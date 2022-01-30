@@ -16,27 +16,73 @@
  */
 
 #include "dsd.h"
+#include <locale.h>
+#include <ncurses.h>
+
+time_t now;
+char * getTime(void) //get pretty hh:mm:ss timestamp
+{
+  time_t t = time(NULL);
+
+  char * curr;
+  char * stamp = asctime(localtime( & t));
+
+  curr = strtok(stamp, " ");
+  curr = strtok(NULL, " ");
+  curr = strtok(NULL, " ");
+  curr = strtok(NULL, " ");
+
+  return curr;
+}
+
+char * getDate(void) {
+  char datename[32];
+  char * curr2;
+  struct tm * to;
+  time_t t;
+  t = time(NULL);
+  to = localtime( & t);
+  strftime(datename, sizeof(datename), "%Y-%m-%d", to);
+  curr2 = strtok(datename, " ");
+  return curr2;
+}
+
 
 void
 printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset, char *modulation)
 {
+  //char datestr[32];
+  //struct tm timep;
+  //erase();
+  //attron(COLOR_PAIR(4));
+  //for (short int i = 0; i < 7; i++) {
+    //printw("%s \n", FM_banner2[i]);}
+  //attroff(COLOR_PAIR(4));
 
   if (opts->verbose > 0)
     {
-      printf ("Sync: %s ", frametype);
+	  //strftime (datestr, 31, "%Y-%m-%d-%H%M%S", &timep);
+      //printf ("Sync: %s ", frametype);
+      //printf ("%s %s Sync: %s ", getDate(), getTime(), frametype);
+      printf ("%s Sync: %s ", getTime(), frametype);
+      printw("%s Sync: %s ", getTime(), frametype);
     }
   if (opts->verbose > 2)
     {
       printf ("o: %4i ", offset);
+      printw("o: %4i ", offset);
     }
   if (opts->verbose > 1)
     {
       printf ("mod: %s ", modulation);
+      printw("mod: %s ", modulation);
     }
   if (opts->verbose > 2)
     {
       printf ("g: %f ", state->aout_gain);
+      printw("g: %f ", state->aout_gain);
     }
+ refresh();
 }
 
 int
@@ -100,6 +146,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   if ((opts->symboltiming == 1) && (state->carrier == 1))
     {
       printf ("\nSymbol Timing:\n");
+      //printw("\nSymbol Timing:\n");
     }
   while (sync == 0)
     {
@@ -489,8 +536,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->min = ((state->min) + lmin) / 2;
                   sprintf (state->ftype, " ProVoice    ");
                   if (opts->errorbars == 1)
+                  //if (opts->errorbars == 1 && (time(NULL) - now) > 2 )
                     {
                       printFrameSync (opts, state, " -ProVoice ", synctest_pos + 1, modulation);
+                      now = time(NULL);
                     }
                   state->lastsynctype = 14;
                   return (14);
@@ -503,8 +552,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->min = ((state->min) + lmin) / 2;
                   sprintf (state->ftype, " ProVoice    ");
                   if (opts->errorbars == 1)
+                  //if (opts->errorbars == 1 && (time(NULL) - now) > 2 )
                     {
                       printFrameSync (opts, state, " -ProVoice ", synctest_pos + 1, modulation);
+                      now = time(NULL);
                     }
                   state->lastsynctype = 15;
                   return (15);
@@ -819,6 +870,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if ((opts->errorbars == 1) && (opts->verbose > 1) && (state->carrier == 1))
                 {
                   printf ("Sync: no sync\n");
+                  printf("Press CTRL + C to close.\n"); //Kindly remind user to double tap CTRL + C
                 }
               noCarrier (opts, state);
               return (-1);

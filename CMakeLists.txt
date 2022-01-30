@@ -10,9 +10,12 @@ find_package(LibSndFile REQUIRED)
 find_package(MBE REQUIRED)
 find_package(ITPP REQUIRED)
 find_package(LibPortAudio)
+find_package(RTLSDR)
+#more fucking around
+find_package(Curses REQUIRED)
 
-include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR})
-set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY})
+include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${CURSES_INCLUDE_DIR})
+set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${CURSES_LIBRARY})
 
 if(PORTAUDIO_FOUND)
     include_directories(SYSTEM ${PORTAUDIO_INCLUDE_DIRS})
@@ -20,8 +23,19 @@ if(PORTAUDIO_FOUND)
     add_definitions(-DUSE_PORTAUDIO)
 endif(PORTAUDIO_FOUND)
 
+if(RTLSDR_FOUND)
+    find_package(Threads)
+    include_directories(SYSTEM ${RTLSDR_INCLUDE_DIRS})
+    list(APPEND LIBS ${RTLSDR_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+    add_definitions(-DUSE_RTLSDR)
+endif(RTLSDR_FOUND)
+
 FILE(GLOB SRCS src/*.c src/*.cpp)
 FILE(GLOB HEADERS include/*.h include/*.hpp)
+
+if(NOT RTLSDR_FOUND)
+    list(REMOVE_ITEM SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/rtl_sdr_fm.cpp)
+endif(NOT RTLSDR_FOUND)
 
 configure_file("src/git_ver.c.in" "${CMAKE_CURRENT_BINARY_DIR}/git_ver.c" @ONLY)
 list(APPEND SRCS "${CMAKE_CURRENT_BINARY_DIR}/git_ver.c")

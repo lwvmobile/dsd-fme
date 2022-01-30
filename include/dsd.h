@@ -58,10 +58,16 @@
 #define PA_LATENCY_OUT 0.100
 #endif
 
+#ifdef USE_RTLSDR
+#include <rtl-sdr.h>
+#endif
+
 /*
  * global variables
  */
-extern int exitflag;
+
+static volatile int exitflag;
+//volatile int exitflag; //didn't work, couldn't build, multiple definitions of exitflag
 
 
 typedef struct
@@ -85,7 +91,9 @@ typedef struct
 #ifdef USE_PORTAUDIO
   PaStream* audio_in_pa_stream;
 #endif
-  int audio_in_type; // 0 for device, 1 for file, 2 for portaudio
+  uint32_t rtlsdr_center_freq;
+  int rtlsdr_ppm_error;
+  int audio_in_type; // 0 for device, 1 for file, 2 for portaudio, 3 for rtlsdr
   char audio_out_dev[1024];
   int audio_out_fd;
   SNDFILE *audio_out_file;
@@ -129,6 +137,8 @@ typedef struct
   int delay;
   int use_cosine_filter;
   int unmute_encrypted_p25;
+  int rtl_dev_index;
+  int rtl_gain_value;
 } dsd_opts;
 
 typedef struct
@@ -316,5 +326,16 @@ void processX2TDMAvoice (dsd_opts * opts, dsd_state * state);
 void processDSTAR_HD (dsd_opts * opts, dsd_state * state);
 short dmr_filter(short sample);
 short nxdn_filter(short sample);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+void open_rtlsdr_stream(dsd_opts *opts);
+void cleanup_rtlsdr_stream();
+void get_rtlsdr_sample(int16_t *sample);
+void rtlsdr_sighandler();
+#ifdef __cplusplus
+}
+#endif
 
 #endif // DSD_H
