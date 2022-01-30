@@ -53,11 +53,11 @@ printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset,
 {
   //char datestr[32];
   //struct tm timep;
-  erase();
-  attron(COLOR_PAIR(4));
-  for (short int i = 0; i < 7; i++) {
-    printw("%s \n", FM_banner2[i]);}
-  attroff(COLOR_PAIR(4));
+  //erase();
+  //attron(COLOR_PAIR(4));
+  //for (short int i = 0; i < 7; i++) {
+    //printw("%s \n", FM_banner2[i]);}
+  //attroff(COLOR_PAIR(4));
 
   if (opts->verbose > 0)
     {
