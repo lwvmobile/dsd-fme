@@ -157,8 +157,8 @@ initOpts (dsd_opts * opts)
   opts->delay = 0;
   opts->use_cosine_filter = 1;
   opts->unmute_encrypted_p25 = 0;
-  opts->rtl_dev_index = 0;        //actual device index since rtl:0 or rtl:1 doesn't do jack shit asshole!
-  opts->rtl_gain_value = 0;    //set actual gain and not this automatic gain bullshit
+  opts->rtl_dev_index = 0;        //choose which device we want by index number
+  opts->rtl_gain_value = 0;    //set actual gain and not automatic gain 
 }
 
 void
