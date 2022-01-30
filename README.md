@@ -1,6 +1,11 @@
 [![Build Status](https://travis-ci.org/szechyjs/dsd.svg?branch=master)](https://travis-ci.org/szechyjs/dsd)
 
-# Digital Speech Decoder 1.7.0-dev
+# Digital Speech Decoder - Florida Man Edition
+This version of DSD shouldn't be used by anybody wanting a stable DSD experience, please see the original version for that.
+Also, please don't submit bug reports to the links on this page, those will direct them to the original version. Links will be updated at a later date. 
+
+The purpose of this is to experiment with the RTL code and other things, and is purely for academic research into the inner workings of DSD. Basically, its for me to poke around with and see what I can manage to break.
+
 DSD is able to decode [several digital voice formats](https://github.com/szechyjs/dsd/wiki/Supported-formats) from discriminator
 tap audio and synthesize  the decoded speech.  Speech
 synthesis requires mbelib, which is a separate package.
