@@ -31,9 +31,9 @@
 #include <rtl-sdr.h>
 #include "dsd.h"
 
-#define DEFAULT_SAMPLE_RATE		48000
+#define DEFAULT_SAMPLE_RATE		48000 //48000
 #define DEFAULT_BUF_LENGTH		(1 * 16384)
-#define MAXIMUM_OVERSAMPLE		16
+#define MAXIMUM_OVERSAMPLE		16 //16
 #define MAXIMUM_BUF_LENGTH		(MAXIMUM_OVERSAMPLE * DEFAULT_BUF_LENGTH)
 #define AUTO_GAIN			-100
 #define BUFFER_DUMP			4096
@@ -46,7 +46,11 @@ static int ACTUAL_BUF_LENGTH;
 static int *atan_lut = NULL;
 static int atan_lut_size = 131072; /* 512 KB */
 static int atan_lut_coef = 8;
-
+//new for UDP
+#include <netinet/in.h>
+#include <arpa/inet.h>
+static pthread_t socket_freq;
+//
 struct dongle_state
 {
 	int      exit_flag;
@@ -585,6 +589,7 @@ static void *demod_thread_fn(void *arg)
 
 int nearest_gain(rtlsdr_dev_t *dev, int target_gain)
 {
+	//target_gain = 36;
 	int i, r, err1, err2, count, nearest;
 	int* gains;
 	r = rtlsdr_set_tuner_gain_mode(dev, 1);
@@ -617,7 +622,8 @@ int verbose_set_frequency(rtlsdr_dev_t *dev, uint32_t frequency)
 	if (r < 0) {
 		fprintf(stderr, "WARNING: Failed to set center freq.\n");
 	} else {
-		fprintf(stderr, "Tuned to %u Hz.\n", frequency);
+		//fprintf(stderr, "Tuned to %u Hz.\n", frequency);
+		fprintf(stderr, "Tuned to center frequency %u Hz.\n", frequency);
 	}
 	return r;
 }
@@ -665,6 +671,7 @@ int verbose_offset_tuning(rtlsdr_dev_t *dev)
 
 int verbose_auto_gain(rtlsdr_dev_t *dev)
 {
+
 	int r;
 	r = rtlsdr_set_tuner_gain_mode(dev, 0);
 	if (r != 0) {
@@ -677,6 +684,7 @@ int verbose_auto_gain(rtlsdr_dev_t *dev)
 
 int verbose_gain_set(rtlsdr_dev_t *dev, int gain)
 {
+	//gain = 36;
 	int r;
 	r = rtlsdr_set_tuner_gain_mode(dev, 1);
 	if (r < 0) {
@@ -694,6 +702,7 @@ int verbose_gain_set(rtlsdr_dev_t *dev, int gain)
 
 int verbose_ppm_set(rtlsdr_dev_t *dev, int ppm_error)
 {
+	//ppm_error = -2; //fix this opt arg to accept negative float values, i.e. float or double??
 	int r;
 	if (ppm_error == 0) {
 		return 0;}
@@ -715,10 +724,12 @@ int verbose_reset_buffer(rtlsdr_dev_t *dev)
 	return r;
 }
 
-static void optimal_settings(int freq, int rate)
+//static void optimal_settings(struct fm_state *fm, int freq, int hopping)
+static void optimal_settings(int freq, int rate) //why did you fuck with optimal settings?
 {
 	// giant ball of hacks
 	// seems unable to do a single pass, 2:1
+	//int r, capture_freq, capture_rate;
 	int capture_freq, capture_rate;
 	struct dongle_state *d = &dongle;
 	struct demod_state *dm = &demod;
@@ -771,6 +782,7 @@ static void *controller_thread_fn(void *arg)
 	/* Set the sample rate */
 	verbose_set_sample_rate(dongle.dev, dongle.rate);
 	fprintf(stderr, "Output at %u Hz.\n", demod.rate_in/demod.post_downsample);
+	fprintf(stderr, "Press CTRL + C to close.\n"); //Kindly remind user to double tap CTRL + C
 
 	while (!exitflag) {
 		safe_cond_wait(&s->hop, &s->hop_m);
@@ -791,8 +803,9 @@ void dongle_init(struct dongle_state *s)
 	s->gain = AUTO_GAIN; // tenths of a dB
 	s->mute = 0;
 	s->direct_sampling = 0;
-	s->offset_tuning = 0;
+	s->offset_tuning = 0; //0 by default, but don't think it listens to proper frequency when 0, offset and tuned seem to be mixed up
 	s->demod_target = &demod;
+	//s->dev_index = 1; //need to set dev_index from dsd_main as well...
 }
 
 void demod_init(struct demod_state *s)
@@ -879,11 +892,148 @@ void sanity_checks(void)
 	}
 
 }
+//UDP remote all below HERE
+static unsigned int chars_to_int(unsigned char* buf) {
+
+	int i;
+	unsigned int val = 0;
+
+	for(i=1; i<5; i++) {
+		val = val | ((buf[i]) << ((i-1)*8));
+	}
+
+	return val;
+}
+
+static void *socket_thread_fn(void *arg) {
+	//struct fm_state *fm = arg;
+	struct demod_state *d = static_cast<demod_state*>(arg);
+	int port = 6020;
+  int r, n;
+  int sockfd, newsockfd, portno;
+  socklen_t clilen;
+  unsigned char buffer[5];
+  struct sockaddr_in serv_addr, cli_addr;
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+  if (sockfd < 0) {
+  	perror("ERROR opening socket");
+  }
+
+	bzero((char *) &serv_addr, sizeof(serv_addr));
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	serv_addr.sin_port = htons(port);
+
+	if (bind(sockfd, (struct sockaddr *) &serv_addr,  sizeof(serv_addr)) < 0) {
+		perror("ERROR on binding");
+	}
+
+	bzero(buffer,5);
+
+	fprintf (stderr, "Main socket started! :-) Tuning enabled on UDP/%d \n", port);
+
+	int new_freq, demod_type, new_squelch, new_gain, agc_mode;
+
+	while((n = read(sockfd,buffer,5)) != 0) {
+		if(buffer[0] == 0) {
+			new_freq = chars_to_int(buffer);
+			dongle.freq = new_freq; //not sure if still needed, or ever was needed lul
+			optimal_settings(new_freq, demod.rate_in);
+			rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+			//fprintf (stderr, "Tuning to: %d [Hz] (central freq: %d [Hz])\n", new_freq, new_freq + freq_offset);
+			fprintf (stderr, "Tuning to: %d [Hz] \n", new_freq);
+		}
+/*
+		if(buffer[0] == 1) {
+			// change demod type
+			int type = chars_to_int(buffer);
+
+			switch(type) {
+				case 0:
+					fprintf (stderr, "Changing demod type to FM\n");
+      		fm->mode_demod = &fm_demod;
+      	break;
+				case 1:
+					fprintf (stderr, "Changing demod type to AM\n");
+      		fm->mode_demod = &am_demod;
+      	break;
+				case 2:
+					fprintf (stderr, "Changing demod type to USB\n");
+      		fm->mode_demod = &usb_demod;
+      		fm->custom_atan = 1;
+      	break;
+				case 3:
+					fprintf (stderr, "Changing demod type to LSB\n");
+      		fm->mode_demod = &lsb_demod;
+      	break;
+				default:
+					fprintf (stderr, "Unknown demod type %d\n", type);
+      	break;
+      }
+		}
+*/
+
+//SQUELCH HERE
+
+		if (buffer[0] == 2) {
+			new_squelch = chars_to_int(buffer);
+			demod.squelch_level = new_squelch; //demod, or d*? or d->
+			//full_demod(d);
+			//new_freq = 850000000;
+			//dongle.freq = new_freq;
+			//optimal_settings(new_freq, demod.rate_in); //hacky way to 'squelch', just setting it to a dead freq instead
+			//rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+			fprintf (stderr, "Changing squelch to %d \n", new_squelch);
+		}
+
+/*
+		if (buffer[0] == 3) {
+			new_gain = chars_to_int(buffer);
+			if (new_gain == AUTO_GAIN) {
+				r = rtlsdr_set_tuner_gain_mode(dev, 0);
+			} else {
+				r = rtlsdr_set_tuner_gain_mode(dev, 1);
+				new_gain = nearest_gain(new_gain);
+				r = rtlsdr_set_tuner_gain(dev, new_gain);
+			}
+
+			if (r != 0) {
+				fprintf(stderr, "WARNING: Failed to set tuner gain.\n");
+			} else if (new_gain == AUTO_GAIN) {
+				fprintf(stderr, "Tuner gain set to automatic.\n");
+			} else {
+				fprintf(stderr, "Tuner gain set to %0.2f dB.\n", new_gain/10.0);
+			}
+		}
+*/
+/*
+		if (buffer[0] == 8) {
+			agc_mode = chars_to_int(buffer);
+			if (agc_mode == 0 || agc_mode == 1) {
+				fprintf(stderr, "Setting AGC to %d\n", agc_mode);
+				rtlsdr_set_agc_mode(dev, agc_mode);
+			} else {
+				fprintf(stderr, "Failed to set AGC to %d\n", agc_mode);
+			}
+		}
+*/
+	}
+
+	close(sockfd);
+	return 0;
+}
+//UDP Control all above HERE
 
 void rtlsdr_sighandler()
 {
 	fprintf(stderr, "Signal caught, exiting!\n");
+	fprintf(stderr, "Press CTRL + C again to close. Thanks. \n"); //Kindly remind user to double tap CTRL + C
 	rtlsdr_cancel_async(dongle.dev);
+	//cleanup_rtlsdr_stream(); //thank the wraith for this one...if it works...didn't work
+	//_Exit(1);
 }
 
 void open_rtlsdr_stream(dsd_opts *opts)
@@ -901,8 +1051,16 @@ void open_rtlsdr_stream(dsd_opts *opts)
 		controller.freq_len++;
 	}
 
-	if (opts->rtlsdr_ppm_error > 0) {
+	if (opts->rtlsdr_ppm_error > 0 || opts->rtlsdr_ppm_error < 0) { //this way will adjust PPM based on negative values as well
 		dongle.ppm_error = opts->rtlsdr_ppm_error;
+	}
+
+	if (opts->audio_in_type == 3) {
+		dongle.dev_index = opts->rtl_dev_index;
+	}
+
+	if (opts->rtl_gain_value > 0) {
+		dongle.gain = opts->rtl_gain_value * 10; //multiple by ten to make it consitent with the way rtl_fm really works
 	}
 
   /* quadruple sample_rate to limit to Δθ to ±π/2 */
@@ -915,13 +1073,15 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	if (controller.freq_len > 1) demod.terminate_on_squelch = 0;
 
   ACTUAL_BUF_LENGTH = lcm_post[demod.post_downsample] * DEFAULT_BUF_LENGTH;
-
   r = rtlsdr_open(&dongle.dev, (uint32_t)dongle.dev_index);
+
   if (r < 0)
   {
     fprintf(stderr, "Failed to open rtlsdr device %d.\n", dongle.dev_index);
     exit(1);
-  }
+  } else {
+		fprintf(stderr, "Using RTLSDR Device Index: %d. \n", dongle.dev_index); //Kindly tell us which device we are using
+	}
 
   // sigact.sa_handler = sighandler;
   // sigemptyset(&sigact.sa_mask);
@@ -952,6 +1112,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
   usleep(100000);
   pthread_create(&demod.thread, NULL, demod_thread_fn, (void*)(&demod));
   pthread_create(&dongle.thread, NULL, dongle_thread_fn, (void*)(&dongle));
+	pthread_create(&socket_freq, NULL, socket_thread_fn, (void *)(&controller));
 }
 
 void cleanup_rtlsdr_stream()
@@ -971,6 +1132,7 @@ void cleanup_rtlsdr_stream()
   controller_cleanup(&controller);
 
   rtlsdr_close(dongle.dev);
+
 }
 
 void get_rtlsdr_sample(int16_t *sample)

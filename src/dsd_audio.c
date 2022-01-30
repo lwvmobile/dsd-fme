@@ -17,7 +17,6 @@
 
 #include "dsd.h"
 
-
 void
 processAudio (dsd_opts * opts, dsd_state * state)
 {
@@ -164,7 +163,7 @@ writeSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 //  for(n=0; n<160; n++)
 //    printf("%d ", ((short*)(state->audio_out_temp_buf))[n]);
 //  printf("\n");
-  
+
   aout_buf_p = aout_buf;
   state->audio_out_temp_buf_p = state->audio_out_temp_buf;
 
@@ -214,6 +213,84 @@ writeSynthesizedVoice (dsd_opts * opts, dsd_state * state)
   */
 }
 
+//Test playing raw audio HERE
+//get_rtlsdr_sample(&sample);
+void
+playRawAudio (dsd_opts * opts, dsd_state * state)
+{
+  ssize_t result;
+
+  //if (state->audio_out_idx > opts->delay)
+  if (opts->audio_in_type == 3) //if set to rtl_fm, maybe it shouldn't matter but for now, using this
+    {
+      // output synthesized speech to sound card
+		if(opts->audio_out_type == 2)
+		{
+#ifdef USE_PORTAUDIO
+			PaError err = paNoError;
+			do
+			{
+				long available = Pa_GetStreamWriteAvailable( opts->audio_out_pa_stream );
+				if(available < 0)
+					err = available;
+				//printf("Frames available: %d\n", available);
+				if( err != paNoError )
+					break;
+				if(available > SAMPLE_RATE_OUT * PA_LATENCY_OUT)
+				{
+					//It looks like this might not be needed for very small latencies. However, it's definitely needed for a bit larger ones.
+					//When PA_LATENCY_OUT == 0.500 I get output buffer underruns if I don't use this. With PA_LATENCY_OUT <= 0.100 I don't see those happen.
+					//But with PA_LATENCY_OUT < 0.100 I run the risk of choppy audio and stream errors.
+					printf("\nSyncing voice output stream\n");
+					err = Pa_StopStream( opts->audio_out_pa_stream );
+					if( err != paNoError )
+						break;
+				}
+
+				err = Pa_IsStreamActive( opts->audio_out_pa_stream );
+				if(err == 0)
+				{
+					printf("Start voice output stream\n");
+					err = Pa_StartStream( opts->audio_out_pa_stream );
+				}
+				else if(err == 1)
+				{
+					err = paNoError;
+				}
+				if( err != paNoError )
+					break;
+
+				//printf("write stream %d\n", state->audio_out_idx);
+				err = Pa_WriteStream( opts->audio_out_pa_stream, (state->audio_out_buf_p - state->audio_out_idx), state->audio_out_idx );
+				if( err != paNoError )
+					break;
+			} while(0);
+
+			if( err != paNoError )
+			{
+				fprintf( stderr, "An error occured while using the portaudio output stream\n" );
+				fprintf( stderr, "Error number: %d\n", err );
+				fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+			}
+
+#endif
+		}
+		else
+			result = write (opts->audio_out_fd, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2));
+      state->audio_out_idx = 0;
+    }
+
+  if (state->audio_out_idx2 >= 800000)
+    {
+      state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
+      state->audio_out_buf_p = state->audio_out_buf + 100;
+      memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
+      memset (state->audio_out_buf, 0, 100 * sizeof (short));
+      state->audio_out_idx2 = 0;
+    }
+}
+
+//end test raw audio
 
 void
 playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
@@ -309,7 +386,7 @@ int getPADevice(char* dev, int input, PaStream** stream)
         printf( "ERROR: Requested device %d is larger than number of devices.\n", devnum );
         return(1);
     }
-	
+
 	const   PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo( devnum );
 
     /* print device name */
@@ -500,7 +577,7 @@ openAudioInDevice (dsd_opts * opts)
 		exit(1);
 #endif
 	}
-  else if(strncmp(opts->audio_in_dev, "rtl:", 3) == 0)
+  else if(strncmp(opts->audio_in_dev, "rtl", 3) == 0)
   {
     opts->audio_in_type = 3;
   }
@@ -533,9 +610,9 @@ openAudioInDevice (dsd_opts * opts)
 #ifdef SOLARIS
     sample_info_t aset, aget;
     int rgain;
-  
+
     rgain = 64;
-  
+
     if (opts->split == 1)
       {
         opts->audio_in_fd = open (opts->audio_in_dev, O_RDONLY);
@@ -549,10 +626,10 @@ openAudioInDevice (dsd_opts * opts)
         printf ("Error, couldn't open %s\n", opts->audio_in_dev);
         exit(1);
       }
-  
+
     // get current
     ioctl (opts->audio_in_fd, AUDIO_GETINFO, &aset);
-  
+
     aset.record.sample_rate = SAMPLE_RATE_IN;
     aset.play.sample_rate = SAMPLE_RATE_IN;
     aset.record.channels = 1;
@@ -563,7 +640,7 @@ openAudioInDevice (dsd_opts * opts)
     aset.play.encoding = AUDIO_ENCODING_LINEAR;
     aset.record.port = AUDIO_LINE_IN;
     aset.record.gain = rgain;
-  
+
     if (ioctl (opts->audio_in_fd, AUDIO_SETINFO, &aset) == -1)
       {
         printf ("Error setting sample device parameters\n");
@@ -573,7 +650,7 @@ openAudioInDevice (dsd_opts * opts)
 
 #if defined(BSD) && !defined(__APPLE__)
     int fmt;
-  
+
     if (opts->split == 1)
       {
         opts->audio_in_fd = open (opts->audio_in_dev, O_RDONLY);
@@ -582,13 +659,13 @@ openAudioInDevice (dsd_opts * opts)
       {
         opts->audio_in_fd = open (opts->audio_in_dev, O_RDWR);
       }
-  
+
     if (opts->audio_in_fd == -1)
       {
         printf ("Error, couldn't open %s\n", opts->audio_in_dev);
         opts->audio_out = 0;
       }
-  
+
     fmt = 0;
     if (ioctl (opts->audio_in_fd, SNDCTL_DSP_RESET) < 0)
       {

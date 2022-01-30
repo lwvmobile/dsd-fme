@@ -28,6 +28,17 @@
 #include "p25p1_heuristics.h"
 #include "pa_devs.h"
 
+#include <locale.h>
+#include <ncurses.h>
+char * FM_banner[9] = {
+  "                                 CTRL + C twice to exit",
+  "██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗",
+  "██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝",
+  "██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗  ",
+  "██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
+  "██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
+  "╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
+};
 
 int
 comp (const void *a, const void *b)
@@ -79,6 +90,11 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   sprintf (state->algid, "________");
   sprintf (state->keyid, "________________");
   mbe_initMbeParms (state->cur_mp, state->prev_mp, state->prev_mp_enhanced);
+  //test below
+  //uint16_t sample;
+  //get_rtlsdr_sample(&sample);
+  //Pa_StartStream(sample);
+  //end test
 }
 
 void
@@ -141,6 +157,8 @@ initOpts (dsd_opts * opts)
   opts->delay = 0;
   opts->use_cosine_filter = 1;
   opts->unmute_encrypted_p25 = 0;
+  opts->rtl_dev_index = 0;        //choose which device we want by index number
+  opts->rtl_gain_value = 0;    //set actual gain and not automatic gain 
 }
 
 void
@@ -266,16 +284,20 @@ usage ()
   printf ("  -z <num>      Frame rate for datascope\n");
   printf ("\n");
   printf ("Input/Output options:\n");
-  printf ("  -i <device>   Audio input device (default is /dev/audio, - for piped stdin)\n");
+  printf ("  -i <device>   Audio input device (default is /dev/audio, - for piped stdin, rtl for rtl device)\n");
   printf ("  -o <device>   Audio output device (default is /dev/audio)\n");
   printf ("  -d <dir>      Create mbe data files, use this directory\n");
-  printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
+  printf ("  -r <files>     Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
   printf ("  -n            Do not send synthesized speech to audio output device\n");
-  printf ("  -w <file>     Output synthesized speech to a .wav file\n");
+  printf ("  -w <file>      Output synthesized speech to a .wav file\n");
   printf ("  -a            Display port audio devices\n");
-  printf ("  -c <hertz>    RTL-SDR center frequency\n");
+  printf ("\n");
+  printf ("RTL-SDR options:\n");
+  printf ("  -c <hertz>    RTL-SDR tune to frequency\n");
   printf ("  -P <num>      RTL-SDR ppm error (default = 0)\n");
+  printf ("  -D <num>      RTL-SDR Device Index Number\n");
+  printf ("  -G <num>      RTL-SDR Device Gain (0-49) (default = 0 Auto Gain)\n");
   printf ("\n");
   printf ("Scanner control options:\n");
   printf ("  -B <num>      Serial port baud rate (default=115200)\n");
@@ -286,7 +308,7 @@ usage ()
   printf ("  -fa           Auto-detect frame type (default)\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -fd           Decode only D-STAR\n");
-  printf ("  -fi           Decode only NXDN48* (6.25 kHz) / IDAS*\n");
+  printf ("  -fi            Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   printf ("  -fn           Decode only NXDN96 (12.5 kHz)\n");
   printf ("  -fp           Decode only ProVoice*\n");
   printf ("  -fr           Decode only DMR/MOTOTRBO\n");
@@ -323,9 +345,9 @@ liveScanner (dsd_opts * opts, dsd_state * state)
 		PaError err = Pa_StartStream( opts->audio_in_pa_stream );
 		if( err != paNoError )
 		{
-			fprintf( stderr, "An error occured while starting the portaudio input stream\n" );
-			fprintf( stderr, "Error number: %d\n", err );
-			fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+			//fprintf( stderr, "An error occured while starting the portaudio input stream\n" );
+			//fprintf( stderr, "Error number: %d\n", err );
+			//fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 			return;
 		}
 	}
@@ -385,9 +407,9 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
 			err = Pa_CloseStream( opts->audio_in_pa_stream );
 			if( err != paNoError )
 			{
-				fprintf( stderr, "An error occured while closing the portaudio input stream\n" );
-				fprintf( stderr, "Error number: %d\n", err );
-				fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+				//fprintf( stderr, "An error occured while closing the portaudio input stream\n" );
+				//fprintf( stderr, "Error number: %d\n", err );
+				//fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 			}
 		}
 		if(opts->audio_out_pa_stream != NULL)
@@ -397,24 +419,24 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
 				err = Pa_StopStream( opts->audio_out_pa_stream );
 			if( err != paNoError )
 			{
-				fprintf( stderr, "An error occured while closing the portaudio output stream\n" );
-				fprintf( stderr, "Error number: %d\n", err );
-				fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+				//fprintf( stderr, "An error occured while closing the portaudio output stream\n" );
+				//fprintf( stderr, "Error number: %d\n", err );
+				//fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 			}
 			err = Pa_CloseStream( opts->audio_out_pa_stream );
 			if( err != paNoError )
 			{
-				fprintf( stderr, "An error occured while closing the portaudio output stream\n" );
-				fprintf( stderr, "Error number: %d\n", err );
-				fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+				//fprintf( stderr, "An error occured while closing the portaudio output stream\n" );
+				//fprintf( stderr, "Error number: %d\n", err );
+				//fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 			}
 		}
 		err = Pa_Terminate();
 		if( err != paNoError )
 		{
-			fprintf( stderr, "An error occured while terminating portaudio\n" );
-			fprintf( stderr, "Error number: %d\n", err );
-			fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+			//fprintf( stderr, "An error occured while terminating portaudio\n" );
+			//fprintf( stderr, "Error number: %d\n", err );
+			//fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 		}
 	}
 #endif
@@ -468,6 +490,32 @@ sigfun (int sig)
 #endif
 }
 
+//LEH version of sigfun
+/*
+void sigfun (int sig)
+{
+  UNUSED_VARIABLE(sig); //what is this and where is it defined?
+  exitflag = 1;
+  signal (SIGINT, SIG_DFL);
+}
+
+//another LEH thing to free allocated memory
+void freeAllocatedMemory(dsd_opts * opts, dsd_state * state)
+{
+  UNUSED_VARIABLE(opts);
+
+  // Free allocated memory //
+  free(state->prev_mp_enhanced);
+  free(state->prev_mp);
+  free(state->cur_mp);
+  free(state->audio_out_float_buf);
+  free(state->audio_out_buf);
+  free(state->dibit_buf);
+}
+
+*/
+//end LEH version of sigfun
+
 double atofs(char *s)
 {
 	char last;
@@ -505,7 +553,12 @@ main (int argc, char **argv)
   char versionstr[25];
   mbe_printVersion (versionstr);
 
-  printf ("Digital Speech Decoder 1.7.0-dev (build:%s)\n", GIT_TAG);
+
+  for (short int i = 0; i < 7; i++) {
+    printf("%s \n", FM_banner[i]);
+  }
+  //printf ("Digital Speech Decoder 1.7.0-dev (build:%s)\n", GIT_TAG);
+  printf ("Digital Speech Decoder: Florida Man Edition\n");
   printf ("mbelib version %s\n", versionstr);
 
   initOpts (&opts);
@@ -514,7 +567,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:rl")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:rl")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -575,6 +628,18 @@ main (int argc, char **argv)
         case 'v':
           sscanf (optarg, "%d", &opts.verbose);
           break;
+
+        case 'G': //Set rtl device gain
+          sscanf (optarg, "%d", &opts.rtl_gain_value); //multiple value by ten to make it consitent with the way rtl_fm really works
+          //opts->audio_in_type = 3; //set to use RTL this way and maybe ditch the other shitty way
+          break;
+
+        case 'D': //Set rtl device index number
+          sscanf (optarg, "%d", &opts.rtl_dev_index);
+          //opts->audio_in_type = 3; //set to use RTL this way and maybe ditch the other shitty way
+          break;
+
+
         case 'z':
           sscanf (optarg, "%d", &opts.scoperate);
           opts.errorbars = 0;
@@ -589,6 +654,7 @@ main (int argc, char **argv)
         case 'i':
           strncpy(opts.audio_in_dev, optarg, 1023);
           opts.audio_in_dev[1023] = '\0';
+          //printf("audio_in_dev = %s\n", opts.audio_in_dev);
           break;
         case 'o':
           strncpy(opts.audio_out_dev, optarg, 1023);
@@ -601,7 +667,7 @@ main (int argc, char **argv)
           break;
         case 'c':
           opts.rtlsdr_center_freq = (uint32_t)atofs(optarg);
-          printf("Using center freq: %i\n", opts.rtlsdr_center_freq);
+          printf("Tuning to frequency: %i\n", opts.rtlsdr_center_freq);
           break;
         case 'g':
           sscanf (optarg, "%f", &opts.audio_gain);
@@ -866,9 +932,9 @@ main (int argc, char **argv)
     PaError err = Pa_Initialize();
     if( err != paNoError )
     {
-		fprintf( stderr, "An error occured while initializing portaudio\n" );
-		fprintf( stderr, "Error number: %d\n", err );
-		fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+		//fprintf( stderr, "An error occured while initializing portaudio\n" );
+		//fprintf( stderr, "Error number: %d\n", err );
+		//fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 		exit(err);
     }
   }
@@ -902,7 +968,25 @@ main (int argc, char **argv)
           openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
         }
       openAudioInDevice (&opts);
+      setlocale(LC_ALL, "");
+      //sleep(3);
+      //initscr(); //Initialize NCURSES screen window
+      start_color();
+      init_pair(1, COLOR_YELLOW, COLOR_BLACK);      //Yellow/Amber for frame sync/control channel, NV style
+      init_pair(2, COLOR_RED, COLOR_BLACK);        //Red for Terminated Calls
+      init_pair(3, COLOR_GREEN, COLOR_BLACK);     //Green for Active Calls
+      init_pair(4, COLOR_CYAN, COLOR_BLACK);     //Cyan for Site Extra and Patches
+      init_pair(5, COLOR_MAGENTA, COLOR_BLACK); //Magenta for no frame sync/signal
+      noecho();
+      cbreak();
+      erase();
+      for (short int i = 0; i < 7; i++) {
+        printw("%s \n", FM_banner[i]); }
+      attroff(COLOR_PAIR(4));
+      refresh();
+      printf("Press CTRL + C twice to close.\n"); //Kindly remind user to double tap CTRL + C
     }
+
   else
     {
       opts.split = 0;
@@ -916,10 +1000,12 @@ main (int argc, char **argv)
     {
       playMbeFiles (&opts, &state, argc, argv);
     }
+
   else
     {
         liveScanner (&opts, &state);
     }
   cleanupAndExit (&opts, &state);
+  endwin();
   return (0);
 }

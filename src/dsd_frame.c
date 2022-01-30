@@ -31,7 +31,7 @@ printFrameInfo (dsd_opts * opts, dsd_state * state)
   level = (int) state->max / 164;
   if (opts->verbose > 0)
     {
-      printf ("inlvl: %2i%% ", level);
+      //printf ("inlvl: %2i%% ", level);
     }
   if (state->nac != 0)
     {
@@ -89,7 +89,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              printf ("inlvl: %2i%% ", level);
+              //printf ("inlvl: %2i%% ", level);
             }
         }
       state->nac = 0;
@@ -112,7 +112,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              printf ("inlvl: %2i%% ", level);
+              //printf ("inlvl: %2i%% ", level);
             }
         }
       state->nac = 0;
@@ -134,7 +134,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              printf ("inlvl: %2i%% ", level);
+              //printf ("inlvl: %2i%% ", level);
             }
         }
       state->nac = 0;
@@ -156,7 +156,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              printf ("inlvl: %2i%% ", level);
+              //printf ("inlvl: %2i%% ", level);
             }
         }
       state->nac = 0;
@@ -179,7 +179,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              printf ("inlvl: %2i%% ", level);
+              //printf ("inlvl: %2i%% ", level);
             }
         }
       if ((state->synctype == 11) || (state->synctype == 12))
@@ -233,7 +233,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              printf ("inlvl: %2i%% ", level);
+              //printf ("inlvl: %2i%% ", level);
             }
         }
       if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
