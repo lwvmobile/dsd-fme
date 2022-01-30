@@ -18,15 +18,7 @@
 #include "dsd.h"
 #include <locale.h>
 #include <ncurses.h>
-char * FM_banner2[9] = {
-  " Digital Speech Decoder: Florida Man Edition - mbelib version 1.3.0        ",
-  " ███████╗██████╗  █████╗  █████╗  ██████╗     ███████╗███╗   ███╗  ██████╗ ",
-  " ██╔════╝██╔══██╗██╔══██╗██╔══██╗██╔════╝     ██╔════╝████╗ ████║  ██╔══██╗",
-  " █████╗  ██║  ██║███████║██║  ╚═╝╚█████╗  ███ █████╗  ██╔████╔██║█████████║",
-  " ██╔══╝  ██║  ██║██╔══██║██║  ██╗ ╚═══██╗     ██╔══╝  ██║╚██╔╝██║  ██║  ██║",
-  " ███████╗██████╔╝██║  ██║╚█████╔╝██████╔╝     ██║     ██║ ╚═╝ ██║  ██████╔╝",
-  " ╚══════╝╚═════╝ ╚═╝  ╚═╝ ╚════╝ ╚═════╝      ╚═╝     ╚═╝     ╚═╝  ╚═════╝ ",
-};
+
 time_t now;
 char * getTime(void) //get pretty hh:mm:ss timestamp
 {
@@ -879,13 +871,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   printf ("Sync: no sync\n");
                   printf("Press CTRL + C to close.\n"); //Kindly remind user to double tap CTRL + C
-                  erase();
-                  attron(COLOR_PAIR(4));
-                  for (short int i = 0; i < 7; i++) {
-                    printw("%s \n", FM_banner2[i]); }
-                  attroff(COLOR_PAIR(4));
-                  printw("Sync: no sync\n");
-                  refresh();
                 }
               noCarrier (opts, state);
               return (-1);
