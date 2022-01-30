@@ -1,46 +1,9 @@
-[![Build Status](https://travis-ci.org/szechyjs/dsd.svg?branch=master)](https://travis-ci.org/szechyjs/dsd)
-
 # Digital Speech Decoder - Florida Man Edition
 This version of DSD shouldn't be used by anybody wanting a stable DSD experience, please see the original version for that.
 Also, please don't submit bug reports to the links on this page, those will direct them to the original version. Links will be updated at a later date. 
 
 The purpose of this is to experiment with the RTL code and other things, and is purely for academic research into the inner workings of DSD. Basically, its for me to poke around with and see what I can manage to break.
 
-
-##
-DSD is able to decode [several digital voice formats](https://github.com/szechyjs/dsd/wiki/Supported-formats) from discriminator
-tap audio and synthesize  the decoded speech.  Speech
-synthesis requires mbelib, which is a separate package.
-
-
-## Information
-
-### The DSD Wiki
-The DSD Wiki has lots of additional information about DSD including build
-instructions and answers to the most frequently asked questions.
-Please browse the Wiki after finishing this README.
-
-[https://github.com/szechyjs/dsd/wiki](https://github.com/szechyjs/dsd/wiki)
-
-### Bug reports
-If you discover a problem with DSD, we would like to know about it.
-However, we ask that you please review these guidelines before submitting a
-bug report:
-
-[https://github.com/szechyjs/dsd/wiki/Bug-reports](https://github.com/szechyjs/dsd/wiki/Bug-reports)
-
-Please don't contact developers directly through email or other channels.
-We ask that you follow the guidelines above and use the
-[Issue Tracker](http://github.com/szechyjs/dsd/issues).
-
-### Contributing
-We hope that you will consider contributing to DSD. Please read this short
-overview for some information about how to get started.
-
-[https://github.com/szechyjs/dsd/wiki/Contributing](https://github.com/szechyjs/dsd/wiki/Contributing)
-
-You will usually want to write tests for your changes. To run the test suite
-run `make test` from your build directory.
 
 ## License
 Copyright (C) 2010 DSD Author
