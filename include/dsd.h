@@ -66,6 +66,7 @@
  * global variables
  */
 static volatile int exitflag;
+//volatile int exitflag; //didn't work, couldn't build, multiple definitions of exitflag
 
 typedef struct
 {
@@ -134,6 +135,8 @@ typedef struct
   int delay;
   int use_cosine_filter;
   int unmute_encrypted_p25;
+  int rtl_dev_index;
+  int rtl_gain_value;
 } dsd_opts;
 
 typedef struct

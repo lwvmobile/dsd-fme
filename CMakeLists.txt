@@ -11,9 +11,11 @@ find_package(MBE REQUIRED)
 find_package(ITPP REQUIRED)
 find_package(LibPortAudio)
 find_package(RTLSDR)
+#more fucking around
+find_package(Curses REQUIRED)
 
-include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR})
-set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY})
+include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${CURSES_INCLUDE_DIR})
+set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${CURSES_LIBRARY})
 
 if(PORTAUDIO_FOUND)
     include_directories(SYSTEM ${PORTAUDIO_INCLUDE_DIRS})

@@ -1,0 +1,9 @@
+  opts->rtl_dev_index = 1;        //actual device index since rtl:0 or rtl:1 doesn't do jack shit asshole!
+  opts->rtl_gain_value = 360;    //set actual gain and not this automatic gain bullshit
+  
+  
+while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:rl")) != -1)
+
+G and D, well God Damn
+
+check on/work on offset tuning 'issue'

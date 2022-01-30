@@ -135,6 +135,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   if (opts->errorbars == 1)
     {
       printf ("%s", state->err_str);
+      //printw("%s", state->err_str);
     }
 
   state->debug_audio_errors += state->errs2;
