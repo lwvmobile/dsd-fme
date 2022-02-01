@@ -25,19 +25,46 @@
 #include "dmr_const.h"
 #include "provoice_const.h"
 #include "git_ver.h"
-#include "p25p1_heuristics.h"
-#include "pa_devs.h"
 
+//pretty pretty colors
+
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KBLU  "\x1B[34m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define KWHT  "\x1B[37m"
+
+int pretty_colors()
+{
+    printf("%sred\n", KRED);
+    printf("%sgreen\n", KGRN);
+    printf("%syellow\n", KYEL);
+    printf("%sblue\n", KBLU);
+    printf("%smagenta\n", KMAG);
+    printf("%scyan\n", KCYN);
+    printf("%swhite\n", KWHT);
+    printf("%snormal\n", KNRM);
+
+    return 0;
+}
+
+
+//#include "p25p1_heuristics.h" //accidentally had this disabled when getting good NXDN, so if it breaks again, try disabling this
+//#include "pa_devs.h"         //accidentally had this disabled when getting good NXDN, so if it breaks again, try disabling this
+short int butt = 1;
 #include <locale.h>
 #include <ncurses.h>
 char * FM_banner[9] = {
   "                                 CTRL + C twice to exit",
-  "██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗",
-  "██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝",
-  "██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗  ",
-  "██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
-  "██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
-  "╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
+  " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗",
+  " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝",
+  " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗  ",
+  " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
+  " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
+  " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
 };
 
 
@@ -159,7 +186,7 @@ initOpts (dsd_opts * opts)
   opts->use_cosine_filter = 1;
   opts->unmute_encrypted_p25 = 0;
   opts->rtl_dev_index = 0;        //choose which device we want by index number
-  opts->rtl_gain_value = 0;    //set actual gain and not automatic gain 
+  opts->rtl_gain_value = 0;    //set actual gain and not automatic gain
 }
 
 void
@@ -333,7 +360,7 @@ usage ()
   printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
   printf ("                 (default=15)\n");
   printf ("\n");
-  printf ("Report bugs to: https://github.com/szechyjs/dsd/issues\n");
+  printf ("Report bugs to: Nobody Mwuhaha \n");
   exit (0);
 }
 
@@ -556,8 +583,10 @@ main (int argc, char **argv)
 
 
   for (short int i = 0; i < 7; i++) {
-    printf("%s \n", FM_banner[i]);
+    printf("%s%s \n", FM_banner[i], KCYN);
   }
+  printf("%s", KNRM); //change back to normal
+  //pretty_colors();
   //printf ("Digital Speech Decoder 1.7.0-dev (build:%s)\n", GIT_TAG);
   printf ("Digital Speech Decoder: Florida Man Edition\n");
   printf ("mbelib version %s\n", versionstr);
@@ -632,12 +661,12 @@ main (int argc, char **argv)
 
         case 'G': //Set rtl device gain
           sscanf (optarg, "%d", &opts.rtl_gain_value); //multiple value by ten to make it consitent with the way rtl_fm really works
-          //opts->audio_in_type = 3; //set to use RTL this way and maybe ditch the other shitty way
+          //opts->audio_in_type = 3;
           break;
 
         case 'D': //Set rtl device index number
           sscanf (optarg, "%d", &opts.rtl_dev_index);
-          //opts->audio_in_type = 3; //set to use RTL this way and maybe ditch the other shitty way
+          //opts->audio_in_type = 3;
           break;
 
 
@@ -784,10 +813,10 @@ main (int argc, char **argv)
               state.symbolCenter = 10;
               opts.mod_c4fm = 0;
               opts.mod_qpsk = 0;
-              opts.mod_gfsk = 1;
-              state.rf_mod = 2;
+              opts.mod_gfsk = 1; //was 1 with others on zero
+              state.rf_mod = 2; //was 2
               printf ("Setting symbol rate to 2400 / second\n");
-              printf ("Enabling only GFSK modulation optimizations.\n");
+              //printf ("Enabling only GFSK modulation optimizations.\n");
               printf ("Decoding only NXDN 4800 baud frames.\n");
             }
           else if (optarg[0] == 'n')
@@ -799,11 +828,12 @@ main (int argc, char **argv)
               opts.frame_nxdn96 = 1;
               opts.frame_dmr = 0;
               opts.frame_provoice = 0;
-              opts.mod_c4fm = 0;
-              opts.mod_qpsk = 0;
-              opts.mod_gfsk = 1;
-              state.rf_mod = 2;
-              printf ("Enabling only GFSK modulation optimizations.\n");
+              //opts.mod_c4fm = 0;
+              //opts.mod_qpsk = 0;
+              //opts.mod_gfsk = 1;
+              //state.rf_mod = 2;
+              printf ("Enabling only C4FM/FSK4 modulation optimizations. I really need a new FSK4 modulator\n");
+              opts.symboltiming = 2400; //no idea if this will do anything
               printf ("Decoding only NXDN 9600 baud frames.\n");
             }
           else if (optarg[0] == 'r')

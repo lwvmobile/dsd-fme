@@ -19,6 +19,39 @@
 #include <locale.h>
 #include <ncurses.h>
 
+//borrowed from LEH for 'improved NXDN sync detection'
+int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr)
+{
+  int Compare = -1;
+  size_t i = 0;
+  int err = 0;
+  int BreakBeforeEnd = 0;
+
+  if(s1 && s2)
+  {
+    for(i = 0; i < size; i++)
+    {
+      if(((s1[i] & 0xFF) != '\0') && ((s2[i] & 0xFF) != '\0'))
+      {
+        if((s1[i] & 0xFF) != (s2[i] & 0xFF)) err++;
+      }
+      else
+      {
+        BreakBeforeEnd = 1;
+        break;
+      }
+    }
+
+    if((err <= MaxErr) && (BreakBeforeEnd == 0))
+    {
+      Compare = 0;
+    }
+  } /* End if(s1 && s2) */
+
+  return Compare;
+} /* End strncmperr() */
+//end LEH
+
 time_t now;
 char * getTime(void) //get pretty hh:mm:ss timestamp
 {
@@ -64,8 +97,10 @@ printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset,
 	  //strftime (datestr, 31, "%Y-%m-%d-%H%M%S", &timep);
       //printf ("Sync: %s ", frametype);
       //printf ("%s %s Sync: %s ", getDate(), getTime(), frametype);
-      printf ("%s Sync: %s ", getTime(), frametype);
-      printw("%s Sync: %s ", getTime(), frametype);
+      printf ("%s ", getTime());
+      printf ("Sync: %s ", frametype);
+      //printf("%s Sync: %s ", getTime(), frametype);
+      //printw("%s Sync: %s ", getTime(), frametype);
     }
   if (opts->verbose > 2)
     {
@@ -562,12 +597,16 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 }
 
             }
+
           if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
             {
-              strncpy (synctest18, (synctest_p - 17), 18);
-              if ((strcmp (synctest18, NXDN_BS_VOICE_SYNC) == 0) || (strcmp (synctest18, NXDN_MS_VOICE_SYNC) == 0))
+              strncpy (synctest18, (synctest_p - 17), 18); //seems like other sync tests do this as well
+              //if ((strcmp (synctest18, NXDN_BS_VOICE_SYNC) == 0) || (strcmp (synctest18, NXDN_MS_VOICE_SYNC) == 0)) //or is this the double up test?
+              //borrowing from LEH here WOW! This works so much better, its not even a joke
+              if ((strncmperr (synctest18, NXDN_BS_VOICE_SYNC, 18, 1) == 0) || (strncmperr (synctest18, NXDN_MS_VOICE_SYNC, 18, 1) == 0))
                 {
-                  if ((state->lastsynctype == 8) || (state->lastsynctype == 16))
+                  //if ((state->lastsynctype == 8) || (state->lastsynctype == 16)) //is this checking for multiple matches first, could be causing 'skips' in audio decode HERE HERE
+                  if ( (opts->frame_nxdn96 == 1) ||(opts->frame_nxdn48 == 1)) //kind of hacky, but too lazy to remove brackets and re-indent
                     {
                       state->carrier = 1;
                       state->offset = synctest_pos;
@@ -597,9 +636,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       state->lastsynctype = 8;
                     }
                 }
-              else if ((strcmp (synctest18, INV_NXDN_BS_VOICE_SYNC) == 0) || (strcmp (synctest18, INV_NXDN_MS_VOICE_SYNC) == 0))
+              //else if ((strcmp (synctest18, INV_NXDN_BS_VOICE_SYNC) == 0) || (strcmp (synctest18, INV_NXDN_MS_VOICE_SYNC) == 0))
+              else if ((strncmperr (synctest18, NXDN_BS_DATA_SYNC, 18, 1) == 0) || (strncmperr (synctest18, NXDN_MS_DATA_SYNC, 18, 1) == 0))
                 {
-                  if ((state->lastsynctype == 9) || (state->lastsynctype == 17))
+                  //if ((state->lastsynctype == 9) || (state->lastsynctype == 17))
+                  if ( (opts->frame_nxdn96 == 1) ||(opts->frame_nxdn48 == 1)) //again, skip the double up
                     {
                       state->carrier = 1;
                       state->offset = synctest_pos;
@@ -629,9 +670,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       state->lastsynctype = 9;
                     }
                 }
-              else if ((strcmp (synctest18, NXDN_BS_DATA_SYNC) == 0) || (strcmp (synctest18, NXDN_MS_DATA_SYNC) == 0))
+              //else if ((strcmp (synctest18, NXDN_BS_DATA_SYNC) == 0) || (strcmp (synctest18, NXDN_MS_DATA_SYNC) == 0))
+              else if ((strncmperr (synctest18, NXDN_BS_DATA_SYNC, 18, 1) == 0) || (strncmperr (synctest18, NXDN_MS_DATA_SYNC, 18, 1) == 0))
                 {
-                  if ((state->lastsynctype == 8) || (state->lastsynctype == 16))
+                  //if ((state->lastsynctype == 8) || (state->lastsynctype == 16))
+                  if ( (opts->frame_nxdn96 == 1) ||(opts->frame_nxdn48 == 1))
                     {
                       state->carrier = 1;
                       state->offset = synctest_pos;
@@ -661,9 +704,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       state->lastsynctype = 16;
                     }
                 }
-              else if ((strcmp (synctest18, INV_NXDN_BS_DATA_SYNC) == 0) || (strcmp (synctest18, INV_NXDN_MS_DATA_SYNC) == 0))
+              //else if ((strcmp (synctest18, INV_NXDN_BS_DATA_SYNC) == 0) || (strcmp (synctest18, INV_NXDN_MS_DATA_SYNC) == 0))
+              else if ((strncmperr (synctest18, INV_NXDN_BS_DATA_SYNC, 18, 1) == 0) || (strncmperr (synctest18, INV_NXDN_MS_DATA_SYNC, 18, 1) == 0))
                 {
-                  if ((state->lastsynctype == 9) || (state->lastsynctype == 17))
+                  //if ((state->lastsynctype == 9) || (state->lastsynctype == 17))
+                  if ( (opts->frame_nxdn96 == 1) ||(opts->frame_nxdn48 == 1))
                     {
                       state->carrier = 1;
                       state->offset = synctest_pos;
