@@ -248,7 +248,7 @@ typedef struct
 #define INV_DSTAR_HD   "313131313111311331313333"
 #define DSTAR_SYNC     "313131313133131113313111"
 #define INV_DSTAR_SYNC "131313131311313331131333"
-
+// original sync numbers which is FSW plus LICH
 #define NXDN_MS_DATA_SYNC      "313133113131111333"
 #define INV_NXDN_MS_DATA_SYNC  "131311331313333111"
 #define NXDN_MS_VOICE_SYNC     "313133113131113133"
@@ -257,6 +257,19 @@ typedef struct
 #define NXDN_BS_DATA_SYNC      "313133113131111313"
 #define INV_NXDN_BS_VOICE_SYNC "131311331313331331"
 #define NXDN_BS_VOICE_SYNC     "313133113131113113"
+
+//Try using only FSW and no LICH
+/*
+#define NXDN_MS_DATA_SYNC      "3131331131"
+#define INV_NXDN_MS_DATA_SYNC  "1313113313"
+#define NXDN_MS_VOICE_SYNC     "313133113131113133"
+#define INV_NXDN_MS_VOICE_SYNC "131311331313331311"
+#define INV_NXDN_BS_DATA_SYNC  "1313113313"
+#define NXDN_BS_DATA_SYNC      "3131331131"
+#define INV_NXDN_BS_VOICE_SYNC "131311331313331331"
+#define NXDN_BS_VOICE_SYNC     "313133113131113113"
+//how do two values equate to 4 symbol types? shouldn't it be -3, -1, 1, 3?
+*/
 
 #define DMR_BS_DATA_SYNC  "313333111331131131331131"
 #define DMR_BS_VOICE_SYNC "131111333113313313113313"
@@ -326,6 +339,10 @@ void processX2TDMAvoice (dsd_opts * opts, dsd_state * state);
 void processDSTAR_HD (dsd_opts * opts, dsd_state * state);
 short dmr_filter(short sample);
 short nxdn_filter(short sample);
+
+//borrow from LEH for testing 'improved NXDN detection'
+int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr);
+//
 
 #ifdef __cplusplus
 extern "C" {
