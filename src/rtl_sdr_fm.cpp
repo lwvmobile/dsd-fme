@@ -50,6 +50,8 @@ static int atan_lut_coef = 8;
 #include <netinet/in.h>
 #include <arpa/inet.h>
 static pthread_t socket_freq;
+
+short int volume_multiplier;
 //
 struct dongle_state
 {
@@ -1057,12 +1059,15 @@ void open_rtlsdr_stream(dsd_opts *opts)
 
 	if (opts->audio_in_type == 3) {
 		dongle.dev_index = opts->rtl_dev_index;
+		demod.squelch_level = opts->rtl_squelch_level;  //adding user definable squelch level to prevent false positives on account of noise in NXDN etc
+		fprintf(stderr, "Setting RTL Squelch Level to %d\n", demod.squelch_level);
 	}
 
 	if (opts->rtl_gain_value > 0) {
 		dongle.gain = opts->rtl_gain_value * 10; //multiple by ten to make it consitent with the way rtl_fm really works
 	}
-
+  volume_multiplier = opts->rtl_volume_multiplier;
+	fprintf(stderr, "Setting RTL Volume Multiplier to %d\n", volume_multiplier);
   /* quadruple sample_rate to limit to Δθ to ±π/2 */
 	demod.rate_in *= demod.post_downsample;
 
@@ -1142,7 +1147,9 @@ void get_rtlsdr_sample(int16_t *sample)
 		safe_cond_wait(&output.ready, &output.ready_m);
 	}
 	pthread_rwlock_wrlock(&output.rw);
-	*sample = output.queue.front();
+	//*sample = output.queue.front();
+
+	*sample = output.queue.front() * volume_multiplier; //try multiplying by numbers here for 'gain'
 	output.queue.pop();
 	pthread_rwlock_unlock(&output.rw);
 }

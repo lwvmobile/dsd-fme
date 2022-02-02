@@ -52,8 +52,8 @@ int pretty_colors()
 }
 
 
-//#include "p25p1_heuristics.h" //accidentally had this disabled when getting good NXDN, so if it breaks again, try disabling this
-//#include "pa_devs.h"         //accidentally had this disabled when getting good NXDN, so if it breaks again, try disabling this
+#include "p25p1_heuristics.h" //accidentally had this disabled when getting good NXDN, so if it breaks again, try disabling this
+#include "pa_devs.h"         //accidentally had this disabled when getting good NXDN, so if it breaks again, try disabling this
 short int butt = 1;
 #include <locale.h>
 #include <ncurses.h>
@@ -187,6 +187,8 @@ initOpts (dsd_opts * opts)
   opts->unmute_encrypted_p25 = 0;
   opts->rtl_dev_index = 0;        //choose which device we want by index number
   opts->rtl_gain_value = 0;    //set actual gain and not automatic gain
+  opts->rtl_squelch_level = 100; //fully open by default, want to specify level for things like NXDN with false positives
+  opts->rtl_volume_multiplier = 1; //set multipler from rtl sample to 'boost volume'
 }
 
 void
@@ -322,10 +324,12 @@ usage ()
   printf ("  -a            Display port audio devices\n");
   printf ("\n");
   printf ("RTL-SDR options:\n");
-  printf ("  -c <hertz>    RTL-SDR tune to frequency\n");
-  printf ("  -P <num>      RTL-SDR ppm error (default = 0)\n");
+  printf ("  -c <hertz>    RTL-SDR Frequency\n");
+  printf ("  -P <num>      RTL-SDR PPM Error (default = 0)\n");
   printf ("  -D <num>      RTL-SDR Device Index Number\n");
   printf ("  -G <num>      RTL-SDR Device Gain (0-49) (default = 0 Auto Gain)\n");
+  printf ("  -L <num>      RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)(Just have to guess really...)\n");
+  printf ("  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)(2-3 recommended, still testing) \n");
   printf ("\n");
   printf ("Scanner control options:\n");
   printf ("  -B <num>      Serial port baud rate (default=115200)\n");
@@ -597,7 +601,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:rl")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:rl")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -661,6 +665,16 @@ main (int argc, char **argv)
 
         case 'G': //Set rtl device gain
           sscanf (optarg, "%d", &opts.rtl_gain_value); //multiple value by ten to make it consitent with the way rtl_fm really works
+          //opts->audio_in_type = 3;
+          break;
+
+        case 'L': //Set rtl squelch level
+          sscanf (optarg, "%d", &opts.rtl_squelch_level); //set squelch by user to prevent false positives on NXDN and others
+          //opts->audio_in_type = 3;
+          break;
+
+        case 'V': //Set rtl squelch level
+          sscanf (optarg, "%d", &opts.rtl_volume_multiplier); //set squelch by user to prevent false positives on NXDN and others
           //opts->audio_in_type = 3;
           break;
 

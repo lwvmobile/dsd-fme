@@ -595,6 +595,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->lastsynctype = 15;
                   return (15);
                 }
+            else { //HERE HERE
+              //printf("farts \n"); //well, this is the correct place to interject and have it playback raw audio if I can figure out how to make PA play raw audio damn it
+              //find something else to use that isn't PortAudio, need a way to send raw audio out from here when no frame sync
+            }
 
             }
 
@@ -612,6 +616,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       state->offset = synctest_pos;
                       state->max = ((state->max) + lmax) / 2;
                       state->min = ((state->min) + lmin) / 2;
+                      //playRawAudio (opts, state); //test here HERE HERE
                       if (state->samplesPerSymbol == 20)
                         {
                           sprintf (state->ftype, " NXDN48      ");
@@ -737,8 +742,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   else
                     {
                       state->lastsynctype = 17;
+
                     }
                 }
+
             }
           if (opts->frame_dstar == 1)
             {

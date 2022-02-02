@@ -219,9 +219,9 @@ void
 playRawAudio (dsd_opts * opts, dsd_state * state)
 {
   ssize_t result;
-
+  //opts->audio_in_pa_stream = opts->audio_out_pa_stream; //no idea if this will work -> can't use PortAudio, it sucks the big one, use OSS/Alsa
   //if (state->audio_out_idx > opts->delay)
-  if (opts->audio_in_type == 3) //if set to rtl_fm, maybe it shouldn't matter but for now, using this
+  if (1 == 1) //idk, just want it to continue
     {
       // output synthesized speech to sound card
 		if(opts->audio_out_type == 2)
@@ -306,6 +306,7 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 			PaError err = paNoError;
 			do
 			{
+        opts->audio_out_pa_stream = opts->audio_in_pa_stream; //just seeing if anythign sticks
 				long available = Pa_GetStreamWriteAvailable( opts->audio_out_pa_stream );
 				if(available < 0)
 					err = available;
