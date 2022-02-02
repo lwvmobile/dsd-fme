@@ -139,6 +139,8 @@ typedef struct
   int unmute_encrypted_p25;
   int rtl_dev_index;
   int rtl_gain_value;
+  int rtl_squelch_level;
+  int rtl_volume_multiplier;
 } dsd_opts;
 
 typedef struct
@@ -287,6 +289,7 @@ typedef struct
 void processDMRdata (dsd_opts * opts, dsd_state * state);
 void processDMRvoice (dsd_opts * opts, dsd_state * state);
 void processAudio (dsd_opts * opts, dsd_state * state);
+void playRawAudio (dsd_opts * opts, dsd_state * state); //added this one HERE HERE
 void writeSynthesizedVoice (dsd_opts * opts, dsd_state * state);
 void playSynthesizedVoice (dsd_opts * opts, dsd_state * state);
 void openAudioOutDevice (dsd_opts * opts, int speed);
