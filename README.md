@@ -5,12 +5,23 @@ Also, please don't submit bug reports to the links on this page, those will dire
 The purpose of this is to experiment with the RTL code and other things, and is purely for academic research into the inner workings of DSD. Basically, its for me to poke around with and see what I can manage to break.
 
 # Example Usage
-padsp -m dsdfme -- ./dsd -fp -i rtl -o /dev/dsp -c 851.8M -d ./MBE/ -P -2 -D 1 -G 36
+padsp -m dsdfme -- ./dsd -fp -i rtl -o /dev/dsp -c 851.8M -d ./MBE/ -P -2 -D 1 -G 36 -L 25 -V 2 -U 6020
 
--i rtl to use rtlsdr 
+-i rtl to use rtl_fm 
+
+-c Set frequency
+
 -P set PPM error
+
 -D set device index number
+
 -G set device gain (0-49 typical)
+
+-L set rtl squelch to 25
+
+-V set RTL sample 'gain' multiplier
+
+-U set UDP port for rtl_fm remote control
 
 ## License
 Copyright (C) 2010 DSD Author
