@@ -141,6 +141,7 @@ typedef struct
   int rtl_gain_value;
   int rtl_squelch_level;
   int rtl_volume_multiplier;
+  int rtl_udp_port;
 } dsd_opts;
 
 typedef struct

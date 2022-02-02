@@ -187,8 +187,9 @@ initOpts (dsd_opts * opts)
   opts->unmute_encrypted_p25 = 0;
   opts->rtl_dev_index = 0;        //choose which device we want by index number
   opts->rtl_gain_value = 0;    //set actual gain and not automatic gain
-  opts->rtl_squelch_level = 100; //fully open by default, want to specify level for things like NXDN with false positives
+  opts->rtl_squelch_level = 0; //fully open by default, want to specify level for things like NXDN with false positives
   opts->rtl_volume_multiplier = 1; //set multipler from rtl sample to 'boost volume'
+  opts->rtl_udp_port = 6020; //set UDP port for RTL remote
 }
 
 void
@@ -330,6 +331,7 @@ usage ()
   printf ("  -G <num>      RTL-SDR Device Gain (0-49) (default = 0 Auto Gain)\n");
   printf ("  -L <num>      RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)(Just have to guess really...)\n");
   printf ("  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)(2-3 recommended, still testing) \n");
+  printf ("  -U <num>      RTL-SDR UDP Remote Port (default = 6020)\n");
   printf ("\n");
   printf ("Scanner control options:\n");
   printf ("  -B <num>      Serial port baud rate (default=115200)\n");
@@ -364,7 +366,7 @@ usage ()
   printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
   printf ("                 (default=15)\n");
   printf ("\n");
-  printf ("Report bugs to: Nobody Mwuhaha \n");
+  printf ("Report bugs to: https://github.com/lwvmobile/dsd-fme/issues \n");
   exit (0);
 }
 
@@ -601,7 +603,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:rl")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:rl")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -674,7 +676,12 @@ main (int argc, char **argv)
           break;
 
         case 'V': //Set rtl squelch level
-          sscanf (optarg, "%d", &opts.rtl_volume_multiplier); //set squelch by user to prevent false positives on NXDN and others
+          sscanf (optarg, "%d", &opts.rtl_volume_multiplier); //set 'volume' multiplier for rtl-sdr samples
+          //opts->audio_in_type = 3;
+          break;
+
+        case 'U': //Set rtl squelch level
+          sscanf (optarg, "%d", &opts.rtl_udp_port); //set udp port number for RTL remote
           //opts->audio_in_type = 3;
           break;
 
