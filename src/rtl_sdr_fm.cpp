@@ -52,6 +52,7 @@ static int atan_lut_coef = 8;
 static pthread_t socket_freq;
 
 short int volume_multiplier;
+short int port;
 //
 struct dongle_state
 {
@@ -910,7 +911,7 @@ static unsigned int chars_to_int(unsigned char* buf) {
 static void *socket_thread_fn(void *arg) {
 	//struct fm_state *fm = arg;
 	struct demod_state *d = static_cast<demod_state*>(arg);
-	int port = 6020;
+	//int port = 6020;
   int r, n;
   int sockfd, newsockfd, portno;
   socklen_t clilen;
@@ -1061,6 +1062,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
 		dongle.dev_index = opts->rtl_dev_index;
 		demod.squelch_level = opts->rtl_squelch_level;  //adding user definable squelch level to prevent false positives on account of noise in NXDN etc
 		fprintf(stderr, "Setting RTL Squelch Level to %d\n", demod.squelch_level);
+		port = opts->rtl_udp_port;
 	}
 
 	if (opts->rtl_gain_value > 0) {
