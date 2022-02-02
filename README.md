@@ -1,8 +1,5 @@
 # Digital Speech Decoder - Florida Man Edition
-This version of DSD shouldn't be used by anybody wanting a stable DSD experience, please see the original version for that.
-Also, please don't submit bug reports to the links on this page, those will direct them to the original version. Links will be updated at a later date. 
-
-The purpose of this is to experiment with the RTL code and other things, and is purely for academic research into the inner workings of DSD. Basically, its for me to poke around with and see what I can manage to break.
+This version of DSD is a flavor blend of szechyjs RTL branch and some of my own additions, along with a few tweaks from the LouisErigHerve branch as well. NXDN voice decoding is currently working a lot better, thanks to the latter, although I have yet to explore the expanded NXDN decoding he has laid out as of yet. That is a goal. I have also implemented a few more RTL options, including a UDP remote that works like the old rtl_udp fork, although its currently limited to changing frequency and squelch. The goal is to integrate this project into EDACS-FM but I also want it to be its own standalone project. 
 
 # Example Usage
 padsp -m dsdfme -- ./dsd -fp -i rtl -o /dev/dsp -c 851.8M -d ./MBE/ -P -2 -D 1 -G 36 -L 25 -V 2 -U 6020
