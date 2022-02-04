@@ -17,7 +17,7 @@
 
 #include "dsd.h"
 #include <locale.h>
-#include <ncurses.h>
+//#include <ncurses.h>
 
 //borrowed from LEH for 'improved NXDN sync detection'
 int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr)
@@ -80,6 +80,9 @@ char * getDate(void) {
   return curr2;
 }
 
+time_t last_sync_time;
+short int time_set = 0;
+//last_sync_time = time(NULL);
 
 void
 printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset, char *modulation)
@@ -89,7 +92,7 @@ printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset,
   //erase();
   //attron(COLOR_PAIR(4));
   //for (short int i = 0; i < 7; i++) {
-    //printw("%s \n", FM_banner2[i]);}
+  //printw("%s \n", FM_banner2[i]);}
   //attroff(COLOR_PAIR(4));
 
   if (opts->verbose > 0)
@@ -105,19 +108,19 @@ printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset,
   if (opts->verbose > 2)
     {
       printf ("o: %4i ", offset);
-      printw("o: %4i ", offset);
+      //printw("o: %4i ", offset);
     }
   if (opts->verbose > 1)
     {
       printf ("mod: %s ", modulation);
-      printw("mod: %s ", modulation);
+      //printw("mod: %s ", modulation);
     }
   if (opts->verbose > 2)
     {
       printf ("g: %f ", state->aout_gain);
-      printw("g: %f ", state->aout_gain);
+      //printw("g: %f ", state->aout_gain);
     }
- refresh();
+ //refresh();
 }
 
 int
@@ -565,6 +568,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               strncpy (synctest32, (synctest_p - 31), 32);
               if ((strcmp (synctest32, PROVOICE_SYNC) == 0) || (strcmp (synctest32, PROVOICE_EA_SYNC) == 0))
                 {
+                  now = time(NULL);
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -574,7 +578,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   //if (opts->errorbars == 1 && (time(NULL) - now) > 2 )
                     {
                       printFrameSync (opts, state, " -ProVoice ", synctest_pos + 1, modulation);
-                      now = time(NULL);
+                      //now = time(NULL);
                     }
                   state->lastsynctype = 14;
                   return (14);
@@ -590,18 +594,21 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   //if (opts->errorbars == 1 && (time(NULL) - now) > 2 )
                     {
                       printFrameSync (opts, state, " -ProVoice ", synctest_pos + 1, modulation);
-                      now = time(NULL);
+                      //now = time(NULL); //must be something I added, don't even remember why now
                     }
                   state->lastsynctype = 15;
                   return (15);
                 }
-            else { //HERE HERE
-              //printf("farts \n"); //well, this is the correct place to interject and have it playback raw audio if I can figure out how to make PA play raw audio damn it
-              //find something else to use that isn't PortAudio, need a way to send raw audio out from here when no frame sync
+            else
+            {
+              if (time_set == 0)
+              {
+                //state->lastsynctype = 99; //HERE HERE set last sync type to 99, special type
+                last_sync_time = time(NULL);
+                time_set == 1;
+              }
             }
-
-            }
-
+          }
           if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
             {
               strncpy (synctest18, (synctest_p - 17), 18); //seems like other sync tests do this as well
@@ -616,7 +623,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       state->offset = synctest_pos;
                       state->max = ((state->max) + lmax) / 2;
                       state->min = ((state->min) + lmin) / 2;
-                      //playRawAudio (opts, state); //test here HERE HERE
+
                       if (state->samplesPerSymbol == 20)
                         {
                           sprintf (state->ftype, " NXDN48      ");
@@ -928,6 +935,15 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               return (-1);
             }
         }
+
+      if ( (opts->monitor_input_audio == 1 && (time(NULL) - now) > 1 ) || (opts->monitor_input_audio == 1 && state->lastsynctype == -1) )
+      {
+        //printf ("Playing Raw Audio - Should Keep Printing Over and over\n");
+        playRawAudio(opts, state); //this is on line 21 in dsd_audio.c
+        //currently working on playRawAudio and samples grabbed in dsd_symbol, going to do it outside of the other big loop
+
+      }
+
     }
 
   return (-1);

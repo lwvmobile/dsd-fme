@@ -56,7 +56,7 @@ int pretty_colors()
 #include "pa_devs.h"         //accidentally had this disabled when getting good NXDN, so if it breaks again, try disabling this
 short int butt = 1;
 #include <locale.h>
-#include <ncurses.h>
+//#include <ncurses.h>
 char * FM_banner[9] = {
   "                                 CTRL + C twice to exit",
   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗",
@@ -118,11 +118,6 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   sprintf (state->algid, "________");
   sprintf (state->keyid, "________________");
   mbe_initMbeParms (state->cur_mp, state->prev_mp, state->prev_mp_enhanced);
-  //test below
-  //uint16_t sample;
-  //get_rtlsdr_sample(&sample);
-  //Pa_StartStream(sample);
-  //end test
 }
 
 void
@@ -297,6 +292,7 @@ initState (dsd_state * state)
 void
 usage ()
 {
+  printf ("\nFME build:%s", GIT_TAG);
   printf ("\n");
   printf ("Usage: dsd [options]            Live scanner mode\n");
   printf ("  or:  dsd [options] -r <files> Read/Play saved mbe data from file(s)\n");
@@ -318,11 +314,12 @@ usage ()
   printf ("  -i <device>   Audio input device (default is /dev/audio, - for piped stdin, rtl for rtl device)\n");
   printf ("  -o <device>   Audio output device (default is /dev/audio)\n");
   printf ("  -d <dir>      Create mbe data files, use this directory\n");
-  printf ("  -r <files>     Read/Play saved mbe data from file(s)\n");
+  printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
   printf ("  -n            Do not send synthesized speech to audio output device\n");
-  printf ("  -w <file>      Output synthesized speech to a .wav file\n");
+  printf ("  -w <file>     Output synthesized speech to a .wav file\n");
   printf ("  -a            Display port audio devices\n");
+  printf ("  -W            Monitor Source Audio When No Sync Detected (WIP!)\n");
   printf ("\n");
   printf ("RTL-SDR options:\n");
   printf ("  -c <hertz>    RTL-SDR Frequency\n");
@@ -342,9 +339,9 @@ usage ()
   printf ("  -fa           Auto-detect frame type (default)\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -fd           Decode only D-STAR\n");
-  printf ("  -fi            Decode only NXDN48* (6.25 kHz) / IDAS*\n");
+  printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   printf ("  -fn           Decode only NXDN96 (12.5 kHz)\n");
-  printf ("  -fp           Decode only ProVoice*\n");
+  printf ("  -fp             Decode only ProVoice*\n");
   printf ("  -fr           Decode only DMR/MOTOTRBO\n");
   printf ("  -fx           Decode only X2-TDMA\n");
   printf ("  -l            Disable DMR/MOTOTRBO and NXDN input filtering\n");
@@ -524,32 +521,6 @@ sigfun (int sig)
 #endif
 }
 
-//LEH version of sigfun
-/*
-void sigfun (int sig)
-{
-  UNUSED_VARIABLE(sig); //what is this and where is it defined?
-  exitflag = 1;
-  signal (SIGINT, SIG_DFL);
-}
-
-//another LEH thing to free allocated memory
-void freeAllocatedMemory(dsd_opts * opts, dsd_state * state)
-{
-  UNUSED_VARIABLE(opts);
-
-  // Free allocated memory //
-  free(state->prev_mp_enhanced);
-  free(state->prev_mp);
-  free(state->cur_mp);
-  free(state->audio_out_float_buf);
-  free(state->audio_out_buf);
-  free(state->dibit_buf);
-}
-
-*/
-//end LEH version of sigfun
-
 double atofs(char *s)
 {
 	char last;
@@ -603,7 +574,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:rl")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Wrl")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -667,27 +638,27 @@ main (int argc, char **argv)
 
         case 'G': //Set rtl device gain
           sscanf (optarg, "%d", &opts.rtl_gain_value); //multiple value by ten to make it consitent with the way rtl_fm really works
-          //opts->audio_in_type = 3;
           break;
 
         case 'L': //Set rtl squelch level
           sscanf (optarg, "%d", &opts.rtl_squelch_level); //set squelch by user to prevent false positives on NXDN and others
-          //opts->audio_in_type = 3;
           break;
 
         case 'V': //Set rtl squelch level
           sscanf (optarg, "%d", &opts.rtl_volume_multiplier); //set 'volume' multiplier for rtl-sdr samples
-          //opts->audio_in_type = 3;
           break;
 
         case 'U': //Set rtl squelch level
           sscanf (optarg, "%d", &opts.rtl_udp_port); //set udp port number for RTL remote
-          //opts->audio_in_type = 3;
           break;
 
         case 'D': //Set rtl device index number
           sscanf (optarg, "%d", &opts.rtl_dev_index);
-          //opts->audio_in_type = 3;
+          break;
+
+        case 'W': //monitor_input_audio if no sync
+          opts.monitor_input_audio = 1;
+          printf ("Monitor Source Audio if no sync detected (WIP!)\n");
           break;
 
 
@@ -838,9 +809,9 @@ main (int argc, char **argv)
               state.rf_mod = 2; //was 2
               //opts.symboltiming = 2400; //NXDN48 uses 2400 symbol rate
               printf ("Setting symbol rate to 2400 / second\n");
-              printf ("Enabling only GFSK modulation optimizations.\n");
-              printf ("Why are we using GFSK modulations? Isn't NXDN FSK4/C4FM??.\n");
-              printf ("Well, it works now, so probably just the way DSD interprets symbols.\n");
+              //printf ("Enabling only GFSK modulation optimizations.\n");
+              //printf ("Why are we using GFSK modulations? Isn't NXDN FSK4/C4FM??.\n");
+              //printf ("Well, it works now, so probably just the way DSD interprets symbols.\n");
               printf ("Decoding only NXDN 4800 baud frames.\n");
             }
           else if (optarg[0] == 'n')
@@ -858,8 +829,8 @@ main (int argc, char **argv)
               state.rf_mod = 2;
               //printf ("Enabling only C4FM/FSK4 modulation optimizations. I really need a new FSK4 modulator\n");
               printf ("Enabling only GFSK modulation optimizations.\n");
-              printf ("Why are we using GFSK modulations? Isn't NXDN FSK4/C4FM??.\n");
-              printf ("Well, it works now, so probably just the way DSD interprets symbols.\n");
+              //printf ("Why are we using GFSK modulations? Isn't NXDN FSK4/C4FM??.\n");
+              //printf ("Well, it works now, so probably just the way DSD interprets symbols.\n");
               //opts.symboltiming = 4800; //NXDN96 uses 4800 symbol rate
               printf ("Decoding only NXDN 9600 baud frames.\n");
             }
@@ -1026,9 +997,10 @@ main (int argc, char **argv)
           openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
         }
       openAudioInDevice (&opts);
+      /*
       setlocale(LC_ALL, "");
-      //sleep(3);
-      //initscr(); //Initialize NCURSES screen window
+      sleep(3);
+      initscr(); //Initialize NCURSES screen window
       start_color();
       init_pair(1, COLOR_YELLOW, COLOR_BLACK);      //Yellow/Amber for frame sync/control channel, NV style
       init_pair(2, COLOR_RED, COLOR_BLACK);        //Red for Terminated Calls
@@ -1042,6 +1014,7 @@ main (int argc, char **argv)
         printw("%s \n", FM_banner[i]); }
       attroff(COLOR_PAIR(4));
       refresh();
+      */
       printf("Press CTRL + C twice to close.\n"); //Kindly remind user to double tap CTRL + C
     }
 
@@ -1064,6 +1037,6 @@ main (int argc, char **argv)
         liveScanner (&opts, &state);
     }
   cleanupAndExit (&opts, &state);
-  endwin();
+  //endwin();
   return (0);
 }

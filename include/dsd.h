@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
-#define __USE_XOPEN
+#define __USE_XOPEN //compiler warning on this, needed for strptime, seems benign
 #include <time.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -43,8 +43,8 @@
 #include "p25p1_heuristics.h"
 
 
-#define SAMPLE_RATE_IN 48000
-#define SAMPLE_RATE_OUT 8000
+#define SAMPLE_RATE_IN 48000 //48000
+#define SAMPLE_RATE_OUT 8000 //8000,
 
 #ifdef USE_PORTAUDIO
 #include "portaudio.h"
@@ -142,6 +142,7 @@ typedef struct
   int rtl_squelch_level;
   int rtl_volume_multiplier;
   int rtl_udp_port;
+  int monitor_input_audio;
 } dsd_opts;
 
 typedef struct
@@ -223,6 +224,10 @@ typedef struct
   // Heuristics state data for -P5 signals
   P25Heuristics inv_p25_heuristics;
 
+  //input sample buffer for monitoring Input
+  short input_sample_buffer; //HERE HERE
+  //float *input_sample_buffer; //HERE HERE
+
 #ifdef TRACE_DSD
   char debug_prefix;
   char debug_prefix_2;
@@ -291,6 +296,7 @@ void processDMRdata (dsd_opts * opts, dsd_state * state);
 void processDMRvoice (dsd_opts * opts, dsd_state * state);
 void processAudio (dsd_opts * opts, dsd_state * state);
 void playRawAudio (dsd_opts * opts, dsd_state * state); //added this one HERE HERE
+void processRawAudio (dsd_opts * opts, dsd_state * state); //added this one HERE HERE
 void writeSynthesizedVoice (dsd_opts * opts, dsd_state * state);
 void playSynthesizedVoice (dsd_opts * opts, dsd_state * state);
 void openAudioOutDevice (dsd_opts * opts, int speed);
