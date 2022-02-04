@@ -17,6 +17,91 @@
 
 #include "dsd.h"
 
+
+void playRawAudio(dsd_opts * opts, dsd_state * state) {
+  short obuf, outl, sample2, i, something;
+  something = state->samplesPerSymbol / 5;
+  /* //this method gets excellent results on gfsk provoice, but not at all on the others
+  if (opts->audio_in_type == 0 && opts->frame_provoice == 1){ //hack, but might as well for this particular type since its nearly perfect
+    read (opts->audio_in_fd, &sample2, 2); //reading here seems to get same speed as gfsk modulation
+    obuf = sample2;
+  }
+  #ifdef USE_PORTAUDIO
+    if (opts->audio_in_type == 2){
+      Pa_ReadStream( opts->audio_in_pa_stream, &sample2, 1 ); //reading here seems to get same speed as gfsk modulation
+      obuf = sample2;
+    }
+  #endif
+  if (opts->audio_in_type == 3){ //can't seem to grab get_rtlsdr_sample here, can't share it with dsd_symbol.c
+    state->input_sample_buffer = state->lastsample;
+  } //grabbing this one from dsd_symbol.c but its already been processed
+  */
+  if (opts->audio_in_type == 0 && opts->audio_out_type == 0){ //hack, but might as well for this particular type since its nearly perfect
+    for (i=0; i < something; i++){
+      read (opts->audio_in_fd, &sample2, 2); //reading here seems to get same speed as gfsk modulation
+      obuf = sample2 / 4;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
+      write (opts->audio_out_fd, (void*)&obuf, 2);
+    }
+  }
+  #ifdef USE_PORTAUDIO
+  if (opts->audio_in_type == 2 && opts->audio_out_type == 0){ //hack, but might as well for this particular type since its nearly perfect
+    for (i=0; i < something; i++){
+      Pa_ReadStream( opts->audio_in_pa_stream, &sample2, 1 ); //reading here seems to get same speed as gfsk modulation
+      obuf = sample2 / 4;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
+      write (opts->audio_out_fd, (void*)&obuf, 2);
+    }
+  }
+  if (opts->audio_in_type == 0 && opts->audio_out_type == 2){ //hack, but might as well for this particular type since its nearly perfect
+    for (i=0; i < something; i++){
+      read (opts->audio_in_fd, &sample2, 2); //reading here seems to get same speed as gfsk modulation
+      obuf = sample2 / 4;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
+      Pa_StartStream( opts->audio_out_pa_stream ); //no promises this shit'll work
+      Pa_WriteStream( opts->audio_out_pa_stream, (void*)&obuf, 2); //no promises this shit'll work
+    }
+  }
+
+  if (opts->audio_in_type == 2 && opts->audio_out_type == 2){ //hack, but might as well for this particular type since its nearly perfect
+    for (i=0; i < something; i++){
+      Pa_ReadStream( opts->audio_in_pa_stream, &sample2, 1 ); //reading here seems to get same speed as gfsk modulation
+      obuf = sample2 / 4;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
+      Pa_StartStream( opts->audio_out_pa_stream ); //no promises this shit'll work
+      Pa_WriteStream( opts->audio_out_pa_stream, (void*)&obuf, 2); //no promises this shit'll work
+    }
+  }
+  #endif
+  //shouldn't need to use ifdef rtl here since audio_in_type will never set to 3 unless its there in main
+  if (opts->audio_in_type == 1 || opts->audio_in_type == 3){ //only plays at 83% and sounds like shit sadly, but can't get samples directly from sdr when its already being polled for samples
+  //also, can't get samples from stdin more than once either it seems, unless I borked it when I tried it earlier, so lumping it in here as well
+    for (i=0; i < something; i++)
+    {
+      obuf = state->input_sample_buffer;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
+      outl = sizeof(obuf) ; //obuf length, I think its always equal to 2
+      if (opts->audio_out_type == 0){
+        write (opts->audio_out_fd, (void*)&obuf, outl);}
+
+      #ifdef USE_PORTAUDIO //no idea if this method will work, since I can't test it
+        if (opts->audio_out_type == 2){
+          short err;
+          err = Pa_IsStreamActive( opts->audio_out_pa_stream );
+          if(err == 0)
+          {
+            err = Pa_StartStream( opts->audio_out_pa_stream );
+            if( err != paNoError ){
+            printf("Can't Start PA Stream");
+            }
+            err = Pa_WriteStream( opts->audio_out_pa_stream, (void*)&obuf, outl );
+            if( err != paNoError ){
+              printf("Can't Write PA Stream");
+            }
+          }
+        }
+        #endif
+    } // end for loop
+  } //end if statement
+
+} //end playRawAudio
+
+
 void
 processAudio (dsd_opts * opts, dsd_state * state)
 {
@@ -213,85 +298,6 @@ writeSynthesizedVoice (dsd_opts * opts, dsd_state * state)
   */
 }
 
-//Test playing raw audio HERE
-//get_rtlsdr_sample(&sample);
-void
-playRawAudio (dsd_opts * opts, dsd_state * state)
-{
-  ssize_t result;
-  //opts->audio_in_pa_stream = opts->audio_out_pa_stream; //no idea if this will work -> can't use PortAudio, it sucks the big one, use OSS/Alsa
-  //if (state->audio_out_idx > opts->delay)
-  if (1 == 1) //idk, just want it to continue
-    {
-      // output synthesized speech to sound card
-		if(opts->audio_out_type == 2)
-		{
-#ifdef USE_PORTAUDIO
-			PaError err = paNoError;
-			do
-			{
-				long available = Pa_GetStreamWriteAvailable( opts->audio_out_pa_stream );
-				if(available < 0)
-					err = available;
-				//printf("Frames available: %d\n", available);
-				if( err != paNoError )
-					break;
-				if(available > SAMPLE_RATE_OUT * PA_LATENCY_OUT)
-				{
-					//It looks like this might not be needed for very small latencies. However, it's definitely needed for a bit larger ones.
-					//When PA_LATENCY_OUT == 0.500 I get output buffer underruns if I don't use this. With PA_LATENCY_OUT <= 0.100 I don't see those happen.
-					//But with PA_LATENCY_OUT < 0.100 I run the risk of choppy audio and stream errors.
-					printf("\nSyncing voice output stream\n");
-					err = Pa_StopStream( opts->audio_out_pa_stream );
-					if( err != paNoError )
-						break;
-				}
-
-				err = Pa_IsStreamActive( opts->audio_out_pa_stream );
-				if(err == 0)
-				{
-					printf("Start voice output stream\n");
-					err = Pa_StartStream( opts->audio_out_pa_stream );
-				}
-				else if(err == 1)
-				{
-					err = paNoError;
-				}
-				if( err != paNoError )
-					break;
-
-				//printf("write stream %d\n", state->audio_out_idx);
-				err = Pa_WriteStream( opts->audio_out_pa_stream, (state->audio_out_buf_p - state->audio_out_idx), state->audio_out_idx );
-				if( err != paNoError )
-					break;
-			} while(0);
-
-			if( err != paNoError )
-			{
-				fprintf( stderr, "An error occured while using the portaudio output stream\n" );
-				fprintf( stderr, "Error number: %d\n", err );
-				fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
-			}
-
-#endif
-		}
-		else
-			result = write (opts->audio_out_fd, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2));
-      state->audio_out_idx = 0;
-    }
-
-  if (state->audio_out_idx2 >= 800000)
-    {
-      state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
-      state->audio_out_buf_p = state->audio_out_buf + 100;
-      memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
-      memset (state->audio_out_buf, 0, 100 * sizeof (short));
-      state->audio_out_idx2 = 0;
-    }
-}
-
-//end test raw audio
-
 void
 playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 {
@@ -306,7 +312,6 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 			PaError err = paNoError;
 			do
 			{
-        opts->audio_out_pa_stream = opts->audio_in_pa_stream; //just seeing if anythign sticks
 				long available = Pa_GetStreamWriteAvailable( opts->audio_out_pa_stream );
 				if(available < 0)
 					err = available;
@@ -353,7 +358,10 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 #endif
 		}
 		else
-			result = write (opts->audio_out_fd, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2));
+      //short multiple = 12;
+      //probably going to need to do that void voodoo again here to get this to work to even see if it works in the grand scheme
+			//result = write (opts->audio_out_fd, ( (state->audio_out_buf_p - state->audio_out_idx) * 12 ),  (state->audio_out_idx * 24) ); //HERE HERE work on way to boost output from 8000 to 48000
+      result = write (opts->audio_out_fd, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2)); //12
       state->audio_out_idx = 0;
     }
 
@@ -484,7 +492,6 @@ openAudioOutDevice (dsd_opts * opts, int speed)
 
   // get current
   ioctl (opts->audio_out_fd, AUDIO_GETINFO, &aset);
-
   aset.record.sample_rate = speed;
   aset.play.sample_rate = speed;
   aset.record.channels = 1;

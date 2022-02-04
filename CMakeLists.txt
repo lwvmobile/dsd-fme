@@ -9,13 +9,19 @@ git_describe(GIT_TAG)
 find_package(LibSndFile REQUIRED)
 find_package(MBE REQUIRED)
 find_package(ITPP REQUIRED)
-find_package(LibPortAudio)
+find_package(LibPortAudio) #disabled for testing
 find_package(RTLSDR)
-#more fucking around
-find_package(Curses REQUIRED)
+#more messing around
+#find_package(Curses REQUIRED)
+
+#include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${CURSES_INCLUDE_DIR})
+#set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${CURSES_LIBRARY})
 
 include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${CURSES_INCLUDE_DIR})
-set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${CURSES_LIBRARY})
+set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY})
+
+#going to disable PortAudio, works just fine with padsp in Linux,
+#hoping disabling this doesn't break OSX or cygwin, etc builds
 
 if(PORTAUDIO_FOUND)
     include_directories(SYSTEM ${PORTAUDIO_INCLUDE_DIRS})
@@ -57,7 +63,7 @@ if (HELP2MAN_FOUND)
             --version-string=${GIT_TAG}
             -o ${CMAKE_CURRENT_BINARY_DIR}/dsd.1
             --no-info
-            $<TARGET_FILE:dsd> 
+            $<TARGET_FILE:dsd>
     )
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/dsd.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 endif()

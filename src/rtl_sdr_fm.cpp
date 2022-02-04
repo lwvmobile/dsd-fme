@@ -728,7 +728,7 @@ int verbose_reset_buffer(rtlsdr_dev_t *dev)
 }
 
 //static void optimal_settings(struct fm_state *fm, int freq, int hopping)
-static void optimal_settings(int freq, int rate) //why did you fuck with optimal settings?
+static void optimal_settings(int freq, int rate) //
 {
 	// giant ball of hacks
 	// seems unable to do a single pass, 2:1
@@ -806,9 +806,9 @@ void dongle_init(struct dongle_state *s)
 	s->gain = AUTO_GAIN; // tenths of a dB
 	s->mute = 0;
 	s->direct_sampling = 0;
-	s->offset_tuning = 0; //0 by default, but don't think it listens to proper frequency when 0, offset and tuned seem to be mixed up
+	s->offset_tuning = 0; //
 	s->demod_target = &demod;
-	//s->dev_index = 1; //need to set dev_index from dsd_main as well...
+
 }
 
 void demod_init(struct demod_state *s)
@@ -943,7 +943,7 @@ static void *socket_thread_fn(void *arg) {
 	while((n = read(sockfd,buffer,5)) != 0) {
 		if(buffer[0] == 0) {
 			new_freq = chars_to_int(buffer);
-			dongle.freq = new_freq; //not sure if still needed, or ever was needed lul
+			dongle.freq = new_freq; //
 			optimal_settings(new_freq, demod.rate_in);
 			rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 			//fprintf (stderr, "Tuning to: %d [Hz] (central freq: %d [Hz])\n", new_freq, new_freq + freq_offset);

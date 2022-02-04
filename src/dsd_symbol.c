@@ -20,14 +20,16 @@
 int
 getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 {
-  short sample;
+  short sample, sample2;
   int i, sum, symbol, count;
   ssize_t result;
 
   sum = 0;
   count = 0;
-  for (i = 0; i < state->samplesPerSymbol; i++)
+
+  for (i = 0; i < state->samplesPerSymbol; i++) //right HERE, this is how many samples it will grab, depending on samplesPerSymbol and also rf_mod messing with it too
     {
+
       // timing control
       if ((i == 0) && (have_sync == 0))
         {
@@ -81,6 +83,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       // Read the new sample from the input
       if(opts->audio_in_type == 0) {
           result = read (opts->audio_in_fd, &sample, 2);
+
+
       }
       else if (opts->audio_in_type == 1) {
           result = sf_read_short(opts->audio_in_file, &sample, 1);
@@ -98,6 +102,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
               fprintf( stderr, "Error number: %d\n", err );
               fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
         }
+
+
 #endif
 	    }
       else if (opts->audio_in_type == 3)
@@ -105,6 +111,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 #ifdef USE_RTLSDR
         // TODO: need to read demodulated stream here
         get_rtlsdr_sample(&sample);
+
+
 #endif
       }
 
@@ -206,21 +214,24 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
                 }
             }
         }
-      if (state->samplesPerSymbol == 20)
+
+      if (state->samplesPerSymbol == 20) //nxdn 4800 baud 2400 symbol rate
         {
           if ((i >= 9) && (i <= 11))
             {
               sum += sample;
               count++;
             }
+            //state->input_sample_buffer = sum; //maybe find correct placement for this?
         }
-      if (state->samplesPerSymbol == 5)
+      if (state->samplesPerSymbol == 5) //provoice or gfsk
         {
           if (i == 2)
             {
               sum += sample;
               count++;
             }
+            //state->input_sample_buffer = sum;
         }
       else
         {
@@ -231,6 +242,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
               if ((i >= state->symbolCenter - 1) && (i <= state->symbolCenter + 2))
                 {
                   sum += sample;
+                  //state->input_sample_buffer = sum;
                   count++;
                 }
 
@@ -273,6 +285,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
 
       state->lastsample = sample;
+      //steal sample here for rtl input or stdin input
+      state->input_sample_buffer = sample; //sample or sum, honestly this seemt to be best place to grab this sadly, sounds terrible most everywhere else
     }   // for
 
   symbol = (sum / count);
