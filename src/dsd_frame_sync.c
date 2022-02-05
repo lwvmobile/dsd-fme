@@ -394,6 +394,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             {
               if (strcmp (synctest, P25P1_SYNC) == 0)
                 {
+                  now = time(NULL);
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -408,6 +409,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 }
               if (strcmp (synctest, INV_P25P1_SYNC) == 0)
                 {
+                  now = time(NULL);
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -425,6 +427,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             {
               if ((strcmp (synctest, X2TDMA_BS_DATA_SYNC) == 0) || (strcmp (synctest, X2TDMA_MS_DATA_SYNC) == 0))
                 {
+                  now = time(NULL);
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + (lmax)) / 2;
@@ -458,6 +461,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 }
               if ((strcmp (synctest, X2TDMA_BS_VOICE_SYNC) == 0) || (strcmp (synctest, X2TDMA_MS_VOICE_SYNC) == 0))
                 {
+                  now = time(NULL);
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -494,6 +498,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             {
               if ((strcmp (synctest, DMR_MS_DATA_SYNC) == 0) || (strcmp (synctest, DMR_BS_DATA_SYNC) == 0))
                 {
+                  now = time(NULL);
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + (lmax)) / 2;
@@ -527,6 +532,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 }
               if ((strcmp (synctest, DMR_MS_VOICE_SYNC) == 0) || (strcmp (synctest, DMR_BS_VOICE_SYNC) == 0))
                 {
+                  now = time(NULL);
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -601,6 +607,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               //borrowing from LEH here WOW! This works so much better, its not even a joke
               if ((strncmperr (synctest18, NXDN_BS_VOICE_SYNC, 18, 1) == 0) || (strncmperr (synctest18, NXDN_MS_VOICE_SYNC, 18, 1) == 0))
                 {
+                  now = time(NULL); //here, or after next if
                   if ((state->lastsynctype == 8) || (state->lastsynctype == 16)) //is this checking for multiple matches first, could be causing 'skips' in audio decode HERE HERE
                   //if ( (opts->frame_nxdn96 == 1) ||(opts->frame_nxdn48 == 1)) //kind of hacky, but too lazy to remove brackets and re-indent
                     {
@@ -636,6 +643,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               //else if ((strcmp (synctest18, INV_NXDN_BS_VOICE_SYNC) == 0) || (strcmp (synctest18, INV_NXDN_MS_VOICE_SYNC) == 0))
               else if ((strncmperr (synctest18, NXDN_BS_DATA_SYNC, 18, 1) == 0) || (strncmperr (synctest18, NXDN_MS_DATA_SYNC, 18, 1) == 0))
                 {
+                  now = time(NULL); //here, or down more
                   if ((state->lastsynctype == 9) || (state->lastsynctype == 17))
                   //if ( (opts->frame_nxdn96 == 1) ||(opts->frame_nxdn48 == 1)) //again, skip the double up
                     {
@@ -670,6 +678,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               //else if ((strcmp (synctest18, NXDN_BS_DATA_SYNC) == 0) || (strcmp (synctest18, NXDN_MS_DATA_SYNC) == 0))
               else if ((strncmperr (synctest18, NXDN_BS_DATA_SYNC, 18, 1) == 0) || (strncmperr (synctest18, NXDN_MS_DATA_SYNC, 18, 1) == 0))
                 {
+                  now = time(NULL);
                   if ((state->lastsynctype == 8) || (state->lastsynctype == 16))
                   //if ( (opts->frame_nxdn96 == 1) ||(opts->frame_nxdn48 == 1))
                     {
@@ -704,6 +713,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               //else if ((strcmp (synctest18, INV_NXDN_BS_DATA_SYNC) == 0) || (strcmp (synctest18, INV_NXDN_MS_DATA_SYNC) == 0))
               else if ((strncmperr (synctest18, INV_NXDN_BS_DATA_SYNC, 18, 1) == 0) || (strncmperr (synctest18, INV_NXDN_MS_DATA_SYNC, 18, 1) == 0))
                 {
+                  now = time(NULL);
                   if ((state->lastsynctype == 9) || (state->lastsynctype == 17))
                   //if ( (opts->frame_nxdn96 == 1) ||(opts->frame_nxdn48 == 1))
                     {
@@ -743,6 +753,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             {
               if (strcmp (synctest, DSTAR_SYNC) == 0)
                 {
+                  now = time(NULL);
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -757,6 +768,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 }
               if (strcmp (synctest, INV_DSTAR_SYNC) == 0)
                 {
+                  now = time(NULL);
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -771,6 +783,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 }
               if (strcmp (synctest, DSTAR_HD) == 0)
                  {
+                   now = time(NULL);
                    state->carrier = 1;
                    state->offset = synctest_pos;
                    state->max = ((state->max) + lmax) / 2;
@@ -785,6 +798,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                  }
               if (strcmp (synctest, INV_DSTAR_HD) == 0)
                 {
+                   now = time(NULL);
                    state->carrier = 1;
                    state->offset = synctest_pos;
                    state->max = ((state->max) + lmax) / 2;
