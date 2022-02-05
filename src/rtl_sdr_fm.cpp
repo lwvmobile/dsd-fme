@@ -31,7 +31,7 @@
 #include <rtl-sdr.h>
 #include "dsd.h"
 
-#define DEFAULT_SAMPLE_RATE		48000 //48000
+//#define DEFAULT_SAMPLE_RATE		48000 //moved to opts->rtl_bandwidth
 #define DEFAULT_BUF_LENGTH		(1 * 16384)
 #define MAXIMUM_OVERSAMPLE		16 //16
 #define MAXIMUM_BUF_LENGTH		(MAXIMUM_OVERSAMPLE * DEFAULT_BUF_LENGTH)
@@ -50,6 +50,10 @@ static int atan_lut_coef = 8;
 #include <netinet/in.h>
 #include <arpa/inet.h>
 static pthread_t socket_freq;
+
+int rtl_bandwidth;
+int bandwidth_multiplier;
+int bandwidth_divisor = 48000; //divide bandwidth by this to get multiplier for the for j loop to queue.push
 
 short int volume_multiplier;
 short int port;
@@ -582,7 +586,8 @@ static void *demod_thread_fn(void *arg)
 		pthread_rwlock_wrlock(&o->rw);
 		for (int i = 0; i < d->result_len; i++)
 		{
-			o->queue.push(d->result[i]);
+			for (int j=0; j < bandwidth_multiplier; j++){
+				o->queue.push(d->result[i]);}
 		}
 		pthread_rwlock_unlock(&o->rw);
 		safe_cond_signal(&o->ready, &o->ready_m);
@@ -802,7 +807,8 @@ static void *controller_thread_fn(void *arg)
 
 void dongle_init(struct dongle_state *s)
 {
-	s->rate = DEFAULT_SAMPLE_RATE;
+	//s->rate = DEFAULT_SAMPLE_RATE;
+	s->rate = rtl_bandwidth;
 	s->gain = AUTO_GAIN; // tenths of a dB
 	s->mute = 0;
 	s->direct_sampling = 0;
@@ -813,8 +819,10 @@ void dongle_init(struct dongle_state *s)
 
 void demod_init(struct demod_state *s)
 {
-	s->rate_in = DEFAULT_SAMPLE_RATE;
-	s->rate_out = DEFAULT_SAMPLE_RATE;
+	//s->rate_in = DEFAULT_SAMPLE_RATE;
+	//s->rate_out = DEFAULT_SAMPLE_RATE;
+	s->rate_in = rtl_bandwidth;
+	s->rate_out = rtl_bandwidth;
 	s->squelch_level = 0;
 	s->conseq_squelch = 10;
 	s->terminate_on_squelch = 0;
@@ -848,7 +856,8 @@ void demod_cleanup(struct demod_state *s)
 
 void output_init(struct output_state *s)
 {
-	s->rate = DEFAULT_SAMPLE_RATE;
+	//s->rate = DEFAULT_SAMPLE_RATE;
+	s->rate = rtl_bandwidth;
 	pthread_rwlock_init(&s->rw, NULL);
 	pthread_cond_init(&s->ready, NULL);
 	pthread_mutex_init(&s->ready_m, NULL);
@@ -1043,7 +1052,10 @@ void open_rtlsdr_stream(dsd_opts *opts)
 {
   struct sigaction sigact;
   int r;
-
+	rtl_bandwidth =  opts->rtl_bandwidth * 1000; //multiple by 1000 to get rate
+	//rtl_bandwidth = 48000;
+	bandwidth_multiplier = (bandwidth_divisor / rtl_bandwidth); //find multiple with no remainder if oddball number entered
+	//bandwidth_multiplier = 1;
   dongle_init(&dongle);
   demod_init(&demod);
   output_init(&output);
@@ -1060,7 +1072,13 @@ void open_rtlsdr_stream(dsd_opts *opts)
 
 	if (opts->audio_in_type == 3) {
 		dongle.dev_index = opts->rtl_dev_index;
+		//rtl_bandwidth =  opts->rtl_bandwidth * 1000; //multiple by 1000 to get rate
+		//rtl_bandwidth = 48000;
+		//bandwidth_multiplier = rtl_bandwidth / bandwidth_divisor; //find multiple with no remainder if oddball number entered
+		//bandwidth_multiplier = 1;
 		demod.squelch_level = opts->rtl_squelch_level;  //adding user definable squelch level to prevent false positives on account of noise in NXDN etc
+		fprintf(stderr, "Setting RTL VFO Bandwidth to %d Hz\n", rtl_bandwidth);
+		fprintf(stderr, "Setting RTL Sample Multiplier to %d\n", bandwidth_multiplier);
 		fprintf(stderr, "Setting RTL Squelch Level to %d\n", demod.squelch_level);
 		port = opts->rtl_udp_port;
 	}
