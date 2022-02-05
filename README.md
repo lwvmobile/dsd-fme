@@ -1,6 +1,8 @@
 # Digital Speech Decoder - Florida Man Edition
 This version of DSD is a flavor blend of szechyjs RTL branch and some of my own additions, along with a few tweaks from the LouisErigHerve branch as well. NXDN voice decoding is currently working a lot better, thanks to the latter, although I have yet to explore the expanded NXDN decoding he has laid out as of yet. That is a goal. I have also implemented a few more RTL options, including a UDP remote that works like the old rtl_udp fork, although its currently limited to changing frequency and squelch. The goal is to integrate this project into EDACS-FM but I also want it to be its own standalone project. 
 
+![alt text](https://github.com/lwvmobile/dsd-fme/blob/master/Screenshot_214.png)
+
 # Example Usage
 padsp -m dsdfme -- ./dsd -fp -i rtl -o /dev/dsp -c 851.8M -d ./MBE/ -P -2 -D 1 -G 36 -L 25 -V 2 -U 6020
 
