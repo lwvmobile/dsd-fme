@@ -3,7 +3,7 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 
 ![alt text](https://github.com/lwvmobile/dsd-fme/blob/master/Screenshot_214.png)
 
-# Example Usage
+## Example Usage
 padsp -m dsdfme -- ./dsd -fp -i rtl -o /dev/dsp -c 851.8M -d ./MBE/ -P -2 -D 1 -G 36 -L 25 -V 2 -U 6020
 
 -i rtl to use rtl_fm 
@@ -25,7 +25,7 @@ padsp -m dsdfme -- ./dsd -fp -i rtl -o /dev/dsp -c 851.8M -d ./MBE/ -P -2 -D 1 -
 -W Monitor Source Audio (WIP!) (may or may not decode audio if this is on, depending on selected decode type)
 (Also, should be noted that depending on modulation, may sound extremely terrible)
 
-# Roadmap
+## Roadmap
 The Current list of objectives include:
 
 1. Random Tinkering
