@@ -164,7 +164,7 @@ initOpts (dsd_opts * opts)
   opts->frame_x2tdma = 1;
   opts->frame_p25p1 = 1;
   opts->frame_nxdn48 = 0;
-  opts->frame_nxdn96 = 1;
+  opts->frame_nxdn96 = 0;
   opts->frame_dmr = 1;
   opts->frame_provoice = 0;
   opts->mod_c4fm = 1;
@@ -340,7 +340,7 @@ usage ()
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -fd           Decode only D-STAR\n");
   printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
-  printf ("  -fn           Decode only NXDN96 (12.5 kHz)\n");
+  printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
   printf ("  -fp             Decode only ProVoice*\n");
   printf ("  -fr           Decode only DMR/MOTOTRBO\n");
   printf ("  -fx           Decode only X2-TDMA\n");
@@ -736,7 +736,7 @@ main (int argc, char **argv)
               opts.frame_x2tdma = 1;
               opts.frame_p25p1 = 1;
               opts.frame_nxdn48 = 0;
-              opts.frame_nxdn96 = 1;
+              opts.frame_nxdn96 = 0;
               opts.frame_dmr = 1;
               opts.frame_provoice = 0;
             }
@@ -809,9 +809,6 @@ main (int argc, char **argv)
               state.rf_mod = 2; //was 2
               //opts.symboltiming = 2400; //NXDN48 uses 2400 symbol rate
               printf ("Setting symbol rate to 2400 / second\n");
-              //printf ("Enabling only GFSK modulation optimizations.\n");
-              //printf ("Why are we using GFSK modulations? Isn't NXDN FSK4/C4FM??.\n");
-              //printf ("Well, it works now, so probably just the way DSD interprets symbols.\n");
               printf ("Decoding only NXDN 4800 baud frames.\n");
             }
           else if (optarg[0] == 'n')
@@ -827,11 +824,7 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 1;
               state.rf_mod = 2;
-              //printf ("Enabling only C4FM/FSK4 modulation optimizations. I really need a new FSK4 modulator\n");
               printf ("Enabling only GFSK modulation optimizations.\n");
-              //printf ("Why are we using GFSK modulations? Isn't NXDN FSK4/C4FM??.\n");
-              //printf ("Well, it works now, so probably just the way DSD interprets symbols.\n");
-              //opts.symboltiming = 4800; //NXDN96 uses 4800 symbol rate
               printf ("Decoding only NXDN 9600 baud frames.\n");
             }
           else if (optarg[0] == 'r')

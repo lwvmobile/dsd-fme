@@ -80,10 +80,6 @@ char * getDate(void) {
   return curr2;
 }
 
-time_t last_sync_time;
-short int time_set = 0;
-//last_sync_time = time(NULL);
-
 void
 printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset, char *modulation)
 {
@@ -578,7 +574,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   //if (opts->errorbars == 1 && (time(NULL) - now) > 2 )
                     {
                       printFrameSync (opts, state, " -ProVoice ", synctest_pos + 1, modulation);
-                      //now = time(NULL);
                     }
                   state->lastsynctype = 14;
                   return (14);
@@ -591,23 +586,13 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->min = ((state->min) + lmin) / 2;
                   sprintf (state->ftype, " ProVoice    ");
                   if (opts->errorbars == 1)
-                  //if (opts->errorbars == 1 && (time(NULL) - now) > 2 )
                     {
                       printFrameSync (opts, state, " -ProVoice ", synctest_pos + 1, modulation);
-                      //now = time(NULL); //must be something I added, don't even remember why now
                     }
                   state->lastsynctype = 15;
                   return (15);
                 }
-            else
-            {
-              if (time_set == 0)
-              {
-                //state->lastsynctype = 99; //HERE HERE set last sync type to 99, special type
-                last_sync_time = time(NULL);
-                time_set == 1;
-              }
-            }
+
           }
           if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
             {

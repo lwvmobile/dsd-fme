@@ -358,9 +358,6 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 #endif
 		}
 		else
-      //short multiple = 12;
-      //probably going to need to do that void voodoo again here to get this to work to even see if it works in the grand scheme
-			//result = write (opts->audio_out_fd, ( (state->audio_out_buf_p - state->audio_out_idx) * 12 ),  (state->audio_out_idx * 24) ); //HERE HERE work on way to boost output from 8000 to 48000
       result = write (opts->audio_out_fd, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2)); //12
       state->audio_out_idx = 0;
     }
