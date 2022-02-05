@@ -20,6 +20,23 @@ padsp -m dsdfme -- ./dsd -fp -i rtl -o /dev/dsp -c 851.8M -d ./MBE/ -P -2 -D 1 -
 
 -U set UDP port for rtl_fm remote control
 
+-W Monitor Source Audio (WIP!) (may or may not decode audio if this is on, depending on selected decode type)
+(Also, should be noted that depending on modulation, may sound extremely terrible)
+
+# Roadmap
+The Current list of objectives include:
+
+1. Random Tinkering
+
+2. Implement Pulse Audio and Remove PortAudio and OSS
+
+3. Improve NXDN support 
+
+4. More Concise Printouts - Ncurses
+
+4. Improve Monitor Source Audio (if #2 on list is up and working)
+
+
 ## License
 Copyright (C) 2010 DSD Author
 GPG Key ID: 0x3F1D7FD0 (74EF 430D F7F2 0A48 FCE6  F630 FAA2 635D 3F1D 7FD0)
