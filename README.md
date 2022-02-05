@@ -4,7 +4,7 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 ![alt text](https://github.com/lwvmobile/dsd-fme/blob/master/Screenshot_214.png)
 
 ## Example Usage
-`padsp -m dsdfme -- ./dsd -fp -i rtl -o /dev/dsp -c 851.8M -d ./MBE/ -P -2 -D 1 -G 36 -L 25 -V 2 -U 6020 -Y 8`
+`padsp -m dsdfme -- ./dsd -fi -i rtl -o /dev/dsp -c 154.9875M -P -2 -D 1 -G 36 -L 25 -V 2 -U 6020 -Y 8`
 
 ```
 -i rtl to use rtl_fm 
