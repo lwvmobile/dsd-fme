@@ -142,6 +142,7 @@ typedef struct
   int rtl_squelch_level;
   int rtl_volume_multiplier;
   int rtl_udp_port;
+  int rtl_bandwidth;
   int monitor_input_audio;
 } dsd_opts;
 
