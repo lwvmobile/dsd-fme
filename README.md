@@ -15,11 +15,11 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 
 -D set device index number
 
--G set device gain (0-49 typical)
+-G set device gain (0-49) (default = 0 Auto Gain)
 
 -L set rtl squelch to 25
 
--V set RTL sample 'gain' multiplier
+-V set RTL sample 'volume' multiplier
 
 -U set UDP port for rtl_fm remote control
 
