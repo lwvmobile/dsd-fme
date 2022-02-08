@@ -68,7 +68,7 @@ void openPulseInput(dsd_opts * opts)
 
 void playRawAudio(dsd_opts * opts, dsd_state * state) {
   short obuf, outl, i, sample2, something;
-  something = state->samplesPerSymbol / 1; //this was 5 in OSS, changed to 1 for pulse audio, no idea how it affects Port Audio
+  something = state->samplesPerSymbol / 1; //was this what it was?
 
   if (opts->audio_in_type == 0 && opts->audio_out_type == 0){ //hack, but might as well for this particular type since its nearly perfect
     for (i=0; i < something; i++){
@@ -396,11 +396,17 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 
 #endif
 		}
-		else{
-      pa_simple_flush(opts->pulse_raw_dev_out, NULL);
+		else {
+      if (opts->monitor_input_audio == 1){
+        pa_simple_flush(opts->pulse_raw_dev_in, NULL);
+        pa_simple_flush(opts->pulse_raw_dev_out, NULL);
+      }
+
       pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
-      state->audio_out_idx = 0; }
+      state->audio_out_idx = 0;
     }
+
+  }
 
   if (state->audio_out_idx2 >= 800000)
     {
