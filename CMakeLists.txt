@@ -9,25 +9,32 @@ git_describe(GIT_TAG)
 find_package(LibSndFile REQUIRED)
 find_package(MBE REQUIRED)
 find_package(ITPP REQUIRED)
-find_package(LibPortAudio) #disabled for testing
+#find_package(LibPortAudio) #disabled for testing
 find_package(RTLSDR)
 #more messing around
 #find_package(Curses REQUIRED)
+find_package(PULSEAUDIO)
 
 #include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${CURSES_INCLUDE_DIR})
 #set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${CURSES_LIBRARY})
 
-include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${CURSES_INCLUDE_DIR})
-set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY})
+include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${PULSEAUDIO_INCLUDE_DIRS} )
+set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${PULSEAUDIO_SIMPLE_LIBRARY})
 
 #going to disable PortAudio, works just fine with padsp in Linux,
 #hoping disabling this doesn't break OSX or cygwin, etc builds
 
-if(PORTAUDIO_FOUND)
-    include_directories(SYSTEM ${PORTAUDIO_INCLUDE_DIRS})
-    list(APPEND LIBS ${PORTAUDIO_LIBRARIES})
-    add_definitions(-DUSE_PORTAUDIO)
-endif(PORTAUDIO_FOUND)
+#if(PORTAUDIO_FOUND)
+#    include_directories(SYSTEM ${PORTAUDIO_INCLUDE_DIRS})
+#    list(APPEND LIBS ${PORTAUDIO_LIBRARIES})
+#    add_definitions(-DUSE_PORTAUDIO)
+#endif(PORTAUDIO_FOUND)
+
+#if(PULSEAUDIO_FOUND) ##I don't think this will be necessary
+#    include_directories(SYSTEM ${PULSEAUDIO_INCLUDE_DIRS})
+#    list(APPEND LIBS ${PULSEAUDIO_LIBRARIES})
+#    add_definitions(-DUSE_PULSEAUDIO)
+#endif(PULSEAUDIO_FOUND)
 
 if(RTLSDR_FOUND)
     find_package(Threads)

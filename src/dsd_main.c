@@ -136,12 +136,14 @@ initOpts (dsd_opts * opts)
   opts->p25status = 0;
   opts->p25tg = 0;
   opts->scoperate = 15;
-  sprintf (opts->audio_in_dev, "/dev/audio");
+  //sprintf (opts->audio_in_dev, "/dev/audio");
+  sprintf (opts->audio_in_dev, "pulse");
   opts->audio_in_fd = -1;
 #ifdef USE_PORTAUDIO
   opts->audio_in_pa_stream = NULL;
 #endif
-  sprintf (opts->audio_out_dev, "/dev/audio");
+  //sprintf (opts->audio_out_dev, "/dev/audio");
+  sprintf (opts->audio_out_dev, "pulse");
   opts->audio_out_fd = -1;
 #ifdef USE_PORTAUDIO
   opts->audio_out_pa_stream = NULL;
@@ -186,6 +188,10 @@ initOpts (dsd_opts * opts)
   opts->rtl_volume_multiplier = 1; //set multipler from rtl sample to 'boost volume'
   opts->rtl_udp_port = 6020; //set UDP port for RTL remote
   opts->rtl_bandwidth = 48; //48000 default value
+  opts->pulse_raw_rate_in   = 48000;
+  opts->pulse_raw_rate_out  = 48000;
+  opts->pulse_digi_rate_in  = 48000;
+  opts->pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
 }
 
 void
@@ -312,8 +318,10 @@ usage ()
   printf ("  -z <num>      Frame rate for datascope\n");
   printf ("\n");
   printf ("Input/Output options:\n");
-  printf ("  -i <device>   Audio input device (default is /dev/audio, - for piped stdin, rtl for rtl device)\n");
-  printf ("  -o <device>   Audio output device (default is /dev/audio)\n");
+  //printf ("  -i <device>   Audio input device (default is /dev/audio, - for piped stdin, rtl for rtl device)\n");
+  printf ("  -i <device>   Audio input device (default is pulse audio, - for piped stdin, rtl for rtl device)\n");
+  //printf ("  -o <device>   Audio output device (default is /dev/audio)\n");
+  printf ("  -o <device>   Audio output device (default is pulse audio)\n");
   printf ("  -d <dir>      Create mbe data files, use this directory\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
@@ -372,6 +380,7 @@ usage ()
 void
 liveScanner (dsd_opts * opts, dsd_state * state)
 {
+//move open pulse below rtl type to set up audio rate out hopefully
 #ifdef USE_PORTAUDIO
 	if(opts->audio_in_type == 2)
 	{
@@ -388,9 +397,18 @@ liveScanner (dsd_opts * opts, dsd_state * state)
 #ifdef USE_RTLSDR
   if(opts->audio_in_type == 3)
   {
+    opts->pulse_digi_rate_out = 8000; //rtl currently needs rate out to be 8000, will investigate this further
     open_rtlsdr_stream(opts);
   }
 #endif
+if (opts->audio_in_type == 0){
+  openPulseInput(opts);
+}
+if (opts->audio_out_type == 0){
+  openPulseOutput(opts);
+}
+  //openPulse(opts);
+
 	while (1)
     {
       noCarrier (opts, state);
@@ -951,6 +969,15 @@ main (int argc, char **argv)
       openSerial (&opts, &state);
     }
 
+    if((strncmp(opts.audio_in_dev, "pulse", 5) == 0))
+    {
+      opts.audio_in_type == 0;
+    }
+
+    if((strncmp(opts.audio_out_dev, "pulse", 5) == 0))
+    {
+      opts.audio_out_type == 0;
+    }
 
 #ifdef USE_PORTAUDIO
   if((strncmp(opts.audio_in_dev, "pa:", 3) == 0)
@@ -996,6 +1023,7 @@ main (int argc, char **argv)
           openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
         }
       openAudioInDevice (&opts);
+
       /*
       setlocale(LC_ALL, "");
       sleep(3);
@@ -1022,12 +1050,14 @@ main (int argc, char **argv)
       opts.split = 0;
       opts.playoffset = 25;     // 38
       opts.delay = 0;
-      openAudioInDevice (&opts);
+      openAudioInDevice (&opts); //disabled all four instances of openAudio devices, in and out for now
       opts.audio_out_fd = opts.audio_in_fd;
     }
 
   if (opts.playfiles == 1)
     {
+      opts.pulse_digi_rate_out = 8000; //need set to 8000 for amb/imb playback
+      openPulseOutput(&opts); //need to open it up for output
       playMbeFiles (&opts, &state, argc, argv);
     }
 
