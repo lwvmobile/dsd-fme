@@ -117,6 +117,7 @@ void playRawAudio(dsd_opts * opts, dsd_state * state) {
       if (opts->audio_out_type == 0){
         //write (opts->audio_out_fd, (void*)&obuf, outl);
         pa_simple_write(opts->pulse_raw_dev_out, (void*)&obuf, 2, NULL);
+        //printf("writing samples");
       }
 
       #ifdef USE_PORTAUDIO //no idea if this method will work, since I can't test it
@@ -308,6 +309,7 @@ writeSynthesizedVoice (dsd_opts * opts, dsd_state * state)
   }
 
   sf_write_short(opts->wav_out_f, aout_buf, 160);
+
   /*
 
   int n;
@@ -396,16 +398,13 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 
 #endif
 		}
-		else {
-      if (opts->monitor_input_audio == 1){
-        pa_simple_flush(opts->pulse_raw_dev_in, NULL);
-        pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-      }
-
+		else
+      //if (opts->monitor_input_audio == 1){
+        //pa_simple_flush(opts->pulse_raw_dev_in, NULL);
+        //pa_simple_flush(opts->pulse_raw_dev_out, NULL);
+      //}
       pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
       state->audio_out_idx = 0;
-    }
-
   }
 
   if (state->audio_out_idx2 >= 800000)
@@ -610,6 +609,7 @@ openAudioInDevice (dsd_opts * opts)
 		opts->audio_in_type = 1;
 		opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
 		opts->audio_in_file_info->samplerate=48000;
+    opts->pulse_digi_rate_out = 8000; //set out rate to 8000 for stdin input
 		opts->audio_in_file_info->channels=1;
 		opts->audio_in_file_info->seekable=0;
 		opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
@@ -617,7 +617,7 @@ openAudioInDevice (dsd_opts * opts)
 
 		if(opts->audio_in_file == NULL) {
 			printf ("Error, couldn't open stdin with libsndfile: %s\n", sf_strerror(NULL));
-			//exit(1);
+			exit(1); //had this one disabled, re-enabling it now
 		}
 	}
 	else if(strncmp(opts->audio_in_dev, "pa:", 2) == 0)
@@ -659,6 +659,7 @@ openAudioInDevice (dsd_opts * opts)
   if (S_ISREG(stat_buf.st_mode))
     {
       // is this a regular file? then process with libsndfile.
+      //opts->pulse_digi_rate_out = 8000; //this for wav files input?
       opts->audio_in_type = 1;
       opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
       opts->audio_in_file_info->channels = 1;
