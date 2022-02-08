@@ -42,8 +42,6 @@
 
 #include "p25p1_heuristics.h"
 
-#include <pulse/simple.h> //PULSE AUDIO
-#include <pulse/error.h> //PULSE AUDIO
 
 #define SAMPLE_RATE_IN 48000 //48000
 #define SAMPLE_RATE_OUT 8000 //8000,
@@ -146,15 +144,6 @@ typedef struct
   int rtl_udp_port;
   int rtl_bandwidth;
   int monitor_input_audio;
-  int pulse_raw_rate_in;
-  int pulse_raw_rate_out;
-  int pulse_digi_rate_in;
-  int pulse_digi_rate_out;
-  pa_simple *pulse_raw_dev_in;
-  pa_simple *pulse_raw_dev_out;
-  pa_simple *pulse_digi_dev_in;
-  pa_simple *pulse_digi_dev_out;
-
 } dsd_opts;
 
 typedef struct
@@ -307,10 +296,8 @@ typedef struct
 void processDMRdata (dsd_opts * opts, dsd_state * state);
 void processDMRvoice (dsd_opts * opts, dsd_state * state);
 void processAudio (dsd_opts * opts, dsd_state * state);
-void playRawAudio (dsd_opts * opts, dsd_state * state);     //added this one HERE HERE
+void playRawAudio (dsd_opts * opts, dsd_state * state); //added this one HERE HERE
 void processRawAudio (dsd_opts * opts, dsd_state * state); //added this one HERE HERE
-void openPulseInput (dsd_opts * opts);  //not sure if we need to just pass opts, or opts and state yet
-void openPulseOutput (dsd_opts * opts);  //not sure if we need to just pass opts, or opts and state yet
 void writeSynthesizedVoice (dsd_opts * opts, dsd_state * state);
 void playSynthesizedVoice (dsd_opts * opts, dsd_state * state);
 void openAudioOutDevice (dsd_opts * opts, int speed);

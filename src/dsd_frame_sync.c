@@ -184,6 +184,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
     }
   while (sync == 0)
     {
+      //printf("now=%d\n", now); //okay, so this is incrementing as expected
+      if ( opts->monitor_input_audio == 1 && (time(NULL) - now) > 1 ) //okay, still something going on, still doing the read part for some reason
+      {
+        playRawAudio(opts, state); //this is on line 21 in dsd_audio.c
+      }
       t++;
       symbol = getSymbol (opts, state, 0);
 
@@ -586,6 +591,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 }
               else if ((strcmp (synctest32, INV_PROVOICE_SYNC) == 0) || (strcmp (synctest32, INV_PROVOICE_EA_SYNC) == 0))
                 {
+                  now = time(NULL);
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -929,19 +935,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   printf ("Sync: no sync\n");
                   printf("Press CTRL + C to close.\n"); //Kindly remind user to double tap CTRL + C
-                }
+                  }
               noCarrier (opts, state);
               return (-1);
             }
         }
-
-      if ( (opts->monitor_input_audio == 1 && (time(NULL) - now) > 1 ) || (opts->monitor_input_audio == 1 && state->lastsynctype == -1) )
-      {
-        //printf ("Playing Raw Audio - Should Keep Printing Over and over\n");
-        playRawAudio(opts, state); //this is on line 21 in dsd_audio.c
-        //currently working on playRawAudio and samples grabbed in dsd_symbol, going to do it outside of the other big loop
-
-      }
 
     }
 

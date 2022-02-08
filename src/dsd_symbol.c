@@ -16,6 +16,22 @@
  */
 
 #include "dsd.h"
+/*
+pa_simple *c;
+pa_sample_spec cc;
+
+void openPulseDigi(dsd_opts * opts){
+
+  cc.format = PA_SAMPLE_S16NE;
+  cc.channels = 1;
+  //cc.rate = 48000; //for some reason, if INPUT is 8000, and output is 48000, sounds correct on NXDN48
+  cc.rate = opts->pulse_digi_rate_in;
+
+  c = pa_simple_new(NULL, "DSD FME", PA_STREAM_RECORD, NULL, "Digi Audio In", &cc, NULL, NULL, NULL);
+
+}
+*/
+
 
 int
 getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
@@ -81,10 +97,9 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         }
 
       // Read the new sample from the input
-      if(opts->audio_in_type == 0) {
-          result = read (opts->audio_in_fd, &sample, 2);
-
-
+      if(opts->audio_in_type == 0)
+      {
+          pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
       }
       else if (opts->audio_in_type == 1) {
           result = sf_read_short(opts->audio_in_file, &sample, 1);
