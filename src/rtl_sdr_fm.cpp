@@ -1054,7 +1054,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
   int r;
 	rtl_bandwidth =  opts->rtl_bandwidth * 1000; //multiple by 1000 to get rate
 	//rtl_bandwidth = 48000;
-	bandwidth_multiplier = (bandwidth_divisor / rtl_bandwidth); //find multiple with no remainder if oddball number entered
+	bandwidth_multiplier = (bandwidth_divisor / rtl_bandwidth);
 	//bandwidth_multiplier = 1;
   dongle_init(&dongle);
   demod_init(&demod);

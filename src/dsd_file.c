@@ -284,7 +284,7 @@ openWavOutFile (dsd_opts * opts, dsd_state * state)
  // opts->wav_out_f = fopen (opts->wav_out_file, "w");
 
   SF_INFO info;
-  info.samplerate = 8000;
+  info.samplerate = 8000; //8000
   info.channels = 1;
   info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
   opts->wav_out_f = sf_open (opts->wav_out_file, SFM_WRITE, &info);

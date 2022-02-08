@@ -187,7 +187,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
       //printf("now=%d\n", now); //okay, so this is incrementing as expected
       if ( opts->monitor_input_audio == 1 && (time(NULL) - now) > 1 ) //okay, still something going on, still doing the read part for some reason
       {
-        playRawAudio(opts, state); //this is on line 21 in dsd_audio.c
+        //playRawAudio(opts, state); //this is on line 21 in dsd_audio.c
       }
 
       t++;

@@ -764,7 +764,7 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 1;
-              opts.frame_provoice = 0;
+              opts.frame_provoice = 0; //turn it on, doesn't work due to symbol rate difference
             }
           else if (optarg[0] == 'd')
             {
