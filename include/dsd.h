@@ -150,6 +150,7 @@ typedef struct
   int pulse_raw_rate_out;
   int pulse_digi_rate_in;
   int pulse_digi_rate_out;
+  int pulse_flush;
   pa_simple *pulse_raw_dev_in;
   pa_simple *pulse_raw_dev_out;
   pa_simple *pulse_digi_dev_in;
@@ -308,7 +309,6 @@ void processDMRdata (dsd_opts * opts, dsd_state * state);
 void processDMRvoice (dsd_opts * opts, dsd_state * state);
 void processAudio (dsd_opts * opts, dsd_state * state);
 void playRawAudio (dsd_opts * opts, dsd_state * state);     //added this one HERE HERE
-void processRawAudio (dsd_opts * opts, dsd_state * state); //added this one HERE HERE
 void openPulseInput (dsd_opts * opts);  //not sure if we need to just pass opts, or opts and state yet
 void openPulseOutput (dsd_opts * opts);  //not sure if we need to just pass opts, or opts and state yet
 void writeSynthesizedVoice (dsd_opts * opts, dsd_state * state);

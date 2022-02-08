@@ -192,6 +192,7 @@ initOpts (dsd_opts * opts)
   opts->pulse_raw_rate_out  = 48000;
   opts->pulse_digi_rate_in  = 48000;
   opts->pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
+  opts->pulse_flush = 1; //set 0 to flush, 1 for flushed
 }
 
 void
@@ -681,8 +682,9 @@ main (int argc, char **argv)
           break;
 
         case 'W': //monitor_input_audio if no sync
-          opts.monitor_input_audio = 1;
-          printf ("Monitor Source Audio if no sync detected (WIP!)\n");
+          opts.monitor_input_audio = 0;
+          //printf ("Monitor Source Audio if no sync detected (WIP!)\n");
+          printf ("Monitor Source Audio Currently Disabled in Pulse Audio Builds.\n");
           break;
 
 

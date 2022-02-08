@@ -189,6 +189,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
       {
         playRawAudio(opts, state); //this is on line 21 in dsd_audio.c
       }
+
       t++;
       symbol = getSymbol (opts, state, 0);
 
