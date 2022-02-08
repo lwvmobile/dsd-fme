@@ -27,6 +27,7 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 
 -W Monitor Source Audio (WIP!) (may or may not decode audio if this is on, depending on selected decode type and luck)
 (Also, should be noted that depending on modulation, may sound extremely terrible)
+(Currently causing Pulse Audio server to restart on Mint, but works in Arch)
 ```
 
 ## Roadmap
@@ -34,13 +35,13 @@ The Current list of objectives include:
 
 1. Random Tinkering
 
-2. Implement Pulse Audio and Remove PortAudio and OSS
+2. Implement Pulse Audio and ~~Remove PortAudio and~~~ Remove OSS, Retain PortAudio as Optional
 
 3. Improve NXDN support 
 
 4. More Concise Printouts - Ncurses
 
-4. Improve Monitor Source Audio (if #2 on list is up and working)
+5. ~~Improve Monitor Source Audio (if #2 on list is up and working)~~ Not currently playing well with Pulse Audio, need to re-evaluate
 
 
 ## License
