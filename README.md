@@ -3,11 +3,13 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 
 ![alt text](https://github.com/lwvmobile/dsd-fme/blob/master/Screenshot_216.png)
 
-## Example Usage
-`padsp -m dsdfme -- ./dsd -fi -i rtl -o /dev/dsp -c 154.9875M -P -2 -D 1 -G 36 -L 25 -V 2 -U 6020 -Y 8`
+## Example Usage - RTL
+`./dsd -fi -i rtl -o pulse -c 154.9875M -P -2 -D 1 -G 36 -L 25 -V 2 -U 6020 -Y 8`
 
 ```
--i rtl to use rtl_fm 
+-i rtl to use rtl_fm (default is -i pulse for pulse audio)
+
+-o pulse to set output to pulse audio (is default anyways)
 
 -c Set frequency
 
@@ -29,20 +31,52 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 (Also, should be noted that depending on modulation, may sound extremely terrible)
 (Currently causing Pulse Audio server to restart on Mint, but works in Arch)
 ```
+## Example Pulse Audio Input and Pulse Audio Output, Autodetect Frame Type
+`./dsd`
+```
+Yes, it really is this simple now
+-fa Auto-detect frame type
+sans NXDN or Provoice, need to specify -fp, -fi, or -fn
+pulse audio are set as default input and output methods
+
+```
+## Example STDIN UDP from GQRX or SDR++, output to Pulse Audio, and save wav files
+`socat stdio udp-listen:7355 | ./dsd -fi -i - -o pulse -w nxdn.wa`
 
 ## Roadmap
 The Current list of objectives include:
 
-1. Random Tinkering
+1. ~~Random Tinkering~~ More Random Tinkering
 
-2. Implement Pulse Audio and ~~Remove PortAudio and~~~ Remove OSS, Retain PortAudio as Optional
+2. Implemented Pulse Audio and ~~Remove PortAudio and~~ Remove OSS, including SOLARIS/APPLE/BSD methods, and Retain PortAudio as Optional (need to re-enable in CMakeLists.txt file)
 
-3. Improve NXDN support 
+3. Improve NXDN and DMR support 
 
 4. More Concise Printouts - Ncurses
 
 5. ~~Improve Monitor Source Audio (if #2 on list is up and working)~~ Not currently playing well with Pulse Audio, need to re-evaluate
 
+6. Make simple to use installer script.
+
+## How to clone, and check out this branch
+First, install prerequisites if you haven't built any variety of DSD before.
+
+Check [DSD Installation](https://github.com/szechyjs/dsd/wiki/Installation "DSD Installation") and install the dependencies listed. Also, check the notices and install [MBElib](https://github.com/szechyjs/mbelib/blob/master/README.md "MBElib") if you feel it is necessary.
+
+Simply run these steps to clone and build DSD-FME w/ pulseaudio support.
+```
+git clone https://github.com/lwvmobile/dsd-fme
+cd dsd-fme
+git branch -a
+git checkout remotes/origin/pulseaudio
+git checkout -b pulseaudio
+git branch -a #double check to see if you are on pulseaudio branch
+mkdir build
+cd build
+cmake ..
+make
+
+```
 
 ## License
 Copyright (C) 2010 DSD Author
@@ -59,3 +93,5 @@ GPG Key ID: 0x3F1D7FD0 (74EF 430D F7F2 0A48 FCE6  F630 FAA2 635D 3F1D 7FD0)
     LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
     OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
     PERFORMANCE OF THIS SOFTWARE.
+    
+   
