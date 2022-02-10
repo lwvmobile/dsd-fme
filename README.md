@@ -68,7 +68,7 @@ sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack
 
 wget -O itpp-latest.tar.bz2 http://sourceforge.net/projects/itpp/files/latest/download?source=files
 tar xjf itpp*
-cd itpp*
+cd itpp-4.3.1 #if you can't cd into this folder, double check folder name first
 mkdir build
 cd build
 cmake ..
@@ -104,7 +104,9 @@ git branch -a #double check to see if you are on pulseaudio branch
 mkdir build
 cd build
 cmake ..
-make
+make -j `nproc`
+##only run make install if you don't have another version already installed##
+sudo make install
 
 ```
 Optional 'Virtual Sinks' for routing audio from SDR++ or GQRX, etc, into DSD-FME
