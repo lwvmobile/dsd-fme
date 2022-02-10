@@ -76,17 +76,17 @@ read_and_correct_dodeca_word (dsd_opts* opts, dsd_state* state, char* dodeca, in
   read_golay24_parity (opts, state, parity, status_count, analog_signal_array, analog_signal_index);
 
 #ifdef TDULC_DEBUG
-  printf("[");
+  fprintf (stderr, "[");
   for (i = 0; i < 12; i++)
     {
-      printf("%c", (dodeca[i] == 1)? 'X' : ' ');
+      fprintf (stderr, "%c", (dodeca[i] == 1)? 'X' : ' ');
     }
-  printf("-");
+  fprintf (stderr, "-");
   for (i = 0; i < 12; i++)
     {
-      printf("%c", (parity[i] == 1)? 'X' : ' ');
+      fprintf (stderr, "%c", (parity[i] == 1)? 'X' : ' ');
     }
-  printf("]");
+  fprintf (stderr, "]");
 #endif
 
   // Use extended golay to error correct the dodeca word
@@ -99,24 +99,24 @@ read_and_correct_dodeca_word (dsd_opts* opts, dsd_state* state, char* dodeca, in
     }
 
 #ifdef TDULC_DEBUG
-  printf(" -> [");
+  fprintf (stderr, " -> [");
   for (i = 0; i < 12; i++)
     {
-      printf("%c", (dodeca[i] == 1)? 'X' : ' ');
+      fprintf (stderr, "%c", (dodeca[i] == 1)? 'X' : ' ');
     }
-  printf("]");
+  fprintf (stderr, "]");
   if (irrecoverable_errors == 0)
     {
       if (fixed_errors > 0)
         {
-          printf(" fixed!");
+          fprintf (stderr, " fixed!");
         }
     }
   else
     {
-      printf(" IRRECOVERABLE");
+      fprintf (stderr, " IRRECOVERABLE");
     }
-  printf("\n");
+  fprintf (stderr, "\n");
 #endif
 }
 
@@ -148,7 +148,7 @@ correct_golay_dibits_12(char* data, int count, AnalogSignal* analog_signal_array
 #ifdef HEURISTICS_DEBUG
           if (analog_signal_array[analog_signal_index].dibit != dibit)
             {
-              printf("TDULC data word corrected from %i to %i, analog value %i\n",
+              fprintf (stderr, "TDULC data word corrected from %i to %i, analog value %i\n",
                       analog_signal_array[analog_signal_index].dibit, dibit, analog_signal_array[analog_signal_index].value);
             }
 #endif
@@ -167,7 +167,7 @@ correct_golay_dibits_12(char* data, int count, AnalogSignal* analog_signal_array
 #ifdef HEURISTICS_DEBUG
           if (analog_signal_array[analog_signal_index].dibit != dibit)
             {
-              printf("TDULC parity corrected from %i to %i, analog value %i\n",
+              fprintf (stderr, "TDULC parity corrected from %i to %i, analog value %i\n",
                       analog_signal_array[analog_signal_index].dibit, dibit, analog_signal_array[analog_signal_index].value);
             }
 #endif
@@ -200,7 +200,7 @@ read_zeros(dsd_opts* opts, dsd_state* state, AnalogSignal* analog_signal_array, 
 #ifdef HEURISTICS_DEBUG
       if (analog_signal_array[i].corrected_dibit != analog_signal_array[i].dibit)
         {
-          printf("TDULC ending zeros corrected from %i to %i, analog value %i\n",
+          fprintf (stderr, "TDULC ending zeros corrected from %i to %i, analog value %i\n",
                   analog_signal_array[i].dibit, 0, analog_signal_array[i].value);
         }
 #endif
@@ -293,7 +293,7 @@ processTDULC (dsd_opts* opts, dsd_state* state)
 
   // Next we should find an status dibit
   if (status_count != 35) {
-      printf("*** SYNC ERROR\n");
+      fprintf (stderr, "*** SYNC ERROR\n");
   }
 
   // trailing status symbol

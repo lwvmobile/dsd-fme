@@ -8,11 +8,11 @@ openSerial (dsd_opts * opts, dsd_state * state)
   struct termios tty;
   speed_t baud;
 
-  printf ("Opening serial port %s and setting baud to %i\n", opts->serial_dev, opts->serial_baud);
+  fprintf (stderr, "Opening serial port %s and setting baud to %i\n", opts->serial_dev, opts->serial_baud);
   opts->serial_fd = open (opts->serial_dev, O_WRONLY);
   if (opts->serial_fd == -1)
     {
-      printf ("Error, couldn't open %s\n", opts->serial_dev);
+      fprintf (stderr, "Error, couldn't open %s\n", opts->serial_dev);
       exit (1);
     }
 

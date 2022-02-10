@@ -22,7 +22,7 @@ processTDU (dsd_opts* opts, dsd_state* state)
 
     // Next we should find an status dibit
     if (status_count != 35) {
-        printf("*** SYNC ERROR\n");
+        fprintf (stderr, "*** SYNC ERROR\n");
     }
 
     // trailing status symbol
