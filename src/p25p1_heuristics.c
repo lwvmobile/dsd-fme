@@ -249,7 +249,7 @@ static void debug_log_pdf(P25Heuristics* heuristics, int previous_dibit, int ana
         pdfs[i] = evaluate_pdf(&(heuristics->symbols[previous_dibit][i]), analog_value);
     }
 
-    printf("v: %i, (%e, %e, %e, %e)\n", analog_value, pdfs[0], pdfs[1], pdfs[2], pdfs[3]);
+    fprintf (stderr, "v: %i, (%e, %e, %e, %e)\n", analog_value, pdfs[0], pdfs[1], pdfs[2], pdfs[3]);
 }
 
 int estimate_symbol(int rf_mod, P25Heuristics* heuristics, int previous_dibit, int analog_value, int* dibit)
@@ -329,20 +329,20 @@ static void debug_print_symbol_heuristics(int previous_dibit, int dibit, SymbolH
         mean = sh->sum/n;
         sd = sqrtf(sh->var_sum / ((float) n));
       }
-    printf("%i%i: count: %2i mean: % 10.2f sd: % 10.2f", previous_dibit, dibit, sh->count, mean, sd);
+    fprintf (stderr, "%i%i: count: %2i mean: % 10.2f sd: % 10.2f", previous_dibit, dibit, sh->count, mean, sd);
     /*
-    printf("(");
+    fprintf (stderr, "(");
     for (k=0; k<n; k++)
       {
         if (k != 0)
           {
-            printf(", ");
+            fprintf (stderr, ", ");
           }
-        printf("%i", sh->values[k]);
+        fprintf (stderr, "%i", sh->values[k]);
       }
-    printf(")");
+    fprintf (stderr, ")");
     */
-    printf("\n");
+    fprintf (stderr, "\n");
 
 }
 
@@ -350,7 +350,7 @@ void debug_print_heuristics(P25Heuristics* heuristics)
 {
   int i,j;
 
-  printf("\n");
+  fprintf (stderr, "\n");
 
   for(i=0; i<4; i++)
     {

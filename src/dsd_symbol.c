@@ -134,7 +134,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       state->debug_sample_index++;
 #endif
 
-      // printf("res: %zd\n, offset: %lld", result, sf_seek(opts->audio_in_file, 0, SEEK_CUR));
+      // printf ("res: %zd\n, offset: %lld", result, sf_seek(opts->audio_in_file, 0, SEEK_CUR));
       if (opts->use_cosine_filter)
         {
           if (state->lastsynctype >= 10 && state->lastsynctype <= 13)
@@ -180,14 +180,14 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
                 }
               if ((opts->symboltiming == 1) && (have_sync == 0) && (state->lastsynctype != -1))
                 {
-                  printf ("O");
+                  fprintf (stderr, "O");
                 }
             }
           else
             {
               if ((opts->symboltiming == 1) && (have_sync == 0) && (state->lastsynctype != -1))
                 {
-                  printf ("+");
+                  fprintf (stderr, "+");
                 }
               if ((state->jitter < 0) && (state->lastsample < state->center) && (state->rf_mod != 1))
                 {               // first transition edge
@@ -213,14 +213,14 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
                 }
               if ((opts->symboltiming == 1) && (have_sync == 0) && (state->lastsynctype != -1))
                 {
-                  printf ("X");
+                  fprintf (stderr, "X");
                 }
             }
           else
             {
               if ((opts->symboltiming == 1) && (have_sync == 0) && (state->lastsynctype != -1))
                 {
-                  printf ("-");
+                  fprintf (stderr, "-");
                 }
               if ((state->jitter < 0) && (state->lastsample > state->center) && (state->rf_mod != 1))
                 {               // first transition edge
@@ -309,11 +309,11 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
     {
       if (state->jitter >= 0)
         {
-          printf (" %i\n", state->jitter);
+          fprintf (stderr, " %i\n", state->jitter);
         }
       else
         {
-          printf ("\n");
+          fprintf (stderr, "\n");
         }
     }
 

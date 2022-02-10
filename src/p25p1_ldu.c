@@ -28,37 +28,37 @@ static void
 debug_log_imbe(char imbe_fr[8][23])
 {
   int i, j;
-  printf("    ");
+  fprintf (stderr, "    ");
 
   for (j=0; j<4; j++)
     {
-        printf("{");
+        fprintf (stderr, "{");
         for (i=0; i<23; i++)
           {
             if (i>0)
               {
-                printf(", ");
+                fprintf (stderr, ", ");
               }
-            printf("%c", (imbe_fr[j][i] + '0'));
+            fprintf (stderr, "%c", (imbe_fr[j][i] + '0'));
           }
-        printf("}; ");
+        fprintf (stderr, "}; ");
     }
 
   for (j=4; j<7; j++)
     {
-      printf("{");
+      fprintf (stderr, "{");
       for (i=0; i<15; i++)
         {
           if (i>0)
             {
-              printf(", ");
+              fprintf (stderr, ", ");
             }
-          printf("%c", (imbe_fr[j][i] + '0'));
+          fprintf (stderr, "%c", (imbe_fr[j][i] + '0'));
         }
-      printf("}; ");
+      fprintf (stderr, "}; ");
     }
 
-  printf("\n");
+  fprintf (stderr, "\n");
 }
 
 void
@@ -137,7 +137,7 @@ process_IMBE (dsd_opts* opts, dsd_state* state, int* status_count)
 
           if (match) {
               // Skip this particular value. If we let it pass it will be signaled as an erroneus IMBE
-              printf("(Non-standard IMBE c0 detected, skipped)");
+              fprintf (stderr, "(Non-standard IMBE c0 detected, skipped)");
           } else {
               processMbeFrame (opts, state, imbe_fr, NULL, NULL);
           }
@@ -161,17 +161,17 @@ read_and_correct_hex_word (dsd_opts* opts, dsd_state* state, char* hex, int* sta
   read_hamm_parity (opts, state, parity, status_count, analog_signal_array, analog_signal_index);
 
 #ifdef LDU_DEBUG
-  printf("[");
+  fprintf (stderr, "[");
   for (i = 0; i < 6; i++)
     {
-      printf("%c", (hex[i] == 1)? 'X' : ' ');
+      fprintf (stderr, "%c", (hex[i] == 1)? 'X' : ' ');
     }
-  printf("-");
+  fprintf (stderr, "-");
   for (i = 0; i < 4; i++)
     {
-      printf("%c", (parity[i] == 1)? 'X' : ' ');
+      fprintf (stderr, "%c", (parity[i] == 1)? 'X' : ' ');
     }
-  printf("]");
+  fprintf (stderr, "]");
 #endif
 
   // Use Hamming to error correct the hex word
@@ -187,21 +187,21 @@ read_and_correct_hex_word (dsd_opts* opts, dsd_state* state, char* hex, int* sta
     }
 
 #ifdef LDU_DEBUG
-  printf(" -> [");
+  fprintf (stderr, " -> [");
   for (i = 0; i < 6; i++)
     {
-      printf("%c", (hex[i] == 1)? 'X' : ' ');
+      fprintf (stderr, "%c", (hex[i] == 1)? 'X' : ' ');
     }
-  printf("]");
+  fprintf (stderr, "]");
   if (error_count == 1)
     {
-      printf(" fixed!");
+      fprintf (stderr, " fixed!");
     }
   else if (error_count ==2)
     {
-      printf(" IRRECOVERABLE");
+      fprintf (stderr, " IRRECOVERABLE");
     }
-  printf("\n");
+  fprintf (stderr, "\n");
 #endif
 }
 
@@ -226,7 +226,7 @@ correct_hamming_dibits(char* data, int count, AnalogSignal* analog_signal_array)
 #ifdef HEURISTICS_DEBUG
           if (analog_signal_array[analog_signal_index].dibit != dibit)
             {
-              printf("LDU word corrected from %i to %i, analog value %i\n",
+              fprintf (stderr, "LDU word corrected from %i to %i, analog value %i\n",
                       analog_signal_array[analog_signal_index].dibit, dibit, analog_signal_array[analog_signal_index].value);
             }
 #endif
@@ -246,7 +246,7 @@ correct_hamming_dibits(char* data, int count, AnalogSignal* analog_signal_array)
 #ifdef HEURISTICS_DEBUG
           if (analog_signal_array[analog_signal_index].dibit != dibit)
             {
-              printf("LDU-HM parity corrected from %i to %i, analog value %i\n",
+              fprintf (stderr, "LDU-HM parity corrected from %i to %i, analog value %i\n",
                       analog_signal_array[analog_signal_index].dibit, dibit, analog_signal_array[analog_signal_index].value);
             }
 #endif
@@ -261,9 +261,8 @@ debug_ldu_header(dsd_state* state)
 {
 #ifdef TRACE_DSD
   float s = state->debug_sample_index / 48000.0F;
-  printf("Start of LDU at sample %f\n", s);
+  fprintf (stderr, "Start of LDU at sample %f\n", s);
 #endif
 
   debug_print_heuristics(&state->p25_heuristics);
 }
-

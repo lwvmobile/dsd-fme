@@ -51,7 +51,7 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
 
   if (opts->errorbars == 1)
     {
-      printf ("e:");
+      fprintf (stderr, "e:");
     }
 
   // IMBE 1
@@ -187,12 +187,12 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
 
   if (opts->errorbars == 1)
     {
-      printf ("\n");
+      fprintf (stderr, "\n");
     }
 
   if (opts->p25status == 1)
     {
-      printf ("lsd1: %s lsd2: %s\n", lsd1, lsd2);
+      fprintf (stderr, "lsd1: %s lsd2: %s\n", lsd1, lsd2);
     }
 
   // trailing status symbol
@@ -234,7 +234,7 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
     }
 
 #ifdef HEURISTICS_DEBUG
-  printf("(audio errors, header errors, critical header errors) (%i,%i,%i)\n",
+  fprintf (stderr, "(audio errors, header errors, critical header errors) (%i,%i,%i)\n",
           state->debug_audio_errors, state->debug_header_errors, state->debug_header_critical_errors);
 #endif
 

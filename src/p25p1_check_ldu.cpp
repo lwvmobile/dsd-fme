@@ -38,32 +38,32 @@ int check_and_fix_reedsolomon_24_12_13(char* data, char* parity)
     int irrecoverable_error = reed_solomon_24_12_13.decode(data, parity);
 
 #ifdef CHECK_LDU_DEBUG
-    printf("Results for Reed-Solomon code (24,12,13)\n\n");
+    fprintf (stderr, "Results for Reed-Solomon code (24,12,13)\n\n");
     if (irrecoverable_error == 0) {
-        printf("  i  original fixed\n");
+        fprintf (stderr, "  i  original fixed\n");
         for (int i = 0; i < 12; i++) {
-            printf("%3d  [", i);
+            fprintf (stderr, "%3d  [", i);
             for (int j = 0; j < 6; j++) {
-                printf("%c", (original[i][j] == 1)? 'X' : ' ');
+                fprintf (stderr, "%c", (original[i][j] == 1)? 'X' : ' ');
             }
-            printf("] [");
+            fprintf (stderr, "] [");
             for (int j = 0; j < 6; j++) {
-                printf("%c", (data[i*6+j] == 1)? 'X' : ' ');
+                fprintf (stderr, "%c", (data[i*6+j] == 1)? 'X' : ' ');
             }
-            printf("]\n");
+            fprintf (stderr, "]\n");
         }
     } else {
-        printf("Irrecoverable errors found\n");
-        printf("  i  original fixed\n");
+        fprintf (stderr, "Irrecoverable errors found\n");
+        fprintf (stderr, "  i  original fixed\n");
         for (int i = 0; i < 12; i++) {
-            printf("%3d  [", i);
+            fprintf (stderr, "%3d  [", i);
             for (int j = 0; j < 6; j++) {
-                printf("%c", (original[i][j] == 1)? 'X' : ' ');
+                fprintf (stderr, "%c", (original[i][j] == 1)? 'X' : ' ');
             }
-            printf("]\n");
+            fprintf (stderr, "]\n");
         }
     }
-    printf("\n");
+    fprintf (stderr, "\n");
 #endif
 
     return irrecoverable_error;
@@ -88,32 +88,32 @@ int check_and_fix_reedsolomon_24_16_9(char* data, char* parity)
     int irrecoverable_error = reed_solomon_24_16_9.decode(data, parity);
 
 #ifdef CHECK_LDU_DEBUG
-    printf("Results for Reed-Solomon code (24,16,9)\n\n");
+    fprintf (stderr, "Results for Reed-Solomon code (24,16,9)\n\n");
     if (irrecoverable_error == 0) {
-        printf("  i  original fixed\n");
+        fprintf (stderr, "  i  original fixed\n");
         for (int i = 0; i < 16; i++) {
-            printf("%3d  [", i);
+            fprintf (stderr, "%3d  [", i);
             for (int j = 0; j < 6; j++) {
-                printf("%c", (original[i][j] == 1)? 'X' : ' ');
+                fprintf (stderr, "%c", (original[i][j] == 1)? 'X' : ' ');
             }
-            printf("] [");
+            fprintf (stderr, "] [");
             for (int j = 0; j < 6; j++) {
-                printf("%c", (data[i*6+j] == 1)? 'X' : ' ');
+                fprintf (stderr, "%c", (data[i*6+j] == 1)? 'X' : ' ');
             }
-            printf("]\n");
+            fprintf (stderr, "]\n");
         }
     } else {
-        printf("Irrecoverable errors found\n");
-        printf("  i  original fixed\n");
+        fprintf (stderr, "Irrecoverable errors found\n");
+        fprintf (stderr, "  i  original fixed\n");
         for (int i = 0; i < 16; i++) {
-            printf("%3d  [", i);
+            fprintf (stderr, "%3d  [", i);
             for (int j = 0; j < 6; j++) {
-                printf("%c", (original[i][j] == 1)? 'X' : ' ');
+                fprintf (stderr, "%c", (original[i][j] == 1)? 'X' : ' ');
             }
-            printf("]\n");
+            fprintf (stderr, "]\n");
         }
     }
-    printf("\n");
+    fprintf (stderr, "\n");
 #endif
 
     return irrecoverable_error;
