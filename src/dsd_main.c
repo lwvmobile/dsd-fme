@@ -388,9 +388,9 @@ liveScanner (dsd_opts * opts, dsd_state * state)
 		PaError err = Pa_StartStream( opts->audio_in_pa_stream );
 		if( err != paNoError )
 		{
-			//fprintf (stderr, stderr, "An error occured while starting the portaudio input stream\n" );
-			//fprintf (stderr, stderr, "Error number: %d\n", err );
-			//fprintf (stderr, stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+			//fprintf (stderr, "An error occured while starting the portaudio input stream\n" );
+			//fprintf (stderr, "Error number: %d\n", err );
+			//fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 			return;
 		}
 	}
@@ -459,9 +459,9 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
 			err = Pa_CloseStream( opts->audio_in_pa_stream );
 			if( err != paNoError )
 			{
-				//fprintf (stderr, stderr, "An error occured while closing the portaudio input stream\n" );
-				//fprintf (stderr, stderr, "Error number: %d\n", err );
-				//fprintf (stderr, stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+				//fprintf (stderr, "An error occured while closing the portaudio input stream\n" );
+				//fprintf (stderr, "Error number: %d\n", err );
+				//fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 			}
 		}
 		if(opts->audio_out_pa_stream != NULL)
@@ -471,24 +471,24 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
 				err = Pa_StopStream( opts->audio_out_pa_stream );
 			if( err != paNoError )
 			{
-				//fprintf (stderr, stderr, "An error occured while closing the portaudio output stream\n" );
-				//fprintf (stderr, stderr, "Error number: %d\n", err );
-				//fprintf (stderr, stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+				//fprintf (stderr, "An error occured while closing the portaudio output stream\n" );
+				//fprintf (stderr, "Error number: %d\n", err );
+				//fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 			}
 			err = Pa_CloseStream( opts->audio_out_pa_stream );
 			if( err != paNoError )
 			{
-				//fprintf (stderr, stderr, "An error occured while closing the portaudio output stream\n" );
-				//fprintf (stderr, stderr, "Error number: %d\n", err );
-				//fprintf (stderr, stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+				//fprintf (stderr, "An error occured while closing the portaudio output stream\n" );
+				//fprintf (stderr, "Error number: %d\n", err );
+				//fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 			}
 		}
 		err = Pa_Terminate();
 		if( err != paNoError )
 		{
-			//fprintf (stderr, stderr, "An error occured while terminating portaudio\n" );
-			//fprintf (stderr, stderr, "Error number: %d\n", err );
-			//fprintf (stderr, stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+			//fprintf (stderr, "An error occured while terminating portaudio\n" );
+			//fprintf (stderr, "Error number: %d\n", err );
+			//fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 		}
 	}
 #endif
@@ -989,9 +989,9 @@ main (int argc, char **argv)
     PaError err = Pa_Initialize();
     if( err != paNoError )
     {
-		//fprintf (stderr, stderr, "An error occured while initializing portaudio\n" );
-		//fprintf (stderr, stderr, "Error number: %d\n", err );
-		//fprintf (stderr, stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+		//fprintf (stderr, "An error occured while initializing portaudio\n" );
+		//fprintf (stderr, "Error number: %d\n", err );
+		//fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 		exit(err);
     }
   }

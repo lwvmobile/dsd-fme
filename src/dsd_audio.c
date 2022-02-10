@@ -391,9 +391,9 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 
 			if( err != paNoError )
 			{
-				fprintf (stderr, stderr, "An error occured while using the portaudio output stream\n" );
-        fprintf (stderr, stderr, "Error number: %d\n", err );
-				fprintf (stderr, stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+				fprintf (stderr, "An error occured while using the portaudio output stream\n" );
+        fprintf (stderr, "Error number: %d\n", err );
+				fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
 			}
 
 #endif
@@ -484,9 +484,9 @@ int getPADevice(char* dev, int input, PaStream** stream)
 	return 0;
 
 error:
-	  fprintf (stderr, stderr, "An error occured while initializing a portaudio stream\n" );
-    fprintf (stderr, stderr, "Error number: %d\n", err );
-    fprintf (stderr, stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+	  fprintf (stderr, "An error occured while initializing a portaudio stream\n" );
+    fprintf (stderr, "Error number: %d\n", err );
+    fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
     return err;
 }
 #endif
