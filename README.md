@@ -59,11 +59,41 @@ The Current list of objectives include:
 6. Make simple to use installer script.
 
 ## How to clone, and check out this branch
-First, install prerequisites if you haven't built any variety of DSD before.
 
-Check [DSD Installation](https://github.com/szechyjs/dsd/wiki/Installation "DSD Installation") and install the dependencies listed. Also, check the notices and install [MBElib](https://github.com/szechyjs/mbelib/blob/master/README.md "MBElib") if you feel it is necessary.
+First, install dependency packages. This guide will assume you are using Debian/Ubuntu based distros. Check your package manager for equivalent packages if different. PortAudio is not currently used in this build, and is disabled in CMakeLists.txt, you can re-enable it if you wish, but it isn't recommended unless you have a very specific reason to do so. Some of these dependencies are not currently be used, but may be used in future builds.
 
-Simply run these steps to clone and build DSD-FME w/ pulseaudio support.
+```
+sudo apt update
+sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr libusb-1.0-0-dev cmake git wget make build-essential
+
+wget -O itpp-latest.tar.bz2 http://sourceforge.net/projects/itpp/files/latest/download?source=files
+tar xjf itpp*
+cd itpp*
+mkdir build
+cd build
+cmake ..
+make -j `nproc`
+sudo make install
+cd ..
+cd ..
+```
+
+MBELib is considered a requirement in this build. You must read this notice prior to continuing. [MBElib Patent Notice](https://github.com/lwvmobile/mbelib#readme "MBElib Patent Notice") This version of MBELib is 1.3.1 and prints to STDERR, using the stock 1.3.0 MBElib may cause problems with print alignments if paired with this version of DSD-FME, or cause issues with printing over the screen in future builds.
+
+```
+git clone https://github.com/lwvmobile/mbelib
+cd mbelib
+mkdir build
+cd build
+cmake ..
+make -j `nproc`
+sudo make install
+cd ..
+cd ..
+```
+
+Finish by running these steps to clone and build DSD-FME w/ pulseaudio support.
+
 ```
 git clone https://github.com/lwvmobile/dsd-fme
 cd dsd-fme
@@ -77,6 +107,15 @@ cmake ..
 make
 
 ```
+Optional 'Virtual Sinks' for routing audio from SDR++ or GQRX, etc, into DSD-FME
+
+You may wish to direct sound into DSD-FME via Virtual Sinks. You may set up a Virtual Sink or two on your machine for routing audio in and out of applications to other applications using the following command, and opening up pavucontrol "PulseAudio Volume Control" in the menu to change line out of application to virtual sink, and line in of DSD-FME to monitor of virtual sink. This command will not persist past a reboot, so you will need to invoke them each time you reboot, or search for how to add this to your conf files for persistency if desired.
+
+```
+pacmd load-module module-null-sink sink_name=virtual_sink  sink_properties=device.description=Virtual_Sink
+pacmd load-module module-null-sink sink_name=virtual_sink2  sink_properties=device.description=Virtual_Sink2
+```
+
 
 ## License
 Copyright (C) 2010 DSD Author
