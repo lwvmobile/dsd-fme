@@ -17,54 +17,54 @@ void printPortAudioDevices()
 
     Pa_Initialize();
 
-    printf( "\nPortAudio version number = %d\nPortAudio version text = '%s'\n",
+    fprintf (stderr,  "\nPortAudio version number = %d\nPortAudio version text = '%s'\n",
             Pa_GetVersion(), Pa_GetVersionText() );
 
 
     numDevices = Pa_GetDeviceCount();
     if( numDevices < 0 )
     {
-        printf( "ERROR: Pa_GetDeviceCount returned 0x%x\n", numDevices );
+        fprintf (stderr,  "ERROR: Pa_GetDeviceCount returned 0x%x\n", numDevices );
         err = numDevices;
         goto error;
     }
 
-    printf( "Number of devices = %d\n", numDevices );
+    fprintf (stderr,  "Number of devices = %d\n", numDevices );
     for( i=0; i<numDevices; i++ )
     {
         deviceInfo = Pa_GetDeviceInfo( i );
-        printf( "--------------------------------------- device #%d\n", i );
+        fprintf (stderr,  "--------------------------------------- device #%d\n", i );
 
     /* Mark global and API specific default devices */
         defaultDisplayed = 0;
         if( i == Pa_GetDefaultInputDevice() )
         {
-            printf( "[ Default Input" );
+            fprintf (stderr,  "[ Default Input" );
             defaultDisplayed = 1;
         }
         else if( i == Pa_GetHostApiInfo( deviceInfo->hostApi )->defaultInputDevice )
         {
             const PaHostApiInfo *hostInfo = Pa_GetHostApiInfo( deviceInfo->hostApi );
-            printf( "[ Default %s Input", hostInfo->name );
+            fprintf (stderr,  "[ Default %s Input", hostInfo->name );
             defaultDisplayed = 1;
         }
 
         if( i == Pa_GetDefaultOutputDevice() )
         {
-            printf( (defaultDisplayed ? "," : "[") );
-            printf( " Default Output" );
+            fprintf (stderr,  (defaultDisplayed ? "," : "[") );
+            fprintf (stderr,  " Default Output" );
             defaultDisplayed = 1;
         }
         else if( i == Pa_GetHostApiInfo( deviceInfo->hostApi )->defaultOutputDevice )
         {
             const PaHostApiInfo *hostInfo = Pa_GetHostApiInfo( deviceInfo->hostApi );
-            printf( (defaultDisplayed ? "," : "[") );
-            printf( " Default %s Output", hostInfo->name );
+            fprintf (stderr,  (defaultDisplayed ? "," : "[") );
+            fprintf (stderr,  " Default %s Output", hostInfo->name );
             defaultDisplayed = 1;
         }
 
         if( defaultDisplayed )
-            printf( " ]\n" );
+            fprintf (stderr,  " ]\n" );
 
     /* print device info fields */
 #ifdef WIN32
@@ -74,17 +74,17 @@ void printPortAudioDevices()
             wprintf( L"Name                        = %s\n", wideName );
         }
 #else
-        printf( "Name                        = %s\n", deviceInfo->name );
+        fprintf (stderr, "Name                        = %s\n", deviceInfo->name );
 #endif
-        printf( "Host API                    = %s\n",  Pa_GetHostApiInfo( deviceInfo->hostApi )->name );
-        printf( "Max inputs = %d", deviceInfo->maxInputChannels  );
-        printf( ", Max outputs = %d\n", deviceInfo->maxOutputChannels  );
-        printf( "Default sample rate         = %8.2f\n", deviceInfo->defaultSampleRate );
+        fprintf (stderr, "Host API                    = %s\n",  Pa_GetHostApiInfo( deviceInfo->hostApi )->name );
+        fprintf (stderr, "Max inputs = %d", deviceInfo->maxInputChannels  );
+        fprintf (stderr, ", Max outputs = %d\n", deviceInfo->maxOutputChannels  );
+        fprintf (stderr, "Default sample rate         = %8.2f\n", deviceInfo->defaultSampleRate );
     }
 
     Pa_Terminate();
 
-    printf("----------------------------------------------\n");
+    fprintf (stderr,"----------------------------------------------\n");
     return;
 
 error:
@@ -98,7 +98,7 @@ error:
 
 void printPortAudioDevices()
 {
-    printf("PortAudio not supported in this build of dsd\n");
+    fprintf (stderr,"PortAudio not supported in this build of dsd\n");
 }
 
 #endif

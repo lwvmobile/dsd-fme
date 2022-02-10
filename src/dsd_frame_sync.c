@@ -94,26 +94,26 @@ printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset,
   if (opts->verbose > 0)
     {
 	  //strftime (datestr, 31, "%Y-%m-%d-%H%M%S", &timep);
-      //printf ("Sync: %s ", frametype);
-      //printf ("%s %s Sync: %s ", getDate(), getTime(), frametype);
-      printf ("%s ", getTime());
-      printf ("Sync: %s ", frametype);
-      //printf("%s Sync: %s ", getTime(), frametype);
+      //fprintf (stderr,"Sync: %s ", frametype);
+      //fprintf (stderr,"%s %s Sync: %s ", getDate(), getTime(), frametype);
+      fprintf (stderr,"%s ", getTime());
+      fprintf (stderr,"Sync: %s ", frametype);
+      //fprintf (stderr,"%s Sync: %s ", getTime(), frametype);
       //printw("%s Sync: %s ", getTime(), frametype);
     }
   if (opts->verbose > 2)
     {
-      printf ("o: %4i ", offset);
+      fprintf (stderr,"o: %4i ", offset);
       //printw("o: %4i ", offset);
     }
   if (opts->verbose > 1)
     {
-      printf ("mod: %s ", modulation);
+      fprintf (stderr,"mod: %s ", modulation);
       //printw("mod: %s ", modulation);
     }
   if (opts->verbose > 2)
     {
-      printf ("g: %f ", state->aout_gain);
+      fprintf (stderr,"g: %f ", state->aout_gain);
       //printw("g: %f ", state->aout_gain);
     }
  //refresh();
@@ -179,12 +179,12 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   state->numflips = 0;
   if ((opts->symboltiming == 1) && (state->carrier == 1))
     {
-      printf ("\nSymbol Timing:\n");
+      fprintf (stderr,"\nSymbol Timing:\n");
       //printw("\nSymbol Timing:\n");
     }
   while (sync == 0)
     {
-      //printf("now=%d\n", now); //okay, so this is incrementing as expected
+      //fprintf (stderr,"now=%d\n", now); //okay, so this is incrementing as expected
       if ( opts->monitor_input_audio == 1 && (time(NULL) - now) > 1 ) //okay, still something going on, still doing the read part for some reason
       {
         //playRawAudio(opts, state); //this is on line 21 in dsd_audio.c
@@ -336,36 +336,36 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   if (state->symbolcnt > (4800 / opts->scoperate))
                     {
                       state->symbolcnt = 0;
-                      printf ("\n");
-                      printf ("Demod mode:     %s                Nac:                     %4X\n", modulation, state->nac);
-                      printf ("Frame Type:    %s        Talkgroup:            %7i\n", state->ftype, state->lasttg);
-                      printf ("Frame Subtype: %s       Source:          %12i\n", state->fsubtype, state->lastsrc);
-                      printf ("TDMA activity:  %s %s     Voice errors: %s\n", state->slot0light, state->slot1light, state->err_str);
-                      printf ("+----------------------------------------------------------------+\n");
+                      fprintf (stderr,"\n");
+                      fprintf (stderr,"Demod mode:     %s                Nac:                     %4X\n", modulation, state->nac);
+                      fprintf (stderr,"Frame Type:    %s        Talkgroup:            %7i\n", state->ftype, state->lasttg);
+                      fprintf (stderr,"Frame Subtype: %s       Source:          %12i\n", state->fsubtype, state->lastsrc);
+                      fprintf (stderr,"TDMA activity:  %s %s     Voice errors: %s\n", state->slot0light, state->slot1light, state->err_str);
+                      fprintf (stderr,"+----------------------------------------------------------------+\n");
                       for (i = 0; i < 10; i++)
                         {
-                          printf ("|");
+                          fprintf (stderr,"|");
                           for (j = 0; j < 64; j++)
                             {
                               if (i == 0)
                                 {
                                   if ((j == ((state->min) + 32768) / 1024) || (j == ((state->max) + 32768) / 1024))
                                     {
-                                      printf ("#");
+                                      fprintf (stderr,"#");
                                     }
                                   else if (j == (state->center + 32768) / 1024)
                                     {
-                                      printf ("!");
+                                      fprintf (stderr,"!");
                                     }
                                   else
                                     {
                                       if (j == 32)
                                         {
-                                          printf ("|");
+                                          fprintf (stderr,"|");
                                         }
                                       else
                                         {
-                                          printf (" ");
+                                          fprintf (stderr," ");
                                         }
                                     }
                                 }
@@ -373,24 +373,24 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                                 {
                                   if (spectrum[j] > 9 - i)
                                     {
-                                      printf ("*");
+                                      fprintf (stderr,"*");
                                     }
                                   else
                                     {
                                       if (j == 32)
                                         {
-                                          printf ("|");
+                                          fprintf (stderr,"|");
                                         }
                                       else
                                         {
-                                          printf (" ");
+                                          fprintf (stderr," ");
                                         }
                                     }
                                 }
                             }
-                          printf ("|\n");
+                          fprintf (stderr,"|\n");
                         }
-                      printf ("+----------------------------------------------------------------+\n");
+                      fprintf (stderr,"+----------------------------------------------------------------+\n");
                     }
                 }
             }
@@ -934,8 +934,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             {
               if ((opts->errorbars == 1) && (opts->verbose > 1) && (state->carrier == 1))
                 {
-                  printf ("Sync: no sync\n");
-                  printf("Press CTRL + C to close.\n"); //Kindly remind user to double tap CTRL + C
+                  fprintf (stderr,"Sync: no sync\n");
+                  fprintf (stderr,"Press CTRL + C to close.\n"); //Kindly remind user to double tap CTRL + C
                   }
               noCarrier (opts, state);
               return (-1);

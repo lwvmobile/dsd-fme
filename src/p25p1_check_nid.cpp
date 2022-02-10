@@ -83,7 +83,7 @@ int check_NID(char* bch_code, int* new_nac, char* new_duid, unsigned char parity
 
         if (expected_parity != parity) {
             // Ignore, not sure what to do
-            //printf("Error in parity detected?");
+            //fprintf (stderr, "Error in parity detected?");
         }
 
         result = 1;

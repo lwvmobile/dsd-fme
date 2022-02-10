@@ -82,7 +82,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
       k++;
     }
   cachbits[24] = 0;
-  printf ("%s ", cachbits);
+  fprintf (stderr, "%s ", cachbits);
 #endif
 
   // current slot
@@ -203,7 +203,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
       k++;
     }
   syncbits[48] = 0;
-  printf ("%s ", syncbits);
+  fprintf (stderr, "%s ", syncbits);
 #endif
 
   if ((strcmp (sync, DMR_BS_DATA_SYNC) == 0) || (strcmp (sync, DMR_MS_DATA_SYNC) == 0))
@@ -220,7 +220,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
 
   if (opts->errorbars == 1)
     {
-      printf ("%s %s ", state->slot0light, state->slot1light);
+      fprintf (stderr, "%s %s ", state->slot0light, state->slot1light);
     }
 
   // current slot second half, cach, next slot 1st half
@@ -230,11 +230,11 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     {
       if (strcmp (state->fsubtype, "              ") == 0)
         {
-          printf (" Unknown burst type: %s\n", bursttype);
+          fprintf (stderr, " Unknown burst type: %s\n", bursttype);
         }
       else
         {
-          printf ("%s\n", state->fsubtype);
+          fprintf (stderr, "%s\n", state->fsubtype);
         }
     }
 }

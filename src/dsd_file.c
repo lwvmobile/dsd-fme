@@ -139,7 +139,7 @@ openMbeInFile (dsd_opts * opts, dsd_state * state)
   opts->mbe_in_f = fopen (opts->mbe_in_file, "ro");
   if (opts->mbe_in_f == NULL)
     {
-      printf ("Error: could not open %s\n", opts->mbe_in_file);
+      fprintf (stderr,"Error: could not open %s\n", opts->mbe_in_file);
     }
 
   // read cookie
@@ -159,7 +159,7 @@ openMbeInFile (dsd_opts * opts, dsd_state * state)
   else
     {
       state->mbe_file_type = -1;
-      printf ("Error - unrecognized file type\n");
+      fprintf (stderr,"Error - unrecognized file type\n");
     }
 
 }
@@ -263,12 +263,12 @@ openMbeOutFile (dsd_opts * opts, dsd_state * state)
   gettimeofday (&tv, NULL);
   sprintf (opts->mbe_out_file, "%i%s", (int) tv.tv_sec, ext);
 
-  sprintf(opts->mbe_out_path, "%s%s", opts->mbe_out_dir, opts->mbe_out_file);
+  sprintf (opts->mbe_out_path, "%s%s", opts->mbe_out_dir, opts->mbe_out_file);
 
   opts->mbe_out_f = fopen (opts->mbe_out_path, "w");
   if (opts->mbe_out_f == NULL)
     {
-      printf ("Error, couldn't open %s\n", opts->mbe_out_path);
+      fprintf (stderr,"Error, couldn't open %s\n", opts->mbe_out_path);
     }
 
   // write magic
@@ -291,7 +291,7 @@ openWavOutFile (dsd_opts * opts, dsd_state * state)
 
   if (opts->wav_out_f == NULL)
   {
-    printf ("Error - could not open wav output file %s\n", opts->wav_out_file);
+    fprintf (stderr,"Error - could not open wav output file %s\n", opts->wav_out_file);
     return;
   }
 
@@ -312,15 +312,15 @@ closeWavOutFile (dsd_opts * opts, dsd_state * state)
       rewind (opts->wav_out_f);
       length = state->wav_out_bytes;
 
-      fprintf (opts->wav_out_f, "RIFF");
+      ffprintf (stderr,opts->wav_out_f, "RIFF");
       // total length
       fputc (((36 + length) & 0xff), opts->≈≈);
       fputc ((((36 + length) >> 8) & 0xff), opts->wav_out_f);
       fputc ((((36 + length) >> 16) & 0xff), opts->wav_out_f);
       fputc ((((36 + length) >> 24) & 0xff), opts->wav_out_f);
 
-      fprintf (opts->wav_out_f, "WAVE");
-      fprintf (opts->wav_out_f, "fmt ");
+      ffprintf (stderr,opts->wav_out_f, "WAVE");
+      ffprintf (stderr,opts->wav_out_f, "fmt ");
 
       // length of format chunk
       fputc (16, opts->wav_out_f);
@@ -357,7 +357,7 @@ closeWavOutFile (dsd_opts * opts, dsd_state * state)
       fputc (0, opts->wav_out_f);
 
       // data chunk header
-      fprintf (opts->wav_out_f, "data");
+      ffprintf (stderr,opts->wav_out_f, "data");
 
       // length of data
       fputc ((length & 0xff), opts->wav_out_f);
