@@ -27,21 +27,21 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 
 -Y 8 set rtl VFO bandwidth in kHz, (default = 48)(6, 8, 12, 16, 24, 48)
 
--W Monitor Source Audio (WIP!) (may or may not decode audio if this is on, depending on selected decode type and luck)
-(Also, should be noted that depending on modulation, may sound extremely terrible)
-(Currently causing Pulse Audio server to restart on Mint, but works in Arch)
+-W Monitor Source Audio (WIP!) (Currently disabled on PulseAudio branch)
 ```
 ## Example Pulse Audio Input and Pulse Audio Output, Autodetect Frame Type
 `./dsd`
 ```
 Yes, it really is this simple now
+
 -fa Auto-detect frame type
+
 sans NXDN or Provoice, need to specify -fp, -fi, or -fn
 pulse audio are set as default input and output methods
 
 ```
 ## Example STDIN UDP from GQRX or SDR++, output to Pulse Audio, and save wav files
-`socat stdio udp-listen:7355 | ./dsd -fi -i - -o pulse -w nxdn.wa`
+`socat stdio udp-listen:7355 | ./dsd -fi -i - -o pulse -w nxdn.wav`
 
 ## Roadmap
 The Current list of objectives include:
@@ -56,7 +56,7 @@ The Current list of objectives include:
 
 5. ~~Improve Monitor Source Audio (if #2 on list is up and working)~~ Not currently playing well with Pulse Audio, need to re-evaluate
 
-6. Make simple to use installer script.
+6. ~~Make simple to use installer script.~~ Working on script now, also have full build and install guide down below
 
 ## How to clone, and check out this branch
 
