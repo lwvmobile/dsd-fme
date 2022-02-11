@@ -68,12 +68,14 @@ sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack
 
 wget -O itpp-latest.tar.bz2 http://sourceforge.net/projects/itpp/files/latest/download?source=files
 tar xjf itpp*
-cd itpp-4.3.1 #if you can't cd into this folder, double check folder name first
+#if you can't cd into this folder, double check folder name first
+cd itpp-4.3.1 
 mkdir build
 cd build
 cmake ..
 make -j `nproc`
 sudo make install
+sudo ldconfig
 cd ..
 cd ..
 ```
@@ -88,6 +90,7 @@ cd build
 cmake ..
 make -j `nproc`
 sudo make install
+sudo ldconfig
 cd ..
 cd ..
 ```
@@ -107,6 +110,7 @@ cmake ..
 make -j `nproc`
 ##only run make install if you don't have another version already installed##
 sudo make install
+sudo ldconfig
 
 ```
 Optional 'Virtual Sinks' for routing audio from SDR++ or GQRX, etc, into DSD-FME
@@ -118,6 +122,19 @@ pacmd load-module module-null-sink sink_name=virtual_sink  sink_properties=devic
 pacmd load-module module-null-sink sink_name=virtual_sink2  sink_properties=device.description=Virtual_Sink2
 ```
 
+Already have this branch, and just want to pull the latest build?
+
+```
+##Open your clone folder##
+git pull https://github.com/lwvmobile/dsd-fme pulseaudio
+##cd into your build folder##
+cd build
+##cmake usually isn't necesary, but could be if I update the cmakelist.txt
+cmake ..
+make
+sudo make install
+sudo ldconfig
+```
 
 ## License
 Copyright (C) 2010 DSD Author
