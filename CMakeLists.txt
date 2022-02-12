@@ -12,18 +12,25 @@ find_package(ITPP REQUIRED)
 #find_package(LibPortAudio) #disabled for testing
 find_package(RTLSDR)
 #more messing around
-#find_package(Curses REQUIRED)
+#find_package(Curses)
+find_package(Curses REQUIRED) #making this required until I can fix all instances of it being called to ifdef lines
 find_package(PULSEAUDIO)
 
-#include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${CURSES_INCLUDE_DIR})
-#set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${CURSES_LIBRARY})
+#include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${PULSEAUDIO_INCLUDE_DIRS} ${CURSES_INCLUDE_DIR})
+#set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${PULSEAUDIO_SIMPLE_LIBRARY} ${CURSES_LIBRARY})
+#remove CURSES from 'required' set up top AFTER switching all commands to ifdef in dsd_main, dsd_framesync, and dsd_ncurses.c
+#also, figure out how to make it build for wide character support in Linux Mint etc, like this -- $(ncursesw5-config --cflags --libs) 
+include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${PULSEAUDIO_INCLUDE_DIRS} ${CURSES_INCLUDE_DIR})
+set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${PULSEAUDIO_SIMPLE_LIBRARY} ${CURSES_LIBRARY})
 
-include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${PULSEAUDIO_INCLUDE_DIRS} )
-set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${PULSEAUDIO_SIMPLE_LIBRARY})
+if(Curses_FOUND)
+    include_directories(SYSTEM ${CURSES_INCLUDE_PATH})
+    list(APPEND LIBS ${CURSES_LIBRARY})
+    add_definitions(-DUSE_CURSES)
+endif(Curses_FOUND)
 
 #going to disable PortAudio, works just fine with padsp in Linux,
 #hoping disabling this doesn't break OSX or cygwin, etc builds
-
 #if(PORTAUDIO_FOUND)
 #    include_directories(SYSTEM ${PORTAUDIO_INCLUDE_DIRS})
 #    list(APPEND LIBS ${PORTAUDIO_LIBRARIES})

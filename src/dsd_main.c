@@ -52,11 +52,10 @@ int pretty_colors()
 }
 
 
-#include "p25p1_heuristics.h" //accidentally had this disabled when getting good NXDN, so if it breaks again, try disabling this
-#include "pa_devs.h"         //accidentally had this disabled when getting good NXDN, so if it breaks again, try disabling this
+#include "p25p1_heuristics.h"
+#include "pa_devs.h"
 short int butt = 1;
-#include <locale.h>
-//#include <ncurses.h>
+
 char * FM_banner[9] = {
   "                                 CTRL + C twice to exit",
   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗",
@@ -193,6 +192,7 @@ initOpts (dsd_opts * opts)
   opts->pulse_digi_rate_in  = 48000;
   opts->pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
   opts->pulse_flush = 1; //set 0 to flush, 1 for flushed
+  opts->use_ncurses_terminal = 0; //ncurses terminal disabled by default, call with -N
 }
 
 void
@@ -595,7 +595,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:Wrl")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:NWrl")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -686,6 +686,11 @@ main (int argc, char **argv)
           //fprintf (stderr,"Monitor Source Audio if no sync detected (WIP!)\n");
           fprintf (stderr,"Monitor Source Audio Currently Disabled in Pulse Audio Builds.\n");
           break;
+
+          case 'N':
+            opts.use_ncurses_terminal = 1;
+            fprintf (stderr,"Enabling NCurses Terminal.\n");
+            break;
 
 
         case 'z':
@@ -965,8 +970,13 @@ main (int argc, char **argv)
         }
     }
 
+    if (opts.use_ncurses_terminal == 1)
+    {
+      ncursesOpen();
+      ncursesPrinter(&opts, &state);
+    }
 
-  if (opts.resume > 0)
+    if (opts.resume > 0)
     {
       openSerial (&opts, &state);
     }
@@ -1026,24 +1036,7 @@ main (int argc, char **argv)
         }
       openAudioInDevice (&opts);
 
-      /*
-      setlocale(LC_ALL, "");
-      sleep(3);
-      initscr(); //Initialize NCURSES screen window
-      start_color();
-      init_pair(1, COLOR_YELLOW, COLOR_BLACK);      //Yellow/Amber for frame sync/control channel, NV style
-      init_pair(2, COLOR_RED, COLOR_BLACK);        //Red for Terminated Calls
-      init_pair(3, COLOR_GREEN, COLOR_BLACK);     //Green for Active Calls
-      init_pair(4, COLOR_CYAN, COLOR_BLACK);     //Cyan for Site Extra and Patches
-      init_pair(5, COLOR_MAGENTA, COLOR_BLACK); //Magenta for no frame sync/signal
-      noecho();
-      cbreak();
-      erase();
-      for (short int i = 0; i < 7; i++) {
-        printw("%s \n", FM_banner[i]); }
-      attroff(COLOR_PAIR(4));
-      refresh();
-      */
+
       fprintf (stderr,"Press CTRL + C twice to close.\n"); //Kindly remind user to double tap CTRL + C
     }
 
@@ -1067,7 +1060,10 @@ main (int argc, char **argv)
     {
         liveScanner (&opts, &state);
     }
+  if (opts.use_ncurses_terminal == 1){
+    ncursesClose ();
+  }
   cleanupAndExit (&opts, &state);
-  //endwin();
+
   return (0);
 }

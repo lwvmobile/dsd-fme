@@ -112,7 +112,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              printf ("inlvl: %2i%% ", level);
+              fprintf (stderr, "inlvl: %2i%% ", level);
             }
         }
       state->nac = 0;
