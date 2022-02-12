@@ -662,6 +662,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               //else if ((strcmp (synctest18, INV_NXDN_BS_VOICE_SYNC) == 0) || (strcmp (synctest18, INV_NXDN_MS_VOICE_SYNC) == 0))
               //else if ((strncmperr (synctest18, NXDN_BS_DATA_SYNC, 18, 1) == 0) || (strncmperr (synctest18, NXDN_MS_DATA_SYNC, 18, 1) == 0)) //supposed to be voice, not data? IT WAS THIS ONE!!
               else if ((strncmperr (synctest18, INV_NXDN_BS_VOICE_SYNC, 18, 1) == 0) || (strncmperr (synctest18, INV_NXDN_MS_VOICE_SYNC, 18, 1) == 0)) //supposed to be voice, not data?
+
                 {
                   now = time(NULL); //here, or down more
                   if ((state->lastsynctype == 9) || (state->lastsynctype == 17))
