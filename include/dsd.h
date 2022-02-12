@@ -63,7 +63,9 @@
 #ifdef USE_RTLSDR
 #include <rtl-sdr.h>
 #endif
-
+//look into making this not required by doing ifdef, make new c file for methods, and CLI case option for ncurses terminal
+#include <locale.h>   //move this stuff to dsd.h
+#include <ncurses.h> //move this stuff to dsd.h
 /*
  * global variables
  */
@@ -155,6 +157,7 @@ typedef struct
   pa_simple *pulse_raw_dev_out;
   pa_simple *pulse_digi_dev_in;
   pa_simple *pulse_digi_dev_out;
+  int use_ncurses_terminal;
 
 } dsd_opts;
 
@@ -367,6 +370,13 @@ short nxdn_filter(short sample);
 //borrow from LEH for testing 'improved NXDN detection'
 int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr);
 //
+//ifdef ncurses
+void ncursesOpen ();
+void ncursesPrinter (dsd_opts * opts, dsd_state * state);
+void ncursesClose ();
+//endif ncurses
+
+
 
 #ifdef __cplusplus
 extern "C" {

@@ -588,6 +588,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, " -ProVoice ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 14;
+                  if (opts->use_ncurses_terminal == 1)
+                  {
+                    ncursesPrinter(opts, state);
+                  }
                   return (14);
                 }
               else if ((strcmp (synctest32, INV_PROVOICE_SYNC) == 0) || (strcmp (synctest32, INV_PROVOICE_EA_SYNC) == 0))
@@ -603,6 +607,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, " -ProVoice ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 15;
+                  if (opts->use_ncurses_terminal == 1)
+                  {
+                    ncursesPrinter(opts, state);
+                  }
                   return (15);
                 }
 
@@ -640,6 +648,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                             }
                         }
                       state->lastsynctype = 8;
+                      if (opts->use_ncurses_terminal == 1)
+                      {
+                        ncursesPrinter(opts, state);
+                      }
                       return (8);
                     }
                   else
@@ -648,8 +660,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                     }
                 }
               //else if ((strcmp (synctest18, INV_NXDN_BS_VOICE_SYNC) == 0) || (strcmp (synctest18, INV_NXDN_MS_VOICE_SYNC) == 0))
-              //else if ((strncmperr (synctest18, NXDN_BS_DATA_SYNC, 18, 1) == 0) || (strncmperr (synctest18, NXDN_MS_DATA_SYNC, 18, 1) == 0))
-	      else if ((strncmperr (synctest18, INV_NXDN_BS_VOICE_SYNC, 18, 1) == 0) || (strncmperr (synctest18, INV_NXDN_MS_VOICE_SYNC, 18, 1) == 0))	  
+              //else if ((strncmperr (synctest18, NXDN_BS_DATA_SYNC, 18, 1) == 0) || (strncmperr (synctest18, NXDN_MS_DATA_SYNC, 18, 1) == 0)) //supposed to be voice, not data? IT WAS THIS ONE!!
+              else if ((strncmperr (synctest18, INV_NXDN_BS_VOICE_SYNC, 18, 1) == 0) || (strncmperr (synctest18, INV_NXDN_MS_VOICE_SYNC, 18, 1) == 0)) //supposed to be voice, not data?
                 {
                   now = time(NULL); //here, or down more
                   if ((state->lastsynctype == 9) || (state->lastsynctype == 17))
@@ -676,6 +688,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                             }
                         }
                       state->lastsynctype = 9;
+                      if (opts->use_ncurses_terminal == 1)
+                      {
+                        ncursesPrinter(opts, state);
+                      }
                       return (9);
                     }
                   else
@@ -711,6 +727,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                             }
                         }
                       state->lastsynctype = 16;
+                      if (opts->use_ncurses_terminal == 1)
+                      {
+                        ncursesPrinter(opts, state);
+                      }
                       return (16);
                     }
                   else
@@ -747,6 +767,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                             }
                         }
                       state->lastsynctype = 17;
+                      if (opts->use_ncurses_terminal == 1)
+                      {
+                        ncursesPrinter(opts, state);
+                      }
                       return (17);
                     }
                   else
@@ -772,6 +796,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, " +D-STAR   ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 6;
+                  if (opts->use_ncurses_terminal == 1)
+                  {
+                    ncursesPrinter(opts, state);
+                  }
                   return (6);
                 }
               if (strcmp (synctest, INV_DSTAR_SYNC) == 0)
@@ -787,6 +815,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, " -D-STAR   ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 7;
+                  if (opts->use_ncurses_terminal == 1)
+                  {
+                    ncursesPrinter(opts, state);
+                  }
                   return (7);
                 }
               if (strcmp (synctest, DSTAR_HD) == 0)
@@ -802,6 +834,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                        printFrameSync (opts, state, " +D-STAR_HD   ", synctest_pos + 1, modulation);
                      }
                    state->lastsynctype = 18;
+                   if (opts->use_ncurses_terminal == 1)
+                   {
+                     ncursesPrinter(opts, state);
+                   }
                    return (18);
                  }
               if (strcmp (synctest, INV_DSTAR_HD) == 0)
@@ -817,6 +853,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                        printFrameSync (opts, state, " -D-STAR_HD   ", synctest_pos + 1, modulation);
                      }
                    state->lastsynctype = 19;
+                   if (opts->use_ncurses_terminal == 1)
+                   {
+                     ncursesPrinter(opts, state);
+                   }
                    return (19);
                  }
 
@@ -836,6 +876,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, "(+P25p1)   ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = -1;
+                  //do we want ncursesPrinter here??
+                  if (opts->use_ncurses_terminal == 1)
+                  {
+                    ncursesPrinter(opts, state);
+                  }
                   return (0);
                 }
               else if ((state->lastsynctype == 1) && ((state->lastp25type == 1) || (state->lastp25type == 2)))
@@ -850,6 +895,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, "(-P25p1)   ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = -1;
+                  if (opts->use_ncurses_terminal == 1)
+                  {
+                    ncursesPrinter(opts, state);
+                  }
                   return (1);
                 }
               else if ((state->lastsynctype == 3) && ((strcmp (synctest, X2TDMA_BS_VOICE_SYNC) != 0) || (strcmp (synctest, X2TDMA_MS_VOICE_SYNC) != 0)))
@@ -864,6 +913,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, "(-X2-TDMA) ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = -1;
+                  if (opts->use_ncurses_terminal == 1)
+                  {
+                    ncursesPrinter(opts, state);
+                  }
                   return (3);
                 }
               else if ((state->lastsynctype == 4) && ((strcmp (synctest, X2TDMA_BS_DATA_SYNC) != 0) || (strcmp (synctest, X2TDMA_MS_DATA_SYNC) != 0)))
@@ -878,6 +931,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, "(+X2-TDMA) ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = -1;
+                  if (opts->use_ncurses_terminal == 1)
+                  {
+                    ncursesPrinter(opts, state);
+                  }
                   return (4);
                 }
               else if ((state->lastsynctype == 11) && ((strcmp (synctest, DMR_BS_VOICE_SYNC) != 0) || (strcmp (synctest, DMR_MS_VOICE_SYNC) != 0)))
@@ -892,6 +949,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, "(-DMR)     ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = -1;
+                  if (opts->use_ncurses_terminal == 1)
+                  {
+                    ncursesPrinter(opts, state);
+                  }
                   return (11);
                 }
               else if ((state->lastsynctype == 12) && ((strcmp (synctest, DMR_BS_DATA_SYNC) != 0) || (strcmp (synctest, DMR_MS_DATA_SYNC) != 0)))
@@ -906,6 +967,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, "(+DMR)     ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = -1;
+                  if (opts->use_ncurses_terminal == 1)
+                  {
+                    ncursesPrinter(opts, state);
+                  }
                   return (12);
                 }
             }
