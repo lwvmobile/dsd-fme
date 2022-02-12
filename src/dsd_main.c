@@ -65,6 +65,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
+  "https://github.com/lwvmobile/dsd-fme"
 };
 
 
@@ -293,7 +294,7 @@ initState (dsd_state * state)
 void
 usage ()
 {
-  printf ("\nFME build:%s", GIT_TAG);
+  printf ("Github Build Version: %s \n", GIT_TAG);
   printf ("\n");
   printf ("Usage: dsd [options]            Live scanner mode\n");
   printf ("  or:  dsd [options] -r <files> Read/Play saved mbe data from file(s)\n");
@@ -568,6 +569,7 @@ main (int argc, char **argv)
   //pretty_colors();
   //printf ("Digital Speech Decoder 1.7.0-dev (build:%s)\n", GIT_TAG);
   printf ("Digital Speech Decoder: Florida Man Edition\n");
+  printf ("Github Build Version: %s \n", GIT_TAG);
   printf ("mbelib version %s\n", versionstr);
 
   initOpts (&opts);
