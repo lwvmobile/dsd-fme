@@ -131,7 +131,7 @@ git pull https://github.com/lwvmobile/dsd-fme pulseaudio
 cd build
 ##cmake usually isn't necesary, but could be if I update the cmakelist.txt
 cmake ..
-make
+make -j `nproc`
 sudo make install
 sudo ldconfig
 ```
