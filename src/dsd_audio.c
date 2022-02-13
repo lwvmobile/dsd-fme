@@ -26,11 +26,11 @@ void openPulseOutput(dsd_opts * opts)
 {
 
   ss.format = PA_SAMPLE_S16NE;
-  ss.channels = 1;
+  ss.channels = opts->pulse_raw_out_channels; //doing tests with 2 channels at 22050 for 44100 audio default in pulse
   ss.rate = opts->pulse_raw_rate_out; //48000
 
   tt.format = PA_SAMPLE_S16NE;
-  tt.channels = 1;
+  tt.channels = opts->pulse_digi_out_channels; //doing tests with 2 channels at 22050 for 44100 audio default in pulse
   tt.rate = opts->pulse_digi_rate_out; //48000, switches to 8000 when using RTL dongle
   //fprintf (stderr,"digi rate out = %d\n", opts->pulse_digi_rate_out);
 
@@ -49,32 +49,34 @@ void openPulseInput(dsd_opts * opts)
 {
 
   zz.format = PA_SAMPLE_S16NE;
-  zz.channels = 1;
+  zz.channels = opts->pulse_raw_in_channels;
   zz.rate = opts->pulse_raw_rate_in; //48000
 
   cc.format = PA_SAMPLE_S16NE;
-  cc.channels = 1;
+  cc.channels = opts->pulse_digi_in_channels;
   cc.rate = opts->pulse_digi_rate_in; //48000
 
   //zz
-  if (opts->monitor_input_audio == 1)
+  if (opts->monitor_input_audio == 2)
   {
-    opts->pulse_raw_dev_in   = pa_simple_new(NULL, "DSD FME", PA_STREAM_RECORD, NULL, "Raw Audio In", &zz, NULL, NULL, NULL);
+    opts->pulse_raw_dev_in = pa_simple_new(NULL, "DSD FME", PA_STREAM_RECORD, NULL, "Raw Audio In", &zz, NULL, NULL, NULL);
   }
   //cc
-  opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD FME", PA_STREAM_RECORD, NULL, "Digi Audio In", &cc, NULL, NULL, NULL);
+  opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD FME", PA_STREAM_RECORD, NULL, "Audio In", &cc, NULL, NULL, NULL);
 
 }
 
 void playRawAudio(dsd_opts * opts, dsd_state * state) {
   short obuf, outl, i, sample2, something;
-  something = state->samplesPerSymbol / 1; //was this what it was?
-
+  something = state->samplesPerSymbol / 1; //1 for buffer steal loops, 5 for rtl loop
+  //something = 1;
   if (opts->audio_in_type == 0 && opts->audio_out_type == 0){ //hack, but might as well for this particular type since its nearly perfect
     for (i=0; i < something; i++){
       //read (opts->audio_in_fd, &sample2, 2); //reading here seems to get same speed as gfsk modulation
-      pa_simple_read(opts->pulse_raw_dev_in, &sample2, 2, NULL );
-      obuf = sample2 / 4;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
+      //pa_simple_read(opts->pulse_raw_dev_in, &state->pulse_raw_out_buffer, 2, NULL );
+      //obuf = state->pulse_raw_out_buffer / 4;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
+      //obuf = state->input_sample_buffer;
+      obuf = state->pulse_raw_out_buffer;
       //write (opts->audio_out_fd, (void*)&obuf, 2);
       pa_simple_write(opts->pulse_raw_dev_out, (void*)&obuf, 2, NULL);
     }
@@ -82,8 +84,9 @@ void playRawAudio(dsd_opts * opts, dsd_state * state) {
   #ifdef USE_PORTAUDIO
   if (opts->audio_in_type == 2 && opts->audio_out_type == 0){ //hack, but might as well for this particular type since its nearly perfect
     for (i=0; i < something * 5; i++){ //not sure if this should be 'something' or something * 5 like is was with OSS
-      Pa_ReadStream( opts->audio_in_pa_stream, &sample2, 1 ); //reading here seems to get same speed as gfsk modulation
-      obuf = sample2 / 4;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
+      //Pa_ReadStream( opts->audio_in_pa_stream, &sample2, 1 ); //reading here seems to get same speed as gfsk modulation
+      obuf = state->pulse_raw_out_buffer;
+      //obuf = sample2 / 4;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
       //write (opts->audio_out_fd, (void*)&obuf, 2);
       pa_simple_write(opts->pulse_raw_dev_out, (void*)&obuf, 2, NULL);
     }
@@ -91,8 +94,9 @@ void playRawAudio(dsd_opts * opts, dsd_state * state) {
   if (opts->audio_in_type == 0 && opts->audio_out_type == 2){ //hack, but might as well for this particular type since its nearly perfect
     for (i=0; i < something; i++){
       //read (opts->audio_in_fd, &sample2, 2); //reading here seems to get same speed as gfsk modulation
-      pa_simple_read(opts->pulse_raw_dev_in, &sample2, 2, NULL );
-      obuf = sample2 / 4;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
+      //pa_simple_read(opts->pulse_raw_dev_in, &sample2, 2, NULL );
+      //obuf = sample2 / 4;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
+      obuf = state->pulse_raw_out_buffer;
       Pa_StartStream( opts->audio_out_pa_stream ); //no promises this work
       Pa_WriteStream( opts->audio_out_pa_stream, (void*)&obuf, 2); //no promises this work
     }
@@ -100,14 +104,16 @@ void playRawAudio(dsd_opts * opts, dsd_state * state) {
 
   if (opts->audio_in_type == 2 && opts->audio_out_type == 2){ //hack, but might as well for this particular type since its nearly perfect
     for (i=0; i < something * 5; i++){ //not sure if this should be 'something' or something * 5 like is was with OSS
-      Pa_ReadStream( opts->audio_in_pa_stream, &sample2, 1 ); //reading here seems to get same speed as gfsk modulation
-      obuf = sample2 / 4;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
+      //Pa_ReadStream( opts->audio_in_pa_stream, &sample2, 1 ); //reading here seems to get same speed as gfsk modulation
+      //obuf = sample2 / 4;  //dividing here 'quietens' it down a little bit, helps with clicking and clipping
+      obuf = state->pulse_raw_out_buffer;
       Pa_StartStream( opts->audio_out_pa_stream ); //no promises this work
       Pa_WriteStream( opts->audio_out_pa_stream, (void*)&obuf, 2); //no promises this work
     }
   }
   #endif
-
+  something = state->samplesPerSymbol / 5; //change to 5 for rtl samples, flips back to 1 up top next loop
+  //something = 1;
   if (opts->audio_in_type == 1 || opts->audio_in_type == 3){ //only plays at 83% and sounds like s sadly, but can't get samples directly from sdr when its already being polled for samples
   //also, can't get samples from stdin more than once either it seems, unless I borked it when I tried it earlier, so lumping it in here as well
     for (i=0; i < something; i++)
@@ -116,7 +122,7 @@ void playRawAudio(dsd_opts * opts, dsd_state * state) {
       outl = sizeof(obuf) ; //obuf length, I think its always equal to 2
       if (opts->audio_out_type == 0){
         //write (opts->audio_out_fd, (void*)&obuf, outl);
-        pa_simple_write(opts->pulse_raw_dev_out, (void*)&obuf, 2, NULL);
+        pa_simple_write(opts->pulse_raw_dev_out, (void*)&obuf, outl, NULL);
         //fprintf (stderr,"writing samples");
       }
 
@@ -399,10 +405,13 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 #endif
 		}
 		else
-      //if (opts->monitor_input_audio == 1){
+      if (opts->monitor_input_audio == 1){
         //pa_simple_flush(opts->pulse_raw_dev_in, NULL);
         //pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-      //}
+        //state->pulse_raw_out_buffer = 0;
+        //pa_simple_write(opts->pulse_raw_dev_out, (void*)&state->pulse_raw_out_buffer, 2, NULL);
+
+      }
       pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
       state->audio_out_idx = 0;
   }

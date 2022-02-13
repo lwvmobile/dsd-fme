@@ -1,4 +1,4 @@
-#/bin/bash
+#! /bin/bash
 clear
 echo DSD-FME Digital Speech Decoder - Florida Man Edition Auto Installer
 echo MBELib is considered a requirement on this build.

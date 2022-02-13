@@ -152,6 +152,10 @@ typedef struct
   int pulse_raw_rate_out;
   int pulse_digi_rate_in;
   int pulse_digi_rate_out;
+  int pulse_raw_in_channels;
+  int pulse_raw_out_channels;
+  int pulse_digi_in_channels;
+  int pulse_digi_out_channels;
   int pulse_flush;
   pa_simple *pulse_raw_dev_in;
   pa_simple *pulse_raw_dev_out;
@@ -242,6 +246,7 @@ typedef struct
 
   //input sample buffer for monitoring Input
   short input_sample_buffer; //HERE HERE
+  short pulse_raw_out_buffer; //HERE HERE
   //float *input_sample_buffer; //HERE HERE
 
 #ifdef TRACE_DSD

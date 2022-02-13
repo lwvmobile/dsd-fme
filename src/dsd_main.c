@@ -64,6 +64,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
+  "https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
 };
 
 
@@ -188,9 +189,14 @@ initOpts (dsd_opts * opts)
   opts->rtl_udp_port = 6020; //set UDP port for RTL remote
   opts->rtl_bandwidth = 48; //48000 default value
   opts->pulse_raw_rate_in   = 48000;
-  opts->pulse_raw_rate_out  = 48000;
-  opts->pulse_digi_rate_in  = 48000;
-  opts->pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
+  opts->pulse_raw_rate_out  = 48000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
+  opts->pulse_digi_rate_in  = 24000;
+  opts->pulse_digi_rate_out = 24000; //need to copy this to rtl type in and change rate out to 8000
+  opts->pulse_raw_in_channels   = 1;
+  opts->pulse_raw_out_channels  = 1;
+  opts->pulse_digi_in_channels  = 2;
+  opts->pulse_digi_out_channels = 2;
+
   opts->pulse_flush = 1; //set 0 to flush, 1 for flushed
   opts->use_ncurses_terminal = 0; //ncurses terminal disabled by default, call with -N
 }
@@ -300,7 +306,7 @@ initState (dsd_state * state)
 void
 usage ()
 {
-  fprintf (stderr, "\nFME build:%s", GIT_TAG);
+  fprintf (stderr, "Github Build Version: %s \n", GIT_TAG);
   fprintf (stderr,"\n");
   fprintf (stderr,"Usage: dsd [options]            Live scanner mode\n");
   fprintf (stderr,"  or:  dsd [options] -r <files> Read/Play saved mbe data from file(s)\n");
@@ -399,6 +405,9 @@ liveScanner (dsd_opts * opts, dsd_state * state)
   if(opts->audio_in_type == 3)
   {
     opts->pulse_digi_rate_out = 8000; //rtl currently needs rate out to be 8000, will investigate this further
+    opts->pulse_digi_out_channels = 1; //don't know if it matters here or not
+    opts->pulse_raw_rate_out = 8000;
+    opts->pulse_raw_out_channels = 1;
     open_rtlsdr_stream(opts);
   }
 #endif
@@ -584,9 +593,11 @@ main (int argc, char **argv)
     fprintf (stderr,"%s%s \n", FM_banner[i], KCYN);
   }
   fprintf (stderr,"%s", KNRM); //change back to normal
+  fprintf (stderr, "%s \n", FM_banner[7]);
   //pretty_colors();
   //fprintf (stderr,"Digital Speech Decoder 1.7.0-dev (build:%s)\n", GIT_TAG);
   fprintf (stderr,"Digital Speech Decoder: Florida Man Edition\n");
+  fprintf (stderr, "Github Build Version: %s \n", GIT_TAG);
   fprintf (stderr,"mbelib version %s\n", versionstr);
 
   initOpts (&opts);
@@ -683,8 +694,9 @@ main (int argc, char **argv)
 
         case 'W': //monitor_input_audio if no sync
           opts.monitor_input_audio = 0;
-          //fprintf (stderr,"Monitor Source Audio if no sync detected (WIP!)\n");
-          fprintf (stderr,"Monitor Source Audio Currently Disabled in Pulse Audio Builds.\n");
+          //fprintf (stderr,"Monitor Source Audio Enabled (WIP!) Sounds bad.\n");
+          //fprintf (stderr,"Monitor Source Audio may cause decoding issues.\n");
+          fprintf (stderr,"Monitor Source Audio currently disabled in Pulse Audio Builds.\n");
           break;
 
           case 'N':
@@ -1052,6 +1064,7 @@ main (int argc, char **argv)
   if (opts.playfiles == 1)
     {
       opts.pulse_digi_rate_out = 8000; //need set to 8000 for amb/imb playback
+      opts.pulse_digi_out_channels = 1;
       openPulseOutput(&opts); //need to open it up for output
       playMbeFiles (&opts, &state, argc, argv);
     }
