@@ -25,7 +25,7 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 
 -U set UDP port for rtl_fm remote control
 
--Y 8 set rtl VFO bandwidth in kHz, (default = 48)(6, 8, 12, 16, 24, 48)
+-Y 12 set rtl VFO bandwidth in kHz, (default = 48)(6, 8, 12, 16, 24, 48)
 
 -W Monitor Source Audio (WIP!) (Currently disabled on PulseAudio branch)
 ```
