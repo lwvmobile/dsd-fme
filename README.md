@@ -1,10 +1,10 @@
 # Digital Speech Decoder - Florida Man Edition
 This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with a few tweaks from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch as well. NXDN voice decoding is currently working a lot better, thanks to the latter, although I have yet to explore the expanded NXDN or DMR decoding he has laid out. That is a goal. I have also implemented a few more RTL options, including rtl device gain, PPM error, device index selection, squelch, VFO bandwidth, and a UDP remote that works like the old rtl_udp fork, although its currently limited to changing frequency and squelch. The goal is to integrate this project into [EDACS-FM](https://github.com/lwvmobile/edacs-fm "EDACS-FM") but I also want it to be its own standalone project. 
 
-![alt text](https://github.com/lwvmobile/dsd-fme/blob/master/Screenshot_216.png)
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)
 
 ## Example Usage - RTL
-`./dsd -fi -i rtl -o pulse -c 154.9875M -P -2 -D 1 -G 36 -L 25 -V 2 -U 6020 -Y 8`
+`dsd -fi -i rtl -o pulse -c 154.9875M -P -2 -D 1 -G 36 -L 70 -U 6021 -Y 12`
 
 ```
 -i rtl to use rtl_fm (default is -i pulse for pulse audio)
@@ -30,7 +30,7 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 -W Monitor Source Audio (WIP!) (Currently disabled on PulseAudio branch)
 ```
 ## Example Pulse Audio Input and Pulse Audio Output, Autodetect Frame Type
-`./dsd`
+`dsd` or `./dsd`
 ```
 Yes, it really is this simple now
 
@@ -41,7 +41,7 @@ pulse audio are set as default input and output methods
 
 ```
 ## Example STDIN UDP from GQRX or SDR++, output to Pulse Audio, and save wav files
-`socat stdio udp-listen:7355 | ./dsd -fi -i - -o pulse -w nxdn.wav`
+`socat stdio udp-listen:7355 | dsd -fi -i - -o pulse -w nxdn.wav`
 
 ## Roadmap
 The Current list of objectives include:
@@ -58,7 +58,17 @@ The Current list of objectives include:
 
 6. ~~Make simple to use installer script.~~ Working on script now, also have full build and install guide down below
 
-## How to clone, and check out this branch
+## How to clone, check out, and build this branch
+
+Using the included install.sh should make for a simple and painless clone, build, and install on any Debian or Ubuntu based system. Simply acquire or copy the script, and run it.
+
+```
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/pulseaudio/install.sh
+chmod +x install.sh
+./install.sh
+```
+
+Or you can elect to manually follow the steps down below.
 
 First, install dependency packages. This guide will assume you are using Debian/Ubuntu based distros. Check your package manager for equivalent packages if different. PortAudio is not currently used in this build, and is disabled in CMakeLists.txt, you can re-enable it if you wish, but it isn't recommended unless you have a very specific reason to do so. Some of these dependencies are not currently be used, but may be used in future builds.
 
