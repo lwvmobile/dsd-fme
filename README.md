@@ -63,6 +63,7 @@ The Current list of objectives include:
 Using the included install.sh should make for a simple and painless clone, build, and install on any Debian or Ubuntu based system. Simply acquire or copy the script, and run it.
 
 ```
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/pulseaudio/install.sh
 chmod +x install.sh
 ./install.sh
 ```
