@@ -4,7 +4,7 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 ![alt text](https://github.com/lwvmobile/dsd-fme/blob/master/Screenshot_216.png)
 
 ## Example Usage - RTL
-`./dsd -fi -i rtl -o pulse -c 154.9875M -P -2 -D 1 -G 36 -L 25 -V 2 -U 6020 -Y 8`
+`dsd -fi -i rtl -o pulse -c 154.9875M -P -2 -D 1 -G 36 -L 70 -U 6021 -Y 12`
 
 ```
 -i rtl to use rtl_fm (default is -i pulse for pulse audio)
@@ -30,7 +30,7 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 -W Monitor Source Audio (WIP!) (Currently disabled on PulseAudio branch)
 ```
 ## Example Pulse Audio Input and Pulse Audio Output, Autodetect Frame Type
-`./dsd`
+`dsd` or `./dsd`
 ```
 Yes, it really is this simple now
 
@@ -41,7 +41,7 @@ pulse audio are set as default input and output methods
 
 ```
 ## Example STDIN UDP from GQRX or SDR++, output to Pulse Audio, and save wav files
-`socat stdio udp-listen:7355 | ./dsd -fi -i - -o pulse -w nxdn.wav`
+`socat stdio udp-listen:7355 | dsd -fi -i - -o pulse -w nxdn.wav`
 
 ## Roadmap
 The Current list of objectives include:
@@ -58,7 +58,16 @@ The Current list of objectives include:
 
 6. ~~Make simple to use installer script.~~ Working on script now, also have full build and install guide down below
 
-## How to clone, and check out this branch
+## How to clone, check out, and build this branch
+
+Using the inluded install.sh should make for a simple and painless install on any Debian or Ubuntu based system. Simply acquire or copy the script, and run it.
+
+```
+chmod +x install.sh
+./install.sh
+```
+
+Or you can elect to manually follow the steps down below.
 
 First, install dependency packages. This guide will assume you are using Debian/Ubuntu based distros. Check your package manager for equivalent packages if different. PortAudio is not currently used in this build, and is disabled in CMakeLists.txt, you can re-enable it if you wish, but it isn't recommended unless you have a very specific reason to do so. Some of these dependencies are not currently be used, but may be used in future builds.
 
