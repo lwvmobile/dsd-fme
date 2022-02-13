@@ -67,7 +67,7 @@ First, install dependency packages. This guide will assume you are using Debian/
 
 ```
 sudo apt update
-sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential
+sudo apt install libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential
 
 wget -O itpp-latest.tar.bz2 http://sourceforge.net/projects/itpp/files/latest/download?source=files
 tar xjf itpp*
@@ -83,10 +83,10 @@ cd ..
 cd ..
 ```
 
-MBELib is considered a requirement in this build. You must read this notice prior to continuing. [MBElib Patent Notice](https://github.com/lwvmobile/mbelib#readme "MBElib Patent Notice") This version of MBELib is 1.3.1 and prints to STDERR, using the stock 1.3.0 MBElib may cause problems with print alignments if paired with this version of DSD-FME, or cause issues with printing over the screen in future builds.
+MBELib is considered a requirement in this build. You must read this notice prior to continuing. [MBElib Patent Notice](https://github.com/szechyjs/mbelib#readme "MBElib Patent Notice") This version of MBELib is 1.3.0 for this main build.
 
 ```
-git clone https://github.com/lwvmobile/mbelib
+git clone https://github.com/szechyjs/mbelib
 cd mbelib
 mkdir build
 cd build
