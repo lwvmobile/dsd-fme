@@ -64,7 +64,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  "https://github.com/lwvmobile/dsd-fme"
+  "https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
 };
 
 
@@ -381,7 +381,6 @@ usage ()
   fprintf (stderr,"                 (default=15)\n");
   fprintf (stderr,"\n");
   fprintf (stderr,"Report bugs to: https://github.com/lwvmobile/dsd-fme/issues \n");
-
   exit (0);
 }
 
@@ -596,10 +595,10 @@ main (int argc, char **argv)
   fprintf (stderr,"%s", KNRM); //change back to normal
   fprintf (stderr, "%s \n", FM_banner[7]);
   //pretty_colors();
-  //printf ("Digital Speech Decoder 1.7.0-dev (build:%s)\n", GIT_TAG);
-  printf ("Digital Speech Decoder: Florida Man Edition\n");
-  printf ("Github Build Version: %s \n", GIT_TAG);
-  printf ("mbelib version %s\n", versionstr);
+  //fprintf (stderr,"Digital Speech Decoder 1.7.0-dev (build:%s)\n", GIT_TAG);
+  fprintf (stderr,"Digital Speech Decoder: Florida Man Edition\n");
+  fprintf (stderr, "Github Build Version: %s \n", GIT_TAG);
+  fprintf (stderr,"mbelib version %s\n", versionstr);
 
   initOpts (&opts);
   initState (&state);
