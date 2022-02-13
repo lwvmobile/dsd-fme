@@ -4,7 +4,7 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 ![alt text](https://github.com/lwvmobile/dsd-fme/blob/master/Screenshot_216.png)
 
 ## Example Usage
-`padsp -m dsdfme -- ./dsd -fi -i rtl -o /dev/dsp -c 154.9875M -P -2 -D 1 -G 36 -L 25 -V 2 -U 6020 -Y 8`
+`padsp -m dsdfme -- ./dsd -fi -i rtl -o /dev/dsp -c 154.9875M -P -2 -D 0 -G 46 -L 70 -U 6021 -Y 12`
 
 ```
 -i rtl to use rtl_fm 
@@ -17,13 +17,13 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 
 -G set device gain (0-49) (default = 0 Auto Gain)
 
--L set rtl squelch to 25
+-L set rtl squelch to 70
 
 -V set RTL sample 'volume' multiplier
 
 -U set UDP port for rtl_fm remote control
 
--Y 8 set rtl VFO bandwidth in kHz, (default = 48)(6, 8, 12, 16, 24, 48)
+-Y 12 set rtl VFO bandwidth in kHz, (default = 48)(6, 8, 12, 16, 24, 48)
 
 -W Monitor Source Audio (WIP!) (may or may not decode audio if this is on, depending on selected decode type and luck)
 (Also, should be noted that depending on modulation, may sound extremely terrible)
