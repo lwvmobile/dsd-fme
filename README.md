@@ -60,6 +60,13 @@ wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/master/install.sh
 chmod +x install.sh
 ./install.sh
 ```
+This script will attempt to automatically build and install in Cygwin environments, but the user will be responsible for installing all dependencies, including librtlsdr. 
+
+```
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/master/cygwin_install.sh
+chmod +x install.sh
+./install.sh
+```
 
 Or you can elect to manually follow the steps down below.
 
