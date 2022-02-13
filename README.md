@@ -60,7 +60,7 @@ The Current list of objectives include:
 
 ## How to clone, check out, and build this branch
 
-Using the inluded install.sh should make for a simple and painless install on any Debian or Ubuntu based system. Simply acquire or copy the script, and run it.
+Using the included install.sh should make for a simple and painless clone, build, and install on any Debian or Ubuntu based system. Simply acquire or copy the script, and run it.
 
 ```
 chmod +x install.sh
