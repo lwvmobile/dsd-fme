@@ -36,6 +36,31 @@ char * FM_bannerN[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
+  "https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
+};
+
+char * SyncTypes[20] = {
+  "P25P1_SYNC",
+  "INV_P25P1_SYNC",
+  "X2TDMA_BS/MS_DATA_SYNC",
+  "INV_X2TDMA_BS/MS_DATA_SYNC",
+  "X2TDMA_BS/MS_VOICE_SYNC",
+  "INV_X2TDMA_BS/MS_VOICE_SYNC",
+  "DSTAR_SYNC",
+  "INV_DSTAR_SYNC",
+  "NXDN_BS_VOICE_SYNC",     //8
+  "INV_NXDN_BS_VOICE_SYNC", //9
+  "DMR_BS/MS_DATA_SYNC",
+  "INV_DMR_BS/MS_DATA_SYNC",
+  "DMR_BS/MS_VOICE_SYNC",
+  "INV_DMR_BS/MS_VOICE_SYNC",
+  "PROVOICE_SYNC",          //14
+  "INV_PROVOICE_SYNC",      //15
+  "NXDN_BS_DATA_SYNC",      //16
+  "INV_NXDN_BS_DATA_SYNC",  //17
+  "DSTAR_HD",
+  "INV_DSTAR_HD"
+
 };
 
 time_t nowN;
@@ -57,7 +82,7 @@ char * getTimeN(void) //get pretty hh:mm:ss timestamp
 void ncursesOpen ()
 {
   mbe_printVersion (versionstr);
-  //setlocale(LC_ALL, "");
+  setlocale(LC_ALL, "");
   initscr(); //Initialize NCURSES screen window
   start_color();
   init_pair(1, COLOR_YELLOW, COLOR_BLACK);      //Yellow/Amber for frame sync/control channel, NV style
@@ -72,21 +97,83 @@ void ncursesOpen ()
 void
 ncursesPrinter (dsd_opts * opts, dsd_state * state)
 {
+  int level;
+  level = (int) state->max / 164;
   erase();
   //disabling until wide support can be built for LM, etc. $(ncursesw5-config --cflags --libs)
-  //printw("%s \n", FM_bannerN[0]); //top line in white
+  //printw ("%s \n", FM_bannerN[0]); //top line in white
   //attron(COLOR_PAIR(4));
   //for (short int i = 1; i < 7; i++) { //following lines in cyan
     //printw("%s \n", FM_bannerN[i]); }
   //attroff(COLOR_PAIR(4));
-  printw("Digital Speech Decoder: Florida Man Edition\n");
-  printw("mbelib version %s\n", versionstr);
-  printw("Time: ");
-  printw("%s ", getTimeN());
+  printw ("%s \n", FM_bannerN[7]); //http link
+  printw ("Digital Speech Decoder: Florida Man Edition\n");
+  printw ("Github Build Version: %s \n", GIT_TAG);
+  printw ("mbelib version %s\n", versionstr);
+  printw ("Time: ");
+  printw ("%s ", getTimeN());
+  if (SyncTypes[state->lastsynctype] != NULL)
+  {
+    printw ("%s \n", SyncTypes[state->lastsynctype]);
+    //printw("%s ", state->ftype); //moved to front, some ftype strings have spaces in front of them, and others dont
+    /* Not sure if I'm going to use the error bars yet
+    if (opts->errorbars == 1)
+    {
+      printw("-"); //AFAIK, errorbars==1 is the internal value for if a system has inverted signal types, not at all misleading
+    }
+    else
+    {
+      printw("+");
+    }
+    */
+    if (1 == 1){ //figure out method that will tell me when is active and when not active, maybe carrier but this doesn't print anyways unless activity
+      attron(COLOR_PAIR(3));
+    }
+    printw ("%s %s\n", state->ftype, state->fsubtype); //some ftype strings have extra spaces in them
+    if (state->lasttg < 0) //triggers compiler warning: comparison between pointer and integer
+    {
+      //sprintf(state->ftype, )
+      //state->lasttg = state->ftype; //warning: assignment to ‘int’ from ‘char *
+      state->lasttg = 0;
+    }
+    printw ("TG [%7i] RID [%12i] \n", state->lasttg, state->lastsrc); //variables to fill with info from other system types too
+    //printw ("TG [%s] \n", state->lasttg);
+    //printw ("TDMA activity:  %s %s \n", state->slot0light, state->slot1light);
+    printw("In Level: [%2i%%] ", level);
+    printw ("Voice Error [%s] \n", state->err_str); //no idea if this shows anything outside of TDMA or P1 or what
+    if (1 == 1){ //same as above
+      attroff(COLOR_PAIR(3));
+    }
+  }
+
+  /*
   if (state->lastsynctype == 8 ||state->lastsynctype == 9 ||state->lastsynctype == 16 ||state->lastsynctype == 17)
   {
-    printw("NXDN");
+    if (state->samplesPerSymbol == 20)
+      {
+        //sprintf (state->ftype, " NXDN48      ");
+        if (opts->errorbars == 1)
+          {
+            //printFrameSync (opts, state, " -NXDN48   ", synctest_pos + 1, modulation);
+            printw("NXDN48 ");
+            printw("%s \n", SyncTypes[state->lastsynctype]);
+            printw("%s ", state->ftype);
+          }
+      }
+    else
+      {
+        //sprintf (state->ftype, " NXDN96      ");
+        if (opts->errorbars == 1)
+          {
+            //printFrameSync (opts, state, " -NXDN96   ", synctest_pos + 1, modulation);
+            printw("NXDN96 ");
+            printw("%s ", SyncTypes[state->lastsynctype]);
+            printw("%s ", state->ftype);
+          }
+      }
   }
+  */
+
   printw("\n"); //line return
   //add other interesting info to put here
 

@@ -16,22 +16,6 @@
  */
 
 #include "dsd.h"
-/*
-pa_simple *c;
-pa_sample_spec cc;
-
-void openPulseDigi(dsd_opts * opts){
-
-  cc.format = PA_SAMPLE_S16NE;
-  cc.channels = 1;
-  //cc.rate = 48000; //for some reason, if INPUT is 8000, and output is 48000, sounds correct on NXDN48
-  cc.rate = opts->pulse_digi_rate_in;
-
-  c = pa_simple_new(NULL, "DSD FME", PA_STREAM_RECORD, NULL, "Digi Audio In", &cc, NULL, NULL, NULL);
-
-}
-*/
-
 
 int
 getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
@@ -100,6 +84,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       if(opts->audio_in_type == 0)
       {
           pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
+          state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
       }
       else if (opts->audio_in_type == 1) {
           result = sf_read_short(opts->audio_in_file, &sample, 1);
@@ -236,7 +221,6 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
               sum += sample;
               count++;
             }
-            //state->input_sample_buffer = sum; //maybe find correct placement for this?
         }
       if (state->samplesPerSymbol == 5) //provoice or gfsk
         {
@@ -245,7 +229,6 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
               sum += sample;
               count++;
             }
-            //state->input_sample_buffer = sum;
         }
       else
         {
@@ -256,7 +239,6 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
               if ((i >= state->symbolCenter - 1) && (i <= state->symbolCenter + 2))
                 {
                   sum += sample;
-                  //state->input_sample_buffer = sum;
                   count++;
                 }
 
@@ -301,7 +283,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       state->lastsample = sample;
       //steal sample here for rtl input or stdin input
       state->input_sample_buffer = sample; //sample or sum, honestly this seemt to be best place to grab this sadly, sounds terrible most everywhere else
-    }   // for
+    }
 
   symbol = (sum / count);
 
