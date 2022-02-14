@@ -69,7 +69,7 @@ chmod +x install.sh
 This script will attempt to automatically build and install in Cygwin environments, but the user will be responsible for installing all dependencies, including librtlsdr. 
 
 ```
-wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/master/cygwin_install.sh
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/master/cygwin-install.sh
 chmod +x install.sh
 ./install.sh
 ```
