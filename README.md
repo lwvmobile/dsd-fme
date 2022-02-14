@@ -77,7 +77,7 @@ chmod +x install.sh
 
 Or you can elect to manually follow the steps down below.
 
-First, install dependency packages. This guide will assume you are using Debian/Ubuntu based distros. Check your package manager for equivalent packages if different. PortAudio is not currently used in this build, and is disabled in CMakeLists.txt, you can re-enable it if you wish, but it isn't recommended unless you have a very specific reason to do so. Some of these dependencies are not currently be used, but may be used in future builds.
+First, install dependency packages. This guide will assume you are using Debian/Ubuntu based distros. Check your package manager for equivalent packages if different. Some of these dependencies are not currently be used, but may be used in future builds.
 
 ```
 sudo apt update
