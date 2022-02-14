@@ -28,6 +28,10 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 -W Monitor Source Audio (WIP!) (may or may not decode audio if this is on, depending on selected decode type and luck)
 (Also, should be noted that depending on modulation, may sound extremely terrible)
 ```
+### Note
+
+`dsd` and `./dsd` may need to be used in your usage, depending on if you are running it from the build folder, or if you have run make install. You will need to tweak the examples to your particular usage.
+
 ## Cygwin RTL Usage, output to /dev/dsp
 `dsd -fi -i rtl -o /dev/dsp -c 154.9875M -P -2 -D 1 -G 36 -L 70 -U 6021 -Y 12`
 
