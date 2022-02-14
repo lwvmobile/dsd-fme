@@ -29,6 +29,12 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 
 -W Monitor Source Audio (WIP!) (Currently disabled on PulseAudio branch)
 ```
+
+### Note
+
+`dsd` and `./dsd` may need to be used in your usage, depending on if you are running it from the build folder, or if you have run make install. You will need to tweak the examples to your particular usage
+
+
 ## Example Pulse Audio Input and Pulse Audio Output, Autodetect Frame Type
 `dsd` or `./dsd`
 ```
