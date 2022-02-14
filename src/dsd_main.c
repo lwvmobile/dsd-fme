@@ -187,7 +187,7 @@ initOpts (dsd_opts * opts)
   opts->rtl_squelch_level = 0; //fully open by default, want to specify level for things like NXDN with false positives
   opts->rtl_volume_multiplier = 1; //set multipler from rtl sample to 'boost volume'
   opts->rtl_udp_port = 6020; //set UDP port for RTL remote
-  opts->rtl_bandwidth = 48; //48000 default value
+  opts->rtl_bandwidth = 12; //changed recommended default to 12, 24 for ProVoice
   opts->pulse_raw_rate_in   = 48000;
   opts->pulse_raw_rate_out  = 48000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
   opts->pulse_digi_rate_in  = 24000;
@@ -387,7 +387,15 @@ usage ()
 void
 liveScanner (dsd_opts * opts, dsd_state * state)
 {
-//move open pulse below rtl type to set up audio rate out hopefully
+//need to use this area to configure audio rates for different sources if not pulse
+if (opts->audio_in_type == 1) //if stdin, switch to 8000 and single channel audio
+{
+  opts->pulse_digi_rate_out = 8000; //stdin needs 8000 output, could have sworn this was working with 48000
+  opts->pulse_digi_out_channels = 1;
+  opts->pulse_raw_rate_out = 8000;
+  opts->pulse_raw_out_channels = 1;
+  fprintf (stderr, "STDIN Audio Rate Out set to 8000 Khz/1 Channel \n");
+}
 #ifdef USE_PORTAUDIO
 	if(opts->audio_in_type == 2)
 	{
@@ -404,10 +412,11 @@ liveScanner (dsd_opts * opts, dsd_state * state)
 #ifdef USE_RTLSDR
   if(opts->audio_in_type == 3)
   {
-    opts->pulse_digi_rate_out = 8000; //rtl currently needs rate out to be 8000, will investigate this further
-    opts->pulse_digi_out_channels = 1; //don't know if it matters here or not
+    opts->pulse_digi_rate_out = 8000; //if rtl, switch to 8000 and 1 channel
+    opts->pulse_digi_out_channels = 1;
     opts->pulse_raw_rate_out = 8000;
     opts->pulse_raw_out_channels = 1;
+    fprintf (stderr, "RTL Audio Rate Out set to 8000 Khz/1 Channel \n");
     open_rtlsdr_stream(opts);
   }
 #endif
@@ -699,11 +708,10 @@ main (int argc, char **argv)
           fprintf (stderr,"Monitor Source Audio currently disabled in Pulse Audio Builds.\n");
           break;
 
-          case 'N':
-            opts.use_ncurses_terminal = 1;
-            fprintf (stderr,"Enabling NCurses Terminal.\n");
-            break;
-
+        case 'N':
+          opts.use_ncurses_terminal = 1;
+          fprintf (stderr,"Enabling NCurses Terminal.\n");
+          break;
 
         case 'z':
           sscanf (optarg, "%d", &opts.scoperate);
