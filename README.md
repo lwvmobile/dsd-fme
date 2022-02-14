@@ -36,6 +36,7 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 
 ## Example PA input, OSS output, save mbe files
 Create MBE folder first in directory
+
 `padsp -- dsd -fa -i pa:1 -o /dev/dsp -d ./MBE/`
 
 ## Roadmap
@@ -52,7 +53,7 @@ The Current list of objectives include:
 4. Improve Monitor Source Audio (if #2 on list is up and working)
 
 ## How to clone, check out, and build this branch
-
+### Debian/Ubuntu
 Using the included install.sh should make for a simple and painless clone, build, and install on any Debian or Ubuntu based system. Simply acquire or copy the script, and run it.
 
 ```
@@ -60,6 +61,7 @@ wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/master/install.sh
 chmod +x install.sh
 ./install.sh
 ```
+### Cygwin
 This script will attempt to automatically build and install in Cygwin environments, but the user will be responsible for installing all dependencies, including librtlsdr. 
 
 ```
