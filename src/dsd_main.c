@@ -786,8 +786,8 @@ main (int argc, char **argv)
               opts.frame_dstar = 1;
               opts.frame_x2tdma = 1;
               opts.frame_p25p1 = 1;
-              opts.frame_nxdn48 = 0;
-              opts.frame_nxdn96 = 0;
+              opts.frame_nxdn48 = 0; //turn it on, doesn't work due to symbol rate difference
+              opts.frame_nxdn96 = 0; //causes false positives, leave on 0 
               opts.frame_dmr = 1;
               opts.frame_provoice = 0; //turn it on, doesn't work due to symbol rate difference
             }
@@ -852,14 +852,16 @@ main (int argc, char **argv)
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
               opts.frame_provoice = 0;
+              //I think I've got it to decode on proper modulation now c4fm, not really sure what the difference is in DSD, seems to work either way for some reason
               state.samplesPerSymbol = 20;
               state.symbolCenter = 10;
-              opts.mod_c4fm = 0;
+              opts.mod_c4fm = 1; // was 0
               opts.mod_qpsk = 0;
-              opts.mod_gfsk = 1; //was 1 with others on zero
-              state.rf_mod = 2; //was 2
+              opts.mod_gfsk = 0; //was 1 with others on zero
+              state.rf_mod = 0; //was 2
               //opts.symboltiming = 2400; //NXDN48 uses 2400 symbol rate
               fprintf (stderr,"Setting symbol rate to 2400 / second\n");
+              fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
               fprintf (stderr,"Decoding only NXDN 4800 baud frames.\n");
             }
           else if (optarg[0] == 'n')
@@ -871,11 +873,12 @@ main (int argc, char **argv)
               opts.frame_nxdn96 = 1;
               opts.frame_dmr = 0;
               opts.frame_provoice = 0;
-              opts.mod_c4fm = 0;
+              opts.mod_c4fm = 1; //was 0
               opts.mod_qpsk = 0;
-              opts.mod_gfsk = 1;
-              state.rf_mod = 2;
-              fprintf (stderr,"Enabling only GFSK modulation optimizations.\n");
+              opts.mod_gfsk = 0; //was 1
+              state.rf_mod = 0; //was 2
+              //fprintf (stderr,"Enabling only GFSK modulation optimizations.\n");
+              fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
               fprintf (stderr,"Decoding only NXDN 9600 baud frames.\n");
             }
           else if (optarg[0] == 'r')
