@@ -811,11 +811,12 @@ main (int argc, char **argv)
               opts.frame_provoice = 0;
               state.samplesPerSymbol = 20;
               state.symbolCenter = 10;
-              opts.mod_c4fm = 0;
+              opts.mod_c4fm = 1;
               opts.mod_qpsk = 0;
-              opts.mod_gfsk = 1; //was 1 with others on zero
-              state.rf_mod = 2; //was 2
+              opts.mod_gfsk = 0; //was 1 with others on zero
+              state.rf_mod = 0; //was 2
               //opts.symboltiming = 2400; //NXDN48 uses 2400 symbol rate
+	      printf ("Enabling only C4FM modulation optimizations.\n");
               printf ("Setting symbol rate to 2400 / second\n");
               printf ("Decoding only NXDN 4800 baud frames.\n");
             }
@@ -828,11 +829,11 @@ main (int argc, char **argv)
               opts.frame_nxdn96 = 1;
               opts.frame_dmr = 0;
               opts.frame_provoice = 0;
-              opts.mod_c4fm = 0;
+              opts.mod_c4fm = 1;
               opts.mod_qpsk = 0;
-              opts.mod_gfsk = 1;
-              state.rf_mod = 2;
-              printf ("Enabling only GFSK modulation optimizations.\n");
+              opts.mod_gfsk = 0;
+              state.rf_mod = 0;
+              printf ("Enabling only C4FM modulation optimizations.\n");
               printf ("Decoding only NXDN 9600 baud frames.\n");
             }
           else if (optarg[0] == 'r')
