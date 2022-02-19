@@ -248,9 +248,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->audio_in_type == 3)
   {
     printw ("| RTL2838 Device #[%d]", opts->rtl_dev_index);
-    printw (" [%i] dB", opts->rtl_gain_value);
-    printw (" [%i] Sq", opts->rtl_squelch_level);
-    printw (" [%i] kHz VFO\n", opts->rtl_bandwidth);
+    printw (" Gain [%i] dB -", opts->rtl_gain_value);
+    printw (" Squelch [%i]", opts->rtl_squelch_level);
+    printw (" VFO [%i] kHz\n", opts->rtl_bandwidth);
     printw ("| Freq: [%lld] Hz", opts->rtlsdr_center_freq);
     printw (" - Tuning available on UDP Port [%i]\n", opts->rtl_udp_port);
   }
