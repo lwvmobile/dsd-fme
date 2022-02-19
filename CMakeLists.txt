@@ -19,9 +19,10 @@ find_package(PULSEAUDIO)
 #include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${PULSEAUDIO_INCLUDE_DIRS} ${CURSES_INCLUDE_DIR})
 #set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${PULSEAUDIO_SIMPLE_LIBRARY} ${CURSES_LIBRARY})
 #remove CURSES from 'required' set up top AFTER switching all commands to ifdef in dsd_main, dsd_framesync, and dsd_ncurses.c
-#also, figure out how to make it build for wide character support in Linux Mint etc, like this -- $(ncursesw5-config --cflags --libs) 
+#also, figure out how to make it build for wide character support in Linux Mint etc, like this -- $(ncursesw5-config --cflags --libs)
 include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${PULSEAUDIO_INCLUDE_DIRS} ${CURSES_INCLUDE_DIR})
 set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${PULSEAUDIO_SIMPLE_LIBRARY} ${CURSES_LIBRARY})
+set(CURSES_NEED_WIDE TRUE)
 
 if(Curses_FOUND)
     include_directories(SYSTEM ${CURSES_INCLUDE_PATH})
