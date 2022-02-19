@@ -283,7 +283,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ("--Audio Decode----------------------------------------------------------------\n");
   printw ("| In Level:    [%3i%%] \n", level);
   printw ("| Voice Error: [%i][%i] \n| Error Bars:  [%s] \n", state->errs, state->errs2, state->err_str); //
-  printw ("| Carrier = %i\n", state->carrier);
+  //printw ("| Carrier = %i\n", state->carrier);
   printw ("------------------------------------------------------------------------------\n");
 
 
