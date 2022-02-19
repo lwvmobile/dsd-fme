@@ -293,6 +293,8 @@ initState (dsd_state * state)
   state->debug_header_errors = 0;
   state->debug_header_critical_errors = 0;
 
+  state->nxdn_last_ran = 0;
+
 #ifdef TRACE_DSD
   state->debug_sample_index = 0;
   state->debug_label_file = NULL;
@@ -787,7 +789,7 @@ main (int argc, char **argv)
               opts.frame_x2tdma = 1;
               opts.frame_p25p1 = 1;
               opts.frame_nxdn48 = 0; //turn it on, doesn't work due to symbol rate difference
-              opts.frame_nxdn96 = 0; //causes false positives, leave on 0 
+              opts.frame_nxdn96 = 0; //causes false positives, leave on 0
               opts.frame_dmr = 1;
               opts.frame_provoice = 0; //turn it on, doesn't work due to symbol rate difference
             }
@@ -877,7 +879,6 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0; //was 1
               state.rf_mod = 0; //was 2
-              //fprintf (stderr,"Enabling only GFSK modulation optimizations.\n");
               fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
               fprintf (stderr,"Decoding only NXDN 9600 baud frames.\n");
             }
@@ -890,6 +891,9 @@ main (int argc, char **argv)
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 1;
               opts.frame_provoice = 0;
+              opts.mod_c4fm = 1; //just a test
+              opts.mod_qpsk = 0;
+              opts.mod_gfsk = 0; //was 1
               fprintf (stderr,"Decoding only DMR/MOTOTRBO frames.\n");
             }
           break;

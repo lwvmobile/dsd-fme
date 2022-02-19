@@ -28,13 +28,18 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   char cachdata[13];
   char cc[5];
   char bursttype[5];
+  int dcc_buf;
 
 #ifdef DMR_DUMP
   int k;
   char syncbits[49];
   char cachbits[25];
 #endif
-
+  cc[0]=0;
+  cc[1]=0;
+  cc[2]=0;
+  cc[3]=0; //initialize with zeroes to prevent segfault down below
+  state->dmr_color_code = 0; //reset
   cc[4] = 0;
   bursttype[4] = 0;
 
@@ -95,8 +100,14 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     {
       dibit = (dibit ^ 2);
     }
-  cc[0] = (1 & (dibit >> 1)) + 48;      // bit 1
-  cc[1] = (1 & dibit) + 48;     // bit 0
+  //c[0] = (1 & (dibit >> 1)) + 48;      // bit 1
+  //cc[1] = (1 & dibit) + 48;     // bit 0
+  cc[0] = (1 & (dibit >> 1));      // bit 1
+  cc[1] = (1 & dibit);     // bit 0
+  dcc_buf = 0;
+  //dcc_buf = (1 & (dibit >> 1)) | (1 & dibit);
+  dcc_buf = ((1 & (dibit >> 1)) + 48) | ((1 & dibit) + 48);
+
 
   dibit = *dibit_p;
   dibit_p++;
@@ -104,8 +115,20 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     {
       dibit = (dibit ^ 2);
     }
-  cc[2] = (1 & (dibit >> 1)) + 48;      // bit 1
-  cc[3] = (1 & dibit) + 48;     // bit 0
+  //cc[2] = (1 & (dibit >> 1)) + 48;      // bit 1
+  //cc[3] = (1 & dibit) + 48;     // bit 0
+  cc[2] = (1 & (dibit >> 1));      // bit 1
+  cc[3] = (1 & dibit);     // bit 0
+
+  dcc_buf = dcc_buf << 2;
+  //dcc_buf = (1 & (dibit >> 1)) | (1 & dibit);
+  dcc_buf = ((1 & (dibit >> 1)) + 48) | ((1 & dibit) + 48);
+
+  //state->dmr_color_code = dcc_buf;
+  state->dmr_color_code = (unsigned int)((cc[0] << 3) + (cc[1] << 2) + (cc[2] << 1) + cc[3]);
+  //cc[2] = (1 & (dibit >> 1));      // bit 1
+  //cc[3] = (1 & dibit);     // bit 0
+
 
   dibit = *dibit_p;
   dibit_p++;

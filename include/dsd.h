@@ -71,8 +71,84 @@
  */
 
 static volatile int exitflag;
-//volatile int exitflag; //didn't work, couldn't build, multiple definitions of exitflag
 
+//borrow from LEH
+typedef struct
+{
+  uint8_t RFChannelType;
+  uint8_t FunctionnalChannelType;
+  uint8_t Option;
+  uint8_t Direction;
+  uint8_t CompleteLich; /* 7 bits of LICH without parity */
+  uint8_t PreviousCompleteLich; /* 7 bits of previous LICH without parity */
+} NxdnLich_t;
+
+
+typedef struct
+{
+  uint8_t StructureField;
+  uint8_t RAN;
+  uint8_t Data[18];
+  uint8_t CrcIsGood;
+} NxdnSacchRawPart_t;
+
+
+typedef struct
+{
+  uint8_t Data[80];
+  uint8_t CrcIsGood;
+} NxdnFacch1RawPart_t;
+
+
+typedef struct
+{
+  uint8_t Data[184];
+  uint8_t CrcIsGood;
+} NxdnFacch2RawPart_t;
+
+
+typedef struct
+{
+  uint8_t  F1;
+  uint8_t  F2;
+  uint8_t  MessageType;
+
+  /****************************/
+  /***** VCALL parameters *****/
+  /****************************/
+  uint8_t  CCOption;
+  uint8_t  CallType;
+  uint8_t  VoiceCallOption;
+  uint16_t SourceUnitID;
+  uint16_t DestinationID;  /* May be a Group ID or a Unit ID */
+  uint8_t  CipherType;
+  uint8_t  KeyID;
+  uint8_t  VCallCrcIsGood;
+
+  /*******************************/
+  /***** VCALL_IV parameters *****/
+  /*******************************/
+  uint8_t  IV[8];
+  uint8_t  VCallIvCrcIsGood;
+
+  /*****************************/
+  /***** Custom parameters *****/
+  /*****************************/
+
+  /* Specifies if the "CipherType" and the "KeyID" parameter are valid
+   * 1 = Valid ; 0 = CRC error */
+  uint8_t  CipherParameterValidity;
+
+  /* Used on DES and AES encrypted frames */
+  uint8_t  PartOfCurrentEncryptedFrame;  /* Could be 1 or 2 */
+  uint8_t  PartOfNextEncryptedFrame;     /* Could be 1 or 2 */
+  uint8_t  CurrentIVComputed[8];
+  uint8_t  NextIVComputed[8];
+} NxdnElementsContent_t;
+
+
+
+//end borrow from LEH
 
 typedef struct
 {
@@ -194,7 +270,8 @@ typedef struct
   int maxbuf[1024];
   int minbuf[1024];
   int midx;
-  char err_str[64];
+  char err_str[64]; //actual error errorbars
+  char err_buf[64]; //make copy of err_str for comparison, only have string print when strcmp is different??
   char fsubtype[16];
   char ftype[16];
   int symbolcnt;
@@ -248,6 +325,35 @@ typedef struct
   short input_sample_buffer; //HERE HERE
   short pulse_raw_out_buffer; //HERE HERE
   //float *input_sample_buffer; //HERE HERE
+  short dibit_to_hex_buf;
+  // state->sr_0 shift registers
+  short hexbuf;
+  unsigned long long sr_0; //64-bit shift registers for pushing decoded binary or dibit data
+  unsigned long long sr_1; //384
+  unsigned long long sr_2; //
+  unsigned long long sr_3; //
+  unsigned long long sr_4; //
+  unsigned long long sr_5; //
+  unsigned long long sr_6; //
+
+  unsigned int dmr_color_code;
+  unsigned int nxdn_last_ran;
+  unsigned int nxdn_last_rid;
+  //borrow from LEH
+  NxdnSacchRawPart_t NxdnSacchRawPart[4];
+  NxdnFacch1RawPart_t NxdnFacch1RawPart[2];
+  NxdnFacch2RawPart_t NxdnFacch2RawPart;
+  NxdnElementsContent_t NxdnElementsContent;
+  NxdnLich_t NxdnLich;
+
+  int printNXDNAmbeVoiceSampleHex;
+
+ char ambe_ciphered[49];
+ char ambe_deciphered[49];
+  //end borrow
+
+
+
 
 #ifdef TRACE_DSD
   char debug_prefix;
@@ -277,34 +383,34 @@ typedef struct
 #define INV_DSTAR_HD   "313131313111311331313333"
 #define DSTAR_SYNC     "313131313133131113313111"
 #define INV_DSTAR_SYNC "131313131311313331131333"
-// original sync numbers which is FSW plus LICH
+
+//bogus nxdnn data syncs to troubleshoot
+/*
+#define NXDN_MS_DATA_SYNC      "33333313133113131111333333333111"
+#define INV_NXDN_MS_DATA_SYNC  "11133331313113313133331113333331"
+#define INV_NXDN_BS_DATA_SYNC  "33331111313113313133331313333333"
+#define NXDN_BS_DATA_SYNC      "11113333131331131311113133333333"
+//end bogus nxdn data syncs
+*/
 #define NXDN_MS_DATA_SYNC      "313133113131111333"
 #define INV_NXDN_MS_DATA_SYNC  "131311331313333111"
-#define NXDN_MS_VOICE_SYNC     "313133113131113133"
-#define INV_NXDN_MS_VOICE_SYNC "131311331313331311"
 #define INV_NXDN_BS_DATA_SYNC  "131311331313333131"
 #define NXDN_BS_DATA_SYNC      "313133113131111313"
-#define INV_NXDN_BS_VOICE_SYNC "131311331313331331"
-#define NXDN_BS_VOICE_SYNC     "313133113131113113"
-
-//Try using only FSW and no LICH
-/*
-#define NXDN_MS_DATA_SYNC      "3131331131"
-#define INV_NXDN_MS_DATA_SYNC  "1313113313"
 #define NXDN_MS_VOICE_SYNC     "313133113131113133"
 #define INV_NXDN_MS_VOICE_SYNC "131311331313331311"
-#define INV_NXDN_BS_DATA_SYNC  "1313113313"
-#define NXDN_BS_DATA_SYNC      "3131331131"
 #define INV_NXDN_BS_VOICE_SYNC "131311331313331331"
 #define NXDN_BS_VOICE_SYNC     "313133113131113113"
-//how do two values equate to 4 symbol types? shouldn't it be -3, -1, 1, 3?
-*/
 
 #define DMR_BS_DATA_SYNC  "313333111331131131331131"
 #define DMR_BS_VOICE_SYNC "131111333113313313113313"
 #define DMR_MS_DATA_SYNC  "311131133313133331131113"
 #define DMR_MS_VOICE_SYNC "133313311131311113313331"
-
+//borrow extra syncs from LEH
+#define DMR_DIRECT_MODE_TS1_DATA_SYNC  "331333313111313133311111"
+#define DMR_DIRECT_MODE_TS1_VOICE_SYNC "113111131333131311133333"
+#define DMR_DIRECT_MODE_TS2_DATA_SYNC  "311311111333113333133311"
+#define DMR_DIRECT_MODE_TS2_VOICE_SYNC "133133333111331111311133"
+//end LEH
 #define INV_PROVOICE_SYNC    "31313111333133133311331133113311"
 #define PROVOICE_SYNC        "13131333111311311133113311331133"
 #define INV_PROVOICE_EA_SYNC "13313133113113333311313133133311"
@@ -374,13 +480,60 @@ short nxdn_filter(short sample);
 
 //borrow from LEH for testing 'improved NXDN detection'
 int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr);
+/* Global functions */ //also borrowed
+uint32_t ConvertBitIntoBytes(uint8_t * BufferIn, uint32_t BitLength);
+uint32_t ConvertAsciiToByte(uint8_t AsciiMsbByte, uint8_t AsciiLsbByte, uint8_t * OutputByte);
+void Convert49BitSampleInto7Bytes(char * InputBit, char * OutputByte);
+void Convert7BytesInto49BitSample(char * InputByte, char * OutputBit);
 //
 //ifdef ncurses
 void ncursesOpen ();
 void ncursesPrinter (dsd_opts * opts, dsd_state * state);
 void ncursesClose ();
 //endif ncurses
+//borrow from LEH
+/* NXDN frame decoding functions */
+void ProcessNXDNFrame(dsd_opts * opts, dsd_state * state, uint8_t Inverted);
+void ProcessNxdnRCCHFrame(dsd_opts * opts, dsd_state * state, uint8_t Inverted);
+void ProcessNxdnRTCHFrame(dsd_opts * opts, dsd_state * state, uint8_t Inverted);
+void ProcessNxdnRDCHFrame(dsd_opts * opts, dsd_state * state, uint8_t Inverted);
+void ProcessNxdnRTCH_C_Frame(dsd_opts * opts, dsd_state * state, uint8_t Inverted);
+void ProcessNXDNIdleData (dsd_opts * opts, dsd_state * state, uint8_t Inverted);
+void ProcessNXDNFacch1Data (dsd_opts * opts, dsd_state * state, uint8_t Inverted);
+void ProcessNXDNUdchData (dsd_opts * opts, dsd_state * state, uint8_t Inverted);
+//end borrow
+//borrow from LEH
+/* NXDN functions */
+void CNXDNConvolution_start(void);
+void CNXDNConvolution_decode(uint8_t s0, uint8_t s1);
+void CNXDNConvolution_chainback(unsigned char* out, unsigned int nBits);
+void CNXDNConvolution_encode(const unsigned char* in, unsigned char* out, unsigned int nBits);
+uint8_t NXDN_decode_LICH(uint8_t   InputLich[8],
+                         uint8_t * RFChannelType,
+                         uint8_t * FunctionnalChannelType,
+                         uint8_t * Option,
+                         uint8_t * Direction,
+                         uint8_t * CompleteLichBinaryFormat,
+                         uint8_t   Inverted);
+uint8_t NXDN_SACCH_raw_part_decode(uint8_t * Input, uint8_t * Output);
+void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state);
+uint8_t NXDN_FACCH1_decode(uint8_t * Input, uint8_t * Output);
+uint8_t NXDN_UDCH_decode(uint8_t * Input, uint8_t * Output);
+void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
+                                  uint8_t CrcCorrect, uint8_t * ElementsContent);
+void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void NXDN_decode_VCALL_IV(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+char * NXDN_Call_Type_To_Str(uint8_t CallType);
+void NXDN_Voice_Call_Option_To_Str(uint8_t VoiceCallOption, uint8_t * Duplex, uint8_t * TransmissionMode);
+char * NXDN_Cipher_Type_To_Str(uint8_t CipherType);
+uint16_t CRC15BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
+uint16_t CRC12BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
+uint8_t CRC6BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
+void ScrambledNXDNVoiceBit(int * LfsrValue, char * BufferIn, char * BufferOut, int NbOfBitToScramble);
+void NxdnEncryptionStreamGeneration (dsd_opts* opts, dsd_state* state, uint8_t KeyStream[1664]);
 
+void processMbeFrameEncrypted (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char ambe_fr[4][24], char imbe7100_fr[7][24], char ambe_keystream[49], char imbe_keystream[88]);
+//end borrow from LEH
 
 
 #ifdef __cplusplus

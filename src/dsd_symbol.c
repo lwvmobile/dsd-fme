@@ -27,7 +27,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
   sum = 0;
   count = 0;
 
-  for (i = 0; i < state->samplesPerSymbol; i++) //right HERE, this is how many samples it will grab, depending on samplesPerSymbol and also rf_mod messing with it too
+  for (i = 0; i < state->samplesPerSymbol; i++) //right HERE
     {
 
       // timing control

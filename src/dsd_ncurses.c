@@ -27,7 +27,28 @@
 
 #include "dsd.h"
 #include "git_ver.h"
+/*
+short hexbuf;
+unsigned long long sr_0 = 0; //64-bit shift registers for pushing decoded binary or dibit data
+unsigned long long sr_1 = 0; //384
+unsigned long long sr_2 = 0; //
+unsigned long long sr_3 = 0; //
+unsigned long long sr_4 = 0; //
+unsigned long long sr_5 = 0; //
+unsigned long long sr_6 = 0; //
+*/
+int tg; //last tg
+int rd; //last rid
+int rn; //last ran
+int nc; //nac
+int src; //last rid? double?
+int lls = -1; //last last sync type
+int dcc = 0; //initialize with 0 to prevent core dump
+int i = 0;
+char * s0last = "     ";
+char * s1last = "     ";
 char versionstr[25];
+unsigned long long int call_matrix[33][6]; //0 - sync type; 1 - tg/ran; 2 - rid; 3 - slot; 4 - cc; 5 - time(NULL) ;
 char * FM_bannerN[9] = {
   "                                 CTRL + C twice to exit",
   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗",
@@ -48,16 +69,16 @@ char * SyncTypes[20] = {
   "INV_X2TDMA_BS/MS_VOICE_SYNC",
   "DSTAR_SYNC",
   "INV_DSTAR_SYNC",
-  "NXDN_BS_VOICE_SYNC",     //8
-  "INV_NXDN_BS_VOICE_SYNC", //9
-  "DMR_BS/MS_DATA_SYNC",
-  "INV_DMR_BS/MS_DATA_SYNC",
-  "DMR_BS/MS_VOICE_SYNC",
-  "INV_DMR_BS/MS_VOICE_SYNC",
-  "PROVOICE_SYNC",          //14
-  "INV_PROVOICE_SYNC",      //15
-  "NXDN_BS_DATA_SYNC",      //16
-  "INV_NXDN_BS_DATA_SYNC",  //17
+  "NXDN_BS_VOICE_SYNC",      //8
+  "INV_NXDN_BS_VOICE_SYNC",  //9
+  "DMR_BS/MS_DATA_SYNC",     //10
+  "DMR_MS/BS_VOICE_SYNC",    //11
+  "DMR_MS/BS_DATA_SYNC",     //12
+  "INV_DMR_BS/MS_VOICE_SYNC", //13
+  "PROVOICE_SYNC",            //14
+  "INV_PROVOICE_SYNC",        //15
+  "NXDN_BS_DATA_SYNC",        //16
+  "INV_NXDN_BS_DATA_SYNC",    //17
   "DSTAR_HD",
   "INV_DSTAR_HD"
 
@@ -82,7 +103,7 @@ char * getTimeN(void) //get pretty hh:mm:ss timestamp
 void ncursesOpen ()
 {
   mbe_printVersion (versionstr);
-  setlocale(LC_ALL, "");
+  //setlocale(LC_ALL, "");
   initscr(); //Initialize NCURSES screen window
   start_color();
   init_pair(1, COLOR_YELLOW, COLOR_BLACK);      //Yellow/Amber for frame sync/control channel, NV style
@@ -92,93 +113,339 @@ void ncursesOpen ()
   init_pair(5, COLOR_MAGENTA, COLOR_BLACK); //Magenta for no frame sync/signal
   noecho();
   cbreak();
+  fprintf (stderr, "Opening NCurses Terminal. \n");
+  //call_matrix[5-i][0] = 0;
+  //call_matrix[5-i][1] = 0;
+  //call_matrix[5-i][2] = 0;
+  //call_matrix[5-i][3] = 0;
+  //call_matrix[5-i][4] = 0;
+  //call_matrix[5-i][5] = time(NULL);
 }
 
 void
 ncursesPrinter (dsd_opts * opts, dsd_state * state)
 {
   int level;
-  level = (int) state->max / 164;
+
+  //level = (int) state->max / 164;
+  level = 0; //start each cycle with 0
   erase();
   //disabling until wide support can be built for LM, etc. $(ncursesw5-config --cflags --libs)
   //printw ("%s \n", FM_bannerN[0]); //top line in white
-  //attron(COLOR_PAIR(4));
-  //for (short int i = 1; i < 7; i++) { //following lines in cyan
-    //printw("%s \n", FM_bannerN[i]); }
-  //attroff(COLOR_PAIR(4));
-  printw ("%s \n", FM_bannerN[7]); //http link
-  printw ("Digital Speech Decoder: Florida Man Edition\n");
-  printw ("Github Build Version: %s \n", GIT_TAG);
-  printw ("mbelib version %s\n", versionstr);
-  printw ("Time: ");
-  printw ("%s ", getTimeN());
-  if (SyncTypes[state->lastsynctype] != NULL)
+  attron(COLOR_PAIR(4));
+  //for (short int i = 1; i < 7; i++)
+  //{ //following lines in cyan
+    //printw("%s \n", FM_bannerN[i]);
+  //}
+  attroff(COLOR_PAIR(4));
+  printw ("--Build Info------------------------------------------------------------------\n");
+  //printw ("| %s \n", FM_bannerN[7]); //http link
+  printw ("| Digital Speech Decoder: Florida Man Edition\n");
+  printw ("| Github Build Version: %s \n", GIT_TAG);
+  printw ("| mbelib version %s\n", versionstr);
+  printw ("------------------------------------------------------------------------------\n");
+
+
+  if ( (state->lastsynctype == 14 || state->lastsynctype == 15) ) //honestly have no idea how to do this for pV
   {
-    printw ("%s \n", SyncTypes[state->lastsynctype]);
-    //printw("%s ", state->ftype); //moved to front, some ftype strings have spaces in front of them, and others dont
-    /* Not sure if I'm going to use the error bars yet
-    if (opts->errorbars == 1)
-    {
-      printw("-"); //AFAIK, errorbars==1 is the internal value for if a system has inverted signal types, not at all misleading
-    }
-    else
-    {
-      printw("+");
-    }
+    call_matrix[5][0] = lls;
+    call_matrix[5][1] = 1;
+    call_matrix[5][2] = 1;
+    call_matrix[5][3] = 1;
+    call_matrix[5][4] = 1;
+    call_matrix[5][5] = time(NULL);
+  }
+
+  if ( (state->nxdn_last_rid != src && src > 0) || (state->nxdn_last_ran != rn && rn > 0) ) //find condition to make this work well, probably if last != local last variables
+  {
+    /* //save just in case
+    call_matrix[0][0] = call_matrix[1][0];
+    call_matrix[0][1] = call_matrix[1][1];
+    call_matrix[0][2] = call_matrix[1][2];
+    call_matrix[0][3] = call_matrix[1][3];
+    call_matrix[0][4] = call_matrix[1][4];
+    call_matrix[0][5] = call_matrix[1][5];
+
+    call_matrix[1][0] = call_matrix[2][0];
+    call_matrix[1][1] = call_matrix[2][1];
+    call_matrix[1][2] = call_matrix[2][2];
+    call_matrix[1][3] = call_matrix[2][3];
+    call_matrix[1][4] = call_matrix[2][4];
+    call_matrix[1][5] = call_matrix[2][5];
+
+    call_matrix[2][0] = call_matrix[3][0];
+    call_matrix[2][1] = call_matrix[3][1];
+    call_matrix[2][2] = call_matrix[3][2];
+    call_matrix[2][3] = call_matrix[3][3];
+    call_matrix[2][4] = call_matrix[3][4];
+    call_matrix[2][5] = call_matrix[3][5];
+
+    call_matrix[3][0] = call_matrix[4][0];
+    call_matrix[3][1] = call_matrix[4][1];
+    call_matrix[3][2] = call_matrix[4][2];
+    call_matrix[3][3] = call_matrix[4][3];
+    call_matrix[3][4] = call_matrix[4][4];
+    call_matrix[3][5] = call_matrix[4][5];
+
+    call_matrix[4][0] = call_matrix[5][0];
+    call_matrix[4][1] = call_matrix[5][1];
+    call_matrix[4][2] = call_matrix[5][2];
+    call_matrix[4][3] = call_matrix[5][3];
+    call_matrix[4][4] = call_matrix[5][4];
+    call_matrix[4][5] = call_matrix[5][5];
     */
-    if (1 == 1){ //figure out method that will tell me when is active and when not active, maybe carrier but this doesn't print anyways unless activity
-      attron(COLOR_PAIR(3));
-    }
-    printw ("%s %s\n", state->ftype, state->fsubtype); //some ftype strings have extra spaces in them
-    if (state->lasttg < 0) //triggers compiler warning: comparison between pointer and integer
+    for (short int k = 0; k < 5; k++)
     {
-      //sprintf(state->ftype, )
-      //state->lasttg = state->ftype; //warning: assignment to ‘int’ from ‘char *
-      state->lasttg = 0;
+      call_matrix[k][0] = call_matrix[k+1][0];
+      call_matrix[k][1] = call_matrix[k+1][1];
+      call_matrix[k][2] = call_matrix[k+1][2];
+      call_matrix[k][3] = call_matrix[k+1][3];
+      call_matrix[k][4] = call_matrix[k+1][4];
+      call_matrix[k][5] = call_matrix[k+1][5];
     }
-    printw ("TG [%7i] RID [%12i] \n", state->lasttg, state->lastsrc); //variables to fill with info from other system types too
-    //printw ("TG [%s] \n", state->lasttg);
-    //printw ("TDMA activity:  %s %s \n", state->slot0light, state->slot1light);
-    printw("In Level: [%2i%%] ", level);
-    printw ("Voice Error [%s] \n", state->err_str); //no idea if this shows anything outside of TDMA or P1 or what
-    if (1 == 1){ //same as above
-      attroff(COLOR_PAIR(3));
-    }
+    call_matrix[5][0] = lls;
+    call_matrix[5][1] = rn;
+    call_matrix[5][2] = src;
+    call_matrix[5][3] = 0;
+    call_matrix[5][4] = 0;
+    call_matrix[5][5] = time(NULL);
+
   }
 
-  /*
-  if (state->lastsynctype == 8 ||state->lastsynctype == 9 ||state->lastsynctype == 16 ||state->lastsynctype == 17)
+  if ( (lls == 0 || lls == 1) && state->lastsrc != rd && state->lastsrc > 0) //find condition to make this work well, probably if last != local last variables
   {
-    if (state->samplesPerSymbol == 20)
-      {
-        //sprintf (state->ftype, " NXDN48      ");
-        if (opts->errorbars == 1)
-          {
-            //printFrameSync (opts, state, " -NXDN48   ", synctest_pos + 1, modulation);
-            printw("NXDN48 ");
-            printw("%s \n", SyncTypes[state->lastsynctype]);
-            printw("%s ", state->ftype);
-          }
-      }
-    else
-      {
-        //sprintf (state->ftype, " NXDN96      ");
-        if (opts->errorbars == 1)
-          {
-            //printFrameSync (opts, state, " -NXDN96   ", synctest_pos + 1, modulation);
-            printw("NXDN96 ");
-            printw("%s ", SyncTypes[state->lastsynctype]);
-            printw("%s ", state->ftype);
-          }
-      }
+    for (short int k = 0; k < 5; k++)
+    {
+      call_matrix[k][0] = call_matrix[k+1][0];
+      call_matrix[k][1] = call_matrix[k+1][1];
+      call_matrix[k][2] = call_matrix[k+1][2];
+      call_matrix[k][3] = call_matrix[k+1][3];
+      call_matrix[k][4] = call_matrix[k+1][4];
+      call_matrix[k][5] = call_matrix[k+1][5];
+    }
+
+    call_matrix[5][0] = lls;
+    call_matrix[5][1] = tg;
+    call_matrix[5][2] = rd;
+    call_matrix[5][3] = 0;
+    call_matrix[5][4] = nc;
+    call_matrix[5][5] = time(NULL);
+    //i++;
   }
-  */
+  //printw ("Time: ");
+  //printw ("%s \n", getTimeN());
+  attron(COLOR_PAIR(4));
+  printw ("--Input Output----------------------------------------------------------------\n");
+  if (opts->audio_in_type == 0)
+  {
+    printw ("| Pulse Audio  Input [%i] kHz [%i] Channel\n", opts->pulse_digi_rate_in, opts->pulse_digi_in_channels);
+  }
+  if (opts->audio_in_type == 1)
+  {
+    printw ("| STDIN - Input\n");
+  }
+  if (opts->audio_in_type == 3)
+  {
+    printw ("| RTL2838 Device #[%d]", opts->rtl_dev_index);
+    printw (" [%i] dB", opts->rtl_gain_value);
+    printw (" [%i] Sq", opts->rtl_squelch_level);
+    printw (" [%i] kHz VFO\n", opts->rtl_bandwidth);
+    printw ("| Freq: [%lld] Hz", opts->rtlsdr_center_freq);
+    printw (" - Tuning available on UDP Port [%i]\n", opts->rtl_udp_port);
+  }
+  if (opts->audio_out_type == 0)
+  {
+    printw ("| Pulse Audio Output [%i] kHz [%i] Channel\n", opts->pulse_digi_rate_out, opts->pulse_digi_out_channels);
+  }
+  if (opts->mbe_out_dir[0] != 0)
+  {
+    printw ("| Writing MBE data files to directory %s\n", opts->mbe_out_dir);
+  }
+  if (opts->wav_out_file[0] != 0)
+  {
+    printw ("| Writing audio wav to file %s\n", opts->wav_out_file);
+  }
 
-  printw("\n"); //line return
+  printw ("------------------------------------------------------------------------------\n");
+  attroff(COLOR_PAIR(4));
+
+  if (state->carrier == 1){ //figure out method that will tell me when is active and when not active, maybe carrier but this doesn't print anyways unless activity
+    attron(COLOR_PAIR(3));
+    level = (int) state->max / 164; //only update on carrier present
+  }
+  //if (state->carrier == 0){ //figure out method that will tell me when is active and when not active, maybe carrier but this doesn't print anyways unless activity
+    //attron(COLOR_PAIR(1));
+    //0 - sync type; 1 - tg/ran; 2 - rid; 3 - slot; 4 - dcc; 5 - time(NULL) ;
+  //}
+
+  printw ("--Audio Decode----------------------------------------------------------------\n");
+  printw ("| In Level:    [%3i%%] \n", level);
+  printw ("| Voice Error: [%i][%i] \n| Error Bars:  [%s] \n", state->errs, state->errs2, state->err_str); //
+  printw ("------------------------------------------------------------------------------\n");
+
+
+  printw ("--Call Info-------------------------------------------------------------------\n");
+  if (state->lastsynctype != -1) //not sure if this will be okay
+  {
+    lls = state->lastsynctype;
+  }
+  if (state->nxdn_last_rid > 0 && state->nxdn_last_rid != src);
+  {
+    src = state->nxdn_last_rid;
+    //rn = state->nxdn_last_ran;
+  }
+  if (state->nxdn_last_ran > 0 && state->nxdn_last_rid != rn);
+  {
+    //src = state->nxdn_last_rid;
+    rn = state->nxdn_last_ran;
+  }
+  //if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17) //change this to NXDN syncs later on
+  if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
+  {
+    //printw ("| RAN: [%02d] \n", state->nxdn_last_ran);
+    printw ("| RAN: [%02d] \n", rn);
+    printw ("| RID: [%d] \n", src); //maybe change to nxdn_last_rid
+  }
+
+  //printw ("Error?: [%i] [%i] \n", state->errs, state->errs2); //what are these?
+
+  if (state->lasttg > 0 && state->lastsrc > 0)
+  {
+    tg = state->lasttg;
+    rd = state->lastsrc;
+  }
+  if (state->nac > 0)
+  {
+    nc = state->nac;
+  }
+  if ((lls == 0 || lls == 1)) //1 for P25 P1 Audio
+  {
+    printw("| TID:[%i] \n| RID:[%i] \n", tg, rd);
+    printw("| NAC: [0x%X] \n", nc);
+  }
+  //if (state->lastsynctype == 12 || state->lastsynctype == 13)  //DMR Voice Types
+  if (lls == 11 || lls == 13)  //DMR Voice Types
+  {
+    printw ("| DCC: [%i]\n", state->dmr_color_code);
+    //printw ("%s ", state->slot0light);
+    printw ("| SLOT 0 ");
+    if (state->currentslot == 0) //find out how to tell when slot0 has voice
+    {
+      s0last = "Voice";
+      //printw("Voice");
+    }
+    printw ("%s ", s0last);
+
+    //printw ("%s ", state->slot1light);
+    printw ("SLOT 1 ");
+    if (state->currentslot == 1) //find out how to tell when slot1 has voice
+    {
+      s1last = "Voice";
+      //printw("Voice");
+    }
+    printw ("%s \n", s1last);
+  }
+
+  if (state->dmr_color_code > 0 && (lls == 11 || lls == 13) ) //DMR VOice
+  {
+    dcc = state->dmr_color_code;
+  }
+  //if (state->lastsynctype == 10 || state->lastsynctype == 11)  //DMR Data Types
+  if (lls == 10 || lls == 11)  //DMR Data Types
+  {
+    printw ("| DCC: [%i]\n", dcc);
+    //printw ("%s ", state->slot0light);
+    printw ("| SLOT 0 ");
+    if (state->currentslot == 0) //find out how to tell when slot0 has voice
+    {
+      s0last = "Data ";
+      if (strcmp (state->fsubtype, " Slot idle    ") == 0)
+      {
+        s0last = "Idle ";
+      }
+    }
+    printw ("%s ", s0last);
+    //printw ("%s ", state->slot1light);
+    printw ("SLOT 1 ");
+    if (state->currentslot == 1) //find out how to tell when slot1 has voice
+    {
+      s1last = "Data ";
+      if (strcmp (state->fsubtype, " Slot idle    ") == 0)
+      {
+        s1last = "Idle ";
+      }
+    }
+    printw ("%s \n", s1last);
+  }
+  if (lls != -1) //is there a synctype 0?
+  {
+    printw ("| %s \n", SyncTypes[lls]);
+  }
+  printw ("------------------------------------------------------------------------------\n");
+  //colors off
+  if (state->carrier == 1){ //same as above
+    attroff(COLOR_PAIR(3));
+  }
+  //if (state->carrier == 0){ //same as above
+    //attroff(COLOR_PAIR(1));
+  //}
+
+  attron(COLOR_PAIR(4)); //cyan for history
   //add other interesting info to put here
+  //make Call_Matrix
+  //0 - sync type; 1 - tg/ran; 2 - rid; 3 - slot; 4 - cc; 5 - time(NULL) ;
 
+  printw ("--Call History----------------------------------------------------------------\n");
+  for (short int j = 0; j < 6; j++)
+  {
+    if ( (time(NULL) - call_matrix[j][5]) < 9999)
+    //if (1 == 1)
+    {
+    printw ("| #%d %s ", 6-j, SyncTypes[call_matrix[j][0]]);
+    if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
+    {
+      printw ("RAN [%2d] ", call_matrix[j][1]);
+    }
+    if (lls == 0 || lls == 1 || lls == 11 || lls == 13) //P25 P1 and DMR Voice
+    {
+      printw ("TID [%2d] ", call_matrix[j][1]);
+    }
+
+    printw ("RID [%4d] ", call_matrix[j][2]);
+    //printw ("S %d - ", call_matrix[j][3]);
+    if (call_matrix[j][0] == 0 || call_matrix[j][0] == 1) //P25P1 Voice
+    {
+      printw ("NAC [0x%X] ", call_matrix[j][4]);
+    }
+    if (call_matrix[j][0] == 12 || call_matrix[j][0] == 13) //DMR Voice Types
+    {
+      printw ("DCC [%d] ", call_matrix[j][4]);
+    }
+    printw ("%d secs ago\n", time(NULL) - call_matrix[j][5]);
+   }
+    //printw("\n");
+  }
+  printw ("------------------------------------------------------------------------------");
+  attroff(COLOR_PAIR(4)); //cyan for history
+  //put sync type at very bottom
+  //printw ("%s %s\n", state->ftype, state->fsubtype); //some ftype strings have extra spaces in them
+  //if (state->lastsynctype != -1) //is there a synctype 0?
+
+
+  //debug sr printw
+  if (1==2) //disable this later on
+  {
+
+    printw ("sr_0 = %16llX \n", state->sr_0);
+    printw ("sr_1 = %16llX \n", state->sr_1);
+    printw ("sr_2 = %16llX \n", state->sr_2);
+    printw ("sr_3 = %16llX \n", state->sr_3);
+    printw ("sr_4 = %16llX \n", state->sr_4);
+    printw ("sr_5 = %16llX \n", state->sr_5);
+    printw ("sr_6 = %16llX \n", state->sr_6);
+
+  }
   refresh();
-
 }
 
 void ncursesClose ()
