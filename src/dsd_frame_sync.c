@@ -193,7 +193,12 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
       {
         playRawAudio(opts, state); //this is on line 21 in dsd_audio.c
       }
-
+      /*
+      if (opts->reset_state == 1 && state->carrier == 0)
+      {
+        resetState (state);
+      }
+      */
       t++;
       symbol = getSymbol (opts, state, 0);
 
@@ -1020,6 +1025,12 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   fprintf (stderr,"Press CTRL + C to close.\n"); //Kindly remind user to double tap CTRL + C
                   }
               noCarrier (opts, state);
+              /*
+              if (opts->reset_state == 1)
+              {
+                resetState (state);
+              }
+              */
               return (-1);
             }
         }

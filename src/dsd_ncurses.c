@@ -274,14 +274,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     attron(COLOR_PAIR(3));
     level = (int) state->max / 164; //only update on carrier present
   }
-  //if (state->carrier == 0){ //figure out method that will tell me when is active and when not active, maybe carrier but this doesn't print anyways unless activity
-    //attron(COLOR_PAIR(1));
-    //0 - sync type; 1 - tg/ran; 2 - rid; 3 - slot; 4 - dcc; 5 - time(NULL) ;
-  //}
+  if (state->carrier == 0 && opts->reset_state == 1)
+  {
+    resetState (state);
+  }
+
 
   printw ("--Audio Decode----------------------------------------------------------------\n");
   printw ("| In Level:    [%3i%%] \n", level);
   printw ("| Voice Error: [%i][%i] \n| Error Bars:  [%s] \n", state->errs, state->errs2, state->err_str); //
+  printw ("| Carrier = %i\n", state->carrier);
   printw ("------------------------------------------------------------------------------\n");
 
 

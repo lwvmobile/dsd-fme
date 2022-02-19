@@ -238,6 +238,7 @@ typedef struct
   pa_simple *pulse_digi_dev_in;
   pa_simple *pulse_digi_dev_out;
   int use_ncurses_terminal;
+  int reset_state;
 
 } dsd_opts;
 
@@ -535,6 +536,7 @@ void NxdnEncryptionStreamGeneration (dsd_opts* opts, dsd_state* state, uint8_t K
 void processMbeFrameEncrypted (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char ambe_fr[4][24], char imbe7100_fr[7][24], char ambe_keystream[49], char imbe_keystream[88]);
 //end borrow from LEH
 
+void resetState (dsd_state * state);
 
 #ifdef __cplusplus
 extern "C" {

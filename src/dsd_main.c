@@ -764,8 +764,9 @@ main (int argc, char **argv)
             }
           break;
         case 'n':
-          opts.audio_out = 0;
-          fprintf (stderr,"Disabling audio output to soundcard.\n");
+          //opts.audio_out = 0;
+          //fprintf (stderr,"Disabling audio output to soundcard.\n");
+          opts.reset_state = 1;
           break;
         case 'w':
           strncpy(opts.wav_out_file, optarg, 1023);
