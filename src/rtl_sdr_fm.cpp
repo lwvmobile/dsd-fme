@@ -1043,6 +1043,7 @@ void rtlsdr_sighandler()
 {
 	fprintf (stderr, "Signal caught, exiting!\n");
 	fprintf (stderr, "Press CTRL + C again to close. Thanks. \n"); //Kindly remind user to double tap CTRL + C
+
 	rtlsdr_cancel_async(dongle.dev);
 	//cleanup_rtlsdr_stream(); //thank the wraith for this one...if it works...didn't work
 	//_Exit(1);
@@ -1155,7 +1156,7 @@ void cleanup_rtlsdr_stream()
   demod_cleanup(&demod);
   output_cleanup(&output);
   controller_cleanup(&controller);
-
+	
   rtlsdr_close(dongle.dev);
 
 }

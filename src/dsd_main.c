@@ -557,6 +557,8 @@ sigfun (int sig)
 {
     exitflag = 1;
     signal (SIGINT, SIG_DFL);
+    ncursesClose ();
+
 #ifdef USE_RTLSDR
     rtlsdr_sighandler();
 #endif
