@@ -37,6 +37,7 @@ unsigned long long sr_4 = 0; //
 unsigned long long sr_5 = 0; //
 unsigned long long sr_6 = 0; //
 */
+int reset = 0;
 char c; //getch key
 int tg; //last tg
 int rd; //last rid
@@ -115,12 +116,7 @@ void ncursesOpen ()
   noecho();
   cbreak();
   fprintf (stderr, "Opening NCurses Terminal. \n");
-  //call_matrix[5-i][0] = 0;
-  //call_matrix[5-i][1] = 0;
-  //call_matrix[5-i][2] = 0;
-  //call_matrix[5-i][3] = 0;
-  //call_matrix[5-i][4] = 0;
-  //call_matrix[5-i][5] = time(NULL);
+
 }
 
 void
@@ -159,42 +155,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if ( (state->nxdn_last_rid != src && src > 0) || (state->nxdn_last_ran != rn && rn > 0) ) //find condition to make this work well, probably if last != local last variables
   {
-    /* //save just in case
-    call_matrix[0][0] = call_matrix[1][0];
-    call_matrix[0][1] = call_matrix[1][1];
-    call_matrix[0][2] = call_matrix[1][2];
-    call_matrix[0][3] = call_matrix[1][3];
-    call_matrix[0][4] = call_matrix[1][4];
-    call_matrix[0][5] = call_matrix[1][5];
-
-    call_matrix[1][0] = call_matrix[2][0];
-    call_matrix[1][1] = call_matrix[2][1];
-    call_matrix[1][2] = call_matrix[2][2];
-    call_matrix[1][3] = call_matrix[2][3];
-    call_matrix[1][4] = call_matrix[2][4];
-    call_matrix[1][5] = call_matrix[2][5];
-
-    call_matrix[2][0] = call_matrix[3][0];
-    call_matrix[2][1] = call_matrix[3][1];
-    call_matrix[2][2] = call_matrix[3][2];
-    call_matrix[2][3] = call_matrix[3][3];
-    call_matrix[2][4] = call_matrix[3][4];
-    call_matrix[2][5] = call_matrix[3][5];
-
-    call_matrix[3][0] = call_matrix[4][0];
-    call_matrix[3][1] = call_matrix[4][1];
-    call_matrix[3][2] = call_matrix[4][2];
-    call_matrix[3][3] = call_matrix[4][3];
-    call_matrix[3][4] = call_matrix[4][4];
-    call_matrix[3][5] = call_matrix[4][5];
-
-    call_matrix[4][0] = call_matrix[5][0];
-    call_matrix[4][1] = call_matrix[5][1];
-    call_matrix[4][2] = call_matrix[5][2];
-    call_matrix[4][3] = call_matrix[5][3];
-    call_matrix[4][4] = call_matrix[5][4];
-    call_matrix[4][5] = call_matrix[5][5];
-    */
     for (short int k = 0; k < 5; k++)
     {
       call_matrix[k][0] = call_matrix[k+1][0];
@@ -264,7 +224,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->wav_out_file[0] != 0)
   {
-    printw ("| Writing audio wav to file %s\n", opts->wav_out_file);
+    printw ("| Writing Audio WAV to file %s\n", opts->wav_out_file);
   }
 
   printw ("------------------------------------------------------------------------------\n");
@@ -273,10 +233,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (state->carrier == 1){ //figure out method that will tell me when is active and when not active, maybe carrier but this doesn't print anyways unless activity
     attron(COLOR_PAIR(3));
     level = (int) state->max / 164; //only update on carrier present
+    reset = 1;
   }
-  if (state->carrier == 0 && opts->reset_state == 1)
+  if (state->carrier == 0 && opts->reset_state == 1 && reset == 1)
   {
     resetState (state);
+    reset = 0;
   }
 
 

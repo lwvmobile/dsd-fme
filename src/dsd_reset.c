@@ -103,5 +103,5 @@ resetState (dsd_state * state)
 //  state->debug_label_imbe_file = NULL;
 //#endif
 
-  initialize_p25_heuristics(&state->p25_heuristics); //see if we want to re-init this or not
+  initialize_p25_heuristics(&state->p25_heuristics); //see if we want to re-init this or not, currently seems to cause memory leak when running over and over
 }
