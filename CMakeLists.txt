@@ -14,7 +14,7 @@ find_package(RTLSDR)
 #more messing around
 #find_package(Curses)
 find_package(Curses REQUIRED) #making this required until I can fix all instances of it being called to ifdef lines
-find_package(PULSEAUDIO)
+find_package(PulseAudio)
 
 #include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${PULSEAUDIO_INCLUDE_DIRS} ${CURSES_INCLUDE_DIR})
 #set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${PULSEAUDIO_SIMPLE_LIBRARY} ${CURSES_LIBRARY})

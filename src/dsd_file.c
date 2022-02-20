@@ -16,7 +16,7 @@
  */
 
 #include "dsd.h"
-
+int payload = 0;
 void
 saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
 {
@@ -28,17 +28,28 @@ saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
   fputc (err, opts->mbe_out_f);
 
   k = 0;
+  if (payload == 1) //make opt variable later on to toggle this
+  {
+    fprintf(stderr, "\n");
+  }
+
   for (i = 0; i < 11; i++)
     {
       b = 0;
+
       for (j = 0; j < 8; j++)
         {
           b = b << 1;
           b = b + imbe_d[k];
           k++;
         }
+        if (payload == 1) //make opt variable later on to toggle this
+        {
+          fprintf (stderr, "[%2X] ", b);
+        }
       fputc (b, opts->mbe_out_f);
     }
+    //fprintf(stderr, "\n");
   fflush (opts->mbe_out_f);
 }
 
@@ -53,17 +64,28 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   fputc (err, opts->mbe_out_f);
 
   k = 0;
+  if (payload == 1) //make opt variable later on to toggle this
+  {
+    fprintf(stderr, "\n");
+  }
   for (i = 0; i < 6; i++)
     {
       b = 0;
+
       for (j = 0; j < 8; j++)
         {
           b = b << 1;
           b = b + ambe_d[k];
           k++;
         }
+        if (payload == 1) //make opt variable later on to toggle this
+        {
+          fprintf (stderr, "[%2X] ", b);
+        }
+
       fputc (b, opts->mbe_out_f);
     }
+  //fprintf(stderr, "\n");
   b = ambe_d[48];
   fputc (b, opts->mbe_out_f);
   fflush (opts->mbe_out_f);

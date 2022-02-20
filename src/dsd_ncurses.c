@@ -27,16 +27,7 @@
 
 #include "dsd.h"
 #include "git_ver.h"
-/*
-short hexbuf;
-unsigned long long sr_0 = 0; //64-bit shift registers for pushing decoded binary or dibit data
-unsigned long long sr_1 = 0; //384
-unsigned long long sr_2 = 0; //
-unsigned long long sr_3 = 0; //
-unsigned long long sr_4 = 0; //
-unsigned long long sr_5 = 0; //
-unsigned long long sr_6 = 0; //
-*/
+
 int reset = 0;
 char c; //getch key
 int tg; //last tg
@@ -62,6 +53,7 @@ char * FM_bannerN[9] = {
   "https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
 };
 
+/*
 char * SyncTypes[20] = {
   "P25P1_SYNC",
   "INV_P25P1_SYNC",
@@ -83,6 +75,30 @@ char * SyncTypes[20] = {
   "INV_NXDN_BS_DATA_SYNC",    //17
   "DSTAR_HD",
   "INV_DSTAR_HD"
+
+};
+*/
+char * SyncTypes[20] = {
+  "+P25P1",
+  "-P25P1",
+  "+X2TDMA DATA",
+  "-X2TDMA DATA",
+  "+X2TDMA VOICE",
+  "-X2TDMA VOICE",
+  "+DSTARC",
+  "-DSTAR",
+  "+NXDN VOICE",      //8
+  "-NXDN VOICE",  //9
+  "+DMR DATA",     //10
+  "-DMR VOICE",    //11
+  "+DMR DATA",     //12
+  "-DMR VOICE", //13
+  "+PROVOICE",            //14
+  "-PROVOICE",        //15
+  "+NXDN DATA",        //16
+  "-NXDN DATA",    //17
+  "+DSTAR HD",
+  "-DSTAR HD"
 
 };
 
@@ -115,7 +131,7 @@ void ncursesOpen ()
   init_pair(5, COLOR_MAGENTA, COLOR_BLACK); //Magenta for no frame sync/signal
   noecho();
   cbreak();
-  fprintf (stderr, "Opening NCurses Terminal. \n");
+  //fprintf (stderr, "Opening NCurses Terminal. \n");
 
 }
 
@@ -143,39 +159,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ("------------------------------------------------------------------------------\n");
 
 
-  if ( (state->lastsynctype == 14 || state->lastsynctype == 15) ) //honestly have no idea how to do this for pV
+  if ( (lls == 14 || lls == 15) && (time(NULL) - call_matrix[9][5] > 5) ) //honestly have no idea how to do this for pV, just going time based?
   {
-    call_matrix[5][0] = lls;
-    call_matrix[5][1] = 1;
-    call_matrix[5][2] = 1;
-    call_matrix[5][3] = 1;
-    call_matrix[5][4] = 1;
-    call_matrix[5][5] = time(NULL);
-  }
-
-  if ( (state->nxdn_last_rid != src && src > 0) || (state->nxdn_last_ran != rn && rn > 0) ) //find condition to make this work well, probably if last != local last variables
-  {
-    for (short int k = 0; k < 5; k++)
-    {
-      call_matrix[k][0] = call_matrix[k+1][0];
-      call_matrix[k][1] = call_matrix[k+1][1];
-      call_matrix[k][2] = call_matrix[k+1][2];
-      call_matrix[k][3] = call_matrix[k+1][3];
-      call_matrix[k][4] = call_matrix[k+1][4];
-      call_matrix[k][5] = call_matrix[k+1][5];
-    }
-    call_matrix[5][0] = lls;
-    call_matrix[5][1] = rn;
-    call_matrix[5][2] = src;
-    call_matrix[5][3] = 0;
-    call_matrix[5][4] = 0;
-    call_matrix[5][5] = time(NULL);
-
-  }
-
-  if ( (lls == 0 || lls == 1) && state->lastsrc != rd && state->lastsrc > 0) //find condition to make this work well, probably if last != local last variables
-  {
-    for (short int k = 0; k < 5; k++)
+    for (short int k = 0; k < 9; k++)
     {
       call_matrix[k][0] = call_matrix[k+1][0];
       call_matrix[k][1] = call_matrix[k+1][1];
@@ -185,12 +171,79 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       call_matrix[k][5] = call_matrix[k+1][5];
     }
 
-    call_matrix[5][0] = lls;
-    call_matrix[5][1] = tg;
-    call_matrix[5][2] = rd;
-    call_matrix[5][3] = 0;
-    call_matrix[5][4] = nc;
-    call_matrix[5][5] = time(NULL);
+    call_matrix[9][0] = lls;
+    call_matrix[9][1] = 1;
+    call_matrix[9][2] = 1;
+    call_matrix[9][3] = 1;
+    call_matrix[9][4] = 1;
+    call_matrix[9][5] = time(NULL);
+    //nowN = time(NULL);
+  }
+
+  //if ( (state->nxdn_last_rid != src && src > 0) || (state->nxdn_last_ran != rn && rn > 0) ) //find condition to make this work well, probably if last != local last variables
+  //if ( (call_matrix[9][2] != src && src > 0) || (call_matrix[9][1] != rn && rn > 0) ) //NXDN working well now with this, updates immediately and only once
+  if ( call_matrix[9][2] != src && src > 0 && rn > 0 ) //NXDN working well now with this, updates immediately and only once
+  {
+    for (short int k = 0; k < 9; k++)
+    {
+      call_matrix[k][0] = call_matrix[k+1][0];
+      call_matrix[k][1] = call_matrix[k+1][1];
+      call_matrix[k][2] = call_matrix[k+1][2];
+      call_matrix[k][3] = call_matrix[k+1][3];
+      call_matrix[k][4] = call_matrix[k+1][4];
+      call_matrix[k][5] = call_matrix[k+1][5];
+    }
+    call_matrix[9][0] = lls;
+    call_matrix[9][1] = rn;
+    call_matrix[9][2] = src;
+    call_matrix[9][3] = 0;
+    call_matrix[9][4] = 0;
+    call_matrix[9][5] = time(NULL);
+
+  }
+
+  //if (state->dmr_color_code != dcc && (lls == 11 || lls == 13 || lls == 10 || lls == 12) ) //DMR Voice + last two is data
+  if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 11 || lls == 13 || lls == 10 || lls == 12) ) //DMR Voice + last two is data
+  {
+    //dcc = state->dmr_color_code;
+    for (short int k = 0; k < 9; k++)
+    {
+      call_matrix[k][0] = call_matrix[k+1][0];
+      call_matrix[k][1] = call_matrix[k+1][1];
+      call_matrix[k][2] = call_matrix[k+1][2];
+      call_matrix[k][3] = call_matrix[k+1][3];
+      call_matrix[k][4] = call_matrix[k+1][4];
+      call_matrix[k][5] = call_matrix[k+1][5];
+    }
+
+    call_matrix[9][0] = lls;
+    call_matrix[9][1] = tg;
+    call_matrix[9][2] = rd;
+    call_matrix[9][3] = 0;
+    call_matrix[9][4] = dcc;
+    call_matrix[9][5] = time(NULL);
+    //i++;
+  }
+
+  //if ( (lls == 0 || lls == 1) && state->lastsrc != rd && state->lastsrc > 0) //find condition to make this work well, probably if last != local last variables
+  if ( (lls == 0 || lls == 1) && call_matrix[9][2] != rd && nc > 0 && tg > 0) //P25
+  {
+    for (short int k = 0; k < 9; k++)
+    {
+      call_matrix[k][0] = call_matrix[k+1][0];
+      call_matrix[k][1] = call_matrix[k+1][1];
+      call_matrix[k][2] = call_matrix[k+1][2];
+      call_matrix[k][3] = call_matrix[k+1][3];
+      call_matrix[k][4] = call_matrix[k+1][4];
+      call_matrix[k][5] = call_matrix[k+1][5];
+    }
+
+    call_matrix[9][0] = lls;
+    call_matrix[9][1] = tg;
+    call_matrix[9][2] = rd;
+    call_matrix[9][3] = 0;
+    call_matrix[9][4] = nc;
+    call_matrix[9][5] = time(NULL);
     //i++;
   }
   //printw ("Time: ");
@@ -199,7 +252,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ("--Input Output----------------------------------------------------------------\n");
   if (opts->audio_in_type == 0)
   {
-    printw ("| Pulse Audio  Input [%i] kHz [%i] Channel\n", opts->pulse_digi_rate_in, opts->pulse_digi_in_channels);
+    printw ("| Pulse Audio  Input [%i] kHz [%i] Channel\n", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
   }
   if (opts->audio_in_type == 1)
   {
@@ -216,7 +269,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_out_type == 0)
   {
-    printw ("| Pulse Audio Output [%i] kHz [%i] Channel\n", opts->pulse_digi_rate_out, opts->pulse_digi_out_channels);
+    printw ("| Pulse Audio Output [%i] kHz [%i] Channel\n", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels);
   }
   if (opts->mbe_out_dir[0] != 0)
   {
@@ -311,7 +364,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("%s \n", s1last);
   }
 
-  if (state->dmr_color_code > 0 && (lls == 11 || lls == 13) ) //DMR VOice
+  if (state->dmr_color_code > 0 && (lls == 11 || lls == 13 || lls == 10 || lls == 12) ) //DMR Voice + last two is data
   {
     dcc = state->dmr_color_code;
   }
@@ -361,36 +414,36 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //0 - sync type; 1 - tg/ran; 2 - rid; 3 - slot; 4 - cc; 5 - time(NULL) ;
 
   printw ("--Call History----------------------------------------------------------------\n");
-  for (short int j = 0; j < 6; j++)
+  for (short int j = 0; j < 10; j++)
   {
-    if ( (time(NULL) - call_matrix[j][5]) < 9999)
+    if ( ((time(NULL) - call_matrix[9-j][5]) < 9999)  )
     //if (1 == 1)
     {
-    printw ("| #%d %s ", 6-j, SyncTypes[call_matrix[j][0]]);
+    printw ("| #%d %s ", j, SyncTypes[call_matrix[9-j][0]]);
     if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
     {
-      printw ("RAN [%2d] ", call_matrix[j][1]);
+      printw ("RAN [%2d] ", call_matrix[9-j][1]);
     }
     if (lls == 0 || lls == 1 || lls == 11 || lls == 13) //P25 P1 and DMR Voice
     {
-      printw ("TID [%2d] ", call_matrix[j][1]);
+      printw ("TID [%2d] ", call_matrix[9-j][1]);
     }
 
-    printw ("RID [%4d] ", call_matrix[j][2]);
+    printw ("RID [%4d] ", call_matrix[9-j][2]);
     //printw ("S %d - ", call_matrix[j][3]);
-    if (call_matrix[j][0] == 0 || call_matrix[j][0] == 1) //P25P1 Voice
+    if (call_matrix[9-j][0] == 0 || call_matrix[9-j][0] == 1) //P25P1 Voice
     {
-      printw ("NAC [0x%X] ", call_matrix[j][4]);
+      printw ("NAC [0x%X] ", call_matrix[9-j][4]);
     }
-    if (call_matrix[j][0] == 12 || call_matrix[j][0] == 13) //DMR Voice Types
+    if (call_matrix[9-j][0] == 12 || call_matrix[9-j][0] == 13 || call_matrix[9-j][0] == 10 || call_matrix[9-j][0] == 11 ) //DMR Voice Types
     {
-      printw ("DCC [%d] ", call_matrix[j][4]);
+      printw ("DCC [%d] ", call_matrix[9-j][4]);
     }
-    printw ("%d secs ago\n", time(NULL) - call_matrix[j][5]);
+    printw ("%d secs ago\n", time(NULL) - call_matrix[9-j][5]);
    }
     //printw("\n");
   }
-  printw ("------------------------------------------------------------------------------");
+  printw ("------------------------------------------------------------------------------\n");
   attroff(COLOR_PAIR(4)); //cyan for history
   //put sync type at very bottom
   //printw ("%s %s\n", state->ftype, state->fsubtype); //some ftype strings have extra spaces in them
@@ -425,7 +478,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
 void ncursesClose ()
 {
-  erase();
-  refresh();
+  //erase();
+  //refresh();
   endwin();
 }
