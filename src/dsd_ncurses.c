@@ -478,7 +478,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
 void ncursesClose ()
 {
-  //erase();
-  //refresh();
   endwin();
+  fprintf(stderr, "Press CTRL+C again to close. Thanks.");
+  fprintf(stderr, "Run 'reset' in your terminal to clean up if necessary.");
 }
