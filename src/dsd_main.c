@@ -293,6 +293,8 @@ initState (dsd_state * state)
   state->debug_header_errors = 0;
   state->debug_header_critical_errors = 0;
 
+  state->nxdn_last_ran = 0;
+
 #ifdef TRACE_DSD
   state->debug_sample_index = 0;
   state->debug_label_file = NULL;
@@ -332,7 +334,7 @@ usage ()
   fprintf (stderr,"  -d <dir>      Create mbe data files, use this directory\n");
   fprintf (stderr,"  -r <files>    Read/Play saved mbe data from file(s)\n");
   fprintf (stderr,"  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
-  fprintf (stderr,"  -n            Do not send synthesized speech to audio output device\n");
+  //fprintf (stderr,"  -n            Do not send synthesized speech to audio output device\n");
   fprintf (stderr,"  -w <file>     Output synthesized speech to a .wav file\n");
   fprintf (stderr,"  -a            Display port audio devices\n");
   fprintf (stderr,"  -W            Monitor Source Audio When No Sync Detected (WIP!)\n");
@@ -379,6 +381,9 @@ usage ()
   fprintf (stderr,"                 (default=36)\n");
   fprintf (stderr,"  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
   fprintf (stderr,"                 (default=15)\n");
+  fprintf (stderr,"  -n            Reset P25 Heuristics and initState variables on mixed decoding signal\n");
+  fprintf (stderr,"                 Helps when decoding multiple signal types at same time\n");
+  fprintf (stderr,"                 (WiP! May Cause Slow Memory Leak - Experimental)\n");
   fprintf (stderr,"\n");
   fprintf (stderr,"Report bugs to: https://github.com/lwvmobile/dsd-fme/issues \n");
   exit (0);
@@ -555,6 +560,8 @@ sigfun (int sig)
 {
     exitflag = 1;
     signal (SIGINT, SIG_DFL);
+    ncursesClose ();
+
 #ifdef USE_RTLSDR
     rtlsdr_sighandler();
 #endif
@@ -711,6 +718,7 @@ main (int argc, char **argv)
         case 'N':
           opts.use_ncurses_terminal = 1;
           fprintf (stderr,"Enabling NCurses Terminal.\n");
+          fprintf (stderr,"  - may need to issue 'reset' command in terminal after use\n");
           break;
 
         case 'z':
@@ -760,8 +768,12 @@ main (int argc, char **argv)
             }
           break;
         case 'n':
-          opts.audio_out = 0;
-          fprintf (stderr,"Disabling audio output to soundcard.\n");
+          //opts.audio_out = 0;
+          //fprintf (stderr,"Disabling audio output to soundcard.\n");
+          opts.reset_state = 1;
+          fprintf (stderr,"Enabling Automatic Reset of P25 states\n");
+          fprintf (stderr,"  -Helps with multiple signal type decoding\n");
+          fprintf (stderr,"  -(WiP! May cause slow memory leak)\n");
           break;
         case 'w':
           strncpy(opts.wav_out_file, optarg, 1023);
@@ -787,7 +799,7 @@ main (int argc, char **argv)
               opts.frame_x2tdma = 1;
               opts.frame_p25p1 = 1;
               opts.frame_nxdn48 = 0; //turn it on, doesn't work due to symbol rate difference
-              opts.frame_nxdn96 = 0; //causes false positives, leave on 0 
+              opts.frame_nxdn96 = 0; //causes false positives, leave on 0
               opts.frame_dmr = 1;
               opts.frame_provoice = 0; //turn it on, doesn't work due to symbol rate difference
             }
@@ -877,7 +889,6 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0; //was 1
               state.rf_mod = 0; //was 2
-              //fprintf (stderr,"Enabling only GFSK modulation optimizations.\n");
               fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
               fprintf (stderr,"Decoding only NXDN 9600 baud frames.\n");
             }
@@ -890,6 +901,9 @@ main (int argc, char **argv)
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 1;
               opts.frame_provoice = 0;
+              opts.mod_c4fm = 1; //just a test
+              opts.mod_qpsk = 0;
+              opts.mod_gfsk = 0; //was 1
               fprintf (stderr,"Decoding only DMR/MOTOTRBO frames.\n");
             }
           break;
@@ -1083,6 +1097,7 @@ main (int argc, char **argv)
   else
     {
         liveScanner (&opts, &state);
+
     }
   if (opts.use_ncurses_terminal == 1){
     ncursesClose ();

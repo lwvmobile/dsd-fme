@@ -78,10 +78,10 @@ processFrame (dsd_opts * opts, dsd_state * state)
       state->minref = state->min;
     }
 
-  if ((state->synctype == 8) || (state->synctype == 9)) //lets make this NOT do this...maybe...
+  if ((state->synctype == 8) || (state->synctype == 9)) //NXDN Voice
     {
       //state->rf_mod = 2; //wrong type of modulation HERE HERE
-      //state->nac = 0;
+      state->nac = 0;
       state->lastsrc = 0;
       state->lasttg = 0;
       if (opts->errorbars == 1)
@@ -89,7 +89,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              fprintf (stderr,"inlvl: %2i%% ", level);
+              fprintf (stderr, "inlvl: %2i%% ", level);
             }
         }
       state->nac = 0;
@@ -101,10 +101,10 @@ processFrame (dsd_opts * opts, dsd_state * state)
       processNXDNVoice (opts, state);
       return;
     }
-  else if ((state->synctype == 16) || (state->synctype == 17))
+  else if ((state->synctype == 16) || (state->synctype == 17)) //NXDN Data
     {
       //state->rf_mod = 2;
-      //state->nac = 0;
+      state->nac = 0;
       state->lastsrc = 0;
       state->lasttg = 0;
       if (opts->errorbars == 1)

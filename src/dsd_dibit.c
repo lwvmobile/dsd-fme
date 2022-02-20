@@ -358,6 +358,61 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
         }
 
       state->last_dibit = dibit;
+      //test loading up a shift register and printing it to stderr
+      //di-bit shift register for hex values
+      //check for which dibit is equal to which half-nibble
+      if (dibit == 0){state->hexbuf = 0x0;} //+1
+      if (dibit == 1){state->hexbuf = 0x1;} //+3
+      if (dibit == 2){state->hexbuf = 0x2;} //-1
+      if (dibit == 3){state->hexbuf = 0x3;} //-3
+      state->sr_0 = (state->sr_0 << 2) | (state->sr_1 >> 62);
+      state->sr_1 = (state->sr_1 << 2) | (state->sr_2 >> 62);
+      state->sr_2 = (state->sr_2 << 2) | (state->sr_3 >> 62);
+      state->sr_3 = (state->sr_3 << 2) | (state->sr_4 >> 62);
+      state->sr_4 = (state->sr_4 << 2) | (state->sr_5 >> 62);
+      state->sr_5 = (state->sr_5 << 2) | (state->sr_6 >> 62);
+      state->sr_6 = state->sr_6 << 2;
+      state->sr_6 |= state->hexbuf;
+      if (1 == 2) //disable this later on
+      {
+        fprintf (stderr, "\nsr_0 = %16llX \n", state->sr_0);
+        fprintf (stderr, "sr_1 = %16llX \n", state->sr_1);
+        fprintf (stderr, "sr_2 = %16llX \n", state->sr_2);
+        fprintf (stderr, "sr_3 = %16llX \n", state->sr_3);
+        fprintf (stderr, "sr_4 = %16llX \n", state->sr_4);
+        fprintf (stderr, "sr_5 = %16llX \n", state->sr_5);
+        fprintf (stderr, "sr_6 = %16llX \n", state->sr_6);
+        /*
+        printw ("sr_0 = %16llX \n", sr_0);
+        printw ("sr_1 = %16llX \n", sr_1);
+        printw ("sr_2 = %16llX \n", sr_2);
+        printw ("sr_3 = %16llX \n", sr_3);
+        printw ("sr_4 = %16llX \n", sr_4);
+        printw ("sr_5 = %16llX \n", sr_5);
+        printw ("sr_6 = %16llX \n", sr_6);
+        */
+      }
+
+      if ( state->sr_5 & 0xFFFFF == 0xDDF5D) //disable this later on
+      {
+        fprintf (stderr, "\nsr_0 = %16llX \n", state->sr_0);
+        fprintf (stderr, "sr_1 = %16llX \n", state->sr_1);
+        fprintf (stderr, "sr_2 = %16llX \n", state->sr_2);
+        fprintf (stderr, "sr_3 = %16llX \n", state->sr_3);
+        fprintf (stderr, "sr_4 = %16llX \n", state->sr_4);
+        fprintf (stderr, "sr_5 = %16llX \n", state->sr_5);
+        fprintf (stderr, "sr_6 = %16llX \n", state->sr_6);
+        /*
+        printw ("sr_0 = %16llX \n", sr_0);
+        printw ("sr_1 = %16llX \n", sr_1);
+        printw ("sr_2 = %16llX \n", sr_2);
+        printw ("sr_3 = %16llX \n", sr_3);
+        printw ("sr_4 = %16llX \n", sr_4);
+        printw ("sr_5 = %16llX \n", sr_5);
+        printw ("sr_6 = %16llX \n", sr_6);
+        */
+      }
+
 
       *state->dibit_buf_p = dibit;
       state->dibit_buf_p++;

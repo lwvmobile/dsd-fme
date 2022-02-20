@@ -953,6 +953,7 @@ static void *socket_thread_fn(void *arg) {
 		if(buffer[0] == 0) {
 			new_freq = chars_to_int(buffer);
 			dongle.freq = new_freq; //
+			//opts->rtlsdr_center_freq = new_freq; //or dongle.freq, this should update the freq displayed in ncurses terminal hopefully and not do anything naughty
 			optimal_settings(new_freq, demod.rate_in);
 			rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 			//fprintf (stderr, "Tuning to: %d [Hz] (central freq: %d [Hz])\n", new_freq, new_freq + freq_offset);
@@ -1043,6 +1044,7 @@ void rtlsdr_sighandler()
 {
 	fprintf (stderr, "Signal caught, exiting!\n");
 	fprintf (stderr, "Press CTRL + C again to close. Thanks. \n"); //Kindly remind user to double tap CTRL + C
+
 	rtlsdr_cancel_async(dongle.dev);
 	//cleanup_rtlsdr_stream(); //thank the wraith for this one...if it works...didn't work
 	//_Exit(1);
