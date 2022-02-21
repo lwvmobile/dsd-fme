@@ -6,6 +6,10 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 ## Example Usage - NCurses Terminal and Log Console to log file
 `./dsd -fa -N 2> voice.log`
 
+in second terminal, same folder, run:
+
+`tail -n 40 -f voice.log`
+
 ## Example Usage - RTL
 `dsd -fi -i rtl -o pulse -c 154.9875M -P -2 -D 1 -G 36 -L 70 -U 6021 -Y 12`
 
