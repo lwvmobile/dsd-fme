@@ -1,0 +1,41 @@
+#include "dsd.h"
+#include "nxdn_const.h"//going to test pushing data frames through, but not throught he processMBE portion, want to get those get frames
+
+void
+processNXDNData (dsd_opts * opts, dsd_state * state)
+{
+  int i, dibit;
+  //dibit = getDibit (opts, state);
+  //fprintf (stderr, "D %c \n", dibit + 48); //adding to see what dumps exactly
+  if (opts->errorbars == 1)
+    {
+      fprintf (stderr, "DATA    ");
+      //dibit = getDibit (opts, state);
+      //fprintf (stderr, "DE %c \n", dibit + 48); //adding to see what dumps exactly
+    }
+
+  for (i = 0; i < 30; i++)
+    {
+      dibit = getDibit (opts, state);
+#ifdef NXDN_DUMP
+      fprintf (stderr, "%c", dibit + 48);
+#endif
+    }
+#ifdef NXDN_DUMP
+  fprintf (stderr, " ");
+#endif
+
+  for (i = 0; i < 144; i++)
+    {
+      dibit = getDibit (opts, state);
+      //fprintf (stderr, "%c", dibit + 48);
+#ifdef NXDN_DUMP
+      fprintf (stderr, "%c", dibit + 48);
+#endif
+    }
+
+  if (opts->errorbars == 1)
+    {
+      fprintf (stderr, "\n");
+    }
+}
