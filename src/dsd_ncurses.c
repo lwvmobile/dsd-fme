@@ -90,8 +90,8 @@ char * SyncTypes[20] = {
   "+NXDN VOICE",      //8
   "-NXDN VOICE",  //9
   "+DMR DATA",     //10
-  "-DMR VOICE",    //11
-  "+DMR DATA",     //12
+  "-DMR DATA",    //11
+  "+DMR VOICE",     //12
   "-DMR VOICE", //13
   "+PROVOICE",            //14
   "-PROVOICE",        //15
@@ -121,7 +121,7 @@ char * getTimeN(void) //get pretty hh:mm:ss timestamp
 void ncursesOpen ()
 {
   mbe_printVersion (versionstr);
-  //setlocale(LC_ALL, "");
+  setlocale(LC_ALL, "");
   initscr(); //Initialize NCURSES screen window
   start_color();
   init_pair(1, COLOR_YELLOW, COLOR_BLACK);      //Yellow/Amber for frame sync/control channel, NV style
@@ -144,18 +144,19 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   level = 0; //start each cycle with 0
   erase();
   //disabling until wide support can be built for LM, etc. $(ncursesw5-config --cflags --libs)
-  //printw ("%s \n", FM_bannerN[0]); //top line in white
+  printw ("%s \n", FM_bannerN[0]); //top line in white
   attron(COLOR_PAIR(4));
-  //for (short int i = 1; i < 7; i++) //following lines in cyan
-  //{
-    //printw("%s \n", FM_bannerN[i]);
-  //}
+  for (short int i = 1; i < 7; i++) //following lines in cyan
+  {
+    printw("%s \n", FM_bannerN[i]);
+  }
   attroff(COLOR_PAIR(4));
   printw ("--Build Info------------------------------------------------------------------\n");
-  //printw ("| %s \n", FM_bannerN[7]); //http link
+  printw ("| %s \n", FM_bannerN[7]); //http link
   printw ("| Digital Speech Decoder: Florida Man Edition\n");
   printw ("| Github Build Version: %s \n", GIT_TAG);
   printw ("| mbelib version %s\n", versionstr);
+  //printw ("| Press CTRL+C twice to exit\n");
   printw ("------------------------------------------------------------------------------\n");
 
 
@@ -203,7 +204,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //if (state->dmr_color_code != dcc && (lls == 11 || lls == 13 || lls == 10 || lls == 12) ) //DMR Voice + last two is data
-  if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 11 || lls == 13 || lls == 10 || lls == 12) ) //DMR Voice + last two is data
+  //if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR
+  if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 12 || lls == 13) ) //DMR
   {
     //dcc = state->dmr_color_code;
     for (short int k = 0; k < 9; k++)
@@ -317,6 +319,22 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //src = state->nxdn_last_rid;
     rn = state->nxdn_last_ran;
   }
+
+  if (state->dmr_color_code > 0 && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR, DCC only carried on Data?
+  {
+    dcc = state->dmr_color_code;
+  }
+
+  if (state->lastsrc > 0 && (lls == 12 || lls == 13))
+  {
+    rd = state->lastsrc;
+  }
+
+  if (state->lasttg > 0 && (lls == 12 || lls == 13))
+  {
+    tg = state->lasttg;
+  }
+
   //if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17) //change this to NXDN syncs later on
   if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
   {
@@ -342,9 +360,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw("| NAC: [0x%X] \n", nc);
   }
   //if (state->lastsynctype == 12 || state->lastsynctype == 13)  //DMR Voice Types
-  if (lls == 11 || lls == 13)  //DMR Voice Types
+  if (lls == 12 || lls == 13)  //DMR Voice Types
   {
-    printw ("| DCC: [%i]\n", state->dmr_color_code);
+    printw ("| DCC: [%i]\n", dcc);
     //printw ("%s ", state->slot0light);
     printw ("| SLOT 0 ");
     if (state->currentslot == 0) //find out how to tell when slot0 has voice
@@ -364,10 +382,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("%s \n", s1last);
   }
 
-  if (state->dmr_color_code > 0 && (lls == 11 || lls == 13 || lls == 10 || lls == 12) ) //DMR Voice + last two is data
-  {
-    dcc = state->dmr_color_code;
-  }
+
   //if (state->lastsynctype == 10 || state->lastsynctype == 11)  //DMR Data Types
   if (lls == 10 || lls == 11)  //DMR Data Types
   {
@@ -424,7 +439,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       printw ("RAN [%2d] ", call_matrix[9-j][1]);
     }
-    if (lls == 0 || lls == 1 || lls == 11 || lls == 13) //P25 P1 and DMR Voice
+    if (lls == 0 || lls == 1 || lls == 12 || lls == 13 || lls == 10 || lls == 11 ) //P25 P1 and DMR
     {
       printw ("TID [%2d] ", call_matrix[9-j][1]);
     }
@@ -479,6 +494,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 void ncursesClose ()
 {
   endwin();
-  fprintf(stderr, "Press CTRL+C again to close. Thanks.");
-  fprintf(stderr, "Run 'reset' in your terminal to clean up if necessary.");
+  printf("Press CTRL+C again to close. Thanks.\n");
+  printf("Run 'reset' in your terminal to clean up if necessary.");
 }
