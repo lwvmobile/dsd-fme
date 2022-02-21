@@ -1,7 +1,7 @@
 # Digital Speech Decoder - Florida Man Edition
 This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with a few tweaks from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch as well. NXDN voice decoding is currently working a lot better, thanks to the latter, although I have yet to explore the expanded NXDN or DMR decoding he has laid out. That is a goal. I have also implemented a few more RTL options, including rtl device gain, PPM error, device index selection, squelch, VFO bandwidth, and a UDP remote that works like the old rtl_udp fork, although its currently limited to changing frequency and squelch. The goal is to integrate this project into [EDACS-FM](https://github.com/lwvmobile/edacs-fm "EDACS-FM") but I also want it to be its own standalone project. 
 
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/cygwin/dsd-fme.png)
 
 ## Example Usage - RTL
 `dsd -fi -i rtl -o pulse -c 154.9875M -P -2 -D 1 -G 36 -L 70 -U 6021 -Y 12`
