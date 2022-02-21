@@ -144,7 +144,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   level = 0; //start each cycle with 0
   erase();
   //disabling until wide support can be built for LM, etc. $(ncursesw5-config --cflags --libs)
-  //printw ("%s \n", FM_bannerN[0]); //top line in white
+  printw ("%s \n", FM_bannerN[0]); //top line in white
   attron(COLOR_PAIR(4));
   for (short int i = 1; i < 7; i++) //following lines in cyan
   {
@@ -156,7 +156,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ("| Digital Speech Decoder: Florida Man Edition\n");
   printw ("| Github Build Version: %s \n", GIT_TAG);
   printw ("| mbelib version %s\n", versionstr);
-  printw ("| Press CTRL+C twice to exit\n");
+  //printw ("| Press CTRL+C twice to exit\n");
   printw ("------------------------------------------------------------------------------\n");
 
 
