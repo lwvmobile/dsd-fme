@@ -66,21 +66,12 @@ The Current list of objectives include:
 
 ## How to clone, check out, and build this branch
 
-Using the included install.sh should make for a simple and painless clone, build, and install on any Debian or Ubuntu based system. Simply acquire or copy the script, and run it.
+Manual Installation: Follow the steps down below.
+
+First, install dependency packages. Check in the Cygwin Cheatsheet folder to see dependencies to install using setup.exe that came with Cygwin.  The guide below will be a loose guide, based on the Debian/Ubuntu guide, as I cannot predict exactly which dependencies will be absolutely necesary in Cygwin. Regardless, the build instructions should be nearly identical once the proper dependencies have been met. The user will also need to manually build and install rtl-sdr and librtlsdr in Cygwin if support for RTL dongles is desired. As of this writing, I have not successfully been able to build a current version inside of Cygwin.
 
 ```
-wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/pulseaudio/install.sh
-chmod +x install.sh
-./install.sh
-```
-
-Or you can elect to manually follow the steps down below.
-
-First, install dependency packages. This guide will assume you are using Debian/Ubuntu based distros. Check your package manager for equivalent packages if different. PortAudio is not currently used in this build, and is disabled in CMakeLists.txt, you can re-enable it if you wish, but it isn't recommended unless you have a very specific reason to do so. Some of these dependencies are not currently be used, but may be used in future builds.
-
-```
-sudo apt update
-sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential
+#libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential
 
 wget -O itpp-latest.tar.bz2 http://sourceforge.net/projects/itpp/files/latest/download?source=files
 tar xjf itpp*
@@ -90,8 +81,7 @@ mkdir build
 cd build
 cmake ..
 make -j `nproc`
-sudo make install
-sudo ldconfig
+make install
 cd ..
 cd ..
 ```
@@ -105,51 +95,41 @@ mkdir build
 cd build
 cmake ..
 make -j `nproc`
-sudo make install
-sudo ldconfig
+make install
 cd ..
 cd ..
 ```
 
-Finish by running these steps to clone and build DSD-FME w/ pulseaudio support.
+Finish by running these steps to clone and build DSD-FME w/ pulseaudio support in Cygwin.
 
 ```
 git clone https://github.com/lwvmobile/dsd-fme
 cd dsd-fme
 git branch -a
-git checkout remotes/origin/pulseaudio
-git checkout -b pulseaudio
-git branch -a #double check to see if you are on pulseaudio branch
+git checkout remotes/origin/cygwin
+git checkout -b cygwin
+git branch -a #double check to see if you are on cygwin branch
 mkdir build
 cd build
 cmake ..
 make -j `nproc`
-##only run make install if you don't have another version already installed##
-sudo make install
-sudo ldconfig
+##only run make install if you want this to be your main DSD install##
+make install
 
-```
-Optional 'Virtual Sinks' for routing audio from SDR++ or GQRX, etc, into DSD-FME
-
-You may wish to direct sound into DSD-FME via Virtual Sinks. You may set up a Virtual Sink or two on your machine for routing audio in and out of applications to other applications using the following command, and opening up pavucontrol "PulseAudio Volume Control" in the menu to change line out of application to virtual sink, and line in of DSD-FME to monitor of virtual sink. This command will not persist past a reboot, so you will need to invoke them each time you reboot, or search for how to add this to your conf files for persistency if desired.
-
-```
-pacmd load-module module-null-sink sink_name=virtual_sink  sink_properties=device.description=Virtual_Sink
-pacmd load-module module-null-sink sink_name=virtual_sink2  sink_properties=device.description=Virtual_Sink2
 ```
 
 Already have this branch, and just want to pull the latest build?
 
 ```
 ##Open your clone folder##
-git pull https://github.com/lwvmobile/dsd-fme pulseaudio
+git pull https://github.com/lwvmobile/dsd-fme cygwin
 ##cd into your build folder##
 cd build
 ##cmake usually isn't necesary, but could be if I update the cmakelist.txt
 cmake ..
 make -j `nproc`
-sudo make install
-sudo ldconfig
+##only run make install if you want this to be your main DSD install##
+make install
 ```
 
 ## License
