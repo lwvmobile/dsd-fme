@@ -50,7 +50,7 @@ char * FM_bannerN[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  "https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
+  "https://github.com/lwvmobile/dsd-fme/tree/cygwin    "
 };
 
 /*
@@ -121,7 +121,7 @@ char * getTimeN(void) //get pretty hh:mm:ss timestamp
 void ncursesOpen ()
 {
   mbe_printVersion (versionstr);
-  setlocale(LC_ALL, "");
+  //setlocale(LC_ALL, "");
   initscr(); //Initialize NCURSES screen window
   start_color();
   init_pair(1, COLOR_YELLOW, COLOR_BLACK);      //Yellow/Amber for frame sync/control channel, NV style
@@ -143,20 +143,20 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //level = (int) state->max / 164;
   level = 0; //start each cycle with 0
   erase();
-  //disabling until wide support can be built for LM, etc. $(ncursesw5-config --cflags --libs)
-  printw ("%s \n", FM_bannerN[0]); //top line in white
-  attron(COLOR_PAIR(4));
-  for (short int i = 1; i < 7; i++) //following lines in cyan
-  {
-    printw("%s \n", FM_bannerN[i]);
-  }
-  attroff(COLOR_PAIR(4));
+  //disabling wide support in cygwin, seems to cause latency
+  //printw ("%s \n", FM_bannerN[0]); //top line in white
+  //attron(COLOR_PAIR(4));
+  //for (short int i = 1; i < 7; i++) //following lines in cyan
+  //{
+  //  printw("%s \n", FM_bannerN[i]);
+  //}
+  //attroff(COLOR_PAIR(4));
   printw ("--Build Info------------------------------------------------------------------\n");
   printw ("| %s \n", FM_bannerN[7]); //http link
   printw ("| Digital Speech Decoder: Florida Man Edition\n");
   printw ("| Github Build Version: %s \n", GIT_TAG);
   printw ("| mbelib version %s\n", versionstr);
-  //printw ("| Press CTRL+C twice to exit\n");
+  printw ("| Press CTRL+C twice to exit\n");
   printw ("------------------------------------------------------------------------------\n");
 
 
