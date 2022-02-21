@@ -46,7 +46,7 @@ sans NXDN or Provoice, need to specify -fp, -fi, or -fn
 pulse audio are set as default input and output methods
 
 ```
-## Example STDIN UDP from GQRX or SDR++, output to Pulse Audio, and save wav files
+## Example STDIN UDP from SDR++, output to Pulse Audio, and save wav files
 `socat stdio udp-listen:7355 | dsd -fi -i - -o pulse -w nxdn.wav`
 
 ## Roadmap
@@ -80,7 +80,7 @@ cd itpp-4.3.1
 mkdir build
 cd build
 cmake ..
-make -j `nproc`
+make 
 make install
 cd ..
 cd ..
@@ -94,7 +94,7 @@ cd mbelib
 mkdir build
 cd build
 cmake ..
-make -j `nproc`
+make
 make install
 cd ..
 cd ..
@@ -112,7 +112,7 @@ git branch -a #double check to see if you are on cygwin branch
 mkdir build
 cd build
 cmake ..
-make -j `nproc`
+make 
 ##only run make install if you want this to be your main DSD install##
 make install
 
@@ -127,7 +127,7 @@ git pull https://github.com/lwvmobile/dsd-fme cygwin
 cd build
 ##cmake usually isn't necesary, but could be if I update the cmakelist.txt
 cmake ..
-make -j `nproc`
+make 
 ##only run make install if you want this to be your main DSD install##
 make install
 ```
