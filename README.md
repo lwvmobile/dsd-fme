@@ -117,6 +117,7 @@ make
 make install
 
 ```
+After make has successfully completed, go into the mbelib/build folder and copy cygmbe-1.dll and paste it into the dsd-fme/build folder.
 
 Already have this branch, and just want to pull the latest build?
 
