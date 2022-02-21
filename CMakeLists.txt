@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 2.8.11)
 
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
 #Set curses to ncurses, and wide true for ascii
-set(CURSES_NEED_NCURSES TRUE)
-set(CURSES_NEED_WIDE TRUE)
+#set(CURSES_NEED_NCURSES TRUE)
+#set(CURSES_NEED_WIDE TRUE)
 
 include(git_revision)
 git_describe(GIT_TAG)
