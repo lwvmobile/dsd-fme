@@ -4,7 +4,7 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 ![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/cygwin/dsd-fme.png)
 
 ## Example Usage - NCurses Terminal and Log Console to log file
-`./dsd -fa -N 2> voice.log`
+`./dsd -fa -o pulse -N 2> voice.log`
 
 in second terminal, same folder, run:
 
