@@ -384,6 +384,7 @@ usage ()
   fprintf (stderr,"  -n            Reset P25 Heuristics and initState variables on mixed decoding signal\n");
   fprintf (stderr,"                 Helps when decoding multiple signal types at same time\n");
   fprintf (stderr,"                 (WiP! May Cause Slow Memory Leak - Experimental)\n");
+  fprintf (stderr,"  -Z            Log MBE Payload to console\n");
   fprintf (stderr,"\n");
   fprintf (stderr,"Report bugs to: https://github.com/lwvmobile/dsd-fme/issues \n");
   exit (0);
@@ -622,7 +623,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:NWrl")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:NWrlZ")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -719,6 +720,11 @@ main (int argc, char **argv)
           opts.use_ncurses_terminal = 1;
           fprintf (stderr,"Enabling NCurses Terminal.\n");
           fprintf (stderr,"  - may need to issue 'reset' command in terminal after use\n");
+          break;
+
+        case 'Z':
+          opts.payload = 1;
+          fprintf (stderr,"Logging MBE Payload to console\n");
           break;
 
         case 'z':

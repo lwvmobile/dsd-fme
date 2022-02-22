@@ -160,7 +160,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ("------------------------------------------------------------------------------\n");
 
 
-  if ( (lls == 14 || lls == 15) && (time(NULL) - call_matrix[9][5] > 5) ) //honestly have no idea how to do this for pV, just going time based?
+  if ( (lls == 14 || lls == 15) && (time(NULL) - call_matrix[9][5] > 5) && state->carrier == 1) //honestly have no idea how to do this for pV, just going time based? only update on carrier == 1.
   {
     for (short int k = 0; k < 9; k++)
     {
