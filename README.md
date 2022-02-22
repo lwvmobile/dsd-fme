@@ -43,15 +43,13 @@ in second terminal, same folder, run:
 
 
 ## Example Pulse Audio Input and Pulse Audio Output, Autodetect Frame Type
-`dsd` or `./dsd`
+`dsd -o pulse ` or `./dsd -o pulse`
 ```
-Yes, it really is this simple now
+Cygwin builds appear to need -o pulse specified, otherwise it may or may not output audio by default.
+
+Not sure why this is the case, Cygwin can act strangely at times.
 
 -fa Auto-detect frame type
-
-sans NXDN or Provoice, need to specify -fp, -fi, or -fn
-pulse audio are set as default input and output methods
-
 ```
 ## Example STDIN UDP from SDR++, output to Pulse Audio, and save wav files
 `socat stdio udp-listen:7355 | dsd -fi -i - -o pulse -w nxdn.wav`
