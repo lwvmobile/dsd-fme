@@ -239,6 +239,7 @@ typedef struct
   pa_simple *pulse_digi_dev_out;
   int use_ncurses_terminal;
   int reset_state;
+  int payload;
 
 } dsd_opts;
 
