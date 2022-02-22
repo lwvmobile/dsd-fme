@@ -64,7 +64,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  "https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
+  "https://github.com/lwvmobile/dsd-fme/tree/cygwin    "
 };
 
 
