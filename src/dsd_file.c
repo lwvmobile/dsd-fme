@@ -16,7 +16,7 @@
  */
 
 #include "dsd.h"
-int payload = 0;
+
 void
 saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
 {
@@ -28,7 +28,7 @@ saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
   fputc (err, opts->mbe_out_f);
 
   k = 0;
-  if (payload == 1) //make opt variable later on to toggle this
+  if (opts->payload == 1) //make opt variable later on to toggle this
   {
     fprintf(stderr, "\n");
   }
@@ -43,7 +43,7 @@ saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
           b = b + imbe_d[k];
           k++;
         }
-        if (payload == 1) //make opt variable later on to toggle this
+        if (opts->payload == 1) //make opt variable later on to toggle this
         {
           fprintf (stderr, "[%2X] ", b);
         }
@@ -64,7 +64,7 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   fputc (err, opts->mbe_out_f);
 
   k = 0;
-  if (payload == 1) //make opt variable later on to toggle this
+  if (opts->payload == 1) //make opt variable later on to toggle this
   {
     fprintf(stderr, "\n");
   }
@@ -78,7 +78,7 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
           b = b + ambe_d[k];
           k++;
         }
-        if (payload == 1) //make opt variable later on to toggle this
+        if (opts->payload == 1) //make opt variable later on to toggle this
         {
           fprintf (stderr, "[%2X] ", b);
         }
