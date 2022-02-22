@@ -73,7 +73,9 @@ The Current list of objectives include:
 
 ## How to clone, check out, and build this branch
 
-Using the included install.sh should make for a simple and painless clone, build, and install on any Debian or Ubuntu based system. Simply acquire or copy the script, and run it.
+### Ubuntu 20.04/LM20/Debian Bullseye or Newer:
+
+Using the included install.sh should make for a simple and painless clone, build, and install on newer Debian or Ubuntu based system. Simply acquire or copy the script, and run it.
 
 ```
 wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/pulseaudio/install.sh
@@ -81,14 +83,23 @@ chmod +x install.sh
 ./install.sh
 ```
 
-Or you can elect to manually follow the steps down below.
+### Ubuntu 18.04/LM19/Buster Note:
+Or you can elect to manually follow the steps down below. Do NOT Manually build and install ITPP 4.3.1 on older systems, it is currently not wanting to build on Ubuntu 18.04 and Linux Mint 19. Install it from the repository instead.
 
-First, install dependency packages. This guide will assume you are using Debian/Ubuntu based distros. Check your package manager for equivalent packages if different. PortAudio is not currently used in this build, and is disabled in CMakeLists.txt, you can re-enable it if you wish, but it isn't recommended unless you have a very specific reason to do so. Some of these dependencies are not currently be used, but may be used in future builds.
+## Manual Install
+
+First, install dependency packages. This guide will assume you are using Ubuntu 20.04 based distros. Check your package manager for equivalent packages if different. PortAudio is not currently used in this build, and is disabled in CMakeLists.txt, you can re-enable it if you wish, but it isn't recommended unless you have a very specific reason to do so. Some of these dependencies are not currently be used, but may be used in future builds.
+
 
 ```
 sudo apt update
-sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential
+sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev
+```
 
+
+### Build and Install ITPP - ONLY IF NOT IN REPO!!
+
+```
 wget -O itpp-latest.tar.bz2 http://sourceforge.net/projects/itpp/files/latest/download?source=files
 tar xjf itpp*
 #if you can't cd into this folder, double check folder name first
@@ -136,7 +147,7 @@ sudo make install
 sudo ldconfig
 
 ```
-Optional 'Virtual Sinks' for routing audio from SDR++ or GQRX, etc, into DSD-FME
+Optional 'Virtual Sinks' for routing audio from SDR++ or GQRX, Media Players, etc. into DSD-FME
 
 You may wish to direct sound into DSD-FME via Virtual Sinks. You may set up a Virtual Sink or two on your machine for routing audio in and out of applications to other applications using the following command, and opening up pavucontrol "PulseAudio Volume Control" in the menu to change line out of application to virtual sink, and line in of DSD-FME to monitor of virtual sink. This command will not persist past a reboot, so you will need to invoke them each time you reboot, or search for how to add this to your conf files for persistency if desired.
 
