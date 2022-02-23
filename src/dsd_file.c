@@ -45,7 +45,7 @@ saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
         }
         if (opts->payload == 1) //make opt variable later on to toggle this
         {
-          fprintf (stderr, "[%2X] ", b);
+          fprintf (stderr, "[%02X] ", b);
         }
       fputc (b, opts->mbe_out_f);
     }
@@ -80,7 +80,7 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
         }
         if (opts->payload == 1) //make opt variable later on to toggle this
         {
-          fprintf (stderr, "[%2X] ", b);
+          fprintf (stderr, "[%02X] ", b);
         }
 
       fputc (b, opts->mbe_out_f);
