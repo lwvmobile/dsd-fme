@@ -31,6 +31,7 @@ saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
   if (opts->payload == 1) //make opt variable later on to toggle this
   {
     fprintf(stderr, "\n");
+    //fprintf(stderr, "ALGID=%X KEYID=%X\n", state->payload_algid, state->payload_keyid);
   }
 
   for (i = 0; i < 11; i++)
@@ -49,7 +50,10 @@ saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
         }
       fputc (b, opts->mbe_out_f);
     }
-    //fprintf(stderr, "\n");
+    if (opts->payload == 1)
+    {
+      fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
+    }
   fflush (opts->mbe_out_f);
 }
 
@@ -85,7 +89,10 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
 
       fputc (b, opts->mbe_out_f);
     }
-  //fprintf(stderr, "\n");
+    if (opts->payload == 1)
+    {
+      fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
+    }
   b = ambe_d[48];
   fputc (b, opts->mbe_out_f);
   fflush (opts->mbe_out_f);
@@ -233,8 +240,14 @@ closeMbeOutFile (dsd_opts * opts, dsd_state * state)
       fclose (opts->mbe_out_f);
       opts->mbe_out_f = NULL;
       strftime (datestr, 31, "%Y-%m-%d-%H%M%S", &timep);
-      //sprintf (newfilename, "nac%X-%s-tg%i%s", state->nac, datestr, talkgroup, ext);
+
       sprintf (newfilename, "%s%s", datestr, ext); //this one
+
+      if (state->lastsynctype == 0 || state->lastsynctype == 1)
+      {
+        sprintf (newfilename, "%s-nac%X-tg%i%s", datestr, state->nac, talkgroup, ext);
+      }
+      
       sprintf (new_path, "%s%s", opts->mbe_out_dir, newfilename);
 #ifdef _WIN32
       sprintf (shell, "move %s %s", opts->mbe_out_path, new_path);
@@ -303,13 +316,12 @@ void
 openWavOutFile (dsd_opts * opts, dsd_state * state)
 {
 
- // opts->wav_out_f = fopen (opts->wav_out_file, "w");
-
   SF_INFO info;
   info.samplerate = 8000; //8000
   info.channels = 1;
   info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
-  opts->wav_out_f = sf_open (opts->wav_out_file, SFM_WRITE, &info);
+  //opts->wav_out_f = sf_open (opts->wav_out_file, SFM_WRITE, &info);
+  opts->wav_out_f = sf_open (opts->wav_out_file, SFM_RDWR, &info); //RDWR will append to file instead of overwrite file
 
   if (opts->wav_out_f == NULL)
   {
