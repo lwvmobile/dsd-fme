@@ -294,7 +294,7 @@ initState (dsd_state * state)
   state->debug_header_errors = 0;
   state->debug_header_critical_errors = 0;
 
-  state->nxdn_last_ran = 0;
+  state->nxdn_last_ran = -1;
 
 #ifdef TRACE_DSD
   state->debug_sample_index = 0;
@@ -328,17 +328,14 @@ usage ()
   fprintf (stderr,"  -z <num>      Frame rate for datascope\n");
   fprintf (stderr,"\n");
   fprintf (stderr,"Input/Output options:\n");
-  //fprintf (stderr,"  -i <device>   Audio input device (default is /dev/audio, - for piped stdin, rtl for rtl device)\n");
   fprintf (stderr,"  -i <device>   Audio input device (default is pulse audio, - for piped stdin, rtl for rtl device)\n");
-  //fprintf (stderr,"  -o <device>   Audio output device (default is /dev/audio)\n");
   fprintf (stderr,"  -o <device>   Audio output device (default is pulse audio)\n");
   fprintf (stderr,"  -d <dir>      Create mbe data files, use this directory\n");
   fprintf (stderr,"  -r <files>    Read/Play saved mbe data from file(s)\n");
   fprintf (stderr,"  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
-  //fprintf (stderr,"  -n            Do not send synthesized speech to audio output device\n");
   fprintf (stderr,"  -w <file>     Output synthesized speech to a .wav file\n");
-  fprintf (stderr,"  -a            Display port audio devices\n");
-  fprintf (stderr,"  -W            Monitor Source Audio When No Sync Detected (WIP!)\n");
+  //fprintf (stderr,"  -a            Display port audio devices\n");
+  //fprintf (stderr,"  -W            Monitor Source Audio When No Sync Detected (WIP!)\n");
   fprintf (stderr,"\n");
   fprintf (stderr,"RTL-SDR options:\n");
   fprintf (stderr,"  -c <hertz>    RTL-SDR Frequency\n");
@@ -382,8 +379,8 @@ usage ()
   fprintf (stderr,"                 (default=36)\n");
   fprintf (stderr,"  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
   fprintf (stderr,"                 (default=15)\n");
-  fprintf (stderr,"  -n            Reset P25 Heuristics and initState variables on mixed decoding signal\n");
-  fprintf (stderr,"                 Helps when decoding multiple signal types at same time\n");
+  fprintf (stderr,"  -n            Reset P25 Heuristics and initState variables on mixed signal decoding\n");
+  fprintf (stderr,"                 Helps when decoding mixed signal types at same time\n");
   fprintf (stderr,"                 (WiP! May Cause Slow Memory Leak - Experimental)\n");
   fprintf (stderr,"  -Z            Log MBE Payload to console\n");
   fprintf (stderr,"\n");
@@ -786,7 +783,7 @@ main (int argc, char **argv)
         case 'w':
           strncpy(opts.wav_out_file, optarg, 1023);
           opts.wav_out_file[1023] = '\0';
-          fprintf (stderr,"Writing audio to file %s\n", opts.wav_out_file);
+          fprintf (stderr,"Writing + Appending audio to file %s\n", opts.wav_out_file);
           openWavOutFile (&opts, &state);
           break;
         case 'B':
