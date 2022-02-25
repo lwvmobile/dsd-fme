@@ -386,6 +386,11 @@ processTDULC (dsd_opts* opts, dsd_state* state)
   lcinfo[53]  = dodeca_data[0][ 9] + '0';
   lcinfo[54]  = dodeca_data[0][10] + '0';
   lcinfo[55]  = dodeca_data[0][11] + '0';
-
+  /*
+  if (state->carrier == 1) //only update when carrier is present, otherwise, garbage values may be collected
+  {
+    state->payload_mfid = strtol (mfid, NULL, 2); //wonder if this is accurate info or not
+  }
+  */
   processP25lcw (opts, state, lcformat, mfid, lcinfo);
 }

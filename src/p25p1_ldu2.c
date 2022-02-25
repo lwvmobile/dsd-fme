@@ -360,11 +360,24 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   kid[14]  = hex_data[ 0][4] + '0';
   kid[15]  = hex_data[ 0][5] + '0';
 
+  if (state->carrier == 1 && state->errs2 == 0) //only update when carrier is present, and no errors
+  {
+    //state->payload_mi = strtol (mi, NULL, 2); //no idea what this value is?
+    algidhex = strtol (algid, NULL, 2);
+    kidhex = strtol (kid, NULL, 2);
+    state->payload_algid = algidhex;
+    state->payload_keyid = kidhex;
+  }
 
-  if (opts->p25enc == 1)
+  if (opts->payload == 1 && state->errs2 == 0)
+  {
+    fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X\n", algidhex, kidhex);
+    //fprintf (stderr, "MI: %s\n", mi);
+  }
+  if (opts->p25enc == 1 && opts->payload == 0)
     {
       algidhex = strtol (algid, NULL, 2);
       kidhex = strtol (kid, NULL, 2);
-      fprintf (stderr, "mi: %s algid: $%x kid: $%x\n", mi, algidhex, kidhex);
+      //fprintf (stderr, "mi: %s algid: $%x kid: $%x\n", mi, algidhex, kidhex);
     }
 }

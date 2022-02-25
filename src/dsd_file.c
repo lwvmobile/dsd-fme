@@ -31,6 +31,7 @@ saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
   if (opts->payload == 1) //make opt variable later on to toggle this
   {
     fprintf(stderr, "\n");
+    //fprintf(stderr, "ALGID=%X KEYID=%X\n", state->payload_algid, state->payload_keyid);
   }
 
   for (i = 0; i < 11; i++)
@@ -49,7 +50,10 @@ saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
         }
       fputc (b, opts->mbe_out_f);
     }
-    //fprintf(stderr, "\n");
+    if (opts->payload == 1)
+    {
+      fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
+    }
   fflush (opts->mbe_out_f);
 }
 

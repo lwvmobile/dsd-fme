@@ -309,6 +309,9 @@ typedef struct
   mbe_parms *prev_mp;
   mbe_parms *prev_mp_enhanced;
   int p25kid;
+  int payload_algid;
+  int payload_keyid;
+  int payload_mfid;
 
   unsigned int debug_audio_errors;
   unsigned int debug_header_errors;

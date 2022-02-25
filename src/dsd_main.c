@@ -199,6 +199,7 @@ initOpts (dsd_opts * opts)
 
   opts->pulse_flush = 1; //set 0 to flush, 1 for flushed
   opts->use_ncurses_terminal = 0; //ncurses terminal disabled by default, call with -N
+  opts->payload = 0; //initialize with 0 so can pass == 0 arguments
 }
 
 void
