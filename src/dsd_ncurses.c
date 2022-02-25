@@ -106,6 +106,7 @@ void ncursesOpen ()
   init_pair(5, COLOR_MAGENTA, COLOR_BLACK); //Magenta for no frame sync/signal
   noecho();
   cbreak();
+
   //fprintf (stderr, "Opening NCurses Terminal. \n");
 
 }
@@ -164,7 +165,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   //if ( (state->nxdn_last_rid != src && src > 0) || (state->nxdn_last_ran != rn && rn > 0) ) //find condition to make this work well, probably if last != local last variables
   //if ( (call_matrix[9][2] != src && src > 0) || (call_matrix[9][1] != rn && rn > 0) ) //NXDN working well now with this, updates immediately and only once
-  if ( call_matrix[9][2] != src && src > 0 && rn > 0 ) //NXDN working well now with this, updates immediately and only once
+  if ( call_matrix[9][2] != src && src > 0 && rn > -1 ) //NXDN working well now with this, updates immediately and only once
   {
     for (short int k = 0; k < 9; k++)
     {
@@ -260,7 +261,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->wav_out_file[0] != 0)
   {
-    printw ("| Writing Audio WAV to file %s\n", opts->wav_out_file);
+    printw ("| Appending Audio WAV to file %s\n", opts->wav_out_file);
   }
 
   printw ("------------------------------------------------------------------------------\n");
@@ -295,7 +296,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     src = state->nxdn_last_rid;
     //rn = state->nxdn_last_ran;
   }
-  if (state->nxdn_last_ran > 0 && state->nxdn_last_rid != rn);
+  if (state->nxdn_last_ran > -1 && state->nxdn_last_rid != rn);
   {
     //src = state->nxdn_last_rid;
     rn = state->nxdn_last_ran;
@@ -344,7 +345,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw("| ALG: [0x%02X] ", state->payload_algid);
     printw("KEY: [0x%04X] ", state->payload_keyid);
     //printw("MFG: [0x%X] ", state->payload_mfid); //no way of knowing if this is accurate info yet
-    if (state->payload_keyid != 0 && state->carrier == 1)
+    if (state->payload_algid != 0x80 && state->carrier == 1)
     {
       attron(COLOR_PAIR(2));
       printw("**ENC**");
