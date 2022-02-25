@@ -659,6 +659,7 @@ main (int argc, char **argv)
           else if (optarg[0] == 'u')
             {
              opts.unmute_encrypted_p25 = 1;
+             fprintf(stderr, "P25 Encrypted Audio Unmuted\n");
             }
           break;
         case 'P':
