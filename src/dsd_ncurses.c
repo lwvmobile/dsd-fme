@@ -53,31 +53,6 @@ char * FM_bannerN[9] = {
   "https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
 };
 
-/*
-char * SyncTypes[20] = {
-  "P25P1_SYNC",
-  "INV_P25P1_SYNC",
-  "X2TDMA_BS/MS_DATA_SYNC",
-  "INV_X2TDMA_BS/MS_DATA_SYNC",
-  "X2TDMA_BS/MS_VOICE_SYNC",
-  "INV_X2TDMA_BS/MS_VOICE_SYNC",
-  "DSTAR_SYNC",
-  "INV_DSTAR_SYNC",
-  "NXDN_BS_VOICE_SYNC",      //8
-  "INV_NXDN_BS_VOICE_SYNC",  //9
-  "DMR_BS/MS_DATA_SYNC",     //10
-  "DMR_MS/BS_VOICE_SYNC",    //11
-  "DMR_MS/BS_DATA_SYNC",     //12
-  "INV_DMR_BS/MS_VOICE_SYNC", //13
-  "PROVOICE_SYNC",            //14
-  "INV_PROVOICE_SYNC",        //15
-  "NXDN_BS_DATA_SYNC",        //16
-  "INV_NXDN_BS_DATA_SYNC",    //17
-  "DSTAR_HD",
-  "INV_DSTAR_HD"
-
-};
-*/
 char * SyncTypes[20] = {
   "+P25P1",
   "-P25P1",
@@ -159,6 +134,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //printw ("| Press CTRL+C twice to exit\n");
   printw ("------------------------------------------------------------------------------\n");
 
+  if (state->carrier == 0) //reset these to 0 when no carrier
+  {
+    //state->payload_algid = 0;
+    //state->payload_keyid = 0;
+    //state->payload_mfid = 0;
+  }
 
   if ( (lls == 14 || lls == 15) && (time(NULL) - call_matrix[9][5] > 5) && state->carrier == 1) //honestly have no idea how to do this for pV, just going time based? only update on carrier == 1.
   {
@@ -356,8 +337,22 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if ((lls == 0 || lls == 1)) //1 for P25 P1 Audio
   {
-    printw("| TID:[%i] \n| RID:[%i] \n", tg, rd);
-    printw("| NAC: [0x%X] \n", nc);
+    //printw("| TID:[%i] | RID:[%i] \n", tg, rd);
+    //printw("| NAC: [0x%X] \n", nc);
+    printw("| TID:[%i] RID:[%i] ", tg, rd);
+    printw("NAC: [0x%X] \n", nc);
+    printw("| ALG: [0x%02X] ", state->payload_algid);
+    printw("KEY: [0x%04X] ", state->payload_keyid);
+    //printw("MFG: [0x%X] ", state->payload_mfid); //no way of knowing if this is accurate info yet
+    if (state->payload_keyid != 0 && state->carrier == 1)
+    {
+      attron(COLOR_PAIR(2));
+      printw("**ENC**");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    printw("\n");
+    //printw("| System Type: %s \n", ALGIDS[state->payload_keyid] );
   }
   //if (state->lastsynctype == 12 || state->lastsynctype == 13)  //DMR Voice Types
   if (lls == 12 || lls == 13)  //DMR Voice Types
