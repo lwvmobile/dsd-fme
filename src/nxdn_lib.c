@@ -726,7 +726,8 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   }
 
   /* Print the "Call Type" */
-  fprintf(stderr, "%s - ", NXDN_Call_Type_To_Str(CallType));
+  //fprintf(stderr, "%s - ", NXDN_Call_Type_To_Str(CallType));
+  fprintf(stderr, "\n\t      %s - ", NXDN_Call_Type_To_Str(CallType)); //line break 1 tab, 2 spaces start this string
 
   /* Print the "Voice Call Option" */
   NXDN_Voice_Call_Option_To_Str(VoiceCallOption, DuplexMode, TransmissionMode);
