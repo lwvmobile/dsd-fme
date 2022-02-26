@@ -242,10 +242,12 @@ closeMbeOutFile (dsd_opts * opts, dsd_state * state)
       strftime (datestr, 31, "%Y-%m-%d-%H%M%S", &timep);
 
       sprintf (newfilename, "%s%s", datestr, ext); //this one
+
       if (state->lastsynctype == 0 || state->lastsynctype == 1)
       {
         sprintf (newfilename, "%s-nac%X-tg%i%s", datestr, state->nac, talkgroup, ext);
       }
+      
       sprintf (new_path, "%s%s", opts->mbe_out_dir, newfilename);
 #ifdef _WIN32
       sprintf (shell, "move %s %s", opts->mbe_out_path, new_path);
