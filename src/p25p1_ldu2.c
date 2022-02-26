@@ -22,8 +22,8 @@
 #include "p25p1_check_ldu.h"
 #include "p25p1_hdu.h"
 
-long long unsigned int mihex1 = 0;
-long long unsigned int mihex2 = 0;
+long long int mihex1 = 0;
+long long int mihex2 = 0;
 
 void
 processLDU2 (dsd_opts * opts, dsd_state * state)
@@ -252,30 +252,30 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   mihex1 = 0;
   mihex2 = 0;
   /*
-  mihex1 |= hex_data[15][0];
+  mihex1 |= atoi(&hex_data[15][0]);
   mihex1 << 1;
-  mihex1 |= hex_data[15][1];
+  mihex1 |= atoi(&hex_data[15][1]);
   mihex1 << 1;
-  mihex1 |= hex_data[15][2];
+  mihex1 |= atoi(&hex_data[15][2]);
   mihex1 << 1;
-  mihex1 |= hex_data[15][3];
+  mihex1 |= atoi(&hex_data[15][3]);
   mihex1 << 1;
-  mihex1 |= hex_data[15][4];
+  mihex1 |= atoi(&hex_data[15][4]);
   mihex1 << 1;
-  mihex1 |= hex_data[15][5];
+  mihex1 |= atoi(&hex_data[15][5]);
   mihex1 << 1;
-  fprintf(stderr, "\n%X\n", mihex1);
-  mihex1 |= hex_data[14][0];
+  //fprintf(stderr, "\n%X\n", mihex1);
+  mihex1 |= atoi(&hex_data[14][0]);
   mihex1 << 1;
-  mihex1 |= hex_data[14][1];
+  mihex1 |= atoi(&hex_data[14][1]);
   mihex1 << 1;
-  mihex1 |= hex_data[14][2];
+  mihex1 |= atoi(&hex_data[14][2]);
   mihex1 << 1;
-  mihex1 |= hex_data[14][3];
+  mihex1 |= atoi(&hex_data[14][3]);
   mihex1 << 1;
-  mihex1 |= hex_data[14][4];
+  mihex1 |= atoi(&hex_data[14][4]);
   mihex1 << 1;
-  mihex1 |= hex_data[14][5];
+  mihex1 |= atoi(&hex_data[14][5]);
   mihex1 << 1;
 
   mihex1 |= hex_data[13][0];
@@ -406,7 +406,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   mihex2 |= hex_data[4][4];
   mihex2 << 1;
   mihex2 |= hex_data[4][5];
-  mihex2 << 1;
+  //mihex2 << 1;
   */
   mi[ 0]   = hex_data[15][0] + '0';
   mi[ 1]   = hex_data[15][1] + '0';
@@ -520,27 +520,34 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   kid[14]  = hex_data[ 0][4] + '0';
   kid[15]  = hex_data[ 0][5] + '0';
 
-  if (state->carrier == 1 && state->errs2 == 0) //only update when carrier is present, and no errors
+  //if (state->carrier == 1 && state->errs2 == 0) //only update when carrier is present, and no errors??
+  if (state->carrier == 1)
   {
     /*
     for (short i = 0; i < 64; i++)
     {
       mihex1 << 1;
-      mihex1 |= strtoll(&mi[i], NULL, 2);
+      //mihex1 |= strtoll(&mi[i], NULL, 2);
+      mihex1 |= atoi(&mi[i]);
+      //fprintf (stderr, "%c", mi[i]);
     }
     for (short i = 0; i < 8; i++)
     {
       mihex2 << 1;
-      mihex2 |= strtoll(&mi[64+i], NULL, 2);
+      //mihex2 |= strtoll(&mi[64+i], NULL, 2);
+      mihex2 |= atoi(&mi[i+64]);
+      //fprintf (stderr, "%c", mi[i+64]);
     }
     */
     algidhex = strtol (algid, NULL, 2);
     kidhex = strtol (kid, NULL, 2);
+
     state->payload_algid = algidhex;
     state->payload_keyid = kidhex;
+
   }
 
-  if (opts->payload == 1 && state->errs2 == 0)
+  if (opts->payload == 1)
   {
     //fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X\n", algidhex, kidhex);
     fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X MI: %s \n", algidhex, kidhex, mi);
@@ -551,6 +558,6 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     {
       algidhex = strtol (algid, NULL, 2);
       kidhex = strtol (kid, NULL, 2);
-      fprintf (stderr, "mi: %s algid: $%x kid: $%x\n", mi, algidhex, kidhex);
+      //fprintf (stderr, "mi: %s algid: $%x kid: $%x\n", mi, algidhex, kidhex);
     }
 }
