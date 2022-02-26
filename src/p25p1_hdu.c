@@ -452,17 +452,25 @@ processHDU(dsd_opts* opts, dsd_state* state)
   skipDibit (opts, state, 5);
   status = getDibit (opts, state);
   //TODO: Do something useful with the status bits...
-  /*
-  algidhex = strtol (algid, NULL, 2);
-  kidhex = strtol (kid, NULL, 2);
 
-  state->payload_algid = algidhex;
-  state->payload_keyid = kidhex;
-  if (opts->payload == 1)
+  if (state->carrier == 1 && state->errs == 0) //only update when carrier is present, and no errors??
+  //if (state->carrier == 1)
   {
-    fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X\n", algidhex, kidhex);
+    algidhex = strtol (algid, NULL, 2);
+    kidhex = strtol (kid, NULL, 2);
+
+    state->payload_algid = algidhex;
+    state->payload_keyid = kidhex;
   }
-  */
+
+  //if (opts->payload == 1)
+  if (opts->payload == 1 && state->errs == 0)
+  {
+    //fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X\n", algidhex, kidhex);
+    fprintf (stderr, "HDU ALG ID: 0x%X KEY ID: 0x%X MI: %s \n", algidhex, kidhex, mi);
+    //fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X MI: 0x%016X%02X\n", algidhex, kidhex, mihex1, mihex2);
+  }
+
   if (opts->p25enc == 1 && opts->payload == 0)
     {
       algidhex = strtol (algid, NULL, 2);

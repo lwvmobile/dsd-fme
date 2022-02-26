@@ -521,7 +521,8 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   kid[15]  = hex_data[ 0][5] + '0';
 
   //if (state->carrier == 1 && state->errs2 == 0) //only update when carrier is present, and no errors??
-  if (state->carrier == 1)
+  if (state->carrier == 1 && state->errs == 0) //only update when carrier is present, and no errors??
+  //if (state->carrier == 1)
   {
     /*
     for (short i = 0; i < 64; i++)
@@ -547,10 +548,11 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 
   }
 
-  if (opts->payload == 1)
+  //if (opts->payload == 1)
+  if (opts->payload == 1 && state->errs == 0)
   {
     //fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X\n", algidhex, kidhex);
-    fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X MI: %s \n", algidhex, kidhex, mi);
+    fprintf (stderr, "LDU2 ALG ID: 0x%X KEY ID: 0x%X MI: %s \n", algidhex, kidhex, mi);
     //fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X MI: 0x%016X%02X\n", algidhex, kidhex, mihex1, mihex2);
   }
   //if (opts->p25enc == 1 && opts->payload == 0)
