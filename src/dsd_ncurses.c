@@ -296,7 +296,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     src = state->nxdn_last_rid;
     //rn = state->nxdn_last_ran;
   }
-  if (state->nxdn_last_ran > -1 && state->nxdn_last_rid != rn);
+  if (state->nxdn_last_ran > -1 && state->nxdn_last_ran != rn);
   {
     //src = state->nxdn_last_rid;
     rn = state->nxdn_last_ran;
