@@ -295,6 +295,7 @@ initState (dsd_state * state)
   state->debug_header_critical_errors = 0;
 
   state->nxdn_last_ran = -1;
+  state->nxdn_last_rid = 0;
 
 #ifdef TRACE_DSD
   state->debug_sample_index = 0;
@@ -858,6 +859,10 @@ main (int argc, char **argv)
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
               opts.frame_provoice = 0;
+              opts.mod_gfsk = 0;
+              opts.mod_c4fm = 1;  //Phase 1 only uses C4FM, right?
+              opts.mod_qpsk = 0;
+              state.rf_mod = 0; //
               fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
             }
           else if (optarg[0] == 'i')
@@ -908,7 +913,8 @@ main (int argc, char **argv)
               opts.frame_provoice = 0;
               opts.mod_c4fm = 1; //just a test
               opts.mod_qpsk = 0;
-              opts.mod_gfsk = 0; //was 1
+              opts.mod_gfsk = 0; //
+              state.rf_mod = 0;  //
               fprintf (stderr,"Decoding only DMR/MOTOTRBO frames.\n");
             }
           break;
