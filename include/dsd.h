@@ -147,9 +147,116 @@ typedef struct
 } NxdnElementsContent_t;
 
 
+//LEH DMR
+
+enum
+{
+  MODE_UNENCRYPTED,
+  MODE_BASIC_PRIVACY,
+  MODE_ENHANCED_PRIVACY_ARC4,
+  MODE_ENHANCED_PRIVACY_AES256,
+  MODE_HYTERA_BASIC_40_BIT,
+  MODE_HYTERA_BASIC_128_BIT,
+  MODE_HYTERA_BASIC_256_BIT
+};
+
+//Read Solomon (12,9) constant
+#define RS_12_9_DATASIZE        9
+#define RS_12_9_CHECKSUMSIZE    3
+
+//Read Solomon (12,9) struct
+typedef struct
+{
+  uint8_t data[RS_12_9_DATASIZE+RS_12_9_CHECKSUMSIZE];
+} rs_12_9_codeword_t;
+
+// Maximum degree of various polynomials.
+#define RS_12_9_POLY_MAXDEG (RS_12_9_CHECKSUMSIZE*2)
+
+typedef struct
+{
+  uint8_t data[RS_12_9_POLY_MAXDEG];
+} rs_12_9_poly_t;
+
+#define RS_12_9_CORRECT_ERRORS_RESULT_NO_ERRORS_FOUND           0
+#define RS_12_9_CORRECT_ERRORS_RESULT_ERRORS_CORRECTED          1
+#define RS_12_9_CORRECT_ERRORS_RESULT_ERRORS_CANT_BE_CORRECTED  2
+typedef uint8_t rs_12_9_correct_errors_result_t;
+
+typedef struct
+{
+  uint8_t bytes[3];
+} rs_12_9_checksum_t;
+
+typedef struct
+{
+  char VoiceFrame[3][72];  /* 3 x 72 bit of voice per time slot frame    */
+  char Sync[48];           /* 48 bit of data or SYNC per time slot frame */
+}TimeSlotRawVoiceFrame_t;
+
+
+typedef struct
+{
+  char DeInterleavedVoiceSample[3][4][24];  /* 3 x (4 x 24) deinterleaved bit of voice per time slot frame */
+}TimeSlotDeinterleavedVoiceFrame_t;
+
+
+typedef struct
+{
+  int  errs1[3];  /* 3 x errors #1 computed when demodulate the AMBE voice bit of the frame */
+  int  errs2[3];  /* 3 x errors #2 computed when demodulate the AMBE voice bit of the frame */
+  char AmbeBit[3][49];  /* 3 x 49 bit of AMBE voice of the frame */
+}TimeSlotAmbeVoiceFrame_t;
+
+typedef struct
+{
+  unsigned int  ProtectFlag;
+  unsigned int  Reserved;
+  unsigned int  FullLinkControlOpcode;
+  unsigned int  FeatureSetID;
+  unsigned int  ServiceOptions;
+  unsigned int  GroupAddress;      /* Destination ID or TG (in Air Interface format) */
+  unsigned int  SourceAddress;     /* Source ID (in Air Interface format) */
+  unsigned int  DataValidity;      /* 0 = All Full LC data are incorrect ; 1 = Full LC data are correct (CRC checked OK) */
+}FullLinkControlPDU_t;
+
+typedef struct
+{
+  TimeSlotRawVoiceFrame_t TimeSlotRawVoiceFrame[6]; /* A voice superframe contains 6 timeslot voice frame */
+  TimeSlotDeinterleavedVoiceFrame_t TimeSlotDeinterleavedVoiceFrame[6];
+  TimeSlotAmbeVoiceFrame_t TimeSlotAmbeVoiceFrame[6];
+  FullLinkControlPDU_t FullLC;
+} TimeSlotVoiceSuperFrame_t;
 
 //end borrow from LEH
+//LEH dPMR
+/* Could only be 2 or 4 */
+#define NB_OF_DPMR_VOICE_FRAME_TO_DECODE 2
 
+typedef struct
+{
+  unsigned char RawVoiceBit[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4][72];
+  unsigned int  errs1[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4];  /* 8 x errors #1 computed when demodulate the AMBE voice bit of the frame */
+  unsigned int  errs2[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4];  /* 8 x errors #2 computed when demodulate the AMBE voice bit of the frame */
+  unsigned char AmbeBit[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4][49];  /* 8 x 49 bit of AMBE voice of the frame */
+  unsigned char CCHData[NB_OF_DPMR_VOICE_FRAME_TO_DECODE][48];
+  unsigned int  CCHDataHammingOk[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
+  unsigned char CCHDataCRC[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
+  unsigned int  CCHDataCrcOk[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
+  unsigned char CalledID[8];
+  unsigned int  CalledIDOk;
+  unsigned char CallingID[8];
+  unsigned int  CallingIDOk;
+  unsigned int  FrameNumbering[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
+  unsigned int  CommunicationMode[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
+  unsigned int  Version[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
+  unsigned int  CommsFormat[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
+  unsigned int  EmergencyPriority[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
+  unsigned int  Reserved[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
+  unsigned char SlowData[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
+  unsigned int  ColorCode[NB_OF_DPMR_VOICE_FRAME_TO_DECODE / 2];
+} dPMRVoiceFS2Frame_t;
+//
 typedef struct
 {
   int onesymbol;
@@ -241,6 +348,15 @@ typedef struct
   int reset_state;
   int payload;
 
+  //LEH DMR Stuff
+  int EncryptionMode;
+
+  //LEH dPMR stuff
+  unsigned int dPMR_curr_frame_is_encrypted;
+  int dPMR_next_part_of_superframe;
+  int inverted_dpmr;
+  int frame_dpmr;
+
 } dsd_opts;
 
 typedef struct
@@ -295,7 +411,7 @@ typedef struct
   int numtdulc;
   int firstframe;
   char slot0light[8];
-  char slot1light[8];
+  //char slot1light[8];
   float aout_gain;
   float aout_max_buf[200];
   float *aout_max_buf_p;
@@ -356,9 +472,47 @@ typedef struct
  char ambe_ciphered[49];
  char ambe_deciphered[49];
   //end borrow
+  //LEH DMR struff
+  unsigned int color_code;
+  unsigned int color_code_ok;
+  unsigned int PI;
+  unsigned int PI_ok;
+  unsigned int LCSS;
+  unsigned int LCSS_ok;
 
+  unsigned int dmr_fid;
+  unsigned int dmr_so;
 
+  char slot1light[8];
+  char slot2light[8];
+  int directmode;
+  TimeSlotVoiceSuperFrame_t TS1SuperFrame;
+  TimeSlotVoiceSuperFrame_t TS2SuperFrame;
 
+  //LEH dPMR stuff
+  dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
+
+  //These flags are used to known the DMR frame
+   //printing format (hex or binary)
+  int printDMRRawVoiceFrameHex;
+  int printDMRRawVoiceFrameBin;
+  int printDMRRawDataFrameHex;
+  int printDMRRawDataFrameBin;
+  int printDMRAmbeVoiceSampleHex;
+  int printDMRAmbeVoiceSampleBin;
+
+  //These flags are used to known the dPMR frame
+   //orinting format (hex or binary)
+  int printdPMRRawVoiceFrameHex;
+  int printdPMRRawVoiceFrameBin;
+  int printdPMRRawDataFrameHex;
+  int printdPMRRawDataFrameBin;
+  int printdPMRAmbeVoiceSampleHex;
+  int printdPMRAmbeVoiceSampleBin;
+
+  unsigned char * dpmr_caller_id;
+  unsigned char * dpmr_target_id;
+  int dpmr_color_code;
 
 #ifdef TRACE_DSD
   char debug_prefix;
@@ -421,11 +575,40 @@ typedef struct
 #define INV_PROVOICE_EA_SYNC "13313133113113333311313133133311"
 #define PROVOICE_EA_SYNC     "31131311331331111133131311311133"
 
+//LEH dPMR
+#define DPMR_FRAME_SYNC_1     "111333331133131131111313"
+
+/* dPMR Frame Sync 2 - 24 bits sequence
+ * HEX    : 5F F7 7D
+ * Binary : 0101 1111 1111 0111 0111 1101
+ * Dibit  :  1 1  3 3  3 3  1 3  1 3  3 1 */
+#define DPMR_FRAME_SYNC_2     "113333131331"
+
+/* dPMR Frame Sync 3 - 24 bits sequence
+ * HEX    : 7D DF F5
+ * Binary : 0111 1101 1101 1111 1111 0101
+ * Dibit  :  1 3  3 1  3 1  3 3  3 3  1 1 */
+#define DPMR_FRAME_SYNC_3     "133131333311"
+
+/* dPMR Frame Sync 4 - 48 bits sequence
+ * HEX    : FD 55 F5 DF 7F DD
+ * Binary : 1111 1101 0101 0101 1111 0101 1101 1111 0111 1111 1101 1101
+ * Dibit  :  3 3  3 1  1 1  1 1  3 3  1 1  3 1  3 3  1 3  3 3  3 1  3 1 */
+#define DPMR_FRAME_SYNC_4     "333111113311313313333131"
+
+/* dPMR Frame Sync 1 to 4 - Inverted */
+#define INV_DPMR_FRAME_SYNC_1 "333111113311313313333131"
+#define INV_DPMR_FRAME_SYNC_2 "331111313113"
+#define INV_DPMR_FRAME_SYNC_3 "311313111133"
+#define INV_DPMR_FRAME_SYNC_4 "111333331133131131111313"
+
+//
 /*
  * function prototypes
  */
 void processDMRdata (dsd_opts * opts, dsd_state * state);
 void processDMRvoice (dsd_opts * opts, dsd_state * state);
+void processdPMRvoice (dsd_opts * opts, dsd_state * state);
 void processAudio (dsd_opts * opts, dsd_state * state);
 void playRawAudio (dsd_opts * opts, dsd_state * state);     //added this one HERE HERE
 void openPulseInput (dsd_opts * opts);  //not sure if we need to just pass opts, or opts and state yet
@@ -538,6 +721,83 @@ void ScrambledNXDNVoiceBit(int * LfsrValue, char * BufferIn, char * BufferOut, i
 void NxdnEncryptionStreamGeneration (dsd_opts* opts, dsd_state* state, uint8_t KeyStream[1664]);
 
 void processMbeFrameEncrypted (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char ambe_fr[4][24], char imbe7100_fr[7][24], char ambe_keystream[49], char imbe_keystream[88]);
+
+//LEH dPMR
+void dPMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
+void printdPMRAmbeVoiceSample(dsd_opts * opts, dsd_state * state);
+void printdPMRRawVoiceFrame (dsd_opts * opts, dsd_state * state);
+//dPMR functions
+void ScrambledPMRBit(uint32_t * LfsrValue, uint8_t * BufferIn, uint8_t * BufferOut, uint32_t NbOfBitToScramble);
+void DeInterleave6x12DPmrBit(uint8_t * BufferIn, uint8_t * BufferOut);
+uint8_t CRC7BitdPMR(uint8_t * BufferIn, uint32_t BitLength);
+uint8_t CRC8BitdPMR(uint8_t * BufferIn, uint32_t BitLength);
+void ConvertAirInterfaceID(uint32_t AI_ID, uint8_t ID[8]);
+int32_t GetdPmrColorCode(uint8_t ChannelCodeBit[24]);
+//LEH DMR
+void ProcessDMREncryption (dsd_opts * opts, dsd_state * state); //consider if this is needed
+void DMRDataFrameProcess(dsd_opts * opts, dsd_state * state);
+void DMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
+//BPTC (Block Product Turbo Code) functions
+void BPTCDeInterleaveDMRData(uint8_t * Input, uint8_t * Output);
+uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DMRDataExtracted[96], uint8_t R[3]);
+uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDataExtracted[77]);
+uint32_t BPTC_16x2_Extract_Data(uint8_t InputInterleavedData[32], uint8_t DMRDataExtracted[32]);
+
+//Read Solomon (12,9) functions
+void rs_12_9_calc_syndrome(rs_12_9_codeword_t *codeword, rs_12_9_poly_t *syndrome);
+uint8_t rs_12_9_check_syndrome(rs_12_9_poly_t *syndrome);
+rs_12_9_correct_errors_result_t rs_12_9_correct_errors(rs_12_9_codeword_t *codeword, rs_12_9_poly_t *syndrome, uint8_t *errors_found);
+rs_12_9_checksum_t *rs_12_9_calc_checksum(rs_12_9_codeword_t *codeword);
+
+//SYNC DMR data extraction functions
+void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state);
+uint16_t ComputeCrcCCITT(uint8_t * DMRData);
+uint32_t ComputeAndCorrectFullLinkControlCrc(uint8_t * FullLinkControlDataBytes, uint32_t * CRCComputed, uint32_t CRCMask);
+uint8_t ComputeCrc5Bit(uint8_t * DMRData);
+uint8_t * DmrAlgIdToStr(uint8_t AlgID);
+uint8_t * DmrAlgPrivacyModeToStr(uint32_t PrivacyMode);
+
+
+void Hamming_7_4_init();
+void Hamming_7_4_encode(unsigned char *origBits, unsigned char *encodedBits);
+bool Hamming_7_4_decode(unsigned char *rxBits);
+
+void Hamming_12_8_init();
+void Hamming_12_8_encode(unsigned char *origBits, unsigned char *encodedBits);
+bool Hamming_12_8_decode(unsigned char *rxBits, unsigned char *decodedBits, int nbCodewords);
+
+void Hamming_13_9_init();
+void Hamming_13_9_encode(unsigned char *origBits, unsigned char *encodedBits);
+bool Hamming_13_9_decode(unsigned char *rxBits, unsigned char *decodedBits, int nbCodewords);
+
+void Hamming_15_11_init();
+void Hamming_15_11_encode(unsigned char *origBits, unsigned char *encodedBits);
+bool Hamming_15_11_decode(unsigned char *rxBits, unsigned char *decodedBits, int nbCodewords);
+
+void Hamming_16_11_4_init();
+void Hamming_16_11_4_encode(unsigned char *origBits, unsigned char *encodedBits);
+bool Hamming_16_11_4_decode(unsigned char *rxBits, unsigned char *decodedBits, int nbCodewords);
+
+void Golay_20_8_init();
+void Golay_20_8_encode(unsigned char *origBits, unsigned char *encodedBits);
+bool Golay_20_8_decode(unsigned char *rxBits);
+
+void Golay_23_12_init();
+void Golay_23_12_encode(unsigned char *origBits, unsigned char *encodedBits);
+bool Golay_23_12_decode(unsigned char *rxBits);
+
+void Golay_24_12_init();
+void Golay_24_12_encode(unsigned char *origBits, unsigned char *encodedBits);
+bool Golay_24_12_decode(unsigned char *rxBits);
+
+void QR_16_7_6_init();
+void QR_16_7_6_encode(unsigned char *origBits, unsigned char *encodedBits);
+bool QR_16_7_6_decode(unsigned char *rxBits);
+
+void InitAllFecFunction(void);
+
 //end borrow from LEH
 
 void resetState (dsd_state * state);

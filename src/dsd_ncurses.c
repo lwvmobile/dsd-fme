@@ -36,7 +36,7 @@ int rn; //last ran
 int nc; //nac
 int src; //last rid? double?
 int lls = -1; //last last sync type
-int dcc = 0; //initialize with 0 to prevent core dump
+int dcc = -1; //initialize with 0 to prevent core dump
 int i = 0;
 char * s0last = "     ";
 char * s1last = "     ";
@@ -53,7 +53,7 @@ char * FM_bannerN[9] = {
   "https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
 };
 
-char * SyncTypes[20] = {
+char * SyncTypes[30] = {
   "+P25P1",
   "-P25P1",
   "+X2TDMA DATA",
@@ -73,7 +73,15 @@ char * SyncTypes[20] = {
   "+NXDN DATA",        //16
   "-NXDN DATA",    //17
   "+DSTAR HD",
-  "-DSTAR HD"
+  "-DSTAR HD",
+  "+dPMR",
+  "+dPMR",
+  "+dPMR",
+  "+dPMR",
+  "-dPMR",
+  "-dPMR",
+  "-dPMR",
+  "-dPMR"
 
 };
 
@@ -187,7 +195,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   //if (state->dmr_color_code != dcc && (lls == 11 || lls == 13 || lls == 10 || lls == 12) ) //DMR Voice + last two is data
   //if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR
-  if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 12 || lls == 13) ) //DMR
+  if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 12 || lls == 13) ) //DMR, needs work
   {
     //dcc = state->dmr_color_code;
     for (short int k = 0; k < 9; k++)
@@ -302,19 +310,25 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     rn = state->nxdn_last_ran;
   }
 
-  if (state->dmr_color_code > 0 && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR, DCC only carried on Data?
+  //if (state->dmr_color_code > 0 && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR, DCC only carried on Data?
+  //if (state->color_code > -1 && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR, DCC only carried on Data?
+  if (state->color_code_ok && (lls == 12 || lls == 13) ) //DMR, needs work
+
   {
     dcc = state->dmr_color_code;
+    //dcc = state->color_code;
   }
 
-  if (state->lastsrc > 0 && (lls == 12 || lls == 13))
+  if (state->lastsrc > 0 && (lls == 12 || lls == 13 || lls == 0 || lls == 1)) //DMR Voice and P25P1
   {
     rd = state->lastsrc;
+    opts->p25enc = 0;
   }
 
-  if (state->lasttg > 0 && (lls == 12 || lls == 13))
+  if (state->lasttg > 0 && (lls == 12 || lls == 13 || lls == 0 || lls == 1)) //DMR Voice and P25P1
   {
     tg = state->lasttg;
+    opts->p25enc = 0;
   }
 
   //if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17) //change this to NXDN syncs later on
@@ -326,12 +340,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //printw ("Error?: [%i] [%i] \n", state->errs, state->errs2); //what are these?
-
+  /* //wasn't we already doing this twice
   if (state->lasttg > 0 && state->lastsrc > 0)
   {
     tg = state->lasttg;
     rd = state->lastsrc;
   }
+  */
   if (state->nac > 0)
   {
     nc = state->nac;
@@ -358,7 +373,35 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //if (state->lastsynctype == 12 || state->lastsynctype == 13)  //DMR Voice Types
   if (lls == 12 || lls == 13)  //DMR Voice Types
   {
-    printw ("| DCC: [%i]\n", dcc);
+    //printw ("| DCC: [%i] FID: [%02X]\n", dcc, state->dmr_fid);
+    printw ("| DCC: [%i] FID: [%02X] SOP: [%X] \n", dcc, state->dmr_fid, state->dmr_so);
+    printw ("| TID: [%i] RID: [%i]", tg, rd);
+    if(state->dmr_so & 0x80) //& apparently is same as ==
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **Emergency** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+
+    if(state->dmr_so & 0x40)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **ENC** ");
+      //printw ("0x%X", state->payload_algid);
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+      //opts->p25enc = 1; //just testing for now
+    }
+
+    if(state->dmr_so & 0x30)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **Private Call** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    printw("\n");
     //printw ("%s ", state->slot0light);
     printw ("| SLOT 0 ");
     if (state->currentslot == 0) //find out how to tell when slot0 has voice
@@ -380,9 +423,39 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
 
   //if (state->lastsynctype == 10 || state->lastsynctype == 11)  //DMR Data Types
-  if (lls == 10 || lls == 11)  //DMR Data Types
+  if (lls == 10 || lls == 11 )  //DMR Data Types
   {
-    printw ("| DCC: [%i]\n", dcc);
+    //printw ("| DCC: [%i]\n", dcc);
+    printw ("| DCC: [%i] FID: [%02X] SOP: [%X] \n", dcc, state->dmr_fid, state->dmr_so);
+    printw ("| TID: [%i] RID: [%i]", tg, rd);
+    //does this need to be in DATA type?
+    /*
+    if(state->dmr_so & 0x80)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **Emergency** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+
+    if(state->dmr_so & 0x40)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **ENC** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+
+    if(state->dmr_so & 0x30)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **Private Call** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    */
+    printw("\n");
+
     //printw ("%s ", state->slot0light);
     printw ("| SLOT 0 ");
     if (state->currentslot == 0) //find out how to tell when slot0 has voice
@@ -406,6 +479,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     printw ("%s \n", s1last);
   }
+
+  //dPMR
+  if (lls == 20 || lls == 21 || lls == 22 || lls == 23 ||lls == 24 || lls == 25 || lls == 26 || lls == 27)
+  {
+    printw ("| DCC: [%i] ", state->dpmr_color_code);
+    printw ("TID: [%s] RID: [%s] \n", state->dpmr_target_id, state->dpmr_caller_id);
+  }
+
   if (lls != -1) //is there a synctype 0?
   {
     printw ("| %s \n", SyncTypes[lls]);
