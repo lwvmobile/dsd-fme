@@ -162,8 +162,8 @@ readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   {
     fprintf(stderr, "\n");
   }
-  //for (i = 0; i < 6; i++)
-  for (i = 0; i < 7; i++)
+  for (i = 0; i < 6; i++)
+  //for (i = 0; i < 7; i++) //this will really break backwards compatability 
     {
       b = fgetc (opts->mbe_in_f);
       if (feof (opts->mbe_in_f))
