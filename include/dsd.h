@@ -218,6 +218,7 @@ typedef struct
   unsigned int  GroupAddress;      /* Destination ID or TG (in Air Interface format) */
   unsigned int  SourceAddress;     /* Source ID (in Air Interface format) */
   unsigned int  DataValidity;      /* 0 = All Full LC data are incorrect ; 1 = Full LC data are correct (CRC checked OK) */
+  unsigned int  LeftOvers;         //what is the 8 bits for that isn't used
 }FullLinkControlPDU_t;
 
 typedef struct

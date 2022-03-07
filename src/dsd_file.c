@@ -73,7 +73,7 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
     fprintf(stderr, "\n");
   }
   //for (i = 0; i < 6; i++)
-  for (i = 0; i < 7; i++)
+  for (i = 0; i < 7; i++) //using 7 seems to break older amb files where it was 6, need to test 7 on 7 some more
     {
       b = 0;
 
@@ -162,8 +162,8 @@ readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   {
     fprintf(stderr, "\n");
   }
-  for (i = 0; i < 6; i++)
-  //for (i = 0; i < 7; i++) //this will really break backwards compatability 
+  //for (i = 0; i < 6; i++)
+  for (i = 0; i < 7; i++) //breaks backwards compatablilty with 6 files
     {
       b = fgetc (opts->mbe_in_f);
       if (feof (opts->mbe_in_f))

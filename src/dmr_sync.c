@@ -104,7 +104,7 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
     DmrDataBit[j + 6] = (DmrDataByte[i] >> 1) & 0x01;
     DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
   }
-
+  //fprintf (stderr, "\nDDB = 0x%X \n", DmrDataBit);
   /* Store the Protect Flag (PF) bit */
   TSVoiceSupFrame->FullLC.ProtectFlag = (unsigned int)(DmrDataBit[0]);
 
@@ -303,7 +303,7 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
     DmrDataBit[j + 6] = (DmrDataByte[i] >> 1) & 0x01;
     DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
   }
-
+  //fprintf (stderr, "\nDDB = 0x%X \n", DmrDataBit);
   /* Store the Protect Flag (PF) bit */
   TSVoiceSupFrame->FullLC.ProtectFlag = (unsigned int)(DmrDataBit[0]);
 
@@ -326,6 +326,8 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
   /* Store the Source address */
   TSVoiceSupFrame->FullLC.SourceAddress = (unsigned int)ConvertBitIntoBytes(&DmrDataBit[48], 24);
   //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
+  //TSVoiceSupFrame->FullLC.LeftOvers = (unsigned int)ConvertBitIntoBytes(&DmrDataBit[64], 8);
+  //fprintf (stderr, "\nBPTC Left Overs = %02X \n", TSVoiceSupFrame->FullLC.LeftOvers);
   if((IrrecoverableErrors == 0))// && CRCCorrect)
   {
     /* CRC is correct so consider the Full LC data as correct/valid */
@@ -472,7 +474,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   CRCExtracted |= (LC_DataBit[74] & 1) << 2;
   CRCExtracted |= (LC_DataBit[75] & 1) << 1;
   CRCExtracted |= (LC_DataBit[76] & 1) << 0;
-
+  //fprintf (stderr, "\nLCDB = 0x%X \n", LC_DataBit);
   /* Compute the 5 bit CRC */
   CRCComputed = ComputeCrc5Bit(LC_DataBit);
 

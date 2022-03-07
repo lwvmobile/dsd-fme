@@ -374,9 +374,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (lls == 12 || lls == 13)  //DMR Voice Types
   {
     //printw ("| DCC: [%i] FID: [%02X]\n", dcc, state->dmr_fid);
-    printw ("| DCC: [%i] FID: [%02X] SOP: [%X] \n", dcc, state->dmr_fid, state->dmr_so);
+    printw ("| DCC: [%i] MFID: [%02X] SOP: [%X] \n", dcc, state->dmr_fid, state->dmr_so);
     printw ("| TID: [%i] RID: [%i]", tg, rd);
-    if(state->dmr_so & 0x80) //& apparently is same as ==
+    if(state->dmr_so & 0x80) //1000 0000
     {
       attron(COLOR_PAIR(2));
       printw (" **Emergency** ");
@@ -384,17 +384,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
 
-    if(state->dmr_so & 0x40)
+    if(state->dmr_so & 0x40) //0100 0000
     {
       attron(COLOR_PAIR(2));
       printw (" **ENC** ");
       //printw ("0x%X", state->payload_algid);
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
-      //opts->p25enc = 1; //just testing for now
+      opts->p25enc = 1; //just testing for now
     }
 
-    if(state->dmr_so & 0x30)
+    if(state->dmr_so & 0x30) //0010 0000
     {
       attron(COLOR_PAIR(2));
       printw (" **Private Call** ");
