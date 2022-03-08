@@ -612,9 +612,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               {
                 //fprintf(stderr, "DPMR_FRAME_SYNC_1\n"); // TODO : To be removed
 
-                if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
-                    (state->lastsynctype == 22) || (state->lastsynctype == 23))
-                {
+                //if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
+                //    (state->lastsynctype == 22) || (state->lastsynctype == 23))
+                //{
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -630,11 +630,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
                   state->lastsynctype = 20;
                   return (20);
-                }
-                else
-                {
-                  state->lastsynctype = 20;
-                }
+                //}
+                //else
+                //{
+                //  state->lastsynctype = 20;
+                //}
               } /* End if (opts->inverted_dpmr == 0) */
             }
             else if(strcmp(synctest12, DPMR_FRAME_SYNC_2) == 0)
@@ -674,9 +674,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               {
                 //fprintf(stderr, "DPMR_FRAME_SYNC_3\n"); // TODO : To be removed
 
-                if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
-                    (state->lastsynctype == 22) || (state->lastsynctype == 23))
-                {
+                //if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
+                //    (state->lastsynctype == 22) || (state->lastsynctype == 23))
+                //{
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -692,11 +692,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
                   state->lastsynctype = 22;
                   return (22);
-                }
-                else
-                {
-                  state->lastsynctype = 22;
-                }
+                //}
+                //else
+                //{
+                //  state->lastsynctype = 22;
+                //}
               }
             }
             if(strcmp(synctest, DPMR_FRAME_SYNC_4) == 0)
@@ -705,9 +705,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               {
                 //fprintf(stderr, "DPMR_FRAME_SYNC_4\n"); // TODO : To be removed
 
-                if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
-                    (state->lastsynctype == 22) || (state->lastsynctype == 23))
-                {
+                //if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
+                //    (state->lastsynctype == 22) || (state->lastsynctype == 23))
+                //{
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -723,11 +723,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
                   state->lastsynctype = 23;
                   return (23);
-                }
-                else
-                {
-                  state->lastsynctype = 23;
-                }
+                //}
+                //else
+                //{
+                //  state->lastsynctype = 23;
+                //}
               }
             }
             else if(strcmp(synctest, INV_DPMR_FRAME_SYNC_1) == 0)
@@ -735,9 +735,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (opts->inverted_dpmr)
               {
                 //fprintf(stderr, "INV_DPMR_FRAME_SYNC_1\n"); // TODO : To be removed
-                if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
-                    (state->lastsynctype == 26) || (state->lastsynctype == 27))
-                {
+                //if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
+                //    (state->lastsynctype == 26) || (state->lastsynctype == 27))
+                //{
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -749,11 +749,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   }
                   state->lastsynctype = 24;
                   return (24);
-                }
-                else
-                {
-                  state->lastsynctype = 24;
-                }
+                //}
+                //else
+                //{
+                //  state->lastsynctype = 24;
+                //}
               }
             }
             else if(strcmp(synctest12, INV_DPMR_FRAME_SYNC_2) == 0)
@@ -762,9 +762,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               {
                 //fprintf(stderr, "DPMR_FRAME_SYNC_2\n"); // TODO : To be removed
 
-                if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
-                    (state->lastsynctype == 26) || (state->lastsynctype == 27))
-                {
+                //if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
+                //    (state->lastsynctype == 26) || (state->lastsynctype == 27))
+                //{
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -776,11 +776,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   }
                   state->lastsynctype = 25;
                   return (25);
-                }
-                else
-                {
-                  state->lastsynctype = 25;
-                }
+                //}
+                //else
+                //{
+                //  state->lastsynctype = 25;
+                //}
               }
             }
             else if(strcmp(synctest12, INV_DPMR_FRAME_SYNC_3) == 0)
@@ -789,9 +789,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               {
                 //fprintf(stderr, "INV_DPMR_FRAME_SYNC_3\n"); // TODO : To be removed
 
-                if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
-                    (state->lastsynctype == 26) || (state->lastsynctype == 27))
-                {
+                //if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
+                //    (state->lastsynctype == 26) || (state->lastsynctype == 27))
+                //{
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -803,11 +803,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   }
                   state->lastsynctype = 26;
                   return (26);
-                }
-                else
-                {
-                  state->lastsynctype = 26;
-                }
+                //}
+                //else
+                //{
+                //  state->lastsynctype = 26;
+                //}
               }
             }
             if(strcmp(synctest, INV_DPMR_FRAME_SYNC_4) == 0)
@@ -816,9 +816,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               {
                 //fprintf(stderr, "INV_DPMR_FRAME_SYNC_4\n"); // TODO : To be removed
 
-                if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
-                    (state->lastsynctype == 26) || (state->lastsynctype == 27))
-                {
+                //if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
+                //    (state->lastsynctype == 26) || (state->lastsynctype == 27))
+                //{
                   state->carrier = 1;
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
@@ -830,11 +830,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   }
                   state->lastsynctype = 27;
                   return (27);
-                }
-                else
-                {
-                  state->lastsynctype = 27;
-                }
+                //}
+                //else
+                //{
+                //  state->lastsynctype = 27;
+                //}
               }
             }
             else

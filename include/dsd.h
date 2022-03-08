@@ -42,8 +42,9 @@
 
 #include "p25p1_heuristics.h"
 
-#include <pulse/simple.h> //PULSE AUDIO
-#include <pulse/error.h> //PULSE AUDIO
+#include <pulse/simple.h>     //PULSE AUDIO
+#include <pulse/error.h>      //PULSE AUDIO
+//#include <pulse/pulseaudio.h> //PUlSE AUDIO
 
 #define SAMPLE_RATE_IN 48000 //48000
 #define SAMPLE_RATE_OUT 8000 //8000,
@@ -348,7 +349,7 @@ typedef struct
   int use_ncurses_terminal;
   int reset_state;
   int payload;
-
+  char output_name[1024];
   //LEH DMR Stuff
   int EncryptionMode;
 
@@ -367,12 +368,20 @@ typedef struct
   int repeat;
   short *audio_out_buf;
   short *audio_out_buf_p;
+  short *audio_out_bufR;
+  short *audio_out_buf_pR;
   float *audio_out_float_buf;
   float *audio_out_float_buf_p;
+  float *audio_out_float_bufR;
+  float *audio_out_float_buf_pR;
   float audio_out_temp_buf[160];
   float *audio_out_temp_buf_p;
+  float audio_out_temp_bufR[160];
+  float *audio_out_temp_buf_pR;
   int audio_out_idx;
   int audio_out_idx2;
+  int audio_out_idxR;
+  int audio_out_idx2R;
   //int wav_out_bytes;
   int center;
   int jitter;
@@ -391,6 +400,8 @@ typedef struct
   int midx;
   char err_str[64]; //actual error errorbars
   char err_buf[64]; //make copy of err_str for comparison, only have string print when strcmp is different??
+  char err_strR[64];
+  char err_bufR[64];
   char fsubtype[16];
   char ftype[16];
   int symbolcnt;

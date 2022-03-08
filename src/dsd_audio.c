@@ -21,6 +21,8 @@ pa_sample_spec ss;
 pa_sample_spec tt;
 pa_sample_spec zz;
 pa_sample_spec cc;
+//pa_channel_map channel_map;
+
 
 void openPulseOutput(dsd_opts * opts)
 {
@@ -33,7 +35,7 @@ void openPulseOutput(dsd_opts * opts)
   tt.channels = opts->pulse_digi_out_channels; //doing tests with 2 channels at 22050 for 44100 audio default in pulse
   tt.rate = opts->pulse_digi_rate_out; //48000, switches to 8000 when using RTL dongle
   //fprintf (stderr,"digi rate out = %d\n", opts->pulse_digi_rate_out);
-
+  //pa_channel_map_init_stereo(&channel_map);
 //ss
   if (opts->monitor_input_audio == 1)
   {
@@ -41,8 +43,13 @@ void openPulseOutput(dsd_opts * opts)
   }
 
 //tt
-  opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD FME", PA_STREAM_PLAYBACK, NULL, "Digi Audio Out", &tt, NULL, NULL, NULL);
-
+  pa_channel_map* left = 0; //NULL and 0 are same in this context
+  pa_channel_map* right = 0; //NULL and 0 are same in this context
+  //pa_channel_map* right;
+  //pa_channel_map_init(right);
+  opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &tt, left, NULL, NULL);
+  //opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD FME", PA_STREAM_PLAYBACK, NULL, "Digi Audio Out  LEFT", &tt, left, NULL, NULL);
+  //opts->pulse_raw_dev_out =  pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, "Digi Audio Out RIGHT", &tt, right, NULL, NULL);
 }
 
 void openPulseInput(dsd_opts * opts)
@@ -62,7 +69,7 @@ void openPulseInput(dsd_opts * opts)
     //opts->pulse_raw_dev_in = pa_simple_new(NULL, "DSD FME", PA_STREAM_RECORD, NULL, "Raw Audio In", &zz, NULL, NULL, NULL);
   }
   //cc
-  opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD FME", PA_STREAM_RECORD, NULL, "Audio In", &cc, NULL, NULL, NULL);
+  opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_RECORD, NULL, opts->output_name, &cc, NULL, NULL, NULL);
 
 }
 
@@ -161,6 +168,7 @@ processAudio (dsd_opts * opts, dsd_state * state)
       // detect max level
       max = 0;
       state->audio_out_temp_buf_p = state->audio_out_temp_buf;
+      //state->audio_out_temp_buf_pR = state->audio_out_temp_bufR;
       for (n = 0; n < 160; n++)
         {
           aout_abs = fabsf (*state->audio_out_temp_buf_p);
@@ -169,15 +177,24 @@ processAudio (dsd_opts * opts, dsd_state * state)
               max = aout_abs;
             }
           state->audio_out_temp_buf_p++;
+          //state->audio_out_temp_buf_pR++;
         }
       *state->aout_max_buf_p = max;
+      //*state->aout_max_buf_pR = max;
       state->aout_max_buf_p++;
+      //state->aout_max_buf_pR++;
       state->aout_max_buf_idx++;
+      //state->aout_max_buf_idxR++;
       if (state->aout_max_buf_idx > 24)
         {
           state->aout_max_buf_idx = 0;
           state->aout_max_buf_p = state->aout_max_buf;
         }
+      //if (state->aout_max_buf_idxR > 24)
+      //  {
+      //    state->aout_max_buf_idxR = 0;
+      //    state->aout_max_buf_pR = state->aout_max_bufR;
+      //  }
 
       // lookup max history
       for (i = 0; i < 25; i++)
@@ -412,6 +429,20 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
         //pa_simple_write(opts->pulse_raw_dev_out, (void*)&state->pulse_raw_out_buffer, 2, NULL);
 
       }
+
+      //two slot audio testing, still need to seperate channels first internally, but this will play them out on left and RIGHT
+      /*
+      if(state->currentslot == 0)
+      {
+        pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
+      }
+      if(state->currentslot == 1)
+      {
+        pa_simple_write(opts->pulse_raw_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
+        //pa_simple_write(opts->pulse_raw_dev_out, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); //Yay! It works.
+      }
+      */
+      
       pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
       state->audio_out_idx = 0;
   }

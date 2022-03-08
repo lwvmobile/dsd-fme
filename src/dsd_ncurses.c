@@ -374,7 +374,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (lls == 12 || lls == 13)  //DMR Voice Types
   {
     //printw ("| DCC: [%i] FID: [%02X]\n", dcc, state->dmr_fid);
-    printw ("| DCC: [%i] MFID: [%02X] SOP: [%X] \n", dcc, state->dmr_fid, state->dmr_so);
+    printw ("| DCC: [%i] FID: [%02X] SOP: [%X] \n", dcc, state->dmr_fid, state->dmr_so);
     printw ("| TID: [%i] RID: [%i]", tg, rd);
     if(state->dmr_so & 0x80) //1000 0000
     {
@@ -403,7 +403,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     printw("\n");
     //printw ("%s ", state->slot0light);
-    printw ("| SLOT 0 ");
+    printw ("| SLOT 1 ");
     if (state->currentslot == 0) //find out how to tell when slot0 has voice
     {
       s0last = "Voice";
@@ -412,7 +412,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("%s ", s0last);
 
     //printw ("%s ", state->slot1light);
-    printw ("SLOT 1 ");
+    printw ("SLOT 2 ");
     if (state->currentslot == 1) //find out how to tell when slot1 has voice
     {
       s1last = "Voice";
@@ -457,7 +457,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw("\n");
 
     //printw ("%s ", state->slot0light);
-    printw ("| SLOT 0 ");
+    printw ("| SLOT 1 ");
     if (state->currentslot == 0) //find out how to tell when slot0 has voice
     {
       s0last = "Data ";
@@ -468,7 +468,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     printw ("%s ", s0last);
     //printw ("%s ", state->slot1light);
-    printw ("SLOT 1 ");
+    printw ("SLOT 2 ");
     if (state->currentslot == 1) //find out how to tell when slot1 has voice
     {
       s1last = "Data ";

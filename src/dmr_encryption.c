@@ -25,8 +25,12 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
   uint32_t i, j;
   uint32_t Frame;
   TimeSlotVoiceSuperFrame_t * TSVoiceSupFrame = NULL;
+  TimeSlotVoiceSuperFrame_t * TSVoiceSupFrameL = NULL;
+  TimeSlotVoiceSuperFrame_t * TSVoiceSupFrameR = NULL;
   int *errs;
   int *errs2;
+  int *errsR;
+  int *errs2R;
 
   /*
    * Currently encryption is not supported in this public version...
@@ -41,6 +45,11 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
   {
     TSVoiceSupFrame = &state->TS2SuperFrame;
   }
+
+  TSVoiceSupFrameL = &state->TS1SuperFrame;
+  TSVoiceSupFrameR = &state->TS2SuperFrame;
+
+
 
   /* Apply encryption here
    *
@@ -84,6 +93,24 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
                                 TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
                                 state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
+      //errs  = (int*)&(TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
+      //errs2 = (int*)&(TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
+      //state->errs =  TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
+      //state->errs2 = TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs2[i]; //correct placement
+
+      //errsR  = (int*)&(TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
+      //errs2R = (int*)&(TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
+      //state->errs =  TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
+      //state->errs2 = TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs2[i]; //correct placement
+      //state->audio_out_temp_bufR = state->audio_out_temp_buf;
+      //mbe_processAmbe2450Dataf (state->audio_out_temp_buf, errs, errs2, state->err_str,
+      //                          TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
+      //                          state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+      //mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, errsR, errs2R, state->err_strR,
+      //                          TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
+      //                          state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
       if (opts->mbe_out_f != NULL)
       {
         saveAmbe2450Data (opts, state, TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
@@ -94,6 +121,7 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
       }
 
       state->debug_audio_errors += *errs2;
+      //state->debug_audio_errors += *errs2R;
 
       processAudio(opts, state);
 
