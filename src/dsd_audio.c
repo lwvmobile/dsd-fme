@@ -430,7 +430,7 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 
       }
 
-      //two slot audio testing, still need to seperate channels first internally, but this will play them out on left and RIGHT
+      //two slot audio testing, still need to seperate channels first internally, but this will play them out of different streams
       /*
       if(state->currentslot == 0)
       {
@@ -442,7 +442,7 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
         //pa_simple_write(opts->pulse_raw_dev_out, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); //Yay! It works.
       }
       */
-      
+
       pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
       state->audio_out_idx = 0;
   }

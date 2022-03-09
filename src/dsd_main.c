@@ -193,11 +193,11 @@ initOpts (dsd_opts * opts)
   opts->pulse_raw_rate_in   = 48000;
   opts->pulse_raw_rate_out  = 24000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
   opts->pulse_digi_rate_in  = 48000;
-  opts->pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
+  opts->pulse_digi_rate_out = 24000; //need to copy this to rtl type in and change rate out to 8000
   opts->pulse_raw_in_channels   = 1;
   opts->pulse_raw_out_channels  = 2;
   opts->pulse_digi_in_channels  = 1; //2
-  opts->pulse_digi_out_channels = 1; //2
+  opts->pulse_digi_out_channels = 2; //2
   //opts->output_name = "DSD-FME";
   sprintf (opts->output_name, " ");
   opts->pulse_flush = 1; //set 0 to flush, 1 for flushed
@@ -312,6 +312,10 @@ initState (dsd_state * state)
 
   state->nxdn_last_ran = -1;
   state->nxdn_last_rid = 0;
+  state->nxdn_last_tg = 0;
+  state->nxdn_cipher_type = 0;
+  state->nxdn_key = 0;
+  sprintf (state->nxdn_call_type, " ");
 
   state->dpmr_color_code = -1;
   state->dpmr_caller_id = 0;
@@ -1079,6 +1083,7 @@ main (int argc, char **argv)
           opts.playfiles = 1;
           opts.errorbars = 0;
           opts.datascope = 0;
+          sprintf (opts.output_name, "MBE Playback");
           state.optind = optind;
           break;
         case 'l':

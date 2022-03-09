@@ -472,6 +472,10 @@ typedef struct
   unsigned int dmr_color_code;
   unsigned int nxdn_last_ran;
   unsigned int nxdn_last_rid;
+  unsigned int nxdn_last_tg;
+  unsigned int nxdn_cipher_type;
+  unsigned int nxdn_key;
+  char nxdn_call_type[1024];
   //borrow from LEH
   NxdnSacchRawPart_t NxdnSacchRawPart[4];
   NxdnFacch1RawPart_t NxdnFacch1RawPart[2];

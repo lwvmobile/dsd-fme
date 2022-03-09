@@ -574,6 +574,14 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
   /* Decode the right "Message Type" */
   switch(MessageType)
   {
+    //Idle
+    case NXDN_IDLE:
+    {
+      //fprintf(stderr, "NXDN IDLE\n");
+      sprintf (state->nxdn_call_type, "NXDN IDLE ");
+    }
+    break;
+
     /* VCALL */
     case NXDN_VCALL:
     {
@@ -728,19 +736,32 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   /* Print the "Call Type" */
   //fprintf(stderr, "%s - ", NXDN_Call_Type_To_Str(CallType));
   fprintf(stderr, "\n\t      %s - ", NXDN_Call_Type_To_Str(CallType)); //line break 1 tab, 2 spaces start this string
+  sprintf (state->nxdn_call_type, NXDN_Call_Type_To_Str(CallType));
+  //state->nxdn_call_type = NXDN_Call_Type_To_Str(CallType);
 
   /* Print the "Voice Call Option" */
   NXDN_Voice_Call_Option_To_Str(VoiceCallOption, DuplexMode, TransmissionMode);
   fprintf(stderr, "%s %s - ", DuplexMode, TransmissionMode);
 
+  state->nxdn_key = (KeyID & 0xFF);
+  state->nxdn_cipher_type = CipherType;
   /* Print the "Cipher Type" */
-  if(CipherType != 0) fprintf(stderr, "%s - ", NXDN_Cipher_Type_To_Str(CipherType));
+  if(CipherType != 0)
+  {
+    fprintf(stderr, "%s - ", NXDN_Cipher_Type_To_Str(CipherType));
+    //state->nxdn_cipher_type = CipherType;
+  }
 
   /* Print the Key ID */
-  if(CipherType != 0) fprintf(stderr, "Key ID %u - ", KeyID & 0xFF);
+  if(CipherType != 0)
+  {
+    fprintf(stderr, "Key ID %u - ", KeyID & 0xFF);
+    //state->nxdn_key = (KeyID & 0xFF);
+  }
 
   /* Print Source ID and Destination ID (Talk Group or Unit ID) */
   fprintf(stderr, "Src=%u - Dst/TG=%u ", SourceUnitID & 0xFFFF, DestinationID & 0xFFFF);
+  state->nxdn_last_tg = (DestinationID & 0xFFFF);
 
   if(state->NxdnElementsContent.VCallCrcIsGood)
   {

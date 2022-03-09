@@ -188,7 +188,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][1] = rn;
     call_matrix[9][2] = src;
     call_matrix[9][3] = 0;
-    call_matrix[9][4] = 0;
+    call_matrix[9][4] = tg;
     call_matrix[9][5] = time(NULL);
 
   }
@@ -295,6 +295,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
 
   printw ("--Call Info-------------------------------------------------------------------\n");
+  //NXDN Ciper Types
+  //switch(CipherType)
+  //{
+  //  case 0:  Ptr = "";          break;  /* Non-ciphered mode / clear call */
+  //  case 1:  Ptr = "Scrambler"; break;
+  //  case 2:  Ptr = "DES";       break;
+  //  case 3:  Ptr = "AES";       break;
+  //  default: Ptr = "Unknown Cipher Type"; break;
+  //}
+
   if (state->lastsynctype != -1) //not sure if this will be okay
   {
     lls = state->lastsynctype;
@@ -302,12 +312,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (state->nxdn_last_rid > 0 && state->nxdn_last_rid != src);
   {
     src = state->nxdn_last_rid;
-    //rn = state->nxdn_last_ran;
   }
   if (state->nxdn_last_ran > -1 && state->nxdn_last_ran != rn);
   {
-    //src = state->nxdn_last_rid;
     rn = state->nxdn_last_ran;
+  }
+  if (state->nxdn_last_tg > 0 && state->nxdn_last_tg != tg);
+  {
+    tg = state->nxdn_last_tg;
   }
 
   //if (state->dmr_color_code > 0 && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR, DCC only carried on Data?
@@ -334,9 +346,50 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17) //change this to NXDN syncs later on
   if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
   {
-    //printw ("| RAN: [%02d] \n", state->nxdn_last_ran);
-    printw ("| RAN: [%02d] \n", rn);
-    printw ("| RID: [%d] \n", src); //maybe change to nxdn_last_rid
+    printw ("| RAN: [%02d] ", rn);
+    printw ("TID: [%d] ", tg);
+    //printw ("| RID: [%d] \n", src);
+    printw ("RID: [%d] \n| ALG: [0x%02X] KEY [0x%02X] ", src, state->nxdn_cipher_type, state->nxdn_key);
+    if (state->carrier == 1)
+    {
+      printw("%s ", state->nxdn_call_type);
+      //attron(COLOR_PAIR(4));
+      //printw ("No Encryption ");
+      //attroff(COLOR_PAIR(4));
+      //attron(COLOR_PAIR(3));
+    }
+    if (state->nxdn_cipher_type == 0x1 && state->carrier == 1)
+    {
+      attron(COLOR_PAIR(2));
+      printw ("Scrambler Encryption ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    if (state->nxdn_cipher_type == 0x2 && state->carrier == 1)
+    {
+      attron(COLOR_PAIR(2));
+      printw ("DES Encryption ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    if (state->nxdn_cipher_type == 0x3 && state->carrier == 1)
+    {
+      attron(COLOR_PAIR(2));
+      printw ("AES Encryption ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    if (state->nxdn_cipher_type > 0x3 && state->carrier == 1)
+    {
+      attron(COLOR_PAIR(2));
+      printw ("Unknown Encryption ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    //printw("%s ", state->nxdn_call_type);
+    printw("\n");
+
+
   }
 
   //printw ("Error?: [%i] [%i] \n", state->errs, state->errs2); //what are these?
@@ -515,6 +568,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
     {
       printw ("RAN [%2d] ", call_matrix[9-j][1]);
+      printw ("TG [%d] ", call_matrix[9-j][4]);
     }
     if (lls == 0 || lls == 1 || lls == 12 || lls == 13 || lls == 10 || lls == 11 ) //P25 P1 and DMR
     {
