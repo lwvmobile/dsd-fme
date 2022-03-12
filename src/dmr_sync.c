@@ -21,7 +21,108 @@
 //#define PRINT_VOICE_LC_HEADER_BYTES
 //#define PRINT_TERMINAISON_LC_BYTES
 //#define PRINT_VOICE_BURST_BYTES
+void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
+{
+  //Placeholder
+  uint32_t i, j, k;
+  uint32_t CRCExtracted     = 0;
+  uint32_t CRCComputed      = 0;
+  uint32_t CRCCorrect       = 0;
+  uint32_t IrrecoverableErrors = 0;
+  uint8_t  DeInteleavedData[196];
+  uint8_t  DmrDataBit[96];
+  uint8_t  DmrDataByte[12];
+  TimeSlotVoiceSuperFrame_t * TSVoiceSupFrame = NULL;
+  uint8_t  R[3];
+  uint8_t  BPTCReservedBits = 0;
 
+  /* Remove warning compiler */
+  //UNUSED_VARIABLE(syncdata[0]);
+  //UNUSED_VARIABLE(SlotType[0]);
+  //UNUSED_VARIABLE(BPTCReservedBits);
+
+  /* Check the current time slot */
+  if(state->currentslot == 0)
+  {
+    TSVoiceSupFrame = &state->TS1SuperFrame;
+  }
+  else
+  {
+    TSVoiceSupFrame = &state->TS2SuperFrame;
+  }
+
+  CRCExtracted = 0;
+  CRCComputed = 0;
+  IrrecoverableErrors = 0;
+
+  /* Deinterleave DMR data */
+  BPTCDeInterleaveDMRData(info, DeInteleavedData);
+
+  /* Extract the BPTC 196,96 DMR data */
+  IrrecoverableErrors = BPTC_196x96_Extract_Data(DeInteleavedData, DmrDataBit, R);
+
+  /* Fill the reserved bit (R(0)-R(2) of the BPTC(196,96) block) */
+  BPTCReservedBits = (R[0] & 0x01) | ((R[1] << 1) & 0x02) | ((R[2] << 2) & 0x08);
+
+  /* Convert the 96 bit of voice LC Header data into 12 bytes */
+  k = 0;
+  for(i = 0; i < 12; i++)
+  {
+    DmrDataByte[i] = 0;
+    for(j = 0; j < 8; j++)
+    {
+      DmrDataByte[i] = DmrDataByte[i] << 1;
+      DmrDataByte[i] = DmrDataByte[i] | (DmrDataBit[k] & 0x01);
+      k++;
+    }
+  }
+
+  /* Fill the CRC extracted (before Reed-Solomon (12,9) FEC correction) */
+  CRCExtracted = 0;
+  //for(i = 0; i < 24; i++)
+  for(i = 0; i < 16; i++)
+  {
+    CRCExtracted = CRCExtracted << 1;
+    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
+    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
+  }
+
+  /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
+  //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
+  //CRCExtracted = CRCExtracted ^ 0x6969;
+
+  /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
+  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
+  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
+
+  /* Convert corrected 12 bytes into 96 bits */
+  for(i = 0, j = 0; i < 12; i++, j+=8)
+  {
+    DmrDataBit[j + 0] = (DmrDataByte[i] >> 7) & 0x01;
+    DmrDataBit[j + 1] = (DmrDataByte[i] >> 6) & 0x01;
+    DmrDataBit[j + 2] = (DmrDataByte[i] >> 5) & 0x01;
+    DmrDataBit[j + 3] = (DmrDataByte[i] >> 4) & 0x01;
+    DmrDataBit[j + 4] = (DmrDataByte[i] >> 3) & 0x01;
+    DmrDataBit[j + 5] = (DmrDataByte[i] >> 2) & 0x01;
+    DmrDataBit[j + 6] = (DmrDataByte[i] >> 1) & 0x01;
+    DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
+  }
+  //Placeholder, figure out which areas to grab
+  //state->payload_algid = DmrDataBit[1];
+  state->payload_algid = DmrDataByte[0]; //not really sure, just guessing on observation?
+  //state->payload_keyid = DmrDataBit[2];
+  state->payload_keyid = DmrDataByte[2];
+  //state->payload_mi    = ( (DmrDataBit[3] << 3) + (DmrDataBit[4] << 2) + (DmrDataBit[5] << 1) + DmrDataBit[6] );
+  state->payload_mi    = ( ((DmrDataByte[3]) << 24) + ((DmrDataByte[4]) << 16) + ((DmrDataByte[5]) << 8) + (DmrDataByte[6]) );
+  //fprintf(stderr, "%s Slot(%d), CC(%x), PI HEADER: ALGID(%02x), KEYID(%02x), MI(%08x), DSTADDR(%06x)\n",
+  fprintf (stderr, "\n DMR PI Header ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X \n", state->payload_algid, state->payload_keyid, state->payload_mi);
+  fprintf (stderr, " Full PI Header Payload in Hex\n");
+  for(i = 0, j = 0; i < 12; i++)
+  {
+    //fprintf (stderr, " Byte [%02d] [%02X] [%02X]\n", i+1, DmrDataByte[i], DmrDataByte[i] ^ 0x69); //0x6969 PI header mask?
+  }
+  //end Placeholder
+}
 
 void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
 {
@@ -140,7 +241,7 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
   }
 
   /* Print the destination ID (TG) and the source ID */
-  fprintf(stderr, "| TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+  fprintf(stderr, "\n  TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
   fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
   //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
   //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
@@ -184,7 +285,7 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
   }
   fprintf(stderr, "Call ");
 
-  if(TSVoiceSupFrame->FullLC.DataValidity) fprintf(stderr, "(OK) ");
+  if(TSVoiceSupFrame->FullLC.DataValidity) fprintf(stderr, "(CRC OK )  ");
   else if(IrrecoverableErrors == 0) fprintf(stderr, "RAS (FEC OK/CRC ERR)");
   else fprintf(stderr, "(FEC FAIL/CRC ERR)");
 
@@ -340,7 +441,7 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
   }
 
   /* Print the destination ID (TG) and the source ID */
-  fprintf(stderr, "| TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+  fprintf(stderr, "\n  TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
   fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
   //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
   //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
@@ -349,7 +450,7 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
 
   if((IrrecoverableErrors == 0) && CRCCorrect)
   {
-    fprintf(stderr, "(OK) ");
+    fprintf(stderr, "(CRC OK )  ");
     //only set on good CRC value or corrected values
     state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
     state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
@@ -520,7 +621,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   }
 
   /* Print the destination ID (TG) and the source ID */
-  fprintf(stderr, "| TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+  fprintf(stderr, "  TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
   fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
   //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
   //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
@@ -528,7 +629,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
 
   if((IrrecoverableErrors == 0) && CRCCorrect)
   {
-    fprintf(stderr, "(OK)");
+    fprintf(stderr, "(CRC OK )  ");
     //only set on good CRC?
     state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
     state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;

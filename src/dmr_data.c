@@ -330,9 +330,10 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     /* Print the color code */
     fprintf(stderr, "| Color Code=%02d ", (int)state->color_code);
 
-    if(state->color_code_ok) fprintf(stderr, "(OK)      |");
-    else fprintf(stderr, "(CRC ERR) |");
-
+    //if(state->color_code_ok) fprintf(stderr, "(OK)      |");
+    if(state->color_code_ok) fprintf(stderr, "(CRC OK ) |"); //add line break
+    else fprintf(stderr, "(CRC ERR) |"); //add line break
+    //fprintf (stderr, "\n"); //print line break
     if (strcmp (state->fsubtype, "              ") == 0)
     {
       fprintf(stderr, " Unknown burst type: %s", bursttype);
@@ -348,6 +349,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     /* Burst = PI header */
     case 0b0000:
     {
+      ProcessDmrPIHeader(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
 

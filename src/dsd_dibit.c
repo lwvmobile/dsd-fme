@@ -444,6 +444,9 @@ get_dibit_and_analog_signal (dsd_opts* opts, dsd_state* state, int* out_analog_s
 
   //
   state->sbuf[state->sidx] = symbol;
+  //
+  //state->pulse_raw_out_buffer = symbol;
+  //
   if (out_analog_signal != NULL)
     {
       *out_analog_signal = symbol;

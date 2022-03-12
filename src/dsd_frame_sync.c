@@ -108,7 +108,7 @@ printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset,
     }
   if (opts->verbose > 1)
     {
-      fprintf (stderr,"mod: %s ", modulation);
+      //fprintf (stderr,"mod: %s ", modulation); //disabled, don't like looking at incorrect mod types anyways, and it eats up space on the console
       //printw("mod: %s ", modulation);
     }
   if (opts->verbose > 2)
@@ -200,12 +200,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
       {
         ncursesPrinter(opts, state);
       }
-      /*
-      if ( opts->monitor_input_audio == 1 && (time(NULL) - now) > 1 ) //okay, still something going on, still doing the read part for some reason
-      {
-        playRawAudio(opts, state); //this is on line 21 in dsd_audio.c
-      }
-      */
 
       /*
       if (opts->reset_state == 1 && state->carrier == 0)
@@ -1126,10 +1120,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (opts->inverted_dmr == 0)
               {
                 // data frame
-                sprintf(state->ftype, " DMR         ");
+                sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, " +DMR      ", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 10;
                 return (10);
@@ -1137,10 +1131,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               else
               {
                 // inverted voice frame
-                sprintf(state->ftype, " DMR         ");
+                sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, " -DMR      ", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 if (state->lastsynctype != 11)
                 {
@@ -1161,10 +1155,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (opts->inverted_dmr == 0)
               {
                 // data frame
-                sprintf(state->ftype, " DMR         ");
+                sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, " +DMR      ", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 10;
                 return (10);
@@ -1172,10 +1166,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               else
               {
                 // inverted voice frame
-                sprintf(state->ftype, " DMR         ");
+                sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, " -DMR      ", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 if (state->lastsynctype != 11)
                 {
@@ -1196,10 +1190,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (opts->inverted_dmr == 0)
               {
                 // data frame
-                sprintf(state->ftype, " DMR         ");
+                sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, " +DMR      ", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 10;
                 return (10);
@@ -1207,10 +1201,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               else
               {
                 // inverted voice frame
-                sprintf(state->ftype, " DMR         ");
+                sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, " -DMR      ", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 if (state->lastsynctype != 11)
                 {
@@ -1230,10 +1224,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (opts->inverted_dmr == 0)
               {
                 // voice frame
-                sprintf(state->ftype, " DMR         ");
+                sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, " +DMR      ", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 if (state->lastsynctype != 12)
                 {
@@ -1245,10 +1239,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               else
               {
                 // inverted data frame
-                sprintf(state->ftype, " DMR         ");
+                sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, " -DMR      ", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 13;
                 return (13);
@@ -1265,10 +1259,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (opts->inverted_dmr == 0)
               {
                 // voice frame
-                sprintf(state->ftype, " DMR         ");
+                sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, " +DMR      ", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 if (state->lastsynctype != 12)
                 {
@@ -1280,10 +1274,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               else
               {
                 // inverted data frame
-                sprintf(state->ftype, " DMR         ");
+                sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, " -DMR      ", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 13;
                 return (13);
@@ -1300,10 +1294,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (opts->inverted_dmr == 0)
               {
                 // voice frame
-                sprintf(state->ftype, " DMR         ");
+                sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, " +DMR      ", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 if (state->lastsynctype != 12)
                 {
@@ -1315,10 +1309,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               else
               {
                 // inverted data frame
-                sprintf(state->ftype, " DMR         ");
+                sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, " -DMR      ", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 13;
                 return (13);
@@ -1711,7 +1705,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   sprintf (state->ftype, "(DMR)");
                   if (opts->errorbars == 1)
                     {
-                      printFrameSync (opts, state, "(-DMR)     ", synctest_pos + 1, modulation);
+                      printFrameSync (opts, state, "(-DMR)", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = -1;
                   if (opts->use_ncurses_terminal == 1)
@@ -1726,10 +1720,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
                   state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "(DMR)        ");
+                  sprintf (state->ftype, "(DMR) ");
                   if (opts->errorbars == 1)
                     {
-                      printFrameSync (opts, state, "(+DMR)     ", synctest_pos + 1, modulation);
+                      printFrameSync (opts, state, "(+DMR)", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = -1;
                   if (opts->use_ncurses_terminal == 1)
@@ -1778,7 +1772,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               return (-1);
             }
         }
-
+        if ( opts->monitor_input_audio == 1 && (time(NULL) - now) > 1 ) //okay, still something going on, still doing the read part for some reason
+        //if ( opts->monitor_input_audio == 1)
+        {
+          playRawAudio(opts, state); //this is on line 21 in dsd_audio.c
+        }
     }
 
   return (-1);

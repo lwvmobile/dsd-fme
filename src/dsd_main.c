@@ -191,11 +191,11 @@ initOpts (dsd_opts * opts)
   opts->rtl_udp_port = 6020; //set UDP port for RTL remote
   opts->rtl_bandwidth = 12; //changed recommended default to 12, 24 for ProVoice
   opts->pulse_raw_rate_in   = 48000;
-  opts->pulse_raw_rate_out  = 24000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
+  opts->pulse_raw_rate_out  = 48000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
   opts->pulse_digi_rate_in  = 48000;
   opts->pulse_digi_rate_out = 24000; //need to copy this to rtl type in and change rate out to 8000
   opts->pulse_raw_in_channels   = 1;
-  opts->pulse_raw_out_channels  = 2;
+  opts->pulse_raw_out_channels  = 1;
   opts->pulse_digi_in_channels  = 1; //2
   opts->pulse_digi_out_channels = 2; //2
   //opts->output_name = "DSD-FME";
@@ -320,6 +320,13 @@ initState (dsd_state * state)
   state->dpmr_color_code = -1;
   state->dpmr_caller_id = 0;
   state->dpmr_target_id = 0;
+
+  state->payload_mi = 0;
+  state->payload_mfid = 0;
+  state->payload_algid = 0;
+  state->payload_keyid = 0;
+
+  state->K = 0;
 
 #ifdef TRACE_DSD
   state->debug_sample_index = 0;
@@ -650,7 +657,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:NWrlZ")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:NWrlZ")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -713,6 +720,11 @@ main (int argc, char **argv)
           sscanf (optarg, "%d", &opts.verbose);
           break;
 
+        case 'K': 
+          sscanf (optarg, "%d", &state.K);
+          state.K = ( ((state.K & 0xFF0F) << 32 ) + (state.K << 16) + state.K );
+          break;
+
         case 'G': //Set rtl device gain
           sscanf (optarg, "%d", &opts.rtl_gain_value); //multiple value by ten to make it consitent with the way rtl_fm really works
           break;
@@ -738,10 +750,19 @@ main (int argc, char **argv)
           break;
 
         case 'W': //monitor_input_audio if no sync
-          opts.monitor_input_audio = 0;
-          //fprintf (stderr,"Monitor Source Audio Enabled (WIP!) Sounds bad.\n");
-          //fprintf (stderr,"Monitor Source Audio may cause decoding issues.\n");
-          fprintf (stderr,"Monitor Source Audio currently disabled in Pulse Audio Builds.\n");
+          opts.monitor_input_audio = 1;
+          fprintf (stderr,"Monitor Source Audio Enabled.\n");
+          //opts.pulse_raw_rate_in   = 48000;
+          //opts.pulse_raw_rate_out  = 48000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
+          //opts.pulse_digi_rate_in  = 48000;
+          //opts.pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
+          //opts.pulse_raw_in_channels   = 1;
+          //opts.pulse_raw_out_channels  = 1;
+          //opts.pulse_digi_in_channels  = 1; //2
+          //opts.pulse_digi_out_channels = 1; //2
+          fprintf (stderr,"  Monitor Source Audio may cause decoding issues.\n");
+          fprintf (stderr,"  Don't Run Monitor Source Audio with Ncurses Terminal.\n");
+          opts.use_ncurses_terminal = 0; //may not set depends on when -N and -W are first and second
           break;
 
         case 'N':

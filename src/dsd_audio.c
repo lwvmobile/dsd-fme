@@ -27,9 +27,9 @@ pa_sample_spec cc;
 void openPulseOutput(dsd_opts * opts)
 {
 
-  //ss.format = PA_SAMPLE_S16NE;
-  //ss.channels = opts->pulse_raw_out_channels; //doing tests with 2 channels at 22050 for 44100 audio default in pulse
-  //ss.rate = opts->pulse_raw_rate_out; //48000
+  ss.format = PA_SAMPLE_S16NE;
+  ss.channels = opts->pulse_raw_out_channels; //doing tests with 2 channels at 22050 for 44100 audio default in pulse
+  ss.rate = opts->pulse_raw_rate_out; //48000
 
   tt.format = PA_SAMPLE_S16NE;
   tt.channels = opts->pulse_digi_out_channels; //doing tests with 2 channels at 22050 for 44100 audio default in pulse
@@ -39,7 +39,7 @@ void openPulseOutput(dsd_opts * opts)
 //ss
   if (opts->monitor_input_audio == 1)
   {
-    //opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD FME", PA_STREAM_PLAYBACK, NULL, "Raw Audio Out", &ss, NULL, NULL, NULL);
+    opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD FME", PA_STREAM_PLAYBACK, NULL, "Raw Audio Out", &ss, NULL, NULL, NULL);
   }
 
 //tt
@@ -64,7 +64,7 @@ void openPulseInput(dsd_opts * opts)
   cc.rate = opts->pulse_digi_rate_in; //48000
 
   //zz
-  if (opts->monitor_input_audio == 2)
+  if (opts->monitor_input_audio == 1)
   {
     //opts->pulse_raw_dev_in = pa_simple_new(NULL, "DSD FME", PA_STREAM_RECORD, NULL, "Raw Audio In", &zz, NULL, NULL, NULL);
   }

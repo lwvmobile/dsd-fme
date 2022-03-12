@@ -593,15 +593,14 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
       for(i = 0; i < 3; i++)
       {
         state->TS1SuperFrame.TimeSlotAmbeVoiceFrame[j].errs1[i] = mbe_eccAmbe3600x2450C0(state->TS1SuperFrame.TimeSlotDeinterleavedVoiceFrame[j].DeInterleavedVoiceSample[i]);
-        //state->errs = state->TS1SuperFrame.TimeSlotAmbeVoiceFrame[j].errs1[i]; //correct placement
+
         state->TS1SuperFrame.TimeSlotAmbeVoiceFrame[j].errs2[i] = state->TS1SuperFrame.TimeSlotAmbeVoiceFrame[j].errs1[i];
-        //state->errs2 = state->TS1SuperFrame.TimeSlotAmbeVoiceFrame[j].errs2[i]; //correct placement
+
         mbe_demodulateAmbe3600x2450Data(state->TS1SuperFrame.TimeSlotDeinterleavedVoiceFrame[j].DeInterleavedVoiceSample[i]);
         state->TS1SuperFrame.TimeSlotAmbeVoiceFrame[j].errs2[i] += mbe_eccAmbe3600x2450Data(state->TS1SuperFrame.TimeSlotDeinterleavedVoiceFrame[j].DeInterleavedVoiceSample[i],
                                                                                             &(state->TS1SuperFrame.TimeSlotAmbeVoiceFrame[j].AmbeBit[i][0]));
       }
-      //state->errs = state->TS1SuperFrame.TimeSlotAmbeVoiceFrame[j].errs1[i]; //correct placement
-      //state->errs2 = (int)state->TS1SuperFrame.TimeSlotAmbeVoiceFrame[j].errs2[i]; //correct placement
+
     }
     else
     {
@@ -609,15 +608,14 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
       for(i = 0; i < 3; i++)
       {
         state->TS2SuperFrame.TimeSlotAmbeVoiceFrame[j].errs1[i] = mbe_eccAmbe3600x2450C0(state->TS2SuperFrame.TimeSlotDeinterleavedVoiceFrame[j].DeInterleavedVoiceSample[i]);
-        //state->errs = state->TS1SuperFrame.TimeSlotAmbeVoiceFrame[j].errs1[i]; //correct placement
+
         state->TS2SuperFrame.TimeSlotAmbeVoiceFrame[j].errs2[i] = state->TS2SuperFrame.TimeSlotAmbeVoiceFrame[j].errs1[i];
-        //state->errs2 = state->TS1SuperFrame.TimeSlotAmbeVoiceFrame[j].errs2[i]; //correct placement
+
         mbe_demodulateAmbe3600x2450Data(state->TS2SuperFrame.TimeSlotDeinterleavedVoiceFrame[j].DeInterleavedVoiceSample[i]);
         state->TS2SuperFrame.TimeSlotAmbeVoiceFrame[j].errs2[i] += mbe_eccAmbe3600x2450Data(state->TS2SuperFrame.TimeSlotDeinterleavedVoiceFrame[j].DeInterleavedVoiceSample[i],
                                                                                             &(state->TS2SuperFrame.TimeSlotAmbeVoiceFrame[j].AmbeBit[i][0]));
       }
-      //state->errs = state->TS2SuperFrame.TimeSlotAmbeVoiceFrame[j].errs1[i]; //correct placement
-      //state->errs2 = (int)state->TS2SuperFrame.TimeSlotAmbeVoiceFrame[j].errs2[i]; //correct placement
+
     }
   }  /* End for(j = 0; j < 6; j++) */
 
@@ -628,10 +626,12 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
     /* Print the color code */
     fprintf(stderr, "| Color Code=%02d ", (int)state->color_code);
 
-    if(state->color_code_ok) fprintf(stderr, "(OK)      |");
-    else fprintf(stderr, "(CRC ERR) |");
+    //if(state->color_code_ok) fprintf(stderr, "(OK)      |");
+    if(state->color_code_ok) fprintf(stderr, "(CRC OK ) |"); //add line break
+    else fprintf(stderr, "(CRC ERR) |"); //add line break
 
-    fprintf(stderr, " VOICE e:");
+    //fprintf(stderr, " VOICE e: \n");
+    fprintf(stderr, " VOICE    \n");
   }
 
   /* Perform the SYNC DMR data embedded decoding */

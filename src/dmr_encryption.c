@@ -27,16 +27,14 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
   TimeSlotVoiceSuperFrame_t * TSVoiceSupFrame = NULL;
   TimeSlotVoiceSuperFrame_t * TSVoiceSupFrameL = NULL;
   TimeSlotVoiceSuperFrame_t * TSVoiceSupFrameR = NULL;
+
   int *errs;
   int *errs2;
   int *errsR;
   int *errs2R;
+  unsigned long long int k;
+  k = 0;
 
-  /*
-   * Currently encryption is not supported in this public version...
-   */
-
-  /* Check the current time slot */
   if(state->currentslot == 0)
   {
     TSVoiceSupFrame = &state->TS1SuperFrame;
@@ -48,37 +46,9 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
 
   TSVoiceSupFrameL = &state->TS1SuperFrame;
   TSVoiceSupFrameR = &state->TS2SuperFrame;
-
-
-
-  /* Apply encryption here
-   *
-   * A DMR superframe = 6 frames x 3 AMBE voice sample of 49 bits each
-   * uint8_t KeyStream[6][3][49];
-   *
-   * 1�) Initialize the "KeyStream" buffer (total 882 bits) with correct bits (depending of
-   *     encryption mode used, MotoTRBO BP, Hytera BP, MotoTRBO EP, MotoTRBO AES...
-   *
-   * 2�) Apply a XOR between "KeyStream" and "TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j]"
-   *     like code :
-   *     for(Frame = 0; Frame < 6; Frame++)
-   *     {
-   *       for(i = 0; i < 3; i++)
-   *       {
-   *         for(j = 0; j < 49; j++)
-   *         {
-   *           TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i] ^= KeyStream[Frame][i][j];
-   *         }
-   *       }
-   *     }
-   *
-   * 3�) Play all AMBE decoded sample (see the "for" loop below)
-   *
-   * */
-
-  /*
-   * Play all AMBE voice samples
-   * 1 DMR voice superframe = 6 DMR frames */
+//
+//
+//
   for(Frame = 0; Frame < 6; Frame++)
   {
     /* 1 DMR frame contains 3 AMBE voice samples */

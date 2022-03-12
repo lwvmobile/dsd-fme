@@ -440,6 +440,8 @@ typedef struct
   int payload_algid;
   int payload_keyid;
   int payload_mfid;
+  int payload_mi;
+  unsigned long long int K;
 
   unsigned int debug_audio_errors;
   unsigned int debug_header_errors;
@@ -774,7 +776,7 @@ uint32_t ComputeAndCorrectFullLinkControlCrc(uint8_t * FullLinkControlDataBytes,
 uint8_t ComputeCrc5Bit(uint8_t * DMRData);
 uint8_t * DmrAlgIdToStr(uint8_t AlgID);
 uint8_t * DmrAlgPrivacyModeToStr(uint32_t PrivacyMode);
-
+void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
 
 void Hamming_7_4_init();
 void Hamming_7_4_encode(unsigned char *origBits, unsigned char *encodedBits);
