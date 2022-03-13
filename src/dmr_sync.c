@@ -87,6 +87,8 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
     CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
   }
 
+  //Look into whether or not we need to run these CRC checks for this header information
+  //and see if its applied the same or differently
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
   //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
   //CRCExtracted = CRCExtracted ^ 0x6969;
@@ -107,21 +109,15 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
     DmrDataBit[j + 6] = (DmrDataByte[i] >> 1) & 0x01;
     DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
   }
-  //Placeholder, figure out which areas to grab
-  //state->payload_algid = DmrDataBit[1];
-  state->payload_algid = DmrDataByte[0]; //not really sure, just guessing on observation?
-  //state->payload_keyid = DmrDataBit[2];
+
+
+  state->payload_algid = DmrDataByte[0];
   state->payload_keyid = DmrDataByte[2];
-  //state->payload_mi    = ( (DmrDataBit[3] << 3) + (DmrDataBit[4] << 2) + (DmrDataBit[5] << 1) + DmrDataBit[6] );
   state->payload_mi    = ( ((DmrDataByte[3]) << 24) + ((DmrDataByte[4]) << 16) + ((DmrDataByte[5]) << 8) + (DmrDataByte[6]) );
-  //fprintf(stderr, "%s Slot(%d), CC(%x), PI HEADER: ALGID(%02x), KEYID(%02x), MI(%08x), DSTADDR(%06x)\n",
-  fprintf (stderr, "\n DMR PI Header ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X \n", state->payload_algid, state->payload_keyid, state->payload_mi);
-  fprintf (stderr, " Full PI Header Payload in Hex\n");
-  for(i = 0, j = 0; i < 12; i++)
+  if (opts->payload == 1)
   {
-    //fprintf (stderr, " Byte [%02d] [%02X] [%02X]\n", i+1, DmrDataByte[i], DmrDataByte[i] ^ 0x69); //0x6969 PI header mask?
+    fprintf (stderr, "\n DMR PI Header ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algid, state->payload_keyid, state->payload_mi);
   }
-  //end Placeholder
 }
 
 void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])

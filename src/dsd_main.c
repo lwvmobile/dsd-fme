@@ -163,7 +163,7 @@ initOpts (dsd_opts * opts)
   opts->serial_baud = 115200;
   sprintf (opts->serial_dev, "/dev/ttyUSB0");
   opts->resume = 0;
-  opts->frame_dstar = 0;
+  opts->frame_dstar = 1; //was disabled for some reason, make sure there are no false positives
   opts->frame_x2tdma = 1;
   opts->frame_p25p1 = 1;
   opts->frame_nxdn48 = 0;
@@ -193,16 +193,16 @@ initOpts (dsd_opts * opts)
   opts->pulse_raw_rate_in   = 48000;
   opts->pulse_raw_rate_out  = 48000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
   opts->pulse_digi_rate_in  = 48000;
-  opts->pulse_digi_rate_out = 24000; //need to copy this to rtl type in and change rate out to 8000
+  opts->pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
   opts->pulse_raw_in_channels   = 1;
   opts->pulse_raw_out_channels  = 1;
   opts->pulse_digi_in_channels  = 1; //2
-  opts->pulse_digi_out_channels = 2; //2
-  //opts->output_name = "DSD-FME";
-  sprintf (opts->output_name, " ");
+  opts->pulse_digi_out_channels = 1; //2
+
+  sprintf (opts->output_name, "Auto Detect");
   opts->pulse_flush = 1; //set 0 to flush, 1 for flushed
-  opts->use_ncurses_terminal = 0; //ncurses terminal disabled by default, call with -N
-  opts->payload = 0; //initialize with 0 so can pass == 0 arguments
+  opts->use_ncurses_terminal = 0; 
+  opts->payload = 0;
 
   opts->EncryptionMode = MODE_UNENCRYPTED;
   opts->inverted_dpmr = 0;
@@ -720,8 +720,8 @@ main (int argc, char **argv)
           sscanf (optarg, "%d", &opts.verbose);
           break;
 
-        case 'K': 
-          sscanf (optarg, "%d", &state.K);
+        case 'K':
+          sscanf (optarg, "%lld", &state.K);
           state.K = ( ((state.K & 0xFF0F) << 32 ) + (state.K << 16) + state.K );
           break;
 

@@ -253,7 +253,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_in_type == 3)
   {
-    printw ("| RTL2838 Device #[%d]", opts->rtl_dev_index);
+    printw ("| RTL2838UHIDIR Device #[%d]", opts->rtl_dev_index);
     printw (" Gain [%i] dB -", opts->rtl_gain_value);
     printw (" Squelch [%i]", opts->rtl_squelch_level);
     printw (" VFO [%i] kHz\n", opts->rtl_bandwidth);
@@ -409,8 +409,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     //printw("| TID:[%i] | RID:[%i] \n", tg, rd);
     //printw("| NAC: [0x%X] \n", nc);
-    printw("| TID:[%08i] RID:[%08i] ", tg, rd);
-    printw("NAC: [0x%03X] \n", nc);
+    printw("| TID:[%8i] RID:[%8i] ", tg, rd);
+    printw("NAC: [0x%3X] \n", nc);
     printw("| ALG: [0x%02X] ", state->payload_algid);
     printw("KEY: [0x%04X] ", state->payload_keyid);
     //printw("MFG: [0x%X] ", state->payload_mfid); //no way of knowing if this is accurate info yet
@@ -429,7 +429,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     //printw ("| DCC: [%i] FID: [%02X]\n", dcc, state->dmr_fid);
     //attron(COLOR_PAIR(3));
-    printw ("| DCC: [%02i] FID: [%02X] SOP: [%02X] ", dcc, state->dmr_fid, state->dmr_so);
+    printw ("| DCC: [%2i] FID: [%02X] SOP: [%02X] ", dcc, state->dmr_fid, state->dmr_so);
     if(state->payload_mi == 0 && state->dmr_so & 0x40)
     {
       attron(COLOR_PAIR(5));
@@ -441,7 +441,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->payload_keyid > 0 && state->dmr_so & 0x40)
     {
       attron(COLOR_PAIR(5));
-      printw (" ALG: [0x%02X] KEY [0x%02X] MI 0x[%08X]", state->payload_algid, state->payload_keyid, state->payload_mi);
+      printw (" ALG: [0x%02X] KEY [0x%02X] MI [0x%08X]", state->payload_algid, state->payload_keyid, state->payload_mi);
       //printw ("0x%X", state->payload_algid);
       attroff(COLOR_PAIR(5));
       attron(COLOR_PAIR(3));
@@ -455,7 +455,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
 
     printw("\n");
-    printw ("| TID: [%08i] RID: [%08i]", tg, rd);
+    printw ("| TID: [%8i] RID: [%8i]", tg, rd);
     if(state->dmr_so & 0x80) //1000 0000
     {
       attron(COLOR_PAIR(2));
@@ -510,8 +510,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (lls == 10 || lls == 11 )  //DMR Data Types
   {
     //printw ("| DCC: [%i]\n", dcc);
-    printw ("| DCC: [%02i] FID: [%02X] SOP: [%02X] \n", dcc, state->dmr_fid, state->dmr_so);
-    printw ("| TID: [%08i] RID: [%08i]", tg, rd);
+    printw ("| DCC: [%2i] FID: [%02X] SOP: [%02X] \n", dcc, state->dmr_fid, state->dmr_so);
+    printw ("| TID: [%8i] RID: [%8i]", tg, rd);
     //does this need to be in DATA type?
     /*
     if(state->dmr_so & 0x80)
@@ -598,23 +598,31 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| #%d %s ", j, SyncTypes[call_matrix[9-j][0]]);
     if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
     {
-      printw ("RAN [%02d] ", call_matrix[9-j][1]);
-      printw ("TG [%04d] ", call_matrix[9-j][4]);
+      printw ("RAN [%2d] ", call_matrix[9-j][1]);
+      printw ("TG [%4d] ", call_matrix[9-j][4]);
+      printw ("RID [%4d] ", call_matrix[9-j][2]);
     }
     if (lls == 0 || lls == 1 || lls == 12 || lls == 13 || lls == 10 || lls == 11 ) //P25 P1 and DMR
     {
-      printw ("TID [%08d] ", call_matrix[9-j][1]);
+      printw ("TID [%8d] ", call_matrix[9-j][1]);
+      printw ("RID [%8d] ", call_matrix[9-j][2]);
+    }
+    if (lls == 20 || lls == 21 || lls == 22 || lls == 23 ||lls == 24 || lls == 25 || lls == 26 || lls == 27) //dPMR
+    {
+      printw ("TID [%8d] ", call_matrix[9-j][1]);
+      printw ("RID [%8d] ", call_matrix[9-j][2]);
+      printw ("DCC [%2d] ", call_matrix[9-j][4]);
     }
 
-    printw ("RID [%08d] ", call_matrix[9-j][2]);
+    //printw ("RID [%08d] ", call_matrix[9-j][2]);
     //printw ("S %d - ", call_matrix[j][3]);
     if (call_matrix[9-j][0] == 0 || call_matrix[9-j][0] == 1) //P25P1 Voice
     {
-      printw ("NAC [0x%03X] ", call_matrix[9-j][4]);
+      printw ("NAC [0x%3X] ", call_matrix[9-j][4]);
     }
     if (call_matrix[9-j][0] == 12 || call_matrix[9-j][0] == 13 || call_matrix[9-j][0] == 10 || call_matrix[9-j][0] == 11 ) //DMR Voice Types
     {
-      printw ("DCC [%02d] ", call_matrix[9-j][4]);
+      printw ("DCC [%2d] ", call_matrix[9-j][4]);
     }
     printw ("%d secs ago\n", time(NULL) - call_matrix[9-j][5]);
    }

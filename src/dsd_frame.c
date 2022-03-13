@@ -609,7 +609,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
       if (opts->errorbars == 1)
         {
           printFrameInfo (opts, state);
-          fprintf (stderr," duid:%s *Unknown DUID*\n", duid);
+          //fprintf (stderr," duid:%s *Unknown DUID*\n", duid); //prints on dPMR frame 3
+          fprintf (stderr, "\n"); //prints on dPMR frame 3
         }
     }
 }
