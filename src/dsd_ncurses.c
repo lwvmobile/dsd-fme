@@ -31,12 +31,13 @@
 int reset = 0;
 char c; //getch key
 int tg; //last tg
+int tgn;
 int rd; //last rid
 int rn; //last ran
 int nc; //nac
 int src; //last rid? double?
 int lls = -1; //last last sync type
-int dcc = 0; //initialize with 0 to prevent core dump
+int dcc = -1; //initialize with 0 to prevent core dump
 int i = 0;
 char * s0last = "     ";
 char * s1last = "     ";
@@ -53,7 +54,7 @@ char * FM_bannerN[9] = {
   "https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
 };
 
-char * SyncTypes[20] = {
+char * SyncTypes[30] = {
   "+P25P1",
   "-P25P1",
   "+X2TDMA DATA",
@@ -73,7 +74,15 @@ char * SyncTypes[20] = {
   "+NXDN DATA",        //16
   "-NXDN DATA",    //17
   "+DSTAR HD",
-  "-DSTAR HD"
+  "-DSTAR HD",
+  "+dPMR",
+  "+dPMR",
+  "+dPMR",
+  "+dPMR",
+  "-dPMR",
+  "-dPMR",
+  "-dPMR",
+  "-dPMR"
 
 };
 
@@ -180,14 +189,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][1] = rn;
     call_matrix[9][2] = src;
     call_matrix[9][3] = 0;
-    call_matrix[9][4] = 0;
+    call_matrix[9][4] = tgn;
     call_matrix[9][5] = time(NULL);
 
   }
 
   //if (state->dmr_color_code != dcc && (lls == 11 || lls == 13 || lls == 10 || lls == 12) ) //DMR Voice + last two is data
   //if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR
-  if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 12 || lls == 13) ) //DMR
+  if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 12 || lls == 13) ) //DMR, needs work
   {
     //dcc = state->dmr_color_code;
     for (short int k = 0; k < 9; k++)
@@ -244,7 +253,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_in_type == 3)
   {
-    printw ("| RTL2838 Device #[%d]", opts->rtl_dev_index);
+    printw ("| RTL2838UHIDIR Device #[%d]", opts->rtl_dev_index);
     printw (" Gain [%i] dB -", opts->rtl_gain_value);
     printw (" Squelch [%i]", opts->rtl_squelch_level);
     printw (" VFO [%i] kHz\n", opts->rtl_bandwidth);
@@ -270,12 +279,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (state->carrier == 1){ //figure out method that will tell me when is active and when not active, maybe carrier but this doesn't print anyways unless activity
     attron(COLOR_PAIR(3));
     level = (int) state->max / 164; //only update on carrier present
-    reset = 1;
+    //reset = 1;
   }
   if (state->carrier == 0 && opts->reset_state == 1 && reset == 1)
   {
-    resetState (state);
-    reset = 0;
+    //resetState (state);
+    //reset = 0;
   }
 
 
@@ -287,6 +296,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
 
   printw ("--Call Info-------------------------------------------------------------------\n");
+  //NXDN Ciper Types
+  //switch(CipherType)
+  //{
+  //  case 0:  Ptr = "";          break;  /* Non-ciphered mode / clear call */
+  //  case 1:  Ptr = "Scrambler"; break;
+  //  case 2:  Ptr = "DES";       break;
+  //  case 3:  Ptr = "AES";       break;
+  //  default: Ptr = "Unknown Cipher Type"; break;
+  //}
+
   if (state->lastsynctype != -1) //not sure if this will be okay
   {
     lls = state->lastsynctype;
@@ -294,44 +313,94 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (state->nxdn_last_rid > 0 && state->nxdn_last_rid != src);
   {
     src = state->nxdn_last_rid;
-    //rn = state->nxdn_last_ran;
   }
   if (state->nxdn_last_ran > -1 && state->nxdn_last_ran != rn);
   {
-    //src = state->nxdn_last_rid;
     rn = state->nxdn_last_ran;
   }
+  if (state->nxdn_last_tg > 0 && state->nxdn_last_tg != tgn);
+  {
+    tgn = state->nxdn_last_tg;
+  }
 
-  if (state->dmr_color_code > 0 && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR, DCC only carried on Data?
+  //if (state->dmr_color_code > 0 && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR, DCC only carried on Data?
+  //if (state->color_code > -1 && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR, DCC only carried on Data?
+  if (state->color_code_ok && (lls == 12 || lls == 13) ) //DMR, needs work
+
   {
     dcc = state->dmr_color_code;
+    //dcc = state->color_code;
   }
 
-  if (state->lastsrc > 0 && (lls == 12 || lls == 13))
+  if (state->lastsrc > 0 && (lls == 12 || lls == 13 || lls == 0 || lls == 1)) //DMR Voice and P25P1
   {
     rd = state->lastsrc;
+    //opts->p25enc = 0;
   }
 
-  if (state->lasttg > 0 && (lls == 12 || lls == 13))
+  if (state->lasttg > 0 && (lls == 12 || lls == 13 || lls == 0 || lls == 1)) //DMR Voice and P25P1
   {
     tg = state->lasttg;
+    //opts->p25enc = 0;
   }
 
   //if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17) //change this to NXDN syncs later on
   if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
   {
-    //printw ("| RAN: [%02d] \n", state->nxdn_last_ran);
-    printw ("| RAN: [%02d] \n", rn);
-    printw ("| RID: [%d] \n", src); //maybe change to nxdn_last_rid
+    printw ("| RAN: [%2d] ", rn);
+    printw ("TID: [%4d] ", tgn);
+    //printw ("| RID: [%d] \n", src);
+    printw ("RID: [%4d] \n| ALG: [0x%02X] KEY [0x%02X] ", src, state->nxdn_cipher_type, state->nxdn_key);
+    if (state->carrier == 1)
+    {
+      printw("%s ", state->nxdn_call_type);
+      //attron(COLOR_PAIR(4));
+      //printw ("No Encryption ");
+      //attroff(COLOR_PAIR(4));
+      //attron(COLOR_PAIR(3));
+    }
+    if (state->nxdn_cipher_type == 0x1 && state->carrier == 1)
+    {
+      attron(COLOR_PAIR(2));
+      printw ("Scrambler Encryption ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    if (state->nxdn_cipher_type == 0x2 && state->carrier == 1)
+    {
+      attron(COLOR_PAIR(2));
+      printw ("DES Encryption ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    if (state->nxdn_cipher_type == 0x3 && state->carrier == 1)
+    {
+      attron(COLOR_PAIR(2));
+      printw ("AES Encryption ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    if (state->nxdn_cipher_type > 0x3 && state->carrier == 1)
+    {
+      attron(COLOR_PAIR(2));
+      printw ("Unknown Encryption ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    //printw("%s ", state->nxdn_call_type);
+    printw("\n");
+
+
   }
 
   //printw ("Error?: [%i] [%i] \n", state->errs, state->errs2); //what are these?
-
+  /* //wasn't we already doing this twice
   if (state->lasttg > 0 && state->lastsrc > 0)
   {
     tg = state->lasttg;
     rd = state->lastsrc;
   }
+  */
   if (state->nac > 0)
   {
     nc = state->nac;
@@ -340,8 +409,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     //printw("| TID:[%i] | RID:[%i] \n", tg, rd);
     //printw("| NAC: [0x%X] \n", nc);
-    printw("| TID:[%i] RID:[%i] ", tg, rd);
-    printw("NAC: [0x%X] \n", nc);
+    printw("| TID:[%8i] RID:[%8i] ", tg, rd);
+    printw("NAC: [0x%3X] \n", nc);
     printw("| ALG: [0x%02X] ", state->payload_algid);
     printw("KEY: [0x%04X] ", state->payload_keyid);
     //printw("MFG: [0x%X] ", state->payload_mfid); //no way of knowing if this is accurate info yet
@@ -358,9 +427,67 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //if (state->lastsynctype == 12 || state->lastsynctype == 13)  //DMR Voice Types
   if (lls == 12 || lls == 13)  //DMR Voice Types
   {
-    printw ("| DCC: [%i]\n", dcc);
+    //printw ("| DCC: [%i] FID: [%02X]\n", dcc, state->dmr_fid);
+    //attron(COLOR_PAIR(3));
+    printw ("| DCC: [%2i] FID: [%02X] SOP: [%02X] ", dcc, state->dmr_fid, state->dmr_so);
+    if(state->payload_mi == 0 && state->dmr_so & 0x40)
+    {
+      attron(COLOR_PAIR(5));
+      printw ("**BP** ");
+      //printw ("0x%X", state->payload_algid);
+      attroff(COLOR_PAIR(5));
+      attron(COLOR_PAIR(3));
+    }
+    if(state->payload_keyid > 0 && state->dmr_so & 0x40)
+    {
+      attron(COLOR_PAIR(5));
+      printw (" ALG: [0x%02X] KEY [0x%02X] MI [0x%08X]", state->payload_algid, state->payload_keyid, state->payload_mi);
+      //printw ("0x%X", state->payload_algid);
+      attroff(COLOR_PAIR(5));
+      attron(COLOR_PAIR(3));
+    }
+    if(state->K > 0 && state->dmr_so & 0x40)
+    {
+      attron(COLOR_PAIR(5));
+      //printw ("K 0x[%12llX]", state->K); //seems to get reset in ncurses for some reason? some bigger issue perhaps? other strange issues occur too with provoice
+      attroff(COLOR_PAIR(5));
+      attron(COLOR_PAIR(3));
+    }
+
+    printw("\n");
+    printw ("| TID: [%8i] RID: [%8i]", tg, rd);
+    if(state->dmr_so & 0x80) //1000 0000 //prints emergency on some amateru DMR repeaters with 0x8E SOP code, need to investigate
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **Emergency** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+
+    if(state->dmr_so & 0x40) //0100 0000
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **ENC** ");
+      //printw ("0x%X", state->payload_algid);
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+      //if (state->K = 0)
+      //{
+        //opts->p25enc = 1; //just testing for now
+      //}
+
+    }
+
+    if(state->dmr_so & 0x30) //0010 0000
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **Private Call** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    printw("\n");
     //printw ("%s ", state->slot0light);
-    printw ("| SLOT 0 ");
+    printw ("| SLOT 1 ");
     if (state->currentslot == 0) //find out how to tell when slot0 has voice
     {
       s0last = "Voice";
@@ -369,7 +496,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("%s ", s0last);
 
     //printw ("%s ", state->slot1light);
-    printw ("SLOT 1 ");
+    printw ("SLOT 2 ");
     if (state->currentslot == 1) //find out how to tell when slot1 has voice
     {
       s1last = "Voice";
@@ -380,11 +507,41 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
 
   //if (state->lastsynctype == 10 || state->lastsynctype == 11)  //DMR Data Types
-  if (lls == 10 || lls == 11)  //DMR Data Types
+  if (lls == 10 || lls == 11 )  //DMR Data Types
   {
-    printw ("| DCC: [%i]\n", dcc);
+    //printw ("| DCC: [%i]\n", dcc);
+    printw ("| DCC: [%2i] FID: [%02X] SOP: [%02X] \n", dcc, state->dmr_fid, state->dmr_so);
+    printw ("| TID: [%8i] RID: [%8i]", tg, rd);
+    //does this need to be in DATA type?
+    /*
+    if(state->dmr_so & 0x80)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **Emergency** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+
+    if(state->dmr_so & 0x40)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **ENC** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+
+    if(state->dmr_so & 0x30)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **Private Call** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    */
+    printw("\n");
+
     //printw ("%s ", state->slot0light);
-    printw ("| SLOT 0 ");
+    printw ("| SLOT 1 ");
     if (state->currentslot == 0) //find out how to tell when slot0 has voice
     {
       s0last = "Data ";
@@ -395,7 +552,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     printw ("%s ", s0last);
     //printw ("%s ", state->slot1light);
-    printw ("SLOT 1 ");
+    printw ("SLOT 2 ");
     if (state->currentslot == 1) //find out how to tell when slot1 has voice
     {
       s1last = "Data ";
@@ -406,6 +563,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     printw ("%s \n", s1last);
   }
+
+  //dPMR
+  if (lls == 20 || lls == 21 || lls == 22 || lls == 23 ||lls == 24 || lls == 25 || lls == 26 || lls == 27)
+  {
+    printw ("| DCC: [%i] ", state->dpmr_color_code);
+    printw ("TID: [%s] RID: [%s] \n", state->dpmr_target_id, state->dpmr_caller_id);
+  }
+
   if (lls != -1) //is there a synctype 0?
   {
     printw ("| %s \n", SyncTypes[lls]);
@@ -434,21 +599,30 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
     {
       printw ("RAN [%2d] ", call_matrix[9-j][1]);
+      printw ("TG [%4d] ", call_matrix[9-j][4]);
+      printw ("RID [%4d] ", call_matrix[9-j][2]);
     }
     if (lls == 0 || lls == 1 || lls == 12 || lls == 13 || lls == 10 || lls == 11 ) //P25 P1 and DMR
     {
-      printw ("TID [%2d] ", call_matrix[9-j][1]);
+      printw ("TID [%8d] ", call_matrix[9-j][1]);
+      printw ("RID [%8d] ", call_matrix[9-j][2]);
+    }
+    if (lls == 20 || lls == 21 || lls == 22 || lls == 23 ||lls == 24 || lls == 25 || lls == 26 || lls == 27) //dPMR
+    {
+      printw ("TID [%8d] ", call_matrix[9-j][1]);
+      printw ("RID [%8d] ", call_matrix[9-j][2]);
+      printw ("DCC [%2d] ", call_matrix[9-j][4]);
     }
 
-    printw ("RID [%4d] ", call_matrix[9-j][2]);
+    //printw ("RID [%08d] ", call_matrix[9-j][2]);
     //printw ("S %d - ", call_matrix[j][3]);
     if (call_matrix[9-j][0] == 0 || call_matrix[9-j][0] == 1) //P25P1 Voice
     {
-      printw ("NAC [0x%X] ", call_matrix[9-j][4]);
+      printw ("NAC [0x%3X] ", call_matrix[9-j][4]);
     }
     if (call_matrix[9-j][0] == 12 || call_matrix[9-j][0] == 13 || call_matrix[9-j][0] == 10 || call_matrix[9-j][0] == 11 ) //DMR Voice Types
     {
-      printw ("DCC [%d] ", call_matrix[9-j][4]);
+      printw ("DCC [%2d] ", call_matrix[9-j][4]);
     }
     printw ("%d secs ago\n", time(NULL) - call_matrix[9-j][5]);
    }

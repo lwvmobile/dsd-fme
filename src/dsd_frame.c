@@ -31,7 +31,7 @@ printFrameInfo (dsd_opts * opts, dsd_state * state)
   level = (int) state->max / 164;
   if (opts->verbose > 0)
     {
-      fprintf (stderr,"inlvl: %2i%% ", level);
+      //fprintf (stderr,"inlvl: %2i%% ", level);
     }
   if (state->nac != 0)
     {
@@ -89,7 +89,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              fprintf (stderr, "inlvl: %2i%% ", level);
+              //fprintf (stderr, "inlvl: %2i%% ", level);
             }
         }
       state->nac = 0;
@@ -112,7 +112,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              fprintf (stderr, "inlvl: %2i%% ", level);
+              //fprintf (stderr, "inlvl: %2i%% ", level);
             }
         }
       state->nac = 0;
@@ -134,7 +134,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              fprintf (stderr,"inlvl: %2i%% ", level);
+              //fprintf (stderr,"inlvl: %2i%% ", level);
             }
         }
       state->nac = 0;
@@ -156,7 +156,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              fprintf (stderr,"inlvl: %2i%% ", level);
+              //fprintf (stderr,"inlvl: %2i%% ", level);
             }
         }
       state->nac = 0;
@@ -179,7 +179,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              fprintf (stderr,"inlvl: %2i%% ", level);
+              //fprintf (stderr,"inlvl: %2i%% ", level);
             }
         }
       if ((state->synctype == 11) || (state->synctype == 12))
@@ -233,7 +233,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
             {
               level = (int) state->max / 164;
-              fprintf (stderr,"inlvl: %2i%% ", level);
+              //fprintf (stderr,"inlvl: %2i%% ", level);
             }
         }
       if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
@@ -244,6 +244,50 @@ processFrame (dsd_opts * opts, dsd_state * state)
       processProVoice (opts, state);
       return;
     }
+    //LEH dPMR
+    else if ((state->synctype == 20) || (state->synctype == 24))
+    {
+      /* dPMR Frame Sync 1 */
+      fprintf(stderr, "dPMR Frame sync 1 ");
+    }
+    else if ((state->synctype == 21) || (state->synctype == 25))
+    {
+      /* dPMR Frame Sync 2 */
+      fprintf(stderr, "dPMR Frame sync 2 ");
+      {
+        //state->rf_mod = GFSK_MODE;
+        state->nac = 0;
+        state->lastsrc = 0;
+        state->lasttg = 0;
+        if (opts->errorbars == 1)
+        {
+          if (opts->verbose > 0)
+          {
+            level = (int) state->max / 164;
+            //fprintf(stderr, "inlvl: %2i%% ", level);
+          }
+        }
+        state->nac = 0;
+        if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
+        {
+          openMbeOutFile (opts, state);
+        }
+        sprintf(state->fsubtype, " VOICE        ");
+        processdPMRvoice (opts, state);
+        return;
+      }
+    }
+    else if ((state->synctype == 22) || (state->synctype == 26))
+    {
+      /* dPMR Frame Sync 3 */
+      fprintf(stderr, "dPMR Frame sync 3 ");
+    }
+    else if ((state->synctype == 23) || (state->synctype == 27))
+    {
+      /* dPMR Frame Sync 4 */
+      fprintf(stderr, "dPMR Frame sync 4 ");
+    }
+    //LEH dPMR
   else
     {
       // Read the NAC, 12 bits
@@ -565,7 +609,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
       if (opts->errorbars == 1)
         {
           printFrameInfo (opts, state);
-          fprintf (stderr," duid:%s *Unknown DUID*\n", duid);
+          //fprintf (stderr," duid:%s *Unknown DUID*\n", duid); //prints on dPMR frame 3
+          fprintf (stderr, "\n"); //prints on dPMR frame 3
         }
     }
 }

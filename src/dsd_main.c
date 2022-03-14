@@ -95,6 +95,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->min = -15000;
   state->center = 0;
   state->err_str[0] = 0;
+  state->err_strR[0] = 0;
   sprintf (state->fsubtype, "              ");
   sprintf (state->ftype, "             ");
   state->errs = 0;
@@ -162,12 +163,13 @@ initOpts (dsd_opts * opts)
   opts->serial_baud = 115200;
   sprintf (opts->serial_dev, "/dev/ttyUSB0");
   opts->resume = 0;
-  opts->frame_dstar = 0;
+  opts->frame_dstar = 1; //was disabled for some reason, make sure there are no false positives
   opts->frame_x2tdma = 1;
   opts->frame_p25p1 = 1;
   opts->frame_nxdn48 = 0;
   opts->frame_nxdn96 = 0;
   opts->frame_dmr = 1;
+  opts->frame_dpmr = 0; //borrow from LEH
   opts->frame_provoice = 0;
   opts->mod_c4fm = 1;
   opts->mod_qpsk = 1;
@@ -190,16 +192,20 @@ initOpts (dsd_opts * opts)
   opts->rtl_bandwidth = 12; //changed recommended default to 12, 24 for ProVoice
   opts->pulse_raw_rate_in   = 48000;
   opts->pulse_raw_rate_out  = 48000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
-  opts->pulse_digi_rate_in  = 24000;
-  opts->pulse_digi_rate_out = 24000; //need to copy this to rtl type in and change rate out to 8000
+  opts->pulse_digi_rate_in  = 48000;
+  opts->pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
   opts->pulse_raw_in_channels   = 1;
   opts->pulse_raw_out_channels  = 1;
-  opts->pulse_digi_in_channels  = 2;
-  opts->pulse_digi_out_channels = 2;
+  opts->pulse_digi_in_channels  = 1; //2
+  opts->pulse_digi_out_channels = 1; //2
 
+  sprintf (opts->output_name, "Auto Detect");
   opts->pulse_flush = 1; //set 0 to flush, 1 for flushed
-  opts->use_ncurses_terminal = 0; //ncurses terminal disabled by default, call with -N
-  opts->payload = 0; //initialize with 0 so can pass == 0 arguments
+  opts->use_ncurses_terminal = 0; 
+  opts->payload = 0;
+
+  opts->EncryptionMode = MODE_UNENCRYPTED;
+  opts->inverted_dpmr = 0;
 }
 
 void
@@ -213,14 +219,23 @@ initState (dsd_state * state)
   memset (state->dibit_buf, 0, sizeof (int) * 200);
   state->repeat = 0;
   state->audio_out_buf = malloc (sizeof (short) * 1000000);
+  state->audio_out_bufR = malloc (sizeof (short) * 1000000);
   memset (state->audio_out_buf, 0, 100 * sizeof (short));
+  memset (state->audio_out_bufR, 0, 100 * sizeof (short));
   state->audio_out_buf_p = state->audio_out_buf + 100;
+  state->audio_out_buf_pR = state->audio_out_buf + 100;
   state->audio_out_float_buf = malloc (sizeof (float) * 1000000);
+  state->audio_out_float_bufR = malloc (sizeof (float) * 1000000);
   memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
+  memset (state->audio_out_float_bufR, 0, 100 * sizeof (float));
   state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
+  state->audio_out_float_buf_pR = state->audio_out_float_bufR + 100;
   state->audio_out_idx = 0;
   state->audio_out_idx2 = 0;
+  state->audio_out_idxR = 0;
+  state->audio_out_idx2R = 0;
   state->audio_out_temp_buf_p = state->audio_out_temp_buf;
+  state->audio_out_temp_buf_pR = state->audio_out_temp_bufR;
   //state->wav_out_bytes = 0;
   state->center = 0;
   state->jitter = -1;
@@ -247,6 +262,7 @@ initState (dsd_state * state)
     }
   state->midx = 0;
   state->err_str[0] = 0;
+  state->err_strR[0] = 0;
   sprintf (state->fsubtype, "              ");
   sprintf (state->ftype, "             ");
   state->symbolcnt = 0;
@@ -296,6 +312,21 @@ initState (dsd_state * state)
 
   state->nxdn_last_ran = -1;
   state->nxdn_last_rid = 0;
+  state->nxdn_last_tg = 0;
+  state->nxdn_cipher_type = 0;
+  state->nxdn_key = 0;
+  sprintf (state->nxdn_call_type, " ");
+
+  state->dpmr_color_code = -1;
+  state->dpmr_caller_id = 0;
+  state->dpmr_target_id = 0;
+
+  state->payload_mi = 0;
+  state->payload_mfid = 0;
+  state->payload_algid = 0;
+  state->payload_keyid = 0;
+
+  state->K = 0;
 
 #ifdef TRACE_DSD
   state->debug_sample_index = 0;
@@ -357,11 +388,12 @@ usage ()
   fprintf (stderr,"  -fa           Auto-detect frame type (default)\n");
   fprintf (stderr,"  -f1           Decode only P25 Phase 1\n");
   fprintf (stderr,"  -fd           Decode only D-STAR\n");
+  fprintf (stderr,"  -fr           Decode only DMR/MOTOTRBO\n");
+  fprintf (stderr,"  -fx           Decode only X2-TDMA\n");
   fprintf (stderr,"  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   fprintf (stderr,"  -fn             Decode only NXDN96* (12.5 kHz)\n");
   fprintf (stderr,"  -fp             Decode only ProVoice*\n");
-  fprintf (stderr,"  -fr           Decode only DMR/MOTOTRBO\n");
-  fprintf (stderr,"  -fx           Decode only X2-TDMA\n");
+  fprintf (stderr,"  -fm             Decode only dPMR*\n");
   fprintf (stderr,"  -l            Disable DMR/MOTOTRBO and NXDN input filtering\n");
   fprintf (stderr,"  -ma           Auto-select modulation optimizations (default)\n");
   fprintf (stderr,"  -mc           Use only C4FM modulation optimizations\n");
@@ -371,6 +403,7 @@ usage ()
   fprintf (stderr,"  -u <num>      Unvoiced speech quality (default=3)\n");
   fprintf (stderr,"  -xx           Expect non-inverted X2-TDMA signal\n");
   fprintf (stderr,"  -xr           Expect inverted DMR/MOTOTRBO signal\n");
+  fprintf (stderr,"  -xd           Expect inverted ICOM dPMR signal\n"); //still need to do this
   fprintf (stderr,"\n");
   fprintf (stderr,"  * denotes frame types that cannot be auto-detected.\n");
   fprintf (stderr,"\n");
@@ -619,10 +652,12 @@ main (int argc, char **argv)
   initOpts (&opts);
   initState (&state);
 
+  InitAllFecFunction(); //HERE
+
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:NWrlZ")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:NWrlZ")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -685,6 +720,11 @@ main (int argc, char **argv)
           sscanf (optarg, "%d", &opts.verbose);
           break;
 
+        case 'K':
+          sscanf (optarg, "%lld", &state.K);
+          state.K = ( ((state.K & 0xFF0F) << 32 ) + (state.K << 16) + state.K );
+          break;
+
         case 'G': //Set rtl device gain
           sscanf (optarg, "%d", &opts.rtl_gain_value); //multiple value by ten to make it consitent with the way rtl_fm really works
           break;
@@ -710,10 +750,19 @@ main (int argc, char **argv)
           break;
 
         case 'W': //monitor_input_audio if no sync
-          opts.monitor_input_audio = 0;
-          //fprintf (stderr,"Monitor Source Audio Enabled (WIP!) Sounds bad.\n");
-          //fprintf (stderr,"Monitor Source Audio may cause decoding issues.\n");
-          fprintf (stderr,"Monitor Source Audio currently disabled in Pulse Audio Builds.\n");
+          opts.monitor_input_audio = 1;
+          fprintf (stderr,"Monitor Source Audio Enabled.\n");
+          //opts.pulse_raw_rate_in   = 48000;
+          //opts.pulse_raw_rate_out  = 48000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
+          //opts.pulse_digi_rate_in  = 48000;
+          //opts.pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
+          //opts.pulse_raw_in_channels   = 1;
+          //opts.pulse_raw_out_channels  = 1;
+          //opts.pulse_digi_in_channels  = 1; //2
+          //opts.pulse_digi_out_channels = 1; //2
+          fprintf (stderr,"  Monitor Source Audio may cause decoding issues.\n");
+          fprintf (stderr,"  Don't Run Monitor Source Audio with Ncurses Terminal.\n");
+          opts.use_ncurses_terminal = 0; //may not set depends on when -N and -W are first and second
           break;
 
         case 'N':
@@ -807,7 +856,9 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0; //turn it on, doesn't work due to symbol rate difference
               opts.frame_nxdn96 = 0; //causes false positives, leave on 0
               opts.frame_dmr = 1;
+              opts.frame_dpmr = 0; //borrow from LEH
               opts.frame_provoice = 0; //turn it on, doesn't work due to symbol rate difference
+              sprintf (opts.output_name, "Auto Detect");
             }
           else if (optarg[0] == 'd')
             {
@@ -817,7 +868,9 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
+              opts.frame_dpmr = 0; //borrow from LEH
               opts.frame_provoice = 0;
+              sprintf (opts.output_name, "D-STAR");
               fprintf (stderr,"Decoding only D-STAR frames.\n");
             }
           else if (optarg[0] == 'x')
@@ -828,7 +881,9 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
+              opts.frame_dpmr = 0; //borrow from LEH
               opts.frame_provoice = 0;
+              sprintf (opts.output_name, "X2-TDMA");
               fprintf (stderr,"Decoding only X2-TDMA frames.\n");
             }
           else if (optarg[0] == 'p')
@@ -839,6 +894,7 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
+              opts.frame_dpmr = 0; //borrow from LEH
               opts.frame_provoice = 1;
               state.samplesPerSymbol = 5;
               state.symbolCenter = 2;
@@ -846,6 +902,7 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 1;
               state.rf_mod = 2;
+              sprintf (opts.output_name, "ProVoice");
               fprintf (stderr,"Setting symbol rate to 9600 / second\n");
               fprintf (stderr,"Enabling only GFSK modulation optimizations.\n");
               fprintf (stderr,"Decoding only ProVoice frames.\n");
@@ -858,11 +915,13 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
+              opts.frame_dpmr = 0; //borrow from LEH
               opts.frame_provoice = 0;
               opts.mod_gfsk = 0;
               opts.mod_c4fm = 1;  //Phase 1 only uses C4FM, right?
               opts.mod_qpsk = 0;
               state.rf_mod = 0; //
+              sprintf (opts.output_name, "P25P1");
               fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
             }
           else if (optarg[0] == 'i')
@@ -873,6 +932,7 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 1;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
+              opts.frame_dpmr = 0; //borrow from LEH
               opts.frame_provoice = 0;
               //I think I've got it to decode on proper modulation now c4fm, not really sure what the difference is in DSD, seems to work either way for some reason
               state.samplesPerSymbol = 20;
@@ -881,6 +941,7 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0; //was 1 with others on zero
               state.rf_mod = 0; //was 2
+              sprintf (opts.output_name, "NXDN48");
               //opts.symboltiming = 2400; //NXDN48 uses 2400 symbol rate
               fprintf (stderr,"Setting symbol rate to 2400 / second\n");
               fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
@@ -894,11 +955,13 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 1;
               opts.frame_dmr = 0;
+              opts.frame_dpmr = 0; //borrow from LEH
               opts.frame_provoice = 0;
               opts.mod_c4fm = 1; //was 0
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0; //was 1
               state.rf_mod = 0; //was 2
+              sprintf (opts.output_name, "NXDN96");
               fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
               fprintf (stderr,"Decoding only NXDN 9600 baud frames.\n");
             }
@@ -910,13 +973,42 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 1;
+              opts.frame_dpmr = 0; //borrow from LEH
               opts.frame_provoice = 0;
               opts.mod_c4fm = 1; //just a test
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0; //
               state.rf_mod = 0;  //
+              sprintf (opts.output_name, "DMR/MOTOTRBO");
               fprintf (stderr,"Decoding only DMR/MOTOTRBO frames.\n");
             }
+          else if (optarg[0] == 'm')
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_dpmr = 1;
+            state.samplesPerSymbol = 20; //same as NXDN48 - 20
+            state.symbolCenter = 10; //same as NXDN48 - 10
+            opts.mod_c4fm = 1;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 0;
+            state.rf_mod = 0; //garbage value to keep jitter in check?
+            sprintf (opts.output_name, "dPMR");
+            //opts.pulse_digi_rate_in  = 48000;
+            //opts.pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
+            //opts.pulse_digi_in_channels  = 1;
+            //opts.pulse_digi_out_channels = 1;
+            //opts.inverted_dpmr = 1;
+            fprintf(stderr, "Setting symbol rate to 2400 / second\n");
+            //fprintf(stderr, "Enabling only GFSK modulation optimizations.\n");
+            fprintf(stderr, "Enabling only C4FM modulation optimizations.\n");
+            fprintf(stderr, "Decoding only dPMR (4800 baud frames).\n");
+          }
           break;
         case 'm':
           if (optarg[0] == 'a')
@@ -974,6 +1066,11 @@ main (int argc, char **argv)
               opts.inverted_dmr = 1;
               fprintf (stderr,"Expecting inverted DMR/MOTOTRBO signals.\n");
             }
+          else if (optarg[0] == 'd')
+            {
+              opts.inverted_dpmr = 1;
+              fprintf (stderr, "Expecting inverted ICOM dPMR signals.\n");
+            }
           break;
         case 'A':
           sscanf (optarg, "%i", &opts.mod_threshold);
@@ -1007,6 +1104,7 @@ main (int argc, char **argv)
           opts.playfiles = 1;
           opts.errorbars = 0;
           opts.datascope = 0;
+          sprintf (opts.output_name, "MBE Playback");
           state.optind = optind;
           break;
         case 'l':

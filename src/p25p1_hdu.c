@@ -222,7 +222,7 @@ processHDU(dsd_opts* opts, dsd_state* state)
   char hex[6];
   int status_count;
   int status;
-
+  unsigned long long int mihex1, mihex2, mihex3;
   char hex_data[20][6];    // Data in hex-words (6 bit words). A total of 20 hex words.
   char hex_parity[16][6];  // Parity of the data, again in hex-word format. A total of 16 parity hex words.
 
@@ -461,14 +461,17 @@ processHDU(dsd_opts* opts, dsd_state* state)
 
     state->payload_algid = algidhex;
     state->payload_keyid = kidhex;
+
+    mihex1 = (unsigned long long int)ConvertBitIntoBytes(&mi[0], 32);
+    mihex2 = (unsigned long long int)ConvertBitIntoBytes(&mi[32], 32);
+    mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
   }
 
-  //if (opts->payload == 1)
-  if (opts->payload == 1 && state->errs == 0)
+  //if (state->errs == 0 && algidhex != 0x80)
+  if (opts->payload == 1)
   {
-    //fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X\n", algidhex, kidhex);
-    fprintf (stderr, "HDU ALG ID: 0x%X KEY ID: 0x%X MI: %s \n", algidhex, kidhex, mi);
-    //fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X MI: 0x%016X%02X\n", algidhex, kidhex, mihex1, mihex2);
+    //fprintf (stderr, " HDU  ALG ID: 0x%X KEY ID: 0x%X MI: %s \n", algidhex, kidhex, mi);
+    fprintf (stderr, " HDU  ALG ID: 0x%X KEY ID: 0x%X MI: 0x%08llX%08llX%02llX\n", algidhex, kidhex, mihex1, mihex2, mihex3);
   }
 
   if (opts->p25enc == 1 && opts->payload == 0)

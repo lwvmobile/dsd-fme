@@ -72,7 +72,8 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   {
     fprintf(stderr, "\n");
   }
-  for (i = 0; i < 6; i++)
+  //for (i = 0; i < 6; i++)
+  for (i = 0; i < 7; i++) //using 7 seems to break older amb files where it was 6, need to test 7 on 7 some more
     {
       b = 0;
 
@@ -103,12 +104,17 @@ readImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
 {
 
   int i, j, k;
-  unsigned char b;
+  unsigned char b, x;
 
   state->errs2 = fgetc (opts->mbe_in_f);
   state->errs = state->errs2;
 
+
   k = 0;
+  if (opts->payload == 1) //make opt variable later on to toggle this
+  {
+    fprintf(stderr, "\n");
+  }
   for (i = 0; i < 11; i++)
     {
       b = fgetc (opts->mbe_in_f);
@@ -119,10 +125,24 @@ readImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
       for (j = 0; j < 8; j++)
         {
           imbe_d[k] = (b & 128) >> 7;
+
+          x = x << 1;
+          x |= ((b & 0x80) >> 7);
+
           b = b << 1;
           b = b & 255;
           k++;
         }
+        //new printout on reading MBE files back in
+        if (opts->payload == 1) //make opt variable later on to toggle this
+        {
+          fprintf (stderr, "[%02X] ", x);
+        }
+        //
+    }
+    if (opts->payload == 1)
+    {
+      fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2); //not sure that errs here are legit values
     }
   return (0);
 }
@@ -132,13 +152,18 @@ readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
 {
 
   int i, j, k;
-  unsigned char b;
+  unsigned char b, x;
 
   state->errs2 = fgetc (opts->mbe_in_f);
   state->errs = state->errs2;
 
   k = 0;
-  for (i = 0; i < 6; i++)
+  if (opts->payload == 1) //make opt variable later on to toggle this
+  {
+    fprintf(stderr, "\n");
+  }
+  //for (i = 0; i < 6; i++)
+  for (i = 0; i < 7; i++) //breaks backwards compatablilty with 6 files
     {
       b = fgetc (opts->mbe_in_f);
       if (feof (opts->mbe_in_f))
@@ -148,10 +173,22 @@ readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
       for (j = 0; j < 8; j++)
         {
           ambe_d[k] = (b & 128) >> 7;
+
+          x = x << 1;
+          x |= ((b & 0x80) >> 7);
+
           b = b << 1;
           b = b & 255;
           k++;
         }
+        if (opts->payload == 1) //make opt variable later on to toggle this
+        {
+          fprintf (stderr, "[%02X] ", x);
+        }
+    }
+    if (opts->payload == 1)
+    {
+      fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
     }
   b = fgetc (opts->mbe_in_f);
   ambe_d[48] = (b & 1);
@@ -247,7 +284,7 @@ closeMbeOutFile (dsd_opts * opts, dsd_state * state)
       {
         sprintf (newfilename, "%s-nac%X-tg%i%s", datestr, state->nac, talkgroup, ext);
       }
-      
+
       sprintf (new_path, "%s%s", opts->mbe_out_dir, newfilename);
 #ifdef _WIN32
       sprintf (shell, "move %s %s", opts->mbe_out_path, new_path);
