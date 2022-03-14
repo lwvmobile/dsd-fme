@@ -734,12 +734,10 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   }
 
   /* Print the "Call Type" */
-  //fprintf(stderr, "%s - ", NXDN_Call_Type_To_Str(CallType));
   fprintf(stderr, "\n %s - ", NXDN_Call_Type_To_Str(CallType)); //line break and 1 space
-  sprintf (state->nxdn_call_type, NXDN_Call_Type_To_Str(CallType)); //fix warning below
+  //sprintf (state->nxdn_call_type, NXDN_Call_Type_To_Str(CallType)); //fix warning below
   //warning: format not a string literal and no format arguments [-Wformat-security]
-
-  //state->nxdn_call_type = NXDN_Call_Type_To_Str(CallType);
+  sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType)); //fix warning below
 
   /* Print the "Voice Call Option" */
   NXDN_Voice_Call_Option_To_Str(VoiceCallOption, DuplexMode, TransmissionMode);

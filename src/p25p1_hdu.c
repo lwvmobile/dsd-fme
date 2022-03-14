@@ -468,7 +468,7 @@ processHDU(dsd_opts* opts, dsd_state* state)
   }
 
   //if (state->errs == 0 && algidhex != 0x80)
-  if (opts->payload == 1 && state->errs == 0)
+  if (opts->payload == 1)
   {
     //fprintf (stderr, " HDU  ALG ID: 0x%X KEY ID: 0x%X MI: %s \n", algidhex, kidhex, mi);
     fprintf (stderr, " HDU  ALG ID: 0x%X KEY ID: 0x%X MI: 0x%08llX%08llX%02llX\n", algidhex, kidhex, mihex1, mihex2, mihex3);

@@ -350,7 +350,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| RAN: [%02d] ", rn);
     printw ("TID: [%04d] ", tgn);
     //printw ("| RID: [%d] \n", src);
-    printw ("RID: [%04d] \n| ALG: 0x[%02X] KEY 0x[%02X] ", src, state->nxdn_cipher_type, state->nxdn_key);
+    printw ("RID: [%04d] \n| ALG: [0x%02X] KEY [0x%02X] ", src, state->nxdn_cipher_type, state->nxdn_key);
     if (state->carrier == 1)
     {
       printw("%s ", state->nxdn_call_type);
