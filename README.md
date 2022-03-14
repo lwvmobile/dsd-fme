@@ -4,14 +4,14 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 ![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)
 
 ## Example Usage - NCurses Terminal and Log Console to log file
-`./dsd -fa -N 2> voice.log`
+`./dsd -N 2> voice.log`
 
 in second terminal, same folder, run:
 
 `tail -n 40 -f voice.log`
 
 ## Example Usage - RTL
-`dsd -fi -i rtl -o pulse -c 154.9875M -P -2 -D 1 -G 36 -L 70 -U 6021 -Y 12`
+`dsd -fi -i rtl -c 154.9875M -P -2 -D 1 -G 36 -L 70 -U 6021 -Y 12`
 
 ```
 -i rtl to use rtl_fm (default is -i pulse for pulse audio)
@@ -34,7 +34,6 @@ in second terminal, same folder, run:
 
 -Y 12 set rtl VFO bandwidth in kHz, (default = 48)(6, 8, 12, 16, 24, 48)
 
--W Monitor Source Audio (WIP!) (Currently disabled on PulseAudio branch)
 ```
 
 ### Note
@@ -47,29 +46,34 @@ in second terminal, same folder, run:
 ```
 Yes, it really is this simple now
 
--fa Auto-detect frame type
+-fa Auto-detect frame type, is default
 
-sans NXDN or Provoice, need to specify -fp, -fi, or -fn
-pulse audio are set as default input and output methods
+sans NXDN, dPMR, or Provoice, need to specify -fp, -fd, -fi, or -fn respectively
+pulse audio is set as default input and output methods
 
 ```
 ## Example STDIN UDP from GQRX or SDR++, output to Pulse Audio, and save wav files
 `socat stdio udp-listen:7355 | dsd -fi -i - -o pulse -w nxdn.wav`
+
+## Example Usage - Extra Information for Academic Study and Logging
+`dsd -d ./MBE/ -Z -pu 2>> voice.log`
+
+in second terminal, same folder, run:
+
+`tail -n 40 -f voice.log`
 
 ## Roadmap
 The Current list of objectives include:
 
 1. ~~Random Tinkering~~ More Random Tinkering
 
-2. Implemented Pulse Audio and ~~Remove PortAudio and~~ Remove OSS, including SOLARIS/APPLE/BSD methods, and Retain PortAudio as Optional (need to re-enable in CMakeLists.txt file)
+2. ~~Implemented Pulse Audio~~ Remove PortAudio, improve Pulse Audio for stereo output and channel/slot separation.
 
-3. Improve NXDN and DMR support 
+3. ~~Improve NXDN and DMR support~~ Continue to improve ~~NXDN and DMR~~ all data and voice decoding. 
 
-4. More Concise Printouts - Ncurses
+4. ~~More Concise Printouts - Ncurses~~
 
-5. ~~Improve Monitor Source Audio (if #2 on list is up and working)~~ Not currently playing well with Pulse Audio, need to re-evaluate
-
-6. ~~Make simple to use installer script.~~ Working on script now, also have full build and install guide down below
+5. ~~Make simple to use installer script.~~ 
 
 ## How to clone, check out, and build this branch
 
@@ -84,7 +88,7 @@ chmod +x install.sh
 ```
 
 ### Ubuntu 18.04/LM19/Buster Note:
-Or you can elect to manually follow the steps down below. Do NOT Manually build and install ITPP 4.3.1 on older systems, it is currently not wanting to build on Ubuntu 18.04 and Linux Mint 19. Install it from the repository instead.
+The above install.sh should now function on older system types. You can elect to manually follow the steps down below. Do NOT Manually build and install ITPP 4.3.1 on older systems, it is currently not wanting to build on Ubuntu 18.04 and Linux Mint 19. Install it from the repository instead.
 
 ## Manual Install
 
