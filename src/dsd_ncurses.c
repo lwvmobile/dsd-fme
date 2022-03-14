@@ -347,10 +347,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17) //change this to NXDN syncs later on
   if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
   {
-    printw ("| RAN: [%02d] ", rn);
-    printw ("TID: [%04d] ", tgn);
+    printw ("| RAN: [%2d] ", rn);
+    printw ("TID: [%4d] ", tgn);
     //printw ("| RID: [%d] \n", src);
-    printw ("RID: [%04d] \n| ALG: [0x%02X] KEY [0x%02X] ", src, state->nxdn_cipher_type, state->nxdn_key);
+    printw ("RID: [%4d] \n| ALG: [0x%02X] KEY [0x%02X] ", src, state->nxdn_cipher_type, state->nxdn_key);
     if (state->carrier == 1)
     {
       printw("%s ", state->nxdn_call_type);
@@ -456,7 +456,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     printw("\n");
     printw ("| TID: [%8i] RID: [%8i]", tg, rd);
-    if(state->dmr_so & 0x80) //1000 0000
+    if(state->dmr_so & 0x80) //1000 0000 //prints emergency on some amateru DMR repeaters with 0x8E SOP code, need to investigate
     {
       attron(COLOR_PAIR(2));
       printw (" **Emergency** ");
