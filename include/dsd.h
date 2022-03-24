@@ -478,6 +478,9 @@ typedef struct
   unsigned int nxdn_cipher_type;
   unsigned int nxdn_key;
   char nxdn_call_type[1024];
+  char dmr_callsign[4][99]; //plenty of room in case of overflow;
+  char dmr_lrrp[6][9999];
+
   //borrow from LEH
   NxdnSacchRawPart_t NxdnSacchRawPart[4];
   NxdnFacch1RawPart_t NxdnFacch1RawPart[2];
@@ -506,6 +509,10 @@ typedef struct
   int directmode;
   TimeSlotVoiceSuperFrame_t TS1SuperFrame;
   TimeSlotVoiceSuperFrame_t TS2SuperFrame;
+
+  char dmr_branding[25];
+  uint8_t  dmr_12_rate_sf[36]; //going three frames deep
+  uint8_t  dmr_34_rate_sf[54]; //going three frames deep
 
   //LEH dPMR stuff
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
@@ -776,7 +783,17 @@ uint32_t ComputeAndCorrectFullLinkControlCrc(uint8_t * FullLinkControlDataBytes,
 uint8_t ComputeCrc5Bit(uint8_t * DMRData);
 uint8_t * DmrAlgIdToStr(uint8_t AlgID);
 uint8_t * DmrAlgPrivacyModeToStr(uint32_t PrivacyMode);
+
 void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+void Process1Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98], uint8_t syncdata[48], uint8_t SlotType[20]);
+void ProcessMBCData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+void ProcessMBChData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+void ProcessWTFData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+
 
 void Hamming_7_4_init();
 void Hamming_7_4_encode(unsigned char *origBits, unsigned char *encodedBits);
@@ -827,6 +844,17 @@ void open_rtlsdr_stream(dsd_opts *opts);
 void cleanup_rtlsdr_stream();
 void get_rtlsdr_sample(int16_t *sample);
 void rtlsdr_sighandler();
+
+//TRELLIS
+void CDMRTrellisTribitsToBits(const unsigned char* tribits, unsigned char* payload);
+unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* tribits);
+bool CDMRTrellisFixCode(unsigned char* points, unsigned int failPos, unsigned char* payload);
+void CDMRTrellisDeinterleave(const unsigned char* data, signed char* dibits);
+void CDMRTrellisDibitsToPoints(const signed char* dibits, unsigned char* points);
+void CDMRTrellisPointsToDibits(const unsigned char* points, signed char* dibits);
+void CDMRTrellisBitsToTribits(const unsigned char* payload, unsigned char* tribits);
+bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload);
+
 #ifdef __cplusplus
 }
 #endif

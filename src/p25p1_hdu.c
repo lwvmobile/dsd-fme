@@ -453,14 +453,16 @@ processHDU(dsd_opts* opts, dsd_state* state)
   status = getDibit (opts, state);
   //TODO: Do something useful with the status bits...
 
-  if (state->carrier == 1 && state->errs == 0) //only update when carrier is present, and no errors??
-  //if (state->carrier == 1)
+  //if (state->carrier == 1 && state->errs == 0) //only update when carrier is present, and no errors??
+  if (state->carrier == 1)
   {
     algidhex = strtol (algid, NULL, 2);
     kidhex = strtol (kid, NULL, 2);
 
     state->payload_algid = algidhex;
     state->payload_keyid = kidhex;
+    //state->payload_mfid = ConvertBitIntoBytes(&mfid[0], 7);
+    //state->payload_mfid = strtol (mfid, NULL, 2);
 
     mihex1 = (unsigned long long int)ConvertBitIntoBytes(&mi[0], 32);
     mihex2 = (unsigned long long int)ConvertBitIntoBytes(&mi[32], 32);
@@ -469,9 +471,10 @@ processHDU(dsd_opts* opts, dsd_state* state)
 
   //if (state->errs == 0 && algidhex != 0x80)
   if (opts->payload == 1)
+  //if (opts->payload == 1 && state->errs == 0)
   {
     //fprintf (stderr, " HDU  ALG ID: 0x%X KEY ID: 0x%X MI: %s \n", algidhex, kidhex, mi);
-    fprintf (stderr, " HDU  ALG ID: 0x%X KEY ID: 0x%X MI: 0x%08llX%08llX%02llX\n", algidhex, kidhex, mihex1, mihex2, mihex3);
+    fprintf (stderr, " HDU  MFID: 0x%02X ALG ID: 0x%X KEY ID: 0x%X MI: 0x%08llX%08llX%02llX\n", state->payload_mfid, algidhex, kidhex, mihex1, mihex2, mihex3);
   }
 
   if (opts->p25enc == 1 && opts->payload == 0)

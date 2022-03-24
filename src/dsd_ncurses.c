@@ -146,9 +146,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (state->carrier == 0) //reset these to 0 when no carrier
   {
-    //state->payload_algid = 0;
-    //state->payload_keyid = 0;
-    //state->payload_mfid = 0;
+    state->payload_algid = 0;
+    state->payload_keyid = 0;
+    //state->payload_mfid  = 0;
+    state->payload_mi    = 0;
+
+    state->nxdn_key         = 0;
+    state->nxdn_cipher_type = 0;
+
+    sprintf(state->dmr_branding, " ");
   }
 
   if ( (lls == 14 || lls == 15) && (time(NULL) - call_matrix[9][5] > 5) && state->carrier == 1) //honestly have no idea how to do this for pV, just going time based? only update on carrier == 1.
@@ -198,6 +204,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR
   if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 12 || lls == 13) ) //DMR, needs work
   {
+    //reset amateur signs on radio id change
+    for (short i = 0; i < 5; i++)
+    {
+      sprintf (state->dmr_callsign[i], "");
+    }
     //dcc = state->dmr_color_code;
     for (short int k = 0; k < 9; k++)
     {
@@ -279,12 +290,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (state->carrier == 1){ //figure out method that will tell me when is active and when not active, maybe carrier but this doesn't print anyways unless activity
     attron(COLOR_PAIR(3));
     level = (int) state->max / 164; //only update on carrier present
-    //reset = 1;
+    reset = 1;
   }
   if (state->carrier == 0 && opts->reset_state == 1 && reset == 1)
   {
-    //resetState (state);
-    //reset = 0;
+    resetState (state);
+    reset = 0;
   }
 
 
@@ -335,13 +346,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (state->lastsrc > 0 && (lls == 12 || lls == 13 || lls == 0 || lls == 1)) //DMR Voice and P25P1
   {
     rd = state->lastsrc;
-    //opts->p25enc = 0;
+    opts->p25enc = 0;
   }
 
   if (state->lasttg > 0 && (lls == 12 || lls == 13 || lls == 0 || lls == 1)) //DMR Voice and P25P1
   {
     tg = state->lasttg;
-    //opts->p25enc = 0;
+    opts->p25enc = 0;
   }
 
   //if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17) //change this to NXDN syncs later on
@@ -411,10 +422,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //printw("| NAC: [0x%X] \n", nc);
     printw("| TID:[%8i] RID:[%8i] ", tg, rd);
     printw("NAC: [0x%3X] \n", nc);
-    printw("| ALG: [0x%02X] ", state->payload_algid);
-    printw("KEY: [0x%04X] ", state->payload_keyid);
-    //printw("MFG: [0x%X] ", state->payload_mfid); //no way of knowing if this is accurate info yet
-    if (state->payload_algid != 0x80 && state->carrier == 1)
+    printw("| ALG:[0x%02X] ", state->payload_algid);
+    printw("    KEY:[0x%04X] ", state->payload_keyid);
+    printw(" MFID: [0x%02X] ", state->payload_mfid); //no way of knowing if this is accurate info yet
+    if (state->payload_algid != 0x80 && state->payload_algid != 0x0 && state->carrier == 1)
     {
       attron(COLOR_PAIR(2));
       printw("**ENC**");
@@ -430,7 +441,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //printw ("| DCC: [%i] FID: [%02X]\n", dcc, state->dmr_fid);
     //attron(COLOR_PAIR(3));
     printw ("| DCC: [%2i] FID: [%02X] SOP: [%02X] ", dcc, state->dmr_fid, state->dmr_so);
-    if(state->payload_mi == 0 && state->dmr_so & 0x40)
+    //if(state->payload_mi == 0 && state->dmr_so & 0x40)
+    if(state->payload_mi == 0 && state->dmr_so == 0x40)
     {
       attron(COLOR_PAIR(5));
       printw ("**BP** ");
@@ -438,7 +450,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attroff(COLOR_PAIR(5));
       attron(COLOR_PAIR(3));
     }
-    if(state->payload_keyid > 0 && state->dmr_so & 0x40)
+    //if(state->payload_keyid > 0 && state->dmr_so & 0x40)
+    if(state->payload_keyid > 0 && state->dmr_so == 0x40)
     {
       attron(COLOR_PAIR(5));
       printw (" ALG: [0x%02X] KEY [0x%02X] MI [0x%08X]", state->payload_algid, state->payload_keyid, state->payload_mi);
@@ -446,7 +459,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attroff(COLOR_PAIR(5));
       attron(COLOR_PAIR(3));
     }
-    if(state->K > 0 && state->dmr_so & 0x40)
+    //if(state->K > 0 && state->dmr_so & 0x40)
+    if(state->K > 0 && state->dmr_so == 0x40)
     {
       attron(COLOR_PAIR(5));
       //printw ("K 0x[%12llX]", state->K); //seems to get reset in ncurses for some reason? some bigger issue perhaps? other strange issues occur too with provoice
@@ -455,8 +469,19 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
 
     printw("\n");
-    printw ("| TID: [%8i] RID: [%8i]", tg, rd);
-    if(state->dmr_so & 0x80) //1000 0000 //prints emergency on some amateru DMR repeaters with 0x8E SOP code, need to investigate
+    printw ("| TID: [%8i]     RID: [%8i]", tg, rd);
+
+    if (1 == 1) //figure out what to put here later on for amateur call signs
+    {
+      printw (" [");
+      for (short i = 0; i < 5; i++)
+      {
+        printw ("%s", state->dmr_callsign[i]);
+      }
+      printw ("]");
+    }
+    //if(state->dmr_so & 0x80) //1000 0000 //prints emergency on some amateru DMR repeaters with 0x8E SOP code, need to investigate
+    if(state->dmr_so == 0x80)
     {
       attron(COLOR_PAIR(2));
       printw (" **Emergency** ");
@@ -464,21 +489,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
 
-    if(state->dmr_so & 0x40) //0100 0000
+    //if(state->dmr_so & 0x40) //0100 0000
+    if(state->dmr_so == 0x40) //0100 0000
     {
       attron(COLOR_PAIR(2));
       printw (" **ENC** ");
       //printw ("0x%X", state->payload_algid);
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
-      //if (state->K = 0)
-      //{
+      if (state->K == 0)
+      {
         //opts->p25enc = 1; //just testing for now
-      //}
+      }
 
     }
 
-    if(state->dmr_so & 0x30) //0010 0000
+    //if(state->dmr_so & 0x30) //0010 0000
+    if(state->dmr_so == 0x30) //0010 0000
     {
       attron(COLOR_PAIR(2));
       printw (" **Private Call** ");
@@ -511,7 +538,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     //printw ("| DCC: [%i]\n", dcc);
     printw ("| DCC: [%2i] FID: [%02X] SOP: [%02X] \n", dcc, state->dmr_fid, state->dmr_so);
-    printw ("| TID: [%8i] RID: [%8i]", tg, rd);
+    printw ("| TID: [%8i]     RID: [%8i]", tg, rd);
+
+    if (1 == 1) //figure out what to put here later on for amateur call signs
+    {
+      printw (" [");
+      for (short i = 0; i < 5; i++)
+      {
+        printw ("%s", state->dmr_callsign[i]);
+      }
+      printw ("]");
+    }
     //does this need to be in DATA type?
     /*
     if(state->dmr_so & 0x80)
@@ -562,6 +599,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       }
     }
     printw ("%s \n", s1last);
+    /*
+    if (state->dmr_lrrp[3] != NULL)
+    {
+      printw ("| LRRP -");
+      printw (" %s", state->dmr_lrrp[3]);
+      printw (" %s", state->dmr_lrrp[1]);
+      printw (" %s\n", state->dmr_lrrp[2]);
+    }
+    */
   }
 
   //dPMR
@@ -573,7 +619,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (lls != -1) //is there a synctype 0?
   {
-    printw ("| %s \n", SyncTypes[lls]);
+    printw ("| %s ", SyncTypes[lls]);
+    printw ("%s", state->dmr_branding);
+    printw ("\n");
   }
   printw ("------------------------------------------------------------------------------\n");
   //colors off
