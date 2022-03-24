@@ -113,7 +113,7 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
         fprintf(stderr, "%s", state->err_str);
       }
 
-      //state->debug_audio_errors += *errs2;
+      state->debug_audio_errors += *errs2;
       //state->debug_audio_errors += *errs2R;
 
       processAudio(opts, state);

@@ -327,10 +327,17 @@ initState (dsd_state * state)
   state->payload_keyid = 0;
 
   sprintf (state->dmr_branding, " ");
-  sprintf (state->dmr_callsign[0], "");
-  sprintf (state->dmr_callsign[1], "");
-  sprintf (state->dmr_callsign[2], "");
-  sprintf (state->dmr_callsign[3], "");
+  sprintf (state->dmr_callsign[0], " ");
+  sprintf (state->dmr_callsign[1], " ");
+  sprintf (state->dmr_callsign[2], " ");
+  sprintf (state->dmr_callsign[3], " ");
+  sprintf (state->dmr_lrrp[0], " ");
+  sprintf (state->dmr_lrrp[1], " ");
+  sprintf (state->dmr_lrrp[2], " ");
+  sprintf (state->dmr_lrrp[3], " ");
+  sprintf (state->dmr_lrrp[4], " ");
+  sprintf (state->dmr_lrrp[5], " ");
+  
   state->K = 0;
 
 #ifdef TRACE_DSD

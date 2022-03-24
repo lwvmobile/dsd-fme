@@ -337,7 +337,7 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
 
     //state->payload_mfid = ConvertBitIntoBytes(&mfid[0], 7);
     lcinfohex = ConvertBitIntoBytes(&lcinfo[0], 55);
-    fprintf (stderr, " LCU LCINFO %16X \n", lcinfohex);
+    fprintf (stderr, " LDU1 LCINFO %16llX \n", lcinfohex);
   }
 
   processP25lcw (opts, state, lcformat, mfid, lcinfo);
