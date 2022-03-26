@@ -701,6 +701,6 @@ openAudioInDevice (dsd_opts * opts)
     }
   else
     {
-      fprintf (stderr, "Audio In/Out Device: %s\n", opts->audio_in_dev);
+      printf (stderr, "Audio In/Out Device: %s\n", opts->audio_in_dev);
     }
 }
