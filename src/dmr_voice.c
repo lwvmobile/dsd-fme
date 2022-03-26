@@ -72,7 +72,7 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
       {
         dibit = *dibit_p;
         dibit_p++;
-        if(opts->inverted_dpmr == 1)
+        if(opts->inverted_dmr == 1)
         {
           dibit = (dibit ^ 2);
         }
@@ -90,7 +90,7 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
       {
         dibit = *dibit_p;
         dibit_p++;
-        if(opts->inverted_dpmr == 1)
+        if(opts->inverted_dmr == 1)
         {
           dibit = (dibit ^ 2);
         }
@@ -150,7 +150,7 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
       {
         dibit = *dibit_p;
         dibit_p++;
-        if(opts->inverted_dpmr == 1)
+        if(opts->inverted_dmr == 1)
         {
           dibit = (dibit ^ 2);
         }
@@ -202,7 +202,7 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
       {
         dibit = *dibit_p;
         dibit_p++;
-        if(opts->inverted_dpmr == 1)
+        if(opts->inverted_dmr == 1)
         {
           dibit = (dibit ^ 2);
         }
@@ -250,7 +250,7 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
       {
         dibit = *dibit_p;
         dibit_p++;
-        if(opts->inverted_dpmr == 1)
+        if(opts->inverted_dmr == 1)
         {
           dibit = (dibit ^ 2);
         }
