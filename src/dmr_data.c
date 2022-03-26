@@ -96,7 +96,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   cachbits[24] = 0;
   fprintf(stderr, "%s ", cachbits);
 #endif
-  //here here here here trellis bits
+  //trellis bits
   unsigned char trellisdibits[98];
   // Current slot - First half - Data Payload - 1st part
   for (i = 0; i < 49; i++)
@@ -313,8 +313,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   }
 
   // Current slot - First half - Data Payload - 1st part
-  //here here find way to grab 98 dibits for trellis
-
+  //trellis
   for (i = 0; i < 49; i++)
   {
     dibit = getDibit(opts, state);

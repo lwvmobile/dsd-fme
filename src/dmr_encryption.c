@@ -52,10 +52,12 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
   for(Frame = 0; Frame < 6; Frame++)
   {
     /* 1 DMR frame contains 3 AMBE voice samples */
+    //fprintf (stderr, "\n 1AMBE ");
     for(i = 0; i < 3; i++)
     {
 
       errs  = (int*)&(TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
+      //fprintf (stderr, "[%02X] ", TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
       errs2 = (int*)&(TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
       state->errs =  TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
       state->errs2 = TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs2[i]; //correct placement

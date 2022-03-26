@@ -848,6 +848,7 @@ void rtlsdr_sighandler();
 //TRELLIS
 void CDMRTrellisTribitsToBits(const unsigned char* tribits, unsigned char* payload);
 unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* tribits);
+//unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* state, unsigned char* tribits);
 bool CDMRTrellisFixCode(unsigned char* points, unsigned int failPos, unsigned char* payload);
 void CDMRTrellisDeinterleave(const unsigned char* data, signed char* dibits);
 void CDMRTrellisDibitsToPoints(const signed char* dibits, unsigned char* points);

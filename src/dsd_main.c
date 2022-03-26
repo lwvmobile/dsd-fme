@@ -327,17 +327,17 @@ initState (dsd_state * state)
   state->payload_keyid = 0;
 
   sprintf (state->dmr_branding, " ");
-  sprintf (state->dmr_callsign[0], " ");
-  sprintf (state->dmr_callsign[1], " ");
-  sprintf (state->dmr_callsign[2], " ");
-  sprintf (state->dmr_callsign[3], " ");
-  sprintf (state->dmr_lrrp[0], " ");
-  sprintf (state->dmr_lrrp[1], " ");
-  sprintf (state->dmr_lrrp[2], " ");
-  sprintf (state->dmr_lrrp[3], " ");
-  sprintf (state->dmr_lrrp[4], " ");
-  sprintf (state->dmr_lrrp[5], " ");
-  
+  sprintf (state->dmr_callsign[0], "");
+  sprintf (state->dmr_callsign[1], "");
+  sprintf (state->dmr_callsign[2], "");
+  sprintf (state->dmr_callsign[3], "");
+  sprintf (state->dmr_lrrp[0], "");
+  sprintf (state->dmr_lrrp[1], "");
+  sprintf (state->dmr_lrrp[2], "");
+  sprintf (state->dmr_lrrp[3], "");
+  sprintf (state->dmr_lrrp[4], "");
+  sprintf (state->dmr_lrrp[5], "");
+
   state->K = 0;
 
 #ifdef TRACE_DSD
@@ -372,7 +372,7 @@ usage ()
   fprintf (stderr,"  -z <num>      Frame rate for datascope\n");
   fprintf (stderr,"\n");
   fprintf (stderr,"Input/Output options:\n");
-  fprintf (stderr,"  -i <device>   Audio input device (default is pulse audio, - for piped stdin, rtl for rtl device)\n");
+  fprintf (stderr,"  -i <device>   Audio input device (default is pulse audio, \n                  - for piped stdin, rtl for rtl device)\n");
   fprintf (stderr,"  -o <device>   Audio output device (default is pulse audio)\n");
   fprintf (stderr,"  -d <dir>      Create mbe data files, use this directory\n");
   fprintf (stderr,"  -r <files>    Read/Play saved mbe data from file(s)\n");
@@ -386,8 +386,8 @@ usage ()
   fprintf (stderr,"  -P <num>      RTL-SDR PPM Error (default = 0)\n");
   fprintf (stderr,"  -D <num>      RTL-SDR Device Index Number\n");
   fprintf (stderr,"  -G <num>      RTL-SDR Device Gain (0-49) (default = 0 Auto Gain)\n");
-  fprintf (stderr,"  -L <num>      RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)(Just have to guess really...)\n");
-  fprintf (stderr,"  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)(1-3 recommended, still testing) \n");
+  fprintf (stderr,"  -L <num>      RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)\n                 (Just have to guess really...)\n");
+  fprintf (stderr,"  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)\n");
   fprintf (stderr,"  -Y <num>      RTL-SDR VFO Bandwidth kHz (default = 48)(6, 8, 12, 16, 24, 48) \n");
   fprintf (stderr,"  -U <num>      RTL-SDR UDP Remote Port (default = 6020)\n");
   fprintf (stderr,"\n");

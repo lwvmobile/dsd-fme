@@ -35,14 +35,14 @@ printFrameInfo (dsd_opts * opts, dsd_state * state)
     }
   if (state->nac != 0)
     {
-      fprintf (stderr,"nac: %4X ", state->nac);
+      fprintf (stderr,"nac: [%4X] ", state->nac);
     }
 
   if (opts->verbose > 1)
     {
-      fprintf (stderr,"src: %8i ", state->lastsrc);
+      fprintf (stderr,"src: [%8i] ", state->lastsrc);
     }
-  fprintf (stderr,"tg: %5i ", state->lasttg);
+  fprintf (stderr,"tg: [%5i] ", state->lasttg);
 }
 
 void
@@ -421,7 +421,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->errorbars == 1)
             {
               printFrameInfo (opts, state);
-              fprintf (stderr," Ignoring LDU2 not preceeded by LDU1\n");
+              fprintf (stderr,"\n Ignoring LDU2 not preceeded by LDU1\n");
             }
           state->lastp25type = 0;
           sprintf (state->fsubtype, "              ");

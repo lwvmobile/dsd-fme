@@ -59,13 +59,16 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   //returns 'payload' which is 144 bit array, so DmrDataBit maybe?
   //CDMRTrellisDecode(const unsigned char* data, unsigned char* payload)
   unsigned char tdibits_reverse[98];
-  if (opts->payload == 21)
+  unsigned char tdibits_inverted[98];
+  if (opts->payload == 1)
   {
     fprintf (stderr, "\n Raw Trellis Dibits\n  ");
     for (i = 0; i < 98; i++)
     {
       fprintf (stderr, "[%X]", tdibits[i]);
-      tdibits_reverse[97-i] = tdibits[i];
+      //tdibits_reverse[97-i] = tdibits[i];
+      tdibits_reverse[97-i] = ((tdibits[i] & 1)<<1) | ((tdibits[i] & 2)>>1);
+      tdibits_inverted[i] = tdibits[i] ^ 2;
     }
   }
 
@@ -73,10 +76,10 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   CDMRTrellisDecode(tdibits, TrellisReturn); //figure out how this works!!
   if (opts->payload == 1)
   {
-    fprintf (stderr, "\nFull 3/4 Rate Trellis Payload\n  ");
+    fprintf (stderr, "\nFull 3/4 Rate Trellis Payload (reversed order)\n  ");
     for (i = 0; i < 18; i++)
     {
-      fprintf (stderr, "[%02X]", TrellisReturn[i]);
+      fprintf (stderr, "[%02X]", TrellisReturn[17-i]);
     }
   }
   /* Extract the BPTC 196,96 DMR data */
@@ -163,13 +166,13 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   if ( (state->dmr_34_rate_sf[0] & 0x3F) == 0x0C)
   {
     fprintf (stderr, "\n  Source:     ");
-    fprintf (stderr, " %d.%d.%d.%d", (state->dmr_34_rate_sf[0] & 0x3F), state->dmr_34_rate_sf[1], state->dmr_34_rate_sf[2], state->dmr_34_rate_sf[3]); //strip first two bits off 1st byte
-    fprintf (stderr, " [%d]", (state->dmr_34_rate_sf[1] <<16 ) + (state->dmr_34_rate_sf[2] << 8) + state->dmr_34_rate_sf[3] );
-    fprintf (stderr, " - Port %d", (state->dmr_34_rate_sf[8] << 8) + state->dmr_34_rate_sf[9]);
+    fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_34_rate_sf[0] & 0x3F), state->dmr_34_rate_sf[1], state->dmr_34_rate_sf[2], state->dmr_34_rate_sf[3]); //strip first two bits off 1st byte
+    fprintf (stderr, " [%08d]", (state->dmr_34_rate_sf[1] <<16 ) + (state->dmr_34_rate_sf[2] << 8) + state->dmr_34_rate_sf[3] );
+    fprintf (stderr, " - Port %05d", (state->dmr_34_rate_sf[8] << 8) + state->dmr_34_rate_sf[9]);
     fprintf (stderr, "\n  Destination:");
-    fprintf (stderr, " %d.%d.%d.%d", (state->dmr_34_rate_sf[4] & 0x3F), state->dmr_34_rate_sf[5], state->dmr_34_rate_sf[6], state->dmr_34_rate_sf[7]); //strip first two bits off 4th byte??
-    fprintf (stderr, " [%d]", (state->dmr_34_rate_sf[5] <<16 ) + (state->dmr_34_rate_sf[6] << 8) + state->dmr_34_rate_sf[7] );
-    fprintf (stderr, " - Port %d", (state->dmr_34_rate_sf[10] << 8) + state->dmr_34_rate_sf[11]);
+    fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_34_rate_sf[4] & 0x3F), state->dmr_34_rate_sf[5], state->dmr_34_rate_sf[6], state->dmr_34_rate_sf[7]); //strip first two bits off 4th byte??
+    fprintf (stderr, " [%08d]", (state->dmr_34_rate_sf[5] <<16 ) + (state->dmr_34_rate_sf[6] << 8) + state->dmr_34_rate_sf[7] );
+    fprintf (stderr, " - Port %05d", (state->dmr_34_rate_sf[10] << 8) + state->dmr_34_rate_sf[11]);
   }
   //LRRP
   if (state->dmr_34_rate_sf[0] == 0x0 && state->dmr_34_rate_sf[4] == 0x0D) //Start LRRP now
@@ -229,7 +232,7 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   //Full
   if (opts->payload == 1)
   {
-    fprintf (stderr, "\nFull 3/4 Rate Payload DmrDataByte\n  ");
+    fprintf (stderr, "\nFull 3/4 Rate Payload DmrDataByte (reverse bits)\n  ");
     for (i = 0; i < 18; i++)
     {
       fprintf (stderr, "[%02X]", DmrDataByte[i]);
@@ -929,21 +932,21 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
   }
 
   //Headers and Addresses
-  if ( (state->dmr_12_rate_sf[0] & 0x3F) == 0x05) //0x3F?? or == 0x05
+  if ( (state->dmr_12_rate_sf[0] & 0x3F) == 0x05) //0x05, or 0x45?
   {
     fprintf (stderr, "\n  IP4 Header");
   }
-
+  //ARS?
   if ( (state->dmr_12_rate_sf[0] & 0x3F) == 0x0C)
   {
     fprintf (stderr, "\n  Source:     ");
-    fprintf (stderr, " %d.%d.%d.%d", (state->dmr_12_rate_sf[0] & 0x3F), state->dmr_12_rate_sf[1], state->dmr_12_rate_sf[2], state->dmr_12_rate_sf[3]); //strip first two bits off 1st byte
-    fprintf (stderr, " [%d]", (state->dmr_12_rate_sf[1] <<16 ) + (state->dmr_12_rate_sf[2] << 8) + state->dmr_12_rate_sf[3] );
-    fprintf (stderr, " - Port %d", (state->dmr_12_rate_sf[8] << 8) + state->dmr_12_rate_sf[9]);
+    fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_12_rate_sf[0] & 0x3F), state->dmr_12_rate_sf[1], state->dmr_12_rate_sf[2], state->dmr_12_rate_sf[3]); //strip first two bits off 1st byte
+    fprintf (stderr, " [%08d]", (state->dmr_12_rate_sf[1] <<16 ) + (state->dmr_12_rate_sf[2] << 8) + state->dmr_12_rate_sf[3] );
+    fprintf (stderr, " - Port %05d", (state->dmr_12_rate_sf[8] << 8) + state->dmr_12_rate_sf[9]);
     fprintf (stderr, "\n  Destination:");
-    fprintf (stderr, " %d.%d.%d.%d", (state->dmr_12_rate_sf[4] & 0x3F), state->dmr_12_rate_sf[5], state->dmr_12_rate_sf[6], state->dmr_12_rate_sf[7]); //strip first two bits off 4th byte??
-    fprintf (stderr, " [%d]", (state->dmr_12_rate_sf[5] <<16 ) + (state->dmr_12_rate_sf[6] << 8) + state->dmr_12_rate_sf[7] );
-    fprintf (stderr, " - Port %d", (state->dmr_12_rate_sf[10] << 8) + state->dmr_12_rate_sf[11]);
+    fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_12_rate_sf[4] & 0x3F), state->dmr_12_rate_sf[5], state->dmr_12_rate_sf[6], state->dmr_12_rate_sf[7]); //strip first two bits off 4th byte??
+    fprintf (stderr, " [%08d]", (state->dmr_12_rate_sf[5] <<16 ) + (state->dmr_12_rate_sf[6] << 8) + state->dmr_12_rate_sf[7] );
+    fprintf (stderr, " - Port %05d", (state->dmr_12_rate_sf[10] << 8) + state->dmr_12_rate_sf[11]);
   }
   //LRRP
   if (state->dmr_12_rate_sf[0] == 0x0 && state->dmr_12_rate_sf[4] == 0x0D) //Start LRRP now
@@ -1246,7 +1249,7 @@ void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t 
   {
     fprintf (stderr, "\n  Site ID %d-%d.%d", (DmrDataByte[2] & 0xF0 >> 4), DmrDataByte[2] & 0xF, DmrDataByte[3]);
     fprintf (stderr, "  DCC %d", DmrDataByte[1]);
-    sprintf ( state->dmr_callsign[0], "Site ID %d-%d.%d", (DmrDataByte[2] & 0xF0 >> 4), DmrDataByte[2] & 0xF, DmrDataByte[3]);
+    //sprintf ( state->dmr_callsign[0], "Site ID %d-%d.%d", (DmrDataByte[2] & 0xF0 >> 4), DmrDataByte[2] & 0xF, DmrDataByte[3]);
     //sprintf(state->dmr_branding, " TIII "); //?? one of these next two seems to be on both types, maybe its a TIII thing?
   }
 
@@ -1383,7 +1386,7 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
   state->payload_algid = DmrDataByte[0];
   state->payload_keyid = DmrDataByte[2];
   state->payload_mi    = ( ((DmrDataByte[3]) << 24) + ((DmrDataByte[4]) << 16) + ((DmrDataByte[5]) << 8) + (DmrDataByte[6]) );
-  if (opts->payload == 1)
+  if (1 == 1) //have it always print?
   {
     fprintf (stderr, "\n DMR PI Header ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algid, state->payload_keyid, state->payload_mi);
   }
@@ -1987,7 +1990,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
     //fprintf (stderr, "]\n");
     if (opts->use_ncurses_terminal == 1)
     {
-      fprintf (stderr, "  Alias Header and Blocks: [%s%s%s%s%s]\n", state->dmr_callsign[0], state->dmr_callsign[1], state->dmr_callsign[2], state->dmr_callsign[3], state->dmr_callsign[4] );
+      fprintf (stderr, "\n  Alias Header and Blocks: [%s%s%s%s%s]", state->dmr_callsign[0], state->dmr_callsign[1], state->dmr_callsign[2], state->dmr_callsign[3], state->dmr_callsign[4] );
     }
   }
 

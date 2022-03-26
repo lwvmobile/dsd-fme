@@ -376,7 +376,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   }
 
   //if (state->errs == 0 && algidhex != 0x80)
-  if (opts->payload == 1)
+  if (1 == 1) //always print the LDU2 alg info
   //if (opts->payload == 1 && state->errs == 0)
   {
     //fprintf (stderr, " LDU2 ALG ID: 0x%X KEY ID: 0x%X MI: %s \n", algidhex, kidhex, mi);

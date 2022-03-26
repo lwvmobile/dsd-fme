@@ -38,7 +38,10 @@ const unsigned char ENCODE_TABLE[] = {
 const unsigned char BIT_MASK_TABLE[] = {0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U, 0x02U, 0x01U};
 
 #define READ_BIT(p,i)    (p[(i)>>3] & BIT_MASK_TABLE[(i)&7])
+#define WRITE_BIT(p,i,b) p[(i)>>3] = (b) ? (p[(i)>>3] | BIT_MASK_TABLE[(i)&7]) : (p[(i)>>3] & ~BIT_MASK_TABLE[(i)&7])
 
+//unsigned char state = 0U;
+//unsigned int superposition = 0;
 //CDMRTrellis::CDMRTrellis()
 //{
 //}
@@ -49,63 +52,23 @@ const unsigned char BIT_MASK_TABLE[] = {0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U
 
 //void CDMRTrellis::tribitsToBits(const unsigned char* tribits, unsigned char* payload) const
 //void CDMRTrellisTribitsToBits(const unsigned char* tribits, unsigned char* payload) const
-void CDMRTrellisTribitsToBits(const unsigned char* tribits, unsigned char* payload)
-
-{
-	unsigned char bits[144];
-
-	// convert tribits to bits
-	for (int i = 0; i < 48; i++) {
-		bits[(i * 3) + 0] = (tribits[i] >> 2) & 1;
-		bits[(i * 3) + 1] = (tribits[i] >> 1) & 1;
-		bits[(i * 3) + 2] = tribits[i] & 1;
-	}
-
-	// convert bits to bytes
-	for (int i = 0; i < 144; i++)
-		payload[i/8] = (payload[i/8] << 1) | bits[i];
-}
-
-//unsigned int CDMRTrellis::checkCode(const unsigned char* points, unsigned char* tribits) const
-//unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* tribits) const
-unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* tribits)
-
-{
-	unsigned char state = 0U;
-
-	for (unsigned int i = 0U; i < 49U; i++) {
-		tribits[i] = 9U;
-
-		for (unsigned int j = 0U; j < 8U; j++) {
-			if (points[i] == ENCODE_TABLE[state * 8U + j]) {
-				tribits[i] = j;
-				break;
-			}
-		}
-
-		if (tribits[i] == 9U) {
-			return i;
-		}
-
-		state = tribits[i];
-	}
-
-	if (tribits[48U] != 0U)
-		return 48U;
-
-	return 999U;
-}
 //bool CDMRTrellis::fixCode(unsigned char* points, unsigned int failPos, unsigned char* payload) const
 //bool CDMRTrellisFixCode(unsigned char* points, unsigned int failPos, unsigned char* payload) const
 bool CDMRTrellisFixCode(unsigned char* points, unsigned int failPos, unsigned char* payload)
 
 {
+	//unsigned int bestPos = 0U;
+	//unsigned int bestVal = 0U;
+
 	for (unsigned j = 0U; j < 20U; j++) {
 		unsigned int bestPos = 0U;
 		unsigned int bestVal = 0U;
+		fprintf (stderr, "  fail%d-", failPos);
 
 		for (unsigned int i = 0U; i < 16U; i++) {
 			points[failPos] = i;
+
+			fprintf (stderr, "i%d", i);
 
 			unsigned char tribits[49U];
 			unsigned int pos = CDMRTrellisCheckCode(points, tribits);
@@ -126,6 +89,107 @@ bool CDMRTrellisFixCode(unsigned char* points, unsigned int failPos, unsigned ch
 
 	return false;
 }
+
+void CDMRTrellisTribitsToBits(const unsigned char* tribits, unsigned char* payload)
+
+{
+	//g4klx version below
+	/*
+	for (unsigned int i = 0U; i < 48U; i++) {
+		unsigned char tribit = tribits[i];
+
+	  bool b1 = (tribit & 0x04U) == 0x04U;
+		bool b2 = (tribit & 0x02U) == 0x02U;
+		bool b3 = (tribit & 0x01U) == 0x01U;
+
+		unsigned int n = 143U - i * 3U;
+		/*
+		WRITE_BIT(payload, n, b1);
+			n--;
+		WRITE_BIT(payload, n, b2);
+			n--;
+		WRITE_BIT(payload, n, b3);
+	}
+	*/
+
+	// boatbod version below...
+	// convert tribits to bits
+
+	unsigned char bits[144];
+	for (int i = 0; i < 48; i++) {
+		bits[(i * 3) + 0] = (tribits[i] >> 2) & 1;
+		bits[(i * 3) + 1] = (tribits[i] >> 1) & 1;
+		bits[(i * 3) + 2] = tribits[i] & 1;
+	}
+
+
+	// convert bits to bytes
+
+	for (int i = 0; i < 144; i++)
+		payload[i/8] = (payload[i/8] << 1) | bits[i];
+
+}
+
+//unsigned int CDMRTrellis::checkCode(const unsigned char* points, unsigned char* tribits) const
+//unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* tribits) const
+/*
+unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* tribits)
+
+{
+	//replace i with superposition; revert back if totally borked
+	//unsigned char state = 0U;
+
+	//for (unsigned int i = 0U; i < 49U; i++) {
+		//tribits[i] = 9U;
+		for (superposition; superposition < 49U; superposition++) {
+			tribits[superposition] = 9U;
+		for (unsigned int j = 0U; j < 8U; j++) {
+			if (points[superposition] == ENCODE_TABLE[state * 8U + j]) {
+				tribits[superposition] = j;
+				break;
+			}
+		}
+
+		if (tribits[superposition] == 9) {
+			return superposition;
+			//experiment placing fixcode right in here instead
+			//or we need to find a way to update state outside of this function
+			}
+		state = tribits[superposition];
+
+	}
+	//if (tribits[48U] != 0U)
+		//return 48U;
+
+	return 999U;
+}
+*/
+unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* tribits)
+{
+	unsigned char state = 0U;
+
+	for (unsigned int i = 0U; i < 49U; i++) {
+		tribits[i] = 9U;
+
+		for (unsigned int j = 0U; j < 8U; j++) {
+			if (points[i] == ENCODE_TABLE[state * 8U + j]) {
+				tribits[i] = j;
+				break;
+			}
+		}
+
+		if (tribits[i] == 9U)
+			return i;
+
+		state = tribits[i];
+	}
+
+	if (tribits[48U] != 0U)
+		return 48U;
+
+	return 999U;
+}
+
 //void CDMRTrellis::deinterleave(const unsigned char* data, signed char* dibits) const
 //void CDMRTrellisDeinterleave(const unsigned char* data, signed char* dibits) const
 void CDMRTrellisDeinterleave(const unsigned char* data, signed char* dibits)
@@ -288,7 +352,7 @@ void CDMRTrellisBitsToTribits(const unsigned char* payload, unsigned char* tribi
 		tribit |= b2 ? 2U : 0U;
 		tribit |= b3 ? 1U : 0U;
 
-		tribits[i] = tribit;
+		//tribits[i] = tribit;
 	}
 
 	tribits[48U] = 0U;
@@ -304,7 +368,7 @@ bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload)
     fprintf (stderr, "\n Raw Trellis Dibits inside Decoder\n  ");
     for (short i = 0; i < 98; i++)
     {
-      fprintf (stderr, "[%X]", data[i]);
+      fprintf (stderr, "[%0d]", data[i]);
     }
   }
 	signed char dibits[98U];
@@ -321,37 +385,69 @@ bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload)
 	CDMRTrellisDibitsToPoints(dibits, points);
 	if (1 == 1)
   {
-    fprintf (stderr, "\n Trellis Points inside Decoder (what the fuck are points?)\n  ");
+    fprintf (stderr, "\n Trellis Points inside Decoder (no higher than 15U?)\n  ");
     for (short i = 0; i < 49; i++)
     {
-      fprintf (stderr, "[%X]", points[i]);
+      fprintf (stderr, "[%02u]", points[i]);
     }
   }
 	// Check the original code
 	unsigned char tribits[49U];
 	unsigned int failPos = CDMRTrellisCheckCode(points, tribits);
+
+
+
+
 	if (failPos == 999U) {
 		CDMRTrellisTribitsToBits(tribits, payload);
+		if (1 == 1)
+		{
+		 fprintf (stderr, "\nTrellis Payload Tribits to Bits failPos == 999U\n  ");
+		 for (short i = 0; i < 18; i++)
+		 {
+		   fprintf (stderr, "[%02u]", payload[i]);
+		 }
+		}
 		return true;
 	}
-	if (1 == 1)
-  {
-    fprintf (stderr, "\n Trellis Tribits inside Decoder\n  ");
-    for (short i = 0; i < 49; i++)
-    {
-      fprintf (stderr, "[%X]", tribits[i]); //shouldn't have any values greater that 0x7?
-    }
-  }
+
 	unsigned char savePoints[49U];
 	for (unsigned int i = 0U; i < 49U; i++)
 		savePoints[i] = points[i];
 
 	bool ret = CDMRTrellisFixCode(points, failPos, payload);
-	if (ret)
-		return true;
+	if (ret){
+
+		if (1 == 1)
+	  {
+	    fprintf (stderr, "\n Trellis Tribits inside Decoder\n  ");
+	    for (short i = 0; i < 49; i++)
+	    {
+	      fprintf (stderr, "[%0u]", tribits[i]); //shouldn't have any values greater that 0x7?
+	    }
+	  }
+
+		if (1 == 1)
+		{
+		 fprintf (stderr, "\nTrellis Payload Tribits to Bits fix return true\n  "); //this one seems to be happening
+		 for (short i = 0; i < 18; i++)
+		 {
+		   fprintf (stderr, "[%02X]", payload[i]);
+		 }
+		}
+		return true; }
 
 	if (failPos == 0U)
-		return false;
+	{
+	if (1 == 1)
+	{
+	 fprintf (stderr, "\nTrellis Payload Tribits to Bits failPos == 0U\n  ");
+	 for (short i = 0; i < 18; i++)
+	 {
+		 fprintf (stderr, "[%02X]", payload[i]);
+	 }
+	}
+		return false; }
 
 	// Backtrack one place for a last go
 	return CDMRTrellisFixCode(savePoints, failPos - 1U, payload);
