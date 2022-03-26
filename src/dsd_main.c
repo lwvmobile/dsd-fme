@@ -1179,7 +1179,8 @@ main (int argc, char **argv)
     }
   }
 #endif
-	//openAudioInDevice (&opts);
+	openAudioInDevice (&opts);
+	//openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
   if (opts.playfiles == 1)
     {
       opts.split = 1;
@@ -1192,7 +1193,7 @@ main (int argc, char **argv)
         }
       else
         {
-          //openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
+          openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
         }
     }
   else if (strcmp (opts.audio_in_dev, opts.audio_out_dev) != 0)
@@ -1206,10 +1207,10 @@ main (int argc, char **argv)
         }
       else
         {
-          //openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
+          openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
         }
       openAudioInDevice (&opts);
-
+	  //openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
 
       fprintf (stderr,"Press CTRL + C twice to close.\n"); //Kindly remind user to double tap CTRL + C
     }
@@ -1221,6 +1222,7 @@ main (int argc, char **argv)
       opts.delay = 0;
       openAudioInDevice (&opts); //disabled all four instances of openAudio devices, in and out for now
       opts.audio_out_fd = opts.audio_in_fd;
+	  
     }
 
   if (opts.playfiles == 1)
