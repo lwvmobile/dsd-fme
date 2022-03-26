@@ -22,8 +22,6 @@
 #include "p25p1_check_ldu.h"
 #include "p25p1_hdu.h"
 
-long long int mihex1 = 0;
-long long int mihex2 = 0;
 
 void
 processLDU2 (dsd_opts * opts, dsd_state * state)
@@ -33,7 +31,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   char mi[73], algid[9], kid[17];
   char lsd1[9], lsd2[9];
   int algidhex, kidhex;
-
+  unsigned long long int mihex1, mihex2, mihex3;
   int status_count;
 
   char hex_data[16][6];    // Data in hex-words (6 bit words). A total of 16 hex words.
@@ -249,165 +247,6 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   lsd1[8] = 0;
   lsd2[8] = 0;
 
-  mihex1 = 0;
-  mihex2 = 0;
-  /*
-  mihex1 |= atoi(&hex_data[15][0]);
-  mihex1 << 1;
-  mihex1 |= atoi(&hex_data[15][1]);
-  mihex1 << 1;
-  mihex1 |= atoi(&hex_data[15][2]);
-  mihex1 << 1;
-  mihex1 |= atoi(&hex_data[15][3]);
-  mihex1 << 1;
-  mihex1 |= atoi(&hex_data[15][4]);
-  mihex1 << 1;
-  mihex1 |= atoi(&hex_data[15][5]);
-  mihex1 << 1;
-  //fprintf(stderr, "\n%X\n", mihex1);
-  mihex1 |= atoi(&hex_data[14][0]);
-  mihex1 << 1;
-  mihex1 |= atoi(&hex_data[14][1]);
-  mihex1 << 1;
-  mihex1 |= atoi(&hex_data[14][2]);
-  mihex1 << 1;
-  mihex1 |= atoi(&hex_data[14][3]);
-  mihex1 << 1;
-  mihex1 |= atoi(&hex_data[14][4]);
-  mihex1 << 1;
-  mihex1 |= atoi(&hex_data[14][5]);
-  mihex1 << 1;
-
-  mihex1 |= hex_data[13][0];
-  mihex1 << 1;
-  mihex1 |= hex_data[13][1];
-  mihex1 << 1;
-  mihex1 |= hex_data[13][2];
-  mihex1 << 1;
-  mihex1 |= hex_data[13][3];
-  mihex1 << 1;
-  mihex1 |= hex_data[13][4];
-  mihex1 << 1;
-  mihex1 |= hex_data[13][5];
-  mihex1 << 1;
-
-  mihex1 |= hex_data[12][0];
-  mihex1 << 1;
-  mihex1 |= hex_data[12][1];
-  mihex1 << 1;
-  mihex1 |= hex_data[12][2];
-  mihex1 << 1;
-  mihex1 |= hex_data[12][3];
-  mihex1 << 1;
-  mihex1 |= hex_data[12][4];
-  mihex1 << 1;
-  mihex1 |= hex_data[12][5];
-  mihex1 << 1;
-
-  mihex1 |= hex_data[113][0];
-  mihex1 << 1;
-  mihex1 |= hex_data[11][1];
-  mihex1 << 1;
-  mihex1 |= hex_data[11][2];
-  mihex1 << 1;
-  mihex1 |= hex_data[11][3];
-  mihex1 << 1;
-  mihex1 |= hex_data[11][4];
-  mihex1 << 1;
-  mihex1 |= hex_data[11][5];
-  mihex1 << 1;
-
-  mihex1 |= hex_data[10][0];
-  mihex1 << 1;
-  mihex1 |= hex_data[10][1];
-  mihex1 << 1;
-  mihex1 |= hex_data[10][2];
-  mihex1 << 1;
-  mihex1 |= hex_data[10][3];
-  mihex1 << 1;
-  mihex1 |= hex_data[10][4];
-  mihex1 << 1;
-  mihex1 |= hex_data[10][5];
-  mihex1 << 1;
-
-  mihex1 |= hex_data[9][0];
-  mihex1 << 1;
-  mihex1 |= hex_data[9][1];
-  mihex1 << 1;
-  mihex1 |= hex_data[9][2];
-  mihex1 << 1;
-  mihex1 |= hex_data[9][3];
-  mihex1 << 1;
-  mihex1 |= hex_data[9][4];
-  mihex1 << 1;
-  mihex1 |= hex_data[9][5];
-  mihex1 << 1;
-
-  mihex1 |= hex_data[8][0];
-  mihex1 << 1;
-  mihex1 |= hex_data[8][1];
-  mihex1 << 1;
-  mihex1 |= hex_data[8][2];
-  mihex1 << 1;
-  mihex1 |= hex_data[8][3];
-  mihex1 << 1;
-  mihex1 |= hex_data[8][4];
-  mihex1 << 1;
-  mihex1 |= hex_data[8][5];
-  mihex1 << 1;
-
-  mihex1 |= hex_data[7][0];
-  mihex1 << 1;
-  mihex1 |= hex_data[7][1];
-  mihex1 << 1;
-  mihex1 |= hex_data[7][2];
-  mihex1 << 1;
-  mihex1 = hex_data[7][3];
-  mihex1 << 1;
-  mihex1 |= hex_data[7][4];
-  mihex1 << 1;
-  mihex1 |= hex_data[7][5];
-  mihex1 << 1;
-
-  mihex1 |= hex_data[6][0];
-  mihex1 << 1;
-  mihex1 |= hex_data[6][1];
-  mihex1 << 1;
-  mihex1 |= hex_data[6][2];
-  mihex1 << 1;
-  mihex1 |= hex_data[6][3];
-  mihex1 << 1;
-  mihex1 |= hex_data[6][4];
-  mihex1 << 1;
-  mihex1 |= hex_data[6][5];
-  mihex1 << 1;
-
-  mihex1 |= hex_data[5][0];
-  mihex1 << 1;
-  mihex1 |= hex_data[5][1];
-  mihex1 << 1;
-  mihex1 |= hex_data[5][2];
-  mihex1 << 1;
-  mihex1 |= hex_data[5][3];
-  //mihex1 << 1;
-
-  mihex2 |= hex_data[5][4];
-  mihex2 << 1;
-  mihex2 |= hex_data[5][5];
-  mihex2 << 1;
-  mihex2 |= hex_data[4][0];
-  mihex2 << 1;
-  mihex2 |= hex_data[4][1];
-  mihex2 << 1;
-  mihex2 |= hex_data[4][2];
-  mihex2 << 1;
-  mihex2 |= hex_data[4][3];
-  mihex2 << 1;
-  mihex2 |= hex_data[4][4];
-  mihex2 << 1;
-  mihex2 |= hex_data[4][5];
-  //mihex2 << 1;
-  */
   mi[ 0]   = hex_data[15][0] + '0';
   mi[ 1]   = hex_data[15][1] + '0';
   mi[ 2]   = hex_data[15][2] + '0';
@@ -520,40 +359,28 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   kid[14]  = hex_data[ 0][4] + '0';
   kid[15]  = hex_data[ 0][5] + '0';
 
-  //if (state->carrier == 1 && state->errs2 == 0) //only update when carrier is present, and no errors??
-  if (state->carrier == 1 && state->errs == 0) //only update when carrier is present, and no errors??
-  //if (state->carrier == 1)
+
+  //if (state->carrier == 1 && state->errs == 0) //only update when carrier is present, and no errors??
+  if (state->carrier == 1)
   {
-    /*
-    for (short i = 0; i < 64; i++)
-    {
-      mihex1 << 1;
-      //mihex1 |= strtoll(&mi[i], NULL, 2);
-      mihex1 |= atoi(&mi[i]);
-      //fprintf (stderr, "%c", mi[i]);
-    }
-    for (short i = 0; i < 8; i++)
-    {
-      mihex2 << 1;
-      //mihex2 |= strtoll(&mi[64+i], NULL, 2);
-      mihex2 |= atoi(&mi[i+64]);
-      //fprintf (stderr, "%c", mi[i+64]);
-    }
-    */
+
     algidhex = strtol (algid, NULL, 2);
     kidhex = strtol (kid, NULL, 2);
 
     state->payload_algid = algidhex;
     state->payload_keyid = kidhex;
 
+    mihex1 = (unsigned long long int)ConvertBitIntoBytes(&mi[0], 32);
+    mihex2 = (unsigned long long int)ConvertBitIntoBytes(&mi[32], 32);
+    mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
   }
 
-  //if (opts->payload == 1)
-  if (opts->payload == 1 && state->errs == 0)
+  //if (state->errs == 0 && algidhex != 0x80)
+  if (1 == 1) //always print the LDU2 alg info
+  //if (opts->payload == 1 && state->errs == 0)
   {
-    //fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X\n", algidhex, kidhex);
-    fprintf (stderr, "LDU2 ALG ID: 0x%X KEY ID: 0x%X MI: %s \n", algidhex, kidhex, mi);
-    //fprintf (stderr, "ALG ID: 0x%X KEY ID: 0x%X MI: 0x%016X%02X\n", algidhex, kidhex, mihex1, mihex2);
+    //fprintf (stderr, " LDU2 ALG ID: 0x%X KEY ID: 0x%X MI: %s \n", algidhex, kidhex, mi);
+    fprintf (stderr, " LDU2 ALG ID: 0x%X KEY ID: 0x%X MI: 0x%08llX%08llX%02llX\n", algidhex, kidhex, mihex1, mihex2, mihex3);
   }
   //if (opts->p25enc == 1 && opts->payload == 0)
   if (opts->payload == 0)

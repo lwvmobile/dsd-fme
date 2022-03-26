@@ -65,6 +65,7 @@ void dstar_header_decode(int radioheaderbuffer[660]) {
 			radioheader[28], radioheader[29], radioheader[30], radioheader[31],
 			radioheader[32], radioheader[33], radioheader[34], radioheader[35],
 			radioheader[36], radioheader[37], radioheader[38]);
+
 	//FCSinheader = ((radioheader[39] << 8) | radioheader[40]) & 0xFFFF;
 	//FCScalculated = calc_fcs((unsigned char*) radioheader, 39);
 	//fprintf (stderr, "Check sum = %04X ", FCSinheader);

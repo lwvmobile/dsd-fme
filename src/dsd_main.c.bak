@@ -1208,7 +1208,7 @@ main (int argc, char **argv)
         {
           //openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
         }
-      openAudioInDevice (&opts);
+      //openAudioInDevice (&opts);
 
 
       fprintf (stderr,"Press CTRL + C twice to close.\n"); //Kindly remind user to double tap CTRL + C

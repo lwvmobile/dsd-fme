@@ -65,7 +65,7 @@ extern const int DSDNXDN_UDCH_m_PunctureList[58];
 //NXDN_DCALL_REC_RESP  = 0b001010,  /* NXDN_DCALL_REC_REQ = NXDN_DCALL_REC_RESP */
 #define   NXDN_DCALL_ASSGN     = 0b001110
 #define   NXDN_DCALL_ASSGN_DUP = 0b001101
-#define   NXDN_IDLE            = 0b010000
+#define   NXDN_IDLE            0b010000
 #define   NXDN_DISC_REQ        = 0b010001  /* NXDN_DISC_REQ = NXDN_DISC */
 #define   NXDN_DISC            = 0b010001   /* NXDN_DISC_REQ = NXDN_DISC */
 

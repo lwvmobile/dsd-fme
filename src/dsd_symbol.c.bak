@@ -83,9 +83,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       // Read the new sample from the input
       if(opts->audio_in_type == 0)
       {
-          //pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
-          //state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
-		  result = read (opts->audio_in_fd, &sample, 2);
+          pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
+          state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
       }
       else if (opts->audio_in_type == 1) {
           result = sf_read_short(opts->audio_in_file, &sample, 1);

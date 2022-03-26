@@ -342,10 +342,10 @@ typedef struct
   int pulse_digi_in_channels;
   int pulse_digi_out_channels;
   int pulse_flush;
-  //pa_simple *pulse_raw_dev_in;
-  //pa_simple *pulse_raw_dev_out;
-  //pa_simple *pulse_digi_dev_in;
-  //pa_simple *pulse_digi_dev_out;
+  pa_simple *pulse_raw_dev_in;
+  pa_simple *pulse_raw_dev_out;
+  pa_simple *pulse_digi_dev_in;
+  pa_simple *pulse_digi_dev_out;
   int use_ncurses_terminal;
   int reset_state;
   int payload;
