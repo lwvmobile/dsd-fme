@@ -631,7 +631,7 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
     else fprintf(stderr, "(CRC ERR) |"); //add line break
 
     //fprintf(stderr, " VOICE e: \n");
-    fprintf(stderr, " VOICE    \n");
+    fprintf(stderr, " VOICE    ");
   }
 
   /* Perform the SYNC DMR data embedded decoding */

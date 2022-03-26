@@ -90,12 +90,15 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       imbe_d[i] = 0;
     }
 
+
   if ((state->synctype == 0) || (state->synctype == 1))
     {
       //  0 +P25p1
       //  1 -P25p1
 
       mbe_processImbe7200x4400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe_fr, imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+      //mbe_processImbe7200x4400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe_fr, processed_block, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
       if (opts->mbe_out_f != NULL)
         {
           saveImbe4400Data (opts, state, imbe_d);
@@ -104,6 +107,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   else if ((state->synctype == 14) || (state->synctype == 15))
     {
       mbe_processImbe7100x4400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe7100_fr, imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+      //mbe_processImbe7100x4400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe7100_fr, processed_block, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
       if (opts->mbe_out_f != NULL)
         {
           saveImbe4400Data (opts, state, imbe_d);

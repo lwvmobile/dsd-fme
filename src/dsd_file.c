@@ -30,7 +30,7 @@ saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
   k = 0;
   if (opts->payload == 1) //make opt variable later on to toggle this
   {
-    fprintf(stderr, "\n");
+    fprintf(stderr, "\n IMBE ");
     //fprintf(stderr, "ALGID=%X KEYID=%X\n", state->payload_algid, state->payload_keyid);
   }
 
@@ -70,7 +70,7 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   k = 0;
   if (opts->payload == 1) //make opt variable later on to toggle this
   {
-    fprintf(stderr, "\n");
+    fprintf(stderr, "\n AMBE ");
   }
   //for (i = 0; i < 6; i++)
   for (i = 0; i < 7; i++) //using 7 seems to break older amb files where it was 6, need to test 7 on 7 some more

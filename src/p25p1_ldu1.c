@@ -330,9 +330,14 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
   lcinfo[54]  = hex_data[ 0][4] + '0';
   lcinfo[55]  = hex_data[ 0][5] + '0';
 
+  unsigned long long int lcinfohex = 0;
   if (state->carrier == 1 && state->errs == 0) //only update when carrier is present, otherwise, garbage values may be collected
   {
     state->payload_mfid = strtol (mfid, NULL, 2);
+
+    //state->payload_mfid = ConvertBitIntoBytes(&mfid[0], 7);
+    lcinfohex = ConvertBitIntoBytes(&lcinfo[0], 55);
+    //fprintf (stderr, " LDU1 LCINFO %16llX \n", lcinfohex);
   }
 
   processP25lcw (opts, state, lcformat, mfid, lcinfo);

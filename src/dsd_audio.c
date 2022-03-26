@@ -37,9 +37,11 @@ void openPulseOutput(dsd_opts * opts)
   //fprintf (stderr,"digi rate out = %d\n", opts->pulse_digi_rate_out);
   //pa_channel_map_init_stereo(&channel_map);
 //ss
-  if (opts->monitor_input_audio == 1)
+  //if (opts->monitor_input_audio == 1)
+  if (opts->frame_dmr == 1  && opts->audio_in_type != 3)
   {
-    opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD FME", PA_STREAM_PLAYBACK, NULL, "Raw Audio Out", &ss, NULL, NULL, NULL);
+    //opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD FME", PA_STREAM_PLAYBACK, NULL, "Raw Audio Out", &ss, NULL, NULL, NULL);
+    //opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD FME", PA_STREAM_PLAYBACK, NULL, "DMR/MOTOTRBO Right", &ss, NULL, NULL, NULL);
   }
 
 //tt
@@ -432,14 +434,19 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 
       //two slot audio testing, still need to seperate channels first internally, but this will play them out of different streams
       /*
-      if(state->currentslot == 0)
+      if(state->currentslot == 0 && opts->audio_in_type != 3)
       {
         pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
       }
-      if(state->currentslot == 1)
+      if(state->currentslot == 1 && opts->audio_in_type != 3)
       {
         pa_simple_write(opts->pulse_raw_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
         //pa_simple_write(opts->pulse_raw_dev_out, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); //Yay! It works.
+      }
+
+      if (opts->audio_in_type == 3)
+      {
+        pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
       }
       */
 

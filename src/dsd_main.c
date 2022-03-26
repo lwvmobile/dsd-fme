@@ -199,9 +199,9 @@ initOpts (dsd_opts * opts)
   opts->pulse_digi_in_channels  = 1; //2
   opts->pulse_digi_out_channels = 1; //2
 
-  sprintf (opts->output_name, "Auto Detect");
+  sprintf (opts->output_name, "Default Channel");
   opts->pulse_flush = 1; //set 0 to flush, 1 for flushed
-  opts->use_ncurses_terminal = 0; 
+  opts->use_ncurses_terminal = 0;
   opts->payload = 0;
 
   opts->EncryptionMode = MODE_UNENCRYPTED;
@@ -213,7 +213,7 @@ initState (dsd_state * state)
 {
 
   int i, j;
-
+  state->last_dibit = 0;
   state->dibit_buf = malloc (sizeof (int) * 1000000);
   state->dibit_buf_p = state->dibit_buf + 200;
   memset (state->dibit_buf, 0, sizeof (int) * 200);
@@ -326,6 +326,18 @@ initState (dsd_state * state)
   state->payload_algid = 0;
   state->payload_keyid = 0;
 
+  sprintf (state->dmr_branding, " ");
+  sprintf (state->dmr_callsign[0], "");
+  sprintf (state->dmr_callsign[1], "");
+  sprintf (state->dmr_callsign[2], "");
+  sprintf (state->dmr_callsign[3], "");
+  sprintf (state->dmr_lrrp[0], "");
+  sprintf (state->dmr_lrrp[1], "");
+  sprintf (state->dmr_lrrp[2], "");
+  sprintf (state->dmr_lrrp[3], "");
+  sprintf (state->dmr_lrrp[4], "");
+  sprintf (state->dmr_lrrp[5], "");
+
   state->K = 0;
 
 #ifdef TRACE_DSD
@@ -360,7 +372,7 @@ usage ()
   fprintf (stderr,"  -z <num>      Frame rate for datascope\n");
   fprintf (stderr,"\n");
   fprintf (stderr,"Input/Output options:\n");
-  fprintf (stderr,"  -i <device>   Audio input device (default is pulse audio, - for piped stdin, rtl for rtl device)\n");
+  fprintf (stderr,"  -i <device>   Audio input device (default is pulse audio, \n                  - for piped stdin, rtl for rtl device)\n");
   fprintf (stderr,"  -o <device>   Audio output device (default is pulse audio)\n");
   fprintf (stderr,"  -d <dir>      Create mbe data files, use this directory\n");
   fprintf (stderr,"  -r <files>    Read/Play saved mbe data from file(s)\n");
@@ -374,8 +386,8 @@ usage ()
   fprintf (stderr,"  -P <num>      RTL-SDR PPM Error (default = 0)\n");
   fprintf (stderr,"  -D <num>      RTL-SDR Device Index Number\n");
   fprintf (stderr,"  -G <num>      RTL-SDR Device Gain (0-49) (default = 0 Auto Gain)\n");
-  fprintf (stderr,"  -L <num>      RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)(Just have to guess really...)\n");
-  fprintf (stderr,"  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)(1-3 recommended, still testing) \n");
+  fprintf (stderr,"  -L <num>      RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)\n                 (Just have to guess really...)\n");
+  fprintf (stderr,"  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)\n");
   fprintf (stderr,"  -Y <num>      RTL-SDR VFO Bandwidth kHz (default = 48)(6, 8, 12, 16, 24, 48) \n");
   fprintf (stderr,"  -U <num>      RTL-SDR UDP Remote Port (default = 6020)\n");
   fprintf (stderr,"\n");
@@ -858,7 +870,12 @@ main (int argc, char **argv)
               opts.frame_dmr = 1;
               opts.frame_dpmr = 0; //borrow from LEH
               opts.frame_provoice = 0; //turn it on, doesn't work due to symbol rate difference
-              sprintf (opts.output_name, "Auto Detect");
+              //adding stereo for DMR so we don't accidentally segfault
+              //opts.pulse_raw_rate_out  = 24000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
+              //opts.pulse_digi_rate_out = 24000; //need to copy this to rtl type in and change rate out to 8000
+              //opts.pulse_raw_out_channels  = 2;
+              //opts.pulse_digi_out_channels = 2; //2
+              sprintf (opts.output_name, "Default Channel");
             }
           else if (optarg[0] == 'd')
             {
@@ -979,7 +996,12 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0; //
               state.rf_mod = 0;  //
+              //opts.pulse_raw_rate_out  = 24000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
+              //opts.pulse_digi_rate_out = 24000; //need to copy this to rtl type in and change rate out to 8000
+              //opts.pulse_raw_out_channels  = 2;
+              //opts.pulse_digi_out_channels = 2; //2
               sprintf (opts.output_name, "DMR/MOTOTRBO");
+              //sprintf (opts.output_name, "DMR/MOTOTRBO  Left");
               fprintf (stderr,"Decoding only DMR/MOTOTRBO frames.\n");
             }
           else if (optarg[0] == 'm')

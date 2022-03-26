@@ -44,17 +44,20 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
     TSVoiceSupFrame = &state->TS2SuperFrame;
   }
 
-  TSVoiceSupFrameL = &state->TS1SuperFrame;
-  TSVoiceSupFrameR = &state->TS2SuperFrame;
+  //TSVoiceSupFrameL = &state->TS1SuperFrame;
+  //TSVoiceSupFrameR = &state->TS2SuperFrame;
 //
 //
 //
   for(Frame = 0; Frame < 6; Frame++)
   {
     /* 1 DMR frame contains 3 AMBE voice samples */
+    //fprintf (stderr, "\n 1AMBE ");
     for(i = 0; i < 3; i++)
     {
+
       errs  = (int*)&(TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
+      //fprintf (stderr, "[%02X] ", TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
       errs2 = (int*)&(TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
       state->errs =  TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
       state->errs2 = TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs2[i]; //correct placement
@@ -63,23 +66,45 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
                                 TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
                                 state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
-      //errs  = (int*)&(TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
-      //errs2 = (int*)&(TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
-      //state->errs =  TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
-      //state->errs2 = TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs2[i]; //correct placement
+      /*
+      if (state->currentslot == 0)
+      {
+      errs  = (int*)&(TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
+      errs2 = (int*)&(TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
+      state->errs =  TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
+      state->errs2 = TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].errs2[i]; //correct placement
 
-      //errsR  = (int*)&(TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
-      //errs2R = (int*)&(TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
-      //state->errs =  TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
-      //state->errs2 = TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs2[i]; //correct placement
+      mbe_processAmbe2450Dataf (state->audio_out_temp_buf, errs, errs2, state->err_str,
+                                TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
+                                state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+      state->debug_audio_errors += *errs2;
+      //state->debug_audio_errors += *errs2R;
+
+      processAudio(opts, state);
+      playSynthesizedVoice (opts, state);
+      }
+      if (state->currentslot == 1)
+      {
+      errsR  = (int*)&(TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
+      errs2R = (int*)&(TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
+      state->errs =  TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
+      state->errs2 = TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs2[i]; //correct placement
       //state->audio_out_temp_bufR = state->audio_out_temp_buf;
-      //mbe_processAmbe2450Dataf (state->audio_out_temp_buf, errs, errs2, state->err_str,
-      //                          TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
-      //                          state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
-      //mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, errsR, errs2R, state->err_strR,
-      //                          TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
-      //                          state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+      mbe_processAmbe2450Dataf (state->audio_out_temp_buf, errsR, errs2R, state->err_strR,
+                                TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
+                                state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+      state->debug_audio_errors += *errs2R;
+      processAudio(opts, state);
+      playSynthesizedVoice (opts, state);
+      }
+
+      mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, errsR, errs2R, state->err_strR,
+                                TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
+                                state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+      */
 
       if (opts->mbe_out_f != NULL)
       {
@@ -94,6 +119,7 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
       //state->debug_audio_errors += *errs2R;
 
       processAudio(opts, state);
+      //playSynthesizedVoice (opts, state);
 
       if (opts->wav_out_f != NULL)
       {
