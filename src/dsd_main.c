@@ -372,12 +372,12 @@ usage ()
   fprintf (stderr,"  -z <num>      Frame rate for datascope\n");
   fprintf (stderr,"\n");
   fprintf (stderr,"Input/Output options:\n");
-  fprintf (stderr,"  -i <device>   Audio input device (default is pulse audio, \n                  - for piped stdin, rtl for rtl device)\n");
-  fprintf (stderr,"  -o <device>   Audio output device (default is pulse audio)\n");
+  fprintf (stderr,"  -i <device>   Audio input device (default is /dev/dsp, \n                  - for piped stdin, rtl for rtl device)\n");
+  fprintf (stderr,"  -o <device>   Audio output device (default is /dev/dsp)\n");
   fprintf (stderr,"  -d <dir>      Create mbe data files, use this directory\n");
   fprintf (stderr,"  -r <files>    Read/Play saved mbe data from file(s)\n");
   fprintf (stderr,"  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
-  fprintf (stderr,"  -w <file>     Output synthesized speech to a .wav file\n");
+  //fprintf (stderr,"  -w <file>     Output synthesized speech to a .wav file\n");
   //fprintf (stderr,"  -a            Display port audio devices\n");
   //fprintf (stderr,"  -W            Monitor Source Audio When No Sync Detected (WIP!)\n");
   fprintf (stderr,"\n");
@@ -1180,7 +1180,10 @@ main (int argc, char **argv)
   }
 #endif
 	openAudioInDevice (&opts);
-	//openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
+	opts.audio_out_type = 0; //hard code these in, since cygwin only can use this type of output
+	sprintf (opts.audio_out_dev, "/dev/dsp"); //hard code these in, since cygwin only can use this type of output
+	openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
+	
   if (opts.playfiles == 1)
     {
       opts.split = 1;
@@ -1193,7 +1196,7 @@ main (int argc, char **argv)
         }
       else
         {
-          openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
+          //openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
         }
     }
   else if (strcmp (opts.audio_in_dev, opts.audio_out_dev) != 0)
@@ -1207,9 +1210,9 @@ main (int argc, char **argv)
         }
       else
         {
-          openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
+          //openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
         }
-      openAudioInDevice (&opts);
+      //openAudioInDevice (&opts);
 	  //openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
 
       fprintf (stderr,"Press CTRL + C twice to close.\n"); //Kindly remind user to double tap CTRL + C
@@ -1227,8 +1230,8 @@ main (int argc, char **argv)
 
   if (opts.playfiles == 1)
     {
-      opts.pulse_digi_rate_out = 8000; //need set to 8000 for amb/imb playback
-      opts.pulse_digi_out_channels = 1;
+      //opts.pulse_digi_rate_out = 8000; //need set to 8000 for amb/imb playback
+      //opts.pulse_digi_out_channels = 1;
       //openPulseOutput(&opts); //need to open it up for output
       playMbeFiles (&opts, &state, argc, argv);
     }

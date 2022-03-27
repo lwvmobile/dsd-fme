@@ -1179,7 +1179,11 @@ main (int argc, char **argv)
     }
   }
 #endif
-	//openAudioInDevice (&opts);
+	openAudioInDevice (&opts);
+	opts.audio_out_type = 0; //hard code these in, since cygwin only can use this type of output
+	sprintf (opts.audio_out_dev, "/dev/dsp"); //hard code these in, since cygwin only can use this type of output
+	openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
+	
   if (opts.playfiles == 1)
     {
       opts.split = 1;
@@ -1209,7 +1213,7 @@ main (int argc, char **argv)
           //openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
         }
       //openAudioInDevice (&opts);
-
+	  //openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
 
       fprintf (stderr,"Press CTRL + C twice to close.\n"); //Kindly remind user to double tap CTRL + C
     }
@@ -1221,12 +1225,13 @@ main (int argc, char **argv)
       opts.delay = 0;
       openAudioInDevice (&opts); //disabled all four instances of openAudio devices, in and out for now
       opts.audio_out_fd = opts.audio_in_fd;
+	  
     }
 
   if (opts.playfiles == 1)
     {
-      opts.pulse_digi_rate_out = 8000; //need set to 8000 for amb/imb playback
-      opts.pulse_digi_out_channels = 1;
+      //opts.pulse_digi_rate_out = 8000; //need set to 8000 for amb/imb playback
+      //opts.pulse_digi_out_channels = 1;
       //openPulseOutput(&opts); //need to open it up for output
       playMbeFiles (&opts, &state, argc, argv);
     }
