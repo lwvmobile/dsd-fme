@@ -4,19 +4,22 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 ![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/cygwin/dsd-fme.png)
 
 ## Example Usage - NCurses Terminal and Log Console to log file
-`./dsd -fa -o pulse -N 2> voice.log`
+
+(only works inside of Cygwin environment/Mintty terminal)
+
+`./dsd -fa -N 2> voice.log`
 
 in second terminal, same folder, run:
 
 `tail -n 40 -f voice.log`
 
 ## Example Usage - RTL
-`dsd -fi -i rtl -o pulse -c 154.9875M -P -2 -D 1 -G 36 -L 70 -U 6021 -Y 12`
+`dsd -fi -i rtl -o /dev/dsp -c 154.9875M -P -2 -D 1 -G 36 -L 70 -U 6021 -Y 12`
 
 ```
--i rtl to use rtl_fm (default is -i pulse for pulse audio)
+-i rtl to use rtl_fm (default is -i /dev/dsp for OSS input audio)
 
--o pulse to set output to pulse audio (is default anyways)
+-o /dev/dsp to set output to OSS audio (is default anyways)
 
 -c Set frequency
 
@@ -34,7 +37,7 @@ in second terminal, same folder, run:
 
 -Y 12 set rtl VFO bandwidth in kHz, (default = 48)(6, 8, 12, 16, 24, 48)
 
--W Monitor Source Audio (WIP!) (Currently disabled on PulseAudio branch)
+-W Monitor Source Audio (WIP!) (Currently disabled due to performance issues)
 ```
 
 ### Note
@@ -42,41 +45,38 @@ in second terminal, same folder, run:
 `dsd` and `./dsd` may need to be used in your usage, depending on if you are running it from the build folder, or if you have run make install. You will need to tweak the examples to your particular usage
 
 
-## Example Pulse Audio Input and Pulse Audio Output, Autodetect Frame Type
-`dsd -o pulse ` or `./dsd -o pulse`
-```
-Cygwin builds appear to need -o pulse specified, otherwise it may or may not output audio by default.
+## Example OSS Audio Input and OSS Audio Output, Autodetect Frame Type
+`dsd -o /dev/dsp ` or `./dsd -o /dev/dsp`
 
-Not sure why this is the case, Cygwin can act strangely at times.
+The Cygwin version has been reverted back to using OSS /dev/dsp audio and hard coded to use /dev/dsp for input and output by default, so these values do not need to be specified in the Cygwin environment.
 
--fa Auto-detect frame type
-```
-## Example STDIN UDP from SDR++, output to Pulse Audio, and save wav files
-`socat stdio udp-listen:7355 | dsd -fi -i - -o pulse -w nxdn.wav`
+## Example STDIN UDP from SDR++, output to OSS Audio, and save MBE files
+`socat stdio udp-listen:7355 | dsd -fi -i - -o /dev/dsp -d ./MBE/`
 
 ## Roadmap
 The Current list of objectives include:
 
 1. ~~Random Tinkering~~ More Random Tinkering
 
-2. Implemented Pulse Audio and ~~Remove PortAudio and~~ Remove OSS, including SOLARIS/APPLE/BSD methods, and Retain PortAudio as Optional (need to re-enable in CMakeLists.txt file)
+2. Reverted back to OSS audio for Cygwin builds due to performance issues and Cygwin quirks dealing with pulse audio.
 
-3. Improve NXDN and DMR support 
+3. Continue to evolve and improve all decoding support.
 
-4. More Concise Printouts - Ncurses
+4. More Concise Printouts - Ncurses (only available in Cygwin environments, not stand-alone releases)
 
-5. ~~Improve Monitor Source Audio (if #2 on list is up and working)~~ Not currently playing well with Pulse Audio, need to re-evaluate
+5. Look for alternate terminal environments/portable Cygwin to support ncurses and other features in precompiled versions.
 
-6. ~~Make simple to use installer script.~~ Working on script now, also have full build and install guide down below
+6. Attempt to make Cygwin builds simpler, better documentation on how to compile from start to finish, with exact requirements to set up in the cygwin installer.
+
 
 ## How to clone, check out, and build this branch
 
 Manual Installation: Follow the steps down below.
 
-First, install dependency packages. Check in the Cygwin Cheatsheet folder to see dependencies to install using setup.exe that came with Cygwin.  The guide below will be a loose guide, based on the Debian/Ubuntu guide, as I cannot predict exactly which dependencies will be absolutely necesary in Cygwin. Regardless, the build instructions should be nearly identical once the proper dependencies have been met. The user will also need to manually build and install rtl-sdr and librtlsdr in Cygwin if support for RTL dongles is desired. As of this writing, I have not successfully been able to build a current version inside of Cygwin.
+First, install dependency packages. Check in the Cygwin Cheatsheet folder to see dependencies to install using setup.exe that came with Cygwin.  The guide below will be a loose guide, based on the Debian/Ubuntu guide, as I cannot predict exactly which dependencies will be absolutely necesary in Cygwin. Regardless, the build instructions should be nearly identical once the proper dependencies have been met. The user will also need to manually build and install rtl-sdr and librtlsdr in Cygwin if support for RTL dongles is desired. As of this writing, I have not been able to document an exact reliable method to compile rtl support inside of Cygwin, but I have it available in precompiled versions.
 
 ```
-libpulse-dev libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make sox socat
+libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make sox socat
 
 wget -O itpp-latest.tar.bz2 http://sourceforge.net/projects/itpp/files/latest/download?source=files
 tar xjf itpp*
@@ -105,7 +105,7 @@ cd ..
 cd ..
 ```
 
-Finish by running these steps to clone and build DSD-FME w/ pulseaudio support in Cygwin.
+Finish by running these steps to clone and build DSD-FME in Cygwin.
 
 ```
 git clone https://github.com/lwvmobile/dsd-fme
