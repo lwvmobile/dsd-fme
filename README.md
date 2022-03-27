@@ -75,9 +75,8 @@ Manual Installation: Follow the steps down below.
 
 First, install dependency packages. Check in the Cygwin Cheatsheet folder to see dependencies to install using setup.exe that came with Cygwin.  The guide below will be a loose guide, based on the Debian/Ubuntu guide, as I cannot predict exactly which dependencies will be absolutely necesary in Cygwin. Regardless, the build instructions should be nearly identical once the proper dependencies have been met. The user will also need to manually build and install rtl-sdr and librtlsdr in Cygwin if support for RTL dongles is desired. As of this writing, I have not been able to document an exact reliable method to compile rtl support inside of Cygwin, but I have it available in precompiled versions.
 
+Build ITPP from source.
 ```
-libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make sox socat
-
 wget -O itpp-latest.tar.bz2 http://sourceforge.net/projects/itpp/files/latest/download?source=files
 tar xjf itpp*
 #if you can't cd into this folder, double check folder name first
