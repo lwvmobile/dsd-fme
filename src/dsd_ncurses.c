@@ -259,7 +259,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ("--Input Output----------------------------------------------------------------\n");
   if (opts->audio_in_type == 0)
   {
-    printw ("| OSS Audio  Input [48000] kHz [%i] Channel\n", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
+    printw ("| OSS Audio  Input [48] kHz [1] Channel\n", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
   }
   if (opts->audio_in_type == 1)
   {
@@ -276,7 +276,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_out_type == 0)
   {
-    printw ("| OSS Audio Output [ 8000] kHz [%i] Channel\n", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels);
+    printw ("| OSS Audio Output [ 8] kHz [1] Channel\n", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels);
   }
   if (opts->mbe_out_dir[0] != 0)
   {
