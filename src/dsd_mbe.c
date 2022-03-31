@@ -47,7 +47,9 @@ playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
 
               if (opts->audio_out == 1)
                 {
+
                   playSynthesizedVoice (opts, state);
+
                 }
             }
           else if (state->mbe_file_type == 1)
