@@ -770,7 +770,8 @@ main (int argc, char **argv)
 
         case 'W': //monitor_input_audio if no sync
           opts.monitor_input_audio = 1;
-          fprintf (stderr,"Monitor Source Audio Enabled.\n");
+          fprintf (stderr,"Monitoring Source Audio when carrier present and No Sync Detected.\n");
+          fprintf (stderr,"  - May cause Pulse Audio Server to crash on some systems.\n");
           break;
 
         case 'N':

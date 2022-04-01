@@ -275,6 +275,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| Pulse Audio Output [%i] kHz [%i] Channel\n", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels);
   }
+  if (opts->monitor_input_audio == 1)
+  {
+    printw ("| Monitoring Source Audio when carrier present and No Sync Detected\n");
+  }
   if (opts->mbe_out_dir[0] != 0)
   {
     printw ("| Writing MBE data files to directory %s\n", opts->mbe_out_dir);

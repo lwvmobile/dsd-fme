@@ -84,7 +84,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       if(opts->audio_in_type == 0)
       {
           pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
-          if (opts->monitor_input_audio == 1 && state->lastsynctype == -1)
+          //look into how processAudio handles playback, not sure if latency issues, or garbage sample values crash pulse when written 
+          if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample < 32767 && sample > -32767)
           {
             state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
             pa_simple_write(opts->pulse_raw_dev_out, (void*)&state->pulse_raw_out_buffer, 2, NULL);
@@ -93,7 +94,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       }
       else if (opts->audio_in_type == 1) {
           result = sf_read_short(opts->audio_in_file, &sample, 1);
-          if (opts->monitor_input_audio == 1 && state->lastsynctype == -1)
+          if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample < 32767 && sample > -32767)
           {
             state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
             pa_simple_write(opts->pulse_raw_dev_out, (void*)&state->pulse_raw_out_buffer, 2, NULL);
@@ -121,7 +122,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 #ifdef USE_RTLSDR
         // TODO: need to read demodulated stream here
         get_rtlsdr_sample(&sample);
-        if (opts->monitor_input_audio == 1 && state->lastsynctype == -1)
+        if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample < 32767 && sample > -32767)
         {
           state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
           pa_simple_write(opts->pulse_raw_dev_out, (void*)&state->pulse_raw_out_buffer, 2, NULL);
