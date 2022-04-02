@@ -1646,7 +1646,7 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
 //Full
   if (opts->payload == 1)
   {
-    fprintf (stderr, "\nFull CSBK Payload ");
+    fprintf (stderr, "\nFull Voice Header Payload ");
     for (i = 0; i < 12; i++)
     {
       fprintf (stderr, "[%02X]", DmrDataByte[i]);
