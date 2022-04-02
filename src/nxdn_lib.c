@@ -770,10 +770,10 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
       state->nxdn_key = (KeyID & 0xFF);
       state->nxdn_cipher_type = CipherType;
     }
-    fprintf(stderr, "   (OK)   - ");
+    fprintf(stderr, "(CRC OK) ");
   }
   //fprintf(stderr, "   (OK)   - ");
-  else fprintf(stderr, "(CRC ERR) - ");
+  else fprintf(stderr, "(CRC ERR) ");
 
   //fprintf(stderr, "\nVCALL = ");
 

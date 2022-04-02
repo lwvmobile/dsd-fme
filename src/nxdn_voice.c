@@ -81,10 +81,10 @@ void processNXDNVoice (dsd_opts * opts, dsd_state * state)
   if(CrcIsGood)
   {
     fprintf (stderr, "RAN=%02d - Part %d/4 ", RAN, PartOfFrame + 1);
-    fprintf (stderr, "   (OK)   - ");
+    fprintf (stderr, "(CRC OK) ");
     state->nxdn_last_ran = RAN; //disable, try to grab this in voice instead
   }
-  else fprintf(stderr, "(CRC ERR) - ");
+  else fprintf(stderr, "(CRC ERR) ");
 
 
   /* Determine the current part of superframe
@@ -106,7 +106,7 @@ void processNXDNVoice (dsd_opts * opts, dsd_state * state)
 
   if (opts->errorbars == 1)
   {
-    fprintf(stderr, "e:");
+    //fprintf(stderr, "e:");
   }
 
   /* Start pseudo-random NXDN sequence after
