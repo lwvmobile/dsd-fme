@@ -445,8 +445,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //printw ("| DCC: [%i] FID: [%02X]\n", dcc, state->dmr_fid);
     //attron(COLOR_PAIR(3));
     printw ("| DCC: [%2i] FID: [%02X] SOP: [%02X] ", dcc, state->dmr_fid, state->dmr_so);
-    //if(state->payload_mi == 0 && state->dmr_so & 0x40)
-    if(state->payload_mi == 0 && state->dmr_so == 0x40)
+    if(state->payload_mi == 0 && state->dmr_so & 0x40)
+    //if(state->payload_mi == 0 && state->dmr_so == 0x40)
     {
       attron(COLOR_PAIR(5));
       printw ("**BP** ");
@@ -454,8 +454,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attroff(COLOR_PAIR(5));
       attron(COLOR_PAIR(3));
     }
-    //if(state->payload_keyid > 0 && state->dmr_so & 0x40)
-    if(state->payload_keyid > 0 && state->dmr_so == 0x40)
+    if(state->payload_keyid > 0 && state->dmr_so & 0x40)
+    //if(state->payload_keyid > 0 && state->dmr_so == 0x40)
     {
       attron(COLOR_PAIR(5));
       printw (" ALG: [0x%02X] KEY [0x%02X] MI [0x%08X]", state->payload_algid, state->payload_keyid, state->payload_mi);
@@ -463,11 +463,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attroff(COLOR_PAIR(5));
       attron(COLOR_PAIR(3));
     }
-    //if(state->K > 0 && state->dmr_so & 0x40)
-    if(state->K > 0 && state->dmr_so == 0x40)
+    if(state->K > 0 && state->payload_keyid == 0 && state->dmr_so & 0x40)
+    //if(state->K > 0 && state->dmr_so == 0x40)
     {
       attron(COLOR_PAIR(5));
-      //printw ("K 0x[%12llX]", state->K); //seems to get reset in ncurses for some reason? some bigger issue perhaps? other strange issues occur too with provoice
+      printw ("BPK [%3d]", state->K);
       attroff(COLOR_PAIR(5));
       attron(COLOR_PAIR(3));
     }

@@ -18,8 +18,9 @@
 #include "dsd.h"
 #include "dmr_const.h"
 #include "p25p1_check_hdu.h"
+//
 
-
+//
 void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
 {
   uint32_t i, j;
@@ -33,6 +34,7 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
   int *errsR;
   int *errs2R;
   unsigned long long int k;
+  int x;
   k = 0;
 
   if(state->currentslot == 0)
@@ -43,11 +45,11 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
   {
     TSVoiceSupFrame = &state->TS2SuperFrame;
   }
-
   //TSVoiceSupFrameL = &state->TS1SuperFrame;
   //TSVoiceSupFrameR = &state->TS2SuperFrame;
+
 //
-//
+
 //
   for(Frame = 0; Frame < 6; Frame++)
   {
@@ -57,7 +59,6 @@ void ProcessDMREncryption (dsd_opts * opts, dsd_state * state)
     {
 
       errs  = (int*)&(TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
-      //fprintf (stderr, "[%02X] ", TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
       errs2 = (int*)&(TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
       state->errs =  TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
       state->errs2 = TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs2[i]; //correct placement

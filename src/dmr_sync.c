@@ -962,7 +962,7 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
   //ARS?
   if ( (state->dmr_12_rate_sf[0] & 0x3F) == 0x0C)
   {
-    fprintf (stderr, "\n  Source:     ");
+    fprintf (stderr, "\n       Source:");
     fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_12_rate_sf[0] & 0x3F), state->dmr_12_rate_sf[1], state->dmr_12_rate_sf[2], state->dmr_12_rate_sf[3]); //strip first two bits off 1st byte
     fprintf (stderr, " [%08d]", (state->dmr_12_rate_sf[1] <<16 ) + (state->dmr_12_rate_sf[2] << 8) + state->dmr_12_rate_sf[3] );
     fprintf (stderr, " - Port %05d", (state->dmr_12_rate_sf[8] << 8) + state->dmr_12_rate_sf[9]);

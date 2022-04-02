@@ -741,7 +741,10 @@ main (int argc, char **argv)
 
         case 'K':
           sscanf (optarg, "%lld", &state.K);
-          state.K = ( ((state.K & 0xFF0F) << 32 ) + (state.K << 16) + state.K );
+          if (state.K > 256)
+          {
+           state.K = 256;
+          }
           break;
 
         case 'G': //Set rtl device gain
