@@ -634,7 +634,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
     /* Unknown Message Type */
     default:
     {
-      fprintf(stderr, "Unknown Message type ");
+      //fprintf(stderr, "Unknown Message type ");
       break;
     }
   } /* End switch(MessageType) */
