@@ -751,9 +751,6 @@ uint16_t CRC15BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
 uint16_t CRC12BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
 uint8_t CRC6BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
 void ScrambledNXDNVoiceBit(int * LfsrValue, char * BufferIn, char * BufferOut, int NbOfBitToScramble);
-void NxdnEncryptionStreamGeneration (dsd_opts* opts, dsd_state* state, uint8_t KeyStream[1664]);
-
-void processMbeFrameEncrypted (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char ambe_fr[4][24], char imbe7100_fr[7][24], char ambe_keystream[49], char imbe_keystream[88]);
 
 //LEH dPMR
 void dPMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
@@ -767,7 +764,7 @@ uint8_t CRC8BitdPMR(uint8_t * BufferIn, uint32_t BitLength);
 void ConvertAirInterfaceID(uint32_t AI_ID, uint8_t ID[8]);
 int32_t GetdPmrColorCode(uint8_t ChannelCodeBit[24]);
 //LEH DMR
-void ProcessDMR (dsd_opts * opts, dsd_state * state); 
+void ProcessDMR (dsd_opts * opts, dsd_state * state);
 void DMRDataFrameProcess(dsd_opts * opts, dsd_state * state);
 void DMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
 //BPTC (Block Product Turbo Code) functions

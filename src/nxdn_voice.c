@@ -16,7 +16,6 @@ void processNXDNVoice (dsd_opts * opts, dsd_state * state)
   uint8_t StructureField = 0;
   uint8_t RAN = 0;
   uint8_t PartOfFrame = 0;
-  uint8_t KeyStream[1664] = {0};
   char ambe7bytesArray[7] = {0};
   int PartOfEncryptedSuperFrame = 0;
 
@@ -26,7 +25,7 @@ void processNXDNVoice (dsd_opts * opts, dsd_state * state)
   }
 
   /* Start pseudo-random NXDN sequence after
-   * LITCH = 16 bit = 8 dibit
+   * LICH = 16 bit = 8 dibit
    * ==> Index 8 */
   pr = (unsigned char *)(&nxdnpr2[8]);
   for (i = 0; i < 30; i++)
@@ -87,13 +86,6 @@ void processNXDNVoice (dsd_opts * opts, dsd_state * state)
   }
   else fprintf(stderr, "(CRC ERR) - ");
 
-  /* Generate the key stream */
-  NxdnEncryptionStreamGeneration(opts, state, KeyStream);
-
-  //fprintf(stderr, "\nKeyStream = ");
-  //for(i = 0; i < 49; i++) fprintf(stderr, "%d", KeyStream[i]);
-  //fprintf(stderr, "\n");
-
 
   /* Determine the current part of superframe
    * (in an AES or DES encrypted frame, two superframes
@@ -118,7 +110,7 @@ void processNXDNVoice (dsd_opts * opts, dsd_state * state)
   }
 
   /* Start pseudo-random NXDN sequence after
-   * LITCH = 16 bit = 8 dibit +
+   * LICH = 16 bit = 8 dibit +
    * SACCH = 60 bit = 30 dibit
    * = 76 bit = 38 dibit
    * ==> Index 38 */
@@ -144,26 +136,8 @@ void processNXDNVoice (dsd_opts * opts, dsd_state * state)
       y++;
       z++;
     }
-    //processMbeFrame (opts, state, NULL, ambe_fr, NULL);
-    processMbeFrameEncrypted(opts, state, NULL, ambe_fr, NULL, (char *)&KeyStream[(PartOfEncryptedSuperFrame * 4 * 4 * 49) + (PartOfFrame * 4 * 49) + (j * 49)], NULL);
+    processMbeFrame (opts, state, NULL, ambe_fr, NULL);
 
-
-#ifdef BUILD_DSD_WITH_FRAME_CONTENT_DISPLAY
-    if(state->printNXDNAmbeVoiceSampleHex)
-    {
-      /* Display AMBE frame content */
-      /* Convert the 49 bit AMBE frame into 7 bytes */
-      Convert49BitSampleInto7Bytes(state->ambe_deciphered, ambe7bytesArray);
-      fprintf(stderr, "\nVoice Frame %d/4 : ", j + 1);
-      fprintf(stderr, "E1 = %d ; E2 = %d ; Content = ", state->errs, state->errs2);
-      for(i = 0; i < 7; i++) fprintf(stderr, "0x%02X, ", ambe7bytesArray[i] & 0xFF);
-      //fprintf(stderr, "\n");
-    }
-#endif /* BUILD_DSD_WITH_FRAME_CONTENT_DISPLAY */
-
-#ifdef NXDN_DUMP
-    fprintf(stderr, " ");
-#endif
   } /* End for (j = 0; j < 4; j++) */
 
   if (opts->errorbars == 1)
