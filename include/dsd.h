@@ -241,6 +241,7 @@ typedef struct
   unsigned int  errs1[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4];  /* 8 x errors #1 computed when demodulate the AMBE voice bit of the frame */
   unsigned int  errs2[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4];  /* 8 x errors #2 computed when demodulate the AMBE voice bit of the frame */
   unsigned char AmbeBit[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4][49];  /* 8 x 49 bit of AMBE voice of the frame */
+  //unsigned char AmbeBit[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4][36];
   unsigned char CCHData[NB_OF_DPMR_VOICE_FRAME_TO_DECODE][48];
   unsigned int  CCHDataHammingOk[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
   unsigned char CCHDataCRC[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
@@ -601,6 +602,11 @@ typedef struct
 #define PROVOICE_EA_SYNC     "31131311331331111133131311311133"
 
 //LEH dPMR
+/* dPMR Frame Sync 1 - 48 bits sequence
+ * HEX    : 57 FF 5F 75 D5 77
+ * Binary : 0101 0111 1111 1111 0101 1111 0111 0101 1101 0101 0111 0111
+ * Dibit  :  1 1  1 3  3 3  3 3  1 1  3 3  1 3  1 1  3 1  1 1  1 3  1 3 */
+
 #define DPMR_FRAME_SYNC_1     "111333331133131131111313"
 
 /* dPMR Frame Sync 2 - 24 bits sequence
@@ -620,12 +626,14 @@ typedef struct
  * Binary : 1111 1101 0101 0101 1111 0101 1101 1111 0111 1111 1101 1101
  * Dibit  :  3 3  3 1  1 1  1 1  3 3  1 1  3 1  3 3  1 3  3 3  3 1  3 1 */
 #define DPMR_FRAME_SYNC_4     "333111113311313313333131"
+//#define DPMR_FRAME_SYNC_4     "111333331133131131111313"
 
 /* dPMR Frame Sync 1 to 4 - Inverted */
 #define INV_DPMR_FRAME_SYNC_1 "333111113311313313333131"
 #define INV_DPMR_FRAME_SYNC_2 "331111313113"
 #define INV_DPMR_FRAME_SYNC_3 "311313111133"
 #define INV_DPMR_FRAME_SYNC_4 "111333331133131131111313"
+//#define INV_DPMR_FRAME_SYNC_4 "333111113311313313333131"
 
 //
 /*
@@ -743,9 +751,6 @@ uint16_t CRC15BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
 uint16_t CRC12BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
 uint8_t CRC6BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
 void ScrambledNXDNVoiceBit(int * LfsrValue, char * BufferIn, char * BufferOut, int NbOfBitToScramble);
-void NxdnEncryptionStreamGeneration (dsd_opts* opts, dsd_state* state, uint8_t KeyStream[1664]);
-
-void processMbeFrameEncrypted (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char ambe_fr[4][24], char imbe7100_fr[7][24], char ambe_keystream[49], char imbe_keystream[88]);
 
 //LEH dPMR
 void dPMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
@@ -759,7 +764,7 @@ uint8_t CRC8BitdPMR(uint8_t * BufferIn, uint32_t BitLength);
 void ConvertAirInterfaceID(uint32_t AI_ID, uint8_t ID[8]);
 int32_t GetdPmrColorCode(uint8_t ChannelCodeBit[24]);
 //LEH DMR
-void ProcessDMREncryption (dsd_opts * opts, dsd_state * state); //consider if this is needed
+void ProcessDMR (dsd_opts * opts, dsd_state * state);
 void DMRDataFrameProcess(dsd_opts * opts, dsd_state * state);
 void DMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
 //BPTC (Block Product Turbo Code) functions

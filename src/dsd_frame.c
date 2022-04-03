@@ -253,8 +253,10 @@ processFrame (dsd_opts * opts, dsd_state * state)
     else if ((state->synctype == 21) || (state->synctype == 25))
     {
       /* dPMR Frame Sync 2 */
-      fprintf(stderr, "dPMR Frame sync 2 ");
-      {
+      //for (short o = 0; o < 2; o++)
+      //{
+        fprintf(stderr, "dPMR Frame sync 2 ");
+
         //state->rf_mod = GFSK_MODE;
         state->nac = 0;
         state->lastsrc = 0;
@@ -268,14 +270,16 @@ processFrame (dsd_opts * opts, dsd_state * state)
           }
         }
         state->nac = 0;
-        if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
-        {
-          openMbeOutFile (opts, state);
-        }
-        sprintf(state->fsubtype, " VOICE        ");
-        processdPMRvoice (opts, state);
+
+          if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
+          {
+            openMbeOutFile (opts, state);
+          }
+          sprintf(state->fsubtype, " VOICE        ");
+          processdPMRvoice (opts, state);
+        //}
         return;
-      }
+
     }
     else if ((state->synctype == 22) || (state->synctype == 26))
     {

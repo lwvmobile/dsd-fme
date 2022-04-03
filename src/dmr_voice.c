@@ -637,8 +637,8 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
   /* Perform the SYNC DMR data embedded decoding */
   ProcessVoiceBurstSync(opts, state);
 
-  /* Perform the DMR encryption decoding */
-  ProcessDMREncryption(opts, state);
+  /* Perform the DMR voice decoding */
+  ProcessDMR(opts, state);
 
   /* Print DMR frame (if needed) */
   //DMRVoiceFrameProcess(opts, state); //HERE HERE, was enabled, disabled so I could build

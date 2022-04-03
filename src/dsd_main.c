@@ -190,6 +190,7 @@ initOpts (dsd_opts * opts)
   opts->rtl_volume_multiplier = 1; //set multipler from rtl sample to 'boost volume'
   opts->rtl_udp_port = 6020; //set UDP port for RTL remote
   opts->rtl_bandwidth = 12; //changed recommended default to 12, 24 for ProVoice
+  opts->rtlsdr_ppm_error = 0; //initialize ppm with 0 value; bug reported by N.
   opts->pulse_raw_rate_in   = 48000;
   opts->pulse_raw_rate_out  = 48000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
   opts->pulse_digi_rate_in  = 48000;
@@ -438,14 +439,16 @@ void
 liveScanner (dsd_opts * opts, dsd_state * state)
 {
 //need to use this area to configure audio rates for different sources if not pulse
+
 if (opts->audio_in_type == 1) //if stdin, switch to 8000 and single channel audio
 {
   opts->pulse_digi_rate_out = 8000; //stdin needs 8000 output, could have sworn this was working with 48000
   opts->pulse_digi_out_channels = 1;
-  opts->pulse_raw_rate_out = 8000;
+  opts->pulse_raw_rate_out = 48000;
   opts->pulse_raw_out_channels = 1;
   fprintf (stderr, "STDIN Audio Rate Out set to 8000 Khz/1 Channel \n");
 }
+
 #ifdef USE_PORTAUDIO
 	if(opts->audio_in_type == 2)
 	{
@@ -464,7 +467,7 @@ if (opts->audio_in_type == 1) //if stdin, switch to 8000 and single channel audi
   {
     opts->pulse_digi_rate_out = 8000; //if rtl, switch to 8000 and 1 channel
     opts->pulse_digi_out_channels = 1;
-    opts->pulse_raw_rate_out = 8000;
+    opts->pulse_raw_rate_out = 48000;
     opts->pulse_raw_out_channels = 1;
     fprintf (stderr, "RTL Audio Rate Out set to 8000 Khz/1 Channel \n");
     open_rtlsdr_stream(opts);
@@ -476,16 +479,20 @@ if (opts->audio_in_type == 0){
 if (opts->audio_out_type == 0){
   openPulseOutput(opts);
 }
-  //openPulse(opts);
+
 
 	while (1)
     {
+
       noCarrier (opts, state);
+
       state->synctype = getFrameSync (opts, state);
       // recalibrate center/umid/lmid
       state->center = ((state->max) + (state->min)) / 2;
       state->umid = (((state->max) - state->center) * 5 / 8) + state->center;
       state->lmid = (((state->min) - state->center) * 5 / 8) + state->center;
+
+
       while (state->synctype != -1)
         {
           processFrame (opts, state);
@@ -734,7 +741,10 @@ main (int argc, char **argv)
 
         case 'K':
           sscanf (optarg, "%lld", &state.K);
-          state.K = ( ((state.K & 0xFF0F) << 32 ) + (state.K << 16) + state.K );
+          if (state.K > 256)
+          {
+           state.K = 256;
+          }
           break;
 
         case 'G': //Set rtl device gain
@@ -763,18 +773,8 @@ main (int argc, char **argv)
 
         case 'W': //monitor_input_audio if no sync
           opts.monitor_input_audio = 1;
-          fprintf (stderr,"Monitor Source Audio Enabled.\n");
-          //opts.pulse_raw_rate_in   = 48000;
-          //opts.pulse_raw_rate_out  = 48000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
-          //opts.pulse_digi_rate_in  = 48000;
-          //opts.pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
-          //opts.pulse_raw_in_channels   = 1;
-          //opts.pulse_raw_out_channels  = 1;
-          //opts.pulse_digi_in_channels  = 1; //2
-          //opts.pulse_digi_out_channels = 1; //2
-          fprintf (stderr,"  Monitor Source Audio may cause decoding issues.\n");
-          fprintf (stderr,"  Don't Run Monitor Source Audio with Ncurses Terminal.\n");
-          opts.use_ncurses_terminal = 0; //may not set depends on when -N and -W are first and second
+          fprintf (stderr,"Monitoring Source Audio when carrier present and No Sync Detected.\n");
+          fprintf (stderr,"  - May cause Pulse Audio Server to crash on some systems.\n");
           break;
 
         case 'N':
@@ -1141,7 +1141,7 @@ main (int argc, char **argv)
     if (opts.use_ncurses_terminal == 1)
     {
       ncursesOpen();
-      ncursesPrinter(&opts, &state);
+      //ncursesPrinter(&opts, &state);
     }
 
     if (opts.resume > 0)
@@ -1231,7 +1231,7 @@ main (int argc, char **argv)
 
     }
   if (opts.use_ncurses_terminal == 1){
-    ncursesClose ();
+    //ncursesClose ();
   }
   cleanupAndExit (&opts, &state);
 
