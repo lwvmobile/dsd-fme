@@ -85,11 +85,11 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
         }
         if (opts->payload == 1 && i < 6) //make opt variable later on to toggle this
         {
-          fprintf (stderr, "[%02X] ", b);
+          fprintf (stderr, "%02X", b);
         }
         if (opts->payload == 1 && i == 6) //7th octet should only contain 1 bit? value will be either 0x00 or 0x80?
         {
-          fprintf (stderr, "[%02X] ", b & 0x80); //7th octet should only contain 1 bit?
+          fprintf (stderr, "%02X", b & 0x80); //7th octet should only contain 1 bit?
         }
 
       fputc (b, opts->mbe_out_f);
@@ -187,11 +187,11 @@ readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
         }
         if (opts->payload == 1 && i < 6) //make opt variable later on to toggle this
         {
-          fprintf (stderr, "[%02X] ", x);
+          fprintf (stderr, "%02X", x);
         }
         if (opts->payload == 1 && i == 6) //7th octet should only contain 1 bit? value will be either 0x00 or 0x80?
         {
-          fprintf (stderr, "[%02X] ", x & 0x80); //7th octet should only contain 1 bit?
+          fprintf (stderr, "%02X", x & 0x80); //7th octet should only contain 1 bit?
         }
     }
     if (opts->payload == 1)
