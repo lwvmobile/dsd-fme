@@ -194,6 +194,7 @@ initOpts (dsd_opts * opts)
   opts->pulse_raw_rate_out  = 48000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
   opts->pulse_digi_rate_in  = 48000;
   opts->pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
+  opts->rtlsdr_ppm_error = 0; //bugfix per N, if not specified, takes random large value
   opts->pulse_raw_in_channels   = 1;
   opts->pulse_raw_out_channels  = 1;
   opts->pulse_digi_in_channels  = 1; //2
@@ -734,7 +735,6 @@ main (int argc, char **argv)
 
         case 'K':
           sscanf (optarg, "%lld", &state.K);
-          state.K = ( ((state.K & 0xFF0F) << 32 ) + (state.K << 16) + state.K );
           break;
 
         case 'G': //Set rtl device gain
