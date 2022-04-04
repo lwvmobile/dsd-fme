@@ -178,6 +178,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   // detect frame sync
   t = 0;
   synctest[24] = 0;
+  synctest12[12] = 0;
   synctest18[18] = 0;
   synctest32[32] = 0;
   synctest_pos = 0;
