@@ -623,7 +623,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (lls != -1) //is there a synctype 0?
   {
     printw ("| %s ", SyncTypes[lls]);
-    printw ("%s", state->dmr_branding);
+    //printw ("%s", state->dmr_branding);
     printw ("\n");
   }
   printw ("------------------------------------------------------------------------------\n");
