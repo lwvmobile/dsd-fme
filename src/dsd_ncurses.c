@@ -464,7 +464,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
     //if(state->K > 0 && state->payload_keyid == 0 && state->dmr_so & 0x40)
-    if(state->K > 0 && state->dmr_so == 0x40)
+    if(state->K > 0 && state->dmr_so == 0x40 && state->payload_keyid == 0)
     {
       attron(COLOR_PAIR(5));
       printw ("BPK [%3d]", state->K);

@@ -214,6 +214,7 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 {
   // determine dibit state
   if ((state->synctype == 6) || (state->synctype == 14)|| (state->synctype == 18))
+
     {
       //  6 +D-STAR
       // 14 +ProVoice
@@ -251,8 +252,9 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
           return (0);               // +1
         }
     }
-  else if ((state->synctype == 1) || (state->synctype == 3) || (state->synctype == 5) ||
-          (state->synctype == 9) || (state->synctype == 11) || (state->synctype == 13) || (state->synctype == 17))
+  else if ((state->synctype == 1) || (state->synctype == 3)  || (state->synctype == 5)  ||
+          (state->synctype == 9)  || (state->synctype == 11) || (state->synctype == 13) || (state->synctype == 17))
+
     {
       //  1 -P25p1
       //  3 -X2-TDMA (inverted signal voice frame)
@@ -261,6 +263,7 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
       // 11 -DMR (inverted signal voice frame)
       // 13 -DMR (inverted signal data frame)
       // 17 -NXDN (inverted data frame)
+      //
 
       int valid;
       int dibit;
