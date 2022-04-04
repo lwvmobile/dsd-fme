@@ -306,18 +306,18 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
   for(i = 0; i < 16; i++)
   {
     CRCExtracted = CRCExtracted << 1;
-    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
-    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
+    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
+    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
   }
 
   //Look into whether or not we need to run these CRC checks for this header information
   //and see if its applied the same or differently
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
-  //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
+  CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
   //CRCExtracted = CRCExtracted ^ 0x6969;
 
   /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
+  CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
   //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
 
   /* Convert corrected 12 bytes into 96 bits */
@@ -332,6 +332,18 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
     DmrDataBit[j + 6] = (DmrDataByte[i] >> 1) & 0x01;
     DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
   }
+
+  //test
+  if((IrrecoverableErrors == 0) && CRCCorrect)
+  {
+    fprintf (stderr, "\n(Data CRC Okay)");
+  }
+  else if((IrrecoverableErrors == 0))
+  {
+    fprintf (stderr, "\n(Data FEC Okay)");
+  }
+  else fprintf (stderr, ("\n(Data CRC Fail, FEC Fail)"));
+
   //
   if (DmrDataByte[0] == 0x43)
   {
@@ -904,19 +916,30 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
   for(i = 0; i < 16; i++)
   {
     CRCExtracted = CRCExtracted << 1;
-    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
-    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
+    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
+    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
   }
 
   //Look into whether or not we need to run these CRC checks for this header information
   //and see if its applied the same or differently
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
-  //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
+  CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
   //CRCExtracted = CRCExtracted ^ 0x6969;
 
   /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
+  CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
   //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
+
+  //test
+  if((IrrecoverableErrors == 0) && CRCCorrect)
+  {
+    fprintf (stderr, "\n(1/2 Rate CRC Okay)");
+  }
+  else if((IrrecoverableErrors == 0))
+  {
+    fprintf (stderr, "\n(1/2 Rate FEC Okay)");
+  }
+  else fprintf (stderr, ("\n(1/2 Rate CRC Fail, FEC Fail)"));
 
   /* Convert corrected 12 bytes into 96 bits */
   for(i = 0, j = 0; i < 12; i++, j+=8)
@@ -939,7 +962,7 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
   //ARS?
   if ( (state->dmr_12_rate_sf[0] & 0x3F) == 0x0C)
   {
-    fprintf (stderr, "\n  Source:     ");
+    fprintf (stderr, "\n       Source:");
     fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_12_rate_sf[0] & 0x3F), state->dmr_12_rate_sf[1], state->dmr_12_rate_sf[2], state->dmr_12_rate_sf[3]); //strip first two bits off 1st byte
     fprintf (stderr, " [%08d]", (state->dmr_12_rate_sf[1] <<16 ) + (state->dmr_12_rate_sf[2] << 8) + state->dmr_12_rate_sf[3] );
     fprintf (stderr, " - Port %05d", (state->dmr_12_rate_sf[8] << 8) + state->dmr_12_rate_sf[9]);
@@ -1093,11 +1116,22 @@ void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t 
   //and see if its applied the same or differently
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
   //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
-  //CRCExtracted = CRCExtracted ^ 0x6969;
+  CRCExtracted = CRCExtracted ^ 0x6969;
 
   /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
   //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
+  CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
+
+  //test
+  if((IrrecoverableErrors == 0) && CRCCorrect)
+  {
+    fprintf (stderr, "\n(CSBK CRC Okay)");
+  }
+  else if((IrrecoverableErrors == 0))
+  {
+    fprintf (stderr, "\n(CSBK FEC Okay)");
+  }
+  else fprintf (stderr, ("\n(CSBK CRC Fail, FEC Fail)"));
 
   /* Convert corrected 12 bytes into 96 bits */
   for(i = 0, j = 0; i < 12; i++, j+=8)
@@ -1247,6 +1281,7 @@ void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t 
   //possible Site identifier, CSBK Aloha?
   if (csbk_o == 0x19) //DmrDataByte[0] == 0x99?
   {
+    fprintf (stderr, "\n  CSBK Aloha?");
     //fprintf (stderr, "\n  Site ID %d-%d.%d", (DmrDataByte[2] & 0xF0 >> 4), DmrDataByte[2] & 0xF, DmrDataByte[3]);
     //fprintf (stderr, "  DCC %d", DmrDataByte[1]);
     //sprintf ( state->dmr_callsign[0], "Site ID %d-%d.%d", (DmrDataByte[2] & 0xF0 >> 4), DmrDataByte[2] & 0xF, DmrDataByte[3]);
@@ -1363,11 +1398,11 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
   //and see if its applied the same or differently
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
   //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
-  //CRCExtracted = CRCExtracted ^ 0x6969;
+  CRCExtracted = CRCExtracted ^ 0x6969;
 
   /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
   //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
+  CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
 
   /* Convert corrected 12 bytes into 96 bits */
   for(i = 0, j = 0; i < 12; i++, j+=8)
@@ -1390,6 +1425,18 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
   {
     fprintf (stderr, "\n DMR PI Header ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algid, state->payload_keyid, state->payload_mi);
   }
+
+  //test
+  if((IrrecoverableErrors == 0) && CRCCorrect)
+  {
+    fprintf (stderr, " (PI CRC Okay)");
+  }
+  else if((IrrecoverableErrors == 0))
+  {
+    fprintf (stderr, "( PI FEC Okay)");
+  }
+  else fprintf (stderr, (" (PI CRC Fail, FEC Fail)"));
+
 }
 
 void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
@@ -1599,7 +1646,7 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
 //Full
   if (opts->payload == 1)
   {
-    fprintf (stderr, "\nFull CSBK Payload ");
+    fprintf (stderr, "\nFull Voice Header Payload ");
     for (i = 0; i < 12; i++)
     {
       fprintf (stderr, "[%02X]", DmrDataByte[i]);

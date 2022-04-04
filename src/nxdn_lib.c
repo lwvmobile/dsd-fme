@@ -627,8 +627,6 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
           CurrentIV = CurrentIV << 8;
         }
 
-        /* Encryption is not supported in the public version,
-         * so do not compute the next IV */
       }
       break;
     } /* End case NXDN_VCALL_IV: */
@@ -636,7 +634,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
     /* Unknown Message Type */
     default:
     {
-      fprintf(stderr, "Unknown Message type ");
+      //fprintf(stderr, "Unknown Message type ");
       break;
     }
   } /* End switch(MessageType) */
@@ -772,10 +770,10 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
       state->nxdn_key = (KeyID & 0xFF);
       state->nxdn_cipher_type = CipherType;
     }
-    fprintf(stderr, "   (OK)   - ");
+    fprintf(stderr, "(CRC OK) ");
   }
   //fprintf(stderr, "   (OK)   - ");
-  else fprintf(stderr, "(CRC ERR) - ");
+  else fprintf(stderr, "(CRC ERR) ");
 
   //fprintf(stderr, "\nVCALL = ");
 
@@ -1042,68 +1040,6 @@ void ScrambledNXDNVoiceBit(int * LfsrValue, char * BufferIn, char * BufferOut, i
   *LfsrValue = (int)LFSR;
 } /* End ScrambledNXDNVoiceBit() */
 
-
-void NxdnEncryptionStreamGeneration (dsd_opts* opts, dsd_state* state, uint8_t KeyStream[1664])
-{
-  uint32_t i = 0, j = 0, k = 0;
-  uint32_t LFSR = 0;
-  uint64_t CurrentIV = 0;
-  uint64_t NextIV = 0;
-  uint64_t TempIV = 0;
-  uint8_t  Temp = 0;
-
-  /* Remove compiler warning */
-  /*
-  UNUSED_VARIABLE(opts);
-  UNUSED_VARIABLE(state);
-  UNUSED_VARIABLE(i);
-  UNUSED_VARIABLE(j);
-  UNUSED_VARIABLE(k);
-  UNUSED_VARIABLE(LFSR);
-  UNUSED_VARIABLE(CurrentIV);
-  UNUSED_VARIABLE(NextIV);
-  UNUSED_VARIABLE(TempIV);
-  UNUSED_VARIABLE(Temp);
-  */
-  if((state->NxdnElementsContent.CipherParameterValidity))
-  {
-    //fprintf(stderr, "Scrambler Encryption ");
-
-    /* Scrambler encryption mode */
-    if(state->NxdnElementsContent.CipherType == 0x01)
-    {
-      /* Encryption not supported in the public version
-       * Set the keystream to 0 */
-      memset(KeyStream, 0, sizeof(uint8_t) * 1664);
-
-    } /* End if(state->NxdnElementsContent.CipherType == 0x01) - Scrambler */
-    /* DES Mode */
-    else if(state->NxdnElementsContent.CipherType == 0x02)
-    {
-      /* Encryption not supported in the public version
-       * Set the keystream to 0 */
-      memset(KeyStream, 0, sizeof(uint8_t) * 1664);
-    } /* End else if(state->NxdnElementsContent.CipherType == 0x02) - DES mode */
-    /* AES Mode */
-    else if(state->NxdnElementsContent.CipherType == 0x03)
-    {
-      /* Encryption not supported in the public version
-       * Set the keystream to 0 */
-      memset(KeyStream, 0, sizeof(uint8_t) * 1664);
-    } /* End else if(state->NxdnElementsContent.CipherType == 0x03) - AES mode */
-    else
-    {
-      /* No encryption required, simply set the keystream to "0" */
-      memset(KeyStream, 0, sizeof(uint8_t) * 1664);
-    }
-  }
-  else
-  {
-    /* No encryption required or error, simply set the keystream to "0" */
-    memset(KeyStream, 0, sizeof(uint8_t) * 1664);
-  }
-
-} /* End NxdnEncryptionStreamGeneration() */
 
 
 /* End of file */

@@ -24,6 +24,8 @@
 
 void processdPMRvoice (dsd_opts * opts, dsd_state * state)
 {
+  for (short q = 0; q < 1; q++)
+  {
   // extracts AMBE frames from DMR frame
   uint32_t i, j, k, dibit;
   uint8_t CCH[NB_OF_DPMR_VOICE_FRAME_TO_DECODE][72] = {0};
@@ -35,7 +37,7 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
   //uint8_t TCH[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4][72] = {0};
   uint8_t CC[NB_OF_DPMR_VOICE_FRAME_TO_DECODE / 2][24] = {0};
   char ambe_fr[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4][4][24] = {0};
-  char ambe_fr2[4][24];
+  char ambe_fr2[8][4][24];
   const int *w, *x, *y, *z;
   uint32_t  ScramblerLFSR = 0;
   bool correctable = true;
@@ -75,6 +77,7 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
 
   /* First CCH (Control CHannel) - 72 bit */
   k = 0;
+
   for (i = 0; i < 36; i++)
   {
     dibit = getDibit (opts, state);
@@ -118,8 +121,8 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
 #endif
       ambe_fr[j][*w][*x] = (1 & (dibit >> 1));   // bit 1
       ambe_fr[j][*y][*z] = (1 & dibit);          // bit 0
-      ambe_fr2[*w][*x] = (1 & (dibit >> 1));   // bit 1
-      ambe_fr2[*y][*z] = (1 & dibit);          // bit 0
+      ambe_fr2[j][*w][*x] = (1 & (dibit >> 1));   // bit 1
+      ambe_fr2[j][*y][*z] = (1 & dibit);          // bit 0
       //TCH[j][k]          = (1 & (dibit >> 1));   // bit 1
       //TCH[j][k + 1]      = (1 & dibit);          // bit 0
       state->dPMRVoiceFS2Frame.RawVoiceBit[j][k]     = (1 & (dibit >> 1)); // bit 1
@@ -131,7 +134,7 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
       z++;
 
     }
-    //processMbeFrame (opts, state, NULL, ambe_fr[j], NULL); //HERE HERE
+    processMbeFrame (opts, state, NULL, ambe_fr2[j], NULL); //HERE HERE
 
 #ifdef DPMR_DUMP
     fprintf(stderr, " ");
@@ -213,8 +216,8 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
 #endif
       ambe_fr[j + 4][*w][*x] = (1 & (dibit >> 1));   // bit 1
       ambe_fr[j + 4][*y][*z] = (1 & dibit);          // bit 0
-      //ambe_fr2[*w][*x] = (1 & (dibit >> 1));   // bit 1
-      //ambe_fr2[*y][*z] = (1 & dibit);          // bit 0
+      ambe_fr2[j+4][*w][*x] = (1 & (dibit >> 1));   // bit 1
+      ambe_fr2[j+4][*y][*z] = (1 & dibit);          // bit 0
       //TCH[j + 4][k]          = (1 & (dibit >> 1));   // bit 1
       //TCH[j + 4][k + 1]      = (1 & dibit);          // bit 0
       state->dPMRVoiceFS2Frame.RawVoiceBit[j + 4][k]     = (1 & (dibit >> 1)); // bit 1
@@ -225,7 +228,7 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
       y++;
       z++;
     }
-    //processMbeFrame (opts, state, NULL, ambe_fr[j], NULL);
+    processMbeFrame (opts, state, NULL, ambe_fr2[j+4], NULL);
 
 #ifdef DPMR_DUMP
     fprintf(stderr, " ");
@@ -631,20 +634,21 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
   if(VoiceFrameFlag)
   {
     /* There is 4 AMBE voice sample per voice frame (= 8 per superframe) */
-    for(i = 0; i < (NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4); i++)
-    //for(i = 0; i < (8); i++)
+    //for(i = 0; i < (NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4); i++)
+    for(i = 0; i < (8); i++)
     {
       /* Apply ECC 1 to the AMBE frames */
-      state->dPMRVoiceFS2Frame.errs1[i] = (unsigned int)mbe_eccAmbe3600x2450C0(ambe_fr[i]);
-      state->dPMRVoiceFS2Frame.errs2[i] = state->dPMRVoiceFS2Frame.errs1[i];
+      //state->dPMRVoiceFS2Frame.errs1[i] = (unsigned int)mbe_eccAmbe3600x2450C0(ambe_fr[i]);
+      //state->dPMRVoiceFS2Frame.errs1[i] = (unsigned int)mbe_eccAmbe3600x2450C0(ambe_fr[i]);
+      //state->dPMRVoiceFS2Frame.errs2[i] = state->dPMRVoiceFS2Frame.errs1[i];
 
       /* Demodulate the AMBE frames */
       //mbe_demodulateAmbe3600x2450Data(ambe_fr[i]);
-      mbe_demodulateAmbe3600x2400Data(ambe_fr[i]);
+      //mbe_demodulateAmbe3600x2450Data(ambe_fr[i]);
 
       /* Apply ECC 2 to the AMBE frames and get the 49 bit of the voice sample */
       //state->dPMRVoiceFS2Frame.errs2[i] += (unsigned int)mbe_eccAmbe3600x2450Data(ambe_fr[i], (char *)state->dPMRVoiceFS2Frame.AmbeBit[i]);
-      state->dPMRVoiceFS2Frame.errs2[i] += (unsigned int)mbe_eccAmbe3600x2400Data(ambe_fr[i], (char *)state->dPMRVoiceFS2Frame.AmbeBit[i]);
+      //state->dPMRVoiceFS2Frame.errs2[i] += (unsigned int)mbe_eccAmbe3600x2450Data(ambe_fr[i], (char *)state->dPMRVoiceFS2Frame.AmbeBit[i]);
       //processMbeFrame (opts, state, NULL, ambe_fr[i], NULL); //HERE HERE
       //processMbeFrame (opts, state, NULL, state->dPMRVoiceFS2Frame.AmbeBit[i], NULL); //HERE HERE
     }
@@ -673,7 +677,7 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
     fprintf(stderr, "Voice frame to play\n");
 #endif //dPMR_PRINT_DEBUG_INFO
     //There is 4 AMBE voice sample per voice frame (so 2 x 4 = 8 per superframe)
-    for(i = 0; i < (NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4); i++) //is this backwards, shouldn't we run this first, and then voice frame after?
+    for(i = 0; i < (8); i++) //is this backwards, shouldn't we run this first, and then voice frame after?
     {
 
       //errs  = (uint32_t*)&(state->dPMRVoiceFS2Frame.errs1[i]);
@@ -685,32 +689,32 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
 
       //sounds like choppy shit, but .amb file playback is acceptable, so investigate why this doesn't work properly
       //could be related to err states not properly done or something?
-      mbe_processAmbe2450Dataf (state->audio_out_temp_buf, (int *)errs, (int *)errs2, state->err_str,
-                                (char *)state->dPMRVoiceFS2Frame.AmbeBit[i],
-                                state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+      //mbe_processAmbe2450Dataf (state->audio_out_temp_buf, (int *)errs, (int *)errs2, state->err_str,
+      //                          (char *)state->dPMRVoiceFS2Frame.AmbeBit[i],
+      //                          state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
       if (opts->mbe_out_f != NULL)
       {
-        saveAmbe2450Data (opts, state, (char *)state->dPMRVoiceFS2Frame.AmbeBit[i]);
+        //saveAmbe2450Data (opts, state, (char *)state->dPMRVoiceFS2Frame.AmbeBit[i]);
       }
       if (opts->errorbars == 1)
       {
         //fprintf(stderr, "%s", state->err_str);
       }
 
-      //state->debug_audio_errors += *errs2;
+      state->debug_audio_errors += *errs2;
 
-      processAudio(opts, state);
+      //processAudio(opts, state);
 
       if (opts->wav_out_f != NULL)
       {
-        writeSynthesizedVoice (opts, state);
+        //writeSynthesizedVoice (opts, state);
       }
 
       if (opts->audio_out == 1)
       {
         //Play the AMBE Frames
-        playSynthesizedVoice (opts, state);
+        //playSynthesizedVoice (opts, state);
       }
     } //End for(i = 0; i < (NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4); i++)
   } //End if(VoiceFrameFlag)
@@ -746,7 +750,7 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
 
   //Print sPMR frame (if needed)
   //dPMRVoiceFrameProcess(opts, state); //HERE HERE disabled to build
-
+ }
 } //End processdPMRvoice()
 
 
