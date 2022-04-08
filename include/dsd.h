@@ -241,7 +241,6 @@ typedef struct
   unsigned int  errs1[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4];  /* 8 x errors #1 computed when demodulate the AMBE voice bit of the frame */
   unsigned int  errs2[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4];  /* 8 x errors #2 computed when demodulate the AMBE voice bit of the frame */
   unsigned char AmbeBit[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4][49];  /* 8 x 49 bit of AMBE voice of the frame */
-  //unsigned char AmbeBit[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4][36];
   unsigned char CCHData[NB_OF_DPMR_VOICE_FRAME_TO_DECODE][48];
   unsigned int  CCHDataHammingOk[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
   unsigned char CCHDataCRC[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
