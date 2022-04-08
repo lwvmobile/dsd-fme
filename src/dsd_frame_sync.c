@@ -17,7 +17,6 @@
 
 #include "dsd.h"
 #include <locale.h>
-//#include <ncurses.h>
 
 //borrowed from LEH for 'improved NXDN sync detection'
 int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr)
@@ -83,23 +82,12 @@ char * getDate(void) {
 void
 printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset, char *modulation)
 {
-  //char datestr[32];
-  //struct tm timep;
-  //erase();
-  //attron(COLOR_PAIR(4));
-  //for (short int i = 0; i < 7; i++) {
-  //printw("%s \n", FM_banner2[i]);}
-  //attroff(COLOR_PAIR(4));
+
 
   if (opts->verbose > 0)
     {
-	  //strftime (datestr, 31, "%Y-%m-%d-%H%M%S", &timep);
-      //fprintf (stderr,"Sync: %s ", frametype);
-      //fprintf (stderr,"%s %s Sync: %s ", getDate(), getTime(), frametype);
       fprintf (stderr,"%s ", getTime());
       fprintf (stderr,"Sync: %s ", frametype);
-      //fprintf (stderr,"%s Sync: %s ", getTime(), frametype);
-      //printw("%s Sync: %s ", getTime(), frametype);
     }
   if (opts->verbose > 2)
     {
@@ -514,85 +502,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                     }
                 }
             }
-          //old style for DMR
-          /*
-          if (opts->frame_dmr == 1)
-            {
-              if ((strcmp (synctest, DMR_MS_DATA_SYNC) == 0) || (strcmp (synctest, DMR_BS_DATA_SYNC) == 0) )//try this
-              //if ((strncmperr (synctest, DMR_MS_DATA_SYNC, 24, 1) == 0) || (strncmperr (synctest, DMR_MS_DATA_SYNC, 24, 1) == 0))
-                {
-                  now = time(NULL);
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + (lmax)) / 2;
-                  state->min = ((state->min) + (lmin)) / 2;
-                  if (opts->inverted_dmr == 0)
-                    {
-                      // data frame
-                      sprintf (state->ftype, "DMR");
-                      if (opts->errorbars == 1)
-                        {
-                          printFrameSync (opts, state, " +DMR      ", synctest_pos + 1, modulation);
-                        }
-                      state->lastsynctype = 10;
-                      return (10);
-                    }
-                  else
-                    {
-                      // inverted voice frame
-                      sprintf (state->ftype, "DMR");
-                      if (opts->errorbars == 1)
-                        {
-                          printFrameSync (opts, state, " -DMR      ", synctest_pos + 1, modulation);
-                        }
-                      if (state->lastsynctype != 11)
-                        {
-                          state->firstframe = 1;
-                        }
-                      state->lastsynctype = 11;
-                      return (11);
-                    }
-                }
-              if ((strcmp (synctest, DMR_MS_VOICE_SYNC) == 0) || (strcmp (synctest, DMR_BS_VOICE_SYNC) == 0))
-              //if ( strcmp (synctest, DMR_MS_VOICE_SYNC) == 0 || strcmp (synctest, DMR_BS_VOICE_SYNC) == 0 || strcmp (synctest, DMR_DIRECT_MODE_TS1_VOICE_SYNC) == 0 || strcmp (synctest, DMR_DIRECT_MODE_TS2_VOICE_SYNC) == 0 )
-              //if ((strncmperr (synctest, DMR_MS_VOICE_SYNC, 24, 1) == 0) || (strncmperr (synctest, DMR_BS_VOICE_SYNC, 24, 1) == 0))
-                {
-                  now = time(NULL);
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  if (opts->inverted_dmr == 0)
-                    {
-                      // voice frame
-                      sprintf (state->ftype, "DMR");
-                      if (opts->errorbars == 1)
-                        {
-                          printFrameSync (opts, state, " +DMR      ", synctest_pos + 1, modulation);
-                        }
-                      if (state->lastsynctype != 12)
-                        {
-                          state->firstframe = 1;
-                        }
-                      state->lastsynctype = 12;
-                      return (12);
-                    }
-                  else
-                    {
-                      // inverted data frame
-                      sprintf (state->ftype, "DMR");
-                      if (opts->errorbars == 1)
-                        {
-                          printFrameSync (opts, state, " -DMR      ", synctest_pos + 1, modulation);
-                        }
-                      state->lastsynctype = 13;
-                      return (13);
-                    }
-                }
-            }
-            */
 
-          // lwvmobile dPMR sync
+          //dPMR sync
           strncpy(synctest,   (synctest_p - 23), 24);
           strncpy(synctest12, (synctest_p - 11), 12);
           if(opts->frame_dpmr == 1)
@@ -601,11 +512,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             {
               if(strcmp(synctest, DPMR_FRAME_SYNC_1) == 0)
               {
-                fprintf (stderr, "DPMR_FRAME_SYNC_1\n");
+                fprintf (stderr, "+dPMR FS1\n");
               }
               if(strcmp(synctest12, DPMR_FRAME_SYNC_2) == 0)
               {
-                fprintf (stderr, "DPMR_FRAME_SYNC_2\n");
+                //fprintf (stderr, "DPMR_FRAME_SYNC_2\n");
                 state->carrier = 1;
                 state->offset = synctest_pos;
                 state->max = ((state->max) + lmax) / 2;
@@ -616,28 +527,27 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   printFrameSync (opts, state, "+dPMR ", synctest_pos + 1, modulation);
                 }
-
                 state->lastsynctype = 21;
                 return (21);
               }
               if(strcmp(synctest12, DPMR_FRAME_SYNC_3) == 0)
               {
-                fprintf (stderr, "DPMR_FRAME_SYNC_3\n");
+                fprintf (stderr, "+dPMR FS3 \n");
               }
               if(strcmp(synctest, DPMR_FRAME_SYNC_4) == 0)
               {
-                fprintf (stderr, "DPMR_FRAME_SYNC_4\n");
+                fprintf (stderr, "+dPMR FS4 \n");
               }
             }
             if (opts->inverted_dpmr == 1)
             {
               if(strcmp(synctest, INV_DPMR_FRAME_SYNC_1) == 0)
               {
-                fprintf (stderr, "INV_DPMR_FRAME_SYNC_1\n");
+                fprintf (stderr, "-dPMR FS1 \n");
               }
               if(strcmp(synctest12, INV_DPMR_FRAME_SYNC_2) == 0)
               {
-                fprintf (stderr, "INV_DPMR_FRAME_SYNC_2\n");
+                //fprintf (stderr, "INV_DPMR_FRAME_SYNC_2\n");
                 state->carrier = 1;
                 state->offset = synctest_pos;
                 state->max = ((state->max) + lmax) / 2;
@@ -654,533 +564,16 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               }
               if(strcmp(synctest12, INV_DPMR_FRAME_SYNC_3) == 0)
               {
-                fprintf (stderr, "INV_DPMR_FRAME_SYNC_3\n");
+                fprintf (stderr, "-dPMR FS3 \n");
               }
               if(strcmp(synctest, INV_DPMR_FRAME_SYNC_4) == 0)
               {
-                fprintf (stderr, "INV_DPMR_FRAME_SYNC_4\n");
+                fprintf (stderr, "-dPMR FS4 \n");
               }
             }
           }
-          //LEH dPMR
 
-
-          /*
-
-          if(opts->frame_dpmr == 1)
-          {
-            strncpy(synctest,   (synctest_p - 23), 24);
-            strncpy(synctest12, (synctest_p - 11), 12);
-
-            if(strcmp(synctest, DPMR_FRAME_SYNC_1) == 0)
-            {
-              if (opts->inverted_dpmr == 0)
-              {
-                fprintf(stderr, "DPMR_FRAME_SYNC_1\n"); // TODO : To be removed
-
-                //if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
-                //    (state->lastsynctype == 22) || (state->lastsynctype == 23))
-                //{
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, "dPMR ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, "+dPMR ", synctest_pos + 1, modulation);
-                  }
-
-                  //The next part of the superframe will normally be the first part
-                  //opts->dPMR_next_part_of_superframe = 1;
-
-                  state->lastsynctype = 20;
-                  return (20);
-                //}
-                //else
-                //{
-                //  state->lastsynctype = 20;
-                //}
-              } //End if (opts->inverted_dpmr == 0)
-            }
-            if(strcmp(synctest12, DPMR_FRAME_SYNC_2) == 0)
-            {
-              if (opts->inverted_dpmr == 0)
-              {
-                fprintf(stderr, "DPMR_FRAME_SYNC_2\n"); // TODO : To be removed
-
-                // TODO : Modif 2019-01-04
-                //if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
-                //    (state->lastsynctype == 22) || (state->lastsynctype == 23))
-                //{
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-
-                  sprintf(state->ftype, "dPMR ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, "+dPMR ", synctest_pos + 1, modulation);
-                  }
-
-                  state->lastsynctype = 21;
-                  return (21);
-                // TODO : Modif 2019-01-04
-                //}
-                //else
-                //{
-                //  state->lastsynctype = 21;
-                //}
-              }
-            }
-            else if(strcmp(synctest12, DPMR_FRAME_SYNC_3) == 0)
-            {
-              //if (opts->inverted_dpmr == 0)
-              //{
-                fprintf(stderr, "DPMR_FRAME_SYNC_3\n"); // TODO : To be removed
-
-                if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
-                    (state->lastsynctype == 22) || (state->lastsynctype == 23))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, "dPMR ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, "+dPMR ", synctest_pos + 1, modulation);
-                  }
-
-                  //The next part of the superframe will normally be the first part
-                  //opts->dPMR_next_part_of_superframe = 1;
-
-                  state->lastsynctype = 22;
-                  return (22);
-                //}
-                //else
-                //{
-                //  state->lastsynctype = 22;
-                //}
-              }
-            }
-            if(strcmp(synctest, DPMR_FRAME_SYNC_4) == 0)
-            {
-              if (opts->inverted_dpmr == 0)
-              {
-                //fprintf(stderr, "DPMR_FRAME_SYNC_4\n"); // TODO : To be removed
-
-                //if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
-                //    (state->lastsynctype == 22) || (state->lastsynctype == 23))
-                //{
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, "dPMR ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, "+dPMR ", synctest_pos + 1, modulation);
-                  }
-
-                  //The next part of the superframe will normally be the first part
-                  //opts->dPMR_next_part_of_superframe = 1;
-
-                  state->lastsynctype = 23;
-                  return (23);
-                //}
-                //else
-                //{
-                //  state->lastsynctype = 23;
-                //}
-              }
-            }
-            if(strcmp(synctest, INV_DPMR_FRAME_SYNC_1) == 0)
-            {
-              if (opts->inverted_dpmr == 1)
-              {
-                fprintf(stderr, "INV_DPMR_FRAME_SYNC_1\n"); // TODO : To be removed
-                //if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
-                //    (state->lastsynctype == 26) || (state->lastsynctype == 27))
-                //{
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, "dPMR ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, "-dPMR ", synctest_pos + 1, modulation);
-                  }
-                  state->lastsynctype = 24;
-                  return (24);
-                //}
-                //else
-                //{
-                //  state->lastsynctype = 24;
-                //}
-              }
-            }
-            if(strcmp(synctest12, INV_DPMR_FRAME_SYNC_2) == 0)
-            {
-              if (opts->inverted_dpmr == 1)
-              {
-                fprintf(stderr, "INV_DPMR_FRAME_SYNC_2\n"); // TODO : To be removed
-
-                //if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
-                //    (state->lastsynctype == 26) || (state->lastsynctype == 27))
-                //{
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, "dPMR ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, "-dPMR ", synctest_pos + 1, modulation);
-                  }
-                  state->lastsynctype = 25;
-                  return (25);
-                //}
-                //else
-                //{
-                //  state->lastsynctype = 25;
-                //}
-              }
-            }
-            if(strcmp(synctest12, INV_DPMR_FRAME_SYNC_3) == 0)
-            {
-              if (opts->inverted_dpmr == 1)
-              {
-                fprintf(stderr, "INV_DPMR_FRAME_SYNC_3\n"); // TODO : To be removed
-
-                //if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
-                //    (state->lastsynctype == 26) || (state->lastsynctype == 27))
-                //{
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, "dPMR ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, "-dPMR ", synctest_pos + 1, modulation);
-                  }
-                  state->lastsynctype = 26;
-                  return (26);
-                //}
-                //else
-                //{
-                //  state->lastsynctype = 26;
-                //}
-              }
-            }
-            if(strcmp(synctest, INV_DPMR_FRAME_SYNC_4) == 0)
-            {
-              if (opts->inverted_dpmr == 1)
-              {
-                fprintf(stderr, "INV_DPMR_FRAME_SYNC_4\n"); // TODO : To be removed
-
-                //if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
-                //    (state->lastsynctype == 26) || (state->lastsynctype == 27))
-                //{
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, "dPMR ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, "-dPMR ", synctest_pos + 1, modulation);
-                  }
-                  state->lastsynctype = 27;
-                  return (27);
-                }
-                //else
-                //{
-                //  state->lastsynctype = 27;
-                //}
-              //}
-            }
-            //else
-            //{
-              // No dPMR frame sync detected
-            //}
-          } // End if(opts->frame_dpmr == 1)
-          */
-          //
-          //LEH dPMR
-          //testing frame syncs here for better performance
-          /*
-          if(opts->frame_dpmr == 1)
-          {
-            strncpy(synctest,   (synctest_p - 23), 24);
-            strncpy(synctest12, (synctest_p - 11), 12);
-
-
-
-            //if(strcmp(synctest, DPMR_FRAME_SYNC_1) == 0)
-            if (strncmperr (synctest, DPMR_FRAME_SYNC_1, 24, 1) == 0 ) //24 bits on frame 1 and 4, 12 on 2 and 3?
-            {
-              if (opts->inverted_dpmr == 0)
-              {
-                //fprintf(stderr, "DPMR_FRAME_SYNC_1\n"); // TODO : To be removed
-
-                if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
-                    (state->lastsynctype == 22) || (state->lastsynctype == 23))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, " dPMR        ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, " +dPMR     ", synctest_pos + 1, modulation);
-                  }
-
-                  //The next part of the superframe will normally be the first part
-                  //opts->dPMR_next_part_of_superframe = 1;
-
-                  state->lastsynctype = 20;
-                  return (20);
-                }
-                else
-                {
-                  state->lastsynctype = 20;
-                }
-              } //End if (opts->inverted_dpmr == 0)
-            }
-
-
-
-            //else if(strcmp(synctest12, DPMR_FRAME_SYNC_2) == 0)
-            if (strncmperr (synctest12, DPMR_FRAME_SYNC_2, 12, 1) == 0 ) //char synctest12[13] ??
-            {
-              if (opts->inverted_dpmr == 0)
-              {
-                //fprintf(stderr, "DPMR_FRAME_SYNC_2\n"); // TODO : To be removed
-
-                // TODO : Modif 2019-01-04
-                if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
-                    (state->lastsynctype == 22) || (state->lastsynctype == 23))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-
-                  sprintf(state->ftype, " dPMR        ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, " +dPMR     ", synctest_pos + 1, modulation);
-                  }
-
-                  state->lastsynctype = 21;
-                  return (21);
-                // TODO : Modif 2019-01-04
-                }
-                else
-                {
-                  state->lastsynctype = 21;
-                }
-              }
-            }
-
-
-
-            //else if(strcmp(synctest12, DPMR_FRAME_SYNC_3) == 0)
-            if (strncmperr (synctest12, DPMR_FRAME_SYNC_3, 12, 1) == 0 ) //char synctest12[13] ??
-            {
-              if (opts->inverted_dpmr == 0)
-              {
-                //fprintf(stderr, "DPMR_FRAME_SYNC_3\n"); // TODO : To be removed
-
-                if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
-                    (state->lastsynctype == 22) || (state->lastsynctype == 23))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, " dPMR        ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, " +dPMR     ", synctest_pos + 1, modulation);
-                  }
-
-                  //The next part of the superframe will normally be the first part//
-                  //opts->dPMR_next_part_of_superframe = 1;
-
-                  state->lastsynctype = 22;
-                  return (22);
-                }
-                else
-                {
-                  state->lastsynctype = 22;
-                }
-              }
-            }
-            //if(strcmp(synctest, DPMR_FRAME_SYNC_4) == 0)
-            if (strncmperr (synctest, DPMR_FRAME_SYNC_4, 24, 1) == 0 ) //if, or else if? original is else if
-            {
-              if (opts->inverted_dpmr == 0)
-              {
-                //fprintf(stderr, "DPMR_FRAME_SYNC_4\n"); // TODO : To be removed
-
-                if ((state->lastsynctype == 20) || (state->lastsynctype == 21) ||
-                    (state->lastsynctype == 22) || (state->lastsynctype == 23))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, " dPMR        ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, " +dPMR     ", synctest_pos + 1, modulation);
-                  }
-
-                  //The next part of the superframe will normally be the first part
-                  //opts->dPMR_next_part_of_superframe = 1;
-
-                  state->lastsynctype = 23;
-                  return (23);
-                }
-                else
-                {
-                  state->lastsynctype = 23;
-                }
-              }
-            }
-            //else if(strcmp(synctest, INV_DPMR_FRAME_SYNC_1) == 0)
-            //else if (strncmperr (synctest12, INV_DPMR_FRAME_SYNC_1, 12, 1) == 0 )
-            if (strncmperr (synctest, INV_DPMR_FRAME_SYNC_1, 24, 1) == 0 ) //if, or else if
-            {
-              if (opts->inverted_dpmr)
-              {
-                //fprintf(stderr, "INV_DPMR_FRAME_SYNC_1\n"); // TODO : To be removed
-                if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
-                    (state->lastsynctype == 26) || (state->lastsynctype == 27))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, " dPMR        ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, " -dPMR     ", synctest_pos + 1, modulation);
-                  }
-                  state->lastsynctype = 24;
-                  return (24);
-                }
-                else
-                {
-                  state->lastsynctype = 24;
-                }
-              }
-            }
-
-
-
-            //else if(strcmp(synctest12, INV_DPMR_FRAME_SYNC_2) == 0)
-            if (strncmperr (synctest12, INV_DPMR_FRAME_SYNC_2, 12, 1) == 0 )
-            {
-              if (opts->inverted_dpmr)
-              {
-                //fprintf(stderr, "DPMR_FRAME_SYNC_2\n"); // TODO : To be removed
-
-                if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
-                    (state->lastsynctype == 26) || (state->lastsynctype == 27))
-                {
-
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, " dPMR        ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, " -dPMR     ", synctest_pos + 1, modulation);
-                  }
-                  state->lastsynctype = 25;
-                  return (25);
-                }
-                else
-                {
-                  state->lastsynctype = 25;
-                }
-              }
-            }
-            //else if(strcmp(synctest12, INV_DPMR_FRAME_SYNC_3) == 0)
-
-
-
-            if (strncmperr (synctest12, INV_DPMR_FRAME_SYNC_3, 12, 1) == 0 )
-            {
-              if (opts->inverted_dpmr)
-              {
-                //fprintf(stderr, "INV_DPMR_FRAME_SYNC_3\n"); // TODO : To be removed
-
-                if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
-                    (state->lastsynctype == 26) || (state->lastsynctype == 27))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, " dPMR        ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, " -dPMR     ", synctest_pos + 1, modulation);
-                  }
-                  state->lastsynctype = 26;
-                  return (26);
-                }
-                else
-                {
-                  state->lastsynctype = 26;
-                }
-              }
-            }
-            //if(strcmp(synctest, INV_DPMR_FRAME_SYNC_4) == 0) //if, or else if
-            if (strncmperr (synctest, INV_DPMR_FRAME_SYNC_4, 24, 1) == 0 )
-            {
-              if (opts->inverted_dpmr)
-              {
-                //fprintf(stderr, "INV_DPMR_FRAME_SYNC_4\n"); // TODO : To be removed
-
-                if ((state->lastsynctype == 24) || (state->lastsynctype == 25) ||
-                    (state->lastsynctype == 26) || (state->lastsynctype == 27))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf(state->ftype, " dPMR        ");
-                  if (opts->errorbars == 1)
-                  {
-                    printFrameSync (opts, state, " -dPMR     ", synctest_pos + 1, modulation);
-                  }
-                  state->lastsynctype = 27;
-                  return (27);
-                }
-                else
-                {
-                  state->lastsynctype = 27;
-                }
-              }
-            }
-            else
-            {
-              //No dPMR frame sync detected
-            }
-
-          } //End if(opts->frame_dpmr == 1)
-          */
-          //LEH DMR Sync
+          //DMR Sync
           if (opts->frame_dmr == 1)
           {
             if ((strcmp (synctest, DMR_MS_DATA_SYNC) == 0) || (strcmp (synctest, DMR_BS_DATA_SYNC) == 0))
@@ -1435,13 +828,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
             {
               strncpy (synctest18, (synctest_p - 17), 18); //seems like other sync tests do this as well
-              //if ((strcmp (synctest18, NXDN_BS_VOICE_SYNC) == 0) || (strcmp (synctest18, NXDN_MS_VOICE_SYNC) == 0)) //or is this the double up test?
               //borrowing from LEH here WOW! This works so much better, its not even a joke
               if ((strncmperr (synctest18, NXDN_BS_VOICE_SYNC, 18, 1) == 0) || (strncmperr (synctest18, NXDN_MS_VOICE_SYNC, 18, 1) == 0))
                 {
                   now = time(NULL); //here, or after next if
-                  if ((state->lastsynctype == 8) || (state->lastsynctype == 16)) //is this checking for multiple matches first, could be causing 'skips' in audio decode HERE HERE
-                  //if ( (opts->frame_nxdn96 == 1) ||(opts->frame_nxdn48 == 1)) //kind of hacky, but too lazy to remove brackets and re-indent
+                  if ((state->lastsynctype == 8) || (state->lastsynctype == 16)) 
                     {
                       state->carrier = 1;
                       state->offset = synctest_pos;
@@ -1450,11 +841,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
                       if (state->samplesPerSymbol == 20)
                         {
-                          //sprintf (state->ftype, " NXDN48      ");
                           sprintf (state->ftype, "NXDN48 "); //get rid of spaces
                           if (opts->errorbars == 1)
                             {
-                              //printFrameSync (opts, state, " +NXDN48   ", synctest_pos + 1, modulation);
                               printFrameSync (opts, state, "+NXDN48 ", synctest_pos + 1, modulation);
                             }
                         }
@@ -1475,14 +864,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       state->lastsynctype = 8;
                     }
                 }
-              //else if ((strcmp (synctest18, INV_NXDN_BS_VOICE_SYNC) == 0) || (strcmp (synctest18, INV_NXDN_MS_VOICE_SYNC) == 0))
-              //else if ((strncmperr (synctest18, NXDN_BS_DATA_SYNC, 18, 1) == 0) || (strncmperr (synctest18, NXDN_MS_DATA_SYNC, 18, 1) == 0)) //supposed to be voice, not data? IT WAS THIS ONE!!
               else if ((strncmperr (synctest18, INV_NXDN_BS_VOICE_SYNC, 18, 1) == 0) || (strncmperr (synctest18, INV_NXDN_MS_VOICE_SYNC, 18, 1) == 0)) //supposed to be voice, not data?
 
                 {
                   now = time(NULL); //here, or down more
                   if ((state->lastsynctype == 9) || (state->lastsynctype == 17))
-                  //if ( (opts->frame_nxdn96 == 1) ||(opts->frame_nxdn48 == 1)) //again, skip the double up
                     {
                       state->carrier = 1;
                       state->offset = synctest_pos;
@@ -1490,11 +876,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       state->min = ((state->min) + lmin) / 2;
                       if (state->samplesPerSymbol == 20)
                         {
-                          //sprintf (state->ftype, " NXDN48      ");
                           sprintf (state->ftype, "NXDN48 ");
                           if (opts->errorbars == 1)
                             {
-                              //printFrameSync (opts, state, " -NXDN48   ", synctest_pos + 1, modulation);
                               printFrameSync (opts, state, " -NXDN48", synctest_pos + 1, modulation);
                             }
                         }
@@ -1514,12 +898,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       state->lastsynctype = 9;
                     }
                 }
-              //else if ((strcmp (synctest18, NXDN_BS_DATA_SYNC) == 0) || (strcmp (synctest18, NXDN_MS_DATA_SYNC) == 0))
               else if ((strncmperr (synctest18, NXDN_BS_DATA_SYNC, 18, 1) == 0) || (strncmperr (synctest18, NXDN_MS_DATA_SYNC, 18, 1) == 0))
                 {
                   now = time(NULL);
                   if ((state->lastsynctype == 8) || (state->lastsynctype == 16))
-                  //if ( (opts->frame_nxdn96 == 1) ||(opts->frame_nxdn48 == 1))
                     {
                       state->carrier = 1;
                       state->offset = synctest_pos;
@@ -1527,11 +909,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       state->min = ((state->min) + lmin) / 2;
                       if (state->samplesPerSymbol == 20)
                         {
-                          //sprintf (state->ftype, " NXDN48      ");
                           sprintf (state->ftype, " NXDN48");
                           if (opts->errorbars == 1)
                             {
-                              //printFrameSync (opts, state, " +NXDN48   ", synctest_pos + 1, modulation);
                               printFrameSync (opts, state, "+NXDN48 ", synctest_pos + 1, modulation);
                             }
                         }
@@ -1551,23 +931,19 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       state->lastsynctype = 16;
                     }
                 }
-              //else if ((strcmp (synctest18, INV_NXDN_BS_DATA_SYNC) == 0) || (strcmp (synctest18, INV_NXDN_MS_DATA_SYNC) == 0))
               else if ((strncmperr (synctest18, INV_NXDN_BS_DATA_SYNC, 18, 1) == 0) || (strncmperr (synctest18, INV_NXDN_MS_DATA_SYNC, 18, 1) == 0))
                 {
                   now = time(NULL);
                   if ((state->lastsynctype == 9) || (state->lastsynctype == 17))
-                  //if ( (opts->frame_nxdn96 == 1) ||(opts->frame_nxdn48 == 1))
                     {
                       state->carrier = 1;
                       state->offset = synctest_pos;
                       state->max = ((state->max) + lmax) / 2;
                       state->min = ((state->min) + lmin) / 2;
-                      //sprintf (state->ftype, " NXDN        ");
                       sprintf (state->ftype, "NXDN ");
                       if (state->samplesPerSymbol == 20)
                         {
                           sprintf (state->ftype, "NXDN48 ");
-                          //sprintf (state->ftype, "NXDN48");
                           if (opts->errorbars == 1)
                             {
                               printFrameSync (opts, state, "-NXDN48 ", synctest_pos + 1, modulation);

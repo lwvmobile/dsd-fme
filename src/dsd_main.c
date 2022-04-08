@@ -868,10 +868,10 @@ main (int argc, char **argv)
               opts.frame_dstar = 1;
               opts.frame_x2tdma = 1;
               opts.frame_p25p1 = 1;
-              opts.frame_nxdn48 = 0; //turn it on, doesn't work due to symbol rate difference
+              opts.frame_nxdn48 = 0; 
               opts.frame_nxdn96 = 0; //causes false positives, leave on 0
               opts.frame_dmr = 1;
-              opts.frame_dpmr = 0; //borrow from LEH
+              opts.frame_dpmr = 0; 
               opts.frame_provoice = 0; //turn it on, doesn't work due to symbol rate difference
               //adding stereo for DMR so we don't accidentally segfault
               //opts.pulse_raw_rate_out  = 24000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
@@ -888,7 +888,7 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
-              opts.frame_dpmr = 0; //borrow from LEH
+              opts.frame_dpmr = 0; 
               opts.frame_provoice = 0;
               sprintf (opts.output_name, "D-STAR");
               fprintf (stderr,"Decoding only D-STAR frames.\n");
@@ -901,7 +901,7 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
-              opts.frame_dpmr = 0; //borrow from LEH
+              opts.frame_dpmr = 0; 
               opts.frame_provoice = 0;
               sprintf (opts.output_name, "X2-TDMA");
               fprintf (stderr,"Decoding only X2-TDMA frames.\n");
@@ -914,7 +914,7 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
-              opts.frame_dpmr = 0; //borrow from LEH
+              opts.frame_dpmr = 0;
               opts.frame_provoice = 1;
               state.samplesPerSymbol = 5;
               state.symbolCenter = 2;
@@ -924,7 +924,7 @@ main (int argc, char **argv)
               state.rf_mod = 2;
               sprintf (opts.output_name, "ProVoice");
               fprintf (stderr,"Setting symbol rate to 9600 / second\n");
-              fprintf (stderr,"Enabling only GFSK modulation optimizations.\n");
+              //fprintf (stderr,"Enabling only GFSK modulation optimizations.\n");
               fprintf (stderr,"Decoding only ProVoice frames.\n");
             }
           else if (optarg[0] == '1')
@@ -935,12 +935,12 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
-              opts.frame_dpmr = 0; //borrow from LEH
+              opts.frame_dpmr = 0; 
               opts.frame_provoice = 0;
               opts.mod_gfsk = 0;
-              opts.mod_c4fm = 1;  //Phase 1 only uses C4FM, right?
+              opts.mod_c4fm = 1;  
               opts.mod_qpsk = 0;
-              state.rf_mod = 0; //
+              state.rf_mod = 0;
               sprintf (opts.output_name, "P25P1");
               fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
             }
@@ -952,19 +952,17 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 1;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
-              opts.frame_dpmr = 0; //borrow from LEH
+              opts.frame_dpmr = 0; 
               opts.frame_provoice = 0;
-              //I think I've got it to decode on proper modulation now c4fm, not really sure what the difference is in DSD, seems to work either way for some reason
               state.samplesPerSymbol = 20;
               state.symbolCenter = 10;
-              opts.mod_c4fm = 1; // was 0
+              opts.mod_c4fm = 1; 
               opts.mod_qpsk = 0;
-              opts.mod_gfsk = 0; //was 1 with others on zero
-              state.rf_mod = 0; //was 2
+              opts.mod_gfsk = 0; 
+              state.rf_mod = 0; 
               sprintf (opts.output_name, "NXDN48");
-              //opts.symboltiming = 2400; //NXDN48 uses 2400 symbol rate
               fprintf (stderr,"Setting symbol rate to 2400 / second\n");
-              fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
+              //fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
               fprintf (stderr,"Decoding only NXDN 4800 baud frames.\n");
             }
           else if (optarg[0] == 'n')
@@ -975,14 +973,14 @@ main (int argc, char **argv)
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 1;
               opts.frame_dmr = 0;
-              opts.frame_dpmr = 0; //borrow from LEH
+              opts.frame_dpmr = 0; 
               opts.frame_provoice = 0;
-              opts.mod_c4fm = 1; //was 0
+              opts.mod_c4fm = 1;
               opts.mod_qpsk = 0;
-              opts.mod_gfsk = 0; //was 1
-              state.rf_mod = 0; //was 2
+              opts.mod_gfsk = 0; 
+              state.rf_mod = 0; 
               sprintf (opts.output_name, "NXDN96");
-              fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
+              //fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
               fprintf (stderr,"Decoding only NXDN 9600 baud frames.\n");
             }
           else if (optarg[0] == 'r')
@@ -1004,6 +1002,7 @@ main (int argc, char **argv)
               //opts.pulse_raw_out_channels  = 2;
               //opts.pulse_digi_out_channels = 2; //2
               sprintf (opts.output_name, "DMR/MOTOTRBO");
+			  fprintf(stderr, "Notice: DMR cannot autodetect polarity. \n Use -xr option if Inverted Signal expected.\n");
               //sprintf (opts.output_name, "DMR/MOTOTRBO  Left");
               fprintf (stderr,"Decoding only DMR/MOTOTRBO frames.\n");
             }
@@ -1024,48 +1023,44 @@ main (int argc, char **argv)
             opts.mod_gfsk = 0;
             state.rf_mod = 0; //garbage value to keep jitter in check?
             sprintf (opts.output_name, "dPMR");
-            //opts.pulse_digi_rate_in  = 48000;
-            //opts.pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
-            //opts.pulse_digi_in_channels  = 1;
-            //opts.pulse_digi_out_channels = 1;
-            //opts.inverted_dpmr = 1;
             fprintf(stderr, "Setting symbol rate to 2400 / second\n");
-            //fprintf(stderr, "Enabling only GFSK modulation optimizations.\n");
-            fprintf(stderr, "Enabling only C4FM modulation optimizations.\n");
-            fprintf(stderr, "Decoding only dPMR (4800 baud frames).\n");
+            fprintf(stderr, "Notice: dPMR cannot autodetect polarity. \n Use -xd option if Inverted Signal expected.\n");
+            //fprintf(stderr, "Enabling only C4FM modulation optimizations.\n");
+            fprintf(stderr, "Decoding only dPMR frames.\n");
           }
           break;
+		//don't change modulations, doesn't do anything really anyways
         case 'm':
           if (optarg[0] == 'a')
             {
-              opts.mod_c4fm = 1;
-              opts.mod_qpsk = 1;
-              opts.mod_gfsk = 1;
-              state.rf_mod = 0;
+              //opts.mod_c4fm = 1;
+              //opts.mod_qpsk = 1;
+              //opts.mod_gfsk = 1;
+              //state.rf_mod = 0;
             }
           else if (optarg[0] == 'c')
             {
-              opts.mod_c4fm = 1;
-              opts.mod_qpsk = 0;
-              opts.mod_gfsk = 0;
-              state.rf_mod = 0;
-              fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
+              //opts.mod_c4fm = 1;
+              //opts.mod_qpsk = 0;
+              //opts.mod_gfsk = 0;
+              //state.rf_mod = 0;
+              //fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
             }
           else if (optarg[0] == 'g')
             {
-              opts.mod_c4fm = 0;
-              opts.mod_qpsk = 0;
-              opts.mod_gfsk = 1;
-              state.rf_mod = 2;
-              fprintf (stderr,"Enabling only GFSK modulation optimizations.\n");
+              //opts.mod_c4fm = 0;
+              //opts.mod_qpsk = 0;
+              //opts.mod_gfsk = 1;
+              //state.rf_mod = 2;
+              //fprintf (stderr,"Enabling only GFSK modulation optimizations.\n");
             }
           else if (optarg[0] == 'q')
             {
-              opts.mod_c4fm = 0;
-              opts.mod_qpsk = 1;
-              opts.mod_gfsk = 0;
-              state.rf_mod = 1;
-              fprintf (stderr,"Enabling only QPSK modulation optimizations.\n");
+              //opts.mod_c4fm = 0;
+              //opts.mod_qpsk = 1;
+              //opts.mod_gfsk = 0;
+              //state.rf_mod = 1;
+              //fprintf (stderr,"Enabling only QPSK modulation optimizations.\n");
             }
           break;
         case 'u':

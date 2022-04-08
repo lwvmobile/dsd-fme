@@ -299,7 +299,7 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
                 }
               else
                 {
-                  dibit = 0;               // +2
+                  dibit = 0;               // +1
                 }
             }
         }

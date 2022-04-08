@@ -248,14 +248,14 @@ processFrame (dsd_opts * opts, dsd_state * state)
     else if ((state->synctype == 20) || (state->synctype == 24))
     {
       /* dPMR Frame Sync 1 */
-      fprintf(stderr, "dPMR Frame sync 1 ");
+      fprintf(stderr, "dPMR Frame Sync 1 ");
     }
     else if ((state->synctype == 21) || (state->synctype == 25))
     {
       /* dPMR Frame Sync 2 */
       //for (short o = 0; o < 2; o++)
       //{
-        fprintf(stderr, "dPMR Frame sync 2 ");
+        fprintf(stderr, "dPMR Frame Sync 2 ");
 
         //state->rf_mod = GFSK_MODE;
         state->nac = 0;
@@ -284,12 +284,12 @@ processFrame (dsd_opts * opts, dsd_state * state)
     else if ((state->synctype == 22) || (state->synctype == 26))
     {
       /* dPMR Frame Sync 3 */
-      fprintf(stderr, "dPMR Frame sync 3 ");
+      fprintf(stderr, "dPMR Frame Sync 3 ");
     }
     else if ((state->synctype == 23) || (state->synctype == 27))
     {
       /* dPMR Frame Sync 4 */
-      fprintf(stderr, "dPMR Frame sync 4 ");
+      fprintf(stderr, "dPMR Frame Sync 4 ");
     }
     //LEH dPMR
   else

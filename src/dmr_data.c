@@ -410,6 +410,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     /* Burst = RATE 3/4 DATA */
     case 0b1000:
     {
+	  //disabled until a viable viterbi/trellis decoding solution is worked out
       //Process34Data(opts, state, trellisdibits, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
