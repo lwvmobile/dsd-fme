@@ -138,8 +138,11 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       // printf ("res: %zd\n, offset: %lld", result, sf_seek(opts->audio_in_file, 0, SEEK_CUR));
       if (opts->use_cosine_filter)
         {
-          if (state->lastsynctype >= 10 && state->lastsynctype <= 13)
-              sample = dmr_filter(sample);
+          if ( (state->lastsynctype >= 10 && state->lastsynctype <= 13) )
+          {
+            sample = dmr_filter(sample);
+          }
+
           else if (state->lastsynctype == 8 || state->lastsynctype == 9 ||
                  state->lastsynctype == 16 || state->lastsynctype == 17)
             {

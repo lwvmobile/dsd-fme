@@ -60,15 +60,26 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   //CDMRTrellisDecode(const unsigned char* data, unsigned char* payload)
   unsigned char tdibits_reverse[98];
   unsigned char tdibits_inverted[98];
-  if (opts->payload == 1)
+  unsigned char tdibits_to_bits[196];
+  if (1 == 2)
   {
-    fprintf (stderr, "\n Raw Trellis Dibits\n  ");
+    fprintf (stderr, "\n Raw Trellis Dibits to Bits\n  ");
     for (i = 0; i < 98; i++)
     {
-      fprintf (stderr, "[%X]", tdibits[i]);
+      tdibits_to_bits[i * 2]       = (tdibits[i] >> 0) & 1;
+      tdibits_to_bits[(i * 2) + 1] = (tdibits[1] >> 1) & 1;
+      fprintf (stderr, "%d%d", tdibits_to_bits[i * 2], tdibits_to_bits[(i * 2) + 1]);
+    }
+  }
+  if (opts->payload == 1)
+  {
+    //fprintf (stderr, "\n Raw Trellis Dibits\n  ");
+    for (i = 0; i < 98; i++)
+    {
+      //fprintf (stderr, "#%d [%X] ", i, tdibits[i]);
       //tdibits_reverse[97-i] = tdibits[i];
-      tdibits_reverse[97-i] = ((tdibits[i] & 1)<<1) | ((tdibits[i] & 2)>>1);
-      tdibits_inverted[i] = tdibits[i] ^ 2;
+      //tdibits_reverse[97-i] = ((tdibits[i] & 1)<<1) | ((tdibits[i] & 2)>>1);
+      //tdibits_inverted[i] = tdibits[i] ^ 2;
     }
   }
 
@@ -76,10 +87,10 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   CDMRTrellisDecode(tdibits, TrellisReturn); //figure out how this works!!
   if (opts->payload == 1)
   {
-    fprintf (stderr, "\nFull 3/4 Rate Trellis Payload (reversed order)\n  ");
+    fprintf (stderr, "\nFull 3/4 Rate Trellis Payload\n  ");
     for (i = 0; i < 18; i++)
     {
-      fprintf (stderr, "[%02X]", TrellisReturn[17-i]);
+      fprintf (stderr, "[%02X]", TrellisReturn[i]);
     }
   }
   /* Extract the BPTC 196,96 DMR data */
@@ -230,7 +241,7 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
     }
   }
   //Full
-  if (opts->payload == 1)
+  if (opts->payload == 2)
   {
     fprintf (stderr, "\nFull 3/4 Rate Payload DmrDataByte (reverse bits)\n  ");
     for (i = 0; i < 18; i++)
@@ -1433,7 +1444,7 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
   }
   else if((IrrecoverableErrors == 0))
   {
-    fprintf (stderr, "( PI FEC Okay)");
+    fprintf (stderr, " (PI FEC Okay)");
   }
   else fprintf (stderr, (" (PI CRC Fail, FEC Fail)"));
 

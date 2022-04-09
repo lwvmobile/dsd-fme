@@ -84,7 +84,7 @@ void ProcessDMR (dsd_opts * opts, dsd_state * state)
 //
 if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
 {
-  fprintf(stderr, " BPK %d", state->K);
+  fprintf(stderr, " BPK %lld", state->K);
   for(Frame = 0; Frame < 6; Frame++)
   {
    for(i = 0; i < 3; i++)
