@@ -446,7 +446,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //attron(COLOR_PAIR(3));
     printw ("| DCC: [%2i] FID: [%02X] SOP: [%02X] ", dcc, state->dmr_fid, state->dmr_so);
     //if(state->payload_mi == 0 && state->dmr_so & 0x40)
-    if(state->payload_mi == 0 && state->dmr_so == 0x40)
+    if(state->payload_mi == 0 && (state->dmr_so & 0xCF) == 0x40) //4F or CF mask?
     {
       attron(COLOR_PAIR(5));
       printw ("**BP** ");
@@ -455,7 +455,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
     //if(state->payload_keyid > 0 && state->dmr_so & 0x40)
-    if(state->payload_keyid > 0 && state->dmr_so == 0x40)
+    if(state->payload_keyid > 0 && (state->dmr_so & 0xCF) == 0x40)
     {
       attron(COLOR_PAIR(5));
       printw (" ALG: [0x%02X] KEY [0x%02X] MI [0x%08X]", state->payload_algid, state->payload_keyid, state->payload_mi);
@@ -464,7 +464,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
     //if(state->K > 0 && state->payload_keyid == 0 && state->dmr_so & 0x40)
-    if(state->K > 0 && state->dmr_so == 0x40)
+    if(state->K > 0 && (state->dmr_so & 0xCF) == 0x40)
     {
       attron(COLOR_PAIR(5));
       printw ("BPK [%3lld]", state->K);
