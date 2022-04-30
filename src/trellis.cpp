@@ -1,8 +1,7 @@
 /*
  *	Copyright (C) 2016 by Jonathan Naylor, G4KLX
  *
- *	Modifications of original code to work with OP25
- *	Copyright (C) 2019 by Graham J. Norbury
+ *	Heavy Modificatins of Original Code to work for DSD-FME
  *
  *	This program is free software; you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -14,7 +13,6 @@
  *	GNU General Public License for more details.
  */
 #include "dsd.h"
-//#include "trellis.h"
 
 #include <cstdio>
 #include <cassert>
@@ -52,6 +50,23 @@ const unsigned char BIT_MASK_TABLE[] = {0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U
 #define WRITE_BIT(p,i,b) p[(i)>>3] = (b) ? (p[(i)>>3] | BIT_MASK_TABLE[(i)&7]) : (p[(i)>>3] & ~BIT_MASK_TABLE[(i)&7])
 
 unsigned char state = 0U;
+//rework quickHamming to accept unsigned intergers instead and go bit by bit
+int quickHamming(unsigned int butt, unsigned int farts)
+{
+    unsigned int i = 0, count = 0, shit = 0, shart = 0;
+		//fprintf (stderr, "Distance Compare %X - %X \n", butt, farts );
+		for (i; i < 3; i++) //shift three places tops;
+		{
+			shit  = (butt  >> i)  & 0b1;
+			shart = (farts >> i)  & 0b1;
+			if (shit != shart)
+			{
+				count++;
+			}
+		}
+
+    return count;
+}
 
 bool CDMRTrellisFixCode(unsigned char* points, unsigned int failPos, unsigned char* payload)
 {
@@ -101,44 +116,107 @@ void CDMRTrellisTribitsToBits(const unsigned char* tribits, unsigned char* paylo
 
 
 	// convert bits to bytes
+	//fprintf (stderr, "\n Tribit Binary Sequence\n  ");
+	for (short i = 0; i < 144; i++)
+	{
+		//fprintf (stderr, "%b", bits[i]);
+	}
+	for(short int i = 0; i < 18; i++)
+  {
+		payload[i] = (bits[i * 8 + 0] << 7) | (bits[i * 8 + 1] << 6) | (bits[i * 8 + 2] << 5) | (bits[i * 8 + 3] << 4) |
+								 (bits[i * 8 + 4] << 3) | (bits[i * 8 + 5] << 2) | (bits[i * 8 + 6] << 1) | (bits[i * 8 + 7] << 0);
+	}
 
-	for (int i = 0; i < 144; i++)
-		payload[i/8] = (payload[i/8] << 1) | bits[i];
+	//for (int i = 0; i < 144; i++)
+		//payload[i/8] = (payload[i/8] << 1) | bits[i];
+		//DmrDataBit[j + 0] = (TrellisReturn[17-i] >> 0) & 0x01; //example
 
 }
 
 unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* tribits)
 {
+
 	//unsigned char state = 0U; //move outside of function to preserve state for every iteration
 	//let's try reversing the points to pass through the decode table instead of flipping them here,
 	//it may mess up the fixcode and failpos POS
 	state = 0U;
-	for (unsigned int i = 0U; i < 49U; i++) {
+	for (unsigned int i = 0U; i < 49U;) //total number of points to process
+	{
 		tribits[i] = 9U;
-
-		for (unsigned int j = 0U; j < 8U; j++) {
-			//if (points[i] == ENCODE_TABLE[state * 8U + j]) {
-			if (points[i] == DECODE_TABLE[state * 8U + j]) {
-			//if (points[48-i] == DECODE_TABLE[state * 8U + j]) {
+		for (unsigned int j = 0U; j < 8U; j++)
+		{
+			//if (points[i] == DECODE_TABLE[state * 8U + j])
+			//if (points[48-i] == DECODE_TABLE[state * 8U + j])
+			if (points[i] == ENCODE_TABLE[state * 8U + j])
+			{
 				tribits[i] = j;
+				state = tribits[i]; //carry over if found right away
+				i++; //increment i by one value
 				break;
 			}
 		}
-
+		//try to find shortest distance for surviving paths and decide on one
+		//seems to be that two paths will have distance value 1, and two will have distance value 2
+		//need to keep totaling up a few rounds before we can eliminate a path and resume?
 		if (tribits[i] == 9U)
-			return i;
+		{
+			int    distance  =  0;
+			int maxdistance  = 99; //random metric for two position distance
+			int pathdistance =  0;
+			unsigned int match     = 0;
+			unsigned int nextmatch = 0;
+			unsigned int q = 0;
+			//only 4 possible states for each point, but in 8 (0-7) FSM states
+			char path[99][99] = {0}; //[i][pathcount] = distance
+			int pathcount = 0;
+			for (unsigned int o = 0; o < 64; o++) //check entire state transition table for matches
+			{
+				if (points[i] == ENCODE_TABLE[o]) //ENCODE TABLE
+				{
+					match = o / (unsigned int)8; //get dividend no remainder/decimal I hope, get fsm state 0-7
+					//fprintf (stderr, "\n Point #%d [%d] Match State %d Position %d Tribit Value %d \n", i, points[i], match, o, o % (unsigned int)8);
+					distance = quickHamming(match, state);
+					//fprintf (stderr, "Raw Distance Current %d\n", distance);
+					path[i][pathcount] = distance ; //save which table values (paths) match as possible values and distance
+					for (q; q < 64; q++) //check entire state transition table for next point match
+					{
+						if (points[i+1] == ENCODE_TABLE[q]) //ENCODE TABLE
+						{
+							nextmatch = q / (unsigned int)8;
+							path[i+1][pathcount] = quickHamming(nextmatch, q % (unsigned int)8);
+							//fprintf (stderr, "Raw Distance Next %d\n", path[i+1][pathcount]);
+							pathcount++;
+							//fprintf (stderr, "State 0 Match %d Distance %d \n", o, distance);
+						}
+					}
+					for (short int z = 0; z <= pathcount; z++) //add metrics on paths to find shortest distance
+					{
+						pathdistance = path[i][0] + path[i+1][z];
+						//fprintf (stderr, "Total Path Distance %d\n", pathdistance);
+						if (pathdistance <= maxdistance) //equal too in case of tie?
+						{
+							maxdistance = pathdistance;
+							tribits[i]   = o % (unsigned int)8; //remainder value will be tribit value on table
+							if (i < 49) //just in case we are on 49 already, don't want to crash or something.
+							{
+								tribits[i+1] = q % (unsigned int)8; //remainder value will be tribit value on table
+							}
 
-		state = tribits[i];
+							//fprintf (stderr, "Point #%d [%d] - Tribit Candidate %d\n", i,   points[i],   tribits[i]   );
+							//fprintf (stderr, "Point #%d [%d]- Tribit Candidate %d\n", i+1, points[i+1], tribits[i+1] );
+						}
+					}
+				}
+				//fprintf (stderr, "Selected Point #%d [%d] - Tribit Selection %d\n", i,   points[i],   tribits[i]   );
+				//fprintf (stderr, "Selected Point #%d [%d]- Tribit Selection %d\n", i+1, points[i+1], tribits[i+1] );
+			}
+			state = tribits[i+1]; //not quite sure if this will be needed or not, if so, set state to last found value
+			i += 2; //increment i by two since we already got the next tribit value as well;
+			//state = tribits[i]; //not quite sure if this will be needed or not, if so, set state to last found value
+			//i++; //increment i by two since we already got the next tribit value as well;
+		}
 
 	}
-
-	//if (tribits[48U] != 0U)
-	if (tribits[48U] != 0U) //
-	{
-		return 48U;
-	}
-
-
 	return 999U;
 }
 
@@ -146,7 +224,8 @@ void CDMRTrellisDeinterleave(const unsigned char* data, signed char* dibits)
 {
 	int n;
 	signed char dibit;
-
+	//can only assume this is giving the correct dibits out, and not inverse or something.
+	/*
 	for (int i = 0; i < 98; i++) {
 		n = i * 2;
 		if (n >= 98) n += 68;
@@ -157,19 +236,44 @@ void CDMRTrellisDeinterleave(const unsigned char* data, signed char* dibits)
 		bool b2 = data[n] != 0x0;
 
 		if (!b1 && b2)
-			dibit = +3;
+			dibit = +3;        // 1 - 01
 		else if (!b1 && !b2)
-			dibit = +1;
+			dibit = +1;        // 0 - 00
 		else if (b1 && !b2)
-			dibit = -1;
+			dibit = -1;        // 2 - 10
 		else
-			dibit = -3;
+			dibit = -3;        // 3 - 11
 
-		n = INTERLEAVE_TABLE[i]; //should this go in reverse?
-		dibits[n] = dibit;
+		*/
+		//Keep it simple!
+		for (int i = 0; i < 98; i++)
+		{
+			n = INTERLEAVE_TABLE[97-i];
+			//n = i;
+			if (data[i] == 0)
+			{
+				dibits[n] =  1; //1
+			}
+			if (data[i] == 1)
+			{
+				dibits[n] =  3; //3
+			}
+			if (data[i] == 2)
+			{
+				dibits[n] =  -1; //-1
+			}
+			if (data[i] == 3)
+			{
+				dibits[n] = -3; //-3
+			}
+		}
+
+		//n = INTERLEAVE_TABLE[i]; //should this go in reverse?
+		//n = INTERLEAVE_TABLE[97-i]; //should this go in reverse?
+		//dibits[n] = dibit; //should this go in reverse too? not sure on this one, but definitely the INTERLEAVE_TABLE
 		//n = INTERLEAVE_TABLE[97-i]; //should this go in reverse?
 		//dibits[97-n] = dibit;
-	}
+	//}
 }
 
 void CDMRTrellisDibitsToPoints(const signed char* dibits, unsigned char* points)
@@ -324,7 +428,7 @@ bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload)
   }
 	signed char dibits[98U];
 	CDMRTrellisDeinterleave(data, dibits);
-	if (1 == 1)
+	if (1 == 2)
   {
     fprintf (stderr, "\n Trellis Deinterleaved Dibits inside Decoder (converted to signed)\n  ");
     for (short i = 0; i < 98; i++)
@@ -333,8 +437,19 @@ bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload)
     }
   }
 	unsigned char points[49U];
+	unsigned char reverse_points[49U];
 	CDMRTrellisDibitsToPoints(dibits, points);
-	if (1 == 1)
+	//maybe keep point 49 at 49, since its the flush?
+	//fprintf (stderr, "\n Trellis Reverse Points inside Decoder\n  ");
+	for (short i = 0; i < 49; i++)
+	{
+		reverse_points[i] = points[48-i];
+		//fprintf (stderr, "#%d [%02u] ", i, reverse_points[i]);
+	}
+	//reverse_points[48] = points[48];
+	//fprintf (stderr, "#%d [%02u] ", 48, reverse_points[48]);
+
+	if (1 == 2)
   {
     fprintf (stderr, "\n Trellis Points inside Decoder\n  ");
     for (short i = 0; i < 49; i++)
@@ -343,19 +458,11 @@ bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload)
     }
   }
 	// Check the original code
-	unsigned char reverse_points[49U];
-	fprintf (stderr, "\n Trellis Reversed Points inside Decoder\n  ");
-	for (short i = 0; i < 49; i++)
-	{
-		reverse_points[i] = points[48-i];
-		fprintf (stderr, "#%d [%02u] ", i, reverse_points[i]);
-	}
-	//unsigned int failPos = CDMRTrellisCheckCode(points, tribits);
-	unsigned int failPos = CDMRTrellisCheckCode(reverse_points, tribits);
 
+	unsigned int failPos = CDMRTrellisCheckCode(points, tribits);
+	//unsigned int failPos = CDMRTrellisCheckCode(reverse_points, tribits); //stack smashing detected terminated
 
-
-	if (1 == 1)
+	if (1 == 2)
 	{
 		fprintf (stderr, "\n Check Code Trellis Tribits inside Decoder\n  ");
 		for (short i = 0; i < 49; i++)
@@ -367,27 +474,36 @@ bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload)
 	if (failPos == 999U)
 	{
 		CDMRTrellisTribitsToBits(tribits, payload);
-		if (1 == 1)
+		if (1 == 2)
 		{
-		 fprintf (stderr, "\nTrellis Payload Tribits to Bits failPos == 999U\n  ");
-		 for (short i = 0; i < 18; i++)
+		 fprintf (stderr, "\nTrellis Payload Tribits\n %s ", KCYN);
+		 for (short i = 0; i < 49; i++)
 		 {
 		   fprintf (stderr, "#%d [%0u] ", i, tribits[i]); //shouldn't have any values greater that 0x7?
 		 }
+		}
+		if (1 == 2)
+		{
+		 fprintf (stderr, "\nTrellis Payload Tribits to Bytes inside Decoder\n %s ", KCYN);
+		 for (short i = 0; i < 18; i++)
+		 {
+			 fprintf (stderr, "[%02X]", payload[i]);
+		 }
+		 fprintf (stderr,"%s", KNRM); //change back to normal
 		}
 		return true;
 	}
 
 	unsigned char savePoints[49U];
 	for (unsigned int i = 0U; i < 49U; i++)
-		//savePoints[i] = points[i];
-		savePoints[i] = reverse_points[i];
+		savePoints[i] = points[i];
+		//savePoints[i] = reverse_points[i];
 
-	//bool ret = CDMRTrellisFixCode(points, failPos, payload);
-	bool ret = CDMRTrellisFixCode(reverse_points, failPos, payload);
+	bool ret = CDMRTrellisFixCode(points, failPos, payload);
+	//bool ret = CDMRTrellisFixCode(reverse_points, failPos, payload);
 	if (ret){
 
-		if (1 == 1)
+		if (1 == 2)
 	  {
 	    fprintf (stderr, "\n if return Trellis Tribits inside Decoder\n  ");
 	    for (short i = 0; i < 49; i++)
@@ -396,7 +512,7 @@ bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload)
 	    }
 	  }
 
-		if (1 == 1)
+		if (1 == 2)
 		{
 		 fprintf (stderr, "\nTrellis Payload Tribits to Bits fix return true\n  "); //this one seems to be happening
 		 for (short i = 0; i < 18; i++)
@@ -408,9 +524,9 @@ bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload)
 
 	if (failPos == 0U)
 	{
-	if (1 == 1)
+	if (1 == 2)
 	{
-	 fprintf (stderr, "\nTrellis Payload Tribits to Bits failPos == 0U\n  ");
+	 fprintf (stderr, "\nTrellis Payload Tribits to Bytes failPos == 0U\n  ");
 	 for (short i = 0; i < 18; i++)
 	 {
 		 fprintf (stderr, "[%02X]", payload[i]);

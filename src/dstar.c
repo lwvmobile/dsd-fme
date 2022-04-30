@@ -128,14 +128,15 @@ void processDSTAR(dsd_opts * opts, dsd_state * state) {
 			slowdata[0] ^= 0x70;
 			slowdata[1] ^= 0x4f;
 			slowdata[2] ^= 0x93;
-			//fprintf (stderr, "unscrambled- %s",slowdata);
+			//fprintf (stderr, "unscrambled- %c%c%c \n", slowdata[0], slowdata[1], slowdata[2] );
 
 		} else if (framecount == 0) {
-			//fprintf (stderr, "never scrambled-%s\n",slowdata);
+			//fprintf (stderr, "never scrambled-%c\n",slowdata);
+			//fprintf (stderr, "never scrambled- %c%c%c \n", slowdata[0], slowdata[1], slowdata[2] );
 		}
 
 		framecount++;
-	}
+	} //end while loop
 
 	end: if (opts->errorbars == 1) {
 		fprintf (stderr, "\n");

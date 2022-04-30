@@ -300,8 +300,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
 
       state->lastsample = sample;
-      //steal sample here for rtl input or stdin input
-      state->input_sample_buffer = sample; //sample or sum, honestly this seemt to be best place to grab this sadly, sounds terrible most everywhere else
+
     }
 
   symbol = (sum / count);

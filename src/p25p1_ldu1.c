@@ -51,7 +51,7 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
 
   if (opts->errorbars == 1)
     {
-      fprintf (stderr, "e:");
+      //fprintf (stderr, "e:");
     }
 
   // IMBE 1

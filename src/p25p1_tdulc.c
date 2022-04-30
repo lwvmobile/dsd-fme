@@ -114,7 +114,9 @@ read_and_correct_dodeca_word (dsd_opts* opts, dsd_state* state, char* dodeca, in
     }
   else
     {
+      fprintf (stderr, "%s", KRED);
       fprintf (stderr, " IRRECOVERABLE");
+      fprintf (stderr, "%s", KNRM);
     }
   fprintf (stderr, "\n");
 #endif
@@ -293,7 +295,9 @@ processTDULC (dsd_opts* opts, dsd_state* state)
 
   // Next we should find an status dibit
   if (status_count != 35) {
+      fprintf (stderr, "%s", KRED);
       fprintf (stderr, "*** SYNC ERROR\n");
+      fprintf (stderr, "%s", KNRM);
   }
 
   // trailing status symbol

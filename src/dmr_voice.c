@@ -115,6 +115,16 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
           state->slot1light[0] = ' ';
           state->slot1light[6] = ' ';
         }
+        //method to only listen to a chosen slot when voices occupy both slots simultaneously
+        //method supersceeded by DMRSTEREO
+        //state->hardslot = 9; //0 to only listen to slot 0 voice, 1 for slot 1, 9 for both
+        //if(state->hardslot != 9 && state->hardslot != state->currentslot)
+        //if(1==1)
+        //{
+          //fprintf (stderr, " Current Slot = %d", state->currentslot + 1);
+          //fprintf (stderr, "\n"); //line break after breaking out of jail
+          //goto JUMP;
+        //}
       }
     }
     cachdata[12] = 0;
@@ -370,10 +380,23 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
       sprintf(state->slot2light, "[sLoT2]");
     }
 
-    if((strcmp (sync, DMR_MS_VOICE_SYNC) == 0) || (strcmp (sync, DMR_MS_DATA_SYNC) == 0))
+    //Comment out Below Lines, or switch if/else if if these cause issues.
+    /*
+    else if((strcmp (sync, DMR_MS_VOICE_SYNC) == 0) || (strcmp (sync, DMR_MS_DATA_SYNC) == 0))
     {
       msMode = 1;
+      if strcmp (sync, DMR_MS_VOICE_SYNC) == 0)
+      {
+        //quickDMRVoice (opts, state); //or make handler for msvoice seperate
+        //goto JUMP; //quit early when returned here
+      }
     }
+    else if((strcmp (sync, DMR_BS_VOICE_SYNC) == 0)
+    {
+      //quickDMRVoice (opts, state); //or make handler for msvoice seperate
+      //goto JUMP; //quit early when returned here
+    }
+    */
 
 // TODO : To be removed
 //    if((j == 0) && (opts->errorbars == 1))
@@ -574,8 +597,9 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
     fprintf(stderr, "%s ", syncbits);
 #endif
 
-    if(j == 5)
+    if(j == 5) //j == 5
     {
+
       // 2nd half next slot
       skipDibit (opts, state, 54);
 
@@ -617,6 +641,7 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
       }
 
     }
+
   }  /* End for(j = 0; j < 6; j++) */
 
   if(opts->errorbars == 1)
@@ -624,14 +649,25 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
     fprintf(stderr, "%s %s ", state->slot1light, state->slot2light);
 
     /* Print the color code */
+    fprintf (stderr, "%s", KCYN);
     fprintf(stderr, "| Color Code=%02d ", (int)state->color_code);
+    fprintf (stderr, "%s", KNRM);
 
     //if(state->color_code_ok) fprintf(stderr, "(OK)      |");
-    if(state->color_code_ok) fprintf(stderr, "(CRC OK ) |"); //add line break
-    else fprintf(stderr, "(CRC ERR) |"); //add line break
+    if(state->color_code_ok)
+    {
+      fprintf(stderr, "| (CRC OK ) |"); //add line break
+      state->dmr_color_code = state->color_code; //set here when voice? otherwise is set off of idle.
+    }
+    else
+    {
+      fprintf (stderr, "%s", KRED);
+      fprintf(stderr, "| (CRC ERR) |"); //add line break
+      fprintf (stderr, "%s", KNRM);
+    }
 
     //fprintf(stderr, " VOICE e: \n");
-    fprintf(stderr, " VOICE    ");
+    fprintf(stderr, " VOICE ");
   }
 
   /* Perform the SYNC DMR data embedded decoding */
@@ -642,9 +678,10 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
 
   /* Print DMR frame (if needed) */
   //DMRVoiceFrameProcess(opts, state); //HERE HERE, was enabled, disabled so I could build
-
+  //JUMP:
   if(opts->errorbars == 1)
   {
     fprintf(stderr, "\n");
   }
+
 } /* End processDMRvoice() */

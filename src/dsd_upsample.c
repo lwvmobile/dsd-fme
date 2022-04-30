@@ -23,8 +23,19 @@ upsample (dsd_state * state, float invalue)
 
   int i, j, sum;
   float *outbuf1, c, d;
-
-  outbuf1 = state->audio_out_float_buf_p;
+  if (state->currentslot == 0 && state->dmr_stereo == 1)
+  {
+    outbuf1 = state->audio_out_float_buf_p;
+  }
+  if (state->currentslot == 1 && state->dmr_stereo == 1)
+  {
+    outbuf1 = state->audio_out_float_buf_pR;
+  }
+  if (state->dmr_stereo == 0)
+  {
+    outbuf1 = state->audio_out_float_buf_p;
+  }
+  //outbuf1 = state->audio_out_float_buf_p;
   outbuf1--;
   c = *outbuf1;
   d = invalue;
@@ -43,6 +54,33 @@ upsample (dsd_state * state, float invalue)
   *outbuf1 = d;
   outbuf1++;
 
+  if (state->currentslot == 1 && state->dmr_stereo == 1)
+  {
+    if (state->audio_out_idx2R > 24)
+    {
+      // smoothing
+      outbuf1 -= 16;
+      for (j = 0; j < 4; j++)
+      {
+          for (i = 0; i < 6; i++)
+          {
+            sum = 0;
+            outbuf1 -= 2;
+            sum += (int)*outbuf1;
+            outbuf1 += 2;
+            sum += (int)*outbuf1;
+            outbuf1 += 2;
+            sum += (int)*outbuf1;
+            outbuf1 -= 2;
+            *outbuf1 = (sum / (float) 3);
+            outbuf1++;
+          }
+        outbuf1 -= 8;
+      }
+    }
+  }
+  if (state->currentslot == 0 && state->dmr_stereo == 1)
+  {
   if (state->audio_out_idx2 > 24)
     {
       // smoothing
@@ -65,4 +103,30 @@ upsample (dsd_state * state, float invalue)
           outbuf1 -= 8;
         }
     }
+  }
+  if (state->dmr_stereo == 0)
+  {
+  if (state->audio_out_idx2 > 24)
+    {
+      // smoothing
+      outbuf1 -= 16;
+      for (j = 0; j < 4; j++)
+        {
+          for (i = 0; i < 6; i++)
+            {
+              sum = 0;
+              outbuf1 -= 2;
+              sum += (int)*outbuf1;
+              outbuf1 += 2;
+              sum += (int)*outbuf1;
+              outbuf1 += 2;
+              sum += (int)*outbuf1;
+              outbuf1 -= 2;
+              *outbuf1 = (sum / (float) 3);
+              outbuf1++;
+            }
+          outbuf1 -= 8;
+        }
+    }
+  }
 }

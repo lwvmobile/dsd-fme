@@ -42,6 +42,7 @@ int i = 0;
 char * s0last = "     ";
 char * s1last = "     ";
 char versionstr[25];
+char lrrp[6][9999]; //local lrrp storage
 unsigned long long int call_matrix[33][6]; //0 - sync type; 1 - tg/ran; 2 - rid; 3 - slot; 4 - cc; 5 - time(NULL) ;
 char * FM_bannerN[9] = {
   "                                 CTRL + C twice to exit",
@@ -54,14 +55,15 @@ char * FM_bannerN[9] = {
   "https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
 };
 
-char * SyncTypes[30] = {
+//need to double check these sync types, not quite matching up with frame_sync
+char * SyncTypes[36] = {
   "+P25P1",
   "-P25P1",
   "+X2TDMA DATA",
   "-X2TDMA DATA",
   "+X2TDMA VOICE",
   "-X2TDMA VOICE",
-  "+DSTARC",
+  "+DSTAR",
   "-DSTAR",
   "+NXDN VOICE",      //8
   "-NXDN VOICE",  //9
@@ -82,7 +84,14 @@ char * SyncTypes[30] = {
   "-dPMR",
   "-dPMR",
   "-dPMR",
-  "-dPMR"
+  "-dPMR",
+  "+NXDN (sync only)",
+  "-NXDN (sync only)",
+  "+YSF",
+  "-YSF",
+  "DMR MS VOICE",
+  "DMR MS DATA",
+  "DMR RC DATA"
 
 };
 
@@ -202,7 +211,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   //if (state->dmr_color_code != dcc && (lls == 11 || lls == 13 || lls == 10 || lls == 12) ) //DMR Voice + last two is data
   //if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR
-  if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 12 || lls == 13) ) //DMR, needs work
+  if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 12 || lls == 13 || lls == 32) ) //DMR, needs work
   {
     //reset amateur signs on radio id change
     for (short i = 0; i < 5; i++)
@@ -228,6 +237,35 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][5] = time(NULL);
     //i++;
   }
+  /*
+  //needs work, look at saving just values to part of the state->dmr_lrrp array, or rework for int values
+  if ( (strcmp(state->dmr_lrrp[3], lrrp[3]) != 0) && (lls == 10 || lls == 11) ) //DMR Data LRRP
+  {
+    sprintf (lrrp[1], state->dmr_lrrp[1]);
+    sprintf (lrrp[2], state->dmr_lrrp[2]);
+    sprintf (lrrp[3], state->dmr_lrrp[3]);
+    //lrrp[1] = state->dmr_lrrp[1];
+    //lrrp[2] = state->dmr_lrrp[2];
+    //lrrp[3] = state->dmr_lrrp[3];
+    for (short int k = 0; k < 9; k++)
+    {
+      call_matrix[k][0] = call_matrix[k+1][0];
+      call_matrix[k][1] = call_matrix[k+1][1];
+      call_matrix[k][2] = call_matrix[k+1][2];
+      call_matrix[k][3] = call_matrix[k+1][3];
+      call_matrix[k][4] = call_matrix[k+1][4];
+      call_matrix[k][5] = call_matrix[k+1][5];
+    }
+
+    call_matrix[9][0] = lls;
+    call_matrix[9][1] = (unsigned long long int)&lrrp[3];
+    call_matrix[9][2] = (unsigned long long int)&lrrp[1];
+    call_matrix[9][3] = (unsigned long long int)&lrrp[2];
+    call_matrix[9][4] = dcc;
+    call_matrix[9][5] = time(NULL);
+    //i++;
+  }
+  */
 
   //if ( (lls == 0 || lls == 1) && state->lastsrc != rd && state->lastsrc > 0) //find condition to make this work well, probably if last != local last variables
   if ( (lls == 0 || lls == 1) && call_matrix[9][2] != rd && nc > 0 && tg > 0) //P25
@@ -304,9 +342,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
 
   printw ("--Audio Decode----------------------------------------------------------------\n");
+  printw ("| Decoding:    %s \n", opts->output_name);
   printw ("| In Level:    [%3i%%] \n", level);
-  printw ("| Voice Error: [%i][%i] \n| Error Bars:  [%s] \n", state->errs, state->errs2, state->err_str); //
-  //printw ("| Carrier = %i\n", state->carrier);
+  //printw ("| Voice Error: [%i][%i] \n| Error Bars:  [%s] \n", state->errs, state->errs2, state->err_str); //
+  printw ("| Voice Error: [%i][%i] \n", state->errs, state->errs2);
   printw ("------------------------------------------------------------------------------\n");
 
 
@@ -320,10 +359,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //  case 3:  Ptr = "AES";       break;
   //  default: Ptr = "Unknown Cipher Type"; break;
   //}
-
+  /*
   if (state->lastsynctype != -1) //not sure if this will be okay
   {
     lls = state->lastsynctype;
+  }
+  */
+  if (state->synctype > 0 && state->synctype < 34) //not sure if this will be okay
+  {
+    lls = state->synctype;
   }
   if (state->nxdn_last_rid > 0 && state->nxdn_last_rid != src);
   {
@@ -340,20 +384,20 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   //if (state->dmr_color_code > 0 && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR, DCC only carried on Data?
   //if (state->color_code > -1 && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR, DCC only carried on Data?
-  if (state->color_code_ok && (lls == 12 || lls == 13) ) //DMR, needs work
+  if (state->color_code_ok && (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32 || lls == 33) ) //DMR, needs work
 
   {
     dcc = state->dmr_color_code;
     //dcc = state->color_code;
   }
 
-  if (state->lastsrc > 0 && (lls == 12 || lls == 13 || lls == 0 || lls == 1)) //DMR Voice and P25P1
+  if (state->lastsrc > 0 && (lls == 12 || lls == 13 || lls == 0 || lls == 1 || lls == 32)) //DMR Voice and P25P1
   {
     rd = state->lastsrc;
     opts->p25enc = 0;
   }
 
-  if (state->lasttg > 0 && (lls == 12 || lls == 13 || lls == 0 || lls == 1)) //DMR Voice and P25P1
+  if (state->lasttg > 0 && (lls == 12 || lls == 13 || lls == 0 || lls == 1 || lls == 32)) //DMR Voice and P25P1
   {
     tg = state->lasttg;
     opts->p25enc = 0;
@@ -440,7 +484,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //printw("| System Type: %s \n", ALGIDS[state->payload_keyid] );
   }
   //if (state->lastsynctype == 12 || state->lastsynctype == 13)  //DMR Voice Types
-  if (lls == 12 || lls == 13)  //DMR Voice Types
+  if (lls == 12 || lls == 13 || lls == 32)  //DMR Voice Types
   {
     //printw ("| DCC: [%i] FID: [%02X]\n", dcc, state->dmr_fid);
     //attron(COLOR_PAIR(3));
@@ -538,7 +582,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
 
   //if (state->lastsynctype == 10 || state->lastsynctype == 11)  //DMR Data Types
-  if (lls == 10 || lls == 11 )  //DMR Data Types
+  if (lls == 10 || lls == 11 || lls == 33)  //DMR Data Types
   {
     //printw ("| DCC: [%i]\n", dcc);
     printw ("| DCC: [%2i] FID: [%02X] SOP: [%02X] \n", dcc, state->dmr_fid, state->dmr_so);
@@ -654,7 +698,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw ("TG [%4d] ", call_matrix[9-j][4]);
       printw ("RID [%4d] ", call_matrix[9-j][2]);
     }
-    if (lls == 0 || lls == 1 || lls == 12 || lls == 13 || lls == 10 || lls == 11 ) //P25 P1 and DMR
+    if (lls == 0 || lls == 1 || lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32 || lls == 33) //P25 P1 and DMR
     {
       printw ("TID [%8d] ", call_matrix[9-j][1]);
       printw ("RID [%8d] ", call_matrix[9-j][2]);

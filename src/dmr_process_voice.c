@@ -19,6 +19,26 @@
 #include "dmr_const.h"
 #include "p25p1_check_hdu.h"
 //
+
+//
+void ProcessDMR (dsd_opts * opts, dsd_state * state)
+{
+  uint32_t i, j;
+  uint32_t Frame;
+  TimeSlotVoiceSuperFrame_t * TSVoiceSupFrameL = NULL;
+  TimeSlotVoiceSuperFrame_t * TSVoiceSupFrameR = NULL;
+  TimeSlotVoiceSuperFrame_t * TSVoiceSupFrameRC = NULL; //Reverse Test for MS Backwards
+
+  int *errs;
+  int *errs2;
+  unsigned long long int k;
+  int x;
+  k = 0;
+
+  TSVoiceSupFrameL = &state->TS1SuperFrame;
+  TSVoiceSupFrameR = &state->TS2SuperFrame;
+
+//
 int BP[256] = {
   0x0000, 0x1F00, 0xE300, 0xFC00, 0x2503, 0x3A03, 0xC603, 0xD903,
   0x4A05, 0x5505, 0xA905, 0xB605, 0x6F06, 0x7006, 0x8C06, 0x9306,
@@ -54,71 +74,53 @@ int BP[256] = {
   0x41F5, 0x5EF5, 0xA2F5, 0xBDF5, 0x64F6, 0x7BF6, 0x87F6, 0x98F6 //255
 };
 //
-void ProcessDMR (dsd_opts * opts, dsd_state * state)
+if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
 {
-  uint32_t i, j;
-  uint32_t Frame;
-  TimeSlotVoiceSuperFrame_t * TSVoiceSupFrame = NULL;
-  TimeSlotVoiceSuperFrame_t * TSVoiceSupFrameL = NULL;
-  TimeSlotVoiceSuperFrame_t * TSVoiceSupFrameR = NULL;
-
-  int *errs;
-  int *errs2;
-  int *errsR;
-  int *errs2R;
-  unsigned long long int k;
-  int x;
-  k = 0;
-
-  if(state->currentslot == 0)
-  {
-    TSVoiceSupFrame = &state->TS1SuperFrame;
-  }
-  else
-  {
-    TSVoiceSupFrame = &state->TS2SuperFrame;
-  }
-  //TSVoiceSupFrameL = &state->TS1SuperFrame;
-  //TSVoiceSupFrameR = &state->TS2SuperFrame;
-
-//
-if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
-{
+  fprintf (stderr, "%s", KYEL);
   fprintf(stderr, " BPK %lld", state->K);
+  fprintf (stderr, "%s", KNRM);
+  k = BP[state->K];
+  k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
   for(Frame = 0; Frame < 6; Frame++)
   {
    for(i = 0; i < 3; i++)
    {
      for(j = 0; j < 49; j++)
-    {
-      k = BP[state->K];
-      k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
+     {
       x = ( ((k << j) & 0x800000000000) >> 47 );
-      TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j] ^= x;
-    }
+      TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j] ^= x;
+     }
+   }
+  }
+}
+
+if (state->currentslot == 1 && state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
+{
+  fprintf (stderr, "%s", KYEL);
+  fprintf(stderr, " BPK %lld", state->K);
+  fprintf (stderr, "%s", KNRM);
+  k = BP[state->K];
+  k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
+  for(Frame = 0; Frame < 6; Frame++)
+  {
+   for(i = 0; i < 3; i++)
+   {
+     for(j = 0; j < 49; j++)
+     {
+      x = ( ((k << j) & 0x800000000000) >> 47 );
+      TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j] ^= x;
+     }
    }
   }
 }
 //
-  for(Frame = 0; Frame < 6; Frame++)
+if (state->currentslot == 0)
+{
+  for(Frame = 0; Frame < 6; Frame++) //6
   {
     /* 1 DMR frame contains 3 AMBE voice samples */
-    //fprintf (stderr, "\n 1AMBE ");
     for(i = 0; i < 3; i++)
     {
-
-      errs  = (int*)&(TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
-      errs2 = (int*)&(TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
-      state->errs =  TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
-      state->errs2 = TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].errs2[i]; //correct placement
-
-      mbe_processAmbe2450Dataf (state->audio_out_temp_buf, errs, errs2, state->err_str,
-                                TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
-                                state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-
-      /*
-      if (state->currentslot == 0)
-      {
       errs  = (int*)&(TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
       errs2 = (int*)&(TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
       state->errs =  TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
@@ -128,45 +130,16 @@ if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
                                 TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
                                 state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
-      state->debug_audio_errors += *errs2;
-      //state->debug_audio_errors += *errs2R;
-
-      processAudio(opts, state);
-      playSynthesizedVoice (opts, state);
-      }
-      if (state->currentslot == 1)
-      {
-      errsR  = (int*)&(TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
-      errs2R = (int*)&(TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
-      state->errs =  TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
-      state->errs2 = TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs2[i]; //correct placement
-      //state->audio_out_temp_bufR = state->audio_out_temp_buf;
-
-      mbe_processAmbe2450Dataf (state->audio_out_temp_buf, errsR, errs2R, state->err_strR,
-                                TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
-                                state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-
-      state->debug_audio_errors += *errs2R;
-      processAudio(opts, state);
-      playSynthesizedVoice (opts, state);
-      }
-
-      mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, errsR, errs2R, state->err_strR,
-                                TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
-                                state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-      */
-
       if (opts->mbe_out_f != NULL)
       {
-        saveAmbe2450Data (opts, state, TSVoiceSupFrame->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
+        saveAmbe2450Data (opts, state, TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
       }
       if (opts->errorbars == 1)
       {
-        fprintf(stderr, "%s", state->err_str);
+        //fprintf(stderr, "%s", state->err_str);
       }
 
       state->debug_audio_errors += *errs2;
-      //state->debug_audio_errors += *errs2R;
 
       processAudio(opts, state);
       //playSynthesizedVoice (opts, state);
@@ -176,14 +149,59 @@ if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
         writeSynthesizedVoice (opts, state);
       }
 
-      if (opts->audio_out == 1 && opts->p25enc != 1) //play only if not equal to enc value, going to set p25enc to 1 if enc detected??
+      //play only if not equal to enc value, going to set p25enc to 1 if enc detected??
+      if (opts->audio_out == 1 && opts->p25enc != 1)
       {
         playSynthesizedVoice (opts, state);
       }
     } /* End for(i = 0; i < 3; i++) */
   } /* End for(Frame = 0; Frame < 6; Frame++) */
-} /* End ProcessDMREncryption() */
+ } //End if Current Slot == 0
+
+ if (state->currentslot == 1)
+ {
+   for(Frame = 0; Frame < 6; Frame++)
+   {
+     /* 1 DMR frame contains 3 AMBE voice samples */
+     for(i = 0; i < 3; i++)
+     {
+       errs  = (int*)&(TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs1[i]);
+       errs2 = (int*)&(TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs2[i]);
+       state->errs =  TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs1[i]; //correct placement
+       state->errs2 = TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].errs2[i]; //correct placement
+
+       mbe_processAmbe2450Dataf (state->audio_out_temp_buf, errs, errs2, state->err_str,
+                                 TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
+                                 state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+       if (opts->mbe_out_f != NULL)
+       {
+         saveAmbe2450Data (opts, state, TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
+       }
+       if (opts->errorbars == 1)
+       {
+         //fprintf(stderr, "%s", state->err_str);
+       }
+
+       state->debug_audio_errors += *errs2;
+
+       processAudio(opts, state);
+       //playSynthesizedVoice (opts, state);
+
+       if (opts->wav_out_f != NULL)
+       {
+         writeSynthesizedVoice (opts, state);
+       }
+
+       //play only if not equal to enc value, going to set p25enc to 1 if enc detected??
+       if (opts->audio_out == 1 && opts->p25enc != 1)
+       {
+         playSynthesizedVoice (opts, state);
+       }
+     } /* End for(i = 0; i < 3; i++) */
+   } /* End for(Frame = 0; Frame < 6; Frame++) */
+ } //End if Current Slot == 1
 
 
-
+} /* End ProcessDMR */
 /* End of file */

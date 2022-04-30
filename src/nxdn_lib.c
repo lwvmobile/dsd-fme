@@ -732,6 +732,7 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   }
 
   /* Print the "Call Type" */
+  fprintf (stderr, "%s", KGRN);
   fprintf(stderr, "\n %s - ", NXDN_Call_Type_To_Str(CallType)); //line break and 1 space
   //sprintf (state->nxdn_call_type, NXDN_Call_Type_To_Str(CallType)); //fix warning below
   //warning: format not a string literal and no format arguments [-Wformat-security]
@@ -753,12 +754,16 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   /* Print the Key ID */
   if(CipherType != 0)
   {
+    fprintf (stderr, "%s", KYEL);
     fprintf(stderr, "Key ID %u - ", KeyID & 0xFF);
+    fprintf (stderr, "%s", KNRM);
     //state->nxdn_key = (KeyID & 0xFF);
   }
 
   /* Print Source ID and Destination ID (Talk Group or Unit ID) */
+
   fprintf(stderr, "Src=%u - Dst/TG=%u ", SourceUnitID & 0xFFFF, DestinationID & 0xFFFF);
+  fprintf (stderr, "%s", KNRM);
 
 
   if(state->NxdnElementsContent.VCallCrcIsGood)
@@ -770,18 +775,15 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
       state->nxdn_key = (KeyID & 0xFF);
       state->nxdn_cipher_type = CipherType;
     }
-    fprintf(stderr, "(CRC OK) ");
+    //fprintf(stderr, "(CRC OK) ");
   }
   //fprintf(stderr, "   (OK)   - ");
-  else fprintf(stderr, "(CRC ERR) ");
-
-  //fprintf(stderr, "\nVCALL = ");
-
-  //for(i = 0; i < 8; i++)
-  //{
-  //  fprintf(stderr, "0x%02X, ", ConvertBitIntoBytes(&Message[i * 8], 8) & 0xFF);
-  //}
-  //fprintf(stderr, "\n");
+  else
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf(stderr, "(CRC ERR) ");
+    fprintf (stderr, "%s", KNRM);
+  }
 
 } /* End NXDN_decode_VCALL() */
 
