@@ -499,19 +499,19 @@ usage ()
 void
 liveScanner (dsd_opts * opts, dsd_state * state)
 {
-//need to use this area to configure audio rates for different sources if not pulse
 
-if (opts->audio_in_type == 1) //if stdin, switch to 8000 and single channel audio
+//not sure this section is needed now that I've worked out the issue, wasn't upsampling due to split == 1
+if (opts->audio_in_type == 1)
 {
-  opts->pulse_digi_rate_out = 8000; //stdin needs 8000 output for single channel
+  opts->pulse_digi_rate_out = 48000;
   opts->pulse_digi_out_channels = 1;
   if (opts->dmr_stereo == 1)
   {
-    opts->pulse_digi_rate_out = 4000; //stdin needs 4000 by 2 channel for DMR TDMA Stereo output
+    opts->pulse_digi_rate_out = 24000; //stdin needs 24000 by 2 channel for DMR TDMA Stereo output
     opts->pulse_digi_out_channels = 2;
-    fprintf (stderr, "STDIN Audio Rate Out set to 4000 Khz/2 Channel \n");
+    fprintf (stderr, "STDIN Audio Rate Out set to 24000 Khz/2 Channel \n");
   }
-  else fprintf (stderr, "STDIN Audio Rate Out set to 8000 Khz/1 Channel \n");
+  else fprintf (stderr, "STDIN Audio Rate Out set to 48000 Khz/1 Channel \n");
   opts->pulse_raw_rate_out = 48000;
   opts->pulse_raw_out_channels = 1;
 
@@ -533,16 +533,16 @@ if (opts->audio_in_type == 1) //if stdin, switch to 8000 and single channel audi
 #ifdef USE_RTLSDR
   if(opts->audio_in_type == 3)
   {
-    //test to see if this is still necessary
-    opts->pulse_digi_rate_out = 8000; //rtl needs 8000 and 1 channel is mono system
+    //not sure this section is needed now that I've worked out the issue, wasn't upsampling due to split == 1
+    opts->pulse_digi_rate_out = 48000; //rtl needs 8000 and 1 channel is mono system
     opts->pulse_digi_out_channels = 1;
     if (opts->dmr_stereo == 1)
     {
-      opts->pulse_digi_rate_out = 4000; //rtl needs 4000 by 2 channel for DMR TDMA Stereo output
+      opts->pulse_digi_rate_out = 24000; //rtl needs 4000 by 2 channel for DMR TDMA Stereo output
       opts->pulse_digi_out_channels = 2;
-      fprintf (stderr, "RTL Audio Rate Out set to 4000 Khz/2 Channel \n");
+      fprintf (stderr, "RTL Audio Rate Out set to 24000 Khz/2 Channel \n");
     }
-    else fprintf (stderr, "RTL Audio Rate Out set to 8000 Khz/1 Channel \n");
+    else fprintf (stderr, "RTL Audio Rate Out set to 48000 Khz/1 Channel \n");
     opts->pulse_raw_rate_out = 48000;
     opts->pulse_raw_out_channels = 1;
 
@@ -1308,7 +1308,7 @@ main (int argc, char **argv)
       openAudioInDevice (&opts);
 
 
-      fprintf (stderr,"Press CTRL + C twice to close.\n"); //Kindly remind user to double tap CTRL + C
+      fprintf (stderr,"Press CTRL + C twice to close.\n");
     }
 
   else
@@ -1323,7 +1323,7 @@ main (int argc, char **argv)
 
   if (opts.playfiles == 1)
     {
-      opts.pulse_digi_rate_out = 8000; //need set to 8000 for amb/imb playback
+      opts.pulse_digi_rate_out = 8000; //need set to 8000 for amb/imb playback, upsamling seems to cause random crackles
       opts.pulse_digi_out_channels = 1;
       openPulseOutput(&opts); //need to open it up for output
       playMbeFiles (&opts, &state, argc, argv);

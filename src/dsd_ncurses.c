@@ -456,7 +456,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_in_type == 1)
   {
-    printw ("| STDIN - Input\n");
+    printw ("| STDIN Standard Input: - \n");
   }
   if (opts->audio_in_type == 3)
   {
