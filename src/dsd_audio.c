@@ -351,10 +351,6 @@ writeSynthesizedVoice (dsd_opts * opts, dsd_state * state)
   short aout_buf[160];
   short *aout_buf_p;
 
-//  for(n=0; n<160; n++)
-//    fprintf (stderr,"%d ", ((short*)(state->audio_out_temp_buf))[n]);
-//  fprintf (stderr,"\n");
-
   aout_buf_p = aout_buf;
   state->audio_out_temp_buf_p = state->audio_out_temp_buf;
 
@@ -375,34 +371,6 @@ writeSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 
   sf_write_short(opts->wav_out_f, aout_buf, 160);
 
-  /*
-
-  int n;
-  short aout_buf[160];
-  short *aout_buf_p;
-  ssize_t result;
-
-  aout_buf_p = aout_buf;
-  state->audio_out_temp_buf_p = state->audio_out_temp_buf;
-  for (n = 0; n < 160; n++)
-    {
-      if (*state->audio_out_temp_buf_p > (float) 32760)
-        {
-          *state->audio_out_temp_buf_p = (float) 32760;
-        }
-      else if (*state->audio_out_temp_buf_p < (float) -32760)
-        {
-          *state->audio_out_temp_buf_p = (float) -32760;
-        }
-      *aout_buf_p = (short) *state->audio_out_temp_buf_p;
-      aout_buf_p++;
-      state->audio_out_temp_buf_p++;
-    }
-
-  result = write (opts->wav_out_fd, aout_buf, 320);
-  fflush (opts->wav_out_f);
-  state->wav_out_bytes += 320;
-  */
 }
 
 void
@@ -419,8 +387,8 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 		}
 		else
 
-      //two slot audio testing, still need to seperate channels first internally, but this will play them out of different streams
-
+      //most likely don't need this seperation anymore with L and R, just push it out without any condional checks
+       /*
       if(state->currentslot == 0 && opts->audio_in_type != 3 && opts->dmr_stereo == 1)
       {
         pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
@@ -433,6 +401,10 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
         pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
         state->audio_out_idx = 0;
       }
+      */
+      //Test just sending it straight on since I think I've figured out the STDIN and RTL for Stereo
+      pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
+      state->audio_out_idx = 0;
 
   }
 
@@ -460,13 +432,16 @@ playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
       //go F yourself PA
 		}
 		else
-
-      //two slot audio testing, still need to seperate channels first internally, but this will play them out of different streams
+      /*
+      //most likely don't need this seperation anymore with L and R, just push it out without any condional checks
       if(opts->dmr_stereo == 1) //state->currentslot == 1 && opts->audio_in_type != 3  && opts->dmr_stereo == 1
       {
         pa_simple_write(opts->pulse_digi_dev_outR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); //Yay! It works.
         state->audio_out_idxR = 0;
       }
+      */
+      pa_simple_write(opts->pulse_digi_dev_outR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); //Yay! It works.
+      state->audio_out_idxR = 0;
   }
 
   if (state->audio_out_idx2R >= 800000)

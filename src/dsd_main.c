@@ -503,11 +503,18 @@ liveScanner (dsd_opts * opts, dsd_state * state)
 
 if (opts->audio_in_type == 1) //if stdin, switch to 8000 and single channel audio
 {
-  opts->pulse_digi_rate_out = 8000; //stdin needs 8000 output, could have sworn this was working with 48000
+  opts->pulse_digi_rate_out = 8000; //stdin needs 8000 output for single channel
   opts->pulse_digi_out_channels = 1;
+  if (opts->dmr_stereo == 1)
+  {
+    opts->pulse_digi_rate_out = 4000; //stdin needs 4000 by 2 channel for DMR TDMA Stereo output
+    opts->pulse_digi_out_channels = 2;
+    fprintf (stderr, "STDIN Audio Rate Out set to 4000 Khz/2 Channel \n");
+  }
+  else fprintf (stderr, "STDIN Audio Rate Out set to 8000 Khz/1 Channel \n");
   opts->pulse_raw_rate_out = 48000;
   opts->pulse_raw_out_channels = 1;
-  fprintf (stderr, "STDIN Audio Rate Out set to 8000 Khz/1 Channel \n");
+
 }
 
 #ifdef USE_PORTAUDIO
@@ -526,11 +533,19 @@ if (opts->audio_in_type == 1) //if stdin, switch to 8000 and single channel audi
 #ifdef USE_RTLSDR
   if(opts->audio_in_type == 3)
   {
-    opts->pulse_digi_rate_out = 8000; //if rtl, switch to 8000 and 1 channel
+    //test to see if this is still necessary
+    opts->pulse_digi_rate_out = 8000; //rtl needs 8000 and 1 channel is mono system
     opts->pulse_digi_out_channels = 1;
+    if (opts->dmr_stereo == 1)
+    {
+      opts->pulse_digi_rate_out = 4000; //rtl needs 4000 by 2 channel for DMR TDMA Stereo output
+      opts->pulse_digi_out_channels = 2;
+      fprintf (stderr, "RTL Audio Rate Out set to 4000 Khz/2 Channel \n");
+    }
+    else fprintf (stderr, "RTL Audio Rate Out set to 8000 Khz/1 Channel \n");
     opts->pulse_raw_rate_out = 48000;
     opts->pulse_raw_out_channels = 1;
-    fprintf (stderr, "RTL Audio Rate Out set to 8000 Khz/1 Channel \n");
+
     open_rtlsdr_stream(opts);
   }
 #endif

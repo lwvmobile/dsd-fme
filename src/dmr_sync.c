@@ -231,6 +231,7 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
     //fprintf (stderr, "\n  Data Blocks [%d]", state->dmr_34_rate_sf[5]);
     for (short i = 1; i < 60; i++) //find way to get padding so we only go as deep as we need to! changed from 64 to 60 to skip the CRC Bytes for confirmed data
     {
+      /*
       if ( state->dmr_34_rate_sf[slot][i] == 0x0C) //Source and Destination info
       {
         fprintf (stderr, "\n       Source:");
@@ -242,6 +243,7 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
         fprintf (stderr, " [%08d]", (state->dmr_34_rate_sf[slot][i+5] <<16 ) + (state->dmr_34_rate_sf[slot][i+6] << 8) + state->dmr_34_rate_sf[slot][i+7] );
         fprintf (stderr, " - Port %05d", (state->dmr_34_rate_sf[slot][i+10] << 8) + state->dmr_34_rate_sf[slot][i+11]);
       }
+      */
       if ( state->dmr_34_rate_sf[slot][i] == 0x34 ) //timestamp
       {
         fprintf (stderr, "\n  LRRP - Timestamp: ");
@@ -282,9 +284,10 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
         //fprintf (stderr, " (");
         if (state->dmr_34_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
         {
-          fprintf (stderr, "-");
+          fprintf (stderr, " (-%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
+          //fprintf (stderr, " -");
         }
-          fprintf (stderr, "%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
+        else fprintf (stderr, " (%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
       }
 
 
@@ -1236,9 +1239,9 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
         //fprintf (stderr, " (");
         if (state->dmr_12_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
         {
-          fprintf (stderr, "-");
+          fprintf (stderr, " (-%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
         }
-          fprintf (stderr, "%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
+        else fprintf (stderr, " (%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
       }
 
 
