@@ -19,8 +19,9 @@
 #include "fcs.h"
 #include "descramble.h"
 #include "dstar_header.h"
+#include "dsd.h"
 
-void dstar_header_decode(int radioheaderbuffer[660]) {
+void dstar_header_decode(dsd_state * state, int radioheaderbuffer[660]) {
 	int radioheaderbuffer2[660];
 	unsigned char radioheader[41];
 	int octetcount, bitcount, loop;
@@ -33,6 +34,7 @@ void dstar_header_decode(int radioheaderbuffer[660]) {
 	deinterleave(radioheaderbuffer2, radioheaderbuffer);
 	len = FECdecoder(radioheaderbuffer, radioheaderbuffer2);
 	memset(radioheader, 0, 41);
+	//memset(state->dstarradioheader, 0, 41);
 	// note we receive 330 bits, but we only use 328 of them (41 octets)
 	// bits 329 and 330 are unused
 	octetcount = 0;
@@ -48,6 +50,14 @@ void dstar_header_decode(int radioheaderbuffer[660]) {
 			bitcount = 0;
 		}
 	}
+	//state->dstarradioheader = radioheader;
+
+	for (short i = 0; i < 41; i++)
+	{
+		state->dstarradioheader[i] = radioheader[i];
+	}
+
+
 	// print header
 	fprintf (stderr, "\nDSTAR HEADER: ");
 	//fprintf (stderr, "FLAG1: %02X - FLAG2: %02X - FLAG3: %02X\n", radioheader[0],

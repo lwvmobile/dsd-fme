@@ -51,7 +51,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   dibit_p = state->dibit_buf_p - 90;
   //using the estimate_symbol method for the dmr_payload_p buffer causes sync
   //issues with P25, so only do it when frame_p25p1 == 0, or -fr option
-  if (opts->frame_p25p1 != 1)
+  if (opts->frame_p25p1 == 0) //opts->frame_p25p1 == 0
   {
     dibit_p = state->dmr_payload_p - 90;
   }
@@ -312,7 +312,17 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   //fprintf(stderr, "| Color Code=%02d ", (int)state->color_code);
 
   /* Reconstitute the burst type */
+  //consider assigning thsi only when slottypeok or similar check passes, eliminate bad burst types from decoding randomly
   burst = (unsigned int)((SlotType[4] << 3) + (SlotType[5] << 2) + (SlotType[6] << 1) + SlotType[7]);
+  if (state->currentslot == 0)
+  {
+    state->dmrburstL = burst;
+  }
+  if (state->currentslot == 1)
+  {
+    state->dmrburstR = burst;
+  }
+
 
   /* Reconstitute the burst type */
   bursttype[0] = SlotType[4] + '0';

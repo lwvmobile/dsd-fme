@@ -66,7 +66,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   //Run Loop while the getting is good
   while (loop == 1) {
-
+  state->dmrburstL = 16; //Use 16 for Voice?
   // No CACH in MS Mode?
   for(i = 0; i < 12; i++)
   {
@@ -464,7 +464,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 
     return curr;
   }
-
+  state->dmrburstL = 16; //Use 16 for Voice?
   dibit_p = state->dmr_payload_p - 90;
   //payload buffer tests
   //CACH + First Half Payload + Sync = 12 + 54 + 24

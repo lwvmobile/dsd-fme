@@ -129,6 +129,15 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
     }
     cachdata[12] = 0;
 
+    //set state-dmrburstL and R here to a value for ncurses
+    if (state->currentslot == 0)
+    {
+      state->dmrburstL = 16; //use 16 for Voice?
+    }
+    if (state->currentslot == 1)
+    {
+      state->dmrburstR = 16; //Use 16 for Voice?
+    }
 
 #ifdef DMR_DUMP
     k = 0;

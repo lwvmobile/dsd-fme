@@ -96,12 +96,7 @@ resetState (dsd_state * state)
 
   state->nxdn_last_ran = 0;
 
-//#ifdef TRACE_DSD
-//  state->debug_sample_index = 0;
-//  state->debug_label_file = NULL;
-//  state->debug_label_dibit_file = NULL;
-//  state->debug_label_imbe_file = NULL;
-//#endif
-
+  //each time you run this, it increses memory use by 4MB, massive memory leak
+  //need to revisit this sometime and look into only resetting only the necesary items to let P25 switch between signals (C4FM or Wide) without needing a restart
   initialize_p25_heuristics(&state->p25_heuristics); //see if we want to re-init this or not, currently seems to cause memory leak when running over and over, mitigated with a reset flag
 }

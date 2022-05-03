@@ -94,7 +94,7 @@ if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->pa
   }
 }
 
-if (state->currentslot == 1 && state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
+if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0)
 {
   fprintf (stderr, "%s", KYEL);
   fprintf(stderr, " BPK %lld", state->K);

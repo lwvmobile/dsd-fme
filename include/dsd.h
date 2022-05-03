@@ -374,6 +374,7 @@ typedef struct
   //
   int frame_ysf;
   int inverted_ysf; //not sure if ysf comes in inverted or not, but signal could if IQ flipped
+  short int aggressive_framesync; //set to 1 for more aggressive framesync, 0 for less aggressive
 
 } dsd_opts;
 
@@ -432,7 +433,9 @@ typedef struct
   char tg[25][16];
   int tgcount;
   int lasttg;
+  int lasttgR;
   int lastsrc;
+  int lastsrcR;
   int nac;
   int errs;
   int errs2;
@@ -466,9 +469,13 @@ typedef struct
   mbe_parms *prev_mp_enhanced2;
   int p25kid;
   int payload_algid;
+  int payload_algidR;
   int payload_keyid;
+  int payload_keyidR;
   int payload_mfid;
+  int payload_mfidR;
   int payload_mi;
+  int payload_miR;
   unsigned long long int K;
 
   unsigned int debug_audio_errors;
@@ -488,17 +495,6 @@ typedef struct
   //input sample buffer for monitoring Input
   short input_sample_buffer; //HERE HERE
   short pulse_raw_out_buffer; //HERE HERE
-  //float *input_sample_buffer; //HERE HERE
-  short dibit_to_hex_buf;
-  // state->sr_0 shift registers
-  short hexbuf;
-  unsigned long long sr_0; //64-bit shift registers for pushing decoded binary or dibit data
-  unsigned long long sr_1; //384
-  unsigned long long sr_2; //
-  unsigned long long sr_3; //
-  unsigned long long sr_4; //
-  unsigned long long sr_5; //
-  unsigned long long sr_6; //
 
   unsigned int dmr_color_code;
   unsigned int nxdn_last_ran;
@@ -507,8 +503,8 @@ typedef struct
   unsigned int nxdn_cipher_type;
   unsigned int nxdn_key;
   char nxdn_call_type[1024];
-  char dmr_callsign[6][99]; //plenty of room in case of overflow;
-  char dmr_lrrp[6][9999];
+  char dmr_callsign[2][6][99]; //plenty of room in case of overflow;
+  char dmr_lrrp[2][6][9999];
 
   NxdnSacchRawPart_t NxdnSacchRawPart[4];
   NxdnFacch1RawPart_t NxdnFacch1RawPart[2];
@@ -531,6 +527,9 @@ typedef struct
   unsigned int dmr_fid;
   unsigned int dmr_so;
 
+  unsigned int dmr_fidR;
+  unsigned int dmr_soR;
+
   char slot1light[8];
   char slot2light[8];
   int directmode;
@@ -540,8 +539,6 @@ typedef struct
   char dmr_branding[25];
   uint8_t  dmr_12_rate_sf[2][60]; //going five frames deep by 12 bytes //[slot][value]
   uint8_t  dmr_34_rate_sf[2][64]; //going four frames deep by 16 bytes //[slot][value]
-  //char dmr_stereo_payload[144]; //load up 144 dibit buffer for every single DMR TDMA frame
-  //char dmr_msmode_payload[144];
   int dmr_stereo_payload[144]; //load up 144 dibit buffer for every single DMR TDMA frame
 
 
@@ -572,6 +569,11 @@ typedef struct
   short int dmr_stereo; //need state variable for upsample function
   short int dmr_ms_rc;
   short int dmr_ms_mode;
+  unsigned int dmrburstL;
+  unsigned int dmrburstR;
+
+  //dstar header for ncurses
+  unsigned char dstarradioheader[41];
 
 #ifdef TRACE_DSD
   char debug_prefix;
@@ -857,6 +859,7 @@ bool QR_16_7_6_decode(unsigned char *rxBits);
 
 void InitAllFecFunction(void);
 void resetState (dsd_state * state);
+void dstar_header_decode(dsd_state * state, int radioheaderbuffer[660]);
 
 #ifdef __cplusplus
 extern "C" {

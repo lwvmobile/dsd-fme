@@ -93,8 +93,11 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   sprintf (state->ftype, "             ");
   state->errs = 0;
   state->errs2 = 0;
+  //should I disable this or not?
   state->lasttg = 0;
   state->lastsrc = 0;
+  state->lasttgR = 0;
+  state->lastsrcR = 0;
   state->lastp25type = 0;
   state->repeat = 0;
   state->nac = 0;
@@ -213,7 +216,8 @@ initOpts (dsd_opts * opts)
 
   opts->EncryptionMode = MODE_UNENCRYPTED;
   opts->inverted_dpmr = 0;
-  opts->dmr_stereo = 0; //change currently only in dsd_frame.c
+  opts->dmr_stereo = 0;
+  opts->aggressive_framesync = 1; //more aggressive to combat wonk wonk voice decoding
 }
 
 void
@@ -346,25 +350,51 @@ initState (dsd_state * state)
   state->dpmr_caller_id = 0;
   state->dpmr_target_id = 0;
 
-  state->payload_mi = 0;
+  state->payload_mi  = 0;
+  state->payload_miR = 0;
   state->payload_mfid = 0;
+  state->payload_mfidR = 0;
   state->payload_algid = 0;
+  state->payload_algidR = 0;
   state->payload_keyid = 0;
+  state->payload_keyidR = 0;
 
   sprintf (state->dmr_branding, " ");
-  sprintf (state->dmr_callsign[0], "");
-  sprintf (state->dmr_callsign[1], "");
-  sprintf (state->dmr_callsign[2], "");
-  sprintf (state->dmr_callsign[3], "");
-  sprintf (state->dmr_lrrp[0], "");
-  sprintf (state->dmr_lrrp[1], "");
-  sprintf (state->dmr_lrrp[2], "");
-  sprintf (state->dmr_lrrp[3], "");
-  sprintf (state->dmr_lrrp[4], "");
-  sprintf (state->dmr_lrrp[5], "");
+  sprintf (state->dmr_callsign[0][0], "");
+  sprintf (state->dmr_callsign[0][1], "");
+  sprintf (state->dmr_callsign[0][2], "");
+  sprintf (state->dmr_callsign[0][3], "");
+  sprintf (state->dmr_callsign[0][4], "");
+  sprintf (state->dmr_callsign[0][5], "");
+  sprintf (state->dmr_callsign[1][0], "");
+  sprintf (state->dmr_callsign[1][1], "");
+  sprintf (state->dmr_callsign[1][2], "");
+  sprintf (state->dmr_callsign[1][3], "");
+  sprintf (state->dmr_callsign[1][4], "");
+  sprintf (state->dmr_callsign[1][5], "");
+  sprintf (state->dmr_lrrp[0][0], "");
+  sprintf (state->dmr_lrrp[0][1], "");
+  sprintf (state->dmr_lrrp[0][2], "");
+  sprintf (state->dmr_lrrp[0][3], "");
+  sprintf (state->dmr_lrrp[0][4], "");
+  sprintf (state->dmr_lrrp[0][5], "");
+  sprintf (state->dmr_lrrp[1][0], "");
+  sprintf (state->dmr_lrrp[1][1], "");
+  sprintf (state->dmr_lrrp[1][2], "");
+  sprintf (state->dmr_lrrp[1][3], "");
+  sprintf (state->dmr_lrrp[1][4], "");
+  sprintf (state->dmr_lrrp[1][5], "");
 
   state->K = 0;
   state->dmr_stereo = 0;
+  state->dmrburstL = 17; //initialize at higher value than possible
+  state->dmrburstR = 17; //17 in char array is set for ERR
+  state->dmr_so   = 0;
+  state->dmr_soR  = 0;
+  state->dmr_fid  = 0;
+  state->dmr_fidR = 0;
+
+  memset(state->dstarradioheader, 0, 41);
 
 #ifdef TRACE_DSD
   state->debug_sample_index = 0;
@@ -452,11 +482,14 @@ usage ()
   fprintf (stderr,"  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
   fprintf (stderr,"                 (default=15)\n");
   fprintf (stderr,"  -n            Reset P25 Heuristics and initState variables on mixed signal decoding\n");
-  fprintf (stderr,"                 Helps when decoding mixed signal types at same time\n");
-  fprintf (stderr,"                 (WiP! May Cause Slow Memory Leak - Experimental)\n");
+  fprintf (stderr,"                 Helps when decoding mixed signal types (P25P1) at same time\n");
+  fprintf (stderr,"                 (WiP! May Cause Slow Memory Leak or System Hang - Experimental)\n");
   fprintf (stderr,"  -T            Enable DMR TDMA Stereo Voice (Two Slot Dual Voices)\n");
   fprintf (stderr,"                 This feature will open two streams for slot 1 voice and slot 2 voice\n");
-  fprintf (stderr,"                 (WiP! May Cause DMR sync break resync issues)\n");
+  fprintf (stderr,"                 May Cause Skipping or sync issues if bad signal/errors\n");
+  fprintf (stderr,"  -F            Enable DMR TDMA Stereo Passive Frame Sync\n");
+  fprintf (stderr,"                 This feature will attempt to resync less often due to excessive voice errors\n");
+  fprintf (stderr,"                 Use if skipping occurs, but may cuase wonky audio due to loss of good sync\n");
   fprintf (stderr,"  -Z            Log MBE Payload to console\n");
   fprintf (stderr,"\n");
   fprintf (stderr,"Report bugs to: https://github.com/lwvmobile/dsd-fme/issues \n");
@@ -697,12 +730,12 @@ main (int argc, char **argv)
   initOpts (&opts);
   initState (&state);
 
-  InitAllFecFunction(); //HERE
+  InitAllFecFunction();
 
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:NWrlZT")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:NWrlZTF")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -824,6 +857,14 @@ main (int argc, char **argv)
           fprintf (stderr, "%s", KRED);
           fprintf (stderr,"Experimental DMR Stereo Sync and Functionality. WIP!\n");
           fprintf (stderr,"DMR Stereo will disable WAV and MBE file saving!\n");
+          fprintf (stderr,"Also consider using -F if playback is too choppy!\n");
+          fprintf (stderr, "%s", KNRM);
+          break;
+
+        case 'F':
+          opts.aggressive_framesync = 0;
+          fprintf (stderr, "%s", KRED);
+          fprintf (stderr,"DMR Stereo Aggressive Resync Disabled!\n");
           fprintf (stderr, "%s", KNRM);
           break;
 
@@ -878,8 +919,9 @@ main (int argc, char **argv)
           opts.reset_state = 1;
           fprintf (stderr, "%s", KRED);
           fprintf (stderr,"Enabling Automatic Reset of P25 states\n");
-          fprintf (stderr,"  -Helps with multiple signal type decoding\n");
-          fprintf (stderr,"  -(WiP! May cause slow memory leak)\n");
+          //fprintf (stderr,"  -Helps with multiple signal type decoding\n");
+          //fprintf (stderr,"  -(WiP! May cause slow memory leak)\n");
+          fprintf (stderr,"  -(Disabled until memory leak issues can be resolved!)\n");
           fprintf (stderr, "%s", KNRM);
           break;
         case 'w':
@@ -968,9 +1010,9 @@ main (int argc, char **argv)
               opts.frame_dmr = 0;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
-              opts.mod_gfsk = 0;
               opts.mod_c4fm = 1;
               opts.mod_qpsk = 0;
+              opts.mod_gfsk = 0;
               state.rf_mod = 0; //
               sprintf (opts.output_name, "P25P1");
               fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
@@ -997,27 +1039,27 @@ main (int argc, char **argv)
               fprintf (stderr,"Setting symbol rate to 2400 / second\n");
               fprintf (stderr,"Decoding only NXDN 4800 baud frames.\n");
             }
-            else if (optarg[0] == 'y')
-              {
-                opts.frame_dstar = 0;
-                opts.frame_x2tdma = 0;
-                opts.frame_p25p1 = 0;
-                opts.frame_nxdn48 = 0;
-                opts.frame_nxdn96 = 0;
-                opts.frame_dmr = 0;
-                opts.frame_dpmr = 0;
-                opts.frame_provoice = 0;
-                opts.frame_ysf = 1;
-                state.samplesPerSymbol = 10;
-                //state.symbolCenter = 10;
-                opts.mod_c4fm = 1;
-                opts.mod_qpsk = 0;
-                opts.mod_gfsk = 0;
-                state.rf_mod = 0;
-                sprintf (opts.output_name, "YSF");
-                //opts.symboltiming = 2400; //NXDN48 uses 2400 symbol rate
-                fprintf (stderr,"Setting symbol rate to 2400 / second\n");
-                fprintf (stderr,"Decoding only YSF frames.\nNot working yet!\n");
+          else if (optarg[0] == 'y')
+            {
+              opts.frame_dstar = 0;
+              opts.frame_x2tdma = 0;
+              opts.frame_p25p1 = 0;
+              opts.frame_nxdn48 = 0;
+              opts.frame_nxdn96 = 0;
+              opts.frame_dmr = 0;
+              opts.frame_dpmr = 0;
+              opts.frame_provoice = 0;
+              opts.frame_ysf = 1;
+              state.samplesPerSymbol = 10;
+              //state.symbolCenter = 10;
+              opts.mod_c4fm = 1;
+              opts.mod_qpsk = 0;
+              opts.mod_gfsk = 0;
+              state.rf_mod = 0;
+              sprintf (opts.output_name, "YSF");
+              //opts.symboltiming = 2400; //NXDN48 uses 2400 symbol rate
+              fprintf (stderr,"Setting symbol rate to 2400 / second\n");
+              fprintf (stderr,"Decoding only YSF frames.\nNot working yet!\n");
               }
           else if (optarg[0] == 'n')
             {

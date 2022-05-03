@@ -219,13 +219,17 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
     fprintf (stderr, " - Port %05d", (state->dmr_34_rate_sf[10] << 8) + state->dmr_34_rate_sf[11]);
   }
   */
+  //temp hide behind payload until working better
+  if (opts->payload == 1)
+  {
   //LRRP
   if ( (state->dmr_34_rate_sf[slot][0] & 0x7F) == 0x45) //Start LRRP now
   {
+    sprintf ( state->dmr_lrrp[state->currentslot][0], "LRRP - ");
     fprintf (stderr, "%s ", KMAG);
     //fprintf (stderr, "\n  IP4 Header"); //Not sure this is accurate info IP4 Header?
     //fprintf (stderr, "\n  Data Blocks [%d]", state->dmr_34_rate_sf[5]);
-    for (short i = 1; i < 64; i++) //find way to get padding so we only go as deep as we need to!
+    for (short i = 1; i < 60; i++) //find way to get padding so we only go as deep as we need to! changed from 64 to 60 to skip the CRC Bytes for confirmed data
     {
       if ( state->dmr_34_rate_sf[slot][i] == 0x0C) //Source and Destination info
       {
@@ -269,9 +273,13 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
           //fprintf (stderr, "-");
         }
         fprintf (stderr, "%.5lf", (lrrplon * lon_unit) );
-        sprintf ( state->dmr_lrrp[3], "Lat: %.5lf Lon: %.5lf", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
+        if (state->dmr_34_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
+        {
+          sprintf ( state->dmr_lrrp[state->currentslot][3], "Lat: -%.5lf Lon: %.5lf ", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
+        }
+        else sprintf ( state->dmr_lrrp[state->currentslot][3], "Lat: %.5lf Lon: %.5lf ", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
         //print for easy copy/paste into browser?
-        fprintf (stderr, " (");
+        //fprintf (stderr, " (");
         if (state->dmr_34_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
         {
           fprintf (stderr, "-");
@@ -287,16 +295,17 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
         double velocity = ( ((double)( (state->dmr_34_rate_sf[slot][i+1] ) + state->dmr_34_rate_sf[slot][i+2] )) / ( (double)128));
         //fprintf (stderr, "\n  LRRP - %.4lf Meters Per Second", velocity);
         fprintf (stderr, "\n  LRRP - %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity) );
-        sprintf ( state->dmr_lrrp[1], "Vel: %.4lf kph", (3.6 * velocity));
+        sprintf ( state->dmr_lrrp[state->currentslot][4], "Vel: %.4lf kph ", (3.6 * velocity));
       }
       if ( state->dmr_34_rate_sf[slot][i] == 0x56 )
       {
         //check for appropriate terminology here - Heading, bearing, course, or track?
         fprintf (stderr, "\n  LRRP - Direction %d Degrees", state->dmr_34_rate_sf[slot][i+1] * 2);
-        sprintf ( state->dmr_lrrp[2], "Dir: %d Deg", state->dmr_34_rate_sf[slot][i+1] * 2);
+        sprintf ( state->dmr_lrrp[state->currentslot][5], "Dir: %d Deg ", state->dmr_34_rate_sf[slot][i+1] * 2);
       }
     }
   }
+ }//end payload
   fprintf (stderr, "%s ", KNRM);
   //Full
   if (opts->payload == 2)
@@ -1080,7 +1089,8 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
     DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
   }
   //Headers Source Destination
-  if ( (state->dmr_12_rate_sf[slot][36] & 0x7F) == 0x45) //Start Source Destination early in case not enough 1/2 data frames
+  //Start Source Destination early in case not enough 1/2 data frames
+  if ( (state->dmr_12_rate_sf[slot][36] & 0x7F) == 0x45 )
   {
     fprintf (stderr, "%s ", KMAG);
     //fprintf (stderr, "\n  IP4 Header"); //Not sure this is accurate info IP4 Header?
@@ -1101,13 +1111,73 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
     }
     fprintf (stderr, "%s ", KNRM);
   }
+  /*
+  //Jurek lrrp, 0x41 is probably a different header type or something, or I need to look at the data header packet PDU first.
+  if ( (state->dmr_12_rate_sf[slot][36] & 0x7F) == 0x41) //Start LRRP now
+  {
+    sprintf ( state->dmr_lrrp[state->currentslot][0], "LRRP - ");
+    fprintf (stderr, "%s ", KMAG);
+    for (short i = 36; i < 60; i++) //find way to get padding so we only go as deep as we need to!
+    {
+      if ( state->dmr_12_rate_sf[slot][i] == 0x51 ) //lattitude and longitude
+      {
+        fprintf (stderr, "\n  LRRP -");
+        fprintf (stderr, " Lat: ");
+        if (state->dmr_12_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
+        {
+          fprintf (stderr, "-");
+        }
+        long int lrrplat;
+        long int lrrplon;
+        double lat_unit = (double)180/(double)4294967295;
+        double lon_unit = (double)360/(double)4294967295;
+        lrrplat = ( ( ((state->dmr_12_rate_sf[slot][i+1] & 0x7F ) <<  24 ) + (state->dmr_12_rate_sf[slot][i+2] << 16) + (state->dmr_12_rate_sf[slot][i+3] << 8) + state->dmr_12_rate_sf[slot][i+4]) * 1 );
+        lrrplon = ( ( (state->dmr_12_rate_sf[slot][i+5]           <<  24 ) + (state->dmr_12_rate_sf[slot][i+6] << 16) + (state->dmr_12_rate_sf[slot][i+7] << 8) + state->dmr_12_rate_sf[slot][i+8]) * 1 );
+        fprintf (stderr, "%.5lf ", ((double)lrrplat) * lat_unit);
+        fprintf (stderr, " Lon: ");
+        if (state->dmr_12_rate_sf[slot][i+5] & 0x80) //first bit indicates a sign, or hemisphere?
+        {
+          //fprintf (stderr, "-");
+        }
+        fprintf (stderr, "%.5lf", (lrrplon * lon_unit) );
+        sprintf ( state->dmr_lrrp[state->currentslot][3], "Lat: %.5lf Lon: %.5lf ", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
+        //print for easy copy/paste into browser?
+        //fprintf (stderr, " (");
+        if (state->dmr_12_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
+        {
+          fprintf (stderr, "-");
+        }
+          fprintf (stderr, "%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
+      }
+
+
+      if ( state->dmr_12_rate_sf[slot][i] == 0x6C )
+      {
+        //either Plus is wrong, or I'm wrong on higher velocities exceeding 0xFF.
+        //fprintf (stderr, "\n  LRRP - Vi %02X Vf %02X Velocity Units (hex)", state->dmr_34_rate_sf[i+1], state->dmr_34_rate_sf[i+2]);
+        double velocity = ( ((double)( (state->dmr_12_rate_sf[slot][i+1] ) + state->dmr_12_rate_sf[slot][i+2] )) / ( (double)128));
+        //fprintf (stderr, "\n  LRRP - %.4lf Meters Per Second", velocity);
+        fprintf (stderr, "\n  LRRP - %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity) );
+        sprintf ( state->dmr_lrrp[state->currentslot][4], "Vel: %.4lf kph ", (3.6 * velocity));
+      }
+      if ( state->dmr_12_rate_sf[slot][i] == 0x56 )
+      {
+        //check for appropriate terminology here - Heading, bearing, course, or track?
+        fprintf (stderr, "\n  LRRP - Direction %d Degrees", state->dmr_12_rate_sf[slot][i+1] * 2);
+        sprintf ( state->dmr_lrrp[state->currentslot][5], "Dir: %d Deg ", state->dmr_12_rate_sf[slot][i+1] * 2);
+      }
+    }
+  }
+  //end Jurek lrrp
+  */
   //LRRP
   if ( (state->dmr_12_rate_sf[slot][0] & 0x7F) == 0x45) //Start LRRP now
   {
+    sprintf ( state->dmr_lrrp[state->currentslot][0], "LRRP - ");
     fprintf (stderr, "%s ", KMAG);
     //fprintf (stderr, "\n  IP4 Header"); //Not sure this is accurate info IP4 Header?
     //fprintf (stderr, "\n  Data Blocks [%d]", state->dmr_34_rate_sf[5]);
-    for (short i = 1; i < 60; i++) //find way to get padding so we only go as deep as we need to!
+    for (short i = 1; i < 56; i++) //find way to get padding so we only go as deep as we need to! changed from 60 to 56 to skip the CRC bytes
     {
       /*
       if ( state->dmr_12_rate_sf[slot][i] == 0x0C) //Source and Destination info
@@ -1153,9 +1223,12 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
           //fprintf (stderr, "-");
         }
         fprintf (stderr, "%.5lf", (lrrplon * lon_unit) );
-        sprintf ( state->dmr_lrrp[3], "Lat: %.5lf Lon: %.5lf", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
-        //print for easy copy/paste into browser?
-        fprintf (stderr, " (");
+        if (state->dmr_12_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
+        {
+          sprintf ( state->dmr_lrrp[state->currentslot][3], "Lat: -%.5lf Lon: %.5lf ", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
+        }
+        else sprintf ( state->dmr_lrrp[state->currentslot][3], "Lat: %.5lf Lon: %.5lf ", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );        //print for easy copy/paste into browser?
+        //fprintf (stderr, " (");
         if (state->dmr_12_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
         {
           fprintf (stderr, "-");
@@ -1171,13 +1244,13 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
         double velocity = ( ((double)( (state->dmr_12_rate_sf[slot][i+1] ) + state->dmr_12_rate_sf[slot][i+2] )) / ( (double)128));
         //fprintf (stderr, "\n  LRRP - %.4lf Meters Per Second", velocity);
         fprintf (stderr, "\n  LRRP - %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity) );
-        sprintf ( state->dmr_lrrp[1], "Vel: %.4lf kph", (3.6 * velocity));
+        sprintf ( state->dmr_lrrp[state->currentslot][4], "Vel: %.4lf kph ", (3.6 * velocity));
       }
       if ( state->dmr_12_rate_sf[slot][i] == 0x56 )
       {
         //check for appropriate terminology here - Heading, bearing, course, or track?
         fprintf (stderr, "\n  LRRP - Direction %d Degrees", state->dmr_12_rate_sf[slot][i+1] * 2);
-        sprintf ( state->dmr_lrrp[2], "Dir: %d Deg", state->dmr_12_rate_sf[slot][i+1] * 2);
+        sprintf ( state->dmr_lrrp[state->currentslot][5], "Dir: %d Deg ", state->dmr_12_rate_sf[slot][i+1] * 2);
       }
     }
   }
@@ -1595,16 +1668,34 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
     DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
   }
 
-
-  state->payload_algid = DmrDataByte[0];
-  state->payload_keyid = DmrDataByte[2];
-  state->payload_mi    = ( ((DmrDataByte[3]) << 24) + ((DmrDataByte[4]) << 16) + ((DmrDataByte[5]) << 8) + (DmrDataByte[6]) );
-  if (1 == 1) //have it always print?
+  if (state->currentslot == 0)
   {
-    fprintf (stderr, "%s ", KYEL);
-    fprintf (stderr, "\n DMR PI Header ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algid, state->payload_keyid, state->payload_mi);
-    fprintf (stderr, "%s ", KNRM);
+    state->payload_algid = DmrDataByte[0];
+    state->payload_keyid = DmrDataByte[2];
+    state->payload_mi    = ( ((DmrDataByte[3]) << 24) + ((DmrDataByte[4]) << 16) + ((DmrDataByte[5]) << 8) + (DmrDataByte[6]) );
+    if (1 == 1) //have it always print?
+    {
+      fprintf (stderr, "%s ", KYEL);
+      fprintf (stderr, "\n Slot 1");
+      fprintf (stderr, " DMR PI Header ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algid, state->payload_keyid, state->payload_mi);
+      fprintf (stderr, "%s ", KNRM);
+    }
   }
+
+  if (state->currentslot == 1)
+  {
+    state->payload_algidR = DmrDataByte[0];
+    state->payload_keyidR = DmrDataByte[2];
+    state->payload_miR    = ( ((DmrDataByte[3]) << 24) + ((DmrDataByte[4]) << 16) + ((DmrDataByte[5]) << 8) + (DmrDataByte[6]) );
+    if (1 == 1) //have it always print?
+    {
+      fprintf (stderr, "%s ", KYEL);
+      fprintf (stderr, "\n Slot 2");
+      fprintf (stderr, " DMR PI Header ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algidR, state->payload_keyidR, state->payload_miR);
+      fprintf (stderr, "%s ", KNRM);
+    }
+  }
+
 
   //test
   if((IrrecoverableErrors == 0) && CRCCorrect)
@@ -2005,11 +2096,24 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
          TSVoiceSupFrame->FullLC.FullLinkControlOpcode != 0x07   ) //work out why amateur sets sourceid on other codes, but pro only does on whatever
     */
     {
-      state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-      state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
-      //state->dmr_color_code = state->color_code;
-      state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-      state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+      if (state->currentslot == 0)
+      {
+        //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+        //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
+        //state->dmr_color_code = state->color_code;
+        state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
+        state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+      }
+      if (state->currentslot == 1)
+      {
+        //state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
+        //state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
+        //state->dmr_color_code = state->color_code;
+        state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
+        state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+      }
+
+
     }
     //only set on good CRC value or corrected values
     //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
@@ -2035,11 +2139,22 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
          TSVoiceSupFrame->FullLC.FullLinkControlOpcode != 0x07   ) //work out why amateur sets sourceid on other codes, but pro only does on whatever
     */
     {
-      state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-      state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
-      //state->dmr_color_code = state->color_code;
-      state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-      state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+      if (state->currentslot == 0)
+      {
+        //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+        //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
+        //state->dmr_color_code = state->color_code;
+        state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
+        state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+      }
+      if (state->currentslot == 1)
+      {
+        //state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
+        //state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
+        //state->dmr_color_code = state->color_code;
+        state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
+        state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+      }
     }
     //only set on good CRC value or corrected values
     //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
@@ -2224,41 +2339,43 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   // let's assume that something has to indicate end of valid characters?
 
   //Embedded Alias
-  if ( TSVoiceSupFrame->FullLC.FullLinkControlOpcode > 0x03 &&  TSVoiceSupFrame->FullLC.FullLinkControlOpcode < 0x08 && opts->payload == 1)
+  if ( TSVoiceSupFrame->FullLC.FullLinkControlOpcode > 0x03 && TSVoiceSupFrame->FullLC.FullLinkControlOpcode < 0x08)
   {
-    sprintf (state->dmr_callsign[TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3], ""); //blank here so it doesn't grow out of control?
+    sprintf (state->dmr_callsign[state->currentslot][TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3], ""); //blank here so it doesn't grow out of control?
     for (i = 0; i < 10; i++)
     {
       //full range of alphanumerical characters?
       if ( (LC_DataBytes[i] > 0x19 && LC_DataBytes[i] < 0x7F) )
       {
-        sprintf ( state->dmr_callsign[TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3] +
-                  strlen(state->dmr_callsign[TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3]) , "%c", LC_DataBytes[i]);
+        sprintf ( state->dmr_callsign[state->currentslot][TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3] +
+                  strlen(state->dmr_callsign[state->currentslot][TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3]) , "%c", LC_DataBytes[i]);
       }
     }
     if (opts->use_ncurses_terminal == 1)
     {
-      fprintf (stderr, "%s", KCYN);
+      fprintf (stderr, "%s", KMAG);
       if (state->dmr_stereo == 0)
       {
         fprintf(stderr, "\n");
       }
       fprintf (stderr, "  SLOT %d", state->currentslot+1);
-      fprintf (stderr, " Embedded Alias Header and Blocks: [%s%s%s%s%s]", state->dmr_callsign[0], state->dmr_callsign[1], state->dmr_callsign[2], state->dmr_callsign[3], state->dmr_callsign[4] );
+      fprintf (stderr, " Embedded Alias Header and Blocks: [%s%s%s%s%s]", state->dmr_callsign[state->currentslot][0],
+              state->dmr_callsign[state->currentslot][1], state->dmr_callsign[state->currentslot][2],
+              state->dmr_callsign[state->currentslot][3], state->dmr_callsign[state->currentslot][4] );
       fprintf (stderr, "%s ", KNRM);
     }
   }
 
   if ( TSVoiceSupFrame->FullLC.FullLinkControlOpcode == 0x08 && opts->payload == 1) //Embedded GPS
   {
-    sprintf (state->dmr_callsign[TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3], ""); //blank here so it doesn't grow out of control?
+    sprintf (state->dmr_callsign[state->currentslot][TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3], ""); //blank here so it doesn't grow out of control?
     for (i = 0; i < 10; i++)
     {
       //full range of alphanumerical characters?
       if ( (LC_DataBytes[i] > 0x19 && LC_DataBytes[i] < 0x7F) )
       {
-        sprintf ( state->dmr_callsign[TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3] +
-                  strlen(state->dmr_callsign[TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3]) , "%c", LC_DataBytes[i]);
+        sprintf ( state->dmr_callsign[state->currentslot][TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3] +
+                  strlen(state->dmr_callsign[state->currentslot][TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3]) , "%c", LC_DataBytes[i]);
       }
     }
     if (opts->use_ncurses_terminal == 1)
@@ -2269,7 +2386,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
         fprintf(stderr, "\n");
       }
       fprintf (stderr, "  SLOT %d", state->currentslot+1);
-      fprintf (stderr, " Embedded GPS: [%s]", state->dmr_callsign[5] );
+      fprintf (stderr, " Embedded GPS: [%s]", state->dmr_callsign[state->currentslot][5] );
       fprintf (stderr, "%s ", KNRM);
     }
   }
@@ -2277,7 +2394,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   /* Print the destination ID (TG) and the source ID */
   if((IrrecoverableErrors == 0) && CRCCorrect)
   {
-    if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode < 0x04 || TSVoiceSupFrame->FullLC.FullLinkControlOpcode > 0x09) //other opcodes may convey callsigns, names, etc. was > 0x07
+    if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode < 0x04 || TSVoiceSupFrame->FullLC.FullLinkControlOpcode > 0x08) //other opcodes may convey callsigns, names, etc. was > 0x07
     {
       fprintf (stderr, "%s", KGRN);
       if (state->dmr_stereo == 0)
@@ -2289,16 +2406,30 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
       fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
       fprintf (stderr, "%s ", KNRM);
       //fprintf(stderr, "(CRC OK ) ");
-      state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-      state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
+      if (state->currentslot == 0)
+      {
+        state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+        state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
+        //state->dmr_color_code = state->color_code;
+        state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
+        state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+      }
+      if (state->currentslot == 1)
+      {
+        state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
+        state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
+        //state->dmr_color_code = state->color_code;
+        state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
+        state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+      }
       //state->dmr_color_code = state->color_code;
       //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
       //state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
     }
     //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
     //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
-    state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-    state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+    //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
+    //state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
     //state->dmr_color_code = state->color_code;
   }
   else if(IrrecoverableErrors == 0)
@@ -2307,7 +2438,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
     //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
     //fprintf(stderr, "RAS (FEC OK/CRC ERR)"); //voice burst
     //or set if was corrected
-    if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode < 0x04 || TSVoiceSupFrame->FullLC.FullLinkControlOpcode > 0x07)
+    if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode < 0x04 || TSVoiceSupFrame->FullLC.FullLinkControlOpcode > 0x08) //7, or 8?
     {
       fprintf (stderr, "%s", KGRN);
       if (state->dmr_stereo == 0)
@@ -2320,16 +2451,30 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%s ", KRED);
       fprintf(stderr, "RAS (FEC OK/CRC ERR)  ");
       fprintf (stderr, "%s ", KNRM);
-      state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-      state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
+      if (state->currentslot == 0)
+      {
+        state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+        state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
+        //state->dmr_color_code = state->color_code;
+        state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
+        state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+      }
+      if (state->currentslot == 1)
+      {
+        state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
+        state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
+        //state->dmr_color_code = state->color_code;
+        state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
+        state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+      }
       //state->dmr_color_code = state->color_code;
       //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
       //state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
     }
     //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
     //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
-    state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-    state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+    //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
+    //state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
     //state->dmr_color_code = state->color_code;
   }
   else {} //fprintf(stderr, "\n(FEC FAIL/CRC ERR)");

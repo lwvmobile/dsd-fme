@@ -375,10 +375,10 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
   }
 
-  if (opts->payload == 1) //print on payload == 1
+  if (1 == 1) //print on payload == 1
   {
     fprintf (stderr, "%s", KYEL);
-    fprintf (stderr, " LDU2 ALG ID: 0x%X KEY ID: 0x%X MI: 0x%08llX%08llX%02llX\n", algidhex, kidhex, mihex1, mihex2, mihex3);
+    fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08llX%08llX%02llX\n", algidhex, kidhex, mihex1, mihex2, mihex3);
     fprintf (stderr, "%s", KNRM);
   }
 

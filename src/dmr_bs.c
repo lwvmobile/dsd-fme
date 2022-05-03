@@ -293,7 +293,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     skipcount++; //after 6 data frames, drop back to getFrameSync and process subsequent data with processDMRdata
     goto SKIP;
   }
-  
+
   if( (strcmp (sync, DMR_BS_DATA_SYNC) != 0) ) //only play voice no data sync // || (strcmp (sync, DMR_MS_DATA_SYNC) != 0)
   {
     if (EmbeddedSignallingOk == 0)
@@ -304,11 +304,13 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     fprintf (stderr,"%s ", getTime());
     if (internalslot == 0)
     {
+      state->dmrburstL = 16; //use 16 for Voice?
       fprintf (stderr,"Sync: +DMR  [slot1]  slot2  | Color Code=%02d | DMRSTEREO | VC%d \n", state->color_code, vc1);
     }
 
     if (internalslot == 1)
     {
+      state->dmrburstR = 16; //use 16 for Voice?
       fprintf (stderr,"Sync: +DMR   slot1  [slot2] | Color Code=%02d | DMRSTEREO | VC%d \n", state->color_code, vc2);
     }
     if (internalslot == 0 && vc1 == 6) //presumably when full (and no sync issues)
@@ -354,8 +356,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   }
   //using these conditions may cause excessive resyncs IF bad signal,
   //but still better than getting stuck in a wonk wonk loop for too long.
-  //maybe consider making a opt variable for loose or aggressive resyncing for this sort of thing?
-  if (1 == 1) //set for more aggressive or less aggressive resync during accumulated playback errs
+  //set for more aggressive or less aggressive resync during accumulated playback errs
+  if (opts->aggressive_framesync == 1)
   {
     //errors caused due to playing MBE files out of sync, break loop
     if (state->errs > 2 || state->errsR > 2)

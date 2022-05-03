@@ -177,9 +177,12 @@ processFrame (dsd_opts * opts, dsd_state * state)
     //Start DMR Types
     else if ((state->synctype >= 10) && (state->synctype <= 13) || (state->synctype == 32) || (state->synctype == 33) || (state->synctype == 34) ) //32-34 DMR MS and RC
     {
+      //disable so radio id doesn't blink in and out during ncurses and aggressive_framesync
       state->nac = 0;
-      state->lastsrc = 0;
-      state->lasttg = 0;
+      //state->lastsrc = 0;
+      //state->lasttg = 0;
+      //state->lastsrcR = 0;
+      //state->lasttgR = 0;
       if (opts->errorbars == 1)
         {
           if (opts->verbose > 0)
