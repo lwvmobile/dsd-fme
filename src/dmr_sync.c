@@ -225,7 +225,7 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   //LRRP
   if ( (state->dmr_34_rate_sf[slot][0] & 0x7F) == 0x45) //Start LRRP now
   {
-    sprintf ( state->dmr_lrrp[state->currentslot][0], "LRRP - ");
+    //sprintf ( state->dmr_lrrp[state->currentslot][0], "LRRP - ");
     fprintf (stderr, "%s ", KMAG);
     //fprintf (stderr, "\n  IP4 Header"); //Not sure this is accurate info IP4 Header?
     //fprintf (stderr, "\n  Data Blocks [%d]", state->dmr_34_rate_sf[5]);
@@ -454,7 +454,12 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
     fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[4] & 0x3F), DmrDataByte[5], DmrDataByte[6], DmrDataByte[7]); //not sure if these are right or not
     fprintf (stderr, "[%d]", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7] );
   }
-
+  if (1 == 1) //already setting by current slot, no need for checking first
+  {
+    sprintf ( state->dmr_lrrp[state->currentslot][1], "SRC [%d] TGT [%d] ",
+            ( (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4]),
+            ( (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7]) );
+  }
   if (DmrDataByte[0] == 0x01)
   {
     fprintf (stderr, "\n  LRRP Control ACK - ");
@@ -1173,7 +1178,7 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
   //LRRP
   if ( (state->dmr_12_rate_sf[slot][0] & 0x7F) == 0x45) //Start LRRP now
   {
-    sprintf ( state->dmr_lrrp[state->currentslot][0], "LRRP - ");
+    //sprintf ( state->dmr_lrrp[state->currentslot][0], "LRRP - ");
     fprintf (stderr, "%s ", KMAG);
     //fprintf (stderr, "\n  IP4 Header"); //Not sure this is accurate info IP4 Header?
     //fprintf (stderr, "\n  Data Blocks [%d]", state->dmr_34_rate_sf[5]);

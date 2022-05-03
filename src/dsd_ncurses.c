@@ -199,14 +199,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     for (short i = 0; i < 6; i++)
     {
-      //sprintf (state->dmr_lrrp[0][i], "");
+      sprintf (state->dmr_lrrp[0][i], "");
     }
   }
   if (state->dmrburstR == 16 || state->carrier == 0)
   {
     for (short i = 0; i < 6; i++)
     {
-      //sprintf (state->dmr_lrrp[1][i], "");
+      sprintf (state->dmr_lrrp[1][i], "");
     }
   }
 
@@ -624,7 +624,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("FID: [%02X] SVC: [%02X] ", state->dmr_fid, state->dmr_so);
     printw ("%s ", DMRBusrtTypes[state->dmrburstL]);
     printw ("\n");
-    printw ("|        | "); //10 spaces
+    //printw ("|        | "); //10 spaces
+    printw ("| V XTRA | "); //10 spaces
     //Burger King
     if(state->dmrburstL == 16 && state->payload_mi == 0 && (state->dmr_so & 0xCF) == 0x40) //4F or CF mask?
     {
@@ -673,7 +674,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     printw ("\n");
     //Alias Blocks and Embedded GPS
-    printw ("|        | "); //10 spaces
+    //printw ("|        | "); //10 spaces
+    printw ("| D XTRA | ");
     if(state->dmrburstL == 16) //only during call
     {
       attron(COLOR_PAIR(5));
@@ -722,7 +724,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("FID: [%02X] SVC: [%02X] ", state->dmr_fidR, state->dmr_soR);
     printw ("%s ", DMRBusrtTypes[state->dmrburstR]);
     printw ("\n");
-    printw ("|        | "); //12 spaces
+    //printw ("|        | "); //12 spaces
+    printw ("| V XTRA | "); //10 spaces
 
     //Burger King 2
     if(state->dmrburstR == 16 && state->payload_miR == 0 && (state->dmr_soR & 0xCF) == 0x40) //4F or CF mask?
@@ -772,7 +775,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     printw ("\n");
     //Alias Blocks and Embedded GPS
-    printw ("|        | "); //10 spaces
+    //printw ("|        | ");
+    printw ("| D XTRA | ");
     if(state->dmrburstR == 16) //only during call
     {
       attron(COLOR_PAIR(5));
