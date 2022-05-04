@@ -218,6 +218,7 @@ initOpts (dsd_opts * opts)
   opts->inverted_dpmr = 0;
   opts->dmr_stereo = 0;
   opts->aggressive_framesync = 1; //more aggressive to combat wonk wonk voice decoding
+  //opts->audio_in_type = 0;
 }
 
 void
@@ -489,7 +490,7 @@ usage ()
   fprintf (stderr,"                 May Cause Skipping or sync issues if bad signal/errors\n");
   fprintf (stderr,"  -F            Enable DMR TDMA Stereo Passive Frame Sync\n");
   fprintf (stderr,"                 This feature will attempt to resync less often due to excessive voice errors\n");
-  fprintf (stderr,"                 Use if skipping occurs, but may cuase wonky audio due to loss of good sync\n");
+  fprintf (stderr,"                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
   fprintf (stderr,"  -Z            Log MBE Payload to console\n");
   fprintf (stderr,"\n");
   fprintf (stderr,"Report bugs to: https://github.com/lwvmobile/dsd-fme/issues \n");
@@ -500,10 +501,11 @@ void
 liveScanner (dsd_opts * opts, dsd_state * state)
 {
 
-//not sure this section is needed now that I've worked out the issue, wasn't upsampling due to split == 1
+//still need this section mostly due the the crackling on the rtl dongle when upsampled
+//probably need to dig a little deeper, maybe inlvl releated?
 if (opts->audio_in_type == 1)
 {
-  opts->pulse_digi_rate_out = 48000;
+  opts->pulse_digi_rate_out = 48000; //change to 48K/1 for STDIN input
   opts->pulse_digi_out_channels = 1;
   if (opts->dmr_stereo == 1)
   {
@@ -533,13 +535,14 @@ if (opts->audio_in_type == 1)
 #ifdef USE_RTLSDR
   if(opts->audio_in_type == 3)
   {
-    //not sure this section is needed now that I've worked out the issue, wasn't upsampling due to split == 1
-    opts->pulse_digi_rate_out = 48000; //rtl needs 8000 and 1 channel is mono system
+    //still need this section mostly due the the crackling on the rtl dongle when upsampled
+    //probably need to dig a little deeper, maybe inlvl releated?
+    opts->pulse_digi_rate_out = 8000; //revert to 8K/1 for RTL input, random crackling otherwise
     opts->pulse_digi_out_channels = 1;
     if (opts->dmr_stereo == 1)
     {
-      opts->pulse_digi_rate_out = 24000; //rtl needs 4000 by 2 channel for DMR TDMA Stereo output
-      opts->pulse_digi_out_channels = 2;
+      opts->pulse_digi_rate_out = 24000; //rtl needs 24000 by 2 channel for DMR TDMA Stereo output
+      opts->pulse_digi_out_channels = 2; //minimal crackling 'may' be observed, not sure, can't test to see on DMR with RTL
       fprintf (stderr, "RTL Audio Rate Out set to 24000 Khz/2 Channel \n");
     }
     else fprintf (stderr, "RTL Audio Rate Out set to 48000 Khz/1 Channel \n");
@@ -1323,7 +1326,8 @@ main (int argc, char **argv)
 
   if (opts.playfiles == 1)
     {
-      opts.pulse_digi_rate_out = 8000; //need set to 8000 for amb/imb playback, upsamling seems to cause random crackles
+      //need set to 8000/1 for amb/imb playback, upsampling seems to cause random crackling
+      opts.pulse_digi_rate_out = 8000;
       opts.pulse_digi_out_channels = 1;
       openPulseOutput(&opts); //need to open it up for output
       playMbeFiles (&opts, &state, argc, argv);

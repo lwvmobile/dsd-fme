@@ -156,8 +156,9 @@ processAudio (dsd_opts * opts, dsd_state * state)
 
   // copy audio data to output buffer and upsample if necessary
   state->audio_out_temp_buf_p = state->audio_out_temp_buf;
-  //the only time we don't want to upsample is when playing back MBE files, upsampling them seems to cause random crackling
-  if (opts->playfiles == 0) //opts->split == 0
+  //we only want to upsample when using sample rates greater than 8k for output,
+  //hard set to 8k for RTL mono and MBE playback, otherwise crackling may occur.
+  if (opts->pulse_digi_rate_out > 8000) 
     {
       for (n = 0; n < 160; n++)
         {
@@ -296,8 +297,9 @@ processAudioR (dsd_opts * opts, dsd_state * state)
 
   // copy audio data to output buffer and upsample if necessary
   state->audio_out_temp_buf_pR = state->audio_out_temp_bufR;
-  //the only time we don't want to upsample is when playing back MBE files, upsampling them seems to cause random crackling
-  if (opts->playfiles == 0) //opts->split == 0
+  //we only want to upsample when using sample rates greater than 8k for output,
+  //hard set to 8k for RTL mono and MBE playback, otherwise crackling may occur.
+  if (opts->pulse_digi_rate_out > 8000)
     {
       for (n = 0; n < 160; n++)
         {
@@ -388,6 +390,11 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
       //go F yourself PA
 		}
 		else
+    {
+      //Test just sending it straight on since I think I've figured out the STDIN and RTL for Stereo
+      pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
+      state->audio_out_idx = 0;
+    }
 
       //most likely don't need this seperation anymore with L and R, just push it out without any condional checks
        /*
@@ -404,9 +411,7 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
         state->audio_out_idx = 0;
       }
       */
-      //Test just sending it straight on since I think I've figured out the STDIN and RTL for Stereo
-      pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
-      state->audio_out_idx = 0;
+
 
   }
 
@@ -434,6 +439,10 @@ playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
       //go F yourself PA
 		}
 		else
+    {
+      pa_simple_write(opts->pulse_digi_dev_outR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); //Yay! It works.
+      state->audio_out_idxR = 0;
+    }
       /*
       //most likely don't need this seperation anymore with L and R, just push it out without any condional checks
       if(opts->dmr_stereo == 1) //state->currentslot == 1 && opts->audio_in_type != 3  && opts->dmr_stereo == 1
@@ -442,8 +451,7 @@ playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
         state->audio_out_idxR = 0;
       }
       */
-      pa_simple_write(opts->pulse_digi_dev_outR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); //Yay! It works.
-      state->audio_out_idxR = 0;
+
   }
 
   if (state->audio_out_idx2R >= 800000)
