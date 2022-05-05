@@ -1,10 +1,24 @@
-# Digital Speech Decoder - Florida Man Edition
-This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with a few tweaks from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch as well. NXDN voice decoding is currently working a lot better, thanks to the latter, although I have yet to explore the expanded NXDN or DMR decoding he has laid out. That is a goal. I have also implemented a few more RTL options, including rtl device gain, PPM error, device index selection, squelch, VFO bandwidth, and a UDP remote that works like the old rtl_udp fork, although its currently limited to changing frequency and squelch. The goal is to integrate this project into [EDACS-FM](https://github.com/lwvmobile/edacs-fm "EDACS-FM") but I also want it to be its own standalone project. 
+# Digital Speech Decoder - Florida Man Edition 
+This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with portions of DMR and NXDN code from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch as well. NXDN voice decoding is currently working a lot better, thanks to the latter, although I have yet to explore the expanded NXDN or DMR decoding he has laid out. That is a goal. I have also implemented a few more RTL options, including rtl device gain, PPM error, device index selection, squelch, VFO bandwidth, and a UDP remote that works like the old rtl_udp fork, although its currently limited to changing frequency and squelch. The goal is to integrate this project into [EDACS-FM](https://github.com/lwvmobile/edacs-fm "EDACS-FM") but I also want it to be its own standalone project. 
+
+## 2022.05.05 Update ## 
+I have successfully added a DMR Stereo method for listening to voice audio in both TDMA channels/slots simultaneously. This method will also allow for data decoding in the opposite slot if only one voice call is active, allowing the user not to miss any useful information in the second slot while the previous slot is in use. DMR Stereo also has vastly improved handling of MS/Simplex voice decoding and (limited/hit or miss) MS data decoding. To call this method, see the example below. The old method of decoding DMR is also included and is stil the default for the time being, but the DMR Stereo method is working well, users are encouraged to try both methods and find the one that is suitable for them. New commands include:
+```
+-T Enable DMR 'TDMA' Stereo
+   Please note, for the time being, any MBE file saving, WAV file saving, or MBE payloads are disabled while using DMR    Stereo. These features are still present in the default DMR handling and other voice decoder options and will be re-    integrated into DMR Stereo in the future. DMR Stereo will also need to be enabled to handle DMR MS/Simplex voice, as    it was removed from the default method due to poor performance.
+   
+-F Enable Passive Frame Sync
+   Use Passive Frame Sync if voice in both slots becomes choppy/skips
+   Using Passive Sync may cause wonky audio though, depends on quality of signal.
+  
+```
 
 ![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)
 
-## Example Usage - NCurses Terminal and Log Console to log file
-`./dsd -N 2> voice.log`
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme2.png)
+
+## Example Usage - New DMR Stereo, Ncurses Terminal, Pulse Input/Output, and Log Console to file
+`./dsd -fr -T -Z -N 2> voice.log`
 
 in second terminal, same folder, run:
 
@@ -67,7 +81,7 @@ The Current list of objectives include:
 
 1. ~~Random Tinkering~~ More Random Tinkering
 
-2. ~~Implemented Pulse Audio~~ Remove PortAudio, improve Pulse Audio for stereo output and channel/slot separation.
+2. ~~Implemented Pulse Audio~~ Remove PortAudio, ~~improved Pulse Audio for stereo output and channel/slot separation~~
 
 3. ~~Improve NXDN and DMR support~~ Continue to improve ~~NXDN and DMR~~ all data and voice decoding. 
 
@@ -77,9 +91,9 @@ The Current list of objectives include:
 
 ## How to clone, check out, and build this branch
 
-### Ubuntu 20.04/LM20/Debian Bullseye or Newer:
+### Ubuntu 22.04/20.04/LM20/Debian Bullseye or Newer:
 
-Using the included install.sh should make for a simple and painless clone, build, and install on newer Debian or Ubuntu based system. Simply acquire or copy the script, and run it.
+Using the included install.sh should make for a simple and painless clone, build, and install on newer Debian or Ubuntu based system. Simply acquire or copy the script, and run it. Update: Ubuntu 22.04 has been tested working with the installer script and use. 
 
 ```
 wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/pulseaudio/install.sh
