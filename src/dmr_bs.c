@@ -456,7 +456,8 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 
   }
 
-  fprintf (stderr,"\n%s ", getTime());
+  //fprintf (stderr,"\n%s ", getTime());
+  fprintf (stderr,"%s ", getTime());
   fprintf (stderr,"Sync: +DMR                  |  Frame Sync   | DMRSTEREO | VC1 FS \n");
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
   dmrBS (opts, state); //bootstrap into full TDMA frame for BS mode
