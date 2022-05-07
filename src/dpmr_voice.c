@@ -163,10 +163,10 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
     {
       dibit = getDibit (opts, state);
 
-      if (opts->inverted_dpmr == 1)
-      {
-        dibit = (dibit ^ 2);
-      }
+    if (opts->inverted_dpmr == 1)
+    {
+      dibit = (dibit ^ 2);
+    }
 
       ambe_fr[j + 4][*w][*x] = (1 & (dibit >> 1));   // bit 1
       ambe_fr[j + 4][*y][*z] = (1 & dibit);          // bit 0
@@ -467,13 +467,17 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
   //fprintf(stderr, "| TG=%s", CalledID);
   if(state->dPMRVoiceFS2Frame.CalledIDOk)
   {
+    fprintf (stderr, "%s", KGRN);
     fprintf(stderr, "\n| TG=%s", CalledID);
+    fprintf (stderr, "%s", KNRM);
     //strcpy (state->dpmr_target_id, CalledID); //HERE HERE
     state->dpmr_target_id = CalledID;
     //fprintf(stderr, " (CRC OK)      ");
     if(state->dPMRVoiceFS2Frame.ColorCode[0] != (unsigned int)(-1))
     {
+      fprintf (stderr, "%s", KGRN);
       fprintf(stderr, " | Color Code=%02d ", (int)state->dPMRVoiceFS2Frame.ColorCode[0]);
+      fprintf (stderr, "%s", KNRM);
       state->dpmr_color_code = (int)state->dPMRVoiceFS2Frame.ColorCode[0];
 
     }
@@ -488,15 +492,19 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
   //fprintf(stderr, "| Src=%s", CallingID);
   if(state->dPMRVoiceFS2Frame.CallingIDOk)
   {
+    fprintf (stderr, "%s", KGRN);
     fprintf(stderr, "| Src=%s", CallingID);
+    fprintf (stderr, "%s", KNRM);
     //strcpy (state->dpmr_caller_id, CallingID);
     state->dpmr_caller_id = CallingID;
 
-    fprintf(stderr, " (CRC OK)      \n");
+    //fprintf(stderr, " (CRC OK)      \n");
   }
   else
   {
+  fprintf (stderr, "%s", KRED);
   fprintf(stderr, " (CRC ERR) \n");
+  fprintf (stderr, "%s", KNRM);
   }
 
 #endif /* (NB_OF_DPMR_VOICE_FRAME_TO_DECODE == 2) */
@@ -583,7 +591,7 @@ void ScrambledPMRBit(uint32_t * LfsrValue, uint8_t * BufferIn, uint8_t * BufferO
     LFSRValue >>= 1;
   }
 
-  /* There are 72 bit to encrypt for voice and 288 bit for data */
+  /* There are 72 bit to descramble for voice and 288 bit for data */
   for(i = 0; i < NbOfBitToScramble; i++)
   {
     BufferOut[i] = (BufferIn[i] ^ S[0]) & 0x01;
@@ -613,8 +621,8 @@ void ScrambledPMRBit(uint32_t * LfsrValue, uint8_t * BufferIn, uint8_t * BufferO
 } /* End ScrambleDPmrBit() */
 
 
-/* Scrambler used for dPMR encryption / decryption,
- * see ETSI TS 102 658 chapter 7.3 for the
+/* Scrambler used for dPMR scrambling / descrambling,
+ * see ETSI TS 102 658 chapter 7.4 for the
  * polynomial description.
  * It is a X^9 + X^5 + 1 polynomial. */
 void DeInterleave6x12DPmrBit(uint8_t * BufferIn, uint8_t * BufferOut)

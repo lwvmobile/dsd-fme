@@ -39,6 +39,9 @@ void processDSTAR(dsd_opts * opts, dsd_state * state) {
 	unsigned int bitbuffer = 0;
 	const int *w, *x;
 
+	//set carrier to 1 so ncurses will light up green
+	state->carrier = 1;
+
 	if (opts->errorbars == 1) {
 		fprintf (stderr, "e:");
 	}
@@ -56,7 +59,7 @@ void processDSTAR(dsd_opts * opts, dsd_state * state) {
 	} else {
 		framecount = 1; //just saw a sync frame; there should be 20 not 21 till the next
 	}
-
+	//why is this running in a loop for?
 	while (sync_missed < 3) {
 
 		memset(ambe_fr, 0, 96);
@@ -86,6 +89,7 @@ void processDSTAR(dsd_opts * opts, dsd_state * state) {
 			ambe_fr[*w][*x] = (1 & dibit);
 			w++;
 			x++;
+
 		}
 
 
@@ -128,14 +132,31 @@ void processDSTAR(dsd_opts * opts, dsd_state * state) {
 			slowdata[0] ^= 0x70;
 			slowdata[1] ^= 0x4f;
 			slowdata[2] ^= 0x93;
-			//fprintf (stderr, "unscrambled- %s",slowdata);
+			//fprintf (stderr, "unscrambled- %02X %02X %02X %02X \n", slowdata[0], slowdata[1], slowdata[2], slowdata[3] );
 
 		} else if (framecount == 0) {
-			//fprintf (stderr, "never scrambled-%s\n",slowdata);
-		}
+			//fprintf (stderr, "never scrambled-%c\n",slowdata);
+			//fprintf (stderr, "never scrambled- %02X %02X %02X %02X \n", slowdata[0], slowdata[1], slowdata[2], slowdata[3] );
 
+			}
+		for (short int i = 0; i < 4; i++)
+		{
+			if (slowdata[i] <= 0x7E && slowdata[i] >=0x20)
+	     {
+	       //fprintf (stderr, "%c", slowdata[i]);
+	     }
+	     //else fprintf (stderr, ".");
+		}
+		//fprintf (stderr, "\n");
 		framecount++;
-	}
+
+		//since we are in a while loop, run ncursesPrinter here.
+	  if (opts->use_ncurses_terminal == 1)
+	  {
+	    ncursesPrinter(opts, state);
+	  }
+
+	} //end while loop
 
 	end: if (opts->errorbars == 1) {
 		fprintf (stderr, "\n");
@@ -153,7 +174,7 @@ void processDSTAR_HD(dsd_opts * opts, dsd_state * state) {
 
 	// Note: These routines contain GPLed code. Remove if you object to that.
 	// Due to this, they are in a separate source file.
-	dstar_header_decode(radioheaderbuffer);
+	dstar_header_decode(state, radioheaderbuffer);
 
 	//We officially have sync now, so just pass on to the above routine:
 

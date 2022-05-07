@@ -51,7 +51,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 
   if (opts->errorbars == 1)
     {
-      fprintf (stderr, "e:");
+      //fprintf (stderr, "e:");
     }
 
   // IMBE 1
@@ -375,18 +375,16 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
   }
 
-  //if (state->errs == 0 && algidhex != 0x80)
-  if (1 == 1) //always print the LDU2 alg info
-  //if (opts->payload == 1 && state->errs == 0)
+  if (1 == 1) //print on payload == 1
   {
-    //fprintf (stderr, " LDU2 ALG ID: 0x%X KEY ID: 0x%X MI: %s \n", algidhex, kidhex, mi);
-    fprintf (stderr, " LDU2 ALG ID: 0x%X KEY ID: 0x%X MI: 0x%08llX%08llX%02llX\n", algidhex, kidhex, mihex1, mihex2, mihex3);
+    fprintf (stderr, "%s", KYEL);
+    fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08llX%08llX%02llX\n", algidhex, kidhex, mihex1, mihex2, mihex3);
+    fprintf (stderr, "%s", KNRM);
   }
-  //if (opts->p25enc == 1 && opts->payload == 0)
+
   if (opts->payload == 0)
     {
       algidhex = strtol (algid, NULL, 2);
       kidhex = strtol (kid, NULL, 2);
-      //fprintf (stderr, "mi: %s algid: $%x kid: $%x\n", mi, algidhex, kidhex);
     }
 }

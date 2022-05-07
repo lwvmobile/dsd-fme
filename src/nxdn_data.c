@@ -66,12 +66,19 @@ void processNXDNData (dsd_opts * opts, dsd_state * state)
   //fprintf(stderr, "RAN=%02d - Part %d/4 ", RAN, PartOfFrame + 1);
   if(CrcIsGood)
   {
+    fprintf (stderr, "%s", KCYN);
     fprintf (stderr, "RAN=%02d - Part %d/4 ", RAN, PartOfFrame + 1);
-    fprintf (stderr, "(CRC OK) ");
+    fprintf (stderr, "%s", KNRM);
+    //fprintf (stderr, "(CRC OK) ");
     state->nxdn_last_ran = RAN; //disable, try to grab this in voice instead
   }
 
-  else fprintf (stderr, "(CRC ERR) ");
+  else
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, "(CRC ERR) ");
+    fprintf (stderr, "%s", KNRM);
+  }
 
 
   /* Decode the SACCH only when all 4 voice frame

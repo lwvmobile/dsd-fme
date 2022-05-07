@@ -35,14 +35,20 @@ printFrameInfo (dsd_opts * opts, dsd_state * state)
     }
   if (state->nac != 0)
     {
+      fprintf (stderr, "%s", KCYN);
       fprintf (stderr,"nac: [%4X] ", state->nac);
+      fprintf (stderr, "%s", KNRM);
     }
 
   if (opts->verbose > 1)
     {
+      fprintf (stderr, "%s", KGRN);
       fprintf (stderr,"src: [%8i] ", state->lastsrc);
+      fprintf (stderr, "%s", KNRM);
     }
+  fprintf (stderr, "%s", KGRN);
   fprintf (stderr,"tg: [%5i] ", state->lasttg);
+  fprintf (stderr, "%s", KNRM);
 }
 
 void
@@ -168,12 +174,15 @@ processFrame (dsd_opts * opts, dsd_state * state)
       processDSTAR_HD (opts, state);
       return;
     }
-
-  else if ((state->synctype >= 10) && (state->synctype <= 13))
+    //Start DMR Types
+    else if ((state->synctype >= 10) && (state->synctype <= 13) || (state->synctype == 32) || (state->synctype == 33) || (state->synctype == 34) ) //32-34 DMR MS and RC
     {
+      //disable so radio id doesn't blink in and out during ncurses and aggressive_framesync
       state->nac = 0;
-      state->lastsrc = 0;
-      state->lasttg = 0;
+      //state->lastsrc = 0;
+      //state->lasttg = 0;
+      //state->lastsrcR = 0;
+      //state->lasttgR = 0;
       if (opts->errorbars == 1)
         {
           if (opts->verbose > 0)
@@ -182,21 +191,63 @@ processFrame (dsd_opts * opts, dsd_state * state)
               //fprintf (stderr,"inlvl: %2i%% ", level);
             }
         }
-      if ((state->synctype == 11) || (state->synctype == 12))
+      if ( (state->synctype == 11) || (state->synctype == 12) || (state->synctype == 32) ) //DMR Voice Modes
         {
-          if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
+          if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL) && opts->dmr_stereo == 0)
             {
               openMbeOutFile (opts, state);
             }
           sprintf (state->fsubtype, " VOICE        ");
-          processDMRvoice (opts, state);
+          if (opts->dmr_stereo == 0 && state->synctype < 32) // -T option for DMR (TDMA) stereo
+          {
+            processDMRvoice (opts, state);
+          }
+          if (opts->dmr_stereo == 0 && state->synctype == 32)
+          {
+            fprintf (stderr, "%s", KRED);
+            fprintf (stderr, "Please use the -T option to handle MS Mode with DMR Stereo TDMA Handling\n");
+            fprintf (stderr, "%s", KNRM);
+          }
+          if (opts->dmr_stereo == 1)
+          {
+            state->dmr_stereo = 1; //set the state to 1 when handling pure voice frames
+            if (state->synctype > 31 )
+            {
+              dmrMSBootstrap (opts, state); //bootstrap into MS Bootstrap (voice only)
+            }
+            else dmrBSBootstrap (opts, state); //bootstrap into BS Bootstrap
+          }
         }
+      else if ( (state->synctype == 33) || (state->synctype == 34) ) //MS Data and RC data
+      {
+        if (opts->dmr_stereo == 0)
+        {
+          closeMbeOutFile (opts, state);
+          state->err_str[0] = 0;
+          fprintf (stderr, "%s", KRED);
+          fprintf (stderr, "Please use the -T option to handle MS Mode with DMR Stereo TDMA Handling\n");
+          fprintf (stderr, "%s", KNRM);
+        }
+        if (opts->dmr_stereo == 1)
+        {
+          dmrMSData (opts, state);
+        }
+      }
       else
+      {
+        if (opts->dmr_stereo == 0)
         {
           closeMbeOutFile (opts, state);
           state->err_str[0] = 0;
           processDMRdata (opts, state);
         }
+        //switch dmr_stereo to 0 when handling BS data frame syncs with processDMRdata
+        if (opts->dmr_stereo == 1)
+        {
+          state->dmr_stereo = 0; //set the state to zero for handling pure data frames
+          processDMRdata (opts, state);
+        }
+      }
       return;
     }
   else if ((state->synctype >= 2) && (state->synctype <= 5))
@@ -244,7 +295,20 @@ processFrame (dsd_opts * opts, dsd_state * state)
       processProVoice (opts, state);
       return;
     }
-    //LEH dPMR
+    //ysf
+    else if ((state->synctype == 30) || (state->synctype == 31))
+    {
+      //Do stuff
+      //fprintf(stderr, "YSF Sync! \n");
+      if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
+      {
+        //openMbeOutFile (opts, state);
+      }
+      //sprintf(state->fsubtype, " VOICE        ");
+      processYSF(opts, state);
+      return;
+    }
+    //dPMR
     else if ((state->synctype == 20) || (state->synctype == 24))
     {
       /* dPMR Frame Sync 1 */
@@ -255,7 +319,6 @@ processFrame (dsd_opts * opts, dsd_state * state)
       /* dPMR Frame Sync 2 */
         fprintf(stderr, "dPMR Frame Sync 2 ");
 
-        //state->rf_mod = GFSK_MODE;
         state->nac = 0;
         state->lastsrc = 0;
         state->lasttg = 0;
@@ -264,7 +327,6 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->verbose > 0)
           {
             level = (int) state->max / 164;
-            //fprintf(stderr, "inlvl: %2i%% ", level);
           }
         }
         state->nac = 0;
@@ -290,7 +352,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
       fprintf(stderr, "dPMR Frame Sync 4 ");
     }
     //dPMR
-  else
+  else //P25
     {
       // Read the NAC, 12 bits
       j = 0;

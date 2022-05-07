@@ -94,6 +94,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       }
       else if (opts->audio_in_type == 1) {
           result = sf_read_short(opts->audio_in_file, &sample, 1);
+          //fprintf (stderr, "..");
           if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample < 32767 && sample > -32767)
           {
             state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
@@ -300,8 +301,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
 
       state->lastsample = sample;
-      //steal sample here for rtl input or stdin input
-      state->input_sample_buffer = sample; //sample or sum, honestly this seemt to be best place to grab this sadly, sounds terrible most everywhere else
+
     }
 
   symbol = (sum / count);

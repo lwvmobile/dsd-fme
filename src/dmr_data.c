@@ -49,6 +49,12 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   bursttype[4] = 0;
 
   dibit_p = state->dibit_buf_p - 90;
+  //using the estimate_symbol method for the dmr_payload_p buffer causes sync
+  //issues with P25, so only do it when frame_p25p1 == 0, or -fr option
+  if (opts->frame_p25p1 == 0) //opts->frame_p25p1 == 0
+  {
+    dibit_p = state->dmr_payload_p - 90;
+  }
 
   // CACH
   for (i = 0; i < 12; i++)
@@ -59,6 +65,11 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     {
       dibit = (dibit ^ 2);
     }
+    if (state->dmr_stereo == 1)
+    {
+      dibit = (int)state->dmr_stereo_payload[i];
+    }
+    //fprintf(stderr, "%X", dibit);
     cachdata[i] = dibit;
     if (i == 2)
     {
@@ -78,6 +89,15 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
         state->slot2light[6] = ']';
         state->slot1light[0] = ' ';
         state->slot1light[6] = ' ';
+      }
+      //method to only see data from one slot or the other when data occupies both slots or gets cooked by sync
+      state->hardslot = 9; //0 to only listen to slot 0 voice, 1 for slot 1, 9 for both
+      if(state->hardslot != 9 && state->hardslot != state->currentslot)
+      //if(1==1)
+      {
+        fprintf (stderr, " Current Slot = %d", state->currentslot + 1);
+        fprintf (stderr, "\n"); //line break after breaking out of jail
+        //goto JUMP;
       }
     }
   }
@@ -107,6 +127,10 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     {
       dibit = (dibit ^ 2);
     }
+    if (state->dmr_stereo == 1)
+    {
+      dibit = (int)state->dmr_stereo_payload[i+12];
+    }
     trellisdibits[i] = dibit;
     info[2*i]     = (1 & (dibit >> 1));  // bit 1
     info[(2*i)+1] = (1 & dibit);         // bit 0
@@ -119,6 +143,10 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   {
     dibit = (dibit ^ 2);
   }
+  if (state->dmr_stereo == 1)
+  {
+    dibit = (int)state->dmr_stereo_payload[61]; //61, not i+61
+  }
   cc[0] = (1 & (dibit >> 1)); // bit 1
   cc[1] = (1 & dibit);        // bit 0
   SlotType[0] = (1 & (dibit >> 1)); // bit 1
@@ -129,6 +157,10 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   if (opts->inverted_dmr == 1)
   {
     dibit = (dibit ^ 2);
+  }
+  if (state->dmr_stereo == 1)
+  {
+    dibit = (int)state->dmr_stereo_payload[62];
   }
   cc[2] = (1 & (dibit >> 1)); // bit 1
   cc[3] = (1 & dibit);        // bit 0
@@ -147,6 +179,10 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   {
     dibit = (dibit ^ 2);
   }
+  if (state->dmr_stereo == 1) //state
+  {
+    dibit = (int)state->dmr_stereo_payload[63]; //(int)
+  }
 //  burst  = (unsigned int)((1 & (dibit >> 1)) << 3);
 //  burst |= (unsigned int)((1 & (dibit >> 0)) << 2);
 //  bursttype[0] = (1 & (dibit >> 1)) + 48;  // bit 1
@@ -159,6 +195,10 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   if (opts->inverted_dmr == 1)
   {
     dibit = (dibit ^ 2);
+  }
+  if (state->dmr_stereo == 1) //state
+  {
+    dibit = (int)state->dmr_stereo_payload[64]; //(int)
   }
 //  burst |= (unsigned int)((1 & (dibit >> 1)) << 1);
 //  burst |= (unsigned int)((1 & (dibit >> 0)) << 0);
@@ -174,6 +214,10 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   {
     dibit = (dibit ^ 2);
   }
+  if (state->dmr_stereo == 1)
+  {
+    dibit = (int)state->dmr_stereo_payload[65];
+  }
   SlotType[8] = (1 & (dibit >> 1)); // bit 1
   SlotType[9] = (1 & dibit);        // bit 0
 
@@ -185,6 +229,10 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     if (opts->inverted_dmr == 1)
     {
       dibit = (dibit ^ 2);
+    }
+    if (state->dmr_stereo == 1)
+    {
+      dibit = (int)state->dmr_stereo_payload[i+66]; //double check these i+ values make sure we are on the right ones
     }
     syncdata[2*i]     = (1 & (dibit >> 1));  // bit 1
     syncdata[(2*i)+1] = (1 & dibit);         // bit 0
@@ -216,6 +264,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
       sprintf(state->slot2light, "[slot2]");
     }
   }
+
   else if(strcmp (sync, DMR_DIRECT_MODE_TS1_DATA_SYNC) == 0)
   {
     state->currentslot = 0;
@@ -236,10 +285,17 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   // Slot type - Second part - Parity bit
   for (i = 0; i < 5; i++)
   {
-    dibit = getDibit(opts, state);
+    if (state->dmr_stereo == 0) //only get dibits if not using dmr_stereo method
+    {
+      dibit = getDibit(opts, state);
+    }
     if (opts->inverted_dmr == 1)
     {
       dibit = (dibit ^ 2);
+    }
+    if (state->dmr_stereo == 1)
+    {
+      dibit = (int)state->dmr_stereo_payload[i+90]; //double checked these i+ values make sure we are on the right ones
     }
     SlotType[(i*2) + 10] = (1 & (dibit >> 1)); // bit 1
     SlotType[(i*2) + 11] = (1 & dibit);        // bit 0
@@ -250,11 +306,23 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   else SlotTypeOk = 0;
 
   /* Slot Type parity checked => Fill the color code */
-  state->color_code = (unsigned int)((cc[0] << 3) + (cc[1] << 2) + (cc[2] << 1) + cc[3]);
+  //state->color_code = (unsigned int)((cc[0] << 3) + (cc[1] << 2) + (cc[2] << 1) + cc[3]);
+  state->color_code = (SlotType[0] << 3) + (SlotType[1] << 2) +(SlotType[2] << 1) + (SlotType[3] << 0);
   state->color_code_ok = SlotTypeOk;
+  //fprintf(stderr, "| Color Code=%02d ", (int)state->color_code);
 
   /* Reconstitute the burst type */
+  //consider assigning thsi only when slottypeok or similar check passes, eliminate bad burst types from decoding randomly
   burst = (unsigned int)((SlotType[4] << 3) + (SlotType[5] << 2) + (SlotType[6] << 1) + SlotType[7]);
+  if (state->currentslot == 0)
+  {
+    state->dmrburstL = burst;
+  }
+  if (state->currentslot == 1)
+  {
+    state->dmrburstR = burst;
+  }
+
 
   /* Reconstitute the burst type */
   bursttype[0] = SlotType[4] + '0';
@@ -263,13 +331,55 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   bursttype[3] = SlotType[7] + '0';
   bursttype[4] = '\0';
 
+  /* //delete this chunk later
+  if (state->dmr_stereo == 3) //may not need this any longer
+  {
+    burst = (state->dmr_stereo_payload[63] << 2) | (state->dmr_stereo_payload[64]);
+    //this whole split for getting burst and burst type is makes no sense
+    //why not just use burst
+    bursttype[0] = (((state->dmr_stereo_payload[63] >> 1) & 1) + '0');
+    bursttype[1] = (((state->dmr_stereo_payload[63] >> 0) & 1) + '0');
+    bursttype[2] = (((state->dmr_stereo_payload[64] >> 1) & 1) + '0');
+    bursttype[3] = (((state->dmr_stereo_payload[64] >> 0) & 1) + '0');
+    bursttype[4] = '\0';
+    //fprintf(stderr, "BURST1 = %04b ", burst);
+  }
+  //figure out why the sync is wrong when dumping the payload to processDMRdata for MS Data
+  //I think its a conversion issue with the payload(chat) from the dibit buffer (int *)
+  //actually, its the dibit buffer storing as 1 and 3 only (GFSK) when sync drops
+  //made a seperate dmr buffer, but still, when sync loss and regain, takes a few syncs to calibrate center/umid/lmid properly
+  //getting accurate MS data AND leading BS data may be impossible without saving the symbols, calibrating, then going back
+  //and running the buffer payload, but I honestly don't know right now, probably easier to start from stratch than fix this
+  if (state->dmr_ms_mode == 7)
+  {
+    burst = (unsigned int)((SlotType[4] << 3) | (SlotType[5] << 2) | (SlotType[6] << 1) | SlotType[7]);
+    bursttype[0] = SlotType[4] + '0';
+    bursttype[1] = SlotType[5] + '0';
+    bursttype[2] = SlotType[6] + '0';
+    bursttype[3] = SlotType[7] + '0';
+    bursttype[4] = '\0';
+    //fprintf(stderr, "BURST1 = %04b ", burst);
+  }
+
+  if (state->dmr_stereo == 3)
+  {
+    fprintf(stderr, "BURST2 = %b%b%b%b Slot Dump ", SlotType[4], SlotType[5], SlotType[6], SlotType[7] );
+    fprintf(stderr, " Slot Dump = ");
+    for (i = 0; i < 20; i++)
+    {
+      fprintf(stderr, "%b", SlotType[i]);
+    }
+    fprintf(stderr, "\n ");
+  }
+  */
+
   if (strcmp (bursttype, "0000") == 0)
   {
     sprintf(state->fsubtype, " PI Header    ");
   }
   else if (strcmp (bursttype, "0001") == 0)
   {
-    sprintf(state->fsubtype, " VOICE Header ");
+    sprintf(state->fsubtype, " VOICE LC Header ");
   }
   else if (strcmp (bursttype, "0010") == 0)
   {
@@ -316,10 +426,17 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   //trellis
   for (i = 0; i < 49; i++)
   {
-    dibit = getDibit(opts, state);
+    if (state->dmr_stereo == 0) //only get dibits if not using dmr_stereo method
+    {
+      dibit = getDibit(opts, state);
+    }
     if (opts->inverted_dmr == 1)
     {
       dibit = (dibit ^ 2);
+    }
+    if (state->dmr_stereo == 1)
+    {
+      dibit = (int)state->dmr_stereo_payload[i+95]; //double checked these i+ values make sure we are on the right ones
     }
     trellisdibits[i+49] = dibit;
     info[(2*i) + 98] = (1 & (dibit >> 1));  // bit 1
@@ -327,20 +444,37 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   }
 
   // Skip cach (24 bit = 12 dibit) and next slot 1st half (98 + 10 bit = 49 + 5 dibit)
-  skipDibit (opts, state, 12 + 49 + 5);
+  if (state->dmr_stereo == 0)
+  {
+    skipDibit (opts, state, 12 + 49 + 5);
+  }
 
   if (opts->errorbars == 1)
   {
     /* Print the color code */
-    fprintf(stderr, "| Color Code=%02d ", (int)state->color_code);
+    //if (burst == 0b1001 && state->color_code_ok) //only print on idle for data types, otherwise prints on voice frames.
+    if (SlotTypeOk == 1)
+    {
+      fprintf (stderr, "%s", KCYN);
+      fprintf(stderr, "| Color Code=%02d ", (int)state->color_code);
+      fprintf (stderr, "%s", KNRM);
+      //state->dmr_color_code = state->color_code;
+    }
+    else fprintf(stderr, "|               ");
 
     //if(state->color_code_ok) fprintf(stderr, "(OK)      |");
-    if(state->color_code_ok) fprintf(stderr, "(CRC OK ) |"); //add line break
-    else fprintf(stderr, "(CRC ERR) |"); //add line break
+    if(state->color_code_ok) fprintf(stderr, "| (CRC OK ) |"); //add line break
+    else
+    {
+      fprintf (stderr, "%s", KRED);
+      fprintf(stderr, "| (CRC ERR) |");
+      fprintf (stderr, "%s", KNRM);
+    }
     //fprintf (stderr, "\n"); //print line break
     if (strcmp (state->fsubtype, "              ") == 0)
     {
-      fprintf(stderr, " Unknown burst type: %s", bursttype);
+      //fprintf(stderr, " Unknown burst type: %s", bursttype);
+      fprintf(stderr, " Unknown");
     }
     else
     {
@@ -368,6 +502,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     /* Burst = TLC */
     case 0b0010:
     {
+      //Not sure if I really care about this in the context of what it shows
       ProcessDmrTerminaisonLC(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
@@ -375,6 +510,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     /* Burst = CSBK */
     case 0b0011:
     {
+      //going to disable until I can find more useful info to present
       ProcessCSBK(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
@@ -386,7 +522,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
       break;
     }
 
-    /* Burst = MBC */
+    /* Burst = MBC Continuation*/
     case 0b0101:
     {
       //ProcessMBCData(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
@@ -410,14 +546,15 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     /* Burst = RATE 3/4 DATA */
     case 0b1000:
     {
-      //disabled until a viable viterbi/trellis decoding solution is worked out
-      //Process34Data(opts, state, trellisdibits, (uint8_t *)syncdata, (uint8_t *)SlotType);
+      //need to keep working on improving the trellis decode, but is partially viable now
+      Process34Data(opts, state, trellisdibits, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
 
     /* Burst = Slot idle */
     case 0b1001:
     {
+      if(state->color_code_ok) state->dmr_color_code = state->color_code; //try setting this on idle if crc ok
       break;
     }
 
@@ -428,10 +565,10 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
       break;
     }
 
-    /* Burst = WTF 1101 Type DATA */
+    /* Burst = Unified Single Block DATA */
     case 0b1101:
     {
-      //ProcessWTFData(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
+      //ProcessUnifiedData(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
 
@@ -448,5 +585,5 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   {
     fprintf(stderr, "\n");
   }
-
+  //JUMP:
 } /* End processDMRdata() */

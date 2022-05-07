@@ -30,19 +30,20 @@
 
 int reset = 0;
 char c; //getch key
-int tg; //last tg
+int tg;
+int tgR;
 int tgn;
-int rd; //last rid
-int rn; //last ran
-int nc; //nac
-int src; //last rid? double?
-int lls = -1; //last last sync type
-int dcc = -1; //initialize with 0 to prevent core dump
+int rd;
+int rdR;
+int rn;
+int nc;
+int src;
+int lls = -1;
+int dcc = -1;
 int i = 0;
-char * s0last = "     ";
-char * s1last = "     ";
 char versionstr[25];
-unsigned long long int call_matrix[33][6]; //0 - sync type; 1 - tg/ran; 2 - rid; 3 - slot; 4 - cc; 5 - time(NULL) ;
+unsigned long long int call_matrix[33][6];
+
 char * FM_bannerN[9] = {
   "                                 CTRL + C twice to exit",
   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗",
@@ -54,25 +55,25 @@ char * FM_bannerN[9] = {
   "https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
 };
 
-char * SyncTypes[30] = {
+char * SyncTypes[36] = {
   "+P25P1",
   "-P25P1",
   "+X2TDMA DATA",
   "-X2TDMA DATA",
   "+X2TDMA VOICE",
   "-X2TDMA VOICE",
-  "+DSTARC",
+  "+DSTAR",
   "-DSTAR",
-  "+NXDN VOICE",      //8
-  "-NXDN VOICE",  //9
-  "+DMR DATA",     //10
-  "-DMR DATA",    //11
-  "+DMR VOICE",     //12
-  "-DMR VOICE", //13
-  "+PROVOICE",            //14
-  "-PROVOICE",        //15
-  "+NXDN DATA",        //16
-  "-NXDN DATA",    //17
+  "+NXDN VOICE",
+  "-NXDN VOICE",
+  "+DMR DATA",
+  "-DMR DATA",
+  "+DMR VOICE",
+  "-DMR VOICE",
+  "+PROVOICE",
+  "-PROVOICE",
+  "+NXDN DATA",
+  "-NXDN DATA",
   "+DSTAR HD",
   "-DSTAR HD",
   "+dPMR",
@@ -82,7 +83,35 @@ char * SyncTypes[30] = {
   "-dPMR",
   "-dPMR",
   "-dPMR",
-  "-dPMR"
+  "-dPMR",
+  "+NXDN (sync only)",
+  "-NXDN (sync only)",
+  "+YSF",
+  "-YSF",
+  "DMR MS VOICE",
+  "DMR MS DATA",
+  "DMR RC DATA"
+};
+
+char * DMRBusrtTypes[18] = {
+  "PI Header     ",
+  "VOICE LC HDR  ",
+  "TLC           ",
+  "CSBK          ",
+  "MBC Header    ",
+  "MBC Cont      ",
+  "DATA Header   ",
+  "RATE 1/2 DATA ",
+  "RATE 3/4 DATA ",
+  "Slot Idle     ",
+  "Rate 1 DATA   ",
+  "ERR           ", //These values for ERR may be Reserved for use in future?
+  "ERR           ",
+  "ERR           ",
+  "ERR           ",
+  "ERR           ",
+  "Voice         ", //Using 16 for Voice since its higher than possible value?
+  "INITIAL       "  //17 is assigned on start up
 
 };
 
@@ -116,48 +145,139 @@ void ncursesOpen ()
   noecho();
   cbreak();
 
-  //fprintf (stderr, "Opening NCurses Terminal. \n");
-
 }
 
 void
 ncursesPrinter (dsd_opts * opts, dsd_state * state)
 {
   int level;
-
-  //level = (int) state->max / 164;
   level = 0; //start each cycle with 0
-  erase();
-  //disabling until wide support can be built for LM, etc. $(ncursesw5-config --cflags --libs)
-  printw ("%s \n", FM_bannerN[0]); //top line in white
-  attron(COLOR_PAIR(4));
-  for (short int i = 1; i < 7; i++) //following lines in cyan
-  {
-    printw("%s \n", FM_bannerN[i]);
-  }
-  attroff(COLOR_PAIR(4));
-  printw ("--Build Info------------------------------------------------------------------\n");
-  printw ("| %s \n", FM_bannerN[7]); //http link
-  printw ("| Digital Speech Decoder: Florida Man Edition\n");
-  printw ("| Github Build Version: %s \n", GIT_TAG);
-  printw ("| mbelib version %s\n", versionstr);
-  //printw ("| Press CTRL+C twice to exit\n");
-  printw ("------------------------------------------------------------------------------\n");
 
+  //Variable reset/set section
+
+  //carrier reset
   if (state->carrier == 0) //reset these to 0 when no carrier
   {
-    state->payload_algid = 0;
-    state->payload_keyid = 0;
+    state->payload_algid    = 0;
+    state->payload_keyid    = 0;
+    state->payload_keyidR   = 0;
+    state->payload_algidR   = 0;
     //state->payload_mfid  = 0;
-    state->payload_mi    = 0;
+    state->payload_mi       = 0;
+    state->payload_miR      = 0;
 
     state->nxdn_key         = 0;
     state->nxdn_cipher_type = 0;
-
+    //memset(state->dstarradioheader, 0, 41);
     sprintf(state->dmr_branding, " ");
   }
 
-  if ( (lls == 14 || lls == 15) && (time(NULL) - call_matrix[9][5] > 5) && state->carrier == 1) //honestly have no idea how to do this for pV, just going time based? only update on carrier == 1.
+  //set lls sync types
+  if (state->synctype >= 0 && state->synctype < 35) //not sure if this will be okay
+  {
+    lls = state->synctype;
+  }
+
+  //reset DMR alias block and embedded gps if burst type is not 16 or carrier drop
+  if (state->dmrburstL != 16 || state->carrier == 0)
+  {
+    for (short i = 0; i < 6; i++)
+    {
+      sprintf (state->dmr_callsign[0][i], "");
+    }
+  }
+  if (state->dmrburstR != 16 || state->carrier == 0)
+  {
+    for (short i = 0; i < 6; i++)
+    {
+      sprintf (state->dmr_callsign[1][i], "");
+    }
+  }
+
+  //reset DMR LRRP when call is active on current slot if burst type is not data or carrier drop
+  if (state->dmrburstL == 16 || state->carrier == 0)
+  {
+    for (short i = 0; i < 6; i++)
+    {
+      sprintf (state->dmr_lrrp[0][i], "");
+    }
+  }
+  if (state->dmrburstR == 16 || state->carrier == 0)
+  {
+    for (short i = 0; i < 6; i++)
+    {
+      sprintf (state->dmr_lrrp[1][i], "");
+    }
+  }
+
+  //NXDN
+  if (state->nxdn_last_rid > 0 && state->nxdn_last_rid != src);
+  {
+    src = state->nxdn_last_rid;
+  }
+  if (state->nxdn_last_ran > -1 && state->nxdn_last_ran != rn);
+  {
+    rn = state->nxdn_last_ran;
+  }
+  if (state->nxdn_last_tg > 0 && state->nxdn_last_tg != tgn);
+  {
+    tgn = state->nxdn_last_tg;
+  }
+
+  //DMR CC
+  if (state->color_code_ok && state->dmr_color_code != -1 && (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32 || lls == 33) )
+  {
+    dcc = state->dmr_color_code;
+  }
+
+  //DMR SRC
+  if ( (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32) )
+  {
+    if (state->dmrburstL == 16 && state->lastsrc > 0) //state->currentslot == 0 &&
+    {
+      rd = state->lastsrc;
+    }
+
+    if (state->dmrburstR == 16 && state->lastsrcR > 0) //state->currentslot == 1 &&
+    {
+      rdR = state->lastsrcR;
+    }
+    //move to seperate P25 version plz
+    opts->p25enc = 0;
+  }
+
+  //DMR TG
+  if ( (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32) )
+  {
+    if (state->dmrburstL == 16 && state->lasttg > 0) //state->currentslot == 0 &&
+    {
+      tg = state->lasttg;
+    }
+
+    if (state->dmrburstR == 16 && state->lastsrcR > 0) //state->currentslot == 1 &&
+    {
+      tgR = state->lasttgR;
+    }
+    opts->p25enc = 0;
+  }
+
+  //P25
+  if (state->nac > 0)
+  {
+    nc = state->nac;
+  }
+  if ( state->lasttg > 0 && (lls == 0 || lls == 1) )
+  {
+    tg = state->lasttg;
+  }
+  if ( state->lastsrc > 0 && (lls == 0 || lls == 1) )
+  {
+    rd = state->lastsrc;
+  }
+
+  //Call History Matrix Shuffling
+  //ProVoice
+  if ( (lls == 14 || lls == 15) && (time(NULL) - call_matrix[9][5] > 5) && state->carrier == 1)
   {
     for (short int k = 0; k < 9; k++)
     {
@@ -175,12 +295,33 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][3] = 1;
     call_matrix[9][4] = 1;
     call_matrix[9][5] = time(NULL);
-    //nowN = time(NULL);
+
   }
 
-  //if ( (state->nxdn_last_rid != src && src > 0) || (state->nxdn_last_ran != rn && rn > 0) ) //find condition to make this work well, probably if last != local last variables
-  //if ( (call_matrix[9][2] != src && src > 0) || (call_matrix[9][1] != rn && rn > 0) ) //NXDN working well now with this, updates immediately and only once
-  if ( call_matrix[9][2] != src && src > 0 && rn > -1 ) //NXDN working well now with this, updates immediately and only once
+  //D-STAR, work on adding the headers later
+  if ( (lls == 6 || lls == 7 || lls == 18 || lls == 19) && (time(NULL) - call_matrix[9][5] > 5) && state->carrier == 1)
+  {
+    for (short int k = 0; k < 9; k++)
+    {
+      call_matrix[k][0] = call_matrix[k+1][0];
+      call_matrix[k][1] = call_matrix[k+1][1];
+      call_matrix[k][2] = call_matrix[k+1][2];
+      call_matrix[k][3] = call_matrix[k+1][3];
+      call_matrix[k][4] = call_matrix[k+1][4];
+      call_matrix[k][5] = call_matrix[k+1][5];
+    }
+
+    call_matrix[9][0] = lls;
+    call_matrix[9][1] = 1;
+    call_matrix[9][2] = 1;
+    call_matrix[9][3] = 1;
+    call_matrix[9][4] = 1;
+    call_matrix[9][5] = time(NULL);
+
+  }
+
+  //NXDN
+  if ( call_matrix[9][2] != src && src > 0 && rn > -1 )
   {
     for (short int k = 0; k < 9; k++)
     {
@@ -200,17 +341,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   }
 
-  //if (state->dmr_color_code != dcc && (lls == 11 || lls == 13 || lls == 10 || lls == 12) ) //DMR Voice + last two is data
-  //if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR
-  if ( (call_matrix[9][4] != dcc || call_matrix[9][2] != rd) && (lls == 12 || lls == 13) ) //DMR, needs work
+  //DMR MS
+  if ( call_matrix[9][2] != rd && (lls == 32 || lls == 33 || lls == 34) )
   {
-    //reset amateur signs on radio id change
-    for (short i = 0; i < 5; i++)
-    {
-      sprintf (state->dmr_callsign[i], "");
-    }
-    //dcc = state->dmr_color_code;
-    for (short int k = 0; k < 9; k++)
+
+    for (short int k = 0; k < 10; k++)
     {
       call_matrix[k][0] = call_matrix[k+1][0];
       call_matrix[k][1] = call_matrix[k+1][1];
@@ -223,14 +358,60 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][0] = lls;
     call_matrix[9][1] = tg;
     call_matrix[9][2] = rd;
-    call_matrix[9][3] = 0;
+    call_matrix[9][3] = 1; //hard set slot number
     call_matrix[9][4] = dcc;
     call_matrix[9][5] = time(NULL);
-    //i++;
+
   }
 
-  //if ( (lls == 0 || lls == 1) && state->lastsrc != rd && state->lastsrc > 0) //find condition to make this work well, probably if last != local last variables
-  if ( (lls == 0 || lls == 1) && call_matrix[9][2] != rd && nc > 0 && tg > 0) //P25
+  //DMR BS Slot 1 - matrix 0-4
+  if ( call_matrix[4][2] != rd && (lls == 12 || lls == 13 || lls == 10 || lls == 11) )
+  {
+
+    for (short int k = 0; k < 4; k++)
+    {
+      call_matrix[k][0] = call_matrix[k+1][0];
+      call_matrix[k][1] = call_matrix[k+1][1];
+      call_matrix[k][2] = call_matrix[k+1][2];
+      call_matrix[k][3] = call_matrix[k+1][3];
+      call_matrix[k][4] = call_matrix[k+1][4];
+      call_matrix[k][5] = call_matrix[k+1][5];
+    }
+
+    call_matrix[4][0] = lls;
+    call_matrix[4][1] = tg;
+    call_matrix[4][2] = rd;
+    call_matrix[4][3] = 1; //hard set slot number
+    call_matrix[4][4] = dcc;
+    call_matrix[4][5] = time(NULL);
+
+  }
+
+  //DMR BS Slot 2 - matrix 5-9
+  if ( call_matrix[9][2] != rdR && (lls == 12 || lls == 13 || lls == 10 || lls == 11) )
+  {
+
+    for (short int k = 5; k < 9; k++)
+    {
+      call_matrix[k][0] = call_matrix[k+1][0];
+      call_matrix[k][1] = call_matrix[k+1][1];
+      call_matrix[k][2] = call_matrix[k+1][2];
+      call_matrix[k][3] = call_matrix[k+1][3];
+      call_matrix[k][4] = call_matrix[k+1][4];
+      call_matrix[k][5] = call_matrix[k+1][5];
+    }
+
+    call_matrix[9][0] = lls;
+    call_matrix[9][1] = tgR;
+    call_matrix[9][2] = rdR;
+    call_matrix[9][3] = 2; //hard set slot number
+    call_matrix[9][4] = dcc;
+    call_matrix[9][5] = time(NULL);
+
+  }
+
+  //P25
+  if ( (lls == 0 || lls == 1) && call_matrix[9][2] != rd && nc > 0 && tg > 0)
   {
     for (short int k = 0; k < 9; k++)
     {
@@ -248,19 +429,34 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][3] = 0;
     call_matrix[9][4] = nc;
     call_matrix[9][5] = time(NULL);
-    //i++;
+
   }
-  //printw ("Time: ");
-  //printw ("%s \n", getTimeN());
+
+  //Start Printing Section
+  erase();
+  printw ("%s \n", FM_bannerN[0]); //top line in white
+  attron(COLOR_PAIR(4));
+  for (short int i = 1; i < 7; i++) //following lines in cyan
+  {
+    printw("%s \n", FM_bannerN[i]);
+  }
+  attroff(COLOR_PAIR(4));
+  printw ("--Build Info------------------------------------------------------------------\n");
+  printw ("| %s \n", FM_bannerN[7]); //http link
+  printw ("| Digital Speech Decoder: Florida Man Edition\n");
+  printw ("| Github Build Version: %s \n", GIT_TAG);
+  printw ("| mbelib version %s\n", versionstr);
+  //printw ("| Press CTRL+C twice to exit\n");
+  printw ("------------------------------------------------------------------------------\n");
   attron(COLOR_PAIR(4));
   printw ("--Input Output----------------------------------------------------------------\n");
   if (opts->audio_in_type == 0)
   {
-    printw ("| Pulse Audio  Input [%i] kHz [%i] Channel\n", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
+    printw ("| Pulse Audio  Input: [%i] kHz [%i] Channel\n", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
   }
   if (opts->audio_in_type == 1)
   {
-    printw ("| STDIN - Input\n");
+    printw ("| STDIN Standard Input: - \n");
   }
   if (opts->audio_in_type == 3)
   {
@@ -273,17 +469,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_out_type == 0)
   {
-    printw ("| Pulse Audio Output [%i] kHz [%i] Channel\n", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels);
+    printw ("| Pulse Audio Output: [%i] kHz [%i] Channel\n", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels);
   }
   if (opts->monitor_input_audio == 1)
   {
-    printw ("| Monitoring Source Audio when carrier present and No Sync Detected\n");
+    printw ("| Monitoring Source Audio when Carrier Present and No Sync Detected\n");
   }
-  if (opts->mbe_out_dir[0] != 0)
+  if (opts->mbe_out_dir[0] != 0 && opts->dmr_stereo == 0)
   {
     printw ("| Writing MBE data files to directory %s\n", opts->mbe_out_dir);
   }
-  if (opts->wav_out_file[0] != 0)
+  if (opts->wav_out_file[0] != 0 && opts->dmr_stereo == 0)
   {
     printw ("| Appending Audio WAV to file %s\n", opts->wav_out_file);
   }
@@ -302,77 +498,52 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     reset = 0;
   }
 
-
   printw ("--Audio Decode----------------------------------------------------------------\n");
+  printw ("| Decoding:    [%s] \n", opts->output_name);
   printw ("| In Level:    [%3i%%] \n", level);
-  printw ("| Voice Error: [%i][%i] \n| Error Bars:  [%s] \n", state->errs, state->errs2, state->err_str); //
-  //printw ("| Carrier = %i\n", state->carrier);
+  if (opts->dmr_stereo == 0)
+  {
+    printw ("| Voice Error: [%i][%i] \n", state->errs, state->errs2);
+  }
+
+  if (opts->dmr_stereo == 1)
+  {
+    printw ("| Voice ErrS1: [%i][%i] \n", state->errs, state->errs2);
+    printw ("| Voice ErrS2: [%i][%i] \n", state->errsR, state->errs2R);
+  }
   printw ("------------------------------------------------------------------------------\n");
 
-
   printw ("--Call Info-------------------------------------------------------------------\n");
-  //NXDN Ciper Types
-  //switch(CipherType)
-  //{
-  //  case 0:  Ptr = "";          break;  /* Non-ciphered mode / clear call */
-  //  case 1:  Ptr = "Scrambler"; break;
-  //  case 2:  Ptr = "DES";       break;
-  //  case 3:  Ptr = "AES";       break;
-  //  default: Ptr = "Unknown Cipher Type"; break;
-  //}
-
-  if (state->lastsynctype != -1) //not sure if this will be okay
+  //DSTAR...what a pain...
+  if (lls == 6 || lls == 7 || lls == 18 || lls == 19)
   {
-    lls = state->lastsynctype;
-  }
-  if (state->nxdn_last_rid > 0 && state->nxdn_last_rid != src);
-  {
-    src = state->nxdn_last_rid;
-  }
-  if (state->nxdn_last_ran > -1 && state->nxdn_last_ran != rn);
-  {
-    rn = state->nxdn_last_ran;
-  }
-  if (state->nxdn_last_tg > 0 && state->nxdn_last_tg != tgn);
-  {
-    tgn = state->nxdn_last_tg;
+    if (state->dstarradioheader[3] != 0) //
+    {
+      printw ("| RPT 2: [%c%c%c%c%c%c%c%c] ", state->dstarradioheader[3], state->dstarradioheader[4],
+  			state->dstarradioheader[5], state->dstarradioheader[6], state->dstarradioheader[7], state->dstarradioheader[8],
+  			state->dstarradioheader[9], state->dstarradioheader[10]);
+      printw ("RPT 1: [%c%c%c%c%c%c%c%c] \n| ", state->dstarradioheader[11], state->dstarradioheader[12],
+  			state->dstarradioheader[13], state->dstarradioheader[14], state->dstarradioheader[15], state->dstarradioheader[16],
+  			state->dstarradioheader[17], state->dstarradioheader[18]);
+      printw ("YOUR:  [%c%c%c%c%c%c%c%c] ", state->dstarradioheader[19], state->dstarradioheader[20],
+  			state->dstarradioheader[21], state->dstarradioheader[22], state->dstarradioheader[23], state->dstarradioheader[24],
+  			state->dstarradioheader[25], state->dstarradioheader[26]);
+      printw ("MY: [%c%c%c%c%c%c%c%c] [%c%c%c%c]\n", state->dstarradioheader[27],
+  			state->dstarradioheader[28], state->dstarradioheader[29], state->dstarradioheader[30], state->dstarradioheader[31],
+  			state->dstarradioheader[32], state->dstarradioheader[33], state->dstarradioheader[34], state->dstarradioheader[35],
+  			state->dstarradioheader[36], state->dstarradioheader[37], state->dstarradioheader[38]);
+    }
   }
 
-  //if (state->dmr_color_code > 0 && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR, DCC only carried on Data?
-  //if (state->color_code > -1 && (lls == 10 || lls == 11 || lls == 12 || lls == 13) ) //DMR, DCC only carried on Data?
-  if (state->color_code_ok && (lls == 12 || lls == 13) ) //DMR, needs work
-
-  {
-    dcc = state->dmr_color_code;
-    //dcc = state->color_code;
-  }
-
-  if (state->lastsrc > 0 && (lls == 12 || lls == 13 || lls == 0 || lls == 1)) //DMR Voice and P25P1
-  {
-    rd = state->lastsrc;
-    opts->p25enc = 0;
-  }
-
-  if (state->lasttg > 0 && (lls == 12 || lls == 13 || lls == 0 || lls == 1)) //DMR Voice and P25P1
-  {
-    tg = state->lasttg;
-    opts->p25enc = 0;
-  }
-
-  //if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17) //change this to NXDN syncs later on
+  //NXDN
   if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
   {
     printw ("| RAN: [%2d] ", rn);
     printw ("TID: [%4d] ", tgn);
-    //printw ("| RID: [%d] \n", src);
     printw ("RID: [%4d] \n| ALG: [0x%02X] KEY [0x%02X] ", src, state->nxdn_cipher_type, state->nxdn_key);
     if (state->carrier == 1)
     {
       printw("%s ", state->nxdn_call_type);
-      //attron(COLOR_PAIR(4));
-      //printw ("No Encryption ");
-      //attroff(COLOR_PAIR(4));
-      //attron(COLOR_PAIR(3));
     }
     if (state->nxdn_cipher_type == 0x1 && state->carrier == 1)
     {
@@ -404,31 +575,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     //printw("%s ", state->nxdn_call_type);
     printw("\n");
-
-
   }
 
-  //printw ("Error?: [%i] [%i] \n", state->errs, state->errs2); //what are these?
-  /* //wasn't we already doing this twice
-  if (state->lasttg > 0 && state->lastsrc > 0)
+  //P25
+  if (lls == 0 || lls == 1)
   {
-    tg = state->lasttg;
-    rd = state->lastsrc;
-  }
-  */
-  if (state->nac > 0)
-  {
-    nc = state->nac;
-  }
-  if ((lls == 0 || lls == 1)) //1 for P25 P1 Audio
-  {
-    //printw("| TID:[%i] | RID:[%i] \n", tg, rd);
-    //printw("| NAC: [0x%X] \n", nc);
     printw("| TID:[%8i] RID:[%8i] ", tg, rd);
     printw("NAC: [0x%3X] \n", nc);
     printw("| ALG:[0x%02X] ", state->payload_algid);
     printw("    KEY:[0x%04X] ", state->payload_keyid);
-    printw(" MFID: [0x%02X] ", state->payload_mfid); //no way of knowing if this is accurate info yet
+    printw("  MFID: [0x%02X] ", state->payload_mfid); //no way of knowing if this is accurate info yet
     if (state->payload_algid != 0x80 && state->payload_algid != 0x0 && state->carrier == 1)
     {
       attron(COLOR_PAIR(2));
@@ -437,182 +593,222 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
     printw("\n");
-    //printw("| System Type: %s \n", ALGIDS[state->payload_keyid] );
-  }
-  //if (state->lastsynctype == 12 || state->lastsynctype == 13)  //DMR Voice Types
-  if (lls == 12 || lls == 13)  //DMR Voice Types
-  {
-    //printw ("| DCC: [%i] FID: [%02X]\n", dcc, state->dmr_fid);
-    //attron(COLOR_PAIR(3));
-    printw ("| DCC: [%2i] FID: [%02X] SOP: [%02X] ", dcc, state->dmr_fid, state->dmr_so);
-    //if(state->payload_mi == 0 && state->dmr_so & 0x40)
-    if(state->payload_mi == 0 && (state->dmr_so & 0xCF) == 0x40) //4F or CF mask?
-    {
-      attron(COLOR_PAIR(5));
-      printw ("**BP** ");
-      //printw ("0x%X", state->payload_algid);
-      attroff(COLOR_PAIR(5));
-      attron(COLOR_PAIR(3));
-    }
-    //if(state->payload_keyid > 0 && state->dmr_so & 0x40)
-    if(state->payload_keyid > 0 && (state->dmr_so & 0xCF) == 0x40)
-    {
-      attron(COLOR_PAIR(5));
-      printw (" ALG: [0x%02X] KEY [0x%02X] MI [0x%08X]", state->payload_algid, state->payload_keyid, state->payload_mi);
-      //printw ("0x%X", state->payload_algid);
-      attroff(COLOR_PAIR(5));
-      attron(COLOR_PAIR(3));
-    }
-    //if(state->K > 0 && state->payload_keyid == 0 && state->dmr_so & 0x40)
-    if(state->K > 0 && (state->dmr_so & 0xCF) == 0x40)
-    {
-      attron(COLOR_PAIR(5));
-      printw ("BPK [%3lld]", state->K);
-      attroff(COLOR_PAIR(5));
-      attron(COLOR_PAIR(3));
-    }
-
-    printw("\n");
-    printw ("| TID: [%8i]     RID: [%8i]", tg, rd);
-
-    if (1 == 1) //figure out what to put here later on for amateur call signs
-    {
-      printw (" [");
-      for (short i = 0; i < 5; i++)
-      {
-        printw ("%s", state->dmr_callsign[i]);
-      }
-      printw ("]");
-    }
-    //if(state->dmr_so & 0x80) //1000 0000 //prints emergency on some amateru DMR repeaters with 0x8E SOP code, need to investigate
-    if(state->dmr_so == 0x80)
-    {
-      attron(COLOR_PAIR(2));
-      printw (" **Emergency** ");
-      attroff(COLOR_PAIR(2));
-      attron(COLOR_PAIR(3));
-    }
-
-    //if(state->dmr_so & 0x40) //0100 0000
-    if(state->dmr_so == 0x40) //0100 0000
-    {
-      attron(COLOR_PAIR(2));
-      printw (" **ENC** ");
-      //printw ("0x%X", state->payload_algid);
-      attroff(COLOR_PAIR(2));
-      attron(COLOR_PAIR(3));
-      if (state->K == 0)
-      {
-        //opts->p25enc = 1; //just testing for now
-      }
-
-    }
-
-    //if(state->dmr_so & 0x30) //0010 0000
-    if(state->dmr_so == 0x30) //0010 0000
-    {
-      attron(COLOR_PAIR(2));
-      printw (" **Private Call** ");
-      attroff(COLOR_PAIR(2));
-      attron(COLOR_PAIR(3));
-    }
-    printw("\n");
-    //printw ("%s ", state->slot0light);
-    printw ("| SLOT 1 ");
-    if (state->currentslot == 0) //find out how to tell when slot0 has voice
-    {
-      s0last = "Voice";
-      //printw("Voice");
-    }
-    printw ("%s ", s0last);
-
-    //printw ("%s ", state->slot1light);
-    printw ("SLOT 2 ");
-    if (state->currentslot == 1) //find out how to tell when slot1 has voice
-    {
-      s1last = "Voice";
-      //printw("Voice");
-    }
-    printw ("%s \n", s1last);
   }
 
-
-  //if (state->lastsynctype == 10 || state->lastsynctype == 11)  //DMR Data Types
-  if (lls == 10 || lls == 11 )  //DMR Data Types
+  //DMR BS/MS Voice and Data Types
+  if ( lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32 || lls == 33 || lls == 34)
   {
-    //printw ("| DCC: [%i]\n", dcc);
-    printw ("| DCC: [%2i] FID: [%02X] SOP: [%02X] \n", dcc, state->dmr_fid, state->dmr_so);
-    printw ("| TID: [%8i]     RID: [%8i]", tg, rd);
-
-    if (1 == 1) //figure out what to put here later on for amateur call signs
+    printw ("| ");
+    if (lls < 30)
     {
-      printw (" [");
-      for (short i = 0; i < 5; i++)
-      {
-        printw ("%s", state->dmr_callsign[i]);
-      }
-      printw ("]");
+      printw ("DMR BS - DCC: [%02i] ", dcc);
     }
-    //does this need to be in DATA type?
-    /*
-    if(state->dmr_so & 0x80)
+    else
+    {
+      printw ("DMR MS - DCC: [%02i] ", dcc);
+    }
+
+    printw ("\n");
+    //Slot 1 [0]
+    printw ("| SLOT 1 - ");
+    if (state->dmrburstL != 16 && state->carrier == 1 && state->lasttg > 0 && state->lastsrc > 0)
     {
       attron(COLOR_PAIR(2));
-      printw (" **Emergency** ");
+    }
+    printw ("TGT: [%8i] SRC: [%8i] ", state->lasttg, state->lastsrc);
+    if (state->dmrburstL != 16 && state->carrier == 1 && state->lasttg > 0 && state->lastsrc > 0)
+    {
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
     }
+    printw ("FID: [%02X] SVC: [%02X] ", state->dmr_fid, state->dmr_so);
+    printw ("%s ", DMRBusrtTypes[state->dmrburstL]);
+    printw ("\n");
+    //printw ("|        | "); //10 spaces
+    printw ("| V XTRA | "); //10 spaces
+    //Burger King
+    if(state->dmrburstL == 16 && state->payload_mi == 0 && (state->dmr_so & 0xCF) == 0x40) //4F or CF mask?
+    {
+      attron(COLOR_PAIR(5));
+      printw (" **BP** ");
+      attroff(COLOR_PAIR(5));
+      attron(COLOR_PAIR(3));
+    }
+    //Point
+    if(state->dmrburstL == 16 && state->payload_mi == 0 && state->K > 0 && (state->dmr_so & 0xCF) == 0x40)
+    {
+      attron(COLOR_PAIR(1));
+      printw ("BPK [%3lld] ", state->K);
+      attroff(COLOR_PAIR(1));
+      attron(COLOR_PAIR(3));
+    }
+    //ALG, KeyID, MI
+    if(state->dmrburstL == 16 && state->payload_keyid > 0 && (state->dmr_so & 0xCF) == 0x40)
+    {
+      attron(COLOR_PAIR(1));
+      printw ("ALG: [0x%02X] KEY: [0x%02X] MI: [0x%08X]", state->payload_algid, state->payload_keyid, state->payload_mi);
+      attroff(COLOR_PAIR(1));
+      attron(COLOR_PAIR(3));
+    }
 
-    if(state->dmr_so & 0x40)
+    if(state->dmrburstL == 16 && state->dmr_so == 0x40) //0100 0000
     {
       attron(COLOR_PAIR(2));
       printw (" **ENC** ");
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
     }
-
-    if(state->dmr_so & 0x30)
+    if(state->dmrburstL == 16 && state->dmr_so == 0x80)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **Emergency** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    if(state->dmrburstL == 16 && state->dmr_so == 0x30) //0010 0000
     {
       attron(COLOR_PAIR(2));
       printw (" **Private Call** ");
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
     }
-    */
-    printw("\n");
+    printw ("\n");
+    //Alias Blocks and Embedded GPS
+    //printw ("|        | "); //10 spaces
+    printw ("| D XTRA | ");
+    if(state->dmrburstL == 16) //only during call
+    {
+      attron(COLOR_PAIR(5));
+      for (short i = 0; i < 5; i++)
+      {
+        printw ("%s", state->dmr_callsign[0][i]);
+      }
+      //Embedded GPS (not LRRP)
+      printw ("%s", state->dmr_callsign[0][5] );
+      attroff(COLOR_PAIR(5));
+      if (state->carrier == 1)
+      {
+        attron(COLOR_PAIR(3));
+      }
 
-    //printw ("%s ", state->slot0light);
-    printw ("| SLOT 1 ");
-    if (state->currentslot == 0) //find out how to tell when slot0 has voice
-    {
-      s0last = "Data ";
-      if (strcmp (state->fsubtype, " Slot idle    ") == 0)
+      //LRRP
+      if(state->dmrburstL != 16) //only during data
       {
-        s0last = "Idle ";
+        attron(COLOR_PAIR(5));
+        for (short i = 0; i < 5; i++)
+        {
+          printw ("%s", state->dmr_lrrp[0][i]);
+        }
+        attroff(COLOR_PAIR(5));
+        if (state->carrier == 1)
+        {
+          attron(COLOR_PAIR(3));
+        }
       }
     }
-    printw ("%s ", s0last);
-    //printw ("%s ", state->slot1light);
-    printw ("SLOT 2 ");
-    if (state->currentslot == 1) //find out how to tell when slot1 has voice
+    printw ("\n");
+
+    //Slot 2 [1]
+    if (lls < 30){ //Don't print on MS mode
+    printw ("| SLOT 2 - ");
+    if (state->dmrburstR != 16 && state->carrier == 1 && state->lasttgR > 0 && state->lastsrcR > 0)
     {
-      s1last = "Data ";
-      if (strcmp (state->fsubtype, " Slot idle    ") == 0)
+      attron(COLOR_PAIR(2));
+    }
+    printw ("TGT: [%8i] SRC: [%8i] ", state->lasttgR, state->lastsrcR);
+    if (state->dmrburstR != 16 && state->carrier == 1 && state->lasttgR > 0 && state->lastsrcR > 0)
+    {
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    printw ("FID: [%02X] SVC: [%02X] ", state->dmr_fidR, state->dmr_soR);
+    printw ("%s ", DMRBusrtTypes[state->dmrburstR]);
+    printw ("\n");
+    //printw ("|        | "); //12 spaces
+    printw ("| V XTRA | "); //10 spaces
+
+    //Burger King 2
+    if(state->dmrburstR == 16 && state->payload_miR == 0 && (state->dmr_soR & 0xCF) == 0x40) //4F or CF mask?
+    {
+      attron(COLOR_PAIR(5));
+      printw (" **BP** ");
+      attroff(COLOR_PAIR(5));
+      attron(COLOR_PAIR(3));
+    }
+    //Point 2
+    if(state->dmrburstR == 16 && state->payload_miR == 0 && state->K > 0 && (state->dmr_soR & 0xCF) == 0x40)
+    {
+      attron(COLOR_PAIR(1));
+      printw ("BPK [%3lld] ", state->K);
+      attroff(COLOR_PAIR(1));
+      attron(COLOR_PAIR(3));
+    }
+    //ALG, KeyID, MI 2
+    if(state->dmrburstR == 16 && state->payload_keyidR > 0 && (state->dmr_soR & 0xCF) == 0x40)
+    {
+      attron(COLOR_PAIR(1));
+      printw ("ALG: [0x%02X] KEY: [0x%02X] MI: [0x%08X]", state->payload_algidR, state->payload_keyidR, state->payload_miR);
+      attroff(COLOR_PAIR(1));
+      attron(COLOR_PAIR(3));
+    }
+    //Call Types, may switch to the more robust version later?
+    if(state->dmrburstR == 16 && state->dmr_soR == 0x40) //0100 0000
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **ENC** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    if(state->dmrburstR == 16 && state->dmr_soR == 0x80)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **Emergency** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    if(state->dmrburstR == 16 && state->dmr_soR == 0x30) //0010 0000
+    {
+      attron(COLOR_PAIR(2));
+      printw (" **Private Call** ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+    }
+    printw ("\n");
+    //Alias Blocks and Embedded GPS
+    //printw ("|        | ");
+    printw ("| D XTRA | ");
+    if(state->dmrburstR == 16) //only during call
+    {
+      attron(COLOR_PAIR(5));
+      for (short i = 0; i < 5; i++)
       {
-        s1last = "Idle ";
+        printw ("%s", state->dmr_callsign[1][i]);
+      }
+      //Embedded GPS (not LRRP)
+      printw ("%s", state->dmr_callsign[1][5] );
+      attroff(COLOR_PAIR(5));
+      if (state->carrier == 1)
+      {
+        attron(COLOR_PAIR(3));
       }
     }
-    printw ("%s \n", s1last);
-    /*
-    if (state->dmr_lrrp[3] != NULL)
+    //LRRP
+    if(state->dmrburstR != 16) //only during data
     {
-      printw ("| LRRP -");
-      printw (" %s", state->dmr_lrrp[3]);
-      printw (" %s", state->dmr_lrrp[1]);
-      printw (" %s\n", state->dmr_lrrp[2]);
+      attron(COLOR_PAIR(5));
+      for (short i = 0; i < 5; i++)
+      {
+        printw ("%s", state->dmr_lrrp[1][i]);
+      }
+      attroff(COLOR_PAIR(5));
+      if (state->carrier == 1)
+      {
+        attron(COLOR_PAIR(3));
+      }
     }
-    */
-  }
+    printw ("\n");
+  }  // end if not MS
+  } //end DMR BS Types
 
   //dPMR
   if (lls == 20 || lls == 21 || lls == 22 || lls == 23 ||lls == 24 || lls == 25 || lls == 26 || lls == 27)
@@ -621,97 +817,73 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("TID: [%s] RID: [%s] \n", state->dpmr_target_id, state->dpmr_caller_id);
   }
 
-  if (lls != -1) //is there a synctype 0?
+  if (lls == 6 || lls == 7 || lls == 18 || lls == 19 || lls == 14 || lls == 15)
   {
     printw ("| %s ", SyncTypes[lls]);
     //printw ("%s", state->dmr_branding);
     printw ("\n");
   }
+  //fence bottom
   printw ("------------------------------------------------------------------------------\n");
   //colors off
   if (state->carrier == 1){ //same as above
     attroff(COLOR_PAIR(3));
   }
-  //if (state->carrier == 0){ //same as above
-    //attroff(COLOR_PAIR(1));
-  //}
 
   attron(COLOR_PAIR(4)); //cyan for history
-  //add other interesting info to put here
-  //make Call_Matrix
-  //0 - sync type; 1 - tg/ran; 2 - rid; 3 - slot; 4 - cc; 5 - time(NULL) ;
-
   printw ("--Call History----------------------------------------------------------------\n");
   for (short int j = 0; j < 10; j++)
   {
+    //only print if a valid time was assinged to the matrix
     if ( ((time(NULL) - call_matrix[9-j][5]) < 9999)  )
-    //if (1 == 1)
     {
-    printw ("| #%d %s ", j, SyncTypes[call_matrix[9-j][0]]);
-    if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
-    {
-      printw ("RAN [%2d] ", call_matrix[9-j][1]);
-      printw ("TG [%4d] ", call_matrix[9-j][4]);
-      printw ("RID [%4d] ", call_matrix[9-j][2]);
+      printw ("| %s ", SyncTypes[call_matrix[9-j][0]]);
+      if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
+      {
+        printw ("RAN [%2lld] ", call_matrix[9-j][1]);
+        printw ("TG [%4lld] ", call_matrix[9-j][4]);
+        printw ("RID [%4lld] ", call_matrix[9-j][2]);
+      }
+      //dPMR
+      if (lls == 20 || lls == 21 || lls == 22 || lls == 23 ||lls == 24 || lls == 25 || lls == 26 || lls == 27)
+      {
+        printw ("TGT [%8lld] ", call_matrix[9-j][1]);
+        printw ("SRC [%8lld] ", call_matrix[9-j][2]);
+        printw ("DCC [%2lld] ", call_matrix[9-j][4]);
+      }
+      //P25P1 Voice and Data
+      if (call_matrix[9-j][0] == 0 || call_matrix[9-j][0] == 1)
+      {
+        printw ("TID [%8lld] ", call_matrix[9-j][1]);
+        printw ("RID [%8lld] ", call_matrix[9-j][2]);
+        printw ("NAC [0x%03llX] ", call_matrix[9-j][4]);
+      }
+      //DMR BS Types
+      if (call_matrix[9-j][0] == 12 || call_matrix[9-j][0] == 13 || call_matrix[9-j][0] == 10 || call_matrix[9-j][0] == 11 )
+      {
+        printw ("S[%d] ", call_matrix[9-j][3]);
+        printw ("TGT [%8lld] ", call_matrix[9-j][1]);
+        printw ("SRC [%8lld] ", call_matrix[9-j][2]);
+        printw ("DCC [%02lld] ", call_matrix[9-j][4]);
+      }
+      //DMR MS Types
+      if (call_matrix[9-j][0] == 32 || call_matrix[9-j][0] == 33 || call_matrix[9-j][0] == 34 )
+      {
+        //printw ("S[%d] ", call_matrix[9-j][3]);
+        printw ("TGT [%8lld] ", call_matrix[9-j][1]);
+        printw ("SRC [%8lld] ", call_matrix[9-j][2]);
+        printw ("DCC [%02lld] ", call_matrix[9-j][4]);
+      }
+      printw ("%lld secs ago\n", time(NULL) - call_matrix[9-j][5]);
     }
-    if (lls == 0 || lls == 1 || lls == 12 || lls == 13 || lls == 10 || lls == 11 ) //P25 P1 and DMR
-    {
-      printw ("TID [%8d] ", call_matrix[9-j][1]);
-      printw ("RID [%8d] ", call_matrix[9-j][2]);
-    }
-    if (lls == 20 || lls == 21 || lls == 22 || lls == 23 ||lls == 24 || lls == 25 || lls == 26 || lls == 27) //dPMR
-    {
-      printw ("TID [%8d] ", call_matrix[9-j][1]);
-      printw ("RID [%8d] ", call_matrix[9-j][2]);
-      printw ("DCC [%2d] ", call_matrix[9-j][4]);
-    }
+  } //end Call History
+  //fence bottom
+ printw ("------------------------------------------------------------------------------\n");
+ attroff(COLOR_PAIR(4)); //cyan for history
 
-    //printw ("RID [%08d] ", call_matrix[9-j][2]);
-    //printw ("S %d - ", call_matrix[j][3]);
-    if (call_matrix[9-j][0] == 0 || call_matrix[9-j][0] == 1) //P25P1 Voice
-    {
-      printw ("NAC [0x%3X] ", call_matrix[9-j][4]);
-    }
-    if (call_matrix[9-j][0] == 12 || call_matrix[9-j][0] == 13 || call_matrix[9-j][0] == 10 || call_matrix[9-j][0] == 11 ) //DMR Voice Types
-    {
-      printw ("DCC [%2d] ", call_matrix[9-j][4]);
-    }
-    printw ("%d secs ago\n", time(NULL) - call_matrix[9-j][5]);
-   }
-    //printw("\n");
-  }
-  printw ("------------------------------------------------------------------------------\n");
-  attroff(COLOR_PAIR(4)); //cyan for history
-  //put sync type at very bottom
-  //printw ("%s %s\n", state->ftype, state->fsubtype); //some ftype strings have extra spaces in them
-  //if (state->lastsynctype != -1) //is there a synctype 0?
 
-  //while((c = getch()) != '~') {
-  //  printw ("%c\n",c);}
-  //c = getch();
-  /*
-  if (c = getch() != '~')
-  {
-    printf ("%c\n",c);
-    printf ("closing NCurses");
-    ncursesClose();
-  }
-  */
-  //debug sr printw
-  if (1==2) //disable this later on
-  {
-
-    printw ("sr_0 = %16llX \n", state->sr_0);
-    printw ("sr_1 = %16llX \n", state->sr_1);
-    printw ("sr_2 = %16llX \n", state->sr_2);
-    printw ("sr_3 = %16llX \n", state->sr_3);
-    printw ("sr_4 = %16llX \n", state->sr_4);
-    printw ("sr_5 = %16llX \n", state->sr_5);
-    printw ("sr_6 = %16llX \n", state->sr_6);
-
-  }
-  refresh();
-}
+ refresh();
+} //end ncursesPrinter
 
 void ncursesClose ()
 {

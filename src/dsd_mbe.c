@@ -126,44 +126,78 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
   else
     {
-      mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-#ifdef AMBE_PACKET_OUT
-
-      for(i=0; i<49; i++) {
-          ambe_d_str[i] = ambe_d[i] + '0';
+      //stereo slots and slot 0 (left slot)
+      if (state->currentslot == 0 && opts->dmr_stereo == 1)
+      {
+        mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
       }
-      ambe_d_str[49] = '\0';
-      // print binary string
-      fprintf (stderr, "\n?\t?\t%s\t", ambe_d_str);
-      // print error data
-      fprintf (stderr, "E1: %d; E2: %d; S: %s", state->errs, state->errs2, state->err_str);}
-#endif
-      if (opts->mbe_out_f != NULL)
+      //stereo slots and slot 1 (right slot)
+      if (state->currentslot == 1 && opts->dmr_stereo == 1)
+      {
+        mbe_processAmbe3600x2450Framef (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR, ambe_fr, ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);
+        //just put this in here for troubleshooting for now
+        if (opts->mbe_out_f != NULL)
         {
           saveAmbe2450Data (opts, state, ambe_d);
         }
+      }
+      if (opts->dmr_stereo == 0)
+      {
+        mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+        if (opts->mbe_out_f != NULL)
+        {
+          saveAmbe2450Data (opts, state, ambe_d);
+        }
+      }
+
+
     }
 
   if (opts->errorbars == 1)
     {
       //state->err_buf = state->err_str; //make comy to compare, and only print when comparison differs?? THIS HERE HERE
       //strncpy (state->err_buf, state->err_str, sizeof(state->err_str)); //is this the correct placement for this? want it just before err_str is set?
-      fprintf (stderr, "%s", state->err_str); //this the actual error 'bar' ==== printer, find way to keep this entire string from printing constantly unless err_str changes
+      //fprintf (stderr, "%s", state->err_str); //this the actual error 'bar' ==== printer, find way to keep this entire string from printing constantly unless err_str changes
       //fprintf (stderr, "%s", state->err_buf);
     }
 
   state->debug_audio_errors += state->errs2;
-
-  processAudio (opts, state);
-  if (opts->wav_out_f != NULL)
-    {
-      writeSynthesizedVoice (opts, state);
-    }
-
-  if (opts->audio_out == 1)
+  state->debug_audio_errorsR += state->errs2R;
+  if (opts->dmr_stereo == 1 && state->currentslot == 0)
+  {
+    processAudio (opts, state);
+    if (opts->audio_out == 1)
     {
       playSynthesizedVoice (opts, state);
     }
+  }
+  if (opts->dmr_stereo == 1 && state->currentslot == 1)
+  {
+    processAudioR (opts, state);
+    if (opts->audio_out == 1)
+    {
+      playSynthesizedVoiceR (opts, state);
+    }
+  }
+  if (opts->dmr_stereo == 0)
+  {
+    processAudio (opts, state);
+    if (opts->audio_out == 1)
+    {
+      playSynthesizedVoice (opts, state);
+    }
+  }
+  if (opts->wav_out_f != NULL && opts->dmr_stereo == 0)
+  {
+    writeSynthesizedVoice (opts, state);
+  }
+  /*
+  if (opts->audio_out == 1)
+  {
+    playSynthesizedVoice (opts, state);
+  }
+  */
 }
 
 /* This function decipher data */

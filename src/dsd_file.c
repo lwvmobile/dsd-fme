@@ -76,7 +76,6 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   for (i = 0; i < 7; i++) //using 7 seems to break older amb files where it was 6, need to test 7 on 7 some more
     {
       b = 0;
-
       for (j = 0; j < 8; j++)
         {
           b = b << 1;
