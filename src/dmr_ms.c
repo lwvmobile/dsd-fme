@@ -267,7 +267,10 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   }
 
-  if ( (strcmp (sync, DMR_MS_VOICE_SYNC) == 0) ) //
+  //if ( (strcmp (sync, DMR_MS_VOICE_SYNC) == 0) )
+  //fixed to compensate for inverted signal
+  if ( ((strcmp (sync, DMR_MS_VOICE_SYNC) == 0) && opts->inverted_dmr == 0) || ((strcmp (sync, DMR_MS_DATA_SYNC) == 0) && opts->inverted_dmr == 1) )
+
   {
     if (internalslot == 0)
     {
@@ -321,7 +324,10 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   }
 
   //check for sync pattern here after collected the rest of the payload, decide what to do with it
-  if ( (strcmp (sync, DMR_MS_DATA_SYNC) == 0) )
+  //if ( (strcmp (sync, DMR_MS_DATA_SYNC) == 0) )
+  //fixed to compensate for inverted signal
+  if ( ((strcmp (sync, DMR_MS_DATA_SYNC) == 0) && opts->inverted_dmr == 0) ||
+       ((strcmp (sync, DMR_MS_VOICE_SYNC) == 0) && opts->inverted_dmr == 1) )
   {
     fprintf (stderr,"%s ", getTime());
     if (internalslot == 0)
@@ -329,7 +335,11 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
       sprintf(state->slot1light, "[slot1]");
       sprintf(state->slot2light, " slot2 ");
       //fprintf (stderr,"Sync: +DMR  [slot1]  slot2  | Color Code=%02d | DMRSTEREO | MS Data  ", state->color_code);
-      fprintf (stderr,"Sync: +DMR  ");
+      if (opts->inverted_dmr == 0)
+      {
+        fprintf (stderr,"Sync: +DMR  ");
+      }
+      else fprintf (stderr,"Sync: -DMR  ");
       //test with vc1 reset disabled, if all is well, leave disabled
       //vc1 = 1;
     }
@@ -338,7 +348,11 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
       sprintf(state->slot2light, "[slot2]");
       sprintf(state->slot1light, " slot1 ");
       //fprintf (stderr,"Sync: +DMR   slot1  [slot2] | Color Code=%02d | DMRSTEREO | Data  ", state->color_code);
-      fprintf (stderr,"Sync: +DMR  ");
+      if (opts->inverted_dmr == 0)
+      {
+        fprintf (stderr,"Sync: +DMR  ");
+      }
+      else fprintf (stderr,"Sync: -DMR  ");
       //test with vc1 reset disabled, if all is well, leave disabled
       //vc2 = 1;
     }
@@ -351,19 +365,34 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     goto END;
   }
 
-  if( (strcmp (sync, DMR_MS_DATA_SYNC) != 0) && internalslot == activeslot && vc1 < 7) //only play voice no MS Data Sync and vc1 below 6 (no voice resync)
+  //if( (strcmp (sync, DMR_MS_DATA_SYNC) != 0) && internalslot == activeslot && vc1 < 7)
+  //only play voice no MS Data Sync and vc1 below 6 (no voice resync)
+  //fixed to compensate for inverted signal
+  if( ( ( ((strcmp (sync, DMR_MS_DATA_SYNC) != 0) && opts->inverted_dmr == 0) ||
+          ((strcmp (sync, DMR_MS_VOICE_SYNC) != 0) && opts->inverted_dmr == 1)  ) )
+            && internalslot == activeslot && vc1 < 7)
+
   {
 
     skipcount = 0; //reset skip count if processing voice frames
     fprintf (stderr,"%s ", getTime());
-    if (internalslot == 0)
+    if (internalslot == 0 && opts->inverted_dmr == 0)
     {
       fprintf (stderr,"Sync: +DMR  [slot1]  slot2  | Color Code=%02d | DMRSTEREO | VC%d \n", state->color_code, vc1);
     }
 
-    if (internalslot == 1)
+    if (internalslot == 0 && opts->inverted_dmr == 1)
+    {
+      fprintf (stderr,"Sync: -DMR  [slot1]  slot2  | Color Code=%02d | DMRSTEREO | VC%d \n", state->color_code, vc1);
+    }
+
+    if (internalslot == 1 && opts->inverted_dmr == 0)
     {
       fprintf (stderr,"Sync: +DMR   slot1  [slot2] | Color Code=%02d | DMRSTEREO | VC%d \n", state->color_code, vc2);
+    }
+    if (internalslot == 1 && opts->inverted_dmr == 1)
+    {
+      fprintf (stderr,"Sync: -DMR   slot1  [slot2] | Color Code=%02d | DMRSTEREO | VC%d \n", state->color_code, vc2);
     }
     if (internalslot == 0 && vc1 == 6) //presumably when full (and no sync issues)
     {
@@ -586,7 +615,12 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 
   fprintf (stderr, "MS MODE ");
   fprintf (stderr,"%s ", getTime());
-  fprintf (stderr,"Sync: +DMR                  |  Frame Sync   | DMRSTEREO | VC1 FS \n");
+  //fprintf (stderr,"Sync: +DMR                  |  Frame Sync   | DMRSTEREO | VC1 FS \n");
+  if (opts->inverted_dmr == 0)
+  {
+    fprintf (stderr,"Sync: +DMR                  |  Frame Sync   | DMRSTEREO | VC1 FS \n");
+  }
+  else fprintf (stderr,"Sync: -DMR                  |  Frame Sync   | DMRSTEREO | VC1 FS \n");
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
@@ -641,7 +675,11 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   fprintf (stderr, "MS MODE ");
   fprintf (stderr, "%s ", getTime());
   //fprintf (stderr, "Sync: +MS DATA              | Color Code=XX | DMRSTEREO | Data  ");
-  fprintf (stderr, "Sync: +DMR  ");
+  if (opts->inverted_dmr == 0)
+  {
+    fprintf (stderr,"Sync: +DMR  ");
+  }
+  else fprintf (stderr,"Sync: -DMR  ");
   //fprintf (stderr, "\n                             ");
 
   //sprintf for slot 1, doesn't matter, just makes print out of data look uniform setting ahead of time

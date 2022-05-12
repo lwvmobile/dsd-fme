@@ -828,7 +828,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                return (11);
+                return (11); //11
               }
             }
             if(strcmp (synctest, DMR_DIRECT_MODE_TS1_DATA_SYNC) == 0)

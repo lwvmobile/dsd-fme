@@ -52,7 +52,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   //using the estimate_symbol method for the dmr_payload_p buffer causes sync
   //issues with P25, so only do it when frame_p25p1 == 0, or -fr option
   //temp fix to only use dmr_payload_p buffer when no inversion expected, otherwise use dibit_buf
-  if (opts->frame_p25p1 == 0 && opts->inverted_dmr == 0) //opts->frame_p25p1 == 0
+  if (opts->frame_p25p1 == 0 && opts->inverted_dmr == 0) //opts->frame_p25p1 == 0 && opts->inverted_dmr == 0
   {
     dibit_p = state->dmr_payload_p - 90;
   }
@@ -293,7 +293,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     }
     if (opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      //dibit = (dibit ^ 2);
     }
     if (state->dmr_stereo == 1)
     {
@@ -391,7 +391,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     }
     if (opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      //dibit = (dibit ^ 2);
     }
     if (state->dmr_stereo == 1)
     {
