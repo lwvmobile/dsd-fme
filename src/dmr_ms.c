@@ -586,7 +586,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 
   fprintf (stderr, "MS MODE ");
   fprintf (stderr,"%s ", getTime());
-  fprintf (stderr,"Sync: +DMR                  | Color Code=XX | DMRSTEREO | VC1 FS \n");
+  fprintf (stderr,"Sync: +DMR                  |  Frame Sync   | DMRSTEREO | VC1 FS \n");
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);

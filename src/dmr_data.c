@@ -51,10 +51,12 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   dibit_p = state->dibit_buf_p - 90;
   //using the estimate_symbol method for the dmr_payload_p buffer causes sync
   //issues with P25, so only do it when frame_p25p1 == 0, or -fr option
-  if (opts->frame_p25p1 == 0) //opts->frame_p25p1 == 0
+  //temp fix to only use dmr_payload_p buffer when no inversion expected, otherwise use dibit_buf
+  if (opts->frame_p25p1 == 0 && opts->inverted_dmr == 0) //opts->frame_p25p1 == 0
   {
     dibit_p = state->dmr_payload_p - 90;
   }
+
 
   // CACH
   for (i = 0; i < 12; i++)
@@ -312,7 +314,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   //fprintf(stderr, "| Color Code=%02d ", (int)state->color_code);
 
   /* Reconstitute the burst type */
-  //consider assigning thsi only when slottypeok or similar check passes, eliminate bad burst types from decoding randomly
+  //consider assigning this only when slottypeok or similar check passes, eliminate bad burst types from decoding randomly
   burst = (unsigned int)((SlotType[4] << 3) + (SlotType[5] << 2) + (SlotType[6] << 1) + SlotType[7]);
   if (state->currentslot == 0)
   {
@@ -323,55 +325,12 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     state->dmrburstR = burst;
   }
 
-
   /* Reconstitute the burst type */
   bursttype[0] = SlotType[4] + '0';
   bursttype[1] = SlotType[5] + '0';
   bursttype[2] = SlotType[6] + '0';
   bursttype[3] = SlotType[7] + '0';
   bursttype[4] = '\0';
-
-  /* //delete this chunk later
-  if (state->dmr_stereo == 3) //may not need this any longer
-  {
-    burst = (state->dmr_stereo_payload[63] << 2) | (state->dmr_stereo_payload[64]);
-    //this whole split for getting burst and burst type is makes no sense
-    //why not just use burst
-    bursttype[0] = (((state->dmr_stereo_payload[63] >> 1) & 1) + '0');
-    bursttype[1] = (((state->dmr_stereo_payload[63] >> 0) & 1) + '0');
-    bursttype[2] = (((state->dmr_stereo_payload[64] >> 1) & 1) + '0');
-    bursttype[3] = (((state->dmr_stereo_payload[64] >> 0) & 1) + '0');
-    bursttype[4] = '\0';
-    //fprintf(stderr, "BURST1 = %04b ", burst);
-  }
-  //figure out why the sync is wrong when dumping the payload to processDMRdata for MS Data
-  //I think its a conversion issue with the payload(chat) from the dibit buffer (int *)
-  //actually, its the dibit buffer storing as 1 and 3 only (GFSK) when sync drops
-  //made a seperate dmr buffer, but still, when sync loss and regain, takes a few syncs to calibrate center/umid/lmid properly
-  //getting accurate MS data AND leading BS data may be impossible without saving the symbols, calibrating, then going back
-  //and running the buffer payload, but I honestly don't know right now, probably easier to start from stratch than fix this
-  if (state->dmr_ms_mode == 7)
-  {
-    burst = (unsigned int)((SlotType[4] << 3) | (SlotType[5] << 2) | (SlotType[6] << 1) | SlotType[7]);
-    bursttype[0] = SlotType[4] + '0';
-    bursttype[1] = SlotType[5] + '0';
-    bursttype[2] = SlotType[6] + '0';
-    bursttype[3] = SlotType[7] + '0';
-    bursttype[4] = '\0';
-    //fprintf(stderr, "BURST1 = %04b ", burst);
-  }
-
-  if (state->dmr_stereo == 3)
-  {
-    fprintf(stderr, "BURST2 = %b%b%b%b Slot Dump ", SlotType[4], SlotType[5], SlotType[6], SlotType[7] );
-    fprintf(stderr, " Slot Dump = ");
-    for (i = 0; i < 20; i++)
-    {
-      fprintf(stderr, "%b", SlotType[i]);
-    }
-    fprintf(stderr, "\n ");
-  }
-  */
 
   if (strcmp (bursttype, "0000") == 0)
   {
@@ -554,7 +513,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     /* Burst = Slot idle */
     case 0b1001:
     {
-      if(state->color_code_ok) state->dmr_color_code = state->color_code; //try setting this on idle if crc ok
+      if(state->color_code_ok && state->dmr_stereo == 0) state->dmr_color_code = state->color_code; //try setting this on idle if crc ok
       break;
     }
 
