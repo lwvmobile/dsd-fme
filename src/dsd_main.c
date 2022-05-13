@@ -68,6 +68,9 @@ comp (const void *a, const void *b)
     return 1;
 }
 
+//struct for checking existence of directory to write to
+struct stat st = {0};
+
 void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
@@ -916,7 +919,13 @@ main (int argc, char **argv)
         case 'd':
           strncpy(opts.mbe_out_dir, optarg, 1023);
           opts.mbe_out_dir[1023] = '\0';
-          fprintf (stderr,"Writing mbe data files to directory %s\n", opts.mbe_out_dir);
+          if (stat(opts.mbe_out_dir, &st) == -1)
+          {
+            fprintf (stderr, "-d %s directory does not exist\n", opts.mbe_out_dir);
+            fprintf (stderr, "Creating directory %s to save MBE files\n", opts.mbe_out_dir);
+            mkdir(opts.mbe_out_dir, 0700); //user read write execute, needs execute for some reason or segfault
+          }
+          else fprintf (stderr,"Writing mbe data files to directory %s\n", opts.mbe_out_dir);
           break;
         case 'c':
           opts.rtlsdr_center_freq = (uint32_t)atofs(optarg);
