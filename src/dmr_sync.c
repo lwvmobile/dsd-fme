@@ -1716,7 +1716,7 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
   }
   else {
     fprintf (stderr, "%s ", KRED);
-    fprintf (stderr, (" (PI CRC Fail, FEC Fail)"));
+    fprintf (stderr, ("\n (PI CRC Fail, FEC Fail)"));
     fprintf (stderr, "%s ", KNRM);
   }
 

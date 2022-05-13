@@ -51,8 +51,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //memset(&state->TS2SuperFrame, 0, sizeof(TimeSlotVoiceSuperFrame_t));
 
   //Init slot lights
-  sprintf (state->slot1light, " slot0 ");
-  sprintf (state->slot2light, " slot1 ");
+  sprintf (state->slot1light, " slot1 ");
+  sprintf (state->slot2light, " slot2 ");
 
   //Init the color code status
   state->color_code_ok = 0;
@@ -346,7 +346,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       {
         fprintf (stderr,"Sync: +DMR   slot1  [SLOT2] |               | DMRSTEREO | VC%d \n",vc2);
       }
-      else fprintf (stderr,"Sync: +DMR   slot1  [SLOT2] |               | DMRSTEREO | VC%d \n",vc2);
+      else fprintf (stderr,"Sync: -DMR   slot1  [SLOT2] |               | DMRSTEREO | VC%d \n",vc2);
     }
     if (internalslot == 0 && vc1 == 6) //presumably when full (and no sync issues)
     {
