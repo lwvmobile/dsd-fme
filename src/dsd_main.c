@@ -102,8 +102,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->repeat = 0;
   state->nac = 0;
   state->numtdulc = 0;
-  sprintf (state->slot0light, " slot0 ");
-  sprintf (state->slot1light, " slot1 ");
+  //sprintf (state->slot0light, " slot0 ");
+  //sprintf (state->slot0light, " slot0 ");
+  sprintf (state->slot0light, "");
+  sprintf (state->slot1light, "");
   state->firstframe = 0;
   if (opts->audio_gain == (float) 0)
   {
@@ -126,6 +128,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   sprintf (state->keyid, "________________");
   mbe_initMbeParms (state->cur_mp, state->prev_mp, state->prev_mp_enhanced);
   mbe_initMbeParms (state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2);
+
+  state->dmr_ms_mode = 0;
 }
 
 void
@@ -307,8 +311,10 @@ initState (dsd_state * state)
   state->optind = 0;
   state->numtdulc = 0;
   state->firstframe = 0;
-  sprintf (state->slot0light, " slot0 ");
-  sprintf (state->slot1light, " slot1 ");
+  //sprintf (state->slot0light, " slot0 ");
+  //sprintf (state->slot1light, " slot1 ");
+  sprintf (state->slot0light, "");
+  sprintf (state->slot1light, "");
   state->aout_gain = 25;
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
@@ -394,6 +400,7 @@ initState (dsd_state * state)
   state->dmr_soR  = 0;
   state->dmr_fid  = 0;
   state->dmr_fidR = 0;
+  state->dmr_ms_mode = 0;
 
   memset(state->dstarradioheader, 0, 41);
 

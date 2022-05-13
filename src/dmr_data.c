@@ -78,14 +78,15 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
       /* Change the current slot only if we are in relayed mode (not in direct mode) */
       if(state->directmode == 0) state->currentslot = (1 & (dibit >> 1));      // bit 1
 
-      if (state->currentslot == 0)
+      if (state->currentslot == 0 && state->dmr_ms_mode == 0)
       {
         state->slot1light[0] = '[';
         state->slot1light[6] = ']';
         state->slot2light[0] = ' ';
         state->slot2light[6] = ' ';
       }
-      else
+      //else
+      if (state->currentslot == 1 && state->dmr_ms_mode == 0)
       {
         state->slot2light[0] = '[';
         state->slot2light[6] = ']';
@@ -97,8 +98,8 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
       if(state->hardslot != 9 && state->hardslot != state->currentslot)
       //if(1==1)
       {
-        fprintf (stderr, " Current Slot = %d", state->currentslot + 1);
-        fprintf (stderr, "\n"); //line break after breaking out of jail
+        //fprintf (stderr, " Current Slot = %d", state->currentslot + 1);
+        //fprintf (stderr, "\n"); //line break after breaking out of jail
         //goto JUMP;
       }
     }
@@ -255,7 +256,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   fprintf(stderr, "%s ", syncbits);
 #endif
 
-  if((strcmp (sync, DMR_BS_DATA_SYNC) == 0) || (strcmp (sync, DMR_MS_DATA_SYNC) == 0))
+  if((strcmp (sync, DMR_BS_DATA_SYNC) == 0) )//|| (strcmp (sync, DMR_MS_DATA_SYNC) == 0))
   {
     if (state->currentslot == 0)
     {
@@ -279,7 +280,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     sprintf(state->slot2light, "[sLoT2]");
   }
 
-  if (opts->errorbars == 1)
+  if (opts->errorbars == 1 && state->dmr_ms_mode == 0)
   {
     fprintf(stderr, "%s %s ", state->slot1light, state->slot2light);
   }
