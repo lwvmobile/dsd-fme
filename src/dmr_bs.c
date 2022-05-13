@@ -51,8 +51,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //memset(&state->TS2SuperFrame, 0, sizeof(TimeSlotVoiceSuperFrame_t));
 
   //Init slot lights
-  sprintf (state->slot0light, " slot0 ");
-  sprintf (state->slot1light, " slot1 ");
+  sprintf (state->slot1light, " slot0 ");
+  sprintf (state->slot2light, " slot1 ");
 
   //Init the color code status
   state->color_code_ok = 0;

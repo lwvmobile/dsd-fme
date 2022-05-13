@@ -390,7 +390,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       fprintf (stderr,"Demod mode:     %s                Nac:                     %4X\n", modulation, state->nac);
                       fprintf (stderr,"Frame Type:    %s        Talkgroup:            %7i\n", state->ftype, state->lasttg);
                       fprintf (stderr,"Frame Subtype: %s       Source:          %12i\n", state->fsubtype, state->lastsrc);
-                      fprintf (stderr,"TDMA activity:  %s %s     Voice errors: %s\n", state->slot0light, state->slot1light, state->err_str);
+                      fprintf (stderr,"TDMA activity:  %s %s     Voice errors: %s\n", state->slot1light, state->slot2light, state->err_str);
                       fprintf (stderr,"+----------------------------------------------------------------+\n");
                       for (i = 0; i < 10; i++)
                         {

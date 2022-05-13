@@ -200,8 +200,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
           sprintf (state->fsubtype, " VOICE        ");
           if (opts->dmr_stereo == 0 && state->synctype < 32) // -T option for DMR (TDMA) stereo
           {
-            sprintf (state->slot0light, " slot0 ");
             sprintf (state->slot1light, " slot1 ");
+            sprintf (state->slot2light, " slot2 ");
             processDMRvoice (opts, state);
           }
           if (opts->dmr_stereo == 0 && state->synctype == 32)
@@ -241,16 +241,16 @@ processFrame (dsd_opts * opts, dsd_state * state)
         {
           closeMbeOutFile (opts, state);
           state->err_str[0] = 0;
-          sprintf (state->slot0light, " slot0 ");
           sprintf (state->slot1light, " slot1 ");
+          sprintf (state->slot2light, " slot2 ");
           processDMRdata (opts, state);
         }
         //switch dmr_stereo to 0 when handling BS data frame syncs with processDMRdata
         if (opts->dmr_stereo == 1)
         {
           state->dmr_stereo = 0; //set the state to zero for handling pure data frames
-          sprintf (state->slot0light, " slot0 ");
           sprintf (state->slot1light, " slot1 ");
+          sprintf (state->slot2light, " slot2 ");
           processDMRdata (opts, state);
         }
       }

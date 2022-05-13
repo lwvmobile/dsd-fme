@@ -104,8 +104,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->numtdulc = 0;
   //sprintf (state->slot0light, " slot0 ");
   //sprintf (state->slot0light, " slot0 ");
-  sprintf (state->slot0light, "");
   sprintf (state->slot1light, "");
+  sprintf (state->slot2light, "");
   state->firstframe = 0;
   if (opts->audio_gain == (float) 0)
   {
@@ -313,8 +313,8 @@ initState (dsd_state * state)
   state->firstframe = 0;
   //sprintf (state->slot0light, " slot0 ");
   //sprintf (state->slot1light, " slot1 ");
-  sprintf (state->slot0light, "");
   sprintf (state->slot1light, "");
+  sprintf (state->slot2light, "");
   state->aout_gain = 25;
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
