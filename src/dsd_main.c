@@ -515,7 +515,7 @@ liveScanner (dsd_opts * opts, dsd_state * state)
 //probably need to dig a little deeper, maybe inlvl releated?
 if (opts->audio_in_type == 1)
 {
-  opts->pulse_digi_rate_out = 48000; //change to 48K/1 for STDIN input
+  opts->pulse_digi_rate_out = 8000; //revert to 8K/1 for STDIN input, sometimes crackles when upsampling
   opts->pulse_digi_out_channels = 1;
   if (opts->dmr_stereo == 1)
   {
