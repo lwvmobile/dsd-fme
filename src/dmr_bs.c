@@ -50,6 +50,10 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //memset(&state->TS1SuperFrame, 0, sizeof(TimeSlotVoiceSuperFrame_t));
   //memset(&state->TS2SuperFrame, 0, sizeof(TimeSlotVoiceSuperFrame_t));
 
+  //Init slot lights
+  sprintf (state->slot1light, " slot1 ");
+  sprintf (state->slot2light, " slot2 ");
+
   //Init the color code status
   state->color_code_ok = 0;
 
@@ -69,7 +73,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     dibit = getDibit(opts, state);
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      //dibit = (dibit ^ 2);
     }
     cachdata[i] = dibit;
     state->dmr_stereo_payload[i] = dibit;
@@ -93,7 +97,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     dibit = getDibit(opts, state);
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      //dibit = (dibit ^ 2);
     }
     state->dmr_stereo_payload[i+12] = dibit;
     redundancyA[i] = dibit;
@@ -135,7 +139,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     dibit = getDibit(opts, state);
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      //dibit = (dibit ^ 2);
     }
     state->dmr_stereo_payload[i+48] = dibit;
     ambe_fr2[*w][*x] = (1 & (dibit >> 1)); // bit 1
@@ -155,7 +159,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     dibit = getDibit(opts, state);
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      //dibit = (dibit ^ 2);
     }
     state->dmr_stereo_payload[i+66] = dibit;
     syncdata[(2*i)]   = (1 & (dibit >> 1));  // bit 1
@@ -185,6 +189,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   }
 
   sync[24] = 0;
+
   EmbeddedSignallingOk = -1;
   if(QR_16_7_6_decode(EmbeddedSignalling))
   {
@@ -192,9 +197,10 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   }
 
   internalcolorcode = 69; //set so we know if this value is being set properly
-  if(EmbeddedSignallingOk == 1)
+  //state->color_code = 69;
+  if( EmbeddedSignallingOk == 1 ) //don't set on 1?
   {
-    state->color_code = (unsigned int)((EmbeddedSignalling[0] << 3) + (EmbeddedSignalling[1] << 2) + (EmbeddedSignalling[2] << 1) + EmbeddedSignalling[3]);
+    //state->color_code = (unsigned int)((EmbeddedSignalling[0] << 3) + (EmbeddedSignalling[1] << 2) + (EmbeddedSignalling[2] << 1) + EmbeddedSignalling[3]);
     internalcolorcode = (unsigned int)((EmbeddedSignalling[0] << 3) + (EmbeddedSignalling[1] << 2) + (EmbeddedSignalling[2] << 1) + EmbeddedSignalling[3]);
     state->color_code_ok = EmbeddedSignallingOk;
 
@@ -215,7 +221,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     dibit = getDibit(opts, state);
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      //dibit = (dibit ^ 2);
     }
     state->dmr_stereo_payload[i+90] = dibit;
     ambe_fr2[*w][*x] = (1 & (dibit >> 1)); // bit 1
@@ -241,7 +247,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     dibit = getDibit(opts, state);
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      //dibit = (dibit ^ 2);
     }
     state->dmr_stereo_payload[i+108] = dibit;
     ambe_fr3[*w][*x] = (1 & (dibit >> 1)); // bit 1
@@ -255,7 +261,10 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   }
 
   //reset vc counters to 1 if new voice sync frame on each slot
-  if ( (strcmp (sync, DMR_BS_VOICE_SYNC) == 0)  )
+  //fixed to compensate for inverted signal
+  if ( strcmp (sync, DMR_BS_VOICE_SYNC) == 0)
+  //if ( ( strcmp (sync, DMR_BS_VOICE_SYNC) == 0 && opts->inverted_dmr == 0 ) ||
+  //     ( strcmp (sync, DMR_BS_DATA_SYNC)  == 0 && opts->inverted_dmr == 1) )
   {
     if (internalslot == 0)
     {
@@ -268,7 +277,10 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   }
 
   //check for sync pattern here after collected the rest of the payload, decide what to do with it
-  if ( (strcmp (sync, DMR_BS_DATA_SYNC) == 0) )
+  //fixed to compensate for inverted signal
+  if ( strcmp (sync, DMR_BS_DATA_SYNC) == 0 )
+  //if ( ( strcmp (sync, DMR_BS_DATA_SYNC)  == 0 && opts->inverted_dmr == 0) ||
+  //     ( strcmp (sync, DMR_BS_VOICE_SYNC) == 0 && opts->inverted_dmr == 1)  )
   {
     fprintf (stderr,"%s ", getTime());
     if (internalslot == 0)
@@ -276,7 +288,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       sprintf(state->slot1light, "[slot1]");
       sprintf(state->slot2light, " slot2 ");
       //fprintf (stderr,"Sync: +DMR  [slot1]  slot2  | Color Code=%02d | DMRSTEREO | Data  ", state->color_code);
-      fprintf (stderr,"Sync: +DMR  ");
+      //fprintf (stderr,"Sync: +DMR  ");
+      if (opts->inverted_dmr == 0)
+      {
+        fprintf (stderr,"Sync: +DMR  ");
+      }
+      else fprintf (stderr,"Sync: -DMR  ");
       //constantly reset the vc counter to 1 each data frame in anticipation of new voice frame
       vc1 = 1;
     }
@@ -285,7 +302,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       sprintf(state->slot2light, "[slot2]");
       sprintf(state->slot1light, " slot1 ");
       //fprintf (stderr,"Sync: +DMR   slot1  [slot2] | Color Code=%02d | DMRSTEREO | Data  ", state->color_code);
-      fprintf (stderr,"Sync: +DMR  ");
+      //fprintf (stderr,"Sync: +DMR  ");
+      if (opts->inverted_dmr == 0)
+      {
+        fprintf (stderr,"Sync: +DMR  ");
+      }
+      else fprintf (stderr,"Sync: -DMR  ");
       //constantly reset the vc counter to 1 each data frame in anticipation of new voice frame
       vc2 = 1;
     }
@@ -293,8 +315,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     skipcount++; //after 6 data frames, drop back to getFrameSync and process subsequent data with processDMRdata
     goto SKIP;
   }
-
-  if( (strcmp (sync, DMR_BS_DATA_SYNC) != 0) ) //only play voice no data sync // || (strcmp (sync, DMR_MS_DATA_SYNC) != 0)
+  //only play voice on no data sync
+  //fixed to compensate for inverted signal
+  if (strcmp (sync, DMR_BS_DATA_SYNC) != 0)
+  //if( ( strcmp (sync, DMR_BS_DATA_SYNC)  != 0 && opts->inverted_dmr == 0)  ||
+  //    ( strcmp (sync, DMR_BS_VOICE_SYNC) != 0 && opts->inverted_dmr == 1)  )
   {
     if (EmbeddedSignallingOk == 0)
     {
@@ -305,13 +330,23 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0)
     {
       state->dmrburstL = 16; //use 16 for Voice?
-      fprintf (stderr,"Sync: +DMR  [slot1]  slot2  | Color Code=%02d | DMRSTEREO | VC%d \n", state->color_code, vc1);
+      //fprintf (stderr,"Sync: +DMR  [slot1]  slot2  | Color Code=%02d | DMRSTEREO | VC%d \n", state->dmr_color_code, vc1);
+      if (opts->inverted_dmr == 0)
+      {
+        fprintf (stderr,"Sync: +DMR  [SLOT1]  slot2  |               | DMRSTEREO | VC%d \n",vc1);
+      }
+      else fprintf (stderr,"Sync: -DMR  [SLOT1]  slot2  |               | DMRSTEREO | VC%d \n",vc1);
     }
 
     if (internalslot == 1)
     {
       state->dmrburstR = 16; //use 16 for Voice?
-      fprintf (stderr,"Sync: +DMR   slot1  [slot2] | Color Code=%02d | DMRSTEREO | VC%d \n", state->color_code, vc2);
+      //fprintf (stderr,"Sync: +DMR   slot1  [slot2] | Color Code=%02d | DMRSTEREO | VC%d \n", state->dmr_color_code, vc2);
+      if (opts->inverted_dmr == 0)
+      {
+        fprintf (stderr,"Sync: +DMR   slot1  [SLOT2] |               | DMRSTEREO | VC%d \n",vc2);
+      }
+      else fprintf (stderr,"Sync: -DMR   slot1  [SLOT2] |               | DMRSTEREO | VC%d \n",vc2);
     }
     if (internalslot == 0 && vc1 == 6) //presumably when full (and no sync issues)
     {
@@ -444,7 +479,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     dibit = getDibit(opts, state);
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      //dibit = (dibit ^ 2);
     }
     ambe_fr3[*w][*x] = (1 & (dibit >> 1)); // bit 1
     ambe_fr3[*y][*z] = (1 & dibit);        // bit 0
@@ -458,7 +493,12 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 
   //fprintf (stderr,"\n%s ", getTime());
   fprintf (stderr,"%s ", getTime());
-  fprintf (stderr,"Sync: +DMR                  |  Frame Sync   | DMRSTEREO | VC1 FS \n");
+  if (opts->inverted_dmr == 0)
+  {
+    fprintf (stderr,"Sync: +DMR                  |  Frame Sync   | DMRSTEREO | VC1 FS \n");
+  }
+  else fprintf (stderr,"Sync: -DMR                  |  Frame Sync   | DMRSTEREO | VC1 FS \n");
+  //fprintf (stderr,"Sync: +DMR                  |  Frame Sync   | DMRSTEREO | VC1 FS \n");
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
   dmrBS (opts, state); //bootstrap into full TDMA frame for BS mode
 

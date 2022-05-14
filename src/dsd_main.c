@@ -68,6 +68,9 @@ comp (const void *a, const void *b)
     return 1;
 }
 
+//struct for checking existence of directory to write to
+struct stat st = {0};
+
 void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
@@ -102,8 +105,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->repeat = 0;
   state->nac = 0;
   state->numtdulc = 0;
-  sprintf (state->slot0light, " slot0 ");
-  sprintf (state->slot1light, " slot1 ");
+  //sprintf (state->slot0light, " slot0 ");
+  //sprintf (state->slot0light, " slot0 ");
+  sprintf (state->slot1light, "");
+  sprintf (state->slot2light, "");
   state->firstframe = 0;
   if (opts->audio_gain == (float) 0)
   {
@@ -126,6 +131,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   sprintf (state->keyid, "________________");
   mbe_initMbeParms (state->cur_mp, state->prev_mp, state->prev_mp_enhanced);
   mbe_initMbeParms (state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2);
+
+  state->dmr_ms_mode = 0;
 }
 
 void
@@ -307,8 +314,10 @@ initState (dsd_state * state)
   state->optind = 0;
   state->numtdulc = 0;
   state->firstframe = 0;
-  sprintf (state->slot0light, " slot0 ");
-  sprintf (state->slot1light, " slot1 ");
+  //sprintf (state->slot0light, " slot0 ");
+  //sprintf (state->slot1light, " slot1 ");
+  sprintf (state->slot1light, "");
+  sprintf (state->slot2light, "");
   state->aout_gain = 25;
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
@@ -394,6 +403,7 @@ initState (dsd_state * state)
   state->dmr_soR  = 0;
   state->dmr_fid  = 0;
   state->dmr_fidR = 0;
+  state->dmr_ms_mode = 0;
 
   memset(state->dstarradioheader, 0, 41);
 
@@ -410,90 +420,90 @@ initState (dsd_state * state)
 void
 usage ()
 {
-  fprintf (stderr, "Github Build Version: %s \n", GIT_TAG);
-  fprintf (stderr,"\n");
-  fprintf (stderr,"Usage: dsd [options]            Live scanner mode\n");
-  fprintf (stderr,"  or:  dsd [options] -r <files> Read/Play saved mbe data from file(s)\n");
-  fprintf (stderr,"  or:  dsd -h                   Show help\n");
-  fprintf (stderr,"\n");
-  fprintf (stderr,"Display Options:\n");
-  fprintf (stderr,"  -e            Show Frame Info and errorbars (default)\n");
-  fprintf (stderr,"  -pe           Show P25 encryption sync bits\n");
-  fprintf (stderr,"  -pl           Show P25 link control bits\n");
-  fprintf (stderr,"  -ps           Show P25 status bits and low speed data\n");
-  fprintf (stderr,"  -pt           Show P25 talkgroup info\n");
-  fprintf (stderr,"  -q            Don't show Frame Info/errorbars\n");
-  fprintf (stderr,"  -s            Datascope (disables other display options)\n");
-  fprintf (stderr,"  -t            Show symbol timing during sync\n");
-  fprintf (stderr,"  -v <num>      Frame information Verbosity\n");
-  fprintf (stderr,"  -z <num>      Frame rate for datascope\n");
-  fprintf (stderr,"\n");
-  fprintf (stderr,"Input/Output options:\n");
-  fprintf (stderr,"  -i <device>   Audio input device (default is pulse audio, \n                  - for piped stdin, rtl for rtl device)\n");
-  fprintf (stderr,"  -o <device>   Audio output device (default is pulse audio)\n");
-  fprintf (stderr,"  -d <dir>      Create mbe data files, use this directory\n");
-  fprintf (stderr,"  -r <files>    Read/Play saved mbe data from file(s)\n");
-  fprintf (stderr,"  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
-  fprintf (stderr,"  -w <file>     Output synthesized speech to a .wav file\n");
-  //fprintf (stderr,"  -a            Display port audio devices\n");
-  fprintf (stderr,"  -W            Monitor Source Audio When No Sync Detected (WIP!)\n");
-  fprintf (stderr,"\n");
-  fprintf (stderr,"RTL-SDR options:\n");
-  fprintf (stderr,"  -c <hertz>    RTL-SDR Frequency\n");
-  fprintf (stderr,"  -P <num>      RTL-SDR PPM Error (default = 0)\n");
-  fprintf (stderr,"  -D <num>      RTL-SDR Device Index Number\n");
-  fprintf (stderr,"  -G <num>      RTL-SDR Device Gain (0-49) (default = 0 Auto Gain)\n");
-  fprintf (stderr,"  -L <num>      RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)\n                 (Just have to guess really...)\n");
-  fprintf (stderr,"  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)\n");
-  fprintf (stderr,"  -Y <num>      RTL-SDR VFO Bandwidth kHz (default = 48)(6, 8, 12, 16, 24, 48) \n");
-  fprintf (stderr,"  -U <num>      RTL-SDR UDP Remote Port (default = 6020)\n");
-  fprintf (stderr,"\n");
-  fprintf (stderr,"Scanner control options:\n");
-  fprintf (stderr,"  -B <num>      Serial port baud rate (default=115200)\n");
-  fprintf (stderr,"  -C <device>   Serial port for scanner control (default=/dev/ttyUSB0)\n");
-  fprintf (stderr,"  -R <num>      Resume scan after <num> TDULC frames or any PDU or TSDU\n");
-  fprintf (stderr,"\n");
-  fprintf (stderr,"Decoder options:\n");
-  fprintf (stderr,"  -fa           Auto-detect frame type (default)\n");
-  fprintf (stderr,"  -f1           Decode only P25 Phase 1\n");
-  fprintf (stderr,"  -fd           Decode only D-STAR\n");
-  fprintf (stderr,"  -fr           Decode only DMR/MOTOTRBO\n");
-  fprintf (stderr,"  -fx           Decode only X2-TDMA\n");
-  fprintf (stderr,"  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
-  fprintf (stderr,"  -fn             Decode only NXDN96* (12.5 kHz)\n");
-  fprintf (stderr,"  -fp             Decode only ProVoice*\n");
-  fprintf (stderr,"  -fm             Decode only dPMR*\n");
-  fprintf (stderr,"  -l            Disable DMR/MOTOTRBO and NXDN input filtering\n");
-  fprintf (stderr,"  -ma           Auto-select modulation optimizations (default)\n");
-  fprintf (stderr,"  -mc           Use only C4FM modulation optimizations\n");
-  fprintf (stderr,"  -mg           Use only GFSK modulation optimizations\n");
-  fprintf (stderr,"  -mq           Use only QPSK modulation optimizations\n");
-  fprintf (stderr,"  -pu           Unmute Encrypted P25\n");
-  fprintf (stderr,"  -u <num>      Unvoiced speech quality (default=3)\n");
-  fprintf (stderr,"  -xx           Expect non-inverted X2-TDMA signal\n");
-  fprintf (stderr,"  -xr           Expect inverted DMR/MOTOTRBO signal\n");
-  fprintf (stderr,"  -xd           Expect inverted ICOM dPMR signal\n"); //still need to do this
-  fprintf (stderr,"\n");
-  fprintf (stderr,"  * denotes frame types that cannot be auto-detected.\n");
-  fprintf (stderr,"\n");
-  fprintf (stderr,"Advanced decoder options:\n");
-  fprintf (stderr,"  -A <num>      QPSK modulation auto detection threshold (default=26)\n");
-  fprintf (stderr,"  -S <num>      Symbol buffer size for QPSK decision point tracking\n");
-  fprintf (stderr,"                 (default=36)\n");
-  fprintf (stderr,"  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
-  fprintf (stderr,"                 (default=15)\n");
-  fprintf (stderr,"  -n            Reset P25 Heuristics and initState variables on mixed signal decoding\n");
-  fprintf (stderr,"                 Helps when decoding mixed signal types (P25P1) at same time\n");
-  fprintf (stderr,"                 (WiP! May Cause Slow Memory Leak or System Hang - Experimental)\n");
-  fprintf (stderr,"  -T            Enable DMR TDMA Stereo Voice (Two Slot Dual Voices)\n");
-  fprintf (stderr,"                 This feature will open two streams for slot 1 voice and slot 2 voice\n");
-  fprintf (stderr,"                 May Cause Skipping or sync issues if bad signal/errors\n");
-  fprintf (stderr,"  -F            Enable DMR TDMA Stereo Passive Frame Sync\n");
-  fprintf (stderr,"                 This feature will attempt to resync less often due to excessive voice errors\n");
-  fprintf (stderr,"                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
-  fprintf (stderr,"  -Z            Log MBE Payload to console\n");
-  fprintf (stderr,"\n");
-  fprintf (stderr,"Report bugs to: https://github.com/lwvmobile/dsd-fme/issues \n");
+  printf ( "Github Build Version: %s \n", GIT_TAG);
+  printf ("\n");
+  printf ("Usage: dsd [options]            Live scanner mode\n");
+  printf ("  or:  dsd [options] -r <files> Read/Play saved mbe data from file(s)\n");
+  printf ("  or:  dsd -h                   Show help\n");
+  printf ("\n");
+  printf ("Display Options:\n");
+  printf ("  -e            Show Frame Info and errorbars (default)\n");
+  printf ("  -pe           Show P25 encryption sync bits\n");
+  printf ("  -pl           Show P25 link control bits\n");
+  printf ("  -ps           Show P25 status bits and low speed data\n");
+  printf ("  -pt           Show P25 talkgroup info\n");
+  printf ("  -q            Don't show Frame Info/errorbars\n");
+  printf ("  -s            Datascope (disables other display options)\n");
+  printf ("  -t            Show symbol timing during sync\n");
+  printf ("  -v <num>      Frame information Verbosity\n");
+  printf ("  -z <num>      Frame rate for datascope\n");
+  printf ("\n");
+  printf ("Input/Output options:\n");
+  printf ("  -i <device>   Audio input device (default is pulse audio, \n                  - for piped stdin, rtl for rtl device)\n");
+  printf ("  -o <device>   Audio output device (default is pulse audio)\n");
+  printf ("  -d <dir>      Create mbe data files, use this directory\n");
+  printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
+  printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
+  printf ("  -w <file>     Output synthesized speech to a .wav file\n");
+  //printf ("  -a            Display port audio devices\n");
+  printf ("  -W            Monitor Source Audio When No Sync Detected (WIP!)\n");
+  printf ("\n");
+  printf ("RTL-SDR options:\n");
+  printf ("  -c <hertz>    RTL-SDR Frequency\n");
+  printf ("  -P <num>      RTL-SDR PPM Error (default = 0)\n");
+  printf ("  -D <num>      RTL-SDR Device Index Number\n");
+  printf ("  -G <num>      RTL-SDR Device Gain (0-49) (default = 0 Auto Gain)\n");
+  printf ("  -L <num>      RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)\n                 (Just have to guess really...)\n");
+  printf ("  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)\n");
+  printf ("  -Y <num>      RTL-SDR VFO Bandwidth kHz (default = 48)(6, 8, 12, 16, 24, 48) \n");
+  printf ("  -U <num>      RTL-SDR UDP Remote Port (default = 6020)\n");
+  printf ("\n");
+  printf ("Scanner control options:\n");
+  printf ("  -B <num>      Serial port baud rate (default=115200)\n");
+  printf ("  -C <device>   Serial port for scanner control (default=/dev/ttyUSB0)\n");
+  printf ("  -R <num>      Resume scan after <num> TDULC frames or any PDU or TSDU\n");
+  printf ("\n");
+  printf ("Decoder options:\n");
+  printf ("  -fa           Auto-detect frame type (default)\n");
+  printf ("  -f1           Decode only P25 Phase 1\n");
+  printf ("  -fd           Decode only D-STAR\n");
+  printf ("  -fr           Decode only DMR/MOTOTRBO\n");
+  printf ("  -fx           Decode only X2-TDMA\n");
+  printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
+  printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
+  printf ("  -fp             Decode only ProVoice*\n");
+  printf ("  -fm             Decode only dPMR*\n");
+  printf ("  -l            Disable DMR/MOTOTRBO and NXDN input filtering\n");
+  printf ("  -ma           Auto-select modulation optimizations (default)\n");
+  printf ("  -mc           Use only C4FM modulation optimizations\n");
+  printf ("  -mg           Use only GFSK modulation optimizations\n");
+  printf ("  -mq           Use only QPSK modulation optimizations\n");
+  printf ("  -pu           Unmute Encrypted P25\n");
+  printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
+  printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
+  printf ("  -xr           Expect inverted DMR/MOTOTRBO signal\n");
+  printf ("  -xd           Expect inverted ICOM dPMR signal\n"); //still need to do this
+  printf ("\n");
+  printf ("  * denotes frame types that cannot be auto-detected.\n");
+  printf ("\n");
+  printf ("Advanced decoder options:\n");
+  printf ("  -A <num>      QPSK modulation auto detection threshold (default=26)\n");
+  printf ("  -S <num>      Symbol buffer size for QPSK decision point tracking\n");
+  printf ("                 (default=36)\n");
+  printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
+  printf ("                 (default=15)\n");
+  printf ("  -n            Reset P25 Heuristics and initState variables on mixed signal decoding\n");
+  printf ("                 Helps when decoding mixed signal types (P25P1) at same time\n");
+  printf ("                 (WiP! May Cause Slow Memory Leak or System Hang - Experimental)\n");
+  printf ("  -T            Enable DMR TDMA Stereo Voice (Two Slot Dual Voices)\n");
+  printf ("                 This feature will open two streams for slot 1 voice and slot 2 voice\n");
+  printf ("                 May Cause Skipping or sync issues if bad signal/errors\n");
+  printf ("  -F            Enable DMR TDMA Stereo Passive Frame Sync\n");
+  printf ("                 This feature will attempt to resync less often due to excessive voice errors\n");
+  printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
+  printf ("  -Z            Log MBE Payload to console\n");
+  printf ("\n");
+  printf ("Report bugs to: https://github.com/lwvmobile/dsd-fme/issues \n");
   exit (0);
 }
 
@@ -505,7 +515,7 @@ liveScanner (dsd_opts * opts, dsd_state * state)
 //probably need to dig a little deeper, maybe inlvl releated?
 if (opts->audio_in_type == 1)
 {
-  opts->pulse_digi_rate_out = 48000; //change to 48K/1 for STDIN input
+  opts->pulse_digi_rate_out = 8000; //revert to 8K/1 for STDIN input, sometimes crackles when upsampling
   opts->pulse_digi_out_channels = 1;
   if (opts->dmr_stereo == 1)
   {
@@ -909,7 +919,13 @@ main (int argc, char **argv)
         case 'd':
           strncpy(opts.mbe_out_dir, optarg, 1023);
           opts.mbe_out_dir[1023] = '\0';
-          fprintf (stderr,"Writing mbe data files to directory %s\n", opts.mbe_out_dir);
+          if (stat(opts.mbe_out_dir, &st) == -1)
+          {
+            fprintf (stderr, "-d %s directory does not exist\n", opts.mbe_out_dir);
+            fprintf (stderr, "Creating directory %s to save MBE files\n", opts.mbe_out_dir);
+            mkdir(opts.mbe_out_dir, 0700); //user read write execute, needs execute for some reason or segfault
+          }
+          else fprintf (stderr,"Writing mbe data files to directory %s\n", opts.mbe_out_dir);
           break;
         case 'c':
           opts.rtlsdr_center_freq = (uint32_t)atofs(optarg);

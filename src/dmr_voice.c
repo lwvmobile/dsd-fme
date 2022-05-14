@@ -361,7 +361,7 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
       state->directmode = 1; /* Direct mode */
       sprintf(state->slot1light, "[sLoT2]");
     }
-    else if((strcmp (sync, DMR_BS_VOICE_SYNC) == 0) || (strcmp (sync, DMR_MS_VOICE_SYNC) == 0))
+    else if((strcmp (sync, DMR_BS_VOICE_SYNC) == 0) ) //|| (strcmp (sync, DMR_MS_VOICE_SYNC) == 0))
     {
       mutecurrentslot = 0;
       state->directmode = 0;

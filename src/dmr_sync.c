@@ -1716,7 +1716,7 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
   }
   else {
     fprintf (stderr, "%s ", KRED);
-    fprintf (stderr, (" (PI CRC Fail, FEC Fail)"));
+    fprintf (stderr, ("\n (PI CRC Fail, FEC Fail)"));
     fprintf (stderr, "%s ", KNRM);
   }
 
@@ -2085,6 +2085,10 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
   state->payload_keyid = 0;
   //state->payload_mfid  = 0;
   state->payload_mi    = 0;
+  state->payload_algidR = 0;
+  state->payload_keyidR = 0;
+  //state->payload_mfid  = 0;
+  state->payload_miR    = 0;
 
   //tlc
   if((IrrecoverableErrors == 0) && CRCCorrect) //amateur DMR seems to only set radio ID up here I think, figure out best way to set without messing up other DMR types
