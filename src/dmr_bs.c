@@ -648,5 +648,10 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
   dmrBS (opts, state); //bootstrap into full TDMA frame for BS mode
   END:
+  //placing this below to fix compiler error, it will never run but compiler needs something there
+  if (0 == 1)
+  {
+    fprintf (stderr, "this is a dumb thing to have to fix");
+  }
 
 }
