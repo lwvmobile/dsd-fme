@@ -81,6 +81,7 @@ if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->pa
   fprintf (stderr, "%s", KNRM);
   k = BP[state->K];
   k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
+  //fprintf (stderr, "\nK=0x%X\n", k);
   for(Frame = 0; Frame < 6; Frame++)
   {
    for(i = 0; i < 3; i++)
@@ -101,6 +102,7 @@ if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->p
   fprintf (stderr, "%s", KNRM);
   k = BP[state->K];
   k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
+  //fprintf (stderr, "\nK=0x%X\n", k);
   for(Frame = 0; Frame < 6; Frame++)
   {
    for(i = 0; i < 3; i++)
@@ -140,7 +142,18 @@ if (state->currentslot == 0)
       }
 
       state->debug_audio_errors += *errs2;
-
+      //
+      //fprintf (stderr, "%X", TSVoiceSupFrameL->TimeSlotDeinterleavedVoiceFrame[Frame].DeInterleavedVoiceSample[i] ); //this set up right?
+      //
+      /*
+      fprintf (stderr, "\nInt RVD ");
+      for (short o = 0; o < 36; o++)
+      {
+        fprintf (stderr, "%X", TSVoiceSupFrameL->TimeSlotDeinterleavedVoiceFrame[Frame].DeInterleavedVoiceSample[i][o] );
+      }
+      */
+      //wny do I have this running twice for?
+      //processAudio(opts, state);
       processAudio(opts, state);
       //playSynthesizedVoice (opts, state);
 
@@ -184,7 +197,16 @@ if (state->currentslot == 0)
        }
 
        state->debug_audio_errors += *errs2;
-
+       //
+       //fprintf (stderr, "%X", TSVoiceSupFrameR->TimeSlotDeinterleavedVoiceFrame[Frame].DeInterleavedVoiceSample[i] ); //this set up right?
+       //
+       /*
+       fprintf (stderr, "\nInt RVD ");
+       for (short o = 0; o < 36; o++)
+       {
+         fprintf (stderr, "%X", TSVoiceSupFrameR->TimeSlotDeinterleavedVoiceFrame[Frame].DeInterleavedVoiceSample[i][o] );
+       }
+       */
        processAudio(opts, state);
        //playSynthesizedVoice (opts, state);
 

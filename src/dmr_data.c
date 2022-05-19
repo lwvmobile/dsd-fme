@@ -57,7 +57,6 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     dibit_p = state->dmr_payload_p - 90;
   }
 
-
   // CACH
   for (i = 0; i < 12; i++)
   {
@@ -93,15 +92,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
         state->slot1light[0] = ' ';
         state->slot1light[6] = ' ';
       }
-      //method to only see data from one slot or the other when data occupies both slots or gets cooked by sync
-      state->hardslot = 9; //0 to only listen to slot 0 voice, 1 for slot 1, 9 for both
-      if(state->hardslot != 9 && state->hardslot != state->currentslot)
-      //if(1==1)
-      {
-        //fprintf (stderr, " Current Slot = %d", state->currentslot + 1);
-        //fprintf (stderr, "\n"); //line break after breaking out of jail
-        //goto JUMP;
-      }
+
     }
   }
   cachdata[12] = 0;

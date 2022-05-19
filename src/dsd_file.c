@@ -102,6 +102,46 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   fflush (opts->mbe_out_f);
 }
 
+void
+PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) //For DMR Stereo, may use this for NXDN too
+{
+  int i, j, k;
+  unsigned char b;
+  unsigned char err;
+
+  err = (unsigned char) state->errs2;
+  k = 0;
+  if (opts->payload == 1 && opts->dmr_stereo == 1) //print AMBE info from DMR Stereo method
+  {
+    fprintf(stderr, " AMBE ");
+  }
+  for (i = 0; i < 7; i++) //using 7 seems to break older amb files where it was 6, need to test 7 on 7 some more
+    {
+      b = 0;
+      for (j = 0; j < 8; j++)
+        {
+          b = b << 1;
+          b = b + ambe_d[k];
+          k++;
+        }
+        if (opts->payload == 1 && i < 6) //make opt variable later on to toggle this
+        {
+          fprintf (stderr, "%02X", b);
+        }
+        if (opts->payload == 1 && i == 6) //7th octet should only contain 1 bit, value will be either 0x00 or 0x80?
+        {
+          fprintf (stderr, "%02X", b & 0x80); //7th octet should only contain 1 bit
+        }
+    }
+    if (state->currentslot == 0)
+    {
+      fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
+    }
+    else fprintf(stderr, " err = [%X] [%X] ", state->errsR, state->errs2R);
+  b = ambe_d[48];
+  fprintf (stderr, "\n");
+}
+
 int
 readImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
 {

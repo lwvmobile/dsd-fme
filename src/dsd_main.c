@@ -46,7 +46,7 @@ int pretty_colors()
 short int butt = 1;
 
 char * FM_banner[9] = {
-  "                                 CTRL + C twice to exit",
+  " 2022 Dove Award Winner           CTRL + C twice to exit",
   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗",
   " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝",
   " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗  ",
@@ -420,7 +420,8 @@ initState (dsd_state * state)
 void
 usage ()
 {
-  printf ( "Github Build Version: %s \n", GIT_TAG);
+  //printf ( "Github Build Version: %s \n", GIT_TAG);
+  //printf ( "2022 Dove Award Recipient"); //Thanks, Scott
   printf ("\n");
   printf ("Usage: dsd [options]            Live scanner mode\n");
   printf ("  or:  dsd [options] -r <files> Read/Play saved mbe data from file(s)\n");
@@ -878,12 +879,12 @@ main (int argc, char **argv)
           break;
 
         case 'T':
-          opts.dmr_stereo  = 1; //just the end user option
+          opts.dmr_stereo  = 1; //this value is the end user option
           state.dmr_stereo = 1; //this values toggles on and off depending on voice or data handling
           opts.pulse_digi_rate_out = 24000;
           opts.pulse_digi_out_channels = 2;
           fprintf (stderr, "%s", KRED);
-          fprintf (stderr,"Experimental DMR Stereo Sync and Functionality. WIP!\n");
+          fprintf (stderr,"DMR Stereo Sync and Functionality Enabled.\n");
           fprintf (stderr,"DMR Stereo will disable WAV and MBE file saving!\n");
           fprintf (stderr,"Also consider using -F if playback is too choppy!\n");
           fprintf (stderr, "%s", KNRM);
