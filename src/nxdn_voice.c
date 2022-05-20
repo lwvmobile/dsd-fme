@@ -143,6 +143,10 @@ void processNXDNVoice (dsd_opts * opts, dsd_state * state)
       y++;
       z++;
     }
+    if (opts->payload == 1)
+    {
+      //fprintf(stderr, "\n");
+    }
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
 
   } /* End for (j = 0; j < 4; j++) */

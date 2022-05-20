@@ -142,28 +142,38 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       //  1 -P25p1
 
       mbe_processImbe7200x4400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe_fr, imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-      //mbe_processImbe7200x4400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe_fr, processed_block, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-
+      if (opts->payload == 1)
+      {
+        PrintIMBEData (opts, state, imbe_d);
+      }
       if (opts->mbe_out_f != NULL)
-        {
-          saveImbe4400Data (opts, state, imbe_d);
-        }
+      {
+        saveImbe4400Data (opts, state, imbe_d);
+      }
     }
   else if ((state->synctype == 14) || (state->synctype == 15))
     {
       mbe_processImbe7100x4400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe7100_fr, imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+      if (opts->payload == 1)
+      {
+        PrintIMBEData (opts, state, imbe_d);
+      }
       if (opts->mbe_out_f != NULL)
-        {
-          saveImbe4400Data (opts, state, imbe_d);
-        }
+      {
+        saveImbe4400Data (opts, state, imbe_d);
+      }
     }
   else if ((state->synctype == 6) || (state->synctype == 7))
     {
       mbe_processAmbe3600x2400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+      if (opts->payload == 1)
+      {
+        PrintAMBEData (opts, state, ambe_d);
+      }
       if (opts->mbe_out_f != NULL)
-        {
-          saveAmbe2450Data (opts, state, ambe_d);
-        }
+      {
+        saveAmbe2450Data (opts, state, ambe_d);
+      }
     }
   else
     {
@@ -223,11 +233,14 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           PrintAMBEData (opts, state, ambe_d);
         }
       }
-      //if using older DMR method, dPMR, etc
+      //if using older DMR method, dPMR, NXDN?
       if (opts->dmr_stereo == 0)
       {
         mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-
+        if (opts->payload == 1)
+        {
+          PrintAMBEData (opts, state, ambe_d);
+        }
         if (opts->mbe_out_f != NULL)
         {
           saveAmbe2450Data (opts, state, ambe_d);

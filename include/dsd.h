@@ -676,6 +676,7 @@ void skipDibit (dsd_opts * opts, dsd_state * state, int count);
 void saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d);
 void saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d);
 void PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d);
+void PrintIMBEData (dsd_opts * opts, dsd_state * state, char *imbe_d);
 int readImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d);
 int readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d);
 void openMbeInFile (dsd_opts * opts, dsd_state * state);
