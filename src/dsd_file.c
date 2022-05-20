@@ -30,8 +30,7 @@ saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
   k = 0;
   if (opts->payload == 1) //make opt variable later on to toggle this
   {
-    fprintf(stderr, "\n IMBE ");
-    //fprintf(stderr, "ALGID=%X KEYID=%X\n", state->payload_algid, state->payload_keyid);
+    //fprintf(stderr, "\n IMBE ");
   }
 
   for (i = 0; i < 11; i++)
@@ -46,13 +45,13 @@ saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
         }
         if (opts->payload == 1) //make opt variable later on to toggle this
         {
-          fprintf (stderr, "%02X", b);
+          //fprintf (stderr, "%02X", b);
         }
       fputc (b, opts->mbe_out_f);
     }
     if (opts->payload == 1)
     {
-      fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
+      //fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
     }
   fflush (opts->mbe_out_f);
 }
@@ -70,7 +69,7 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   k = 0;
   if (opts->payload == 1) //make opt variable later on to toggle this
   {
-    fprintf(stderr, "\n AMBE ");
+    //fprintf(stderr, "\n AMBE ");
   }
   //for (i = 0; i < 6; i++)
   for (i = 0; i < 7; i++) //using 7 seems to break older amb files where it was 6, need to test 7 on 7 some more
@@ -84,22 +83,107 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
         }
         if (opts->payload == 1 && i < 6) //make opt variable later on to toggle this
         {
-          fprintf (stderr, "%02X", b);
+          //fprintf (stderr, "%02X", b);
         }
         if (opts->payload == 1 && i == 6) //7th octet should only contain 1 bit? value will be either 0x00 or 0x80?
         {
-          fprintf (stderr, "%02X", b & 0x80); //7th octet should only contain 1 bit?
+          //fprintf (stderr, "%02X", b & 0x80); //7th octet should only contain 1 bit?
         }
 
       fputc (b, opts->mbe_out_f);
     }
     if (opts->payload == 1)
     {
-      fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
+      //fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
     }
   b = ambe_d[48];
   fputc (b, opts->mbe_out_f);
   fflush (opts->mbe_out_f);
+}
+
+void
+PrintIMBEData (dsd_opts * opts, dsd_state * state, char *imbe_d) //for P25P1 and ProVoice
+{
+  int i, j, k;
+  unsigned char b;
+  unsigned char err;
+
+  err = (unsigned char) state->errs2;
+  k = 0;
+  if (opts->payload == 1) //print IMBE info
+  {
+    fprintf(stderr, "\n IMBE ");
+  }
+  for (i = 0; i < 11; i++)
+  {
+    b = 0;
+    for (j = 0; j < 8; j++)
+    {
+      b = b << 1;
+      b = b + imbe_d[k];
+      k++;
+    }
+    if (opts->payload == 1)
+    {
+      fprintf (stderr, "%02X", b);
+    }
+  }
+
+  if (opts->payload == 1)
+  {
+    fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
+  }
+
+  //fprintf (stderr, "\n");
+}
+
+void
+PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) //For DMR Stereo, may use this for NXDN too
+{
+  int i, j, k;
+  unsigned char b;
+  unsigned char err;
+
+  err = (unsigned char) state->errs2;
+  k = 0;
+  if (opts->dmr_stereo == 0)
+  {
+    fprintf (stderr, "\n");
+  }
+  if (opts->payload == 1) //print AMBE info from DMR Stereo method
+  {
+    fprintf(stderr, " AMBE ");
+  }
+
+  for (i = 0; i < 7; i++) //using 7 seems to break older amb files where it was 6, need to test 7 on 7 some more
+    {
+      b = 0;
+      for (j = 0; j < 8; j++)
+        {
+          b = b << 1;
+          b = b + ambe_d[k];
+          k++;
+        }
+        if (opts->payload == 1 && i < 6) //make opt variable later on to toggle this
+        {
+          fprintf (stderr, "%02X", b);
+        }
+        if (opts->payload == 1 && i == 6) //7th octet should only contain 1 bit, value will be either 0x00 or 0x80?
+        {
+          fprintf (stderr, "%02X", b & 0x80); //7th octet should only contain 1 bit
+        }
+    }
+    if (state->currentslot == 0)
+    {
+      fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
+    }
+    else fprintf(stderr, " err = [%X] [%X] ", state->errsR, state->errs2R);
+  b = ambe_d[48];
+  if (opts->dmr_stereo == 1)
+  {
+    fprintf (stderr, "\n");
+  }
+
 }
 
 int

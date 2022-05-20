@@ -1860,8 +1860,8 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
   }
   /* Print the destination ID (TG) and the source ID */
   fprintf (stderr, "%s ", KGRN);
-  fprintf(stderr, "\n  TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-  fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
+  fprintf(stderr, "\n  TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+  //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
   //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
   //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
   //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
@@ -2095,8 +2095,8 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
   {
     fprintf (stderr, "%s \n", KRED);
     fprintf (stderr, "  SLOT %d", state->currentslot+1);
-    fprintf(stderr, " TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-    fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
+    fprintf(stderr, " TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+    //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
     fprintf (stderr, "%s ", KNRM);
     //fprintf(stderr, "(CRC OK )  ");
     if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode == 0) //other opcodes may convey callsigns, names, etc.
@@ -2138,8 +2138,8 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
   {
     fprintf (stderr, "%s \n", KRED);
     fprintf (stderr, "  SLOT %d", state->currentslot+1);
-    fprintf(stderr, " TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-    fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
+    fprintf(stderr, " TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+    //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
     fprintf(stderr, "RAS (FEC OK/CRC ERR)"); //tlc
     fprintf (stderr, "%s ", KNRM);
     if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode == 0) //other opcodes may convey callsigns, names, etc.
@@ -2414,8 +2414,8 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
         fprintf(stderr, "\n");
       }
       fprintf (stderr, "  SLOT %d", state->currentslot+1);
-      fprintf(stderr, " TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-      fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
+      fprintf(stderr, " TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+      //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
       fprintf (stderr, "%s ", KNRM);
       //fprintf(stderr, "(CRC OK ) ");
       if (state->currentslot == 0)
@@ -2458,8 +2458,8 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
         fprintf(stderr, "\n");
       }
       fprintf (stderr, "  SLOT %d", state->currentslot+1);
-      fprintf(stderr, " TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-      fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
+      fprintf(stderr, " TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+      //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
       fprintf (stderr, "%s ", KRED);
       fprintf(stderr, "RAS (FEC OK/CRC ERR)  ");
       fprintf (stderr, "%s ", KNRM);
@@ -2537,7 +2537,44 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
 
 } /* End ProcessVoiceBurstSync() */
 
+int LSFR(dsd_state * state)
+{
+  int lfsr = 0;
+  if (state->currentslot == 0)
+  {
+    lfsr = state->payload_mi;
+  }
+  else lfsr = state->payload_miR;
 
+  uint8_t cnt = 0;
+  //fprintf(stderr, "\nInitial Value:- 0x%08x\n", lfsr);
+
+  for(cnt=0;cnt<32;cnt++)
+  {
+	  // Polynomial is C(x) = x^32 + x^4 + x^2 + 1
+    int bit  = ((lfsr >> 31) ^ (lfsr >> 3) ^ (lfsr >> 1)) & 0x1;
+    lfsr =  (lfsr << 1) | (bit);
+    //fprintf(stderr, "\nshift #%i, 0x%08x\n", (cnt+1), lfsr);
+  }
+  if (state->currentslot == 0)
+  {
+    fprintf (stderr, "%s", KYEL);
+    fprintf (stderr, "\n Slot 1");
+    fprintf (stderr, " DMR PI Continuation ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
+    fprintf(stderr, " Next MI: 0x%08X", lfsr);
+    fprintf (stderr, "%s", KNRM);
+    state->payload_mi = lfsr;
+  }
+  else
+  {
+    fprintf (stderr, "%s", KYEL);
+    fprintf (stderr, "\n Slot 2");
+    fprintf (stderr, " DMR PI Continuation ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algidR, state->payload_keyidR);
+    fprintf(stderr, " Next MI: 0x%08X", lfsr);
+    fprintf (stderr, "%s", KNRM);
+    state->payload_miR = lfsr;
+  }
+}
 /*
  * @brief : This function compute the CRC-CCITT of the DMR data
  *          by using the polynomial x^16 + x^12 + x^5 + 1

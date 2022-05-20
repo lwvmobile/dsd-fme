@@ -81,6 +81,7 @@ if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->pa
   fprintf (stderr, "%s", KNRM);
   k = BP[state->K];
   k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
+  //fprintf (stderr, "\nK=0x%X\n", k);
   for(Frame = 0; Frame < 6; Frame++)
   {
    for(i = 0; i < 3; i++)
@@ -101,6 +102,7 @@ if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->p
   fprintf (stderr, "%s", KNRM);
   k = BP[state->K];
   k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
+  //fprintf (stderr, "\nK=0x%X\n", k);
   for(Frame = 0; Frame < 6; Frame++)
   {
    for(i = 0; i < 3; i++)
@@ -116,6 +118,10 @@ if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->p
 //
 if (state->currentslot == 0)
 {
+  if (opts->payload == 1)
+  {
+    fprintf(stderr, "\n"); //line break for AMBE printer
+  }
   for(Frame = 0; Frame < 6; Frame++) //6
   {
     /* 1 DMR frame contains 3 AMBE voice samples */
@@ -130,19 +136,19 @@ if (state->currentslot == 0)
                                 TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
                                 state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
+      if (opts->payload == 1)
+      {
+        PrintAMBEData(opts, state, TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
+      }
+
       if (opts->mbe_out_f != NULL)
       {
         saveAmbe2450Data (opts, state, TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
-      }
-      if (opts->errorbars == 1)
-      {
-        //fprintf(stderr, "%s", state->err_str);
       }
 
       state->debug_audio_errors += *errs2;
 
       processAudio(opts, state);
-      //playSynthesizedVoice (opts, state);
 
       if (opts->wav_out_f != NULL)
       {
@@ -160,6 +166,10 @@ if (state->currentslot == 0)
 
  if (state->currentslot == 1)
  {
+   if (opts->payload == 1)
+   {
+     fprintf(stderr, "\n"); //line break for AMBE printer
+   }
    for(Frame = 0; Frame < 6; Frame++)
    {
      /* 1 DMR frame contains 3 AMBE voice samples */
@@ -174,19 +184,20 @@ if (state->currentslot == 0)
                                  TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i],
                                  state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
+
+       if (opts->payload == 1)
+       {
+         PrintAMBEData(opts, state, TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
+       }
+
        if (opts->mbe_out_f != NULL)
        {
          saveAmbe2450Data (opts, state, TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
-       }
-       if (opts->errorbars == 1)
-       {
-         //fprintf(stderr, "%s", state->err_str);
        }
 
        state->debug_audio_errors += *errs2;
 
        processAudio(opts, state);
-       //playSynthesizedVoice (opts, state);
 
        if (opts->wav_out_f != NULL)
        {

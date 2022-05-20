@@ -19,7 +19,7 @@ Use Passive Frame Sync if voice in both slots becomes choppy or skips. Using Pas
 ### Example Usage and Note!
 `dsd` or `./dsd` may need to be used in your usage, depending on if you are running it from the build folder, or if you have run make install. You will need to tweak the examples to your particular usage. Users can always check `dsd -h`  for help and all command line switches to use.
 
-`dsd` is all you need to run for pulse input, pulse output, and auto detect for DMR, P25P1, D-STAR, and X2-TDMA decoding. To use other decoding methods which cannot be auto detected, please use the following command line switches.
+`dsd` is all you need to run for pulse input, pulse output, and auto detect for DMR, P25P1, D-STAR, and X2-TDMA decoding. To use other decoding methods which cannot be auto detected, please use the following command line switches. Make sure to route audio into and out of DSD-FME using pavucontrol and virtual sinks as needed. 
 
 ```
 -fi NXDN48
@@ -32,11 +32,13 @@ Use Passive Frame Sync if voice in both slots becomes choppy or skips. Using Pas
 ```
 
 ## Example Usage - New DMR Stereo, Ncurses Terminal, Pulse Input/Output, and Log Console to file
-`dsd -fr -T -Z -N 2> voice.log`
+`dsd -fr -T -N 2> voice.log`
 
 and in a second terminal tab, same folder, run
 
 `tail -n 40 -f voice.log`
+
+Then you can open up your pavucontrol "Pulse Audio Volume Control" or "Volume Control" application and route input into DSD-FME from any application and DSD-FME output to the left and right speakers respectively. (unlock the channel in the application stream and adjust left and right independently)
 
 ## Example Usage - RTL2832 Dongle Input
 `dsd -fi -i rtl -c 154.9875M -P -2 -D 1 -G 36 -L 70 -U 6021 -Y 12`
@@ -54,7 +56,7 @@ and in a second terminal tab, same folder, run
 
 -G set device gain (0-49) (default = 0 Auto Gain)
 
--L set rtl squelch to 25 (default = 0; off)
+-L set rtl squelch to 70 (default = 0; off)
 
 -U set UDP port for rtl_fm remote control (default = 6020)
 
@@ -62,12 +64,14 @@ and in a second terminal tab, same folder, run
 
 ```
 ## Example STDIN UDP from GQRX or SDR++, output to Pulse Audio, and append decoded audio to wav file
+Be sure to first start UDP output sink in GQRX or SDR++ and set VFO appropriately
+
 `socat stdio udp-listen:7355 | dsd -fi -i - -w nxdn.wav`
 
 ## Example Usage - Extra Information for Academic Study and Logging
 Be sure to create a folder called MBE first and run
 
-`dsd -d ./MBE/ -Z -pu 2>> voice.log`
+`dsd -fa -Z -pu 2>> voice.log`
 
 and in a second terminal tab, same folder, run
 
@@ -78,7 +82,7 @@ The Current list of objectives include:
 
 1. ~~Random Tinkering~~ More Random Tinkering
 
-2. ~~Implemented Pulse Audio~~ Remove PortAudio, ~~improved Pulse Audio for stereo output and channel/slot separation~~
+2. ~~Implemented Pulse Audio~~ Remove remaining PortAudio code, ~~improved Pulse Audio for stereo output and channel/slot separation~~ and reimplement wav file saving using DMR Stereo method for stereo wav files, or seperate as per call wav files.
 
 3. ~~Improve NXDN and DMR support~~ Continue to improve ~~NXDN and DMR~~ all data and voice decoding. 
 

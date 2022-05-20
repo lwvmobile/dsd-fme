@@ -17,16 +17,15 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
- //pretty pretty colors
-
- #define KNRM  "\x1B[0m"
- #define KRED  "\x1B[31m"
- #define KGRN  "\x1B[32m"
- #define KYEL  "\x1B[33m"
- #define KBLU  "\x1B[34m"
- #define KMAG  "\x1B[35m"
- #define KCYN  "\x1B[36m"
- #define KWHT  "\x1B[37m"
+//pretty pretty colors
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KBLU  "\x1B[34m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define KWHT  "\x1B[37m"
 
 #include "config.h"
 #include <stdio.h>
@@ -78,9 +77,7 @@
 //look into making this not required by doing ifdef, make new c file for methods, and CLI case option for ncurses terminal
 #include <locale.h>   //move this stuff to dsd.h
 #include <ncurses.h> //move this stuff to dsd.h
-//
 
-//
 static volatile int exitflag;
 
 typedef struct
@@ -476,6 +473,8 @@ typedef struct
   int payload_mfidR;
   int payload_mi;
   int payload_miR;
+  int payload_lsfr;
+  int payload_lsfrR;
   unsigned long long int K;
 
   unsigned int debug_audio_errors;
@@ -676,6 +675,8 @@ int get_dibit_and_analog_signal (dsd_opts * opts, dsd_state * state, int * out_a
 void skipDibit (dsd_opts * opts, dsd_state * state, int count);
 void saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d);
 void saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d);
+void PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d);
+void PrintIMBEData (dsd_opts * opts, dsd_state * state, char *imbe_d);
 int readImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d);
 int readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d);
 void openMbeInFile (dsd_opts * opts, dsd_state * state);
@@ -819,7 +820,7 @@ void ProcessMBCData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8
 void ProcessMBChData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
 void ProcessWTFData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
 void ProcessUnifiedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-
+int LSFR(dsd_state * state);
 
 void Hamming_7_4_init();
 void Hamming_7_4_encode(unsigned char *origBits, unsigned char *encodedBits);

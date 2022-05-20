@@ -269,7 +269,8 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   //if ( (strcmp (sync, DMR_MS_VOICE_SYNC) == 0) )
   //fixed to compensate for inverted signal
-  if ( ((strcmp (sync, DMR_MS_VOICE_SYNC) == 0) && opts->inverted_dmr == 0) || ((strcmp (sync, DMR_MS_DATA_SYNC) == 0) && opts->inverted_dmr == 1) )
+  if ( ((strcmp (sync, DMR_MS_VOICE_SYNC) == 0) && opts->inverted_dmr == 0) ||
+       ((strcmp (sync, DMR_MS_DATA_SYNC) == 0) && opts->inverted_dmr == 1) )
 
   {
     if (internalslot == 0)
@@ -380,21 +381,65 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     fprintf (stderr,"%s ", getTime());
     if (internalslot == 0 && opts->inverted_dmr == 0)
     {
-      fprintf (stderr,"Sync: +DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d \n", state->color_code, vc1);
+      fprintf (stderr,"Sync: +DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d ", state->color_code, vc1);
+      if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
+      {
+        fprintf (stderr, "%s", KYEL);
+        fprintf(stderr, " BPK %lld", state->K);
+        fprintf (stderr, "%s", KNRM);
+      }
+      if (vc1 == 6 && state->payload_keyid  != 0 && opts->payload == 1)
+      {
+        LSFR(state);
+      }
+      fprintf (stderr, "\n");
     }
 
     if (internalslot == 0 && opts->inverted_dmr == 1)
     {
-      fprintf (stderr,"Sync: -DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d \n", state->color_code, vc1);
+      fprintf (stderr,"Sync: -DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d ", state->color_code, vc1);
+      if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
+      {
+        fprintf (stderr, "%s", KYEL);
+        fprintf(stderr, " BPK %lld", state->K);
+        fprintf (stderr, "%s", KNRM);
+      }
+      if (vc1 == 6 && state->payload_keyid  != 0 && opts->payload == 1)
+      {
+        LSFR(state);
+      }
+      fprintf (stderr, "\n");
     }
 
     if (internalslot == 1 && opts->inverted_dmr == 0)
     {
-      fprintf (stderr,"Sync: +DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d \n", state->color_code, vc2);
+      fprintf (stderr,"Sync: +DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d ", state->color_code, vc2);
+      if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
+      {
+        fprintf (stderr, "%s", KYEL);
+        fprintf(stderr, " BPK %lld", state->K);
+        fprintf (stderr, "%s", KNRM);
+      }
+      if (vc2 == 6 && state->payload_keyidR != 0 && opts->payload == 1)
+      {
+        LSFR(state);
+      }
+      fprintf (stderr, "\n");
     }
     if (internalslot == 1 && opts->inverted_dmr == 1)
     {
-      fprintf (stderr,"Sync: -DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d \n", state->color_code, vc2);
+      fprintf (stderr,"Sync: -DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d ", state->color_code, vc2);
+      if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
+      {
+        fprintf (stderr, "%s", KYEL);
+        fprintf(stderr, " BPK %lld", state->K);
+        fprintf (stderr, "%s", KNRM);
+      }
+      if (vc2 == 6 && state->payload_keyidR != 0 && opts->payload == 1)
+      {
+        LSFR(state);
+      }
+      fprintf (stderr, "\n");
     }
     if (internalslot == 0 && vc1 == 6) //presumably when full (and no sync issues)
     {
@@ -429,7 +474,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   }
 
   SKIP:
-  skipDibit (opts, state, 144); //skip to next slot?
+  skipDibit (opts, state, 144); //skip to next tdma channel
   state->dmr_ms_rc = 0;
 
   //since we are in a repetitive loop, run ncursesPrinter here
@@ -452,7 +497,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
      dibit = (dibit ^ 2);
    }
    state->dmr_stereo_payload[i] = dibit;
-   //fprintf(stderr, "%X", state->dmr_stereo_payload[i]);
+
  }
 
  state->dmr_stereo = 0;
@@ -461,7 +506,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
 }
 
-//Only process 2nd half voice payload (3rd frame) and then jump to full MS Voice decoding.
+//collect buffered 1st half and get 2nd half voice payload and then jump to full MS Voice decoding.
 void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 {
   int i, j, k, l, dibit;
@@ -499,12 +544,10 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   dibit_p = state->dmr_payload_p - 90;
   //payload buffer tests
   //CACH + First Half Payload + Sync = 12 + 54 + 24
-  //fprintf(stderr, "\n Full DMR Stereo Dump Dibits 90 From Buffer\n");
   for (i = 0; i < 90; i++) //90
   {
     state->dmr_stereo_payload[i] = *dibit_p;
     dibit_p++;
-    //fprintf(stderr, "%X", state->dmr_stereo_payload[i]);
   }
   //end payload buffer test
 
@@ -614,15 +657,39 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
     z++;
 
   }
+  //work around to set erroneous PI header values to 0 if K is active
+  if (state->K > 0)
+  {
+    state->payload_keyid = 0; //just for testing
+    state->payload_keyidR = 0; //just for testing
+  }
 
-  //fprintf (stderr, "MS MODE ");
   fprintf (stderr,"%s ", getTime());
-  //fprintf (stderr,"Sync: +DMR                  |  Frame Sync   | DMRSTEREO | VC1 FS \n");
+
   if (opts->inverted_dmr == 0)
   {
-    fprintf (stderr,"Sync: +DMR MS MODE |  Frame Sync   | DMRSTEREO | VC1 FS \n");
+    fprintf (stderr,"Sync: +DMR MS MODE |  Frame Sync   | DMRSTEREO | VC1 ");
+    if ( (state->K > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0) ||
+         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0) )
+    {
+      fprintf (stderr, "%s", KYEL);
+      fprintf(stderr, " BPK %lld", state->K);
+      fprintf (stderr, "%s", KNRM);
+    }
+    fprintf (stderr, "\n");
   }
-  else fprintf (stderr,"Sync: -DMR MS MODE |  Frame Sync   | DMRSTEREO | VC1 FS \n");
+  else
+  {
+    fprintf (stderr,"Sync: -DMR MS MODE |  Frame Sync   | DMRSTEREO | VC1 ");
+    if ( (state->K > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0) ||
+         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0) )
+    {
+      fprintf (stderr, "%s", KYEL);
+      fprintf(stderr, " BPK %lld", state->K);
+      fprintf (stderr, "%s", KNRM);
+    }
+    fprintf (stderr, "\n");
+  }
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
@@ -656,44 +723,49 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   }
 
   //CACH + First Half Payload + Sync = 12 + 54 + 24
-  //fprintf(stderr, "\n Full DMR Stereo Dump Dibits 90 From Buffer\n");
+  //dibit_p = state->dibit_buf_p - 90;
+  dibit_p = state->dmr_payload_p - 90;
   for (i = 0; i < 90; i++) //90
   {
-    //fprintf(stderr, "%X", state->dmr_stereo_payload[i]);
+    dibit = *dibit_p;
+    dibit_p++;
+    if(opts->inverted_dmr == 1)
+    {
+      dibit = (dibit ^ 2);
+    }
+    state->dmr_stereo_payload[i] = dibit;
   }
 
   for (i = 0; i < 54; i++)
   {
     dibit = getDibit(opts, state);
-    if (opts->inverted_dmr == 1)
-    {
-      dibit = (dibit ^ 2);
-    }
     state->dmr_stereo_payload[i+90] = dibit;
 
   }
-  //fprintf(stderr, "\n");
-  //print nice pretty lines
-  //fprintf (stderr, "MS MODE ");
-  fprintf (stderr, "%s ", getTime());
-  //fprintf (stderr, "Sync: +MS DATA              | Color Code=XX | DMRSTEREO | Data  ");
-  if (opts->inverted_dmr == 0)
+  //hide behind payload due to errs in data in MS mode
+  if (opts->payload == 1)
   {
-    fprintf (stderr,"Sync: +DMR MS MODE ");
+    fprintf (stderr, "%s ", getTime());
+    if (opts->inverted_dmr == 0)
+    {
+      fprintf (stderr,"Sync: +DMR MS MODE ");
+    }
+    else fprintf (stderr,"Sync: -DMR MS MODE ");
   }
-  else fprintf (stderr,"Sync: -DMR MS MODE ");
-  //fprintf (stderr, "\n                             ");
 
-  //sprintf for slot 1, doesn't matter, just makes print out of data look uniform setting ahead of time
-  //sprintf(state->slot1light, "[slot1]");
-  //sprintf(state->slot2light, " slot2 ");
+
   sprintf(state->slot1light, "");
   sprintf(state->slot2light, "");
 
   //process data
   state->dmr_stereo = 1;
   state->dmr_ms_mode = 1;
-  processDMRdata (opts, state);
+  //only run if payload is set to 1 due to errors with MS data
+  if (opts->payload == 1)
+  {
+    processDMRdata (opts, state);
+  }
+
   state->dmr_stereo = 0;
   state->dmr_ms_mode = 0;
 
@@ -703,12 +775,7 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   for (i = 0; i < 66; i++) //66
   {
     dibit = getDibit(opts, state);
-    if (opts->inverted_dmr == 1)
-    {
-      dibit = (dibit ^ 2);
-    }
     state->dmr_stereo_payload[i] = dibit;
-    //fprintf(stderr, "%X", state->dmr_stereo_payload[i]);
   }
 
 }

@@ -45,7 +45,7 @@ char versionstr[25];
 unsigned long long int call_matrix[33][6];
 
 char * FM_bannerN[9] = {
-  "                                 CTRL + C twice to exit",
+  " 2022 Dove Award Winner           CTRL + C twice to exit",
   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗",
   " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝",
   " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗  ",

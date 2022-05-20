@@ -46,7 +46,7 @@ int pretty_colors()
 short int butt = 1;
 
 char * FM_banner[9] = {
-  "                                 CTRL + C twice to exit",
+  " 2022 Dove Award Winner           CTRL + C twice to exit",
   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗",
   " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝",
   " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗  ",
@@ -225,7 +225,10 @@ initOpts (dsd_opts * opts)
   opts->inverted_dpmr = 0;
   opts->dmr_stereo = 0;
   opts->aggressive_framesync = 1; //more aggressive to combat wonk wonk voice decoding
-  //opts->audio_in_type = 0;
+  //see if initializing these values causes issues elsewhere, if so, then disable.
+  opts->audio_in_type = 0;  //this was never initialized, causes issues on rPI 64 (bullseye) if not initialized
+  opts->audio_out_type = 0; //this was never initialized, causes issues on rPI 64 (bullseye) if not initialized
+
 }
 
 void
@@ -420,7 +423,8 @@ initState (dsd_state * state)
 void
 usage ()
 {
-  printf ( "Github Build Version: %s \n", GIT_TAG);
+  //printf ( "Github Build Version: %s \n", GIT_TAG);
+  //printf ( "2022 Dove Award Recipient"); //Thanks, Scott
   printf ("\n");
   printf ("Usage: dsd [options]            Live scanner mode\n");
   printf ("  or:  dsd [options] -r <files> Read/Play saved mbe data from file(s)\n");
@@ -562,10 +566,12 @@ if (opts->audio_in_type == 1)
     open_rtlsdr_stream(opts);
   }
 #endif
-if (opts->audio_in_type == 0){
+if (opts->audio_in_type == 0)
+{
   openPulseInput(opts);
 }
-if (opts->audio_out_type == 0){
+if (opts->audio_out_type == 0)
+{
   openPulseOutput(opts);
 }
 
@@ -878,12 +884,12 @@ main (int argc, char **argv)
           break;
 
         case 'T':
-          opts.dmr_stereo  = 1; //just the end user option
+          opts.dmr_stereo  = 1; //this value is the end user option
           state.dmr_stereo = 1; //this values toggles on and off depending on voice or data handling
           opts.pulse_digi_rate_out = 24000;
           opts.pulse_digi_out_channels = 2;
           fprintf (stderr, "%s", KRED);
-          fprintf (stderr,"Experimental DMR Stereo Sync and Functionality. WIP!\n");
+          fprintf (stderr,"DMR Stereo Sync and Functionality Enabled.\n");
           fprintf (stderr,"DMR Stereo will disable WAV and MBE file saving!\n");
           fprintf (stderr,"Also consider using -F if playback is too choppy!\n");
           fprintf (stderr, "%s", KNRM);
