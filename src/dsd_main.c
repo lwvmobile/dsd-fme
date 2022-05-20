@@ -225,7 +225,10 @@ initOpts (dsd_opts * opts)
   opts->inverted_dpmr = 0;
   opts->dmr_stereo = 0;
   opts->aggressive_framesync = 1; //more aggressive to combat wonk wonk voice decoding
-  //opts->audio_in_type = 0;
+  //see if initializing these values causes issues elsewhere, if so, then disable.
+  opts->audio_in_type = 0;  //this was never initialized, causes issues on rPI 64 (bullseye) if not initialized
+  opts->audio_out_type = 0; //this was never initialized, causes issues on rPI 64 (bullseye) if not initialized
+
 }
 
 void
@@ -563,10 +566,12 @@ if (opts->audio_in_type == 1)
     open_rtlsdr_stream(opts);
   }
 #endif
-if (opts->audio_in_type == 0){
+if (opts->audio_in_type == 0)
+{
   openPulseInput(opts);
 }
-if (opts->audio_out_type == 0){
+if (opts->audio_out_type == 0)
+{
   openPulseOutput(opts);
 }
 
