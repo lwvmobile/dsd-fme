@@ -276,6 +276,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0)
     {
       vc1 = 1;
+      state->dropL = 256;
       fprintf (stderr, "MS Slot 1 Voice Sync \n");
       //activeslot = 0;
 
@@ -283,6 +284,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 1)
     {
       vc2 = 1;
+      state->dropR = 256;
       //fprintf (stderr, "MS Slot 2 Voice Sync \n");
       //activeslot = 1;
     }
@@ -390,7 +392,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
       }
       if (vc1 == 6 && state->payload_keyid  != 0 && opts->payload == 1)
       {
-        LSFR(state);
+        LFSR(state);
       }
       fprintf (stderr, "\n");
     }
@@ -406,7 +408,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
       }
       if (vc1 == 6 && state->payload_keyid  != 0 && opts->payload == 1)
       {
-        LSFR(state);
+        LFSR(state);
       }
       fprintf (stderr, "\n");
     }
@@ -422,7 +424,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
       }
       if (vc2 == 6 && state->payload_keyidR != 0 && opts->payload == 1)
       {
-        LSFR(state);
+        LFSR(state);
       }
       fprintf (stderr, "\n");
     }
@@ -437,7 +439,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
       }
       if (vc2 == 6 && state->payload_keyidR != 0 && opts->payload == 1)
       {
-        LSFR(state);
+        LFSR(state);
       }
       fprintf (stderr, "\n");
     }
@@ -690,6 +692,9 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
     }
     fprintf (stderr, "\n");
   }
+  //reset drop values since we don't know which slot (because I'm too lazy to write that part)
+  state->dropL = 256;
+  state->dropR = 256;
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
@@ -760,6 +765,7 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   //process data
   state->dmr_stereo = 1;
   state->dmr_ms_mode = 1;
+
   //only run if payload is set to 1 due to errors with MS data
   if (opts->payload == 1)
   {
@@ -768,6 +774,9 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
 
   state->dmr_stereo = 0;
   state->dmr_ms_mode = 0;
+  //reset drop values since we don't know which slot (because I'm too lazy to write that part)
+  state->dropL = 256;
+  state->dropR = 256;
 
   //get potential first half payload dibits and store them in the payload for the next repitition, MS voice or data.
   skipDibit (opts, state, 144);

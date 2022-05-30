@@ -373,6 +373,9 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     mihex1 = (unsigned long long int)ConvertBitIntoBytes(&mi[0], 32);
     mihex2 = (unsigned long long int)ConvertBitIntoBytes(&mi[32], 32);
     mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
+    //need to check this for accuracy, may be incorrect, MI may also be incorrect, I have 72, but LFSR shows 64
+    state->payload_miP = (mihex1 << 40) | (mihex2 << 8) | mihex3;
+
   }
 
   if (1 == 1) //print on payload == 1
@@ -381,10 +384,37 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08llX%08llX%02llX\n", algidhex, kidhex, mihex1, mihex2, mihex3);
     fprintf (stderr, "%s", KNRM);
   }
-
+  if (opts->payload == 1)
+  {
+    //LFSRP(state);
+  }
+  //why am I doing this part below again?
   if (opts->payload == 0)
     {
       algidhex = strtol (algid, NULL, 2);
       kidhex = strtol (kid, NULL, 2);
     }
+}
+
+//needs some work to make mi value fit in there since its a 72 bit value, need to check this over
+//LFSR code courtesy of https://github.com/mattames/LFSR/
+int LFSRP(dsd_state * state)
+{
+  uint64_t lfsr = 0;
+  lfsr = state->payload_miP;
+  uint8_t cnt = 0;
+
+  for(cnt=0;cnt<32;cnt++)
+  {
+	  // Polynomial is C(x) = x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1
+    uint64_t bit  = ((lfsr >> 63) ^ (lfsr >> 61) ^ (lfsr >> 45) ^ (lfsr >> 37) ^ (lfsr >> 26) ^ (lfsr >> 14)) & 0x1;
+    lfsr =  (lfsr << 1) | (bit);
+  }
+
+  fprintf (stderr, "%s", KYEL);
+  fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
+  fprintf(stderr, " Next MI: 0x%016X \n", lfsr);
+  fprintf (stderr, "%s", KNRM);
+  state->payload_miP = lfsr;
+
 }

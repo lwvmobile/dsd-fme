@@ -645,11 +645,11 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
   /* Perform the DMR voice decoding */
   ProcessDMR(opts, state);
 
-  //LSFR if required
+  //LFSR if required, change condition?
   if ( (state->currentslot == 0 && state->payload_keyid  != 0 && opts->payload == 1) ||
        (state->currentslot == 1 && state->payload_keyidR != 0 && opts->payload == 1)  )
   {
-    LSFR(state);
+    LFSR(state);
   }
 
   if(opts->errorbars == 1)

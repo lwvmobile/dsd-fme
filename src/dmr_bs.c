@@ -170,10 +170,18 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       state->TS2SuperFrame.TimeSlotRawVoiceFrame[vc2-1].Sync[i*2]   = (1 & (dibit >> 1)); // bit 1
       state->TS2SuperFrame.TimeSlotRawVoiceFrame[vc2-1].Sync[i*2+1] = (1 & dibit);        // bit 0
     }
-
   }
 
   sync[24] = 0;
+  if (internalslot == 0 && vc1 == 6)
+  {
+    fprintf (stderr, "\nVC6 Burst = %X\n", syncdata);
+
+  }
+  if (internalslot == 1 && vc2 == 6)
+  {
+    fprintf (stderr, "\nVC6 Burst = %X\n", syncdata);
+  }
 
   EmbeddedSignallingOk = -1;
   if(QR_16_7_6_decode(EmbeddedSignalling))
@@ -251,10 +259,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0)
     {
       vc1 = 1;
+      state->dropL = 256;
     }
     if (internalslot == 1)
     {
       vc2 = 1;
+      state->dropR = 256;
     }
   }
 
@@ -274,6 +284,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       else fprintf (stderr,"Sync: -DMR  ");
       //constantly reset the vc counter to 1 each data frame in anticipation of new voice frame
       vc1 = 1;
+      state->dropL = 256;
     }
     if (internalslot == 1)
     {
@@ -287,6 +298,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       else fprintf (stderr,"Sync: -DMR  ");
       //constantly reset the vc counter to 1 each data frame in anticipation of new voice frame
       vc2 = 1;
+      state->dropR = 256;
     }
     processDMRdata (opts, state);
     skipcount++; //after 2 data frames, drop back to getFrameSync and process subsequent data with processDMRdata
@@ -325,7 +337,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         }
         if (vc1 == 1 && state->payload_keyid != 0 && opts->payload == 1)
         {
-          LSFR(state);
+          LFSR(state);
         }
         fprintf (stderr, "\n");
       }
@@ -340,7 +352,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         }
         if (vc1 == 1 && state->payload_keyid != 0 && opts->payload == 1)
         {
-          LSFR(state);
+          LFSR(state);
         }
         fprintf (stderr, "\n");
       }
@@ -360,7 +372,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         }
         if (vc2 == 1 && state->payload_keyidR != 0 && opts->payload == 1)
         {
-          LSFR(state);
+          LFSR(state);
         }
         fprintf (stderr, "\n");
       }
@@ -375,7 +387,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         }
         if (vc2 == 1 && state->payload_keyidR != 0 && opts->payload == 1)
         {
-          LSFR(state);
+          LFSR(state);
         }
         fprintf (stderr, "\n");
       }
@@ -643,6 +655,9 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   }
 
   //these ambe_fr values are set correctly now!
+  //reset drop values since we don't know which slot (because I'm too lazy to write that part)
+  state->dropL = 256;
+  state->dropR = 256;
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);

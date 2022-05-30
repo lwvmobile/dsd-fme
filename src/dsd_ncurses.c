@@ -163,8 +163,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     state->payload_keyidR   = 0;
     state->payload_algidR   = 0;
     //state->payload_mfid  = 0;
-    state->payload_mi       = 0;
-    state->payload_miR      = 0;
+    //state->payload_mi       = 0;
+    //state->payload_miR      = 0;
 
     state->nxdn_key         = 0;
     state->nxdn_cipher_type = 0;

@@ -368,6 +368,7 @@ typedef struct
   int frame_dpmr;
   //
   short int dmr_stereo;
+
   //
   int frame_ysf;
   int inverted_ysf; //not sure if ysf comes in inverted or not, but signal could if IQ flipped
@@ -472,7 +473,8 @@ typedef struct
   int payload_mfid;
   int payload_mfidR;
   int payload_mi;
-  int payload_miR;
+  int payload_miR; //check to see if anything tied to this still functions appropriately
+  uint64_t payload_miP;
   int payload_lsfr;
   int payload_lsfrR;
   unsigned long long int K;
@@ -570,6 +572,9 @@ typedef struct
   short int dmr_ms_mode;
   unsigned int dmrburstL;
   unsigned int dmrburstR;
+  int dropL;
+  int dropR;
+  unsigned long long int R;
 
   //dstar header for ncurses
   unsigned char dstarradioheader[41];
@@ -820,7 +825,9 @@ void ProcessMBCData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8
 void ProcessMBChData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
 void ProcessWTFData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
 void ProcessUnifiedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-int LSFR(dsd_state * state);
+//LFSR code courtesy of https://github.com/mattames/LFSR/
+int LFSR(dsd_state * state);
+int LFSRP(dsd_state * state);
 
 void Hamming_7_4_init();
 void Hamming_7_4_encode(unsigned char *origBits, unsigned char *encodedBits);

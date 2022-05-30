@@ -18,9 +18,11 @@
 #include "dsd.h"
 #include "dmr_const.h"
 #include "p25p1_check_hdu.h"
-//
 
 //
+//A
+//
+
 void ProcessDMR (dsd_opts * opts, dsd_state * state)
 {
   uint32_t i, j;
@@ -115,6 +117,8 @@ if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->p
    }
   }
 }
+//
+//B
 //
 if (state->currentslot == 0)
 {

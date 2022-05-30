@@ -2081,14 +2081,24 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
   //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
 
   //reset alg, keys, mi during a TLC call termination EVENT so we aren't stuck on an old value, PI header will proceed a new call if BP isn't used
-  state->payload_algid = 0;
-  state->payload_keyid = 0;
-  //state->payload_mfid  = 0;
-  state->payload_mi    = 0;
-  state->payload_algidR = 0;
-  state->payload_keyidR = 0;
-  //state->payload_mfid  = 0;
-  state->payload_miR    = 0;
+  //assuming the TLC frame comes on the same slot as the call it was terminating? not sure?
+  if (state->currentslot == 0)
+  {
+    state->payload_algid = 0;
+    state->payload_keyid = 0;
+    //state->payload_mfid  = 0;
+    //state->payload_mi    = 0; //let's try disabling this for a bit
+
+  }
+  if (state->currentslot == 1)
+  {
+    state->payload_algidR = 0;
+    state->payload_keyidR = 0;
+    //state->payload_mfid  = 0;
+    //state->payload_miR    = 0; ////let's try disabling this for a bit
+
+  }
+
 
   //tlc
   if((IrrecoverableErrors == 0) && CRCCorrect) //amateur DMR seems to only set radio ID up here I think, figure out best way to set without messing up other DMR types
@@ -2537,8 +2547,10 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
 
 } /* End ProcessVoiceBurstSync() */
 
-int LSFR(dsd_state * state)
+//LFSR code courtesy of https://github.com/mattames/LFSR/
+int LFSR(dsd_state * state)
 {
+  //int lfsr = 0;
   int lfsr = 0;
   if (state->currentslot == 0)
   {
@@ -2575,6 +2587,7 @@ int LSFR(dsd_state * state)
     state->payload_miR = lfsr;
   }
 }
+
 /*
  * @brief : This function compute the CRC-CCITT of the DMR data
  *          by using the polynomial x^16 + x^12 + x^5 + 1

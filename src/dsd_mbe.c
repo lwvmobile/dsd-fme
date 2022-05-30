@@ -17,7 +17,9 @@
 
 #include "dsd.h"
 
-//static void DecipherData(char * Input, char * KeyStream, char * Output, int NbData);
+//
+//C
+//
 
 void
 playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
@@ -77,7 +79,7 @@ playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
 void
 processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char ambe_fr[4][24], char imbe7100_fr[7][24])
 {
-  //is this the best placement for this array?
+
   //
   int BP[256] = {
     0x0000, 0x1F00, 0xE300, 0xFC00, 0x2503, 0x3A03, 0xC603, 0xD903,
@@ -180,7 +182,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       //stereo slots and slot 0 (left slot)
       if (state->currentslot == 0 && opts->dmr_stereo == 1)
       {
-        //seperate the ecc, demodulation, slip in xor, and processdata instead?
+
         state->errs = mbe_eccAmbe3600x2450C0 (ambe_fr);
         state->errs2 = state->errs;
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
@@ -195,6 +197,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             ambe_d[j] ^= x;
           }
         }
+        //
+				//D
+        //
         mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
                                   ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
@@ -208,7 +213,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       //stereo slots and slot 1 (right slot)
       if (state->currentslot == 1 && opts->dmr_stereo == 1)
       {
-        //seperate the ecc, demodulation, slip in xor, and processdata instead?
+
         state->errsR = mbe_eccAmbe3600x2450C0 (ambe_fr);
         state->errs2R = state->errsR;
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
@@ -223,6 +228,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             ambe_d[j] ^= x;
           }
         }
+				//
+				//E
+        //
         mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
                                   ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);
 
@@ -233,7 +241,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           PrintAMBEData (opts, state, ambe_d);
         }
       }
-      //if using older DMR method, dPMR, NXDN?
+      //if using older DMR method, dPMR, or NXDN
       if (opts->dmr_stereo == 0)
       {
         mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
@@ -248,14 +256,6 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       }
 
 
-    }
-
-  if (opts->errorbars == 1)
-    {
-      //state->err_buf = state->err_str; //make comy to compare, and only print when comparison differs?? THIS HERE HERE
-      //strncpy (state->err_buf, state->err_str, sizeof(state->err_str)); //is this the correct placement for this? want it just before err_str is set?
-      //fprintf (stderr, "%s", state->err_str); //this the actual error 'bar' ==== printer, find way to keep this entire string from printing constantly unless err_str changes
-      //fprintf (stderr, "%s", state->err_buf);
     }
 
   state->debug_audio_errors += state->errs2;
@@ -288,23 +288,5 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   {
     writeSynthesizedVoice (opts, state);
   }
-  /*
-  if (opts->audio_out == 1)
-  {
-    playSynthesizedVoice (opts, state);
-  }
-  */
-}
 
-/* This function decipher data */
-/* //does anything even call this function?
-static void DecipherData(char * Input, char * KeyStream, char * Output, int NbData)
-{
-  int i;
-
-  for(i = 0; i < NbData; i++)
-  {
-    Output[i] = Input[i] ^ KeyStream[i];
-  }
 }
-*/
