@@ -412,8 +412,8 @@ int LFSRP(dsd_state * state)
   }
 
   fprintf (stderr, "%s", KYEL);
-  fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%02llX", state->payload_algid, state->payload_keyid);
-  fprintf(stderr, " Next MI: 0x%016X \n", lfsr);
+  fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
+  fprintf(stderr, " Next MI: 0x%016llX \n", lfsr);
   fprintf (stderr, "%s", KNRM);
   state->payload_miP = lfsr;
 
