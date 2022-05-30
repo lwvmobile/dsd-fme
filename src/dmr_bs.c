@@ -175,12 +175,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   sync[24] = 0;
   if (internalslot == 0 && vc1 == 6)
   {
-    fprintf (stderr, "\nVC6 Burst = %X\n", syncdata);
+    //fprintf (stderr, "\nVC6 Burst = %X\n", syncdata);
 
   }
   if (internalslot == 1 && vc2 == 6)
   {
-    fprintf (stderr, "\nVC6 Burst = %X\n", syncdata);
+    //fprintf (stderr, "\nVC6 Burst = %X\n", syncdata);
   }
 
   EmbeddedSignallingOk = -1;
