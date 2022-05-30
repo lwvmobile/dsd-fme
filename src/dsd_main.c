@@ -133,6 +133,9 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   mbe_initMbeParms (state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2);
 
   state->dmr_ms_mode = 0;
+  state->dropL = 256; //drop it like its hot
+  state->dropR = 256; //drop it like its hot
+
 }
 
 void
@@ -363,8 +366,8 @@ initState (dsd_state * state)
   state->dpmr_caller_id = 0;
   state->dpmr_target_id = 0;
 
-  state->payload_mi  = 0;
-  state->payload_miR = 0;
+  //state->payload_mi  = 0;
+  //state->payload_miR = 0;
   state->payload_mfid = 0;
   state->payload_mfidR = 0;
   state->payload_algid = 0;
@@ -399,6 +402,7 @@ initState (dsd_state * state)
   sprintf (state->dmr_lrrp[1][5], "");
 
   state->K = 0;
+  state->R = 0; //make configurable later on?
   state->dmr_stereo = 0;
   state->dmrburstL = 17; //initialize at higher value than possible
   state->dmrburstR = 17; //17 in char array is set for ERR
@@ -407,6 +411,9 @@ initState (dsd_state * state)
   state->dmr_fid  = 0;
   state->dmr_fidR = 0;
   state->dmr_ms_mode = 0;
+
+  state->dropL = 256; //drop it like its hot
+  state->dropR = 256; //drop it like its hot
 
   memset(state->dstarradioheader, 0, 41);
 
@@ -840,6 +847,10 @@ main (int argc, char **argv)
           }
           break;
 
+        case 'R':
+          sscanf (optarg, "%lld", &state.R);
+          break;
+
         case 'G': //Set rtl device gain
           sscanf (optarg, "%d", &opts.rtl_gain_value); //multiple value by ten to make it consitent with the way rtl_fm really works
           break;
@@ -977,10 +988,10 @@ main (int argc, char **argv)
           strncpy(opts.serial_dev, optarg, 1023);
           opts.serial_dev[1023] = '\0';
           break;
-        case 'R':
-          sscanf (optarg, "%d", &opts.resume);
-          fprintf (stderr,"Enabling scan resume after %i TDULC frames\n", opts.resume);
-          break;
+        //case 'R':
+        //  sscanf (optarg, "%d", &opts.resume);
+        //  fprintf (stderr,"Enabling scan resume after %i TDULC frames\n", opts.resume);
+        //  break;
         case 'f':
           if (optarg[0] == 'a')
             {

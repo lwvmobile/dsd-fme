@@ -187,6 +187,9 @@ make -j `nproc`
 sudo make install
 sudo ldconfig
 ```
+# Join the Conversation
+
+Want to help drive the direction of this project and read more about the latest updates and releases to DSD-FME? Then join the conversation on the 'unofficial official' [DSD-FME](https://forums.radioreference.com/threads/dsd-fme.438137/ "DSD-FME") Forum Thread on the Radio Reference Forums.
 
 ## License
 Copyright (C) 2010 DSD Author
