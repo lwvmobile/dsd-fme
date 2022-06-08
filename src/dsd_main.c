@@ -136,6 +136,21 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->dropL = 256; //drop it like its hot
   state->dropR = 256; //drop it like its hot
 
+  //not sure if desirable here or not just yet, may need to disable a few of these
+  state->payload_mi  = 0;
+  state->payload_miR = 0;
+  state->payload_mfid = 0;
+  state->payload_mfidR = 0;
+  state->payload_algid = 0;
+  state->payload_algidR = 0;
+  state->payload_keyid = 0;
+  state->payload_keyidR = 0;
+  //just for a test
+  if (state->M == 0)
+  {
+    state->K = 0;
+  }
+
 }
 
 void
@@ -231,6 +246,7 @@ initOpts (dsd_opts * opts)
   //see if initializing these values causes issues elsewhere, if so, then disable.
   opts->audio_in_type = 0;  //this was never initialized, causes issues on rPI 64 (bullseye) if not initialized
   opts->audio_out_type = 0; //this was never initialized, causes issues on rPI 64 (bullseye) if not initialized
+
 
 }
 
@@ -366,8 +382,8 @@ initState (dsd_state * state)
   state->dpmr_caller_id = 0;
   state->dpmr_target_id = 0;
 
-  //state->payload_mi  = 0;
-  //state->payload_miR = 0;
+  state->payload_mi  = 0;
+  state->payload_miR = 0;
   state->payload_mfid = 0;
   state->payload_mfidR = 0;
   state->payload_algid = 0;
@@ -402,7 +418,8 @@ initState (dsd_state * state)
   sprintf (state->dmr_lrrp[1][5], "");
 
   state->K = 0;
-  state->R = 0; //make configurable later on?
+  state->R = 0;
+  state->M = 0;
   state->dmr_stereo = 0;
   state->dmrburstL = 17; //initialize at higher value than possible
   state->dmrburstR = 17; //17 in char array is set for ERR
@@ -841,6 +858,7 @@ main (int argc, char **argv)
 
         case 'K':
           sscanf (optarg, "%lld", &state.K);
+          state.M = 1;
           if (state.K > 256)
           {
            state.K = 256;

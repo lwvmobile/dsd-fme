@@ -1549,27 +1549,27 @@ void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t 
   //Hytera XPT
   if (csbk_o == 0x28)
   {
-    fprintf (stderr, "\nHytera TIII Announcement");
+    //fprintf (stderr, "\nHytera TIII Announcement");
     //sprintf(state->dmr_branding, " MotoTRBO Capacity Plus ");
     sprintf(state->dmr_branding, " TIII "); //?? one of these next two seems to be on both types, maybe its a TIII thing?
   }
   //if ( ((csbk_o << 8) +  csbk_fid) == 0x3606 ) //
   if (csbk_o == 0x36)
   {
-    fprintf (stderr, "\nHytera XPT");
+    //fprintf (stderr, "\nHytera XPT");
     sprintf(state->dmr_branding, " Hytera XPT ");
   }
 
   if (csbk_o == 0x0A)
   {
-    fprintf (stderr, "\nHytera XPT Site State");
+    //fprintf (stderr, "\nHytera XPT Site State");
     sprintf(state->dmr_branding, " Hytera XPT ");
   }
 
   //if ( ((csbk_o << 8) +  csbk_fid) == 0x3706 ) //
   if (csbk_o == 0x37)
   {
-    fprintf (stderr, "\nHytera XPT");
+    //fprintf (stderr, "\nHytera XPT");
     sprintf(state->dmr_branding, " Hytera XPT ");
   }
 
@@ -1681,12 +1681,18 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
     state->payload_algid = DmrDataByte[0];
     state->payload_keyid = DmrDataByte[2];
     state->payload_mi    = ( ((DmrDataByte[3]) << 24) + ((DmrDataByte[4]) << 16) + ((DmrDataByte[5]) << 8) + (DmrDataByte[6]) );
-    if (1 == 1) //have it always print?
+    if (state->payload_algid < 0x26) //have it always print? only if a good value, was 1 == 1
     {
       fprintf (stderr, "%s ", KYEL);
       fprintf (stderr, "\n Slot 1");
       fprintf (stderr, " DMR PI Header ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algid, state->payload_keyid, state->payload_mi);
       fprintf (stderr, "%s ", KNRM);
+    }
+    if (state->payload_algid >= 0x26) //sanity check to make sure we aren't keeping bogus PI header info
+    {
+      state->payload_algid = 0;
+      state->payload_keyid = 0;
+      state->payload_mi = 0;
     }
   }
 
@@ -1695,12 +1701,18 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
     state->payload_algidR = DmrDataByte[0];
     state->payload_keyidR = DmrDataByte[2];
     state->payload_miR    = ( ((DmrDataByte[3]) << 24) + ((DmrDataByte[4]) << 16) + ((DmrDataByte[5]) << 8) + (DmrDataByte[6]) );
-    if (1 == 1) //have it always print?
+    if (state->payload_algidR < 0x26) //have it always print? only if a good value, was 1 == 1
     {
       fprintf (stderr, "%s ", KYEL);
       fprintf (stderr, "\n Slot 2");
       fprintf (stderr, " DMR PI Header ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algidR, state->payload_keyidR, state->payload_miR);
       fprintf (stderr, "%s ", KNRM);
+    }
+    if (state->payload_algidR >= 0x26) //sanity check to make sure we aren't keeping bogus PI header info
+    {
+      state->payload_algidR = 0;
+      state->payload_keyidR = 0;
+      state->payload_miR = 0;
     }
   }
 
@@ -2775,13 +2787,15 @@ uint8_t ComputeCrc5Bit(uint8_t * DMRData)
  *
  * @return A constant string pointer that explain the Alg ID used
  */
+ /*
 uint8_t * DmrAlgIdToStr(uint8_t AlgID)
 {
   if(AlgID == 0x21) return (uint8_t *)"ARC4";
   else if(AlgID == 0x25) return (uint8_t *)"AES256";
   else return (uint8_t *)"UNKNOWN";
   //state->payload_algid = AlgID;
-} /* End DmrAlgIdToStr */
+} // End DmrAlgIdToStr
+*/
 
 /*
  * @brief : This function returns the encryption mode into an explicit string
@@ -2798,6 +2812,7 @@ uint8_t * DmrAlgIdToStr(uint8_t AlgID)
  *
  * @return A constant string pointer that explain the encryption mode used
  */
+ /*
 uint8_t * DmrAlgPrivacyModeToStr(uint32_t PrivacyMode)
 {
   switch(PrivacyMode)
@@ -2842,8 +2857,8 @@ uint8_t * DmrAlgPrivacyModeToStr(uint32_t PrivacyMode)
       return (uint8_t *)"UNKNOWN";
       break;
     }
-  } /* End switch(PrivacyMode) */
-} /* End DmrAlgPrivacyModeToStr() */
-
+  } // End switch(PrivacyMode) /
+} //End DmrAlgPrivacyModeToStr() /
+*/
 
 /* End of file */

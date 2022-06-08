@@ -462,7 +462,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     case 0b0011:
     {
       //going to disable until I can find more useful info to present
-      ProcessCSBK(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
+      //ProcessCSBK(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
 
@@ -498,7 +498,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     case 0b1000:
     {
       //need to keep working on improving the trellis decode, but is partially viable now
-      Process34Data(opts, state, trellisdibits, (uint8_t *)syncdata, (uint8_t *)SlotType);
+      //Process34Data(opts, state, trellisdibits, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
 

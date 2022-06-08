@@ -627,7 +627,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //printw ("|        | "); //10 spaces
     printw ("| V XTRA | "); //10 spaces
     //Burger King
-    if(state->dmrburstL == 16 && state->payload_mi == 0 && (state->dmr_so & 0xCF) == 0x40) //4F or CF mask?
+    if(state->dmrburstL == 16 && state->payload_mi == 0 && (state->dmr_so & 0x4F) == 0x40) //4F or CF mask? & 0xCF currently
     {
       attron(COLOR_PAIR(5));
       printw (" **BP** ");
@@ -635,7 +635,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
     //Point
-    if(state->dmrburstL == 16 && state->payload_mi == 0 && state->K > 0 && (state->dmr_so & 0xCF) == 0x40)
+    if(state->dmrburstL == 16 && state->payload_mi == 0 && state->K > 0 && (state->dmr_so & 0x4F) == 0x40)
     {
       attron(COLOR_PAIR(1));
       printw ("BPK [%3lld] ", state->K);
@@ -643,7 +643,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
     //ALG, KeyID, MI
-    if(state->dmrburstL == 16 && state->payload_keyid > 0 && (state->dmr_so & 0xCF) == 0x40)
+    if(state->dmrburstL == 16 && state->payload_keyid > 0 && (state->dmr_so & 0x4F) == 0x40)
     {
       attron(COLOR_PAIR(1));
       printw ("ALG: [0x%02X] KEY: [0x%02X] MI: [0x%08X]", state->payload_algid, state->payload_keyid, state->payload_mi);
@@ -728,7 +728,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| V XTRA | "); //10 spaces
 
     //Burger King 2
-    if(state->dmrburstR == 16 && state->payload_miR == 0 && (state->dmr_soR & 0xCF) == 0x40) //4F or CF mask?
+    if(state->dmrburstR == 16 && state->payload_miR == 0 && (state->dmr_soR & 0x4F) == 0x40) //4F or CF mask?
     {
       attron(COLOR_PAIR(5));
       printw (" **BP** ");
@@ -736,7 +736,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
     //Point 2
-    if(state->dmrburstR == 16 && state->payload_miR == 0 && state->K > 0 && (state->dmr_soR & 0xCF) == 0x40)
+    if(state->dmrburstR == 16 && state->payload_miR == 0 && state->K > 0 && (state->dmr_soR & 0x4F) == 0x40)
     {
       attron(COLOR_PAIR(1));
       printw ("BPK [%3lld] ", state->K);

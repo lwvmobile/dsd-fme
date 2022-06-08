@@ -117,8 +117,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   };
   //
 
-  //comment out line below should return print back to normal
-  //strncpy (state->err_buf, state->err_str, sizeof(state->err_str));  //right at the very top before err_str gets returned?
+
   int i;
   char imbe_d[88];
   char ambe_d[49];
@@ -187,6 +186,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->errs2 = state->errs;
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
         state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+				//
+				//F
+				//
         if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0) //
         {
           k = BP[state->K];
@@ -198,7 +200,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           }
         }
         //
-				//D
+        //D
         //
         mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
                                   ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
@@ -218,6 +220,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->errs2R = state->errsR;
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
         state->errs2R += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+				//
+				//G
+				//
         if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0) //
         {
           k = BP[state->K];
@@ -229,7 +234,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           }
         }
 				//
-				//E
+        //E
         //
         mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
                                   ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);

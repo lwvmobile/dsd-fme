@@ -478,6 +478,7 @@ typedef struct
   int payload_lsfr;
   int payload_lsfrR;
   unsigned long long int K;
+  int M;
 
   unsigned int debug_audio_errors;
   unsigned int debug_audio_errorsR;

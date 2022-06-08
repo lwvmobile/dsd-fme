@@ -335,7 +335,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " BPK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        if (vc1 == 1 && state->payload_keyid != 0 && opts->payload == 1)
+        if (vc1 == 1 && state->payload_algid != 0 && opts->payload == 1)
         {
           LFSR(state);
         }
@@ -350,7 +350,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " BPK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        if (vc1 == 1 && state->payload_keyid != 0 && opts->payload == 1)
+        if (vc1 == 1 && state->payload_algid != 0 && opts->payload == 1)
         {
           LFSR(state);
         }
@@ -370,7 +370,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " BPK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        if (vc2 == 1 && state->payload_keyidR != 0 && opts->payload == 1)
+        if (vc2 == 1 && state->payload_algidR != 0 && opts->payload == 1)
         {
           LFSR(state);
         }
@@ -385,7 +385,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " BPK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        if (vc2 == 1 && state->payload_keyidR != 0 && opts->payload == 1)
+        if (vc2 == 1 && state->payload_algidR != 0 && opts->payload == 1)
         {
           LFSR(state);
         }

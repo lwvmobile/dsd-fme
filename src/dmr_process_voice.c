@@ -76,6 +76,8 @@ int BP[256] = {
   0x41F5, 0x5EF5, 0xA2F5, 0xBDF5, 0x64F6, 0x7BF6, 0x87F6, 0x98F6 //255
 };
 //
+//H
+//
 if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
 {
   fprintf (stderr, "%s", KYEL);
@@ -83,7 +85,7 @@ if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->pa
   fprintf (stderr, "%s", KNRM);
   k = BP[state->K];
   k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
-  //fprintf (stderr, "\nK=0x%X\n", k);
+	
   for(Frame = 0; Frame < 6; Frame++)
   {
    for(i = 0; i < 3; i++)
@@ -104,7 +106,7 @@ if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->p
   fprintf (stderr, "%s", KNRM);
   k = BP[state->K];
   k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
-  //fprintf (stderr, "\nK=0x%X\n", k);
+
   for(Frame = 0; Frame < 6; Frame++)
   {
    for(i = 0; i < 3; i++)
@@ -122,7 +124,7 @@ if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->p
 //
 if (state->currentslot == 0)
 {
-  if (opts->payload == 1)
+  if (opts->payload == 1 && state->R == 0)
   {
     fprintf(stderr, "\n"); //line break for AMBE printer
   }

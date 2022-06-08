@@ -390,7 +390,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
         fprintf(stderr, " BPK %lld", state->K);
         fprintf (stderr, "%s", KNRM);
       }
-      if (vc1 == 6 && state->payload_keyid  != 0 && opts->payload == 1)
+      if (vc1 == 6 && state->payload_algid  != 0 && opts->payload == 1)
       {
         LFSR(state);
       }
@@ -406,7 +406,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
         fprintf(stderr, " BPK %lld", state->K);
         fprintf (stderr, "%s", KNRM);
       }
-      if (vc1 == 6 && state->payload_keyid  != 0 && opts->payload == 1)
+      if (vc1 == 6 && state->payload_algid  != 0 && opts->payload == 1)
       {
         LFSR(state);
       }
@@ -422,7 +422,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
         fprintf(stderr, " BPK %lld", state->K);
         fprintf (stderr, "%s", KNRM);
       }
-      if (vc2 == 6 && state->payload_keyidR != 0 && opts->payload == 1)
+      if (vc2 == 6 && state->payload_algidR != 0 && opts->payload == 1)
       {
         LFSR(state);
       }
@@ -437,7 +437,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
         fprintf(stderr, " BPK %lld", state->K);
         fprintf (stderr, "%s", KNRM);
       }
-      if (vc2 == 6 && state->payload_keyidR != 0 && opts->payload == 1)
+      if (vc2 == 6 && state->payload_algidR != 0 && opts->payload == 1)
       {
         LFSR(state);
       }
@@ -455,7 +455,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
       //ProcessVoiceBurstSync(opts, state);
       //fprintf (stderr, "\n");
     }
-
+    state->dmr_ms_mode == 1;
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
@@ -695,6 +695,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   //reset drop values since we don't know which slot (because I'm too lazy to write that part)
   state->dropL = 256;
   state->dropR = 256;
+  state->dmr_ms_mode = 1;
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
