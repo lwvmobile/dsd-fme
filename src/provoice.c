@@ -33,7 +33,7 @@ processProVoice (dsd_opts * opts, dsd_state * state)
   if (opts->payload == 1)
   {
     k = 0;
-    fprintf (stderr, "\nInit 64 ");
+    //fprintf (stderr, "\nInit 64 ");
     for(i = 0; i < 8; i++)
     {
       initbyte[i] = 0;
@@ -43,9 +43,9 @@ processProVoice (dsd_opts * opts, dsd_state * state)
         initbyte[i] = initbyte[i] | init[k];
         k++;
       }
-      fprintf (stderr, "%02X", initbyte[i]);
+      //fprintf (stderr, "%02X", initbyte[i]);
     }
-    fprintf (stderr, "\n");
+    //fprintf (stderr, "\n");
   }
   // lid
   for (i = 0; i < 16; i++)
@@ -75,7 +75,7 @@ processProVoice (dsd_opts * opts, dsd_state * state)
   if (opts->payload == 1)
   {
     k = 0;
-    fprintf (stderr, "LID ");
+    //fprintf (stderr, "LID ");
     for(i = 0; i < 10; i++)
     {
       lidbyte[i] = 0;
@@ -85,9 +85,9 @@ processProVoice (dsd_opts * opts, dsd_state * state)
         lidbyte[i] = lidbyte[i] | lid[k];
         k++;
       }
-      fprintf (stderr, "%02X", lidbyte[i]);
+      //fprintf (stderr, "%02X", lidbyte[i]);
     }
-    fprintf (stderr, "\n");
+    //fprintf (stderr, "\n");
   }
 
 
@@ -333,7 +333,7 @@ processProVoice (dsd_opts * opts, dsd_state * state)
 if (opts->payload == 1)
 {
   k = 0;
-  fprintf (stderr, "16 bits? ");
+  //fprintf (stderr, "16 bits? ");
   for(i = 0; i < 2; i++)
   {
     initbyte[i] = 0;
@@ -343,9 +343,9 @@ if (opts->payload == 1)
       initbyte[i] = initbyte[i] | init[k];
       k++;
     }
-    fprintf (stderr, "%02X", initbyte[i]);
+    //fprintf (stderr, "%02X", initbyte[i]);
   }
-  fprintf (stderr, "\n");
+  //fprintf (stderr, "\n");
 }
   // imbe frames 3,4 first half
   w = pW;

@@ -542,6 +542,7 @@ typedef struct
   uint8_t  dmr_12_rate_sf[2][60]; //going five frames deep by 12 bytes //[slot][value]
   uint8_t  dmr_34_rate_sf[2][64]; //going four frames deep by 16 bytes //[slot][value]
   int dmr_stereo_payload[144]; //load up 144 dibit buffer for every single DMR TDMA frame
+  //uint8_t dmr_stereo_payload[144]; //load up 144 dibit buffer for every single DMR TDMA frame
 
 
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
