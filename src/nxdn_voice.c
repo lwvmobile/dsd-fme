@@ -143,9 +143,9 @@ void processNXDNVoice (dsd_opts * opts, dsd_state * state)
       y++;
       z++;
     }
-    if (opts->payload == 1)
+    if (opts->payload == 1 && opts->dmr_stereo == 1)
     {
-      //fprintf(stderr, "\n");
+      fprintf(stderr, "\n");
     }
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
 

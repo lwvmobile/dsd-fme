@@ -186,9 +186,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->errs2 = state->errs;
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
         state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
-				//
-				//F
-				//
+        //
+        //F
+        //
         if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0) //
         {
           k = BP[state->K];
@@ -220,9 +220,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->errs2R = state->errsR;
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
         state->errs2R += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
-				//
-				//G
-				//
+        //
+        //G
+        //
         if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0) //
         {
           k = BP[state->K];
@@ -233,7 +233,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             ambe_d[j] ^= x;
           }
         }
-				//
+        //
         //E
         //
         mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
