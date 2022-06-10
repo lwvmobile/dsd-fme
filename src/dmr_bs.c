@@ -46,10 +46,6 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     return curr;
   }
 
-  //Init the superframe buffers
-  //memset(&state->TS1SuperFrame, 0, sizeof(TimeSlotVoiceSuperFrame_t));
-  //memset(&state->TS2SuperFrame, 0, sizeof(TimeSlotVoiceSuperFrame_t));
-
   //Init slot lights
   sprintf (state->slot1light, " slot1 ");
   sprintf (state->slot2light, " slot2 ");
@@ -73,6 +69,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     dibit = getDibit(opts, state);
     cachdata[i] = dibit;
     state->dmr_stereo_payload[i] = dibit;
+    //fprintf (stderr, "D%X ", dibit);
+    //fprintf (stderr, "P%X ", state->dmr_stereo_payload[i]);
     if(i == 2)
     {
       state->currentslot = (1 & (dibit >> 1));
@@ -173,15 +171,6 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   }
 
   sync[24] = 0;
-  if (internalslot == 0 && vc1 == 6)
-  {
-    //fprintf (stderr, "\nVC6 Burst = %X\n", syncdata);
-
-  }
-  if (internalslot == 1 && vc2 == 6)
-  {
-    //fprintf (stderr, "\nVC6 Burst = %X\n", syncdata);
-  }
 
   EmbeddedSignallingOk = -1;
   if(QR_16_7_6_decode(EmbeddedSignalling))
@@ -335,7 +324,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " BPK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        if (vc1 == 1 && state->payload_keyid != 0 && opts->payload == 1)
+        if (vc1 == 1 && state->payload_algid != 0 && opts->payload == 1)
         {
           LFSR(state);
         }
@@ -350,7 +339,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " BPK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        if (vc1 == 1 && state->payload_keyid != 0 && opts->payload == 1)
+        if (vc1 == 1 && state->payload_algid != 0 && opts->payload == 1)
         {
           LFSR(state);
         }
@@ -370,7 +359,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " BPK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        if (vc2 == 1 && state->payload_keyidR != 0 && opts->payload == 1)
+        if (vc2 == 1 && state->payload_algidR != 0 && opts->payload == 1)
         {
           LFSR(state);
         }
@@ -385,7 +374,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " BPK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        if (vc2 == 1 && state->payload_keyidR != 0 && opts->payload == 1)
+        if (vc2 == 1 && state->payload_algidR != 0 && opts->payload == 1)
         {
           LFSR(state);
         }
@@ -404,9 +393,100 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       ProcessVoiceBurstSync(opts, state);
       fprintf (stderr, "\n");
     }
+
+    //test printing ambe_fr values
+    /*
+    if (1 == 1)
+    {
+      fprintf (stderr, "\nAMBE_FR1 = ");
+      for (j = 0; j < 4; j++)
+      {
+        fprintf (stderr, " - ");
+        for (k = 0; k < 12;)
+        {
+          int b = 0;
+          int c = 0;
+          int d = 0;
+          int e = 0;
+          b = ambe_fr[j][k];
+          c = ambe_fr[j][k+1];
+          d = ambe_fr[j][k+2];
+          e = ambe_fr[j][k+3];
+          //fprintf (stderr, "%X", (((uint8_t)ambe_fr[k] << 2) + ambe_fr[k+1]) );
+          fprintf (stderr, "%01X", ( (b << 3) + (c << 2) + (d << 1) + e ) );
+          k = k + 4;
+        }
+      }
+      fprintf (stderr, "\nAMBE_FR2 = ");
+      for (j = 0; j < 4; j++)
+      {
+        fprintf (stderr, " - ");
+        for (k = 0; k < 12;)
+        {
+          int b = 0;
+          int c = 0;
+          int d = 0;
+          int e = 0;
+          b = ambe_fr2[j][k];
+          c = ambe_fr2[j][k+1];
+          d = ambe_fr2[j][k+2];
+          e = ambe_fr2[j][k+3];
+          //fprintf (stderr, "%X", (((uint8_t)ambe_fr[k] << 2) + ambe_fr[k+1]) );
+          fprintf (stderr, "%01X", ( (b << 3) + (c << 2) + (d << 1) + e ) );
+          k = k + 4;
+        }
+      }
+      fprintf (stderr, "\nAMBE_FR3 = ");
+      for (j = 0; j < 4; j++)
+      {
+        fprintf (stderr, " - ");
+        for (k = 0; k < 12;)
+        {
+          int b = 0;
+          int c = 0;
+          int d = 0;
+          int e = 0;
+          b = ambe_fr3[j][k];
+          c = ambe_fr3[j][k+1];
+          d = ambe_fr3[j][k+2];
+          e = ambe_fr3[j][k+3];
+          //fprintf (stderr, "%X", (((uint8_t)ambe_fr[k] << 2) + ambe_fr[k+1]) );
+          fprintf (stderr, "%01X", ( (b << 3) + (c << 2) + (d << 1) + e ) );
+          k = k + 4;
+        }
+      }
+
+      fprintf (stderr, "\n");
+
+    }
+    */
+    //end testing fr values
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+    /*
+    if (internalslot == 0 ) //&& vc1 == 6
+    {
+      fprintf (stderr, "\nVC%d Full = ", vc1);
+      for (k = 0; k < 144;)
+      {
+        fprintf (stderr, "%X", ((state->dmr_stereo_payload[k] << 2) + state->dmr_stereo_payload[k+1]) );
+        k = k + 2;
+      }
+      fprintf (stderr, "\n");
+    }
+    if (internalslot == 1 ) //&& vc2 == 6
+    {
+      fprintf (stderr, "\nVC%d Full = ", vc2);
+      for (k = 0; k < 144;)
+      {
+        //fprintf (stderr, " L%X R%X ", state->dmr_stereo_payload[k], state->dmr_stereo_payload[k+1]);
+        fprintf (stderr, "%01X", ((state->dmr_stereo_payload[k] << 2) + state->dmr_stereo_payload[k+1]) );
+        k = k + 2;
+      }
+      fprintf (stderr, "\n");
+    }
+    */
     if (internalslot == 0)
     {
       vc1++;
