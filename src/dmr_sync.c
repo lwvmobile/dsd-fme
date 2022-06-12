@@ -2096,16 +2096,16 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
   //assuming the TLC frame comes on the same slot as the call it was terminating? not sure?
   if (state->currentslot == 0)
   {
-    state->payload_algid = 0;
-    state->payload_keyid = 0;
+    //state->payload_algid = 0; //try disablign all of these?
+    //state->payload_keyid = 0;
     //state->payload_mfid  = 0;
     //state->payload_mi    = 0; //let's try disabling this for a bit
 
   }
   if (state->currentslot == 1)
   {
-    state->payload_algidR = 0;
-    state->payload_keyidR = 0;
+    //state->payload_algidR = 0; //try disablign all of these?
+    //state->payload_keyidR = 0;
     //state->payload_mfid  = 0;
     //state->payload_miR    = 0; ////let's try disabling this for a bit
 
@@ -2582,20 +2582,26 @@ int LFSR(dsd_state * state)
   }
   if (state->currentslot == 0)
   {
-    fprintf (stderr, "%s", KYEL);
-    fprintf (stderr, "\n Slot 1");
-    fprintf (stderr, " DMR PI Continuation ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
-    fprintf(stderr, " Next MI: 0x%08X", lfsr);
-    fprintf (stderr, "%s", KNRM);
+    if (1 == 1)
+    {
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, "\n Slot 1");
+      fprintf (stderr, " DMR PI Continuation ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
+      fprintf(stderr, " Next MI: 0x%08X", lfsr);
+      fprintf (stderr, "%s", KNRM);
+    }
     state->payload_mi = lfsr;
   }
-  else
+  if (state->currentslot == 1) //else
   {
-    fprintf (stderr, "%s", KYEL);
-    fprintf (stderr, "\n Slot 2");
-    fprintf (stderr, " DMR PI Continuation ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algidR, state->payload_keyidR);
-    fprintf(stderr, " Next MI: 0x%08X", lfsr);
-    fprintf (stderr, "%s", KNRM);
+    if (1 == 1)
+    {
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, "\n Slot 2");
+      fprintf (stderr, " DMR PI Continuation ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algidR, state->payload_keyidR);
+      fprintf(stderr, " Next MI: 0x%08X", lfsr);
+      fprintf (stderr, "%s", KNRM);
+    }
     state->payload_miR = lfsr;
   }
 }
@@ -2775,90 +2781,5 @@ uint8_t ComputeCrc5Bit(uint8_t * DMRData)
   /* Return the CRC */
   return CRC;
 } /* End ComputeCrc5Bit() */
-
-
-/*
- * @brief : This function returns the Algorithm ID into an explicit string
- *
- * @param AlgID : The algorithm ID
- *   @arg : 0x21 for ARC4
- *   @arg : 0x22 for DES
- *   @arg : 0x25 for AES256
- *
- * @return A constant string pointer that explain the Alg ID used
- */
- /*
-uint8_t * DmrAlgIdToStr(uint8_t AlgID)
-{
-  if(AlgID == 0x21) return (uint8_t *)"ARC4";
-  else if(AlgID == 0x25) return (uint8_t *)"AES256";
-  else return (uint8_t *)"UNKNOWN";
-  //state->payload_algid = AlgID;
-} // End DmrAlgIdToStr
-*/
-
-/*
- * @brief : This function returns the encryption mode into an explicit string
- *
- * @param PrivacyMode : The algorithm ID
- *   @arg : MODE_UNENCRYPTED
- *   @arg : MODE_BASIC_PRIVACY
- *   @arg : MODE_ENHANCED_PRIVACY_ARC4
- *   @arg : MODE_ENHANCED_PRIVACY_DES
- *   @arg : MODE_ENHANCED_PRIVACY_AES256
- *   @arg : MODE_HYTERA_BASIC_40_BIT
- *   @arg : MODE_HYTERA_BASIC_128_BIT
- *   @arg : MODE_HYTERA_BASIC_256_BIT
- *
- * @return A constant string pointer that explain the encryption mode used
- */
- /*
-uint8_t * DmrAlgPrivacyModeToStr(uint32_t PrivacyMode)
-{
-  switch(PrivacyMode)
-  {
-    case MODE_UNENCRYPTED:
-    {
-      return (uint8_t *)"NOT ENC";
-      break;
-    }
-    case MODE_BASIC_PRIVACY:
-    {
-      return (uint8_t *)"BP";
-      break;
-    }
-    case MODE_ENHANCED_PRIVACY_ARC4:
-    {
-      return (uint8_t *)"EP ARC4";
-      break;
-    }
-    case MODE_ENHANCED_PRIVACY_AES256:
-    {
-      return (uint8_t *)"EP AES256";
-      break;
-    }
-    case MODE_HYTERA_BASIC_40_BIT:
-    {
-      return (uint8_t *)"HYTERA BASIC 40 BIT";
-      break;
-    }
-    case MODE_HYTERA_BASIC_128_BIT:
-    {
-      return (uint8_t *)"HYTERA BASIC 128 BIT";
-      break;
-    }
-    case MODE_HYTERA_BASIC_256_BIT:
-    {
-      return (uint8_t *)"HYTERA BASIC 256 BIT";
-      break;
-    }
-    default:
-    {
-      return (uint8_t *)"UNKNOWN";
-      break;
-    }
-  } // End switch(PrivacyMode) /
-} //End DmrAlgPrivacyModeToStr() /
-*/
 
 /* End of file */
