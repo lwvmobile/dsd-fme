@@ -329,7 +329,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         {
           //LFSR(state); //placement here causes issues when second slot becomes active as well
         }
-        //fprintf (stderr, "\n");
+        fprintf (stderr, "\n");
       }
       else
       {
@@ -345,7 +345,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         {
           //LFSR(state); //placement here causes issues when second slot becomes active as well
         }
-        //fprintf (stderr, "\n");
+        fprintf (stderr, "\n");
       }
     }
 
@@ -366,7 +366,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         {
           //LFSR(state);
         }
-        //fprintf (stderr, "\n");
+        fprintf (stderr, "\n");
       }
       else
       {
@@ -382,7 +382,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         {
           //LFSR(state);
         }
-        //fprintf (stderr, "\n");
+        fprintf (stderr, "\n");
       }
     }
     if (internalslot == 0 && vc1 == 6) //presumably when full (and no sync issues)
@@ -399,73 +399,6 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "\n");
     }
 
-    //test printing ambe_fr values
-    /*
-    if (1 == 1)
-    {
-      fprintf (stderr, "\nAMBE_FR1 = ");
-      for (j = 0; j < 4; j++)
-      {
-        fprintf (stderr, " - ");
-        for (k = 0; k < 12;)
-        {
-          int b = 0;
-          int c = 0;
-          int d = 0;
-          int e = 0;
-          b = ambe_fr[j][k];
-          c = ambe_fr[j][k+1];
-          d = ambe_fr[j][k+2];
-          e = ambe_fr[j][k+3];
-          //fprintf (stderr, "%X", (((uint8_t)ambe_fr[k] << 2) + ambe_fr[k+1]) );
-          fprintf (stderr, "%01X", ( (b << 3) + (c << 2) + (d << 1) + e ) );
-          k = k + 4;
-        }
-      }
-      fprintf (stderr, "\nAMBE_FR2 = ");
-      for (j = 0; j < 4; j++)
-      {
-        fprintf (stderr, " - ");
-        for (k = 0; k < 12;)
-        {
-          int b = 0;
-          int c = 0;
-          int d = 0;
-          int e = 0;
-          b = ambe_fr2[j][k];
-          c = ambe_fr2[j][k+1];
-          d = ambe_fr2[j][k+2];
-          e = ambe_fr2[j][k+3];
-          //fprintf (stderr, "%X", (((uint8_t)ambe_fr[k] << 2) + ambe_fr[k+1]) );
-          fprintf (stderr, "%01X", ( (b << 3) + (c << 2) + (d << 1) + e ) );
-          k = k + 4;
-        }
-      }
-      fprintf (stderr, "\nAMBE_FR3 = ");
-      for (j = 0; j < 4; j++)
-      {
-        fprintf (stderr, " - ");
-        for (k = 0; k < 12;)
-        {
-          int b = 0;
-          int c = 0;
-          int d = 0;
-          int e = 0;
-          b = ambe_fr3[j][k];
-          c = ambe_fr3[j][k+1];
-          d = ambe_fr3[j][k+2];
-          e = ambe_fr3[j][k+3];
-          //fprintf (stderr, "%X", (((uint8_t)ambe_fr[k] << 2) + ambe_fr[k+1]) );
-          fprintf (stderr, "%01X", ( (b << 3) + (c << 2) + (d << 1) + e ) );
-          k = k + 4;
-        }
-      }
-
-      fprintf (stderr, "\n");
-
-    }
-    */
-    //end testing fr values
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
@@ -476,8 +409,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0 && vc1 == 6)
     {
       state->dropL = 256;
-      //if (vc1 == 1 && state->payload_algid != 0 && opts->payload == 1)
-      if (state->payload_algid != 0 && opts->payload == 1)
+      if (state->payload_algid != 0 ) //&& opts->payload == 1
       {
         LFSR(state);
         fprintf (stderr, "\n");
@@ -488,7 +420,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 1 && vc2 == 6)
     {
       state->dropR = 256;
-      if (state->payload_algidR != 0 && opts->payload == 1)
+      if (state->payload_algidR != 0 && opts->payload == 1) //&& opts->payload == 1
       {
         LFSR(state);
         fprintf (stderr, "\n");
