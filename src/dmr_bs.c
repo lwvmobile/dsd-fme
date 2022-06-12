@@ -420,7 +420,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 1 && vc2 == 6)
     {
       state->dropR = 256;
-      if (state->payload_algidR != 0 && opts->payload == 1) //&& opts->payload == 1
+      if (state->payload_algidR != 0 ) //&& opts->payload == 1
       {
         LFSR(state);
         fprintf (stderr, "\n");
