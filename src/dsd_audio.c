@@ -49,8 +49,8 @@ void openPulseOutput(dsd_opts * opts)
   }
   if (opts->dmr_stereo == 1)
   {
-    opts->pulse_digi_dev_out  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, "DMR/MOTOTRBO  LEFT", &tt, left, NULL, NULL);
-    opts->pulse_digi_dev_outR = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, "DMR/MOTOTRBO RIGHT", &tt, right, NULL, NULL);
+    opts->pulse_digi_dev_out  = pa_simple_new(NULL, "DSD-FME1", PA_STREAM_PLAYBACK, NULL, "DMR/MOTOTRBO SLOT 1", &tt, left, NULL, NULL);
+    opts->pulse_digi_dev_outR = pa_simple_new(NULL, "DSD-FME2", PA_STREAM_PLAYBACK, NULL, "DMR/MOTOTRBO SLOT 2", &tt, right, NULL, NULL);
   }
 
 }
@@ -158,7 +158,7 @@ processAudio (dsd_opts * opts, dsd_state * state)
   state->audio_out_temp_buf_p = state->audio_out_temp_buf;
   //we only want to upsample when using sample rates greater than 8k for output,
   //hard set to 8k for RTL mono and MBE playback, otherwise crackling may occur.
-  if (opts->pulse_digi_rate_out > 8000) 
+  if (opts->pulse_digi_rate_out > 8000)
     {
       for (n = 0; n < 160; n++)
         {
