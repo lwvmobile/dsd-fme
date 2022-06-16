@@ -12,7 +12,6 @@ git_describe(GIT_TAG)
 find_package(LibSndFile REQUIRED)
 find_package(MBE REQUIRED)
 find_package(ITPP REQUIRED)
-#find_package(LibPortAudio) #disabled for testing
 find_package(RTLSDR)
 find_package(Curses REQUIRED) 
 find_package(PULSEAUDIO)
@@ -67,10 +66,3 @@ configure_file(
 
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-
-option(DISABLE_TEST "Disable building of test framework." OFF)
-
-if (NOT DISABLE_TEST)
-    enable_testing()
-    add_subdirectory(test)
-endif()
