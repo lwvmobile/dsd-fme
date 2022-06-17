@@ -4,7 +4,7 @@
 
 https://github.com/lwvmobile/dsd-fme/tree/pulseaudio
 
-## Cygwin branch for Windows Users
+## Cygwin branch for Windows Users -- Discontinued
 
 https://github.com/lwvmobile/dsd-fme/tree/cygwin
 
