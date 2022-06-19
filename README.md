@@ -1,4 +1,7 @@
 # Digital Speech Decoder - Florida Man Edition 
+
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)
+
 This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with portions of DMR and NXDN code from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch as well. This code also borrows snippets, inspiration, and ideas from other open source works including [Boatbod OP25](https://github.com/boatbod/op25 "Boatbod OP25"), [DSDcc](https://github.com/f4exb/dsdcc "DSDcc"), [SDTRunk](https://github.com/DSheirer/sdrtrunk "SDRTrunk"), [MMDVMHost](https://github.com/g4klx/MMDVMHost "MMDVMHost"), and [LFSR](https://github.com/mattames/LFSR "LFSR"). This project wouldn't be possible without a few good people providing me plenty of sample audio files to run over and over again. Special thanks to jurek1111, KrisMar, noamlivne, racingfan360, iScottyBotty, LimaZulu and hrh17 for the many hours of wav samples submitted by them.
 
 ## 2022.06.20 Update - Current Users Please Read!! ## 
@@ -13,11 +16,6 @@ I have successfully added a DMR Stereo method for listening to voice audio in bo
 Please note, for the time being, any MBE file saving and WAV file saving are disabled while using DMR Stereo. These features are still present in the default DMR handling and other voice decoder options and will be re-integrated into DMR Stereo in the future. DMR Stereo will also need to be enabled to handle DMR MS/Simplex voice, as it was removed from the default method due to poor performance.
 
 Use Passive Frame Sync if voice in both slots becomes choppy or skips. Using Passive Sync may cause wonky audio though, depends on quality of signal and bit errors present.
-  
-
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)
-
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme2.png)
 
 ### Example Usage and Note!
 `dsd-fme` or `./dsd-fme` may need to be used in your usage, depending on if you are running it from the build folder, or if you have run make install. You will need to tweak the examples to your particular usage. Users can always check `dsd-fme -h`  for help and all command line switches to use.
@@ -40,6 +38,8 @@ Use Passive Frame Sync if voice in both slots becomes choppy or skips. Using Pas
 and in a second terminal tab, same folder, run
 
 `tail -n 40 -f voice.log`
+
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme2.png)
 
 Then you can open up your pavucontrol "Pulse Audio Volume Control" or "Volume Control" application and route input into DSD-FME from any application and DSD-FME output to the left and right speakers respectively. (unlock the channel in the application stream and adjust left and right independently)
 
