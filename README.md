@@ -13,7 +13,7 @@ I have successfully added a DMR Stereo method for listening to voice audio in bo
 -T Enable DMR 'TDMA' Stereo
 -F Enable Passive Frame Sync
 ```
-Please note, for the time being, any MBE file saving and WAV file saving are disabled while using DMR Stereo. These features are still present in the default DMR handling and other voice decoder options and will be re-integrated into DMR Stereo in the future. DMR Stereo will also need to be enabled to handle DMR MS/Simplex voice, as it was removed from the default method due to poor performance.
+Please note, for the time being, MBE file saving and WAV file saving are disabled while using DMR Stereo. These features are still present in the default DMR handling and other voice decoder options and will be re-integrated into DMR Stereo in the future. DMR Stereo will also need to be enabled to handle DMR MS/Simplex voice, as it was removed from the default method due to poor performance.
 
 Use Passive Frame Sync if voice in both slots becomes choppy or skips. Using Passive Sync may cause wonky audio though, depends on quality of signal and bit errors present.
 
