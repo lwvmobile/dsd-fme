@@ -10,7 +10,7 @@ I have successfully added a DMR Stereo method for listening to voice audio in bo
 -T Enable DMR 'TDMA' Stereo
 -F Enable Passive Frame Sync
 ```
-Please note, for the time being, any MBE file saving, WAV file saving, or MBE payloads are disabled while using DMR    Stereo. These features are still present in the default DMR handling and other voice decoder options and will be re-    integrated into DMR Stereo in the future. DMR Stereo will also need to be enabled to handle DMR MS/Simplex voice, as    it was removed from the default method due to poor performance.
+Please note, for the time being, any MBE file saving and WAV file saving are disabled while using DMR Stereo. These features are still present in the default DMR handling and other voice decoder options and will be re-integrated into DMR Stereo in the future. DMR Stereo will also need to be enabled to handle DMR MS/Simplex voice, as it was removed from the default method due to poor performance.
 
 Use Passive Frame Sync if voice in both slots becomes choppy or skips. Using Passive Sync may cause wonky audio though, depends on quality of signal and bit errors present.
   
@@ -72,9 +72,8 @@ Be sure to first start UDP output sink in GQRX or SDR++ and set VFO appropriatel
 `socat stdio udp-listen:7355 | dsd-fme -fi -i - -w nxdn.wav`
 
 ## Example Usage - Extra Information for Academic Study and Logging
-Be sure to create a folder called MBE first and run
 
-`dsd-fme -fa -Z -pu 2>> voice.log`
+`dsd-fme -Z -pu -N 2>> voice.log`
 
 and in a second terminal tab, same folder, run
 
@@ -97,12 +96,12 @@ The Current list of objectives include:
 
 ### Ubuntu 22.04/20.04/LM20/Debian Bullseye or Newer:
 
-Using the included install.sh should make for a simple and painless clone, build, and install on newer Debian or Ubuntu based system. Simply acquire or copy the script, and run it. Update: Ubuntu 22.04 has been tested working with the installer script and use. 
+Using the included download-and-install.sh should make for a simple and painless clone, build, and install on newer Debian/Ubuntu/Mint/Pi systems. Simply acquire or copy the script, and run it. Update: Ubuntu 22.04 and RPi Bullseye 64-bit has been tested working with the installer script and functions appropriately. 
 
 ```
-wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/pulseaudio/install.sh
-chmod +x install.sh
-./install.sh
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/pulseaudio/download-and-install.sh
+chmod +x download-and-install.sh
+./download-and-install.sh
 ```
 
 ### Ubuntu 18.04/LM19/Buster Note:
@@ -110,7 +109,7 @@ The above install.sh should now function on older system types. You can elect to
 
 ## Manual Install
 
-First, install dependency packages. This guide will assume you are using Ubuntu 20.04 based distros. Check your package manager for equivalent packages if different. PortAudio is not used in this build! 
+First, install dependency packages. This guide will assume you are using Debian/Ubuntu based distros. Check your package manager for equivalent packages if different. 
 
 ```
 sudo apt update
@@ -118,7 +117,7 @@ sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack
 ```
 ## Headless
 
-If running headless, swap out pavucontrol for pulsemixer, and also install pulseaudio as well. Attempting to install pavucontrol in a headless environment will attempt to install a minimal desktop environment.
+If running headless, swap out pavucontrol for pulsemixer, and also install pulseaudio as well. Attempting to install pavucontrol in a headless environment may attempt to install a minimal desktop environment. Note: Default behavior of pulseaudio in a headless environment may be to be muted, so check by opening pulsemixer and unmuting and routing audio appropriately.
 
 ```
 sudo apt install libpulse-dev libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev pulsemixer pulseaudio
@@ -176,14 +175,14 @@ sudo ldconfig
 ```
 Optional 'Virtual Sinks' for routing audio from SDR++ or GQRX, Media Players, etc. into DSD-FME
 
-You may wish to direct sound into DSD-FME via Virtual Sinks. You may set up a Virtual Sink or two on your machine for routing audio in and out of applications to other applications using the following command, and opening up pavucontrol "PulseAudio Volume Control" in the menu to change line out of application to virtual sink, and line in of DSD-FME to monitor of virtual sink. This command will not persist past a reboot, so you will need to invoke them each time you reboot, or search for how to add this to your conf files for persistency if desired.
+You may wish to direct sound into DSD-FME via Virtual Sinks. You may set up a Virtual Sink or two on your machine for routing audio in and out of applications to other applications using the following command, and opening up pavucontrol "PulseAudio Volume Control" in the menu (or `pulsemixer` in headless mode) to change line out of application to virtual sink, and line in of DSD-FME to monitor of virtual sink. This command will not persist past a reboot, so you will need to invoke them each time you reboot, or search for how to add this to your conf files for persistency if desired.
 
 ```
 pacmd load-module module-null-sink sink_name=virtual_sink  sink_properties=device.description=Virtual_Sink
 pacmd load-module module-null-sink sink_name=virtual_sink2  sink_properties=device.description=Virtual_Sink2
 ```
 
-Already have this branch, and just want to pull the latest build?
+Already have this branch, and just want to pull the latest build? You can run the rebuild.sh file in the dsd-fme folder, or manually do the pull with the commands:
 
 ```
 ##Open your clone folder##
