@@ -2,7 +2,7 @@
 This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with portions of DMR and NXDN code from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch as well. This code also borrows snippets, inspiration, and ideas from other open source works including [Boatbod OP25](https://github.com/boatbod/op25 "Boatbod OP25"), [DSDcc](https://github.com/f4exb/dsdcc "DSDcc"), [SDTRunk](https://github.com/DSheirer/sdrtrunk "SDRTrunk"), [MMDVMHost](https://github.com/g4klx/MMDVMHost "MMDVMHost"), and [LFSR](https://github.com/mattames/LFSR "LFSR"). This project wouldn't be possible without a few good people providing me plenty of sample audio files to run over and over again. Special thanks to jurek1111, KrisMar, noamlivne, racingfan360, iScottyBotty, LimaZulu and hrh17 for the many hours of wav samples submitted by them.
 
 ## 2022.06.20 Update - Current Users Please Read!! ## 
-The executable for this project has been changed from `dsd` to `dsd-fme` so after pulling or cloning the lastest version, make sure to call the software with `dsd-fme`. It may also be beneficial to open your current build folder and run `sudo make uninstall` to uninstall the binary named `dsd` to alleviate any confusion or from accidentally calling the older version as it will still be installed along with the new `dsd-fme` executable. The Summer Cleanup Project has also seen a lot of the files that weren't in use, or used for github workflows and cmake files removed from the project, slimming it down quite considerably. If you have any issue doing a git pull to get the current version, you may need to instead do a fresh clone, build, and  install in a clean folder.
+The executable for this project has been changed from `dsd` to `dsd-fme` so after pulling or cloning the lastest version, make sure to call the software with `dsd-fme`. It may also be beneficial to open your current build folder and run `sudo make uninstall` to uninstall the binary named `dsd` or to run `sudo rm  /usr/local/bin/dsd` to alleviate any confusion or from accidentally calling the older version as it will still be installed along with the new `dsd-fme` executable. The Summer Cleanup Project has also seen a lot of the files that weren't in use, or used for github workflows and cmake files removed from the project folder, slimming it down quite considerably. If you have any issue doing a git pull to get the current version, you may need to instead do a fresh clone, build, and  install in a clean folder. Check the info below about running download-and-install-nodeps.sh if needed.
 
 ## 2022.05.05 Update ## 
 I have successfully added a DMR Stereo method for listening to voice audio in both TDMA channels/slots simultaneously. This method will also allow for data decoding in the opposite slot if only one voice call is active, allowing the user not to miss any useful information in the second slot while the previous slot is in use. DMR Stereo also has vastly improved handling of MS/Simplex voice decoding and (hit or miss) MS data decoding. To call this method, see the example below. The old method of decoding DMR is also included and is stil the default for the time being, but the DMR Stereo method is working well, users are encouraged to try both methods and find the one that is suitable for them. New commands include:
@@ -98,10 +98,20 @@ The Current list of objectives include:
 
 Using the included download-and-install.sh should make for a simple and painless clone, build, and install on newer Debian/Ubuntu/Mint/Pi systems. Simply acquire or copy the script, and run it. Update: Ubuntu 22.04 and RPi Bullseye 64-bit has been tested working with the installer script and functions appropriately. 
 
+If you need all dependencies build and installed first (only on Debian/Ubuntu/Mint/Pi), run:
+
 ```
 wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/pulseaudio/download-and-install.sh
 chmod +x download-and-install.sh
 ./download-and-install.sh
+```
+
+If you have dependencies already installed (i.e. need a fresh clean install on a system with DSD-FME already or using system other than Debian/Ubuntu, etc), please run this instead:
+
+```
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/pulseaudio/download-and-install-nodeps.sh
+chmod +x download-and-install-nodeps.sh
+./download-and-install-nodeps.sh
 ```
 
 ### Ubuntu 18.04/LM19/Buster Note:
