@@ -1,5 +1,11 @@
 # Digital Speech Decoder - Florida Man Edition 
-This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with portions of DMR and NXDN code from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch as well. This code also borrows snippets, inspiration, and ideas from other open source works including [Boatbod OP25](https://github.com/boatbod/op25 "Boatbod OP25"), [DSDcc](https://github.com/f4exb/dsdcc "DSDcc"), [SDTRunk](https://github.com/DSheirer/sdrtrunk "SDRTrunk"), and [MMDVMHost](https://github.com/g4klx/MMDVMHost "MMDVMHost"). This project wouldn't be possible without a few good people providing me plenty of sample audio files to run over and over again. Special thanks to jurek1111, KrisMar, noamlivne, racingfan360, and hrh17 for the many hours of wav samples submitted by them.
+
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)
+
+This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with portions of DMR and NXDN code from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch as well. This code also borrows snippets, inspiration, and ideas from other open source works including [Boatbod OP25](https://github.com/boatbod/op25 "Boatbod OP25"), [DSDcc](https://github.com/f4exb/dsdcc "DSDcc"), [SDTRunk](https://github.com/DSheirer/sdrtrunk "SDRTrunk"), [MMDVMHost](https://github.com/g4klx/MMDVMHost "MMDVMHost"), and [LFSR](https://github.com/mattames/LFSR "LFSR"). This project wouldn't be possible without a few good people providing me plenty of sample audio files to run over and over again. Special thanks to jurek1111, KrisMar, noamlivne, racingfan360, iScottyBotty, LimaZulu and hrh17 for the many hours of wav samples submitted by them.
+
+## 2022.06.20 Update - Current Users Please Read!! ## 
+The executable for this project has been changed from `dsd` to `dsd-fme` so after pulling or cloning the lastest version, make sure to call the software with `dsd-fme`. It may also be beneficial to open your current build folder and run `sudo make uninstall` to uninstall the binary named `dsd` or to run `sudo rm  /usr/local/bin/dsd` to alleviate any confusion or from accidentally calling the older version as it will still be installed along with the new `dsd-fme` executable. The Summer Cleanup Project has also seen a lot of the files that weren't in use, or used for github workflows and cmake files removed from the project folder, slimming it down quite considerably. If you have any issue doing a git pull to get the current version, you may need to instead do a fresh clone, build, and  install in a clean folder. Check the info below about running download-and-install-nodeps.sh if needed.
 
 ## 2022.05.05 Update ## 
 I have successfully added a DMR Stereo method for listening to voice audio in both TDMA channels/slots simultaneously. This method will also allow for data decoding in the opposite slot if only one voice call is active, allowing the user not to miss any useful information in the second slot while the previous slot is in use. DMR Stereo also has vastly improved handling of MS/Simplex voice decoding and (hit or miss) MS data decoding. To call this method, see the example below. The old method of decoding DMR is also included and is stil the default for the time being, but the DMR Stereo method is working well, users are encouraged to try both methods and find the one that is suitable for them. New commands include:
@@ -7,19 +13,14 @@ I have successfully added a DMR Stereo method for listening to voice audio in bo
 -T Enable DMR 'TDMA' Stereo
 -F Enable Passive Frame Sync
 ```
-Please note, for the time being, any MBE file saving, WAV file saving, or MBE payloads are disabled while using DMR    Stereo. These features are still present in the default DMR handling and other voice decoder options and will be re-    integrated into DMR Stereo in the future. DMR Stereo will also need to be enabled to handle DMR MS/Simplex voice, as    it was removed from the default method due to poor performance.
+Please note, for the time being, MBE file saving and WAV file saving are disabled while using DMR Stereo. These features are still present in the default DMR handling and other voice decoder options and will be re-integrated into DMR Stereo in the future. DMR Stereo will also need to be enabled to handle DMR MS/Simplex voice, as it was removed from the default method due to poor performance.
 
 Use Passive Frame Sync if voice in both slots becomes choppy or skips. Using Passive Sync may cause wonky audio though, depends on quality of signal and bit errors present.
-  
-
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)
-
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme2.png)
 
 ### Example Usage and Note!
-`dsd` or `./dsd` may need to be used in your usage, depending on if you are running it from the build folder, or if you have run make install. You will need to tweak the examples to your particular usage. Users can always check `dsd -h`  for help and all command line switches to use.
+`dsd-fme` or `./dsd-fme` may need to be used in your usage, depending on if you are running it from the build folder, or if you have run make install. You will need to tweak the examples to your particular usage. Users can always check `dsd-fme -h`  for help and all command line switches to use.
 
-`dsd` is all you need to run for pulse input, pulse output, and auto detect for DMR, P25P1, D-STAR, and X2-TDMA decoding. To use other decoding methods which cannot be auto detected, please use the following command line switches. Make sure to route audio into and out of DSD-FME using pavucontrol and virtual sinks as needed. 
+`dsd-fme` is all you need to run for pulse input, pulse output, and auto detect for DMR, P25P1, D-STAR, and X2-TDMA decoding. To use other decoding methods which cannot be auto detected, please use the following command line switches. Make sure to route audio into and out of DSD-FME using pavucontrol and virtual sinks as needed. 
 
 ```
 -fi NXDN48
@@ -32,16 +33,18 @@ Use Passive Frame Sync if voice in both slots becomes choppy or skips. Using Pas
 ```
 
 ## Example Usage - New DMR Stereo, Ncurses Terminal, Pulse Input/Output, and Log Console to file
-`dsd -fr -T -N 2> voice.log`
+`dsd-fme -fr -T -N 2> voice.log`
 
 and in a second terminal tab, same folder, run
 
 `tail -n 40 -f voice.log`
 
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme2.png)
+
 Then you can open up your pavucontrol "Pulse Audio Volume Control" or "Volume Control" application and route input into DSD-FME from any application and DSD-FME output to the left and right speakers respectively. (unlock the channel in the application stream and adjust left and right independently)
 
 ## Example Usage - RTL2832 Dongle Input
-`dsd -fi -i rtl -c 154.9875M -P -2 -D 1 -G 36 -L 70 -U 6021 -Y 12`
+`dsd-fme -fi -i rtl -c 154.9875M -P -2 -D 1 -G 36 -L 70 -U 6021 -Y 12`
 
 ```
 -i rtl to use rtl_fm (default is -i pulse for pulse audio)
@@ -66,12 +69,11 @@ Then you can open up your pavucontrol "Pulse Audio Volume Control" or "Volume Co
 ## Example STDIN UDP from GQRX or SDR++, output to Pulse Audio, and append decoded audio to wav file
 Be sure to first start UDP output sink in GQRX or SDR++ and set VFO appropriately
 
-`socat stdio udp-listen:7355 | dsd -fi -i - -w nxdn.wav`
+`socat stdio udp-listen:7355 | dsd-fme -fi -i - -w nxdn.wav`
 
 ## Example Usage - Extra Information for Academic Study and Logging
-Be sure to create a folder called MBE first and run
 
-`dsd -fa -Z -pu 2>> voice.log`
+`dsd-fme -Z -pu -N 2>> voice.log`
 
 and in a second terminal tab, same folder, run
 
@@ -94,12 +96,22 @@ The Current list of objectives include:
 
 ### Ubuntu 22.04/20.04/LM20/Debian Bullseye or Newer:
 
-Using the included install.sh should make for a simple and painless clone, build, and install on newer Debian or Ubuntu based system. Simply acquire or copy the script, and run it. Update: Ubuntu 22.04 has been tested working with the installer script and use. 
+Using the included download-and-install.sh should make for a simple and painless clone, build, and install on newer Debian/Ubuntu/Mint/Pi systems. Simply acquire or copy the script, and run it. Update: Ubuntu 22.04 and RPi Bullseye 64-bit has been tested working with the installer script and functions appropriately. 
+
+If you need all dependencies build and installed first (only on Debian/Ubuntu/Mint/Pi), run:
 
 ```
-wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/pulseaudio/install.sh
-chmod +x install.sh
-./install.sh
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/pulseaudio/download-and-install.sh
+chmod +x download-and-install.sh
+./download-and-install.sh
+```
+
+If you have dependencies already installed (i.e. need a fresh clean install on a system with DSD-FME already or using system other than Debian/Ubuntu, etc), please run this instead:
+
+```
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/pulseaudio/download-and-install-nodeps.sh
+chmod +x download-and-install-nodeps.sh
+./download-and-install-nodeps.sh
 ```
 
 ### Ubuntu 18.04/LM19/Buster Note:
@@ -107,13 +119,19 @@ The above install.sh should now function on older system types. You can elect to
 
 ## Manual Install
 
-First, install dependency packages. This guide will assume you are using Ubuntu 20.04 based distros. Check your package manager for equivalent packages if different. PortAudio is not used in this build! 
+First, install dependency packages. This guide will assume you are using Debian/Ubuntu based distros. Check your package manager for equivalent packages if different. 
 
 ```
 sudo apt update
 sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev
 ```
+## Headless
 
+If running headless, swap out pavucontrol for pulsemixer, and also install pulseaudio as well. Attempting to install pavucontrol in a headless environment may attempt to install a minimal desktop environment. Note: Default behavior of pulseaudio in a headless environment may be to be muted, so check by opening pulsemixer and unmuting and routing audio appropriately.
+
+```
+sudo apt install libpulse-dev libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev pulsemixer pulseaudio
+```
 
 ### Build and Install ITPP - ONLY IF NOT IN REPO!!
 
@@ -167,14 +185,14 @@ sudo ldconfig
 ```
 Optional 'Virtual Sinks' for routing audio from SDR++ or GQRX, Media Players, etc. into DSD-FME
 
-You may wish to direct sound into DSD-FME via Virtual Sinks. You may set up a Virtual Sink or two on your machine for routing audio in and out of applications to other applications using the following command, and opening up pavucontrol "PulseAudio Volume Control" in the menu to change line out of application to virtual sink, and line in of DSD-FME to monitor of virtual sink. This command will not persist past a reboot, so you will need to invoke them each time you reboot, or search for how to add this to your conf files for persistency if desired.
+You may wish to direct sound into DSD-FME via Virtual Sinks. You may set up a Virtual Sink or two on your machine for routing audio in and out of applications to other applications using the following command, and opening up pavucontrol "PulseAudio Volume Control" in the menu (or `pulsemixer` in headless mode) to change line out of application to virtual sink, and line in of DSD-FME to monitor of virtual sink. This command will not persist past a reboot, so you will need to invoke them each time you reboot, or search for how to add this to your conf files for persistency if desired.
 
 ```
 pacmd load-module module-null-sink sink_name=virtual_sink  sink_properties=device.description=Virtual_Sink
 pacmd load-module module-null-sink sink_name=virtual_sink2  sink_properties=device.description=Virtual_Sink2
 ```
 
-Already have this branch, and just want to pull the latest build?
+Already have this branch, and just want to pull the latest build? You can run the rebuild.sh file in the dsd-fme folder, or manually do the pull with the commands:
 
 ```
 ##Open your clone folder##
@@ -190,6 +208,7 @@ sudo ldconfig
 # Join the Conversation
 
 Want to help drive the direction of this project and read more about the latest updates and releases to DSD-FME? Then join the conversation on the 'unofficial official' [DSD-FME](https://forums.radioreference.com/threads/dsd-fme.438137/ "DSD-FME") Forum Thread on the Radio Reference Forums.
+
 
 ## License
 Copyright (C) 2010 DSD Author

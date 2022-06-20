@@ -1,4 +1,4 @@
-project(dsd)
+project(dsd-fme)
 cmake_minimum_required(VERSION 2.8.11)
 
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
@@ -12,7 +12,6 @@ git_describe(GIT_TAG)
 find_package(LibSndFile REQUIRED)
 find_package(MBE REQUIRED)
 find_package(ITPP REQUIRED)
-#find_package(LibPortAudio) #disabled for testing
 find_package(RTLSDR)
 find_package(Curses REQUIRED) 
 find_package(PULSEAUDIO)
@@ -39,24 +38,24 @@ list(APPEND SRCS "${CMAKE_CURRENT_BINARY_DIR}/git_ver.c")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
-ADD_EXECUTABLE(dsd ${SRCS} ${HEADERS})
-TARGET_LINK_LIBRARIES(dsd ${LIBS})
+ADD_EXECUTABLE(dsd-fme ${SRCS} ${HEADERS})
+TARGET_LINK_LIBRARIES(dsd-fme ${LIBS})
 
 include(GNUInstallDirs)
-install(TARGETS dsd DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS dsd-fme DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # man page
 find_program(HELP2MAN_FOUND help2man)
 if (HELP2MAN_FOUND)
-    add_custom_command(TARGET dsd POST_BUILD
+    add_custom_command(TARGET dsd-fme POST_BUILD
         COMMAND help2man
         ARGS -n "Digital Speech Decoder"
             --version-string=${GIT_TAG}
-            -o ${CMAKE_CURRENT_BINARY_DIR}/dsd.1
+            -o ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme.1
             --no-info
-            $<TARGET_FILE:dsd>
+            $<TARGET_FILE:dsd-fme>
     )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/dsd.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 endif()
 
 # uninstall target
@@ -67,10 +66,3 @@ configure_file(
 
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-
-option(DISABLE_TEST "Disable building of test framework." OFF)
-
-if (NOT DISABLE_TEST)
-    enable_testing()
-    add_subdirectory(test)
-endif()
