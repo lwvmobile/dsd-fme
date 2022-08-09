@@ -33,6 +33,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   char redundancyB[36];
   unsigned short int vc1;
   unsigned short int vc2;
+
   //add time to mirror printFrameSync
   time_t now;
   char * getTime(void) //get pretty hh:mm:ss timestamp
@@ -60,12 +61,15 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   short int skipcount = 0;
 
   //Hardset variables for MS
-  state->currentslot = 0;
+  state->currentslot = 0; //0
   internalslot = 0;
   activeslot = 0;
 
   //Run Loop while the getting is good
   while (loop == 1) {
+
+  short int m = 0;
+
   state->dmrburstL = 16; //Use 16 for Voice?
   // No CACH in MS Mode?
   for(i = 0; i < 12; i++)
@@ -258,17 +262,9 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     y++;
     z++;
 
-    //end early to allow next sync without skipping a voice superframe
-    //only use if only doing 6 VC and nothing else, otherwise, will lose sync
-    if (vc1 == 6 && i == 30)
-    {
-      //i = 36;
-    }
 
   }
 
-  //if ( (strcmp (sync, DMR_MS_VOICE_SYNC) == 0) )
-  //fixed to compensate for inverted signal
   if ( ((strcmp (sync, DMR_MS_VOICE_SYNC) == 0) && opts->inverted_dmr == 0) ||
        ((strcmp (sync, DMR_MS_DATA_SYNC) == 0) && opts->inverted_dmr == 1) )
 
@@ -276,29 +272,18 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0)
     {
       vc1 = 1;
-      state->dropL = 256;
       fprintf (stderr, "MS Slot 1 Voice Sync \n");
-      //activeslot = 0;
-
     }
+
     if (internalslot == 1)
     {
       vc2 = 1;
-      state->dropR = 256;
-      //fprintf (stderr, "MS Slot 2 Voice Sync \n");
-      //activeslot = 1;
     }
+
     state->dmr_ms_mode = 1; //set to 1 here??
   }
 
   state->dmr_ms_mode = 1; //set to 1 here?
-  //testing to see if we need to do something to get MS mode working properly,
-  //get proper sync, skip frames, etc.
-  if (state->dmr_ms_mode == 1 ) //&& vc1 < 7
-  {
-    //do something
-    //fprintf (stderr, "MS MODE ");
-  }
 
   //don't know if we will catch an RC sync in here or not, should be on VC6 if it occurs
   if ( (strcmp (rcsync, DMR_RC_DATA_SYNC) == 0) || (strcmp (sync, DMR_RC_DATA_SYNC) == 0) ) //should be in same position as sync
@@ -370,9 +355,6 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     goto END;
   }
 
-  //if( (strcmp (sync, DMR_MS_DATA_SYNC) != 0) && internalslot == activeslot && vc1 < 7)
-  //only play voice no MS Data Sync and vc1 below 6 (no voice resync)
-  //fixed to compensate for inverted signal
   if( ( ( ((strcmp (sync, DMR_MS_DATA_SYNC) != 0) && opts->inverted_dmr == 0) ||
           ((strcmp (sync, DMR_MS_VOICE_SYNC) != 0) && opts->inverted_dmr == 1)  ) )
             && internalslot == activeslot && vc1 < 7)
@@ -390,10 +372,6 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
         fprintf(stderr, " BPK %lld", state->K);
         fprintf (stderr, "%s", KNRM);
       }
-      if (vc1 == 6 && state->payload_algid  != 0 && opts->payload == 1)
-      {
-        LFSR(state);
-      }
       fprintf (stderr, "\n");
     }
 
@@ -406,67 +384,32 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
         fprintf(stderr, " BPK %lld", state->K);
         fprintf (stderr, "%s", KNRM);
       }
-      if (vc1 == 6 && state->payload_algid  != 0 && opts->payload == 1)
-      {
-        LFSR(state);
-      }
       fprintf (stderr, "\n");
     }
 
-    if (internalslot == 1 && opts->inverted_dmr == 0)
-    {
-      fprintf (stderr,"Sync: +DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d ", state->color_code, vc2);
-      if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
-      {
-        fprintf (stderr, "%s", KYEL);
-        fprintf(stderr, " BPK %lld", state->K);
-        fprintf (stderr, "%s", KNRM);
-      }
-      if (vc2 == 6 && state->payload_algidR != 0 && opts->payload == 1)
-      {
-        LFSR(state);
-      }
-      fprintf (stderr, "\n");
-    }
-    if (internalslot == 1 && opts->inverted_dmr == 1)
-    {
-      fprintf (stderr,"Sync: -DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d ", state->color_code, vc2);
-      if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
-      {
-        fprintf (stderr, "%s", KYEL);
-        fprintf(stderr, " BPK %lld", state->K);
-        fprintf (stderr, "%s", KNRM);
-      }
-      if (vc2 == 6 && state->payload_algidR != 0 && opts->payload == 1)
-      {
-        LFSR(state);
-      }
-      fprintf (stderr, "\n");
-    }
+
     if (internalslot == 0 && vc1 == 6) //presumably when full (and no sync issues)
     {
       //process voice burst
       ProcessVoiceBurstSync(opts, state);
       fprintf (stderr, "\n");
     }
-    if (internalslot == 1 && vc2 == 6) //presumably when full (and no sync issues)
-    {
-      //process voice burst
-      //ProcessVoiceBurstSync(opts, state);
-      //fprintf (stderr, "\n");
-    }
+
     state->dmr_ms_mode == 1;
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
-    if (internalslot == 0)
+
+    //need to seperate the algs here so we don't run LFSR on 22 and so on
+    if (vc1 == 6 && state->payload_algid >= 21)
     {
-      //vc1++;
-    }
-    if (internalslot == 1)
-    {
-      vc2++;
-    }
+       //state->currentslot = 0;
+       if (state->payload_mi != 0 && state->payload_algid >= 0x21)
+       {
+         LFSR(state);
+       }
+       fprintf (stderr, "\n");
+     }
   }
   vc1++;
   //6 seems optimal for MS, allows to quickly exit and resync if wonky or something
@@ -692,13 +635,13 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
     }
     fprintf (stderr, "\n");
   }
-  //reset drop values since we don't know which slot (because I'm too lazy to write that part)
-  state->dropL = 256;
-  state->dropR = 256;
+
   state->dmr_ms_mode = 1;
+
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+
   skipDibit (opts, state, 144); //skip to next TDMA slot
   dmrMS (opts, state); //bootstrap into full TDMA frame
 
@@ -706,11 +649,17 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 
 void dmrMSData (dsd_opts * opts, dsd_state * state)
 {
-  int i;
+  int i, b, c;
   int dibit;
   int *dibit_p;
   unsigned int burst;
 
+  unsigned char MSCach[24] = {0}; //12 dibits = 24 bits
+  unsigned char MSSync[48] = {0}; //24 dibits = 48 bits
+  unsigned char MSSlot[20] = {0}; //10 dibits = 20 bits
+  unsigned char MSBurst[5] = {0};
+  int cachInterleave[24]   = {0, 7, 8, 9, 1, 10, 11, 12, 2, 13, 14, 15, 3, 16, 4, 17, 18, 19, 5, 20, 21, 22, 6, 23};
+  //int cachInterleave[24]   = {0,}
   //add time to mirror sync
   time_t now;
   char * getTime(void) //get pretty hh:mm:ss timestamp
@@ -727,7 +676,8 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
 
     return curr;
   }
-
+  b = 0;
+  c = 0;
   //CACH + First Half Payload + Sync = 12 + 54 + 24
   //dibit_p = state->dibit_buf_p - 90;
   dibit_p = state->dmr_payload_p - 90;
@@ -740,14 +690,42 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
       dibit = (dibit ^ 2);
     }
     state->dmr_stereo_payload[i] = dibit;
+    //load cach
+    if (i < 12)
+    {
+      MSCach[cachInterleave[(i*2)]]   = (1 & (dibit >> 1)); // bit 1
+      MSCach[cachInterleave[(i*2)+1]] = (1 & dibit);       // bit 0
+    }
+    //load slot, first half
+    if (i > 60 && i < 66)
+    {
+      MSSlot[(b*2)]   = (1 & (dibit >> 1)); // bit 1
+      MSSlot[(b*2)+1] = (1 & dibit);       // bit
+      b++;
+    }
+    //load sync
+    if (i > 66)
+    {
+      MSSync[(c*2)]   = (1 & (dibit >> 1)); // bit 1
+      MSSync[(c*2)+1] = (1 & dibit);       // bit 0
+      c++;
+    }
   }
 
   for (i = 0; i < 54; i++)
   {
     dibit = getDibit(opts, state);
     state->dmr_stereo_payload[i+90] = dibit;
+    //load slot, second half
+    if (i < 6)
+    {
+      MSSlot[(b*2)]   = (1 & (dibit >> 1)); // bit 1
+      MSSlot[(b*2)+1] = (1 & dibit);       // bit
+      b++;
+    }
 
   }
+
   //hide behind payload due to errs in data in MS mode
   if (opts->payload == 1)
   {
@@ -775,9 +753,6 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
 
   state->dmr_stereo = 0;
   state->dmr_ms_mode = 0;
-  //reset drop values since we don't know which slot (because I'm too lazy to write that part)
-  state->dropL = 256;
-  state->dropR = 256;
 
   //get potential first half payload dibits and store them in the payload for the next repitition, MS voice or data.
   skipDibit (opts, state, 144);

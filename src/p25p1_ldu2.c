@@ -49,6 +49,8 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   // so we start counter at 36-14-1 = 21
   status_count = 21;
 
+  state->p25vc = 9;
+
   if (opts->errorbars == 1)
     {
       //fprintf (stderr, "e:");
@@ -65,7 +67,6 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   state->debug_prefix_2 = '1';
 #endif
   process_IMBE (opts, state, &status_count);
-
   // Read data after IMBE 2
   read_and_correct_hex_word (opts, state, &(hex_data[15][0]), &status_count, analog_signal_array, &analog_signal_index);
   read_and_correct_hex_word (opts, state, &(hex_data[14][0]), &status_count, analog_signal_array, &analog_signal_index);
@@ -78,7 +79,6 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   state->debug_prefix_2 = '2';
 #endif
   process_IMBE (opts, state, &status_count);
-
   // Read data after IMBE 3
   read_and_correct_hex_word (opts, state, &(hex_data[11][0]), &status_count, analog_signal_array, &analog_signal_index);
   read_and_correct_hex_word (opts, state, &(hex_data[10][0]), &status_count, analog_signal_array, &analog_signal_index);
@@ -91,7 +91,6 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   state->debug_prefix_2 = '3';
 #endif
   process_IMBE (opts, state, &status_count);
-
   // Read data after IMBE 4
   read_and_correct_hex_word (opts, state, &(hex_data[ 7][0]), &status_count, analog_signal_array, &analog_signal_index);
   read_and_correct_hex_word (opts, state, &(hex_data[ 6][0]), &status_count, analog_signal_array, &analog_signal_index);
@@ -104,7 +103,6 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   state->debug_prefix_2 = '4';
 #endif
   process_IMBE (opts, state, &status_count);
-
   // Read data after IMBE 5
   read_and_correct_hex_word (opts, state, &(hex_data[ 3][0]), &status_count, analog_signal_array, &analog_signal_index);
   read_and_correct_hex_word (opts, state, &(hex_data[ 2][0]), &status_count, analog_signal_array, &analog_signal_index);
@@ -117,7 +115,6 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   state->debug_prefix_2 = '5';
 #endif
   process_IMBE (opts, state, &status_count);
-
   // Read data after IMBE 6
   read_and_correct_hex_word (opts, state, &(hex_parity[ 7][0]), &status_count, analog_signal_array, &analog_signal_index);
   read_and_correct_hex_word (opts, state, &(hex_parity[ 6][0]), &status_count, analog_signal_array, &analog_signal_index);
@@ -130,7 +127,6 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   state->debug_prefix_2 = '6';
 #endif
   process_IMBE (opts, state, &status_count);
-
   // Read data after IMBE 7
   read_and_correct_hex_word (opts, state, &(hex_parity[ 3][0]), &status_count, analog_signal_array, &analog_signal_index);
   read_and_correct_hex_word (opts, state, &(hex_parity[ 2][0]), &status_count, analog_signal_array, &analog_signal_index);
@@ -143,7 +139,6 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   state->debug_prefix_2 = '7';
 #endif
   process_IMBE (opts, state, &status_count);
-
   // Read data after IMBE 8: LSD (low speed data)
   {
     char lsd[8];
@@ -174,6 +169,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
       {
         lsd2[i] = lsd[i] + '0';
       }
+      //skip two octets since LSD is part of the encryption portion
 
     // TODO: error correction of the LSD bytes...
     // TODO: do something useful with the LSD bytes...
@@ -184,6 +180,9 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   state->debug_prefix_2 = '8';
 #endif
   process_IMBE (opts, state, &status_count);
+
+  //set vc counter to 0
+  state->p25vc = 0;
 
   if (opts->errorbars == 1)
     {
@@ -373,48 +372,23 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     mihex1 = (unsigned long long int)ConvertBitIntoBytes(&mi[0], 32);
     mihex2 = (unsigned long long int)ConvertBitIntoBytes(&mi[32], 32);
     mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
-    //need to check this for accuracy, may be incorrect, MI may also be incorrect, I have 72, but LFSR shows 64
-    state->payload_miP = (mihex1 << 40) | (mihex2 << 8) | mihex3;
+    //only use 64 MSB, trailing 8 bits aren't used, so no mihex3
+    state->payload_miP = (mihex1 << 32) | (mihex2);
 
   }
 
-  if (1 == 1) //print on payload == 1
+  if (state->payload_algid != 0x80) //print on payload == 1
   {
     fprintf (stderr, "%s", KYEL);
-    fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08llX%08llX%02llX\n", algidhex, kidhex, mihex1, mihex2, mihex3);
+    fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08llX%08llX%02llX", algidhex, kidhex, mihex1, mihex2, mihex3);
     fprintf (stderr, "%s", KNRM);
   }
-  if (opts->payload == 1)
+
+  if (state->payload_algid != 0x80) //print on payload == 1
   {
-    //LFSRP(state);
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, " ENC \n");
+    fprintf (stderr, "%s", KNRM);
   }
-  //why am I doing this part below again?
-  if (opts->payload == 0)
-    {
-      algidhex = strtol (algid, NULL, 2);
-      kidhex = strtol (kid, NULL, 2);
-    }
-}
-
-//needs some work to make mi value fit in there since its a 72 bit value, need to check this over
-//LFSR code courtesy of https://github.com/mattames/LFSR/
-int LFSRP(dsd_state * state)
-{
-  uint64_t lfsr = 0;
-  lfsr = state->payload_miP;
-  uint8_t cnt = 0;
-
-  for(cnt=0;cnt<32;cnt++)
-  {
-	  // Polynomial is C(x) = x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1
-    uint64_t bit  = ((lfsr >> 63) ^ (lfsr >> 61) ^ (lfsr >> 45) ^ (lfsr >> 37) ^ (lfsr >> 26) ^ (lfsr >> 14)) & 0x1;
-    lfsr =  (lfsr << 1) | (bit);
-  }
-
-  fprintf (stderr, "%s", KYEL);
-  fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
-  fprintf(stderr, " Next MI: 0x%016llX \n", lfsr);
-  fprintf (stderr, "%s", KNRM);
-  state->payload_miP = lfsr;
 
 }

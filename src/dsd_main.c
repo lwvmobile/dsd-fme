@@ -43,19 +43,18 @@ int pretty_colors()
 
 #include "p25p1_heuristics.h"
 #include "pa_devs.h"
-short int butt = 1;
+short int butt = 0;
 
 char * FM_banner[9] = {
-  " 2022 Dove Award Winner           CTRL + C twice to exit",
+  "                                                        ",
   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗",
   " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝",
   " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗  ",
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  "https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
+  " https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
 };
-
 
 int
 comp (const void *a, const void *b)
@@ -74,6 +73,7 @@ struct stat st = {0};
 void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
+  // state->testcounter = 0;
   state->dibit_buf_p = state->dibit_buf + 200;
   memset (state->dibit_buf, 0, sizeof (int) * 200);
   //dmr buffer
@@ -133,8 +133,6 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   mbe_initMbeParms (state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2);
 
   state->dmr_ms_mode = 0;
-  state->dropL = 256; //drop it like its hot
-  state->dropR = 256; //drop it like its hot
 
   //not sure if desirable here or not just yet, may need to disable a few of these
   state->payload_mi  = 0;
@@ -145,11 +143,45 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->payload_algidR = 0;
   state->payload_keyid = 0;
   state->payload_keyidR = 0;
-  //just for a test
-  if (state->M == 0)
+
+  state->payload_miN = 0;
+  state->p25vc = 0;
+  state->payload_miP = 0;
+
+  //initialize dmr data header source
+  state->dmr_lrrp_source[0] = 0;
+  state->dmr_lrrp_source[1] = 0;
+
+  //initialize 12 rate superframe
+  for (short i = 0; i < 84; i++)
   {
-    state->K = 0;
+    state->dmr_12_rate_sf[0][i] = 0;
+    state->dmr_12_rate_sf[1][i] = 0;
   }
+
+  //initialize 34 rate superframe
+  for (short i = 0; i < 96; i++)
+  {
+    state->dmr_34_rate_sf[0][i] = 0;
+    state->dmr_34_rate_sf[1][i] = 0;
+  }
+
+  //initialize data header bits
+  state->data_header_blocks[0] = 1;  //initialize with 1, otherwise we may end up segfaulting when no/bad data header
+  state->data_header_blocks[1] = 1; //when trying to fill the superframe and 0-1 blocks give us an overflow
+  state->data_header_padding[0] = 0;
+  state->data_header_padding[1] = 0;
+  state->data_header_format[0] = 0;
+  state->data_header_format[1] = 0;
+  state->data_header_sap[0] = 0;
+  state->data_header_sap[1] = 0;
+  state->data_block_counter[0] = 0;
+  state->data_block_counter[1] = 0;
+  state->data_p_head[0] = 0;
+  state->data_p_head[1] = 0;
+
+  state->dmr_so   = 0;
+  state->dmr_soR  = 0;
 
 }
 
@@ -172,15 +204,15 @@ initOpts (dsd_opts * opts)
   //sprintf (opts->audio_in_dev, "/dev/audio");
   sprintf (opts->audio_in_dev, "pulse");
   opts->audio_in_fd = -1;
-#ifdef USE_PORTAUDIO
-  opts->audio_in_pa_stream = NULL;
-#endif
+// #ifdef USE_PORTAUDIO
+//   opts->audio_in_pa_stream = NULL;
+// #endif
   //sprintf (opts->audio_out_dev, "/dev/audio");
   sprintf (opts->audio_out_dev, "pulse");
   opts->audio_out_fd = -1;
-#ifdef USE_PORTAUDIO
-  opts->audio_out_pa_stream = NULL;
-#endif
+// #ifdef USE_PORTAUDIO
+//   opts->audio_out_pa_stream = NULL;
+// #endif
   opts->split = 0;
   opts->playoffset = 0;
   opts->playoffsetR = 0;
@@ -192,7 +224,16 @@ initOpts (dsd_opts * opts)
   opts->audio_gainR = 0;
   opts->audio_out = 1;
   opts->wav_out_file[0] = 0;
+  opts->wav_out_fileR[0] = 0;
+  opts->wav_out_file_raw[0] = 0;
+  opts->symbol_out_file[0] = 0;
+  opts->symbol_out_f = NULL;
+  opts->symbol_out = 0;
   opts->wav_out_f = NULL;
+  opts->wav_out_fR = NULL;
+  opts->wav_out_raw = NULL;
+
+  opts->dmr_stereo_wav = 0; //flag for per call dmr stereo wav recordings
   //opts->wav_out_fd = -1;
   opts->serial_baud = 115200;
   sprintf (opts->serial_dev, "/dev/ttyUSB0");
@@ -200,6 +241,7 @@ initOpts (dsd_opts * opts)
   opts->frame_dstar = 1;
   opts->frame_x2tdma = 1;
   opts->frame_p25p1 = 1;
+  opts->frame_p25p2 = 0;
   opts->frame_nxdn48 = 0;
   opts->frame_nxdn96 = 0;
   opts->frame_dmr = 1;
@@ -225,10 +267,11 @@ initOpts (dsd_opts * opts)
   opts->rtl_udp_port = 6020; //set UDP port for RTL remote
   opts->rtl_bandwidth = 12; //changed recommended default to 12, 24 for ProVoice
   opts->rtlsdr_ppm_error = 0; //initialize ppm with 0 value; bug reported by N.
+  opts->rtl_started = 0;
   opts->pulse_raw_rate_in   = 48000;
-  opts->pulse_raw_rate_out  = 48000; //doing tests with 2 channels at 24000 for 48000 audio default in pulse
+  opts->pulse_raw_rate_out  = 48000; //
   opts->pulse_digi_rate_in  = 48000;
-  opts->pulse_digi_rate_out = 48000; //need to copy this to rtl type in and change rate out to 8000
+  opts->pulse_digi_rate_out = 8000; // reverted to 8/1, crisper sound, dmr stereo will switch to 24/2
   opts->pulse_raw_in_channels   = 1;
   opts->pulse_raw_out_channels  = 1;
   opts->pulse_digi_in_channels  = 1; //2
@@ -237,15 +280,17 @@ initOpts (dsd_opts * opts)
   sprintf (opts->output_name, "Auto Detect");
   opts->pulse_flush = 1; //set 0 to flush, 1 for flushed
   opts->use_ncurses_terminal = 0;
+  opts->ncurses_compact = 0;
+  opts->ncurses_history = 1;
   opts->payload = 0;
-
-  opts->EncryptionMode = MODE_UNENCRYPTED;
   opts->inverted_dpmr = 0;
   opts->dmr_stereo = 0;
   opts->aggressive_framesync = 1; //more aggressive to combat wonk wonk voice decoding
   //see if initializing these values causes issues elsewhere, if so, then disable.
   opts->audio_in_type = 0;  //this was never initialized, causes issues on rPI 64 (bullseye) if not initialized
   opts->audio_out_type = 0; //this was never initialized, causes issues on rPI 64 (bullseye) if not initialized
+
+  opts->lrrp_file_output = 0;
 
 
 }
@@ -255,6 +300,7 @@ initState (dsd_state * state)
 {
 
   int i, j;
+  // state->testcounter = 0;
   state->last_dibit = 0;
   state->dibit_buf = malloc (sizeof (int) * 1000000);
   state->dibit_buf_p = state->dibit_buf + 200;
@@ -313,6 +359,7 @@ initState (dsd_state * state)
   sprintf (state->fsubtype, "              ");
   sprintf (state->ftype, "             ");
   state->symbolcnt = 0;
+  state->symbolc = 0; //
   state->rf_mod = 0;
   state->numflips = 0;
   state->lastsynctype = -1;
@@ -377,6 +424,7 @@ initState (dsd_state * state)
   state->nxdn_cipher_type = 0;
   state->nxdn_key = 0;
   sprintf (state->nxdn_call_type, " ");
+  state->payload_miN = 0;
 
   state->dpmr_color_code = -1;
   state->dpmr_caller_id = 0;
@@ -419,7 +467,7 @@ initState (dsd_state * state)
 
   state->K = 0;
   state->R = 0;
-  state->M = 0;
+
   state->dmr_stereo = 0;
   state->dmrburstL = 17; //initialize at higher value than possible
   state->dmrburstR = 17; //17 in char array is set for ERR
@@ -429,10 +477,45 @@ initState (dsd_state * state)
   state->dmr_fidR = 0;
   state->dmr_ms_mode = 0;
 
-  state->dropL = 256; //drop it like its hot
-  state->dropR = 256; //drop it like its hot
+  state->p25vc = 0;
+
+  state->payload_miP = 0;
 
   memset(state->dstarradioheader, 0, 41);
+
+  //initialize dmr data header source
+  state->dmr_lrrp_source[0] = 0;
+  state->dmr_lrrp_source[1] = 0;
+
+  //initialize 12 rate superframe
+  for (short i = 0; i < 84; i++)
+  {
+    state->dmr_12_rate_sf[0][i] = 0;
+    state->dmr_12_rate_sf[1][i] = 0;
+  }
+
+  //initialize 34 rate superframe
+  for (short i = 0; i < 96; i++)
+  {
+    state->dmr_34_rate_sf[0][i] = 0;
+    state->dmr_34_rate_sf[1][i] = 0;
+  }
+
+  //initialize data header bits
+  state->data_header_blocks[0] = 1;  //initialize with 1, otherwise we may end up segfaulting when no/bad data header
+  state->data_header_blocks[1] = 1; //when trying to fill the superframe and 0-1 blocks give us an overflow
+  state->data_header_padding[0] = 0;
+  state->data_header_padding[1] = 0;
+  state->data_header_format[0] = 0;
+  state->data_header_format[1] = 0;
+  state->data_header_sap[0] = 0;
+  state->data_header_sap[1] = 0;
+  state->data_block_counter[0] = 0;
+  state->data_block_counter[1] = 0;
+  state->data_p_head[0] = 0;
+  state->data_p_head[1] = 0;
+
+  state->menuopen = 0; //is the ncurses menu open, if so, don't process frame sync
 
 #ifdef TRACE_DSD
   state->debug_sample_index = 0;
@@ -447,14 +530,15 @@ initState (dsd_state * state)
 void
 usage ()
 {
-  //printf ( "Github Build Version: %s \n", GIT_TAG);
-  //printf ( "2022 Dove Award Recipient"); //Thanks, Scott
+
   printf ("\n");
-  printf ("Usage: dsd [options]            Live scanner mode\n");
-  printf ("  or:  dsd [options] -r <files> Read/Play saved mbe data from file(s)\n");
-  printf ("  or:  dsd -h                   Show help\n");
+  printf ("Usage: dsd-fme [options]            Live scanner mode\n");
+  printf ("  or:  dsd-fme [options] -r <files> Read/Play saved mbe data from file(s)\n");
+  printf ("  or:  dsd-fme -h                   Show help\n");
   printf ("\n");
   printf ("Display Options:\n");
+  printf ("  -N            Use NCurses Terminal\n");
+  printf ("                 -use with 2> log.txt at end of command\n");
   printf ("  -e            Show Frame Info and errorbars (default)\n");
   printf ("  -pe           Show P25 encryption sync bits\n");
   printf ("  -pl           Show P25 link control bits\n");
@@ -474,7 +558,7 @@ usage ()
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
   printf ("  -w <file>     Output synthesized speech to a .wav file\n");
   //printf ("  -a            Display port audio devices\n");
-  printf ("  -W            Monitor Source Audio When No Sync Detected (WIP!)\n");
+  //printf ("  -W            Monitor Source Audio When No Sync Detected (WIP!)\n");
   printf ("\n");
   printf ("RTL-SDR options:\n");
   printf ("  -c <hertz>    RTL-SDR Frequency\n");
@@ -495,43 +579,38 @@ usage ()
   printf ("  -fa           Auto-detect frame type (default)\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -fd           Decode only D-STAR\n");
-  printf ("  -fr           Decode only DMR/MOTOTRBO\n");
+  printf ("  -fr           Decode only DMR\n");
   printf ("  -fx           Decode only X2-TDMA\n");
   printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
   printf ("  -fp             Decode only ProVoice*\n");
   printf ("  -fm             Decode only dPMR*\n");
-  printf ("  -l            Disable DMR/MOTOTRBO and NXDN input filtering\n");
-  printf ("  -ma           Auto-select modulation optimizations (default)\n");
-  printf ("  -mc           Use only C4FM modulation optimizations\n");
-  printf ("  -mg           Use only GFSK modulation optimizations\n");
-  printf ("  -mq           Use only QPSK modulation optimizations\n");
+  printf ("  -l            Disable DMR and NXDN input filtering\n");
   printf ("  -pu           Unmute Encrypted P25\n");
   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
   printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
-  printf ("  -xr           Expect inverted DMR/MOTOTRBO signal\n");
+  printf ("  -xr           Expect inverted DMR signal\n");
   printf ("  -xd           Expect inverted ICOM dPMR signal\n"); //still need to do this
   printf ("\n");
   printf ("  * denotes frame types that cannot be auto-detected.\n");
   printf ("\n");
-  printf ("Advanced decoder options:\n");
-  printf ("  -A <num>      QPSK modulation auto detection threshold (default=26)\n");
+  printf ("Advanced Decoder options:\n");
+  // printf ("  -A <num>      QPSK modulation auto detection threshold (default=26)\n");
   printf ("  -S <num>      Symbol buffer size for QPSK decision point tracking\n");
   printf ("                 (default=36)\n");
   printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
   printf ("                 (default=15)\n");
-  printf ("  -n            Reset P25 Heuristics and initState variables on mixed signal decoding\n");
-  printf ("                 Helps when decoding mixed signal types (P25P1) at same time\n");
-  printf ("                 (WiP! May Cause Slow Memory Leak or System Hang - Experimental)\n");
+  // printf ("  -n            Reset P25 Heuristics and initState variables on mixed signal decoding\n");
+  // printf ("                 Helps when decoding mixed signal types (P25P1) at same time\n");
+  // printf ("                 (WiP! May Cause Slow Memory Leak or System Hang - Experimental)\n");
   printf ("  -T            Enable DMR TDMA Stereo Voice (Two Slot Dual Voices)\n");
   printf ("                 This feature will open two streams for slot 1 voice and slot 2 voice\n");
   printf ("                 May Cause Skipping or sync issues if bad signal/errors\n");
   printf ("  -F            Enable DMR TDMA Stereo Passive Frame Sync\n");
   printf ("                 This feature will attempt to resync less often due to excessive voice errors\n");
   printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
-  printf ("  -Z            Log MBE Payload to console\n");
+  printf ("  -Z            Log MBE/Frame Payloads to console\n");
   printf ("\n");
-  printf ("Report bugs to: https://github.com/lwvmobile/dsd-fme/issues \n");
   exit (0);
 }
 
@@ -539,8 +618,6 @@ void
 liveScanner (dsd_opts * opts, dsd_state * state)
 {
 
-//still need this section mostly due the the crackling on the rtl dongle when upsampled
-//probably need to dig a little deeper, maybe inlvl releated?
 if (opts->audio_in_type == 1)
 {
   opts->pulse_digi_rate_out = 8000; //revert to 8K/1 for STDIN input, sometimes crackles when upsampling
@@ -557,19 +634,6 @@ if (opts->audio_in_type == 1)
 
 }
 
-#ifdef USE_PORTAUDIO
-	if(opts->audio_in_type == 2)
-	{
-		PaError err = Pa_StartStream( opts->audio_in_pa_stream );
-		if( err != paNoError )
-		{
-			//fprintf (stderr, "An error occured while starting the portaudio input stream\n" );
-			//fprintf (stderr, "Error number: %d\n", err );
-			//fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
-			return;
-		}
-	}
-#endif
 #ifdef USE_RTLSDR
   if(opts->audio_in_type == 3)
   {
@@ -588,28 +652,38 @@ if (opts->audio_in_type == 1)
     opts->pulse_raw_out_channels = 1;
 
     open_rtlsdr_stream(opts);
+    opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
   }
 #endif
+
+if (opts->use_ncurses_terminal == 1)
+{
+  ncursesOpen(opts, state);
+}
+
 if (opts->audio_in_type == 0)
 {
   openPulseInput(opts);
 }
+
 if (opts->audio_out_type == 0)
 {
   openPulseOutput(opts);
 }
 
-
 	while (1)
     {
 
       noCarrier (opts, state);
+      if (state->menuopen == 0)
+      {
+        state->synctype = getFrameSync (opts, state);
+        // recalibrate center/umid/lmid
+        state->center = ((state->max) + (state->min)) / 2;
+        state->umid = (((state->max) - state->center) * 5 / 8) + state->center;
+        state->lmid = (((state->min) - state->center) * 5 / 8) + state->center;
+      }
 
-      state->synctype = getFrameSync (opts, state);
-      // recalibrate center/umid/lmid
-      state->center = ((state->max) + (state->min)) / 2;
-      state->umid = (((state->max) - state->center) * 5 / 8) + state->center;
-      state->lmid = (((state->min) - state->center) * 5 / 8) + state->center;
 
 
       while (state->synctype != -1)
@@ -620,16 +694,24 @@ if (opts->audio_out_type == 0)
           state->debug_prefix = 'S';
 #endif
 
-          state->synctype = getFrameSync (opts, state);
+          // state->synctype = getFrameSync (opts, state);
 
 #ifdef TRACE_DSD
           state->debug_prefix = '\0';
 #endif
 
-          // recalibrate center/umid/lmid
-          state->center = ((state->max) + (state->min)) / 2;
-          state->umid = (((state->max) - state->center) * 5 / 8) + state->center;
-          state->lmid = (((state->min) - state->center) * 5 / 8) + state->center;
+          // // recalibrate center/umid/lmid
+          // state->center = ((state->max) + (state->min)) / 2;
+          // state->umid = (((state->max) - state->center) * 5 / 8) + state->center;
+          // state->lmid = (((state->min) - state->center) * 5 / 8) + state->center;
+          if (state->menuopen == 0)
+          {
+            state->synctype = getFrameSync (opts, state);
+            // recalibrate center/umid/lmid
+            state->center = ((state->max) + (state->min)) / 2;
+            state->umid = (((state->max) - state->center) * 5 / 8) + state->center;
+            state->lmid = (((state->min) - state->center) * 5 / 8) + state->center;
+          }
         }
     }
 }
@@ -639,59 +721,33 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
 {
   noCarrier (opts, state);
   if (opts->wav_out_f != NULL)
-    {
-      closeWavOutFile (opts, state);
-    }
-
-#ifdef USE_PORTAUDIO
-	if((opts->audio_in_type == 2) || (opts->audio_out_type == 2))
-	{
-		fprintf (stderr,"Terminating portaudio.\n");
-		PaError err = paNoError;
-		if(opts->audio_in_pa_stream != NULL)
-		{
-			err = Pa_CloseStream( opts->audio_in_pa_stream );
-			if( err != paNoError )
-			{
-				//fprintf (stderr, "An error occured while closing the portaudio input stream\n" );
-				//fprintf (stderr, "Error number: %d\n", err );
-				//fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
-			}
-		}
-		if(opts->audio_out_pa_stream != NULL)
-		{
-			err = Pa_IsStreamActive( opts->audio_out_pa_stream );
-			if(err == 1)
-				err = Pa_StopStream( opts->audio_out_pa_stream );
-			if( err != paNoError )
-			{
-				//fprintf (stderr, "An error occured while closing the portaudio output stream\n" );
-				//fprintf (stderr, "Error number: %d\n", err );
-				//fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
-			}
-			err = Pa_CloseStream( opts->audio_out_pa_stream );
-			if( err != paNoError )
-			{
-				//fprintf (stderr, "An error occured while closing the portaudio output stream\n" );
-				//fprintf (stderr, "Error number: %d\n", err );
-				//fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
-			}
-		}
-		err = Pa_Terminate();
-		if( err != paNoError )
-		{
-			//fprintf (stderr, "An error occured while terminating portaudio\n" );
-			//fprintf (stderr, "Error number: %d\n", err );
-			//fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
-		}
-	}
-#endif
+  {
+    closeWavOutFile (opts, state);
+  }
+  if (opts->wav_out_raw != NULL)
+  {
+    closeWavOutFileRaw (opts, state);
+  }
+  if (opts->dmr_stereo_wav == 1)
+  {
+    closeWavOutFileL (opts, state);
+    closeWavOutFileR (opts, state);
+  }
+  if (opts->symbol_out == 1)
+  {
+    closeSymbolOutFile (opts, state);
+  }
+  if (opts->mbe_out_f != NULL)
+  {
+    closeMbeOutFile (opts, state);
+  }
 
 #ifdef USE_RTLSDR
   if(opts->audio_in_type == 3)
   {
     // TODO: cleanup demod threads
-    cleanup_rtlsdr_stream();
+    //temp disable to see if this corrects issues with closing
+    //cleanup_rtlsdr_stream();
   }
 #endif
 
@@ -775,15 +831,15 @@ main (int argc, char **argv)
   char versionstr[25];
   mbe_printVersion (versionstr);
 
-
-  for (short int i = 0; i < 7; i++) {
-    fprintf (stderr,"%s%s \n", FM_banner[i], KCYN); //cyan/blue text
+  fprintf (stderr,"            Digital Speech Decoder: Florida Man Edition\n");
+  for (short int i = 1; i < 7; i++) {
+    //fprintf (stderr,"%s%s \n", FM_banner[i], KGRN); //cyan/blue text
+    fprintf (stderr,"%s\n", FM_banner[i]); //cyan/blue tex
   }
-  fprintf (stderr,"%s", KNRM); //change back to normal
-  fprintf (stderr, "%s \n", FM_banner[7]);
-  fprintf (stderr,"Digital Speech Decoder: Florida Man Edition\n");
+  //fprintf (stderr,"%s", KNRM); //change back to normal
+
   fprintf (stderr, "Github Build Version: %s \n", GIT_TAG);
-  fprintf (stderr,"mbelib version %s\n", versionstr);
+  fprintf (stderr,"MBElib version %s\n", versionstr);
 
   initOpts (&opts);
   initState (&state);
@@ -793,7 +849,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:NWrlZTF")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:NQWrlZTF")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -802,7 +858,7 @@ main (int argc, char **argv)
           usage ();
           exit (0);
         case 'a':
-          printPortAudioDevices();
+          //printPortAudioDevices();
           exit(0);
         case 'e':
           opts.errorbars = 1;
@@ -832,7 +888,8 @@ main (int argc, char **argv)
             }
           break;
         case 'P':
-          sscanf (optarg, "%i", &opts.rtlsdr_ppm_error);
+          //can't handle negative numbers?
+          //sscanf (optarg, "%d", &opts.rtlsdr_ppm_error);
           break;
         case 'q':
           opts.errorbars = 0;
@@ -858,15 +915,10 @@ main (int argc, char **argv)
 
         case 'K':
           sscanf (optarg, "%lld", &state.K);
-          state.M = 1;
           if (state.K > 256)
           {
            state.K = 256;
           }
-          break;
-
-        case 'R':
-          sscanf (optarg, "%lld", &state.R);
           break;
 
         case 'G': //Set rtl device gain
@@ -877,11 +929,11 @@ main (int argc, char **argv)
           sscanf (optarg, "%d", &opts.rtl_squelch_level); //set squelch by user to prevent false positives on NXDN and others
           break;
 
-        case 'V': //Set rtl squelch level
+        case 'V': //Set rtl voltage level
           sscanf (optarg, "%d", &opts.rtl_volume_multiplier); //set 'volume' multiplier for rtl-sdr samples
           break;
 
-        case 'U': //Set rtl squelch level
+        case 'U': //Set rtl udp remote port
           sscanf (optarg, "%d", &opts.rtl_udp_port); //set udp port number for RTL remote
           break;
 
@@ -893,23 +945,20 @@ main (int argc, char **argv)
           sscanf (optarg, "%d", &opts.rtl_bandwidth);
           break;
 
-        case 'W': //monitor_input_audio if no sync
-          opts.monitor_input_audio = 1;
-          fprintf (stderr, "%s", KRED);
-          fprintf (stderr,"Monitoring Source Audio when carrier present and No Sync Detected.\n");
-          fprintf (stderr,"  - May cause Pulse Audio Server to crash on some systems.\n");
-          fprintf (stderr, "%s", KNRM);
-          break;
-
         case 'N':
           opts.use_ncurses_terminal = 1;
           fprintf (stderr,"Enabling NCurses Terminal.\n");
-          fprintf (stderr,"  - may need to issue 'reset' command in terminal after use\n");
+          //fprintf (stderr,"  - may need to issue 'reset' command in terminal after use\n");
           break;
 
         case 'Z':
           opts.payload = 1;
-          fprintf (stderr,"Logging MBE Payload to console\n");
+          fprintf (stderr,"Logging Frame Payload to console\n");
+          break;
+
+        case 'Q':
+          opts.lrrp_file_output = 1;
+          fprintf (stderr,"Logging LRRP data to ~/lrrp.txt \n");
           break;
 
         case 'T':
@@ -917,16 +966,18 @@ main (int argc, char **argv)
           state.dmr_stereo = 1; //this values toggles on and off depending on voice or data handling
           opts.pulse_digi_rate_out = 24000;
           opts.pulse_digi_out_channels = 2;
-          fprintf (stderr, "%s", KRED);
+          sprintf (opts.output_name, "DMR STEREO");
+          fprintf (stderr, "%s", KYEL);
           fprintf (stderr,"DMR Stereo Sync and Functionality Enabled.\n");
-          fprintf (stderr,"DMR Stereo will disable WAV and MBE file saving!\n");
+          fprintf (stderr,"DMR Stereo will disable MBE file saving!\n");
+          fprintf (stderr,"DMR Stereo per call WAV file can be enabled in the NCurses Terminal!\n");
           fprintf (stderr,"Also consider using -F if playback is too choppy!\n");
           fprintf (stderr, "%s", KNRM);
           break;
 
         case 'F':
           opts.aggressive_framesync = 0;
-          fprintf (stderr, "%s", KRED);
+          fprintf (stderr, "%s", KYEL);
           fprintf (stderr,"DMR Stereo Aggressive Resync Disabled!\n");
           fprintf (stderr, "%s", KNRM);
           break;
@@ -984,32 +1035,28 @@ main (int argc, char **argv)
               state.aout_gainR = opts.audio_gain;
             }
           break;
-        case 'n':
-          opts.reset_state = 1;
-          fprintf (stderr, "%s", KRED);
-          fprintf (stderr,"Enabling Automatic Reset of P25 states\n");
-          //fprintf (stderr,"  -Helps with multiple signal type decoding\n");
-          //fprintf (stderr,"  -(WiP! May cause slow memory leak)\n");
-          fprintf (stderr,"  -(Disabled until memory leak issues can be resolved!)\n");
-          fprintf (stderr, "%s", KNRM);
-          break;
+
         case 'w':
           strncpy(opts.wav_out_file, optarg, 1023);
           opts.wav_out_file[1023] = '\0';
-          fprintf (stderr,"Writing + Appending audio to file %s\n", opts.wav_out_file);
+          fprintf (stderr,"Writing + Appending decoded audio to file %s\n", opts.wav_out_file);
           openWavOutFile (&opts, &state);
           break;
+          
         case 'B':
           sscanf (optarg, "%d", &opts.serial_baud);
           break;
+
         case 'C':
           strncpy(opts.serial_dev, optarg, 1023);
           opts.serial_dev[1023] = '\0';
           break;
-        //case 'R':
-        //  sscanf (optarg, "%d", &opts.resume);
-        //  fprintf (stderr,"Enabling scan resume after %i TDULC frames\n", opts.resume);
-        //  break;
+
+        case 'R':
+         sscanf (optarg, "%d", &opts.resume);
+         fprintf (stderr,"Enabling scan resume after %i TDULC frames\n", opts.resume);
+         break;
+
         case 'f':
           if (optarg[0] == 'a')
             {
@@ -1017,7 +1064,7 @@ main (int argc, char **argv)
               opts.frame_x2tdma = 1;
               opts.frame_p25p1 = 1;
               opts.frame_nxdn48 = 0;
-              opts.frame_nxdn96 = 0; //causes false positives, leave on 0
+              opts.frame_nxdn96 = 0;
               opts.frame_dmr = 1;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
@@ -1033,6 +1080,7 @@ main (int argc, char **argv)
               opts.frame_dmr = 0;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
+              state.rf_mod = 0;
               sprintf (opts.output_name, "D-STAR");
               fprintf (stderr,"Decoding only D-STAR frames.\n");
             }
@@ -1104,7 +1152,6 @@ main (int argc, char **argv)
               opts.mod_gfsk = 0;
               state.rf_mod = 0;
               sprintf (opts.output_name, "NXDN48");
-              //opts.symboltiming = 2400; //NXDN48 uses 2400 symbol rate
               fprintf (stderr,"Setting symbol rate to 2400 / second\n");
               fprintf (stderr,"Decoding only NXDN 4800 baud frames.\n");
             }
@@ -1113,23 +1160,44 @@ main (int argc, char **argv)
               opts.frame_dstar = 0;
               opts.frame_x2tdma = 0;
               opts.frame_p25p1 = 0;
+              opts.frame_p25p2 = 0;
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 1;
-              state.samplesPerSymbol = 10;
-              //state.symbolCenter = 10;
+              state.samplesPerSymbol = 20; //10
+              state.symbolCenter = 10;
               opts.mod_c4fm = 1;
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
               state.rf_mod = 0;
               sprintf (opts.output_name, "YSF");
-              //opts.symboltiming = 2400; //NXDN48 uses 2400 symbol rate
               fprintf (stderr,"Setting symbol rate to 2400 / second\n");
               fprintf (stderr,"Decoding only YSF frames.\nNot working yet!\n");
               }
+              else if (optarg[0] == '2')
+                {
+                  opts.frame_dstar = 0;
+                  opts.frame_x2tdma = 0;
+                  opts.frame_p25p1 = 0;
+                  opts.frame_p25p2 = 1;
+                  opts.frame_nxdn48 = 0;
+                  opts.frame_nxdn96 = 0;
+                  opts.frame_dmr = 0;
+                  opts.frame_dpmr = 0;
+                  opts.frame_provoice = 0;
+                  opts.frame_ysf = 0;
+                  state.samplesPerSymbol = 20; //10
+                  state.symbolCenter = 10;
+                  opts.mod_c4fm = 0;
+                  opts.mod_qpsk = 1;
+                  opts.mod_gfsk = 0;
+                  state.rf_mod = 0;
+                  sprintf (opts.output_name, "P25-P2");
+                  fprintf (stderr,"Decoding P25-P2 frames.\nNot working yet!\n");
+                  }
           else if (optarg[0] == 'n')
             {
               opts.frame_dstar = 0;
@@ -1161,9 +1229,9 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0; //
               state.rf_mod = 0;  //
-              sprintf (opts.output_name, "DMR/MOTOTRBO");
+              sprintf (opts.output_name, "DMR LEH");
               //fprintf(stderr, "Notice: DMR cannot autodetect polarity. \n Use -xr option if Inverted Signal expected.\n");
-              fprintf (stderr,"Decoding only DMR/MOTOTRBO frames.\n");
+              fprintf (stderr,"Decoding only DMR frames.\n");
             }
           else if (optarg[0] == 'm')
           {
@@ -1242,7 +1310,7 @@ main (int argc, char **argv)
           else if (optarg[0] == 'r')
             {
               opts.inverted_dmr = 1;
-              fprintf (stderr,"Expecting inverted DMR/MOTOTRBO signals.\n");
+              fprintf (stderr,"Expecting inverted DMR signals.\n");
             }
           else if (optarg[0] == 'd')
             {
@@ -1253,7 +1321,6 @@ main (int argc, char **argv)
         case 'A':
           sscanf (optarg, "%i", &opts.mod_threshold);
           fprintf (stderr,"Setting C4FM/QPSK auto detection threshold to %i\n", opts.mod_threshold);
-          break;
         case 'S':
           sscanf (optarg, "%i", &opts.ssize);
           if (opts.ssize > 128)
@@ -1294,11 +1361,6 @@ main (int argc, char **argv)
         }
     }
 
-    if (opts.use_ncurses_terminal == 1)
-    {
-      ncursesOpen();
-    }
-
     if (opts.resume > 0)
     {
       openSerial (&opts, &state);
@@ -1314,23 +1376,7 @@ main (int argc, char **argv)
       opts.audio_out_type == 0;
     }
 
-#ifdef USE_PORTAUDIO
-  if((strncmp(opts.audio_in_dev, "pa:", 3) == 0)
-  || (strncmp(opts.audio_out_dev, "pa:", 3) == 0))
-  {
-	fprintf (stderr,"Initializing portaudio.\n");
-    PaError err = Pa_Initialize();
-    if( err != paNoError )
-    {
-		//fprintf (stderr, "An error occured while initializing portaudio\n" );
-		//fprintf (stderr, "Error number: %d\n", err );
-		//fprintf (stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
-		exit(err);
-    }
-  }
-#endif
-
-  if (opts.playfiles == 1)
+    if (opts.playfiles == 1)
     {
       opts.split = 1;
       opts.playoffset = 0;
@@ -1345,7 +1391,7 @@ main (int argc, char **argv)
           openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
         }
     }
-  else if (strcmp (opts.audio_in_dev, opts.audio_out_dev) != 0)
+    else if (strcmp (opts.audio_in_dev, opts.audio_out_dev) != 0)
     {
       opts.split = 1;
       opts.playoffset = 0;
@@ -1368,16 +1414,15 @@ main (int argc, char **argv)
   else
     {
       opts.split = 0;
-      opts.playoffset = 25;      // 38
-      opts.playoffsetR = 25;     // 38
+      opts.playoffset = 25;
+      opts.playoffsetR = 25;
       opts.delay = 0;
-      openAudioInDevice (&opts); //disabled all four instances of openAudio devices, in and out for now
+      openAudioInDevice (&opts);
       opts.audio_out_fd = opts.audio_in_fd;
     }
 
   if (opts.playfiles == 1)
     {
-      //need set to 8000/1 for amb/imb playback, upsampling seems to cause random crackling
       opts.pulse_digi_rate_out = 8000;
       opts.pulse_digi_out_channels = 1;
       openPulseOutput(&opts); //need to open it up for output
@@ -1389,9 +1434,6 @@ main (int argc, char **argv)
         liveScanner (&opts, &state);
     }
 
-  if (opts.use_ncurses_terminal == 1){
-    //ncursesClose ();
-  }
   cleanupAndExit (&opts, &state);
 
   return (0);

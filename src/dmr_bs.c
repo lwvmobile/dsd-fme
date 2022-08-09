@@ -10,13 +10,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   char ambe_fr[4][24] = {0};
   char ambe_fr2[4][24] = {0};
   char ambe_fr3[4][24] = {0};
-  char t_ambe_fr[4][24] = {9};
-  char t_ambe_fr2[4][24] = {9};
-  char t_ambe_fr3[4][24] = {9};
+
   const int *w, *x, *y, *z;
   char sync[25] = {0};
   char syncdata[48] = {0};
-  char cachdata[13] = {0};
+  //char cachdata[13] = {0};
   int mutecurrentslot;
   int msMode;
   char cc[4];
@@ -28,6 +26,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   char redundancyB[36];
   unsigned short int vc1;
   unsigned short int vc2;
+
+  //cach fec
+  char cachdata[25] = {0}; //increased from 24 to 25 to see if this fixes ubuntu 32 bug
+  int cachInterleave[24]   = {0, 7, 8, 9, 1, 10, 11, 12, 2, 13, 14, 15, 3, 16, 4, 17, 18, 19, 5, 20, 21, 22, 6, 23};
+
 
   //add time to mirror printFrameSync
   time_t now;
@@ -67,16 +70,33 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 12; i++)
   {
     dibit = getDibit(opts, state);
-    cachdata[i] = dibit;
     state->dmr_stereo_payload[i] = dibit;
-    //fprintf (stderr, "D%X ", dibit);
-    //fprintf (stderr, "P%X ", state->dmr_stereo_payload[i]);
-    if(i == 2)
-    {
-      state->currentslot = (1 & (dibit >> 1));
-      internalslot = (1 & (dibit >> 1));
-    }
+
+    cachdata[cachInterleave[(i*2)]]   = (1 & (dibit >> 1)); // bit 1
+    cachdata[cachInterleave[(i*2)+1]] = (1 & dibit);       // bit 0
   }
+
+  cachdata[25] = 0; //setting to see if this fixes ubuntu 32 bit bug
+
+  //decode and correct cach and compare
+  int cach_okay = 69;
+  if ( Hamming_7_4_decode (cachdata) ) //see if we need to de-interleave this...probably do.
+  {
+    cach_okay = 1;
+  }
+  if (cach_okay == 1)
+  {
+    //fprintf (stderr, "CACH Okay ");
+  }
+  if (cach_okay != 1)
+  {
+    //fprintf (stderr, "CACH FEC Error %d", cach_okay);
+  }
+
+  state->currentslot = cachdata[1];
+  internalslot = cachdata[1];
+
+  //this cach fec seems to work quite well, really helps on shaky signals
 
   //Setup for first AMBE Frame
   //Interleave Schedule
@@ -140,19 +160,24 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
   //short int l = 0; //do I still use this?
   // signaling data or sync
+  long long int late_entry_pi[24] = {0};
+  short int m = 0;
   for(i = 0; i < 24; i++)
   {
     dibit = getDibit(opts, state);
 
     state->dmr_stereo_payload[i+66] = dibit;
     syncdata[(2*i)]   = (1 & (dibit >> 1));  // bit 1
-    syncdata[(2*i)+1] = (1 & dibit);         // bit 0
+    syncdata[(2*i)+1] = (1 & dibit);        // bit 0
     sync[i] = (dibit | 1) + 48;
 
-    if (i < 4 || i > 19) //
+    if (i < 4 || i > 19)
     {
-      EmbeddedSignalling[2*i]   = (1 & (dibit >> 1));  // bit 1
-      EmbeddedSignalling[2*i+1] = (1 & dibit);         // bit 0
+      // fprintf(stderr, "\n EMB = ");
+      EmbeddedSignalling[(2*i)]   = (1 & (dibit >> 1));  // bit 1
+      //fprintf (stderr, "%02b", dibit);
+      EmbeddedSignalling[(2*i)+1] = (1 & dibit);         // bit 0
+
     }
 
     //Used for ProcessVoiceBurstSync
@@ -168,6 +193,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       state->TS2SuperFrame.TimeSlotRawVoiceFrame[vc2-1].Sync[i*2]   = (1 & (dibit >> 1)); // bit 1
       state->TS2SuperFrame.TimeSlotRawVoiceFrame[vc2-1].Sync[i*2+1] = (1 & dibit);        // bit 0
     }
+
   }
 
   sync[24] = 0;
@@ -194,9 +220,20 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     state->LCSS = (unsigned int)((EmbeddedSignalling[5] << 1) + EmbeddedSignalling[6]);
     state->LCSS_ok = EmbeddedSignallingOk;
 
-  }
-  else skipcount++;
+    for (i = 0; i < 8; i++)
+    {
+      //fprintf (stderr, " %b", EmbeddedSignalling[i]);
+    }
 
+  }
+  //else skipcount++;
+  else
+  {
+    for (i = 0; i < 8; i++)
+    {
+      //fprintf (stderr, " %b", EmbeddedSignalling[i]);
+    }
+  }
   //Continue Second AMBE Frame, 18 after Sync or EmbeddedSignalling
   for(i = 0; i < 18; i++)
   {
@@ -248,14 +285,26 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0)
     {
       vc1 = 1;
-      state->dropL = 256;
     }
     if (internalslot == 1)
     {
       vc2 = 1;
-      state->dropR = 256;
     }
   }
+
+  // if( strcmp (sync, DMR_DIRECT_MODE_TS1_DATA_SYNC) == 0)
+  // {
+  //   fprintf (stderr,"%s ", getTime());
+  //   fprintf (stderr, " Sync: DMR TDMA Direct Mode TS 1 \n");
+  //   goto SKIP;
+  // }
+  //
+  // if( strcmp (sync, DMR_DIRECT_MODE_TS2_DATA_SYNC) == 0)
+  // {
+  //   fprintf (stderr,"%s ", getTime());
+  //   fprintf (stderr, " Sync: DMR TDMA Direct Mode TS 2 \n");
+  //   goto SKIP;
+  // }
 
   //check for sync pattern here after collected the rest of the payload, decide what to do with it
   if ( strcmp (sync, DMR_BS_DATA_SYNC) == 0 )
@@ -273,7 +322,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       else fprintf (stderr,"Sync: -DMR  ");
       //constantly reset the vc counter to 1 each data frame in anticipation of new voice frame
       vc1 = 1;
-      //state->dropL = 256;
+
     }
     if (internalslot == 1)
     {
@@ -287,7 +336,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       else fprintf (stderr,"Sync: -DMR  ");
       //constantly reset the vc counter to 1 each data frame in anticipation of new voice frame
       vc2 = 1;
-      //state->dropR = 256;
+
     }
     processDMRdata (opts, state);
     skipcount++; //after 2 data frames, drop back to getFrameSync and process subsequent data with processDMRdata
@@ -304,6 +353,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //only play voice on no data sync
   if (strcmp (sync, DMR_BS_DATA_SYNC) != 0)
   {
+
     if (EmbeddedSignallingOk == 0)
     {
       //goto END;
@@ -314,7 +364,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0)
     {
       state->dmrburstL = 16; //use 16 for Voice?
-      //fprintf (stderr,"Sync: +DMR  [slot1]  slot2  | Color Code=%02d | DMRSTEREO | VC%d \n", state->dmr_color_code, vc1);
+
       if (opts->inverted_dmr == 0)
       {
         fprintf (stderr,"Sync: +DMR  [SLOT1]  slot2  |               | DMRSTEREO | VC%d ",vc1);
@@ -323,11 +373,6 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "%s", KYEL);
           fprintf(stderr, " BPK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
-        }
-        //the condition below should be swapped to vc6 and not on vc1, placement after processMbeFrame
-        if (vc1 == 1 && state->payload_algid != 0 && opts->payload == 1)
-        {
-          //LFSR(state); //placement here causes issues when second slot becomes active as well
         }
         fprintf (stderr, "\n");
       }
@@ -339,11 +384,6 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "%s", KYEL);
           fprintf(stderr, " BPK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
-        }
-        //the condition below should be swapped to vc6 and not on vc1, placement after processMbeFrame
-        if (vc1 == 1 && state->payload_algid != 0 && opts->payload == 1)
-        {
-          //LFSR(state); //placement here causes issues when second slot becomes active as well
         }
         fprintf (stderr, "\n");
       }
@@ -361,11 +401,6 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " BPK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        //the condition below should be swapped to vc6 and not on vc1, placement after processMbeFrame
-        if (vc2 == 1 && state->payload_algidR != 0 && opts->payload == 1)
-        {
-          //LFSR(state);
-        }
         fprintf (stderr, "\n");
       }
       else
@@ -376,11 +411,6 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "%s", KYEL);
           fprintf(stderr, " BPK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
-        }
-        //the condition below should be swapped to vc6 and not on vc1, placement after processMbeFrame
-        if (vc2 == 1 && state->payload_algidR != 0 && opts->payload == 1)
-        {
-          //LFSR(state);
         }
         fprintf (stderr, "\n");
       }
@@ -403,29 +433,31 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
 
-    //We only want to run LFSR after processing VC6 frames and before rolling
-    //back to VC1, otherwise we will incur an unwanted LFSR if voice becomes active
-    //in both slots while in this loop
     if (internalslot == 0 && vc1 == 6)
     {
-      state->dropL = 256;
-      if (state->payload_algid != 0 ) //&& opts->payload == 1
+
+      if (state->payload_algid >= 0x21)
       {
-        LFSR(state);
+        //running this as state->payload_mi > 0 apparently causes some problem, don't know why
+        if (state->payload_mi != 0 && state->payload_algid >= 0x21)
+        {
+          LFSR(state);
+        }
         fprintf (stderr, "\n");
       }
-
     }
 
     if (internalslot == 1 && vc2 == 6)
     {
-      state->dropR = 256;
-      if (state->payload_algidR != 0 ) //&& opts->payload == 1
+
+      if (state->payload_algidR >= 0x21)
       {
-        LFSR(state);
+        if (state->payload_miR != 0 && state->payload_algidR == 0x21)
+        {
+          LFSR(state); //re-enable this one after testing Late Entry MI
+        }
         fprintf (stderr, "\n");
       }
-
     }
 
     if (internalslot == 0)
@@ -436,6 +468,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     {
       vc2++;
     }
+
   }
 
   // recalibrate center/umid/lmid, not sure this helps or does anything particularly in this case
@@ -677,10 +710,6 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "\n");
   }
 
-  //these ambe_fr values are set correctly now!
-  //reset drop values since we don't know which slot (because I'm too lazy to write that part)
-  state->dropL = 256;
-  state->dropR = 256;
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);

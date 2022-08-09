@@ -25,14 +25,17 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   int *dibit_p;
   char sync[25];
   char syncdata[48];
-  char cachdata[13] = {0};
+  char cachdata[25] = {0}; //increased from 24 to 25 to see if this fixes ubuntu 32 bug
   char cc[5] = {0};
   char ccAscii[5] = {0};
   char bursttype[5];
   unsigned int burst;
   char info[196];
-  char SlotType[20];
+  // char SlotType[20]; //was char, but I don't think FEC brings back good values when usign that
+  unsigned char SlotType[20]; //was char, but I don't think FEC brings back good values when usign that
   unsigned int SlotTypeOk;
+  int cachInterleave[24]   = {0, 7, 8, 9, 1, 10, 11, 12, 2, 13, 14, 15, 3, 16, 4, 17, 18, 19, 5, 20, 21, 22, 6, 23};
+
 
   /* Remove warning compiler */
   //UNUSED_VARIABLE(cachdata[0]);
@@ -57,7 +60,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     dibit_p = state->dmr_payload_p - 90;
   }
 
-  // CACH
+  // CACH, why aren't we running any FEC on this?
   for (i = 0; i < 12; i++)
   {
     dibit = *dibit_p;
@@ -71,31 +74,72 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
       dibit = (int)state->dmr_stereo_payload[i];
     }
     //fprintf(stderr, "%X", dibit);
-    cachdata[i] = dibit;
+    //cachdata[i] = dibit;
+
+    cachdata[cachInterleave[(i*2)]]   = (1 & (dibit >> 1)); // bit 1
+    cachdata[cachInterleave[(i*2)+1]] = (1 & dibit);       // bit 0
+    // cachdata[(i*2)]   = (1 & (dibit >> 1)); // bit 1
+    // cachdata[(i*2)+1] = (1 & dibit);       // bit 0
+
     if (i == 2)
     {
       /* Change the current slot only if we are in relayed mode (not in direct mode) */
-      if(state->directmode == 0) state->currentslot = (1 & (dibit >> 1));      // bit 1
-
-      if (state->currentslot == 0 && state->dmr_ms_mode == 0)
-      {
-        state->slot1light[0] = '[';
-        state->slot1light[6] = ']';
-        state->slot2light[0] = ' ';
-        state->slot2light[6] = ' ';
-      }
-      //else
-      if (state->currentslot == 1 && state->dmr_ms_mode == 0)
-      {
-        state->slot2light[0] = '[';
-        state->slot2light[6] = ']';
-        state->slot1light[0] = ' ';
-        state->slot1light[6] = ' ';
-      }
+      // if(state->directmode == 0) state->currentslot = (1 & (dibit >> 1)); //move this until after cach fec performed
+      //
+      // if (state->currentslot == 0 && state->dmr_ms_mode == 0)
+      // {
+      //   state->slot1light[0] = '[';
+      //   state->slot1light[6] = ']';
+      //   state->slot2light[0] = ' ';
+      //   state->slot2light[6] = ' ';
+      // }
+      // //else
+      // if (state->currentslot == 1 && state->dmr_ms_mode == 0)
+      // {
+      //   state->slot2light[0] = '[';
+      //   state->slot2light[6] = ']';
+      //   state->slot1light[0] = ' ';
+      //   state->slot1light[6] = ' ';
+      // }
 
     }
   }
-  cachdata[12] = 0;
+  //cachdata[12] = 0;
+  cachdata[25] = 0; //setting to see if this fixes ubuntu 32 bit bug
+  //decode and correct cach and compare
+  int cach_okay = 69;
+  if ( Hamming_7_4_decode (cachdata) ) //is now de-interleaved appropriately
+  {
+    cach_okay = 1;
+  }
+  if (cach_okay == 1)
+  {
+    //fprintf (stderr, "CACH Okay ");
+  }
+  if (cach_okay != 1)
+  {
+    //fprintf (stderr, "CACH FEC Error %d", cach_okay);
+    goto END;
+  }
+
+  state->currentslot = cachdata[1]; //still bit 2, or somewhere else? is it 8? 1? TC?
+
+  if (state->currentslot == 0 && state->dmr_ms_mode == 0)
+  {
+    state->slot1light[0] = '[';
+    state->slot1light[6] = ']';
+    state->slot2light[0] = ' ';
+    state->slot2light[6] = ' ';
+  }
+  //else
+  if (state->currentslot == 1 && state->dmr_ms_mode == 0)
+  {
+    state->slot2light[0] = '[';
+    state->slot2light[6] = ']';
+    state->slot1light[0] = ' ';
+    state->slot1light[6] = ' ';
+  }
+  //end correct cach and set slot
 
 #ifdef DMR_DUMP
   k = 0;
@@ -232,7 +276,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     syncdata[(2*i)+1] = (1 & dibit);         // bit 0
     sync[i] = (dibit | 1) + 48;
   }
-  sync[24] = 0;
+  sync[24] = 0; //why?
 
 #ifdef DMR_DUMP
   k = 0;
@@ -296,8 +340,18 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   }
 
   /* Check and correct the SlotType (apply Golay(20,8) FEC check) */
-  if(Golay_20_8_decode((unsigned char *)SlotType)) SlotTypeOk = 1;
-  else SlotTypeOk = 0;
+  //pretty sure this isn't working correcty, does not apply corrected bits, due to cast type mismatching
+  // if(Golay_20_8_decode((unsigned char *)SlotType)) SlotTypeOk = 1;
+  if( Golay_20_8_decode(SlotType) )
+  {
+    SlotTypeOk = 1;
+    //fprintf (stderr, "Slot Okay ");
+  }
+  else
+  {
+    SlotTypeOk = 0;
+    goto END;
+  }
 
   /* Slot Type parity checked => Fill the color code */
   //state->color_code = (unsigned int)((cc[0] << 3) + (cc[1] << 2) + (cc[2] << 1) + cc[3]);
@@ -536,5 +590,13 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   {
     fprintf(stderr, "\n");
   }
-  //JUMP:
+  END:
+  if (SlotTypeOk == 0 || cach_okay == 0)
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, " **CACH or Burst Type FEC ERR - SKIPPING** ");
+    fprintf (stderr, "%s", KNRM);
+    fprintf (stderr, "\n");
+  }
+
 } /* End processDMRdata() */

@@ -8,9 +8,9 @@ resetState (dsd_state * state)
 
   int i, j;
 
-  state->dibit_buf = malloc (sizeof (int) * 1000000);
-  state->dibit_buf_p = state->dibit_buf + 200;
-  memset (state->dibit_buf, 0, sizeof (int) * 200);
+  // state->dibit_buf = malloc (sizeof (int) * 1000000);
+  // state->dibit_buf_p = state->dibit_buf + 200;
+  // memset (state->dibit_buf, 0, sizeof (int) * 200);
   state->repeat = 0; //not sure yet
   //state->audio_out_buf = malloc (sizeof (short) * 1000000);
   //memset (state->audio_out_buf, 0, 100 * sizeof (short));

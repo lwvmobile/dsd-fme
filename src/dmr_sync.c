@@ -17,10 +17,35 @@
 
 #include "dsd.h"
 
-//#define PRINT_PI_HEADER_BYTES
-//#define PRINT_VOICE_LC_HEADER_BYTES
-//#define PRINT_TERMINAISON_LC_BYTES
-//#define PRINT_VOICE_BURST_BYTES
+
+//time_t now;
+char * getTimeL(void) //get pretty hh:mm:ss timestamp
+{
+  time_t t = time(NULL);
+
+  char * curr;
+  char * stamp = asctime(localtime( & t));
+
+  curr = strtok(stamp, " ");
+  curr = strtok(NULL, " ");
+  curr = strtok(NULL, " ");
+  curr = strtok(NULL, " ");
+
+  return curr;
+}
+
+//getDate has a bug that affects writing to file using fopen 32-bit Ubuntu OS, need to look into
+char * getDateL(void) {
+  char datename[99]; //increased to 99 to fix 32-bit Ubuntu when fopen file printing to lrrp.txt
+  char * curr2;
+  struct tm * to;
+  time_t t;
+  t = time(NULL);
+  to = localtime( & t);
+  strftime(datename, sizeof(datename), "%Y/%m/%d", to);
+  curr2 = strtok(datename, " ");
+  return curr2;
+}
 
 //Need to work in a way to seperate data bursts on seperate slots, having data pouring into both slots simultaneously
 //Need to make seperate superframe arrays for each
@@ -88,25 +113,7 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   unsigned char TrellisReturn[18];
   //CDMRTrellisDecode(tdibits, TrellisReturn); //figure out how this works!!
   CDMRTrellisDecode(tdibits_reverse, TrellisReturn); //NEEDS REVERSE DIBITS!
-  if (opts->payload == 1)
-  {
-    fprintf (stderr,"%s", KCYN);
-    fprintf (stderr, "\nFull 3/4 Rate Trellis Payload\n  ");
-    for (i = 0; i < 18; i++)
-    {
-      fprintf (stderr, "[%02X]", TrellisReturn[i]);
-    }
-    fprintf (stderr, "\n  Hex to Ascii - ");
-    for (i = 0; i < 18; i++)
-    {
-      if (TrellisReturn[i] <= 0x7E && TrellisReturn[i] >=0x20)
-      {
-        fprintf (stderr, "%c", TrellisReturn[i]);
-      }
-      else fprintf (stderr, ".");
-    }
-    fprintf (stderr,"%s", KNRM); //change back to normal
-  }
+
   /* Extract the BPTC 196,96 DMR data */
   //IrrecoverableErrors = BPTC_196x96_Extract_Data(DeInteleavedData, DmrDataBit, R);
   //
@@ -142,12 +149,21 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   }
   */
   /* Convert the 96 bit of voice LC Header data into 12 bytes */
-  k = 0;
+
+  //define our block and padding values
+  uint8_t blocks  = state->data_header_blocks[slot] - 1; //subtract 1 for the relevant value in the calc below
+  uint8_t padding = state->data_header_padding[slot];
+
+  //shift data in the superframe up a block
+  k = 0; //is this still used?
   for(i = 0; i < 16; i++) //16, or 18? seems to have two extra bytes in front currently
   {
-    state->dmr_34_rate_sf[slot][i] = state->dmr_34_rate_sf[slot][i+16];    //shift middle to left 12 to load up new round
-    state->dmr_34_rate_sf[slot][i+16] = state->dmr_34_rate_sf[slot][i+32]; //shift far right middle to left middle 12, going four frames deep;
+    state->dmr_34_rate_sf[slot][i] = state->dmr_34_rate_sf[slot][i+16];
+    state->dmr_34_rate_sf[slot][i+16] = state->dmr_34_rate_sf[slot][i+32];
     state->dmr_34_rate_sf[slot][i+32] = state->dmr_34_rate_sf[slot][i+48];
+    state->dmr_34_rate_sf[slot][i+48] = state->dmr_34_rate_sf[slot][i+64];
+    state->dmr_34_rate_sf[slot][i+64] = state->dmr_34_rate_sf[slot][i+80];
+
     DmrDataByte[i] = 0;
     for(j = 0; j < 8; j++)
     {
@@ -156,95 +172,70 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
       DmrDataByte[i] = DmrDataByte[i] | (DmrDataBit[k] & 0x01);
       k++;
     }
-    //state->dmr_34_rate_sf[i+36] = ~DmrDataByte[i]; //copy byte to right hand side of shift frame
-    //state->dmr_34_rate_sf[i+36] = ~TrellisReturn[i]& 0xFF;
-    state->dmr_34_rate_sf[slot][i+48] = TrellisReturn[i+2]; //plus two to skip the first two bytes
-  }
-  if (opts->payload == 2)
-  {
-    fprintf (stderr, "%s",KGRN);
-    fprintf (stderr, "\n Rate 3/4 Superframe - Slot [%d]\n  ",slot+1);
-    for (i = 0; i < (16*4); i++)
-    {
-      fprintf (stderr, "[%02X]", state->dmr_34_rate_sf[slot][i]);
-      if (i == 15 || i == 31 || i == 47)
-      {
-        fprintf (stderr, "\n  "); //line break and two spaces after each 16 bytes
-      }
-    }
-    fprintf (stderr, "%s ", KNRM);
-  }
-  //fprintf (stderr, "%s ", KNRM);
-  /* Fill the CRC extracted (before Reed-Solomon (12,9) FEC correction) */
-  CRCExtracted = 0;
-  //for(i = 0; i < 24; i++)
-  for(i = 0; i < 16; i++)
-  {
-    //CRCExtracted = CRCExtracted << 1;
-    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
-    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
+
+    //state->dmr_34_rate_sf[slot][i+48] = TrellisReturn[i+2]; //plus two to skip the first two bytes
+    state->dmr_34_rate_sf[slot][i+(blocks*16)] = TrellisReturn[i+2]; //plus two to skip the first two bytes
   }
 
-  //Look into whether or not we need to run these CRC checks for this header information
-  //and see if its applied the same or differently
-  /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
-  //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
-  //CRCExtracted = CRCExtracted ^ 0x6969;
-
-  /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
-
-  //
-  /* Convert corrected 12 bytes into 96 bits */
-
-
-  //Headers and Addresses
-
-  /*
-  if ( (state->dmr_34_rate_sf[0] & 0x3F) == 0x05) //0x3F?? or == 0x05
-  {
-    fprintf (stderr, "\n  IP4 Header");
-  }
-
-  if ( (state->dmr_34_rate_sf[0] & 0x3F) == 0x0C)
-  {
-    fprintf (stderr, "\n  Source:     ");
-    fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_34_rate_sf[0] & 0x3F), state->dmr_34_rate_sf[1], state->dmr_34_rate_sf[2], state->dmr_34_rate_sf[3]); //strip first two bits off 1st byte
-    fprintf (stderr, " [%08d]", (state->dmr_34_rate_sf[1] <<16 ) + (state->dmr_34_rate_sf[2] << 8) + state->dmr_34_rate_sf[3] );
-    fprintf (stderr, " - Port %05d", (state->dmr_34_rate_sf[8] << 8) + state->dmr_34_rate_sf[9]);
-    fprintf (stderr, "\n  Destination:");
-    fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_34_rate_sf[4] & 0x3F), state->dmr_34_rate_sf[5], state->dmr_34_rate_sf[6], state->dmr_34_rate_sf[7]); //strip first two bits off 4th byte??
-    fprintf (stderr, " [%08d]", (state->dmr_34_rate_sf[5] <<16 ) + (state->dmr_34_rate_sf[6] << 8) + state->dmr_34_rate_sf[7] );
-    fprintf (stderr, " - Port %05d", (state->dmr_34_rate_sf[10] << 8) + state->dmr_34_rate_sf[11]);
-  }
-  */
-  //temp hide behind payload until working better
-  if (opts->payload == 1)
-  {
+  //Start Polling the 3/4 Rate Super Frame for Data when byte 0 contains values
   //LRRP
+  int message_legnth = 0;
   if ( (state->dmr_34_rate_sf[slot][0] & 0x7F) == 0x45) //Start LRRP now
   {
-    //sprintf ( state->dmr_lrrp[state->currentslot][0], "LRRP - ");
-    fprintf (stderr, "%s ", KMAG);
-    //fprintf (stderr, "\n  IP4 Header"); //Not sure this is accurate info IP4 Header?
-    //fprintf (stderr, "\n  Data Blocks [%d]", state->dmr_34_rate_sf[5]);
-    for (short i = 1; i < 60; i++) //find way to get padding so we only go as deep as we need to! changed from 64 to 60 to skip the CRC Bytes for confirmed data
+    //test opening a file with fopen and dumping the LRRP data into it.
+    //just going to use the same code from EDACS-FM
+
+    //find user home directory and append directory and filename.
+    FILE * pFile; //put this outside of the if statement?
+    if (opts->lrrp_file_output == 1)
     {
-      /*
+      char * filename = "/lrrp.txt";
+      char * home_dir = getenv("HOME");
+      char * filepath = malloc(strlen(home_dir) + strlen(filename) + 1);
+      strncpy (filepath, home_dir, strlen(home_dir) + 1);
+      strncat (filepath, filename, strlen(filename) + 1);
+      //end find user home directory and append directory and filename
+
+      pFile = fopen (filepath, "a");
+
+      //hard code filename override for those wanting to use other software
+      //pFile = fopen("DSDPlus.LRRP", "a");
+
+
+      fprintf (pFile, "%s\t %s\t", getDateL(), getTimeL()); //current timestamp, may find a way to only add this IF no included timestamp in LRRP data?
+      fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
+    }
+
+
+    fprintf (stderr, "%s ", KMAG);
+
+    //go to number of octets minus padding and crc, confirmed data may need a second rule to skip Serial Numbers and Block CRCs
+    //for (short i = 12; i < ( ((blocks+1)*12) - (padding+4) ); i++)
+    for (short i = 12; i < ( ((blocks+1)*16) - (padding+4) ); i++)
+    {
+
       if ( state->dmr_34_rate_sf[slot][i] == 0x0C) //Source and Destination info
       {
-        fprintf (stderr, "\n       Source:");
+        fprintf (stderr, "\n         Source: ");
         fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_34_rate_sf[slot][i+0] & 0x3F), state->dmr_34_rate_sf[slot][i+1], state->dmr_34_rate_sf[slot][i+2], state->dmr_34_rate_sf[slot][i+3]); //strip first two bits off 1st byte
         fprintf (stderr, " [%08d]", (state->dmr_34_rate_sf[slot][i+1] <<16 ) + (state->dmr_34_rate_sf[slot][i+2] << 8) + state->dmr_34_rate_sf[slot][i+3] );
-        fprintf (stderr, " - Port %05d", (state->dmr_34_rate_sf[slot][i+8] << 8) + state->dmr_34_rate_sf[slot][i+9]);
-        fprintf (stderr, "\n  Destination:");
+        fprintf (stderr, " - Port %05d ", (state->dmr_34_rate_sf[slot][i+8] << 8) + state->dmr_34_rate_sf[slot][i+9]);
+        fprintf (stderr, "\n    Destination: ");
         fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_34_rate_sf[slot][i+4] & 0x3F), state->dmr_34_rate_sf[slot][i+5], state->dmr_34_rate_sf[slot][6], state->dmr_34_rate_sf[slot][i+7]); //strip first two bits off 4th byte??
         fprintf (stderr, " [%08d]", (state->dmr_34_rate_sf[slot][i+5] <<16 ) + (state->dmr_34_rate_sf[slot][i+6] << 8) + state->dmr_34_rate_sf[slot][i+7] );
         fprintf (stderr, " - Port %05d", (state->dmr_34_rate_sf[slot][i+10] << 8) + state->dmr_34_rate_sf[slot][i+11]);
+
+        i = i + 12; //skip 12 bytes here so we don't accidentally trip another flag with data in these bytes
       }
-      */
-      if ( state->dmr_34_rate_sf[slot][i] == 0x34 ) //timestamp
+
+      if (state->dmr_34_rate_sf[slot][i] == 0x0D) //This should lock on to the second 0x0D value hopefully and tell us the message legnth
+      {
+        message_legnth = state->dmr_34_rate_sf[slot][i+1];
+        fprintf (stderr, "\n Message Legnth: %02d", message_legnth);
+        i = i + 2; //skip 2 bytes here so we don't accidentally trip another flag with data in these bytes
+      }
+
+      if ( state->dmr_34_rate_sf[slot][i] == 0x34 && message_legnth > 27 ) //timestamp, seems to need legnth of 28
       {
         fprintf (stderr, "\n  LRRP - Timestamp: ");
         fprintf (stderr, "%4d.", (state->dmr_34_rate_sf[slot][i+1] << 6) + (state->dmr_34_rate_sf[slot][i+2] >> 2) ); //4 digit year
@@ -252,15 +243,22 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
         fprintf (stderr, "%02d",  ( (state->dmr_34_rate_sf[slot][i+3] & 0x30) >> 1) + ((state->dmr_34_rate_sf[slot][i+3] & 0x0E) >> 1)  ); //2 digit day
         fprintf (stderr, " %02d:",( (state->dmr_34_rate_sf[slot][i+3] & 0x01) << 4) + ((state->dmr_34_rate_sf[slot][i+4] & 0xF0) >> 4)  ); //2 digit hour
         fprintf (stderr,  "%02d:",( (state->dmr_34_rate_sf[slot][i+4] & 0x0F) << 2) + ((state->dmr_34_rate_sf[slot][i+5] & 0xC0) >> 6)  ); //2 digit minute
-        fprintf (stderr,  "%02d", ( (state->dmr_34_rate_sf[slot][i+5] & 0x3F) << 0) );                                               //2 digit second
+        fprintf (stderr,  "%02d", ( (state->dmr_34_rate_sf[slot][i+5] & 0x3F) << 0) );                                                     //2 digit second
+
+        i = i + 6; //skip 6 bytes here so we don't accidentally trip another flag with data in these bytes
       }
-      if ( state->dmr_34_rate_sf[slot][i] == 0x51 ) //lattitude and longitude
+
+      if ( state->dmr_34_rate_sf[slot][i] == 0x51 && message_legnth > 13) //lattitude and longitude, message_lenght > 13?
       {
         fprintf (stderr, "\n  LRRP -");
         fprintf (stderr, " Lat: ");
         if (state->dmr_34_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
         {
           fprintf (stderr, "-");
+          if (opts->lrrp_file_output == 1)
+          {
+            fprintf (pFile, "-");
+          }
         }
         long int lrrplat;
         long int lrrplon;
@@ -269,63 +267,113 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
         lrrplat = ( ( ((state->dmr_34_rate_sf[slot][i+1] & 0x7F ) <<  24 ) + (state->dmr_34_rate_sf[slot][i+2] << 16) + (state->dmr_34_rate_sf[slot][i+3] << 8) + state->dmr_34_rate_sf[slot][i+4]) * 1 );
         lrrplon = ( ( (state->dmr_34_rate_sf[slot][i+5]           <<  24 ) + (state->dmr_34_rate_sf[slot][i+6] << 16) + (state->dmr_34_rate_sf[slot][i+7] << 8) + state->dmr_34_rate_sf[slot][i+8]) * 1 );
         fprintf (stderr, "%.5lf ", ((double)lrrplat) * lat_unit);
+        if (opts->lrrp_file_output == 1)
+        {
+          fprintf (pFile, "%.5lf\t", ((double)lrrplat) * lat_unit);
+        }
         fprintf (stderr, " Lon: ");
         if (state->dmr_34_rate_sf[slot][i+5] & 0x80) //first bit indicates a sign, or hemisphere?
         {
           //fprintf (stderr, "-");
         }
         fprintf (stderr, "%.5lf", (lrrplon * lon_unit) );
+        if (opts->lrrp_file_output == 1)
+        {
+          fprintf (pFile, "%.5lf\t", (lrrplon * lon_unit) );
+        }
         if (state->dmr_34_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
         {
           sprintf ( state->dmr_lrrp[state->currentslot][3], "Lat: -%.5lf Lon: %.5lf ", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
         }
-        else sprintf ( state->dmr_lrrp[state->currentslot][3], "Lat: %.5lf Lon: %.5lf ", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
-        //print for easy copy/paste into browser?
+        else sprintf ( state->dmr_lrrp[state->currentslot][3], "Lat: %.5lf Lon: %.5lf ", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );        //print for easy copy/paste into browser?
         //fprintf (stderr, " (");
         if (state->dmr_34_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
         {
           fprintf (stderr, " (-%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
-          //fprintf (stderr, " -");
         }
         else fprintf (stderr, " (%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
+
+        i = i + 9 + 2; //skip 9 bytes here so we don't accidentally trip another flag with data in these bytes
       }
 
 
-      if ( state->dmr_34_rate_sf[slot][i] == 0x6C )
+      if ( state->dmr_34_rate_sf[slot][i] == 0x6C && message_legnth > 13)
       {
-        //either Plus is wrong, or I'm wrong on higher velocities exceeding 0xFF.
+        //either Plus is wrong, or I'm wrong on higher velocities exceeding 0xFF. double check double values?
         //fprintf (stderr, "\n  LRRP - Vi %02X Vf %02X Velocity Units (hex)", state->dmr_34_rate_sf[i+1], state->dmr_34_rate_sf[i+2]);
         double velocity = ( ((double)( (state->dmr_34_rate_sf[slot][i+1] ) + state->dmr_34_rate_sf[slot][i+2] )) / ( (double)128));
-        //fprintf (stderr, "\n  LRRP - %.4lf Meters Per Second", velocity);
-        fprintf (stderr, "\n  LRRP - %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity) );
+        if (opts->lrrp_file_output == 1)
+        {
+          fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
+        }
+        fprintf (stderr, "\n  LRRP - Velocity: %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity) );
         sprintf ( state->dmr_lrrp[state->currentslot][4], "Vel: %.4lf kph ", (3.6 * velocity));
+
+        i = i + 3; //skip 3 bytes here so we don't accidentally trip another flag with data in these bytes
       }
-      if ( state->dmr_34_rate_sf[slot][i] == 0x56 )
+      if ( state->dmr_34_rate_sf[slot][i] == 0x56 && message_legnth > 13)
       {
         //check for appropriate terminology here - Heading, bearing, course, or track?
-        fprintf (stderr, "\n  LRRP - Direction %d Degrees", state->dmr_34_rate_sf[slot][i+1] * 2);
+        if (opts->lrrp_file_output == 1)
+        {
+          fprintf (pFile, "%d\t", state->dmr_34_rate_sf[slot][i+1] * 2);
+        }
+        fprintf (stderr, "\n  LRRP - Track: %d Degrees", state->dmr_34_rate_sf[slot][i+1] * 2);
         sprintf ( state->dmr_lrrp[state->currentslot][5], "Dir: %d Deg ", state->dmr_34_rate_sf[slot][i+1] * 2);
+
+        //i = ((blocks+1)*12); //skip to end of loop here so we don't accidentally trip another flag with data in these bytes
+        i = 99;
+      }
+      //try for a Control ACK at the very end if nothing else pops, flag still unknown
+      if ( (state->dmr_34_rate_sf[slot][i] == 0x36 || state->dmr_34_rate_sf[slot][i] == 0x37) && message_legnth > 6 )
+      {
+        fprintf (stderr, "\n  LRRP - Control ACK ");
       }
     }
+    if (opts->lrrp_file_output == 1)
+    {
+      fprintf (pFile, "\n");
+      fclose (pFile);
+    }
   }
- }//end payload
   fprintf (stderr, "%s ", KNRM);
+
   //Full
-  if (opts->payload == 2)
+  if (opts->payload == 1)
   {
-    fprintf (stderr, "\nFull 3/4 Rate Payload DmrDataByte (reverse)\n  ");
+    fprintf (stderr,"%s", KCYN);
+    fprintf (stderr, "\n Full 3/4 Rate Trellis Payload - Slot [%d]\n  ", slot+1);
+    for (i = 0; i < 18; i++) //16, or 18?
+    {
+      fprintf (stderr, "[%02X]", TrellisReturn[i]);
+    }
+    fprintf (stderr, "\n  Hex to Ascii - ");
     for (i = 0; i < 18; i++)
     {
-      fprintf (stderr, "[%02X]", DmrDataByte[i]);
+      if (TrellisReturn[i] <= 0x7E && TrellisReturn[i] >=0x20)
+      {
+        fprintf (stderr, "%c", TrellisReturn[i]);
+      }
+      else fprintf (stderr, ".");
     }
-
-    fprintf (stderr, "\nFull 3/4 Rate Payload DmrDataByte (reverse inverted)\n  ");
-    for (i = 0; i < 18; i++)
-    {
-      fprintf (stderr, "[%02X]", ~DmrDataByte[i] & 0xFF);
-    }
+    fprintf (stderr,"%s", KNRM); //change back to normal
   }
-
+  //Full Super Frame - Debug Output
+  if (opts->payload == 1 && state->data_block_counter[state->currentslot] == state->data_header_blocks[state->currentslot])
+  {
+    fprintf (stderr, "%s",KGRN);
+    fprintf (stderr, "\n Rate 3/4 Superframe - Slot [%d]\n  ",slot+1);
+    for (i = 0; i < (16*4); i++) //16, or 18?
+    {
+      fprintf (stderr, "[%02X]", state->dmr_34_rate_sf[slot][i]);
+      if (i == 15 || i == 31 || i == 47 || i == 63 || i == 79)
+      {
+        fprintf (stderr, "\n  "); //line break and two spaces after each 16 bytes
+      }
+    }
+    fprintf (stderr, "%s ", KNRM);
+  }
+  state->data_block_counter[state->currentslot]++; //increment block counter
 }
 
 //This is Data Header, why did I name it Data Data
@@ -334,13 +382,14 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
   short int slot = 0;
   slot = (short int)state->currentslot;
 
+  //see if we still need this portion if we are going to use the data block info
   //clear out the 3/4 rate data superframe so we don't repeat old info
-  for (short int i = 0; i < (16*4); i++)
+  for (short int i = 0; i < (16*6); i++)
   {
     state->dmr_34_rate_sf[slot][i] = 0;
   }
   //clear out the 1/2 rate data superframe so we don't repeat old info
-  for (short int i = 0; i < (12*3); i++)
+  for (short int i = 0; i < (12*5); i++) //12*5 = 60
   {
     state->dmr_12_rate_sf[slot][i] = 0;
   }
@@ -446,32 +495,172 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
   }
   else {}//fprintf (stderr, ("\n(Data CRC Fail, FEC Fail)"));
 
-  //
+  //collect relevant data header info, figure out format, and grab appropriate info from it
+  if (state->data_p_head[state->currentslot] == 0)
+  {
+    fprintf (stderr, "%s ", KGRN);
+    state->data_block_counter[state->currentslot] = 1; //reset block counter to 1
+    state->data_header_format[state->currentslot] = DmrDataByte[0]; //collect the entire byte, we can check group or individual, response requested as well on this
+    state->data_header_sap[state->currentslot] = (DmrDataByte[1] & 0xF0) >> 4; //SAP is IP(4) or other
+
+    // state->data_header_padding[state->currentslot] = DmrDataByte[1] & 0xF; //number of padding octets on last block
+    // state->data_header_blocks[state->currentslot] = DmrDataByte[8] & 0x7F; //number of blocks to follow, most useful for when to poll the super array for data
+    // fprintf (stderr, "\n  Unconfirmed Data Header: Format %02X - SAP %02X - Block Count %02X - Padding Octets %02X",
+    //          state->data_header_format[state->currentslot], state->data_header_sap[state->currentslot],
+    //          state->data_header_blocks[state->currentslot], state->data_header_padding[state->currentslot] );
+
+    if ( (state->data_header_format[state->currentslot] & 0xF) ==  0x2)
+    {
+      state->data_header_padding[state->currentslot] = DmrDataByte[1] & 0xF; //number of padding octets on last block
+      state->data_header_blocks[state->currentslot] = DmrDataByte[8] & 0x7F; //number of blocks to follow, most useful for when to poll the super array for data
+      fprintf (stderr, "\n  Unconfirmed Data Header: DPF %01X - SAP %02X - Block Count %02X - Padding Octets %02X",
+               state->data_header_format[state->currentslot] & 0xF, state->data_header_sap[state->currentslot],
+               state->data_header_blocks[state->currentslot], state->data_header_padding[state->currentslot] );
+    }
+
+    if ( (state->data_header_format[state->currentslot] & 0xF) ==  0x3)
+    {
+      state->data_header_padding[state->currentslot] = DmrDataByte[1] & 0xF; //number of padding octets on last block
+      state->data_header_blocks[state->currentslot] = DmrDataByte[8] & 0x7F; //number of blocks to follow, most useful for when to poll the super array for data
+      fprintf (stderr, "\n  Confirmed Data Header: DPF %01X - SAP %02X - Block Count %02X - Padding Octets %02X",
+               state->data_header_format[state->currentslot] & 0xF, state->data_header_sap[state->currentslot],
+               state->data_header_blocks[state->currentslot], state->data_header_padding[state->currentslot] );
+    }
+
+    if ( (state->data_header_format[state->currentslot] & 0xF) ==  0xD) //DD_HEAD
+    {
+      state->data_header_padding[state->currentslot] = DmrDataByte[7] & 0xF;
+      state->data_header_blocks[state->currentslot] = ( (DmrDataByte[0] & 0x30) | ((DmrDataByte[1] & 0xF) >> 0) ); //what a pain MSB | LSB
+      fprintf (stderr, "\n  Short Data - Defined: DPF %01X - SAP %02X - Appended Blocks %02X - Padding Bits %02X",
+               state->data_header_format[state->currentslot] & 0xF, state->data_header_sap[state->currentslot],
+               state->data_header_blocks[state->currentslot], state->data_header_padding[state->currentslot] );
+    }
+
+    if ( (state->data_header_format[state->currentslot] & 0xF) ==  0xE) //SP_HEAD or R_HEAD
+    {
+      state->data_header_padding[state->currentslot] = DmrDataByte[7] & 0xF;
+      state->data_header_blocks[state->currentslot] = ( (DmrDataByte[0] & 0x30) | ((DmrDataByte[1] & 0xF) >> 0) ); //what a pain MSB | LSB
+      fprintf (stderr, "\n  Short Data - Raw or Precoded: DPF %01X - SAP %02X - Appended Blocks %02X - Padding Bits %02X",
+               state->data_header_format[state->currentslot] & 0xF, state->data_header_sap[state->currentslot],
+               state->data_header_blocks[state->currentslot], state->data_header_padding[state->currentslot] );
+    }
+
+
+  }
+
+  //sanity check to prevent random crash in 1/2 rate and 3/4 rate data
+  //we want to assign extra large block sizes to a max of 7 so we don't overload the 1/2 or 3/4 array
+  if (state->data_header_blocks[state->currentslot] > 7)
+  {
+    state->data_header_blocks[state->currentslot] = 7; //currently 1/2 only supports a max of 7 blocks per slot
+  }
+
+
+  //set source here so we can reference it in our text dump
+  state->dmr_lrrp_source[state->currentslot] = (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7];
+  fprintf (stderr, "%s ", KNRM);
+  //end collecting data header info
+
   fprintf (stderr, "%s ", KMAG);
-  if (DmrDataByte[0] == 0x43)
+  if (state->data_header_sap[state->currentslot] == 0x4 && state->data_p_head[state->currentslot] == 0) //4 is IP data
   {
-    fprintf (stderr, "\n  IP4 Source IP:");
-    fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[0] & 0x3F), DmrDataByte[1], DmrDataByte[2], DmrDataByte[3]); //not sure if these are right or not
-    fprintf (stderr, "[%d]", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4] );
-    fprintf (stderr, " Destination IP:");
-    fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[4] & 0x3F), DmrDataByte[5], DmrDataByte[6], DmrDataByte[7]); //not sure if these are right or not
-    fprintf (stderr, "[%d]", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7] );
+    fprintf (stderr, "\n  IP4 Data - Source: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[0] & 0x3F), DmrDataByte[1], DmrDataByte[2], DmrDataByte[3]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7] );
+    fprintf (stderr, " Destination: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[4] & 0x3F), DmrDataByte[5], DmrDataByte[6], DmrDataByte[7]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] <<8 ) + DmrDataByte[4] );
+
+    //part below should probably be inside of above if condition
+    if (1 == 1) //already setting by current slot, no need for checking first
+    {
+      sprintf ( state->dmr_lrrp[state->currentslot][1], "SRC [%d] DST [%d] ",
+              ( (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7]),
+              ( (DmrDataByte[2] <<16 ) + (DmrDataByte[3] <<8 ) + DmrDataByte[4]) );
+    }
+
   }
-  if (1 == 1) //already setting by current slot, no need for checking first
+
+  if (state->data_header_sap[state->currentslot] == 0x5 && state->data_p_head[state->currentslot] == 0) //5 is ARP Address Resolution Protocol
   {
-    sprintf ( state->dmr_lrrp[state->currentslot][1], "SRC [%d] TGT [%d] ",
-            ( (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4]),
-            ( (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7]) );
+    fprintf (stderr, "\n  ARP - Address Resolution Protocol ");
   }
-  if (DmrDataByte[0] == 0x01)
+
+  if ( (state->data_header_format[state->currentslot] & 0xF ) == 0xD && state->data_p_head[state->currentslot] == 0) //5 is ARP Address Resolution Protocol
   {
-    fprintf (stderr, "\n  LRRP Control ACK - ");
+    fprintf (stderr, "\n  Short Data - Defined - Source: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[0] & 0x3F), DmrDataByte[1], DmrDataByte[2], DmrDataByte[3]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7] );
+    fprintf (stderr, " Destination: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[4] & 0x3F), DmrDataByte[5], DmrDataByte[6], DmrDataByte[7]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] <<8 ) + DmrDataByte[4] );
+  }
+
+  if ( (state->data_header_format[state->currentslot] & 0xF) == 0xE && state->data_p_head[state->currentslot] == 0) //5 is ARP Address Resolution Protocol
+  {
+    fprintf (stderr, "\n  Short Data - Raw or Status/Precoded - Source: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[0] & 0x3F), DmrDataByte[1], DmrDataByte[2], DmrDataByte[3]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7] );
+    fprintf (stderr, " Destination: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[4] & 0x3F), DmrDataByte[5], DmrDataByte[6], DmrDataByte[7]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] <<8 ) + DmrDataByte[4] );
+  }
+
+  if ( (state->data_header_format[state->currentslot] & 0xF ) == 0x1 && state->data_p_head[state->currentslot] == 0) //5 is ARP Address Resolution Protocol
+  {
+    fprintf (stderr, "\n  Response Packet - Source:  ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[0] & 0x3F), DmrDataByte[1], DmrDataByte[2], DmrDataByte[3]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7] );
+    fprintf (stderr, " Destination: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[4] & 0x3F), DmrDataByte[5], DmrDataByte[6], DmrDataByte[7]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] <<8 ) + DmrDataByte[4] );
+  }
+
+  if ( (state->data_header_format[state->currentslot] & 0xF ) == 0x0 && state->data_p_head[state->currentslot] == 0) //5 is ARP Address Resolution Protocol
+  {
+    fprintf (stderr, "\n  Unified Data Transport - Source:  ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[0] & 0x3F), DmrDataByte[1], DmrDataByte[2], DmrDataByte[3]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7] );
+    fprintf (stderr, " Destination: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[4] & 0x3F), DmrDataByte[5], DmrDataByte[6], DmrDataByte[7]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] <<8 ) + DmrDataByte[4] );
+  }
+
+  if ( (state->data_header_format[state->currentslot] & 0x40) == 0x40 && state->data_p_head[state->currentslot] == 0) //check response req bit
+  {
+    fprintf (stderr, "\n  Response Requested - ");
     fprintf (stderr, " Source:");
-    fprintf (stderr, " %d", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4] );
+    fprintf (stderr, " [%d]", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4] );
     fprintf (stderr, " Destination:");
-    fprintf (stderr, " %d", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7] );
+    fprintf (stderr, " [%d]", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7] );
+  }
+
+  //if proprietary header was flagged by the last data header, then process data differently
+  //maybe we could add the data header bytes found here into the 12 rate and/or 34 rate superframe
+  if (state->data_p_head[state->currentslot] == 1)
+  {
+    fprintf (stderr, "\n  Proprietary Data Header: SAP %01X - Format %01X - MFID %02X",
+             (DmrDataByte[0] & 0xF0) >> 4, DmrDataByte[0] & 0xF, DmrDataByte[1]       );
+
+    state->data_p_head[state->currentslot] = 0;
+    state->data_header_sap[state->currentslot] = 0; //reset this to zero so we don't trip the condition below
+    state->data_block_counter[state->currentslot]++; //increment the counter since this counts against the data blocks
+    //shim the databytes into the approprate 12 Rate Super Frame
+    uint8_t blocks = state->data_header_blocks[state->currentslot] - 1;
+    for(i = 0; i < 12; i++)
+    {
+      state->dmr_12_rate_sf[slot][i+(blocks*12)] = DmrDataByte[i];
+    }
+  }
+
+  //only set this flag after everything else is processed
+  if (state->data_header_sap[state->currentslot] == 0x9 && state->data_p_head[state->currentslot] == 0) //9 is Proprietary Packet data
+  {
+    fprintf (stderr, "\n  Proprietary Packet Data Incoming ");
+    state->data_p_head[state->currentslot] = 1; //flag that next data header will be a proprietary data header
   }
   fprintf (stderr, "%s ", KNRM);
+
   //Full
   if (opts->payload == 1)
   {
@@ -483,6 +672,7 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
     }
     fprintf (stderr, "%s", KNRM);
   }
+
 
 }
 
@@ -1015,14 +1205,19 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
   /* Fill the reserved bit (R(0)-R(2) of the BPTC(196,96) block) */
   BPTCReservedBits = (R[0] & 0x01) | ((R[1] << 1) & 0x02) | ((R[2] << 2) & 0x08);
 
-  /* Convert the 96 bit of voice LC Header data into 12 bytes */
+  //define our block and padding values
+  uint8_t blocks  = state->data_header_blocks[slot] - 1; //subtract 1 for the relevant value in the calc below
+  uint8_t padding = state->data_header_padding[slot];
+  //shift data in the superframe up a block
   k = 0;
   for(i = 0; i < 12; i++)
   {
-    state->dmr_12_rate_sf[slot][i] = state->dmr_12_rate_sf[slot][i+12];    //shift middle 12 to leftmost 12 to load up new round
-    state->dmr_12_rate_sf[slot][i+12] = state->dmr_12_rate_sf[slot][i+24]; //shift middle right 12 to middle left 12, going four frames deep;
-    state->dmr_12_rate_sf[slot][i+24] = state->dmr_12_rate_sf[slot][i+36]; //shift far right 12 to middle right 12, going four frames deep;
-    state->dmr_12_rate_sf[slot][i+36] = state->dmr_12_rate_sf[slot][i+48];
+    state->dmr_12_rate_sf[slot][i] = state->dmr_12_rate_sf[slot][i+12];    //shift block 2 to block 1
+    state->dmr_12_rate_sf[slot][i+12] = state->dmr_12_rate_sf[slot][i+24]; //shift block 3 to block 2
+    state->dmr_12_rate_sf[slot][i+24] = state->dmr_12_rate_sf[slot][i+36]; //shift block 4 to block 3
+    state->dmr_12_rate_sf[slot][i+36] = state->dmr_12_rate_sf[slot][i+48]; //shift block 5 to block 4
+    state->dmr_12_rate_sf[slot][i+48] = state->dmr_12_rate_sf[slot][i+60]; //shift block 6 to block 5
+    state->dmr_12_rate_sf[slot][i+60] = state->dmr_12_rate_sf[slot][i+72]; //shift block 7 to block 6
     DmrDataByte[i] = 0;
     for(j = 0; j < 8; j++)
     {
@@ -1030,22 +1225,9 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
       DmrDataByte[i] = DmrDataByte[i] | (DmrDataBit[k] & 0x01);
       k++;
     }
-    state->dmr_12_rate_sf[slot][i+48] = DmrDataByte[i]; //copy byte to right hand side of shift frame
-  }
-
-  if (opts->payload == 2)
-  {
-    fprintf (stderr, "%s",KGRN);
-    fprintf (stderr, "\n Rate 1/2 Superframe - Slot [%d]\n  ",slot+1);
-    for (i = 0; i < (12*5); i++)
-    {
-      fprintf (stderr, "[%02X]", state->dmr_12_rate_sf[slot][i]);
-      if (i == 11 || i == 23 || i == 35 || i == 47) //line break and two spaces after each 16 bytes
-      {
-        fprintf (stderr, "\n  ");
-      }
-    }
-    fprintf (stderr, "%s ", KNRM);
+    //state->dmr_12_rate_sf[slot][i+48] = DmrDataByte[i]; //copy byte to right hand side of shift frame
+    //start loading new superframe at appropriate block count determined by the data header
+    state->dmr_12_rate_sf[slot][i+(blocks*12)] = DmrDataByte[i]; //if 3 blocks, then start at position 36; 4 blocks at 48, 5 at
   }
 
   /* Fill the CRC extracted (before Reed-Solomon (12,9) FEC correction) */
@@ -1096,111 +1278,65 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
     DmrDataBit[j + 6] = (DmrDataByte[i] >> 1) & 0x01;
     DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
   }
-  //Headers Source Destination
-  //Start Source Destination early in case not enough 1/2 data frames
-  if ( (state->dmr_12_rate_sf[slot][36] & 0x7F) == 0x45 )
-  {
-    fprintf (stderr, "%s ", KMAG);
-    //fprintf (stderr, "\n  IP4 Header"); //Not sure this is accurate info IP4 Header?
-    //fprintf (stderr, "\n  Data Blocks [%d]", state->dmr_34_rate_sf[5]);
-    for (short i = 36; i < 60; i++) //find way to get padding so we only go as deep as we need to!
-    {
-      if ( state->dmr_12_rate_sf[slot][i] == 0x0C) //Source and Destination info
-      {
-        fprintf (stderr, "\n       Source:");
-        fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_12_rate_sf[slot][i+0] & 0x3F), state->dmr_12_rate_sf[slot][i+1], state->dmr_12_rate_sf[slot][i+2], state->dmr_12_rate_sf[slot][i+3]); //strip first two bits off 1st byte
-        fprintf (stderr, " [%08d]", (state->dmr_12_rate_sf[slot][i+1] <<16 ) + (state->dmr_12_rate_sf[slot][i+2] << 8) + state->dmr_12_rate_sf[slot][i+3] );
-        fprintf (stderr, " - Port %05d", (state->dmr_12_rate_sf[slot][i+8] << 8) + state->dmr_12_rate_sf[slot][i+9]);
-        fprintf (stderr, "\n  Destination:");
-        fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_12_rate_sf[slot][i+4] & 0x3F), state->dmr_12_rate_sf[slot][i+5], state->dmr_12_rate_sf[slot][6], state->dmr_12_rate_sf[slot][i+7]); //strip first two bits off 4th byte??
-        fprintf (stderr, " [%08d]", (state->dmr_12_rate_sf[slot][i+5] <<16 ) + (state->dmr_12_rate_sf[slot][i+6] << 8) + state->dmr_12_rate_sf[slot][i+7] );
-        fprintf (stderr, " - Port %05d", (state->dmr_12_rate_sf[slot][i+10] << 8) + state->dmr_12_rate_sf[slot][i+11]);
-      }
-    }
-    fprintf (stderr, "%s ", KNRM);
-  }
-  /*
-  //Jurek lrrp, 0x41 is probably a different header type or something, or I need to look at the data header packet PDU first.
-  if ( (state->dmr_12_rate_sf[slot][36] & 0x7F) == 0x41) //Start LRRP now
-  {
-    sprintf ( state->dmr_lrrp[state->currentslot][0], "LRRP - ");
-    fprintf (stderr, "%s ", KMAG);
-    for (short i = 36; i < 60; i++) //find way to get padding so we only go as deep as we need to!
-    {
-      if ( state->dmr_12_rate_sf[slot][i] == 0x51 ) //lattitude and longitude
-      {
-        fprintf (stderr, "\n  LRRP -");
-        fprintf (stderr, " Lat: ");
-        if (state->dmr_12_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
-        {
-          fprintf (stderr, "-");
-        }
-        long int lrrplat;
-        long int lrrplon;
-        double lat_unit = (double)180/(double)4294967295;
-        double lon_unit = (double)360/(double)4294967295;
-        lrrplat = ( ( ((state->dmr_12_rate_sf[slot][i+1] & 0x7F ) <<  24 ) + (state->dmr_12_rate_sf[slot][i+2] << 16) + (state->dmr_12_rate_sf[slot][i+3] << 8) + state->dmr_12_rate_sf[slot][i+4]) * 1 );
-        lrrplon = ( ( (state->dmr_12_rate_sf[slot][i+5]           <<  24 ) + (state->dmr_12_rate_sf[slot][i+6] << 16) + (state->dmr_12_rate_sf[slot][i+7] << 8) + state->dmr_12_rate_sf[slot][i+8]) * 1 );
-        fprintf (stderr, "%.5lf ", ((double)lrrplat) * lat_unit);
-        fprintf (stderr, " Lon: ");
-        if (state->dmr_12_rate_sf[slot][i+5] & 0x80) //first bit indicates a sign, or hemisphere?
-        {
-          //fprintf (stderr, "-");
-        }
-        fprintf (stderr, "%.5lf", (lrrplon * lon_unit) );
-        sprintf ( state->dmr_lrrp[state->currentslot][3], "Lat: %.5lf Lon: %.5lf ", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
-        //print for easy copy/paste into browser?
-        //fprintf (stderr, " (");
-        if (state->dmr_12_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
-        {
-          fprintf (stderr, "-");
-        }
-          fprintf (stderr, "%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
-      }
 
-
-      if ( state->dmr_12_rate_sf[slot][i] == 0x6C )
-      {
-        //either Plus is wrong, or I'm wrong on higher velocities exceeding 0xFF.
-        //fprintf (stderr, "\n  LRRP - Vi %02X Vf %02X Velocity Units (hex)", state->dmr_34_rate_sf[i+1], state->dmr_34_rate_sf[i+2]);
-        double velocity = ( ((double)( (state->dmr_12_rate_sf[slot][i+1] ) + state->dmr_12_rate_sf[slot][i+2] )) / ( (double)128));
-        //fprintf (stderr, "\n  LRRP - %.4lf Meters Per Second", velocity);
-        fprintf (stderr, "\n  LRRP - %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity) );
-        sprintf ( state->dmr_lrrp[state->currentslot][4], "Vel: %.4lf kph ", (3.6 * velocity));
-      }
-      if ( state->dmr_12_rate_sf[slot][i] == 0x56 )
-      {
-        //check for appropriate terminology here - Heading, bearing, course, or track?
-        fprintf (stderr, "\n  LRRP - Direction %d Degrees", state->dmr_12_rate_sf[slot][i+1] * 2);
-        sprintf ( state->dmr_lrrp[state->currentslot][5], "Dir: %d Deg ", state->dmr_12_rate_sf[slot][i+1] * 2);
-      }
-    }
-  }
-  //end Jurek lrrp
-  */
+  //Start Polling the 1/2 Rate Super Frame for Data when byte 0 contains values
   //LRRP
+  int message_legnth = 0;
   if ( (state->dmr_12_rate_sf[slot][0] & 0x7F) == 0x45) //Start LRRP now
   {
-    //sprintf ( state->dmr_lrrp[state->currentslot][0], "LRRP - ");
-    fprintf (stderr, "%s ", KMAG);
-    //fprintf (stderr, "\n  IP4 Header"); //Not sure this is accurate info IP4 Header?
-    //fprintf (stderr, "\n  Data Blocks [%d]", state->dmr_34_rate_sf[5]);
-    for (short i = 1; i < 56; i++) //find way to get padding so we only go as deep as we need to! changed from 60 to 56 to skip the CRC bytes
+    //test opening a file with fopen and dumping the LRRP data into it.
+    //just going to use the same code from EDACS-FM
+
+    //find user home directory and append directory and filename.
+    FILE * pFile; //put this outside of the if statement?
+    if (opts->lrrp_file_output == 1)
     {
-      /*
+      char * filename = "/lrrp.txt";
+      char * home_dir = getenv("HOME");
+      char * filepath = malloc(strlen(home_dir) + strlen(filename) + 1);
+      strncpy (filepath, home_dir, strlen(home_dir) + 1);
+      strncat (filepath, filename, strlen(filename) + 1);
+      //end find user home directory and append directory and filename
+
+      pFile = fopen (filepath, "a");
+
+      //hard code filename override for those wanting to use other software
+      //pFile = fopen("DSDPlus.LRRP", "a");
+
+
+      fprintf (pFile, "%s\t %s\t", getDateL(), getTimeL()); //current timestamp, may find a way to only add this IF no included timestamp in LRRP data?
+      fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
+    }
+
+
+    fprintf (stderr, "%s ", KMAG);
+
+    //go to number of octets minus padding and crc, confirmed data may need a second rule to skip Serial Numbers and Block CRCs
+    for (short i = 12; i < ( ((blocks+1)*12) - (padding+4) ); i++)
+    {
+
       if ( state->dmr_12_rate_sf[slot][i] == 0x0C) //Source and Destination info
       {
-        fprintf (stderr, "\n       Source:");
+        fprintf (stderr, "\n         Source: ");
         fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_12_rate_sf[slot][i+0] & 0x3F), state->dmr_12_rate_sf[slot][i+1], state->dmr_12_rate_sf[slot][i+2], state->dmr_12_rate_sf[slot][i+3]); //strip first two bits off 1st byte
         fprintf (stderr, " [%08d]", (state->dmr_12_rate_sf[slot][i+1] <<16 ) + (state->dmr_12_rate_sf[slot][i+2] << 8) + state->dmr_12_rate_sf[slot][i+3] );
-        fprintf (stderr, " - Port %05d", (state->dmr_12_rate_sf[slot][i+8] << 8) + state->dmr_12_rate_sf[slot][i+9]);
-        fprintf (stderr, "\n  Destination:");
+        fprintf (stderr, " - Port %05d ", (state->dmr_12_rate_sf[slot][i+8] << 8) + state->dmr_12_rate_sf[slot][i+9]);
+        fprintf (stderr, "\n    Destination: ");
         fprintf (stderr, " %03d.%03d.%03d.%03d", (state->dmr_12_rate_sf[slot][i+4] & 0x3F), state->dmr_12_rate_sf[slot][i+5], state->dmr_12_rate_sf[slot][6], state->dmr_12_rate_sf[slot][i+7]); //strip first two bits off 4th byte??
         fprintf (stderr, " [%08d]", (state->dmr_12_rate_sf[slot][i+5] <<16 ) + (state->dmr_12_rate_sf[slot][i+6] << 8) + state->dmr_12_rate_sf[slot][i+7] );
         fprintf (stderr, " - Port %05d", (state->dmr_12_rate_sf[slot][i+10] << 8) + state->dmr_12_rate_sf[slot][i+11]);
+
+        i = i + 12; //skip 12 bytes here so we don't accidentally trip another flag with data in these bytes
       }
-      */
-      if ( state->dmr_12_rate_sf[slot][i] == 0x34 ) //timestamp
+
+      if (state->dmr_12_rate_sf[slot][i] == 0x0D) //This should lock on to the second 0x0D value hopefully and tell us the message legnth
+      {
+        message_legnth = state->dmr_12_rate_sf[slot][i+1];
+        fprintf (stderr, "\n Message Legnth: %02d", message_legnth);
+        i = i + 2; //skip 2 bytes here so we don't accidentally trip another flag with data in these bytes
+      }
+
+      if ( state->dmr_12_rate_sf[slot][i] == 0x34 && message_legnth > 27 ) //timestamp, seems to need legnth of 28
       {
         fprintf (stderr, "\n  LRRP - Timestamp: ");
         fprintf (stderr, "%4d.", (state->dmr_12_rate_sf[slot][i+1] << 6) + (state->dmr_12_rate_sf[slot][i+2] >> 2) ); //4 digit year
@@ -1208,15 +1344,22 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
         fprintf (stderr, "%02d",  ( (state->dmr_12_rate_sf[slot][i+3] & 0x30) >> 1) + ((state->dmr_12_rate_sf[slot][i+3] & 0x0E) >> 1)  ); //2 digit day
         fprintf (stderr, " %02d:",( (state->dmr_12_rate_sf[slot][i+3] & 0x01) << 4) + ((state->dmr_12_rate_sf[slot][i+4] & 0xF0) >> 4)  ); //2 digit hour
         fprintf (stderr,  "%02d:",( (state->dmr_12_rate_sf[slot][i+4] & 0x0F) << 2) + ((state->dmr_12_rate_sf[slot][i+5] & 0xC0) >> 6)  ); //2 digit minute
-        fprintf (stderr,  "%02d", ( (state->dmr_12_rate_sf[slot][i+5] & 0x3F) << 0) );                                               //2 digit second
+        fprintf (stderr,  "%02d", ( (state->dmr_12_rate_sf[slot][i+5] & 0x3F) << 0) );                                                     //2 digit second
+
+        i = i + 6; //skip 6 bytes here so we don't accidentally trip another flag with data in these bytes
       }
-      if ( state->dmr_12_rate_sf[slot][i] == 0x51 ) //lattitude and longitude
+
+      if ( state->dmr_12_rate_sf[slot][i] == 0x51 && message_legnth > 13) //lattitude and longitude, message_lenght > 13?
       {
         fprintf (stderr, "\n  LRRP -");
         fprintf (stderr, " Lat: ");
         if (state->dmr_12_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
         {
           fprintf (stderr, "-");
+          if (opts->lrrp_file_output == 1)
+          {
+            fprintf (pFile, "-");
+          }
         }
         long int lrrplat;
         long int lrrplon;
@@ -1225,12 +1368,20 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
         lrrplat = ( ( ((state->dmr_12_rate_sf[slot][i+1] & 0x7F ) <<  24 ) + (state->dmr_12_rate_sf[slot][i+2] << 16) + (state->dmr_12_rate_sf[slot][i+3] << 8) + state->dmr_12_rate_sf[slot][i+4]) * 1 );
         lrrplon = ( ( (state->dmr_12_rate_sf[slot][i+5]           <<  24 ) + (state->dmr_12_rate_sf[slot][i+6] << 16) + (state->dmr_12_rate_sf[slot][i+7] << 8) + state->dmr_12_rate_sf[slot][i+8]) * 1 );
         fprintf (stderr, "%.5lf ", ((double)lrrplat) * lat_unit);
+        if (opts->lrrp_file_output == 1)
+        {
+          fprintf (pFile, "%.5lf\t", ((double)lrrplat) * lat_unit);
+        }
         fprintf (stderr, " Lon: ");
         if (state->dmr_12_rate_sf[slot][i+5] & 0x80) //first bit indicates a sign, or hemisphere?
         {
           //fprintf (stderr, "-");
         }
         fprintf (stderr, "%.5lf", (lrrplon * lon_unit) );
+        if (opts->lrrp_file_output == 1)
+        {
+          fprintf (pFile, "%.5lf\t", (lrrplon * lon_unit) );
+        }
         if (state->dmr_12_rate_sf[slot][i+1] & 0x80) //first bit indicates a sign, or hemisphere?
         {
           sprintf ( state->dmr_lrrp[state->currentslot][3], "Lat: -%.5lf Lon: %.5lf ", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
@@ -1242,24 +1393,47 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
           fprintf (stderr, " (-%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
         }
         else fprintf (stderr, " (%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
+
+        i = i + 9 + 2; //skip 9 bytes here so we don't accidentally trip another flag with data in these bytes
       }
 
 
-      if ( state->dmr_12_rate_sf[slot][i] == 0x6C )
+      if ( state->dmr_12_rate_sf[slot][i] == 0x6C && message_legnth > 13)
       {
-        //either Plus is wrong, or I'm wrong on higher velocities exceeding 0xFF.
+        //either Plus is wrong, or I'm wrong on higher velocities exceeding 0xFF. double check double values?
         //fprintf (stderr, "\n  LRRP - Vi %02X Vf %02X Velocity Units (hex)", state->dmr_34_rate_sf[i+1], state->dmr_34_rate_sf[i+2]);
         double velocity = ( ((double)( (state->dmr_12_rate_sf[slot][i+1] ) + state->dmr_12_rate_sf[slot][i+2] )) / ( (double)128));
-        //fprintf (stderr, "\n  LRRP - %.4lf Meters Per Second", velocity);
-        fprintf (stderr, "\n  LRRP - %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity) );
+        if (opts->lrrp_file_output == 1)
+        {
+          fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
+        }
+        fprintf (stderr, "\n  LRRP - Velocity: %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity) );
         sprintf ( state->dmr_lrrp[state->currentslot][4], "Vel: %.4lf kph ", (3.6 * velocity));
+
+        i = i + 3; //skip 3 bytes here so we don't accidentally trip another flag with data in these bytes
       }
-      if ( state->dmr_12_rate_sf[slot][i] == 0x56 )
+      if ( state->dmr_12_rate_sf[slot][i] == 0x56 && message_legnth > 13)
       {
         //check for appropriate terminology here - Heading, bearing, course, or track?
-        fprintf (stderr, "\n  LRRP - Direction %d Degrees", state->dmr_12_rate_sf[slot][i+1] * 2);
+        if (opts->lrrp_file_output == 1)
+        {
+          fprintf (pFile, "%d\t", state->dmr_12_rate_sf[slot][i+1] * 2);
+        }
+        fprintf (stderr, "\n  LRRP - Track: %d Degrees", state->dmr_12_rate_sf[slot][i+1] * 2);
         sprintf ( state->dmr_lrrp[state->currentslot][5], "Dir: %d Deg ", state->dmr_12_rate_sf[slot][i+1] * 2);
+
+        i = ((blocks+1)*12); //skip to end of loop here so we don't accidentally trip another flag with data in these bytes
       }
+      //try for a Control ACK at the very end if nothing else pops, flag still unknown
+      if ( (state->dmr_12_rate_sf[slot][i] == 0x36 || state->dmr_12_rate_sf[slot][i] == 0x37) && message_legnth > 6 )
+      {
+        fprintf (stderr, "\n  LRRP - Control ACK ");
+      }
+    }
+    if (opts->lrrp_file_output == 1)
+    {
+      fprintf (pFile, "\n");
+      fclose (pFile);
     }
   }
   fprintf (stderr, "%s ", KNRM);
@@ -1284,6 +1458,22 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
     }
     fprintf (stderr,"%s", KNRM);
   }
+  //Full Super Frame - Debug Output
+  if (opts->payload == 1 && state->data_block_counter[state->currentslot] == state->data_header_blocks[state->currentslot])
+  {
+    fprintf (stderr, "%s",KGRN);
+    fprintf (stderr, "\n Rate 1/2 Superframe - Slot [%d]\n  ",slot+1);
+    for (i = 0; i < ((blocks+1)*12); i++) //only print as many as we have blocks
+    {
+      fprintf (stderr, "[%02X]", state->dmr_12_rate_sf[slot][i]);
+      if (i == 11 || i == 23 || i == 35 || i == 47 || i == 59 || i == 71) //line break and two spaces after each 16 bytes
+      {
+        fprintf (stderr, "\n  ");
+      }
+    }
+    fprintf (stderr, "%s ", KNRM);
+  }
+  state->data_block_counter[state->currentslot]++; //increment block counter
 
 }
 
@@ -1681,6 +1871,7 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
     state->payload_algid = DmrDataByte[0];
     state->payload_keyid = DmrDataByte[2];
     state->payload_mi    = ( ((DmrDataByte[3]) << 24) + ((DmrDataByte[4]) << 16) + ((DmrDataByte[5]) << 8) + (DmrDataByte[6]) );
+    //state->payload_mi = 0; //testing for late entry, remove later
     if (state->payload_algid < 0x26) //have it always print? only if a good value, was 1 == 1
     {
       fprintf (stderr, "%s ", KYEL);
@@ -1701,6 +1892,7 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
     state->payload_algidR = DmrDataByte[0];
     state->payload_keyidR = DmrDataByte[2];
     state->payload_miR    = ( ((DmrDataByte[3]) << 24) + ((DmrDataByte[4]) << 16) + ((DmrDataByte[5]) << 8) + (DmrDataByte[6]) );
+    //state->payload_miR = 0; //testing for late entry, remove later
     if (state->payload_algidR < 0x26) //have it always print? only if a good value, was 1 == 1
     {
       fprintf (stderr, "%s ", KYEL);
@@ -1871,8 +2063,9 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
     }
   }
   /* Print the destination ID (TG) and the source ID */
-  fprintf (stderr, "%s ", KGRN);
-  fprintf(stderr, "\n  TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+  fprintf (stderr, "%s \n", KGRN);
+  fprintf (stderr, " Slot %d ", state->currentslot+1);
+  fprintf(stderr, "  TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
   //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
   //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
   //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
@@ -1884,17 +2077,12 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
   if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x80) fprintf(stderr, "Emergency ");
   if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x40)
   {
-    /* By default select the basic privacy (BP), if the encryption mode is EP ARC4 or AES256
-     * a PI Header will be sent with the encryption mode and DSD will upgrade automatically
-     * the new encryption mode */
-    opts->EncryptionMode = MODE_BASIC_PRIVACY;
     fprintf (stderr, "%s ", KRED);
     fprintf(stderr, "Encrypted ");
     //fprintf (stderr, "%s ", KNRM);
   }
   else
   {
-    opts->EncryptionMode = MODE_UNENCRYPTED;
     fprintf (stderr, "%s ", KGRN);
     fprintf(stderr, "Clear/Unencrypted ");
     //fprintf (stderr, "%s ", KNRM);
@@ -2093,21 +2281,20 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
   //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
 
   //reset alg, keys, mi during a TLC call termination EVENT so we aren't stuck on an old value, PI header will proceed a new call if BP isn't used
-  //assuming the TLC frame comes on the same slot as the call it was terminating? not sure?
   if (state->currentslot == 0)
   {
-    //state->payload_algid = 0; //try disablign all of these?
-    //state->payload_keyid = 0;
+    state->payload_algid = 0;
+    state->payload_keyid = 0;
     //state->payload_mfid  = 0;
-    //state->payload_mi    = 0; //let's try disabling this for a bit
+    state->payload_mi    = 0;
 
   }
   if (state->currentslot == 1)
   {
-    //state->payload_algidR = 0; //try disablign all of these?
-    //state->payload_keyidR = 0;
+    state->payload_algidR = 0;
+    state->payload_keyidR = 0;
     //state->payload_mfid  = 0;
-    //state->payload_miR    = 0; ////let's try disabling this for a bit
+    state->payload_miR    = 0;
 
   }
 
@@ -2552,6 +2739,8 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "[%02X]", LC_DataBytes[i]); //amateur DMR hams seem to use this area to send callsigns and names using 04,05,06,07 opcodes
     }
+    // fprintf(stderr, "\n");
+    // fprintf(stderr, "CRC extracted = 0x%04X - CRC computed = 0x%04X - ", CRCExtracted, CRCComputed);
     fprintf (stderr, "%s", KNRM);
 
 

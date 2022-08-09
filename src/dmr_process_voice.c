@@ -19,10 +19,6 @@
 #include "dmr_const.h"
 #include "p25p1_check_hdu.h"
 
-//
-//A
-//
-
 void ProcessDMR (dsd_opts * opts, dsd_state * state)
 {
   uint32_t i, j;
@@ -40,7 +36,6 @@ void ProcessDMR (dsd_opts * opts, dsd_state * state)
   TSVoiceSupFrameL = &state->TS1SuperFrame;
   TSVoiceSupFrameR = &state->TS2SuperFrame;
 
-//
 int BP[256] = {
   0x0000, 0x1F00, 0xE300, 0xFC00, 0x2503, 0x3A03, 0xC603, 0xD903,
   0x4A05, 0x5505, 0xA905, 0xB605, 0x6F06, 0x7006, 0x8C06, 0x9306,
@@ -75,9 +70,8 @@ int BP[256] = {
   0x0BF0, 0x14F0, 0xE8F0, 0xF7F0, 0x2EF3, 0x31F3, 0xCDF3, 0xD2F3,
   0x41F5, 0x5EF5, 0xA2F5, 0xBDF5, 0x64F6, 0x7BF6, 0x87F6, 0x98F6 //255
 };
-//
-//H
-//
+
+
 if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
 {
   fprintf (stderr, "%s", KYEL);
@@ -85,12 +79,12 @@ if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->pa
   fprintf (stderr, "%s", KNRM);
   k = BP[state->K];
   k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
-	
+
   for(Frame = 0; Frame < 6; Frame++)
   {
    for(i = 0; i < 3; i++)
    {
-     for(j = 0; j < 49; j++)
+     for(j = 0; j < 48; j++)
      {
       x = ( ((k << j) & 0x800000000000) >> 47 );
       TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j] ^= x;
@@ -111,7 +105,7 @@ if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->p
   {
    for(i = 0; i < 3; i++)
    {
-     for(j = 0; j < 49; j++)
+     for(j = 0; j < 48; j++)
      {
       x = ( ((k << j) & 0x800000000000) >> 47 );
       TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j] ^= x;
@@ -119,15 +113,10 @@ if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->p
    }
   }
 }
-//
-//B
-//
+
 if (state->currentslot == 0)
 {
-  if (opts->payload == 1 && state->R == 0)
-  {
-    fprintf(stderr, "\n"); //line break for AMBE printer
-  }
+
   for(Frame = 0; Frame < 6; Frame++) //6
   {
     /* 1 DMR frame contains 3 AMBE voice samples */
@@ -172,10 +161,7 @@ if (state->currentslot == 0)
 
  if (state->currentslot == 1)
  {
-   if (opts->payload == 1)
-   {
-     fprintf(stderr, "\n"); //line break for AMBE printer
-   }
+
    for(Frame = 0; Frame < 6; Frame++)
    {
      /* 1 DMR frame contains 3 AMBE voice samples */

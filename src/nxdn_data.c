@@ -1,9 +1,6 @@
 #include "dsd.h"
 #include "nxdn_const.h"
 
-//don't know why this doesn't work right in LEH, need to figure that out for him
-//works just fien when ripped from his and into mine
-//must be some random thing, I'll look at his when I have a chance
 void processNXDNData (dsd_opts * opts, dsd_state * state)
 {
   int i, dibit = 0;
@@ -24,7 +21,7 @@ void processNXDNData (dsd_opts * opts, dsd_state * state)
   }
 
   /* Start pseudo-random NXDN sequence after
-   * LITCH = 16 bit = 8 dibit
+   * LICH = 16 bit = 8 dibit
    * ==> Index 8 */
   pr = (unsigned char *)(&nxdnpr2[8]);
   for (i = 0; i < 30; i++)

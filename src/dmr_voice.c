@@ -646,8 +646,8 @@ void processDMRvoice (dsd_opts * opts, dsd_state * state)
   ProcessDMR(opts, state);
 
   //LFSR if required, change condition?
-  if ( (state->currentslot == 0 && state->payload_algid  != 0 ) ||  //&& opts->payload == 1
-       (state->currentslot == 1 && state->payload_algidR != 0 )  ) //&& opts->payload == 1
+  if ( (state->currentslot == 0 && state->payload_algid  == 0x21 ) ||  //&& opts->payload == 1
+       (state->currentslot == 1 && state->payload_algidR == 0x21 )  ) //&& opts->payload == 1
   {
     LFSR(state);
   }

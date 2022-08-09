@@ -26,6 +26,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
   sum = 0;
   count = 0;
+  sample = 0; //init sample with a value of 0...see if this was causing issues with raw audio monitoring
 
   for (i = 0; i < state->samplesPerSymbol; i++) //right HERE
     {
@@ -81,14 +82,21 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         }
 
       // Read the new sample from the input
-      if(opts->audio_in_type == 0)
+      if(opts->audio_in_type == 0) // && state->menuopen == 0 still not quite working
       {
           pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
           //look into how processAudio handles playback, not sure if latency issues, or garbage sample values crash pulse when written
-          if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample < 32767 && sample > -32767)
+          // if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample < 32767 && sample > -32767)
+          if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample != 0)
           {
             state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
             pa_simple_write(opts->pulse_raw_dev_out, (void*)&state->pulse_raw_out_buffer, 2, NULL);
+          }
+          //playback is wrong, depends on samples_per_symbol, maybe make a buffer and store first?
+          //making buffer might also fix raw audio monitoring as well
+          if (opts->wav_out_file_raw[0] != 0) //if set for recording sample raw files
+          {
+            //writeRawSample (opts, state, sample);
           }
 
       }
@@ -122,7 +130,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       {
 #ifdef USE_RTLSDR
         // TODO: need to read demodulated stream here
-        get_rtlsdr_sample(&sample);
+        // get_rtlsdr_sample(&sample);
+        get_rtlsdr_sample(&sample, opts, state);
         if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample < 32767 && sample > -32767)
         {
           state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
@@ -131,6 +140,11 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
 #endif
       }
+      // //test reading symbol bin files
+      // else if (opts->audio_in_type == 4)
+      // {
+      //   //use fopen and read in a sample, check boatbod op25 for clues
+      // }
 
 #ifdef TRACE_DSD
       state->debug_sample_index++;
@@ -337,6 +351,73 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       }
   }
 #endif
+
+  //read op25/fme symbol bin files
+  if (opts->audio_in_type == 4)
+  {
+    //use fopen and read in a symbol, check op25 for clues
+    if(opts->symbolfile == NULL)
+    {
+      fprintf(stderr, "Error Opening File %s\n", opts->symbolfile);
+      return(-1);
+    }
+
+    state->symbolc = fgetc(opts->symbolfile);
+    //fprintf(stderr, "%d", state->symbolc);
+    if( feof(opts->symbolfile) )
+    {
+      opts->audio_in_type = 0; //switch to pulse after playback, ncurses terminal can initiate replay if wanted
+      fclose(opts->symbolfile);
+      openPulseInput(opts);
+    }
+
+    //flipping these to 'positive' produces terrible results in P25 P1, and I tried flopping it every way I could
+    //positive polarity works fine with DMR, but not P25, so may look at reading and storing based on frame type?
+    if (opts->frame_p25p1 == 1) //use inverted polarity for reading P25, but not DMR (or others?)
+    {
+      if (state->symbolc == 0)
+      {
+        symbol = -1; //-1
+      }
+      if (state->symbolc == 1)
+      {
+        symbol = -3; //-3
+      }
+      if (state->symbolc == 2)
+      {
+        symbol = 1; //1
+      }
+      if (state->symbolc == 3)
+      {
+        symbol = 3; //3
+      }
+    }
+    else if (opts->frame_provoice == 1) //syncs fine, but issues with dibit reading
+    {
+        //provoice has issue where sync is okay, but decode isn't working after sync
+        //symbol = state->symbolc;
+    }
+    else
+    {
+      if (state->symbolc == 0)
+      {
+        symbol = 1; //-1
+      }
+      if (state->symbolc == 1)
+      {
+        symbol = 3; //-3
+      }
+      if (state->symbolc == 2)
+      {
+        symbol = -1; //1
+      }
+      if (state->symbolc == 3)
+      {
+        symbol = -3; //3
+      }
+    }
+
+  }
 
 
   state->symbolcnt++;
