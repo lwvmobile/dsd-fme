@@ -146,7 +146,7 @@ PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) //For DMR Stere
 
   err = (unsigned char) state->errs2;
   k = 0;
-  if (opts->dmr_stereo == 0) //was 0, switched while working out des
+  if (opts->dmr_stereo == 0)
   {
     fprintf (stderr, "\n");
   }
@@ -181,7 +181,7 @@ PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) //For DMR Stere
   b = ambe_d[48];
   if (opts->dmr_stereo == 1) //need to fix the printouts again
   {
-    fprintf (stderr, "\n"); //temp disable while I work on DES
+    fprintf (stderr, "\n"); 
   }
 
 }

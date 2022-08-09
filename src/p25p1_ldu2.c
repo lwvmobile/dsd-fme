@@ -169,7 +169,6 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
       {
         lsd2[i] = lsd[i] + '0';
       }
-      //skip two octets since LSD is part of the encryption portion
 
     // TODO: error correction of the LSD bytes...
     // TODO: do something useful with the LSD bytes...

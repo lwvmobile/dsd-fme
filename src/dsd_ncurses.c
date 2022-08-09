@@ -677,7 +677,6 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           }
           if (S_ISREG(stat_buf.st_mode))
           {
-            //state->symbolfile = fopen("adp_fdma.bin", "r");
             opts->symbolfile = fopen(opts->audio_in_dev, "r");
             opts->audio_in_type = 4; //symbol capture bin files
           }

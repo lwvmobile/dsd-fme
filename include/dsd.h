@@ -254,13 +254,13 @@ typedef struct
 
   uint32_t rtlsdr_center_freq;
   int rtlsdr_ppm_error; //was int, changed to float
-  int audio_in_type; // 0 for device, 1 for file, 2 for portaudio, 3 for rtlsdr
+  int audio_in_type; // 0 for device, 1 for file, 3 for rtlsdr
   char audio_out_dev[1024];
   int audio_out_fd;
   SNDFILE *audio_out_file;
   SF_INFO *audio_out_file_info;
 
-  int audio_out_type; // 0 for device, 1 for file, 2 for portaudio
+  int audio_out_type; // 0 for device, 1 for file,
   int split;
   int playoffset;
   int playoffsetR;

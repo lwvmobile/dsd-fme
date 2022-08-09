@@ -779,14 +779,6 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     //state->nxdn_key = (KeyID & 0xFF);
   }
 
-  //print scrambler key value if manually inserted
-  if (state->nxdn_cipher_type == 0x01 && state->R > 0) //scrambler
-  {
-    fprintf (stderr, "%s", KYEL);
-    fprintf(stderr, "Value: 0x%04llX", state->R); //use R and not miN
-    fprintf (stderr, "%s", KNRM);
-  }
-
   if(state->NxdnElementsContent.VCallCrcIsGood)
   {
     if ( (SourceUnitID & 0xFFFF) > 0 )
@@ -841,7 +833,7 @@ void NXDN_decode_VCALL_IV(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   for(i = 0; i < 8; i++)
   {
     state->NxdnElementsContent.IV[i] = (uint8_t)ConvertBitIntoBytes(&Message[(i + 1) * 8], 8);
-    //let's load this mother fucker up then lol
+
     state->payload_miN = state->payload_miN << 8 | state->NxdnElementsContent.IV[i];
   }
 
