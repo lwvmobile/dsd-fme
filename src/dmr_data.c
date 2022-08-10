@@ -523,14 +523,14 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     /* Burst = MBC Header */
     case 0b0100:
     {
-      //ProcessMBChData(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
+      ProcessMBChData(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
 
     /* Burst = MBC Continuation*/
     case 0b0101:
     {
-      //ProcessMBCData(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
+      ProcessMBCData(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
 
@@ -566,14 +566,14 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     /* Burst = Rate 1 DATA */
     case 0b1010:
     {
-      //Process1Data(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
+      Process1Data(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
 
     /* Burst = Unified Single Block DATA */
     case 0b1101:
     {
-      //ProcessUnifiedData(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
+      ProcessUnifiedData(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
 
@@ -581,7 +581,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     default:
     {
       /* Nothing to do */
-      //ProcessWTFData(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
+      ProcessReservedData(opts, state, (uint8_t *)info, (uint8_t *)syncdata, (uint8_t *)SlotType);
       break;
     }
   } /* End switch(burst) */

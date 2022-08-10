@@ -153,14 +153,14 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->dmr_lrrp_source[1] = 0;
 
   //initialize 12 rate superframe
-  for (short i = 0; i < 84; i++)
+  for (short i = 0; i < 288; i++)
   {
     state->dmr_12_rate_sf[0][i] = 0;
     state->dmr_12_rate_sf[1][i] = 0;
   }
 
   //initialize 34 rate superframe
-  for (short i = 0; i < 96; i++)
+  for (short i = 0; i < 288; i++)
   {
     state->dmr_34_rate_sf[0][i] = 0;
     state->dmr_34_rate_sf[1][i] = 0;
@@ -488,14 +488,14 @@ initState (dsd_state * state)
   state->dmr_lrrp_source[1] = 0;
 
   //initialize 12 rate superframe
-  for (short i = 0; i < 84; i++)
+  for (short i = 0; i < 288; i++)
   {
     state->dmr_12_rate_sf[0][i] = 0;
     state->dmr_12_rate_sf[1][i] = 0;
   }
 
   //initialize 34 rate superframe
-  for (short i = 0; i < 96; i++)
+  for (short i = 0; i < 288; i++)
   {
     state->dmr_34_rate_sf[0][i] = 0;
     state->dmr_34_rate_sf[1][i] = 0;
@@ -1042,7 +1042,7 @@ main (int argc, char **argv)
           fprintf (stderr,"Writing + Appending decoded audio to file %s\n", opts.wav_out_file);
           openWavOutFile (&opts, &state);
           break;
-          
+
         case 'B':
           sscanf (optarg, "%d", &opts.serial_baud);
           break;

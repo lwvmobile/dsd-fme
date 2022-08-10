@@ -17,8 +17,6 @@
 
 #include "dsd.h"
 
-
-//time_t now;
 char * getTimeL(void) //get pretty hh:mm:ss timestamp
 {
   time_t t = time(NULL);
@@ -47,11 +45,10 @@ char * getDateL(void) {
   return curr2;
 }
 
-//Need to work in a way to seperate data bursts on seperate slots, having data pouring into both slots simultaneously
-//Need to make seperate superframe arrays for each
+//Trellis Decoding still needs work, so be surprised by bad decodes
 void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98], uint8_t syncdata[48], uint8_t SlotType[20])
 {
-  //NEED TRELLIS DECODER HERE
+
   uint32_t i, j, k;
   uint32_t CRCExtracted     = 0;
   uint32_t CRCComputed      = 0;
@@ -76,51 +73,17 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
     TSVoiceSupFrame = &state->TS2SuperFrame;
   }
 
-  CRCExtracted = 0;
-  CRCComputed = 0;
-  IrrecoverableErrors = 0;
-
-  /* Deinterleave DMR data */
-  //BPTCDeInterleaveDMRData(info, DeInteleavedData);
-  //info is the dibits; is output DeInterleavedData?
-  //data is dibits I think, so sub info for data? only wants 98U dibits though.
-  //returns 'payload' which is 144 bit array, so DmrDataBit maybe?
-  //CDMRTrellisDecode(const unsigned char* data, unsigned char* payload)
   unsigned char tdibits_reverse[98];
   unsigned char tdibits_inverted[98];
   unsigned char tdibits_to_bits[196];
-  if (1 == 2)
-  {
-    //fprintf (stderr, "\n Raw Trellis Dibits to Bits\n  ");
-    for (i = 0; i < 98; i++)
-    {
-      tdibits_to_bits[i * 2]       = (tdibits[i] >> 0) & 1;
-      tdibits_to_bits[(i * 2) + 1] = (tdibits[1] >> 1) & 1;
-      //fprintf (stderr, "%d%d", tdibits_to_bits[i * 2], tdibits_to_bits[(i * 2) + 1]);
-    }
-  }
 
-  //fprintf (stderr, "\n Raw Trellis Dibits\n  ");
   for (i = 0; i < 98; i++)
   {
-    //fprintf (stderr, "#%d [%X] ", i, tdibits[i]);
     tdibits_reverse[97-i] = tdibits[i];
-    //tdibits_reverse[97-i] = ((tdibits[i] & 1)<<1) | ((tdibits[i] & 2)>>1);
-    //tdibits_inverted[i] = tdibits[i] ^ 2;
   }
 
-
   unsigned char TrellisReturn[18];
-  //CDMRTrellisDecode(tdibits, TrellisReturn); //figure out how this works!!
   CDMRTrellisDecode(tdibits_reverse, TrellisReturn); //NEEDS REVERSE DIBITS!
-
-  /* Extract the BPTC 196,96 DMR data */
-  //IrrecoverableErrors = BPTC_196x96_Extract_Data(DeInteleavedData, DmrDataBit, R);
-  //
-  //CDMRTrellisDibitsToPoints(const signed char* dibits, unsigned char* points) ??
-  //
-  /* Fill the reserved bit (R(0)-R(2) of the BPTC(196,96) block) */
-  //BPTCReservedBits = (R[0] & 0x01) | ((R[1] << 1) & 0x02) | ((R[2] << 2) & 0x08);
 
   for(i = 0, j = 0; i < 18; i++, j+=8)
   {
@@ -134,28 +97,12 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
     DmrDataBit[j + 7] = (TrellisReturn[i] >> 0) & 0x01;
   }
 
-  //the reverse card
-  /*
-  for(i = 0, j = 0; i < 18; i++, j+=8)
-  {
-    DmrDataBit[j + 0] = (TrellisReturn[17-i] >> 0) & 0x01;
-    DmrDataBit[j + 1] = (TrellisReturn[17-i] >> 1) & 0x01;
-    DmrDataBit[j + 2] = (TrellisReturn[17-i] >> 2) & 0x01;
-    DmrDataBit[j + 3] = (TrellisReturn[17-i] >> 3) & 0x01;
-    DmrDataBit[j + 4] = (TrellisReturn[17-i] >> 4) & 0x01;
-    DmrDataBit[j + 5] = (TrellisReturn[17-i] >> 5) & 0x01;
-    DmrDataBit[j + 6] = (TrellisReturn[17-i] >> 6) & 0x01;
-    DmrDataBit[j + 7] = (TrellisReturn[17-i] >> 7) & 0x01;
-  }
-  */
-  /* Convert the 96 bit of voice LC Header data into 12 bytes */
-
   //define our block and padding values
   uint8_t blocks  = state->data_header_blocks[slot] - 1; //subtract 1 for the relevant value in the calc below
   uint8_t padding = state->data_header_padding[slot];
 
   //shift data in the superframe up a block
-  k = 0; //is this still used?
+  k = 0;
   for(i = 0; i < 16; i++) //16, or 18? seems to have two extra bytes in front currently
   {
     state->dmr_34_rate_sf[slot][i] = state->dmr_34_rate_sf[slot][i+16];
@@ -168,7 +115,6 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
     for(j = 0; j < 8; j++)
     {
       DmrDataByte[i] = DmrDataByte[i] << 1;
-      //DmrDataByte[i] = DmrDataByte[i] | (DmrDataBit[k] & 0x01);
       DmrDataByte[i] = DmrDataByte[i] | (DmrDataBit[k] & 0x01);
       k++;
     }
@@ -182,8 +128,6 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   int message_legnth = 0;
   if ( (state->dmr_34_rate_sf[slot][0] & 0x7F) == 0x45) //Start LRRP now
   {
-    //test opening a file with fopen and dumping the LRRP data into it.
-    //just going to use the same code from EDACS-FM
 
     //find user home directory and append directory and filename.
     FILE * pFile; //put this outside of the if statement?
@@ -200,7 +144,6 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
 
       //hard code filename override for those wanting to use other software
       //pFile = fopen("DSDPlus.LRRP", "a");
-
 
       fprintf (pFile, "%s\t %s\t", getDateL(), getTimeL()); //current timestamp, may find a way to only add this IF no included timestamp in LRRP data?
       fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
@@ -363,7 +306,7 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   {
     fprintf (stderr, "%s",KGRN);
     fprintf (stderr, "\n Rate 3/4 Superframe - Slot [%d]\n  ",slot+1);
-    for (i = 0; i < (16*4); i++) //16, or 18?
+    for (i = 0; i < ((blocks+1)*16); i++) //(16*4), using 16 since we jump the first two bytes
     {
       fprintf (stderr, "[%02X]", state->dmr_34_rate_sf[slot][i]);
       if (i == 15 || i == 31 || i == 47 || i == 63 || i == 79)
@@ -376,7 +319,7 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   state->data_block_counter[state->currentslot]++; //increment block counter
 }
 
-//This is Data Header, why did I name it Data Data
+//This is Data Header
 void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
 {
   short int slot = 0;
@@ -384,12 +327,12 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
 
   //see if we still need this portion if we are going to use the data block info
   //clear out the 3/4 rate data superframe so we don't repeat old info
-  for (short int i = 0; i < (16*6); i++)
+  for (short int i = 0; i < 288; i++) //expanded to 288 to prevent crashing
   {
     state->dmr_34_rate_sf[slot][i] = 0;
   }
   //clear out the 1/2 rate data superframe so we don't repeat old info
-  for (short int i = 0; i < (12*5); i++) //12*5 = 60
+  for (short int i = 0; i < 288; i++) //expanded to 288 to prevent crashing
   {
     state->dmr_12_rate_sf[slot][i] = 0;
   }
@@ -407,13 +350,6 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
   uint8_t  R[3];
   uint8_t  BPTCReservedBits = 0;
 
-  // Extract parameters for logging purposes
-  uint8_t  csbk_lb   = 0;
-  uint8_t  csbk_pf   = 0;
-  uint8_t  csbk_o    = 0;
-  uint8_t  csbk_fid  = 0;
-  uint64_t csbk_data = 0;
-  uint8_t  csbk      = 0;
 
   /* Check the current time slot */
   if(state->currentslot == 0)
@@ -453,23 +389,17 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
 
   /* Fill the CRC extracted (before Reed-Solomon (12,9) FEC correction) */
   CRCExtracted = 0;
-  //for(i = 0; i < 24; i++)
   for(i = 0; i < 16; i++)
   {
     CRCExtracted = CRCExtracted << 1;
-    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
-    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
+    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1);
   }
 
-  //Look into whether or not we need to run these CRC checks for this header information
-  //and see if its applied the same or differently
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
-  //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
   CRCExtracted = CRCExtracted ^ 0xCCCC;
 
   /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
   CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0xCCCC);
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
 
   /* Convert corrected 12 bytes into 96 bits */
   for(i = 0, j = 0; i < 12; i++, j+=8)
@@ -686,115 +616,96 @@ void Process1Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t
   uint32_t IrrecoverableErrors = 0;
   uint8_t  DeInteleavedData[196];
   uint8_t  DmrDataBit[96];
-  uint8_t  DmrDataByte[12];
+  uint8_t  DmrDataByte[25];
   TimeSlotVoiceSuperFrame_t * TSVoiceSupFrame = NULL;
   uint8_t  R[3];
   uint8_t  BPTCReservedBits = 0;
+  short int slot = 0;
+  slot = (short int)state->currentslot;
 
-  // Extract parameters for logging purposes
-  uint8_t  csbk_lb   = 0;
-  uint8_t  csbk_pf   = 0;
-  uint8_t  csbk_o    = 0;
-  uint8_t  csbk_fid  = 0;
-  uint64_t csbk_data = 0;
-  uint8_t  csbk      = 0;
-
-  /* Check the current time slot */
-  if(state->currentslot == 0)
-  {
-    TSVoiceSupFrame = &state->TS1SuperFrame;
-  }
-  else
-  {
-    TSVoiceSupFrame = &state->TS2SuperFrame;
-  }
-
-  CRCExtracted = 0;
-  CRCComputed = 0;
-  IrrecoverableErrors = 0;
-
-  /* Deinterleave DMR data */
-  BPTCDeInterleaveDMRData(info, DeInteleavedData);
-
-  /* Extract the BPTC 196,96 DMR data */
-  IrrecoverableErrors = BPTC_196x96_Extract_Data(DeInteleavedData, DmrDataBit, R);
-
-  /* Fill the reserved bit (R(0)-R(2) of the BPTC(196,96) block) */
-  BPTCReservedBits = (R[0] & 0x01) | ((R[1] << 1) & 0x02) | ((R[2] << 2) & 0x08);
-
-  /* Convert the 96 bit of voice LC Header data into 12 bytes */
+  //define our block and padding values
+  uint8_t blocks  = state->data_header_blocks[slot] - 1; //subtract 1 for the relevant value in the calc below
+  uint8_t padding = state->data_header_padding[slot];
+  //shift data in the superframe up a block
   k = 0;
-  for(i = 0; i < 12; i++)
+  for(i = 0; i < 24; i++)
   {
+    //reuse dmr_12_rate_sf since 12, we can use 2 blocks to load 1 block here
+    state->dmr_12_rate_sf[slot][i] = state->dmr_12_rate_sf[slot][i+24];    //shift block 2 to block 1
+    state->dmr_12_rate_sf[slot][i+24] = state->dmr_12_rate_sf[slot][i+48];    //shift block 3 to block 2
+    state->dmr_12_rate_sf[slot][i+48] = state->dmr_12_rate_sf[slot][i+72];    //shift block 3 to block 2
     DmrDataByte[i] = 0;
     for(j = 0; j < 8; j++)
     {
       DmrDataByte[i] = DmrDataByte[i] << 1;
-      DmrDataByte[i] = DmrDataByte[i] | (DmrDataBit[k] & 0x01);
+      DmrDataByte[i] = DmrDataByte[i] | (info[k] ); //& 1
       k++;
     }
+
+    //start loading new superframe at appropriate block count determined by the data header
+    state->dmr_12_rate_sf[slot][i+(blocks*24)] = DmrDataByte[i];
   }
+
+  //need to rework this for rate 1 data, will be a crc 9 for each confirmed block,
+  //and/or CRC 32 on last block (full superframe)
+  //NOTE 2: Only used when CRC-9 present in burst.
 
   /* Fill the CRC extracted (before Reed-Solomon (12,9) FEC correction) */
-  CRCExtracted = 0;
-  //for(i = 0; i < 24; i++)
-  for(i = 0; i < 16; i++)
-  {
-    CRCExtracted = CRCExtracted << 1;
-    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
-    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
-  }
+  // CRCExtracted = 0;
+  // //for(i = 0; i < 24; i++)
+  // for(i = 0; i < 16; i++)
+  // {
+  //   CRCExtracted = CRCExtracted << 1;
+  //   //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
+  //   CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1);
+  // }
 
-  //Look into whether or not we need to run these CRC checks for this header information
-  //and see if its applied the same or differently
-  /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
-  //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
   //CRCExtracted = CRCExtracted ^ 0x6969;
 
   /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
   //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
 
-  /* Convert corrected 12 bytes into 96 bits */
-  for(i = 0, j = 0; i < 12; i++, j+=8)
-  {
-    DmrDataBit[j + 0] = (DmrDataByte[i] >> 7) & 0x01;
-    DmrDataBit[j + 1] = (DmrDataByte[i] >> 6) & 0x01;
-    DmrDataBit[j + 2] = (DmrDataByte[i] >> 5) & 0x01;
-    DmrDataBit[j + 3] = (DmrDataByte[i] >> 4) & 0x01;
-    DmrDataBit[j + 4] = (DmrDataByte[i] >> 3) & 0x01;
-    DmrDataBit[j + 5] = (DmrDataByte[i] >> 2) & 0x01;
-    DmrDataBit[j + 6] = (DmrDataByte[i] >> 1) & 0x01;
-    DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
-  }
-  //
-  if (DmrDataByte[0] == 0x43)
-  {
-    //fprintf (stderr, "\n  IP4 Source IP:");
-    //fprintf (stderr, " %d", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4] );
-    //fprintf (stderr, " Destination IP:");
-    //fprintf (stderr, " %d", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7] );
-  }
-
-  if (DmrDataByte[0] == 0x01)
-  {
-    //fprintf (stderr, "\n  LRRP Control ACK - ");
-    //fprintf (stderr, " Source:");
-    //fprintf (stderr, " %d", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4] );
-    //fprintf (stderr, " Destination:");
-    //fprintf (stderr, " %d", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7] );
-  }
   //Full
   if (opts->payload == 1)
   {
     fprintf (stderr, "%s", KCYN);
-    fprintf (stderr, "\nFull Rate 1 Payload ");
-    for (i = 0; i < 12; i++)
+    fprintf (stderr, "\nFull Rate 1 Payload \n");
+    for (i = 0; i < 24; i++)
     {
       fprintf (stderr, "[%02X]", DmrDataByte[i]);
+      if (i == 11)
+      {
+        fprintf (stderr, "\n");
+      }
+    }
+    fprintf (stderr, "\n  Hex to Ascii - ");
+    for (i = 0; i < 24; i++)
+    {
+      if (DmrDataByte[i] <= 0x7E && DmrDataByte[i] >=0x20)
+      {
+        fprintf (stderr, "%c", DmrDataByte[i]);
+      }
+      else fprintf (stderr, ".");
     }
     fprintf (stderr, "%s", KNRM);
   }
+
+  //Full Super Frame - Debug Output
+  if (opts->payload == 1 && state->data_block_counter[state->currentslot] == state->data_header_blocks[state->currentslot])
+  {
+    fprintf (stderr, "%s",KGRN);
+    fprintf (stderr, "\n Rate 1 Superframe - Slot [%d]\n  ",slot+1);
+    for (i = 0; i < ((blocks+1)*24); i++) //only print as many as we have blocks
+    {
+      fprintf (stderr, "[%02X]", state->dmr_12_rate_sf[slot][i]);
+      if (i == 11 || i == 23 || i == 35 || i == 47 || i == 59 || i == 71) //line break and two spaces after each 12 bytes
+      {
+        fprintf (stderr, "\n  ");
+      }
+    }
+    fprintf (stderr, "%s ", KNRM);
+  }
+  state->data_block_counter[state->currentslot]++; //increment block counter
 
 }
 
@@ -813,14 +724,6 @@ void ProcessMBChData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
   uint8_t  R[3];
   uint8_t  BPTCReservedBits = 0;
 
-  // Extract parameters for logging purposes
-  uint8_t  csbk_lb   = 0;
-  uint8_t  csbk_pf   = 0;
-  uint8_t  csbk_o    = 0;
-  uint8_t  csbk_fid  = 0;
-  uint64_t csbk_data = 0;
-  uint8_t  csbk      = 0;
-
   /* Check the current time slot */
   if(state->currentslot == 0)
   {
@@ -859,22 +762,16 @@ void ProcessMBChData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
 
   /* Fill the CRC extracted (before Reed-Solomon (12,9) FEC correction) */
   CRCExtracted = 0;
-  //for(i = 0; i < 24; i++)
   for(i = 0; i < 16; i++)
   {
     CRCExtracted = CRCExtracted << 1;
-    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
-    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
+    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1);
   }
 
-  //Look into whether or not we need to run these CRC checks for this header information
-  //and see if its applied the same or differently
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
-  //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
   CRCExtracted = CRCExtracted ^ 0xAAAA;
 
   /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
   CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0xAAAA);
 
   /* Convert corrected 12 bytes into 96 bits */
@@ -889,23 +786,7 @@ void ProcessMBChData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
     DmrDataBit[j + 6] = (DmrDataByte[i] >> 1) & 0x01;
     DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
   }
-  //
-  if (DmrDataByte[0] == 0x43)
-  {
-    //fprintf (stderr, "\n  IP4 Source IP:");
-    //fprintf (stderr, " %d", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4] );
-    //fprintf (stderr, " Destination IP:");
-    //fprintf (stderr, " %d", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7] );
-  }
 
-  if (DmrDataByte[0] == 0x01)
-  {
-    //fprintf (stderr, "\n  LRRP Control ACK - ");
-    //fprintf (stderr, " Source:");
-    //fprintf (stderr, " %d", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4] );
-    //fprintf (stderr, " Destination:");
-    //fprintf (stderr, " %d", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7] );
-  }
   //Full
   if (opts->payload == 1)
   {
@@ -935,14 +816,6 @@ void ProcessMBCData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8
   uint8_t  R[3];
   uint8_t  BPTCReservedBits = 0;
 
-  // Extract parameters for logging purposes
-  uint8_t  csbk_lb   = 0;
-  uint8_t  csbk_pf   = 0;
-  uint8_t  csbk_o    = 0;
-  uint8_t  csbk_fid  = 0;
-  uint64_t csbk_data = 0;
-  uint8_t  csbk      = 0;
-
   /* Check the current time slot */
   if(state->currentslot == 0)
   {
@@ -979,25 +852,24 @@ void ProcessMBCData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8
     }
   }
 
-  /* Fill the CRC extracted (before Reed-Solomon (12,9) FEC correction) */
-  CRCExtracted = 0;
-  //for(i = 0; i < 24; i++)
-  for(i = 0; i < 16; i++)
-  {
-    CRCExtracted = CRCExtracted << 1;
-    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
-    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
-  }
+  //NO CRC or FEC on MBC Cont. Data?
+  //...that seems to be according to the manual
 
-  //Look into whether or not we need to run these CRC checks for this header information
-  //and see if its applied the same or differently
+  /* Fill the CRC extracted (before Reed-Solomon (12,9) FEC correction) */
+  // CRCExtracted = 0;
+  // for(i = 0; i < 16; i++)
+  // {
+  //   CRCExtracted = CRCExtracted << 1;
+  //   CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1);
+  // }
+
+  //No CRC Mask for MBC Continuation Data
+  //Note 1. None required for intermediate or last blocks.
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
-  //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
   //CRCExtracted = CRCExtracted ^ 0x6969;
 
   /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
+  // CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x0); //0, or FFFF?
 
   /* Convert corrected 12 bytes into 96 bits */
   for(i = 0, j = 0; i < 12; i++, j+=8)
@@ -1011,28 +883,12 @@ void ProcessMBCData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8
     DmrDataBit[j + 6] = (DmrDataByte[i] >> 1) & 0x01;
     DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
   }
-  //
-  if (DmrDataByte[0] == 0x43)
-  {
-    //fprintf (stderr, "\n  IP4 Source IP:");
-    //fprintf (stderr, " %d", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4] );
-    //fprintf (stderr, " Destination IP:");
-    //fprintf (stderr, " %d", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7] );
-  }
 
-  if (DmrDataByte[0] == 0x01)
-  {
-    //fprintf (stderr, "\n  LRRP Control ACK - ");
-    //fprintf (stderr, " Source:");
-    //fprintf (stderr, " %d", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4] );
-    //fprintf (stderr, " Destination:");
-    //fprintf (stderr, " %d", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7] );
-  }
   //Full
   if (opts->payload == 1)
   {
     fprintf (stderr, "%s", KCYN);
-    fprintf (stderr, "\nFull MBC Payload ");
+    fprintf (stderr, "\nFull MBC Continuation Payload ");
     for (i = 0; i < 12; i++)
     {
       fprintf (stderr, "[%02X]", DmrDataByte[i]);
@@ -1042,7 +898,8 @@ void ProcessMBCData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8
 
 }
 
-void ProcessWTFData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
+//This data shouldn't be active, but come here to dump in case of data burst type decoding failure
+void ProcessReservedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
 {
   //Placeholder
   uint32_t i, j, k;
@@ -1057,13 +914,74 @@ void ProcessWTFData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8
   uint8_t  R[3];
   uint8_t  BPTCReservedBits = 0;
 
-  // Extract parameters for logging purposes
-  uint8_t  csbk_lb   = 0;
-  uint8_t  csbk_pf   = 0;
-  uint8_t  csbk_o    = 0;
-  uint8_t  csbk_fid  = 0;
-  uint64_t csbk_data = 0;
-  uint8_t  csbk      = 0;
+  /* Check the current time slot */
+  if(state->currentslot == 0)
+  {
+    TSVoiceSupFrame = &state->TS1SuperFrame;
+  }
+  else
+  {
+    TSVoiceSupFrame = &state->TS2SuperFrame;
+  }
+
+  /* Convert the 196 bit of voice LC Header data into 12 bytes */
+  k = 0;
+  for(i = 0; i < 24; i++)
+  {
+    DmrDataByte[i] = 0;
+    for(j = 0; j < 8; j++)
+    {
+      DmrDataByte[i] = DmrDataByte[i] << 1;
+      DmrDataByte[i] = DmrDataByte[i] | info[i];
+      k++;
+    }
+  }
+
+  /* Convert corrected 12 bytes into 96 bits */
+  for(i = 0, j = 0; i < 12; i++, j+=8)
+  {
+    DmrDataBit[j + 0] = (DmrDataByte[i] >> 7) & 0x01;
+    DmrDataBit[j + 1] = (DmrDataByte[i] >> 6) & 0x01;
+    DmrDataBit[j + 2] = (DmrDataByte[i] >> 5) & 0x01;
+    DmrDataBit[j + 3] = (DmrDataByte[i] >> 4) & 0x01;
+    DmrDataBit[j + 4] = (DmrDataByte[i] >> 3) & 0x01;
+    DmrDataBit[j + 5] = (DmrDataByte[i] >> 2) & 0x01;
+    DmrDataBit[j + 6] = (DmrDataByte[i] >> 1) & 0x01;
+    DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
+  }
+
+  //Full
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, "%s", KCYN);
+    fprintf (stderr, "\nFull Reserved Payload ");
+    for (i = 0; i < 12; i++)
+    {
+      fprintf (stderr, "[%02X]", DmrDataByte[i]);
+    }
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, "\nINFO! This Payload Dump May be caused by erroneous data burst type decoding! ");
+    fprintf (stderr, "%s", KNRM);
+  }
+
+}
+
+void ProcessUnifiedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
+{
+
+  uint32_t i, j, k;
+  uint32_t CRCExtracted     = 0;
+  uint32_t CRCComputed      = 0;
+  uint32_t CRCCorrect       = 0;
+  uint32_t IrrecoverableErrors = 0;
+  uint8_t  DeInteleavedData[196];
+  uint8_t  DmrDataBit[96];
+  uint8_t  DmrDataByte[12];
+  TimeSlotVoiceSuperFrame_t * TSVoiceSupFrame = NULL;
+  uint8_t  R[3];
+  uint8_t  BPTCReservedBits = 0;
+  short int slot = 0;
+  slot = (short int)state->currentslot;
 
   /* Check the current time slot */
   if(state->currentslot == 0)
@@ -1088,7 +1006,7 @@ void ProcessWTFData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8
   /* Fill the reserved bit (R(0)-R(2) of the BPTC(196,96) block) */
   BPTCReservedBits = (R[0] & 0x01) | ((R[1] << 1) & 0x02) | ((R[2] << 2) & 0x08);
 
-  /* Convert the 96 bit of voice LC Header data into 12 bytes */
+
   k = 0;
   for(i = 0; i < 12; i++)
   {
@@ -1099,6 +1017,7 @@ void ProcessWTFData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8
       DmrDataByte[i] = DmrDataByte[i] | (DmrDataBit[k] & 0x01);
       k++;
     }
+
   }
 
   /* Fill the CRC extracted (before Reed-Solomon (12,9) FEC correction) */
@@ -1107,19 +1026,32 @@ void ProcessWTFData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8
   for(i = 0; i < 16; i++)
   {
     CRCExtracted = CRCExtracted << 1;
-    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
-    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
+    CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1);
   }
 
   //Look into whether or not we need to run these CRC checks for this header information
   //and see if its applied the same or differently
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
-  //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
-  //CRCExtracted = CRCExtracted ^ 0x6969;
+  CRCExtracted = CRCExtracted ^ 0x3333;
 
   /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
+  CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x3333);
+
+  //test
+  if((IrrecoverableErrors == 0) && CRCCorrect)
+  {
+    //fprintf (stderr, "\n(Unified Data CRC Okay)");
+  }
+  else if((IrrecoverableErrors == 0))
+  {
+    //fprintf (stderr, "\n(Unified Data FEC Okay)");
+  }
+  else
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, ("\n(Unified Rate CRC Fail, FEC Fail)"));
+    fprintf (stderr, "%s", KNRM);
+  }
 
   /* Convert corrected 12 bytes into 96 bits */
   for(i = 0, j = 0; i < 12; i++, j+=8)
@@ -1133,37 +1065,29 @@ void ProcessWTFData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8
     DmrDataBit[j + 6] = (DmrDataByte[i] >> 1) & 0x01;
     DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
   }
-  //
-  if (DmrDataByte[0] == 0x43)
-  {
-    //fprintf (stderr, "\n  IP4 Source IP:");
-    //fprintf (stderr, " %d", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4] );
-    //fprintf (stderr, " Destination IP:");
-    //fprintf (stderr, " %d", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7] );
-  }
 
-  if (DmrDataByte[0] == 0x01)
-  {
-    //fprintf (stderr, "\n  LRRP Control ACK - ");
-    //fprintf (stderr, " Source:");
-    //fprintf (stderr, " %d", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] << 8) + DmrDataByte[4] );
-    //fprintf (stderr, " Destination:");
-    //fprintf (stderr, " %d", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] <<8 ) + DmrDataByte[7] );
-  }
   //Full
   if (opts->payload == 1)
   {
-    fprintf (stderr, "%s", KCYN);
-    fprintf (stderr, "\nFull WTF Payload ");
+    fprintf (stderr,"%s", KCYN);
+    fprintf (stderr, "\n Full Unified Data Payload ");
     for (i = 0; i < 12; i++)
     {
       fprintf (stderr, "[%02X]", DmrDataByte[i]);
     }
-    fprintf (stderr, "%s", KNRM);
+    fprintf (stderr, "\n  Hex to Ascii - ");
+    for (i = 0; i < 12; i++)
+    {
+      if (DmrDataByte[i] <= 0x7E && DmrDataByte[i] >=0x20)
+      {
+        fprintf (stderr, "%c", DmrDataByte[i]);
+      }
+      else fprintf (stderr, ".");
+    }
+    fprintf (stderr,"%s", KNRM);
   }
 
 }
-
 
 void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
 {
@@ -1232,23 +1156,17 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
 
   /* Fill the CRC extracted (before Reed-Solomon (12,9) FEC correction) */
   CRCExtracted = 0;
-  //for(i = 0; i < 24; i++)
-  for(i = 0; i < 16; i++)
+  for(i = 0; i < 24; i++)
   {
     CRCExtracted = CRCExtracted << 1;
     CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 72] & 1);
-    //CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
   }
 
-  //Look into whether or not we need to run these CRC checks for this header information
-  //and see if its applied the same or differently
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
   CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
-  //CRCExtracted = CRCExtracted ^ 0x6969;
 
   /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
   CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
 
   //test
   if((IrrecoverableErrors == 0) && CRCCorrect)
@@ -1466,7 +1384,7 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
     for (i = 0; i < ((blocks+1)*12); i++) //only print as many as we have blocks
     {
       fprintf (stderr, "[%02X]", state->dmr_12_rate_sf[slot][i]);
-      if (i == 11 || i == 23 || i == 35 || i == 47 || i == 59 || i == 71) //line break and two spaces after each 16 bytes
+      if (i == 11 || i == 23 || i == 35 || i == 47 || i == 59 || i == 71) //line break and two spaces after each 12 bytes
       {
         fprintf (stderr, "\n  ");
       }

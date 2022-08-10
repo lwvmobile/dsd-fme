@@ -519,8 +519,8 @@ typedef struct
   TimeSlotVoiceSuperFrame_t TS2SuperFrame;
 
   char dmr_branding[25];
-  uint8_t  dmr_12_rate_sf[2][84]; //going seven blocks deep by 12 bytes //[slot][value]
-  uint8_t  dmr_34_rate_sf[2][96]; //going six blocks deep by 16 bytes //[slot][value]
+  uint8_t  dmr_12_rate_sf[2][288]; //was 84, expanded to 288 to prevent possible crash if more comes in than expected
+  uint8_t  dmr_34_rate_sf[2][288]; //was 96, expanded to 288 to prevent possible crash if more comes in than expected
   int dmr_stereo_payload[144];    //load up 144 dibit buffer for every single DMR TDMA frame
   uint8_t data_header_blocks[2];  //collect number of blocks to follow from data header per slot
   uint8_t data_header_padding[2]; //collect number of padding octets in last block per slot
@@ -833,7 +833,7 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
 void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98], uint8_t syncdata[48], uint8_t SlotType[20]);
 void ProcessMBCData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
 void ProcessMBChData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-void ProcessWTFData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+void ProcessReservedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
 void ProcessUnifiedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
 
 //LFSR code courtesy of https://github.com/mattames/LFSR/
