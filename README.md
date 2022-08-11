@@ -5,7 +5,7 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 ## 2022.08.12 Update ##
 A new menu system has been introduced in the NCURSES Terminal. While running DSD-FME, a user can simply use the ESC or arrow keys to open the menu and change options on the fly. This is extremely beneficial when wanting to change settings on the fly, and also to alleviate the need to use complex start up command line arguments. All of the previous command line arguments still work and will get you up faster, but if you would rather configure after start up, or change settings while running, the menu system is very helpful in that regard.
 
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)
+[![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)](https://www.youtube.com/watch?v=TqTfAfaPJ4s "DSD-FME Update 2022.08.12")
 
 To get started with the new menu system, simply launch with:
 
