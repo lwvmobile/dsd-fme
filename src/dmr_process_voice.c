@@ -136,25 +136,36 @@ if (state->currentslot == 0)
         PrintAMBEData(opts, state, TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
       }
 
-      if (opts->mbe_out_f != NULL)
+      //quick enc toggle to determine whether or not to play enc traffic
+      int enc_bit = 0;
+      enc_bit = (state->dmr_so >> 6) & 0x1;
+      if (enc_bit == 1)
       {
-        saveAmbe2450Data (opts, state, TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
+        state->dmr_encL = 1;
       }
-
-      state->debug_audio_errors += *errs2;
-
-      processAudio(opts, state);
-
-      if (opts->wav_out_f != NULL)
+      else state->dmr_encL = 0;
+      //quick test to determine whether or not to run the next few steps below
+      if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
       {
-        writeSynthesizedVoice (opts, state);
-      }
+        if (opts->mbe_out_f != NULL)
+        {
+          saveAmbe2450Data (opts, state, TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
+        }
 
-      //play only if not equal to enc value, going to set p25enc to 1 if enc detected??
-      if (opts->audio_out == 1 && opts->p25enc != 1)
-      {
-        playSynthesizedVoice (opts, state);
-      }
+        state->debug_audio_errors += *errs2;
+
+        processAudio(opts, state);
+
+        if (opts->wav_out_f != NULL)
+        {
+          writeSynthesizedVoice (opts, state);
+        }
+
+        if (opts->audio_out == 1) //opts->audio_out == 1
+        {
+          playSynthesizedVoice (opts, state);
+        }
+      } //second bracket for the test enc condition
     } /* End for(i = 0; i < 3; i++) */
   } /* End for(Frame = 0; Frame < 6; Frame++) */
  } //End if Current Slot == 0
@@ -182,24 +193,36 @@ if (state->currentslot == 0)
          PrintAMBEData(opts, state, TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
        }
 
-       if (opts->mbe_out_f != NULL)
+       //quick enc toggle to determine whether or not to play enc traffic
+       int enc_bit = 0;
+       enc_bit = (state->dmr_soR >> 6) & 0x1;
+       if (enc_bit == 1)
        {
-         saveAmbe2450Data (opts, state, TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
+         state->dmr_encR = 1;
        }
+       else state->dmr_encR = 0;
 
-       state->debug_audio_errors += *errs2;
-
-       processAudio(opts, state);
-
-       if (opts->wav_out_f != NULL)
+       //quick test to determine whether or not to run the next few steps below
+       if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
        {
-         writeSynthesizedVoice (opts, state);
-       }
+         if (opts->mbe_out_f != NULL)
+         {
+           saveAmbe2450Data (opts, state, TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i]);
+         }
 
-       //play only if not equal to enc value, going to set p25enc to 1 if enc detected??
-       if (opts->audio_out == 1 && opts->p25enc != 1)
-       {
-         playSynthesizedVoice (opts, state);
+         state->debug_audio_errors += *errs2;
+
+         processAudio(opts, state);
+
+         if (opts->wav_out_f != NULL)
+         {
+           writeSynthesizedVoice (opts, state);
+         }
+
+         if (opts->audio_out == 1)
+         {
+           playSynthesizedVoice (opts, state);
+         }
        }
      } /* End for(i = 0; i < 3; i++) */
    } /* End for(Frame = 0; Frame < 6; Frame++) */

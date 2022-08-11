@@ -239,11 +239,10 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             ambe_d[j] ^= x;
           }
         }
-				if (1 == 1) //still not quite right //state->payload_algid == 0 || state->K != 0
-				{
-        	mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
-                                  	ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-				}
+
+      	mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
+                                	ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
 
         //old method for this step below
         //mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
@@ -272,11 +271,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             ambe_d[j] ^= x;
           }
         }
-				if (1 == 1) //state->payload_algidR == 0 || state->K != 0
-				{
-					mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
-	                                  ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);
-				}
+
+				mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
+	                                ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);
 
         //old method for this step below
         //mbe_processAmbe3600x2450Framef (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR, ambe_fr, ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);
@@ -285,7 +282,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           PrintAMBEData (opts, state, ambe_d);
         }
       }
-      //if using ???
+
+      //if using ??? dPMR? D-STAR? X2-TDMA?
       if (opts->dmr_stereo == 0)
       {
         mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
@@ -302,32 +300,64 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
     }
 
-  state->debug_audio_errors += state->errs2;
-  state->debug_audio_errorsR += state->errs2R;
+  //having these values here I think caused muddy audio, seems cleaner now when moved to correct area
+  // state->debug_audio_errors += state->errs2;
+  // state->debug_audio_errorsR += state->errs2R;
+
+  //quick enc check to determine whether or not to play enc traffic
+  int enc_bit = 0;
+  //end enc check
+
   if (opts->dmr_stereo == 1 && state->currentslot == 0)
   {
-    processAudio (opts, state);
-    if (opts->audio_out == 1)
+    enc_bit = (state->dmr_so >> 6) & 0x1;
+    if (enc_bit == 1)
     {
-      playSynthesizedVoice (opts, state);
+      state->dmr_encL = 1;
+    }
+    else state->dmr_encL = 0;
+    if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
+    {
+      state->debug_audio_errors += state->errs2;
+      processAudio (opts, state);
+      if (opts->audio_out == 1)
+      {
+        playSynthesizedVoice (opts, state);
+      }
     }
   }
+
   if (opts->dmr_stereo == 1 && state->currentslot == 1)
   {
-    processAudioR (opts, state);
-    if (opts->audio_out == 1)
+    enc_bit = (state->dmr_soR >> 6) & 0x1;
+    if (enc_bit == 0x1)
     {
-      playSynthesizedVoiceR (opts, state);
+      state->dmr_encR = 1;
+    }
+    else state->dmr_encR = 0;
+    if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
+    {
+      state->debug_audio_errorsR += state->errs2R;
+      processAudioR (opts, state);
+      if (opts->audio_out == 1)
+      {
+        playSynthesizedVoiceR (opts, state);
+      }
     }
   }
+
+  //if using ??? dPMR? D-STAR? X2-TDMA?
   if (opts->dmr_stereo == 0)
   {
+    state->debug_audio_errors += state->errs2;
     processAudio (opts, state);
     if (opts->audio_out == 1)
     {
       playSynthesizedVoice (opts, state);
     }
   }
+
+  //if using ??? dPMR? D-STAR? X2-TDMA?
   if (opts->wav_out_f != NULL && opts->dmr_stereo == 0)
   {
     writeSynthesizedVoice (opts, state);
@@ -336,14 +366,21 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 	//per call can only be used when ncurses terminal is active since we use its call history matrix for when to record
 	if (opts->use_ncurses_terminal == 1 && opts->dmr_stereo_wav == 1 && opts->dmr_stereo == 1 && state->currentslot == 0)
 	{
-		//write wav to per call on left channel Slot 1
-		writeSynthesizedVoice (opts, state);
-	}
+    if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
+    {
+	    //write wav to per call on left channel Slot 1
+	    writeSynthesizedVoice (opts, state);
+    }
+  }
+
 	//per call can only be used when ncurses terminal is active since we use its call history matrix for when to record
 	if (opts->use_ncurses_terminal == 1 && opts->dmr_stereo_wav == 1 && opts->dmr_stereo == 1 && state->currentslot == 1)
 	{
-		//write wav to per call on right channel Slot 2
-		writeSynthesizedVoiceR (opts, state);
+    if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
+    {
+	    //write wav to per call on right channel Slot 2
+	    writeSynthesizedVoiceR (opts, state);
+    }
 	}
 
 

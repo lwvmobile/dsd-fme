@@ -180,8 +180,11 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->data_p_head[0] = 0;
   state->data_p_head[1] = 0;
 
-  // state->dmr_so   = 0; //let TLC or Voice Burst zero or set this instead?
+  // state->dmr_so   = 0; //let TLC or Voice LC/Burst zero or set this instead?
   // state->dmr_soR  = 0;
+
+  state->dmr_encL = 0;
+  state->dmr_encR = 0;
 
 }
 
@@ -292,6 +295,8 @@ initOpts (dsd_opts * opts)
 
   opts->lrrp_file_output = 0;
 
+  opts->dmr_mute_encL = 1;
+  opts->dmr_mute_encR = 1;
 
 }
 
@@ -516,6 +521,9 @@ initState (dsd_state * state)
   state->data_p_head[1] = 0;
 
   state->menuopen = 0; //is the ncurses menu open, if so, don't process frame sync
+
+  state->dmr_encL = 0;
+  state->dmr_encR = 0;
 
 #ifdef TRACE_DSD
   state->debug_sample_index = 0;
@@ -918,6 +926,13 @@ main (int argc, char **argv)
           if (state.K > 256)
           {
            state.K = 256;
+          }
+          opts.dmr_mute_encL = 0;
+          opts.dmr_mute_encR = 0;
+          if (state.K == 1)
+          {
+            opts.dmr_mute_encL = 1;
+            opts.dmr_mute_encR = 1;
           }
           break;
 

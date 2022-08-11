@@ -176,7 +176,7 @@ char *choicesc[] = {
       "Return",
       "Save Decoded Audio WAV (NO DMR STEREO!)",
       "Save Signal to Symbol Capture Bin",
-      "Toggle Muting ENC P25 Traffic    ",
+      "Toggle Muting Enrypted Traffic    ",
       "Per Call WAV REC (DMR Stereo/MS)",
       "Setup and Start RTL Input ",
       "Pulse Audio 48kHz Output",
@@ -451,6 +451,19 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
             opts->unmute_encrypted_p25 = 1;
           }
           else opts->unmute_encrypted_p25 = 0;
+
+          if (opts->dmr_mute_encL == 0)
+          {
+            opts->dmr_mute_encL = 1;
+          }
+          else opts->dmr_mute_encL = 0;
+
+          if (opts->dmr_mute_encR == 0)
+          {
+            opts->dmr_mute_encR = 1;
+          }
+          else opts->dmr_mute_encR = 0;
+
         }
         if (choicec == 5)
         {
@@ -806,9 +819,16 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       refresh();
       wscanw(entry_win, "%d", &state->K);
       noecho();
+      opts->dmr_mute_encL = 0;
+      opts->dmr_mute_encR = 0;
       if (state->K > 255)
       {
         state->K = 255;
+      }
+      if (state->K == 0)
+      {
+        opts->dmr_mute_encL = 1;
+        opts->dmr_mute_encR = 1;
       }
       break;
     }

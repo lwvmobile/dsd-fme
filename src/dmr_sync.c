@@ -119,7 +119,6 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
       k++;
     }
 
-    //state->dmr_34_rate_sf[slot][i+48] = TrellisReturn[i+2]; //plus two to skip the first two bytes
     state->dmr_34_rate_sf[slot][i+(blocks*16)] = TrellisReturn[i+2]; //plus two to skip the first two bytes
   }
 
@@ -153,7 +152,6 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
     fprintf (stderr, "%s ", KMAG);
 
     //go to number of octets minus padding and crc, confirmed data may need a second rule to skip Serial Numbers and Block CRCs
-    //for (short i = 12; i < ( ((blocks+1)*12) - (padding+4) ); i++)
     for (short i = 12; i < ( ((blocks+1)*16) - (padding+4) ); i++)
     {
 
@@ -337,7 +335,6 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
     state->dmr_12_rate_sf[slot][i] = 0;
   }
 
-  //Placeholder
   uint32_t i, j, k;
   uint32_t CRCExtracted     = 0;
   uint32_t CRCComputed      = 0;
@@ -608,7 +605,7 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
 
 void Process1Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
 {
-  //Placeholder
+
   uint32_t i, j, k;
   uint32_t CRCExtracted     = 0;
   uint32_t CRCComputed      = 0;
@@ -711,7 +708,7 @@ void Process1Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t
 
 void ProcessMBChData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
 {
-  //Placeholder
+
   uint32_t i, j, k;
   uint32_t CRCExtracted     = 0;
   uint32_t CRCComputed      = 0;
@@ -803,7 +800,7 @@ void ProcessMBChData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
 
 void ProcessMBCData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
 {
-  //Placeholder
+
   uint32_t i, j, k;
   uint32_t CRCExtracted     = 0;
   uint32_t CRCComputed      = 0;
@@ -901,7 +898,7 @@ void ProcessMBCData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8
 //This data shouldn't be active, but come here to dump in case of data burst type decoding failure
 void ProcessReservedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
 {
-  //Placeholder
+
   uint32_t i, j, k;
   uint32_t CRCExtracted     = 0;
   uint32_t CRCComputed      = 0;
@@ -1147,7 +1144,7 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
       DmrDataByte[i] = DmrDataByte[i] | (DmrDataBit[k] & 0x01);
       k++;
     }
-    //state->dmr_12_rate_sf[slot][i+48] = DmrDataByte[i]; //copy byte to right hand side of shift frame
+
     //start loading new superframe at appropriate block count determined by the data header
     state->dmr_12_rate_sf[slot][i+(blocks*12)] = DmrDataByte[i]; //if 3 blocks, then start at position 36; 4 blocks at 48, 5 at
   }
@@ -1200,8 +1197,6 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
   int message_legnth = 0;
   if ( (state->dmr_12_rate_sf[slot][0] & 0x7F) == 0x45) //Start LRRP now
   {
-    //test opening a file with fopen and dumping the LRRP data into it.
-    //just going to use the same code from EDACS-FM
 
     //find user home directory and append directory and filename.
     FILE * pFile; //put this outside of the if statement?
@@ -1395,7 +1390,7 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
 
 void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
 {
-  //Placeholder
+
   uint32_t i, j, k;
   uint32_t CRCExtracted     = 0;
   uint32_t CRCComputed      = 0;
@@ -1463,11 +1458,9 @@ void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t 
   }
 
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
-  //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
   CRCExtracted = CRCExtracted ^ 0xA5A5;
 
   /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
   CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0xA5A5);
 
   //test
@@ -1693,7 +1686,7 @@ void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t 
 
 void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
 {
-  //Placeholder
+
   uint32_t i, j, k;
   uint32_t CRCExtracted     = 0;
   uint32_t CRCComputed      = 0;
@@ -1705,11 +1698,6 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
   TimeSlotVoiceSuperFrame_t * TSVoiceSupFrame = NULL;
   uint8_t  R[3];
   uint8_t  BPTCReservedBits = 0;
-
-  /* Remove warning compiler */
-  //UNUSED_VARIABLE(syncdata[0]);
-  //UNUSED_VARIABLE(SlotType[0]);
-  //UNUSED_VARIABLE(BPTCReservedBits);
 
   /* Check the current time slot */
   if(state->currentslot == 0)
@@ -1758,11 +1746,9 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
   }
 
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
-  //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
   CRCExtracted = CRCExtracted ^ 0x6969;
 
   /* Check/correct the full link control data and compute the Reed-Solomon (12,9) CRC */
-  //CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x969696);
   CRCCorrect = ComputeAndCorrectFullLinkControlCrc(DmrDataByte, &CRCComputed, 0x6969);
 
   /* Convert corrected 12 bytes into 96 bits */
@@ -1864,11 +1850,6 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
   uint8_t  R[3];
   uint8_t  BPTCReservedBits = 0;
 
-  /* Remove warning compiler */
-  //UNUSED_VARIABLE(syncdata[0]);
-  //UNUSED_VARIABLE(SlotType[0]);
-  //UNUSED_VARIABLE(BPTCReservedBits);
-
   /* Check the current time slot */
   if(state->currentslot == 0)
   {
@@ -1950,7 +1931,7 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
 
   /* Store the Group address (Talk Group) */
   TSVoiceSupFrame->FullLC.GroupAddress = (unsigned int)ConvertBitIntoBytes(&DmrDataBit[24], 24);
-  //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+
   /* Store the Source address */
   TSVoiceSupFrame->FullLC.SourceAddress = (unsigned int)ConvertBitIntoBytes(&DmrDataBit[48], 24);
   //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
@@ -1998,13 +1979,6 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
   fprintf (stderr, "%s \n", KGRN);
   fprintf (stderr, " Slot %d ", state->currentslot+1);
   fprintf(stderr, "  TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-  //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
-  //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-  //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
-  //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-
-  //HERE HERE do some work to get this Emergency and BP modes to display in ncurses
-  //state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
 
   if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x80) fprintf(stderr, "Emergency ");
   if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x40)
@@ -2104,12 +2078,6 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
   uint8_t  R[3];
   uint8_t  BPTCReservedBits = 0;
 
-  /* Remove warning compiler */
-  //UNUSED_VARIABLE(opts);
-  //UNUSED_VARIABLE(syncdata[0]);
-  //UNUSED_VARIABLE(SlotType[0]);
-  //UNUSED_VARIABLE(BPTCReservedBits);
-
   /* Check the current time slot */
   if(state->currentslot == 0)
   {
@@ -2191,12 +2159,10 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
 
   /* Store the Group address (Talk Group) */
   TSVoiceSupFrame->FullLC.GroupAddress = (unsigned int)ConvertBitIntoBytes(&DmrDataBit[24], 24);
-  //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+
   /* Store the Source address */
   TSVoiceSupFrame->FullLC.SourceAddress = (unsigned int)ConvertBitIntoBytes(&DmrDataBit[48], 24);
-  //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
-  //TSVoiceSupFrame->FullLC.LeftOvers = (unsigned int)ConvertBitIntoBytes(&DmrDataBit[64], 8);
-  //fprintf (stderr, "\nBPTC Left Overs = %02X \n", TSVoiceSupFrame->FullLC.LeftOvers);
+
   if((IrrecoverableErrors == 0))// && CRCCorrect)
   {
     /* CRC is correct so consider the Full LC data as correct/valid */
@@ -2208,11 +2174,7 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
     TSVoiceSupFrame->FullLC.DataValidity = 0;
   }
 
-  /* Print the destination ID (TG) and the source ID */
-  //fprintf(stderr, "\n  TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-  //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
-
-  //reset alg, keys, mi during a TLC call termination EVENT so we aren't stuck on an old value, PI header will proceed a new call if BP isn't used
+  //reset alg, keys, mi during a TLC call termination EVENT so we aren't stuck on an old value
   if (state->currentslot == 0)
   {
     state->payload_algid = 0;
@@ -2230,7 +2192,6 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
 
   }
 
-
   //tlc
   if((IrrecoverableErrors == 0) && CRCCorrect) //amateur DMR seems to only set radio ID up here I think, figure out best way to set without messing up other DMR types
   {
@@ -2241,39 +2202,18 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
     fprintf (stderr, "%s ", KNRM);
     //fprintf(stderr, "(CRC OK )  ");
     if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode == 0) //other opcodes may convey callsigns, names, etc.
-    /*
-    if ( TSVoiceSupFrame->FullLC.FullLinkControlOpcode != 0xAF   ||
-         TSVoiceSupFrame->FullLC.FullLinkControlOpcode != 0x04   ||
-         TSVoiceSupFrame->FullLC.FullLinkControlOpcode != 0x05   ||
-         TSVoiceSupFrame->FullLC.FullLinkControlOpcode != 0x06   ||
-         TSVoiceSupFrame->FullLC.FullLinkControlOpcode != 0x07   ) //work out why amateur sets sourceid on other codes, but pro only does on whatever
-    */
     {
       if (state->currentslot == 0)
       {
-        //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-        //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
-        //state->dmr_color_code = state->color_code;
         state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
         state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
       }
       if (state->currentslot == 1)
       {
-        //state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
-        //state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
-        //state->dmr_color_code = state->color_code;
         state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
         state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
       }
-
-
     }
-    //only set on good CRC value or corrected values
-    //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-    //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
-    //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-    //state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
-    //state->dmr_color_code = state->color_code;
   }
   else if(IrrecoverableErrors == 0)
   {
@@ -2284,37 +2224,19 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
     fprintf(stderr, "RAS (FEC OK/CRC ERR)"); //tlc
     fprintf (stderr, "%s ", KNRM);
     if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode == 0) //other opcodes may convey callsigns, names, etc.
-    /*
-    if ( TSVoiceSupFrame->FullLC.FullLinkControlOpcode != 0xAF   ||
-         TSVoiceSupFrame->FullLC.FullLinkControlOpcode != 0x04   ||
-         TSVoiceSupFrame->FullLC.FullLinkControlOpcode != 0x05   ||
-         TSVoiceSupFrame->FullLC.FullLinkControlOpcode != 0x06   ||
-         TSVoiceSupFrame->FullLC.FullLinkControlOpcode != 0x07   ) //work out why amateur sets sourceid on other codes, but pro only does on whatever
-    */
+
     {
       if (state->currentslot == 0)
       {
-        //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-        //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
-        //state->dmr_color_code = state->color_code;
         state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
         state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
       }
       if (state->currentslot == 1)
       {
-        //state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
-        //state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
-        //state->dmr_color_code = state->color_code;
         state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
         state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
       }
     }
-    //only set on good CRC value or corrected values
-    //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-    //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
-    //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-    //state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
-    //state->dmr_color_code = state->color_code;
   }
   else {} //fprintf(stderr, "\n(FEC FAIL/CRC ERR)");
 
@@ -2438,7 +2360,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   CRCExtracted |= (LC_DataBit[74] & 1) << 2;
   CRCExtracted |= (LC_DataBit[75] & 1) << 1;
   CRCExtracted |= (LC_DataBit[76] & 1) << 0;
-  //fprintf (stderr, "\nLCDB = 0x%X \n", LC_DataBit);
+
   /* Compute the 5 bit CRC */
   CRCComputed = ComputeCrc5Bit(LC_DataBit);
 
@@ -2463,7 +2385,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
 
   /* Store the Group address (Talk Group) */
   TSVoiceSupFrame->FullLC.GroupAddress = (unsigned int)ConvertBitIntoBytes(&LC_DataBit[24], 24);
-  //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+
   /* Store the Source address */
   TSVoiceSupFrame->FullLC.SourceAddress = (unsigned int)ConvertBitIntoBytes(&LC_DataBit[48], 24);
   //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
@@ -2575,22 +2497,11 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
         state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
         state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
       }
-      //state->dmr_color_code = state->color_code;
-      //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-      //state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
     }
-    //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-    //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
-    //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-    //state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
-    //state->dmr_color_code = state->color_code;
   }
   else if(IrrecoverableErrors == 0)
   {
-    //fprintf(stderr, "  TG=%u  Src=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-    //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
-    //fprintf(stderr, "RAS (FEC OK/CRC ERR)"); //voice burst
-    //or set if was corrected
+
     if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode < 0x04 || TSVoiceSupFrame->FullLC.FullLinkControlOpcode > 0x08) //7, or 8?
     {
       fprintf (stderr, "%s", KGRN);
@@ -2610,7 +2521,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
         state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
         //state->dmr_color_code = state->color_code;
         state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-        state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+        // state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
       }
       if (state->currentslot == 1)
       {
@@ -2618,17 +2529,9 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
         state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
         //state->dmr_color_code = state->color_code;
         state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
-        state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+        // state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
       }
-      //state->dmr_color_code = state->color_code;
-      //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-      //state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
     }
-    //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-    //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
-    //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-    //state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
-    //state->dmr_color_code = state->color_code;
   }
   else {} //fprintf(stderr, "\n(FEC FAIL/CRC ERR)");
 

@@ -340,11 +340,13 @@ typedef struct
   int dPMR_next_part_of_superframe;
   int inverted_dpmr;
   int frame_dpmr;
-  //
+
   short int dmr_stereo;
   short int lrrp_file_output;
 
-  //
+  short int dmr_mute_encL;
+  short int dmr_mute_encR;
+
   int frame_ysf;
   int inverted_ysf;
   short int aggressive_framesync;
@@ -561,7 +563,9 @@ typedef struct
   unsigned int dmrburstR;
   unsigned long long int R;
   // int block_count;
-
+  short int dmr_encL;
+  short int dmr_encR;
+  
   //dstar header for ncurses
   unsigned char dstarradioheader[41];
 
