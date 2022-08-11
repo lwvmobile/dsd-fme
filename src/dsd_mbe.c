@@ -283,7 +283,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         }
       }
 
-      //if using ??? dPMR? D-STAR? X2-TDMA?
+      //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
       if (opts->dmr_stereo == 0)
       {
         mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
@@ -291,7 +291,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         {
           PrintAMBEData (opts, state, ambe_d);
         }
-        if (opts->mbe_out_f != NULL)
+        //only save MBE files if not enc or unmuted, THIS does not seem to work for some reason
+        if (opts->mbe_out_f != NULL && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
         {
           saveAmbe2450Data (opts, state, ambe_d);
         }
@@ -346,8 +347,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
   }
 
-  //if using ??? dPMR? D-STAR? X2-TDMA?
-  if (opts->dmr_stereo == 0)
+  //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
+  if (opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
   {
     state->debug_audio_errors += state->errs2;
     processAudio (opts, state);
@@ -357,8 +358,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
   }
 
-  //if using ??? dPMR? D-STAR? X2-TDMA?
-  if (opts->wav_out_f != NULL && opts->dmr_stereo == 0)
+  //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
+  if (opts->wav_out_f != NULL && opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0))
   {
     writeSynthesizedVoice (opts, state);
   }

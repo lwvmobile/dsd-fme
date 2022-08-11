@@ -1294,7 +1294,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       rdR = state->lastsrcR;
     }
     //move to seperate P25 version plz
-    opts->p25enc = 0;
+    //opts->p25enc = 0;
   }
 
   //DMR TG
@@ -1311,7 +1311,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       tgR = state->lasttgR;
 
     }
-    opts->p25enc = 0;
+    //opts->p25enc = 0;
 
   }
 

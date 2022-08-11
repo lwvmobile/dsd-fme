@@ -786,9 +786,18 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
       state->nxdn_last_rid = SourceUnitID & 0xFFFF;   //only grab if CRC is okay
       state->nxdn_last_tg = (DestinationID & 0xFFFF);
       state->nxdn_key = (KeyID & 0xFF);
-      state->nxdn_cipher_type = CipherType;
+      state->nxdn_cipher_type = CipherType; //will this set to zero if no enc?
     }
     //fprintf(stderr, "(CRC OK) ");
+  }
+  //set enc bit here so we can tell playSynthesizedVoice whether or not to play enc traffic
+  if (state->nxdn_cipher_type != 0)
+  {
+    state->dmr_encL = 1;
+  }
+  if (state->nxdn_cipher_type == 0)
+  {
+    state->dmr_encL = 0;
   }
   //fprintf(stderr, "   (OK)   - ");
   else
