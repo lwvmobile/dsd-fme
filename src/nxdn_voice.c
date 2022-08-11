@@ -1,9 +1,6 @@
 #include "dsd.h"
 #include "nxdn_const.h"
 
-//don't know why this doesn't work right in LEH, need to figure that out for him
-//works just fien when ripped from his and into mine
-//must be some random thing, I'll look at his when I have a chance
 void processNXDNVoice (dsd_opts * opts, dsd_state * state)
 {
   int i, j, dibit;
@@ -143,11 +140,12 @@ void processNXDNVoice (dsd_opts * opts, dsd_state * state)
       y++;
       z++;
     }
-    if (opts->payload == 1 && opts->dmr_stereo == 1)
+    if (opts->payload == 1)
     {
-      fprintf(stderr, "\n");
+      //fprintf(stderr, "\n");
     }
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
+    state->p25vc++; //increment counter by one here?
 
   } /* End for (j = 0; j < 4; j++) */
 
@@ -162,5 +160,6 @@ void processNXDNVoice (dsd_opts * opts, dsd_state * state)
   {
     /* Reset all CRCs of the SACCH */
     for(i = 0; i < 4; i++) state->NxdnSacchRawPart[i].CrcIsGood = 0;
+
   }
 } /* End processNXDNVoice() */

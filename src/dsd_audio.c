@@ -22,6 +22,20 @@ pa_sample_spec tt;
 pa_sample_spec zz;
 pa_sample_spec cc;
 
+void closePulseOutput (dsd_opts * opts)
+{
+  pa_simple_free (opts->pulse_digi_dev_out);
+  if (opts->dmr_stereo == 1)
+  {
+    pa_simple_free (opts->pulse_digi_dev_outR);
+  }
+}
+
+void closePulseInput (dsd_opts * opts)
+{
+  pa_simple_free (opts->pulse_digi_dev_in);
+}
+
 void openPulseOutput(dsd_opts * opts)
 {
 
@@ -35,7 +49,7 @@ void openPulseOutput(dsd_opts * opts)
 
   if (opts->monitor_input_audio == 1)
   {
-    opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, "Raw Audio Out", &ss, NULL, NULL, NULL);
+    opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME3", PA_STREAM_PLAYBACK, NULL, "Raw Audio Out", &ss, NULL, NULL, NULL);
   }
 
 //tt
@@ -47,10 +61,11 @@ void openPulseOutput(dsd_opts * opts)
     opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &tt, left, NULL, NULL);
 
   }
+
   if (opts->dmr_stereo == 1)
   {
-    opts->pulse_digi_dev_out  = pa_simple_new(NULL, "DSD-FME1", PA_STREAM_PLAYBACK, NULL, "DMR/MOTOTRBO SLOT 1", &tt, left, NULL, NULL);
-    opts->pulse_digi_dev_outR = pa_simple_new(NULL, "DSD-FME2", PA_STREAM_PLAYBACK, NULL, "DMR/MOTOTRBO SLOT 2", &tt, right, NULL, NULL);
+    opts->pulse_digi_dev_out  = pa_simple_new(NULL, "DSD-FME1", PA_STREAM_PLAYBACK, NULL, "DMR SLOT 1", &tt, left, NULL, NULL);
+    opts->pulse_digi_dev_outR = pa_simple_new(NULL, "DSD-FME2", PA_STREAM_PLAYBACK, NULL, "DMR SLOT 2", &tt, right, NULL, NULL);
   }
 
 }
@@ -348,8 +363,7 @@ processAudioR (dsd_opts * opts, dsd_state * state)
     }
 }
 
-void
-writeSynthesizedVoice (dsd_opts * opts, dsd_state * state)
+void writeSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 {
   int n;
   short aout_buf[160];
@@ -377,6 +391,50 @@ writeSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 
 }
 
+void writeSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
+{
+  int n;
+  short aout_buf[160];
+  short *aout_buf_p;
+
+  aout_buf_p = aout_buf;
+  state->audio_out_temp_buf_pR = state->audio_out_temp_bufR;
+
+  for (n = 0; n < 160; n++)
+  {
+    if (*state->audio_out_temp_buf_pR > (float) 32767)
+      {
+        *state->audio_out_temp_buf_pR = (float) 32767;
+      }
+    else if (*state->audio_out_temp_buf_pR < (float) -32768)
+      {
+        *state->audio_out_temp_buf_pR = (float) -32768;
+      }
+      *aout_buf_p = (short) *state->audio_out_temp_buf_pR;
+      aout_buf_p++;
+      state->audio_out_temp_buf_pR++;
+  }
+
+  sf_write_short(opts->wav_out_fR, aout_buf, 160);
+
+}
+
+void writeRawSample (dsd_opts * opts, dsd_state * state, short sample)
+{
+  int n;
+  short aout_buf[160];
+  short *aout_buf_p;
+
+  //sf_write_short(opts->wav_out_raw, aout_buf, 160);
+
+  //only write if actual audio, truncate silence
+  if (sample != 0)
+  {
+    sf_write_short(opts->wav_out_raw, &sample, 2); //2 to match pulseaudio input sample read
+  }
+
+}
+
 void
 playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 {
@@ -395,22 +453,6 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
       pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
       state->audio_out_idx = 0;
     }
-
-      //most likely don't need this seperation anymore with L and R, just push it out without any condional checks
-       /*
-      if(state->currentslot == 0 && opts->audio_in_type != 3 && opts->dmr_stereo == 1)
-      {
-        pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
-        state->audio_out_idx = 0;
-      }
-
-      //if input type is rtl dongle or no dmr stereo...do I need it this way still?
-      if (opts->audio_in_type == 3 || opts->dmr_stereo == 0)
-      {
-        pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
-        state->audio_out_idx = 0;
-      }
-      */
 
 
   }
@@ -443,14 +485,6 @@ playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
       pa_simple_write(opts->pulse_digi_dev_outR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); //Yay! It works.
       state->audio_out_idxR = 0;
     }
-      /*
-      //most likely don't need this seperation anymore with L and R, just push it out without any condional checks
-      if(opts->dmr_stereo == 1) //state->currentslot == 1 && opts->audio_in_type != 3  && opts->dmr_stereo == 1
-      {
-        pa_simple_write(opts->pulse_digi_dev_outR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); //Yay! It works.
-        state->audio_out_idxR = 0;
-      }
-      */
 
   }
 
@@ -467,17 +501,13 @@ playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
 void
 openAudioOutDevice (dsd_opts * opts, int speed)
 {
+  //converted to handle any calls to use portaudio
 	if(strncmp(opts->audio_out_dev, "pa:", 3) == 0)
 	{
-		opts->audio_out_type = 2;
-#ifdef USE_PORTAUDIO
-		int err = getPADevice(opts->audio_out_dev, 0, &opts->audio_out_pa_stream);
-		if(err != 0)
-			exit(err);
-#else
-		fprintf (stderr,"Error, Portaudio support not compiled.\n");
-		exit(1);
-#endif
+		opts->audio_out_type = 0;
+    fprintf (stderr,"Error, Port Audio is not supported by FME!\n");
+    fprintf (stderr,"Using Pulse Audio Output Stream Instead! \n");
+    sprintf (opts->audio_out_dev, "pulse");
 	}
   if(strncmp(opts->audio_in_dev, "pulse", 5) == 0)
   {
@@ -522,25 +552,13 @@ openAudioInDevice (dsd_opts * opts)
 			exit(1); //had this one disabled, re-enabling it now
 		}
 	}
+  //converted to handle any calls to use portaudio
 	else if(strncmp(opts->audio_in_dev, "pa:", 2) == 0)
 	{
-		opts->audio_in_type = 2;
-#ifdef USE_PORTAUDIO
-		int err = getPADevice(opts->audio_in_dev, 1, &opts->audio_in_pa_stream);
-		if(err != 0)
-			exit(err);
-
-		if (opts->split == 0)
-		{
-			int err = getPADevice(opts->audio_in_dev, 0, &opts->audio_out_pa_stream);
-			if(err != 0)
-				exit(err);
-		}
-
-#else
-		fprintf (stderr,"Error, Portaudio support not compiled.\n");
-		exit(1);
-#endif
+		opts->audio_in_type = 0;
+    fprintf (stderr,"Error, Port Audio is not supported by FME!\n");
+    fprintf (stderr,"Using Pulse Audio Input Stream Instead! \n");
+    sprintf (opts->audio_in_dev, "pulse");
 	}
   else if(strncmp(opts->audio_in_dev, "rtl", 3) == 0)
   {
@@ -550,28 +568,32 @@ openAudioInDevice (dsd_opts * opts)
   {
     opts->audio_in_type = 0;
   }
+  //convert from opening wav files to OP25 symbol capture files since opening wav files is busted
 	else
 	{
-  struct stat stat_buf;
-  if (stat(opts->audio_in_dev, &stat_buf) != 0)
+    struct stat stat_buf;
+    if (stat(opts->audio_in_dev, &stat_buf) != 0)
     {
       fprintf (stderr,"Error, couldn't open %s\n", opts->audio_in_dev);
       exit(1);
     }
-  if (S_ISREG(stat_buf.st_mode))
+    if (S_ISREG(stat_buf.st_mode))
     {
       // is this a regular file? then process with libsndfile.
       //opts->pulse_digi_rate_out = 8000; //this for wav files input?
-      opts->audio_in_type = 1;
-      opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
-      opts->audio_in_file_info->channels = 1;
-      opts->audio_in_file = sf_open(opts->audio_in_dev, SFM_READ, opts->audio_in_file_info);
+      // opts->audio_in_type = 1;
+      // opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
+      // opts->audio_in_file_info->channels = 1;
+      // opts->audio_in_file = sf_open(opts->audio_in_dev, SFM_READ, opts->audio_in_file_info);
+      //
+      // if(opts->audio_in_file == NULL)
+      //   {
+      //     fprintf (stderr,"Error, couldn't open file %s\n", opts->audio_in_dev);
+      //     exit(1);
+      //   }
 
-      if(opts->audio_in_file == NULL)
-        {
-          fprintf (stderr,"Error, couldn't open file %s\n", opts->audio_in_dev);
-          exit(1);
-        }
+      opts->symbolfile = fopen(opts->audio_in_dev, "r");
+      opts->audio_in_type = 4; //symbol capture bin files
     }
   else
     {

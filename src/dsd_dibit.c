@@ -376,6 +376,7 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
       *state->dmr_payload_p = dibit;
       state->dmr_payload_p++;
       //dmr buffer end
+
       return dibit;
     }
 }
@@ -385,6 +386,19 @@ get_dibit_and_analog_signal (dsd_opts* opts, dsd_state* state, int* out_analog_s
 {
   int symbol;
   int dibit;
+
+  // if (opts->audio_in_type == 4 && opts->frame_provoice == 1) //
+  // {
+  //   //skip processing symbol as dibit and use it as is
+  //   if (state->symbolc == 0)
+  //   {
+  //     symbol = 1;
+  //   }
+  //   if (state->symbolc == 1)
+  //   {
+  //     symbol = 3;
+  //   }
+  // }
 
 #ifdef TRACE_DSD
   unsigned int l, r;
@@ -402,7 +416,7 @@ get_dibit_and_analog_signal (dsd_opts* opts, dsd_state* state, int* out_analog_s
   r = state->debug_sample_index;
 #endif
 
-  //
+
   state->sbuf[state->sidx] = symbol;
 
   if (out_analog_signal != NULL)
@@ -413,6 +427,21 @@ get_dibit_and_analog_signal (dsd_opts* opts, dsd_state* state, int* out_analog_s
   use_symbol (opts, state, symbol);
 
   dibit = digitize (opts, state, symbol);
+
+  //don't think this is quite right still, but should work, don't know why it doesn't
+  if (opts->audio_in_type == 4 && opts->frame_provoice == 1) //
+  {
+    //skip processing symbol as dibit and use it as is
+    dibit = state->symbolc;
+  }
+
+  //symbol/dibit file capture/writing
+  //need this bit here to capture dibits once sync starts
+  if (opts->symbol_out == 1)
+  {
+    //fprintf (stderr, "%d", dibit);
+    fputc (dibit, opts->symbol_out_f);
+  }
 
 #ifdef TRACE_DSD
   {

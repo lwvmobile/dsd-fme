@@ -119,8 +119,17 @@ process_IMBE (dsd_opts* opts, dsd_state* state, int* status_count)
 #ifdef TRACE_DSD
   state->debug_prefix = '\0';
 #endif
+  //check for enc, then always run below step and mute at the point of playing audio so we can still dump the frames
+  if (state->payload_algid != 0x80)
+  {
+    state->dmr_encL = 1;
+  }
+  if (state->payload_algid == 0x80)
+  {
+    state->dmr_encL = 0;
+  }
 
-  if (state->p25kid == 0 || opts->unmute_encrypted_p25 == 1)
+  if (1 == 1) //state->p25kid == 0 || opts->unmute_encrypted_p25 == 1
     {
       {
           // Check for a non-standard c0 transmitted

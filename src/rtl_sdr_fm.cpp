@@ -954,8 +954,10 @@ static void *socket_thread_fn(void *arg) {
 			new_freq = chars_to_int(buffer);
 			dongle.freq = new_freq; //
 			//opts->rtlsdr_center_freq = new_freq; //or dongle.freq, this should update the freq displayed in ncurses terminal hopefully and not do anything naughty
+
 			optimal_settings(new_freq, demod.rate_in);
 			rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+			//verbose_set_frequency (dongle.dev, new_freq);
 			//fprintf (stderr, "Tuning to: %d [Hz] (central freq: %d [Hz])\n", new_freq, new_freq + freq_offset);
 			fprintf (stderr, "Tuning to: %d [Hz] \n", new_freq);
 		}
@@ -1042,8 +1044,8 @@ static void *socket_thread_fn(void *arg) {
 
 void rtlsdr_sighandler()
 {
-	fprintf (stderr, "Signal caught, exiting!\n");
-	fprintf (stderr, "Press CTRL + C again to close. Thanks. \n"); //Kindly remind user to double tap CTRL + C
+	//fprintf (stderr, "Signal caught, exiting!\n");
+	//fprintf (stderr, "Press CTRL + C again to close. Thanks. \n"); //Kindly remind user to double tap CTRL + C
 
 	rtlsdr_cancel_async(dongle.dev);
 	//cleanup_rtlsdr_stream(); //thank the wraith for this one...if it works...didn't work
@@ -1070,6 +1072,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
 
 	if (opts->rtlsdr_ppm_error > 0 || opts->rtlsdr_ppm_error < 0) { //this way will adjust PPM based on negative values as well
 		dongle.ppm_error = opts->rtlsdr_ppm_error;
+		fprintf (stderr, "Setting RTL PPM Error Set to %d\n", opts->rtlsdr_ppm_error);
 	}
 
 	if (opts->audio_in_type == 3) {
@@ -1152,6 +1155,8 @@ void cleanup_rtlsdr_stream()
   safe_cond_signal(&output.ready, &output.ready_m);
   safe_cond_signal(&controller.hop, &controller.hop_m);
   pthread_join(controller.thread, NULL);
+	//add socket thread
+	//pthread_join(socket_freq, NULL);
 
   //dongle_cleanup(&dongle);
   demod_cleanup(&demod);
@@ -1162,16 +1167,29 @@ void cleanup_rtlsdr_stream()
 
 }
 
-void get_rtlsdr_sample(int16_t *sample)
+//void get_rtlsdr_sample(int16_t *sample)
+void get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 {
 	if (output.queue.empty())
 	{
+		if (opts->use_ncurses_terminal == 1)
+		{
+			//ncursesPrinter(opts, state);
+			//printw ("\n\n\n HELP I'M LOCKED!\n");
+		}
 		safe_cond_wait(&output.ready, &output.ready_m);
+		//goto END;
 	}
+
 	pthread_rwlock_wrlock(&output.rw);
 	//*sample = output.queue.front();
 
 	*sample = output.queue.front() * volume_multiplier; //try multiplying by numbers here for 'gain'
 	output.queue.pop();
 	pthread_rwlock_unlock(&output.rw);
+	// END:
+	// if (1 == 2)
+	// {
+	// 	fprintf (stderr, "This is a dumb thing to fix");
+	// }
 }

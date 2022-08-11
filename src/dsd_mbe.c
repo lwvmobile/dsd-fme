@@ -17,10 +17,6 @@
 
 #include "dsd.h"
 
-//
-//C
-//
-
 void
 playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
 {
@@ -117,8 +113,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   };
   //
 
-
-  int i;
+	int i;
   char imbe_d[88];
   char ambe_d[49];
   char ambe_d_str[50];
@@ -141,20 +136,44 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     {
       //  0 +P25p1
       //  1 -P25p1
+			state->errs = mbe_eccImbe7200x4400C0 (imbe_fr);
+			state->errs2 = state->errs;
+			mbe_demodulateImbe7200x4400Data (imbe_fr);
+			state->errs2 += mbe_eccImbe7200x4400Data (imbe_fr, imbe_d);
 
-      mbe_processImbe7200x4400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe_fr, imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+
+			mbe_processImbe4400Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
+																imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+      //mbe_processImbe7200x4400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe_fr, imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
       if (opts->payload == 1)
       {
         PrintIMBEData (opts, state, imbe_d);
       }
+
+			//increment vc counter by one.
+			state->p25vc++;
+
       if (opts->mbe_out_f != NULL)
       {
         saveImbe4400Data (opts, state, imbe_d);
       }
     }
-  else if ((state->synctype == 14) || (state->synctype == 15))
+  else if ((state->synctype == 14) || (state->synctype == 15)) //pV Sync
     {
-      mbe_processImbe7100x4400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe7100_fr, imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+			state->errs = mbe_eccImbe7100x4400C0 (imbe7100_fr);
+			state->errs2 = state->errs;
+			mbe_demodulateImbe7100x4400Data (imbe7100_fr);
+			state->errs2 += mbe_eccImbe7100x4400Data (imbe7100_fr, imbe_d);
+			mbe_convertImbe7100to7200(imbe_d); //needs extra conversion step apparently
+
+			mbe_processImbe4400Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
+																imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+			//below line the old way of doing this
+      // mbe_processImbe7100x4400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe7100_fr, imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
       if (opts->payload == 1)
       {
         PrintIMBEData (opts, state, imbe_d);
@@ -176,6 +195,28 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         saveAmbe2450Data (opts, state, ambe_d);
       }
     }
+	else if ((state->synctype == 8) || (state->synctype == 9))
+	{
+		state->errs = mbe_eccAmbe3600x2450C0 (ambe_fr);
+		state->errs2 = state->errs;
+		mbe_demodulateAmbe3600x2450Data (ambe_fr);
+		state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+
+
+		mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
+															ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+		if (opts->payload == 1)
+		{
+			PrintAMBEData (opts, state, ambe_d);
+		}
+
+		if (opts->mbe_out_f != NULL)
+		{
+			saveAmbe2450Data (opts, state, ambe_d);
+		}
+
+	}
   else
     {
       //stereo slots and slot 0 (left slot)
@@ -186,28 +227,26 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->errs2 = state->errs;
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
         state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
-        //
-        //F
-        //
+
+				//
         if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0) //
         {
           k = BP[state->K];
           k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
-          for (short int j = 0; j < 49; j++)
+          for (short int j = 0; j < 48; j++) //49
           {
             x = ( ((k << j) & 0x800000000000) >> 47 );
             ambe_d[j] ^= x;
           }
         }
-        //
-        //D
-        //
-        mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
-                                  ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+      	mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
+                                	ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
 
         //old method for this step below
         //mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-        if (opts->payload == 1)
+        if (opts->payload == 1) // && state->R == 0 this is why slot 1 didn't primt abme, probably had it set during testing
         {
           PrintAMBEData (opts, state, ambe_d);
         }
@@ -220,24 +259,21 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->errs2R = state->errsR;
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
         state->errs2R += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
-        //
-        //G
-        //
+
+				//BP Handling, Slot 2
         if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0) //
         {
           k = BP[state->K];
           k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
-          for (short int j = 0; j < 49; j++)
+          for (short int j = 0; j < 48; j++)
           {
             x = ( ((k << j) & 0x800000000000) >> 47 );
             ambe_d[j] ^= x;
           }
         }
-        //
-        //E
-        //
-        mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
-                                  ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);
+
+				mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
+	                                ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);
 
         //old method for this step below
         //mbe_processAmbe3600x2450Framef (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR, ambe_fr, ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);
@@ -246,7 +282,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           PrintAMBEData (opts, state, ambe_d);
         }
       }
-      //if using older DMR method, dPMR, or NXDN
+
+      //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
       if (opts->dmr_stereo == 0)
       {
         mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
@@ -254,7 +291,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         {
           PrintAMBEData (opts, state, ambe_d);
         }
-        if (opts->mbe_out_f != NULL)
+        //only save MBE files if not enc or unmuted, THIS does not seem to work for some reason
+        if (opts->mbe_out_f != NULL && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
         {
           saveAmbe2450Data (opts, state, ambe_d);
         }
@@ -263,35 +301,88 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
     }
 
-  state->debug_audio_errors += state->errs2;
-  state->debug_audio_errorsR += state->errs2R;
+  //having these values here I think caused muddy audio, seems cleaner now when moved to correct area
+  // state->debug_audio_errors += state->errs2;
+  // state->debug_audio_errorsR += state->errs2R;
+
+  //quick enc check to determine whether or not to play enc traffic
+  int enc_bit = 0;
+  //end enc check
+
   if (opts->dmr_stereo == 1 && state->currentslot == 0)
   {
-    processAudio (opts, state);
-    if (opts->audio_out == 1)
+    enc_bit = (state->dmr_so >> 6) & 0x1;
+    if (enc_bit == 1)
     {
-      playSynthesizedVoice (opts, state);
+      state->dmr_encL = 1;
+    }
+    else state->dmr_encL = 0;
+    if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
+    {
+      state->debug_audio_errors += state->errs2;
+      processAudio (opts, state);
+      if (opts->audio_out == 1)
+      {
+        playSynthesizedVoice (opts, state);
+      }
     }
   }
+
   if (opts->dmr_stereo == 1 && state->currentslot == 1)
   {
-    processAudioR (opts, state);
-    if (opts->audio_out == 1)
+    enc_bit = (state->dmr_soR >> 6) & 0x1;
+    if (enc_bit == 0x1)
     {
-      playSynthesizedVoiceR (opts, state);
+      state->dmr_encR = 1;
+    }
+    else state->dmr_encR = 0;
+    if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
+    {
+      state->debug_audio_errorsR += state->errs2R;
+      processAudioR (opts, state);
+      if (opts->audio_out == 1)
+      {
+        playSynthesizedVoiceR (opts, state);
+      }
     }
   }
-  if (opts->dmr_stereo == 0)
+
+  //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
+  if (opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
   {
+    state->debug_audio_errors += state->errs2;
     processAudio (opts, state);
     if (opts->audio_out == 1)
     {
       playSynthesizedVoice (opts, state);
     }
   }
-  if (opts->wav_out_f != NULL && opts->dmr_stereo == 0)
+
+  //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
+  if (opts->wav_out_f != NULL && opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0))
   {
     writeSynthesizedVoice (opts, state);
   }
+
+	//per call can only be used when ncurses terminal is active since we use its call history matrix for when to record
+	if (opts->use_ncurses_terminal == 1 && opts->dmr_stereo_wav == 1 && opts->dmr_stereo == 1 && state->currentslot == 0)
+	{
+    if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
+    {
+	    //write wav to per call on left channel Slot 1
+	    writeSynthesizedVoice (opts, state);
+    }
+  }
+
+	//per call can only be used when ncurses terminal is active since we use its call history matrix for when to record
+	if (opts->use_ncurses_terminal == 1 && opts->dmr_stereo_wav == 1 && opts->dmr_stereo == 1 && state->currentslot == 1)
+	{
+    if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
+    {
+	    //write wav to per call on right channel Slot 2
+	    writeSynthesizedVoiceR (opts, state);
+    }
+	}
+
 
 }

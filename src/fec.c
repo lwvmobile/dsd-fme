@@ -1224,10 +1224,11 @@ void Golay_24_12_encode(unsigned char *origBits, unsigned char *encodedBits)
             encodedBits[j] += origBits[i] * Golay_24_12_m_G[24*i + j];
         }
     }
-
+    // fprintf (stderr, "\n Inside Golay - Encoded Bits = "); //disable later on
     for (i = 0; i < 24; i++)
     {
         encodedBits[i] %= 2;
+        // fprintf (stderr, "%b", encodedBits[i]); //disable later on
     }
 }
 

@@ -8,9 +8,9 @@ resetState (dsd_state * state)
 
   int i, j;
 
-  state->dibit_buf = malloc (sizeof (int) * 1000000);
-  state->dibit_buf_p = state->dibit_buf + 200;
-  memset (state->dibit_buf, 0, sizeof (int) * 200);
+  // state->dibit_buf = malloc (sizeof (int) * 1000000);
+  // state->dibit_buf_p = state->dibit_buf + 200;
+  // memset (state->dibit_buf, 0, sizeof (int) * 200);
   state->repeat = 0; //not sure yet
   //state->audio_out_buf = malloc (sizeof (short) * 1000000);
   //memset (state->audio_out_buf, 0, 100 * sizeof (short));
@@ -95,6 +95,10 @@ resetState (dsd_state * state)
   state->debug_header_critical_errors = 0;
 
   state->nxdn_last_ran = 0;
+  // state->payload_algid = 0;
+  // state->payload_algidR = 0;
+  state->dmr_encL = 0;
+  state->dmr_encR = 0;
 
   //each time you run this, it increses memory use by 4MB, massive memory leak
   //need to revisit this sometime and look into only resetting only the necesary items to let P25 switch between signals (C4FM or Wide) without needing a restart

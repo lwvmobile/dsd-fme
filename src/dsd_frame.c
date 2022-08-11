@@ -105,6 +105,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
         }
       sprintf (state->fsubtype, " VOICE        ");
       processNXDNVoice (opts, state);
+      //ProcessNXDNFrame (opts, state, 0);
       return;
     }
   else if ((state->synctype == 16) || (state->synctype == 17)) //NXDN Data
@@ -128,6 +129,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
         }
       sprintf (state->fsubtype, " DATA         ");
       processNXDNData (opts, state);
+      //ProcessNXDNFrame (opts, state, 0);
       return;
     }
   else if ((state->synctype == 6) || (state->synctype == 7))
@@ -233,6 +235,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
         if (opts->dmr_stereo == 1)
         {
           dmrMSData (opts, state);
+
         }
       }
       else
@@ -243,6 +246,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           state->err_str[0] = 0;
           sprintf (state->slot1light, " slot1 ");
           sprintf (state->slot2light, " slot2 ");
+          state->payload_miP = 0; //zero out when switching back to data sync
           processDMRdata (opts, state);
         }
         //switch dmr_stereo to 0 when handling BS data frame syncs with processDMRdata
@@ -251,6 +255,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           state->dmr_stereo = 0; //set the state to zero for handling pure data frames
           sprintf (state->slot1light, " slot1 ");
           sprintf (state->slot2light, " slot2 ");
+          state->payload_miP = 0; //zero out when switching back to data sync
           processDMRdata (opts, state);
         }
       }
@@ -312,6 +317,19 @@ processFrame (dsd_opts * opts, dsd_state * state)
       }
       //sprintf(state->fsubtype, " VOICE        ");
       processYSF(opts, state);
+      return;
+    }
+    //P25 P2
+    else if ((state->synctype == 35) || (state->synctype == 36))
+    {
+      //Do stuff
+      //fprintf(stderr, "YSF Sync! \n");
+      if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
+      {
+        //openMbeOutFile (opts, state);
+      }
+      //sprintf(state->fsubtype, " VOICE        ");
+      processP2(opts, state);
       return;
     }
     //dPMR
@@ -481,6 +499,12 @@ processFrame (dsd_opts * opts, dsd_state * state)
       state->lastp25type = 1;
       sprintf (state->fsubtype, " LDU1         ");
       state->numtdulc = 0;
+      if (state->payload_algid == 0x81)
+      {
+        fprintf (stderr, "\n");
+        //LFSRP (state); //HERE HERE best placement?
+      }
+
       processLDU1 (opts, state);
     }
   else if (strcmp (duid, "22") == 0)

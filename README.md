@@ -1,26 +1,34 @@
-# Digital Speech Decoder - Florida Man Edition 
-
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)
+# Digital Speech Decoder - Florida Man Edition
 
 This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with portions of DMR and NXDN code from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch as well. This code also borrows snippets, inspiration, and ideas from other open source works including [Boatbod OP25](https://github.com/boatbod/op25 "Boatbod OP25"), [DSDcc](https://github.com/f4exb/dsdcc "DSDcc"), [SDTRunk](https://github.com/DSheirer/sdrtrunk "SDRTrunk"), [MMDVMHost](https://github.com/g4klx/MMDVMHost "MMDVMHost"), and [LFSR](https://github.com/mattames/LFSR "LFSR"). This project wouldn't be possible without a few good people providing me plenty of sample audio files to run over and over again. Special thanks to jurek1111, KrisMar, noamlivne, racingfan360, iScottyBotty, LimaZulu and hrh17 for the many hours of wav samples submitted by them.
 
-## 2022.06.20 Update - Current Users Please Read!! ## 
-The executable for this project has been changed from `dsd` to `dsd-fme` so after pulling or cloning the lastest version, make sure to call the software with `dsd-fme`. It may also be beneficial to open your current build folder and run `sudo make uninstall` to uninstall the binary named `dsd` or to run `sudo rm  /usr/local/bin/dsd` to alleviate any confusion or from accidentally calling the older version as it will still be installed along with the new `dsd-fme` executable. The Summer Cleanup Project has also seen a lot of the files that weren't in use, or used for github workflows and cmake files removed from the project folder, slimming it down quite considerably. If you have any issue doing a git pull to get the current version, you may need to instead do a fresh clone, build, and  install in a clean folder. Check the info below about running download-and-install-nodeps.sh if needed.
+## 2022.08.12 Update ##
+A new menu system has been introduced in the NCURSES Terminal. While running DSD-FME, a user can simply use the ESC or arrow keys to open the menu and change options on the fly. This is extremely beneficial when wanting to change settings on the fly, and also to alleviate the need to use complex start up command line arguments. All of the previous command line arguments still work and will get you up faster, but if you would rather configure after start up, or change settings while running, the menu system is very helpful in that regard.
 
-## 2022.05.05 Update ## 
-I have successfully added a DMR Stereo method for listening to voice audio in both TDMA channels/slots simultaneously. This method will also allow for data decoding in the opposite slot if only one voice call is active, allowing the user not to miss any useful information in the second slot while the previous slot is in use. DMR Stereo also has vastly improved handling of MS/Simplex voice decoding and (hit or miss) MS data decoding. To call this method, see the example below. The old method of decoding DMR is also included and is stil the default for the time being, but the DMR Stereo method is working well, users are encouraged to try both methods and find the one that is suitable for them. New commands include:
-```
--T Enable DMR 'TDMA' Stereo
--F Enable Passive Frame Sync
-```
-Please note, for the time being, MBE file saving and WAV file saving are disabled while using DMR Stereo. These features are still present in the default DMR handling and other voice decoder options and will be re-integrated into DMR Stereo in the future. DMR Stereo will also need to be enabled to handle DMR MS/Simplex voice, as it was removed from the default method due to poor performance.
+[![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)](https://www.youtube.com/watch?v=TqTfAfaPJ4s "DSD-FME Update 2022.08.12")
 
-Use Passive Frame Sync if voice in both slots becomes choppy or skips. Using Passive Sync may cause wonky audio though, depends on quality of signal and bit errors present.
+To get started with the new menu system, simply launch with:
+
+`dsd-fme -N 2> log.txt`
+
+Virtually all the examples listed below can now be set up on the fly with the menu system, no need to check the help or refer to this page.
+
+This release also has provisional support for playing back OP25 capture bin files, and the creation and playback of its own capture bin files as well (most likely not OP25 compatible). Mileage may vary. Be sure to choose the decoder option required when playing a bin file back, do not rely on auto-detect. Capture Bin files can be used to reliably replay P25, DMR BS, and NXDN decodings, and can replace the need for MBE file saving in the case of DMR Stereo, allowing for a complete replay of all events on a system, rather than just voice only.
+
+Per Call wav file creation has been implemented, currently only for DMR Stereo. Complete audio decode wav is available for all other decoder types. LRRP has been revamped, working more consistently, and an option to dump LRRP data to ~/lrrp.txt in the user home directory now exists, and can be imported into open-source QGIS to provide mapping data for LRRP output. Simply open the newly included map file in QGIS and point it at your geographic region. (Be sure the lrrp.txt file exists, and has data populated in it prior to opening the map file in QGIS, otherwise, the map layer may not want to show back up!)
+
+DMR Data Header decoding has been revamped, and most data burst decoding types tightened up and code cleaned. FEC error checking now implemented on CACH and Burst types, cleaning up some erroneous slot and burst errors.
+
+## 2022.06.20 Update - Current Users Please Read!! ##
+The executable for this project has been changed from `dsd` to `dsd-fme` so after pulling or cloning the lastest version, make sure to call the software with `dsd-fme`.
+
+## 2022.05.05 Update ##
+DMR Stereo method added for listening to voice audio in both TDMA channels/slots simultaneously.
 
 ### Example Usage and Note!
 `dsd-fme` or `./dsd-fme` may need to be used in your usage, depending on if you are running it from the build folder, or if you have run make install. You will need to tweak the examples to your particular usage. Users can always check `dsd-fme -h`  for help and all command line switches to use.
 
-`dsd-fme` is all you need to run for pulse input, pulse output, and auto detect for DMR, P25P1, D-STAR, and X2-TDMA decoding. To use other decoding methods which cannot be auto detected, please use the following command line switches. Make sure to route audio into and out of DSD-FME using pavucontrol and virtual sinks as needed. 
+`dsd-fme` is all you need to run for pulse input, pulse output, and auto detect for DMR, P25P1, D-STAR, and X2-TDMA decoding. To use other decoding methods which cannot be auto detected, please use the following command line switches. Make sure to route audio into and out of DSD-FME using pavucontrol and virtual sinks as needed.
 
 ```
 -fi NXDN48
@@ -38,8 +46,6 @@ Use Passive Frame Sync if voice in both slots becomes choppy or skips. Using Pas
 and in a second terminal tab, same folder, run
 
 `tail -n 40 -f voice.log`
-
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme2.png)
 
 Then you can open up your pavucontrol "Pulse Audio Volume Control" or "Volume Control" application and route input into DSD-FME from any application and DSD-FME output to the left and right speakers respectively. (unlock the channel in the application stream and adjust left and right independently)
 
@@ -79,24 +85,27 @@ and in a second terminal tab, same folder, run
 
 `tail -n 40 -f voice.log`
 
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme2.png)
+
 ## Roadmap
 The Current list of objectives include:
 
-1. ~~Random Tinkering~~ More Random Tinkering
+1. Include P25 P2 Audio decoding with capture bin files, then RTL input and/or disc tap input.
+~~Random Tinkering~~ ~~More Random Tinkering~~
 
-2. ~~Implemented Pulse Audio~~ Remove remaining PortAudio code, ~~improved Pulse Audio for stereo output and channel/slot separation~~ and reimplement wav file saving using DMR Stereo method for stereo wav files, or seperate as per call wav files.
+2. ~~Implemented Pulse Audio~~ ~~Remove remaining PortAudio code,~~ ~~improved Pulse Audio for stereo output and channel/slot separation~~ ~~and reimplement wav file saving using DMR Stereo method for stereo wav files, or seperate as per call wav files.~~
 
-3. ~~Improve NXDN and DMR support~~ Continue to improve ~~NXDN and DMR~~ all data and voice decoding. 
+3. ~~Improve NXDN and DMR support~~ Continue to improve ~~NXDN and DMR~~ all data and voice decoding.
 
 4. ~~More Concise Printouts - Ncurses~~
 
-5. ~~Make simple to use installer script.~~ 
+5. ~~Make simple to use installer script.~~
 
 ## How to clone, check out, and build this branch
 
 ### Ubuntu 22.04/20.04/LM20/Debian Bullseye or Newer:
 
-Using the included download-and-install.sh should make for a simple and painless clone, build, and install on newer Debian/Ubuntu/Mint/Pi systems. Simply acquire or copy the script, and run it. Update: Ubuntu 22.04 and RPi Bullseye 64-bit has been tested working with the installer script and functions appropriately. 
+Using the included download-and-install.sh should make for a simple and painless clone, build, and install on newer Debian/Ubuntu/Mint/Pi systems. Simply acquire or copy the script, and run it. Update: Ubuntu 22.04 and RPi Bullseye 64-bit has been tested working with the installer script and functions appropriately.
 
 If you need all dependencies build and installed first (only on Debian/Ubuntu/Mint/Pi), run:
 
@@ -119,7 +128,7 @@ The above install.sh should now function on older system types. You can elect to
 
 ## Manual Install
 
-First, install dependency packages. This guide will assume you are using Debian/Ubuntu based distros. Check your package manager for equivalent packages if different. 
+First, install dependency packages. This guide will assume you are using Debian/Ubuntu based distros. Check your package manager for equivalent packages if different.
 
 ```
 sudo apt update
@@ -139,7 +148,7 @@ sudo apt install libpulse-dev libsndfile1-dev libfftw3-dev liblapack-dev socat l
 wget -O itpp-latest.tar.bz2 http://sourceforge.net/projects/itpp/files/latest/download?source=files
 tar xjf itpp*
 #if you can't cd into this folder, double check folder name first
-cd itpp-4.3.1 
+cd itpp-4.3.1
 mkdir build
 cd build
 cmake ..
@@ -199,7 +208,6 @@ Already have this branch, and just want to pull the latest build? You can run th
 git pull https://github.com/lwvmobile/dsd-fme pulseaudio
 ##cd into your build folder##
 cd build
-##cmake usually isn't necesary, but could be if I update the cmakelist.txt
 cmake ..
 make -j `nproc`
 sudo make install
@@ -225,5 +233,3 @@ GPG Key ID: 0x3F1D7FD0 (74EF 430D F7F2 0A48 FCE6  F630 FAA2 635D 3F1D 7FD0)
     LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
     OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
     PERFORMANCE OF THIS SOFTWARE.
-    
-   

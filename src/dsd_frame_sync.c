@@ -144,12 +144,15 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
    * 32 = DMR MS Voice
    * 33 = DMR MS Data
    * 34 = DMR RC Data
+   * 35 = +P25 P2
+   * 36 = -P25 P2
    */
 
 
   int i, j, t, o, dibit, sync, symbol, synctest_pos, lastt;
   char synctest[25];
   char synctest12[13]; //dPMR
+  char synctest10[11];
   char synctest18[19];
   char synctest32[33];
   char synctest20[21]; //YSF
@@ -268,6 +271,22 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           state->dibit_buf_p++;
           dibit = 51;               // '3'
         }
+
+      //this is needed to capture dibits and convert them to appropriate format for a symbol bin
+      if (opts->symbol_out == 1 && symbol != 0) //is 0 a valid symbol from dsd? //&& symbol != 0
+      {
+        int csymbol = 0;
+        if (dibit == 49)
+        {
+          csymbol = 1; //1
+        }
+        if (dibit == 51)
+        {
+          csymbol = 3; //3
+        }
+        //fprintf (stderr, "%d", dibit);
+        fputc (csymbol, opts->symbol_out_f);
+      }
 
       //digitize test for storing dibits in buffer correctly for dmr recovery
 
@@ -597,6 +616,52 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             }
           }
           //end YSF sync
+          //P25 P2 sync
+          strncpy(synctest20, (synctest_p - 19), 20); //double check make sure this is right
+          if(opts->frame_p25p2 == 1) //(opts->frame_ysf == 1
+          {
+            if (0 == 0) //opts->inverted_ysf == 0
+            {
+              if (strcmp(synctest20, P25P2_SYNC) == 0)
+              {
+                state->carrier = 1;
+                state->offset = synctest_pos;
+                state->max = ((state->max) + lmax) / 2;
+                state->min = ((state->min) + lmin) / 2;
+                fprintf (stderr, "\n+P25-P2 Sync");
+                opts->inverted_ysf = 0; //should we set this here?
+                state->lastsynctype = 30;
+                if ( opts->monitor_input_audio == 1)
+                {
+
+                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
+                }
+                return (35);
+              }
+            }
+          }
+          if(opts->frame_p25p2 == 1) //(opts->frame_p25p2 == 1
+          {
+            if (0 == 0) //inverted p25
+            {
+              if (strcmp(synctest20, INV_P25P2_SYNC) == 0)
+              {
+                state->carrier = 1;
+                state->offset = synctest_pos;
+                state->max = ((state->max) + lmax) / 2;
+                state->min = ((state->min) + lmin) / 2;
+                fprintf (stderr, "\n-P25-P2 Sync");
+                opts->inverted_ysf = 1; //should we set this here?
+                state->lastsynctype = 31;
+                if ( opts->monitor_input_audio == 1)
+                {
+
+                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
+                }
+                return (36);
+              }
+            }
+          }
           //dPMR sync
           strncpy(synctest,   (synctest_p - 23), 24);
           strncpy(synctest12, (synctest_p - 11), 12);
@@ -1093,6 +1158,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 }
 
           }
+
           if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
             {
               strncpy (synctest18, (synctest_p - 17), 18);

@@ -40,12 +40,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
-#ifdef SOLARIS
-#include <sys/audioio.h>
-#endif
-#if defined(BSD) && !defined(__APPLE__)
-#include <sys/soundcard.h>
-#endif
+
 #include <math.h>
 #include <mbelib.h>
 #include <sndfile.h>
@@ -54,29 +49,16 @@
 
 #include <pulse/simple.h>     //PULSE AUDIO
 #include <pulse/error.h>      //PULSE AUDIO
-//#include <pulse/pulseaudio.h> //PUlSE AUDIO
 
 #define SAMPLE_RATE_IN 48000 //48000
 #define SAMPLE_RATE_OUT 8000 //8000,
 
-#ifdef USE_PORTAUDIO
-#include "portaudio.h"
-#define PA_FRAMES_PER_BUFFER 64
-//Buffer needs to be large enough to prevent input buffer overruns while DSD is doing other struff (like outputting voice)
-//else you get skipped samples which result in incomplete/erronous decodes and a mountain of error messages.
-#define PA_LATENCY_IN 0.500
-//Buffer needs to be large enough to prevent output buffer underruns while DSD is doing other stuff (like decoding input)
-//else you get choppy audio and in 'extreme' cases errors.
-//Buffer also needs to be as small as possible so we don't have a lot of audio delay.
-#define PA_LATENCY_OUT 0.100
-#endif
-
 #ifdef USE_RTLSDR
 #include <rtl-sdr.h>
 #endif
-//look into making this not required by doing ifdef, make new c file for methods, and CLI case option for ncurses terminal
-#include <locale.h>   //move this stuff to dsd.h
-#include <ncurses.h> //move this stuff to dsd.h
+
+#include <locale.h>
+#include <ncurses.h>
 
 static volatile int exitflag;
 
@@ -152,18 +134,6 @@ typedef struct
   uint8_t  CurrentIVComputed[8];
   uint8_t  NextIVComputed[8];
 } NxdnElementsContent_t;
-
-
-enum
-{
-  MODE_UNENCRYPTED,
-  MODE_BASIC_PRIVACY,
-  MODE_ENHANCED_PRIVACY_ARC4,
-  MODE_ENHANCED_PRIVACY_AES256,
-  MODE_HYTERA_BASIC_40_BIT,
-  MODE_HYTERA_BASIC_128_BIT,
-  MODE_HYTERA_BASIC_256_BIT
-};
 
 //Read Solomon (12,9) constant
 #define RS_12_9_DATASIZE        9
@@ -281,20 +251,16 @@ typedef struct
   int audio_in_fd;
   SNDFILE *audio_in_file;
   SF_INFO *audio_in_file_info;
-#ifdef USE_PORTAUDIO
-  PaStream* audio_in_pa_stream;
-#endif
+
   uint32_t rtlsdr_center_freq;
   int rtlsdr_ppm_error; //was int, changed to float
-  int audio_in_type; // 0 for device, 1 for file, 2 for portaudio, 3 for rtlsdr
+  int audio_in_type; // 0 for device, 1 for file, 3 for rtlsdr
   char audio_out_dev[1024];
   int audio_out_fd;
   SNDFILE *audio_out_file;
   SF_INFO *audio_out_file_info;
-#ifdef USE_PORTAUDIO
-  PaStream* audio_out_pa_stream;
-#endif
-  int audio_out_type; // 0 for device, 1 for file, 2 for portaudio
+
+  int audio_out_type; // 0 for device, 1 for file,
   int split;
   int playoffset;
   int playoffsetR;
@@ -302,11 +268,19 @@ typedef struct
   char mbe_out_file[1024];
   char mbe_out_path[1024];
   FILE *mbe_out_f;
+  FILE *symbol_out_f;
   float audio_gain;
   float audio_gainR;
   int audio_out;
+  int dmr_stereo_wav;
   char wav_out_file[1024];
+  char wav_out_fileR[1024];
+  char wav_out_file_raw[1024];
+  char symbol_out_file[1024];
+  short int symbol_out;
   SNDFILE *wav_out_f;
+  SNDFILE *wav_out_fR;
+  SNDFILE *wav_out_raw;
   //int wav_out_fd;
   int serial_baud;
   char serial_dev[1024];
@@ -315,6 +289,7 @@ typedef struct
   int frame_dstar;
   int frame_x2tdma;
   int frame_p25p1;
+  int frame_p25p2;
   int frame_nxdn48;
   int frame_nxdn96;
   int frame_dmr;
@@ -338,17 +313,16 @@ typedef struct
   int rtl_volume_multiplier;
   int rtl_udp_port;
   int rtl_bandwidth;
+  int rtl_started;
   int monitor_input_audio;
   int pulse_raw_rate_in;
   int pulse_raw_rate_out;
   int pulse_digi_rate_in;
   int pulse_digi_rate_out;
-  //int pulse_digi_rate_outR;
   int pulse_raw_in_channels;
   int pulse_raw_out_channels;
   int pulse_digi_in_channels;
   int pulse_digi_out_channels;
-  //int pulse_digi_out_channelsR;
   int pulse_flush;
   pa_simple *pulse_raw_dev_in;
   pa_simple *pulse_raw_dev_out;
@@ -356,23 +330,28 @@ typedef struct
   pa_simple *pulse_digi_dev_out;
   pa_simple *pulse_digi_dev_outR;
   int use_ncurses_terminal;
+  int ncurses_compact;
+  int ncurses_history;
   int reset_state;
   int payload;
   char output_name[1024];
-
-  int EncryptionMode;
 
   unsigned int dPMR_curr_frame_is_encrypted;
   int dPMR_next_part_of_superframe;
   int inverted_dpmr;
   int frame_dpmr;
-  //
-  short int dmr_stereo;
 
-  //
+  short int dmr_stereo;
+  short int lrrp_file_output;
+
+  short int dmr_mute_encL;
+  short int dmr_mute_encR;
+
   int frame_ysf;
-  int inverted_ysf; //not sure if ysf comes in inverted or not, but signal could if IQ flipped
-  short int aggressive_framesync; //set to 1 for more aggressive framesync, 0 for less aggressive
+  int inverted_ysf;
+  short int aggressive_framesync;
+
+  FILE *symbolfile;
 
 } dsd_opts;
 
@@ -380,8 +359,8 @@ typedef struct
 {
   int *dibit_buf;
   int *dibit_buf_p;
-  int *dmr_payload_buf; //try loading up a small amount to buffer, 144 or 288?
-  int *dmr_payload_p; //position for payload buffer
+  int *dmr_payload_buf;
+  int *dmr_payload_p;
   int repeat;
   short *audio_out_buf;
   short *audio_out_buf_p;
@@ -415,13 +394,15 @@ typedef struct
   int maxbuf[1024];
   int minbuf[1024];
   int midx;
-  char err_str[64]; //actual error errorbars
-  char err_buf[64]; //make copy of err_str for comparison, only have string print when strcmp is different??
+  char err_str[64];
+  char err_buf[64];
   char err_strR[64];
   char err_bufR[64];
   char fsubtype[16];
   char ftype[16];
   int symbolcnt;
+  int symbolc;
+
   int rf_mod;
   int numflips;
   int lastsynctype;
@@ -473,12 +454,12 @@ typedef struct
   int payload_mfid;
   int payload_mfidR;
   int payload_mi;
-  int payload_miR; //check to see if anything tied to this still functions appropriately
-  uint64_t payload_miP;
-  int payload_lsfr;
-  int payload_lsfrR;
+  int payload_miR;
+  unsigned long long int payload_miN;
+  unsigned long long int payload_miP;
+  int p25vc;
   unsigned long long int K;
-  int M;
+  int menuopen;
 
   unsigned int debug_audio_errors;
   unsigned int debug_audio_errorsR;
@@ -506,7 +487,8 @@ typedef struct
   unsigned int nxdn_key;
   char nxdn_call_type[1024];
   char dmr_callsign[2][6][99]; //plenty of room in case of overflow;
-  char dmr_lrrp[2][6][9999];
+  char dmr_lrrp[2][6][9999]; //memory hog
+  unsigned long long int dmr_lrrp_source[2];
 
   NxdnSacchRawPart_t NxdnSacchRawPart[4];
   NxdnFacch1RawPart_t NxdnFacch1RawPart[2];
@@ -539,16 +521,21 @@ typedef struct
   TimeSlotVoiceSuperFrame_t TS2SuperFrame;
 
   char dmr_branding[25];
-  uint8_t  dmr_12_rate_sf[2][60]; //going five frames deep by 12 bytes //[slot][value]
-  uint8_t  dmr_34_rate_sf[2][64]; //going four frames deep by 16 bytes //[slot][value]
-  int dmr_stereo_payload[144]; //load up 144 dibit buffer for every single DMR TDMA frame
-  //uint8_t dmr_stereo_payload[144]; //load up 144 dibit buffer for every single DMR TDMA frame
+  uint8_t  dmr_12_rate_sf[2][288]; //was 84, expanded to 288 to prevent possible crash if more comes in than expected
+  uint8_t  dmr_34_rate_sf[2][288]; //was 96, expanded to 288 to prevent possible crash if more comes in than expected
+  int dmr_stereo_payload[144];    //load up 144 dibit buffer for every single DMR TDMA frame
+  uint8_t data_header_blocks[2];  //collect number of blocks to follow from data header per slot
+  uint8_t data_header_padding[2]; //collect number of padding octets in last block per slot
+  uint8_t data_header_format[2];  //collect format of data header (conf or unconf) per slot
+  uint8_t data_header_sap[2];     //collect sap info per slot
+  uint8_t data_block_counter[2];  //counter for number of data blocks collected
+  uint8_t data_p_head[2];         //flag for dmr proprietary header to follow
 
 
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
 
   //These flags are used to known the DMR frame
-   //printing format (hex or binary)
+  //printing format (hex or binary)
   int printDMRRawVoiceFrameHex;
   int printDMRRawVoiceFrameBin;
   int printDMRRawDataFrameHex;
@@ -557,7 +544,7 @@ typedef struct
   int printDMRAmbeVoiceSampleBin;
 
   //These flags are used to known the dPMR frame
-   //orinting format (hex or binary)
+  //orinting format (hex or binary)
   int printdPMRRawVoiceFrameHex;
   int printdPMRRawVoiceFrameBin;
   int printdPMRRawDataFrameHex;
@@ -574,10 +561,11 @@ typedef struct
   short int dmr_ms_mode;
   unsigned int dmrburstL;
   unsigned int dmrburstR;
-  int dropL;
-  int dropR;
   unsigned long long int R;
-
+  // int block_count;
+  short int dmr_encL;
+  short int dmr_encR;
+  
   //dstar header for ncurses
   unsigned char dstarradioheader[41];
 
@@ -604,6 +592,21 @@ typedef struct
 #define INV_P25P1_SYNC "333331331133111131311111"
 #define P25P1_SYNC     "111113113311333313133333"
 
+//preliminary P2 sync
+
+// static const uint64_t P25P2_FRAME_SYNC_MAGIC   = 0x575D57F7FFLL;   // 40 bits
+// static const uint64_t P25P2_FRAME_SYNC_REV_P   = 0x575D57F7FFLL ^ 0xAAAAAAAAAALL;
+#define P25P2_SYNC     "11131131111333133333"
+#define INV_P25P2_SYNC "33313313333111311111"
+// static const uint64_t P25P2_FRAME_SYNC_MASK    = 0xFFFFFFFFFFLL; //wonder what the mask was for if its all F
+//
+// static const uint64_t P25P2_FRAME_SYNC_N1200   = 0x0104015155LL;
+//#define P25P2_SYNC_N     ""
+// static const uint64_t P25P2_FRAME_SYNC_X2400   = 0xa8a2a8d800LL;
+//#define P25P2_SYNC_X     ""
+// static const uint64_t P25P2_FRAME_SYNC_P1200   = 0xfefbfeaeaaLL;
+//#define P25P2_SYNC_P     ""
+
 #define X2TDMA_BS_VOICE_SYNC "113131333331313331113311"
 #define X2TDMA_BS_DATA_SYNC  "331313111113131113331133"
 #define X2TDMA_MS_DATA_SYNC  "313113333111111133333313"
@@ -628,9 +631,8 @@ typedef struct
 #define DMR_MS_DATA_SYNC  "311131133313133331131113"
 #define DMR_MS_VOICE_SYNC "133313311131311113313331"
 
-//inversion testing on MS
-//#define DMR_MS_DATA_SYNC  "133313311131311113313331"
-//#define DMR_MS_VOICE_SYNC "311131133313133331131113"
+//Testing NXDN FSW again
+#define NXDN_FSW "3131331131"
 
 #define DMR_RC_DATA_SYNC  "131331111133133133311313"
 
@@ -670,7 +672,10 @@ void processAudio (dsd_opts * opts, dsd_state * state);
 void processAudioR (dsd_opts * opts, dsd_state * state);
 void openPulseInput (dsd_opts * opts);  //not sure if we need to just pass opts, or opts and state yet
 void openPulseOutput (dsd_opts * opts);  //not sure if we need to just pass opts, or opts and state yet
+void closePulseInput (dsd_opts * opts);
+void closePulseOutput (dsd_opts * opts);
 void writeSynthesizedVoice (dsd_opts * opts, dsd_state * state);
+void writeSynthesizedVoiceR (dsd_opts * opts, dsd_state * state);
 void playSynthesizedVoice (dsd_opts * opts, dsd_state * state);
 void playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state);
 void openAudioOutDevice (dsd_opts * opts, int speed);
@@ -690,7 +695,17 @@ void openMbeInFile (dsd_opts * opts, dsd_state * state);
 void closeMbeOutFile (dsd_opts * opts, dsd_state * state);
 void openMbeOutFile (dsd_opts * opts, dsd_state * state);
 void openWavOutFile (dsd_opts * opts, dsd_state * state);
+void openWavOutFileL (dsd_opts * opts, dsd_state * state);
+void openWavOutFileR (dsd_opts * opts, dsd_state * state);
+void openWavOutFileRaw (dsd_opts * opts, dsd_state * state);
+void openSymbolOutFile (dsd_opts * opts, dsd_state * state);
+void closeSymbolOutFile (dsd_opts * opts, dsd_state * state);
+void writeSymbolOutFile (dsd_opts * opts, dsd_state * state);
+void writeRawSample (dsd_opts * opts, dsd_state * state, short sample);
 void closeWavOutFile (dsd_opts * opts, dsd_state * state);
+void closeWavOutFileL (dsd_opts * opts, dsd_state * state);
+void closeWavOutFileR (dsd_opts * opts, dsd_state * state);
+void closeWavOutFileRaw (dsd_opts * opts, dsd_state * state);
 void printFrameInfo (dsd_opts * opts, dsd_state * state);
 void processFrame (dsd_opts * opts, dsd_state * state);
 void printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset, char *modulation);
@@ -724,9 +739,9 @@ void processX2TDMAdata (dsd_opts * opts, dsd_state * state);
 void processX2TDMAvoice (dsd_opts * opts, dsd_state * state);
 void processDSTAR_HD (dsd_opts * opts, dsd_state * state);
 void processYSF(dsd_opts * opts, dsd_state * state); //YSF
+void processP2(dsd_opts * opts, dsd_state * state); //P2
 short dmr_filter(short sample);
 short nxdn_filter(short sample);
-
 
 int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr);
 /* Global functions */ //also borrowed
@@ -734,12 +749,10 @@ uint32_t ConvertBitIntoBytes(uint8_t * BufferIn, uint32_t BitLength);
 uint32_t ConvertAsciiToByte(uint8_t AsciiMsbByte, uint8_t AsciiLsbByte, uint8_t * OutputByte);
 void Convert49BitSampleInto7Bytes(char * InputBit, char * OutputByte);
 void Convert7BytesInto49BitSample(char * InputByte, char * OutputBit);
-//
-//ifdef ncurses
-void ncursesOpen ();
+
+void ncursesOpen (dsd_opts * opts, dsd_state * state);
 void ncursesPrinter (dsd_opts * opts, dsd_state * state);
 void ncursesClose ();
-//endif ncurses
 
 /* NXDN frame decoding functions */
 void ProcessNXDNFrame(dsd_opts * opts, dsd_state * state, uint8_t Inverted);
@@ -763,7 +776,7 @@ uint8_t NXDN_decode_LICH(uint8_t   InputLich[8],
                          uint8_t * Option,
                          uint8_t * Direction,
                          uint8_t * CompleteLichBinaryFormat,
-                         uint8_t   Inverted);
+                         uint8_t Inverted);
 uint8_t NXDN_SACCH_raw_part_decode(uint8_t * Input, uint8_t * Output);
 void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state);
 uint8_t NXDN_FACCH1_decode(uint8_t * Input, uint8_t * Output);
@@ -778,12 +791,11 @@ char * NXDN_Cipher_Type_To_Str(uint8_t CipherType);
 uint16_t CRC15BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
 uint16_t CRC12BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
 uint8_t CRC6BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
-void ScrambledNXDNVoiceBit(int * LfsrValue, char * BufferIn, char * BufferOut, int NbOfBitToScramble);
-
 
 void dPMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
 void printdPMRAmbeVoiceSample(dsd_opts * opts, dsd_state * state);
 void printdPMRRawVoiceFrame (dsd_opts * opts, dsd_state * state);
+
 //dPMR functions
 void ScrambledPMRBit(uint32_t * LfsrValue, uint8_t * BufferIn, uint8_t * BufferOut, uint32_t NbOfBitToScramble);
 void DeInterleave6x12DPmrBit(uint8_t * BufferIn, uint8_t * BufferOut);
@@ -825,11 +837,11 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
 void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98], uint8_t syncdata[48], uint8_t SlotType[20]);
 void ProcessMBCData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
 void ProcessMBChData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-void ProcessWTFData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+void ProcessReservedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
 void ProcessUnifiedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+
 //LFSR code courtesy of https://github.com/mattames/LFSR/
 int LFSR(dsd_state * state);
-int LFSRP(dsd_state * state);
 
 void Hamming_7_4_init();
 void Hamming_7_4_encode(unsigned char *origBits, unsigned char *encodedBits);
@@ -876,7 +888,7 @@ extern "C" {
 #endif
 void open_rtlsdr_stream(dsd_opts *opts);
 void cleanup_rtlsdr_stream();
-void get_rtlsdr_sample(int16_t *sample);
+void get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state);
 void rtlsdr_sighandler();
 
 //TRELLIS
@@ -889,8 +901,6 @@ void CDMRTrellisDibitsToPoints(const signed char* dibits, unsigned char* points)
 void CDMRTrellisPointsToDibits(const unsigned char* points, signed char* dibits);
 void CDMRTrellisBitsToTribits(const unsigned char* payload, unsigned char* tribits);
 bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload);
-
-
 
 #ifdef __cplusplus
 }

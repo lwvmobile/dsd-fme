@@ -179,9 +179,9 @@ PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) //For DMR Stere
     }
     else fprintf(stderr, " err = [%X] [%X] ", state->errsR, state->errs2R);
   b = ambe_d[48];
-  if (opts->dmr_stereo == 1)
+  if (opts->dmr_stereo == 1) //need to fix the printouts again
   {
-    fprintf (stderr, "\n");
+    fprintf (stderr, "\n"); 
   }
 
 }
@@ -460,74 +460,113 @@ openWavOutFile (dsd_opts * opts, dsd_state * state)
 //  state->wav_out_bytes = 0;
 
 }
+void openWavOutFileL (dsd_opts * opts, dsd_state * state)
+{
 
-void
-closeWavOutFile (dsd_opts * opts, dsd_state * state)
+  SF_INFO info;
+  info.samplerate = 8000; //8000
+  info.channels = 1;
+  info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
+  //opts->wav_out_f = sf_open (opts->wav_out_file, SFM_WRITE, &info);
+  opts->wav_out_f = sf_open (opts->wav_out_file, SFM_RDWR, &info); //RDWR will append to file instead of overwrite file
+
+  if (opts->wav_out_f == NULL)
+  {
+    fprintf (stderr,"Error - could not open wav output file %s\n", opts->wav_out_file);
+    return;
+  }
+
+//  state->wav_out_bytes = 0;
+
+}
+
+void openWavOutFileR (dsd_opts * opts, dsd_state * state)
+{
+
+  SF_INFO info;
+  info.samplerate = 8000; //8000
+  info.channels = 1;
+  info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
+  //opts->wav_out_f = sf_open (opts->wav_out_file, SFM_WRITE, &info);
+  opts->wav_out_fR = sf_open (opts->wav_out_fileR, SFM_RDWR, &info); //RDWR will append to file instead of overwrite file
+
+  if (opts->wav_out_f == NULL)
+  {
+    fprintf (stderr,"Error - could not open wav output file %s\n", opts->wav_out_fileR);
+    return;
+  }
+
+//  state->wav_out_bytes = 0;
+
+}
+
+void openWavOutFileRaw (dsd_opts * opts, dsd_state * state)
+{
+
+  SF_INFO info;
+  info.samplerate = 48000; //8000
+  info.channels = 1;
+  info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
+  //opts->wav_out_f = sf_open (opts->wav_out_file, SFM_WRITE, &info);
+  //opts->wav_out_f = sf_open (opts->wav_out_file, SFM_RDWR, &info); //RDWR will append to file instead of overwrite file
+  opts->wav_out_raw = sf_open (opts->wav_out_file_raw, SFM_RDWR, &info);
+  if (opts->wav_out_raw == NULL)
+  {
+    fprintf (stderr,"Error - could not open raw wav output file %s\n", opts->wav_out_file_raw);
+    return;
+  }
+
+//  state->wav_out_bytes = 0;
+
+}
+
+void closeWavOutFile (dsd_opts * opts, dsd_state * state)
 {
   sf_close(opts->wav_out_f);
+}
 
-/*
-  int length;
+void closeWavOutFileL (dsd_opts * opts, dsd_state * state)
+{
+  sf_close(opts->wav_out_f);
+}
 
-  if (opts->wav_out_f != NULL)
+void closeWavOutFileR (dsd_opts * opts, dsd_state * state)
+{
+  sf_close(opts->wav_out_fR);
+}
+
+void closeWavOutFileRaw (dsd_opts * opts, dsd_state * state)
+{
+  sf_close(opts->wav_out_raw);
+}
+
+void openSymbolOutFile (dsd_opts * opts, dsd_state * state)
+{
+  //Do something
+  opts->symbol_out_f = fopen (opts->symbol_out_file, "w");
+}
+
+void writeSymbolOutFile (dsd_opts * opts, dsd_state * state)
+{
+  //Do something
+
+}
+
+void closeSymbolOutFile (dsd_opts * opts, dsd_state * state)
+{
+  //Do something
+  if (opts->symbol_out == 1)
+  {
+    if (opts->symbol_out_file != NULL) //check first, or issuing a second fclose will crash the SOFTWARE
     {
-      rewind (opts->wav_out_f);
-      length = state->wav_out_bytes;
-
-      fprintf (stderr,opts->wav_out_f, "RIFF");
-      // total length
-      fputc (((36 + length) & 0xff), opts->≈≈);
-      fputc ((((36 + length) >> 8) & 0xff), opts->wav_out_f);
-      fputc ((((36 + length) >> 16) & 0xff), opts->wav_out_f);
-      fputc ((((36 + length) >> 24) & 0xff), opts->wav_out_f);
-
-      fprintf (stderr,opts->wav_out_f, "WAVE");
-      fprintf (stderr,opts->wav_out_f, "fmt ");
-
-      // length of format chunk
-      fputc (16, opts->wav_out_f);
-      fputc (0, opts->wav_out_f);
-      fputc (0, opts->wav_out_f);
-      fputc (0, opts->wav_out_f);
-
-      // always 0x1
-      fputc (1, opts->wav_out_f);
-      fputc (0, opts->wav_out_f);
-
-      // channels
-      fputc (1, opts->wav_out_f);
-      fputc (0, opts->wav_out_f);
-
-      // sample rate
-      fputc (64, opts->wav_out_f);
-      fputc (31, opts->wav_out_f);
-      fputc (0, opts->wav_out_f);
-      fputc (0, opts->wav_out_f);
-
-      // bytes per second
-      fputc (128, opts->wav_out_f);
-      fputc (62, opts->wav_out_f);
-      fputc (0, opts->wav_out_f);
-      fputc (0, opts->wav_out_f);
-
-      // block align
-      fputc (2, opts->wav_out_f);
-      fputc (0, opts->wav_out_f);
-
-      // bits/sample
-      fputc (16, opts->wav_out_f);
-      fputc (0, opts->wav_out_f);
-
-      // data chunk header
-      fprintf (stderr,opts->wav_out_f, "data");
-
-      // length of data
-      fputc ((length & 0xff), opts->wav_out_f);
-      fputc (((length >> 8) & 0xff), opts->wav_out_f);
-      fputc (((length >> 16) & 0xff), opts->wav_out_f);
-      fputc (((length >> 24) & 0xff), opts->wav_out_f);
-
-      fflush (opts->wav_out_f);
+      fclose(opts->symbol_out_f); //free(): double free detected in tcache 2 (this is a new one) happens when closing more than once
+      //noCarrier(opts, state); //free(): double free detected in tcache 2 (this is a new one)
     }
-    */
+
+    opts->symbol_out = 0; //set flag to 1
+    //sprintf (opts->symbol_out_file, "fme-capture.bin"); //use fme for the symbol bin ext
+    //openSymbolOutFile (opts, state);
+
+  }
+
 }
