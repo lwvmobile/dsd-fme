@@ -15,7 +15,7 @@ Virtually all the examples listed below can now be set up on the fly with the me
 
 This release also has provisional support for playing back OP25 capture bin files, and the creation and playback of its own capture bin files as well (most likely not OP25 compatible). Mileage may vary. Be sure to choose the decoder option required when playing a bin file back, do not rely on auto-detect. Capture Bin files can be used to reliably replay P25, DMR BS, and NXDN decodings, and can replace the need for MBE file saving in the case of DMR Stereo, allowing for a complete replay of all events on a system, rather than just voice only.
 
-Per Call wav file creation has been implemented, currently only for DMR Stereo. Complete audio decode wav is available for all over decoder types. LRRP has been revamped, working more consistently, and an option to dump LRRP data to ~/lrrp.txt in the user home directory now exists, and can be imported into open-source QGIS to provide mapping data for LRRP output. Simply open the newly included map file in QGIS and point it at your geographic region. (Be sure the lrrp.txt file exists, and has data populated in it prior to opening the map file in QGIS, otherwise, the map layer may not want to show back up!)
+Per Call wav file creation has been implemented, currently only for DMR Stereo. Complete audio decode wav is available for all other decoder types. LRRP has been revamped, working more consistently, and an option to dump LRRP data to ~/lrrp.txt in the user home directory now exists, and can be imported into open-source QGIS to provide mapping data for LRRP output. Simply open the newly included map file in QGIS and point it at your geographic region. (Be sure the lrrp.txt file exists, and has data populated in it prior to opening the map file in QGIS, otherwise, the map layer may not want to show back up!)
 
 DMR Data Header decoding has been revamped, and most data burst decoding types tightened up and code cleaned. FEC error checking now implemented on CACH and Burst types, cleaning up some erroneous slot and burst errors.
 
@@ -46,8 +46,6 @@ DMR Stereo method added for listening to voice audio in both TDMA channels/slots
 and in a second terminal tab, same folder, run
 
 `tail -n 40 -f voice.log`
-
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme2.png)
 
 Then you can open up your pavucontrol "Pulse Audio Volume Control" or "Volume Control" application and route input into DSD-FME from any application and DSD-FME output to the left and right speakers respectively. (unlock the channel in the application stream and adjust left and right independently)
 
@@ -86,6 +84,8 @@ Be sure to first start UDP output sink in GQRX or SDR++ and set VFO appropriatel
 and in a second terminal tab, same folder, run
 
 `tail -n 40 -f voice.log`
+
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme2.png)
 
 ## Roadmap
 The Current list of objectives include:
@@ -208,7 +208,6 @@ Already have this branch, and just want to pull the latest build? You can run th
 git pull https://github.com/lwvmobile/dsd-fme pulseaudio
 ##cd into your build folder##
 cd build
-##cmake usually isn't necesary, but could be if I update the cmakelist.txt
 cmake ..
 make -j `nproc`
 sudo make install

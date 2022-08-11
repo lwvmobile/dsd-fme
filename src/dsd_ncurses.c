@@ -200,7 +200,7 @@ char *choices[] = {
 			"Decode D-STAR*",
 			"Decode P25-P1*",
 			"Decode DMR  (STEREO BS/MS)",
-      "Decode DMR* (LEH)", //better name
+      "Decode DMR* (LEH)",
       "Decode dPMR",
       "Decode NXDN48",
       "Decode NXDN96",
@@ -445,7 +445,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         }
         if (choicec == 4)
         {
-          //still disabled until a fix is found
+          //toggle all mutes
           if (opts->unmute_encrypted_p25 == 0)
           {
             opts->unmute_encrypted_p25 = 1;
@@ -804,7 +804,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       //endwin(); //causes quick blink in and out of ncursesprinter, not required
     }
 
-    //Burger King
+    //Cheat Code Entry
     if (choice == 13)
     {
       state->payload_keyid = 0;
@@ -1169,7 +1169,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
   {
     openPulseInput(opts);
   }
-
+  #ifdef USE_RTLSDR
   if (opts->audio_in_type == 3) //open rtl input if it is the specified input method
   {
     ncursesPrinter (opts, state); //run one rep to clear menu boxes out
@@ -1180,6 +1180,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     }
 
   }
+  #endif
 
 
 }
@@ -1191,7 +1192,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   int level = 0;
   int c = 0;
 
-  if (opts->audio_in_type != 1) //can't run getch/menues when using STDIN -
+  if (opts->audio_in_type != 1) //can't run getch/menu when using STDIN -
   {
     timeout(0);
     c = getch();
@@ -1199,6 +1200,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   //testing sending UDP commands to the socket inside of rtl_sdr_fm.cpp
   //this works, but we will want to make an init func open one time, and have sendto here
+  #ifdef USE_RTLSDR
   if (temp_freq == opts->rtlsdr_center_freq)
   {
     handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -1211,6 +1213,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     temp_freq = -1;
   }
+  #endif
 
   //Variable reset/set section
 

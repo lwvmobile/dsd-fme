@@ -1952,6 +1952,7 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
   else if(IrrecoverableErrors == 0)
   {
     //FEC okay? Set SVCop code anyways
+    TSVoiceSupFrame->FullLC.DataValidity = 0; //shouldn't matter in this context
     if (state->currentslot == 0)
     {
       state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
