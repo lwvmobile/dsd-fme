@@ -45,7 +45,7 @@ char * getDateL(void) {
   return curr2;
 }
 
-//Trellis Decoding still needs work, so be surprised by bad decodes
+//Trellis Decoding still needs work, so don't be surprised by bad decodes
 void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98], uint8_t syncdata[48], uint8_t SlotType[20])
 {
 
@@ -1029,8 +1029,6 @@ void ProcessUnifiedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
     CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1);
   }
 
-  //Look into whether or not we need to run these CRC checks for this header information
-  //and see if its applied the same or differently
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
   CRCExtracted = CRCExtracted ^ 0x3333;
 
@@ -1464,8 +1462,6 @@ void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t 
     CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
   }
 
-  //Look into whether or not we need to run these CRC checks for this header information
-  //and see if its applied the same or differently
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
   //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
   CRCExtracted = CRCExtracted ^ 0xA5A5;
@@ -1761,8 +1757,6 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
     CRCExtracted = CRCExtracted | (uint32_t)(DmrDataBit[i + 80] & 1); //80-96 for PI header
   }
 
-  //Look into whether or not we need to run these CRC checks for this header information
-  //and see if its applied the same or differently
   /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
   //CRCExtracted = CRCExtracted ^ 0x969696; //does this mask get applied here though for PI?
   CRCExtracted = CRCExtracted ^ 0x6969;
@@ -1965,6 +1959,26 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
   {
     /* CRC is correct so consider the Full LC data as correct/valid */
     TSVoiceSupFrame->FullLC.DataValidity = 1;
+    if (state->currentslot == 0)
+    {
+      state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+    }
+    if (state->currentslot == 1)
+    {
+      state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+    }
+  }
+  else if(IrrecoverableErrors == 0)
+  {
+    //FEC okay? Set SVCop code anyways
+    if (state->currentslot == 0)
+    {
+      state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+    }
+    if (state->currentslot == 1)
+    {
+      state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+    }
   }
   else
   {

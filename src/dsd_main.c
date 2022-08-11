@@ -180,8 +180,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->data_p_head[0] = 0;
   state->data_p_head[1] = 0;
 
-  state->dmr_so   = 0;
-  state->dmr_soR  = 0;
+  // state->dmr_so   = 0; //let TLC or Voice Burst zero or set this instead?
+  // state->dmr_soR  = 0;
 
 }
 
