@@ -298,6 +298,8 @@ initOpts (dsd_opts * opts)
   opts->dmr_mute_encL = 1;
   opts->dmr_mute_encR = 1;
 
+  opts->monitor_input_audio = 0;
+
 }
 
 void
