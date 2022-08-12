@@ -176,7 +176,7 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
         i = i + 2; //skip 2 bytes here so we don't accidentally trip another flag with data in these bytes
       }
 
-      if ( state->dmr_34_rate_sf[slot][i] == 0x34 && message_legnth > 27 ) //timestamp, seems to need legnth of 28
+      if ( state->dmr_34_rate_sf[slot][i] == 0x34 && message_legnth > 21 ) //timestamp, seems to need legnth of 27, shortened to 21 due to other samples
       {
         fprintf (stderr, "\n  LRRP - Timestamp: ");
         fprintf (stderr, "%4d.", (state->dmr_34_rate_sf[slot][i+1] << 6) + (state->dmr_34_rate_sf[slot][i+2] >> 2) ); //4 digit year
@@ -189,7 +189,9 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
         i = i + 6; //skip 6 bytes here so we don't accidentally trip another flag with data in these bytes
       }
 
-      if ( state->dmr_34_rate_sf[slot][i] == 0x51 && message_legnth > 13) //lattitude and longitude, message_lenght > 13?
+      //is 66 a hemisphere or meridian difference from 0x51? Or different system type?
+      if ( (state->dmr_34_rate_sf[slot][i] == 0x51 && message_legnth > 13) ||
+           (state->dmr_34_rate_sf[slot][i] == 0x66 && message_legnth > 13)    ) //lattitude and longitude, message_lenght > 13?
       {
         fprintf (stderr, "\n  LRRP -");
         fprintf (stderr, " Lat: ");
@@ -1247,7 +1249,7 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
         i = i + 2; //skip 2 bytes here so we don't accidentally trip another flag with data in these bytes
       }
 
-      if ( state->dmr_12_rate_sf[slot][i] == 0x34 && message_legnth > 27 ) //timestamp, seems to need legnth of 28
+      if ( state->dmr_12_rate_sf[slot][i] == 0x34 && message_legnth > 21 ) //timestamp, seems to need legnth of 27, shortened to 21 due to other samples
       {
         fprintf (stderr, "\n  LRRP - Timestamp: ");
         fprintf (stderr, "%4d.", (state->dmr_12_rate_sf[slot][i+1] << 6) + (state->dmr_12_rate_sf[slot][i+2] >> 2) ); //4 digit year
@@ -1260,7 +1262,9 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
         i = i + 6; //skip 6 bytes here so we don't accidentally trip another flag with data in these bytes
       }
 
-      if ( state->dmr_12_rate_sf[slot][i] == 0x51 && message_legnth > 13) //lattitude and longitude, message_lenght > 13?
+      //is 66 a hemisphere or meridian difference from 0x51? Or different system type?
+      if ( (state->dmr_12_rate_sf[slot][i] == 0x51 && message_legnth > 13) ||
+           (state->dmr_12_rate_sf[slot][i] == 0x66 && message_legnth > 13)    ) //lattitude and longitude, message_lenght > 13?
       {
         fprintf (stderr, "\n  LRRP -");
         fprintf (stderr, " Lat: ");
