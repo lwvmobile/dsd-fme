@@ -6,9 +6,8 @@ https://github.com/lwvmobile/dsd-fme/tree/pulseaudio
 
 ## Cygwin branch for Windows Users -- Discontinued
 
-https://github.com/lwvmobile/dsd-fme/tree/cygwin
-
-
+Cygwin Branch officially deleted; No more support for it; 
+See Issues for old instructions from Cygwin build.
 
 ## License
 Copyright (C) 2010 DSD Author
