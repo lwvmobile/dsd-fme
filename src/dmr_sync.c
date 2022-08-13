@@ -144,7 +144,9 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
       //hard code filename override for those wanting to use other software
       //pFile = fopen("DSDPlus.LRRP", "a");
 
-      fprintf (pFile, "%s\t %s\t", getDateL(), getTimeL()); //current timestamp, may find a way to only add this IF no included timestamp in LRRP data?
+      //seperate these two values since they cause issues with garbage writing to files in some environments (cygwin)
+      fprintf (pFile, "%s\t ", getDateL() ); //current date, may find a way to only add this IF no included timestamp in LRRP data?
+      fprintf (pFile, "%s\t ", getTimeL()) ; //current timestamp, may find a way to only add this IF no included timestamp in LRRP data?
       fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
     }
 
@@ -1216,8 +1218,9 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
       //hard code filename override for those wanting to use other software
       //pFile = fopen("DSDPlus.LRRP", "a");
 
-
-      fprintf (pFile, "%s\t %s\t", getDateL(), getTimeL()); //current timestamp, may find a way to only add this IF no included timestamp in LRRP data?
+      //seperate these two values since they cause issues with garbage writing to files in some environments (cygwin)
+      fprintf (pFile, "%s\t ", getDateL() ); //current date, may find a way to only add this IF no included timestamp in LRRP data?
+      fprintf (pFile, "%s\t ", getTimeL() ); //current timestamp, may find a way to only add this IF no included timestamp in LRRP data?
       fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
     }
 
