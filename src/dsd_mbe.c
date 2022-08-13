@@ -155,7 +155,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 			//increment vc counter by one.
 			state->p25vc++;
 
-      if (opts->mbe_out_f != NULL)
+      if (opts->mbe_out_f != NULL && state->dmr_encL == 0) //only save if this bit not set
       {
         saveImbe4400Data (opts, state, imbe_d);
       }
@@ -211,7 +211,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 			PrintAMBEData (opts, state, ambe_d);
 		}
 
-		if (opts->mbe_out_f != NULL)
+		if (opts->mbe_out_f != NULL && (state->dmr_encL == 0 || opts->dmr_mute_encL == 0) )
 		{
 			saveAmbe2450Data (opts, state, ambe_d);
 		}
@@ -300,10 +300,6 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
 
     }
-
-  //having these values here I think caused muddy audio, seems cleaner now when moved to correct area
-  // state->debug_audio_errors += state->errs2;
-  // state->debug_audio_errorsR += state->errs2R;
 
   //quick enc check to determine whether or not to play enc traffic
   int enc_bit = 0;
