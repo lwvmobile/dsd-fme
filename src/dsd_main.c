@@ -204,18 +204,12 @@ initOpts (dsd_opts * opts)
   opts->p25status = 0;
   opts->p25tg = 0;
   opts->scoperate = 15;
-  //sprintf (opts->audio_in_dev, "/dev/audio");
   sprintf (opts->audio_in_dev, "pulse");
   opts->audio_in_fd = -1;
-// #ifdef USE_PORTAUDIO
-//   opts->audio_in_pa_stream = NULL;
-// #endif
-  //sprintf (opts->audio_out_dev, "/dev/audio");
+
   sprintf (opts->audio_out_dev, "pulse");
   opts->audio_out_fd = -1;
-// #ifdef USE_PORTAUDIO
-//   opts->audio_out_pa_stream = NULL;
-// #endif
+
   opts->split = 0;
   opts->playoffset = 0;
   opts->playoffsetR = 0;
