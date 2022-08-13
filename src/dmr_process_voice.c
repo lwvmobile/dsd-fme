@@ -208,11 +208,11 @@ if (state->currentslot == 0)
        }
        else state->dmr_encR = 0;
 
-       if (state->K != 0 || state->R != 0)
+       if (state->K != 0)
  			 {
  				state->dmr_encR = 0;
  			 }
-       
+
        //quick test to determine whether or not to run the next few steps below
        if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
        {
