@@ -931,7 +931,7 @@ main (int argc, char **argv)
           }
           opts.dmr_mute_encL = 0;
           opts.dmr_mute_encR = 0;
-          if (state.K == 1)
+          if (state.K == 0)
           {
             opts.dmr_mute_encL = 1;
             opts.dmr_mute_encR = 1;
