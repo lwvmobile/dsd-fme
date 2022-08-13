@@ -34,7 +34,7 @@ char * getTimeL(void) //get pretty hh:mm:ss timestamp
 
 //getDate has a bug that affects writing to file using fopen 32-bit Ubuntu OS, need to look into
 char * getDateL(void) {
-  char datename[99]; //increased to 99 to fix 32-bit Ubuntu when fopen file printing to lrrp.txt
+  char datename[200]; //increased to 200 to fix 32-bit Ubuntu/Cygwin when fopen file printing to lrrp.txt
   char * curr2;
   struct tm * to;
   time_t t;
