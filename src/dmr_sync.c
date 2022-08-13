@@ -33,8 +33,9 @@ char * getTimeL(void) //get pretty hh:mm:ss timestamp
 }
 
 //getDate has a bug that affects writing to file using fopen 32-bit Ubuntu OS, need to look into
+//increasing array size causes date to not print in Linux builds, but fixes cygwin bug, so reverting to 99 until a better fix is worked out.
 char * getDateL(void) {
-  char datename[200]; //increased to 200 to fix 32-bit Ubuntu/Cygwin when fopen file printing to lrrp.txt
+  char datename[99]; //increased to 200 to fix 32-bit Ubuntu/Cygwin when fopen file printing to lrrp.txt
   char * curr2;
   struct tm * to;
   time_t t;
@@ -145,8 +146,8 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
       //pFile = fopen("DSDPlus.LRRP", "a");
 
       //seperate these two values since they cause issues with garbage writing to files in some environments (cygwin)
-      fprintf (pFile, "%s\t ", getDateL() ); //current date, may find a way to only add this IF no included timestamp in LRRP data?
-      fprintf (pFile, "%s\t ", getTimeL()) ; //current timestamp, may find a way to only add this IF no included timestamp in LRRP data?
+      fprintf (pFile, "%s\t", getDateL() ); //current date, may find a way to only add this IF no included timestamp in LRRP data?
+      fprintf (pFile, "%s\t", getTimeL()) ; //current timestamp, may find a way to only add this IF no included timestamp in LRRP data?
       fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
     }
 
@@ -1219,8 +1220,8 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
       //pFile = fopen("DSDPlus.LRRP", "a");
 
       //seperate these two values since they cause issues with garbage writing to files in some environments (cygwin)
-      fprintf (pFile, "%s\t ", getDateL() ); //current date, may find a way to only add this IF no included timestamp in LRRP data?
-      fprintf (pFile, "%s\t ", getTimeL() ); //current timestamp, may find a way to only add this IF no included timestamp in LRRP data?
+      fprintf (pFile, "%s\t", getDateL() ); //current date, may find a way to only add this IF no included timestamp in LRRP data?
+      fprintf (pFile, "%s\t", getTimeL() ); //current timestamp, may find a way to only add this IF no included timestamp in LRRP data?
       fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
     }
 
