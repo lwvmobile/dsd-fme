@@ -277,6 +277,7 @@ typedef struct
   char wav_out_fileR[1024];
   char wav_out_file_raw[1024];
   char symbol_out_file[1024];
+  char lrrp_out_file[1024];
   short int symbol_out;
   SNDFILE *wav_out_f;
   SNDFILE *wav_out_fR;
@@ -565,7 +566,7 @@ typedef struct
   // int block_count;
   short int dmr_encL;
   short int dmr_encR;
-  
+
   //dstar header for ncurses
   unsigned char dstarradioheader[41];
 

@@ -211,7 +211,7 @@ char *choices[] = {
       "Enable Payloads to Console",
       "Disable Payloads to Console",
       "Input & Output Options",
-      "Enable LRRP to ~/lrrp.txt",
+      "LRRP Data to File",
 			"Exit DSD-FME",
       // "Test"
 		  };
@@ -436,7 +436,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           wscanw(entry_win, "%s", &opts->symbol_out_file);
           noecho();
 
-          if (opts->symbol_out_file != NULL)
+          if (opts->symbol_out_file[0] != NULL)
           {
             opts->symbol_out = 1; //set flag to 1
             openSymbolOutFile (opts, state);
@@ -735,7 +735,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         {
           if (opts->symbol_out == 1)
           {
-            if (opts->symbol_out_file != NULL) //check first, or issuing a second fclose will crash the SOFTWARE
+            if (opts->symbol_out_file[0] != NULL) //check first, or issuing a second fclose will crash the SOFTWARE
             {
               fclose(opts->symbol_out_f); //free(): double free detected in tcache 2 (this is a new one) happens when closing more than once
               sprintf (opts->audio_in_dev, opts->symbol_out_file); //swap output bin filename to input for quick replay
@@ -1143,8 +1143,69 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     }
     if (choice == 18)
     {
-      opts->lrrp_file_output = 1;
-      fprintf(stderr, "LRRP to text\n");
+      short int lrrpchoice = 0;
+      entry_win = newwin(10, WIDTH+16, starty+10, startx+10);
+      box (entry_win, 0, 0);
+      mvwprintw(entry_win, 2, 2, " Enable or Disable LRRP Data File");
+      mvwprintw(entry_win, 3, 2, " 1 - ~/lrrp.txt (QGis)");
+      mvwprintw(entry_win, 4, 2, " 2 - ./DSDPlus.LRRP (LRRP.exe)");
+      mvwprintw(entry_win, 5, 2, " 3 - ./Custom Filename");
+      mvwprintw(entry_win, 6, 2, " 4 - Cancel/Stop");
+      mvwprintw(entry_win, 7, 2, " ");
+      mvwprintw(entry_win, 8, 2, " ");
+      echo();
+      refresh();
+      wscanw(entry_win, "%d", &lrrpchoice);
+      noecho();
+
+      if (lrrpchoice == 1)
+      {
+        //find user home directory and append directory and filename.
+        char * filename = "/lrrp.txt";
+        char * home_dir = getenv("HOME");
+        char * filepath = malloc(strlen(home_dir) + strlen(filename) + 1);
+        strncpy (filepath, home_dir, strlen(home_dir) + 1);
+        strncat (filepath, filename, strlen(filename) + 1);
+        //assign home directory/filename to lrrp_out_file
+        sprintf (opts->lrrp_out_file, filepath);
+        opts->lrrp_file_output = 1;
+      }
+
+      else if (lrrpchoice == 2)
+      {
+        sprintf (opts->lrrp_out_file, "DSDPlus.LRRP");
+        opts->lrrp_file_output = 1;
+      }
+
+      else if (lrrpchoice == 3)
+      {
+        //read in filename for symbol capture bin
+        opts->lrrp_out_file[0] = 0;
+        entry_win = newwin(6, WIDTH+16, starty+10, startx+10);
+        box (entry_win, 0, 0);
+        mvwprintw(entry_win, 2, 2, " Enter LRRP Data Filename");
+        mvwprintw(entry_win, 3, 3, " ");
+        echo();
+        refresh();
+        wscanw(entry_win, "%s", &opts->lrrp_out_file);
+        noecho();
+        if (opts->lrrp_out_file[0] != NULL)
+        {
+          opts->lrrp_file_output = 1;
+        }
+        else
+        {
+          opts->lrrp_file_output = 0;
+          sprintf (opts->lrrp_out_file, "");
+          opts->lrrp_out_file[0] = 0;
+        }
+      }
+      else
+      {
+        opts->lrrp_file_output = 0;
+        sprintf (opts->lrrp_out_file, "");
+        opts->lrrp_out_file[0] = 0;
+      }
     }
     if (choice == 19)
     {
