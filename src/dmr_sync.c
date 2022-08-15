@@ -126,24 +126,21 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
   //Start Polling the 3/4 Rate Super Frame for Data when byte 0 contains values
   //LRRP
   int message_legnth = 0;
-  if ( (state->dmr_34_rate_sf[slot][0] & 0x7F) == 0x45) //Start LRRP now
+  if ( ((state->dmr_34_rate_sf[slot][0] & 0x7F) == 0x45) ||
+       ((state->dmr_34_rate_sf[slot][0] & 0x7F) == 0x1F) ) //Start LRRP now, shimmed in 1F for KrisMar testing
   {
+
+    if ( (state->dmr_34_rate_sf[slot][0] & 0x7F) == 0x1F )
+    {
+      message_legnth = 22; //quick shim for KrisMar samples, until I can find a message legnth flag on his
+    }
 
     //find user home directory and append directory and filename.
     FILE * pFile; //put this outside of the if statement?
     if (opts->lrrp_file_output == 1)
     {
-      char * filename = "/lrrp.txt";
-      char * home_dir = getenv("HOME");
-      char * filepath = malloc(strlen(home_dir) + strlen(filename) + 1);
-      strncpy (filepath, home_dir, strlen(home_dir) + 1);
-      strncat (filepath, filename, strlen(filename) + 1);
-      //end find user home directory and append directory and filename
-
-      pFile = fopen (filepath, "a");
-
-      //hard code filename override for those wanting to use other software
-      //pFile = fopen("DSDPlus.LRRP", "a");
+      //open file by name that is supplied in the ncurses terminal
+      pFile = fopen (opts->lrrp_out_file, "a");
 
       //seperate these two values since they cause issues with garbage writing to files in some environments (cygwin)
       fprintf (pFile, "%s\t", getDateL() ); //current date, may find a way to only add this IF no included timestamp in LRRP data?
@@ -239,37 +236,39 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
         }
         else fprintf (stderr, " (%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
 
-        i = i + 9 + 2; //skip 9 bytes here so we don't accidentally trip another flag with data in these bytes
-      }
+        //i = i + 9 + 2; //skip 9 bytes here so we don't accidentally trip another flag with data in these bytes
 
-
-      if ( state->dmr_34_rate_sf[slot][i] == 0x6C && message_legnth > 13)
-      {
-        //either Plus is wrong, or I'm wrong on higher velocities exceeding 0xFF. double check double values?
-        //fprintf (stderr, "\n  LRRP - Vi %02X Vf %02X Velocity Units (hex)", state->dmr_34_rate_sf[i+1], state->dmr_34_rate_sf[i+2]);
-        double velocity = ( ((double)( (state->dmr_34_rate_sf[slot][i+1] ) + state->dmr_34_rate_sf[slot][i+2] )) / ( (double)128));
-        if (opts->lrrp_file_output == 1)
+        //tuck velocity and track inside the lrrp coordinates? loose false positives on velocity and track without a coord point
+        if ( state->dmr_34_rate_sf[slot][i+11] == 0x6C && message_legnth > 13)
         {
-          fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
-        }
-        fprintf (stderr, "\n  LRRP - Velocity: %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity) );
-        sprintf ( state->dmr_lrrp[state->currentslot][4], "Vel: %.4lf kph ", (3.6 * velocity));
+          //either Plus is wrong, or I'm wrong on higher velocities exceeding 0xFF. double check double values?
+          //fprintf (stderr, "\n  LRRP - Vi %02X Vf %02X Velocity Units (hex)", state->dmr_34_rate_sf[i+1], state->dmr_34_rate_sf[i+2]);
+          double velocity = ( ((double)( (state->dmr_34_rate_sf[slot][i+12] ) + state->dmr_34_rate_sf[slot][i+13] )) / ( (double)128));
+          if (opts->lrrp_file_output == 1)
+          {
+            fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
+          }
+          fprintf (stderr, "\n  LRRP - Velocity: %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity) );
+          sprintf ( state->dmr_lrrp[state->currentslot][4], "Vel: %.4lf kph ", (3.6 * velocity));
 
-        i = i + 3; //skip 3 bytes here so we don't accidentally trip another flag with data in these bytes
-      }
-      if ( state->dmr_34_rate_sf[slot][i] == 0x56 && message_legnth > 13)
-      {
-        //check for appropriate terminology here - Heading, bearing, course, or track?
-        if (opts->lrrp_file_output == 1)
+          //i = i + 3; //skip 3 bytes here so we don't accidentally trip another flag with data in these bytes
+        }
+        if ( state->dmr_34_rate_sf[slot][i+14] == 0x56 && message_legnth > 13)
         {
-          fprintf (pFile, "%d\t", state->dmr_34_rate_sf[slot][i+1] * 2);
-        }
-        fprintf (stderr, "\n  LRRP - Track: %d Degrees", state->dmr_34_rate_sf[slot][i+1] * 2);
-        sprintf ( state->dmr_lrrp[state->currentslot][5], "Dir: %d Deg ", state->dmr_34_rate_sf[slot][i+1] * 2);
+          //check for appropriate terminology here - Heading, bearing, course, or track?
+          if (opts->lrrp_file_output == 1)
+          {
+            fprintf (pFile, "%d\t", state->dmr_34_rate_sf[slot][i+15] * 2);
+          }
+          fprintf (stderr, "\n  LRRP - Track: %d Degrees", state->dmr_34_rate_sf[slot][i+15] * 2);
+          sprintf ( state->dmr_lrrp[state->currentslot][5], "Dir: %d Deg ", state->dmr_34_rate_sf[slot][i+15] * 2);
 
-        //i = ((blocks+1)*12); //skip to end of loop here so we don't accidentally trip another flag with data in these bytes
-        i = 99;
+          i = ((blocks+1)*12); //skip to end of loop here so we don't accidentally trip another flag with data in these bytes
+        }
+
+        i = i + 15;
       }
+
       //try for a Control ACK at the very end if nothing else pops, flag still unknown
       if ( (state->dmr_34_rate_sf[slot][i] == 0x36 || state->dmr_34_rate_sf[slot][i] == 0x37) && message_legnth > 6 )
       {
@@ -1203,21 +1202,17 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
   if ( (state->dmr_12_rate_sf[slot][0] & 0x7F) == 0x45) //Start LRRP now
   {
 
+    if ( (state->dmr_12_rate_sf[slot][0] & 0x7F) == 0x1F )
+    {
+      message_legnth = 22; //quick shim for KrisMar samples, until I can find a message legnth flag on his
+    }
+
     //find user home directory and append directory and filename.
     FILE * pFile; //put this outside of the if statement?
     if (opts->lrrp_file_output == 1)
     {
-      char * filename = "/lrrp.txt";
-      char * home_dir = getenv("HOME");
-      char * filepath = malloc(strlen(home_dir) + strlen(filename) + 1);
-      strncpy (filepath, home_dir, strlen(home_dir) + 1);
-      strncat (filepath, filename, strlen(filename) + 1);
-      //end find user home directory and append directory and filename
-
-      pFile = fopen (filepath, "a");
-
-      //hard code filename override for those wanting to use other software
-      //pFile = fopen("DSDPlus.LRRP", "a");
+      //open file by name that is supplied in the ncurses terminal
+      pFile = fopen (opts->lrrp_out_file, "a");
 
       //seperate these two values since they cause issues with garbage writing to files in some environments (cygwin)
       fprintf (pFile, "%s\t", getDateL() ); //current date, may find a way to only add this IF no included timestamp in LRRP data?
@@ -1313,36 +1308,40 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
         }
         else fprintf (stderr, " (%.5lf, %.5lf)", ((double)lrrplat) * lat_unit , (lrrplon * lon_unit) );
 
-        i = i + 9 + 2; //skip 9 bytes here so we don't accidentally trip another flag with data in these bytes
-      }
+        //i = i + 9 + 2; //skip 9 bytes here so we don't accidentally trip another flag with data in these bytes
 
-
-      if ( state->dmr_12_rate_sf[slot][i] == 0x6C && message_legnth > 13)
-      {
-        //either Plus is wrong, or I'm wrong on higher velocities exceeding 0xFF. double check double values?
-        //fprintf (stderr, "\n  LRRP - Vi %02X Vf %02X Velocity Units (hex)", state->dmr_34_rate_sf[i+1], state->dmr_34_rate_sf[i+2]);
-        double velocity = ( ((double)( (state->dmr_12_rate_sf[slot][i+1] ) + state->dmr_12_rate_sf[slot][i+2] )) / ( (double)128));
-        if (opts->lrrp_file_output == 1)
+        //tuck velocity and track inside the lrrp coordinates? loose false positives on velocity and track without a coord point
+        if ( state->dmr_12_rate_sf[slot][i+11] == 0x6C && message_legnth > 13)
         {
-          fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
-        }
-        fprintf (stderr, "\n  LRRP - Velocity: %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity) );
-        sprintf ( state->dmr_lrrp[state->currentslot][4], "Vel: %.4lf kph ", (3.6 * velocity));
+          //either Plus is wrong, or I'm wrong on higher velocities exceeding 0xFF. double check double values?
+          //fprintf (stderr, "\n  LRRP - Vi %02X Vf %02X Velocity Units (hex)", state->dmr_34_rate_sf[i+1], state->dmr_34_rate_sf[i+2]);
+          double velocity = ( ((double)( (state->dmr_12_rate_sf[slot][i+12] ) + state->dmr_12_rate_sf[slot][i+13] )) / ( (double)128));
+          if (opts->lrrp_file_output == 1)
+          {
+            fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
+          }
+          fprintf (stderr, "\n  LRRP - Velocity: %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity) );
+          sprintf ( state->dmr_lrrp[state->currentslot][4], "Vel: %.4lf kph ", (3.6 * velocity));
 
-        i = i + 3; //skip 3 bytes here so we don't accidentally trip another flag with data in these bytes
-      }
-      if ( state->dmr_12_rate_sf[slot][i] == 0x56 && message_legnth > 13)
-      {
-        //check for appropriate terminology here - Heading, bearing, course, or track?
-        if (opts->lrrp_file_output == 1)
+          //i = i + 3; //skip 3 bytes here so we don't accidentally trip another flag with data in these bytes
+        }
+        if ( state->dmr_12_rate_sf[slot][i+14] == 0x56 && message_legnth > 13)
         {
-          fprintf (pFile, "%d\t", state->dmr_12_rate_sf[slot][i+1] * 2);
-        }
-        fprintf (stderr, "\n  LRRP - Track: %d Degrees", state->dmr_12_rate_sf[slot][i+1] * 2);
-        sprintf ( state->dmr_lrrp[state->currentslot][5], "Dir: %d Deg ", state->dmr_12_rate_sf[slot][i+1] * 2);
+          //check for appropriate terminology here - Heading, bearing, course, or track?
+          if (opts->lrrp_file_output == 1)
+          {
+            fprintf (pFile, "%d\t", state->dmr_12_rate_sf[slot][i+15] * 2);
+          }
+          fprintf (stderr, "\n  LRRP - Track: %d Degrees", state->dmr_12_rate_sf[slot][i+15] * 2);
+          sprintf ( state->dmr_lrrp[state->currentslot][5], "Dir: %d Deg ", state->dmr_12_rate_sf[slot][i+15] * 2);
 
-        i = ((blocks+1)*12); //skip to end of loop here so we don't accidentally trip another flag with data in these bytes
+          i = ((blocks+1)*12); //skip to end of loop here so we don't accidentally trip another flag with data in these bytes
+        }
+
+        i = i + 15;
+
       }
+
       //try for a Control ACK at the very end if nothing else pops, flag still unknown
       if ( (state->dmr_12_rate_sf[slot][i] == 0x36 || state->dmr_12_rate_sf[slot][i] == 0x37) && message_legnth > 6 )
       {

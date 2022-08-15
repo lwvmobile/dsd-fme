@@ -224,6 +224,7 @@ initOpts (dsd_opts * opts)
   opts->wav_out_fileR[0] = 0;
   opts->wav_out_file_raw[0] = 0;
   opts->symbol_out_file[0] = 0;
+  opts->lrrp_out_file[0] = 0;
   opts->symbol_out_f = NULL;
   opts->symbol_out = 0;
   opts->wav_out_f = NULL;
