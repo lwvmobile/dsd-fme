@@ -135,8 +135,7 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
       message_legnth = 22; //quick shim for KrisMar samples, until I can find a message legnth flag on his
     }
 
-    //find user home directory and append directory and filename.
-    FILE * pFile; //put this outside of the if statement?
+    FILE * pFile;
     if (opts->lrrp_file_output == 1)
     {
       //open file by name that is supplied in the ncurses terminal
@@ -1199,7 +1198,8 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
   //Start Polling the 1/2 Rate Super Frame for Data when byte 0 contains values
   //LRRP
   int message_legnth = 0;
-  if ( (state->dmr_12_rate_sf[slot][0] & 0x7F) == 0x45) //Start LRRP now
+  if ( ((state->dmr_12_rate_sf[slot][0] & 0x7F) == 0x45) ||
+       ((state->dmr_12_rate_sf[slot][0] & 0x7F) == 0x1F)   ) //Start LRRP now, shimmed in 1F for KrisMar testing
   {
 
     if ( (state->dmr_12_rate_sf[slot][0] & 0x7F) == 0x1F )
@@ -1207,7 +1207,6 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
       message_legnth = 22; //quick shim for KrisMar samples, until I can find a message legnth flag on his
     }
 
-    //find user home directory and append directory and filename.
     FILE * pFile; //put this outside of the if statement?
     if (opts->lrrp_file_output == 1)
     {
