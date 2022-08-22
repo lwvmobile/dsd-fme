@@ -77,7 +77,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 {
 
   //
-  int BP[256] = {
+  int Pr[256] = {
     0x0000, 0x1F00, 0xE300, 0xFC00, 0x2503, 0x3A03, 0xC603, 0xD903,
     0x4A05, 0x5505, 0xA905, 0xB605, 0x6F06, 0x7006, 0x8C06, 0x9306,
     0x2618, 0x3918, 0xC518, 0xDA18, 0x031B, 0x1C1B, 0xE01B, 0xFF1B,
@@ -230,7 +230,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
 		    if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10)
         {
-          k = BP[state->K];
+          k = Pr[state->K];
           k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
           for (short int j = 0; j < 48; j++) //49
           {
@@ -292,7 +292,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
         if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fid == 0x10)
         {
-          k = BP[state->K];
+          k = Pr[state->K];
           k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
           for (short int j = 0; j < 48; j++)
           {

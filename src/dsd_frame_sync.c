@@ -1197,7 +1197,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                           }
                           if (opts->errorbars == 1)
                             {
-                              printFrameSync (opts, state, " +NXDN96   ", synctest_pos + 1, modulation);
+                              printFrameSync (opts, state, "+NXDN96 ", synctest_pos + 1, modulation);
                             }
                         }
                       state->lastsynctype = 8;

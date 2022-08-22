@@ -632,9 +632,9 @@ usage ()
   printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
   printf ("  -Z            Log MBE/Frame Payloads to console\n");
   printf ("\n");
-  printf ("  -K <dec>      Manually Enter DMRA BP Key (Decimal Value of Key Number)\n");
+  printf ("  -K <dec>      Manually Enter DMRA Privacy Key (Decimal Value of Key Number)\n");
   printf ("\n");
-  printf ("  -H <hex>      Manually Enter Terra 10 BP Key (40-Bit/10-Char Hex Value)\n");
+  printf ("  -H <hex>      Manually Enter 'Tera 10 Privacy Key (40-Bit/10-Char Hex Value)\n");
   printf ("\n");
   exit (0);
 }

@@ -371,7 +371,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10)
         {
           fprintf (stderr, "%s", KYEL);
-          fprintf(stderr, " BPK %lld", state->K);
+          fprintf(stderr, " PrK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
         if (state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
@@ -388,7 +388,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10)
         {
           fprintf (stderr, "%s", KYEL);
-          fprintf(stderr, " BPK %lld", state->K);
+          fprintf(stderr, " PrK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
         if (state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
@@ -410,7 +410,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10)
         {
           fprintf (stderr, "%s", KYEL);
-          fprintf(stderr, " BPK %lld", state->K);
+          fprintf(stderr, " PrK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
         if (state->H > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
@@ -427,7 +427,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10)
         {
           fprintf (stderr, "%s", KYEL);
-          fprintf(stderr, " BPK %lld", state->K);
+          fprintf(stderr, " PrK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
         if (state->H > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
@@ -714,7 +714,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
          (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10) )
     {
       fprintf (stderr, "%s", KYEL);
-      fprintf(stderr, " BPK %lld", state->K);
+      fprintf(stderr, " PrK %lld", state->K);
       fprintf (stderr, "%s", KNRM);
 
     }
@@ -734,9 +734,9 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
          (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10) )
     {
       fprintf (stderr, "%s", KYEL);
-      fprintf(stderr, " BPK %lld", state->K);
+      fprintf(stderr, " PrK %lld", state->K);
       fprintf (stderr, "%s", KNRM);
-      
+
     }
     if ( (state->H > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid  == 0x68) ||
          (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68) )

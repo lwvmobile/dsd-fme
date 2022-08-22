@@ -809,8 +809,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       box (entry_win, 0, 0);
       mvwprintw(entry_win, 2, 2, "Key Type Selection");
       mvwprintw(entry_win, 3, 2, " ");
-      mvwprintw(entry_win, 4, 2, "1 -  DMRA BP ");
-      mvwprintw(entry_win, 5, 2, "2 - Terra BP ");
+      mvwprintw(entry_win, 4, 2, "1 -  DMRA Privacy ");
+      mvwprintw(entry_win, 5, 2, "2 - 'Tera Privacy ");
       mvwprintw(entry_win, 6, 3, " ");
       echo();
       refresh();
@@ -822,7 +822,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       {
         entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
         box (entry_win, 0, 0);
-        mvwprintw(entry_win, 2, 2, "DMRA BP Key Number (DEC):");
+        mvwprintw(entry_win, 2, 2, "DMRA Privacy Key Number (DEC):");
         mvwprintw(entry_win, 3, 3, " ");
         echo();
         refresh();
@@ -837,7 +837,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       {
         entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
         box (entry_win, 0, 0);
-        mvwprintw(entry_win, 2, 2, "**Terra 10 Key Value (HEX):");
+        mvwprintw(entry_win, 2, 2, "'Tera 10 Key Value (HEX):");
         mvwprintw(entry_win, 3, 3, " ");
         echo();
         refresh();
@@ -1839,7 +1839,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL == 16 && state->payload_algid == 0 && (state->dmr_so & 0xCF) == 0x40) //4F or CF mask? & 0xCF currently
     {
       attron(COLOR_PAIR(5));
-      printw (" **BP** ");
+      printw (" **Pr** ");
       attroff(COLOR_PAIR(5));
       attron(COLOR_PAIR(3));
     }
@@ -1847,8 +1847,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL == 16 && state->payload_algid == 0 && state->K > 0 && state->dmr_fid == 0x10 && (state->dmr_so & 0xCF) == 0x40)
     {
       attron(COLOR_PAIR(1));
-      //printw ("BPK [%3lld] ", state->K);
-      printw ("DMRA BP Key [%3lld] ", state->K);
+      printw ("DMRA P Key [%3lld] ", state->K);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
@@ -1856,7 +1855,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL == 16 && state->payload_algid == 0 && state->H > 0 && state->dmr_fid == 0x68 && ((state->dmr_so & 0xCF) == 0x40) )
     {
       attron(COLOR_PAIR(1));
-      printw ("**Terra BP Key [%010llX] ", state->H);
+      printw ("**'Tera P Key [%010llX] ", state->H);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
@@ -1949,7 +1948,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstR == 16 && state->payload_algidR == 0 && (state->dmr_soR & 0xCF) == 0x40) //4F or CF mask?
     {
       attron(COLOR_PAIR(5));
-      printw (" **BP** ");
+      printw (" **Pr** ");
       attroff(COLOR_PAIR(5));
       attron(COLOR_PAIR(3));
     }
@@ -1957,14 +1956,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->K > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x10)
     {
       attron(COLOR_PAIR(1));
-      printw ("DMRA BP Key [%3lld] ", state->K);
+      printw ("DMRA Pr Key [%3lld] ", state->K);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
     if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->H > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x68)
     {
       attron(COLOR_PAIR(1));
-      printw ("**Terra BP Key [%010llX] ", state->H);
+      printw ("**'Tera Pr Key [%010llX] ", state->H);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
