@@ -118,7 +118,7 @@ if (state->currentslot == 0 && state->H > 0 && state->dmr_so & 0x40 && state->pa
 {
 
 	fprintf (stderr, "%s", KYEL);
-	fprintf(stderr, " HYT %010llX", state->H);
+	fprintf(stderr, " T10 %010llX", state->H);
 	fprintf (stderr, "%s", KNRM);
 	k = state->H;
 
@@ -150,7 +150,7 @@ if (state->currentslot == 1 && state->H > 0 && state->dmr_soR & 0x40 && state->p
 {
 
 	fprintf (stderr, "%s", KYEL);
-	fprintf(stderr, " HYT %010llX", state->H);
+	fprintf(stderr, " T10 %010llX", state->H);
 	fprintf (stderr, "%s", KNRM);
 	k = state->H;
 

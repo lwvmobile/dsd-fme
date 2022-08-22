@@ -206,7 +206,7 @@ char *choices[] = {
       "Decode NXDN96",
       "Decode X2-TDMA*",
       "Toggle Signal Inversion",
-      "Basic Key Entry", //spacer
+      "Privacy Key Entry", //spacer
       "Reset Call History",
       "Enable Payloads to Console",
       "Disable Payloads to Console",
