@@ -1618,7 +1618,7 @@ void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t 
     uint8_t nb4 = DmrDataByte[5] & 0x3F; //extract(csbk, 42, 48);
     uint8_t nb5 = DmrDataByte[6] & 0x3F; //extract(csbk, 50, 56);
     fprintf (stderr, "\nMotoTRBO Capacity Plus Neighbors");
-    //fprintf(stderr, " NB1(%02x), NB2(%02x), NB3(%02x), NB4(%02x), NB5(%02x)", nb1, nb2, nb3, nb4, nb5);
+    fprintf(stderr, " NB1(%02x), NB2(%02x), NB3(%02x), NB4(%02x), NB5(%02x)", nb1, nb2, nb3, nb4, nb5);
     sprintf(state->dmr_branding, " MotoTRBO Capacity Plus ");
   }
 
@@ -1842,6 +1842,9 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
 
 }
 
+//need to look into differences with Cap+ and other systems affecting the expected radio src id values
+//find a way to differentiate the system types so we get good radio id decodes all the time
+//svc op 0x60 for cap+?? if so, then should we use a mask?
 void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
 {
   uint32_t i, j, k;
@@ -1861,7 +1864,7 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
   {
     TSVoiceSupFrame = &state->TS1SuperFrame;
   }
-  else
+  if(state->currentslot == 1)
   {
     TSVoiceSupFrame = &state->TS2SuperFrame;
   }
@@ -1948,15 +1951,15 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
     {
       state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
       state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
-      state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-      state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
+      //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+      //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress; //disabled for now, Cap+ and other systems cause issues with these values
     }
     if (state->currentslot == 1)
     {
       state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
       state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
-      state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
-      state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
+      //state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
+      //state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
     }
   }
   else if(IrrecoverableErrors == 0)
@@ -1967,15 +1970,15 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
     {
       state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
       state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
-      state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-      state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
+      //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+      //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
     }
     if (state->currentslot == 1)
     {
       state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
       state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
-      state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
-      state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
+      //state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
+      //state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
     }
   }
   else
@@ -2359,14 +2362,12 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 10; i++)
   {
     LC_DataBytes[i] = 0;
-    for(j = 0; j < 8; j++)
-    //for(j = 0; j < 10; j++)
+    for(j = 0; j < 10; j++) //why did I change this?
     {
       LC_DataBytes[i] = LC_DataBytes[i] << 1;
       LC_DataBytes[i] = LC_DataBytes[i] | (LC_DataBit[k] & 0x01);
       k++;
       if(k >= 76) break;
-      //if(k >= 80) break;
     }
   }
 
