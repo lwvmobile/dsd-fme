@@ -358,7 +358,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
     //use fopen and read in a symbol, check op25 for clues
     if(opts->symbolfile == NULL)
     {
-      fprintf(stderr, "Error Opening File %s\n", opts->symbolfile);
+      fprintf(stderr, "Error Opening File %s\n", opts->audio_in_dev); //double check this
       return(-1);
     }
 

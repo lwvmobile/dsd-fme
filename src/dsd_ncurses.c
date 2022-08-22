@@ -809,8 +809,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       box (entry_win, 0, 0);
       mvwprintw(entry_win, 2, 2, "Key Type Selection");
       mvwprintw(entry_win, 3, 2, " ");
-      mvwprintw(entry_win, 4, 2, "1 - DMRA BP ");
-      mvwprintw(entry_win, 5, 2, "2 - Tera BP ");
+      mvwprintw(entry_win, 4, 2, "1 -  DMRA BP ");
+      mvwprintw(entry_win, 5, 2, "2 - Terra BP ");
       mvwprintw(entry_win, 6, 3, " ");
       echo();
       refresh();
@@ -837,7 +837,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       {
         entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
         box (entry_win, 0, 0);
-        mvwprintw(entry_win, 2, 2, "**Tera 10 Key Value (HEX):");
+        mvwprintw(entry_win, 2, 2, "**Terra 10 Key Value (HEX):");
         mvwprintw(entry_win, 3, 3, " ");
         echo();
         refresh();
@@ -1856,7 +1856,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL == 16 && state->payload_algid == 0 && state->H > 0 && state->dmr_fid == 0x68 && ((state->dmr_so & 0xCF) == 0x40) )
     {
       attron(COLOR_PAIR(1));
-      printw ("**Tera BP Key [%010llX] ", state->H);
+      printw ("**Terra BP Key [%010llX] ", state->H);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
@@ -1964,7 +1964,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->H > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x68)
     {
       attron(COLOR_PAIR(1));
-      printw ("**Tera BP Key [%010llX] ", state->H);
+      printw ("**Terra BP Key [%010llX] ", state->H);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }

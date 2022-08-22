@@ -634,7 +634,7 @@ usage ()
   printf ("\n");
   printf ("  -K <dec>      Manually Enter DMRA BP Key (Decimal Value of Key Number)\n");
   printf ("\n");
-  printf ("  -H <hex>      Manually Enter **tera 10 BP Key (40-Bit/10-Char Hex Value)\n");
+  printf ("  -H <hex>      Manually Enter Terra 10 BP Key (40-Bit/10-Char Hex Value)\n");
   printf ("\n");
   exit (0);
 }
