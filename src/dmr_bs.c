@@ -710,26 +710,40 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   if (opts->inverted_dmr == 0)
   {
     fprintf (stderr,"Sync: +DMR                  |  Frame Sync   | DMRSTEREO | VC1 ");
-    if ( (state->K > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0) ||
-         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0) )
+    if ( (state->K > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid  == 0x10) ||
+         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10) )
     {
       fprintf (stderr, "%s", KYEL);
       fprintf(stderr, " BPK %lld", state->K);
       fprintf (stderr, "%s", KNRM);
-      //state->currentslot = 0; //slot now set from cach data from buffer
+
+    }
+    if ( (state->H > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid  == 0x68) ||
+         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68) )
+    {
+      fprintf (stderr, "%s", KYEL);
+      fprintf(stderr, " T10 %010llX", state->H);
+      fprintf (stderr, "%s", KNRM);
     }
     fprintf (stderr, "\n");
   }
   else
   {
     fprintf (stderr,"Sync: -DMR                  |  Frame Sync   | DMRSTEREO | VC1 ");
-    if ( (state->K > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0) ||
-         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0) )
+    if ( (state->K > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid  == 0x10) ||
+         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10) )
     {
       fprintf (stderr, "%s", KYEL);
       fprintf(stderr, " BPK %lld", state->K);
       fprintf (stderr, "%s", KNRM);
-      //state->currentslot = 0; //slot now set from cach data from buffer
+      
+    }
+    if ( (state->H > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid  == 0x68) ||
+         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68) )
+    {
+      fprintf (stderr, "%s", KYEL);
+      fprintf(stderr, " T10 %010llX", state->H);
+      fprintf (stderr, "%s", KNRM);
     }
     fprintf (stderr, "\n");
   }
