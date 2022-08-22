@@ -290,7 +290,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->errs2R += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
 
-        if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fid == 0x10)
+        if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10)
         {
           k = Pr[state->K];
           k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
