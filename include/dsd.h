@@ -563,6 +563,11 @@ typedef struct
   unsigned int dmrburstL;
   unsigned int dmrburstR;
   unsigned long long int R;
+  unsigned long long int H;
+  unsigned long long int HYTL;
+  unsigned long long int HYTR;
+  int DMRvcL;
+  int DMRvcR;
   // int block_count;
   short int dmr_encL;
   short int dmr_encR;
@@ -887,11 +892,13 @@ void dstar_header_decode(dsd_state * state, int radioheaderbuffer[660]);
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#ifdef USE_RTLSDR
 void open_rtlsdr_stream(dsd_opts *opts);
 void cleanup_rtlsdr_stream();
 void get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state);
 void rtlsdr_sighandler();
-
+#endif
 //TRELLIS
 void CDMRTrellisTribitsToBits(const unsigned char* tribits, unsigned char* payload);
 unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* tribits);

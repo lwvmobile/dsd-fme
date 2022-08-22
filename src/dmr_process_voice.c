@@ -72,7 +72,7 @@ int BP[256] = {
 };
 
 
-if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
+if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10)
 {
   fprintf (stderr, "%s", KYEL);
   fprintf(stderr, " BPK %lld", state->K);
@@ -93,7 +93,7 @@ if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->pa
   }
 }
 
-if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0)
+if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10)
 {
   fprintf (stderr, "%s", KYEL);
   fprintf(stderr, " BPK %lld", state->K);
@@ -110,6 +110,70 @@ if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->p
       x = ( ((k << j) & 0x800000000000) >> 47 );
       TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j] ^= x;
      }
+   }
+  }
+}
+
+if (state->currentslot == 0 && state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
+{
+
+	fprintf (stderr, "%s", KYEL);
+	fprintf(stderr, " HYT %010llX", state->H);
+	fprintf (stderr, "%s", KNRM);
+	k = state->H;
+
+	unsigned long long int msb = 0;
+
+	k = k << 8;
+	k = k | ((k >> 40) & 0xFF);
+
+  for(Frame = 0; Frame < 6; Frame++)
+  {
+   for(i = 0; i < 3; i++)
+   {
+     for(j = 0; j < 48; j++)
+     {
+      x = ( ((k << j) & 0x800000000000) >> 47 );
+      TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j] ^= x;
+     }
+
+			k = k << 1;
+			msb = (k >> 32) & 0xFFFF;
+			k = (k << 8) & 0xFFFFFFFF0000;
+			k = k | msb;
+
+   }
+  }
+}
+
+if (state->currentslot == 1 && state->H > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
+{
+
+	fprintf (stderr, "%s", KYEL);
+	fprintf(stderr, " HYT %010llX", state->H);
+	fprintf (stderr, "%s", KNRM);
+	k = state->H;
+
+	unsigned long long int msb = 0;
+
+	k = k << 8;
+	k = k | ((k >> 40) & 0xFF);
+
+  for(Frame = 0; Frame < 6; Frame++)
+  {
+   for(i = 0; i < 3; i++)
+   {
+     for(j = 0; j < 48; j++)
+     {
+      x = ( ((k << j) & 0x800000000000) >> 47 );
+      TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j] ^= x;
+     }
+
+			k = k << 1;
+			msb = (k >> 32) & 0xFFFF;
+			k = (k << 8) & 0xFFFFFFFF0000;
+			k = k | msb;
+
    }
   }
 }

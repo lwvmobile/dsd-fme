@@ -368,10 +368,16 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       if (opts->inverted_dmr == 0)
       {
         fprintf (stderr,"Sync: +DMR  [SLOT1]  slot2  |               | DMRSTEREO | VC%d ",vc1);
-        if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
+        if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10)
         {
           fprintf (stderr, "%s", KYEL);
           fprintf(stderr, " BPK %lld", state->K);
+          fprintf (stderr, "%s", KNRM);
+        }
+        if (state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
+        {
+          fprintf (stderr, "%s", KYEL);
+          fprintf(stderr, " T10 %010llX", state->H);
           fprintf (stderr, "%s", KNRM);
         }
         fprintf (stderr, "\n");
@@ -379,10 +385,16 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       else
       {
         fprintf (stderr,"Sync: -DMR  [SLOT1]  slot2  |               | DMRSTEREO | VC%d ",vc1);
-        if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
+        if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10)
         {
           fprintf (stderr, "%s", KYEL);
           fprintf(stderr, " BPK %lld", state->K);
+          fprintf (stderr, "%s", KNRM);
+        }
+        if (state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
+        {
+          fprintf (stderr, "%s", KYEL);
+          fprintf(stderr, " T10 %010llX", state->H);
           fprintf (stderr, "%s", KNRM);
         }
         fprintf (stderr, "\n");
@@ -395,10 +407,16 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       if (opts->inverted_dmr == 0)
       {
         fprintf (stderr,"Sync: +DMR   slot1  [SLOT2] |               | DMRSTEREO | VC%d ",vc2);
-        if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0)
+        if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10)
         {
           fprintf (stderr, "%s", KYEL);
           fprintf(stderr, " BPK %lld", state->K);
+          fprintf (stderr, "%s", KNRM);
+        }
+        if (state->H > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
+        {
+          fprintf (stderr, "%s", KYEL);
+          fprintf(stderr, " T10 %010llX", state->H);
           fprintf (stderr, "%s", KNRM);
         }
         fprintf (stderr, "\n");
@@ -406,10 +424,16 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       else
       {
         fprintf (stderr,"Sync: -DMR   slot1  [SLOT2] |               | DMRSTEREO | VC%d ",vc2);
-        if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0)
+        if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10)
         {
           fprintf (stderr, "%s", KYEL);
           fprintf(stderr, " BPK %lld", state->K);
+          fprintf (stderr, "%s", KNRM);
+        }
+        if (state->H > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
+        {
+          fprintf (stderr, "%s", KYEL);
+          fprintf(stderr, " T10 %010llX", state->H);
           fprintf (stderr, "%s", KNRM);
         }
         fprintf (stderr, "\n");
@@ -435,10 +459,10 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
     if (internalslot == 0 && vc1 == 6)
     {
-
+      state->DMRvcL = 0;
       if (state->payload_algid >= 0x21)
       {
-        //running this as state->payload_mi > 0 apparently causes some problem, don't know why
+
         if (state->payload_mi != 0 && state->payload_algid >= 0x21)
         {
           LFSR(state);
@@ -449,12 +473,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
     if (internalslot == 1 && vc2 == 6)
     {
-
+      state->DMRvcR = 0;
       if (state->payload_algidR >= 0x21)
       {
         if (state->payload_miR != 0 && state->payload_algidR == 0x21)
         {
-          LFSR(state); //re-enable this one after testing Late Entry MI
+          LFSR(state);
         }
         fprintf (stderr, "\n");
       }
@@ -565,8 +589,8 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 
   //payload buffer
   //CACH + First Half Payload + Sync = 12 + 54 + 24
-  dibit_p = state->dibit_buf_p - 90; //this seems to work okay for both
-  //dibit_p = state->dmr_payload_p - 90;
+  //dibit_p = state->dibit_buf_p - 90; //this seems to work okay for both
+  dibit_p = state->dmr_payload_p - 90;
   for (i = 0; i < 90; i++) //90
   {
     dibit = *dibit_p;
@@ -709,6 +733,9 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     }
     fprintf (stderr, "\n");
   }
+
+  state->DMRvcL = 0;
+  state->DMRvcR = 0;
 
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);

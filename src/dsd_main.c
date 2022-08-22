@@ -144,6 +144,16 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->payload_keyid = 0;
   state->payload_keyidR = 0;
 
+  state->dmr_fid = 0;
+  state->dmr_so = 0;
+  state->dmr_fidR = 0;
+  state->dmr_soR = 0;
+
+  state->HYTL = 0;
+  state->HYTR = 0;
+  state->DMRvcL = 0;
+  state->DMRvcR = 0;
+
   state->payload_miN = 0;
   state->p25vc = 0;
   state->payload_miP = 0;
@@ -469,6 +479,7 @@ initState (dsd_state * state)
 
   state->K = 0;
   state->R = 0;
+  state->H = 0;
 
   state->dmr_stereo = 0;
   state->dmrburstL = 17; //initialize at higher value than possible
@@ -478,6 +489,11 @@ initState (dsd_state * state)
   state->dmr_fid  = 0;
   state->dmr_fidR = 0;
   state->dmr_ms_mode = 0;
+
+  state->HYTL = 0;
+  state->HYTR = 0;
+  state->DMRvcL = 0;
+  state->DMRvcR = 0;
 
   state->p25vc = 0;
 
@@ -615,6 +631,10 @@ usage ()
   printf ("                 This feature will attempt to resync less often due to excessive voice errors\n");
   printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
   printf ("  -Z            Log MBE/Frame Payloads to console\n");
+  printf ("\n");
+  printf ("  -K <dec>      Manually Enter DMRA BP Key (Decimal Value of Key Number)\n");
+  printf ("\n");
+  printf ("  -H <hex>      Manually Enter **tera 10 BP Key (40-Bit/10-Char Hex Value)\n");
   printf ("\n");
   exit (0);
 }
@@ -854,7 +874,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:NQWrlZTF")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:NQWrlZTF")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -927,6 +947,21 @@ main (int argc, char **argv)
           opts.dmr_mute_encL = 0;
           opts.dmr_mute_encR = 0;
           if (state.K == 0)
+          {
+            opts.dmr_mute_encL = 1;
+            opts.dmr_mute_encR = 1;
+          }
+          break;
+
+        case 'H':
+          sscanf (optarg, "%llX", &state.H);
+          if (state.H > 0xFFFFFFFFFF)
+          {
+           state.H = 0xFFFFFFFFFF;
+          }
+          opts.dmr_mute_encL = 0;
+          opts.dmr_mute_encR = 0;
+          if (state.H == 0)
           {
             opts.dmr_mute_encL = 1;
             opts.dmr_mute_encR = 1;

@@ -318,6 +318,13 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
       // store non-inverted values in dibit_buf
       *state->dibit_buf_p = invert_dibit(dibit);
       state->dibit_buf_p++;
+
+      //dmr buffer
+      *state->dmr_payload_p = invert_dibit(dibit); //invert, or no?
+      // *state->dmr_payload_p = dibit; //invert, or no?
+      state->dmr_payload_p++;
+      //dmr buffer end
+
       return dibit;
     }
   else

@@ -51,15 +51,15 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   ccAscii[4] = 0;
   bursttype[4] = 0;
 
-  dibit_p = state->dibit_buf_p - 90;
+  //dibit_p = state->dibit_buf_p - 90;
   //using the estimate_symbol method for the dmr_payload_p buffer causes sync
   //issues with P25, so only do it when frame_p25p1 == 0, or -fr option
   //temp fix to only use dmr_payload_p buffer when no inversion expected, otherwise use dibit_buf
-  if (opts->frame_p25p1 == 0 && opts->inverted_dmr == 0) //opts->frame_p25p1 == 0 && opts->inverted_dmr == 0
-  {
-    dibit_p = state->dmr_payload_p - 90;
-  }
-
+  // if (opts->frame_p25p1 == 0 && opts->inverted_dmr == 0) //opts->frame_p25p1 == 0 && opts->inverted_dmr == 0
+  // {
+  //   dibit_p = state->dmr_payload_p - 90;
+  // }
+  dibit_p = state->dmr_payload_p - 90;
   // CACH, why aren't we running any FEC on this?
   for (i = 0; i < 12; i++)
   {
