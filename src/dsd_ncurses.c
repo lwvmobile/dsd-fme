@@ -1847,7 +1847,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL == 16 && state->payload_algid == 0 && state->K > 0 && state->dmr_fid == 0x10 && (state->dmr_so & 0xCF) == 0x40)
     {
       attron(COLOR_PAIR(1));
-      printw ("DMRA P Key [%3lld] ", state->K);
+      printw ("DMRA Pr Key [%3lld] ", state->K);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
@@ -1855,7 +1855,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL == 16 && state->payload_algid == 0 && state->H > 0 && state->dmr_fid == 0x68 && ((state->dmr_so & 0xCF) == 0x40) )
     {
       attron(COLOR_PAIR(1));
-      printw ("**'Tera P Key [%010llX] ", state->H);
+      printw ("**'Tera Pr Key [%010llX] ", state->H);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
