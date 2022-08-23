@@ -206,7 +206,7 @@ char *choices[] = {
       "Decode NXDN96",
       "Decode X2-TDMA*",
       "Toggle Signal Inversion",
-      "                       ", //spacer
+      "Privacy Key Entry", //spacer
       "Reset Call History",
       "Enable Payloads to Console",
       "Disable Payloads to Console",
@@ -310,13 +310,6 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
   if (opts->audio_in_type == 0) //close pulse input if it is the specified input method
   {
     closePulseInput(opts);
-  }
-
-  if (opts->audio_in_type == 3)
-  {
-    //function hangs, figure out why I can't release/stop the dongle
-    //cleanup_rtlsdr_stream(); //close down the rtl dongle
-    //rtlsdr_sighandler();
   }
 
   state->payload_keyid = 0;
@@ -809,27 +802,59 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     {
       state->payload_keyid = 0;
       state->payload_keyidR = 0;
-      state->K = 0;
-
-      entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
+      // state->K = 0;
+      // state->H = 0;
+      short int option = 0;
+      entry_win = newwin(9, WIDTH+6, starty+10, startx+10);
       box (entry_win, 0, 0);
-      mvwprintw(entry_win, 2, 2, " ");
-      mvwprintw(entry_win, 3, 3, " ");
+      mvwprintw(entry_win, 2, 2, "Key Type Selection");
+      mvwprintw(entry_win, 3, 2, " ");
+      mvwprintw(entry_win, 4, 2, "1 -  DMRA Privacy ");
+      mvwprintw(entry_win, 5, 2, "2 - 'Tera Privacy ");
+      mvwprintw(entry_win, 6, 3, " ");
       echo();
       refresh();
-      wscanw(entry_win, "%d", &state->K);
+      wscanw(entry_win, "%d", &option);
       noecho();
       opts->dmr_mute_encL = 0;
       opts->dmr_mute_encR = 0;
-      if (state->K > 255)
+      if (option == 1)
       {
-        state->K = 255;
+        entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
+        box (entry_win, 0, 0);
+        mvwprintw(entry_win, 2, 2, "DMRA Privacy Key Number (DEC):");
+        mvwprintw(entry_win, 3, 3, " ");
+        echo();
+        refresh();
+        wscanw(entry_win, "%lld", &state->K);
+        noecho();
+        if (state->K > 255)
+        {
+          state->K = 255;
+        }
       }
-      if (state->K == 0)
+      if (option == 2)
+      {
+        entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
+        box (entry_win, 0, 0);
+        mvwprintw(entry_win, 2, 2, "'Tera 10 Key Value (HEX):");
+        mvwprintw(entry_win, 3, 3, " ");
+        echo();
+        refresh();
+        wscanw(entry_win, "%llX", &state->H);
+        noecho();
+        if (state->H > 0xFFFFFFFFFF)
+        {
+          state->H = 0xFFFFFFFFFF;
+        }
+      }
+
+      if (state->K == 0 && state->H == 0)
       {
         opts->dmr_mute_encL = 1;
         opts->dmr_mute_encR = 1;
       }
+
       break;
     }
 
@@ -1367,7 +1392,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     }
 
-    if (state->dmrburstR == 16 && state->lastsrcR > 0) //state->currentslot == 1 &&
+    if (state->dmrburstR == 16 && state->lasttgR > 0) //state->currentslot == 1 &&
     {
       tgR = state->lasttgR;
 
@@ -1766,7 +1791,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (state->payload_algid == 0xAA)
       {
         attron(COLOR_PAIR(1));
-        printw(" ADP/RC4");
+        printw(" RC4");
         attron(COLOR_PAIR(3));
       }
       if (state->payload_algid == 0x81)
@@ -1810,22 +1835,31 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("\n");
     //printw ("|        | "); //10 spaces
     printw ("| V XTRA | "); //10 spaces
-    //Burger King
+
     if(state->dmrburstL == 16 && state->payload_algid == 0 && (state->dmr_so & 0xCF) == 0x40) //4F or CF mask? & 0xCF currently
     {
       attron(COLOR_PAIR(5));
-      printw (" **BP** ");
+      printw (" **Pr** ");
       attroff(COLOR_PAIR(5));
       attron(COLOR_PAIR(3));
     }
-    //Point
-    if(state->dmrburstL == 16 && state->payload_algid == 0 && state->K > 0 && (state->dmr_so & 0xCF) == 0x40)
+
+    if(state->dmrburstL == 16 && state->payload_algid == 0 && state->K > 0 && state->dmr_fid == 0x10 && (state->dmr_so & 0xCF) == 0x40)
     {
       attron(COLOR_PAIR(1));
-      printw ("BPK [%3lld] ", state->K);
+      printw ("DMRA Pr Key [%3lld] ", state->K);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
+
+    if(state->dmrburstL == 16 && state->payload_algid == 0 && state->H > 0 && state->dmr_fid == 0x68 && ((state->dmr_so & 0xCF) == 0x40) )
+    {
+      attron(COLOR_PAIR(1));
+      printw ("**'Tera Pr Key [%010llX] ", state->H);
+      attroff(COLOR_PAIR(1));
+      attron(COLOR_PAIR(3));
+    }
+
     //ALG, KeyID, MI                            //was key_id
     if(state->dmrburstL == 16 && state->payload_algid > 0 && (state->dmr_so & 0xCF) == 0x40)
     {
@@ -1911,19 +1945,25 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //printw ("|        | "); //12 spaces
     printw ("| V XTRA | "); //10 spaces
 
-    //Burger King 2
     if(state->dmrburstR == 16 && state->payload_algidR == 0 && (state->dmr_soR & 0xCF) == 0x40) //4F or CF mask?
     {
       attron(COLOR_PAIR(5));
-      printw (" **BP** ");
+      printw (" **Pr** ");
       attroff(COLOR_PAIR(5));
       attron(COLOR_PAIR(3));
     }
-    //Point 2
-    if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->K > 0 && (state->dmr_soR & 0xCF) == 0x40)
+
+    if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->K > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x10)
     {
       attron(COLOR_PAIR(1));
-      printw ("BPK [%3lld] ", state->K);
+      printw ("DMRA Pr Key [%3lld] ", state->K);
+      attroff(COLOR_PAIR(1));
+      attron(COLOR_PAIR(3));
+    }
+    if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->H > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x68)
+    {
+      attron(COLOR_PAIR(1));
+      printw ("**'Tera Pr Key [%010llX] ", state->H);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }

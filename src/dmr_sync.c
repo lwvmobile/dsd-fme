@@ -1618,7 +1618,7 @@ void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t 
     uint8_t nb4 = DmrDataByte[5] & 0x3F; //extract(csbk, 42, 48);
     uint8_t nb5 = DmrDataByte[6] & 0x3F; //extract(csbk, 50, 56);
     fprintf (stderr, "\nMotoTRBO Capacity Plus Neighbors");
-    //fprintf(stderr, " NB1(%02x), NB2(%02x), NB3(%02x), NB4(%02x), NB5(%02x)", nb1, nb2, nb3, nb4, nb5);
+    fprintf(stderr, " NB1(%02x), NB2(%02x), NB3(%02x), NB4(%02x), NB5(%02x)", nb1, nb2, nb3, nb4, nb5);
     sprintf(state->dmr_branding, " MotoTRBO Capacity Plus ");
   }
 
@@ -1842,6 +1842,9 @@ void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
 
 }
 
+//need to look into differences with Cap+ and other systems affecting the expected radio src id values
+//find a way to differentiate the system types so we get good radio id decodes all the time
+//svc op 0x60 for cap+?? if so, then should we use a mask?
 void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20])
 {
   uint32_t i, j, k;
@@ -1861,7 +1864,7 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
   {
     TSVoiceSupFrame = &state->TS1SuperFrame;
   }
-  else
+  if(state->currentslot == 1)
   {
     TSVoiceSupFrame = &state->TS2SuperFrame;
   }
@@ -1918,7 +1921,7 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
     DmrDataBit[j + 6] = (DmrDataByte[i] >> 1) & 0x01;
     DmrDataBit[j + 7] = (DmrDataByte[i] >> 0) & 0x01;
   }
-  //fprintf (stderr, "\nDDB = 0x%X \n", DmrDataBit);
+
   /* Store the Protect Flag (PF) bit */
   TSVoiceSupFrame->FullLC.ProtectFlag = (unsigned int)(DmrDataBit[0]);
 
@@ -1930,7 +1933,6 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
 
   /* Store the Feature set ID (FID)  */
   TSVoiceSupFrame->FullLC.FeatureSetID = (unsigned int)ConvertBitIntoBytes(&DmrDataBit[8], 8);
-  //state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
 
   /* Store the Service Options  */
   TSVoiceSupFrame->FullLC.ServiceOptions = (unsigned int)ConvertBitIntoBytes(&DmrDataBit[16], 8);
@@ -1940,7 +1942,6 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
 
   /* Store the Source address */
   TSVoiceSupFrame->FullLC.SourceAddress = (unsigned int)ConvertBitIntoBytes(&DmrDataBit[48], 24);
-  //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
 
   if((IrrecoverableErrors == 0) && CRCCorrect)
   {
@@ -1948,24 +1949,36 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
     TSVoiceSupFrame->FullLC.DataValidity = 1;
     if (state->currentslot == 0)
     {
+      state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
       state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+      //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+      //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress; //disabled for now, Cap+ and other systems cause issues with these values
     }
     if (state->currentslot == 1)
     {
+      state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
       state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+      //state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
+      //state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
     }
   }
   else if(IrrecoverableErrors == 0)
   {
-    //FEC okay? Set SVCop code anyways
-    TSVoiceSupFrame->FullLC.DataValidity = 0; //shouldn't matter in this context
+    //FEC okay. Set all variables anyways.
+    TSVoiceSupFrame->FullLC.DataValidity = 0;
     if (state->currentslot == 0)
     {
+      state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
       state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+      //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+      //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
     }
     if (state->currentslot == 1)
     {
+      state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
       state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+      //state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
+      //state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
     }
   }
   else
@@ -1973,19 +1986,12 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
     /* CRC checking error, so consider the Full LC data as invalid */
     TSVoiceSupFrame->FullLC.DataValidity = 0;
   }
-  //Full, amateur callsigns and labels not on this,
-  if (opts->payload == 1)
-  {
-    //fprintf (stderr, "\nFull VoiceLC Payload ");
-    for (i = 0; i < 12; i++)
-    {
-      //fprintf (stderr, "[%02X]", DmrDataByte[i]);
-    }
-  }
+
   /* Print the destination ID (TG) and the source ID */
   fprintf (stderr, "%s \n", KGRN);
-  fprintf (stderr, " Slot %d ", state->currentslot+1);
-  fprintf(stderr, "  TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+  fprintf (stderr, " SLOT %d ", state->currentslot+1);
+  fprintf(stderr, "TGT=%u SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+  fprintf(stderr, "FID=0x%02X SVC=0x%02X", TSVoiceSupFrame->FullLC.FeatureSetID, TSVoiceSupFrame->FullLC.ServiceOptions);
 
   if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x80) fprintf(stderr, "Emergency ");
   if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x40)
@@ -2186,16 +2192,26 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
   {
     state->payload_algid = 0;
     state->payload_keyid = 0;
-    //state->payload_mfid  = 0;
     state->payload_mi    = 0;
+    // state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
+    // state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+    //state->dmr_fid = 0;
+    //state->dmr_so = 0; //leave disabled so will persist to aid in muting or unmuting when required
+    state->lastsrc = 0;
+    state->lasttg = 0;
 
   }
   if (state->currentslot == 1)
   {
     state->payload_algidR = 0;
     state->payload_keyidR = 0;
-    //state->payload_mfid  = 0;
     state->payload_miR    = 0;
+    // state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
+    // state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+    //state->dmr_fidR = 0;
+    //state->dmr_soR = 0;
+    state->lastsrcR = 0;
+    state->lasttgR = 0;
 
   }
 
@@ -2203,31 +2219,33 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
   if((IrrecoverableErrors == 0) && CRCCorrect) //amateur DMR seems to only set radio ID up here I think, figure out best way to set without messing up other DMR types
   {
     fprintf (stderr, "%s \n", KRED);
-    fprintf (stderr, "  SLOT %d", state->currentslot+1);
-    fprintf(stderr, " TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-    //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
+    fprintf (stderr, " SLOT %d ", state->currentslot+1);
+    fprintf(stderr, "TGT=%u SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+    fprintf(stderr, "FID=0x%02X SVC=0x%02X", TSVoiceSupFrame->FullLC.FeatureSetID, TSVoiceSupFrame->FullLC.ServiceOptions);
     fprintf (stderr, "%s ", KNRM);
-    //fprintf(stderr, "(CRC OK )  ");
+
     if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode == 0) //other opcodes may convey callsigns, names, etc.
     {
       if (state->currentslot == 0)
       {
-        state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-        state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+        // state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
+        // state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+        //zero out src and tgt here as well, or will that cause issues with ncurses terminal and per call?
       }
       if (state->currentslot == 1)
       {
-        state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
-        state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+        // state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
+        // state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+        //zero out src and tgt here as well, or will that cause issues with ncurses terminal and per call?
       }
     }
   }
   else if(IrrecoverableErrors == 0)
   {
     fprintf (stderr, "%s \n", KRED);
-    fprintf (stderr, "  SLOT %d", state->currentslot+1);
-    fprintf(stderr, " TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-    //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
+    fprintf (stderr, " SLOT %d ", state->currentslot+1);
+    fprintf(stderr, "TGT=%u SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+    fprintf(stderr, "FID=0x%02X SVC=0x%02X", TSVoiceSupFrame->FullLC.FeatureSetID, TSVoiceSupFrame->FullLC.ServiceOptions);
     fprintf(stderr, "RAS (FEC OK/CRC ERR)"); //tlc
     fprintf (stderr, "%s ", KNRM);
     if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode == 0) //other opcodes may convey callsigns, names, etc.
@@ -2235,13 +2253,13 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
     {
       if (state->currentslot == 0)
       {
-        state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-        state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
+        // state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
+        // state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
       }
       if (state->currentslot == 1)
       {
-        state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
-        state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
+        // state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
+        // state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
       }
     }
   }
@@ -2306,11 +2324,6 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   uint8_t  CRCComputed;
   uint32_t CRCCorrect = 0;
 
-  /* Remove warning compiler */
-  //UNUSED_VARIABLE(opts);
-
-  /* Check the current time slot */
-
   if(state->currentslot == 0)
   {
     TSVoiceSupFrame = &state->TS1SuperFrame;
@@ -2319,7 +2332,6 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   {
     TSVoiceSupFrame = &state->TS2SuperFrame;
   }
-
 
   /* First step : Reconstitute the BPTC 16x8 matrix */
   Burst = 1; /* Burst B to E contains embedded signaling data */
@@ -2350,14 +2362,12 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 10; i++)
   {
     LC_DataBytes[i] = 0;
-    for(j = 0; j < 8; j++)
-    //for(j = 0; j < 10; j++)
+    for(j = 0; j < 10; j++) //why did I change this?
     {
       LC_DataBytes[i] = LC_DataBytes[i] << 1;
       LC_DataBytes[i] = LC_DataBytes[i] | (LC_DataBit[k] & 0x01);
       k++;
       if(k >= 76) break;
-      //if(k >= 80) break;
     }
   }
 
@@ -2395,7 +2405,6 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
 
   /* Store the Source address */
   TSVoiceSupFrame->FullLC.SourceAddress = (unsigned int)ConvertBitIntoBytes(&LC_DataBit[48], 24);
-  //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
 
   /* Check the CRC values */
   if((IrrecoverableErrors == 0))// && CRCCorrect)
@@ -2440,7 +2449,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
       {
         fprintf(stderr, "\n");
       }
-      fprintf (stderr, "  SLOT %d", state->currentslot+1);
+      fprintf (stderr, " SLOT %d", state->currentslot+1);
       fprintf (stderr, " Embedded Alias Header and Blocks: [%s%s%s%s%s]", state->dmr_callsign[state->currentslot][0],
               state->dmr_callsign[state->currentslot][1], state->dmr_callsign[state->currentslot][2],
               state->dmr_callsign[state->currentslot][3], state->dmr_callsign[state->currentslot][4] );
@@ -2467,7 +2476,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
       {
         fprintf(stderr, "\n");
       }
-      fprintf (stderr, "  SLOT %d", state->currentslot+1);
+      fprintf (stderr, " SLOT %d", state->currentslot+1);
       fprintf (stderr, " Embedded GPS: [%s]", state->dmr_callsign[state->currentslot][5] );
       fprintf (stderr, "%s ", KNRM);
     }
@@ -2483,11 +2492,45 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
       {
         fprintf(stderr, "\n");
       }
-      fprintf (stderr, "  SLOT %d", state->currentslot+1);
-      fprintf(stderr, " TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-      //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
+      fprintf (stderr, " SLOT %d ", state->currentslot+1);
+      fprintf(stderr, "TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+      fprintf(stderr, "FID=0x%02X SVC=0x%02X", TSVoiceSupFrame->FullLC.FeatureSetID, TSVoiceSupFrame->FullLC.ServiceOptions);
       fprintf (stderr, "%s ", KNRM);
-      //fprintf(stderr, "(CRC OK ) ");
+
+      if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x80) fprintf(stderr, "Emergency ");
+      if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x40)
+      {
+        fprintf (stderr, "%s ", KRED);
+        fprintf(stderr, "Encrypted ");
+        //fprintf (stderr, "%s ", KNRM);
+      }
+      else
+      {
+        fprintf (stderr, "%s ", KGRN);
+        fprintf(stderr, "Clear/Unencrypted ");
+        //fprintf (stderr, "%s ", KNRM);
+      }
+
+      /* Check the "Reserved" bits */
+      if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x30)
+      {
+        /* Experimentally determined with DSD+, when the "Reserved" bit field
+         * is equal to 0x2, this is a TXI call */
+        if((TSVoiceSupFrame->FullLC.ServiceOptions & 0x30) == 0x20) fprintf(stderr, "TXI ");
+        else fprintf(stderr, "Reserved=%d ", (TSVoiceSupFrame->FullLC.ServiceOptions & 0x30) >> 4);
+      }
+      if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x08) fprintf(stderr, "Broadcast ");
+      if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x04) fprintf(stderr, "OVCM ");
+      if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x03)
+      {
+        if((TSVoiceSupFrame->FullLC.ServiceOptions & 0x03) == 0x01) fprintf(stderr, "Priority 1 ");
+        else if((TSVoiceSupFrame->FullLC.ServiceOptions & 0x03) == 0x02) fprintf(stderr, "Priority 2 ");
+        else if((TSVoiceSupFrame->FullLC.ServiceOptions & 0x03) == 0x03) fprintf(stderr, "Priority 3 ");
+        else fprintf(stderr, "No Priority "); /* We should never go here */
+      }
+      fprintf(stderr, "Call ");
+      fprintf (stderr, "%s ", KNRM);
+
       if (state->currentslot == 0)
       {
         state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
@@ -2516,12 +2559,47 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
       {
         fprintf(stderr, "\n");
       }
-      fprintf (stderr, "  SLOT %d", state->currentslot+1);
-      fprintf(stderr, " TGT=%u  SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-      //fprintf(stderr, "FID=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID);
+      fprintf (stderr, " SLOT %d ", state->currentslot+1);
+      fprintf(stderr, "TGT=%u SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
+      fprintf(stderr, "FID=0x%02X SVC=0x%02X", TSVoiceSupFrame->FullLC.FeatureSetID, TSVoiceSupFrame->FullLC.ServiceOptions);
       fprintf (stderr, "%s ", KRED);
       fprintf(stderr, "RAS (FEC OK/CRC ERR)  ");
       fprintf (stderr, "%s ", KNRM);
+
+      if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x80) fprintf(stderr, "Emergency ");
+      if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x40)
+      {
+        fprintf (stderr, "%s ", KRED);
+        fprintf(stderr, "Encrypted ");
+        //fprintf (stderr, "%s ", KNRM);
+      }
+      else
+      {
+        fprintf (stderr, "%s ", KGRN);
+        fprintf(stderr, "Clear/Unencrypted ");
+        //fprintf (stderr, "%s ", KNRM);
+      }
+
+      /* Check the "Reserved" bits */
+      if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x30)
+      {
+        /* Experimentally determined with DSD+, when the "Reserved" bit field
+         * is equal to 0x2, this is a TXI call */
+        if((TSVoiceSupFrame->FullLC.ServiceOptions & 0x30) == 0x20) fprintf(stderr, "TXI ");
+        else fprintf(stderr, "Reserved=%d ", (TSVoiceSupFrame->FullLC.ServiceOptions & 0x30) >> 4);
+      }
+      if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x08) fprintf(stderr, "Broadcast ");
+      if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x04) fprintf(stderr, "OVCM ");
+      if(TSVoiceSupFrame->FullLC.ServiceOptions & 0x03)
+      {
+        if((TSVoiceSupFrame->FullLC.ServiceOptions & 0x03) == 0x01) fprintf(stderr, "Priority 1 ");
+        else if((TSVoiceSupFrame->FullLC.ServiceOptions & 0x03) == 0x02) fprintf(stderr, "Priority 2 ");
+        else if((TSVoiceSupFrame->FullLC.ServiceOptions & 0x03) == 0x03) fprintf(stderr, "Priority 3 ");
+        else fprintf(stderr, "No Priority "); /* We should never go here */
+      }
+      fprintf(stderr, "Call ");
+      fprintf (stderr, "%s ", KNRM);
+
       if (state->currentslot == 0)
       {
         state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;

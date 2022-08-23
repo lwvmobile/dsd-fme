@@ -295,14 +295,14 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
     	 state->dmr_payload_p = state->dmr_payload_buf + 200;
       }
 
-      int valid;
+      // int valid;
       //running estimate_symbol causes an issue with P25 syncing properly
-      if (opts->frame_p25p1 != 1)
-      {
-        valid = estimate_symbol(state->rf_mod, &(state->p25_heuristics), state->last_dibit, symbol, &dibit);
-      }
+      // if (opts->frame_p25p1 != 1)
+      // {
+      //   valid = estimate_symbol(state->rf_mod, &(state->p25_heuristics), state->last_dibit, symbol, &dibit);
+      // }
 
-      if (opts->frame_dmr == 1 && valid == 0) //opts->dmr_stereo
+      if (1 == 1) //opts->dmr_stereo //opts->frame_dmr == 1 && valid == 0
       {
         if (symbol > state->center)
         {
@@ -1197,7 +1197,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                           }
                           if (opts->errorbars == 1)
                             {
-                              printFrameSync (opts, state, " +NXDN96   ", synctest_pos + 1, modulation);
+                              printFrameSync (opts, state, "+NXDN96 ", synctest_pos + 1, modulation);
                             }
                         }
                       state->lastsynctype = 8;

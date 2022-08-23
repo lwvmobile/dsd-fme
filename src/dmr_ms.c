@@ -366,10 +366,16 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0 && opts->inverted_dmr == 0)
     {
       fprintf (stderr,"Sync: +DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d ", state->color_code, vc1);
-      if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
+      if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10)
       {
         fprintf (stderr, "%s", KYEL);
-        fprintf(stderr, " BPK %lld", state->K);
+        fprintf(stderr, " PrK %lld", state->K);
+        fprintf (stderr, "%s", KNRM);
+      }
+      if (state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
+      {
+        fprintf (stderr, "%s", KYEL);
+        fprintf(stderr, " T10 %010llX", state->H);
         fprintf (stderr, "%s", KNRM);
       }
       fprintf (stderr, "\n");
@@ -378,10 +384,16 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0 && opts->inverted_dmr == 1)
     {
       fprintf (stderr,"Sync: -DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d ", state->color_code, vc1);
-      if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0)
+      if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10)
       {
         fprintf (stderr, "%s", KYEL);
-        fprintf(stderr, " BPK %lld", state->K);
+        fprintf(stderr, " PrK %lld", state->K);
+        fprintf (stderr, "%s", KNRM);
+      }
+      if (state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
+      {
+        fprintf (stderr, "%s", KYEL);
+        fprintf(stderr, " T10 %010llX", state->H);
         fprintf (stderr, "%s", KNRM);
       }
       fprintf (stderr, "\n");
@@ -400,10 +412,9 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
 
-    //need to seperate the algs here so we don't run LFSR on 22 and so on
     if (vc1 == 6 && state->payload_algid >= 21)
     {
-       //state->currentslot = 0;
+       state->DMRvcL = 0;
        if (state->payload_mi != 0 && state->payload_algid >= 0x21)
        {
          LFSR(state);
@@ -614,11 +625,18 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   if (opts->inverted_dmr == 0)
   {
     fprintf (stderr,"Sync: +DMR MS MODE |  Frame Sync   | DMRSTEREO | VC1 ");
-    if ( (state->K > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0) ||
-         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0) )
+    if ( (state->K > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid == 0x10) ||
+         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fid == 0x10)  )
     {
       fprintf (stderr, "%s", KYEL);
-      fprintf(stderr, " BPK %lld", state->K);
+      fprintf(stderr, " PrK %lld", state->K);
+      fprintf (stderr, "%s", KNRM);
+    }
+    if ( (state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68) ||
+         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fid == 0x68)  )
+    {
+      fprintf (stderr, "%s", KYEL);
+      fprintf(stderr, " T10 %010llX", state->H);
       fprintf (stderr, "%s", KNRM);
     }
     fprintf (stderr, "\n");
@@ -626,17 +644,25 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   else
   {
     fprintf (stderr,"Sync: -DMR MS MODE |  Frame Sync   | DMRSTEREO | VC1 ");
-    if ( (state->K > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0) ||
-         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0) )
+    if ( (state->K > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid == 0x10) ||
+         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fid == 0x10) )
     {
       fprintf (stderr, "%s", KYEL);
-      fprintf(stderr, " BPK %lld", state->K);
+      fprintf(stderr, " PrK %lld", state->K);
+      fprintf (stderr, "%s", KNRM);
+    }
+    if ( (state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68) ||
+         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fid == 0x68)  )
+    {
+      fprintf (stderr, "%s", KYEL);
+      fprintf(stderr, " T10 %010llX", state->H);
       fprintf (stderr, "%s", KNRM);
     }
     fprintf (stderr, "\n");
   }
 
   state->dmr_ms_mode = 1;
+  state->DMRvcL = 0;
 
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
