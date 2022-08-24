@@ -144,10 +144,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->payload_keyid = 0;
   state->payload_keyidR = 0;
 
-  state->dmr_fid = 0;
-  state->dmr_so = 0;
-  state->dmr_fidR = 0;
-  state->dmr_soR = 0;
+  // state->dmr_fid = 0;
+  // state->dmr_so = 0;
+  // state->dmr_fidR = 0;
+  // state->dmr_soR = 0;
 
   state->HYTL = 0;
   state->HYTR = 0;

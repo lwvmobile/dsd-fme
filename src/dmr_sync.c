@@ -1942,6 +1942,11 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
 
   /* Store the Source address */
   TSVoiceSupFrame->FullLC.SourceAddress = (unsigned int)ConvertBitIntoBytes(&DmrDataBit[48], 24);
+  //truncate if Byte 0 isn't 0, 0x04 (or other) may signify a Cap+ System
+  if (DmrDataByte != 0x0)
+  {
+    TSVoiceSupFrame->FullLC.SourceAddress = TSVoiceSupFrame->FullLC.SourceAddress & 0xFFFF;
+  }
 
   if((IrrecoverableErrors == 0) && CRCCorrect)
   {
@@ -1951,15 +1956,16 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
     {
       state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
       state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
-      //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-      //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress; //disabled for now, Cap+ and other systems cause issues with these values
+      state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+      state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress; //disabled for now, Cap+ and other systems cause issues with these values
+
     }
     if (state->currentslot == 1)
     {
       state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
       state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
-      //state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
-      //state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
+      state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
+      state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
     }
   }
   else if(IrrecoverableErrors == 0)
@@ -1970,15 +1976,15 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
     {
       state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
       state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
-      //state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
-      //state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
+      state->lasttg = TSVoiceSupFrame->FullLC.GroupAddress;
+      state->lastsrc = TSVoiceSupFrame->FullLC.SourceAddress;
     }
     if (state->currentslot == 1)
     {
       state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
       state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
-      //state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
-      //state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
+      state->lasttgR = TSVoiceSupFrame->FullLC.GroupAddress;
+      state->lastsrcR = TSVoiceSupFrame->FullLC.SourceAddress;
     }
   }
   else
