@@ -202,7 +202,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 		mbe_demodulateAmbe3600x2450Data (ambe_fr);
 		state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
-    if (state->nxdn_cipher_type == 0x01 && state->R > 0) //reuse R for scrambler key
+    if (state->nxdn_cipher_type == 0x01 && state->R > 0)
 		{
 
 			if (state->payload_miN == 0)
