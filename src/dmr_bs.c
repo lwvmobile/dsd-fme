@@ -374,10 +374,23 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " PrK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        if (state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
+        if (state->DMRvcL == 0 && state->K1 > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
         {
+          fprintf (stderr, "\n");
           fprintf (stderr, "%s", KYEL);
-          fprintf(stderr, " T10 %010llX", state->H);
+          fprintf(stderr, " SPT %016llX", state->K1);
+          if (state->K2 != 0)
+          {
+            fprintf(stderr, " %016llX", state->K2);
+          }
+          if (state->K3 != 0)
+          {
+            fprintf(stderr, " %016llX", state->K3);
+          }
+          if (state->K4 != 0)
+          {
+            fprintf(stderr, " %016llX", state->K4);
+          }
           fprintf (stderr, "%s", KNRM);
         }
         fprintf (stderr, "\n");
@@ -391,10 +404,23 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " PrK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        if (state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
+        if (state->DMRvcL == 0 && state->K1 > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
         {
+          fprintf (stderr, "\n");
           fprintf (stderr, "%s", KYEL);
-          fprintf(stderr, " T10 %010llX", state->H);
+          fprintf(stderr, " SPT %016llX", state->K1);
+          if (state->K2 != 0)
+          {
+            fprintf(stderr, " %016llX", state->K2);
+          }
+          if (state->K3 != 0)
+          {
+            fprintf(stderr, " %016llX", state->K3);
+          }
+          if (state->K4 != 0)
+          {
+            fprintf(stderr, " %016llX", state->K4);
+          }
           fprintf (stderr, "%s", KNRM);
         }
         fprintf (stderr, "\n");
@@ -413,10 +439,23 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " PrK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        if (state->H > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
+        if (state->DMRvcR == 0 && state->K1 > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
         {
+          fprintf (stderr, "\n");
           fprintf (stderr, "%s", KYEL);
-          fprintf(stderr, " T10 %010llX", state->H);
+          fprintf(stderr, " SPT %016llX", state->K1);
+          if (state->K2 != 0)
+          {
+            fprintf(stderr, " %016llX", state->K2);
+          }
+          if (state->K3 != 0)
+          {
+            fprintf(stderr, " %016llX", state->K3);
+          }
+          if (state->K4 != 0)
+          {
+            fprintf(stderr, " %016llX", state->K4);
+          }
           fprintf (stderr, "%s", KNRM);
         }
         fprintf (stderr, "\n");
@@ -430,10 +469,23 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
           fprintf(stderr, " PrK %lld", state->K);
           fprintf (stderr, "%s", KNRM);
         }
-        if (state->H > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
+        if (state->DMRvcR == 0 && state->K1 > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
         {
+          fprintf (stderr, "\n");
           fprintf (stderr, "%s", KYEL);
-          fprintf(stderr, " T10 %010llX", state->H);
+          fprintf(stderr, " SPT %016llX", state->K1);
+          if (state->K2 != 0)
+          {
+            fprintf(stderr, " %016llX", state->K2);
+          }
+          if (state->K3 != 0)
+          {
+            fprintf(stderr, " %016llX", state->K3);
+          }
+          if (state->K4 != 0)
+          {
+            fprintf(stderr, " %016llX", state->K4);
+          }
           fprintf (stderr, "%s", KNRM);
         }
         fprintf (stderr, "\n");
@@ -718,11 +770,24 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%s", KNRM);
 
     }
-    if ( (state->H > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid  == 0x68) ||
-         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68) )
+    if ( (state->K1 > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid  == 0x68) ||
+         (state->K1 > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68) )
     {
+      fprintf (stderr, "\n");
       fprintf (stderr, "%s", KYEL);
-      fprintf(stderr, " T10 %010llX", state->H);
+      fprintf(stderr, " SPT %016llX", state->K1);
+      if (state->K2 != 0)
+      {
+        fprintf(stderr, " %016llX", state->K2);
+      }
+      if (state->K3 != 0)
+      {
+        fprintf(stderr, " %016llX", state->K3);
+      }
+      if (state->K4 != 0)
+      {
+        fprintf(stderr, " %016llX", state->K4);
+      }
       fprintf (stderr, "%s", KNRM);
     }
     fprintf (stderr, "\n");
@@ -738,11 +803,24 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%s", KNRM);
 
     }
-    if ( (state->H > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid  == 0x68) ||
-         (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68) )
+    if ( (state->K1 > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid  == 0x68) ||
+         (state->K1 > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68) )
     {
+      fprintf (stderr, "\n");
       fprintf (stderr, "%s", KYEL);
-      fprintf(stderr, " T10 %010llX", state->H);
+      fprintf(stderr, " SPT %016llX", state->K1);
+      if (state->K2 != 0)
+      {
+        fprintf(stderr, " %016llX", state->K2);
+      }
+      if (state->K3 != 0)
+      {
+        fprintf(stderr, " %016llX", state->K3);
+      }
+      if (state->K4 != 0)
+      {
+        fprintf(stderr, " %016llX", state->K4);
+      }
       fprintf (stderr, "%s", KNRM);
     }
     fprintf (stderr, "\n");

@@ -460,6 +460,10 @@ typedef struct
   unsigned long long int payload_miP;
   int p25vc;
   unsigned long long int K;
+  unsigned long long int K1;
+  unsigned long long int K2;
+  unsigned long long int K3;
+  unsigned long long int K4;
   int menuopen;
 
   unsigned int debug_audio_errors;
@@ -848,6 +852,7 @@ void ProcessUnifiedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], u
 
 //LFSR code courtesy of https://github.com/mattames/LFSR/
 int LFSR(dsd_state * state);
+void LFSRN (char * BufferIn, char * BufferOut, dsd_state * state);
 
 void Hamming_7_4_init();
 void Hamming_7_4_encode(unsigned char *origBits, unsigned char *encodedBits);
