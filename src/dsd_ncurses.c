@@ -841,7 +841,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         state->K4 = 0;
         state->H = 0;
 
-        entry_win = newwin(7, WIDTH+6, starty+10, startx+10);
+        entry_win = newwin(7, WIDTH+8, starty+10, startx+10);
         box (entry_win, 0, 0);
         mvwprintw(entry_win, 2, 2, " Enter **tera Privacy Key Value (HEX) ");
         mvwprintw(entry_win, 3, 2, " 10 Char or First 16 for 32/64");
@@ -852,7 +852,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         noecho();
         state->K1 = state->H;
 
-        entry_win = newwin(7, WIDTH+6, starty+10, startx+10);
+        entry_win = newwin(7, WIDTH+8, starty+10, startx+10);
         box (entry_win, 0, 0);
         mvwprintw(entry_win, 2, 2, " Enter **tera Privacy Key Value 2 (HEX) ");
         mvwprintw(entry_win, 3, 2, " Second 16 Chars or Zero");
@@ -862,7 +862,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         wscanw(entry_win, "%llX", &state->K2);
         noecho();
 
-        entry_win = newwin(7, WIDTH+6, starty+10, startx+10);
+        entry_win = newwin(7, WIDTH+8, starty+10, startx+10);
         box (entry_win, 0, 0);
         mvwprintw(entry_win, 2, 2, " Enter **tera Privacy Key Value 3 (HEX) ");
         mvwprintw(entry_win, 3, 2, " Third 16 Chars or Zero");
@@ -872,7 +872,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         wscanw(entry_win, "%llX", &state->K3);
         noecho();
 
-        entry_win = newwin(7, WIDTH+6, starty+10, startx+10);
+        entry_win = newwin(7, WIDTH+8, starty+10, startx+10);
         box (entry_win, 0, 0);
         mvwprintw(entry_win, 2, 2, " Enter **tera Privacy Key Value 4 (HEX) ");
         mvwprintw(entry_win, 3, 2, " Fourth 16 Chars or Zero");
