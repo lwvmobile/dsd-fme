@@ -743,6 +743,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         if (choicec == 17) //RTL UDP Retune
         {
           //read in new rtl frequency
+          #ifdef USE_RTLSDR
           entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
           box (entry_win, 0, 0);
           mvwprintw(entry_win, 2, 2, " Enter Frequency in Hz (851.8 MHz is 851800000 Hz) ");
@@ -759,7 +760,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           data[4] = (opts->rtlsdr_center_freq >> 24) & 0xFF;
 
           temp_freq = opts->rtlsdr_center_freq;
-
+          #endif
           choicec = 18;
         }
 
