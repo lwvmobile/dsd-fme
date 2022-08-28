@@ -62,15 +62,15 @@ int i = 0;
 char versionstr[25];
 unsigned long long int call_matrix[33][6];
 //current news story for tagline
-//https://www.vice.com/en/article/epzzdk/florida-man-arrested-trying-to-warn-space-force-base-of-alien-dragon-war
+//https://www.facebook.com/watch/?ref=external&v=1254505325380758
 char * FM_bannerN[9] = {
   "                             ESC or Arrow Keys For Menu                      ",
-  " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  'Florida Man steals",
-  " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝  Truck; Drives to   ",
-  " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗    Space Force to warn",
-  " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝    warn of war between",
-  " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗  Aliens and Chinese ",
-  " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝  Dragons' - FM News ",
+  " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  'They ain't wrong, ",
+  " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝   I ain't blame the ",
+  " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗    police...they just ",
+  " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝    protect the people.",
+  " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗  I ain't even mad at",
+  " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝  y'all..' - FM News ",
   "                                                                             ",
   "                                                                             "
 };
