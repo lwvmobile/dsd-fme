@@ -159,6 +159,10 @@ void processNXDNVoice (dsd_opts * opts, dsd_state * state)
   if(PartOfFrame == 3)
   {
     /* Reset all CRCs of the SACCH */
+    if (state->R > 0 && state->nxdn_cipher_type == 0x1)
+    {
+      state->payload_miN = state->R;
+    }
     for(i = 0; i < 4; i++) state->NxdnSacchRawPart[i].CrcIsGood = 0;
 
   }

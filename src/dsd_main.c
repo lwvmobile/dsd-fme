@@ -480,6 +480,10 @@ initState (dsd_state * state)
   state->K = 0;
   state->R = 0;
   state->H = 0;
+  state->K1 = 0;
+  state->K2 = 0;
+  state->K3 = 0;
+  state->K4 = 0;
 
   state->dmr_stereo = 0;
   state->dmrburstL = 17; //initialize at higher value than possible
@@ -621,9 +625,6 @@ usage ()
   printf ("                 (default=36)\n");
   printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
   printf ("                 (default=15)\n");
-  // printf ("  -n            Reset P25 Heuristics and initState variables on mixed signal decoding\n");
-  // printf ("                 Helps when decoding mixed signal types (P25P1) at same time\n");
-  // printf ("                 (WiP! May Cause Slow Memory Leak or System Hang - Experimental)\n");
   printf ("  -T            Enable DMR TDMA Stereo Voice (Two Slot Dual Voices)\n");
   printf ("                 This feature will open two streams for slot 1 voice and slot 2 voice\n");
   printf ("                 May Cause Skipping or sync issues if bad signal/errors\n");
@@ -634,7 +635,10 @@ usage ()
   printf ("\n");
   printf ("  -K <dec>      Manually Enter DMRA Privacy Key (Decimal Value of Key Number)\n");
   printf ("\n");
-  printf ("  -H <hex>      Manually Enter 'Tera 10 Privacy Key (40-Bit/10-Char Hex Value)\n");
+  printf ("  -H <hex>      Manually Enter **tera 10 Privacy Key (40-Bit/10-Char Hex Value)\n");
+  printf ("                (32/64-Char values can only be entered in the NCurses Terminal)\n");
+  printf ("  -R <dec>      Manually Enter NXDN 4800 EHR Scrambler Key Value \n");
+  printf ("                 \n");
   printf ("\n");
   exit (0);
 }
@@ -953,6 +957,21 @@ main (int argc, char **argv)
           }
           break;
 
+        case 'R':
+          sscanf (optarg, "%lld", &state.R);
+          if (state.R > 0x7FFF)
+          {
+           state.R = 0x7FFF;
+          }
+          // opts.dmr_mute_encL = 0;
+          // opts.dmr_mute_encR = 0;
+          if (state.R == 0)
+          {
+            // opts.dmr_mute_encL = 1;
+            // opts.dmr_mute_encR = 1;
+          }
+          break;
+
         case 'H':
           sscanf (optarg, "%llX", &state.H);
           if (state.H > 0xFFFFFFFFFF)
@@ -966,6 +985,7 @@ main (int argc, char **argv)
             opts.dmr_mute_encL = 1;
             opts.dmr_mute_encR = 1;
           }
+          state.K1 = state.H; //shim
           break;
 
         case 'G': //Set rtl device gain
@@ -1099,10 +1119,10 @@ main (int argc, char **argv)
           opts.serial_dev[1023] = '\0';
           break;
 
-        case 'R':
-         sscanf (optarg, "%d", &opts.resume);
-         fprintf (stderr,"Enabling scan resume after %i TDULC frames\n", opts.resume);
-         break;
+        // case 'R':
+        //  sscanf (optarg, "%d", &opts.resume);
+        //  fprintf (stderr,"Enabling scan resume after %i TDULC frames\n", opts.resume);
+        //  break;
 
         case 'f':
           if (optarg[0] == 'a')

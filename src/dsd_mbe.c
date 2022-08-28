@@ -202,6 +202,23 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 		mbe_demodulateAmbe3600x2450Data (ambe_fr);
 		state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
+    if (state->nxdn_cipher_type == 0x01 && state->R > 0)
+		{
+
+			if (state->payload_miN == 0)
+			{
+				state->payload_miN = state->R;
+			}
+
+			char ambe_temp[49];
+			for (short int i = 0; i < 49; i++)
+			{
+				ambe_temp[i] = ambe_d[i];
+				ambe_d[i] = 0;
+			}
+			LFSRN(ambe_temp, ambe_d, state);
+
+		}
 
 		mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
 															ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
@@ -239,34 +256,60 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           }
         }
 
-        if (state->currentslot == 0 && state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
+        if (state->K1 > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
 				{
-					unsigned long long int msb = 0;
-					if (state->DMRvcL == 0)
-					{
-						state->HYTL = state->H;
-						k = state->H;
 
-						k = k << 8;
-						k = k | ((k >> 40) & 0xFF);
-						state->HYTL = k;
+					int pos = 0;
+
+					unsigned long long int k1 = state->K1;
+					unsigned long long int k2 = state->K2;
+					unsigned long long int k3 = state->K3;
+					unsigned long long int k4 = state->K4;
+
+					int T_Key[256] = {0};
+					int pN[882] = {0};
+
+					int len = 0;
+
+					if (k2 == 0)
+					{
+						len = 39;
+						k1 = k1 << 24;
+					}
+					if (k2 != 0)
+					{
+						len = 127;
+					}
+					if (k4 != 0)
+					{
+						len = 255;
 					}
 
-					k = state->HYTL;
-  	     	for(short int j = 0; j < 48; j++)
-		     	{
-			      x = ( ((k << j) & 0x800000000000) >> 47 );
-			      ambe_d[j] ^= x;
-			    }
+					for (i = 0; i < 64; i++)
+					{
+						T_Key[i]     = ( ((k1 << i) & 0x8000000000000000) >> 63 );
+						T_Key[i+64]  = ( ((k2 << i) & 0x8000000000000000) >> 63 );
+						T_Key[i+128] = ( ((k3 << i) & 0x8000000000000000) >> 63 );
+						T_Key[i+192] = ( ((k4 << i) & 0x8000000000000000) >> 63 );
+					}
 
-					k = k << 1;
-					msb = (k >> 32) & 0xFFFF; //new MSB
-					k = (k << 8) & 0xFFFFFFFF0000;
-					k = k | msb;
+					for (i = 0; i < 882; i++)
+					{
+						pN[i] = T_Key[pos];
+						pos++;
+						if (pos > len)
+						{
+							pos = 0;
+						}
+					}
 
-					state->HYTL = k;
+					pos = state->DMRvcL * 49;
+		     	for(i = 0; i < 49; i++)
+				  {
+				    ambe_d[i] ^= pN[pos];
+						pos++;
+					}
 					state->DMRvcL++;
-
 				}
 
       	mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
@@ -289,7 +332,6 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
         state->errs2R += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
-
         if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10)
         {
           k = Pr[state->K];
@@ -301,34 +343,60 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           }
         }
 
-        if (state->H > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
+        if (state->K1 > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
 				{
-					unsigned long long int msb = 0;
-					if (state->DMRvcR == 0)
-					{
-						state->HYTR = state->H;
-						k = state->H;
 
-						k = k << 8;
-						k = k | ((k >> 40) & 0xFF);
-						state->HYTR = k;
+					int pos = 0;
+
+					unsigned long long int k1 = state->K1;
+					unsigned long long int k2 = state->K2;
+					unsigned long long int k3 = state->K3;
+					unsigned long long int k4 = state->K4;
+
+					int T_Key[256] = {0};
+					int pN[882] = {0};
+
+					int len = 0;
+
+					if (k2 == 0)
+					{
+						len = 39;
+						k1 = k1 << 24;
+					}
+					if (k2 != 0)
+					{
+						len = 127;
+					}
+					if (k4 != 0)
+					{
+						len = 255;
 					}
 
-					k = state->HYTR;
-  	     	for(short int j = 0; j < 48; j++)
-		     	{
-			      x = ( ((k << j) & 0x800000000000) >> 47 );
-			      ambe_d[j] ^= x;
-			    }
+					for (i = 0; i < 64; i++)
+					{
+						T_Key[i]     = ( ((k1 << i) & 0x8000000000000000) >> 63 );
+						T_Key[i+64]  = ( ((k2 << i) & 0x8000000000000000) >> 63 );
+						T_Key[i+128] = ( ((k3 << i) & 0x8000000000000000) >> 63 );
+						T_Key[i+192] = ( ((k4 << i) & 0x8000000000000000) >> 63 );
+					}
 
-					k = k << 1;
-					msb = (k >> 32) & 0xFFFF;
-					k = (k << 8) & 0xFFFFFFFF0000;
-					k = k | msb;
+					for (i = 0; i < 882; i++)
+					{
+						pN[i] = T_Key[pos];
+						pos++;
+						if (pos > len)
+						{
+							pos = 0;
+						}
+					}
 
-					state->HYTR = k;
+					pos = state->DMRvcR * 49;
+		     	for(i = 0; i < 49; i++)
+				  {
+				    ambe_d[i] ^= pN[pos];
+						pos++;
+					}
 					state->DMRvcR++;
-
 				}
 
 				mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,

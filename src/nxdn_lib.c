@@ -775,8 +775,15 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   {
 
     fprintf(stderr, "Key ID %u - ", KeyID & 0xFF);
-    //fprintf (stderr, "%s", KNRM);
+    fprintf (stderr, "%s", KNRM);
     //state->nxdn_key = (KeyID & 0xFF);
+  }
+
+  if (state->nxdn_cipher_type == 0x01 && state->R > 0) //scrambler
+  {
+    fprintf (stderr, "%s", KYEL);
+    fprintf(stderr, "Value: %05lld", state->R);
+    fprintf (stderr, "%s", KNRM);
   }
 
   if(state->NxdnElementsContent.VCallCrcIsGood)
@@ -790,21 +797,21 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     }
     //fprintf(stderr, "(CRC OK) ");
   }
-  //set enc bit here so we can tell playSynthesizedVoice whether or not to play enc traffic
-  if (state->nxdn_cipher_type != 0)
-  {
-    state->dmr_encL = 1;
-  }
-  if (state->nxdn_cipher_type == 0)
-  {
-    state->dmr_encL = 0;
-  }
   //fprintf(stderr, "   (OK)   - ");
   else
   {
     fprintf (stderr, "%s", KRED);
     fprintf(stderr, "(CRC ERR) ");
     fprintf (stderr, "%s", KNRM);
+  }
+  //set enc bit here so we can tell playSynthesizedVoice whether or not to play enc traffic
+  if (state->nxdn_cipher_type != 0)
+  {
+    state->dmr_encL = 1;
+  }
+  if (state->nxdn_cipher_type == 0 || state->R != 0)
+  {
+    state->dmr_encL = 0;
   }
   //fprintf(stderr, "\nFull Message = %016llX ", FullMessage);
 } /* End NXDN_decode_VCALL() */
@@ -1662,7 +1669,24 @@ void ProcessNxdnRTCHFrame(dsd_opts * opts, dsd_state * state, uint8_t Inverted)
   }
 } /* End ProcessNxdnRTCHFrame() */
 
+void LFSRN(char * BufferIn, char * BufferOut, dsd_state * state)
+{
+  int i;
+  int lfsr;
+  int pN[49] = {0};
+  int bit = 0;
 
+  lfsr = state->payload_miN & 0x7FFF;
 
+  for (i = 0; i < 49; i++)
+  {
+    pN[i] = lfsr & 0x1;
+    bit = ( (lfsr >> 1) ^ (lfsr >> 0) ) & 1;
+    lfsr =  ( (lfsr >> 1 ) | (bit << 14) );
+    BufferOut[i] = BufferIn[i] ^ pN[i];
+  }
+
+  state->payload_miN = lfsr & 0x7FFF;
+}
 
 /* End of file */

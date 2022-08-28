@@ -114,68 +114,148 @@ if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->p
   }
 }
 
-if (state->currentslot == 0 && state->H > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
+if (state->currentslot == 0 && state->K1 > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
 {
 
+	int pos = 0; 
+
+	unsigned long long int k1 = state->K1;
+	unsigned long long int k2 = state->K2;
+	unsigned long long int k3 = state->K3;
+	unsigned long long int k4 = state->K4;
+
+	fprintf (stderr, "\n");
 	fprintf (stderr, "%s", KYEL);
-	fprintf(stderr, " T10 %010llX", state->H);
+	fprintf(stderr, " SPT %010llX", k1);
+
+	int T_Key[256] = {0};
+	int pN[882] = {0};
+
+	int len = 0;
+
+	if (k2 == 0)
+	{
+		len = 39;
+		k1 = k1 << 24;
+	}
+	if (k2 != 0)
+	{
+		len = 127;
+		fprintf(stderr, " %016llX", k2);
+	}
+	if (k4 != 0)
+	{
+		len = 255;
+		fprintf(stderr, " %016llX", k3);
+		fprintf(stderr, " %016llX", k4);
+	}
+
 	fprintf (stderr, "%s", KNRM);
-	k = state->H;
 
-	unsigned long long int msb = 0;
+	for (i = 0; i < 64; i++)
+	{
+		T_Key[i]     = ( ((k1 << i) & 0x8000000000000000) >> 63 );
+		T_Key[i+64]  = ( ((k2 << i) & 0x8000000000000000) >> 63 );
+		T_Key[i+128] = ( ((k3 << i) & 0x8000000000000000) >> 63 );
+		T_Key[i+192] = ( ((k4 << i) & 0x8000000000000000) >> 63 );
+	}
 
-	k = k << 8;
-	k = k | ((k >> 40) & 0xFF);
+	for (i = 0; i < 882; i++)
+	{
+		pN[i] = T_Key[pos];
+		pos++;
+		if (pos > len)
+		{
+			pos = 0;
+		}
+	}
 
-  for(Frame = 0; Frame < 6; Frame++)
+	pos = 0;
+	for(Frame = 0; Frame < 6; Frame++)
   {
    for(i = 0; i < 3; i++)
    {
-     for(j = 0; j < 48; j++)
+     for(j = 0; j < 49; j++)
      {
-      x = ( ((k << j) & 0x800000000000) >> 47 );
-      TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j] ^= x;
-     }
-
-			k = k << 1;
-			msb = (k >> 32) & 0xFFFF;
-			k = (k << 8) & 0xFFFFFFFF0000;
-			k = k | msb;
-
+      TSVoiceSupFrameL->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j] ^= pN[pos];
+			pos++;
+		 }
    }
+
   }
+
 }
 
-if (state->currentslot == 1 && state->H > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
+if (state->currentslot == 1 && state->K1 > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
 {
 
+	int pos = 0;
+
+	unsigned long long int k1 = state->K1;
+	unsigned long long int k2 = state->K2;
+	unsigned long long int k3 = state->K3;
+	unsigned long long int k4 = state->K4;
+
+	fprintf (stderr, "\n");
 	fprintf (stderr, "%s", KYEL);
-	fprintf(stderr, " T10 %010llX", state->H);
+	fprintf(stderr, " SPT %010llX", k1);
+
+	int T_Key[256] = {0};
+	int pN[882] = {0};
+
+	int len = 0;
+
+	if (k2 == 0)
+	{
+		len = 39;
+		k1 = k1 << 24;
+	}
+	if (k2 != 0)
+	{
+		len = 127;
+		fprintf(stderr, " %016llX", k2);
+	}
+	if (k4 != 0)
+	{
+		len = 255;
+		fprintf(stderr, " %016llX", k3);
+		fprintf(stderr, " %016llX", k4);
+	}
+
 	fprintf (stderr, "%s", KNRM);
-	k = state->H;
 
-	unsigned long long int msb = 0;
+	for (i = 0; i < 64; i++)
+	{
+		T_Key[i]     = ( ((k1 << i) & 0x8000000000000000) >> 63 );
+		T_Key[i+64]  = ( ((k2 << i) & 0x8000000000000000) >> 63 );
+		T_Key[i+128] = ( ((k3 << i) & 0x8000000000000000) >> 63 );
+		T_Key[i+192] = ( ((k4 << i) & 0x8000000000000000) >> 63 );
+	}
 
-	k = k << 8;
-	k = k | ((k >> 40) & 0xFF);
+	for (i = 0; i < 882; i++)
+	{
+		pN[i] = T_Key[pos];
+		pos++;
+		if (pos > len)
+		{
+			pos = 0;
+		}
+	}
 
-  for(Frame = 0; Frame < 6; Frame++)
+	pos = 0;
+	for(Frame = 0; Frame < 6; Frame++)
   {
    for(i = 0; i < 3; i++)
    {
-     for(j = 0; j < 48; j++)
+     for(j = 0; j < 49; j++)
      {
-      x = ( ((k << j) & 0x800000000000) >> 47 );
-      TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j] ^= x;
-     }
-
-			k = k << 1;
-			msb = (k >> 32) & 0xFFFF;
-			k = (k << 8) & 0xFFFFFFFF0000;
-			k = k | msb;
-
+      TSVoiceSupFrameR->TimeSlotAmbeVoiceFrame[Frame].AmbeBit[i][j] ^= pN[pos];
+			pos++;
+		 }
    }
+
   }
+
 }
 
 if (state->currentslot == 0)

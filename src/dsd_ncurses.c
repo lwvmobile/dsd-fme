@@ -62,15 +62,15 @@ int i = 0;
 char versionstr[25];
 unsigned long long int call_matrix[33][6];
 //current news story for tagline
-//https://www.vice.com/en/article/epzzdk/florida-man-arrested-trying-to-warn-space-force-base-of-alien-dragon-war
+//https://www.facebook.com/watch/?ref=external&v=1254505325380758
 char * FM_bannerN[9] = {
   "                             ESC or Arrow Keys For Menu                      ",
-  " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  'Florida Man steals",
-  " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝  Truck; Drives to   ",
-  " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗    Space Force to warn",
-  " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝    warn of war between",
-  " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗  Aliens and Chinese ",
-  " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝  Dragons' - FM News ",
+  " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  'They ain't wrong, ",
+  " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝   I ain't blame the ",
+  " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗    police...they just ",
+  " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝    protect the people.",
+  " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗  I ain't even mad at",
+  " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝  y'all..' - FM News ",
   "                                                                             ",
   "                                                                             "
 };
@@ -206,10 +206,10 @@ char *choices[] = {
       "Decode NXDN96",
       "Decode X2-TDMA*",
       "Toggle Signal Inversion",
-      "Privacy Key Entry", //spacer
+      "Privacy Key Entry",
       "Reset Call History",
-      "Enable Payloads to Console",
-      "Disable Payloads to Console",
+      "Toggle Payloads to Console",
+      "                  ", //spacer
       "Input & Output Options",
       "LRRP Data to File",
 			"Exit DSD-FME",
@@ -743,6 +743,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         if (choicec == 17) //RTL UDP Retune
         {
           //read in new rtl frequency
+          #ifdef USE_RTLSDR
           entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
           box (entry_win, 0, 0);
           mvwprintw(entry_win, 2, 2, " Enter Frequency in Hz (851.8 MHz is 851800000 Hz) ");
@@ -759,7 +760,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           data[4] = (opts->rtlsdr_center_freq >> 24) & 0xFF;
 
           temp_freq = opts->rtlsdr_center_freq;
-
+          #endif
           choicec = 18;
         }
 
@@ -802,16 +803,15 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     {
       state->payload_keyid = 0;
       state->payload_keyidR = 0;
-      // state->K = 0;
-      // state->H = 0;
       short int option = 0;
-      entry_win = newwin(9, WIDTH+6, starty+10, startx+10);
+      entry_win = newwin(10, WIDTH+6, starty+10, startx+10);
       box (entry_win, 0, 0);
       mvwprintw(entry_win, 2, 2, "Key Type Selection");
       mvwprintw(entry_win, 3, 2, " ");
-      mvwprintw(entry_win, 4, 2, "1 -  DMRA Privacy ");
-      mvwprintw(entry_win, 5, 2, "2 - 'Tera Privacy ");
-      mvwprintw(entry_win, 6, 3, " ");
+      mvwprintw(entry_win, 4, 2, "1 -   DMRA Privacy ");
+      mvwprintw(entry_win, 5, 2, "2 - **tera Privacy ");
+      mvwprintw(entry_win, 6, 2, "3 - NXDN Scrambler ");
+      mvwprintw(entry_win, 7, 3, " ");
       echo();
       refresh();
       wscanw(entry_win, "%d", &option);
@@ -820,6 +820,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->dmr_mute_encR = 0;
       if (option == 1)
       {
+        state->K = 0;
         entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
         box (entry_win, 0, 0);
         mvwprintw(entry_win, 2, 2, "DMRA Privacy Key Number (DEC):");
@@ -835,21 +836,71 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       }
       if (option == 2)
       {
-        entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
+        state->K1 = 0;
+        state->K2 = 0;
+        state->K3 = 0;
+        state->K4 = 0;
+        state->H = 0;
+
+        entry_win = newwin(7, WIDTH+8, starty+10, startx+10);
         box (entry_win, 0, 0);
-        mvwprintw(entry_win, 2, 2, "'Tera 10 Key Value (HEX):");
-        mvwprintw(entry_win, 3, 3, " ");
+        mvwprintw(entry_win, 2, 2, " Enter **tera Privacy Key Value (HEX) ");
+        mvwprintw(entry_win, 3, 2, " 10 Char or First 16 for 32/64");
+        mvwprintw(entry_win, 4, 3, " ");
         echo();
         refresh();
         wscanw(entry_win, "%llX", &state->H);
         noecho();
-        if (state->H > 0xFFFFFFFFFF)
+        state->K1 = state->H;
+
+        entry_win = newwin(7, WIDTH+8, starty+10, startx+10);
+        box (entry_win, 0, 0);
+        mvwprintw(entry_win, 2, 2, " Enter **tera Privacy Key Value 2 (HEX) ");
+        mvwprintw(entry_win, 3, 2, " Second 16 Chars or Zero");
+        mvwprintw(entry_win, 4, 3, " ");
+        echo();
+        refresh();
+        wscanw(entry_win, "%llX", &state->K2);
+        noecho();
+
+        entry_win = newwin(7, WIDTH+8, starty+10, startx+10);
+        box (entry_win, 0, 0);
+        mvwprintw(entry_win, 2, 2, " Enter **tera Privacy Key Value 3 (HEX) ");
+        mvwprintw(entry_win, 3, 2, " Third 16 Chars or Zero");
+        mvwprintw(entry_win, 4, 3, " ");
+        echo();
+        refresh();
+        wscanw(entry_win, "%llX", &state->K3);
+        noecho();
+
+        entry_win = newwin(7, WIDTH+8, starty+10, startx+10);
+        box (entry_win, 0, 0);
+        mvwprintw(entry_win, 2, 2, " Enter **tera Privacy Key Value 4 (HEX) ");
+        mvwprintw(entry_win, 3, 2, " Fourth 16 Chars or Zero");
+        mvwprintw(entry_win, 4, 3, " ");
+        echo();
+        refresh();
+        wscanw(entry_win, "%llX", &state->K4);
+        noecho();
+
+      }
+      if (option == 3)
+      {
+        state->R = 0;
+        entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
+        box (entry_win, 0, 0);
+        mvwprintw(entry_win, 2, 2, "NXDN Scrambler Key Value (DEC):");
+        mvwprintw(entry_win, 3, 3, " ");
+        echo();
+        refresh();
+        wscanw(entry_win, "%lld", &state->R);
+        noecho();
+        if (state->K > 0x7FFF)
         {
-          state->H = 0xFFFFFFFFFF;
+          state->K = 0x7FFF;
         }
       }
-
-      if (state->K == 0 && state->H == 0)
+      if (state->K == 0 && state->K1 == 0)
       {
         opts->dmr_mute_encL = 1;
         opts->dmr_mute_encR = 1;
@@ -1156,15 +1207,22 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       }
     }
 
-    if (choice == 15) //turn on payload printing
+    if (choice == 15) //toggle payload printing
     {
-      opts->payload = 1;
-      fprintf(stderr, "Payload on\n");
+      if (opts->payload == 0)
+      {
+        opts->payload = 1;
+        fprintf(stderr, "Payload on\n");
+      }
+      else
+      {
+        opts->payload = 0;
+        fprintf(stderr, "Payload Off\n");
+      }
     }
-    if (choice == 16) //turn off payload printing
+    if (choice == 16)
     {
-      opts->payload = 0;
-      fprintf(stderr, "Payload Off\n");
+
     }
     if (choice == 18)
     {
@@ -1746,6 +1804,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw ("Scrambler ");
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
+      if (state->R != 0)
+      {
+        //printw ("\n| ");
+        attron(COLOR_PAIR(1));
+        printw ("KEY VALUE: [%05lld] ", state->R );
+        printw ("SEED: [%04llX]", state->payload_miN);
+        attron(COLOR_PAIR(3));
+      }
     }
     if (state->nxdn_cipher_type == 0x2 && state->carrier == 1)
     {
@@ -1855,7 +1921,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL == 16 && state->payload_algid == 0 && state->H > 0 && state->dmr_fid == 0x68 && ((state->dmr_so & 0xCF) == 0x40) )
     {
       attron(COLOR_PAIR(1));
-      printw ("**'Tera Pr Key [%010llX] ", state->H);
+      printw ("**tera Pr Key [%010llX] ", state->H);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
@@ -1963,7 +2029,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->H > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x68)
     {
       attron(COLOR_PAIR(1));
-      printw ("**'Tera Pr Key [%010llX] ", state->H);
+      printw ("**tera Pr Key [%010llX] ", state->H);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }

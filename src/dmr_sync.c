@@ -32,8 +32,6 @@ char * getTimeL(void) //get pretty hh:mm:ss timestamp
   return curr;
 }
 
-//getDate has a bug that affects writing to file using fopen 32-bit Ubuntu OS, need to look into
-//increasing array size causes date to not print in Linux builds, but fixes cygwin bug, so reverting to 99 until a better fix is worked out.
 char * getDateL(void) {
   char datename[120]; //increased to 200 to fix 32-bit Ubuntu/Cygwin when fopen file printing to lrrp.txt
   char * curr2;
@@ -2199,10 +2197,8 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
     state->payload_algid = 0;
     state->payload_keyid = 0;
     state->payload_mi    = 0;
-    // state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-    // state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
-    //state->dmr_fid = 0;
-    //state->dmr_so = 0; //leave disabled so will persist to aid in muting or unmuting when required
+    state->dmr_fid = 0;
+    state->dmr_so = 0;
     state->lastsrc = 0;
     state->lasttg = 0;
 
@@ -2212,10 +2208,8 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
     state->payload_algidR = 0;
     state->payload_keyidR = 0;
     state->payload_miR    = 0;
-    // state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
-    // state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
-    //state->dmr_fidR = 0;
-    //state->dmr_soR = 0;
+    state->dmr_fidR = 0;
+    state->dmr_soR = 0;
     state->lastsrcR = 0;
     state->lasttgR = 0;
 
@@ -2230,21 +2224,6 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
     fprintf(stderr, "FID=0x%02X SVC=0x%02X", TSVoiceSupFrame->FullLC.FeatureSetID, TSVoiceSupFrame->FullLC.ServiceOptions);
     fprintf (stderr, "%s ", KNRM);
 
-    if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode == 0) //other opcodes may convey callsigns, names, etc.
-    {
-      if (state->currentslot == 0)
-      {
-        // state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-        // state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
-        //zero out src and tgt here as well, or will that cause issues with ncurses terminal and per call?
-      }
-      if (state->currentslot == 1)
-      {
-        // state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
-        // state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
-        //zero out src and tgt here as well, or will that cause issues with ncurses terminal and per call?
-      }
-    }
   }
   else if(IrrecoverableErrors == 0)
   {
@@ -2254,20 +2233,7 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
     fprintf(stderr, "FID=0x%02X SVC=0x%02X", TSVoiceSupFrame->FullLC.FeatureSetID, TSVoiceSupFrame->FullLC.ServiceOptions);
     fprintf(stderr, "RAS (FEC OK/CRC ERR)"); //tlc
     fprintf (stderr, "%s ", KNRM);
-    if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode == 0) //other opcodes may convey callsigns, names, etc.
 
-    {
-      if (state->currentslot == 0)
-      {
-        // state->dmr_fid = TSVoiceSupFrame->FullLC.FeatureSetID;
-        // state->dmr_so = TSVoiceSupFrame->FullLC.ServiceOptions;
-      }
-      if (state->currentslot == 1)
-      {
-        // state->dmr_fidR = TSVoiceSupFrame->FullLC.FeatureSetID;
-        // state->dmr_soR = TSVoiceSupFrame->FullLC.ServiceOptions;
-      }
-    }
   }
   else {} //fprintf(stderr, "\n(FEC FAIL/CRC ERR)");
 
@@ -2660,13 +2626,10 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   {
     fprintf (stderr, "%s", KCYN);
     fprintf (stderr, "\nFull Voice Burst Payload ");
-    //for (i = 0; i < 8; i++)
     for (i = 0; i < 10; i++)
     {
-      fprintf (stderr, "[%02X]", LC_DataBytes[i]); //amateur DMR hams seem to use this area to send callsigns and names using 04,05,06,07 opcodes
+      fprintf (stderr, "[%02X]", LC_DataBytes[i]);
     }
-    // fprintf(stderr, "\n");
-    // fprintf(stderr, "CRC extracted = 0x%04X - CRC computed = 0x%04X - ", CRCExtracted, CRCComputed);
     fprintf (stderr, "%s", KNRM);
 
 
@@ -2677,7 +2640,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
 //LFSR code courtesy of https://github.com/mattames/LFSR/
 int LFSR(dsd_state * state)
 {
-  //int lfsr = 0;
+
   int lfsr = 0;
   if (state->currentslot == 0)
   {
@@ -2686,14 +2649,12 @@ int LFSR(dsd_state * state)
   else lfsr = state->payload_miR;
 
   uint8_t cnt = 0;
-  //fprintf(stderr, "\nInitial Value:- 0x%08x\n", lfsr);
 
   for(cnt=0;cnt<32;cnt++)
   {
 	  // Polynomial is C(x) = x^32 + x^4 + x^2 + 1
     int bit  = ((lfsr >> 31) ^ (lfsr >> 3) ^ (lfsr >> 1)) & 0x1;
     lfsr =  (lfsr << 1) | (bit);
-    //fprintf(stderr, "\nshift #%i, 0x%08x\n", (cnt+1), lfsr);
   }
   if (state->currentslot == 0)
   {
