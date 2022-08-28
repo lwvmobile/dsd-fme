@@ -918,7 +918,7 @@ main (int argc, char **argv)
           break;
         case 'P':
           //can't handle negative numbers?
-          //sscanf (optarg, "%d", &opts.rtlsdr_ppm_error);
+          sscanf (optarg, "%d", &opts.rtlsdr_ppm_error);
           break;
         case 'q':
           opts.errorbars = 0;
