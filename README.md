@@ -79,7 +79,7 @@ Be sure to first start UDP output sink in GQRX or SDR++ and set VFO appropriatel
 
 ## Example Usage - Extra Information for Academic Study and Logging
 
-`dsd-fme -Z -pu -N 2>> voice.log`
+`dsd-fme -Z -N 2>> voice.log`
 
 and in a second terminal tab, same folder, run
 
