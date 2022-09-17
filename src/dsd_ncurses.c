@@ -226,7 +226,8 @@ char *choices[] = {
       "Decode NXDN96",
       "Decode X2-TDMA*",
       "Toggle Signal Inversion",
-      "Privacy Key Entry",
+      // "Privacy Key Entry",
+      "                  ",
       "Reset Call History",
       "Toggle Payloads to Console",
       "Manually Set P2 Parameters", //16

@@ -2417,7 +2417,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 10; i++)
   {
     LC_DataBytes[i] = 0;
-    for(j = 0; j < 10; j++) //why did I change this?
+    for(j = 0; j < 8; j++) //this was changed to 10 (confused) broke Voice Burst including Alias
     {
       LC_DataBytes[i] = LC_DataBytes[i] << 1;
       LC_DataBytes[i] = LC_DataBytes[i] | (LC_DataBit[k] & 0x01);
