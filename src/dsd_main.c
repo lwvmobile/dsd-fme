@@ -43,7 +43,6 @@ int pretty_colors()
 
 #include "p25p1_heuristics.h"
 #include "pa_devs.h"
-short int butt = 0;
 
 char * FM_banner[9] = {
   "                                                        ",
@@ -69,6 +68,7 @@ comp (const void *a, const void *b)
 
 //struct for checking existence of directory to write to
 struct stat st = {0};
+char wav_file_directory[1024] = {0};
 
 void
 noCarrier (dsd_opts * opts, dsd_state * state)
@@ -105,10 +105,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->repeat = 0;
   state->nac = 0;
   state->numtdulc = 0;
-  //sprintf (state->slot0light, " slot0 ");
-  //sprintf (state->slot0light, " slot0 ");
-  sprintf (state->slot1light, "");
-  sprintf (state->slot2light, "");
+  sprintf (state->slot1light, "%s", "");
+  sprintf (state->slot2light, "%s", "");
   state->firstframe = 0;
   if (opts->audio_gain == (float) 0)
   {
@@ -196,6 +194,18 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->dmr_encL = 0;
   state->dmr_encR = 0;
 
+  state->dmrburstL = 17;
+  state->dmrburstR = 17;
+
+  //reset P2 ESS_B fragments and 4V counter
+  for (short i = 0; i < 4; i++)
+  {
+    state->ess_b[0][i] = 0;
+    state->ess_b[1][i] = 0;
+  }
+  state->fourv_counter[0] = 0;
+  state->fourv_counter[1] = 0;
+
 }
 
 void
@@ -237,6 +247,7 @@ initOpts (dsd_opts * opts)
   opts->lrrp_out_file[0] = 0;
   opts->symbol_out_f = NULL;
   opts->symbol_out = 0;
+  opts->mbe_out = 0;
   opts->wav_out_f = NULL;
   opts->wav_out_fR = NULL;
   opts->wav_out_raw = NULL;
@@ -246,18 +257,18 @@ initOpts (dsd_opts * opts)
   opts->serial_baud = 115200;
   sprintf (opts->serial_dev, "/dev/ttyUSB0");
   opts->resume = 0;
-  opts->frame_dstar = 1;
+  opts->frame_dstar = 0;
   opts->frame_x2tdma = 1;
   opts->frame_p25p1 = 1;
-  opts->frame_p25p2 = 0;
+  opts->frame_p25p2 = 1;
   opts->frame_nxdn48 = 0;
   opts->frame_nxdn96 = 0;
   opts->frame_dmr = 1;
   opts->frame_dpmr = 0;
   opts->frame_provoice = 0;
   opts->mod_c4fm = 1;
-  opts->mod_qpsk = 1;
-  opts->mod_gfsk = 1;
+  opts->mod_qpsk = 0;
+  opts->mod_gfsk = 0;
   opts->uvquality = 3;
   opts->inverted_x2tdma = 1;    // most transmitter + scanner + sound card combinations show inverted signals for this
   opts->inverted_dmr = 0;       // most transmitter + scanner + sound card combinations show non-inverted signals for this
@@ -279,20 +290,20 @@ initOpts (dsd_opts * opts)
   opts->pulse_raw_rate_in   = 48000;
   opts->pulse_raw_rate_out  = 48000; //
   opts->pulse_digi_rate_in  = 48000;
-  opts->pulse_digi_rate_out = 8000; // reverted to 8/1, crisper sound, dmr stereo will switch to 24/2
+  opts->pulse_digi_rate_out = 24000; //new default for XDMA
   opts->pulse_raw_in_channels   = 1;
   opts->pulse_raw_out_channels  = 1;
   opts->pulse_digi_in_channels  = 1; //2
-  opts->pulse_digi_out_channels = 1; //2
+  opts->pulse_digi_out_channels = 2; //new default for XDMA
 
-  sprintf (opts->output_name, "Auto Detect");
+  sprintf (opts->output_name, "XDMA");
   opts->pulse_flush = 1; //set 0 to flush, 1 for flushed
   opts->use_ncurses_terminal = 0;
   opts->ncurses_compact = 0;
   opts->ncurses_history = 1;
   opts->payload = 0;
   opts->inverted_dpmr = 0;
-  opts->dmr_stereo = 0;
+  opts->dmr_stereo = 1;
   opts->aggressive_framesync = 1; //more aggressive to combat wonk wonk voice decoding
   //see if initializing these values causes issues elsewhere, if so, then disable.
   opts->audio_in_type = 0;  //this was never initialized, causes issues on rPI 64 (bullseye) if not initialized
@@ -304,6 +315,9 @@ initOpts (dsd_opts * opts)
   opts->dmr_mute_encR = 1;
 
   opts->monitor_input_audio = 0;
+
+  opts->inverted_p2 = 0;
+  opts->p2counter = 0;
 
 }
 
@@ -395,10 +409,8 @@ initState (dsd_state * state)
   state->optind = 0;
   state->numtdulc = 0;
   state->firstframe = 0;
-  //sprintf (state->slot0light, " slot0 ");
-  //sprintf (state->slot1light, " slot1 ");
-  sprintf (state->slot1light, "");
-  sprintf (state->slot2light, "");
+  sprintf (state->slot1light, "%s", "");
+  sprintf (state->slot2light, "%s", "");
   state->aout_gain = 25;
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
@@ -435,7 +447,7 @@ initState (dsd_state * state)
   state->nxdn_last_tg = 0;
   state->nxdn_cipher_type = 0;
   state->nxdn_key = 0;
-  sprintf (state->nxdn_call_type, " ");
+  sprintf (state->nxdn_call_type, "%s", "");
   state->payload_miN = 0;
 
   state->dpmr_color_code = -1;
@@ -451,41 +463,52 @@ initState (dsd_state * state)
   state->payload_keyid = 0;
   state->payload_keyidR = 0;
 
-  sprintf (state->dmr_branding, " ");
-  sprintf (state->dmr_callsign[0][0], "");
-  sprintf (state->dmr_callsign[0][1], "");
-  sprintf (state->dmr_callsign[0][2], "");
-  sprintf (state->dmr_callsign[0][3], "");
-  sprintf (state->dmr_callsign[0][4], "");
-  sprintf (state->dmr_callsign[0][5], "");
-  sprintf (state->dmr_callsign[1][0], "");
-  sprintf (state->dmr_callsign[1][1], "");
-  sprintf (state->dmr_callsign[1][2], "");
-  sprintf (state->dmr_callsign[1][3], "");
-  sprintf (state->dmr_callsign[1][4], "");
-  sprintf (state->dmr_callsign[1][5], "");
-  sprintf (state->dmr_lrrp[0][0], "");
-  sprintf (state->dmr_lrrp[0][1], "");
-  sprintf (state->dmr_lrrp[0][2], "");
-  sprintf (state->dmr_lrrp[0][3], "");
-  sprintf (state->dmr_lrrp[0][4], "");
-  sprintf (state->dmr_lrrp[0][5], "");
-  sprintf (state->dmr_lrrp[1][0], "");
-  sprintf (state->dmr_lrrp[1][1], "");
-  sprintf (state->dmr_lrrp[1][2], "");
-  sprintf (state->dmr_lrrp[1][3], "");
-  sprintf (state->dmr_lrrp[1][4], "");
-  sprintf (state->dmr_lrrp[1][5], "");
+  //init P2 ESS_B fragments and 4V counter
+  for (short i = 0; i < 4; i++)
+  {
+    state->ess_b[0][i] = 0;
+    state->ess_b[1][i] = 0;
+  }
+  state->fourv_counter[0] = 0;
+  state->fourv_counter[1] = 0;
+
+  sprintf (state->dmr_branding, "%s", "");
+  sprintf (state->dmr_callsign[0][0], "%s", "");
+  sprintf (state->dmr_callsign[0][1], "%s", "");
+  sprintf (state->dmr_callsign[0][2], "%s", "");
+  sprintf (state->dmr_callsign[0][3], "%s", "");
+  sprintf (state->dmr_callsign[0][4], "%s", "");
+  sprintf (state->dmr_callsign[0][5], "%s", "");
+  sprintf (state->dmr_callsign[1][0], "%s", "");
+  sprintf (state->dmr_callsign[1][1], "%s", "");
+  sprintf (state->dmr_callsign[1][2], "%s", "");
+  sprintf (state->dmr_callsign[1][3], "%s", "");
+  sprintf (state->dmr_callsign[1][4], "%s", "");
+  sprintf (state->dmr_callsign[1][5], "%s", "");
+  sprintf (state->dmr_lrrp[0][0], "%s", "");
+  sprintf (state->dmr_lrrp[0][1], "%s", "");
+  sprintf (state->dmr_lrrp[0][2], "%s", "");
+  sprintf (state->dmr_lrrp[0][3], "%s", "");
+  sprintf (state->dmr_lrrp[0][4], "%s", "");
+  sprintf (state->dmr_lrrp[0][5], "%s", "");
+  sprintf (state->dmr_lrrp[1][0], "%s", "");
+  sprintf (state->dmr_lrrp[1][1], "%s", "");
+  sprintf (state->dmr_lrrp[1][2], "%s", "");
+  sprintf (state->dmr_lrrp[1][3], "%s", "");
+  sprintf (state->dmr_lrrp[1][4], "%s", "");
+  sprintf (state->dmr_lrrp[1][5], "%s", "");
 
   state->K = 0;
   state->R = 0;
+  state->RR = 0;
   state->H = 0;
   state->K1 = 0;
   state->K2 = 0;
   state->K3 = 0;
   state->K4 = 0;
+  state->M = 0; //force key priority over settings from fid/so
 
-  state->dmr_stereo = 0;
+  state->dmr_stereo = 0; //1, or 0?
   state->dmrburstL = 17; //initialize at higher value than possible
   state->dmrburstR = 17; //17 in char array is set for ERR
   state->dmr_so   = 0;
@@ -542,6 +565,16 @@ initState (dsd_state * state)
   state->dmr_encL = 0;
   state->dmr_encR = 0;
 
+  //P2 variables
+  state->p2_wacn = 0;
+  state->p2_sysid = 0;
+  state->p2_cc = 0;
+  state->p2_hardset = 0;
+  state->p2_is_lcch = 0;
+
+  state->p2_scramble_offset = 0;
+  state->p2_vch_chan_num = 0;
+
 #ifdef TRACE_DSD
   state->debug_sample_index = 0;
   state->debug_label_file = NULL;
@@ -563,7 +596,7 @@ usage ()
   printf ("\n");
   printf ("Display Options:\n");
   printf ("  -N            Use NCurses Terminal\n");
-  printf ("                 -use with 2> log.txt at end of command\n");
+  printf ("                 dsd-fme -N 2> log.txt \n");
   printf ("  -e            Show Frame Info and errorbars (default)\n");
   printf ("  -pe           Show P25 encryption sync bits\n");
   printf ("  -pl           Show P25 link control bits\n");
@@ -582,8 +615,11 @@ usage ()
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
   printf ("  -w <file>     Output synthesized speech to a .wav file\n");
+  printf ("  -T            Enable Per Call WAV file saving in XDMA  and NXDN decoding classes\n");
+  printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
+  printf ("                 (Running in console will use static wav files)\n");
   //printf ("  -a            Display port audio devices\n");
-  //printf ("  -W            Monitor Source Audio When No Sync Detected (WIP!)\n");
+  //printf ("  -W            Monitor Source Audio When No Sync Detected (broken!)\n");
   printf ("\n");
   printf ("RTL-SDR options:\n");
   printf ("  -c <hertz>    RTL-SDR Frequency\n");
@@ -601,7 +637,8 @@ usage ()
   printf ("  -R <num>      Resume scan after <num> TDULC frames or any PDU or TSDU\n");
   printf ("\n");
   printf ("Decoder options:\n");
-  printf ("  -fa           Auto-detect frame type (default)\n");
+  printf ("  -fa           Legacy Auto Detection (old methods default)\n");
+  printf ("  -ft           XDMA P25 and DMR BS/MS frame types (new default)\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -fd           Decode only D-STAR\n");
   printf ("  -fr           Decode only DMR\n");
@@ -615,7 +652,7 @@ usage ()
   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
   printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
   printf ("  -xr           Expect inverted DMR signal\n");
-  printf ("  -xd           Expect inverted ICOM dPMR signal\n"); //still need to do this
+  printf ("  -xd           Expect inverted ICOM dPMR signal\n");
   printf ("\n");
   printf ("  * denotes frame types that cannot be auto-detected.\n");
   printf ("\n");
@@ -625,18 +662,19 @@ usage ()
   printf ("                 (default=36)\n");
   printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
   printf ("                 (default=15)\n");
-  printf ("  -T            Enable DMR TDMA Stereo Voice (Two Slot Dual Voices)\n");
-  printf ("                 This feature will open two streams for slot 1 voice and slot 2 voice\n");
-  printf ("                 May Cause Skipping or sync issues if bad signal/errors\n");
-  printf ("  -F            Enable DMR TDMA Stereo Passive Frame Sync\n");
-  printf ("                 This feature will attempt to resync less often due to excessive voice errors\n");
-  printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
+  // printf ("  -T            Enable DMR TDMA Stereo Voice (Two Slot Dual Voices)\n");
+  // printf ("                 This feature will open two streams for slot 1 voice and slot 2 voice\n");
+  // printf ("                 May Cause Skipping or sync issues if bad signal/errors\n");
+  // printf ("  -F            Enable DMR TDMA Stereo Passive Frame Sync\n");
+  // printf ("                 This feature will attempt to resync less often due to excessive voice errors\n");
+  // printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
   printf ("  -Z            Log MBE/Frame Payloads to console\n");
   printf ("\n");
   printf ("  -K <dec>      Manually Enter DMRA Privacy Key (Decimal Value of Key Number)\n");
   printf ("\n");
   printf ("  -H <hex>      Manually Enter **tera 10 Privacy Key (40-Bit/10-Char Hex Value)\n");
   printf ("                (32/64-Char values can only be entered in the NCurses Terminal)\n");
+  printf ("\n");
   printf ("  -R <dec>      Manually Enter NXDN 4800 EHR Scrambler Key Value \n");
   printf ("                 \n");
   printf ("\n");
@@ -757,7 +795,7 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
   {
     closeWavOutFileRaw (opts, state);
   }
-  if (opts->dmr_stereo_wav == 1)
+  if (opts->dmr_stereo_wav == 1) //cause of crash on exit, need to check if NULL first, may need to set NULL when turning off in nterm
   {
     closeWavOutFileL (opts, state);
     closeWavOutFileR (opts, state);
@@ -1028,19 +1066,22 @@ main (int argc, char **argv)
           fprintf (stderr,"Logging LRRP data to ~/lrrp.txt \n");
           break;
 
-        case 'T':
-          opts.dmr_stereo  = 1; //this value is the end user option
-          state.dmr_stereo = 1; //this values toggles on and off depending on voice or data handling
-          opts.pulse_digi_rate_out = 24000;
-          opts.pulse_digi_out_channels = 2;
-          sprintf (opts.output_name, "DMR STEREO");
-          fprintf (stderr, "%s", KYEL);
-          fprintf (stderr,"DMR Stereo Sync and Functionality Enabled.\n");
-          fprintf (stderr,"DMR Stereo will disable MBE file saving!\n");
-          fprintf (stderr,"DMR Stereo per call WAV file can be enabled in the NCurses Terminal!\n");
-          fprintf (stderr,"Also consider using -F if playback is too choppy!\n");
-          fprintf (stderr, "%s", KNRM);
-          break;
+        case 'T': //repurposed to TDMA/NXDN Per Call
+        sprintf (wav_file_directory, "./WAV"); // /wav, or ./wav
+        wav_file_directory[1023] = '\0';
+        if (stat(wav_file_directory, &st) == -1)
+        {
+          fprintf (stderr, "-T %s WAV file directory does not exist\n", wav_file_directory);
+          fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
+          mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
+        }
+        fprintf (stderr,"XDMA and NXDN Per Call Wav File Saving Enabled. (NCurses Terminal Only)\n");
+        sprintf (opts.wav_out_file, "./WAV/DSD-FME-X1.wav"); // foward slash here, on wav_file_directory?
+        sprintf (opts.wav_out_fileR, "./WAV/DSD-FME-X2.wav");
+        opts.dmr_stereo_wav = 1;
+        openWavOutFileL (&opts, &state); //testing for now, will want to move to per call later
+        openWavOutFileR (&opts, &state); //testing for now, will want to move to per call later
+        break;
 
         case 'F':
           opts.aggressive_framesync = 0;
@@ -1079,6 +1120,7 @@ main (int argc, char **argv)
             mkdir(opts.mbe_out_dir, 0700); //user read write execute, needs execute for some reason or segfault
           }
           else fprintf (stderr,"Writing mbe data files to directory %s\n", opts.mbe_out_dir);
+          // fprintf (stderr,"Writing mbe data temporarily disabled!\n");
           break;
         case 'c':
           opts.rtlsdr_center_freq = (uint32_t)atofs(optarg);
@@ -1130,23 +1172,33 @@ main (int argc, char **argv)
               opts.frame_dstar = 1;
               opts.frame_x2tdma = 1;
               opts.frame_p25p1 = 1;
+              opts.frame_p25p2 = 0;
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 1;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
-              sprintf (opts.output_name, "Auto Detect");
+              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_out_channels = 1;
+              opts.dmr_stereo = 0;
+              state.dmr_stereo = 0;
+              sprintf (opts.output_name, "Legacy Auto");
             }
           else if (optarg[0] == 'd')
             {
               opts.frame_dstar = 1;
               opts.frame_x2tdma = 0;
               opts.frame_p25p1 = 0;
+              opts.frame_p25p2 = 0;
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
+              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_out_channels = 1;
+              opts.dmr_stereo = 0;
+              state.dmr_stereo = 0;
               state.rf_mod = 0;
               sprintf (opts.output_name, "D-STAR");
               fprintf (stderr,"Decoding only D-STAR frames.\n");
@@ -1156,11 +1208,16 @@ main (int argc, char **argv)
               opts.frame_dstar = 0;
               opts.frame_x2tdma = 1;
               opts.frame_p25p1 = 0;
+              opts.frame_p25p2 = 0;
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
+              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_out_channels = 1;
+              opts.dmr_stereo = 0;
+              state.dmr_stereo = 0;
               sprintf (opts.output_name, "X2-TDMA");
               fprintf (stderr,"Decoding only X2-TDMA frames.\n");
             }
@@ -1169,6 +1226,7 @@ main (int argc, char **argv)
               opts.frame_dstar = 0;
               opts.frame_x2tdma = 0;
               opts.frame_p25p1 = 0;
+              opts.frame_p25p2 = 0;
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
@@ -1180,6 +1238,10 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 1;
               state.rf_mod = 2;
+              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_out_channels = 1;
+              opts.dmr_stereo = 0;
+              state.dmr_stereo = 0;
               sprintf (opts.output_name, "ProVoice");
               fprintf (stderr,"Setting symbol rate to 9600 / second\n");
               fprintf (stderr,"Decoding only ProVoice frames.\n");
@@ -1189,15 +1251,20 @@ main (int argc, char **argv)
               opts.frame_dstar = 0;
               opts.frame_x2tdma = 0;
               opts.frame_p25p1 = 1;
+              opts.frame_p25p2 = 0;
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
+              opts.dmr_stereo = 0;
+              state.dmr_stereo = 0;
               opts.mod_c4fm = 1;
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
               state.rf_mod = 0; //
+              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_out_channels = 1;
               sprintf (opts.output_name, "P25P1");
               fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
             }
@@ -1206,6 +1273,7 @@ main (int argc, char **argv)
               opts.frame_dstar = 0;
               opts.frame_x2tdma = 0;
               opts.frame_p25p1 = 0;
+              opts.frame_p25p2 = 0;
               opts.frame_nxdn48 = 1;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 0;
@@ -1218,6 +1286,10 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
               state.rf_mod = 0;
+              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_out_channels = 1;
+              opts.dmr_stereo = 0;
+              state.dmr_stereo = 0;
               sprintf (opts.output_name, "NXDN48");
               fprintf (stderr,"Setting symbol rate to 2400 / second\n");
               fprintf (stderr,"Decoding only NXDN 4800 baud frames.\n");
@@ -1227,6 +1299,7 @@ main (int argc, char **argv)
               opts.frame_dstar = 0;
               opts.frame_x2tdma = 0;
               opts.frame_p25p1 = 0;
+              opts.frame_p25p2 = 0;
               opts.frame_p25p2 = 0;
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
@@ -1240,6 +1313,10 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
               state.rf_mod = 0;
+              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_out_channels = 1;
+              opts.dmr_stereo = 0;
+              state.dmr_stereo = 0;
               sprintf (opts.output_name, "YSF");
               fprintf (stderr,"Setting symbol rate to 2400 / second\n");
               fprintf (stderr,"Decoding only YSF frames.\nNot working yet!\n");
@@ -1262,14 +1339,43 @@ main (int argc, char **argv)
                   opts.mod_qpsk = 1;
                   opts.mod_gfsk = 0;
                   state.rf_mod = 0;
+                  opts.dmr_stereo = 1;
+                  state.dmr_stereo = 1;
                   sprintf (opts.output_name, "P25-P2");
-                  fprintf (stderr,"Decoding P25-P2 frames.\nNot working yet!\n");
+                  fprintf (stderr,"Decoding P25-P2 frames C4FM or OP25 Symbol Captures!\n");
                   }
+                  else if (optarg[0] == 't')
+                    {
+                      opts.frame_dstar = 0;
+                      opts.frame_x2tdma = 1;
+                      opts.frame_p25p1 = 1;
+                      opts.frame_p25p2 = 1;
+                      opts.inverted_p2 = 0;
+                      opts.frame_nxdn48 = 0;
+                      opts.frame_nxdn96 = 0;
+                      opts.frame_dmr = 1;
+                      opts.frame_dpmr = 0;
+                      opts.frame_provoice = 0;
+                      opts.frame_ysf = 0;
+                      opts.mod_c4fm = 1;
+                      opts.mod_qpsk = 0;
+                      opts.mod_gfsk = 0;
+                      //Need a new demodulator is needed to handle p2 cqpsk
+                      //or consider using an external modulator (GNURadio?)
+                      state.rf_mod = 0;
+                      opts.dmr_stereo = 1;
+                      //state.dmr_stereo = 1;
+                      opts.pulse_digi_rate_out = 24000;
+                      opts.pulse_digi_out_channels = 2;
+                      sprintf (opts.output_name, "XDMA");
+                      fprintf (stderr,"Decoding XDMA P25 and DMR\n");
+                      }
           else if (optarg[0] == 'n')
             {
               opts.frame_dstar = 0;
               opts.frame_x2tdma = 0;
               opts.frame_p25p1 = 0;
+              opts.frame_p25p2 = 0;
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 1;
               opts.frame_dmr = 0;
@@ -1279,6 +1385,10 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
               state.rf_mod = 0;
+              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_out_channels = 1;
+              opts.dmr_stereo = 0;
+              state.dmr_stereo = 0;
               sprintf (opts.output_name, "NXDN96");
               fprintf (stderr,"Decoding only NXDN 9600 baud frames.\n");
             }
@@ -1287,6 +1397,7 @@ main (int argc, char **argv)
               opts.frame_dstar = 0;
               opts.frame_x2tdma = 0;
               opts.frame_p25p1 = 0;
+              opts.frame_p25p2 = 0;
               opts.frame_nxdn48 = 0;
               opts.frame_nxdn96 = 0;
               opts.frame_dmr = 1;
@@ -1296,8 +1407,12 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0; //
               state.rf_mod = 0;  //
+              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_out_channels = 1;
+              opts.dmr_stereo = 0;
+              state.dmr_stereo = 0;
               sprintf (opts.output_name, "DMR LEH");
-              //fprintf(stderr, "Notice: DMR cannot autodetect polarity. \n Use -xr option if Inverted Signal expected.\n");
+              fprintf(stderr, "Notice: DMR cannot autodetect polarity. \n Use -xr option if Inverted Signal expected.\n");
               fprintf (stderr,"Decoding only DMR frames.\n");
             }
           else if (optarg[0] == 'm')
@@ -1305,6 +1420,7 @@ main (int argc, char **argv)
             opts.frame_dstar = 0;
             opts.frame_x2tdma = 0;
             opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
             opts.frame_nxdn48 = 0;
             opts.frame_nxdn96 = 0;
             opts.frame_dmr = 0;
@@ -1317,6 +1433,10 @@ main (int argc, char **argv)
             opts.mod_qpsk = 0;
             opts.mod_gfsk = 0;
             state.rf_mod = 0;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            state.dmr_stereo = 0;
             sprintf (opts.output_name, "dPMR");
             fprintf(stderr, "Notice: dPMR cannot autodetect polarity. \n Use -xd option if Inverted Signal expected.\n");
             fprintf(stderr, "Decoding only dPMR frames.\n");
@@ -1326,34 +1446,34 @@ main (int argc, char **argv)
         case 'm':
           if (optarg[0] == 'a')
             {
-              //opts.mod_c4fm = 1;
-              //opts.mod_qpsk = 1;
-              //opts.mod_gfsk = 1;
-              //state.rf_mod = 0;
+              opts.mod_c4fm = 1;
+              opts.mod_qpsk = 1;
+              opts.mod_gfsk = 1;
+              state.rf_mod = 0;
             }
           else if (optarg[0] == 'c')
             {
-              //opts.mod_c4fm = 1;
-              //opts.mod_qpsk = 0;
-              //opts.mod_gfsk = 0;
-              //state.rf_mod = 0;
-              //fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
+              opts.mod_c4fm = 1;
+              opts.mod_qpsk = 0;
+              opts.mod_gfsk = 0;
+              state.rf_mod = 0;
+              fprintf (stderr,"Enabling only C4FM modulation optimizations.\n");
             }
           else if (optarg[0] == 'g')
             {
-              //opts.mod_c4fm = 0;
-              //opts.mod_qpsk = 0;
-              //opts.mod_gfsk = 1;
-              //state.rf_mod = 2;
-              //fprintf (stderr,"Enabling only GFSK modulation optimizations.\n");
+              opts.mod_c4fm = 0;
+              opts.mod_qpsk = 0;
+              opts.mod_gfsk = 1;
+              state.rf_mod = 2;
+              fprintf (stderr,"Enabling only GFSK modulation optimizations.\n");
             }
           else if (optarg[0] == 'q')
             {
-              //opts.mod_c4fm = 0;
-              //opts.mod_qpsk = 1;
-              //opts.mod_gfsk = 0;
-              //state.rf_mod = 1;
-              //fprintf (stderr,"Enabling only QPSK modulation optimizations.\n");
+              opts.mod_c4fm = 0;
+              opts.mod_qpsk = 1;
+              opts.mod_gfsk = 0;
+              state.rf_mod = 1;
+              fprintf (stderr,"Enabling only QPSK modulation optimizations.\n");
             }
           break;
         case 'u':
@@ -1416,6 +1536,10 @@ main (int argc, char **argv)
           opts.playfiles = 1;
           opts.errorbars = 0;
           opts.datascope = 0;
+          opts.pulse_digi_rate_out = 8000;
+          opts.pulse_digi_out_channels = 1;
+          opts.dmr_stereo = 0;
+          state.dmr_stereo = 0;
           sprintf (opts.output_name, "MBE Playback");
           state.optind = optind;
           break;

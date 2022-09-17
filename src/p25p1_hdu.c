@@ -474,14 +474,14 @@ processHDU(dsd_opts* opts, dsd_state* state)
   //set vc counter to 0
   state->p25vc = 0;
 
-  if (state->payload_algid != 0x80) //print on payload == 1
+  if (state->payload_algid != 0x80 && state->payload_algid != 0x0) //print on payload == 1
   {
     fprintf (stderr, "%s", KYEL);
     fprintf (stderr, " HDU  ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08llX%08llX%02llX MFID: 0x%02X", algidhex, kidhex, mihex1, mihex2, mihex3, state->payload_mfid);
     fprintf (stderr, "%s", KNRM);
   }
 
-  if (state->payload_algid != 0x80) //print on payload == 1
+  if (state->payload_algid != 0x80 && state->payload_algid != 0x0) //print on payload == 1
   {
     fprintf (stderr, "%s", KRED);
     fprintf (stderr, " ENC \n");

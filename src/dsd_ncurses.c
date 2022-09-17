@@ -46,6 +46,9 @@ struct sockaddr_in address;
 uint32_t temp_freq = -1;
 //
 
+//struct for checking existence of directory to write to
+struct stat st_wav = {0};
+
 int reset = 0;
 
 int tg;
@@ -61,61 +64,64 @@ int dcc = -1;
 int i = 0;
 char versionstr[25];
 unsigned long long int call_matrix[33][6];
-//current news story for tagline
-//https://www.facebook.com/watch/?ref=external&v=1254505325380758
+
 char * FM_bannerN[9] = {
-  "                             ESC or Arrow Keys For Menu                      ",
-  " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  'They ain't wrong, ",
-  " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝   I ain't blame the ",
-  " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗    police...they just ",
-  " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝    protect the people.",
-  " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗  I ain't even mad at",
-  " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝  y'all..' - FM News ",
-  "                                                                             ",
-  "                                                                             "
+  "                             ESC or Arrow Keys For Menu   ",
+  " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  ",
+  " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝  ",
+  " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗    ",
+  " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝    ",
+  " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗  ",
+  " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝  ",
+  "                                                          ",
+  "                                                          "
 };
 
-char * SyncTypes[38] = {
-  "+P25P1",
-  "-P25P1",
-  "+X2TDMA DATA",
-  "-X2TDMA DATA",
-  "+X2TDMA VOICE",
-  "-X2TDMA VOICE",
-  "+DSTAR",
-  "-DSTAR",
-  "+NXDN VOICE",
-  "-NXDN VOICE",
-  "+DMR DATA",
-  "-DMR DATA",
-  "+DMR VOICE",
-  "-DMR VOICE",
-  "+PROVOICE",
-  "-PROVOICE",
-  "+NXDN DATA",
-  "-NXDN DATA",
-  "+DSTAR HD",
-  "-DSTAR HD",
-  "+dPMR",
-  "+dPMR",
-  "+dPMR",
-  "+dPMR",
-  "-dPMR",
-  "-dPMR",
-  "-dPMR",
-  "-dPMR",
-  "+NXDN (sync only)",
-  "-NXDN (sync only)",
-  "+YSF",
-  "-YSF",
+char * SyncTypes[44] = {
+  "P25P1",
+  "P25P1",
+  "X2TDMA DATA",
+  "X2TDMA DATA",
+  "X2TDMA VOICE",
+  "X2TDMA VOICE",
+  "DSTAR",
+  "DSTAR",
+  "NXDN VOICE",
+  "NXDN VOICE",
+  "DMR DATA", //10
+  "DMR DATA",
+  "DMR VOICE",
+  "DMR VOICE",
+  "PROVOICE",
+  "PROVOICE",
+  "NXDN DATA",
+  "NXDN DATA",
+  "DSTAR HD",
+  "DSTAR HD",
+  "dPMR", //20
+  "dPMR",
+  "dPMR",
+  "dPMR",
+  "dPMR",
+  "dPMR",
+  "dPMR",
+  "dPMR",
+  "NXDN (sync only)",
+  "NXDN (sync only)",
+  "YSF", //30
+  "YSF",
   "DMR MS VOICE",
   "DMR MS DATA",
   "DMR RC DATA",
-  "+P25-P2",
-  "-P25-P2"
+  "P25P2",
+  "P25P2",
+  "FDMA", //37
+  "TDMA", //38
+  "",
+  ""
 };
 
-char * DMRBusrtTypes[18] = {
+char * DMRBusrtTypes[32] = {
   "PI Header     ",
   "VOICE LC HDR  ",
   "TLC           ",
@@ -128,12 +134,26 @@ char * DMRBusrtTypes[18] = {
   "Slot Idle     ",
   "Rate 1 DATA   ",
   "ERR           ", //These values for ERR may be Reserved for use in future?
-  "ERR           ",
-  "ERR           ",
-  "ERR           ",
-  "ERR           ",
-  "Voice         ", //Using 16 for Voice since its higher than possible value?
-  "INITIAL       "  //17 is assigned on start up
+  "DUID ERR      ",
+  "R-S ERR       ",
+  "CRC ERR       ",
+  "NULL          ",
+  "Voice         ", //Using 16 for Voice since its higher than possible value in DMR
+  "INITIAL       ",  //17 is assigned on start up
+  "INITIAL       ",
+  "INITIAL       ",//expanded to include P1/2 signalling
+  "MAC PTT",      //20
+  "MAC ACTIVE",   //21
+  "MAC HANGTIME", //22
+  "MAC PTT END",  //23
+  "MAC IDLE",     //24
+  "HDU",
+  "VOICE LDU", //26
+  "VOICE LDU",
+  "TDU/TDULC",
+  "TSBK",
+  "MAC_SIGNAL",
+  "MAC_SIGNAL"
 
 };
 
@@ -174,14 +194,14 @@ int starty = 0;
 
 char *choicesc[] = {
       "Return",
-      "Save Decoded Audio WAV (NO DMR STEREO!)",
+      "Save Decoded Audio WAV (Legacy Mode)",
       "Save Signal to Symbol Capture Bin",
-      "Toggle Muting Enrypted Traffic    ",
-      "Per Call WAV REC (DMR Stereo/MS)",
+      "Toggle Muting Encrypted Traffic    ",
+      "Save Per Call Decoded WAV (XDMA and NXDN)",
       "Setup and Start RTL Input ",
-      "Pulse Audio 48kHz Output",
-      "Pulse Audio 8kHz Output (NO DMR STEREO!)",
-      "Reset States and Heuristics",
+      "Retune RTL Dongle         ",
+      "                          ",
+      "                          ", //removing options no longer necesary or not recommended
       "Toggle NCurses Compact Mode",
       "Toggle NCurses Call History",
       "Stop All Decoded WAV Saving",
@@ -189,17 +209,17 @@ char *choicesc[] = {
       "Replay Last Symbol Capture Bin",
       "Stop & Close Symbol Capture Bin Playback",
       "Stop & Close Symbol Capture Bin Saving",
-      "Retune RTL Dongle",
+      "               ",
 			"Resume Decoding"
       };
 
 char *choices[] = {
       "Resume Decoding",
-      "Decode Auto**",
-			"Decode ProVoice",
+      "Decode Legacy Auto**",
+			"Decode XDMA (P25 and DMR BS/MS)",
 			"Decode D-STAR*",
 			"Decode P25-P1*",
-			"Decode DMR  (STEREO BS/MS)",
+			"Decode ProVoice",
       "Decode DMR* (LEH)",
       "Decode dPMR",
       "Decode NXDN48",
@@ -209,7 +229,7 @@ char *choices[] = {
       "Privacy Key Entry",
       "Reset Call History",
       "Toggle Payloads to Console",
-      "                  ", //spacer
+      "Manually Set P2 Parameters", //16
       "Input & Output Options",
       "LRRP Data to File",
 			"Exit DSD-FME",
@@ -373,8 +393,18 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     {
       info_win = newwin(6, WIDTH+18, starty, startx+20);
       box (info_win, 0, 0);
-      mvwprintw(info_win, 2, 2, " Auto Decoding can only detect the following:.");
+      mvwprintw(info_win, 2, 2, " Legacy Auto can only detect the following:");
       mvwprintw(info_win, 3, 2, " P25-P1, D-STAR, DMR LEH, and X2-TDMA");
+      wrefresh(info_win);
+    }
+
+    if (highlight == 3)
+    {
+      info_win = newwin(7, WIDTH+18, starty, startx+20);
+      box (info_win, 0, 0);
+      mvwprintw(info_win, 2, 2, " XDMA Decoding Class Supports the following:");
+      mvwprintw(info_win, 3, 2, " P25-P1, P25-P2, DMR Stereo BS/MS and X2-TDMA");
+      mvwprintw(info_win, 4, 2, " --C4FM / FSK4 only, and OP25 P2 Capture Bins");
       wrefresh(info_win);
     }
 
@@ -429,7 +459,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           wscanw(entry_win, "%s", &opts->symbol_out_file);
           noecho();
 
-          if (opts->symbol_out_file[0] != NULL)
+          if (opts->symbol_out_file[0] != 0) //NULL
           {
             opts->symbol_out = 1; //set flag to 1
             openSymbolOutFile (opts, state);
@@ -460,14 +490,21 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         }
         if (choicec == 5)
         {
+          char wav_file_directory[1024];
+          sprintf (wav_file_directory, "./WAV");
+          wav_file_directory[1023] = '\0';
+          if (stat(wav_file_directory, &st_wav) == -1)
+          {
+            fprintf (stderr, "%s wav file directory does not exist\n", wav_file_directory);
+            fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
+            mkdir(wav_file_directory, 0700);
+          }
           opts->dmr_stereo_wav = 1;
           //catch all in case of no file name set, won't crash or something
-          sprintf (opts->wav_out_file, "DSD-FME-SLOT1.wav");
-          //sprintf (opts->wav_out_file, "%s %s S1 - CC %d - TG %d - RD %d.wav", getDateN(), getTimeN(), dcc, tg, rd);
-          sprintf (opts->wav_out_fileR, "DSD-FME-SLOT2.wav");
-          //sprintf (opts->wav_out_fileR, "%s %s S2 - CC %d - TG %d - RD %d.wav", getDateN(), getTimeN(), dcc, tg, rd);
-          openWavOutFileL (opts, state); //testing for now, will want to move to per call later
-          openWavOutFileR (opts, state); //testing for now, will want to move to per call later
+          sprintf (opts->wav_out_file, "./WAV/DSD-FME-X1.wav");
+          sprintf (opts->wav_out_fileR, "./WAV/DSD-FME-X2.wav");
+          openWavOutFileL (opts, state);
+          openWavOutFileR (opts, state);
 
         }
 
@@ -571,64 +608,16 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           noecho();
 
           refresh();
-          // opts->rtlsdr_center_freq = 851800000; //test with pV LCN 2
-          //opts->rtl_gain_value = 46;
-          //opts->rtl_dev_index = 1;
-          // opts->rtl_bandwidth = 24; //12 or 24.
-          //opts->rtlsdr_ppm_error = -1;
-          //opts->rtl_udp_port = 6020;
-          //fprintf (stderr, "Confirm = %d", confirm);
 
           //works well, but can't release dongle later, so its a one way trip until exit
           if (confirm == 1)
           {
             opts->audio_in_type = 3; //RTL input, only set this on confirm
-            //open_rtlsdr_stream(opts); //may move to outside of this box so we return to the normal ncurses term first
             choicec = 18; //exit to decoder screen only if confirmed, otherwise, just go back
           }
 
-          // if (confirm != 1)
-          // {
-          //   opts->audio_in_type = 0;
-          // }
-
           #endif
 
-        }
-
-        if (choicec == 7)
-        {
-          if (opts->dmr_stereo == 0)
-          {
-            opts->pulse_digi_rate_out = 48000;
-            //fprintf (stderr, "Rate Out set to 48kHz\n");
-          }
-          if (opts->dmr_stereo == 1)
-          {
-            opts->pulse_digi_rate_out = 24000;
-            //fprintf (stderr, "Rate Out set to 24kHz\n");
-          }
-
-        }
-
-        if (choicec == 8)
-        {
-          if (opts->dmr_stereo == 0)
-          {
-            opts->pulse_digi_rate_out = 8000;
-            //fprintf (stderr, "Rate Out set to 8kHz\n");
-          }
-
-          if (opts->dmr_stereo == 1)
-          {
-            opts->pulse_digi_rate_out = 24000; //always force 24kHz with DMR Stereo
-            //fprintf (stderr, "Rate Out set to 16kHz\n");
-          }
-        }
-
-        if (choicec == 9)
-        {
-          resetState (state); //use sparingly, may cause memory leak
         }
 
         if (choicec == 10)
@@ -657,8 +646,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           closeWavOutFileL (opts, state);
           closeWavOutFileR (opts, state);
           //closeWavOutFileRaw (opts, state);
-          sprintf (opts->wav_out_file, "");
-          sprintf (opts->wav_out_fileR, "");
+          sprintf (opts->wav_out_file, "%s", "");
+          sprintf (opts->wav_out_fileR, "%s", "");
           opts->dmr_stereo_wav = 0;
         }
 
@@ -678,7 +667,6 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           if (stat(opts->audio_in_dev, &stat_buf) != 0)
           {
             fprintf (stderr,"Error, couldn't open %s\n", opts->audio_in_dev);
-            //exit(1);
             goto SKIP;
           }
           if (S_ISREG(stat_buf.st_mode))
@@ -696,7 +684,6 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           if (stat(opts->audio_in_dev, &stat_buf) != 0)
           {
             fprintf (stderr,"Error, couldn't open %s\n", opts->audio_in_dev);
-            //exit(1);
             goto SKIPR;
           }
           if (S_ISREG(stat_buf.st_mode))
@@ -728,10 +715,10 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         {
           if (opts->symbol_out == 1)
           {
-            if (opts->symbol_out_file[0] != NULL) //check first, or issuing a second fclose will crash the SOFTWARE
+            if (opts->symbol_out_file[0] != 0) //NULL
             {
               fclose(opts->symbol_out_f); //free(): double free detected in tcache 2 (this is a new one) happens when closing more than once
-              sprintf (opts->audio_in_dev, opts->symbol_out_file); //swap output bin filename to input for quick replay
+              sprintf (opts->audio_in_dev, "%s", opts->symbol_out_file); //swap output bin filename to input for quick replay
             }
 
             opts->symbol_out = 0; //set flag to 1
@@ -740,7 +727,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           choicec = 18; //exit
         }
 
-        if (choicec == 17) //RTL UDP Retune
+        if (choicec == 7) //RTL UDP Retune
         {
           //read in new rtl frequency
           #ifdef USE_RTLSDR
@@ -769,8 +756,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           //return
           choice = 0;
           choicec = 0;
-          //highlightb = 1;
-          //highlight = 1;
+
           keypad(test_win, FALSE);
           keypad(menu_win, TRUE);
           delwin(test_win);
@@ -783,35 +769,33 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           //exit
           choice = 1;
           choicec = 0;
-          //highlightb = 0;
-          //highlight = 0;
+
           keypad(test_win, FALSE);
           keypad(menu_win, TRUE);
           delwin(test_win);
           print_menu(menu_win, highlight);
-          //wrefresh(menu_win);
           break;
         }
       }
       clrtoeol(); //clear to end of line?
       refresh();
-      //endwin(); //causes quick blink in and out of ncursesprinter, not required
     }
 
-    //Cheat Code Entry
+    //Privacy Key Entry
     if (choice == 13)
     {
       state->payload_keyid = 0;
       state->payload_keyidR = 0;
       short int option = 0;
-      entry_win = newwin(10, WIDTH+6, starty+10, startx+10);
+      entry_win = newwin(11, WIDTH+6, starty+10, startx+10);
       box (entry_win, 0, 0);
       mvwprintw(entry_win, 2, 2, "Key Type Selection");
       mvwprintw(entry_win, 3, 2, " ");
       mvwprintw(entry_win, 4, 2, "1 -   DMRA Privacy ");
       mvwprintw(entry_win, 5, 2, "2 - **tera Privacy ");
       mvwprintw(entry_win, 6, 2, "3 - NXDN Scrambler ");
-      mvwprintw(entry_win, 7, 3, " ");
+      mvwprintw(entry_win, 7, 2, "4 - Force Key Priority ");
+      mvwprintw(entry_win, 8, 3, " ");
       echo();
       refresh();
       wscanw(entry_win, "%d", &option);
@@ -900,6 +884,15 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           state->K = 0x7FFF;
         }
       }
+      //toggle enforcement of privacy key over enc bit set on traffic
+      if (option == 4)
+      {
+        if (state->M == 0)
+        {
+          state->M = 1;
+        }
+        else state->M = 0;
+      }
       if (state->K == 0 && state->K1 == 0)
       {
         opts->dmr_mute_encL = 1;
@@ -915,7 +908,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       resetState (state); //use sparingly, may cause memory leak
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
-      sprintf (opts->output_name, "Auto Detect");
+      sprintf (opts->output_name, "Legacy Auto");
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 8000;
@@ -923,6 +916,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dstar = 1;
       opts->frame_x2tdma = 1;
       opts->frame_p25p1 = 1;
+      opts->frame_p25p2 = 0;
       opts->frame_nxdn48 = 0;
       opts->frame_nxdn96 = 0;
       opts->frame_dmr = 1;
@@ -933,10 +927,10 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->mod_gfsk = 0;
       state->rf_mod = 0;
       opts->unmute_encrypted_p25 = 0;
-      break; //break?
+      break;
 
     }
-    if (choice == 3)
+    if (choice == 6)
     {
       //ProVoice Specifics
       resetState (state); //use sparingly, may cause memory leak
@@ -950,6 +944,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dstar = 0;
       opts->frame_x2tdma = 0;
       opts->frame_p25p1 = 0;
+      opts->frame_p25p2 = 0;
       opts->frame_nxdn48 = 0;
       opts->frame_nxdn96 = 0;
       opts->frame_dmr = 0;
@@ -975,6 +970,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dstar = 1;
       opts->frame_x2tdma = 0;
       opts->frame_p25p1 = 0;
+      opts->frame_p25p2 = 0;
       opts->frame_nxdn48 = 0;
       opts->frame_nxdn96 = 0;
       opts->frame_dmr = 0;
@@ -993,6 +989,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       //P25 P1
       resetState (state); //use sparingly, may cause memory leak
       opts->frame_p25p1 = 1;
+      opts->frame_p25p2 = 0;
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       state->rf_mod = 0;
@@ -1017,25 +1014,25 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       break;
     }
 
-    if (choice == 6)
+    if (choice == 3)
     {
-      //DMR Stereo
+      //XDMA Stereo P25 1, 2, and DMR
       resetState (state); //use sparingly, seems to cause issue when switching back to other formats
       opts->frame_dmr = 1;
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       state->rf_mod = 0;
-      sprintf (opts->output_name, "DMR STEREO");
+      sprintf (opts->output_name, "XDMA");
       opts->dmr_stereo  = 1; //this value is the end user option
       state->dmr_stereo = 1; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 24000;
       opts->pulse_digi_out_channels = 2;
       opts->frame_dstar = 0;
-      opts->frame_x2tdma = 0;
-      opts->frame_p25p1 = 0;
+      opts->frame_x2tdma = 1;
+      opts->frame_p25p1 = 1;
+      opts->frame_p25p2 = 1;
       opts->frame_nxdn48 = 0;
       opts->frame_nxdn96 = 0;
-      //opts->frame_dmr = 0;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->mod_c4fm = 1;
@@ -1094,7 +1091,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
       state->rf_mod = 0;
-      opts->unmute_encrypted_p25 = 0;
+      //opts->unmute_encrypted_p25 = 0;
       break;
     }
     if (choice == 9)
@@ -1119,7 +1116,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->mod_c4fm = 1;
-      opts->unmute_encrypted_p25 = 0;
+      //opts->unmute_encrypted_p25 = 0;
       // opts->mod_qpsk = 0;
       // opts->mod_gfsk = 0;
       // state->rf_mod = 0;
@@ -1147,7 +1144,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
       state->rf_mod = 0;
-      opts->unmute_encrypted_p25 = 0;
+      //opts->unmute_encrypted_p25 = 0;
     }
     if (choice == 11)
     {
@@ -1173,7 +1170,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
       state->rf_mod = 0;
-      opts->unmute_encrypted_p25 = 0;
+      //opts->unmute_encrypted_p25 = 0;
     }
     if (choice == 12)
     {
@@ -1205,6 +1202,18 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         call_matrix[k][4] = 0;
         call_matrix[k][5] = 0;
       }
+      src = 0;
+      rn = 0;
+      tgn = 0;
+      dcc = 0;
+      tg = 0;
+      tgR = 0;
+      rd = 0;
+      rdR = 0;
+      state->lastsrc = 0;
+      state->lastsrcR = 0;
+      state->lasttg = 0;
+      state->lasttgR = 0;
     }
 
     if (choice == 15) //toggle payload printing
@@ -1222,6 +1231,43 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     }
     if (choice == 16)
     {
+      //hardset P2 WACN, SYSID, and NAC
+      entry_win = newwin(6, WIDTH+16, starty+10, startx+10);
+      box (entry_win, 0, 0);
+      mvwprintw(entry_win, 2, 2, " Enter Phase 2 WACN");
+      mvwprintw(entry_win, 3, 3, " ");
+      echo();
+      refresh();
+      wscanw(entry_win, "%X", &state->p2_wacn);
+      noecho();
+
+      entry_win = newwin(6, WIDTH+16, starty+10, startx+10);
+      box (entry_win, 0, 0);
+      mvwprintw(entry_win, 2, 2, " Enter Phase 2 SYSID");
+      mvwprintw(entry_win, 3, 3, " ");
+      echo();
+      refresh();
+      wscanw(entry_win, "%X", &state->p2_sysid);
+      noecho();
+
+      entry_win = newwin(6, WIDTH+16, starty+10, startx+10);
+      box (entry_win, 0, 0);
+      mvwprintw(entry_win, 2, 2, " Enter Phase 2 NAC/CC");
+      mvwprintw(entry_win, 3, 3, " ");
+      echo();
+      refresh();
+      wscanw(entry_win, "%X", &state->p2_cc);
+      noecho();
+
+      //need handling to truncate larger than expected values
+
+      //set our hardset flag to 1 if values inserted, else set to 0 so we can attempt to get them from TSBK/LCCH
+      if (state->p2_wacn != 0 && state->p2_sysid != 0 && state->p2_cc != 0)
+      {
+        state->p2_hardset = 1;
+      }
+      else state->p2_hardset = 0;
+
 
     }
     if (choice == 18)
@@ -1250,7 +1296,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         strncpy (filepath, home_dir, strlen(home_dir) + 1);
         strncat (filepath, filename, strlen(filename) + 1);
         //assign home directory/filename to lrrp_out_file
-        sprintf (opts->lrrp_out_file, filepath);
+        sprintf (opts->lrrp_out_file, "%s", filepath); //double check make sure this still works
         opts->lrrp_file_output = 1;
       }
 
@@ -1272,21 +1318,21 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         refresh();
         wscanw(entry_win, "%s", &opts->lrrp_out_file);
         noecho();
-        if (opts->lrrp_out_file[0] != NULL)
+        if (opts->lrrp_out_file[0] != 0) //NULL
         {
           opts->lrrp_file_output = 1;
         }
         else
         {
           opts->lrrp_file_output = 0;
-          sprintf (opts->lrrp_out_file, "");
+          sprintf (opts->lrrp_out_file, "%s", "");
           opts->lrrp_out_file[0] = 0;
         }
       }
       else
       {
         opts->lrrp_file_output = 0;
-        sprintf (opts->lrrp_out_file, "");
+        sprintf (opts->lrrp_out_file, "%s", "");
         opts->lrrp_out_file[0] = 0;
       }
     }
@@ -1364,11 +1410,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //carrier reset
   if (state->carrier == 0) //reset these to 0 when no carrier
   {
-    sprintf(state->dmr_branding, " ");
+    sprintf(state->dmr_branding, "%s", "");
   }
 
   //set lls sync types
-  if (state->synctype >= 0 && state->synctype < 35) //not sure if this will be okay
+  if (state->synctype >= 0 && state->synctype < 37) //not sure if this will be okay
   {
     lls = state->synctype;
   }
@@ -1378,14 +1424,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     for (short i = 0; i < 6; i++)
     {
-      sprintf (state->dmr_callsign[0][i], "");
+      sprintf (state->dmr_callsign[0][i], "%s", "");
     }
   }
   if (state->dmrburstR != 16 || state->carrier == 0)
   {
     for (short i = 0; i < 6; i++)
     {
-      sprintf (state->dmr_callsign[1][i], "");
+      sprintf (state->dmr_callsign[1][i], "%s", "");
     }
   }
 
@@ -1394,14 +1440,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     for (short i = 0; i < 6; i++)
     {
-      sprintf (state->dmr_lrrp[0][i], "");
+      sprintf (state->dmr_lrrp[0][i], "%s", "");
     }
   }
   if (state->dmrburstR == 16 || state->carrier == 0)
   {
     for (short i = 0; i < 6; i++)
     {
-      sprintf (state->dmr_lrrp[1][i], "");
+      sprintf (state->dmr_lrrp[1][i], "%s", "");
     }
   }
 
@@ -1459,18 +1505,32 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   }
 
-  //P25
-  if (state->nac > 0)
+  //P25 P1 and VCH0
+  if (state->p2_cc > 0)
   {
-    nc = state->nac;
+    nc = state->p2_cc;
   }
-  if ( state->lasttg > 0 && (lls == 0 || lls == 1) )
+  if ( state->lasttg > 0 && (lls == 0 || lls == 1 || lls == 35 || lls == 36) )
   {
     tg = state->lasttg;
   }
-  if ( state->lastsrc > 0 && (lls == 0 || lls == 1) )
+  if ( state->lastsrc > 0 && (lls == 0 || lls == 1 || lls == 35 || lls == 36) )
   {
     rd = state->lastsrc;
+  }
+  //P25 P2 VCH2
+  if (state->lasttgR > 0 && (lls == 35 || lls == 36) )
+  {
+    tgR = state->lasttgR;
+  }
+  if (state->lastsrcR > 0 && (lls == 35 || lls == 36) )
+  {
+    rdR = state->lastsrcR;
+  }
+  //P25 P2 NAC to dcc for matrix shim
+  if (state->p2_cc > 0 && (lls == 35 || lls == 36) )
+  {
+    dcc = state->p2_cc;
   }
 
   //Call History Matrix Shuffling
@@ -1537,6 +1597,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][4] = tgn;
     call_matrix[9][5] = time(NULL);
 
+    //open wav file if enabled and both rd and tg are not 0
+    if (opts->dmr_stereo_wav == 1 && src != 0 && tgn != 0)
+    {
+      //close old first, assign name based on time and radio, open wav file
+      closeWavOutFileL (opts, state);
+      sprintf (opts->wav_out_file, "./WAV/%s NXDN - RAN %d - TGT %d - SRC %d.wav", getTimeN(), rn, tgn, src);
+      openWavOutFileL (opts, state); //testing for now, will want to move to per call later
+    }
+
   }
 
   //DMR MS
@@ -1565,14 +1634,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "%s MS - CC %d - TG %d - RD %d.wav", getTimeN(), dcc, tg, rd);
+      sprintf (opts->wav_out_file, "./WAV/%s MS - CC %d - TG %d - RD %d.wav", getTimeN(), dcc, tg, rd);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
   }
 
   //DMR BS Slot 1 - matrix 0-4
-  if ( call_matrix[4][2] != rd && (lls == 12 || lls == 13 || lls == 10 || lls == 11) )
+  if ( call_matrix[4][2] != rd && (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 35 || lls == 36) )
   {
 
     for (short int k = 0; k < 4; k++)
@@ -1598,14 +1667,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
 
-      sprintf (opts->wav_out_file, "%s S1 - CC %d - TG %d - RD %d.wav", getTimeN(), dcc, tg, rd);
+      sprintf (opts->wav_out_file, "./WAV/%s X1 - CC %d - TG %d - RD %d.wav", getTimeN(), dcc, tg, rd);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
   }
 
   //DMR BS Slot 2 - matrix 5-9
-  if ( call_matrix[9][2] != rdR && (lls == 12 || lls == 13 || lls == 10 || lls == 11) )
+  if ( call_matrix[9][2] != rdR && (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 35 || lls == 36) )
   {
 
     for (short int k = 5; k < 9; k++)
@@ -1630,14 +1699,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileR (opts, state);
-      sprintf (opts->wav_out_fileR, "%s S2 - CC %d - TG %d - RD %d.wav", getTimeN(), dcc, tgR, rdR);
+      sprintf (opts->wav_out_fileR, "./WAV/%s X2 - CC %d - TG %d - RD %d.wav", getTimeN(), dcc, tgR, rdR);
       openWavOutFileR (opts, state); //testing for now, will want to move to per call later
     }
 
   }
 
-  //P25
-  if ( (lls == 0 || lls == 1) && call_matrix[9][2] != rd && nc > 0 && tg > 0)
+  //P25 P1
+  if ( (lls == 0 || lls == 1) && call_matrix[9][2] != rd && nc > 0 && tg > 0 && state->dmrburstL == 26)
   {
     for (short int k = 0; k < 9; k++)
     {
@@ -1656,6 +1725,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][4] = nc;
     call_matrix[9][5] = time(NULL);
 
+    //open wav file if enabled and both rd and tg are not 0
+    if (opts->dmr_stereo_wav == 1 && rd != 0 && tg != 0)
+    {
+      //close old first, assign name based on time and radio, open wav file
+      closeWavOutFileL (opts, state);
+      sprintf (opts->wav_out_file, "./WAV/%s P1 - NAC %X - TGT %d - SRC %d.wav", getTimeN(), nc, tg, rd);
+      openWavOutFileL (opts, state); //testing for now, will want to move to per call later
+    }
+
   }
 
   //Start Printing Section
@@ -1672,13 +1750,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       printw("%s \n", FM_bannerN[i]);
     }
+    printw (" https://github.com/lwvmobile/dsd-fme/tree/pulseaudio\n");
+    printw (" Github Build Version: %s \n", GIT_TAG);
     attroff(COLOR_PAIR(6)); //6
-    printw ("--Build Info------------------------------------------------------------------\n");
-    printw ("| https://github.com/lwvmobile/dsd-fme/tree/pulseaudio\n"); //http link
-    printw ("| Digital Speech Decoder: Florida Man Edition\n");
-    printw ("| Github Build Version: %s \n", GIT_TAG);
-    printw ("| MBElib version %s\n", versionstr);
-    printw ("------------------------------------------------------------------------------\n");
+    // printw ("--Build Info------------------------------------------------------------------\n");
+    // printw ("| https://github.com/lwvmobile/dsd-fme/tree/pulseaudio\n"); //http link
+    // printw ("| Digital Speech Decoder: Florida Man Edition\n");
+    // printw ("| Github Build Version: %s \n", GIT_TAG);
+    // printw ("| MBElib version %s\n", versionstr);
+    // printw ("------------------------------------------------------------------------------\n");
     attron(COLOR_PAIR(4));
   }
 
@@ -1837,56 +1917,71 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw("\n");
   }
 
-  //P25
-  if (lls == 0 || lls == 1)
-  {
-    // printw("| TID:[%8i] RID:[%8i] ", tg, rd);
-    printw("| TID:[%8i] RID:[%8i] ", state->lasttg, state->lastsrc);
-    printw("  MFID:[0x%02X]  ", state->payload_mfid);
-    printw("NAC: [0x%3X] \n", nc);
-    printw("| ALG:[0x%02X] ", state->payload_algid);
-    printw("    KID:[0x%04X] ", state->payload_keyid);
-    printw("      MI:[0x%016llX] ", state->payload_miP);
-
-    if (state->payload_algid != 0x80 && state->payload_algid != 0x0 && state->carrier == 1 && state->R == 0)
-    {
-      attron(COLOR_PAIR(2));
-      printw("**ENC**");
-      attroff(COLOR_PAIR(2));
-      attron(COLOR_PAIR(3));
-      if (state->payload_algid == 0xAA)
-      {
-        attron(COLOR_PAIR(1));
-        printw(" RC4");
-        attron(COLOR_PAIR(3));
-      }
-      if (state->payload_algid == 0x81)
-      {
-        attron(COLOR_PAIR(1));
-        printw(" DES-OFB");
-        attron(COLOR_PAIR(3));
-      }
-    }
-    printw("\n");
-  }
+  //P25-P1
+  // if (lls == 0 || lls == 1)
+  // {
+  //   // printw("| TID:[%8i] RID:[%8i] ", tg, rd);
+  //   printw("| TID:[%8i] RID:[%8i] ", state->lasttg, state->lastsrc);
+  //   printw("  MFID:[0x%02X]  ", state->payload_mfid);
+  //   printw("NAC: [0x%3X] \n", nc);
+  //   printw("| ALG:[0x%02X] ", state->payload_algid);
+  //   printw("    KID:[0x%04X] ", state->payload_keyid);
+  //   printw("      MI:[0x%016llX] ", state->payload_miP);
+  //
+  //   if (state->payload_algid != 0x80 && state->payload_algid != 0x0 && state->carrier == 1 && state->R == 0)
+  //   {
+  //     attron(COLOR_PAIR(2));
+  //     printw("**ENC**");
+  //     attroff(COLOR_PAIR(2));
+  //     attron(COLOR_PAIR(3));
+  //     if (state->payload_algid == 0xAA)
+  //     {
+  //       attron(COLOR_PAIR(1));
+  //       printw(" RC4");
+  //       attron(COLOR_PAIR(3));
+  //     }
+  //     if (state->payload_algid == 0x81)
+  //     {
+  //       attron(COLOR_PAIR(1));
+  //       printw(" DES-OFB");
+  //       attron(COLOR_PAIR(3));
+  //     }
+  //   }
+  //   printw("\n");
+  // }
 
   //DMR BS/MS Voice and Data Types
-  if ( lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32 || lls == 33 || lls == 34)
+  if (  lls == 0 || lls == 1 || lls == 12 || lls == 13 || lls == 10 ||
+        lls == 11 || lls == 32 || lls == 33 || lls == 34 || lls == 35 || lls == 36)
   {
     printw ("| ");
-    if (lls < 30)
+    if (lls > 1 && lls < 30)
     {
       printw ("DMR BS - DCC: [%02i] ", dcc);
     }
-    else
+    else if (lls == 32 || lls == 33 || lls == 34)
     {
       printw ("DMR MS - DCC: [%02i] ", dcc);
+    }
+    else if (lls == 0 || lls == 1) //P1
+    {
+      printw ("P25 P1 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+    }
+    else if (lls == 35 || lls == 36) //P2
+    {
+      printw ("P25 P2 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+      if (state->p2_wacn == 0 || state->p2_sysid == 0 || state->p2_cc == 0)
+      {
+        attron(COLOR_PAIR(2));
+        printw (" Phase 2 Missing Parameters ");
+        attron(COLOR_PAIR(3));
+      }
     }
 
     printw ("\n");
     //Slot 1 [0]
     printw ("| SLOT 1 - ");
-    if (state->dmrburstL != 16 && state->carrier == 1 && state->lasttg > 0 && state->lastsrc > 0)
+    if (state->dmrburstL < 16 && state->carrier == 1 && state->lasttg > 0 && state->lastsrc > 0)
     {
       attron(COLOR_PAIR(2));
     }
@@ -1930,8 +2025,30 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL == 16 && state->payload_algid > 0 && (state->dmr_so & 0xCF) == 0x40)
     {
       attron(COLOR_PAIR(1));
-      printw ("ALG: [0x%02X] KEY: [0x%02X] MI: [0x%08X]", state->payload_algid, state->payload_keyid, state->payload_mi);
+      printw ("ALG: [0x%02X] KEY: [0x%02X] MI: [0x%08X] ", state->payload_algid, state->payload_keyid, state->payload_mi);
       attroff(COLOR_PAIR(1));
+      attron(COLOR_PAIR(3));
+    }
+
+    //P25 FDMA/TDMA
+    if(state->dmrburstL > 19 && state->payload_algid > 0 && state->payload_algid != 0x80)
+    {
+      attron(COLOR_PAIR(1));
+      printw ("ALG: [0x%02X] KEY: [0x%04X] MI: [0x%016llX] ", state->payload_algid, state->payload_keyid, state->payload_miP);
+      attroff(COLOR_PAIR(1));
+      attron(COLOR_PAIR(3));
+    }
+
+    if (state->payload_algid == 0xAA || state->payload_algid == 0x21)
+    {
+      attron(COLOR_PAIR(1));
+      printw("ADP-RC4");
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algid == 0x81 || state->payload_algid == 0x22)
+    {
+      attron(COLOR_PAIR(1));
+      printw("DES-OFB");
       attron(COLOR_PAIR(3));
     }
 
@@ -1993,9 +2110,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("\n");
 
     //Slot 2 [1]
-    if (lls < 30){ //Don't print on MS mode
+    if (lls < 30 || lls == 35 || lls == 36){ //Don't print on MS mode
     printw ("| SLOT 2 - ");
-    if (state->dmrburstR != 16 && state->carrier == 1 && state->lasttgR > 0 && state->lastsrcR > 0)
+    if (state->dmrburstR < 16 && state->carrier == 1 && state->lasttgR > 0 && state->lastsrcR > 0)
     {
       attron(COLOR_PAIR(2));
     }
@@ -2037,8 +2154,28 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstR == 16 && state->payload_algidR > 0 && (state->dmr_soR & 0xCF) == 0x40)
     {
       attron(COLOR_PAIR(1));
-      printw ("ALG: [0x%02X] KEY: [0x%02X] MI: [0x%08X]", state->payload_algidR, state->payload_keyidR, state->payload_miR);
+      printw ("ALG: [0x%02X] KEY: [0x%02X] MI: [0x%08X] ", state->payload_algidR, state->payload_keyidR, state->payload_miR);
       attroff(COLOR_PAIR(1));
+      attron(COLOR_PAIR(3));
+    }
+    //P25-P1 and P2
+    if(state->dmrburstR > 19 && state->payload_algidR > 0 && state->payload_algidR != 0x80)
+    {
+      attron(COLOR_PAIR(1));
+      printw ("ALG: [0x%02X] KEY: [0x%04X] MI: [0x%016llX] ", state->payload_algidR, state->payload_keyidR, state->payload_miN);
+      attroff(COLOR_PAIR(1));
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algidR == 0xAA || state->payload_algidR == 0x21)
+    {
+      attron(COLOR_PAIR(1));
+      printw("ADP-RC4");
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algidR == 0x81 || state->payload_algidR == 0x22)
+    {
+      attron(COLOR_PAIR(1));
+      printw("DES-OFB");
       attron(COLOR_PAIR(3));
     }
     //Call Types, may switch to the more robust version later?
@@ -2143,11 +2280,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           printw ("SRC [%8lld] ", call_matrix[9-j][2]);
           printw ("DCC [%2lld] ", call_matrix[9-j][4]);
         }
-        //P25P1 Voice and Data
-        if (call_matrix[9-j][0] == 0 || call_matrix[9-j][0] == 1)
+        //P25
+        if (call_matrix[9-j][0] == 0 || call_matrix[9-j][0] == 1 || call_matrix[9-j][0] == 35 || call_matrix[9-j][0] == 36)
         {
-          printw ("TID [%8lld] ", call_matrix[9-j][1]);
-          printw ("RID [%8lld] ", call_matrix[9-j][2]);
+          printw ("TGT [%8lld] ", call_matrix[9-j][1]);
+          printw ("SRC [%8lld] ", call_matrix[9-j][2]);
           printw ("NAC [0x%03llX] ", call_matrix[9-j][4]);
         }
         //DMR BS Types

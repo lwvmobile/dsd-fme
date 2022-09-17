@@ -376,14 +376,14 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 
   }
 
-  if (state->payload_algid != 0x80) //print on payload == 1
+  if (state->payload_algid != 0x80 && state->payload_algid != 0x0) //print on payload == 1
   {
     fprintf (stderr, "%s", KYEL);
     fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08llX%08llX%02llX", algidhex, kidhex, mihex1, mihex2, mihex3);
     fprintf (stderr, "%s", KNRM);
   }
 
-  if (state->payload_algid != 0x80) //print on payload == 1
+  if (state->payload_algid != 0x80 && state->payload_algid != 0x0) //print on payload == 1
   {
     fprintf (stderr, "%s", KRED);
     fprintf (stderr, " ENC \n");

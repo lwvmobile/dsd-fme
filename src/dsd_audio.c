@@ -64,8 +64,8 @@ void openPulseOutput(dsd_opts * opts)
 
   if (opts->dmr_stereo == 1)
   {
-    opts->pulse_digi_dev_out  = pa_simple_new(NULL, "DSD-FME1", PA_STREAM_PLAYBACK, NULL, "DMR SLOT 1", &tt, left, NULL, NULL);
-    opts->pulse_digi_dev_outR = pa_simple_new(NULL, "DSD-FME2", PA_STREAM_PLAYBACK, NULL, "DMR SLOT 2", &tt, right, NULL, NULL);
+    opts->pulse_digi_dev_out  = pa_simple_new(NULL, "DSD-FME1", PA_STREAM_PLAYBACK, NULL, "XDMA SLOT 1", &tt, left, NULL, NULL);
+    opts->pulse_digi_dev_outR = pa_simple_new(NULL, "DSD-FME2", PA_STREAM_PLAYBACK, NULL, "XDMA SLOT 2", &tt, right, NULL, NULL);
   }
 
 }
@@ -92,6 +92,11 @@ processAudio (dsd_opts * opts, dsd_state * state)
     {
       // detect max level
       max = 0;
+      //attempt to reduce crackle by overriding the max value when not using pulse input
+      if (opts->audio_in_type != 0)
+      {
+        max = 3000;
+      }
       state->audio_out_temp_buf_p = state->audio_out_temp_buf;
       for (n = 0; n < 160; n++)
         {
@@ -233,6 +238,11 @@ processAudioR (dsd_opts * opts, dsd_state * state)
     {
       // detect max level
       max = 0;
+      //attempt to reduce crackle by overriding the max value when not using pulse input
+      if (opts->audio_in_type != 0)
+      {
+        max = 3000;
+      }
       state->audio_out_temp_buf_pR = state->audio_out_temp_bufR;
       for (n = 0; n < 160; n++)
         {

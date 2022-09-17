@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
-#define __USE_XOPEN //compiler warning on this, needed for strptime, seems benign
+//#define __USE_XOPEN //compiler warning on this, need to rewrite dsd_file so it doesn't use strptime
 #include <time.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -279,6 +279,7 @@ typedef struct
   char symbol_out_file[1024];
   char lrrp_out_file[1024];
   short int symbol_out;
+  short int mbe_out; //flag for mbe out, don't attempt fclose more than once
   SNDFILE *wav_out_f;
   SNDFILE *wav_out_fR;
   SNDFILE *wav_out_raw;
@@ -291,6 +292,8 @@ typedef struct
   int frame_x2tdma;
   int frame_p25p1;
   int frame_p25p2;
+  int inverted_p2;
+  int p2counter;
   int frame_nxdn48;
   int frame_nxdn96;
   int frame_dmr;
@@ -464,6 +467,7 @@ typedef struct
   unsigned long long int K2;
   unsigned long long int K3;
   unsigned long long int K4;
+  int M;
   int menuopen;
 
   unsigned int debug_audio_errors;
@@ -567,14 +571,26 @@ typedef struct
   unsigned int dmrburstL;
   unsigned int dmrburstR;
   unsigned long long int R;
+  unsigned long long int RR;
   unsigned long long int H;
   unsigned long long int HYTL;
   unsigned long long int HYTR;
   int DMRvcL;
   int DMRvcR;
-  // int block_count;
+
   short int dmr_encL;
   short int dmr_encR;
+
+  //P2 variables
+  unsigned long long int p2_wacn;
+  unsigned long long int p2_sysid;
+  unsigned long long int p2_cc;    //p1 NAC
+  int p2_hardset; //flag for checking whether or not P2 wacn and sysid are hard set by user
+  int p2_scramble_offset; //offset counter for scrambling application
+  int p2_vch_chan_num; //vch channel number (0 or 1, not the 0-11 TS)
+  int ess_b[2][96]; //external storage for ESS_B fragments
+  int fourv_counter[2]; //external reference counter for ESS_B fragment collection
+  int p2_is_lcch; //flag to tell us when a frame is lcch and not sacch
 
   //dstar header for ncurses
   unsigned char dstarradioheader[41];
@@ -602,20 +618,8 @@ typedef struct
 #define INV_P25P1_SYNC "333331331133111131311111"
 #define P25P1_SYNC     "111113113311333313133333"
 
-//preliminary P2 sync
-
-// static const uint64_t P25P2_FRAME_SYNC_MAGIC   = 0x575D57F7FFLL;   // 40 bits
-// static const uint64_t P25P2_FRAME_SYNC_REV_P   = 0x575D57F7FFLL ^ 0xAAAAAAAAAALL;
 #define P25P2_SYNC     "11131131111333133333"
 #define INV_P25P2_SYNC "33313313333111311111"
-// static const uint64_t P25P2_FRAME_SYNC_MASK    = 0xFFFFFFFFFFLL; //wonder what the mask was for if its all F
-//
-// static const uint64_t P25P2_FRAME_SYNC_N1200   = 0x0104015155LL;
-//#define P25P2_SYNC_N     ""
-// static const uint64_t P25P2_FRAME_SYNC_X2400   = 0xa8a2a8d800LL;
-//#define P25P2_SYNC_X     ""
-// static const uint64_t P25P2_FRAME_SYNC_P1200   = 0xfefbfeaeaaLL;
-//#define P25P2_SYNC_P     ""
 
 #define X2TDMA_BS_VOICE_SYNC "113131333331313331113311"
 #define X2TDMA_BS_DATA_SYNC  "331313111113131113331133"
@@ -750,6 +754,7 @@ void processX2TDMAvoice (dsd_opts * opts, dsd_state * state);
 void processDSTAR_HD (dsd_opts * opts, dsd_state * state);
 void processYSF(dsd_opts * opts, dsd_state * state); //YSF
 void processP2(dsd_opts * opts, dsd_state * state); //P2
+void processTSBK(dsd_opts * opts, dsd_state * state);
 short dmr_filter(short sample);
 short nxdn_filter(short sample);
 
@@ -914,6 +919,16 @@ void CDMRTrellisDibitsToPoints(const signed char* dibits, unsigned char* points)
 void CDMRTrellisPointsToDibits(const unsigned char* points, signed char* dibits);
 void CDMRTrellisBitsToTribits(const unsigned char* payload, unsigned char* tribits);
 bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload);
+
+//Phase 2 Helper Functions
+int ez_rs28_ess (int payload[96], int parity[168]); //ezpwd bridge for FME
+int ez_rs28_facch (int payload[156], int parity[114]); //ezpwd bridge for FME
+int ez_rs28_sacch (int payload[180], int parity[132]); //ezpwd bridge for FME
+unsigned long long int isch_lookup (unsigned long long int isch); //isch map lookup
+int bd_bridge (int payload[196], uint8_t decoded[12]); //bridge to Michael Ossmann Block De-interleaver and 1/2 rate trellis decoder
+// uint16_t crc16(uint8_t buf[], int len);
+int crc16_lb_bridge (int payload[190], int len);
+int crc12_xb_bridge (int payload[190], int len);
 
 #ifdef __cplusplus
 }

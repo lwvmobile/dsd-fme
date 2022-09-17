@@ -209,7 +209,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->dmr_stereo == 0 && state->synctype == 32)
           {
             fprintf (stderr, "%s", KRED);
-            fprintf (stderr, "Please use the -T option to handle MS Mode with DMR Stereo TDMA Handling\n");
+            fprintf (stderr, "Please use XDMA decoding class to decode MS/Simplex \n");
             fprintf (stderr, "%s", KNRM);
           }
           if (opts->dmr_stereo == 1)
@@ -229,7 +229,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           closeMbeOutFile (opts, state);
           state->err_str[0] = 0;
           fprintf (stderr, "%s", KRED);
-          fprintf (stderr, "Please use the -T option to handle MS Mode with DMR Stereo TDMA Handling\n");
+          fprintf (stderr, "Please use XDMA decoding class to decode MS/Simplex \n");
           fprintf (stderr, "%s", KNRM);
         }
         if (opts->dmr_stereo == 1)
@@ -397,7 +397,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
           bch_code[index_bch_code] = v;
           index_bch_code++;
         }
-      state->nac = strtol (nac, NULL, 2);
+        //this one setting bogus nac data
+      // state->nac = strtol (nac, NULL, 2);
 
       // Read the DUID, 4 bits
       for (i = 0; i < 2; i++)
@@ -445,6 +446,10 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (new_nac != state->nac) {
               // NAC fixed by error correction
               state->nac = new_nac;
+              if (state->p2_hardset == 0)
+              {
+                state->p2_cc = new_nac;
+              }
               state->debug_header_errors++;
           }
           if (strcmp(new_duid, duid) != 0) {
@@ -478,6 +483,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
         }
       mbe_initMbeParms (state->cur_mp, state->prev_mp, state->prev_mp_enhanced);
       state->lastp25type = 2;
+      state->dmrburstL = 25;
+      state->currentslot = 0;
       sprintf (state->fsubtype, " HDU          ");
       processHDU (opts, state);
     }
@@ -497,12 +504,13 @@ processFrame (dsd_opts * opts, dsd_state * state)
             }
         }
       state->lastp25type = 1;
+      state->dmrburstL = 26;
+      state->currentslot = 0;
       sprintf (state->fsubtype, " LDU1         ");
       state->numtdulc = 0;
       if (state->payload_algid == 0x81)
       {
         fprintf (stderr, "\n");
-        //LFSRP (state); //HERE HERE best placement?
       }
 
       processLDU1 (opts, state);
@@ -510,6 +518,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
   else if (strcmp (duid, "22") == 0)
     {
       // Logical Link Data Unit 2
+      state->dmrburstL = 27;
+      state->currentslot = 0;
       if (state->lastp25type != 1)
         {
           if (opts->errorbars == 1)
@@ -543,6 +553,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
   else if (strcmp (duid, "33") == 0)
     {
       // Terminator with subsequent Link Control
+      state->dmrburstL = 28;
       if (opts->errorbars == 1)
         {
           printFrameInfo (opts, state);
@@ -569,6 +580,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
   else if (strcmp (duid, "03") == 0)
     {
       // Terminator without subsequent Link Control
+      state->dmrburstL = 28;
       if (opts->errorbars == 1)
         {
           printFrameInfo (opts, state);
@@ -589,10 +601,11 @@ processFrame (dsd_opts * opts, dsd_state * state)
     }
   else if (strcmp (duid, "13") == 0)
     {
+      state->dmrburstL = 29;
       if (opts->errorbars == 1)
         {
           printFrameInfo (opts, state);
-          fprintf (stderr," TSDU\n");
+          fprintf (stderr," TSBK");
         }
       if (opts->resume > 0)
         {
@@ -601,11 +614,11 @@ processFrame (dsd_opts * opts, dsd_state * state)
       state->lasttg = 0;
       state->lastsrc = 0;
       state->lastp25type = 3;
-      sprintf (state->fsubtype, " TSDU         ");
+      sprintf (state->fsubtype, " TSBK         ");
 
       // Now processing NID
+      processTSBK(opts, state);
 
-      skipDibit (opts, state, 328-25);
     }
   else if (strcmp (duid, "30") == 0)
     {
@@ -676,15 +689,14 @@ processFrame (dsd_opts * opts, dsd_state * state)
       if (opts->errorbars == 1)
         {
           printFrameInfo (opts, state);
-          fprintf (stderr," (TSDU)\n");
+          fprintf (stderr," (TSBK)\n");
         }
       //state->lastp25type = 0;
-      // Guess that the state is TSDU
+      // Guess that the state is TSBK
       state->lastp25type = 3;
-      sprintf (state->fsubtype, "(TSDU)        ");
+      sprintf (state->fsubtype, "(TSBK)        ");
 
       // Now processing NID
-
       skipDibit (opts, state, 328-25);
     }
   else if (state->lastp25type == 4)
@@ -703,8 +715,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
       if (opts->errorbars == 1)
         {
           printFrameInfo (opts, state);
-          //fprintf (stderr," duid:%s *Unknown DUID*\n", duid); //prints on dPMR frame 3
-          fprintf (stderr, "\n"); //prints on dPMR frame 3
+          fprintf (stderr," duid:%s *Unknown DUID*\n", duid); //prints on dPMR frame 3
+          // fprintf (stderr, "\n"); //prints on dPMR frame 3
         }
     }
 }

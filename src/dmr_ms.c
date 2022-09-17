@@ -817,8 +817,8 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   }
 
 
-  sprintf(state->slot1light, "");
-  sprintf(state->slot2light, "");
+  sprintf(state->slot1light, "%s", "");
+  sprintf(state->slot2light, "%s", "");
 
   //process data
   state->dmr_stereo = 1;
