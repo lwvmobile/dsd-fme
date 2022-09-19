@@ -293,7 +293,7 @@ if (state->currentslot == 0)
       }
       else state->dmr_encL = 0;
 
-      if (state->K != 0)
+      if (state->K != 0 || state->K1 != 0)
 			{
 				state->dmr_encL = 0;
 			}
@@ -356,7 +356,7 @@ if (state->currentslot == 0)
        }
        else state->dmr_encR = 0;
 
-       if (state->K != 0)
+       if (state->K != 0 || state->K1 != 0)
  			 {
  				state->dmr_encR = 0;
  			 }

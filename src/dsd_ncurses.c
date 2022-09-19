@@ -1235,29 +1235,41 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       //hardset P2 WACN, SYSID, and NAC
       entry_win = newwin(6, WIDTH+16, starty+10, startx+10);
       box (entry_win, 0, 0);
-      mvwprintw(entry_win, 2, 2, " Enter Phase 2 WACN");
+      mvwprintw(entry_win, 2, 2, " Enter Phase 2 WACN (HEX)");
       mvwprintw(entry_win, 3, 3, " ");
       echo();
       refresh();
       wscanw(entry_win, "%X", &state->p2_wacn);
+      if (state->p2_wacn > 0xFFFFF)
+      {
+        state->p2_wacn = 0xFFFFF;
+      }
       noecho();
 
       entry_win = newwin(6, WIDTH+16, starty+10, startx+10);
       box (entry_win, 0, 0);
-      mvwprintw(entry_win, 2, 2, " Enter Phase 2 SYSID");
+      mvwprintw(entry_win, 2, 2, " Enter Phase 2 SYSID (HEX)");
       mvwprintw(entry_win, 3, 3, " ");
       echo();
       refresh();
       wscanw(entry_win, "%X", &state->p2_sysid);
+      if (state->p2_sysid > 0xFFF)
+      {
+        state->p2_sysid = 0xFFF;
+      }
       noecho();
 
       entry_win = newwin(6, WIDTH+16, starty+10, startx+10);
       box (entry_win, 0, 0);
-      mvwprintw(entry_win, 2, 2, " Enter Phase 2 NAC/CC");
+      mvwprintw(entry_win, 2, 2, " Enter Phase 2 NAC/CC (HEX)");
       mvwprintw(entry_win, 3, 3, " ");
       echo();
       refresh();
       wscanw(entry_win, "%X", &state->p2_cc);
+      if (state->p2_cc > 0xFFF)
+      {
+        state->p2_cc = 0xFFF;
+      }
       noecho();
 
       //need handling to truncate larger than expected values
