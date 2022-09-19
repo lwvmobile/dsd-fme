@@ -296,7 +296,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
       }
 
 
-      if (1 == 1) 
+      if (1 == 1)
       {
         if (symbol > state->center)
         {
@@ -631,9 +631,16 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   printFrameSync (opts, state, "+P25p2 SISCH", synctest_pos + 1, modulation);
                 }
-                if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0)
+                if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+          					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
             		{
             			fprintf (stderr, " WACN [%05llX] SYS [%03llX] NAC [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+            		}
+                else if (state->p2_wacn == 0xFFFFF || state->p2_cc == 0xFFF || state->p2_sysid == 0xFFF)
+            		{
+                  fprintf (stderr, "%s", KRED);
+            			fprintf (stderr, " P2 Invalid Parameters            ");
+            			fprintf (stderr, "%s", KNRM);
             		}
             		else
             		{
@@ -665,11 +672,16 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   printFrameSync (opts, state, "-P25p2 SISCH", synctest_pos + 1, modulation);
                 }
-                if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0)
+                if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+          					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
             		{
-            			//fprintf (stderr, "%s", KCYN);
             			fprintf (stderr, " WACN [%05llX] SYS [%03llX] NAC [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
-            			//fprintf (stderr, "%s", KNRM);
+            		}
+                else if (state->p2_wacn == 0xFFFFF || state->p2_cc == 0xFFF || state->p2_sysid == 0xFFF)
+            		{
+                  fprintf (stderr, "%s", KRED);
+            			fprintf (stderr, " P2 Invalid Parameters            ");
+            			fprintf (stderr, "%s", KNRM);
             		}
             		else
             		{

@@ -1989,6 +1989,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw (" Phase 2 Missing Parameters ");
         attron(COLOR_PAIR(3));
       }
+      if (state->p2_wacn == 0xFFFFF || state->p2_sysid == 0xFFF || state->p2_cc == 0xFFF)
+      {
+        attron(COLOR_PAIR(2));
+        printw (" Phase 2 Invalid Parameters ");
+        attron(COLOR_PAIR(3));
+      }
     }
 
     printw ("\n");

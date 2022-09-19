@@ -1464,7 +1464,8 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
     if (duid_decoded == 0)
     {
       fprintf (stderr, " 4V %d", state->fourv_counter[state->currentslot]+1);
-			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0)
+			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
 			{
 				process_4V (opts, state);
 			}
@@ -1472,14 +1473,16 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
     else if (duid_decoded == 6)
     {
       fprintf (stderr, " 2V");
-			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0)
+			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
 			{
 				process_2V (opts, state);
 			}
     }
 		else if (duid_decoded == 3)
     {
-			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0)
+			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
 			{
 				process_SACCHs(opts, state);
 			}
@@ -1494,7 +1497,8 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
     }
 		else if (duid_decoded == 9)
     {
-			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0)
+			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
 			{
 				process_FACCHs(opts, state);
 			}
@@ -1512,7 +1516,8 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
       fprintf (stderr, " LCCH Sc"); //w/ scrambling
 			// if (state->currentslot == 0) state->dmrburstL = 31;
 			// else state->dmrburstR = 31;
-			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0)
+			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
 			{
 				state->p2_is_lcch = 1;
 				process_SACCHs(opts, state);
