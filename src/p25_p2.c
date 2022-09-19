@@ -144,6 +144,12 @@ void p2_dibit_buffer (dsd_opts * opts, dsd_state * state)
 		if (opts->audio_in_type == 4) //4
 		{
 			dibit = fgetc(opts->symbolfile);
+			//experimental throttle
+			useconds_t stime = state->symbol_throttle;
+			if (state->use_throttle == 1)
+			{
+				usleep(stime);
+			}
 		}
 		else
 		{
@@ -203,7 +209,7 @@ void process_Frame_Scramble (dsd_opts * opts, dsd_state * state)
 
 void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned long long int MAC[24])
 {
-	//handle variable content MAC PDUs (Active, Idle, or Hangtime)
+	//handle variable content MAC PDUs (Active, Idle, Hangtime, or Signal)
 	//use type to specify SACCH or FACCH, so we know if we should invert the currentslot when assigning ids etc
 	//get first b1 and b2 values, and first offset value
 	//need a lookup table for message length values...aquired one from OP25
@@ -228,7 +234,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 	int b_b = 0;
 	int mco_b = 0;
 
-	//assing here if OECI MAC SIGNAL, after passing RS and CRC
+	//assigning here if OECI MAC SIGNAL, after passing RS and CRC
 	if (state->p2_is_lcch)
 	{
 		if (slot == 0) state->dmrburstL = 30;

@@ -267,7 +267,7 @@ initOpts (dsd_opts * opts)
   opts->frame_dpmr = 0;
   opts->frame_provoice = 0;
   opts->mod_c4fm = 1;
-  opts->mod_qpsk = 0;
+  opts->mod_qpsk = 1;
   opts->mod_gfsk = 0;
   opts->uvquality = 3;
   opts->inverted_x2tdma = 1;    // most transmitter + scanner + sound card combinations show inverted signals for this
@@ -572,6 +572,10 @@ initState (dsd_state * state)
   state->p2_hardset = 0;
   state->p2_is_lcch = 0;
 
+  //experimental symbol file capture read throttle
+  state->symbol_throttle = 0; //throttle speed
+  state->use_throttle = 0; //only use throttle if set to 1
+
   state->p2_scramble_offset = 0;
   state->p2_vch_chan_num = 0;
 
@@ -618,8 +622,8 @@ usage ()
   printf ("  -T            Enable Per Call WAV file saving in XDMA  and NXDN decoding classes\n");
   printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
   printf ("                 (Running in console will use static wav files)\n");
-  //printf ("  -a            Display port audio devices\n");
-  //printf ("  -W            Monitor Source Audio When No Sync Detected (broken!)\n");
+  printf ("  -n            Throttle Symbol Capture Bin Input");
+  printf ("                 (useful when reading files still being written to by OP25)");
   printf ("\n");
   printf ("RTL-SDR options:\n");
   printf ("  -c <hertz>    RTL-SDR Frequency\n");
@@ -662,9 +666,6 @@ usage ()
   printf ("                 (default=36)\n");
   printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
   printf ("                 (default=15)\n");
-  // printf ("  -T            Enable DMR TDMA Stereo Voice (Two Slot Dual Voices)\n");
-  // printf ("                 This feature will open two streams for slot 1 voice and slot 2 voice\n");
-  // printf ("                 May Cause Skipping or sync issues if bad signal/errors\n");
   // printf ("  -F            Enable DMR TDMA Stereo Passive Frame Sync\n");
   // printf ("                 This feature will attempt to resync less often due to excessive voice errors\n");
   // printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
@@ -979,7 +980,9 @@ main (int argc, char **argv)
         case 'v':
           sscanf (optarg, "%d", &opts.verbose);
           break;
-
+        case 'n':
+          state.use_throttle = 1;
+          break;
         case 'K':
           sscanf (optarg, "%lld", &state.K);
           if (state.K > 256)

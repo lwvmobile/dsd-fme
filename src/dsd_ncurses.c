@@ -2052,6 +2052,30 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw("DES-OFB");
       attron(COLOR_PAIR(3));
     }
+    if (state->payload_algid == 0x83 || state->payload_algid == 0x23)
+    {
+      attron(COLOR_PAIR(1));
+      printw("Triple DES");
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algid == 0x85 || state->payload_algid == 0x24)
+    {
+      attron(COLOR_PAIR(1));
+      printw("AES-128");
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algid == 0x84 || state->payload_algid == 0x25)
+    {
+      attron(COLOR_PAIR(1));
+      printw("AES-256");
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algid == 0x02)
+    {
+      attron(COLOR_PAIR(1));
+      printw("Hytera Full Encrypt");
+      attron(COLOR_PAIR(3));
+    }
 
     if(state->dmrburstL == 16 && state->dmr_so == 0x40 && state->R == 0) //0100 0000
     {
@@ -2177,6 +2201,30 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       attron(COLOR_PAIR(1));
       printw("DES-OFB");
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algidR == 0x83 || state->payload_algidR == 0x23)
+    {
+      attron(COLOR_PAIR(1));
+      printw("Triple DES");
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algidR == 0x85 || state->payload_algidR == 0x24)
+    {
+      attron(COLOR_PAIR(1));
+      printw("AES-128");
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algidR == 0x84 || state->payload_algidR == 0x25)
+    {
+      attron(COLOR_PAIR(1));
+      printw("AES-256");
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algidR == 0x02)
+    {
+      attron(COLOR_PAIR(1));
+      printw("Hytera Full Encrypt");
       attron(COLOR_PAIR(3));
     }
     //Call Types, may switch to the more robust version later?
