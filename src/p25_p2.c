@@ -235,7 +235,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 	int mco_b = 0;
 
 	//assigning here if OECI MAC SIGNAL, after passing RS and CRC
-	if (state->p2_is_lcch)
+	if (state->p2_is_lcch == 1)
 	{
 		if (slot == 0) state->dmrburstL = 30;
 		else state->dmrburstR = 30;
@@ -249,6 +249,78 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 	for (int i = 0; i < 1; i++) //short loop to get both messages if available
 	{
+
+		//Secondary Control Channel Broadcast, Explicit
+		if (MAC[1+len_a] == 0xE9)
+		{
+			int rfssid = MAC[2+len_a];
+			int siteid = MAC[3+len_a];
+			int channelt = (MAC[4+len_a] << 8) | MAC[5+len_a];
+			int channelr = (MAC[6+len_a] << 8) | MAC[7+len_a];
+			int sysclass = MAC[8+len_a];
+
+			if (1 == 1) //state->p2_is_lcch == 1
+			{
+				//fprintf (stderr, "%s", KCYN);
+				fprintf (stderr, "\n Secondary Control Channel Broadcast - Explicit\n");
+				fprintf (stderr, " RFSS[%03d] SITE ID [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", rfssid, siteid, channelt, channelr, sysclass);
+				fprintf (stderr, "%s", KNRM);
+			}
+
+		}
+
+		//Secondary Control Channel Broadcast, Implicit
+		if (MAC[1+len_a] == 0x79)
+		{
+			int rfssid = MAC[2+len_a];
+			int siteid = MAC[3+len_a];
+			int channel1 = (MAC[4+len_a] << 8) | MAC[5+len_a];
+			int sysclass1 = MAC[6+len_a];
+			int channel2 = (MAC[7+len_a] << 8) | MAC[8+len_a];
+			int sysclass2 = MAC[9+len_a];
+			if (1 == 1) //state->p2_is_lcch == 1
+			{
+				//fprintf (stderr, "%s", KCYN);
+				fprintf (stderr, "\n Secondary Control Channel Broadcast - Implicit\n");
+				fprintf (stderr, " RFSS[%03d] SITE ID [%03X] CHAN1 [%04X] SSC [%02X] CHAN2 [%04X] SSC [%02X]", rfssid, siteid, channel1, sysclass1, channel2, sysclass2);
+				fprintf (stderr, "%s", KNRM);
+			}
+
+		}
+
+		//Group Voice Channel Grant Update - Implicit
+		if (MAC[1+len_a] == 0x42)
+		{
+			int channel1  = (MAC[2+len_a] << 8) | MAC[3+len_a];
+			int group1 = (MAC[4+len_a] << 8) | MAC[5+len_a];
+			int channel2  = (MAC[6+len_a] << 8) | MAC[7+len_a];
+			int group2 = (MAC[8+len_a] << 8) | MAC[9+len_a];
+
+			fprintf (stderr, "\nVCH %d - Group Voice Channel Grant Update - Implicit");
+			fprintf (stderr, "\n Channel 1 [%04X] Group 1 [%d][%04X]", channel1, group1, group1);
+			fprintf (stderr, "\n Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
+
+		}
+
+		//Group Voice Channel Grant Update - Explicit
+		if (MAC[1+len_a] == 0xC3)
+		{
+			int svc = MAC[2+len_a];
+			int channelt  = (MAC[3+len_a] << 8) | MAC[4+len_a];
+			int channelr  = (MAC[5+len_a] << 8) | MAC[6+len_a];
+			int group = (MAC[7+len_a] << 8) | MAC[8+len_a];
+
+			fprintf (stderr, "\nVCH %d - Group Voice Channel Grant Update - Explicit", slot);
+			fprintf (stderr, "\n SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc, channelt, channelr, group, group);
+			//maybe, not sure if we want this enabled here or not
+			if (slot == 0)
+			{
+				state->lasttg = group;
+			}
+			else state->lasttgR = group;
+
+		}
+
 		//MFID90 Group Regroup Voice Channel User - Abbreviated
 		//this is the one that was playing but had no group or src in tdma6.bin
 		if (MAC[1+len_a] == 0x80 && MAC[2+len_a] == 0x90)
@@ -336,7 +408,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		//network status broadcast, abbreviated
 		if (MAC[1+len_a] == 0x7B)
 		{
-			fprintf (stderr, "%s", KCYN);
+			//fprintf (stderr, "%s", KCYN);
 			int lra = MAC[2+len_a];
 			int lwacn  = (MAC[3+len_a] << 12) | (MAC[4+len_a] << 4) | ((MAC[5+len_a] & 0xF0) >> 4);
 			int lsysid = ((MAC[5+len_a] & 0xF) << 8) | MAC[6+len_a];
@@ -364,7 +436,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channelr = (MAC[9+len_a] << 8) | MAC[10+len_a];
 			int sysclass = MAC[9+len_a];
 			int lcolorcode = ((MAC[12+len_a] & 0xF) << 8) | MAC[13+len_a];
-			fprintf (stderr, "%s", KCYN);
+			//fprintf (stderr, "%s", KCYN);
 			fprintf (stderr, "\n Network Status Broadcast - Extended \n");
 			fprintf (stderr, "  LRA [%02X] WACN [%05X] SYSID [%03X] NAC [%03X] CHAN-T [%04X] CHAN-R [%04X]", lra, lwacn, lsysid, lcolorcode, channelt, channelr);
 			fprintf (stderr, "%s", KNRM);
@@ -389,7 +461,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			//int lcolorcode = ((MAC[12+len_a] & 0xF) << 8) | MAC[13+len_a];
 			if (1 == 1) //state->p2_is_lcch == 1
 			{
-				fprintf (stderr, "%s", KCYN);
+				//fprintf (stderr, "%s", KCYN);
 				fprintf (stderr, "\n Adjacent Status Broadcast - Abbreviated\n");
 				fprintf (stderr, " LRA [%02X] RFSS[%03d] SYSID [%03X] CHAN-T [%04X] SSC [%02X]", lra, rfssid, lsysid, channelt, sysclass);
 				fprintf (stderr, "%s", KNRM);
@@ -410,7 +482,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			//int lcolorcode = ((MAC[12+len_a] & 0xF) << 8) | MAC[13+len_a];
 			if (1 == 1) //state->p2_is_lcch == 1
 			{
-				fprintf (stderr, "%s", KCYN);
+				//fprintf (stderr, "%s", KCYN);
 				fprintf (stderr, "\n Adjacent Status Broadcast - Extended\n");
 				fprintf (stderr, " LRA [%02X] RFSS[%03d] SYSID [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", lra, rfssid, lsysid, channelt, channelr, sysclass);
 				fprintf (stderr, "%s", KNRM);
@@ -491,7 +563,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 	int err = -2;
 	if (state->p2_is_lcch == 0)
 	{
-		int len =
+		int len = 0;
 		err = crc12_xb_bridge(payload, 180-12);
 		if (err != 0) //CRC Failure, warn or skip.
 		{
@@ -501,7 +573,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			}
 			else
 			{
-				fprintf (stderr, " CRC12 ERR ");
+				fprintf (stderr, " CRC12 ERR S");
 				if (state->currentslot == 0) state->dmrburstL = 14;
 				else state->dmrburstR = 14;
 				goto END_SMAC;
@@ -523,10 +595,10 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			}
 			else
 			{
-				fprintf (stderr, " CRC16 ERR ");
+				fprintf (stderr, " CRC16 ERR L");
 				state->p2_is_lcch = 0; //turn flag off here
-				//if (state->currentslot == 0) state->dmrburstL = 14;
-				//else state->dmrburstR = 14;
+				if (state->currentslot == 0) state->dmrburstL = 14;
+				else state->dmrburstR = 14;
 				goto END_SMAC;
 			}
 		}
@@ -737,7 +809,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			}
 			else
 			{
-				fprintf (stderr, " CRC12 ERR ");
+				fprintf (stderr, " CRC12 ERR F");
 				if (state->currentslot == 0) state->dmrburstL = 14;
 				else state->dmrburstR = 14;
 				goto END_FMAC;
@@ -747,13 +819,13 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 
 
 	//Not sure if a MAC Signal will come on a FACCH or not, so disable to prevent falsing
-	// if (opcode == 0x0)
-	// {
-	// 	fprintf (stderr, " MAC_SIGNAL ");
-	// 	fprintf (stderr, "%s", KMAG);
-	// 	process_MAC_VPDU(opts, state, 0, FMAC);
-	// 	fprintf (stderr, "%s", KNRM);
-	// }
+	if (opcode == 0x0)
+	{
+		fprintf (stderr, " MAC_SIGNAL ");
+		fprintf (stderr, "%s", KMAG);
+		process_MAC_VPDU(opts, state, 0, FMAC);
+		fprintf (stderr, "%s", KNRM);
+	}
 
 	if (opcode == 0x1)
 	{
@@ -970,7 +1042,7 @@ void process_FACCHc (dsd_opts * opts, dsd_state * state)
 	}
 	else
 	{
-		fprintf(stderr, " R-S ERR ");
+		fprintf(stderr, " R-S ERR Fc");
 		if (state->currentslot == 0) state->dmrburstL = 13;
 		else state->dmrburstR = 13;
 	}
@@ -1024,7 +1096,7 @@ void process_FACCHs (dsd_opts * opts, dsd_state * state)
 	}
 	else
 	{
-		fprintf(stderr, " R-S ERR ");
+		fprintf(stderr, " R-S ERR Fs");
 		if (state->currentslot == 0) state->dmrburstL = 13;
 		else state->dmrburstR = 13;
 	}
@@ -1073,7 +1145,7 @@ void process_SACCHc (dsd_opts * opts, dsd_state * state)
 	}
 	else
 	{
-		fprintf(stderr, " R-S ERR ");
+		fprintf(stderr, " R-S ERR Sc");
 		if (state->currentslot == 0) state->dmrburstL = 13;
 		else state->dmrburstR = 13;
 	}
@@ -1123,7 +1195,7 @@ void process_SACCHs (dsd_opts * opts, dsd_state * state)
 	}
 	else
 	{
-		fprintf(stderr, " R-S ERR ");
+		fprintf(stderr, " R-S ERR Ss");
 		if (state->currentslot == 0) state->dmrburstL = 13;
 		else state->dmrburstR = 13;
 	}
