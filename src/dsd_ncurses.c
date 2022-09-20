@@ -1621,7 +1621,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][5] = time(NULL);
 
     //open wav file if enabled and both rd and tg are not 0
-    if (opts->dmr_stereo_wav == 1 && src != 0 && tgn != 0)
+    if (opts->dmr_stereo_wav == 1 && src != 0 ) //&& tgn != 0, some TG can be 0 on NXDN
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
@@ -1828,14 +1828,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| Writing Symbol Capture to Bin File: %s\n", opts->symbol_out_file);
   }
-  if (opts->wav_out_file[0] != 0 && opts->dmr_stereo == 0)
+  if (opts->wav_out_file[0] != 0 && opts->dmr_stereo_wav == 0)
   {
     printw ("| Writing Decoded Audio to  WAV File: %s\n", opts->wav_out_file);
   }
   if (opts->dmr_stereo_wav == 1) //opts->wav_out_file[0] != 0 &&
   {
-    printw ("| Per Call WAV S1 - %s\n", opts->wav_out_file);
-    printw ("| Per Call WAV S2 - %s\n", opts->wav_out_fileR);
+    printw ("| Per Call - %s\n", opts->wav_out_file);
+    printw ("| Per Call - %s\n", opts->wav_out_fileR);
   }
 
 

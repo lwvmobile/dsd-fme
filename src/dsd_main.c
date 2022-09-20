@@ -1153,6 +1153,7 @@ main (int argc, char **argv)
           strncpy(opts.wav_out_file, optarg, 1023);
           opts.wav_out_file[1023] = '\0';
           fprintf (stderr,"Writing + Appending decoded audio to file %s\n", opts.wav_out_file);
+          opts.dmr_stereo_wav = 0;
           openWavOutFile (&opts, &state);
           break;
 
@@ -1584,7 +1585,7 @@ main (int argc, char **argv)
       opts.playoffset = 0;
       opts.playoffsetR = 0;
       opts.delay = 0;
-      if (strlen(opts.wav_out_file) > 0)
+      if (strlen(opts.wav_out_file) > 0 && opts.dmr_stereo_wav == 0)
         {
           openWavOutFile (&opts, &state);
         }
@@ -1599,7 +1600,7 @@ main (int argc, char **argv)
       opts.playoffset = 0;
       opts.playoffsetR = 0;
       opts.delay = 0;
-      if (strlen(opts.wav_out_file) > 0)
+      if (strlen(opts.wav_out_file) > 0 && opts.dmr_stereo_wav == 0)
         {
           openWavOutFile (&opts, &state);
         }
