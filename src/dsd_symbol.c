@@ -363,6 +363,13 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
     }
 
     state->symbolc = fgetc(opts->symbolfile);
+
+    //experimental throttle
+    useconds_t stime = state->symbol_throttle;
+    if (state->use_throttle == 1)
+    {
+      usleep(stime);
+    }
     //fprintf(stderr, "%d", state->symbolc);
     if( feof(opts->symbolfile) )
     {
@@ -371,9 +378,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       openPulseInput(opts);
     }
 
-    //flipping these to 'positive' produces terrible results in P25 P1, and I tried flopping it every way I could
-    //positive polarity works fine with DMR, but not P25, so may look at reading and storing based on frame type?
-    if (opts->frame_p25p1 == 1) //use inverted polarity for reading P25, but not DMR (or others?)
+    //flip dibit values when p25-p1, has issues when read in positive polarity
+    if (state->synctype == 0 || state->synctype == 1 )
     {
       if (state->symbolc == 0)
       {

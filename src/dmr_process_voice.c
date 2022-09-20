@@ -72,7 +72,8 @@ int Pr[256] = {
 };
 
 
-if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10)
+if ( (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10) ||
+      (state->currentslot == 0 && state->K > 0 && state->M == 1) )
 {
   fprintf (stderr, "%s", KYEL);
   fprintf(stderr, " PrK %lld", state->K);
@@ -93,7 +94,8 @@ if (state->currentslot == 0 && state->K > 0 && state->dmr_so & 0x40 && state->pa
   }
 }
 
-if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10)
+if ( (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10) ||
+      (state->currentslot == 1 && state->K > 0 && state->M == 1) )
 {
   fprintf (stderr, "%s", KYEL);
   fprintf(stderr, " PrK %lld", state->K);
@@ -114,10 +116,11 @@ if (state->currentslot == 1 && state->K > 0 && state->dmr_soR & 0x40 && state->p
   }
 }
 
-if (state->currentslot == 0 && state->K1 > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
+if ( (state->currentslot == 0 && state->K1 > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68) ||
+      (state->currentslot == 0 && state->K1 > 0 && state->M == 1) )
 {
 
-	int pos = 0; 
+	int pos = 0;
 
 	unsigned long long int k1 = state->K1;
 	unsigned long long int k2 = state->K2;
@@ -186,7 +189,8 @@ if (state->currentslot == 0 && state->K1 > 0 && state->dmr_so & 0x40 && state->p
 
 }
 
-if (state->currentslot == 1 && state->K1 > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
+if ( (state->currentslot == 1 && state->K1 > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68) ||
+      (state->currentslot == 1 && state->K1 > 0 && state->M == 1) )
 {
 
 	int pos = 0;
@@ -289,7 +293,7 @@ if (state->currentslot == 0)
       }
       else state->dmr_encL = 0;
 
-      if (state->K != 0)
+      if (state->K != 0 || state->K1 != 0)
 			{
 				state->dmr_encL = 0;
 			}
@@ -352,7 +356,7 @@ if (state->currentslot == 0)
        }
        else state->dmr_encR = 0;
 
-       if (state->K != 0)
+       if (state->K != 0 || state->K1 != 0)
  			 {
  				state->dmr_encR = 0;
  			 }

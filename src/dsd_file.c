@@ -17,6 +17,34 @@
 
 #include "dsd.h"
 
+time_t nowF;
+char * getTimeF(void) //get pretty hh:mm:ss timestamp
+{
+  time_t t = time(NULL);
+
+  char * curr;
+  char * stamp = asctime(localtime( & t));
+
+  curr = strtok(stamp, " ");
+  curr = strtok(NULL, " ");
+  curr = strtok(NULL, " ");
+  curr = strtok(NULL, " ");
+
+  return curr;
+}
+
+char * getDateF(void) {
+  char datename[120]; //bug in 32-bit Ubuntu when using date in filename, date is garbage text
+  char * curr2;
+  struct tm * to;
+  time_t t;
+  t = time(NULL);
+  to = localtime( & t);
+  strftime(datename, sizeof(datename), "%Y-%m-%d", to);
+  curr2 = strtok(datename, " ");
+  return curr2;
+}
+
 void
 saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
 {
@@ -72,7 +100,7 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
     //fprintf(stderr, "\n AMBE ");
   }
   //for (i = 0; i < 6; i++)
-  for (i = 0; i < 7; i++) //using 7 seems to break older amb files where it was 6, need to test 7 on 7 some more
+  for (i = 0; i < 6; i++) //using 7 seems to break older amb files where it was 6, need to test 7 on 7 some more
     {
       b = 0;
       for (j = 0; j < 8; j++)
@@ -181,7 +209,7 @@ PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) //For DMR Stere
   b = ambe_d[48];
   if (opts->dmr_stereo == 1) //need to fix the printouts again
   {
-    fprintf (stderr, "\n"); 
+    fprintf (stderr, "\n");
   }
 
 }
@@ -250,7 +278,7 @@ readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
     fprintf(stderr, "\n");
   }
   //for (i = 0; i < 6; i++)
-  for (i = 0; i < 7; i++) //breaks backwards compatablilty with 6 files
+  for (i = 0; i < 6; i++) //breaks backwards compatablilty with 6 files
     {
       b = fgetc (opts->mbe_in_f);
       if (feof (opts->mbe_in_f))
@@ -321,85 +349,105 @@ openMbeInFile (dsd_opts * opts, dsd_state * state)
 
 }
 
-void
-closeMbeOutFile (dsd_opts * opts, dsd_state * state)
+//temporarily disabled until the compiler warnings can be fixed, use symbol capture  or per call instead!
+//probably the easiest thing is to just have this run fclose, and have name assignment on open instead.
+// void
+// closeMbeOutFile (dsd_opts * opts, dsd_state * state)
+// {
+//
+//   char shell[255], newfilename[64], ext[5], datestr[32], new_path[1024];
+//   char tgid[17];
+//   int sum, i, j;
+//   int talkgroup;
+//   struct tm timep;
+//   int result;
+//
+//   if (opts->mbe_out_f != NULL)
+//     {
+//       if ((state->synctype == 0) || (state->synctype == 1) || (state->synctype == 14) || (state->synctype == 15))
+//         {
+//           sprintf (ext, ".imb");
+//           //strptime (opts->mbe_out_file, "%s.imb", &timep);
+//         }
+//       else
+//         {
+//           sprintf (ext, ".amb");
+//           //strptime (opts->mbe_out_file, "%s.amb", &timep);
+//         }
+//
+//       if (state->tgcount > 0)
+//         {
+//           for (i = 0; i < 16; i++)
+//             {
+//               sum = 0;
+//               for (j = 0; j < state->tgcount; j++)
+//                 {
+//                   sum = sum + state->tg[j][i] - 48;
+//                 }
+//               tgid[i] = (char) (((float) sum / (float) state->tgcount) + 48.5);
+//             }
+//           tgid[16] = 0;
+//           talkgroup = (int) strtol (tgid, NULL, 2);
+//         }
+//       else
+//         {
+//           talkgroup = 0;
+//         }
+//
+//       fflush (opts->mbe_out_f);
+//       fclose (opts->mbe_out_f);
+//       opts->mbe_out_f = NULL;
+//       strftime (datestr, 31, "%Y-%m-%d-%H%M%S", &timep);
+//
+//       sprintf (newfilename, "%s%s", datestr, ext); //this one
+//
+//       if (state->lastsynctype == 0 || state->lastsynctype == 1)
+//       {
+//         sprintf (newfilename, "%s-nac%X-tg%i%s", datestr, state->nac, talkgroup, ext);
+//       }
+//
+//       //sprintf (new_path, "%s%s", opts->mbe_out_dir, newfilename);
+// #ifdef _WIN32
+//       //sprintf (shell, "move %s %s", opts->mbe_out_path, new_path);
+// #else
+//       //sprintf (shell, "mv %s %s", opts->mbe_out_path, new_path);
+// #endif
+//       //result = system (shell);
+//
+//       state->tgcount = 0;
+//       for (i = 0; i < 25; i++)
+//         {
+//           for (j = 0; j < 16; j++)
+//             {
+//               state->tg[i][j] = 48;
+//             }
+//         }
+//     }
+// }
+
+//much simpler version
+void closeMbeOutFile (dsd_opts * opts, dsd_state * state)
 {
-
-  char shell[255], newfilename[64], ext[5], datestr[32], new_path[1024];
-  char tgid[17];
-  int sum, i, j;
-  int talkgroup;
-  struct tm timep;
-  int result;
-
-  if (opts->mbe_out_f != NULL)
+  if (opts->mbe_out == 1)
+  {
+    if (opts->mbe_out_f != NULL)
     {
-      if ((state->synctype == 0) || (state->synctype == 1) || (state->synctype == 14) || (state->synctype == 15))
-        {
-          sprintf (ext, ".imb");
-          strptime (opts->mbe_out_file, "%s.imb", &timep);
-        }
-      else
-        {
-          sprintf (ext, ".amb");
-          strptime (opts->mbe_out_file, "%s.amb", &timep);
-        }
-
-      if (state->tgcount > 0)
-        {
-          for (i = 0; i < 16; i++)
-            {
-              sum = 0;
-              for (j = 0; j < state->tgcount; j++)
-                {
-                  sum = sum + state->tg[j][i] - 48;
-                }
-              tgid[i] = (char) (((float) sum / (float) state->tgcount) + 48.5);
-            }
-          tgid[16] = 0;
-          talkgroup = (int) strtol (tgid, NULL, 2);
-        }
-      else
-        {
-          talkgroup = 0;
-        }
-
       fflush (opts->mbe_out_f);
       fclose (opts->mbe_out_f);
       opts->mbe_out_f = NULL;
-      strftime (datestr, 31, "%Y-%m-%d-%H%M%S", &timep);
-
-      sprintf (newfilename, "%s%s", datestr, ext); //this one
-
-      if (state->lastsynctype == 0 || state->lastsynctype == 1)
-      {
-        sprintf (newfilename, "%s-nac%X-tg%i%s", datestr, state->nac, talkgroup, ext);
-      }
-
-      sprintf (new_path, "%s%s", opts->mbe_out_dir, newfilename);
-#ifdef _WIN32
-      sprintf (shell, "move %s %s", opts->mbe_out_path, new_path);
-#else
-      sprintf (shell, "mv %s %s", opts->mbe_out_path, new_path);
-#endif
-      result = system (shell);
-
-      state->tgcount = 0;
-      for (i = 0; i < 25; i++)
-        {
-          for (j = 0; j < 16; j++)
-            {
-              state->tg[i][j] = 48;
-            }
-        }
+      opts->mbe_out = 0;
+      fprintf (stderr, "\nClosing MBE out file.");
     }
+
+  }
+
 }
 
 void
 openMbeOutFile (dsd_opts * opts, dsd_state * state)
 {
 
-  struct timeval tv;
+  //struct timeval tv;
   int i, j;
   char ext[5];
 
@@ -423,18 +471,22 @@ openMbeOutFile (dsd_opts * opts, dsd_state * state)
 
   state->tgcount = 0;
 
-  gettimeofday (&tv, NULL);
-  sprintf (opts->mbe_out_file, "%i%s", (int) tv.tv_sec, ext);
+  //gettimeofday (&tv, NULL);
+  //rewrite below line to take getTime function instead?
+  // sprintf (opts->mbe_out_file, "%i%s", (int) tv.tv_sec, ext);
+
+  sprintf (opts->mbe_out_file, "%s %s%s", getDateF(), getTimeF(), ext);
 
   sprintf (opts->mbe_out_path, "%s%s", opts->mbe_out_dir, opts->mbe_out_file);
 
   opts->mbe_out_f = fopen (opts->mbe_out_path, "w");
   if (opts->mbe_out_f == NULL)
-    {
-      fprintf (stderr,"Error, couldn't open %s\n", opts->mbe_out_path);
-    }
+  {
+    fprintf (stderr,"Error, couldn't open %s\n", opts->mbe_out_path);
+  }
+  else opts->mbe_out = 1;
 
-  // write magic
+  //
   fprintf (opts->mbe_out_f, "%s", ext);
 
   fflush (opts->mbe_out_f);

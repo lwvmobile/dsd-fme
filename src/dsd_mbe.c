@@ -202,7 +202,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 		mbe_demodulateAmbe3600x2450Data (ambe_fr);
 		state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
-    if (state->nxdn_cipher_type == 0x01 && state->R > 0)
+    if ( (state->nxdn_cipher_type == 0x01 && state->R > 0) ||
+          (state->M == 1 && state->R > 0) )
 		{
 
 			if (state->payload_miN == 0)
@@ -245,7 +246,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
         state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
-		    if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10)
+		    if ( (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10) ||
+              (state->K > 0 && state->M == 1) )
         {
           k = Pr[state->K];
           k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
@@ -256,7 +258,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           }
         }
 
-        if (state->K1 > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68)
+        if ( (state->K1 > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68) ||
+              (state->K1 > 0 && state->M == 1) )
 				{
 
 					int pos = 0;
@@ -338,7 +341,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
         state->errs2R += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
-        if (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10)
+        if ( (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10) ||
+              (state->K > 0 && state->M == 1) )
         {
           k = Pr[state->K];
           k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
@@ -349,7 +353,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           }
         }
 
-        if (state->K1 > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68)
+        if ( (state->K1 > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68) ||
+              (state->K1 > 0 && state->M == 1))
 				{
 
 					int pos = 0;
@@ -451,7 +456,23 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     {
       state->dmr_encL = 1;
     }
+
+    //checkdown for P25 1 and 2
+		else if (state->payload_algid != 0 && state->payload_algid != 0x80)
+		{
+			state->dmr_encL = 1;
+		}
     else state->dmr_encL = 0;
+
+    //second checkdown for P25-2 WACN, SYSID, and CC set
+		if (state->synctype == 35 || state->synctype == 36)
+		{
+			if (state->p2_wacn == 0 || state->p2_sysid == 0 || state->p2_cc == 0)
+			{
+				state->dmr_encL = 1;
+			}
+		}
+
     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
     {
       state->debug_audio_errors += state->errs2;
@@ -470,7 +491,23 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     {
       state->dmr_encR = 1;
     }
+
+    //checkdown for P25 1 and 2
+		else if (state->payload_algidR != 0 && state->payload_algidR != 0x80)
+		{
+			state->dmr_encR = 1;
+		}
     else state->dmr_encR = 0;
+
+    //second checkdown for P25-2 WACN, SYSID, and CC set
+		if (state->synctype == 35 || state->synctype == 36)
+		{
+			if (state->p2_wacn == 0 || state->p2_sysid == 0 || state->p2_cc == 0)
+			{
+				state->dmr_encR = 1;
+			}
+		}
+
     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
     {
       state->debug_audio_errorsR += state->errs2R;
@@ -500,7 +537,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   }
 
 	//per call can only be used when ncurses terminal is active since we use its call history matrix for when to record
-	if (opts->use_ncurses_terminal == 1 && opts->dmr_stereo_wav == 1 && opts->dmr_stereo == 1 && state->currentslot == 0)
+	if (opts->dmr_stereo_wav == 1 && opts->dmr_stereo == 1 && state->currentslot == 0) //opts->use_ncurses_terminal == 1 &&
 	{
     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
     {
@@ -510,7 +547,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   }
 
 	//per call can only be used when ncurses terminal is active since we use its call history matrix for when to record
-	if (opts->use_ncurses_terminal == 1 && opts->dmr_stereo_wav == 1 && opts->dmr_stereo == 1 && state->currentslot == 1)
+	if (opts->dmr_stereo_wav == 1 && opts->dmr_stereo == 1 && state->currentslot == 1) //opts->use_ncurses_terminal == 1 &&
 	{
     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
     {

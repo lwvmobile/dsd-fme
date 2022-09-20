@@ -1,3 +1,8 @@
+//remove below ifdef if problems arise
+#if __cplusplus > 199711L
+#define register      // Deprecated in C++11.
+#endif  // #if __cplusplus > 199711L
+//end ifdef to fix compiler warnings
 
 #include "p25p1_check_ldu.h"
 

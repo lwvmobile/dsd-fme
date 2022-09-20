@@ -484,15 +484,14 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
   }
 
 
-  //set source here so we can reference it in our text dump
-  state->dmr_lrrp_source[state->currentslot] = (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7];
   fprintf (stderr, "%s ", KNRM);
   //end collecting data header info
 
+  //look at see which type of data service ap we have, and then assign src and dst later for lrrp text dump, etc.
   fprintf (stderr, "%s ", KMAG);
-  if (state->data_header_sap[state->currentslot] == 0x4 && state->data_p_head[state->currentslot] == 0) //4 is IP data
+  if (state->data_header_sap[state->currentslot] == 0x4 && state->data_p_head[state->currentslot] == 0)
   {
-    fprintf (stderr, "\n  IP4 Data - Source: ");
+    fprintf (stderr, "\n  IP Data - Source: ");
     //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[0] & 0x3F), DmrDataByte[1], DmrDataByte[2], DmrDataByte[3]); //not sure if these are right or not
     fprintf (stderr, "[%d]", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7] );
     fprintf (stderr, " Destination: ");
@@ -506,6 +505,90 @@ void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint
               ( (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7]),
               ( (DmrDataByte[2] <<16 ) + (DmrDataByte[3] <<8 ) + DmrDataByte[4]) );
     }
+
+    state->dmr_lrrp_source[state->currentslot] = (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7];
+
+  }
+
+  if (state->data_header_sap[state->currentslot] == 0x0 && state->data_p_head[state->currentslot] == 0)
+  {
+    fprintf (stderr, "\n  Unified Data Transport - Source: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[0] & 0x3F), DmrDataByte[1], DmrDataByte[2], DmrDataByte[3]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7] );
+    fprintf (stderr, " Destination: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[4] & 0x3F), DmrDataByte[5], DmrDataByte[6], DmrDataByte[7]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] <<8 ) + DmrDataByte[4] );
+
+    //part below should probably be inside of above if condition
+    if (1 == 1) //already setting by current slot, no need for checking first
+    {
+      sprintf ( state->dmr_lrrp[state->currentslot][1], "SRC [%d] DST [%d] ",
+              ( (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7]),
+              ( (DmrDataByte[2] <<16 ) + (DmrDataByte[3] <<8 ) + DmrDataByte[4]) );
+    }
+
+    state->dmr_lrrp_source[state->currentslot] = (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7];
+
+  }
+
+  if (state->data_header_sap[state->currentslot] == 0x9 && state->data_p_head[state->currentslot] == 0)
+  {
+    fprintf (stderr, "\n  Proprietary Packet Data - Source: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[0] & 0x3F), DmrDataByte[1], DmrDataByte[2], DmrDataByte[3]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7] );
+    fprintf (stderr, " Destination: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[4] & 0x3F), DmrDataByte[5], DmrDataByte[6], DmrDataByte[7]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", (DmrDataByte[2] <<16 ) + (DmrDataByte[3] <<8 ) + DmrDataByte[4] );
+
+    //part below should probably be inside of above if condition
+    if (1 == 1) //already setting by current slot, no need for checking first
+    {
+      sprintf ( state->dmr_lrrp[state->currentslot][1], "SRC [%d] DST [%d] ",
+              ( (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7]),
+              ( (DmrDataByte[2] <<16 ) + (DmrDataByte[3] <<8 ) + DmrDataByte[4]) );
+    }
+
+    state->dmr_lrrp_source[state->currentslot] = (DmrDataByte[5] <<16 ) + (DmrDataByte[6] << 8) + DmrDataByte[7];
+
+  }
+
+  if (state->data_header_sap[state->currentslot] == 0x2 && state->data_p_head[state->currentslot] == 0)
+  {
+    fprintf (stderr, "\n  TCP/IP Header Compression Data - Source: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[0] & 0x3F), DmrDataByte[1], DmrDataByte[2], DmrDataByte[3]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", DmrDataByte[3]);
+    fprintf (stderr, " Destination: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[4] & 0x3F), DmrDataByte[5], DmrDataByte[6], DmrDataByte[7]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", DmrDataByte[2]);
+
+    //part below should probably be inside of above if condition
+    if (1 == 1) //already setting by current slot, no need for checking first
+    {
+      sprintf ( state->dmr_lrrp[state->currentslot][1], "SRC [%d] DST [%d] ",
+                DmrDataByte[3], DmrDataByte[2] );
+    }
+
+    state->dmr_lrrp_source[state->currentslot] = DmrDataByte[3];
+
+  }
+
+  if (state->data_header_sap[state->currentslot] == 0x3 && state->data_p_head[state->currentslot] == 0)
+  {
+    fprintf (stderr, "\n  UDP/IP Header Compression Data - Source: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[0] & 0x3F), DmrDataByte[1], DmrDataByte[2], DmrDataByte[3]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", DmrDataByte[3]);
+    fprintf (stderr, " Destination: ");
+    //fprintf (stderr, " %d.%d.%d.%d", (DmrDataByte[4] & 0x3F), DmrDataByte[5], DmrDataByte[6], DmrDataByte[7]); //not sure if these are right or not
+    fprintf (stderr, "[%d]", DmrDataByte[2]);
+
+    //part below should probably be inside of above if condition
+    if (1 == 1) //already setting by current slot, no need for checking first
+    {
+      sprintf ( state->dmr_lrrp[state->currentslot][1], "SRC [%d] DST [%d] ",
+                DmrDataByte[3], DmrDataByte[2] );
+    }
+
+    state->dmr_lrrp_source[state->currentslot] = DmrDataByte[3];
 
   }
 
@@ -2334,7 +2417,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 10; i++)
   {
     LC_DataBytes[i] = 0;
-    for(j = 0; j < 10; j++) //why did I change this?
+    for(j = 0; j < 8; j++) //this was changed to 10 (confused) broke Voice Burst including Alias
     {
       LC_DataBytes[i] = LC_DataBytes[i] << 1;
       LC_DataBytes[i] = LC_DataBytes[i] | (LC_DataBit[k] & 0x01);
@@ -2404,7 +2487,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
   //Embedded Alias
   if ( TSVoiceSupFrame->FullLC.FullLinkControlOpcode > 0x03 && TSVoiceSupFrame->FullLC.FullLinkControlOpcode < 0x08)
   {
-    sprintf (state->dmr_callsign[state->currentslot][TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3], ""); //blank here so it doesn't grow out of control?
+    sprintf (state->dmr_callsign[state->currentslot][TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3], "%s", ""); //blank here so it doesn't grow out of control?
     for (i = 0; i < 10; i++)
     {
       //full range of alphanumerical characters?
@@ -2431,7 +2514,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
 
   if ( TSVoiceSupFrame->FullLC.FullLinkControlOpcode == 0x08 && opts->payload == 1) //Embedded GPS
   {
-    sprintf (state->dmr_callsign[state->currentslot][TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3], ""); //blank here so it doesn't grow out of control?
+    sprintf (state->dmr_callsign[state->currentslot][TSVoiceSupFrame->FullLC.FullLinkControlOpcode - 3], "%s", ""); //blank here so it doesn't grow out of control?
     for (i = 0; i < 10; i++)
     {
       //full range of alphanumerical characters?

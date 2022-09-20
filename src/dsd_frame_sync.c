@@ -295,14 +295,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
     	 state->dmr_payload_p = state->dmr_payload_buf + 200;
       }
 
-      // int valid;
-      //running estimate_symbol causes an issue with P25 syncing properly
-      // if (opts->frame_p25p1 != 1)
-      // {
-      //   valid = estimate_symbol(state->rf_mod, &(state->p25_heuristics), state->last_dibit, symbol, &dibit);
-      // }
 
-      if (1 == 1) //opts->dmr_stereo //opts->frame_dmr == 1 && valid == 0
+      if (1 == 1)
       {
         if (symbol > state->center)
         {
@@ -474,6 +468,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
                   state->min = ((state->min) + lmin) / 2;
+                  state->dmrburstR = 17;
                   sprintf (state->ftype, "P25 Phase 1");
                   if (opts->errorbars == 1)
                     {
@@ -489,6 +484,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
                   state->min = ((state->min) + lmin) / 2;
+                  state->dmrburstR = 17;
                   sprintf (state->ftype, "P25 Phase 1");
                   if (opts->errorbars == 1)
                     {
@@ -616,11 +612,12 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             }
           }
           //end YSF sync
-          //P25 P2 sync
-          strncpy(synctest20, (synctest_p - 19), 20); //double check make sure this is right
-          if(opts->frame_p25p2 == 1) //(opts->frame_ysf == 1
+
+          //P25 P2 sync S-ISCH VCH
+          strncpy(synctest20, (synctest_p - 19), 20);
+          if(opts->frame_p25p2 == 1)
           {
-            if (0 == 0) //opts->inverted_ysf == 0
+            if (0 == 0)
             {
               if (strcmp(synctest20, P25P2_SYNC) == 0)
               {
@@ -628,40 +625,81 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 state->offset = synctest_pos;
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
-                fprintf (stderr, "\n+P25-P2 Sync");
-                opts->inverted_ysf = 0; //should we set this here?
-                state->lastsynctype = 30;
+                opts->inverted_p2 = 0;
+                state->lastsynctype = 35; //35
+                if (opts->errorbars == 1)
+                {
+                  printFrameSync (opts, state, "+P25p2 SISCH", synctest_pos + 1, modulation);
+                }
+                if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+          					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
+            		{
+            			fprintf (stderr, " WACN [%05llX] SYS [%03llX] NAC [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+            		}
+                else if (state->p2_wacn == 0xFFFFF || state->p2_cc == 0xFFF || state->p2_sysid == 0xFFF)
+            		{
+                  fprintf (stderr, "%s", KRED);
+            			fprintf (stderr, " P2 Invalid Parameters            ");
+            			fprintf (stderr, "%s", KNRM);
+            		}
+            		else
+            		{
+            			fprintf (stderr, "%s", KRED);
+            			fprintf (stderr, " P2 Missing Parameters            ");
+            			fprintf (stderr, "%s", KNRM);
+            		}
                 if ( opts->monitor_input_audio == 1)
                 {
-
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                return (35);
+                return (35); //35
               }
             }
           }
-          if(opts->frame_p25p2 == 1) //(opts->frame_p25p2 == 1
+          if(opts->frame_p25p2 == 1)
           {
-            if (0 == 0) //inverted p25
+            if (0 == 0)
             {
+              //S-ISCH VCH
               if (strcmp(synctest20, INV_P25P2_SYNC) == 0)
               {
                 state->carrier = 1;
                 state->offset = synctest_pos;
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
-                fprintf (stderr, "\n-P25-P2 Sync");
-                opts->inverted_ysf = 1; //should we set this here?
-                state->lastsynctype = 31;
+                opts->inverted_p2 = 1;
+                if (opts->errorbars == 1)
+                {
+                  printFrameSync (opts, state, "-P25p2 SISCH", synctest_pos + 1, modulation);
+                }
+                if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+          					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
+            		{
+            			fprintf (stderr, " WACN [%05llX] SYS [%03llX] NAC [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+            		}
+                else if (state->p2_wacn == 0xFFFFF || state->p2_cc == 0xFFF || state->p2_sysid == 0xFFF)
+            		{
+                  fprintf (stderr, "%s", KRED);
+            			fprintf (stderr, " P2 Invalid Parameters            ");
+            			fprintf (stderr, "%s", KNRM);
+            		}
+            		else
+            		{
+            			fprintf (stderr, "%s", KRED);
+            			fprintf (stderr, " P2 Missing Parameters            ");
+            			fprintf (stderr, "%s", KNRM);
+            		}
+
+                state->lastsynctype = 36; //36
                 if ( opts->monitor_input_audio == 1)
                 {
-
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                return (36);
+                return (36); //36
               }
             }
           }
+
           //dPMR sync
           strncpy(synctest,   (synctest_p - 23), 24);
           strncpy(synctest12, (synctest_p - 11), 12);

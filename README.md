@@ -1,23 +1,24 @@
 # Digital Speech Decoder - Florida Man Edition
 
-This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with portions of DMR and NXDN code from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch as well. This code also borrows snippets, inspiration, and ideas from other open source works including [Boatbod OP25](https://github.com/boatbod/op25 "Boatbod OP25"), [DSDcc](https://github.com/f4exb/dsdcc "DSDcc"), [SDTRunk](https://github.com/DSheirer/sdrtrunk "SDRTrunk"), [MMDVMHost](https://github.com/g4klx/MMDVMHost "MMDVMHost"), and [LFSR](https://github.com/mattames/LFSR "LFSR"). This project wouldn't be possible without a few good people providing me plenty of sample audio files to run over and over again. Special thanks to jurek1111, KrisMar, noamlivne, racingfan360, iScottyBotty, LimaZulu and hrh17 for the many hours of wav samples submitted by them.
+This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with portions of DMR and NXDN code from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch. This code also borrows snippets, inspiration, and ideas from other open source works including [Boatbod OP25](https://github.com/boatbod/op25 "Boatbod OP25"), [DSDcc](https://github.com/f4exb/dsdcc "DSDcc"), [SDTRunk](https://github.com/DSheirer/sdrtrunk "SDRTrunk"), [MMDVMHost](https://github.com/g4klx/MMDVMHost "MMDVMHost"), [LFSR](https://github.com/mattames/LFSR "LFSR"), and [EZPWD-Reed-Solomon](https://github.com/pjkundert/ezpwd-reed-solomon "EZPWD"). This project wouldn't be possible without a few good people providing me plenty of sample audio files to run over and over again. Special thanks to jurek1111, KrisMar, noamlivne, racingfan360, iScottyBotty, LimaZulu and hrh17 for the many hours of wav samples submitted by them.
+
+## 2022.09.17 Update ##
+P25 Phase 2 Audio decoding has been implemented into DSD-FME. Currently, Phase 2 will only work from OP25 symbol capture bin files, or from wav files/SDR applications/RTL input that are sourced from FSK4 sources. CQPSK (LSM/H-D8PSK) will not work from audio sources. With the addition of Phases 2 audio, a new default decoder class has been implemented, XDMA, which is P25 Phase 1, Phase 2, DMR BS and MS (DMR Stereo). Furthermore, very limited Phase 1 TSBK support and Phase 2 FAcch/SaCCH/LCCH has been worked in just to get Network Status Broadcasts, which can fill in the required P2 parameters for WACN, SYSID, and CC for Phase 2 frame de-scrambling, and active voice call information.
+
+With the implementation of the XDMA decoder class (default decoder), the CLI switches for DMR Stereo has been repurposed. -T option will now open a per call wav file saving when used with NCurses Terminal, otherwise it will write wav files to slot 1 and slot 2 wav files.
+
+Anybody using `dsd-fme -fr -T` ...... should now just use `dsd-fme -ft` instead!
+
+To see the up to date CLI options, please look at the help options with the -h CLI option.
 
 ## 2022.08.12 Update ##
-A new menu system has been introduced in the NCURSES Terminal. While running DSD-FME, a user can simply use the ESC or arrow keys to open the menu. This is extremely beneficial when wanting to change settings on the fly, and also to alleviate the need to use complex start up command line arguments. All of the previous command line arguments still work and will get you up faster, but if you would rather configure after start up, or change settings while running, the menu system is very helpful in that regard.
+A new menu system has been introduced in the NCURSES Terminal. Also includes support for LRRP to text file type of choice and reading OP25 symbol capture bin files.
 
 [![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)](https://www.youtube.com/watch?v=TqTfAfaPJ4s "DSD-FME Update 2022.08.12")
 
 To get started with the new menu system, simply launch with:
 
 `dsd-fme -N 2> log.txt`
-
-Virtually all the examples listed below can now be set up on the fly with the menu system, no need to check the help or refer to this page.
-
-This release also has provisional support for playing back OP25 capture bin files, and the creation and playback of its own capture bin files as well (most likely not OP25 compatible). Mileage may vary. Be sure to choose the decoder option required when playing a bin file back, do not rely on auto-detect. Capture Bin files can be used to reliably replay P25, DMR BS, and NXDN decodings, and can replace the need for MBE file saving in the case of DMR Stereo, allowing for a complete replay of all events on a system, rather than just voice only.
-
-Per Call wav file creation has been implemented, currently only for DMR Stereo. Complete audio decode wav is available for all other decoder types. LRRP has been revamped, working more consistently, and an option to dump LRRP data to ~/lrrp.txt in the user home directory now exists, and can be imported into open-source QGIS to provide mapping data for LRRP output. Simply open the newly included map file in QGIS and point it at your geographic region. (Be sure the lrrp.txt file exists, and has data populated in it prior to opening the map file in QGIS, otherwise, the map layer may not want to show back up!)
-
-DMR Data Header decoding has been revamped, and most data burst decoding types tightened up and code cleaned. FEC error checking now implemented on CACH and Burst types, cleaning up some erroneous slot and burst errors.
 
 ## 2022.06.20 Update - Current Users Please Read!! ##
 The executable for this project has been changed from `dsd` to `dsd-fme` so after pulling or cloning the lastest version, make sure to call the software with `dsd-fme`.
@@ -28,20 +29,22 @@ DMR Stereo method added for listening to voice audio in both TDMA channels/slots
 ### Example Usage and Note!
 `dsd-fme` or `./dsd-fme` may need to be used in your usage, depending on if you are running it from the build folder, or if you have run make install. You will need to tweak the examples to your particular usage. Users can always check `dsd-fme -h`  for help and all command line switches to use.
 
-`dsd-fme` is all you need to run for pulse input, pulse output, and auto detect for DMR, P25P1, D-STAR, and X2-TDMA decoding. To use other decoding methods which cannot be auto detected, please use the following command line switches. Make sure to route audio into and out of DSD-FME using pavucontrol and virtual sinks as needed.
+`dsd-fme` is all you need to run for pulse input, pulse output, and auto detect for DMR BS/MS, P25 (1 and 2) and X2-TDMA decoding. To use other decoding methods which cannot be auto detected, please use the following command line switches. Make sure to route audio into and out of DSD-FME using pavucontrol and virtual sinks as needed.
 
 ```
+-ft XDMA decoder class (P25 1 and 2, DMR BS/MS, X2-TDMA)
+-fa Legacy Auto
 -fi NXDN48
 -fn NXDN96
 -fp ProVoice
 -fm dPMR, also may need to use -xd if inverted dPMR.
--fr DMR, also may need to use -xr if inverted DMR, use -T for Stereo, and -F for passive sync
+-fr DMR, also may need to use -xr if inverted DMR.
 -f1 P25P1
 -fx X2-TDMA
 ```
 
-## Example Usage - New DMR Stereo, Ncurses Terminal, Pulse Input/Output, and Log Console to file
-`dsd-fme -fr -T -N 2> voice.log`
+## Example Usage - New XDMA Decoder, Ncurses Terminal, Pulse Input/Output, and Log Console to file
+`dsd-fme -ft -N 2> voice.log`
 
 and in a second terminal tab, same folder, run
 
@@ -90,12 +93,12 @@ and in a second terminal tab, same folder, run
 ## Roadmap
 The Current list of objectives include:
 
-1. Include P25 P2 Audio decoding with capture bin files, then RTL input and/or disc tap input.
+1. ~~Include P25 P2 Audio decoding with capture bin files~~, new demodulators and input method(s) (considering liquid-dsp).
 ~~Random Tinkering~~ ~~More Random Tinkering~~
 
 2. ~~Implemented Pulse Audio~~ ~~Remove remaining PortAudio code,~~ ~~improved Pulse Audio for stereo output and channel/slot separation~~ ~~and reimplement wav file saving using DMR Stereo method for stereo wav files, or seperate as per call wav files.~~
 
-3. ~~Improve NXDN and DMR support~~ Continue to improve ~~NXDN and DMR~~ all data and voice decoding.
+3. ~~Improve NXDN and DMR support~~ Continue to improve all data and voice decoding.
 
 4. ~~More Concise Printouts - Ncurses~~
 
