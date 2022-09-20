@@ -263,7 +263,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			{
 				//fprintf (stderr, "%s", KCYN);
 				fprintf (stderr, "\n Secondary Control Channel Broadcast - Explicit\n");
-				fprintf (stderr, " RFSS[%03d] SITE ID [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", rfssid, siteid, channelt, channelr, sysclass);
+				fprintf (stderr, "  RFSS[%03d] SITE ID [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", rfssid, siteid, channelt, channelr, sysclass);
 				fprintf (stderr, "%s", KNRM);
 			}
 
@@ -282,7 +282,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			{
 				//fprintf (stderr, "%s", KCYN);
 				fprintf (stderr, "\n Secondary Control Channel Broadcast - Implicit\n");
-				fprintf (stderr, " RFSS[%03d] SITE ID [%03X] CHAN1 [%04X] SSC [%02X] CHAN2 [%04X] SSC [%02X]", rfssid, siteid, channel1, sysclass1, channel2, sysclass2);
+				fprintf (stderr, "  RFSS[%03d] SITE ID [%03X] CHAN1 [%04X] SSC [%02X] CHAN2 [%04X] SSC [%02X]", rfssid, siteid, channel1, sysclass1, channel2, sysclass2);
 				fprintf (stderr, "%s", KNRM);
 			}
 
@@ -296,9 +296,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channel2  = (MAC[6+len_a] << 8) | MAC[7+len_a];
 			int group2 = (MAC[8+len_a] << 8) | MAC[9+len_a];
 
-			fprintf (stderr, "\nVCH %d - Group Voice Channel Grant Update - Implicit");
-			fprintf (stderr, "\n Channel 1 [%04X] Group 1 [%d][%04X]", channel1, group1, group1);
-			fprintf (stderr, "\n Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
+			fprintf (stderr, "\n Group Voice Channel Grant Update - Implicit");
+			fprintf (stderr, "\n  Channel 1 [%04X] Group 1 [%d][%04X]", channel1, group1, group1);
+			fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
 
 		}
 
@@ -310,8 +310,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channelr  = (MAC[5+len_a] << 8) | MAC[6+len_a];
 			int group = (MAC[7+len_a] << 8) | MAC[8+len_a];
 
-			fprintf (stderr, "\nVCH %d - Group Voice Channel Grant Update - Explicit", slot);
-			fprintf (stderr, "\n SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc, channelt, channelr, group, group);
+			fprintf (stderr, "\n Group Voice Channel Grant Update - Explicit");
+			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc, channelt, channelr, group, group);
 			//maybe, not sure if we want this enabled here or not
 			if (slot == 0)
 			{
