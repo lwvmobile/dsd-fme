@@ -266,6 +266,7 @@ initOpts (dsd_opts * opts)
   opts->frame_dmr = 1;
   opts->frame_dpmr = 0;
   opts->frame_provoice = 0;
+  opts->frame_ysf = 0; //forgot to init this, and Cygwin treated as it was turned on.
   opts->mod_c4fm = 1;
   opts->mod_qpsk = 1;
   opts->mod_gfsk = 0;
@@ -1181,6 +1182,7 @@ main (int argc, char **argv)
               opts.frame_dmr = 1;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
+              opts.frame_ysf = 0;
               opts.pulse_digi_rate_out = 8000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
@@ -1198,6 +1200,7 @@ main (int argc, char **argv)
               opts.frame_dmr = 0;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
+              opts.frame_ysf = 0;
               opts.pulse_digi_rate_out = 8000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
@@ -1217,6 +1220,7 @@ main (int argc, char **argv)
               opts.frame_dmr = 0;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
+              opts.frame_ysf = 0;
               opts.pulse_digi_rate_out = 8000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
@@ -1235,6 +1239,7 @@ main (int argc, char **argv)
               opts.frame_dmr = 0;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 1;
+              opts.frame_ysf = 0;
               state.samplesPerSymbol = 5;
               state.symbolCenter = 2;
               opts.mod_c4fm = 0;
@@ -1260,6 +1265,7 @@ main (int argc, char **argv)
               opts.frame_dmr = 0;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
+              opts.frame_ysf = 0;
               opts.dmr_stereo = 0;
               state.dmr_stereo = 0;
               opts.mod_c4fm = 1;
@@ -1384,6 +1390,7 @@ main (int argc, char **argv)
               opts.frame_dmr = 0;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
+              opts.frame_ysf = 0;
               opts.mod_c4fm = 1;
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
@@ -1406,6 +1413,7 @@ main (int argc, char **argv)
               opts.frame_dmr = 1;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
+              opts.frame_ysf = 0;
               opts.mod_c4fm = 1;
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0; //

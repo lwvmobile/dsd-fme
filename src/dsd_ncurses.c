@@ -923,6 +923,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dmr = 1;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
+      opts->frame_ysf = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -951,6 +952,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dmr = 0;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 1;
+      opts->frame_ysf = 0;
       opts->mod_c4fm = 0;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 1;
@@ -977,6 +979,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dmr = 0;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
+      opts->frame_ysf = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1007,6 +1010,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dmr = 0;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
+      opts->frame_ysf = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1036,6 +1040,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_nxdn96 = 0;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
+      opts->frame_ysf = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1063,6 +1068,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       //opts->frame_dmr = 0;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
+      opts->frame_ysf = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1088,6 +1094,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dmr = 0;
       opts->frame_dpmr = 1;
       opts->frame_provoice = 0;
+      opts->frame_ysf = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1116,6 +1123,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dmr = 0;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
+      opts->frame_ysf = 0;
       opts->mod_c4fm = 1;
       //opts->unmute_encrypted_p25 = 0;
       // opts->mod_qpsk = 0;
@@ -1141,6 +1149,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dmr = 0;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
+      opts->frame_ysf = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1167,6 +1176,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dmr = 0;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
+      opts->frame_ysf = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;

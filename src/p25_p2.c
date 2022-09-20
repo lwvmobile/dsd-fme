@@ -261,7 +261,6 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			if (1 == 1) //state->p2_is_lcch == 1
 			{
-				//fprintf (stderr, "%s", KCYN);
 				fprintf (stderr, "\n Secondary Control Channel Broadcast - Explicit\n");
 				fprintf (stderr, "  RFSS[%03d] SITE ID [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", rfssid, siteid, channelt, channelr, sysclass);
 				fprintf (stderr, "%s", KNRM);
@@ -280,7 +279,6 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int sysclass2 = MAC[9+len_a];
 			if (1 == 1) //state->p2_is_lcch == 1
 			{
-				//fprintf (stderr, "%s", KCYN);
 				fprintf (stderr, "\n Secondary Control Channel Broadcast - Implicit\n");
 				fprintf (stderr, "  RFSS[%03d] SITE ID [%03X] CHAN1 [%04X] SSC [%02X] CHAN2 [%04X] SSC [%02X]", rfssid, siteid, channel1, sysclass1, channel2, sysclass2);
 				fprintf (stderr, "%s", KNRM);
@@ -733,6 +731,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 	{
 		if (state->currentslot == 1) state->dmrburstL = 24;
 		else state->dmrburstR = 24;
+		fprintf (stderr, "%s", KMAG);
 		fprintf (stderr, " MAC_IDLE ");
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
@@ -742,7 +741,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		if (state->currentslot == 1) state->dmrburstL = 21;
 		else state->dmrburstR = 21;
 		fprintf (stderr, " MAC_ACTIVE ");
-		fprintf (stderr, "%s", KGRN);
+		fprintf (stderr, "%s", KMAG);
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -751,7 +750,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		if (state->currentslot == 1) state->dmrburstL = 22;
 		else state->dmrburstR = 22;
 		fprintf (stderr, " MAC_HANGTIME ");
-		fprintf (stderr, "%s", KYEL);
+		fprintf (stderr, "%s", KMAG);
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -965,6 +964,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 
 		}
 		fprintf (stderr, " MAC_IDLE ");
+		fprintf (stderr, "%s", KMAG);
 		process_MAC_VPDU(opts, state, 0, FMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -973,7 +973,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		if (state->currentslot == 0) state->dmrburstL = 21;
 		else state->dmrburstR = 21;
 		fprintf (stderr, " MAC_ACTIVE ");
-		fprintf (stderr, "%s", KGRN);
+		fprintf (stderr, "%s", KMAG);
 		process_MAC_VPDU(opts, state, 0, FMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -982,7 +982,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		if (state->currentslot == 0) state->dmrburstL = 22;
 		else state->dmrburstR = 22;
 		fprintf (stderr, " MAC_HANGTIME ");
-		fprintf (stderr, "%s", KYEL);
+		fprintf (stderr, "%s", KMAG);
 		process_MAC_VPDU(opts, state, 0, FMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
