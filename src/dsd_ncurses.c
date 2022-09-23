@@ -157,6 +157,61 @@ char * DMRBusrtTypes[32] = {
 
 };
 
+void beeper (dsd_opts * opts, dsd_state * state, int type)
+{
+  FILE *beep;
+  char wav_name[1024] = {0};
+  if (opts->dmr_stereo == 1)
+  {
+    //24k tone wav file
+    strncpy(wav_name, "/usr/share/tone24.wav", 1023);
+  }
+  else
+  {
+    //8k tone
+    strncpy(wav_name, "/usr/share/tone8.wav", 1023);
+  }
+  wav_name[1023] = '\0';
+  struct stat stat_buf;
+  if (stat(wav_name, &stat_buf) == 0)
+  {
+    beep = fopen (wav_name, "ro");
+    uint8_t buf[1024] = {0};
+    short blip = 0;
+    int loop = 1;
+    while (loop == 1)
+    {
+      fread(buf, sizeof(buf), 1, beep);
+      if ( feof (beep) )
+      {
+        loop = 0;
+      }
+      if (loop == 1)
+      {
+        //only beep on R if dmr_stereo is active and slot 2, else beep on L
+        if (type == 0 && state->dmr_stereo == 1)
+        {
+          pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
+        }
+        if (type == 1 && state->dmr_stereo == 1)
+        {
+          pa_simple_write(opts->pulse_digi_dev_outR, buf, sizeof(buf), NULL);
+        }
+        if (state->dmr_stereo == 0)
+        {
+          pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
+        }
+
+
+      }
+
+    }
+
+    fclose (beep);
+  }
+
+}
+
 char * getDateN(void) {
   char datename[99]; //bug in 32-bit Ubuntu when using date in filename, date is garbage text
   char * curr2;
@@ -209,7 +264,7 @@ char *choicesc[] = {
       "Replay Last Symbol Capture Bin",
       "Stop & Close Symbol Capture Bin Playback",
       "Stop & Close Symbol Capture Bin Saving",
-      "               ",
+      "Toggle Call Alert Beep     ",
 			"Resume Decoding"
       };
 
@@ -621,6 +676,40 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
         }
 
+        if (choicec == 7) //RTL UDP Retune
+        {
+          //read in new rtl frequency
+          #ifdef USE_RTLSDR
+          entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
+          box (entry_win, 0, 0);
+          mvwprintw(entry_win, 2, 2, " Enter Frequency in Hz (851.8 MHz is 851800000 Hz) ");
+          mvwprintw(entry_win, 3, 3, " ");
+          echo();
+          refresh();
+          wscanw(entry_win, "%d", &opts->rtlsdr_center_freq); //ld, or lld?
+          noecho();
+          //do the thing with the thing
+          data[0] = 0;
+          data[1] = opts->rtlsdr_center_freq & 0xFF;
+          data[2] = (opts->rtlsdr_center_freq >> 8) & 0xFF;
+          data[3] = (opts->rtlsdr_center_freq >> 16) & 0xFF;
+          data[4] = (opts->rtlsdr_center_freq >> 24) & 0xFF;
+
+          temp_freq = opts->rtlsdr_center_freq;
+          #endif
+          choicec = 18;
+        }
+
+        if (choicec == 8)
+        {
+          //vacant box
+        }
+
+        if (choicec == 9)
+        {
+          //vacant box
+        }
+
         if (choicec == 10)
         {
           if (opts->ncurses_compact == 0)
@@ -728,28 +817,14 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           choicec = 18; //exit
         }
 
-        if (choicec == 7) //RTL UDP Retune
+        //toggle call alert beep
+        if (choicec == 17)
         {
-          //read in new rtl frequency
-          #ifdef USE_RTLSDR
-          entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
-          box (entry_win, 0, 0);
-          mvwprintw(entry_win, 2, 2, " Enter Frequency in Hz (851.8 MHz is 851800000 Hz) ");
-          mvwprintw(entry_win, 3, 3, " ");
-          echo();
-          refresh();
-          wscanw(entry_win, "%d", &opts->rtlsdr_center_freq); //ld, or lld?
-          noecho();
-          //do the thing with the thing
-          data[0] = 0;
-          data[1] = opts->rtlsdr_center_freq & 0xFF;
-          data[2] = (opts->rtlsdr_center_freq >> 8) & 0xFF;
-          data[3] = (opts->rtlsdr_center_freq >> 16) & 0xFF;
-          data[4] = (opts->rtlsdr_center_freq >> 24) & 0xFF;
-
-          temp_freq = opts->rtlsdr_center_freq;
-          #endif
-          choicec = 18;
+          if (opts->call_alert == 0)
+          {
+            opts->call_alert = 1;
+          }
+          else opts->call_alert = 0;
         }
 
         if (choicec != 0 && choicec != 18 ) //return to last menu
@@ -765,6 +840,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           //wrefresh(menu_win);
           break;
         }
+
         if (choicec == 18) //exit both menus
         {
           //exit
@@ -1495,7 +1571,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //DMR SRC
-  if ( (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32) )
+  // if ( (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32) )
+  if ( (lls == 12 || lls == 11 || lls == 32) )
   {
     if (state->dmrburstL == 16 && state->lastsrc > 0) //state->currentslot == 0 &&
     {
@@ -1506,17 +1583,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       rdR = state->lastsrcR;
     }
-    //move to seperate P25 version plz
-    //opts->p25enc = 0;
+
   }
 
   //DMR TG
-  if ( (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32) )
+  if ( (lls == 12 || lls == 11 || lls == 32) )
   {
     if (state->dmrburstL == 16 && state->lasttg > 0) //state->currentslot == 0 &&
     {
       tg = state->lasttg;
-
     }
 
     if (state->dmrburstR == 16 && state->lasttgR > 0) //state->currentslot == 1 &&
@@ -1524,7 +1599,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       tgR = state->lasttgR;
 
     }
-    //opts->p25enc = 0;
 
   }
 
@@ -1629,10 +1703,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
+    if (opts->call_alert == 1)
+    {
+      beeper (opts, state, 0);
+    }
+
   }
 
   //DMR MS
-  if ( call_matrix[9][2] != rd && (lls == 32 || lls == 33 || lls == 34) )
+  if ( call_matrix[9][2] != rd && lls == 32)
   {
 
     for (short int k = 0; k < 10; k++)
@@ -1661,10 +1740,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
+    if (opts->call_alert == 1)
+    {
+      beeper (opts, state, 0);
+    }
+
   }
 
   //DMR BS Slot 1 - matrix 0-4
-  if ( call_matrix[4][2] != rd && (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 35 || lls == 36) )
+  if ( call_matrix[4][2] != rd && (lls == 11 || lls == 12 || lls == 35 || lls == 36) )
   {
 
     for (short int k = 0; k < 4; k++)
@@ -1694,10 +1778,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
+    if (opts->call_alert == 1)
+    {
+      beeper (opts, state, 0);
+    }
+
   }
 
   //DMR BS Slot 2 - matrix 5-9
-  if ( call_matrix[9][2] != rdR && (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 35 || lls == 36) )
+  if ( call_matrix[9][2] != rdR && (lls == 11 || lls == 12 || lls == 35 || lls == 36) )
   {
 
     for (short int k = 5; k < 9; k++)
@@ -1724,6 +1813,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       closeWavOutFileR (opts, state);
       sprintf (opts->wav_out_fileR, "./WAV/%s X2 - CC %d - TG %d - RD %d.wav", getTimeN(), dcc, tgR, rdR);
       openWavOutFileR (opts, state); //testing for now, will want to move to per call later
+    }
+
+    if (opts->call_alert == 1)
+    {
+      beeper (opts, state, 1);
     }
 
   }
@@ -1755,6 +1849,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       closeWavOutFileL (opts, state);
       sprintf (opts->wav_out_file, "./WAV/%s P1 - NAC %X - TGT %d - SRC %d.wav", getTimeN(), nc, tg, rd);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
+    }
+
+    if (opts->call_alert == 1)
+    {
+      beeper (opts, state, 0);
     }
 
   }
