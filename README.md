@@ -7,7 +7,7 @@ P25 Phase 2 Audio decoding has been implemented into DSD-FME. Currently, Phase 2
 
 With the implementation of the XDMA decoder class (default decoder), the CLI switches for DMR Stereo has been repurposed. -T option will now open a per call wav file saving when used with NCurses Terminal, otherwise it will write wav files to slot 1 and slot 2 wav files.
 
-Anybody using `dsd-fme -fr -T` ...... should now just use `dsd-fme -ft` instead!!
+Anybody using `dsd-fme -fr -T` ...... should now just use `dsd-fme -ft` instead!
 
 To see the up to date CLI options, please look at the help options with the -h CLI option.
 
