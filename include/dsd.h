@@ -356,6 +356,7 @@ typedef struct
   short int aggressive_framesync;
 
   FILE *symbolfile;
+  int call_alert;
 
 } dsd_opts;
 
@@ -593,7 +594,7 @@ typedef struct
   int p2_is_lcch; //flag to tell us when a frame is lcch and not sacch
 
   //experimental symbol file capture read throttle
-  unsigned long long int symbol_throttle; //throttle speed
+  int symbol_throttle; //throttle speed
   int use_throttle; //only use throttle if set to 1
 
   //dstar header for ncurses

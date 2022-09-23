@@ -1757,6 +1757,32 @@ void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t 
     sprintf(state->dmr_branding, " Hytera XPT ");
   }
 
+  //Testing CSBK Voice Call on Tait //CSBK Protect  RID ILLEGALLY_PARKED
+  // if ((IrrecoverableErrors == 0) && CRCCorrect)
+  // {
+  //   if (DmrDataByte[0] == 0xAF)
+  //   {
+  //     if (state->currentslot == 0)
+  //     {
+  //       state->lastsrc = (DmrDataByte[4] << 16) | (DmrDataByte[5] << 8) | (DmrDataByte[6] << 0);
+  //       state->lasttg  = (DmrDataByte[7] << 16) | (DmrDataByte[8] << 8) | (DmrDataByte[9] << 0);
+  //       fprintf (stderr, "%s", KGRN);
+  //       fprintf (stderr, "\n SLOT %d ", state->currentslot+1);
+  //       fprintf(stderr, "TGT=%u SRC=%u ", state->lasttg, state->lastsrc);
+  //       fprintf(stderr, " CSBK Voice LC??");
+  //     }
+  //     if (state->currentslot == 1)
+  //     {
+  //       state->lastsrcR = (DmrDataByte[4] << 16) | (DmrDataByte[5] << 8) | (DmrDataByte[6] << 0);
+  //       state->lasttgR  = (DmrDataByte[7] << 16) | (DmrDataByte[8] << 8) | (DmrDataByte[9] << 0);
+  //       fprintf (stderr, "%s", KGRN);
+  //       fprintf (stderr, "\n SLOT %d ", state->currentslot+1);
+  //       fprintf(stderr, "TGT=%u SRC=%u ", state->lasttgR, state->lastsrcR);
+  //       fprintf(stderr, " CSBK Voice LC??");
+  //     }
+  //   }
+  // }
+
   //Full
   if (opts->payload == 1)
   {

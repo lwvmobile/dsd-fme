@@ -13,6 +13,10 @@ git branch -a
 git checkout remotes/origin/pulseaudio
 git checkout -b pulseaudio
 git branch -a #double check to see if you are on pulseaudio branch
+sudo cp tone8.wav /usr/share/
+sudo cp tone24.wav /usr/share/
+sudo chmod 777 /usr/share/tone8.wav
+sudo chmod 777 /usr/share/tone24.wav
 mkdir build
 cd build
 cmake ..

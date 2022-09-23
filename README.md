@@ -186,6 +186,10 @@ git branch -a
 git checkout remotes/origin/pulseaudio
 git checkout -b pulseaudio
 git branch -a #double check to see if you are on pulseaudio branch
+sudo cp tone8.wav /usr/share/
+sudo cp tone24.wav /usr/share/
+sudo chmod 777 /usr/share/tone8.wav
+sudo chmod 777 /usr/share/tone24.wav
 mkdir build
 cd build
 cmake ..
@@ -216,6 +220,16 @@ make -j `nproc`
 sudo make install
 sudo ldconfig
 ```
+
+If the call alert wav files aren't playing, then make sure to run the following in the dsd-fme folder to copy the wav files to the /usr/share/ folder and give them adequate permission to be accessed.
+
+```
+sudo cp tone8.wav /usr/share/
+sudo cp tone24.wav /usr/share/
+sudo chmod 777 /usr/share/tone8.wav
+sudo chmod 777 /usr/share/tone24.wav
+```
+
 # Join the Conversation
 
 Want to help drive the direction of this project and read more about the latest updates and releases to DSD-FME? Then join the conversation on the 'unofficial official' [DSD-FME](https://forums.radioreference.com/threads/dsd-fme.438137/ "DSD-FME") Forum Thread on the Radio Reference Forums.

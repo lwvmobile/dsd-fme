@@ -69,6 +69,7 @@ comp (const void *a, const void *b)
 //struct for checking existence of directory to write to
 struct stat st = {0};
 char wav_file_directory[1024] = {0};
+unsigned long long int p2vars = 0;
 
 void
 noCarrier (dsd_opts * opts, dsd_state * state)
@@ -320,6 +321,8 @@ initOpts (dsd_opts * opts)
   opts->inverted_p2 = 0;
   opts->p2counter = 0;
 
+  opts->call_alert = 0; //call alert beeper for ncurses
+
 }
 
 void
@@ -403,6 +406,8 @@ initState (dsd_state * state)
   state->tgcount = 0;
   state->lasttg = 0;
   state->lastsrc = 0;
+  state->lasttgR = 0;
+  state->lastsrcR = 0;
   state->nac = 0;
   state->errs = 0;
   state->errs2 = 0;
@@ -614,7 +619,7 @@ usage ()
   printf ("  -z <num>      Frame rate for datascope\n");
   printf ("\n");
   printf ("Input/Output options:\n");
-  printf ("  -i <device>   Audio input device (default is pulse audio, \n                  - for piped stdin, rtl for rtl device)\n");
+  printf ("  -i <device>   Audio input device (default is pulse audio), \n                  - for piped stdin, rtl for rtl device,\n                    filename.bin for OP25/FME capture bin files\n");
   printf ("  -o <device>   Audio output device (default is pulse audio)\n");
   printf ("  -d <dir>      Create mbe data files, use this directory\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
@@ -623,7 +628,9 @@ usage ()
   printf ("  -T            Enable Per Call WAV file saving in XDMA  and NXDN decoding classes\n");
   printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
   printf ("                 (Running in console will use static wav files)\n");
-  printf ("  -n            Throttle Symbol Capture Bin Input");
+  printf ("  -a            Enable Call Alert Beep (NCurses Terminal Only)\n");
+  printf ("                 (Warning! Might be annoying.)");
+  printf ("  -n            Throttle Symbol Capture Bin Input\n");
   printf ("                 (useful when reading files still being written to by OP25)");
   printf ("\n");
   printf ("RTL-SDR options:\n");
@@ -662,11 +669,13 @@ usage ()
   printf ("  * denotes frame types that cannot be auto-detected.\n");
   printf ("\n");
   printf ("Advanced Decoder options:\n");
+  printf ("  -X <hex>      Manually Set P2 Parameters (WACN, SYSID, CC/NAC)\n");
+  printf ("                 (-X BEE00ABC123)\n");
   // printf ("  -A <num>      QPSK modulation auto detection threshold (default=26)\n");
-  printf ("  -S <num>      Symbol buffer size for QPSK decision point tracking\n");
-  printf ("                 (default=36)\n");
-  printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
-  printf ("                 (default=15)\n");
+  // printf ("  -S <num>      Symbol buffer size for QPSK decision point tracking\n");
+  // printf ("                 (default=36)\n");
+  // printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
+  // printf ("                 (default=15)\n");
   // printf ("  -F            Enable DMR TDMA Stereo Passive Frame Sync\n");
   // printf ("                 This feature will attempt to resync less often due to excessive voice errors\n");
   // printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
@@ -918,7 +927,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:NQWrlZTF")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -928,7 +937,8 @@ main (int argc, char **argv)
           exit (0);
         case 'a':
           //printPortAudioDevices();
-          exit(0);
+          //exit(0);
+          opts.call_alert = 1;
         case 'e':
           opts.errorbars = 1;
           opts.datascope = 0;
@@ -1028,6 +1038,21 @@ main (int argc, char **argv)
             opts.dmr_mute_encR = 1;
           }
           state.K1 = state.H; //shim
+          break;
+
+        //manually set Phase 2 TDMA WACN/SYSID/CC
+        case 'X':
+          sscanf (optarg, "%llX", &p2vars);
+          if (p2vars > 0)
+          {
+           state.p2_wacn = p2vars >> 24;
+           state.p2_sysid = (p2vars >> 12) & 0xFFF;
+           state.p2_cc = p2vars & 0xFFF;
+          }
+          if (state.p2_wacn != 0 && state.p2_sysid != 0 && state.p2_cc != 0)
+          {
+            state.p2_hardset = 1;
+          }
           break;
 
         case 'G': //Set rtl device gain
