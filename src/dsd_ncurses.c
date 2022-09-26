@@ -189,15 +189,15 @@ void beeper (dsd_opts * opts, dsd_state * state, int type)
       if (loop == 1)
       {
         //only beep on R if dmr_stereo is active and slot 2, else beep on L
-        if (type == 0 && state->dmr_stereo == 1)
+        if (type == 0 && state->dmr_stereo == 1 && opts->audio_out == 1)
         {
           pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
         }
-        if (type == 1 && state->dmr_stereo == 1)
+        if (type == 1 && state->dmr_stereo == 1 && opts->audio_out == 1)
         {
           pa_simple_write(opts->pulse_digi_dev_outR, buf, sizeof(buf), NULL);
         }
-        if (state->dmr_stereo == 0)
+        if (state->dmr_stereo == 0 && opts->audio_out == 1)
         {
           pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
         }
@@ -256,7 +256,7 @@ char *choicesc[] = {
       "Setup and Start RTL Input ",
       "Retune RTL Dongle         ",
       "                          ",
-      "                          ", //removing options no longer necesary or not recommended
+      "Toggle Audio Mute         ", //removing options no longer necesary or not recommended
       "Toggle NCurses Compact Mode",
       "Toggle NCurses Call History",
       "Stop All Decoded WAV Saving",
@@ -380,8 +380,11 @@ void ncursesOpen (dsd_opts * opts, dsd_state * state)
 //ncursesMenu
 void ncursesMenu (dsd_opts * opts, dsd_state * state)
 {
-  // state->menuopen = 1; //flag the menu is open, stop processing getFrameSync
-  closePulseOutput (opts);
+  //close pulse output if not null output
+  if (opts->audio_out == 1 && opts->audio_out_type == 0)
+  {
+    closePulseOutput (opts);
+  }
 
   if (opts->audio_in_type == 0) //close pulse input if it is the specified input method
   {
@@ -707,7 +710,16 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
         if (choicec == 9)
         {
-          //vacant box
+          if (opts->audio_out == 0)
+          {
+            opts->audio_out = 1;
+            opts->audio_out_type = 0; 
+          }
+          else
+          {
+            opts->audio_out = 0;
+            opts->audio_out_type = 9;
+          }
         }
 
         if (choicec == 10)
@@ -1451,8 +1463,12 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 	refresh();
   state->menuopen = 0; //flag the menu is closed, resume processing getFrameSync
 
-  //reopen pulse output with new parameters
-  openPulseOutput (opts);
+  //reopen pulse output with new parameters, if not null output type
+  if (opts->audio_out == 1 && opts->audio_out_type == 0)
+  {
+    openPulseOutput (opts);
+  }
+  
 
   if (opts->audio_in_type == 0) //reopen pulse input if it is the specified input method
   {

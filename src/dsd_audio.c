@@ -526,18 +526,18 @@ openAudioOutDevice (dsd_opts * opts, int speed)
 	else
 	{
 		struct stat stat_buf;
-  if(stat(opts->audio_out_dev, &stat_buf) != 0 && strncmp(opts->audio_out_dev, "pulse", 5 != 0)) //HERE
-    {
-      fprintf (stderr,"Error, couldn't open %s\n", opts->audio_out_dev);
-      exit(1);
-    }
+  // if(stat(opts->audio_out_dev, &stat_buf) != 0 && strncmp(opts->audio_out_dev, "pulse", 5 != 0)) //HERE
+  //   {
+  //     fprintf (stderr,"Error, couldn't open %s\n", opts->audio_out_dev);
+  //     exit(1);
+  //   }
 
-  if( (!(S_ISCHR(stat_buf.st_mode) || S_ISBLK(stat_buf.st_mode))) && strncmp(opts->audio_out_dev, "pulse", 5 != 0))
-    {
-      // this is not a device
-      fprintf (stderr,"Error, %s is not a device. use -w filename for wav output.\n", opts->audio_out_dev);
-      exit(1);
-    }
+  // if( (!(S_ISCHR(stat_buf.st_mode) || S_ISBLK(stat_buf.st_mode))) && strncmp(opts->audio_out_dev, "pulse", 5 != 0))
+  //   {
+  //     // this is not a device
+  //     fprintf (stderr,"Error, %s is not a device. use -w filename for wav output.\n", opts->audio_out_dev);
+  //     exit(1);
+  //   }
 	}
   fprintf (stderr,"Audio Out Device: %s\n", opts->audio_out_dev);
 }

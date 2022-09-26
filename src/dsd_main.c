@@ -1596,12 +1596,18 @@ main (int argc, char **argv)
 
     if((strncmp(opts.audio_in_dev, "pulse", 5) == 0))
     {
-      opts.audio_in_type == 0;
+      opts.audio_in_type = 0;
     }
 
     if((strncmp(opts.audio_out_dev, "pulse", 5) == 0))
     {
-      opts.audio_out_type == 0;
+      opts.audio_out_type = 0;
+    }
+
+    if((strncmp(opts.audio_out_dev, "null", 4) == 0))
+    {
+      opts.audio_out_type = 9; //9 for NULL, or mute output
+      opts.audio_out = 0; //turn off so we won't playSynthesized
     }
 
     if (opts.playfiles == 1)
