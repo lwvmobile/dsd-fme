@@ -714,11 +714,23 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           {
             opts->audio_out = 1;
             opts->audio_out_type = 0; 
+            // state->audio_out_buf_p = 0;
+            // state->audio_out_buf_pR = 0;
+            state->audio_out_idx = 0;
+            state->audio_out_idx2 = 0;
+            state->audio_out_idxR = 0;
+            state->audio_out_idx2R = 0;
           }
           else
           {
             opts->audio_out = 0;
             opts->audio_out_type = 9;
+            // state->audio_out_buf_p = 0;
+            // state->audio_out_buf_pR = 0;
+            state->audio_out_idx = 0;
+            state->audio_out_idx2 = 0;
+            state->audio_out_idxR = 0;
+            state->audio_out_idx2R = 0;
           }
         }
 
