@@ -371,7 +371,10 @@ if (state->currentslot == 0)
 
          state->debug_audio_errors += *errs2;
 
-         processAudio(opts, state);
+         if (opts->audio_out == 1)
+         {
+            processAudio(opts, state);
+         }
 
          if (opts->wav_out_f != NULL)
          {

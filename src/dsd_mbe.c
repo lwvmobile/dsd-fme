@@ -37,7 +37,10 @@ playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
             {
               readImbe4400Data (opts, state, imbe_d);
               mbe_processImbe4400Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-              processAudio (opts, state);
+              if (opts->audio_out == 1)
+              {
+                processAudio(opts, state);
+              }
               if (opts->wav_out_f != NULL)
                 {
                   writeSynthesizedVoice (opts, state);
@@ -54,7 +57,10 @@ playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
             {
               readAmbe2450Data (opts, state, ambe_d);
               mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-              processAudio (opts, state);
+              if (opts->audio_out == 1)
+              {
+                processAudio(opts, state);
+              }
               if (opts->wav_out_f != NULL)
                 {
                   writeSynthesizedVoice (opts, state);
@@ -476,7 +482,10 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
     {
       state->debug_audio_errors += state->errs2;
-      processAudio (opts, state);
+      if (opts->audio_out == 1)
+      {
+        processAudio(opts, state);
+      }
       if (opts->audio_out == 1)
       {
         playSynthesizedVoice (opts, state);
@@ -511,7 +520,10 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
     {
       state->debug_audio_errorsR += state->errs2R;
-      processAudioR (opts, state);
+      if (opts->audio_out == 1)
+      {
+        processAudioR(opts, state);
+      }
       if (opts->audio_out == 1)
       {
         playSynthesizedVoiceR (opts, state);
@@ -523,7 +535,10 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   if (opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
   {
     state->debug_audio_errors += state->errs2;
-    processAudio (opts, state);
+    if (opts->audio_out == 1)
+    {
+      processAudio(opts, state);
+    }
     if (opts->audio_out == 1)
     {
       playSynthesizedVoice (opts, state);
