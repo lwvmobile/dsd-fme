@@ -674,7 +674,7 @@ usage ()
   printf ("  -fs           DMR Stereo BS and MS Simplex only\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -fd           Decode only D-STAR\n");
-  printf ("  -fr           Decode only DMR\n");
+  printf ("  -fr           Decode only DMR (LEH)\n");
   printf ("  -fx           Decode only X2-TDMA\n");
   printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
