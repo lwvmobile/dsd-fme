@@ -671,6 +671,7 @@ usage ()
   printf ("Decoder options:\n");
   printf ("  -fa           Legacy Auto Detection (old methods default)\n");
   printf ("  -ft           XDMA P25 and DMR BS/MS frame types (new default)\n");
+  printf ("  -fs           DMR Stereo BS and MS Simplex only\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -fd           Decode only D-STAR\n");
   printf ("  -fr           Decode only DMR\n");
@@ -1397,9 +1398,33 @@ main (int argc, char **argv)
                   state.rf_mod = 0;
                   opts.dmr_stereo = 1;
                   state.dmr_stereo = 1;
-                  sprintf (opts.output_name, "P25-P2");
+                  sprintf (opts.output_name, "P25P2");
                   fprintf (stderr,"Decoding P25-P2 frames C4FM or OP25 Symbol Captures!\n");
                   }
+              else if (optarg[0] == 's')
+              {
+                opts.frame_dstar = 0;
+                opts.frame_x2tdma = 0;
+                opts.frame_p25p1 = 0;
+                opts.frame_p25p2 = 0;
+                opts.inverted_p2 = 0; 
+                opts.frame_nxdn48 = 0;
+                opts.frame_nxdn96 = 0;
+                opts.frame_dmr = 1;
+                opts.frame_dpmr = 0;
+                opts.frame_provoice = 0;
+                opts.frame_ysf = 0;
+                opts.mod_c4fm = 1;
+                opts.mod_qpsk = 0;
+                opts.mod_gfsk = 0;
+                state.rf_mod = 0;
+                opts.dmr_stereo = 1;
+                //state.dmr_stereo = 1; //manually set to 1
+                opts.pulse_digi_rate_out = 24000;
+                opts.pulse_digi_out_channels = 2;
+                sprintf (opts.output_name, "DMR Stereo");
+                fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
+              }
                   else if (optarg[0] == 't')
                     {
                       opts.frame_dstar = 0;

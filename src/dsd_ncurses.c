@@ -279,7 +279,7 @@ char *choices[] = {
       "Decode dPMR",
       "Decode NXDN48",
       "Decode NXDN96",
-      "Decode X2-TDMA*",
+      "Decode DMR Stereo", //was X2-TDMA*
       "Toggle Signal Inversion",
       "Privacy Key Entry",
       // "                  ",
@@ -462,7 +462,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       info_win = newwin(7, WIDTH+18, starty, startx+20);
       box (info_win, 0, 0);
       mvwprintw(info_win, 2, 2, " XDMA Decoding Class Supports the following:");
-      mvwprintw(info_win, 3, 2, " P25-P1, P25-P2, DMR Stereo BS/MS and X2-TDMA");
+      mvwprintw(info_win, 3, 2, " P25-P1, P25-P2, and DMR Stereo BS/MS");
       mvwprintw(info_win, 4, 2, " --C4FM / FSK4 only, and OP25 P2 Capture Bins");
       wrefresh(info_win);
     }
@@ -1129,11 +1129,11 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->rf_mod = 0;
       sprintf (opts->output_name, "XDMA");
       opts->dmr_stereo  = 1; //this value is the end user option
-      state->dmr_stereo = 1; //this values toggles on and off depending on voice or data handling
+      state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 24000;
       opts->pulse_digi_out_channels = 2;
       opts->frame_dstar = 0;
-      opts->frame_x2tdma = 1;
+      opts->frame_x2tdma = 0;
       opts->frame_p25p1 = 1;
       opts->frame_p25p2 = 1;
       opts->frame_nxdn48 = 0;
@@ -1258,22 +1258,22 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     }
     if (choice == 11)
     {
-      //Decode X2-TDMA
-      //NXDN96
+      //Decode DMR Stereo (was X2-TDMA)
       resetState (state); //use sparingly, may cause memory leak
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
-      sprintf (opts->output_name, "X2-TDMA");
-      opts->dmr_stereo  = 0; //this value is the end user option
+      // sprintf (opts->output_name, "X2-TDMA");
+      sprintf (opts->output_name, "DMR Stereo");
+      opts->dmr_stereo  = 1; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 8000;
-      opts->pulse_digi_out_channels = 1;
+      opts->pulse_digi_rate_out = 24000;
+      opts->pulse_digi_out_channels = 2;
       opts->frame_dstar = 0;
-      opts->frame_x2tdma = 1;
+      opts->frame_x2tdma = 0;
       opts->frame_p25p1 = 0;
       opts->frame_nxdn48 = 0;
       opts->frame_nxdn96 = 0;
-      opts->frame_dmr = 0;
+      opts->frame_dmr = 1;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->frame_ysf = 0;
