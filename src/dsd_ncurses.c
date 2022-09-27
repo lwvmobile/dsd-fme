@@ -2116,6 +2116,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else if (lls == 0 || lls == 1) //P1
     {
       printw ("P25 P1 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+      if (state->p25_cc_freq != 0)
+      {
+        printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
+      }
     }
     else if (lls == 35 || lls == 36) //P2
     {
@@ -2126,11 +2130,19 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw (" Phase 2 Missing Parameters ");
         attron(COLOR_PAIR(3));
       }
-      if (state->p2_wacn == 0xFFFFF || state->p2_sysid == 0xFFF || state->p2_cc == 0xFFF)
+      else if (state->p2_wacn == 0xFFFFF || state->p2_sysid == 0xFFF || state->p2_cc == 0xFFF)
       {
         attron(COLOR_PAIR(2));
         printw (" Phase 2 Invalid Parameters ");
         attron(COLOR_PAIR(3));
+      }
+      else 
+      {
+        if (state->p25_cc_freq != 0)
+        {
+        printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
+        }
+        //printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
       }
     }
 
@@ -2271,20 +2283,30 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         attron(COLOR_PAIR(3));
       }
+    }
 
-      //LRRP
-      if(state->dmrburstL != 16) //only during data
+    //LRRP
+    if(state->dmrburstL != 16) //only during data
+    {
+      attron(COLOR_PAIR(5));
+      for (short i = 0; i < 5; i++)
       {
-        attron(COLOR_PAIR(5));
-        for (short i = 0; i < 5; i++)
-        {
-          printw ("%s", state->dmr_lrrp[0][i]);
-        }
-        attroff(COLOR_PAIR(5));
-        if (state->carrier == 1)
-        {
-          attron(COLOR_PAIR(3));
-        }
+        printw ("%s", state->dmr_lrrp[0][i]);
+      }
+      attroff(COLOR_PAIR(5));
+      if (state->carrier == 1)
+      {
+        attron(COLOR_PAIR(3));
+      }
+    }
+      
+    if (state->p25_vc_freq[0] != 0)
+    {
+      attron(COLOR_PAIR(5));
+      printw ("Frequency: [%.06lf] MHz", (double)state->p25_vc_freq[0]/1000000);
+      if (state->carrier == 1)
+      {
+        attron(COLOR_PAIR(3));
       }
     }
     printw ("\n");
@@ -2432,6 +2454,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw ("%s", state->dmr_lrrp[1][i]);
       }
       attroff(COLOR_PAIR(5));
+      if (state->carrier == 1)
+      {
+        attron(COLOR_PAIR(3));
+      }
+    }
+    if (state->p25_vc_freq[0] != 0)
+    {
+      attron(COLOR_PAIR(5));
+      printw ("Frequency: [%.06lf] MHz", (double)state->p25_vc_freq[0]/1000000);
       if (state->carrier == 1)
       {
         attron(COLOR_PAIR(3));

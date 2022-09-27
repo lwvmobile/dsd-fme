@@ -207,6 +207,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->fourv_counter[0] = 0;
   state->fourv_counter[1] = 0;
 
+  //values displayed in ncurses terminal
+  state->p25_vc_freq[0] = 0;
+  state->p25_vc_freq[1] = 0;
+
 }
 
 void
@@ -585,6 +589,20 @@ initState (dsd_state * state)
   state->p2_scramble_offset = 0;
   state->p2_vch_chan_num = 0;
 
+  //p25 iden_up values
+  state->p25_chan_iden = 0;
+  for (int i = 0; i < 16; i++)
+  {
+    state->p25_chan_type[i] = 0;
+    state->p25_trans_off[i] = 0;
+    state->p25_chan_spac[i] = 0;
+    state->p25_base_freq[i] = 0;
+  }
+  //values displayed in ncurses terminal
+  state->p25_cc_freq = 0;
+  state->p25_vc_freq[0] = 0;
+  state->p25_vc_freq[1] = 0;
+
 #ifdef TRACE_DSD
   state->debug_sample_index = 0;
   state->debug_label_file = NULL;
@@ -606,7 +624,7 @@ usage ()
   printf ("\n");
   printf ("Display Options:\n");
   printf ("  -N            Use NCurses Terminal\n");
-  printf ("                 dsd-fme -N 2> log.txt \n");
+  printf ("                 dsd-fme -N 2> log.ans \n");
   printf ("  -e            Show Frame Info and errorbars (default)\n");
   printf ("  -pe           Show P25 encryption sync bits\n");
   printf ("  -pl           Show P25 link control bits\n");
@@ -619,17 +637,19 @@ usage ()
   printf ("  -z <num>      Frame rate for datascope\n");
   printf ("\n");
   printf ("Input/Output options:\n");
-  printf ("  -i <device>   Audio input device (default is pulse audio), \n                  - for piped stdin, rtl for rtl device,\n                    filename.bin for OP25/FME capture bin files\n");
-  printf ("  -o <device>   Audio output device (default is pulse audio)\n");
+  printf ("  -i <device>   Audio input device (default is pulse audio)\n");
+  printf ("                - for piped stdin, rtl for rtl device\n");
+  printf ("                filename.bin for OP25/FME capture bin files\n");
+  printf ("  -o <device>   Audio output device (default is pulse audio)(null for no audio output)\n");
   printf ("  -d <dir>      Create mbe data files, use this directory\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
-  printf ("  -w <file>     Output synthesized speech to a .wav file\n");
-  printf ("  -T            Enable Per Call WAV file saving in XDMA  and NXDN decoding classes\n");
+  printf ("  -w <file>     Output synthesized speech to a .wav file, legacy auto modes only.\n");
+  printf ("  -T            Enable Per Call WAV file saving in XDMA and NXDN decoding classes\n");
   printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
   printf ("                 (Running in console will use static wav files)\n");
   printf ("  -a            Enable Call Alert Beep (NCurses Terminal Only)\n");
-  printf ("                 (Warning! Might be annoying.)");
+  printf ("                 (Warning! Might be annoying.)\n");
   printf ("  -n            Throttle Symbol Capture Bin Input\n");
   printf ("                 (useful when reading files still being written to by OP25)");
   printf ("\n");
@@ -671,6 +691,7 @@ usage ()
   printf ("Advanced Decoder options:\n");
   printf ("  -X <hex>      Manually Set P2 Parameters (WACN, SYSID, CC/NAC)\n");
   printf ("                 (-X BEE00ABC123)\n");
+  printf ("\n");
   // printf ("  -A <num>      QPSK modulation auto detection threshold (default=26)\n");
   // printf ("  -S <num>      Symbol buffer size for QPSK decision point tracking\n");
   // printf ("                 (default=36)\n");

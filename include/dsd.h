@@ -593,6 +593,17 @@ typedef struct
   int fourv_counter[2]; //external reference counter for ESS_B fragment collection
   int p2_is_lcch; //flag to tell us when a frame is lcch and not sacch
 
+  //iden freq storage for frequency calculations
+  int p25_chan_iden;
+  int p25_chan_type[16];
+  int p25_trans_off[16];
+  int p25_chan_spac[16];
+  long int p25_base_freq[16];
+
+  //p25 frequency storage for display in ncurses
+  long int p25_cc_freq;     //cc freq from net_stat
+  long int p25_vc_freq[2]; //vc freq from voice grant updates, etc
+
   //experimental symbol file capture read throttle
   int symbol_throttle; //throttle speed
   int use_throttle; //only use throttle if set to 1
@@ -903,6 +914,16 @@ bool QR_16_7_6_decode(unsigned char *rxBits);
 void InitAllFecFunction(void);
 void resetState (dsd_state * state);
 void dstar_header_decode(dsd_state * state, int radioheaderbuffer[660]);
+
+//P25 PDU Handler
+void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned long long int MAC[24]);
+
+//P25 xCCH Handlers (SACCH, FACCH, LCCH)
+void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]);
+void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]);
+
+//P25 Channel to Frequency
+long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channel);
 
 #ifdef __cplusplus
 extern "C" {
