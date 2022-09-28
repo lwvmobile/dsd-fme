@@ -2,6 +2,14 @@
 
 This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with portions of DMR and NXDN code from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch. This code also borrows snippets, inspiration, and ideas from other open source works including [Boatbod OP25](https://github.com/boatbod/op25 "Boatbod OP25"), [DSDcc](https://github.com/f4exb/dsdcc "DSDcc"), [SDTRunk](https://github.com/DSheirer/sdrtrunk "SDRTrunk"), [MMDVMHost](https://github.com/g4klx/MMDVMHost "MMDVMHost"), [LFSR](https://github.com/mattames/LFSR "LFSR"), and [EZPWD-Reed-Solomon](https://github.com/pjkundert/ezpwd-reed-solomon "EZPWD"). This project wouldn't be possible without a few good people providing me plenty of sample audio files to run over and over again. Special thanks to jurek1111, KrisMar, noamlivne, racingfan360, iScottyBotty, LimaZulu and hrh17 for the many hours of wav samples submitted by them.
 
+## 2022.09.28 Mini Update ##
+Back by popular demand, I've re-implemented DMR Stereo as a standalone decoder. DMR Stereo is also stil l available in XDMA decoding for P25 1, 2, and DMR BS/MS Simplex as well.
+
+DMR Stereo `dsd-fme -fs` 
+XDMA       `dsd-fme -ft` 
+
+It can also be selected in the NCurses Terminal Menu.
+
 ## 2022.09.17 Update ##
 P25 Phase 2 Audio decoding has been implemented into DSD-FME. Currently, Phase 2 will only work from OP25 symbol capture bin files, or from wav files/SDR applications/RTL input that are sourced from FSK4 sources. CQPSK (LSM/H-D8PSK) will not work from audio sources. With the addition of Phases 2 audio, a new default decoder class has been implemented, XDMA, which is P25 Phase 1, Phase 2, DMR BS and MS (DMR Stereo). Furthermore, very limited Phase 1 TSBK support and Phase 2 FAcch/SaCCH/LCCH has been worked in just to get Network Status Broadcasts, which can fill in the required P2 parameters for WACN, SYSID, and CC for Phase 2 frame de-scrambling, and active voice call information.
 
