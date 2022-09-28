@@ -485,7 +485,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 	END_PDU:
 	state->p2_is_lcch = 0; 
 	//debug printing
-	if (opts->payload == 1) //print only if not a null type //&& MAC[1] != 0 //&& MAC[2] != 0
+	if (opts->payload == 1 && MAC[1] != 0) //print only if not a null type //&& MAC[1] != 0 //&& MAC[2] != 0
 	{
 		fprintf (stderr, "%s", KCYN);
 		fprintf (stderr, "\n P25 PDU Payload\n  ");

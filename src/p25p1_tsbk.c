@@ -80,7 +80,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     }
 
     //convert tsbk_byte to PDU and send to vPDU handler...may or may not be entirely compatible, 
-    PDU[0] = 0; //convert to MAC_SIGNAL
+    PDU[0] = 07; //P25p1 TSBK Duid 0x07
     PDU[1] = tsbk_byte[0];
     PDU[2] = tsbk_byte[2];
     PDU[3] = tsbk_byte[3];
