@@ -374,7 +374,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						goto END_PDU;
 					}
 					wgid = (MAC[10+len_a+a] << 8) | MAC[11+len_a+a];
-					fprintf (stderr, "WGID [%02X][%05d] ", wgid, wgid);
+					fprintf (stderr, "WGID [%05d][%02X] ", wgid, wgid);
 					a = a + 2;
 					i = i + 2;
 				}
