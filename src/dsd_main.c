@@ -263,7 +263,7 @@ initOpts (dsd_opts * opts)
   sprintf (opts->serial_dev, "/dev/ttyUSB0");
   opts->resume = 0;
   opts->frame_dstar = 0;
-  opts->frame_x2tdma = 1;
+  opts->frame_x2tdma = 0;
   opts->frame_p25p1 = 1;
   opts->frame_p25p2 = 1;
   opts->frame_nxdn48 = 0;
@@ -273,7 +273,7 @@ initOpts (dsd_opts * opts)
   opts->frame_provoice = 0;
   opts->frame_ysf = 0; //forgot to init this, and Cygwin treated as it was turned on.
   opts->mod_c4fm = 1;
-  opts->mod_qpsk = 1;
+  opts->mod_qpsk = 0;
   opts->mod_gfsk = 0;
   opts->uvquality = 3;
   opts->inverted_x2tdma = 1;    // most transmitter + scanner + sound card combinations show inverted signals for this
@@ -693,11 +693,16 @@ usage ()
   printf ("  -X <hex>      Manually Set P2 Parameters (WACN, SYSID, CC/NAC)\n");
   printf ("                 (-X BEE00ABC123)\n");
   printf ("\n");
-  // printf ("  -A <num>      QPSK modulation auto detection threshold (default=26)\n");
-  // printf ("  -S <num>      Symbol buffer size for QPSK decision point tracking\n");
-  // printf ("                 (default=36)\n");
-  // printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
-  // printf ("                 (default=15)\n");
+  printf ("  -A <num>      QPSK modulation auto detection threshold (default=26)\n");
+  printf ("  -S <num>      Symbol buffer size for QPSK decision point tracking\n");
+  printf ("                 (default=36)\n");
+  printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
+  printf ("                 (default=15)\n");
+  printf ("  -ma           Auto-select modulation optimizations (default)\n");
+  printf ("  -mc           Use only C4FM modulation optimizations\n");
+  printf ("  -mg           Use only GFSK modulation optimizations\n");
+  printf ("  -mq           Use only QPSK modulation optimizations\n");
+  printf ("  -m2           Use Phase 2 6000 sps CQPSK modulation optimizations (testing, not fully implemented) \n");
   // printf ("  -F            Enable DMR TDMA Stereo Passive Frame Sync\n");
   // printf ("                 This feature will attempt to resync less often due to excessive voice errors\n");
   // printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
@@ -1390,14 +1395,14 @@ main (int argc, char **argv)
                   opts.frame_dpmr = 0;
                   opts.frame_provoice = 0;
                   opts.frame_ysf = 0;
-                  state.samplesPerSymbol = 20; //10
-                  state.symbolCenter = 10;
-                  opts.mod_c4fm = 0;
-                  opts.mod_qpsk = 1;
+                  state.samplesPerSymbol = 10; 
+                  state.symbolCenter = 4;
+                  opts.mod_c4fm = 1;
+                  opts.mod_qpsk = 0;
                   opts.mod_gfsk = 0;
                   state.rf_mod = 0;
                   opts.dmr_stereo = 1;
-                  state.dmr_stereo = 1;
+                  state.dmr_stereo = 0;
                   sprintf (opts.output_name, "P25P2");
                   fprintf (stderr,"Decoding P25-P2 frames C4FM or OP25 Symbol Captures!\n");
                   }
@@ -1557,6 +1562,16 @@ main (int argc, char **argv)
               opts.mod_gfsk = 0;
               state.rf_mod = 1;
               fprintf (stderr,"Enabling only QPSK modulation optimizations.\n");
+            }
+          else if (optarg[0] == '2')
+            {
+              opts.mod_c4fm = 0;
+              opts.mod_qpsk = 1;
+              opts.mod_gfsk = 0;
+              state.rf_mod = 1;
+              state.samplesPerSymbol = 8; 
+              state.symbolCenter = 3; 
+              fprintf (stderr,"Enabling 6000 sps P25 CQPSK (testing only).\n");
             }
           break;
         case 'u':

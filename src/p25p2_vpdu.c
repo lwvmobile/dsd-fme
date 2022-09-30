@@ -21,7 +21,7 @@ static const uint8_t mac_msg_len[256] = {
 	 8,  0,  0,  7, 11,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //8F
 	 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //9F
 	16,  0,  0, 11, 13, 11, 11, 11, 10,  0,  0,  0,  0,  0,  0,  0, //AF
-	 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //BF
+	 17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //BF, b0 was 0, set to 17
 	11,  0,  0,  8, 15, 12, 15, 32, 12, 12,  0, 27, 14, 29, 29, 32, //CF
 	 0,  0,  0,  0,  0,  0,  9,  0, 14, 29, 11, 27, 14,  0, 40, 11, //DF 
 	28,  0,  0, 14, 17, 14,  0,  0, 16,  8, 11,  0, 13, 19,  0,  0, //EF
@@ -343,6 +343,56 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				state->lasttgR = gr;
 				if (src != 0) state->lastsrcR = src;
 			}
+		}
+
+		//MFIDA4 Group Regroup Explicit Encryption Command
+		if (MAC[1+len_a] == 0xB0 && MAC[2+len_a] == 0xA4) //&& MAC[2+len_a] == 0xA4
+		{
+			int len_grg = MAC[3+len_a] & 0x3F;
+			int grg = MAC[4+len_a] >> 5; //3 bits
+			int ssn = MAC[4+len_a] & 0x1F; //5 bits
+			fprintf (stderr, "\n MFIDA4 Group Regroup Explicit Encryption Command\n");
+			//fprintf (stderr, " LEN [%02X] GRG [%02X]\n", len_grg, grg);
+			if (grg & 0x2) //if grg == wgid //&0x2 according to OP25
+			{
+				int sg =  (MAC[5+len_a] << 8) | MAC[6+len_a];
+				int key = (MAC[7+len_a] << 8) | MAC[8+len_a];
+				int alg = MAC[9+len_a];
+				int t1 = (MAC[10+len_a] << 8) | MAC[11+len_a];
+				int t2 = (MAC[12+len_a] << 8) | MAC[13+len_a];
+				int t3 = (MAC[14+len_a] << 8) | MAC[15+len_a];
+				int t4 = (MAC[16+len_a] << 8) | MAC[17+len_a];
+				fprintf (stderr, "  SG [%05d] KEY [%02X] ALG [%02X]\n  ", sg, key, alg);
+				int a = 0;
+				int wgid = 0;
+				//worried a bad decode may cause an oob array crash on this one
+				for (int i = 10; i < len_grg;)
+				{
+					//failsafe to prevent oob array
+					if ( (i + len_a) > 20)
+					{
+						goto END_PDU;
+					}
+					wgid = (MAC[10+len_a+a] << 8) | MAC[11+len_a+a];
+					fprintf (stderr, "WGID [%02X][%05d] ", wgid, wgid);
+					a = a + 2;
+					i = i + 2;
+				}
+
+			}
+			else //if grg == wuid
+			{
+				int sg =  (MAC[5+len_a] << 8) | MAC[6+len_a];
+				int key = (MAC[7+len_a] << 8) | MAC[8+len_a];
+				int t1 = (MAC[9+len_a] << 16) | (MAC[10+len_a] << 8) | MAC[11+len_a];
+				int t2 = (MAC[12+len_a] << 16) | (MAC[13+len_a] << 8) | MAC[14+len_a];
+				int t3 = (MAC[15+len_a] << 16) | (MAC[16+len_a] << 8) | MAC[17+len_a];
+				fprintf (stderr, "  SG [%02X] KEY [%02X]", sg, key);
+				fprintf (stderr, " U1 [%02X] U2 [%02X] U3 [%02X] ", t1, t2, t3);
+
+			}
+
+
 		}
 
 		//1 or 21, group voice channel message, abb and ext

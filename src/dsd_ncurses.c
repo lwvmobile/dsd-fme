@@ -255,8 +255,8 @@ char *choicesc[] = {
       "Save Per Call Decoded WAV (XDMA and NXDN)",
       "Setup and Start RTL Input ",
       "Retune RTL Dongle         ",
-      "                          ",
-      "Toggle Audio Mute         ", //removing options no longer necesary or not recommended
+      "Toggle C4FM/CQPSK (testing)",
+      "Toggle Audio Mute         ", 
       "Toggle NCurses Compact Mode",
       "Toggle NCurses Call History",
       "Stop All Decoded WAV Saving",
@@ -705,7 +705,22 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
         if (choicec == 8)
         {
-          //vacant box
+          if (state->rf_mod == 0)
+          {
+            state->rf_mod = 1;
+            state->samplesPerSymbol = 8;
+            state->symbolCenter = 3;
+            opts->mod_c4fm = 0;
+            opts->mod_qpsk = 1;
+          }
+          else
+          {
+            state->rf_mod = 0;
+            state->samplesPerSymbol = 10;
+            state->symbolCenter = 4;
+            opts->mod_c4fm = 1;
+            opts->mod_qpsk = 0;
+          }
         }
 
         if (choicec == 9)

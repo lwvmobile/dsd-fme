@@ -2,6 +2,10 @@
 
 This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with portions of DMR and NXDN code from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch. This code also borrows snippets, inspiration, and ideas from other open source works including [Boatbod OP25](https://github.com/boatbod/op25 "Boatbod OP25"), [DSDcc](https://github.com/f4exb/dsdcc "DSDcc"), [SDTRunk](https://github.com/DSheirer/sdrtrunk "SDRTrunk"), [MMDVMHost](https://github.com/g4klx/MMDVMHost "MMDVMHost"), [LFSR](https://github.com/mattames/LFSR "LFSR"), and [EZPWD-Reed-Solomon](https://github.com/pjkundert/ezpwd-reed-solomon "EZPWD"). This project wouldn't be possible without a few good people providing me plenty of sample audio files to run over and over again. Special thanks to jurek1111, KrisMar, noamlivne, racingfan360, iScottyBotty, LimaZulu and hrh17 for the many hours of wav samples submitted by them.
 
+## 2022.10.01 Update ##
+
+DSD-FME, and The Florida Man Labs will be taking a hiatus period from straigth development of this project. Currently, I feel we are at a bit of a stand still as far as what can be done with the project without new demodulation, dibit buffer, audio, and input methods. DSD-FME will continue to receive maintenance updates for simple bug fixes and also any major bug issues that cause crashing, etc., but I am reluctant to continue developing with the current underlying issues mentioned above. I am going to go into a period of hiatus with this project and do lots of experimentation, learning, and testing to see what viable options are out there or need to be created from scratch. I feel like I've learned a lot, achieved a lot, made tons of mistakes, learned from a few of them, but ultimately improved on the DSD project. DSD-FME will continue to receive replies and support in any opened issues but will currently only extend to help in setting up and using the software, on top of regular minor maintenance and any crash related issues.
+
 ## 2022.09.28 Mini Update ##
 Back by popular demand, I've re-implemented DMR Stereo as a standalone decoder. DMR Stereo is also still available in XDMA decoding for P25 1, 2, and DMR BS/MS Simplex as well.
 
@@ -102,16 +106,11 @@ and in a second terminal tab, same folder, run
 ## Roadmap
 The Current list of objectives include:
 
-1. ~~Include P25 P2 Audio decoding with capture bin files~~, new demodulators and input method(s) (considering liquid-dsp).
-~~Random Tinkering~~ ~~More Random Tinkering~~
+1. New demodulators and input method(s) (considering liquid-dsp).
 
-2. ~~Implemented Pulse Audio~~ ~~Remove remaining PortAudio code,~~ ~~improved Pulse Audio for stereo output and channel/slot separation~~ ~~and reimplement wav file saving using DMR Stereo method for stereo wav files, or seperate as per call wav files.~~
+2. Graphical User Interface (may need to migrate to new project).
 
-3. ~~Improve NXDN and DMR support~~ Continue to improve all data and voice decoding.
-
-4. ~~More Concise Printouts - Ncurses~~
-
-5. ~~Make simple to use installer script.~~
+3. Lots of experimentation.
 
 ## How to clone, check out, and build this branch
 
