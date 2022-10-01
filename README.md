@@ -4,6 +4,10 @@ This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/
 
 ## 2022.10.01 Update ##
 
+Very Experimental (Mostly Just Sampling Speed and using built in QPSK demodulator) for Phase 2 CQPSK 6000 sps input over disc tap inputs (SDR++, GQRX, WAV files). Promising results, but some errors in decoding as expected. I've had some pretty good luck using SDR++ to listen to and decode Duke Energy TDMA Control Channel through the virtual sink. Experimental CQPSK can be toggled in Ncurses Menu and also via command line switch `-f2 -m2` but keep in mind this will only work with Phase 2 RF channels using CQPSK, and not a combined decoding.
+
+Also, added some new iden_up PDUs and other odd and end P25 PDU's (still far from complete). Ncurses Terminal and Console output will now show relevant frequencies for CC and Voice channels if iden_up commands are present.
+
 DSD-FME, and The Florida Man Labs will be taking a hiatus period from straigth development of this project. Currently, I feel we are at a bit of a stand still as far as what can be done with the project without new demodulation, dibit buffer, audio, and input methods. DSD-FME will continue to receive maintenance updates for simple bug fixes and also any major bug issues that cause crashing, etc., but I am reluctant to continue developing with the current underlying issues mentioned above. I am going to go into a period of hiatus with this project and do lots of experimentation, learning, and testing to see what viable options are out there or need to be created from scratch. I feel like I've learned a lot, achieved a lot, made tons of mistakes, learned from a few of them, but ultimately improved on the DSD project. DSD-FME will continue to receive replies and support in any opened issues but will currently only extend to help in setting up and using the software, on top of regular minor maintenance and any crash related issues.
 
 ## 2022.09.28 Mini Update ##
@@ -15,7 +19,7 @@ XDMA       `dsd-fme -ft`
 It can also be selected in the NCurses Terminal Menu. Sadly I had to remove the X2-TDMA decoder option in the menu, I'm sure nobody will miss it.
 
 ## 2022.09.17 Update ##
-P25 Phase 2 Audio decoding has been implemented into DSD-FME. Currently, Phase 2 will only work from OP25 symbol capture bin files, or from wav files/SDR applications/RTL input that are sourced from FSK4 sources. CQPSK (LSM/H-D8PSK) will not work from audio sources. With the addition of Phases 2 audio, a new default decoder class has been implemented, XDMA, which is P25 Phase 1, Phase 2, DMR BS and MS (DMR Stereo). Furthermore, very limited Phase 1 TSBK support and Phase 2 FAcch/SaCCH/LCCH has been worked in just to get Network Status Broadcasts, which can fill in the required P2 parameters for WACN, SYSID, and CC for Phase 2 frame de-scrambling, and active voice call information.
+P25 Phase 2 Audio decoding has been implemented into DSD-FME. Currently, Phase 2 will only work from OP25 symbol capture bin files, or from wav files/SDR applications/RTL input that are sourced from FSK4 sources. CQPSK (LSM/H-D8PSK) will not work from audio sources. With the addition of Phases 2 audio, a new default decoder class has been implemented, XDMA, which is P25 Phase 1, Phase 2, DMR BS and MS (DMR Stereo). Furthermore, very limited Phase 1 TSBK support and Phase 2 FACCH/SACCH/LCCH has been worked in just to get Network Status Broadcasts, which can fill in the required P2 parameters for WACN, SYSID, and CC for Phase 2 frame de-scrambling, and active voice call information.
 
 With the implementation of the XDMA decoder class (default decoder), the CLI switches for DMR Stereo has been repurposed. -T option will now open a per call wav file saving when used with NCurses Terminal, otherwise it will write wav files to slot 1 and slot 2 wav files.
 
