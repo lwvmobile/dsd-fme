@@ -84,6 +84,12 @@ int ez_rs28_facch (int payload[156], int parity[114])
   int ec = -2;
   int i, j, k, b;
 
+  //init HB 
+  for (i = 0; i < 64; i++)
+  {
+	HB[i] = 0;
+  }
+
   //Erasures for FACCH
   Erasures = {0,1,2,3,4,5,6,7,8,54,55,56,57,58,59,60,61,62};
 
@@ -128,6 +134,12 @@ int ez_rs28_sacch (int payload[180], int parity[132])
   //do something!
   int ec = -2;
   int i, j, k, b;
+
+  //init HBS
+  for (i = 0; i < 64; i++)
+  {
+	HBS[i] = 0;
+  }
 
   //Erasures for SACCH
   Erasures = {0,1,2,3,4,57,58,59,60,61,62};

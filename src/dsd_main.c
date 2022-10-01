@@ -1565,12 +1565,15 @@ main (int argc, char **argv)
             }
           else if (optarg[0] == '2')
             {
+              //opts.pulse_digi_rate_in  = 96000;
               opts.mod_c4fm = 0;
               opts.mod_qpsk = 1;
               opts.mod_gfsk = 0;
               state.rf_mod = 1;
               state.samplesPerSymbol = 8; 
               state.symbolCenter = 3; 
+              // state.samplesPerSymbol = 8*2; 
+              // state.symbolCenter = 3*2; 
               fprintf (stderr,"Enabling 6000 sps P25 CQPSK (testing only).\n");
             }
           break;

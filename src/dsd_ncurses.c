@@ -255,7 +255,7 @@ char *choicesc[] = {
       "Save Per Call Decoded WAV (XDMA and NXDN)",
       "Setup and Start RTL Input ",
       "Retune RTL Dongle         ",
-      "Toggle C4FM/CQPSK (testing)",
+      "Toggle C4FM/CQPSK (6000 sps)",
       "Toggle Audio Mute         ", 
       "Toggle NCurses Compact Mode",
       "Toggle NCurses Call History",

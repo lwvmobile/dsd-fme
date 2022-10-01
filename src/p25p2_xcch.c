@@ -76,12 +76,12 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			{
 				//fprintf (stderr, " NULL ");
 			}
-			else
+			else //permit MAC_SIGNAL on CRC ERR for now until demodulator is working better? tests show tons of falsing, so leave on
 			{
 				fprintf (stderr, " CRC16 ERR L");
 				state->p2_is_lcch = 0; //turn flag off here
-				if (state->currentslot == 0) state->dmrburstL = 14;
-				else state->dmrburstR = 14;
+				// if (state->currentslot == 0) state->dmrburstL = 14;
+				// else state->dmrburstR = 14;
 				goto END_SMAC;
 			}
 		}
@@ -93,11 +93,18 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 	if (opcode == 0x0)
 	{
 		fprintf (stderr, " MAC_SIGNAL ");
+		//warn user instead of failing
+		if (err != 0)
+		{
+			fprintf (stderr, "%s", KRED);
+			fprintf (stderr, "CRC16 ERR ");
+		}
 		fprintf (stderr, "%s", KMAG);
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
-	if (opcode == 0x1)
+	//do not permit MAC_PTT with CRC errs, help prevent false positives on calls
+	if (opcode == 0x1 && err == 0)
 	{
 		fprintf (stderr, " MAC_PTT ");
 		fprintf (stderr, "%s", KGRN);
@@ -170,18 +177,19 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		}
 		fprintf (stderr, "%s", KNRM);
 	}
-	if (opcode == 0x2)
+	//do not permit MAC_PTT_END with CRC errs, help prevent false positives on calls
+	if (opcode == 0x2 && err == 0)
 	{
 		fprintf (stderr, " MAC_END_PTT ");
 		fprintf (stderr, "%s", KRED);
 		//remember, slots are inverted here, so set the opposite ones
 		if (state->currentslot == 1)
 		{
-			//reset fourv_counter and dropbyte on PTT END
+			
 			state->fourv_counter[0] = 0;
 			state->dmrburstL = 23;
-			state->payload_algid = 0; //zero this out as well
-			state->payload_keyid = 0; //and this
+			state->payload_algid = 0; 
+			state->payload_keyid = 0; 
 
 			fprintf (stderr, "\n VCH 0 - ");
 			fprintf (stderr, "TG %d ", state->lasttg);
@@ -193,7 +201,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		}
 		if (state->currentslot == 0)
 		{
-			//reset fourv_counter and dropbyte on PTT END
+			
 			state->fourv_counter[1] = 0;
 			state->dmrburstR = 23;
 			state->payload_algidR = 0;
@@ -308,7 +316,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 	// 	fprintf (stderr, "%s", KNRM);
 	// }
 
-	if (opcode == 0x1)
+	if (opcode == 0x1 && err == 0)
 	{
 
 		fprintf (stderr, " MAC_PTT  ");
@@ -381,13 +389,13 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		fprintf (stderr, "%s", KNRM);
 
 	}
-	if (opcode == 0x2)
+	if (opcode == 0x2 && err == 0)
 	{
 		fprintf (stderr, " MAC_END_PTT ");
 		fprintf (stderr, "%s", KRED);
 		if (state->currentslot == 0)
 		{
-			//reset fourv_counter and dropbyte on PTT END
+			
 			state->fourv_counter[0] = 0;
 			state->dmrburstL = 23;
 			state->payload_algid = 0; //zero this out as well
@@ -403,7 +411,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		}
 		if (state->currentslot == 1)
 		{
-			//reset fourv_counter and dropbyte on PTT END
+			
 			state->fourv_counter[1] = 0;
 			state->dmrburstR = 23;
 			state->payload_algidR = 0; //zero this out as well

@@ -321,8 +321,8 @@ void process_SACCHc (dsd_opts * opts, dsd_state * state)
 	else
 	{
 		fprintf(stderr, " R-S ERR Sc");
-		if (state->currentslot == 0) state->dmrburstL = 13;
-		else state->dmrburstR = 13;
+		// if (state->currentslot == 0) state->dmrburstL = 13;
+		// else state->dmrburstR = 13;
 	}
 
 }
@@ -371,8 +371,8 @@ void process_SACCHs (dsd_opts * opts, dsd_state * state)
 	else
 	{
 		fprintf(stderr, " R-S ERR Ss");
-		if (state->currentslot == 0) state->dmrburstL = 13;
-		else state->dmrburstR = 13;
+		// if (state->currentslot == 0) state->dmrburstL = 13;
+		// else state->dmrburstR = 13;
 	}
 
 }
@@ -403,9 +403,17 @@ void process_ISCH (dsd_opts * opts, dsd_state * state)
 			state->p2_vch_chan_num = chan_num;
 
 			//determine where the offset should be by first finding TS 0
+			//this rule doesn't seem to work properly on LCCH, 
+			//duke always showed a chan 1 loc 0, so offset 12 - frame
 			if (chan_num == 0 && isch_loc == 0)
 			{
 				state->p2_scramble_offset = 11 - framing_counter;
+			}
+			//additional rule for odd chan number offset,
+			//fixes duke, and no issues with other samples
+			else if (chan_num == 1 && isch_loc == 0)
+			{
+				state->p2_scramble_offset = 12 - framing_counter; 
 			}
 
 		}
@@ -413,8 +421,10 @@ void process_ISCH (dsd_opts * opts, dsd_state * state)
 		{
 			//if -2(no return value) or -1(fec error)
 		}
+		
 
 	}
+	// fprintf (stderr, "\n");
 
 }
 
