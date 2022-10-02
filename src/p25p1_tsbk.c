@@ -90,8 +90,9 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     PDU[7] = tsbk_byte[7];
     PDU[8] = tsbk_byte[8];
     PDU[9] = tsbk_byte[9];
-    PDU[10] = tsbk_byte[10];
-    PDU[11] = tsbk_byte[11];
+    //remove CRC to prevent false positive when vPDU goes to look for additional message in block
+    PDU[10] = 0; //tsbk_byte[10]; 
+    PDU[11] = 0; //tsbk_byte[11];
     PDU[1] = PDU[1] ^ 0x40; //flip bit to make it compatible with MAC_PDUs, i.e. 3D to 7D
 
     //Don't run NET_STS out of this, or will set wrong NAC/CC
