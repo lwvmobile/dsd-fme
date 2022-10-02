@@ -362,7 +362,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				int t2 = (MAC[12+len_a] << 8) | MAC[13+len_a];
 				int t3 = (MAC[14+len_a] << 8) | MAC[15+len_a];
 				int t4 = (MAC[16+len_a] << 8) | MAC[17+len_a];
-				fprintf (stderr, "  SG [%05d] KEY [%02X] ALG [%02X]\n  ", sg, key, alg);
+				fprintf (stderr, "  SG [%05d] KEY [%04X] ALG [%02X]\n  ", sg, key, alg);
 				int a = 0;
 				int wgid = 0;
 				//worried a bad decode may cause an oob array crash on this one
@@ -387,7 +387,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				int t1 = (MAC[9+len_a] << 16) | (MAC[10+len_a] << 8) | MAC[11+len_a];
 				int t2 = (MAC[12+len_a] << 16) | (MAC[13+len_a] << 8) | MAC[14+len_a];
 				int t3 = (MAC[15+len_a] << 16) | (MAC[16+len_a] << 8) | MAC[17+len_a];
-				fprintf (stderr, "  SG [%02X] KEY [%02X]", sg, key);
+				fprintf (stderr, "  SG [%02X] KEY [%04X]", sg, key);
 				fprintf (stderr, " U1 [%02X] U2 [%02X] U3 [%02X] ", t1, t2, t3);
 
 			}

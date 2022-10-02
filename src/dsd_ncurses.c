@@ -189,15 +189,15 @@ void beeper (dsd_opts * opts, dsd_state * state, int type)
       if (loop == 1)
       {
         //only beep on R if dmr_stereo is active and slot 2, else beep on L
-        if (type == 0 && state->dmr_stereo == 1 && opts->audio_out == 1)
+        if (type == 0 && opts->dmr_stereo == 1 && opts->audio_out == 1)
         {
           pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
         }
-        if (type == 1 && state->dmr_stereo == 1 && opts->audio_out == 1)
+        if (type == 1 && opts->dmr_stereo == 1 && opts->audio_out == 1)
         {
           pa_simple_write(opts->pulse_digi_dev_outR, buf, sizeof(buf), NULL);
         }
-        if (state->dmr_stereo == 0 && opts->audio_out == 1)
+        if (opts->dmr_stereo == 0 && opts->audio_out == 1)
         {
           pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
         }
