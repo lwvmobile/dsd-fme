@@ -120,13 +120,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		//Telephone Interconnect Voice Channel Grant (TELE_INT_CH_GRANT)
 		if (MAC[1+len_a] == 0x48)
 		{
-			fprintf (stderr, "\n Telephone Interconnect Voice Channel Grant (TELE_INT_CH_GRANT)");	
+			fprintf (stderr, "\n Telephone Interconnect Voice Channel Grant ");	
 		}
 
 		//Telephone Interconnect Voice Channel Grant Update (TELE_INT_CH_GRANT_UPDT)
 		if (MAC[1+len_a] == 0x49)
 		{
-			fprintf (stderr, "\n Telephone Interconnect Voice Channel Grant Update (TELE_INT_CH_GRANT_UPDT)");	
+			fprintf (stderr, "\n Telephone Interconnect Voice Channel Grant Update ");	
 		}
 
 		//Synchronization Broadcast (SYNC_BCST)

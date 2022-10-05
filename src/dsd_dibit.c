@@ -263,7 +263,7 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 
   else if ((state->synctype == 1) || (state->synctype == 3)  || (state->synctype == 5)  ||
           (state->synctype == 9)  || (state->synctype == 11) || (state->synctype == 13) ||
-          (state->synctype == 17)  )
+          (state->synctype == 17) || (state->synctype == 36) )
 
     {
       //  1 -P25p1
@@ -394,19 +394,6 @@ get_dibit_and_analog_signal (dsd_opts* opts, dsd_state* state, int* out_analog_s
   int symbol;
   int dibit;
 
-  // if (opts->audio_in_type == 4 && opts->frame_provoice == 1) //
-  // {
-  //   //skip processing symbol as dibit and use it as is
-  //   if (state->symbolc == 0)
-  //   {
-  //     symbol = 1;
-  //   }
-  //   if (state->symbolc == 1)
-  //   {
-  //     symbol = 3;
-  //   }
-  // }
-
 #ifdef TRACE_DSD
   unsigned int l, r;
 #endif
@@ -435,15 +422,17 @@ get_dibit_and_analog_signal (dsd_opts* opts, dsd_state* state, int* out_analog_s
 
   dibit = digitize (opts, state, symbol);
 
-  //don't think this is quite right still, but should work, don't know why it doesn't
-  if (opts->audio_in_type == 4 && opts->frame_provoice == 1) //
+  if (opts->audio_in_type == 4) 
   {
-    //skip processing symbol as dibit and use it as is
+    //assign dibit from last symbol/dibit read from capture bin
     dibit = state->symbolc;
+    if (state->use_throttle == 1)
+		{
+			usleep(0); 
+		}
   }
 
   //symbol/dibit file capture/writing
-  //need this bit here to capture dibits once sync starts
   if (opts->symbol_out == 1)
   {
     //fprintf (stderr, "%d", dibit);

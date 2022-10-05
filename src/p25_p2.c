@@ -95,26 +95,9 @@ void p2_dibit_buffer (dsd_opts * opts, dsd_state * state)
 
   for (int i = 0; i < 2140; i++) //2160 for an entire superframe of dibits - 20 sync dibits
   {
-	//rip dibits directly from the capture bin file instead of getDibit
-	if (opts->audio_in_type == 4) //4
-	{
-		dibit = fgetc(opts->symbolfile);
-		//experimental throttle
-		useconds_t stime = state->symbol_throttle;
-		if (state->use_throttle == 1)
-		{
-			usleep(stime);
-		}
-	}
-	else
-	{
-		dibit = getDibit(opts, state);
-		if (opts->inverted_p2 == 1)
-		{
-			dibit = (dibit ^ 2); //invert dibit here since we are reading it upside down
-		}
-	}
-
+	//symbol capture reading now handled directly by getSymbol and getDibit
+	dibit = getDibit(opts, state);
+	//dibit inversion handled internally by getDibit if sync type is inverted
     p2bit[i*2]   = (dibit >> 1) & 1;
     p2bit[i*2+1] = (dibit & 1);
 
@@ -765,8 +748,6 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 	else if (duid_decoded == 4)
     {
       	fprintf (stderr, " LCCH Sc"); //w/ scrambling
-		// if (state->currentslot == 0) state->dmrburstL = 31;
-		// else state->dmrburstR = 31;
 		if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
 				state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
 		{

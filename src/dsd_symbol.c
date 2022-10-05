@@ -140,11 +140,6 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
 #endif
       }
-      // //test reading symbol bin files
-      // else if (opts->audio_in_type == 4)
-      // {
-      //   //use fopen and read in a sample, check boatbod op25 for clues
-      // }
 
 #ifdef TRACE_DSD
       state->debug_sample_index++;
@@ -378,32 +373,20 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       openPulseInput(opts);
     }
 
-    //flip dibit values when p25-p1, has issues when read in positive polarity
-    if (state->synctype == 0 || state->synctype == 1 )
+    //assign symbol/dibit values based on modulation type
+    if (state->rf_mod == 1) //GFSK
     {
-      if (state->symbolc == 0)
+      symbol = state->symbolc;
+      if (state->symbolc == 0 && state->synctype >= 0)
       {
-        symbol = -1; //-1
+        symbol = -3; //-1
       }
-      if (state->symbolc == 1)
+      if (state->symbolc == 1 && state->synctype >= 0)
       {
-        symbol = -3; //-3
-      }
-      if (state->symbolc == 2)
-      {
-        symbol = 1; //1
-      }
-      if (state->symbolc == 3)
-      {
-        symbol = 3; //3
+        symbol = -1; //-3
       }
     }
-    else if (opts->frame_provoice == 1) //syncs fine, but issues with dibit reading
-    {
-        //provoice has issue where sync is okay, but decode isn't working after sync
-        //symbol = state->symbolc;
-    }
-    else
+    else //everything else
     {
       if (state->symbolc == 0)
       {
@@ -424,7 +407,6 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
     }
 
   }
-
 
   state->symbolcnt++;
   return (symbol);
