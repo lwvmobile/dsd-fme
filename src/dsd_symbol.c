@@ -374,7 +374,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
     }
 
     //assign symbol/dibit values based on modulation type
-    if (state->rf_mod == 1) //GFSK
+    if (state->rf_mod == 2) //GFSK
     {
       symbol = state->symbolc;
       if (state->symbolc == 0 && state->synctype >= 0)
