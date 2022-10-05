@@ -703,9 +703,11 @@ usage ()
   printf ("  -mg           Use only GFSK modulation optimizations\n");
   printf ("  -mq           Use only QPSK modulation optimizations\n");
   printf ("  -m2           Use Phase 2 6000 sps CQPSK modulation optimizations (testing, not fully implemented) \n");
-  // printf ("  -F            Enable DMR TDMA Stereo Passive Frame Sync\n");
-  // printf ("                 This feature will attempt to resync less often due to excessive voice errors\n");
-  // printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
+  printf ("  -F            Relax P25 Phase 2 MAC_SIGNAL CRC Checksum Pass/Fail\n");
+  printf ("                 Use this feature to allow MAC_SIGNAL even if bad CRC errors.\n");
+  printf ("  -F            Enable DMR BS Stereo Passive Frame Sync\n");
+  printf ("                 This feature will attempt to resync less often due to excessive voice errors\n");
+  printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
   printf ("  -Z            Log MBE/Frame Payloads to console\n");
   printf ("\n");
   printf ("  -K <dec>      Manually Enter DMRA Privacy Key (Decimal Value of Key Number)\n");

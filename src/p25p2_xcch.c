@@ -76,17 +76,19 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			{
 				//fprintf (stderr, " NULL ");
 			}
-			else //permit MAC_SIGNAL on CRC ERR for now until demodulator is working better? tests show tons of falsing, so leave on
+			else //permit MAC_SIGNAL on CRC ERR if -F option called
 			{
-				fprintf (stderr, " CRC16 ERR L");
-				state->p2_is_lcch = 0; //turn flag off here
-				// if (state->currentslot == 0) state->dmrburstL = 14;
-				// else state->dmrburstR = 14;
-				goto END_SMAC;
+				if (opts->aggressive_framesync == 1)
+				{
+					fprintf (stderr, " CRC16 ERR L");
+					state->p2_is_lcch = 0; //turn flag off here
+					if (state->currentslot == 0) state->dmrburstL = 14;
+					else state->dmrburstR = 14;
+					goto END_SMAC;
+				}				
 			}
 		}
 	}
-
 
 	//remember, slots are inverted here, so set the opposite ones
 	//monitor, test, and remove these if they cause issues due to inversion
@@ -217,7 +219,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		}
 		fprintf (stderr, "%s", KNRM);
 	}
-	if (opcode == 0x3)
+	if (opcode == 0x3 && err == 0)
 	{
 		if (state->currentslot == 1) state->dmrburstL = 24;
 		else state->dmrburstR = 24;
@@ -226,7 +228,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
-	if (opcode == 0x4)
+	if (opcode == 0x4 && err == 0)
 	{
 		if (state->currentslot == 1) state->dmrburstL = 21;
 		else state->dmrburstR = 21;
@@ -235,7 +237,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
-	if (opcode == 0x6)
+	if (opcode == 0x6 && err == 0)
 	{
 		if (state->currentslot == 1) state->dmrburstL = 22;
 		else state->dmrburstR = 22;
@@ -427,7 +429,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		}
 		fprintf (stderr, "%s", KNRM);
 	}
-	if (opcode == 0x3)
+	if (opcode == 0x3 && err == 0)
 	{
 		//what else should we zero out here?
 		//disable any of the lines below if issues are observed
@@ -456,7 +458,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		process_MAC_VPDU(opts, state, 0, FMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
-	if (opcode == 0x4)
+	if (opcode == 0x4 && err == 0)
 	{
 		if (state->currentslot == 0) state->dmrburstL = 21;
 		else state->dmrburstR = 21;
@@ -465,7 +467,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		process_MAC_VPDU(opts, state, 0, FMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
-	if (opcode == 0x6)
+	if (opcode == 0x6 && err == 0)
 	{
 		if (state->currentslot == 0) state->dmrburstL = 22;
 		else state->dmrburstR = 22;
