@@ -625,15 +625,15 @@ usage ()
   printf ("Display Options:\n");
   printf ("  -N            Use NCurses Terminal\n");
   printf ("                 dsd-fme -N 2> log.ans \n");
-  printf ("  -e            Show Frame Info and errorbars (default)\n");
-  printf ("  -pe           Show P25 encryption sync bits\n");
-  printf ("  -pl           Show P25 link control bits\n");
-  printf ("  -ps           Show P25 status bits and low speed data\n");
-  printf ("  -pt           Show P25 talkgroup info\n");
-  printf ("  -q            Don't show Frame Info/errorbars\n");
+  // printf ("  -e            Show Frame Info and errorbars (default)\n");
+  // printf ("  -pe           Show P25 encryption sync bits\n");
+  // printf ("  -pl           Show P25 link control bits\n");
+  // printf ("  -ps           Show P25 status bits and low speed data\n");
+  // printf ("  -pt           Show P25 talkgroup info\n");
+  // printf ("  -q            Don't show Frame Info/errorbars\n");
   printf ("  -s            Datascope (disables other display options)\n");
   printf ("  -t            Show symbol timing during sync\n");
-  printf ("  -v <num>      Frame information Verbosity\n");
+  // printf ("  -v <num>      Frame information Verbosity\n");
   printf ("  -z <num>      Frame rate for datascope\n");
   printf ("\n");
   printf ("Input/Output options:\n");
@@ -702,7 +702,7 @@ usage ()
   printf ("  -mc           Use only C4FM modulation optimizations\n");
   printf ("  -mg           Use only GFSK modulation optimizations\n");
   printf ("  -mq           Use only QPSK modulation optimizations\n");
-  printf ("  -m2           Use Phase 2 6000 sps CQPSK modulation optimizations (testing, not fully implemented) \n");
+  printf ("  -m2           Use Phase 2 6000 sps CQPSK modulation optimizations (4 Level, not 8 Level LSM) \n");
   printf ("  -F            Relax P25 Phase 2 MAC_SIGNAL CRC Checksum Pass/Fail\n");
   printf ("                 Use this feature to allow MAC_SIGNAL even if bad CRC errors.\n");
   printf ("  -F            Enable DMR BS Stereo Passive Frame Sync\n");
@@ -715,8 +715,9 @@ usage ()
   printf ("  -H <hex>      Manually Enter **tera 10 Privacy Key (40-Bit/10-Char Hex Value)\n");
   printf ("                (32/64-Char values can only be entered in the NCurses Terminal)\n");
   printf ("\n");
-  printf ("  -R <dec>      Manually Enter NXDN 4800 EHR Scrambler Key Value \n");
+  printf ("  -R <dec>      Manually Enter NXDN 4800/9600 EHR Scrambler Key Value \n");
   printf ("                 \n");
+  printf ("  -4            Force Privacy Key over FID and SVC bits \n");
   printf ("\n");
   exit (0);
 }
@@ -956,7 +957,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF4")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1067,6 +1068,11 @@ main (int argc, char **argv)
             opts.dmr_mute_encR = 1;
           }
           state.K1 = state.H; //shim
+          break;
+
+        case '4':
+          state.M = 1;
+          fprintf (stderr,"Force Privacy Key Priority over FID and SVC bits.\n");
           break;
 
         //manually set Phase 2 TDMA WACN/SYSID/CC

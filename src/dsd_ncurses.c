@@ -94,8 +94,8 @@ char * SyncTypes[44] = {
   "DMR VOICE",
   "PROVOICE",
   "PROVOICE",
-  "NXDN DATA",
-  "NXDN DATA",
+  "NXDN VOICE", //DATA
+  "NXDN VOICE", //DATA
   "DSTAR HD",
   "DSTAR HD",
   "dPMR", //20

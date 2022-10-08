@@ -15,6 +15,17 @@ void processNXDNData (dsd_opts * opts, dsd_state * state)
   /* Remove compiler warning */
   //UNUSED_VARIABLE(dibit);
 
+  //if using NXDN Scrambling, run LFSRN (dummy ambe values) to continue seed
+  if (state->nxdn_cipher_type == 0x1 && state->R != 0)
+  {
+    char ambe_temp[49] = {0};
+    char ambe_d[49] = {0};
+    for (i = 0; i < 4; i++)
+    {
+      LFSRN(ambe_temp, ambe_d, state);
+    }
+  }
+
   if (opts->errorbars == 1)
   {
     fprintf(stderr, "DATA  - ");
@@ -105,5 +116,12 @@ void processNXDNData (dsd_opts * opts, dsd_state * state)
   {
     /* Reset all CRCs of the SACCH */
     for(i = 0; i < 4; i++) state->NxdnSacchRawPart[i].CrcIsGood = 0;
+
+    //reset Scrambler seed
+    if (state->nxdn_cipher_type == 0x1)
+    {
+      state->payload_miN = 0; 
+    }
+
   }
 } /* End processNXDNData() */
