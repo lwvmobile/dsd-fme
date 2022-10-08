@@ -132,7 +132,36 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		//Synchronization Broadcast (SYNC_BCST)
 		if (MAC[1+len_a] == 0x70)
 		{
-			fprintf (stderr, "\n Synchronization Broadcast (SYNC_BCST)");	
+			fprintf (stderr, "\n Synchronization Broadcast \n");
+			int ist =   (MAC[3+len_a] >> 2) & 0x1; //IST bit tells us if time is realiable, synced to external source
+			int ltoff = (MAC[4+len_a] & 0x3F);
+			int year  = MAC[5+len_a] >> 1;
+			int month = ((MAC[5+len_a] & 0x1) << 3) | (MAC[6+len_a] >> 5);
+			int day   = (MAC[6+len_a] & 0x1F);
+			int hour  = MAC[7+len_a] >> 3;
+			int min   = ((MAC[7+len_a] & 0x7) << 3) | (MAC[8+len_a] >> 5);
+			int slots = ((MAC[8+len_a] & 0x1F) << 8) | MAC[9+len_a];
+			int sign = (ltoff & 0b100000) >> 5;
+			float offhour = 0;
+			//calculate local time (on system) by looking at offset and subtracting 30 minutes increments, or divide by 2 for hourly
+			if (sign == 1)
+			{
+				offhour = -( (ltoff & 0b11111 ) / 2);
+			}
+			else offhour = ( (ltoff & 0b11111 ) / 2);
+			
+			int seconds = slots / 135; //very rough estimation, but may be close enough for grins
+			if (seconds > 60) seconds = 60; //sanity check for rounding error
+			fprintf (stderr, "  Date: 20%02d.%02d.%02d Time: %02d:%02d:%02d UTC\n", 
+			          year, month, day, hour, min, seconds); 
+			fprintf (stderr, "  Local Time Offset: %.01f Hours;", offhour);
+			//if ist bit is set, then time on system may be considered invalid (i.e., no external time sync)
+			if (ist == 1)
+			{
+				fprintf (stderr, " Invalid System Time ");
+			}
+			else fprintf (stderr, " Valid System Time ");
+
 		}
 
 		//identifier update VHF/UHF

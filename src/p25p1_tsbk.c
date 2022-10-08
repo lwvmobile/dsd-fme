@@ -79,8 +79,22 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       //fprintf (stderr, "BAD CRC16");
     }
 
+    //shuffle corrected bits back into tsbk_byte
+    k = 0;
+    for (i = 0; i < 12; i++)
+    {
+      int byte = 0;
+      for (x = 0; x < 8; x++)
+      {
+        byte = byte << 1;
+        byte = byte | tsbk_decoded_bits[k];
+        k++;
+      }
+      tsbk_byte[i] = byte;
+    }
+
     //convert tsbk_byte to PDU and send to vPDU handler...may or may not be entirely compatible, 
-    PDU[0] = 07; //P25p1 TSBK Duid 0x07
+    PDU[0] = 0x07; //P25p1 TSBK Duid 0x07
     PDU[1] = tsbk_byte[0];
     PDU[2] = tsbk_byte[2];
     PDU[3] = tsbk_byte[3];
@@ -96,7 +110,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     PDU[1] = PDU[1] ^ 0x40; //flip bit to make it compatible with MAC_PDUs, i.e. 3D to 7D
 
     //Don't run NET_STS out of this, or will set wrong NAC/CC
-    if (err == 0 && ec == 0 && PDU[1] != 0x7B && PDU[1] != 0xFB) 
+    if (err == 0 && ec == 0 && PDU[1] != 0x7B && PDU[1] != 0xFB && PDU[1] != 0x49 && PDU[1] != 0x45) //0x49 is telephone grant, 0x46 Unit to Unit Channel Answer Request
     {
       fprintf (stderr, "%s",KMAG);
       process_MAC_VPDU(opts, state, 0, PDU);
@@ -122,7 +136,6 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
         {
           fprintf (stderr, "%s",KCYN);
           fprintf (stderr, "\n P25 PDU Payload ");
-          fprintf (stderr, " BD = %d  CRC = %d \n  ", ec, err);
           for (i = 0; i < 12; i++)
           {
             fprintf (stderr, "[%02X]", tsbk_byte[i]);

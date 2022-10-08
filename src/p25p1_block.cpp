@@ -18,7 +18,7 @@ typedef std::vector<bool> bit_vector;
 /* deinterleave and trellis1_2 decoding, count_bits, and find_min*/
 /* buf is assumed to be a buffer of 12 bytes */
 
-typedef std::vector<bool> bit_vector;
+//typedef std::vector<bool> bit_vector;
 
 //ugly copy and paste below
 static int count_bits(unsigned int n) {
