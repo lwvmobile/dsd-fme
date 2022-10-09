@@ -313,9 +313,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 					}
 
           //sanity check
-          if (state->DMRvcL > 18)
+          if (state->DMRvcL > 17) //18
 					{
-						state->DMRvcL = 18;
+						state->DMRvcL = 17; //18
 					}
 
 					pos = state->DMRvcL * 49;
@@ -408,9 +408,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 					}
 
           //sanity check
-          if (state->DMRvcR > 18)
+          if (state->DMRvcR > 17) //18
 					{
-						state->DMRvcR = 18;
+						state->DMRvcR = 17; //18
 					}
 
 					pos = state->DMRvcR * 49;

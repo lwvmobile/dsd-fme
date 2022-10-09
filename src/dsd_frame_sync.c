@@ -1304,7 +1304,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       if (state->samplesPerSymbol == 20)
                         {
                           //sprintf (state->ftype, " NXDN48      ");
-                          sprintf (state->ftype, " NXDN48");
+                          sprintf (state->ftype, "NXDN48 ");
                           if (opts->errorbars == 1)
                             {
                               //printFrameSync (opts, state, " +NXDN48   ", synctest_pos + 1, modulation);

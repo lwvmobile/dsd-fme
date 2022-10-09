@@ -285,10 +285,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0)
     {
       vc1 = 1;
+      state->DMRvcL = 0; //reset here if internal sync forces reset
     }
     if (internalslot == 1)
     {
       vc2 = 1;
+      state->DMRvcR = 0; //reset here if internal sync forces reset
     }
   }
 
@@ -348,6 +350,17 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   {
     skipcount++;
     goto SKIP;
+  }
+
+  //extra check to see if we have missed a voice/data frame sync at this point and then exit if required
+  if (opts->aggressive_framesync == 1)
+  {
+    //extremely aggressive
+    if ( vc1 > 7 || vc2 > 7 ) 
+    {
+      goto END;
+    }
+
   }
 
   //only play voice on no data sync
@@ -562,22 +575,6 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   if ( (vc1 > 14 || vc2 > 14) )
   {
     goto END;
-  }
-  //using these conditions may cause excessive resyncs IF bad signal,
-  //but still better than getting stuck in a wonk wonk loop for too long.
-  //set for more aggressive or less aggressive resync during accumulated playback errs
-  if (opts->aggressive_framesync == 1)
-  {
-    //errors caused due to playing MBE files out of sync, break loop
-    if (state->errs > 2 || state->errsR > 2)
-    {
-      //goto END; //
-    }
-    //errors caused due to playing MBE files out of sync, break loop
-    if (state->errs2 > 4 || state->errs2R > 4)
-    {
-      goto END; //
-    }
   }
 
   //earlier skip conditions teleport us here to process further skip conditions before restarting while loop

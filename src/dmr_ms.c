@@ -272,12 +272,14 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0)
     {
       vc1 = 1;
+      state->DMRvcL = 0; //reset here if jitter/sync forces reset
       fprintf (stderr, "MS Slot 1 Voice Sync \n");
     }
 
     if (internalslot == 1)
     {
       vc2 = 1;
+      state->DMRvcR = 0; //reset here if jitter/sync forces reset
     }
 
     state->dmr_ms_mode = 1; //set to 1 here??

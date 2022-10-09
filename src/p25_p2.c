@@ -200,7 +200,7 @@ void process_FACCHc (dsd_opts * opts, dsd_state * state)
 	}
 	else
 	{
-		fprintf(stderr, " R-S ERR Fc");
+		fprintf (stderr, " R-S ERR Fc");
 		if (state->currentslot == 0) state->dmrburstL = 13;
 		else state->dmrburstR = 13;
 	}
@@ -254,7 +254,7 @@ void process_FACCHs (dsd_opts * opts, dsd_state * state)
 	}
 	else
 	{
-		fprintf(stderr, " R-S ERR Fs");
+		fprintf (stderr, " R-S ERR Fs");
 		if (state->currentslot == 0) state->dmrburstL = 13;
 		else state->dmrburstR = 13;
 	}
@@ -303,7 +303,7 @@ void process_SACCHc (dsd_opts * opts, dsd_state * state)
 	}
 	else
 	{
-		fprintf(stderr, " R-S ERR Sc");
+		fprintf (stderr, " R-S ERR Sc");
 		// if (state->currentslot == 0) state->dmrburstL = 13;
 		// else state->dmrburstR = 13;
 	}
@@ -353,7 +353,7 @@ void process_SACCHs (dsd_opts * opts, dsd_state * state)
 	}
 	else
 	{
-		fprintf(stderr, " R-S ERR Ss");
+		fprintf (stderr, " R-S ERR Ss");
 		// if (state->currentslot == 0) state->dmrburstL = 13;
 		// else state->dmrburstR = 13;
 	}
@@ -538,7 +538,7 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 				fprintf (stderr, " ALG ID 0x%02X", state->payload_algid);
 				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyid);
 				fprintf (stderr, " MI 0x%016llX", state->payload_miP);
-				fprintf(stderr, " ESSB");
+				fprintf (stderr, " ESSB");
 			}
 
 		}
@@ -553,7 +553,7 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 				fprintf (stderr, " ALG ID 0x%02X", state->payload_algidR);
 				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyidR);
 				fprintf (stderr, " MI 0x%016llX", state->payload_miN);
-				fprintf(stderr, " ESSB");
+				fprintf (stderr, " ESSB");
 			}
 
 		}
