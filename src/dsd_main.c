@@ -71,6 +71,8 @@ struct stat st = {0};
 char wav_file_directory[1024] = {0};
 unsigned long long int p2vars = 0;
 
+char * pEnd; //bugfix
+
 void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
@@ -1061,7 +1063,7 @@ main (int argc, char **argv)
 
         case 'H':
           //new handling for 10/32/64 Char Key
-          char * pEnd;
+          
           strncpy(opts.szNumbers, optarg, 1023);
           opts.szNumbers[1023] = '\0';
           state.K1 = strtoull (opts.szNumbers, &pEnd, 16);
