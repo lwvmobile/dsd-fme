@@ -1009,7 +1009,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         }
         else state->M = 0;
       }
-      if (state->K == 0 && state->K1 == 0)
+      if (state->K == 0 && state->K1 == 0 && state->K2 == 0 && state->K3 == 0 && state->K4 == 0)
       {
         opts->dmr_mute_encL = 1;
         opts->dmr_mute_encR = 1;

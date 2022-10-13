@@ -250,6 +250,7 @@ initOpts (dsd_opts * opts)
   opts->wav_out_file_raw[0] = 0;
   opts->symbol_out_file[0] = 0;
   opts->lrrp_out_file[0] = 0;
+  opts->szNumbers[0] = 0;
   opts->symbol_out_f = NULL;
   opts->symbol_out = 0;
   opts->mbe_out = 0;
@@ -702,7 +703,8 @@ usage ()
   printf ("  -mc           Use only C4FM modulation optimizations\n");
   printf ("  -mg           Use only GFSK modulation optimizations\n");
   printf ("  -mq           Use only QPSK modulation optimizations\n");
-  printf ("  -m2           Use Phase 2 6000 sps CQPSK modulation optimizations (4 Level, not 8 Level LSM) \n");
+  printf ("  -m2           Use Phase 2 6000 sps CQPSK modulation optimizations\n");
+  printf ("                 (4 Level, not 8 Level LSM) \n");
   printf ("  -F            Relax P25 Phase 2 MAC_SIGNAL CRC Checksum Pass/Fail\n");
   printf ("                 Use this feature to allow MAC_SIGNAL even if bad CRC errors.\n");
   printf ("  -F            Enable DMR BS Stereo Passive Frame Sync\n");
@@ -712,10 +714,13 @@ usage ()
   printf ("\n");
   printf ("  -K <dec>      Manually Enter DMRA Privacy Key (Decimal Value of Key Number)\n");
   printf ("\n");
-  printf ("  -H <hex>      Manually Enter **tera 10 Privacy Key (40-Bit/10-Char Hex Value)\n");
-  printf ("                (32/64-Char values can only be entered in the NCurses Terminal)\n");
+  printf ("  -H <hex>      Manually Enter **tera 10/32/64 Char Privacy Hex Key (see example below)\n");
+  printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
+  printf ("                 -H 0B57935150 \n");
+  printf ("                 -H '736B9A9C5645288B 243AD5CB8701EF8A' \n");
+  printf ("                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' \n");
   printf ("\n");
-  printf ("  -R <dec>      Manually Enter NXDN 4800/9600 EHR Scrambler Key Value \n");
+  printf ("  -R <dec>      Manually Enter NXDN 4800/9600 EHR Scrambler Key Value (Decimal Value)\n");
   printf ("                 \n");
   printf ("  -4            Force Privacy Key over FID and SVC bits \n");
   printf ("\n");
@@ -1055,19 +1060,38 @@ main (int argc, char **argv)
           break;
 
         case 'H':
-          sscanf (optarg, "%llX", &state.H);
-          if (state.H > 0xFFFFFFFFFF)
-          {
-           state.H = 0xFFFFFFFFFF;
-          }
+          //new handling for 10/32/64 Char Key
+          char * pEnd;
+          strncpy(opts.szNumbers, optarg, 1023);
+          opts.szNumbers[1023] = '\0';
+          state.K1 = strtoull (opts.szNumbers, &pEnd, 16);
+          state.K2 = strtoull (pEnd, &pEnd, 16);
+          state.K3 = strtoull (pEnd, &pEnd, 16);
+          state.K4 = strtoull (pEnd, &pEnd, 16); 
+          fprintf (stderr, "**tera Key = %016llX %016llX %016llX %016llX\n", state.K1, state.K2, state.K3, state.K4);
           opts.dmr_mute_encL = 0;
           opts.dmr_mute_encR = 0;
-          if (state.H == 0)
+          if (state.K1 == 0 && state.K2 == 0 && state.K3 == 0 && state.K4 == 0)
           {
             opts.dmr_mute_encL = 1;
             opts.dmr_mute_encR = 1;
           }
-          state.K1 = state.H; //shim
+          state.H = state.K1; //shim still required?
+
+          //old handling for 10 Char Key
+          // sscanf (optarg, "%llX", &state.H);
+          // if (state.H > 0xFFFFFFFFFF)
+          // {
+          //  state.H = 0xFFFFFFFFFF;
+          // }
+          // opts.dmr_mute_encL = 0;
+          // opts.dmr_mute_encR = 0;
+          // if (state.H == 0)
+          // {
+          //   opts.dmr_mute_encL = 1;
+          //   opts.dmr_mute_encR = 1;
+          // }
+          // state.K1 = state.H; //shim
           break;
 
         case '4':

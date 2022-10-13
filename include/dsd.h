@@ -278,6 +278,7 @@ typedef struct
   char wav_out_file_raw[1024];
   char symbol_out_file[1024];
   char lrrp_out_file[1024];
+  char szNumbers[1024]; //**tera 10/32/64 char str
   short int symbol_out;
   short int mbe_out; //flag for mbe out, don't attempt fclose more than once
   SNDFILE *wav_out_f;
