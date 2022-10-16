@@ -940,7 +940,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->offset = synctest_pos;
               state->max = ((state->max) + (lmax)) / 2;
               state->min = ((state->min) + (lmin)) / 2;
-              state->currentslot = 0;
+              //state->currentslot = 0;
               state->directmode = 1;  //Direct mode
               if (opts->inverted_dmr == 0)
               {
@@ -948,14 +948,14 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
+                  //printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
-                state->lastsynctype = 10;
+                //state->lastsynctype = 10;
                 if ( opts->monitor_input_audio == 1)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                return (10);
+                //return (33);
               }
               else
               {
@@ -963,18 +963,18 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
+                  //printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 if (state->lastsynctype != 11)
                 {
                   state->firstframe = 1;
                 }
-                state->lastsynctype = 11;
+                //state->lastsynctype = 11;
                 if ( opts->monitor_input_audio == 1)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                return (11);
+                return (32);
               }
             } /* End if(strcmp (synctest, DMR_DIRECT_MODE_TS1_DATA_SYNC) == 0) */
             if(strcmp (synctest, DMR_DIRECT_MODE_TS2_DATA_SYNC) == 0)
@@ -983,7 +983,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->offset = synctest_pos;
               state->max = ((state->max) + (lmax)) / 2;
               state->min = ((state->min) + (lmin)) / 2;
-              state->currentslot = 1;
+              //state->currentslot = 1;
               state->directmode = 1;  //Direct mode
               if (opts->inverted_dmr == 0)
               {
@@ -991,14 +991,14 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
+                  //printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
-                state->lastsynctype = 10;
+                //state->lastsynctype = 10;
                 if ( opts->monitor_input_audio == 1)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                return (10);
+                //return (33);
               }
               else
               {
@@ -1006,18 +1006,18 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1 && opts->dmr_stereo == 0)
                 {
-                  printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
+                  //printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 if (state->lastsynctype != 11)
                 {
                   state->firstframe = 1;
                 }
-                state->lastsynctype = 11;
+                //state->lastsynctype = 11;
                 if ( opts->monitor_input_audio == 1)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                return (11);
+                return (32);
               }
             } /* End if(strcmp (synctest, DMR_DIRECT_MODE_TS2_DATA_SYNC) == 0) */
             //if((strcmp (synctest, DMR_MS_VOICE_SYNC) == 0) || (strcmp (synctest, DMR_BS_VOICE_SYNC) == 0))
@@ -1070,15 +1070,15 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
-              state->currentslot = 0;
+              //state->currentslot = 0;
               state->directmode = 1;  //Direct mode
-              if (opts->inverted_dmr == 0 && opts->dmr_stereo == 0)
+              if (opts->inverted_dmr == 0) //&& opts->dmr_stereo == 1
               {
                 // voice frame
                 sprintf(state->ftype, "DMR ");
-                if (opts->errorbars == 1)
+                if (opts->errorbars == 1 && opts->dmr_stereo == 0)
                 {
-                  printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
+                  //printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 if (state->lastsynctype != 12)
                 {
@@ -1089,7 +1089,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                return (12);
+                return (32); //treat Direct Mode same as MS mode for now
               }
               else
               {
@@ -1097,10 +1097,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1 && opts->dmr_stereo == 0)
                 {
-                  printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
+                  //printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 13;
-                return (13);
+                //return (33);
               }
             } /* End if(strcmp (synctest, DMR_DIRECT_MODE_TS1_VOICE_SYNC) == 0) */
             if(strcmp (synctest, DMR_DIRECT_MODE_TS2_VOICE_SYNC) == 0)
@@ -1109,26 +1109,26 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
-              state->currentslot = 1;
+              //state->currentslot = 1;
               state->directmode = 1;  //Direct mode
-              if (opts->inverted_dmr == 0)
+              if (opts->inverted_dmr == 0) //&& opts->dmr_stereo == 1
               {
                 // voice frame
                 sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1 && opts->dmr_stereo == 0)
                 {
-                  printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
+                  //printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 if (state->lastsynctype != 12)
                 {
                   state->firstframe = 1;
                 }
-                state->lastsynctype = 12;
+                //state->lastsynctype = 12;
                 if ( opts->monitor_input_audio == 1)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                return (12);
+                return (32);
               }
               else
               {
@@ -1136,15 +1136,14 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1 && opts->dmr_stereo == 0)
                 {
-                  printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
+                  //printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
-                state->lastsynctype = 13;
+                //state->lastsynctype = 13;
                 if ( opts->monitor_input_audio == 1)
                 {
-
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                return (13);
+                //return (33);
               }
             } //End if(strcmp (synctest, DMR_DIRECT_MODE_TS2_VOICE_SYNC) == 0)
           } //End if (opts->frame_dmr == 1)

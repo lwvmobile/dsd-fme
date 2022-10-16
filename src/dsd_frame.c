@@ -209,10 +209,10 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (opts->dmr_stereo == 0 && state->synctype == 32)
           {
             fprintf (stderr, "%s", KRED);
-            fprintf (stderr, "Please use XDMA decoding class to decode MS/Simplex \n");
+            fprintf (stderr, "Please use XDMA or DMR Stereo to decode MS/Simplex \n");
             fprintf (stderr, "%s", KNRM);
           }
-          if (opts->dmr_stereo == 1)
+          if (opts->dmr_stereo == 1) //opts->dmr_stereo == 1
           {
             state->dmr_stereo = 1; //set the state to 1 when handling pure voice frames
             if (state->synctype > 31 )
@@ -229,7 +229,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           closeMbeOutFile (opts, state);
           state->err_str[0] = 0;
           fprintf (stderr, "%s", KRED);
-          fprintf (stderr, "Please use XDMA decoding class to decode MS/Simplex \n");
+          fprintf (stderr, "Please use XDMA or DMR Stereo to decode MS/Simplex \n");
           fprintf (stderr, "%s", KNRM);
         }
         if (opts->dmr_stereo == 1)

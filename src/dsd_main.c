@@ -92,7 +92,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->carrier = 0;
   state->max = 15000;
   state->min = -15000;
-  state->center = 0; //quick disable for dmr testing with buffer
+  state->center = 0; 
   state->err_str[0] = 0;
   state->err_strR[0] = 0;
   sprintf (state->fsubtype, "              ");

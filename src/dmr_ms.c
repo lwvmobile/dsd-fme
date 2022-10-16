@@ -10,6 +10,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   char ambe_fr[4][24] = {0};
   char ambe_fr2[4][24] = {0};
   char ambe_fr3[4][24] = {0};
+  char ambe_fr4[4][24] = {0};
   char t_ambe_fr[4][24] = {9};
   char t_ambe_fr2[4][24] = {9};
   char t_ambe_fr3[4][24] = {9};
@@ -71,7 +72,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   short int m = 0;
 
   state->dmrburstL = 16; //Use 16 for Voice?
-  // No CACH in MS Mode?
+  // No CACH in MS/DM Mode?
   for(i = 0; i < 12; i++)
   {
     dibit = getDibit(opts, state);
@@ -296,7 +297,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
       sprintf(state->slot1light, "[slot1]");
       sprintf(state->slot2light, " slot2 ");
       //fprintf (stderr,"Sync: +DMR  [slot1]  slot2  | Color Code=%02d | DMRSTEREO | RC  ", state->color_code);
-      fprintf (stderr,"Sync: +DMR MS MODE | Color Code=%02d | DMRSTEREO | RC  ", state->color_code);
+      fprintf (stderr,"Sync: +DMR MS/DM MODE | Color Code=%02d | DMRSTEREO | RC  ", state->color_code);
       //test with vc1 reset disabled, if all is well, leave disabled
       //vc1 = 1;
     }
@@ -305,7 +306,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
       sprintf(state->slot2light, "[slot2]");
       sprintf(state->slot1light, " slot1 ");
       //fprintf (stderr,"Sync: +DMR   slot1  [slot2] | Color Code=%02d | DMRSTEREO | RC  ", state->color_code);
-      fprintf (stderr,"Sync: +DMR MS MODE | Color Code=%02d | DMRSTEREO | RC  ", state->color_code);
+      fprintf (stderr,"Sync: +DMR MS/DM MODE | Color Code=%02d | DMRSTEREO | RC  ", state->color_code);
       //test with vc1 reset disabled, if all is well, leave disabled
       //vc2 = 1;
     }
@@ -342,9 +343,9 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
       //fprintf (stderr,"Sync: +DMR   slot1  [slot2] | Color Code=%02d | DMRSTEREO | Data  ", state->color_code);
       if (opts->inverted_dmr == 0)
       {
-        fprintf (stderr,"Sync: +DMR MS MODE ");
+        fprintf (stderr,"Sync: +DMR MS/DM MODE ");
       }
-      else fprintf (stderr,"Sync: -DMR MS MODE ");
+      else fprintf (stderr,"Sync: -DMR MS/DM MODE ");
       //test with vc1 reset disabled, if all is well, leave disabled
       //vc2 = 1;
     }
@@ -367,7 +368,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     fprintf (stderr,"%s ", getTime());
     if (internalslot == 0 && opts->inverted_dmr == 0)
     {
-      fprintf (stderr,"Sync: +DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d ", state->color_code, vc1);
+      fprintf (stderr,"Sync: +DMR MS/DM MODE | Color Code=%02d | DMRSTEREO | VC%d ", state->color_code, vc1);
       if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10)
       {
         fprintf (stderr, "%s", KYEL);
@@ -398,7 +399,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
     if (internalslot == 0 && opts->inverted_dmr == 1)
     {
-      fprintf (stderr,"Sync: -DMR MS MODE | Color Code=%02d | DMRSTEREO | VC%d ", state->color_code, vc1);
+      fprintf (stderr,"Sync: -DMR MS/DM MODE | Color Code=%02d | DMRSTEREO | VC%d ", state->color_code, vc1);
       if (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10)
       {
         fprintf (stderr, "%s", KYEL);
@@ -436,9 +437,22 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     }
 
     state->dmr_ms_mode == 1;
-    processMbeFrame (opts, state, NULL, ambe_fr, NULL);
-    processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
-    processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+    memcpy (ambe_fr4, ambe_fr2, sizeof(ambe_fr2));
+
+    //state->directmode = 0; //flag off for testing
+
+    if (state->directmode == 0)
+    {
+      processMbeFrame (opts, state, NULL, ambe_fr, NULL);
+      processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+      processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+    }
+    else
+    {
+      processMbeFrame (opts, state, NULL, ambe_fr4, NULL); //play duplicate of 2 here to smooth audio
+      processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+      processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+    }
 
     if (vc1 == 6 && state->payload_algid >= 21)
     {
@@ -468,7 +482,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   }
 
  } // end while loop
- //reset these variables when exiting MS mode.
+ //reset these variables when exiting MS/DM mode.
  END:
  //get first half payload dibits and store them in the payload for the next repitition
  skipDibit (opts, state, 144);
@@ -487,6 +501,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
  state->dmr_stereo = 0;
  state->dmr_ms_mode = 0;
  state->dmr_ms_rc = 0;
+ state->directmode = 0; //flag off
  state->DMRvcL = 0;
 
 }
@@ -499,6 +514,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   char ambe_fr[4][24] = {0};
   char ambe_fr2[4][24] = {0};
   char ambe_fr3[4][24] = {0};
+  char ambe_fr4[4][24] = {0}; //shim for playing back direct mode samples where ambe1 is bad, duplicate 2 to 4 and play both to smooth audio
   const int *w, *x, *y, *z;
   char sync[25];
   char syncdata[48];
@@ -643,7 +659,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 
   }
   //work around to set erroneous PI header values to 0 if K is active
-  if (state->K > 0)
+  if (state->K > 0 || state->K1 > 0)
   {
     state->payload_keyid = 0; //just for testing
     state->payload_keyidR = 0; //just for testing
@@ -653,7 +669,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 
   if (opts->inverted_dmr == 0)
   {
-    fprintf (stderr,"Sync: +DMR MS MODE |  Frame Sync   | DMRSTEREO | VC1 ");
+    fprintf (stderr,"Sync: +DMR MS/DM MODE |  Frame Sync   | DMRSTEREO | VC1 ");
     if ( (state->K > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid == 0x10) ||
          (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fid == 0x10)  )
     {
@@ -685,7 +701,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   }
   else
   {
-    fprintf (stderr,"Sync: -DMR MS MODE |  Frame Sync   | DMRSTEREO | VC1 ");
+    fprintf (stderr,"Sync: -DMR MS/DM MODE |  Frame Sync   | DMRSTEREO | VC1 ");
     if ( (state->K > 0 && state->dmr_so  & 0x40 && state->payload_keyid  == 0 && state->dmr_fid == 0x10) ||
          (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fid == 0x10) )
     {
@@ -719,9 +735,23 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   state->dmr_ms_mode = 1;
   state->DMRvcL = 0;
 
-  processMbeFrame (opts, state, NULL, ambe_fr, NULL);
-  processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
-  processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+  memcpy (ambe_fr4, ambe_fr2, sizeof(ambe_fr2));
+
+  //state->directmode = 0; //flag off for testing samples
+
+  if (state->directmode == 0)
+  {
+    processMbeFrame (opts, state, NULL, ambe_fr, NULL);
+    processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+    processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+  }
+  else
+  {
+    processMbeFrame (opts, state, NULL, ambe_fr4, NULL); //play duplicate of 2 here to smooth audio
+    processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+    processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+  }
+  
 
   skipDibit (opts, state, 144); //skip to next TDMA slot
   dmrMS (opts, state); //bootstrap into full TDMA frame
@@ -807,15 +837,17 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
 
   }
 
-  //hide behind payload due to errs in data in MS mode
-  if (opts->payload == 1)
+  //state->directmode = 0; //flag off for testing
+
+  //hide behind payload due to errs in data in MS/DM mode
+  if (opts->payload == 1 && state->directmode == 0) 
   {
     fprintf (stderr, "%s ", getTime());
     if (opts->inverted_dmr == 0)
     {
-      fprintf (stderr,"Sync: +DMR MS MODE ");
+      fprintf (stderr,"Sync: +DMR MS/DM MODE ");
     }
-    else fprintf (stderr,"Sync: -DMR MS MODE ");
+    else fprintf (stderr,"Sync: -DMR MS/DM MODE ");
   }
 
 
@@ -827,13 +859,14 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   state->dmr_ms_mode = 1;
 
   //only run if payload is set to 1 due to errors with MS data
-  if (opts->payload == 1)
+  if (opts->payload == 1 && state->directmode == 0) //don't run on Direct Mode just yet
   {
     processDMRdata (opts, state);
   }
 
   state->dmr_stereo = 0;
   state->dmr_ms_mode = 0;
+  state->directmode = 0; //flag off
 
   //get potential first half payload dibits and store them in the payload for the next repitition, MS voice or data.
   skipDibit (opts, state, 144);
