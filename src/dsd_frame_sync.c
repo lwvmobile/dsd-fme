@@ -955,7 +955,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                //return (33);
+                return (33);
               }
               else
               {
@@ -998,7 +998,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                //return (33);
+                return (33);
               }
               else
               {
@@ -1100,7 +1100,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   //printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 13;
-                //return (33);
+                return (33);
               }
             } /* End if(strcmp (synctest, DMR_DIRECT_MODE_TS1_VOICE_SYNC) == 0) */
             if(strcmp (synctest, DMR_DIRECT_MODE_TS2_VOICE_SYNC) == 0)
@@ -1143,7 +1143,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
-                //return (33);
+                return (33);
               }
             } //End if(strcmp (synctest, DMR_DIRECT_MODE_TS2_VOICE_SYNC) == 0)
           } //End if (opts->frame_dmr == 1)

@@ -76,7 +76,6 @@ char * pEnd; //bugfix
 void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
-  // state->testcounter = 0;
   state->dibit_buf_p = state->dibit_buf + 200;
   memset (state->dibit_buf, 0, sizeof (int) * 200);
   //dmr buffer
@@ -84,9 +83,9 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset (state->dmr_payload_buf, 0, sizeof (int) * 200);
   //dmr buffer end
   if (opts->mbe_out_f != NULL)
-    {
-      closeMbeOutFile (opts, state);
-    }
+  {
+    closeMbeOutFile (opts, state);
+  }
   state->jitter = -1;
   state->lastsynctype = -1;
   state->carrier = 0;

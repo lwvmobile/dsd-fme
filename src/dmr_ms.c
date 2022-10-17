@@ -26,6 +26,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   int msMode;
   char cc[4];
   unsigned char EmbeddedSignalling[16];
+  unsigned char EmbeddedSignallingInverse[16];
   int EmbeddedSignallingOk;
   unsigned int internalcolorcode;
   int internalslot;
@@ -71,8 +72,8 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   short int m = 0;
 
-  state->dmrburstL = 16; //Use 16 for Voice?
-  // No CACH in MS/DM Mode?
+  state->dmrburstL = 16; //Use 16 for Voice
+
   for(i = 0; i < 12; i++)
   {
     dibit = getDibit(opts, state);
@@ -82,11 +83,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     }
     cachdata[i] = dibit;
     state->dmr_stereo_payload[i] = dibit;
-    if(i == 2)
-    {
-      //state->currentslot = (1 & (dibit >> 1));
-      //internalslot = (1 & (dibit >> 1));
-    }
+
   }
 
   //Setup for first AMBE Frame
@@ -193,10 +190,27 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   sync[24] = 0;
   EmbeddedSignallingOk = -1;
+
+  // for (i = 0; i < 16; i++)
+  // {
+  //   EmbeddedSignallingInverse[i] = EmbeddedSignalling[i] ^ 1;
+  // }
+
   if(QR_16_7_6_decode(EmbeddedSignalling))
   {
     EmbeddedSignallingOk = 1;
   }
+
+  //test for inverted signal - this should move to data, and have a slottype check here perhaps?
+  // else if (QR_16_7_6_decode(EmbeddedSignallingInverse))
+  // {
+  //   if (opts->inverted_dmr == 0)
+  //   {
+  //     opts->inverted_dmr = 1; 
+  //   }
+  //   else opts->inverted_dmr = 0;
+  //   goto END;
+  // }
 
   internalcolorcode = 69; //set so we know if this value is being set properly
   if(EmbeddedSignallingOk == 1)
@@ -543,14 +557,13 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   }
   state->dmrburstL = 16; //Use 16 for Voice?
   dibit_p = state->dmr_payload_p - 90;
-  //payload buffer tests
+
   //CACH + First Half Payload + Sync = 12 + 54 + 24
   for (i = 0; i < 90; i++) //90
   {
     state->dmr_stereo_payload[i] = *dibit_p;
     dibit_p++;
   }
-  //end payload buffer test
 
   for(i = 0; i < 12; i++)
   {
@@ -614,11 +627,12 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
     z++;
 
   }
-
+  
   //Continue Second AMBE Frame, 18 after Sync or EmbeddedSignalling
   for(i = 0; i < 18; i++)
   {
     dibit = getDibit(opts, state);
+    
     if(opts->inverted_dmr == 1)
     {
       dibit = (dibit ^ 2);
@@ -770,7 +784,7 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   unsigned char MSSlot[20] = {0}; //10 dibits = 20 bits
   unsigned char MSBurst[5] = {0};
   int cachInterleave[24]   = {0, 7, 8, 9, 1, 10, 11, 12, 2, 13, 14, 15, 3, 16, 4, 17, 18, 19, 5, 20, 21, 22, 6, 23};
-  //int cachInterleave[24]   = {0,}
+
   //add time to mirror sync
   time_t now;
   char * getTime(void) //get pretty hh:mm:ss timestamp
@@ -789,8 +803,8 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   }
   b = 0;
   c = 0;
+
   //CACH + First Half Payload + Sync = 12 + 54 + 24
-  //dibit_p = state->dibit_buf_p - 90;
   dibit_p = state->dmr_payload_p - 90;
   for (i = 0; i < 90; i++) //90
   {
@@ -798,7 +812,7 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
     dibit_p++;
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      dibit = (dibit ^ 2); 
     }
     state->dmr_stereo_payload[i] = dibit;
     //load cach
@@ -826,6 +840,10 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   for (i = 0; i < 54; i++)
   {
     dibit = getDibit(opts, state);
+    if(opts->inverted_dmr == 1)
+    {
+      dibit = (dibit ^ 2); 
+    }
     state->dmr_stereo_payload[i+90] = dibit;
     //load slot, second half
     if (i < 6)
@@ -839,8 +857,8 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
 
   //state->directmode = 0; //flag off for testing
 
-  //hide behind payload due to errs in data in MS/DM mode
-  if (opts->payload == 1 && state->directmode == 0) 
+  //with FEC fix, now we can (hopefully) feel confident in running MS data
+  if (1 == 1) //opts->payload == 1 && state->directmode == 0
   {
     fprintf (stderr, "%s ", getTime());
     if (opts->inverted_dmr == 0)
@@ -850,6 +868,34 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
     else fprintf (stderr,"Sync: -DMR MS/DM MODE ");
   }
 
+  // decode and correct cach and slot
+  // golay (20,8) hamming-weight of 6 reliably corrects at most 2 bit-errors
+  int cach_okay = -1;
+  if ( Hamming_7_4_decode (MSCach) )
+  {
+    cach_okay = 1;
+  }
+  if (cach_okay == 1)
+  {
+    //fprintf (stderr, "CACH Okay ");
+  }
+  else
+  {
+    //fprintf (stderr, "CACH ERR ");
+    goto END;
+  }
+
+  int slot_okay = -1;
+  if(Golay_20_8_decode(MSSlot))
+  {
+    slot_okay = 1;
+  }
+  if (slot_okay == 1)
+  {
+    //fprintf (stderr, "Slot Okay ");
+  }
+  else goto END;
+
 
   sprintf(state->slot1light, "%s", "");
   sprintf(state->slot2light, "%s", "");
@@ -858,10 +904,19 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   state->dmr_stereo = 1;
   state->dmr_ms_mode = 1;
 
-  //only run if payload is set to 1 due to errors with MS data
-  if (opts->payload == 1 && state->directmode == 0) //don't run on Direct Mode just yet
+  //with FEC fix, now we can (hopefully) feel confident in running MS data
+  if (1 == 1) //opts->payload == 1 && state->directmode == 0
   {
     processDMRdata (opts, state);
+  }
+
+  END:
+  if (slot_okay != 1 || cach_okay != 1)
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, "| **CACH or Burst Type FEC ERR ** ");
+    fprintf (stderr, "%s", KNRM);
+    fprintf (stderr, "\n");
   }
 
   state->dmr_stereo = 0;
@@ -870,11 +925,12 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
 
   //get potential first half payload dibits and store them in the payload for the next repitition, MS voice or data.
   skipDibit (opts, state, 144);
+
   //CACH + First Half Payload = 12 + 54
   for (i = 0; i < 66; i++) //66
   {
     dibit = getDibit(opts, state);
-    state->dmr_stereo_payload[i] = dibit;
+    state->dmr_stereo_payload[i] = dibit;    
   }
 
 }

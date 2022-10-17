@@ -170,7 +170,7 @@ use_symbol (dsd_opts* opts, dsd_state* state, int symbol)
     }
 
   // Increase sidx
-  if (state->sidx == (opts->ssize - 1))
+  if (state->sidx >= (opts->ssize - 1))
     {
       state->sidx = 0;
 
@@ -315,13 +315,11 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 
       state->last_dibit = dibit;
 
-      // store non-inverted values in dibit_buf
       *state->dibit_buf_p = invert_dibit(dibit);
       state->dibit_buf_p++;
 
       //dmr buffer
-      *state->dmr_payload_p = invert_dibit(dibit); //invert, or no?
-      // *state->dmr_payload_p = dibit; //invert, or no?
+      *state->dmr_payload_p = invert_dibit(dibit); 
       state->dmr_payload_p++;
       //dmr buffer end
 
@@ -377,9 +375,15 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
         }
 
       state->last_dibit = dibit;
+
       *state->dibit_buf_p = dibit;
       state->dibit_buf_p++;
+
       //dmr buffer
+      //note to self, perceived bug with initial dibit buffer appears to be caused by
+      //media player, when playing back from audacity, the initial few dmr frames are
+      //decoded properly, need to investigate the root cause of what audacity is doing
+      //vs other audio sources...perhaps just the audio level itself?
       *state->dmr_payload_p = dibit;
       state->dmr_payload_p++;
       //dmr buffer end

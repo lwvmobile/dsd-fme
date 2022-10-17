@@ -872,11 +872,14 @@ void Golay_20_8_encode(unsigned char *origBits, unsigned char *encodedBits)
     }
 }
 
+// golay (20,8) hamming-weight of 6 reliably corrects at most 2 bit-errors
 bool Golay_20_8_decode(unsigned char *rxBits)
 {
     unsigned int syndromeI = 0; // syndrome index
     int is = 0;
     int i = 0;
+    //tally corrections made, exceeding 2 will return false
+    int correction = 0; 
 
     for (is = 0; is < 12; is++)
     {
@@ -915,12 +918,19 @@ bool Golay_20_8_decode(unsigned char *rxBits)
             else
             {
                 rxBits[Golay_20_8_m_corr[syndromeI][i]] ^= 1; // flip bit
+                correction++;
             }
         }
 
         if (i == 0)
         {
             return false;
+        }
+        
+        //return false due to exceeding the number of allowed corrected bits
+        if (correction > 2)
+        {
+            return false; 
         }
     }
 
