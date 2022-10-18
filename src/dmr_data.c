@@ -65,8 +65,6 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
 
   }
 
-  cachdata[25] = 0; 
-
   //decode and correct cach and compare
   int cach_okay = 69;
   if ( Hamming_7_4_decode (cachdata) ) //is now de-interleaved appropriately
@@ -80,10 +78,14 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   if (cach_okay != 1)
   {
     //fprintf (stderr, "CACH FEC Error %d", cach_okay);
-    goto END;
+    if (opts->aggressive_framesync == 1) //may not worry about it on data
+    {
+      goto END;
+    }
+    
   }
 
-  state->currentslot = cachdata[1]; //still bit 2, or somewhere else? is it 8? 1? TC?
+  state->currentslot = cachdata[1]; 
 
   if (state->currentslot == 0 && state->dmr_ms_mode == 0)
   {
@@ -306,8 +308,13 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   }
   else
   {
-    SlotTypeOk = 0;
-    goto END;
+    
+    if (opts->aggressive_framesync == 1)
+    {
+      SlotTypeOk = 0;
+      goto END;
+    }
+    
   }
 
   /* Slot Type parity checked => Fill the color code */
@@ -546,10 +553,10 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
     fprintf(stderr, "\n");
   }
   END:
-  if (SlotTypeOk == 0 || cach_okay == 0)
+  if (SlotTypeOk == 0 || cach_okay != 1)
   {
     fprintf (stderr, "%s", KRED);
-    fprintf (stderr, "| **CACH or Burst Type FEC ERR ** ");
+    fprintf (stderr, "| ** CACH or Burst Type FEC ERR ** ");
     fprintf (stderr, "%s", KNRM);
     fprintf (stderr, "\n");
   }

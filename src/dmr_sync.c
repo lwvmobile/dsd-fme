@@ -2330,7 +2330,7 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
     fprintf (stderr, "%s \n", KRED);
     fprintf (stderr, " SLOT %d ", state->currentslot+1);
     fprintf(stderr, "TGT=%u SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-    fprintf(stderr, "FID=0x%02X SVC=0x%02X", TSVoiceSupFrame->FullLC.FeatureSetID, TSVoiceSupFrame->FullLC.ServiceOptions);
+    fprintf(stderr, "FID=0x%02X SVC=0x%02X  ", TSVoiceSupFrame->FullLC.FeatureSetID, TSVoiceSupFrame->FullLC.ServiceOptions);
     fprintf (stderr, "%s ", KNRM);
 
   }
@@ -2339,8 +2339,8 @@ void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[19
     fprintf (stderr, "%s \n", KRED);
     fprintf (stderr, " SLOT %d ", state->currentslot+1);
     fprintf(stderr, "TGT=%u SRC=%u ", TSVoiceSupFrame->FullLC.GroupAddress, TSVoiceSupFrame->FullLC.SourceAddress);
-    fprintf(stderr, "FID=0x%02X SVC=0x%02X", TSVoiceSupFrame->FullLC.FeatureSetID, TSVoiceSupFrame->FullLC.ServiceOptions);
-    fprintf(stderr, "RAS (FEC OK/CRC ERR)"); //tlc
+    fprintf(stderr, "FID=0x%02X SVC=0x%02X ", TSVoiceSupFrame->FullLC.FeatureSetID, TSVoiceSupFrame->FullLC.ServiceOptions);
+    fprintf(stderr, "RAS (FEC OK/CRC ERR) "); //tlc
     fprintf (stderr, "%s ", KNRM);
 
   }

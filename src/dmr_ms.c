@@ -882,7 +882,10 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   else
   {
     //fprintf (stderr, "CACH ERR ");
-    goto END;
+    if (opts->aggressive_framesync == 1) //may not worry about it on data
+    {
+      goto END;
+    }
   }
 
   int slot_okay = -1;
@@ -914,7 +917,7 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   if (slot_okay != 1 || cach_okay != 1)
   {
     fprintf (stderr, "%s", KRED);
-    fprintf (stderr, "| **CACH or Burst Type FEC ERR ** ");
+    fprintf (stderr, "| ** CACH or Burst Type FEC ERR ** ");
     fprintf (stderr, "%s", KNRM);
     fprintf (stderr, "\n");
   }

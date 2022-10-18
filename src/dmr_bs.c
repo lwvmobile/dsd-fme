@@ -26,6 +26,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   char redundancyB[36];
   unsigned short int vc1;
   unsigned short int vc2;
+  int cach_okay = 0;
 
   //cach fec
   char cachdata[25] = {0}; //increased from 24 to 25 to see if this fixes ubuntu 32 bug
@@ -76,10 +77,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     cachdata[cachInterleave[(i*2)+1]] = (1 & dibit);       // bit 0
   }
 
-  cachdata[25] = 0; //setting to see if this fixes ubuntu 32 bit bug
-
   //decode and correct cach and compare
-  int cach_okay = 69;
+  cach_okay = 69;
   if ( Hamming_7_4_decode (cachdata) ) //see if we need to de-interleave this...probably do.
   {
     cach_okay = 1;
@@ -91,6 +90,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   if (cach_okay != 1)
   {
     //fprintf (stderr, "CACH FEC Error %d", cach_okay);
+    if (opts->aggressive_framesync == 1)
+    {
+      goto END;
+    } 
+    
   }
 
   state->currentslot = cachdata[1];
@@ -353,7 +357,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   }
 
   //extra check to see if we have missed a voice/data frame sync at this point and then exit if required
-  if (opts->aggressive_framesync == 1)
+  if (1 == 1) //opts->aggressive_framesync
   {
     //extremely aggressive
     if ( vc1 > 7 || vc2 > 7 ) 
@@ -541,7 +545,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       state->DMRvcR = 0;
       if (state->payload_algidR >= 0x21)
       {
-        if (state->payload_miR != 0 && state->payload_algidR == 0x21)
+        if (state->payload_miR != 0 && state->payload_algidR >= 0x21)
         {
           LFSR(state);
         }
@@ -596,9 +600,23 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
  state->dmr_stereo = 0;
  state->errs2R = 0;
  state->errs2 = 0;
-//
 
-//
+ //if we have a cach err, then produce sync pattern/err message
+ if (cach_okay != 1)
+ {
+   fprintf (stderr,"%s ", getTime());
+   fprintf (stderr,"Sync:  DMR                  ");
+   fprintf (stderr, "%s", KRED);
+   fprintf (stderr, "| ** VOICE CACH ERR ** ");
+   fprintf (stderr, "%s", KNRM);
+   //run LFSR if either slot had an active MI in it.
+   state->currentslot = 0;
+   if (state->payload_algid >= 0x21) LFSR(state);
+   state->currentslot = 1;
+   if (state->payload_algidR >= 0x21) LFSR(state);
+   fprintf (stderr, "\n");
+ }
+
 }
 
 //Process buffered half frame and 2nd half and then jump to full BS decoding
@@ -612,12 +630,15 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   const int *w, *x, *y, *z;
   char sync[25];
   char syncdata[48];
-  char cachdata[13] = {0};
   int mutecurrentslot;
   int msMode;
   char cc[4];
   unsigned char EmbeddedSignalling[16];
   unsigned int EmbeddedSignallingOk;
+
+  //cach fec
+  char cachdata[25] = {0}; //increased from 24 to 25 to see if this fixes ubuntu 32 bug
+  int cachInterleave[24]   = {0, 7, 8, 9, 1, 10, 11, 12, 2, 13, 14, 15, 3, 16, 4, 17, 18, 19, 5, 20, 21, 22, 6, 23};
 
   //add time to mirror printFrameSync
   time_t now;
@@ -638,7 +659,6 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 
   //payload buffer
   //CACH + First Half Payload + Sync = 12 + 54 + 24
-  //dibit_p = state->dibit_buf_p - 90; //this seems to work okay for both
   dibit_p = state->dmr_payload_p - 90;
   for (i = 0; i < 90; i++) //90
   {
@@ -654,12 +674,31 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 12; i++)
   {
     dibit = state->dmr_stereo_payload[i];
-    cachdata[i] = dibit;
-    if(i == 2)
-    {
-      state->currentslot = (1 & (dibit >> 1));
-    }
+    cachdata[cachInterleave[(i*2)]]   = (1 & (dibit >> 1)); // bit 1
+    cachdata[cachInterleave[(i*2)+1]] = (1 & dibit);       // bit 0
   }
+
+  //decode and correct cach and compare
+  int cach_okay = 69;
+  if ( Hamming_7_4_decode (cachdata) ) //see if we need to de-interleave this...probably do.
+  {
+    cach_okay = 1;
+  }
+  if (cach_okay == 1)
+  {
+    //fprintf (stderr, "CACH Okay ");
+  }
+  if (cach_okay != 1)
+  {
+    //fprintf (stderr, "CACH FEC Error %d", cach_okay);
+    if (opts->aggressive_framesync == 1)
+    {
+      goto END;
+    } 
+    
+  }
+
+  state->currentslot = cachdata[1];
 
   //Setup for first AMBE Frame
 
@@ -831,10 +870,20 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
   dmrBS (opts, state); //bootstrap into full TDMA frame for BS mode
   END:
-  //placing this below to fix compiler error, it will never run but compiler needs something there
-  if (0 == 1)
+  //if we have a cach err, then produce sync pattern/err message
+  if (cach_okay != 1)
   {
-    fprintf (stderr, "this is a dumb thing to have to fix");
+    fprintf (stderr,"%s ", getTime());
+    fprintf (stderr,"Sync:  DMR                  ");
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, "| ** VOICE CACH ERR ** ");
+    fprintf (stderr, "%s", KNRM);
+    //run LFSR if either slot had an active MI in it.
+    state->currentslot = 0;
+    if (state->payload_algid >= 0x21) LFSR(state);
+    state->currentslot = 1;
+    if (state->payload_algidR >= 0x21) LFSR(state);
+    fprintf (stderr, "\n");
   }
 
 }

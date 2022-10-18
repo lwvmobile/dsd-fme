@@ -330,6 +330,7 @@ bool Hamming_7_4_decode(unsigned char *rxBits) // corrects in place
 {
     unsigned int syndromeI = 0; // syndrome index
     int is = 0;
+    int correction = 0;
 
     for (is = 0; is < 3; is++)
     {
@@ -351,6 +352,13 @@ bool Hamming_7_4_decode(unsigned char *rxBits) // corrects in place
         else
         {
             rxBits[Hamming_7_4_m_corr[syndromeI]] ^= 1; // flip bit
+            correction++;
+        }
+        //not sure of upper limit on what hamming can correct (if any),
+        //but will test with 0 and 1 to see how those perform
+        if (correction > 1)
+        {
+            return false;
         }
     }
 
@@ -926,8 +934,10 @@ bool Golay_20_8_decode(unsigned char *rxBits)
         {
             return false;
         }
-        
+
         //return false due to exceeding the number of allowed corrected bits
+        //being stingy and only allowing 1 error, may wreck some good data decodes, 
+        //decided to play it safe with 2
         if (correction > 2)
         {
             return false; 
