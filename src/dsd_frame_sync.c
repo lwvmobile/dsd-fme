@@ -1464,66 +1464,66 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
           if ((t == 24) && (state->lastsynctype != -1))
             {
-              if ((state->lastsynctype == 0) && ((state->lastp25type == 1) || (state->lastp25type == 2)))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + (lmax)) / 2;
-                  state->min = ((state->min) + (lmin)) / 2;
-                  sprintf (state->ftype, "(P25 Phase 1) ");
-                  if (opts->errorbars == 1)
-                    {
-                      printFrameSync (opts, state, "(+P25p1) ", synctest_pos + 1, modulation);
-                    }
-                  state->lastsynctype = -1;
+              // if ((state->lastsynctype == 0) && ((state->lastp25type == 1) || (state->lastp25type == 2)))
+              //   {
+              //     state->carrier = 1;
+              //     state->offset = synctest_pos;
+              //     state->max = ((state->max) + (lmax)) / 2;
+              //     state->min = ((state->min) + (lmin)) / 2;
+              //     sprintf (state->ftype, "(P25 Phase 1) ");
+              //     if (opts->errorbars == 1)
+              //       {
+              //         printFrameSync (opts, state, "(+P25p1) ", synctest_pos + 1, modulation);
+              //       }
+              //     state->lastsynctype = -1;
 
-                  return (0);
-                }
-              else if ((state->lastsynctype == 1) && ((state->lastp25type == 1) || (state->lastp25type == 2)))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "(P25 Phase 1) ");
-                  if (opts->errorbars == 1)
-                    {
-                      printFrameSync (opts, state, "(-P25p1) ", synctest_pos + 1, modulation);
-                    }
-                  state->lastsynctype = -1;
+              //     return (0);
+              //   }
+              // else if ((state->lastsynctype == 1) && ((state->lastp25type == 1) || (state->lastp25type == 2)))
+              //   {
+              //     state->carrier = 1;
+              //     state->offset = synctest_pos;
+              //     state->max = ((state->max) + lmax) / 2;
+              //     state->min = ((state->min) + lmin) / 2;
+              //     sprintf (state->ftype, "(P25 Phase 1) ");
+              //     if (opts->errorbars == 1)
+              //       {
+              //         printFrameSync (opts, state, "(-P25p1) ", synctest_pos + 1, modulation);
+              //       }
+              //     state->lastsynctype = -1;
 
-                  return (1);
-                }
-              else if ((state->lastsynctype == 3) && ((strcmp (synctest, X2TDMA_BS_VOICE_SYNC) != 0) || (strcmp (synctest, X2TDMA_MS_VOICE_SYNC) != 0)))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "(X2-TDMA) ");
-                  if (opts->errorbars == 1)
-                    {
-                      printFrameSync (opts, state, "(-X2-TDMA) ", synctest_pos + 1, modulation);
-                    }
-                  state->lastsynctype = -1;
+              //     return (1);
+              //   }
+              // else if ((state->lastsynctype == 3) && ((strcmp (synctest, X2TDMA_BS_VOICE_SYNC) != 0) || (strcmp (synctest, X2TDMA_MS_VOICE_SYNC) != 0)))
+              //   {
+              //     state->carrier = 1;
+              //     state->offset = synctest_pos;
+              //     state->max = ((state->max) + lmax) / 2;
+              //     state->min = ((state->min) + lmin) / 2;
+              //     sprintf (state->ftype, "(X2-TDMA) ");
+              //     if (opts->errorbars == 1)
+              //       {
+              //         printFrameSync (opts, state, "(-X2-TDMA) ", synctest_pos + 1, modulation);
+              //       }
+              //     state->lastsynctype = -1;
 
-                  return (3);
-                }
-              else if ((state->lastsynctype == 4) && ((strcmp (synctest, X2TDMA_BS_DATA_SYNC) != 0) || (strcmp (synctest, X2TDMA_MS_DATA_SYNC) != 0)))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "(X2-TDMA)");
-                  if (opts->errorbars == 1)
-                    {
-                      printFrameSync (opts, state, "(+X2-TDMA) ", synctest_pos + 1, modulation);
-                    }
-                  state->lastsynctype = -1;
+              //     return (3);
+              //   }
+              // else if ((state->lastsynctype == 4) && ((strcmp (synctest, X2TDMA_BS_DATA_SYNC) != 0) || (strcmp (synctest, X2TDMA_MS_DATA_SYNC) != 0)))
+              //   {
+              //     state->carrier = 1;
+              //     state->offset = synctest_pos;
+              //     state->max = ((state->max) + lmax) / 2;
+              //     state->min = ((state->min) + lmin) / 2;
+              //     sprintf (state->ftype, "(X2-TDMA)");
+              //     if (opts->errorbars == 1)
+              //       {
+              //         printFrameSync (opts, state, "(+X2-TDMA) ", synctest_pos + 1, modulation);
+              //       }
+              //     state->lastsynctype = -1;
 
-                  return (4);
-                }
+              //     return (4);
+              //   }
 
                 //dmr desync handling, causes issues with TDMA stereo (MS especially), consider removing
                 //may have been because we had BS Voice twice on here, seems okay, continue testing
@@ -1548,80 +1548,80 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 }
                 */
 
-                else if ( (state->lastsynctype == 32) && (strcmp (synctest, DMR_MS_VOICE_SYNC) != 0) )
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "(DMR) ");
-                  if (opts->errorbars == 1)
-                    {
-                      //printFrameSync (opts, state, "(+DMR) ", synctest_pos + 1, modulation);
-                    }
-                  state->lastsynctype = -1;
-                  if ( opts->monitor_input_audio == 1)
-                  {
-                    pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                  }
-                  return (32); //32
-                }
+                // else if ( (state->lastsynctype == 32) && (strcmp (synctest, DMR_MS_VOICE_SYNC) != 0) )
+                // {
+                //   state->carrier = 1;
+                //   state->offset = synctest_pos;
+                //   state->max = ((state->max) + lmax) / 2;
+                //   state->min = ((state->min) + lmin) / 2;
+                //   sprintf (state->ftype, "(DMR) ");
+                //   if (opts->errorbars == 1)
+                //     {
+                //       //printFrameSync (opts, state, "(+DMR) ", synctest_pos + 1, modulation);
+                //     }
+                //   state->lastsynctype = -1;
+                //   if ( opts->monitor_input_audio == 1)
+                //   {
+                //     pa_simple_flush(opts->pulse_raw_dev_out, NULL);
+                //   }
+                //   return (32); //32
+                // }
 
-                else if ( (state->lastsynctype == 33) && (strcmp (synctest, DMR_MS_DATA_SYNC) != 0) )
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "(DMR) ");
-                  if (opts->errorbars == 1)
-                    {
-                      //printFrameSync (opts, state, "(+DMR) ", synctest_pos + 1, modulation);
-                    }
-                  state->lastsynctype = -1;
-                  if ( opts->monitor_input_audio == 1)
-                  {
-                    pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                  }
-                  return (33); //33
-                }
-                else if ( (state->lastsynctype == 34) && (strcmp (synctest, DMR_RC_DATA_SYNC) != 0) )
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "(DMR) ");
-                  if (opts->errorbars == 1)
-                    {
-                      //printFrameSync (opts, state, "(+DMR) ", synctest_pos + 1, modulation);
-                    }
-                  state->lastsynctype = -1;
-                  if ( opts->monitor_input_audio == 1)
-                  {
-                    pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                  }
-                  return (34); //34
-                }
+                // else if ( (state->lastsynctype == 33) && (strcmp (synctest, DMR_MS_DATA_SYNC) != 0) )
+                // {
+                //   state->carrier = 1;
+                //   state->offset = synctest_pos;
+                //   state->max = ((state->max) + lmax) / 2;
+                //   state->min = ((state->min) + lmin) / 2;
+                //   sprintf (state->ftype, "(DMR) ");
+                //   if (opts->errorbars == 1)
+                //     {
+                //       //printFrameSync (opts, state, "(+DMR) ", synctest_pos + 1, modulation);
+                //     }
+                //   state->lastsynctype = -1;
+                //   if ( opts->monitor_input_audio == 1)
+                //   {
+                //     pa_simple_flush(opts->pulse_raw_dev_out, NULL);
+                //   }
+                //   return (33); //33
+                // }
+                // else if ( (state->lastsynctype == 34) && (strcmp (synctest, DMR_RC_DATA_SYNC) != 0) )
+                // {
+                //   state->carrier = 1;
+                //   state->offset = synctest_pos;
+                //   state->max = ((state->max) + lmax) / 2;
+                //   state->min = ((state->min) + lmin) / 2;
+                //   sprintf (state->ftype, "(DMR) ");
+                //   if (opts->errorbars == 1)
+                //     {
+                //       //printFrameSync (opts, state, "(+DMR) ", synctest_pos + 1, modulation);
+                //     }
+                //   state->lastsynctype = -1;
+                //   if ( opts->monitor_input_audio == 1)
+                //   {
+                //     pa_simple_flush(opts->pulse_raw_dev_out, NULL);
+                //   }
+                //   return (34); //34
+                // }
 
-                else if ((state->lastsynctype == 11) && ((strcmp (synctest, DMR_BS_VOICE_SYNC) != 0) ))
-                {
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "(DMR) ");
-                  if (opts->errorbars == 1)
-                    {
-                      //printFrameSync (opts, state, "(-DMR) ", synctest_pos + 1, modulation);
-                    }
-                  state->lastsynctype = -1;
-                  if ( opts->monitor_input_audio == 1)
-                  {
-                    pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                  }
-                  return (11); //11
-                }
+                // else if ((state->lastsynctype == 11) && ((strcmp (synctest, DMR_BS_VOICE_SYNC) != 0) ))
+                // {
+                //   state->carrier = 1;
+                //   state->offset = synctest_pos;
+                //   state->max = ((state->max) + lmax) / 2;
+                //   state->min = ((state->min) + lmin) / 2;
+                //   sprintf (state->ftype, "(DMR) ");
+                //   if (opts->errorbars == 1)
+                //     {
+                //       //printFrameSync (opts, state, "(-DMR) ", synctest_pos + 1, modulation);
+                //     }
+                //   state->lastsynctype = -1;
+                //   if ( opts->monitor_input_audio == 1)
+                //   {
+                //     pa_simple_flush(opts->pulse_raw_dev_out, NULL);
+                //   }
+                //   return (11); //11
+                // }
 
                 //DMR desync
 
@@ -1659,13 +1659,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
                 }
               noCarrier (opts, state);
-
-              /*
-              if (opts->reset_state == 1)
-              {
-                resetState (state);
-              }
-              */
               return (-1);
             }
         }
