@@ -555,7 +555,10 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 
     return curr;
   }
+  
   state->dmrburstL = 16; //Use 16 for Voice?
+  state->currentslot = 0; //force to slot 0
+
   dibit_p = state->dmr_payload_p - 90;
 
   //CACH + First Half Payload + Sync = 12 + 54 + 24

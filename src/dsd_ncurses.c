@@ -515,7 +515,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
-          wscanw(entry_win, "%s", &opts->symbol_out_file);
+          wscanw(entry_win, "%s", opts->symbol_out_file); //&opts->symbol_out_file
           noecho();
 
           if (opts->symbol_out_file[0] != 0) //NULL
@@ -789,7 +789,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
-          wscanw(entry_win, "%s", &opts->audio_in_dev);
+          wscanw(entry_win, "%s", opts->audio_in_dev); //&opts->audio_in_dev
           noecho();
           //do the thing with the thing
           struct stat stat_buf;
@@ -914,7 +914,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       mvwprintw(entry_win, 8, 3, " ");
       echo();
       refresh();
-      wscanw(entry_win, "%d", &option);
+      wscanw(entry_win, "%hd", &option); //%d
       noecho();
       opts->dmr_mute_encL = 0;
       opts->dmr_mute_encR = 0;
@@ -1364,7 +1364,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       mvwprintw(entry_win, 3, 3, " ");
       echo();
       refresh();
-      wscanw(entry_win, "%X", &state->p2_wacn);
+      wscanw(entry_win, "%llX", &state->p2_wacn); //%X
       if (state->p2_wacn > 0xFFFFF)
       {
         state->p2_wacn = 0xFFFFF;
@@ -1377,7 +1377,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       mvwprintw(entry_win, 3, 3, " ");
       echo();
       refresh();
-      wscanw(entry_win, "%X", &state->p2_sysid);
+      wscanw(entry_win, "%llX", &state->p2_sysid); //%X
       if (state->p2_sysid > 0xFFF)
       {
         state->p2_sysid = 0xFFF;
@@ -1390,7 +1390,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       mvwprintw(entry_win, 3, 3, " ");
       echo();
       refresh();
-      wscanw(entry_win, "%X", &state->p2_cc);
+      wscanw(entry_win, "%llX", &state->p2_cc); //%X
       if (state->p2_cc > 0xFFF)
       {
         state->p2_cc = 0xFFF;
@@ -1422,7 +1422,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       mvwprintw(entry_win, 8, 2, " ");
       echo();
       refresh();
-      wscanw(entry_win, "%d", &lrrpchoice);
+      wscanw(entry_win, "%hd", &lrrpchoice); //%d
       noecho();
 
       if (lrrpchoice == 1)
@@ -1454,7 +1454,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         mvwprintw(entry_win, 3, 3, " ");
         echo();
         refresh();
-        wscanw(entry_win, "%s", &opts->lrrp_out_file);
+        wscanw(entry_win, "%s", opts->lrrp_out_file); //&opts->lrrp_out_file
         noecho();
         if (opts->lrrp_out_file[0] != 0) //NULL
         {
@@ -1947,7 +1947,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw (" Gain [%i] dB -", opts->rtl_gain_value);
     printw (" Squelch [%i]", opts->rtl_squelch_level);
     printw (" VFO [%i] kHz\n", opts->rtl_bandwidth);
-    printw ("| Freq: [%lld] Hz", opts->rtlsdr_center_freq);
+    printw ("| Freq: [%d] Hz", opts->rtlsdr_center_freq); //%lld
     printw (" - Tuning available on UDP Port [%i]\n", opts->rtl_udp_port);
   }
   if (opts->audio_out_type == 0)
@@ -2540,7 +2540,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         //DMR BS Types
         if (call_matrix[9-j][0] == 12 || call_matrix[9-j][0] == 13 || call_matrix[9-j][0] == 10 || call_matrix[9-j][0] == 11 )
         {
-          printw ("S[%d] ", call_matrix[9-j][3]);
+          printw ("S[%lld] ", call_matrix[9-j][3]); //%d
           printw ("TGT [%8lld] ", call_matrix[9-j][1]);
           printw ("SRC [%8lld] ", call_matrix[9-j][2]);
           printw ("DCC [%02lld] ", call_matrix[9-j][4]);

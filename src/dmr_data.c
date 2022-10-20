@@ -346,7 +346,7 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
   }
   else if (strcmp (bursttype, "0001") == 0)
   {
-    sprintf(state->fsubtype, " VOICE LC Header ");
+    sprintf(state->fsubtype, " VOICE LC     ");
   }
   else if (strcmp (bursttype, "0010") == 0)
   {
