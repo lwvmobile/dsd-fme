@@ -148,22 +148,31 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       // printf ("res: %zd\n, offset: %lld", result, sf_seek(opts->audio_in_file, 0, SEEK_CUR));
       if (opts->use_cosine_filter)
         {
-          if ( (state->lastsynctype >= 10 && state->lastsynctype <= 13) )
+          if ( (state->lastsynctype >= 10 && state->lastsynctype <= 13) || state->lastsynctype == 32 || state->lastsynctype == 33 || state->lastsynctype == 34)
           {
             sample = dmr_filter(sample);
           }
 
-          else if (state->lastsynctype == 8 || state->lastsynctype == 9 ||
-                 state->lastsynctype == 16 || state->lastsynctype == 17)
+          else if (state->lastsynctype == 8  || state->lastsynctype == 9  ||
+               state->lastsynctype == 16 || state->lastsynctype == 17 ||
+               state->lastsynctype == 20 || state->lastsynctype == 21 ||
+               state->lastsynctype == 22 || state->lastsynctype == 23 ||
+               state->lastsynctype == 24 || state->lastsynctype == 25 ||
+               state->lastsynctype == 26 || state->lastsynctype == 27 ) //||
+               //state->lastsynctype == 35 || state->lastsynctype == 36) //phase 2
             {
               if(state->samplesPerSymbol == 20)
-                {
-                  sample = nxdn_filter(sample);
-                }
+              {
+                sample = nxdn_filter(sample);
+              }
+              else if (state->samplesPerSymbol == 8) //phase 2 cqpsk
+              {
+                //sample = dmr_filter(sample); //work on filter later
+              }
               else // the 12.5KHz NXDN filter is the same as the DMR filter
-                {
-                  sample = dmr_filter(sample);
-                }
+              {
+                sample = dmr_filter(sample);
+              }
             }
         }
 
