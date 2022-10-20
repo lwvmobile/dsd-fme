@@ -87,6 +87,13 @@ processDMRdata (dsd_opts * opts, dsd_state * state)
 
   state->currentslot = cachdata[1]; 
 
+  //minor bugfix for MSData when MSData has accumulated data blocks
+  //(i.e. data header and 1/2 rate data), force all data into slot 0
+  if (state->dmr_ms_mode == 1)
+  {
+    state->currentslot = 0;
+  }
+
   if (state->currentslot == 0 && state->dmr_ms_mode == 0)
   {
     state->slot1light[0] = '[';

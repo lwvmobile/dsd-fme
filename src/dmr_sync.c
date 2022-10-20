@@ -301,7 +301,7 @@ void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98]
     fprintf (stderr,"%s", KNRM); //change back to normal
   }
   //Full Super Frame - Debug Output
-  if (opts->payload == 1 && state->data_block_counter[state->currentslot] == state->data_header_blocks[state->currentslot])
+  if (opts->payload == 2 && state->data_block_counter[state->currentslot] == state->data_header_blocks[state->currentslot])
   {
     fprintf (stderr, "%s",KGRN);
     fprintf (stderr, "\n Rate 3/4 Superframe - Slot [%d]\n  ",slot+1);
@@ -772,7 +772,7 @@ void Process1Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t
   }
 
   //Full Super Frame - Debug Output
-  if (opts->payload == 1 && state->data_block_counter[state->currentslot] == state->data_header_blocks[state->currentslot])
+  if (opts->payload == 2 && state->data_block_counter[state->currentslot] == state->data_header_blocks[state->currentslot])
   {
     fprintf (stderr, "%s",KGRN);
     fprintf (stderr, "\n Rate 1 Superframe - Slot [%d]\n  ",slot+1);
@@ -1457,7 +1457,7 @@ void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_
     fprintf (stderr,"%s", KNRM);
   }
   //Full Super Frame - Debug Output
-  if (opts->payload == 1 && state->data_block_counter[state->currentslot] == state->data_header_blocks[state->currentslot])
+  if (opts->payload == 2 && state->data_block_counter[state->currentslot] == state->data_header_blocks[state->currentslot])
   {
     fprintf (stderr, "%s",KGRN);
     fprintf (stderr, "\n Rate 1/2 Superframe - Slot [%d]\n  ",slot+1);
