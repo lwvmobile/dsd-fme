@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------------
- * p25_p2.c
- * Phase 2 TDMA Voice Processing
+ * p25p2_frame.c
+ * Phase 2 TDMA Frame Processing
  *
  * original copyrights for portions used below (OP25 DUID table, MAC len table)
  *
@@ -92,57 +92,49 @@ int sacch_rs[2][132] = {0};
 //store an entire p2 superframe worth of dibits into a bit buffer
 void p2_dibit_buffer (dsd_opts * opts, dsd_state * state)
 {
-
-  for (int i = 0; i < 2140; i++) //2160 for an entire superframe of dibits - 20 sync dibits
+	//we used to grab 2140 (entire superframe minus sync)
+	//now we grab 700 (4 Timeslots minus sync)
+  for (int i = 0; i < 700; i++) //2160 for an entire superframe of dibits - 20 sync dibits
   {
-	//symbol capture reading now handled directly by getSymbol and getDibit
-	dibit = getDibit(opts, state);
-	//dibit inversion handled internally by getDibit if sync type is inverted
-    p2bit[i*2]   = (dibit >> 1) & 1;
-    p2bit[i*2+1] = (dibit & 1);
+		//symbol capture reading now handled directly by getSymbol and getDibit
+		dibit = getDibit(opts, state);
+		//dibit inversion handled internally by getDibit if sync type is inverted
+  	p2bit[i*2]   = (dibit >> 1) & 1;
+  	p2bit[i*2+1] = (dibit & 1);
 
   }
 
-	//grab the entire VCH S-ISCH from the buffer and tack it onto the very end of the bitstream for reference?
-	int *dibit_p;
-	dibit_p = state->dibit_buf_p - 20; //rewind 20 dibits
-	for (int i = 2140; i < 2160; i++) //2160 for an entire superframe of dibits (Symbols)
-  	{
-		dibit = *dibit_p;
-    	dibit_p++;
-		p2bit[i*2]   = (dibit >> 1) & 1;
-    	p2bit[i*2+1] = (dibit & 1);
-	}
+
 }
 
 void process_Frame_Scramble (dsd_opts * opts, dsd_state * state)
 {
-  	//The bits of the scramble sequence corresponding to signal bits that are not scrambled or not used are discarded.
-  	//descramble frame scrambled by LFSR of WACN, SysID, and CC(NAC)
-  	unsigned long long int seed = 0;
+  //The bits of the scramble sequence corresponding to signal bits that are not scrambled or not used are discarded.
+  //descramble frame scrambled by LFSR of WACN, SysID, and CC(NAC)
+  unsigned long long int seed = 0;
 
 	//below calc is the same as shifting left the required number of bits.
 	seed = ( (state->p2_wacn * 16777216) + (state->p2_sysid * 4096) + state->p2_cc );
 
-  	unsigned long long int bit = 1; //temp bit for storage during LFSR operation
+  unsigned long long int bit = 1; //temp bit for storage during LFSR operation
 
-  	for (int i = 0; i < 4320; i++)
-  	{
-    //External LFSR in figure 7.1 BBAC
+  for (int i = 0; i < 4320; i++)
+  {
+  	//External LFSR in figure 7.1 BBAC
 
-	//assign our scramble bit to the array
-	p2lbit[i] = (seed >> 43) & 0x1;
-	//assign same bit to position +4320 to allow for a rollover with an offset value
-	p2lbit[i+4320] = (seed >> 43) & 0x1;
-	//compute our next scramble bit and shift the seed register and append bit to LSB
-	bit = ((seed >> 33) ^ (seed >> 19) ^ (seed >> 14) ^ (seed >> 8) ^ (seed >> 3) ^ (seed >> 43)) & 0x1;
-	seed = (seed << 1) | bit;
-  	}
+		//assign our scramble bit to the array
+		p2lbit[i] = (seed >> 43) & 0x1;
+		//assign same bit to position +4320 to allow for a rollover with an offset value
+		p2lbit[i+4320] = (seed >> 43) & 0x1;
+		//compute our next scramble bit and shift the seed register and append bit to LSB
+		bit = ((seed >> 33) ^ (seed >> 19) ^ (seed >> 14) ^ (seed >> 8) ^ (seed >> 3) ^ (seed >> 43)) & 0x1;
+		seed = (seed << 1) | bit;
+  }
 
 	for (int i = 0; i < 4300; i++)
-  	{
-	//offset by 20 for sync, then 360 for each ts frame off from start of superframe
-	p2xbit[i] = p2bit[i] ^ p2lbit[i+20+(360*state->p2_scramble_offset)];
+  {
+		//offset by 20 for sync, then 360 for each ts frame off from start of superframe
+		p2xbit[i] = p2bit[i] ^ p2lbit[i+20+(360*state->p2_scramble_offset)];
 	}
 
 }
@@ -363,11 +355,11 @@ void process_SACCHs (dsd_opts * opts, dsd_state * state)
 void process_ISCH (dsd_opts * opts, dsd_state * state)
 {
 	isch = 0;
-  	for (int i = 0; i < 40; i++)
-  	{
-    	isch = isch << 1;
-    	isch = isch | p2bit[i+320+(360*framing_counter)];
-  	}
+  for (int i = 0; i < 40; i++)
+  {
+   	isch = isch << 1;
+   	isch = isch | p2bit[i+320+(360*framing_counter)];
+  }
 
 	if (isch == 0x575D57F7FF) //S-ISCH frame sync, pass;
 	{
@@ -385,18 +377,30 @@ void process_ISCH (dsd_opts * opts, dsd_state * state)
 			int chan_num = (isch_decoded >> 5) & 0x3;
 			state->p2_vch_chan_num = chan_num;
 
+			//old rules for entire superframe worth
 			//determine where the offset should be by first finding TS 0
-			//this rule doesn't seem to work properly on LCCH, 
-			//duke always showed a chan 1 loc 0, so offset 12 - frame
-			if (chan_num == 0 && isch_loc == 0)
-			{
-				state->p2_scramble_offset = 11 - framing_counter;
-			}
-			//additional rule for odd chan number offset,
-			//fixes duke, and no issues with other samples
-			else if (chan_num == 1 && isch_loc == 0)
+			// if (chan_num == 0 && isch_loc == 0)
+			// {
+			// 	state->p2_scramble_offset = 11 - framing_counter;
+			// }
+			// //find TS1 if TS0 isn't found
+			// else if (chan_num == 1 && isch_loc == 0)
+			// {
+			// 	state->p2_scramble_offset = 12 - framing_counter; 
+			// }
+
+			//new rules for relative position to the only chan 1 we should see
+			if (chan_num == 1 && isch_loc == 0)
 			{
 				state->p2_scramble_offset = 12 - framing_counter; 
+			}
+			else if (chan_num == 1 && isch_loc == 1)
+			{
+				state->p2_scramble_offset = 4 - framing_counter; 
+			}
+			else if (chan_num == 1 && isch_loc == 2)
+			{
+				state->p2_scramble_offset = 8 - framing_counter; 
 			}
 
 		}
@@ -404,10 +408,9 @@ void process_ISCH (dsd_opts * opts, dsd_state * state)
 		{
 			//if -2(no return value) or -1(fec error)
 		}
-		
 
 	}
-	// fprintf (stderr, "\n");
+	
 
 }
 
@@ -653,140 +656,141 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
     return curr;
   	}
 
-  for (ts_counter = 0; ts_counter < 12; ts_counter++)
+  for (ts_counter = 0; ts_counter < 4; ts_counter++) //12
   {
 
-	p2_duid[0] = p2bit[0+(ts_counter*360)];
-    p2_duid[1] = p2bit[1+(ts_counter*360)];
-    p2_duid[2] = p2bit[74+(ts_counter*360)];
-    p2_duid[3] = p2bit[75+(ts_counter*360)];
-    p2_duid[4] = p2bit[244+(ts_counter*360)];
-    p2_duid[5] = p2bit[245+(ts_counter*360)];
-    p2_duid[6] = p2bit[318+(ts_counter*360)];
-    p2_duid[7] = p2bit[319+(ts_counter*360)];
+		p2_duid[0] = p2bit[0+(ts_counter*360)];
+		p2_duid[1] = p2bit[1+(ts_counter*360)];
+		p2_duid[2] = p2bit[74+(ts_counter*360)];
+		p2_duid[3] = p2bit[75+(ts_counter*360)];
+		p2_duid[4] = p2bit[244+(ts_counter*360)];
+		p2_duid[5] = p2bit[245+(ts_counter*360)];
+		p2_duid[6] = p2bit[318+(ts_counter*360)];
+		p2_duid[7] = p2bit[319+(ts_counter*360)];
 
-    //process p2_duid with (8,4,4) encoding/decoding
-    int p2_duid_complete = 0;
-    for (int i = 0; i < 8; i++)
-    {
-      p2_duid_complete = p2_duid_complete << 1;
-      p2_duid_complete = p2_duid_complete | p2_duid[i];
-    }
-    duid_decoded = duid_lookup[p2_duid_complete];
-
-	fprintf (stderr, "\n");
-	fprintf (stderr,"%s ", getTime());
-	fprintf (stderr, "       P25p2 ");
-
-	if (state->currentslot == 0)
-	{
-		state->currentslot = 1;
-	}
-	else
-	{
-		state->currentslot = 0;
-	}
-
-	//print our VCH channel number, or print S for SACCH since its inverted
-	if (state->currentslot == 0 && duid_decoded != 3 && duid_decoded != 12)
-	{
-		fprintf (stderr, "VCH 0 ");
-	}
-	else if (state->currentslot == 1 && duid_decoded != 3 && duid_decoded != 12)
-	{
-		fprintf (stderr, "VCH 1 ");
-	}
-	else fprintf (stderr, "VCH S ");
-
-    if (duid_decoded == 0)
-    {
-      	fprintf (stderr, " 4V %d", state->fourv_counter[state->currentslot]+1);
-		if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
-				state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
+		//process p2_duid with (8,4,4) encoding/decoding
+		int p2_duid_complete = 0;
+		for (int i = 0; i < 8; i++)
 		{
-			process_4V (opts, state);
+			p2_duid_complete = p2_duid_complete << 1;
+			p2_duid_complete = p2_duid_complete | p2_duid[i];
 		}
-    }
-    else if (duid_decoded == 6)
-    {
-      	fprintf (stderr, " 2V");
-		if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
-				state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
+		duid_decoded = duid_lookup[p2_duid_complete];
+
+		fprintf (stderr, "\n");
+		fprintf (stderr,"%s ", getTime());
+		fprintf (stderr, "       P25p2 ");
+
+		//print our VCH channel number, or print S for SACCH since its inverted
+		if (state->currentslot == 0 && duid_decoded != 3 && duid_decoded != 12)
 		{
-			process_2V (opts, state);
+			fprintf (stderr, "VCH 0 ");
 		}
-    }
-	else if (duid_decoded == 3)
-    {
-		if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
-				state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
+		else if (state->currentslot == 1 && duid_decoded != 3 && duid_decoded != 12)
 		{
-			process_SACCHs(opts, state);
+			fprintf (stderr, "VCH 1 ");
 		}
-    }
-	else if (duid_decoded == 12)
-    {
-		process_SACCHc(opts, state);
-    }
-	else if (duid_decoded == 15)
-    {
-		process_FACCHc(opts, state);
-    }
-	else if (duid_decoded == 9)
-    {
-		if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
-				state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
+		else fprintf (stderr, "VCH S ");
+
+		if (duid_decoded == 0)
 		{
-			process_FACCHs(opts, state);
+			fprintf (stderr, " 4V %d", state->fourv_counter[state->currentslot]+1);
+			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
+			{
+				process_4V (opts, state);
+			}
 		}
-    }
-	else if (duid_decoded == 13)
-    {
-		state->p2_is_lcch = 1;
-		process_SACCHc(opts, state);
-    }
-	else if (duid_decoded == 4)
-    {
-      	fprintf (stderr, " LCCH Sc"); //w/ scrambling
-		if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
-				state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
+		else if (duid_decoded == 6)
+		{
+			fprintf (stderr, " 2V");
+			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
+			{
+				process_2V (opts, state);
+			}
+		}
+		else if (duid_decoded == 3)
+		{
+			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
+			{
+				process_SACCHs(opts, state);
+			}
+		}
+		else if (duid_decoded == 12)
+		{
+			process_SACCHc(opts, state);
+		}
+		else if (duid_decoded == 15)
+		{
+			process_FACCHc(opts, state);
+		}
+		else if (duid_decoded == 9)
+		{
+			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
+			{
+				process_FACCHs(opts, state);
+			}
+		}
+		else if (duid_decoded == 13)
 		{
 			state->p2_is_lcch = 1;
-			process_SACCHs(opts, state);
+			process_SACCHc(opts, state);
 		}
-    }
-	else
-	{
-		fprintf (stderr, " DUID ERR %d", duid_decoded);
-		if (state->currentslot == 0) state->dmrburstL = 12;
-		else state->dmrburstR = 12;
-		err_counter++;
-	}
-	if (err_counter > 1) //&& opts->aggressive_framesync == 1
-	{
-		//zero out values when errs accumulate in DUID
-		//most likely cause will be signal drop or tuning away
-		state->payload_algid = 0;
-		state->payload_keyid = 0;
-		state->payload_algidR = 0;
-		state->payload_keyidR = 0;
-		state->lastsrc = 0;
-		state->lastsrcR = 0;
-		state->lasttg = 0;
-		state->lasttgR = 0;
-		state->p2_is_lcch = 0;
-		state->fourv_counter[0] = 0;
-		state->fourv_counter[1] = 0;
+		else if (duid_decoded == 4)
+		{
+			fprintf (stderr, " LCCH Sc"); //w/ scrambling
+			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
+					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
+			{
+				state->p2_is_lcch = 1;
+				process_SACCHs(opts, state);
+			}
+		}
+		else
+		{
+			fprintf (stderr, " DUID ERR %d", duid_decoded);
+			if (state->currentslot == 0) state->dmrburstL = 12;
+			else state->dmrburstR = 12;
+			err_counter++;
+		}
+		if (err_counter > 1) //&& opts->aggressive_framesync == 1
+		{
+			//zero out values when errs accumulate in DUID
+			//most likely cause will be signal drop or tuning away
+			state->payload_algid = 0;
+			state->payload_keyid = 0;
+			state->payload_algidR = 0;
+			state->payload_keyidR = 0;
+			state->lastsrc = 0;
+			state->lastsrcR = 0;
+			state->lasttg = 0;
+			state->lasttgR = 0;
+			state->p2_is_lcch = 0;
+			state->fourv_counter[0] = 0;
+			state->fourv_counter[1] = 0;
 
-		goto END;
-	}
-	//since we are in a while loop, run ncursesPrinter here.
-	if (opts->use_ncurses_terminal == 1)
-	{
-	  ncursesPrinter(opts, state);
-	}
-	//add 360 bits to each counter
-	vc_counter = vc_counter + 360;
+			goto END;
+		}
+		//since we are in a while loop, run ncursesPrinter here.
+		if (opts->use_ncurses_terminal == 1)
+		{
+			ncursesPrinter(opts, state);
+		}
+		//add 360 bits to each counter
+		vc_counter = vc_counter + 360;
+
+		//flip slots after each TS processed
+		if (state->currentslot == 0)
+		{
+			state->currentslot = 1;
+		}
+		else
+		{
+			state->currentslot = 0;
+		}
 
   }
 	END:
@@ -800,22 +804,29 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 void processP2 (dsd_opts * opts, dsd_state * state)
 {
 	state->dmr_stereo = 1; 
-	state->currentslot = 1; 
+	//state->currentslot = 1; 
 
 	p2_dibit_buffer (opts, state);
 
 	//look at our ISCH values and determine location in superframe before running frame scramble
-	for (framing_counter = 0; framing_counter < 11; framing_counter++) //11, or 12
+	for (framing_counter = 0; framing_counter < 4; framing_counter++) //12
 	{
 		process_ISCH (opts, state); //run ISCH in here so we know when to start descramble offset
 	}
 
+	//set initial current slot depending on offset value
+	if (state->p2_scramble_offset % 2)
+	{
+		state->currentslot = 0; 
+	}
+	else state->currentslot = 1; 
+
 	//frame_scramble runs lfsr and creates an array of unscrambled bits to pull from
-  	process_Frame_Scramble (opts, state);
+  process_Frame_Scramble (opts, state);
 
 	//process DUID will run through all collected frames and handle them appropriately
-  	process_P2_DUID (opts, state);
+  process_P2_DUID (opts, state);
 	state->dmr_stereo = 0; 
 	state->p2_is_lcch = 0; 
-  	fprintf (stderr, "\n"); 
+  fprintf (stderr, "\n"); 
 }

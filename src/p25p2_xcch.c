@@ -75,6 +75,8 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			if (SMAC[1] == 0x0) //NULL PDU Check, pass if NULL type
 			{
 				//fprintf (stderr, " NULL ");
+				state->p2_is_lcch = 0; //turn flag off here
+				goto END_SMAC;
 			}
 			else //permit MAC_SIGNAL on CRC ERR if -F option called
 			{
