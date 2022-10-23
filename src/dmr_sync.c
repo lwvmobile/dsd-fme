@@ -2747,7 +2747,7 @@ void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state)
 } /* End ProcessVoiceBurstSync() */
 
 //LFSR code courtesy of https://github.com/mattames/LFSR/
-int LFSR(dsd_state * state)
+void LFSR(dsd_state * state)
 {
 
   int lfsr = 0;
