@@ -873,7 +873,7 @@ void ProcessReservedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], 
 void ProcessUnifiedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
 
 //LFSR code courtesy of https://github.com/mattames/LFSR/
-int LFSR(dsd_state * state);
+void LFSR(dsd_state * state);
 void LFSRN (char * BufferIn, char * BufferOut, dsd_state * state);
 
 void Hamming_7_4_init();
