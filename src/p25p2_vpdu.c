@@ -1,9 +1,9 @@
 /*-------------------------------------------------------------------------------
  * p25p2_vpdu.c
- * Phase 2 Variable PDU Handling
+ * Phase 2 Variable PDU (and TSBK PDU) Handling
  *
  * LWVMOBILE
- * 2022-09 DSD-FME Florida Man Edition
+ * 2022-10 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
@@ -76,6 +76,70 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 	for (int i = 0; i < 2; i++) 
 	{
+
+		//New PDUs added below here as of 10-23-2022
+
+		//SNDCP Data Channel Announcement
+		if (MAC[1+len_a] == 0xD6)
+		{
+			fprintf (stderr, "\n SNDCP Data Channel Announcement ");	
+		}
+
+		//MFID90 Group Regroup Add Command
+		if (MAC[1+len_a] == 0x81) //needs MAC message len update, may work same as explicit enc regroup?
+		{
+			fprintf (stderr, "\n MFID90 Group Regroup Add Command ");	
+		}
+
+		//Authentication Response - Abbreviated
+		if (MAC[1+len_a] == 0x78) 
+		{
+			int res1 = 0; //don't really care about this value, just setting it to zero
+			int source = (MAC[8+len_a] << 16) | (MAC[9+len_a] << 8) | MAC[10+len_a];
+			fprintf (stderr, "\n Authentication Response - Abbreviated \n");
+			fprintf (stderr, "  Source [%08d][%06X] ", source, source);
+		}
+
+		//Authentication Response - Extended
+		if (MAC[1+len_a] == 0xF8) 
+		{
+			//only partial data will print on this, do we really care about the SUID?
+			int source = (MAC[5+len_a] << 16) | (MAC[6+len_a] << 8) | MAC[7+len_a];
+			fprintf (stderr, "\n Authentication Response - Extended \n");
+			fprintf (stderr, "  Source [%08d][%06X] ", source, source);
+		}
+
+		//RFSS Status Broadcast - Implicit
+		if (MAC[1+len_a] == 0x7A) 
+		{
+			int lra = MAC[2+len_a];
+			int lsysid = ((MAC[3+len_a] & 0xF) << 8) | MAC[4+len_a];
+			int rfssid = MAC[5+len_a];
+			int siteid = MAC[6+len_a];
+			int channel = (MAC[7+len_a] << 8) | MAC[8+len_a];
+			int sysclass = MAC[9+len_a];
+			fprintf (stderr, "\n RFSS Status Broadcast - Implicit \n");
+			fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%02X] SITE ID [%02X] CHAN [%04X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channel, sysclass);
+			process_channel_to_freq (opts, state, channel);
+		}
+
+		//RFSS Status Broadcast - Explicit
+		if (MAC[1+len_a] == 0xFA) 
+		{
+			int lra = MAC[2+len_a];
+			int lsysid = ((MAC[3+len_a] & 0xF) << 8) | MAC[4+len_a];
+			int rfssid = MAC[5+len_a];
+			int siteid = MAC[6+len_a];
+			int channelt = (MAC[7+len_a] << 8) | MAC[8+len_a];
+			int channelr = (MAC[9+len_a] << 8) | MAC[10+len_a];
+			int sysclass = MAC[11+len_a];
+			fprintf (stderr, "\n RFSS Status Broadcast - Explicit \n");
+			fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%02X] SITE ID [%02X]\n  CHAN-T [%04X] CHAN-R [%02X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channelt, channelr, sysclass);
+			process_channel_to_freq (opts, state, channelt);
+			process_channel_to_freq (opts, state, channelr);
+		}
+
+		//End New PDUs added
 
 		//Group Voice Channel Grant (GRP_V_CH_GRANT)
 		if (MAC[1+len_a] == 0x40)

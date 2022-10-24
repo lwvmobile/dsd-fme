@@ -1,9 +1,9 @@
 /*-------------------------------------------------------------------------------
  * p25p1_tsbk.c
- * P25 Trunking Signal Block Handler
+ * P25p1 Trunking Signal Block Handler
  *
  * LWVMOBILE
- * 2022-09 DSD-FME Florida Man Edition
+ * 2022-10 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
@@ -19,16 +19,14 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
   int tsbk_decoded_bits[190] = {0}; //decoded bits from tsbk_bytes for sending to crc16_lb_bridge
   int i, j, k, b, x, y;
   int ec = -2; //error value returned from (block_deinterleave)
-  int checksum = -2; //checksum returned from crc16, 0 is valid, anything else is invalid
-  int skipdibit = 14; //initial status dibit will occur at 14, then add 35 each time it occurs
+  int err = -2; //error value returned from crc16_lb_bridge
+  int skipdibit = 14; //initial status dibit will occur at 14, then add 36 each time it occurs
 
+  //Update: Identified Bug in skipdibit incrememnt causing many block deinterleave/crc failures
+  //with correct values set, now we are decoding many more TSBKs
+  //TODO: Don't Print TSBKs/vPDUs unless verbosity levels set higher
   //TSBKs are always single block, but up to three can be transmitted in a row,
-  //my observation shows that, as far as I know, only the first block of three is good,
-  //and NULL types can contain some amount of garbage, but the CRC is always 00s.
-  //Multi-Block PDUs are sent on a different DUID - 0xC
-  //Best way to proceed for now is going to be to collect all three potentials, and only process on good
-  //de-interleaves AND good CRCs, otherwise, ignore them
-  //The Last Block flag doesn't really seem to apply for some reason (byte 0 0x80), or is always on a garbage block
+  //Multi-Block PDUs are sent on a different DUID - 0xC (not handled currently)
 
   //collect three reps of 101 dibits (98 valid dibits with status dibits interlaced)
   for (j = 0; j < 3; j++)
@@ -49,7 +47,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
 
       if (i+(j*101) == skipdibit) 
       {
-        skipdibit += 35;
+        skipdibit += 36; //was set to 35, this was the bug
       }
 
     }
@@ -68,16 +66,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       }
     }
 
-    int err = -2;
     err = crc16_lb_bridge(tsbk_decoded_bits, 80);
-    if (ec != 0)
-    {
-      //fprintf (stderr, "BAD BLOCK DEINTERLEAVE");
-    }
-    if (err != 0)
-    {
-      //fprintf (stderr, "BAD CRC16");
-    }
 
     //shuffle corrected bits back into tsbk_byte
     k = 0;
@@ -93,9 +82,10 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       tsbk_byte[i] = byte;
     }
 
-    //convert tsbk_byte to PDU and send to vPDU handler...may or may not be entirely compatible, 
+    //convert tsbk_byte to PDU and send to vPDU handler
+    //...may or may not be entirely compatible, 
     PDU[0] = 0x07; //P25p1 TSBK Duid 0x07
-    PDU[1] = tsbk_byte[0];
+    PDU[1] = tsbk_byte[0] & 0x3F;
     PDU[2] = tsbk_byte[2];
     PDU[3] = tsbk_byte[3];
     PDU[4] = tsbk_byte[4];
@@ -110,7 +100,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     PDU[1] = PDU[1] ^ 0x40; //flip bit to make it compatible with MAC_PDUs, i.e. 3D to 7D
 
     //Don't run NET_STS out of this, or will set wrong NAC/CC
-    if (err == 0 && ec == 0 && PDU[1] != 0x7B && PDU[1] != 0xFB && PDU[1] != 0x49 && PDU[1] != 0x45) //0x49 is telephone grant, 0x46 Unit to Unit Channel Answer Request
+    if (err == 0 && ec == 0 && PDU[1] != 0x7B && PDU[1] != 0x49 && PDU[1] != 0x45) //0x49 is telephone grant, 0x46 Unit to Unit Channel Answer Request (seems bogus)
     {
       fprintf (stderr, "%s",KMAG);
       process_MAC_VPDU(opts, state, 0, PDU);
@@ -149,7 +139,12 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
 
     //reset for next rep
     ec = -2;
-    checksum = -2;
+    err = -2;
+    //check for last block bit
+    if ( (tsbk_byte[0] >> 7) == 1 ) 
+    {
+      j = 4; //set j to break the loop early
+    }
   }
   fprintf (stderr, "\n"); 
 }
