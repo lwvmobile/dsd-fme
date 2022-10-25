@@ -143,9 +143,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       //  0 +P25p1
       //  1 -P25p1
 			state->errs = mbe_eccImbe7200x4400C0 (imbe_fr);
-			state->errs2 = state->errs;
+			//state->errs2 = state->errs;
 			mbe_demodulateImbe7200x4400Data (imbe_fr);
-			state->errs2 += mbe_eccImbe7200x4400Data (imbe_fr, imbe_d);
+			state->errs2 = mbe_eccImbe7200x4400Data (imbe_fr, imbe_d);
 
 
 
@@ -170,9 +170,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     {
 
 			state->errs = mbe_eccImbe7100x4400C0 (imbe7100_fr);
-			state->errs2 = state->errs;
+			//state->errs2 = state->errs;
 			mbe_demodulateImbe7100x4400Data (imbe7100_fr);
-			state->errs2 += mbe_eccImbe7100x4400Data (imbe7100_fr, imbe_d);
+			state->errs2 = mbe_eccImbe7100x4400Data (imbe7100_fr, imbe_d);
 			mbe_convertImbe7100to7200(imbe_d); //needs extra conversion step apparently
 
 			mbe_processImbe4400Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
@@ -203,10 +203,11 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
 	else if ((state->synctype == 8) || (state->synctype == 9))
 	{
+
 		state->errs = mbe_eccAmbe3600x2450C0 (ambe_fr);
-		state->errs2 = state->errs;
+		//state->errs2 = state->errs;
 		mbe_demodulateAmbe3600x2450Data (ambe_fr);
-		state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+		state->errs2 = mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
     if ( (state->nxdn_cipher_type == 0x01 && state->R > 0) ||
           (state->M == 1 && state->R > 0) )
@@ -248,9 +249,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       {
 
         state->errs = mbe_eccAmbe3600x2450C0 (ambe_fr);
-        state->errs2 = state->errs;
+        //state->errs2 = state->errs;
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
-        state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+        state->errs2 = mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
 		    if ( (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10) ||
               (state->K > 0 && state->M == 1) )
@@ -343,9 +344,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       {
 
         state->errsR = mbe_eccAmbe3600x2450C0 (ambe_fr);
-        state->errs2R = state->errsR;
+        //state->errs2R = state->errsR;
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
-        state->errs2R += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+        state->errs2R = mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
         if ( (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10) ||
               (state->K > 0 && state->M == 1) )

@@ -1156,7 +1156,7 @@ main (int argc, char **argv)
           break;
 
         case 'T': //repurposed to TDMA/NXDN Per Call
-        sprintf (wav_file_directory, "./WAV"); // /wav, or ./wav
+        sprintf (wav_file_directory, "./WAV"); 
         wav_file_directory[1023] = '\0';
         if (stat(wav_file_directory, &st) == -1)
         {
@@ -1165,17 +1165,19 @@ main (int argc, char **argv)
           mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
         }
         fprintf (stderr,"XDMA and NXDN Per Call Wav File Saving Enabled. (NCurses Terminal Only)\n");
-        sprintf (opts.wav_out_file, "./WAV/DSD-FME-X1.wav"); // foward slash here, on wav_file_directory?
+        sprintf (opts.wav_out_file, "./WAV/DSD-FME-X1.wav"); 
         sprintf (opts.wav_out_fileR, "./WAV/DSD-FME-X2.wav");
         opts.dmr_stereo_wav = 1;
-        openWavOutFileL (&opts, &state); //testing for now, will want to move to per call later
-        openWavOutFileR (&opts, &state); //testing for now, will want to move to per call later
+        openWavOutFileL (&opts, &state); 
+        openWavOutFileR (&opts, &state); 
         break;
 
         case 'F':
           opts.aggressive_framesync = 0;
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr,"DMR Stereo Aggressive Resync Disabled!\n");
+          //fprintf (stderr,"DMR Stereo Aggressive Resync Disabled!\n");
+          fprintf (stderr, "Relax P25 Phase 2 MAC_SIGNAL CRC Checksum Pass/Fail\n");
+          fprintf (stderr, "Relax DMR CACH/Burst FEC Pass/Fail\n");
           fprintf (stderr, "%s", KNRM);
           break;
 

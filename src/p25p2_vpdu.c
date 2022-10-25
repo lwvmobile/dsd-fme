@@ -220,7 +220,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			          year, month, day, hour, min, seconds); 
 			fprintf (stderr, "  Local Time Offset: %.01f Hours;", offhour);
 			//if ist bit is set, then time on system may be considered invalid (i.e., no external time sync)
-			if (ist == 1)
+			if (ist % 1)
 			{
 				fprintf (stderr, " Invalid System Time ");
 			}

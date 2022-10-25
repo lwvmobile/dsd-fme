@@ -65,16 +65,39 @@ int i = 0;
 char versionstr[25];
 unsigned long long int call_matrix[33][6];
 
+/*
+       ___)__|_
+  .-*'          '*-,
+ /      /|   |\     \
+;      /_|   |_\     ;
+;   |\           /|  ;
+;   | ''--...--'' |  ;
+ \  ''---.....--''  /
+  ''*-.,_______,.-*'   BOO!
+*/
+
+// char * FM_bannerN[9] = {
+//   "                             ESC or Arrow Keys For Menu   ",
+//   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  ",
+//   " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝  ",
+//   " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗    ",
+//   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝    ",
+//   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗  ",
+//   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝  ",
+//   "                                                          ",
+//   "                                                          "
+// };
+
 char * FM_bannerN[9] = {
-  "                             ESC or Arrow Keys For Menu   ",
-  " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  ",
-  " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝  ",
-  " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗    ",
-  " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝    ",
-  " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗  ",
-  " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝  ",
-  "                                                          ",
-  "                                                          "
+  " ESC or Arrow Keys For Menu            Happy Halloween!        ___)__|_        ",
+  " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  .-*'          '*-,   ",
+  " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝;      /_|   |_\\     ;",
+  " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗  ;   |\\           /|  ;",
+  " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ;   | ''--...--'' |  ; ",
+  " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗ \\  ''---.....--''  / ",
+  " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝  ''*-.,_______,.-*'   ",
+  "                                                           Happy Halloween     ",
+  "                                                                               "
 };
 
 char * SyncTypes[44] = {
@@ -152,8 +175,8 @@ char * DMRBusrtTypes[32] = {
   "VOICE LDU",
   "TDU/TDULC",
   "TSBK",
-  "MAC_SIGNAL",
-  "MAC_SIGNAL"
+  "MAC SIGNAL",
+  "MAC SIGNAL"
 
 };
 
@@ -1910,13 +1933,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->ncurses_compact == 0)
   {
-    attron(COLOR_PAIR(6)); //6
+    attron(COLOR_PAIR(1)); //6
     for (short int i = 0; i < 7; i++)
     {
       printw("%s \n", FM_bannerN[i]);
     }
     printw (" https://github.com/lwvmobile/dsd-fme/tree/pulseaudio\n");
-    printw (" Github Build Version: %s \n", GIT_TAG);
+    //printw (" Github Build Version: %s \n", GIT_TAG);
+    printw (" Github Build Version: %s \n", "1313"); //probably better than the first number I thought of
     attroff(COLOR_PAIR(6)); //6
     // printw ("--Build Info------------------------------------------------------------------\n");
     // printw ("| https://github.com/lwvmobile/dsd-fme/tree/pulseaudio\n"); //http link
