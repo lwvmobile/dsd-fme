@@ -1757,32 +1757,6 @@ void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t 
     sprintf(state->dmr_branding, " Hytera XPT ");
   }
 
-  //Testing CSBK Voice Call on Tait //CSBK Protect  RID ILLEGALLY_PARKED
-  // if ((IrrecoverableErrors == 0) && CRCCorrect)
-  // {
-  //   if (DmrDataByte[0] == 0xAF)
-  //   {
-  //     if (state->currentslot == 0)
-  //     {
-  //       state->lastsrc = (DmrDataByte[4] << 16) | (DmrDataByte[5] << 8) | (DmrDataByte[6] << 0);
-  //       state->lasttg  = (DmrDataByte[7] << 16) | (DmrDataByte[8] << 8) | (DmrDataByte[9] << 0);
-  //       fprintf (stderr, "%s", KGRN);
-  //       fprintf (stderr, "\n SLOT %d ", state->currentslot+1);
-  //       fprintf(stderr, "TGT=%u SRC=%u ", state->lasttg, state->lastsrc);
-  //       fprintf(stderr, " CSBK Voice LC??");
-  //     }
-  //     if (state->currentslot == 1)
-  //     {
-  //       state->lastsrcR = (DmrDataByte[4] << 16) | (DmrDataByte[5] << 8) | (DmrDataByte[6] << 0);
-  //       state->lasttgR  = (DmrDataByte[7] << 16) | (DmrDataByte[8] << 8) | (DmrDataByte[9] << 0);
-  //       fprintf (stderr, "%s", KGRN);
-  //       fprintf (stderr, "\n SLOT %d ", state->currentslot+1);
-  //       fprintf(stderr, "TGT=%u SRC=%u ", state->lasttgR, state->lastsrcR);
-  //       fprintf(stderr, " CSBK Voice LC??");
-  //     }
-  //   }
-  // }
-
   //Full
   if (opts->payload == 1)
   {
@@ -2049,9 +2023,12 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
 
   /* Store the Source address */
   TSVoiceSupFrame->FullLC.SourceAddress = (unsigned int)ConvertBitIntoBytes(&DmrDataBit[48], 24);
-  //truncate if Byte 0 isn't 0, 0x04 (or other) may signify a Cap+ System
-  if (DmrDataByte != 0x0)
+
+  int rest_channel = -1; //set rest_channel to -1; if set to other value, then we know we have a Cap+?
+  //Below "Should" be a MotoTRBO Cap+ system
+  if (TSVoiceSupFrame->FullLC.FullLinkControlOpcode & 0x4 && TSVoiceSupFrame->FullLC.FeatureSetID == 0x10) 
   {
+    rest_channel = (TSVoiceSupFrame->FullLC.SourceAddress >> 16); //8 bits for Rest Channel
     TSVoiceSupFrame->FullLC.SourceAddress = TSVoiceSupFrame->FullLC.SourceAddress & 0xFFFF;
   }
 
@@ -2144,38 +2121,13 @@ void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[19
   else if(IrrecoverableErrors == 0) {}//fprintf(stderr, "RAS (FEC OK/CRC ERR)");
   else {}//fprintf(stderr, "(FEC FAIL/CRC ERR)");
 
-#ifdef PRINT_VOICE_LC_HEADER_BYTES
-  fprintf(stderr, "\n");
-  fprintf(stderr, "VOICE LC HEADER : ");
-  for(i = 0; i < 12; i++)
+  //check Cap+ rest channel info if available
+  if (rest_channel != -1)
   {
-    fprintf(stderr, "0x%02X", DmrDataByte[i]);
-    if(i != 11) fprintf(stderr, " - ");
+    //fprintf (stderr, "Cap+ R-Ch=%d", rest_channel);
   }
 
-  fprintf(stderr, "\n");
-
-  fprintf(stderr, "BPTC(196,96) Reserved bit R(0)-R(2) = 0x%02X\n", BPTCReservedBits);
-
-  fprintf(stderr, "CRC extracted = 0x%04X - CRC computed = 0x%04X - ", CRCExtracted, CRCComputed);
-
-  if((IrrecoverableErrors == 0) && CRCCorrect)
-  {
-    fprintf(stderr, "CRCs are equal + FEC OK !\n");
-  }
-  else if(IrrecoverableErrors == 0)
-  {
-    else fprintf(stderr, "FEC correctly corrected but CRCs are incorrect\n");
-  }
-  else
-  {
-    fprintf(stderr, "ERROR !!! CRCs are different and FEC Failed !\n");
-  }
-
-  fprintf(stderr, "Hamming Irrecoverable Errors = %u\n", IrrecoverableErrors);
-#endif /* PRINT_VOICE_LC_HEADER_BYTES */
-
-//Full
+  //Full
   if (opts->payload == 1)
   {
     fprintf (stderr, "%s", KCYN);

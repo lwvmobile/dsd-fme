@@ -434,7 +434,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         }
       }
 
-      //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
+      //X2-TDMA? Not sure what still makes it this far to run under Framef
       if (opts->dmr_stereo == 0)
       {
         mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);

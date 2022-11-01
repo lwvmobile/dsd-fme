@@ -65,40 +65,20 @@ int i = 0;
 char versionstr[25];
 unsigned long long int call_matrix[33][6];
 
-/*
-       ___)__|_
-  .-*'          '*-,
- /      /|   |\     \
-;      /_|   |_\     ;
-;   |\           /|  ;
-;   | ''--...--'' |  ;
- \  ''---.....--''  /
-  ''*-.,_______,.-*'   BOO!
-*/
-
-// char * FM_bannerN[9] = {
-//   "                             ESC or Arrow Keys For Menu   ",
-//   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  ",
-//   " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝  ",
-//   " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗    ",
-//   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝    ",
-//   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗  ",
-//   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝  ",
-//   "                                                          ",
-//   "                                                          "
-// };
 
 char * FM_bannerN[9] = {
-  " ESC or Arrow Keys For Menu            Happy Halloween!        ___)__|_        ",
-  " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  .-*'          '*-,   ",
-  " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝;      /_|   |_\\     ;",
-  " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗  ;   |\\           /|  ;",
-  " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ;   | ''--...--'' |  ; ",
-  " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗ \\  ''---.....--''  / ",
-  " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝  ''*-.,_______,.-*'   ",
-  "                                                           Happy Halloween     ",
-  "                                                                               "
+  "                             ESC or Arrow Keys For Menu   ",
+  " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  ",
+  " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝  ",
+  " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗    ",
+  " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝    ",
+  " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗  ",
+  " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝  ",
+  "                                                          ",
+  "                                                          "
 };
+
+
 
 char * SyncTypes[44] = {
   "P25P1",
@@ -111,10 +91,10 @@ char * SyncTypes[44] = {
   "DSTAR",
   "NXDN VOICE",
   "NXDN VOICE",
-  "DMR DATA", //10
-  "DMR DATA",
-  "DMR VOICE",
-  "DMR VOICE",
+  "DMR ", //10
+  "DMR ",
+  "DMR ",
+  "DMR ",
   "PROVOICE",
   "PROVOICE",
   "NXDN VOICE", //DATA
@@ -146,7 +126,7 @@ char * SyncTypes[44] = {
 
 char * DMRBusrtTypes[32] = {
   "PI Header     ",
-  "VOICE LC HDR  ",
+  "VOICE LC      ",
   "TLC           ",
   "CSBK          ",
   "MBC Header    ",
@@ -155,7 +135,7 @@ char * DMRBusrtTypes[32] = {
   "RATE 1/2 DATA ",
   "RATE 3/4 DATA ",
   "Slot Idle     ",
-  "Rate 1 DATA   ",
+  "RATE 1 DATA   ",
   "ERR           ", //These values for ERR may be Reserved for use in future?
   "DUID ERR      ",
   "R-S ERR       ",
@@ -180,6 +160,11 @@ char * DMRBusrtTypes[32] = {
 
 };
 
+//there is still a bug in beeper, but the bug isn't related to call history,
+//if it were, per call wav would also be affected.
+//seems to do with playing a wav file,
+//debug shows it should trigger even when you don't hear it
+//no beep or double beep still happens randomly but debug shows only one played!?
 void beeper (dsd_opts * opts, dsd_state * state, int type)
 {
   FILE *beep;
@@ -199,7 +184,8 @@ void beeper (dsd_opts * opts, dsd_state * state, int type)
   if (stat(wav_name, &stat_buf) == 0)
   {
     beep = fopen (wav_name, "ro");
-    uint8_t buf[1024] = {0};
+    uint8_t buf[1024];
+    memset (buf, 0, sizeof(buf));
     short blip = 0;
     int loop = 1;
     while (loop == 1)
@@ -215,14 +201,17 @@ void beeper (dsd_opts * opts, dsd_state * state, int type)
         if (type == 0 && opts->dmr_stereo == 1 && opts->audio_out == 1)
         {
           pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
+          //fprintf (stderr, "BEEP 0 24\n");
         }
         if (type == 1 && opts->dmr_stereo == 1 && opts->audio_out == 1)
         {
           pa_simple_write(opts->pulse_digi_dev_outR, buf, sizeof(buf), NULL);
+          //fprintf (stderr, "BEEP 1 24\n");
         }
         if (opts->dmr_stereo == 0 && opts->audio_out == 1)
         {
           pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
+          //fprintf (stderr, "BEEP 0 8\n");
         }
 
 
@@ -252,6 +241,30 @@ char * getTimeN(void) //get pretty hh:mm:ss timestamp
 {
   time_t t = time(NULL);
 
+  char * curr;
+  char * stamp = asctime(localtime( & t));
+
+  curr = strtok(stamp, " ");
+  curr = strtok(NULL, " ");
+  curr = strtok(NULL, " ");
+  curr = strtok(NULL, " ");
+
+  return curr;
+}
+
+char * getDateC(time_t t) {
+  char datename[99]; //Ubuntu 32-bit, use 80; everything else, use 99
+  char * curr2;
+  struct tm * to;
+
+  to = localtime( & t);
+  strftime(datename, sizeof(datename), "%Y-%m-%d", to);
+  curr2 = strtok(datename, " ");
+  return curr2;
+}
+
+char * getTimeC(time_t t) //get pretty hh:mm:ss timestamp
+{
   char * curr;
   char * stamp = asctime(localtime( & t));
 
@@ -1637,15 +1650,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //DMR SRC
-  // if ( (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32) )
-  if ( (lls == 12 || lls == 11 || lls == 32) )
+  if ( (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32) )
+  //if ( (lls == 12 || lls == 11 || lls == 32) )
   {
-    if (state->dmrburstL == 16 && state->lastsrc > 0) //state->currentslot == 0 &&
+    //if (state->dmrburstL == 16 && state->lastsrc > 0) //state->currentslot == 0 &&
+    if (state->lastsrc > 0)
     {
       rd = state->lastsrc;
     }
 
-    if (state->dmrburstR == 16 && state->lastsrcR > 0) //state->currentslot == 1 &&
+    //if (state->dmrburstR == 16 && state->lastsrcR > 0) //state->currentslot == 1 &&
+    if (state->lastsrcR > 0)
     {
       rdR = state->lastsrcR;
     }
@@ -1653,14 +1668,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //DMR TG
-  if ( (lls == 12 || lls == 11 || lls == 32) )
+  if ( (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32) )
+  //if ( (lls == 12 || lls == 11 || lls == 32) )
   {
-    if (state->dmrburstL == 16 && state->lasttg > 0) //state->currentslot == 0 &&
+    //if (state->dmrburstL == 16 && state->lasttg > 0) //state->currentslot == 0 &&
+    if (state->lasttg > 0)
     {
       tg = state->lasttg;
     }
 
-    if (state->dmrburstR == 16 && state->lasttgR > 0) //state->currentslot == 1 &&
+    //if (state->dmrburstR == 16 && state->lasttgR > 0) //state->currentslot == 1 &&
+    if (state->lasttgR > 0)
     {
       tgR = state->lasttgR;
 
@@ -1808,13 +1826,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     if (opts->call_alert == 1)
     {
+      //fprintf (stderr, "BEEP 0 MS LEFT\n");
       beeper (opts, state, 0);
     }
 
   }
 
   //DMR BS Slot 1 - matrix 0-4
-  if ( call_matrix[4][2] != rd && (lls == 11 || lls == 12 || lls == 35 || lls == 36) )
+  if ( call_matrix[4][2] != rd && (lls == 11 || lls == 12 || lls == 10 || lls == 13 || lls == 35 || lls == 36) )
   {
 
     for (short int k = 0; k < 4; k++)
@@ -1846,13 +1865,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     if (opts->call_alert == 1)
     {
+      //fprintf (stderr, "BEEP 0 BS LEFT\n");
       beeper (opts, state, 0);
     }
 
   }
 
   //DMR BS Slot 2 - matrix 5-9
-  if ( call_matrix[9][2] != rdR && (lls == 11 || lls == 12 || lls == 35 || lls == 36) )
+  if ( call_matrix[9][2] != rdR && (lls == 11 || lls == 12 || lls == 10 || lls == 13 || lls == 35 || lls == 36) )
   {
 
     for (short int k = 5; k < 9; k++)
@@ -1883,6 +1903,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     if (opts->call_alert == 1)
     {
+      //fprintf (stderr, "BEEP 1 BS RIGHT\n");
       beeper (opts, state, 1);
     }
 
@@ -1933,14 +1954,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->ncurses_compact == 0)
   {
-    attron(COLOR_PAIR(1)); //6
+    attron(COLOR_PAIR(6)); //6
     for (short int i = 0; i < 7; i++)
     {
       printw("%s \n", FM_bannerN[i]);
     }
     printw (" https://github.com/lwvmobile/dsd-fme/tree/pulseaudio\n");
-    //printw (" Github Build Version: %s \n", GIT_TAG);
-    printw (" Github Build Version: %s \n", "1313"); //probably better than the first number I thought of
+    printw (" Github Build Version: %s \n", GIT_TAG);
     attroff(COLOR_PAIR(6)); //6
     // printw ("--Build Info------------------------------------------------------------------\n");
     // printw ("| https://github.com/lwvmobile/dsd-fme/tree/pulseaudio\n"); //http link
@@ -2577,7 +2597,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           printw ("SRC [%8lld] ", call_matrix[9-j][2]);
           printw ("DCC [%02lld] ", call_matrix[9-j][4]);
         }
-        printw ("%lld secs ago\n", time(NULL) - call_matrix[9-j][5]);
+
+        printw ("%s ", getDateC(call_matrix[9-j][5]) ); //You're welcome
+        printw ("%s \n", getTimeC(call_matrix[9-j][5]) ); //Roman
       }
     } //end Call History
     //fence bottom
