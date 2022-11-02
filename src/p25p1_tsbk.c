@@ -9,18 +9,20 @@
 #include "dsd.h"
 void processTSBK(dsd_opts * opts, dsd_state * state)
 {
-  //process TSDU/TSBK and look for relevant data (WACN, SYSID, iden_up, other goodies later on)
+  
   int tsbkbit[196] = {0}; //tsbk bit array, 196 trellis encoded bits
   int tsbk_dibit[98] = {0};
 
   int dibit = 0;
   uint8_t tsbk_byte[12] = {0}; //12 byte return from bd_bridge (block_deinterleave)
-  unsigned long long int PDU[24] = {0}; //24 byte PDU to send to the tsbk_byte vPDU handler, should be same formats
+  unsigned long long int PDU[24] = {0}; //24 byte PDU to send to the tsbk_byte vPDU handler, should be same formats (mostly)
   int tsbk_decoded_bits[190] = {0}; //decoded bits from tsbk_bytes for sending to crc16_lb_bridge
   int i, j, k, b, x, y;
   int ec = -2; //error value returned from (block_deinterleave)
   int err = -2; //error value returned from crc16_lb_bridge
   int skipdibit = 14; //initial status dibit will occur at 14, then add 36 each time it occurs
+  int protectbit = 0;
+  int MFID = 0xFF; //Manufacturer ID - Might be beneficial to NOT send anything but standard 0x00 or 0x01 messages
 
   //Update: Identified Bug in skipdibit incrememnt causing many block deinterleave/crc failures
   //with correct values set, now we are decoding many more TSBKs
@@ -83,7 +85,8 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     }
 
     //convert tsbk_byte to PDU and send to vPDU handler
-    //...may or may not be entirely compatible, 
+    //...may or may not be entirely compatible,
+    MFID   = tsbk_byte[1];
     PDU[0] = 0x07; //P25p1 TSBK Duid 0x07
     PDU[1] = tsbk_byte[0] & 0x3F;
     PDU[2] = tsbk_byte[2];
@@ -99,8 +102,12 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     PDU[11] = 0; //tsbk_byte[11];
     PDU[1] = PDU[1] ^ 0x40; //flip bit to make it compatible with MAC_PDUs, i.e. 3D to 7D
 
-    //Don't run NET_STS out of this, or will set wrong NAC/CC
-    if (err == 0 && ec == 0 && PDU[1] != 0x7B && PDU[1] != 0x49 && PDU[1] != 0x45) //0x49 is telephone grant, 0x46 Unit to Unit Channel Answer Request (seems bogus)
+    //check the protect bit, don't run if protected
+    protectbit = (tsbk_byte[0] >> 6) & 0x1;
+
+    //Don't run NET_STS out of this, or will set wrong NAC/CC //&& PDU[1] != 0x49 && PDU[1] != 0x45
+    //0x49 is telephone grant, 0x46 Unit to Unit Channel Answer Request (seems bogus)
+    if (MFID < 0x2 && protectbit == 0 && err == 0 && ec == 0 && PDU[1] != 0x7B ) 
     {
       fprintf (stderr, "%s",KMAG);
       process_MAC_VPDU(opts, state, 0, PDU);
@@ -108,38 +115,42 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     }
 
     //set our WACN and SYSID here now that we have valid ec and crc/checksum
-    if (err == 0 && ec == 0 && tsbk_byte[0] == 0x3B)
+    if (protectbit == 0 && err == 0 && ec == 0 && (tsbk_byte[0] & 0x3F) == 0x3B)
     {
+      long int wacn = (tsbk_byte[3] << 12) | (tsbk_byte[4] << 4) | (tsbk_byte[5] >> 4);;
+      int sysid = ((tsbk_byte[5] & 0xF) << 8) | tsbk_byte[6];
+      int channel = (tsbk_byte[7] << 8) | tsbk_byte[8];
+      fprintf (stderr, "%s",KMAG);
+      fprintf (stderr, "\n Network Status Broadcast TSBK - Abbreviated \n");
+      fprintf (stderr, "  WACN [%05lX] SYSID [%03X] NAC [%03llX]", wacn, sysid, state->p2_cc);
+      state->p25_cc_freq = process_channel_to_freq(opts, state, channel);
+
       //only set IF these values aren't already hard set by the user
       if (state->p2_hardset == 0)
       {
-        state->p2_wacn  = (tsbk_byte[3] << 12) | (tsbk_byte[4] << 4) | (tsbk_byte[5] >> 4);
-        state->p2_sysid = ((tsbk_byte[5] & 0xF) << 8) | tsbk_byte[6];
-        int channel = (tsbk_byte[7] << 8) | tsbk_byte[8];
-        fprintf (stderr, "%s",KMAG);
-        fprintf (stderr, "\n Network Status Broadcast TSBK - Abbreviated \n");
-        fprintf (stderr, "  WACN [%05llX] SYSID [%03llX] NAC [%03llX]", state->p2_wacn, state->p2_sysid, state->p2_cc);
+        state->p2_wacn = wacn;
+        state->p2_sysid = sysid;
+      }  
         
-        state->p25_cc_freq = process_channel_to_freq(opts, state, channel);
-        
-        if (opts->payload == 1)
+      if (opts->payload == 1)
+      {
+        fprintf (stderr, "%s",KCYN);
+        fprintf (stderr, "\n P25 PDU Payload ");
+        for (i = 0; i < 12; i++)
         {
-          fprintf (stderr, "%s",KCYN);
-          fprintf (stderr, "\n P25 PDU Payload ");
-          for (i = 0; i < 12; i++)
-          {
-            fprintf (stderr, "[%02X]", tsbk_byte[i]);
-          }
+          fprintf (stderr, "[%02X]", tsbk_byte[i]);
         }
-        fprintf (stderr, "%s ", KNRM);
-
       }
+      fprintf (stderr, "%s ", KNRM);
 
     }
 
     //reset for next rep
     ec = -2;
     err = -2;
+    protectbit = 0;
+    MFID = 0xFF;
+
     //check for last block bit
     if ( (tsbk_byte[0] >> 7) == 1 ) 
     {
