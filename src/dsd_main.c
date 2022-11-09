@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " https://github.com/lwvmobile/dsd-fme/tree/pulseaudio    "
+  " DEV BUILD - May contain changes and broken features    "
 };
 
 int
@@ -946,7 +946,7 @@ main (int argc, char **argv)
   mbe_printVersion (versionstr);
 
   fprintf (stderr,"            Digital Speech Decoder: Florida Man Edition\n");
-  for (short int i = 1; i < 7; i++) {
+  for (short int i = 1; i < 8; i++) {
     //fprintf (stderr,"%s%s \n", FM_banner[i], KGRN); //cyan/blue text
     fprintf (stderr,"%s\n", FM_banner[i]); //cyan/blue tex
   }

@@ -1959,7 +1959,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       printw("%s \n", FM_bannerN[i]);
     }
-    printw (" https://github.com/lwvmobile/dsd-fme/tree/pulseaudio\n");
+    //printw (" https://github.com/lwvmobile/dsd-fme/tree/pulseaudio\n");
+    printw (" DEV BUILD - May contain changes and broken features\n");
     printw (" Github Build Version: %s \n", GIT_TAG);
     attroff(COLOR_PAIR(6)); //6
     // printw ("--Build Info------------------------------------------------------------------\n");
