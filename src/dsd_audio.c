@@ -545,31 +545,59 @@ openAudioOutDevice (dsd_opts * opts, int speed)
 void
 openAudioInDevice (dsd_opts * opts)
 {
-  // get info of device/file
-	if(strncmp(opts->audio_in_dev, "-", 1) == 0)
-	{
-		opts->audio_in_type = 1;
-		opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
-		opts->audio_in_file_info->samplerate=48000;
-    opts->pulse_digi_rate_out = 8000; //set out rate to 8000 for stdin input
-		opts->audio_in_file_info->channels=1;
-		opts->audio_in_file_info->seekable=0;
-		opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
-		opts->audio_in_file = sf_open_fd(fileno(stdin), SFM_READ, opts->audio_in_file_info, 0);
+  char * extension;
+  const char ch = '.';
+  extension = strrchr(opts->audio_in_dev, ch); //return extension if this is a .wav or .bin file
 
-		if(opts->audio_in_file == NULL) {
-			fprintf (stderr,"Error, couldn't open stdin with libsndfile: %s\n", sf_strerror(NULL));
-			exit(1); //had this one disabled, re-enabling it now
-		}
-	}
-  //converted to handle any calls to use portaudio
-	else if(strncmp(opts->audio_in_dev, "pa:", 2) == 0)
+  // get info of device/file
+	if (strncmp(opts->audio_in_dev, "-", 1) == 0)
 	{
-		opts->audio_in_type = 0;
-    fprintf (stderr,"Error, Port Audio is not supported by FME!\n");
-    fprintf (stderr,"Using Pulse Audio Input Stream Instead! \n");
-    sprintf (opts->audio_in_dev, "pulse");
+    opts->audio_in_type = 1;
+    opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
+    opts->audio_in_file_info->samplerate=opts->wav_sample_rate;
+    opts->audio_in_file_info->channels=1;
+    opts->audio_in_file_info->seekable=0;
+    opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
+    opts->audio_in_file = sf_open_fd(fileno(stdin), SFM_READ, opts->audio_in_file_info, 0);
+
+    if(opts->audio_in_file == NULL)
+    {
+      fprintf(stderr, "Error, couldn't open stdin with libsndfile: %s\n", sf_strerror(NULL));
+      exit(1);
+    }
 	}
+  else if (strncmp(opts->audio_in_dev, "tcp", 3) == 0)
+  {
+    opts->audio_in_type = 8;
+    opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
+    opts->audio_in_file_info->samplerate=opts->wav_sample_rate;
+    opts->audio_in_file_info->channels=1;
+    opts->audio_in_file_info->seekable=0;
+    opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
+    opts->tcp_file_in = sf_open_fd(opts->tcp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
+
+    if(opts->tcp_file_in == NULL)
+    {
+      fprintf(stderr, "Error, couldn't open TCP with libsndfile: %s\n", sf_strerror(NULL));
+      exit(1);
+    }
+  }
+  else if (strncmp(opts->audio_in_dev, "udp", 3) == 0)
+  {
+    opts->audio_in_type = 6;
+    opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
+    opts->audio_in_file_info->samplerate=opts->wav_sample_rate;
+    opts->audio_in_file_info->channels=1;
+    opts->audio_in_file_info->seekable=0;
+    opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
+    opts->udp_file_in = sf_open_fd(opts->udp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
+
+    if(opts->udp_file_in == NULL)
+    {
+      fprintf(stderr, "Error, couldn't open UDP with libsndfile: %s\n", sf_strerror(NULL));
+      exit(1);
+    }
+  }
   else if(strncmp(opts->audio_in_dev, "rtl", 3) == 0)
   {
     opts->audio_in_type = 3;
@@ -578,41 +606,58 @@ openAudioInDevice (dsd_opts * opts)
   {
     opts->audio_in_type = 0;
   }
-  //convert from opening wav files to OP25 symbol capture files since opening wav files is busted
+  else if (strncmp(extension, ".bin", 3) == 0)
+	{
+    struct stat stat_buf;
+    if (stat(opts->audio_in_dev, &stat_buf) != 0)
+    {
+      fprintf (stderr,"Error, couldn't open bin file %s\n", opts->audio_in_dev);
+      exit(1);
+    }
+    if (S_ISREG(stat_buf.st_mode))
+    {
+      opts->symbolfile = fopen(opts->audio_in_dev, "r");
+      opts->audio_in_type = 4; //symbol capture bin files
+    }
+    else
+    {
+      opts->audio_in_type = 0;
+    }
+  }
+  //open as wav file as last resort, wav files subseptible to sample rate issues if not 48000
 	else
 	{
     struct stat stat_buf;
     if (stat(opts->audio_in_dev, &stat_buf) != 0)
     {
-      fprintf (stderr,"Error, couldn't open %s\n", opts->audio_in_dev);
+      fprintf (stderr,"Error, couldn't open wav file %s\n", opts->audio_in_dev);
       exit(1);
     }
     if (S_ISREG(stat_buf.st_mode))
     {
-      // is this a regular file? then process with libsndfile.
-      //opts->pulse_digi_rate_out = 8000; //this for wav files input?
-      // opts->audio_in_type = 1;
-      // opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
-      // opts->audio_in_file_info->channels = 1;
-      // opts->audio_in_file = sf_open(opts->audio_in_dev, SFM_READ, opts->audio_in_file_info);
+      opts->audio_in_type = 2; //two now, seperating STDIN and wav files
+      opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
+      opts->audio_in_file_info->samplerate=opts->wav_sample_rate; 
+      opts->audio_in_file_info->channels=1; 
+      opts->audio_in_file_info->channels = 1;
+      opts->audio_in_file_info->seekable=0;
+      opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
       //
-      // if(opts->audio_in_file == NULL)
-      //   {
-      //     fprintf (stderr,"Error, couldn't open file %s\n", opts->audio_in_dev);
-      //     exit(1);
-      //   }
+      opts->audio_in_file = sf_open(opts->audio_in_dev, SFM_READ, opts->audio_in_file_info);
 
-      opts->symbolfile = fopen(opts->audio_in_dev, "r");
-      opts->audio_in_type = 4; //symbol capture bin files
+      if(opts->audio_in_file == NULL)
+      {
+        fprintf(stderr, "Error, couldn't open wav file %s\n", opts->audio_in_dev);
+        exit(1);
+      }
+
     }
-  else
+    //open pulse audio if no bin or wav
+    else
     {
-      // this is a device, use old handling, pulse audio now
-      opts->audio_in_type = 0;
-
+      opts->audio_in_type = 0; //not sure if this works or needs to openPulse here
     }
   }
-
   if (opts->split == 1)
     {
       fprintf (stderr,"Audio In Device: %s\n", opts->audio_in_dev);

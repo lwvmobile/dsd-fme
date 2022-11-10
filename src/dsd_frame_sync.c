@@ -146,7 +146,43 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
    * 34 = DMR RC Data
    * 35 = +P25 P2
    * 36 = -P25 P2
+   * 37 = +EDACS
+   * 38 = -EDACS
    */
+
+  //start control channel hunting if using trunking, time needs updating on each successful sync
+  //will need to assign frequencies to a CC array for P25 since that isn't imported from CSV
+  if (opts->p25_is_tuned == 0 && opts->p25_trunk == 1 && time(NULL) - state->last_cc_sync_time > 3)
+  {
+    //start going through the lcn/frequencies CC/signal hunting
+    fprintf (stderr, "Control Channel Signal Lost. Searching for Control Channel.\n");
+    //make sure our current roll value doesn't exceed value of frequencies imported
+    if (state->lcn_freq_roll > state->lcn_freq_count)
+    {
+      state->lcn_freq_roll = 0; //reset to zero
+    }
+    //check that we have a non zero value first, then tune next frequency
+    if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0) 
+    {
+      //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
+      if (opts->use_rigctl == 1)
+      {
+        SetModulation(opts->rigctl_sockfd, 12500); //may not use this here, not sure yet
+        SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[state->lcn_freq_roll]);
+      }
+
+      if (opts->audio_in_type == 3)
+      {
+        rtl_udp_tune (opts, state, state->trunk_lcn_freq[state->lcn_freq_roll]);
+      }
+      
+      fprintf (stderr, "Tuning to Control Channel Frequency: %.06lf MHz\n", 
+                (double)state->trunk_lcn_freq[state->lcn_freq_roll]/1000000);
+
+    }
+    state->lcn_freq_roll++;
+    state->last_cc_sync_time = time(NULL); //set again to give another x seconds
+  }
 
 
   int i, j, t, o, dibit, sync, symbol, synctest_pos, lastt;
@@ -156,6 +192,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   char synctest18[19];
   char synctest32[33];
   char synctest20[21]; //YSF
+  char synctest48[49]; //EDACS
   char modulation[8];
   char *synctest_p;
   char synctest_buf[10240];
@@ -177,6 +214,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   synctest18[18] = 0;
   synctest32[32] = 0;
   synctest20[20] = 0;
+  synctest48[48] = 0;
   synctest_pos = 0;
   synctest_p = synctest_buf + 10;
   sync = 0;
@@ -326,7 +364,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
       // end digitize and dmr buffer testing
 
       *synctest_p = dibit;
-      if (t >= 18)
+      if (t >= 10) //t >= 18
         {
           for (i = 0; i < 24; i++)
             {
@@ -475,6 +513,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, "+P25p1 ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 0;
+                  state->last_cc_sync_time = time(NULL);
                   return (0);
                 }
               if (strcmp (synctest, INV_P25P1_SYNC) == 0)
@@ -491,6 +530,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, "-P25p1 ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 1;
+                  state->last_cc_sync_time = time(NULL);
                   return (1);
                 }
             }
@@ -652,6 +692,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL);
                 return (35); //35
               }
             }
@@ -695,6 +736,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL);
                 return (36); //36
               }
             }
@@ -1149,50 +1191,64 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           } //End if (opts->frame_dmr == 1)
 
           //end DMR Sync
+
+          //ProVoice and EDACS sync
           if (opts->frame_provoice == 1)
+          {
+            strncpy (synctest32, (synctest_p - 31), 32);
+            strncpy (synctest48, (synctest_p - 47), 48);
+            if ((strcmp (synctest32, PROVOICE_SYNC) == 0) || (strcmp (synctest32, PROVOICE_EA_SYNC) == 0))
             {
-              strncpy (synctest32, (synctest_p - 31), 32);
-              if ((strcmp (synctest32, PROVOICE_SYNC) == 0) || (strcmp (synctest32, PROVOICE_EA_SYNC) == 0))
-                {
-                  now = time(NULL);
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "ProVoice ");
-                  if (opts->errorbars == 1)
-                  //if (opts->errorbars == 1 && (time(NULL) - now) > 2 )
-                    {
-                      printFrameSync (opts, state, "-ProVoice ", synctest_pos + 1, modulation);
-                    }
-                  state->lastsynctype = 14;
-                  if ( opts->monitor_input_audio == 1)
-                  {
+              state->last_cc_sync_time = time(NULL);
+              state->carrier = 1;
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+              sprintf (state->ftype, "ProVoice ");
+              if (opts->errorbars == 1)
+              printFrameSync (opts, state, "+PV   ", synctest_pos + 1, modulation);
+              state->lastsynctype = 14;
+              state->last_cc_sync_time = time(NULL);
+              return (14);
+           }
+           else if ((strcmp (synctest32, INV_PROVOICE_SYNC) == 0) || (strcmp (synctest32, INV_PROVOICE_EA_SYNC) == 0))
+           {
+              state->last_cc_sync_time = time(NULL);
+              state->carrier = 1;
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+              sprintf (state->ftype, "ProVoice ");
+              printFrameSync (opts, state, "-PV   ", synctest_pos + 1, modulation);
+              state->lastsynctype = 15;
+              state->last_cc_sync_time = time(NULL);
+              return (15);
+           }
 
-                    pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                  }
-                  return (14);
-                }
-              else if ((strcmp (synctest32, INV_PROVOICE_SYNC) == 0) || (strcmp (synctest32, INV_PROVOICE_EA_SYNC) == 0))
-                {
-                  now = time(NULL);
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "ProVoice ");
-                  if (opts->errorbars == 1)
-                    {
-                      printFrameSync (opts, state, "-ProVoice ", synctest_pos + 1, modulation);
-                    }
-                  state->lastsynctype = 15;
-                  if ( opts->monitor_input_audio == 1)
-                  {
-
-                    pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                  }
-                  return (15);
-                }
+           else if ( strcmp (synctest48, EDACS_SYNC) == 0)
+           {
+             state->last_cc_sync_time = time(NULL);
+             state->carrier = 1;
+             state->offset = synctest_pos;
+             state->max = ((state->max) + lmax) / 2;
+             state->min = ((state->min) + lmin) / 2;
+             printFrameSync (opts, state, "-EDACS", synctest_pos + 1, modulation);
+             state->lastsynctype = 38; 
+             state->last_cc_sync_time = time(NULL);
+             return (38);
+           }
+           else if ( strcmp (synctest48, INV_EDACS_SYNC) == 0)
+           {
+             state->last_cc_sync_time = time(NULL);
+             state->carrier = 1;
+             state->offset = synctest_pos;
+             state->max = ((state->max) + lmax) / 2;
+             state->min = ((state->min) + lmin) / 2;
+             printFrameSync (opts, state, "+EDACS", synctest_pos + 1, modulation);
+             state->lastsynctype = 37; 
+             state->last_cc_sync_time = time(NULL);
+             return (37);
+           }
 
           }
 

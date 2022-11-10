@@ -221,12 +221,13 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 //int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 {
   // determine dibit state
-  if ((state->synctype == 6) || (state->synctype == 14)|| (state->synctype == 18))
+  if ((state->synctype == 6) || (state->synctype == 14)|| (state->synctype == 18) || (state->synctype == 37))
 
     {
       //  6 +D-STAR
       // 14 +ProVoice
       // 18 +D-STAR_HD
+      // 37 +EDACS
 
       if (symbol > state->center)
         {
@@ -241,11 +242,12 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
           return (1);               // +3
         }
     }
-  else if ((state->synctype == 7) || (state->synctype == 15)|| (state->synctype == 19))
+  else if ((state->synctype == 7) || (state->synctype == 15)|| (state->synctype == 19) || (state->synctype == 38))
     {
       //  7 -D-STAR
       // 15 -ProVoice
       // 19 -D-STAR_HD
+      // 38 -EDACS
 
       if (symbol > state->center)
         {

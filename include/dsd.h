@@ -62,6 +62,14 @@
 
 static volatile int exitflag;
 
+//group csv import struct
+typedef struct
+{
+  unsigned long int groupNumber;
+  char groupMode[8]; //char *?
+  char groupName[50];
+} groupinfo;
+
 typedef struct
 {
   uint8_t RFChannelType;
@@ -247,7 +255,7 @@ typedef struct
   int p25status;
   int p25tg;
   int scoperate;
-  char audio_in_dev[1024];
+  char audio_in_dev[2048]; //increase size for super long directory/file names?
   int audio_in_fd;
   SNDFILE *audio_in_file;
   SF_INFO *audio_in_file_info;
@@ -358,6 +366,37 @@ typedef struct
 
   FILE *symbolfile;
   int call_alert;
+
+  //rigctl opt
+  int rigctl_sockfd;
+  int use_rigctl;
+  int rigctlportno;
+  char * rigctlhostname;
+
+  //udp socket for GQRX, SDR++, etc
+  int udp_sockfd;
+  int udp_portno;
+  char * udp_hostname;
+  SNDFILE *udp_file_in;
+
+  //tcp socket for SDR++, etc
+  int tcp_sockfd;
+  int tcp_portno;
+  char * tcp_hostname;
+  SNDFILE *tcp_file_in;
+
+  //wav file sample rate, interpolator and decimator
+  int wav_sample_rate;
+  int wav_interpolator;
+  int wav_decimator;
+
+  int p25_trunk; //enable experimental P25 trunking with RIGCTL (or RTLFM)
+  int p25_is_tuned; //set to 1 if currently on VC, set back to 0 if on CC
+
+  //csv import filenames
+  char group_in_file[1024];
+  char lcn_in_file[1024];
+  //end import filenames
 
 } dsd_opts;
 
@@ -612,16 +651,40 @@ typedef struct
   //dstar header for ncurses
   unsigned char dstarradioheader[41];
 
-#ifdef TRACE_DSD
-  char debug_prefix;
-  char debug_prefix_2;
-  unsigned int debug_sample_index;
-  unsigned int debug_sample_left_edge;
-  unsigned int debug_sample_right_edge;
-  FILE* debug_label_file;
-  FILE* debug_label_dibit_file;
-  FILE* debug_label_imbe_file;
-#endif
+  //dmr trunking stuff
+  int dmr_rest_channel;
+  int dmr_mfid; //just when 'fid' is used as a manufacturer ID and not a feature set id
+  int dmr_vc_lcn;
+  int dmr_vc_lsn;
+  int dmr_tuned_lcn;
+
+  //edacs
+  int ea_mode;
+  int esk_mode;
+  unsigned short esk_mask;
+  unsigned long long int edacs_site_id;
+  int edacs_lcn_count; //running tally of lcn's observed on edacs system
+  int edacs_cc_lcn; //current lcn for the edacs control channel
+  int edacs_vc_lcn; //current lcn for any active vc (not the one we are tuned/tuning to)
+  int edacs_tuned_lcn; //the vc we are currently tuned to...above variable is for updating all in the matrix
+
+  //trunking group and lcn freq list
+  long int trunk_lcn_freq[26]; //max number on an EDACS system, should be enough on DMR too hopefully
+  groupinfo group_array[0x3FF]; //max supported by Cygwin is 3FFF (signed vs unsigned?)
+  unsigned int group_tally; //tally number of groups imported from CSV file for referencing later
+  int lcn_freq_count;
+  int lcn_freq_roll; //number we have 'rolled' to in search of the CC
+  time_t last_cc_sync_time; //use this to start hunting for CC after signal lost
+
+  //new nxdn stuff
+  int nxdn_part_of_frame;
+  int nxdn_ran;
+  int nxdn_sf;
+  bool nxdn_sacch_non_superframe; //flag to indicate whether or not a sacch is a part of a superframe, or an individual piece
+  uint8_t nxdn_sacch_frame_segment[4][18]; //part of frame by 18 bits
+  uint8_t nxdn_sacch_frame_segcrc[4];
+  uint8_t nxdn_alias_block_number;
+  char nxdn_alias_block_segment[4][4][8]; //might be too large? maybe just an 8?
 
 } dsd_state;
 
@@ -662,8 +725,8 @@ typedef struct
 #define DMR_MS_DATA_SYNC  "311131133313133331131113"
 #define DMR_MS_VOICE_SYNC "133313311131311113313331"
 
-//Testing NXDN FSW again
-#define NXDN_FSW "3131331131"
+#define NXDN_FSW      "3131331131"
+#define INV_NXDN_FSW  "1313113313"
 
 #define DMR_RC_DATA_SYNC  "131331111133133133311313"
 
@@ -676,6 +739,9 @@ typedef struct
 #define PROVOICE_SYNC        "13131333111311311133113311331133"
 #define INV_PROVOICE_EA_SYNC "13313133113113333311313133133311"
 #define PROVOICE_EA_SYNC     "31131311331331111133131311311133"
+
+#define EDACS_SYNC      "313131313131313131313111333133133131313131313131"
+#define INV_EDACS_SYNC  "131313131313131313131333111311311313131313131313"
 
 #define DPMR_FRAME_SYNC_1     "111333331133131131111313"
 #define DPMR_FRAME_SYNC_2     "113333131331"
@@ -925,6 +991,36 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 
 //P25 Channel to Frequency
 long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channel);
+
+//rigctl functions and TCP/UDP functions
+void error(char *msg);
+int Connect (char *hostname, int portno);
+bool Send(int sockfd, char *buf);
+bool Recv(int sockfd, char *buf);
+
+//rtl_fm udp tuning function
+void rtl_udp_tune(dsd_opts * opts, dsd_state * state, long int frequency);
+
+bool GetCurrentFreq(int sockfd, long int freq);
+bool SetFreq(int sockfd, long int freq);
+bool SetModulation(int sockfd, int bandwidth);
+//commands below unique to GQRX only, not usable on SDR++
+bool GetSignalLevel(int sockfd, double *dBFS);
+bool GetSquelchLevel(int sockfd, double *dBFS);
+bool SetSquelchLevel(int sockfd, double dBFS);
+bool GetSignalLevelEx(int sockfd, double *dBFS, int n_samp);
+//end gqrx-scanner
+
+//UDP socket connection
+int UDPBind (char *hostname, int portno);
+
+//Edacs
+void edacs(dsd_opts * opts, dsd_state * state);
+unsigned long long int edacs_bch (unsigned long long int message); 
+
+//csv imports
+int csvGroupImport(dsd_opts * opts, dsd_state * state);
+int csvLCNImport(dsd_opts * opts, dsd_state * state);
 
 #ifdef __cplusplus
 extern "C" {

@@ -13,10 +13,14 @@ processProVoice (dsd_opts * opts, dsd_state * state)
   char imbe7100_fr2[7][24];
   const int *w, *x;
 
-  if (opts->errorbars == 1)
-    {
-      fprintf (stderr,"VOICE ");
-    }
+  fprintf (stderr," VOICE");
+  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1)
+  {
+    fprintf (stderr, "%s", KGRN);
+    fprintf (stderr, " Site [%02llX][%03lld] Group [%05d] Source [%08d] LCN[%02d] ", 
+              state->edacs_site_id, state->edacs_site_id, state->lasttg, state->lastsrc, state->edacs_tuned_lcn);
+    fprintf (stderr, "%s", KNRM);
+  }
 
   for (i = 0; i < 64; i++)
     {

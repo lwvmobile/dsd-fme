@@ -287,9 +287,9 @@ processFrame (dsd_opts * opts, dsd_state * state)
     }
   else if ((state->synctype == 14) || (state->synctype == 15))
     {
-      state->nac = 0;
-      state->lastsrc = 0;
-      state->lasttg = 0;
+      //state->nac = 0;
+      //state->lastsrc = 0;
+      //state->lasttg = 0;
       if (opts->errorbars == 1)
         {
           if (opts->verbose > 0)
@@ -304,6 +304,12 @@ processFrame (dsd_opts * opts, dsd_state * state)
         }
       sprintf (state->fsubtype, " VOICE        ");
       processProVoice (opts, state);
+      return;
+    }
+    //edacs
+    else if ((state->synctype == 37) || (state->synctype == 38))
+    {
+      edacs (opts, state);
       return;
     }
     //ysf

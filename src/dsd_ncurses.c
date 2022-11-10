@@ -95,8 +95,8 @@ char * SyncTypes[44] = {
   "DMR ",
   "DMR ",
   "DMR ",
-  "PROVOICE",
-  "PROVOICE",
+  "EDACS/PV",
+  "EDACS/PV",
   "NXDN VOICE", //DATA
   "NXDN VOICE", //DATA
   "DSTAR HD",
@@ -118,8 +118,8 @@ char * SyncTypes[44] = {
   "DMR RC DATA",
   "P25P2",
   "P25P2",
-  "FDMA", //37
-  "TDMA", //38
+  "EDACS/PV", //37
+  "EDACS/PV", //38
   "",
   ""
 };
@@ -416,6 +416,10 @@ void ncursesOpen (dsd_opts * opts, dsd_state * state)
 //ncursesMenu
 void ncursesMenu (dsd_opts * opts, dsd_state * state)
 {
+
+  //update sync time on cc sync so we don't immediately go CC hunting when exiting the menu
+  state->last_cc_sync_time = time(NULL);
+
   //close pulse output if not null output
   if (opts->audio_out == 1 && opts->audio_out_type == 0)
   {
@@ -425,6 +429,16 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
   if (opts->audio_in_type == 0) //close pulse input if it is the specified input method
   {
     closePulseInput(opts);
+  }
+
+  if (opts->audio_in_type == 8) //close TCP input SF file so we don't buffer audio while not decoding
+  {
+    sf_close(opts->tcp_file_in);
+  }
+
+  if (opts->audio_in_type == 5) //close UDP input SF file so we don't buffer audio while not decoding
+  {
+    sf_close(opts->udp_file_in); //disable for testing
   }
 
   state->payload_keyid = 0;
@@ -1089,7 +1103,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       resetState (state); //use sparingly, may cause memory leak
       state->samplesPerSymbol = 5;
       state->symbolCenter = 2;
-      sprintf (opts->output_name, "ProVoice");
+      sprintf (opts->output_name, "EDACS/PV");
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 8000;
@@ -1550,6 +1564,18 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
   }
   #endif
 
+  if (opts->audio_in_type == 8) //re-open TCP input 'file'
+  {
+    opts->tcp_file_in = sf_open_fd(opts->tcp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
+  }
+
+  if (opts->audio_in_type == 5) //re-open UDP input 'file'
+  {
+    opts->udp_file_in = sf_open_fd(opts->udp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
+  }
+
+  //update sync time on cc sync so we don't immediately go CC hunting when exiting the menu
+  state->last_cc_sync_time = time(NULL);
 
 }
 //end Ncurses Menu
@@ -1592,7 +1618,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //set lls sync types
-  if (state->synctype >= 0 && state->synctype < 37) //not sure if this will be okay
+  if (state->synctype >= 0 && state->synctype < 39) 
   {
     lls = state->synctype;
   }
@@ -1715,25 +1741,19 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //Call History Matrix Shuffling
-  //ProVoice
-  if ( (lls == 14 || lls == 15) && (time(NULL) - call_matrix[9][5] > 5) && state->carrier == 1)
+  //Edacs - ProVoice
+  if ( (lls == 14 || lls == 15 || lls == 37 || lls == 38) && state->carrier == 1)
   {
-    for (short int k = 0; k < 9; k++)
+   
+    if (state->edacs_vc_lcn != -1)      
     {
-      call_matrix[k][0] = call_matrix[k+1][0];
-      call_matrix[k][1] = call_matrix[k+1][1];
-      call_matrix[k][2] = call_matrix[k+1][2];
-      call_matrix[k][3] = call_matrix[k+1][3];
-      call_matrix[k][4] = call_matrix[k+1][4];
-      call_matrix[k][5] = call_matrix[k+1][5];
-    }
-
-    call_matrix[9][0] = lls;
-    call_matrix[9][1] = 1;
-    call_matrix[9][2] = 1;
-    call_matrix[9][3] = 1;
-    call_matrix[9][4] = 1;
-    call_matrix[9][5] = time(NULL);
+      call_matrix[state->edacs_vc_lcn][0] = lls;
+      call_matrix[state->edacs_vc_lcn][1] = state->edacs_vc_lcn;
+      call_matrix[state->edacs_vc_lcn][2] = state->lasttg; 
+      call_matrix[state->edacs_vc_lcn][3] = state->lastsrc; 
+      call_matrix[state->edacs_vc_lcn][4] = 1;
+      call_matrix[state->edacs_vc_lcn][5] = time(NULL);
+    } 
 
   }
 
@@ -2022,7 +2042,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->dmr_stereo_wav == 1) //opts->wav_out_file[0] != 0 &&
   {
     printw ("| Per Call - %s\n", opts->wav_out_file);
-    printw ("| Per Call - %s\n", opts->wav_out_fileR);
+    if (opts->dmr_stereo == 1) printw ("| Per Call - %s\n", opts->wav_out_fileR);
+  }
+  if (opts->use_rigctl == 1)
+  {
+    printw ("| RIGCTL Remote Control Client Established on Port [%d]\n", opts->rigctlportno);
+  }
+  if (opts->p25_trunk == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3) )
+  {
+    printw ("| Trunk Tracking Active (P25/EDACS)\n");
   }
 
 
@@ -2539,7 +2567,93 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("TID: [%s] RID: [%s] \n", state->dpmr_target_id, state->dpmr_caller_id);
   }
 
-  if (lls == 6 || lls == 7 || lls == 18 || lls == 19 || lls == 14 || lls == 15)
+  //EDACS and ProVoice
+  if (lls == 14 || lls == 15 || lls == 37 || lls == 38)
+  {
+    attroff (COLOR_PAIR(3)); //colors off for EDACS 
+    if (state->edacs_site_id != 0)
+    {
+      if (opts->p25_is_tuned == 0)
+      {
+        printw ("| Monitoring Control Channel\n");
+      }
+      else
+      {
+        printw ("| Monitoring Voice Channel - LCN [%02d]\n", state->edacs_tuned_lcn);
+        //since we are tuned, keep updating the time so it doesn't disappear during call
+        call_matrix[state->edacs_tuned_lcn][5] = time(NULL); 
+      } 
+      printw ("| SITE [%03lld][%02llX]", state->edacs_site_id, state->edacs_site_id);
+
+      if (state->ea_mode == 1)
+      {
+        printw (" Extended Addressing");
+      }
+      else printw (" Standard/Networked");
+      if (state->esk_mask == 0xA0)
+      {
+        printw (" w/  ESK");
+      }
+      else printw (" w/o ESK");
+      printw ("\n");
+    }
+    for (i = 1; i <= state->edacs_lcn_count; i++)
+    {
+      //shim 443 afs in here for display purposes
+      int a  = (call_matrix[i][3] >> 7) & 0xF; 
+      int fs = call_matrix[i][3] & 0x7F;
+      printw ("| - LCN [%02d][%.06lf]", i, (double)state->trunk_lcn_freq[i-1]/1000000); 
+      
+      //print Control Channel on LCN line with the current Control Channel
+      if ( (i) == state->edacs_cc_lcn)
+      {
+        attron (COLOR_PAIR(1)); //yellow
+        printw (" Control Channel");
+        attroff (COLOR_PAIR(1));
+      }
+      //print active calls on corresponding LCN line
+      if ((i != state->edacs_cc_lcn) && time(NULL) - call_matrix[i][5] < 2) 
+      {
+        attron (COLOR_PAIR(3)); 
+        if (state->ea_mode == 1) printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
+        else printw (" AFS [%3llX][%02d-%03d]", call_matrix[i][3], a, fs );
+        for (int k = 0; k < state->group_tally; k++)
+        {
+          if (state->group_array[k].groupNumber == call_matrix[i][2])
+          {
+            printw (" [%s]", state->group_array[k].groupName);
+            printw ("[%s]", state->group_array[k].groupMode);
+          }
+        }
+        attroff (COLOR_PAIR(3)); 
+      }
+      //print dying or dead calls in red for x seconds longer 
+      if ( (i != state->edacs_cc_lcn) && (time(NULL) - call_matrix[i][5] >= 2) && (time(NULL) - call_matrix[i][5] < 5) ) 
+      {
+        attron (COLOR_PAIR(2)); 
+        if (state->ea_mode == 1) printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
+        else printw (" AFS [%3llX][%02d-%03d]", call_matrix[i][3], a, fs );
+        for (int k = 0; k < state->group_tally; k++)
+        {
+          if (state->group_array[k].groupNumber == call_matrix[i][2])
+          {
+            printw (" [%s]", state->group_array[k].groupName);
+            printw ("[%s]", state->group_array[k].groupMode);
+          }
+        }
+        attroff (COLOR_PAIR(2)); 
+      }
+      if (i == state->edacs_tuned_lcn && opts->p25_is_tuned == 1) printw (" **T**"); //asterisk which lcn is opened
+      printw ("\n");
+    }
+    if (state->carrier == 1)
+    {
+      attron (COLOR_PAIR(3)); 
+    }
+  }
+
+
+  if (lls == 6 || lls == 7 || lls == 18 || lls == 19)
   {
     printw ("| %s ", SyncTypes[lls]);
     //printw ("%s", state->dmr_branding);
@@ -2558,8 +2672,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("--Call History----------------------------------------------------------------\n");
     for (short int j = 0; j < 10; j++)
     {
-      //only print if a valid time was assinged to the matrix
-      if ( ((time(NULL) - call_matrix[9-j][5]) < 9999)  )
+      //only print if a valid time was assigned to the matrix, and not EDACS/PV
+      if ( ((time(NULL) - call_matrix[9-j][5]) < 9999) && call_matrix[9-j][0] != 14 && call_matrix[9-j][0] != 15 && call_matrix[9-j][0] != 37 && call_matrix[9-j][0] != 38 )
       {
         printw ("| %s ", SyncTypes[call_matrix[9-j][0]]);
         if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
@@ -2601,6 +2715,21 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
         printw ("%s ", getDateC(call_matrix[9-j][5]) ); //You're welcome
         printw ("%s \n", getTimeC(call_matrix[9-j][5]) ); //Roman
+      }
+
+      //EDACS and ProVoice, outside of timestamp loop
+      if (call_matrix[j][0] == 14 || call_matrix[j][0] == 15 || call_matrix[j][0] == 37 || call_matrix[j][0] == 38 )
+      {
+        if (call_matrix[j][3] != 0) 
+        {
+          printw ("| %s ", SyncTypes[call_matrix[j][0]]);
+          printw ("LCN [%2lld] ", call_matrix[j][1]);
+          printw ("Group [%8lld] ", call_matrix[j][2]);
+          printw ("Source [%8lld] ", call_matrix[j][3]);
+          printw ("%s ", getDateC(call_matrix[j][5]) ); 
+          printw ("%s \n", getTimeC(call_matrix[j][5]) ); 
+        }
+         
       }
     } //end Call History
     //fence bottom

@@ -76,6 +76,43 @@ char * pEnd; //bugfix
 void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
+
+  //tune back to last knwon CC when using trunking
+  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1) 
+  {
+    if (state->p25_cc_freq != 0) //still need a con+ way to set this accurately, or atleast guess, maybe shim p25_cc_freq to lcn index 0?
+    {
+      //maybe I should make a seperate tuning function that can handle multiple tuning types
+      if (opts->use_rigctl == 1) //rigctl tuning
+      {
+        SetModulation(opts->rigctl_sockfd, 12500); //could use the bw field on iden_up for P25 to determine a good bw, but honestly it really depends on signal stregth
+        SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+      }
+
+      else if (opts->audio_in_type == 3) //rtl_fm tuning
+      {
+        //UDP command to tune the RTL dongle
+        rtl_udp_tune(opts, state, state->p25_cc_freq);
+      }
+
+      opts->p25_is_tuned = 0; 
+      state->edacs_tuned_lcn = -1;
+    }
+    //only for EDACS right now, disable this later on or work around
+    if (opts->wav_out_file != NULL)
+    {
+      closeWavOutFile(opts, state);
+    }
+    state->last_cc_sync_time = time(NULL);
+    //test to revert back to 10/4 P1 QPSK
+    if (opts->mod_qpsk == 1)
+    {
+      state->samplesPerSymbol = 10;
+      state->symbolCenter = 4;
+    }
+    
+  }
+
   state->dibit_buf_p = state->dibit_buf + 200;
   memset (state->dibit_buf, 0, sizeof (int) * 200);
   //dmr buffer
@@ -212,6 +249,16 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->p25_vc_freq[0] = 0;
   state->p25_vc_freq[1] = 0;
 
+  //new nxdn stuff
+  state->nxdn_part_of_frame = 0;
+  state->nxdn_ran = 0;
+  state->nxdn_sf = 0;
+  memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc)); //init on 1, bad CRC all
+  state->nxdn_sacch_non_superframe = TRUE; 
+  memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
+  state->nxdn_alias_block_number = 0;
+  memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
+
 }
 
 void
@@ -304,6 +351,10 @@ initOpts (dsd_opts * opts)
   opts->pulse_digi_in_channels  = 1; //2
   opts->pulse_digi_out_channels = 2; //new default for XDMA
 
+  opts->wav_sample_rate = 48000; //default value (DSDPlus uses 96000 on raw signal wav files)
+  opts->wav_interpolator = 1; //default factor of 1 on 48000; 2 on 96000; sample rate / decimator
+  opts->wav_decimator = 48000; //maybe for future use?
+
   sprintf (opts->output_name, "XDMA");
   opts->pulse_flush = 1; //set 0 to flush, 1 for flushed
   opts->use_ncurses_terminal = 0;
@@ -328,6 +379,25 @@ initOpts (dsd_opts * opts)
   opts->p2counter = 0;
 
   opts->call_alert = 0; //call alert beeper for ncurses
+
+  //rigctl options
+  opts->use_rigctl = 0;
+  opts->rigctl_sockfd = 0;
+  opts->rigctlportno = 7356; //TCP Port Number; GQRX - 7356; SDR++ - 4532
+  opts->rigctlhostname = "localhost";
+
+  //udp input options
+  opts->udp_sockfd = 0;
+  opts->udp_portno = 7355; //default favored by GQRX and SDR++
+  opts->udp_hostname = "localhost";
+
+  //tcp input options
+  opts->tcp_sockfd = 0;
+  opts->tcp_portno = 7355; //default favored by SDR++
+  opts->tcp_hostname = "localhost";
+
+  opts->p25_trunk = 0; //0 disabled, 1 is enabled
+  opts->p25_is_tuned = 0; //set to 1 if currently on VC, set back to 0 if on CC
 
 }
 
@@ -600,17 +670,47 @@ initState (dsd_state * state)
     state->p25_chan_spac[i] = 0;
     state->p25_base_freq[i] = 0;
   }
+
   //values displayed in ncurses terminal
   state->p25_cc_freq = 0;
   state->p25_vc_freq[0] = 0;
   state->p25_vc_freq[1] = 0;
 
-#ifdef TRACE_DSD
-  state->debug_sample_index = 0;
-  state->debug_label_file = NULL;
-  state->debug_label_dibit_file = NULL;
-  state->debug_label_imbe_file = NULL;
-#endif
+  //edacs
+  state->ea_mode = -1; //init on -1, 0 is standard, 1 is ea
+  state->esk_mode = -1; //same as above, but with esk or not
+  state->esk_mask = 0x0; //toggles from 0x0 to 0xA0 if esk mode enabled
+  state->edacs_site_id = 0;
+  state->edacs_lcn_count = 0;
+  state->edacs_cc_lcn = 0;
+  state->edacs_vc_lcn = 0;
+  state->edacs_tuned_lcn = -1;
+
+  //trunking
+  memset (state->trunk_lcn_freq, 0, sizeof(state->trunk_lcn_freq));
+  state->group_tally = 0;
+  state->lcn_freq_count = 0; //number of frequncies imported from LCN
+  state->lcn_freq_roll = 0; //needs reset if sync is found?
+  state->last_cc_sync_time = time(NULL);
+
+  //dmr trunking/ncurses stuff 
+  state->dmr_rest_channel = -1; //init on -1
+  state->dmr_mfid = -1; //
+  state->dmr_tuned_lcn = -1; //logical slot, lcn * ts?
+  state->dmr_vc_lcn = -1; //
+  state->dmr_vc_lsn = -1;
+
+  //new nxdn stuff
+  state->nxdn_part_of_frame = 0;
+  state->nxdn_ran = 0;
+  state->nxdn_sf = 0;
+  memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc)); //init on 1, bad CRC all
+  state->nxdn_sacch_non_superframe = TRUE; 
+  memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
+  state->nxdn_alias_block_number = 0;
+  memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
+
+
 
   initialize_p25_heuristics(&state->p25_heuristics);
 }
@@ -641,6 +741,11 @@ usage ()
   printf ("Input/Output options:\n");
   printf ("  -i <device>   Audio input device (default is pulse audio)\n");
   printf ("                - for piped stdin, rtl for rtl device\n");
+  printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
+  printf ("                filename.bin for OP25/FME capture bin files\n");
+  printf ("                filename.wav for 48K/1 wav files (SDR++, GQRX)\n");
+  printf ("                filename.wav -s 96000 for 96K/1 wav files (DSDPlus)\n");
+  printf ("                (Use single quotes '/directory/audio file.wav' when directories/spaces are present)\n");
   printf ("                filename.bin for OP25/FME capture bin files\n");
   printf ("  -o <device>   Audio output device (default is pulse audio)(null for no audio output)\n");
   printf ("  -d <dir>      Create mbe data files, use this directory\n");
@@ -680,7 +785,7 @@ usage ()
   printf ("  -fx           Decode only X2-TDMA\n");
   printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
-  printf ("  -fp             Decode only ProVoice*\n");
+  printf ("  -fp             Decode only EDACS/ProVoice*\n");
   printf ("  -fm             Decode only dPMR*\n");
   printf ("  -l            Disable DMR and NXDN input filtering\n");
   printf ("  -pu           Unmute Encrypted P25\n");
@@ -724,6 +829,15 @@ usage ()
   printf ("  -R <dec>      Manually Enter NXDN 4800/9600 EHR Scrambler Key Value (Decimal Value)\n");
   printf ("                 \n");
   printf ("  -4            Force Privacy Key over FID and SVC bits \n");
+  printf ("\n");
+  printf (" Experimental Functions and Features---------------------------------------------------\n");
+  printf ("  -1 <file>     Import LCN Frequencies from csv file (numeral 'one')                   \n");
+  printf ("                 (See lcn.csv for example)\n");
+  printf ("  -2 <file>     Import Group List Allow/Block and Label from csv file (numeral 'two')\n");
+  printf ("                 (See group.csv for example)\n");
+  printf ("  -3            Enable Experimental Trunking Features (P25/EDACS for now) with RIGCTL/TCP or RTL Input\n");
+  printf ("  -5 <udp p>    Enable RIGCTL/TCP; Set UDP Port for RIGCTL. (4532 on SDR++)\n");
+  //printf ("                 (Currently only available on UDP port 4532)\n");
   printf ("\n");
   exit (0);
 }
@@ -856,15 +970,6 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
     closeMbeOutFile (opts, state);
   }
 
-#ifdef USE_RTLSDR
-  if(opts->audio_in_type == 3)
-  {
-    // TODO: cleanup demod threads
-    //temp disable to see if this corrects issues with closing
-    //cleanup_rtlsdr_stream();
-  }
-#endif
-
   fprintf (stderr,"\n");
   fprintf (stderr,"Total audio errors: %i\n", state->debug_audio_errors);
   fprintf (stderr,"Total header errors: %i\n", state->debug_header_errors);
@@ -963,7 +1068,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qstv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF4")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qs:tv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -975,6 +1080,30 @@ main (int argc, char **argv)
           //printPortAudioDevices();
           //exit(0);
           opts.call_alert = 1;
+        //placeholder until letters get re-arranged (or opt_long switched in)
+        case '1': //LCN/Frequency CSV
+          strncpy(opts.lcn_in_file, optarg, 1023);
+          opts.lcn_in_file[1023] = '\0';
+          csvLCNImport (&opts, &state);
+          break;
+        //placeholder until letters get re-arranged
+        case '2': //Group Label CSV
+          strncpy(opts.group_in_file, optarg, 1023);
+          opts.group_in_file[1023] = '\0';
+          csvGroupImport(&opts, &state);
+          break;
+        //placeholder until letters get re-arranged
+        case '3':
+          opts.p25_trunk = 1;
+          break;
+        //placeholder until letters get re-arranged
+        case '5': //RIGCTL UDP port
+          sscanf (optarg, "%d", &opts.rigctlportno);
+          if (opts.rigctlportno != 0)
+          {
+            opts.use_rigctl = 1; 
+          }
+          break;
         case 'e':
           opts.errorbars = 1;
           opts.datascope = 0;
@@ -1011,13 +1140,18 @@ main (int argc, char **argv)
           opts.verbose = 0;
           break;
         case 's':
-          opts.errorbars = 0;
-          opts.p25enc = 0;
-          opts.p25lc = 0;
-          opts.p25status = 0;
-          opts.p25tg = 0;
-          opts.datascope = 1;
-          opts.symboltiming = 0;
+          // opts.errorbars = 0;
+          // opts.p25enc = 0;
+          // opts.p25lc = 0;
+          // opts.p25status = 0;
+          // opts.p25tg = 0;
+          // opts.datascope = 1;
+          // opts.symboltiming = 0;
+          sscanf (optarg, "%d", &opts.wav_sample_rate);
+          opts.wav_interpolator = opts.wav_sample_rate / opts.wav_decimator;
+          state.samplesPerSymbol = state.samplesPerSymbol * opts.wav_interpolator;
+          state.symbolCenter = state.symbolCenter * opts.wav_interpolator;
+          //fprintf (stderr, "Are we getting this far?\n");
           break;
         case 't':
           opts.symboltiming = 1;
@@ -1193,9 +1327,8 @@ main (int argc, char **argv)
           fprintf (stderr,"Setting datascope frame rate to %i frame per second.\n", opts.scoperate);
           break;
         case 'i':
-          strncpy(opts.audio_in_dev, optarg, 1023);
-          opts.audio_in_dev[1023] = '\0';
-          //fprintf (stderr,"audio_in_dev = %s\n", opts.audio_in_dev);
+          strncpy(opts.audio_in_dev, optarg, 2047);
+          opts.audio_in_dev[2047] = '\0';
           break;
         case 'o':
           strncpy(opts.audio_out_dev, optarg, 1023);
@@ -1338,7 +1471,7 @@ main (int argc, char **argv)
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
               state.dmr_stereo = 0;
-              sprintf (opts.output_name, "ProVoice");
+              sprintf (opts.output_name, "EDACS/PV");
               fprintf (stderr,"Setting symbol rate to 9600 / second\n");
               fprintf (stderr,"Decoding only ProVoice frames.\n");
             }
@@ -1691,6 +1824,31 @@ main (int argc, char **argv)
     if (opts.resume > 0)
     {
       openSerial (&opts, &state);
+    }
+
+    //need error handling on opening rigctl so we don't exit or crash on disconnect
+    if (opts.use_rigctl == 1)
+    {
+      opts.rigctl_sockfd = Connect(opts.rigctlhostname, opts.rigctlportno);
+      long int initfreq = 0;
+      GetCurrentFreq(opts.rigctl_sockfd, initfreq);
+    }
+
+    if((strncmp(opts.audio_in_dev, "tcp", 3) == 0)) //tcp socket input from SDR++ and others
+    {
+      //use same handling as connect function from rigctl
+      //also still needs err handling
+      opts.tcp_sockfd = Connect(opts.tcp_hostname, opts.tcp_portno);
+      opts.audio_in_type = 8;
+    }
+
+    //still need to work out why I can't use this
+    //issues with samples received, may be using UDP DGRAMS incorrectly, incorrect procedure?
+    if((strncmp(opts.audio_in_dev, "udp", 3) == 0)) //udp socket input from SDR++, GQRX, and others
+    {
+      //also still needs err handling
+      opts.udp_sockfd = UDPBind(opts.udp_hostname, opts.udp_portno);
+      opts.audio_in_type = 6;
     }
 
     if((strncmp(opts.audio_in_dev, "pulse", 5) == 0))

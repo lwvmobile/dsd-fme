@@ -959,7 +959,7 @@ static void *socket_thread_fn(void *arg) {
 			rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 			//verbose_set_frequency (dongle.dev, new_freq);
 			//fprintf (stderr, "Tuning to: %d [Hz] (central freq: %d [Hz])\n", new_freq, new_freq + freq_offset);
-			fprintf (stderr, "Tuning to: %d [Hz] \n", new_freq);
+			fprintf (stderr, "\nTuning to: %d [Hz] \n", new_freq);
 		}
 /*
 		if(buffer[0] == 1) {

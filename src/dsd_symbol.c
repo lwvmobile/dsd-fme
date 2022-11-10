@@ -100,32 +100,34 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           }
 
       }
-      else if (opts->audio_in_type == 1) {
-          result = sf_read_short(opts->audio_in_file, &sample, 1);
-          //fprintf (stderr, "..");
-          if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample < 32767 && sample > -32767)
-          {
-            state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
-            pa_simple_write(opts->pulse_raw_dev_out, (void*)&state->pulse_raw_out_buffer, 2, NULL);
-          }
-          if(result == 0) {
-              cleanupAndExit (opts, state);
-          }
+      //stdin only, wav files moving to new number
+      else if (opts->audio_in_type == 1)
+      {
+        result = sf_read_short(opts->audio_in_file, &sample, 1);
+        if(result == 0)
+        {
+          //cleanupAndExit (opts, state);
+          sf_close(opts->audio_in_file);
+          opts->audio_in_type = 0; //set input type
+          openPulseInput(opts); //open pulse inpput
+          sample = 0; //send zero sample 
+        }
       }
+      //wav files, same but using seperate value so we can still manipulate ncurses menu
+      //since we can not worry about getch/stdin conflict
       else if (opts->audio_in_type == 2)
       {
-#ifdef USE_PORTAUDIO
-        PaError err = Pa_ReadStream( opts->audio_in_pa_stream, &sample, 1 );
-        if( err != paNoError )
+        result = sf_read_short(opts->audio_in_file, &sample, 1);
+        if(result == 0)
         {
-              fprintf( stderr, "An error occured while using the portaudio input stream\n" );
-              fprintf( stderr, "Error number: %d\n", err );
-              fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+
+          sf_close(opts->audio_in_file);
+          opts->audio_in_type = 0; //set input type
+          openPulseInput(opts); //open pulse inpput
+          sample = 0; //send zero sample 
+              
         }
-
-
-#endif
-	    }
+      }
       else if (opts->audio_in_type == 3)
       {
 #ifdef USE_RTLSDR
@@ -140,12 +142,30 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
 #endif
       }
+      //tcp socket input from SDR++
+      else if (opts->audio_in_type == 8)
+      {
+        result = sf_read_short(opts->tcp_file_in, &sample, 1);
+        if(result == 0) {
+          sf_close(opts->tcp_file_in);
+          opts->audio_in_type = 0; //set input type
+          openPulseInput(opts); //open pulse inpput
+          sample = 0; //zero sample on bad result, keep the ball rolling
+          fprintf (stderr, "Connection to TCP Server Disconnected.\n");
+        }
+      }
+      //UDP Socket input...not working correct. Reads samples, but no sync
+      else if (opts->audio_in_type == 6)
+      {
+        //I think this doesn't get the entire dgram when we run sf_read_short on the udp dgram
+        result = sf_read_short(opts->udp_file_in, &sample, 1); 
+        // if (sample != 0)
+        //   fprintf (stderr, "Result = %d Sample = %d \n", result, sample);
+      }
 
-#ifdef TRACE_DSD
-      state->debug_sample_index++;
-#endif
 
-      // printf ("res: %zd\n, offset: %lld", result, sf_seek(opts->audio_in_file, 0, SEEK_CUR));
+
+
       if (opts->use_cosine_filter)
         {
           if ( (state->lastsynctype >= 10 && state->lastsynctype <= 13) || state->lastsynctype == 32 || state->lastsynctype == 33 || state->lastsynctype == 34)
@@ -386,11 +406,11 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
     if (state->rf_mod == 2) //GFSK
     {
       symbol = state->symbolc;
-      if (state->symbolc == 0 && state->synctype >= 0)
+      if (state->symbolc == 0 ) 
       {
         symbol = -3; //-1
       }
-      if (state->symbolc == 1 && state->synctype >= 0)
+      if (state->symbolc == 1 ) 
       {
         symbol = -1; //-3
       }
