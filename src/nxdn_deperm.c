@@ -95,7 +95,8 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	}
 
 	if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
-	else NXDN_Elements_Content_decode(opts, state, 0, trellis_buf); 
+	//only run data with bad CRC when payload is enabled and hide the ugly
+	else if (opts->payload == 1) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf); 
 }
 
 void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])

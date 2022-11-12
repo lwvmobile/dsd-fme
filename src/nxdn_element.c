@@ -78,9 +78,8 @@ void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state)
   }
 
   /* Decodes the element content */
-  //if (CrcCorrect == 1) NXDN_Elements_Content_decode(opts, state, CrcCorrect, SACCH);
-  //run it, and let each element handler decide what is okay for console, internal, and terminal assignment
-  if (1 == 1) NXDN_Elements_Content_decode(opts, state, CrcCorrect, SACCH);
+  //run it under crccorrect, or under payload (if incorrect, hide bad data unless payload enabled)
+  if (CrcCorrect == 1 || opts->payload == 1) NXDN_Elements_Content_decode(opts, state, CrcCorrect, SACCH);
 
 } /* End NXDN_SACCH_Full_decode() */
 
