@@ -109,8 +109,8 @@ char * SyncTypes[44] = {
   "dPMR",
   "dPMR",
   "dPMR",
-  "NXDN (sync only)",
-  "NXDN (sync only)",
+  "NXDN",
+  "NXDN",
   "YSF", //30
   "YSF",
   "DMR MS VOICE",
@@ -2107,11 +2107,25 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //NXDN
-  if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
+  //if (lls == 8 || lls == 9 || lls == 16 || lls == 17 || lls == 28 || lls == 29)
+  if (lls == 28 || lls == 29)
   {
     printw ("| RAN: [%2d] ", rn);
-    printw ("TID: [%4d] ", tgn);
-    printw ("RID: [%4d] \n| ALG: [0x%02X] KEY: [0x%02X] ", src, state->nxdn_cipher_type, state->nxdn_key);
+    printw ("TGT: [%4d] ", tgn);
+    printw ("SRC: [%4d] ", src);
+    if (state->nxdn_alias_block_segment[0][0] > 0) //could not display if this segment is bad
+    {
+      printw ("[");
+      for (int i = 0; i < 4; i++)
+      {
+        for (int j = 0; j < 4; j++)
+        {
+          printw ("%s", state->nxdn_alias_block_segment[i][j]); 
+        }
+      }
+      printw ("]");
+    }
+    printw ("\n| ALG: [0x%02X] KEY: [0x%02X] ", state->nxdn_cipher_type, state->nxdn_key);
     if (state->carrier == 1)
     {
       printw("%s ", state->nxdn_call_type);
@@ -2152,42 +2166,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
     }
+    //printw("%s ", state->nxdn_call_type);
     printw("\n");
   }
-
-  //P25-P1
-  // if (lls == 0 || lls == 1)
-  // {
-  //   // printw("| TID:[%8i] RID:[%8i] ", tg, rd);
-  //   printw("| TID:[%8i] RID:[%8i] ", state->lasttg, state->lastsrc);
-  //   printw("  MFID:[0x%02X]  ", state->payload_mfid);
-  //   printw("NAC: [0x%3X] \n", nc);
-  //   printw("| ALG:[0x%02X] ", state->payload_algid);
-  //   printw("    KID:[0x%04X] ", state->payload_keyid);
-  //   printw("      MI:[0x%016llX] ", state->payload_miP);
-  //
-  //   if (state->payload_algid != 0x80 && state->payload_algid != 0x0 && state->carrier == 1 && state->R == 0)
-  //   {
-  //     attron(COLOR_PAIR(2));
-  //     printw("**ENC**");
-  //     attroff(COLOR_PAIR(2));
-  //     attron(COLOR_PAIR(3));
-  //     if (state->payload_algid == 0xAA)
-  //     {
-  //       attron(COLOR_PAIR(1));
-  //       printw(" RC4");
-  //       attron(COLOR_PAIR(3));
-  //     }
-  //     if (state->payload_algid == 0x81)
-  //     {
-  //       attron(COLOR_PAIR(1));
-  //       printw(" DES-OFB");
-  //       attron(COLOR_PAIR(3));
-  //     }
-  //   }
-  //   printw("\n");
-  // }
-
+  
   //DMR BS/MS Voice and Data Types
   if (  lls == 0 || lls == 1 || lls == 12 || lls == 13 || lls == 10 ||
         lls == 11 || lls == 32 || lls == 33 || lls == 34 || lls == 35 || lls == 36)
@@ -2676,7 +2658,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if ( ((time(NULL) - call_matrix[9-j][5]) < 9999) && call_matrix[9-j][0] != 14 && call_matrix[9-j][0] != 15 && call_matrix[9-j][0] != 37 && call_matrix[9-j][0] != 38 )
       {
         printw ("| %s ", SyncTypes[call_matrix[9-j][0]]);
-        if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
+        if (lls == 28 || lls == 29)
         {
           printw ("RAN [%2lld] ", call_matrix[9-j][1]);
           printw ("TG [%4lld] ", call_matrix[9-j][4]);
@@ -2748,6 +2730,5 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 void ncursesClose ()
 {
   endwin();
-  //printf("Press CTRL+C again to close. Thanks.\n");
-  //printf("Run 'reset' in your terminal to clean up if necessary.\n");
+
 }
