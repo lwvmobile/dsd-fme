@@ -84,54 +84,13 @@ processFrame (dsd_opts * opts, dsd_state * state)
       state->minref = state->min;
     }
 
-  if ((state->synctype == 8) || (state->synctype == 9)) //NXDN Voice
-    {
-      //state->rf_mod = 2; //wrong type of modulation HERE HERE
-      state->nac = 0;
-      state->lastsrc = 0;
-      state->lasttg = 0;
-      if (opts->errorbars == 1)
-        {
-          if (opts->verbose > 0)
-            {
-              level = (int) state->max / 164;
-              //fprintf (stderr, "inlvl: %2i%% ", level);
-            }
-        }
-      state->nac = 0;
-      if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
-        {
-          openMbeOutFile (opts, state);
-        }
-      sprintf (state->fsubtype, " VOICE        ");
-      processNXDNVoice (opts, state);
-      //ProcessNXDNFrame (opts, state, 0);
-      return;
-    }
-  else if ((state->synctype == 16) || (state->synctype == 17)) //NXDN Data
-    {
-      //state->rf_mod = 2;
-      state->nac = 0;
-      state->lastsrc = 0;
-      state->lasttg = 0;
-      if (opts->errorbars == 1)
-        {
-          if (opts->verbose > 0)
-            {
-              level = (int) state->max / 164;
-              //fprintf (stderr, "inlvl: %2i%% ", level);
-            }
-        }
-      state->nac = 0;
-      if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
-        {
-          openMbeOutFile (opts, state);
-        }
-      sprintf (state->fsubtype, " DATA         ");
-      processNXDNData (opts, state);
-      //ProcessNXDNFrame (opts, state, 0);
-      return;
-    }
+  //NXDN FSW
+  if ((state->synctype == 28) || (state->synctype == 29))
+  {
+    nxdn_frame (opts, state);
+    //no MBEout...use symbol capture bin instead! 
+    return;
+  }
   else if ((state->synctype == 6) || (state->synctype == 7))
     {
       state->nac = 0;

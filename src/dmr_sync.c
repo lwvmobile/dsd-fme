@@ -15,6 +15,9 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+ //Originally found at - https://github.com/LouisErigHerve/dsd
+ //Modified for use in DSD-FME
+
 #include "dsd.h"
 
 char * getTimeL(void) //get pretty hh:mm:ss timestamp
@@ -2918,5 +2921,19 @@ uint8_t ComputeCrc5Bit(uint8_t * DMRData)
   /* Return the CRC */
   return CRC;
 } /* End ComputeCrc5Bit() */
+
+uint32_t ConvertBitIntoBytes(uint8_t * BufferIn, uint32_t BitLength)
+ {
+   uint32_t Output = 0;
+   uint32_t i;
+
+   for(i = 0; i < BitLength; i++)
+   {
+     Output <<= 1;
+     Output |= (uint32_t)(BufferIn[i] & 1);
+   }
+
+   return Output;
+ } /* End ConvertBitIntoBytes() */
 
 /* End of file */

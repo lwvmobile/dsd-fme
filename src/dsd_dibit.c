@@ -265,7 +265,7 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 
   else if ((state->synctype == 1) || (state->synctype == 3)  || (state->synctype == 5)  ||
           (state->synctype == 9)  || (state->synctype == 11) || (state->synctype == 13) ||
-          (state->synctype == 17) || (state->synctype == 36) )
+          (state->synctype == 17) || (state->synctype == 29) || (state->synctype == 36) )
 
     {
       //  1 -P25p1
@@ -275,6 +275,8 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
       // 11 -DMR (inverted signal voice frame)
       // 13 -DMR (inverted signal data frame)
       // 17 -NXDN (inverted data frame)
+      // 29 -NXDN (inverted FSW)
+      // 36 -P25p2 
 
       int valid;
       int dibit;
@@ -284,7 +286,7 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
       if (state->synctype == 1)
         {
           // Use the P25 heuristics if available
-          valid = estimate_symbol(state->rf_mod, &(state->inv_p25_heuristics), state->last_dibit, symbol, &dibit);
+          //valid = estimate_symbol(state->rf_mod, &(state->inv_p25_heuristics), state->last_dibit, symbol, &dibit);
         }
 
       if (valid == 0)
@@ -336,6 +338,8 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
       // 10 +DMR (non inverted signal data frame)
       // 12 +DMR (non inverted signal voice frame)
       // 16 +NXDN (non inverted data frame)
+      // 28 +NXND (FSW)
+      // 35 +p25p2
 
       int valid;
       int dibit;
@@ -345,7 +349,7 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
       if (state->synctype == 0)
         {
           // Use the P25 heuristics if available
-          valid = estimate_symbol(state->rf_mod, &(state->p25_heuristics), state->last_dibit, symbol, &dibit);
+          //valid = estimate_symbol(state->rf_mod, &(state->p25_heuristics), state->last_dibit, symbol, &dibit);
         }
 
       if (valid == 0)

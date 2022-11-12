@@ -70,39 +70,6 @@ typedef struct
   char groupName[50];
 } groupinfo;
 
-typedef struct
-{
-  uint8_t RFChannelType;
-  uint8_t FunctionnalChannelType;
-  uint8_t Option;
-  uint8_t Direction;
-  uint8_t CompleteLich; /* 7 bits of LICH without parity */
-  uint8_t PreviousCompleteLich; /* 7 bits of previous LICH without parity */
-} NxdnLich_t;
-
-
-typedef struct
-{
-  uint8_t StructureField;
-  uint8_t RAN;
-  uint8_t Data[18];
-  uint8_t CrcIsGood;
-} NxdnSacchRawPart_t;
-
-
-typedef struct
-{
-  uint8_t Data[80];
-  uint8_t CrcIsGood;
-} NxdnFacch1RawPart_t;
-
-
-typedef struct
-{
-  uint8_t Data[184];
-  uint8_t CrcIsGood;
-} NxdnFacch2RawPart_t;
-
 
 typedef struct
 {
@@ -143,11 +110,11 @@ typedef struct
   uint8_t  NextIVComputed[8];
 } NxdnElementsContent_t;
 
-//Read Solomon (12,9) constant
+//Reed Solomon (12,9) constant
 #define RS_12_9_DATASIZE        9
 #define RS_12_9_CHECKSUMSIZE    3
 
-//Read Solomon (12,9) struct
+//Reed Solomon (12,9) struct
 typedef struct
 {
   uint8_t data[RS_12_9_DATASIZE+RS_12_9_CHECKSUMSIZE];
@@ -255,14 +222,14 @@ typedef struct
   int p25status;
   int p25tg;
   int scoperate;
-  char audio_in_dev[2048]; //increase size for super long directory/file names?
+  char audio_in_dev[2048]; //increase size for super long directory/file names
   int audio_in_fd;
   SNDFILE *audio_in_file;
   SF_INFO *audio_in_file_info;
 
   uint32_t rtlsdr_center_freq;
-  int rtlsdr_ppm_error; //was int, changed to float
-  int audio_in_type; // 0 for device, 1 for file, 3 for rtlsdr
+  int rtlsdr_ppm_error; 
+  int audio_in_type; 
   char audio_out_dev[1024];
   int audio_out_fd;
   SNDFILE *audio_out_file;
@@ -390,7 +357,7 @@ typedef struct
   int wav_interpolator;
   int wav_decimator;
 
-  int p25_trunk; //enable experimental P25 trunking with RIGCTL (or RTLFM)
+  int p25_trunk; //experimental P25 trunking with RIGCTL (or RTLFM)
   int p25_is_tuned; //set to 1 if currently on VC, set back to 0 if on CC
 
   //csv import filenames
@@ -423,7 +390,6 @@ typedef struct
   int audio_out_idx2;
   int audio_out_idxR;
   int audio_out_idx2R;
-  //int wav_out_bytes;
   int center;
   int jitter;
   int synctype;
@@ -470,7 +436,6 @@ typedef struct
   int numtdulc;
   int firstframe;
   char slot0light[8];
-  //char slot1light[8];
   float aout_gain;
   float aout_gainR;
   float aout_max_buf[200];
@@ -537,16 +502,10 @@ typedef struct
   unsigned int nxdn_key;
   char nxdn_call_type[1024];
   char dmr_callsign[2][6][99]; //plenty of room in case of overflow;
-  char dmr_lrrp[2][6][9999]; //memory hog
+  char dmr_lrrp[2][6][9999]; //need to fix this
   unsigned long long int dmr_lrrp_source[2];
 
-  NxdnSacchRawPart_t NxdnSacchRawPart[4];
-  NxdnFacch1RawPart_t NxdnFacch1RawPart[2];
-  NxdnFacch2RawPart_t NxdnFacch2RawPart;
   NxdnElementsContent_t NxdnElementsContent;
-  NxdnLich_t NxdnLich;
-
-  int printNXDNAmbeVoiceSampleHex;
 
  char ambe_ciphered[49];
  char ambe_deciphered[49];
@@ -670,7 +629,7 @@ typedef struct
 
   //trunking group and lcn freq list
   long int trunk_lcn_freq[26]; //max number on an EDACS system, should be enough on DMR too hopefully
-  groupinfo group_array[0x3FF]; //max supported by Cygwin is 3FFF (signed vs unsigned?)
+  groupinfo group_array[0x3FF]; //max supported by Cygwin is 3FFF, I hope nobody actually tries to import this many groups
   unsigned int group_tally; //tally number of groups imported from CSV file for referencing later
   int lcn_freq_count;
   int lcn_freq_roll; //number we have 'rolled' to in search of the CC
@@ -684,7 +643,7 @@ typedef struct
   uint8_t nxdn_sacch_frame_segment[4][18]; //part of frame by 18 bits
   uint8_t nxdn_sacch_frame_segcrc[4];
   uint8_t nxdn_alias_block_number;
-  char nxdn_alias_block_segment[4][4][8]; //might be too large? maybe just an 8?
+  char nxdn_alias_block_segment[4][4][8]; 
 
 } dsd_state;
 
@@ -840,45 +799,47 @@ void processP2(dsd_opts * opts, dsd_state * state); //P2
 void processTSBK(dsd_opts * opts, dsd_state * state);
 short dmr_filter(short sample);
 short nxdn_filter(short sample);
+short dpmr_filter(short sample);
 
 int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr);
-/* Global functions */ //also borrowed
+/* Global functions */ 
 uint32_t ConvertBitIntoBytes(uint8_t * BufferIn, uint32_t BitLength);
-uint32_t ConvertAsciiToByte(uint8_t AsciiMsbByte, uint8_t AsciiLsbByte, uint8_t * OutputByte);
-void Convert49BitSampleInto7Bytes(char * InputBit, char * OutputByte);
-void Convert7BytesInto49BitSample(char * InputByte, char * OutputBit);
 
 void ncursesOpen (dsd_opts * opts, dsd_state * state);
 void ncursesPrinter (dsd_opts * opts, dsd_state * state);
 void ncursesClose ();
 
-/* NXDN frame decoding functions */
-void ProcessNXDNFrame(dsd_opts * opts, dsd_state * state, uint8_t Inverted);
-void ProcessNxdnRCCHFrame(dsd_opts * opts, dsd_state * state, uint8_t Inverted);
-void ProcessNxdnRTCHFrame(dsd_opts * opts, dsd_state * state, uint8_t Inverted);
-void ProcessNxdnRDCHFrame(dsd_opts * opts, dsd_state * state, uint8_t Inverted);
-void ProcessNxdnRTCH_C_Frame(dsd_opts * opts, dsd_state * state, uint8_t Inverted);
-void ProcessNXDNIdleData (dsd_opts * opts, dsd_state * state, uint8_t Inverted);
-void ProcessNXDNFacch1Data (dsd_opts * opts, dsd_state * state, uint8_t Inverted);
-void ProcessNXDNUdchData (dsd_opts * opts, dsd_state * state, uint8_t Inverted);
-//end borrow
+//new NXDN Functions start here!
+void nxdn_frame (dsd_opts * opts, dsd_state * state);
+void nxdn_descramble (uint8_t dibits[], int len);
+void nxdn_deperm_facch (dsd_opts * opts, dsd_state * state, uint8_t bits[144]);
+void nxdn_deperm_sacch (dsd_opts * opts, dsd_state * state, uint8_t bits[60]);
+void nxdn_deperm_cac (dsd_opts * opts, dsd_state * state, uint8_t bits[300]);
+void nxdn_deperm_facch2_udch (dsd_opts * opts, dsd_state * state, uint8_t bits[348]);
+void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType);
+void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182]);
+
+//utility functions from OP25 needed by NXDN frame handler
+static inline int load_i(const uint8_t val[], int len);
+static inline void cfill(uint8_t result[], const uint8_t src[], int len);
+
+static inline void trellis_encode(uint8_t result[], const uint8_t source[], int result_len, int reg);
+static inline void trellis_decode(uint8_t result[], const uint8_t source[], int result_len);
+
+//OP25 CRC functions
+static uint8_t crc6(const uint8_t buf[], int len);
+static uint16_t crc12f(const uint8_t buf[], int len);
+static uint16_t crc15(const uint8_t buf[], int len);
+static uint16_t crc16cac(const uint8_t buf[], int len);
 
 /* NXDN functions */
 void CNXDNConvolution_start(void);
 void CNXDNConvolution_decode(uint8_t s0, uint8_t s1);
 void CNXDNConvolution_chainback(unsigned char* out, unsigned int nBits);
 void CNXDNConvolution_encode(const unsigned char* in, unsigned char* out, unsigned int nBits);
-uint8_t NXDN_decode_LICH(uint8_t   InputLich[8],
-                         uint8_t * RFChannelType,
-                         uint8_t * FunctionnalChannelType,
-                         uint8_t * Option,
-                         uint8_t * Direction,
-                         uint8_t * CompleteLichBinaryFormat,
-                         uint8_t Inverted);
-uint8_t NXDN_SACCH_raw_part_decode(uint8_t * Input, uint8_t * Output);
+
+//keeping these
 void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state);
-uint8_t NXDN_FACCH1_decode(uint8_t * Input, uint8_t * Output);
-uint8_t NXDN_UDCH_decode(uint8_t * Input, uint8_t * Output);
 void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
                                   uint8_t CrcCorrect, uint8_t * ElementsContent);
 void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message);
@@ -886,9 +847,7 @@ void NXDN_decode_VCALL_IV(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 char * NXDN_Call_Type_To_Str(uint8_t CallType);
 void NXDN_Voice_Call_Option_To_Str(uint8_t VoiceCallOption, uint8_t * Duplex, uint8_t * TransmissionMode);
 char * NXDN_Cipher_Type_To_Str(uint8_t CipherType);
-uint16_t CRC15BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
-uint16_t CRC12BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
-uint8_t CRC6BitNXDN(uint8_t * BufferIn, uint32_t BitLength);
+void NXDN_decode_Alias(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 
 void dPMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
 void printdPMRAmbeVoiceSample(dsd_opts * opts, dsd_state * state);
@@ -911,7 +870,7 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DM
 uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDataExtracted[77]);
 uint32_t BPTC_16x2_Extract_Data(uint8_t InputInterleavedData[32], uint8_t DMRDataExtracted[32]);
 
-//Read Solomon (12,9) functions
+//Reed Solomon (12,9) functions
 void rs_12_9_calc_syndrome(rs_12_9_codeword_t *codeword, rs_12_9_poly_t *syndrome);
 uint8_t rs_12_9_check_syndrome(rs_12_9_poly_t *syndrome);
 rs_12_9_correct_errors_result_t rs_12_9_correct_errors(rs_12_9_codeword_t *codeword, rs_12_9_poly_t *syndrome, uint8_t *errors_found);
@@ -1014,7 +973,7 @@ bool GetSignalLevelEx(int sockfd, double *dBFS, int n_samp);
 //UDP socket connection
 int UDPBind (char *hostname, int portno);
 
-//Edacs
+//EDACS
 void edacs(dsd_opts * opts, dsd_state * state);
 unsigned long long int edacs_bch (unsigned long long int message); 
 
@@ -1032,10 +991,9 @@ void cleanup_rtlsdr_stream();
 void get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state);
 void rtlsdr_sighandler();
 #endif
-//TRELLIS
+//DMR TRELLIS
 void CDMRTrellisTribitsToBits(const unsigned char* tribits, unsigned char* payload);
 unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* tribits);
-//unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* state, unsigned char* tribits);
 bool CDMRTrellisFixCode(unsigned char* points, unsigned int failPos, unsigned char* payload);
 void CDMRTrellisDeinterleave(const unsigned char* data, signed char* dibits);
 void CDMRTrellisDibitsToPoints(const signed char* dibits, unsigned char* points);
@@ -1049,7 +1007,6 @@ int ez_rs28_facch (int payload[156], int parity[114]); //ezpwd bridge for FME
 int ez_rs28_sacch (int payload[180], int parity[132]); //ezpwd bridge for FME
 unsigned long long int isch_lookup (unsigned long long int isch); //isch map lookup
 int bd_bridge (int payload[196], uint8_t decoded[12]); //bridge to Michael Ossmann Block De-interleaver and 1/2 rate trellis decoder
-// uint16_t crc16(uint8_t buf[], int len);
 int crc16_lb_bridge (int payload[190], int len);
 int crc12_xb_bridge (int payload[190], int len);
 

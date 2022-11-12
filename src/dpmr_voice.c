@@ -177,10 +177,8 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
       x++;
       y++;
       z++;
-      if (j == 3 && i == 28) //find sweet spot to cut off early
-      {
-        i = 40; //break early so FS2 sync can resync
-      }
+      //should be fixed now with the frame_sync t_max setup
+      //no more early breaking required
     }
   }
 

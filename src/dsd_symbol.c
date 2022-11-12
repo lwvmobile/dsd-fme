@@ -178,18 +178,25 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
                state->lastsynctype == 20 || state->lastsynctype == 21 ||
                state->lastsynctype == 22 || state->lastsynctype == 23 ||
                state->lastsynctype == 24 || state->lastsynctype == 25 ||
-               state->lastsynctype == 26 || state->lastsynctype == 27 ) //||
-               //state->lastsynctype == 35 || state->lastsynctype == 36) //phase 2
+               state->lastsynctype == 26 || state->lastsynctype == 27 ||
+               state->lastsynctype == 28 || state->lastsynctype == 29  ) //||
+               //state->lastsynctype == 35 || state->lastsynctype == 36) //phase 2 C4FM disc tap input
             {
-              if(state->samplesPerSymbol == 20)
+              //if(state->samplesPerSymbol == 20)
+              if(opts->frame_nxdn48 == 1)
               {
                 sample = nxdn_filter(sample);
+              }
+              //else if (state->lastsynctype >= 20 && state->lastsynctype <=27) //this the right range?
+              else if (opts->frame_dpmr == 1)
+              {
+                sample = dpmr_filter(sample);
               }
               else if (state->samplesPerSymbol == 8) //phase 2 cqpsk
               {
                 //sample = dmr_filter(sample); //work on filter later
               }
-              else // the 12.5KHz NXDN filter is the same as the DMR filter
+              else // the 12.5KHz NXDN filter is the same as the DMR filter...hopefully
               {
                 sample = dmr_filter(sample);
               }
