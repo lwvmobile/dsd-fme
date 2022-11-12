@@ -138,8 +138,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
 	  }
 
     //Standard/Networked Auto Detection
-	  //if (command == netcmd) //netcmd is F3 Unknown Command in Networked
-    if ( (fr_1t >> 32 == netcmd) )
+	  //if (command == netcmd) //netcmd is F3 Standard/Networked (I think)
+    if ( (fr_1t >> 32 == netcmd) || (fr_1t >> 32 == (netcmd ^ 0xA0)) ) 
     { 
 		  state->ea_mode = 0; //disable extended addressing mode
 	  }
@@ -234,7 +234,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d]", group, source, lcn);
 
-        char mode[8]; //allow, block, digital, enc, etc
+        char mode[8]; //allow, block, digital enc
 
         for (int i = 0; i < state->group_tally; i++)
         {
@@ -242,7 +242,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
           {
             fprintf (stderr, " [%s]", state->group_array[i].groupName);
             strcpy (mode, state->group_array[i].groupMode);
-            //fprintf (stderr, "[%s]", mode); //see if we are getting correct values
           }
         }
 
@@ -252,12 +251,12 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KNRM);
 
         //this is working now with the new import setup
-        if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) ) 
+        if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
         {
           if (lcn < 26 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
           {
             //openwav file and do per call right here, should probably check as well to make sure we have a valid trunking method active (rigctl, rtl)
-            if (opts->dmr_stereo_wav == 1)
+            if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
               sprintf (opts->wav_out_file, "./WAV/%s %s pV Site %lld TG %d SRC %d.wav", getDateE(), getTimeE(), state->edacs_site_id, group, source);
               openWavOutFile (opts, state);
@@ -268,7 +267,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
             {
               SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength, but we want a wide one for now
       		    SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
-              //probably should place these inside of the tuning function condition
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1; 
               
@@ -276,9 +274,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
             if (opts->audio_in_type == 3) //rtl dongle
             {
-              //insert rtl udp command, make a new function for it!
               rtl_udp_tune(opts, state, state->trunk_lcn_freq[lcn-1]);
-              //probably should place these inside of the tuning function condition
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1; 
             }
@@ -337,7 +333,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " AFS [0x%03X] [%02d-%03d] LCN [%02d]", afs, a, fs, lcn);
 
-        char mode[8]; //allow, block, digital, enc, etc
+        char mode[8]; //allow, block, digital enc
 
         for (int i = 0; i < state->group_tally; i++)
         {
@@ -357,12 +353,12 @@ void edacs(dsd_opts * opts, dsd_state * state)
         {
           fprintf (stderr, " Digital");
           //this is working now with the new import setup
-          if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) ) 
+          if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
           {
             if (lcn < 26 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
             {
               //openwav file and do per call right here
-              if (opts->dmr_stereo_wav == 1)
+              if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
               {
                 sprintf (opts->wav_out_file, "./WAV/%s %s pV Site %lld AFS %X.wav", getDateE(), getTimeE(), state->edacs_site_id, afs);
                 openWavOutFile (opts, state);
@@ -372,16 +368,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
               {
                 SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength, but we want a wide one for now
       		      SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because our index starts at zero
-      		      //probably should place these inside of the tuning function condition
                 state->edacs_tuned_lcn = lcn;
                 opts->p25_is_tuned = 1; 
               }
 
               if (opts->audio_in_type == 3) //rtl dongle
               {
-                //rtl udp command here
                 rtl_udp_tune(opts, state, state->trunk_lcn_freq[lcn-1]);
-                //probably should place these inside of the tuning function condition
                 state->edacs_tuned_lcn = lcn;
                 opts->p25_is_tuned = 1; 
               }

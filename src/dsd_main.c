@@ -676,7 +676,7 @@ initState (dsd_state * state)
   state->p25_vc_freq[0] = 0;
   state->p25_vc_freq[1] = 0;
 
-  //edacs
+  //edacs - may need to make these user configurable instead for stability on non-ea systems
   state->ea_mode = -1; //init on -1, 0 is standard, 1 is ea
   state->esk_mode = -1; //same as above, but with esk or not
   state->esk_mask = 0x0; //toggles from 0x0 to 0xA0 if esk mode enabled
@@ -733,8 +733,8 @@ usage ()
   // printf ("  -ps           Show P25 status bits and low speed data\n");
   // printf ("  -pt           Show P25 talkgroup info\n");
   // printf ("  -q            Don't show Frame Info/errorbars\n");
-  printf ("  -s            Datascope (disables other display options)\n");
-  printf ("  -t            Show symbol timing during sync\n");
+  //printf ("  -s            Datascope (disables other display options)\n");
+  //printf ("  -t            Show symbol timing during sync\n");
   // printf ("  -v <num>      Frame information Verbosity\n");
   printf ("  -z <num>      Frame rate for datascope\n");
   printf ("\n");
@@ -747,6 +747,7 @@ usage ()
   printf ("                filename.wav -s 96000 for 96K/1 wav files (DSDPlus)\n");
   printf ("                (Use single quotes '/directory/audio file.wav' when directories/spaces are present)\n");
   printf ("                filename.bin for OP25/FME capture bin files\n");
+  printf ("  -s <rate>     Sample Rate of wav input files (usually 48000 or 96000) Mono only!\n");
   printf ("  -o <device>   Audio output device (default is pulse audio)(null for no audio output)\n");
   printf ("  -d <dir>      Create mbe data files, use this directory\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
@@ -767,7 +768,7 @@ usage ()
   printf ("  -G <num>      RTL-SDR Device Gain (0-49) (default = 0 Auto Gain)\n");
   printf ("  -L <num>      RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)\n                 (Just have to guess really...)\n");
   printf ("  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)\n");
-  printf ("  -Y <num>      RTL-SDR VFO Bandwidth kHz (default = 48)(6, 8, 12, 16, 24, 48) \n");
+  printf ("  -Y <num>      RTL-SDR VFO Bandwidth kHz (default = 12)(6, 8, 12, 16, 24, 48) \n");
   printf ("  -U <num>      RTL-SDR UDP Remote Port (default = 6020)\n");
   printf ("\n");
   printf ("Scanner control options:\n");
@@ -1080,6 +1081,7 @@ main (int argc, char **argv)
           //printPortAudioDevices();
           //exit(0);
           opts.call_alert = 1;
+          break;
         //placeholder until letters get re-arranged (or opt_long switched in)
         case '1': //LCN/Frequency CSV
           strncpy(opts.lcn_in_file, optarg, 1023);
