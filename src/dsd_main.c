@@ -80,12 +80,11 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   //tune back to last knwon CC when using trunking
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1) 
   {
-    if (state->p25_cc_freq != 0) //still need a con+ way to set this accurately, or atleast guess, maybe shim p25_cc_freq to lcn index 0?
+    if (state->p25_cc_freq != 0) 
     {
-      //maybe I should make a seperate tuning function that can handle multiple tuning types
       if (opts->use_rigctl == 1) //rigctl tuning
       {
-        SetModulation(opts->rigctl_sockfd, 12500); //could use the bw field on iden_up for P25 to determine a good bw, but honestly it really depends on signal stregth
+        SetModulation(opts->rigctl_sockfd, 12500); 
         SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
       }
 
@@ -97,20 +96,20 @@ noCarrier (dsd_opts * opts, dsd_state * state)
 
       opts->p25_is_tuned = 0; 
       state->edacs_tuned_lcn = -1;
+
+      //only for EDACS/PV
+      if (opts->frame_provoice == 1 && opts->wav_out_file != NULL)
+      {
+        closeWavOutFile(opts, state);
+      }
+      state->last_cc_sync_time = time(NULL);
+      //test to switch back to 10/4 P1 QPSK for P25 FDMA CC
+      if (opts->mod_qpsk == 1 && state->p25_cc_is_tdma == 0)
+      {
+        state->samplesPerSymbol = 10;
+        state->symbolCenter = 4;
+      }
     }
-    //only for EDACS right now, disable this later on or work around
-    if (opts->wav_out_file != NULL)
-    {
-      closeWavOutFile(opts, state);
-    }
-    state->last_cc_sync_time = time(NULL);
-    //test to revert back to 10/4 P1 QPSK
-    if (opts->mod_qpsk == 1)
-    {
-      state->samplesPerSymbol = 10;
-      state->symbolCenter = 4;
-    }
-    
   }
 
   state->dibit_buf_p = state->dibit_buf + 200;
@@ -397,7 +396,7 @@ initOpts (dsd_opts * opts)
   opts->tcp_hostname = "localhost";
 
   opts->p25_trunk = 0; //0 disabled, 1 is enabled
-  opts->p25_is_tuned = 0; //set to 1 if currently on VC, set back to 0 if on CC
+  opts->p25_is_tuned = 0; //set to 1 if currently on VC, set back to 0 on carrier drop
 
 }
 

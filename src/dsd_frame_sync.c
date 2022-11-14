@@ -152,6 +152,13 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   //will need to assign frequencies to a CC array for P25 since that isn't imported from CSV
   if (opts->p25_is_tuned == 0 && opts->p25_trunk == 1 && time(NULL) - state->last_cc_sync_time > 3)
   {
+    //test to switch back to 10/4 P1 QPSK for P25 FDMA CC
+    if (opts->mod_qpsk == 1 && state->p25_cc_is_tdma == 0)
+    {
+      state->samplesPerSymbol = 10;
+      state->symbolCenter = 4;
+    }
+
     //start going through the lcn/frequencies CC/signal hunting
     fprintf (stderr, "Control Channel Signal Lost. Searching for Control Channel.\n");
     //make sure our current roll value doesn't exceed value of frequencies imported
@@ -212,30 +219,16 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   //if Phase 2 (or YSF in future), then only 20
   else if (state->lastsynctype == 35 || state->lastsynctype == 36) //P2
   {
-    t_max = 20;
+    t_max = 20; 
   }
-  else t_max = 24; //was 18, but everything else seems to be based on 24 dibit sync pattern
+  else t_max = 24; //24 for everything else
 
-  //int lbuf[11], lbuf2[11]; //24 each //10 was woking good on NXDN, but not going well on P25, probably others too
   int lbuf[t_max], lbuf2[t_max];
   int lsum;
   char spectrum[64];
   //init the lbuf
   memset (lbuf, 0, sizeof(lbuf));
   memset (lbuf2, 0, sizeof(lbuf2));
-
-
-  //test changing these values, and the qsort and other values down below sync
-  //also, add max min shit to the sync pattern for NXDN FSW
-  //and maybe also try making a more variable based t >= and also user opt filters (op25, original)
-
-  //also also, go back to post commit version of this file, and try to copy shit back again and not
-  //break things this time, this version is a shim from BJ
-  // for (i = 18; i < 24; i++) //was 18, changing to 10, revert if issues arise
-  //   {
-  //     lbuf[i] = 0;
-  //     lbuf2[i] = 0;
-  //   }
 
   // detect frame sync
   t = 0;
@@ -292,7 +285,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           state->sidx++;
         }
 
-      if (lastt == 23) //issue for QPSK on shorter sync pattern?
+      if (lastt == t_max) //issue for QPSK on shorter sync pattern? //23
         {
           lastt = 0;
           if (state->numflips > opts->mod_threshold)
@@ -418,20 +411,19 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
         }
       }
 
-      // *state->dmr_payload_p = 1; //test just setting all sync with 3, see if it gets rejected by fec
       state->dmr_payload_p++;
       // end digitize and dmr buffer testing
 
-      *synctest_p = dibit; //here's your problem, lady! well, more like the assignment dibit gets up above
+      *synctest_p = dibit; 
       if (t >= t_max) //works excelent now with short sync patterns, and no issues with large ones!
         {
           for (i = 0; i < t_max; i++) //24
             {
               lbuf2[i] = lbuf[i];
             }
-          qsort (lbuf2, t_max, sizeof (int), comp); //24
+          qsort (lbuf2, t_max, sizeof (int), comp); 
           lmin = (lbuf2[1] + lbuf2[2] + lbuf2[3]) / 3;
-          lmax = (lbuf2[t_max - 3] + lbuf2[t_max - 2] + lbuf2[t_max - 1]) / 3; //7,8,9 for NXDN
+          lmax = (lbuf2[t_max - 3] + lbuf2[t_max - 2] + lbuf2[t_max - 1]) / 3; 
 
           if (state->rf_mod == 1)
             {
@@ -466,20 +458,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->maxref = state->max;
               state->minref = state->min;
             }
-
-          // if (state->rf_mod == 0)
-          //   {
-          //     sprintf (modulation, "C4FM");
-          //   }
-          // else if (state->rf_mod == 1)
-          //   {
-          //     sprintf (modulation, "QPSK");
-          //   }
-          // else if (state->rf_mod == 2)
-          //   {
-          //     sprintf (modulation, "GFSK");
-          //   }
-          //tempted to shitcan this datascope
 
           strncpy (synctest, (synctest_p - 23), 24);
           if (opts->frame_p25p1 == 1)

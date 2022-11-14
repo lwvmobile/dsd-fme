@@ -62,7 +62,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 	else slot = state->currentslot;
 
 	//assigning here if OECI MAC SIGNAL, after passing RS and CRC
-	if (state->p2_is_lcch)
+	if (state->p2_is_lcch = 1)
 	{
 		if (slot == 1) state->dmrburstL = 30;
 		else state->dmrburstR = 30;
@@ -74,10 +74,766 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		goto END_PDU;
 	}
 
+	//group list mode so we can look and see if we need to block tuning any groups, etc
+	char mode[8]; //allow, block, digital, enc, etc
+
 	for (int i = 0; i < 2; i++) 
 	{
 
-		//New PDUs added below here as of 10-23-2022
+		//MFID90 Voice Grants, A3, A4, and A5
+		//MFID90 Group Regroup Channel Grant - Implicit
+		if (MAC[1+len_a] == 0xA3 && MAC[2+len_a] == 0x90)
+		{
+			int mfid = MAC[2+len_a];
+			int channel  = (MAC[5+len_a] << 8) | MAC[6+len_a];
+			int sgroup = (MAC[7+len_a] << 8) | MAC[8+len_a];
+			long int freq = 0;
+			fprintf (stderr, "\n MFID90 Group Regroup Channel Grant - Implicit");
+			fprintf (stderr, "\n  CHAN [%04X] Group [%d][%04X]", channel, sgroup, sgroup);
+			freq = process_channel_to_freq (opts, state, channel);
+
+			for (int i = 0; i < state->group_tally; i++)
+      {
+        if (state->group_array[i].groupNumber == sgroup)
+        {
+          fprintf (stderr, " [%s]", state->group_array[i].groupName);
+          strcpy (mode, state->group_array[i].groupMode);
+        }
+      }
+
+			//tune if tuning available
+			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+  		{
+				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+    		if (opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+    		{
+					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+					if (opts->mod_qpsk == 1)
+					{
+						int spacing = state->p25_chan_spac[channel >> 12];
+						if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						{
+							state->samplesPerSymbol = 8;
+							state->symbolCenter = 3;
+						}	
+					}
+					//rigctl
+          if (opts->use_rigctl == 1)
+					{
+						SetModulation(opts->rigctl_sockfd, 12500);
+      			SetFreq(opts->rigctl_sockfd, freq);
+						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+					}
+					//rtl_udp
+					else if (opts->audio_in_type == 3)
+					{
+						rtl_udp_tune (opts, state, freq);
+						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+						opts->p25_is_tuned = 1;
+					}
+    		}    
+  		}
+			//if playing back files, and we still want to see what freqs are in use in the ncurses terminal
+			//might only want to do these on a grant update, and not a grant by itself?
+			if (opts->p25_trunk == 0)
+			{
+				//P1 FDMA
+				if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+				//P2 TDMA
+				else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+			}	
+		}
+
+		//MFID90 Group Regroup Channel Grant - Explicit
+		if (MAC[1+len_a] == 0xA4 && MAC[2+len_a] == 0x90)
+		{
+			int mfid = MAC[2+len_a];
+			int channel  = (MAC[5+len_a] << 8) | MAC[6+len_a];
+			int channelr = (MAC[7+len_a] << 8) | MAC[8+len_a];
+			int sgroup = (MAC[9+len_a] << 8) | MAC[10+len_a];
+			long int freq = 0;
+			fprintf (stderr, "\n MFID90 Group Regroup Channel Grant - Explicit");
+			fprintf (stderr, "\n  CHAN [%04X] Group [%d][%04X]", channel, sgroup, sgroup);
+			freq = process_channel_to_freq (opts, state, channel);
+
+			for (int i = 0; i < state->group_tally; i++)
+      {
+        if (state->group_array[i].groupNumber == sgroup)
+        {
+          fprintf (stderr, " [%s]", state->group_array[i].groupName);
+          strcpy (mode, state->group_array[i].groupMode);
+        }
+      }
+
+			//tune if tuning available
+			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+  		{
+				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+    		if (opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+    		{
+					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+					if (opts->mod_qpsk == 1)
+					{
+						int spacing = state->p25_chan_spac[channel >> 12];
+						if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						{
+							state->samplesPerSymbol = 8;
+							state->symbolCenter = 3;
+						}	
+					}
+					//do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
+          if (opts->use_rigctl == 1)
+					{
+						SetModulation(opts->rigctl_sockfd, 12500);
+      			SetFreq(opts->rigctl_sockfd, freq);
+						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+					}
+					//rtl_udp
+					else if (opts->audio_in_type == 3)
+					{
+						rtl_udp_tune (opts, state, freq);
+						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+						opts->p25_is_tuned = 1;
+					}
+    		}    
+  		}
+			//if playing back files, and we still want to see what freqs are in use in the ncurses terminal
+			//might only want to do these on a grant update, and not a grant by itself?
+			if (opts->p25_trunk == 0)
+			{
+				if (sgroup == state->lasttg || sgroup == state->lasttgR)
+				{
+					//P1 FDMA
+					if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+					//P2 TDMA
+					else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+				}
+			}
+		}
+
+		//MFID90 Group Regroup Channel Grant Update
+		if (MAC[1+len_a] == 0xA5 && MAC[2+len_a] == 0x90)
+		{
+			int channel1  = (MAC[4+len_a] << 8) | MAC[5+len_a];
+			int group1 = (MAC[6+len_a] << 8) | MAC[7+len_a];
+			int channel2  = (MAC[8+len_a] << 8) | MAC[9+len_a];
+			int group2 = (MAC[10+len_a] << 8) | MAC[11+len_a];
+			long int freq1 = 0;
+			long int freq2 = 0;
+
+			fprintf (stderr, "\n MFID90 Group Regroup Channel Grant Update");
+			fprintf (stderr, "\n  Channel 1 [%04X] Group 1 [%d][%04X]", channel1, group1, group1);
+			freq1 = process_channel_to_freq (opts, state, channel1);
+			fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
+			freq2 = process_channel_to_freq (opts, state, channel2);
+
+			//monstrocity below should get us evaluating and tuning groups...hopefully, will be first come first served though, no priority
+			//see how many loops we need to run on when to tune if first group is blocked
+			int loop = 1;
+			if (channel1 == channel2) loop = 1;
+			else loop = 2;
+			//assigned inside loop
+			long int tunable_freq = 0;
+			int tunable_chan = 0; 
+			int tunable_group = 0;
+
+			for (int j = 0; j < loop; j++)
+			{
+				//assign our internal variables for check down on if to tune one freq/group or not
+				if (j == 0)
+				{
+					tunable_freq = freq1;
+					tunable_chan = channel1;
+					tunable_group = group1;
+				}
+				else 
+				{
+					tunable_freq = freq2;
+					tunable_chan = channel2;
+					tunable_group = group2;
+				}
+
+				for (int i = 0; i < state->group_tally; i++)
+				{
+					if (state->group_array[i].groupNumber == tunable_group)
+					{
+						fprintf (stderr, " [%s]", state->group_array[i].groupName);
+						strcpy (mode, state->group_array[i].groupMode);
+					}
+				}
+
+				//check to see if the group candidate is blocked first
+				if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0)) //DE is digital encrypted, B is block
+				{
+					//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+					if (opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency already
+					{
+						//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+						if (opts->mod_qpsk == 1) 
+						{
+							int spacing = state->p25_chan_spac[tunable_chan >> 12];
+							if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+							{
+								state->samplesPerSymbol = 8;
+								state->symbolCenter = 3;
+							}	
+						}
+						//rigctl
+						if (opts->use_rigctl == 1)
+						{
+							SetModulation(opts->rigctl_sockfd, 12500);
+							SetFreq(opts->rigctl_sockfd, tunable_freq);
+							//probably best to only set these when really tuning
+							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
+							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+							
+						}
+						//rtl_udp
+						else if (opts->audio_in_type == 3)
+						{
+							rtl_udp_tune (opts, state, tunable_freq);
+							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
+							opts->p25_is_tuned = 1;
+						}
+					}    
+				}
+				//if playing back files, and we still want to see what freqs are in use in the ncurses terminal
+				//might only want to do these on a grant update, and not a grant by itself?
+				if (opts->p25_trunk == 0)
+				{
+					if (tunable_group == state->lasttg || tunable_group == state->lasttgR)
+					{
+						//P1 FDMA
+						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = tunable_freq;
+						//P2 TDMA
+						else state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
+					}
+				}
+			}
+		}
+
+		//Standard P25 Tunable Commands
+		//Group Voice Channel Grant (GRP_V_CH_GRANT)
+		if (MAC[1+len_a] == 0x40)
+		{
+			int svc      = MAC[2+len_a];
+			int channel = (MAC[3+len_a] << 8) | MAC[4+len_a];
+			int group   = (MAC[5+len_a] << 8) | MAC[6+len_a];
+			int source  = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
+			long int freq = 0;
+
+			fprintf (stderr, "\n Group Voice Channel Grant Update");
+			fprintf (stderr, "\n  SVC [%02X] CHAN [%04X] Group [%d] Source [%d]", svc, channel, group, source);
+			freq = process_channel_to_freq (opts, state, channel);
+
+			for (int i = 0; i < state->group_tally; i++)
+      {
+        if (state->group_array[i].groupNumber == group)
+        {
+          fprintf (stderr, " [%s]", state->group_array[i].groupName);
+          strcpy (mode, state->group_array[i].groupMode);
+        }
+      }
+
+			//tune if tuning available
+			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+  		{
+				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+    		if (opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+    		{
+					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+					if (opts->mod_qpsk == 1)
+					{
+						int spacing = state->p25_chan_spac[channel >> 12];
+						if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						{
+							state->samplesPerSymbol = 8;
+							state->symbolCenter = 3;
+						}	
+					}
+					//rigctl
+          if (opts->use_rigctl == 1)
+					{
+						SetModulation(opts->rigctl_sockfd, 12500);
+      			SetFreq(opts->rigctl_sockfd, freq);
+						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+					}
+					//rtl_udp
+					else if (opts->audio_in_type == 3)
+					{
+						rtl_udp_tune (opts, state, freq);
+						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+						opts->p25_is_tuned = 1;
+					}
+    		}    
+  		}
+			//if playing back files, and we still want to see what freqs are in use in the ncurses terminal
+			//might only want to do these on a grant update, and not a grant by itself?
+			if (opts->p25_trunk == 0)
+			{
+				if (group == state->lasttg || group == state->lasttgR)
+				{
+					//P1 FDMA
+					if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+					//P2 TDMA
+					else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+				}
+			}
+		}
+
+		//Unit-to-Unit Voice Service Channel Grant (UU_V_CH_GRANT), or Grant Update (same format)
+		if (MAC[1+len_a] == 0x44 || MAC[1+len_a] == 0x46)
+		{
+			int channel = (MAC[2+len_a] << 8) | MAC[3+len_a];
+			int target  = (MAC[4+len_a] << 16) | (MAC[5+len_a] << 8) | MAC[6+len_a];
+			int source  = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
+			long int freq = 0;
+
+			fprintf (stderr, "\n Unit to Unit Channel Grant");
+			if ( MAC[1+len_a] == 0x46) fprintf (stderr, " Update");
+			fprintf (stderr, "\n  CHAN [%04X] Source [%d] Target [%d]", channel, source, target);
+			freq = process_channel_to_freq (opts, state, channel);
+
+			//unit to unit needs work, may fail under certain conditions (first blocked, second allowed, etc) (labels should still work though)
+			for (int i = 0; i < state->group_tally; i++)
+      {
+        if (state->group_array[i].groupNumber == source || state->group_array[i].groupNumber == target)
+        {
+          fprintf (stderr, " [%s]", state->group_array[i].groupName);
+          strcpy (mode, state->group_array[i].groupMode);
+        }
+      }
+
+			//tune if tuning available
+			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+  		{
+				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+    		if (opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+    		{
+					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+					if (opts->mod_qpsk == 1)
+					{
+						int spacing = state->p25_chan_spac[channel >> 12];
+						if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						{
+							state->samplesPerSymbol = 8;
+							state->symbolCenter = 3;
+						}	
+					}
+					//rigctl
+          if (opts->use_rigctl == 1)
+					{
+						SetModulation(opts->rigctl_sockfd, 12500);
+      			SetFreq(opts->rigctl_sockfd, freq);
+						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+					}
+					//rtl_udp
+					else if (opts->audio_in_type == 3)
+					{
+						rtl_udp_tune (opts, state, freq);
+						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+						opts->p25_is_tuned = 1;
+					}
+    		}    
+  		}
+			if (opts->p25_trunk == 0)
+			{
+				if (target == state->lasttg || target == state->lasttgR)
+				{
+					//P1 FDMA
+					if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+					//P2 TDMA
+					else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+				}
+			}
+		}
+
+		//Group Voice Channel Grant Update Multiple - Explicit
+		if (MAC[1+len_a] == 0x25)
+		{
+			int svc1 = MAC[2+len_a];
+			int channelt1  = (MAC[3+len_a] << 8) | MAC[4+len_a];
+			int channelr1  = (MAC[5+len_a] << 8) | MAC[6+len_a];
+			int group1 = (MAC[7+len_a] << 8) | MAC[8+len_a];
+			int svc2 = MAC[9+len_a];
+			int channelt2  = (MAC[10+len_a] << 8) | MAC[11+len_a];
+			int channelr2  = (MAC[12+len_a] << 8) | MAC[13+len_a];
+			int group2 = (MAC[14+len_a] << 8) | MAC[15+len_a];
+			long int freq1t = 0;
+			long int freq1r = 0;
+			long int freq2t = 0;
+			long int freq2r = 0;
+			fprintf (stderr, "\n Group Voice Channel Grant Update Multiple - Explicit");
+			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc1, channelt1, channelr1, group1, group1);
+			freq1t = process_channel_to_freq (opts, state, channelt1);
+			freq1r = process_channel_to_freq (opts, state, channelr1);
+			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc2, channelt2, channelr2, group2, group2);
+			freq1t = process_channel_to_freq (opts, state, channelt2);
+			freq1r = process_channel_to_freq (opts, state, channelr2);
+
+			int loop = 1;
+			if (channelt2 == channelt2) loop = 1;
+			else loop = 2;
+			//assigned inside loop
+			long int tunable_freq = 0;
+			int tunable_chan = 0; 
+			int tunable_group = 0;
+
+			for (int j = 0; j < loop; j++)
+			{
+				//assign our internal variables for check down on if to tune one freq/group or not
+				if (j == 0)
+				{
+					tunable_freq = freq1t;
+					tunable_chan = channelt1;
+					tunable_group = group1;
+				}
+				else 
+				{
+					tunable_freq = freq2t;
+					tunable_chan = channelt2;
+					tunable_group = group2;
+				}
+				for (int i = 0; i < state->group_tally; i++)
+				{
+					if (state->group_array[i].groupNumber == tunable_group)
+					{
+						fprintf (stderr, " [%s]", state->group_array[i].groupName);
+						strcpy (mode, state->group_array[i].groupMode);
+					}
+				}
+
+				//tune if tuning available
+				if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+				{
+					//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+					if (opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency
+					{
+						//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+						if (opts->mod_qpsk == 1)
+						{
+							int spacing = state->p25_chan_spac[tunable_chan >> 12];
+							if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+							{
+								state->samplesPerSymbol = 8;
+								state->symbolCenter = 3;
+							}	
+						}
+						//do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
+						if (opts->use_rigctl == 1)
+						{
+							SetModulation(opts->rigctl_sockfd, 12500);
+							SetFreq(opts->rigctl_sockfd, tunable_freq);
+							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
+							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+						}
+						//rtl_udp
+						else if (opts->audio_in_type == 3)
+						{
+							rtl_udp_tune (opts, state, tunable_freq);
+							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
+							opts->p25_is_tuned = 1;
+						}
+					}    
+				}
+				if (opts->p25_trunk == 0)
+				{
+					if (tunable_group == state->lasttg || tunable_group == state->lasttgR)
+					{
+						//P1 FDMA
+						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = tunable_freq;
+						//P2 TDMA
+						else state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
+					}
+				}
+			}
+		}
+
+		//Group Voice Channel Grant Update Multiple - Implicit
+		if (MAC[1+len_a] == 0x05) //wonder if this is MAC_SIGNAL only? Too long for a TSBK
+		{
+			int so1 = MAC[2+len_a];
+			int channel1  = (MAC[3+len_a] << 8) | MAC[4+len_a];
+			int group1 = (MAC[5+len_a] << 8) | MAC[6+len_a];
+			int so2 = MAC[7+len_a];
+			int channel2  = (MAC[8+len_a] << 8) | MAC[9+len_a];
+			int group2 = (MAC[10+len_a] << 8) | MAC[11+len_a];
+			int so3 = MAC[12+len_a];
+			int channel3  = (MAC[13+len_a] << 8) | MAC[14+len_a];
+			int group3 = (MAC[15+len_a] << 8) | MAC[16+len_a];
+			long int freq1 = 0;
+			long int freq2 = 0;
+			long int freq3 = 0;
+
+			fprintf (stderr, "\n Group Voice Channel Grant Update Multiple - Implicit");
+			fprintf (stderr, "\n  Channel 1 [%04X] Group 1 [%d][%04X]", channel1, group1, group1);
+			freq1 = process_channel_to_freq (opts, state, channel1);
+			fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
+			freq2 = process_channel_to_freq (opts, state, channel2);
+			fprintf (stderr, "\n  Channel 3 [%04X] Group 3 [%d][%04X]", channel3, group3, group3);
+			freq3 = process_channel_to_freq (opts, state, channel3);
+
+			int loop = 3;
+
+			long int tunable_freq = 0;
+			int tunable_chan = 0; 
+			int tunable_group = 0;
+
+			for (int j = 0; j < loop; j++)
+			{
+				//assign our internal variables for check down on if to tune one freq/group or not
+				if (j == 0)
+				{
+					tunable_freq = freq1;
+					tunable_chan = channel1;
+					tunable_group = group1;
+				}
+				else if (j == 1)
+				{
+					tunable_freq = freq2;
+					tunable_chan = channel2;
+					tunable_group = group2;
+				}
+				else 
+				{
+					tunable_freq = freq3;
+					tunable_chan = channel3;
+					tunable_group = group3;
+				}
+
+				for (int i = 0; i < state->group_tally; i++)
+				{
+					if (state->group_array[i].groupNumber == tunable_group)
+					{
+						fprintf (stderr, " [%s]", state->group_array[i].groupName);
+						strcpy (mode, state->group_array[i].groupMode);
+					}
+				}
+
+				//check to see if the group candidate is blocked first
+				if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0)) //DE is digital encrypted, B is block
+				{
+					//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+					if (opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency already
+					{
+						//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+						if (opts->mod_qpsk == 1) 
+						{
+							int spacing = state->p25_chan_spac[tunable_chan >> 12];
+							if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+							{
+								state->samplesPerSymbol = 8;
+								state->symbolCenter = 3;
+							}	
+						}
+						//rigctl
+						if (opts->use_rigctl == 1)
+						{
+							SetModulation(opts->rigctl_sockfd, 12500);
+							SetFreq(opts->rigctl_sockfd, tunable_freq);
+							//probably best to only set these when really tuning
+							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
+							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+							
+						}
+						//rtl_udp
+						else if (opts->audio_in_type == 3)
+						{
+							rtl_udp_tune (opts, state, tunable_freq);
+							//probably best to only set these when really tuning
+							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
+							opts->p25_is_tuned = 1;
+						}
+					}    
+				}
+				if (opts->p25_trunk == 0)
+				{
+					if (tunable_group == state->lasttg || tunable_group == state->lasttgR)
+					{
+						//P1 FDMA
+						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = tunable_freq;
+						//P2 TDMA
+						else state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
+					}
+				} 
+			}
+		}
+
+		//Group Voice Channel Grant Update - Implicit
+		if (MAC[1+len_a] == 0x42)
+		{
+			int channel1  = (MAC[2+len_a] << 8) | MAC[3+len_a];
+			int group1 = (MAC[4+len_a] << 8) | MAC[5+len_a];
+			int channel2  = (MAC[6+len_a] << 8) | MAC[7+len_a];
+			int group2 = (MAC[8+len_a] << 8) | MAC[9+len_a];
+			long int freq1 = 0;
+			long int freq2 = 0;
+
+			fprintf (stderr, "\n Group Voice Channel Grant Update - Implicit");
+			fprintf (stderr, "\n  Channel 1 [%04X] Group 1 [%d][%04X]", channel1, group1, group1);
+			freq1 = process_channel_to_freq (opts, state, channel1);
+			fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
+			freq2 = process_channel_to_freq (opts, state, channel2);
+
+			int loop = 1;
+			if (channel1 == channel2) loop = 1;
+			else loop = 2;
+			//assigned inside loop
+			long int tunable_freq = 0;
+			int tunable_chan = 0; 
+			int tunable_group = 0;
+
+			for (int j = 0; j < loop; j++)
+			{
+				//assign our internal variables for check down on if to tune one freq/group or not
+				if (j == 0)
+				{
+					tunable_freq = freq1;
+					tunable_chan = channel1;
+					tunable_group = group1;
+				}
+				else 
+				{
+					tunable_freq = freq2;
+					tunable_chan = channel2;
+					tunable_group = group2;
+				}
+
+				for (int i = 0; i < state->group_tally; i++)
+				{
+					if (state->group_array[i].groupNumber == tunable_group)
+					{
+						fprintf (stderr, " [%s]", state->group_array[i].groupName);
+						strcpy (mode, state->group_array[i].groupMode);
+					}
+				}
+
+				//check to see if the group candidate is blocked first
+				if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0)) //DE is digital encrypted, B is block
+				{
+					//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+					if (opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency already
+					{
+						//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+						if (opts->mod_qpsk == 1) 
+						{
+							int spacing = state->p25_chan_spac[tunable_chan >> 12];
+							if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+							{
+								state->samplesPerSymbol = 8;
+								state->symbolCenter = 3;
+							}	
+						}
+						//rigctl
+						if (opts->use_rigctl == 1)
+						{
+							SetModulation(opts->rigctl_sockfd, 12500);
+							SetFreq(opts->rigctl_sockfd, tunable_freq);
+							//probably best to only set these when really tuning
+							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
+							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+							
+						}
+						//rtl_udp
+						else if (opts->audio_in_type == 3)
+						{
+							rtl_udp_tune (opts, state, tunable_freq);
+							//probably best to only set these when really tuning
+							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
+							opts->p25_is_tuned = 1;
+						}
+					}    
+				}
+				if (opts->p25_trunk == 0)
+				{
+					if (tunable_group == state->lasttg || tunable_group == state->lasttgR)
+					{
+						//P1 FDMA
+						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = tunable_freq;
+						//P2 TDMA
+						else state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
+					}
+				}
+			}
+		}
+
+		//Group Voice Channel Grant Update - Explicit
+		if (MAC[1+len_a] == 0xC3)
+		{
+			int svc = MAC[2+len_a];
+			int channelt  = (MAC[3+len_a] << 8) | MAC[4+len_a];
+			int channelr  = (MAC[5+len_a] << 8) | MAC[6+len_a];
+			int group = (MAC[7+len_a] << 8) | MAC[8+len_a];
+			long int freq1 = 0;
+			long int freq2 = 0;
+
+			fprintf (stderr, "\n Group Voice Channel Grant Update - Explicit");
+			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc, channelt, channelr, group, group);
+			freq1 = process_channel_to_freq (opts, state, channelt);
+			freq2 = process_channel_to_freq (opts, state, channelr);
+			if (slot == 0)
+			{
+				state->lasttg = group;
+			}
+			else state->lasttgR = group;
+
+			for (int i = 0; i < state->group_tally; i++)
+      {
+        if (state->group_array[i].groupNumber == group)
+        {
+          fprintf (stderr, " [%s]", state->group_array[i].groupName);
+          strcpy (mode, state->group_array[i].groupMode);
+        }
+      }
+
+			//tune if tuning available
+			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+  		{
+				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+    		if (opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
+    		{
+					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+					if (opts->mod_qpsk == 1)
+					{
+						int spacing = state->p25_chan_spac[channelt >> 12];
+						if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						{
+							state->samplesPerSymbol = 8;
+							state->symbolCenter = 3;
+						}	
+					}
+					//rigctl
+          if (opts->use_rigctl == 1)
+					{
+						SetModulation(opts->rigctl_sockfd, 12500);
+      			SetFreq(opts->rigctl_sockfd, freq1);
+						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+					}
+					//rtl_udp
+					else if (opts->audio_in_type == 3)
+					{
+						rtl_udp_tune (opts, state, freq1);
+						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
+						opts->p25_is_tuned = 1;
+					}
+    		}    
+  		}
+			if (opts->p25_trunk == 0)
+			{
+				if (group == state->lasttg || group == state->lasttgR)
+				{
+					//P1 FDMA
+					if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq1;
+					//P2 TDMA
+					else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
+				}
+			}
+		}
 
 		//SNDCP Data Channel Announcement
 		if (MAC[1+len_a] == 0xD6)
@@ -137,35 +893,6 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%02X] SITE ID [%02X]\n  CHAN-T [%04X] CHAN-R [%02X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channelt, channelr, sysclass);
 			process_channel_to_freq (opts, state, channelt);
 			process_channel_to_freq (opts, state, channelr);
-		}
-
-		//End New PDUs added
-
-		//Group Voice Channel Grant (GRP_V_CH_GRANT)
-		if (MAC[1+len_a] == 0x40)
-		{
-			int svc      = MAC[2+len_a];
-			int channel = (MAC[3+len_a] << 8) | MAC[4+len_a];
-			int group   = (MAC[5+len_a] << 8) | MAC[6+len_a];
-			int source  = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
-
-			fprintf (stderr, "\n Group Voice Channel Grant Update");
-			fprintf (stderr, "\n  SVC [%02X] CHAN [%04X] Group [%d] Source [%d]", svc, channel, group, source);
-			process_channel_to_freq (opts, state, channel);
-			
-		}
-
-		//Unit-to-Unit Voice Service Channel Grant (UU_V_CH_GRANT)
-		if (MAC[1+len_a] == 0x44)
-		{
-			int channel = (MAC[2+len_a] << 8) | MAC[3+len_a];
-			int target  = (MAC[4+len_a] << 16) | (MAC[5+len_a] << 8) | MAC[6+len_a];
-			int source  = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
-
-			fprintf (stderr, "\n Unit to Unit Channel Grant");
-			fprintf (stderr, "\n  CHAN [%04X] Source [%d] Target [%d]", channel, source, target);
-			process_channel_to_freq (opts, state, channel);
-			
 		}
 
 		//Unit-to-Unit Answer Request (UU_ANS_REQ)
@@ -337,66 +1064,6 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 		}
 
-		//Group Voice Channel Grant Update - Implicit
-		if (MAC[1+len_a] == 0x42)
-		{
-			int channel1  = (MAC[2+len_a] << 8) | MAC[3+len_a];
-			int group1 = (MAC[4+len_a] << 8) | MAC[5+len_a];
-			int channel2  = (MAC[6+len_a] << 8) | MAC[7+len_a];
-			int group2 = (MAC[8+len_a] << 8) | MAC[9+len_a];
-
-			fprintf (stderr, "\n Group Voice Channel Grant Update - Implicit");
-			fprintf (stderr, "\n  Channel 1 [%04X] Group 1 [%d][%04X]", channel1, group1, group1);
-
-			if (state->lasttg == group1)
-			{
-				state->p25_vc_freq[0] = process_channel_to_freq (opts, state, channel1);
-			}
-			else if (state->lasttgR == group1)
-			{
-				state->p25_vc_freq[1] = process_channel_to_freq (opts, state, channel1);
-			}
-			else process_channel_to_freq (opts, state, channel1);
-			//only run next channel if not identical to first channel
-			if (group1 != group2)
-			{
-				fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
-				if (state->lasttg == group2)
-				{
-					state->p25_vc_freq[0] = process_channel_to_freq (opts, state, channel2);
-				}
-				else if (state->lasttgR == group2)
-				{
-					state->p25_vc_freq[1] = process_channel_to_freq (opts, state, channel2);
-				}
-				else process_channel_to_freq (opts, state, channel2);
-			
-			}
-			
-			
-
-		}
-
-		//Group Voice Channel Grant Update - Explicit
-		if (MAC[1+len_a] == 0xC3)
-		{
-			int svc = MAC[2+len_a];
-			int channelt  = (MAC[3+len_a] << 8) | MAC[4+len_a];
-			int channelr  = (MAC[5+len_a] << 8) | MAC[6+len_a];
-			int group = (MAC[7+len_a] << 8) | MAC[8+len_a];
-
-			fprintf (stderr, "\n Group Voice Channel Grant Update - Explicit");
-			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc, channelt, channelr, group, group);
-			process_channel_to_freq (opts, state, channelt);
-			process_channel_to_freq (opts, state, channelr);
-			if (slot == 0)
-			{
-				state->lasttg = group;
-			}
-			else state->lasttgR = group;
-
-		}
-
 		//MFID90 Group Regroup Voice Channel User - Abbreviated
 		if (MAC[1+len_a] == 0x80 && MAC[2+len_a] == 0x90)
 		{
@@ -545,6 +1212,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n Network Status Broadcast - Abbreviated \n");
 			fprintf (stderr, "  LRA [%02X] WACN [%05X] SYSID [%03X] NAC [%03X] CHAN-T [%04X]", lra, lwacn, lsysid, lcolorcode, channel);
 			state->p25_cc_freq = process_channel_to_freq (opts, state, channel);
+			state->p25_cc_is_tdma = 1; //flag on for CC tuning purposes when system is qpsk
 			if (state->p2_hardset == 0 ) //state->p2_is_lcch == 1 shim until CRC is working, prevent bogus data
 			{
 				state->p2_wacn = lwacn;
@@ -567,6 +1235,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "  LRA [%02X] WACN [%05X] SYSID [%03X] NAC [%03X] CHAN-T [%04X] CHAN-R [%04X]", lra, lwacn, lsysid, lcolorcode, channelt, channelr);
 			process_channel_to_freq (opts, state, channelt);
 			process_channel_to_freq (opts, state, channelr);
+			state->p25_cc_is_tdma = 1; //flag on for CC tuning purposes when system is qpsk
 			if (state->p2_hardset == 0 ) //state->p2_is_lcch == 1 shim until CRC is working, prevent bogus data
 			{
 				state->p2_wacn = lwacn;

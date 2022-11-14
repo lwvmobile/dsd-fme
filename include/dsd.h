@@ -599,9 +599,11 @@ typedef struct
   int p25_chan_spac[16];
   long int p25_base_freq[16];
 
-  //p25 frequency storage for display in ncurses
+  //p25 frequency storage for trunking and display in ncurses
   long int p25_cc_freq;     //cc freq from net_stat
   long int p25_vc_freq[2]; //vc freq from voice grant updates, etc
+  int p25_cc_is_tdma; //flag to tell us that the P25 control channel is TDMA so we can change symbol rate when required
+
 
   //experimental symbol file capture read throttle
   int symbol_throttle; //throttle speed

@@ -124,6 +124,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "\n Network Status Broadcast TSBK - Abbreviated \n");
       fprintf (stderr, "  WACN [%05lX] SYSID [%03X] NAC [%03llX]", wacn, sysid, state->p2_cc);
       state->p25_cc_freq = process_channel_to_freq(opts, state, channel);
+      state->p25_cc_is_tdma = 0; //flag off for CC tuning purposes when system is qpsk
 
       //only set IF these values aren't already hard set by the user
       if (state->p2_hardset == 0)
