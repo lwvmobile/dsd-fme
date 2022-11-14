@@ -647,6 +647,9 @@ typedef struct
   uint8_t nxdn_alias_block_number;
   char nxdn_alias_block_segment[4][4][8]; 
 
+  //Roman DMR End Call Alert Beep
+  int dmr_end_alert[2]; //dmr TLC end call alert beep has already played once flag
+
 } dsd_state;
 
 /*

@@ -1848,6 +1848,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //fprintf (stderr, "BEEP 0 MS LEFT\n");
       beeper (opts, state, 0);
+      state->dmr_end_alert[0] = 0; //new voice frame, okay to beep at the end of it
     }
 
   }
@@ -1887,6 +1888,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //fprintf (stderr, "BEEP 0 BS LEFT\n");
       beeper (opts, state, 0);
+      state->dmr_end_alert[0] = 0; //new voice frame, okay to beep at the end of it
     }
 
   }
@@ -1925,6 +1927,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //fprintf (stderr, "BEEP 1 BS RIGHT\n");
       beeper (opts, state, 1);
+      state->dmr_end_alert[1] = 0; //new voice frame, okay to beep at the end of it
     }
 
   }
@@ -1964,6 +1967,21 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
 
   }
+
+  //Roman DMR End Call Alert Beep
+  // if (opts->call_alert == 1)
+  // {
+  //   if (state->dmrburstL == 2 && state->dmr_end_alert[0] == 0) //if TLC and flag not tripped
+  //   {
+  //     beeper (opts, state, 0);
+  //     state->dmr_end_alert[0] = 1; //don't play again until new voice frames
+  //   } 
+  //   if (state->dmrburstR == 2 && state->dmr_end_alert[1] == 0) //if TLC and flag not tripped
+  //   {
+  //     beeper (opts, state, 1);
+  //     state->dmr_end_alert[1] = 1; //don't play again until new voice frames
+  //   } 
+  // }
 
   //Start Printing Section
   erase();

@@ -709,7 +709,9 @@ initState (dsd_state * state)
   state->nxdn_alias_block_number = 0;
   memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
 
-
+  //Roman DMR End Call Alert Beep
+  state->dmr_end_alert[0] = 0;
+  state->dmr_end_alert[1] = 0;
 
   initialize_p25_heuristics(&state->p25_heuristics);
 }
