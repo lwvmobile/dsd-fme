@@ -84,7 +84,9 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     {
       if (opts->use_rigctl == 1) //rigctl tuning
       {
-        SetModulation(opts->rigctl_sockfd, 12500); 
+        //may or may not use setmod here, let user control it instead?
+        if (opts->frame_nxdn48 == 1) SetModulation(opts->rigctl_sockfd, 6250);
+        else SetModulation(opts->rigctl_sockfd, 12500); 
         SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
       }
 
@@ -747,7 +749,7 @@ usage ()
   printf ("                filename.wav for 48K/1 wav files (SDR++, GQRX)\n");
   printf ("                filename.wav -s 96000 for 96K/1 wav files (DSDPlus)\n");
   printf ("                (Use single quotes '/directory/audio file.wav' when directories/spaces are present)\n");
-  printf ("                filename.bin for OP25/FME capture bin files\n");
+  //printf ("                filename.bin for OP25/FME capture bin files\n");
   printf ("  -s <rate>     Sample Rate of wav input files (usually 48000 or 96000) Mono only!\n");
   printf ("  -o <device>   Audio output device (default is pulse audio)(null for no audio output)\n");
   printf ("  -d <dir>      Create mbe data files, use this directory\n");

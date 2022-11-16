@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
-//#define __USE_XOPEN //compiler warning on this, need to rewrite dsd_file so it doesn't use strptime
+
 #include <time.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -484,10 +484,10 @@ typedef struct
   // Last dibit read
   int last_dibit;
 
-  // Heuristics state data for +P5 signals
+  // Heuristics state data for +P25 signals
   P25Heuristics p25_heuristics;
 
-  // Heuristics state data for -P5 signals
+  // Heuristics state data for -P25 signals
   P25Heuristics inv_p25_heuristics;
 
   //input sample buffer for monitoring Input
@@ -852,7 +852,13 @@ void NXDN_decode_VCALL_IV(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 char * NXDN_Call_Type_To_Str(uint8_t CallType);
 void NXDN_Voice_Call_Option_To_Str(uint8_t VoiceCallOption, uint8_t * Duplex, uint8_t * TransmissionMode);
 char * NXDN_Cipher_Type_To_Str(uint8_t CipherType);
+//added these
 void NXDN_decode_Alias(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void NXDN_decode_cch_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void NXDN_decode_srv_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void NXDN_decode_site_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void nxdn_location_id_handler (dsd_state * state, uint32_t location_id);
 
 void dPMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
 void printdPMRAmbeVoiceSample(dsd_opts * opts, dsd_state * state);
@@ -955,6 +961,9 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 
 //P25 Channel to Frequency
 long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channel);
+
+//NXDN Channel to Frequency, Courtesy of IcomIcR20 on RR Forums
+long int nxdn_channel_to_frequency (dsd_opts * opts, uint16_t channel);
 
 //rigctl functions and TCP/UDP functions
 void error(char *msg);

@@ -196,7 +196,7 @@ dsd_input_filter(short sample, int mode)
   for (i = 0; i < zeros; i++)
       v[i] = v[i+1];
 
-  v[zeros] = sample; // unfiltered sample in
+  v[zeros] = (float)sample; // unfiltered sample in
   sum = 0.0f;
 
   for (i = 0; i <= zeros; i++)

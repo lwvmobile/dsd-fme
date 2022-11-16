@@ -18,10 +18,10 @@
 #include "dsd.h"
 #include <locale.h>
 
-//borrowed from DSDcc for 'improved NXDN sync detection'
+//borrowed from LEH/DSDcc for 'improved NXDN sync detection'
 int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr)
 {
-  //MaxErr = 0; //force to zero for NXDN testing
+
   int Compare = -1;
   size_t i = 0;
   int err = 0;
@@ -169,13 +169,15 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
     //check that we have a non zero value first, then tune next frequency
     if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0) 
     {
-      //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
+      //rigctl
       if (opts->use_rigctl == 1)
       {
-        SetModulation(opts->rigctl_sockfd, 12500); //may not use this here, not sure yet
+        //may or may not use setmod here, let user control it instead?
+        if (opts->frame_nxdn48 == 1) SetModulation(opts->rigctl_sockfd, 6250);
+        else SetModulation(opts->rigctl_sockfd, 12500);
         SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[state->lcn_freq_roll]);
       }
-
+      //rtludp
       if (opts->audio_in_type == 3)
       {
         rtl_udp_tune (opts, state, state->trunk_lcn_freq[state->lcn_freq_roll]);
@@ -211,7 +213,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   {
     t_max = 10;
   }
-  //else if dPMR, need condition here when we can test what it'll need
+  //else if dPMR
   else if (opts->frame_dpmr == 1)
   {
     t_max = 12; //based on Frame_Sync_2 pattern
@@ -256,7 +258,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
   if ((opts->symboltiming == 1) && (state->carrier == 1))
     {
-      fprintf (stderr,"\nSymbol Timing:\n");
+      //fprintf (stderr,"\nSymbol Timing:\n");
       //printw("\nSymbol Timing:\n");
     }
   while (sync == 0)
@@ -335,9 +337,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           dibit = 51;               // '3'
         }
 
-      //this is needed to capture dibits and convert them to appropriate format for a symbol bin
-      //HERE HERE i REMOVED THE SYMBOL != 0 BIT, IF THAT CAUSES ISSUES, THEN PUT IT BACK!!!!!
-      if (opts->symbol_out == 1 && dibit != 0) //is 0 a valid symbol from dsd? //&& symbol != 0 //&& symbol != 0
+      if (opts->symbol_out == 1 && dibit != 0) 
       {
         int csymbol = 0;
         if (dibit == 49)
@@ -353,10 +353,12 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
       }
 
       //digitize test for storing dibits in buffer correctly for dmr recovery
+
       if (state->dmr_payload_p > state->dmr_payload_buf + 900000)
       {
        state->dmr_payload_p = state->dmr_payload_buf + 200;
       }
+
       if (1 == 1)
       {
         if (symbol > state->center)
@@ -382,35 +384,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           }
         }
       }
-      //if this part were working, we shouldn't have to worry about flipping dibits in dmr, just pull them right off the buffer
-      //but that has caused issues due to various reasons, probably forgot to flip something somehwere else, so just leave it Disabled
-      //since we can get the same result by flipping them later on
-      if (0 == 1)
-      {
-        if (symbol > state->center)
-        {
-          if (symbol > state->umid)
-          {
-            *state->dmr_payload_p = 3;               // +3
-          }
-          else
-          {
-            *state->dmr_payload_p = 2;               // +1
-          }
-        }
-        else
-        {
-          if (symbol < state->lmid)
-          {
-            *state->dmr_payload_p = 1;               // -3
-          }
-          else
-          {
-            *state->dmr_payload_p = 0;               // -1
-          }
-        }
-      }
-
+      
       state->dmr_payload_p++;
       // end digitize and dmr buffer testing
 
@@ -1173,9 +1147,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->lastsynctype = 15;
                   return (15);
               }
-              //had error in return type, apparently, local EDACS site is indeed pos polarity, 
-              //so had to flip return syncs
-              //fixed edacs sync on bin files, was only converting symbols on synctype > 0, didn't need to do that
               else if ( strcmp (synctest48, EDACS_SYNC) == 0)
               {
                 state->last_cc_sync_time = time(NULL);
@@ -1184,7 +1155,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
                 printFrameSync (opts, state, "-EDACS", synctest_pos + 1, modulation);
-                state->lastsynctype = 38; //14
+                state->lastsynctype = 38; 
                 return (38);
               }
               else if ( strcmp (synctest48, INV_EDACS_SYNC) == 0)
@@ -1195,7 +1166,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
                 printFrameSync (opts, state, "+EDACS", synctest_pos + 1, modulation);
-                state->lastsynctype = 37; //15
+                state->lastsynctype = 37; 
                 return (37);
               }
 
@@ -1282,13 +1253,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
             }
           
-          //Testing NXDN FSW sync and handling - moved to very bottom of sync stack for falsing sanity
-          //move printframesync to inside of new nxdn handling when its set up, only run when not bad lich, etc
+          //NXDN FSW sync and handling - moved to very bottom of sync stack for falsing sanity
           else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
           {
             strncpy (synctest10, (synctest_p - 9), 10);
             if ( (strncmperr (synctest10, NXDN_FSW, 10, 1) == 0) )
-            //if (strcmp (synctest10, NXDN_FSW) == 0) //this seems to work well on some samples
             {
               state->carrier = 1;
               state->offset = synctest_pos;
@@ -1305,7 +1274,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             }
 
             if ( (strncmperr (synctest10, INV_NXDN_FSW, 10, 1) == 0) )
-            //if (strcmp (synctest10, INV_NXDN_FSW) == 0) //not so well on others though
             {
               state->carrier = 1;
               state->offset = synctest_pos;
@@ -1352,7 +1320,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if ((opts->errorbars == 1) && (opts->verbose > 1) && (state->carrier == 1))
                 {
                   fprintf (stderr,"Sync: no sync\n");
-                  fprintf (stderr,"Press CTRL + C to close.\n"); //Kindly remind user to double tap CTRL + C
+                  fprintf (stderr,"Press CTRL + C to close.\n"); 
 
                 }
               noCarrier (opts, state);
