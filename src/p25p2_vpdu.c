@@ -1052,15 +1052,25 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int sysclass1 = MAC[6+len_a];
 			int channel2 = (MAC[7+len_a] << 8) | MAC[8+len_a];
 			int sysclass2 = MAC[9+len_a];
+			long int freq1 = 0;
+			long int freq2 = 0;
 			if (1 == 1) //state->p2_is_lcch == 1
 			{
 
 				fprintf (stderr, "\n Secondary Control Channel Broadcast - Implicit\n");
 				fprintf (stderr, "  RFSS[%03d] SITE ID [%03X] CHAN1 [%04X] SSC [%02X] CHAN2 [%04X] SSC [%02X]", rfssid, siteid, channel1, sysclass1, channel2, sysclass2);
 
-				process_channel_to_freq (opts, state, channel1);
-				process_channel_to_freq (opts, state, channel2);
+				freq1 = process_channel_to_freq (opts, state, channel1);
+				freq2 = process_channel_to_freq (opts, state, channel2);
 			}
+
+			//place the cc freq into the list at index 0 if 0 is empty so we can hunt for rotating CCs without user LCN list
+      if (state->trunk_lcn_freq[1] == 0)
+      {
+        state->trunk_lcn_freq[1] = freq1; 
+				state->trunk_lcn_freq[2] = freq2;
+				state->lcn_freq_count = 3; //increment to three
+      } 
 
 		}
 
@@ -1219,6 +1229,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				state->p2_sysid = lsysid;
 				state->p2_cc = lcolorcode;
 			}
+
+			//place the cc freq into the list at index 0 if 0 is empty, or not the same, 
+      //so we can hunt for rotating CCs without user LCN list
+			if (state->trunk_lcn_freq[0] == 0 || state->trunk_lcn_freq[0] != state->p25_cc_freq)
+      {
+        state->trunk_lcn_freq[0] = state->p25_cc_freq; 
+      } 
 
 		}
 		//network status broadcast, extended
