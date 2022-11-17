@@ -182,11 +182,6 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->payload_keyid = 0;
   state->payload_keyidR = 0;
 
-  // state->dmr_fid = 0;
-  // state->dmr_so = 0;
-  // state->dmr_fidR = 0;
-  // state->dmr_soR = 0;
-
   state->HYTL = 0;
   state->HYTR = 0;
   state->DMRvcL = 0;
@@ -228,9 +223,6 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->data_p_head[0] = 0;
   state->data_p_head[1] = 0;
 
-  // state->dmr_so   = 0; //let TLC or Voice LC/Burst zero or set this instead?
-  // state->dmr_soR  = 0;
-
   state->dmr_encL = 0;
   state->dmr_encR = 0;
 
@@ -259,6 +251,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
   state->nxdn_alias_block_number = 0;
   memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
+  sprintf (state->nxdn_call_type, "%s", "");
 
 }
 
@@ -710,6 +703,10 @@ initState (dsd_state * state)
   memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
   state->nxdn_alias_block_number = 0;
   memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
+  //site/srv/cch info
+  state->nxdn_location_site_code = 0;
+  state->nxdn_location_sys_code = 0;
+  sprintf (state->nxdn_location_category, "%s", " "); 
 
   //Roman DMR End Call Alert Beep
   state->dmr_end_alert[0] = 0;
@@ -839,7 +836,7 @@ usage ()
   printf ("                 (See lcn.csv for example)\n");
   printf ("  -2 <file>     Import Group List Allow/Block and Label from csv file (numeral 'two')\n");
   printf ("                 (See group.csv for example)\n");
-  printf ("  -3            Enable Experimental Trunking Features (P25/EDACS for now) with RIGCTL/TCP or RTL Input\n");
+  printf ("  -3            Enable Extremely Experimental Trunking Features (NXDN/P25/EDACS for now) with RIGCTL/TCP or RTL Input\n");
   printf ("  -5 <udp p>    Enable RIGCTL/TCP; Set UDP Port for RIGCTL. (4532 on SDR++)\n");
   //printf ("                 (Currently only available on UDP port 4532)\n");
   printf ("\n");

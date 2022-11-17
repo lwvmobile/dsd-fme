@@ -2,12 +2,15 @@
  * p25_frequency.c
  * P25 Channel to Frequency Calculator
  *
+ * NXDN Channel to Frequency, Courtesy of IcomIcR20 and EricCottrell (base values)
+ * 
  * LWVMOBILE
- * 2022-09 DSD-FME Florida Man Edition
+ * 2022-11 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
 
+//P25
 long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channel)
 {
 
@@ -40,5 +43,45 @@ long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channe
         fprintf (stderr, "\n  Base Frequency Not Found - Iden [%d]", iden);
         return (0);
     }
+
+}
+
+//NXDN Channel to Frequency, Courtesy of IcomIcR20 on RR Forums
+long int nxdn_channel_to_frequency(dsd_opts * opts, uint16_t channel)
+{
+	long int freq;
+	long int base = 0;
+
+	//the base freq value is per EricCottrell in the Understanding NXDN Trunking Forum Thread
+	//will need to do some research or tests to confirm these values are accurate
+
+	if ((channel > 0) && (channel <= 400))
+	{
+		if (opts->frame_nxdn48 == 1) base = 450000000;
+		else base = 451000000;
+
+		freq = base + (channel - 1) * 12500;
+		fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
+		return (freq);
+	}
+	else if ((channel >= 401) && (channel <= 800))
+	{
+		if (opts->frame_nxdn48 == 1) base = 460000000;
+		else base = 461000000;
+
+		freq = base + (channel - 401) * 12500;
+		fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
+		return (freq);
+	}
+	else if (channel > 800)
+	{
+		//write function to check the LCN import array for custom frequency values!
+		//return (freq);
+	}
+	else
+	{
+		fprintf(stderr, "\n  This LCN is used for a non-standard frequency. No frequency can be reported");
+		return (0);
+	}
 
 }

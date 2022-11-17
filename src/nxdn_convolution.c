@@ -59,17 +59,6 @@ static uint64_t * m_dp = NULL;
 
 /* Functions ----------------------------------------------------------------*/
 
-void CNXDNConvolution_start(void)
-{
-  memset(m_metrics1, 0x00U, CNXDNConvolution_NUM_OF_STATES * sizeof(uint16_t));
-  memset(m_metrics2, 0x00U, CNXDNConvolution_NUM_OF_STATES * sizeof(uint16_t));
-
-  m_oldMetrics = m_metrics1;
-  m_newMetrics = m_metrics2;
-  m_dp = m_decisions;
-}
-
-
 void CNXDNConvolution_decode(uint8_t s0, uint8_t s1)
 {
   uint8_t    i = 0;
@@ -165,5 +154,17 @@ void CNXDNConvolution_encode(const unsigned char* in, unsigned char* out, unsign
     WRITE_BIT1(out, k, g2 != 0U);
     k++;
   }
+}
+
+void CNXDNConvolution_start(void)
+{
+  memset(m_metrics1, 0x00U, CNXDNConvolution_NUM_OF_STATES * sizeof(uint16_t));
+  memset(m_metrics2, 0x00U, CNXDNConvolution_NUM_OF_STATES * sizeof(uint16_t));
+
+  m_oldMetrics = m_metrics1;
+  m_newMetrics = m_metrics2;
+  m_dp = m_decisions;
+
+  for (int x = 0; x < 4; x++) CNXDNConvolution_decode(0U, 0U);
 }
 

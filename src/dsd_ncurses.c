@@ -2125,15 +2125,50 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //NXDN
-  //if (lls == 8 || lls == 9 || lls == 16 || lls == 17 || lls == 28 || lls == 29)
   if (lls == 28 || lls == 29)
   {
-    printw ("| RAN: [%2d] ", rn);
+    
+    if (opts->p25_trunk == 1)
+    {
+
+      printw ("| ");
+      if (opts->p25_is_tuned == 0)
+      {
+        printw ("Monitoring Control Channel");
+        if (state->p25_cc_freq != 0)
+        {
+          printw (" - CC Freq: [%.06lf] Mhz ", (double)state->p25_cc_freq/1000000);
+        }
+      } 
+      else if (opts->p25_is_tuned == 1)
+      {
+        printw ("Monitoring  Voice  Channel");
+        if (state->p25_vc_freq[0] != 0)
+        {
+          printw (" - VC Freq: [%.06lf] Mhz ", (double)state->p25_vc_freq[0]/1000000);
+        }
+      } 
+      
+      printw ("\n");
+
+    }
+
+    printw ("| ");
+    printw ("NXDN - RAN: [%2d] ", rn);
+    if (state->nxdn_location_site_code != 0)
+    {
+      printw ("Cat [%s] ", state->nxdn_location_category);
+      printw ("Sys Code [%d] ", state->nxdn_location_sys_code);
+      printw ("Site Code [%d] ", state->nxdn_location_site_code);
+    }
+
+    printw ("\n");
+    printw ("| ");
     printw ("TGT: [%4d] ", tgn);
     printw ("SRC: [%4d] ", src);
-    if (state->nxdn_alias_block_segment[0][0] > 0) //could not display if this segment is bad
+    if (state->nxdn_alias_block_segment[0][0] > 0) 
     {
-      printw ("[");
+      printw ("ALIAS: [");
       for (int i = 0; i < 4; i++)
       {
         for (int j = 0; j < 4; j++)
@@ -2143,10 +2178,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       }
       printw ("]");
     }
-    printw ("\n| ALG: [0x%02X] KEY: [0x%02X] ", state->nxdn_cipher_type, state->nxdn_key);
     if (state->carrier == 1)
     {
-      printw("%s ", state->nxdn_call_type);
+      printw(" %s ", state->nxdn_call_type);
+    }
+    printw ("\n|");
+    if (state->nxdn_cipher_type > 0)
+    {
+      printw (" ALG: [0x%02X] KEY: [0x%02X] ", state->nxdn_cipher_type, state->nxdn_key);
     }
     if (state->nxdn_cipher_type == 0x1 && state->carrier == 1)
     {
@@ -2156,7 +2195,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
       if (state->R != 0)
       {
-        //printw ("\n| ");
         attron(COLOR_PAIR(1));
         printw ("KEY VALUE: [%05lld] ", state->R );
         printw ("SEED: [%04llX]", state->payload_miN);
@@ -2165,6 +2203,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     if (state->nxdn_cipher_type == 0x2 && state->carrier == 1)
     {
+      printw ("IV: [%016llX]", state->payload_miN);
       attron(COLOR_PAIR(2));
       printw ("DES-OFB  ");
       attroff(COLOR_PAIR(2));
@@ -2172,6 +2211,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     if (state->nxdn_cipher_type == 0x3 && state->carrier == 1)
     {
+      printw ("IV: [%016llX]", state->payload_miN);
       attron(COLOR_PAIR(2));
       printw ("AES-256 ");
       attroff(COLOR_PAIR(2));
@@ -2184,11 +2224,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
     }
-    //printw("%s ", state->nxdn_call_type);
     printw("\n");
   }
   
-  //DMR BS/MS Voice and Data Types
+  //P25 and DMR BS/MS 
   if (  lls == 0 || lls == 1 || lls == 12 || lls == 13 || lls == 10 ||
         lls == 11 || lls == 32 || lls == 33 || lls == 34 || lls == 35 || lls == 36)
   {
@@ -2738,9 +2777,31 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
  refresh();
- if (c == 27) //esc key
+
+ //keyboard shortcuts - codes same as ascii codes
+ if (c == 27) //esc key, open menu
  {
    ncursesMenu (opts, state); //just a quick test
+ }
+ if (c == 99) //'c' key, toggle compact mode
+ {
+  if (opts->ncurses_compact == 1) opts->ncurses_compact = 0;
+  else opts->ncurses_compact = 1;
+ }
+ if (c == 116) //'t' key, toggle trunking
+ {
+  if (opts->p25_trunk == 1) opts->p25_trunk = 0;
+  else opts->p25_trunk = 1;
+ }
+ if (c == 97) //'a' key, toggle call alert beep
+ {
+  if (opts->call_alert == 1) opts->call_alert = 0;
+  else opts->call_alert = 1;
+ }
+ if (c == 104) //'h' key, toggle history
+ {
+  if (opts->ncurses_history == 1) opts->ncurses_history = 0;
+  else opts->ncurses_history = 1;
  }
 
 } //end ncursesPrinter

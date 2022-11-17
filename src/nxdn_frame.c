@@ -1,6 +1,6 @@
 //NXDN frame handler
-//Reworked portions from Osmocom OP25
-//from Osmocom OP25 rx_sync.cc
+//Reworked portions from Osmocom OP25 rx_sync.cc
+
 /* -*- c++ -*- */
 /* 
  * NXDN Encoder/Decoder (C) Copyright 2019 Max H. Parke KA1RBI
@@ -59,7 +59,6 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	memset (dbuf, 0, sizeof(dbuf));
 
 	//collect lich bits first, if they are good, then we can collect the rest of them
-	//otherwise we will either exit, or skip and then exit (depends on performance)
   for (int i = 0; i < 8; i++) 
   {
 		lich_dibits[i] = dbuf[i] = getDibit(opts, state);
@@ -150,8 +149,10 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		sacch = 1;
 		break;
 	default:
-    if (opts->payload == 1) fprintf(stderr, "unsupported NXDN lich type 0x%02X\n", lich);
-		//fprintf(stderr, "        unsupported NXDN lich 0x%02X\n", lich);
+    if (opts->payload == 1) fprintf(stderr, "  false sync or unsupported NXDN lich type 0x%02X\n", lich);
+		//reset the sacch field, we probably got a false sync and need to wipe or give a bad crc
+		memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
+		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc)); 
 		voice = 0;
 		goto END;
 		break;
@@ -239,21 +240,13 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 
 	}  
 
-	if (sacch)
-	{
-		state->nxdn_sacch_non_superframe = (lich == 0x20 || lich == 0x21 || lich == 0x61 || lich == 0x40 || lich == 0x41) ? true : false;
-		nxdn_deperm_sacch(opts, state, sacch_bits);
-	}
+	state->nxdn_sacch_non_superframe = (lich == 0x20 || lich == 0x21 || lich == 0x61 || lich == 0x40 || lich == 0x41) ? true : false;
+	if (sacch)nxdn_deperm_sacch(opts, state, sacch_bits);
 	if (cac) nxdn_deperm_cac(opts, state, cac_bits); 
 	if (facch2) nxdn_deperm_facch2_udch(opts, state, facch2_bits);
 	if (facch & 1) nxdn_deperm_facch(opts, state, facch_bits_a);
-	if (facch & 2)
-	{
-		//don't run if duplicate of facch in first, may still run both if one has bad CRC
-		//hopefully can mitigate that later when we having the CRC function working properly for FACCH
-		if (facch_bits_a != facch_bits_b) nxdn_deperm_facch(opts, state, facch_bits_b); //don't think this check works correctly
-	} 
-	if (voice) nxdn_voice (opts, state, voice, dbuf); //working great now with new simplified method!
+	if (facch & 2) nxdn_deperm_facch(opts, state, facch_bits_b);
+	if (voice) nxdn_voice (opts, state, voice, dbuf); 
 
 	fprintf (stderr, "\n");
 	END: ; //do nothing

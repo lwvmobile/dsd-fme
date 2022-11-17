@@ -645,7 +645,12 @@ typedef struct
   uint8_t nxdn_sacch_frame_segment[4][18]; //part of frame by 18 bits
   uint8_t nxdn_sacch_frame_segcrc[4];
   uint8_t nxdn_alias_block_number;
-  char nxdn_alias_block_segment[4][4][8]; 
+  char nxdn_alias_block_segment[4][4][8];
+  //site/srv/cch info
+  char nxdn_location_category[14];
+  uint32_t nxdn_location_sys_code;
+  uint16_t nxdn_location_site_code;
+
 
   //Roman DMR End Call Alert Beep
   int dmr_end_alert[2]; //dmr TLC end call alert beep has already played once flag

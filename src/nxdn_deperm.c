@@ -1,5 +1,6 @@
 //NXDN descramble/deperm/depuncture and utility functions
 //Reworked portions from Osmocom OP25
+
 /* -*- c++ -*- */
 /* 
  * NXDN Encoder/Decoder (C) Copyright 2019 Max H. Parke KA1RBI
@@ -52,24 +53,65 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 {
 	uint8_t deperm[144];
 	uint8_t depunc[192];
-	uint8_t trellis_buf[92];
+	uint8_t trellis_buf[96];
 	uint16_t crc = 0; //crc calculated by function
 	uint16_t check = 0; //crc from payload for comparison
 	int out;
 	char buf[128];
-	uint8_t answer[12];
 
 	for (int i=0; i<144; i++) 
 		deperm[PERM_16_9[i]] = bits[i]; 
 	out = 0;
 	for (int i=0; i<144; i+=3) {
 		depunc[out++] = deperm[i+0];
-		depunc[out++] = 0; //0
+		depunc[out++] = 0; 
 		depunc[out++] = deperm[i+1];
 		depunc[out++] = deperm[i+2];
 	}
 
-	trellis_decode(trellis_buf, depunc, 92);
+	//trellis_decode(trellis_buf, depunc, 92);
+
+	//switch to the convolutional decoder
+	uint8_t temp[210];
+	uint8_t s0;
+  uint8_t s1;
+	uint8_t m_data[13];
+	memset (temp, 0, sizeof(temp));
+	memset (m_data, 0, sizeof(m_data));
+	memset (trellis_buf, 0, sizeof(trellis_buf));
+
+	for (int i = 0; i < 192; i++)
+	{
+		temp[i] = depunc[i] << 1; 
+	}
+
+	for (int i = 0; i < 8; i++)
+	{
+		temp[i+192] = 0;
+	}
+
+	CNXDNConvolution_start();
+  for (int i = 0U; i < 100U; i++) 
+  {
+    s0 = temp[(2*i)];
+    s1 = temp[(2*i)+1];
+
+    CNXDNConvolution_decode(s0, s1);
+  }
+
+  CNXDNConvolution_chainback(m_data, 96U);
+
+	for(int i = 0; i < 12; i++)
+  {
+    trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
+    trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
+    trellis_buf[(i*8)+2] = (m_data[i] >> 5) & 1;
+    trellis_buf[(i*8)+3] = (m_data[i] >> 4) & 1;
+    trellis_buf[(i*8)+4] = (m_data[i] >> 3) & 1;
+    trellis_buf[(i*8)+5] = (m_data[i] >> 2) & 1;
+    trellis_buf[(i*8)+6] = (m_data[i] >> 1) & 1;
+    trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
+  }
 
 	//load tail 16 bits into check variable to compare vs computed crc value
 	for (int i = 0; i < 12; i++)
@@ -79,33 +121,31 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	}
 
 	crc = crc12f (trellis_buf, 80);
-	cfill(answer, trellis_buf, 12); //<-92 bits in 12 bytes, leaves 4 bits on tail to scrub off
+
+	if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
+	//else if (opts->payload == 1) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
+
 	if (opts->payload == 1)
 	{
 		fprintf (stderr, "\n");
 		fprintf (stderr, " FACCH Payload ");
-		answer[11] = answer[11] & 0xF0; //scrub the garbage 4 bits from cfill on the end for ppayload print
 		for (int i = 0; i < 12; i++)
 		{
-			fprintf (stderr, "[%02X]", answer[i]); 
+			fprintf (stderr, "[%02X]", m_data[i]); 
 		}
-
 		fprintf (stderr, " - %03X %03X", crc, check);
-
 	}
 
-	if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
-	//only run data with bad CRC when payload is enabled and hide the ugly
-	else if (opts->payload == 1) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf); 
 }
 
+//new sacch
 void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 {
 	uint8_t deperm[60];
 	uint8_t depunc[72];
 	uint8_t trellis_buf[32];
 	uint8_t answer[26];
-	int o=0;
+	int o = 0;
 	uint8_t crc = 0; //value computed by crc6 on payload
 	uint8_t check = 0; //value pulled from last 6 bits
 	int sf = 0;
@@ -120,16 +160,60 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		depunc[o++] = deperm[p+2];
 		depunc[o++] = deperm[p+3];
 		depunc[o++] = deperm[p+4];
-		depunc[o++] = 0; //0
+		depunc[o++] = 0;
 		depunc[o++] = deperm[p+5];
 		depunc[o++] = deperm[p+6];
 		depunc[o++] = deperm[p+7];
 		depunc[o++] = deperm[p+8];
 		depunc[o++] = deperm[p+9];
-		depunc[o++] = 0; //0
+		depunc[o++] = 0;
 	}
 
-	trellis_decode(trellis_buf, depunc, 32);
+	//trellis_decode(trellis_buf, depunc, 32);
+
+	//switch to the convolutional decoder
+	uint8_t temp[90];
+	uint8_t s0;
+  uint8_t s1;
+	uint8_t m_data[5];
+
+	memset (temp, 0, sizeof (temp));
+	memset (m_data, 0, sizeof (m_data));
+	memset (trellis_buf, 0, sizeof(trellis_buf));
+
+	for (int i = 0; i < 72; i++)
+	{
+		temp[i] = depunc[i] << 1; 
+	}
+
+	for (int i = 0; i < 8; i++)
+	{
+		temp[i+72] = 0; 
+	}
+
+	CNXDNConvolution_start();
+  for (int i = 0U; i < 40U; i++) 
+  {
+    s0 = temp[(2*i)];
+    s1 = temp[(2*i)+1];
+
+    CNXDNConvolution_decode(s0, s1);
+  }
+
+	//stored as 5 bytes, will need to convert to trellis_buf after running
+  CNXDNConvolution_chainback(m_data, 36U); 
+
+	for(int i = 0; i < 4; i++)
+  {
+    trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
+    trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
+    trellis_buf[(i*8)+2] = (m_data[i] >> 5) & 1;
+    trellis_buf[(i*8)+3] = (m_data[i] >> 4) & 1;
+    trellis_buf[(i*8)+4] = (m_data[i] >> 3) & 1;
+    trellis_buf[(i*8)+5] = (m_data[i] >> 2) & 1;
+    trellis_buf[(i*8)+6] = (m_data[i] >> 1) & 1;
+    trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
+  }
 
 	crc = crc6(trellis_buf, 32);
 	for (int i = 0; i < 6; i++)
@@ -138,59 +222,89 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		check = check + trellis_buf[i+26];
 	}
 
-	//sf and ran together are denoted as SR in the manual (more confusing acronyms)
-	//sf (structure field) and RAN will always exist in first 8 bits of each SACCH, then the next 18 bits are the fragment of the superframe
-	sf = (trellis_buf[0] << 1) | trellis_buf[1];
-	ran = (trellis_buf[2] << 5) | (trellis_buf[3] << 4) | (trellis_buf[4] << 3) | (trellis_buf[5] << 2) | (trellis_buf[6] << 1) | trellis_buf[7];
-	if      (sf == 3) part_of_frame = 0;
-	else if (sf == 2) part_of_frame = 1;
-	else if (sf == 1) part_of_frame = 2;
-	else if (sf == 0) part_of_frame = 3;
-	else part_of_frame = 0; 
-
-	//gives unusual results when non_superframe SF, not sure why, or if its accurate yet
-	if (state->nxdn_sacch_non_superframe == FALSE) 
+	//FIRST! If part of a non_superframe, and CRC is good, send directly to NXDN_Elements_Content_decode
+	if (state->nxdn_sacch_non_superframe == TRUE)
 	{
-		fprintf (stderr, "%s", KCYN);
-		fprintf (stderr, " RAN %02d ", state->nxdn_last_ran);
-		//fprintf (stderr, " RAN %02d - SF %01d - POF %02d", ran, sf, part_of_frame);
-		fprintf (stderr, "%s", KNRM);
+		if (state->nxdn_last_ran != -1) fprintf (stderr, " RAN %02d ", state->nxdn_last_ran);
+		else fprintf (stderr, "        ");
+
+		uint8_t nsf_sacch[26];
+		memset (nsf_sacch, 0, sizeof(nsf_sacch));
+		for (int i = 0; i < 26; i++)
+		{
+			nsf_sacch[i] = trellis_buf[i+8];
+		}
+
+		if (crc == 0) NXDN_Elements_Content_decode(opts, state, 1, nsf_sacch);
+
+		if (opts->payload == 1)
+		{ 
+			fprintf (stderr, "\n SACCH NSF ");
+			for (int i = 0; i < 5; i++)
+			{
+				fprintf (stderr, "[%02X]", m_data[i]);
+			}
+			if (crc != 0) fprintf (stderr, " CRC ERR - %02X %02X", crc, check);
+		}
+
 	}
-	else fprintf (stderr, "        ");
 	
-	//reset scrambler seed to key value on new superframe
-	if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1) state->payload_miN = 0;
-
-	if (crc == 0 && state->nxdn_sacch_non_superframe == FALSE) //only set these when superframe type, or get odd results (can't verify correct)
+	//If part of superframe, collect the fragments and send to NXDN_SACCH_Full_decode instead
+	else if (state->nxdn_sacch_non_superframe == FALSE)
 	{
-		state->nxdn_ran = state->nxdn_last_ran = ran;
-		state->nxdn_sf = sf;
-		state->nxdn_part_of_frame = part_of_frame;
-		state->nxdn_sacch_frame_segcrc[part_of_frame] = 0; //zero indicates good check
-	}
-	else state->nxdn_sacch_frame_segcrc[part_of_frame] = 1; //1 indicates bad check
+		//sf and ran together are denoted as SR in the manual (more confusing acronyms)
+		//sf (structure field) and RAN will always exist in first 8 bits of each SACCH, then the next 18 bits are the fragment of the superframe
+		sf = (trellis_buf[0] << 1) | trellis_buf[1];
+		ran = (trellis_buf[2] << 5) | (trellis_buf[3] << 4) | (trellis_buf[4] << 3) | (trellis_buf[5] << 2) | (trellis_buf[6] << 1) | trellis_buf[7];
+		if      (sf == 3) part_of_frame = 0;
+		else if (sf == 2) part_of_frame = 1;
+		else if (sf == 1) part_of_frame = 2;
+		else if (sf == 0) part_of_frame = 3;
+		else part_of_frame = 0; 
 
-	int sacch_segment = 0;
+		fprintf (stderr, "%s", KCYN);
+		if (state->nxdn_last_ran != -1) fprintf (stderr, " RAN %02d ", state->nxdn_last_ran);
+		else fprintf (stderr, "        ");
+		fprintf (stderr, "%s", KNRM);
+		
+		//reset scrambler seed to key value on new superframe
+		if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1) state->payload_miN = 0;
 
-	for (int i = 0; i < 18; i++)
-	{
-		sacch_segment = sacch_segment << 1;
-		sacch_segment = sacch_segment + trellis_buf[i+8]; 
-		state->nxdn_sacch_frame_segment[part_of_frame][i] = trellis_buf[i+8];
-	}
+		if (crc == 0)
+		{
+			state->nxdn_ran = state->nxdn_last_ran = ran;
+			state->nxdn_sf = sf;
+			state->nxdn_part_of_frame = part_of_frame;
+			state->nxdn_sacch_frame_segcrc[part_of_frame] = 0; //zero indicates good check
+		}
+		else state->nxdn_sacch_frame_segcrc[part_of_frame] = 1; //1 indicates bad check
 
-	//Hand off to LEH NXDN SACCH handling
-	if (part_of_frame == 3 && state->nxdn_sacch_non_superframe == FALSE)
- 	{
-		NXDN_SACCH_Full_decode (opts, state);
-	} 
+		int sacch_segment = 0;
 
-	if (opts->payload == 1)
-	{ 
-		fprintf (stderr, "\n"); 
-		fprintf (stderr, " SACCH Segment #%d - %05X", part_of_frame+1, sacch_segment);
-		if (crc != 0) fprintf (stderr, " CRC ERR - %02X %02X", crc, check);
-	}
+		for (int i = 0; i < 18; i++)
+		{
+			sacch_segment = sacch_segment << 1;
+			sacch_segment = sacch_segment + trellis_buf[i+8]; 
+			state->nxdn_sacch_frame_segment[part_of_frame][i] = trellis_buf[i+8];
+		}
+
+		//Hand off to LEH NXDN_SACCH_Full_decode
+		if (part_of_frame == 3)
+		{
+			NXDN_SACCH_Full_decode (opts, state);
+		} 
+
+		if (opts->payload == 1)
+		{ 
+			fprintf (stderr, "\n"); 
+			fprintf (stderr, " SACCH SF Segment #%d ", part_of_frame+1);
+			for (int i = 0; i < 5; i++)
+			{
+				fprintf (stderr, "[%02X]", m_data[i]);
+			}
+			if (crc != 0) fprintf (stderr, " CRC ERR - %02X %02X", crc, check);
+		}
+	}	
 	
 }
 
@@ -222,23 +336,68 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 		depunc[id++] = deperm[i*12+10];
 		depunc[id++] = deperm[i*12+11];
 	}
-	trellis_decode(trellis_buf, depunc, 199);
-	crc = crc15(trellis_buf, 199);
+	
+	//trellis_decode(trellis_buf, depunc, 199);
 
-	uint8_t MessageType = 0;
-	for (int i = 0; i < 6; i++)
+	//switch to the convolutional decoder
+	uint8_t temp[220];
+	uint8_t s0;
+  uint8_t s1;
+	uint8_t m_data[26];
+	memset (trellis_buf, 0, sizeof(trellis_buf));
+	memset (temp, 0, sizeof (temp));
+	memset (m_data, 0, sizeof (m_data));
+
+	for (int i = 0; i < 406; i++)
 	{
-		MessageType = MessageType << 1;
-		MessageType = MessageType + trellis_buf[i+2]; //on +2 on any facch1
+		temp[i] = depunc[i] << 1; 
 	}
 
-	fprintf (stderr, " FACCH2/UDCH ");
-	if (crc == 0) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
-	else
+	for (int i = 0; i < 8; i++)
 	{
-		fprintf (stderr, "CRC ERR ");
-		//NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
-	} 
+		temp[i+203] = 0; 
+	}
+
+	CNXDNConvolution_start();
+  for (int i = 0U; i < 207U; i++) 
+  {
+    s0 = temp[(2*i)];
+    s1 = temp[(2*i)+1];
+
+    CNXDNConvolution_decode(s0, s1);
+  }
+
+	//numerals seem okay now
+  CNXDNConvolution_chainback(m_data, 203U); 
+
+	for(int i = 0; i < 26; i++)
+  {
+    trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
+    trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
+    trellis_buf[(i*8)+2] = (m_data[i] >> 5) & 1;
+    trellis_buf[(i*8)+3] = (m_data[i] >> 4) & 1;
+    trellis_buf[(i*8)+4] = (m_data[i] >> 3) & 1;
+    trellis_buf[(i*8)+5] = (m_data[i] >> 2) & 1;
+    trellis_buf[(i*8)+6] = (m_data[i] >> 1) & 1;
+    trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
+  }
+
+	crc = crc15(trellis_buf, 199);
+
+	fprintf (stderr, " F2/U   ");
+	if (crc == 0) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf);
+
+	if (opts->payload == 1)
+	{
+		fprintf (stderr, "\n");
+		fprintf (stderr, " F2/U Payload\n  ");
+		for (int i = 0; i < 26; i++)
+		{
+			fprintf (stderr, "[%02X]", m_data[i]); 
+			if (i == 12) fprintf (stderr, "\n  ");
+		}
+		if (crc != 0) fprintf (stderr, " CRC ERR ");
+	}  
 
 }
 
@@ -247,7 +406,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 
 	uint8_t deperm[300];
 	uint8_t depunc[350];
-	uint8_t decode[171];
+	uint8_t trellis_buf[171];
 	int id = 0;
 	uint16_t crc = 0;
 
@@ -270,57 +429,108 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 		depunc[id++] = deperm[i*12+10];
 		depunc[id++] = deperm[i*12+11];
 	}
-	trellis_decode(decode, depunc, 171);
-	crc = crc16cac(decode, 171); 
 
-	fprintf (stderr, " CAC ");
-	
-	//these messages can also be double depending on CAC type, so need to check that first, and split the 
-	//decode first, then we can run each message type and element decode if necessary
+	//trellis_decode(trellis_buf, depunc, 171);
+
+	//switch to the convolutional decoder
+	uint8_t temp[360];
+	uint8_t s0;
+  uint8_t s1;
+	uint8_t m_data[26];
+	memset (trellis_buf, 0, sizeof(trellis_buf));
+	memset (temp, 0, sizeof (temp));
+	memset (m_data, 0, sizeof (m_data));
+
+	for (int i = 0; i < 350; i++)
+	{
+		temp[i] = depunc[i] << 1; 
+	}
+
+	for (int i = 0; i < 8; i++)
+	{
+		temp[i+350] = 0; 
+	}
+
+	CNXDNConvolution_start();
+  for (int i = 0U; i < 179U; i++) 
+  {
+    s0 = temp[(2*i)];
+    s1 = temp[(2*i)+1];
+
+    CNXDNConvolution_decode(s0, s1);
+  }
+
+  CNXDNConvolution_chainback(m_data, 175U); 
+
+	for(int i = 0; i < 22; i++)
+  {
+    trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
+    trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
+    trellis_buf[(i*8)+2] = (m_data[i] >> 5) & 1;
+    trellis_buf[(i*8)+3] = (m_data[i] >> 4) & 1;
+    trellis_buf[(i*8)+4] = (m_data[i] >> 3) & 1;
+    trellis_buf[(i*8)+5] = (m_data[i] >> 2) & 1;
+    trellis_buf[(i*8)+6] = (m_data[i] >> 1) & 1;
+    trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
+  }
+
+	crc = crc16cac(trellis_buf, 171); 
+
+	fprintf (stderr, " CAC    ");
+
+	//message type will probably be neccesary beforehand on single/dual meessage runs
+	//run message, check len, load into a seperate buffer, send to element, do same with other piece?
 	uint8_t MessageType = 0;
 	for (int i = 0; i < 6; i++)
 	{
 		MessageType = MessageType << 1;
-		MessageType = MessageType + decode[i+2]; //double check this on CAC
+		MessageType = MessageType + trellis_buf[i+2]; //double check this on CAC
 	}
 
-	//nxdn_message_type (opts, state, MessageType);
+	uint8_t cac_message_buffer[171];
+	memset (cac_message_buffer, 0, sizeof(cac_message_buffer));
 
-	//not sure if CAC will contain same type of 'elements' as a FACCH or SACCH
-	//or if its purely for Control Signalling
-
-	//need to check CAC type, CAC can contain two messages, or one long message,
-	//then we need to break up the messages and process them individually
-	if (crc == 0) NXDN_Elements_Content_decode(opts, state, 1, decode); 
-	else
+	//shift the cac_message into the appropriate byte arrangement for element_decoder
+	for (int i = 0; i < 160; i++) //in future, we can use this to send multiple messages to decoder, if present
 	{
-		fprintf (stderr, " CRC ERR ");
-		//NXDN_Elements_Content_decode(opts, state, 0, decode);
+		cac_message_buffer[i] = trellis_buf[i+8];
+	}
+
+	if (crc == 0) NXDN_Elements_Content_decode(opts, state, 1, cac_message_buffer);
+
+	if (opts->payload == 1)
+	{
+		fprintf (stderr, "\n");
+		fprintf (stderr, " CAC Payload\n  ");
+		for (int i = 0; i < 22; i++)
+		{
+			fprintf (stderr, "[%02X]", m_data[i]); 
+			if (i == 10) fprintf (stderr, "\n  ");
+		}
+		if (crc != 0) fprintf (stderr, " CRC ERR ");
+
 	} 
 
 }
 
-//its own function now to consolidate all the message types to one area to keep track of
-//may need to add a 'source' of message so we don't call messages not associated with cac, facch, sacch, etc
 void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 {
 
-	//if (opts->payload == 1) fprintf (stderr, " M%02X ", MessageType);
 	fprintf (stderr, "%s", KYEL);
 	if      (MessageType == 0x10) fprintf(stderr, " IDLE");
+	else if (MessageType == 0x11) fprintf(stderr, " DISC"); //disconnect
 	else if (MessageType == 0x01) fprintf(stderr, " VCALL");
 	else if (MessageType == 0x03) fprintf(stderr, " VCALL IV");
 	
 	else if (MessageType == 0x07) fprintf(stderr, " TX_REL_EX");
 	else if (MessageType == 0x08) fprintf(stderr, " TX_REL");
-	
 
-	//CAC only? valid in all, or just CAC?
-	else if (MessageType == 0x04) fprintf(stderr, " VCALL ASSGN");
-	else if (MessageType == 0x0E) fprintf(stderr, " DCALL ASSGN");
+	else if (MessageType == 0x04) fprintf(stderr, " VCALL_ASSGN");
+	else if (MessageType == 0x05) fprintf(stderr, " VCALL_ASSGN_DUP");
+	else if (MessageType == 0x0E) fprintf(stderr, " DCALL_ASSGN");
 	else if (MessageType == 0x18) fprintf(stderr, " SITE_INFO");
-	else if (MessageType == 0x19) fprintf(stderr, " SRV_INFO"); //per Op25
-	else if (MessageType == 0x1C) fprintf(stderr, " FAIL_STAT_INFO"); //per the damn manual
+	else if (MessageType == 0x19) fprintf(stderr, " SRV_INFO"); 
+	else if (MessageType == 0x1C) fprintf(stderr, " FAIL_STAT_INFO"); 
 	else if (MessageType == 0x1A) fprintf(stderr, " CCH_INFO");
 	else if (MessageType == 0x1B) fprintf(stderr, " ADJ_SITE_INFO");
 	else if (MessageType == 0x20) fprintf(stderr, " REG_RESP");
@@ -331,20 +541,23 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 	else if (MessageType == 0x38) fprintf(stderr, " SDCALL_REQ_HEADER");
 	else if (MessageType == 0x39) fprintf(stderr, " SDCALL_REQ_USERDATA");
 	else if (MessageType == 0x3B) fprintf(stderr, " SDCALL_RESP");
-	//end CAC only?
 
-	else if (MessageType == 0x3F) fprintf(stderr, " ALIAS"); //observed from DSDPlus and OP25 dumps
-	else if (MessageType == 0x0C) fprintf(stderr, " DCALL_ACK"); //need to verify these for accuracy vs DSDPlus
-	else fprintf(stderr, " Unknown M%02X", MessageType);
+	else if (MessageType == 0x3F) fprintf(stderr, " ALIAS"); 
+	else if (MessageType == 0x0C) fprintf(stderr, " DCALL_ACK"); 
+	else fprintf(stderr, " Unknown M-%02X", MessageType);
 	fprintf (stderr, "%s", KNRM);
 
 	//zero out stale values so they won't persist after a transmit release
-	if (MessageType == 0x08 || MessageType == 0x10)
+	//disable if random messages wipe out the alias
+	if (MessageType == 0x08 || MessageType == 0x10) //idle, tx_rel
 	{
 		memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
 		state->nxdn_last_rid = 0;
 		state->nxdn_last_tg = 0;
 		state->nxdn_cipher_type = 0;
+		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+		memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
+		sprintf (state->nxdn_call_type, "%s", "");
 	} 
 }
 
