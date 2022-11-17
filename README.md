@@ -1,5 +1,137 @@
 ## WARNING! The DEV branch may have broken or incomplete features, changes in Menu or CLI options, and other quirks. USE AT YOUR OWN RISK!
 
+If you want to checkout and build this branch (for testing purposes) ignore the automatic scripts and instructions further down below, run these steps instead 
+
+```
+sudo apt update
+sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev
+```
+
+
+```
+git clone https://github.com/lwvmobile/dsd-fme
+cd dsd-fme
+git branch -a
+git checkout remotes/origin/dev
+git checkout -b dev
+git branch -a #double check to see if you are on dev branch
+sudo cp tone8.wav /usr/share/
+sudo cp tone24.wav /usr/share/
+sudo chmod 777 /usr/share/tone8.wav
+sudo chmod 777 /usr/share/tone24.wav
+mkdir build
+cd build
+cmake ..
+make -j `nproc`
+sudo make install
+```
+
+
+```
+
+ Experimental Functions and Features---------------------------------------------------
+   -i <device>   Audio input device (default is pulse audio)
+   
+                - for piped stdin
+                
+                rtl for rtl device
+                
+                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)
+                
+                filename.bin for OP25/FME capture bin files
+                
+                filename.wav for 48K/1 wav files (SDR++, GQRX)
+                
+                filename.wav -s 96000 for 96K/1 wav files (DSDPlus)
+                (Use single quotes '/directory/audio file.wav' when directories/spaces are present)
+                
+  -s <rate>     Sample Rate of wav input files (usually 48000 or 96000) Mono only!
+
+  -----command line switches here subject to change------------------
+  -1 <file>     Import LCN Frequencies from csv file (numeral 'one')                   
+                 (See lcn.csv for example)
+  -2 <file>     Import Group List Allow/Block and Label from csv file (numeral 'two')
+                 (See group.csv for example)
+  -3            Enable Experimental Trunking Features (P25/EDACS/NXDN-ish for now) with RIGCTL/TCP or RTL Input
+  -5 <udp p>    Enable RIGCTL/TCP; Set UDP Port for RIGCTL. (4532 for SDR++)
+
+```
+### Input ###
+
+--TCP Direct Audio Link with SDR++
+
+`dsd-fme -i tcp` Currently defaults to localhost:7355 (SDR++)(User Configurable Later)
+
+--48000/9600 Mono Wav File Input
+
+`dsd-fme -i filename.wav` 48k/1 16-bit Audio
+
+`dsd-fme -i filename.wav -s 96000` 96k/1 16-bit Audio (DSDPlus Raw Signal Wav Files)
+
+Wav File Input Note: Due to 96000 rate audio requiring me to double the symbol rate and center, be sure to use the -s 96000 at the very end of the startup command. Also, some NXDN48/96 may have difficulties decoding properly with wav file input (especially from DSDPlus). 
+
+### Very Experimental EDACS/P25/NXDN Simple/Single VFO Trunking ###
+
+EDACS Trunking will require an lcn csv file with lcn frequencies listed in order, comma seperated. Currently, LCN imports will be single system only to keep things simple and easy. See lcn.csv in the example folder provided. 
+
+--EDACS/PV Trunking using RIGCTL and TCP Direct Link Audio inside of SDR++ (Tested and Working on EDACS/EDACS-EA with Provoice only, no analog voice monitoring)
+
+`dsd-fme -i tcp -fp -1 lcn.csv -2 group.csv -3 -5 4532 -N 2> log.ans`
+
+--NXDN48 Trunking (standard band plan) with SDR++ (untested for frequency accuracy)
+
+`dsd-fme -fi -i tcp -3 -5 4532 -N 2> log.ans`
+
+--P25 Trunking P1 and P2 (C4FM) with SDR++
+
+`dsd-fme -i tcp -3 -5 4532 -N 2> log.ans`
+
+--P25 Trunking (CQPSK) with P1 Control Channel (Should switch symbol rate and center on Phase 2 audio channels)
+
+`dsd-fme -i tcp -3 -5 4532 -N -mq 2> log.ans`
+
+--P25 Trunking Phase 2 TDMA Control Channel systems with CQPSK (non Phase 1 systems)
+
+`dsd-fme -i tcp -3 -5 4532 -N -f2 -m2 2> log.ans`
+
+Trunking Note1: All samples above can also be run with the RTL input method and setting of RTL UDP remote port.
+
+`dsd-fme -fp -i rtl -c 851M -P -2 -G 44 -D 0 -U 6020 -Y 24 -N -T -1 lcn.csv -2 groups.csv -3 2> log.ans`
+
+Trunking Note2: CQPSK Phase 1 and Phase 2 Systems are subceptible to LSM distortion issues, but seem to do okay, but require really good signal. Some CRC issues still occur with Phase 2 TDMA LCCH Mac Signal that can affect reliability, I believe this issue is ultimately caused by the PSK demodulation inside of FME. I also don't believe this will work on 8-level PSK, but I cannot determine that at the moment.
+
+Trunking Note3: DMR Trunking will take longer to implement due to the various types of trunking it can use. Hytera XPT, Connect Plus, Capacity Plus, and TIII trunking all require more research, coding, and testing to implement. 
+
+Trunking Note4: NXDN Trunking may also require an lcn file, but currently, the import function does not map frequencies to channel numbers, and 'standard' channel (0-800) frequencies have not been tested for accuracy, so while some primitive NXDN trunking is technically there, I cannot say that it will tune to the correct frequency on any system as of yet.
+
+## NCurses Keyboard Shortcuts ##
+
+Some Keyboard Shortcuts have been implemented for testing to see how users like them. Just hope nobody pushes a key on accident and doesn't know which one it was or what it does. The current list of keyboard shortcuts include:
+
+```
+esc - ncurses menu
+q - quit
+c - toggle compact mode
+h - toggle call history
+z - toggle console payloads
+a - toggle call alert beep
+4 - force dmr privacy key assertion over fid and svc bits
+i - toggle signal inversion on types that can't auto detect (dmr, dpmr)
+m - toggle c4fm/cqpsk 10/4 (everything but phase 2 signal)
+M - toggle c4fm/cqpsk 8/3 (phase 2 tdma control channel)
+t - toggle trunking (needs either rtl input, or rigctl setup at CLI)
+R - start capturing symbol capture bin (date/time name file)
+r - stop capturing symbol capture bin
+spacebar - replay last symbol capture bin (captures must be stopped first)
+s - stop playing symbol capture bin or wav input file
+P - start per call decoded wav files
+p - stop per call decoded wav files
+
+```
+
+More keyboard shortcuts will be added in time, more work will be needed for any shortcut that requires a box window for info entry (keys, etc).
+
+
 # Digital Speech Decoder - Florida Man Edition
 
 This version of DSD is a flavor blend of [szechyjs](https://github.com/szechyjs/dsd "szechyjs") RTL branch and some of my own additions, along with portions of DMR and NXDN code from the [LouisErigHerve](https://github.com/LouisErigHerve/dsd "LouisErigHerve") branch. This code also borrows snippets, inspiration, and ideas from other open source works including [Boatbod OP25](https://github.com/boatbod/op25 "Boatbod OP25"), [DSDcc](https://github.com/f4exb/dsdcc "DSDcc"), [SDTRunk](https://github.com/DSheirer/sdrtrunk "SDRTrunk"), [MMDVMHost](https://github.com/g4klx/MMDVMHost "MMDVMHost"), [LFSR](https://github.com/mattames/LFSR "LFSR"), and [EZPWD-Reed-Solomon](https://github.com/pjkundert/ezpwd-reed-solomon "EZPWD"). This project wouldn't be possible without a few good people providing me plenty of sample audio files to run over and over again. Special thanks to jurek1111, KrisMar, noamlivne, racingfan360, iScottyBotty, LimaZulu and hrh17 for the many hours of wav samples submitted by them.

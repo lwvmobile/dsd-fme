@@ -67,7 +67,7 @@ unsigned long long int call_matrix[33][6];
 
 
 char * FM_bannerN[9] = {
-  "                             ESC or Arrow Keys For Menu   ",
+  " Press 'q' to quit           ESC or Arrow Keys For Menu   ",
   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗  ",
   " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝  ",
   " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗    ",
@@ -310,7 +310,7 @@ char *choices[] = {
 			"Decode XDMA (P25 and DMR BS/MS)",
 			"Decode D-STAR*",
 			"Decode P25-P1*",
-			"Decode ProVoice",
+			"Decode EDACS/PV",
       "Decode DMR* (LEH)",
       "Decode dPMR",
       "Decode NXDN48",
@@ -2017,7 +2017,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_in_type == 4)
   {
-    printw ("| Symbol Capture Input: %s \n", opts->audio_in_dev);
+    printw ("| Direct Symbol Bin Input: %s \n", opts->audio_in_dev);
+  }
+
+  if (opts->audio_in_type == 8)
+  {
+    printw ("| Direct TCP Input: Port [%d] Sample Rate [%d] \n", opts->tcp_portno, opts->wav_sample_rate);
+  }
+
+  if (opts->audio_in_type == 2)
+  {
+    printw ("| Direct WAV File Input: %s Sample Rate [%d] \n", opts->audio_in_dev, opts->wav_sample_rate);
   }
   if (opts->audio_in_type == 1)
   {
@@ -2051,11 +2061,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->symbol_out_file[0] != 0 && opts->symbol_out == 1)
   {
-    printw ("| Writing Symbol Capture to Bin File: %s\n", opts->symbol_out_file);
+    printw ("| SymbolC Bin: %s\n", opts->symbol_out_file);
   }
   if (opts->wav_out_file[0] != 0 && opts->dmr_stereo_wav == 0)
   {
-    printw ("| Writing Decoded Audio to  WAV File: %s\n", opts->wav_out_file);
+    printw ("| Decoded WAV: %s\n", opts->wav_out_file);
   }
   if (opts->dmr_stereo_wav == 1) //opts->wav_out_file[0] != 0 &&
   {
@@ -2068,7 +2078,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->p25_trunk == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3) )
   {
-    printw ("| Trunk Tracking Active (P25/EDACS)\n");
+    printw ("| Trunk Tracking Active (P25/EDACS/NXDN)\n");
   }
 
 
@@ -2712,7 +2722,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     for (short int j = 0; j < 10; j++)
     {
       //only print if a valid time was assigned to the matrix, and not EDACS/PV
-      if ( ((time(NULL) - call_matrix[9-j][5]) < 9999) && call_matrix[9-j][0] != 14 && call_matrix[9-j][0] != 15 && call_matrix[9-j][0] != 37 && call_matrix[9-j][0] != 38 )
+      if ( ((time(NULL) - call_matrix[9-j][5]) < 999999) && call_matrix[9-j][0] != 14 && call_matrix[9-j][0] != 15 && call_matrix[9-j][0] != 37 && call_matrix[9-j][0] != 38 )
       {
         printw ("| %s ", SyncTypes[call_matrix[9-j][0]]);
         if (lls == 28 || lls == 29)
@@ -2779,30 +2789,207 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
  refresh();
 
  //keyboard shortcuts - codes same as ascii codes
- if (c == 27) //esc key, open menu
+  if (c == 27) //esc key, open menu
  {
-   ncursesMenu (opts, state); //just a quick test
+  ncursesMenu (opts, state); //just a quick test
  }
+
+ if (c == 122) //'z' key, toggle payload to console
+ {
+  if (opts->payload == 1) opts->payload = 0;
+  else opts->payload = 1;
+ }
+
  if (c == 99) //'c' key, toggle compact mode
  {
   if (opts->ncurses_compact == 1) opts->ncurses_compact = 0;
   else opts->ncurses_compact = 1;
  }
+
  if (c == 116) //'t' key, toggle trunking
  {
   if (opts->p25_trunk == 1) opts->p25_trunk = 0;
   else opts->p25_trunk = 1;
  }
+
  if (c == 97) //'a' key, toggle call alert beep
  {
   if (opts->call_alert == 1) opts->call_alert = 0;
   else opts->call_alert = 1;
  }
+
  if (c == 104) //'h' key, toggle history
  {
   if (opts->ncurses_history == 1) opts->ncurses_history = 0;
   else opts->ncurses_history = 1;
  }
+
+ if (c == 113) //'q' key, quit
+ {
+  ncursesClose();
+  cleanupAndExit (opts, state);
+ }
+
+ if (c == 52) // '4' key, toggle force privacy key over fid and svc (dmr)
+ {
+  if (state->M == 1) state->M = 0;
+  else state->M = 1;
+ }
+
+ if (c == 105) //'i' key, toggle signal inversion on inverted types
+ {
+  //Set all signal for inversion or uninversion
+  if (opts->inverted_dmr == 0)
+  {
+    opts->inverted_dmr = 1;
+    opts->inverted_dpmr = 1;
+    opts->inverted_x2tdma = 1;
+    opts->inverted_ysf = 1;
+  }
+  else
+  {
+    opts->inverted_dmr = 0;
+    opts->inverted_dpmr = 0;
+    opts->inverted_x2tdma = 0;
+    opts->inverted_ysf = 0;
+  }
+ }
+
+ if (c == 109) //'m' key, toggle qpsk/c4fm - everything but phase 2
+ {
+  if (state->rf_mod == 0)
+  {
+    state->rf_mod = 1;
+    state->samplesPerSymbol = 10;
+    state->symbolCenter = 4;
+    opts->mod_c4fm = 0;
+    opts->mod_qpsk = 1;
+  }
+  else
+  {
+    state->rf_mod = 0;
+    state->samplesPerSymbol = 10;
+    state->symbolCenter = 4;
+    opts->mod_c4fm = 1;
+    opts->mod_qpsk = 0;
+  }
+ }
+
+ if (c == 77) //'M' key, toggle qpsk - phase 2 
+ {
+  if (state->rf_mod == 0)
+  {
+    state->rf_mod = 1;
+    state->samplesPerSymbol = 8;
+    state->symbolCenter = 3;
+    opts->mod_c4fm = 0;
+    opts->mod_qpsk = 1;
+  }
+  else
+  {
+    state->rf_mod = 0;
+    state->samplesPerSymbol = 10;
+    state->symbolCenter = 4;
+    opts->mod_c4fm = 1;
+    opts->mod_qpsk = 0;
+  }
+ }
+
+ if (c == 82) //'R', save symbol capture bin with date/time string as name
+ {
+  sprintf (opts->symbol_out_file, "%s %s.bin", getDateN(), getTimeN());
+  if (opts->symbol_out_file[0] != 0)
+  {
+    opts->symbol_out = 1; //set flag to 1
+    openSymbolOutFile (opts, state);
+  }
+ }
+
+ if (c == 114) //'r' key, stop capturing symbol capture bin file
+ {
+  if (opts->symbol_out == 1)
+  {
+    if (opts->symbol_out_file[0] != 0)
+    {
+      fclose(opts->symbol_out_f); 
+      sprintf (opts->audio_in_dev, "%s", opts->symbol_out_file);
+    }
+
+    opts->symbol_out = 0;
+  }
+ }
+
+ if (c == 32) //'space bar' replay last bin file (rework to do wav files too?)
+ {
+  struct stat stat_buf;
+  if (stat(opts->audio_in_dev, &stat_buf) != 0)
+  {
+    fprintf (stderr,"Error, couldn't open %s\n", opts->audio_in_dev);
+    goto SKIPR;
+  }
+  if (S_ISREG(stat_buf.st_mode))
+  {
+    opts->symbolfile = fopen(opts->audio_in_dev, "r");
+    opts->audio_in_type = 4; //symbol capture bin files
+  }
+  SKIPR: ; //do nothing
+ }
+
+ if (c == 80) //'P' key - start per call wav files
+ {
+  char wav_file_directory[1024];
+  sprintf (wav_file_directory, "./WAV");
+  wav_file_directory[1023] = '\0';
+  if (stat(wav_file_directory, &st_wav) == -1)
+  {
+    fprintf (stderr, "-T %s wav file directory does not exist\n", wav_file_directory);
+    fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
+    mkdir(wav_file_directory, 0700); 
+  }
+  opts->dmr_stereo_wav = 1;
+  //catch all in case of no file name set, won't crash or something
+  sprintf (opts->wav_out_file, "./WAV/DSD-FME-T1.wav");
+  sprintf (opts->wav_out_fileR, "./WAV/DSD-FME-T2.wav");
+  openWavOutFileL (opts, state); 
+  openWavOutFileR (opts, state); 
+ }
+
+//this one could cause issues, but seems okay
+if (c == 112) //'p' key - stop all per call wav files
+{
+  //hope this one doesn't cause random crashing or garbage writing
+  closeWavOutFile (opts, state);
+  closeWavOutFileL (opts, state);
+  closeWavOutFileR (opts, state);
+  sprintf (opts->wav_out_file, "%s", "");
+  sprintf (opts->wav_out_fileR, "%s", "");
+  opts->dmr_stereo_wav = 0;
+}
+
+
+if (c == 115) //'s' key, stop playing wav or symbol in files
+{
+  if (opts->symbolfile != NULL)
+  {
+    if (opts->audio_in_type == 4) 
+    {
+      fclose(opts->symbolfile); 
+    }
+  }
+
+  if (opts->audio_in_type == 2) //wav input file
+  {
+    sf_close(opts->audio_in_file);
+  }
+
+  opts->audio_in_type = 0;
+  openPulseInput(opts); 
+}
+
+
+ //anything with an entry box will need the inputs and outputs stopped first
+ //so probably just write a function to handle c input, and when c = certain values 
+ //needing an entry box, then stop all of those
 
 } //end ncursesPrinter
 

@@ -62,7 +62,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 	else slot = state->currentslot;
 
 	//assigning here if OECI MAC SIGNAL, after passing RS and CRC
-	if (state->p2_is_lcch = 1)
+	if (state->p2_is_lcch == 1)
 	{
 		if (slot == 1) state->dmrburstL = 30;
 		else state->dmrburstR = 30;
