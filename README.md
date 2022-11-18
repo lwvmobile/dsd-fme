@@ -68,7 +68,7 @@ sudo make install
 
 `dsd-fme -i filename.wav -s 96000` 96k/1 16-bit Audio (DSDPlus Raw Signal Wav Files)
 
-Wav File Input Note: Due to 96000 rate audio requiring me to double the symbol rate and center, be sure to use the -s 96000 at the very end of the startup command. Also, some NXDN48/96 may have difficulties decoding properly with wav file input (especially from DSDPlus). 
+Wav File Input Note: Due to 96000 rate audio requiring me to double the symbol rate and center, be sure to use the -s 96000 at the very end of the startup command. Also, some NXDN48/96 may have difficulties decoding properly with wav file input. 
 
 ### Very Experimental EDACS/P25/NXDN Simple/Single VFO Trunking ###
 
@@ -98,7 +98,7 @@ Trunking Note1: All samples above can also be run with the RTL input method and 
 
 `dsd-fme -fp -i rtl -c 851M -P -2 -G 44 -D 0 -U 6020 -Y 24 -N -T -1 lcn.csv -2 groups.csv -3 2> log.ans`
 
-Trunking Note2: CQPSK Phase 1 and Phase 2 Systems are subceptible to LSM distortion issues, but seem to do okay, but require really good signal. Some CRC issues still occur with Phase 2 TDMA LCCH Mac Signal that can affect reliability, I believe this issue is ultimately caused by the PSK demodulation inside of FME. I also don't believe this will work on 8-level PSK, but I cannot determine that at the moment.
+Trunking Note2: CQPSK Phase 1 and Phase 2 Systems are subceptible to LSM distortion issues, but seem to do okay, but require really good signal. Some CRC issues still occur with Phase 2 TDMA LCCH Mac Signal that can affect reliability, I believe this issue is ultimately caused by the PSK demodulation inside of FME. I also don't believe this will work on 8-level PSK, but I cannot determine that at the moment. Update: I have improved the LCCH Mac Signal decoding my increasing the QPSK decision point buffers to their maximum values. 
 
 Trunking Note3: DMR Trunking will take longer to implement due to the various types of trunking it can use. Hytera XPT, Connect Plus, Capacity Plus, and TIII trunking all require more research, coding, and testing to implement. 
 
@@ -164,7 +164,7 @@ To see the up to date CLI options, please look at the help options with the -h C
 ## 2022.08.12 Update ##
 A new menu system has been introduced in the NCURSES Terminal. Also includes support for LRRP to text file type of choice and reading OP25 symbol capture bin files.
 
-[![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme.png)](https://www.youtube.com/watch?v=TqTfAfaPJ4s "DSD-FME Update 2022.08.12")
+[![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/dev/dsd-fme.png)](https://www.youtube.com/watch?v=TqTfAfaPJ4s "DSD-FME Update 2022.08.12")
 
 To get started with the new menu system, simply launch with:
 
@@ -239,7 +239,7 @@ and in a second terminal tab, same folder, run
 
 `tail -n 40 -f voice.log`
 
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/pulseaudio/dsd-fme2.png)
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/dev/dsd-fme2.png)
 
 ## Roadmap
 The Current list of objectives include:

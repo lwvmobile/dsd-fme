@@ -2098,6 +2098,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   printw ("--Audio Decode----------------------------------------------------------------\n");
+  printw ("| Demod/Rate:  ");
+  if (opts->mod_qpsk == 1) printw ("[QPSK]");
+  if (opts->mod_c4fm == 1) printw ("[C4FM]");
+  if (opts->mod_gfsk == 1) printw ("[GFSK]");
+  printw ( "[%d] \n", (48000*opts->wav_interpolator)/state->samplesPerSymbol);
   printw ("| Decoding:    [%s] \n", opts->output_name);
   printw ("| In Level:    [%3i%%] \n", level);
   if (opts->dmr_stereo == 0)
@@ -2859,39 +2864,43 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
  {
   if (state->rf_mod == 0)
   {
+    opts->mod_c4fm = 0;
+    opts->mod_qpsk = 1;
+    opts->mod_gfsk = 0;
     state->rf_mod = 1;
     state->samplesPerSymbol = 10;
     state->symbolCenter = 4;
-    opts->mod_c4fm = 0;
-    opts->mod_qpsk = 1;
   }
   else
   {
+    opts->mod_c4fm = 1;
+    opts->mod_qpsk = 0;
+    opts->mod_gfsk = 0;
     state->rf_mod = 0;
     state->samplesPerSymbol = 10;
     state->symbolCenter = 4;
-    opts->mod_c4fm = 1;
-    opts->mod_qpsk = 0;
   }
  }
 
- if (c == 77) //'M' key, toggle qpsk - phase 2 
+ if (c == 77) //'M' key, toggle qpsk - phase 2 6000 sps
  {
   if (state->rf_mod == 0)
   {
+    opts->mod_c4fm = 0;
+    opts->mod_qpsk = 1;
+    opts->mod_gfsk = 0;
     state->rf_mod = 1;
     state->samplesPerSymbol = 8;
     state->symbolCenter = 3;
-    opts->mod_c4fm = 0;
-    opts->mod_qpsk = 1;
   }
   else
   {
+    opts->mod_c4fm = 1;
+    opts->mod_qpsk = 0;
+    opts->mod_gfsk = 0;
     state->rf_mod = 0;
     state->samplesPerSymbol = 10;
     state->symbolCenter = 4;
-    opts->mod_c4fm = 1;
-    opts->mod_qpsk = 0;
   }
  }
 

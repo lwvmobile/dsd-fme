@@ -322,8 +322,8 @@ initOpts (dsd_opts * opts)
   opts->inverted_x2tdma = 1;    // most transmitter + scanner + sound card combinations show inverted signals for this
   opts->inverted_dmr = 0;       // most transmitter + scanner + sound card combinations show non-inverted signals for this
   opts->mod_threshold = 26;
-  opts->ssize = 36;
-  opts->msize = 15;
+  opts->ssize = 128; //36 default, max is 128, much cleaner data decodes on Phase 2 cqpsk at max
+  opts->msize = 1024; //15 default, max is 1024, much cleaner data decodes on Phase 2 cqpsk at max
   opts->playfiles = 0;
   opts->delay = 0;
   opts->use_cosine_filter = 1;
@@ -810,12 +810,11 @@ usage ()
   printf ("  -mc           Use only C4FM modulation optimizations\n");
   printf ("  -mg           Use only GFSK modulation optimizations\n");
   printf ("  -mq           Use only QPSK modulation optimizations\n");
-  printf ("  -m2           Use Phase 2 6000 sps CQPSK modulation optimizations\n");
-  printf ("                 (4 Level, not 8 Level LSM) \n");
+  printf ("  -m2           Use P25p2 6000 sps CQPSK modulation optimizations\n");
+  //printf ("                 (4 Level, not 8 Level LSM) (this is honestly unknown since I can't verify what local systems are using)\n");
   printf ("  -F            Relax P25 Phase 2 MAC_SIGNAL CRC Checksum Pass/Fail\n");
   printf ("                 Use this feature to allow MAC_SIGNAL even if bad CRC errors.\n");
-  printf ("  -F            Enable DMR BS Stereo Passive Frame Sync\n");
-  printf ("                 This feature will attempt to resync less often due to excessive voice errors\n");
+  printf ("  -F            Relax DMR CACH/Burst FEC Pass/Fail - Passive Frame Sync\n");
   printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
   printf ("  -Z            Log MBE/Frame Payloads to console\n");
   printf ("\n");
@@ -1735,16 +1734,13 @@ main (int argc, char **argv)
             }
           else if (optarg[0] == '2')
             {
-              //opts.pulse_digi_rate_in  = 96000;
               opts.mod_c4fm = 0;
               opts.mod_qpsk = 1;
               opts.mod_gfsk = 0;
               state.rf_mod = 1;
               state.samplesPerSymbol = 8; 
               state.symbolCenter = 3; 
-              // state.samplesPerSymbol = 8*2; 
-              // state.symbolCenter = 3*2; 
-              fprintf (stderr,"Enabling 6000 sps P25 CQPSK (testing only).\n");
+              fprintf (stderr,"Enabling 6000 sps P25p2 CQPSK.\n");
             }
           break;
         case 'u':

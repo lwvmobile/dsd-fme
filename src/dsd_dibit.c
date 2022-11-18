@@ -283,7 +283,9 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 
       valid = 0;
 
-      if (state->synctype == 1)
+      //only run estimate_symbol when we aren't trunking, otherwise noise/gain levels on other rf channels may impact performance severely
+      //honestly can't say I've seen any improvement when using heuristics, but is detrimental to playing back multiple p25 samples
+      if (state->synctype == 1 && opts->p25_trunk == 0) 
         {
           // Use the P25 heuristics if available
           //valid = estimate_symbol(state->rf_mod, &(state->inv_p25_heuristics), state->last_dibit, symbol, &dibit);
@@ -346,7 +348,9 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 
       valid = 0;
 
-      if (state->synctype == 0)
+      //only run estimate_symbol when we aren't trunking, otherwise noise/gain levels on other rf channels may impact performance severely
+      //honestly can't say I've seen any improvement when using heuristics, but is detrimental to playing back multiple p25 samples
+      if (state->synctype == 0 && opts->p25_trunk == 0)
         {
           // Use the P25 heuristics if available
           //valid = estimate_symbol(state->rf_mod, &(state->p25_heuristics), state->last_dibit, symbol, &dibit);
