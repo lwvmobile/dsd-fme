@@ -1849,6 +1849,50 @@ main (int argc, char **argv)
       opts.audio_in_type = 6;
     }
 
+    if((strncmp(opts.audio_in_dev, "/dev/dsp", 8) == 0))
+    {
+      sprintf (opts.audio_in_dev, "%s", "pulse");
+      fprintf (stderr, "Did you mean pulse audio? Using pulse audio input!\n");
+      opts.audio_in_type = 0;
+    }
+
+    if((strncmp(opts.audio_in_dev, "/dev/audio", 10) == 0))
+    {
+      sprintf (opts.audio_in_dev, "%s", "pulse");
+      fprintf (stderr, "Nope! Using pulse audio input!\n");
+      opts.audio_in_type = 0;
+    }
+
+    if((strncmp(opts.audio_out_dev, "/dev/dsp", 8) == 0))
+    {
+      sprintf (opts.audio_out_dev, "%s", "pulse");
+      fprintf (stderr, "I told you to stop trying to use /dev/dsp, Roman!!\n");
+      opts.audio_out_type = 0;
+    }
+
+    if((strncmp(opts.audio_out_dev, "/dev/audio", 10) == 0))
+    {
+      sprintf (opts.audio_out_dev, "%s", "pulse");
+      fprintf (stderr, "WHY?! Why are you trying to make me use OSS? That was depreciated over 10 years ago!\n");
+      opts.audio_out_type = 0;
+    }
+
+    if((strncmp(opts.audio_out_dev, "pa", 2) == 0))
+    {
+      sprintf (opts.audio_out_dev, "%s", "pulse");
+      fprintf (stderr, "We don't use Port Audio 'round 'ere!\n");
+      opts.audio_out_type = 0;
+    }
+
+    if((strncmp(opts.audio_in_dev, "pa", 2) == 0))
+    {
+      sprintf (opts.audio_in_dev, "%s", "pulse");
+      fprintf (stderr, "Port Audio wouldn't work even if it were still in the code!\n");
+      opts.audio_out_type = 0;
+    }
+
+
+
     if((strncmp(opts.audio_in_dev, "pulse", 5) == 0))
     {
       opts.audio_in_type = 0;
