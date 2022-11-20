@@ -359,6 +359,7 @@ typedef struct
 
   int p25_trunk; //experimental P25 trunking with RIGCTL (or RTLFM)
   int p25_is_tuned; //set to 1 if currently on VC, set back to 0 if on CC
+  int trunk_hangtime; //hangtime in seconds before tuning back to CC
 
   //csv import filenames
   char group_in_file[1024];

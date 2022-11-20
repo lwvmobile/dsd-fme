@@ -384,8 +384,22 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 
 	crc = crc15(trellis_buf, 199);
 
-	fprintf (stderr, " F2/U   ");
-	if (crc == 0) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf);
+	uint8_t f2u_message_buffer[199];
+	memset (f2u_message_buffer, 0, sizeof(f2u_message_buffer));
+
+	//just going to leave this all here in case its needed, like in cac,
+	//don't have any samples with f2 or udch data in it
+	for (int i = 0; i < 199-8; i++) 
+	{
+		f2u_message_buffer[i] = trellis_buf[i+8]; 
+	}
+	
+	if (crc == 0)
+	{
+		fprintf (stderr, " F2/U   "); 
+		//NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
+		NXDN_Elements_Content_decode(opts, state, 1, f2u_message_buffer); 
+	} 
 
 	if (opts->payload == 1)
 	{
@@ -476,8 +490,6 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 
 	crc = crc16cac(trellis_buf, 171); 
 
-	fprintf (stderr, " CAC    ");
-
 	//message type will probably be neccesary beforehand on single/dual meessage runs
 	//run message, check len, load into a seperate buffer, send to element, do same with other piece?
 	uint8_t MessageType = 0;
@@ -496,7 +508,11 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 		cac_message_buffer[i] = trellis_buf[i+8];
 	}
 
-	if (crc == 0) NXDN_Elements_Content_decode(opts, state, 1, cac_message_buffer);
+	if (crc == 0)
+	{
+		fprintf (stderr, " CAC    ");
+		NXDN_Elements_Content_decode(opts, state, 1, cac_message_buffer);
+	} 
 
 	if (opts->payload == 1)
 	{

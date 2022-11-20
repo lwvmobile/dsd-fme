@@ -54,6 +54,7 @@ sudo make install
                  (See group.csv for example)
   -3            Enable Experimental Trunking Features (P25/EDACS/NXDN-ish for now) with RIGCTL/TCP or RTL Input
   -5 <udp p>    Enable RIGCTL/TCP; Set UDP Port for RIGCTL. (4532 for SDR++)
+  -6 <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)
 
 ```
 ### Input ###

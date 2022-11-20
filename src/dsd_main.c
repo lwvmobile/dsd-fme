@@ -77,8 +77,8 @@ void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
 
-  //tune back to last knwon CC when using trunking
-  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1) 
+  //tune back to last knwon CC when using trunking after x second hangtime 
+  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && time(NULL) - state->last_cc_sync_time > opts->trunk_hangtime) 
   {
     if (state->p25_cc_freq != 0) 
     {
@@ -136,11 +136,26 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   sprintf (state->ftype, "             ");
   state->errs = 0;
   state->errs2 = 0;
-  //should I disable this or not?
-  state->lasttg = 0;
-  state->lastsrc = 0;
-  state->lasttgR = 0;
-  state->lastsrcR = 0;
+
+  //zero out right away if not trunking
+  if (opts->p25_trunk == 0)
+  {
+    state->lasttg = 0;
+    state->lastsrc = 0;
+    state->lasttgR = 0;
+    state->lastsrcR = 0;
+  }
+
+  //zero out after x second hangtime when trunking to prevent premature zeroing on these variables
+  //mainly bugfix for ncurses and per call wavs (edacs)
+  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && time(NULL) - state->last_cc_sync_time > opts->trunk_hangtime) 
+  {
+    state->lasttg = 0;
+    state->lastsrc = 0;
+    state->lasttgR = 0;
+    state->lastsrcR = 0;
+  }
+  
   state->lastp25type = 0;
   state->repeat = 0;
   state->nac = 0;
@@ -392,6 +407,7 @@ initOpts (dsd_opts * opts)
 
   opts->p25_trunk = 0; //0 disabled, 1 is enabled
   opts->p25_is_tuned = 0; //set to 1 if currently on VC, set back to 0 on carrier drop
+  opts->trunk_hangtime = 1; //1 second hangtime by default before tuning back to CC
 
 }
 
@@ -647,6 +663,7 @@ initState (dsd_state * state)
   state->p2_cc = 0;
   state->p2_hardset = 0;
   state->p2_is_lcch = 0;
+  state->p25_cc_is_tdma = 2; //init on 2, TSBK NET_STS will set 0, TDMA NET_STS will set 1. //used to determine if we need to change symbol rate when cc hunting
 
   //experimental symbol file capture read throttle
   state->symbol_throttle = 0; //throttle speed
@@ -837,6 +854,7 @@ usage ()
   printf ("                 (See group.csv for example)\n");
   printf ("  -3            Enable Extremely Experimental Trunking Features (NXDN/P25/EDACS for now) with RIGCTL/TCP or RTL Input\n");
   printf ("  -5 <udp p>    Enable RIGCTL/TCP; Set UDP Port for RIGCTL. (4532 on SDR++)\n");
+  printf ("  -6 <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)\n");
   //printf ("                 (Currently only available on UDP port 4532)\n");
   printf ("\n");
   exit (0);
@@ -1068,7 +1086,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qs:tv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qs:tv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:6:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1104,6 +1122,10 @@ main (int argc, char **argv)
           {
             opts.use_rigctl = 1; 
           }
+          break;
+        //placeholder until letters get re-arranged
+        case '6': //hangtime in seconds, default is 1;
+          sscanf (optarg, "%d", &opts.trunk_hangtime);
           break;
         case 'e':
           opts.errorbars = 1;
