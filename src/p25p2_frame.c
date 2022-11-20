@@ -193,8 +193,8 @@ void process_FACCHc (dsd_opts * opts, dsd_state * state)
 	else
 	{
 		fprintf (stderr, " R-S ERR Fc");
-		if (state->currentslot == 0) state->dmrburstL = 13;
-		else state->dmrburstR = 13;
+		//if (state->currentslot == 0) state->dmrburstL = 13;
+		//else state->dmrburstR = 13;
 	}
 
 }
@@ -247,8 +247,8 @@ void process_FACCHs (dsd_opts * opts, dsd_state * state)
 	else
 	{
 		fprintf (stderr, " R-S ERR Fs");
-		if (state->currentslot == 0) state->dmrburstL = 13;
-		else state->dmrburstR = 13;
+		//if (state->currentslot == 0) state->dmrburstL = 13;
+		//else state->dmrburstR = 13;
 	}
 }
 
@@ -752,8 +752,8 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		else
 		{
 			fprintf (stderr, " DUID ERR %d", duid_decoded);
-			if (state->currentslot == 0) state->dmrburstL = 12;
-			else state->dmrburstR = 12;
+			//if (state->currentslot == 0) state->dmrburstL = 12;
+			//else state->dmrburstR = 12;
 			err_counter++;
 		}
 		if (err_counter > 1) //&& opts->aggressive_framesync == 1

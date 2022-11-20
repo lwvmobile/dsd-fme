@@ -77,7 +77,7 @@ void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
 
-  //tune back to last knwon CC when using trunking after x second hangtime 
+  //tune back to last known CC when using trunking after x second hangtime 
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && time(NULL) - state->last_cc_sync_time > opts->trunk_hangtime) 
   {
     if (state->p25_cc_freq != 0) 
@@ -147,7 +147,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   }
 
   //zero out after x second hangtime when trunking to prevent premature zeroing on these variables
-  //mainly bugfix for ncurses and per call wavs (edacs)
+  //mainly bugfix for ncurses and per call wavs (edacs) and also signal fade, etc
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && time(NULL) - state->last_cc_sync_time > opts->trunk_hangtime) 
   {
     state->lasttg = 0;

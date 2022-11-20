@@ -57,8 +57,8 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			else
 			{
 				fprintf (stderr, " CRC12 ERR S");
-				if (state->currentslot == 0) state->dmrburstL = 14;
-				else state->dmrburstR = 14;
+				//if (state->currentslot == 0) state->dmrburstL = 14;
+				//else state->dmrburstR = 14;
 				goto END_SMAC;
 			}
 		}
@@ -84,8 +84,8 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 				{
 					fprintf (stderr, " CRC16 ERR L");
 					state->p2_is_lcch = 0; //turn flag off here
-					if (state->currentslot == 0) state->dmrburstL = 14;
-					else state->dmrburstR = 14;
+					//if (state->currentslot == 0) state->dmrburstL = 14;
+					//else state->dmrburstR = 14;
 					goto END_SMAC;
 				}				
 			}
@@ -303,8 +303,8 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			else
 			{
 				fprintf (stderr, " CRC12 ERR F");
-				if (state->currentslot == 0) state->dmrburstL = 14;
-				else state->dmrburstR = 14;
+				//if (state->currentslot == 0) state->dmrburstL = 14;
+				//else state->dmrburstR = 14;
 				goto END_FMAC;
 			}
 		}

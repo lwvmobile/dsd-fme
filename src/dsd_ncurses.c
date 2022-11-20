@@ -2441,7 +2441,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         attron(COLOR_PAIR(3));
       }
     }
-      
+
+    //Frequency Display
     if (state->p25_vc_freq[0] != 0)
     {
       attron(COLOR_PAIR(5));
@@ -2451,6 +2452,25 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         attron(COLOR_PAIR(3));
       }
     }
+
+    //Group Name Labels from CSV import
+    if (state->dmrburstL == 16 || state->dmrburstL > 19)
+    {
+      for (int k = 0; k < state->group_tally; k++)
+      {
+        if (state->group_array[k].groupNumber == state->lasttg)
+        {
+          attron(COLOR_PAIR(5));
+          printw (" [%s]", state->group_array[k].groupName);
+          printw ("[%s] ", state->group_array[k].groupMode);
+          if (state->carrier == 1)
+          {
+            attron(COLOR_PAIR(3));
+          }
+        }
+      }
+    }
+
     printw ("\n");
 
     //Slot 2 [1]
@@ -2587,6 +2607,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         attron(COLOR_PAIR(3));
       }
     }
+
     //LRRP
     if(state->dmrburstR != 16) //only during data
     {
@@ -2601,6 +2622,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         attron(COLOR_PAIR(3));
       }
     }
+    
+    //Frequency Display
     if (state->p25_vc_freq[0] != 0)
     {
       attron(COLOR_PAIR(5));
@@ -2610,6 +2633,25 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         attron(COLOR_PAIR(3));
       }
     }
+
+    //Group Name Labels from CSV import
+    if (state->dmrburstR == 16 || state->dmrburstR > 19)
+    {
+      for (int k = 0; k < state->group_tally; k++)
+      {
+        if (state->group_array[k].groupNumber == state->lasttgR)
+        {
+          attron(COLOR_PAIR(5));
+          printw (" [%s]", state->group_array[k].groupName);
+          printw ("[%s] ", state->group_array[k].groupMode);
+        }
+        if (state->carrier == 1)
+        {
+          attron(COLOR_PAIR(3));
+        }
+      }
+    }
+
     printw ("\n");
   }  // end if not MS
   } //end DMR BS Types
@@ -2656,7 +2698,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //shim 443 afs in here for display purposes
       int a  = (call_matrix[i][3] >> 7) & 0xF; 
       int fs = call_matrix[i][3] & 0x7F;
-      printw ("| - LCN [%02d][%.06lf]", i, (double)state->trunk_lcn_freq[i-1]/1000000); 
+      printw ("| - LCN [%02d][%.06lf] MHz", i, (double)state->trunk_lcn_freq[i-1]/1000000); 
       
       //print Control Channel on LCN line with the current Control Channel
       if ( (i) == state->edacs_cc_lcn)
