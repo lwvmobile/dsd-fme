@@ -31,23 +31,36 @@ long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channe
 	int type = state->p25_chan_type[iden];
 	int slots_per_carrier[16] = {1,1,1,2,4,2,2,2,2,2,2,2,2,2,2,2}; //from OP25
 	int step = (channel & 0xFFF) / slots_per_carrier[type];
-	
-	if (state->p25_base_freq[iden] != 0)
+
+	//first, check channel map
+	if (state->trunk_chan_map[channel] != 0)
 	{
-		freq = (state->p25_base_freq[iden] * 5) + ( step * state->p25_chan_spac[iden] * 125);
-        fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
-        return (freq);
+		freq = state->trunk_chan_map[channel];
+		fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
+		return (freq);
 	}
-	else 
-    {
-        fprintf (stderr, "\n  Base Frequency Not Found - Iden [%d]", iden);
-        return (0);
-    }
+
+	//if not found, attempt to find it via calculation 
+	else
+	{
+		if (state->p25_base_freq[iden] != 0)
+		{
+			freq = (state->p25_base_freq[iden] * 5) + ( step * state->p25_chan_spac[iden] * 125);
+					fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
+					return (freq);
+		}
+		else 
+		{
+				fprintf (stderr, "\n  Base Frequency Not Found - Iden [%d]", iden);
+				fprintf(stderr, "\n    or Channel not found in import file");
+				return (0);
+		}
+	}	
 
 }
 
 //NXDN Channel to Frequency, Courtesy of IcomIcR20 on RR Forums
-long int nxdn_channel_to_frequency(dsd_opts * opts, uint16_t channel)
+long int nxdn_channel_to_frequency(dsd_opts * opts, dsd_state * state, uint16_t channel)
 {
 	long int freq;
 	long int base = 0;
@@ -55,33 +68,41 @@ long int nxdn_channel_to_frequency(dsd_opts * opts, uint16_t channel)
 	//the base freq value is per EricCottrell in the Understanding NXDN Trunking Forum Thread
 	//will need to do some research or tests to confirm these values are accurate
 
-	if ((channel > 0) && (channel <= 400))
+	//first, check channel map
+	if (state->trunk_chan_map[channel] != 0)
 	{
-		if (opts->frame_nxdn48 == 1) base = 450000000;
-		else base = 451000000;
-
-		freq = base + (channel - 1) * 12500;
+		freq = state->trunk_chan_map[channel];
 		fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
 		return (freq);
 	}
-	else if ((channel >= 401) && (channel <= 800))
-	{
-		if (opts->frame_nxdn48 == 1) base = 460000000;
-		else base = 461000000;
 
-		freq = base + (channel - 401) * 12500;
-		fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
-		return (freq);
-	}
-	else if (channel > 800)
-	{
-		//write function to check the LCN import array for custom frequency values!
-		//return (freq);
-	}
+	//if not found, attempt to find it via calculation 
 	else
 	{
-		fprintf(stderr, "\n  This LCN is used for a non-standard frequency. No frequency can be reported");
-		return (0);
+		if ((channel > 0) && (channel <= 400))
+		{
+			if (opts->frame_nxdn48 == 1) base = 450000000;
+			else base = 451000000;
+
+			freq = base + (channel - 1) * 12500;
+			fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
+			return (freq);
+		}
+		else if ((channel >= 401) && (channel <= 800))
+		{
+			if (opts->frame_nxdn48 == 1) base = 460000000;
+			else base = 461000000;
+
+			freq = base + (channel - 401) * 12500;
+			fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
+			return (freq);
+		}
+		else
+		{
+			fprintf(stderr, "\n  Non-standard frequency or channel not found in import file");
+			return (0);
+		}
 	}
+	
 
 }

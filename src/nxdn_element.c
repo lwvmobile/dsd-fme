@@ -231,7 +231,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
 
   //run process to figure out frequency value from the channel, or from lcn import array
   long int freq = 0;
-  freq = nxdn_channel_to_frequency(opts, Channel);
+  freq = nxdn_channel_to_frequency(opts, state, Channel);
 
   //run group/source analysis and tune if available/desired
   //group list mode so we can look and see if we need to block tuning any groups, etc
@@ -373,8 +373,8 @@ void NXDN_decode_cch_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   else if (channel1sts & 0x10) fprintf (stderr, "New ");
   else if (channel1sts & 0x8) fprintf (stderr, "Candidate Added ");
   else if (channel1sts & 0x4) fprintf (stderr, "Candidate Deleted ");
-  freq1 = nxdn_channel_to_frequency (opts, channel1);
-  freq2 = nxdn_channel_to_frequency (opts, channel2);
+  freq1 = nxdn_channel_to_frequency (opts, state, channel1);
+  freq2 = nxdn_channel_to_frequency (opts, state, channel2);
 
   //add handling for adding (or deleting?) frequencies to CC list
   if (channel1sts & 0x20 || channel1sts & 0x8) //current or new only
@@ -497,12 +497,12 @@ void NXDN_decode_site_info(dsd_opts * opts, dsd_state * state, uint8_t * Message
   if (channel1 != 0)
   {
     fprintf (stderr, "\n Control Channel 1 [%03X][%04d] ", channel1, channel1 );
-    freq1 = nxdn_channel_to_frequency (opts, channel1);
+    freq1 = nxdn_channel_to_frequency (opts, state, channel1);
   }
   if (channel2 != 0)
   {
     fprintf (stderr, "\n Control Channel 2 [%03X][%04d] ", channel2, channel2 );
-    freq2 = nxdn_channel_to_frequency (opts, channel2);
+    freq2 = nxdn_channel_to_frequency (opts, state, channel2);
   }
 
   fprintf (stderr, "%s", KNRM);

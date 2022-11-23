@@ -307,6 +307,11 @@ initOpts (dsd_opts * opts)
   opts->wav_out_file_raw[0] = 0;
   opts->symbol_out_file[0] = 0;
   opts->lrrp_out_file[0] = 0;
+  //csv import filenames
+  opts->group_in_file[0] = 0;
+  opts->lcn_in_file[0] = 0;
+  opts->chan_in_file[0] = 0;
+  //end import filenames
   opts->szNumbers[0] = 0;
   opts->symbol_out_f = NULL;
   opts->symbol_out = 0;
@@ -699,6 +704,7 @@ initState (dsd_state * state)
 
   //trunking
   memset (state->trunk_lcn_freq, 0, sizeof(state->trunk_lcn_freq));
+  memset (state->trunk_chan_map, 0, sizeof(state->trunk_chan_map));
   state->group_tally = 0;
   state->lcn_freq_count = 0; //number of frequncies imported from LCN
   state->lcn_freq_roll = 0; //needs reset if sync is found?
@@ -850,6 +856,8 @@ usage ()
   printf (" Experimental Functions and Features---------------------------------------------------\n");
   printf ("  -1 <file>     Import LCN Frequencies from csv file (numeral 'one')                   \n");
   printf ("                 (See lcn.csv for example)\n");
+  printf ("  -7 <file>     Import Channel to Frequency Map from csv file (numeral 'seven')                   \n");
+  printf ("                 (See channel_map.csv for example)\n");
   printf ("  -2 <file>     Import Group List Allow/Block and Label from csv file (numeral 'two')\n");
   printf ("                 (See group.csv for example)\n");
   printf ("  -3            Enable Extremely Experimental Trunking Features (NXDN/P25/EDACS for now) with RIGCTL/TCP or RTL Input\n");
@@ -1086,7 +1094,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qs:tv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:6:")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qs:tv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:6:7:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1100,13 +1108,19 @@ main (int argc, char **argv)
           opts.call_alert = 1;
           break;
         //placeholder until letters get re-arranged (or opt_long switched in)
-        case '1': //LCN/Frequency CSV
+        case '1': //LCN to Frequency CSV Import
           strncpy(opts.lcn_in_file, optarg, 1023);
           opts.lcn_in_file[1023] = '\0';
           csvLCNImport (&opts, &state);
           break;
         //placeholder until letters get re-arranged
-        case '2': //Group Label CSV
+        case '7': //Channel Map Frequency CSV Import
+          strncpy(opts.chan_in_file, optarg, 1023);
+          opts.chan_in_file[1023] = '\0';
+          csvChanImport (&opts, &state);
+          break;
+        //placeholder until letters get re-arranged
+        case '2': //Group CSV Import
           strncpy(opts.group_in_file, optarg, 1023);
           opts.group_in_file[1023] = '\0';
           csvGroupImport(&opts, &state);

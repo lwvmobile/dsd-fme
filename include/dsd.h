@@ -364,6 +364,7 @@ typedef struct
   //csv import filenames
   char group_in_file[1024];
   char lcn_in_file[1024];
+  char chan_in_file[1024]; 
   //end import filenames
 
 } dsd_opts;
@@ -632,6 +633,7 @@ typedef struct
 
   //trunking group and lcn freq list
   long int trunk_lcn_freq[26]; //max number on an EDACS system, should be enough on DMR too hopefully
+  long int trunk_chan_map[0xFFFF]; //NXDN - 10 bit; P25 - 16 bit; DMR up to 12 bit (standard TIII)
   groupinfo group_array[0x3FF]; //max supported by Cygwin is 3FFF, I hope nobody actually tries to import this many groups
   unsigned int group_tally; //tally number of groups imported from CSV file for referencing later
   int lcn_freq_count;
@@ -830,14 +832,8 @@ void nxdn_deperm_facch2_udch (dsd_opts * opts, dsd_state * state, uint8_t bits[3
 void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType);
 void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182]);
 
-//utility functions from OP25 needed by NXDN frame handler
+//OP25  NXDN CRC functions
 static inline int load_i(const uint8_t val[], int len);
-static inline void cfill(uint8_t result[], const uint8_t src[], int len);
-
-static inline void trellis_encode(uint8_t result[], const uint8_t source[], int result_len, int reg);
-static inline void trellis_decode(uint8_t result[], const uint8_t source[], int result_len);
-
-//OP25 CRC functions
 static uint8_t crc6(const uint8_t buf[], int len);
 static uint16_t crc12f(const uint8_t buf[], int len);
 static uint16_t crc15(const uint8_t buf[], int len);
@@ -969,7 +965,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channel);
 
 //NXDN Channel to Frequency, Courtesy of IcomIcR20 on RR Forums
-long int nxdn_channel_to_frequency (dsd_opts * opts, uint16_t channel);
+long int nxdn_channel_to_frequency (dsd_opts * opts, dsd_state * state, uint16_t channel);
 
 //rigctl functions and TCP/UDP functions
 void error(char *msg);
@@ -1000,6 +996,7 @@ unsigned long long int edacs_bch (unsigned long long int message);
 //csv imports
 int csvGroupImport(dsd_opts * opts, dsd_state * state);
 int csvLCNImport(dsd_opts * opts, dsd_state * state);
+int csvChanImport(dsd_opts * opts, dsd_state * state);
 
 #ifdef __cplusplus
 extern "C" {

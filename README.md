@@ -50,6 +50,8 @@ sudo make install
   -----command line switches here subject to change------------------
   -1 <file>     Import LCN Frequencies from csv file (numeral 'one')                   
                  (See lcn.csv for example)
+  -7 <file>     Import Channel to Frequency Map from csv file (numeral 'seven')                   
+                 (See channel_map.csv for example)
   -2 <file>     Import Group List Allow/Block and Label from csv file (numeral 'two')
                  (See group.csv for example)
   -3            Enable Experimental Trunking Features (P25/EDACS/NXDN-ish for now) with RIGCTL/TCP or RTL Input

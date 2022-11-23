@@ -12,7 +12,7 @@ int csvGroupImport(dsd_opts * opts, dsd_state * state)
   FILE * fp;
   fp = fopen(filename, "r");
   if (fp == NULL) {
-    printf("Unable to open file '%s'\n", filename);
+    printf("Unable to open group file '%s'\n", filename);
     exit(1);
   }
   int row_count = 0;
@@ -64,7 +64,7 @@ int csvLCNImport(dsd_opts * opts, dsd_state * state) //LCN/LSN import for EDACS/
   FILE * fp;
   fp = fopen(filename, "r");
   if (fp == NULL) {
-    printf("Unable to open file '%s'\n", filename);
+    printf("Unable to open lcn file '%s'\n", filename);
     //have this return -1 and handle it inside of main
     exit(1);
   }
@@ -89,6 +89,53 @@ int csvLCNImport(dsd_opts * opts, dsd_state * state) //LCN/LSN import for EDACS/
       field_count++;
     }
     fprintf (stderr, "LCN Count %d\n", state->lcn_freq_count);
+    
+  }
+  fclose(fp);
+  return 0;
+}
+
+int csvChanImport(dsd_opts * opts, dsd_state * state) //channel map import
+{
+  char filename[1024] = "filename.csv"; 
+  sprintf (filename, "%s", opts->chan_in_file);
+
+  char buffer[BSIZE];
+  FILE * fp;
+  fp = fopen(filename, "r");
+  if (fp == NULL) {
+    printf("Unable to open channel map file '%s'\n", filename);
+    //have this return -1 and handle it inside of main
+    exit(1);
+  }
+  int row_count = 0;
+  int field_count = 0;
+
+  long int chan_number;
+
+  while (fgets(buffer, BSIZE, fp)) {
+    field_count = 0;
+    row_count++;
+    if (row_count == 1)
+      continue; //don't want labels
+    char * field = strtok(buffer, ","); //seperate by comma
+    while (field) {
+
+      if (field_count == 0)
+      {
+        sscanf (field, "%ld", &chan_number);
+      }
+
+      if (field_count == 1)
+      {
+        sscanf (field, "%ld", &state->trunk_chan_map[chan_number]);
+      }
+      
+      field = strtok(NULL, ",");
+      field_count++;
+    }
+    fprintf (stderr, "Channel [%05ld] [%09ld]", chan_number, state->trunk_chan_map[chan_number]);
+    fprintf (stderr, "\n");
     
   }
   fclose(fp);
