@@ -1,4 +1,4 @@
-//NXDN descramble/deperm/depuncture and utility functions
+//NXDN descramble/deperm/depuncture and crc/utility functions
 //Reworked portions from Osmocom OP25
 
 /* -*- c++ -*- */
@@ -68,8 +68,6 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 		depunc[out++] = deperm[i+1];
 		depunc[out++] = deperm[i+2];
 	}
-
-	//trellis_decode(trellis_buf, depunc, 92);
 
 	//switch to the convolutional decoder
 	uint8_t temp[210];
@@ -168,8 +166,6 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		depunc[o++] = deperm[p+9];
 		depunc[o++] = 0;
 	}
-
-	//trellis_decode(trellis_buf, depunc, 32);
 
 	//switch to the convolutional decoder
 	uint8_t temp[90];
@@ -337,8 +333,6 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 		depunc[id++] = deperm[i*12+11];
 	}
 	
-	//trellis_decode(trellis_buf, depunc, 199);
-
 	//switch to the convolutional decoder
 	uint8_t temp[220];
 	uint8_t s0;
@@ -443,8 +437,6 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 		depunc[id++] = deperm[i*12+10];
 		depunc[id++] = deperm[i*12+11];
 	}
-
-	//trellis_decode(trellis_buf, depunc, 171);
 
 	//switch to the convolutional decoder
 	uint8_t temp[360];
@@ -598,69 +590,12 @@ void LFSRN(char * BufferIn, char * BufferOut, dsd_state * state)
   state->payload_miN = lfsr & 0x7FFF;
 }
 
-//utility functions here, consider moving to its own file later
-static inline void cfill(uint8_t result[], const uint8_t src[], int len)
-{
-	for (int i=0; i<len; i++)
-		result[i] = load_i(src+i*8, 8);
-}
-
 static inline int load_i(const uint8_t val[], int len) {
 	int acc = 0;
 	for (int i=0; i<len; i++){
 		acc = (acc << 1) + (val[i] & 1);
 	}
 	return acc;
-}
-
-// trellis_1_2 encode: source is in bits, result in bits
-static inline void trellis_encode(uint8_t result[], const uint8_t source[], int result_len, int reg)
-{
-	for (int i=0; i<result_len; i+=2) {
-		reg = (reg << 1) | source[i>>1];
-		result[i] = PARITY[reg & 0x19];
-		result[i+1] = PARITY[reg & 0x17];
-	}
-}
-
-// simplified trellis 2:1 decode; source and result in bits
-// assumes that encoding was done with NTEST trailing zero bits
-// result_len should be set to the actual number of data bits
-// in the original unencoded message (excl. these trailing bits)
-static inline void trellis_decode(uint8_t result[], const uint8_t source[], int result_len)
-{
-	int reg = 0;
-	int min_d;
-	int min_bt;
-	static const int NTEST = 4;
-	static const int NTESTC = 1 << NTEST;
-	uint8_t bt[NTEST];
-	uint8_t tt[NTEST*2];
-	int dstats[4];
-	int sum;
-	for (int p=0; p < 4; p++)
-		dstats[p] = 0;
-	for (int p=0; p < result_len; p++) {
-		for (int i=0; i<NTESTC; i++) {
-			bt[0] = (i&8)>>3;
-			bt[1] = (i&4)>>2;
-			bt[2] = (i&2)>>1;
-			bt[3] = (i&1);
-			trellis_encode(tt, bt, NTEST*2, reg);
-			sum=0;
-			for (int j=0; j<NTEST*2; j++) {
-				sum += tt[j] ^ source[p*2+j];
-			}
-			if (i == 0 || sum < min_d) {
-				min_d = sum;
-				min_bt = bt[0];
-			}
-		}
-		result[p] = min_bt;
-		reg = (reg << 1) | min_bt;
-		dstats[(min_d > 3) ? 3 : min_d] += 1;
-	}
-	// fprintf (stderr, "stats\t%d %d %d %d\n", dstats[0], dstats[1], dstats[2], dstats[3]);
 }
 
 static uint8_t crc6(const uint8_t buf[], int len)
