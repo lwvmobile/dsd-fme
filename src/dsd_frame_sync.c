@@ -195,7 +195,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   int i, j, t, o, dibit, sync, symbol, synctest_pos, lastt;
   char synctest[25];
   char synctest12[13]; //dPMR
-  char synctest10[11];
+  char synctest10[11]; //NXDN FSW only
+  char synctest19[20]; //NXDN Preamble + FSW
   char synctest18[19];
   char synctest32[33];
   char synctest20[21]; //YSF
@@ -1257,8 +1258,34 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           //NXDN FSW sync and handling - moved to very bottom of sync stack for falsing sanity
           else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
           {
-            strncpy (synctest10, (synctest_p - 9), 10);
-            if ( (strncmperr (synctest10, NXDN_FSW, 10, 1) == 0) )
+            strncpy (synctest10, (synctest_p - 9), 10); //FSW only
+            strncpy (synctest19, (synctest_p - 18), 19); //Preamble + FSW
+
+            //Preamble plus FSW, proceed right away
+            if ( (strncmperr (synctest19, NXDN_PANDFSW, 19, 1) == 0) )
+            {
+              state->carrier = 1;
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+              state->lastsynctype = 28;
+              state->last_cc_sync_time = time(NULL);
+              if (opts->payload == 1) fprintf (stderr, "PANDF ");
+              return (28);
+            }
+            else if ( (strncmperr (synctest19, INV_NXDN_PANDFSW, 19, 1) == 0) )
+            {
+              state->carrier = 1;
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+              state->lastsynctype = 29;
+              state->last_cc_sync_time = time(NULL);
+              if (opts->payload == 1) fprintf (stderr, "PANDF ");
+              return (29);
+            }
+
+            else if ( (strncmperr (synctest10, NXDN_FSW, 10, 1) == 0) )
             {
               state->carrier = 1;
               state->offset = synctest_pos;
@@ -1268,13 +1295,14 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (state->lastsynctype == 28) 
               {
                 state->last_cc_sync_time = time(NULL);
+                if (opts->payload == 1) fprintf (stderr, "FSW   ");
                 return (28);
               }
               state->lastsynctype = 28; //need two consecutive patterns to continue
 
             }
 
-            if ( (strncmperr (synctest10, INV_NXDN_FSW, 10, 1) == 0) )
+            else if ( (strncmperr (synctest10, INV_NXDN_FSW, 10, 1) == 0) )
             {
               state->carrier = 1;
               state->offset = synctest_pos;
@@ -1284,6 +1312,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (state->lastsynctype == 29) 
               {
                 state->last_cc_sync_time = time(NULL);
+                if (opts->payload == 1) fprintf (stderr, "FSW   ");
                 return (29);
               }
               state->lastsynctype = 29; //need two consecutive patterns to continue

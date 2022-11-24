@@ -697,8 +697,12 @@ typedef struct
 #define DMR_MS_DATA_SYNC  "311131133313133331131113"
 #define DMR_MS_VOICE_SYNC "133313311131311113313331"
 
+//Part 1-A CAI 4.4.4 (FSW only - Late Entry - Marginal Signal)
 #define NXDN_FSW      "3131331131"
 #define INV_NXDN_FSW  "1313113313"
+//Part 1-A CAI 4.4.3 Preamble Last 9 plus FSW (start of RDCH)
+#define NXDN_PANDFSW      "3131133313131331131" //19 symbols
+#define INV_NXDN_PANDFSW  "1313311131313113313" //19 symbols
 
 #define DMR_RC_DATA_SYNC  "131331111133133133311313"
 
