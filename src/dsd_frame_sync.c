@@ -1270,7 +1270,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->min = ((state->min) + lmin) / 2;
               state->lastsynctype = 28;
               state->last_cc_sync_time = time(NULL);
-              if (opts->payload == 1) fprintf (stderr, "PANDF ");
+              //if (opts->payload == 1) fprintf (stderr, "PANDF ");
               return (28);
             }
             else if ( (strncmperr (synctest19, INV_NXDN_PANDFSW, 19, 1) == 0) )
@@ -1281,7 +1281,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->min = ((state->min) + lmin) / 2;
               state->lastsynctype = 29;
               state->last_cc_sync_time = time(NULL);
-              if (opts->payload == 1) fprintf (stderr, "PANDF ");
+              //if (opts->payload == 1) fprintf (stderr, "PANDF ");
               return (29);
             }
 
@@ -1295,7 +1295,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (state->lastsynctype == 28) 
               {
                 state->last_cc_sync_time = time(NULL);
-                if (opts->payload == 1) fprintf (stderr, "FSW   ");
+                //if (opts->payload == 1) fprintf (stderr, "FSW   ");
                 return (28);
               }
               state->lastsynctype = 28; //need two consecutive patterns to continue
@@ -1312,7 +1312,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (state->lastsynctype == 29) 
               {
                 state->last_cc_sync_time = time(NULL);
-                if (opts->payload == 1) fprintf (stderr, "FSW   ");
+                //if (opts->payload == 1) fprintf (stderr, "FSW   ");
                 return (29);
               }
               state->lastsynctype = 29; //need two consecutive patterns to continue
