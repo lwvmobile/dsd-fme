@@ -150,7 +150,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
   //start control channel hunting if using trunking, time needs updating on each successful sync
   //will need to assign frequencies to a CC array for P25 since that isn't imported from CSV
-  if (opts->p25_is_tuned == 0 && opts->p25_trunk == 1 && (time(NULL) - state->last_cc_sync_time > (opts->trunk_hangtime + 2)) )
+  if (opts->p25_is_tuned == 0 && opts->p25_trunk == 1 && ( (time(NULL) - state->last_cc_sync_time) > (opts->trunk_hangtime + 2) ) )
   {
 
     //test to switch back to 10/4 P1 QPSK for P25 FDMA CC

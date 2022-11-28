@@ -78,7 +78,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
 {
 
   //tune back to last known CC when using trunking after x second hangtime 
-  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && time(NULL) - state->last_cc_sync_time > opts->trunk_hangtime) 
+  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && ( (time(NULL) - state->last_cc_sync_time) > opts->trunk_hangtime) ) 
   {
     if (state->p25_cc_freq != 0) 
     {
