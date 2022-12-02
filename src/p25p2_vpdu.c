@@ -105,7 +105,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
   		{
 				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-    		if (opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+    		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
     		{
 					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
 					if (opts->mod_qpsk == 1)
@@ -170,7 +170,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
   		{
 				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-    		if (opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+    		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
     		{
 					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
 					if (opts->mod_qpsk == 1)
@@ -268,7 +268,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0)) //DE is digital encrypted, B is block
 				{
 					//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-					if (opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency already
+					if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency already
 					{
 						//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
 						if (opts->mod_qpsk == 1) 
@@ -341,7 +341,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
   		{
 				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-    		if (opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+    		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
     		{
 					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
 					if (opts->mod_qpsk == 1)
@@ -411,7 +411,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
   		{
 				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-    		if (opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+    		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
     		{
 					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
 					if (opts->mod_qpsk == 1)
@@ -511,7 +511,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
 				{
 					//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-					if (opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency
+					if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency
 					{
 						//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
 						if (opts->mod_qpsk == 1)
@@ -618,7 +618,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0)) //DE is digital encrypted, B is block
 				{
 					//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-					if (opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency already
+					if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency already
 					{
 						//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
 						if (opts->mod_qpsk == 1) 
@@ -716,7 +716,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0)) //DE is digital encrypted, B is block
 				{
 					//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-					if (opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency already
+					if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency already
 					{
 						//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
 						if (opts->mod_qpsk == 1) 
@@ -794,7 +794,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
   		{
 				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-    		if (opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
+    		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
     		{
 					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
 					if (opts->mod_qpsk == 1)

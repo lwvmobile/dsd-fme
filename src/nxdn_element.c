@@ -255,7 +255,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
   //check to see if the source/target candidate is blocked first
   if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0)) //DE is digital encrypted, B is block
   {
-    if (opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency already
+    if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency already
     {
       //rigctl
       if (opts->use_rigctl == 1)
