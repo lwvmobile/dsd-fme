@@ -152,7 +152,8 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
     if (opts->payload == 1) fprintf(stderr, "  false sync or unsupported NXDN lich type 0x%02X\n", lich);
 		//reset the sacch field, we probably got a false sync and need to wipe or give a bad crc
 		memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
-		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc)); 
+		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly 
 		voice = 0;
 		goto END;
 		break;
