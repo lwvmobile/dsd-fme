@@ -388,7 +388,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
     //Capacity+ Section
     if (csbk_fid == 0x10)
     {
-      //will need to ponder the best way to do trunking rules for this
+      //not quite sure how these tuning rules will go over
+      //if they don't work so well, may just fall back to
+      //a 'follow rest channel on no sync' only approach
       if (csbk_o == 0x3E)
       {
         //initial line break
@@ -400,7 +402,14 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint8_t ch[8]; //one bit per channel
         uint8_t tg = 0;
         uint32_t tghex = 0; //combined all tgs for debug
-        int i, k;
+        int i, j, k;
+
+        //tg and channel info for trunking purposes
+        uint8_t t_tg[9];
+        uint8_t t_ch[9];
+        memset (t_tg, 0, sizeof(t_tg));
+        memset (t_ch, 0, sizeof(t_ch));        
+
         k = 0;
         if (rest_channel != state->dmr_rest_channel)
         {
@@ -409,6 +418,12 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         for (int i = 0; i < 8; i++)
         {
           ch[i] = cs_pdu_bits[i+24];
+        }
+
+        //assign to cc freq to follow during no sync
+        if (state->trunk_chan_map[rest_channel] != 0)
+        {
+          state->p25_cc_freq = state->trunk_chan_map[rest_channel];
         }
         
         fprintf (stderr, " Capacity Plus Channel Status - Rest Channel %d", rest_channel);
@@ -421,6 +436,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           {
             tg = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[k*8+32], 8); 
             fprintf (stderr, " %03d ", tg);
+            //add values to trunking tg/channel potentials
+            t_tg[i] = tg;
+            t_ch[i] = i;
             k++;
             
           }
@@ -434,6 +452,53 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         state->dmr_mfid = 0x10;
         sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
         fprintf (stderr, "%s", KNRM);
+
+        //tuning logic with active tg's in active channels
+        if (state->dmrburstL != 16 && state->dmrburstR != 16) //if neither current slot has a voice in it
+        {
+          for (j = 0; i < 8; j++) //go through the channels stored looking for active ones to tune to
+          {
+            char mode[8]; //allow, block, digital, enc, etc
+            for (int i = 0; i < state->group_tally; i++)
+            {
+              if (state->group_array[i].groupNumber == t_tg[j])
+              {
+                fprintf (stderr, " [%s]", state->group_array[i].groupName);
+                strcpy (mode, state->group_array[i].groupMode);
+              }
+            }
+
+            //either j, or j+1 != restchannel (don't think restchannel would show a tg value, but could erroneously do so)
+            //also, some active channels reported a tg value of 0, so could be bad decode, or unit-to-unit?
+            if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0)) //&& j+1 != restchannel
+            {
+              if (state->trunk_lcn_freq[t_ch[j]] != 0) //if we have a valid frequency
+              {
+                //RIGCTL
+                if (opts->use_rigctl == 1)
+                {
+                  SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength more than anything, 12.5 should be safe for DMR
+                  SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[t_ch[j]]); //minus one because our index starts at zero
+                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[t_ch[j]];
+                  opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+                  j = 11; //break loop
+                }
+              }
+
+              //rtl_udp
+              else if (opts->audio_in_type == 3)
+              {
+                rtl_udp_tune (opts, state, state->trunk_chan_map[t_ch[j]]);
+                state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[t_ch[j]];
+                opts->p25_is_tuned = 1;
+                j = 11; //break loop
+              }
+            }
+
+          }
+        }
+        
+        
       }
     }
 

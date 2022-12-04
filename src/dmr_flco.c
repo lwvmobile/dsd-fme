@@ -123,7 +123,12 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
     if (restchannel != state->dmr_rest_channel && restchannel != -1)
     {
-      state->dmr_rest_channel = restchannel; 
+      state->dmr_rest_channel = restchannel;
+      //assign to cc freq
+      if (state->trunk_chan_map[restchannel] != 0)
+      {
+        state->p25_cc_freq = state->trunk_chan_map[restchannel];
+      } 
     }
 
     if (type == 1) fprintf (stderr, "%s \n", KGRN);
@@ -479,6 +484,11 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
     fprintf (stderr, " SLCO Capacity Plus Rest Channel %d", restchannel);
     state->dmr_rest_channel = restchannel;
+    //assign to cc freq if available
+    if (state->trunk_chan_map[restchannel] != 0)
+    {
+      state->p25_cc_freq = state->trunk_chan_map[restchannel];
+    }
   }
     
   else fprintf (stderr, " SLCO Unknown - %d ", slco);

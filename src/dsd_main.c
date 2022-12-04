@@ -112,6 +112,9 @@ noCarrier (dsd_opts * opts, dsd_state * state)
         state->symbolCenter = 4;
       }
     }
+    //zero out vc frequencies?
+    state->p25_vc_freq[0] = 0;
+    state->p25_vc_freq[1] = 0;
   }
 
   state->dibit_buf_p = state->dibit_buf + 200;
@@ -144,6 +147,9 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     state->lastsrc = 0;
     state->lasttgR = 0;
     state->lastsrcR = 0;
+    //zero out vc frequencies?
+    state->p25_vc_freq[0] = 0;
+    state->p25_vc_freq[1] = 0;
   }
 
   //zero out after x second hangtime when trunking to prevent premature zeroing on these variables
@@ -154,6 +160,9 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     state->lastsrc = 0;
     state->lasttgR = 0;
     state->lastsrcR = 0;
+    //zero out vc frequencies?
+    // state->p25_vc_freq[0] = 0;
+    // state->p25_vc_freq[1] = 0;
   }
   
   state->lastp25type = 0;
@@ -287,8 +296,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
 
   //zero out vc frequencies?
-  state->p25_vc_freq[0] = 0;
-  state->p25_vc_freq[1] = 0;
+  // state->p25_vc_freq[0] = 0;
+  // state->p25_vc_freq[1] = 0;
 
 } //nocarrier
 
@@ -868,13 +877,13 @@ usage ()
   printf ("  -4            Force Privacy Key over FID and SVC bits \n");
   printf ("\n");
   printf (" Experimental Functions and Features---------------------------------------------------\n");
-  printf ("  -1 <file>     Import LCN Frequencies from csv file (numeral 'one')                   \n");
+  printf ("  -1 <file>     Import LCN Frequencies (consecutive lcn numbered frequencies for EDACS LCNs) from csv file (numeral 'one')                   \n");
   printf ("                 (See lcn.csv for example)\n");
-  printf ("  -7 <file>     Import Channel to Frequency Map from csv file (numeral 'seven')                   \n");
+  printf ("  -7 <file>     Import Channel to Frequency Map (channum, freq) from csv file (numeral 'seven')                   \n");
   printf ("                 (See channel_map.csv for example)\n");
   printf ("  -2 <file>     Import Group List Allow/Block and Label from csv file (numeral 'two')\n");
   printf ("                 (See group.csv for example)\n");
-  printf ("  -3            Enable Extremely Experimental Trunking Features (NXDN/P25/EDACS/DMR TIII, Con+) with RIGCTL/TCP or RTL Input\n");
+  printf ("  -3            Enable Extremely Experimental Trunking Features (NXDN/P25/EDACS/DMR TIII, Con+, Cap+ RC following) with RIGCTL/TCP or RTL Input\n");
   printf ("  -5 <udp p>    Enable RIGCTL/TCP; Set UDP Port for RIGCTL. (4532 on SDR++)\n");
   printf ("  -6 <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)\n");
   //printf ("                 (Currently only available on UDP port 4532)\n");
