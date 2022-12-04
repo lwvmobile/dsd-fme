@@ -102,18 +102,20 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       //I wonder which of these we truly want to zero out, possibly none of them
       if (state->currentslot == 0)
       {
-        // state->dmr_fid = 0;
-        // state->dmr_so = 0;
-        state->lasttg = 0;
-        state->lastsrc = 0;
+        state->dmr_fid = 0;
+        state->dmr_so = 0;
+        // state->lasttg = 0;
+        // state->lastsrc = 0;
+        state->payload_algid = 0;
         state->payload_mi = 0;
       }
       if (state->currentslot == 1)
       {
-        // state->dmr_fidR = 0;
-        // state->dmr_soR = 0;
-        state->lasttgR = 0;
-        state->lastsrcR = 0;
+        state->dmr_fidR = 0;
+        state->dmr_soR = 0;
+        // state->lasttgR = 0;
+        // state->lastsrcR = 0;
+        state->payload_algidR = 0;
         state->payload_miR = 0;
       }
     }
@@ -440,9 +442,17 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   fprintf (stderr, "%s", KYEL);
 
   if (slco == 0x2) //C_SYS_Parms
+  {
     fprintf (stderr, " C_SYS_PARMS - %s - Net ID: %d Site ID: %d - Reg Req: %d - CSC: %d ", model_str, net, site, reg, csc);
+    //add string for ncurses terminal display - no par since slc doesn't carrry that value
+    sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d", model_str, net, site);
+  }
   else if (slco == 0x3) //P_SYS_Parms
+  {
     fprintf (stderr, " P_SYS_PARMS - %s - Net ID: %d Site ID: %d - Comp Ch: %d ", model_str, net, site, reg); 
+    //add string for ncurses terminal display - no par since slc doesn't carrry that value
+    sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d", model_str, net, site);
+  }
   else if (slco == 0x0) //null
     fprintf (stderr, " SLCO NULL ");
   else if (slco == 0x1)
@@ -452,6 +462,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     state->dmr_mfid = 0x10;
     sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Voice Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
+    sprintf (state->dmr_site_parms, "N%d-S%d", con_netid, con_siteid);
   }
     
   else if (slco == 0xA)
@@ -459,6 +470,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     state->dmr_mfid = 0x10;
     sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Control Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
+    sprintf (state->dmr_site_parms, "N%d-S%d", con_netid, con_siteid);
   }
    
   else if (slco == 0xF)
@@ -466,6 +478,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     state->dmr_mfid = 0x10;
     sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
     fprintf (stderr, " SLCO Capacity Plus Rest Channel %d", restchannel);
+    state->dmr_rest_channel = restchannel;
   }
     
   else fprintf (stderr, " SLCO Unknown - %d ", slco);
@@ -574,6 +587,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 {
   fprintf (stderr, "%s", KYEL);
   fprintf (stderr, " Embedded GPS");
+  uint8_t slot = state->currentslot;
   uint8_t pf = lc_bits[0];
   uint8_t res_a = lc_bits[1];
   uint8_t res_b = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 4);
@@ -581,7 +595,26 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[23], 25);
   uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[48], 24);
 
+  double lat_unit = (double)180/(double)16777216; //180 divided by 2^24
+  double lon_unit = (double)360/(double)33554432; //360 divided by 2^25
+
   //run calculations and print
+  //7.2.16 and 7.2.17
+  double latitude  = (double)-90 + ((double)lat * lat_unit);
+  double longitude = (double)-180 + ((double)lon * lon_unit);
+
+  fprintf (stderr, " Lat: %.5lf Lon: %.5lf", latitude, longitude);
+
+  //7.2.15 Position Error
+  uint16_t position_error = pow(2, pos_err); //2^pos_err = 2 meters to the pos_err power
+  if (pos_err == 0x7 ) fprintf (stderr, " Position Error: Not Known or Location Invalid");
+  else fprintf (stderr, " Position Error: Less than %d meters", position_error);
+
+  //save to array for ncurses
+  if (pos_err != 0x7)
+  {
+    sprintf (state->dmr_embedded_gps[slot], "E-GPS (%lf %lf) Error: %dm", latitude, longitude, position_error);
+  }
 
   fprintf (stderr, "%s", KNRM);
 }

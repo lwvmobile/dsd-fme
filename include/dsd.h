@@ -462,8 +462,7 @@ typedef struct
   unsigned int nxdn_cipher_type;
   unsigned int nxdn_key;
   char nxdn_call_type[1024];
-  char dmr_callsign[2][6][99]; //plenty of room in case of overflow;
-  char dmr_lrrp[2][6][9999]; //need to fix this
+
   unsigned long long int dmr_lrrp_source[2];
 
   NxdnElementsContent_t NxdnElementsContent;
@@ -488,7 +487,7 @@ typedef struct
   char slot2light[8];
   int directmode;
 
-  char dmr_branding[25];
+  char dmr_branding[99];
   int dmr_stereo_payload[144];    //load up 144 dibit buffer for every single DMR TDMA frame
   uint8_t data_header_blocks[2];  //collect number of blocks to follow from data header per slot
   uint8_t data_header_padding[2]; //collect number of padding octets in last block per slot
@@ -510,6 +509,9 @@ typedef struct
   uint8_t dmr_alias_format[2]; //per slot
   uint8_t dmr_alias_len[2]; //per slot
   char dmr_alias_block_segment[2][4][7][16]; //2 slots, by 4 blocks, by up to 7 alias bytes that are up to 16-bit chars
+  char dmr_embedded_gps[2][200]; //2 slots by 99 char string for string embedded gps
+  char dmr_lrrp_gps[2][200]; //2 slots by 99 char string for string lrrp gps
+  char dmr_site_parms[200]; //string for site/net info depending on type of DMR system (TIII or Con+)
 
 
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;

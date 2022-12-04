@@ -125,26 +125,26 @@ char * SyncTypes[44] = {
 };
 
 char * DMRBusrtTypes[32] = {
-  "PI Header     ",
-  "VOICE LC      ",
-  "TLC           ",
-  "CSBK          ",
-  "MBC Header    ",
-  "MBC Cont      ",
-  "DATA Header   ",
-  "RATE 1/2 DATA ",
-  "RATE 3/4 DATA ",
-  "Slot Idle     ",
-  "RATE 1 DATA   ",
-  "ERR           ", //These values for ERR may be Reserved for use in future?
+  "PI       ",
+  "VLC      ",
+  "TLC      ",
+  "CSBK     ",
+  "MBCH     ",
+  "MBCC     ",
+  "DATA     ",
+  "R12D     ",
+  "R34D     ",
+  "IDLE     ",
+  "R1_D     ",
+  "ERR      ", 
   "DUID ERR      ",
   "R-S ERR       ",
   "CRC ERR       ",
   "NULL          ",
   "Voice         ", //Using 16 for Voice since its higher than possible value in DMR
-  "INITIAL       ",  //17 is assigned on start up
-  "INITIAL       ",
-  "INITIAL       ",//expanded to include P1/2 signalling
+  "              ",  //17 is assigned on start up
+  "INIT          ",
+  "INIT          ",//expanded to include P1/2 signalling
   "MAC PTT",      //20
   "MAC ACTIVE",   //21
   "MAC HANGTIME", //22
@@ -311,7 +311,7 @@ char *choices[] = {
 			"Decode D-STAR*",
 			"Decode P25-P1*",
 			"Decode EDACS/PV",
-      "Decode DMR* (LEH)",
+      "Decode DMR Mono*",
       "Decode dPMR",
       "Decode NXDN48",
       "Decode NXDN96",
@@ -503,7 +503,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       info_win = newwin(6, WIDTH+18, starty, startx+20);
       box (info_win, 0, 0);
       mvwprintw(info_win, 2, 2, " Legacy Auto can only detect the following:");
-      mvwprintw(info_win, 3, 2, " P25-P1, D-STAR, DMR LEH, and X2-TDMA");
+      mvwprintw(info_win, 3, 2, " P25-P1, D-STAR, DMR Mono, and X2-TDMA");
       wrefresh(info_win);
     }
 
@@ -957,7 +957,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       box (entry_win, 0, 0);
       mvwprintw(entry_win, 2, 2, "Key Type Selection");
       mvwprintw(entry_win, 3, 2, " ");
-      mvwprintw(entry_win, 4, 2, "1 -   DMRA Privacy ");
+      mvwprintw(entry_win, 4, 2, "1 -  Basic Privacy ");
       mvwprintw(entry_win, 5, 2, "2 - **tera Privacy ");
       mvwprintw(entry_win, 6, 2, "3 - NXDN Scrambler ");
       mvwprintw(entry_win, 7, 2, "4 - Force Key Priority ");
@@ -1075,6 +1075,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       sprintf (opts->output_name, "Legacy Auto");
+      opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 8000;
@@ -1104,6 +1105,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->samplesPerSymbol = 5;
       state->symbolCenter = 2;
       sprintf (opts->output_name, "EDACS/PV");
+      opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 8000;
@@ -1131,6 +1133,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       sprintf (opts->output_name, "D-STAR");
+      opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 8000;
@@ -1163,6 +1166,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->symbolCenter = 4;
       state->rf_mod = 0;
       sprintf (opts->output_name, "P25P1");
+      opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 8000;
@@ -1193,6 +1197,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->symbolCenter = 4;
       state->rf_mod = 0;
       sprintf (opts->output_name, "XDMA");
+      opts->dmr_mono = 0;
       opts->dmr_stereo  = 1; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 24000;
@@ -1220,7 +1225,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       state->rf_mod = 0;
-      sprintf (opts->output_name, "DMR LEH");
+      sprintf (opts->output_name, "DMR Mono");
+      opts->dmr_mono = 1;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 8000;
@@ -1247,6 +1253,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->samplesPerSymbol = 20;
       state->symbolCenter = 10;
       sprintf (opts->output_name, "dPMR");
+      opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 8000;
@@ -1276,6 +1283,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->symbolCenter = 10;
       state->rf_mod = 0;
       sprintf (opts->output_name, "NXDN48");
+      opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 8000;
@@ -1302,6 +1310,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       sprintf (opts->output_name, "NXDN96");
+      opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 8000;
@@ -1329,6 +1338,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->symbolCenter = 4;
       // sprintf (opts->output_name, "X2-TDMA");
       sprintf (opts->output_name, "DMR Stereo");
+      opts->dmr_mono = 0;
       opts->dmr_stereo  = 1; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 24000;
@@ -1612,47 +1622,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //Variable reset/set section
 
   //carrier reset
-  if (state->carrier == 0) //reset these to 0 when no carrier
-  {
-    sprintf(state->dmr_branding, "%s", "");
-  }
+  // if (state->carrier == 0) //reset these to 0 when no carrier
+  // {
+  //   sprintf(state->dmr_branding, "%s", "");
+  // }
 
   //set lls sync types
   if (state->synctype >= 0 && state->synctype < 39) 
   {
     lls = state->synctype;
-  }
-
-  //reset DMR alias block and embedded gps if burst type is not 16 or carrier drop
-  if (state->dmrburstL != 16 || state->carrier == 0)
-  {
-    for (short i = 0; i < 6; i++)
-    {
-      sprintf (state->dmr_callsign[0][i], "%s", "");
-    }
-  }
-  if (state->dmrburstR != 16 || state->carrier == 0)
-  {
-    for (short i = 0; i < 6; i++)
-    {
-      sprintf (state->dmr_callsign[1][i], "%s", "");
-    }
-  }
-
-  //reset DMR LRRP when call is active on current slot if burst type is not data or carrier drop
-  if (state->dmrburstL == 16 || state->carrier == 0)
-  {
-    for (short i = 0; i < 6; i++)
-    {
-      sprintf (state->dmr_lrrp[0][i], "%s", "");
-    }
-  }
-  if (state->dmrburstR == 16 || state->carrier == 0)
-  {
-    for (short i = 0; i < 6; i++)
-    {
-      sprintf (state->dmr_lrrp[1][i], "%s", "");
-    }
   }
 
   //NXDN
@@ -1851,6 +1829,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       state->dmr_end_alert[0] = 0; //new voice frame, okay to beep at the end of it
     }
 
+    memset(state->dmr_alias_block_segment[0], 0, sizeof(state->dmr_alias_block_segment[0]));
+    sprintf (state->dmr_embedded_gps[0], "%s", "");
+
   }
 
   //DMR BS Slot 1 - matrix 0-4
@@ -1891,6 +1872,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       state->dmr_end_alert[0] = 0; //new voice frame, okay to beep at the end of it
     }
 
+    memset(state->dmr_alias_block_segment[0], 0, sizeof(state->dmr_alias_block_segment[0]));
+    sprintf (state->dmr_embedded_gps[0], "%s", "");
+
   }
 
   //DMR BS Slot 2 - matrix 5-9
@@ -1929,6 +1913,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       beeper (opts, state, 1);
       state->dmr_end_alert[1] = 0; //new voice frame, okay to beep at the end of it
     }
+
+    memset(state->dmr_alias_block_segment[1], 0, sizeof(state->dmr_alias_block_segment[1]));
+    sprintf (state->dmr_embedded_gps[1], "%s", "");
 
   }
 
@@ -2078,7 +2065,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->p25_trunk == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3) )
   {
-    printw ("| Trunk Tracking Active (P25/EDACS/NXDN)\n");
+    printw ("| Trunk Tracking Active (P25/EDACS/NXDN/DMR)\n");
   }
 
 
@@ -2250,6 +2237,21 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (lls > 1 && lls < 30)
     {
       printw ("DMR BS - DCC: [%02i] ", dcc);
+      if (state->dmr_mfid > -1) printw ("%s %s", state->dmr_branding, state->dmr_branding_sub);
+      printw ("%s", state->dmr_site_parms); //site id, net id, etc 
+      if (state->dmr_rest_channel > 0)
+      {
+        printw ("Rest Channel: [%02d] ", state->dmr_rest_channel);
+        if (state->trunk_chan_map[state->dmr_rest_channel] != 0)
+        {
+          printw ("%.06lf Mhz", (double)state->trunk_chan_map[state->dmr_rest_channel]/1000000);
+        }
+      }
+      else if (state->p25_cc_freq != 0)
+      {
+        printw ("%.06lf MHz", (double)state->p25_cc_freq/1000000);
+      }
+      
     }
     else if (lls == 32 || lls == 33 || lls == 34)
     {
@@ -2282,9 +2284,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         if (state->p25_cc_freq != 0)
         {
-        printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
+          printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
         }
-        //printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
       }
     }
 
@@ -2318,7 +2319,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL == 16 && state->payload_algid == 0 && state->K > 0 && state->dmr_fid == 0x10 && (state->dmr_so & 0xCF) == 0x40)
     {
       attron(COLOR_PAIR(1));
-      printw ("DMRA Pr Key [%3lld] ", state->K);
+      printw ("Pr Key [%3lld] ", state->K);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
@@ -2408,18 +2409,37 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
     printw ("\n");
-    //Alias Blocks and Embedded GPS
+
     //printw ("|        | "); //10 spaces
     printw ("| D XTRA | ");
+
+    //Frequency Display
+    if (state->p25_vc_freq[0] != 0)
+    {
+      attron(COLOR_PAIR(5));
+      printw ("Frequency: [%.06lf] MHz  ", (double)state->p25_vc_freq[0]/1000000);
+      if (state->carrier == 1)
+      {
+        attron(COLOR_PAIR(3));
+      }
+    }
+
     if(state->dmrburstL == 16) //only during call
     {
       attron(COLOR_PAIR(5));
-      for (short i = 0; i < 5; i++)
-      {
-        printw ("%s", state->dmr_callsign[0][i]);
-      }
+
       //Embedded GPS (not LRRP)
-      printw ("%s", state->dmr_callsign[0][5] );
+      printw  ("%s ", state->dmr_embedded_gps[0]);
+            
+      //Embedded Talker Alias Blocks
+      for (int i = 0; i < 4; i++)
+      {
+        for (int j = 0; j < 7; j++)
+        {
+          printw ("%s", state->dmr_alias_block_segment[0][i][j]); 
+        }
+      }
+
       attroff(COLOR_PAIR(5));
       if (state->carrier == 1)
       {
@@ -2430,27 +2450,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //LRRP
     if(state->dmrburstL != 16) //only during data
     {
-      attron(COLOR_PAIR(5));
-      for (short i = 0; i < 5; i++)
-      {
-        printw ("%s", state->dmr_lrrp[0][i]);
-      }
-      attroff(COLOR_PAIR(5));
-      if (state->carrier == 1)
-      {
-        attron(COLOR_PAIR(3));
-      }
-    }
-
-    //Frequency Display
-    if (state->p25_vc_freq[0] != 0)
-    {
-      attron(COLOR_PAIR(5));
-      printw ("Frequency: [%.06lf] MHz", (double)state->p25_vc_freq[0]/1000000);
-      if (state->carrier == 1)
-      {
-        attron(COLOR_PAIR(3));
-      }
+      printw  ("%s", state->dmr_lrrp_gps[0]);
     }
 
     //Group Name Labels from CSV import
@@ -2503,7 +2503,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->K > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x10)
     {
       attron(COLOR_PAIR(1));
-      printw ("DMRA Pr Key [%3lld] ", state->K);
+      printw ("Pr Key [%3lld] ", state->K);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
@@ -2589,51 +2589,51 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
     printw ("\n");
-    //Alias Blocks and Embedded GPS
+
     //printw ("|        | ");
     printw ("| D XTRA | ");
+
+    //Frequency Display
+    if (state->p25_vc_freq[1] != 0)
+    {
+      attron(COLOR_PAIR(5));
+      printw ("Frequency: [%.06lf] MHz  ", (double)state->p25_vc_freq[1]/1000000);
+      if (state->carrier == 1)
+      {
+        attron(COLOR_PAIR(3));
+      }
+    }
+
     if(state->dmrburstR == 16) //only during call
     {
       attron(COLOR_PAIR(5));
-      for (short i = 0; i < 5; i++)
-      {
-        printw ("%s", state->dmr_callsign[1][i]);
-      }
+      
       //Embedded GPS (not LRRP)
-      printw ("%s", state->dmr_callsign[1][5] );
+      printw  ("%s ", state->dmr_embedded_gps[1]);
+
+      //Embedded Talker Alias Blocks
+      for (int i = 0; i < 4; i++)
+      {
+        for (int j = 0; j < 7; j++)
+        {
+          printw ("%s", state->dmr_alias_block_segment[1][i][j]); 
+        }
+      }
+
       attroff(COLOR_PAIR(5));
       if (state->carrier == 1)
       {
         attron(COLOR_PAIR(3));
       }
+
     }
 
     //LRRP
     if(state->dmrburstR != 16) //only during data
     {
-      attron(COLOR_PAIR(5));
-      for (short i = 0; i < 5; i++)
-      {
-        printw ("%s", state->dmr_lrrp[1][i]);
-      }
-      attroff(COLOR_PAIR(5));
-      if (state->carrier == 1)
-      {
-        attron(COLOR_PAIR(3));
-      }
+      printw  ("%s", state->dmr_embedded_gps[1]);
     }
     
-    //Frequency Display
-    if (state->p25_vc_freq[0] != 0)
-    {
-      attron(COLOR_PAIR(5));
-      printw ("Frequency: [%.06lf] MHz", (double)state->p25_vc_freq[0]/1000000);
-      if (state->carrier == 1)
-      {
-        attron(COLOR_PAIR(3));
-      }
-    }
-
     //Group Name Labels from CSV import
     if (state->dmrburstR == 16 || state->dmrburstR > 19)
     {

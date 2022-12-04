@@ -260,6 +260,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->dmr_rest_channel = -1; //init on -1
   sprintf(state->dmr_branding_sub, "%s", "");
   sprintf(state->dmr_branding, "%s", "");
+  sprintf (state->dmr_site_parms, "%s", ""); //may not zero this out
   state->dmr_mfid = 0;
 
   //dmr slco stuff
@@ -278,6 +279,16 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   //late entry mi fragments
   memset (state->late_entry_mi_fragment, 0, sizeof (state->late_entry_mi_fragment));
 
+  //dmr talker alias new/fixed stuff
+  memset(state->dmr_alias_format, 0, sizeof(state->dmr_alias_format));
+  memset(state->dmr_alias_len, 0, sizeof(state->dmr_alias_len));
+  memset(state->dmr_alias_block_segment, 0, sizeof(state->dmr_alias_block_segment));
+  memset(state->dmr_embedded_gps, 0, sizeof(state->dmr_embedded_gps));
+  memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
+
+  //zero out vc frequencies?
+  state->p25_vc_freq[0] = 0;
+  state->p25_vc_freq[1] = 0;
 
 } //nocarrier
 
@@ -581,31 +592,6 @@ initState (dsd_state * state)
   state->fourv_counter[0] = 0;
   state->fourv_counter[1] = 0;
 
-  sprintf (state->dmr_callsign[0][0], "%s", "");
-  sprintf (state->dmr_callsign[0][1], "%s", "");
-  sprintf (state->dmr_callsign[0][2], "%s", "");
-  sprintf (state->dmr_callsign[0][3], "%s", "");
-  sprintf (state->dmr_callsign[0][4], "%s", "");
-  sprintf (state->dmr_callsign[0][5], "%s", "");
-  sprintf (state->dmr_callsign[1][0], "%s", "");
-  sprintf (state->dmr_callsign[1][1], "%s", "");
-  sprintf (state->dmr_callsign[1][2], "%s", "");
-  sprintf (state->dmr_callsign[1][3], "%s", "");
-  sprintf (state->dmr_callsign[1][4], "%s", "");
-  sprintf (state->dmr_callsign[1][5], "%s", "");
-  sprintf (state->dmr_lrrp[0][0], "%s", "");
-  sprintf (state->dmr_lrrp[0][1], "%s", "");
-  sprintf (state->dmr_lrrp[0][2], "%s", "");
-  sprintf (state->dmr_lrrp[0][3], "%s", "");
-  sprintf (state->dmr_lrrp[0][4], "%s", "");
-  sprintf (state->dmr_lrrp[0][5], "%s", "");
-  sprintf (state->dmr_lrrp[1][0], "%s", "");
-  sprintf (state->dmr_lrrp[1][1], "%s", "");
-  sprintf (state->dmr_lrrp[1][2], "%s", "");
-  sprintf (state->dmr_lrrp[1][3], "%s", "");
-  sprintf (state->dmr_lrrp[1][4], "%s", "");
-  sprintf (state->dmr_lrrp[1][5], "%s", "");
-
   state->K = 0;
   state->R = 0;
   state->RR = 0;
@@ -737,6 +723,7 @@ initState (dsd_state * state)
 
   sprintf (state->dmr_branding, "%s", "");
   sprintf (state->dmr_branding_sub, "%s", "");
+  sprintf (state->dmr_site_parms, "%s", "");
 
   //initialize unified dmr pdu 'superframe'
   memset (state->dmr_pdu_sf, 0, sizeof (state->dmr_pdu_sf));
@@ -755,12 +742,15 @@ initState (dsd_state * state)
   memset(state->dmr_alias_format, 0, sizeof(state->dmr_alias_format));
   memset(state->dmr_alias_len, 0, sizeof(state->dmr_alias_len));
   memset(state->dmr_alias_block_segment, 0, sizeof(state->dmr_alias_block_segment));
+  memset(state->dmr_embedded_gps, 0, sizeof(state->dmr_embedded_gps));
+  memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
 
   //late entry mi fragments
   memset (state->late_entry_mi_fragment, 0, sizeof (state->late_entry_mi_fragment));
  
   initialize_p25_heuristics(&state->p25_heuristics);
-}
+
+} //init_state
 
 void
 usage ()

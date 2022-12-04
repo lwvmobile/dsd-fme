@@ -10,7 +10,6 @@
  *-----------------------------------------------------------------------------*/
 
 //TODO: CRC9 on confirmed data blocks; CRC32 on completed data sf;
-//TODO: Embedded GPS Calculations
 //TODO: MBC full message CRC16 (does this include the header or not though?)
 //TODO: Reverse Channel Signalling - RC single burst BPTC/7-bit CRC
 //TODO: Single Burst Embedded LC - Non-RC single burst LC - Look for Late Entry Alg/Key

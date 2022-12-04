@@ -234,6 +234,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24); 
         
         fprintf (stderr, " C_ALOHA_SYS_PARMS - %s - Net ID: %d Site ID: %d Par: %d \n  Reg Req: %d V: %d MS: %d", model_str, net, site, par, regreq, version, target);
+
+        //add string for ncurses terminal display - no par since slc doesn't carrry that value
+        sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d", model_str, net, site);
+
+        //debug print
         //fprintf (stderr, " Sys ID Code: [%04X]", sysidcode);
 
         uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16);

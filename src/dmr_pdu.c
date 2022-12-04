@@ -353,6 +353,17 @@ uint8_t dmr_lrrp_check (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[])
         fprintf (pFile, "\n");
         fclose (pFile);
       }
+
+      //save to array for ncurses
+      if (!source) source = state->dmr_lrrp_source[state->currentslot];
+      char sign[8];
+      if (lat_sign) sprintf (sign, "%s", "-");
+      else sprintf (sign, "%s", ""); 
+      if (lat)
+      {
+        sprintf (state->dmr_embedded_gps[slot], "LRRP %08d (%s%lf, %lf)", source, sign, (double)lat * lat_unit, (double)lon * lon_unit);
+      }
+      
     }
     
   }

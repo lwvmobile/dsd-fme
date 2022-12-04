@@ -90,11 +90,6 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
     fprintf (stderr, " Destination: ");
     fprintf (stderr, "[%d]", (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4] );
 
-    sprintf ( state->dmr_lrrp[slot][1], "SRC [%d] DST [%d] ",
-            ( (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7]),
-            ( (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4]) );
-
-
     state->dmr_lrrp_source[slot] = (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7];
 
   }
@@ -105,10 +100,6 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
     fprintf (stderr, "[%d]", (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7] );
     fprintf (stderr, " Destination: ");
     fprintf (stderr, "[%d]", (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4] );
-
-    sprintf ( state->dmr_lrrp[slot][1], "SRC [%d] DST [%d] ",
-            ( (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7]),
-            ( (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4]) );
 
     state->dmr_lrrp_source[slot] = (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7];
 
@@ -121,10 +112,6 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
     fprintf (stderr, " Destination: ");
     fprintf (stderr, "[%d]", (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4] );
 
-    sprintf ( state->dmr_lrrp[slot][1], "SRC [%d] DST [%d] ",
-            ( (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7]),
-            ( (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4]) );
-
     state->dmr_lrrp_source[slot] = (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7];
 
   }
@@ -136,9 +123,6 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
     fprintf (stderr, " Destination: ");
     fprintf (stderr, "[%d]", dheader[2]);
 
-    sprintf ( state->dmr_lrrp[slot][1], "SRC [%d] DST [%d] ",
-              dheader[3], dheader[2] );
-
     state->dmr_lrrp_source[slot] = dheader[3];
 
   }
@@ -149,9 +133,6 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
     fprintf (stderr, "[%d]", dheader[3]);
     fprintf (stderr, " Destination: ");
     fprintf (stderr, "[%d]", dheader[2]);
-
-    sprintf ( state->dmr_lrrp[slot][1], "SRC [%d] DST [%d] ",
-              dheader[3], dheader[2] );
 
     state->dmr_lrrp_source[slot] = dheader[3];
 
