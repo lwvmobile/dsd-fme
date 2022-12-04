@@ -54,9 +54,10 @@ sudo make install
                  (See channel_map.csv for example)
   -2 <file>     Import Group List Allow/Block and Label from csv file (numeral 'two')
                  (See group.csv for example)
-  -3            Enable Experimental Trunking Features (P25/EDACS/NXDN-ish for now) with RIGCTL/TCP or RTL Input
+  -3            Enable Extremely Experimental Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input
   -5 <udp p>    Enable RIGCTL/TCP; Set UDP Port for RIGCTL. (4532 for SDR++)
   -6 <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)
+  -8            Reverse Mute - Mute Unencrypted Voice Channels
 
 ```
 ### Input ###
@@ -85,7 +86,15 @@ EDACS Trunking will require an lcn csv file with lcn frequencies listed in order
 
 `dsd-fme -fi -i tcp -3 -5 4532 -N 2> log.ans`
 
---P25 Trunking P1 and P2 (C4FM) with SDR++
+--NXDN48 Trunking (w/ channel map import) with SDR++ (see channel_map.csv file for example)
+
+`dsd-fme -fi -i tcp -3 -5 4532 -7 channel_map.csv -N 2> log.ans`
+
+--DMR Trunking (w/ channel map import) with SDR++ (put control channel frequency at channel 0 in channel_map.csv)
+
+`dsd-fme -fs -i tcp -3 -5 4532 -7 channel_map.csv -N 2> log.ans`
+
+--P25 Trunking P1 and P2 (C4FM) with SDR++ (VHF/UHF iden_up_vu frequencies untested for complete accuracy)
 
 `dsd-fme -i tcp -3 -5 4532 -N 2> log.ans`
 
@@ -103,7 +112,7 @@ Trunking Note1: All samples above can also be run with the RTL input method and 
 
 Trunking Note2: CQPSK Phase 1 and Phase 2 Systems are subceptible to LSM distortion issues, but seem to do okay, but require really good signal. Some CRC issues still occur with Phase 2 TDMA LCCH Mac Signal that can affect reliability, I believe this issue is ultimately caused by the PSK demodulation inside of FME. I also don't believe this will work on 8-level PSK, but I cannot determine that at the moment. Update: I have improved the LCCH Mac Signal decoding my increasing the QPSK decision point buffers to their maximum values. 
 
-Trunking Note3: DMR Trunking will take longer to implement due to the various types of trunking it can use. Hytera XPT, Connect Plus, Capacity Plus, and TIII trunking all require more research, coding, and testing to implement. 
+Trunking Note3: DMR Trunking has been coded, and is completely untested currently. Current coded and supported trunking systems include standard TIII, Con+, and Cap+. A channel map file will be required for DMR trunking. While some TIII systems broadcast absolute frequencies that can be internally calculated, there is no mechanism in place to figure out the control channel frequency, so at the very minimum, for TIII, a channel map with channel number 0 mapped to the CC frequency will be required, but using a complete channel map csv file is highly recommended in most any situation if possible. If you do not know which channels need frequencies, observe the console output log and look for channels and try to match them to known system frequencies. Currently uncoded/unknown trunking systems include Hytera XPT.
 
 Trunking Note4: NXDN Trunking may also require an lcn file, but currently, the import function does not map frequencies to channel numbers, and 'standard' channel (0-800) frequencies have not been tested for accuracy, so while some primitive NXDN trunking is technically there, I cannot say that it will tune to the correct frequency on any system as of yet.
 
