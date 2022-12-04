@@ -166,7 +166,7 @@ PrintIMBEData (dsd_opts * opts, dsd_state * state, char *imbe_d) //for P25P1 and
 }
 
 void
-PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) //For DMR Stereo, may use this for NXDN too
+PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) 
 {
   int i, j, k;
   unsigned char b;
@@ -174,7 +174,7 @@ PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) //For DMR Stere
 
   err = (unsigned char) state->errs2;
   k = 0;
-  if (opts->dmr_stereo == 0)
+  if (opts->dmr_stereo == 0 && opts->dmr_mono == 0)
   {
     fprintf (stderr, "\n");
   }
@@ -183,7 +183,7 @@ PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) //For DMR Stere
     fprintf(stderr, " AMBE ");
   }
 
-  for (i = 0; i < 7; i++) //using 7 seems to break older amb files where it was 6, need to test 7 on 7 some more
+  for (i = 0; i < 7; i++) 
     {
       b = 0;
       for (j = 0; j < 8; j++)
@@ -192,13 +192,13 @@ PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) //For DMR Stere
           b = b + ambe_d[k];
           k++;
         }
-        if (opts->payload == 1 && i < 6) //make opt variable later on to toggle this
+        if (opts->payload == 1 && i < 6) 
         {
           fprintf (stderr, "%02X", b);
         }
-        if (opts->payload == 1 && i == 6) //7th octet should only contain 1 bit, value will be either 0x00 or 0x80?
+        if (opts->payload == 1 && i == 6) 
         {
-          fprintf (stderr, "%02X", b & 0x80); //7th octet should only contain 1 bit
+          fprintf (stderr, "%02X", b & 0x80); 
         }
     }
     if (state->currentslot == 0)
@@ -207,7 +207,7 @@ PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) //For DMR Stere
     }
     else fprintf(stderr, " err = [%X] [%X] ", state->errsR, state->errs2R);
   b = ambe_d[48];
-  if (opts->dmr_stereo == 1) //need to fix the printouts again
+  if (opts->dmr_stereo == 1 || opts->dmr_mono == 1) //need to fix the printouts again
   {
     fprintf (stderr, "\n");
   }
@@ -226,7 +226,7 @@ readImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
 
 
   k = 0;
-  if (opts->payload == 1) //make opt variable later on to toggle this
+  if (opts->payload == 1) 
   {
     fprintf(stderr, "\n");
   }
@@ -248,12 +248,12 @@ readImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
           b = b & 255;
           k++;
         }
-        //new printout on reading MBE files back in
-        if (opts->payload == 1) //make opt variable later on to toggle this
+        
+        if (opts->payload == 1) 
         {
           fprintf (stderr, "%02X", x);
         }
-        //
+        
     }
     if (opts->payload == 1)
     {
@@ -273,11 +273,11 @@ readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   state->errs = state->errs2;
 
   k = 0;
-  if (opts->payload == 1) //make opt variable later on to toggle this
+  if (opts->payload == 1) 
   {
     fprintf(stderr, "\n");
   }
-  //for (i = 0; i < 6; i++)
+
   for (i = 0; i < 6; i++) //breaks backwards compatablilty with 6 files
     {
       b = fgetc (opts->mbe_in_f);
@@ -296,13 +296,13 @@ readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
           b = b & 255;
           k++;
         }
-        if (opts->payload == 1 && i < 6) //make opt variable later on to toggle this
+        if (opts->payload == 1 && i < 6) 
         {
           fprintf (stderr, "%02X", x);
         }
-        if (opts->payload == 1 && i == 6) //7th octet should only contain 1 bit? value will be either 0x00 or 0x80?
+        if (opts->payload == 1 && i == 6) 
         {
-          fprintf (stderr, "%02X", x & 0x80); //7th octet should only contain 1 bit?
+          fprintf (stderr, "%02X", x & 0x80); 
         }
     }
     if (opts->payload == 1)
@@ -349,82 +349,6 @@ openMbeInFile (dsd_opts * opts, dsd_state * state)
 
 }
 
-//temporarily disabled until the compiler warnings can be fixed, use symbol capture  or per call instead!
-//probably the easiest thing is to just have this run fclose, and have name assignment on open instead.
-// void
-// closeMbeOutFile (dsd_opts * opts, dsd_state * state)
-// {
-//
-//   char shell[255], newfilename[64], ext[5], datestr[32], new_path[1024];
-//   char tgid[17];
-//   int sum, i, j;
-//   int talkgroup;
-//   struct tm timep;
-//   int result;
-//
-//   if (opts->mbe_out_f != NULL)
-//     {
-//       if ((state->synctype == 0) || (state->synctype == 1) || (state->synctype == 14) || (state->synctype == 15))
-//         {
-//           sprintf (ext, ".imb");
-//           //strptime (opts->mbe_out_file, "%s.imb", &timep);
-//         }
-//       else
-//         {
-//           sprintf (ext, ".amb");
-//           //strptime (opts->mbe_out_file, "%s.amb", &timep);
-//         }
-//
-//       if (state->tgcount > 0)
-//         {
-//           for (i = 0; i < 16; i++)
-//             {
-//               sum = 0;
-//               for (j = 0; j < state->tgcount; j++)
-//                 {
-//                   sum = sum + state->tg[j][i] - 48;
-//                 }
-//               tgid[i] = (char) (((float) sum / (float) state->tgcount) + 48.5);
-//             }
-//           tgid[16] = 0;
-//           talkgroup = (int) strtol (tgid, NULL, 2);
-//         }
-//       else
-//         {
-//           talkgroup = 0;
-//         }
-//
-//       fflush (opts->mbe_out_f);
-//       fclose (opts->mbe_out_f);
-//       opts->mbe_out_f = NULL;
-//       strftime (datestr, 31, "%Y-%m-%d-%H%M%S", &timep);
-//
-//       sprintf (newfilename, "%s%s", datestr, ext); //this one
-//
-//       if (state->lastsynctype == 0 || state->lastsynctype == 1)
-//       {
-//         sprintf (newfilename, "%s-nac%X-tg%i%s", datestr, state->nac, talkgroup, ext);
-//       }
-//
-//       //sprintf (new_path, "%s%s", opts->mbe_out_dir, newfilename);
-// #ifdef _WIN32
-//       //sprintf (shell, "move %s %s", opts->mbe_out_path, new_path);
-// #else
-//       //sprintf (shell, "mv %s %s", opts->mbe_out_path, new_path);
-// #endif
-//       //result = system (shell);
-//
-//       state->tgcount = 0;
-//       for (i = 0; i < 25; i++)
-//         {
-//           for (j = 0; j < 16; j++)
-//             {
-//               state->tg[i][j] = 48;
-//             }
-//         }
-//     }
-// }
-
 //much simpler version
 void closeMbeOutFile (dsd_opts * opts, dsd_state * state)
 {
@@ -447,7 +371,6 @@ void
 openMbeOutFile (dsd_opts * opts, dsd_state * state)
 {
 
-  //struct timeval tv;
   int i, j;
   char ext[5];
 
@@ -470,10 +393,6 @@ openMbeOutFile (dsd_opts * opts, dsd_state * state)
     }
 
   state->tgcount = 0;
-
-  //gettimeofday (&tv, NULL);
-  //rewrite below line to take getTime function instead?
-  // sprintf (opts->mbe_out_file, "%i%s", (int) tv.tv_sec, ext);
 
   sprintf (opts->mbe_out_file, "%s %s%s", getDateF(), getTimeF(), ext);
 
@@ -500,7 +419,6 @@ openWavOutFile (dsd_opts * opts, dsd_state * state)
   info.samplerate = 8000; //8000
   info.channels = 1;
   info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
-  //opts->wav_out_f = sf_open (opts->wav_out_file, SFM_WRITE, &info);
   opts->wav_out_f = sf_open (opts->wav_out_file, SFM_RDWR, &info); //RDWR will append to file instead of overwrite file
 
   if (opts->wav_out_f == NULL)
@@ -508,18 +426,15 @@ openWavOutFile (dsd_opts * opts, dsd_state * state)
     fprintf (stderr,"Error - could not open wav output file %s\n", opts->wav_out_file);
     return;
   }
-
-//  state->wav_out_bytes = 0;
-
 }
+
 void openWavOutFileL (dsd_opts * opts, dsd_state * state)
 {
 
   SF_INFO info;
-  info.samplerate = 8000; //8000
+  info.samplerate = 8000; 
   info.channels = 1;
   info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
-  //opts->wav_out_f = sf_open (opts->wav_out_file, SFM_WRITE, &info);
   opts->wav_out_f = sf_open (opts->wav_out_file, SFM_RDWR, &info); //RDWR will append to file instead of overwrite file
 
   if (opts->wav_out_f == NULL)
@@ -527,9 +442,6 @@ void openWavOutFileL (dsd_opts * opts, dsd_state * state)
     fprintf (stderr,"Error - could not open wav output file %s\n", opts->wav_out_file);
     return;
   }
-
-//  state->wav_out_bytes = 0;
-
 }
 
 void openWavOutFileR (dsd_opts * opts, dsd_state * state)
@@ -539,7 +451,6 @@ void openWavOutFileR (dsd_opts * opts, dsd_state * state)
   info.samplerate = 8000; //8000
   info.channels = 1;
   info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
-  //opts->wav_out_f = sf_open (opts->wav_out_file, SFM_WRITE, &info);
   opts->wav_out_fR = sf_open (opts->wav_out_fileR, SFM_RDWR, &info); //RDWR will append to file instead of overwrite file
 
   if (opts->wav_out_f == NULL)
@@ -547,9 +458,6 @@ void openWavOutFileR (dsd_opts * opts, dsd_state * state)
     fprintf (stderr,"Error - could not open wav output file %s\n", opts->wav_out_fileR);
     return;
   }
-
-//  state->wav_out_bytes = 0;
-
 }
 
 void openWavOutFileRaw (dsd_opts * opts, dsd_state * state)
@@ -559,17 +467,12 @@ void openWavOutFileRaw (dsd_opts * opts, dsd_state * state)
   info.samplerate = 48000; //8000
   info.channels = 1;
   info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
-  //opts->wav_out_f = sf_open (opts->wav_out_file, SFM_WRITE, &info);
-  //opts->wav_out_f = sf_open (opts->wav_out_file, SFM_RDWR, &info); //RDWR will append to file instead of overwrite file
   opts->wav_out_raw = sf_open (opts->wav_out_file_raw, SFM_RDWR, &info);
   if (opts->wav_out_raw == NULL)
   {
     fprintf (stderr,"Error - could not open raw wav output file %s\n", opts->wav_out_file_raw);
     return;
   }
-
-//  state->wav_out_bytes = 0;
-
 }
 
 void closeWavOutFile (dsd_opts * opts, dsd_state * state)
@@ -609,15 +512,12 @@ void closeSymbolOutFile (dsd_opts * opts, dsd_state * state)
   //Do something
   if (opts->symbol_out == 1)
   {
-    if (opts->symbol_out_file != NULL) //check first, or issuing a second fclose will crash the SOFTWARE
+    if (opts->symbol_out_file != NULL) 
     {
-      fclose(opts->symbol_out_f); //free(): double free detected in tcache 2 (this is a new one) happens when closing more than once
-      //noCarrier(opts, state); //free(): double free detected in tcache 2 (this is a new one)
+      fclose(opts->symbol_out_f); 
     }
 
     opts->symbol_out = 0; //set flag to 1
-    //sprintf (opts->symbol_out_file, "fme-capture.bin"); //use fme for the symbol bin ext
-    //openSymbolOutFile (opts, state);
 
   }
 

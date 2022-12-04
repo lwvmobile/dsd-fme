@@ -163,13 +163,14 @@ processFrame (dsd_opts * opts, dsd_state * state)
           {
             sprintf (state->slot1light, " slot1 ");
             sprintf (state->slot2light, " slot2 ");
-            processDMRvoice (opts, state);
+            dmrMSBootstrap (opts, state); 
           }
-          if (opts->dmr_stereo == 0 && state->synctype == 32)
+          if (opts->dmr_mono == 1 && state->synctype == 32)
           {
-            fprintf (stderr, "%s", KRED);
-            fprintf (stderr, "Please use XDMA or DMR Stereo to decode MS/Simplex \n");
-            fprintf (stderr, "%s", KNRM);
+            // fprintf (stderr, "%s", KRED);
+            // fprintf (stderr, "Please use XDMA or DMR Stereo to decode MS/Simplex \n");
+            // fprintf (stderr, "%s", KNRM);
+            dmrMSBootstrap (opts, state); 
           }
           if (opts->dmr_stereo == 1) //opts->dmr_stereo == 1
           {
@@ -183,19 +184,20 @@ processFrame (dsd_opts * opts, dsd_state * state)
         }
       else if ( (state->synctype == 33) || (state->synctype == 34) ) //MS Data and RC data
       {
-        if (opts->dmr_stereo == 0)
-        {
-          closeMbeOutFile (opts, state);
-          state->err_str[0] = 0;
-          fprintf (stderr, "%s", KRED);
-          fprintf (stderr, "Please use XDMA or DMR Stereo to decode MS/Simplex \n");
-          fprintf (stderr, "%s", KNRM);
-        }
-        if (opts->dmr_stereo == 1)
-        {
-          dmrMSData (opts, state);
+        dmrMSData (opts, state);
+        // if (opts->dmr_stereo == 0)
+        // {
+        //   closeMbeOutFile (opts, state);
+        //   state->err_str[0] = 0;
+        //   fprintf (stderr, "%s", KRED);
+        //   fprintf (stderr, "Please use XDMA or DMR Stereo to decode MS/Simplex \n");
+        //   fprintf (stderr, "%s", KNRM);
+        // }
+        // if (opts->dmr_stereo == 1)
+        // {
+        //   dmrMSData (opts, state);
 
-        }
+        // }
       }
       else
       {
@@ -206,7 +208,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           sprintf (state->slot1light, " slot1 ");
           sprintf (state->slot2light, " slot2 ");
           state->payload_miP = 0; //zero out when switching back to data sync
-          processDMRdata (opts, state);
+          dmr_data_sync (opts, state);
         }
         //switch dmr_stereo to 0 when handling BS data frame syncs with processDMRdata
         if (opts->dmr_stereo == 1)
@@ -215,7 +217,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           sprintf (state->slot1light, " slot1 ");
           sprintf (state->slot2light, " slot2 ");
           state->payload_miP = 0; //zero out when switching back to data sync
-          processDMRdata (opts, state);
+          dmr_data_sync (opts, state);
         }
       }
       return;

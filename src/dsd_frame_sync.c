@@ -889,7 +889,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1 && opts->dmr_stereo == 0)
                 {
-                  printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
+                  //printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 if (state->lastsynctype != 11)
                 {
@@ -1003,7 +1003,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 sprintf(state->ftype, "DMR ");
                 if (opts->errorbars == 1 && opts->dmr_stereo == 0)
                 {
-                  printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
+                  //printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 if (state->lastsynctype != 12)
                 {

@@ -245,7 +245,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   else
     {
       //stereo slots and slot 0 (left slot)
-      if (state->currentslot == 0 && opts->dmr_stereo == 1)
+      if (state->currentslot == 0) //&& opts->dmr_stereo == 1
       {
 
         state->errs = mbe_eccAmbe3600x2450C0 (ambe_fr);
@@ -340,7 +340,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         }
       }
       //stereo slots and slot 1 (right slot)
-      if (state->currentslot == 1 && opts->dmr_stereo == 1)
+      if (state->currentslot == 1) //&& opts->dmr_stereo == 1
       {
 
         state->errsR = mbe_eccAmbe3600x2450C0 (ambe_fr);
@@ -435,19 +435,19 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       }
 
       //X2-TDMA? Not sure what still makes it this far to run under Framef
-      if (opts->dmr_stereo == 0)
-      {
-        mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-        if (opts->payload == 1)
-        {
-          PrintAMBEData (opts, state, ambe_d);
-        }
-        //only save MBE files if not enc or unmuted, THIS does not seem to work for some reason
-        if (opts->mbe_out_f != NULL && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
-        {
-          saveAmbe2450Data (opts, state, ambe_d);
-        }
-      }
+      // if (opts->dmr_stereo == 0)
+      // {
+      //   mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+      //   if (opts->payload == 1)
+      //   {
+      //     PrintAMBEData (opts, state, ambe_d);
+      //   }
+      //   //only save MBE files if not enc or unmuted, THIS does not seem to work for some reason
+      //   if (opts->mbe_out_f != NULL && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
+      //   {
+      //     saveAmbe2450Data (opts, state, ambe_d);
+      //   }
+      // }
 
 
     }
@@ -456,7 +456,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   int enc_bit = 0;
   //end enc check
 
-  if (opts->dmr_stereo == 1 && state->currentslot == 0)
+  if ( (opts->dmr_mono == 1 ||opts->dmr_stereo == 1) && state->currentslot == 0) //all mono traffic routed through 'left'
   {
     enc_bit = (state->dmr_so >> 6) & 0x1;
     if (enc_bit == 1)
@@ -494,7 +494,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
   }
 
-  if (opts->dmr_stereo == 1 && state->currentslot == 1)
+  if (opts->dmr_stereo == 1 && state->currentslot == 1) 
   {
     enc_bit = (state->dmr_soR >> 6) & 0x1;
     if (enc_bit == 0x1)
@@ -533,7 +533,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   }
 
   //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
-  if (opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
+  if (opts->dmr_mono == 0 && opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
   {
     state->debug_audio_errors += state->errs2;
     if (opts->audio_out == 1)

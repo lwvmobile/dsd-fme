@@ -138,48 +138,6 @@ typedef struct
   uint8_t bytes[3];
 } rs_12_9_checksum_t;
 
-typedef struct
-{
-  char VoiceFrame[3][72];  /* 3 x 72 bit of voice per time slot frame    */
-  char Sync[48];           /* 48 bit of data or SYNC per time slot frame */
-}TimeSlotRawVoiceFrame_t;
-
-
-typedef struct
-{
-  char DeInterleavedVoiceSample[3][4][24];  /* 3 x (4 x 24) deinterleaved bit of voice per time slot frame */
-}TimeSlotDeinterleavedVoiceFrame_t;
-
-
-typedef struct
-{
-  int  errs1[3];  /* 3 x errors #1 computed when demodulate the AMBE voice bit of the frame */
-  int  errs2[3];  /* 3 x errors #2 computed when demodulate the AMBE voice bit of the frame */
-  char AmbeBit[3][49];  /* 3 x 49 bit of AMBE voice of the frame */
-}TimeSlotAmbeVoiceFrame_t;
-
-typedef struct
-{
-  unsigned int  ProtectFlag;
-  unsigned int  Reserved;
-  unsigned int  FullLinkControlOpcode;
-  unsigned int  FeatureSetID;
-  unsigned int  ServiceOptions;
-  unsigned int  GroupAddress;      /* Destination ID or TG (in Air Interface format) */
-  unsigned int  SourceAddress;     /* Source ID (in Air Interface format) */
-  unsigned int  DataValidity;      /* 0 = All Full LC data are incorrect ; 1 = Full LC data are correct (CRC checked OK) */
-  unsigned int  LeftOvers;         //what is the 8 bits for that isn't used
-}FullLinkControlPDU_t;
-
-typedef struct
-{
-  TimeSlotRawVoiceFrame_t TimeSlotRawVoiceFrame[6]; /* A voice superframe contains 6 timeslot voice frame */
-  TimeSlotDeinterleavedVoiceFrame_t TimeSlotDeinterleavedVoiceFrame[6];
-  TimeSlotAmbeVoiceFrame_t TimeSlotAmbeVoiceFrame[6];
-  FullLinkControlPDU_t FullLC;
-} TimeSlotVoiceSuperFrame_t;
-
-
 //dPMR
 /* Could only be 2 or 4 */
 #define NB_OF_DPMR_VOICE_FRAME_TO_DECODE 2
@@ -321,6 +279,7 @@ typedef struct
   int inverted_dpmr;
   int frame_dpmr;
 
+  short int dmr_mono;
   short int dmr_stereo;
   short int lrrp_file_output;
 
@@ -528,12 +487,8 @@ typedef struct
   char slot1light[8];
   char slot2light[8];
   int directmode;
-  TimeSlotVoiceSuperFrame_t TS1SuperFrame;
-  TimeSlotVoiceSuperFrame_t TS2SuperFrame;
 
   char dmr_branding[25];
-  uint8_t  dmr_12_rate_sf[2][288]; //was 84, expanded to 288 to prevent possible crash if more comes in than expected
-  uint8_t  dmr_34_rate_sf[2][288]; //was 96, expanded to 288 to prevent possible crash if more comes in than expected
   int dmr_stereo_payload[144];    //load up 144 dibit buffer for every single DMR TDMA frame
   uint8_t data_header_blocks[2];  //collect number of blocks to follow from data header per slot
   uint8_t data_header_padding[2]; //collect number of padding octets in last block per slot
@@ -542,26 +497,22 @@ typedef struct
   uint8_t data_block_counter[2];  //counter for number of data blocks collected
   uint8_t data_p_head[2];         //flag for dmr proprietary header to follow
 
+  //new stuff below here
+  uint8_t data_conf_data[2];      //flag for confirmed data blocks per slot
+  uint8_t dmr_pdu_sf[2][288];     //unified pdu 'superframe' //[slot][byte]
+  uint8_t data_block_crc_valid[2][25]; //flag each individual block as good crc on confirmed data
+  char dmr_embedded_signalling[2][6][48]; //embedded signalling 2 slots by 6 vc by 48 bits (replacing TS1SuperFrame.TimeSlotRawVoiceFrame.Sync structure)
+
+  char dmr_cach_fragment[4][17]; //unsure of size, will need to check/verify
+  int dmr_cach_counter; //counter for dmr_cach_fragments 0-3; not sure if needed yet.
+  
+  //dmr talker alias new/fixed stuff
+  uint8_t dmr_alias_format[2]; //per slot
+  uint8_t dmr_alias_len[2]; //per slot
+  char dmr_alias_block_segment[2][4][7][16]; //2 slots, by 4 blocks, by up to 7 alias bytes that are up to 16-bit chars
+
 
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
-
-  //These flags are used to known the DMR frame
-  //printing format (hex or binary)
-  int printDMRRawVoiceFrameHex;
-  int printDMRRawVoiceFrameBin;
-  int printDMRRawDataFrameHex;
-  int printDMRRawDataFrameBin;
-  int printDMRAmbeVoiceSampleHex;
-  int printDMRAmbeVoiceSampleBin;
-
-  //These flags are used to known the dPMR frame
-  //orinting format (hex or binary)
-  int printdPMRRawVoiceFrameHex;
-  int printdPMRRawVoiceFrameBin;
-  int printdPMRRawDataFrameHex;
-  int printdPMRRawDataFrameBin;
-  int printdPMRAmbeVoiceSampleHex;
-  int printdPMRAmbeVoiceSampleBin;
 
   unsigned char * dpmr_caller_id;
   unsigned char * dpmr_target_id;
@@ -572,6 +523,8 @@ typedef struct
   short int dmr_ms_mode;
   unsigned int dmrburstL;
   unsigned int dmrburstR;
+  int dropL;
+  int dropR;
   unsigned long long int R;
   unsigned long long int RR;
   unsigned long long int H;
@@ -654,6 +607,11 @@ typedef struct
   uint32_t nxdn_location_sys_code;
   uint16_t nxdn_location_site_code;
 
+  //dmr late entry mi
+  uint64_t late_entry_mi_fragment[2][7][3];
+
+  //char dmr_branding[25]; //may need higher value?
+  char dmr_branding_sub[25];
 
   //Roman DMR End Call Alert Beep
   int dmr_end_alert[2]; //dmr TLC end call alert beep has already played once flag
@@ -733,13 +691,7 @@ typedef struct
 /*
  * function prototypes
  */
-void processDMRdata (dsd_opts * opts, dsd_state * state);
-void processDMRvoice (dsd_opts * opts, dsd_state * state);
-void dmrBSBootstrap (dsd_opts * opts, dsd_state * state);
-void dmrBS (dsd_opts * opts, dsd_state * state);
-void dmrMS (dsd_opts * opts, dsd_state * state);
-void dmrMSData (dsd_opts * opts, dsd_state * state);
-void dmrMSBootstrap (dsd_opts * opts, dsd_state * state);
+
 void processdPMRvoice (dsd_opts * opts, dsd_state * state);
 void processAudio (dsd_opts * opts, dsd_state * state);
 void processAudioR (dsd_opts * opts, dsd_state * state);
@@ -799,8 +751,7 @@ void resumeScan (dsd_opts * opts, dsd_state * state);
 int getSymbol (dsd_opts * opts, dsd_state * state, int have_sync);
 void upsample (dsd_state * state, float invalue);
 void processDSTAR (dsd_opts * opts, dsd_state * state);
-void processNXDNVoice (dsd_opts * opts, dsd_state * state);
-void processNXDNData (dsd_opts * opts, dsd_state * state);
+
 void processP25lcw (dsd_opts * opts, dsd_state * state, char *lcformat, char *mfid, char *lcinfo);
 void processHDU (dsd_opts * opts, dsd_state * state);
 void processLDU1 (dsd_opts * opts, dsd_state * state);
@@ -836,14 +787,14 @@ void nxdn_deperm_facch2_udch (dsd_opts * opts, dsd_state * state, uint8_t bits[3
 void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType);
 void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182]);
 
-//OP25  NXDN CRC functions
+//OP25 NXDN CRC functions
 static inline int load_i(const uint8_t val[], int len);
 static uint8_t crc6(const uint8_t buf[], int len);
 static uint16_t crc12f(const uint8_t buf[], int len);
 static uint16_t crc15(const uint8_t buf[], int len);
 static uint16_t crc16cac(const uint8_t buf[], int len);
 
-/* NXDN functions */
+/* NXDN Convolution functions */
 void CNXDNConvolution_start(void);
 void CNXDNConvolution_decode(uint8_t s0, uint8_t s1);
 void CNXDNConvolution_chainback(unsigned char* out, unsigned int nBits);
@@ -867,8 +818,6 @@ void NXDN_decode_site_info(dsd_opts * opts, dsd_state * state, uint8_t * Message
 void nxdn_location_id_handler (dsd_state * state, uint32_t location_id);
 
 void dPMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
-void printdPMRAmbeVoiceSample(dsd_opts * opts, dsd_state * state);
-void printdPMRRawVoiceFrame (dsd_opts * opts, dsd_state * state);
 
 //dPMR functions
 void ScrambledPMRBit(uint32_t * LfsrValue, uint8_t * BufferIn, uint8_t * BufferOut, uint32_t NbOfBitToScramble);
@@ -878,9 +827,6 @@ uint8_t CRC8BitdPMR(uint8_t * BufferIn, uint32_t BitLength);
 void ConvertAirInterfaceID(uint32_t AI_ID, uint8_t ID[8]);
 int32_t GetdPmrColorCode(uint8_t ChannelCodeBit[24]);
 
-void ProcessDMR (dsd_opts * opts, dsd_state * state);
-void DMRDataFrameProcess(dsd_opts * opts, dsd_state * state);
-void DMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
 //BPTC (Block Product Turbo Code) functions
 void BPTCDeInterleaveDMRData(uint8_t * Input, uint8_t * Output);
 uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DMRDataExtracted[96], uint8_t R[3]);
@@ -893,26 +839,49 @@ uint8_t rs_12_9_check_syndrome(rs_12_9_poly_t *syndrome);
 rs_12_9_correct_errors_result_t rs_12_9_correct_errors(rs_12_9_codeword_t *codeword, rs_12_9_poly_t *syndrome, uint8_t *errors_found);
 rs_12_9_checksum_t *rs_12_9_calc_checksum(rs_12_9_codeword_t *codeword);
 
-//SYNC DMR data extraction functions
-void ProcessDmrVoiceLcHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-void ProcessDmrTerminaisonLC(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-void ProcessVoiceBurstSync(dsd_opts * opts, dsd_state * state);
+//DMR CRC Functions
 uint16_t ComputeCrcCCITT(uint8_t * DMRData);
 uint32_t ComputeAndCorrectFullLinkControlCrc(uint8_t * FullLinkControlDataBytes, uint32_t * CRCComputed, uint32_t CRCMask);
 uint8_t ComputeCrc5Bit(uint8_t * DMRData);
-uint8_t * DmrAlgIdToStr(uint8_t AlgID);
-uint8_t * DmrAlgPrivacyModeToStr(uint32_t PrivacyMode);
 
-void ProcessDmrPIHeader(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-void ProcessCSBK(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-void ProcessDataData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-void Process1Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-void Process12Data(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-void Process34Data(dsd_opts * opts, dsd_state * state, unsigned char tdibits[98], uint8_t syncdata[48], uint8_t SlotType[20]);
-void ProcessMBCData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-void ProcessMBChData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-void ProcessReservedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
-void ProcessUnifiedData(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t syncdata[48], uint8_t SlotType[20]);
+//new simplified dmr functions
+void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t databurst);
+void dmr_data_sync (dsd_opts * opts, dsd_state * state);
+void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors);
+void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors, uint8_t type);
+void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8_t cs_pdu[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors);
+void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[]);
+uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25]);
+
+//Embedded Alias and GPS
+void dmr_embedded_alias_header (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
+void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
+void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
+
+//"DMR STEREO"
+void dmrBSBootstrap (dsd_opts * opts, dsd_state * state);
+void dmrBS (dsd_opts * opts, dsd_state * state);
+void dmrMS (dsd_opts * opts, dsd_state * state);
+void dmrMSData (dsd_opts * opts, dsd_state * state);
+void dmrMSBootstrap (dsd_opts * opts, dsd_state * state);
+
+//dmr data header and multi block types (header, 1/2, 3/4, 1, Unified)
+void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors);
+void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_bytes[], uint8_t block_len, uint8_t databurst, uint8_t type);
+void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[]);
+void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[]);
+uint8_t dmr_lrrp_check (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[]);
+
+//dmr alg stuff
+void dmr_alg_reset (dsd_opts * opts, dsd_state * state);
+void dmr_alg_refresh (dsd_opts * opts, dsd_state * state);
+void dmr_late_entry_mi_fragment (dsd_opts * opts, dsd_state * state, uint8_t vc, char ambe_fr[4][24], char ambe_fr2[4][24], char ambe_fr3[4][24]);
+void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state);
+
+//DMR FEC/CRC from Boatbod - OP25
+bool Hamming17123(uint8_t* d);
+uint8_t crc8(uint8_t bits[], unsigned int len);
+bool crc8_ok(uint8_t bits[], unsigned int len);
 
 //LFSR code courtesy of https://github.com/mattames/LFSR/
 void LFSR(dsd_state * state);
