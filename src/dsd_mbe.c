@@ -456,7 +456,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   int enc_bit = 0;
   //end enc check
 
-  if ( (opts->dmr_mono == 1 ||opts->dmr_stereo == 1) && state->currentslot == 0) //all mono traffic routed through 'left'
+  if ( (opts->dmr_mono == 1 || opts->dmr_stereo == 1) && state->currentslot == 0) //all mono traffic routed through 'left'
   {
     enc_bit = (state->dmr_so >> 6) & 0x1;
     if (enc_bit == 1)
@@ -479,6 +479,24 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 				state->dmr_encL = 1;
 			}
 		}
+
+    //reverse mute testing, only mute unencrypted traffic (slave piggyback dsd+ method)
+    if (opts->reverse_mute == 1)
+    {
+      if (state->dmr_encL == 0)
+      {
+        state->dmr_encL = 1;
+        opts->unmute_encrypted_p25 = 0;
+        opts->dmr_mute_encL = 1;
+      } 
+      else
+      {
+        state->dmr_encL = 0;
+        opts->unmute_encrypted_p25 = 1;
+        opts->dmr_mute_encL = 0;
+      } 
+    }
+    //end reverse mute test
 
     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
     {
@@ -517,6 +535,24 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 				state->dmr_encR = 1;
 			}
 		}
+
+    //reverse mute testing, only mute unencrypted traffic (slave piggyback dsd+ method)
+    if (opts->reverse_mute == 1)
+    {
+      if (state->dmr_encR == 0)
+      {
+        state->dmr_encR = 1;
+        opts->unmute_encrypted_p25 = 0;
+        opts->dmr_mute_encR = 1;
+      } 
+      else
+      {
+        state->dmr_encR = 0;
+        opts->unmute_encrypted_p25 = 1;
+        opts->dmr_mute_encR = 0;
+      } 
+    }
+    //end reverse mute test
 
     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
     {

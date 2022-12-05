@@ -446,6 +446,9 @@ initOpts (dsd_opts * opts)
   opts->p25_is_tuned = 0; //set to 1 if currently on VC, set back to 0 on carrier drop
   opts->trunk_hangtime = 1; //1 second hangtime by default before tuning back to CC
 
+  //reverse mute 
+  opts->reverse_mute = 0;
+
 } //initopts
 
 void
@@ -883,9 +886,10 @@ usage ()
   printf ("                 (See channel_map.csv for example)\n");
   printf ("  -2 <file>     Import Group List Allow/Block and Label from csv file (numeral 'two')\n");
   printf ("                 (See group.csv for example)\n");
-  printf ("  -3            Enable Extremely Experimental Trunking Features (NXDN/P25/EDACS/DMR TIII, Con+, Cap+ RC following) with RIGCTL/TCP or RTL Input\n");
+  printf ("  -3            Enable Extremely Experimental Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input\n");
   printf ("  -5 <udp p>    Enable RIGCTL/TCP; Set UDP Port for RIGCTL. (4532 on SDR++)\n");
   printf ("  -6 <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)\n");
+  printf ("  -8            Reverse Mute - Mute Unencrypted Voice Channels\n");
   //printf ("                 (Currently only available on UDP port 4532)\n");
   printf ("\n");
   exit (0);
@@ -1094,7 +1098,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qs:tv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:6:7:")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qs:tv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:6:7:8")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1139,6 +1143,11 @@ main (int argc, char **argv)
         //placeholder until letters get re-arranged
         case '6': //hangtime in seconds, default is 1;
           sscanf (optarg, "%d", &opts.trunk_hangtime);
+          break;
+        //placeholder until letters get re-arranged
+        case '8':
+          opts.reverse_mute = 1;
+          fprintf (stderr, "Reverse Mute\n");
           break;
         case 'e':
           opts.errorbars = 1;

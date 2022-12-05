@@ -2067,6 +2067,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| Trunk Tracking Active (P25/EDACS/NXDN/DMR)\n");
   }
+  if (opts->reverse_mute == 1)
+  {
+    printw ("| Reverse Mute - Muting Unencrypted Voice\n");
+  }
 
 
   printw ("------------------------------------------------------------------------------\n");

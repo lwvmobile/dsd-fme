@@ -326,6 +326,9 @@ typedef struct
   char chan_in_file[1024]; 
   //end import filenames
 
+  //reverse mute
+  uint8_t reverse_mute;
+
 } dsd_opts;
 
 typedef struct
