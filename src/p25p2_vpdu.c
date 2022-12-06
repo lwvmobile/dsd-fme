@@ -288,6 +288,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+							j = 8; //break loop
 							
 						}
 						//rtl_udp
@@ -296,6 +297,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							rtl_udp_tune (opts, state, tunable_freq);
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1;
+							j = 8; //break loop
 						}
 					}    
 				}
@@ -530,6 +532,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							SetFreq(opts->rigctl_sockfd, tunable_freq);
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+							j = 8; //break loop
 						}
 						//rtl_udp
 						else if (opts->audio_in_type == 3)
@@ -537,6 +540,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							rtl_udp_tune (opts, state, tunable_freq);
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1;
+							j = 8; //break loop
 						}
 					}    
 				}
@@ -638,7 +642,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
-							
+							j = 8; //break loop
 						}
 						//rtl_udp
 						else if (opts->audio_in_type == 3)
@@ -647,6 +651,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1;
+							j = 8; //break loop
 						}
 					}    
 				}
@@ -736,7 +741,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
-							
+							j = 8; //break loop
 						}
 						//rtl_udp
 						else if (opts->audio_in_type == 3)
@@ -745,6 +750,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1;
+							j = 8; //break loop
 						}
 					}    
 				}
@@ -1274,7 +1280,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (1 == 1) //state->p2_is_lcch == 1
 			{
 				fprintf (stderr, "\n Adjacent Status Broadcast - Abbreviated\n");
-				fprintf (stderr, "  LRA [%02X] RFSS[%03d] SYSID [%03X] CHAN-T [%04X] SSC [%02X]", lra, rfssid, lsysid, channelt, sysclass);
+				fprintf (stderr, "  LRA [%02X] RFSS[%03d] SYSID [%03X] SITE [%03X] CHAN-T [%04X] SSC [%02X]", lra, rfssid, lsysid, siteid, channelt, sysclass);
 				process_channel_to_freq (opts, state, channelt);
 			}
 
@@ -1293,7 +1299,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (1 == 1) //state->p2_is_lcch == 1
 			{
 				fprintf (stderr, "\n Adjacent Status Broadcast - Extended\n");
-				fprintf (stderr, "  LRA [%02X] RFSS[%03d] SYSID [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", lra, rfssid, lsysid, channelt, channelr, sysclass);
+				fprintf (stderr, "  LRA [%02X] RFSS[%03d] SYSID [%03X] SITE [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", lra, rfssid, lsysid, siteid, channelt, channelr, sysclass);
 				process_channel_to_freq (opts, state, channelt);
 				process_channel_to_freq (opts, state, channelr);
 			}
