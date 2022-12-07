@@ -306,6 +306,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "| CACH/Burst FEC ERR");
     fprintf (stderr, "%s", KNRM);
     fprintf (stderr, "\n");
+    dmr_reset_blocks (opts, state); //failsafe to reset all data header and blocks when bad tact or slottype
   }
 
   // Skip cach (24 bit = 12 dibit) and next slot 1st half (98 + 10 bit = 49 + 5 dibit)

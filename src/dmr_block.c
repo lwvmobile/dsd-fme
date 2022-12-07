@@ -190,7 +190,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
     fprintf (stderr, "\n  Proprietary Data Header: SAP %01X - Format %01X - MFID %02X",
              (dheader[0] & 0xF0) >> 4, dheader[0] & 0xF, dheader[1]       );
 
-    state->data_p_head[slot] = 0;
+    //state->data_p_head[slot] = 0; //disabling this, we can flag it off after processing pdu instead
     state->data_header_sap[slot] = 0; //reset this to zero so we don't trip the condition below
     state->data_block_counter[slot]++; //increment the counter since this counts against the data blocks
 
@@ -255,7 +255,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   if (block_len == 0) block_len = 18;
   if (block_len > 24) block_len = 24;
 
-  //TODO: add CRC/FEC validation to each block and each confirmed data block as well - type 1
+  //TODO: add CRC/FEC validation to each data header and each confirmed data block as well - type 1
   if (type == 1)
   {
     //type 1 data block, shuffle method
@@ -275,7 +275,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
     if (state->data_block_counter[slot] == state->data_header_blocks[slot])
     {
       //TODO: CRC32 on completed messages
-      dmr_pdu (opts, state, state->dmr_pdu_sf[slot]);
+      dmr_pdu (opts, state, block_len, state->dmr_pdu_sf[slot]);
     }
   }
   
@@ -370,4 +370,17 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
   }
 
+}
+
+//failsafe to clear old data header and block info in case of tact/emb/slottype failures and we
+//can no longer verify accurate data block reporting
+void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
+{
+  memset (state->data_p_head, 0, sizeof(state->data_p_head));
+  memset (state->data_conf_data, 0, sizeof(state->data_conf_data));
+  memset (state->dmr_pdu_sf, 0, sizeof(state->dmr_pdu_sf));
+  memset (state->data_block_counter, 0, sizeof(state->data_block_counter));
+  memset (state->data_header_blocks, 0, sizeof(state->data_header_blocks));
+  memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
+  memset (state->dmr_lrrp_source, 0, sizeof(state->dmr_lrrp_source));
 }

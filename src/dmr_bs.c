@@ -399,25 +399,29 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
  //if we have a tact or emb err, then produce sync pattern/err message
  if (tact_okay != 1 || emb_ok != 1)
  {
-   fprintf (stderr,"%s ", getTime());
-   fprintf (stderr,"Sync:  DMR                  ");
-   fprintf (stderr, "%s", KRED);
-   fprintf (stderr, "| VOICE CACH/EMB ERR");
-   fprintf (stderr, "%s", KNRM);
-   fprintf (stderr, "\n");
-   //run LFSR if either slot had an active MI in it.
-   if (state->payload_algid >= 0x21)
-   {
-    state->currentslot = 0;
-    LFSR(state);
-    fprintf (stderr, "\n");
-   }
-   if (state->payload_algidR >= 0x21) 
-   {
-    state->currentslot = 1;
-    LFSR(state);
-    fprintf (stderr, "\n");
-   }
+
+  fprintf (stderr,"%s ", getTime());
+  fprintf (stderr,"Sync:  DMR                  ");
+  fprintf (stderr, "%s", KRED);
+  fprintf (stderr, "| VOICE CACH/EMB ERR");
+  fprintf (stderr, "%s", KNRM);
+  fprintf (stderr, "\n");
+  //run LFSR if either slot had an active MI in it.
+  if (state->payload_algid >= 0x21)
+  {
+  state->currentslot = 0;
+  LFSR(state);
+  fprintf (stderr, "\n");
+  }
+  if (state->payload_algidR >= 0x21) 
+  {
+  state->currentslot = 1;
+  LFSR(state);
+  fprintf (stderr, "\n");
+  }
+    
+  //failsafe to reset all data header and blocks when bad tact or emb
+  dmr_reset_blocks (opts, state); 
    
  }
 
@@ -657,6 +661,10 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
       LFSR(state);
       fprintf (stderr, "\n");
     }
+    
+    //failsafe to reset all data header and blocks when bad tact or emb
+    dmr_reset_blocks (opts, state); 
   }
+
 
 }

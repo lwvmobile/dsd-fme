@@ -6,7 +6,6 @@
  * 2022-12 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
-//unified DMR multiblock PDU message handler (LRRP, etc)
 #include "dsd.h"
 
 char * getTimeL(void) //get pretty hh:mm:ss timestamp
@@ -36,31 +35,34 @@ char * getDateL(void) {
   return curr2;
 }
 
-void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[])
+void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[])
 {
 
-  int message_legnth = 0;
+  uint8_t message_len = 0;
   uint8_t slot = state->currentslot;
-  uint8_t blocks  = state->data_header_blocks[slot] - 1; //subtract 1 for the relevant value in the calc below
+  uint8_t blocks  = state->data_header_blocks[slot]; 
   uint8_t padding = state->data_header_padding[slot];
   uint8_t lrrp_conf = 0;
 
-  lrrp_conf = dmr_lrrp_check (opts, state, DMR_PDU);
+  //consider disabling on prop_head data blocks if bad/false decodes
+  //if (state->data_p_head[slot] == 0)
+   lrrp_conf = dmr_lrrp (opts, state, block_len, DMR_PDU);
 
   //maybe one day we will have more things to do here
   state->data_conf_data[slot] = 0; //flag off confirmed data after processing it 
+  state->data_p_head[slot] = 0; //flag off prop_head data after processing it
   
 }
 
 //The contents of this function are mostly my reversed engineered efforts by observing DSDPlus output and matching data bytes
 //combined with a few external sources such as OK-DMR for some token values and extra data values (rad and alt)
 //this is by no means an extensive LRRP list and is prone to error (unless somebody has the manual or something)
-uint8_t dmr_lrrp_check (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[])
+uint8_t dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[])
 {
   int i, j;
-  uint8_t message_len = 0;
+  uint16_t message_len = 0;
   uint8_t slot = state->currentslot;
-  uint8_t blocks = state->data_header_blocks[slot] - 1; 
+  uint8_t blocks = state->data_header_blocks[slot];
   uint8_t padding = state->data_header_padding[slot];
   uint8_t lrrp_confidence = 0; //variable to increment based on number of tokens found, the more, the higher the confidence level
 
@@ -98,11 +100,19 @@ uint8_t dmr_lrrp_check (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[])
 
   //triggered information report
   uint8_t report = 0;
-  uint8_t pot_report = 0; //potential report by findind 0x0D and backtracking a few bytes
+  uint8_t pot_report = 0; //potential report by finding 0x0D and backtracking a few bytes
 
-  i = 0; //watch DMR_PDU[10] closely for a 'report' token
+  //shim for getting LRRP out of some prop head data blocks
+  if (state->data_p_head[slot] == 1)
+  {
+    i = 0;
+    message_len = blocks * block_len; 
+  }
+  else i = 12; 
+
+  
   //start looking for tokens (using my best understanding of the ok-dmr library xml and python files)
-  for (i; i < ( ((blocks+1)*16) - (padding+4) ); i++) //need to change the 16, or entire thing? or who cares lol just keep looking
+  for (i; i < ( (blocks*block_len) - (padding+4) ); i++) 
   {
 
     switch(DMR_PDU[i]){
@@ -122,6 +132,7 @@ uint8_t dmr_lrrp_check (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[])
       //case 0x1D: //ARRP_TriggeredInformationAnswer_NCDT
       //case 0x1E: //ARRP_TriggeredInformationReport = FALSE?
       //case 0x25: //ARRP_UnsolicitedInformationReport_NCDT = (0x25, True, "")
+      case 0x26: //ARRP_UnsolicitedInformationReport_NCDT
       case 0x13: //LRRP_UnsolicitedLocationReport_NCDT
       case 0x15: //LRRP_LocationProtocolReport_NCDT
       case 0x21: //ARRP_TriggeredInformationStopRequest_NCDT
@@ -188,7 +199,7 @@ uint8_t dmr_lrrp_check (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[])
           second = (DMR_PDU[i+5] & 0x3F);
           i += 5; 
           //sanity check
-          if (year > 2000 && year < 2025) lrrp_confidence++;
+          if (year > 2000 && year <= 2025) lrrp_confidence++;
           if (year > 2025 || year < 2000) year = 0; //needs future proofing
         }
         break;
@@ -254,7 +265,7 @@ uint8_t dmr_lrrp_check (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[])
   if (report && message_len > 0)
   {
     fprintf (stderr, "%s", KYEL);
-    fprintf (stderr, "\n LRRP Confidence: %d - Message Len: %d", lrrp_confidence, message_len);
+    fprintf (stderr, "\n LRRP Confidence: %d - Message Len: %d Octets", lrrp_confidence, message_len);
     if (lrrp_confidence >= 3) //find the sweet magical number
     {
       //now we can open our lrrp file and write to it as well
@@ -281,13 +292,14 @@ uint8_t dmr_lrrp_check (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[])
       {
         fprintf (stderr, "\n");
         fprintf (stderr, "  Report: 0x%02X", report);
-        if (report == 0x1F) fprintf (stderr, " ARRP_TriggeredInformationReport_NCDT "); //customize later when more is learned
+        if (report == 0x1F) fprintf (stderr, " ARRP_TriggeredInformationReport_NCDT "); //customize later when more is learned 
         if (report == 0x21) fprintf (stderr, " ARRP_TriggeredInformationStopRequest_NCDT ");
         if (report == 0x22) fprintf (stderr, " ARRP_TriggeredInformationStopAnswer ");
         if (report == 0x25) fprintf (stderr, " ARRP_UnsolicitedInformationReport_NCDT ");
         if (report == 0x26) fprintf (stderr, " ARRP_UnsolicitedInformationReport_NCDT ");
         if (report == 0x27) fprintf (stderr, " ARRP_InformationProtocolRequest_NCDT ");
         if (report == 0x13) fprintf (stderr, " LRRP_UnsolicitedLocationReport_NCDT ");
+        if (report == 0x15) fprintf (stderr, " LRRP_UnsolicitedLocationReport_NCDT ");
 
       }
       if (source)
@@ -368,11 +380,18 @@ uint8_t dmr_lrrp_check (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[])
     
   }
   
-  if (pot_report)
+  else if (pot_report)
   {
     fprintf (stderr, "\n");
     fprintf (stderr, "  Potential ARRP/LRRP Report (Debug): 0x%02X", report);
   }
+
+  // else //debug only, disabled
+  // {
+  //   fprintf (stderr, "\n");
+  //   fprintf (stderr, "\n LRRP Confidence: %d - Message Len: %d Octets", lrrp_confidence, message_len);
+  // }
+
   fprintf (stderr, "%s", KNRM);
   
   

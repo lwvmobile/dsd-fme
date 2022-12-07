@@ -47,9 +47,10 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16);
   }
 
-  //Embedded Talker Alias Header Only (format and len storage)
+  
   if (IrrecoverableErrors == 0)
   {
+    //Embedded Talker Alias Header Only (format and len storage)
     if (type == 3 && flco == 0x04) 
     {
       dmr_embedded_alias_header(opts, state, lc_bits);
@@ -63,10 +64,10 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     }
 
     //Embedded GPS
-    if (type == 3 && flco == 0x08) 
+    if (type == 3 && flco == 0x08)
     {
       is_gps = 1;
-      dmr_embedded_gps(opts, state, lc_bits);
+      if (fid == 0) dmr_embedded_gps(opts, state, lc_bits); //issues with fid 0x10 and flco 0x08
     }
   }  
 
@@ -596,7 +597,7 @@ void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_b
 void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 {
   fprintf (stderr, "%s", KYEL);
-  fprintf (stderr, " Embedded GPS");
+  fprintf (stderr, " Embedded GPS:");
   uint8_t slot = state->currentslot;
   uint8_t pf = lc_bits[0];
   uint8_t res_a = lc_bits[1];
@@ -605,25 +606,58 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[23], 25);
   uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[48], 24);
 
-  double lat_unit = (double)180/(double)16777216; //180 divided by 2^24
-  double lon_unit = (double)360/(double)33554432; //360 divided by 2^25
+  double lat_unit = (double)180/ pow (2.0, 24); //180 divided by 2^24
+  double lon_unit = (double)360/ pow (2.0, 25); //360 divided by 2^25
 
-  //run calculations and print
-  //7.2.16 and 7.2.17
-  double latitude  = (double)-90 + ((double)lat * lat_unit);
-  double longitude = (double)-180 + ((double)lon * lon_unit);
+  uint32_t lat_sign = lat >> 23;
+  uint32_t lon_sign = lon >> 24;
+  char latstr[3];
+  char lonstr[3];
+  sprintf (latstr, "%s", "N");
+  sprintf (lonstr, "%s", "E");
 
-  fprintf (stderr, " Lat: %.5lf Lon: %.5lf", latitude, longitude);
+  //run calculations and print (still cannot verify as accurate)
+  //7.2.16 and 7.2.17 (two's compliment)
 
-  //7.2.15 Position Error
-  uint16_t position_error = pow(2, pos_err); //2^pos_err = 2 meters to the pos_err power
-  if (pos_err == 0x7 ) fprintf (stderr, " Position Error: Not Known or Location Invalid");
-  else fprintf (stderr, " Position Error: Less than %d meters", position_error);
+  double latitude = 0;  
+  double longitude = 0; 
 
-  //save to array for ncurses
-  if (pos_err != 0x7)
+  if (pf) fprintf (stderr, " Protected");
+  else
   {
-    sprintf (state->dmr_embedded_gps[slot], "E-GPS (%lf %lf) Error: %dm", latitude, longitude, position_error);
+    if (lat_sign)
+    {
+      lat = 0x800001 - (lat & 0x7FFFFF);
+      sprintf (latstr, "%s", "S");
+    } 
+    latitude = ((double)lat * lat_unit);
+
+    if (lon_sign)
+    {
+      lon = 0x1000001 - (lon & 0xFFFFFF);
+      sprintf (lonstr, "%s", "W");
+    } 
+    longitude = ((double)lon * lon_unit);
+
+    //sanity check
+    if (abs (latitude) < 90 && abs(longitude) < 180)
+    {
+      fprintf (stderr, " Lat: %.5lf %s Lon: %.5lf %s", latitude, latstr, longitude, lonstr);
+
+      //7.2.15 Position Error
+      uint16_t position_error = 2 * pow(10, pos_err); //2 * 10^pos_err 
+      if (pos_err == 0x7 ) fprintf (stderr, " Position Error: Unknown or Invalid");
+      else fprintf (stderr, " Position Error: Less than %dm", position_error);
+
+      //save to array for ncurses
+      if (pos_err != 0x7)
+      {
+        sprintf (state->dmr_embedded_gps[slot], "E-GPS (%lf %s %lf %s) Err: %dm", latitude, latstr, longitude, lonstr, position_error);
+      }
+
+    }
+
+    
   }
 
   fprintf (stderr, "%s", KNRM);

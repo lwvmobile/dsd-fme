@@ -873,9 +873,9 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state);
 //dmr data header and multi block types (header, 1/2, 3/4, 1, Unified)
 void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors);
 void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_bytes[], uint8_t block_len, uint8_t databurst, uint8_t type);
-void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[]);
-void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[]);
-uint8_t dmr_lrrp_check (dsd_opts * opts, dsd_state * state, uint8_t DMR_PDU[]);
+void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[]);
+void dmr_reset_blocks (dsd_opts * opts, dsd_state * state);
+uint8_t dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[]);
 
 //dmr alg stuff
 void dmr_alg_reset (dsd_opts * opts, dsd_state * state);
