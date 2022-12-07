@@ -369,12 +369,18 @@ uint8_t dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t
       //save to array for ncurses
       if (!source) source = state->dmr_lrrp_source[state->currentslot];
       char sign[8];
+      char velstr[20];
+      char degstr[20];
+      char lrrpstr[100];
+      sprintf (lrrpstr, "%s", "");
+      sprintf (velstr, "%s", "");
+      sprintf (degstr, "%s", "");
       if (lat_sign) sprintf (sign, "%s", "-");
       else sprintf (sign, "%s", ""); 
-      if (lat)
-      {
-        sprintf (state->dmr_embedded_gps[slot], "LRRP %08d (%s%lf, %lf)", source, sign, (double)lat * lat_unit, (double)lon * lon_unit);
-      }
+      if (lat) sprintf (lrrpstr, "LRRP %0d (%s%lf, %lf)", source, sign, (double)lat * lat_unit, (double)lon * lon_unit);
+      if (vel_set) sprintf (velstr, " %.4lf km/h", velocity * 3.6);
+      if (deg_set) sprintf (degstr, " %d deg", degrees);
+      sprintf (state->dmr_embedded_gps[slot], "%s%s%s", lrrpstr, velstr, degstr);
       
     }
     
