@@ -380,7 +380,7 @@ uint8_t dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t
       if (lat) sprintf (lrrpstr, "LRRP %0d (%s%lf, %lf)", source, sign, (double)lat * lat_unit, (double)lon * lon_unit);
       if (vel_set) sprintf (velstr, " %.4lf km/h", velocity * 3.6);
       if (deg_set) sprintf (degstr, " %d deg", degrees);
-      sprintf (state->dmr_embedded_gps[slot], "%s%s%s", lrrpstr, velstr, degstr);
+      sprintf (state->dmr_lrrp_gps[slot], "%s%s%s", lrrpstr, velstr, degstr);
       
     }
     

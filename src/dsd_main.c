@@ -278,7 +278,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   sprintf(state->dmr_branding_sub, "%s", "");
   sprintf(state->dmr_branding, "%s", "");
   sprintf (state->dmr_site_parms, "%s", ""); //may not zero this out
-  state->dmr_mfid = 0;
+  state->dmr_mfid = -1;
 
   //dmr slco stuff
   memset(state->dmr_cach_fragment, 0, sizeof(state->dmr_cach_fragment));

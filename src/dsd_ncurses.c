@@ -2635,7 +2635,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //LRRP
     if(state->dmrburstR != 16) //only during data
     {
-      printw  ("%s", state->dmr_embedded_gps[1]);
+      printw  ("%s", state->dmr_lrrp_gps[1]);
     }
     
     //Group Name Labels from CSV import
