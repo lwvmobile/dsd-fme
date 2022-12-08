@@ -288,7 +288,7 @@ uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25])
     h1 = Hamming17123 (slco_bits + 0);
 
     //run single - manual would suggest that though this exists, there is no support? or perhaps its manufacturer only thing?
-    if (h1) dmr_slco (opts, state, slco_bits);
+    if (h1) ; // dmr_slco (opts, state, slco_bits); //random false positibes for con+, so diabled for now
     else
     {
       err = 1;
@@ -593,7 +593,7 @@ void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_b
   
 }
 
-//externalize embedded GPS
+//externalize embedded GPS - Needs samples to test/fix function
 void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 {
   fprintf (stderr, "%s", KYEL);
@@ -603,14 +603,15 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   uint8_t res_a = lc_bits[1];
   uint8_t res_b = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 4);
   uint8_t pos_err = (uint8_t)ConvertBitIntoBytes(&lc_bits[20], 3);
-  uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[23], 25);
-  uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[48], 24);
+  
+  uint32_t lon_sign = lc_bits[23]; 
+  uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[24], 24); 
+  uint32_t lat_sign = lc_bits[48]; 
+  uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[49], 23); 
 
   double lat_unit = (double)180/ pow (2.0, 24); //180 divided by 2^24
   double lon_unit = (double)360/ pow (2.0, 25); //360 divided by 2^25
 
-  uint32_t lat_sign = lat >> 23;
-  uint32_t lon_sign = lon >> 24;
   char latstr[3];
   char lonstr[3];
   sprintf (latstr, "%s", "N");
@@ -627,14 +628,14 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   {
     if (lat_sign)
     {
-      lat = 0x800001 - (lat & 0x7FFFFF);
+      lat = 0x800001 - lat;
       sprintf (latstr, "%s", "S");
     } 
     latitude = ((double)lat * lat_unit);
 
     if (lon_sign)
     {
-      lon = 0x1000001 - (lon & 0xFFFFFF);
+      lon = 0x1000001 - lon;
       sprintf (lonstr, "%s", "W");
     } 
     longitude = ((double)lon * lon_unit);
@@ -657,7 +658,6 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 
     }
 
-    
   }
 
   fprintf (stderr, "%s", KNRM);

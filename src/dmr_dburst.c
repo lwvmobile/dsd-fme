@@ -10,7 +10,6 @@
  *-----------------------------------------------------------------------------*/
 
 //TODO: CRC9 on confirmed data blocks; CRC32 on completed data sf;
-//TODO: MBC full message CRC16 (does this include the header or not though?)
 //TODO: Reverse Channel Signalling - RC single burst BPTC/7-bit CRC
 //TODO: Single Burst Embedded LC - Non-RC single burst LC - Look for Late Entry Alg/Key
 
@@ -325,7 +324,8 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   {
     CRCExtracted = 0;
     CRCComputed = 0;
-    IrrecoverableErrors = 1; //can't be tested, but maybe can poll trellis decoder for a value in the future
+    IrrecoverableErrors = 1; 
+    bool trellis_good = TRUE;
 
     uint8_t tdibits[98];
     memset (tdibits, 0, sizeof(tdibits));
@@ -339,7 +339,9 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     unsigned char TrellisReturn[18];
     memset (TrellisReturn, 0, sizeof(TrellisReturn));
 
-    CDMRTrellisDecode(tdibits, TrellisReturn);
+    trellis_good = CDMRTrellisDecode(tdibits, TrellisReturn);
+    if (trellis_good == TRUE) IrrecoverableErrors = 0;
+    // else (fprintf (stderr, " Trellis Failure")); //debug print
 
     for (i = 0; i < pdu_len; i++) //18
     {

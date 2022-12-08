@@ -9,6 +9,36 @@
 
 #include "dsd.h"
 
+//modified to accept variable payload size and len
+uint16_t ComputeCrcCCITT16d(const uint8_t buf[], uint8_t len)
+{
+  uint32_t i;
+  uint16_t CRC = 0x0000; /* Initialization value = 0x0000 */
+  /* Polynomial x^16 + x^12 + x^5 + 1
+   * Normal     = 0x1021
+   * Reciprocal = 0x0811
+   * Reversed   = 0x8408
+   * Reversed reciprocal = 0x8810 */
+  uint16_t Polynome = 0x1021;
+  for(i = 0; i < len; i++)
+  {
+    if(((CRC >> 15) & 1) ^ (buf[i] & 1))
+    {
+      CRC = (CRC << 1) ^ Polynome;
+    }
+    else
+    {
+      CRC <<= 1;
+    }
+  }
+
+  /* Invert the CRC */
+  CRC ^= 0xFFFF;
+
+  /* Return the CRC */
+  return CRC;
+} /* End ComputeCrcCCITTd() */
+
 // A Hamming (17,12,3) Check for completed SLC message
 bool Hamming17123(uint8_t* d)
 {

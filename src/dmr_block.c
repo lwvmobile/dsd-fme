@@ -276,8 +276,13 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   uint32_t CRCCorrect = 0;
   uint32_t CRCComputed = 0;
   uint32_t CRCExtracted = 0;
-  uint32_t IrrecoverableErrors = 0;
+  uint32_t IrrecoverableErrors = 0; 
+
   uint8_t dmr_pdu_sf_bits[18*8*8]; //8 blocks at 18 bytes at 8 bits //just a large value to have plenty storage space
+
+  //MBC Header and Block CRC
+  uint8_t mbc_crc_good[2]; //header and blocks crc pass/fail local storage
+  memset (mbc_crc_good, 0, sizeof (mbc_crc_good)); //init on 0 - bad crc
 
   if (type == 1) blocks = state->data_header_blocks[slot] - 1; 
   if (type == 2) blocks = state->data_block_counter[slot];
@@ -344,12 +349,46 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         dmr_pdu_sf_bits[j + 7] = (state->dmr_pdu_sf[slot][i] >> 0) & 0x01;
       }
 
-      //TODO: CRC check on Header and full frames as appropriate
+      //CRC check on Header and full frames as appropriate (header crc already stored)
+      //The 16 bit CRC in the header shall include the data carried by the header. 
+      //The 16 bit CRC in the last block shall be performed on 
+      //all MBC blocks (conmbined) except the header block. <-- misleading statement, just like half the dmr manual
+      
+      mbc_crc_good[0] = state->data_block_crc_valid[slot][0];
+      
+      CRCExtracted = 0;
+      //extract crc from last block, apply to completed 'superframe' minus header
+      for(i = 0; i < 16; i++) 
+      {
+        CRCExtracted = CRCExtracted << 1;
+        CRCExtracted = CRCExtracted | (uint32_t)(dmr_pdu_sf_bits[i + 96*(1+blocks) - 16] & 1); 
+      }
 
-      //shim these values for now
-      CRCCorrect = 1;
-      IrrecoverableErrors = 0;
+      uint8_t mbc_block_bits[12*8*3];
+      memset (mbc_block_bits, 0, sizeof(mbc_block_bits));
+      //shift continuation blocks and last block into seperate array for crc check
+      for (i = 0; i < 12*8*3; i++)
+      {
+        mbc_block_bits[i] = dmr_pdu_sf_bits[i+96]; //skip mbc header
+      }
 
+      CRCComputed = ComputeCrcCCITT16d (mbc_block_bits, ((blocks+0)*96)-16 );
+
+      // fprintf (stderr, " \n  CRC EXT %X CRC CMP %X", CRCExtracted, CRCComputed);
+
+      if (CRCComputed == CRCExtracted) mbc_crc_good[1] = 1;
+
+      CRCCorrect = 0;
+      IrrecoverableErrors = 1;
+
+      //set good on good header and good blocks
+      if (mbc_crc_good[0] == 1 && mbc_crc_good[1] == 1)
+      {
+        CRCCorrect = 1;
+        IrrecoverableErrors = 0;
+      }
+
+      //cspdu will only act on any fid/opcodes if good CRC to prevent falsing on control signalling
       dmr_cspdu (opts, state, dmr_pdu_sf_bits, state->dmr_pdu_sf[slot], CRCCorrect, IrrecoverableErrors);
 
     }
@@ -358,7 +397,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   //Full Super Frame Type 1 - Debug Output
   if (opts->payload == 1 && type == 1 && state->data_block_counter[slot] == state->data_header_blocks[slot]) 
   {
-    fprintf (stderr, "%s",KGRN);
+    fprintf (stderr, "%s", KGRN);
     fprintf (stderr, "\n Multi Block PDU Superframe - Slot [%d]\n  ", slot+1);
     for (i = 0; i < ((blocks+1)*block_len); i++) 
     {
@@ -374,7 +413,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   //Full Super Frame MBC - Debug Output
   if (opts->payload == 1 && type == 2 && lb == 1)
   {
-    fprintf (stderr, "%s",KGRN);
+    fprintf (stderr, "%s", KGRN);
     fprintf (stderr, "\n MBC Multi Block PDU Superframe - Slot [%d]\n  ", slot+1);
     for (i = 0; i < ((blocks+1)*block_len); i++) 
     {
@@ -384,6 +423,9 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         fprintf (stderr, "\n  "); 
       }
     }
+    fprintf (stderr, "%s", KRED);
+    if (mbc_crc_good[0] == 0) fprintf (stderr, "MBC Header CRC ERR ");
+    if (mbc_crc_good[1] == 0) fprintf (stderr, "MBC Blocks CRC ERR ");
     fprintf (stderr, "%s ", KNRM);
   }
 
@@ -405,7 +447,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
 }
 
-//failsafe to clear old data header and block info in case of tact/emb/slottype failures and we
+//failsafe to clear old data header, block info, cach, in case of tact/emb/slottype failures and we
 //can no longer verify accurate data block reporting
 void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
 {
@@ -416,4 +458,5 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
   memset (state->data_header_blocks, 0, sizeof(state->data_header_blocks));
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
   memset (state->dmr_lrrp_source, 0, sizeof(state->dmr_lrrp_source));
+  memset (state->dmr_cach_fragment, 0, sizeof (state->dmr_cach_fragment));
 }

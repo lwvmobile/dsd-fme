@@ -846,6 +846,7 @@ rs_12_9_checksum_t *rs_12_9_calc_checksum(rs_12_9_codeword_t *codeword);
 
 //DMR CRC Functions
 uint16_t ComputeCrcCCITT(uint8_t * DMRData);
+uint16_t ComputeCrcCCITT16d(const uint8_t buf[], uint8_t len);
 uint32_t ComputeAndCorrectFullLinkControlCrc(uint8_t * FullLinkControlDataBytes, uint32_t * CRCComputed, uint32_t CRCMask);
 uint8_t ComputeCrc5Bit(uint8_t * DMRData);
 
