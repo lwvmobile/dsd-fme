@@ -132,10 +132,10 @@ uint8_t dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t
       //case 0x1D: //ARRP_TriggeredInformationAnswer_NCDT
       //case 0x1E: //ARRP_TriggeredInformationReport = FALSE?
       //case 0x25: //ARRP_UnsolicitedInformationReport_NCDT = (0x25, True, "")
-      case 0x26: //ARRP_UnsolicitedInformationReport_NCDT
-      case 0x13: //LRRP_UnsolicitedLocationReport_NCDT
-      case 0x15: //LRRP_LocationProtocolReport_NCDT
-      case 0x21: //ARRP_TriggeredInformationStopRequest_NCDT
+      //case 0x26: //ARRP_UnsolicitedInformationReport_NCDT
+      //case 0x13: //LRRP_UnsolicitedLocationReport_NCDT
+      //case 0x15: //LRRP_LocationProtocolReport_NCDT
+      //case 0x21: //ARRP_TriggeredInformationStopRequest_NCDT
       case 0x1F: //ARRP_TriggeredInformationReport_NCDT
         if (report == 0)
         {
