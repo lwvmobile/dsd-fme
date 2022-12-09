@@ -129,6 +129,8 @@ int csvChanImport(dsd_opts * opts, dsd_state * state) //channel map import
       if (field_count == 1)
       {
         sscanf (field, "%ld", &state->trunk_chan_map[chan_number]);
+        sscanf (field, "%ld", &state->trunk_lcn_freq[state->lcn_freq_count]);
+        state->lcn_freq_count++; //keep tally of number of Frequencies imported
       }
       
       field = strtok(NULL, ",");
