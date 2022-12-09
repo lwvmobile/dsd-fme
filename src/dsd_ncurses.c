@@ -1955,7 +1955,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   }
 
-  //Roman DMR End Call Alert Beep
+  //Remus DMR End Call Alert Beep
   // if (opts->call_alert == 1)
   // {
   //   if (state->dmrburstL == 2 && state->dmr_end_alert[0] == 0) //if TLC and flag not tripped
@@ -2417,6 +2417,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //printw ("|        | "); //10 spaces
     printw ("| D XTRA | ");
 
+    attron(COLOR_PAIR(4));
+
     //Frequency Display
     if (state->p25_vc_freq[0] != 0)
     {
@@ -2474,6 +2476,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         }
       }
     }
+
+    if (state->carrier == 1) attron(COLOR_PAIR(3));
+    else attroff(COLOR_PAIR(4));
 
     printw ("\n");
 
@@ -2597,6 +2602,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //printw ("|        | ");
     printw ("| D XTRA | ");
 
+    attron(COLOR_PAIR(4));
+
     //Frequency Display
     if (state->p25_vc_freq[1] != 0)
     {
@@ -2610,7 +2617,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     if(state->dmrburstR == 16) //only during call
     {
-      attron(COLOR_PAIR(5));
       
       //Embedded GPS (not LRRP)
       printw  ("%s ", state->dmr_embedded_gps[1]);
@@ -2655,6 +2661,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         }
       }
     }
+
+    if (state->carrier == 1) attron(COLOR_PAIR(3));
+    else attroff(COLOR_PAIR(4));
 
     printw ("\n");
   }  // end if not MS
@@ -2814,7 +2823,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         }
 
         printw ("%s ", getDateC(call_matrix[9-j][5]) ); //You're welcome
-        printw ("%s \n", getTimeC(call_matrix[9-j][5]) ); //Roman
+        printw ("%s \n", getTimeC(call_matrix[9-j][5]) ); //Remus
       }
 
       //EDACS and ProVoice, outside of timestamp loop

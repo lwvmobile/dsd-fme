@@ -92,7 +92,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
 
     state->dmr_lrrp_source[slot] = (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7];
 
-    //ROMAN! Uncomment these line
+    //Remus! Uncomment these line
     // if ( (state->data_header_format[slot] & 0xF ) != 0x1 && state->data_p_head[slot] == 0)
     //   sprintf (state->dmr_lrrp_gps[slot], "IP DATA SRC [%d] DST [%d] ", (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7], (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4]); 
 
@@ -107,7 +107,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
 
     state->dmr_lrrp_source[slot] = (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7];
 
-    //ROMAN! Uncomment these line
+    //Remus! Uncomment these line
     // if ( (state->data_header_format[slot] & 0xF ) != 0x1 && state->data_p_head[slot] == 0)
     //   sprintf (state->dmr_lrrp_gps[slot], "UDT SRC [%d] DST [%d] ", (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7], (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4]); 
 
@@ -122,7 +122,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
 
     state->dmr_lrrp_source[slot] = (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7];
 
-    //ROMAN! Uncomment this line
+    //Remus! Uncomment this line
     // sprintf (state->dmr_lrrp_gps[slot], "P_HEAD SRC [%d] DST [%d] ", (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7], (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4]); 
 
   }
@@ -136,7 +136,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
 
     state->dmr_lrrp_source[slot] = dheader[3];
 
-    //ROMAN! Uncomment these line
+    //Remus! Uncomment these line
     // if ( (state->data_header_format[slot] & 0xF ) != 0x1 && state->data_p_head[slot] == 0)
     //   sprintf (state->dmr_lrrp_gps[slot], "IPC SRC [%d] DST [%d] ", dheader[3], dheader[2]); 
 
@@ -151,7 +151,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
 
     state->dmr_lrrp_source[slot] = dheader[3];
 
-    //ROMAN! Uncomment these line
+    //Remus! Uncomment these line
     // if ( (state->data_header_format[slot] & 0xF ) != 0x1 && state->data_p_head[slot] == 0)
     //   sprintf (state->dmr_lrrp_gps[slot], "UDP SRC [%d] DST [%d] ", dheader[3], dheader[2]);
 
@@ -169,7 +169,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
     fprintf (stderr, " Destination: ");
     fprintf (stderr, "[%d]", (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4] );
 
-    //ROMAN! Uncomment this line
+    //Remus! Uncomment this line
     // sprintf (state->dmr_lrrp_gps[slot], "SD-D SRC [%d] DST [%d] ", (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7], (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4]); 
 
   }
@@ -181,7 +181,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
     fprintf (stderr, " Destination: ");
     fprintf (stderr, "[%d]", (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4] );
 
-    //ROMAN! Uncomment this line
+    //Remus! Uncomment this line
     // sprintf (state->dmr_lrrp_gps[slot], "SD-R/P SRC [%d] DST [%d] ", (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7], (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4]); 
 
   }
@@ -193,7 +193,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
     fprintf (stderr, " Destination: ");
     fprintf (stderr, "[%d]", (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4] );
 
-    //ROMAN! Uncomment these lines
+    //Remus! Uncomment these lines
     // char rsp[90];
     // sprintf (rsp, " - RSP SRC [%d] DST [%d] ", (dheader[5] <<16 ) + (dheader[6] << 8) + dheader[7], (dheader[2] <<16 ) + (dheader[3] <<8 ) + dheader[4]);
     // strcat (state->dmr_lrrp_gps[slot], rsp);  
@@ -210,7 +210,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
     fprintf (stderr, " Destination:");
     fprintf (stderr, " [%d]", (dheader[5] <<16 ) + (dheader[6] <<8 ) + dheader[7] );
 
-    //ROMAN! Uncomment these lines
+    //Remus! Uncomment these lines
     // char rsp[90];
     // sprintf (rsp, "- RSP REQ ");
     // strcat (state->dmr_lrrp_gps[slot], rsp);

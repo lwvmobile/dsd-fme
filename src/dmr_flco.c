@@ -190,7 +190,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     //group labels
     for (int i = 0; i < state->group_tally; i++)
     {
-      //ROMAN! Change target to source if you prefer
+      //Remus! Change target to source if you prefer
       if (state->group_array[i].groupNumber == target)
       {
         fprintf (stderr, "%s", KCYN);

@@ -618,7 +618,7 @@ typedef struct
   //char dmr_branding[25]; //may need higher value?
   char dmr_branding_sub[25];
 
-  //Roman DMR End Call Alert Beep
+  //Remus DMR End Call Alert Beep
   int dmr_end_alert[2]; //dmr TLC end call alert beep has already played once flag
 
 } dsd_state;

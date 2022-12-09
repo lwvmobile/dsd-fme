@@ -737,7 +737,7 @@ initState (dsd_state * state)
   state->nxdn_location_sys_code = 0;
   sprintf (state->nxdn_location_category, "%s", " "); 
 
-  //Roman DMR End Call Alert Beep
+  //Remus DMR End Call Alert Beep
   state->dmr_end_alert[0] = 0;
   state->dmr_end_alert[1] = 0;
 
@@ -1924,7 +1924,7 @@ main (int argc, char **argv)
     if((strncmp(opts.audio_out_dev, "/dev/dsp", 8) == 0))
     {
       sprintf (opts.audio_out_dev, "%s", "pulse");
-      fprintf (stderr, "I told you to stop trying to use /dev/dsp, Roman!!\n");
+      fprintf (stderr, "I told you to stop trying to use /dev/dsp!!\n");
       opts.audio_out_type = 0;
     }
 
