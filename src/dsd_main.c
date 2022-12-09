@@ -82,18 +82,46 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   {
     if (state->p25_cc_freq != 0) 
     {
+      //cap+ increment rest channel by one, or two? 
+      if (state->dmr_rest_channel != -1)
+      {
+        if (state->dmr_rest_channel > 6) //7 and 8 share the same rf frequency
+        {
+          state->dmr_rest_channel = 1;
+        }
+        else state->dmr_rest_channel += 2;
+
+        //extra sanity check
+        if (state->dmr_rest_channel > 8) state->dmr_rest_channel = 1;
+
+        if (state->trunk_chan_map[state->dmr_rest_channel] != 0)
+        {
+          state->p25_cc_freq = state->trunk_chan_map[state->dmr_rest_channel];
+        }
+        //extra redundant failsafe
+        else if (state->trunk_chan_map[1] != 0)
+        {
+          state->p25_cc_freq = state->trunk_chan_map[1];
+        }
+        //if all else fail, let frame sync start hunting for it 
+        else state->dmr_rest_channel = -1;
+
+      }
+
       if (opts->use_rigctl == 1) //rigctl tuning
       {
         //may or may not use setmod here, let user control it instead?
         if (opts->frame_nxdn48 == 1) SetModulation(opts->rigctl_sockfd, 6250);
         else SetModulation(opts->rigctl_sockfd, 12500); 
         SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+        state->dmr_rest_channel = -1; //maybe?
       }
 
       else if (opts->audio_in_type == 3) //rtl_fm tuning
       {
         //UDP command to tune the RTL dongle
         rtl_udp_tune(opts, state, state->p25_cc_freq);
+        state->dmr_rest_channel = -1; //maybe?
       }
 
       opts->p25_is_tuned = 0; 
@@ -173,7 +201,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     // state->p25_vc_freq[0] = 0;
     // state->p25_vc_freq[1] = 0;
   }
-  
+    
   state->lastp25type = 0;
   state->repeat = 0;
   state->nac = 0;
@@ -306,6 +334,17 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   //zero out vc frequencies?
   // state->p25_vc_freq[0] = 0;
   // state->p25_vc_freq[1] = 0;
+
+  if (state->last_cc_sync_time > 30) //thirty seconds of no carrier
+  {
+    state->dmr_rest_channel = -1;
+    state->p25_vc_freq[0] = 0;
+    state->p25_vc_freq[1] = 0;
+    state->dmr_mfid = 0; 
+    sprintf(state->dmr_branding_sub, "%s", "");
+    sprintf(state->dmr_branding, "%s", "");
+    opts->p25_is_tuned = 0;
+  }
 
 } //nocarrier
 

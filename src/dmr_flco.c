@@ -468,7 +468,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     state->dmr_mfid = 0x10;
     sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Voice Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
-    sprintf (state->dmr_site_parms, "N%d-S%d", con_netid, con_siteid);
+    sprintf (state->dmr_site_parms, "N%d - S%d ", con_netid, con_siteid);
   }
     
   else if (slco == 0xA)
@@ -476,7 +476,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     state->dmr_mfid = 0x10;
     sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Control Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
-    sprintf (state->dmr_site_parms, "N%d-S%d", con_netid, con_siteid);
+    sprintf (state->dmr_site_parms, "N%d - S%d ", con_netid, con_siteid);
   }
    
   else if (slco == 0xF)

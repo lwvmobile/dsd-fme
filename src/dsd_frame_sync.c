@@ -150,7 +150,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
   //start control channel hunting if using trunking, time needs updating on each successful sync
   //will need to assign frequencies to a CC array for P25 since that isn't imported from CSV
-  if (opts->p25_is_tuned == 0 && opts->p25_trunk == 1 && ( (time(NULL) - state->last_cc_sync_time) > (opts->trunk_hangtime + 2) ) )
+  if (state->dmr_rest_channel == -1 && opts->p25_is_tuned == 0 && opts->p25_trunk == 1 && ( (time(NULL) - state->last_cc_sync_time) > (opts->trunk_hangtime + 2) ) )
   {
 
     //test to switch back to 10/4 P1 QPSK for P25 FDMA CC
@@ -881,6 +881,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL); 
                 return (10);
               }
               else
@@ -900,6 +901,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL); 
                 return (11); //11
               }
             }
@@ -924,6 +926,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL);
                 return (33);
               }
               else
@@ -943,6 +946,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL);
                 return (32);
               }
             } /* End if(strcmp (synctest, DMR_DIRECT_MODE_TS1_DATA_SYNC) == 0) */
@@ -967,6 +971,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL);
                 return (33);
               }
               else
@@ -986,6 +991,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL);
                 return (32);
               }
             } /* End if(strcmp (synctest, DMR_DIRECT_MODE_TS2_DATA_SYNC) == 0) */
@@ -1014,6 +1020,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL); 
                 return (12);
               }
 
@@ -1030,6 +1037,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL); 
                 return (13);
               }
             }
@@ -1058,6 +1066,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL);
                 return (32); //treat Direct Mode same as MS mode for now
               }
               else
@@ -1097,6 +1106,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL);
                 return (32);
               }
               else
@@ -1112,6 +1122,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 {
                   pa_simple_flush(opts->pulse_raw_dev_out, NULL);
                 }
+                state->last_cc_sync_time = time(NULL);
                 return (33);
               }
             } //End if(strcmp (synctest, DMR_DIRECT_MODE_TS2_VOICE_SYNC) == 0)

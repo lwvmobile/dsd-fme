@@ -406,9 +406,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         //tg and channel info for trunking purposes
         uint8_t t_tg[9];
-        uint8_t t_ch[9];
         memset (t_tg, 0, sizeof(t_tg));
-        memset (t_ch, 0, sizeof(t_ch));        
 
         k = 0;
         if (rest_channel != state->dmr_rest_channel)
@@ -424,6 +422,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (state->trunk_chan_map[rest_channel] != 0)
         {
           state->p25_cc_freq = state->trunk_chan_map[rest_channel];
+          //set to always tuned
+          opts->p25_is_tuned = 1;
         }
         
         fprintf (stderr, " Capacity Plus Channel Status - Rest Channel %d", rest_channel);
@@ -438,7 +438,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             fprintf (stderr, " %03d ", tg);
             //add values to trunking tg/channel potentials
             t_tg[i] = tg;
-            t_ch[i] = i;
             k++;
             
           }
@@ -454,9 +453,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "%s", KNRM);
 
         //tuning logic with active tg's in active channels
-        if (state->dmrburstL != 16 && state->dmrburstR != 16) //if neither current slot has a voice in it
+        //if neither current slot has vlc, pi, or voice in it currently
+        //may need to fully write this out if this statement doesn't work the way I want it to
+        if (state->dmrburstL != (16 || 0 || 1) && state->dmrburstR != (16 || 0 || 1) ) 
         {
-          for (j = 0; i < 8; j++) //go through the channels stored looking for active ones to tune to
+          for (j = 0; j < 8; j++) //go through the channels stored looking for active ones to tune to
           {
             char mode[8]; //allow, block, digital, enc, etc
             for (int i = 0; i < state->group_tally; i++)
@@ -472,14 +473,14 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             //also, some active channels reported a tg value of 0, so could be bad decode, or unit-to-unit?
             if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0)) //&& j+1 != restchannel
             {
-              if (state->trunk_lcn_freq[t_ch[j]] != 0) //if we have a valid frequency
+              if (state->trunk_chan_map[j+1] != 0) //if we have a valid frequency
               {
                 //RIGCTL
                 if (opts->use_rigctl == 1)
                 {
                   SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength more than anything, 12.5 should be safe for DMR
-                  SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[t_ch[j]]); //minus one because our index starts at zero
-                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[t_ch[j]];
+                  SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+1]); //minus one because our index starts at zero
+                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
                   opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
                   j = 11; //break loop
                 }
@@ -488,8 +489,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               //rtl_udp
               else if (opts->audio_in_type == 3)
               {
-                rtl_udp_tune (opts, state, state->trunk_chan_map[t_ch[j]]);
-                state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[t_ch[j]];
+                rtl_udp_tune (opts, state, state->trunk_chan_map[j+1]);
+                state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
                 opts->p25_is_tuned = 1;
                 j = 11; //break loop
               }
@@ -505,6 +506,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
     //Connect+ Section
     if (csbk_fid == 0x06)
     {
+
+      //users need to set channel 0 to their current cc frequency for now
+      if (state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
+
       if (csbk_o == 0x01)
       {
         //initial line break
@@ -523,9 +528,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
       if (csbk_o == 0x03)
       {
-        //shim in chan map 0 as the cc frequency, user will need to specify it in the channel map file
-        if (state->p25_cc_freq != 0 && state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
-
+        
         //initial line break
         fprintf (stderr, "\n");
         uint32_t srcAddr = ( (cs_pdu[2] << 16) + (cs_pdu[3] << 8) + cs_pdu[4] ); 
@@ -562,7 +565,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //need channel map frequencies and stuff, also way to figure out control channel frequency? (channel 0 from channel map?)
         if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0)) 
         {
-          if (state->trunk_lcn_freq[lcn] != 0) //if we have a valid frequency
+          if (state->trunk_chan_map[lcn] != 0) //if we have a valid frequency
           {
             //RIGCTL
             if (opts->use_rigctl == 1)
