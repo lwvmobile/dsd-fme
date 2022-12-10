@@ -82,31 +82,15 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   {
     if (state->p25_cc_freq != 0) 
     {
-      //cap+ increment rest channel by one, or two? 
+
+      //cap+ rest channel - redundant?
       if (state->dmr_rest_channel != -1)
       {
-        if (state->dmr_rest_channel > 6) //7 and 8 share the same rf frequency
-        {
-          state->dmr_rest_channel = 1;
-        }
-        else state->dmr_rest_channel += 2;
-
-        //extra sanity check
-        if (state->dmr_rest_channel > 8) state->dmr_rest_channel = 1;
-
         if (state->trunk_chan_map[state->dmr_rest_channel] != 0)
         {
           state->p25_cc_freq = state->trunk_chan_map[state->dmr_rest_channel];
         }
-        //extra redundant failsafe
-        else if (state->trunk_chan_map[1] != 0)
-        {
-          state->p25_cc_freq = state->trunk_chan_map[1];
-        }
-        //if all else fail, let frame sync start hunting for it 
-        else state->dmr_rest_channel = -1;
-
-      }
+      } 
 
       if (opts->use_rigctl == 1) //rigctl tuning
       {
@@ -330,10 +314,6 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset(state->dmr_alias_block_segment, 0, sizeof(state->dmr_alias_block_segment));
   memset(state->dmr_embedded_gps, 0, sizeof(state->dmr_embedded_gps));
   memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
-
-  //zero out vc frequencies?
-  // state->p25_vc_freq[0] = 0;
-  // state->p25_vc_freq[1] = 0;
 
   if (time(NULL) - state->last_cc_sync_time > 30) //thirty seconds of no carrier
   {
