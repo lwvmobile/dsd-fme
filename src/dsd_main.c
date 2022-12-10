@@ -335,7 +335,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   // state->p25_vc_freq[0] = 0;
   // state->p25_vc_freq[1] = 0;
 
-  if (state->last_cc_sync_time > 30) //thirty seconds of no carrier
+  if (time(NULL) - state->last_cc_sync_time > 30) //thirty seconds of no carrier
   {
     state->dmr_rest_channel = -1;
     state->p25_vc_freq[0] = 0;
