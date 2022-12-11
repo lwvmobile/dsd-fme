@@ -369,6 +369,10 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     tact_okay = 0;
     emb_ok = 0;
 
+    //Extra safeguards to break loop
+    // if ( (vc1 > 7 && vc2 > 7) ) goto END;
+    if ( (vc1 > 14 || vc2 > 14) ) goto END;
+
   }
 
   SKIP:

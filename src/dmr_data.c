@@ -75,7 +75,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   else
   {
     cach_okay = -1;
-    if (opts->aggressive_framesync == 2)
+    if (opts->aggressive_framesync == 1)
     {
       SlotTypeOk = 0;
       goto END;

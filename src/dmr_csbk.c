@@ -48,6 +48,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       //7.1.1.1.1 Channel Grant CSBK/MBC PDU
       if (csbk_o > 47 && csbk_o < 53 )
       {
+
+        //users will need to import the cc frequency as channel 0 for now
+        if (state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
+
         //initial line break
         fprintf (stderr, "\n");
 
@@ -66,6 +70,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         else if (lpchannum == 0xFFF) fprintf (stderr, " - Absolute"); //This is from an MBC, signalling an absolute and not a logical
         else fprintf (stderr, " - Logical");
 
+        //dsdplus channel values
+        uint16_t pluschannum = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 13); //lcn bit included
+        pluschannum += 1; //add a one for good measure
+
         //LCN conveyed here is the tdma timeslot variety, and not the RF frequency variety
         uint8_t lcn = cs_pdu_bits[28];
         //the next three bits can have different meanings depending on which item above for context
@@ -77,7 +85,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
 
         fprintf (stderr, "\n");
-        fprintf (stderr, "  CHAN [%03X][%04d] - LCN/TS [%d] - Target [%08d] - Source [%08d]", lpchannum, lpchannum, lcn, target, source);
+        //added my best guess as to how dsdplus arrives at a dmr channel value (seems pretty consistent) as C+
+        fprintf (stderr, "  Ch [%03X] Cd [%04d] C+ [%04d] - TS [%d] - Target [%08d] - Source [%08d]", lpchannum, lpchannum, pluschannum, lcn, target, source);
+
         if (st2) fprintf (stderr, " Emergency");
 
         if (lpchannum == 0xFFF) //This is from an MBC, signalling an absolute and not a logical

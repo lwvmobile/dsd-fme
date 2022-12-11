@@ -1379,7 +1379,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     }
     if (choice == 14) //reset call history (usually if janky output when switching modes)
     {
-      for (short int k = 0; k < 9; k++)
+      for (short int k = 0; k <= 9; k++)
       {
         call_matrix[k][0] = 0;
         call_matrix[k][1] = 0;
@@ -2432,7 +2432,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     if(state->dmrburstL == 16) //only during call
     {
-      attron(COLOR_PAIR(5));
 
       //Embedded GPS (not LRRP)
       printw  ("%s ", state->dmr_embedded_gps[0]);
