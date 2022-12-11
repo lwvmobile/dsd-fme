@@ -2241,7 +2241,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (lls > 1 && lls < 30)
     {
       printw ("DMR BS - DCC: [%02i] ", dcc);
-      if (state->dmr_mfid > -1) printw ("%s %s", state->dmr_branding, state->dmr_branding_sub);
+      printw ("%s %s", state->dmr_branding, state->dmr_branding_sub);
       printw ("%s", state->dmr_site_parms); //site id, net id, etc 
       if (state->dmr_rest_channel > 0)
       {

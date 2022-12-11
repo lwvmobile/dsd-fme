@@ -170,7 +170,12 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     //zero out nxdn site/srv/cch info if not trunking
     state->nxdn_location_site_code = 0;
     state->nxdn_location_sys_code = 0;
-    sprintf (state->nxdn_location_category, "%s", " "); 
+    sprintf (state->nxdn_location_category, "%s", " ");
+
+    //dmr mfid branding and site parms
+    sprintf(state->dmr_branding_sub, "%s", "");
+    sprintf(state->dmr_branding, "%s", "");
+    sprintf (state->dmr_site_parms, "%s", ""); 
   }
 
   //zero out after x second hangtime when trunking to prevent premature zeroing on these variables
@@ -181,9 +186,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     state->lastsrc = 0;
     state->lasttgR = 0;
     state->lastsrcR = 0;
-    //zero out vc frequencies?
-    // state->p25_vc_freq[0] = 0;
-    // state->p25_vc_freq[1] = 0;
+
   }
     
   state->lastp25type = 0;
@@ -287,13 +290,11 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
   sprintf (state->nxdn_call_type, "%s", "");
 
-  sprintf(state->dmr_branding_sub, "%s", "");
-  sprintf(state->dmr_branding, "%s", "");
-  sprintf (state->dmr_site_parms, "%s", ""); //may not zero this out
-  state->dmr_mfid = -1;
+  //dmr overaching manufacturer in use for a particular system or radio  
+  // state->dmr_mfid = -1;
 
   //dmr slco stuff
-  memset(state->dmr_cach_fragment, 0, sizeof(state->dmr_cach_fragment));
+  memset(state->dmr_cach_fragment, 1, sizeof(state->dmr_cach_fragment));
   state->dmr_cach_counter = 0;
 
   //initialize unified dmr pdu 'superframe'
@@ -320,9 +321,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     state->dmr_rest_channel = -1;
     state->p25_vc_freq[0] = 0;
     state->p25_vc_freq[1] = 0;
-    state->dmr_mfid = 0; 
+    state->dmr_mfid = -1; 
     sprintf(state->dmr_branding_sub, "%s", "");
     sprintf(state->dmr_branding, "%s", "");
+    sprintf (state->dmr_site_parms, "%s", ""); 
     opts->p25_is_tuned = 0;
   }
 
@@ -771,7 +773,7 @@ initState (dsd_state * state)
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
 
   //dmr slco stuff
-  memset(state->dmr_cach_fragment, 0, sizeof(state->dmr_cach_fragment));
+  memset(state->dmr_cach_fragment, 1, sizeof(state->dmr_cach_fragment));
   state->dmr_cach_counter = 0;
 
   //embedded signalling

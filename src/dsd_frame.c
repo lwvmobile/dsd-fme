@@ -145,20 +145,22 @@ processFrame (dsd_opts * opts, dsd_state * state)
       else if (state->dmr_mfid == 0x68) sprintf (state->dmr_branding, "%s", "Hytera");
       else if (state->dmr_mfid == 0x58) sprintf (state->dmr_branding, "%s", "Tait");
       
-      else if (state->dmr_mfid == 0x20) sprintf (state->dmr_branding, "%s", "JVC Kenwood");
-      else if (state->dmr_mfid == 0x04) sprintf (state->dmr_branding, "%s", "Flyde Micro");
-      else if (state->dmr_mfid == 0x05) sprintf (state->dmr_branding, "%s", "PROD-EL SPA");
-      else if (state->dmr_mfid == 0x06) sprintf (state->dmr_branding, "%s", ""); //trident
-      else if (state->dmr_mfid == 0x07) sprintf (state->dmr_branding, "%s", "RADIODATA");
-      else if (state->dmr_mfid == 0x08) sprintf (state->dmr_branding, "%s", "Hytera");
-      else if (state->dmr_mfid == 0x09) sprintf (state->dmr_branding, "%s", "ASELSAN");
-      else if (state->dmr_mfid == 0x0A) sprintf (state->dmr_branding, "%s", "Kirisun");
-      else if (state->dmr_mfid == 0x0B) sprintf (state->dmr_branding, "%s", "DMR Association");
-      else if (state->dmr_mfid == 0x13) sprintf (state->dmr_branding, "%s", "EMC S.P.A.");
-      else if (state->dmr_mfid == 0x1C) sprintf (state->dmr_branding, "%s", "EMC S.P.A.");
-      else if (state->dmr_mfid == 0x33) sprintf (state->dmr_branding, "%s", "Radio Activity");
-      else if (state->dmr_mfid == 0x3C) sprintf (state->dmr_branding, "%s", "Radio Activity");
-      else if (state->dmr_mfid == 0x77) sprintf (state->dmr_branding, "%s", "Vertex Standard");
+      //disabling these due to random data decodes setting an odd mfid, could be legit, but only for that one packet?
+      //or, its just a decode error somewhere
+      // else if (state->dmr_mfid == 0x20) sprintf (state->dmr_branding, "%s", "JVC Kenwood");
+      // else if (state->dmr_mfid == 0x04) sprintf (state->dmr_branding, "%s", "Flyde Micro");
+      // else if (state->dmr_mfid == 0x05) sprintf (state->dmr_branding, "%s", "PROD-EL SPA");
+      // else if (state->dmr_mfid == 0x06) sprintf (state->dmr_branding, "%s", "Motorola"); //trident/moto con+
+      // else if (state->dmr_mfid == 0x07) sprintf (state->dmr_branding, "%s", "RADIODATA");
+      // else if (state->dmr_mfid == 0x08) sprintf (state->dmr_branding, "%s", "Hytera");
+      // else if (state->dmr_mfid == 0x09) sprintf (state->dmr_branding, "%s", "ASELSAN");
+      // else if (state->dmr_mfid == 0x0A) sprintf (state->dmr_branding, "%s", "Kirisun");
+      // else if (state->dmr_mfid == 0x0B) sprintf (state->dmr_branding, "%s", "DMR Association");
+      // else if (state->dmr_mfid == 0x13) sprintf (state->dmr_branding, "%s", "EMC S.P.A.");
+      // else if (state->dmr_mfid == 0x1C) sprintf (state->dmr_branding, "%s", "EMC S.P.A.");
+      // else if (state->dmr_mfid == 0x33) sprintf (state->dmr_branding, "%s", "Radio Activity");
+      // else if (state->dmr_mfid == 0x3C) sprintf (state->dmr_branding, "%s", "Radio Activity");
+      // else if (state->dmr_mfid == 0x77) sprintf (state->dmr_branding, "%s", "Vertex Standard");
 
       //disable so radio id doesn't blink in and out during ncurses and aggressive_framesync
       state->nac = 0;

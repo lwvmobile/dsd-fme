@@ -45,6 +45,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     is_cap_plus = 1;
     restchannel = (int)ConvertBitIntoBytes(&lc_bits[48], 8);
     source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16);
+    sprintf (state->dmr_branding, "%s", "Motorola");
+    sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
   }
 
   
@@ -267,7 +269,7 @@ uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25])
   {
     //reset the full cach, even if we aren't going to use it, may be beneficial for next time
     state->dmr_cach_counter = 0; //first fragment, set to zero.
-    memset (state->dmr_cach_fragment, 0, sizeof (state->dmr_cach_fragment));
+    memset (state->dmr_cach_fragment, 1, sizeof (state->dmr_cach_fragment));
 
     //seperate
     for (i = 0; i < 17; i++)
@@ -288,7 +290,7 @@ uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25])
     h1 = Hamming17123 (slco_bits + 0);
 
     //run single - manual would suggest that though this exists, there is no support? or perhaps its manufacturer only thing?
-    if (h1) ; // dmr_slco (opts, state, slco_bits); //random false positibes for con+, so diabled for now
+    if (h1) ; // dmr_slco (opts, state, slco_bits); //random false positives and sets bad parms/mfid etc
     else
     {
       err = 1;
@@ -301,7 +303,7 @@ uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25])
   {
     //reset the full cach and counter
     state->dmr_cach_counter = 0; 
-    memset (state->dmr_cach_fragment, 0, sizeof (state->dmr_cach_fragment));
+    memset (state->dmr_cach_fragment, 1, sizeof (state->dmr_cach_fragment));
   } 
   if (lcss == 3) state->dmr_cach_counter++; //continuation, so increment counter by one.
   if (lcss == 2) //final segment - assemble, de-interleave, hamming, crc, and execute
@@ -315,7 +317,7 @@ uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25])
     //zero out complete fragment array
     lcss = 5; //toss away value
     state->dmr_cach_counter = 0;
-    memset (state->dmr_cach_fragment, 0, sizeof (state->dmr_cach_fragment));
+    memset (state->dmr_cach_fragment, 1, sizeof (state->dmr_cach_fragment));
     err = 1; 
     return (err);
   }
@@ -451,13 +453,13 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   {
     fprintf (stderr, " C_SYS_PARMS - %s - Net ID: %d Site ID: %d - Reg Req: %d - CSC: %d ", model_str, net, site, reg, csc);
     //add string for ncurses terminal display - no par since slc doesn't carrry that value
-    sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d", model_str, net, site);
+    sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d ", model_str, net, site);
   }
   else if (slco == 0x3) //P_SYS_Parms
   {
     fprintf (stderr, " P_SYS_PARMS - %s - Net ID: %d Site ID: %d - Comp Ch: %d ", model_str, net, site, reg); 
     //add string for ncurses terminal display - no par since slc doesn't carrry that value
-    sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d", model_str, net, site);
+    sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d ", model_str, net, site);
   }
   else if (slco == 0x0) //null
     fprintf (stderr, " SLCO NULL ");
@@ -466,6 +468,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   else if (slco == 0x9)
   {
     state->dmr_mfid = 0x10;
+    sprintf (state->dmr_branding, "%s", "Motorola");
     sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Voice Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
     sprintf (state->dmr_site_parms, "N%d - S%d ", con_netid, con_siteid);
@@ -474,6 +477,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   else if (slco == 0xA)
   {
     state->dmr_mfid = 0x10;
+    sprintf (state->dmr_branding, "%s", "Motorola");
     sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Control Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
     sprintf (state->dmr_site_parms, "N%d - S%d ", con_netid, con_siteid);
@@ -482,6 +486,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   else if (slco == 0xF)
   {
     state->dmr_mfid = 0x10;
+    sprintf (state->dmr_branding, "%s", "Motorola");
     sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
     fprintf (stderr, " SLCO Capacity Plus Rest Channel %d", restchannel);
     state->dmr_rest_channel = restchannel;

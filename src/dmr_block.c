@@ -228,7 +228,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
     state->data_block_counter[slot]++; //increment the counter since this counts against the data blocks
 
     //set overarching manufacturer in use when non-standard feature id set is up
-    if (dheader[1] != 0) state->dmr_mfid = dheader[1];
+    //if (dheader[1] != 0) state->dmr_mfid = dheader[1]; //diable, will only set in link control or csbk for now (random manufacturers getting set, bad decode? or random feature?)
 
     //assign prop header pdu to 'superframe'
     uint8_t blocks = state->data_header_blocks[slot] - 1;
@@ -458,5 +458,5 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
   memset (state->data_header_blocks, 0, sizeof(state->data_header_blocks));
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
   memset (state->dmr_lrrp_source, 0, sizeof(state->dmr_lrrp_source));
-  memset (state->dmr_cach_fragment, 0, sizeof (state->dmr_cach_fragment));
+  memset (state->dmr_cach_fragment, 1, sizeof (state->dmr_cach_fragment));
 }

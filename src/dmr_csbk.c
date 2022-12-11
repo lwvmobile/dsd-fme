@@ -36,7 +36,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
     csbk     = ((cs_pdu[0] & 0x3F) << 8) | cs_pdu[1]; //opcode and fid combo set
 
     //set overarching manufacturer in use when non-standard feature id set is up
-    if (csbk_fid != 0) state->dmr_mfid = csbk_fid;
+    if (csbk_fid != 0) state->dmr_mfid = csbk_fid; 
 
     //TIII standard with fid of 0 - (opcodes in decimal)
     if (0 == 0) //standard feature set for TIII //csbk_fid == 0
@@ -148,39 +148,45 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             state->p25_vc_freq[1] = freq;
           }
 
-          char mode[8]; //allow, block, digital, enc, etc
-
-          for (int i = 0; i < state->group_tally; i++)
+          //if neither current slot has vlc, pi, or voice in it currently
+          //may need to fully write this out if this statement doesn't work the way I want it to
+          if (state->dmrburstL != (16 || 0 || 1) && state->dmrburstR != (16 || 0 || 1) )
           {
-            if (state->group_array[i].groupNumber == target)
-            {
-              fprintf (stderr, " [%s]", state->group_array[i].groupName);
-              strcpy (mode, state->group_array[i].groupMode);
-            }
-          } 
+            char mode[8]; //allow, block, digital, enc, etc
 
-          if (state->p25_cc_freq != 0 && opts->p25_trunk == 1  && (strcmp(mode, "DE") != 0)) 
-          {
-            if (freq != 0) //if we have a valid frequency
+            for (int i = 0; i < state->group_tally; i++)
             {
-              //RIGCTL
-              if (opts->use_rigctl == 1)
+              if (state->group_array[i].groupNumber == target)
               {
-                SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength more than anything, 12.5 should be safe for DMR
-                SetFreq(opts->rigctl_sockfd, freq); //minus one because our index starts at zero
+                fprintf (stderr, " [%s]", state->group_array[i].groupName);
+                strcpy (mode, state->group_array[i].groupMode);
+              }
+            } 
+
+            if (state->p25_cc_freq != 0 && opts->p25_trunk == 1  && (strcmp(mode, "DE") != 0)) 
+            {
+              if (freq != 0) //if we have a valid frequency
+              {
+                //RIGCTL
+                if (opts->use_rigctl == 1)
+                {
+                  SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength more than anything, 12.5 should be safe for DMR
+                  SetFreq(opts->rigctl_sockfd, freq); //minus one because our index starts at zero
+                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+                  opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+                }
+              }
+
+              //rtl_udp
+              else if (opts->audio_in_type == 3)
+              {
+                rtl_udp_tune (opts, state, freq);
                 state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
-                opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+                opts->p25_is_tuned = 1;
               }
             }
-
-            //rtl_udp
-            else if (opts->audio_in_type == 3)
-            {
-              rtl_udp_tune (opts, state, freq);
-              state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
-              opts->p25_is_tuned = 1;
-            }
           }
+
         }
         
       }
@@ -246,7 +252,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, " C_ALOHA_SYS_PARMS - %s - Net ID: %d Site ID: %d Par: %d \n  Reg Req: %d V: %d MS: %d", model_str, net, site, par, regreq, version, target);
 
         //add string for ncurses terminal display - no par since slc doesn't carrry that value
-        sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d", model_str, net, site);
+        sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d ", model_str, net, site);
 
         //debug print
         //fprintf (stderr, " Sys ID Code: [%04X]", sysidcode);
@@ -278,14 +284,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (p_kind == 0) fprintf (stderr, " Disable Target PTT (DIS_PTT)");
         if (p_kind == 1) fprintf (stderr, " Enable Target PTT (EN_PTT)");
         if (p_kind == 2) fprintf (stderr, " Private Call (ILLEGALLY_PARKED)");
-        if (p_kind == 3) fprintf (stderr, " Enable Target MS PTT(EN_PTT_ONE_MS)");//EN_PTT_ONE_MS
+        if (p_kind == 3) fprintf (stderr, " Enable Target MS PTT (EN_PTT_ONE_MS)");
 
         fprintf (stderr, "\n");
         fprintf (stderr, "  Target [%08d] - Source [%08d]", target, source);
 
-        //experimental, but this may work work if we stay on this channel
-        //may be reversed considering we won't know exactly who is going to answer first
-        //only good for an initial protect clear all as well
+        //Illegally Parked is another way to say a private call is outbound on this channel
+        //so, we can use this as a form of 'link control'
         if (p_kind == 2)
         {
           //don't set this if operating out of dmr mono or using call alert beep
@@ -403,6 +408,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       //a 'follow rest channel on no sync' only approach
       if (csbk_o == 0x3E)
       {
+
         //initial line break
         fprintf (stderr, "\n");
         fprintf (stderr, "%s", KYEL);
@@ -459,6 +465,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         tghex = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
         //fprintf (stderr, "\n   TG Hex = 0x%06X", tghex);
         state->dmr_mfid = 0x10;
+        sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
         fprintf (stderr, "%s", KNRM);
 
@@ -533,6 +540,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, " Connect Plus Neighbors\n");
         fprintf (stderr, "  NB1(%02d), NB2(%02d), NB3(%02d), NB4(%02d), NB5(%02d)", nb1, nb2, nb3, nb4, nb5);
         state->dmr_mfid = 0x06; 
+        sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
       }
 
@@ -549,6 +557,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, " Connect Plus Voice Channel Grant\n");
         fprintf (stderr, "  srcAddr(%8d), grpAddr(%8d), LCN(%d), TS(%d)",srcAddr, grpAddr, lcn, tslot);
         state->dmr_mfid = 0x06; 
+        sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
         // state->dmr_vc_lcn = lcn; 
         // state->dmr_vc_lsn = lcn * (tslot+1);
@@ -570,31 +579,37 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             fprintf (stderr, " [%s]", state->group_array[i].groupName);
             strcpy (mode, state->group_array[i].groupMode);
           }
-        } 
+        }
 
-        //need channel map frequencies and stuff, also way to figure out control channel frequency? (channel 0 from channel map?)
-        if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0)) 
+        //voice calls can occur on the con+ control channel, so we need the same check for voice as we do for cap+
+        //if neither current slot has vlc, pi, or voice in it currently
+        //may need to fully write this out if this statement doesn't work the way I want it to
+        if (state->dmrburstL != (16 || 0 || 1) && state->dmrburstR != (16 || 0 || 1) )
         {
-          if (state->trunk_chan_map[lcn] != 0) //if we have a valid frequency
+          //need channel map frequencies and stuff, also way to figure out control channel frequency? (channel 0 from channel map?)
+          if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0)) 
           {
-            //RIGCTL
-            if (opts->use_rigctl == 1)
+            if (state->trunk_chan_map[lcn] != 0) //if we have a valid frequency
             {
-              SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength more than anything, 12.5 should be safe for DMR
-              SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[lcn]); //minus one because our index starts at zero
+              //RIGCTL
+              if (opts->use_rigctl == 1)
+              {
+                SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength more than anything, 12.5 should be safe for DMR
+                SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[lcn]); //minus one because our index starts at zero
+                state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
+                opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+              }
+            }
+
+            //rtl_udp
+            else if (opts->audio_in_type == 3)
+            {
+              rtl_udp_tune (opts, state, state->trunk_chan_map[lcn]);
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
-              opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+              opts->p25_is_tuned = 1;
             }
           }
-
-          //rtl_udp
-					else if (opts->audio_in_type == 3)
-					{
-						rtl_udp_tune (opts, state, state->trunk_chan_map[lcn]);
-						state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
-						opts->p25_is_tuned = 1;
-					}
-        }
+        }  
 
       }
 
@@ -610,6 +625,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, " Connect Plus Data Channel Grant\n"); 
         fprintf (stderr, "  srcAddr(%8d), grpAddr(%8d), LCN(%d), TS(%d)",srcAddr, grpAddr, lcn, tslot);
         state->dmr_mfid = 0x06; 
+        sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
       }
 
@@ -625,6 +641,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, " Connect Plus Terminate Channel Grant\n"); //Data only shows a srcAddr??
         fprintf (stderr, "  srcAddr(%8d), grpAddr(%8d), LCN(%d), TS(%d)",srcAddr, grpAddr, lcn, tslot);
         state->dmr_mfid = 0x06; 
+        sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
       }
 
@@ -635,6 +652,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "%s", KYEL);
         fprintf (stderr, " Connect Plus Registration Request");
         state->dmr_mfid = 0x06; 
+        sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
       }
 
@@ -645,6 +663,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "%s", KYEL);
         fprintf (stderr, " Connect Plus Registration Response");
         state->dmr_mfid = 0x06; 
+        sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
       }
 
@@ -655,6 +674,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "%s", KYEL);
         fprintf (stderr, " Connect Plus Talkgroup Affiliation");
         state->dmr_mfid = 0x06; 
+        sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
       }
 
