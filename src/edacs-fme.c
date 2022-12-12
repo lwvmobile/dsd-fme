@@ -265,7 +265,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
             if (opts->use_rigctl == 1)
             {
-              SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength, but we want a wide one for now
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
       		    SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1; 
@@ -366,7 +366,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
               if (opts->use_rigctl == 1)
               {
-                SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength, but we want a wide one for now
+                if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
       		      SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because our index starts at zero
                 state->edacs_tuned_lcn = lcn;
                 opts->p25_is_tuned = 1; 

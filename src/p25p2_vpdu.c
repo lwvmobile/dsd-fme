@@ -120,7 +120,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					//rigctl
           if (opts->use_rigctl == 1)
 					{
-						SetModulation(opts->rigctl_sockfd, 12500);
+						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
       			SetFreq(opts->rigctl_sockfd, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
@@ -182,10 +182,10 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							state->symbolCenter = 3;
 						}	
 					}
-					//do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
+					
           if (opts->use_rigctl == 1)
 					{
-						SetModulation(opts->rigctl_sockfd, 12500);
+						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
       			SetFreq(opts->rigctl_sockfd, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
@@ -283,7 +283,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						//rigctl
 						if (opts->use_rigctl == 1)
 						{
-							SetModulation(opts->rigctl_sockfd, 12500);
+							if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
 							SetFreq(opts->rigctl_sockfd, tunable_freq);
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
@@ -358,7 +358,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					//rigctl
           if (opts->use_rigctl == 1)
 					{
-						SetModulation(opts->rigctl_sockfd, 12500);
+						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
       			SetFreq(opts->rigctl_sockfd, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
@@ -428,7 +428,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					//rigctl
           if (opts->use_rigctl == 1)
 					{
-						SetModulation(opts->rigctl_sockfd, 12500);
+						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
       			SetFreq(opts->rigctl_sockfd, freq);
 						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
@@ -525,10 +525,10 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 								state->symbolCenter = 3;
 							}	
 						}
-						//do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
+						
 						if (opts->use_rigctl == 1)
 						{
-							SetModulation(opts->rigctl_sockfd, 12500);
+							if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
 							SetFreq(opts->rigctl_sockfd, tunable_freq);
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
@@ -637,7 +637,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						//rigctl
 						if (opts->use_rigctl == 1)
 						{
-							SetModulation(opts->rigctl_sockfd, 12500);
+							if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
 							SetFreq(opts->rigctl_sockfd, tunable_freq);
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
@@ -736,7 +736,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						//rigctl
 						if (opts->use_rigctl == 1)
 						{
-							SetModulation(opts->rigctl_sockfd, 12500);
+							if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
 							SetFreq(opts->rigctl_sockfd, tunable_freq);
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
@@ -815,7 +815,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					//rigctl
           if (opts->use_rigctl == 1)
 					{
-						SetModulation(opts->rigctl_sockfd, 12500);
+						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
       			SetFreq(opts->rigctl_sockfd, freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 

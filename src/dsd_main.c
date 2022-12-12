@@ -94,9 +94,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
 
       if (opts->use_rigctl == 1) //rigctl tuning
       {
-        //may or may not use setmod here, let user control it instead?
-        if (opts->frame_nxdn48 == 1) SetModulation(opts->rigctl_sockfd, 6250);
-        else SetModulation(opts->rigctl_sockfd, 12500); 
+        if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
         SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
         state->dmr_rest_channel = -1; //maybe?
       }
@@ -469,7 +467,7 @@ initOpts (dsd_opts * opts)
   //tcp input options
   opts->tcp_sockfd = 0;
   opts->tcp_portno = 7355; //default favored by SDR++
-  opts->tcp_hostname = "localhost";
+  sprintf (opts->tcp_hostname, "%s", "localhost");
 
   opts->p25_trunk = 0; //0 disabled, 1 is enabled
   opts->p25_is_tuned = 0; //set to 1 if currently on VC, set back to 0 on carrier drop
@@ -477,6 +475,9 @@ initOpts (dsd_opts * opts)
 
   //reverse mute 
   opts->reverse_mute = 0;
+
+  //setmod bandwidth
+  opts->setmod_bw = 0; //default to 0 - off
 
 } //initopts
 
@@ -820,6 +821,7 @@ usage ()
   printf ("  -i <device>   Audio input device (default is pulse audio)\n");
   printf ("                - for piped stdin, rtl for rtl device\n");
   printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
+  printf ("                tcp:192.168.7.5:7355 for custom address and port \n");
   printf ("                filename.bin for OP25/FME capture bin files\n");
   printf ("                filename.wav for 48K/1 wav files (SDR++, GQRX)\n");
   printf ("                filename.wav -s 96000 for 96K/1 wav files (DSDPlus)\n");
@@ -919,7 +921,8 @@ usage ()
   printf ("  -5 <udp p>    Enable RIGCTL/TCP; Set UDP Port for RIGCTL. (4532 on SDR++)\n");
   printf ("  -6 <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)\n");
   printf ("  -8            Reverse Mute - Mute Unencrypted Voice Channels\n");
-  //printf ("                 (Currently only available on UDP port 4532)\n");
+  printf ("  -9 <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
+  printf ("                 P25 - 7000; NXDN48 - 4000; DMR - 12500; EDACS/PV - 12500; May vary based on system stregnth, etc.\n");
   printf ("\n");
   exit (0);
 }
@@ -1127,7 +1130,7 @@ main (int argc, char **argv)
   exitflag = 0;
   signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qs:tv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:6:7:8")) != -1)
+  while ((c = getopt (argc, argv, "haep:P:qs:tv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:6:7:89:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1177,6 +1180,11 @@ main (int argc, char **argv)
         case '8':
           opts.reverse_mute = 1;
           fprintf (stderr, "Reverse Mute\n");
+          break;
+        //placeholder until letters get re-arranged
+        case '9': //rigctl setmod bandwidth;
+          sscanf (optarg, "%d", &opts.setmod_bw);
+          if (opts.setmod_bw > 25000) opts.setmod_bw = 25000; //not too high
           break;
         case 'e':
           opts.errorbars = 1;
@@ -1546,6 +1554,7 @@ main (int argc, char **argv)
               opts.dmr_mono = 0;
               opts.pulse_digi_rate_out = 8000;
               opts.pulse_digi_out_channels = 1;
+              // opts.setmod_bw = 7000;
               sprintf (opts.output_name, "P25P1");
               fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
             }
@@ -1572,6 +1581,7 @@ main (int argc, char **argv)
               opts.dmr_stereo = 0;
               state.dmr_stereo = 0;
               opts.dmr_mono = 0;
+              // opts.setmod_bw = 4000;
               sprintf (opts.output_name, "NXDN48");
               fprintf (stderr,"Setting symbol rate to 2400 / second\n");
               fprintf (stderr,"Decoding only NXDN 4800 baud frames.\n");
@@ -1625,6 +1635,7 @@ main (int argc, char **argv)
                   opts.dmr_stereo = 1;
                   state.dmr_stereo = 0;
                   opts.dmr_mono = 0;
+                  // opts.setmod_bw = 7000;
                   sprintf (opts.output_name, "P25P2");
                   fprintf (stderr,"Decoding P25-P2 frames C4FM or OP25 Symbol Captures!\n");
                   }
@@ -1699,6 +1710,7 @@ main (int argc, char **argv)
               opts.dmr_stereo = 0;
               opts.dmr_mono = 0;
               state.dmr_stereo = 0;
+              // opts.setmod_bw = 7000;
               sprintf (opts.output_name, "NXDN96");
               fprintf (stderr,"Decoding only NXDN 9600 baud frames.\n");
             }
@@ -1915,6 +1927,22 @@ main (int argc, char **argv)
     {
       //use same handling as connect function from rigctl
       //also still needs err handling
+      fprintf (stderr, "TCP Direct Link: ");
+      char * curr; 
+
+      curr = strtok(opts.audio_in_dev, ":"); //should be 'tcp'
+      if (curr != NULL) ; //continue
+      else goto TCPEND; //end early with preset values
+
+      curr = strtok(NULL, ":"); //host address
+      if (curr != NULL) strncpy (opts.tcp_hostname, curr, 1023);
+
+      curr = strtok(NULL, ":"); //host port
+      if (curr != NULL) opts.tcp_portno = atoi (curr);
+
+      TCPEND:
+      fprintf (stderr, "%s:", opts.tcp_hostname);
+      fprintf (stderr, "%d \n", opts.tcp_portno);
       opts.tcp_sockfd = Connect(opts.tcp_hostname, opts.tcp_portno);
       opts.audio_in_type = 8;
     }

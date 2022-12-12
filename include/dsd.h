@@ -308,7 +308,7 @@ typedef struct
   //tcp socket for SDR++, etc
   int tcp_sockfd;
   int tcp_portno;
-  char * tcp_hostname;
+  char tcp_hostname[1024];
   SNDFILE *tcp_file_in;
 
   //wav file sample rate, interpolator and decimator
@@ -328,6 +328,9 @@ typedef struct
 
   //reverse mute
   uint8_t reverse_mute;
+
+  //setmod bandwidth
+  int setmod_bw;
 
 } dsd_opts;
 

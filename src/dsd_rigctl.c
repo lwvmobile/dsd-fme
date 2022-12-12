@@ -146,8 +146,7 @@ bool SetFreq(int sockfd, long int freq)
 bool SetModulation(int sockfd, int bandwidth) 
 {
     char buf[BUFSIZE];
-    //ideally, on P25, we want to use the iden_up with bw, and calc bandwidth first
-    //bandwidth = 12500; //default value, if doing pV, may want to swtich to 25000
+    //the bandwidth is now a user/system based configurable variable
     sprintf (buf, "M FM %d\n", bandwidth); 
     Send(sockfd, buf);
     Recv(sockfd, buf);

@@ -173,9 +173,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
       //rigctl
       if (opts->use_rigctl == 1)
       {
-        //may or may not use setmod here, let user control it instead?
-        if (opts->frame_nxdn48 == 1) SetModulation(opts->rigctl_sockfd, 6250);
-        else SetModulation(opts->rigctl_sockfd, 12500);
+        if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
         SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[state->lcn_freq_roll]);
       }
       //rtludp

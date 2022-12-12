@@ -170,8 +170,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 //RIGCTL
                 if (opts->use_rigctl == 1)
                 {
-                  SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength more than anything, 12.5 should be safe for DMR
-                  SetFreq(opts->rigctl_sockfd, freq); //minus one because our index starts at zero
+                  if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+                  SetFreq(opts->rigctl_sockfd, freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
                 }
@@ -495,8 +495,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 //RIGCTL
                 if (opts->use_rigctl == 1)
                 {
-                  SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength more than anything, 12.5 should be safe for DMR
-                  SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+1]); //minus one because our index starts at zero
+                  if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+                  SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+1]); 
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
                   opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
                   j = 11; //break loop
@@ -594,8 +594,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               //RIGCTL
               if (opts->use_rigctl == 1)
               {
-                SetModulation(opts->rigctl_sockfd, 12500); //bw depends on system strength more than anything, 12.5 should be safe for DMR
-                SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[lcn]); //minus one because our index starts at zero
+                if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+                SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[lcn]); 
                 state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
                 opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
               }

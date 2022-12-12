@@ -260,9 +260,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
       //rigctl
       if (opts->use_rigctl == 1)
       {
-        //may or may not use setmod here, let user control it instead?
-        if (opts->frame_nxdn48 == 1) SetModulation(opts->rigctl_sockfd, 6250);
-        else SetModulation(opts->rigctl_sockfd, 12500);
+        if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
         SetFreq(opts->rigctl_sockfd, freq);
         state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
         opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop         
