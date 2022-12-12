@@ -109,7 +109,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     //0x49 is telephone grant, 0x46 Unit to Unit Channel Answer Request (seems bogus)
     if (MFID < 0x2 && protectbit == 0 && err == 0 && ec == 0 && PDU[1] != 0x7B ) 
     {
-      fprintf (stderr, "%s",KMAG);
+      fprintf (stderr, "%s",KYEL);
       process_MAC_VPDU(opts, state, 0, PDU);
       fprintf (stderr, "%s",KNRM);
     }
@@ -120,7 +120,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       long int wacn = (tsbk_byte[3] << 12) | (tsbk_byte[4] << 4) | (tsbk_byte[5] >> 4);;
       int sysid = ((tsbk_byte[5] & 0xF) << 8) | tsbk_byte[6];
       int channel = (tsbk_byte[7] << 8) | tsbk_byte[8];
-      fprintf (stderr, "%s",KMAG);
+      fprintf (stderr, "%s",KYEL);
       fprintf (stderr, "\n Network Status Broadcast TSBK - Abbreviated \n");
       fprintf (stderr, "  WACN [%05lX] SYSID [%03X] NAC [%03llX]", wacn, sysid, state->p2_cc);
       state->p25_cc_freq = process_channel_to_freq(opts, state, channel);

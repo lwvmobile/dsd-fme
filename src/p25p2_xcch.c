@@ -103,7 +103,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			fprintf (stderr, "%s", KRED);
 			fprintf (stderr, "CRC16 ERR ");
 		}
-		fprintf (stderr, "%s", KMAG);
+		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -226,7 +226,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		if (state->currentslot == 1) state->dmrburstL = 24;
 		else state->dmrburstR = 24;
 		fprintf (stderr, " MAC_IDLE ");
-		fprintf (stderr, "%s", KMAG);
+		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -235,7 +235,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		if (state->currentslot == 1) state->dmrburstL = 21;
 		else state->dmrburstR = 21;
 		fprintf (stderr, " MAC_ACTIVE ");
-		fprintf (stderr, "%s", KMAG);
+		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -244,7 +244,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		if (state->currentslot == 1) state->dmrburstL = 22;
 		else state->dmrburstR = 22;
 		fprintf (stderr, " MAC_HANGTIME ");
-		fprintf (stderr, "%s", KMAG);
+		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -315,7 +315,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 	// if (opcode == 0x0)
 	// {
 	// 	fprintf (stderr, " MAC_SIGNAL ");
-	// 	fprintf (stderr, "%s", KMAG);
+	// 	fprintf (stderr, "%s", KYEL);
 	// 	process_MAC_VPDU(opts, state, 0, FMAC);
 	// 	fprintf (stderr, "%s", KNRM);
 	// }
@@ -456,7 +456,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 
 		}
 		fprintf (stderr, " MAC_IDLE ");
-		fprintf (stderr, "%s", KMAG);
+		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 0, FMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -465,7 +465,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		if (state->currentslot == 0) state->dmrburstL = 21;
 		else state->dmrburstR = 21;
 		fprintf (stderr, " MAC_ACTIVE ");
-		fprintf (stderr, "%s", KMAG);
+		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 0, FMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -474,7 +474,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		if (state->currentslot == 0) state->dmrburstL = 22;
 		else state->dmrburstR = 22;
 		fprintf (stderr, " MAC_HANGTIME ");
-		fprintf (stderr, "%s", KMAG);
+		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 0, FMAC);
 		fprintf (stderr, "%s", KNRM);
 	}
