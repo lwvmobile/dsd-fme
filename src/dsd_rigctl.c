@@ -100,45 +100,35 @@ bool Recv(int sockfd, char *buf)
 //
 // GQRX Protocol
 //
-// bool GetCurrentFreq(int sockfd, freq_t *freq)
-bool GetCurrentFreq(int sockfd, long int freq) //compatible with P25 freq storage
+long int GetCurrentFreq(int sockfd) 
 {
+    long int freq = 0;
     char buf[BUFSIZE];
     char * ptr;
     char * token;
 
     Send(sockfd, "f\n");
-    Recv(sockfd, buf); //buffer will contain a stored \n line break as well
+    Recv(sockfd, buf); 
 
-    if (strcmp(buf, "RPRT 1") == 0 ) //sdr++ may return this in error
-        return false;
+    if (strcmp(buf, "RPRT 1") == 0 ) 
+        return freq;
 
-    token = strtok (buf, "\n"); //remove line break \n from return buf string
-    freq = strtol (token, &ptr, 10); //number is base, as in base 2 is binary, base 10 is dec, base 16 hex
-    //fprintf (stderr, "\nRIGCTL Buffer: [%s]\n", buf);
-    //fprintf (stderr, "\nRIGCTL VFO Freq: [%ld]\n", freq);
-    return true;
+    token = strtok (buf, "\n"); 
+    freq = strtol (token, &ptr, 10); 
+    // fprintf (stderr, "\nRIGCTL VFO Freq: [%ld]\n", freq);
+    return freq;
 }
-// bool SetFreq(int sockfd, freq_t freq)
+
 bool SetFreq(int sockfd, long int freq)
 {
     char buf[BUFSIZE];
 
-    sprintf (buf, "F %ld\n", freq); //llu
+    sprintf (buf, "F %ld\n", freq); 
     Send(sockfd, buf);
     Recv(sockfd, buf);
 
     if (strcmp(buf, "RPRT 1") == 0 )
         return false;
-
-    GetCurrentFreq(sockfd, freq);
-
-    //freq_t freq_current = 0;
-    //long int freq_current = 0;
-    // do
-    // {
-    //     GetCurrentFreq(sockfd, freq_current);
-    // } while (freq_current != freq);
 
     return true;
 }
@@ -153,8 +143,6 @@ bool SetModulation(int sockfd, int bandwidth)
 
     if (strcmp(buf, "RPRT 1") == 0 )
         return false;
-
-    //GetCurrentFreq(sockfd, freq);
 
     return true;
 }

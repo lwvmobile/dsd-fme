@@ -1919,8 +1919,6 @@ main (int argc, char **argv)
     if (opts.use_rigctl == 1)
     {
       opts.rigctl_sockfd = Connect(opts.rigctlhostname, opts.rigctlportno);
-      long int initfreq = 0;
-      GetCurrentFreq(opts.rigctl_sockfd, initfreq);
     }
 
     if((strncmp(opts.audio_in_dev, "tcp", 3) == 0)) //tcp socket input from SDR++ and others

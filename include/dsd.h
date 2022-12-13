@@ -958,7 +958,7 @@ bool Recv(int sockfd, char *buf);
 //rtl_fm udp tuning function
 void rtl_udp_tune(dsd_opts * opts, dsd_state * state, long int frequency);
 
-bool GetCurrentFreq(int sockfd, long int freq);
+long int GetCurrentFreq(int sockfd);
 bool SetFreq(int sockfd, long int freq);
 bool SetModulation(int sockfd, int bandwidth);
 //commands below unique to GQRX only, not usable on SDR++

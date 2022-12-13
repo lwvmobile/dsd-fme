@@ -378,6 +378,12 @@ void NXDN_decode_cch_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   if (channel1sts & 0x20 || channel1sts & 0x8) //current or new only
   {
     if (freq1 != 0) state->p25_cc_freq = freq1;
+    //let's assume the frequency we are tuned to is the current control channel
+    else if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0 or nxdn_channel_to_frequency and rigctl is available
+    {
+      freq1 = GetCurrentFreq (opts->rigctl_sockfd);
+      if (freq1 != 0) state->p25_cc_freq = freq1;
+    }
   }
   else if (channel1sts & 0x8) //Candidate Added
   {

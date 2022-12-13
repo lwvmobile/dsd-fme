@@ -388,6 +388,8 @@ uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25])
 
 void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
 {
+  long int ccfreq = 0;
+
   int i;
   uint8_t slco_bytes[6]; //completed byte blocks for payload print
   for (i = 0; i < 5; i++) slco_bytes[i] = (uint8_t)ConvertBitIntoBytes(&slco_bits[i*8], 8);
@@ -454,6 +456,12 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     fprintf (stderr, " C_SYS_PARMS - %s - Net ID: %d Site ID: %d - Reg Req: %d - CSC: %d ", model_str, net, site, reg, csc);
     //add string for ncurses terminal display - no par since slc doesn't carrry that value
     sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d ", model_str, net, site);
+    //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
+    if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
+    {
+      ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
+      if (ccfreq != 0) state->p25_cc_freq = ccfreq;
+    }
   }
   else if (slco == 0x3) //P_SYS_Parms
   {
@@ -481,6 +489,12 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Control Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
     sprintf (state->dmr_site_parms, "N%d - S%d ", con_netid, con_siteid);
+    //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
+    if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
+    {
+      ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
+      if (ccfreq != 0) state->p25_cc_freq = ccfreq;
+    }
   }
    
   else if (slco == 0xF)

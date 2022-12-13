@@ -25,6 +25,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
   uint64_t csbk_data = 0;
   int csbk      = 0;
 
+  long int ccfreq = 0;
+
   if(IrrecoverableErrors == 0 && CRCCorrect == 1) 
   {
     
@@ -254,11 +256,18 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //add string for ncurses terminal display - no par since slc doesn't carrry that value
         sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d ", model_str, net, site);
 
-        //debug print
-        //fprintf (stderr, " Sys ID Code: [%04X]", sysidcode);
+        //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
+        if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
+        {
+          ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
+          if (ccfreq != 0) state->p25_cc_freq = ccfreq;
+        }
 
         uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16);
+
+        //debug print
         //fprintf (stderr, "\n  SYSCODE: %016b", syscode);
+        //fprintf (stderr, " Sys ID Code: [%04X]", sysidcode);
       } 
 
       //P_CLEAR
@@ -561,6 +570,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         sprintf(state->dmr_branding_sub, "Con+ ");
         // state->dmr_vc_lcn = lcn; 
         // state->dmr_vc_lsn = lcn * (tslot+1);
+
+        //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
+        if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
+        {
+          ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
+          if (ccfreq != 0) state->p25_cc_freq = ccfreq;
+        }
 
         //shim in here for ncurses freq display when not trunking (playback, not live)
         if (opts->p25_trunk == 0 && state->trunk_chan_map[lcn] != 0)
