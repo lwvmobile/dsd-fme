@@ -55,7 +55,7 @@ int csvGroupImport(dsd_opts * opts, dsd_state * state)
   return 0;
 }
 
-int csvLCNImport(dsd_opts * opts, dsd_state * state) //LCN/LSN import for EDACS/DMR/NXDN?
+int csvLCNImport(dsd_opts * opts, dsd_state * state) //LCN/LSN import for EDACS, consider migrating to channel map
 {
   char filename[1024] = "filename.csv"; 
   sprintf (filename, "%s", opts->lcn_in_file); 
@@ -129,6 +129,7 @@ int csvChanImport(dsd_opts * opts, dsd_state * state) //channel map import
       if (field_count == 1)
       {
         sscanf (field, "%ld", &state->trunk_chan_map[chan_number]);
+        //adding this should be compatible with EDACS, test and obsolete the LCN Import function if desired
         sscanf (field, "%ld", &state->trunk_lcn_freq[state->lcn_freq_count]);
         state->lcn_freq_count++; //keep tally of number of Frequencies imported
       }

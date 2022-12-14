@@ -150,9 +150,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             state->p25_vc_freq[1] = freq;
           }
 
-          //if neither current slot has vlc, pi, or voice in it currently
-          //may need to fully write this out if this statement doesn't work the way I want it to
-          if (state->dmrburstL != (16 || 0 || 1) && state->dmrburstR != (16 || 0 || 1) )
+          //don't tune if currently a vc on the control channel
+          if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
           {
             char mode[8]; //allow, block, digital, enc, etc
 
@@ -165,7 +164,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               }
             } 
 
-            if (state->p25_cc_freq != 0 && opts->p25_trunk == 1  && (strcmp(mode, "DE") != 0)) 
+            if (state->p25_cc_freq != 0 && opts->p25_trunk == 1  && (strcmp(mode, "B") != 0)) 
             {
               if (freq != 0) //if we have a valid frequency
               {
@@ -478,10 +477,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
         fprintf (stderr, "%s", KNRM);
 
-        //tuning logic with active tg's in active channels
-        //if neither current slot has vlc, pi, or voice in it currently
-        //may need to fully write this out if this statement doesn't work the way I want it to
-        if (state->dmrburstL != (16 || 0 || 1) && state->dmrburstR != (16 || 0 || 1) ) 
+        //don't tune if currently a vc on the current channel 
+        if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
         {
           for (j = 0; j < 8; j++) //go through the channels stored looking for active ones to tune to
           {
@@ -497,7 +494,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
             //no more 0 reporting, that was some bad code that caused that issue
             //without priority, this will tune the first one it finds (if group isn't blocked)
-            if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0)) 
+            if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0)) 
             {
               if (state->trunk_chan_map[j+1] != 0) //if we have a valid frequency
               {
@@ -595,13 +592,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           }
         }
 
-        //voice calls can occur on the con+ control channel, so we need the same check for voice as we do for cap+
-        //if neither current slot has vlc, pi, or voice in it currently
-        //may need to fully write this out if this statement doesn't work the way I want it to
-        if (state->dmrburstL != (16 || 0 || 1) && state->dmrburstR != (16 || 0 || 1) )
+        //don't tune if currently a vc on the control channel
+        if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
         {
           //need channel map frequencies and stuff, also way to figure out control channel frequency? (channel 0 from channel map?)
-          if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0)) 
+          if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0)) 
           {
             if (state->trunk_chan_map[lcn] != 0) //if we have a valid frequency
             {

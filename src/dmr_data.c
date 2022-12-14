@@ -325,7 +325,6 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
       {
         if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
         SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
-
       }
 
       else if (opts->audio_in_type == 3) //rtl_fm tuning
