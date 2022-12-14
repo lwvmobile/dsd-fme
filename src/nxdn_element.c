@@ -233,6 +233,21 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
   long int freq = 0;
   freq = nxdn_channel_to_frequency(opts, state, Channel);
 
+  //check for control channel frequency in the channel map if not available
+  if (opts->p25_trunk == 1 && state->p25_cc_freq == 0)
+  {
+    if (state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
+    //if not available from the import file, then poll rigctl if its available
+    //we are assuming that the current channel is the control channel
+    //unsure whether or not control signalling is available on NXDN voice channels
+    else if (opts->use_rigctl == 1)
+    {
+      long int ccfreq = 0;
+      ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
+      if (ccfreq != 0) state->p25_cc_freq = ccfreq;
+    }
+  }
+
   //run group/source analysis and tune if available/desired
   //group list mode so we can look and see if we need to block tuning any groups, etc
 	char mode[8]; //allow, block, digital, enc, etc
