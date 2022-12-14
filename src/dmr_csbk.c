@@ -608,6 +608,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
                 opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
                 state->is_con_plus = 1; //flag on
+                state->last_vc_sync_time = time(NULL); //bugfix: set sync here so we don't immediately tune back to CC constantly.
               }
             }
 
@@ -618,6 +619,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
               opts->p25_is_tuned = 1;
               state->is_con_plus = 1; //flag on
+              state->last_vc_sync_time = time(NULL); //bugfix: set sync here so we don't immediately tune back to CC constantly.
             }
           }
         }  

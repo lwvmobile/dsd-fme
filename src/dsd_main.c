@@ -1679,6 +1679,7 @@ main (int argc, char **argv)
                 state.rf_mod = 0;
                 opts.dmr_stereo = 1;
                 opts.dmr_mono = 0;
+                // opts.setmod_bw = 7000;
                 opts.setmod_bw = 7000;
                 opts.pulse_digi_rate_out = 24000;
                 opts.pulse_digi_out_channels = 2;
