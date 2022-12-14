@@ -176,14 +176,15 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
                 }
-              }
 
-              //rtl_udp
-              else if (opts->audio_in_type == 3)
-              {
-                rtl_udp_tune (opts, state, freq);
-                state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
-                opts->p25_is_tuned = 1;
+                //rtl_udp
+                else if (opts->audio_in_type == 3)
+                {
+                  rtl_udp_tune (opts, state, freq);
+                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+                  opts->p25_is_tuned = 1;
+                }
+
               }
             }
           }
@@ -507,21 +508,21 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
                   j = 11; //break loop
                 }
-              }
 
-              //rtl_udp
-              else if (opts->audio_in_type == 3)
-              {
-                rtl_udp_tune (opts, state, state->trunk_chan_map[j+1]);
-                state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
-                opts->p25_is_tuned = 1;
-                j = 11; //break loop
+                //rtl_udp
+                else if (opts->audio_in_type == 3)
+                {
+                  rtl_udp_tune (opts, state, state->trunk_chan_map[j+1]);
+                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
+                  opts->p25_is_tuned = 1;
+                  j = 11; //break loop
+                }
+
               }
             }
 
           }
         }
-        
         
       }
     }
@@ -610,16 +611,17 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 state->is_con_plus = 1; //flag on
                 state->last_vc_sync_time = time(NULL); //bugfix: set sync here so we don't immediately tune back to CC constantly.
               }
-            }
 
-            //rtl_udp
-            else if (opts->audio_in_type == 3)
-            {
-              rtl_udp_tune (opts, state, state->trunk_chan_map[lcn]);
-              state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
-              opts->p25_is_tuned = 1;
-              state->is_con_plus = 1; //flag on
-              state->last_vc_sync_time = time(NULL); //bugfix: set sync here so we don't immediately tune back to CC constantly.
+              //rtl_udp
+              else if (opts->audio_in_type == 3)
+              {
+                rtl_udp_tune (opts, state, state->trunk_chan_map[lcn]);
+                state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
+                opts->p25_is_tuned = 1;
+                state->is_con_plus = 1; //flag on
+                state->last_vc_sync_time = time(NULL); //bugfix: set sync here so we don't immediately tune back to CC constantly.
+              }
+
             }
           }
         }  

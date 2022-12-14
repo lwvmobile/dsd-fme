@@ -409,7 +409,7 @@ initOpts (dsd_opts * opts)
   opts->rtl_dev_index = 0;        //choose which device we want by index number
   opts->rtl_gain_value = 26;    //mid value, 0 - AGC (not recommended) 49 highest value
   opts->rtl_squelch_level = 0; //fully open by default, want to specify level for things like NXDN with false positives
-  opts->rtl_volume_multiplier = 3; //sample multiplier; 3 seems like a good value
+  opts->rtl_volume_multiplier = 1; //sample multiplier; 1 seems like a good value
   opts->rtl_udp_port = 6020; //set UDP port for RTL remote
   opts->rtl_bandwidth = 12; //changed recommended default to 12, 24 for ProVoice
   opts->rtlsdr_ppm_error = 0; //initialize ppm with 0 value; bug reported by N.
