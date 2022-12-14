@@ -407,9 +407,9 @@ initOpts (dsd_opts * opts)
   opts->use_cosine_filter = 1;
   opts->unmute_encrypted_p25 = 0;
   opts->rtl_dev_index = 0;        //choose which device we want by index number
-  opts->rtl_gain_value = 0;    //set actual gain and not automatic gain
+  opts->rtl_gain_value = 26;    //mid value, 0 - AGC (not recommended) 49 highest value
   opts->rtl_squelch_level = 0; //fully open by default, want to specify level for things like NXDN with false positives
-  opts->rtl_volume_multiplier = 1; //set multipler from rtl sample to 'boost volume'
+  opts->rtl_volume_multiplier = 3; //sample multiplier; 3 seems like a good value
   opts->rtl_udp_port = 6020; //set UDP port for RTL remote
   opts->rtl_bandwidth = 12; //changed recommended default to 12, 24 for ProVoice
   opts->rtlsdr_ppm_error = 0; //initialize ppm with 0 value; bug reported by N.
@@ -734,7 +734,7 @@ initState (dsd_state * state)
   memset (state->trunk_lcn_freq, 0, sizeof(state->trunk_lcn_freq));
   memset (state->trunk_chan_map, 0, sizeof(state->trunk_chan_map));
   state->group_tally = 0;
-  state->lcn_freq_count = 0; //number of frequncies imported from LCN
+  state->lcn_freq_count = 0; //number of frequncies imported as an enumerated lcn list
   state->lcn_freq_roll = 0; //needs reset if sync is found?
   state->last_cc_sync_time = time(NULL);
   state->last_vc_sync_time = time(NULL);
@@ -801,13 +801,14 @@ usage ()
 {
 
   printf ("\n");
-  printf ("Usage: dsd-fme [options]            Live scanner mode\n");
+  printf ("Usage: dsd-fme [options]            Decoder/Trunking Mode\n");
   printf ("  or:  dsd-fme [options] -r <files> Read/Play saved mbe data from file(s)\n");
   printf ("  or:  dsd-fme -h                   Show help\n");
   printf ("\n");
   printf ("Display Options:\n");
   printf ("  -N            Use NCurses Terminal\n");
   printf ("                 dsd-fme -N 2> log.ans \n");
+  printf ("  -Z            Log MBE/PDU Payloads to console\n");
   // printf ("  -e            Show Frame Info and errorbars (default)\n");
   // printf ("  -pe           Show P25 encryption sync bits\n");
   // printf ("  -pl           Show P25 link control bits\n");
@@ -817,25 +818,25 @@ usage ()
   //printf ("  -s            Datascope (disables other display options)\n");
   //printf ("  -t            Show symbol timing during sync\n");
   // printf ("  -v <num>      Frame information Verbosity\n");
-  printf ("  -z <num>      Frame rate for datascope\n");
+  // printf ("  -z <num>      Frame rate for datascope\n");
   printf ("\n");
   printf ("Input/Output options:\n");
   printf ("  -i <device>   Audio input device (default is pulse audio)\n");
-  printf ("                - for piped stdin, rtl for rtl device\n");
+  printf ("                - for piped stdin\n");
+  printf ("                rtl:dev:freq:gain:ppm:bw:sq:udp for rtl dongle (see below)\n");
   printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
   printf ("                tcp:192.168.7.5:7355 for custom address and port \n");
   printf ("                filename.bin for OP25/FME capture bin files\n");
   printf ("                filename.wav for 48K/1 wav files (SDR++, GQRX)\n");
   printf ("                filename.wav -s 96000 for 96K/1 wav files (DSDPlus)\n");
   printf ("                (Use single quotes '/directory/audio file.wav' when directories/spaces are present)\n");
-  //printf ("                filename.bin for OP25/FME capture bin files\n");
   printf ("  -s <rate>     Sample Rate of wav input files (usually 48000 or 96000) Mono only!\n");
   printf ("  -o <device>   Audio output device (default is pulse audio)(null for no audio output)\n");
   printf ("  -d <dir>      Create mbe data files, use this directory\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
   printf ("  -w <file>     Output synthesized speech to a .wav file, legacy auto modes only.\n");
-  printf ("  -T            Enable Per Call WAV file saving in XDMA and NXDN decoding classes\n");
+  printf ("  -P            Enable Per Call WAV file saving in XDMA and NXDN decoding classes\n");
   printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
   printf ("                 (Running in console will use static wav files)\n");
   printf ("  -a            Enable Call Alert Beep (NCurses Terminal Only)\n");
@@ -844,20 +845,23 @@ usage ()
   printf ("                 (useful when reading files still being written to by OP25)");
   printf ("\n");
   printf ("RTL-SDR options:\n");
-  printf ("  -c <hertz>    RTL-SDR Frequency\n");
-  printf ("  -P <num>      RTL-SDR PPM Error (default = 0)\n");
-  printf ("  -D <num>      RTL-SDR Device Index Number\n");
-  printf ("  -G <num>      RTL-SDR Device Gain (0-49) (default = 0 Auto Gain)\n");
-  printf ("  -L <num>      RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)\n                 (Just have to guess really...)\n");
-  printf ("  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)\n");
-  printf ("  -Y <num>      RTL-SDR VFO Bandwidth kHz (default = 12)(6, 8, 12, 16, 24, 48) \n");
-  printf ("  -U <num>      RTL-SDR UDP Remote Port (default = 6020)\n");
+  printf (" WARNING! Old CLI Switch Handling has been depreciated in favor of rtl:<parms>\n");
+  printf (" Usage: rtl:dev:freq:gain:ppm:bw:sq:udp\n");
+  printf ("  dev  <num>    RTL-SDR Device Index Number\n");
+  printf ("  freq <num>    RTL-SDR Frequency\n");
+  printf ("  gain <num>    RTL-SDR Device Gain (0-49) (default = 0 Auto Gain)\n");
+  printf ("  ppm  <num>    RTL-SDR PPM Error (default = 0)\n");
+  printf ("  bw   <num>    RTL-SDR VFO Bandwidth kHz (default = 26)(0 = Hardware AGC, not recommended) \n");
+  printf ("  sq   <num>    RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)\n");
+  // printf ("  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)\n");
+  printf ("  udp  <num>    RTL-SDR UDP Remote Port (default = 6020)\n");
+  printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:12:0:6021\n");
   printf ("\n");
-  printf ("Scanner control options:\n");
-  printf ("  -B <num>      Serial port baud rate (default=115200)\n");
-  printf ("  -C <device>   Serial port for scanner control (default=/dev/ttyUSB0)\n");
-  printf ("  -R <num>      Resume scan after <num> TDULC frames or any PDU or TSDU\n");
-  printf ("\n");
+  // printf ("Scanner control options:\n");
+  // printf ("  -B <num>      Serial port baud rate (default=115200)\n");
+  // printf ("  -C <device>   Serial port for scanner control (default=/dev/ttyUSB0)\n");
+  // printf ("  -R <num>      Resume scan after <num> TDULC frames or any PDU or TSDU\n");
+  // printf ("\n");
   printf ("Decoder options:\n");
   printf ("  -fa           Legacy Auto Detection (old methods default)\n");
   printf ("  -ft           XDMA P25 and DMR BS/MS frame types (new default)\n");
@@ -898,9 +902,9 @@ usage ()
   printf ("                 Use this feature to allow MAC_SIGNAL even if bad CRC errors.\n");
   printf ("  -F            Relax DMR CACH/Burst FEC Pass/Fail - Passive Frame Sync\n");
   printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
-  printf ("  -Z            Log MBE/Frame Payloads to console\n");
+  
   printf ("\n");
-  printf ("  -K <dec>      Manually Enter DMRA Privacy Key (Decimal Value of Key Number)\n");
+  printf ("  -K <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)\n");
   printf ("\n");
   printf ("  -H <hex>      Manually Enter **tera 10/32/64 Char Privacy Hex Key (see example below)\n");
   printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
@@ -912,19 +916,17 @@ usage ()
   printf ("                 \n");
   printf ("  -4            Force Privacy Key over FID and SVC bits \n");
   printf ("\n");
-  printf (" Experimental Functions and Features---------------------------------------------------\n");
-  printf ("  -1 <file>     Import LCN Frequencies (consecutive lcn numbered frequencies for EDACS LCNs) from csv file (numeral 'one')                   \n");
-  printf ("                 (See lcn.csv for example)\n");
-  printf ("  -7 <file>     Import Channel to Frequency Map (channum, freq) from csv file (numeral 'seven')                   \n");
+  printf (" New and Experimental Functions and Features---------------------------------------------------\n");
+  printf ("  -C <file>     Import Channel to Frequency Map (channum, freq) from csv file. (Capital C)                   \n");
   printf ("                 (See channel_map.csv for example)\n");
-  printf ("  -2 <file>     Import Group List Allow/Block and Label from csv file (numeral 'two')\n");
+  printf ("  -G <file>     Import Group List Allow/Block and Label from csv file.\n");
   printf ("                 (See group.csv for example)\n");
-  printf ("  -3            Enable Extremely Experimental Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input\n");
-  printf ("  -5 <udp p>    Enable RIGCTL/TCP; Set UDP Port for RIGCTL. (4532 on SDR++)\n");
-  printf ("  -6 <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)\n");
-  printf ("  -8            Reverse Mute - Mute Unencrypted Voice Channels\n");
-  printf ("  -9 <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
-  printf ("                 P25 - 7000; NXDN48 - 4000; DMR - 12500; EDACS/PV - 12500; May vary based on system stregnth, etc.\n");
+  printf ("  -T            Enable Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input\n");
+  printf ("  -U <port>     Enable RIGCTL/TCP; Set TCP Port for RIGCTL. (4532 on SDR++)\n");
+  printf ("  -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
+  printf ("                 P25 - 7000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500; May vary based on system stregnth, etc.\n");
+  printf ("  -t <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)\n");
+  printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
   printf ("\n");
   exit (0);
 }
@@ -1065,17 +1067,21 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
   exit (0);
 }
 
-void
-sigfun (int sig)
-{
-    exitflag = 1;
-    signal (SIGINT, SIG_DFL);
-    ncursesClose ();
+// void
+// sigfun (int sig) //not convinced this is truly required, maybe some environments require it?
+// {
+//     exitflag = 1;
+// #ifdef USE_RTLSDR
+//     // if (opts->audio_in_type == 3)
+//       //rtlsdr_sighandler();
+// #endif
+//     signal (SIGINT, SIG_DFL);
+//     ncursesClose ();
 
-#ifdef USE_RTLSDR
-    rtlsdr_sighandler();
-#endif
-}
+// // #ifdef USE_RTLSDR
+// //     if (opts->audio_in_type == 3) rtlsdr_sighandler();
+// // #endif
+// }
 
 double atofs(char *s)
 {
@@ -1130,9 +1136,9 @@ main (int argc, char **argv)
   InitAllFecFunction();
 
   exitflag = 0;
-  signal (SIGINT, sigfun);
+  // signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:P:qs:tv:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:6:7:89:")) != -1)
+  while ((c = getopt (argc, argv, "haep:Pqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:6:7:89:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1144,101 +1150,111 @@ main (int argc, char **argv)
           opts.call_alert = 1;
           break;
 
-        //placeholder until letters get re-arranged (or opt_long switched in)
-        case '1': //LCN to Frequency CSV Import
-          strncpy(opts.lcn_in_file, optarg, 1023);
-          opts.lcn_in_file[1023] = '\0';
-          csvLCNImport (&opts, &state);
-          break;
-        //placeholder until letters get re-arranged
+        //Free'd up switches include e,p,v,Q,V,D,Y,z
+        //make sure to put a colon : after each if they need an argument
+        //or remove colon if no argument required
+
+        //Disabled the Serial Port Dev and Baud Rate, etc, If somebody uses that function, sorry...
+
+        case 'C': //new letter assignment for Channel import, flow down to allow temp numbers
+        case '1': //LCN to Frequency CSV Import <--> flow down to chanimport now, tell users to use a channel map for edacs
         case '7': //Channel Map Frequency CSV Import
           strncpy(opts.chan_in_file, optarg, 1023);
           opts.chan_in_file[1023] = '\0';
           csvChanImport (&opts, &state);
           break;
-        //placeholder until letters get re-arranged
+
+        case 'G': //new letter assignment for group import, flow down to allow temp numbers
         case '2': //Group CSV Import
           strncpy(opts.group_in_file, optarg, 1023);
           opts.group_in_file[1023] = '\0';
           csvGroupImport(&opts, &state);
           break;
-        //placeholder until letters get re-arranged
+
+        case 'T': //new letter assignment for trunking, flow down to allow temp numbers
         case '3':
           opts.p25_trunk = 1;
           break;
-        //placeholder until letters get re-arranged
+
+        case 'U': //New letter assignment for RIGCTL TCP port, flow down to allow temp numbers
         case '5': //RIGCTL UDP port
           sscanf (optarg, "%d", &opts.rigctlportno);
-          if (opts.rigctlportno != 0)
-          {
-            opts.use_rigctl = 1; 
-          }
+          if (opts.rigctlportno != 0) opts.use_rigctl = 1; 
           break;
-        //placeholder until letters get re-arranged
+
+        case 't': //New letter assignment for Trunk Hangtime, flow down to allow temp numbers
         case '6': //hangtime in seconds, default is 1;
           sscanf (optarg, "%d", &opts.trunk_hangtime);
           break;
-        //placeholder until letters get re-arranged
+        
+        case 'q': //New letter assignment for Reverse Mute, flow down to allow temp numbers
         case '8':
           opts.reverse_mute = 1;
           fprintf (stderr, "Reverse Mute\n");
           break;
-        //placeholder until letters get re-arranged
+        
+        case 'B': //New letter assignment for RIGCTL SetMod BW, flow down to allow temp numbers
         case '9': //rigctl setmod bandwidth;
           sscanf (optarg, "%d", &opts.setmod_bw);
           if (opts.setmod_bw > 25000) opts.setmod_bw = 25000; //not too high
           break;
-        case 'e':
-          opts.errorbars = 1;
-          opts.datascope = 0;
-          break;
-        case 'p':
-          if (optarg[0] == 'e')
-            {
-              opts.p25enc = 1;
-            }
-          else if (optarg[0] == 'l')
-            {
-              opts.p25lc = 1;
-            }
-          else if (optarg[0] == 's')
-            {
-              opts.p25status = 1;
-            }
-          else if (optarg[0] == 't')
-            {
-              opts.p25tg = 1;
-            }
-          else if (optarg[0] == 'u')
-            {
-             opts.unmute_encrypted_p25 = 1;
-             fprintf(stderr, "P25 Encrypted Audio Unmuted\n");
-            }
-          break;
-        case 'P':
-          sscanf (optarg, "%d", &opts.rtlsdr_ppm_error);
-          break;
-        case 'q':
-          opts.errorbars = 0;
-          opts.verbose = 0;
-          break;
+
+        // case 'e':
+        //   opts.errorbars = 1;
+        //   opts.datascope = 0;
+        //   break;
+        // case 'p':
+        //   if (optarg[0] == 'e')
+        //     {
+        //       opts.p25enc = 1;
+        //     }
+        //   else if (optarg[0] == 'l')
+        //     {
+        //       opts.p25lc = 1;
+        //     }
+        //   else if (optarg[0] == 's')
+        //     {
+        //       opts.p25status = 1;
+        //     }
+        //   else if (optarg[0] == 't')
+        //     {
+        //       opts.p25tg = 1;
+        //     }
+        //   else if (optarg[0] == 'u')
+        //     {
+        //      opts.unmute_encrypted_p25 = 1;
+        //      fprintf(stderr, "P25 Encrypted Audio Unmuted\n");
+        //     }
+        //   break;
+        // case 'P':
+        //   sscanf (optarg, "%d", &opts.rtlsdr_ppm_error);
+        //   break;
+        // case 'q':
+        //   opts.errorbars = 0;
+        //   opts.verbose = 0;
+        //   break;
+
         case 's':
           sscanf (optarg, "%d", &opts.wav_sample_rate);
           opts.wav_interpolator = opts.wav_sample_rate / opts.wav_decimator;
           state.samplesPerSymbol = state.samplesPerSymbol * opts.wav_interpolator;
           state.symbolCenter = state.symbolCenter * opts.wav_interpolator;
           break;
-        case 't':
-          opts.symboltiming = 1;
-          opts.errorbars = 1;
-          opts.datascope = 0;
-          break;
+
+        // case 't':
+        //   opts.symboltiming = 1;
+        //   opts.errorbars = 1;
+        //   opts.datascope = 0;
+        //   break;
+
         case 'v':
           sscanf (optarg, "%d", &opts.verbose);
           break;
-        case 'n':
+
+        case 'n': //disable or reclaim?
           state.use_throttle = 1;
           break;
+
         case 'K':
           sscanf (optarg, "%lld", &state.K);
           if (state.K > 256)
@@ -1309,34 +1325,33 @@ main (int argc, char **argv)
           }
           break;
 
-        case 'G': //Set rtl device gain
-          sscanf (optarg, "%d", &opts.rtl_gain_value); //multiple value by ten to make it consitent with the way rtl_fm really works
-          break;
+        // case 'G': //Set rtl device gain
+        //   sscanf (optarg, "%d", &opts.rtl_gain_value); //multiple value by ten to make it consitent with the way rtl_fm really works
+        //   break;
 
-        case 'L': //Set rtl squelch level
-          sscanf (optarg, "%d", &opts.rtl_squelch_level); //set squelch by user to prevent false positives on NXDN and others
-          break;
+        // case 'L': //Set rtl squelch level
+        //   sscanf (optarg, "%d", &opts.rtl_squelch_level); //set squelch by user to prevent false positives on NXDN and others
+        //   break;
 
-        case 'V': //Set rtl voltage level
-          sscanf (optarg, "%d", &opts.rtl_volume_multiplier); //set 'volume' multiplier for rtl-sdr samples
-          break;
+        // case 'V': //Set rtl voltage level
+        //   sscanf (optarg, "%d", &opts.rtl_volume_multiplier); //set 'volume' multiplier for rtl-sdr samples
+        //   break;
 
-        case 'U': //Set rtl udp remote port
-          sscanf (optarg, "%d", &opts.rtl_udp_port); //set udp port number for RTL remote
-          break;
+        // case 'U': //Set rtl udp remote port
+        //   sscanf (optarg, "%d", &opts.rtl_udp_port); //set udp port number for RTL remote
+        //   break;
 
-        case 'D': //Set rtl device index number
-          sscanf (optarg, "%d", &opts.rtl_dev_index);
-          break;
+        // case 'D': //Set rtl device index number
+        //   sscanf (optarg, "%d", &opts.rtl_dev_index);
+        //   break;
 
-        case 'Y': //Set rtl VFO bandwidth --recommend 6, 12, 24, 36, 48, default 48? or 12?
-          sscanf (optarg, "%d", &opts.rtl_bandwidth);
-          break;
+        // case 'Y': //Set rtl VFO bandwidth --recommend 6, 12, 24, 36, 48, default 48? or 12?
+        //   sscanf (optarg, "%d", &opts.rtl_bandwidth);
+        //   break;
 
         case 'N':
           opts.use_ncurses_terminal = 1;
           fprintf (stderr,"Enabling NCurses Terminal.\n");
-          //fprintf (stderr,"  - may need to issue 'reset' command in terminal after use\n");
           break;
 
         case 'Z':
@@ -1344,12 +1359,12 @@ main (int argc, char **argv)
           fprintf (stderr,"Logging Frame Payload to console\n");
           break;
 
-        case 'Q':
+        case 'L': //was Q, now is L
           opts.lrrp_file_output = 1;
           fprintf (stderr,"Logging LRRP data to ~/lrrp.txt \n");
           break;
 
-        case 'T': //repurposed to TDMA/NXDN Per Call
+        case 'P': //TDMA/NXDN Per Call - was T, now is P
         sprintf (wav_file_directory, "./WAV"); 
         wav_file_directory[1023] = '\0';
         if (stat(wav_file_directory, &st) == -1)
@@ -1375,17 +1390,17 @@ main (int argc, char **argv)
           fprintf (stderr, "%s", KNRM);
           break;
 
-        case 'z':
-          sscanf (optarg, "%d", &opts.scoperate);
-          opts.errorbars = 0;
-          opts.p25enc = 0;
-          opts.p25lc = 0;
-          opts.p25status = 0;
-          opts.p25tg = 0;
-          opts.datascope = 1;
-          opts.symboltiming = 0;
-          fprintf (stderr,"Setting datascope frame rate to %i frame per second.\n", opts.scoperate);
-          break;
+        // case 'z':
+        //   sscanf (optarg, "%d", &opts.scoperate);
+        //   opts.errorbars = 0;
+        //   opts.p25enc = 0;
+        //   opts.p25lc = 0;
+        //   opts.p25status = 0;
+        //   opts.p25tg = 0;
+        //   opts.datascope = 1;
+        //   opts.symboltiming = 0;
+        //   fprintf (stderr,"Setting datascope frame rate to %i frame per second.\n", opts.scoperate);
+        //   break;
         case 'i':
           strncpy(opts.audio_in_dev, optarg, 2047);
           opts.audio_in_dev[2047] = '\0';
@@ -1406,10 +1421,12 @@ main (int argc, char **argv)
           else fprintf (stderr,"Writing mbe data files to directory %s\n", opts.mbe_out_dir);
           // fprintf (stderr,"Writing mbe data temporarily disabled!\n");
           break;
-        case 'c':
-          opts.rtlsdr_center_freq = (uint32_t)atofs(optarg);
-          fprintf (stderr,"Tuning to frequency: %i Hz\n", opts.rtlsdr_center_freq);
-          break;
+
+        // case 'c':
+        //   opts.rtlsdr_center_freq = (uint32_t)atofs(optarg);
+        //   fprintf (stderr,"Tuning to frequency: %i Hz\n", opts.rtlsdr_center_freq);
+        //   break;
+
         case 'g':
           sscanf (optarg, "%f", &opts.audio_gain);
           if (opts.audio_gain < (float) 0 )
@@ -1437,14 +1454,14 @@ main (int argc, char **argv)
           openWavOutFile (&opts, &state);
           break;
 
-        case 'B':
-          sscanf (optarg, "%d", &opts.serial_baud);
-          break;
+        // case 'B':
+        //   sscanf (optarg, "%d", &opts.serial_baud);
+        //   break;
 
-        case 'C':
-          strncpy(opts.serial_dev, optarg, 1023);
-          opts.serial_dev[1023] = '\0';
-          break;
+        // case 'C':
+        //   strncpy(opts.serial_dev, optarg, 1023);
+        //   opts.serial_dev[1023] = '\0';
+        //   break;
 
         case 'f':
           if (optarg[0] == 'a')
@@ -1464,6 +1481,7 @@ main (int argc, char **argv)
               opts.dmr_stereo = 0;
               opts.dmr_mono = 1;
               state.dmr_stereo = 0;
+              opts.setmod_bw = 7000;
               sprintf (opts.output_name, "Legacy Auto");
             }
           else if (optarg[0] == 'd')
@@ -1530,6 +1548,7 @@ main (int argc, char **argv)
               opts.dmr_stereo = 0;
               opts.dmr_mono = 0;
               state.dmr_stereo = 0;
+              opts.setmod_bw = 12500;
               sprintf (opts.output_name, "EDACS/PV");
               fprintf (stderr,"Setting symbol rate to 9600 / second\n");
               fprintf (stderr,"Decoding only ProVoice frames.\n");
@@ -1556,7 +1575,7 @@ main (int argc, char **argv)
               opts.dmr_mono = 0;
               opts.pulse_digi_rate_out = 8000;
               opts.pulse_digi_out_channels = 1;
-              // opts.setmod_bw = 7000;
+              opts.setmod_bw = 7000;
               sprintf (opts.output_name, "P25P1");
               fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
             }
@@ -1583,7 +1602,7 @@ main (int argc, char **argv)
               opts.dmr_stereo = 0;
               state.dmr_stereo = 0;
               opts.dmr_mono = 0;
-              // opts.setmod_bw = 4000;
+              opts.setmod_bw = 4000;
               sprintf (opts.output_name, "NXDN48");
               fprintf (stderr,"Setting symbol rate to 2400 / second\n");
               fprintf (stderr,"Decoding only NXDN 4800 baud frames.\n");
@@ -1637,7 +1656,7 @@ main (int argc, char **argv)
                   opts.dmr_stereo = 1;
                   state.dmr_stereo = 0;
                   opts.dmr_mono = 0;
-                  // opts.setmod_bw = 7000;
+                  opts.setmod_bw = 7000;
                   sprintf (opts.output_name, "P25P2");
                   fprintf (stderr,"Decoding P25-P2 frames C4FM or OP25 Symbol Captures!\n");
                   }
@@ -1660,6 +1679,7 @@ main (int argc, char **argv)
                 state.rf_mod = 0;
                 opts.dmr_stereo = 1;
                 opts.dmr_mono = 0;
+                opts.setmod_bw = 7000;
                 opts.pulse_digi_rate_out = 24000;
                 opts.pulse_digi_out_channels = 2;
                 sprintf (opts.output_name, "DMR Stereo");
@@ -1686,6 +1706,7 @@ main (int argc, char **argv)
                       state.rf_mod = 0;
                       opts.dmr_stereo = 1;
                       opts.dmr_mono = 0;
+                      opts.setmod_bw = 7000;
                       opts.pulse_digi_rate_out = 24000;
                       opts.pulse_digi_out_channels = 2;
                       sprintf (opts.output_name, "XDMA");
@@ -1712,7 +1733,7 @@ main (int argc, char **argv)
               opts.dmr_stereo = 0;
               opts.dmr_mono = 0;
               state.dmr_stereo = 0;
-              // opts.setmod_bw = 7000;
+              opts.setmod_bw = 7000;
               sprintf (opts.output_name, "NXDN96");
               fprintf (stderr,"Decoding only NXDN 9600 baud frames.\n");
             }
@@ -1737,6 +1758,7 @@ main (int argc, char **argv)
               opts.dmr_mono = 1;
               opts.dmr_stereo = 0;
               state.dmr_stereo = 0; //0
+              opts.setmod_bw = 7000;
               sprintf (opts.output_name, "DMR Mono");
               //fprintf(stderr, "Notice: DMR cannot autodetect polarity. \n Use -xr option if Inverted Signal expected.\n");
               fprintf (stderr,"Decoding only DMR Mono. \nUsing DMR Stereo or XDMA is highly encouraged.\n");
@@ -1947,6 +1969,76 @@ main (int argc, char **argv)
       opts.audio_in_type = 8;
     }
 
+    if((strncmp(opts.audio_in_dev, "rtl", 3) == 0)) //rtl dongle input
+    {
+      uint8_t rtl_ok = 0;
+      #ifdef USE_RTLSDR
+      fprintf (stderr, "RTL Input: ");
+      char * curr; 
+
+      curr = strtok(opts.audio_in_dev, ":"); //should be 'rtl'
+      if (curr != NULL) ; //continue
+      else goto RTLEND; //end early with preset values
+
+      curr = strtok(NULL, ":"); //rtl device number "-D"
+      if (curr != NULL) opts.rtl_dev_index = atoi (curr);
+      else goto RTLEND;
+
+      curr = strtok(NULL, ":"); //rtl freq "-c"
+      if (curr != NULL) opts.rtlsdr_center_freq = (uint32_t)atofs(curr);
+      else goto RTLEND;
+
+      curr = strtok(NULL, ":"); //rtl gain value "-G"
+      if (curr != NULL) opts.rtl_gain_value = atoi (curr);
+      else goto RTLEND;
+
+      curr = strtok(NULL, ":"); //rtl ppm err "-P"
+      if (curr != NULL) opts.rtlsdr_ppm_error = atoi (curr);
+      else goto RTLEND;
+
+      curr = strtok(NULL, ":"); //rtl bandwidth "-Y"
+      if (curr != NULL)
+      {
+        int bw = 0;
+        bw = atoi (curr);
+        //check for proper values (6,8,12,24)
+        if (bw == 6 || bw == 8 || bw == 12 || bw == 24)
+        {
+          opts.rtl_bandwidth = bw;
+        }
+        else 
+          opts.rtl_bandwidth = 12; //safe default
+      }
+      else goto RTLEND; 
+
+      curr = strtok(NULL, ":"); //rtl squelch level "-L"
+      if (curr != NULL) opts.rtl_squelch_level = atoi (curr);
+      else goto RTLEND;
+
+      curr = strtok(NULL, ":"); //rtl udp port "-U"
+      if (curr != NULL) opts.rtl_udp_port = atoi (curr);
+      else goto RTLEND;
+
+      RTLEND:
+      fprintf (stderr, "Dev %d ", opts.rtl_dev_index);
+      fprintf (stderr, "Freq %d ", opts.rtlsdr_center_freq);
+      fprintf (stderr, "Gain %d ", opts.rtl_gain_value);
+      fprintf (stderr, "PPM %d ", opts.rtlsdr_ppm_error);
+      fprintf (stderr, "BW %d ", opts.rtl_bandwidth);
+      fprintf (stderr, "SQ %d ", opts.rtl_squelch_level);
+      fprintf (stderr, "UDP %d \n", opts.rtl_udp_port);
+      opts.audio_in_type = 3;
+      rtl_ok = 1;
+      #endif
+
+      if (rtl_ok == 0) //not set, means rtl support isn't compiled/available
+      {
+        fprintf (stderr, "RTL Support not enabled/compiled, falling back to Pulse Audio Input.\n");
+        sprintf (opts.audio_in_dev, "%s", "pulse");
+        opts.audio_in_type = 0;
+      }
+    }
+
     //still need to work out why I can't use this
     //issues with samples received, may be using UDP DGRAMS incorrectly, incorrect procedure?
     if((strncmp(opts.audio_in_dev, "udp", 3) == 0)) //udp socket input from SDR++, GQRX, and others
@@ -2046,7 +2138,7 @@ main (int argc, char **argv)
       openAudioInDevice (&opts);
 
 
-      fprintf (stderr,"Press CTRL + C twice to close.\n");
+      fprintf (stderr,"Press CTRL + C to close.\n");
     }
 
   else

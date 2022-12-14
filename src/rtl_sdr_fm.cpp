@@ -790,7 +790,7 @@ static void *controller_thread_fn(void *arg)
 	/* Set the sample rate */
 	verbose_set_sample_rate(dongle.dev, dongle.rate);
 	fprintf (stderr, "Output at %u Hz.\n", demod.rate_in/demod.post_downsample);
-	fprintf (stderr, "Press CTRL + C to close.\n"); //Kindly remind user to double tap CTRL + C
+	fprintf (stderr, "Press CTRL + C to close.\n"); 
 
 	while (!exitflag) {
 		safe_cond_wait(&s->hop, &s->hop_m);

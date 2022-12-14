@@ -55,7 +55,8 @@ int csvGroupImport(dsd_opts * opts, dsd_state * state)
   return 0;
 }
 
-int csvLCNImport(dsd_opts * opts, dsd_state * state) //LCN/LSN import for EDACS, consider migrating to channel map
+//LCN import for EDACS, migrated to channel map (channel map does both)
+int csvLCNImport(dsd_opts * opts, dsd_state * state) 
 {
   char filename[1024] = "filename.csv"; 
   sprintf (filename, "%s", opts->lcn_in_file); 
