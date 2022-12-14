@@ -174,7 +174,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     if(vc > 1 && vc < 6) //grab on vc1 values 2-5 B C D and E
     {
       state->dmr_embedded_signalling[internalslot][vc-1][i*2]   = (1 & (dibit >> 1)); // bit 1
-      state->dmr_embedded_signalling[internalslot][vc-1][i*2+1] = (1 & dibit); // bit 1
+      state->dmr_embedded_signalling[internalslot][vc-1][i*2+1] = (1 & dibit); // bit 0
     }
 
   }
@@ -263,6 +263,9 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   //errors in ms/mono since we skip the other slot
   // cach_err = dmr_cach (opts, state, cachdata);
+
+  //update voice sync time for trunking purposes (particularly Con+)
+  state->last_vc_sync_time = time(NULL);
 
   vc++;
   //this is necessary because we need to skip and collect dibits, not just skip them

@@ -495,9 +495,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               }
             }
 
-            //either j, or j+1 != restchannel (don't think restchannel would show a tg value, but could erroneously do so)
-            //also, some active channels reported a tg value of 0, so could be bad decode, or unit-to-unit?
-            if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0)) //&& j+1 != restchannel
+            //no more 0 reporting, that was some bad code that caused that issue
+            //without priority, this will tune the first one it finds (if group isn't blocked)
+            if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0)) 
             {
               if (state->trunk_chan_map[j+1] != 0) //if we have a valid frequency
               {
@@ -568,8 +568,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
-        // state->dmr_vc_lcn = lcn; 
-        // state->dmr_vc_lsn = lcn * (tslot+1);
 
         //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
         if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
@@ -613,7 +611,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
                 SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[lcn]); 
                 state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
-                opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+                opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+                state->is_con_plus = 1; //flag on
               }
             }
 
@@ -623,6 +622,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               rtl_udp_tune (opts, state, state->trunk_chan_map[lcn]);
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
               opts->p25_is_tuned = 1;
+              state->is_con_plus = 1; //flag on
             }
           }
         }  
@@ -651,10 +651,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "\n");
         uint32_t srcAddr = ( (cs_pdu[2] << 16) + (cs_pdu[3] << 8) + cs_pdu[4] ); 
         uint32_t grpAddr = ( (cs_pdu[5] << 16) + (cs_pdu[6] << 8) + cs_pdu[7] ); 
-        uint8_t  lcn     = ( (cs_pdu[8] & 0xF0 ) >> 4 ) ; ////extract(csbk, 64, 68); //double check these?
-        uint8_t  tslot   = ( (cs_pdu[8] & 0x08 ) >> 3 ); //csbk[68];
+        uint8_t  lcn     = ( (cs_pdu[8] & 0xF0 ) >> 4 ); 
+        uint8_t  tslot   = ( (cs_pdu[8] & 0x08 ) >> 3 ); 
         fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Connect Plus Terminate Channel Grant\n"); //Data only shows a srcAddr??
+        fprintf (stderr, " Connect Plus Terminate Channel Grant\n"); 
         fprintf (stderr, "  srcAddr(%8d), grpAddr(%8d), LCN(%d), TS(%d)",srcAddr, grpAddr, lcn, tslot);
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");

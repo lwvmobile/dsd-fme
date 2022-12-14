@@ -364,6 +364,9 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0) vc1++;
     if (internalslot == 1) vc2++;
 
+    //update voice sync time for trunking purposes (particularly Con+)
+    state->last_vc_sync_time = time(NULL);
+
     //reset err checks
     cach_err = 1;
     tact_okay = 0;

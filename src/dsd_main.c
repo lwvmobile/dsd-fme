@@ -737,6 +737,8 @@ initState (dsd_state * state)
   state->lcn_freq_count = 0; //number of frequncies imported from LCN
   state->lcn_freq_roll = 0; //needs reset if sync is found?
   state->last_cc_sync_time = time(NULL);
+  state->last_vc_sync_time = time(NULL);
+  state->is_con_plus = 0;
 
   //dmr trunking/ncurses stuff 
   state->dmr_rest_channel = -1; //init on -1

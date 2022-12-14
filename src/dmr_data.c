@@ -315,4 +315,31 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
     skipDibit (opts, state, 12 + 49 + 5);
   }
 
+  //if using con+ trunking and last voice observed more than x seconds ago, snap back to con+ cc
+  //con+ voice channels can have extremely long idle periods without properly tearing down
+  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && state->is_con_plus == 1)
+  {
+    if ( (time(NULL) - state->last_vc_sync_time > 3) ) 
+    {
+      if (opts->use_rigctl == 1) //rigctl tuning
+      {
+        if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+        SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+
+      }
+
+      else if (opts->audio_in_type == 3) //rtl_fm tuning
+      {
+        //UDP command to tune the RTL dongle
+        rtl_udp_tune(opts, state, state->p25_cc_freq);
+      }
+      opts->p25_is_tuned = 0;
+      //zero out vc frequencies
+      state->p25_vc_freq[0] = 0;
+      state->p25_vc_freq[1] = 0;
+      state->last_cc_sync_time = time(NULL);
+      state->is_con_plus = 0; //con+ flag off
+    }
+  }
+
 } 
