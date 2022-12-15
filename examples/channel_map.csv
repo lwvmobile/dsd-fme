@@ -1,4 +1,6 @@
-ChannelNumber(dec),frequency(Hz)
+ChannelNumber(dec),frequency(Hz) (do not delete this line or won't import properly)
 1,851375000
-800,154987500
-801,451375000
+2,851800000
+3,855987500
+4,858487500
+5,852312500

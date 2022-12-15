@@ -2,11 +2,29 @@
 
 If you want to checkout and build this branch (for testing purposes) ignore the automatic scripts and instructions further down below, run these steps instead 
 
+Download and Install the dependencies if you don't already have them (Debian/Ubuntu/Mint/Pi)
+
 ```
 sudo apt update
 sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev
 ```
 
+Download and Install MBElib if you don't already have it
+
+```
+git clone https://github.com/lwvmobile/mbelib
+cd mbelib
+mkdir build
+cd build
+cmake ..
+make -j `nproc`
+sudo make install
+sudo ldconfig
+cd ..
+cd ..
+```
+
+Download and Install dev branch of DSD-FME
 
 ```
 git clone https://github.com/lwvmobile/dsd-fme
@@ -34,9 +52,10 @@ sudo make install
    
                 - for piped stdin
                 
-                rtl for rtl device
+                rtl:dev:freq:gain:ppm:bw:sq:udp for rtl dongle (see below)
                 
                 tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)
+                tcp:192.168.7.5:7355 for custom address and port
                 
                 filename.bin for OP25/FME capture bin files
                 
@@ -47,74 +66,114 @@ sudo make install
                 
   -s <rate>     Sample Rate of wav input files (usually 48000 or 96000) Mono only!
 
-  -----command line switches here subject to change------------------
-  -1 <file>     Import LCN Frequencies from csv file (numeral 'one')                   
-                 (See lcn.csv for example)
-  -7 <file>     Import Channel to Frequency Map from csv file (numeral 'seven')                   
+ New and Experimental Functions and Features---------------------------------------------------
+  -C <file>     Import Channel to Frequency Map (channel number, frequency) from csv file. (Capital C)                   
                  (See channel_map.csv for example)
-  -2 <file>     Import Group List Allow/Block and Label from csv file (numeral 'two')
+  -G <file>     Import Group List Allow/Block and Label from csv file.
                  (See group.csv for example)
-  -3            Enable Extremely Experimental Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input
-  -5 <udp p>    Enable RIGCTL/TCP; Set UDP Port for RIGCTL. (4532 for SDR++)
-  -6 <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)
-  -8            Reverse Mute - Mute Unencrypted Voice Channels
+  -T            Enable Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input
+  -U <port>     Enable RIGCTL/TCP; Set TCP Port for RIGCTL. (4532 on SDR++)
+  -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)
+                 P25 - 7000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500; May vary based on system stregnth, etc.
+  -t <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)
+  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice
+
 
 ```
 ### Input ###
 
 --TCP Direct Audio Link with SDR++
 
-`dsd-fme -i tcp` Currently defaults to localhost:7355 (SDR++)(User Configurable Later)
+`dsd-fme -i tcp` Currently defaults to localhost:7355 (SDR++ defaults)
+
+`dsd-fme -i tcp:192.168.7.5:7356` (remote host and custom port)
+
+--New RTL Input String--
+
+WARNING! The old RTL input command line switches have been depreciated in favor of rtl:dev:freq:gain:ppm:bw:sq:udp 
+
+Old Example: `dsd-fme -fp -i rtl -c 851M -P -2 -G 44 -D 0 -U 6020 -Y 24 -N 2> log.ans`
+
+New Example: `dsd-fme -fp -i rtl:0:851.8M:22:-2:24:0:6020 -N 2> log.ans`
+
+```
+RTL-SDR options:
+ WARNING! Old CLI Switch Handling has been depreciated in favor of rtl:<parms>
+ Usage: rtl:dev:freq:gain:ppm:bw:sq:udp
+  dev  <num>    RTL-SDR Device Index Number
+  freq <num>    RTL-SDR Frequency
+  gain <num>    RTL-SDR Device Gain (0-49) (default = 26)(0 = Hardware AGC, not recommended)
+  ppm  <num>    RTL-SDR PPM Error (default = 0)
+  bw   <num>    RTL-SDR VFO Bandwidth kHz (default = 12)(6, 8, 12, 24) 
+  sq   <num>    RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)
+  udp  <num>    RTL-SDR UDP Remote Port (default = 6020)
+ Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:12:0:6021
+
+```
+
 
 --48000/9600 Mono Wav File Input
 
-`dsd-fme -i filename.wav` 48k/1 16-bit Audio
+`dsd-fme -i filename.wav` 48k/1 Audio
 
-`dsd-fme -i filename.wav -s 96000` 96k/1 16-bit Audio (DSDPlus Raw Signal Wav Files)
+`dsd-fme -i filename.wav -s 96000` 96k/1 (DSDPlus Raw Signal Wav Files)
 
 Wav File Input Note: Due to 96000 rate audio requiring me to double the symbol rate and center, be sure to use the -s 96000 at the very end of the startup command. Also, some NXDN48/96 may have difficulties decoding properly with wav file input. 
 
-### Very Experimental EDACS/P25/NXDN Simple/Single VFO Trunking ###
+### EDACS/P25/NXDN/DMR Simple/Single VFO Trunking ###
 
-EDACS Trunking will require an lcn csv file with lcn frequencies listed in order, comma seperated. Currently, LCN imports will be single system only to keep things simple and easy. See lcn.csv in the example folder provided. 
+EDACS Trunking (w/ channel map import)
 
 --EDACS/PV Trunking using RIGCTL and TCP Direct Link Audio inside of SDR++ (Tested and Working on EDACS/EDACS-EA with Provoice only, no analog voice monitoring)
 
-`dsd-fme -i tcp -fp -1 lcn.csv -2 group.csv -3 -5 4532 -N 2> log.ans`
+`dsd-fme -i tcp -fp -C channel_map.csv -G group.csv -T -U 4532 -N 2> log.ans`
 
 --NXDN48 Trunking (standard band plan) with SDR++ (untested for frequency accuracy)
 
-`dsd-fme -fi -i tcp -3 -5 4532 -N 2> log.ans`
+`dsd-fme -fi -i tcp -T -U 4532 -N 2> log.ans`
 
---NXDN48 Trunking (w/ channel map import) with SDR++ (see channel_map.csv file for example)
+--NXDN48 Trunking (w/ channel map import) with SDR++ (put control channel frequency at channel 0 in channel_map.csv)
 
-`dsd-fme -fi -i tcp -3 -5 4532 -7 channel_map.csv -N 2> log.ans`
+`dsd-fme -fi -i tcp -T -U 4532 -C channel_map.csv -N 2> log.ans`
 
---DMR Trunking (w/ channel map import) with SDR++ (put control channel frequency at channel 0 in channel_map.csv)
+--DMR Trunking (w/ channel map import) with SDR++ (put control channel frequency at channel 0 (TIII and Con+) in channel_map.csv)
 
-`dsd-fme -fs -i tcp -3 -5 4532 -7 channel_map.csv -N 2> log.ans`
+`dsd-fme -fs -i tcp -T -U 4532 -C channel_map.csv -N 2> log.ans`
 
---P25 Trunking P1 and P2 (C4FM) with SDR++ (VHF/UHF iden_up_vu frequencies untested for complete accuracy)
+--P25 Trunking P1 and P2 (C4FM) with SDR++ 
 
-`dsd-fme -i tcp -3 -5 4532 -N 2> log.ans`
+`dsd-fme -i tcp -T -U 4532 -N 2> log.ans`
 
 --P25 Trunking (CQPSK) with P1 Control Channel (Should switch symbol rate and center on Phase 2 audio channels)
 
-`dsd-fme -i tcp -3 -5 4532 -N -mq 2> log.ans`
+`dsd-fme -i tcp -T -U 4532 -N -mq 2> log.ans`
 
 --P25 Trunking Phase 2 TDMA Control Channel systems with CQPSK (non Phase 1 systems)
 
-`dsd-fme -i tcp -3 -5 4532 -N -f2 -m2 2> log.ans`
+`dsd-fme -i tcp -T -U 4532 -N -f2 -m2 2> log.ans`
 
-Trunking Note1: All samples above can also be run with the RTL input method and setting of RTL UDP remote port.
+Trunking Note1: All samples above can also be run with the RTL input method and setting of RTL UDP remote port. In terms of performance, however, SDR++ will do a much better job on weaker/marginal signal compared to the RTL input. RTL input should only be used on strong signal.
 
-`dsd-fme -fp -i rtl -c 851M -P -2 -G 44 -D 0 -U 6020 -Y 24 -N -T -1 lcn.csv -2 groups.csv -3 2> log.ans`
+`dsd-fme -fp -i rtl:0:851.8M:22:-2:24:0:6020 -T -C channel_map.csv -G group.csv -N 2> log.ans`
 
 Trunking Note2: CQPSK Phase 1 and Phase 2 Systems are subceptible to LSM distortion issues, but seem to do okay, but require really good signal. Some CRC issues still occur with Phase 2 TDMA LCCH Mac Signal that can affect reliability, I believe this issue is ultimately caused by the PSK demodulation inside of FME. I also don't believe this will work on 8-level PSK, but I cannot determine that at the moment. Update: I have improved the LCCH Mac Signal decoding my increasing the QPSK decision point buffers to their maximum values. 
 
-Trunking Note3: DMR Trunking has been coded, and is completely untested currently. Current coded and supported trunking systems include standard TIII, Con+, and Cap+. A channel map file will be required for DMR trunking. While some TIII systems broadcast absolute frequencies that can be internally calculated, there is no mechanism in place to figure out the control channel frequency, so at the very minimum, for TIII, a channel map with channel number 0 mapped to the CC frequency will be required, but using a complete channel map csv file is highly recommended in most any situation if possible. If you do not know which channels need frequencies, observe the console output log and look for channels and try to match them to known system frequencies. Currently uncoded/unknown trunking systems include Hytera XPT.
+Trunking Note3: DMR Trunking has been coded, and some testing and tweaks have been carried out. Cap+, Con+, and TIII systems seem to do well with trunking now. Placing the frequency for the control channel at channel map 0 in your channel_map.csv file is not required now if using RIGCTL, RIGCTL can poll the VFO for the current frequency if it believes its on a control channel, but using channel 0 as the control channel will be required when using the rtl dongle. If you need to map out your channels for TIII, you can observe the console output and look for channel numbers. For conveniece I have included the DSDPlus channel numbering (as best as I can figure it) into the console print so it will make it easier for users from DSDPlus to map frequencies into the channel_map.csv file. Make sure your channel numbers are the Cd (channel decimal) values from the log, and not the C+ (dsdplus) values.
 
-Trunking Note4: NXDN Trunking may also require an lcn file, but currently, the import function does not map frequencies to channel numbers, and 'standard' channel (0-800) frequencies have not been tested for accuracy, so while some primitive NXDN trunking is technically there, I cannot say that it will tune to the correct frequency on any system as of yet.
+```
+ Talkgroup Voice Channel Grant (TV_GRANT) - Logical
+  Ch [036] Cd [0054] C+ [0110] - TS [1] - Target [01900500] - Source [01900505]
+```
+
+Use channel 54 in your import file, which would correspond to dsdplus channels 109 and 110 (109 = TS0 / 110 = TS1).
+
+For Connect Plus, enumerate your list from 1 to the last channel and add the frequency. For Capacity Plus, Rest Channels 1 and 2 will share the same frequency, 3 and 4 will share, 5 and 6 will share, and 7-8 will share, as Capacity Plus counts each RF frequency as two seperate channels, one for each time slot. Capacity Plus Quirk: DSD-FME makes its best effort to follow the rest channel in the event that the sync is lost for longer than the hangtime, but occassionally, DSD-FME will lose the rest channel and will have to hunt through all frequencies to find it again.
+
+Currently uncoded/unknown DMR trunking systems include Hytera XPT.
+
+Trunking Note4: NXDN Trunking may also require a channel map file, depending on the system. If it uses a custom range (above 800), then channels will need to be mapped. If channels do not require mapping (have channels below 800) but you are not tuning properly, then please use a channel_map and please report the issue in the issues along with the channels you are tuning and the actual rf frequency so corrections can be made.
+
+Channel Map and Group CSV Note: Leave the top line of the channel_map.csv and group.csv as the label, do not delete the line, if no line is there, dsd_import skips the first line so it will not import the first channel or first group in those files if there is something there that isn't a label. 
 
 ## NCurses Keyboard Shortcuts ##
 
