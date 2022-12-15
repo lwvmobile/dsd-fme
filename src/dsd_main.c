@@ -841,6 +841,8 @@ usage ()
   printf ("                 (Running in console will use static wav files)\n");
   printf ("  -a            Enable Call Alert Beep (NCurses Terminal Only)\n");
   printf ("                 (Warning! Might be annoying.)\n");
+  printf ("  -L <file>     Specify Filename for LRRP Data Output.\n");
+  printf ("  -c <file>     Output symbol capture to .bin file\n");
   printf ("  -n            Throttle Symbol Capture Bin Input\n");
   printf ("                 (useful when reading files still being written to by OP25)");
   printf ("\n");
@@ -1177,7 +1179,7 @@ main (int argc, char **argv)
           break;
 
         case 'U': //New letter assignment for RIGCTL TCP port, flow down to allow temp numbers
-        case '5': //RIGCTL UDP port
+        case '5': //RIGCTL TCP port
           sscanf (optarg, "%d", &opts.rigctlportno);
           if (opts.rigctlportno != 0) opts.use_rigctl = 1; 
           break;
@@ -1359,9 +1361,11 @@ main (int argc, char **argv)
           fprintf (stderr,"Logging Frame Payload to console\n");
           break;
 
-        case 'L': //was Q, now is L
+        case 'L': //LRRP output to file
+          strncpy(opts.lrrp_out_file, optarg, 1023);
+          opts.lrrp_out_file[1023] = '\0';
           opts.lrrp_file_output = 1;
-          fprintf (stderr,"Logging LRRP data to ~/lrrp.txt \n");
+          fprintf (stderr,"Writing + Appending LRRP data to file %s\n", opts.lrrp_out_file);
           break;
 
         case 'P': //TDMA/NXDN Per Call - was T, now is P
@@ -1401,6 +1405,7 @@ main (int argc, char **argv)
         //   opts.symboltiming = 0;
         //   fprintf (stderr,"Setting datascope frame rate to %i frame per second.\n", opts.scoperate);
         //   break;
+
         case 'i':
           strncpy(opts.audio_in_dev, optarg, 2047);
           opts.audio_in_dev[2047] = '\0';
@@ -1426,6 +1431,14 @@ main (int argc, char **argv)
         //   opts.rtlsdr_center_freq = (uint32_t)atofs(optarg);
         //   fprintf (stderr,"Tuning to frequency: %i Hz\n", opts.rtlsdr_center_freq);
         //   break;
+
+        case 'c': //now is symbol capture bin output like FME Lite
+          strncpy(opts.symbol_out_file, optarg, 1023);
+          opts.symbol_out_file[1023] = '\0';
+          fprintf (stderr,"Writing + Appending symbol capture to file %s\n", opts.symbol_out_file);
+          opts.symbol_out = 1;
+          openSymbolOutFile (&opts, &state);
+          break;
 
         case 'g':
           sscanf (optarg, "%f", &opts.audio_gain);
@@ -2052,42 +2065,42 @@ main (int argc, char **argv)
     if((strncmp(opts.audio_in_dev, "/dev/dsp", 8) == 0))
     {
       sprintf (opts.audio_in_dev, "%s", "pulse");
-      fprintf (stderr, "Did you mean pulse audio? Using pulse audio input!\n");
+      fprintf (stderr, "OSS and PA Handling Disabled; Using Pulse Audio.\n");
       opts.audio_in_type = 0;
     }
 
     if((strncmp(opts.audio_in_dev, "/dev/audio", 10) == 0))
     {
       sprintf (opts.audio_in_dev, "%s", "pulse");
-      fprintf (stderr, "Nope! Using pulse audio input!\n");
+      fprintf (stderr, "OSS and PA Handling Disabled; Using Pulse Audio.\n");
       opts.audio_in_type = 0;
     }
 
     if((strncmp(opts.audio_out_dev, "/dev/dsp", 8) == 0))
     {
       sprintf (opts.audio_out_dev, "%s", "pulse");
-      fprintf (stderr, "I told you to stop trying to use /dev/dsp!!\n");
+      fprintf (stderr, "OSS and PA Handling Disabled; Using Pulse Audio.\n");
       opts.audio_out_type = 0;
     }
 
     if((strncmp(opts.audio_out_dev, "/dev/audio", 10) == 0))
     {
       sprintf (opts.audio_out_dev, "%s", "pulse");
-      fprintf (stderr, "WHY?! Why are you trying to make me use OSS? That was depreciated over 10 years ago!\n");
+      fprintf (stderr, "OSS and PA Handling Disabled; Using Pulse Audio.\n");
       opts.audio_out_type = 0;
     }
 
     if((strncmp(opts.audio_out_dev, "pa", 2) == 0))
     {
       sprintf (opts.audio_out_dev, "%s", "pulse");
-      fprintf (stderr, "We don't use Port Audio 'round 'ere!\n");
+      fprintf (stderr, "OSS and PA Handling Disabled; Using Pulse Audio.\n");
       opts.audio_out_type = 0;
     }
 
     if((strncmp(opts.audio_in_dev, "pa", 2) == 0))
     {
       sprintf (opts.audio_in_dev, "%s", "pulse");
-      fprintf (stderr, "Port Audio wouldn't work even if it were still in the code!\n");
+      fprintf (stderr, "OSS and PA Handling Disabled; Using Pulse Audio.\n");
       opts.audio_out_type = 0;
     }
 
