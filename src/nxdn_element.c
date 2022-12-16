@@ -236,14 +236,22 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
   //check for control channel frequency in the channel map if not available
   if (opts->p25_trunk == 1 && state->p25_cc_freq == 0)
   {
+    long int ccfreq = 0;
     if (state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
-    //if not available from the import file, then poll rigctl if its available
+    
     //we are assuming that the current channel is the control channel
     //unsure whether or not control signalling is available on NXDN voice channels
+
+    //if not available from the import file, then poll rigctl if its available
     else if (opts->use_rigctl == 1)
     {
-      long int ccfreq = 0;
       ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
+      if (ccfreq != 0) state->p25_cc_freq = ccfreq;
+    }
+    //if using rtl input, we can ask for the current frequency tuned
+    else if (opts->audio_in_type == 3)
+    {
+      ccfreq = (long int)opts->rtlsdr_center_freq;
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
     }
   }

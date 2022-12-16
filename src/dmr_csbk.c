@@ -48,7 +48,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       fprintf (stderr, "%s", KYEL); 
       
       //7.1.1.1.1 Channel Grant CSBK/MBC PDU
-      if (csbk_o > 47 && csbk_o < 53 )
+      if (csbk_o > 47 && csbk_o < 55 )
       {
 
         //users will need to import the cc frequency as channel 0 for now
@@ -65,6 +65,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (csbk_o == 50) fprintf (stderr, " Private Broadcast Voice Channel Grant (BTV_GRANT)");
         if (csbk_o == 51) fprintf (stderr, " Private Data Channel Grant: Single Item (PD_GRANT)");
         if (csbk_o == 52) fprintf (stderr, " Talkgroup Data Channel Grant: Single Item (TD_GRANT)");
+        if (csbk_o == 53) fprintf (stderr, " Duplex Private Voice Channel Grant (PV_GRANT_DX)");
+        if (csbk_o == 54) fprintf (stderr, " Duplex Private Data Channel Grant (PD_GRANT_DX)");
 
         //Logical Physical Channel Number
         uint16_t lpchannum = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 12); 
@@ -79,7 +81,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //LCN conveyed here is the tdma timeslot variety, and not the RF frequency variety
         uint8_t lcn = cs_pdu_bits[28];
         //the next three bits can have different meanings depending on which item above for context
-        uint8_t st1 = cs_pdu_bits[29]; //late_entry, hi_rate
+        uint8_t st1 = cs_pdu_bits[29]; //late_entry, hi_rate, reserved(dx)
         uint8_t st2 = cs_pdu_bits[30]; //emergency
         uint8_t st3 = cs_pdu_bits[31]; //offset, call direction
         //target and source are always the same bits
@@ -137,7 +139,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }  
 
         //if not a data channel grant (only tuning to voice channel grants)
-        if (csbk_o < 51) //48, 49, 50 are voice grants, 51 and 52 are data grants
+        if (csbk_o == 48 || csbk_o == 49 || csbk_o == 50 || csbk_o == 53) //48, 49, 50 are voice grants, 51 and 52 are data grants, 53 Duplex Private Voice, 54 Duplex Private Data
         {
           //shim in chan map 0 as the cc frequency, user will need to specify it in the channel map file
           if (state->p25_cc_freq != 0 && state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
@@ -260,6 +262,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
         {
           ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
+          if (ccfreq != 0) state->p25_cc_freq = ccfreq;
+        }
+
+        //if using rtl input, we can ask for the current frequency tuned
+        if (opts->audio_in_type == 3 && state->p25_cc_freq == 0)
+        {
+          ccfreq = (long int)opts->rtlsdr_center_freq;
           if (ccfreq != 0) state->p25_cc_freq = ccfreq;
         }
 
@@ -571,6 +580,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
         {
           ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
+          if (ccfreq != 0) state->p25_cc_freq = ccfreq;
+        }
+
+        //if using rtl input, we can ask for the current frequency tuned
+        if (opts->audio_in_type == 3  && state->p25_cc_freq == 0)
+        {
+          ccfreq = (long int)opts->rtlsdr_center_freq;
           if (ccfreq != 0) state->p25_cc_freq = ccfreq;
         }
 

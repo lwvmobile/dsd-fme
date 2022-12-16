@@ -199,6 +199,25 @@ void edacs(dsd_opts * opts, dsd_state * state)
             state->edacs_lcn_count = state->edacs_cc_lcn;
           }
           fprintf (stderr, " [%d]", state->edacs_cc_lcn);
+
+          //check for control channel lcn frequency if not provided in channel map or in the lcn list
+          if (state->trunk_lcn_freq[state->edacs_cc_lcn-1] == 0)
+          {
+            long int lcnfreq = 0;
+            //if using rigctl, we can ask for the currrent frequency
+            if (opts->use_rigctl == 1)
+            {
+              lcnfreq = GetCurrentFreq (opts->rigctl_sockfd);
+              if (lcnfreq != 0) state->trunk_lcn_freq[state->edacs_cc_lcn-1] = lcnfreq;
+            }
+            //if using rtl input, we can ask for the current frequency tuned
+            if (opts->audio_in_type == 3)
+            {
+              lcnfreq = (long int)opts->rtlsdr_center_freq;
+              if (lcnfreq != 0) state->trunk_lcn_freq[state->edacs_cc_lcn-1] = lcnfreq;
+            }
+          }
+
           //set trunking cc here so we know where to come back to
           if (opts->p25_trunk == 1 && state->trunk_lcn_freq[state->edacs_cc_lcn-1] != 0)
           {
@@ -309,10 +328,36 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KNRM);
         state->edacs_site_id = site_id;
         state->edacs_cc_lcn = cc_lcn;
+
         if (state->edacs_cc_lcn > state->edacs_lcn_count && lcn < 26) 
         {
           state->edacs_lcn_count = state->edacs_cc_lcn;
         }
+
+        //check for control channel lcn frequency if not provided in channel map or in the lcn list
+        if (state->trunk_lcn_freq[state->edacs_cc_lcn-1] == 0)
+        {
+          long int lcnfreq = 0;
+          //if using rigctl, we can ask for the currrent frequency
+          if (opts->use_rigctl == 1)
+          {
+            lcnfreq = GetCurrentFreq (opts->rigctl_sockfd);
+            if (lcnfreq != 0) state->trunk_lcn_freq[state->edacs_cc_lcn-1] = lcnfreq;
+          }
+          //if using rtl input, we can ask for the current frequency tuned
+          if (opts->audio_in_type == 3)
+          {
+            lcnfreq = (long int)opts->rtlsdr_center_freq;
+            if (lcnfreq != 0) state->trunk_lcn_freq[state->edacs_cc_lcn-1] = lcnfreq;
+          }
+        }
+
+        //set trunking cc here so we know where to come back to
+        if (opts->p25_trunk == 1 && state->trunk_lcn_freq[state->edacs_cc_lcn-1] != 0)
+        {
+          state->p25_cc_freq = state->trunk_lcn_freq[state->edacs_cc_lcn-1]; //index starts at zero, lcn's locally here start at 1
+        }
+
       }
 
       //voice call assignment
