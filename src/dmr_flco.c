@@ -453,21 +453,32 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
 
   if (slco == 0x2) //C_SYS_Parms
   {
-    fprintf (stderr, " C_SYS_PARMS - %s - Net ID: %d Site ID: %d - Reg Req: %d - CSC: %d ", model_str, net, site, reg, csc);
+    fprintf (stderr, " C_SYS_PARMS - %s - Net ID: %d Site ID: %d - Reg Req: %d - CSC: %d ", model_str, net+1, site+1, reg, csc);
+
+    //disabling so we can show the par information from the CSBK
     //add string for ncurses terminal display - no par since slc doesn't carrry that value
-    sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d ", model_str, net, site);
+    // sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d ", model_str, net, site);
     //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
+
     if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
     {
       ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
     }
+
+    //nullify any previous branding sub (bugfix for naughty assignments or system type switching)
+    sprintf(state->dmr_branding_sub, "%s", "");
   }
   else if (slco == 0x3) //P_SYS_Parms
   {
-    fprintf (stderr, " P_SYS_PARMS - %s - Net ID: %d Site ID: %d - Comp Ch: %d ", model_str, net, site, reg); 
+    fprintf (stderr, " P_SYS_PARMS - %s - Net ID: %d Site ID: %d - Comp Ch: %d ", model_str, net+1, site+1, reg); 
+
+    //only asssign below if the field is empty, the CSBK version on CC will carry par
     //add string for ncurses terminal display - no par since slc doesn't carrry that value
-    sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d ", model_str, net, site);
+    if((strncmp(state->dmr_site_parms, "", 3) == 0)) sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net+1, site+1);
+
+    //nullify any previous branding sub (bugfix for naughty assignments or system type switching)
+    sprintf(state->dmr_branding_sub, "%s", "");
   }
   else if (slco == 0x0) //null
     fprintf (stderr, " SLCO NULL ");

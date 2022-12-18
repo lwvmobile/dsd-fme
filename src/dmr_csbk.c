@@ -253,10 +253,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint8_t par = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[54], 2); 
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24); 
         
-        fprintf (stderr, " C_ALOHA_SYS_PARMS - %s - Net ID: %d Site ID: %d Par: %d \n  Reg Req: %d V: %d MS: %d", model_str, net, site, par, regreq, version, target);
+        fprintf (stderr, " C_ALOHA_SYS_PARMS - %s - Net ID: %d Site ID: %d Par: %d \n  Reg Req: %d V: %d MS: %d", model_str, net+1, site+1, par+1, regreq, version, target);
 
-        //add string for ncurses terminal display - no par since slc doesn't carrry that value
-        sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d ", model_str, net, site);
+        //add string for ncurses terminal display
+        sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, site+1, par+1);
 
         //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
         if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
@@ -273,6 +273,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
 
         uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16);
+
+        //nullify any previous branding sub (bugfix for naughty assignments or system type switching)
+        sprintf(state->dmr_branding_sub, "%s", "");
 
         //debug print
         //fprintf (stderr, "\n  SYSCODE: %016b", syscode);
@@ -382,9 +385,15 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint8_t par = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[54], 2); 
         uint32_t parms2 = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24); 
         fprintf (stderr, "\n");
-        fprintf (stderr, "  C_BCAST_SYS_PARMS - %s - Net ID: %d Site ID: %d Par: %d ", model_str, net, site, par);
+        fprintf (stderr, "  C_BCAST_SYS_PARMS - %s - Net ID: %d Site ID: %d Par: %d ", model_str, net+1, site+1, par+1);
         uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16);
         //fprintf (stderr, "\n  SYSCODE: %016b", syscode);
+
+        //add string for ncurses terminal display - This may set adjacent site info, so just do it out of Aloha
+        // sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, site+1, par+1);
+
+        //nullify any previous branding sub (bugfix for naughty assignments or system type switching)
+        sprintf(state->dmr_branding_sub, "%s", "");
 
       }
 
@@ -612,7 +621,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //don't tune if currently a vc on the control channel
         if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
         {
-          //need channel map frequencies and stuff, also way to figure out control channel frequency? (channel 0 from channel map?)
+          
           if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0)) 
           {
             if (state->trunk_chan_map[lcn] != 0) //if we have a valid frequency

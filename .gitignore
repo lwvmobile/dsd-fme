@@ -3,3 +3,4 @@
 *.dylib
 build
 *.sh
+*.csv

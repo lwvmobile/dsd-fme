@@ -319,7 +319,8 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   //con+ voice channels can have extremely long idle periods without properly tearing down
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && state->is_con_plus == 1)
   {
-    if ( (time(NULL) - state->last_vc_sync_time > 3) ) 
+    //at 3 seconds, the CC was sending back to the VC even without voice present, increased to 5
+    if ( (time(NULL) - state->last_vc_sync_time > 5) ) 
     {
       if (opts->use_rigctl == 1) //rigctl tuning
       {

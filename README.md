@@ -1,5 +1,9 @@
 ## WARNING! The DEV branch may have broken or incomplete features, changes in Menu or CLI options, and other quirks. USE AT YOUR OWN RISK!
 
+Click image below for video of current DMR/P25 trunking capabilities.
+
+[![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/dev/dsd-fme.png)](https://www.youtube.com/watch?v=hGIijBbbUxg "DSD-FME Trunking Demo")
+
 If you want to checkout and build this branch (for testing purposes) ignore the automatic scripts and instructions further down below, run these steps instead 
 
 Download and Install the dependencies if you don't already have them (Debian/Ubuntu/Mint/Pi)
@@ -234,8 +238,6 @@ To see the up to date CLI options, please look at the help options with the -h C
 
 ## 2022.08.12 Update ##
 A new menu system has been introduced in the NCURSES Terminal. Also includes support for LRRP to text file type of choice and reading OP25 symbol capture bin files.
-
-[![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/dev/dsd-fme.png)](https://www.youtube.com/watch?v=TqTfAfaPJ4s "DSD-FME Update 2022.08.12")
 
 To get started with the new menu system, simply launch with:
 
