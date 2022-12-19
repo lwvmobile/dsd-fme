@@ -81,6 +81,7 @@ sudo make install
                  P25 - 7000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500; May vary based on system stregnth, etc.
   -t <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)
   -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice
+  -D <dec>      Manually Set TIII DMR Location Area n bit len (0-10)(10 max)
 
 
 ```

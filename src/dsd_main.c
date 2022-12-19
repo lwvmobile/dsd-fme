@@ -314,6 +314,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset(state->dmr_embedded_gps, 0, sizeof(state->dmr_embedded_gps));
   memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
 
+  //multi-purpose call_string
+  sprintf (state->call_string[0], "%s", "                    "); //20 spaces
+  sprintf (state->call_string[1], "%s", "                    "); //20 spaces
+
   if (time(NULL) - state->last_cc_sync_time > 30) //thirty seconds of no carrier
   {
     state->dmr_rest_channel = -1;
@@ -478,6 +482,10 @@ initOpts (dsd_opts * opts)
 
   //setmod bandwidth
   opts->setmod_bw = 0; //default to 0 - off
+
+  //DMR Location Area - DMRLA B***S***
+  opts->dmr_dmrla_is_set = 0;
+  opts->dmr_dmrla_n = 0;
 
 } //initopts
 
@@ -789,6 +797,10 @@ initState (dsd_state * state)
   memset(state->dmr_embedded_gps, 0, sizeof(state->dmr_embedded_gps));
   memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
 
+  //multi-purpose call_string
+  sprintf (state->call_string[0], "%s", "                    "); //20 spaces
+  sprintf (state->call_string[1], "%s", "                    "); //20 spaces
+
   //late entry mi fragments
   memset (state->late_entry_mi_fragment, 0, sizeof (state->late_entry_mi_fragment));
  
@@ -888,6 +900,9 @@ usage ()
   printf ("Advanced Decoder options:\n");
   printf ("  -X <hex>      Manually Set P2 Parameters (WACN, SYSID, CC/NAC)\n");
   printf ("                 (-X BEE00ABC123)\n");
+  printf ("  -D <dec>      Manually Set TIII DMR Location Area n bit len (0-10)(10 max)\n");
+  printf ("                 (Value defaults to max n bit value for site model size)\n");
+  printf ("                 (Setting 0 will show full Site ID, no area/subarea)\n");
   printf ("\n");
   printf ("  -A <num>      QPSK modulation auto detection threshold (default=26)\n");
   printf ("  -S <num>      Symbol buffer size for QPSK decision point tracking\n");
@@ -1152,11 +1167,19 @@ main (int argc, char **argv)
           opts.call_alert = 1;
           break;
 
-        //Free'd up switches include e,p,v,Q,V,D,Y,z
+        //Free'd up switches include e,p,v,Q,V,Y,z
         //make sure to put a colon : after each if they need an argument
         //or remove colon if no argument required
 
         //Disabled the Serial Port Dev and Baud Rate, etc, If somebody uses that function, sorry...
+
+        case 'D': //user set DMRLA n value
+          sscanf (optarg, "%c", &opts.dmr_dmrla_n);
+          if (opts.dmr_dmrla_n > 10) opts.dmr_dmrla_n = 10; //max out at 10;
+          // if (opts.dmr_dmrla_n != 0) opts.dmr_dmrla_is_set = 1; //zero will fix a capmax site id value...I think
+          opts.dmr_dmrla_is_set = 1;
+          fprintf (stderr, "DMRLA n value set to %d. \n", opts.dmr_dmrla_n);
+          break;
 
         case 'C': //new letter assignment for Channel import, flow down to allow temp numbers
         case '1': //LCN to Frequency CSV Import <--> flow down to chanimport now, tell users to use a channel map for edacs
@@ -1859,6 +1882,7 @@ main (int argc, char **argv)
               opts.mod_qpsk = 1;
               opts.mod_gfsk = 0;
               state.rf_mod = 1;
+              opts.setmod_bw = 12500;
               fprintf (stderr,"Enabling only QPSK modulation optimizations.\n");
             }
           else if (optarg[0] == '2')
@@ -1869,6 +1893,7 @@ main (int argc, char **argv)
               state.rf_mod = 1;
               state.samplesPerSymbol = 8; 
               state.symbolCenter = 3; 
+              opts.setmod_bw = 12500;
               fprintf (stderr,"Enabling 6000 sps P25p2 CQPSK.\n");
             }
           break;

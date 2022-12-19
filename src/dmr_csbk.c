@@ -231,7 +231,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //tiny n 1-3; small 1-5; large 1-8; huge 1-10
         uint16_t n = 1; //The minimum value of DMRLA is normally ≥ 1, 0 is reserved
 
-        //TODO: Add logic to set n and sub_mask values for DMRLA
 
         char model_str[8];
         char par_str[8]; //category A, B, AB, or reserved
@@ -244,25 +243,55 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 9);
           site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[51], 3);
           sprintf (model_str, "%s", "Tiny");
+          n = 3;
         }
         else if (model == 1) //Small
         {
           net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 7);
           site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[49], 5);
           sprintf (model_str, "%s", "Small");
+          n = 5;
         }
         else if (model == 2) //Large
         {
           net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 4);
           site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[46], 8);
           sprintf (model_str, "%s", "Large");
+          n = 8;
         }
         else if (model == 3) //Huge
         {
           net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 2);
           site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[44], 10);
           sprintf (model_str, "%s", "Huge");
+          n = 10;
         }
+
+        //honestly can't say that this is accurate, just a guess
+        uint8_t is_capmax = 0; //capmax(mot) flag
+        if (csbk_fid == 0x10)
+        {
+          n = 0;
+          is_capmax = 1;
+          opts->dmr_dmrla_is_set = 1;
+          opts->dmr_dmrla_n = 0;
+          sprintf (state->dmr_branding, "%s", "Motorola");
+          sprintf (state->dmr_branding_sub, "%s", "CapMax ");
+        } 
+
+        if (opts->dmr_dmrla_is_set == 1) n = opts->dmr_dmrla_n;
+
+        if (n == 0) sub_mask = 0x0;
+        if (n == 1) sub_mask = 0x1;
+        if (n == 2) sub_mask = 0x3;
+        if (n == 3) sub_mask = 0x7;
+        if (n == 4) sub_mask = 0xF;
+        if (n == 5) sub_mask = 0x1F;
+        if (n == 6) sub_mask = 0x3F;
+        if (n == 7) sub_mask = 0x7F;
+        if (n == 8) sub_mask = 0xFF;
+        if (n == 9) sub_mask = 0x1FF;
+        if (n == 10) sub_mask = 0x3FF;
 
         uint8_t par = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[54], 2);
         if (par == 1) sprintf (par_str, "%s", "A ");
@@ -271,10 +300,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24); 
         
-        fprintf (stderr, " C_ALOHA_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d Cat: %s\n  Reg Req: %d V: %d Mask: %02X MS: %d", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, par_str, regreq, version, mask, target);
+        if (n != 0) fprintf (stderr, " C_ALOHA_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d Cat: %s\n  Reg Req: %d V: %d Mask: %02X MS: %d", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, par_str, regreq, version, mask, target);
+        else fprintf (stderr, " C_ALOHA_SYS_PARMS - %s - Net ID: %d Site ID: %d Cat: %s\n  Reg Req: %d V: %d Mask: %02X MS: %d", model_str, net, site, par_str, regreq, version, mask, target);
+        if (is_capmax) fprintf (stderr, " Capacity Max ");
 
         //add string for ncurses terminal display
-        sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1 );
+        if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1 );
+        else sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net, site);
 
         //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
         if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
@@ -291,11 +323,12 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
 
         //nullify any previous branding sub (bugfix for bad assignments or system type switching)
-        sprintf(state->dmr_branding_sub, "%s", "");
+        //sprintf(state->dmr_branding_sub, "%s", "");
 
         //debug print
         uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16);
         //fprintf (stderr, "\n  SYSCODE: %016b", syscode);
+        //fprintf (stderr, "\n  SYSCODE: %02b.%b.%b", model, net, site); //won't show leading zeroes, but may not be required
         //fprintf (stderr, "\n  SYSCODE: %04X", syscode);
       } 
 
@@ -379,8 +412,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //tiny n 1-3; small 1-5; large 1-8; huge 1-10
         uint16_t n = 1; //The minimum value of DMRLA is normally ≥ 1, 0 is reserved
 
-        //TODO: Add logic to set n and sub_mask values for DMRLA
-
         //channel number from Broadcast Parms 2
         uint16_t lpchannum = 0;
 
@@ -395,25 +426,55 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 9);
           site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[51], 3);
           sprintf (model_str, "%s", "Tiny");
+          n = 3;
         }
         else if (model == 1) //Small
         {
           net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 7);
           site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[49], 5);
           sprintf (model_str, "%s", "Small");
+          n = 5;
         }
         else if (model == 2) //Large
         {
           net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 4);
           site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[46], 8);
           sprintf (model_str, "%s", "Large");
+          n = 8;
         }
         else if (model == 3) //Huge
         {
           net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 2);
           site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[44], 10);
           sprintf (model_str, "%s", "Huge");
+          n = 10;
         }
+
+        //honestly can't say that this is accurate, just a guess
+        uint8_t is_capmax = 0; //capmax(mot) flag
+        if (csbk_fid == 0x10)
+        {
+          n = 0;
+          is_capmax = 1;
+          opts->dmr_dmrla_is_set = 1;
+          opts->dmr_dmrla_n = 0;
+          sprintf (state->dmr_branding, "%s", "Motorola");
+          sprintf (state->dmr_branding_sub, "%s", "CapMax ");
+        } 
+
+        if (opts->dmr_dmrla_is_set == 1) n = opts->dmr_dmrla_n;
+
+        if (n == 0) sub_mask = 0x0;
+        if (n == 1) sub_mask = 0x1;
+        if (n == 2) sub_mask = 0x3;
+        if (n == 3) sub_mask = 0x7;
+        if (n == 4) sub_mask = 0xF;
+        if (n == 5) sub_mask = 0x1F;
+        if (n == 6) sub_mask = 0x3F;
+        if (n == 7) sub_mask = 0x7F;
+        if (n == 8) sub_mask = 0xFF;
+        if (n == 9) sub_mask = 0x1FF;
+        if (n == 10) sub_mask = 0x3FF;
 
         uint8_t par = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[54], 2);
         if (par == 1) sprintf (par_str, "%s", "A ");
@@ -424,13 +485,16 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         lpchannum = parms2 & 0xFFF; //7.2.19.7, for DSDPlus, this value is (lpchannum << 1) + 1;
 
         fprintf (stderr, "\n");
-        fprintf (stderr, "  C_BCAST_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d Cat: %s Cd: %d C+: %d", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, par_str, lpchannum, (lpchannum << 1)+1 );
+        if (n != 0) fprintf (stderr, "  C_BCAST_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d Cat: %s Cd: %d C+: %d", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, par_str, lpchannum, (lpchannum << 1)+1 );
+        else fprintf (stderr, "  C_BCAST_SYS_PARMS - %s - Net ID: %d Site ID: %d Cat: %s Cd: %d C+: %d", model_str, net, site, par_str, lpchannum, (lpchannum << 1)+1 );
+        if (is_capmax) fprintf (stderr, " Capacity Max");
 
         //add string for ncurses terminal display, if not adjacent site info
-        if (a_type != 6)  sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1);
+        if (a_type != 6 && n != 0)  sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1);
+        if (a_type != 6 && n == 0)  sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net, site);
 
         //nullify any previous branding sub (bugfix for bad assignments or system type switching)
-        sprintf(state->dmr_branding_sub, "%s", "");
+        //sprintf(state->dmr_branding_sub, "%s", "");
 
         uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16);
         //fprintf (stderr, "\n  SYSCODE: %016b", syscode);

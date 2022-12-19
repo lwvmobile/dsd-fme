@@ -29,6 +29,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   int is_cap_plus = 0;
   int is_alias = 0;
   int is_gps = 0;
+  uint8_t slot = state->currentslot;
 
   
   pf = (uint8_t)(lc_bits[0]); //Protect Flag
@@ -142,15 +143,32 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     fprintf(stderr, "TGT=%u SRC=%u ", target, source);
     if (opts->payload == 1) fprintf(stderr, "FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
 
-    if (flco == 3) fprintf (stderr, "Private "); //UU_V_Ch_Usr 
-    else fprintf (stderr, "Group "); //Grp_V_Ch_Usr
+    if (flco == 3) //UU_V_Ch_Usr 
+    {
+      sprintf (state->call_string[slot], " Private");
+      fprintf (stderr, "Private "); 
+    } 
+    else //Grp_V_Ch_Usr
+    {
+      sprintf (state->call_string[slot], "   Group");
+      fprintf (stderr, "Group "); 
+    } 
 
-    if(so & 0x80) fprintf(stderr, "Emergency ");
+    if(so & 0x80)
+    {
+      strcat (state->call_string[slot], " Emergency  ");
+      fprintf (stderr, "%s", KRED);
+      fprintf(stderr, "Emergency ");
+    }
+    else strcat (state->call_string[slot], "            ");
+
     if(so & 0x40)
     {
+      // strcat (state->call_string[slot], " Encrypted");
       fprintf (stderr, "%s", KRED);
-      fprintf(stderr, "Encrypted ");     
+      fprintf(stderr, "Encrypted ");
     }
+    // else strcat (state->call_string[slot], "          ");
 
     /* Check the "Service Option" bits */ 
     if(so & 0x30)
@@ -169,7 +187,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       else if((so & 0x03) == 0x03) fprintf(stderr, "Priority 3 ");
       else fprintf(stderr, "No Priority "); /* We should never go here */
     }
-
+    
     fprintf(stderr, "Call ");
     
     fprintf (stderr, "%s", KRED);
@@ -420,6 +438,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   uint16_t n = 1; //The minimum value of DMRLA is normally ≥ 1, 0 is reserved
 
   //TODO: Add logic to set n and sub_mask values for DMRLA
+  //assigning n as largest possible value for model type
 
   //Sys_Parms
   if (slco == 0x2 || slco == 0x3) 
@@ -429,25 +448,44 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
       net  = (uint16_t)ConvertBitIntoBytes(&slco_bits[6], 9);
       site = (uint16_t)ConvertBitIntoBytes(&slco_bits[15], 3);
       sprintf (model_str, "%s", "Tiny");
+      n = 3;
     }
     else if (model == 1) //Small
     {
       net  = (uint16_t)ConvertBitIntoBytes(&slco_bits[6], 7);
       site = (uint16_t)ConvertBitIntoBytes(&slco_bits[13], 5);
       sprintf (model_str, "%s", "Small");
+      n = 5;
     }
     else if (model == 2) //Large
     {
       net  = (uint16_t)ConvertBitIntoBytes(&slco_bits[6], 4);
       site = (uint16_t)ConvertBitIntoBytes(&slco_bits[10], 8);
       sprintf (model_str, "%s", "Large");
+      n = 8;
     }
     else if (model == 3) //Huge
     {
       net  = (uint16_t)ConvertBitIntoBytes(&slco_bits[6], 2);
       site = (uint16_t)ConvertBitIntoBytes(&slco_bits[8], 10);
       sprintf (model_str, "%s", "Huge");
+      n = 10;
     }
+
+    if (opts->dmr_dmrla_is_set == 1) n = opts->dmr_dmrla_n;
+
+    if (n == 0) sub_mask = 0x0;
+    if (n == 1) sub_mask = 0x1;
+    if (n == 2) sub_mask = 0x3;
+    if (n == 3) sub_mask = 0x7;
+    if (n == 4) sub_mask = 0xF;
+    if (n == 5) sub_mask = 0x1F;
+    if (n == 6) sub_mask = 0x3F;
+    if (n == 7) sub_mask = 0x7F;
+    if (n == 8) sub_mask = 0xFF;
+    if (n == 9) sub_mask = 0x1FF;
+    if (n == 10) sub_mask = 0x3FF;
+
   }
 
   //Con+
@@ -462,10 +500,12 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
 
   if (slco == 0x2) //C_SYS_Parms
   {
-    fprintf (stderr, " C_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d - Reg Req: %d - CSC: %d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, reg, csc);
+    if (n != 0) fprintf (stderr, " C_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d - Reg Req: %d - CSC: %d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, reg, csc);
+    else fprintf (stderr, " C_SYS_PARMS - %s - Net ID: %d Site ID: %d - Reg Req: %d - CSC: %d ", model_str, net, site, reg, csc);
 
     //add string for ncurses terminal display
-    sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1 );
+    if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1 );
+    else sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net, site);
 
     //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
 
@@ -475,18 +515,31 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
     }
 
-    //nullify any previous branding sub (bugfix for naughty assignments or system type switching)
-    sprintf(state->dmr_branding_sub, "%s", "");
+    //nullify any previous branding sub (bugfix for bad assignments or system type switching)
+    //sprintf(state->dmr_branding_sub, "%s", "");
+
+    //debug print
+    uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&slco_bits[4], 14);
+    //fprintf (stderr, "\n  SYSCODE: %014b", syscode);
+    //fprintf (stderr, "\n  SYSCODE: %02b.%b.%b", model, net, site); //won't show leading zeroes, but may not be required
+
   }
   else if (slco == 0x3) //P_SYS_Parms
   {
     fprintf (stderr, " P_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d - Comp CC: %d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, reg); 
 
     //add string for ncurses terminal display
-    sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1 );
+    if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1 );
+    else sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net, site);
 
     //nullify any previous branding sub (bugfix for bad assignments or system type switching)
-    sprintf(state->dmr_branding_sub, "%s", "");
+    //sprintf(state->dmr_branding_sub, "%s", "");
+
+    //debug print
+    uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&slco_bits[4], 14);
+    //fprintf (stderr, "\n  SYSCODE: %014b", syscode);
+    //fprintf (stderr, "\n  SYSCODE: %02b.%b.%b", model, net, site); //won't show leading zeroes, but may not be required
+
   }
   else if (slco == 0x0) //null
     fprintf (stderr, " SLCO NULL ");
@@ -508,7 +561,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Control Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
     sprintf (state->dmr_site_parms, "%d-%d ", con_netid, con_siteid);
-    
+
     //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
     if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
     {

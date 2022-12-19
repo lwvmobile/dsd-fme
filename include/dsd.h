@@ -332,6 +332,10 @@ typedef struct
   //setmod bandwidth
   int setmod_bw;
 
+  //DMR Location Area - DMRLA B***S***
+  uint8_t dmr_dmrla_is_set; //flag to tell us dmrla is set by the user
+  uint8_t dmr_dmrla_n; //n value for dmrla
+
 } dsd_opts;
 
 typedef struct
@@ -518,6 +522,7 @@ typedef struct
   char dmr_embedded_gps[2][200]; //2 slots by 99 char string for string embedded gps
   char dmr_lrrp_gps[2][200]; //2 slots by 99 char string for string lrrp gps
   char dmr_site_parms[200]; //string for site/net info depending on type of DMR system (TIII or Con+)
+  char call_string[2][200]; //string for call information
 
 
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
