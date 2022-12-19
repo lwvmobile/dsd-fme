@@ -2306,10 +2306,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
     }
-    printw ("FID: [%02X] SVC: [%02X] ", state->dmr_fid, state->dmr_so);
+
+    //REMUS! THIS IS THE OLD ONE
+    // printw ("FID: [%02X] SVC: [%02X] ", state->dmr_fid, state->dmr_so);
+    //This is the new one
+    printw ("%s | ", state->call_string[0]);
     printw ("%s ", DMRBusrtTypes[state->dmrburstL]);
     printw ("\n");
-    //printw ("|        | "); //10 spaces
+
     printw ("| V XTRA | "); //10 spaces
 
     if(state->dmrburstL == 16 && state->payload_algid == 0 && (state->dmr_so & 0xCF) == 0x40) //4F or CF mask? & 0xCF currently
@@ -2497,10 +2501,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
     }
-    printw ("FID: [%02X] SVC: [%02X] ", state->dmr_fidR, state->dmr_soR);
+
+    //REMUS! THIS IS THE OLD ONE
+    // printw ("FID: [%02X] SVC: [%02X] ", state->dmr_fidR, state->dmr_soR);
+    //THIS IS THE NEW ONE
+    printw ("%s | ", state->call_string[1]);
     printw ("%s ", DMRBusrtTypes[state->dmrburstR]);
     printw ("\n");
-    //printw ("|        | "); //12 spaces
+    
     printw ("| V XTRA | "); //10 spaces
 
     if(state->dmrburstR == 16 && state->payload_algidR == 0 && (state->dmr_soR & 0xCF) == 0x40) //4F or CF mask?

@@ -314,7 +314,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset(state->dmr_embedded_gps, 0, sizeof(state->dmr_embedded_gps));
   memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
 
-  //multi-purpose call_string
+  //REMUS! multi-purpose call_string
   sprintf (state->call_string[0], "%s", "                    "); //20 spaces
   sprintf (state->call_string[1], "%s", "                    "); //20 spaces
 
@@ -797,7 +797,7 @@ initState (dsd_state * state)
   memset(state->dmr_embedded_gps, 0, sizeof(state->dmr_embedded_gps));
   memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
 
-  //multi-purpose call_string
+  //REMUS! multi-purpose call_string
   sprintf (state->call_string[0], "%s", "                    "); //20 spaces
   sprintf (state->call_string[1], "%s", "                    "); //20 spaces
 

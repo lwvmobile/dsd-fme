@@ -164,10 +164,12 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
     if(so & 0x40)
     {
+      //REMUS! Uncomment Line Below if desired
       // strcat (state->call_string[slot], " Encrypted");
       fprintf (stderr, "%s", KRED);
       fprintf(stderr, "Encrypted ");
     }
+    //REMUS! Uncomment Line Below if desired
     // else strcat (state->call_string[slot], "          ");
 
     /* Check the "Service Option" bits */ 
@@ -175,17 +177,57 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     {
       /* Experimentally determined with DSD+,
       * is equal to 0x2, this is a TXI call */
-      if((so & 0x30) == 0x20) fprintf(stderr, "TXI ");
-      else fprintf(stderr, "Reserved=%d ", (so & 0x30) >> 4);
+      if((so & 0x30) == 0x20)
+      {
+        //REMUS! Uncomment Line Below if desired
+        // strcat (state->call_string[slot], " TXI");
+        fprintf(stderr, "TXI ");
+      } 
+      else
+      {
+        //REMUS! Uncomment Line Below if desired
+        // strcat (state->call_string[slot], " RES");
+        fprintf(stderr, "Reserved=%d ", (so & 0x30) >> 4);
+      } 
     }
-    if(so & 0x08) fprintf(stderr, "Broadcast ");
-    if(so & 0x04) fprintf(stderr, "OVCM ");
+    if(so & 0x08)
+    {
+      //REMUS! Uncomment Line Below if desired
+      // strcat (state->call_string[slot], "-BC   ");
+      fprintf(stderr, "Broadcast ");
+    } 
+    if(so & 0x04)
+    {
+      //REMUS! Uncomment Line Below if desired
+      // strcat (state->call_string[slot], "-OVCM ");
+      fprintf(stderr, "OVCM ");
+    } 
     if(so & 0x03)
     {
-      if((so & 0x03) == 0x01) fprintf(stderr, "Priority 1 ");
-      else if((so & 0x03) == 0x02) fprintf(stderr, "Priority 2 ");
-      else if((so & 0x03) == 0x03) fprintf(stderr, "Priority 3 ");
-      else fprintf(stderr, "No Priority "); /* We should never go here */
+      if((so & 0x03) == 0x01)
+      {
+        //REMUS! Uncomment Line Below if desired
+        // strcat (state->call_string[slot], "-P1");
+        fprintf(stderr, "Priority 1 ");
+      } 
+      else if((so & 0x03) == 0x02)
+      {
+        //REMUS! Uncomment Line Below if desired
+        // strcat (state->call_string[slot], "-P2");
+        fprintf(stderr, "Priority 2 ");
+      } 
+      else if((so & 0x03) == 0x03)
+      {
+        //REMUS! Uncomment Line Below if desired
+        // strcat (state->call_string[slot], "-P3");
+        fprintf(stderr, "Priority 3 ");
+      } 
+      else /* We should never go here */
+      {
+        //REMUS! Uncomment Line Below if desired
+        // strcat (state->call_string[slot], "  ");
+        fprintf(stderr, "No Priority "); 
+      } 
     }
     
     fprintf(stderr, "Call ");
