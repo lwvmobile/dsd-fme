@@ -499,9 +499,6 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Voice Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
     sprintf (state->dmr_site_parms, "%d-%d ", con_netid, con_siteid);
-
-    //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-    sprintf(state->dmr_site_parms, "%s", "");
   }
     
   else if (slco == 0xA)
@@ -511,15 +508,13 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Control Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
     sprintf (state->dmr_site_parms, "%d-%d ", con_netid, con_siteid);
+    
     //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
     if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
     {
       ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
     }
-
-    //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-    sprintf(state->dmr_site_parms, "%s", "");
   }
    
   else if (slco == 0xF)
@@ -534,7 +529,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     {
       state->p25_cc_freq = state->trunk_chan_map[restchannel];
     }
-    
+
     //nullify any previous TIII data (bugfix for bad assignments or system type switching)
     sprintf(state->dmr_site_parms, "%s", "");
   }

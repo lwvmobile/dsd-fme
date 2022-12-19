@@ -613,9 +613,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
 
-        //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-        sprintf(state->dmr_site_parms, "%s", "");
-
       }
 
       if (csbk_o == 0x03)
@@ -633,9 +630,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
-
-        //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-        sprintf(state->dmr_site_parms, "%s", "");
 
         //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
         if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
@@ -719,9 +713,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
-
-        //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-        sprintf(state->dmr_site_parms, "%s", "");
       }
 
       if (csbk_o == 0x0C) 
@@ -738,9 +729,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
-
-        //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-        sprintf(state->dmr_site_parms, "%s", "");
       }
 
       if (csbk_o == 0x11) 
@@ -752,9 +740,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
-
-        //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-        sprintf(state->dmr_site_parms, "%s", "");
       }
 
       if (csbk_o == 0x12) 
@@ -766,9 +751,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
-
-        //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-        sprintf(state->dmr_site_parms, "%s", "");
       }
 
       if (csbk_o == 0x18) 
@@ -780,9 +762,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
-
-        //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-        sprintf(state->dmr_site_parms, "%s", "");
       }
 
       fprintf (stderr, "%s", KNRM);
