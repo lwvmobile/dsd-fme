@@ -297,7 +297,7 @@ typedef struct
   int rigctl_sockfd;
   int use_rigctl;
   int rigctlportno;
-  char * rigctlhostname;
+  char rigctlhostname[1024];
 
   //udp socket for GQRX, SDR++, etc
   int udp_sockfd;

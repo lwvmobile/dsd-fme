@@ -461,7 +461,7 @@ initOpts (dsd_opts * opts)
   opts->use_rigctl = 0;
   opts->rigctl_sockfd = 0;
   opts->rigctlportno = 7356; //TCP Port Number; GQRX - 7356; SDR++ - 4532
-  opts->rigctlhostname = "localhost";
+  sprintf (opts->rigctlhostname, "%s", "localhost");
 
   //udp input options
   opts->udp_sockfd = 0;
@@ -1978,12 +1978,6 @@ main (int argc, char **argv)
       openSerial (&opts, &state);
     }
 
-    //need error handling on opening rigctl so we don't exit or crash on disconnect
-    if (opts.use_rigctl == 1)
-    {
-      opts.rigctl_sockfd = Connect(opts.rigctlhostname, opts.rigctlportno);
-    }
-
     if((strncmp(opts.audio_in_dev, "tcp", 3) == 0)) //tcp socket input from SDR++ and others
     {
       //use same handling as connect function from rigctl
@@ -1996,7 +1990,13 @@ main (int argc, char **argv)
       else goto TCPEND; //end early with preset values
 
       curr = strtok(NULL, ":"); //host address
-      if (curr != NULL) strncpy (opts.tcp_hostname, curr, 1023);
+      if (curr != NULL)
+      {
+        strncpy (opts.tcp_hostname, curr, 1023);
+        //shim to tie the hostname of the tcp input to the rigctl hostname (probably covers a vast majority of use cases)
+        //in the future, I will rework part of this so that users can enter a hostname and port similar to how tcp and rtl strings work
+        memcpy (opts.rigctlhostname, opts.tcp_hostname, sizeof (opts.rigctlhostname) );
+      } 
 
       curr = strtok(NULL, ":"); //host port
       if (curr != NULL) opts.tcp_portno = atoi (curr);
@@ -2006,6 +2006,12 @@ main (int argc, char **argv)
       fprintf (stderr, "%d \n", opts.tcp_portno);
       opts.tcp_sockfd = Connect(opts.tcp_hostname, opts.tcp_portno);
       opts.audio_in_type = 8;
+    }
+
+    //need error handling on opening rigctl so we don't exit or crash on disconnect
+    if (opts.use_rigctl == 1)
+    {
+      opts.rigctl_sockfd = Connect(opts.rigctlhostname, opts.rigctlportno);
     }
 
     if((strncmp(opts.audio_in_dev, "rtl", 3) == 0)) //rtl dongle input
