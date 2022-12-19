@@ -102,11 +102,16 @@ uint8_t dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t
   uint8_t report = 0;
   uint8_t pot_report = 0; //potential report by finding 0x0D and backtracking a few bytes
 
+  uint8_t is_p_head = 0;
+
   //shim for getting LRRP out of some prop head data blocks
   if (state->data_p_head[slot] == 1)
   {
+    if (DMR_PDU[1] != 0x10) goto LRRP_END; //check to see if FID is 0x10
     i = 0;
     message_len = blocks * block_len; 
+    source = state->dmr_lrrp_source[state->currentslot];
+    is_p_head = 1;
   }
   else i = 12; 
 
@@ -183,7 +188,8 @@ uint8_t dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t
           lon = ( ( (DMR_PDU[i+5]           <<  24 ) + (DMR_PDU[i+6] << 16) + (DMR_PDU[i+7] << 8) + DMR_PDU[i+8]) * 1 );
           rad = (DMR_PDU[i+9] << 8) + DMR_PDU[i+10];
           i += 10; //double check
-          lrrp_confidence++;
+          if (lat > 0 && lon > 0) lrrp_confidence++; //would be better to set by absolute boundary (180 and 90?)
+          else lat = 0;
         }
         break;
       
@@ -223,7 +229,8 @@ uint8_t dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t
           lon = ( ( (DMR_PDU[i+5]           <<  24 ) + (DMR_PDU[i+6] << 16) + (DMR_PDU[i+7] << 8) + DMR_PDU[i+8]) * 1 );
           alt =  DMR_PDU[i+9];
           i += 9; //check
-          lrrp_confidence++;
+          if (lat > 0 && lon > 0) lrrp_confidence++; //would be better to set by absolute boundary (180 and 90?)
+          else lat = 0;
         }
         break;
       case 0x36: //protocol-version
@@ -266,7 +273,7 @@ uint8_t dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t
   {
     fprintf (stderr, "%s", KYEL);
     fprintf (stderr, "\n LRRP Confidence: %d - Message Len: %d Octets", lrrp_confidence, message_len);
-    if (lrrp_confidence >= 3) //find the sweet magical number
+    if (lrrp_confidence >= 4) //find the sweet magical number
     {
       //now we can open our lrrp file and write to it as well
       FILE * pFile; //file pointer
@@ -397,6 +404,8 @@ uint8_t dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t
   //   fprintf (stderr, "\n");
   //   fprintf (stderr, "\n LRRP Confidence: %d - Message Len: %d Octets", lrrp_confidence, message_len);
   // }
+
+  LRRP_END:
 
   fprintf (stderr, "%s", KNRM);
   

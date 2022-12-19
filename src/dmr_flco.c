@@ -412,6 +412,15 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   uint8_t ts1_hash = (uint8_t)ConvertBitIntoBytes(&slco_bits[12], 8); //ts1 address hash (crc8) //361-1 B.3.7
   uint8_t ts2_hash = (uint8_t)ConvertBitIntoBytes(&slco_bits[20], 8); //ts2 address hash (crc8) //361-1 B.3.7
 
+  //DMR Location Area - DMRLA - should probably be state variables so we can use this in both slc and csbk
+  uint16_t sys_area = 0;
+  uint16_t sub_area = 0;
+  uint16_t sub_mask = 0x1;
+  //tiny n 1-3; small 1-5; large 1-8; huge 1-10
+  uint16_t n = 1; //The minimum value of DMRLA is normally ≥ 1, 0 is reserved
+
+  //TODO: Add logic to set n and sub_mask values for DMRLA
+
   //Sys_Parms
   if (slco == 0x2 || slco == 0x3) 
   {
@@ -453,11 +462,11 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
 
   if (slco == 0x2) //C_SYS_Parms
   {
-    fprintf (stderr, " C_SYS_PARMS - %s - Net ID: %d Site ID: %d - Reg Req: %d - CSC: %d ", model_str, net+1, site+1, reg, csc);
+    fprintf (stderr, " C_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d - Reg Req: %d - CSC: %d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, reg, csc);
 
-    //disabling so we can show the par information from the CSBK
-    //add string for ncurses terminal display - no par since slc doesn't carrry that value
-    // sprintf (state->dmr_site_parms, "TIII - %s N%d-S%d ", model_str, net, site);
+    //add string for ncurses terminal display
+    sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1 );
+
     //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
 
     if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
@@ -471,13 +480,12 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   }
   else if (slco == 0x3) //P_SYS_Parms
   {
-    fprintf (stderr, " P_SYS_PARMS - %s - Net ID: %d Site ID: %d - Comp Ch: %d ", model_str, net+1, site+1, reg); 
+    fprintf (stderr, " P_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d - Comp CC: %d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, reg); 
 
-    //only asssign below if the field is empty, the CSBK version on CC will carry par
-    //add string for ncurses terminal display - no par since slc doesn't carrry that value
-    if((strncmp(state->dmr_site_parms, "", 3) == 0)) sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net+1, site+1);
+    //add string for ncurses terminal display
+    sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1 );
 
-    //nullify any previous branding sub (bugfix for naughty assignments or system type switching)
+    //nullify any previous branding sub (bugfix for bad assignments or system type switching)
     sprintf(state->dmr_branding_sub, "%s", "");
   }
   else if (slco == 0x0) //null
@@ -490,7 +498,10 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     sprintf (state->dmr_branding, "%s", "Motorola");
     sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Voice Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
-    sprintf (state->dmr_site_parms, "N%d - S%d ", con_netid, con_siteid);
+    sprintf (state->dmr_site_parms, "%d-%d ", con_netid, con_siteid);
+
+    //nullify any previous TIII data (bugfix for bad assignments or system type switching)
+    sprintf(state->dmr_site_parms, "%s", "");
   }
     
   else if (slco == 0xA)
@@ -499,13 +510,16 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     sprintf (state->dmr_branding, "%s", "Motorola");
     sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Control Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
-    sprintf (state->dmr_site_parms, "N%d - S%d ", con_netid, con_siteid);
+    sprintf (state->dmr_site_parms, "%d-%d ", con_netid, con_siteid);
     //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
     if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
     {
       ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
     }
+
+    //nullify any previous TIII data (bugfix for bad assignments or system type switching)
+    sprintf(state->dmr_site_parms, "%s", "");
   }
    
   else if (slco == 0xF)
@@ -520,6 +534,9 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     {
       state->p25_cc_freq = state->trunk_chan_map[restchannel];
     }
+    
+    //nullify any previous TIII data (bugfix for bad assignments or system type switching)
+    sprintf(state->dmr_site_parms, "%s", "");
   }
     
   else fprintf (stderr, " SLCO Unknown - %d ", slco);

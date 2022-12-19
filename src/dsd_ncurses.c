@@ -2433,6 +2433,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL == 16) //only during call
     {
 
+      attron(COLOR_PAIR(4));
+
       //Embedded GPS (not LRRP)
       printw  ("%s ", state->dmr_embedded_gps[0]);
             
@@ -2455,6 +2457,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //LRRP
     if(state->dmrburstL != 16) //only during data
     {
+      attron(COLOR_PAIR(4));
       printw  ("%s", state->dmr_lrrp_gps[0]);
     }
 
@@ -2618,6 +2621,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       
       //Embedded GPS (not LRRP)
+      attron(COLOR_PAIR(4));
       printw  ("%s ", state->dmr_embedded_gps[1]);
 
       //Embedded Talker Alias Blocks
@@ -2640,6 +2644,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //LRRP
     if(state->dmrburstR != 16) //only during data
     {
+      attron(COLOR_PAIR(4));
       printw  ("%s", state->dmr_lrrp_gps[1]);
     }
     
