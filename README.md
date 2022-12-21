@@ -106,7 +106,7 @@ RTL-SDR options:
  WARNING! Old CLI Switch Handling has been depreciated in favor of rtl:<parms>
  Usage: rtl:dev:freq:gain:ppm:bw:sq:udp
   dev  <num>    RTL-SDR Device Index Number
-  freq <num>    RTL-SDR Frequency
+  freq <num>    RTL-SDR Frequency (851800000 or 851.8M)
   gain <num>    RTL-SDR Device Gain (0-49) (default = 26)(0 = Hardware AGC, not recommended)
   ppm  <num>    RTL-SDR PPM Error (default = 0)
   bw   <num>    RTL-SDR VFO Bandwidth kHz (default = 12)(6, 8, 12, 24) 
@@ -163,7 +163,7 @@ Trunking Note1: All samples above can also be run with the RTL input method and 
 
 Trunking Note2: CQPSK Phase 1 and Phase 2 Systems are subceptible to LSM distortion issues, but seem to do okay, but require really good signal. Some CRC issues still occur with Phase 2 TDMA LCCH Mac Signal that can affect reliability, I believe this issue is ultimately caused by the PSK demodulation inside of FME. I also don't believe this will work on 8-level PSK, but I cannot determine that at the moment. Update: I have improved the LCCH Mac Signal decoding my increasing the QPSK decision point buffers to their maximum values. 
 
-Trunking Note3: DMR Trunking has been coded, and some testing and tweaks have been carried out. Cap+, Con+, and TIII systems seem to do well with trunking now. Placing the frequency for the control channel at channel map 0 in your channel_map.csv file is not required now if using RIGCTL, RIGCTL can poll the VFO for the current frequency if it believes its on a control channel, but using channel 0 as the control channel will be required when using the rtl dongle. If you need to map out your channels for TIII, you can observe the console output and look for channel numbers. For conveniece I have included the DSDPlus channel numbering (as best as I can figure it) into the console print so it will make it easier for users from DSDPlus to map frequencies into the channel_map.csv file. Make sure your channel numbers are the Cd (channel decimal) values from the log, and not the C+ (dsdplus) values. Notice: TIII Site ID value needs work to determine proper DMRLA values for system area and sub area.
+Trunking Note3: DMR Trunking has been coded, and some testing and tweaks have been carried out. Cap+, Con+, and TIII systems seem to do well with trunking now. Placing the frequency for the control channel at channel map 0 in your channel_map.csv file is not required now if using RIGCTL or the RTL Input, both can poll the VFO for the current frequency if it believes its on a control channel, but using channel 0 as the control channel will hardset that frequency to the control channel. If you need to map out your channels for TIII, you can observe the console output and look for channel numbers. For conveniece I have included the DSDPlus channel numbering (as best as I can figure it) into the console print so it will make it easier for users from DSDPlus to map frequencies into the channel_map.csv file. Make sure your channel numbers are the Cd (channel decimal) values from the log, and not the C+ (dsdplus) values. Notice: TIII Site ID value needs work to determine proper DMRLA values for system area and sub area.
 
 ```
  Talkgroup Voice Channel Grant (TV_GRANT) - Logical

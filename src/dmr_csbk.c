@@ -41,7 +41,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
     if (csbk_fid != 0) state->dmr_mfid = csbk_fid; 
 
     //TIII standard with fid of 0 - (opcodes in decimal)
-    if (0 == 0) //standard feature set for TIII //csbk_fid == 0
+    if (0 == 0) //some non-standard fid values (0x58 - tait, 0x68 - hytera, 0x10-motcapmax) also use a good chunk of these
     {
 
       
@@ -51,9 +51,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       if (csbk_o > 47 && csbk_o < 55 )
       {
 
-        //users will need to import the cc frequency as channel 0 for now
-        if (state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
-
+        //maintain this to allow users to hardset the cc freq as map[0]; otherwise, set from rigctl or rtl freq at c_aloha_sys_parms
+        // if (state->p25_cc_freq == 0 && state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
+        
         //initial line break
         fprintf (stderr, "\n");
 
@@ -141,9 +141,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //if not a data channel grant (only tuning to voice channel grants)
         if (csbk_o == 48 || csbk_o == 49 || csbk_o == 50 || csbk_o == 53) //48, 49, 50 are voice grants, 51 and 52 are data grants, 53 Duplex Private Voice, 54 Duplex Private Data
         {
-          //shim in chan map 0 as the cc frequency, user will need to specify it in the channel map file
-          if (state->p25_cc_freq != 0 && state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
-
           //shim in here for ncurses freq display when not trunking (playback, not live)
           if (opts->p25_trunk == 0 && freq != 0)
           {
@@ -166,7 +163,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               }
             } 
 
-            if (state->p25_cc_freq != 0 && opts->p25_trunk == 1  && (strcmp(mode, "B") != 0)) 
+            if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
             {
               if (freq != 0) //if we have a valid frequency
               {
@@ -308,15 +305,16 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1 );
         else sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net, site);
 
-        //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
-        if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
+        //if using rigctl we can set an unknown or updated cc frequency 
+        //by polling rigctl for the current frequency
+        if (opts->use_rigctl == 1 && opts->p25_is_tuned == 0) //&& state->p25_cc_freq == 0
         {
           ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
           if (ccfreq != 0) state->p25_cc_freq = ccfreq;
         }
 
         //if using rtl input, we can ask for the current frequency tuned
-        if (opts->audio_in_type == 3 && state->p25_cc_freq == 0)
+        if (opts->audio_in_type == 3 && opts->p25_is_tuned == 0) //&& state->p25_cc_freq == 0
         {
           ccfreq = (long int)opts->rtlsdr_center_freq;
           if (ccfreq != 0) state->p25_cc_freq = ccfreq;
@@ -622,7 +620,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
             //no more 0 reporting, that was some bad code that caused that issue
             //without priority, this will tune the first one it finds (if group isn't blocked)
-            if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0)) 
+            if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
             {
               if (state->trunk_chan_map[j+1] != 0) //if we have a valid frequency
               {
@@ -658,8 +656,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
     if (csbk_fid == 0x06)
     {
 
-      //users need to set channel 0 to their current cc frequency for now
-      if (state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
+      //maintain this to allow users to hardset the cc freq as map[0]; otherwise, set from rigctl or rtl freq
+      // if (state->p25_cc_freq == 0 && state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
 
       if (csbk_o == 0x01)
       {
@@ -695,15 +693,16 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
 
-        //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
-        if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
+        //if using rigctl we can set an unknown or updated cc frequency 
+        //by polling rigctl for the current frequency
+        if (opts->use_rigctl == 1 && opts->p25_is_tuned == 0) //&& state->p25_cc_freq == 0
         {
           ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
           if (ccfreq != 0) state->p25_cc_freq = ccfreq;
         }
 
         //if using rtl input, we can ask for the current frequency tuned
-        if (opts->audio_in_type == 3  && state->p25_cc_freq == 0)
+        if (opts->audio_in_type == 3 && opts->p25_is_tuned == 0) //&& state->p25_cc_freq == 0
         {
           ccfreq = (long int)opts->rtlsdr_center_freq;
           if (ccfreq != 0) state->p25_cc_freq = ccfreq;
@@ -732,7 +731,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
         {
           
-          if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0)) 
+          if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0) ) 
           {
             if (state->trunk_chan_map[lcn] != 0) //if we have a valid frequency
             {

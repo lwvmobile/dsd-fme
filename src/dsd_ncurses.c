@@ -2459,7 +2459,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
 
     //LRRP
-    if(state->dmrburstL != 16) //only during data
+    if(state->dmrburstL != 16 && opts->p25_trunk == 0) //only during data and no trunking
     {
       attron(COLOR_PAIR(4));
       printw  ("%s", state->dmr_lrrp_gps[0]);
@@ -2472,7 +2472,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         if (state->group_array[k].groupNumber == state->lasttg)
         {
-          attron(COLOR_PAIR(5));
+          attron(COLOR_PAIR(4));
           printw (" [%s]", state->group_array[k].groupName);
           printw ("[%s] ", state->group_array[k].groupMode);
           if (state->carrier == 1)
@@ -2650,7 +2650,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
 
     //LRRP
-    if(state->dmrburstR != 16) //only during data
+    if(state->dmrburstR != 16 && opts->p25_trunk == 0) //only during data and no trunking
     {
       attron(COLOR_PAIR(4));
       printw  ("%s", state->dmr_lrrp_gps[1]);
@@ -2663,7 +2663,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         if (state->group_array[k].groupNumber == state->lasttgR)
         {
-          attron(COLOR_PAIR(5));
+          attron(COLOR_PAIR(4));
           printw (" [%s]", state->group_array[k].groupName);
           printw ("[%s] ", state->group_array[k].groupMode);
         }

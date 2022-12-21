@@ -862,10 +862,10 @@ usage ()
   printf (" WARNING! Old CLI Switch Handling has been depreciated in favor of rtl:<parms>\n");
   printf (" Usage: rtl:dev:freq:gain:ppm:bw:sq:udp\n");
   printf ("  dev  <num>    RTL-SDR Device Index Number\n");
-  printf ("  freq <num>    RTL-SDR Frequency\n");
-  printf ("  gain <num>    RTL-SDR Device Gain (0-49) (default = 0 Auto Gain)\n");
+  printf ("  freq <num>    RTL-SDR Frequency (851800000 or 851.8M) \n");
+  printf ("  gain <num>    RTL-SDR Device Gain (0-49)(default = 26)(0 = Hardware AGC, not recommended)\n");
   printf ("  ppm  <num>    RTL-SDR PPM Error (default = 0)\n");
-  printf ("  bw   <num>    RTL-SDR VFO Bandwidth kHz (default = 26)(0 = Hardware AGC, not recommended) \n");
+  printf ("  bw   <num>    RTL-SDR VFO Bandwidth kHz (default = 12)(6, 8, 12, 24)  \n");
   printf ("  sq   <num>    RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)\n");
   // printf ("  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)\n");
   printf ("  udp  <num>    RTL-SDR UDP Remote Port (default = 6020)\n");
