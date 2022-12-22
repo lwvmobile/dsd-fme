@@ -3062,6 +3062,39 @@ if (c == 115) //'s' key, stop playing wav or symbol in files
   openPulseInput(opts); 
 }
 
+//Lockout bug in EDACS prevents any group from tuning when using this, not sure why yet
+//WARNING! USE THESE WITH CAUTION! IF BREAKING ISSUES OBSERVED, THEN RESTART AND DON'T USE THEM!!
+if (opts->frame_provoice != 1 && c == 49) //'1' key, lockout slot 1 or conventional tg from tuning/playback during session
+{
+  state->group_array[state->group_tally].groupNumber = state->lasttg;
+  sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
+  sprintf (state->group_array[state->group_tally].groupName, "%s", "LOCKOUT");
+  state->group_tally++;
+
+  //test tuning away to break sync, if not working so well, then disable
+  //RIGCTL
+  if (opts->frame_provoice != 1 && opts->p25_is_tuned == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, 450000000);
+
+  //rtl_udp
+  if (opts->frame_provoice != 1 && opts->p25_is_tuned == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, 450000000);
+
+}
+
+if (opts->frame_provoice != 1 && c == 50) //'2' key, lockout slot 2 tdma tgR from tuning/playback during session
+{
+  state->group_array[state->group_tally].groupNumber = state->lasttgR;
+  sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
+  sprintf (state->group_array[state->group_tally].groupName, "%s", "LOCKOUT");
+  state->group_tally++;
+
+  //test tuning away to break sync, if not working so well, then disable
+  //RIGCTL
+  if (opts->p25_is_tuned == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, 450000000);
+
+  //rtl_udp
+  if (opts->p25_is_tuned == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, 450000000);
+
+}
 
  //anything with an entry box will need the inputs and outputs stopped first
  //so probably just write a function to handle c input, and when c = certain values 

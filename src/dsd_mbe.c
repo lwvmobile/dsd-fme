@@ -128,15 +128,39 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
 
   for (i = 0; i < 88; i++)
+  {
+    imbe_d[i] = 0;
+  }
+
+  for (i = 0; i < 49; i++)
+  {
+    ambe_d[i] = 0;
+  }
+
+  //set playback mode for this frame
+  char mode[8];
+
+  //if we are using allow/whitelist mode, then write 'B' to mode for block
+  //comparison below will look for an 'A' to write to mode if it is allowed
+  if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+  
+  int groupNumber = 0;
+
+  if (state->currentslot == 0) groupNumber = state->lasttg;
+  else groupNumber = state->lasttgR;
+
+  for (i = 0; i < state->group_tally; i++)
+  {
+    if (state->group_array[i].groupNumber == groupNumber)
     {
-      imbe_d[i] = 0;
+      strcpy (mode, state->group_array[i].groupMode);
     }
+  }
 
-    for (i = 0; i < 49; i++)
-      {
-        ambe_d[i] = 0;
-      }
+  //set flag to not play audio this time, but won't prevent writing to wav files
+  if (strcmp(mode, "B") == 0) opts->audio_out = 0;
 
+  //end set playback mode for this frame
 
   if ((state->synctype == 0) || (state->synctype == 1))
     {
@@ -608,5 +632,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
 	}
 
-
+  //reset audio out flag for next repitition
+  if (strcmp(mode, "B") == 0) opts->audio_out = 1;
+  //restore flag for null output type
+  if (opts->audio_out_type == 9) opts->audio_out = 0;
 }
