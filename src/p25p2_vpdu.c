@@ -77,6 +77,10 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 	//group list mode so we can look and see if we need to block tuning any groups, etc
 	char mode[8]; //allow, block, digital, enc, etc
 
+	//if we are using allow/whitelist mode, then write 'B' to mode for block
+	//comparison below will look for an 'A' to write to mode if it is allowed
+	if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+
 	for (int i = 0; i < 2; i++) 
 	{
 
@@ -399,6 +403,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n  CHAN [%04X] Source [%d] Target [%d]", channel, source, target);
 			freq = process_channel_to_freq (opts, state, channel);
 
+			//Skip tuning private calls if private calls is disabled
+      if (opts->trunk_tune_private_calls == 0) goto SKIPCALL; 
+
 			//unit to unit needs work, may fail under certain conditions (first blocked, second allowed, etc) (labels should still work though)
 			for (int i = 0; i < state->group_tally; i++)
       {
@@ -452,6 +459,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 				}
 			}
+
+			SKIPCALL: ; //do nothing
 		}
 
 		//Group Voice Channel Grant Update Multiple - Explicit

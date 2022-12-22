@@ -76,6 +76,10 @@ sudo make install
   -G <file>     Import Group List Allow/Block and Label from csv file.
                  (See group.csv for example)
   -T            Enable Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input
+  -W            Use Imported Group List as a Trunking Allow/White List -- Only Tune with Mode A
+  -p            Don't Tune to Private Calls (DMR TIII and P25)
+  -e            Enable Tune to Data Calls (DMR TIII)
+                 (NOTE: DMR Con+ and P25 Data Channels Not Enabled (no handling)
   -U <port>     Enable RIGCTL/TCP; Set TCP Port for RIGCTL. (4532 on SDR++)
   -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)
                  P25 - 7000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500; May vary based on system stregnth, etc.
@@ -202,6 +206,8 @@ spacebar - replay last symbol capture bin (captures must be stopped first)
 s - stop playing symbol capture bin or wav input file
 P - start per call decoded wav files
 p - stop per call decoded wav files
+1 - Lockout Tuning/Playback of TG in Slot 1 or Conventional (Current Session Only)
+2 - Lockout Tuning/Playback of TG in Slot 2 (Current Session Only)
 
 ```
 

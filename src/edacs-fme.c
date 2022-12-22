@@ -255,6 +255,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
         char mode[8]; //allow, block, digital enc
 
+        //if we are using allow/whitelist mode, then write 'B' to mode for block
+        //comparison below will look for an 'A' to write to mode if it is allowed
+        if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+
         for (int i = 0; i < state->group_tally; i++)
         {
           if (state->group_array[i].groupNumber == group)
@@ -379,6 +383,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, " AFS [0x%03X] [%02d-%03d] LCN [%02d]", afs, a, fs, lcn);
 
         char mode[8]; //allow, block, digital enc
+
+        //if we are using allow/whitelist mode, then write 'B' to mode for block
+        //comparison below will look for an 'A' to write to mode if it is allowed
+        if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
 
         for (int i = 0; i < state->group_tally; i++)
         {

@@ -260,6 +260,10 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
   //group list mode so we can look and see if we need to block tuning any groups, etc
 	char mode[8]; //allow, block, digital, enc, etc
 
+  //if we are using allow/whitelist mode, then write 'B' to mode for block
+  //comparison below will look for an 'A' to write to mode if it is allowed
+  if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+
   for (int i = 0; i < state->group_tally; i++)
   {
     if (state->group_array[i].groupNumber == DestinationID) //source, or destination?

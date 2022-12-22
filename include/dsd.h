@@ -336,6 +336,15 @@ typedef struct
   uint8_t dmr_dmrla_is_set; //flag to tell us dmrla is set by the user
   uint8_t dmr_dmrla_n; //n value for dmrla
 
+  //Trunking - Use Group List as Allow List
+  uint8_t trunk_use_allow_list;
+
+  //Trunking - Tune Private Calls
+  uint8_t trunk_tune_private_calls;
+
+  //Trunking - Tune Data Calls...why?
+  uint8_t trunk_tune_data_calls;
+
 } dsd_opts;
 
 typedef struct

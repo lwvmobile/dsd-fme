@@ -136,8 +136,17 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         {
           freq = state->trunk_chan_map[lpchannum];
           (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
-        }  
+        }
 
+        //Skip tuning private calls if private calls are disabled
+        if (opts->trunk_tune_private_calls == 0 && csbk_o != 49) goto SKIPCALL;
+
+        //Allow tuning of data calls if user wishes by flipping the csbk_o to a group voice call
+        if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54)
+        {
+          if (opts->trunk_tune_data_calls == 1) csbk_o = 49;
+        }
+         
         //if not a data channel grant (only tuning to voice channel grants)
         if (csbk_o == 48 || csbk_o == 49 || csbk_o == 50 || csbk_o == 53) //48, 49, 50 are voice grants, 51 and 52 are data grants, 53 Duplex Private Voice, 54 Duplex Private Data
         {
@@ -153,6 +162,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
           {
             char mode[8]; //allow, block, digital, enc, etc
+
+            //if we are using allow/whitelist mode, then write 'B' to mode for block
+            //comparison below will look for an 'A' to write to mode if it is allowed
+            if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
 
             for (int i = 0; i < state->group_tally; i++)
             {
@@ -189,6 +202,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           }
 
         }
+
+        SKIPCALL: ; //do nothing
         
       }
 
@@ -609,6 +624,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           for (j = 0; j < 8; j++) //go through the channels stored looking for active ones to tune to
           {
             char mode[8]; //allow, block, digital, enc, etc
+
+            //if we are using allow/whitelist mode, then write 'B' to mode for block
+            //comparison below will look for an 'A' to write to mode if it is allowed
+            if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+
             for (int i = 0; i < state->group_tally; i++)
             {
               if (state->group_array[i].groupNumber == t_tg[j])
@@ -717,6 +737,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
 
         char mode[8]; //allow, block, digital, enc, etc
+
+        //if we are using allow/whitelist mode, then write 'B' to mode for block
+        //comparison below will look for an 'A' to write to mode if it is allowed
+        if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
 
         for (int i = 0; i < state->group_tally; i++)
         {

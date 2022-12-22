@@ -487,6 +487,15 @@ initOpts (dsd_opts * opts)
   opts->dmr_dmrla_is_set = 0;
   opts->dmr_dmrla_n = 0;
 
+  //Trunking - Use Group List as Allow List
+  opts->trunk_use_allow_list = 0; //disabled by default
+
+  //Trunking - Tune Private Calls
+  opts->trunk_tune_private_calls = 1; //enabled by default
+
+  //Trunking - Tune Data Calls
+  opts->trunk_tune_data_calls = 0; //disabled by default
+
 } //initopts
 
 void
@@ -939,6 +948,10 @@ usage ()
   printf ("  -G <file>     Import Group List Allow/Block and Label from csv file.\n");
   printf ("                 (See group.csv for example)\n");
   printf ("  -T            Enable Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input\n");
+  printf ("  -W            Use Imported Group List as a Trunking Allow/White List -- Only Tune with Mode A\n");
+  printf ("  -p            Don't Tune to Private Calls (DMR TIII and P25)\n");
+  printf ("  -e            Enable Tune to Data Calls (DMR TIII)\n");
+  printf ("                 (NOTE: DMR Con+ and P25 Data Channels Not Enabled (no handling) \n");
   printf ("  -U <port>     Enable RIGCTL/TCP; Set TCP Port for RIGCTL. (4532 on SDR++)\n");
   printf ("  -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
   printf ("                 P25 - 7000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500; May vary based on system stregnth, etc.\n");
@@ -1155,7 +1168,7 @@ main (int argc, char **argv)
   exitflag = 0;
   // signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haep:Pqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:6:7:89:")) != -1)
+  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:6:7:89:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1167,11 +1180,29 @@ main (int argc, char **argv)
           opts.call_alert = 1;
           break;
 
-        //Free'd up switches include e,p,v,Q,V,Y,z
+        //Free'd up switches include v,Q,V,Y,z
         //make sure to put a colon : after each if they need an argument
         //or remove colon if no argument required
 
         //Disabled the Serial Port Dev and Baud Rate, etc, If somebody uses that function, sorry...
+
+        //Trunking - Use Group List as Allow List
+        case 'W':
+          opts.trunk_use_allow_list = 1;
+          fprintf (stderr, "Using Group List as Allow/White List. \n");
+          break;
+
+        //Trunking - Tune Private Calls
+        case 'p':
+          opts.trunk_tune_private_calls = 0; //disable
+          fprintf (stderr, "Disable Tuning to Private Calls. \n");
+          break;
+
+        //Trunking - Tune Data Calls
+        case 'e':
+          opts.trunk_tune_data_calls = 1; //enable
+          fprintf (stderr, "Enable Tuning to Data Calls. \n");
+          break;
 
         case 'D': //user set DMRLA n value
           sscanf (optarg, "%c", &opts.dmr_dmrla_n);
