@@ -2032,7 +2032,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_out_type == 0)
   {
-    printw ("| Pulse Audio Output: [%2i] kHz [%i] Channel\n", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels);
+    printw ("| Pulse Audio Output: [%2i] kHz [%i] Channel", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels);
+    if (state->audio_smoothing == 1 && opts->pulse_digi_rate_out != 8000) printw (" Smoothing On");
+    if (state->audio_smoothing == 0 && opts->pulse_digi_rate_out != 8000) printw (" Smoothing Off");
+    printw (" \n");
   }
   if (opts->monitor_input_audio == 1)
   {
@@ -3094,6 +3097,12 @@ if (opts->frame_provoice != 1 && c == 50) //'2' key, lockout slot 2 tdma tgR fro
   //rtl_udp
   if (opts->p25_is_tuned == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, 450000000);
 
+}
+
+if (c == 48) //'0' key, toggle upsampled audio smoothing
+{
+  if (state->audio_smoothing == 1) state->audio_smoothing = 0;
+  else state->audio_smoothing = 1; 
 }
 
  //anything with an entry box will need the inputs and outputs stopped first

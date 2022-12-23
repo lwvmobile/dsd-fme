@@ -640,6 +640,9 @@ typedef struct
   //Remus DMR End Call Alert Beep
   int dmr_end_alert[2]; //dmr TLC end call alert beep has already played once flag
 
+  //Upsampled Audio Smoothing
+  uint8_t audio_smoothing;
+
 } dsd_state;
 
 /*

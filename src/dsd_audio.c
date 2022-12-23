@@ -92,11 +92,7 @@ processAudio (dsd_opts * opts, dsd_state * state)
     {
       // detect max level
       max = 0;
-      //attempt to reduce crackle by overriding the max value when not using pulse input
-      if (opts->audio_in_type != 0)
-      {
-        max = 3000;
-      }
+
       state->audio_out_temp_buf_p = state->audio_out_temp_buf;
       for (n = 0; n < 160; n++)
         {
@@ -238,11 +234,7 @@ processAudioR (dsd_opts * opts, dsd_state * state)
     {
       // detect max level
       max = 0;
-      //attempt to reduce crackle by overriding the max value when not using pulse input
-      if (opts->audio_in_type != 0)
-      {
-        max = 3000;
-      }
+
       state->audio_out_temp_buf_pR = state->audio_out_temp_bufR;
       for (n = 0; n < 160; n++)
         {

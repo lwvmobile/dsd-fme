@@ -196,12 +196,14 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->firstframe = 0;
   if (opts->audio_gain == (float) 0)
   {
-    state->aout_gain = 25;
+    if (state->audio_smoothing == 0) state->aout_gain = 15; //15
+    else state->aout_gain = 25; //25
   }
 
   if (opts->audio_gainR == (float) 0)
   {
-    state->aout_gainR = 25;
+    if (state->audio_smoothing == 0) state->aout_gainR = 15; //15
+    else state->aout_gainR = 25; //25
   }
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
@@ -361,8 +363,8 @@ initOpts (dsd_opts * opts)
   opts->mbe_out_file[0] = 0;
   opts->mbe_out_path[0] = 0;
   opts->mbe_out_f = NULL;
-  opts->audio_gain = 0;
-  opts->audio_gainR = 0;
+  opts->audio_gain = 0; //0
+  opts->audio_gainR = 0; //0
   opts->audio_out = 1;
   opts->wav_out_file[0] = 0;
   opts->wav_out_fileR[0] = 0;
@@ -514,6 +516,10 @@ initState (dsd_state * state)
   memset (state->dmr_payload_buf, 0, sizeof (int) * 200);
   //dmr buffer end
   state->repeat = 0;
+
+  //Upsampled Audio Smoothing
+  state->audio_smoothing = 1;
+
   state->audio_out_buf = malloc (sizeof (short) * 1000000);
   state->audio_out_bufR = malloc (sizeof (short) * 1000000);
   memset (state->audio_out_buf, 0, 100 * sizeof (short));
@@ -590,7 +596,8 @@ initState (dsd_state * state)
   state->firstframe = 0;
   sprintf (state->slot1light, "%s", "");
   sprintf (state->slot2light, "%s", "");
-  state->aout_gain = 25;
+  state->aout_gain = 0;
+  state->aout_gainR = 0;
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
   state->aout_max_buf_idx = 0;
@@ -898,7 +905,7 @@ usage ()
   printf ("  -fp             Decode only EDACS/ProVoice*\n");
   printf ("  -fm             Decode only dPMR*\n");
   printf ("  -l            Disable DMR and NXDN input filtering\n");
-  printf ("  -pu           Unmute Encrypted P25\n");
+  // printf ("  -pu           Unmute Encrypted P25\n");
   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
   printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
   printf ("  -xr           Expect inverted DMR signal\n");
@@ -957,6 +964,8 @@ usage ()
   printf ("                 P25 - 7000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500; May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)\n");
   printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
+  printf ("  -V            Disable Audio Smoothing on Upsampled Audio (XDMA and DMR Stereo 24k/2 output) (Capital V)\n");
+  printf ("                 (Audio Smoothing is now disabled on rtl, tcp, bin, and wav inputs by default -- fix crackle/buzz bug)\n");
   printf ("\n");
   exit (0);
 }
@@ -1168,7 +1177,7 @@ main (int argc, char **argv)
   exitflag = 0;
   // signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:Y:K:H:X:NQWrlZTF1:2:345:6:7:89:")) != -1)
+  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:Y:K:H:X:NQWrlZTF01:2:345:6:7:89:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1180,11 +1189,17 @@ main (int argc, char **argv)
           opts.call_alert = 1;
           break;
 
-        //Free'd up switches include v,Q,V,Y,z
+        //Free'd up switches include Q,Y,z
         //make sure to put a colon : after each if they need an argument
         //or remove colon if no argument required
 
         //Disabled the Serial Port Dev and Baud Rate, etc, If somebody uses that function, sorry...
+
+        //Disable Audio Smoothing for Upsampled Audio
+        case '0': 
+        case 'V':
+          state.audio_smoothing = 0;
+          break; 
 
         //Trunking - Use Group List as Allow List
         case 'W':
@@ -1499,15 +1514,18 @@ main (int argc, char **argv)
           if (opts.audio_gain < (float) 0 )
             {
               fprintf (stderr,"Disabling audio out gain setting\n");
+              opts.audio_gainR = opts.audio_gain;
             }
           else if (opts.audio_gain == (float) 0)
             {
               opts.audio_gain = (float) 0;
+              opts.audio_gainR = opts.audio_gain;
               fprintf (stderr,"Enabling audio out auto-gain\n");
             }
           else
             {
               fprintf (stderr,"Setting audio out gain to %f\n", opts.audio_gain);
+              opts.audio_gainR = opts.audio_gain;
               state.aout_gain = opts.audio_gain;
               state.aout_gainR = opts.audio_gain;
             }
@@ -2037,6 +2055,7 @@ main (int argc, char **argv)
       fprintf (stderr, "%d \n", opts.tcp_portno);
       opts.tcp_sockfd = Connect(opts.tcp_hostname, opts.tcp_portno);
       opts.audio_in_type = 8;
+      state.audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
     }
 
     //need error handling on opening rigctl so we don't exit or crash on disconnect
@@ -2104,6 +2123,7 @@ main (int argc, char **argv)
       fprintf (stderr, "SQ %d ", opts.rtl_squelch_level);
       fprintf (stderr, "UDP %d \n", opts.rtl_udp_port);
       opts.audio_in_type = 3;
+      state.audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
       rtl_ok = 1;
       #endif
 

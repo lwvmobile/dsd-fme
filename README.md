@@ -86,6 +86,8 @@ sudo make install
   -t <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)
   -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice
   -D <dec>      Manually Set TIII DMR Location Area n bit len (0-10)(10 max)
+  -V            Disable Audio Smoothing on Upsampled Audio (XDMA and DMR Stereo 24k/2 output) (Capital V)
+                 (Audio Smoothing is now disabled on rtl, tcp, bin, and wav inputs by default -- fix crackle/buzz bug)
 
 
 ```
@@ -208,6 +210,7 @@ P - start per call decoded wav files
 p - stop per call decoded wav files
 1 - Lockout Tuning/Playback of TG in Slot 1 or Conventional (Current Session Only)
 2 - Lockout Tuning/Playback of TG in Slot 2 (Current Session Only)
+0 - Toggle Audio Smoothing on Upsampled Audio (XDMA and DMR Stereo 24k/2 output)
 
 ```
 
