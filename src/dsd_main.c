@@ -518,7 +518,7 @@ initState (dsd_state * state)
   state->repeat = 0;
 
   //Upsampled Audio Smoothing
-  state->audio_smoothing = 1;
+  state->audio_smoothing = 0;
 
   state->audio_out_buf = malloc (sizeof (short) * 1000000);
   state->audio_out_bufR = malloc (sizeof (short) * 1000000);
@@ -964,8 +964,8 @@ usage ()
   printf ("                 P25 - 7000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500; May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)\n");
   printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
-  printf ("  -V            Disable Audio Smoothing on Upsampled Audio (XDMA and DMR Stereo 24k/2 output) (Capital V)\n");
-  printf ("                 (Audio Smoothing is now disabled on rtl, tcp, bin, and wav inputs by default -- fix crackle/buzz bug)\n");
+  printf ("  -V            Enable Audio Smoothing on Upsampled Audio (XDMA and DMR Stereo 24k/2 output) (Capital V)\n");
+  printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
   printf ("\n");
   exit (0);
 }
@@ -976,11 +976,11 @@ liveScanner (dsd_opts * opts, dsd_state * state)
 
 if (opts->audio_in_type == 1)
 {
-  opts->pulse_digi_rate_out = 8000; //revert to 8K/1 for STDIN input, sometimes crackles when upsampling
+  opts->pulse_digi_rate_out = 48000; 
   opts->pulse_digi_out_channels = 1;
   if (opts->dmr_stereo == 1)
   {
-    opts->pulse_digi_rate_out = 24000; //stdin needs 24000 by 2 channel for DMR TDMA Stereo output
+    opts->pulse_digi_rate_out = 24000; 
     opts->pulse_digi_out_channels = 2;
     fprintf (stderr, "STDIN Audio Rate Out set to 24000 Khz/2 Channel \n");
   }
@@ -995,7 +995,7 @@ if (opts->audio_in_type == 1)
   {
     //still need this section mostly due the the crackling on the rtl dongle when upsampled
     //probably need to dig a little deeper, maybe inlvl releated?
-    opts->pulse_digi_rate_out = 8000; //revert to 8K/1 for RTL input, random crackling otherwise
+    opts->pulse_digi_rate_out = 48000; //revert to 8K/1 for RTL input, random crackling otherwise
     opts->pulse_digi_out_channels = 1;
     if (opts->dmr_stereo == 1)
     {
@@ -1195,10 +1195,10 @@ main (int argc, char **argv)
 
         //Disabled the Serial Port Dev and Baud Rate, etc, If somebody uses that function, sorry...
 
-        //Disable Audio Smoothing for Upsampled Audio
+        //Enable Audio Smoothing for Upsampled Audio
         case '0': 
         case 'V':
-          state.audio_smoothing = 0;
+          state.audio_smoothing = 1;
           break; 
 
         //Trunking - Use Group List as Allow List
@@ -1561,7 +1561,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 0;
-              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
               opts.dmr_mono = 1;
@@ -1581,7 +1581,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 0;
-              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
               state.dmr_stereo = 0;
@@ -1602,7 +1602,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 0;
-              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
               opts.dmr_mono = 0;
@@ -1628,7 +1628,7 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 1;
               state.rf_mod = 2;
-              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
               opts.dmr_mono = 0;
@@ -1658,7 +1658,7 @@ main (int argc, char **argv)
               state.rf_mod = 0; //
               opts.dmr_stereo = 0;
               opts.dmr_mono = 0;
-              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
               opts.setmod_bw = 7000;
               sprintf (opts.output_name, "P25P1");
@@ -1682,7 +1682,7 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
               state.rf_mod = 0;
-              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
               state.dmr_stereo = 0;
@@ -1711,7 +1711,7 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
               state.rf_mod = 0;
-              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
               state.dmr_stereo = 0;
@@ -1814,7 +1814,7 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
               state.rf_mod = 0;
-              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
               opts.dmr_mono = 0;
@@ -1839,7 +1839,7 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0; //
               state.rf_mod = 0;  //
-              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_mono = 1;
               opts.dmr_stereo = 0;
@@ -1889,7 +1889,7 @@ main (int argc, char **argv)
             opts.mod_qpsk = 0;
             opts.mod_gfsk = 0;
             state.rf_mod = 0;
-            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_rate_out = 48000;
             opts.pulse_digi_out_channels = 1;
             opts.dmr_stereo = 0;
             opts.dmr_mono = 0;
@@ -2006,7 +2006,7 @@ main (int argc, char **argv)
           opts.playfiles = 1;
           opts.errorbars = 0;
           opts.datascope = 0;
-          opts.pulse_digi_rate_out = 8000;
+          opts.pulse_digi_rate_out = 48000;
           opts.pulse_digi_out_channels = 1;
           opts.dmr_stereo = 0;
           state.dmr_stereo = 0;
@@ -2249,7 +2249,7 @@ main (int argc, char **argv)
 
   if (opts.playfiles == 1)
     {
-      opts.pulse_digi_rate_out = 8000;
+      opts.pulse_digi_rate_out = 48000;
       opts.pulse_digi_out_channels = 1;
       openPulseOutput(&opts); //need to open it up for output
       playMbeFiles (&opts, &state, argc, argv);
