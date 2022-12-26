@@ -98,6 +98,13 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         state->lasttgR = target;
         state->lastsrcR = source;
       }
+
+      //update cc amd vc sync time for trunking purposes (particularly Con+)
+      if (opts->p25_is_tuned == 1)
+      {
+        state->last_vc_sync_time = time(NULL);
+        state->last_cc_sync_time = time(NULL);
+      } 
       
     }
 

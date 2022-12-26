@@ -364,8 +364,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0) vc1++;
     if (internalslot == 1) vc2++;
 
-    //update voice sync time for trunking purposes (particularly Con+)
-    state->last_vc_sync_time = time(NULL);
+    //update cc amd vc sync time for trunking purposes (particularly Con+)
+    if (opts->p25_is_tuned == 1)
+    {
+      state->last_vc_sync_time = time(NULL);
+      state->last_cc_sync_time = time(NULL);
+    } 
 
     //reset err checks
     cach_err = 1;
@@ -452,6 +456,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   char sync[25];
   uint8_t tact_okay = 0;
   uint8_t cach_err = 0;
+  uint8_t sync_okay = 1;
 
 
   char cachdata[25]; 
@@ -570,7 +575,14 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   }
   sync[24] = 0;
 
-  if ( strcmp (sync, DMR_BS_VOICE_SYNC) != 0) goto END;
+  if ( strcmp (sync, DMR_BS_VOICE_SYNC) != 0)
+  {
+    if (opts->aggressive_framesync == 1)
+    {
+      sync_okay = 0;
+      goto END;
+    } 
+  }
 
   //Continue Second AMBE Frame, 18 after Sync or EmbeddedSignalling
   for(i = 0; i < 18; i++)
@@ -645,15 +657,18 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   cach_err = dmr_cach (opts, state, cachdata);
   fprintf (stderr, "\n");
 
+  //update voice sync time for trunking purposes (particularly Con+)
+  if (opts->p25_is_tuned == 1) state->last_vc_sync_time = time(NULL);
+
   dmrBS (opts, state); //bootstrap into full TDMA frame for BS mode
   END:
   //if we have a tact err, then produce sync pattern/err message
-  if (tact_okay != 1)
+  if (tact_okay != 1 || sync_okay != 1)
   {
     fprintf (stderr,"%s ", getTime());
     fprintf (stderr,"Sync:  DMR                  ");
     fprintf (stderr, "%s", KRED);
-    fprintf (stderr, "| VOICE CACH/EMB ERR");
+    fprintf (stderr, "| VOICE CACH/SYNC ERR");
     fprintf (stderr, "%s", KNRM);
     //run LFSR if either slot had an active MI in it.
     if (state->payload_algid >= 0x21)
