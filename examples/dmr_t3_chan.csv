@@ -1,0 +1,8 @@
+ChannelNumber(dec),frequency(Hz) (do not delete this line or won't import properly)
+999,456318750,default cc (come here first), optional use non-existent channel as first entry
+36,455756250
+54,455981250
+81,456318750
+
+
+

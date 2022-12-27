@@ -45,19 +45,16 @@ cd ..
 
 git clone https://github.com/lwvmobile/dsd-fme
 cd dsd-fme
-git branch -a
-git checkout remotes/origin/pulseaudio
-git checkout -b pulseaudio
-git branch -a #double check to see if you are on pulseaudio branch
 sudo cp tone8.wav /usr/share/
 sudo cp tone24.wav /usr/share/
+sudo cp tone48.wav /usr/share/
 sudo chmod 777 /usr/share/tone8.wav
 sudo chmod 777 /usr/share/tone24.wav
+sudo chmod 777 /usr/share/tone48.wav
 mkdir build
 cd build
 cmake ..
 make -j `nproc`
-##only run make install if you don't have another version already installed##
 sudo make install
 sudo ldconfig
 
