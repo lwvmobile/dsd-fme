@@ -2,4 +2,6 @@
 *.so*
 *.dylib
 build
-
+*.sh
+*.csv
+examples

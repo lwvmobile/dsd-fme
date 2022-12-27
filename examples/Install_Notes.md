@@ -7,7 +7,7 @@ Using the included download-and-install.sh should make for a simple and painless
 If you need all dependencies build and installed first (only on Debian/Ubuntu/Mint/Pi), run:
 
 ```
-wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/master/download-and-install.sh
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/main/download-and-install.sh
 chmod +x download-and-install.sh
 ./download-and-install.sh
 ```
@@ -15,7 +15,7 @@ chmod +x download-and-install.sh
 If you have dependencies already installed (i.e. need a fresh clean install on a system with DSD-FME already or using system other than Debian/Ubuntu, etc), please run this instead:
 
 ```
-wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/master/download-and-install-nodeps.sh
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/main/download-and-install-nodeps.sh
 chmod +x download-and-install-nodeps.sh
 ./download-and-install-nodeps.sh
 ```

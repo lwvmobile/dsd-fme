@@ -20,7 +20,7 @@ See the example folder for information on cloning, installing, example usage, an
 
 ## Notice
 
-The pulseaudio branch will hearby be for legacy use as the promotion of this version to master branch will obsolete that branch. Any pre-compiled windows versions found in the release link will be considered legacy as well, and do not feature trunking support and have older handling for some other modes. Users are free to use those, but keep in mind the use case syntax may and will be different between versions. Furthermore, any wiki articles made for windows users may contain outdated information for building the pulseaudio branch, please adjust any information found in those accordingly.
+The pulseaudio branch will hearby be for legacy use as the promotion of this version to main branch will obsolete that branch. Any pre-compiled windows versions found in the release link will be considered legacy as well, and do not feature trunking support and have older handling for some other modes. Users are free to use those, but keep in mind the use case syntax may and will be different between versions. Furthermore, any wiki articles made for windows users may contain outdated information for building the pulseaudio branch, please adjust any information found in those accordingly.
 
 ## License
 Copyright (C) 2010 DSD Author
