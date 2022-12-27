@@ -2029,8 +2029,6 @@ main (int argc, char **argv)
 
     if((strncmp(opts.audio_in_dev, "tcp", 3) == 0)) //tcp socket input from SDR++ and others
     {
-      //use same handling as connect function from rigctl
-      //also still needs err handling
       fprintf (stderr, "TCP Direct Link: ");
       char * curr; 
 
@@ -2054,14 +2052,30 @@ main (int argc, char **argv)
       fprintf (stderr, "%s:", opts.tcp_hostname);
       fprintf (stderr, "%d \n", opts.tcp_portno);
       opts.tcp_sockfd = Connect(opts.tcp_hostname, opts.tcp_portno);
-      opts.audio_in_type = 8;
-      state.audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
+      if (opts.tcp_sockfd != 0)
+      {
+        opts.audio_in_type = 8;
+        state.audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
+      }
+      else 
+      {
+        opts.audio_in_type = 0;
+        fprintf (stderr, "TCP Connection Failure - Using Pulse Audio Input.\n");
+        sprintf (opts.audio_in_dev, "%s", "pulse");
+      }
+      
     }
 
-    //need error handling on opening rigctl so we don't exit or crash on disconnect
     if (opts.use_rigctl == 1)
     {
+      // opts.rigctl_sockfd = Connect(opts.rigctlhostname, opts.rigctlportno);
       opts.rigctl_sockfd = Connect(opts.rigctlhostname, opts.rigctlportno);
+      if (opts.rigctl_sockfd != 0) opts.use_rigctl = 1;
+      else
+      {
+        fprintf (stderr, "RIGCTL Connection Failure - RIGCTL Features Disabled\n");
+        opts.use_rigctl = 0;
+      } 
     }
 
     if((strncmp(opts.audio_in_dev, "rtl", 3) == 0)) //rtl dongle input

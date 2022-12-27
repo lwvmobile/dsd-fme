@@ -51,7 +51,7 @@ unsigned long long int call_matrix[33][6];
 
 
 char * FM_bannerN[9] = {
-  " Press 'q' to quit           ESC or Arrow Keys For Menu  ",
+  "                                                         ",
   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗ ",
   " ██╔══██╗██╔════╝██╔══██╗    ██╔════╝████╗ ████║██╔════╝ ",
   " ██║  ██║╚█████╗ ██║  ██║    █████╗  ██╔████╔██║█████╗   ",
@@ -144,25 +144,15 @@ char * DMRBusrtTypes[32] = {
 
 };
 
-//there is still a bug in beeper, but the bug isn't related to call history,
-//if it were, per call wav would also be affected.
-//seems to do with playing a wav file,
-//debug shows it should trigger even when you don't hear it
-//no beep or double beep still happens randomly but debug shows only one played!?
+
 void beeper (dsd_opts * opts, dsd_state * state, int type)
 {
   FILE *beep;
   char wav_name[1024] = {0};
-  if (opts->dmr_stereo == 1)
-  {
-    //24k tone wav file
-    strncpy(wav_name, "/usr/share/tone24.wav", 1023);
-  }
-  else
-  {
-    //8k tone
-    strncpy(wav_name, "/usr/share/tone8.wav", 1023);
-  }
+
+  if (opts->pulse_digi_rate_out == 8000) strncpy(wav_name, "/usr/share/tone8.wav", 1023);
+  if (opts->pulse_digi_rate_out == 48000) strncpy(wav_name, "/usr/share/tone48.wav", 1023);
+  if (opts->pulse_digi_rate_out == 24000) strncpy(wav_name, "/usr/share/tone24.wav", 1023);
   wav_name[1023] = '\0';
   struct stat stat_buf;
   if (stat(wav_name, &stat_buf) == 0)
@@ -275,10 +265,10 @@ char *choicesc[] = {
       "Save Per Call Decoded WAV (XDMA and NXDN)",
       "Setup and Start RTL Input ",
       "Retune RTL Dongle         ",
-      "Toggle C4FM/CQPSK (6000 sps)",
-      "Toggle Audio Mute         ", 
-      "Toggle NCurses Compact Mode",
-      "Toggle NCurses Call History",
+      "Toggle C4FM/QPSK (P2 TDMA CC)",
+      "Toggle C4FM/QPSK (P1 FDMA CC)", 
+      "Start TCP Direct Link Audio",
+      "Configure RIGCTL",
       "Stop All Decoded WAV Saving",
       "Read OP25/FME Symbol Capture Bin",
       "Replay Last Symbol Capture Bin",
@@ -302,14 +292,12 @@ char *choices[] = {
       "Decode DMR Stereo", //was X2-TDMA*
       "Toggle Signal Inversion",
       "Privacy Key Entry",
-      // "                  ",
       "Reset Call History",
       "Toggle Payloads to Console",
       "Manually Set P2 Parameters", //16
       "Input & Output Options",
       "LRRP Data to File",
 			"Exit DSD-FME",
-      // "Test"
 		  };
 
 
@@ -759,48 +747,158 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
         if (choicec == 9)
         {
-          if (opts->audio_out == 0)
+          if (state->rf_mod == 0)
           {
-            opts->audio_out = 1;
-            opts->audio_out_type = 0; 
-            // state->audio_out_buf_p = 0;
-            // state->audio_out_buf_pR = 0;
-            state->audio_out_idx = 0;
-            state->audio_out_idx2 = 0;
-            state->audio_out_idxR = 0;
-            state->audio_out_idx2R = 0;
+            state->rf_mod = 1;
+            state->samplesPerSymbol = 10;
+            state->symbolCenter = 4;
+            opts->mod_c4fm = 0;
+            opts->mod_qpsk = 1;
           }
           else
           {
-            opts->audio_out = 0;
-            opts->audio_out_type = 9;
-            // state->audio_out_buf_p = 0;
-            // state->audio_out_buf_pR = 0;
-            state->audio_out_idx = 0;
-            state->audio_out_idx2 = 0;
-            state->audio_out_idxR = 0;
-            state->audio_out_idx2R = 0;
+            state->rf_mod = 0;
+            state->samplesPerSymbol = 10;
+            state->symbolCenter = 4;
+            opts->mod_c4fm = 1;
+            opts->mod_qpsk = 0;
           }
         }
 
+        // if (choicec == 9)
+        // {
+        //   if (opts->audio_out == 0)
+        //   {
+        //     opts->audio_out = 1;
+        //     opts->audio_out_type = 0; 
+        //     // state->audio_out_buf_p = 0;
+        //     // state->audio_out_buf_pR = 0;
+        //     state->audio_out_idx = 0;
+        //     state->audio_out_idx2 = 0;
+        //     state->audio_out_idxR = 0;
+        //     state->audio_out_idx2R = 0;
+        //   }
+        //   else
+        //   {
+        //     opts->audio_out = 0;
+        //     opts->audio_out_type = 9;
+        //     // state->audio_out_buf_p = 0;
+        //     // state->audio_out_buf_pR = 0;
+        //     state->audio_out_idx = 0;
+        //     state->audio_out_idx2 = 0;
+        //     state->audio_out_idxR = 0;
+        //     state->audio_out_idx2R = 0;
+        //   }
+        // }
+
+        //TCP Audio Input
         if (choicec == 10)
         {
-          if (opts->ncurses_compact == 0)
+          //read in tcp hostname
+          sprintf (opts->tcp_hostname, "%s", "localhost");
+          opts->tcp_portno = 7355;
+
+          entry_win = newwin(8, WIDTH+16, starty+10, startx+10);
+          box (entry_win, 0, 0);
+          mvwprintw(entry_win, 2, 2, " Enter TCP Direct Link Hostname:");
+          mvwprintw(entry_win, 3, 2, "  (default is localhost)");
+          mvwprintw(entry_win, 4, 2, "                        ");
+          mvwprintw(entry_win, 5, 3, " ");
+          echo();
+          refresh();
+          wscanw(entry_win, "%s", opts->tcp_hostname);
+          noecho();
+
+          //read in tcp port number
+          entry_win = newwin(8, WIDTH+16, starty+10, startx+10);
+          box (entry_win, 0, 0);
+          mvwprintw(entry_win, 2, 2, " Enter TCP Direct Link Port Number:");
+          mvwprintw(entry_win, 3, 2, "  (default is 7355)");
+          mvwprintw(entry_win, 4, 2, "                        ");
+          mvwprintw(entry_win, 5, 3, " ");
+          echo();
+          refresh();
+          wscanw(entry_win, "%d", &opts->tcp_portno);
+          noecho();
+
+          opts->tcp_sockfd = Connect(opts->tcp_hostname, opts->tcp_portno);
+          if (opts->tcp_sockfd == 0) goto TCP_END;
+          //successful connection, continue;
+
+          opts->audio_in_type = 8;
+          opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
+          opts->audio_in_file_info->samplerate=opts->wav_sample_rate;
+          opts->audio_in_file_info->channels=1;
+          opts->audio_in_file_info->seekable=0;
+          opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
+          opts->tcp_file_in = sf_open_fd(opts->tcp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
+
+          if(opts->tcp_file_in == NULL)
           {
-            opts->ncurses_compact = 1;
+            fprintf(stderr, "Error, couldn't open TCP with libsndfile: %s\n", sf_strerror(NULL));
+            sprintf (opts->audio_in_dev, "%s", "pulse");
+            opts->audio_in_type = 0;
           }
-          else opts->ncurses_compact = 0;
+
+          state->audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
+
+          TCP_END: ; //do nothing
 
         }
 
+        //RIGCTL
         if (choicec == 11)
         {
-          if (opts->ncurses_history == 0)
-          {
-            opts->ncurses_history = 1;
-          }
-          else opts->ncurses_history = 0;
+          //read in tcp hostname
+          sprintf (opts->rigctlhostname, "%s", "localhost");
+          opts->rigctlportno = 4532;
+
+          entry_win = newwin(8, WIDTH+16, starty+10, startx+10);
+          box (entry_win, 0, 0);
+          mvwprintw(entry_win, 2, 2, " Enter RIGCTL Hostname:");
+          mvwprintw(entry_win, 3, 2, "  (default is localhost)");
+          mvwprintw(entry_win, 4, 2, "                        ");
+          mvwprintw(entry_win, 5, 3, " ");
+          echo();
+          refresh();
+          wscanw(entry_win, "%s", opts->rigctlhostname);
+          noecho();
+
+          //read in tcp port number
+          entry_win = newwin(8, WIDTH+16, starty+10, startx+10);
+          box (entry_win, 0, 0);
+          mvwprintw(entry_win, 2, 2, " Enter RIGCTL Port Number:");
+          mvwprintw(entry_win, 3, 2, "  (default is 4532)");
+          mvwprintw(entry_win, 4, 2, "                        ");
+          mvwprintw(entry_win, 5, 3, " ");
+          echo();
+          refresh();
+          wscanw(entry_win, "%d", &opts->rigctlportno);
+          noecho();
+
+          opts->rigctl_sockfd = Connect(opts->rigctlhostname, opts->rigctlportno);
+          if (opts->rigctl_sockfd != 0) opts->use_rigctl = 1;
+          else opts->use_rigctl = 0;
         }
+
+        // if (choicec == 10)
+        // {
+        //   if (opts->ncurses_compact == 0)
+        //   {
+        //     opts->ncurses_compact = 1;
+        //   }
+        //   else opts->ncurses_compact = 0;
+
+        // }
+
+        // if (choicec == 11)
+        // {
+        //   if (opts->ncurses_history == 0)
+        //   {
+        //     opts->ncurses_history = 1;
+        //   }
+        //   else opts->ncurses_history = 0;
+        // }
 
         if (choicec == 12)
         {
@@ -1964,7 +2062,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 0)
   {
     attron(COLOR_PAIR(6));
-    for (short int i = 1; i < 7; i++)
+    for (short int i = 0; i < 7; i++)
     {
       printw("%s", FM_bannerN[i]);
       if (i == 1) printw (" ESC to Menu");
@@ -2047,13 +2145,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->p25_trunk == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3) )
   {
-    printw ("| Trunk Tracking Active (P25/EDACS/NXDN/DMR)\n");
+    printw ("| Trunk Tracking Active (P25/EDACS/NXDN/DMR)");
+    if (opts->trunk_use_allow_list == 1)
+    {
+      printw (" - White List Mode\n");
+    }
+    else printw (" - Black List Mode\n");
   }
   if (opts->reverse_mute == 1)
   {
     printw ("| Reverse Mute - Muting Unencrypted Voice\n");
   }
-
 
   printw ("------------------------------------------------------------------------------\n");
   attroff(COLOR_PAIR(4));
@@ -2062,7 +2164,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     attron(COLOR_PAIR(3));
     level = (int) state->max / 164; //only update on carrier present
-    if (opts->mod_qpsk == 1) (int) state->max / (164*2); //test values here
+    if (opts->mod_qpsk == 1) level = (int) state->max / 328; //test values here
     reset = 1;
   }
   if (state->carrier == 0 && opts->reset_state == 1 && reset == 1)
@@ -2078,7 +2180,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->mod_gfsk == 1) printw ("[GFSK]");
   printw ( "[%d] \n", (48000*opts->wav_interpolator)/state->samplesPerSymbol);
   printw ("| Decoding:    [%s] \n", opts->output_name);
-  printw ("| In Level:    [%3i%%] \n", level);
+  printw ("| In Level:    [%02d%%] \n", level); 
   if (opts->dmr_stereo == 0)
   {
     printw ("| Voice Error: [%i][%i] \n", state->errs, state->errs2);
@@ -3083,6 +3185,12 @@ if (c == 48) //'0' key, toggle upsampled audio smoothing
 {
   if (state->audio_smoothing == 1) state->audio_smoothing = 0;
   else state->audio_smoothing = 1; 
+}
+
+if (opts->p25_trunk == 1 && c == 119) //'w' key, toggle white list/black list mode 
+{
+  if (opts->trunk_use_allow_list == 1) opts->trunk_use_allow_list = 0;
+  else opts->trunk_use_allow_list = 1; 
 }
 
  //anything with an entry box will need the inputs and outputs stopped first
