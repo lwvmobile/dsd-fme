@@ -8,11 +8,11 @@ This project wouldn't be possible without a few good people providing me plenty 
 
 Click image below for video of current DMR/P25 trunking capabilities.
 
-[![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/dev/dsd-fme.png)](https://www.youtube.com/watch?v=hGIijBbbUxg "DSD-FME Trunking Demo")
+[![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/main/dsd-fme.png)](https://www.youtube.com/watch?v=hGIijBbbUxg "DSD-FME Trunking Demo")
 
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/dev/dsd-fme2.png)
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/main/dsd-fme2.png)
 
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/dev/dsd-fme3.png)
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/main/dsd-fme3.png)
 
 ## Information
 
