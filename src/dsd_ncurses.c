@@ -1160,7 +1160,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 48000;
+      opts->pulse_digi_rate_out = 8000;
       opts->pulse_digi_out_channels = 1;
       opts->frame_dstar = 1;
       opts->frame_x2tdma = 1;
@@ -2326,8 +2326,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (lls > 1 && lls < 30)
     {
       printw ("DMR BS - DCC: [%02i] ", dcc);
-      printw ("%s %s", state->dmr_branding, state->dmr_branding_sub);
-      printw ("%s", state->dmr_site_parms); //site id, net id, etc 
+      // printw ("%s %s", state->dmr_branding, state->dmr_branding_sub);
+      printw ("%s ", state->dmr_branding);
+      printw ("%s ", state->dmr_branding_sub);
+      printw ("%s ", state->dmr_site_parms); //site id, net id, etc 
       if (state->dmr_rest_channel > 0)
       {
         printw ("Rest Channel: [%02d] ", state->dmr_rest_channel);

@@ -837,16 +837,6 @@ usage ()
   printf ("  -N            Use NCurses Terminal\n");
   printf ("                 dsd-fme -N 2> log.ans \n");
   printf ("  -Z            Log MBE/PDU Payloads to console\n");
-  // printf ("  -e            Show Frame Info and errorbars (default)\n");
-  // printf ("  -pe           Show P25 encryption sync bits\n");
-  // printf ("  -pl           Show P25 link control bits\n");
-  // printf ("  -ps           Show P25 status bits and low speed data\n");
-  // printf ("  -pt           Show P25 talkgroup info\n");
-  // printf ("  -q            Don't show Frame Info/errorbars\n");
-  //printf ("  -s            Datascope (disables other display options)\n");
-  //printf ("  -t            Show symbol timing during sync\n");
-  // printf ("  -v <num>      Frame information Verbosity\n");
-  // printf ("  -z <num>      Frame rate for datascope\n");
   printf ("\n");
   printf ("Input/Output options:\n");
   printf ("  -i <device>   Audio input device (default is pulse audio)\n");
@@ -858,7 +848,7 @@ usage ()
   printf ("                filename.wav for 48K/1 wav files (SDR++, GQRX)\n");
   printf ("                filename.wav -s 96000 for 96K/1 wav files (DSDPlus)\n");
   printf ("                (Use single quotes '/directory/audio file.wav' when directories/spaces are present)\n");
-  printf ("  -s <rate>     Sample Rate of wav input files (usually 48000 or 96000) Mono only!\n");
+  printf ("  -s <rate>     Sample Rate of wav input files (48000 or 96000) Mono only!\n");
   printf ("  -o <device>   Audio output device (default is pulse audio)(null for no audio output)\n");
   printf ("  -d <dir>      Create mbe data files, use this directory\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
@@ -871,8 +861,9 @@ usage ()
   printf ("                 (Warning! Might be annoying.)\n");
   printf ("  -L <file>     Specify Filename for LRRP Data Output.\n");
   printf ("  -c <file>     Output symbol capture to .bin file\n");
-  printf ("  -n            Throttle Symbol Capture Bin Input\n");
-  printf ("                 (useful when reading files still being written to by OP25)");
+  printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
+  printf ("  -V            Enable Audio Smoothing on Upsampled 48k/1 or 24k/2 Audio (Capital V)\n");
+  printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
   printf ("\n");
   printf ("RTL-SDR options:\n");
   printf (" WARNING! Old CLI Switch Handling has been depreciated in favor of rtl:<parms>\n");
@@ -883,17 +874,11 @@ usage ()
   printf ("  ppm  <num>    RTL-SDR PPM Error (default = 0)\n");
   printf ("  bw   <num>    RTL-SDR VFO Bandwidth kHz (default = 12)(6, 8, 12, 24)  \n");
   printf ("  sq   <num>    RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)\n");
-  // printf ("  -V <num>      RTL-SDR Sample Gain Multiplier (default = 1)\n");
   printf ("  udp  <num>    RTL-SDR UDP Remote Port (default = 6020)\n");
   printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:12:0:6021\n");
   printf ("\n");
-  // printf ("Scanner control options:\n");
-  // printf ("  -B <num>      Serial port baud rate (default=115200)\n");
-  // printf ("  -C <device>   Serial port for scanner control (default=/dev/ttyUSB0)\n");
-  // printf ("  -R <num>      Resume scan after <num> TDULC frames or any PDU or TSDU\n");
-  // printf ("\n");
   printf ("Decoder options:\n");
-  printf ("  -fa           Legacy Auto Detection (old methods default)\n");
+  printf ("  -fa           Legacy Auto Detection 8k/1 (old methods default)\n");
   printf ("  -ft           XDMA P25 and DMR BS/MS frame types (new default)\n");
   printf ("  -fs           DMR Stereo BS and MS Simplex only\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
@@ -905,7 +890,6 @@ usage ()
   printf ("  -fp             Decode only EDACS/ProVoice*\n");
   printf ("  -fm             Decode only dPMR*\n");
   printf ("  -l            Disable DMR and NXDN input filtering\n");
-  // printf ("  -pu           Unmute Encrypted P25\n");
   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
   printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
   printf ("  -xr           Expect inverted DMR signal\n");
@@ -932,7 +916,7 @@ usage ()
   printf ("  -m2           Use P25p2 6000 sps CQPSK modulation optimizations\n");
   //printf ("                 (4 Level, not 8 Level LSM) (this is honestly unknown since I can't verify what local systems are using)\n");
   printf ("  -F            Relax P25 Phase 2 MAC_SIGNAL CRC Checksum Pass/Fail\n");
-  printf ("                 Use this feature to allow MAC_SIGNAL even if bad CRC errors.\n");
+  printf ("                 Use this feature to allow MAC_SIGNAL even if CRC errors.\n");
   printf ("  -F            Relax DMR CACH/Burst FEC Pass/Fail - Passive Frame Sync\n");
   printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
   
@@ -949,23 +933,24 @@ usage ()
   printf ("                 \n");
   printf ("  -4            Force Privacy Key over FID and SVC bits \n");
   printf ("\n");
-  printf (" New and Experimental Functions and Features---------------------------------------------------\n");
+  printf (" Trunking Options:\n");
   printf ("  -C <file>     Import Channel to Frequency Map (channum, freq) from csv file. (Capital C)                   \n");
   printf ("                 (See channel_map.csv for example)\n");
   printf ("  -G <file>     Import Group List Allow/Block and Label from csv file.\n");
   printf ("                 (See group.csv for example)\n");
   printf ("  -T            Enable Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input\n");
   printf ("  -W            Use Imported Group List as a Trunking Allow/White List -- Only Tune with Mode A\n");
-  printf ("  -p            Don't Tune to Private Calls (DMR TIII and P25)\n");
+  printf ("  -p            Disable Tune to Private Calls (DMR TIII and P25)\n");
   printf ("  -e            Enable Tune to Data Calls (DMR TIII)\n");
   printf ("                 (NOTE: DMR Con+ and P25 Data Channels Not Enabled (no handling) \n");
   printf ("  -U <port>     Enable RIGCTL/TCP; Set TCP Port for RIGCTL. (4532 on SDR++)\n");
   printf ("  -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
-  printf ("                 P25 - 7000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500; May vary based on system stregnth, etc.\n");
+  printf ("                 P25 - 7000; P25 (QPSK) - 12000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500;\n");
+  printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)\n");
-  printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
-  printf ("  -V            Enable Audio Smoothing on Upsampled Audio (XDMA and DMR Stereo 24k/2 output) (Capital V)\n");
-  printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
+  printf ("\n");
+  printf (" Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
+  printf (" Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8:0:6020 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
   printf ("\n");
   exit (0);
 }
@@ -1561,7 +1546,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 0;
-              opts.pulse_digi_rate_out = 48000;
+              opts.pulse_digi_rate_out = 8000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
               opts.dmr_mono = 1;
@@ -1931,7 +1916,7 @@ main (int argc, char **argv)
               opts.mod_qpsk = 1;
               opts.mod_gfsk = 0;
               state.rf_mod = 1;
-              opts.setmod_bw = 12500;
+              opts.setmod_bw = 12000;
               fprintf (stderr,"Enabling only QPSK modulation optimizations.\n");
             }
           else if (optarg[0] == '2')
@@ -1942,7 +1927,7 @@ main (int argc, char **argv)
               state.rf_mod = 1;
               state.samplesPerSymbol = 8; 
               state.symbolCenter = 3; 
-              opts.setmod_bw = 12500;
+              opts.setmod_bw = 12000;
               fprintf (stderr,"Enabling 6000 sps P25p2 CQPSK.\n");
             }
           break;

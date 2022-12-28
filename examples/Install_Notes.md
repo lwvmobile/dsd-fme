@@ -71,6 +71,9 @@ cd ..
 cd ..
 ```
 
+Note: Some environment/distro users (Cygwin, Arch, and others) may need to manually copy any libmbe files found in the build folder to the /usr/lib folder on root.
+`sudo cp libmbe* /usr/lib`
+
 Finish by running these steps to clone and build DSD-FME.
 
 ```

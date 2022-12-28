@@ -463,17 +463,19 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           n = 10;
         }
 
+        //disabled until this can be sorted/fleshed out by type, going to use aloha only for now
+
         //honestly can't say that this is accurate, just a guess
-        uint8_t is_capmax = 0; //capmax(mot) flag
-        if (csbk_fid == 0x10)
-        {
-          n = 0;
-          is_capmax = 1;
-          opts->dmr_dmrla_is_set = 1;
-          opts->dmr_dmrla_n = 0;
-          sprintf (state->dmr_branding, "%s", "Motorola");
-          sprintf (state->dmr_branding_sub, "%s", "CapMax ");
-        } 
+        // uint8_t is_capmax = 0; //capmax(mot) flag
+        // if (csbk_fid == 0x10)
+        // {
+        //   n = 0;
+        //   is_capmax = 1;
+        //   opts->dmr_dmrla_is_set = 1;
+        //   opts->dmr_dmrla_n = 0;
+        //   sprintf (state->dmr_branding, "%s", "Motorola");
+        //   sprintf (state->dmr_branding_sub, "%s", "CapMax ");
+        // } 
 
         if (opts->dmr_dmrla_is_set == 1) n = opts->dmr_dmrla_n;
 
@@ -497,51 +499,123 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint32_t parms2 = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24); 
         lpchannum = parms2 & 0xFFF; //7.2.19.7, for DSDPlus, this value is (lpchannum << 1) + 1;
 
-        fprintf (stderr, "\n");
-        if (n != 0) fprintf (stderr, "  C_BCAST_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d Cat: %s Cd: %d C+: %d", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, par_str, lpchannum, (lpchannum << 1)+1 );
-        else fprintf (stderr, "  C_BCAST_SYS_PARMS - %s - Net ID: %d Site ID: %d Cat: %s Cd: %d C+: %d", model_str, net, site, par_str, lpchannum, (lpchannum << 1)+1 );
-        if (is_capmax) fprintf (stderr, " Capacity Max");
+        //disabled until this can be sorted/fleshed out by type, going to use aloha only for now
 
-        //add string for ncurses terminal display, if not adjacent site info
-        if (a_type != 6 && n != 0)  sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1);
-        if (a_type != 6 && n == 0)  sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net, site);
+        // if (a_type == 2 || a_type == 7)
+        // {
+        //   fprintf (stderr, "\n");
+        //   if (n != 0) fprintf (stderr, "  C_BCAST_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d Cat: %s Cd: %d C+: %d", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, par_str, lpchannum, (lpchannum << 1)+1 );
+        //   else fprintf (stderr, "  C_BCAST_SYS_PARMS - %s - Net ID: %d Site ID: %d Cat: %s Cd: %d C+: %d", model_str, net, site, par_str, lpchannum, (lpchannum << 1)+1 );
+        //   if (is_capmax) fprintf (stderr, " Capacity Max");
 
-        //nullify any previous branding sub (bugfix for bad assignments or system type switching)
-        //sprintf(state->dmr_branding_sub, "%s", "");
-
+        //   //add string for ncurses terminal display, if not adjacent site info
+        //   if (a_type != 6 && n != 0)  sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1);
+        //   if (a_type != 6 && n == 0)  sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net, site);
+        // }
+        
         uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16);
         //fprintf (stderr, "\n  SYSCODE: %016b", syscode);
         //fprintf (stderr, "\n  SYSCODE: %04X", syscode);
 
       }
 
-      if (csbk == 28) 
+      if (csbk_o == 28) 
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " C_AHOY (TODO)");
+        fprintf (stderr, " C_AHOY (TODO) ");
       }
 
-      if (csbk == 42) 
+      if (csbk_o == 42) 
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " P_MAINT (TODO)");
+        fprintf (stderr, " P_MAINT (TODO) ");
       }
 
-      if (csbk == 30) 
+      if (csbk_o == 30) 
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " C_ACKVIT (TODO)");
+        fprintf (stderr, " C_ACKVIT (TODO) ");
       }
 
-      if (csbk == 31) 
+      if (csbk_o == 31) 
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " C_RAND (TODO)");
+        fprintf (stderr, " C_RAND (TODO) ");
       }
+
+      //tier 2 csbks
+      if (csbk_o == 4)
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " Unit to Unit Voice Service Request (UU_V_Req) - ");
+
+        uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
+        uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
+        fprintf (stderr, "Target [%d] - Source [%d] ", target, source);
+      }
+
+      if (csbk_o == 5)
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " Unit to Unit Voice Service Answer Response (UU_Ans_Req) - ");
+
+        uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
+        uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
+        fprintf (stderr, "Target [%d] - Source [%d] ", target, source);
+
+      }
+
+      if (csbk_o == 7)
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " Channel Timing CSBK (CT_CSBK) - ");
+      }
+
+      if (csbk_o == 38)
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " Negative Acknowledgement Response (NACK_Rsp) - ");
+
+        uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
+        uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
+        fprintf (stderr, "Target [%d] - Source [%d] ", target, source);
+
+      }
+
+      if (csbk_o == 56)
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " BS Outbound Activation (BS_Dwn_Act) - ");
+
+        uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
+        uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
+        fprintf (stderr, "Target [%d] - Source [%d] ", target, source);
+      }
+
+      if (csbk_o == 61)
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " Preamble CSBK - ");
+        uint8_t content = cs_pdu_bits[16];
+        uint8_t gi = cs_pdu_bits[17];
+        uint8_t res = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[18], 6);
+        uint8_t blocks = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[24], 8);
+        uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
+        uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
+
+        if (gi == 0) fprintf (stderr, "Individual ");
+        else fprintf (stderr, "Group ");
+        
+        if (content == 0) fprintf (stderr, "CSBK - ");
+        else fprintf (stderr, "Data - ");
+
+        fprintf (stderr, "Target [%d] - Source [%d] ", target, source);
+      }
+      //end tier 2 csbks
 
     }
 
