@@ -2145,11 +2145,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->p25_trunk == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3) )
   {
-    printw ("| Trunk Tracking Active (P25/EDACS/NXDN/DMR)");
-    if (opts->trunk_use_allow_list == 1)
-    {
-      printw (" - White List Mode\n");
-    }
+    printw ("| Trunk Tracking Active");
+    printw (" - Group");
+    if (opts->trunk_tune_private_calls == 1) printw (" Private");
+    if (opts->trunk_tune_data_calls == 1) printw (" Data");
+    printw (" Calls");
+    if (opts->trunk_use_allow_list == 1) printw (" - White List Mode\n");
     else printw (" - Black List Mode\n");
   }
   if (opts->reverse_mute == 1)
@@ -2328,19 +2329,19 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw ("DMR BS - DCC: [%02i] ", dcc);
       // printw ("%s %s", state->dmr_branding, state->dmr_branding_sub);
       printw ("%s ", state->dmr_branding);
-      printw ("%s ", state->dmr_branding_sub);
-      printw ("%s ", state->dmr_site_parms); //site id, net id, etc 
+      printw ("%s", state->dmr_branding_sub);
+      printw ("%s", state->dmr_site_parms); //site id, net id, etc 
       if (state->dmr_rest_channel > 0)
       {
         printw ("Rest Channel: [%02d] ", state->dmr_rest_channel);
         if (state->trunk_chan_map[state->dmr_rest_channel] != 0)
         {
-          printw ("%.06lf Mhz", (double)state->trunk_chan_map[state->dmr_rest_channel]/1000000);
+          printw ("Freq: [%.06lf] Mhz", (double)state->trunk_chan_map[state->dmr_rest_channel]/1000000);
         }
       }
       else if (state->p25_cc_freq != 0)
       {
-        printw ("%.06lf MHz", (double)state->p25_cc_freq/1000000);
+        printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
       }
       
     }
@@ -3193,6 +3194,18 @@ if (opts->p25_trunk == 1 && c == 119) //'w' key, toggle white list/black list mo
 {
   if (opts->trunk_use_allow_list == 1) opts->trunk_use_allow_list = 0;
   else opts->trunk_use_allow_list = 1; 
+}
+
+if (opts->p25_trunk == 1 && c == 69) //'E' key, toggle tune private calls
+{
+  if (opts->trunk_tune_private_calls == 1) opts->trunk_tune_private_calls = 0;
+  else opts->trunk_tune_private_calls = 1; 
+}
+
+if (opts->p25_trunk == 1 && c == 101) //'e' key, toggle tune data calls
+{
+  if (opts->trunk_tune_data_calls == 1) opts->trunk_tune_data_calls = 0;
+  else opts->trunk_tune_data_calls = 1; 
 }
 
  //anything with an entry box will need the inputs and outputs stopped first

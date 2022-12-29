@@ -108,7 +108,7 @@ Trunking Note1: All samples above can also be run with the RTL input method and 
 
 Trunking Note2: CQPSK Phase 1 and Phase 2 Systems are subceptible to LSM distortion issues, but seem to do okay, but require really good signal. Some CRC issues still occur with Phase 2 TDMA LCCH Mac Signal that can affect reliability, I believe this issue is ultimately caused by the PSK demodulation inside of FME. I also don't believe this will work on 8-level PSK, but I cannot determine that at the moment. Update: I have improved the LCCH Mac Signal decoding my increasing the QPSK decision point buffers to their maximum values. 
 
-Trunking Note3: DMR Trunking has been coded, and some testing and tweaks have been carried out. Cap+, Con+, and TIII systems seem to do well with trunking now. Placing the frequency for the control channel at channel map 0 in your channel_map.csv file is not required now if using RIGCTL or the RTL Input, both can poll the VFO for the current frequency if it believes its on a control channel, but using channel 0 as the control channel will hardset that frequency to the control channel. If you need to map out your channels for TIII, you can observe the console output and look for channel numbers. For conveniece I have included the DSDPlus channel numbering (as best as I can figure it) into the console print so it will make it easier for users from DSDPlus to map frequencies into the channel_map.csv file. Make sure your channel numbers are the Cd (channel decimal) values from the log, and not the C+ (dsdplus) values. Notice: TIII Site ID value needs work to determine proper DMRLA values for system area and sub area.
+Trunking Note3: DMR Trunking has been coded, and some testing and tweaks have been carried out. Cap+, Con+, and TIII systems seem to do well with trunking now. Placing the frequency for the control channel at channel map 0 in your channel_map.csv file is not required now if using RIGCTL or the RTL Input, both can poll the VFO for the current frequency if it believes its on a control channel, but setting a fake channel number (i.e. 999) first with the CC frequency will result in finding the CC faster on startup if desired. If you need to map out your channels for TIII, you can observe the console output and look for channel numbers. For conveniece I have included the DSDPlus channel numbering (as best as I can figure it, but they seem consistent) into the console print so it will make it easier for users from DSDPlus to map frequencies into the channel_map.csv file. Make sure your channel numbers are the Cd (channel decimal) values from the log, and not the C+ (dsdplus) values. Notice: TIII Site ID value needs work to determine proper DMRLA values for system area and sub area.
 
 ```
  Talkgroup Voice Channel Grant (TV_GRANT) - Logical
@@ -138,18 +138,20 @@ z - toggle console payloads
 a - toggle call alert beep
 4 - force dmr privacy key assertion over fid and svc bits
 i - toggle signal inversion on types that can't auto detect (dmr, dpmr)
-m - toggle c4fm/cqpsk 10/4 (everything but phase 2 signal)
-M - toggle c4fm/cqpsk 8/3 (phase 2 tdma control channel)
-t - toggle trunking (needs either rtl input, or rigctl setup at CLI)
+m - toggle c4fm/qpsk 10/4 (everything but phase 2 signal)
+M - toggle c4fm/qpsk 8/3 (phase 2 tdma control channel)
 R - start capturing symbol capture bin (date/time name file)
 r - stop capturing symbol capture bin
 spacebar - replay last symbol capture bin (captures must be stopped first)
 s - stop playing symbol capture bin or wav input file
 P - start per call decoded wav files
 p - stop per call decoded wav files
+t - toggle trunking (needs either rtl input, or rigctl connection)
 1 - Lockout Tuning/Playback of TG in Slot 1 or Conventional (Current Session Only)
 2 - Lockout Tuning/Playback of TG in Slot 2 (Current Session Only)
 0 - Toggle Audio Smoothing - May produce crackling if enabled on RTL/TCP or wav/bin files
 w - Toggle Trunking/Playback White List (Allow A Groups Only) / Black List (Block B or DE groups only) Mode
+e - Toggle Trunking Tuning to Data Calls
+E - Toggle Trunking Tuning to Private Calls
 
 ```

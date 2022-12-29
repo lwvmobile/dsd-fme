@@ -506,7 +506,6 @@ typedef struct
   char slot2light[8];
   int directmode;
 
-  char dmr_branding[99];
   int dmr_stereo_payload[144];    //load up 144 dibit buffer for every single DMR TDMA frame
   uint8_t data_header_blocks[2];  //collect number of blocks to follow from data header per slot
   uint8_t data_header_padding[2]; //collect number of padding octets in last block per slot
@@ -634,8 +633,9 @@ typedef struct
   //dmr late entry mi
   uint64_t late_entry_mi_fragment[2][7][3];
 
-  //char dmr_branding[25]; //may need higher value?
-  char dmr_branding_sub[25];
+  //dmr manufacturer branding and sub_branding (i.e., Motorola and Con+)
+  char dmr_branding[99];
+  char dmr_branding_sub[99];
 
   //Remus DMR End Call Alert Beep
   int dmr_end_alert[2]; //dmr TLC end call alert beep has already played once flag

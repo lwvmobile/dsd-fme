@@ -150,6 +150,16 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //if not a data channel grant (only tuning to voice channel grants)
         if (csbk_o == 48 || csbk_o == 49 || csbk_o == 50 || csbk_o == 53) //48, 49, 50 are voice grants, 51 and 52 are data grants, 53 Duplex Private Voice, 54 Duplex Private Data
         {
+          //TIII tuner fix if voice assignment occurs to the control channel itself,
+          //then it may not want to resume tuning due to no framesync loss after call ends
+          if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
+          {
+            opts->p25_is_tuned = 0;
+            //zero out vc frequencies
+            state->p25_vc_freq[0] = 0;
+            state->p25_vc_freq[1] = 0;
+          } 
+
           //shim in here for ncurses freq display when not trunking (playback, not live)
           if (opts->p25_trunk == 0 && freq != 0)
           {
@@ -572,7 +582,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       if (csbk_o == 7)
       {
         fprintf (stderr, "\n");
-        fprintf (stderr, " Channel Timing CSBK (CT_CSBK) - ");
+        fprintf (stderr, " Channel Timing CSBK (CT_CSBK) ");
       }
 
       if (csbk_o == 38)
