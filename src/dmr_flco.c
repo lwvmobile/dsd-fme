@@ -71,7 +71,19 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     {
       is_gps = 1;
       if (fid == 0) dmr_embedded_gps(opts, state, lc_bits); //issues with fid 0x10 and flco 0x08
+
+      //NOTE: fid 0x10 and flco 0x08 produces a lot of 'zero' lat or lon values, I don't believe this is embedded gps
+      //this has been observed to happen often on CapMax systems, so I believe it could be some CapMax 'thing'
+      //Unknown Link Control - FLCO=0x08 FID=0x10 SVC=0xC1 or FLCO=0x08 FID=0x10 SVC=0xC0 <-- have the enc bit set on svc, but these calls aren't enc?
+      //is this an encrypted embedded link control?
+      else
+      {
+        fprintf (stderr, "%s", KGRN);
+        fprintf (stderr, " Slot %d Unknown EMB LC - FLCO=0x%02X FID=0x%02X SVC=0x%02X ", slot+1, flco, fid, so);
+        fprintf (stderr, "%s", KNRM);
+      } 
     }
+
   }  
 
   //will want to continue to observe for different flco and fid combinations to find out their meaning
@@ -549,23 +561,19 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
 
   if (slco == 0x2) //C_SYS_Parms
   {
-    if (n != 0) fprintf (stderr, " C_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d - Reg Req: %d - CSC: %d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, reg, csc);
-    else fprintf (stderr, " C_SYS_PARMS - %s - Net ID: %d Site ID: %d - Reg Req: %d - CSC: %d ", model_str, net, site, reg, csc);
+    if (n != 0) fprintf (stderr, " SLC_C_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d - Reg Req: %d - CSC: %d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, reg, csc);
+    else fprintf (stderr, " SLC_C_SYS_PARMS - %s - Net ID: %d Site ID: %d - Reg Req: %d - Capacity Max ", model_str, net, site, reg);
 
     //add string for ncurses terminal display
     if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1 );
     else sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net, site);
 
     //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
-
     if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
     {
       ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
     }
-
-    //nullify any previous branding sub (bugfix for bad assignments or system type switching)
-    //sprintf(state->dmr_branding_sub, "%s", "");
 
     //debug print
     uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&slco_bits[4], 14);
@@ -575,14 +583,12 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   }
   else if (slco == 0x3) //P_SYS_Parms
   {
-    fprintf (stderr, " P_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d - Comp CC: %d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, reg); 
+    if (n != 0) fprintf (stderr, " SLC_P_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d - Comp CC: %d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, reg); 
+    else fprintf (stderr, " SLC_P_SYS_PARMS - %s - Net ID: %d Site ID: %d - Capacity Max", model_str, net, site);
 
     //add string for ncurses terminal display
     if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1 );
     else sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net, site);
-
-    //nullify any previous branding sub (bugfix for bad assignments or system type switching)
-    //sprintf(state->dmr_branding_sub, "%s", "");
 
     //debug print
     uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&slco_bits[4], 14);

@@ -37,14 +37,19 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
     csbk_pf  = ( (cs_pdu[1] & 0x80) >> 7); 
     csbk     = ((cs_pdu[0] & 0x3F) << 8) | cs_pdu[1]; //opcode and fid combo set
 
-    //set overarching manufacturer in use when non-standard feature id set is up
-    if (csbk_fid != 0) state->dmr_mfid = csbk_fid; 
+    if (csbk_pf == 1) //check the protect flag, don't run if set
+    {
+      fprintf (stderr, "%s", KRED); 
+      fprintf (stderr, "\n Protected Control Signalling Block(s)");
+      fprintf (stderr, "%s", KNRM);
+    }
 
-    //TIII standard with fid of 0 - (opcodes in decimal)
-    if (0 == 0) //some non-standard fid values (0x58 - tait, 0x68 - hytera, 0x10-motcapmax) also use a good chunk of these
+    if (csbk_pf == 0) //okay to run
     {
 
-      
+      //set overarching manufacturer in use when non-standard feature id set is up
+      if (csbk_fid != 0) state->dmr_mfid = csbk_fid; 
+
       fprintf (stderr, "%s", KYEL); 
       
       //7.1.1.1.1 Channel Grant CSBK/MBC PDU
