@@ -105,6 +105,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
         }
       }
 
+			//Skip tuning group calls if group calls are disabled
+			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
+
 			//tune if tuning available
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
   		{
@@ -170,6 +173,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
         }
       }
 
+			//Skip tuning group calls if group calls are disabled
+			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
+
 			//tune if tuning available
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
   		{
@@ -232,6 +238,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			freq1 = process_channel_to_freq (opts, state, channel1);
 			fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
 			freq2 = process_channel_to_freq (opts, state, channel2);
+
+			//Skip tuning group calls if group calls are disabled
+			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			//monstrocity below should get us evaluating and tuning groups...hopefully, will be first come first served though, no priority
 			//see how many loops we need to run on when to tune if first group is blocked
@@ -342,6 +351,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
           strcpy (mode, state->group_array[i].groupMode);
         }
       }
+
+			//Skip tuning group calls if group calls are disabled
+			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			//tune if tuning available
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
@@ -460,7 +472,6 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				}
 			}
 
-			SKIPCALL: ; //do nothing
 		}
 
 		//Group Voice Channel Grant Update Multiple - Explicit
@@ -485,6 +496,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc2, channelt2, channelr2, group2, group2);
 			freq1t = process_channel_to_freq (opts, state, channelt2);
 			freq1r = process_channel_to_freq (opts, state, channelr2);
+
+			//Skip tuning group calls if group calls are disabled
+			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			int loop = 1;
 			if (channelt2 == channelt2) loop = 1;
@@ -590,6 +604,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n  Channel 3 [%04X] Group 3 [%d][%04X]", channel3, group3, group3);
 			freq3 = process_channel_to_freq (opts, state, channel3);
 
+			//Skip tuning group calls if group calls are disabled
+			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
+
 			int loop = 3;
 
 			long int tunable_freq = 0;
@@ -692,6 +709,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			freq1 = process_channel_to_freq (opts, state, channel1);
 			fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
 			freq2 = process_channel_to_freq (opts, state, channel2);
+
+			//Skip tuning group calls if group calls are disabled
+			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			int loop = 1;
 			if (channel1 == channel2) loop = 1;
@@ -804,6 +824,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
           strcpy (mode, state->group_array[i].groupMode);
         }
       }
+
+			//Skip tuning group calls if group calls are disabled
+			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			//tune if tuning available
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
@@ -1314,6 +1337,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			}
 
 		}
+
+		SKIPCALL: ; //do nothing
 
 		if ( (len_b + len_c) < 24 && len_c != 0) 
 		{

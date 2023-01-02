@@ -151,7 +151,8 @@ t - toggle trunking (needs either rtl input, or rigctl connection)
 2 - Lockout Tuning/Playback of TG in Slot 2 (Current Session Only)
 0 - Toggle Audio Smoothing - May produce crackling if enabled on RTL/TCP or wav/bin files
 w - Toggle Trunking/Playback White List (Allow A Groups Only) / Black List (Block B or DE groups only) Mode
-e - Toggle Trunking Tuning to Data Calls
-E - Toggle Trunking Tuning to Private Calls
+g - Toggle Trunking Tuning to Group Calls (DMR T3, Con+, Cap+, P25)
+u - Toggle Trunking Tuning to Private Calls (DMR T3, P25)
+d - Toggle Trunking Tuning to Data Calls (DMR T3)
 
 ```

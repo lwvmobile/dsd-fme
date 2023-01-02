@@ -339,10 +339,13 @@ typedef struct
   //Trunking - Use Group List as Allow List
   uint8_t trunk_use_allow_list;
 
+  //Trunking - Tune Group Calls
+  uint8_t trunk_tune_group_calls;
+
   //Trunking - Tune Private Calls
   uint8_t trunk_tune_private_calls;
 
-  //Trunking - Tune Data Calls...why?
+  //Trunking - Tune Data Calls
   uint8_t trunk_tune_data_calls;
 
 } dsd_opts;

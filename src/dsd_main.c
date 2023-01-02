@@ -125,6 +125,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     //zero out vc frequencies?
     state->p25_vc_freq[0] = 0;
     state->p25_vc_freq[1] = 0;
+
+    state->is_con_plus = 0; //flag off
   }
 
   state->dibit_buf_p = state->dibit_buf + 200;
@@ -491,6 +493,9 @@ initOpts (dsd_opts * opts)
 
   //Trunking - Use Group List as Allow List
   opts->trunk_use_allow_list = 0; //disabled by default
+
+  //Trunking - Tune Group Calls
+  opts->trunk_tune_group_calls = 1; //enabled by default
 
   //Trunking - Tune Private Calls
   opts->trunk_tune_private_calls = 1; //enabled by default
@@ -941,11 +946,13 @@ usage ()
   printf ("  -T            Enable Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input\n");
   printf ("  -W            Use Imported Group List as a Trunking Allow/White List -- Only Tune with Mode A\n");
   printf ("  -p            Disable Tune to Private Calls (DMR TIII and P25)\n");
+  printf ("  -E            Disable Tune to Group Calls (DMR TIII, Con+, Cap+ and P25)\n");
+  printf ("                 (NOTE: NXDN and EDACS, simply disable trunking if desired) \n");
   printf ("  -e            Enable Tune to Data Calls (DMR TIII)\n");
-  printf ("                 (NOTE: DMR Con+ and P25 Data Channels Not Enabled (no handling) \n");
+  printf ("                 (NOTE: P25 Data Channels Not Enabled (no handling) \n");
   printf ("  -U <port>     Enable RIGCTL/TCP; Set TCP Port for RIGCTL. (4532 on SDR++)\n");
   printf ("  -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
-  printf ("                 P25 - 7000; P25 (QPSK) - 12000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500;\n");
+  printf ("                 P25 - 7000-12000; P25 (QPSK) - 12000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500;\n");
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)\n");
   printf ("\n");
@@ -1162,7 +1169,7 @@ main (int argc, char **argv)
   exitflag = 0;
   // signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:Y:K:H:X:NQWrlZTF01:2:345:6:7:89:")) != -1)
+  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:Y:K:H:X:NQWrlZTF01:2:345:6:7:89:E")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1190,6 +1197,12 @@ main (int argc, char **argv)
         case 'W':
           opts.trunk_use_allow_list = 1;
           fprintf (stderr, "Using Group List as Allow/White List. \n");
+          break;
+
+        //Trunking - Tune Group Calls
+        case 'E':
+          opts.trunk_tune_group_calls = 0; //disable
+          fprintf (stderr, "Disable Tuning to Group Calls. \n");
           break;
 
         //Trunking - Tune Private Calls

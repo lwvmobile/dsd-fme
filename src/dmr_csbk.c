@@ -37,6 +37,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
     csbk_pf  = ( (cs_pdu[1] & 0x80) >> 7); 
     csbk     = ((cs_pdu[0] & 0x3F) << 8) | cs_pdu[1]; //opcode and fid combo set
 
+    //update time to prevent random 'Control Channel Signal Lost' hopping
+    //in the middle of voice call on current Control Channel (con+ and t3)
+    state->last_cc_sync_time = time(NULL); 
+
     if (csbk_pf == 1) //check the protect flag, don't run if set
     {
       fprintf (stderr, "%s", KRED); 
@@ -143,14 +147,17 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
         }
 
-        //Skip tuning private calls if private calls are disabled
-        if (opts->trunk_tune_private_calls == 0 && csbk_o != 49) goto SKIPCALL;
+        //Skip tuning group calls if group calls are disabled
+        if (opts->trunk_tune_group_calls == 0 && csbk_o == 49) goto SKIPCALL;
 
         //Allow tuning of data calls if user wishes by flipping the csbk_o to a group voice call
         if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54)
         {
           if (opts->trunk_tune_data_calls == 1) csbk_o = 49;
         }
+
+        //Skip tuning private calls if private calls are disabled
+        if (opts->trunk_tune_private_calls == 0 && csbk_o != 49) goto SKIPCALL;
          
         //if not a data channel grant (only tuning to voice channel grants)
         if (csbk_o == 48 || csbk_o == 49 || csbk_o == 50 || csbk_o == 53) //48, 49, 50 are voice grants, 51 and 52 are data grants, 53 Duplex Private Voice, 54 Duplex Private Data
@@ -707,6 +714,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         fprintf (stderr, "%s", KNRM);
 
+        //Skip tuning group calls if group calls are disabled
+        if (opts->trunk_tune_group_calls == 0) goto SKIPCAP;
+
         //don't tune if currently a vc on the current channel 
         if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
         {
@@ -759,14 +769,12 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
         
       }
+      SKIPCAP: ; //do nothing
     }
 
     //Connect+ Section
     if (csbk_fid == 0x06)
     {
-
-      //maintain this to allow users to hardset the cc freq as map[0]; otherwise, set from rigctl or rtl freq
-      // if (state->p25_cc_freq == 0 && state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
 
       if (csbk_o == 0x01)
       {
@@ -801,6 +809,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
+
+        //Skip tuning group calls if group calls are disabled
+        if (opts->trunk_tune_group_calls == 0) goto SKIPCON;
 
         //if using rigctl we can set an unknown or updated cc frequency 
         //by polling rigctl for the current frequency
@@ -841,7 +852,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
 
         //don't tune if currently a vc on the control channel
-        if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
+        if ( (opts->trunk_tune_group_calls == 1) && (time(NULL) - state->last_vc_sync_time > 2) ) 
         {
           
           if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0) ) 
@@ -873,72 +884,70 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           }
         }  
 
+        SKIPCON: ; //do nothing
+
       }
 
-      if (csbk_o == 0x06) 
+      //upon further examination, opcodes 6 and C (12) do not appear to be a channel grants or tlcs,
+      //it is present in Connect+, but its purpose isn't entirely clear
+      //DSDPlus only regards it as a 'CSBK [LB=1 CSBKO=6 (?) FID=06 v1=115213 v2=10488576 v3=0]
+      //unsure of what the v1 v2 v3 fields specify
+      // if (csbk_o == 0x06 || csbk_o == 0x0C) 
+      if (csbk_o != 0x01 && csbk_o != 0x03) 
       {
-        //initial line break
-        fprintf (stderr, "\n");
-        uint32_t srcAddr = ( (cs_pdu[2] << 16) + (cs_pdu[3] << 8) + cs_pdu[4] ); 
-        uint32_t grpAddr = ( (cs_pdu[5] << 16) + (cs_pdu[6] << 8) + cs_pdu[7] ); 
-        uint8_t  lcn     = ( (cs_pdu[8] & 0xF0 ) >> 4 ) ; 
-        uint8_t  tslot   = ( (cs_pdu[8] & 0x08 ) >> 3 ); 
-        fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Connect Plus Data Channel Grant\n"); 
-        fprintf (stderr, "  srcAddr(%8d), grpAddr(%8d), LCN(%d), TS(%d)",srcAddr, grpAddr, lcn, tslot);
-        state->dmr_mfid = 0x06; 
-        sprintf (state->dmr_branding, "%s", "Motorola");
-        sprintf(state->dmr_branding_sub, "Con+ ");
+        
+        uint32_t v1 = ( (cs_pdu[2] << 16) + (cs_pdu[3] << 8) + cs_pdu[4] ); 
+        uint32_t v2 = ( (cs_pdu[5] << 16) + (cs_pdu[6] << 8) + cs_pdu[7] );
+        uint32_t v3 = ( (cs_pdu[7] << 16) + (cs_pdu[8] << 8) + cs_pdu[9] ); 
+
+        // debug print
+        // initial line break
+        // fprintf (stderr, "\n");
+        // fprintf (stderr, "%s", KYEL);
+        // fprintf (stderr, " Connect Plus CSBK 0x%X\n", csbk_o); 
+        // fprintf (stderr, "  v1(%d), v2(%d), v3(%d)",v1, v2, v3);
+        // state->dmr_mfid = 0x06; 
+        // sprintf (state->dmr_branding, "%s", "Motorola");
+        // sprintf(state->dmr_branding_sub, "Con+ ");
       }
 
-      if (csbk_o == 0x0C) 
-      {
-        //initial line break
-        fprintf (stderr, "\n");
-        uint32_t srcAddr = ( (cs_pdu[2] << 16) + (cs_pdu[3] << 8) + cs_pdu[4] ); 
-        uint32_t grpAddr = ( (cs_pdu[5] << 16) + (cs_pdu[6] << 8) + cs_pdu[7] ); 
-        uint8_t  lcn     = ( (cs_pdu[8] & 0xF0 ) >> 4 ); 
-        uint8_t  tslot   = ( (cs_pdu[8] & 0x08 ) >> 3 ); 
-        fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Connect Plus Terminate Channel Grant\n"); 
-        fprintf (stderr, "  srcAddr(%8d), grpAddr(%8d), LCN(%d), TS(%d)",srcAddr, grpAddr, lcn, tslot);
-        state->dmr_mfid = 0x06; 
-        sprintf (state->dmr_branding, "%s", "Motorola");
-        sprintf(state->dmr_branding_sub, "Con+ ");
-      }
+      //the validity of these last three csbk opcodes cannot be confirmed
+      //I recall making these based on observation and speculation long ago,
+      //but cannot verify the accuracy of them now, so they will remain disabled
+      //they offer no particular interest to trunking/listening
 
-      if (csbk_o == 0x11) 
-      {
-        //initial line break
-        fprintf (stderr, "\n");
-        fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Connect Plus Registration Request");
-        state->dmr_mfid = 0x06; 
-        sprintf (state->dmr_branding, "%s", "Motorola");
-        sprintf(state->dmr_branding_sub, "Con+ ");
-      }
+      // if (csbk_o == 0x11) 
+      // {
+      //   //initial line break
+      //   fprintf (stderr, "\n");
+      //   fprintf (stderr, "%s", KYEL);
+      //   fprintf (stderr, " Connect Plus Registration Request");
+      //   state->dmr_mfid = 0x06; 
+      //   sprintf (state->dmr_branding, "%s", "Motorola");
+      //   sprintf(state->dmr_branding_sub, "Con+ ");
+      // }
 
-      if (csbk_o == 0x12) 
-      {
-        //initial line break
-        fprintf (stderr, "\n");
-        fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Connect Plus Registration Response");
-        state->dmr_mfid = 0x06; 
-        sprintf (state->dmr_branding, "%s", "Motorola");
-        sprintf(state->dmr_branding_sub, "Con+ ");
-      }
+      // if (csbk_o == 0x12) 
+      // {
+      //   //initial line break
+      //   fprintf (stderr, "\n");
+      //   fprintf (stderr, "%s", KYEL);
+      //   fprintf (stderr, " Connect Plus Registration Response");
+      //   state->dmr_mfid = 0x06; 
+      //   sprintf (state->dmr_branding, "%s", "Motorola");
+      //   sprintf(state->dmr_branding_sub, "Con+ ");
+      // }
 
-      if (csbk_o == 0x18) 
-      {
-        //initial line break
-        fprintf (stderr, "\n");
-        fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Connect Plus Talkgroup Affiliation");
-        state->dmr_mfid = 0x06; 
-        sprintf (state->dmr_branding, "%s", "Motorola");
-        sprintf(state->dmr_branding_sub, "Con+ ");
-      }
+      // if (csbk_o == 0x18) 
+      // {
+      //   //initial line break
+      //   fprintf (stderr, "\n");
+      //   fprintf (stderr, "%s", KYEL);
+      //   fprintf (stderr, " Connect Plus Talkgroup Affiliation");
+      //   state->dmr_mfid = 0x06; 
+      //   sprintf (state->dmr_branding, "%s", "Motorola");
+      //   sprintf(state->dmr_branding_sub, "Con+ ");
+      // }
 
       fprintf (stderr, "%s", KNRM);
 

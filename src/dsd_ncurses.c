@@ -2145,10 +2145,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->p25_trunk == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3) )
   {
-    printw ("| Trunk Tracking Active");
-    printw (" - Group");
-    if (opts->trunk_tune_private_calls == 1) printw (" Private");
-    if (opts->trunk_tune_data_calls == 1) printw (" Data");
+    printw ("| Trunk Tracking Active -");
+    if (opts->trunk_tune_group_calls == 0) attron(COLOR_PAIR(2));
+    printw (" Group(g)");
+    attron(COLOR_PAIR(4));
+    if (opts->trunk_tune_private_calls == 0) attron(COLOR_PAIR(2));
+    printw (" Private(u)");
+    attron(COLOR_PAIR(4));
+    if (opts->trunk_tune_data_calls == 0) attron(COLOR_PAIR(2));
+    printw (" Data(d)");
+    attron(COLOR_PAIR(4));
     printw (" Calls");
     if (opts->trunk_use_allow_list == 1) printw (" - White List Mode\n");
     else printw (" - Black List Mode\n");
@@ -3196,16 +3202,22 @@ if (opts->p25_trunk == 1 && c == 119) //'w' key, toggle white list/black list mo
   else opts->trunk_use_allow_list = 1; 
 }
 
-if (opts->p25_trunk == 1 && c == 69) //'E' key, toggle tune private calls
+if (opts->p25_trunk == 1 && c == 117) //'u' key, toggle tune private calls
 {
   if (opts->trunk_tune_private_calls == 1) opts->trunk_tune_private_calls = 0;
   else opts->trunk_tune_private_calls = 1; 
 }
 
-if (opts->p25_trunk == 1 && c == 101) //'e' key, toggle tune data calls
+if (opts->p25_trunk == 1 && c == 100) //'d' key, toggle tune data calls
 {
   if (opts->trunk_tune_data_calls == 1) opts->trunk_tune_data_calls = 0;
   else opts->trunk_tune_data_calls = 1; 
+}
+
+if (opts->p25_trunk == 1 && c == 103) //'g' key, toggle tune group calls
+{
+  if (opts->trunk_tune_group_calls == 1) opts->trunk_tune_group_calls = 0;
+  else opts->trunk_tune_group_calls = 1; 
 }
 
  //anything with an entry box will need the inputs and outputs stopped first
