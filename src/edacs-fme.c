@@ -47,12 +47,13 @@ char * getTimeE(void) //get pretty hh:mm:ss timestamp
 
 void edacs(dsd_opts * opts, dsd_state * state)
 {
-  unsigned long long fr_1 = 0xFFFFFFFFFF; //40-bit frames
-  unsigned long long fr_2 = 0; //each is a 40 bit frame that repeats 3 times
-  unsigned long long fr_3 = 0; //two messages per frame
-  unsigned long long fr_4 = 0xFFFFFFFFFF; 
-  unsigned long long fr_5 = 0;
-  unsigned long long fr_6 = 0;
+  //changed to ulli here for 32-bit cygwin (not sure if was an issue, but playing it safe)
+  unsigned long long int fr_1 = 0xFFFFFFFFFF; //40-bit frames
+  unsigned long long int fr_2 = 0; //each is a 40 bit frame that repeats 3 times
+  unsigned long long int fr_3 = 0; //two messages per frame
+  unsigned long long int fr_4 = 0xFFFFFFFFFF; 
+  unsigned long long int fr_5 = 0;
+  unsigned long long int fr_6 = 0;
 
   //BCH stuff
   unsigned long long int fr_1m = 0xFFFFFFF; //28-bit 7X message portion to pass to bch handler
