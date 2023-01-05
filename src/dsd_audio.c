@@ -444,17 +444,18 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 
   if (state->audio_out_idx > opts->delay)
   {
-    // output synthesized speech to sound card
-		if(opts->audio_out_type == 2)
-		{
-      //go F yourself PA
-		}
-		else
+    if (opts->audio_out_type == 5) //OSS
     {
-      //Test just sending it straight on since I think I've figured out the STDIN and RTL for Stereo
-      pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); //Yay! It works.
+      //OSS
+      result = write (opts->audio_out_fd, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2));
       state->audio_out_idx = 0;
     }
+		else if (opts->audio_out_type == 0)
+    {
+      pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); 
+      state->audio_out_idx = 0;
+    }
+    else state->audio_out_idx = 0; //failsafe for audio_out == 0
 
 
   }
@@ -478,15 +479,18 @@ playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
   if (state->audio_out_idxR > opts->delay)
   {
     // output synthesized speech to sound card
-		if(opts->audio_out_type == 2)
-		{
-      //go F yourself PA
-		}
-		else
+		if (opts->audio_out_type == 5) //OSS
     {
-      pa_simple_write(opts->pulse_digi_dev_outR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); //Yay! It works.
+      //OSS
+      result = write (opts->audio_out_fdR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2));
       state->audio_out_idxR = 0;
     }
+		else if (opts->audio_out_type == 0)
+    {
+      pa_simple_write(opts->pulse_digi_dev_outR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); 
+      state->audio_out_idxR = 0;
+    }
+    else state->audio_out_idxR = 0; //failsafe for audio_out == 0
 
   }
 
@@ -558,6 +562,7 @@ openAudioInDevice (dsd_opts * opts)
       exit(1);
     }
 	}
+
   else if (strncmp(opts->audio_in_dev, "tcp", 3) == 0)
   {
     opts->audio_in_type = 8;
@@ -567,13 +572,13 @@ openAudioInDevice (dsd_opts * opts)
     opts->audio_in_file_info->seekable=0;
     opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
     opts->tcp_file_in = sf_open_fd(opts->tcp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
-
     if(opts->tcp_file_in == NULL)
     {
       fprintf(stderr, "Error, couldn't open TCP with libsndfile: %s\n", sf_strerror(NULL));
       exit(1);
     }
   }
+
   else if (strncmp(opts->audio_in_dev, "udp", 3) == 0)
   {
     opts->audio_in_type = 6;
@@ -597,6 +602,10 @@ openAudioInDevice (dsd_opts * opts)
   else if(strncmp(opts->audio_in_dev, "pulse", 5) == 0)
   {
     opts->audio_in_type = 0;
+  }
+  else if((strncmp(opts->audio_in_dev, "/dev/dsp", 8) == 0))
+  {
+    opts->audio_in_type = 5;
   }
   else if (strncmp(extension, ".bin", 3) == 0)
 	{
@@ -645,9 +654,11 @@ openAudioInDevice (dsd_opts * opts)
 
     }
     //open pulse audio if no bin or wav
-    else
+    else //seems this condition is never met
     {
-      opts->audio_in_type = 0; //not sure if this works or needs to openPulse here
+      //opts->audio_in_type = 5; //not sure if this works or needs to openPulse here
+      fprintf(stderr, "Error, couldn't open input file.\n");
+      exit(1);
     }
   }
   if (opts->split == 1)

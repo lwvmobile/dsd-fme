@@ -125,7 +125,7 @@ char * DMRBusrtTypes[32] = {
   "R-S ERR  ",
   "CRC ERR  ",
   "NULL     ",
-  "Voice    ", 
+  "Voice ", 
   "         ",  
   "INIT     ",
   "INIT     ",
@@ -150,9 +150,10 @@ void beeper (dsd_opts * opts, dsd_state * state, int type)
   FILE *beep;
   char wav_name[1024] = {0};
 
-  if (opts->pulse_digi_rate_out == 8000) strncpy(wav_name, "/usr/share/tone8.wav", 1023);
-  if (opts->pulse_digi_rate_out == 48000) strncpy(wav_name, "/usr/share/tone48.wav", 1023);
-  if (opts->pulse_digi_rate_out == 24000) strncpy(wav_name, "/usr/share/tone24.wav", 1023);
+  if (opts->pulse_digi_rate_out == 8000) strncpy(wav_name, "tone8.wav", 1023);
+  if (opts->pulse_digi_rate_out == 48000) strncpy(wav_name, "tone48.wav", 1023);
+  if (opts->pulse_digi_rate_out == 24000) strncpy(wav_name, "tone24.wav", 1023);
+  if (opts->audio_out_type == 5) strncpy(wav_name, "tone48.wav", 1023);
   wav_name[1023] = '\0';
   struct stat stat_buf;
   if (stat(wav_name, &stat_buf) == 0)
@@ -174,17 +175,20 @@ void beeper (dsd_opts * opts, dsd_state * state, int type)
         //only beep on R if dmr_stereo is active and slot 2, else beep on L
         if (type == 0 && opts->dmr_stereo == 1 && opts->audio_out == 1)
         {
-          pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
+          if (opts->audio_out_type == 0) pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
+          if (opts->audio_out_type == 5) write (opts->audio_out_fd, buf, sizeof(buf));
           //fprintf (stderr, "BEEP 0 24\n");
         }
         if (type == 1 && opts->dmr_stereo == 1 && opts->audio_out == 1)
         {
-          pa_simple_write(opts->pulse_digi_dev_outR, buf, sizeof(buf), NULL);
+          if (opts->audio_out_type == 0) pa_simple_write(opts->pulse_digi_dev_outR, buf, sizeof(buf), NULL);
+          if (opts->audio_out_type == 5) write (opts->audio_out_fd, buf, sizeof(buf));
           //fprintf (stderr, "BEEP 1 24\n");
         }
         if (opts->dmr_stereo == 0 && opts->audio_out == 1)
         {
-          pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
+          if (opts->audio_out_type == 0) pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
+          if (opts->audio_out_type == 5) write (opts->audio_out_fd, buf, sizeof(buf));
           //fprintf (stderr, "BEEP 0 8\n");
         }
 
@@ -199,7 +203,7 @@ void beeper (dsd_opts * opts, dsd_state * state, int type)
 }
 
 char * getDateN(void) {
-  char datename[99]; //bug in 32-bit Ubuntu when using date in filename, date is garbage text
+  char datename[80]; //bug in 32-bit Ubuntu when using date in filename, date is garbage text
   char * curr2;
   struct tm * to;
   time_t t;
@@ -410,7 +414,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_in_type == 5) //close UDP input SF file so we don't buffer audio while not decoding
   {
-    sf_close(opts->udp_file_in); //disable for testing
+    // sf_close(opts->udp_file_in); //disable for testing
   }
 
   state->payload_keyid = 0;
@@ -1663,7 +1667,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_in_type == 5) //re-open UDP input 'file'
   {
-    opts->udp_file_in = sf_open_fd(opts->udp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
+    // opts->udp_file_in = sf_open_fd(opts->udp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
   }
 
   //update sync time on cc sync so we don't immediately go CC hunting when exiting the menu
@@ -2057,7 +2061,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition %s \n", GIT_TAG);
+    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-6-gc44e039 RC1");
   }
   if (opts->ncurses_compact == 0)
   {
@@ -2067,8 +2071,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw("%s", FM_bannerN[i]);
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
-      if (i == 5) printw (" MBElib %s", versionstr);
-      if (i == 6) printw (" %s \n", GIT_TAG);
+      if (i == 4) printw (" MBElib %s", versionstr);
+      if (i == 5) printw (" %s ", "Win32 RC1"); //printw (" %s \n", GIT_TAG);
+      if (i == 6) printw (" %s \n", "v2.0.0-6-gc44e039"); //printw (" %s \n", GIT_TAG);
       else printw ("\n");
     }
     attroff(COLOR_PAIR(6)); //6
@@ -2079,6 +2084,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->audio_in_type == 0)
   {
     printw ("| Pulse Audio  Input: [%2i] kHz [%i] Channel\n", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
+  }
+  if (opts->audio_in_type == 5)
+  {
+    printw ("| OSS Audio  Input: [%2i] kHz [1] Channel\n", SAMPLE_RATE_IN);
   }
   if (opts->audio_in_type == 4)
   {
@@ -2111,6 +2120,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->audio_out_type == 0)
   {
     printw ("| Pulse Audio Output: [%2i] kHz [%i] Channel", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels);
+    if (state->audio_smoothing == 1) printw (" - Smoothing On");
+    printw (" \n");
+  }
+  if (opts->audio_out_type == 5)
+  {
+    printw ("| OSS Audio Output: [%2i] kHz [1] Channel", SAMPLE_RATE_IN);
     if (state->audio_smoothing == 1) printw (" - Smoothing On");
     printw (" \n");
   }
@@ -2406,6 +2421,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //This is the new one
     printw ("%s | ", state->call_string[0]);
     printw ("%s ", DMRBusrtTypes[state->dmrburstL]);
+    if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && state->dmrburstR == 16 && state->dmrburstL == 16) printw ("*M*"); 
     printw ("\n");
 
     printw ("| V XTRA | "); //10 spaces
@@ -2601,6 +2617,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //THIS IS THE NEW ONE
     printw ("%s | ", state->call_string[1]);
     printw ("%s ", DMRBusrtTypes[state->dmrburstR]);
+    if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && state->dmrburstR == 16 && state->dmrburstL == 16) printw ("*M*"); 
     printw ("\n");
     
     printw ("| V XTRA | "); //10 spaces

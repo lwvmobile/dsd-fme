@@ -126,6 +126,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   unsigned long long int k;
   int x;
 
+  int preempt = 0; //TDMA dual voice slot preemption(when using OSS output)
+
 
   for (i = 0; i < 88; i++)
   {
@@ -522,6 +524,14 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
     //end reverse mute test
 
+    //OSS Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
+    if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && state->dmrburstR == 16) 
+    {
+      opts->audio_out = 0;
+      preempt = 1;
+      if (opts->payload == 0) fprintf (stderr, " *MUTED*"); 
+    }
+
     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
     {
       state->debug_audio_errors += state->errs2;
@@ -578,6 +588,14 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
     //end reverse mute test
 
+    //OSS Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
+    if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && state->dmrburstL == 16) 
+    {
+      opts->audio_out = 0;
+      preempt = 1;
+      if (opts->payload == 0) fprintf (stderr, " *MUTED*"); 
+    }
+
     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
     {
       state->debug_audio_errorsR += state->errs2R;
@@ -631,6 +649,12 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 	    writeSynthesizedVoiceR (opts, state);
     }
 	}
+
+  if (preempt == 1)
+  {
+    opts->audio_out = 1;
+    preempt = 0; 
+  }
 
   //reset audio out flag for next repitition
   if (strcmp(mode, "B") == 0) opts->audio_out = 1;

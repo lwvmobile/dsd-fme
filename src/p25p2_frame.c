@@ -474,6 +474,10 @@ void process_4V (dsd_opts * opts, dsd_state * state)
 		fprintf (stderr, "\n");
 	}
 
+	//set to 16 for MBE OSS shim to preempt audio
+	if (state->currentslot == 0) state->dmrburstL = 16;
+	else state->dmrburstR = 16;
+
 	processMbeFrame (opts, state, NULL, ambe_fr1, NULL);
 	processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
 	processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
@@ -624,6 +628,10 @@ void process_2V (dsd_opts * opts, dsd_state * state)
 	{
 		fprintf (stderr, "\n");
 	}
+
+	//set to 16 for MBE OSS shim to preempt audio
+	if (state->currentslot == 0) state->dmrburstL = 16;
+	else state->dmrburstR = 16;
 
 	processMbeFrame (opts, state, NULL, ambe_fr1, NULL);
 	processMbeFrame (opts, state, NULL, ambe_fr2, NULL);

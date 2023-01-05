@@ -1,3 +1,7 @@
+## Notice
+
+These examples will need to be modified to run on the 'lite' branch, or any precompiled Windows binaries released. (i.e. dsd-fme to dsd-fme-lite.exe, -i pulse -o pulse, etc)
+
 ### Example Usage and Notes!
 
 `dsd-fme` is all you need to run for pulse input, pulse output, and auto detect for DMR BS/MS, and P25 (1 and 2) . To use other decoding methods which cannot be auto detected, please use the following command line switches. Make sure to route audio into and out of DSD-FME using pavucontrol and virtual sinks as needed.

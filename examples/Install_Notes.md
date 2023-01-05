@@ -1,3 +1,7 @@
+## Notice
+
+These should not be followed for the 'lite' branch
+
 ## How to clone and build this branch
 
 ### Ubuntu 22.04/20.04/LM20/Debian Bullseye or Newer:

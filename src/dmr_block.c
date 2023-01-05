@@ -81,7 +81,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
   fprintf (stderr, "%s ", KNRM);
   //end collecting data header info
 
-  fprintf (stderr, "%s ", KMAG);
+  fprintf (stderr, "%s ", KYEL);
 
   if (state->data_header_sap[slot] == 0x4 && state->data_p_head[slot] == 0) 
   {

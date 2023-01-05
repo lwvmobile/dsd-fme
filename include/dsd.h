@@ -47,11 +47,14 @@
 
 #include "p25p1_heuristics.h"
 
+//OSS support
+#include <sys/soundcard.h>
+
 #include <pulse/simple.h>     //PULSE AUDIO
 #include <pulse/error.h>      //PULSE AUDIO
 
 #define SAMPLE_RATE_IN 48000 //48000
-#define SAMPLE_RATE_OUT 8000 //8000,
+#define SAMPLE_RATE_OUT 48000 //8000,
 
 #ifdef USE_RTLSDR
 #include <rtl-sdr.h>
@@ -190,6 +193,7 @@ typedef struct
   int audio_in_type; 
   char audio_out_dev[1024];
   int audio_out_fd;
+  int audio_out_fdR; //right channel audio for OSS hack
   SNDFILE *audio_out_file;
   SF_INFO *audio_out_file_info;
 
@@ -347,6 +351,9 @@ typedef struct
 
   //Trunking - Tune Data Calls
   uint8_t trunk_tune_data_calls;
+
+  //OSS audio - slot preference
+  uint8_t slot_preference;
 
 } dsd_opts;
 

@@ -1,3 +1,6 @@
+## Notice
+
+This branch is for modifications to make a Windows 32-bit binary to be precompiled, please DO NOT use this branch if you are a Linux User, or copy any contents out of here to modify your existing setup!
 
 # Digital Speech Decoder - Florida Man Edition
 

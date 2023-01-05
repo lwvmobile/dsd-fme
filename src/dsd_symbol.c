@@ -82,35 +82,24 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         }
 
       // Read the new sample from the input
-      if(opts->audio_in_type == 0) // && state->menuopen == 0 still not quite working
+      if(opts->audio_in_type == 0) //pulse audio
       {
-          pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
-          //look into how processAudio handles playback, not sure if latency issues, or garbage sample values crash pulse when written
-          // if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample < 32767 && sample > -32767)
-          if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample != 0)
-          {
-            state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
-            pa_simple_write(opts->pulse_raw_dev_out, (void*)&state->pulse_raw_out_buffer, 2, NULL);
-          }
-          //playback is wrong, depends on samples_per_symbol, maybe make a buffer and store first?
-          //making buffer might also fix raw audio monitoring as well
-          if (opts->wav_out_file_raw[0] != 0) //if set for recording sample raw files
-          {
-            //writeRawSample (opts, state, sample);
-          }
-
+        pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
       }
+
+      else if (opts->audio_in_type == 5) //OSS
+      {
+        read (opts->audio_in_fd, &sample, 2);
+      }
+
       //stdin only, wav files moving to new number
-      else if (opts->audio_in_type == 1)
+      else if (opts->audio_in_type == 1) //won't work in windows, needs posix pipe (mintty)
       {
         result = sf_read_short(opts->audio_in_file, &sample, 1);
         if(result == 0)
         {
-          //cleanupAndExit (opts, state);
           sf_close(opts->audio_in_file);
-          opts->audio_in_type = 0; //set input type
-          openPulseInput(opts); //open pulse inpput
-          sample = 0; //send zero sample 
+          cleanupAndExit (opts, state);
         }
       }
       //wav files, same but using seperate value so we can still manipulate ncurses menu
@@ -122,10 +111,15 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         {
 
           sf_close(opts->audio_in_file);
-          opts->audio_in_type = 0; //set input type
-          openPulseInput(opts); //open pulse inpput
-          sample = 0; //send zero sample 
-              
+          fprintf (stderr, "\n\nEnd of .wav file.\n");
+          //open pulse input if we are pulse output AND using ncurses terminal
+          if (opts->audio_out_type == 0 && opts->use_ncurses_terminal == 1)
+          {
+            opts->audio_in_type = 0; //set input type
+            openPulseInput(opts); //open pulse input
+          } 
+          //else cleanup and exit
+          else cleanupAndExit(opts, state);             
         }
       }
       else if (opts->audio_in_type == 3)
@@ -147,24 +141,28 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       {
         result = sf_read_short(opts->tcp_file_in, &sample, 1);
         if(result == 0) {
-          sf_close(opts->tcp_file_in);
-          opts->audio_in_type = 0; //set input type
-          openPulseInput(opts); //open pulse inpput
-          sample = 0; //zero sample on bad result, keep the ball rolling
+
           fprintf (stderr, "Connection to TCP Server Disconnected.\n");
+          //open pulse input if we are pulse output AND using ncurses terminal
+          if (opts->audio_out_type == 0 && opts->use_ncurses_terminal == 1)
+          {
+            opts->audio_in_type = 0; //set input type
+            openPulseInput(opts); //open pulse input
+          } 
+          //else cleanup and exit
+          else cleanupAndExit(opts, state);
+          
         }
       }
+
       //UDP Socket input...not working correct. Reads samples, but no sync
-      else if (opts->audio_in_type == 6)
-      {
+      // else if (opts->audio_in_type == 6)
+      // {
         //I think this doesn't get the entire dgram when we run sf_read_short on the udp dgram
-        result = sf_read_short(opts->udp_file_in, &sample, 1); 
+        // result = sf_read_short(opts->udp_file_in, &sample, 1); 
         // if (sample != 0)
         //   fprintf (stderr, "Result = %d Sample = %d \n", result, sample);
-      }
-
-
-
+      // }
 
       if (opts->use_cosine_filter)
         {
@@ -383,6 +381,12 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
   }
 #endif
 
+  //test throttle on wav input files
+	if (opts->audio_in_type == 2)
+	{
+		if (state->use_throttle == 1) usleep(.003); //very environment specific, tuning to cygwin
+	}
+
   //read op25/fme symbol bin files
   if (opts->audio_in_type == 4)
   {
@@ -399,14 +403,23 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
     useconds_t stime = state->symbol_throttle;
     if (state->use_throttle == 1)
     {
-      usleep(stime);
+      // usleep(stime);
+      usleep(.003); //very environment specific, tuning to cygwin
     }
     //fprintf(stderr, "%d", state->symbolc);
     if( feof(opts->symbolfile) )
     {
-      opts->audio_in_type = 0; //switch to pulse after playback, ncurses terminal can initiate replay if wanted
+      // opts->audio_in_type = 0; //switch to pulse after playback, ncurses terminal can initiate replay if wanted
       fclose(opts->symbolfile);
-      openPulseInput(opts);
+      fprintf (stderr, "\n\nEnd of .bin file\n");
+      //open pulse input if we are pulse output AND using ncurses terminal
+      if (opts->audio_out_type == 0 && opts->use_ncurses_terminal == 1)
+      {
+        opts->audio_in_type = 0; //set input type
+        openPulseInput(opts); //open pulse input
+      } 
+      //else cleanup and exit
+      else cleanupAndExit(opts, state);
     }
 
     //assign symbol/dibit values based on modulation type

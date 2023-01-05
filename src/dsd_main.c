@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  "                                                        "
+  " Lite Edition v2.0.0-6-gc44e039 Windows 32-bit RC1      "
 };
 
 int
@@ -352,11 +352,12 @@ initOpts (dsd_opts * opts)
   opts->p25status = 0;
   opts->p25tg = 0;
   opts->scoperate = 15;
-  sprintf (opts->audio_in_dev, "pulse");
+  sprintf (opts->audio_in_dev, "/dev/dsp");
   opts->audio_in_fd = -1;
 
-  sprintf (opts->audio_out_dev, "pulse");
+  sprintf (opts->audio_out_dev, "/dev/dsp");
   opts->audio_out_fd = -1;
+  opts->audio_out_fdR = -1;
 
   opts->split = 0;
   opts->playoffset = 0;
@@ -444,10 +445,10 @@ initOpts (dsd_opts * opts)
   opts->inverted_dpmr = 0;
   opts->dmr_mono = 0;
   opts->dmr_stereo = 1;
-  opts->aggressive_framesync = 1; //more aggressive to combat wonk wonk voice decoding
-  //see if initializing these values causes issues elsewhere, if so, then disable.
-  opts->audio_in_type = 0;  //this was never initialized, causes issues on rPI 64 (bullseye) if not initialized
-  opts->audio_out_type = 0; //this was never initialized, causes issues on rPI 64 (bullseye) if not initialized
+  opts->aggressive_framesync = 1; 
+
+  opts->audio_in_type = 5;  
+  opts->audio_out_type = 5; 
 
   opts->lrrp_file_output = 0;
 
@@ -502,6 +503,12 @@ initOpts (dsd_opts * opts)
 
   //Trunking - Tune Data Calls
   opts->trunk_tune_data_calls = 0; //disabled by default
+
+  //OSS audio - Slot Preference
+  //slot preference is used during OSS audio playback to
+  //prefer one tdma voice slot over another when both are playing back
+  //this is a fix to cygwin stuttering when both slots have voice
+  opts->slot_preference = 0; //default prefer slot 1 -- state->currentslot = 0;
 
 } //initopts
 
@@ -728,7 +735,7 @@ initState (dsd_state * state)
   state->p25_cc_is_tdma = 2; //init on 2, TSBK NET_STS will set 0, TDMA NET_STS will set 1. //used to determine if we need to change symbol rate when cc hunting
 
   //experimental symbol file capture read throttle
-  state->symbol_throttle = 0; //throttle speed
+  state->symbol_throttle = 100; //throttle speed
   state->use_throttle = 0; //only use throttle if set to 1
 
   state->p2_scramble_offset = 0;
@@ -834,18 +841,18 @@ usage ()
 {
 
   printf ("\n");
-  printf ("Usage: dsd-fme [options]            Decoder/Trunking Mode\n");
-  printf ("  or:  dsd-fme [options] -r <files> Read/Play saved mbe data from file(s)\n");
-  printf ("  or:  dsd-fme -h                   Show help\n");
+  printf ("Usage: dsd-fme-lite [options]            Decoder/Trunking Mode\n");
+  printf ("  or:  dsd-fme-lite [options] -r <files> Read/Play saved mbe data from file(s)\n");
+  printf ("  or:  dsd-fme-lite -h                   Show help\n");
   printf ("\n");
   printf ("Display Options:\n");
   printf ("  -N            Use NCurses Terminal\n");
-  printf ("                 dsd-fme -N 2> log.ans \n");
+  printf ("                 dsd-fme-lite -N 2> log.ans \n");
   printf ("  -Z            Log MBE/PDU Payloads to console\n");
   printf ("\n");
   printf ("Input/Output options:\n");
-  printf ("  -i <device>   Audio input device (default is pulse audio)\n");
-  printf ("                - for piped stdin\n");
+  printf ("  -i <device>   Audio input device (default is /dev/dsp)\n");
+  printf ("                pulse for pulse audio \n");
   printf ("                rtl:dev:freq:gain:ppm:bw:sq:udp for rtl dongle (see below)\n");
   printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
   printf ("                tcp:192.168.7.5:7355 for custom address and port \n");
@@ -853,8 +860,11 @@ usage ()
   printf ("                filename.wav for 48K/1 wav files (SDR++, GQRX)\n");
   printf ("                filename.wav -s 96000 for 96K/1 wav files (DSDPlus)\n");
   printf ("                (Use single quotes '/directory/audio file.wav' when directories/spaces are present)\n");
+  // printf ("                (Windows - '\directory\audio file.wav' backslash, not forward slash)\n");
   printf ("  -s <rate>     Sample Rate of wav input files (48000 or 96000) Mono only!\n");
-  printf ("  -o <device>   Audio output device (default is pulse audio)(null for no audio output)\n");
+  printf ("  -o <device>   Audio output device (default is /dev/dsp)\n");
+  printf ("                null for no audio output\n");
+  printf ("                pulse for pulse audio \n");
   printf ("  -d <dir>      Create mbe data files, use this directory\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
@@ -869,6 +879,7 @@ usage ()
   printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
   printf ("  -V            Enable Audio Smoothing on Upsampled 48k/1 or 24k/2 Audio (Capital V)\n");
   printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
+  printf ("  -z            Set TDMA Voice Slot Preference when using OSS audio output (prevent lag and stuttering)\n");
   printf ("\n");
   printf ("RTL-SDR options:\n");
   printf (" WARNING! Old CLI Switch Handling has been depreciated in favor of rtl:<parms>\n");
@@ -880,7 +891,7 @@ usage ()
   printf ("  bw   <num>    RTL-SDR VFO Bandwidth kHz (default = 12)(6, 8, 12, 24)  \n");
   printf ("  sq   <num>    RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)\n");
   printf ("  udp  <num>    RTL-SDR UDP Remote Port (default = 6020)\n");
-  printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:12:0:6021\n");
+  printf (" Example: dsd-fme-lite -fp -i rtl:0:851.375M:22:-2:12:0:6021\n");
   printf ("\n");
   printf ("Decoder options:\n");
   printf ("  -fa           Legacy Auto Detection 8k/1 (old methods default)\n");
@@ -956,8 +967,8 @@ usage ()
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)\n");
   printf ("\n");
-  printf (" Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
-  printf (" Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8:0:6020 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
+  printf (" Trunking Example TCP: dsd-fme-lite -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
+  printf (" Trunking Example RTL: dsd-fme-lite -fs -i rtl:0:450M:26:-2:8:0:6020 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
   printf ("\n");
   exit (0);
 }
@@ -1158,8 +1169,9 @@ main (int argc, char **argv)
   }
   //fprintf (stderr,"%s", KNRM); //change back to normal
 
-  fprintf (stderr, "Github Build Version: %s \n", GIT_TAG);
-  fprintf (stderr,"MBElib version %s\n", versionstr);
+  // git_tag not working in 32-bit cygwin? or issue with copy and paste, even with the .git folder?
+  // fprintf (stderr, "Github Build Version: %s \n", GIT_TAG);
+  // fprintf (stderr,"MBElib version %s\n", versionstr);
 
   initOpts (&opts);
   initState (&state);
@@ -1186,6 +1198,13 @@ main (int argc, char **argv)
         //or remove colon if no argument required
 
         //Disabled the Serial Port Dev and Baud Rate, etc, If somebody uses that function, sorry...
+
+        case 'z':
+          sscanf (optarg, "%d", &opts.slot_preference);
+          opts.slot_preference--; //user inputs 1 or 2, internally we want 0 and 1
+          if (opts.slot_preference > 1) opts.slot_preference = 1;
+          fprintf (stderr, "TDMA (DMR and P2) Slot Voice Preference is Slot %d. \n", opts.slot_preference+1);
+          break;
 
         //Enable Audio Smoothing for Upsampled Audio
         case '0': 
@@ -1559,7 +1578,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 0;
-              opts.pulse_digi_rate_out = 8000;
+              opts.pulse_digi_rate_out = 8000; //doesn't matter for /dev/dsp anyways
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
               opts.dmr_mono = 1;
@@ -1762,11 +1781,11 @@ main (int argc, char **argv)
                 state.rf_mod = 0;
                 opts.dmr_stereo = 1;
                 opts.dmr_mono = 0;
-                // opts.setmod_bw = 7000;
                 opts.setmod_bw = 7000;
                 opts.pulse_digi_rate_out = 24000;
                 opts.pulse_digi_out_channels = 2;
                 sprintf (opts.output_name, "DMR Stereo");
+                
                 fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
               }
                   else if (optarg[0] == 't')
@@ -2054,12 +2073,14 @@ main (int argc, char **argv)
       {
         opts.audio_in_type = 8;
         state.audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
+        fprintf (stderr, "TCP Connection Success!\n");
+        // openAudioInDevice(&opts); //do this to see if it makes it work correctly
       }
       else 
       {
-        opts.audio_in_type = 0;
+        opts.audio_in_type = 5;
         fprintf (stderr, "TCP Connection Failure - Using Pulse Audio Input.\n");
-        sprintf (opts.audio_in_dev, "%s", "pulse");
+        sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
       }
       
     }
@@ -2141,61 +2162,137 @@ main (int argc, char **argv)
 
       if (rtl_ok == 0) //not set, means rtl support isn't compiled/available
       {
-        fprintf (stderr, "RTL Support not enabled/compiled, falling back to Pulse Audio Input.\n");
-        sprintf (opts.audio_in_dev, "%s", "pulse");
-        opts.audio_in_type = 0;
+        fprintf (stderr, "RTL Support not enabled/compiled, falling back to OSS /dev/dsp Audio Input.\n");
+        sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
+        opts.audio_in_type = 5;
       }
     }
 
-    //still need to work out why I can't use this
-    //issues with samples received, may be using UDP DGRAMS incorrectly, incorrect procedure?
+    //doesn't work correctly, so just going to reroute to /dev/dsp instead
     if((strncmp(opts.audio_in_dev, "udp", 3) == 0)) //udp socket input from SDR++, GQRX, and others
     {
-      //also still needs err handling
-      opts.udp_sockfd = UDPBind(opts.udp_hostname, opts.udp_portno);
-      opts.audio_in_type = 6;
+      fprintf (stderr, "UDP Input not working, falling back to OSS /dev/dsp Audio Input.\n");
+      sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
+      opts.audio_in_type = 5;
     }
 
-    if((strncmp(opts.audio_in_dev, "/dev/dsp", 8) == 0))
-    {
-      sprintf (opts.audio_in_dev, "%s", "pulse");
-      fprintf (stderr, "OSS and PA Handling Disabled; Using Pulse Audio.\n");
-      opts.audio_in_type = 0;
-    }
+    int fmt; 
+    int speed = 48000; 
 
     if((strncmp(opts.audio_in_dev, "/dev/audio", 10) == 0))
     {
-      sprintf (opts.audio_in_dev, "%s", "pulse");
-      fprintf (stderr, "OSS and PA Handling Disabled; Using Pulse Audio.\n");
-      opts.audio_in_type = 0;
-    }
-
-    if((strncmp(opts.audio_out_dev, "/dev/dsp", 8) == 0))
-    {
-      sprintf (opts.audio_out_dev, "%s", "pulse");
-      fprintf (stderr, "OSS and PA Handling Disabled; Using Pulse Audio.\n");
-      opts.audio_out_type = 0;
-    }
-
-    if((strncmp(opts.audio_out_dev, "/dev/audio", 10) == 0))
-    {
-      sprintf (opts.audio_out_dev, "%s", "pulse");
-      fprintf (stderr, "OSS and PA Handling Disabled; Using Pulse Audio.\n");
-      opts.audio_out_type = 0;
-    }
-
-    if((strncmp(opts.audio_out_dev, "pa", 2) == 0))
-    {
-      sprintf (opts.audio_out_dev, "%s", "pulse");
-      fprintf (stderr, "OSS and PA Handling Disabled; Using Pulse Audio.\n");
-      opts.audio_out_type = 0;
+      sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
+      fprintf (stderr, "Switching to /dev/dsp.\n");
     }
 
     if((strncmp(opts.audio_in_dev, "pa", 2) == 0))
     {
-      sprintf (opts.audio_in_dev, "%s", "pulse");
-      fprintf (stderr, "OSS and PA Handling Disabled; Using Pulse Audio.\n");
-      opts.audio_out_type = 0;
+      sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
+      fprintf (stderr, "Switching to /dev/dsp.\n");
+    }
+
+    if((strncmp(opts.audio_in_dev, "/dev/dsp", 8) == 0))
+    {
+      fprintf (stderr, "OSS Input %s.\n", opts.audio_in_dev);
+      opts.audio_in_fd = open (opts.audio_in_dev, O_RDWR);
+      if (opts.audio_in_fd == -1)
+      {
+        fprintf (stderr, "Error, couldn't open %s\n", opts.audio_in_dev);
+        opts.audio_out = 0;
+      }
+      
+      fmt = 0;
+      if (ioctl (opts.audio_in_fd, SNDCTL_DSP_RESET) < 0)
+      {
+        fprintf (stderr, "ioctl reset error \n");
+      }
+      fmt = speed;
+      if (ioctl (opts.audio_in_fd, SNDCTL_DSP_SPEED, &fmt) < 0)
+      {
+        fprintf (stderr, "ioctl speed error \n");
+      }
+      fmt = 0;
+      if (ioctl (opts.audio_in_fd, SNDCTL_DSP_STEREO, &fmt) < 0)
+      {
+        fprintf (stderr, "ioctl stereo error \n");
+      }
+      fmt = AFMT_S16_LE;
+      if (ioctl (opts.audio_in_fd, SNDCTL_DSP_SETFMT, &fmt) < 0)
+      {
+        fprintf (stderr, "ioctl setfmt error \n");
+      }
+
+      opts.audio_in_type = 5; //5 will become OSS input type
+    }
+
+    if((strncmp(opts.audio_out_dev, "/dev/audio", 10) == 0))
+    {
+      sprintf (opts.audio_out_dev, "%s", "/dev/dsp");
+      fprintf (stderr, "Switching to /dev/dsp.\n");
+    }
+
+    if((strncmp(opts.audio_out_dev, "pa", 2) == 0))
+    {
+      sprintf (opts.audio_out_dev, "%s", "/dev/dsp");
+      fprintf (stderr, "Switching to /dev/dsp.\n");
+    }
+
+    if((strncmp(opts.audio_out_dev, "/dev/dsp", 8) == 0))
+    {
+      fprintf (stderr, "OSS Output %s.\n", opts.audio_out_dev);
+      opts.audio_out_fd = open (opts.audio_out_dev, O_RDWR);     //O_WRONLY
+      opts.audio_out_fdR = open (opts.audio_out_dev, O_RDWR);
+      if (opts.audio_out_fd == -1)
+      {
+        fprintf (stderr, "Error, couldn't open #1 %s\n", opts.audio_out_dev);
+        opts.audio_out = 0;
+        exit(1);
+      }
+
+      if (opts.audio_out_fdR == -1)
+      {
+        fprintf (stderr, "Error, couldn't open #2 %s\n", opts.audio_out_dev);
+        opts.audio_out = 0;
+        exit(1);
+      }
+      fmt = 0;
+      if (ioctl (opts.audio_out_fd, SNDCTL_DSP_RESET) < 0)
+      {
+        fprintf (stderr, "ioctl reset error \n");
+      }
+      if (ioctl (opts.audio_out_fdR, SNDCTL_DSP_RESET) < 0)
+      {
+        fprintf (stderr, "ioctl reset error \n");
+      }
+      fmt = speed;
+      if (ioctl (opts.audio_out_fd, SNDCTL_DSP_SPEED, &fmt) < 0)
+      {
+        fprintf (stderr, "ioctl speed error \n");
+      }
+      if (ioctl (opts.audio_out_fdR, SNDCTL_DSP_SPEED, &fmt) < 0)
+      {
+        fprintf (stderr, "ioctl speed error \n");
+      }
+      fmt = 0;
+      if (ioctl (opts.audio_out_fd, SNDCTL_DSP_STEREO, &fmt) < 0)
+      {
+        fprintf (stderr, "ioctl stereo error \n");
+      }
+      if (ioctl (opts.audio_out_fdR, SNDCTL_DSP_STEREO, &fmt) < 0)
+      {
+        fprintf (stderr, "ioctl stereo error \n");
+      }
+      fmt = AFMT_S16_LE;
+      if (ioctl (opts.audio_out_fd, SNDCTL_DSP_SETFMT, &fmt) < 0)
+      {
+        fprintf (stderr, "ioctl setfmt error \n");
+      }
+      if (ioctl (opts.audio_out_fdR, SNDCTL_DSP_SETFMT, &fmt) < 0)
+      {
+        fprintf (stderr, "ioctl setfmt error \n");
+      }
+      
+      opts.audio_out_type = 5; //5 will become OSS output type
     }
 
     if((strncmp(opts.audio_in_dev, "pulse", 5) == 0))
@@ -2229,6 +2326,7 @@ main (int argc, char **argv)
           openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
         }
     }
+
     else if (strcmp (opts.audio_in_dev, opts.audio_out_dev) != 0)
     {
       opts.split = 1;
@@ -2263,13 +2361,14 @@ main (int argc, char **argv)
     {
       opts.pulse_digi_rate_out = 48000;
       opts.pulse_digi_out_channels = 1;
-      openPulseOutput(&opts); //need to open it up for output
+      // openPulseOutput(&opts); //need to open it up for output?
+      openAudioInDevice (&opts); //needs to be tested, not sure if required
       playMbeFiles (&opts, &state, argc, argv);
     }
 
   else
     {
-        liveScanner (&opts, &state);
+      liveScanner (&opts, &state);
     }
 
   cleanupAndExit (&opts, &state);
