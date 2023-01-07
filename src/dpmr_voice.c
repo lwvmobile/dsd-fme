@@ -468,7 +468,7 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
     {
 
       //check to see if we are using scrambler
-      if (state->dPMRVoiceFS2Frame.Version[o] != 0)
+      if (state->dPMRVoiceFS2Frame.Version[o] == 3) //!= 0
       {
         state->synctype = 28; //fake it as nxdn
         state->nxdn_cipher_type = 0x01; //turn on nxdn scrambler cipher
