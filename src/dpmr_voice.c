@@ -24,11 +24,18 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
   uint8_t CCH[NB_OF_DPMR_VOICE_FRAME_TO_DECODE][72] = {0};
   uint8_t CCHDescrambled[NB_OF_DPMR_VOICE_FRAME_TO_DECODE][72] = {0};
   uint8_t CCHDeInterleaved[NB_OF_DPMR_VOICE_FRAME_TO_DECODE][72] = {0};
-  uint8_t CCHDataHammingCorrected[NB_OF_DPMR_VOICE_FRAME_TO_DECODE][48] = {0};
-  uint8_t CCHDataCRC[NB_OF_DPMR_VOICE_FRAME_TO_DECODE] = {0};
-  uint8_t CCHDataCRCComputed[NB_OF_DPMR_VOICE_FRAME_TO_DECODE] = {0};
+  uint8_t CCHDataHammingCorrected[NB_OF_DPMR_VOICE_FRAME_TO_DECODE][48];
+  uint8_t CCHDataCRC[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
+
+  memset (CCHDataHammingCorrected, 1, sizeof(CCHDataHammingCorrected));
+  memset (CCHDataCRC, 1, sizeof(CCHDataCRC));
+
+  uint8_t CCHDataCRCComputed[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
+  memset (CCHDataCRCComputed, 0, sizeof(CCHDataCRCComputed));
+
   uint8_t CC[NB_OF_DPMR_VOICE_FRAME_TO_DECODE / 2][24] = {0};
-  char ambe_fr[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4][4][24] = {0};
+  char ambe_fr[NB_OF_DPMR_VOICE_FRAME_TO_DECODE * 4][4][24];
+  memset (ambe_fr, 0, sizeof (ambe_fr));
   const int *w, *x, *y, *z;
   uint32_t  ScramblerLFSR = 0;
   bool correctable = true;
@@ -56,11 +63,6 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
   uint8_t CalledID[8] = {0};
   uint8_t CallingID[8] = {0};
 
-  if (opts->errorbars == 1)
-  {
-    //fprintf(stderr, "VOICE e:");
-  }
-
   /* First CCH (Control CHannel) - 72 bit */
   k = 0;
 
@@ -75,7 +77,6 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
 
     CCH[0][(i * 2)]     =  (1 & (dibit >> 1));   // bit 1
     CCH[0][(i * 2) + 1] =  (1 & dibit);          // bit 0
-
 
   }
 
@@ -148,9 +149,6 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
 
   /* 4 TCH (Traffic CHannel) = 4 x 72 bit voice playload */
 
-  //Sync issues occur when FS2 occurs immediatly after the 4th rep, so cutting of 4 early to gain constant resync
-  //probably can't resync fast enough when the next sync starts immediately after the 4th rep of 36 dibits
-  //consider writing a method that will loop this entire process based on the frame numbering found inside the CCH info, is that possible?
   k = 0;
   for (j = 0; j < 4; j++)
   {
@@ -177,15 +175,9 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
       x++;
       y++;
       z++;
-      //should be fixed now with the frame_sync t_max setup
-      //no more early breaking required
+
     }
   }
-
-  /* Initialize the Hamming (12,8) error code detection
-   * Not needed because it has already been done
-   * in the "InitAllFecFunction()" function */
-  //Hamming_12_8_init();
 
   /* Decoding all CCH (Control CHannel) */
   for(i = 0; i < NB_OF_DPMR_VOICE_FRAME_TO_DECODE; i++)
@@ -207,22 +199,8 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
       if(HammingCorrectable[i][j] == false) correctable = false;
     }
 
-    if(correctable)
-    {
-
-      //fprintf(stderr, "CCH data corrected successfully\n");
-
-
-      HammingOk[i] = 1;
-    }
-    else
-    {
-
-      //fprintf(stderr, "ERROR !!! CCH data contains uncorrectable bit\n");
-
-
-      HammingOk[i] = 0;
-    }
+    if(correctable) HammingOk[i] = 1;
+    else HammingOk[i] = 0;
 
     /* Reconstitute the 7 bit CRC */
     CCHDataCRC[i] = 0;
@@ -237,24 +215,8 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
     /* Compute the 7 bit CRC */
     CCHDataCRCComputed[i] = CRC7BitdPMR(CCHDataHammingCorrected[i], 41);
 
-    if(CCHDataCRC[i] == CCHDataCRCComputed[i])
-    {
-
-      //fprintf(stderr, "Good CCH CRCs ! CRC received = 0x%02X, CRC computed = 0x%02X\n",
-      //       CCHDataCRC[i], CCHDataCRCComputed[i]);
-
-
-      CrcOk[i] = 1;
-    }
-    else
-    {
-
-      //fprintf(stderr, "ERROR !!! CCH CRCs are different ! CRC received = 0x%02X, CRC computed = 0x%02X\n",
-      //       CCHDataCRC[i], CCHDataCRCComputed[i]);
-
-
-      CrcOk[i] = 0;
-    }
+    if(CCHDataCRC[i] == CCHDataCRCComputed[i]) CrcOk[i] = 1;
+    else CrcOk[i] = 0;
 
     /* Fill the frame number */
     CCH_FrameNumber[i] = ConvertBitIntoBytes(&CCHDataHammingCorrected[i][0], 2);
@@ -300,44 +262,17 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
   CallingID[7] = '\0';
 
 
-  /* Print Hamming debug info */
-  //fprintf(stderr, " | ");
-  for(i = 0; i < NB_OF_DPMR_VOICE_FRAME_TO_DECODE; i++)
-  {
-    //fprintf(stderr, "Hamming[%u]=", i);
-    for(j = 0; j < 6; j++)
-    {
-      //if(HammingCorrectable[i][j]) fprintf(stderr, "1");
-      //else fprintf(stderr, "0");
-    }
-    //fprintf(stderr, " HammingOk[%u]=%u", i, HammingOk[i]);
-    //fprintf(stderr, " CrcOk[%u]=%u", i, CrcOk[i]);
-    //fprintf(stderr, " Bit[%u]=", i);
-    //for(j = 0; j < 7; j++)
-    //{
-    //  if(CCHDataHammingCorrected[i][j + 41]) fprintf(stderr, "1");
-    //  else fprintf(stderr, "0");
-    //}
-    //fprintf(stderr, " CRCrec=0x%02X CRCcomp=0x%02X", CCHDataCRC[i], CCHDataCRCComputed[i]);
-    //if(i < (NB_OF_DPMR_VOICE_FRAME_TO_DECODE - 1)) fprintf(stderr, " - ");
-  }
-
-
-
-#if (NB_OF_DPMR_VOICE_FRAME_TO_DECODE == 2)
   /* To determine the part of the payload frame, we need to check the
    * Hamming code result, the CRC and the frame number */
+
 //  if( (HammingOk[0] && CrcOk[0] && (CCH_FrameNumber[0] == 0)) ||
 //      (HammingOk[1] && CrcOk[1] && (CCH_FrameNumber[1] == 1)))
+
   if(((CrcOk[0] || HammingCorrectable[0][0]) && (CCH_FrameNumber[0] == 0)) ||
      ((CrcOk[1] || HammingCorrectable[1][0]) && (CCH_FrameNumber[1] == 1)))
   {
     /* First part of the super frame */
     PartOfSuperFrame = 1;
-
-
-    //fprintf(stderr, "\nFirst part of the Super Frame");
-
 
     /* The next part will normally be the second part */
     opts->dPMR_next_part_of_superframe = 2;
@@ -366,19 +301,18 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
     /* BUGFIX : Copy in all case the TG ID */
     strcpy((char *)state->dPMRVoiceFS2Frame.CalledID, (char *)CalledID);
   }
+
   /* To determine the part of the payload frame, we need to check the
    * Hamming code result, the CRC and the frame number */
+
 //  else if( (HammingOk[0] && CrcOk[0] && (CCH_FrameNumber[0] == 2)) ||
 //           (HammingOk[1] && CrcOk[1] && (CCH_FrameNumber[1] == 3)))
+
   else if(((CrcOk[0] || HammingCorrectable[0][0]) && (CCH_FrameNumber[0] == 2)) ||
           ((CrcOk[1] || HammingCorrectable[1][0]) && (CCH_FrameNumber[1] == 3)))
   {
     /* Second part of the super frame */
     PartOfSuperFrame = 2;
-
-
-    //fprintf(stderr, "\nSecond part of the Super Frame");
-
 
     /* The next part will normally be the first part */
     opts->dPMR_next_part_of_superframe = 1;
@@ -392,7 +326,9 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
     CallingID[7] = '\0';
 
     /* Determine if the calling SRC ID is correct */
+
     //if(HammingOk[0] && CrcOk[0] && HammingOk[1] && CrcOk[1])
+
     if((CrcOk[0] || (HammingCorrectable[0][0] && HammingCorrectable[0][1])) &&
        (CrcOk[1] || (HammingCorrectable[1][0] && HammingCorrectable[1][1])))
     {
@@ -420,132 +356,143 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
     /* Set the next part of the superframe to receive */
     if(opts->dPMR_next_part_of_superframe == 1)
     {
-
-
-      //fprintf(stderr, "Supposed first part of the Super Frame\n");
-
-
       /* Set the next part as the second part */
       opts->dPMR_next_part_of_superframe = 2;
     }
     else if(opts->dPMR_next_part_of_superframe == 2)
     {
-
-      //fprintf(stderr, "Supposed second part of the Super Frame\n");
-
-
       /* Set the next part as the first part */
       opts->dPMR_next_part_of_superframe = 1;
     }
     else
     {
-
-
-      //fprintf(stderr, "Unknown part of the Super Frame\n");
-
-
       /* Unknown current part, set to 0 */
       opts->dPMR_next_part_of_superframe = 0;
     }
   }
 
-  if(state->dPMRVoiceFS2Frame.ColorCode[0] != (unsigned int)(-1))
-  {
-    //only print the CC and src/tg info if CRC is good
-    /* Display the color code */
-    //fprintf(stderr, " | Color Code=%02d ", (int)state->dPMRVoiceFS2Frame.ColorCode[0]);
-  }
-  else
-  {
-    /* Unknown color code, display "??" */
-    //fprintf(stderr, " | Color Code=?? ");
-  }
-
   /* Display the destination ID (talk group - TG) */
-  //fprintf(stderr, "| TG=%s", CalledID);
+  fprintf (stderr, "\n");
+
   if(state->dPMRVoiceFS2Frame.CalledIDOk)
   {
     fprintf (stderr, "%s", KGRN);
-    fprintf(stderr, "\n| TG=%s", CalledID);
+    fprintf(stderr, " TG=%s", CalledID);
     fprintf (stderr, "%s", KNRM);
-    //strcpy (state->dpmr_target_id, CalledID); //HERE HERE
-    state->dpmr_target_id = CalledID;
-    //fprintf(stderr, " (CRC OK)      ");
+
+    //check other as well before assigning
+    if(state->dPMRVoiceFS2Frame.CallingIDOk) sprintf (state->dpmr_target_id, "%s", CalledID);
+
+  }
+  else
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf(stderr, " TG=(CRC ERR)");
+    fprintf (stderr, "%s", KNRM);
+  }
+
+  /* Display the source ID */
+  if(state->dPMRVoiceFS2Frame.CallingIDOk)
+  {
+    fprintf (stderr, "%s", KGRN);
+    fprintf(stderr, " Src=%s", CallingID);
+    fprintf (stderr, "%s", KNRM);
+
+    //check other as well before assigning
+    if(state->dPMRVoiceFS2Frame.CalledIDOk) sprintf (state->dpmr_caller_id, "%s", CallingID);
+
+    //stashed channel code in here, more likely to be correct, but no guarantee
     if(state->dPMRVoiceFS2Frame.ColorCode[0] != (unsigned int)(-1))
     {
       fprintf (stderr, "%s", KGRN);
-      fprintf(stderr, " | Color Code=%02d ", (int)state->dPMRVoiceFS2Frame.ColorCode[0]);
+      fprintf(stderr, " Channel Code=%02d", (int)state->dPMRVoiceFS2Frame.ColorCode[0]);
       fprintf (stderr, "%s", KNRM);
-      state->dpmr_color_code = (int)state->dPMRVoiceFS2Frame.ColorCode[0];
 
+      //check other as well before assigning
+      if(state->dPMRVoiceFS2Frame.CalledIDOk) state->dpmr_color_code = (int)state->dPMRVoiceFS2Frame.ColorCode[0];
     }
 
   }
   else
   {
-    //fprintf(stderr, " (CRC ERR) ");
-  }
-
-  /* Display the source ID */
-  //fprintf(stderr, "| Src=%s", CallingID);
-  if(state->dPMRVoiceFS2Frame.CallingIDOk)
-  {
-    fprintf (stderr, "%s", KGRN);
-    fprintf(stderr, "| Src=%s", CallingID);
-    fprintf (stderr, "%s", KNRM);
-    //strcpy (state->dpmr_caller_id, CallingID);
-    state->dpmr_caller_id = CallingID;
-
-    //fprintf(stderr, " (CRC OK)      \n");
-  }
-  else
-  {
   fprintf (stderr, "%s", KRED);
-  fprintf(stderr, " (CRC ERR) \n");
-  fprintf (stderr, "%s", KNRM);
+  fprintf(stderr, " Src=(CRC ERR) Channel Code =(CRC ERR)");
+  fprintf (stderr, "%s", KNRM); 
   }
 
-#endif /* (NB_OF_DPMR_VOICE_FRAME_TO_DECODE == 2) */
+  if (state->dPMRVoiceFS2Frame.Version[0] == 3)
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, " Scrambler");
+    fprintf (stderr, "%s", KNRM);
+    if (state->R != 0)
+    {
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, " KEY VALUE: [%05lld] ", state->R );
+      fprintf (stderr, "%s", KNRM);
+    }
+  }
 
   //Play only voice frames by first looking to see if there is a TCH voice in CommunicationMode,
-  //then sending it to be processed by processMbeFrame, its much cleaner this way
   short start = 0;
   short end = 4;
+
+  //not really even sure why I made this loop
+  //I probably should actually read the manual again
   for (short o = 0; o < 2; o++)
   {
+
+    //reset scrambler key seed on frame 0
+    if (state->dPMRVoiceFS2Frame.FrameNumbering[o] == 0) state->payload_miN = 0;
+    
     //depending on first or second TCH, set start and end variables appropriately
     if (o == 1)
     {
       start = 4;
       end = 8;
-      //add extra line break on second repitition only when dumping payload to console
-      if (opts->payload == 1)
-      {
-        fprintf(stderr, "\n");
-      }
 
     }
-    //fprintf (stderr, "\nCommunication Mode: %d\n", state->dPMRVoiceFS2Frame.CommunicationMode[o]);
-    //fprintf (stderr, "Encryption Mode: %d\n", state->dPMRVoiceFS2Frame.Version[o]);
-    //fprintf (stderr, "Superframe Number: %d", state->dPMRVoiceFS2Frame.FrameNumbering[o]); //should be 1-4, but may be same number on TCH 1 or TCH 2
+
+    //this is used so we can simply pass the voice here to the 
+    //nxdn scrambler by telling mbe these are nxdn frames and to
+    //apply the same descramble method to them if necessary
+    int realsynctype = state->synctype; 
+
+    // fprintf (stderr, "\nCommunication Mode: %d\n", state->dPMRVoiceFS2Frame.CommunicationMode[o]);
+    // fprintf (stderr, "Encryption Mode: %d\n", state->dPMRVoiceFS2Frame.Version[o]); //shows as 3 (manufacturer specific, 5.16) on the dPMR scrambler values received
+    // fprintf (stderr, "Superframe Number: %d", state->dPMRVoiceFS2Frame.FrameNumbering[o]); 
+
     if((state->dPMRVoiceFS2Frame.CommunicationMode[o] == 0) ||
        (state->dPMRVoiceFS2Frame.CommunicationMode[o] == 1) ||
        (state->dPMRVoiceFS2Frame.CommunicationMode[o] == 5))
     {
 
-      //There are 4 AMBE voice samples per TCH
+      //check to see if we are using scrambler
+      if (state->dPMRVoiceFS2Frame.Version[o] == 3) //!= 0
+      {
+        state->synctype = 28; //fake it as nxdn
+        state->nxdn_cipher_type = 0x01; //turn on nxdn scrambler cipher
+        state->dmr_encL = 1; //flag on enc bit here so we can mute if no key provided
+      }
+      
+      //flag back off if key is provided
+      if (state->R != 0) state->dmr_encL = 0;
+      
+      //There are 4 AMBE voice frames per TCH
       for(i = start; i < end; i++)
       {
         processMbeFrame (opts, state, NULL, ambe_fr[i], NULL);
-      } //End for(i = start; i < end); i++)
-    } //if comms and not encrypted
-  }//End for TCH for o loop
+      } 
 
+      //set the correct sync type again and flag off the cipher
+      state->synctype = realsynctype;
+      state->nxdn_cipher_type = 0;
 
-  if (opts->errorbars == 1)
-  {
-    fprintf(stderr, "\n");
-  }
+    } 
+  } 
+
+  fprintf(stderr, "\n");
+
 
 //keep code below, could be handy cheat sheet for other info
 #ifdef dPMR_PRINT_DEBUG_INFO

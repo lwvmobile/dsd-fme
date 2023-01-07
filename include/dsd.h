@@ -545,8 +545,9 @@ typedef struct
 
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
 
-  unsigned char * dpmr_caller_id;
-  unsigned char * dpmr_target_id;
+  char dpmr_caller_id[20];
+  char dpmr_target_id[20];
+
   int dpmr_color_code;
 
   short int dmr_stereo; //need state variable for upsample function
@@ -644,8 +645,8 @@ typedef struct
   uint64_t late_entry_mi_fragment[2][7][3];
 
   //dmr manufacturer branding and sub_branding (i.e., Motorola and Con+)
-  char dmr_branding[99];
-  char dmr_branding_sub[99];
+  char dmr_branding[20];
+  char dmr_branding_sub[80];
 
   //Remus DMR End Call Alert Beep
   int dmr_end_alert[2]; //dmr TLC end call alert beep has already played once flag

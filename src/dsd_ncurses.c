@@ -1045,7 +1045,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       mvwprintw(entry_win, 3, 2, " ");
       mvwprintw(entry_win, 4, 2, "1 -  Basic Privacy ");
       mvwprintw(entry_win, 5, 2, "2 - **tera Privacy ");
-      mvwprintw(entry_win, 6, 2, "3 - NXDN Scrambler ");
+      mvwprintw(entry_win, 6, 2, "3 - NXDN/dPMR Scrambler ");
       mvwprintw(entry_win, 7, 2, "4 - Force Key Priority ");
       mvwprintw(entry_win, 8, 3, " ");
       echo();
@@ -1125,7 +1125,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         state->R = 0;
         entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
         box (entry_win, 0, 0);
-        mvwprintw(entry_win, 2, 2, "NXDN Scrambler Key Value (DEC):");
+        mvwprintw(entry_win, 2, 2, "NXDN/dPMR Scrambler Key Value (DEC):");
         mvwprintw(entry_win, 3, 3, " ");
         echo();
         refresh();
@@ -2061,7 +2061,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-6-gc44e039 RC1");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-8-g235eeed RC2");
   }
   if (opts->ncurses_compact == 0)
   {
@@ -2072,8 +2072,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4) printw (" MBElib %s", versionstr);
-      if (i == 5) printw (" %s ", "Win32 RC1"); //printw (" %s \n", GIT_TAG);
-      if (i == 6) printw (" %s \n", "v2.0.0-6-gc44e039"); //printw (" %s \n", GIT_TAG);
+      if (i == 5) printw (" %s ", "Win32 RC2"); //printw (" %s \n", GIT_TAG);
+      if (i == 6) printw (" %s \n", "v2.0.0-8-g235eeed"); //printw (" %s \n", GIT_TAG);
       else printw ("\n");
     }
     attroff(COLOR_PAIR(6)); //6
@@ -2796,7 +2796,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (lls == 20 || lls == 21 || lls == 22 || lls == 23 ||lls == 24 || lls == 25 || lls == 26 || lls == 27)
   {
     printw ("| DCC: [%i] ", state->dpmr_color_code);
-    printw ("TID: [%s] RID: [%s] \n", state->dpmr_target_id, state->dpmr_caller_id);
+    printw ("TGT: [%s] SRC: [%s] ", state->dpmr_target_id, state->dpmr_caller_id);
+    printw ("\n| ");
+    if (state->dPMRVoiceFS2Frame.Version[0] == 3)
+    {
+      attron(COLOR_PAIR(2));
+      printw ("Scrambler ");
+      attroff(COLOR_PAIR(2));
+      attron(COLOR_PAIR(3));
+      if (state->R != 0)
+      {
+        attron(COLOR_PAIR(1));
+        printw ("KEY VALUE: [%05lld] ", state->R );
+        //printw ("SEED: [%04llX]", state->payload_miN);
+        attron(COLOR_PAIR(3));
+      }
+    }
+    printw ("\n");
   }
 
   //EDACS and ProVoice

@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " Lite Edition v2.0.0-6-gc44e039 Windows 32-bit RC1      "
+  " 'Lite' Edition v2.0.0-8-g235eeed Windows 32-bit RC2    "
 };
 
 int
@@ -334,6 +334,17 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     opts->p25_is_tuned = 0;
   }
 
+  opts->dPMR_next_part_of_superframe = 0;
+
+  state->dPMRVoiceFS2Frame.CalledIDOk  = 0;
+  state->dPMRVoiceFS2Frame.CallingIDOk = 0;
+  memset(state->dPMRVoiceFS2Frame.CalledID, 0, 8);
+  memset(state->dPMRVoiceFS2Frame.CallingID, 0, 8);
+  memset(state->dPMRVoiceFS2Frame.Version, 0, 8);
+
+  sprintf (state->dpmr_caller_id, "%s", "      ");
+  sprintf (state->dpmr_target_id, "%s", "      ");
+
 } //nocarrier
 
 void
@@ -504,6 +515,8 @@ initOpts (dsd_opts * opts)
   //Trunking - Tune Data Calls
   opts->trunk_tune_data_calls = 0; //disabled by default
 
+  opts->dPMR_next_part_of_superframe = 0;
+
   //OSS audio - Slot Preference
   //slot preference is used during OSS audio playback to
   //prefer one tdma voice slot over another when both are playing back
@@ -649,8 +662,6 @@ initState (dsd_state * state)
   state->payload_miN = 0;
 
   state->dpmr_color_code = -1;
-  state->dpmr_caller_id = 0;
-  state->dpmr_target_id = 0;
 
   state->payload_mi  = 0;
   state->payload_miR = 0;
@@ -834,6 +845,15 @@ initState (dsd_state * state)
  
   initialize_p25_heuristics(&state->p25_heuristics);
 
+  state->dPMRVoiceFS2Frame.CalledIDOk  = 0;
+  state->dPMRVoiceFS2Frame.CallingIDOk = 0;
+  memset(state->dPMRVoiceFS2Frame.CalledID, 0, 8);
+  memset(state->dPMRVoiceFS2Frame.CallingID, 0, 8);
+  memset(state->dPMRVoiceFS2Frame.Version, 0, 8);
+
+  sprintf (state->dpmr_caller_id, "%s", "      ");
+  sprintf (state->dpmr_target_id, "%s", "      ");
+
 } //init_state
 
 void
@@ -945,7 +965,7 @@ usage ()
   printf ("                 -H '736B9A9C5645288B 243AD5CB8701EF8A' \n");
   printf ("                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' \n");
   printf ("\n");
-  printf ("  -R <dec>      Manually Enter NXDN 4800/9600 EHR Scrambler Key Value (Decimal Value)\n");
+  printf ("  -R <dec>      Manually Enter dPMR or NXDN EHR Scrambler Key Value (Decimal Value)\n");
   printf ("                 \n");
   printf ("  -4            Force Privacy Key over FID and SVC bits \n");
   printf ("\n");
