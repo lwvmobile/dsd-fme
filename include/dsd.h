@@ -538,8 +538,9 @@ typedef struct
 
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
 
-  unsigned char * dpmr_caller_id;
-  unsigned char * dpmr_target_id;
+  char dpmr_caller_id[20];
+  char dpmr_target_id[20];
+
   int dpmr_color_code;
 
   short int dmr_stereo; //need state variable for upsample function
