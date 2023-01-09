@@ -1684,30 +1684,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     c = getch();
   }
 
-  //testing sending UDP commands to the socket inside of rtl_sdr_fm.cpp
-  //this works, but we will want to make an init func open one time, and have sendto here
+  //use rtl_udp_tune
   #ifdef USE_RTLSDR
   if (temp_freq == opts->rtlsdr_center_freq)
   {
-    handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
-    memset((char * ) & address, 0, sizeof(address));
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = inet_addr(SRV_IP); //address of host
-    address.sin_port = htons(udp_port);
-    sendto(handle, data, UDP_BUFLEN, 0, (const struct sockaddr * ) & address, sizeof(struct sockaddr_in));
-
+    rtl_udp_tune (opts, state, temp_freq);
     temp_freq = -1;
   }
   #endif
 
   //Variable reset/set section
-
-  //carrier reset
-  // if (state->carrier == 0) //reset these to 0 when no carrier
-  // {
-  //   sprintf(state->dmr_branding, "%s", "");
-  // }
 
   //set lls sync types
   if (state->synctype >= 0 && state->synctype < 39) 

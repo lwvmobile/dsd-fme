@@ -428,7 +428,7 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
     if (state->R != 0)
     {
       fprintf (stderr, "%s", KYEL);
-      fprintf (stderr, " KEY VALUE: [%05lld] ", state->R );
+      fprintf (stderr, " Key %05lld ", state->R );
       fprintf (stderr, "%s", KNRM);
     }
   }
