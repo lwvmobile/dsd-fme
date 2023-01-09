@@ -840,8 +840,13 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           if(opts->tcp_file_in == NULL)
           {
             fprintf(stderr, "Error, couldn't open TCP with libsndfile: %s\n", sf_strerror(NULL));
-            sprintf (opts->audio_in_dev, "%s", "pulse");
-            opts->audio_in_type = 0;
+            if (opts->audio_out_type == 0)
+            {
+              sprintf (opts->audio_in_dev, "%s", "pulse");
+              opts->audio_in_type = 0;
+            }
+            else opts->audio_in_type = 5;
+            
           }
 
           state->audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
@@ -971,7 +976,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
             }
 
           }
-          opts->audio_in_type = 0; //set after closing to prevent above crash condition
+          if (opts->audio_out_type == 0) opts->audio_in_type = 0; //set after closing to prevent above crash condition
+          else (opts->audio_in_type = 5);
 
           choicec = 18; //exit
         }
@@ -1688,30 +1694,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     c = getch();
   }
 
-  //testing sending UDP commands to the socket inside of rtl_sdr_fm.cpp
-  //this works, but we will want to make an init func open one time, and have sendto here
+  //use rtl_udp_tune
   #ifdef USE_RTLSDR
   if (temp_freq == opts->rtlsdr_center_freq)
   {
-    handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
-    memset((char * ) & address, 0, sizeof(address));
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = inet_addr(SRV_IP); //address of host
-    address.sin_port = htons(udp_port);
-    sendto(handle, data, UDP_BUFLEN, 0, (const struct sockaddr * ) & address, sizeof(struct sockaddr_in));
-
+    rtl_udp_tune (opts, state, temp_freq);
     temp_freq = -1;
   }
   #endif
 
   //Variable reset/set section
-
-  //carrier reset
-  // if (state->carrier == 0) //reset these to 0 when no carrier
-  // {
-  //   sprintf(state->dmr_branding, "%s", "");
-  // }
 
   //set lls sync types
   if (state->synctype >= 0 && state->synctype < 39) 
@@ -2061,7 +2053,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-8-g235eeed RC2");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-9-g9b8a382 RC2a");
   }
   if (opts->ncurses_compact == 0)
   {
@@ -2072,8 +2064,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4) printw (" MBElib %s", versionstr);
-      if (i == 5) printw (" %s ", "Win32 RC2"); //printw (" %s \n", GIT_TAG);
-      if (i == 6) printw (" %s \n", "v2.0.0-8-g235eeed"); //printw (" %s \n", GIT_TAG);
+      if (i == 5) printw (" %s ", "Win32 RC2a"); //printw (" %s \n", GIT_TAG);
+      if (i == 6) printw (" %s \n", "v2.0.0-9-g9b8a382"); //printw (" %s \n", GIT_TAG);
       else printw ("\n");
     }
     attroff(COLOR_PAIR(6)); //6
@@ -3185,8 +3177,13 @@ if (c == 115) //'s' key, stop playing wav or symbol in files
     sf_close(opts->audio_in_file);
   }
 
-  opts->audio_in_type = 0;
-  openPulseInput(opts); 
+  if (opts->audio_out_type == 0)
+  {
+    opts->audio_in_type = 0;
+    openPulseInput(opts);
+  }
+  else opts->audio_in_type = 5;//cleanupAndExit(opts, state); 
+   
 }
 
 //Lockout bug in EDACS prevents any group from tuning when using this, not sure why yet

@@ -273,4 +273,9 @@ void rtl_udp_tune(dsd_opts * opts, dsd_state * state, long int frequency)
     address.sin_addr.s_addr = inet_addr("127.0.0.1"); //make user configurable later
     address.sin_port = htons(udp_port);
     sendto(handle, data, 5, 0, (const struct sockaddr * ) & address, sizeof(struct sockaddr_in));
+
+    //BUGFIX: This was causing an indefinite number of UDP sockets to stay open on each tune request
+    //we open a new socket with each request, so we need to close the socket after writing to it
+    //this would cause the tuning to stop after x number of tune attempts (few hours? on a busy system)
+    close (handle); //close socket after sending.
 }
