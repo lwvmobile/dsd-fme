@@ -25,6 +25,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   uint8_t so = 0;
   uint32_t target = 0;
   uint32_t source = 0;
+  uint8_t capsite = 0; 
   int restchannel = -1;
   int is_cap_plus = 0;
   int is_alias = 0;
@@ -44,7 +45,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   if (type == 1 && fid == 0x10 && flco == 0x04)
   {
     is_cap_plus = 1;
-    restchannel = (int)ConvertBitIntoBytes(&lc_bits[48], 8);
+    capsite = (uint8_t)ConvertBitIntoBytes(&lc_bits[48], 4); //can't verify, just speculating
+    restchannel = (int)ConvertBitIntoBytes(&lc_bits[52], 4); //was 48,8
     source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16);
     sprintf (state->dmr_branding, "%s", "Motorola");
     sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
@@ -553,7 +555,8 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   uint8_t con_netid  = (uint8_t)ConvertBitIntoBytes(&slco_bits[8], 8);
   uint8_t con_siteid = (uint8_t)ConvertBitIntoBytes(&slco_bits[16], 8);
   //Cap+
-  uint8_t restchannel = (uint8_t)ConvertBitIntoBytes(&slco_bits[12], 8);
+  uint8_t capsite = (uint8_t)ConvertBitIntoBytes(&slco_bits[12], 4); //can't verify, just speculating
+  uint8_t restchannel = (uint8_t)ConvertBitIntoBytes(&slco_bits[16], 4); //was 12,8
 
   //initial line break
   fprintf (stderr, "\n");
