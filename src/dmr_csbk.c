@@ -655,7 +655,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "%s", KYEL);
         uint8_t fl = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 2);
         uint8_t slot = cs_pdu_bits[18];
-        uint8_t rest_channel = cs_pdu[2] & 0xF; //0xF, or 0x1F?
+        uint8_t rest_channel = cs_pdu[2] & 0xF; //0xF, this one was correct, but other two had 8 bits?
         uint8_t ch[8]; //one bit per channel
         uint8_t tg = 0;
         uint32_t tghex = 0; //combined all tgs for debug
