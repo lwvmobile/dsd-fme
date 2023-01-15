@@ -1027,7 +1027,7 @@ bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload);
 int ez_rs28_ess (int payload[96], int parity[168]); //ezpwd bridge for FME
 int ez_rs28_facch (int payload[156], int parity[114]); //ezpwd bridge for FME
 int ez_rs28_sacch (int payload[180], int parity[132]); //ezpwd bridge for FME
-unsigned long long int isch_lookup (unsigned long long int isch); //isch map lookup
+int isch_lookup (unsigned long long int isch); //isch map lookup
 int bd_bridge (int payload[196], uint8_t decoded[12]); //bridge to Michael Ossmann Block De-interleaver and 1/2 rate trellis decoder
 int crc16_lb_bridge (int payload[190], int len);
 int crc12_xb_bridge (int payload[190], int len);
