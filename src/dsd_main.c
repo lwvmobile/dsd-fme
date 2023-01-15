@@ -2284,6 +2284,7 @@ main (int argc, char **argv)
       opts.pulse_digi_rate_out = 48000;
       opts.pulse_digi_out_channels = 1;
       openPulseOutput(&opts); //need to open it up for output
+      state.aout_gain = 25; //BUGFIX: No audio output when playing back .amb/.imb files
       playMbeFiles (&opts, &state, argc, argv);
     }
 
