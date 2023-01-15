@@ -312,11 +312,11 @@ void map_isch()
 	isch_map["fb063f092"] = 127;
 }
 
-unsigned long long int isch_lookup (unsigned long long int isch)
+int isch_lookup (unsigned long long int isch)
 {
   map_isch(); //initialize the lookup map
   char s[64];
-  unsigned long long int decoded = -2; //initialize lookup to an invalid number
+  int decoded = -2; //initialize lookup to an invalid number
   sprintf(s, "%llx", isch);
   decoded = isch_map[s];
   return(decoded);

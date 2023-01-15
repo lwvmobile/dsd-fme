@@ -76,7 +76,7 @@ int vc_counter = 0;
 int framing_counter = 0;
 
 unsigned long long int isch = 0;
-unsigned long long int isch_decoded = 0;
+int isch_decoded = -1;
 int p2_duid[8] = {0};
 int16_t duid_decoded = 0;
 
@@ -369,7 +369,7 @@ void process_ISCH (dsd_opts * opts, dsd_state * state)
 	{
 		isch_decoded = isch_lookup(isch);
 
-		if (isch_decoded > 0)
+		if (isch_decoded > -1)
 		{
 			int uf_count = isch_decoded & 0x3;
 			int free = (isch_decoded >> 2) & 0x1;
@@ -411,6 +411,7 @@ void process_ISCH (dsd_opts * opts, dsd_state * state)
 
 	}
 	
+	isch_decoded = -1; //reset to bad value after running
 
 }
 
