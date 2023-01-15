@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Lite' Edition v2.0.0-10-gb2ccd3a Windows 32-bit RC2a  "
+  " 'Lite' Edition v2.0.0-10-gb2ccd3a Windows 32-bit RC2b  "
 };
 
 int
@@ -1047,6 +1047,7 @@ if (opts->audio_in_type == 0)
 
 if (opts->audio_out_type == 0)
 {
+  // openPulseInput(opts); //test to see if we still randomly hang up in ncurses and tcp input if we open this and leave it opened
   openPulseOutput(opts);
 }
 
@@ -2338,13 +2339,13 @@ main (int argc, char **argv)
       opts.playoffsetR = 0;
       opts.delay = 0;
       if (strlen(opts.wav_out_file) > 0 && opts.dmr_stereo_wav == 0)
-        {
-          openWavOutFile (&opts, &state);
-        }
-      else
-        {
-          openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
-        }
+      {
+        openWavOutFile (&opts, &state);
+      }
+      opts.pulse_digi_rate_out = 48000;
+      opts.pulse_digi_out_channels = 1;
+      if (opts.audio_out_type == 0) openPulseOutput(&opts); //need to open it up for output?
+      if (opts.audio_out_type == 5) openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
     }
 
     else if (strcmp (opts.audio_in_dev, opts.audio_out_dev) != 0)
@@ -2379,10 +2380,7 @@ main (int argc, char **argv)
 
   if (opts.playfiles == 1)
     {
-      opts.pulse_digi_rate_out = 48000;
-      opts.pulse_digi_out_channels = 1;
-      // openPulseOutput(&opts); //need to open it up for output?
-      openAudioInDevice (&opts); //needs to be tested, not sure if required
+      state.aout_gain = 25; //BUGFIX: No audio output when playing back .amb/.imb files
       playMbeFiles (&opts, &state, argc, argv);
     }
 
