@@ -348,6 +348,10 @@ typedef struct
   //Trunking - Tune Data Calls
   uint8_t trunk_tune_data_calls;
 
+  //'DSP' Format Output
+  uint8_t use_dsp_output;
+  char dsp_out_file[1024];
+
 } dsd_opts;
 
 typedef struct

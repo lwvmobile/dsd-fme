@@ -371,6 +371,20 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       state->last_cc_sync_time = time(NULL);
     } 
 
+    //'DSP' output to file
+    if (opts->use_dsp_output == 1)
+    {
+      FILE * pFile; //file pointer
+      pFile = fopen (opts->dsp_out_file, "a");
+      fprintf (pFile, "\n%d 10 ", internalslot+1); //0x10 for voice burst
+      for (i = 6; i < 72; i++) //33 bytes, no CACH
+      {
+        int dsp_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
+        fprintf (pFile, "%X", dsp_byte);
+      }
+      fclose (pFile);
+    }
+
     //reset err checks
     cach_err = 1;
     tact_okay = 0;
@@ -458,6 +472,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   uint8_t cach_err = 0;
   uint8_t sync_okay = 1;
 
+  uint8_t internalslot;
 
   char cachdata[25]; 
   int cachInterleave[24] =
@@ -490,10 +505,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   {
     dibit = *dibit_p;
     dibit_p++;
-    if(opts->inverted_dmr == 1)
-    {
-      dibit = (dibit ^ 2);
-    }
+    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2) & 3;
     state->dmr_stereo_payload[i] = dibit;
   }
 
@@ -521,7 +533,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     } 
   }
 
-  state->currentslot = tact_bits[1];
+  internalslot = state->currentslot = tact_bits[1];
 
   //Setup for first AMBE Frame
 
@@ -588,6 +600,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 18; i++)
   {
     dibit = getDibit(opts, state);
+    state->dmr_stereo_payload[i+90] = dibit;
     ambe_fr2[*w][*x] = (1 & (dibit >> 1)); // bit 1
     ambe_fr2[*y][*z] = (1 & dibit);        // bit 0
 
@@ -610,6 +623,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 36; i++)
   {
     dibit = getDibit(opts, state);
+    state->dmr_stereo_payload[i+108] = dibit;
     ambe_fr3[*w][*x] = (1 & (dibit >> 1)); // bit 1
     ambe_fr3[*y][*z] = (1 & dibit);        // bit 0
 
@@ -618,6 +632,20 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     y++;
     z++;
 
+  }
+
+  //'DSP' output to file
+  if (opts->use_dsp_output == 1)
+  {
+    FILE * pFile; //file pointer
+    pFile = fopen (opts->dsp_out_file, "a");
+    fprintf (pFile, "\n%d 10 ", internalslot+1); //0x10 for "voice burst"
+    for (i = 6; i < 72; i++) //33 bytes, no CACH
+    {
+      int dsp_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
+      fprintf (pFile, "%X", dsp_byte);
+    }
+    fclose (pFile);
   }
 
   fprintf (stderr,"%s ", getTime());

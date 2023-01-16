@@ -69,6 +69,7 @@ comp (const void *a, const void *b)
 //struct for checking existence of directory to write to
 struct stat st = {0};
 char wav_file_directory[1024] = {0};
+char dsp_filename[1024] = {0};
 unsigned long long int p2vars = 0;
 
 char * pEnd; //bugfix
@@ -516,6 +517,10 @@ initOpts (dsd_opts * opts)
 
   opts->dPMR_next_part_of_superframe = 0;
 
+  //dsp structured file
+  opts->dsp_out_file[0] = 0;
+  opts->use_dsp_output = 0;
+
 } //initopts
 
 void
@@ -885,6 +890,7 @@ usage ()
   printf ("  -a            Enable Call Alert Beep (NCurses Terminal Only)\n");
   printf ("                 (Warning! Might be annoying.)\n");
   printf ("  -L <file>     Specify Filename for LRRP Data Output.\n");
+  printf ("  -Q <file>     Specify Filename for DSP Structured File Output. (placed in DSP folder)\n");
   printf ("  -c <file>     Output symbol capture to .bin file\n");
   printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
   printf ("  -V            Enable Audio Smoothing on Upsampled 48k/1 or 24k/2 Audio (Capital V)\n");
@@ -1189,7 +1195,7 @@ main (int argc, char **argv)
   exitflag = 0;
   // signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:Y:K:H:X:NQWrlZTF01:2:345:6:7:89:E")) != -1)
+  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:Y:K:H:X:NQ:WrlZTF01:2:345:6:7:89:E")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1206,6 +1212,23 @@ main (int argc, char **argv)
         //or remove colon if no argument required
 
         //Disabled the Serial Port Dev and Baud Rate, etc, If somebody uses that function, sorry...
+
+        case 'Q': //'DSP' Structured Output file for OKDMRlib
+        sprintf (wav_file_directory, "./DSP"); 
+        wav_file_directory[1023] = '\0';
+        if (stat(wav_file_directory, &st) == -1)
+        {
+          fprintf (stderr, "-Q %s DSP file directory does not exist\n", wav_file_directory);
+          fprintf (stderr, "Creating directory %s to save DSP Structured files\n", wav_file_directory);
+          mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
+        }
+        //read in filename
+        //sprintf (opts.wav_out_file, "./WAV/DSD-FME-X1.wav");
+        strncpy(dsp_filename, optarg, 1023);
+        sprintf(opts.dsp_out_file, "%s/%s", wav_file_directory, dsp_filename);
+        fprintf (stderr, "Saving DSP Structured files to %s\n", opts.dsp_out_file);
+        opts.use_dsp_output = 1;
+        break;
 
         //Enable Audio Smoothing for Upsampled Audio
         case '0': 
@@ -1460,7 +1483,7 @@ main (int argc, char **argv)
         wav_file_directory[1023] = '\0';
         if (stat(wav_file_directory, &st) == -1)
         {
-          fprintf (stderr, "-T %s WAV file directory does not exist\n", wav_file_directory);
+          fprintf (stderr, "-P %s WAV file directory does not exist\n", wav_file_directory);
           fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
           mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
         }

@@ -87,7 +87,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 12; i++)
   {
     dibit = getDibit(opts, state);
-    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2);
+    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2) & 3;
 
     cachdata[i] = dibit;
     state->dmr_stereo_payload[i] = dibit;
@@ -119,7 +119,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 36; i++)
   {
     dibit = getDibit(opts, state);
-    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2);
+    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2) & 3;
 
     state->dmr_stereo_payload[i+12] = dibit;
 
@@ -144,7 +144,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 18; i++)
   {
     dibit = getDibit(opts, state);
-    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2);
+    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2) & 3;
 
     state->dmr_stereo_payload[i+48] = dibit;
     ambe_fr2[*w][*x] = (1 & (dibit >> 1)); // bit 1
@@ -161,7 +161,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 24; i++)
   {
     dibit = getDibit(opts, state);
-    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2);
+    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2) & 3;
 
     state->dmr_stereo_payload[i+66] = dibit;
 
@@ -190,7 +190,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 18; i++)
   {
     dibit = getDibit(opts, state);
-    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2);
+    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2) & 3;
 
     state->dmr_stereo_payload[i+90] = dibit;
     ambe_fr2[*w][*x] = (1 & (dibit >> 1)); // bit 1
@@ -214,7 +214,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   for(i = 0; i < 36; i++)
   {
     dibit = getDibit(opts, state);
-    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2);
+    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2) & 3;
 
     state->dmr_stereo_payload[i+108] = dibit;
     ambe_fr3[*w][*x] = (1 & (dibit >> 1)); // bit 1
@@ -225,6 +225,20 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     y++;
     z++;
 
+  }
+
+  //'DSP' output to file
+  if (opts->use_dsp_output == 1)
+  {
+    FILE * pFile; //file pointer
+    pFile = fopen (opts->dsp_out_file, "a");
+    fprintf (pFile, "\n%d 10 ", state->currentslot+1); //0x10 for "voice burst", forced to slot 1
+    for (i = 6; i < 72; i++) //33 bytes, no CACH
+    {
+      int dsp_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
+      fprintf (pFile, "%X", dsp_byte);
+    }
+    fclose (pFile);
   }
 
   state->dmr_ms_mode = 1;
@@ -292,7 +306,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
    dibit = getDibit(opts, state);
    if (opts->inverted_dmr == 1)
    {
-     dibit = (dibit ^ 2);
+     dibit = (dibit ^ 2) & 3;
    }
    state->dmr_stereo_payload[i] = dibit;
 
@@ -379,7 +393,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
     dibit = state->dmr_stereo_payload[i];
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      dibit = (dibit ^ 2) & 3;
     }
     cachdata[i] = dibit;
   }
@@ -398,7 +412,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
     dibit = state->dmr_stereo_payload[i+12];
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      dibit = (dibit ^ 2) & 3;
     }
     state->dmr_stereo_payload[i+12] = dibit;
     ambe_fr[*w][*x] = (1 & (dibit >> 1)); // bit 1
@@ -425,7 +439,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
     dibit = state->dmr_stereo_payload[i+48];
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      dibit = (dibit ^ 2) & 3;
     }
     ambe_fr2[*w][*x] = (1 & (dibit >> 1)); // bit 1
     ambe_fr2[*y][*z] = (1 & dibit);        // bit 0
@@ -443,8 +457,9 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
     dibit = getDibit(opts, state);
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      dibit = (dibit ^ 2) & 3;
     }
+    state->dmr_stereo_payload[i+90] = dibit;
     ambe_fr2[*w][*x] = (1 & (dibit >> 1)); // bit 1
     ambe_fr2[*y][*z] = (1 & dibit);        // bit 0
 
@@ -469,8 +484,9 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
     dibit = getDibit(opts, state);
     if(opts->inverted_dmr == 1)
     {
-      dibit = (dibit ^ 2);
+      dibit = (dibit ^ 2) & 3;
     }
+    state->dmr_stereo_payload[i+108] = dibit;
     ambe_fr3[*w][*x] = (1 & (dibit >> 1)); // bit 1
     ambe_fr3[*y][*z] = (1 & dibit);        // bit 0
 
@@ -479,6 +495,20 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
     y++;
     z++;
 
+  }
+
+  //'DSP' output to file
+  if (opts->use_dsp_output == 1)
+  {
+    FILE * pFile; //file pointer
+    pFile = fopen (opts->dsp_out_file, "a");
+    fprintf (pFile, "\n%d 10 ", state->currentslot+1); //0x10 for "voice burst", force to slot 1
+    for (i = 6; i < 72; i++) //33 bytes, no CACH
+    {
+      int dsp_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
+      fprintf (pFile, "%X", dsp_byte);
+    }
+    fclose (pFile);
   }
 
   fprintf (stderr, "%s ", getTime());
@@ -558,7 +588,7 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   {
     dibit = *dibit_p;
     dibit_p++;
-    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2);
+    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2) & 3;
     state->dmr_stereo_payload[i] = dibit;
 
   }
@@ -566,7 +596,7 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   for (i = 0; i < 54; i++)
   {
     dibit = getDibit(opts, state);
-    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2);
+    if(opts->inverted_dmr == 1) dibit = (dibit ^ 2) & 3;
     state->dmr_stereo_payload[i+90] = dibit;
 
   }
