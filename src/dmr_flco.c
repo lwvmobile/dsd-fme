@@ -25,7 +25,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   uint8_t so = 0;
   uint32_t target = 0;
   uint32_t source = 0;
-  uint8_t capsite = 0;
+  uint8_t capsite = 0; 
   int restchannel = -1;
   int is_cap_plus = 0;
   int is_alias = 0;
@@ -557,6 +557,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   //Cap+
   uint8_t capsite = (uint8_t)ConvertBitIntoBytes(&slco_bits[12], 4); //can't verify, just speculating
   uint8_t restchannel = (uint8_t)ConvertBitIntoBytes(&slco_bits[16], 4); //was 12,8
+  uint8_t cap_reserved = (uint8_t)ConvertBitIntoBytes(&slco_bits[20], 8); //unknown if any significant value?
 
   //initial line break
   fprintf (stderr, "\n");
@@ -633,7 +634,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     state->dmr_mfid = 0x10;
     sprintf (state->dmr_branding, "%s", "Motorola");
     sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
-    fprintf (stderr, " SLCO Capacity Plus Rest Channel %d", restchannel);
+    fprintf (stderr, " SLCO Capacity Plus Site: %d - Rest Channel %d - RS: %02X", capsite+1, restchannel, cap_reserved);
     state->dmr_rest_channel = restchannel;
     //assign to cc freq if available
     if (state->trunk_chan_map[restchannel] != 0)
