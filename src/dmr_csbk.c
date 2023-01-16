@@ -653,9 +653,12 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //initial line break
         fprintf (stderr, "\n");
         fprintf (stderr, "%s", KYEL);
-        uint8_t fl = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 2);
-        uint8_t slot = cs_pdu_bits[18];
-        uint8_t rest_channel = cs_pdu[2] & 0xF; //0xF, this one was correct, but other two had 8 bits?
+
+        uint8_t fl = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 2); 
+        uint8_t ts = cs_pdu_bits[18];  //accurate?
+        uint8_t res = cs_pdu_bits[19]; //unknown??
+        uint8_t rest_channel = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[20], 4);
+
         uint8_t ch[8]; //one bit per channel
         uint8_t tg = 0;
         uint32_t tghex = 0; //combined all tgs for debug
@@ -683,7 +686,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           opts->p25_is_tuned = 1;
         }
         
-        fprintf (stderr, " Capacity Plus Channel Status - Rest Channel %d", rest_channel);
+        fprintf (stderr, " Capacity Plus Channel Status - FL: %d TS: %d RS: %d - Rest Channel %d", fl, ts, res, rest_channel);
 
         fprintf (stderr, "\n  ");
         for (i = 0; i < 8; i++)
