@@ -168,6 +168,20 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   {
     if (state->dmr_ms_mode == 0) fprintf(stderr, "| Color Code=%02d ", state->dmr_color_code);
     fprintf(stderr, "|%s", state->fsubtype);
+
+    //'DSP' output to file
+    if (opts->use_dsp_output == 1)
+    {
+      FILE * pFile; //file pointer
+      pFile = fopen (opts->dsp_out_file, "a");
+      fprintf (pFile, "\n%d %02X ", slot+1, databurst); //use hex value of current data burst type
+      for (i = 6; i < 72; i++) //33 bytes, no CACH
+      {
+        int dsp_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
+        fprintf (pFile, "%X", dsp_byte);
+      }
+      fclose (pFile);
+    }
   }
   
   //Most Data Sync Burst types will use the bptc 196x96

@@ -56,6 +56,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
     {
       dibit = (int)state->dmr_stereo_payload[i];
     }
+    else state->dmr_stereo_payload[i] = dibit;
 
     cachdata[cachInterleave[(i*2)]]   = (1 & (dibit >> 1)); // bit 1
     cachdata[cachInterleave[(i*2)+1]] = (1 & dibit);       // bit 0
@@ -103,6 +104,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
     {
       dibit = (int)state->dmr_stereo_payload[i+12];
     }
+    else state->dmr_stereo_payload[i+12] = dibit;
     info[2*i]     = (1 & (dibit >> 1));  // bit 1
     info[(2*i)+1] = (1 & dibit);         // bit 0
   }
@@ -118,6 +120,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   {
     dibit = (int)state->dmr_stereo_payload[61]; 
   }
+  else state->dmr_stereo_payload[61] = dibit;
 
   SlotType[0] = (1 & (dibit >> 1)); // bit 1
   SlotType[1] = (1 & dibit);        // bit 0
@@ -132,6 +135,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   {
     dibit = (int)state->dmr_stereo_payload[62];
   }
+  else state->dmr_stereo_payload[62] = dibit;
 
   SlotType[2] = (1 & (dibit >> 1)); // bit 1
   SlotType[3] = (1 & dibit);        // bit 0
@@ -146,6 +150,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   {
     dibit = (int)state->dmr_stereo_payload[63]; 
   }
+  else state->dmr_stereo_payload[63] = dibit;
 
   SlotType[4]  = (1 & (dibit >> 1)); // bit 1
   SlotType[5]  = (1 & dibit);        // bit 0
@@ -160,6 +165,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   {
     dibit = (int)state->dmr_stereo_payload[64]; 
   }
+  else state->dmr_stereo_payload[64] = dibit;
 
   SlotType[6]  = (1 & (dibit >> 1)); // bit 1
   SlotType[7]  = (1 & dibit);        // bit 0
@@ -175,6 +181,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   {
     dibit = (int)state->dmr_stereo_payload[65];
   }
+  else state->dmr_stereo_payload[65] = dibit;
   SlotType[8] = (1 & (dibit >> 1)); // bit 1
   SlotType[9] = (1 & dibit);        // bit 0
 
@@ -191,6 +198,8 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
     {
       dibit = (int)state->dmr_stereo_payload[i+66]; 
     }
+    else state->dmr_stereo_payload[i+66] = dibit;
+
     syncdata[2*i]     = (1 & (dibit >> 1));  // bit 1
     syncdata[(2*i)+1] = (1 & dibit);         // bit 0
     sync[i] = (dibit | 1) + 48;
@@ -236,6 +245,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
     if (state->dmr_stereo == 0) 
     {
       dibit = getDibit(opts, state);
+      state->dmr_stereo_payload[i+90] = dibit;
     }
     if (state->dmr_stereo == 1)
     {
@@ -277,6 +287,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
     if (state->dmr_stereo == 0) 
     {
       dibit = getDibit(opts, state);
+      state->dmr_stereo_payload[i+95] = dibit;
     }
 
     if (state->dmr_stereo == 1)

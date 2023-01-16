@@ -355,6 +355,10 @@ typedef struct
   //OSS audio - slot preference
   uint8_t slot_preference;
 
+  //'DSP' Format Output
+  uint8_t use_dsp_output;
+  char dsp_out_file[1024];
+
 } dsd_opts;
 
 typedef struct
