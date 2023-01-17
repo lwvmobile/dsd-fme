@@ -136,10 +136,11 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->dmr_payload_p = state->dibit_buf + 200;
   memset (state->dmr_payload_buf, 0, sizeof (int) * 200);
   //dmr buffer end
-  if (opts->mbe_out_f != NULL)
-  {
-    closeMbeOutFile (opts, state);
-  }
+
+  //close MBE out files
+  if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+  if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
+
   state->jitter = -1;
   state->lastsynctype = -1;
   state->carrier = 0;
@@ -375,8 +376,10 @@ initOpts (dsd_opts * opts)
   opts->playoffsetR = 0;
   opts->mbe_out_dir[0] = 0;
   opts->mbe_out_file[0] = 0;
+  opts->mbe_out_fileR[0] = 0; //second slot on a TDMA system
   opts->mbe_out_path[0] = 0;
   opts->mbe_out_f = NULL;
+  opts->mbe_out_fR = NULL; //second slot on a TDMA system
   opts->audio_gain = 0; //0
   opts->audio_gainR = 0; //0
   opts->audio_out = 1;
@@ -394,6 +397,7 @@ initOpts (dsd_opts * opts)
   opts->symbol_out_f = NULL;
   opts->symbol_out = 0;
   opts->mbe_out = 0;
+  opts->mbe_outR = 0; //second slot on a TDMA system
   opts->wav_out_f = NULL;
   opts->wav_out_fR = NULL;
   opts->wav_out_raw = NULL;
@@ -880,7 +884,7 @@ usage ()
   printf ("                (Use single quotes '/directory/audio file.wav' when directories/spaces are present)\n");
   printf ("  -s <rate>     Sample Rate of wav input files (48000 or 96000) Mono only!\n");
   printf ("  -o <device>   Audio output device (default is pulse audio)(null for no audio output)\n");
-  printf ("  -d <dir>      Create mbe data files, use this directory\n");
+  printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
   printf ("  -w <file>     Output synthesized speech to a .wav file, legacy auto modes only.\n");
@@ -911,7 +915,7 @@ usage ()
   printf ("Decoder options:\n");
   printf ("  -fa           Legacy Auto Detection 8k/1 (old methods default)\n");
   printf ("  -ft           XDMA P25 and DMR BS/MS frame types (new default)\n");
-  printf ("  -fs           DMR Stereo BS and MS Simplex only\n");
+  printf ("  -fs           DMR Stereo BS and MS Simplex\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -fd           Decode only D-STAR\n");
   printf ("  -fr           Decode only DMR Mono - Single Slot Voice\n");
@@ -920,7 +924,7 @@ usage ()
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
   printf ("  -fp             Decode only EDACS/ProVoice*\n");
   printf ("  -fm             Decode only dPMR*\n");
-  printf ("  -l            Disable DMR and NXDN input filtering\n");
+  printf ("  -l            Disable DMR, dPMR, and NXDN input filtering\n");
   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
   printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
   printf ("  -xr           Expect inverted DMR signal\n");
@@ -1111,10 +1115,10 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
   {
     closeSymbolOutFile (opts, state);
   }
-  if (opts->mbe_out_f != NULL)
-  {
-    closeMbeOutFile (opts, state);
-  }
+  
+  //close MBE out files
+  if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+  if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
 
   fprintf (stderr,"\n");
   fprintf (stderr,"Total audio errors: %i\n", state->debug_audio_errors);

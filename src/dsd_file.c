@@ -45,8 +45,7 @@ char * getDateF(void) {
   return curr2;
 }
 
-void
-saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
+void saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
 {
   int i, j, k;
   unsigned char b;
@@ -56,36 +55,22 @@ saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
   fputc (err, opts->mbe_out_f);
 
   k = 0;
-  if (opts->payload == 1) //make opt variable later on to toggle this
-  {
-    //fprintf(stderr, "\n IMBE ");
-  }
-
   for (i = 0; i < 11; i++)
-    {
-      b = 0;
+  {
+    b = 0;
 
-      for (j = 0; j < 8; j++)
-        {
-          b = b << 1;
-          b = b + imbe_d[k];
-          k++;
-        }
-        if (opts->payload == 1) //make opt variable later on to toggle this
-        {
-          //fprintf (stderr, "%02X", b);
-        }
-      fputc (b, opts->mbe_out_f);
-    }
-    if (opts->payload == 1)
-    {
-      //fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
-    }
+    for (j = 0; j < 8; j++)
+      {
+        b = b << 1;
+        b = b + imbe_d[k];
+        k++;
+      }
+    fputc (b, opts->mbe_out_f);
+  }
   fflush (opts->mbe_out_f);
 }
 
-void
-saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
+void saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
 {
   int i, j, k;
   unsigned char b;
@@ -95,42 +80,49 @@ saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   fputc (err, opts->mbe_out_f);
 
   k = 0;
-  if (opts->payload == 1) //make opt variable later on to toggle this
+  for (i = 0; i < 6; i++) 
   {
-    //fprintf(stderr, "\n AMBE ");
+    b = 0;
+    for (j = 0; j < 8; j++)
+    {
+      b = b << 1;
+      b = b + ambe_d[k];
+      k++;
+    }
+    fputc (b, opts->mbe_out_f);
   }
-  //for (i = 0; i < 6; i++)
-  for (i = 0; i < 6; i++) //using 7 seems to break older amb files where it was 6, need to test 7 on 7 some more
-    {
-      b = 0;
-      for (j = 0; j < 8; j++)
-        {
-          b = b << 1;
-          b = b + ambe_d[k];
-          k++;
-        }
-        if (opts->payload == 1 && i < 6) //make opt variable later on to toggle this
-        {
-          //fprintf (stderr, "%02X", b);
-        }
-        if (opts->payload == 1 && i == 6) //7th octet should only contain 1 bit? value will be either 0x00 or 0x80?
-        {
-          //fprintf (stderr, "%02X", b & 0x80); //7th octet should only contain 1 bit?
-        }
-
-      fputc (b, opts->mbe_out_f);
-    }
-    if (opts->payload == 1)
-    {
-      //fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
-    }
   b = ambe_d[48];
   fputc (b, opts->mbe_out_f);
   fflush (opts->mbe_out_f);
 }
 
-void
-PrintIMBEData (dsd_opts * opts, dsd_state * state, char *imbe_d) //for P25P1 and ProVoice
+void saveAmbe2450DataR (dsd_opts * opts, dsd_state * state, char *ambe_d)
+{
+  int i, j, k;
+  unsigned char b;
+  unsigned char err;
+
+  err = (unsigned char) state->errs2R;
+  fputc (err, opts->mbe_out_fR);
+
+  k = 0;
+  for (i = 0; i < 6; i++) 
+  {
+    b = 0;
+    for (j = 0; j < 8; j++)
+    {
+      b = b << 1;
+      b = b + ambe_d[k];
+      k++;
+    }
+    fputc (b, opts->mbe_out_fR);
+  }
+  b = ambe_d[48];
+  fputc (b, opts->mbe_out_fR);
+  fflush (opts->mbe_out_fR);
+}
+
+void PrintIMBEData (dsd_opts * opts, dsd_state * state, char *imbe_d) //for P25P1 and ProVoice
 {
   int i, j, k;
   unsigned char b;
@@ -165,8 +157,7 @@ PrintIMBEData (dsd_opts * opts, dsd_state * state, char *imbe_d) //for P25P1 and
   //fprintf (stderr, "\n");
 }
 
-void
-PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) 
+void PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) 
 {
   int i, j, k;
   unsigned char b;
@@ -333,14 +324,21 @@ openMbeInFile (dsd_opts * opts, dsd_state * state)
   cookie[2] = fgetc (opts->mbe_in_f);
   cookie[3] = fgetc (opts->mbe_in_f);
   cookie[4] = 0;
+  //ambe+2
   if (strstr (cookie, ".amb") != NULL)
-    {
-      state->mbe_file_type = 1;
-    }
+  {
+    state->mbe_file_type = 1;
+  }
+  //p1 and pv
   else if (strstr (cookie, ".imb") != NULL)
-    {
-      state->mbe_file_type = 0;
-    }
+  {
+    state->mbe_file_type = 0;
+  }
+  //d-star ambe
+  else if (strstr (cookie, ".dmb") != NULL)
+  {
+    state->mbe_file_type = 2;
+  }
   else
     {
       state->mbe_file_type = -1;
@@ -349,7 +347,7 @@ openMbeInFile (dsd_opts * opts, dsd_state * state)
 
 }
 
-//much simpler version
+//slot 1
 void closeMbeOutFile (dsd_opts * opts, dsd_state * state)
 {
   if (opts->mbe_out == 1)
@@ -360,48 +358,67 @@ void closeMbeOutFile (dsd_opts * opts, dsd_state * state)
       fclose (opts->mbe_out_f);
       opts->mbe_out_f = NULL;
       opts->mbe_out = 0;
-      fprintf (stderr, "\nClosing MBE out file.");
+      fprintf (stderr, "\nClosing MBE out file 1.\n");
     }
 
   }
-
 }
 
-void
-openMbeOutFile (dsd_opts * opts, dsd_state * state)
+//slot 2
+void closeMbeOutFileR (dsd_opts * opts, dsd_state * state)
+{
+  if (opts->mbe_outR == 1)
+  {
+    if (opts->mbe_out_fR != NULL)
+    {
+      fflush (opts->mbe_out_fR);
+      fclose (opts->mbe_out_fR);
+      opts->mbe_out_fR = NULL;
+      opts->mbe_outR = 0;
+      fprintf (stderr, "\nClosing MBE out file 2.\n");
+    }
+
+  }
+}
+
+void openMbeOutFile (dsd_opts * opts, dsd_state * state)
 {
 
   int i, j;
   char ext[5];
 
-  if ((state->synctype == 0) || (state->synctype == 1) || (state->synctype == 14) || (state->synctype == 15))
-    {
-      sprintf (ext, ".imb");
-    }
-  else
-    {
-      sprintf (ext, ".amb");
-    }
+  //phase 1 and provoice
+  if ( (state->synctype == 0) || (state->synctype == 1) || (state->synctype == 14) || (state->synctype == 15) )
+  {
+    sprintf (ext, ".imb");
+  }
+  //d-star
+  else if ( (state->synctype == 6) || (state->synctype == 7) || (state->synctype == 18) || (state->synctype == 19) )
+  {
+    sprintf (ext, ".dmb"); //new dstar file extension to make it read in and process properly
+  }
+  //dmr, nxdn, phase 2, x2-tdma
+  else sprintf (ext, ".amb"); 
 
-  //  reset talkgroup id buffer
+  //reset talkgroup id buffer
   for (i = 0; i < 12; i++)
+  {
+    for (j = 0; j < 25; j++)
     {
-      for (j = 0; j < 25; j++)
-        {
-          state->tg[j][i] = 0;
-        }
+      state->tg[j][i] = 0;
     }
+  }
 
   state->tgcount = 0;
 
-  sprintf (opts->mbe_out_file, "%s %s%s", getDateF(), getTimeF(), ext);
+  sprintf (opts->mbe_out_file, "%s %s S1%s", getDateF(), getTimeF(), ext);
 
   sprintf (opts->mbe_out_path, "%s%s", opts->mbe_out_dir, opts->mbe_out_file);
 
   opts->mbe_out_f = fopen (opts->mbe_out_path, "w");
   if (opts->mbe_out_f == NULL)
   {
-    fprintf (stderr,"Error, couldn't open %s\n", opts->mbe_out_path);
+    fprintf (stderr,"\nError, couldn't open %s for slot 1\n", opts->mbe_out_path);
   }
   else opts->mbe_out = 1;
 
@@ -411,8 +428,54 @@ openMbeOutFile (dsd_opts * opts, dsd_state * state)
   fflush (opts->mbe_out_f);
 }
 
-void
-openWavOutFile (dsd_opts * opts, dsd_state * state)
+void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
+{
+
+  int i, j;
+  char ext[5];
+
+  //phase 1 and provoice
+  if ( (state->synctype == 0) || (state->synctype == 1) || (state->synctype == 14) || (state->synctype == 15) )
+  {
+    sprintf (ext, ".imb");
+  }
+  //d-star
+  else if ( (state->synctype == 6) || (state->synctype == 7) || (state->synctype == 18) || (state->synctype == 19) )
+  {
+    sprintf (ext, ".dmb"); //new dstar file extension to make it read in and process properly
+  }
+  //dmr, nxdn, phase 2, x2-tdma
+  else sprintf (ext, ".amb"); 
+
+  //reset talkgroup id buffer
+  for (i = 0; i < 12; i++)
+  {
+    for (j = 0; j < 25; j++)
+    {
+      state->tg[j][i] = 0;
+    }
+  }
+
+  state->tgcount = 0;
+
+  sprintf (opts->mbe_out_fileR, "%s %s S2%s", getDateF(), getTimeF(), ext);
+
+  sprintf (opts->mbe_out_path, "%s%s", opts->mbe_out_dir, opts->mbe_out_fileR);
+
+  opts->mbe_out_fR = fopen (opts->mbe_out_path, "w");
+  if (opts->mbe_out_fR == NULL)
+  {
+    fprintf (stderr,"\nError, couldn't open %s for slot 2\n", opts->mbe_out_path);
+  }
+  else opts->mbe_outR = 1;
+
+  //
+  fprintf (opts->mbe_out_fR, "%s", ext);
+
+  fflush (opts->mbe_out_fR);
+}
+
+void openWavOutFile (dsd_opts * opts, dsd_state * state)
 {
 
   SF_INFO info;

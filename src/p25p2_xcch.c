@@ -202,6 +202,10 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			//print it and then zero out
 			state->lastsrc = 0;
 			state->lasttg = 0;
+
+			//close any open MBEout files
+ 			if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+
 		}
 		if (state->currentslot == 0)
 		{
@@ -218,6 +222,9 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			//print it and then zero out
 			state->lastsrcR = 0;
 			state->lasttgR = 0;
+
+			//close any open MBEout files
+			if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
 		}
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -241,8 +248,18 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 	}
 	if (opcode == 0x6 && err == 0)
 	{
-		if (state->currentslot == 1) state->dmrburstL = 22;
-		else state->dmrburstR = 22;
+		if (state->currentslot == 1)
+		{
+			state->dmrburstL = 21;
+			//close any open MBEout files
+ 			if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+		} 
+		else
+		{
+			state->dmrburstR = 21;
+			//close any open MBEout files
+ 			if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
+		}
 		fprintf (stderr, " MAC_HANGTIME ");
 		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 1, SMAC);
@@ -412,6 +429,10 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			//print it and then zero out
 			state->lastsrc = 0;
 			state->lasttg = 0;
+
+			//close any open MBEout files
+ 			if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+			
 		}
 		if (state->currentslot == 1)
 		{
@@ -428,6 +449,9 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			//print it and then zero out
 			state->lastsrcR = 0;
 			state->lasttgR = 0;
+
+			//close any open MBEout files
+			if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
 		}
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -471,8 +495,18 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 	}
 	if (opcode == 0x6 && err == 0)
 	{
-		if (state->currentslot == 0) state->dmrburstL = 22;
-		else state->dmrburstR = 22;
+		if (state->currentslot == 0)
+		{
+			state->dmrburstL = 22;
+			//close any open MBEout files
+ 			if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+		} 
+		else
+		{
+			state->dmrburstR = 22;
+			//close any open MBEout files
+ 			if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
+		} 
 		fprintf (stderr, " MAC_HANGTIME ");
 		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 0, FMAC);

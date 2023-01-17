@@ -87,8 +87,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
   //NXDN FSW
   if ((state->synctype == 28) || (state->synctype == 29))
   {
-    nxdn_frame (opts, state);
-    //no MBEout...use symbol capture bin instead! 
+    //MBEout restored, is not handled internally by nxdn_frame.c
+    nxdn_frame (opts, state); 
     return;
   }
   else if ((state->synctype == 6) || (state->synctype == 7))
@@ -107,7 +107,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
       state->nac = 0;
       if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
         {
-          openMbeOutFile (opts, state);
+          openMbeOutFile (opts, state); //dstar ambe files are read back incorrectly, need to change file extension to differentiate when doing a playback
         }
       sprintf (state->fsubtype, " VOICE        ");
       processDSTAR (opts, state);
@@ -128,9 +128,9 @@ processFrame (dsd_opts * opts, dsd_state * state)
         }
       state->nac = 0;
       if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
-        {
-          openMbeOutFile (opts, state);
-        }
+      {
+        openMbeOutFile (opts, state); //dstar ambe files are read back incorrectly, need to change file extension to differentiate when doing a playback
+      }
       sprintf (state->fsubtype, " DATA         ");
       processDSTAR_HD (opts, state);
       return;
@@ -164,70 +164,58 @@ processFrame (dsd_opts * opts, dsd_state * state)
 
       //disable so radio id doesn't blink in and out during ncurses and aggressive_framesync
       state->nac = 0;
-      //state->lastsrc = 0;
-      //state->lasttg = 0;
-      //state->lastsrcR = 0;
-      //state->lasttgR = 0;
+
       if (opts->errorbars == 1)
+      {
+        if (opts->verbose > 0)
         {
-          if (opts->verbose > 0)
-            {
-              level = (int) state->max / 164;
-              //fprintf (stderr,"inlvl: %2i%% ", level);
-            }
+          level = (int) state->max / 164;
+          //fprintf (stderr,"inlvl: %2i%% ", level);
         }
+      }
       if ( (state->synctype == 11) || (state->synctype == 12) || (state->synctype == 32) ) //DMR Voice Modes
+      {
+
+        sprintf (state->fsubtype, " VOICE        ");
+        if (opts->dmr_stereo == 0 && state->synctype < 32) // -T option for DMR (TDMA) stereo
         {
-          if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL) && opts->dmr_stereo == 0)
-            {
-              openMbeOutFile (opts, state);
-            }
-          sprintf (state->fsubtype, " VOICE        ");
-          if (opts->dmr_stereo == 0 && state->synctype < 32) // -T option for DMR (TDMA) stereo
-          {
-            sprintf (state->slot1light, " slot1 ");
-            sprintf (state->slot2light, " slot2 ");
-            dmrMSBootstrap (opts, state); 
-          }
-          if (opts->dmr_mono == 1 && state->synctype == 32)
-          {
-            // fprintf (stderr, "%s", KRED);
-            // fprintf (stderr, "Please use XDMA or DMR Stereo to decode MS/Simplex \n");
-            // fprintf (stderr, "%s", KNRM);
-            dmrMSBootstrap (opts, state); 
-          }
-          if (opts->dmr_stereo == 1) //opts->dmr_stereo == 1
-          {
-            state->dmr_stereo = 1; //set the state to 1 when handling pure voice frames
-            if (state->synctype > 31 )
-            {
-              dmrMSBootstrap (opts, state); //bootstrap into MS Bootstrap (voice only)
-            }
-            else dmrBSBootstrap (opts, state); //bootstrap into BS Bootstrap
-          }
+          sprintf (state->slot1light, " slot1 ");
+          sprintf (state->slot2light, " slot2 ");
+          //we can safely open MBE on any MS or mono handling
+          if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state); 
+          dmrMSBootstrap (opts, state); 
         }
+        if (opts->dmr_mono == 1 && state->synctype == 32)
+        {
+          //we can safely open MBE on any MS or mono handling
+          if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
+          dmrMSBootstrap (opts, state); 
+        }
+        if (opts->dmr_stereo == 1) //opts->dmr_stereo == 1
+        {
+          state->dmr_stereo = 1; //set the state to 1 when handling pure voice frames
+          if (state->synctype > 31 )
+          {
+            //we can safely open MBE on any MS or mono handling
+            if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
+            dmrMSBootstrap (opts, state); //bootstrap into MS Bootstrap (voice only)
+          }
+          else dmrBSBootstrap (opts, state); //bootstrap into BS Bootstrap
+        }
+      }
       else if ( (state->synctype == 33) || (state->synctype == 34) ) //MS Data and RC data
       {
+        if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+        if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
         dmrMSData (opts, state);
-        // if (opts->dmr_stereo == 0)
-        // {
-        //   closeMbeOutFile (opts, state);
-        //   state->err_str[0] = 0;
-        //   fprintf (stderr, "%s", KRED);
-        //   fprintf (stderr, "Please use XDMA or DMR Stereo to decode MS/Simplex \n");
-        //   fprintf (stderr, "%s", KNRM);
-        // }
-        // if (opts->dmr_stereo == 1)
-        // {
-        //   dmrMSData (opts, state);
-
-        // }
       }
       else
       {
         if (opts->dmr_stereo == 0)
         {
-          closeMbeOutFile (opts, state);
+          if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+          if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
+
           state->err_str[0] = 0;
           sprintf (state->slot1light, " slot1 ");
           sprintf (state->slot2light, " slot2 ");
@@ -237,6 +225,9 @@ processFrame (dsd_opts * opts, dsd_state * state)
         //switch dmr_stereo to 0 when handling BS data frame syncs with processDMRdata
         if (opts->dmr_stereo == 1)
         {
+          if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+          if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
+
           state->dmr_stereo = 0; //set the state to zero for handling pure data frames
           sprintf (state->slot1light, " slot1 ");
           sprintf (state->slot2light, " slot2 ");
@@ -246,7 +237,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
       }
       return;
     }
-  else if ((state->synctype >= 2) && (state->synctype <= 5))
+    //X2-TDMA
+    else if ((state->synctype >= 2) && (state->synctype <= 5))
     {
       state->nac = 0;
       if (opts->errorbars == 1)
@@ -256,15 +248,15 @@ processFrame (dsd_opts * opts, dsd_state * state)
       if ((state->synctype == 3) || (state->synctype == 4))
         {
           if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
-            {
-              openMbeOutFile (opts, state);
-            }
+          {
+            openMbeOutFile (opts, state);
+          }
           sprintf (state->fsubtype, " VOICE        ");
           processX2TDMAvoice (opts, state);
         }
       else
         {
-          closeMbeOutFile (opts, state);
+          if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
           state->err_str[0] = 0;
           processX2TDMAdata (opts, state);
         }
@@ -272,21 +264,18 @@ processFrame (dsd_opts * opts, dsd_state * state)
     }
   else if ((state->synctype == 14) || (state->synctype == 15))
     {
-      //state->nac = 0;
-      //state->lastsrc = 0;
-      //state->lasttg = 0;
       if (opts->errorbars == 1)
+      {
+        if (opts->verbose > 0)
         {
-          if (opts->verbose > 0)
-            {
-              level = (int) state->max / 164;
-              //fprintf (stderr,"inlvl: %2i%% ", level);
-            }
+          level = (int) state->max / 164;
+          //fprintf (stderr,"inlvl: %2i%% ", level);
         }
+      }
       if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
-        {
-          openMbeOutFile (opts, state);
-        }
+      {
+        openMbeOutFile (opts, state);
+      }
       sprintf (state->fsubtype, " VOICE        ");
       processProVoice (opts, state);
       return;
@@ -294,6 +283,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
     //edacs
     else if ((state->synctype == 37) || (state->synctype == 38))
     {
+      if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state); 
       edacs (opts, state);
       return;
     }
@@ -313,13 +303,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
     //P25 P2
     else if ((state->synctype == 35) || (state->synctype == 36))
     {
-      //Do stuff
-      //fprintf(stderr, "YSF Sync! \n");
-      if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
-      {
-        //openMbeOutFile (opts, state);
-      }
-      //sprintf(state->fsubtype, " VOICE        ");
+      //relocate MBEout to inside frame handling
       processP2(opts, state);
       return;
     }
@@ -328,6 +312,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
     {
       /* dPMR Frame Sync 1 */
       fprintf(stderr, "dPMR Frame Sync 1 ");
+      if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
     }
     else if ((state->synctype == 21) || (state->synctype == 25))
     {
@@ -346,12 +331,12 @@ processFrame (dsd_opts * opts, dsd_state * state)
         }
         state->nac = 0;
 
-          if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
-          {
-            openMbeOutFile (opts, state);
-          }
-          sprintf(state->fsubtype, " VOICE        ");
-          processdPMRvoice (opts, state);
+        if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
+        {
+          openMbeOutFile (opts, state);
+        }
+        sprintf(state->fsubtype, " VOICE        ");
+        processdPMRvoice (opts, state);
 
         return;
 
@@ -360,11 +345,13 @@ processFrame (dsd_opts * opts, dsd_state * state)
     {
       /* dPMR Frame Sync 3 */
       fprintf(stderr, "dPMR Frame Sync 3 ");
+      if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
     }
     else if ((state->synctype == 23) || (state->synctype == 27))
     {
       /* dPMR Frame Sync 4 */
       fprintf(stderr, "dPMR Frame Sync 4 ");
+      if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
     }
     //dPMR
   else //P25
@@ -463,15 +450,15 @@ processFrame (dsd_opts * opts, dsd_state * state)
     {
       // Header Data Unit
       if (opts->errorbars == 1)
-        {
-          printFrameInfo (opts, state);
-          fprintf (stderr," HDU\n");
-        }
+      {
+        printFrameInfo (opts, state);
+        fprintf (stderr," HDU\n");
+      }
       if (opts->mbe_out_dir[0] != 0)
-        {
-          closeMbeOutFile (opts, state);
-          openMbeOutFile (opts, state);
-        }
+      {
+        if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state); 
+        if (opts->mbe_out_f == NULL) openMbeOutFile (opts, state);
+      }
       mbe_initMbeParms (state->cur_mp, state->prev_mp, state->prev_mp_enhanced);
       state->lastp25type = 2;
       state->dmrburstL = 25;
@@ -483,17 +470,17 @@ processFrame (dsd_opts * opts, dsd_state * state)
     {
       // Logical Link Data Unit 1
       if (opts->errorbars == 1)
-        {
-          printFrameInfo (opts, state);
-          fprintf (stderr," LDU1  ");
-        }
+      {
+        printFrameInfo (opts, state);
+        fprintf (stderr," LDU1  ");
+      }
       if (opts->mbe_out_dir[0] != 0)
+      {
+        if (opts->mbe_out_f == NULL)
         {
-          if (opts->mbe_out_f == NULL)
-            {
-              openMbeOutFile (opts, state);
-            }
+          openMbeOutFile (opts, state);
         }
+      }
       state->lastp25type = 1;
       state->dmrburstL = 26;
       state->currentslot = 0;
@@ -514,27 +501,27 @@ processFrame (dsd_opts * opts, dsd_state * state)
       if (state->lastp25type != 1)
         {
           if (opts->errorbars == 1)
-            {
-              printFrameInfo (opts, state);
-              fprintf (stderr,"\n Ignoring LDU2 not preceeded by LDU1\n");
-            }
+          {
+            printFrameInfo (opts, state);
+            fprintf (stderr,"\n Ignoring LDU2 not preceeded by LDU1\n");
+          }
           state->lastp25type = 0;
           sprintf (state->fsubtype, "              ");
         }
       else
         {
           if (opts->errorbars == 1)
-            {
-              printFrameInfo (opts, state);
-              fprintf (stderr," LDU2  ");
-            }
+          {
+            printFrameInfo (opts, state);
+            fprintf (stderr," LDU2  ");
+          }
           if (opts->mbe_out_dir[0] != 0)
+          {
+            if (opts->mbe_out_f == NULL)
             {
-              if (opts->mbe_out_f == NULL)
-                {
-                  openMbeOutFile (opts, state);
-                }
+              openMbeOutFile (opts, state);
             }
+          }
           state->lastp25type = 2;
           sprintf (state->fsubtype, " LDU2         ");
           state->numtdulc = 0;
@@ -546,14 +533,14 @@ processFrame (dsd_opts * opts, dsd_state * state)
       // Terminator with subsequent Link Control
       state->dmrburstL = 28;
       if (opts->errorbars == 1)
-        {
-          printFrameInfo (opts, state);
-          fprintf (stderr," TDULC\n");
-        }
+      {
+        printFrameInfo (opts, state);
+        fprintf (stderr," TDULC\n");
+      }
       if (opts->mbe_out_dir[0] != 0)
-        {
-          closeMbeOutFile (opts, state);
-        }
+      {
+        if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+      }
       mbe_initMbeParms (state->cur_mp, state->prev_mp, state->prev_mp_enhanced);
       state->lasttg = 0;
       state->lastsrc = 0;
@@ -562,9 +549,9 @@ processFrame (dsd_opts * opts, dsd_state * state)
       sprintf (state->fsubtype, " TDULC        ");
       state->numtdulc++;
       if ((opts->resume > 0) && (state->numtdulc > opts->resume))
-        {
-          resumeScan (opts, state);
-        }
+      {
+        resumeScan (opts, state);
+      }
       processTDULC (opts, state);
       state->err_str[0] = 0;
     }
@@ -573,14 +560,14 @@ processFrame (dsd_opts * opts, dsd_state * state)
       // Terminator without subsequent Link Control
       state->dmrburstL = 28;
       if (opts->errorbars == 1)
-        {
-          printFrameInfo (opts, state);
-          fprintf (stderr," TDU\n");
-        }
+      {
+        printFrameInfo (opts, state);
+        fprintf (stderr," TDU\n");
+      }
       if (opts->mbe_out_dir[0] != 0)
-        {
-          closeMbeOutFile (opts, state);
-        }
+      {
+        if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+      }
       mbe_initMbeParms (state->cur_mp, state->prev_mp, state->prev_mp_enhanced);
       state->lasttg = 0;
       state->lastsrc = 0;
@@ -594,120 +581,126 @@ processFrame (dsd_opts * opts, dsd_state * state)
     {
       state->dmrburstL = 29;
       if (opts->errorbars == 1)
-        {
-          printFrameInfo (opts, state);
-          fprintf (stderr," TSBK");
-        }
+      {
+        printFrameInfo (opts, state);
+        fprintf (stderr," TSBK");
+      }
+      if (opts->mbe_out_dir[0] != 0)
+      {
+        if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+        if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
+      }
       if (opts->resume > 0)
-        {
-          resumeScan (opts, state);
-        }
+      {
+        resumeScan (opts, state);
+      }
       state->lasttg = 0;
       state->lastsrc = 0;
       state->lastp25type = 3;
       sprintf (state->fsubtype, " TSBK         ");
 
-      // Now processing NID
       processTSBK(opts, state);
 
     }
   else if (strcmp (duid, "30") == 0)
     {
       if (opts->errorbars == 1)
-        {
-          printFrameInfo (opts, state);
-          fprintf (stderr," PDU\n");
-        }
-      if (opts->resume > 0)
-        {
-          resumeScan (opts, state);
-        }
+      {
+        printFrameInfo (opts, state);
+        fprintf (stderr," PDU\n"); //multi block/packet PDU
+      }
       if (opts->mbe_out_dir[0] != 0)
-        {
-          if (opts->mbe_out_f == NULL)
-            {
-              openMbeOutFile (opts, state);
-            }
-        }
+      {
+        if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+        if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
+      }
+      if (opts->resume > 0)
+      {
+        resumeScan (opts, state);
+      }
       state->lastp25type = 4;
       sprintf (state->fsubtype, " PDU          ");
     }
-  // try to guess based on previous frame if unknown type
-  else if (state->lastp25type == 1)
-    {
-      if (opts->errorbars == 1)
-        {
-          printFrameInfo (opts, state);
-          fprintf (stderr,"(LDU2) ");
-        }
-      if (opts->mbe_out_dir[0] != 0)
-        {
-          if (opts->mbe_out_f == NULL)
-            {
-              openMbeOutFile (opts, state);
-            }
-        }
-      //state->lastp25type = 0;
-      // Guess that the state is LDU2
-      state->lastp25type = 2;
-      sprintf (state->fsubtype, "(LDU2)        ");
-      state->numtdulc = 0;
-      processLDU2 (opts, state);
-    }
-  else if (state->lastp25type == 2)
-    {
-      if (opts->errorbars == 1)
-        {
-          printFrameInfo (opts, state);
-          fprintf (stderr,"(LDU1) ");
-        }
-      if (opts->mbe_out_dir[0] != 0)
-        {
-          if (opts->mbe_out_f == NULL)
-            {
-              openMbeOutFile (opts, state);
-            }
-        }
-      //state->lastp25type = 0;
-      // Guess that the state is LDU1
-      state->lastp25type = 1;
-      sprintf (state->fsubtype, "(LDU1)        ");
-      state->numtdulc = 0;
-      processLDU1 (opts, state);
-    }
-  else if (state->lastp25type == 3)
-    {
-      if (opts->errorbars == 1)
-        {
-          printFrameInfo (opts, state);
-          fprintf (stderr," (TSBK)\n");
-        }
-      //state->lastp25type = 0;
-      // Guess that the state is TSBK
-      state->lastp25type = 3;
-      sprintf (state->fsubtype, "(TSBK)        ");
 
-      // Now processing NID
-      skipDibit (opts, state, 328-25);
-    }
-  else if (state->lastp25type == 4)
-    {
-      if (opts->errorbars == 1)
-        {
-          printFrameInfo (opts, state);
-          fprintf (stderr," (PDU)\n");
-        }
-      state->lastp25type = 0;
-    }
+  // try to guess based on previous frame if unknown type
+  // disabling the guessing game on P1
+
+  // else if (state->lastp25type == 1)
+  //   {
+  //     if (opts->errorbars == 1)
+  //       {
+  //         printFrameInfo (opts, state);
+  //         fprintf (stderr,"(LDU2) ");
+  //       }
+  //     // if (opts->mbe_out_dir[0] != 0)
+  //     //   {
+  //     //     if (opts->mbe_out_f == NULL)
+  //     //       {
+  //     //         openMbeOutFile (opts, state);
+  //     //       }
+  //     //   }
+  //     //state->lastp25type = 0;
+  //     // Guess that the state is LDU2
+  //     state->lastp25type = 2;
+  //     sprintf (state->fsubtype, "(LDU2)        ");
+  //     state->numtdulc = 0;
+  //     processLDU2 (opts, state);
+  //   }
+  // else if (state->lastp25type == 2)
+  //   {
+  //     if (opts->errorbars == 1)
+  //       {
+  //         printFrameInfo (opts, state);
+  //         fprintf (stderr,"(LDU1) ");
+  //       }
+  //     if (opts->mbe_out_dir[0] != 0)
+  //       {
+  //         if (opts->mbe_out_f == NULL)
+  //           {
+  //             openMbeOutFile (opts, state);
+  //           }
+  //       }
+  //     //state->lastp25type = 0;
+  //     // Guess that the state is LDU1
+  //     state->lastp25type = 1;
+  //     sprintf (state->fsubtype, "(LDU1)        ");
+  //     state->numtdulc = 0;
+  //     processLDU1 (opts, state);
+  //   }
+  // else if (state->lastp25type == 3)
+  //   {
+  //     if (opts->errorbars == 1)
+  //       {
+  //         printFrameInfo (opts, state);
+  //         fprintf (stderr," (TSBK)\n");
+  //       }
+  //     //state->lastp25type = 0;
+  //     // Guess that the state is TSBK
+  //     state->lastp25type = 3;
+  //     sprintf (state->fsubtype, "(TSBK)        ");
+
+  //     // Now processing NID
+  //     skipDibit (opts, state, 328-25);
+  //   }
+  // else if (state->lastp25type == 4)
+  //   {
+  //     if (opts->errorbars == 1)
+  //       {
+  //         printFrameInfo (opts, state);
+  //         fprintf (stderr," (PDU)\n");
+  //       }
+  //     state->lastp25type = 0;
+  //   }
+
   else
+  {
+    state->lastp25type = 0;
+    sprintf (state->fsubtype, "              ");
+    if (opts->errorbars == 1)
     {
-      state->lastp25type = 0;
-      sprintf (state->fsubtype, "              ");
-      if (opts->errorbars == 1)
-        {
-          printFrameInfo (opts, state);
-          fprintf (stderr," duid:%s *Unknown DUID*\n", duid); //prints on dPMR frame 3
-          // fprintf (stderr, "\n"); //prints on dPMR frame 3
-        }
+      printFrameInfo (opts, state);
+      fprintf (stderr," duid:%s *Unknown DUID*\n", duid); //prints on dPMR frame 3
+      // fprintf (stderr, "\n"); //prints on dPMR frame 3
     }
+  }
 }
