@@ -694,10 +694,20 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		if (state->currentslot == 0 && duid_decoded != 3 && duid_decoded != 12)
 		{
 			fprintf (stderr, "VCH 0 ");
+			//open MBEout file - slot 1 - USE WITH CAUTION on Phase 2! Consider using a symbol capture bin instead!
+			if (duid_decoded == 0 || duid_decoded == 6) //4V or 2V (voice)
+			{
+				if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
+			}
 		}
 		else if (state->currentslot == 1 && duid_decoded != 3 && duid_decoded != 12)
 		{
 			fprintf (stderr, "VCH 1 ");
+			//open MBEout file - slot 2 - USE WITH CAUTION on Phase 2! Consider using a symbol capture bin instead!
+			if (duid_decoded == 0 || duid_decoded == 6) //4V or 2V (voice)
+			{
+      	if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_fR == NULL)) openMbeOutFileR (opts, state);
+			}
 		}
 		else fprintf (stderr, "VCH S ");
 

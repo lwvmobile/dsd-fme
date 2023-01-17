@@ -247,7 +247,30 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	if (facch2) nxdn_deperm_facch2_udch(opts, state, facch2_bits);
 	if (facch & 1) nxdn_deperm_facch(opts, state, facch_bits_a);
 	if (facch & 2) nxdn_deperm_facch(opts, state, facch_bits_b);
-	if (voice) nxdn_voice (opts, state, voice, dbuf); 
+	if (voice)
+	{
+		//restore MBE file open here
+		if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
+		//update last voice sync time
+		state->last_vc_sync_time = time(NULL);
+		//process voice frame
+		nxdn_voice (opts, state, voice, dbuf); 
+	}
+	//close MBE file if no voice and its open
+	if (!voice)
+	{
+		if (opts->mbe_out_f != NULL)
+		{
+			if (opts->frame_nxdn96 == 1) //nxdn96 has voice and data mixed together, so we will need to do a time check first
+			{
+				if ( (time(NULL) - state->last_vc_sync_time) > 1) //test for optimal time, 1 sec should be okay
+				{
+					closeMbeOutFile (opts, state);
+				} 
+			}
+			if (opts->frame_nxdn48 == 1) closeMbeOutFile (opts, state); //okay to close right away if nxdn48, no data/voice mixing
+		} 
+	} 
 
 	fprintf (stderr, "\n");
 	END: ; //do nothing

@@ -265,6 +265,9 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       else fprintf (stderr,"Sync: -DMR  ");
       
       vc1 = 1;
+
+      //close MBEout file - slot 1
+      if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state); 
     }
     if (internalslot == 1)
     {
@@ -275,6 +278,9 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       else fprintf (stderr,"Sync: -DMR  ");
 
       vc2 = 1;
+
+      //close MBEout file - slot 2
+      if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
 
     }
     dmr_data_sync (opts, state);
@@ -312,12 +318,16 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       state->dmrburstL = 16;
       vc = vc1;
       sprintf (light, "%s", " [SLOT1]  slot2  ");
+      //open MBEout file - slot 1
+      if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
     } 
     else
     {
       state->dmrburstR = 16;
       vc = vc2;
       sprintf (light, "%s", "  slot1  [SLOT2] ");
+      //open MBEout file - slot 2
+      if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_fR == NULL)) openMbeOutFileR (opts, state);
     } 
     if (opts->inverted_dmr == 0) sprintf (polarity, "%s", "+");
     else sprintf (polarity, "%s", "-");
@@ -389,6 +399,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     {
       FILE * pFile; //file pointer
       pFile = fopen (opts->dsp_out_file, "a");
+      fprintf (pFile, "\n%d 98 ", internalslot+1); //'98' is CACH designation value
+      for (i = 0; i < 6; i++) //3 byte CACH
+      {
+        int cach_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
+        fprintf (pFile, "%X", cach_byte);
+      }
       fprintf (pFile, "\n%d 10 ", internalslot+1); //0x10 for voice burst
       for (i = 6; i < 72; i++) //33 bytes, no CACH
       {
@@ -433,6 +449,10 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
  state->errs2 = 0;
  state->errs2R = 0;
  state->errs2 = 0;
+
+ //close any open MBEout files
+ if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+ if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
 
  //if we have a tact or emb err, then produce sync pattern/err message
  if (tact_okay != 1 || emb_ok != 1)
@@ -652,6 +672,12 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   {
     FILE * pFile; //file pointer
     pFile = fopen (opts->dsp_out_file, "a");
+    fprintf (pFile, "\n%d 98 ", internalslot+1); //'98' is CACH designation value
+    for (i = 0; i < 6; i++) //3 byte CACH
+    {
+      int cach_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
+      fprintf (pFile, "%X", cach_byte);
+    }
     fprintf (pFile, "\n%d 10 ", internalslot+1); //0x10 for "voice burst"
     for (i = 6; i < 72; i++) //33 bytes, no CACH
     {
@@ -668,10 +694,14 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   if (state->currentslot == 0)
   {
     sprintf (light, "%s", " [SLOT1]  slot2  ");
+    //open MBEout file - slot 1
+    if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
   } 
   else
   {
     sprintf (light, "%s", "  slot1  [SLOT2] ");
+    //open MBEout file - slot 2
+    if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_fR == NULL)) openMbeOutFileR (opts, state);
   } 
   if (opts->inverted_dmr == 0) sprintf (polarity, "%s", "+");
   else sprintf (polarity, "%s", "-");
@@ -709,7 +739,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     fprintf (stderr,"%s ", getTime());
     fprintf (stderr,"Sync:  DMR                  ");
     fprintf (stderr, "%s", KRED);
-    fprintf (stderr, "| VOICE CACH/SYNC ERR");
+    fprintf (stderr, "| VOICE TACT/SYNC ERR");
     fprintf (stderr, "%s", KNRM);
     //run LFSR if either slot had an active MI in it.
     if (state->payload_algid >= 0x21)

@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Lite' Edition v2.0.0-10-gb2ccd3a Windows 32-bit RC2b  "
+  " 'Lite' Edition v2.0.0-17-gdcb21f2 Windows 32-bit RC2b  "
 };
 
 int
@@ -136,10 +136,11 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->dmr_payload_p = state->dibit_buf + 200;
   memset (state->dmr_payload_buf, 0, sizeof (int) * 200);
   //dmr buffer end
-  if (opts->mbe_out_f != NULL)
-  {
-    closeMbeOutFile (opts, state);
-  }
+  
+  //close MBE out files
+  if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+  if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
+
   state->jitter = -1;
   state->lastsynctype = -1;
   state->carrier = 0;
@@ -376,8 +377,10 @@ initOpts (dsd_opts * opts)
   opts->playoffsetR = 0;
   opts->mbe_out_dir[0] = 0;
   opts->mbe_out_file[0] = 0;
+  opts->mbe_out_fileR[0] = 0; //second slot on a TDMA system
   opts->mbe_out_path[0] = 0;
   opts->mbe_out_f = NULL;
+  opts->mbe_out_fR = NULL; //second slot on a TDMA system
   opts->audio_gain = 0; //0
   opts->audio_gainR = 0; //0
   opts->audio_out = 1;
@@ -395,6 +398,7 @@ initOpts (dsd_opts * opts)
   opts->symbol_out_f = NULL;
   opts->symbol_out = 0;
   opts->mbe_out = 0;
+  opts->mbe_outR = 0; //second slot on a TDMA system
   opts->wav_out_f = NULL;
   opts->wav_out_fR = NULL;
   opts->wav_out_raw = NULL;
@@ -890,7 +894,7 @@ usage ()
   printf ("  -o <device>   Audio output device (default is /dev/dsp)\n");
   printf ("                null for no audio output\n");
   printf ("                pulse for pulse audio \n");
-  printf ("  -d <dir>      Create mbe data files, use this directory\n");
+  printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
   printf ("  -w <file>     Output synthesized speech to a .wav file, legacy auto modes only.\n");
@@ -920,9 +924,9 @@ usage ()
   printf (" Example: dsd-fme-lite -fp -i rtl:0:851.375M:22:-2:12:0:6021\n");
   printf ("\n");
   printf ("Decoder options:\n");
-  printf ("  -fa           Legacy Auto Detection 8k/1 (old methods default)\n");
+  printf ("  -fa           Legacy Auto Detection (old methods default)\n");
   printf ("  -ft           XDMA P25 and DMR BS/MS frame types (new default)\n");
-  printf ("  -fs           DMR Stereo BS and MS Simplex only\n");
+  printf ("  -fs           DMR Stereo BS and MS Simplex\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -fd           Decode only D-STAR\n");
   printf ("  -fr           Decode only DMR Mono - Single Slot Voice\n");
@@ -931,7 +935,7 @@ usage ()
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
   printf ("  -fp             Decode only EDACS/ProVoice*\n");
   printf ("  -fm             Decode only dPMR*\n");
-  printf ("  -l            Disable DMR and NXDN input filtering\n");
+  printf ("  -l            Disable DMR, dPMR, and NXDN input filtering\n");
   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
   printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
   printf ("  -xr           Expect inverted DMR signal\n");
@@ -1123,10 +1127,10 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
   {
     closeSymbolOutFile (opts, state);
   }
-  if (opts->mbe_out_f != NULL)
-  {
-    closeMbeOutFile (opts, state);
-  }
+  
+  //close MBE out files
+  if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+  if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
 
   fprintf (stderr,"\n");
   fprintf (stderr,"Total audio errors: %i\n", state->debug_audio_errors);
@@ -1622,10 +1626,10 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 0;
-              opts.pulse_digi_rate_out = 8000; //doesn't matter for /dev/dsp anyways
+              opts.pulse_digi_rate_out = 48000; // /dev/dsp does need this set to 48000 to properly process the upsampling
               opts.pulse_digi_out_channels = 1;
-              opts.dmr_stereo = 0;
-              opts.dmr_mono = 1;
+              opts.dmr_stereo = 1; //switching in 'stereo' for 'mono'
+              opts.dmr_mono = 0;
               state.dmr_stereo = 0;
               opts.setmod_bw = 7000;
               sprintf (opts.output_name, "Legacy Auto");
@@ -1908,7 +1912,7 @@ main (int argc, char **argv)
               opts.setmod_bw = 7000;
               sprintf (opts.output_name, "DMR Mono");
               //fprintf(stderr, "Notice: DMR cannot autodetect polarity. \n Use -xr option if Inverted Signal expected.\n");
-              fprintf (stderr,"Decoding only DMR Mono. \nUsing DMR Stereo or XDMA is highly encouraged.\n");
+              fprintf (stderr,"Decoding only DMR Mono. \nUsing DMR Stereo '-fs' or XDMA '-ft' is highly encouraged.\n");
               //dmr stereo below
               // opts.frame_dstar = 0;
               // opts.frame_x2tdma = 0;

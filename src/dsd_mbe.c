@@ -87,7 +87,7 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
 
           }
       }
-      else if (state->mbe_file_type == 1) //ambe files
+      else if (state->mbe_file_type > 0) //ambe files
       {
         readAmbe2450Data (opts, state, ambe_d);
         int j, x;
@@ -102,8 +102,11 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
             ambe_d[j] ^= x;
           }
         }
-
-        mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+        
+        //ambe+2
+        if (state->mbe_file_type == 1) mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+        //dstar ambe
+        if (state->mbe_file_type == 2) mbe_processAmbe2400Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
         if (opts->audio_out == 1)
         {
@@ -375,6 +378,13 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         {
           PrintAMBEData (opts, state, ambe_d);
         }
+
+        //restore MBE file save, slot 1 -- consider saving even if enc
+        if (opts->mbe_out_f != NULL && (state->dmr_encL == 0 || opts->dmr_mute_encL == 0) )
+        {
+          saveAmbe2450Data (opts, state, ambe_d);
+        }
+
       }
       //stereo slots and slot 1 (right slot)
       if (state->currentslot == 1) //&& opts->dmr_stereo == 1
@@ -468,6 +478,12 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         if (opts->payload == 1)
         {
           PrintAMBEData (opts, state, ambe_d);
+        }
+
+        //restore MBE file save, slot 2 -- consider saving even if enc
+        if (opts->mbe_out_fR != NULL && (state->dmr_encR == 0 || opts->dmr_mute_encR == 0) )
+        {
+          saveAmbe2450DataR (opts, state, ambe_d);
         }
       }
 

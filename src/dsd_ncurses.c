@@ -1690,8 +1690,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_in_type != 1) //can't run getch/menu when using STDIN -
   {
-    timeout(0);
-    c = getch();
+    timeout(0);  // 
+    c = getch(); //
   }
 
   //use rtl_udp_tune
@@ -2053,7 +2053,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-10-gb2ccd3a RC2a");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-17-gdcb21f2 RC2b");
   }
   if (opts->ncurses_compact == 0)
   {
@@ -2064,8 +2064,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4) printw (" MBElib %s", versionstr);
-      if (i == 5) printw (" %s ", "Win32 RC2a"); //printw (" %s \n", GIT_TAG);
-      if (i == 6) printw (" %s \n", "v2.0.0-10-gb2ccd3a"); //printw (" %s \n", GIT_TAG);
+      if (i == 5) printw (" %s ", "Win32 RC2b"); //printw (" %s \n", GIT_TAG);
+      if (i == 6) printw (" %s \n", "v2.0.0-17-gdcb21f2"); //printw (" %s \n", GIT_TAG);
       else printw ("\n");
     }
     attroff(COLOR_PAIR(6)); //6
@@ -3114,21 +3114,24 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
  }
 
- if (c == 32) //'space bar' replay last bin file (rework to do wav files too?)
- {
-  struct stat stat_buf;
-  if (stat(opts->audio_in_dev, &stat_buf) != 0)
-  {
-    fprintf (stderr,"Error, couldn't open %s\n", opts->audio_in_dev);
-    goto SKIPR;
-  }
-  if (S_ISREG(stat_buf.st_mode))
-  {
-    opts->symbolfile = fopen(opts->audio_in_dev, "r");
-    opts->audio_in_type = 4; //symbol capture bin files
-  }
-  SKIPR: ; //do nothing
- }
+//
+//  if (c == 32) //'space bar' replay last bin file (rework to do wav files too?)
+//  {
+//   struct stat stat_buf;
+//   if (stat(opts->audio_in_dev, &stat_buf) != 0)
+//   {
+//     fprintf (stderr,"Error, couldn't open %s\n", opts->audio_in_dev);
+//     goto SKIPR;
+//   }
+//   if (S_ISREG(stat_buf.st_mode))
+//   {
+//     opts->symbolfile = fopen(opts->audio_in_dev, "r");
+//     opts->audio_in_type = 4; //symbol capture bin files
+//   }
+//   SKIPR: ; //do nothing
+//  }
+//
+
 
  if (c == 80) //'P' key - start per call wav files
  {
@@ -3161,33 +3164,34 @@ if (c == 112) //'p' key - stop all per call wav files
   opts->dmr_stereo_wav = 0;
 }
 
+//
+// if (c == 115) //'s' key, stop playing wav or symbol in files
+// {
+//   if (opts->symbolfile != NULL)
+//   {
+//     if (opts->audio_in_type == 4) 
+//     {
+//       fclose(opts->symbolfile); 
+//     }
+//   }
 
-if (c == 115) //'s' key, stop playing wav or symbol in files
-{
-  if (opts->symbolfile != NULL)
-  {
-    if (opts->audio_in_type == 4) 
-    {
-      fclose(opts->symbolfile); 
-    }
-  }
+//   if (opts->audio_in_type == 2) //wav input file
+//   {
+//     sf_close(opts->audio_in_file);
+//   }
 
-  if (opts->audio_in_type == 2) //wav input file
-  {
-    sf_close(opts->audio_in_file);
-  }
-
-  if (opts->audio_out_type == 0)
-  {
-    opts->audio_in_type = 0;
-    openPulseInput(opts);
-  }
-  else opts->audio_in_type = 5;//cleanupAndExit(opts, state); 
+//   if (opts->audio_out_type == 0)
+//   {
+//     opts->audio_in_type = 0;
+//     openPulseInput(opts);
+//   }
+//   else opts->audio_in_type = 5;//cleanupAndExit(opts, state); 
    
-}
+// }
+//
 
-//Lockout bug in EDACS prevents any group from tuning when using this, not sure why yet
-//WARNING! USE THESE WITH CAUTION! IF BREAKING ISSUES OBSERVED, THEN RESTART AND DON'T USE THEM!!
+// //Lockout bug in EDACS prevents any group from tuning when using this, not sure why yet
+// //WARNING! USE THESE WITH CAUTION! IF BREAKING ISSUES OBSERVED, THEN RESTART AND DON'T USE THEM!!
 if (opts->frame_provoice != 1 && c == 49) //'1' key, lockout slot 1 or conventional tg from tuning/playback during session
 {
   state->group_array[state->group_tally].groupNumber = state->lasttg;

@@ -203,8 +203,10 @@ typedef struct
   int playoffsetR;
   char mbe_out_dir[1024];
   char mbe_out_file[1024];
+  char mbe_out_fileR[1024]; //second slot on a TDMA system
   char mbe_out_path[2048]; //1024
   FILE *mbe_out_f;
+  FILE *mbe_out_fR; //second slot on a TDMA system
   FILE *symbol_out_f;
   float audio_gain;
   float audio_gainR;
@@ -218,6 +220,7 @@ typedef struct
   char szNumbers[1024]; //**tera 10/32/64 char str
   short int symbol_out;
   short int mbe_out; //flag for mbe out, don't attempt fclose more than once
+  short int mbe_outR; //flag for mbe out, don't attempt fclose more than once
   SNDFILE *wav_out_f;
   SNDFILE *wav_out_fR;
   SNDFILE *wav_out_raw;
@@ -357,7 +360,7 @@ typedef struct
 
   //'DSP' Format Output
   uint8_t use_dsp_output;
-  char dsp_out_file[1024];
+  char dsp_out_file[2048];
 
 } dsd_opts;
 
@@ -754,13 +757,16 @@ int get_dibit_and_analog_signal (dsd_opts * opts, dsd_state * state, int * out_a
 void skipDibit (dsd_opts * opts, dsd_state * state, int count);
 void saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d);
 void saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d);
+void saveAmbe2450DataR (dsd_opts * opts, dsd_state * state, char *ambe_d); //tdma slot 2
 void PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d);
 void PrintIMBEData (dsd_opts * opts, dsd_state * state, char *imbe_d);
 int readImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d);
 int readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d);
 void openMbeInFile (dsd_opts * opts, dsd_state * state);
 void closeMbeOutFile (dsd_opts * opts, dsd_state * state);
+void closeMbeOutFileR (dsd_opts * opts, dsd_state * state); //tdma slot 2
 void openMbeOutFile (dsd_opts * opts, dsd_state * state);
+void openMbeOutFileR (dsd_opts * opts, dsd_state * state); //tdma slot 2
 void openWavOutFile (dsd_opts * opts, dsd_state * state);
 void openWavOutFileL (dsd_opts * opts, dsd_state * state);
 void openWavOutFileR (dsd_opts * opts, dsd_state * state);

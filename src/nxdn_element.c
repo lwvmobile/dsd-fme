@@ -287,6 +287,13 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
       //rigctl
       if (opts->use_rigctl == 1)
       {
+        //extra safeguards due to sync issues with NXDN
+        memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
+		    memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+		    state->lastsynctype = -1; 
+        state->last_cc_sync_time = time(NULL);
+        //
+        
         if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
         SetFreq(opts->rigctl_sockfd, freq);
         state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
@@ -295,6 +302,13 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
       //rtl_udp
       else if (opts->audio_in_type == 3)
       {
+        //extra safeguards due to sync issues with NXDN
+        memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
+		    memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+		    state->lastsynctype = -1; 
+        state->last_cc_sync_time = time(NULL);
+        //
+
         rtl_udp_tune (opts, state, freq); 
         state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
         opts->p25_is_tuned = 1;

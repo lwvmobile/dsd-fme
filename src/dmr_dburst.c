@@ -174,6 +174,12 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     {
       FILE * pFile; //file pointer
       pFile = fopen (opts->dsp_out_file, "a");
+      fprintf (pFile, "\n%d 98 ", slot+1); //'98' is CACH designation value
+      for (i = 0; i < 6; i++) //3 byte CACH
+      {
+        int cach_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
+        fprintf (pFile, "%X", cach_byte);
+      }
       fprintf (pFile, "\n%d %02X ", slot+1, databurst); //use hex value of current data burst type
       for (i = 6; i < 72; i++) //33 bytes, no CACH
       {
