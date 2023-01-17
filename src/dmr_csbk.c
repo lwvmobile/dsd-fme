@@ -655,8 +655,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "%s", KYEL);
 
         uint8_t fl = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 2); 
-        uint8_t ts = cs_pdu_bits[18]; //accurate?
-        uint8_t res = cs_pdu_bits[19];//unknown??
+        uint8_t ts = cs_pdu_bits[18];  //accurate?
+        uint8_t res = cs_pdu_bits[19]; //unknown??
         uint8_t rest_channel = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[20], 4);
 
         uint8_t ch[8]; //one bit per channel
@@ -695,7 +695,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           if (ch[i] != 0)
           {
             tg = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[k*8+32], 8); 
-            fprintf (stderr, " %03d ", tg);
+            if (tg != 0) fprintf (stderr, " %03d ", tg);
+            else fprintf (stderr, "Priv "); //observed 000s for TG value seem to appear during a Cap+ Private TXI call
             //add values to trunking tg/channel potentials
             t_tg[i] = tg;
             k++;

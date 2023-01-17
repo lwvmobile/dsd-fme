@@ -42,7 +42,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   source = (uint32_t)ConvertBitIntoBytes(&lc_bits[48], 24);
 
   //look for Cap+ on VLC header, then set source and/or rest channel appropriately
-  if (type == 1 && fid == 0x10 && flco == 0x04)
+  if (type == 1 && fid == 0x10 && (flco == 0x04 || flco == 0x07) ) //0x07 appears to be a cap+ txi private call
   {
     is_cap_plus = 1;
     capsite = (uint8_t)ConvertBitIntoBytes(&lc_bits[48], 4); //can't verify, just speculating
@@ -164,7 +164,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     fprintf(stderr, "TGT=%u SRC=%u ", target, source);
     if (opts->payload == 1) fprintf(stderr, "FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
 
-    if (flco == 3) //UU_V_Ch_Usr 
+    if (flco == 0x3 || flco == 0x7 || flco == 0x23) //UU_V_Ch_Usr, Cap+ Private TXI call (VLC), or Cap+ Private TXI call (EMB)
     {
       sprintf (state->call_string[slot], " Private");
       fprintf (stderr, "Private "); 
