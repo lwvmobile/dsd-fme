@@ -695,7 +695,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           if (ch[i] != 0)
           {
             tg = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[k*8+32], 8); 
-            fprintf (stderr, " %03d ", tg);
+            if (tg != 0) fprintf (stderr, " %03d ", tg);
+            else fprintf (stderr, "Priv "); //observed 000s for TG value seem to appear during a Cap+ Private TXI call
             //add values to trunking tg/channel potentials
             t_tg[i] = tg;
             k++;
