@@ -1,7 +1,3 @@
-## Notice
-
-These examples will need to be modified to run on the 'lite' branch, or any precompiled Windows binaries released. (i.e. dsd-fme to dsd-fme-lite.exe, -i pulse -o pulse, etc)
-
 ### Example Usage and Notes!
 
 `dsd-fme` is all you need to run for pulse input, pulse output, and auto detect for DMR BS/MS, and P25 (1 and 2) . To use other decoding methods which cannot be auto detected, please use the following command line switches. Make sure to route audio into and out of DSD-FME using pavucontrol and virtual sinks as needed.
@@ -125,7 +121,7 @@ For Connect Plus, enumerate your list from 1 to the last channel and add the fre
 
 Currently uncoded/unknown DMR trunking systems include Hytera XPT.
 
-Trunking Note4: NXDN Trunking may also require a channel map file, depending on the system. If it uses a custom range (above 800), then channels will need to be mapped. If channels do not require mapping (have channels below 800) but you are not tuning properly, then please use a channel_map and please report the issue in the issues along with the channels you are tuning and the actual rf frequency so corrections can be made.
+Trunking Note4: NXDN TRunking will require a channel map. Please see the example folder for an appropriate channel map. ~NXDN Trunking may also require a channel map file, depending on the system. If it uses a custom range (above 800), then channels will need to be mapped. If channels do not require mapping (have channels below 800) but you are not tuning properly, then please use a channel_map and please report the issue in the issues along with the channels you are tuning and the actual rf frequency so corrections can be made.~
 
 Channel Map and Group CSV Note: Leave the top line of the channel_map.csv and group.csv as the label, do not delete the line, if no line is there, dsd_import skips the first line so it will not import the first channel or first group in those files if there is something there that isn't a label. 
 
