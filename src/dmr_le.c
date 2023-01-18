@@ -137,3 +137,151 @@ void dmr_alg_reset (dsd_opts * opts, dsd_state * state)
   state->payload_miP = 0; 
 }
 
+//handle Single Burst (Voice Burst F) or Reverse Channel Signalling 
+//(Embedded or Dedicated Outbound, not Stand Alone (MS sourced) or Direct Mode)
+//MS Sourced or Direct Mode probably would be handled poorly by the demodulator
+void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
+{
+  int i;
+  uint8_t slot = state->currentslot;
+  uint8_t sbrc_interleaved[32];
+  uint8_t sbrc_return[32];
+  memset (sbrc_interleaved, 0, sizeof(sbrc_interleaved));
+  memset (sbrc_return, 0, sizeof(sbrc_return));
+  uint32_t irr_err = 0;
+  uint32_t sbrc_hex = 0;
+  uint16_t crc_extracted = 7777;
+  uint16_t crc_computed = 9999;
+  uint8_t crc_okay = 0;
+
+  // 9.3.2 Pre-emption and power control Indicator (PI)
+  // 0 - The embedded signalling carries information associated to the same logical channel or the Null embedded message
+  // 1 - The embedded signalling carries RC information associated to the other logical channel
+
+  for(i = 0; i < 32; i++) sbrc_interleaved[i] = state->dmr_embedded_signalling[slot][5][i + 8];
+  //power == 0 should be single burst
+  if (power == 0) irr_err = BPTC_16x2_Extract_Data(sbrc_interleaved, sbrc_return, 0);
+  //power == 1 should be reverse channel -- still need to check the interleave inside of BPTC
+  if (power == 1) irr_err = BPTC_16x2_Extract_Data(sbrc_interleaved, sbrc_return, 1);
+  //bad emb burst, never set a valid power indicator value (probably 9)
+  if (power > 1) goto SBRC_END; 
+
+  //RC Channel CRC 7 Mask = 0x7A; CRC bits are used as privacy indicators on 
+  //Single Voice Burst F (see below), other moto values seem to exist there as well
+  //unknown what the other values are (see Cap+ 0x313)
+  if (power == 1) //RC
+  {
+    crc_extracted = 0;
+    for (i = 0; i < 7; i++)
+    {
+      crc_extracted = crc_extracted << 1;
+      crc_extracted = crc_extracted | sbrc_return[i+4];
+    }
+    crc_extracted = crc_extracted ^ 0x7A;
+    crc_computed = crc7((uint8_t *) sbrc_return, 11);
+    if (crc_extracted == crc_computed) crc_okay = 1;
+    if (opts->payload == 1) fprintf (stderr, " CRC EXT %02X, CRC CMP %02X", crc_extracted, crc_computed);
+  }
+  else crc_okay = 1; //SB
+  
+  fprintf (stderr, "\n %s", KCYN);
+  if (power == 0) fprintf (stderr, " SB: ");
+  if (power == 1) fprintf (stderr, " RC: ");
+  for(i = 0; i < 11; i++)
+  {
+    sbrc_hex = sbrc_hex << 1;
+    sbrc_hex |= sbrc_return[i] & 1; //sbrc_return
+    fprintf (stderr, "%d", sbrc_return[i]);
+  }
+  fprintf (stderr, " - %03X", sbrc_hex);
+  fprintf (stderr, "%s", KNRM);
+
+  if (crc_okay == 0)
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, " (CRC ERR)");
+    fprintf (stderr, "%s", KNRM);
+  }
+
+  //sbrc_hex value of 0x313 seems to be some Cap+ Thing, 
+  //also observed 0x643 on another cap+ system (site id, status? something?)
+  //I've observed it in the Private Cap+ TXI calls as well
+  //there also seems to be a correlation between the SVC bits for TXI (reserved=3) and these extra cap+ values
+  uint8_t sbrc_opcode = sbrc_hex; 
+  uint8_t alg = sbrc_hex & 3;
+  uint16_t key = (sbrc_hex >> 3) & 0xFF;
+
+  if (irr_err != 0) fprintf (stderr, "%s (FEC ERR) %d %s", KRED, irr_err, KNRM);
+  if (irr_err == 0)
+  {
+    if (sbrc_hex == 0) ; //NULL
+    else if (sbrc_hex == 0x313)
+    {
+      //Cap+ Thing? Observed On Cap+ Systems
+      // fprintf (stderr, " Cap+ Thing?");
+    } 
+    else
+    {
+
+      if (slot == 0)
+      {
+        //key and alg only present SOME times, not all,
+        //also, intermixed with other signalling
+        //needs more study first!
+        if (state->dmr_so & 0x40 && key != 0 && state->payload_keyid == 0)
+        {
+          if (opts->payload == 1)
+          {
+            fprintf (stderr, "%s ", KYEL);
+            fprintf (stderr, "\n Slot 1");
+            fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
+            fprintf (stderr, "%s ", KNRM);
+          }
+          
+          //needs more study before assignment
+          //state->payload_keyid = key;
+          //state->payload_algid = alg + 0x20; //assuming DMRA approved alg values (moto patent)
+        }
+      }
+      if (slot == 1)
+      {
+        if (state->dmr_soR & 0x40 && key != 0 && state->payload_keyidR == 0)
+        {
+          if (opts->payload == 1)
+          {
+            fprintf (stderr, "%s ", KYEL);
+            fprintf (stderr, "\n Slot 2");
+            fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
+            fprintf (stderr, "%s ", KNRM);
+          }
+          
+          //needs more study before assignment
+          //state->payload_keyidR = key;
+          //state->payload_algidR = alg + 0x20; //assuming DMRA approved alg values (moto patent)
+        }
+      }
+
+    }
+
+  }
+
+  SBRC_END:
+
+  //'DSP' output to file -- only RC, or RC and SB?
+  if (power == 1 && opts->use_dsp_output == 1 && sbrc_hex != 0) //if not NULL
+  {
+    FILE * pFile; //file pointer
+    pFile = fopen (opts->dsp_out_file, "a");
+    fprintf (pFile, "\n%d 99 ", slot+1); //'99' is RC designation value
+    int k = 0;
+    for (i = 0; i < 24; i++) //12 bytes, SB or RC
+    {
+      //check to see if k++ starts at zero, or at 1
+      int sbrc_nib = (state->dmr_embedded_signalling[slot][5][k++] << 3) | (state->dmr_embedded_signalling[slot][5][k++] << 2) | (state->dmr_embedded_signalling[slot][5][k++] << 1) | (state->dmr_embedded_signalling[slot][5][k++] << 0);
+      fprintf (pFile, "%X", sbrc_nib);
+    }
+    fclose (pFile);
+  } 
+
+}
+

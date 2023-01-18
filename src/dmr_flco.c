@@ -133,6 +133,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         // state->lastsrc = 0;
         state->payload_algid = 0;
         state->payload_mi = 0;
+        state->payload_keyid = 0;
       }
       if (state->currentslot == 1)
       {
@@ -142,6 +143,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         // state->lastsrcR = 0;
         state->payload_algidR = 0;
         state->payload_miR = 0;
+        state->payload_keyidR = 0;
       }
     }
     
@@ -164,14 +166,32 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     fprintf(stderr, "TGT=%u SRC=%u ", target, source);
     if (opts->payload == 1) fprintf(stderr, "FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
 
-    if (flco == 0x3 || flco == 0x7 || flco == 0x23) //UU_V_Ch_Usr, Cap+ Private TXI call (VLC), or Cap+ Private TXI call (EMB)
+    //0x04 and 0x05 on a TLC seem to indicate a Cap + Private Call Terminator (perhaps one for each MS)
+    //0x07 on a VLC seems to indicate a Cap+ Private Call Header
+    //0x23 on the Embedded Voice Burst Sync seems to indicate a Cap+ Private Call in progress
+    if (flco == 0x4 || flco == 0x5 || flco == 0x7 || flco == 0x23) //Cap+ Things
     {
-      sprintf (state->call_string[slot], " Private");
+      sprintf (state->call_string[slot], " Cap+");
+      fprintf (stderr, "Cap+ ");
+      if (flco == 0x4)
+      {
+        strcat (state->call_string[slot], " Grp");
+        fprintf (stderr, "Group ");
+      }
+      else
+      {
+        strcat (state->call_string[slot], " Pri");
+        fprintf (stderr, "Private ");
+      } 
+    }
+    else if (flco == 0x3) //UU_V_Ch_Usr
+    {
+      sprintf (state->call_string[slot], " Private ");
       fprintf (stderr, "Private "); 
-    } 
+    }
     else //Grp_V_Ch_Usr
     {
-      sprintf (state->call_string[slot], "   Group");
+      sprintf (state->call_string[slot], "   Group ");
       fprintf (stderr, "Group "); 
     } 
 
@@ -208,7 +228,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       {
         //REMUS! Uncomment Line Below if desired
         // strcat (state->call_string[slot], " RES");
-        fprintf(stderr, "Reserved=%d ", (so & 0x30) >> 4);
+        fprintf(stderr, "RS%d ", (so & 0x30) >> 4);
       } 
     }
     if(so & 0x08)
@@ -255,8 +275,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     
     fprintf (stderr, "%s", KRED);
     if (CRCCorrect == 1) ; //CRCCorrect 1 is good, else is bad CRC; no print on good
-    else if(IrrecoverableErrors == 0) fprintf(stderr, "(FEC/RAS)");
-    else fprintf(stderr, "(FEC/CRC ERR)");
+    else if(IrrecoverableErrors == 0) ; //fprintf(stderr, "(FEC OK)");
+    else fprintf(stderr, "(FEC/CRC ERR) ");
 
     //check Cap+ rest channel info if available and good fec
     if (is_cap_plus == 1)

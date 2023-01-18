@@ -4,7 +4,7 @@
 //Original Source - https://github.com/LouisErigHerve/dsd
 
 //Additional Functions
-//Hamming17123, crc8, crc8ok functions
+//Hamming17123, crc7, crc8, crc8ok functions
 //Original Souce - https://github.com/boatbod/op25
 
 #include "dsd.h"
@@ -119,6 +119,31 @@ bool crc8_ok(uint8_t bits[], unsigned int len)
 		crc = (crc << 1) + bits[len+i];
 	}
 	return (crc == crc8(bits,len));
+}
+
+uint8_t crc7(uint8_t bits[], unsigned int len)
+{
+	uint8_t crc=0;
+	unsigned int K = 7;
+  //G7(x) = x7 + x5 + x2 + x + 1   check poly below for correct (dmr rc crc7)
+	uint8_t poly[8] = {1,0,1,0,0,1,1,1}; // crc7 poly
+	uint8_t buf[256];
+	if (len+K > sizeof(buf)) {
+		// fprintf (stderr, "crc8: buffer length %u exceeds maximum %lu\n", len+K, sizeof(buf));
+		return 0;
+	}
+	memset (buf, 0, sizeof(buf));
+	for (unsigned int i=0; i<len; i++){
+		buf[i] = bits[i];
+	}
+	for (unsigned int i=0; i<len; i++)
+		if (buf[i])
+			for (unsigned int j=0; j<K+1; j++)
+				buf[i+j] ^= poly[j];
+	for (unsigned int i=0; i<K; i++){
+		crc = (crc << 1) + buf[len + i];
+	}
+	return crc;
 }
 
 /*
@@ -330,3 +355,75 @@ uint32_t ConvertBitIntoBytes(uint8_t * BufferIn, uint32_t BitLength)
  *
  * @return The 9 bit CRC
  */
+ uint16_t ComputeCrc9Bit(uint8_t * DMRData, uint32_t NbData)
+{
+  uint32_t i;
+  uint16_t CRC = 0x0000; /* Initialization value = 0x0000 */
+  /* Polynomial x^9 + x^6 + x^4 + x^3 + 1
+   * Normal     = 0x059
+   * Reciprocal = 0x134
+   * Reversed reciprocal = 0x12C */
+  uint16_t Polynome = 0x059;
+  for(i = 0; i < NbData; i++)
+  {
+    if(((CRC >> 8) & 1) ^ (DMRData[i] & 1))
+    {
+      CRC = (CRC << 1) ^ Polynome;
+    }
+    else
+    {
+      CRC <<= 1;
+    }
+  }
+
+  /* Conserve only the 9 LSBs */
+  CRC &= 0x01FF;
+
+  /* Invert the CRC */
+  CRC ^= 0x01FF;
+
+  /* Return the CRC */
+  return CRC;
+} /* End ComputeCrc9Bit() */
+
+/*
+ * @brief : This function compute the CRC-32 of the DMR data
+ *          by using the polynomial x^32 + x^26 + x^23 + x^22 + x^16 + x^12 + x^11 + x^10 + x^8 + x^7 + x^5 + x^4 + x^2 + x + 1
+ *
+ * @param Input : A buffer pointer of the DMR data (80 bytes)
+ *        Rate 1/2 coded confirmed (10 data octets): 80 bit sequence (80 bytes)
+ *        Rate 3/4 coded confirmed (16 data octets): 128 bit sequence (120 bytes)
+ *        Rate 1 coded confirmed (22 data octets): 176 bit sequence (176 bytes)
+ *
+ * @param NbData : The number of bit to compute
+ *        Rate 1/2 coded confirmed (10 data octets): 80 bit sequence (80 bytes)
+ *        Rate 3/4 coded confirmed (16 data octets): 128 bit sequence (120 bytes)
+ *        Rate 1 coded confirmed (22 data octets): 176 bit sequence (176 bytes)
+ *
+ * @return The 32 bit CRC
+ */
+uint32_t ComputeCrc32Bit(uint8_t * DMRData, uint32_t NbData)
+{
+  uint32_t i;
+  uint32_t CRC = 0x00000000; /* Initialization value = 0x00000000 */
+  /* Polynomial x^32 + x^26 + x^23 + x^22 + x^16 + x^12 + x^11 + x^10 + x^8 + x^7 + x^5 + x^4 + x^2 + x + 1
+   * Normal     = 0x04C11DB7
+   * Reversed   = 0xEDB88320
+   * Reciprocal = 0xDB710641
+   * Reversed reciprocal = 0x82608EDB */
+  uint32_t Polynome = 0x04C11DB7;
+  for(i = 0; i < NbData; i++)
+  {
+    if(((CRC >> 31) & 1) ^ (DMRData[i] & 1))
+    {
+      CRC = (CRC << 1) ^ Polynome;
+    }
+    else
+    {
+      CRC <<= 1;
+    }
+  }
+
+  /* Return the CRC */
+  return CRC;
+} /* End ComputeCrc32Bit() */

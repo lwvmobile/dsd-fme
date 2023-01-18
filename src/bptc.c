@@ -134,6 +134,13 @@ const uint8_t DeInterleaveReverseChannelBptc[32] =
   24,  9, 26, 11, 28, 13, 30, 15
 };
 
+const uint8_t DeInterleaveReverseChannelBptcPlacement[32] =
+{
+   0, 16,  1, 17,  2, 18,  3, 19,
+   4, 20,  5, 21,  6, 22,  7, 23,
+   8, 24,  9, 25, 10, 26, 11, 27,
+  12, 28, 13, 29, 14, 30, 15, 31
+};
 
 /* Functions ----------------------------------------------------------------*/
 
@@ -498,33 +505,38 @@ uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDat
  *                           DMRDataExtracted[11..15] = Hamming data
  *                           DMRDataExtracted[16..31] = 16 bits of odd parity (to be checked)
  *
+ * @param ParityCheckTypeOdd : 0 = Parity to check is even (used in Non-Reverse Channel Single Burst BPTC)
+ *                             1 = Parity to check is odd (used in Reverse Channel Single Burst BPTC)
+ *
  * @return 0 = All is OK
  *         Other = Error - Irrecoverable Hamming parity check error number
  */
-uint32_t BPTC_16x2_Extract_Data(uint8_t InputInterleavedData[32], uint8_t DMRDataExtracted[32])
+uint32_t BPTC_16x2_Extract_Data(uint8_t InputInterleavedData[32], uint8_t DMRDataExtracted[32], uint32_t ParityCheckTypeOdd)
 {
   uint32_t i;
   uint8_t  DataMatrix[32];
   uint8_t  LineUncorrected[16];
   uint8_t  LineCorrected[11];
   uint32_t HammingIrrecoverableErrorNb = 0;
-  uint32_t ParityCheckErrorNb = 0;
+  uint32_t ParityCheckOddErrorNb = 0;
+  uint32_t ParityCheckEvenErrorNb = 0;
 
+  //TODO: make this so we can load either rc interleave, or single burst interleave
   for(i = 0; i < 32; i++)
   {
-    DataMatrix[DeInterleaveReverseChannelBptc[i]] = InputInterleavedData[i] & 1;
+    DataMatrix[DeInterleaveReverseChannelBptcPlacement[DeInterleaveReverseChannelBptc[i]]] = InputInterleavedData[i] & 1;
   }
 
   /* Copy the entire input buffer to the output buffer */
   for(i = 0; i < 32; i++)
   {
-    DMRDataExtracted[i] = DataMatrix[i];
+    DMRDataExtracted[i] = DataMatrix[i] & 1;
   }
 
   /* Prepare the line to be corrected */
   for(i = 0; i < 16; i++)
   {
-    LineUncorrected[i] = DataMatrix[i];
+    LineUncorrected[i] = DataMatrix[i] & 1;
   }
 
   /* Apply Hamming (16,11,4) code correction */
@@ -536,7 +548,7 @@ uint32_t BPTC_16x2_Extract_Data(uint8_t InputInterleavedData[32], uint8_t DMRDat
   /* Copy the corrected content to the output buffer */
   for(i = 0; i < 11; i++)
   {
-    DMRDataExtracted[i] = LineCorrected[i];
+    DMRDataExtracted[i] = LineCorrected[i] & 1;
   }
 
   /* Check Parity bits */
@@ -544,14 +556,24 @@ uint32_t BPTC_16x2_Extract_Data(uint8_t InputInterleavedData[32], uint8_t DMRDat
   {
     /* Odd parity ==> If data = 1 then parity = 0
      *                If data = 0 then parity = 1 */
-    if(DMRDataExtracted[i] == DMRDataExtracted[i + 16]) ParityCheckErrorNb++;
+    if((DMRDataExtracted[i] & 1) == (DMRDataExtracted[i + 16] & 1)) ParityCheckOddErrorNb++;
+    if((DMRDataExtracted[i] & 1) != (DMRDataExtracted[i + 16] & 1)) ParityCheckEvenErrorNb++;
   }
 
-  //fprintf(stderr, "Hamming ERR=%u ; Parity ERR=%u", HammingIrrecoverableErrorNb, ParityCheckErrorNb);
+  //fprintf(stderr, "Hamming ERR=%u ; Parity odd ERR=%u, Parity even ERR=%u, ", HammingIrrecoverableErrorNb, ParityCheckOddErrorNb, ParityCheckEvenErrorNb);
+
+  //fprintf(stderr, "Content =\n");
+  //for(i = 0; i < 32; i++)
+  //{
+  //  fprintf(stderr, "%u", DMRDataExtracted[i] & 1);
+  //  if((i == 15) || (i == 31)) fprintf(stderr, "\n");
+  //  else fprintf(stderr, "-");
+  //}
 
   /* Return the number of irrecoverable Hamming errors +
    * the number of parity check error */
-  return (HammingIrrecoverableErrorNb + ParityCheckErrorNb);
+  if(ParityCheckTypeOdd) return (HammingIrrecoverableErrorNb + ParityCheckOddErrorNb);
+  else return (HammingIrrecoverableErrorNb + ParityCheckEvenErrorNb);
 
 } /* End BPTC_16x2_Extract_Data() */
 

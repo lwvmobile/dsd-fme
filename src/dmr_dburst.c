@@ -45,9 +45,10 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
   uint8_t  R[3];
   uint8_t  BPTCReservedBits = 0;
+  uint8_t  is_ras = 0;
 
   uint32_t crcmask = 0; 
-  uint8_t crclen = 0;
+  uint8_t  crclen = 0;
 
   uint8_t is_bptc = 0;
   uint8_t is_trellis = 0; 
@@ -204,7 +205,13 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     IrrecoverableErrors = BPTC_196x96_Extract_Data(BPTCDeInteleavedData, BPTCDmrDataBit, R);
 
     /* Fill the reserved bit (R(0)-R(2) of the BPTC(196,96) block) */
-    BPTCReservedBits = (R[0] & 0x01) | ((R[1] << 1) & 0x02) | ((R[2] << 2) & 0x08);
+    BPTCReservedBits = (R[0] & 0x01) | ((R[1] << 1) & 0x02) | ((R[2] << 2) & 0x04);
+
+    //debug print
+    //fprintf (stderr, " RAS? %X - %d %d %d", BPTCReservedBits, R[0], R[1], R[2]); 
+
+    //set the 'RAS Flag'
+    if (BPTCReservedBits != 0) is_ras = 1; //!=0, or == 0x4
 
     /* Convert the 96 bits BPTC data into 12 bytes */
     k = 0;
@@ -435,6 +442,15 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 2);
   } 
   if (databurst == 0x05) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 2);
+
+  //print whether or not the 'RAS Field' bits are set to indicate RAS enabled (to be verified)
+  if (IrrecoverableErrors == 0 && is_ras == 1)
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, " RAS ");
+    if (opts->payload == 1) fprintf (stderr, "%X ", BPTCReservedBits);
+    fprintf (stderr, "%s", KNRM);
+  }
 
   //print the unified PDU format here, if not slot idle
   if (opts->payload == 1 && databurst != 0x09)
