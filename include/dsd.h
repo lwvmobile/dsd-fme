@@ -326,7 +326,8 @@ typedef struct
   //csv import filenames
   char group_in_file[1024];
   char lcn_in_file[1024];
-  char chan_in_file[1024]; 
+  char chan_in_file[1024];
+  char key_in_file[1024]; 
   //end import filenames
 
   //reverse mute
@@ -640,6 +641,9 @@ typedef struct
   char nxdn_location_category[14];
   uint32_t nxdn_location_sys_code;
   uint16_t nxdn_location_site_code;
+
+  //multi-key array for nxdn keys
+  unsigned long long int rkey_array[0x1FF];
 
   //dmr late entry mi
   uint64_t late_entry_mi_fragment[2][7][3];
@@ -1019,6 +1023,7 @@ unsigned long long int edacs_bch (unsigned long long int message);
 int csvGroupImport(dsd_opts * opts, dsd_state * state);
 int csvLCNImport(dsd_opts * opts, dsd_state * state);
 int csvChanImport(dsd_opts * opts, dsd_state * state);
+int csvKeyImport(dsd_opts * opts, dsd_state * state);
 
 #ifdef __cplusplus
 extern "C" {

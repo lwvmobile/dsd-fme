@@ -667,6 +667,9 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     fprintf (stderr, "%s", KNRM);
   }
 
+  //check the rkey array for a scrambler key value
+  if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
+
   if (state->nxdn_cipher_type == 0x01 && state->R > 0) //scrambler key value
   {
     fprintf (stderr, "%s", KYEL);

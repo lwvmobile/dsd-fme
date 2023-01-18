@@ -392,6 +392,7 @@ initOpts (dsd_opts * opts)
   opts->group_in_file[0] = 0;
   opts->lcn_in_file[0] = 0;
   opts->chan_in_file[0] = 0;
+  opts->key_in_file[0] = 0;
   //end import filenames
   opts->szNumbers[0] = 0;
   opts->symbol_out_f = NULL;
@@ -808,7 +809,10 @@ initState (dsd_state * state)
   //site/srv/cch info
   state->nxdn_location_site_code = 0;
   state->nxdn_location_sys_code = 0;
-  sprintf (state->nxdn_location_category, "%s", " "); 
+  sprintf (state->nxdn_location_category, "%s", " ");
+
+  //multi-key array
+  memset (state->rkey_array, 0, sizeof(state->rkey_array)); 
 
   //Remus DMR End Call Alert Beep
   state->dmr_end_alert[0] = 0;
@@ -965,6 +969,7 @@ usage ()
   printf ("                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' \n");
   printf ("\n");
   printf ("  -R <dec>      Manually Enter dPMR or NXDN EHR Scrambler Key Value (Decimal Value)\n");
+  printf ("  -k <file>     Import NXDN Scrambler Key List from csv file.\n");
   printf ("                 \n");
   printf ("  -4            Force DMR Privacy Key over FID and SVC bits \n");
   printf ("\n");
@@ -1199,7 +1204,7 @@ main (int argc, char **argv)
   exitflag = 0;
   // signal (SIGINT, sigfun);
 
-  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:Y:K:H:X:NQ:WrlZTF01:2:345:6:7:89:E")) != -1)
+  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:Y:K:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1211,11 +1216,17 @@ main (int argc, char **argv)
           opts.call_alert = 1;
           break;
 
-        //Free'd up switches include Q,Y,z
+        //Free'd up switches include Y,z
         //make sure to put a colon : after each if they need an argument
         //or remove colon if no argument required
 
         //Disabled the Serial Port Dev and Baud Rate, etc, If somebody uses that function, sorry...
+
+        case 'k': //NXDN multi-key loader
+          strncpy(opts.key_in_file, optarg, 1023);
+          opts.key_in_file[1023] = '\0';
+          csvKeyImport(&opts, &state);
+          break;
 
         case 'Q': //'DSP' Structured Output file for OKDMRlib
         sprintf (wav_file_directory, "./DSP"); 
