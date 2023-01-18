@@ -528,7 +528,7 @@ typedef struct
   uint8_t data_conf_data[2];      //flag for confirmed data blocks per slot
   uint8_t dmr_pdu_sf[2][288];     //unified pdu 'superframe' //[slot][byte]
   uint8_t data_block_crc_valid[2][25]; //flag each individual block as good crc on confirmed data
-  char dmr_embedded_signalling[2][6][48]; //embedded signalling 2 slots by 6 vc by 48 bits (replacing TS1SuperFrame.TimeSlotRawVoiceFrame.Sync structure)
+  char dmr_embedded_signalling[2][7][48]; //embedded signalling 2 slots by 6 vc by 48 bits (replacing TS1SuperFrame.TimeSlotRawVoiceFrame.Sync structure)
 
   char dmr_cach_fragment[4][17]; //unsure of size, will need to check/verify
   int dmr_cach_counter; //counter for dmr_cach_fragments 0-3; not sure if needed yet.
@@ -872,7 +872,7 @@ int32_t GetdPmrColorCode(uint8_t ChannelCodeBit[24]);
 void BPTCDeInterleaveDMRData(uint8_t * Input, uint8_t * Output);
 uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DMRDataExtracted[96], uint8_t R[3]);
 uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDataExtracted[77]);
-uint32_t BPTC_16x2_Extract_Data(uint8_t InputInterleavedData[32], uint8_t DMRDataExtracted[32]);
+uint32_t BPTC_16x2_Extract_Data(uint8_t InputInterleavedData[32], uint8_t DMRDataExtracted[32], uint32_t ParityCheckTypeOdd);
 
 //Reed Solomon (12,9) functions
 void rs_12_9_calc_syndrome(rs_12_9_codeword_t *codeword, rs_12_9_poly_t *syndrome);
@@ -885,6 +885,9 @@ uint16_t ComputeCrcCCITT(uint8_t * DMRData);
 uint16_t ComputeCrcCCITT16d(const uint8_t buf[], uint8_t len);
 uint32_t ComputeAndCorrectFullLinkControlCrc(uint8_t * FullLinkControlDataBytes, uint32_t * CRCComputed, uint32_t CRCMask);
 uint8_t ComputeCrc5Bit(uint8_t * DMRData);
+uint16_t ComputeCrc9Bit(uint8_t * DMRData, uint32_t NbData);
+uint32_t ComputeCrc32Bit(uint8_t * DMRData, uint32_t NbData);
+
 
 //new simplified dmr functions
 void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t databurst);
@@ -920,10 +923,14 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state);
 void dmr_late_entry_mi_fragment (dsd_opts * opts, dsd_state * state, uint8_t vc, char ambe_fr[4][24], char ambe_fr2[4][24], char ambe_fr3[4][24]);
 void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state);
 
+//handle Single Burst (Voice Burst F) or Reverse Channel Signalling
+void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power);
+
 //DMR FEC/CRC from Boatbod - OP25
 bool Hamming17123(uint8_t* d);
 uint8_t crc8(uint8_t bits[], unsigned int len);
 bool crc8_ok(uint8_t bits[], unsigned int len);
+uint8_t crc7(uint8_t bits[], unsigned int len);
 
 //LFSR code courtesy of https://github.com/mattames/LFSR/
 void LFSR(dsd_state * state);

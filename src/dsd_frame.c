@@ -141,9 +141,9 @@ processFrame (dsd_opts * opts, dsd_state * state)
 
       //print manufacturer strings to branding, disabled 0x10 moto other systems can use that fid set
       //0x06 is trident, but when searching, apparently, they developed con+, but was bought by moto?
-      if (state->dmr_mfid == 0x10) ; //sprintf (state->dmr_branding, "%s", "Motorola");
-      else if (state->dmr_mfid == 0x68) sprintf (state->dmr_branding, "%s", "Hytera");
-      else if (state->dmr_mfid == 0x58) sprintf (state->dmr_branding, "%s", "Tait");
+      if (state->dmr_mfid == 0x10) ; //sprintf (state->dmr_branding, "%s",  "Motorola");
+      else if (state->dmr_mfid == 0x68) sprintf (state->dmr_branding, "%s", "  Hytera");
+      else if (state->dmr_mfid == 0x58) sprintf (state->dmr_branding, "%s", "    Tait");
       
       //disabling these due to random data decodes setting an odd mfid, could be legit, but only for that one packet?
       //or, its just a decode error somewhere

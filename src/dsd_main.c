@@ -321,8 +321,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
 
   //REMUS! multi-purpose call_string
-  sprintf (state->call_string[0], "%s", "                    "); //20 spaces
-  sprintf (state->call_string[1], "%s", "                    "); //20 spaces
+  sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+  sprintf (state->call_string[1], "%s", "                     "); //21 spaces
 
   if (time(NULL) - state->last_cc_sync_time > 30) //thirty seconds of no carrier
   {
@@ -839,8 +839,8 @@ initState (dsd_state * state)
   memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
 
   //REMUS! multi-purpose call_string
-  sprintf (state->call_string[0], "%s", "                    "); //20 spaces
-  sprintf (state->call_string[1], "%s", "                    "); //20 spaces
+  sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+  sprintf (state->call_string[1], "%s", "                     "); //21 spaces
 
   //late entry mi fragments
   memset (state->late_entry_mi_fragment, 0, sizeof (state->late_entry_mi_fragment));

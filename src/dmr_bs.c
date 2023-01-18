@@ -41,6 +41,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   uint8_t internalslot;
   uint8_t vc1;
   uint8_t vc2;
+
+  //assign as nonsensical numbers
+  uint8_t cc = 25;
+  uint8_t power = 9; //power and pre-emption indicator
+  uint8_t lcss = 9;
   
   //would be ideal to grab all dibits and break them into bits to pass to new data handler?
   uint8_t dummy_bits[196]; 
@@ -189,13 +194,13 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     syncdata[(2*i)+1] = (1 & dibit);         // bit 0
 
     //embedded link control
-    if(internalslot == 0 && vc1 > 1 && vc1 < 6) //grab on vc1 values 2-5 B C D and E
+    if(internalslot == 0 && vc1 > 1 && vc1 < 7) //grab on vc1 values 2-5 B C D and E (F for Single/RC)
     {
       state->dmr_embedded_signalling[internalslot][vc1-1][i*2]   = (1 & (dibit >> 1)); // bit 1
       state->dmr_embedded_signalling[internalslot][vc1-1][i*2+1] = (1 & dibit); // bit 0
     }
 
-    if(internalslot == 1 && vc2 > 1 && vc2 < 6) //grab on vc2 values 2-5 B C D and E
+    if(internalslot == 1 && vc2 > 1 && vc2 < 7) //grab on vc2 values 2-5 B C D and E (F for Single/RC)
     {
       state->dmr_embedded_signalling[internalslot][vc2-1][i*2]   = (1 & (dibit >> 1)); // bit 1
       state->dmr_embedded_signalling[internalslot][vc2-1][i*2+1] = (1 & dibit); // bit 0
@@ -300,9 +305,9 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if ( (strcmp (sync, DMR_BS_VOICE_SYNC) != 0) && emb_ok == 0) goto END; //fprintf (stderr, "EMB BAD? ");
     else if (emb_ok == 1)
     {
-      uint8_t cc = ((EmbeddedSignalling[0] << 3) + (EmbeddedSignalling[1] << 2) + (EmbeddedSignalling[2] << 1) + EmbeddedSignalling[3]);
-      uint8_t power = EmbeddedSignalling[4];
-      uint8_t lcss = ((EmbeddedSignalling[5] << 1) + EmbeddedSignalling[6]);
+      cc = ((EmbeddedSignalling[0] << 3) + (EmbeddedSignalling[1] << 2) + (EmbeddedSignalling[2] << 1) + EmbeddedSignalling[3]);
+      power = EmbeddedSignalling[4];
+      lcss = ((EmbeddedSignalling[5] << 1) + EmbeddedSignalling[6]);
     }
 
 
@@ -339,6 +344,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       //process embedded link control
       fprintf (stderr, "\n");
       dmr_data_burst_handler(opts, state, (uint8_t *)dummy_bits, 0xEB);
+      //check the single burst/reverse channel opportunity
+      dmr_sbrc (opts, state, power);
     }
 
     if (internalslot == 1 && vc2 == 6) 
@@ -346,6 +353,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       //process embedded link control
       fprintf (stderr, "\n");
       dmr_data_burst_handler(opts, state, (uint8_t *)dummy_bits, 0xEB);
+      //check the single burst/reverse channel opportunity
+      dmr_sbrc (opts, state, power);
     }
 
     if (opts->payload == 1) fprintf (stderr, "\n"); //extra line break necessary here
@@ -405,6 +414,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     cach_err = 1;
     tact_okay = 0;
     emb_ok = 0;
+
+    //reset emb components
+    cc = 25;
+    power = 9;
+    lcss = 9;
 
     //Extra safeguards to break loop
     // if ( (vc1 > 7 && vc2 > 7) ) goto END;
