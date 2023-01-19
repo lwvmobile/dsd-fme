@@ -183,26 +183,29 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
     if (opts->payload == 1) fprintf (stderr, " CRC EXT %02X, CRC CMP %02X", crc_extracted, crc_computed);
   }
   else crc_okay = 1; //SB
-  
-  fprintf (stderr, "\n %s", KCYN);
-  if (power == 0) fprintf (stderr, " SB: ");
-  if (power == 1) fprintf (stderr, " RC: ");
-  for(i = 0; i < 11; i++)
-  {
-    sbrc_hex = sbrc_hex << 1;
-    sbrc_hex |= sbrc_return[i] & 1; //sbrc_return
-    fprintf (stderr, "%d", sbrc_return[i]);
-  }
-  fprintf (stderr, " - %03X", sbrc_hex);
-  fprintf (stderr, "%s", KNRM);
 
-  if (crc_okay == 0)
+  if (opts->payload == 1) //hide the sb/rc behind the payload printer, won't be useful to most people right now
   {
-    fprintf (stderr, "%s", KRED);
-    fprintf (stderr, " (CRC ERR)");
+    fprintf (stderr, "\n %s", KCYN);
+    if (power == 0) fprintf (stderr, " SB: ");
+    if (power == 1) fprintf (stderr, " RC: ");
+    for(i = 0; i < 11; i++)
+    {
+      sbrc_hex = sbrc_hex << 1;
+      sbrc_hex |= sbrc_return[i] & 1; //sbrc_return
+      fprintf (stderr, "%d", sbrc_return[i]);
+    }
+    fprintf (stderr, " - %03X", sbrc_hex);
     fprintf (stderr, "%s", KNRM);
-  }
 
+    if (crc_okay == 0)
+    {
+      fprintf (stderr, "%s", KRED);
+      fprintf (stderr, " (CRC ERR)");
+      fprintf (stderr, "%s", KNRM);
+    }
+  }
+  
   //sbrc_hex value of 0x313 seems to be some Cap+ Thing, 
   //also observed 0x643 on another cap+ system (site id, status? something?)
   //I've observed it in the Private Cap+ TXI calls as well
@@ -211,58 +214,61 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   uint8_t alg = sbrc_hex & 3;
   uint16_t key = (sbrc_hex >> 3) & 0xFF;
 
-  if (irr_err != 0) fprintf (stderr, "%s (FEC ERR) %d %s", KRED, irr_err, KNRM);
-  if (irr_err == 0)
+  if (opts->payload == 1)
   {
-    if (sbrc_hex == 0) ; //NULL
-    else if (sbrc_hex == 0x313)
+    if (irr_err != 0) fprintf (stderr, "%s (FEC ERR) %d %s", KRED, irr_err, KNRM);
+    if (irr_err == 0)
     {
-      //Cap+ Thing? Observed On Cap+ Systems
-      // fprintf (stderr, " Cap+ Thing?");
-    } 
-    else
-    {
+      if (sbrc_hex == 0) ; //NULL
+      else if (sbrc_hex == 0x313)
+      {
+        //Cap+ Thing? Observed On Cap+ Systems
+        // fprintf (stderr, " Cap+ Thing?");
+      } 
+      else
+      {
 
-      if (slot == 0)
-      {
-        //key and alg only present SOME times, not all,
-        //also, intermixed with other signalling
-        //needs more study first!
-        if (state->dmr_so & 0x40 && key != 0 && state->payload_keyid == 0)
+        if (slot == 0)
         {
-          if (opts->payload == 1)
+          //key and alg only present SOME times, not all,
+          //also, intermixed with other signalling
+          //needs more study first!
+          if (state->dmr_so & 0x40 && key != 0 && state->payload_keyid == 0)
           {
-            fprintf (stderr, "%s ", KYEL);
-            fprintf (stderr, "\n Slot 1");
-            fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
-            fprintf (stderr, "%s ", KNRM);
+            if (opts->payload == 1)
+            {
+              fprintf (stderr, "%s ", KYEL);
+              fprintf (stderr, "\n Slot 1");
+              fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
+              fprintf (stderr, "%s ", KNRM);
+            }
+            
+            //needs more study before assignment
+            //state->payload_keyid = key;
+            //state->payload_algid = alg + 0x20; //assuming DMRA approved alg values (moto patent)
           }
-          
-          //needs more study before assignment
-          //state->payload_keyid = key;
-          //state->payload_algid = alg + 0x20; //assuming DMRA approved alg values (moto patent)
         }
-      }
-      if (slot == 1)
-      {
-        if (state->dmr_soR & 0x40 && key != 0 && state->payload_keyidR == 0)
+        if (slot == 1)
         {
-          if (opts->payload == 1)
+          if (state->dmr_soR & 0x40 && key != 0 && state->payload_keyidR == 0)
           {
-            fprintf (stderr, "%s ", KYEL);
-            fprintf (stderr, "\n Slot 2");
-            fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
-            fprintf (stderr, "%s ", KNRM);
+            if (opts->payload == 1)
+            {
+              fprintf (stderr, "%s ", KYEL);
+              fprintf (stderr, "\n Slot 2");
+              fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
+              fprintf (stderr, "%s ", KNRM);
+            }
+            
+            //needs more study before assignment
+            //state->payload_keyidR = key;
+            //state->payload_algidR = alg + 0x20; //assuming DMRA approved alg values (moto patent)
           }
-          
-          //needs more study before assignment
-          //state->payload_keyidR = key;
-          //state->payload_algidR = alg + 0x20; //assuming DMRA approved alg values (moto patent)
         }
+
       }
 
     }
-
   }
 
   SBRC_END:
