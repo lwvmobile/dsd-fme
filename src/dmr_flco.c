@@ -53,7 +53,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   }
 
   
-  if (IrrecoverableErrors == 0)
+  if (IrrecoverableErrors == 0 && CRCCorrect == 1)
   {
     //Embedded Talker Alias Header Only (format and len storage)
     if (type == 3 && flco == 0x04) 
@@ -90,7 +90,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
   //will want to continue to observe for different flco and fid combinations to find out their meaning
   //Standard Addressing/Cap+ Addressing (trying to avoid embedded alias and gps, etc)
-  if(IrrecoverableErrors == 0 && is_alias == 0 && is_gps == 0) 
+  if(IrrecoverableErrors == 0 && is_alias == 0 && is_gps == 0 && CRCCorrect == 1) 
   {
     //set overarching manufacturer in use when non-standard feature id set is up
     //may not want to set moto 0x10 here either, lots of radios use that set as well

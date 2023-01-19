@@ -210,8 +210,6 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     //debug print
     //fprintf (stderr, " RAS? %X - %d %d %d", BPTCReservedBits, R[0], R[1], R[2]); 
 
-    //set the 'RAS Flag'
-    if (BPTCReservedBits != 0) is_ras = 1; //!=0, or == 0x4
 
     /* Convert the 96 bits BPTC data into 12 bytes */
     k = 0;
@@ -252,7 +250,17 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       CRCComputed = ComputeCrcCCITT(BPTCDmrDataBit); 
       if (CRCComputed == CRCExtracted) CRCCorrect = 1;
       else CRCCorrect = 0;
-    } 
+    }
+
+    //set the 'RAS Flag', if no irrecoverable errors but bad crc
+    if (CRCCorrect == 0 && IrrecoverableErrors == 0 && BPTCReservedBits == 4) is_ras = 1; //!=0, or == 0x4, or just R[2] == 1
+
+    //make sure the system type isn't Hytera, but could just be bad decodes on bad sample
+    if (BPTCDmrDataByte[1] == 0x68) is_ras = 0;
+
+    //if this is a RAS system, set the CRC to okay if irrecoverable errors is okay
+    //if we don't do this, then we can't view some data (CSBKs on RAS enabled systems) 
+    if (is_ras == 1) CRCCorrect = 1;
 
     if (databurst == 0x04 || databurst == 0x06) //MBC Header, Data Header
     {
@@ -444,10 +452,11 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   if (databurst == 0x05) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 2);
 
   //print whether or not the 'RAS Field' bits are set to indicate RAS enabled (to be verified)
-  if (IrrecoverableErrors == 0 && is_ras == 1)
+  if (is_ras == 1)
   {
     fprintf (stderr, "%s", KRED);
-    fprintf (stderr, " RAS ");
+    fprintf (stderr, " CRC/RAS ");
+    //the value of this field seems to always, or usually, be 4, or just R[2] bit is set
     if (opts->payload == 1) fprintf (stderr, "%X ", BPTCReservedBits);
     fprintf (stderr, "%s", KNRM);
   }
