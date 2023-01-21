@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Lite' Edition v2.0.0-20-gd2d750e Windows 32-bit RC2b  "
+  " 'Lite' Edition v2.0.0-21-gbb5da93 Windows 32-bit RC2c  "
 };
 
 int
@@ -967,9 +967,8 @@ usage ()
   //printf ("                 (4 Level, not 8 Level LSM) (this is honestly unknown since I can't verify what local systems are using)\n");
   printf ("  -F            Relax P25 Phase 2 MAC_SIGNAL CRC Checksum Pass/Fail\n");
   printf ("                 Use this feature to allow MAC_SIGNAL even if CRC errors.\n");
-  printf ("  -F            Relax DMR CACH/Burst FEC Pass/Fail - Passive Frame Sync\n");
-  printf ("                 Use if skipping occurs, but may cause wonky audio due to loss of good sync\n");
-  
+  printf ("  -F            Relax DMR CACH/Burst FEC or RAS/CRC CSBK Pass/Fail\n");
+  printf ("                 Enabling on some systems could lead to bad voice/data decoding if bad or marginal signal\n");
   printf ("\n");
   printf ("  -K <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)\n");
   printf ("\n");
@@ -1535,7 +1534,7 @@ main (int argc, char **argv)
           fprintf (stderr, "%s", KYEL);
           //fprintf (stderr,"DMR Stereo Aggressive Resync Disabled!\n");
           fprintf (stderr, "Relax P25 Phase 2 MAC_SIGNAL CRC Checksum Pass/Fail\n");
-          fprintf (stderr, "Relax DMR CACH/Burst FEC Pass/Fail\n");
+          fprintf (stderr, "Relax DMR CACH/Burst FEC or RAS/CRC CSBK Pass/Fail\n");
           fprintf (stderr, "%s", KNRM);
           break;
 

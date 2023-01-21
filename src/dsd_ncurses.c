@@ -2053,7 +2053,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-20-gd2d750e RC2b");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-21-gbb5da93 RC2c");
   }
   if (opts->ncurses_compact == 0)
   {
@@ -2064,8 +2064,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4) printw (" MBElib %s", versionstr);
-      if (i == 5) printw (" %s ", "Win32 RC2b"); //printw (" %s \n", GIT_TAG);
-      if (i == 6) printw (" %s \n", "v2.0.0-20-gd2d750e"); //printw (" %s \n", GIT_TAG);
+      if (i == 5) printw (" %s ", "Win32 RC2c"); //printw (" %s \n", GIT_TAG);
+      if (i == 6) printw (" %s \n", "v2.0.0-21-gbb5da93"); //printw (" %s \n", GIT_TAG);
       else printw ("\n");
     }
     attroff(COLOR_PAIR(6)); //6
@@ -3252,6 +3252,38 @@ if (opts->p25_trunk == 1 && c == 103) //'g' key, toggle tune group calls
 {
   if (opts->trunk_tune_group_calls == 1) opts->trunk_tune_group_calls = 0;
   else opts->trunk_tune_group_calls = 1; 
+}
+
+if (c == 70) //'F' key - toggle agressive sync/crc failure/ras 
+{
+  if (opts->aggressive_framesync == 0) opts->aggressive_framesync = 1;
+  else opts->aggressive_framesync = 0;
+}
+
+if (c == 68) //'D' key - Reset DMR Site Parms/Call Strings, etc.
+{
+  //dmr trunking/ncurses stuff 
+  state->dmr_rest_channel = -1; //init on -1
+  state->dmr_mfid = -1; //
+
+  //dmr mfid branding and site parms
+  sprintf(state->dmr_branding_sub, "%s", "");
+  sprintf(state->dmr_branding, "%s", "");
+  sprintf (state->dmr_site_parms, "%s", "");
+
+  //DMR Location Area - DMRLA B***S***
+  opts->dmr_dmrla_is_set = 0;
+  opts->dmr_dmrla_n = 0;
+
+}
+
+//Debug/Troubleshooting Option
+if (c == 90) //'Z' key - Simulate NoCarrier/No VC/CC sync to zero out more stuff (capital Z)
+{
+  // opts->p25_is_tuned = 0;
+  state->last_cc_sync_time = 0;
+  state->last_vc_sync_time = 0;
+  noCarrier(opts, state);
 }
 
  //anything with an entry box will need the inputs and outputs stopped first

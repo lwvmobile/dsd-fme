@@ -46,6 +46,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   uint8_t  R[3];
   uint8_t  BPTCReservedBits = 0;
   uint8_t  is_ras = 0;
+  uint8_t  crc_original_validity = 0;
 
   uint32_t crcmask = 0; 
   uint8_t  crclen = 0;
@@ -156,6 +157,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       break;
     //special types (not real data 'sync' bursts)
     case 0xEB: //Embedded Signalling
+      crclen = 5;
       is_emb = 1;
       pdu_len = 9;
       break;
@@ -252,15 +254,19 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       else CRCCorrect = 0;
     }
 
-    //set the 'RAS Flag', if no irrecoverable errors but bad crc
-    if (CRCCorrect == 0 && IrrecoverableErrors == 0 && BPTCReservedBits == 4) is_ras = 1; //!=0, or == 0x4, or just R[2] == 1
+    //set the 'RAS Flag', if no irrecoverable errors but bad crc, only when enabled by user (to prevent a lot of bad data CSBKs)
+    if (opts->aggressive_framesync == 0 && CRCCorrect == 0 && IrrecoverableErrors == 0 && BPTCReservedBits == 4) is_ras = 1; //!=0, or == 0x4, or just R[2] == 1
 
     //make sure the system type isn't Hytera, but could just be bad decodes on bad sample
     if (BPTCDmrDataByte[1] == 0x68) is_ras = 0;
 
     //if this is a RAS system, set the CRC to okay if irrecoverable errors is okay
     //if we don't do this, then we can't view some data (CSBKs on RAS enabled systems) 
-    if (is_ras == 1) CRCCorrect = 1;
+    if (is_ras == 1)
+    {
+      crc_original_validity = CRCCorrect;
+      CRCCorrect = 1;
+    } 
 
     if (databurst == 0x04 || databurst == 0x06) //MBC Header, Data Header
     {
@@ -330,11 +336,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     IrrecoverableErrors = BPTC_128x77_Extract_Data(BptcDataMatrix, LC_DataBit);
 
     /* Reconstitute the 5 bit CRC */
-    CRCExtracted  = (LC_DataBit[72] & 1) << 4;
-    CRCExtracted |= (LC_DataBit[73] & 1) << 3;
-    CRCExtracted |= (LC_DataBit[74] & 1) << 2;
-    CRCExtracted |= (LC_DataBit[75] & 1) << 1;
-    CRCExtracted |= (LC_DataBit[76] & 1) << 0;
+    CRCExtracted = (uint32_t)ConvertBitIntoBytes(&LC_DataBit[72], 5);
 
     /* Compute the 5 bit CRC */
     CRCComputed = ComputeCrc5Bit(LC_DataBit);
@@ -451,13 +453,41 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   } 
   if (databurst == 0x05) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 2);
 
+  //set the original CRCCorrect back to its original value if the RAS flag was tripped
+  if (is_ras == 1) CRCCorrect = crc_original_validity;
+
+  //start printing relevant fec/crc/ras messages, don't print on idle or MBC continuation blocks (handled in dmr_block.c)
+  if (CRCCorrect == 1 && databurst != 0x09 && databurst != 0x05) ; //fprintf(stderr, "(CRC OK)");
+
+  if (IrrecoverableErrors == 0 && CRCCorrect == 0 && databurst != 0x09 && databurst != 0x05)
+  {
+    fprintf (stderr, "%s", KYEL);
+    fprintf(stderr, " (FEC OK)");
+    fprintf (stderr, "%s", KNRM);
+
+  } 
+
+  if (IrrecoverableErrors != 0 && databurst != 0x09 && databurst != 0x05)
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf(stderr, " (FEC ERR)");
+    fprintf (stderr, "%s", KNRM);
+  } 
+
   //print whether or not the 'RAS Field' bits are set to indicate RAS enabled (to be verified)
   if (is_ras == 1)
   {
     fprintf (stderr, "%s", KRED);
-    fprintf (stderr, " CRC/RAS ");
+    fprintf (stderr, " -RAS ");
     //the value of this field seems to always, or usually, be 4, or just R[2] bit is set
     if (opts->payload == 1) fprintf (stderr, "%X ", BPTCReservedBits);
+    fprintf (stderr, "%s", KNRM);
+  }
+  
+  if (CRCCorrect == 0 && databurst != 0x09 && databurst != 0x05)
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, " (CRC ERR) ");
     fprintf (stderr, "%s", KNRM);
   }
 

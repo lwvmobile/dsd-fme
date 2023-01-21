@@ -247,11 +247,11 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
   fprintf (stderr, "%s ", KNRM);
 
   //let user know the data header may have errors
-  fprintf (stderr, "%s", KRED);
-  if (CRCCorrect == 1) ; //CRCCorrect 1 is good, else is bad CRC; no print on good
-  else if(IrrecoverableErrors == 0) fprintf(stderr, " (FEC OK)");
-  else fprintf(stderr, " (FEC/CRC ERR)");
-  fprintf (stderr, "%s", KNRM);
+  // fprintf (stderr, "%s", KRED);
+  // if (CRCCorrect == 1) ; //CRCCorrect 1 is good, else is bad CRC; no print on good
+  // else if(IrrecoverableErrors == 0) fprintf(stderr, " (FEC OK)");
+  // else fprintf(stderr, " (FEC/CRC ERR)");
+  // fprintf (stderr, "%s", KNRM);
 
 }
 
@@ -386,6 +386,12 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
       {
         CRCCorrect = 1;
         IrrecoverableErrors = 0;
+      }
+      else
+      {
+        fprintf (stderr, "%s", KRED);
+        fprintf(stderr, " (CRC ERR)");
+        fprintf (stderr, "%s", KNRM);
       }
 
       //cspdu will only act on any fid/opcodes if good CRC to prevent falsing on control signalling
