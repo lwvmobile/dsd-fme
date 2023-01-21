@@ -740,7 +740,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     fprintf (stderr,"%s ", getTime());
     fprintf (stderr,"Sync:  DMR                  ");
     fprintf (stderr, "%s", KRED);
-    fprintf (stderr, "| VOICE TACT/SYNC ERR");
+    fprintf (stderr, "| VOICE CACH/SYNC ERR");
     fprintf (stderr, "%s", KNRM);
     //run LFSR if either slot had an active MI in it.
     if (state->payload_algid >= 0x21)

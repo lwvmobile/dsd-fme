@@ -186,6 +186,22 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   sync[24] = 0;
 
+  //test for RC sync pattern in MS sourced audio
+  if ( strcmp (sync, DMR_RC_DATA_SYNC) == 0)
+  {
+    state->dmr_ms_rc = 1;
+    fprintf (stderr, "%s ", getTime());
+    if (opts->inverted_dmr == 0)
+    {
+      fprintf (stderr,"Sync: +DMR MS/DM MODE/MONO ");
+    }
+    else fprintf (stderr,"Sync: -DMR MS/DM MODE/MONO ");
+
+    fprintf (stderr, "| RC ");
+    fprintf (stderr, "\n");
+
+  }
+
   for(i = 0; i < 8; i++) EmbeddedSignalling[i] = syncdata[i];
   for(i = 0; i < 8; i++) EmbeddedSignalling[i + 8] = syncdata[i + 40];
   
@@ -264,19 +280,22 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   memcpy (m2, ambe_fr2, sizeof(m2));
   memcpy (m3, ambe_fr3, sizeof(m3));
 
-  if (state->directmode == 0)
+  if (state->dmr_ms_rc == 0)
   {
-    processMbeFrame (opts, state, NULL, ambe_fr, NULL);
-    processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
-    processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+    if (state->directmode == 0)
+    {
+      processMbeFrame (opts, state, NULL, ambe_fr, NULL);
+      processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+      processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+    }
+    else
+    {
+      processMbeFrame (opts, state, NULL, ambe_fr4, NULL); //play duplicate of 2 here to smooth audio on tdma direct
+      processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+      processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+    }
   }
-  else
-  {
-    processMbeFrame (opts, state, NULL, ambe_fr4, NULL); //play duplicate of 2 here to smooth audio on tdma direct
-    processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
-    processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
-  }
-
+  
   if (vc == 6)
   {
     dmr_data_burst_handler(opts, state, (uint8_t *)dummy_bits, 0xEB);

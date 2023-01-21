@@ -42,18 +42,18 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   source = (uint32_t)ConvertBitIntoBytes(&lc_bits[48], 24);
 
   //look for Cap+ on VLC header, then set source and/or rest channel appropriately
-  if (type == 1 && fid == 0x10 && (flco == 0x04 || flco == 0x07) ) //0x07 appears to be a cap+ txi private call
+  if (IrrecoverableErrors == 0 && type == 1 && fid == 0x10 && (flco == 0x04 || flco == 0x07) ) //0x07 appears to be a cap+ txi private call
   {
     is_cap_plus = 1;
     capsite = (uint8_t)ConvertBitIntoBytes(&lc_bits[48], 4); //can't verify, just speculating
     restchannel = (int)ConvertBitIntoBytes(&lc_bits[52], 4); //was 48,8
     source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16);
-    sprintf (state->dmr_branding, "%s", "Motorola");
-    sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
+    // sprintf (state->dmr_branding, "%s", "Motorola");
+    // sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
   }
 
   
-  if (IrrecoverableErrors == 0 && CRCCorrect == 1)
+  if (IrrecoverableErrors == 0)
   {
     //Embedded Talker Alias Header Only (format and len storage)
     if (type == 3 && flco == 0x04) 
@@ -90,7 +90,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
   //will want to continue to observe for different flco and fid combinations to find out their meaning
   //Standard Addressing/Cap+ Addressing (trying to avoid embedded alias and gps, etc)
-  if(IrrecoverableErrors == 0 && is_alias == 0 && is_gps == 0 && CRCCorrect == 1) 
+  if(IrrecoverableErrors == 0 && is_alias == 0 && is_gps == 0) 
   {
     //set overarching manufacturer in use when non-standard feature id set is up
     //may not want to set moto 0x10 here either, lots of radios use that set as well
@@ -273,10 +273,10 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     
     fprintf(stderr, "Call ");
     
-    fprintf (stderr, "%s", KRED);
-    if (CRCCorrect == 1) ; //CRCCorrect 1 is good, else is bad CRC; no print on good
-    else if(IrrecoverableErrors == 0) ; //fprintf(stderr, "(FEC OK)");
-    else fprintf(stderr, "(FEC/CRC ERR) ");
+    // fprintf (stderr, "%s", KRED);
+    // if (CRCCorrect == 1) ; //fprintf(stderr, "(CRC OK)"); //CRCCorrect 1 is good, else is bad CRC; no print on good
+    // else if(IrrecoverableErrors == 0) ; //fprintf(stderr, "(FEC OK)");
+    // else fprintf(stderr, "(FEC ERR) ");
 
     //check Cap+ rest channel info if available and good fec
     if (is_cap_plus == 1)
@@ -320,6 +320,16 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     } 
     
   }
+
+  if(IrrecoverableErrors != 0)
+  {
+    if (type != 3) fprintf (stderr, "\n");
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, " SLOT %d", state->currentslot+1);
+    fprintf (stderr, " FLCO FEC ERR ");
+    fprintf (stderr, "%s", KNRM);
+  }
+
 
 }
 
@@ -626,18 +636,20 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     fprintf (stderr, " SLCO Activity Update TS1: %X Hash: %02X TS2: %X Hash: %02X", ts1_act, ts1_hash, ts2_act, ts2_hash); //102 361-2 7.1.3.2 
   else if (slco == 0x9)
   {
-    state->dmr_mfid = 0x10;
-    sprintf (state->dmr_branding, "%s", "Motorola");
-    sprintf (state->dmr_branding_sub, "%s", "Con+ ");
+    //remove all setting of branding/sub from SLCO, can cause false positives even with seeming good CRC
+    
+    // state->dmr_mfid = 0x10;
+    // sprintf (state->dmr_branding, "%s", "Motorola"); 
+    // sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Voice Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
     sprintf (state->dmr_site_parms, "%d-%d ", con_netid, con_siteid);
   }
     
   else if (slco == 0xA)
   {
-    state->dmr_mfid = 0x10;
-    sprintf (state->dmr_branding, "%s", "Motorola");
-    sprintf (state->dmr_branding_sub, "%s", "Con+ ");
+    // state->dmr_mfid = 0x10;
+    // sprintf (state->dmr_branding, "%s", "Motorola");
+    // sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Control Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
     sprintf (state->dmr_site_parms, "%d-%d ", con_netid, con_siteid);
 
@@ -651,11 +663,11 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
    
   else if (slco == 0xF)
   {
-    state->dmr_mfid = 0x10;
-    sprintf (state->dmr_branding, "%s", "Motorola");
-    sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
+    // state->dmr_mfid = 0x10;
+    // sprintf (state->dmr_branding, "%s", "Motorola");
+    // sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
     fprintf (stderr, " SLCO Capacity Plus Site: %d - Rest Channel %d - RS: %02X", capsite+1, restchannel, cap_reserved);
-    state->dmr_rest_channel = restchannel;
+    // state->dmr_rest_channel = restchannel; //test without, may work better
     //assign to cc freq if available
     if (state->trunk_chan_map[restchannel] != 0)
     {
@@ -663,7 +675,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     }
 
     //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-    sprintf(state->dmr_site_parms, "%s", "");
+    // sprintf(state->dmr_site_parms, "%s", "");
   }
     
   else fprintf (stderr, " SLCO Unknown - %d ", slco);

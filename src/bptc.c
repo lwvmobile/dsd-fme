@@ -199,18 +199,10 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DM
     }
   }
 
-  /* R(0) to R(2) may be used to transport some
-   * Restricted Access System (RAS) information,
-   * So save these three bytes before reset all of them
-   * See patent US 2013/0288643 A1 */
-  R[0] = DataMatrix[0][2]; /* Save R(0) */
-  R[1] = DataMatrix[0][1]; /* Save R(1) */
-  R[2] = DataMatrix[0][0]; /* Save R(2) */
-
   /* Set to 0 R(0) to R(2) - See DMR standard chapter B1.1 BPTC (196,96) */
-  DataMatrix[0][0] = 0; /* R(2) */
-  DataMatrix[0][1] = 0; /* R(1) */
-  DataMatrix[0][2] = 0; /* R(0) */
+  // DataMatrix[0][0] = 0; /* R(2) */
+  // DataMatrix[0][1] = 0; /* R(1) */
+  // DataMatrix[0][2] = 0; /* R(0) */
 
   /* Init the Hamming (15,11,3) library
    * Not needed because it has already been done
@@ -362,6 +354,14 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DM
       k++;
     }
   }
+
+  /* R(0) to R(2) may be used to transport some
+   * Restricted Access System (RAS) information,
+   * So save these three bits after hamming correction
+   * See patent US 2013/0288643 A1 */
+  R[0] = DataMatrix[0][2]; /* Save R(0) */
+  R[1] = DataMatrix[0][1]; /* Save R(1) */
+  R[2] = DataMatrix[0][0]; /* Save R(2) */
 
   /* Return the number of irrecoverable Hamming errors */
   return HammingIrrecoverableErrorNb;

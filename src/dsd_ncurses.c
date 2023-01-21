@@ -3222,6 +3222,38 @@ if (opts->p25_trunk == 1 && c == 103) //'g' key, toggle tune group calls
   else opts->trunk_tune_group_calls = 1; 
 }
 
+if (c == 70) //'F' key - toggle agressive sync/crc failure/ras 
+{
+  if (opts->aggressive_framesync == 0) opts->aggressive_framesync = 1;
+  else opts->aggressive_framesync = 0;
+}
+
+if (c == 68) //'D' key - Reset DMR Site Parms/Call Strings, etc.
+{
+  //dmr trunking/ncurses stuff 
+  state->dmr_rest_channel = -1; //init on -1
+  state->dmr_mfid = -1; //
+
+  //dmr mfid branding and site parms
+  sprintf(state->dmr_branding_sub, "%s", "");
+  sprintf(state->dmr_branding, "%s", "");
+  sprintf (state->dmr_site_parms, "%s", "");
+
+  //DMR Location Area - DMRLA B***S***
+  opts->dmr_dmrla_is_set = 0;
+  opts->dmr_dmrla_n = 0;
+
+}
+
+//Debug/Troubleshooting Option
+if (c == 90) //'Z' key - Simulate NoCarrier/No VC/CC sync to zero out more stuff (capital Z)
+{
+  // opts->p25_is_tuned = 0;
+  state->last_cc_sync_time = 0;
+  state->last_vc_sync_time = 0;
+  noCarrier(opts, state);
+}
+
  //anything with an entry box will need the inputs and outputs stopped first
  //so probably just write a function to handle c input, and when c = certain values 
  //needing an entry box, then stop all of those

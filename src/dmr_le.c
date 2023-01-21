@@ -180,7 +180,6 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
     crc_extracted = crc_extracted ^ 0x7A;
     crc_computed = crc7((uint8_t *) sbrc_return, 11);
     if (crc_extracted == crc_computed) crc_okay = 1;
-    if (opts->payload == 1) fprintf (stderr, " CRC EXT %02X, CRC CMP %02X", crc_extracted, crc_computed);
   }
   else crc_okay = 1; //SB
 
@@ -203,6 +202,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
       fprintf (stderr, "%s", KRED);
       fprintf (stderr, " (CRC ERR)");
       fprintf (stderr, "%s", KNRM);
+      if (opts->payload == 1) fprintf (stderr, " CRC EXT %02X, CRC CMP %02X", crc_extracted, crc_computed);
     }
   }
   
