@@ -31,6 +31,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   int is_alias = 0;
   int is_gps = 0;
   uint8_t slot = state->currentslot;
+  uint8_t unk = 0; //flag for unknown FLCO + FID combo
 
   
   pf = (uint8_t)(lc_bits[0]); //Protect Flag
@@ -52,38 +53,55 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     // sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
   }
 
-  
+
   if (IrrecoverableErrors == 0)
   {
     //Embedded Talker Alias Header Only (format and len storage)
-    if (type == 3 && flco == 0x04) 
+    if (fid == 0 && type == 3 && flco == 0x04) 
     {
       dmr_embedded_alias_header(opts, state, lc_bits);
     }
 
     //Embedded Talker Alias Header (continuation) and Blocks
-    if (type == 3 && flco > 0x3 && flco < 0x08) 
+    if (fid == 0 && type == 3 && flco > 0x3 && flco < 0x08) 
     {
       is_alias = 1;
       dmr_embedded_alias_blocks(opts, state, lc_bits);
     }
 
     //Embedded GPS
-    if (type == 3 && flco == 0x08)
+    if (fid == 0 && type == 3 && flco == 0x08)
     {
       is_gps = 1;
-      if (fid == 0) dmr_embedded_gps(opts, state, lc_bits); //issues with fid 0x10 and flco 0x08
+      dmr_embedded_gps(opts, state, lc_bits);
+    }
 
-      //NOTE: fid 0x10 and flco 0x08 produces a lot of 'zero' lat or lon values, I don't believe this is embedded gps
+    //Unknown CapMax Things
+    if (fid == 0x10 && (flco == 0x08 || flco == 0x10) )
+    {
+      //NOTE: fid 0x10 and flco 0x08 produces a lot of 'zero' bytes, rid users refer to receiving 'ten' 'elevens'? C0 and C1?
       //this has been observed to happen often on CapMax systems, so I believe it could be some CapMax 'thing'
       //Unknown Link Control - FLCO=0x08 FID=0x10 SVC=0xC1 or FLCO=0x08 FID=0x10 SVC=0xC0 <-- have the enc bit set on svc, but these calls aren't enc?
-      //is this an encrypted embedded link control?
-      else
-      {
-        fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Slot %d Unknown EMB LC - FLCO=0x%02X FID=0x%02X SVC=0x%02X ", slot+1, flco, fid, so);
-        fprintf (stderr, "%s", KNRM);
-      } 
+      //flco 0x10 has also been observed lately with similar svc bits, but the tg and src values don't match the vlc/tlc
+      if (type == 1) fprintf (stderr, "%s \n", KRED);
+      if (type == 2) fprintf (stderr, "%s \n", KRED);
+      if (type == 3) fprintf (stderr, "%s", KRED);
+      fprintf (stderr, " SLOT %d", state->currentslot+1);
+      fprintf (stderr, " CapMax?");
+      unk = 1;
+      goto END_FLCO;
+    }
+
+    //unknown other manufacturer or OTA ENC, etc.
+    if (fid != 0 && fid != 0x58 && fid != 0x68 && fid != 0x10)
+    {
+      if (type == 1) fprintf (stderr, "%s \n", KRED);
+      if (type == 2) fprintf (stderr, "%s \n", KRED);
+      if (type == 3) fprintf (stderr, "%s", KRED);
+      fprintf (stderr, " SLOT %d", state->currentslot+1);
+      fprintf (stderr, " Unknown LC ");
+      unk = 1;
+      goto END_FLCO;
     }
 
   }  
@@ -320,6 +338,13 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     } 
     
   }
+
+  END_FLCO:
+  if (unk == 1)
+  {
+    fprintf(stderr, " FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
+    fprintf (stderr, "%s", KNRM);
+  } 
 
   if(IrrecoverableErrors != 0)
   {
