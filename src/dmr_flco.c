@@ -42,6 +42,17 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   target = (uint32_t)ConvertBitIntoBytes(&lc_bits[24], 24); //Target or Talk Group
   source = (uint32_t)ConvertBitIntoBytes(&lc_bits[48], 24);
 
+  //check protect flag
+  if (pf == 1)
+  {
+    if (type == 1) fprintf (stderr, "%s \n", KRED);
+    if (type == 2) fprintf (stderr, "%s \n", KRED);
+    if (type == 3) fprintf (stderr, "%s", KRED);
+    fprintf (stderr, " SLOT %d", state->currentslot+1);
+    fprintf (stderr, " Protected LC ");
+    goto END_FLCO; 
+  } 
+
   //look for Cap+ on VLC header, then set source and/or rest channel appropriately
   if (IrrecoverableErrors == 0 && type == 1 && fid == 0x10 && (flco == 0x04 || flco == 0x07) ) //0x07 appears to be a cap+ txi private call
   {
@@ -340,11 +351,11 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   }
 
   END_FLCO:
-  if (unk == 1)
+  if (unk == 1 || pf == 1)
   {
     fprintf(stderr, " FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
     fprintf (stderr, "%s", KNRM);
-  } 
+  }
 
   if(IrrecoverableErrors != 0)
   {
