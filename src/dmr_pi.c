@@ -29,7 +29,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
       {
         fprintf (stderr, "%s ", KYEL);
         fprintf (stderr, "\n Slot 1");
-        fprintf (stderr, " DMR PI Header ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algid, state->payload_keyid, state->payload_mi);
+        fprintf (stderr, " DMR PI H- ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algid, state->payload_keyid, state->payload_mi);
         fprintf (stderr, "%s ", KNRM);
       }
 
@@ -57,7 +57,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
       {
         fprintf (stderr, "%s ", KYEL);
         fprintf (stderr, "\n Slot 2");
-        fprintf (stderr, " DMR PI Header ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algidR, state->payload_keyidR, state->payload_miR);
+        fprintf (stderr, " DMR PI H- ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algidR, state->payload_keyidR, state->payload_miR);
         fprintf (stderr, "%s ", KNRM);
       }
 
@@ -73,21 +73,6 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
     }
   }
   
-
-  if((IrrecoverableErrors == 0) && CRCCorrect)
-  {
-    //fprintf (stderr, " (PI CRC Okay)");
-  }
-  else if((IrrecoverableErrors == 0))
-  {
-    //fprintf (stderr, " (PI FEC Okay)");
-  }
-  else {
-    fprintf (stderr, "%s", KRED);
-    fprintf (stderr, (" (PI FEC ERR)"));
-    fprintf (stderr, "%s ", KNRM);
-  }
-
 }
 
 void LFSR(dsd_state * state)
@@ -114,7 +99,7 @@ void LFSR(dsd_state * state)
     {
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot 1");
-      fprintf (stderr, " DMR PI Continuation ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
+      fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
       fprintf(stderr, " Next MI: 0x%08X", lfsr);
       fprintf (stderr, "%s", KNRM);
     }
@@ -127,7 +112,7 @@ void LFSR(dsd_state * state)
     {
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot 2");
-      fprintf (stderr, " DMR PI Continuation ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algidR, state->payload_keyidR);
+      fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algidR, state->payload_keyidR);
       fprintf(stderr, " Next MI: 0x%08X", lfsr);
       fprintf (stderr, "%s", KNRM);
     }
