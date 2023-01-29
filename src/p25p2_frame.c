@@ -846,6 +846,16 @@ void processP2 (dsd_opts * opts, dsd_state * state)
 	//process DUID will run through all collected frames and handle them appropriately
   process_P2_DUID (opts, state);
 	state->dmr_stereo = 0; 
-	state->p2_is_lcch = 0; 
+	state->p2_is_lcch = 0;
+
+	//bugfix for OSS dmrbust 16 shim, reset both to 0 upon exit
+	//in case or marginal signal and both get stuck on 16, indefinitely muting the non-preferred slot
+	//but...this can also cause at least one 4v/2v to get through on the other slot if the sync lines up that way
+	if (opts->audio_out_type == 5)
+	{
+		//set both to blank value
+		state->dmrburstL = 17;
+		state->dmrburstR = 17;
+	}
   fprintf (stderr, "\n"); 
 }
