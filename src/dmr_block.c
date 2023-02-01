@@ -51,7 +51,14 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
 
     if ( (state->data_header_format[slot] & 0xF) ==  0xD) //DD_HEAD
     {
-      state->data_conf_data[slot] = 0; 
+      //The Response Requested (A) information element of the header shall be set to 0 for unconfirmed data and shall be set
+      //to 1 for confirmed data. ETSI TS 102 361-3 V1.2.1 (2013-07) - 6.1.2
+      if ( (state->data_header_format[slot] & 0x40) == 0x40 && state->data_p_head[slot] == 0) //check response req bit
+      {
+        state->data_conf_data[slot] = 1; 
+      }
+      else state->data_conf_data[slot] = 0;
+
       state->data_header_padding[slot] = dheader[7] & 0xF;
       state->data_header_blocks[slot] = ( (dheader[0] & 0x30) | ((dheader[1] & 0xF) >> 0) ); //what a pain MSB | LSB
       fprintf (stderr, "\n  Short Data - Defined: DPF %01X - SAP %02X - Appended Blocks %02X - Padding Bits %02X",
@@ -61,7 +68,14 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_
 
     if ( (state->data_header_format[slot] & 0xF) ==  0xE) //SP_HEAD or R_HEAD
     {
-      state->data_conf_data[slot] = 0; 
+      //The Response Requested (A) information element of the header shall be set to 0 for unconfirmed data and shall be set
+      //to 1 for confirmed data. ETSI TS 102 361-3 V1.2.1 (2013-07) - 6.2.2
+      if ( (state->data_header_format[slot] & 0x40) == 0x40 && state->data_p_head[slot] == 0) //check response req bit
+      {
+        state->data_conf_data[slot] = 1; 
+      }
+      else state->data_conf_data[slot] = 0;
+
       state->data_header_padding[slot] = dheader[7] & 0xF;
       state->data_header_blocks[slot] = ( (dheader[0] & 0x30) | ((dheader[1] & 0xF) >> 0) ); 
       fprintf (stderr, "\n  Short Data - Raw or Precoded: DPF %01X - SAP %02X - Appended Blocks %02X - Padding Bits %02X",
@@ -261,16 +275,17 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   int i, j, k;
   uint8_t lb = 0; //mbc last block
   uint8_t pf = 0; //mbc protect flag
-  uint8_t is_conf_data = 0; //internal flag to see if type 1 blocks contain confirmed data crcs and serials
+  // uint8_t is_conf_data = 0; //internal flag to see if type 1 blocks contain confirmed data crcs and serials
   uint8_t slot = state->currentslot; 
   int blocks; 
   uint8_t blockcounter = state->data_block_counter[slot];
+  uint8_t block_num = state->data_header_blocks[slot];
 
   //crc specific variables
-  uint8_t len = 24; //len of completed message needing crc32 number of blocks*block_len - 12? 
-  uint8_t crclen = 32; //len of the crc32 (obviously)
-  uint8_t start = 12; //starting position (+12 offset loaded up data header)
-  uint8_t n = 12; //number of bytes per block
+  // uint8_t len = 24; 
+  // uint8_t crclen = 32; //len of the crc32 (obviously)
+  // uint8_t start = 12; //starting position (+12 offset loaded up data header)
+  // uint8_t n = 12; //number of bytes per block
 
   //TODO: CRC check on Header, Blocks and full frames as appropriate
   uint32_t CRCCorrect = 0;
@@ -278,7 +293,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   uint32_t CRCExtracted = 0;
   uint32_t IrrecoverableErrors = 0; 
 
-  uint8_t dmr_pdu_sf_bits[18*8*8]; //8 blocks at 18 bytes at 8 bits //just a large value to have plenty storage space
+  uint8_t dmr_pdu_sf_bits[8*8*50]; //give plenty of space so we don't go oob
 
   //MBC Header and Block CRC
   uint8_t mbc_crc_good[2]; //header and blocks crc pass/fail local storage
@@ -293,7 +308,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   if (block_len == 0) block_len = 18;
   if (block_len > 24) block_len = 24;
 
-  //TODO: add CRC/FEC validation to each data header and each confirmed data block as well - type 1
+  //WIP: CRC32 on Completed Message Working! CRC9 on 3/4 Working! CRC9 or 1/2 and 1 still need testing - type 1
+  //may/will still fail on p_head data and blocks
   if (type == 1)
   {
     //type 1 data block, shuffle method
@@ -312,8 +328,79 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
     //time to send the completed 'superframe' to the DMR PDU message handler
     if (state->data_block_counter[slot] == state->data_header_blocks[slot])
     {
-      //TODO: CRC32 on completed messages
-      dmr_pdu (opts, state, block_len, state->dmr_pdu_sf[slot]);
+      //CRC32 on completed messages
+      for(i = 0, j = 0; i < (block_num * block_len); i++, j+=8)
+      {
+        dmr_pdu_sf_bits[j + 0] = (state->dmr_pdu_sf[slot][i] >> 7) & 0x01;
+        dmr_pdu_sf_bits[j + 1] = (state->dmr_pdu_sf[slot][i] >> 6) & 0x01;
+        dmr_pdu_sf_bits[j + 2] = (state->dmr_pdu_sf[slot][i] >> 5) & 0x01;
+        dmr_pdu_sf_bits[j + 3] = (state->dmr_pdu_sf[slot][i] >> 4) & 0x01;
+        dmr_pdu_sf_bits[j + 4] = (state->dmr_pdu_sf[slot][i] >> 3) & 0x01;
+        dmr_pdu_sf_bits[j + 5] = (state->dmr_pdu_sf[slot][i] >> 2) & 0x01;
+        dmr_pdu_sf_bits[j + 6] = (state->dmr_pdu_sf[slot][i] >> 1) & 0x01;
+        dmr_pdu_sf_bits[j + 7] = (state->dmr_pdu_sf[slot][i] >> 0) & 0x01;
+
+      }
+
+      //sanity check to prevent a negative or zero block_num or sending a negative value into the bit array
+      if (block_num < 1 || block_num == 0) block_num = 1;
+
+      CRCExtracted = 0;
+      //extract crc from last block, apply to completed 'superframe' minus header
+      for(i = 0; i < 32; i++) 
+      {
+        CRCExtracted = CRCExtracted << 1;
+        CRCExtracted = CRCExtracted | (uint32_t)(dmr_pdu_sf_bits[i + (block_len * 8) * block_num - 32] & 1); //96
+      }
+
+      //rearrage for ridiculously stupid CRC32 LSO/MSO ordering
+      for(i = 0, j = 0; i < (block_num * block_len); i+=2, j+=16) 
+      {
+        dmr_pdu_sf_bits[j + 0] = (state->dmr_pdu_sf[slot][i+1] >> 7) & 0x01;
+        dmr_pdu_sf_bits[j + 1] = (state->dmr_pdu_sf[slot][i+1] >> 6) & 0x01;
+        dmr_pdu_sf_bits[j + 2] = (state->dmr_pdu_sf[slot][i+1] >> 5) & 0x01;
+        dmr_pdu_sf_bits[j + 3] = (state->dmr_pdu_sf[slot][i+1] >> 4) & 0x01;
+        dmr_pdu_sf_bits[j + 4] = (state->dmr_pdu_sf[slot][i+1] >> 3) & 0x01;
+        dmr_pdu_sf_bits[j + 5] = (state->dmr_pdu_sf[slot][i+1] >> 2) & 0x01;
+        dmr_pdu_sf_bits[j + 6] = (state->dmr_pdu_sf[slot][i+1] >> 1) & 0x01;
+        dmr_pdu_sf_bits[j + 7] = (state->dmr_pdu_sf[slot][i+1] >> 0) & 0x01;
+
+        dmr_pdu_sf_bits[j +  8] = (state->dmr_pdu_sf[slot][i] >> 7) & 0x01;
+        dmr_pdu_sf_bits[j +  9] = (state->dmr_pdu_sf[slot][i] >> 6) & 0x01;
+        dmr_pdu_sf_bits[j + 10] = (state->dmr_pdu_sf[slot][i] >> 5) & 0x01;
+        dmr_pdu_sf_bits[j + 11] = (state->dmr_pdu_sf[slot][i] >> 4) & 0x01;
+        dmr_pdu_sf_bits[j + 12] = (state->dmr_pdu_sf[slot][i] >> 3) & 0x01;
+        dmr_pdu_sf_bits[j + 13] = (state->dmr_pdu_sf[slot][i] >> 2) & 0x01;
+        dmr_pdu_sf_bits[j + 14] = (state->dmr_pdu_sf[slot][i] >> 1) & 0x01;
+        dmr_pdu_sf_bits[j + 15] = (state->dmr_pdu_sf[slot][i] >> 0) & 0x01;
+
+        //increment extra 2 bytes on each nth byte (depends on data type 1/2, 3/4, 1) if conf data
+        if ( i == (block_len - 1) )
+        {
+          if (state->data_conf_data[slot] == 0) i+=2;
+        }
+      }
+
+      //confirmed working now!
+      CRCComputed = (uint32_t)ComputeCrc32Bit(dmr_pdu_sf_bits, ( block_num * block_len * 8) - 32);
+
+      //if the CRC32 is correct, I think its fair to assume we don't need to worry about if the 
+      //individual CRC9s are correct on confirmed data blocks (but we can confirm now that they are all good)
+      if (CRCComputed == CRCExtracted) CRCCorrect = 1;
+
+      //test only running on good CRC or CRC/RAS bypass (aggressive_framesync)
+      if (CRCCorrect || opts->aggressive_framesync == 0) dmr_pdu (opts, state, block_len, state->dmr_pdu_sf[slot]);
+
+      if (CRCCorrect) ; //print nothing
+      else
+      {
+        fprintf (stderr, "%s", KRED);
+        fprintf (stderr, "\n Slot %d - Multi Block PDU Message CRC32 ERR", slot+1);
+        fprintf (stderr, "%s", KNRM);
+
+        state->data_conf_data[slot] = 0; //flag off conf data flag
+        state->data_header_format[slot] = 0; //zero out so we don't keep ascii printing
+      } 
     }
   }
   
@@ -404,7 +491,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   if (opts->payload == 1 && type == 1 && state->data_block_counter[slot] == state->data_header_blocks[slot]) 
   {
     fprintf (stderr, "%s", KGRN);
-    fprintf (stderr, "\n Multi Block PDU Superframe - Slot [%d]\n  ", slot+1);
+    fprintf (stderr, "\n Slot %d - Multi Block PDU Message\n  ", slot+1);
     for (i = 0; i < ((blocks+1)*block_len); i++) 
     {
       fprintf (stderr, "[%02X]", state->dmr_pdu_sf[slot][i]);
@@ -413,6 +500,10 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         fprintf (stderr, "\n  "); 
       }
     }
+
+    //debug print
+    // fprintf (stderr, " CRC - EXT %X CMP %X", CRCExtracted, CRCComputed);
+
     fprintf (stderr, "%s ", KNRM);
   }
 
@@ -420,7 +511,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   if (opts->payload == 1 && type == 2 && lb == 1)
   {
     fprintf (stderr, "%s", KGRN);
-    fprintf (stderr, "\n MBC Multi Block PDU Superframe - Slot [%d]\n  ", slot+1);
+    fprintf (stderr, "\n Slot %d - Multi Block Control Message\n  ", slot+1);
     for (i = 0; i < ((blocks+1)*block_len); i++) 
     {
       fprintf (stderr, "[%02X]", state->dmr_pdu_sf[slot][i]);
