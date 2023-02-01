@@ -234,7 +234,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " Move (C_MOVE) (TODO)");
+        fprintf (stderr, " Move (C_MOVE) ");
       } 
 
       //Aloha 
@@ -372,10 +372,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " Clear (P_CLEAR) (TODO)");
+        fprintf (stderr, " Clear (P_CLEAR) ");
       } 
 
-      //(P_PROTECT) - Could be a useful way of determining who is on the current timeslot p_kind 2
+      //(P_PROTECT)
       if (csbk_o == 47)
       {
         //initial line break
@@ -394,27 +394,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         fprintf (stderr, "\n");
         fprintf (stderr, "  Target [%08d] - Source [%08d]", target, source);
-
-        //Illegally Parked is another way to say a private call is outbound on this channel
-        //so, we can use this as a form of 'link control'
-        if (p_kind == 2)
-        {
-          //don't set this if operating out of dmr mono or using call alert beep
-          if (opts->dmr_mono == 0 && opts->call_alert == 0)
-          {
-            if (state->currentslot == 0)
-            {
-              state->lasttg = target;
-              state->lastsrc = source;
-            }
-            else 
-            {
-              state->lasttgR = target;
-              state->lastsrcR = source;
-            }
-          }
-          
-        }
 
       }
 
@@ -545,28 +524,28 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " C_AHOY (TODO) ");
+        fprintf (stderr, " C_AHOY ");
       }
 
       if (csbk_o == 42) 
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " P_MAINT (TODO) ");
+        fprintf (stderr, " P_MAINT ");
       }
 
       if (csbk_o == 30) 
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " C_ACKVIT (TODO) ");
+        fprintf (stderr, " C_ACKVIT ");
       }
 
       if (csbk_o == 31) 
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " C_RAND (TODO) ");
+        fprintf (stderr, " C_RAND ");
       }
 
       //tier 2 csbks
@@ -891,67 +870,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         SKIPCON: ; //do nothing
 
       }
-
-      //upon further examination, opcodes 6 and C (12) do not appear to be a channel grants or tlcs,
-      //it is present in Connect+, but its purpose isn't entirely clear
-      //DSDPlus only regards it as a 'CSBK [LB=1 CSBKO=6 (?) FID=06 v1=115213 v2=10488576 v3=0]
-      //unsure of what the v1 v2 v3 fields specify
-      // if (csbk_o == 0x06 || csbk_o == 0x0C) 
-      if (csbk_o != 0x01 && csbk_o != 0x03) 
-      {
-        
-        uint32_t v1 = ( (cs_pdu[2] << 16) + (cs_pdu[3] << 8) + cs_pdu[4] ); 
-        uint32_t v2 = ( (cs_pdu[5] << 16) + (cs_pdu[6] << 8) + cs_pdu[7] );
-        uint32_t v3 = ( (cs_pdu[7] << 16) + (cs_pdu[8] << 8) + cs_pdu[9] ); 
-
-        // debug print
-        // initial line break
-        // fprintf (stderr, "\n");
-        // fprintf (stderr, "%s", KYEL);
-        // fprintf (stderr, " Connect Plus CSBK 0x%X\n", csbk_o); 
-        // fprintf (stderr, "  v1(%d), v2(%d), v3(%d)",v1, v2, v3);
-        // state->dmr_mfid = 0x06; 
-        // sprintf (state->dmr_branding, "%s", "Motorola");
-        // sprintf(state->dmr_branding_sub, "Con+ ");
-      }
-
-      //the validity of these last three csbk opcodes cannot be confirmed
-      //I recall making these based on observation and speculation long ago,
-      //but cannot verify the accuracy of them now, so they will remain disabled
-      //they offer no particular interest to trunking/listening
-
-      // if (csbk_o == 0x11) 
-      // {
-      //   //initial line break
-      //   fprintf (stderr, "\n");
-      //   fprintf (stderr, "%s", KYEL);
-      //   fprintf (stderr, " Connect Plus Registration Request");
-      //   state->dmr_mfid = 0x06; 
-      //   sprintf (state->dmr_branding, "%s", "Motorola");
-      //   sprintf(state->dmr_branding_sub, "Con+ ");
-      // }
-
-      // if (csbk_o == 0x12) 
-      // {
-      //   //initial line break
-      //   fprintf (stderr, "\n");
-      //   fprintf (stderr, "%s", KYEL);
-      //   fprintf (stderr, " Connect Plus Registration Response");
-      //   state->dmr_mfid = 0x06; 
-      //   sprintf (state->dmr_branding, "%s", "Motorola");
-      //   sprintf(state->dmr_branding_sub, "Con+ ");
-      // }
-
-      // if (csbk_o == 0x18) 
-      // {
-      //   //initial line break
-      //   fprintf (stderr, "\n");
-      //   fprintf (stderr, "%s", KYEL);
-      //   fprintf (stderr, " Connect Plus Talkgroup Affiliation");
-      //   state->dmr_mfid = 0x06; 
-      //   sprintf (state->dmr_branding, "%s", "Motorola");
-      //   sprintf(state->dmr_branding_sub, "Con+ ");
-      // }
 
       fprintf (stderr, "%s", KNRM);
 

@@ -87,24 +87,48 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       dmr_embedded_gps(opts, state, lc_bits);
     }
 
-    //Unknown CapMax Things
-    if (fid == 0x10 && (flco == 0x08 || flco == 0x10) )
+    //Unknown CapMax/Moto Things
+    if (fid == 0x10 && (flco == 0x08 || flco == 0x28)) 
     {
-      //NOTE: fid 0x10 and flco 0x08 produces a lot of 'zero' bytes, rid users refer to receiving 'ten' 'elevens'? C0 and C1?
+      //NOTE: fid 0x10 and flco 0x08 (emb) produces a lot of 'zero' bytes
       //this has been observed to happen often on CapMax systems, so I believe it could be some CapMax 'thing'
-      //Unknown Link Control - FLCO=0x08 FID=0x10 SVC=0xC1 or FLCO=0x08 FID=0x10 SVC=0xC0 <-- have the enc bit set on svc, but these calls aren't enc?
-      //flco 0x10 has also been observed lately with similar svc bits, but the tg and src values don't match the vlc/tlc
+      //Unknown Link Control - FLCO=0x08 FID=0x10 SVC=0xC1 or FLCO=0x08 FID=0x10 SVC=0xC0 <- probably no SVC bits in the lc
+      //flco 0x28 has also been observed lately but the tg and src values don't match
+      //another flco 0x10 does seem to match, so is probably capmax group call flco
       if (type == 1) fprintf (stderr, "%s \n", KRED);
       if (type == 2) fprintf (stderr, "%s \n", KRED);
       if (type == 3) fprintf (stderr, "%s", KRED);
       fprintf (stderr, " SLOT %d", state->currentslot+1);
-      fprintf (stderr, " CapMax?");
+      fprintf (stderr, " Motorola");
+      unk = 1;
+      goto END_FLCO;
+    }
+
+    //7.1.1.1 Terminator Data Link Control PDU - ETSI TS 102 361-3 V1.2.1 (2013-07)
+    if (type == 2 && flco == 0x30)
+    {
+      fprintf (stderr, "%s \n", KRED);
+      fprintf (stderr, " SLOT %d", state->currentslot+1);
+      fprintf (stderr, " Data Terminator (TD_LC)");
+      goto END_FLCO;
+    }
+
+    //Unknown Tait Things
+    if (fid == 0x58)
+    {
+      //NOTE: fid 0x58 (tait) had a single flco 0x06 emb observed, but without the other blocks (4,5,7) for an alias
+      //will need to observe this one, or just remove it from the list, going to isolate tait lc for now
+      if (type == 1) fprintf (stderr, "%s \n", KRED);
+      if (type == 2) fprintf (stderr, "%s \n", KRED);
+      if (type == 3) fprintf (stderr, "%s", KRED);
+      fprintf (stderr, " SLOT %d", state->currentslot+1);
+      fprintf (stderr, " Tait");
       unk = 1;
       goto END_FLCO;
     }
 
     //unknown other manufacturer or OTA ENC, etc.
-    if (fid != 0 && fid != 0x58 && fid != 0x68 && fid != 0x10)
+    if (fid != 0 && fid != 0x68 && fid != 0x10) //removed tait from the list
     {
       if (type == 1) fprintf (stderr, "%s \n", KRED);
       if (type == 2) fprintf (stderr, "%s \n", KRED);
@@ -302,10 +326,6 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     
     fprintf(stderr, "Call ");
     
-    // fprintf (stderr, "%s", KRED);
-    // if (CRCCorrect == 1) ; //fprintf(stderr, "(CRC OK)"); //CRCCorrect 1 is good, else is bad CRC; no print on good
-    // else if(IrrecoverableErrors == 0) ; //fprintf(stderr, "(FEC OK)");
-    // else fprintf(stderr, "(FEC ERR) ");
 
     //check Cap+ rest channel info if available and good fec
     if (is_cap_plus == 1)
@@ -353,7 +373,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   END_FLCO:
   if (unk == 1 || pf == 1)
   {
-    fprintf(stderr, " FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
+    // fprintf(stderr, " FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
+    fprintf(stderr, " FLCO=0x%02X FID=0x%02X ", flco, fid); //not all LC PDUs contain SVC bits (see TD_LC)
     fprintf (stderr, "%s", KNRM);
   }
 
