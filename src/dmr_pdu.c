@@ -51,6 +51,7 @@ void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR
   //maybe one day we will have more things to do here
   state->data_conf_data[slot] = 0; //flag off confirmed data after processing it 
   state->data_p_head[slot] = 0; //flag off prop_head data after processing it
+  state->data_header_format[slot] = 0; //zero out so we don't keep ascii printing
   
 }
 

@@ -9,9 +9,9 @@
  * 2022-12 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
-//TODO: CRC9 on confirmed data blocks; CRC32 on completed data sf;
-//TODO: Reverse Channel Signalling - RC single burst BPTC/7-bit CRC
-//TODO: Single Burst Embedded LC - Non-RC single burst LC - Look for Late Entry Alg/Key
+//WIP: CRC9 on confirmed data blocks; CRC32 on completed data sf;
+//WIP: Reverse Channel Signalling - RC single burst BPTC/7-bit CRC
+//WIP: Single Burst Embedded LC - Non-RC single burst LC - Look for Late Entry Alg/Key
 
 #include "dsd.h"
 
@@ -25,6 +25,12 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   uint32_t IrrecoverableErrors = 0;
   uint8_t slot = state->currentslot;
   uint8_t block = state->data_block_counter[slot];
+
+  //confirmed data 
+  uint8_t dbsn = 0; //data block serial number for confirmed data blocks
+  uint8_t blockcounter = 0; //local block count
+  uint8_t confdatabits[250]; //array to reshuffle conf data block bits into sequence for crc9 check
+  memset (confdatabits, 0, sizeof(confdatabits));
 
   //BPTC 196x96 Specific
   uint8_t  BPTCDeInteleavedData[196];
@@ -110,32 +116,31 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       pdu_len = 12; //12 bytes
       sprintf(state->fsubtype, " DATA");
       break;
-    //TODO - 1/2 0x0F0 - 3/4 0x1FF - Rate 1 0x10F 
-    //going to set crclen and mask according to confirmed data here,
-    //use block assmebler to carry out completed message crc
     case 0x07: //1/2 Rate Data
       is_bptc = 1;
       crclen = 9; //confirmed data only
       crcmask = 0x0F0; 
       pdu_len = 12; //12 bytes unconfirmed
+      sprintf(state->fsubtype, " R12U ");
       if (state->data_conf_data[slot] == 1)
       {
         pdu_len = 10; 
         pdu_start = 2; //start at plus two when assembling
+        sprintf(state->fsubtype, " R12C ");
       } 
-      sprintf(state->fsubtype, " R12D ");
       break;
     case 0x08: //3/4 Rate Data
       is_trellis = 1;
       crclen = 9; //confirmed data only
       crcmask = 0x1FF;
       pdu_len = 18; //18 bytes unconfirmed
+      sprintf(state->fsubtype, " R34U ");
       if (state->data_conf_data[slot] == 1)
       {
         pdu_len = 16; 
         pdu_start = 2; //start at plus two when assembling
+        sprintf(state->fsubtype, " R34C ");
       } 
-      sprintf(state->fsubtype, " R34D ");
       break;
     case 0x09: //Idle
       //pseudo-random data fill, no need to do anything with this
@@ -143,10 +148,16 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       break;
     case 0x0A: //1 Rate Data
       crclen = 9; //confirmed data only
-      crcmask = 0x1FF; 
+      crcmask = 0x10F; 
       is_full = 1;
-      pdu_len = 25; //196 bits - 24.5 bytes 
-      sprintf(state->fsubtype, " R_1D ");
+      pdu_len = 25; //196 bits - 24.5 bytes
+      sprintf(state->fsubtype, " R_1U ");
+      if (state->data_conf_data[slot] == 1)
+      {
+        pdu_len = 23; 
+        pdu_start = 2; //start at plus two when assembling
+        sprintf(state->fsubtype, " R_1C ");
+      }  
       break;
     case 0x0B: //Unified Data
       is_bptc = 1;
@@ -155,6 +166,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       pdu_len = 12; //12 bytes
       sprintf(state->fsubtype, " UDAT ");
       break;
+      
     //special types (not real data 'sync' bursts)
     case 0xEB: //Embedded Signalling
       crclen = 5;
@@ -163,6 +175,12 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       break;
 
     default:
+      //Slot Type FEC should catch this so we never see it,
+      //but if it doesn't, then we can still dump the entire 'packet'
+      //treat like rate 1 unconfirmed data 
+      is_full = 1;
+      pdu_len = 25; //196 bits - 24.5 bytes 
+      sprintf(state->fsubtype, " _UNK "); 
       break;
     
   }
@@ -240,10 +258,39 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     /* Check/correct the BPTC data and compute the Reed-Solomon (12,9) CRC */ 
     if (is_lc) CRCCorrect = ComputeAndCorrectFullLinkControlCrc(BPTCDmrDataByte, &CRCComputed, crcmask);
 
-    //TODO: run CRC9 on confirmed 1/2 data blocks
-    else if (state->data_conf_data[slot] == 1)
+    //set CRC to correct on unconfirmed 1/2 data blocks (for reporting due to no CRC available on these)
+    else if (state->data_conf_data[slot] == 0 && databurst == 0x7)
     {
-      //run CRC on individual blocks according to type and validate each individual block
+      CRCComputed = 0;
+      CRCExtracted = 0;
+      CRCCorrect = 1;
+    } 
+
+    //set CRC to correct on proprietary data header blocks (unsure if p_head data has valid crcs,
+    //may be ras enabled, manufacturer specific, or none, currently unknown, but possibly RAS on samples I have)
+    // else if (state->data_p_head[slot] == 1 && databurst == 0x06) CRCCorrect = 1;
+
+    //run CRC9 on intermediate and last 1/2 confirmed data blocks
+    else if (state->data_conf_data[slot] == 1 && databurst == 0x7)
+    {
+      blockcounter = state->data_block_counter[slot]; //current block number according to the counter
+      dbsn = (uint32_t)ConvertBitIntoBytes(&BPTCDmrDataBit[0], 7) + 1; //recover data block serial number
+      CRCExtracted = (uint32_t)ConvertBitIntoBytes(&BPTCDmrDataBit[7], 9); //extract CRC from data
+      CRCExtracted = CRCExtracted ^ crcmask;
+
+      //reorganize the BPTCDmrDataBit array into confdatabits, just for CRC9 check
+      //need to find a sample to confirm this
+      for(i = 0; i < 80; i++) confdatabits[i] = BPTCDmrDataBit[i + 16];
+      for(i = 0; i < 7; i++) confdatabits[i + 80] = BPTCDmrDataBit[i];
+
+      CRCComputed = ComputeCrc9Bit(confdatabits, 87);
+      if (CRCExtracted == CRCComputed)
+      {
+        CRCCorrect = 1;
+        state->data_block_crc_valid[slot][blockcounter] = 1;
+      } 
+      else state->data_block_crc_valid[slot][blockcounter] = 0;
+
     }
 
     //run CCITT on other data forms
@@ -385,6 +432,50 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       DMR_PDU[i] = (uint8_t)TrellisReturn[i+pdu_start]; 
     }
 
+    for(i = 0, j = 0; i < 18; i++, j+=8)
+    {
+      DMR_PDU_bits[j + 0] = (TrellisReturn[i] >> 7) & 0x01;
+      DMR_PDU_bits[j + 1] = (TrellisReturn[i] >> 6) & 0x01;
+      DMR_PDU_bits[j + 2] = (TrellisReturn[i] >> 5) & 0x01;
+      DMR_PDU_bits[j + 3] = (TrellisReturn[i] >> 4) & 0x01;
+      DMR_PDU_bits[j + 4] = (TrellisReturn[i] >> 3) & 0x01;
+      DMR_PDU_bits[j + 5] = (TrellisReturn[i] >> 2) & 0x01;
+      DMR_PDU_bits[j + 6] = (TrellisReturn[i] >> 1) & 0x01;
+      DMR_PDU_bits[j + 7] = (TrellisReturn[i] >> 0) & 0x01;
+    }
+
+    //set CRC to correct on unconfirmed 3/4 data blocks (for reporting due to no CRC available on these)
+    if (state->data_conf_data[slot] == 0) CRCCorrect = 1;
+ 
+    //run CRC9 on intermediate and last 3/4 data blocks
+    else if (state->data_conf_data[slot] == 1)
+    {
+      blockcounter = state->data_block_counter[slot]; //current block number according to the counter
+      dbsn = (uint32_t)ConvertBitIntoBytes(&DMR_PDU_bits[0], 7) + 1; //recover data block serial number
+      CRCExtracted = (uint32_t)ConvertBitIntoBytes(&DMR_PDU_bits[7], 9); //extract CRC from data
+      CRCExtracted = CRCExtracted ^ crcmask;
+
+      //reorganize the DMR_PDU_bits array into confdatabits, just for CRC9 check
+      //confirmed working now!
+      for(i = 0; i < 128; i++) confdatabits[i] = DMR_PDU_bits[i + 16];
+      for(i = 0; i < 7; i++) confdatabits[i + 128] = DMR_PDU_bits[i];
+
+      CRCComputed = ComputeCrc9Bit(confdatabits, 135); 
+      if (CRCExtracted == CRCComputed)
+      {
+        CRCCorrect = 1;
+        state->data_block_crc_valid[slot][blockcounter] = 1;
+      } 
+      else
+      {
+        IrrecoverableErrors = 9; //set as a shim since the trellis decoder is a pain to fix
+        state->data_block_crc_valid[slot][blockcounter] = 0;
+      } 
+
+    }
+
+    //reorganize the DMR_PDU_bits into PDU friendly format (minus the dbsn and crc9)
+    memset (DMR_PDU_bits, 0, sizeof(DMR_PDU_bits));
     for(i = 0, j = 0; i < pdu_len; i++, j+=8)
     {
       DMR_PDU_bits[j + 0] = (TrellisReturn[i+pdu_start] >> 7) & 0x01;
@@ -397,17 +488,13 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       DMR_PDU_bits[j + 7] = (TrellisReturn[i+pdu_start] >> 0) & 0x01;
     }
 
-    //TODO: run CRC9 on confirmed 3/4 data blocks
-
   }
 
   if (is_full) //Rate 1 Data
   {
     CRCExtracted = 0;
     CRCComputed = 0;
-    IrrecoverableErrors = 0;
-
-    //TODO: run CRC9 on confirmed data
+    IrrecoverableErrors = 0; //implicit, since there is no encoding
 
     for (i = 0; i < 24; i++)
     {
@@ -417,6 +504,32 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     //pushing last 4 to 25 and shifting it
     DMR_PDU[25] = (uint8_t)ConvertBitIntoBytes(&info[192], 4);
     DMR_PDU[25] = DMR_PDU[25] << 4;
+
+    //set CRC to correct on unconfirmed 1 rate data blocks (for reporting due to no CRC available on these)
+    if (state->data_conf_data[slot] == 0) CRCCorrect = 1;
+ 
+    //run CRC9 on intermediate and last 1 rate data blocks
+    else if (state->data_conf_data[slot] == 1)
+    {
+      blockcounter = state->data_block_counter[slot]; //current block number according to the counter
+      dbsn = (uint32_t)ConvertBitIntoBytes(&info[0], 7) + 1; //recover data block serial number
+      CRCExtracted = (uint32_t)ConvertBitIntoBytes(&info[7], 9); //extract CRC from data
+      CRCExtracted = CRCExtracted ^ crcmask;
+
+      //reorganize the info bit array into confdatabits, just for CRC9 check
+      //unconfirmed, haven't seen any samples with rate 1 data
+      for(i = 0; i < 176; i++) confdatabits[i] = info[i + 16];
+      for(i = 0; i < 7; i++) confdatabits[i + 176] = info[i];
+
+      CRCComputed = ComputeCrc9Bit(confdatabits, 183); 
+      if (CRCExtracted == CRCComputed)
+      {
+        CRCCorrect = 1;
+        state->data_block_crc_valid[slot][blockcounter] = 1;
+      } 
+      else state->data_block_crc_valid[slot][blockcounter] = 0;
+
+    }
 
     //copy info to dmr_pdu_bits
     memcpy(DMR_PDU_bits, info, sizeof(DMR_PDU_bits));
@@ -436,13 +549,12 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   if (databurst == 0x06) dmr_dheader (opts, state, DMR_PDU, CRCCorrect, IrrecoverableErrors);
   if (databurst == 0x07) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 1); //1/2 Rate Data
   if (databurst == 0x08) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 1); //3/4 Rate Data
-  //if (databurst == 0x0A) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 1); //Full Rate Data - Disabled until further testing can be done
+  if (databurst == 0x0A) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 1); //Full Rate Data
 
-  //is unified data handled like normal data, or control signalling data?
+  //my best understanding is that unified data carries supplimentary MS data on TIII systems, not control signalling
   if (databurst == 0x0B) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 1); //Unified Data
-  //if (databurst == 0x0B) dmr_cspdu (opts, state, DMR_PDU_bits, DMR_PDU, CRCCorrect, IrrecoverableErrors);
 
-  //control signalling types (CSBK, MBC, UDT)
+  //control signalling types (CSBK, MBC)
   if (databurst == 0x03) dmr_cspdu (opts, state, DMR_PDU_bits, DMR_PDU, CRCCorrect, IrrecoverableErrors);
   
   //both MBC header and MBC continuation will go to the block_assembler - type 2, and then to dmr_cspdu 
@@ -502,20 +614,31 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       fprintf (stderr, "[%02X]", DMR_PDU[i]);
     }
 
+    //debug print
+    // if (dbsn) fprintf (stderr, " SN %X", dbsn);
+    // fprintf (stderr, " CRC - EXT %X CMP %X", CRCExtracted, CRCComputed);
+
     fprintf (stderr, "%s", KNRM);
 
-    // fprintf (stderr, "%s", KCYN);
-    // fprintf (stderr, "\n  Hex to Ascii - ");
-    // for (i = 0; i < 12; i++)
-    // {
-    //   if (DMR_PDU[i] <= 0x7E && DMR_PDU[i] >=0x20)
-    //   {
-    //     fprintf (stderr, "%c", DMR_PDU[i]);
-    //   }
-    //   else fprintf (stderr, ".");
-    // }
+    //short data - DD_HEAD, SP_HEAD or R_HEAD (Might do on TMS as well)
+    if ( (state->data_header_format[slot] & 0xF) == 0xD )
+    {
+      fprintf (stderr, "%s", KCYN);
+      fprintf (stderr, "\n  Hex to Ascii - ");
+      for (i = 0; i < pdu_len; i++)
+      {
+        if (DMR_PDU[i] <= 0x7E && DMR_PDU[i] >=0x20)
+        {
+          fprintf (stderr, "%c", DMR_PDU[i]);
+        }
+        else fprintf (stderr, ".");
+      }
+      
+      fprintf (stderr,"%s", KNRM);
+      
+    }
+
     
-    fprintf (stderr,"%s", KNRM);
   }
 
 }
