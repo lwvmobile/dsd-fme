@@ -915,6 +915,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n RFSS Status Broadcast - Implicit \n");
 			fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%02X] SITE ID [%02X] CHAN [%04X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channel, sysclass);
 			process_channel_to_freq (opts, state, channel);
+			
+			state->p2_siteid = siteid;
+			state->p2_rfssid = rfssid;
 		}
 
 		//RFSS Status Broadcast - Explicit
@@ -931,6 +934,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%02X] SITE ID [%02X]\n  CHAN-T [%04X] CHAN-R [%02X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channelt, channelr, sysclass);
 			process_channel_to_freq (opts, state, channelt);
 			process_channel_to_freq (opts, state, channelr);
+
+			state->p2_siteid = siteid;
+			state->p2_rfssid = rfssid;
 		}
 
 		//Unit-to-Unit Answer Request (UU_ANS_REQ)
@@ -1079,6 +1085,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				process_channel_to_freq (opts, state, channelr);
 			}
 
+			state->p2_siteid = siteid;
+			state->p2_rfssid = rfssid;
+
 		}
 
 		//Secondary Control Channel Broadcast, Implicit
@@ -1108,7 +1117,10 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
         state->trunk_lcn_freq[1] = freq1; 
 				state->trunk_lcn_freq[2] = freq2;
 				state->lcn_freq_count = 3; //increment to three
-      } 
+      }
+
+			state->p2_siteid = siteid;
+			state->p2_rfssid = rfssid; 
 
 		}
 

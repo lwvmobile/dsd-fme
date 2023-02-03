@@ -2053,7 +2053,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-21-gbb5da93 RC2c");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-26-g6666424 RC2d");
   }
   if (opts->ncurses_compact == 0)
   {
@@ -2064,8 +2064,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4) printw (" MBElib %s", versionstr);
-      if (i == 5) printw (" %s ", "Win32 RC2c"); //printw (" %s \n", GIT_TAG);
-      if (i == 6) printw (" %s \n", "v2.0.0-21-gbb5da93"); //printw (" %s \n", GIT_TAG);
+      if (i == 5) printw (" %s ", "Win32 RC2d"); //printw (" %s \n", GIT_TAG);
+      if (i == 6) printw (" %s \n", "v2.0.0-26-g6666424"); //printw (" %s \n", GIT_TAG);
       else printw ("\n");
     }
     attroff(COLOR_PAIR(6)); //6
@@ -2364,7 +2364,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     else if (lls == 0 || lls == 1) //P1
     {
-      printw ("P25 P1 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+      // printw ("P25 P1 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+      printw ("P25 P1 - [%05llX][%03llX][%03llX] RFSS: [%X] SITE: [%X] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p25_cc_freq != 0)
       {
         printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
@@ -2372,7 +2373,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     else if (lls == 35 || lls == 36) //P2
     {
-      printw ("P25 P2 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+      // printw ("P25 P2 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+      printw ("P25 P2 - [%05llX][%03llX][%03llX] RFSS: [%X] SITE: [%X] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p2_wacn == 0 || state->p2_sysid == 0 || state->p2_cc == 0)
       {
         attron(COLOR_PAIR(2));

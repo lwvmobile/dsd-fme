@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Lite' Edition v2.0.0-21-gbb5da93 Windows 32-bit RC2c  "
+  " 'Lite' Edition v2.0.0-26-g6666424 Windows 32-bit RC2d  "
 };
 
 int
@@ -704,10 +704,12 @@ initState (dsd_state * state)
   state->dmr_stereo = 0; //1, or 0?
   state->dmrburstL = 17; //initialize at higher value than possible
   state->dmrburstR = 17; //17 in char array is set for ERR
-  state->dmr_so   = 0;
-  state->dmr_soR  = 0;
-  state->dmr_fid  = 0;
-  state->dmr_fidR = 0;
+  state->dmr_so    = 0;
+  state->dmr_soR   = 0;
+  state->dmr_fid   = 0;
+  state->dmr_fidR  = 0;
+  state->dmr_flco  = 0;
+  state->dmr_flcoR = 0;
   state->dmr_ms_mode = 0;
 
   state->HYTL = 0;
@@ -751,6 +753,8 @@ initState (dsd_state * state)
   state->p2_wacn = 0;
   state->p2_sysid = 0;
   state->p2_cc = 0;
+  state->p2_siteid = 0;
+  state->p2_rfssid = 0;
   state->p2_hardset = 0;
   state->p2_is_lcch = 0;
   state->p25_cc_is_tdma = 2; //init on 2, TSBK NET_STS will set 0, TDMA NET_STS will set 1. //used to determine if we need to change symbol rate when cc hunting

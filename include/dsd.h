@@ -516,9 +516,11 @@ typedef struct
 
   unsigned int dmr_fid;
   unsigned int dmr_so;
+  unsigned int dmr_flco;
 
   unsigned int dmr_fidR;
   unsigned int dmr_soR;
+  unsigned int dmr_flcoR;
 
   char slot1light[8];
   char slot2light[8];
@@ -580,6 +582,8 @@ typedef struct
   unsigned long long int p2_wacn;
   unsigned long long int p2_sysid;
   unsigned long long int p2_cc;    //p1 NAC
+  unsigned long long int p2_siteid;
+  unsigned long long int p2_rfssid;
   int p2_hardset; //flag for checking whether or not P2 wacn and sysid are hard set by user
   int p2_scramble_offset; //offset counter for scrambling application
   int p2_vch_chan_num; //vch channel number (0 or 1, not the 0-11 TS)
