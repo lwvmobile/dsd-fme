@@ -2343,7 +2343,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     else if (lls == 0 || lls == 1) //P1
     {
-      printw ("P25 P1 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+      // printw ("P25 P1 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+      printw ("P25 P1 - [%05llX][%03llX][%03llX] RFSS: [%X] SITE: [%X] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p25_cc_freq != 0)
       {
         printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
@@ -2351,7 +2352,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     else if (lls == 35 || lls == 36) //P2
     {
-      printw ("P25 P2 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+      // printw ("P25 P2 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
+      printw ("P25 P2 - [%05llX][%03llX][%03llX] RFSS: [%X] SITE: [%X] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p2_wacn == 0 || state->p2_sysid == 0 || state->p2_cc == 0)
       {
         attron(COLOR_PAIR(2));

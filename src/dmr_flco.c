@@ -67,6 +67,10 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
   if (IrrecoverableErrors == 0)
   {
+    
+    if (slot == 0) state->dmr_flco = flco;
+    else state->dmr_flcoR = flco;
+
     //Embedded Talker Alias Header Only (format and len storage)
     if (fid == 0 && type == 3 && flco == 0x04) 
     {
@@ -95,9 +99,9 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       //Unknown Link Control - FLCO=0x08 FID=0x10 SVC=0xC1 or FLCO=0x08 FID=0x10 SVC=0xC0 <- probably no SVC bits in the lc
       //flco 0x28 has also been observed lately but the tg and src values don't match
       //another flco 0x10 does seem to match, so is probably capmax group call flco
-      if (type == 1) fprintf (stderr, "%s \n", KRED);
-      if (type == 2) fprintf (stderr, "%s \n", KRED);
-      if (type == 3) fprintf (stderr, "%s", KRED);
+      if (type == 1) fprintf (stderr, "%s \n", KCYN);
+      if (type == 2) fprintf (stderr, "%s \n", KCYN);
+      if (type == 3) fprintf (stderr, "%s", KCYN);
       fprintf (stderr, " SLOT %d", state->currentslot+1);
       fprintf (stderr, " Motorola");
       unk = 1;
@@ -110,6 +114,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       fprintf (stderr, "%s \n", KRED);
       fprintf (stderr, " SLOT %d", state->currentslot+1);
       fprintf (stderr, " Data Terminator (TD_LC)");
+      fprintf (stderr, "%s ", KNRM);
       goto END_FLCO;
     }
 
@@ -118,9 +123,9 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     {
       //NOTE: fid 0x58 (tait) had a single flco 0x06 emb observed, but without the other blocks (4,5,7) for an alias
       //will need to observe this one, or just remove it from the list, going to isolate tait lc for now
-      if (type == 1) fprintf (stderr, "%s \n", KRED);
-      if (type == 2) fprintf (stderr, "%s \n", KRED);
-      if (type == 3) fprintf (stderr, "%s", KRED);
+      if (type == 1) fprintf (stderr, "%s \n", KCYN);
+      if (type == 2) fprintf (stderr, "%s \n", KCYN);
+      if (type == 3) fprintf (stderr, "%s", KCYN);
       fprintf (stderr, " SLOT %d", state->currentslot+1);
       fprintf (stderr, " Tait");
       unk = 1;
@@ -130,9 +135,9 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     //unknown other manufacturer or OTA ENC, etc.
     if (fid != 0 && fid != 0x68 && fid != 0x10) //removed tait from the list
     {
-      if (type == 1) fprintf (stderr, "%s \n", KRED);
-      if (type == 2) fprintf (stderr, "%s \n", KRED);
-      if (type == 3) fprintf (stderr, "%s", KRED);
+      if (type == 1) fprintf (stderr, "%s \n", KYEL);
+      if (type == 2) fprintf (stderr, "%s \n", KYEL);
+      if (type == 3) fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " SLOT %d", state->currentslot+1);
       fprintf (stderr, " Unknown LC ");
       unk = 1;
