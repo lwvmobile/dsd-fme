@@ -1900,7 +1900,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
-    if (opts->call_alert == 1)
+    if (opts->call_alert == 1 && rd != 0 && tg != 0)
     {
       //fprintf (stderr, "BEEP 0 MS LEFT\n");
       beeper (opts, state, 0);
@@ -1943,7 +1943,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
-    if (opts->call_alert == 1)
+    if (opts->call_alert == 1 && rd != 0 && tg != 0)
     {
       //fprintf (stderr, "BEEP 0 BS LEFT\n");
       beeper (opts, state, 0);
@@ -1985,7 +1985,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       openWavOutFileR (opts, state); //testing for now, will want to move to per call later
     }
 
-    if (opts->call_alert == 1)
+    if (opts->call_alert == 1 && rdR != 0 && tgR != 0)
     {
       //fprintf (stderr, "BEEP 1 BS RIGHT\n");
       beeper (opts, state, 1);
@@ -2040,11 +2040,19 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //   {
   //     beeper (opts, state, 0);
   //     state->dmr_end_alert[0] = 1; //don't play again until new voice frames
+  //     state->lasttg = 0;
+  //     state->lastsrc = 0;
+  //     rd = 0;
+  //     tg = 0;
   //   } 
   //   if (state->dmrburstR == 2 && state->dmr_end_alert[1] == 0) //if TLC and flag not tripped
   //   {
   //     beeper (opts, state, 1);
   //     state->dmr_end_alert[1] = 1; //don't play again until new voice frames
+  //     state->lasttgR = 0;
+  //     state->lastsrcR = 0;
+  //     rdR = 0;
+  //     tgR = 0;
   //   } 
   // }
 
@@ -2053,7 +2061,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-27-g630d3f3 RC3");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-28-ga02f992 RC3");
   }
   if (opts->ncurses_compact == 0)
   {
@@ -2065,7 +2073,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4) printw (" MBElib %s", versionstr);
       if (i == 5) printw (" %s ", "Win32 RC3"); //printw (" %s \n", GIT_TAG);
-      if (i == 6) printw (" %s \n", "v2.0.0-27-g630d3f3"); //printw (" %s \n", GIT_TAG);
+      if (i == 6) printw (" %s \n", "v2.0.0-28-ga02f992"); //printw (" %s \n", GIT_TAG);
       else printw ("\n");
     }
     attroff(COLOR_PAIR(6)); //6
@@ -2365,7 +2373,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else if (lls == 0 || lls == 1) //P1
     {
       // printw ("P25 P1 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
-      printw ("P25 P1 - [%05llX][%03llX][%03llX] RFSS: [%X] SITE: [%X] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
+      printw ("P25 P1 - [%05llX][%03llX][%03llX] RFSS: [%llX] SITE: [%llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p25_cc_freq != 0)
       {
         printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
@@ -2374,7 +2382,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else if (lls == 35 || lls == 36) //P2
     {
       // printw ("P25 P2 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
-      printw ("P25 P2 - [%05llX][%03llX][%03llX] RFSS: [%X] SITE: [%X] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
+      printw ("P25 P2 - [%05llX][%03llX][%03llX] RFSS: [%llX] SITE: [%llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p2_wacn == 0 || state->p2_sysid == 0 || state->p2_cc == 0)
       {
         attron(COLOR_PAIR(2));
@@ -2914,8 +2922,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("--Call History----------------------------------------------------------------\n");
     for (short int j = 0; j < 10; j++)
     {
-      //only print if a valid time was assigned to the matrix, and not EDACS/PV
-      if ( ((time(NULL) - call_matrix[9-j][5]) < 999999) && call_matrix[9-j][0] != 14 && call_matrix[9-j][0] != 15 && call_matrix[9-j][0] != 37 && call_matrix[9-j][0] != 38 )
+      //only print if a valid time was assigned to the matrix, and not EDACS/PV, and source is not zero
+      if ( ((time(NULL) - call_matrix[9-j][5]) < 999999) && call_matrix[9-j][0] != 14 && call_matrix[9-j][0] != 15 && call_matrix[9-j][0] != 37 && call_matrix[9-j][0] != 38 && call_matrix[9-j][2] != 0) //
       {
         printw ("| %s ", SyncTypes[call_matrix[9-j][0]]);
         if (lls == 28 || lls == 29)
