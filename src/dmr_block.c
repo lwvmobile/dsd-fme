@@ -556,4 +556,5 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
   memset (state->dmr_lrrp_source, 0, sizeof(state->dmr_lrrp_source));
   memset (state->dmr_cach_fragment, 1, sizeof (state->dmr_cach_fragment));
+  memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
 }

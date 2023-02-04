@@ -303,6 +303,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
 
   //initialize unified dmr pdu 'superframe'
   memset (state->dmr_pdu_sf, 0, sizeof (state->dmr_pdu_sf));
+  memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
 
   //init confirmed data individual block crc as invalid
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
@@ -797,9 +798,6 @@ initState (dsd_state * state)
   //dmr trunking/ncurses stuff 
   state->dmr_rest_channel = -1; //init on -1
   state->dmr_mfid = -1; //
-  state->dmr_tuned_lcn = -1; //logical slot, lcn * ts?
-  state->dmr_vc_lcn = -1; //
-  state->dmr_vc_lsn = -1;
 
   //new nxdn stuff
   state->nxdn_part_of_frame = 0;
@@ -828,6 +826,7 @@ initState (dsd_state * state)
 
   //initialize unified dmr pdu 'superframe'
   memset (state->dmr_pdu_sf, 0, sizeof (state->dmr_pdu_sf));
+  memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
 
   //init confirmed data individual block crc as invalid
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));

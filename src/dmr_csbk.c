@@ -620,12 +620,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
     }
 
-    //Capacity+ Section
+    //Reworked Cap+ for Multi Block FL PDU and Private/Data Calls
+    //experimental, but seems to be working well
     if (csbk_fid == 0x10)
     {
-      //not quite sure how these tuning rules will go over
-      //if they don't work so well, may just fall back to
-      //a 'follow rest channel on no sync' only approach
+      //Cap+ Channel Status PDU
       if (csbk_o == 0x3E)
       {
 
@@ -634,27 +633,41 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "%s", KYEL);
 
         uint8_t fl = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 2); 
-        uint8_t ts = cs_pdu_bits[18];  //accurate?
-        uint8_t res = cs_pdu_bits[19]; //unknown??
+        uint8_t ts = cs_pdu_bits[18];  //timeslot this PDU occurs in
+        uint8_t res = cs_pdu_bits[19]; //unknown, always seems to be 0
         uint8_t rest_channel = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[20], 4);
+        uint8_t group_tally = 0; //set this to the number of active group channels tallied
 
         uint8_t ch[8]; //one bit per channel
+        uint8_t pch[8]; //private or data call channel bits 
         uint8_t tg = 0;
-        uint32_t tghex = 0; //combined all tgs for debug
         int i, j, k;
 
         //tg and channel info for trunking purposes
         uint8_t t_tg[9];
         memset (t_tg, 0, sizeof(t_tg));
 
-        k = 0;
+        //initialize group ch and private/data channel bit arrays
+        for (i = 0; i < 8; i++)
+        {
+          ch[i] = 0;
+          pch[i] = 0;
+        }
+
+        //treating FL as a form of LCSS
+        if (fl != 1) //initial or single block (fl2 or fl3) 
+        {
+          memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
+          for (i = 0; i < 10*8; i++) state->cap_plus_csbk_bits[i] = cs_pdu_bits[i];
+        }
+        else //appended block (fl1)
+        {
+          for (i = 0; i < 7*8; i++) state->cap_plus_csbk_bits[i+80] = cs_pdu_bits[i+24];
+        }
+        
         if (rest_channel != state->dmr_rest_channel)
         {
           state->dmr_rest_channel = rest_channel; 
-        }
-        for (int i = 0; i < 8; i++)
-        {
-          ch[i] = cs_pdu_bits[i+24];
         }
 
         //assign to cc freq to follow during no sync
@@ -664,96 +677,297 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           //set to always tuned
           opts->p25_is_tuned = 1;
         }
-        
+
         fprintf (stderr, " Capacity Plus Channel Status - FL: %d TS: %d RS: %d - Rest Channel %d", fl, ts, res, rest_channel);
+        if (fl == 1) fprintf (stderr, " - Appended Block");
+        if (fl == 2) fprintf (stderr, " - Initial Block");
+        if (fl == 3) fprintf (stderr, " - Single Block");
 
-        fprintf (stderr, "\n  ");
-        for (i = 0; i < 8; i++)
+        //look at each group channel bit -- run this PRIOR to checking private or data calls
+        //or else we will overwrite the ch bits we set below for private calls with zeroes
+        //these also seem to indicate data calls -- can't find a distinction of which is which
+        for (int i = 0; i < 8; i++)
         {
-          fprintf (stderr, "Ch%d: ", i+1);
-          if (ch[i] != 0)
-          {
-            tg = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[k*8+32], 8); 
-            if (tg != 0) fprintf (stderr, " %03d ", tg);
-            else fprintf (stderr, "Priv "); //observed 000s for TG value seem to appear during a Cap+ Private TXI call
-            //add values to trunking tg/channel potentials
-            t_tg[i] = tg;
-            k++;
-            
-          }
-          else if (i+1 == rest_channel) fprintf (stderr, "Rest ");
-          else fprintf (stderr, "Idle ");
+          ch[i] = state->cap_plus_csbk_bits[i+24];
+          if (ch[i] == 1) group_tally++; //figure out where to start looking in the byte stream for the 0x80 flag
+        } 
 
-          if (i == 3) fprintf (stderr, "\n  "); 
-        }
-        tghex = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
-        //fprintf (stderr, "\n   TG Hex = 0x%06X", tghex);
-        state->dmr_mfid = 0x10;
-        sprintf (state->dmr_branding, "%s", "Motorola");
-        sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
+        //check for private/data calls
+        uint8_t pdflag = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[40+(group_tally*8)], 8); //seems to be 0x80 (last block flag?) on samples I have 
+        uint16_t private_target = 0;
 
-        //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-        sprintf(state->dmr_site_parms, "%s", "");
-
-        fprintf (stderr, "%s", KNRM);
-
-        //Skip tuning group calls if group calls are disabled
-        if (opts->trunk_tune_group_calls == 0) goto SKIPCAP;
-
-        //don't tune if currently a vc on the current channel 
-        if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
+        //first, check to see if we have a completed PDU
+        if (fl != 2) 
         {
-          for (j = 0; j < 8; j++) //go through the channels stored looking for active ones to tune to
+          //then check to see if this byte has a value, should be 0x80
+          //this bytes location seems to shift depending on level of activity
+          if (pdflag != 0) //now looking to see if any appended data was added 
           {
-            char mode[8]; //allow, block, digital, enc, etc
-
-            //if we are using allow/whitelist mode, then write 'B' to mode for block
-            //comparison below will look for an 'A' to write to mode if it is allowed
-            if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
-
-            for (int i = 0; i < state->group_tally; i++)
+            k = 0; //= 0
+            fprintf (stderr, "\n");
+            fprintf (stderr, " F%X Private or Data Call", pdflag);
+            for (int i = 0; i < 8; i++)
             {
-              if (state->group_array[i].groupNumber == t_tg[j])
+              pch[i] = state->cap_plus_csbk_bits[i+48+(group_tally*8)];
+              if (pch[i] == 1)
               {
-                fprintf (stderr, " [%s]", state->group_array[i].groupName);
-                strcpy (mode, state->group_array[i].groupMode);
-              }
+                fprintf (stderr, " Ch%d:", i+1);
+                private_target = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[56+(k*16)+(group_tally*8)], 16);
+                fprintf (stderr, " TGT %d;", private_target);
+                if (opts->trunk_tune_private_calls == 1) t_tg[i] = private_target; //set here for tuning allow/block
+                k++;
+              } 
             }
-
-            //no more 0 reporting, that was some bad code that caused that issue
-            //without priority, this will tune the first one it finds (if group isn't blocked)
-            if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
-            {
-              if (state->trunk_chan_map[j+1] != 0) //if we have a valid frequency
-              {
-                //RIGCTL
-                if (opts->use_rigctl == 1)
-                {
-                  if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
-                  SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+1]); 
-                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
-                  opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
-                  j = 11; //break loop
-                }
-
-                //rtl_udp
-                else if (opts->audio_in_type == 3)
-                {
-                  rtl_udp_tune (opts, state, state->trunk_chan_map[j+1]);
-                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
-                  opts->p25_is_tuned = 1;
-                  j = 11; //break loop
-                }
-
-              }
-            }
-
           }
         }
+        //end private/data call check
+
+        if (fl != 2)
+        {
+          fprintf (stderr, "\n  ");
+          
+          k = 0;
+          for (i = 0; i < 8; i++)
+          {
+            fprintf (stderr, "Ch%d: ", i+1);
+            if (ch[i] == 1) //group voice channels
+            {
+              tg = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[k*8+32], 8); 
+              if (tg != 0) fprintf (stderr, " %03d ", tg);
+              else fprintf (stderr, "Actv "); 
+              //add values to trunking tg/channel potentials
+              t_tg[i] = tg;
+              if (tg != 0) k++; 
+              
+            }
+            else if (pch[i] == 1) //private or data channels
+            {
+              fprintf (stderr, "P||D ");
+              //flag as available for tuning if enabled
+              if (opts->trunk_tune_private_calls == 1) ch[i] = 1; 
+            }  
+            else if (i+1 == rest_channel) fprintf (stderr, "Rest ");
+            else fprintf (stderr, "Idle ");
+
+            if (i == 3) fprintf (stderr, "\n  "); 
+          }
+
+          state->dmr_mfid = 0x10;
+          sprintf (state->dmr_branding, "%s", "Motorola");
+          sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
+
+          //nullify any previous TIII data (bugfix for bad assignments or system type switching)
+          sprintf(state->dmr_site_parms, "%s", "");
+
+          fprintf (stderr, "%s", KNRM);
+
+          //Skip tuning group calls if group calls are disabled
+          if (opts->trunk_tune_group_calls == 0) goto SKIPCAP;
+
+          //don't tune if vc on the current channel 
+          if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
+          {
+            for (j = 0; j < 8; j++) //go through the channels stored looking for active ones to tune to
+            {
+              char mode[8]; //allow, block, digital, enc, etc
+
+              //if we are using allow/whitelist mode, then write 'B' to mode for block
+              //comparison below will look for an 'A' to write to mode if it is allowed
+              if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+
+              for (int i = 0; i < state->group_tally; i++)
+              {
+                if (state->group_array[i].groupNumber == t_tg[j])
+                {
+                  fprintf (stderr, " [%s]", state->group_array[i].groupName);
+                  strcpy (mode, state->group_array[i].groupMode);
+                }
+              }
+
+              //without priority, this will tune the first one it finds (if group isn't blocked)
+              if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
+              {
+                if (state->trunk_chan_map[j+1] != 0) //if we have a valid frequency
+                {
+                  //RIGCTL
+                  if (opts->use_rigctl == 1)
+                  {
+                    if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+                    SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+1]); 
+                    state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
+                    opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+                    j = 11; //break loop
+                  }
+
+                  //rtl_udp
+                  else if (opts->audio_in_type == 3)
+                  {
+                    rtl_udp_tune (opts, state, state->trunk_chan_map[j+1]);
+                    state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
+                    opts->p25_is_tuned = 1;
+                    j = 11; //break loop
+                  }
+
+                }
+              }
+
+            }
+          } //end tuning
+
+          SKIPCAP: ;
+          //debug print
+          if (fl == 1 && opts->payload == 1)
+          {
+            fprintf (stderr, "%s\n", KYEL); 
+            fprintf (stderr, " CAP+ Multi Block PDU ");
+            uint8_t fl_bytes = 0;
+            for (i = 0; i < 17; i++)
+            {
+              fl_bytes = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[i*8], 8);
+              fprintf (stderr, "[%02X]", fl_bytes);
+            }
+            fprintf (stderr, "%s", KNRM);
+          }
+          memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
+          
+        } //fl != 2
+      } //opcode == 0x3E
+    } //fid == 0x10
+
+    //Capacity+ Section -- fallback if issues arise
+    // if (csbk_fid == 0x10)
+    // {
+    //   //not quite sure how these tuning rules will go over
+    //   //if they don't work so well, may just fall back to
+    //   //a 'follow rest channel on no sync' only approach
+    //   if (csbk_o == 0x3E)
+    //   {
+
+    //     //initial line break
+    //     fprintf (stderr, "\n");
+    //     fprintf (stderr, "%s", KYEL);
+
+    //     uint8_t fl = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 2); 
+    //     uint8_t ts = cs_pdu_bits[18];  //accurate?
+    //     uint8_t res = cs_pdu_bits[19]; //unknown??
+    //     uint8_t rest_channel = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[20], 4);
+
+    //     uint8_t ch[8]; //one bit per channel
+    //     uint8_t tg = 0;
+    //     uint32_t tghex = 0; //combined all tgs for debug
+    //     int i, j, k;
+
+    //     //tg and channel info for trunking purposes
+    //     uint8_t t_tg[9];
+    //     memset (t_tg, 0, sizeof(t_tg));
+
+    //     k = 0;
+    //     if (rest_channel != state->dmr_rest_channel)
+    //     {
+    //       state->dmr_rest_channel = rest_channel; 
+    //     }
+    //     for (int i = 0; i < 8; i++)
+    //     {
+    //       ch[i] = cs_pdu_bits[i+24];
+    //     }
+
+    //     //assign to cc freq to follow during no sync
+    //     if (state->trunk_chan_map[rest_channel] != 0)
+    //     {
+    //       state->p25_cc_freq = state->trunk_chan_map[rest_channel];
+    //       //set to always tuned
+    //       opts->p25_is_tuned = 1;
+    //     }
         
-      }
-      SKIPCAP: ; //do nothing
-    }
+    //     fprintf (stderr, " Capacity Plus Channel Status - FL: %d TS: %d RS: %d - Rest Channel %d", fl, ts, res, rest_channel);
+
+    //     fprintf (stderr, "\n  ");
+    //     for (i = 0; i < 8; i++)
+    //     {
+    //       fprintf (stderr, "Ch%d: ", i+1);
+    //       if (ch[i] != 0)
+    //       {
+    //         tg = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[k*8+32], 8); 
+    //         if (tg != 0) fprintf (stderr, " %03d ", tg);
+    //         else fprintf (stderr, "Priv "); //observed 000s for TG value seem to appear during a Cap+ Private TXI call
+    //         //add values to trunking tg/channel potentials
+    //         t_tg[i] = tg;
+    //         k++;
+            
+    //       }
+    //       else if (i+1 == rest_channel) fprintf (stderr, "Rest ");
+    //       else fprintf (stderr, "Idle ");
+
+    //       if (i == 3) fprintf (stderr, "\n  "); 
+    //     }
+    //     tghex = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
+    //     //fprintf (stderr, "\n   TG Hex = 0x%06X", tghex);
+    //     state->dmr_mfid = 0x10;
+    //     sprintf (state->dmr_branding, "%s", "Motorola");
+    //     sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
+
+    //     //nullify any previous TIII data (bugfix for bad assignments or system type switching)
+    //     sprintf(state->dmr_site_parms, "%s", "");
+
+    //     fprintf (stderr, "%s", KNRM);
+
+    //     //Skip tuning group calls if group calls are disabled
+    //     if (opts->trunk_tune_group_calls == 0) goto SKIPCAP;
+
+    //     //don't tune if currently a vc on the current channel 
+    //     if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
+    //     {
+    //       for (j = 0; j < 8; j++) //go through the channels stored looking for active ones to tune to
+    //       {
+    //         char mode[8]; //allow, block, digital, enc, etc
+
+    //         //if we are using allow/whitelist mode, then write 'B' to mode for block
+    //         //comparison below will look for an 'A' to write to mode if it is allowed
+    //         if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+
+    //         for (int i = 0; i < state->group_tally; i++)
+    //         {
+    //           if (state->group_array[i].groupNumber == t_tg[j])
+    //           {
+    //             fprintf (stderr, " [%s]", state->group_array[i].groupName);
+    //             strcpy (mode, state->group_array[i].groupMode);
+    //           }
+    //         }
+
+    //         //no more 0 reporting, that was some bad code that caused that issue
+    //         //without priority, this will tune the first one it finds (if group isn't blocked)
+    //         if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
+    //         {
+    //           if (state->trunk_chan_map[j+1] != 0) //if we have a valid frequency
+    //           {
+    //             //RIGCTL
+    //             if (opts->use_rigctl == 1)
+    //             {
+    //               if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+    //               SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+1]); 
+    //               state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
+    //               opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+    //               j = 11; //break loop
+    //             }
+
+    //             //rtl_udp
+    //             else if (opts->audio_in_type == 3)
+    //             {
+    //               rtl_udp_tune (opts, state, state->trunk_chan_map[j+1]);
+    //               state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
+    //               opts->p25_is_tuned = 1;
+    //               j = 11; //break loop
+    //             }
+
+    //           }
+    //         }
+
+    //       }
+    //     }
+        
+    //   }
+    //   SKIPCAP: ; //do nothing
+    // }
 
     //Connect+ Section
     if (csbk_fid == 0x06)
