@@ -587,7 +587,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   }
 
   //collect the mi fragment
-  dmr_late_entry_mi_fragment (opts, state, 1, ambe_fr, ambe_fr2, ambe_fr3);
+  dmr_late_entry_mi_fragment (opts, state, 1, m1, m2, m3);
 
   //errors due to skipping other slot
   // cach_err = dmr_cach (opts, state, cachdata);

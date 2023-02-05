@@ -724,7 +724,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
 
   //collect the mi fragment
-  dmr_late_entry_mi_fragment (opts, state, 1, ambe_fr, ambe_fr2, ambe_fr3);
+  dmr_late_entry_mi_fragment (opts, state, 1, m1, m2, m3);
 
   cach_err = dmr_cach (opts, state, cachdata);
   fprintf (stderr, "\n");
