@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Lite' Edition v2.0.0-28-ga02f992 Windows 32-bit RC3   "
+  " 'Lite' Edition v2.0.0-30-ga4ecfdc  Windows 32-bit RC3a   "
 };
 
 int
@@ -303,7 +303,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
 
   //initialize unified dmr pdu 'superframe'
   memset (state->dmr_pdu_sf, 0, sizeof (state->dmr_pdu_sf));
-  memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
+  
+  //initialize cap+ bits and block num storage
+  memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));  
+  state->cap_plus_block_num = 0;
 
   //init confirmed data individual block crc as invalid
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
@@ -833,7 +836,10 @@ initState (dsd_state * state)
 
   //initialize unified dmr pdu 'superframe'
   memset (state->dmr_pdu_sf, 0, sizeof (state->dmr_pdu_sf));
-  memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
+  
+  //initialize cap+ bits and block num storage
+  memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));  
+  state->cap_plus_block_num = 0;
 
   //init confirmed data individual block crc as invalid
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
@@ -1977,14 +1983,14 @@ main (int argc, char **argv)
             fprintf(stderr, "Decoding only dPMR frames.\n");
           }
           break;
-        //don't mess with the modulations, doesn't really do anything meaningful anyways
+        //don't mess with the modulations unless you really need to
         case 'm':
           if (optarg[0] == 'a')
             {
-              // opts.mod_c4fm = 1;
-              // opts.mod_qpsk = 1;
-              // opts.mod_gfsk = 1;
-              // state.rf_mod = 0;
+              opts.mod_c4fm = 1;
+              opts.mod_qpsk = 1;
+              opts.mod_gfsk = 1;
+              state.rf_mod = 0;
               fprintf (stderr,"Don't use the -ma switch.\n");
             }
           else if (optarg[0] == 'c')
@@ -2023,6 +2029,29 @@ main (int argc, char **argv)
               opts.setmod_bw = 12000;
               fprintf (stderr,"Enabling 6000 sps P25p2 CQPSK.\n");
             }
+          //test
+          else if (optarg[0] == '3')
+            {
+              opts.mod_c4fm = 1;
+              opts.mod_qpsk = 0;
+              opts.mod_gfsk = 0;
+              state.rf_mod = 0;
+              state.samplesPerSymbol = 8; 
+              state.symbolCenter = 3; 
+              opts.setmod_bw = 12000;
+              fprintf (stderr,"Enabling 6000 sps P25p2 C4FM.\n");
+            }
+          else if (optarg[0] == '4')
+          {
+            opts.mod_c4fm = 1;
+            opts.mod_qpsk = 1;
+            opts.mod_gfsk = 1;
+            state.rf_mod = 0;
+            state.samplesPerSymbol = 8; 
+            state.symbolCenter = 3; 
+            opts.setmod_bw = 12000;
+            fprintf (stderr,"Enabling 6000 sps P25p2 all optimizations.\n");
+          }
           break;
         case 'u':
           sscanf (optarg, "%i", &opts.uvquality);

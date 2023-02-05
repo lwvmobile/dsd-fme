@@ -185,6 +185,9 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     
   }
 
+  //flag off prop head when not looking at data blocks
+  if (databurst != 0x6 && databurst != 0x7 && databurst != 0x8 && databurst != 0xA && databurst != 0xB) state->data_p_head[slot] = 0;
+
   if (databurst != 0xEB)
   {
     if (state->dmr_ms_mode == 0) fprintf(stderr, "| Color Code=%02d ", state->dmr_color_code);

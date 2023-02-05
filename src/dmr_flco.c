@@ -67,10 +67,10 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
   if (IrrecoverableErrors == 0)
   {
-
+    
     if (slot == 0) state->dmr_flco = flco;
     else state->dmr_flcoR = flco;
-    
+
     //Embedded Talker Alias Header Only (format and len storage)
     if (fid == 0 && type == 3 && flco == 0x04) 
     {
@@ -226,7 +226,9 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
     //0x04 and 0x05 on a TLC seem to indicate a Cap + Private Call Terminator (perhaps one for each MS)
     //0x07 on a VLC seems to indicate a Cap+ Private Call Header
-    //0x23 on the Embedded Voice Burst Sync seems to indicate a Cap+ Private Call in progress
+    //0x23 on the Embedded Voice Burst Sync seems to indicate a Cap+ or Cap+ TXI Private Call in progress
+    //0x20 on the Embedded Voice Burst Sync seems to indicate a Moto (non-specific) Group Call in progress
+    //its possible that both EMB FID 0x10 FLCO 0x20 and 0x23 are just Moto but non-specific (observed 0x20 on Tier 2)
     if (flco == 0x4 || flco == 0x5 || flco == 0x7 || flco == 0x23) //Cap+ Things
     {
       sprintf (state->call_string[slot], " Cap+");
