@@ -211,7 +211,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   //I've observed it in the Private Cap+ TXI calls as well
   //there also seems to be a correlation between the SVC bits for TXI (reserved=3) and these extra cap+ values
   uint8_t sbrc_opcode = sbrc_hex; 
-  uint8_t alg = sbrc_hex & 3;
+  uint8_t alg = sbrc_hex & 0x7;
   uint16_t key = (sbrc_hex >> 3) & 0xFF;
 
   if (opts->payload == 1)
