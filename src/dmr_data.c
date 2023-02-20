@@ -75,12 +75,10 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   if ( Hamming_7_4_decode (tact_bits) ) cach_okay = 1;
   else
   {
+
     cach_okay = -1;
-    if (opts->aggressive_framesync == 1)
-    {
-      SlotTypeOk = 0;
-      goto END;
-    }
+    SlotTypeOk = 0;
+    goto END; 
   }
 
   state->currentslot = tact_bits[1];
@@ -257,17 +255,14 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   }
 
   /* Check and correct the SlotType (apply Golay(20,8) FEC check) */
-  
+
   // golay (20,8) hamming-weight of 6 reliably corrects at most 2 bit-errors
   if( Golay_20_8_decode(SlotType) ) SlotTypeOk = 1;
   else
   {
-    SlotTypeOk = -1;
-    if (opts->aggressive_framesync == 1)
-    {
-      SlotTypeOk = 0;
-      goto END;
-    }
+
+    SlotTypeOk = 0;
+    goto END; 
   }
 
   state->color_code = (SlotType[0] << 3) + (SlotType[1] << 2) +(SlotType[2] << 1) + (SlotType[3] << 0);

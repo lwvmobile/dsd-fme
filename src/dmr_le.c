@@ -76,6 +76,12 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
         fprintf (stderr, " Slot 1 PI/LFSR and Late Entry MI Mismatch - %08X : %08X \n", state->payload_mi, mi_final);
         state->payload_mi = mi_final; 
         fprintf (stderr, "%s", KNRM);
+      }
+      //run afterwards, or le verification won't match up properly
+      if (state->payload_algid != 0x21)
+      {
+        LFSR64 (state);
+        fprintf (stderr, "\n");
       } 
     }
     if (slot == 1 && state->payload_algidR != 0)
@@ -86,6 +92,12 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
         fprintf (stderr, " Slot 2 PI/LFSR and Late Entry MI Mismatch - %08X : %08X \n", state->payload_miR, mi_final);
         state->payload_miR = mi_final;
         fprintf (stderr, "%s", KNRM);
+      }
+      //run afterwards, or le verification won't match up properly
+      if (state->payload_algidR != 0x21)
+      {
+        LFSR64 (state);
+        fprintf (stderr, "\n");
       } 
     }
 
@@ -104,11 +116,13 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
       state->DMRvcL = 0;
     }
 
-    if (state->payload_algid >= 0x21)
+    if (state->payload_algid == 0x21)
     {
       LFSR (state);
       fprintf (stderr, "\n");
     }
+    //LFSR64 carried out after LE verification in order to keep it from constantly resetting the MI to the previous value
+
   }
   if (state->currentslot == 1)
   {
@@ -119,11 +133,13 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
       state->DMRvcR = 0;
     }
 
-    if (state->payload_algidR >= 0x21)
+    if (state->payload_algidR == 0x21)
     {
       LFSR (state);
       fprintf (stderr, "\n");
     }
+    //LFSR64 carried out after LE verification in order to keep it from constantly resetting the MI to the previous value
+
   }
 
 }
@@ -134,12 +150,11 @@ void dmr_alg_reset (dsd_opts * opts, dsd_state * state)
   state->dropR = 256;
   state->DMRvcL = 0;
   state->DMRvcR = 0; 
-  state->payload_miP = 0; 
+  state->payload_miP = 0;
+  state->payload_miN = 0; 
 }
 
 //handle Single Burst (Voice Burst F) or Reverse Channel Signalling 
-//(Embedded or Dedicated Outbound, not Stand Alone (MS sourced) or Direct Mode)
-//MS Sourced or Direct Mode probably would be handled poorly by the demodulator
 void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
 {
   int i;
@@ -164,11 +179,11 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   //power == 1 should be reverse channel -- still need to check the interleave inside of BPTC
   if (power == 1) irr_err = BPTC_16x2_Extract_Data(sbrc_interleaved, sbrc_return, 1);
   //bad emb burst, never set a valid power indicator value (probably 9)
-  if (power > 1) goto SBRC_END; 
+  if (power > 1) goto SBRC_END;
 
   //RC Channel CRC 7 Mask = 0x7A; CRC bits are used as privacy indicators on 
   //Single Voice Burst F (see below), other moto values seem to exist there as well
-  //unknown what the other values are (see Cap+ 0x313)
+  //unknown what the other values are (see Cap+ 0x313 and 0x643)
   if (power == 1) //RC
   {
     crc_extracted = 0;
@@ -206,70 +221,78 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
     }
   }
   
+  //Disabling the lower portion until this can be completely ironed out
+  
   //sbrc_hex value of 0x313 seems to be some Cap+ Thing, 
   //also observed 0x643 on another cap+ system (site id, status? something?)
-  //I've observed it in the Private Cap+ TXI calls as well
-  //there also seems to be a correlation between the SVC bits for TXI (reserved=3) and these extra cap+ values
-  uint8_t sbrc_opcode = sbrc_hex; 
-  uint8_t alg = sbrc_hex & 0x7;
-  uint16_t key = (sbrc_hex >> 3) & 0xFF;
+  // uint8_t sbrc_opcode = sbrc_hex; 
+  // uint8_t alg = sbrc_hex & 0x7;
+  // uint8_t key = (sbrc_hex >> 3) & 0xFF;
 
-  if (opts->payload == 1)
-  {
-    if (irr_err != 0) fprintf (stderr, "%s (FEC ERR) %d %s", KRED, irr_err, KNRM);
-    if (irr_err == 0)
-    {
-      if (sbrc_hex == 0) ; //NULL
-      else if (sbrc_hex == 0x313)
-      {
-        //Cap+ Thing? Observed On Cap+ Systems
-        // fprintf (stderr, " Cap+ Thing?");
-      } 
-      else
-      {
+  //this pattern seems to fit the multiple cap+ systems I've observed
+  //test on site '7' to make sure (works on 1 and 4)
+  // uint8_t cap_site = (sbrc_hex >> 4) & 0x7;
 
-        if (slot == 0)
-        {
-          //key and alg only present SOME times, not all,
-          //also, intermixed with other signalling
-          //needs more study first!
-          if (state->dmr_so & 0x40 && key != 0 && state->payload_keyid == 0)
-          {
-            if (opts->payload == 1)
-            {
-              fprintf (stderr, "%s ", KYEL);
-              fprintf (stderr, "\n Slot 1");
-              fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
-              fprintf (stderr, "%s ", KNRM);
-            }
+  // if (opts->payload == 1)
+  // {
+  //   if (irr_err != 0) fprintf (stderr, "%s (FEC ERR) %d %s", KRED, irr_err, KNRM);
+  //   if (irr_err == 0)
+  //   {
+  //     if (sbrc_hex == 0) ; //NULL
+  //     else if (sbrc_hex == 0x313) //sbrc_hex == 0x313 and 0x643 (cap+ things)
+  //     {
+  //       //Cap+ Site ID seems to fit here on samples I've seen with the alternate SB signalling
+  //       fprintf (stderr, "%s ", KYEL);
+  //       fprintf (stderr, "\n ");
+  //       fprintf (stderr, " Capacity Plus Site %d", cap_site);
+  //       fprintf (stderr, "%s ", KNRM);
+  //     } 
+  //     else
+  //     {
+
+  //       if (slot == 0)
+  //       {
+  //         //key and alg only present SOME times, not all,
+  //         //also, intermixed with other signalling
+  //         //needs more study first!
+  //         if (state->dmr_so & 0x40 && key != 0 && state->payload_keyid == 0)
+  //         {
+  //           if (opts->payload == 1)
+  //           {
+  //             fprintf (stderr, "%s ", KYEL);
+  //             fprintf (stderr, "\n Slot 1");
+  //             fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
+  //             fprintf (stderr, "%s ", KNRM);
+  //           }
             
-            //needs more study before assignment
-            //state->payload_keyid = key;
-            //state->payload_algid = alg + 0x20; //assuming DMRA approved alg values (moto patent)
-          }
-        }
-        if (slot == 1)
-        {
-          if (state->dmr_soR & 0x40 && key != 0 && state->payload_keyidR == 0)
-          {
-            if (opts->payload == 1)
-            {
-              fprintf (stderr, "%s ", KYEL);
-              fprintf (stderr, "\n Slot 2");
-              fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
-              fprintf (stderr, "%s ", KNRM);
-            }
+  //           //needs more study before assignment
+  //           // state->payload_keyid = key;
+  //           // state->payload_algid = alg + 0x20; //assuming DMRA approved alg values (moto patent)
+  //         }
+  //       }
+
+  //       if (slot == 1)
+  //       {
+  //         if (state->dmr_soR & 0x40 && key != 0 && state->payload_keyidR == 0)
+  //         {
+  //           if (opts->payload == 1)
+  //           {
+  //             fprintf (stderr, "%s ", KYEL);
+  //             fprintf (stderr, "\n Slot 2");
+  //             fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
+  //             fprintf (stderr, "%s ", KNRM);
+  //           }
             
-            //needs more study before assignment
-            //state->payload_keyidR = key;
-            //state->payload_algidR = alg + 0x20; //assuming DMRA approved alg values (moto patent)
-          }
-        }
+  //           //needs more study before assignment
+  //           // state->payload_keyidR = key;
+  //           // state->payload_algidR = alg + 0x20; //assuming DMRA approved alg values (moto patent)
+  //         }
+  //       }
 
-      }
+  //     }
 
-    }
-  }
+  //   }
+  // }
 
   SBRC_END:
 

@@ -114,13 +114,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //disabled for dmr_cach testing
   tact_okay = 0;
   if ( Hamming_7_4_decode (tact_bits) ) tact_okay = 1;
-  if (tact_okay != 1)
-  {
-    if (opts->aggressive_framesync == 1)
-    {
-      goto END;
-    } 
-  }
+  if (tact_okay != 1) goto END; //when going to end for bad tact or emb, consider using getdibit or skipdibit to 'stash' dibits and get better return on next sync pattern? in data particularly
+
 
   internalslot = state->currentslot = tact_bits[1];
 
@@ -338,7 +333,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     else sprintf (polarity, "%s", "-");
 
     fprintf (stderr,"Sync: %sDMR %s| Color Code=%02d | VC%d ", polarity, light, state->dmr_color_code, vc);
- 
+
     if (internalslot == 0 && vc1 == 6) 
     {
       //process embedded link control
@@ -465,18 +460,16 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   fprintf (stderr, "| VOICE CACH/EMB ERR");
   fprintf (stderr, "%s", KNRM);
   fprintf (stderr, "\n");
-  //run LFSR if either slot had an active MI in it.
-  if (state->payload_algid >= 0x21)
+  //run refresh if either slot had an active MI in it.
+  if (state->payload_algid != 0)
   {
-  state->currentslot = 0;
-  LFSR(state);
-  fprintf (stderr, "\n");
+    state->currentslot = 0;
+    dmr_alg_refresh (opts, state);
   }
-  if (state->payload_algidR >= 0x21) 
+  if (state->payload_algidR != 0) 
   {
-  state->currentslot = 1;
-  LFSR(state);
-  fprintf (stderr, "\n");
+    state->currentslot = 1;
+    dmr_alg_refresh (opts, state);
   }
     
   //failsafe to reset all data header and blocks when bad tact or emb
@@ -514,7 +507,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   11, 12, 2, 13, 14,
   15, 3, 16, 4, 17, 18,
   19, 5, 20, 21, 22, 6, 23
-  }; 
+  };
   //add time to mirror printFrameSync
   time_t now;
   char * getTime(void) //get pretty hh:mm:ss timestamp
@@ -559,13 +552,8 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 
   //decode and correct tact and compare
   if ( Hamming_7_4_decode (tact_bits) ) tact_okay = 1;
-  if (tact_okay != 1)
-  {
-    if (opts->aggressive_framesync == 1)
-    {
-      goto END;
-    } 
-  }
+  if (tact_okay != 1) goto END; 
+
 
   internalslot = state->currentslot = tact_bits[1];
 
@@ -623,11 +611,8 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 
   if ( strcmp (sync, DMR_BS_VOICE_SYNC) != 0)
   {
-    if (opts->aggressive_framesync == 1)
-    {
-      sync_okay = 0;
-      goto END;
-    } 
+    sync_okay = 0;
+    goto END; 
   }
 
   //Continue Second AMBE Frame, 18 after Sync or EmbeddedSignalling
@@ -742,18 +727,17 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "%s", KRED);
     fprintf (stderr, "| VOICE CACH/SYNC ERR");
     fprintf (stderr, "%s", KNRM);
-    //run LFSR if either slot had an active MI in it.
-    if (state->payload_algid >= 0x21)
+    fprintf (stderr, "\n");
+    //run refresh if either slot had an active MI in it.
+    if (state->payload_algid != 0)
     {
       state->currentslot = 0;
-      LFSR(state);
-      fprintf (stderr, "\n");
+      dmr_alg_refresh (opts, state);
     }
-    if (state->payload_algidR >= 0x21) 
+    if (state->payload_algidR != 0) 
     {
       state->currentslot = 1;
-      LFSR(state);
-      fprintf (stderr, "\n");
+      dmr_alg_refresh (opts, state);
     }
     
     //failsafe to reset all data header and blocks when bad tact or emb
