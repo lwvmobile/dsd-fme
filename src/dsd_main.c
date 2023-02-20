@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Lite' Edition v2.0.0-35-g37c24d0  Windows 32-bit RC4  "
+  " 'Lite' Edition v2.0.0-36-g2f644f5  Windows 32-bit RC4  "
 };
 
 int comp (const void *a, const void *b)
@@ -1542,7 +1542,7 @@ main (int argc, char **argv)
               opts.dmr_stereo = 1; //switching in 'stereo' for 'mono'
               opts.dmr_mono = 0;
               state.dmr_stereo = 0;
-              opts.setmod_bw = 7000;
+              //opts.setmod_bw = 7000;
               sprintf (opts.output_name, "Legacy Auto");
             }
           else if (optarg[0] == 'd')
@@ -1636,7 +1636,7 @@ main (int argc, char **argv)
               opts.dmr_mono = 0;
               opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
-              opts.setmod_bw = 7000;
+              opts.setmod_bw = 12000;
               sprintf (opts.output_name, "P25P1");
               fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
             }
@@ -1663,7 +1663,7 @@ main (int argc, char **argv)
               opts.dmr_stereo = 0;
               state.dmr_stereo = 0;
               opts.dmr_mono = 0;
-              opts.setmod_bw = 4000;
+              // opts.setmod_bw = 4000; //causing issues
               sprintf (opts.output_name, "NXDN48");
               fprintf (stderr,"Setting symbol rate to 2400 / second\n");
               fprintf (stderr,"Decoding only NXDN 4800 baud frames.\n");
@@ -1717,7 +1717,7 @@ main (int argc, char **argv)
                   opts.dmr_stereo = 1;
                   state.dmr_stereo = 0;
                   opts.dmr_mono = 0;
-                  opts.setmod_bw = 7000;
+                  opts.setmod_bw = 12000;
                   sprintf (opts.output_name, "P25P2");
                   fprintf (stderr,"Decoding P25-P2 frames C4FM or OP25 Symbol Captures!\n");
                   }
@@ -1768,7 +1768,7 @@ main (int argc, char **argv)
                       state.rf_mod = 0;
                       opts.dmr_stereo = 1;
                       opts.dmr_mono = 0;
-                      opts.setmod_bw = 7000;
+                      opts.setmod_bw = 12000; //safe default on both DMR and P25
                       opts.pulse_digi_rate_out = 24000;
                       opts.pulse_digi_out_channels = 2;
                       sprintf (opts.output_name, "XDMA");
@@ -1795,7 +1795,7 @@ main (int argc, char **argv)
               opts.dmr_stereo = 0;
               opts.dmr_mono = 0;
               state.dmr_stereo = 0;
-              opts.setmod_bw = 7000;
+              // opts.setmod_bw = 7000; //causing issues
               sprintf (opts.output_name, "NXDN96");
               fprintf (stderr,"Decoding only NXDN 9600 baud frames.\n");
             }
@@ -1907,8 +1907,8 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
               state.rf_mod = 0;
-              state.samplesPerSymbol = 8; 
-              state.symbolCenter = 3; 
+              state.samplesPerSymbol = 10; 
+              state.symbolCenter = 4; 
               opts.setmod_bw = 12000;
               fprintf (stderr,"Enabling 6000 sps P25p2 C4FM.\n");
             }
