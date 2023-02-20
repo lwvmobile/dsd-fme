@@ -940,7 +940,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		}
 
 		//Unit-to-Unit Answer Request (UU_ANS_REQ)
-		if (MAC[1+len_a] == 0x45)
+		if (MAC[1+len_a] == 0x45 && MAC[2+len_a] != 0x90)
 		{
 			int svc     = MAC[2+len_a];
 			int answer  = MAC[3+len_a];
@@ -952,17 +952,17 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			
 		}
 
-		//Telephone Interconnect Voice Channel Grant (TELE_INT_CH_GRANT)
-		if (MAC[1+len_a] == 0x48)
-		{
-			fprintf (stderr, "\n Telephone Interconnect Voice Channel Grant ");	
-		}
+		//Telephone Interconnect Voice Channel Grant (TELE_INT_CH_GRANT) //look at PDU for this, see if this is tunable
+		// if (MAC[1+len_a] == 0x48 && MAC[2+len_a] != 0x90)
+		// {
+		// 	fprintf (stderr, "\n Telephone Interconnect Voice Channel Grant ");	
+		// }
 
-		//Telephone Interconnect Voice Channel Grant Update (TELE_INT_CH_GRANT_UPDT)
-		if (MAC[1+len_a] == 0x49)
-		{
-			fprintf (stderr, "\n Telephone Interconnect Voice Channel Grant Update ");	
-		}
+		// //Telephone Interconnect Voice Channel Grant Update (TELE_INT_CH_GRANT_UPDT)
+		// if (MAC[1+len_a] == 0x49 && MAC[2+len_a] != 0x90)
+		// {
+		// 	fprintf (stderr, "\n Telephone Interconnect Voice Channel Grant Update ");	
+		// }
 
 		//Synchronization Broadcast (SYNC_BCST)
 		if (MAC[1+len_a] == 0x70)
@@ -986,12 +986,12 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			else offhour = ( (ltoff & 0b11111 ) / 2);
 			
 			int seconds = slots / 135; //very rough estimation, but may be close enough for grins
-			if (seconds > 60) seconds = 60; //sanity check for rounding error
+			if (seconds > 59) seconds = 59; //sanity check for rounding error
 			fprintf (stderr, "  Date: 20%02d.%02d.%02d Time: %02d:%02d:%02d UTC\n", 
 			          year, month, day, hour, min, seconds); 
 			fprintf (stderr, "  Local Time Offset: %.01f Hours;", offhour);
 			//if ist bit is set, then time on system may be considered invalid (i.e., no external time sync)
-			if (ist % 1)
+			if (ist == 1)
 			{
 				fprintf (stderr, " Invalid System Time ");
 			}
