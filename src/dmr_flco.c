@@ -30,17 +30,42 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   int is_cap_plus = 0;
   int is_alias = 0;
   int is_gps = 0;
+
+  //XPT 'Things'
+  int is_xpt = 0;
+  uint8_t xpt_hand = 0;  //handshake
+  uint8_t xpt_free = 0;  //free repeater
+  uint8_t xpt_int  = 0;  //xpt channel to interrupt (channel/repeater call should occur on?)
+  uint8_t xpt_res_a = 0; //unknown values of other bits of the XPT LC
+  uint8_t xpt_res_b = 0; //unknown values of other bits of the XPT LC
+  uint8_t xpt_res_c = 0; //unknown values of other bits of the XPT LC
+  uint8_t target_hash[24]; //for XPT (and others if desired, get the hash and compare against SLC or XPT Status CSBKs)
+  uint8_t tg_hash = 0; //value of the hashed TG
+
   uint8_t slot = state->currentslot;
   uint8_t unk = 0; //flag for unknown FLCO + FID combo
 
-  
-  pf = (uint8_t)(lc_bits[0]); //Protect Flag
-  reserved = (uint8_t)(lc_bits[1]); //Reserved 
+  pf = (uint8_t)(lc_bits[0]); //Protect Flag -- Hytera XPT uses this to signify which TS the PDU is on
+  reserved = (uint8_t)(lc_bits[1]); //Reserved -- Hytera XPT G/I bit; 0 - Individual; 1 - Group;
   flco = (uint8_t)ConvertBitIntoBytes(&lc_bits[2], 6); //Full Link Control Opcode
   fid = (uint8_t)ConvertBitIntoBytes(&lc_bits[8], 8); //Feature set ID (FID)
   so = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 8); //Service Options
   target = (uint32_t)ConvertBitIntoBytes(&lc_bits[24], 24); //Target or Talk Group
   source = (uint32_t)ConvertBitIntoBytes(&lc_bits[48], 24);
+
+  //read ahead a little to get this for the xpt flag
+  if (IrrecoverableErrors == 0 && flco == 0x09 && fid == 0x68)
+  {
+    sprintf (state->dmr_branding, "%s", "  Hytera"); 
+    sprintf (state->dmr_branding_sub, "XPT ");
+  }
+
+  //look at the dmr_branding_sub for the XPT string
+  //branding sub is set at CSBK(68-3A and 3B), SLCO 8, and here on 0x09
+  if (strcmp (state->dmr_branding_sub, "XPT ") == 0) is_xpt = 1;
+
+  //hytera XPT -- disable the pf flag, is used for TS value in some Hytera XPT PDUs
+  if (is_xpt) pf = 0;
 
   //check protect flag
   if (pf == 1)
@@ -53,18 +78,6 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     goto END_FLCO; 
   } 
 
-  //look for Cap+ on VLC header, then set source and/or rest channel appropriately
-  if (IrrecoverableErrors == 0 && type == 1 && fid == 0x10 && (flco == 0x04 || flco == 0x07) ) //0x07 appears to be a cap+ txi private call
-  {
-    is_cap_plus = 1;
-    capsite = (uint8_t)ConvertBitIntoBytes(&lc_bits[48], 4); //can't verify, just speculating
-    restchannel = (int)ConvertBitIntoBytes(&lc_bits[52], 4); //was 48,8
-    source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16);
-    // sprintf (state->dmr_branding, "%s", "Motorola");
-    // sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
-  }
-
-
   if (IrrecoverableErrors == 0)
   {
     
@@ -72,23 +85,32 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     else state->dmr_flcoR = flco;
 
     //Embedded Talker Alias Header Only (format and len storage)
-    if (fid == 0 && type == 3 && flco == 0x04) 
+    if ( (fid == 0 || fid == 0x68) && type == 3 && flco == 0x04) 
     {
       dmr_embedded_alias_header(opts, state, lc_bits);
     }
 
     //Embedded Talker Alias Header (continuation) and Blocks
-    if (fid == 0 && type == 3 && flco > 0x3 && flco < 0x08) 
+    if ( (fid == 0 || fid == 0x68) && type == 3 && flco > 0x03 && flco < 0x08) 
     {
       is_alias = 1;
       dmr_embedded_alias_blocks(opts, state, lc_bits);
     }
 
     //Embedded GPS
-    if (fid == 0 && type == 3 && flco == 0x08)
+    if ( (fid == 0 || fid == 0x68) && fid == 0 && type == 3 && flco == 0x08)
     {
       is_gps = 1;
       dmr_embedded_gps(opts, state, lc_bits);
+    }
+
+    //look for Cap+ on VLC header, then set source and/or rest channel appropriately
+    if (type == 1 && fid == 0x10 && (flco == 0x04 || flco == 0x07) ) //0x07 appears to be a cap+ txi private call
+    {
+      is_cap_plus = 1;
+      capsite = (uint8_t)ConvertBitIntoBytes(&lc_bits[48], 4); //don't believe so
+      restchannel = (int)ConvertBitIntoBytes(&lc_bits[52], 4); //
+      source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16);
     }
 
     //Unknown CapMax/Moto Things
@@ -113,8 +135,16 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     {
       fprintf (stderr, "%s \n", KRED);
       fprintf (stderr, " SLOT %d", state->currentslot+1);
-      fprintf (stderr, " Data Terminator (TD_LC)");
-      fprintf (stderr, "%s ", KNRM);
+      fprintf (stderr, " Data Terminator (TD_LC) ");
+      fprintf (stderr, "%s", KNRM);
+
+      //reset data header format storage
+      state->data_header_format[slot] = 7;
+      //flag off data header validity 
+      state->data_header_valid[slot] = 0; 
+      //flag off conf data flag
+      state->data_conf_data[slot] = 0;
+      
       goto END_FLCO;
     }
 
@@ -132,8 +162,127 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       goto END_FLCO;
     }
 
+    //look for any Hytera XPT system, adjust TG to 16-bit allocation 
+    //Groups use only 8 out of 16, but 16 always seems to be allocated
+    //private calls use 16-bit target values hased to 8-bit in the site status csbk
+    //the TLC preceeds the VLC for a 'handshake' call setup in XPT
+
+    //truncate if XPT is set
+    if (is_xpt == 1)
+    {
+      target = (uint32_t)ConvertBitIntoBytes(&lc_bits[32], 16); //16-bit allocation
+      source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16); //16-bit allocation
+
+      //the crc8 hash is the value represented in the CSBK when dealing with private calls
+      for (int i = 0; i < 16; i++) target_hash[i] = lc_bits[32+i];
+      tg_hash = crc8 (target_hash, 16); 
+    } 
+
+    //XPT Call 'Grant' Setup Occurs in TLC (TermLC Handshake) with a flco 0x09 
+    if (fid == 0x68 && flco == 0x09)
+    {
+      //The CSBK always uses an 8-bit TG; The White Papers (user manuals) say 8-bit TG and 16-bit SRC addressing
+      //It seems that private calls and indiv data calls use a hash of their 8 bit tgt values in the CSBK
+      xpt_free = (uint8_t)ConvertBitIntoBytes(&lc_bits[24], 4); //24 and 4 on 0x09
+      xpt_hand = (uint8_t)ConvertBitIntoBytes(&lc_bits[28], 4); //handshake kind: 0 - ordinary; 1-2 Interrupts; 3-15 reserved; 
+
+      target = (uint32_t)ConvertBitIntoBytes(&lc_bits[32], 16); //16-bit allocation
+      source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16); //16-bit allocation
+
+      //the bits that are left behind
+      xpt_res_a = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 8); //Where the SVC bits would usually be
+      xpt_res_b = (uint8_t)ConvertBitIntoBytes(&lc_bits[48], 8); //where the first 8 bits of the SRC would be
+      xpt_res_c = (uint8_t)ConvertBitIntoBytes(&lc_bits[72], 8); //some unknown 8 bit value after the SRC
+
+      //speculation: 16,4 may be the current repeater channel this call will occur on? or the channel to interrupt?, could also be 8 bits?
+      xpt_int = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 4);
+
+      //the crc8 hash is the value represented in the CSBK when dealing with private calls
+      for (int i = 0; i < 16; i++) target_hash[i] = lc_bits[32+i];
+      tg_hash = crc8 (target_hash, 16); //This is a different poly, but using as placeholder
+
+      fprintf (stderr, "%s \n", KGRN);
+      fprintf (stderr, " SLOT %d ", state->currentslot+1); 
+      fprintf(stderr, "TGT=%u SRC=%u ", target, source);
+
+      // Here are some of the RIDs with hash address seen in that sample:
+      //     930 = 88
+      //     9317 = 198
+      //     10002 = 187
+
+      if (opts->payload == 1) fprintf(stderr, "HASH=%d ", tg_hash);
+      // if (opts->payload == 1) fprintf(stderr, "HSK [%X] ", xpt_hand);
+
+      if (opts->payload == 1) fprintf(stderr, "CH=%X ", xpt_int+1); //repeater channel to 'interrupt' with this call?
+      if (opts->payload == 1) fprintf(stderr, "FLCO=0x%02X FID=0x%02X ", flco, fid);
+
+      // if (opts->payload == 1) fprintf(stderr, "RS [%02X][%02X][%02X] ", xpt_res_a, xpt_res_b, xpt_res_c);
+      
+      fprintf (stderr, "Hytera XPT ");
+      if (reserved == 1) fprintf (stderr, "Group "); //according to observation
+      else fprintf (stderr, "Private "); //according to observation
+      fprintf (stderr, "Call Grant ");
+
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, "F-Rpt %d", xpt_free+1);
+      fprintf (stderr, "%s ", KNRM);
+
+      //add string for ncurses terminal display
+      sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free+1);
+
+      is_xpt = 1;
+      goto END_FLCO;
+    }
+
+    //XPT 'Handshake' -- not observed as of yet on any samples
+    if ( fid == 0x68 && (flco == 0x2E || flco == 0x2F) ) 
+    {
+
+      //all below is according to the patent, but never observed on any samples I have
+      target = (uint32_t)ConvertBitIntoBytes(&lc_bits[24], 24); //24-bit values according to patent
+      source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 24); //24-bit values according to patent
+
+      xpt_free = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 4); //16 and 4 on 2E and 2F
+      xpt_hand = (uint8_t)ConvertBitIntoBytes(&lc_bits[20], 4); //handshake kind: 0 - ordinary; 1-2 Interrupts; 3-15 reserved; 
+      xpt_int  = (uint8_t)ConvertBitIntoBytes(&lc_bits[24], 8); //Interrupt Designated Channel (No idea?)
+
+      fprintf (stderr, "%s \n", KGRN);
+      fprintf (stderr, " SLOT %d ", state->currentslot+1); 
+      fprintf(stderr, "TGT=%u SRC=%u ", target, source);
+
+      if (opts->payload == 1) fprintf(stderr, "HASH=%d ", tg_hash);
+      // if (opts->payload == 1) fprintf(stderr, "HSK=[%X] ", xpt_hand);
+
+      if (opts->payload == 1) fprintf(stderr, "FLCO=0x%02X FID=0x%02X ", flco, fid);
+      fprintf (stderr, "Hytera XPT ");
+      if (reserved == 1) fprintf (stderr, "Group "); 
+      else fprintf (stderr, "Private "); 
+
+      fprintf (stderr, "Call ");
+      if (flco == 0x2E) fprintf (stderr, "Request ");
+      if (flco == 0x2F) fprintf (stderr, "Response ");
+
+      fprintf (stderr, "%s ", KNRM);
+      is_xpt = 1;
+      goto END_FLCO;
+
+    }
+
+    //Hytera XPT "something" -- seen on Embedded
+    if (fid == 0x68 && flco == 0x13)
+    {
+      if (type == 1) fprintf (stderr, "%s \n", KCYN);
+      if (type == 2) fprintf (stderr, "%s \n", KCYN);
+      if (type == 3) fprintf (stderr, "%s", KCYN);
+      fprintf (stderr, " SLOT %d", state->currentslot+1);
+      fprintf (stderr, " Hytera ");
+      unk = 1;
+      goto END_FLCO;
+    }
+
     //unknown other manufacturer or OTA ENC, etc.
-    if (fid != 0 && fid != 0x68 && fid != 0x10) //removed tait from the list
+    //removed tait from the list, added hytera 0x08
+    if (fid != 0 && fid != 0x68 && fid != 0x10 && fid != 0x08) 
     {
       if (type == 1) fprintf (stderr, "%s \n", KYEL);
       if (type == 2) fprintf (stderr, "%s \n", KYEL);
@@ -147,11 +296,9 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   }  
 
   //will want to continue to observe for different flco and fid combinations to find out their meaning
-  //Standard Addressing/Cap+ Addressing (trying to avoid embedded alias and gps, etc)
   if(IrrecoverableErrors == 0 && is_alias == 0 && is_gps == 0) 
   {
     //set overarching manufacturer in use when non-standard feature id set is up
-    //may not want to set moto 0x10 here either, lots of radios use that set as well
     if (fid != 0) state->dmr_mfid = fid;
 
     if (type != 2) //VLC and EMB, set our target, source, so, and fid per channel
@@ -222,6 +369,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     
     fprintf (stderr, " SLOT %d ", state->currentslot+1);
     fprintf(stderr, "TGT=%u SRC=%u ", target, source);
+    if (opts->payload == 1 && is_xpt == 1) fprintf(stderr, "HASH=%d ", tg_hash);
     if (opts->payload == 1) fprintf(stderr, "FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
 
     //0x04 and 0x05 on a TLC seem to indicate a Cap + Private Call Terminator (perhaps one for each MS)
@@ -229,7 +377,10 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     //0x23 on the Embedded Voice Burst Sync seems to indicate a Cap+ or Cap+ TXI Private Call in progress
     //0x20 on the Embedded Voice Burst Sync seems to indicate a Moto (non-specific) Group Call in progress
     //its possible that both EMB FID 0x10 FLCO 0x20 and 0x23 are just Moto but non-specific (observed 0x20 on Tier 2)
-    if (flco == 0x4 || flco == 0x5 || flco == 0x7 || flco == 0x23) //Cap+ Things
+
+    if (fid == 0x68) sprintf (state->call_string[slot], " Hytera  "); 
+
+    else if (flco == 0x4 || flco == 0x5 || flco == 0x7 || flco == 0x23) //Cap+ Things
     {
       sprintf (state->call_string[slot], " Cap+");
       fprintf (stderr, "Cap+ ");
@@ -244,12 +395,12 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         fprintf (stderr, "Private ");
       } 
     }
-    else if (flco == 0x3) //UU_V_Ch_Usr
+    else if (flco == 0x3) //UU_V_Ch_Usr -- still valid on hytera VLC
     {
       sprintf (state->call_string[slot], " Private ");
       fprintf (stderr, "Private "); 
     }
-    else //Grp_V_Ch_Usr
+    else //Grp_V_Ch_Usr -- still valid on hytera VLC
     {
       sprintf (state->call_string[slot], "   Group ");
       fprintf (stderr, "Group "); 
@@ -273,64 +424,74 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     //REMUS! Uncomment Line Below if desired
     // else strcat (state->call_string[slot], "          ");
 
-    /* Check the "Service Option" bits */ 
-    if(so & 0x30)
+    //Motorola FID 0x10 Only
+    if (fid == 0x10)
     {
-      /* Experimentally determined with DSD+,
-      * is equal to 0x2, this is a TXI call */
-      if((so & 0x30) == 0x20)
+      /* Check the "Service Option" bits */ 
+      if(so & 0x30)
+      {
+        /* Experimentally determined with DSD+,
+        * is equal to 0x2, this is a TXI call */
+        if((so & 0x30) == 0x20)
+        {
+          //REMUS! Uncomment Line Below if desired
+          // strcat (state->call_string[slot], " TXI");
+          fprintf(stderr, "TXI ");
+        } 
+        else
+        {
+          //REMUS! Uncomment Line Below if desired
+          // strcat (state->call_string[slot], " RES");
+          fprintf(stderr, "RS%d ", (so & 0x30) >> 4);
+        } 
+      }
+      if(so & 0x08)
       {
         //REMUS! Uncomment Line Below if desired
-        // strcat (state->call_string[slot], " TXI");
-        fprintf(stderr, "TXI ");
+        // strcat (state->call_string[slot], "-BC   ");
+        fprintf(stderr, "Broadcast ");
       } 
-      else
+      if(so & 0x04)
       {
         //REMUS! Uncomment Line Below if desired
-        // strcat (state->call_string[slot], " RES");
-        fprintf(stderr, "RS%d ", (so & 0x30) >> 4);
+        // strcat (state->call_string[slot], "-OVCM ");
+        fprintf(stderr, "OVCM ");
       } 
-    }
-    if(so & 0x08)
-    {
-      //REMUS! Uncomment Line Below if desired
-      // strcat (state->call_string[slot], "-BC   ");
-      fprintf(stderr, "Broadcast ");
-    } 
-    if(so & 0x04)
-    {
-      //REMUS! Uncomment Line Below if desired
-      // strcat (state->call_string[slot], "-OVCM ");
-      fprintf(stderr, "OVCM ");
-    } 
-    if(so & 0x03)
-    {
-      if((so & 0x03) == 0x01)
+      if(so & 0x03)
       {
-        //REMUS! Uncomment Line Below if desired
-        // strcat (state->call_string[slot], "-P1");
-        fprintf(stderr, "Priority 1 ");
-      } 
-      else if((so & 0x03) == 0x02)
-      {
-        //REMUS! Uncomment Line Below if desired
-        // strcat (state->call_string[slot], "-P2");
-        fprintf(stderr, "Priority 2 ");
-      } 
-      else if((so & 0x03) == 0x03)
-      {
-        //REMUS! Uncomment Line Below if desired
-        // strcat (state->call_string[slot], "-P3");
-        fprintf(stderr, "Priority 3 ");
-      } 
-      else /* We should never go here */
-      {
-        //REMUS! Uncomment Line Below if desired
-        // strcat (state->call_string[slot], "  ");
-        fprintf(stderr, "No Priority "); 
-      } 
+        if((so & 0x03) == 0x01)
+        {
+          //REMUS! Uncomment Line Below if desired
+          // strcat (state->call_string[slot], "-P1");
+          fprintf(stderr, "Priority 1 ");
+        } 
+        else if((so & 0x03) == 0x02)
+        {
+          //REMUS! Uncomment Line Below if desired
+          // strcat (state->call_string[slot], "-P2");
+          fprintf(stderr, "Priority 2 ");
+        } 
+        else if((so & 0x03) == 0x03)
+        {
+          //REMUS! Uncomment Line Below if desired
+          // strcat (state->call_string[slot], "-P3");
+          fprintf(stderr, "Priority 3 ");
+        } 
+        else /* We should never go here */
+        {
+          //REMUS! Uncomment Line Below if desired
+          // strcat (state->call_string[slot], "  ");
+          fprintf(stderr, "No Priority "); 
+        } 
+      }
     }
     
+    //should rework this back into the upper portion
+    if (fid == 0x68) fprintf (stderr, "Hytera ");
+    if (is_xpt) fprintf (stderr, "XPT ");
+    if (fid == 0x68 && flco == 0x00) fprintf (stderr, "Group ");
+    if (fid == 0x68 && flco == 0x03) fprintf (stderr, "Private ");
+
     fprintf(stderr, "Call ");
     
 
@@ -380,8 +541,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   END_FLCO:
   if (unk == 1 || pf == 1)
   {
-    // fprintf(stderr, " FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
-    fprintf(stderr, " FLCO=0x%02X FID=0x%02X ", flco, fid); //not all LC PDUs contain SVC bits (see TD_LC)
+    fprintf(stderr, " FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
     fprintf (stderr, "%s", KNRM);
   }
 
@@ -648,10 +808,17 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   //Con+
   uint8_t con_netid  = (uint8_t)ConvertBitIntoBytes(&slco_bits[8], 8);
   uint8_t con_siteid = (uint8_t)ConvertBitIntoBytes(&slco_bits[16], 8);
+
   //Cap+
-  uint8_t capsite = (uint8_t)ConvertBitIntoBytes(&slco_bits[12], 4); //can't verify, just speculating
-  uint8_t restchannel = (uint8_t)ConvertBitIntoBytes(&slco_bits[16], 4); //was 12,8
-  uint8_t cap_reserved = (uint8_t)ConvertBitIntoBytes(&slco_bits[20], 8); //unknown if any significant value?
+  uint8_t capsite = (uint8_t)ConvertBitIntoBytes(&slco_bits[22], 3); //Seems more consistent
+  uint8_t restchannel = (uint8_t)ConvertBitIntoBytes(&slco_bits[16], 4); 
+  uint8_t cap_reserved = (uint8_t)ConvertBitIntoBytes(&slco_bits[20], 2); //significant value?
+
+  //Hytera XPT
+  uint8_t xpt_free = (uint8_t)ConvertBitIntoBytes(&slco_bits[12], 4); //free repeater
+  //the next two per SDRTrunk, but only 0 values ever observed here
+  uint8_t xpt_pri  = (uint8_t)ConvertBitIntoBytes(&slco_bits[16], 4); //priority repeater
+  uint8_t xpt_hash = (uint8_t)ConvertBitIntoBytes(&slco_bits[20], 8); //priority TG hash
 
   //initial line break
   fprintf (stderr, "\n");
@@ -700,20 +867,12 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     fprintf (stderr, " SLCO Activity Update TS1: %X Hash: %02X TS2: %X Hash: %02X", ts1_act, ts1_hash, ts2_act, ts2_hash); //102 361-2 7.1.3.2 
   else if (slco == 0x9)
   {
-    //remove all setting of branding/sub from SLCO, can cause false positives even with seeming good CRC
-    
-    // state->dmr_mfid = 0x10;
-    // sprintf (state->dmr_branding, "%s", "Motorola"); 
-    // sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Voice Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
     sprintf (state->dmr_site_parms, "%d-%d ", con_netid, con_siteid);
   }
     
   else if (slco == 0xA)
   {
-    // state->dmr_mfid = 0x10;
-    // sprintf (state->dmr_branding, "%s", "Motorola");
-    // sprintf (state->dmr_branding_sub, "%s", "Con+ ");
     fprintf (stderr, " SLCO Connect Plus Control Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
     sprintf (state->dmr_site_parms, "%d-%d ", con_netid, con_siteid);
 
@@ -727,19 +886,21 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
    
   else if (slco == 0xF)
   {
-    // state->dmr_mfid = 0x10;
-    // sprintf (state->dmr_branding, "%s", "Motorola");
-    // sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
-    fprintf (stderr, " SLCO Capacity Plus Site: %d - Rest Channel %d - RS: %02X", capsite+1, restchannel, cap_reserved);
-    // state->dmr_rest_channel = restchannel; //test without, may work better
+    fprintf (stderr, " SLCO Capacity Plus Site: %d - Rest Channel %d - RS: %02X", capsite, restchannel, cap_reserved);
     //assign to cc freq if available
     if (state->trunk_chan_map[restchannel] != 0)
     {
       state->p25_cc_freq = state->trunk_chan_map[restchannel];
     }
 
-    //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-    // sprintf(state->dmr_site_parms, "%s", "");
+  }
+  else if (slco == 0x08)
+  {
+    //The Priority Repeater and Priority Hash values stem from SDRTrunk, but I've never seen these values not be zeroes
+    // fprintf (stderr, " SLCO Hytera XPT - Free RPT %d - PRI RPT %d - PRI HASH: %02X", xpt_free, xpt_pri, xpt_hash);
+    //NOTE: on really busy systems, this free repeater assignment can lag due to the 4 TS requirment to get SLC
+    fprintf (stderr, " SLCO Hytera XPT - Free RPT %d ", xpt_free+1); 
+    sprintf (state->dmr_branding_sub, "XPT ");
   }
     
   else fprintf (stderr, " SLCO Unknown - %d ", slco);

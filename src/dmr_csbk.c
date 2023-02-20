@@ -22,31 +22,33 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
   int  csbk_pf   = 0;
   int  csbk_o    = 0;
   int  csbk_fid  = 0;
-  uint64_t csbk_data = 0;
-  int csbk      = 0;
 
   long int ccfreq = 0;
 
-  if(IrrecoverableErrors == 0 && CRCCorrect == 1) 
+  csbk_lb  = ( (cs_pdu[0] & 0x80) >> 7 );
+  csbk_pf  = ( (cs_pdu[0] & 0x40) >> 6 );
+  csbk_o   =    cs_pdu[0] & 0x3F; 
+  csbk_fid =    cs_pdu[1]; //feature set id
+
+  //check, regardless of CRC err
+  if (IrrecoverableErrors == 0)
   {
-    
-    csbk_lb  = ( (cs_pdu[0] & 0x80) >> 7 );
-    csbk_pf  = ( (cs_pdu[0] & 0x40) >> 6 );
-    csbk_o   =    cs_pdu[0] & 0x3F; 
-    csbk_fid =    cs_pdu[1]; //feature set id
-    csbk_pf  = ( (cs_pdu[1] & 0x80) >> 7); 
-    csbk     = ((cs_pdu[0] & 0x3F) << 8) | cs_pdu[1]; //opcode and fid combo set
-
-    //update time to prevent random 'Control Channel Signal Lost' hopping
-    //in the middle of voice call on current Control Channel (con+ and t3)
-    state->last_cc_sync_time = time(NULL); 
-
+    //Hytera XPT CSBK Check -- if bits 0 and 1 are used as lcss, gi, ts, then this bit may be set on
+    if (csbk_fid == 0x68 && csbk_o == 0x0A) csbk_pf = 0; 
     if (csbk_pf == 1) //check the protect flag, don't run if set
     {
       fprintf (stderr, "%s", KRED); 
       fprintf (stderr, "\n Protected Control Signalling Block(s)");
       fprintf (stderr, "%s", KNRM);
     }
+  }
+  
+  if(IrrecoverableErrors == 0 && CRCCorrect == 1) 
+  {
+    
+    //update time to prevent random 'Control Channel Signal Lost' hopping
+    //in the middle of voice call on current Control Channel (con+ and t3)
+    state->last_cc_sync_time = time(NULL); 
 
     if (csbk_pf == 0) //okay to run
     {
@@ -209,6 +211,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   SetFreq(opts->rigctl_sockfd, freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+                  dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                 }
 
                 //rtl_udp
@@ -217,6 +220,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   rtl_udp_tune (opts, state, freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1;
+                  dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                 }
 
               }
@@ -624,7 +628,56 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
     //experimental, but seems to be working well
     if (csbk_fid == 0x10)
     {
-      //Cap+ Channel Status PDU
+
+      //Cap+ Something
+      if (csbk_o == 0x3A)
+      {
+        //initial line break
+        fprintf (stderr, "\n");
+        fprintf (stderr, "%s", KYEL);
+
+        fprintf (stderr, " Capacity Plus CSBK 0x3A ");
+
+        // 01:15:08 Sync: +DMR   slot1  [slot2] | Color Code=03 | CSBK
+        // Capacity Plus Channel Status - FL: 3 TS: 1 RS: 0 - Rest Channel 1 - Single Block
+        //   Ch1: Rest Ch2: Idle Ch3: Idle Ch4: Idle 
+        //   Ch5: Idle Ch6: Idle Ch7: Idle Ch8: Idle 
+        // DMR PDU Payload [BE][10][E1][00][00][00][00][00][00][00][4E][15]
+        // 01:15:08 Sync: +DMR  [slot1]  slot2  | Color Code=03 | CSBK
+
+        //FL, TS, and Rest Channel seem to be in same location as the Channel Status CSBK
+        //other values are currently unknown
+        // DMR PDU Payload [BA][10][C1][3B][61][11][51][00][00][00][3D][D6]
+        // 01:15:08 Sync: +DMR   slot1  [slot2] | Color Code=03 | CSBK
+        // DMR PDU Payload [BA][10][E1][3B][61][11][51][00][00][00][46][BE]
+
+      }
+
+      //Cap+ Neighbors
+      if (csbk_o == 0x3B)
+      {
+
+        //initial line break
+        fprintf (stderr, "\n");
+        fprintf (stderr, "%s", KYEL);
+
+        fprintf (stderr, " Capacity Plus Neighbor List ");
+
+        uint8_t nl[6]; //neighbors numerical value
+        uint8_t nr[6]; //neighbors current rest channel
+        memset (nl, 0, sizeof (nl));
+        memset (nr, 0, sizeof (nr));
+
+        for (int i = 0; i < 6; i++)
+        {
+          nl[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[32+(i*8)], 4);
+          nr[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[36+(i*8)], 4);
+          if (nl[i]) fprintf (stderr, "S: %d R(%d) ", nl[i], nr[i]);
+        }
+
+      }
+      
+      //Cap+ Channel Status
       if (csbk_o == 0x3E)
       {
 
@@ -634,8 +687,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         uint8_t fl = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 2); 
         uint8_t ts = cs_pdu_bits[18];  //timeslot this PDU occurs in
-        uint8_t res = cs_pdu_bits[19]; //unknown, always seems to be 0
-        uint8_t rest_channel = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[20], 4);
+        uint8_t res = cs_pdu_bits[19]; //unknown, always seems to be 0 -- could be used in larger Cap+? like a bank switch?
+        uint8_t rest_channel = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[20], 4); 
         uint8_t group_tally = 0; //set this to the number of active group channels tallied
 
         uint8_t block_num = state->cap_plus_block_num;
@@ -809,6 +862,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                     SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+1]); 
                     state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
                     opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+                    dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                     j = 11; //break loop
                   }
 
@@ -818,6 +872,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                     rtl_udp_tune (opts, state, state->trunk_chan_map[j+1]);
                     state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
                     opts->p25_is_tuned = 1;
+                    dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                     j = 11; //break loop
                   }
 
@@ -849,154 +904,20 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       } //opcode == 0x3E
     } //fid == 0x10
 
-    //Capacity+ Section -- fallback if issues arise
-    // if (csbk_fid == 0x10)
-    // {
-    //   //not quite sure how these tuning rules will go over
-    //   //if they don't work so well, may just fall back to
-    //   //a 'follow rest channel on no sync' only approach
-    //   if (csbk_o == 0x3E)
-    //   {
-
-    //     //initial line break
-    //     fprintf (stderr, "\n");
-    //     fprintf (stderr, "%s", KYEL);
-
-    //     uint8_t fl = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 2); 
-    //     uint8_t ts = cs_pdu_bits[18];  //accurate?
-    //     uint8_t res = cs_pdu_bits[19]; //unknown??
-    //     uint8_t rest_channel = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[20], 4);
-
-    //     uint8_t ch[8]; //one bit per channel
-    //     uint8_t tg = 0;
-    //     uint32_t tghex = 0; //combined all tgs for debug
-    //     int i, j, k;
-
-    //     //tg and channel info for trunking purposes
-    //     uint8_t t_tg[9];
-    //     memset (t_tg, 0, sizeof(t_tg));
-
-    //     k = 0;
-    //     if (rest_channel != state->dmr_rest_channel)
-    //     {
-    //       state->dmr_rest_channel = rest_channel; 
-    //     }
-    //     for (int i = 0; i < 8; i++)
-    //     {
-    //       ch[i] = cs_pdu_bits[i+24];
-    //     }
-
-    //     //assign to cc freq to follow during no sync
-    //     if (state->trunk_chan_map[rest_channel] != 0)
-    //     {
-    //       state->p25_cc_freq = state->trunk_chan_map[rest_channel];
-    //       //set to always tuned
-    //       opts->p25_is_tuned = 1;
-    //     }
-        
-    //     fprintf (stderr, " Capacity Plus Channel Status - FL: %d TS: %d RS: %d - Rest Channel %d", fl, ts, res, rest_channel);
-
-    //     fprintf (stderr, "\n  ");
-    //     for (i = 0; i < 8; i++)
-    //     {
-    //       fprintf (stderr, "Ch%d: ", i+1);
-    //       if (ch[i] != 0)
-    //       {
-    //         tg = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[k*8+32], 8); 
-    //         if (tg != 0) fprintf (stderr, " %03d ", tg);
-    //         else fprintf (stderr, "Priv "); //observed 000s for TG value seem to appear during a Cap+ Private TXI call
-    //         //add values to trunking tg/channel potentials
-    //         t_tg[i] = tg;
-    //         k++;
-            
-    //       }
-    //       else if (i+1 == rest_channel) fprintf (stderr, "Rest ");
-    //       else fprintf (stderr, "Idle ");
-
-    //       if (i == 3) fprintf (stderr, "\n  "); 
-    //     }
-    //     tghex = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
-    //     //fprintf (stderr, "\n   TG Hex = 0x%06X", tghex);
-    //     state->dmr_mfid = 0x10;
-    //     sprintf (state->dmr_branding, "%s", "Motorola");
-    //     sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
-
-    //     //nullify any previous TIII data (bugfix for bad assignments or system type switching)
-    //     sprintf(state->dmr_site_parms, "%s", "");
-
-    //     fprintf (stderr, "%s", KNRM);
-
-    //     //Skip tuning group calls if group calls are disabled
-    //     if (opts->trunk_tune_group_calls == 0) goto SKIPCAP;
-
-    //     //don't tune if currently a vc on the current channel 
-    //     if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
-    //     {
-    //       for (j = 0; j < 8; j++) //go through the channels stored looking for active ones to tune to
-    //       {
-    //         char mode[8]; //allow, block, digital, enc, etc
-
-    //         //if we are using allow/whitelist mode, then write 'B' to mode for block
-    //         //comparison below will look for an 'A' to write to mode if it is allowed
-    //         if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
-
-    //         for (int i = 0; i < state->group_tally; i++)
-    //         {
-    //           if (state->group_array[i].groupNumber == t_tg[j])
-    //           {
-    //             fprintf (stderr, " [%s]", state->group_array[i].groupName);
-    //             strcpy (mode, state->group_array[i].groupMode);
-    //           }
-    //         }
-
-    //         //no more 0 reporting, that was some bad code that caused that issue
-    //         //without priority, this will tune the first one it finds (if group isn't blocked)
-    //         if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
-    //         {
-    //           if (state->trunk_chan_map[j+1] != 0) //if we have a valid frequency
-    //           {
-    //             //RIGCTL
-    //             if (opts->use_rigctl == 1)
-    //             {
-    //               if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
-    //               SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+1]); 
-    //               state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
-    //               opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
-    //               j = 11; //break loop
-    //             }
-
-    //             //rtl_udp
-    //             else if (opts->audio_in_type == 3)
-    //             {
-    //               rtl_udp_tune (opts, state, state->trunk_chan_map[j+1]);
-    //               state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
-    //               opts->p25_is_tuned = 1;
-    //               j = 11; //break loop
-    //             }
-
-    //           }
-    //         }
-
-    //       }
-    //     }
-        
-    //   }
-    //   SKIPCAP: ; //do nothing
-    // }
-
     //Connect+ Section
     if (csbk_fid == 0x06)
     {
 
       if (csbk_o == 0x01)
       {
-        //initial line break
-        fprintf (stderr, "\n");
         uint8_t nb1 = cs_pdu[2] & 0x3F; 
         uint8_t nb2 = cs_pdu[3] & 0x3F; 
         uint8_t nb3 = cs_pdu[4] & 0x3F; 
         uint8_t nb4 = cs_pdu[5] & 0x3F; 
-        uint8_t nb5 = cs_pdu[6] & 0x3F; 
+        uint8_t nb5 = cs_pdu[6] & 0x3F;
+
+        //initial line break
+        fprintf (stderr, "\n"); 
         fprintf (stderr, "%s", KYEL);
         fprintf (stderr, " Connect Plus Neighbors\n");
         fprintf (stderr, "  NB1(%02d), NB2(%02d), NB3(%02d), NB4(%02d), NB5(%02d)", nb1, nb2, nb3, nb4, nb5);
@@ -1080,6 +1001,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
                 state->is_con_plus = 1; //flag on
                 state->last_vc_sync_time = time(NULL); //bugfix: set sync here so we don't immediately tune back to CC constantly.
+                dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
               }
 
               //rtl_udp
@@ -1090,6 +1012,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 opts->p25_is_tuned = 1;
                 state->is_con_plus = 1; //flag on
                 state->last_vc_sync_time = time(NULL); //bugfix: set sync here so we don't immediately tune back to CC constantly.
+                dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
               }
 
             }
@@ -1102,7 +1025,201 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
       fprintf (stderr, "%s", KNRM);
 
-    } 
+    } //end Connect+
+
+    //Hytera XPT
+    if (csbk_fid == 0x68)
+    {
+      //XPT Site Status -- Very Very Experimental, WIP, Don't be surprised by bad decodes or broken trunking
+      if (csbk_o == 0x0A)
+      {
+        //initial line break
+        fprintf (stderr, "\n"); 
+        fprintf (stderr, "%s", KYEL);
+
+        uint8_t xpt_ch[6]; //one tg/call per timeslot
+        uint16_t tg = 0;  //8-bit TG value or hash
+        int i, j;
+
+        //tg and channel info for trunking purposes
+        uint8_t t_tg[24];
+        memset (t_tg, 0, sizeof(t_tg));
+
+        uint8_t xpt_seq    = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[0], 2);  //this replaces the CSBK lb and pf
+        uint8_t xpt_free   = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 4); //free repeater channel
+        uint8_t xpt_bank   = 0;
+
+        if (xpt_seq) xpt_bank = xpt_seq*6;
+
+        //get 2-bit status values for each 6 channels (timeslots) 
+        for (i = 0; i < 6; i++) xpt_ch[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[20+(i*2)], 2);
+
+        fprintf (stderr, " Hytera XPT Site Status - Free RPT: %d SN: %d\n ", xpt_free+1, xpt_seq);
+
+        //Print List of Channels and Activity 
+        for (i = 0; i < 6; i++) 
+        {
+          fprintf (stderr, "Ch%02d: ", i+xpt_bank+1); //(xpt_seq*6)
+          tg = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[i*8+32], 8);
+          fprintf (stderr, "ST-%X", xpt_ch[i]); //status bits value 0,1,2, or 3
+          if (tg != 0)                fprintf (stderr, " %03d  ", tg); 
+          else
+          {
+            if (xpt_ch[i] == 3)         fprintf (stderr, " Null "); //offline?, free? but also group call if the TG value is populated? Wut? Null should cover both cases...maybe
+            else if (xpt_ch[i] == 2)    fprintf (stderr, " Priv "); //This seems to be used on both private data and private calls, but one or the other has a 0 TG value?
+            else if (xpt_ch[i] == 1)    fprintf (stderr, " Unk  "); //the 01 value has not been observed as of yet, group data?
+            else if (xpt_ch[i] == 0)    fprintf (stderr, " Idle "); //Idle appears to always be a 0, or could indicate Group Data (including status CSBK and VLC/TLC)
+          }
+
+          if (i == 2) fprintf (stderr, "\n ");
+
+
+          //add values to trunking tg/channel potentials
+          if (tg != 0) t_tg[i+(xpt_seq*6)] = tg;
+
+        }
+
+        //add string for ncurses terminal display
+        sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free+1);
+
+        //assign to cc freq to follow during no sync
+        //current theory is that user should set channel 0 as the 'home repeater' frequency
+        //this can change if this is ever tested by anybody properly
+        if (state->trunk_chan_map[0] != 0)
+        {
+          state->p25_cc_freq = state->trunk_chan_map[0];
+          //set to always tuned
+          opts->p25_is_tuned = 1;
+        }
+
+        //Skip tuning calls if group calls are disabled
+        if (opts->trunk_tune_group_calls == 0) goto SKIPXPT;
+
+        //don't tune if vc on the current channel 
+        if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
+        {
+          for (j = 0; j < 6; j++) //go through the channels stored looking for active ones to tune to
+          {
+            char mode[8]; //allow, block, digital, enc, etc
+
+            //if we are using allow/whitelist mode, then write 'B' to mode for block
+            //comparison below will look for an 'A' to write to mode if it is allowed
+            if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+
+            //this won't work properly on hashed TGT values
+            //unless users load a TGT hash in a csv file
+            //and hope it doesn't clash with other normal TG values
+            for (int i = 0; i < state->group_tally; i++)
+            {
+              if (state->group_array[i].groupNumber == t_tg[j+(xpt_seq*6)])
+              {
+                fprintf (stderr, " [%s]", state->group_array[i].groupName);
+                strcpy (mode, state->group_array[i].groupMode);
+              }
+            }
+
+            //without priority, this will tune the first one it finds (if group isn't blocked)
+            if (t_tg[j+(xpt_seq*6)] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
+            {
+              if (state->trunk_chan_map[j+(xpt_seq*6)+1] != 0) //if we have a valid frequency
+              {
+                //RIGCTL
+                if (opts->use_rigctl == 1)
+                {
+                  if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+                  SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+(xpt_seq*6)+1]); 
+                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
+                  opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+                  dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+                  j = 11; //break loop
+                }
+
+                //rtl_udp
+                else if (opts->audio_in_type == 3)
+                {
+                  rtl_udp_tune (opts, state, state->trunk_chan_map[j+(xpt_seq*6)+1]);
+                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
+                  opts->p25_is_tuned = 1;
+                  dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+                  j = 11; //break loop
+                }
+
+              }
+            }
+
+          }
+        } //end tuning
+
+        SKIPXPT: ;
+
+        sprintf (state->dmr_branding_sub, "XPT ");
+
+        //Trunking Note: My understanding is that XPT calls always start on the 'home' repeater, and then expand
+        //outward to the free repeaters, so its probably easiest for a user to load the frequencies in a csv file
+        //and let FME scan through them as opposed to actively trunking, it will spend most of the time on the home repeater
+        //and if calls occur on the home repeater, it'll be too busy with those to go to the free repeater
+        //DSD-FME doesn't have any sort of TG priority, so its first come first served, just block or allow
+
+      }
+
+      //XPT Site Information - Adj Site Info
+      if (csbk_o == 0x0B)
+      {
+
+        //initial line break
+        fprintf (stderr, "\n"); 
+        fprintf (stderr, "%s", KYEL);
+
+        // fprintf (stderr, " Hytera XPT CSBK 0x0B ");
+
+        //wraithe's theory -- seems pretty good to me
+        //still only a theory though until can be verified
+        //by having a system with precisely known variables
+
+        // Site ID [5 bits]
+        // Unknown_3 [3 bits]
+        // Free Repeater on site [4 bits]
+        // Unknown_4 [4 bits]
+
+        // 11:44:58 Sync: +DMR   slot1  [slot2] | Color Code=01 | CSBK
+        // Hytera XPT CSBK 0x0B 
+        // DMR PDU Payload [0B][68][10][20][18][10][20][10][28][20][EF][DA]
+
+        // repeat x3 (for total of 4 sites)
+        int i;
+        uint8_t xpt_site_id[4];
+        uint8_t xpt_site_rp[4];
+        uint8_t xpt_site_u1[4];
+        uint8_t xpt_site_u2[4];
+
+        for (i = 0; i < 4; i++)
+        {
+          xpt_site_id[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16+(i*16)], 5);
+          xpt_site_u1[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[21+(i*16)], 3);
+          xpt_site_rp[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[24+(i*16)], 4);
+          xpt_site_u2[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[28+(i*16)], 4);
+        }
+
+        fprintf (stderr, " Hytera XPT Site Id: %d - Free RPT: %d", xpt_site_id[0], xpt_site_rp[0]);
+        // fprintf (stderr, " RS1: %d RS2: %d", xpt_site_u1[0], xpt_site_u2[1]); //debug
+
+        fprintf (stderr, "\n");
+        fprintf (stderr, " XPT Adj Site(s): ");
+        for (i = 1; i < 4; i++)
+        {
+          if (xpt_site_id[i] != 0) 
+          {
+            fprintf (stderr, "%d (%d) ", xpt_site_id[i], xpt_site_rp[i]);
+            // fprintf (stderr, "RS1: %d RS2: %d - ", xpt_site_u1[i], xpt_site_u2[i]); //debug
+          }
+        }
+
+        sprintf (state->dmr_branding_sub, "XPT ");
+
+
+      }
+
+    } //end Hytera XPT section
 
   }
   END:
