@@ -40,7 +40,8 @@ static int find_min(uint8_t list[], int len) {
                     index = i;
                     unique = 1;
                 } else if (list[i] == min) {
-                    unique = 0;
+                    //unique = 0;
+                    ; //do nothing, still can be correct and pass CRC
                 }
             }
             /* return -1 if a minimum can't be found */
