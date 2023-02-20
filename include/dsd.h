@@ -527,11 +527,12 @@ typedef struct
   int directmode;
 
   int dmr_stereo_payload[144];    //load up 144 dibit buffer for every single DMR TDMA frame
-  uint8_t data_header_blocks[2];  //collect number of blocks to follow from data header per slot
+  int data_header_blocks[2];      //collect number of blocks to follow from data header per slot
+  int data_block_counter[2];      //counter for number of data blocks collected
+  uint8_t data_header_valid[2];   //flag for verifying the data header if still valid (in case of tact/burst fec errs)
   uint8_t data_header_padding[2]; //collect number of padding octets in last block per slot
   uint8_t data_header_format[2];  //collect format of data header (conf or unconf) per slot
   uint8_t data_header_sap[2];     //collect sap info per slot
-  uint8_t data_block_counter[2];  //counter for number of data blocks collected
   uint8_t data_p_head[2];         //flag for dmr proprietary header to follow
 
   //new stuff below here
@@ -927,11 +928,12 @@ void dmrMSData (dsd_opts * opts, dsd_state * state);
 void dmrMSBootstrap (dsd_opts * opts, dsd_state * state);
 
 //dmr data header and multi block types (header, 1/2, 3/4, 1, Unified)
-void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors);
+void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t dheader_bits[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors);
 void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_bytes[], uint8_t block_len, uint8_t databurst, uint8_t type);
 void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[]);
 void dmr_reset_blocks (dsd_opts * opts, dsd_state * state);
-uint8_t dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[]);
+void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[]);
+void dmr_locn (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[]);
 
 //dmr alg stuff
 void dmr_alg_reset (dsd_opts * opts, dsd_state * state);
@@ -951,6 +953,7 @@ uint8_t crc7(uint8_t bits[], unsigned int len);
 //LFSR code courtesy of https://github.com/mattames/LFSR/
 void LFSR(dsd_state * state);
 void LFSRN (char * BufferIn, char * BufferOut, dsd_state * state);
+void LFSR64(dsd_state * state);
 
 void Hamming_7_4_init();
 void Hamming_7_4_encode(unsigned char *origBits, unsigned char *encodedBits);

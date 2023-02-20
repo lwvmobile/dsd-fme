@@ -52,11 +52,10 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Lite' Edition v2.0.0-30-ga4ecfdc  Windows 32-bit RC3a   "
+  " 'Lite' Edition v2.0.0-31-g3167f9d  Windows 32-bit RC4  "
 };
 
-int
-comp (const void *a, const void *b)
+int comp (const void *a, const void *b)
 {
   if (*((const int *) a) == *((const int *) b))
     return 0;
@@ -255,12 +254,12 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->data_header_blocks[1] = 1; //when trying to fill the superframe and 0-1 blocks give us an overflow
   state->data_header_padding[0] = 0;
   state->data_header_padding[1] = 0;
-  state->data_header_format[0] = 0;
-  state->data_header_format[1] = 0;
+  state->data_header_format[0] = 7;
+  state->data_header_format[1] = 7;
   state->data_header_sap[0] = 0;
   state->data_header_sap[1] = 0;
-  state->data_block_counter[0] = 0;
-  state->data_block_counter[1] = 0;
+  state->data_block_counter[0] = 1;
+  state->data_block_counter[1] = 1;
   state->data_p_head[0] = 0;
   state->data_p_head[1] = 0;
 
@@ -303,7 +302,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
 
   //initialize unified dmr pdu 'superframe'
   memset (state->dmr_pdu_sf, 0, sizeof (state->dmr_pdu_sf));
-  
+  memset (state->data_header_valid, 0, sizeof(state->data_header_valid));
+
   //initialize cap+ bits and block num storage
   memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));  
   state->cap_plus_block_num = 0;
@@ -739,12 +739,12 @@ initState (dsd_state * state)
   state->data_header_blocks[1] = 1; //when trying to fill the superframe and 0-1 blocks give us an overflow
   state->data_header_padding[0] = 0;
   state->data_header_padding[1] = 0;
-  state->data_header_format[0] = 0;
-  state->data_header_format[1] = 0;
+  state->data_header_format[0] = 7;
+  state->data_header_format[1] = 7;
   state->data_header_sap[0] = 0;
   state->data_header_sap[1] = 0;
-  state->data_block_counter[0] = 0;
-  state->data_block_counter[1] = 0;
+  state->data_block_counter[0] = 1;
+  state->data_block_counter[1] = 1;
   state->data_p_head[0] = 0;
   state->data_p_head[1] = 0;
 
@@ -836,6 +836,7 @@ initState (dsd_state * state)
 
   //initialize unified dmr pdu 'superframe'
   memset (state->dmr_pdu_sf, 0, sizeof (state->dmr_pdu_sf));
+  memset (state->data_header_valid, 0, sizeof(state->data_header_valid));
   
   //initialize cap+ bits and block num storage
   memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));  
@@ -976,7 +977,7 @@ usage ()
   //printf ("                 (4 Level, not 8 Level LSM) (this is honestly unknown since I can't verify what local systems are using)\n");
   printf ("  -F            Relax P25 Phase 2 MAC_SIGNAL CRC Checksum Pass/Fail\n");
   printf ("                 Use this feature to allow MAC_SIGNAL even if CRC errors.\n");
-  printf ("  -F            Relax DMR CACH/Burst FEC or RAS/CRC CSBK Pass/Fail\n");
+  printf ("  -F            Relax DMR RAS/CRC CSBK/DATA Pass/Fail\n");
   printf ("                 Enabling on some systems could lead to bad voice/data decoding if bad or marginal signal\n");
   printf ("\n");
   printf ("  -K <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)\n");
@@ -1153,22 +1154,6 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
   exit (0);
 }
 
-// void
-// sigfun (int sig) //not convinced this is truly required, maybe some environments require it?
-// {
-//     exitflag = 1;
-// #ifdef USE_RTLSDR
-//     // if (opts->audio_in_type == 3)
-//       //rtlsdr_sighandler();
-// #endif
-//     signal (SIGINT, SIG_DFL);
-//     ncursesClose ();
-
-// // #ifdef USE_RTLSDR
-// //     if (opts->audio_in_type == 3) rtlsdr_sighandler();
-// // #endif
-// }
-
 double atofs(char *s)
 {
 	char last;
@@ -1223,7 +1208,6 @@ main (int argc, char **argv)
   InitAllFecFunction();
 
   exitflag = 0;
-  // signal (SIGINT, sigfun);
 
   while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:Y:K:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
     {
@@ -1241,7 +1225,6 @@ main (int argc, char **argv)
         //make sure to put a colon : after each if they need an argument
         //or remove colon if no argument required
 
-        //Disabled the Serial Port Dev and Baud Rate, etc, If somebody uses that function, sorry...
 
         case 'k': //NXDN multi-key loader
           strncpy(opts.key_in_file, optarg, 1023);
@@ -1354,53 +1337,12 @@ main (int argc, char **argv)
           if (opts.setmod_bw > 25000) opts.setmod_bw = 25000; //not too high
           break;
 
-        // case 'e':
-        //   opts.errorbars = 1;
-        //   opts.datascope = 0;
-        //   break;
-        // case 'p':
-        //   if (optarg[0] == 'e')
-        //     {
-        //       opts.p25enc = 1;
-        //     }
-        //   else if (optarg[0] == 'l')
-        //     {
-        //       opts.p25lc = 1;
-        //     }
-        //   else if (optarg[0] == 's')
-        //     {
-        //       opts.p25status = 1;
-        //     }
-        //   else if (optarg[0] == 't')
-        //     {
-        //       opts.p25tg = 1;
-        //     }
-        //   else if (optarg[0] == 'u')
-        //     {
-        //      opts.unmute_encrypted_p25 = 1;
-        //      fprintf(stderr, "P25 Encrypted Audio Unmuted\n");
-        //     }
-        //   break;
-        // case 'P':
-        //   sscanf (optarg, "%d", &opts.rtlsdr_ppm_error);
-        //   break;
-        // case 'q':
-        //   opts.errorbars = 0;
-        //   opts.verbose = 0;
-        //   break;
-
         case 's':
           sscanf (optarg, "%d", &opts.wav_sample_rate);
           opts.wav_interpolator = opts.wav_sample_rate / opts.wav_decimator;
           state.samplesPerSymbol = state.samplesPerSymbol * opts.wav_interpolator;
           state.symbolCenter = state.symbolCenter * opts.wav_interpolator;
           break;
-
-        // case 't':
-        //   opts.symboltiming = 1;
-        //   opts.errorbars = 1;
-        //   opts.datascope = 0;
-        //   break;
 
         case 'v':
           sscanf (optarg, "%d", &opts.verbose);
@@ -1480,30 +1422,6 @@ main (int argc, char **argv)
           }
           break;
 
-        // case 'G': //Set rtl device gain
-        //   sscanf (optarg, "%d", &opts.rtl_gain_value); //multiple value by ten to make it consitent with the way rtl_fm really works
-        //   break;
-
-        // case 'L': //Set rtl squelch level
-        //   sscanf (optarg, "%d", &opts.rtl_squelch_level); //set squelch by user to prevent false positives on NXDN and others
-        //   break;
-
-        // case 'V': //Set rtl voltage level
-        //   sscanf (optarg, "%d", &opts.rtl_volume_multiplier); //set 'volume' multiplier for rtl-sdr samples
-        //   break;
-
-        // case 'U': //Set rtl udp remote port
-        //   sscanf (optarg, "%d", &opts.rtl_udp_port); //set udp port number for RTL remote
-        //   break;
-
-        // case 'D': //Set rtl device index number
-        //   sscanf (optarg, "%d", &opts.rtl_dev_index);
-        //   break;
-
-        // case 'Y': //Set rtl VFO bandwidth --recommend 6, 12, 24, 36, 48, default 48? or 12?
-        //   sscanf (optarg, "%d", &opts.rtl_bandwidth);
-        //   break;
-
         case 'N':
           opts.use_ncurses_terminal = 1;
           fprintf (stderr,"Enabling NCurses Terminal.\n");
@@ -1543,21 +1461,9 @@ main (int argc, char **argv)
           fprintf (stderr, "%s", KYEL);
           //fprintf (stderr,"DMR Stereo Aggressive Resync Disabled!\n");
           fprintf (stderr, "Relax P25 Phase 2 MAC_SIGNAL CRC Checksum Pass/Fail\n");
-          fprintf (stderr, "Relax DMR CACH/Burst FEC or RAS/CRC CSBK Pass/Fail\n");
+          fprintf (stderr, "Relax DMR RAS/CRC CSBK/DATA Pass/Fail\n");
           fprintf (stderr, "%s", KNRM);
           break;
-
-        // case 'z':
-        //   sscanf (optarg, "%d", &opts.scoperate);
-        //   opts.errorbars = 0;
-        //   opts.p25enc = 0;
-        //   opts.p25lc = 0;
-        //   opts.p25status = 0;
-        //   opts.p25tg = 0;
-        //   opts.datascope = 1;
-        //   opts.symboltiming = 0;
-        //   fprintf (stderr,"Setting datascope frame rate to %i frame per second.\n", opts.scoperate);
-        //   break;
 
         case 'i':
           strncpy(opts.audio_in_dev, optarg, 2047);
@@ -1579,11 +1485,6 @@ main (int argc, char **argv)
           else fprintf (stderr,"Writing mbe data files to directory %s\n", opts.mbe_out_dir);
           // fprintf (stderr,"Writing mbe data temporarily disabled!\n");
           break;
-
-        // case 'c':
-        //   opts.rtlsdr_center_freq = (uint32_t)atofs(optarg);
-        //   fprintf (stderr,"Tuning to frequency: %i Hz\n", opts.rtlsdr_center_freq);
-        //   break;
 
         case 'c': //now is symbol capture bin output like FME Lite
           strncpy(opts.symbol_out_file, optarg, 1023);
@@ -1622,15 +1523,6 @@ main (int argc, char **argv)
           opts.dmr_stereo_wav = 0;
           openWavOutFile (&opts, &state);
           break;
-
-        // case 'B':
-        //   sscanf (optarg, "%d", &opts.serial_baud);
-        //   break;
-
-        // case 'C':
-        //   strncpy(opts.serial_dev, optarg, 1023);
-        //   opts.serial_dev[1023] = '\0';
-        //   break;
 
         case 'f':
           if (optarg[0] == 'a')
@@ -1930,30 +1822,9 @@ main (int argc, char **argv)
               state.dmr_stereo = 0; //0
               opts.setmod_bw = 7000;
               sprintf (opts.output_name, "DMR Mono");
-              //fprintf(stderr, "Notice: DMR cannot autodetect polarity. \n Use -xr option if Inverted Signal expected.\n");
+              fprintf(stderr, "Notice: DMR cannot autodetect polarity. \n Use -xr option if Inverted Signal expected.\n");
               fprintf (stderr,"Decoding only DMR Mono. \nUsing DMR Stereo '-fs' or XDMA '-ft' is highly encouraged.\n");
-              //dmr stereo below
-              // opts.frame_dstar = 0;
-              // opts.frame_x2tdma = 0;
-              // opts.frame_p25p1 = 0;
-              // opts.frame_p25p2 = 0;
-              // opts.inverted_p2 = 0; 
-              // opts.frame_nxdn48 = 0;
-              // opts.frame_nxdn96 = 0;
-              // opts.frame_dmr = 1;
-              // opts.frame_dpmr = 0;
-              // opts.frame_provoice = 0;
-              // opts.frame_ysf = 0;
-              // opts.mod_c4fm = 1;
-              // opts.mod_qpsk = 0;
-              // opts.mod_gfsk = 0;
-              // state.rf_mod = 0;
-              // opts.dmr_stereo = 1;
-              // state.dmr_stereo = 0; 
-              // opts.pulse_digi_rate_out = 24000;
-              // opts.pulse_digi_out_channels = 2;
-              // sprintf (opts.output_name, "DMR Stereo");
-              // fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
+
             }
           else if (optarg[0] == 'm')
           {
