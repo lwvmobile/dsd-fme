@@ -15,15 +15,11 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
 
   if((IrrecoverableErrors == 0)) 
   {
+
     if (state->currentslot == 0)
     {
-
-      if (0 == 0) 
-      {
-        state->payload_algid = PI_BYTE[0];
-        state->payload_keyid = PI_BYTE[2];
-      }
-
+      state->payload_algid = PI_BYTE[0];
+      state->payload_keyid = PI_BYTE[2];
       state->payload_mi    = ( ((PI_BYTE[3]) << 24) + ((PI_BYTE[4]) << 16) + ((PI_BYTE[5]) << 8) + (PI_BYTE[6]) );
       if (state->payload_algid < 0x26) 
       {
@@ -31,27 +27,26 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
         fprintf (stderr, "\n Slot 1");
         fprintf (stderr, " DMR PI H- ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algid, state->payload_keyid, state->payload_mi);
         fprintf (stderr, "%s ", KNRM);
+        if (state->payload_algid != 0x21)
+        {
+          fprintf (stderr, "\n");
+          LFSR64 (state);
+        } 
       }
 
       if (state->payload_algid >= 0x26)
       {
-        if (0 == 0) 
-        {
-          state->payload_algid = 0;
-          state->payload_keyid = 0;
-          state->payload_mi = 0;
-        }
+        state->payload_algid = 0;
+        state->payload_keyid = 0;
+        state->payload_mi = 0;
       }
     }
 
     if (state->currentslot == 1)
     {
-      if (0 == 0) 
-      {
-        state->payload_algidR = PI_BYTE[0];
-        state->payload_keyidR = PI_BYTE[2];
-      }
 
+      state->payload_algidR = PI_BYTE[0];
+      state->payload_keyidR = PI_BYTE[2];
       state->payload_miR    = ( ((PI_BYTE[3]) << 24) + ((PI_BYTE[4]) << 16) + ((PI_BYTE[5]) << 8) + (PI_BYTE[6]) );
       if (state->payload_algidR < 0x26) 
       {
@@ -59,20 +54,23 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
         fprintf (stderr, "\n Slot 2");
         fprintf (stderr, " DMR PI H- ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algidR, state->payload_keyidR, state->payload_miR);
         fprintf (stderr, "%s ", KNRM);
+        if (state->payload_algidR != 0x21)
+        {
+          fprintf (stderr, "\n");
+          LFSR64 (state);
+        } 
       }
 
       if (state->payload_algidR >= 0x26)
       {
-        if (0== 0) 
-        {
-          state->payload_algidR = 0;
-          state->payload_keyidR = 0;
-          state->payload_miR = 0;
-        }
+        state->payload_algidR = 0;
+        state->payload_keyidR = 0;
+        state->payload_miR = 0;
       }
+
     }
+
   }
-  
 }
 
 void LFSR(dsd_state * state)
@@ -95,27 +93,67 @@ void LFSR(dsd_state * state)
 
   if (state->currentslot == 0)
   {
-    if (1 == 1)
-    {
-      fprintf (stderr, "%s", KYEL);
-      fprintf (stderr, " Slot 1");
-      fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
-      fprintf(stderr, " Next MI: 0x%08X", lfsr);
-      fprintf (stderr, "%s", KNRM);
-    }
+    fprintf (stderr, "%s", KYEL);
+    fprintf (stderr, " Slot 1");
+    fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
+    fprintf(stderr, " MI: 0x%08X", lfsr);
+    fprintf (stderr, "%s", KNRM);
     state->payload_mi = lfsr;
   }
 
   if (state->currentslot == 1) 
   {
-    if (1 == 1)
+
+    fprintf (stderr, "%s", KYEL);
+    fprintf (stderr, " Slot 2");
+    fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algidR, state->payload_keyidR);
+    fprintf(stderr, " MI: 0x%08X", lfsr);
+    fprintf (stderr, "%s", KNRM);
+    state->payload_miR = lfsr;
+  }
+}
+
+void LFSR64(dsd_state * state)
+{
+	{
+    uint64_t lfsr = 0;
+
+		if (state->currentslot == 0)
+		{
+			lfsr = (uint64_t) state->payload_mi; 
+		}
+    else lfsr = (uint64_t) state->payload_miR; 
+
+    uint8_t cnt = 0;
+
+    for(cnt=0;cnt<32;cnt++) 
     {
+			uint64_t bit = ( (lfsr >> 31) ^ (lfsr >> 21) ^ (lfsr >> 1) ^ (lfsr >> 0) ) & 0x1;
+      lfsr = (lfsr << 1) | bit;
+    }
+
+		// if (state->currentslot == 0) state->payload_miP = lfsr;
+    // else state->payload_miN = lfsr; 
+
+		if (state->currentslot == 0)
+		{
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, " Slot 1");
+      fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
+      fprintf (stderr, " MI: 0x%016lX", lfsr);
+      fprintf (stderr, "%s", KNRM);
+			state->payload_mi = lfsr & 0xFFFFFFFF; //truncate for next repitition and le verification
+		}
+
+		if (state->currentslot == 1)
+		{
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot 2");
       fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algidR, state->payload_keyidR);
-      fprintf(stderr, " Next MI: 0x%08X", lfsr);
+      fprintf (stderr, " MI: 0x%016lX", lfsr);
       fprintf (stderr, "%s", KNRM);
-    }
-    state->payload_miR = lfsr;
-  }
+			state->payload_miR = lfsr & 0xFFFFFFFF; //truncate for next repitition and le verification
+		}
+
+	}
 }

@@ -114,13 +114,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //disabled for dmr_cach testing
   tact_okay = 0;
   if ( Hamming_7_4_decode (tact_bits) ) tact_okay = 1;
-  if (tact_okay != 1)
-  {
-    if (opts->aggressive_framesync == 1)
-    {
-      goto END;
-    } 
-  }
+  if (tact_okay != 1) goto END;
+
 
   internalslot = state->currentslot = tact_bits[1];
 
@@ -478,18 +473,16 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   fprintf (stderr, "| VOICE CACH/EMB ERR");
   fprintf (stderr, "%s", KNRM);
   fprintf (stderr, "\n");
-  //run LFSR if either slot had an active MI in it.
+  //run refresh if either slot had an active MI in it.
   if (state->payload_algid >= 0x21)
   {
-  state->currentslot = 0;
-  LFSR(state);
-  fprintf (stderr, "\n");
+    state->currentslot = 0;
+    dmr_alg_refresh (opts, state);
   }
   if (state->payload_algidR >= 0x21) 
   {
-  state->currentslot = 1;
-  LFSR(state);
-  fprintf (stderr, "\n");
+    state->currentslot = 1;
+    dmr_alg_refresh (opts, state);
   }
     
   //failsafe to reset all data header and blocks when bad tact or emb
@@ -572,13 +565,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 
   //decode and correct tact and compare
   if ( Hamming_7_4_decode (tact_bits) ) tact_okay = 1;
-  if (tact_okay != 1)
-  {
-    if (opts->aggressive_framesync == 1)
-    {
-      goto END;
-    } 
-  }
+  if (tact_okay != 1) goto END;
 
   internalslot = state->currentslot = tact_bits[1];
 
@@ -636,11 +623,8 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 
   if ( strcmp (sync, DMR_BS_VOICE_SYNC) != 0)
   {
-    if (opts->aggressive_framesync == 1)
-    {
-      sync_okay = 0;
-      goto END;
-    } 
+    sync_okay = 0;
+    goto END;
   }
 
   //Continue Second AMBE Frame, 18 after Sync or EmbeddedSignalling
@@ -755,18 +739,17 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "%s", KRED);
     fprintf (stderr, "| VOICE CACH/SYNC ERR");
     fprintf (stderr, "%s", KNRM);
-    //run LFSR if either slot had an active MI in it.
+    fprintf (stderr, "\n");
+    //run refresh if either slot had an active MI in it.
     if (state->payload_algid >= 0x21)
     {
       state->currentslot = 0;
-      LFSR(state);
-      fprintf (stderr, "\n");
+      dmr_alg_refresh (opts, state);
     }
     if (state->payload_algidR >= 0x21) 
     {
       state->currentslot = 1;
-      LFSR(state);
-      fprintf (stderr, "\n");
+      dmr_alg_refresh (opts, state);
     }
     
     //failsafe to reset all data header and blocks when bad tact or emb

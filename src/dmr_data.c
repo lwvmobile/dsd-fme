@@ -76,11 +76,8 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   else
   {
     cach_okay = -1;
-    if (opts->aggressive_framesync == 1)
-    {
-      SlotTypeOk = 0;
-      goto END;
-    }
+    SlotTypeOk = 0;
+    goto END;
   }
 
   state->currentslot = tact_bits[1];
@@ -262,11 +259,8 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   else
   {
     SlotTypeOk = -1;
-    if (opts->aggressive_framesync == 1)
-    {
-      SlotTypeOk = 0;
-      goto END;
-    }
+    SlotTypeOk = 0;
+    goto END;
   }
 
   state->color_code = (SlotType[0] << 3) + (SlotType[1] << 2) +(SlotType[2] << 1) + (SlotType[3] << 0);
