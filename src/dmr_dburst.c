@@ -9,9 +9,11 @@
  * 2022-12 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
-//WIP: CRC9 on confirmed data blocks; CRC32 on completed data sf;
-//WIP: Reverse Channel Signalling - RC single burst BPTC/7-bit CRC
-//WIP: Single Burst Embedded LC - Non-RC single burst LC - Look for Late Entry Alg/Key
+//WIP:  Unified Single Block Data - USBD -- TODO: USBD LIP Protocol Handling
+//WIP:  UDT Header and Blocks (coded - need samples)
+//WIP:  CRC9/CRC32 on Rate 1 Data (need samples)
+//WIP:  Reverse Channel Signalling - RC single burst BPTC/7-bit CRC (rc interleave) and when to run RC and not SB
+//WIP:  Single Burst Embedded LC - Non-RC single burst LC - Look for Late Entry Alg/Key
 
 #include "dsd.h"
 
@@ -43,9 +45,9 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   uint8_t  LC_DataBytes[10];
   int Burst = -1;
 
-  //Unified PDU (is this the best nomenclature) Bytes
-  uint8_t  DMR_PDU[25]; //using 25 bytes as the max for now
-  uint8_t  DMR_PDU_bits[196]; //bitwise version of unified payload, will probably be a lot easier to use this w/ manual
+  //PDU Bytes and Bits
+  uint8_t  DMR_PDU[25]; 
+  uint8_t  DMR_PDU_bits[196]; 
   memset (DMR_PDU, 0, sizeof (DMR_PDU));
   memset (DMR_PDU_bits, 0, sizeof (DMR_PDU_bits));
 
@@ -61,9 +63,12 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   uint8_t is_trellis = 0; 
   uint8_t is_emb = 0;
   uint8_t is_lc = 0;  
-  uint8_t is_full = 0; 
+  uint8_t is_full = 0;
+  uint8_t is_udt = 0; 
   uint8_t pdu_len = 0;
-  uint8_t pdu_start = 0; //starting value of pdu (0 normal, 2 for confirmed) 
+  uint8_t pdu_start = 0; //starting value of pdu (0 normal, 2 for confirmed)
+
+  uint8_t usbd_st = 0; //usbd service type 
 
   switch(databurst){
     case 0x00: //PI
@@ -127,7 +132,12 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
         pdu_len = 10; 
         pdu_start = 2; //start at plus two when assembling
         sprintf(state->fsubtype, " R12C ");
-      } 
+      }
+      if (state->data_header_format[slot] == 0) //UDT 1/2 Encoded Blocks
+      {
+        is_udt = 1; 
+        sprintf(state->fsubtype, " UDTC ");
+      }
       break;
     case 0x08: //3/4 Rate Data
       is_trellis = 1;
@@ -159,12 +169,12 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
         sprintf(state->fsubtype, " R_1C ");
       }  
       break;
-    case 0x0B: //Unified Data
+    case 0x0B: //Unified Single Block Data USBD
       is_bptc = 1;
       crclen = 16;
       crcmask = 0x3333;
       pdu_len = 12; //12 bytes
-      sprintf(state->fsubtype, " UDAT ");
+      sprintf(state->fsubtype, " USBD ");
       break;
       
     //special types (not real data 'sync' bursts)
@@ -202,7 +212,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       for (i = 0; i < 6; i++) //3 byte CACH
       {
         int cach_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
-        fprintf (pFile, "%X", cach_byte);
+        fprintf (pFile, "%X", cach_byte); //nibble, not a byte, next time I look at this and wonder why its not %02X
       }
       fprintf (pFile, "\n%d %02X ", slot+1, databurst); //use hex value of current data burst type
       for (i = 6; i < 72; i++) //33 bytes, no CACH
@@ -232,7 +242,6 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
     //debug print
     //fprintf (stderr, " RAS? %X - %d %d %d", BPTCReservedBits, R[0], R[1], R[2]); 
-
 
     /* Convert the 96 bits BPTC data into 12 bytes */
     k = 0;
@@ -269,10 +278,6 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       CRCCorrect = 1;
     } 
 
-    //set CRC to correct on proprietary data header blocks (unsure if p_head data has valid crcs,
-    //may be ras enabled, manufacturer specific, or none, currently unknown, but possibly RAS on samples I have)
-    // else if (state->data_p_head[slot] == 1 && databurst == 0x06) CRCCorrect = 1;
-
     //run CRC9 on intermediate and last 1/2 confirmed data blocks
     else if (state->data_conf_data[slot] == 1 && databurst == 0x7)
     {
@@ -297,7 +302,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     }
 
     //run CCITT on other data forms
-    else //will still run on unconfirmed data (shouldn't matter other than a possible bogus warning message)
+    else 
     {
       CRCComputed = ComputeCrcCCITT(BPTCDmrDataBit); 
       if (CRCComputed == CRCExtracted) CRCCorrect = 1;
@@ -305,12 +310,12 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     }
 
     //set the 'RAS Flag', if no irrecoverable errors but bad crc, only when enabled by user (to prevent a lot of bad data CSBKs)
-    if (opts->aggressive_framesync == 0 && CRCCorrect == 0 && IrrecoverableErrors == 0 && BPTCReservedBits == 4) is_ras = 1; //!=0, or == 0x4, or just R[2] == 1
+    if (opts->aggressive_framesync == 0 && CRCCorrect == 0 && IrrecoverableErrors == 0 && BPTCReservedBits == 4) is_ras = 1; 
 
     //make sure the system type isn't Hytera, but could just be bad decodes on bad sample
     if (BPTCDmrDataByte[1] == 0x68) is_ras = 0;
 
-    //if this is a RAS system, set the CRC to okay if irrecoverable errors is okay
+    //if this is a RAS system, set the CRC to okay if irrecoverable errors are okay
     //if we don't do this, then we can't view some data (CSBKs on RAS enabled systems) 
     if (is_ras == 1)
     {
@@ -340,7 +345,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       BPTCDmrDataBit[j + 7] = (BPTCDmrDataByte[i+pdu_start] >> 0) & 0x01;
     }
 
-    //convert to unified DMR_PDU and DMR_PDU_bits
+    //convert to DMR_PDU and DMR_PDU_bits
     for (i = 0; i < pdu_len; i++)
     {
       DMR_PDU[i] = BPTCDmrDataByte[i+pdu_start];
@@ -471,7 +476,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       } 
       else
       {
-        IrrecoverableErrors = 9; //set as a shim since the trellis decoder is a pain to fix
+        // IrrecoverableErrors = 9; //set as a shim since the trellis decoder is a pain to fix
         state->data_block_crc_valid[slot][blockcounter] = 0;
       } 
 
@@ -548,14 +553,12 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   if (databurst == 0x02) dmr_flco (opts, state, DMR_PDU_bits, CRCCorrect, IrrecoverableErrors, 2); //TLC
   if (databurst == 0xEB) dmr_flco (opts, state, DMR_PDU_bits, CRCCorrect, IrrecoverableErrors, 3); //EMB
 
-  //dmr data header and multi block types (header, 1/2, 3/4, 1, Unified) - type 1
-  if (databurst == 0x06) dmr_dheader (opts, state, DMR_PDU, CRCCorrect, IrrecoverableErrors);
-  if (databurst == 0x07) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 1); //1/2 Rate Data
+  //dmr data header and multi block types (header, 1/2, 3/4, 1, UDT) - type 1
+  if (databurst == 0x06) dmr_dheader (opts, state, DMR_PDU, DMR_PDU_bits, CRCCorrect, IrrecoverableErrors);
   if (databurst == 0x08) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 1); //3/4 Rate Data
   if (databurst == 0x0A) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 1); //Full Rate Data
-
-  //my best understanding is that unified data carries supplimentary MS data on TIII systems, not control signalling
-  if (databurst == 0x0B) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 1); //Unified Data
+  if (databurst == 0x07 && is_udt == 0) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 1); //1/2 Rate Data
+  if (databurst == 0x07 && is_udt == 1) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 3); //UDT with 1/2 Rate Encoding
 
   //control signalling types (CSBK, MBC)
   if (databurst == 0x03) dmr_cspdu (opts, state, DMR_PDU_bits, DMR_PDU, CRCCorrect, IrrecoverableErrors);
@@ -564,25 +567,38 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   if (databurst == 0x04) 
   {
     state->data_block_counter[slot] = 0; //zero block counter before running header
+    state->data_header_valid[slot] = 1; //set valid header since we received one
     dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 2);
   } 
   if (databurst == 0x05) dmr_block_assembler (opts, state, DMR_PDU, pdu_len, databurst, 2);
+
+  //Unified Single Data Block (USBD) -- Not to be confused with Unified Data Transport (UDT)
+  if (databurst == 0x0B)
+  {
+    //TODO: provide more robust handling at a later date -- ETSI TS 102 361-4 V1.11.1 (2021-01) 6.6.11.3
+    usbd_st = (uint8_t)ConvertBitIntoBytes(&DMR_PDU_bits[0], 4);
+    fprintf (stderr, "%s\n", KYEL);
+    fprintf (stderr, " Unified Single Block Data - ");
+    if (usbd_st == 0) fprintf (stderr, "Location Information Protocol");
+    else if (usbd_st > 8) fprintf (stderr, "Manufacturer Specific Service %d ", usbd_st);
+    else fprintf (stderr, "Reserved %d ", usbd_st);
+  }
 
   //set the original CRCCorrect back to its original value if the RAS flag was tripped
   if (is_ras == 1) CRCCorrect = crc_original_validity;
 
   //start printing relevant fec/crc/ras messages, don't print on idle or MBC continuation blocks (handled in dmr_block.c)
-  if (CRCCorrect == 1 && databurst != 0x09 && databurst != 0x05) ; //fprintf(stderr, "(CRC OK)");
+  if (IrrecoverableErrors == 0 && CRCCorrect == 1 && databurst != 0x09 && databurst != 0x05) ; //fprintf(stderr, "(CRC OK)");
 
-  if (IrrecoverableErrors == 0 && CRCCorrect == 0 && databurst != 0x09 && databurst != 0x05)
-  {
-    fprintf (stderr, "%s", KYEL);
-    fprintf(stderr, " (FEC OK)");
-    fprintf (stderr, "%s", KNRM);
+  // if (IrrecoverableErrors == 0 && CRCCorrect == 0 && databurst != 0x09 && databurst != 0x05)
+  // {
+  //   fprintf (stderr, "%s", KYEL);
+  //   fprintf(stderr, " (FEC OK)");
+  //   fprintf (stderr, "%s", KNRM);
 
-  } 
+  // } 
 
-  if (IrrecoverableErrors != 0 && databurst != 0x09 && databurst != 0x05)
+  if (IrrecoverableErrors != 0 && databurst != 0x09) //&& databurst != 0x05
   {
     fprintf (stderr, "%s", KRED);
     fprintf(stderr, " (FEC ERR)");
@@ -599,7 +615,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     fprintf (stderr, "%s", KNRM);
   }
   
-  if (CRCCorrect == 0 && databurst != 0x09 && databurst != 0x05)
+  if (IrrecoverableErrors == 0 && CRCCorrect == 0 && is_ras == 0 && databurst != 0x09 && databurst != 0x05)
   {
     fprintf (stderr, "%s", KRED);
     fprintf (stderr, " (CRC ERR) ");
@@ -622,25 +638,6 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     // fprintf (stderr, " CRC - EXT %X CMP %X", CRCExtracted, CRCComputed);
 
     fprintf (stderr, "%s", KNRM);
-
-    //short data - DD_HEAD, SP_HEAD or R_HEAD (Might do on TMS as well)
-    if ( (state->data_header_format[slot] & 0xF) == 0xD )
-    {
-      fprintf (stderr, "%s", KCYN);
-      fprintf (stderr, "\n  Hex to Ascii - ");
-      for (i = 0; i < pdu_len; i++)
-      {
-        if (DMR_PDU[i] <= 0x7E && DMR_PDU[i] >=0x20)
-        {
-          fprintf (stderr, "%c", DMR_PDU[i]);
-        }
-        else fprintf (stderr, ".");
-      }
-      
-      fprintf (stderr,"%s", KNRM);
-      
-    }
-
     
   }
 

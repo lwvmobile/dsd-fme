@@ -2157,6 +2157,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| Reverse Mute - Muting Unencrypted Voice\n");
   }
+  if (opts->aggressive_framesync == 0) printw ("| Selective CRC ERR Bypass Enabled (RAS) \n");
 
   printw ("------------------------------------------------------------------------------\n");
   attroff(COLOR_PAIR(4));
@@ -2351,8 +2352,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     else if (lls == 0 || lls == 1) //P1
     {
-      // printw ("P25 P1 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
-      printw ("P25 P1 - [%05llX][%03llX][%03llX] RFSS: [%llX] SITE: [%llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
+      printw ("P25 P1 - [%05llX][%03llX][%03llX] RFSS: [%lld] SITE: [%lld] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p25_cc_freq != 0)
       {
         printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
@@ -2360,8 +2360,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     else if (lls == 35 || lls == 36) //P2
     {
-      // printw ("P25 P2 - WACN: [%05llX] SYS: [%03llX] NAC: [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
-      printw ("P25 P2 - [%05llX][%03llX][%03llX] RFSS: [%llX] SITE: [%llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
+      printw ("P25 P2 - [%05llX][%03llX][%03llX] RFSS: [%lld] SITE: [%lld] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p2_wacn == 0 || state->p2_sysid == 0 || state->p2_cc == 0)
       {
         attron(COLOR_PAIR(2));
@@ -2472,7 +2471,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw("AES-128");
       attron(COLOR_PAIR(3));
     }
-    if (state->payload_algid == 0x84 || state->payload_algid == 0x25)
+    if (state->payload_algid == 0x84 || state->payload_algid == 0x25 || state->payload_algid == 0x05)
     {
       attron(COLOR_PAIR(1));
       printw("AES-256");
@@ -2513,16 +2512,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     attron(COLOR_PAIR(4));
 
-    //Frequency Display
-    if (state->p25_vc_freq[0] != 0)
-    {
-      attron(COLOR_PAIR(5));
-      printw ("Frequency: [%.06lf] MHz  ", (double)state->p25_vc_freq[0]/1000000);
-      if (state->carrier == 1)
-      {
-        attron(COLOR_PAIR(3));
-      }
-    }
 
     if(state->dmrburstL == 16) //only during call
     {
@@ -2549,7 +2538,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
 
     //LRRP
-    if(state->dmrburstL != 16 && opts->p25_trunk == 0) //only during data and no trunking
+    if(state->dmrburstL != 16) //only during data and no trunking //&& opts->p25_trunk == 0
     {
       attron(COLOR_PAIR(4));
       printw  ("%s", state->dmr_lrrp_gps[0]);
@@ -2578,197 +2567,204 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     printw ("\n");
 
-    //Slot 2 [1]
-    if (lls < 30 || lls == 35 || lls == 36){ //Don't print on MS mode
-    printw ("| SLOT 2 - ");
-    if (state->dmrburstR < 16 && state->carrier == 1 && state->lasttgR > 0 && state->lastsrcR > 0)
-    {
-      attron(COLOR_PAIR(2));
-    }
-    printw ("TGT: [%8i] SRC: [%8i] ", state->lasttgR, state->lastsrcR);
-    if (state->dmrburstR != 16 && state->carrier == 1 && state->lasttgR > 0 && state->lastsrcR > 0)
-    {
-      attroff(COLOR_PAIR(2));
-      attron(COLOR_PAIR(3));
-    }
-
-    //REMUS! THIS IS THE OLD ONE
-    // printw ("FID: [%02X] SVC: [%02X] ", state->dmr_fidR, state->dmr_soR);
-    //THIS IS THE NEW ONE
-    printw ("%s | ", state->call_string[1]);
-    printw ("%s ", DMRBusrtTypes[state->dmrburstR]);
-    printw ("\n");
-    
-    printw ("| V XTRA | "); //10 spaces
-
-    if(state->dmrburstR == 16 && state->payload_algidR == 0 && (state->dmr_soR & 0xCF) == 0x40) //4F or CF mask?
-    {
-      attron(COLOR_PAIR(5));
-      printw (" **Pr** ");
-      attroff(COLOR_PAIR(5));
-      attron(COLOR_PAIR(3));
-    }
-
-    if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->K > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x10)
-    {
-      attron(COLOR_PAIR(1));
-      printw ("Pr Key [%3lld] ", state->K);
-      attroff(COLOR_PAIR(1));
-      attron(COLOR_PAIR(3));
-    }
-    if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->H > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x68)
-    {
-      attron(COLOR_PAIR(1));
-      printw ("**tera Pr Key [%010llX] ", state->H);
-      attroff(COLOR_PAIR(1));
-      attron(COLOR_PAIR(3));
-    }
-    //ALG, KeyID, MI 2                          //was keyidR
-    if(state->dmrburstR == 16 && state->payload_algidR > 0 && (state->dmr_soR & 0xCF) == 0x40)
-    {
-      attron(COLOR_PAIR(1));
-      printw ("ALG: [0x%02X] KEY: [0x%02X] MI: [0x%08X] ", state->payload_algidR, state->payload_keyidR, state->payload_miR);
-      attroff(COLOR_PAIR(1));
-      attron(COLOR_PAIR(3));
-    }
-    //P25-P1 and P2
-    if(state->dmrburstR > 19 && state->payload_algidR > 0 && state->payload_algidR != 0x80)
-    {
-      attron(COLOR_PAIR(1));
-      printw ("ALG: [0x%02X] KEY: [0x%04X] MI: [0x%016llX] ", state->payload_algidR, state->payload_keyidR, state->payload_miN);
-      attroff(COLOR_PAIR(1));
-      attron(COLOR_PAIR(3));
-    }
-    if (state->payload_algidR == 0xAA || state->payload_algidR == 0x21)
-    {
-      attron(COLOR_PAIR(1));
-      printw("ADP-RC4");
-      attron(COLOR_PAIR(3));
-    }
-    if (state->payload_algidR == 0x81 || state->payload_algidR == 0x22)
-    {
-      attron(COLOR_PAIR(1));
-      printw("DES-OFB");
-      attron(COLOR_PAIR(3));
-    }
-    if (state->payload_algidR == 0x83 || state->payload_algidR == 0x23)
-    {
-      attron(COLOR_PAIR(1));
-      printw("Triple DES");
-      attron(COLOR_PAIR(3));
-    }
-    if (state->payload_algidR == 0x85 || state->payload_algidR == 0x24)
-    {
-      attron(COLOR_PAIR(1));
-      printw("AES-128");
-      attron(COLOR_PAIR(3));
-    }
-    if (state->payload_algidR == 0x84 || state->payload_algidR == 0x25)
-    {
-      attron(COLOR_PAIR(1));
-      printw("AES-256");
-      attron(COLOR_PAIR(3));
-    }
-    if (state->payload_algidR == 0x02)
-    {
-      attron(COLOR_PAIR(1));
-      printw("Hytera Full Encrypt");
-      attron(COLOR_PAIR(3));
-    }
-    //Call Types, may switch to the more robust version later?
-    if(state->dmrburstR == 16 && state->dmr_soR == 0x40 && state->R == 0) //0100 0000
-    {
-      attron(COLOR_PAIR(2));
-      printw (" **ENC** ");
-      attroff(COLOR_PAIR(2));
-      attron(COLOR_PAIR(3));
-    }
-    if(state->dmrburstR == 16 && state->dmr_soR == 0x80)
-    {
-      attron(COLOR_PAIR(2));
-      printw (" **Emergency** ");
-      attroff(COLOR_PAIR(2));
-      attron(COLOR_PAIR(3));
-    }
-    if(state->dmrburstR == 16 && state->dmr_soR == 0x30) //0010 0000
-    {
-      attron(COLOR_PAIR(2));
-      printw (" **Private Call** ");
-      attroff(COLOR_PAIR(2));
-      attron(COLOR_PAIR(3));
-    }
-    printw ("\n");
-
-    //printw ("|        | ");
-    printw ("| D XTRA | ");
-
-    attron(COLOR_PAIR(4));
-
-    //Frequency Display
-    if (state->p25_vc_freq[1] != 0)
-    {
-      attron(COLOR_PAIR(5));
-      printw ("Frequency: [%.06lf] MHz  ", (double)state->p25_vc_freq[1]/1000000);
-      if (state->carrier == 1)
+    //Slot 2 [1] //Don't print on MS mode
+    if (lls < 30 || lls == 35 || lls == 36)
+    { 
+      printw ("| SLOT 2 - ");
+      if (state->dmrburstR < 16 && state->carrier == 1 && state->lasttgR > 0 && state->lastsrcR > 0)
       {
+        attron(COLOR_PAIR(2));
+      }
+      printw ("TGT: [%8i] SRC: [%8i] ", state->lasttgR, state->lastsrcR);
+      if (state->dmrburstR != 16 && state->carrier == 1 && state->lasttgR > 0 && state->lastsrcR > 0)
+      {
+        attroff(COLOR_PAIR(2));
         attron(COLOR_PAIR(3));
       }
-    }
 
-    if(state->dmrburstR == 16) //only during call
-    {
+      //REMUS! THIS IS THE OLD ONE
+      // printw ("FID: [%02X] SVC: [%02X] ", state->dmr_fidR, state->dmr_soR);
+      //THIS IS THE NEW ONE
+      printw ("%s | ", state->call_string[1]);
+      printw ("%s ", DMRBusrtTypes[state->dmrburstR]);
+      printw ("\n");
       
-      //Embedded GPS (not LRRP)
-      attron(COLOR_PAIR(4));
-      printw  ("%s ", state->dmr_embedded_gps[1]);
+      printw ("| V XTRA | "); //10 spaces
 
-      //Embedded Talker Alias Blocks
-      for (int i = 0; i < 4; i++)
+      if(state->dmrburstR == 16 && state->payload_algidR == 0 && (state->dmr_soR & 0xCF) == 0x40) //4F or CF mask?
       {
-        for (int j = 0; j < 7; j++)
-        {
-          printw ("%s", state->dmr_alias_block_segment[1][i][j]); 
-        }
-      }
-
-      attroff(COLOR_PAIR(5));
-      if (state->carrier == 1)
-      {
+        attron(COLOR_PAIR(5));
+        printw (" **Pr** ");
+        attroff(COLOR_PAIR(5));
         attron(COLOR_PAIR(3));
       }
 
-    }
-
-    //LRRP
-    if(state->dmrburstR != 16 && opts->p25_trunk == 0) //only during data and no trunking
-    {
-      attron(COLOR_PAIR(4));
-      printw  ("%s", state->dmr_lrrp_gps[1]);
-    }
-    
-    //Group Name Labels from CSV import
-    if (state->dmrburstR == 16 || state->dmrburstR > 19)
-    {
-      for (int k = 0; k < state->group_tally; k++)
+      if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->K > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x10)
       {
-        if (state->group_array[k].groupNumber == state->lasttgR)
+        attron(COLOR_PAIR(1));
+        printw ("Pr Key [%3lld] ", state->K);
+        attroff(COLOR_PAIR(1));
+        attron(COLOR_PAIR(3));
+      }
+      if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->H > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x68)
+      {
+        attron(COLOR_PAIR(1));
+        printw ("**tera Pr Key [%010llX] ", state->H);
+        attroff(COLOR_PAIR(1));
+        attron(COLOR_PAIR(3));
+      }
+      //ALG, KeyID, MI 2                          //was keyidR
+      if(state->dmrburstR == 16 && state->payload_algidR > 0 && (state->dmr_soR & 0xCF) == 0x40)
+      {
+        attron(COLOR_PAIR(1));
+        printw ("ALG: [0x%02X] KEY: [0x%02X] MI: [0x%08X] ", state->payload_algidR, state->payload_keyidR, state->payload_miR);
+        attroff(COLOR_PAIR(1));
+        attron(COLOR_PAIR(3));
+      }
+      //P25-P1 and P2
+      if(state->dmrburstR > 19 && state->payload_algidR > 0 && state->payload_algidR != 0x80)
+      {
+        attron(COLOR_PAIR(1));
+        printw ("ALG: [0x%02X] KEY: [0x%04X] MI: [0x%016llX] ", state->payload_algidR, state->payload_keyidR, state->payload_miN);
+        attroff(COLOR_PAIR(1));
+        attron(COLOR_PAIR(3));
+      }
+      if (state->payload_algidR == 0xAA || state->payload_algidR == 0x21)
+      {
+        attron(COLOR_PAIR(1));
+        printw("ADP-RC4");
+        attron(COLOR_PAIR(3));
+      }
+      if (state->payload_algidR == 0x81 || state->payload_algidR == 0x22)
+      {
+        attron(COLOR_PAIR(1));
+        printw("DES-OFB");
+        attron(COLOR_PAIR(3));
+      }
+      if (state->payload_algidR == 0x83 || state->payload_algidR == 0x23)
+      {
+        attron(COLOR_PAIR(1));
+        printw("Triple DES");
+        attron(COLOR_PAIR(3));
+      }
+      if (state->payload_algidR == 0x85 || state->payload_algidR == 0x24)
+      {
+        attron(COLOR_PAIR(1));
+        printw("AES-128");
+        attron(COLOR_PAIR(3));
+      }
+      if (state->payload_algidR == 0x84 || state->payload_algidR == 0x25 || state->payload_algidR == 0x05)
+      {
+        attron(COLOR_PAIR(1));
+        printw("AES-256");
+        attron(COLOR_PAIR(3));
+      }
+      if (state->payload_algidR == 0x02)
+      {
+        attron(COLOR_PAIR(1));
+        printw("Hytera Full Encrypt");
+        attron(COLOR_PAIR(3));
+      }
+      //Call Types, may switch to the more robust version later?
+      if(state->dmrburstR == 16 && state->dmr_soR == 0x40 && state->R == 0) //0100 0000
+      {
+        attron(COLOR_PAIR(2));
+        printw (" **ENC** ");
+        attroff(COLOR_PAIR(2));
+        attron(COLOR_PAIR(3));
+      }
+      if(state->dmrburstR == 16 && state->dmr_soR == 0x80)
+      {
+        attron(COLOR_PAIR(2));
+        printw (" **Emergency** ");
+        attroff(COLOR_PAIR(2));
+        attron(COLOR_PAIR(3));
+      }
+      if(state->dmrburstR == 16 && state->dmr_soR == 0x30) //0010 0000
+      {
+        attron(COLOR_PAIR(2));
+        printw (" **Private Call** ");
+        attroff(COLOR_PAIR(2));
+        attron(COLOR_PAIR(3));
+      }
+      printw ("\n");
+
+      //printw ("|        | ");
+      printw ("| D XTRA | ");
+
+      attron(COLOR_PAIR(4));
+
+
+      if(state->dmrburstR == 16) //only during call
+      {
+        
+        //Embedded GPS (not LRRP)
+        attron(COLOR_PAIR(4));
+        printw  ("%s ", state->dmr_embedded_gps[1]);
+
+        //Embedded Talker Alias Blocks
+        for (int i = 0; i < 4; i++)
         {
-          attron(COLOR_PAIR(4));
-          printw (" [%s]", state->group_array[k].groupName);
-          printw ("[%s] ", state->group_array[k].groupMode);
+          for (int j = 0; j < 7; j++)
+          {
+            printw ("%s", state->dmr_alias_block_segment[1][i][j]); 
+          }
         }
+
+        attroff(COLOR_PAIR(5));
         if (state->carrier == 1)
         {
           attron(COLOR_PAIR(3));
         }
+
       }
-    }
 
-    if (state->carrier == 1) attron(COLOR_PAIR(3));
-    else attroff(COLOR_PAIR(4));
+      //LRRP
+      if(state->dmrburstR != 16) //only during data and no trunking //&& opts->p25_trunk == 0
+      {
+        attron(COLOR_PAIR(4));
+        printw  ("%s", state->dmr_lrrp_gps[1]);
+      }
+      
+      //Group Name Labels from CSV import
+      if (state->dmrburstR == 16 || state->dmrburstR > 19)
+      {
+        for (int k = 0; k < state->group_tally; k++)
+        {
+          if (state->group_array[k].groupNumber == state->lasttgR)
+          {
+            attron(COLOR_PAIR(4));
+            printw (" [%s]", state->group_array[k].groupName);
+            printw ("[%s] ", state->group_array[k].groupMode);
+          }
+          if (state->carrier == 1)
+          {
+            attron(COLOR_PAIR(3));
+          }
+        }
+      }
 
-    printw ("\n");
-  }  // end if not MS
+      if (state->carrier == 1) attron(COLOR_PAIR(3));
+      else attroff(COLOR_PAIR(4));
+
+      printw ("\n");
+
+      if (1 == 1) //opts->p25_trunk == 1
+      {
+        printw ("| T INFO | ");
+
+        // Tuned Frequency Display
+        if (state->p25_vc_freq[0] != 0)
+        {
+          attron(COLOR_PAIR(5));
+          printw ("Frequency: [%.06lf] MHz  ", (double)state->p25_vc_freq[0]/1000000);
+        }
+        if (state->carrier == 1) attron(COLOR_PAIR(3));
+        else attroff(COLOR_PAIR(4));
+        printw ("\n");
+      }
+      
+    }  // end if not MS
   } //end DMR BS Types
 
   //dPMR
@@ -3136,133 +3132,133 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   openWavOutFileR (opts, state); 
  }
 
-//this one could cause issues, but seems okay
-if (c == 112) //'p' key - stop all per call wav files
-{
-  //hope this one doesn't cause random crashing or garbage writing
-  closeWavOutFile (opts, state);
-  closeWavOutFileL (opts, state);
-  closeWavOutFileR (opts, state);
-  sprintf (opts->wav_out_file, "%s", "");
-  sprintf (opts->wav_out_fileR, "%s", "");
-  opts->dmr_stereo_wav = 0;
-}
-
-
-if (c == 115) //'s' key, stop playing wav or symbol in files
-{
-  if (opts->symbolfile != NULL)
+  //this one could cause issues, but seems okay
+  if (c == 112) //'p' key - stop all per call wav files
   {
-    if (opts->audio_in_type == 4) 
+    //hope this one doesn't cause random crashing or garbage writing
+    closeWavOutFile (opts, state);
+    closeWavOutFileL (opts, state);
+    closeWavOutFileR (opts, state);
+    sprintf (opts->wav_out_file, "%s", "");
+    sprintf (opts->wav_out_fileR, "%s", "");
+    opts->dmr_stereo_wav = 0;
+  }
+
+
+  if (c == 115) //'s' key, stop playing wav or symbol in files
+  {
+    if (opts->symbolfile != NULL)
     {
-      fclose(opts->symbolfile); 
+      if (opts->audio_in_type == 4) 
+      {
+        fclose(opts->symbolfile); 
+      }
     }
+
+    if (opts->audio_in_type == 2) //wav input file
+    {
+      sf_close(opts->audio_in_file);
+    }
+
+    opts->audio_in_type = 0;
+    openPulseInput(opts); 
   }
 
-  if (opts->audio_in_type == 2) //wav input file
+  //Lockout bug in EDACS prevents any group from tuning when using this, not sure why yet
+  //WARNING! USE THESE WITH CAUTION! IF BREAKING ISSUES OBSERVED, THEN RESTART AND DON'T USE THEM!!
+  if (opts->frame_provoice != 1 && c == 49) //'1' key, lockout slot 1 or conventional tg from tuning/playback during session
   {
-    sf_close(opts->audio_in_file);
+    state->group_array[state->group_tally].groupNumber = state->lasttg;
+    sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
+    sprintf (state->group_array[state->group_tally].groupName, "%s", "LOCKOUT");
+    state->group_tally++;
+
+    //test tuning away to break sync, if not working so well, then disable
+    //RIGCTL
+    if (opts->frame_provoice != 1 && opts->p25_is_tuned == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, 450000000);
+
+    //rtl_udp
+    if (opts->frame_provoice != 1 && opts->p25_is_tuned == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, 450000000);
+
   }
 
-  opts->audio_in_type = 0;
-  openPulseInput(opts); 
-}
+  if (opts->frame_provoice != 1 && c == 50) //'2' key, lockout slot 2 tdma tgR from tuning/playback during session
+  {
+    state->group_array[state->group_tally].groupNumber = state->lasttgR;
+    sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
+    sprintf (state->group_array[state->group_tally].groupName, "%s", "LOCKOUT");
+    state->group_tally++;
 
-//Lockout bug in EDACS prevents any group from tuning when using this, not sure why yet
-//WARNING! USE THESE WITH CAUTION! IF BREAKING ISSUES OBSERVED, THEN RESTART AND DON'T USE THEM!!
-if (opts->frame_provoice != 1 && c == 49) //'1' key, lockout slot 1 or conventional tg from tuning/playback during session
-{
-  state->group_array[state->group_tally].groupNumber = state->lasttg;
-  sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
-  sprintf (state->group_array[state->group_tally].groupName, "%s", "LOCKOUT");
-  state->group_tally++;
+    //test tuning away to break sync, if not working so well, then disable
+    //RIGCTL
+    if (opts->p25_is_tuned == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, 450000000);
 
-  //test tuning away to break sync, if not working so well, then disable
-  //RIGCTL
-  if (opts->frame_provoice != 1 && opts->p25_is_tuned == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, 450000000);
+    //rtl_udp
+    if (opts->p25_is_tuned == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, 450000000);
 
-  //rtl_udp
-  if (opts->frame_provoice != 1 && opts->p25_is_tuned == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, 450000000);
+  }
 
-}
+  if (c == 48) //'0' key, toggle upsampled audio smoothing
+  {
+    if (state->audio_smoothing == 1) state->audio_smoothing = 0;
+    else state->audio_smoothing = 1; 
+  }
 
-if (opts->frame_provoice != 1 && c == 50) //'2' key, lockout slot 2 tdma tgR from tuning/playback during session
-{
-  state->group_array[state->group_tally].groupNumber = state->lasttgR;
-  sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
-  sprintf (state->group_array[state->group_tally].groupName, "%s", "LOCKOUT");
-  state->group_tally++;
+  if (opts->p25_trunk == 1 && c == 119) //'w' key, toggle white list/black list mode 
+  {
+    if (opts->trunk_use_allow_list == 1) opts->trunk_use_allow_list = 0;
+    else opts->trunk_use_allow_list = 1; 
+  }
 
-  //test tuning away to break sync, if not working so well, then disable
-  //RIGCTL
-  if (opts->p25_is_tuned == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, 450000000);
+  if (opts->p25_trunk == 1 && c == 117) //'u' key, toggle tune private calls
+  {
+    if (opts->trunk_tune_private_calls == 1) opts->trunk_tune_private_calls = 0;
+    else opts->trunk_tune_private_calls = 1; 
+  }
 
-  //rtl_udp
-  if (opts->p25_is_tuned == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, 450000000);
+  if (opts->p25_trunk == 1 && c == 100) //'d' key, toggle tune data calls
+  {
+    if (opts->trunk_tune_data_calls == 1) opts->trunk_tune_data_calls = 0;
+    else opts->trunk_tune_data_calls = 1; 
+  }
 
-}
+  if (opts->p25_trunk == 1 && c == 103) //'g' key, toggle tune group calls
+  {
+    if (opts->trunk_tune_group_calls == 1) opts->trunk_tune_group_calls = 0;
+    else opts->trunk_tune_group_calls = 1; 
+  }
 
-if (c == 48) //'0' key, toggle upsampled audio smoothing
-{
-  if (state->audio_smoothing == 1) state->audio_smoothing = 0;
-  else state->audio_smoothing = 1; 
-}
+  if (c == 70) //'F' key - toggle agressive sync/crc failure/ras 
+  {
+    if (opts->aggressive_framesync == 0) opts->aggressive_framesync = 1;
+    else opts->aggressive_framesync = 0;
+  }
 
-if (opts->p25_trunk == 1 && c == 119) //'w' key, toggle white list/black list mode 
-{
-  if (opts->trunk_use_allow_list == 1) opts->trunk_use_allow_list = 0;
-  else opts->trunk_use_allow_list = 1; 
-}
+  if (c == 68) //'D' key - Reset DMR Site Parms/Call Strings, etc.
+  {
+    //dmr trunking/ncurses stuff 
+    state->dmr_rest_channel = -1; //init on -1
+    state->dmr_mfid = -1; //
 
-if (opts->p25_trunk == 1 && c == 117) //'u' key, toggle tune private calls
-{
-  if (opts->trunk_tune_private_calls == 1) opts->trunk_tune_private_calls = 0;
-  else opts->trunk_tune_private_calls = 1; 
-}
+    //dmr mfid branding and site parms
+    sprintf(state->dmr_branding_sub, "%s", "");
+    sprintf(state->dmr_branding, "%s", "");
+    sprintf (state->dmr_site_parms, "%s", "");
 
-if (opts->p25_trunk == 1 && c == 100) //'d' key, toggle tune data calls
-{
-  if (opts->trunk_tune_data_calls == 1) opts->trunk_tune_data_calls = 0;
-  else opts->trunk_tune_data_calls = 1; 
-}
+    //DMR Location Area - DMRLA B***S***
+    opts->dmr_dmrla_is_set = 0;
+    opts->dmr_dmrla_n = 0;
 
-if (opts->p25_trunk == 1 && c == 103) //'g' key, toggle tune group calls
-{
-  if (opts->trunk_tune_group_calls == 1) opts->trunk_tune_group_calls = 0;
-  else opts->trunk_tune_group_calls = 1; 
-}
+  }
 
-if (c == 70) //'F' key - toggle agressive sync/crc failure/ras 
-{
-  if (opts->aggressive_framesync == 0) opts->aggressive_framesync = 1;
-  else opts->aggressive_framesync = 0;
-}
-
-if (c == 68) //'D' key - Reset DMR Site Parms/Call Strings, etc.
-{
-  //dmr trunking/ncurses stuff 
-  state->dmr_rest_channel = -1; //init on -1
-  state->dmr_mfid = -1; //
-
-  //dmr mfid branding and site parms
-  sprintf(state->dmr_branding_sub, "%s", "");
-  sprintf(state->dmr_branding, "%s", "");
-  sprintf (state->dmr_site_parms, "%s", "");
-
-  //DMR Location Area - DMRLA B***S***
-  opts->dmr_dmrla_is_set = 0;
-  opts->dmr_dmrla_n = 0;
-
-}
-
-//Debug/Troubleshooting Option
-if (c == 90) //'Z' key - Simulate NoCarrier/No VC/CC sync to zero out more stuff (capital Z)
-{
-  // opts->p25_is_tuned = 0;
-  state->last_cc_sync_time = 0;
-  state->last_vc_sync_time = 0;
-  noCarrier(opts, state);
-}
+  //Debug/Troubleshooting Option
+  if (c == 90) //'Z' key - Simulate NoCarrier/No VC/CC sync to zero out more stuff (capital Z)
+  {
+    // opts->p25_is_tuned = 0;
+    state->last_cc_sync_time = 0;
+    state->last_vc_sync_time = 0;
+    noCarrier(opts, state);
+  }
 
  //anything with an entry box will need the inputs and outputs stopped first
  //so probably just write a function to handle c input, and when c = certain values 
