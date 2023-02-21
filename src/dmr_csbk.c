@@ -788,7 +788,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
         //end private/data call check
 
-        if (fl != 2)
+        // if (fl != 2)
+        if (fl == 1 || fl == 3)
         {
           fprintf (stderr, "\n  ");
           
@@ -900,7 +901,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
           state->cap_plus_block_num = 0;
           
-        } //fl != 2
+        } //if (fl == 1 || fl == 3)
       } //opcode == 0x3E
     } //fid == 0x10
 
@@ -1119,7 +1120,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             }
 
             //without priority, this will tune the first one it finds (if group isn't blocked)
-            if (t_tg[j+(xpt_seq*6)] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
+            if (t_tg[j+(xpt_seq*6)+1] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
             {
               if (state->trunk_chan_map[j+(xpt_seq*6)+1] != 0) //if we have a valid frequency
               {
@@ -1128,7 +1129,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 {
                   if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
                   SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+(xpt_seq*6)+1]); 
-                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
+                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+(xpt_seq*6)+1];
                   opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
                   dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                   j = 11; //break loop
@@ -1138,7 +1139,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 else if (opts->audio_in_type == 3)
                 {
                   rtl_udp_tune (opts, state, state->trunk_chan_map[j+(xpt_seq*6)+1]);
-                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
+                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+(xpt_seq*6)+1];
                   opts->p25_is_tuned = 1;
                   dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                   j = 11; //break loop
@@ -1160,7 +1161,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //and if calls occur on the home repeater, it'll be too busy with those to go to the free repeater
         //DSD-FME doesn't have any sort of TG priority, so its first come first served, just block or allow
 
-      }
+      } //end 0x0A
 
       //XPT Site Information - Adj Site Info
       if (csbk_o == 0x0B)
@@ -1217,7 +1218,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         sprintf (state->dmr_branding_sub, "XPT ");
 
 
-      }
+      } //end 0x0B
 
     } //end Hytera XPT section
 
