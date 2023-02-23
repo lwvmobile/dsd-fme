@@ -288,35 +288,44 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
       if (opts->use_rigctl == 1)
       {
         //extra safeguards due to sync issues with NXDN
-        memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
+        memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		    memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 		    state->lastsynctype = -1; 
         state->last_cc_sync_time = time(NULL);
+        state->last_vc_sync_time = time(NULL); //useful?
         //
         
         if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
         SetFreq(opts->rigctl_sockfd, freq);
         state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
-        opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop         
+        opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+
+        //set rid and tg when we actually tune to it
+        state->nxdn_last_rid = SourceUnitID & 0xFFFF;   
+        state->nxdn_last_tg = (DestinationID & 0xFFFF);
+        sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType));
       }
       //rtl_udp
       else if (opts->audio_in_type == 3)
       {
         //extra safeguards due to sync issues with NXDN
-        memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
+        memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		    memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 		    state->lastsynctype = -1; 
         state->last_cc_sync_time = time(NULL);
+        state->last_vc_sync_time = time(NULL);
         //
 
         rtl_udp_tune (opts, state, freq); 
         state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
         opts->p25_is_tuned = 1;
+
+        //set rid and tg when we actually tune to it
+        state->nxdn_last_rid = SourceUnitID & 0xFFFF;   
+        state->nxdn_last_tg = (DestinationID & 0xFFFF);
+        sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType));
       }
-      //set rid and tg when we actually tune to it
-      state->nxdn_last_rid = SourceUnitID & 0xFFFF;   
-      state->nxdn_last_tg = (DestinationID & 0xFFFF);
-      sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType));
+      
     }    
   }
 
@@ -668,7 +677,11 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   }
 
   //check the rkey array for a scrambler key value
+  //check by keyid first, then by tgt id
+  //TGT ID and Key ID could clash though if csv or system has both 
   if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
+  else if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
+  else state->R = 0;
 
   if (state->nxdn_cipher_type == 0x01 && state->R > 0) //scrambler key value
   {
@@ -680,7 +693,7 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   //only grab if CRC is okay
   if(state->NxdnElementsContent.VCallCrcIsGood)
   {
-    if ( (SourceUnitID & 0xFFFF) > 0 )
+    if ( (SourceUnitID & 0xFFFF) > 0 ) //
     {
       state->nxdn_last_rid = SourceUnitID & 0xFFFF;   
       state->nxdn_last_tg = (DestinationID & 0xFFFF);

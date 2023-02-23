@@ -111,17 +111,15 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
     trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
   }
 
-	//load tail 16 bits into check variable to compare vs computed crc value
+	crc = crc12f (trellis_buf, 84); //80
 	for (int i = 0; i < 12; i++)
 	{
 		check = check << 1;
-		check = check + trellis_buf[80+i];
+		check = check | trellis_buf[84+i]; //80
 	}
 
-	crc = crc12f (trellis_buf, 80);
-
 	if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
-	//else if (opts->payload == 1) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
+	// else if (opts->payload == 1) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
 
 	if (opts->payload == 1)
 	{
@@ -131,7 +129,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 		{
 			fprintf (stderr, "[%02X]", m_data[i]); 
 		}
-		fprintf (stderr, " - %03X %03X", crc, check);
+		fprintf (stderr, " - %03X %03X", check, crc);
 	}
 
 }
@@ -211,11 +209,11 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
     trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
   }
 
-	crc = crc6(trellis_buf, 32);
+	crc = crc6(trellis_buf, 26); //32
 	for (int i = 0; i < 6; i++)
 	{
 		check = check << 1;
-		check = check + trellis_buf[i+26];
+		check = check | trellis_buf[i+26];
 	}
 
 	//FIRST! If part of a non_superframe, and CRC is good, send directly to NXDN_Elements_Content_decode
@@ -231,16 +229,16 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 			nsf_sacch[i] = trellis_buf[i+8];
 		}
 
-		if (crc == 0) NXDN_Elements_Content_decode(opts, state, 1, nsf_sacch);
+		if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, nsf_sacch); 
 
 		if (opts->payload == 1)
 		{ 
 			fprintf (stderr, "\n SACCH NSF ");
-			for (int i = 0; i < 5; i++)
+			for (int i = 0; i < 4; i++)
 			{
 				fprintf (stderr, "[%02X]", m_data[i]);
 			}
-			if (crc != 0) fprintf (stderr, " CRC ERR - %02X %02X", crc, check);
+			if (crc != check) fprintf (stderr, " CRC ERR - %02X %02X", check, crc); 
 		}
 
 	}
@@ -266,7 +264,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		//reset scrambler seed to key value on new superframe
 		if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1) state->payload_miN = 0;
 
-		if (crc == 0)
+		if (crc == check)
 		{
 			state->nxdn_ran = state->nxdn_last_ran = ran;
 			state->nxdn_sf = sf;
@@ -294,11 +292,11 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		{ 
 			fprintf (stderr, "\n"); 
 			fprintf (stderr, " SACCH SF Segment #%d ", part_of_frame+1);
-			for (int i = 0; i < 5; i++)
+			for (int i = 0; i < 4; i++)
 			{
 				fprintf (stderr, "[%02X]", m_data[i]);
 			}
-			if (crc != 0) fprintf (stderr, " CRC ERR - %02X %02X", crc, check);
+			if (crc != check) fprintf (stderr, " CRC ERR - %02X %02X", crc, check);
 		}
 	}	
 	
@@ -312,6 +310,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 	uint8_t trellis_buf[199];
 	int id = 0;
 	uint16_t crc = 0;
+	uint16_t check = 0;
 
 	for (int i=0; i<348; i++) {
 		deperm[PERM_12_29[i]] = bits[i];
@@ -377,6 +376,11 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
   }
 
 	crc = crc15(trellis_buf, 199);
+	for (int i = 0; i < 15; i++)
+	{
+		check = check << 1;
+		check = check | trellis_buf[i+184];
+	}
 
 	uint8_t f2u_message_buffer[199];
 	memset (f2u_message_buffer, 0, sizeof(f2u_message_buffer));
@@ -388,7 +392,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 		f2u_message_buffer[i] = trellis_buf[i+8]; 
 	}
 	
-	if (crc == 0)
+	if (crc == check)
 	{
 		fprintf (stderr, " F2/U   "); 
 		//NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
@@ -404,7 +408,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 			fprintf (stderr, "[%02X]", m_data[i]); 
 			if (i == 12) fprintf (stderr, "\n  ");
 		}
-		if (crc != 0) fprintf (stderr, " CRC ERR ");
+		if (crc != check) fprintf (stderr, " CRC ERR ");
 	}  
 
 }
@@ -452,11 +456,6 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 		temp[i] = depunc[i] << 1; 
 	}
 
-	for (int i = 0; i < 8; i++)
-	{
-		temp[i+350] = 0; 
-	}
-
 	CNXDNConvolution_start();
   for (int i = 0U; i < 179U; i++) 
   {
@@ -482,20 +481,11 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 
 	crc = crc16cac(trellis_buf, 171); 
 
-	//message type will probably be neccesary beforehand on single/dual meessage runs
-	//run message, check len, load into a seperate buffer, send to element, do same with other piece?
-	uint8_t MessageType = 0;
-	for (int i = 0; i < 6; i++)
-	{
-		MessageType = MessageType << 1;
-		MessageType = MessageType + trellis_buf[i+2]; //double check this on CAC
-	}
-
 	uint8_t cac_message_buffer[171];
 	memset (cac_message_buffer, 0, sizeof(cac_message_buffer));
 
-	//shift the cac_message into the appropriate byte arrangement for element_decoder
-	for (int i = 0; i < 160; i++) //in future, we can use this to send multiple messages to decoder, if present
+	//shift the cac_message into the appropriate byte arrangement for element_decoder -- skip SR field
+	for (int i = 0; i < 160; i++)
 	{
 		cac_message_buffer[i] = trellis_buf[i+8];
 	}
@@ -564,7 +554,7 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 		state->nxdn_last_tg = 0;
 		state->nxdn_cipher_type = 0;
 		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
-		memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
+		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		sprintf (state->nxdn_call_type, "%s", "");
 	} 
 }
@@ -669,13 +659,13 @@ static uint16_t crc15(const uint8_t buf[], int len)
 
 static uint16_t crc16cac(const uint8_t buf[], int len)
 {
-	int crc = 0xc3ee;
-        int poly = (1<<12) + (1<<5) + 1;
-	for (int i=0;i<len;i++) {
-                crc = ((crc << 1) | buf[i]) & 0x1ffff;
-                if(crc & 0x10000)
-                        crc = (crc & 0xffff) ^ poly;
+	uint32_t crc = 0xc3ee; //not sure why this though
+	uint32_t poly = (1<<12) + (1<<5) + 1; //poly is fine
+	for (int i=0;i<len;i++) 
+	{
+		crc = ((crc << 1) | buf[i]) & 0x1ffff;
+		if(crc & 0x10000) crc = (crc & 0xffff) ^ poly;
 	}
-        crc = crc ^ 0xffff;
-        return crc & 0xffff;
+	crc = crc ^ 0xffff;
+	return crc & 0xffff;
 }

@@ -288,7 +288,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->nxdn_sf = 0;
   memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc)); //init on 1, bad CRC all
   state->nxdn_sacch_non_superframe = TRUE; 
-  memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
+  memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
   state->nxdn_alias_block_number = 0;
   memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
   sprintf (state->nxdn_call_type, "%s", "");
@@ -815,7 +815,7 @@ initState (dsd_state * state)
   state->nxdn_sf = 0;
   memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc)); //init on 1, bad CRC all
   state->nxdn_sacch_non_superframe = TRUE; 
-  memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
+  memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
   state->nxdn_alias_block_number = 0;
   memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
   //site/srv/cch info
