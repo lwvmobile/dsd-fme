@@ -3,7 +3,7 @@
 *.dylib
 build
 *.sh
-*.csv
-examples
+
+
 *.bin
 *.ans

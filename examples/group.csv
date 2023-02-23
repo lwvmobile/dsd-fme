@@ -1,5 +1,0 @@
-DEC,Mode(A- Allow, B - Block, DE - Digital Enc),Name of Group,Tag (do not delete this line or won't import properly)
-100,B,Example Name,Tag
-1449,A,Fire Dispatch,Fire
-929,A,Fire Tac,Fire
-22033,DE,Law Dispatch,Law
