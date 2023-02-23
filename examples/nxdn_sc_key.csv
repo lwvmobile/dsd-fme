@@ -1,4 +1,4 @@
-key(dec), value(dec), load any single keys as key 0
+key(dec) or tg(dec), value(dec), load any single keys as key 0
 0,23466
 1,12345
 2,32700

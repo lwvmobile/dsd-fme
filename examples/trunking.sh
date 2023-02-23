@@ -13,7 +13,7 @@
 #dsd-fme -i tcp:192.168.7.8:7355 -U 4532 -T -f2 -m2 -N 2> log.ans
 #dsd-fme -i rtl:0:855.625M:26:-2:12:0:6020 -T -f2 -m2 -N 2> log.ans
 
-#DMR TIII, Con+, Cap+
+#DMR TIII, Con+, Cap+, XPT
 dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans
 #dsd-fme -fs -i rtl:0:450M:26:-2:8:0:6020 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans
 
@@ -21,13 +21,13 @@ dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans
 #dsd-fme -fp -i tcp:192.168.7.5:7355 -U 4532 -T -C edacs_channel_map.csv -G group.csv -N 2> log.ans
 #dsd-fme -fp -i rtl:0:850M:26:-2:24:0:6020 -T -C edacs_channel_map.csv -G group.csv -N 2> log.ans
 
-#NXDN48 Trunking with Standard Band Plan (Channels 0-800)
-#dsd-fme -fi -i tcp -T -U 4532 -N 2> log.ans
-#dsd-fme -fi -i rtl:0:450M:26:-2:8:75:6020 -T -G group.csv -N 2> log.ans
-
 #NXDN48 Trunking with Channel Map (Custom Channels > 800)
 #dsd-fme -fi -i tcp -T -U 4532 -C channel_map.csv -N 2> log.ans
-#dsd-fme -fi -i rtl:0:450M:26:-2:8:75:6020 -T -G group.csv -C channel_map.csv -N 2> log.ans
+#NOTE! NXDN Trunking will not work correctly with the RTL input method
+
+#NXDN96 Trunking with Channel Map (Custom Channels > 800)
+#dsd-fme -fn -i tcp -T -U 4532 -C channel_map.csv -N 2> log.ans
+#NOTE! NXDN Trunking will not work correctly with the RTL input method
 
 #Notes: parameters after -i tcp can be omitted if using localhost as the default hostname to connect
 #and 7355 as the default port number. -U is the port number for RIGCTL and will mirror the tcp hostname
