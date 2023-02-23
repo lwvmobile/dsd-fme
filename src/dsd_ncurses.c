@@ -2756,7 +2756,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         // Tuned Frequency Display
         if (state->p25_vc_freq[0] != 0)
         {
-          attron(COLOR_PAIR(5));
+          attron(COLOR_PAIR(4));
           printw ("Frequency: [%.06lf] MHz  ", (double)state->p25_vc_freq[0]/1000000);
         }
         if (state->carrier == 1) attron(COLOR_PAIR(3));

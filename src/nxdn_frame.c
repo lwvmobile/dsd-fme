@@ -86,6 +86,15 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	facch2 = 0;
 	sacch = 0;
 	cac = 0;
+
+	//test for inbound direction lich when trunking (false positive) and skip
+	//all inbound lich are even value (lsb is set to 0 for inbound direction)
+	if (lich % 2 == 0 && opts->p25_trunk == 1)
+	{
+		if (opts->payload == 1) fprintf(stderr, "  Simplex/Inbound NXDN lich on trunking system - type 0x%02X\n", lich);
+		goto END;
+	}
+
 	switch(lich) { //cases without breaks continue to flow downwards until they hit the break
 	case 0x01:	// CAC types
 	case 0x05:
@@ -123,7 +132,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		break;
 	case 0x36:  //vch in both
 	case 0x37:
-	case 0x56:
+	case 0x56: 
 	case 0x57: 
 	case 0x77:
 		voice = 3;	
@@ -151,7 +160,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	default:
     if (opts->payload == 1) fprintf(stderr, "  false sync or unsupported NXDN lich type 0x%02X\n", lich);
 		//reset the sacch field, we probably got a false sync and need to wipe or give a bad crc
-		memset (state->nxdn_sacch_frame_segment, 0, sizeof(state->nxdn_sacch_frame_segment));
+		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly 
 		voice = 0;
@@ -241,7 +250,9 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 
 	}  
 
-	state->nxdn_sacch_non_superframe = (lich == 0x20 || lich == 0x21 || lich == 0x61 || lich == 0x40 || lich == 0x41) ? true : false;
+	if (lich == 0x20 || lich == 0x21 || lich == 0x61 || lich == 0x40 || lich == 0x41) state->nxdn_sacch_non_superframe = TRUE;
+	else state->nxdn_sacch_non_superframe = FALSE;
+
 	if (sacch)nxdn_deperm_sacch(opts, state, sacch_bits);
 	if (cac) nxdn_deperm_cac(opts, state, cac_bits); 
 	if (facch2) nxdn_deperm_facch2_udch(opts, state, facch2_bits);
