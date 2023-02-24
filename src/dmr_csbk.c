@@ -34,7 +34,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
   if (IrrecoverableErrors == 0)
   {
     //Hytera XPT CSBK Check -- if bits 0 and 1 are used as lcss, gi, ts, then this bit may be set on
-    if (csbk_fid == 0x68 && csbk_o == 0x0A) csbk_pf = 0; 
+    if ( csbk_fid == 0x68 && (csbk_o == 0x0A || csbk_o == 0x0B) ) csbk_pf = 0; 
     if (csbk_pf == 1) //check the protect flag, don't run if set
     {
       fprintf (stderr, "%s", KRED); 
@@ -1163,7 +1163,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
       } //end 0x0A
 
-      //XPT Site Information - Adj Site Info
+      //XPT Site Information - Adj Site Info??
       if (csbk_o == 0x0B)
       {
 
@@ -1171,11 +1171,15 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "\n"); 
         fprintf (stderr, "%s", KYEL);
 
-        // fprintf (stderr, " Hytera XPT CSBK 0x0B ");
+        fprintf (stderr, " Hytera XPT CSBK 0x0B ");
 
         //wraithe's theory -- seems pretty good to me
         //still only a theory though until can be verified
         //by having a system with precisely known variables
+
+        //new samples show this doesn't always quite work, there seems to be
+        //more than one data set transmitted in this CSBK
+        //one set works, the other doesn't fit the pattern
 
         // Site ID [5 bits]
         // Unknown_3 [3 bits]
@@ -1187,33 +1191,34 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         // DMR PDU Payload [0B][68][10][20][18][10][20][10][28][20][EF][DA]
 
         // repeat x3 (for total of 4 sites)
-        int i;
-        uint8_t xpt_site_id[4];
-        uint8_t xpt_site_rp[4];
-        uint8_t xpt_site_u1[4];
-        uint8_t xpt_site_u2[4];
 
-        for (i = 0; i < 4; i++)
-        {
-          xpt_site_id[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16+(i*16)], 5);
-          xpt_site_u1[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[21+(i*16)], 3);
-          xpt_site_rp[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[24+(i*16)], 4);
-          xpt_site_u2[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[28+(i*16)], 4);
-        }
+        // int i;
+        // uint8_t xpt_site_id[4];
+        // uint8_t xpt_site_rp[4];
+        // uint8_t xpt_site_u1[4];
+        // uint8_t xpt_site_u2[4];
 
-        fprintf (stderr, " Hytera XPT Site Id: %d - Free RPT: %d", xpt_site_id[0], xpt_site_rp[0]);
-        // fprintf (stderr, " RS1: %d RS2: %d", xpt_site_u1[0], xpt_site_u2[1]); //debug
+        // for (i = 0; i < 4; i++)
+        // {
+        //   xpt_site_id[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16+(i*16)], 5);
+        //   xpt_site_u1[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[21+(i*16)], 3);
+        //   xpt_site_rp[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[24+(i*16)], 4);
+        //   xpt_site_u2[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[28+(i*16)], 4);
+        // }
 
-        fprintf (stderr, "\n");
-        fprintf (stderr, " XPT Adj Site(s): ");
-        for (i = 1; i < 4; i++)
-        {
-          if (xpt_site_id[i] != 0) 
-          {
-            fprintf (stderr, "%d (%d) ", xpt_site_id[i], xpt_site_rp[i]);
-            // fprintf (stderr, "RS1: %d RS2: %d - ", xpt_site_u1[i], xpt_site_u2[i]); //debug
-          }
-        }
+        // fprintf (stderr, " Hytera XPT Site Id: %d - Free RPT: %d", xpt_site_id[0], xpt_site_rp[0]);
+        // // fprintf (stderr, " RS1: %d RS2: %d", xpt_site_u1[0], xpt_site_u2[1]); //debug
+
+        // fprintf (stderr, "\n");
+        // fprintf (stderr, " XPT Adj Site(s): ");
+        // for (i = 1; i < 4; i++)
+        // {
+        //   if (xpt_site_id[i] != 0) 
+        //   {
+        //     fprintf (stderr, "%d (%d) ", xpt_site_id[i], xpt_site_rp[i]);
+        //     // fprintf (stderr, "RS1: %d RS2: %d - ", xpt_site_u1[i], xpt_site_u2[i]); //debug
+        //   }
+        // }
 
         sprintf (state->dmr_branding_sub, "XPT ");
 

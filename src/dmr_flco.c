@@ -113,8 +113,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16);
     }
 
-    //Unknown CapMax/Moto Things
-    if (fid == 0x10 && (flco == 0x08 || flco == 0x28)) 
+    //Unknown CapMax/Moto Things -- 0x14, 0x15, 0x16 are new ones on emb
+    if (fid == 0x10 && (flco == 0x08 || flco == 0x28 || flco == 0x14 || flco == 0x15 || flco == 0x16)) 
     {
       //NOTE: fid 0x10 and flco 0x08 (emb) produces a lot of 'zero' bytes
       //this has been observed to happen often on CapMax systems, so I believe it could be some CapMax 'thing'
@@ -221,7 +221,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       fprintf (stderr, "Hytera XPT ");
       if (reserved == 1) fprintf (stderr, "Group "); //according to observation
       else fprintf (stderr, "Private "); //according to observation
-      fprintf (stderr, "Call Grant ");
+      fprintf (stderr, "Call Protect ");
 
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, "F-Rpt %d", xpt_free+1);
@@ -901,6 +901,9 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     //NOTE: on really busy systems, this free repeater assignment can lag due to the 4 TS requirment to get SLC
     fprintf (stderr, " SLCO Hytera XPT - Free RPT %d ", xpt_free+1); 
     sprintf (state->dmr_branding_sub, "XPT ");
+
+    //add string for ncurses terminal display
+    sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free+1);
   }
     
   else fprintf (stderr, " SLCO Unknown - %d ", slco);

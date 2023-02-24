@@ -233,6 +233,11 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
   long int freq = 0;
   freq = nxdn_channel_to_frequency(opts, state, Channel);
 
+  //check the rkey array for a scrambler key value
+  //TGT ID and Key ID could clash though if csv or system has both with different keys
+  if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
+  if (state->M == 1) state->nxdn_cipher_type = 0x1;
+
   //check for control channel frequency in the channel map if not available
   if (opts->p25_trunk == 1 && state->p25_cc_freq == 0)
   {
@@ -662,6 +667,18 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   fprintf(stderr, "Src=%u - Dst/TG=%u ", SourceUnitID & 0xFFFF, DestinationID & 0xFFFF);
   fprintf (stderr, "%s", KNRM);
 
+  //check the rkey array for a scrambler key value
+  //check by keyid first, then by tgt id
+  //TGT ID and Key ID could clash though if csv or system has both with different keys
+  if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
+  else if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
+
+  if (state->M == 1)
+  {
+    state->nxdn_cipher_type = 0x1;
+    CipherType = 0x1;
+  } 
+
   /* Print the "Cipher Type" */
   if(CipherType != 0)
   {
@@ -676,12 +693,6 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     fprintf (stderr, "%s", KNRM);
   }
 
-  //check the rkey array for a scrambler key value
-  //check by keyid first, then by tgt id
-  //TGT ID and Key ID could clash though if csv or system has both 
-  if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
-  else if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
-  else state->R = 0;
 
   if (state->nxdn_cipher_type == 0x01 && state->R > 0) //scrambler key value
   {
