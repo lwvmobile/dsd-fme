@@ -391,9 +391,12 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
         uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
 
+        if (gi)  fprintf (stderr, " Group");
+        if (!gi) fprintf (stderr, " Private");
+
         if (p_kind == 0) fprintf (stderr, " Disable Target PTT (DIS_PTT)");
         if (p_kind == 1) fprintf (stderr, " Enable Target PTT (EN_PTT)");
-        if (p_kind == 2) fprintf (stderr, " Private Call (ILLEGALLY_PARKED)");
+        if (p_kind == 2) fprintf (stderr, " Call (ILLEGALLY_PARKED)");
         if (p_kind == 3) fprintf (stderr, " Enable Target MS PTT (EN_PTT_ONE_MS)");
 
         fprintf (stderr, "\n");
