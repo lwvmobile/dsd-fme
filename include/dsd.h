@@ -656,7 +656,7 @@ typedef struct
   uint32_t nxdn_location_sys_code;
   uint16_t nxdn_location_site_code;
 
-  //multi-key array for nxdn keys
+  //multi-key array
   unsigned long long int rkey_array[0xFFFF];
 
   //dmr late entry mi

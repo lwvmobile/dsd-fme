@@ -146,7 +146,7 @@ int csvChanImport(dsd_opts * opts, dsd_state * state) //channel map import
   return 0;
 }
 
-int csvKeyImport(dsd_opts * opts, dsd_state * state) //multi-key support for NXDN
+int csvKeyImport(dsd_opts * opts, dsd_state * state) //multi-key support
 {
   char filename[1024] = "filename.csv"; 
   sprintf (filename, "%s", opts->key_in_file);
@@ -160,7 +160,13 @@ int csvKeyImport(dsd_opts * opts, dsd_state * state) //multi-key support for NXD
   }
   int row_count = 0;
   int field_count = 0;
-  unsigned long long int keynumber;
+  
+  unsigned long long int keynumber = 0;
+  unsigned long long int keyvalue = 0;
+
+  uint16_t hash = 0;
+  uint8_t hash_bits[24];
+  memset (hash_bits, 0, sizeof(hash_bits));
 
   while (fgets(buffer, BSIZE, fp)) {
     field_count = 0;
@@ -173,11 +179,24 @@ int csvKeyImport(dsd_opts * opts, dsd_state * state) //multi-key support for NXD
       if (field_count == 0)
       {
         sscanf (field, "%lld", &keynumber);
+        if (keynumber > 0xFFFF) //if larger than 16-bits, get its hash instead
+        {
+          keynumber = keynumber & 0xFFFFFF; //truncate to 24-bits (max allowed)
+          for (int i = 0; i < 24; i++)
+          {
+            hash_bits[i] = ((keynumber << i) & 0x800000) >> 23; //load into array for CRC16 
+          }
+          hash = ComputeCrcCCITT16d (hash_bits, 24);
+          keynumber = hash & 0xFFFF; //make sure its no larger than 16-bits
+          fprintf (stderr, "Hashed ");
+        }
+        
       }
 
       if (field_count == 1)
       {
-        sscanf (field, "%lld", &state->rkey_array[keynumber]);
+        sscanf (field, "%lld", &keyvalue);
+        state->rkey_array[keynumber] = keyvalue & 0xFFFFFFFFFF; //doesn't exceed 40-bit value
       }
       
       field = strtok(NULL, ",");
@@ -185,6 +204,7 @@ int csvKeyImport(dsd_opts * opts, dsd_state * state) //multi-key support for NXD
     }
     fprintf (stderr, "Key [%03lld] [%05lld]", keynumber, state->rkey_array[keynumber]);
     fprintf (stderr, "\n");
+    hash = 0;
     
   }
   fclose(fp);

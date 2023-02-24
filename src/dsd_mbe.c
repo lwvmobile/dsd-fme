@@ -140,6 +140,11 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   unsigned long long int k;
   int x;
 
+  //24-bit TG to 16-bit hash
+  uint16_t hash = 0;
+  uint8_t hash_bits[24];
+  memset (hash_bits, 0, sizeof(hash_bits));
+
   int preempt = 0; //TDMA dual voice slot preemption(when using OSS output)
 
 
@@ -293,6 +298,31 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
         state->errs2 = mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
+        //EXPERIMENTAL!!
+        //load basic privacy key number from array by the tg value (if not forced)
+        //currently only Moto BP and Hytera 10 Char BP (converted to decimal)
+        if (state->M == 0)
+        {
+          //see if we need to hash a value larger than 16-bits
+          hash = state->lasttg & 0xFFFFFF; 
+          if (hash > 0xFFFF) //if greater than 16-bits
+          {
+            for (int i = 0; i < 24; i++)
+            {
+              hash_bits[i] = ((hash << i) & 0x800000) >> 23; //load into array for CRC16 
+            }
+            hash = ComputeCrcCCITT16d (hash_bits, 24);
+            hash = hash & 0xFFFF; //make sure its no larger than 16-bits
+          }
+          if (state->rkey_array[hash] != 0)
+          {
+            state->K = state->rkey_array[hash] & 0xFF; //doesn't exceed 255
+            state->K1 = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
+            opts->dmr_mute_encL = 0;
+          }
+          // else opts->dmr_mute_encL = 1; //may cause issues for manual key entry (non-csv)
+        }
+
 		    if ( (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10) ||
               (state->K > 0 && state->M == 1) )
         {
@@ -394,6 +424,31 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         //state->errs2R = state->errsR;
         mbe_demodulateAmbe3600x2450Data (ambe_fr);
         state->errs2R = mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+
+        //EXPERIMENTAL!!
+        //load basic privacy key number from array by the tg value (if not forced)
+        //currently only Moto BP and Hytera 10 Char BP (converted to decimal)
+        if (state->M == 0)
+        {
+          //see if we need to hash a value larger than 16-bits
+          hash = state->lasttgR & 0xFFFFFF; 
+          if (hash > 0xFFFF) //if greater than 16-bits
+          {
+            for (int i = 0; i < 24; i++)
+            {
+              hash_bits[i] = ((hash << i) & 0x800000) >> 23; //load into array for CRC16 
+            }
+            hash = ComputeCrcCCITT16d (hash_bits, 24);
+            hash = hash & 0xFFFF; //make sure its no larger than 16-bits
+          }
+          if (state->rkey_array[hash] != 0)
+          {
+            state->K = state->rkey_array[hash] & 0xFF; //doesn't exceed 255
+            state->K1 = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
+            opts->dmr_mute_encR = 0;
+          }
+          // else opts->dmr_mute_encR = 1; //may cause issues for manual key entry (non-csv)
+        }
 
         if ( (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10) ||
               (state->K > 0 && state->M == 1) )

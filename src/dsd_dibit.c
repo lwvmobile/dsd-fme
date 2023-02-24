@@ -283,11 +283,11 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 
       valid = 0;
 
-      //re-enabling -- heuristics may also work with P2, but cna't see any benefit, need more P2 C4FM samples for testing
-      if (state->synctype == 1 && opts->p25_trunk == 1) //|| state->synctype == 36
+      //disabling again, causing issues with trunking P25
+      if (state->synctype == 1 && opts->p25_trunk == 1)
         {
           // Use the P25 heuristics if available
-          valid = estimate_symbol(state->rf_mod, &(state->inv_p25_heuristics), state->last_dibit, symbol, &dibit);
+          // valid = estimate_symbol(state->rf_mod, &(state->inv_p25_heuristics), state->last_dibit, symbol, &dibit);
         }
 
       if (valid == 0)
@@ -347,11 +347,11 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 
       valid = 0;
 
-      ////re-enabling, but only when trunking (should have uniform volume if not tampered with during setup)
-      if (state->synctype == 0 && opts->p25_trunk == 1) //|| state->synctype == 35 
+      //disabling again, causing issues with trunking P25
+      if (state->synctype == 0 && opts->p25_trunk == 1) 
         {
           // Use the P25 heuristics if available
-          valid = estimate_symbol(state->rf_mod, &(state->p25_heuristics), state->last_dibit, symbol, &dibit);
+          // valid = estimate_symbol(state->rf_mod, &(state->p25_heuristics), state->last_dibit, symbol, &dibit);
         }
 
       if (valid == 0)

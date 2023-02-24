@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Lite' Edition v2.0.0-37-g6e4a373  Windows 32-bit RC4  "
+  " 'Lite' Edition v2.0.0-40-gc999c97   Windows 32-bit RC4 "
 };
 
 int comp (const void *a, const void *b)
@@ -989,7 +989,10 @@ usage ()
   printf ("                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' \n");
   printf ("\n");
   printf ("  -R <dec>      Manually Enter dPMR or NXDN EHR Scrambler Key Value (Decimal Value)\n");
-  printf ("  -k <file>     Import NXDN Scrambler Key List from csv file.\n");
+  printf ("                 \n");
+  printf ("  -k <file>     Import Key List from csv file.\n");
+  printf ("                  Only supports NXDN, DMR Basic Privacy and **tera 10-Char (decimal value) only. \n");
+  printf ("                  (dPMR and **tera 32/64 char not supported, DMR uses TG value as key id -- EXPERIMENTAL!!). \n");
   printf ("                 \n");
   printf ("  -4            Force Privacy Key over FID and SVC bits \n");
   printf ("\n");
