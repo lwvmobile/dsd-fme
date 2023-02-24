@@ -98,6 +98,36 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
     //DISC
     case 0x11:
       //NXDN_decode_VCALL(opts, state, ElementsContent);
+
+      //tune back to CC here - save about 1-2 seconds
+      if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
+      {
+        //rigctl
+        if (opts->use_rigctl == 1)
+        {
+          //extra safeguards due to sync issues with NXDN
+          memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+          memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+          // state->lastsynctype = -1; 
+          // state->last_cc_sync_time = time(NULL);
+          opts->p25_is_tuned = 0;
+          if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+          SetFreq(opts->rigctl_sockfd, state->p25_cc_freq); 
+          
+        }
+        //rtl_udp
+        else if (opts->audio_in_type == 3)
+        {
+          //extra safeguards due to sync issues with NXDN
+          memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+          memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+          // state->lastsynctype = -1; 
+          // state->last_cc_sync_time = time(NULL);
+          opts->p25_is_tuned = 0;
+          rtl_udp_tune (opts, state,  state->p25_cc_freq); 
+        }
+      }
+      
       break;
 
     //Idle
