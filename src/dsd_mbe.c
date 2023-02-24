@@ -317,7 +317,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           if (state->rkey_array[hash] != 0)
           {
             state->K = state->rkey_array[hash] & 0xFF; //doesn't exceed 255
-            state->K1 = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
+            state->K1 = state->H = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
             opts->dmr_mute_encL = 0;
           }
           // else opts->dmr_mute_encL = 1; //may cause issues for manual key entry (non-csv)
@@ -444,7 +444,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           if (state->rkey_array[hash] != 0)
           {
             state->K = state->rkey_array[hash] & 0xFF; //doesn't exceed 255
-            state->K1 = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
+            state->K1 = state->H = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
             opts->dmr_mute_encR = 0;
           }
           // else opts->dmr_mute_encR = 1; //may cause issues for manual key entry (non-csv)
