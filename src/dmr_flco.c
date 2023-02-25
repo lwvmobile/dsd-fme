@@ -84,6 +84,14 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     if (slot == 0) state->dmr_flco = flco;
     else state->dmr_flcoR = flco;
 
+    //FID 0x10 and FLCO 0x14, 0x15, 0x16 and 0x17 confirmed as Moto EMB Alias
+    //Can probably assume FID 0x10 FLCO 0x18 is Moto EMB GPS -- to be tested
+    if ( fid == 0x10 && (flco == 0x14 || flco == 0x15 || flco == 0x16 || flco == 0x17 || flco == 0x18) )
+    {
+      flco = flco - 0x10;
+      fid = 0;
+    }
+
     //Embedded Talker Alias Header Only (format and len storage)
     if ( (fid == 0 || fid == 0x68) && type == 3 && flco == 0x04) 
     {
@@ -113,8 +121,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16);
     }
 
-    //Unknown CapMax/Moto Things -- 0x14, 0x15, 0x16 are new ones on emb
-    if (fid == 0x10 && (flco == 0x08 || flco == 0x28 || flco == 0x14 || flco == 0x15 || flco == 0x16)) 
+    //Unknown CapMax/Moto Things
+    if (fid == 0x10 && (flco == 0x08 || flco == 0x28)) 
     {
       //NOTE: fid 0x10 and flco 0x08 (emb) produces a lot of 'zero' bytes
       //this has been observed to happen often on CapMax systems, so I believe it could be some CapMax 'thing'
@@ -954,6 +962,10 @@ void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_b
   uint8_t format = state->dmr_alias_format[slot]; //0=7-bit; 1=ISO8; 2=UTF-8; 3=UTF16BE
   uint8_t len =  state->dmr_alias_len[slot];
   uint8_t start; //starting position depends on context of block and format
+
+  //Cap Max Variation
+  uint8_t fid = (uint8_t)ConvertBitIntoBytes(&lc_bits[8], 8);
+  if (fid == 0x10) block = block - 0x10; //CapMax adds 0x10 to its FLCO (block num) in its Embedded Aliasing
 
   //there is some issue with the next three lines of code that prevent proper assignments, not sure what.
   //if (block > 4) start = 16;
