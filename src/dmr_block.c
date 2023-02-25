@@ -128,12 +128,12 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     if (dpf == 15)
     {
       if      (p_mfid == 0x10) sprintf (mfid_string, "%s", "Motorola");
-      else if (p_mfid == 0x58) sprintf (mfid_string, "%s", "Tait    ");
-      else if (p_mfid == 0x68) sprintf (mfid_string, "%s", "Hytera  ");
-      else if (p_mfid == 0x08) sprintf (mfid_string, "%s", "Hytera  ");
+      else if (p_mfid == 0x58) sprintf (mfid_string, "%s", "Tait");
+      else if (p_mfid == 0x68) sprintf (mfid_string, "%s", "Hytera");
+      else if (p_mfid == 0x08) sprintf (mfid_string, "%s", "Hytera");
       else if (p_mfid == 0x06) sprintf (mfid_string, "%s", "Trid/Mot"); 
       else if (p_mfid == 0x00) sprintf (mfid_string, "%s", "Standard"); 
-      else                     sprintf (mfid_string, "%s", "Other   ");
+      else                     sprintf (mfid_string, "%s", "Other");
     }
 
     //udt format string handling
@@ -324,6 +324,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     state->data_conf_data[slot] = 0;
     state->data_block_counter[slot] = 1; 
     state->data_header_blocks[slot] = 1; 
+    state->data_header_format[slot] = 7;
 
   }
 
@@ -384,7 +385,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   uint32_t CRCExtracted = 0;
   uint32_t IrrecoverableErrors = 0; 
 
-  uint8_t dmr_pdu_sf_bits[8*8*50]; //give plenty of space so we don't go oob
+  uint8_t dmr_pdu_sf_bits[8*24*50]; //give plenty of space so we don't go oob
 
   //MBC Header and Block CRC
   uint8_t mbc_crc_good[2]; //header and blocks crc pass/fail local storage

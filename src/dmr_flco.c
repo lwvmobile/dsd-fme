@@ -203,7 +203,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       xpt_res_c = (uint8_t)ConvertBitIntoBytes(&lc_bits[72], 8); //some unknown 8 bit value after the SRC
 
       //speculation: 16,4 may be the current repeater channel this call will occur on? or the channel to interrupt?, could also be 8 bits?
-      xpt_int = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 4);
+      xpt_int = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 4); //not sure about this value for this FLCO    
 
       //the crc8 hash is the value represented in the CSBK when dealing with private calls
       for (int i = 0; i < 16; i++) target_hash[i] = lc_bits[32+i];
@@ -221,7 +221,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       if (opts->payload == 1) fprintf(stderr, "HASH=%d ", tg_hash);
       // if (opts->payload == 1) fprintf(stderr, "HSK [%X] ", xpt_hand);
 
-      if (opts->payload == 1) fprintf(stderr, "CH=%X ", xpt_int+1); //repeater channel to 'interrupt' with this call?
+      // if (opts->payload == 1) fprintf(stderr, "CH=%d ", xpt_int);
       if (opts->payload == 1) fprintf(stderr, "FLCO=0x%02X FID=0x%02X ", flco, fid);
 
       // if (opts->payload == 1) fprintf(stderr, "RS [%02X][%02X][%02X] ", xpt_res_a, xpt_res_b, xpt_res_c);
@@ -232,11 +232,11 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       fprintf (stderr, "Call Protect ");
 
       fprintf (stderr, "%s", KYEL);
-      fprintf (stderr, "F-Rpt %d", xpt_free+1);
+      fprintf (stderr, "F-Rpt %d", xpt_free);
       fprintf (stderr, "%s ", KNRM);
 
       //add string for ncurses terminal display
-      sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free+1);
+      sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free);
 
       is_xpt = 1;
       goto END_FLCO;
@@ -907,11 +907,11 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     //The Priority Repeater and Priority Hash values stem from SDRTrunk, but I've never seen these values not be zeroes
     // fprintf (stderr, " SLCO Hytera XPT - Free RPT %d - PRI RPT %d - PRI HASH: %02X", xpt_free, xpt_pri, xpt_hash);
     //NOTE: on really busy systems, this free repeater assignment can lag due to the 4 TS requirment to get SLC
-    fprintf (stderr, " SLCO Hytera XPT - Free RPT %d ", xpt_free+1); 
+    fprintf (stderr, " SLCO Hytera XPT - Free RPT %d ", xpt_free); 
     sprintf (state->dmr_branding_sub, "XPT ");
 
     //add string for ncurses terminal display
-    sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free+1);
+    sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free);
   }
     
   else fprintf (stderr, " SLCO Unknown - %d ", slco);
