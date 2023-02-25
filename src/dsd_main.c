@@ -1589,7 +1589,7 @@ main (int argc, char **argv)
               opts.dmr_stereo = 0;
               opts.dmr_mono = 0;
               state.dmr_stereo = 0;
-              opts.setmod_bw = 12500;
+              // opts.setmod_bw = 12500;
               sprintf (opts.output_name, "EDACS/PV");
               fprintf (stderr,"Setting symbol rate to 9600 / second\n");
               fprintf (stderr,"Decoding only ProVoice frames.\n");
@@ -1616,7 +1616,7 @@ main (int argc, char **argv)
               opts.dmr_mono = 0;
               opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
-              opts.setmod_bw = 12000;
+              // opts.setmod_bw = 12000;
               sprintf (opts.output_name, "P25P1");
               fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
             }
@@ -1697,7 +1697,7 @@ main (int argc, char **argv)
                   opts.dmr_stereo = 1;
                   state.dmr_stereo = 0;
                   opts.dmr_mono = 0;
-                  opts.setmod_bw = 12000;
+                  // opts.setmod_bw = 12000;
                   sprintf (opts.output_name, "P25P2");
                   fprintf (stderr,"Decoding P25-P2 frames C4FM or OP25 Symbol Captures!\n");
                   }
@@ -1720,7 +1720,7 @@ main (int argc, char **argv)
                 state.rf_mod = 0;
                 opts.dmr_stereo = 1;
                 opts.dmr_mono = 0;
-                opts.setmod_bw = 7000;
+                // opts.setmod_bw = 7000;
                 opts.pulse_digi_rate_out = 24000;
                 opts.pulse_digi_out_channels = 2;
                 sprintf (opts.output_name, "DMR Stereo");
@@ -1747,7 +1747,7 @@ main (int argc, char **argv)
                       state.rf_mod = 0;
                       opts.dmr_stereo = 1;
                       opts.dmr_mono = 0;
-                      opts.setmod_bw = 12000; //safe default on both DMR and P25
+                      // opts.setmod_bw = 12000; //safe default on both DMR and P25
                       opts.pulse_digi_rate_out = 24000;
                       opts.pulse_digi_out_channels = 2;
                       sprintf (opts.output_name, "XDMA");
@@ -1799,7 +1799,7 @@ main (int argc, char **argv)
               opts.dmr_mono = 1;
               opts.dmr_stereo = 0;
               state.dmr_stereo = 0; //0
-              opts.setmod_bw = 7000;
+              // opts.setmod_bw = 7000;
               sprintf (opts.output_name, "DMR Mono");
               fprintf(stderr, "Notice: DMR cannot autodetect polarity. \n Use -xr option if Inverted Signal expected.\n");
               fprintf (stderr,"Decoding only DMR Mono. \nUsing DMR Stereo or XDMA is highly encouraged.\n");
@@ -1864,7 +1864,7 @@ main (int argc, char **argv)
               opts.mod_qpsk = 1;
               opts.mod_gfsk = 0;
               state.rf_mod = 1;
-              opts.setmod_bw = 12000;
+              // opts.setmod_bw = 12000;
               fprintf (stderr,"Enabling only QPSK modulation optimizations.\n");
             }
           else if (optarg[0] == '2')
@@ -1875,7 +1875,7 @@ main (int argc, char **argv)
               state.rf_mod = 1;
               state.samplesPerSymbol = 8; 
               state.symbolCenter = 3; 
-              opts.setmod_bw = 12000;
+              // opts.setmod_bw = 12000;
               fprintf (stderr,"Enabling 6000 sps P25p2 CQPSK.\n");
             }
           //test
@@ -1887,7 +1887,7 @@ main (int argc, char **argv)
               state.rf_mod = 0;
               state.samplesPerSymbol = 10; 
               state.symbolCenter = 4; 
-              opts.setmod_bw = 12000;
+              // opts.setmod_bw = 12000;
               fprintf (stderr,"Enabling 6000 sps P25p2 C4FM.\n");
             }
           else if (optarg[0] == '4')
@@ -1898,7 +1898,7 @@ main (int argc, char **argv)
             state.rf_mod = 0;
             state.samplesPerSymbol = 8; 
             state.symbolCenter = 3; 
-            opts.setmod_bw = 12000;
+            // opts.setmod_bw = 12000;
             fprintf (stderr,"Enabling 6000 sps P25p2 all optimizations.\n");
           }
           break;
