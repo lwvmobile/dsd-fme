@@ -1058,7 +1058,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //get 2-bit status values for each 6 channels (timeslots) 
         for (i = 0; i < 6; i++) xpt_ch[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[20+(i*2)], 2);
 
-        fprintf (stderr, " Hytera XPT Site Status - Free RPT: %d SN: %d\n ", xpt_free+1, xpt_seq);
+        fprintf (stderr, " Hytera XPT Site Status - Free RPT: %d SN: %d\n ", xpt_free, xpt_seq);
 
         //Print List of Channels and Activity 
         for (i = 0; i < 6; i++) 
@@ -1084,7 +1084,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
 
         //add string for ncurses terminal display
-        sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free+1);
+        sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free);
 
         //assign to cc freq to follow during no sync
         //current theory is that user should set channel 0 as the 'home repeater' frequency
