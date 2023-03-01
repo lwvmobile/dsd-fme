@@ -2061,7 +2061,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-46-g4ab16b5 RC4a");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-47-g6badf92 RC4b");
   }
   if (opts->ncurses_compact == 0)
   {
@@ -2072,8 +2072,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4) printw (" MBElib %s", versionstr);
-      if (i == 5) printw (" %s ", "Win32 RC4a"); //printw (" %s \n", GIT_TAG);
-      if (i == 6) printw (" %s \n", "v2.0.0-46-g4ab16b5"); //printw (" %s \n", GIT_TAG);
+      if (i == 5) printw (" %s ", "Win32 RC4b"); //printw (" %s \n", GIT_TAG);
+      if (i == 6) printw (" %s \n", "v2.0.0-47-g6badf92"); //printw (" %s \n", GIT_TAG);
       else printw ("\n");
     }
     attroff(COLOR_PAIR(6)); //6
@@ -2179,6 +2179,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| Reverse Mute - Muting Unencrypted Voice\n");
   }
   if (opts->aggressive_framesync == 0) printw ("| Selective CRC ERR Bypass Enabled (RAS) \n");
+  if (state->M == 1) printw ("| Forcing Key Priority -- Key: %lld \n", state->R);
+  if (opts->scanner_mode == 1)
+  {
+    printw ("| Fast Scan Mode Enabled ");
+    printw (" - Frequency: [%.06lf] Mhz \n", (double)state->trunk_lcn_freq[state->lcn_freq_roll]/1000000);
+  }
 
   printw ("------------------------------------------------------------------------------\n");
   attroff(COLOR_PAIR(4));
@@ -2278,8 +2284,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     printw ("\n");
     printw ("| ");
-    printw ("TGT: [%4d] ", tgn);
-    printw ("SRC: [%4d] ", src);
+    printw ("TGT: [%05d] ", tgn);
+    printw ("SRC: [%05d] ", src);
     if (state->nxdn_alias_block_segment[0][0] > 0) 
     {
       printw ("ALIAS: [");
@@ -2317,7 +2323,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     if (state->nxdn_cipher_type == 0x2 && state->carrier == 1)
     {
-      printw ("IV: [%016llX]", state->payload_miN);
+      printw ("IV: [%016llX] ", state->payload_miN);
       attron(COLOR_PAIR(2));
       printw ("DES-OFB  ");
       attroff(COLOR_PAIR(2));
@@ -2325,7 +2331,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     if (state->nxdn_cipher_type == 0x3 && state->carrier == 1)
     {
-      printw ("IV: [%016llX]", state->payload_miN);
+      printw ("IV: [%016llX] ", state->payload_miN);
       attron(COLOR_PAIR(2));
       printw ("AES-256 ");
       attroff(COLOR_PAIR(2));
@@ -2922,9 +2928,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw ("| %s ", SyncTypes[call_matrix[9-j][0]]);
         if (lls == 28 || lls == 29)
         {
-          printw ("RAN [%2lld] ", call_matrix[9-j][1]);
-          printw ("TG [%4lld] ", call_matrix[9-j][4]);
-          printw ("RID [%4lld] ", call_matrix[9-j][2]);
+          printw ("RAN [%02lld] ", call_matrix[9-j][1]);
+          printw ("TG [%05lld] ", call_matrix[9-j][4]);
+          printw ("RID [%05lld] ", call_matrix[9-j][2]);
         }
         //dPMR
         if (lls == 20 || lls == 21 || lls == 22 || lls == 23 ||lls == 24 || lls == 25 || lls == 26 || lls == 27)
@@ -3006,6 +3012,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->p25_trunk == 1) opts->p25_trunk = 0;
     else opts->p25_trunk = 1;
   }
+
+  if (c == 121) //'y' key, toggle scanner mode
+ {
+  if (opts->scanner_mode == 1) opts->scanner_mode = 0;
+  else opts->scanner_mode = 1;
+  opts->p25_trunk = 0; //turn off trunking mode
+ }
 
   if (c == 97) //'a' key, toggle call alert beep
   {
