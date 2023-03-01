@@ -150,7 +150,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
   //start control channel hunting if using trunking, time needs updating on each successful sync
   //will need to assign frequencies to a CC array for P25 since that isn't imported from CSV
-  if (state->dmr_rest_channel == -1 && opts->p25_is_tuned == 0 && opts->p25_trunk == 1 && ( (time(NULL) - state->last_cc_sync_time) > (opts->trunk_hangtime + 2) ) )
+  if (state->dmr_rest_channel == -1 && opts->p25_is_tuned == 0 && opts->p25_trunk == 1 && ( (time(NULL) - state->last_cc_sync_time) > (opts->trunk_hangtime + 0) ) ) //was 3, go to hangtime value
   {
 
     //test to switch back to 10/4 P1 QPSK for P25 FDMA CC
@@ -163,9 +163,22 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
     //start going through the lcn/frequencies CC/signal hunting
     fprintf (stderr, "Control Channel Signal Lost. Searching for Control Channel.\n");
     //make sure our current roll value doesn't exceed value of frequencies imported
-    if (state->lcn_freq_roll > state->lcn_freq_count)
+    if (state->lcn_freq_roll >= state->lcn_freq_count) //fixed this to skip the extra wait out at the end of the list
     {
       state->lcn_freq_roll = 0; //reset to zero
+    }
+    //roll an extra value up if the current is the same as what's already loaded -- faster hunting on Cap+, etc
+    if (state->lcn_freq_roll != 0)
+    {
+      if (state->trunk_lcn_freq[state->lcn_freq_roll-1] == state->trunk_lcn_freq[state->lcn_freq_roll])
+      {
+        state->lcn_freq_roll++;
+        //check roll again if greater than expected, then go back to zero
+        if (state->lcn_freq_roll >= state->lcn_freq_count) 
+        {
+          state->lcn_freq_roll = 0; //reset to zero
+        } 
+      }
     }
     //check that we have a non zero value first, then tune next frequency
     if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0) 
@@ -182,7 +195,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
         rtl_udp_tune (opts, state, state->trunk_lcn_freq[state->lcn_freq_roll]);
       }
       
-      fprintf (stderr, "Tuning to Control Channel Frequency: %.06lf MHz\n", 
+      fprintf (stderr, "Tuning to Frequency: %.06lf MHz\n", 
                 (double)state->trunk_lcn_freq[state->lcn_freq_roll]/1000000);
 
     }
