@@ -76,33 +76,42 @@ long int nxdn_channel_to_frequency(dsd_opts * opts, dsd_state * state, uint16_t 
 		return (freq);
 	}
 
-	//if not found, attempt to find it via calculation 
 	else
 	{
-		if ((channel > 0) && (channel <= 400))
-		{
-			if (opts->frame_nxdn48 == 1) base = 450000000;
-			else base = 451000000;
+		fprintf(stderr, "\n    Channel not found in import file");
+		return (0);
+	} 
 
-			freq = base + (channel - 1) * 12500;
-			fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
-			return (freq);
-		}
-		else if ((channel >= 401) && (channel <= 800))
-		{
-			if (opts->frame_nxdn48 == 1) base = 460000000;
-			else base = 461000000;
+	//if not found, attempt to find it via calculation 
+	//disabled, frequency 'band plan' isn't standard
+	//like originally believed
 
-			freq = base + (channel - 401) * 12500;
-			fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
-			return (freq);
-		}
-		else
-		{
-			fprintf(stderr, "\n  Non-standard frequency or channel not found in import file");
-			return (0);
-		}
-	}
+	// else
+	// {
+	// 	if ((channel > 0) && (channel <= 400))
+	// 	{
+	// 		if (opts->frame_nxdn48 == 1) base = 450000000;
+	// 		else base = 451000000;
+
+	// 		freq = base + (channel - 1) * 12500;
+	// 		fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
+	// 		return (freq);
+	// 	}
+	// 	else if ((channel >= 401) && (channel <= 800))
+	// 	{
+	// 		if (opts->frame_nxdn48 == 1) base = 460000000;
+	// 		else base = 461000000;
+
+	// 		freq = base + (channel - 401) * 12500;
+	// 		fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
+	// 		return (freq);
+	// 	}
+	// 	else
+	// 	{
+	// 		fprintf(stderr, "\n  Non-standard frequency or channel not found in import file");
+	// 		return (0);
+	// 	}
+	// }
 	
 
 }

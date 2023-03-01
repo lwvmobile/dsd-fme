@@ -8,72 +8,6 @@
 
 #include "dsd.h"
 
-int block_convolution (int payload[196], uint8_t decoded[12])
-{
-  int ec = -1; //initialize error value
-
-  uint8_t deinterleaved_bits[196];
-  uint8_t trellis_bytes[12];
-  uint8_t m_data[14];
-  uint8_t temp[210]; //temp bit position buffer for convolution
-
-  //initialize our deinterleaved bits and bytes with zeroes
-  for (int i = 0; i < 196; i++) deinterleaved_bits[i] = 0;
-  for (int i = 0; i < 210; i++) temp[i] = 0;
-  for (int i = 0; i < 12; i++)  trellis_bytes[i] = 0;
-  for (int i = 0; i < 14; i++)  m_data[i] = 0;
-
-  //convolution decoder 
-  uint8_t s0;
-  uint8_t s1;
-
-  //initialize our decoded byte buffer with zeroes
-  for (int i = 0; i < 12; i++) decoded[i] = 0;
-
-  static const uint16_t deinterleave_tsbk[] = {
-  0,  1,  2,  3,  52, 53, 54, 55, 100,101,102,103, 148,149,150,151,
-  4,  5,  6,  7,  56, 57, 58, 59, 104,105,106,107, 152,153,154,155,
-  8,  9, 10, 11,  60, 61, 62, 63, 108,109,110,111, 156,157,158,159,
-  12, 13, 14, 15,  64, 65, 66, 67, 112,113,114,115, 160,161,162,163,
-  16, 17, 18, 19,  68, 69, 70, 71, 116,117,118,119, 164,165,166,167,
-  20, 21, 22, 23,  72, 73, 74, 75, 120,121,122,123, 168,169,170,171,
-  24, 25, 26, 27,  76, 77, 78, 79, 124,125,126,127, 172,173,174,175,
-  28, 29, 30, 31,  80, 81, 82, 83, 128,129,130,131, 176,177,178,179,
-  32, 33, 34, 35,  84, 85, 86, 87, 132,133,134,135, 180,181,182,183,
-  36, 37, 38, 39,  88, 89, 90, 91, 136,137,138,139, 184,185,186,187,
-  40, 41, 42, 43,  92, 93, 94, 95, 140,141,142,143, 188,189,190,191,
-  44, 45, 46, 47,  96, 97, 98, 99, 144,145,146,147, 192,193,194,195,
-  48, 49, 50, 51 };
-
-  //get the deinterleaved bits
-  for (int i = 0; i < 196; i++) deinterleaved_bits[deinterleave_tsbk[i]] = payload[i];
-
-  //shift into proper position for the convolutional decoder
-  for (int i = 0; i < 196; i++) temp[i] = deinterleaved_bits[i] << 1; 
-
-  CNXDNConvolution_start();
-  for (int i = 0U; i < 98U; i++) //102U
-  {
-    s0 = temp[(2*i)];
-    s1 = temp[(2*i)+1];
-
-    CNXDNConvolution_decode(s0, s1);
-  }
-
-  CNXDNConvolution_chainback(m_data, 96U); //98U
-
-  //debug print
-  fprintf (stderr, "\n Convolution Chainback - ");
-  for (int i = 0; i < 14; i++) fprintf (stderr, "[%02X]", m_data[i]);
-
-  //transfer m_data to decoded bytes -- when sorted out, can probably send decoded straight to chainback, and save the code
-  // for (int i = 0; i < 12; i++) decoded[i] = m_data[i];
-
-  ec = 0; //unknown if a method exists to returns errors from the convolutional decoder, just rely on CRC check for now
-
-  return ec;
-}
-
 void processTSBK(dsd_opts * opts, dsd_state * state)
 {
   
@@ -120,9 +54,6 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       }
 
     }
-
-    //test with the nxdn convolutional decoder
-    // ec = block_convolution (tsbkbit, tsbk_byte);
 
     //send tsbkbit to block_deinterleave and return tsbk_byte
     ec = bd_bridge(tsbkbit, tsbk_byte);
