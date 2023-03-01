@@ -323,6 +323,8 @@ typedef struct
   int p25_is_tuned; //set to 1 if currently on VC, set back to 0 if on CC
   int trunk_hangtime; //hangtime in seconds before tuning back to CC
 
+  int scanner_mode; //experimental -- use the channel map as a conventional scanner, quicker tuning, but no CC
+  
   //csv import filenames
   char group_in_file[1024];
   char lcn_in_file[1024];

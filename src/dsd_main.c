@@ -77,6 +77,36 @@ void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
 
+  //experimental conventional frequency scanner mode
+  if (opts->scanner_mode == 1)
+  {
+
+    if (state->lcn_freq_roll >= state->lcn_freq_count)
+    {
+      state->lcn_freq_roll = 0; //reset to zero
+    }
+    //check that we have a non zero value first, then tune next frequency
+    if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0) 
+    {
+      //rigctl
+      if (opts->use_rigctl == 1)
+      {
+        if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+        SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[state->lcn_freq_roll]);
+      }
+      //rtludp
+      if (opts->audio_in_type == 3)
+      {
+        rtl_udp_tune (opts, state, state->trunk_lcn_freq[state->lcn_freq_roll]);
+      }
+
+      if (state->lastsynctype != -1) fprintf (stderr, "Resume Scanning Mode\n");
+
+    }
+    state->lcn_freq_roll++;
+  }
+  //end experimental conventional frequency scanner mode
+
   //tune back to last known CC when using trunking after x second hangtime 
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && ( (time(NULL) - state->last_cc_sync_time) > opts->trunk_hangtime) ) 
   {
@@ -501,6 +531,8 @@ initOpts (dsd_opts * opts)
   opts->p25_trunk = 0; //0 disabled, 1 is enabled
   opts->p25_is_tuned = 0; //set to 1 if currently on VC, set back to 0 on carrier drop
   opts->trunk_hangtime = 1; //1 second hangtime by default before tuning back to CC
+
+  opts->scanner_mode = 0; //0 disabled, 1 is enabled
 
   //reverse mute 
   opts->reverse_mute = 0;
@@ -968,6 +1000,8 @@ usage ()
   printf ("                 Use this feature to allow MAC_SIGNAL even if CRC errors.\n");
   printf ("  -F            Relax DMR RAS/CRC CSBK/DATA Pass/Fail\n");
   printf ("                 Enabling on some systems could lead to bad voice/data decoding if bad or marginal signal\n");
+  printf ("  -F            Relax NXDN SACCH/FACCH/CAC/F2U CRC Pass/Fail\n");
+  printf ("                 Not recommended on NXDN, but can be bypassed if desired.\n");
   printf ("\n");
   printf ("  -K <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)\n");
   printf ("\n");
@@ -990,6 +1024,9 @@ usage ()
   printf ("  -G <file>     Import Group List Allow/Block and Label from csv file.\n");
   printf ("                 (See group.csv for example)\n");
   printf ("  -T            Enable Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input\n");
+  printf ("  -Y            Enable Fast Scanning Mode with RIGCTL/TCP or RTL Input (Lower z) \n");
+  printf ("                 Experimental -- Can only scan for sync with enabled decoders, don't mix NXDN and DMR/P25!\n");
+  printf ("                 This is not a Trunking Feature, just scans through conventional frequencies fast!\n");
   printf ("  -W            Use Imported Group List as a Trunking Allow/White List -- Only Tune with Mode A\n");
   printf ("  -p            Disable Tune to Private Calls (DMR TIII and P25)\n");
   printf ("  -E            Disable Tune to Group Calls (DMR TIII, Con+, Cap+ and P25)\n");
@@ -1198,7 +1235,7 @@ main (int argc, char **argv)
 
   exitflag = 0;
 
-  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:Y:K:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
+  while ((c = getopt (argc, argv, "haepPqs:t:v:zi:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:YK:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1210,9 +1247,14 @@ main (int argc, char **argv)
           opts.call_alert = 1;
           break;
 
-        //Free'd up switches include Y,z
+        //Free'd up switches include z
         //make sure to put a colon : after each if they need an argument
         //or remove colon if no argument required
+
+        case 'Y': //conventional scanner mode
+          opts.scanner_mode = 1; //enable scanner
+          opts.p25_trunk = 0; //turn off trunking mode if user enabled it
+          break;
 
         case 'k': //NXDN multi-key loader
           strncpy(opts.key_in_file, optarg, 1023);
@@ -1293,6 +1335,7 @@ main (int argc, char **argv)
         case 'T': //new letter assignment for trunking, flow down to allow temp numbers
         case '3':
           opts.p25_trunk = 1;
+          opts.scanner_mode = 0; //turn off scanner mode if user enabled it
           break;
 
         case 'U': //New letter assignment for RIGCTL TCP port, flow down to allow temp numbers
@@ -1442,6 +1485,7 @@ main (int argc, char **argv)
           fprintf (stderr, "%s", KYEL);
           fprintf (stderr, "Relax P25 Phase 2 MAC_SIGNAL CRC Pass/Fail\n");
           fprintf (stderr, "Relax DMR RAS/CRC CSBK/DATA Pass/Fail\n");
+          fprintf (stderr, "Relax NXDN SACCH/FACCH/CAC/F2U CRC Pass/Fail\n");
           fprintf (stderr, "%s", KNRM);
           break;
 
