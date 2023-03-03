@@ -2162,7 +2162,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->scanner_mode == 1)
   {
     printw ("| Fast Scan Mode Enabled ");
-    printw (" - Frequency: [%.06lf] Mhz \n", (double)state->trunk_lcn_freq[state->lcn_freq_roll]/1000000);
+    if (state->trunk_lcn_freq[state->lcn_freq_roll]) //this is a workaround to fix freq of 0 during roll reset
+      printw (" - Frequency: [%.06lf] Mhz \n", (double)state->trunk_lcn_freq[state->lcn_freq_roll]/1000000);
+    else printw (" - Frequency: [%.06lf] Mhz \n", (double)state->trunk_lcn_freq[0]/1000000); 
   } 
 
   printw ("------------------------------------------------------------------------------\n");
