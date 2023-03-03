@@ -2061,7 +2061,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-47-g6badf92 RC4b");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Win32 %s \n", "v2.0.0-52-gda41dcd RC4b");
   }
   if (opts->ncurses_compact == 0)
   {
@@ -2073,7 +2073,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4) printw (" MBElib %s", versionstr);
       if (i == 5) printw (" %s ", "Win32 RC4b"); //printw (" %s \n", GIT_TAG);
-      if (i == 6) printw (" %s \n", "v2.0.0-47-g6badf92"); //printw (" %s \n", GIT_TAG);
+      if (i == 6) printw (" %s \n", "v2.0.0-52-gda41dcd"); //printw (" %s \n", GIT_TAG);
       else printw ("\n");
     }
     attroff(COLOR_PAIR(6)); //6
@@ -2183,7 +2183,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->scanner_mode == 1)
   {
     printw ("| Fast Scan Mode Enabled ");
-    printw (" - Frequency: [%.06lf] Mhz \n", (double)state->trunk_lcn_freq[state->lcn_freq_roll]/1000000);
+    if (state->trunk_lcn_freq[state->lcn_freq_roll]) //this is a workaround to fix freq of 0 during roll reset
+      printw (" - Frequency: [%.06lf] Mhz \n", (double)state->trunk_lcn_freq[state->lcn_freq_roll]/1000000);
+    else printw (" - Frequency: [%.06lf] Mhz \n", (double)state->trunk_lcn_freq[0]/1000000);
   }
 
   printw ("------------------------------------------------------------------------------\n");
