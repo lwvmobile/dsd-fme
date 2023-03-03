@@ -42,7 +42,8 @@ static const int PARITY[] = {
 //decoding functions here
 void nxdn_descramble(uint8_t dibits[], int len)
 {
-	for (int i=0; i<sizeof(scramble_t); i++) {
+	for (int i=0; i<len; i++)
+	{
 		if (scramble_t[i] >= len)
 			break;
 		dibits[scramble_t[i]] ^= 0x2;	// invert sign of scrambled dibits
@@ -119,7 +120,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	}
 
 	if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
-	// else if (opts->payload == 1) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
+	else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
 
 	if (opts->payload == 1)
 	{
@@ -137,10 +138,16 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 //new sacch
 void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 {
-	uint8_t deperm[60];
-	uint8_t depunc[72];
-	uint8_t trellis_buf[32];
-	uint8_t answer[26];
+	//see about initializing these variables
+	uint8_t deperm[60]; 
+	uint8_t depunc[72];  
+	uint8_t trellis_buf[32]; 
+	uint8_t answer[26]; 
+
+	memset (deperm, 0, sizeof(deperm));
+	memset (depunc, 0, sizeof(depunc));
+	memset (trellis_buf, 0, sizeof(trellis_buf));
+	memset (answer, 0, sizeof(answer));
 	int o = 0;
 	uint8_t crc = 0; //value computed by crc6 on payload
 	uint8_t check = 0; //value pulled from last 6 bits
@@ -186,7 +193,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	}
 
 	CNXDNConvolution_start();
-  for (int i = 0U; i < 40U; i++) 
+  for (int i = 0U; i < 36U; i++) //40
   {
     s0 = temp[(2*i)];
     s1 = temp[(2*i)+1];
@@ -195,7 +202,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
   }
 
 	//stored as 5 bytes, will need to convert to trellis_buf after running
-  CNXDNConvolution_chainback(m_data, 36U); 
+  CNXDNConvolution_chainback(m_data, 32U); //36
 
 	for(int i = 0; i < 4; i++)
   {
@@ -230,6 +237,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		}
 
 		if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, nsf_sacch); 
+		else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, nsf_sacch);
 
 		if (opts->payload == 1)
 		{ 
@@ -398,6 +406,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 		//NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
 		NXDN_Elements_Content_decode(opts, state, 1, f2u_message_buffer); 
 	} 
+	else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, f2u_message_buffer);
 
 	if (opts->payload == 1)
 	{
@@ -495,6 +504,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 		fprintf (stderr, " CAC    ");
 		NXDN_Elements_Content_decode(opts, state, 1, cac_message_buffer);
 	} 
+	else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, cac_message_buffer);  
 
 	if (opts->payload == 1)
 	{
@@ -518,7 +528,7 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 	if      (MessageType == 0x10) fprintf(stderr, " IDLE");
 	else if (MessageType == 0x11) fprintf(stderr, " DISC"); //disconnect
 	else if (MessageType == 0x01) fprintf(stderr, " VCALL");
-	else if (MessageType == 0x03) fprintf(stderr, " VCALL IV");
+	else if (MessageType == 0x03) fprintf(stderr, " VCALL_IV");
 	
 	else if (MessageType == 0x07) fprintf(stderr, " TX_REL_EX");
 	else if (MessageType == 0x08) fprintf(stderr, " TX_REL");
@@ -545,9 +555,8 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 	else fprintf(stderr, " Unknown M-%02X", MessageType);
 	fprintf (stderr, "%s", KNRM);
 
-	//zero out stale values so they won't persist after a transmit release
-	//disable if random messages wipe out the alias
-	if (MessageType == 0x08 || MessageType == 0x10) //idle, tx_rel
+	//zero out stale values so they won't persist after a transmit release, idle, or disconnect
+	if (MessageType == 0x08 || MessageType == 0x10 || MessageType == 0x11) //tx_rel, idle, or disc
 	{
 		memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
 		state->nxdn_last_rid = 0;

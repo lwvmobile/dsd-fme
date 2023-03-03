@@ -45,40 +45,48 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	int sr_structure;
 	int sr_ran;
 
-	uint8_t lich_dibits[8] = {0}; 
-	uint8_t sacch_bits[60] = {0};
-	uint8_t facch_bits_a[144] = {0};
-	uint8_t facch_bits_b[144] = {0};
-	uint8_t cac_bits[300] = {0};
-	uint8_t facch2_bits[348] = {0}; //facch2 or udch, same amount of bits
+	uint8_t lich_dibits[8]; 
+	uint8_t sacch_bits[60];
+	uint8_t facch_bits_a[144];
+	uint8_t facch_bits_b[144];
+	uint8_t cac_bits[300];
+	uint8_t facch2_bits[348]; //facch2 or udch, same amount of bits
 
   //nxdn bit buffer, for easy assignment handling
-  int nxdn_bit_buffer[364] = {0}; 
-	int nxdn_dibit_buffer[182] = {0};
+  int nxdn_bit_buffer[364]; 
+	int nxdn_dibit_buffer[182];
 
+	//init all arrays
 	memset (dbuf, 0, sizeof(dbuf));
+	memset (answer, 0, sizeof(answer));
+	memset (sacch_answer, 0, sizeof(sacch_answer));
+	memset (lich_dibits, 0, sizeof(lich_dibits));
+	memset (sacch_bits, 0, sizeof(sacch_bits));
+	memset (facch_bits_b, 0, sizeof(facch_bits_b));
+	memset (facch_bits_a, 0, sizeof(facch_bits_a));
+	memset (cac_bits, 0, sizeof(cac_bits));
+	memset (facch2_bits, 0, sizeof(facch2_bits));
+
+	memset (nxdn_bit_buffer, 0, sizeof(nxdn_bit_buffer));
+	memset (nxdn_dibit_buffer, 0, sizeof(nxdn_dibit_buffer));
 
 	//collect lich bits first, if they are good, then we can collect the rest of them
-  for (int i = 0; i < 8; i++) 
-  {
-		lich_dibits[i] = dbuf[i] = getDibit(opts, state);
-  }
+  for (int i = 0; i < 8; i++) lich_dibits[i] = dbuf[i] = getDibit(opts, state);
 
 	nxdn_descramble (lich_dibits, 8);
 	
 	lich = 0;
-	for (int i=0; i<8; i++)
-  {
-    lich |= (lich_dibits[i] >> 1) << (7-i);
-  }
+	for (int i=0; i<8; i++) lich |= (lich_dibits[i] >> 1) << (7-i);
 		
 	lich_parity_received = lich & 1;
 	lich_parity_computed = ((lich >> 7) + (lich >> 6) + (lich >> 5) + (lich >> 4)) & 1;
 	lich = lich >> 1;
 	if (lich_parity_received != lich_parity_computed)
   {
-    //fprintf(stderr, "NXDN lich parity error, ignoring frame \n");
-		return;
+    // fprintf(stderr, "NXDN lich parity error, ignoring frame \n"); //debug
+		// state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly 
+		goto END;
+		// return;
 	}
   
 	voice = 0;
@@ -92,6 +100,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	if (lich % 2 == 0 && opts->p25_trunk == 1)
 	{
 		if (opts->payload == 1) fprintf(stderr, "  Simplex/Inbound NXDN lich on trunking system - type 0x%02X\n", lich);
+		// state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly 
 		goto END;
 	}
 
@@ -225,10 +234,16 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	//vch frames stay inside dbuf, easier to assign that to ambe_fr frames
 	//sacch needs extra handling depending on superframe or non-superframe variety
 
-	if (voice)
+	if (voice && !facch) //voice only, no facch steal
 	{
 		fprintf (stderr, "%s", KGRN);
 		fprintf (stderr, " Voice ");
+		fprintf (stderr, "%s", KNRM);
+	}
+	else if (voice && facch) //voice with facch steal
+	{
+		fprintf (stderr, "%s", KGRN);
+		fprintf (stderr, " V%d+F%d ", 3 - facch, facch); //print which position on each
 		fprintf (stderr, "%s", KNRM);
 	}
 	else
@@ -238,7 +253,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		fprintf (stderr, "%s", KNRM);
 
 		//roll the voice scrambler LFSR here if key available to advance seed (usually just needed on NXDN96)
-		if (state->nxdn_cipher_type == 0x1 && state->R != 0) //!voice, or voice == 0
+		if (state->nxdn_cipher_type == 0x1 && state->R != 0) 
 		{
 			char ambe_temp[49] = {0};
 			char ambe_d[49] = {0};
@@ -248,16 +263,38 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 			}
 		}
 
-	}  
+	}
+
+	if (voice && facch == 1) //facch steal 1 -- before voice
+	{
+		//force scrambler here, but with unspecified key (just use what's loaded)
+		if (state->M == 1 && state->R != 0) state->nxdn_cipher_type = 0x1; 
+		//roll the voice scrambler LFSR here if key available to advance seed -- half rotation on a facch steal
+		if (state->nxdn_cipher_type == 0x1 && state->R != 0)
+		{
+			char ambe_temp[49] = {0};
+			char ambe_d[49] = {0};
+			for (int i = 0; i < 2; i++)
+			{
+				LFSRN(ambe_temp, ambe_d, state);
+			}
+		}  
+	}
 
 	if (lich == 0x20 || lich == 0x21 || lich == 0x61 || lich == 0x40 || lich == 0x41) state->nxdn_sacch_non_superframe = TRUE;
 	else state->nxdn_sacch_non_superframe = FALSE;
 
-	if (sacch)nxdn_deperm_sacch(opts, state, sacch_bits);
-	if (cac) nxdn_deperm_cac(opts, state, cac_bits); 
+	if (sacch)  nxdn_deperm_sacch(opts, state, sacch_bits);
+	if (cac)    nxdn_deperm_cac(opts, state, cac_bits); 
 	if (facch2) nxdn_deperm_facch2_udch(opts, state, facch2_bits);
-	if (facch & 1) nxdn_deperm_facch(opts, state, facch_bits_a);
-	if (facch & 2) nxdn_deperm_facch(opts, state, facch_bits_b);
+
+	//testing purposes -- don't run facch steals on enc -- causing issues with key loader (VCALL_ASSGN_DUP)
+	if (state->nxdn_cipher_type == 0 || state->R == 0) //!voice
+	{
+		if (facch & 1) nxdn_deperm_facch(opts, state, facch_bits_a);
+		if (facch & 2) nxdn_deperm_facch(opts, state, facch_bits_b);
+	}
+	
 	if (voice)
 	{
 		//restore MBE file open here
@@ -281,7 +318,22 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 			}
 			if (opts->frame_nxdn48 == 1) closeMbeOutFile (opts, state); //okay to close right away if nxdn48, no data/voice mixing
 		} 
-	} 
+	}
+
+	if (voice && facch == 2) //facch steal 2 -- after voice
+	{
+		//roll the voice scrambler LFSR here if key available to advance seed -- half rotation on a facch steal
+		if (state->nxdn_cipher_type == 0x1 && state->R != 0)
+		{
+			char ambe_temp[49] = {0};
+			char ambe_d[49] = {0};
+			for (int i = 0; i < 2; i++)
+			{
+				LFSRN(ambe_temp, ambe_d, state);
+			}
+		}  
+	}
+	
 
 	fprintf (stderr, "\n");
 	END: ; //do nothing
