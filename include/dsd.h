@@ -818,7 +818,8 @@ void processX2TDMAvoice (dsd_opts * opts, dsd_state * state);
 void processDSTAR_HD (dsd_opts * opts, dsd_state * state);
 void processYSF(dsd_opts * opts, dsd_state * state); //YSF
 void processP2(dsd_opts * opts, dsd_state * state); //P2
-void processTSBK(dsd_opts * opts, dsd_state * state);
+void processTSBK(dsd_opts * opts, dsd_state * state); //P25 Trunking Single Block
+void processMPDU(dsd_opts * opts, dsd_state * state); //P25 Multi Block PDU (SAP 0x61 FMT 0x15 or 0x17 for Trunking Blocks)
 short dmr_filter(short sample);
 short nxdn_filter(short sample);
 short dpmr_filter(short sample);

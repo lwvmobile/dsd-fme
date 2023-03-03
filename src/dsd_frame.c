@@ -604,10 +604,11 @@ processFrame (dsd_opts * opts, dsd_state * state)
     }
   else if (strcmp (duid, "30") == 0)
     {
+      state->dmrburstL = 29;
       if (opts->errorbars == 1)
       {
         printFrameInfo (opts, state);
-        fprintf (stderr," PDU\n"); //multi block/packet PDU
+        fprintf (stderr," MBF\n"); //multi block format PDU
       }
       if (opts->mbe_out_dir[0] != 0)
       {
@@ -619,7 +620,9 @@ processFrame (dsd_opts * opts, dsd_state * state)
         resumeScan (opts, state);
       }
       state->lastp25type = 4;
-      sprintf (state->fsubtype, " PDU          ");
+      sprintf (state->fsubtype, " MBF          ");
+
+      processMPDU(opts, state);
     }
 
   // try to guess based on previous frame if unknown type
