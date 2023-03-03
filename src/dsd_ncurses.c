@@ -2263,8 +2263,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     printw ("\n");
     printw ("| ");
-    printw ("TGT: [%05d] ", tgn);
-    printw ("SRC: [%05d] ", src);
+    printw ("TGT: [%5d] ", tgn);
+    printw ("SRC: [%5d] ", src);
     if (state->nxdn_alias_block_segment[0][0] > 0) 
     {
       printw ("ALIAS: [");
@@ -2302,6 +2302,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     if (state->nxdn_cipher_type == 0x2 && state->carrier == 1)
     {
+      attron(COLOR_PAIR(1));
       printw ("IV: [%016llX] ", state->payload_miN);
       attron(COLOR_PAIR(2));
       printw ("DES-OFB  ");
@@ -2310,6 +2311,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     if (state->nxdn_cipher_type == 0x3 && state->carrier == 1)
     {
+      attron(COLOR_PAIR(1));
       printw ("IV: [%016llX] ", state->payload_miN);
       attron(COLOR_PAIR(2));
       printw ("AES-256 ");
@@ -2908,8 +2910,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         if (lls == 28 || lls == 29)
         {
           printw ("RAN [%02lld] ", call_matrix[9-j][1]);
-          printw ("TG [%05lld] ", call_matrix[9-j][4]);
-          printw ("RID [%05lld] ", call_matrix[9-j][2]);
+          printw ("TG [%5lld] ", call_matrix[9-j][4]);
+          printw ("RID [%5lld] ", call_matrix[9-j][2]);
         }
         //dPMR
         if (lls == 20 || lls == 21 || lls == 22 || lls == 23 ||lls == 24 || lls == 25 || lls == 26 || lls == 27)

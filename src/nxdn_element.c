@@ -18,7 +18,7 @@ void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state)
   uint32_t i;
   uint8_t CrcCorrect = 1;
 
-  /* Consider all SACCH CRC parts as corrects */
+  /* Consider all SACCH CRC parts as correct */
   CrcCorrect = 1;
 
   /* Reconstitute the full 72 bits SACCH */
@@ -33,6 +33,7 @@ void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state)
   /* Decodes the element content */
   // currently only going to run this if all four CRCs are good
   if (CrcCorrect == 1) NXDN_Elements_Content_decode(opts, state, CrcCorrect, SACCH);
+  else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, SACCH);
 
 } /* End NXDN_SACCH_Full_decode() */
 
@@ -272,13 +273,9 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
   if (opts->p25_trunk == 1 && state->p25_cc_freq == 0)
   {
     long int ccfreq = 0;
-    if (state->trunk_chan_map[0] != 0) state->p25_cc_freq = state->trunk_chan_map[0];
     
-    //we are assuming that the current channel is the control channel
-    //unsure whether or not control signalling is available on NXDN voice channels
-
-    //if not available from the import file, then poll rigctl if its available
-    else if (opts->use_rigctl == 1)
+    //if not available, then poll rigctl if its available
+    if (opts->use_rigctl == 1)
     {
       ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
@@ -290,6 +287,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
     }
   }
+
 
   //run group/source analysis and tune if available/desired
   //group list mode so we can look and see if we need to block tuning any groups, etc
@@ -459,31 +457,9 @@ void NXDN_decode_cch_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   freq1 = nxdn_channel_to_frequency (opts, state, channel1);
   freq2 = nxdn_channel_to_frequency (opts, state, channel2);
 
-  //add handling for adding (or deleting?) frequencies to CC list
-  if (channel1sts & 0x20 || channel1sts & 0x8) //current or new only
-  {
-    if (freq1 != 0) state->p25_cc_freq = freq1;
-    //let's assume the frequency we are tuned to is the current control channel
-    else if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0 or nxdn_channel_to_frequency and rigctl is available
-    {
-      freq1 = GetCurrentFreq (opts->rigctl_sockfd);
-      if (freq1 != 0) state->p25_cc_freq = freq1;
-    }
-  }
-  else if (channel1sts & 0x8) //Candidate Added
-  {
-    if (freq1 != 0)
-    {
-      //add to trunk_lcn_freq list?
-      for (int i = 0; i <= state->lcn_freq_count; i++)  //<= pretty sure is correct here since we need to go through atleast one rep
-      {
-        if (freq1 == state->trunk_lcn_freq[i]) goto SKIP;
-      }
-      //assign if freq1 not found in array
-      state->trunk_lcn_freq[state->lcn_freq_count] = freq1;
-      state->lcn_freq_count++;
-    }
-  }
+  //removed code below, may have been causing issues with current CC frequency assignment
+  //removed code is unneccesary for trunking purposes
+
 
   //if a delete, let's not bother trying to remove it from the list for now
   SKIP: ; //do nothing
@@ -506,6 +482,25 @@ void NXDN_decode_srv_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   fprintf (stderr, "Location ID [%06X] SVC [%04X] RST [%06X] ", location_id, svc_info, rst_info);
   nxdn_location_id_handler (state, location_id);
   fprintf (stderr, "%s", KNRM);
+
+  //poll for current frequency, will always be the control channel
+  //this PDU is constantly pumped out on the CC CAC Message
+  if (opts->p25_trunk == 1)
+  {
+    long int ccfreq = 0;
+    //if using rigctl, we can poll for the current frequency
+    if (opts->use_rigctl == 1)
+    {
+      ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
+      if (ccfreq != 0) state->p25_cc_freq = ccfreq;
+    }
+    //if using rtl input, we can ask for the current frequency tuned
+    else if (opts->audio_in_type == 3)
+    {
+      ccfreq = (long int)opts->rtlsdr_center_freq;
+      if (ccfreq != 0) state->p25_cc_freq = ccfreq;
+    }
+  }
 
 }
 
@@ -596,31 +591,9 @@ void NXDN_decode_site_info(dsd_opts * opts, dsd_state * state, uint8_t * Message
 
   fprintf (stderr, "%s", KNRM);
 
-  //place the freqs into the array for hunting CC or
-  //rotating CCs without user LCN list
-  if (freq1 != 0)
-  {
-    for (int i = 0; i <= state->lcn_freq_count; i++)  //<= pretty sure is correct here since we need to go through atleast one rep
-    {
-      if (freq1 == state->trunk_lcn_freq[i]) goto SKIP;
-    }
-    //assign if freq1 not found in array
-    state->trunk_lcn_freq[state->lcn_freq_count] = freq1;
-    state->lcn_freq_count++;
-    //shim here for main CC freq?
-    state->p25_cc_freq = freq1;
-  }
+  //removed code below, may have been causing issues with current CC frequency assignment
+  //removed code is unneccesary for trunking purposes
 
-  if (freq2 != 0)
-  {
-    for (int i = 0; i <= state->lcn_freq_count; i++)  //<= pretty sure is correct here since we need to go through atleast one rep
-    {
-      if (freq2 == state->trunk_lcn_freq[i]) goto SKIP;
-    }
-    //assign if freq2 not found in array
-    state->trunk_lcn_freq[state->lcn_freq_count] = freq2;
-    state->lcn_freq_count++;
-  }
 
   SKIP: ; //do nothing
 
@@ -703,11 +676,19 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
   else if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
 
-  if (state->M == 1)
-  {
-    state->nxdn_cipher_type = 0x1;
-    CipherType = 0x1;
-  } 
+  //consider removing code below, if we get this far (under good crc),
+  //then we will always have a correct cipher type and won't need to
+  //force it, its only needed on the vcall_assgn where no cipher is set
+  //dsd_mbe can also force the scrambler without triggering the settings here
+
+  // if (state->M == 1)
+  // {
+  //   state->nxdn_cipher_type = 0x1;
+  //   CipherType = 0x1;
+  // }
+
+  //debug
+  // if (CipherType > 0x1) state->R = 0; //don't use on manual key entry
 
   /* Print the "Cipher Type" */
   if(CipherType != 0)
