@@ -1316,17 +1316,21 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		if (MAC[1+len_a] == 0x7C) 
 		{
 			int lra = MAC[2+len_a];
+			int cfva = MAC[3+len_a] >> 4;
 			int lsysid = ((MAC[3+len_a] & 0xF) << 8) | MAC[4+len_a];
 			int rfssid = MAC[5+len_a];
 			int siteid = MAC[6+len_a];
 			int channelt = (MAC[7+len_a] << 8) | MAC[8+len_a];
 			int sysclass = MAC[9+len_a];
-			if (1 == 1) //state->p2_is_lcch == 1
-			{
-				fprintf (stderr, "\n Adjacent Status Broadcast - Abbreviated\n");
-				fprintf (stderr, "  LRA [%02X] RFSS[%03d] SYSID [%03X] SITE [%03X] CHAN-T [%04X] SSC [%02X]", lra, rfssid, lsysid, siteid, channelt, sysclass);
-				process_channel_to_freq (opts, state, channelt);
-			}
+			fprintf (stderr, "\n Adjacent Status Broadcast - Abbreviated\n");
+			fprintf (stderr, "  LRA [%02X] RFSS[%03d] SYSID [%03X] SITE [%03X] CHAN-T [%04X] SSC [%02X]\n  ", lra, rfssid, lsysid, siteid, channelt, sysclass);
+			if (cfva & 0x8) fprintf (stderr, " Conventional");
+			if (cfva & 0x4) fprintf (stderr, " Failure Condition");
+			if (cfva & 0x2) fprintf (stderr, " Up to Date (Correct)");
+			else fprintf (stderr, " Last Known");
+			if (cfva & 0x1) fprintf (stderr, " Valid RFSS Connection Active");
+			process_channel_to_freq (opts, state, channelt);
+
 
 		}
 
@@ -1334,19 +1338,23 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		if (MAC[1+len_a] == 0xFC) 
 		{
 			int lra = MAC[2+len_a];
+			int cfva = MAC[3+len_a] >> 4; 
 			int lsysid = ((MAC[3+len_a] & 0xF) << 8) | MAC[4+len_a];
 			int rfssid = MAC[5+len_a];
 			int siteid = MAC[6+len_a];
 			int channelt = (MAC[7+len_a] << 8) | MAC[8+len_a];
 			int channelr = (MAC[9+len_a] << 8) | MAC[10+len_a];
-			int sysclass = MAC[9+len_a];
-			if (1 == 1) //state->p2_is_lcch == 1
-			{
-				fprintf (stderr, "\n Adjacent Status Broadcast - Extended\n");
-				fprintf (stderr, "  LRA [%02X] RFSS[%03d] SYSID [%03X] SITE [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", lra, rfssid, lsysid, siteid, channelt, channelr, sysclass);
-				process_channel_to_freq (opts, state, channelt);
-				process_channel_to_freq (opts, state, channelr);
-			}
+			int sysclass = MAC[11+len_a];  //need to re-check this 
+			fprintf (stderr, "\n Adjacent Status Broadcast - Extended\n");
+			fprintf (stderr, "  LRA [%02X] RFSS[%03d] SYSID [%03X] SITE [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]\n  ", lra, rfssid, lsysid, siteid, channelt, channelr, sysclass);
+			if (cfva & 0x8) fprintf (stderr, " Conventional");
+			if (cfva & 0x4) fprintf (stderr, " Failure Condition");
+			if (cfva & 0x2) fprintf (stderr, " Up to Date (Correct)");
+			else fprintf (stderr, " Last Known");
+			if (cfva & 0x1) fprintf (stderr, " Valid RFSS Connection Active");
+			process_channel_to_freq (opts, state, channelt);
+			process_channel_to_freq (opts, state, channelr);
+
 
 		}
 

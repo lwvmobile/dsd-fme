@@ -11,13 +11,26 @@
 void processTSBK(dsd_opts * opts, dsd_state * state)
 {
   
-  int tsbkbit[196] = {0}; //tsbk bit array, 196 trellis encoded bits
-  int tsbk_dibit[98] = {0};
+  int tsbkbit[196]; //tsbk bit array, 196 trellis encoded bits
+  int tsbk_dibit[98];
+
+  memset (tsbkbit, 0, sizeof(tsbkbit));
+  memset (tsbk_dibit, 0, sizeof(tsbk_dibit));
 
   int dibit = 0;
-  uint8_t tsbk_byte[12] = {0}; //12 byte return from bd_bridge (block_deinterleave)
-  unsigned long long int PDU[24] = {0}; //24 byte PDU to send to the tsbk_byte vPDU handler, should be same formats (mostly)
-  int tsbk_decoded_bits[190] = {0}; //decoded bits from tsbk_bytes for sending to crc16_lb_bridge
+
+  uint8_t tsbk_byte[12]; //12 byte return from bd_bridge (block_deinterleave)
+  memset (tsbk_byte, 0, sizeof(tsbk_byte));
+
+  unsigned long long int PDU[24]; //24 byte PDU to send to the tsbk_byte vPDU handler, should be same formats (mostly)
+  memset (PDU, 0, sizeof(PDU));
+
+  int tsbk_decoded_bits[190]; //decoded bits from tsbk_bytes for sending to crc16_lb_bridge
+  memset (tsbk_decoded_bits, 0, sizeof(tsbk_decoded_bits));
+
+  int flushing_bits[196]; //for flushing the trellis state machine
+  memset (flushing_bits, 0, sizeof(flushing_bits));
+  
   int i, j, k, b, x, y;
   int ec = -2; //error value returned from (block_deinterleave)
   int err = -2; //error value returned from crc16_lb_bridge
@@ -53,6 +66,14 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
         skipdibit += 36; //was set to 35, this was the bug
       }
 
+    }
+
+    //flushing the trellis state machine
+    if (j == 0)
+    {
+      bd_bridge(flushing_bits, tsbk_byte);
+      //reset tsbk_byte afterwards
+      memset (tsbk_byte, 0, sizeof(tsbk_byte));
     }
 
     //send tsbkbit to block_deinterleave and return tsbk_byte
@@ -119,7 +140,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     //set our WACN and SYSID here now that we have valid ec and crc/checksum
     else if (protectbit == 0 && err == 0 && ec == 0 && (tsbk_byte[0] & 0x3F) == 0x3B) 
     {
-      long int wacn = (tsbk_byte[3] << 12) | (tsbk_byte[4] << 4) | (tsbk_byte[5] >> 4);;
+      long int wacn = (tsbk_byte[3] << 12) | (tsbk_byte[4] << 4) | (tsbk_byte[5] >> 4);
       int sysid = ((tsbk_byte[5] & 0xF) << 8) | tsbk_byte[6];
       int channel = (tsbk_byte[7] << 8) | tsbk_byte[8];
       fprintf (stderr, "%s",KYEL);
