@@ -165,6 +165,7 @@ s - stop playing symbol capture bin or wav input file
 P - start per call decoded wav files
 p - stop per call decoded wav files
 t - toggle trunking (needs either rtl input, or rigctl connection)
+y - toggle trunking (needs either rtl input, or rigctl connection)
 1 - Lockout Tuning/Playback of TG in Slot 1 or Conventional (Current Session Only)
 2 - Lockout Tuning/Playback of TG in Slot 2 (Current Session Only)
 0 - Toggle Audio Smoothing - May produce crackling if enabled on RTL/TCP or wav/bin files
