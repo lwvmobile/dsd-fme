@@ -1108,17 +1108,20 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			state->p25_chan_spac[iden] = ((MAC[4+len_a] & 0x3) << 8) | MAC[5+len_a];
 			state->p25_base_freq[iden] = (MAC[6+len_a] << 24) | (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | (MAC[9+len_a] << 0);
 
-			//I don't think this is a surefire way, but may be good enough?
-			if (state->p25_chan_spac[iden] == 0x64) //tdma
-			{
-				state->p25_chan_type[iden] = 4; //
-				state->p25_chan_tdma[iden] = 1; //
-			}
-			else //fdma
-			{
-				state->p25_chan_type[iden] = 1; //
-				state->p25_chan_tdma[iden] = 0; //
-			}
+			//this is causing more issues -- need a different way to check on this
+			// if (state->p25_chan_spac[iden] == 0x64) //tdma
+			// {
+			// 	state->p25_chan_type[iden] = 4; //
+			// 	state->p25_chan_tdma[iden] = 1; //
+			// }
+			// else //fdma
+			// {
+			// 	state->p25_chan_type[iden] = 1; //
+			// 	state->p25_chan_tdma[iden] = 0; //
+			// }
+
+			state->p25_chan_type[iden] = 1; //set as old values for now
+			state->p25_chan_tdma[iden] = 0; //set as old values for now
 
 			fprintf (stderr, "\n Identifier Update UHF/VHF\n");
 			fprintf (stderr, "  Channel Identifier [%01X] BW [%01X] Transmit Offset [%04X]\n  Channel Spacing [%03X] Base Frequency [%08lX] [%09ld]",
