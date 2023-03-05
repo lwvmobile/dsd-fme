@@ -590,6 +590,7 @@ typedef struct
   int p2_is_lcch; //flag to tell us when a frame is lcch and not sacch
 
   //iden freq storage for frequency calculations
+  int p25_chan_tdma[16]; //set from iden_up vs iden_up_tdma
   int p25_chan_iden;
   int p25_chan_type[16];
   int p25_trans_off[16];

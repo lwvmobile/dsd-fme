@@ -81,7 +81,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   if (opts->scanner_mode == 1)
   {
 
-    if (state->lcn_freq_roll >= state->lcn_freq_count)
+    if (state->lcn_freq_roll > state->lcn_freq_count) //with >= we were cutting one short
     {
       state->lcn_freq_roll = 0; //reset to zero
     }
@@ -799,6 +799,7 @@ initState (dsd_state * state)
   state->p25_chan_iden = 0;
   for (int i = 0; i < 16; i++)
   {
+    state->p25_chan_tdma[i] = -1; //0, or -1
     state->p25_chan_type[i] = 0;
     state->p25_trans_off[i] = 0;
     state->p25_chan_spac[i] = 0;

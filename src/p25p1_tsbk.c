@@ -130,7 +130,9 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     //Don't run NET_STS out of this, or will set wrong NAC/CC //&& PDU[1] != 0x49 && PDU[1] != 0x45
     //0x49 is telephone grant, 0x46 Unit to Unit Channel Answer Request (seems bogus) (mfid 90)
     // if (MFID < 0x2 && protectbit == 0 && err == 0 && ec == 0 && PDU[1] != 0x7B )
-    if ( (MFID < 0x2 || MFID == 0xA4 || MFID == 0x90) && protectbit == 0 && err == 0 && ec == 0 && PDU[1] != 0x7B )  
+    //running with A4 and 90 causing some false positives when sending to vPDU, issuing bad call grants to nowhere!
+    // if ( (MFID < 0x2 || MFID == 0xA4 || MFID == 0x90) && protectbit == 0 && err == 0 && ec == 0 && PDU[1] != 0x7B )  
+    if (MFID < 0x2 && protectbit == 0 && err == 0 && ec == 0 && PDU[1] != 0x7B ) 
     {
       fprintf (stderr, "%s",KYEL);
       process_MAC_VPDU(opts, state, 0, PDU);

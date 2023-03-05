@@ -114,16 +114,27 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
     		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
     		{
-					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+					// //testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+					// if (opts->mod_qpsk == 1)
+					// {
+					// 	int spacing = state->p25_chan_spac[channel >> 12];
+					// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+					// 	{
+					// 		state->samplesPerSymbol = 8;
+					// 		state->symbolCenter = 3;
+					// 	}	
+					// }
+
+					//may be this way independent of whether or not this is QPSK (does C4FM run at 6000 sps?)
 					if (opts->mod_qpsk == 1)
 					{
-						int spacing = state->p25_chan_spac[channel >> 12];
-						if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						if (state->p25_chan_tdma[channel >> 12] == 1)
 						{
 							state->samplesPerSymbol = 8;
 							state->symbolCenter = 3;
-						}	
+						}
 					}
+					
 					//rigctl
           if (opts->use_rigctl == 1)
 					{
@@ -183,14 +194,24 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
     		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
     		{
 					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+					// if (opts->mod_qpsk == 1)
+					// {
+					// 	int spacing = state->p25_chan_spac[channel >> 12];
+					// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+					// 	{
+					// 		state->samplesPerSymbol = 8;
+					// 		state->symbolCenter = 3;
+					// 	}	
+					// }
+
+					//may be this way independent of whether or not this is QPSK (does C4FM run at 6000 sps?)
 					if (opts->mod_qpsk == 1)
 					{
-						int spacing = state->p25_chan_spac[channel >> 12];
-						if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						if (state->p25_chan_tdma[channel >> 12] == 1)
 						{
 							state->samplesPerSymbol = 8;
 							state->symbolCenter = 3;
-						}	
+						}
 					}
 					
           if (opts->use_rigctl == 1)
@@ -284,15 +305,26 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency already
 					{
 						//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
-						if (opts->mod_qpsk == 1) 
+						// if (opts->mod_qpsk == 1) 
+						// {
+						// 	int spacing = state->p25_chan_spac[tunable_chan >> 12];
+						// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						// 	{
+						// 		state->samplesPerSymbol = 8;
+						// 		state->symbolCenter = 3;
+						// 	}	
+						// }
+
+						//may be this way independent of whether or not this is QPSK (does C4FM run at 6000 sps?)
+						if (opts->mod_qpsk == 1)
 						{
-							int spacing = state->p25_chan_spac[tunable_chan >> 12];
-							if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+							if (state->p25_chan_tdma[tunable_chan >> 12] == 1)
 							{
 								state->samplesPerSymbol = 8;
 								state->symbolCenter = 3;
-							}	
+							}
 						}
+
 						//rigctl
 						if (opts->use_rigctl == 1)
 						{
@@ -362,15 +394,26 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
     		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
     		{
 					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+					// if (opts->mod_qpsk == 1)
+					// {
+					// 	int spacing = state->p25_chan_spac[channel >> 12];
+					// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+					// 	{
+					// 		state->samplesPerSymbol = 8;
+					// 		state->symbolCenter = 3;
+					// 	}	
+					// }
+
+					//may be this way independent of whether or not this is QPSK (does C4FM run at 6000 sps?)
 					if (opts->mod_qpsk == 1)
 					{
-						int spacing = state->p25_chan_spac[channel >> 12];
-						if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						if (state->p25_chan_tdma[channel >> 12] == 1)
 						{
 							state->samplesPerSymbol = 8;
 							state->symbolCenter = 3;
-						}	
+						}
 					}
+
 					//rigctl
           if (opts->use_rigctl == 1)
 					{
@@ -435,15 +478,26 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
     		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
     		{
 					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+					// if (opts->mod_qpsk == 1)
+					// {
+					// 	int spacing = state->p25_chan_spac[channel >> 12];
+					// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+					// 	{
+					// 		state->samplesPerSymbol = 8;
+					// 		state->symbolCenter = 3;
+					// 	}	
+					// }
+
+					//may be this way independent of whether or not this is QPSK (does C4FM run at 6000 sps?)
 					if (opts->mod_qpsk == 1)
 					{
-						int spacing = state->p25_chan_spac[channel >> 12];
-						if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						if (state->p25_chan_tdma[channel >> 12] == 1)
 						{
 							state->samplesPerSymbol = 8;
 							state->symbolCenter = 3;
-						}	
+						}
 					}
+
 					//rigctl
           if (opts->use_rigctl == 1)
 					{
@@ -539,14 +593,24 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency
 					{
 						//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+						// if (opts->mod_qpsk == 1)
+						// {
+						// 	int spacing = state->p25_chan_spac[tunable_chan >> 12];
+						// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						// 	{
+						// 		state->samplesPerSymbol = 8;
+						// 		state->symbolCenter = 3;
+						// 	}	
+						// }
+
+						//may be this way independent of whether or not this is QPSK (does C4FM run at 6000 sps?)
 						if (opts->mod_qpsk == 1)
 						{
-							int spacing = state->p25_chan_spac[tunable_chan >> 12];
-							if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+							if (state->p25_chan_tdma[tunable_chan >> 12] == 1)
 							{
 								state->samplesPerSymbol = 8;
 								state->symbolCenter = 3;
-							}	
+							}
 						}
 						
 						if (opts->use_rigctl == 1)
@@ -651,15 +715,26 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency already
 					{
 						//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
-						if (opts->mod_qpsk == 1) 
+						// if (opts->mod_qpsk == 1) 
+						// {
+						// 	int spacing = state->p25_chan_spac[tunable_chan >> 12];
+						// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						// 	{
+						// 		state->samplesPerSymbol = 8;
+						// 		state->symbolCenter = 3;
+						// 	}	
+						// }
+
+						//may be this way independent of whether or not this is QPSK (does C4FM run at 6000 sps?)
+						if (opts->mod_qpsk == 1)
 						{
-							int spacing = state->p25_chan_spac[tunable_chan >> 12];
-							if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+							if (state->p25_chan_tdma[tunable_chan >> 12] == 1)
 							{
 								state->samplesPerSymbol = 8;
 								state->symbolCenter = 3;
-							}	
+							}
 						}
+
 						//rigctl
 						if (opts->use_rigctl == 1)
 						{
@@ -753,15 +828,26 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && tunable_freq != 0) //if we aren't already on a VC and have a valid frequency already
 					{
 						//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
-						if (opts->mod_qpsk == 1) 
+						// if (opts->mod_qpsk == 1) 
+						// {
+						// 	int spacing = state->p25_chan_spac[tunable_chan >> 12];
+						// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						// 	{
+						// 		state->samplesPerSymbol = 8;
+						// 		state->symbolCenter = 3;
+						// 	}	
+						// }
+
+						//may be this way independent of whether or not this is QPSK (does C4FM run at 6000 sps?)
+						if (opts->mod_qpsk == 1)
 						{
-							int spacing = state->p25_chan_spac[tunable_chan >> 12];
-							if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+							if (state->p25_chan_tdma[tunable_chan >> 12] == 1)
 							{
 								state->samplesPerSymbol = 8;
 								state->symbolCenter = 3;
-							}	
+							}
 						}
+
 						//rigctl
 						if (opts->use_rigctl == 1)
 						{
@@ -810,11 +896,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc, channelt, channelr, group, group);
 			freq1 = process_channel_to_freq (opts, state, channelt);
 			freq2 = process_channel_to_freq (opts, state, channelr);
-			if (slot == 0)
-			{
-				state->lasttg = group;
-			}
-			else state->lasttgR = group;
+
+			//don't set the tg here, one multiple grant updates, will mess up the TG value on current call
+			// if (slot == 0)
+			// {
+			// 	state->lasttg = group;
+			// }
+			// else state->lasttgR = group;
 
 			for (int i = 0; i < state->group_tally; i++)
       {
@@ -835,15 +923,26 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
     		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
     		{
 					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+					// if (opts->mod_qpsk == 1)
+					// {
+					// 	int spacing = state->p25_chan_spac[channelt >> 12];
+					// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+					// 	{
+					// 		state->samplesPerSymbol = 8;
+					// 		state->symbolCenter = 3;
+					// 	}	
+					// }
+
+					//may be this way independent of whether or not this is QPSK (does C4FM run at 6000 sps?)
 					if (opts->mod_qpsk == 1)
 					{
-						int spacing = state->p25_chan_spac[channelt >> 12];
-						if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						if (state->p25_chan_tdma[channelt >> 12] == 1)
 						{
 							state->samplesPerSymbol = 8;
 							state->symbolCenter = 3;
-						}	
+						}
 					}
+
 					//rigctl
           if (opts->use_rigctl == 1)
 					{
@@ -999,17 +1098,27 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 		}
 
-		//identifier update VHF/UHF
-		if (MAC[1+len_a] == 0x74)
+		//identifier update VHF/UHF 
+		if (MAC[1+len_a] == 0x74) 
 		{
 			state->p25_chan_iden = MAC[2+len_a] >> 4;
 			int iden = state->p25_chan_iden;
-
-			state->p25_chan_type[iden] = 1;
 			int bw_vu = (MAC[2+len_a] & 0xF);
 			state->p25_trans_off[iden] = (MAC[3+len_a] << 6) | (MAC[4+len_a] >> 2);
 			state->p25_chan_spac[iden] = ((MAC[4+len_a] & 0x3) << 8) | MAC[5+len_a];
 			state->p25_base_freq[iden] = (MAC[6+len_a] << 24) | (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | (MAC[9+len_a] << 0);
+
+			//I don't think this is a surefire way, but may be good enough?
+			if (state->p25_chan_spac[iden] == 0x64) //tdma
+			{
+				state->p25_chan_type[iden] = 4; //
+				state->p25_chan_tdma[iden] = 1; //
+			}
+			else //fdma
+			{
+				state->p25_chan_type[iden] = 1; //
+				state->p25_chan_tdma[iden] = 0; //
+			}
 
 			fprintf (stderr, "\n Identifier Update UHF/VHF\n");
 			fprintf (stderr, "  Channel Identifier [%01X] BW [%01X] Transmit Offset [%04X]\n  Channel Spacing [%03X] Base Frequency [%08lX] [%09ld]",
@@ -1023,6 +1132,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int iden = state->p25_chan_iden;
 
 			state->p25_chan_type[iden] = 1;
+			state->p25_chan_tdma[iden] = 0;
 			int bw = ((MAC[2+len_a] & 0xF) << 5) | ((MAC[3+len_a] & 0xF8) >> 2);
 			state->p25_trans_off[iden] = (MAC[3+len_a] << 6) | (MAC[4+len_a] >> 2);
 			state->p25_chan_spac[iden] = ((MAC[4+len_a] & 0x3) << 8) | MAC[5+len_a];
@@ -1038,6 +1148,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		{
 			state->p25_chan_iden = MAC[2+len_a] >> 4;
 			int iden = state->p25_chan_iden;
+			state->p25_chan_tdma[iden] = 1;
 			state->p25_chan_type[iden] = MAC[2+len_a] & 0xF;
 			state->p25_trans_off[iden] = (MAC[3+len_a] << 6) | (MAC[4+len_a] >> 2);
 			state->p25_chan_spac[iden] = ((MAC[4+len_a] & 0x3) << 8) | MAC[5+len_a];
@@ -1053,6 +1164,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		{
 			state->p25_chan_iden = MAC[3+len_a] >> 4;
 			int iden = state->p25_chan_iden;
+			state->p25_chan_tdma[iden] = 1;
 			state->p25_chan_type[iden] = MAC[3+len_a] & 0xF;
 			state->p25_trans_off[iden] = (MAC[4+len_a] << 6) | (MAC[5+len_a] >> 2);
 			state->p25_chan_spac[iden] = ((MAC[5+len_a] & 0x3) << 8) | MAC[6+len_a];
