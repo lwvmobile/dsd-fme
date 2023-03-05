@@ -321,7 +321,7 @@ typedef struct
 
   int p25_trunk; //experimental P25 trunking with RIGCTL (or RTLFM)
   int p25_is_tuned; //set to 1 if currently on VC, set back to 0 if on CC
-  int trunk_hangtime; //hangtime in seconds before tuning back to CC
+  float trunk_hangtime; //hangtime in seconds before tuning back to CC
 
   int scanner_mode; //experimental -- use the channel map as a conventional scanner, quicker tuning, but no CC
   

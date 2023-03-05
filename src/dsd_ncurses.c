@@ -2158,13 +2158,19 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| Reverse Mute - Muting Unencrypted Voice\n");
   }
   if (opts->aggressive_framesync == 0) printw ("| Selective CRC ERR Bypass Enabled (RAS) \n");
-  if (state->M == 1) printw ("| Forcing Key Priority -- Key: %lld \n", state->R);
+  if (state->M == 1)
+  {
+    if (state->R != 0)  printw ("| Forcing Key Priority -- NXDN Sc Key: %05lld \n", state->R);
+    if (state->K != 0)  printw ("| Forcing Key Priority -- Moto BP Key: %03lld \n", state->K);
+    if (state->K1 != 0) printw ("| Forcing Key Priority -- tera BP Key: %016llX \n", state->K1);
+    if (state->K != 0 && state->K1 != 0) printw ("| Warning! Multiple DMR Key Types Loaded! \n"); //warning may not be required
+  } 
   if (opts->scanner_mode == 1)
   {
     printw ("| Fast Scan Mode Enabled ");
-    if (state->trunk_lcn_freq[state->lcn_freq_roll]) //this is a workaround to fix freq of 0 during roll reset
-      printw (" - Frequency: [%.06lf] Mhz \n", (double)state->trunk_lcn_freq[state->lcn_freq_roll]/1000000);
-    else printw (" - Frequency: [%.06lf] Mhz \n", (double)state->trunk_lcn_freq[0]/1000000); 
+    if (state->lcn_freq_roll != 0) 
+      printw (" - Frequency: [%.06lf] Mhz \n", (double)state->trunk_lcn_freq[state->lcn_freq_roll-1]/1000000);
+    printw (" Speed: %.02lf sec \n", opts->trunk_hangtime);  //not sure values less than 1 make a difference, may be system/environment dependent   
   } 
 
   printw ("------------------------------------------------------------------------------\n");
