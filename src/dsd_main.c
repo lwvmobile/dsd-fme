@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Lite' Edition v2.0.0-55-gc1ed3fe   Windows 32-bit RC4c"
+  " 'Lite' Edition v2.0.0-56-gfe46420  Windows 32-bit RC420"
 };
 
 int comp (const void *a, const void *b)
@@ -77,11 +77,41 @@ void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
 
+  // // experimental conventional frequency scanner mode
+  // if (opts->scanner_mode == 1)
+  // {
+
+  //   if (state->lcn_freq_roll > state->lcn_freq_count) //with >= we were cutting one short
+  //   {
+  //     state->lcn_freq_roll = 0; //reset to zero
+  //   }
+  //   //check that we have a non zero value first, then tune next frequency
+  //   if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0) 
+  //   {
+  //     //rigctl
+  //     if (opts->use_rigctl == 1)
+  //     {
+  //       if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+  //       SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[state->lcn_freq_roll]);
+  //     }
+  //     //rtludp
+  //     if (opts->audio_in_type == 3)
+  //     {
+  //       rtl_udp_tune (opts, state, state->trunk_lcn_freq[state->lcn_freq_roll]);
+  //     }
+
+  //     if (state->lastsynctype != -1) fprintf (stderr, "Resume Scanning Mode\n");
+
+  //   }
+  //   state->lcn_freq_roll++;
+  // }
+  // //end experimental conventional frequency scanner mode
+
   //experimental conventional frequency scanner mode
-  if (opts->scanner_mode == 1)
+  if (opts->scanner_mode == 1 && ( (time(NULL) - state->last_cc_sync_time) > opts->trunk_hangtime))
   {
 
-    if (state->lcn_freq_roll > state->lcn_freq_count) //with >= we were cutting one short
+    if (state->lcn_freq_roll >= state->lcn_freq_count)
     {
       state->lcn_freq_roll = 0; //reset to zero
     }
@@ -104,6 +134,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
 
     }
     state->lcn_freq_roll++;
+    state->last_cc_sync_time = time(NULL);
   }
   //end experimental conventional frequency scanner mode
 
@@ -531,7 +562,7 @@ initOpts (dsd_opts * opts)
 
   opts->p25_trunk = 0; //0 disabled, 1 is enabled
   opts->p25_is_tuned = 0; //set to 1 if currently on VC, set back to 0 on carrier drop
-  opts->trunk_hangtime = 1; //1 second hangtime by default before tuning back to CC
+  opts->trunk_hangtime = 1; //1 second hangtime by default before tuning back to CC, going sub 1 sec causes issues with cc slip
 
   opts->scanner_mode = 0; //0 disabled, 1 is enabled
 
@@ -1049,7 +1080,7 @@ usage ()
   printf ("  -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
   printf ("                 P25 - 7000-12000; P25 (QPSK) - 12000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500;\n");
   printf ("                 May vary based on system stregnth, etc.\n");
-  printf ("  -t <secs>     Set Trunking VC/sync loss hangtime in seconds. (default = 1 second)\n");
+  printf ("  -t <secs>     Set Trunking or Fast Scan VC/sync loss hangtime in seconds. (default = 1 second) (decimal values permitted) \n");
   printf ("\n");
   printf (" Trunking Example TCP: dsd-fme-lite -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
   printf (" Trunking Example RTL: dsd-fme-lite -fs -i rtl:0:450M:26:-2:8:0:6020 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
@@ -1365,9 +1396,14 @@ main (int argc, char **argv)
           if (opts.rigctlportno != 0) opts.use_rigctl = 1; 
           break;
 
+        //NOTE: I changed trunk_hangtime to a float, BUT! time(NULL) returns in second whole numbers
+        //so using anything but whole numbers won't affect the outcome (rounded up?), in the future though,
+        //may change to a different return on sync times and this will matter!
+
         case 't': //New letter assignment for Trunk Hangtime, flow down to allow temp numbers
-        case '6': //hangtime in seconds, default is 1;
-          sscanf (optarg, "%d", &opts.trunk_hangtime);
+        case '6': //hangtime in seconds, default is 1; 
+          sscanf (optarg, "%f", &opts.trunk_hangtime); //updated for float/decimal values
+          fprintf (stderr, "Trunking or Fast Scanner Hang Time set to: %.02lf sec\n", opts.trunk_hangtime);
           break;
         
         case 'q': //New letter assignment for Reverse Mute, flow down to allow temp numbers
