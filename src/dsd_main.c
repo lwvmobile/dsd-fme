@@ -81,7 +81,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   if (opts->scanner_mode == 1)
   {
 
-    if (state->lcn_freq_roll >= state->lcn_freq_count)
+    if (state->lcn_freq_roll > state->lcn_freq_count) //with >= we were cutting one short
     {
       state->lcn_freq_roll = 0; //reset to zero
     }
