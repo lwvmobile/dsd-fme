@@ -1383,7 +1383,7 @@ main (int argc, char **argv)
         case 't': //New letter assignment for Trunk Hangtime, flow down to allow temp numbers
         case '6': //hangtime in seconds, default is 1; 
           sscanf (optarg, "%f", &opts.trunk_hangtime); //updated for float/decimal values
-          fprintf (stderr, "Trunking or Fast Scanner Hang Time set to: %.02lf sec\n", opts.trunk_hangtime);
+          fprintf (stderr, "Trunking or Fast Scanner Hang Time set to: %.02f sec\n", opts.trunk_hangtime);
           break;
         
         case 'q': //New letter assignment for Reverse Mute, flow down to allow temp numbers
