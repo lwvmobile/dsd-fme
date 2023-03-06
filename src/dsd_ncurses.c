@@ -2190,7 +2190,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| Fast Scan Mode Enabled ");
     if (state->lcn_freq_roll != 0) 
-      printw (" - Frequency: [%.06lf] Mhz \n", (double)state->trunk_lcn_freq[state->lcn_freq_roll-1]/1000000);
+      printw (" - Frequency: [%.06lf] Mhz", (double)state->trunk_lcn_freq[state->lcn_freq_roll-1]/1000000);
     printw (" Speed: %.02lf sec \n", opts->trunk_hangtime);  //not sure values less than 1 make a difference, may be system/environment dependent 
   }
 
@@ -3219,7 +3219,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   // //Lockout bug in EDACS prevents any group from tuning when using this, not sure why yet
   // //WARNING! USE THESE WITH CAUTION! IF BREAKING ISSUES OBSERVED, THEN RESTART AND DON'T USE THEM!!
-  if (opts->frame_provoice != 1 && c == 49) //'1' key, lockout slot 1 or conventional tg from tuning/playback during session
+  if (state->lasttg != 0 && opts->frame_provoice != 1 && c == 49) //'1' key, lockout slot 1 or conventional tg from tuning/playback during session
   {
     state->group_array[state->group_tally].groupNumber = state->lasttg;
     sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
@@ -3235,7 +3235,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   }
 
-  if (opts->frame_provoice != 1 && c == 50) //'2' key, lockout slot 2 tdma tgR from tuning/playback during session
+  if (state->lasttgR != 0 && opts->frame_provoice != 1 && c == 50) //'2' key, lockout slot 2 tdma tgR from tuning/playback during session
   {
     state->group_array[state->group_tally].groupNumber = state->lasttgR;
     sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
