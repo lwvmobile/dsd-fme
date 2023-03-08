@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Lite' Edition v2.0.0-56-gfe46420  Windows 32-bit RC420"
+  " 'Aero' Edition v2.0.0-62-g432495c  Windows 32-bit RC5  "
 };
 
 int comp (const void *a, const void *b)
@@ -947,13 +947,13 @@ usage ()
 {
 
   printf ("\n");
-  printf ("Usage: dsd-fme-lite [options]            Decoder/Trunking Mode\n");
-  printf ("  or:  dsd-fme-lite [options] -r <files> Read/Play saved mbe data from file(s)\n");
-  printf ("  or:  dsd-fme-lite -h                   Show help\n");
+  printf ("Usage: dsd-fme-aero [options]            Decoder/Trunking Mode\n");
+  printf ("  or:  dsd-fme-aero [options] -r <files> Read/Play saved mbe data from file(s)\n");
+  printf ("  or:  dsd-fme-aero -h                   Show help\n");
   printf ("\n");
   printf ("Display Options:\n");
   printf ("  -N            Use NCurses Terminal\n");
-  printf ("                 dsd-fme-lite -N 2> log.ans \n");
+  printf ("                 dsd-fme-aero -N 2> log.ans \n");
   printf ("  -Z            Log MBE/PDU Payloads to console\n");
   printf ("\n");
   printf ("Input/Output options:\n");
@@ -998,7 +998,7 @@ usage ()
   printf ("  bw   <num>    RTL-SDR VFO Bandwidth kHz (default = 12)(6, 8, 12, 24)  \n");
   printf ("  sq   <num>    RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)\n");
   printf ("  udp  <num>    RTL-SDR UDP Remote Port (default = 6020)\n");
-  printf (" Example: dsd-fme-lite -fp -i rtl:0:851.375M:22:-2:12:0:6021\n");
+  printf (" Example: dsd-fme-aero -fp -i rtl:0:851.375M:22:-2:12:0:6021\n");
   printf ("\n");
   printf ("Decoder options:\n");
   printf ("  -fa           Legacy Auto Detection (old methods default)\n");
@@ -1082,8 +1082,8 @@ usage ()
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking or Fast Scan VC/sync loss hangtime in seconds. (default = 1 second) (decimal values permitted) \n");
   printf ("\n");
-  printf (" Trunking Example TCP: dsd-fme-lite -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
-  printf (" Trunking Example RTL: dsd-fme-lite -fs -i rtl:0:450M:26:-2:8:0:6020 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
+  printf (" Trunking Example TCP: dsd-fme-aero -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
+  printf (" Trunking Example RTL: dsd-fme-aero -fs -i rtl:0:450M:26:-2:8:0:6020 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
   printf ("\n");
   exit (0);
 }
@@ -1568,7 +1568,7 @@ main (int argc, char **argv)
           // fprintf (stderr,"Writing mbe data temporarily disabled!\n");
           break;
 
-        case 'c': //now is symbol capture bin output like FME Lite
+        case 'c': 
           strncpy(opts.symbol_out_file, optarg, 1023);
           opts.symbol_out_file[1023] = '\0';
           fprintf (stderr,"Writing + Appending symbol capture to file %s\n", opts.symbol_out_file);

@@ -1,4 +1,4 @@
-project(dsd-fme-lite)
+project(dsd-fme-aero)
 cmake_minimum_required(VERSION 2.8.11)
 
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
@@ -38,24 +38,24 @@ list(APPEND SRCS "${CMAKE_CURRENT_BINARY_DIR}/git_ver.c")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
-ADD_EXECUTABLE(dsd-fme-lite ${SRCS} ${HEADERS})
-TARGET_LINK_LIBRARIES(dsd-fme-lite ${LIBS})
+ADD_EXECUTABLE(dsd-fme-aero ${SRCS} ${HEADERS})
+TARGET_LINK_LIBRARIES(dsd-fme-aero ${LIBS})
 
 include(GNUInstallDirs)
-install(TARGETS dsd-fme-lite DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS dsd-fme-aero DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # man page
 find_program(HELP2MAN_FOUND help2man)
 if (HELP2MAN_FOUND)
-    add_custom_command(TARGET dsd-fme-lite POST_BUILD
+    add_custom_command(TARGET dsd-fme-aero POST_BUILD
         COMMAND help2man
         ARGS -n "Digital Speech Decoder"
             --version-string=${GIT_TAG}
-            -o ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme-lite.1
+            -o ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme-aero.1
             --no-info
-            $<TARGET_FILE:dsd-fme-lite>
+            $<TARGET_FILE:dsd-fme-aero>
     )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme-lite.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme-aero.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 endif()
 
 # uninstall target
