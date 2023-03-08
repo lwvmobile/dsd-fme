@@ -3188,8 +3188,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     openPulseInput(opts); 
   }
 
-  //Lockout bug in EDACS prevents any group from tuning when using this, not sure why yet
-  //WARNING! USE THESE WITH CAUTION! IF BREAKING ISSUES OBSERVED, THEN RESTART AND DON'T USE THEM!!
+  //test jumping back to CC on group lockout instead of random frequency to break framesync
   if (state->lasttg != 0 && opts->frame_provoice != 1 && c == 49) //'1' key, lockout slot 1 or conventional tg from tuning/playback during session
   {
     state->group_array[state->group_tally].groupNumber = state->lasttg;
@@ -3197,12 +3196,35 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     sprintf (state->group_array[state->group_tally].groupName, "%s", "LOCKOUT");
     state->group_tally++;
 
-    //test tuning away to break sync, if not working so well, then disable
+    //extra safeguards due to sync issues with NXDN
+    memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+    memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+
+    //reset dmr blocks
+    dmr_reset_blocks (opts, state);
+
+    //zero out additional items
+    state->lasttg = 0;
+    state->lasttgR = 0;
+    state->lastsrc = 0;
+    state->lastsrcR = 0;
+    state->payload_algid = 0;
+    state->payload_algidR = 0;
+    state->payload_keyid = 0;
+    state->payload_keyidR = 0;
+    state->payload_mi = 0;
+    state->payload_miR = 0;
+    state->payload_miP = 0;
+    state->payload_miN = 0;
+    opts->p25_is_tuned = 0;
+    state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+
+    //tune back to the control channel
     //RIGCTL
-    if (opts->frame_provoice != 1 && opts->p25_is_tuned == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, 450000000);
+    if (opts->p25_trunk == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
 
     //rtl_udp
-    if (opts->frame_provoice != 1 && opts->p25_is_tuned == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, 450000000);
+    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, state->p25_cc_freq);
 
   }
 
@@ -3213,12 +3235,35 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     sprintf (state->group_array[state->group_tally].groupName, "%s", "LOCKOUT");
     state->group_tally++;
 
-    //test tuning away to break sync, if not working so well, then disable
+    //extra safeguards due to sync issues with NXDN
+    memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+    memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+
+    //reset dmr blocks
+    dmr_reset_blocks (opts, state);
+
+    //zero out additional items
+    state->lasttg = 0;
+    state->lasttgR = 0;
+    state->lastsrc = 0;
+    state->lastsrcR = 0;
+    state->payload_algid = 0;
+    state->payload_algidR = 0;
+    state->payload_keyid = 0;
+    state->payload_keyidR = 0;
+    state->payload_mi = 0;
+    state->payload_miR = 0;
+    state->payload_miP = 0;
+    state->payload_miN = 0;
+    opts->p25_is_tuned = 0;
+    state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+
+    //tune back to the control channel
     //RIGCTL
-    if (opts->p25_is_tuned == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, 450000000);
+    if (opts->p25_trunk == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
 
     //rtl_udp
-    if (opts->p25_is_tuned == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, 450000000);
+    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, state->p25_cc_freq);
 
   }
 
