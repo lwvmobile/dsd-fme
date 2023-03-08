@@ -486,10 +486,6 @@ processFrame (dsd_opts * opts, dsd_state * state)
       state->currentslot = 0;
       sprintf (state->fsubtype, " LDU1         ");
       state->numtdulc = 0;
-      if (state->payload_algid == 0x81)
-      {
-        fprintf (stderr, "\n");
-      }
 
       processLDU1 (opts, state);
     }
@@ -542,8 +538,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
         if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
       }
       mbe_initMbeParms (state->cur_mp, state->prev_mp, state->prev_mp_enhanced);
-      state->lasttg = 0;
-      state->lastsrc = 0;
+      // state->lasttg = 0;
+      // state->lastsrc = 0;
       state->lastp25type = 0;
       state->err_str[0] = 0;
       sprintf (state->fsubtype, " TDULC        ");
@@ -625,76 +621,6 @@ processFrame (dsd_opts * opts, dsd_state * state)
       processMPDU(opts, state);
     }
 
-  // try to guess based on previous frame if unknown type
-  // disabling the guessing game on P1
-
-  // else if (state->lastp25type == 1)
-  //   {
-  //     if (opts->errorbars == 1)
-  //       {
-  //         printFrameInfo (opts, state);
-  //         fprintf (stderr,"(LDU2) ");
-  //       }
-  //     // if (opts->mbe_out_dir[0] != 0)
-  //     //   {
-  //     //     if (opts->mbe_out_f == NULL)
-  //     //       {
-  //     //         openMbeOutFile (opts, state);
-  //     //       }
-  //     //   }
-  //     //state->lastp25type = 0;
-  //     // Guess that the state is LDU2
-  //     state->lastp25type = 2;
-  //     sprintf (state->fsubtype, "(LDU2)        ");
-  //     state->numtdulc = 0;
-  //     processLDU2 (opts, state);
-  //   }
-  // else if (state->lastp25type == 2)
-  //   {
-  //     if (opts->errorbars == 1)
-  //       {
-  //         printFrameInfo (opts, state);
-  //         fprintf (stderr,"(LDU1) ");
-  //       }
-  //     if (opts->mbe_out_dir[0] != 0)
-  //       {
-  //         if (opts->mbe_out_f == NULL)
-  //           {
-  //             openMbeOutFile (opts, state);
-  //           }
-  //       }
-  //     //state->lastp25type = 0;
-  //     // Guess that the state is LDU1
-  //     state->lastp25type = 1;
-  //     sprintf (state->fsubtype, "(LDU1)        ");
-  //     state->numtdulc = 0;
-  //     processLDU1 (opts, state);
-  //   }
-  // else if (state->lastp25type == 3)
-  //   {
-  //     if (opts->errorbars == 1)
-  //       {
-  //         printFrameInfo (opts, state);
-  //         fprintf (stderr," (TSBK)\n");
-  //       }
-  //     //state->lastp25type = 0;
-  //     // Guess that the state is TSBK
-  //     state->lastp25type = 3;
-  //     sprintf (state->fsubtype, "(TSBK)        ");
-
-  //     // Now processing NID
-  //     skipDibit (opts, state, 328-25);
-  //   }
-  // else if (state->lastp25type == 4)
-  //   {
-  //     if (opts->errorbars == 1)
-  //       {
-  //         printFrameInfo (opts, state);
-  //         fprintf (stderr," (PDU)\n");
-  //       }
-  //     state->lastp25type = 0;
-  //   }
-
   else
   {
     state->lastp25type = 0;
@@ -702,8 +628,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
     if (opts->errorbars == 1)
     {
       printFrameInfo (opts, state);
-      fprintf (stderr," duid:%s *Unknown DUID*\n", duid); //prints on dPMR frame 3
-      // fprintf (stderr, "\n"); //prints on dPMR frame 3
+      // fprintf (stderr," duid:%s *Unknown DUID*\n", duid);
+      fprintf (stderr," duid:%s \n", duid); //DUID ERR
     }
   }
 }

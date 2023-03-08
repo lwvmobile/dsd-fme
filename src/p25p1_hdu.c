@@ -453,93 +453,40 @@ processHDU(dsd_opts* opts, dsd_state* state)
   status = getDibit (opts, state);
   //TODO: Do something useful with the status bits...
 
-  //if (state->carrier == 1 && state->errs == 0) //only update when carrier is present, and no errors??
-  if (state->carrier == 1)
-  {
-    algidhex = strtol (algid, NULL, 2);
-    kidhex = strtol (kid, NULL, 2);
-
-    state->payload_algid = algidhex;
-    state->payload_keyid = kidhex;
-    //state->payload_mfid = ConvertBitIntoBytes(&mfid[0], 7);
-    //state->payload_mfid = strtol (mfid, NULL, 2);
-
-    mihex1 = (unsigned long long int)ConvertBitIntoBytes(&mi[0], 32);
-    mihex2 = (unsigned long long int)ConvertBitIntoBytes(&mi[32], 32);
-    mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
-    //only use 64 MSB, trailing 8 bits aren't used, so no mihex3
-    state->payload_miP = (mihex1 << 32) | (mihex2);
-  }
+  algidhex = strtol (algid, NULL, 2);
+  kidhex = strtol (kid, NULL, 2);
+  mihex1 = (unsigned long long int)ConvertBitIntoBytes(&mi[0], 32);
+  mihex2 = (unsigned long long int)ConvertBitIntoBytes(&mi[32], 32);
+  mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
 
   //set vc counter to 0
   state->p25vc = 0;
 
-  if (state->payload_algid != 0x80 && state->payload_algid != 0x0) //print on payload == 1
+  if (irrecoverable_errors == 0)
   {
+
     fprintf (stderr, "%s", KYEL);
-    fprintf (stderr, " HDU  ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08llX%08llX%02llX MFID: 0x%02X", algidhex, kidhex, mihex1, mihex2, mihex3, state->payload_mfid);
+    fprintf (stderr, " HDU  ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08llX%08llX%02llX", algidhex, kidhex, mihex1, mihex2, mihex3);
     fprintf (stderr, "%s", KNRM);
+    state->payload_algid = algidhex;
+    state->payload_keyid = kidhex;
+    //only use 64 MSB, trailing 8 bits aren't used, so no mihex3
+    state->payload_miP = (mihex1 << 32) | (mihex2);
+
+    if (state->payload_algid != 0x80 && state->payload_algid != 0x0) //print on payload == 1
+    {
+      fprintf (stderr, "%s", KRED);
+      fprintf (stderr, " ENC");
+      fprintf (stderr, "%s", KNRM);
+    }
+
+    fprintf (stderr, "\n");
   }
-
-  if (state->payload_algid != 0x80 && state->payload_algid != 0x0) //print on payload == 1
-  {
-    fprintf (stderr, "%s", KRED);
-    fprintf (stderr, " ENC \n");
-    fprintf (stderr, "%s", KNRM);
-  }
-
-  if (opts->p25enc == 1 && opts->payload == 0)
-    {
-      algidhex = strtol (algid, NULL, 2);
-      kidhex = strtol (kid, NULL, 2);
-    }
-  if (opts->p25lc == 1)
-    {
-      fprintf (stderr, "mfid: %s tgid: %s ", mfid, tgid);
-      if (opts->p25tg == 0)
-        {
-          fprintf (stderr, "\n");
-        }
-    }
-
-  j = 0;
-  if (strcmp (mfid, "10010000") == 0)
-    {
-      for (i = 4; i < 16; i++)
-        {
-          if (state->tgcount < 24)
-            {
-              state->tg[state->tgcount][j] = tgid[i];
-            }
-          tmpstr[j] = tgid[i];
-          j++;
-        }
-      tmpstr[12] = '0';
-      tmpstr[13] = '0';
-      tmpstr[14] = '0';
-      tmpstr[15] = '0';
-    }
   else
-    {
-      for (i = 0; i < 16; i++)
-        {
-          if (state->tgcount < 24)
-            {
-              state->tg[state->tgcount][j] = tgid[i];
-            }
-          tmpstr[j] = tgid[i];
-          j++;
-        }
-    }
-  tmpstr[16] = 0;
-  talkgroup = strtol (tmpstr, NULL, 2);
-  state->lasttg = talkgroup;
-  if (state->tgcount < 24)
-    {
-      state->tgcount = state->tgcount + 1;
-    }
-  if (opts->p25tg == 1)
-    {
-      fprintf (stderr, "tg: %li\n", talkgroup);
-    }
+  {
+      fprintf (stderr, "%s", KRED);
+      fprintf (stderr, " HDU FEC ERR \n");
+      fprintf (stderr, "%s", KNRM);
+  }
+  
 }
