@@ -390,11 +390,60 @@ processTDULC (dsd_opts* opts, dsd_state* state)
   lcinfo[53]  = dodeca_data[0][ 9] + '0';
   lcinfo[54]  = dodeca_data[0][10] + '0';
   lcinfo[55]  = dodeca_data[0][11] + '0';
-  /*
-  if (state->carrier == 1) //only update when carrier is present, otherwise, garbage values may be collected
+
+  int j;
+  uint8_t LCW_bytes[9];
+  uint8_t LCW_bits[72];
+  memset (LCW_bytes, 0, sizeof(LCW_bytes));
+  memset (LCW_bits, 0, sizeof(LCW_bits));
+
+  //load array above into byte form first
+  LCW_bytes[0] = (uint8_t) ConvertBitIntoBytes(&lcformat[0], 8);
+  LCW_bytes[1] = (uint8_t) ConvertBitIntoBytes(&mfid[0], 8);
+  for (i = 0; i < 7; i++) LCW_bytes[i+2] = (uint8_t) ConvertBitIntoBytes(&lcinfo[i*8], 8);
+
+  //load as bit array next (easier to process data in bit form)
+  for(i = 0, j = 0; i < 9; i++, j+=8)
   {
-    state->payload_mfid = strtol (mfid, NULL, 2); //wonder if this is accurate info or not
+    LCW_bits[j + 0] = (LCW_bytes[i] >> 7) & 0x01;
+    LCW_bits[j + 1] = (LCW_bytes[i] >> 6) & 0x01;
+    LCW_bits[j + 2] = (LCW_bytes[i] >> 5) & 0x01;
+    LCW_bits[j + 3] = (LCW_bytes[i] >> 4) & 0x01;
+    LCW_bits[j + 4] = (LCW_bytes[i] >> 3) & 0x01;
+    LCW_bits[j + 5] = (LCW_bytes[i] >> 2) & 0x01;
+    LCW_bits[j + 6] = (LCW_bytes[i] >> 1) & 0x01;
+    LCW_bits[j + 7] = (LCW_bytes[i] >> 0) & 0x01;
   }
-  */
-  processP25lcw (opts, state, lcformat, mfid, lcinfo);
+ 
+  //send to new P25 LCW function
+  if (irrecoverable_errors == 0)
+  {
+    fprintf (stderr, "%s", KYEL);
+    p25_lcw (opts, state, LCW_bits, 0);
+    fprintf (stderr, "%s", KNRM);
+  }
+  else
+  {
+    fprintf (stderr, "%s",KRED);
+    fprintf (stderr, " LCW FEC ERR ");
+    fprintf (stderr, "%s\n", KNRM);
+  }
+
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, "%s",KCYN);
+    fprintf (stderr, " P25 LCW Payload ");
+    for (i = 0; i < 9; i++)
+    {
+      fprintf (stderr, "[%02X]", LCW_bytes[i]);
+    }
+    
+    
+    fprintf (stderr, "%s\n", KNRM);
+  }
+
+  //reset some strings -- since its a tdu, blank out any call strings, only want during actual call
+  sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+  sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+
 }

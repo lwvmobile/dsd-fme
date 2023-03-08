@@ -289,6 +289,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 			freq1 = process_channel_to_freq (opts, state, channelt);
 			freq2 = process_channel_to_freq (opts, state, channelr);
 
+      //add active channel to string for ncurses display
+			sprintf (state->dmr_lrrp_gps[0], "Active Ch: %04X TG: %d", channelt, group);
+
       for (int i = 0; i < state->group_tally; i++)
       {
         if (state->group_array[i].groupNumber == group)
@@ -354,6 +357,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Source [%ld][%04lX] Target [%ld][%04lX]", svc, channelt, channelr, source, source, target, target);
 			freq1 = process_channel_to_freq (opts, state, channelt);
 			freq2 = process_channel_to_freq (opts, state, channelr); //optional!
+
+      //add active channel to string for ncurses display
+			sprintf (state->dmr_lrrp_gps[0], "Active Ch: %04X TGT: %ld;", channelt, target);
 
       for (int i = 0; i < state->group_tally; i++)
       {

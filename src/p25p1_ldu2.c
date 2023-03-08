@@ -357,37 +357,37 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   kid[14]  = hex_data[ 0][4] + '0';
   kid[15]  = hex_data[ 0][5] + '0';
 
+  algidhex = strtol (algid, NULL, 2);
+  kidhex = strtol (kid, NULL, 2);
+  mihex1 = (unsigned long long int)ConvertBitIntoBytes(&mi[0], 32);
+  mihex2 = (unsigned long long int)ConvertBitIntoBytes(&mi[32], 32);
+  mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
 
-  //if (state->carrier == 1 && state->errs == 0) //only update when carrier is present, and no errors??
-  if (state->carrier == 1)
-  {
-
-    algidhex = strtol (algid, NULL, 2);
-    kidhex = strtol (kid, NULL, 2);
-
-    state->payload_algid = algidhex;
-    state->payload_keyid = kidhex;
-
-    mihex1 = (unsigned long long int)ConvertBitIntoBytes(&mi[0], 32);
-    mihex2 = (unsigned long long int)ConvertBitIntoBytes(&mi[32], 32);
-    mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
-    //only use 64 MSB, trailing 8 bits aren't used, so no mihex3
-    state->payload_miP = (mihex1 << 32) | (mihex2);
-
-  }
-
-  if (state->payload_algid != 0x80 && state->payload_algid != 0x0) //print on payload == 1
+  if (irrecoverable_errors == 0)
   {
     fprintf (stderr, "%s", KYEL);
     fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08llX%08llX%02llX", algidhex, kidhex, mihex1, mihex2, mihex3);
     fprintf (stderr, "%s", KNRM);
-  }
 
-  if (state->payload_algid != 0x80 && state->payload_algid != 0x0) //print on payload == 1
+    state->payload_algid = algidhex;
+    state->payload_keyid = kidhex;
+    //only use 64 MSB, trailing 8 bits aren't used, so no mihex3
+    state->payload_miP = (mihex1 << 32) | (mihex2);
+
+    if (state->payload_algid != 0x80 && state->payload_algid != 0x0) //print on payload == 1
+    {
+      fprintf (stderr, "%s", KRED);
+      fprintf (stderr, " ENC");
+      fprintf (stderr, "%s", KNRM);
+    }
+
+    fprintf (stderr, "\n");
+  }
+  else
   {
-    fprintf (stderr, "%s", KRED);
-    fprintf (stderr, " ENC \n");
-    fprintf (stderr, "%s", KNRM);
+      fprintf (stderr, "%s", KRED);
+      fprintf (stderr, " LDU2 FEC ERR \n");
+      fprintf (stderr, "%s", KNRM);
   }
 
 }

@@ -630,7 +630,7 @@ processX2TDMAvoice (dsd_opts * opts, dsd_state * state)
     {
       if ((eeei == 0) && (aiei == 0))
         {
-          processP25lcw (opts, state, lcformat, mfid, lcinfo);
+          // processP25lcw (opts, state, lcformat, mfid, lcinfo);
         }
       if (opts->p25enc == 1)
         {

@@ -324,15 +324,53 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
   lcinfo[54]  = hex_data[ 0][4] + '0';
   lcinfo[55]  = hex_data[ 0][5] + '0';
 
-  unsigned long long int lcinfohex = 0;
-  if (state->carrier == 1 && state->errs == 0) //only update when carrier is present, otherwise, garbage values may be collected
-  {
-    state->payload_mfid = strtol (mfid, NULL, 2);
+  int j;
+  uint8_t LCW_bytes[9];
+  uint8_t LCW_bits[72];
+  memset (LCW_bytes, 0, sizeof(LCW_bytes));
+  memset (LCW_bits, 0, sizeof(LCW_bits));
 
-    //state->payload_mfid = ConvertBitIntoBytes(&mfid[0], 7);
-    lcinfohex = ConvertBitIntoBytes(&lcinfo[0], 55);
-    //fprintf (stderr, " LDU1 LCINFO %16llX \n", lcinfohex);
+  //load array above into byte form first
+  LCW_bytes[0] = (uint8_t) ConvertBitIntoBytes(&lcformat[0], 8);
+  LCW_bytes[1] = (uint8_t) ConvertBitIntoBytes(&mfid[0], 8);
+  for (i = 0; i < 7; i++) LCW_bytes[i+2] = (uint8_t) ConvertBitIntoBytes(&lcinfo[i*8], 8);
+
+  //load as bit array next (easier to process data in bit form)
+  for(i = 0, j = 0; i < 9; i++, j+=8)
+  {
+    LCW_bits[j + 0] = (LCW_bytes[i] >> 7) & 0x01;
+    LCW_bits[j + 1] = (LCW_bytes[i] >> 6) & 0x01;
+    LCW_bits[j + 2] = (LCW_bytes[i] >> 5) & 0x01;
+    LCW_bits[j + 3] = (LCW_bytes[i] >> 4) & 0x01;
+    LCW_bits[j + 4] = (LCW_bytes[i] >> 3) & 0x01;
+    LCW_bits[j + 5] = (LCW_bytes[i] >> 2) & 0x01;
+    LCW_bits[j + 6] = (LCW_bytes[i] >> 1) & 0x01;
+    LCW_bits[j + 7] = (LCW_bytes[i] >> 0) & 0x01;
+  }
+ 
+  //send to new P25 LCW function
+  if (irrecoverable_errors == 0)
+  {
+    fprintf (stderr, "%s", KYEL);
+    p25_lcw (opts, state, LCW_bits, 0);
+    fprintf (stderr, "%s", KNRM);
+  }
+  else
+  {
+    fprintf (stderr, "%s",KRED);
+    fprintf (stderr, " LCW FEC ERR ");
+    fprintf (stderr, "%s\n", KNRM);
   }
 
-  processP25lcw (opts, state, lcformat, mfid, lcinfo);
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, "%s",KCYN);
+    fprintf (stderr, " P25 LCW Payload ");
+    for (i = 0; i < 9; i++)
+    {
+      fprintf (stderr, "[%02X]", LCW_bytes[i]);
+    }
+    
+    fprintf (stderr, "%s\n", KNRM);
+  }
 }
