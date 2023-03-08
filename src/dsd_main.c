@@ -1698,6 +1698,8 @@ main (int argc, char **argv)
               opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
               // opts.setmod_bw = 12000;
+              opts.ssize = 36; //128 current default, fall back to old default on P1 only systems
+              opts.msize = 15; //1024 current default, fall back to old default on P1 only systems
               sprintf (opts.output_name, "P25P1");
               fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
             }
