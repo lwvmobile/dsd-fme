@@ -229,7 +229,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       fprintf (stderr, "Hytera XPT ");
       if (reserved == 1) fprintf (stderr, "Group "); //according to observation
       else fprintf (stderr, "Private "); //according to observation
-      fprintf (stderr, "Call Protect ");
+      fprintf (stderr, "Call Alert "); //sounds more reasonable than 'protect'
 
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, "F-Rpt %d", xpt_free);

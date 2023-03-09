@@ -1087,16 +1087,12 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free);
 
         //assign to cc freq to follow during no sync
-        //current theory is that user should set channel 0 as the 'home repeater' frequency
-        //this can change if this is ever tested by anybody properly
         long int ccfreq = 0; 
 
         //if using rigctl we can set an unknown or updated cc frequency 
-        //by polling rigctl for the current frequency
-        if (opts->use_rigctl == 1 ) //&& state->p25_cc_freq == 0 //&& opts->p25_is_tuned == 0
+        if (opts->use_rigctl == 1 ) 
         {
           ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
-          // if (ccfreq != 0) state->p25_cc_freq = ccfreq;
           if (ccfreq != 0)
           {
             state->p25_cc_freq = ccfreq;
@@ -1105,7 +1101,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
 
         //if using rtl input, we can ask for the current frequency tuned
-        if (opts->audio_in_type == 3 ) //&& state->p25_cc_freq == 0 //&& opts->p25_is_tuned == 0
+        if (opts->audio_in_type == 3 )
         {
           ccfreq = (long int)opts->rtlsdr_center_freq;
           if (ccfreq != 0)
@@ -1115,13 +1111,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           } 
 
         }
-
-        // if (state->trunk_chan_map[0] != 0)
-        // {
-        //   state->p25_cc_freq = state->trunk_chan_map[0];
-        //   //set to always tuned
-        //   opts->p25_is_tuned = 1;
-        // }
 
         //Skip tuning calls if group calls are disabled
         if (opts->trunk_tune_group_calls == 0) goto SKIPXPT;
@@ -1190,6 +1179,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //and let FME scan through them as opposed to actively trunking, it will spend most of the time on the home repeater
         //and if calls occur on the home repeater, it'll be too busy with those to go to the free repeater
         //DSD-FME doesn't have any sort of TG priority, so its first come first served, just block or allow
+
+        //Additional Notes: I've set XPT to set a CC frequency to whichever frequency its tuned to currently and getting
+        //this particular CSBK, if the status portion does work correctly, then it shouldn't matter which frequency it is on
+        //as long as this CSBK comes in and we can tune to other repeater lcns if they have activity and the frequency mapping
+        //is correct in the csv file, assuming the current frequency doesn't have voice activity
 
       } //end 0x0A
 
