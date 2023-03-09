@@ -1375,7 +1375,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				fprintf (stderr, " Priority %d", svc & 0x7); //call priority
 			}
 
-			fprintf (stderr, "Group Voice");
+			fprintf (stderr, " Group Voice");
 
 			sprintf (state->call_string[slot], "   Group ");
 			if (svc & 0x80) strcat (state->call_string[slot], " Emergency  ");
@@ -1414,7 +1414,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				fprintf (stderr, " Priority %d", svc & 0x7); //call priority
 			}
 
-			fprintf (stderr, "Unit to Unit Voice");
+			fprintf (stderr, " Unit to Unit Voice");
 
 			sprintf (state->call_string[slot], " Private ");
 			if (svc & 0x80) strcat (state->call_string[slot], " Emergency  ");
