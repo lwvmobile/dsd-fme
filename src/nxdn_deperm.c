@@ -555,17 +555,35 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 	else fprintf(stderr, " Unknown M-%02X", MessageType);
 	fprintf (stderr, "%s", KNRM);
 
-	//zero out stale values so they won't persist after a transmit release, idle, or disconnect
-	if (MessageType == 0x08 || MessageType == 0x10 || MessageType == 0x11) //tx_rel, idle, or disc
+	//on nxdn48 trunking -- zero out stale values so they won't persist after a transmit release, idle, or disconnect
+	if (opts->frame_nxdn48 == 1)
 	{
-		memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
-		state->nxdn_last_rid = 0;
-		state->nxdn_last_tg = 0;
-		state->nxdn_cipher_type = 0;
-		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
-		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
-		sprintf (state->nxdn_call_type, "%s", "");
-	} 
+		if (MessageType == 0x08 || MessageType == 0x10 || MessageType == 0x11) //tx_rel, idle, or disc
+		{
+			memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
+			state->nxdn_last_rid = 0;
+			state->nxdn_last_tg = 0;
+			state->nxdn_cipher_type = 0;
+			memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+			memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+			sprintf (state->nxdn_call_type, "%s", "");
+		}
+	}
+	//if nxdn96, only zero out on disc or tx_rel, some systems have data frames have idle that wipe out the tg/rid and cipher
+	else 
+	{
+		if (MessageType == 0x08 || MessageType == 0x11) //tx_rel, or disc
+		{
+			memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
+			state->nxdn_last_rid = 0;
+			state->nxdn_last_tg = 0;
+			state->nxdn_cipher_type = 0;
+			// memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+			// memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+			sprintf (state->nxdn_call_type, "%s", "");
+		}
+	}
+	 
 }
 
 //voice descrambler
