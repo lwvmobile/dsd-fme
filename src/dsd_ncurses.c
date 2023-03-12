@@ -2061,7 +2061,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.0.0-64-gbd94f83 RC5");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.0.0-65-g1737c1f RC5a");
   }
   if (opts->ncurses_compact == 0)
   {
@@ -2072,8 +2072,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4) printw (" MBElib %s", versionstr);
-      if (i == 5) printw (" %s ", "Aero RC5"); //printw (" %s \n", GIT_TAG);
-      if (i == 6) printw (" %s \n", "v2.0.0-64-gbd94f83"); //printw (" %s \n", GIT_TAG);
+      if (i == 5) printw (" %s ", "Aero RC5a"); //printw (" %s \n", GIT_TAG);
+      if (i == 6) printw (" %s \n", "v2.0.0-65-g1737c1f"); //printw (" %s \n", GIT_TAG);
       else printw ("\n");
     }
     attroff(COLOR_PAIR(6)); //6
