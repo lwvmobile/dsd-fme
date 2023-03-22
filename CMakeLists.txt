@@ -1,5 +1,11 @@
+set(CMAKE_LEGACY_CYGWIN_WIN32 0) #annoying warning in cygwin
 project(dsd-fme-aero)
-cmake_minimum_required(VERSION 2.8.11)
+#Ubuntu 18.04 uses 3.10.2 currently -- almost EOL
+#Ubuntu 20.04 uses 3.16.3
+#Ubuntu 22.04 uses 3.22.1
+#Arch currently on 3.25.3
+#Cygwin currently using 3.23.2 (or newer)
+cmake_minimum_required(VERSION 3.10.2)
 
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
 #Set curses to ncurses, and wide true for ascii
@@ -14,7 +20,7 @@ find_package(MBE REQUIRED)
 find_package(ITPP REQUIRED)
 find_package(RTLSDR)
 find_package(Curses REQUIRED) 
-find_package(PULSEAUDIO REQUIRED)
+find_package(PulseAudio REQUIRED)
 
 include_directories(SYSTEM ${LIBSNDFILE_INCLUDE_DIR} ${MBE_INCLUDE_DIR} ${ITPP_INCLUDE_DIR} ${PULSEAUDIO_INCLUDE_DIRS} ${CURSES_INCLUDE_DIR})
 set(LIBS ${MBE_LIBRARY} ${LIBSNDFILE_LIBRARY} ${ITPP_LIBRARY} ${PULSEAUDIO_SIMPLE_LIBRARY} ${CURSES_LIBRARY})
