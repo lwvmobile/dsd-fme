@@ -711,12 +711,23 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		}
 		else fprintf (stderr, "VCH S ");
 
+		//check to see when last voice activity occurred in order to allow tuning on phase 2
+		//mac_signal or mac_idle when no more voice activity on current channel
+		//this is primarily a fix for TDMA control channels that carry voice (Duke P25)
+		//but may also allow for chain tuning without returning to the control channel <--may be problematic since we can assign a p25_cc_freq from the pdu
+		if (duid_decoded == 13 && opts->p25_is_tuned == 1 && ((time(NULL) - state->last_vc_sync_time) > opts->trunk_hangtime) )  //version for MAC_SIGNAL only, no idle
+		{
+			opts->p25_is_tuned = 0;
+			state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+		}
+
 		if (duid_decoded == 0)
 		{
 			fprintf (stderr, " 4V %d", state->fourv_counter[state->currentslot]+1);
 			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
 					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
 			{
+				state->last_vc_sync_time = time(NULL);
 				process_4V (opts, state);
 			}
 		}
@@ -726,6 +737,7 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
 					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
 			{
+				state->last_vc_sync_time = time(NULL);
 				process_2V (opts, state);
 			}
 		}
@@ -823,22 +835,21 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 void processP2 (dsd_opts * opts, dsd_state * state)
 {
 	state->dmr_stereo = 1; 
-	//state->currentslot = 1; 
-
 	p2_dibit_buffer (opts, state);
 
 	//look at our ISCH values and determine location in superframe before running frame scramble
-	for (framing_counter = 0; framing_counter < 4; framing_counter++) //12
+	for (framing_counter = 0; framing_counter < 4; framing_counter++)
 	{
-		process_ISCH (opts, state); //run ISCH in here so we know when to start descramble offset
+		//run ISCH in here so we know when to start descramble offset
+		process_ISCH (opts, state); 
 	}
 
 	//set initial current slot depending on offset value
 	if (state->p2_scramble_offset % 2)
 	{
-		state->currentslot = 0; 
+		state->currentslot = 1; 
 	}
-	else state->currentslot = 1; 
+	else state->currentslot = 0; 
 
 	//frame_scramble runs lfsr and creates an array of unscrambled bits to pull from
   process_Frame_Scramble (opts, state);
