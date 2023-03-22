@@ -13,6 +13,9 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 	//Figure out which PDU we are looking at, see above info on 8.4.1
 	//reorganize bits into bytes and process accordingly
 
+	//new slot variable with flipped assignment for SACCH
+	uint8_t slot = (state->currentslot ^ 1) & 1;
+
 	unsigned long long int SMAC[24] = {0}; //22.5 bytes for SACCH MAC PDUs
 	int byte = 0;
 	int k = 0;
@@ -206,6 +209,9 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			//close any open MBEout files
  			if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
 
+			//blank the call string here -- slot variable is already flipped accordingly for sacch
+			sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
+
 		}
 		if (state->currentslot == 0)
 		{
@@ -236,6 +242,9 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
+
+		//blank the call string here -- slot variable is already flipped accordingly for sacch
+		sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
 	}
 	if (opcode == 0x4 && err == 0)
 	{
@@ -278,6 +287,9 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 {
 	//Figure out which PDU we are looking at, see above info on 8.4.1
 	//reorganize bits into bytes and process accordingly
+
+	//new slot variable
+	uint8_t slot = state->currentslot;
 
 	unsigned long long int FMAC[24] = {0}; //19.5 bytes for FACCH MAC PDUs, add padding to end
 	int byte = 0;
@@ -432,6 +444,9 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 
 			//close any open MBEout files
  			if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+
+			//blank the call string here 
+			sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
 			
 		}
 		if (state->currentslot == 1)
@@ -483,6 +498,9 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 0, FMAC);
 		fprintf (stderr, "%s", KNRM);
+		
+		//blank the call string here
+		sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
 	}
 	if (opcode == 0x4 && err == 0)
 	{
