@@ -545,6 +545,9 @@ openAudioInDevice (dsd_opts * opts)
   const char ch = '.';
   extension = strrchr(opts->audio_in_dev, ch); //return extension if this is a .wav or .bin file
 
+  //if no extension set, give default of .wav -- bugfix for github issue #105
+  if (extension == NULL) extension = ".wav";
+
   // get info of device/file
 	if (strncmp(opts->audio_in_dev, "-", 1) == 0)
 	{
