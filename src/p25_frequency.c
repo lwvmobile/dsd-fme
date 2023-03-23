@@ -2,7 +2,7 @@
  * p25_frequency.c
  * P25 Channel to Frequency Calculator
  *
- * NXDN Channel to Frequency, Courtesy of IcomIcR20 and EricCottrell (base values)
+ * NXDN Channel to Frequency Calculator
  * 
  * LWVMOBILE
  * 2022-11 DSD-FME Florida Man Edition
@@ -59,16 +59,16 @@ long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channe
 
 }
 
-//NXDN Channel to Frequency, Courtesy of IcomIcR20 on RR Forums
 long int nxdn_channel_to_frequency(dsd_opts * opts, dsd_state * state, uint16_t channel)
 {
 	long int freq;
 	long int base = 0;
+	long int step = 0;
 
-	//the base freq value is per EricCottrell in the Understanding NXDN Trunking Forum Thread
-	//will need to do some research or tests to confirm these values are accurate
+	//reworked to include Direct Frequency Assignment if available
 
-	//first, check channel map
+	//first, check channel map for imported value, DFA systems most likely won't need an import,
+	//unless it has 'system definable' attributes
 	if (state->trunk_chan_map[channel] != 0)
 	{
 		freq = state->trunk_chan_map[channel];
@@ -76,42 +76,41 @@ long int nxdn_channel_to_frequency(dsd_opts * opts, dsd_state * state, uint16_t 
 		return (freq);
 	}
 
+	//then, let's see if its DFA instead -- 6.5.36
+	else if (state->nxdn_rcn == 1)
+	{
+		//determine the base frequency in Hz
+		if (state->nxdn_base_freq == 1) 			base = 100000000; //100 MHz
+		else if (state->nxdn_base_freq == 2) 	base = 330000000; //330 Mhz
+		else if (state->nxdn_base_freq == 3)	base = 400000000; //400 Mhz
+		else if (state->nxdn_base_freq == 4)	base = 750000000; //750 Mhz
+		else base = 0; //just set to zero, will be system definable most likely and won't be able to calc
+
+		//determine the step value in Hz
+		if (state->nxdn_step = 2)				step = 1250; //1.25 kHz
+		else if (state->nxdn_step = 3)	step = 3125; //3.125 kHz
+		else step = 0; //just set to zero, will be system definable most likely and won't be able to calc
+
+		//if we have a valid base and step, then calc frequency
+		//6.5.45. Outbound/Inbound Frequency Number (OFN/IFN)
+		if (base && step)
+		{
+			freq = base + (channel * step);
+			fprintf (stderr, "\n  DFA Frequency [%.6lf] MHz", (double)freq/1000000);
+			return (freq);
+		}
+		else 
+		{
+			fprintf(stderr, "\n    Custom DFA Settings -- Unknown Freq;");
+			return (0);
+		}
+		
+	}
+
 	else
 	{
 		fprintf(stderr, "\n    Channel not found in import file");
 		return (0);
 	} 
-
-	//if not found, attempt to find it via calculation 
-	//disabled, frequency 'band plan' isn't standard
-	//like originally believed
-
-	// else
-	// {
-	// 	if ((channel > 0) && (channel <= 400))
-	// 	{
-	// 		if (opts->frame_nxdn48 == 1) base = 450000000;
-	// 		else base = 451000000;
-
-	// 		freq = base + (channel - 1) * 12500;
-	// 		fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
-	// 		return (freq);
-	// 	}
-	// 	else if ((channel >= 401) && (channel <= 800))
-	// 	{
-	// 		if (opts->frame_nxdn48 == 1) base = 460000000;
-	// 		else base = 461000000;
-
-	// 		freq = base + (channel - 401) * 12500;
-	// 		fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
-	// 		return (freq);
-	// 	}
-	// 	else
-	// 	{
-	// 		fprintf(stderr, "\n  Non-standard frequency or channel not found in import file");
-	// 		return (0);
-	// 	}
-	// }
-	
 
 }

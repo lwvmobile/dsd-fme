@@ -234,6 +234,12 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     state->nxdn_location_sys_code = 0;
     sprintf (state->nxdn_location_category, "%s", " ");
 
+    //channel access information
+    state->nxdn_rcn = 0;
+    state->nxdn_base_freq = 0;
+    state->nxdn_step = 0;
+    state->nxdn_bw = 0;
+
     //dmr mfid branding and site parms
     sprintf(state->dmr_branding_sub, "%s", "");
     sprintf(state->dmr_branding, "%s", "");
@@ -875,10 +881,17 @@ initState (dsd_state * state)
   memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
   state->nxdn_alias_block_number = 0;
   memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
+
   //site/srv/cch info
   state->nxdn_location_site_code = 0;
   state->nxdn_location_sys_code = 0;
   sprintf (state->nxdn_location_category, "%s", " ");
+  
+  //channel access information
+  state->nxdn_rcn = 0;
+  state->nxdn_base_freq = 0;
+  state->nxdn_step = 0;
+  state->nxdn_bw = 0;
 
   //multi-key array
   memset (state->rkey_array, 0, sizeof(state->rkey_array)); 
