@@ -654,10 +654,17 @@ typedef struct
   uint8_t nxdn_sacch_frame_segcrc[4];
   uint8_t nxdn_alias_block_number;
   char nxdn_alias_block_segment[4][4][8];
+
   //site/srv/cch info
   char nxdn_location_category[14];
   uint32_t nxdn_location_sys_code;
   uint16_t nxdn_location_site_code;
+
+  //channel access information
+  uint8_t nxdn_rcn;
+  uint8_t nxdn_base_freq;
+  uint8_t nxdn_step;
+  uint8_t nxdn_bw;
 
   //multi-key array
   unsigned long long int rkey_array[0xFFFF];

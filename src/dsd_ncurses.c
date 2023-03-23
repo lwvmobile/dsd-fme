@@ -2290,6 +2290,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw ("Site Code [%d] ", state->nxdn_location_site_code);
     }
 
+    //if system supports Direct Frequency Assignment
+    if (state->nxdn_rcn == 1) printw ("DFA ");
+
     printw ("\n");
     printw ("| ");
     printw ("TGT: [%5d] ", tgn);
