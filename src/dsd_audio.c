@@ -546,7 +546,7 @@ openAudioInDevice (dsd_opts * opts)
   extension = strrchr(opts->audio_in_dev, ch); //return extension if this is a .wav or .bin file
 
   //if no extension set, give default of .wav -- bugfix for github issue #105
-  if (extension == NULL) extension = ".wav";
+  // if (extension == NULL) extension = ".wav";
 
   // get info of device/file
 	if (strncmp(opts->audio_in_dev, "-", 1) == 0)
@@ -610,6 +610,25 @@ openAudioInDevice (dsd_opts * opts)
   {
     opts->audio_in_type = 5;
   }
+
+  //if no extension set, treat as named pipe or extensionless wav file -- bugfix for github issue #105
+  else if (extension == NULL)
+  {
+    opts->audio_in_type = 2;
+    opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
+    opts->audio_in_file_info->samplerate = opts->wav_sample_rate;
+    opts->audio_in_file_info->channels = 1;
+    opts->audio_in_file_info->seekable = 0;
+    opts->audio_in_file_info->format = SF_FORMAT_RAW | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
+    opts->audio_in_file = sf_open(opts->audio_in_dev, SFM_READ, opts->audio_in_file_info);
+
+    if (opts->audio_in_file == NULL)
+    {
+      fprintf(stderr, "Error, couldn't open file/pipe with libsndfile: %s\n", sf_strerror(NULL));
+      exit(1);
+    }
+  }
+
   else if (strncmp(extension, ".bin", 3) == 0)
 	{
     struct stat stat_buf;
