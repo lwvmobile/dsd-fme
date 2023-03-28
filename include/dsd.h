@@ -888,7 +888,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
 void NXDN_decode_cch_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_srv_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_site_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
-void nxdn_location_id_handler (dsd_state * state, uint32_t location_id);
+void NXDN_decode_adj_site(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 
 void dPMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
 
