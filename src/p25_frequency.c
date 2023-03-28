@@ -80,7 +80,7 @@ long int nxdn_channel_to_frequency(dsd_opts * opts, dsd_state * state, uint16_t 
 	else if (state->nxdn_rcn == 1)
 	{
 		//determine the base frequency in Hz
-		if (state->nxdn_base_freq == 1) 			base = 100000000; //100 MHz
+		if (state->nxdn_base_freq == 1)				base = 100000000; //100 MHz
 		else if (state->nxdn_base_freq == 2) 	base = 330000000; //330 Mhz
 		else if (state->nxdn_base_freq == 3)	base = 400000000; //400 Mhz
 		else if (state->nxdn_base_freq == 4)	base = 750000000; //750 Mhz
