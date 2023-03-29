@@ -1,11 +1,11 @@
-set(CMAKE_LEGACY_CYGWIN_WIN32 0) #annoying warning in cygwin
-project(dsd-fme)
 #Ubuntu 18.04 uses 3.10.2 currently -- almost EOL
 #Ubuntu 20.04 uses 3.16.3
 #Ubuntu 22.04 uses 3.22.1
-#Arch currently on 3.25.3
+#Arch currently on 3.26.1 -- new nag warning starts on this one, see below
+#cmake_minimum_required() should be called prior to this top-level project()
 #Cygwin currently using 3.23.2 (or newer)
 cmake_minimum_required(VERSION 3.10.2)
+project(dsd-fme)
 
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
 #Set curses to ncurses, and wide true for ascii
