@@ -172,7 +172,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
     //look for any Hytera XPT system, adjust TG to 16-bit allocation 
     //Groups use only 8 out of 16, but 16 always seems to be allocated
-    //private calls use 16-bit target values hased to 8-bit in the site status csbk
+    //private calls use 16-bit target values hashed to 8-bit in the site status csbk
     //the TLC preceeds the VLC for a 'handshake' call setup in XPT
 
     //truncate if XPT is set
@@ -186,11 +186,12 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       tg_hash = crc8 (target_hash, 16); 
     } 
 
-    //XPT Call 'Grant' Setup Occurs in TLC (TermLC Handshake) with a flco 0x09 
+    //XPT Call 'Grant/Alert' Setup Occurs in TLC (TermLC 'Handshake') with a flco 0x09 
     if (fid == 0x68 && flco == 0x09)
     {
-      //The CSBK always uses an 8-bit TG; The White Papers (user manuals) say 8-bit TG and 16-bit SRC addressing
-      //It seems that private calls and indiv data calls use a hash of their 8 bit tgt values in the CSBK
+      //The CSBK always uses an 8-bit TG/TGT; The White Papers (user manuals) say 8-bit TG and 16-bit SRC addressing
+      //private calls and indiv data calls use a hash of their 8 bit tgt values in the CSBK
+      xpt_int = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 4); //This is consistent with an LCN value, not an LSN value
       xpt_free = (uint8_t)ConvertBitIntoBytes(&lc_bits[24], 4); //24 and 4 on 0x09
       xpt_hand = (uint8_t)ConvertBitIntoBytes(&lc_bits[28], 4); //handshake kind: 0 - ordinary; 1-2 Interrupts; 3-15 reserved; 
 
@@ -198,86 +199,55 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16); //16-bit allocation
 
       //the bits that are left behind
-      xpt_res_a = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 8); //Where the SVC bits would usually be
+      xpt_res_a = (uint8_t)ConvertBitIntoBytes(&lc_bits[20], 4); //after the xpt_int channel, before the free repeater channel
       xpt_res_b = (uint8_t)ConvertBitIntoBytes(&lc_bits[48], 8); //where the first 8 bits of the SRC would be
       xpt_res_c = (uint8_t)ConvertBitIntoBytes(&lc_bits[72], 8); //some unknown 8 bit value after the SRC
 
-      //speculation: 16,4 may be the current repeater channel this call will occur on? or the channel to interrupt?, could also be 8 bits?
-      xpt_int = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 4); //not sure about this value for this FLCO    
-
       //the crc8 hash is the value represented in the CSBK when dealing with private calls
       for (int i = 0; i < 16; i++) target_hash[i] = lc_bits[32+i];
-      tg_hash = crc8 (target_hash, 16); //This is a different poly, but using as placeholder
+      tg_hash = crc8 (target_hash, 16); 
 
       fprintf (stderr, "%s \n", KGRN);
-      fprintf (stderr, " SLOT %d ", state->currentslot+1); 
-      fprintf(stderr, "TGT=%u SRC=%u ", target, source);
-
-      // Here are some of the RIDs with hash address seen in that sample:
-      //     930 = 88
-      //     9317 = 198
-      //     10002 = 187
-
-      if (opts->payload == 1) fprintf(stderr, "HASH=%d ", tg_hash);
-      // if (opts->payload == 1) fprintf(stderr, "HSK [%X] ", xpt_hand);
-
-      // if (opts->payload == 1) fprintf(stderr, "CH=%d ", xpt_int);
-      if (opts->payload == 1) fprintf(stderr, "FLCO=0x%02X FID=0x%02X ", flco, fid);
-
-      // if (opts->payload == 1) fprintf(stderr, "RS [%02X][%02X][%02X] ", xpt_res_a, xpt_res_b, xpt_res_c);
+      fprintf (stderr, " SLOT %d ", state->currentslot+1);
+      if (opts->payload == 1) fprintf(stderr, "FLCO=0x%02X FID=0x%02X ", flco, fid); 
+      fprintf (stderr, "TGT=%u SRC=%u ", target, source);
       
       fprintf (stderr, "Hytera XPT ");
       if (reserved == 1) fprintf (stderr, "Group "); //according to observation
       else fprintf (stderr, "Private "); //according to observation
-      fprintf (stderr, "Call Alert "); //sounds more reasonable than 'protect'
+      fprintf (stderr, "Call Alert "); //Alert or Grant
 
-      fprintf (stderr, "%s", KYEL);
-      fprintf (stderr, "F-Rpt %d", xpt_free);
+      //reorganized all the 'extra' data to a second line and added extra verbosity
+      if (opts->payload == 1) fprintf (stderr, "\n  ");
+      if (opts->payload == 1) fprintf (stderr, "%s", KYEL);
+      //only display the hashed tgt value if its a private call and not a group call
+      if (reserved == 0 && opts->payload == 1) fprintf(stderr, "TGT Hash=%d; ", tg_hash);
+      if (opts->payload == 1) fprintf(stderr, "HSK=%X; ", xpt_hand);
+      //extra verbosity on handshake type
+      if (opts->payload == 1) 
+      {
+        fprintf (stderr, "Handshake - ");
+        if (xpt_hand == 0) fprintf (stderr, "Ordinary; ");
+        else if (xpt_hand == 1) fprintf (stderr, "Callback/Alarm Interrupt; ");
+        else if (xpt_hand == 2) fprintf (stderr, "Release Channel Interrupt; ");
+        else fprintf (stderr, "Reserved; ");
+      }
+
+      //logical repeater channel, not the logical slot value in the CSBK
+      if (opts->payload == 1) fprintf(stderr, "Call on LCN %d; ", xpt_int); //LCN channel call or 'interrupt' will occur on
+      // if (opts->payload == 1) fprintf(stderr, "RS A[%01X]B[%02X]C[%02X]; ", xpt_res_a, xpt_res_b, xpt_res_c); //leftover bits
+      if (opts->payload == 1) fprintf (stderr, "Free LCN %d; ", xpt_free); //current free repeater LCN channel
       fprintf (stderr, "%s ", KNRM);
 
       //add string for ncurses terminal display
-      sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free);
+      sprintf (state->dmr_site_parms, "Free LCN - %d ", xpt_free);
 
       is_xpt = 1;
       goto END_FLCO;
     }
 
-    //XPT 'Handshake' -- not observed as of yet on any samples
-    if ( fid == 0x68 && (flco == 0x2E || flco == 0x2F) ) 
-    {
-
-      //all below is according to the patent, but never observed on any samples I have
-      target = (uint32_t)ConvertBitIntoBytes(&lc_bits[24], 24); //24-bit values according to patent
-      source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 24); //24-bit values according to patent
-
-      xpt_free = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 4); //16 and 4 on 2E and 2F
-      xpt_hand = (uint8_t)ConvertBitIntoBytes(&lc_bits[20], 4); //handshake kind: 0 - ordinary; 1-2 Interrupts; 3-15 reserved; 
-      xpt_int  = (uint8_t)ConvertBitIntoBytes(&lc_bits[24], 8); //Interrupt Designated Channel (No idea?)
-
-      fprintf (stderr, "%s \n", KGRN);
-      fprintf (stderr, " SLOT %d ", state->currentslot+1); 
-      fprintf(stderr, "TGT=%u SRC=%u ", target, source);
-
-      if (opts->payload == 1) fprintf(stderr, "HASH=%d ", tg_hash);
-      // if (opts->payload == 1) fprintf(stderr, "HSK=[%X] ", xpt_hand);
-
-      if (opts->payload == 1) fprintf(stderr, "FLCO=0x%02X FID=0x%02X ", flco, fid);
-      fprintf (stderr, "Hytera XPT ");
-      if (reserved == 1) fprintf (stderr, "Group "); 
-      else fprintf (stderr, "Private "); 
-
-      fprintf (stderr, "Call ");
-      if (flco == 0x2E) fprintf (stderr, "Request ");
-      if (flco == 0x2F) fprintf (stderr, "Response ");
-
-      fprintf (stderr, "%s ", KNRM);
-      is_xpt = 1;
-      goto END_FLCO;
-
-    }
-
-    //Hytera XPT "something" -- seen on Embedded
-    if (fid == 0x68 && flco == 0x13)
+    //Hytera XPT 'Others' -- moved the patent opcodes here as well for now
+    if ( fid == 0x68 && (flco == 0x13 || flco == 0x2E || flco == 0x2F) )
     {
       if (type == 1) fprintf (stderr, "%s \n", KCYN);
       if (type == 2) fprintf (stderr, "%s \n", KCYN);
@@ -905,13 +875,13 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   else if (slco == 0x08)
   {
     //The Priority Repeater and Priority Hash values stem from SDRTrunk, but I've never seen these values not be zeroes
-    // fprintf (stderr, " SLCO Hytera XPT - Free RPT %d - PRI RPT %d - PRI HASH: %02X", xpt_free, xpt_pri, xpt_hash);
+    fprintf (stderr, " SLCO Hytera XPT - Free LCN %d - PRI LCN %d - PRI HASH: %02X", xpt_free, xpt_pri, xpt_hash);
     //NOTE: on really busy systems, this free repeater assignment can lag due to the 4 TS requirment to get SLC
-    fprintf (stderr, " SLCO Hytera XPT - Free RPT %d ", xpt_free); 
+    // fprintf (stderr, " SLCO Hytera XPT - Free LCN %d ", xpt_free); 
     sprintf (state->dmr_branding_sub, "XPT ");
 
     //add string for ncurses terminal display
-    sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free);
+    sprintf (state->dmr_site_parms, "Free LCN - %d ", xpt_free);
   }
     
   else fprintf (stderr, " SLCO Unknown - %d ", slco);
