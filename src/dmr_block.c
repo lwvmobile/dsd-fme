@@ -34,6 +34,25 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     uint32_t target = (uint32_t)ConvertBitIntoBytes(&dheader_bits[16], 24); //destination llid 
     uint32_t source = (uint32_t)ConvertBitIntoBytes(&dheader_bits[40], 24); //source llid
 
+    //extra tgt/src handling for XPT 
+    uint8_t target_hash[24]; 
+    uint8_t tg_hash = 0;
+    uint8_t is_xpt = 0;
+    //set flag if XPT
+    if (strcmp (state->dmr_branding_sub, "XPT ") == 0) is_xpt = 1;
+
+    //truncate tgt/src to 16-bit values if XPT
+    if (is_xpt == 1)
+    {
+      target = (uint32_t)ConvertBitIntoBytes(&dheader_bits[24], 16); //destination llid 
+      source = (uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 16); //source llid
+      if (gi == 0) 
+      {
+        for (int i = 0; i < 16; i++) target_hash[i] = dheader_bits[24+i];
+        tg_hash = crc8 (target_hash, 16);
+      }
+    }
+
     //store source for dmr pdu packet handling (lrrp) when not available in completed message
     if (dpf != 15) state->dmr_lrrp_source[slot] = source;
 
@@ -111,6 +130,9 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
 
     if (a == 1 && dpf != 15) fprintf(stderr, "- Response Requested ");
     if (dpf != 15) fprintf (stderr, "- Source: %d Target: %d ", source, target);
+
+    //include the hash value if this is an XPT and if its IND data
+    if (dpf != 15 && is_xpt == 1 && gi == 0) fprintf (stderr, "Hash: %d ", tg_hash);
 
     //sap string handling
     if (dpf == 15) sap = p_sap;

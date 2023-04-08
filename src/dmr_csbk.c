@@ -615,13 +615,35 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
         uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
 
+        uint8_t target_hash[24]; 
+        uint8_t tg_hash = 0; 
+
         if (gi == 0) fprintf (stderr, "Individual ");
         else fprintf (stderr, "Group ");
         
         if (content == 0) fprintf (stderr, "CSBK - ");
         else fprintf (stderr, "Data - ");
 
-        fprintf (stderr, "Target [%d] - Source [%d] ", target, source);
+        // check to see if this is XPT
+        if (strcmp (state->dmr_branding_sub, "XPT ") == 0)
+        {
+          //get 16-bit truncated target and source ids
+          target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16); //40, or 32?
+          source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[64], 16); //56, or 64?
+
+          //check to see if this is indiv data (private) then we will need to report the hash value as well
+          if (gi == 0)
+          {
+            //the crc8 hash is the value represented in the Hytera XPT Site Status CSBK when dealing with indiv data
+            for (int i = 0; i < 16; i++) target_hash[i] = cs_pdu_bits[40+i];
+            tg_hash = crc8 (target_hash, 16);
+            fprintf (stderr, "Source: %d - Target: %d - Hash: %d ", source, target, tg_hash);
+          }
+          else fprintf (stderr, "Source: %d - Target: %d ", source, target);
+
+        }
+        else fprintf (stderr, "Source: %d - Target: %d ", source, target);
+
       }
       //end tier 2 csbks
 
@@ -780,7 +802,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               pch[i] = state->cap_plus_csbk_bits[i+48+(group_tally*8)];
               if (pch[i] == 1)
               {
-                fprintf (stderr, " Ch%d:", i+1);
+                fprintf (stderr, " LSN %d:", i+1);
                 private_target = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[56+(k*16)+(group_tally*8)], 16);
                 fprintf (stderr, " TGT %d;", private_target);
                 if (opts->trunk_tune_data_calls == 1) t_tg[i] = private_target; //set here for tuning allow/block
@@ -799,7 +821,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           k = 0;
           for (i = 0; i < 8; i++)
           {
-            fprintf (stderr, "Ch%d: ", i+1);
+            fprintf (stderr, "LSN %d: ", i+1);
             if (ch[i] == 1) //group voice channels
             {
               tg = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[k*8+32], 8); 
@@ -1034,7 +1056,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
     //Hytera XPT
     if (csbk_fid == 0x68)
     {
-      //XPT Site Status -- Very Very Experimental, WIP, Don't be surprised by bad decodes or broken trunking
+      //XPT Site Status -- Experimental, WIP, Don't be surprised by bad decodes or broken trunking
       if (csbk_o == 0x0A)
       {
         //initial line break
@@ -1053,17 +1075,19 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint8_t xpt_free   = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 4); //free repeater channel
         uint8_t xpt_bank   = 0;
 
-        if (xpt_seq) xpt_bank = xpt_seq*6;
+        //xpt_bank needs testing on busier systems/samples still to verify accuracy
+        if (xpt_seq) xpt_bank = xpt_seq*6; 
 
         //get 2-bit status values for each 6 channels (timeslots) 
         for (i = 0; i < 6; i++) xpt_ch[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[20+(i*2)], 2);
 
-        fprintf (stderr, " Hytera XPT Site Status - Free RPT: %d SN: %d\n ", xpt_free, xpt_seq);
+        fprintf (stderr, " Hytera XPT Site Status - Free LCN: %d SN: %d \n ", xpt_free, xpt_seq);
 
         //Print List of Channels and Activity 
         for (i = 0; i < 6; i++) 
         {
-          fprintf (stderr, "Ch%02d: ", i+xpt_bank+1); //(xpt_seq*6)
+          //LSN value here is logical slot, in flco, we get the logical channel (which is the repeater, does not include the slot value)
+          fprintf (stderr, "LSN %02d: ", i+xpt_bank+1); //swap out xpt_bank for all (xpt_seq*6) to simplify things
           tg = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[i*8+32], 8);
           fprintf (stderr, "ST-%X", xpt_ch[i]); //status bits value 0,1,2, or 3
           if (tg != 0)                fprintf (stderr, " %03d  ", tg); 
@@ -1077,14 +1101,17 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
           if (i == 2) fprintf (stderr, "\n ");
 
-
           //add values to trunking tg/channel potentials
-          if (tg != 0) t_tg[i+(xpt_seq*6)] = tg;
+          if (tg != 0) t_tg[i+xpt_bank] = tg;
 
         }
 
+        //debug ncurses terminal display
+        // sprintf (state->dmr_lrrp_gps[0], "XPT SN %d LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d;", xpt_seq, xpt_bank+1, t_tg[0], xpt_bank+2, t_tg[1], xpt_bank+3, t_tg[2]);
+        // sprintf (state->dmr_lrrp_gps[1], "XPT SN %d LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d;", xpt_seq, xpt_bank+4, t_tg[3], xpt_bank+5, t_tg[4], xpt_bank+6, t_tg[5]);
+
         //add string for ncurses terminal display
-        sprintf (state->dmr_site_parms, "Free RPT - %d ", xpt_free);
+        sprintf (state->dmr_site_parms, "Free LCN - %d ", xpt_free);
 
         //assign to cc freq to follow during no sync
         long int ccfreq = 0; 
@@ -1116,7 +1143,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (opts->trunk_tune_group_calls == 0) goto SKIPXPT;
 
         //don't tune if vc on the current channel 
-        if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
+        if ( (time(NULL) - state->last_vc_sync_time) > 2 ) //parenthesis error fixed
         {
           for (j = 0; j < 6; j++) //go through the channels stored looking for active ones to tune to
           {
@@ -1131,7 +1158,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             //and hope it doesn't clash with other normal TG values
             for (int i = 0; i < state->group_tally; i++)
             {
-              if (state->group_array[i].groupNumber == t_tg[j+(xpt_seq*6)])
+              if (state->group_array[i].groupNumber == t_tg[j+xpt_bank])
               {
                 fprintf (stderr, " [%s]", state->group_array[i].groupName);
                 strcpy (mode, state->group_array[i].groupMode);
@@ -1139,16 +1166,22 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             }
 
             //without priority, this will tune the first one it finds (if group isn't blocked)
-            if (t_tg[j+(xpt_seq*6)+1] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
+            if (t_tg[j+xpt_bank] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
             {
-              if (state->trunk_chan_map[j+(xpt_seq*6)+1] != 0) //if we have a valid frequency
+              //debug print for tuning verification
+              fprintf (stderr, "\n LSN/TG to tune to: %d - %d", j+xpt_bank+1, t_tg[j+xpt_bank]);
+
+              if (state->trunk_chan_map[j+xpt_bank+1] != 0) //if we have a valid frequency
               {
                 //RIGCTL
                 if (opts->use_rigctl == 1)
                 {
+                  //debug 
+                  fprintf (stderr, " - Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);
+
                   if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
-                  SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+(xpt_seq*6)+1]); 
-                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+(xpt_seq*6)+1];
+                  SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+xpt_bank+1]); 
+                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+xpt_bank+1];
                   opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
                   dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                   j = 11; //break loop
@@ -1157,8 +1190,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 //rtl_udp
                 else if (opts->audio_in_type == 3)
                 {
-                  rtl_udp_tune (opts, state, state->trunk_chan_map[j+(xpt_seq*6)+1]);
-                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+(xpt_seq*6)+1];
+                  //debug 
+                  fprintf (stderr, " - Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);
+
+                  rtl_udp_tune (opts, state, state->trunk_chan_map[j+xpt_bank+1]);
+                  state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+xpt_bank+1];
                   opts->p25_is_tuned = 1;
                   dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                   j = 11; //break loop
@@ -1174,13 +1210,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         sprintf (state->dmr_branding_sub, "XPT ");
 
-        //Trunking Note: My understanding is that XPT calls always start on the 'home' repeater, and then expand
-        //outward to the free repeaters, so its probably easiest for a user to load the frequencies in a csv file
-        //and let FME scan through them as opposed to actively trunking, it will spend most of the time on the home repeater
-        //and if calls occur on the home repeater, it'll be too busy with those to go to the free repeater
-        //DSD-FME doesn't have any sort of TG priority, so its first come first served, just block or allow
+        //Notes: I had a few issues to fix in this CSBK, but it does appear that this is trunking on at least one system now,
+        //albeit a very quiet system that makes it difficult to know for certain if every aspect is working correctly
 
-        //Additional Notes: I've set XPT to set a CC frequency to whichever frequency its tuned to currently and getting
+        //Notes: I've set XPT to set a CC frequency to whichever frequency its tuned to currently and getting
         //this particular CSBK, if the status portion does work correctly, then it shouldn't matter which frequency it is on
         //as long as this CSBK comes in and we can tune to other repeater lcns if they have activity and the frequency mapping
         //is correct in the csv file, assuming the current frequency doesn't have voice activity
@@ -1195,54 +1228,62 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "\n"); 
         fprintf (stderr, "%s", KYEL);
 
-        fprintf (stderr, " Hytera XPT CSBK 0x0B ");
-
         //wraithe's theory -- seems pretty good to me
         //still only a theory though until can be verified
         //by having a system with precisely known variables
-
-        //new samples show this doesn't always quite work, there seems to be
-        //more than one data set transmitted in this CSBK
-        //one set works, the other doesn't fit the pattern
 
         // Site ID [5 bits]
         // Unknown_3 [3 bits]
         // Free Repeater on site [4 bits]
         // Unknown_4 [4 bits]
-
-        // 11:44:58 Sync: +DMR   slot1  [slot2] | Color Code=01 | CSBK
-        // Hytera XPT CSBK 0x0B 
-        // DMR PDU Payload [0B][68][10][20][18][10][20][10][28][20][EF][DA]
-
         // repeat x3 (for total of 4 sites)
 
-        // int i;
-        // uint8_t xpt_site_id[4];
-        // uint8_t xpt_site_rp[4];
-        // uint8_t xpt_site_u1[4];
-        // uint8_t xpt_site_u2[4];
+        //new samples show this doesn't always quite work, there seems to be
+        //more than one data set transmitted in this CSBK, when the first two bits aren't 0
+        //one set works, the other doesn't fit the pattern
 
-        // for (i = 0; i < 4; i++)
-        // {
-        //   xpt_site_id[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16+(i*16)], 5);
-        //   xpt_site_u1[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[21+(i*16)], 3);
-        //   xpt_site_rp[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[24+(i*16)], 4);
-        //   xpt_site_u2[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[28+(i*16)], 4);
-        // }
+        // 18:55:56 Sync: +DMR   slot1  [slot2] | Color Code=01 | CSBK
+        // Hytera XPT Site Id: 1 - Free LCN: 2
+        // XPT Adj Site(s): Site:4 Free:1; Site:2 Free:1; Site:5 Free:1; 
+        // DMR PDU Payload [0B][68][08][20][20][10][10][10][28][10][F4][C0]
+        // 18:55:56 Sync: +DMR  [slot1]  slot2  | Color Code=01 | CSBK
+        // Hytera XPT CSBK 0x0B - SN: 1
+        // DMR PDU Payload [4B][68][54][F0][00][00][00][00][00][00][E9][8F] <--site ID: 10 Free: 15 doesn't make sense compared to other data here
 
-        // fprintf (stderr, " Hytera XPT Site Id: %d - Free RPT: %d", xpt_site_id[0], xpt_site_rp[0]);
-        // // fprintf (stderr, " RS1: %d RS2: %d", xpt_site_u1[0], xpt_site_u2[1]); //debug
+        int i;
+        uint8_t xpt_site_id[4];
+        uint8_t xpt_site_rp[4];
+        uint8_t xpt_site_u1[4];
+        uint8_t xpt_site_u2[4];
 
-        // fprintf (stderr, "\n");
-        // fprintf (stderr, " XPT Adj Site(s): ");
-        // for (i = 1; i < 4; i++)
-        // {
-        //   if (xpt_site_id[i] != 0) 
-        //   {
-        //     fprintf (stderr, "%d (%d) ", xpt_site_id[i], xpt_site_rp[i]);
-        //     // fprintf (stderr, "RS1: %d RS2: %d - ", xpt_site_u1[i], xpt_site_u2[i]); //debug
-        //   }
-        // }
+        uint8_t xpt_sn = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[0], 2); //this is not the protect flag and reserved flag, could be a seq number of fl?
+        uint8_t adj_flag = cs_pdu_bits[1]; //this is NOT the TS bit like in other XPT PDUs
+
+        for (i = 0; i < 4; i++)
+        {
+          xpt_site_id[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16+(i*16)], 5);
+          xpt_site_u1[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[21+(i*16)], 3);
+          xpt_site_rp[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[24+(i*16)], 4);
+          xpt_site_u2[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[28+(i*16)], 4);
+        }
+
+        if (xpt_sn == 0) //for now, only run on 0, 1 could be appended data, but I don't think its adj_site related; could be other info; 
+        {
+          fprintf (stderr, " Hytera XPT Site Id: %d - Free LCN: %d", xpt_site_id[0], xpt_site_rp[0]);
+          // fprintf (stderr, " RS1: %d RS2: %d", xpt_site_u1[0], xpt_site_u2[1]); //debug
+
+          fprintf (stderr, "\n");
+          fprintf (stderr, " XPT Adj Site(s): ");
+          for (i = 1; i < 4; i++)
+          {
+            if (xpt_site_id[i] != 0) 
+            {
+              fprintf (stderr, "Site:%d Free:%d; ", xpt_site_id[i], xpt_site_rp[i]);
+              // fprintf (stderr, "RS1: %d RS2: %d - ", xpt_site_u1[i], xpt_site_u2[i]); //debug
+            }
+          }
+        }
+        else fprintf (stderr, " Hytera XPT CSBK 0x0B - SN: %d", xpt_sn);
 
         sprintf (state->dmr_branding_sub, "XPT ");
 
