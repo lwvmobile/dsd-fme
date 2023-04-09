@@ -98,8 +98,8 @@ Optional 'Virtual Sinks' for routing audio from SDR++ or GQRX, Media Players, et
 You may wish to direct sound into DSD-FME via Virtual Sinks. You may set up a Virtual Sink or two on your machine for routing audio in and out of applications to other applications using the following command, and opening up pavucontrol "PulseAudio Volume Control" in the menu (or `pulsemixer` in headless mode) to change line out of application to virtual sink, and line in of DSD-FME to monitor of virtual sink. This command will not persist past a reboot, so you will need to invoke them each time you reboot, or search for how to add this to your conf files for persistency if desired.
 
 ```
-pacmd load-module module-null-sink sink_name=virtual_sink  sink_properties=device.description=Virtual_Sink
-pacmd load-module module-null-sink sink_name=virtual_sink2  sink_properties=device.description=Virtual_Sink2
+pactl load-module module-null-sink sink_name=virtual_sink  sink_properties=device.description=Virtual_Sink
+pactl load-module module-null-sink sink_name=virtual_sink2  sink_properties=device.description=Virtual_Sink2
 ```
 
 Already have this branch, and just want to pull the latest build? You can run the rebuild.sh file in the dsd-fme folder, or manually do the pull with the commands:
