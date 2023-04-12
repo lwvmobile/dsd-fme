@@ -141,7 +141,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   int x;
 
   //24-bit TG to 16-bit hash
-  uint16_t hash = 0;
+  uint32_t hash = 0;
   uint8_t hash_bits[24];
   memset (hash_bits, 0, sizeof(hash_bits));
 
@@ -302,6 +302,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         {
           //see if we need to hash a value larger than 16-bits
           hash = state->lasttg & 0xFFFFFF; 
+          // fprintf (stderr, "TG: %lld Hash: %ld ", state->lasttg, hash);
           if (hash > 0xFFFF) //if greater than 16-bits
           {
             for (int i = 0; i < 24; i++)
@@ -310,12 +311,14 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             }
             hash = ComputeCrcCCITT16d (hash_bits, 24);
             hash = hash & 0xFFFF; //make sure its no larger than 16-bits
+            // fprintf (stderr, "Hash: %d ", hash);
           }
           if (state->rkey_array[hash] != 0)
           {
             state->K = state->rkey_array[hash] & 0xFF; //doesn't exceed 255
             state->K1 = state->H = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
             opts->dmr_mute_encL = 0;
+            // fprintf (stderr, "Key: %X ", state->rkey_array[hash]);
           }
           // else opts->dmr_mute_encL = 1; //may cause issues for manual key entry (non-csv)
         }
@@ -429,6 +432,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         {
           //see if we need to hash a value larger than 16-bits
           hash = state->lasttgR & 0xFFFFFF; 
+          // fprintf (stderr, "TG: %lld Hash: %ld ", state->lasttgR, hash);
           if (hash > 0xFFFF) //if greater than 16-bits
           {
             for (int i = 0; i < 24; i++)
@@ -437,12 +441,14 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             }
             hash = ComputeCrcCCITT16d (hash_bits, 24);
             hash = hash & 0xFFFF; //make sure its no larger than 16-bits
+            // fprintf (stderr, "Hash: %d ", hash);
           }
           if (state->rkey_array[hash] != 0)
           {
             state->K = state->rkey_array[hash] & 0xFF; //doesn't exceed 255
             state->K1 = state->H = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
             opts->dmr_mute_encR = 0;
+            // fprintf (stderr, "Key: %X ", state->rkey_array[hash]);
           }
           // else opts->dmr_mute_encR = 1; //may cause issues for manual key entry (non-csv)
         }
