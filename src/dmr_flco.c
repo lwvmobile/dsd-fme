@@ -186,7 +186,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       tg_hash = crc8 (target_hash, 16); 
     } 
 
-    //XPT Call 'Grant/Alert' Setup Occurs in TLC (TermLC 'Handshake') with a flco 0x09 
+    //XPT Call 'Grant/Alert' Setup Occurs in TLC with a flco 0x09 
     if (fid == 0x68 && flco == 0x09)
     {
       //The CSBK always uses an 8-bit TG/TGT; The White Papers (user manuals) say 8-bit TG and 16-bit SRC addressing
@@ -213,7 +213,14 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       fprintf (stderr, "TGT=%u SRC=%u ", target, source);
       
       fprintf (stderr, "Hytera XPT ");
-      if (reserved == 1) fprintf (stderr, "Group "); //according to observation
+
+      //Group ID ranges from 1 to 240; emergency group call ID ranges from 250 to 254; all call ID is 255.
+      if (reserved == 1)
+      {
+        fprintf (stderr, "Group "); //according to observation
+        if (target > 248 && target < 255) fprintf (stderr, "Emergency ");
+        if (target == 255) fprintf (stderr, "All ");
+      } 
       else fprintf (stderr, "Private "); //according to observation
       fprintf (stderr, "Call Alert "); //Alert or Grant
 
@@ -223,7 +230,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       //only display the hashed tgt value if its a private call and not a group call
       if (reserved == 0 && opts->payload == 1) fprintf(stderr, "TGT Hash=%d; ", tg_hash);
       if (opts->payload == 1) fprintf(stderr, "HSK=%X; ", xpt_hand);
-      //extra verbosity on handshake type
+      //extra verbosity on handshake types found in the patent
       if (opts->payload == 1) 
       {
         fprintf (stderr, "Handshake - ");
@@ -247,7 +254,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     }
 
     //Hytera XPT 'Others' -- moved the patent opcodes here as well for now
-    if ( fid == 0x68 && (flco == 0x13 || flco == 0x2E || flco == 0x2F) )
+    if ( fid == 0x68 && (flco == 0x13 || flco == 0x31 || flco == 0x2E || flco == 0x2F) )
     {
       if (type == 1) fprintf (stderr, "%s \n", KCYN);
       if (type == 2) fprintf (stderr, "%s \n", KCYN);
@@ -347,7 +354,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     
     fprintf (stderr, " SLOT %d ", state->currentslot+1);
     fprintf(stderr, "TGT=%u SRC=%u ", target, source);
-    if (opts->payload == 1 && is_xpt == 1) fprintf(stderr, "HASH=%d ", tg_hash);
+    if (opts->payload == 1 && is_xpt == 1 && flco == 0x3) fprintf(stderr, "HASH=%d ", tg_hash);
     if (opts->payload == 1) fprintf(stderr, "FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
 
     //0x04 and 0x05 on a TLC seem to indicate a Cap + Private Call Terminator (perhaps one for each MS)
@@ -373,7 +380,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         fprintf (stderr, "Private ");
       } 
     }
-    else if (flco == 0x3) //UU_V_Ch_Usr -- still valid on hytera VLC
+    else if (flco == 0x3) //UU_V_Ch_Usr
     {
       sprintf (state->call_string[slot], " Private ");
       fprintf (stderr, "Private "); 
