@@ -678,7 +678,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
       }
 
-      //Cap+ Neighbors
+      //Cap+ Adjacent Sites
       if (csbk_o == 0x3B)
       {
 
@@ -686,10 +686,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "\n");
         fprintf (stderr, "%s", KYEL);
 
-        fprintf (stderr, " Capacity Plus Neighbor List ");
+        fprintf (stderr, " Capacity Plus Adjacent Sites\n  ");
 
-        uint8_t nl[6]; //neighbors numerical value
-        uint8_t nr[6]; //neighbors current rest channel
+        uint8_t nl[6]; //adjacet site numerical value
+        uint8_t nr[6]; //adjacent site current rest channel
         memset (nl, 0, sizeof (nl));
         memset (nr, 0, sizeof (nr));
 
@@ -697,7 +697,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         {
           nl[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[32+(i*8)], 4);
           nr[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[36+(i*8)], 4);
-          if (nl[i]) fprintf (stderr, "S: %d R(%d) ", nl[i], nr[i]);
+          if (nl[i]) fprintf (stderr, "Site: %d Rest: %d; ", nl[i], nr[i]);
         }
 
       }
@@ -825,8 +825,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             if (ch[i] == 1) //group voice channels
             {
               tg = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[k*8+32], 8); 
-              if (tg != 0) fprintf (stderr, " %03d ", tg);
-              else fprintf (stderr, "Actv "); 
+              if (tg != 0) fprintf (stderr, " %03d; ", tg);
+              else fprintf (stderr, "Actv; "); 
               //add values to trunking tg/channel potentials
               t_tg[i] = tg;
               if (tg != 0) k++; 
@@ -834,12 +834,12 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             }
             else if (pch[i] == 1) //private or data channels
             {
-              fprintf (stderr, "P||D ");
+              fprintf (stderr, "P||D; ");
               //flag as available for tuning if enabled
               if (opts->trunk_tune_data_calls == 1) ch[i] = 1; 
             }  
-            else if (i+1 == rest_channel) fprintf (stderr, "Rest ");
-            else fprintf (stderr, "Idle ");
+            else if (i+1 == rest_channel) fprintf (stderr, "Rest; ");
+            else fprintf (stderr, "Idle; ");
 
             if (i == 3) fprintf (stderr, "\n  "); 
           }
@@ -1053,53 +1053,78 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
     } //end Connect+
 
-    //Hytera XPT
+    //Hytera XPT -- Experimental, but values now seem very consistent and trunking is working on systems tested with
     if (csbk_fid == 0x68)
     {
-      //XPT Site Status -- Experimental, WIP, Don't be surprised by bad decodes or broken trunking
+      //XPT Site Status 
       if (csbk_o == 0x0A)
       {
         //initial line break
         fprintf (stderr, "\n"); 
         fprintf (stderr, "%s", KYEL);
 
-        uint8_t xpt_ch[6]; //one tg/call per timeslot
-        uint16_t tg = 0;  //8-bit TG value or hash
+        uint8_t xpt_ch[6]; //one tg/call per LSN
+        uint16_t tg = 0;  //8-bit TG value or TGT hash
         int i, j;
 
         //tg and channel info for trunking purposes
-        uint8_t t_tg[24];
+        uint8_t t_tg[6];
         memset (t_tg, 0, sizeof(t_tg));
 
         uint8_t xpt_seq    = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[0], 2);  //this replaces the CSBK lb and pf
-        uint8_t xpt_free   = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 4); //free repeater channel
+        uint8_t xpt_free   = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 4); //free repeater channel LCN
         uint8_t xpt_bank   = 0;
+        uint8_t xpt_lcn    = 1;
 
-        //xpt_bank needs testing on busier systems/samples still to verify accuracy
+        //determine starting position of LCN value
+        if (xpt_seq == 1) xpt_lcn = 4;
+        if (xpt_seq == 2) xpt_lcn = 7; 
+
+        //determine xpt_bank value for LSN value/tuning
         if (xpt_seq) xpt_bank = xpt_seq*6; 
 
-        //get 2-bit status values for each 6 channels (timeslots) 
+        //get 2-bit status values for each 6 LSNs
         for (i = 0; i < 6; i++) xpt_ch[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[20+(i*2)], 2);
 
-        fprintf (stderr, " Hytera XPT Site Status - Free LCN: %d SN: %d \n ", xpt_free, xpt_seq);
+        fprintf (stderr, " Hytera XPT Site Status - Free LCN: %d SN: %d", xpt_free, xpt_seq);
 
-        //Print List of Channels and Activity 
+        //Print List of LCN with LSN Activity 
         for (i = 0; i < 6; i++) 
         {
+          //add LCN value for each LSN pair to help users differentiate between the two when seeing LCN on FLC
+          if (i == 0 || i == 2 || i == 4)
+          {
+            fprintf (stderr, "\n LCN %d - ", xpt_lcn);
+            xpt_lcn++;
+          } 
+          
           //LSN value here is logical slot, in flco, we get the logical channel (which is the repeater, does not include the slot value)
-          fprintf (stderr, "LSN %02d: ", i+xpt_bank+1); //swap out xpt_bank for all (xpt_seq*6) to simplify things
+          fprintf (stderr, "LSN %02d: ", i+xpt_bank+1); //swapped out xpt_bank for all (xpt_seq*6) to simplify things
           tg = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[i*8+32], 8);
           fprintf (stderr, "ST-%X", xpt_ch[i]); //status bits value 0,1,2, or 3
-          if (tg != 0)                fprintf (stderr, " %03d  ", tg); 
+          if (tg != 0)                fprintf (stderr, " %03d;  ", tg); 
           else
           {
-            if (xpt_ch[i] == 3)         fprintf (stderr, " Null "); //offline?, free? but also group call if the TG value is populated? Wut? Null should cover both cases...maybe
-            else if (xpt_ch[i] == 2)    fprintf (stderr, " Priv "); //This seems to be used on both private data and private calls, but one or the other has a 0 TG value?
-            else if (xpt_ch[i] == 1)    fprintf (stderr, " Unk  "); //the 01 value has not been observed as of yet, group data?
-            else if (xpt_ch[i] == 0)    fprintf (stderr, " Idle "); //Idle appears to always be a 0, or could indicate Group Data (including status CSBK and VLC/TLC)
+            if (xpt_ch[i] == 3)         fprintf (stderr, " Null; "); //NULL on ST-3 indicates repeater is not active for the LSNs that would be covered by these bits
+            else if (xpt_ch[i] == 2)    fprintf (stderr, " Priv; "); //This seems to be used on both private data and private voice calls, but occassionally has a 0 TGT value
+            else if (xpt_ch[i] == 1)    fprintf (stderr, " Unk;  "); //the 01 value has not been observed as of yet
+            else if (xpt_ch[i] == 0)    fprintf (stderr, " Idle; "); //Idle
+
+            //if Priv/Unk occurs, add t_tg value to it for tuning purposes
+            if (xpt_ch[i] == 2)
+            {
+              if (opts->trunk_tune_private_calls == 1) t_tg[i] = 1;
+            }
+
+            //could cause erroneous tuning since we don't yet know what the unk value really is (never observed)
+            if (xpt_ch[i] == 1)
+            {
+              // if (opts->trunk_tune_data_calls == 1) t_tg[i] = 1; //disabled
+            }
+
           }
 
-          if (i == 2) fprintf (stderr, "\n ");
+          // if (i == 2) fprintf (stderr, "\n ");
 
           //add values to trunking tg/channel potentials
           if (tg != 0) t_tg[i+xpt_bank] = tg;
@@ -1210,8 +1235,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         sprintf (state->dmr_branding_sub, "XPT ");
 
-        //Notes: I had a few issues to fix in this CSBK, but it does appear that this is trunking on at least one system now,
-        //albeit a very quiet system that makes it difficult to know for certain if every aspect is working correctly
+        //Notes: I had a few issues to fix in this CSBK, but it does appear that this is trunking on a few small systems now,
+        //albeit a very quiet systems that makes it difficult to know for certain if every aspect is working correctly
 
         //Notes: I've set XPT to set a CC frequency to whichever frequency its tuned to currently and getting
         //this particular CSBK, if the status portion does work correctly, then it shouldn't matter which frequency it is on
@@ -1220,7 +1245,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
       } //end 0x0A
 
-      //XPT Site Information - Adj Site Info??
+      //XPT Adjacent Site Information -- Have yet to find a consistent indication of 'current site' identification in any CSBK/FLC/SLC payload
       if (csbk_o == 0x0B)
       {
 
@@ -1228,36 +1253,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "\n"); 
         fprintf (stderr, "%s", KYEL);
 
-        //wraithe's theory -- seems pretty good to me
-        //still only a theory though until can be verified
-        //by having a system with precisely known variables
-
-        // Site ID [5 bits]
-        // Unknown_3 [3 bits]
-        // Free Repeater on site [4 bits]
-        // Unknown_4 [4 bits]
-        // repeat x3 (for total of 4 sites)
-
-        //new samples show this doesn't always quite work, there seems to be
-        //more than one data set transmitted in this CSBK, when the first two bits aren't 0
-        //one set works, the other doesn't fit the pattern
-
-        // 18:55:56 Sync: +DMR   slot1  [slot2] | Color Code=01 | CSBK
-        // Hytera XPT Site Id: 1 - Free LCN: 2
-        // XPT Adj Site(s): Site:4 Free:1; Site:2 Free:1; Site:5 Free:1; 
-        // DMR PDU Payload [0B][68][08][20][20][10][10][10][28][10][F4][C0]
-        // 18:55:56 Sync: +DMR  [slot1]  slot2  | Color Code=01 | CSBK
-        // Hytera XPT CSBK 0x0B - SN: 1
-        // DMR PDU Payload [4B][68][54][F0][00][00][00][00][00][00][E9][8F] <--site ID: 10 Free: 15 doesn't make sense compared to other data here
-
         int i;
         uint8_t xpt_site_id[4];
         uint8_t xpt_site_rp[4];
         uint8_t xpt_site_u1[4];
         uint8_t xpt_site_u2[4];
 
-        uint8_t xpt_sn = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[0], 2); //this is not the protect flag and reserved flag, could be a seq number of fl?
-        uint8_t adj_flag = cs_pdu_bits[1]; //this is NOT the TS bit like in other XPT PDUs
+        uint8_t xpt_sn = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[0], 2); 
 
         for (i = 0; i < 4; i++)
         {
@@ -1267,26 +1269,18 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           xpt_site_u2[i] = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[28+(i*16)], 4);
         }
 
-        if (xpt_sn == 0) //for now, only run on 0, 1 could be appended data, but I don't think its adj_site related; could be other info; 
+        fprintf (stderr, " Hytera XPT CSBK 0x0B - SN: %d", xpt_sn);
+        fprintf (stderr, "\n");
+        fprintf (stderr, " XPT Adjacent ");
+        for (i = 0; i < 4; i++)
         {
-          fprintf (stderr, " Hytera XPT Site Id: %d - Free LCN: %d", xpt_site_id[0], xpt_site_rp[0]);
-          // fprintf (stderr, " RS1: %d RS2: %d", xpt_site_u1[0], xpt_site_u2[1]); //debug
-
-          fprintf (stderr, "\n");
-          fprintf (stderr, " XPT Adj Site(s): ");
-          for (i = 1; i < 4; i++)
+          if (xpt_site_id[i] != 0) 
           {
-            if (xpt_site_id[i] != 0) 
-            {
-              fprintf (stderr, "Site:%d Free:%d; ", xpt_site_id[i], xpt_site_rp[i]);
-              // fprintf (stderr, "RS1: %d RS2: %d - ", xpt_site_u1[i], xpt_site_u2[i]); //debug
-            }
+            fprintf (stderr, "Site:%d Free:%d; ", xpt_site_id[i], xpt_site_rp[i]);
+            // fprintf (stderr, "RS1: %d RS2: %d - ", xpt_site_u1[i], xpt_site_u2[i]); //debug
           }
         }
-        else fprintf (stderr, " Hytera XPT CSBK 0x0B - SN: %d", xpt_sn);
-
         sprintf (state->dmr_branding_sub, "XPT ");
-
 
       } //end 0x0B
 
