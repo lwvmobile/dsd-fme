@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Aero' Edition v2.0.0-72-gce75acb  Windows 32-bit RC5c "
+  " 'Aero' Edition v2.0.0-80-g5e24ff5  Windows 32-bit RC5d "
 };
 
 int comp (const void *a, const void *b)
