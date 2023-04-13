@@ -378,12 +378,23 @@ void ncursesOpen (dsd_opts * opts, dsd_state * state)
   setlocale(LC_ALL, "");
   initscr(); //Initialize NCURSES screen window
   start_color();
+
+  #ifdef PRETTY_COLORS
   init_pair(1, COLOR_YELLOW, COLOR_BLACK);      //Yellow/Amber for frame sync/control channel, NV style
   init_pair(2, COLOR_RED, COLOR_BLACK);        //Red for Terminated Calls
   init_pair(3, COLOR_GREEN, COLOR_BLACK);     //Green for Active Calls
   init_pair(4, COLOR_CYAN, COLOR_BLACK);     //Cyan for Site Extra and Patches
   init_pair(5, COLOR_MAGENTA, COLOR_BLACK); //Magenta for no frame sync/signal
   init_pair(6, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
+  #else
+  init_pair(1, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
+  init_pair(2, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
+  init_pair(3, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
+  init_pair(4, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
+  init_pair(5, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
+  init_pair(6, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
+  #endif
+
   noecho();
   cbreak();
 
