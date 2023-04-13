@@ -45,6 +45,12 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	int sr_structure;
 	int sr_ran;
 
+	//new, and even more confusing NXDN Type-D / "IDAS" acronyms
+	int idas = 0;
+	int scch = 0;
+	int facch3 = 0;
+	int udch2 = 0;
+
 	uint8_t lich_dibits[8]; 
 	uint8_t sacch_bits[60];
 	uint8_t facch_bits_a[144];
@@ -83,10 +89,8 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	lich = lich >> 1;
 	if (lich_parity_received != lich_parity_computed)
   {
-    // fprintf(stderr, "NXDN lich parity error, ignoring frame \n"); //debug
 		// state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly 
 		goto END;
-		// return;
 	}
   
 	voice = 0;
@@ -117,15 +121,12 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	case 0x49:
 	case 0x4e:
 	case 0x4f:
-	case 0x69:
-	case 0x6f:
 		facch2 = 1;
 		break;
 	case 0x32:  //facch in 1, vch in 2
 	case 0x33:
 	case 0x52:
 	case 0x53:
-	case 0x73:
 		voice = 2;	
 		facch = 1;
 		sacch = 1;
@@ -134,7 +135,6 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	case 0x35:
 	case 0x54:
 	case 0x55:
-	case 0x75:
 		voice = 1;	
 		facch = 2;
 		sacch = 1;
@@ -143,7 +143,6 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	case 0x37:
 	case 0x56: 
 	case 0x57: 
-	case 0x77:
 		voice = 3;	
 		facch = 0;
 		sacch = 1;
@@ -156,8 +155,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	case 0x41:
 	case 0x50:
 	case 0x51:
-	case 0x61:
-	case 0x71:
+
 		voice = 0;
 		facch = 3;	
 		sacch = 1;
@@ -166,6 +164,54 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	case 0x39:
 		sacch = 1;
 		break;
+
+	//NXDN "Type-D" or "IDAS" Specific Lich Codes
+	case 0x76: //normal voice (in one and two)
+	case 0x77: 
+		idas = 1;
+		scch = 1;
+		voice = 3;
+		break;
+	case 0x74: //vch in 1, scch in 2 (scch 2 steal)
+	case 0x75:
+		idas = 1;
+		voice = 1;
+		scch = 2;
+		break;
+	case 0x72: //scch in 1, vch in 2 (scch 1 steal)
+	case 0x73:
+		idas = 1;
+		voice = 2;
+		scch = 2;
+		break;
+	case 0x70: //scch in 1 and 2 
+	case 0x71:
+		idas = 1;
+		scch = 4; //total of three scch positions
+		break;
+	case 0x6E: //udch2
+	case 0x6F:
+		idas = 1;
+		udch2 = 1;
+		break;
+	case 0x68:
+	case 0x69: //facch3
+		idas = 1;
+		facch3 = 1;
+		break;
+	case 0x62:
+	case 0x63: //facch1 in 1, n/post in 2
+		idas = 1;
+		scch = 1;
+		facch = 1;
+		break;
+	case 0x60:
+	case 0x61: //facch1 in both
+		idas = 1;
+		scch = 1;
+		facch = 3;
+		break;
+
 	default:
     if (opts->payload == 1) fprintf(stderr, "  false sync or unsupported NXDN lich type 0x%02X\n", lich);
 		//reset the sacch field, we probably got a false sync and need to wipe or give a bad crc
@@ -178,10 +224,16 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	} // end of switch(lich)
 
 	//printframesync after determining we have a good lich and it has something in it
-	if (voice || facch || sacch || facch2 || cac)
+	if (idas)
 	{
-		// if (state->synctype == 28) fprintf (stderr, " +");
-		// else fprintf (stderr, " -");
+		if (opts->frame_nxdn48 == 1)
+		{
+			printFrameSync (opts, state, "IDAS D ", 0, "-");
+		}
+		if (opts->payload == 1) fprintf (stderr, "L%02X -", lich);
+	}
+	else if (voice || facch || sacch || facch2 || cac)
+	{
 		if (opts->frame_nxdn48 == 1)
 		{
 			printFrameSync (opts, state, "NXDN48 ", 0, "-");
@@ -234,7 +286,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	//vch frames stay inside dbuf, easier to assign that to ambe_fr frames
 	//sacch needs extra handling depending on superframe or non-superframe variety
 
-	if (voice && !facch) //voice only, no facch steal
+	if (voice && !facch && scch < 2) //voice only, no facch/scch steal
 	{
 		fprintf (stderr, "%s", KGRN);
 		fprintf (stderr, " Voice ");
@@ -244,6 +296,12 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	{
 		fprintf (stderr, "%s", KGRN);
 		fprintf (stderr, " V%d+F%d ", 3 - facch, facch); //print which position on each
+		fprintf (stderr, "%s", KNRM);
+	}
+	else if (voice && scch > 1) //voice with scch steal
+	{
+		fprintf (stderr, "%s", KGRN);
+		fprintf (stderr, " V%d+S%d ", 4 - scch, scch); //print which position on each
 		fprintf (stderr, "%s", KNRM);
 	}
 	else
@@ -283,6 +341,18 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 
 	if (lich == 0x20 || lich == 0x21 || lich == 0x61 || lich == 0x40 || lich == 0x41) state->nxdn_sacch_non_superframe = TRUE;
 	else state->nxdn_sacch_non_superframe = FALSE;
+
+	//TODO Later: Add Direction to all decoding functions
+	uint8_t direction;
+	if (lich % 2 == 0) direction = 0;
+	else direction = 1;
+
+	//TODO: SCCH handling -- direction will be needed
+	if (scch)   fprintf (stderr, " SCCH ");
+
+	//TODO Much Later: FACCH3 and UDCH2 handling
+	if (facch3) fprintf (stderr, " FACCH3 ");
+	if (udch2)  fprintf (stderr, " UDCH2 ");
 
 	if (sacch)  nxdn_deperm_sacch(opts, state, sacch_bits);
 	if (cac)    nxdn_deperm_cac(opts, state, cac_bits); 
