@@ -52,13 +52,15 @@ void nxdn_descramble(uint8_t dibits[], int len)
 
 void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 {
-	uint8_t deperm[144];
-	uint8_t depunc[192];
-	uint8_t trellis_buf[96];
+	uint8_t deperm[200]; //144
+	uint8_t depunc[200]; //192
+	uint8_t trellis_buf[400]; //96
 	uint16_t crc = 0; //crc calculated by function
 	uint16_t check = 0; //crc from payload for comparison
 	int out;
-	char buf[128];
+
+	memset (deperm, 0, sizeof(deperm));
+	memset (depunc, 0, sizeof(depunc));
 
 	for (int i=0; i<144; i++) 
 		deperm[PERM_16_9[i]] = bits[i]; 
@@ -74,7 +76,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	uint8_t temp[210];
 	uint8_t s0;
   uint8_t s1;
-	uint8_t m_data[13];
+	uint8_t m_data[20]; //13
 	memset (temp, 0, sizeof(temp));
 	memset (m_data, 0, sizeof(m_data));
 	memset (trellis_buf, 0, sizeof(trellis_buf));
@@ -139,15 +141,14 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 {
 	//see about initializing these variables
-	uint8_t deperm[60]; 
-	uint8_t depunc[72];  
-	uint8_t trellis_buf[32]; 
-	uint8_t answer[26]; 
+	uint8_t deperm[200]; //60 
+	uint8_t depunc[200]; //72
+	uint8_t trellis_buf[400]; //32
 
 	memset (deperm, 0, sizeof(deperm));
 	memset (depunc, 0, sizeof(depunc));
 	memset (trellis_buf, 0, sizeof(trellis_buf));
-	memset (answer, 0, sizeof(answer));
+
 	int o = 0;
 	uint8_t crc = 0; //value computed by crc6 on payload
 	uint8_t check = 0; //value pulled from last 6 bits
@@ -176,7 +177,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	uint8_t temp[90];
 	uint8_t s0;
   uint8_t s1;
-	uint8_t m_data[5];
+	uint8_t m_data[10]; //5
 
 	memset (temp, 0, sizeof (temp));
 	memset (m_data, 0, sizeof (m_data));
@@ -229,7 +230,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		if (state->nxdn_last_ran != -1) fprintf (stderr, " RAN %02d ", state->nxdn_last_ran);
 		else fprintf (stderr, "        ");
 
-		uint8_t nsf_sacch[26];
+		uint8_t nsf_sacch[400];
 		memset (nsf_sacch, 0, sizeof(nsf_sacch));
 		for (int i = 0; i < 26; i++)
 		{
@@ -313,12 +314,15 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[348])
 {
 
-	uint8_t deperm[348];
-	uint8_t depunc[406];
-	uint8_t trellis_buf[199];
+	uint8_t deperm[500]; //348
+	uint8_t depunc[500]; //406
+	uint8_t trellis_buf[400]; //199
 	int id = 0;
 	uint16_t crc = 0;
 	uint16_t check = 0;
+
+	memset (deperm, 0, sizeof(deperm));
+	memset (depunc, 0, sizeof(depunc));
 
 	for (int i=0; i<348; i++) {
 		deperm[PERM_12_29[i]] = bits[i];
@@ -341,10 +345,10 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 	}
 	
 	//switch to the convolutional decoder
-	uint8_t temp[220];
+	uint8_t temp[500]; //220, this one was way too small
 	uint8_t s0;
   uint8_t s1;
-	uint8_t m_data[26];
+	uint8_t m_data[52]; //26
 	memset (trellis_buf, 0, sizeof(trellis_buf));
 	memset (temp, 0, sizeof (temp));
 	memset (m_data, 0, sizeof (m_data));
@@ -390,7 +394,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 		check = check | trellis_buf[i+184];
 	}
 
-	uint8_t f2u_message_buffer[199];
+	uint8_t f2u_message_buffer[400]; //199
 	memset (f2u_message_buffer, 0, sizeof(f2u_message_buffer));
 
 	//just going to leave this all here in case its needed, like in cac,
@@ -403,7 +407,6 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 	if (crc == check)
 	{
 		fprintf (stderr, " F2/U   "); 
-		//NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
 		NXDN_Elements_Content_decode(opts, state, 1, f2u_message_buffer); 
 	} 
 	else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, f2u_message_buffer);
@@ -425,11 +428,14 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 {
 
-	uint8_t deperm[300];
-	uint8_t depunc[350];
-	uint8_t trellis_buf[171];
+	uint8_t deperm[500]; //300
+	uint8_t depunc[500]; //350
+	uint8_t trellis_buf[400]; //171
 	int id = 0;
 	uint16_t crc = 0;
+
+	memset (deperm, 0, sizeof(deperm));
+	memset (depunc, 0, sizeof(depunc));
 
 	for (int i=0; i<300; i++) {
 		deperm[PERM_12_25[i]] = bits[i];
@@ -455,7 +461,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 	uint8_t temp[360];
 	uint8_t s0;
   uint8_t s1;
-	uint8_t m_data[26];
+	uint8_t m_data[52]; //26
 	memset (trellis_buf, 0, sizeof(trellis_buf));
 	memset (temp, 0, sizeof (temp));
 	memset (m_data, 0, sizeof (m_data));
@@ -490,7 +496,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 
 	crc = crc16cac(trellis_buf, 171); 
 
-	uint8_t cac_message_buffer[171];
+	uint8_t cac_message_buffer[400]; //171
 	memset (cac_message_buffer, 0, sizeof(cac_message_buffer));
 
 	//shift the cac_message into the appropriate byte arrangement for element_decoder -- skip SR field
