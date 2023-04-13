@@ -12,6 +12,13 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
 set(CURSES_NEED_NCURSES TRUE)
 set(CURSES_NEED_WIDE TRUE)
 
+#use cmake option -DCOLORS=OFF to disable color output
+option(COLORS
+    "Build with Colors Enabled" ON)
+if (COLORS)
+    add_definitions(-DPRETTY_COLORS) 
+endif ()
+
 include(git_revision)
 git_describe(GIT_TAG)
 
