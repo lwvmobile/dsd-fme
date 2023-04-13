@@ -14,9 +14,11 @@
 
 void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state)
 {
-  uint8_t SACCH[72];
+  uint8_t SACCH[400]; //72
   uint32_t i;
   uint8_t CrcCorrect = 1;
+
+  memset (SACCH, 0, sizeof (SACCH));
 
   /* Consider all SACCH CRC parts as correct */
   CrcCorrect = 1;
@@ -53,8 +55,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
   MessageType |= (ElementsContent[6] & 1) << 1;
   MessageType |= (ElementsContent[7] & 1) << 0;
 
-  //only run message type if good CRC? 
-  if (CrcCorrect == 1) nxdn_message_type (opts, state, MessageType);
+  nxdn_message_type (opts, state, MessageType);
 
   /* Save the "F1" and "F2" flags */
   state->NxdnElementsContent.F1 = ElementsContent[0];
@@ -239,7 +240,7 @@ void nxdn_location_id_handler (dsd_state * state, uint32_t location_id, uint8_t 
   //type 0 is for current site, type 1 is for adjacent sites
   if (type == 0)
   {
-    state->nxdn_last_ran = site_code; 
+    state->nxdn_last_ran = site_code % 64; //Table 6.3-4 RAN for Trunked Radio Systems
     if (site_code != 0) state->nxdn_location_site_code = site_code; 
     if (sys_code != 0) state->nxdn_location_sys_code = sys_code;
     sprintf (state->nxdn_location_category, "%s", category); 
@@ -848,39 +849,39 @@ void NXDN_decode_adj_site(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     adj3_site = (uint32_t)ConvertBitIntoBytes(&Message[88], 24);
     adj3_opt = (uint8_t)ConvertBitIntoBytes(&Message[112], 6);
     adj3_chan = (uint16_t)ConvertBitIntoBytes(&Message[118], 10);
-    //4
-    adj4_site = (uint32_t)ConvertBitIntoBytes(&Message[128], 24);
-    adj4_opt = (uint8_t)ConvertBitIntoBytes(&Message[152], 6);
-    adj4_chan = (uint16_t)ConvertBitIntoBytes(&Message[158], 10);
+    //4 -- facch2 only
+    // adj4_site = (uint32_t)ConvertBitIntoBytes(&Message[128], 24);
+    // adj4_opt = (uint8_t)ConvertBitIntoBytes(&Message[152], 6);
+    // adj4_chan = (uint16_t)ConvertBitIntoBytes(&Message[158], 10);
 
-    if (adj1_site)
+    if (adj1_opt & 0xF)
     {
-      fprintf (stderr, "\n  Adjacent Site %d ", adj1_opt & 0xF);
+      fprintf (stderr, "\n Adjacent Site %d ", adj1_opt & 0xF);
       fprintf (stderr, "Channel [%03X] [%04d]", adj1_chan, adj1_chan);
       nxdn_location_id_handler(state, adj1_site, 1);
       nxdn_channel_to_frequency (opts, state, adj1_chan);
     }
-    if (adj2_site)
+    if (adj2_opt & 0xF)
     {
-      fprintf (stderr, "\n  Adjacent Site %d ", adj2_opt & 0xF);
+      fprintf (stderr, "\n Adjacent Site %d ", adj2_opt & 0xF);
       fprintf (stderr, "Channel [%03X] [%04d]", adj2_chan, adj2_chan);
       nxdn_location_id_handler(state, adj2_site, 1);
       nxdn_channel_to_frequency (opts, state, adj2_chan);
     }
-    if (adj3_site)
+    if (adj3_opt & 0xF)
     {
-      fprintf (stderr, "\n  Adjacent Site %d ", adj3_opt & 0xF);
+      fprintf (stderr, "\n Adjacent Site %d ", adj3_opt & 0xF);
       fprintf (stderr, "Channel [%03X] [%04d]", adj3_chan, adj3_chan);
       nxdn_location_id_handler(state, adj3_site, 1);
       nxdn_channel_to_frequency (opts, state, adj3_chan);
     }
-    if (adj4_site)
-    {
-      fprintf (stderr, "\n  Adjacent Site %d: ", adj4_opt & 0xF);
-      fprintf (stderr, "Channel [%03X] [%04d]", adj4_chan, adj4_chan);
-      nxdn_location_id_handler(state, adj4_site, 1);
-      nxdn_channel_to_frequency (opts, state, adj4_chan);
-    }
+    // if (adj4_opt & 0xF) //facch2 only
+    // {
+    //   fprintf (stderr, "\n Adjacent Site %d: ", adj4_opt & 0xF);
+    //   fprintf (stderr, "Channel [%03X] [%04d]", adj4_chan, adj4_chan);
+    //   nxdn_location_id_handler(state, adj4_site, 1);
+    //   nxdn_channel_to_frequency (opts, state, adj4_chan);
+    // }
 
   }
 
@@ -897,15 +898,15 @@ void NXDN_decode_adj_site(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     adj2_opt = (uint8_t)ConvertBitIntoBytes(&Message[80], 6);
     adj2_bw = (uint8_t)ConvertBitIntoBytes(&Message[86], 2);
     adj2_chan = (uint16_t)ConvertBitIntoBytes(&Message[88], 16);
-    //3
-    adj3_site = (uint32_t)ConvertBitIntoBytes(&Message[104], 24);
-    adj3_opt = (uint8_t)ConvertBitIntoBytes(&Message[128], 6);
-    adj3_bw = (uint8_t)ConvertBitIntoBytes(&Message[134], 2);
-    adj3_chan = (uint16_t)ConvertBitIntoBytes(&Message[136], 16);
+    //3 -- facch2 only
+    // adj3_site = (uint32_t)ConvertBitIntoBytes(&Message[104], 24);
+    // adj3_opt = (uint8_t)ConvertBitIntoBytes(&Message[128], 6);
+    // adj3_bw = (uint8_t)ConvertBitIntoBytes(&Message[134], 2);
+    // adj3_chan = (uint16_t)ConvertBitIntoBytes(&Message[136], 16);
 
-    if (adj1_site)
+    if (adj1_opt & 0xF)
     {
-      fprintf (stderr, "\n  Adjacent Site %d ", adj1_opt & 0xF);
+      fprintf (stderr, "\n Adjacent Site %d ", adj1_opt & 0xF);
       fprintf (stderr, "Channel [%04X] [%05d] ", adj1_chan, adj1_chan);
       if (adj1_bw == 0) fprintf (stderr, "BW: 6.25 kHz - 4800 bps");
       else if (adj1_bw == 1) fprintf (stderr, "BW: 12.5 kHz - 9600 bps");
@@ -913,26 +914,26 @@ void NXDN_decode_adj_site(dsd_opts * opts, dsd_state * state, uint8_t * Message)
       nxdn_location_id_handler(state, adj1_site, 1);
       nxdn_channel_to_frequency (opts, state, adj1_chan);
     }
-    if (adj2_site)
+    if (adj2_opt & 0xF)
     {
-      fprintf (stderr, "\n  Adjacent Site %d ", adj2_opt & 0xF);
-      fprintf (stderr, "Channel [%04X] [%05d]", adj2_chan, adj2_chan);
+      fprintf (stderr, "\n Adjacent Site %d ", adj2_opt & 0xF);
+      fprintf (stderr, "Channel [%04X] [%05d] ", adj2_chan, adj2_chan);
       if (adj2_bw == 0) fprintf (stderr, "BW: 6.25 kHz - 4800 bps");
       else if (adj2_bw == 1) fprintf (stderr, "BW: 12.5 kHz - 9600 bps");
       else fprintf (stderr, "BW: %d Reserved Value", adj2_bw);
       nxdn_location_id_handler(state, adj2_site, 1);
       nxdn_channel_to_frequency (opts, state, adj2_chan);
     }
-    if (adj3_site)
-    {
-      fprintf (stderr, "\n  Adjacent Site %d: ", adj3_opt & 0xF);
-      fprintf (stderr, "Channel [%04X] [%05d]", adj3_chan, adj3_chan);
-      if (adj3_bw == 0) fprintf (stderr, "BW: 6.25 kHz - 4800 bps");
-      else if (adj3_bw == 1) fprintf (stderr, "BW: 12.5 kHz - 9600 bps");
-      else fprintf (stderr, "BW: %d Reserved Value", adj3_bw);
-      nxdn_location_id_handler(state, adj3_site, 1);
-      nxdn_channel_to_frequency (opts, state, adj3_chan);
-    }
+    // if (adj3_opt & 0xF) //facch2 only
+    // {
+    //   fprintf (stderr, "\n Adjacent Site %d: ", adj3_opt & 0xF);
+    //   fprintf (stderr, "Channel [%04X] [%05d] ", adj3_chan, adj3_chan);
+    //   if (adj3_bw == 0) fprintf (stderr, "BW: 6.25 kHz - 4800 bps");
+    //   else if (adj3_bw == 1) fprintf (stderr, "BW: 12.5 kHz - 9600 bps");
+    //   else fprintf (stderr, "BW: %d Reserved Value", adj3_bw);
+    //   nxdn_location_id_handler(state, adj3_site, 1);
+    //   nxdn_channel_to_frequency (opts, state, adj3_chan);
+    // }
   }
 
   fprintf (stderr, "%s", KNRM);
