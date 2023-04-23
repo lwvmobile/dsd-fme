@@ -672,6 +672,7 @@ typedef struct
 
   //multi-key array
   unsigned long long int rkey_array[0xFFFF];
+  int keyloader; //let us know the keyloader is active
 
   //dmr late entry mi
   uint64_t late_entry_mi_fragment[2][7][3];
@@ -857,10 +858,15 @@ void ncursesClose ();
 //new NXDN Functions start here!
 void nxdn_frame (dsd_opts * opts, dsd_state * state);
 void nxdn_descramble (uint8_t dibits[], int len);
+//nxdn deinterleaving/depuncturing functions
 void nxdn_deperm_facch (dsd_opts * opts, dsd_state * state, uint8_t bits[144]);
 void nxdn_deperm_sacch (dsd_opts * opts, dsd_state * state, uint8_t bits[60]);
 void nxdn_deperm_cac (dsd_opts * opts, dsd_state * state, uint8_t bits[300]);
-void nxdn_deperm_facch2_udch (dsd_opts * opts, dsd_state * state, uint8_t bits[348]);
+void nxdn_deperm_facch2_udch (dsd_opts * opts, dsd_state * state, uint8_t bits[348], uint8_t type);
+//type-d 'idas' deinterleaving/depuncturing functions
+void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint8_t direction);
+void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[288], uint8_t type);
+//end 
 void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType);
 void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182]);
 
@@ -870,6 +876,7 @@ static uint8_t crc6(const uint8_t buf[], int len);
 static uint16_t crc12f(const uint8_t buf[], int len);
 static uint16_t crc15(const uint8_t buf[], int len);
 static uint16_t crc16cac(const uint8_t buf[], int len);
+static uint8_t crc7_scch(uint8_t bits[], int len); //converted from op25 crc6
 
 /* NXDN Convolution functions */
 void CNXDNConvolution_start(void);
@@ -893,6 +900,8 @@ void NXDN_decode_cch_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 void NXDN_decode_srv_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_site_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_adj_site(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+//Type-D SCCH Message Decoder
+void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uint8_t direction);
 
 void dPMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
 
