@@ -900,7 +900,8 @@ initState (dsd_state * state)
   state->nxdn_bw = 0;
 
   //multi-key array
-  memset (state->rkey_array, 0, sizeof(state->rkey_array)); 
+  memset (state->rkey_array, 0, sizeof(state->rkey_array));
+  state->keyloader = 0; //keyloader off  
 
   //Remus DMR End Call Alert Beep
   state->dmr_end_alert[0] = 0;
@@ -1318,6 +1319,7 @@ main (int argc, char **argv)
           strncpy(opts.key_in_file, optarg, 1023);
           opts.key_in_file[1023] = '\0';
           csvKeyImport(&opts, &state);
+          state.keyloader = 1;
           break;
 
         case 'Q': //'DSP' Structured Output file for OKDMRlib
@@ -1463,17 +1465,9 @@ main (int argc, char **argv)
 
         case 'R':
           sscanf (optarg, "%lld", &state.R);
-          if (state.R > 0x7FFF)
-          {
-           state.R = 0x7FFF;
-          }
-          // opts.dmr_mute_encL = 0;
-          // opts.dmr_mute_encR = 0;
-          if (state.R == 0)
-          {
-            // opts.dmr_mute_encL = 1;
-            // opts.dmr_mute_encR = 1;
-          }
+          if (state.R > 0x7FFF) state.R = 0x7FFF;
+          //disable keyloader in case user tries to use this and it at the same time
+          state.keyloader = 0;
           break;
 
         case 'H':
