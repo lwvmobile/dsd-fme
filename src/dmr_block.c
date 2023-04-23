@@ -53,6 +53,16 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
       }
     }
 
+    uint8_t is_cap = 0;
+    if (strcmp (state->dmr_branding_sub, "Cap+ ") == 0) is_cap = 1;
+
+    if (is_cap)
+    {
+      //truncate tg on group? or just on private/individual data?
+      if (gi == 0) target = (uint32_t)ConvertBitIntoBytes(&dheader_bits[24], 16);
+      source = (uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 16);
+    }
+
     //store source for dmr pdu packet handling (lrrp) when not available in completed message
     if (dpf != 15) state->dmr_lrrp_source[slot] = source;
 
@@ -116,8 +126,8 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     fprintf (stderr, "\n");
     fprintf (stderr, " Slot %d Data Header - ", slot+1);
 
-    if (gi == 1 && dpf != 15) fprintf(stderr, "GROUP - ");
-    if (gi == 0 && dpf != 15) fprintf(stderr, "INDIV - ");
+    if (gi == 1 && dpf != 15) fprintf(stderr, "Group - ");
+    if (gi == 0 && dpf != 15) fprintf(stderr, "Indiv - ");
     
     if (dpf == 0)       fprintf (stderr, "Unified Data Transport (UDT) ");
     else if (dpf == 1)  fprintf (stderr, "Response Packet ");

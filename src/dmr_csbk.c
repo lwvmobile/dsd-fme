@@ -642,6 +642,15 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           else fprintf (stderr, "Source: %d - Target: %d ", source, target);
 
         }
+        // check to see if this is Cap+
+        else if (strcmp (state->dmr_branding_sub, "Cap+ ") == 0)
+        {
+          //truncate tg on group? or just on private/individual data?
+          if (gi == 0) target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16);
+          source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[64], 16);
+          int rest = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[60], 4);
+          fprintf (stderr, "Source: %d - Target: %d - Rest Channel: %d", source, target, rest);
+        }
         else fprintf (stderr, "Source: %d - Target: %d ", source, target);
 
       }
@@ -701,8 +710,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
 
       }
-      
-      //Cap+ Channel Status
+
+      //Cap+ Channel Status -- Expanded for up to 16 LSNs and private voice/data calls and dual slot csbk_bit storage
       if (csbk_o == 0x3E)
       {
 
@@ -712,11 +721,26 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         uint8_t fl = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 2); 
         uint8_t ts = cs_pdu_bits[18];  //timeslot this PDU occurs in
-        uint8_t res = cs_pdu_bits[19]; //unknown, always seems to be 0 -- could be used in larger Cap+? like a bank switch?
+        uint8_t res = cs_pdu_bits[19]; //unknown or unused bit value
         uint8_t rest_channel = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[20], 4); 
-        uint8_t group_tally = 0; //set this to the number of active group channels tallied
-
+        uint8_t group_tally = 0; //set this to the number of active channels tallied
+        uint8_t bank_one = 0;
+        uint8_t bank_two = 0;
+        uint8_t b2_start = 0;
         uint8_t block_num = state->cap_plus_block_num;
+        uint8_t pdflag = 0;
+        uint8_t pdflag2 = 0;
+        uint16_t private_target = 0;
+        uint8_t pd_b2 = 0;
+        uint8_t start = 8;
+        uint8_t end = 8;
+        uint8_t fl_bytes = 0;
+        uint8_t ch[24]; //one bit per channel
+        uint8_t pch[24]; //private or data call channel bits 
+        uint16_t tg = 0;
+        int i, j, k, x;
+        //tg and channel info for trunking purposes
+        uint16_t t_tg[24];
 
         //sanity check
         if (block_num > 6)
@@ -725,32 +749,22 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           block_num = 6;
         }
 
-        uint8_t ch[8]; //one bit per channel
-        uint8_t pch[8]; //private or data call channel bits 
-        uint8_t tg = 0;
-        int i, j, k;
-
-        //tg and channel info for trunking purposes
-        uint8_t t_tg[9];
+        //init some arrays
         memset (t_tg, 0, sizeof(t_tg));
-
-        //initialize group ch and private/data channel bit arrays
-        for (i = 0; i < 8; i++)
-        {
-          ch[i] = 0;
-          pch[i] = 0;
-        }
+        memset (ch, 0, sizeof(ch));
+        memset (pch, 0, sizeof(pch));
 
         //treating FL as a form of LCSS
         if (fl == 2 || fl == 3) //initial or single block (fl2 or fl3) 
         {
-          memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
-          for (i = 0; i < 10*8; i++) state->cap_plus_csbk_bits[i] = cs_pdu_bits[i];
+          //NOTE: this has been changed to store per slot
+          memset (state->cap_plus_csbk_bits[ts], 0, sizeof(state->cap_plus_csbk_bits[ts]));
+          for (i = 0; i < 10*8; i++) state->cap_plus_csbk_bits[ts][i] = cs_pdu_bits[i];
           state->cap_plus_block_num = 0;
         }
-        else //appended block (fl0) or final block (fl1)
+        else //appended block (fl 0) or final block (fl 1)
         {
-          for (i = 0; i < 7*8; i++) state->cap_plus_csbk_bits[i+80+(7*8*block_num)] = cs_pdu_bits[i+24];
+          for (i = 0; i < 7*8; i++) state->cap_plus_csbk_bits[ts][i+80+(7*8*block_num)] = cs_pdu_bits[i+24];
           block_num++;
           state->cap_plus_block_num++;
         }
@@ -772,94 +786,169 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (fl == 0) fprintf (stderr, " - Appended Block"); //have not yet observed a system use this fl value
         if (fl == 1) fprintf (stderr, " - Final Block"); 
         if (fl == 2) fprintf (stderr, " - Initial Block");
-        if (fl == 3) fprintf (stderr, " - Single Block"); //still considering a single, and not a final
+        if (fl == 3) fprintf (stderr, " - Single Block");
 
         //look at each group channel bit -- run this PRIOR to checking private or data calls
         //or else we will overwrite the ch bits we set below for private calls with zeroes
         //these also seem to indicate data calls -- can't find a distinction of which is which
+        bank_one = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][24], 8);
         for (int i = 0; i < 8; i++)
         {
-          ch[i] = state->cap_plus_csbk_bits[i+24];
-          if (ch[i] == 1) group_tally++; //figure out where to start looking in the byte stream for the 0x80 flag
-        } 
+          ch[i] = state->cap_plus_csbk_bits[ts][i+24];
+          if (ch[i] == 1) group_tally++; //figure out where to start looking in the byte stream for the 0next bank of calls
+        }
 
-        //check for private/data calls -- user will neeed to enable 'data' call tuning in order to tune them
-        uint8_t pdflag = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[40+(group_tally*8)], 8); //seems to be 0x80 (last block flag?) on samples I have 
-        uint16_t private_target = 0;
+        //Expanded to cover larger systems up to 16 slots.
+        bank_two = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][32+(group_tally*8)], 8); //32
+        b2_start = group_tally;
+        if (bank_two)
+        {
+          for (int i = 0; i < 8; i++)
+          {
+            ch[i+8] = state->cap_plus_csbk_bits[ts][i+32+(b2_start*8)];
+            if (ch[i+8] == 1) group_tally++; 
+          }
+        }
 
-        //first, check to see if we have a completed PDU
+        //check flag for appended private and/or data calls
+        pdflag = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][40+(group_tally*8)], 8);
+
+        //check for private activity on LSNs 1-8
         if (fl == 1 || fl == 3) 
         {
-          //then check to see if this byte has a value, should be 0x80
-          //this bytes location seems to shift depending on level of activity
-          if (pdflag == 0x80) //now looking to see if any appended data was added 
+          if (pdflag == 0x80)
           {
             k = 0; //= 0
             fprintf (stderr, "\n");
-            fprintf (stderr, " F%X Private or Data Call", pdflag);
+            fprintf (stderr, " F%X Private or Data Call - ", pdflag);
             for (int i = 0; i < 8; i++)
             {
-              pch[i] = state->cap_plus_csbk_bits[i+48+(group_tally*8)];
+              pch[i] = state->cap_plus_csbk_bits[ts][i+48+(group_tally*8)];
               if (pch[i] == 1)
               {
-                fprintf (stderr, " LSN %d:", i+1);
-                private_target = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[56+(k*16)+(group_tally*8)], 16);
+                fprintf (stderr, " LSN %02d:", i+1);
+                private_target = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][56+(k*16)+(group_tally*8)], 16);
                 fprintf (stderr, " TGT %d;", private_target);
-                if (opts->trunk_tune_data_calls == 1) t_tg[i] = private_target; //set here for tuning allow/block
+                // if (opts->trunk_tune_data_calls == 1) t_tg[i] = private_target; //moved to below section
                 k++;
+                if (bank_one == 0) bank_one = 1; //flag on bank one if not already for private call listings
+              } 
+            }
+            //save for starting point of the next private call bank
+            pd_b2 = k;
+          }
+        }
+        //end private/data call check on LSNs 1-8
+
+        //check flag for appended private and/or data calls -- flag two still needs work or testing, double checking, etc, disable if issues arise
+        pdflag2 = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][48+(group_tally*8)+(pd_b2*16)], 8);  
+
+        //check for private activity on LSNs 9-16
+        if (fl == 1 || fl == 3) 
+        {
+          //then check to see if this byte has a value, should be 0x80, could be other?
+          //this bytes location shifts depending on level of activity -- see banks above
+          if (pdflag2 == 0x80) //now looking to see if any appended data was added 
+          {
+            k = 0;
+            fprintf (stderr, "\n");
+            fprintf (stderr, " F%X Private or Data Call - ", pdflag2);
+            for (int i = 0; i < 8; i++)
+            {
+              pch[i+8] = state->cap_plus_csbk_bits[ts][i+56+(group_tally*8)+(pd_b2*16)]; //48
+              if (pch[i+8] == 1)
+              {
+                fprintf (stderr, " LSN %02d:", i+1);
+                private_target = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][64+(k*16)+(group_tally*8)+(pd_b2*16)], 16); //64
+                fprintf (stderr, " TGT %d;", private_target);
+                // if (opts->trunk_tune_data_calls == 1) t_tg[i+8] = private_target; //moved to below section
+                k++;
+                if (bank_two == 0) bank_two = 1; //flag on bank one if not already for private call listings
               } 
             }
           }
         }
-        //end private/data call check
+        //end private/data call check on LSNs 9-16
 
-        // if (fl != 2)
         if (fl == 1 || fl == 3)
         {
           fprintf (stderr, "\n  ");
           
           k = 0;
-          for (i = 0; i < 8; i++)
+          x = 0;
+
+          //start position;
+          start = 8;
+          if (bank_one) start = 0;
+          else if (rest_channel < 8) start = 0;
+
+          //end position; 
+          end = 8;
+          if (bank_two) end = 16;
+          else if (rest_channel > 8) end = 16;
+
+          //start parsing info and listing active LSNs
+          for (i = start; i < end; i++)
           {
-            fprintf (stderr, "LSN %d: ", i+1);
+            //skip an additional k value per bank
+            if (i == 8) k++;
+
+            if (i == 4 || i == 12)
+              fprintf (stderr, "\n  ");
+
+            if (i == 8 && start == 0 && end == 16)
+              fprintf (stderr, "\n  ");
+
+            fprintf (stderr, "LSN %02d: ", i+1);
             if (ch[i] == 1) //group voice channels
             {
-              tg = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[k*8+32], 8); 
-              if (tg != 0) fprintf (stderr, " %03d; ", tg);
-              else fprintf (stderr, "Actv; "); 
-              //add values to trunking tg/channel potentials
-              t_tg[i] = tg;
-              if (tg != 0) k++; 
               
+              tg = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][(k*8)+32], 8);
+              if (tg != 0) fprintf (stderr, "%5d;  ", tg);
+              else fprintf (stderr, "Group;  "); 
+              //flag as available for tuning if group calls enabled 
+              if (opts->trunk_tune_group_calls == 1) t_tg[i] = tg;
+              if (tg != 0) k++;               
             }
             else if (pch[i] == 1) //private or data channels
             {
-              fprintf (stderr, "P||D; ");
-              //flag as available for tuning if enabled
-              if (opts->trunk_tune_data_calls == 1) ch[i] = 1; 
+              tg = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][(group_tally*8)+(x*16)+56], 16);
+              if (tg != 0) fprintf (stderr, "%5d;  ", tg);
+              else fprintf (stderr, " P||D;  ");
+              //flag as available for tuning if data calls enabled 
+              if (opts->trunk_tune_data_calls == 1) t_tg[i] = tg; //ch[i] = 1;
+              if (tg != 0) x++;  
             }  
-            else if (i+1 == rest_channel) fprintf (stderr, "Rest; ");
-            else fprintf (stderr, "Idle; ");
+            else if (i+1 == rest_channel) fprintf (stderr, " Rest;  ");
+            else fprintf (stderr, " Idle;  ");
 
-            if (i == 3) fprintf (stderr, "\n  "); 
           }
+
+          //debug ncurses terminal display -- LSNs 1-8
+          // sprintf (state->dmr_lrrp_gps[0], "CAP LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d;", 1, t_tg[0], 2, t_tg[1], 3, t_tg[2], 4, t_tg[3]);
+          // sprintf (state->dmr_lrrp_gps[1], "CAP LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d;", 5, t_tg[4], 6, t_tg[5], 7, t_tg[6], 8, t_tg[7]);
+
+          //debug ncurses terminal display -- LSNs 9-16
+          // sprintf (state->dmr_lrrp_gps[0], "CAP LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d;", 9, t_tg[8], 10, t_tg[9], 11, t_tg[10], 12, t_tg[11]);
+          // sprintf (state->dmr_lrrp_gps[1], "CAP LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d;", 13, t_tg[12], 14, t_tg[13], 15, t_tg[14], 16, t_tg[15]);
+
 
           state->dmr_mfid = 0x10;
           sprintf (state->dmr_branding, "%s", "Motorola");
           sprintf (state->dmr_branding_sub, "%s", "Cap+ ");
 
-          //nullify any previous TIII data (bugfix for bad assignments or system type switching)
+          //nullify any previous site_parm data
           sprintf(state->dmr_site_parms, "%s", "");
 
           fprintf (stderr, "%s", KNRM);
 
-          //Skip tuning group calls if group calls are disabled
-          if (opts->trunk_tune_group_calls == 0) goto SKIPCAP;
+          //Skip tuning group calls if group calls are disabled -- moved to individual switches in the parsing phase
+          // if (opts->trunk_tune_group_calls == 0) goto SKIPCAP;
 
           //don't tune if vc on the current channel 
           if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
           {
-            for (j = 0; j < 8; j++) //go through the channels stored looking for active ones to tune to
+            for (j = start; j < end; j++) //go through the channels stored looking for active ones to tune to
             {
               char mode[8]; //allow, block, digital, enc, etc
 
@@ -879,6 +968,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               //without priority, this will tune the first one it finds (if group isn't blocked)
               if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
               {
+                //debug print for tuning verification
+                fprintf (stderr, "\n LSN/TG to tune to: %d - %d", j+1, t_tg[j]);
+                
                 if (state->trunk_chan_map[j+1] != 0) //if we have a valid frequency
                 {
                   //RIGCTL
@@ -914,20 +1006,21 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           {
             fprintf (stderr, "%s\n", KYEL); 
             fprintf (stderr, " CAP+ Multi Block PDU \n  ");
-            uint8_t fl_bytes = 0;
+            fl_bytes = 0;
             for (i = 0; i < (10+(block_num*7)); i++) 
             {
-              fl_bytes = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[i*8], 8);
+              fl_bytes = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][i*8], 8);
               fprintf (stderr, "[%02X]", fl_bytes);
               if (i == 17 || i == 35) fprintf (stderr, "\n  ");
             }
             fprintf (stderr, "%s", KNRM);
           }
-          memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
+          memset (state->cap_plus_csbk_bits[ts], 0, sizeof(state->cap_plus_csbk_bits[ts]));
           state->cap_plus_block_num = 0;
           
         } //if (fl == 1 || fl == 3)
       } //opcode == 0x3E
+
     } //fid == 0x10
 
     //Connect+ Section
@@ -974,14 +1067,14 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         //if using rigctl we can set an unknown or updated cc frequency 
         //by polling rigctl for the current frequency
-        if (opts->use_rigctl == 1 && opts->p25_is_tuned == 0) //&& state->p25_cc_freq == 0
+        if (opts->use_rigctl == 1 && opts->p25_is_tuned == 0)
         {
           ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
           if (ccfreq != 0) state->p25_cc_freq = ccfreq;
         }
 
         //if using rtl input, we can ask for the current frequency tuned
-        if (opts->audio_in_type == 3 && opts->p25_is_tuned == 0) //&& state->p25_cc_freq == 0
+        if (opts->audio_in_type == 3 && opts->p25_is_tuned == 0)
         {
           ccfreq = (long int)opts->rtlsdr_center_freq;
           if (ccfreq != 0) state->p25_cc_freq = ccfreq;
@@ -1100,7 +1193,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           
           //LSN value here is logical slot, in flco, we get the logical channel (which is the repeater, does not include the slot value)
           fprintf (stderr, "LSN %02d: ", i+xpt_bank+1); //swapped out xpt_bank for all (xpt_seq*6) to simplify things
-          tg = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[i*8+32], 8);
+          tg = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[i*8+32], 8);
           fprintf (stderr, "ST-%X", xpt_ch[i]); //status bits value 0,1,2, or 3
           if (tg != 0)                fprintf (stderr, " %03d;  ", tg); 
           else

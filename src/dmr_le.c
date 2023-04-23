@@ -239,9 +239,9 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   //   if (irr_err == 0)
   //   {
   //     if (sbrc_hex == 0) ; //NULL
-  //     else if (sbrc_hex == 0x313) //sbrc_hex == 0x313 and 0x643 (cap+ things)
+  //     else if (strcmp (state->dmr_branding_sub, "Cap+ ") == 0)
   //     {
-  //       //Cap+ Site ID seems to fit here on samples I've seen with the alternate SB signalling
+  //       //Cap+ Site ID seems to fit here on samples I've seen with the alternate SB signalling, but no idea what signals that info and not the emb alg/key info
   //       fprintf (stderr, "%s ", KYEL);
   //       fprintf (stderr, "\n ");
   //       fprintf (stderr, " Capacity Plus Site %d", cap_site);
