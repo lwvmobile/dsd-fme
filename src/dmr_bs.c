@@ -366,7 +366,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
 
     cach_err = dmr_cach (opts, state, cachdata); 
-    fprintf (stderr, "\n");
+    if (opts->payload == 0) fprintf (stderr, "\n");
 
     // run alg refresh after vc6 ambe processing
     if (internalslot == 0 && vc1 == 6) dmr_alg_refresh (opts, state);
@@ -712,7 +712,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   dmr_late_entry_mi_fragment (opts, state, 1, m1, m2, m3);
 
   cach_err = dmr_cach (opts, state, cachdata);
-  fprintf (stderr, "\n");
+  if (opts->payload == 0) fprintf (stderr, "\n");
 
   //update voice sync time for trunking purposes (particularly Con+)
   if (opts->p25_is_tuned == 1) state->last_vc_sync_time = time(NULL);

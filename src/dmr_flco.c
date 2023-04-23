@@ -199,9 +199,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16); //16-bit allocation
 
       //the bits that are left behind
-      xpt_res_a = (uint8_t)ConvertBitIntoBytes(&lc_bits[20], 4); //after the xpt_int channel, before the free repeater channel
+      xpt_res_a = (uint8_t)ConvertBitIntoBytes(&lc_bits[20], 4); //after the xpt_int channel, before the free repeater channel -- call being established = 7; call connected = 0; ??
       xpt_res_b = (uint8_t)ConvertBitIntoBytes(&lc_bits[48], 8); //where the first 8 bits of the SRC would be
-      xpt_res_c = (uint8_t)ConvertBitIntoBytes(&lc_bits[72], 8); //some unknown 8 bit value after the SRC
 
       //the crc8 hash is the value represented in the CSBK when dealing with private calls
       for (int i = 0; i < 16; i++) target_hash[i] = lc_bits[32+i];
@@ -239,6 +238,14 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         else if (xpt_hand == 2) fprintf (stderr, "Release Channel Interrupt; ");
         else fprintf (stderr, "Reserved; ");
       }
+
+      // if (opts->payload == 1)
+      // {
+      //   if (xpt_res_a == 0) fprintf (stderr, "Call Connected; ");
+      //   if (xpt_res_a == 1) fprintf (stderr, "Data Call Request; ");
+      //   if (xpt_res_a == 7) fprintf (stderr, "Voice Call Request; ");
+      //   if (xpt_res_a == 2) fprintf (stderr, "Unknown Status; ");
+      // }
 
       //logical repeater channel, not the logical slot value in the CSBK
       if (opts->payload == 1) fprintf(stderr, "Call on LCN %d; ", xpt_int); //LCN channel call or 'interrupt' will occur on
@@ -526,7 +533,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   END_FLCO:
   if (unk == 1 || pf == 1)
   {
-    fprintf(stderr, " FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
+    fprintf(stderr, " FLCO=0x%02X FID=0x%02X ", flco, fid);
     fprintf (stderr, "%s", KNRM);
   }
 
