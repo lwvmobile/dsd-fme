@@ -66,8 +66,8 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	uint8_t facch2_bits[348]; //facch2 or udch, same amount of bits
 	uint8_t facch3_bits[288]; //facch3 or udch2, same amoount of bits
 
-  //nxdn bit buffer, for easy assignment handling
-  int nxdn_bit_buffer[364]; 
+	//nxdn bit buffer, for easy assignment handling
+	int nxdn_bit_buffer[364]; 
 	int nxdn_dibit_buffer[182];
 
 	//init all arrays
@@ -85,7 +85,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	memset (nxdn_dibit_buffer, 0, sizeof(nxdn_dibit_buffer));
 
 	//collect lich bits first, if they are good, then we can collect the rest of them
-  for (int i = 0; i < 8; i++) lich_dibits[i] = dbuf[i] = getDibit(opts, state);
+	for (int i = 0; i < 8; i++) lich_dibits[i] = dbuf[i] = getDibit(opts, state);
 
 	nxdn_descramble (lich_dibits, 8);
 	
@@ -96,7 +96,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	lich_parity_computed = ((lich >> 7) + (lich >> 6) + (lich >> 5) + (lich >> 4)) & 1;
 	lich = lich >> 1;
 	if (lich_parity_received != lich_parity_computed)
-  {
+	{
 		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly 
 		goto END;
 	}
@@ -318,7 +318,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	// RF Channel Type
 	if (lich_rf == 0) fprintf (stderr, "RCCH ");
 	else if (lich_rf == 1) fprintf (stderr, "RTCH ");
-	else if (lich_rf == 1) fprintf (stderr, "RDCH ");
+	else if (lich_rf == 2) fprintf (stderr, "RDCH ");
 	else
 	{
 		if (lich < 0x60) fprintf (stderr, "RTCH_C ");
