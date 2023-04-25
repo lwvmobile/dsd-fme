@@ -37,6 +37,11 @@ void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state)
   if (CrcCorrect == 1) NXDN_Elements_Content_decode(opts, state, CrcCorrect, SACCH);
   else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, SACCH);
 
+  //reset the sacch field -- Github Issue #118
+  memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+  memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+
+
 } /* End NXDN_SACCH_Full_decode() */
 
 
@@ -428,7 +433,8 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
   /* Print Source ID and Destination ID (Talk Group or Unit ID) */
   fprintf(stderr, "Src=%u - Dst/TG=%u ", SourceUnitID & 0xFFFF, DestinationID & 0xFFFF);
 
-  // if (idas) fprintf (stderr, "- Ch: %d ", rep1);
+  //Channel here appears to be the prefix or home channel of the caller, not necessarily the channel the call is occuring on
+  // if (idas) fprintf (stderr, "- Prefix Ch: %d ", rep1);
 
   /* Print Channel */
   if (state->nxdn_rcn == 0)
@@ -1089,7 +1095,8 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   /* Print Source ID and Destination ID (Talk Group or Unit ID) */
   fprintf(stderr, "Src=%u - Dst/TG=%u ", SourceUnitID & 0xFFFF, DestinationID & 0xFFFF);
 
-  if (idas) fprintf (stderr, "- Ch: %d ", rep1);
+  //Channel here appears to be the prefix or home channel of the caller, not necessarily the channel the call is occuring on
+  if (idas) fprintf (stderr, "- Prefix Ch: %d ", rep1);
 
   fprintf (stderr, "%s", KNRM);
 
@@ -1101,6 +1108,15 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 
   //Don't zero key if no keyloader
   if (CipherType != 0x1 && state->keyloader == 1) state->R = 0;
+
+  //NOTE: Broadcast Call appears to have values that aren't typical for VCALL, 
+  //so not applying any settings below if CallType == 0 (BC Call)
+
+  //NOTE: Above note may be in error; its possible that the issues I was having
+  //was from not resetting the entire SACCH superframe after reading it, and
+  //the samples in question having interwoven ALIAS and VCALL, and bad settings
+  //coming from a missed SF Part of Frame, if not reset, we could skip a SF POF 
+  //and still believe we have a good decode -- will need further testing #118
 
   /* Print the "Cipher Type" */
   if(CipherType != 0 && MessageType == 0x1)
@@ -1218,9 +1234,11 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
   sprintf (state->nxdn_location_category, "Type-D");
 
   //placeholder numbers, using 99 if these aren't set by the Site ID Message (single sites)
-  if (state->nxdn_location_site_code == 0) state->nxdn_location_site_code = 99; 
-  if (state->nxdn_location_sys_code == 0)  state->nxdn_location_sys_code = 99;
-  if (state->nxdn_last_ran == -1)          state->nxdn_last_ran = 99;
+  // if (state->nxdn_location_site_code == 0) state->nxdn_location_site_code = 99; 
+  // if (state->nxdn_location_sys_code == 0)  state->nxdn_location_sys_code = 99;
+  // if (state->nxdn_last_ran == -1)          state->nxdn_last_ran = 99;
+
+  state->nxdn_last_ran = area;
 
   state->last_cc_sync_time = time(NULL);
 

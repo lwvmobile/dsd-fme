@@ -97,9 +97,9 @@ char * SyncTypes[44] = {
   "NXDN",
   "YSF", //30
   "YSF",
-  "DMR MS VOICE",
-  "DMR MS DATA",
-  "DMR RC DATA",
+  "DMR", //DMR MS VOICE
+  "DMR", //DMR MS DATA
+  "DMR", //DMR RC DATA
   "P25P2",
   "P25P2",
   "EDACS/PV", //37
@@ -1686,6 +1686,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 void
 ncursesPrinter (dsd_opts * opts, dsd_state * state)
 {
+  uint8_t idas = 0;
   int level = 0;
   int c = 0;
 
@@ -2245,39 +2246,44 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //NXDN
   if (lls == 28 || lls == 29)
   {
-    
+    if (strcmp (state->nxdn_location_category, "Type-D") == 0) idas = 1;
+
     if (opts->p25_trunk == 1)
     {
 
       printw ("| ");
       if (opts->p25_is_tuned == 0)
       {
-        printw ("Monitoring Control Channel");
+        if (idas == 0) printw ("Monitoring RCCH Channel"); //Control Channel
+        if (idas == 1) printw ("Monitoring RTCH2 Channel"); //Idas RTCH2 Channel
         if (state->p25_cc_freq != 0)
         {
-          printw (" - CC Freq: [%.06lf] Mhz ", (double)state->p25_cc_freq/1000000);
+          printw (" - Frequency: [%.06lf] Mhz ", (double)state->p25_cc_freq/1000000);
         }
       } 
       else if (opts->p25_is_tuned == 1)
       {
-        printw ("Monitoring  Voice  Channel");
+        if (idas == 0) printw ("Monitoring RTCH Channel"); //Traffic Channel
+        if (idas == 1) printw ("Monitoring RTCH2 Channel"); //Idas RTCH2
         if (state->p25_vc_freq[0] != 0)
         {
-          printw (" - VC Freq: [%.06lf] Mhz ", (double)state->p25_vc_freq[0]/1000000);
+          printw (" - Frequency: [%.06lf] Mhz ", (double)state->p25_vc_freq[0]/1000000);
         }
-      } 
-      
-      printw ("\n");
+      }
 
+      printw ("\n");
     }
+      
+    
 
     printw ("| ");
-    printw ("NXDN - RAN: [%02d] ", rn);
+    if (idas == 0) printw ("NXDN - RAN: [%02d] ", rn);
+    if (idas == 1) printw ("IDAS - Area: [%02d] ", rn);
     if (state->nxdn_location_site_code != 0)
     {
-      printw ("Cat [%s] ", state->nxdn_location_category);
-      printw ("Sys Code [%d] ", state->nxdn_location_sys_code);
-      printw ("Site Code [%d] ", state->nxdn_location_site_code);
+      printw ("Cat: [%s] ", state->nxdn_location_category);
+      printw ("Sys Code: [%d] ", state->nxdn_location_sys_code);
+      printw ("Site Code: [%d] ", state->nxdn_location_site_code);
     }
 
     //if system supports Direct Frequency Assignment
@@ -2310,9 +2316,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     if (state->nxdn_cipher_type == 0x1 && state->carrier == 1)
     {
-      attron(COLOR_PAIR(2));
+      if (state->R == 0) attron(COLOR_PAIR(2));
       printw ("Scrambler ");
-      attroff(COLOR_PAIR(2));
+      if (state->R == 0) attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
       if (state->R != 0)
       {
@@ -2487,6 +2493,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       attron(COLOR_PAIR(1));
       printw("DES-OFB");
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algid == 0x82)
+    {
+      attron(COLOR_PAIR(1));
+      printw("Double DES");
       attron(COLOR_PAIR(3));
     }
     if (state->payload_algid == 0x83 || state->payload_algid == 0x23)
@@ -2931,7 +2943,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw ("| %s ", SyncTypes[call_matrix[9-j][0]]);
         if (lls == 28 || lls == 29)
         {
-          printw ("RAN [%02lld] ", call_matrix[9-j][1]);
+          if (idas == 0) printw ("RAN [%02lld] ", call_matrix[9-j][1]);
+          if (idas == 1) printw ("Area [%02lld] ", call_matrix[9-j][1]);
           printw ("TG [%5lld] ", call_matrix[9-j][4]);
           printw ("RID [%5lld] ", call_matrix[9-j][2]);
         }
@@ -2960,7 +2973,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         //DMR MS Types
         if (call_matrix[9-j][0] == 32 || call_matrix[9-j][0] == 33 || call_matrix[9-j][0] == 34 )
         {
-          //printw ("S[%d] ", call_matrix[9-j][3]);
+          printw ("S[%lld] ", call_matrix[9-j][3]);
           printw ("TGT [%8lld] ", call_matrix[9-j][1]);
           printw ("SRC [%8lld] ", call_matrix[9-j][2]);
           printw ("DCC [%02lld] ", call_matrix[9-j][4]);
@@ -3210,6 +3223,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     sprintf (state->group_array[state->group_tally].groupName, "%s", "LOCKOUT");
     state->group_tally++;
 
+    //if we have an opened group file, let's write a group lock out into it to make it permanent
+    if (opts->group_in_file[0] != 0) //file is available
+    {
+      FILE * pFile; //file pointer
+      //open file by name that is supplied in the ncurses terminal, or cli
+      pFile = fopen (opts->group_in_file, "a");
+      fprintf (pFile, "%d,B,LOCKOUT,%02X\n", state->lasttg, state->payload_algid);
+      fclose (pFile);
+    }
+
     //extra safeguards due to sync issues with NXDN
     memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
     memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
@@ -3248,6 +3271,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
     sprintf (state->group_array[state->group_tally].groupName, "%s", "LOCKOUT");
     state->group_tally++;
+
+    //if we have an opened group file, let's write a group lock out into it to make it permanent
+    if (opts->group_in_file[0] != 0) //file is available
+    {
+      FILE * pFile; //file pointer
+      //open file by name that is supplied in the ncurses terminal, or cli
+      pFile = fopen (opts->group_in_file, "a");
+      fprintf (pFile, "%d,B,LOCKOUT,%02X\n", state->lasttgR, state->payload_algidR);
+      fclose (pFile);
+    }
 
     //extra safeguards due to sync issues with NXDN
     memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
@@ -3331,6 +3364,19 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //DMR Location Area - DMRLA B***S***
     opts->dmr_dmrla_is_set = 0;
     opts->dmr_dmrla_n = 0;
+
+    //reset NXDN info
+    state->nxdn_location_site_code = 0;
+    state->nxdn_location_sys_code = 0;
+    sprintf (state->nxdn_location_category, "%s", " ");
+
+    state->nxdn_last_ran = 0;
+    state->nxdn_ran = 0;
+
+    state->nxdn_rcn = 0;
+    state->nxdn_base_freq = 0;
+    state->nxdn_step = 0;
+    state->nxdn_bw = 0;
 
   }
 

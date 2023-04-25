@@ -271,6 +271,10 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 			}
 			// if (crc != check) fprintf (stderr, " CRC ERR - %02X %02X", check, crc); 
 		}
+		
+		//reset the sacch field -- Github Issue #118
+		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 
 	}
 	
