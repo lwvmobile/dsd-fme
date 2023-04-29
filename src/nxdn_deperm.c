@@ -932,7 +932,8 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 		memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
 		state->nxdn_last_rid = 0;
 		state->nxdn_last_tg = 0;
-		if (state->M == 0) state->nxdn_cipher_type = 0;
+		state->nxdn_cipher_type = 0; //force will reactivate it if needed during voice tx
+		if (state->keyloader == 1) state->R = 0;
 		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		sprintf (state->nxdn_call_type, "%s", "");

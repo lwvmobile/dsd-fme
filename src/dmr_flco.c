@@ -907,6 +907,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     {
       fprintf (stderr, "[%02X]", slco_bytes[i]);
     }
+    fprintf (stderr, "\n"); //if its a voice frame, we need the line break 
   }
 
   fprintf (stderr, "%s", KNRM);

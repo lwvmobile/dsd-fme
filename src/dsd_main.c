@@ -52,7 +52,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Aero' Edition       v2.0.0-84-gacd2b0b Windows 32-bit "
+  " 'Aero' Edition       v2.0.0-86-gfef36e3 Windows 32-bit "
 };
 
 int comp (const void *a, const void *b)
@@ -76,36 +76,6 @@ char * pEnd; //bugfix
 void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
-
-  // // experimental conventional frequency scanner mode
-  // if (opts->scanner_mode == 1)
-  // {
-
-  //   if (state->lcn_freq_roll > state->lcn_freq_count) //with >= we were cutting one short
-  //   {
-  //     state->lcn_freq_roll = 0; //reset to zero
-  //   }
-  //   //check that we have a non zero value first, then tune next frequency
-  //   if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0) 
-  //   {
-  //     //rigctl
-  //     if (opts->use_rigctl == 1)
-  //     {
-  //       if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-  //       SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[state->lcn_freq_roll]);
-  //     }
-  //     //rtludp
-  //     if (opts->audio_in_type == 3)
-  //     {
-  //       rtl_udp_tune (opts, state, state->trunk_lcn_freq[state->lcn_freq_roll]);
-  //     }
-
-  //     if (state->lastsynctype != -1) fprintf (stderr, "Resume Scanning Mode\n");
-
-  //   }
-  //   state->lcn_freq_roll++;
-  // }
-  // //end experimental conventional frequency scanner mode
 
   //experimental conventional frequency scanner mode
   if (opts->scanner_mode == 1 && ( (time(NULL) - state->last_cc_sync_time) > opts->trunk_hangtime))
@@ -359,6 +329,18 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->nxdn_alias_block_number = 0;
   memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
   sprintf (state->nxdn_call_type, "%s", "");
+
+  //unload keys when using keylaoder
+  if (state->keyloader == 1)
+  {
+    state->R = 0; //NXDN
+    state->K = 0; //BP
+    state->K1 = 0; //tera 10 char BP
+    state->H = 0; //shim for above
+  }
+
+  //forcing key application will re-enable this at the time of voice tx
+  state->nxdn_cipher_type = 0;
 
   //dmr overaching manufacturer in use for a particular system or radio  
   // state->dmr_mfid = -1;
