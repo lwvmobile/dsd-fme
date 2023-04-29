@@ -442,11 +442,11 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
   if (state->nxdn_rcn == 1) 
     fprintf(stderr, "- DFA Channel [%04X][%05d] ", OFN, OFN);
 
-  //test VCALL_ASSGN_DUP, if no voice sync activity in 1-2 seconds, then convert to assgn and allow tuning
+  //test VCALL_ASSGN_DUP, if no voice sync activity (by trunk_hangtime), then convert to assgn and allow tuning
   //VCALL_ASSGN_DUP has been seen in the middle of calls, but also on the tail end instead of a TX_REL or DISC
   if (MessageType == 0x5 && opts->p25_is_tuned == 1 && opts->p25_trunk == 1)
   {
-    if ( (time(NULL) - state->last_vc_sync_time) > 1 ) 
+    if ( (time(NULL) - state->last_vc_sync_time) > opts->trunk_hangtime ) 
     {
       MessageType = 0x04; //convert to VCALL
       opts->p25_is_tuned = 0; //open tuning back up to tune
