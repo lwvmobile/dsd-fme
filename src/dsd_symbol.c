@@ -142,16 +142,49 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
 #endif
       }
+
       //tcp socket input from SDR++
       else if (opts->audio_in_type == 8)
       {
         result = sf_read_short(opts->tcp_file_in, &sample, 1);
         if(result == 0) {
-          sf_close(opts->tcp_file_in);
-          opts->audio_in_type = 0; //set input type
-          openPulseInput(opts); //open pulse inpput
-          sample = 0; //zero sample on bad result, keep the ball rolling
-          fprintf (stderr, "Connection to TCP Server Disconnected.\n");
+          fprintf (stderr, "\nConnection to TCP Server Interrupted. Trying again in 3 seconds.\n");
+          sample = 0;
+          sf_close(opts->tcp_file_in); //close current connection on this end
+          sleep (3); //halt all processing and wait 3 seconds
+
+          //attempt to reconnect to socket
+          opts->tcp_sockfd = 0;  
+          opts->tcp_sockfd = Connect(opts->tcp_hostname, opts->tcp_portno);
+          if (opts->tcp_sockfd != 0)
+          {
+            //reset audio input stream
+            opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
+            opts->audio_in_file_info->samplerate=opts->wav_sample_rate;
+            opts->audio_in_file_info->channels=1;
+            opts->audio_in_file_info->seekable=0;
+            opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
+            opts->tcp_file_in = sf_open_fd(opts->tcp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
+
+            if(opts->tcp_file_in == NULL)
+            {
+              fprintf(stderr, "Error, couldn't Reconnect to TCP with libsndfile: %s\n", sf_strerror(NULL));
+            }
+            else fprintf (stderr, "TCP Socket Reconnected Successfully.\n");
+          }
+          else fprintf (stderr, "TCP Socket Connection Error.\n");          
+
+          //now retry reading sample
+          result = sf_read_short(opts->tcp_file_in, &sample, 1);
+          if (result == 0) {
+            sf_close(opts->tcp_file_in);
+            opts->audio_in_type = 0; //set input type
+            opts->tcp_sockfd = 0; //added this line so we will know if it connected when using ncurses terminal keyboard shortcut
+            openPulseInput(opts); //open pulse inpput
+            sample = 0; //zero sample on bad result, keep the ball rolling
+            fprintf (stderr, "Connection to TCP Server Disconnected.\n");
+          }
+          
         }
       }
       //UDP Socket input...not working correct. Reads samples, but no sync

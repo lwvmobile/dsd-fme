@@ -3389,6 +3389,36 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     noCarrier(opts, state);
   }
 
+  //attempt retry to TCP Audio server
+  if (c == 56) // '8' key, try audio in type 8 (TCP Audio Server connection) using defaults OR whatever the user last specified
+  {
+
+    opts->tcp_sockfd = Connect(opts->tcp_hostname, opts->tcp_portno);
+    if (opts->tcp_sockfd != 0)
+    {
+      //reset audio input stream
+      opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
+      opts->audio_in_file_info->samplerate=opts->wav_sample_rate;
+      opts->audio_in_file_info->channels=1;
+      opts->audio_in_file_info->seekable=0;
+      opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
+      opts->tcp_file_in = sf_open_fd(opts->tcp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
+
+      if(opts->tcp_file_in == NULL)
+      {
+        fprintf(stderr, "Error, couldn't Connect to TCP with libsndfile: %s\n", sf_strerror(NULL));
+      }
+      else
+      {
+        //close pulse input if it is currently open
+        if (opts->audio_in_type == 0) closePulseInput(opts);
+        fprintf (stderr, "TCP Socket Connected Successfully.\n");
+        opts->audio_in_type = 8;
+      } 
+    }
+    else fprintf (stderr, "TCP Socket Connection Error.\n");
+  }
+
  //anything with an entry box will need the inputs and outputs stopped first
  //so probably just write a function to handle c input, and when c = certain values 
  //needing an entry box, then stop all of those
