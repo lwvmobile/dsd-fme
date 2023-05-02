@@ -73,7 +73,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //all of these messages share the same format (thankfully)
         if (csbk_o == 48) fprintf (stderr, " Private Voice Channel Grant (PV_GRANT)");
         if (csbk_o == 49) fprintf (stderr, " Talkgroup Voice Channel Grant (TV_GRANT)");
-        if (csbk_o == 50) fprintf (stderr, " Private Broadcast Voice Channel Grant (BTV_GRANT)");
+        if (csbk_o == 50) fprintf (stderr, " Broadcast Voice Channel Grant (BTV_GRANT)");  //listed as private in the appendix (error?)
         if (csbk_o == 51) fprintf (stderr, " Private Data Channel Grant: Single Item (PD_GRANT)");
         if (csbk_o == 52) fprintf (stderr, " Talkgroup Data Channel Grant: Single Item (TD_GRANT)");
         if (csbk_o == 53) fprintf (stderr, " Duplex Private Voice Channel Grant (PV_GRANT_DX)");
@@ -149,8 +149,15 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
         }
 
+        //add active channel string to display
+        //NOTE: Need to reconfigure mbc variables so I can print them here when needed, just using abs freq for now
+        if (lpchannum != 0 && lpchannum != 0xFFF) sprintf (state->active_channel[0], "Active Ch: %d TG: %d; ", lpchannum, target);
+        else if (lpchannum == 0xFFF) sprintf (state->active_channel[0], "Active Freq: %.6lf TG: %d; ", (double)freq/1000000, target);
+
         //Skip tuning group calls if group calls are disabled
-        if (opts->trunk_tune_group_calls == 0 && csbk_o == 49) goto SKIPCALL;
+        if (opts->trunk_tune_group_calls == 0 && csbk_o == 49) goto SKIPCALL; //TV_GRANT
+        if (opts->trunk_tune_group_calls == 0 && csbk_o == 50) goto SKIPCALL; //BTV_GRANT
+        if (csbk_o == 50) csbk_o = 49; //flip to normal group call for group tuning
 
         //Allow tuning of data calls if user wishes by flipping the csbk_o to a group voice call
         if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54)
@@ -741,6 +748,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         int i, j, k, x;
         //tg and channel info for trunking purposes
         uint16_t t_tg[24];
+        char cap_active[20]; //local string to concantenate to active channel stuff
 
         //sanity check
         if (block_num > 6)
@@ -829,9 +837,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 fprintf (stderr, " LSN %02d:", i+1);
                 private_target = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][56+(k*16)+(group_tally*8)], 16);
                 fprintf (stderr, " TGT %d;", private_target);
-                // if (opts->trunk_tune_data_calls == 1) t_tg[i] = private_target; //moved to below section
                 k++;
-                if (bank_one == 0) bank_one = 1; //flag on bank one if not already for private call listings
+                if (bank_one == 0) bank_one = 0xFF; //set all bits on so we can atleast parse all of them below in listing/display 
               } 
             }
             //save for starting point of the next private call bank
@@ -861,9 +868,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 fprintf (stderr, " LSN %02d:", i+1);
                 private_target = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][64+(k*16)+(group_tally*8)+(pd_b2*16)], 16); //64
                 fprintf (stderr, " TGT %d;", private_target);
-                // if (opts->trunk_tune_data_calls == 1) t_tg[i+8] = private_target; //moved to below section
                 k++;
-                if (bank_two == 0) bank_two = 1; //flag on bank one if not already for private call listings
+                if (bank_two == 0) bank_two = 0xFF; //set all bits on so we can atleast parse all of them below in listing/display 
               } 
             }
           }
@@ -873,19 +879,45 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (fl == 1 || fl == 3)
         {
           fprintf (stderr, "\n  ");
+
+          //additive strings for active channels
+          memset (state->active_channel, 0, sizeof(state->active_channel));
+          sprintf (state->active_channel[0], "Cap+ ");
           
           k = 0;
           x = 0;
 
-          //start position;
-          start = 8;
-          if (bank_one) start = 0;
-          else if (rest_channel < 8) start = 0;
+          //NOTE: New start and end positions will allow the status print
+          //to contract and expand as needed to prevent this from
+          //being a four liner CSBK when there is little or no activity
 
-          //end position; 
-          end = 8;
-          if (bank_two) end = 16;
-          else if (rest_channel > 8) end = 16;
+          //start position;
+          start = 0; 
+          if (bank_one & 0xF0) start = 0;
+          else if (rest_channel < 5) start = 0;
+
+          else if (bank_one & 0xF) start = 4;
+          else if (rest_channel > 4 && rest_channel < 9) start = 4;
+
+          else if (bank_two & 0xF0) start = 8;
+          else if (rest_channel > 8 && rest_channel < 13) start = 8;
+
+          else if (bank_two & 0xF) start = 12;
+          else if (rest_channel > 12) start = 12;
+
+          //end position;
+          end = 16;
+          if (bank_two & 0xF) end = 16;
+          else if (rest_channel > 12) end = 16;
+
+          else if (bank_two & 0xF0) end = 12;
+          else if (rest_channel > 9 && rest_channel < 13) end = 12;
+
+          else if (bank_one & 0xF) end = 8;
+          else if (rest_channel > 4 && rest_channel < 9) end = 8;
+
+          else if (bank_one & 0xF0) end = 4;
+          else if (rest_channel < 5) end = 4;
 
           //start parsing info and listing active LSNs
           for (i = start; i < end; i++)
@@ -893,10 +925,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             //skip an additional k value per bank
             if (i == 8) k++;
 
-            if (i == 4 || i == 12)
+            if (start < 1 && i == 4)
               fprintf (stderr, "\n  ");
 
-            if (i == 8 && start == 0 && end == 16)
+            if (start < 5 && i == 8)
+              fprintf (stderr, "\n  ");
+
+            if (start < 9 && i == 12)
               fprintf (stderr, "\n  ");
 
             fprintf (stderr, "LSN %02d: ", i+1);
@@ -908,7 +943,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               else fprintf (stderr, "Group;  "); 
               //flag as available for tuning if group calls enabled 
               if (opts->trunk_tune_group_calls == 1) t_tg[i] = tg;
-              if (tg != 0) k++;               
+              if (tg != 0) k++;
+
+              //add active channel to display string
+              sprintf (cap_active, "LSN:%d TG:%d; ", i+1, tg);
+              strcat (state->active_channel[i+1], cap_active);               
             }
             else if (pch[i] == 1) //private or data channels
             {
@@ -917,20 +956,23 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               else fprintf (stderr, " P||D;  ");
               //flag as available for tuning if data calls enabled 
               if (opts->trunk_tune_data_calls == 1) t_tg[i] = tg; //ch[i] = 1;
-              if (tg != 0) x++;  
+              if (tg != 0) x++;
+
+              //add active channel to display string
+              
+              //NOTE: Consider only adding this if user toggled or else 
+              //lots of short data bursts blink in and out
+              if (1 == 1) //opts->trunk_tune_data_calls
+              {
+                sprintf (cap_active, "LSN:%d PC:%d; ", i+1, tg);
+                strcat (state->active_channel[i+1], cap_active);
+              }
+                
             }  
             else if (i+1 == rest_channel) fprintf (stderr, " Rest;  ");
             else fprintf (stderr, " Idle;  ");
 
           }
-
-          //debug ncurses terminal display -- LSNs 1-8
-          // sprintf (state->dmr_lrrp_gps[0], "CAP LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d;", 1, t_tg[0], 2, t_tg[1], 3, t_tg[2], 4, t_tg[3]);
-          // sprintf (state->dmr_lrrp_gps[1], "CAP LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d;", 5, t_tg[4], 6, t_tg[5], 7, t_tg[6], 8, t_tg[7]);
-
-          //debug ncurses terminal display -- LSNs 9-16
-          // sprintf (state->dmr_lrrp_gps[0], "CAP LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d;", 9, t_tg[8], 10, t_tg[9], 11, t_tg[10], 12, t_tg[11]);
-          // sprintf (state->dmr_lrrp_gps[1], "CAP LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d;", 13, t_tg[12], 14, t_tg[13], 15, t_tg[14], 16, t_tg[15]);
 
 
           state->dmr_mfid = 0x10;
@@ -1062,6 +1104,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
 
+        //add active channel string for display
+        sprintf (state->active_channel[0], "Active Ch: %d TG: %d; ", lcn, grpAddr);
+
         //Skip tuning group calls if group calls are disabled
         if (opts->trunk_tune_group_calls == 0) goto SKIPCON;
 
@@ -1181,6 +1226,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         fprintf (stderr, " Hytera XPT Site Status - Free LCN: %d SN: %d", xpt_free, xpt_seq);
 
+        //strings for active channels
+        char xpt_active[20];
+        if (xpt_seq == 0) sprintf (state->active_channel[0], "XPT "); //add initial if sequence 0
+        else sprintf (state->active_channel[xpt_seq], "%s", ""); //blank current sequence to re-write to
+
         //Print List of LCN with LSN Activity 
         for (i = 0; i < 6; i++) 
         {
@@ -1222,11 +1272,18 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           //add values to trunking tg/channel potentials
           if (tg != 0) t_tg[i+xpt_bank] = tg;
 
-        }
+          //concantenate string to active channels for ncurses display
+          if (tg != 0)
+          {
+            if (xpt_ch[i] == 3) sprintf (xpt_active, "LSN:%d TG:%d; ", i+xpt_bank+1, tg);
+            if (xpt_ch[i] == 2) sprintf (xpt_active, "LSN:%d PC:%d; ", i+xpt_bank+1, tg);
+            //last two are unknown status but have an associated target value
+            if (xpt_ch[i] == 1) sprintf (xpt_active, "LSN:%d UK:%d; ", i+xpt_bank+1, tg);
+            if (xpt_ch[i] == 0) sprintf (xpt_active, "LSN:%d UK:%d; ", i+xpt_bank+1, tg);
+            strcat (state->active_channel[xpt_seq], xpt_active); //add string to active channel seq
+          }
 
-        //debug ncurses terminal display
-        // sprintf (state->dmr_lrrp_gps[0], "XPT SN %d LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d;", xpt_seq, xpt_bank+1, t_tg[0], xpt_bank+2, t_tg[1], xpt_bank+3, t_tg[2]);
-        // sprintf (state->dmr_lrrp_gps[1], "XPT SN %d LSN: %02d TG: %03d; LSN: %02d TG: %03d; LSN: %02d TG: %03d;", xpt_seq, xpt_bank+4, t_tg[3], xpt_bank+5, t_tg[4], xpt_bank+6, t_tg[5]);
+        }
 
         //add string for ncurses terminal display
         sprintf (state->dmr_site_parms, "Free LCN - %d ", xpt_free);
