@@ -10,6 +10,11 @@
 
 void processTSBK(dsd_opts * opts, dsd_state * state)
 {
+
+  //reset some strings when returning from a call in case they didn't get zipped already
+  sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+  sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+  state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
   
   int tsbkbit[196]; //tsbk bit array, 196 trellis encoded bits
   int tsbk_dibit[98];
@@ -38,11 +43,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
   int protectbit = 0;
   int MFID = 0xFF; //Manufacturer ID - Might be beneficial to NOT send anything but standard 0x00 or 0x01 messages
 
-  //Update: Identified Bug in skipdibit incrememnt causing many block deinterleave/crc failures
-  //with correct values set, now we are decoding many more TSBKs
   //TODO: Don't Print TSBKs/vPDUs unless verbosity levels set higher
-  //TSBKs are always single block, but up to three can be transmitted in a row,
-  //Multi-Block PDUs are sent on a different DUID - 0xC (not handled currently)
 
   //collect three reps of 101 dibits (98 valid dibits with status dibits interlaced)
   for (j = 0; j < 3; j++)
@@ -63,7 +64,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
 
       if (i+(j*101) == skipdibit) 
       {
-        skipdibit += 36; //was set to 35, this was the bug
+        skipdibit += 36;
       }
 
     }

@@ -93,13 +93,13 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         if (channel1 && group1)
         {
           fprintf (stderr, "Ch: %04X TG: %d; ", channel1, group1);
-          sprintf (state->dmr_lrrp_gps[0], "Active Ch: %04X TG: %d;", channel1, group1);
+          sprintf (state->active_channel[0], "Active Ch: %04X TG: %d; ", channel1, group1);
         }
 
         if (channel2 && group2 && group1 != group2)
         {
           fprintf (stderr, "Ch: %04X TG: %d; ", channel2, group2);
-          sprintf (state->dmr_lrrp_gps[1], "Active Ch: %04X TG: %d;", channel2, group2);
+          sprintf (state->active_channel[1], "Active Ch: %04X TG: %d; ", channel2, group2);
         }
 
       }
@@ -299,8 +299,8 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
             //reset some strings
             sprintf (state->call_string[0], "%s", "                     "); //21 spaces
             sprintf (state->call_string[1], "%s", "                     "); //21 spaces
-            sprintf (state->dmr_lrrp_gps[0], "%s", ""); //this is used for active ch in p25 trunking
-            sprintf (state->dmr_lrrp_gps[1], "%s", ""); //this is used for active ch in p25 trunking
+            sprintf (state->active_channel[0], "%s", "");
+            sprintf (state->active_channel[1], "%s", "");
             opts->p25_is_tuned = 0;
             state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
             if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
@@ -317,8 +317,8 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
             //reset some strings
             sprintf (state->call_string[0], "%s", "                     "); //21 spaces
             sprintf (state->call_string[1], "%s", "                     "); //21 spaces
-            sprintf (state->dmr_lrrp_gps[0], "%s", ""); //this is used for active ch in p25 trunking
-            sprintf (state->dmr_lrrp_gps[1], "%s", ""); //this is used for active ch in p25 trunking
+            sprintf (state->active_channel[0], "%s", "");
+            sprintf (state->active_channel[1], "%s", "");
             opts->p25_is_tuned = 0;
             state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
             rtl_udp_tune (opts, state,  state->p25_cc_freq); 

@@ -365,6 +365,9 @@ typedef struct
   //Trunking - Tune Data Calls
   uint8_t trunk_tune_data_calls;
 
+  //Trunking - Tune Enc Calls (P25 only on applicable grants with svc opts)
+  uint8_t trunk_tune_enc_calls;
+
   //'DSP' Format Output
   uint8_t use_dsp_output;
   char dsp_out_file[2048];

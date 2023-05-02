@@ -24,6 +24,11 @@ static uint32_t crc32mbf(uint8_t buf[], int len)
 
 void processMPDU(dsd_opts * opts, dsd_state * state)
 {
+
+  //reset some strings when returning from a call in case they didn't get zipped already
+  sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+  sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+  state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
   
   int tsbkbit[196]; //tsbk bit array, 196 trellis encoded bits
   int tsbk_dibit[98];
@@ -276,21 +281,32 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     //Group Voice Channel Grant - Extended 
     else if (opcode == 0x0) 
     {
-      int svc = mpdu_byte[8]; //look up what these do!
+      int svc = mpdu_byte[8];
 			int channelt  = (mpdu_byte[14] << 8) | mpdu_byte[15];
 			int channelr  = (mpdu_byte[16] << 8) | mpdu_byte[17];
       long int source = (mpdu_byte[3] << 16) |(mpdu_byte[4] << 8) | mpdu_byte[5];
 			int group = (mpdu_byte[18] << 8) | mpdu_byte[19];
 			long int freq1 = 0;
 			long int freq2 = 0;
-      fprintf (stderr, "%s",KYEL);
-			fprintf (stderr, "\n Group Voice Channel Grant Update - Extended");
+      fprintf (stderr, "%s\n ",KYEL);
+      if (svc & 0x80) fprintf (stderr, " Emergency");
+      if (svc & 0x40) fprintf (stderr, " Encrypted");
+
+      if (opts->payload == 1) //hide behind payload due to len
+      {
+        if (svc & 0x20) fprintf (stderr, " Duplex");
+        if (svc & 0x10) fprintf (stderr, " Packet");
+        else fprintf (stderr, " Circuit");
+        if (svc & 0x8) fprintf (stderr, " R"); //reserved bit is on
+        fprintf (stderr, " Priority %d", svc & 0x7); //call priority
+      }
+			fprintf (stderr, " Group Voice Channel Grant Update - Extended");
 			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc, channelt, channelr, group, group);
 			freq1 = process_channel_to_freq (opts, state, channelt);
 			freq2 = process_channel_to_freq (opts, state, channelr);
 
       //add active channel to string for ncurses display
-			sprintf (state->dmr_lrrp_gps[0], "Active Ch: %04X TG: %d", channelt, group);
+			sprintf (state->active_channel[0], "Active Ch: %04X TG: %d ", channelt, group);
 
       for (int i = 0; i < state->group_tally; i++)
       {
@@ -304,6 +320,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
+
+      //Skip tuning encrypted calls if enc calls are disabled
+      if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
 
 			//tune if tuning available
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
@@ -344,7 +363,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     else if (opcode == 0x6) 
     {
       //I'm not doing EVERY element of this, just enough for tuning!
-      int svc = mpdu_byte[8]; //look up what these do!
+      int svc = mpdu_byte[8];
 			int channelt  = (mpdu_byte[22] << 8) | mpdu_byte[23];
 			int channelr  = (mpdu_byte[24] << 8) | mpdu_byte[25]; //optional!
       //using source and target address, not source and target id (is this correct?)
@@ -352,14 +371,25 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 			long int target = (mpdu_byte[19] << 16) |(mpdu_byte[20] << 8) | mpdu_byte[21];
 			long int freq1 = 0;
 			long int freq2 = 0;
-      fprintf (stderr, "%s",KYEL);
-			fprintf (stderr, "\n Unit to Unit Voice Channel Grant Update - Extended");
+      fprintf (stderr, "%s\n ",KYEL);
+      if (svc & 0x80) fprintf (stderr, " Emergency");
+      if (svc & 0x40) fprintf (stderr, " Encrypted");
+
+      if (opts->payload == 1) //hide behind payload due to len
+      {
+        if (svc & 0x20) fprintf (stderr, " Duplex");
+        if (svc & 0x10) fprintf (stderr, " Packet");
+        else fprintf (stderr, " Circuit");
+        if (svc & 0x8) fprintf (stderr, " R"); //reserved bit is on
+        fprintf (stderr, " Priority %d", svc & 0x7); //call priority
+      }
+			fprintf (stderr, " Unit to Unit Voice Channel Grant Update - Extended");
 			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Source [%ld][%04lX] Target [%ld][%04lX]", svc, channelt, channelr, source, source, target, target);
 			freq1 = process_channel_to_freq (opts, state, channelt);
 			freq2 = process_channel_to_freq (opts, state, channelr); //optional!
 
       //add active channel to string for ncurses display
-			sprintf (state->dmr_lrrp_gps[0], "Active Ch: %04X TGT: %ld;", channelt, target);
+			sprintf (state->active_channel[0], "Active Ch: %04X TGT: %ld; ", channelt, target);
 
       for (int i = 0; i < state->group_tally; i++)
       {
@@ -373,6 +403,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       
 			//Skip tuning private calls if group calls are disabled
 			if (opts->trunk_tune_private_calls == 0) goto SKIPCALL;
+
+      //Skip tuning encrypted calls if enc calls are disabled
+      if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
 
 			//tune if tuning available
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
