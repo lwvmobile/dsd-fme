@@ -157,6 +157,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     state->p25_vc_freq[0] = 0;
     state->p25_vc_freq[1] = 0;
 
+    memset(state->active_channel, 0, sizeof(state->active_channel));
+
     state->is_con_plus = 0; //flag off
   }
 
@@ -373,11 +375,13 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset(state->dmr_embedded_gps, 0, sizeof(state->dmr_embedded_gps));
   memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
 
+  // memset(state->active_channel, 0, sizeof(state->active_channel));
+
   //REMUS! multi-purpose call_string
   sprintf (state->call_string[0], "%s", "                     "); //21 spaces
   sprintf (state->call_string[1], "%s", "                     "); //21 spaces
 
-  if (time(NULL) - state->last_cc_sync_time > 30) //thirty seconds of no carrier
+  if (time(NULL) - state->last_cc_sync_time > 10) //ten seconds of no carrier
   {
     state->dmr_rest_channel = -1;
     state->p25_vc_freq[0] = 0;
@@ -387,6 +391,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     sprintf(state->dmr_branding, "%s", "");
     sprintf (state->dmr_site_parms, "%s", ""); 
     opts->p25_is_tuned = 0;
+    memset(state->active_channel, 0, sizeof(state->active_channel));
   }
 
   opts->dPMR_next_part_of_superframe = 0;
@@ -535,7 +540,7 @@ initOpts (dsd_opts * opts)
   //rigctl options
   opts->use_rigctl = 0;
   opts->rigctl_sockfd = 0;
-  opts->rigctlportno = 7356; //TCP Port Number; GQRX - 7356; SDR++ - 4532
+  opts->rigctlportno = 4532; //TCP Port Number; GQRX - 7356; SDR++ - 4532
   sprintf (opts->rigctlhostname, "%s", "localhost");
 
   //udp input options
@@ -917,6 +922,7 @@ initState (dsd_state * state)
   memset(state->dmr_alias_block_segment, 0, sizeof(state->dmr_alias_block_segment));
   memset(state->dmr_embedded_gps, 0, sizeof(state->dmr_embedded_gps));
   memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
+  memset(state->active_channel, 0, sizeof(state->active_channel));
 
   //REMUS! multi-purpose call_string
   sprintf (state->call_string[0], "%s", "                     "); //21 spaces

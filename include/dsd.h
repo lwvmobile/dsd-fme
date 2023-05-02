@@ -567,6 +567,7 @@ typedef struct
   char dmr_lrrp_gps[2][200]; //2 slots by 99 char string for string lrrp gps
   char dmr_site_parms[200]; //string for site/net info depending on type of DMR system (TIII or Con+)
   char call_string[2][200]; //string for call information
+  char active_channel[31][200]; //string for storing and displaying active trunking channels
 
 
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;

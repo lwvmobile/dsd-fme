@@ -134,6 +134,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
           //extra safeguards due to sync issues with NXDN
           memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
           memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+          memset(state->active_channel, 0, sizeof(state->active_channel));
           opts->p25_is_tuned = 0;
           if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
           SetFreq(opts->rigctl_sockfd, state->p25_cc_freq); 
@@ -145,6 +146,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
           //extra safeguards due to sync issues with NXDN
           memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
           memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+          memset(state->active_channel, 0, sizeof(state->active_channel));
           opts->p25_is_tuned = 0;
           rtl_udp_tune (opts, state,  state->p25_cc_freq); 
         }
@@ -452,6 +454,12 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
       opts->p25_is_tuned = 0; //open tuning back up to tune
     }
   }
+
+  //assign active call to string (might place inside of tune decision to get multiple ones?)
+  if (state->nxdn_rcn == 0)
+    sprintf (state->active_channel[0], "Active Ch: %d TG: %d; ", Channel, DestinationID);
+  if (state->nxdn_rcn == 1)
+    sprintf (state->active_channel[0], "Active Ch: %d TG: %d; ", OFN, DestinationID);
 
   //Add support for tuning data and group/private calls on trunking systems
   uint8_t tune = 0;
@@ -1314,6 +1322,15 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
 			else fprintf (stderr, "Private Call ");
 
 			if (rep1 == 31) fprintf (stderr, "Termination ");
+
+      //add current active to display string -- may need tweaking on if to use rep1 (active ch), or rep2 (home prefix)
+      if (rep1 != 0 && rep1 != 31) 
+      {
+        if (gu == 0) sprintf (state->active_channel[rep1], "Active Ch: %d TG: %d-%d; ", rep1, rep2, id); //Group TG
+        else sprintf (state->active_channel[rep1], "Active Ch: %d TGT: %d-%d; ", rep1, rep2, id); //Private TGT
+      }
+      //may not be needed -- DISC also zips the entire thing (all channels)
+      else if (rep1 == 31) sprintf (state->active_channel[rep1], "%s", ""); //zip it
 
       //start tuning section here
       uint8_t tune = 0; //use this to check to see if okay to tune
