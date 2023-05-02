@@ -97,9 +97,9 @@ char * SyncTypes[44] = {
   "NXDN",
   "YSF", //30
   "YSF",
-  "DMR", //DMR MS VOICE
-  "DMR", //DMR MS DATA
-  "DMR", //DMR RC DATA
+  "DMR ", //DMR MS VOICE
+  "DMR ", //DMR MS DATA
+  "DMR ", //DMR RC DATA
   "P25P2",
   "P25P2",
   "EDACS/PV", //37
@@ -2151,7 +2151,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->p25_trunk == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3) )
   {
-    printw ("| Trunk Tracking Active -");
+    printw ("| Trunking -");
     if (opts->trunk_tune_group_calls == 0) attron(COLOR_PAIR(2));
     printw (" Group(g)");
     attron(COLOR_PAIR(4));
@@ -2160,6 +2160,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     attron(COLOR_PAIR(4));
     if (opts->trunk_tune_data_calls == 0) attron(COLOR_PAIR(2));
     printw (" Data(d)");
+    attron(COLOR_PAIR(4));
+    if (opts->trunk_tune_enc_calls == 0) attron(COLOR_PAIR(2));
+    printw (" Encrypted(e)");
     attron(COLOR_PAIR(4));
     printw (" Calls");
     if (opts->trunk_use_allow_list == 1) printw (" - White List Mode\n");
@@ -2353,6 +2356,24 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
     }
+
+    //Active Trunking Channels (NXDN and IDAS)
+    if (1 == 1) //opts->p25_trunk 
+    {
+      printw ("\n");
+      printw ("| "); 
+
+      //active channel display
+      attron(COLOR_PAIR(4));
+      for (int i = 0; i < 16; i++)
+      {
+        if (state->active_channel[i] != 0) printw ("%s", state->active_channel[i]);
+      }
+
+      if (state->carrier == 1) attron(COLOR_PAIR(3));
+      else attroff(COLOR_PAIR(4));
+    }
+
     printw("\n");
   }
   
@@ -2526,27 +2547,31 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
 
-    if(state->dmrburstL == 16 && state->dmr_so == 0x40 && state->R == 0) //0100 0000
-    {
-      attron(COLOR_PAIR(2));
-      printw (" **ENC** ");
-      attroff(COLOR_PAIR(2));
-      attron(COLOR_PAIR(3));
-    }
-    if(state->dmrburstL == 16 && state->dmr_so == 0x80)
-    {
-      attron(COLOR_PAIR(2));
-      printw (" **Emergency** ");
-      attroff(COLOR_PAIR(2));
-      attron(COLOR_PAIR(3));
-    }
-    if(state->dmrburstL == 16 && state->dmr_so == 0x30) //0010 0000
-    {
-      attron(COLOR_PAIR(2));
-      printw (" **Private Call** ");
-      attroff(COLOR_PAIR(2));
-      attron(COLOR_PAIR(3));
-    }
+    //Not always correct, or correct at all, depends on context
+    //this is already in the call_string anyways
+
+    // if(state->dmrburstL == 16 && state->dmr_so == 0x40 && state->R == 0) //0100 0000
+    // {
+    //   attron(COLOR_PAIR(2));
+    //   printw (" **ENC** ");
+    //   attroff(COLOR_PAIR(2));
+    //   attron(COLOR_PAIR(3));
+    // }
+    // if(state->dmrburstL == 16 && state->dmr_so == 0x80)
+    // {
+    //   attron(COLOR_PAIR(2));
+    //   printw (" **Emergency** ");
+    //   attroff(COLOR_PAIR(2));
+    //   attron(COLOR_PAIR(3));
+    // }
+    // if(state->dmrburstL == 16 && state->dmr_so == 0x30) //0010 0000
+    // {
+    //   attron(COLOR_PAIR(2));
+    //   printw (" **Private Call** ");
+    //   attroff(COLOR_PAIR(2));
+    //   attron(COLOR_PAIR(3));
+    // }
+
     printw ("\n");
 
     //printw ("|        | "); //10 spaces
@@ -2580,7 +2605,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
 
     //LRRP
-    if(state->dmrburstL != 16) //only during data and no trunking //&& opts->p25_trunk == 0
+    if(state->dmrburstL != 16) //only during data and no trunking 
     {
       attron(COLOR_PAIR(4));
       printw  ("%s", state->dmr_lrrp_gps[0]);
@@ -2707,28 +2732,32 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw("Hytera Full Encrypt");
         attron(COLOR_PAIR(3));
       }
-      //Call Types, may switch to the more robust version later?
-      if(state->dmrburstR == 16 && state->dmr_soR == 0x40 && state->R == 0) //0100 0000
-      {
-        attron(COLOR_PAIR(2));
-        printw (" **ENC** ");
-        attroff(COLOR_PAIR(2));
-        attron(COLOR_PAIR(3));
-      }
-      if(state->dmrburstR == 16 && state->dmr_soR == 0x80)
-      {
-        attron(COLOR_PAIR(2));
-        printw (" **Emergency** ");
-        attroff(COLOR_PAIR(2));
-        attron(COLOR_PAIR(3));
-      }
-      if(state->dmrburstR == 16 && state->dmr_soR == 0x30) //0010 0000
-      {
-        attron(COLOR_PAIR(2));
-        printw (" **Private Call** ");
-        attroff(COLOR_PAIR(2));
-        attron(COLOR_PAIR(3));
-      }
+
+      //Not always correct, or correct at all, depends on context
+      //this is already in the call_string anyways
+
+      // if(state->dmrburstR == 16 && state->dmr_soR == 0x40 && state->R == 0) //0100 0000
+      // {
+      //   attron(COLOR_PAIR(2));
+      //   printw (" **ENC** ");
+      //   attroff(COLOR_PAIR(2));
+      //   attron(COLOR_PAIR(3));
+      // }
+      // if(state->dmrburstR == 16 && state->dmr_soR == 0x80)
+      // {
+      //   attron(COLOR_PAIR(2));
+      //   printw (" **Emergency** ");
+      //   attroff(COLOR_PAIR(2));
+      //   attron(COLOR_PAIR(3));
+      // }
+      // if(state->dmrburstR == 16 && state->dmr_soR == 0x30) //0010 0000
+      // {
+      //   attron(COLOR_PAIR(2));
+      //   printw (" **Private Call** ");
+      //   attroff(COLOR_PAIR(2));
+      //   attron(COLOR_PAIR(3));
+      // }
+
       printw ("\n");
 
       //printw ("|        | ");
@@ -2762,7 +2791,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       }
 
       //LRRP
-      if(state->dmrburstR != 16) //only during data and no trunking //&& opts->p25_trunk == 0
+      if(state->dmrburstR != 16) //only during data and no trunking
       {
         attron(COLOR_PAIR(4));
         printw  ("%s", state->dmr_lrrp_gps[1]);
@@ -2793,7 +2822,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
       if (1 == 1) //opts->p25_trunk == 1
       {
-        printw ("| T INFO | ");
+        printw ("|        | "); //Active Trunking Channels
+
+        //active channel display
+        attron(COLOR_PAIR(4));
+        for (int i = 0; i < 31; i++) //up to 31 idas channels
+        {
+          if (state->active_channel[i] != 0) printw ("%s", state->active_channel[i]);
+        }
+
+        if (state->carrier == 1) attron(COLOR_PAIR(3));
+        else attroff(COLOR_PAIR(4));
+        printw ("\n");
+      }
+
+      if (1 == 1) //opts->p25_trunk == 1
+      {
+        printw ("|        | "); //Currently Tuned Frequency
 
         // Tuned Frequency Display
         if (state->p25_vc_freq[0] != 0)
@@ -3338,6 +3383,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else opts->trunk_tune_data_calls = 1; 
   }
 
+  if (opts->p25_trunk == 1 && c == 101) //'e' key, toggle tune enc calls (P25 only on certain grants)
+  {
+    if (opts->trunk_tune_enc_calls == 1) opts->trunk_tune_enc_calls = 0;
+    else opts->trunk_tune_enc_calls = 1; 
+  }
+
   if (opts->p25_trunk == 1 && c == 103) //'g' key, toggle tune group calls
   {
     if (opts->trunk_tune_group_calls == 1) opts->trunk_tune_group_calls = 0;
@@ -3417,6 +3468,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       } 
     }
     else fprintf (stderr, "TCP Socket Connection Error.\n");
+  }
+
+  if (c == 57) //'9' key, try rigctl connection with default values
+  {
+    //use same or last specified host for TCP audio sink for connection
+    memcpy (opts->rigctlhostname, opts->tcp_hostname, sizeof (opts->rigctlhostname) );
+    opts->rigctl_sockfd = Connect(opts->rigctlhostname, opts->rigctlportno);
+    if (opts->rigctl_sockfd != 0) opts->use_rigctl = 1;
+    else opts->use_rigctl = 0;
   }
 
  //anything with an entry box will need the inputs and outputs stopped first
