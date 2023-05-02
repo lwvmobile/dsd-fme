@@ -369,6 +369,9 @@ typedef struct
   //Trunking - Tune Data Calls
   uint8_t trunk_tune_data_calls;
 
+  //Trunking - Tune Enc Calls (P25 only on applicable grants with svc opts)
+  uint8_t trunk_tune_enc_calls;
+
   //OSS audio - slot preference
   uint8_t slot_preference;
 

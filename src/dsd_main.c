@@ -581,6 +581,9 @@ initOpts (dsd_opts * opts)
   //Trunking - Tune Data Calls
   opts->trunk_tune_data_calls = 0; //disabled by default
 
+  //Trunking - Tune Encrypted Calls (P25 only on applicable grants with svc opts)
+  opts->trunk_tune_enc_calls = 1; //enabled by default
+
   opts->dPMR_next_part_of_superframe = 0;
 
   //OSS audio - Slot Preference
