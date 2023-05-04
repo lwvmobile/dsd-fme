@@ -318,8 +318,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->fourv_counter[1] = 0;
 
   //values displayed in ncurses terminal
-  state->p25_vc_freq[0] = 0;
-  state->p25_vc_freq[1] = 0;
+  // state->p25_vc_freq[0] = 0;
+  // state->p25_vc_freq[1] = 0;
 
   //new nxdn stuff
   state->nxdn_part_of_frame = 0;
