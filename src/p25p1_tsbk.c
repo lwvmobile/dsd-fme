@@ -14,7 +14,6 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
   //reset some strings when returning from a call in case they didn't get zipped already
   sprintf (state->call_string[0], "%s", "                     "); //21 spaces
   sprintf (state->call_string[1], "%s", "                     "); //21 spaces
-  state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
   
   int tsbkbit[196]; //tsbk bit array, 196 trellis encoded bits
   int tsbk_dibit[98];

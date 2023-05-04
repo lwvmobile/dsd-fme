@@ -1329,8 +1329,6 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
         if (gu == 0) sprintf (state->active_channel[rep1], "Active Ch: %d TG: %d-%d; ", rep1, rep2, id); //Group TG
         else sprintf (state->active_channel[rep1], "Active Ch: %d TGT: %d-%d; ", rep1, rep2, id); //Private TGT
       }
-      //may not be needed -- DISC also zips the entire thing (all channels)
-      else if (rep1 == 31) sprintf (state->active_channel[rep1], "%s", ""); //zip it
 
       //start tuning section here
       uint8_t tune = 0; //use this to check to see if okay to tune
