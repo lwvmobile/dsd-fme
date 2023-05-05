@@ -1276,7 +1276,113 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                  }
 
             }
+
+          #ifdef NXDNTESTSYNC //use experimental sync detection based on multiple factors
           
+          //NXDN FSW sync and handling - testing with more exact syncs and also inlv (state->max)
+          //Theory is that pure noise is always much louder than an organized signal
+
+          //The state->max inlvl will hinge on the user setting an appropriate gain level
+          //so, this may not entirely be ideal, loud system may still not decode properly
+          //currently set to invlv 5000 or ~31% or less audio in level when dividing by 164
+
+          //Also, landing on other signal types will probably also 
+          //trigger this without squelch enabled
+
+          //moved carrier = 1 and last_cc_synctime to inside of nxdn_frame after 
+          //a good lich parity and known lich value occurs -- still available on 
+          //the 'stable' sync pattern though
+          else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
+          {
+            strncpy (synctest10, (synctest_p - 9), 10); //FSW only
+            strncpy (synctest19, (synctest_p - 18), 19); //Preamble + FSW
+
+            //Using Hard Coded Sync Strings with variations for the areas where the symbol
+            //error will occur due to the demodulation issues internally
+
+            //Preamble plus FSW, proceed right away
+            if ( (strcmp (synctest19, "3131133313131331131") == 0 ) ||
+                 (strcmp (synctest19, "3131133313331331131") == 0 ) ||
+                 (strcmp (synctest19, "3131133313131331111") == 0 ) ||
+                 (strcmp (synctest19, "3131133313331331111") == 0 )   )
+            {
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+              state->lastsynctype = 28;
+              if (opts->payload == 1) fprintf (stderr, "\n PANDF ");
+              if (opts->payload == 1) fprintf (stderr, " %s ", synctest19);
+              if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164);
+              if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
+              if (state->max < 5000)
+                return (28);
+            }
+            else if ( (strcmp (synctest19, "1313311133131331131") == 0 ) ||
+                      (strcmp (synctest19, "1313311133331331131") == 0 ) ||
+                      (strcmp (synctest19, "1313311133131331111") == 0 ) ||
+                      (strcmp (synctest19, "1313311133331331111") == 0 )   )
+            {
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+              state->lastsynctype = 29;
+              if (opts->payload == 1) fprintf (stderr, "\n PANDF ");
+              if (opts->payload == 1) fprintf (stderr, " %s ", synctest19);
+              if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164);
+              if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
+              if (state->max < 5000)
+                return (29);
+            }
+
+            else if ( (strcmp (synctest10, "3131331131") == 0 ) ||
+                      (strcmp (synctest10, "3331331131") == 0 ) ||
+                      (strcmp (synctest10, "3131331111") == 0 ) ||
+                      (strcmp (synctest10, "3331331111") == 0 )   )
+            {
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+
+              if (state->lastsynctype == 28) 
+              {
+                if (opts->payload == 1) fprintf (stderr, "\n FSW   ");
+                if (opts->payload == 1) fprintf (stderr, " %s ", synctest10);
+                if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164); //see if we can get max to meet threshold first?
+                if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
+                if (state->max < 5000)
+                  return (28);
+              }
+              if (state->max < 5000)
+                state->lastsynctype = 28;
+
+            }
+
+            else if ( (strcmp (synctest10, "1313113313") == 0 ) ||
+                      (strcmp (synctest10, "1113113313") == 0 ) ||
+                      (strcmp (synctest10, "1313113333") == 0 ) ||
+                      (strcmp (synctest10, "1113113333") == 0 )   )
+            {
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+
+              if (state->lastsynctype == 29) 
+              {
+                if (opts->payload == 1) fprintf (stderr, "\n FSW   ");
+                if (opts->payload == 1) fprintf (stderr, " %s ", synctest10);
+                if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164);
+                if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
+                if (state->max < 5000)
+                  return (29);
+              }
+              if (state->max < 5000)
+                state->lastsynctype = 29;
+
+            }
+          }
+
+          #else //use current 'more stable' NXDN Sync pattern detection
+
           //NXDN FSW sync and handling - moved to very bottom of sync stack for falsing sanity
           else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
           {
@@ -1286,30 +1392,33 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             //Preamble plus FSW, proceed right away
             if ( (strncmperr (synctest19, NXDN_PANDFSW, 19, 1) == 0) )
             {
-              state->carrier = 1;
+              // state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
               state->lastsynctype = 28;
               state->last_cc_sync_time = time(NULL);
-              //if (opts->payload == 1) fprintf (stderr, "PANDF ");
+              // if (opts->payload == 1) fprintf (stderr, "PANDF ");
+              // fprintf (stderr, " %s ", synctest19);
               return (28);
             }
+            
             else if ( (strncmperr (synctest19, INV_NXDN_PANDFSW, 19, 1) == 0) )
             {
-              state->carrier = 1;
+              // state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
               state->lastsynctype = 29;
               state->last_cc_sync_time = time(NULL);
-              //if (opts->payload == 1) fprintf (stderr, "PANDF ");
+              // if (opts->payload == 1) fprintf (stderr, "PANDF ");
+              // fprintf (stderr, " %s ", synctest19);
               return (29);
             }
 
             else if ( (strncmperr (synctest10, NXDN_FSW, 10, 1) == 0) )
             {
-              state->carrier = 1;
+              // state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
@@ -1317,7 +1426,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (state->lastsynctype == 28) 
               {
                 state->last_cc_sync_time = time(NULL);
-                //if (opts->payload == 1) fprintf (stderr, "FSW   ");
+                // if (opts->payload == 1) fprintf (stderr, "FSW   ");
+                // fprintf (stderr, " %s ", synctest10);
                 return (28);
               }
               state->lastsynctype = 28; //need two consecutive patterns to continue
@@ -1326,7 +1436,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
             else if ( (strncmperr (synctest10, INV_NXDN_FSW, 10, 1) == 0) )
             {
-              state->carrier = 1;
+              // state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
@@ -1334,7 +1444,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (state->lastsynctype == 29) 
               {
                 state->last_cc_sync_time = time(NULL);
-                //if (opts->payload == 1) fprintf (stderr, "FSW   ");
+                // if (opts->payload == 1) fprintf (stderr, "FSW   ");
+                // fprintf (stderr, " %s ", synctest10);
                 return (29);
               }
               state->lastsynctype = 29; //need two consecutive patterns to continue
@@ -1342,6 +1453,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             }
           }
 
+          #endif //NXDN Sync Type Selection
         } // t >= 10
 
       if (exitflag == 1)
