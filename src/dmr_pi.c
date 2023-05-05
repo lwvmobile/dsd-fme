@@ -116,7 +116,7 @@ void LFSR(dsd_state * state)
 void LFSR64(dsd_state * state)
 {
 	{
-    uint64_t lfsr = 0;
+    unsigned long long int lfsr = 0;
 
 		if (state->currentslot == 0)
 		{
@@ -128,19 +128,16 @@ void LFSR64(dsd_state * state)
 
     for(cnt=0;cnt<32;cnt++) 
     {
-			uint64_t bit = ( (lfsr >> 31) ^ (lfsr >> 21) ^ (lfsr >> 1) ^ (lfsr >> 0) ) & 0x1;
+			unsigned long long int bit = ( (lfsr >> 31) ^ (lfsr >> 21) ^ (lfsr >> 1) ^ (lfsr >> 0) ) & 0x1;
       lfsr = (lfsr << 1) | bit;
     }
-
-		// if (state->currentslot == 0) state->payload_miP = lfsr;
-    // else state->payload_miN = lfsr; 
 
 		if (state->currentslot == 0)
 		{
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot 1");
       fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
-      fprintf (stderr, " MI: 0x%016lX", lfsr);
+      fprintf (stderr, " MI: 0x%016llX", lfsr);
       fprintf (stderr, "%s", KNRM);
 			state->payload_mi = lfsr & 0xFFFFFFFF; //truncate for next repitition and le verification
 		}
@@ -150,7 +147,7 @@ void LFSR64(dsd_state * state)
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot 2");
       fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algidR, state->payload_keyidR);
-      fprintf (stderr, " MI: 0x%016lX", lfsr);
+      fprintf (stderr, " MI: 0x%016llX", lfsr);
       fprintf (stderr, "%s", KNRM);
 			state->payload_miR = lfsr & 0xFFFFFFFF; //truncate for next repitition and le verification
 		}
