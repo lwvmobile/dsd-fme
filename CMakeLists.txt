@@ -19,6 +19,20 @@ if (COLORS)
     add_definitions(-DPRETTY_COLORS) 
 endif ()
 
+#use cmake option -DNXDN=ON to enable new NXDN Sync Pattern Testing
+option(NXDN
+    "Build with new NXDN Sync Pattern Testing Enabled" OFF)
+if (NXDN)
+    add_definitions(-DNXDNTESTSYNC) 
+endif ()
+
+#use cmake option -DLZ=ON to enable LimaZulu Requested NXDN Tweaks
+option(LZ
+    "Build with new LimaZulu Requested NXDN Tweaks Enabled" OFF)
+if (NXDN)
+    add_definitions(-DLIMAZULUTWEAKS) 
+endif ()
+
 include(git_revision)
 git_describe(GIT_TAG)
 

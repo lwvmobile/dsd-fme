@@ -97,6 +97,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	lich = lich >> 1;
 	if (lich_parity_received != lich_parity_computed)
 	{
+		if (opts->payload == 1) fprintf(stderr, "  Lich Parity Error %02X\n", lich);
 		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly 
 		goto END;
 	}
@@ -236,6 +237,10 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		goto END;
 		break;
 	} // end of switch(lich)
+
+	//enable these after good lich parity and known lich value
+	state->carrier = 1;
+	state->last_cc_sync_time = time(NULL);
 
 	//printframesync after determining we have a good lich and it has something in it
 	if (idas)
