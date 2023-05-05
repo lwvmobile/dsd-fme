@@ -19,6 +19,13 @@ if (COLORS)
     add_definitions(-DPRETTY_COLORS) 
 endif ()
 
+#use cmake option -DPVC=ON to enable Provoice Conventional Frame Sync
+option(PVC
+    "Build with Provoice Conventional Frame Sync Enabled" OFF)
+if (PVC)
+    add_definitions(-DPVCONVENTIONAL) 
+endif ()
+
 #use cmake option -DNXDN=ON to enable new NXDN Sync Pattern Testing
 option(NXDN
     "Build with new NXDN Sync Pattern Testing Enabled" OFF)

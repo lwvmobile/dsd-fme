@@ -215,17 +215,16 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 			//state->errs2 = state->errs;
 			mbe_demodulateImbe7100x4400Data (imbe7100_fr);
 			state->errs2 = mbe_eccImbe7100x4400Data (imbe7100_fr, imbe_d);
-			mbe_convertImbe7100to7200(imbe_d); //needs extra conversion step apparently
 
+      if (opts->payload == 1)
+			{
+				PrintIMBEData (opts, state, imbe_d);
+			}
+
+			mbe_convertImbe7100to7200(imbe_d);
 			mbe_processImbe4400Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
 																imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
-			//below line the old way of doing this
-      // mbe_processImbe7100x4400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe7100_fr, imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-      if (opts->payload == 1)
-      {
-        PrintIMBEData (opts, state, imbe_d);
-      }
       if (opts->mbe_out_f != NULL)
       {
         saveImbe4400Data (opts, state, imbe_d);

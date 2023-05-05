@@ -1454,6 +1454,94 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           }
 
           #endif //NXDN Sync Type Selection
+
+          //Provoice Conventional -- Some False Positives due to shortened frame sync pattern, so use squelch if possible
+          #ifdef PVCONVENTIONAL
+          if (opts->frame_provoice == 1)
+          {
+            memset (synctest32, 0, sizeof(synctest32)); 
+            strncpy (synctest32, (synctest_p - 31), 16); //short sync grab here on 32
+            char pvc_txs[9]; //string (symbol) value of TX Address
+            char pvc_rxs[9]; //string (symbol) value of RX Address
+            uint8_t pvc_txa = 0; //actual value of TX Address
+            uint8_t pvc_rxa = 0; //actual value of RX Address
+            strncpy (pvc_txs, (synctest_p - 15), 8); //copy string value of TX Address
+            strncpy (pvc_rxs, (synctest_p - 7), 8); //copy string value of RX Address
+            if ((strcmp (synctest32, INV_PROVOICE_CONV_SHORT) == 0))
+            {
+                if (state->lastsynctype == 15) //use this condition, like NXDN, to migitage false positives due to short sync pattern
+                {
+                  state->carrier = 1;
+                  state->offset = synctest_pos;
+                  state->max = ((state->max) + lmax) / 2;
+                  state->min = ((state->min) + lmin) / 2;
+                  sprintf (state->ftype, "ProVoice ");
+                  // fprintf (stderr, "Sync Pattern = %s ", synctest32);
+                  // fprintf (stderr, "TX = %s ", pvc_txs);
+                  // fprintf (stderr, "RX = %s ", pvc_rxs);
+                  for (int i = 0; i < 8; i++)
+                  {
+                    pvc_txa = pvc_txa << 1;
+                    pvc_rxa = pvc_rxa << 1;
+                    //symbol 1 is binary 1 on inverted
+                    //I hate working with strings, has to be a better way to evaluate this
+                    memset (pvc_txs, 0, sizeof (pvc_txs));
+                    memset (pvc_rxs, 0, sizeof (pvc_rxs));
+                    strncpy (pvc_txs, (synctest_p - 15+i), 1);
+                    strncpy (pvc_rxs, (synctest_p - 7+i), 1);
+                    if ((strcmp (pvc_txs, "1") == 0))
+                      pvc_txa = pvc_txa + 1;
+                    if ((strcmp (pvc_rxs, "1") == 0))
+                      pvc_rxa = pvc_rxa + 1;
+                  }
+                  printFrameSync (opts, state, "-PV_C ", synctest_pos + 1, modulation);
+                  fprintf (stderr, "TX: %d ", pvc_txa);
+                  fprintf (stderr, "RX: %d ", pvc_rxa);
+                  if (pvc_txa == 172) fprintf (stderr, "ALL CALL ");
+                  state->lastsynctype = 15;
+                  return (15);
+                }
+                state->lastsynctype = 15;
+            }
+            else if ((strcmp (synctest32, PROVOICE_CONV_SHORT) == 0))
+            {
+                if (state->lastsynctype == 14) //use this condition, like NXDN, to migitage false positives due to short sync pattern
+                {
+                  state->carrier = 1;
+                  state->offset = synctest_pos;
+                  state->max = ((state->max) + lmax) / 2;
+                  state->min = ((state->min) + lmin) / 2;
+                  sprintf (state->ftype, "ProVoice ");
+                  // fprintf (stderr, "Sync Pattern = %s ", synctest32);
+                  // fprintf (stderr, "TX = %s ", pvc_txs);
+                  // fprintf (stderr, "RX = %s ", pvc_rxs);
+                  for (int i = 0; i < 8; i++)
+                  {
+                    pvc_txa = pvc_txa << 1;
+                    pvc_rxa = pvc_rxa << 1;
+                    //symbol 3 is binary 1 on positive
+                    //I hate working with strings, has to be a better way to evaluate this
+                    memset (pvc_txs, 0, sizeof (pvc_txs));
+                    memset (pvc_rxs, 0, sizeof (pvc_rxs));
+                    strncpy (pvc_txs, (synctest_p - 15+i), 1);
+                    strncpy (pvc_rxs, (synctest_p - 7+i), 1);
+                    if ((strcmp (pvc_txs, "3") == 0))
+                      pvc_txa = pvc_txa + 1;
+                    if ((strcmp (pvc_rxs, "3") == 0))
+                      pvc_rxa = pvc_rxa + 1;
+                  }
+                  printFrameSync (opts, state, "+PV_C ", synctest_pos + 1, modulation);
+                  fprintf (stderr, "TX: %d ", pvc_txa);
+                  fprintf (stderr, "RX: %d ", pvc_rxa);
+                  if (pvc_txa == 172) fprintf (stderr, "ALL CALL ");
+                  state->lastsynctype = 14;
+                  return (14);
+                }
+                state->lastsynctype = 14;
+            }
+          }
+          #endif //End Provoice Conventional
+
         } // t >= 10
 
       if (exitflag == 1)
