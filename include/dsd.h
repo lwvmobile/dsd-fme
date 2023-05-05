@@ -756,6 +756,26 @@ typedef struct
 #define INV_PROVOICE_EA_SYNC "13313133113113333311313133133311"
 #define PROVOICE_EA_SYNC     "31131311331331111133131311311133"
 
+//define the provoice conventional string pattern to default 85/85 if not enabled, else mute it so we won't double sync on accident in frame_sync
+#ifdef PVCONVENTIONAL
+#define PROVOICE_CONV        "00000000000000000000000000000000" //all zeroes should be unobtainable string in the frame_sync synctests
+#define INV_PROVOICE_CONV    "00000000000000000000000000000000" //all zeroes should be unobtainable string in the frame_sync synctests
+#else
+#define PROVOICE_CONV        "13131333111311311313131313131313" //TX 85 RX 85 (default programming value)
+#define INV_PROVOICE_CONV    "31313111333133133131313131313131" //TX 85 RX 85 (default programming value)
+#endif
+//we use the short sync instead of the default 85/85 wnen PVCONVENTIONAL is defined by cmake
+#define PROVOICE_CONV_SHORT                 "1313133311131131" //16-bit short pattern, last 16-bits change based on TX an RX values
+#define INV_PROVOICE_CONV_SHORT             "3131311133313313"
+//In this pattern (inverted polarity, the norm for PV) 3 is bit 0, and 1 is bit 1 (2 level GFSK)
+                  //same pattern   //TX     //RX
+// Sync Pattern = 3131311133313313 31331131 31331131 TX/RX 77  -- 31331131 symbol = 01001101 binary = 77 decimal
+// Sync Pattern = 3131311133313313 33333333 33333333 TX/RX 0   -- 33333333 symbol = 00000000 binary = 0 decimal
+// Sync Pattern = 3131311133313313 33333331 33333331 TX/RX 1   -- 33333331 symbol = 00000001 binary = 1 decimal
+// Sync Pattern = 3131311133313313 13131133 13131133 TX/RX 172 -- 13131133 symbol = 10101100 binary = 172 decimal
+// Sync Pattern = 3131311133313313 11333111 11333111 TX/RX 199 -- 11333111 symbol = 11000111 binary = 199 decimal
+// Sync Pattern = 3131311133313313 31313131 31313131 TX/RX 85  -- 31313131 symbol = 01010101 binary = 85 decimal
+
 #define EDACS_SYNC      "313131313131313131313111333133133131313131313131"
 #define INV_EDACS_SYNC  "131313131313131313131333111311311313131313131313"
 
