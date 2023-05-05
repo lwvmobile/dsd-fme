@@ -345,6 +345,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
       //zero out vc frequencies
       state->p25_vc_freq[0] = 0;
       state->p25_vc_freq[1] = 0;
+      memset (state->active_channel, 0, sizeof(state->active_channel));
       state->last_cc_sync_time = time(NULL);
       state->is_con_plus = 0; //con+ flag off
     }

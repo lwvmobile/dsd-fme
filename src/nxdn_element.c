@@ -1172,14 +1172,14 @@ void NXDN_decode_VCALL_IV(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 {
   uint32_t i;
   state->payload_miN = 0; //zero out
-  uint64_t IV = 0; 
+  unsigned long long int IV = 0; 
 
   //NOTE: On Type-D systems, the FACCH1 version of message only carries a 4-octet payload and also only carries a 22-bit IV
   //which makes no sense since you still have the full 80-bits of FACCH1 to use
   uint8_t idas = 0;
   if (strcmp (state->nxdn_location_category, "Type-D") == 0) idas = 1;
-  if (!idas) IV = (uint64_t)ConvertBitIntoBytes(&Message[8], 64);
-  else IV = (uint64_t)ConvertBitIntoBytes(&Message[8], 22);
+  if (!idas) IV = (unsigned long long int)ConvertBitIntoBytes(&Message[8], 64);
+  else IV = (unsigned long long int)ConvertBitIntoBytes(&Message[8], 22);
   //At this point, I would assume an LFSR function is needed to expand the 22-bit IV collected here into a 64-bit IV, or 128-bit IV
 
   state->payload_miN = IV;
@@ -1223,11 +1223,11 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
 	uint8_t gu    = Message[24]; //group or unit bit
 
   //OSM 2 and 3 elements -- unique only
-  uint64_t iv_a   = (uint64_t)ConvertBitIntoBytes(&Message[13], 12); //initialization vector (0-11)
+  unsigned long long int iv_a   = (uint64_t)ConvertBitIntoBytes(&Message[13], 12); //initialization vector (0-11)
 
   //OSM 1 elements -- unique only -- DOUBLE CHECK ALL OF THESE!
-  uint64_t iv_b    = (uint64_t)ConvertBitIntoBytes(&Message[18], 6); //initialization vector (b12-17)
-  uint64_t iv_c    = (uint64_t)ConvertBitIntoBytes(&Message[8], 5); //initialization vector (b18-22)
+  unsigned long long int iv_b    = (uint64_t)ConvertBitIntoBytes(&Message[18], 6); //initialization vector (b12-17)
+  unsigned long long int iv_c    = (uint64_t)ConvertBitIntoBytes(&Message[8], 5); //initialization vector (b18-22)
   uint8_t iv_type  = Message[24]; //0 or 1 tells us whether or not this is for IV, or for cipher/key
   uint8_t call_opt = (uint8_t)ConvertBitIntoBytes(&Message[13], 3); //Call Options
   uint8_t key_id   = (uint8_t)ConvertBitIntoBytes(&Message[18], 6); //Key ID
@@ -1429,7 +1429,7 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
     if (id == 31)
     {
       fprintf (stderr, "\n%s ", KYEL);
-      fprintf (stderr, " Call IV A: %04lX", iv_a);
+      fprintf (stderr, " Call IV A: %04llX", iv_a);
     }
     else
     {
@@ -1451,7 +1451,7 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
     if (id == 31)
     {
       fprintf (stderr, "\n%s ", KYEL);
-      fprintf (stderr, " Call IV A: %04lX; ", iv_a); //MSB 0-11
+      fprintf (stderr, " Call IV A: %04llX; ", iv_a); //MSB 0-11
       //zero out IV storage and append this chunk to MSB position
       state->payload_miN = 0; 
       state->payload_miN = state->payload_miN | (iv_a << 11); //MSB 11, so shift 11 (22 total bits).
@@ -1491,8 +1491,8 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
     else
     {
       fprintf (stderr, "\n%s ", KYEL);
-      fprintf (stderr, "Call IV B: %04lX; ", iv_b);
-      fprintf (stderr, "Call IV C: %04lX; ", iv_c);
+      fprintf (stderr, "Call IV B: %04llX; ", iv_b);
+      fprintf (stderr, "Call IV C: %04llX; ", iv_c);
       //Append to Call IV storage
       state->payload_miN = state->payload_miN | (iv_c << 6); //middle 5 bits..shifts 6 to accomodate last 6 bits below
       state->payload_miN = state->payload_miN | (iv_b << 0); //last 6 bits...no shift needed

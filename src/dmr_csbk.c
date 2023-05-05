@@ -116,7 +116,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           uint8_t mbc_cc = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[108], 4);
           uint8_t mbc_cdeftype = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[112], 4); //see 7.2.19.7 = 0 for channel parms, 1 through FFFF reserved
           uint8_t mbc_res2 = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[116], 2);
-          uint64_t mbc_cdefparms = (uint64_t)ConvertBitIntoBytes(&cs_pdu_bits[118], 58); //see 7.2.19.7.1
+          unsigned long long int mbc_cdefparms = (unsigned long long int)ConvertBitIntoBytes(&cs_pdu_bits[118], 58); //see 7.2.19.7.1
 
           //this is how you read the 58 parm bits according to the appendix 7.2.19.7.1
           if (mbc_cdeftype == 0) //if 0, then absolute channel parms
