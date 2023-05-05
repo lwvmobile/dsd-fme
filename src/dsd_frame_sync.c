@@ -1276,7 +1276,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                  }
 
             }
-          
+
           #ifdef NXDNTESTSYNC //use experimental sync detection based on multiple factors
           
           //NXDN FSW sync and handling - testing with more exact syncs and also inlv (state->max)
@@ -1289,9 +1289,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           //Also, landing on other signal types will probably also 
           //trigger this without squelch enabled
 
-          //moved carrier = 1 and last_cc_synctime to inside of nxdn_frame after 
-          //a good lich parity and known lich value occurs -- still available on 
-          //the 'stable' sync pattern though
+          //NOTE: This test seems to work better for NXDN48 than it does for NXDN96
+
           else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
           {
             strncpy (synctest10, (synctest_p - 9), 10); //FSW only
@@ -1306,14 +1305,15 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                  (strcmp (synctest19, "3131133313131331111") == 0 ) ||
                  (strcmp (synctest19, "3131133313331331111") == 0 )   )
             {
+              state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
               state->lastsynctype = 28;
-              if (opts->payload == 1) fprintf (stderr, "\n PANDF ");
-              if (opts->payload == 1) fprintf (stderr, " %s ", synctest19);
-              if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164);
-              if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
+              // if (opts->payload == 1) fprintf (stderr, "\n PANDF ");
+              // if (opts->payload == 1) fprintf (stderr, " %s ", synctest19);
+              // if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164);
+              // if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
               if (state->max < 5000)
                 return (28);
             }
@@ -1322,14 +1322,15 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       (strcmp (synctest19, "1313311133131331111") == 0 ) ||
                       (strcmp (synctest19, "1313311133331331111") == 0 )   )
             {
+              state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
               state->lastsynctype = 29;
-              if (opts->payload == 1) fprintf (stderr, "\n PANDF ");
-              if (opts->payload == 1) fprintf (stderr, " %s ", synctest19);
-              if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164);
-              if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
+              // if (opts->payload == 1) fprintf (stderr, "\n PANDF ");
+              // if (opts->payload == 1) fprintf (stderr, " %s ", synctest19);
+              // if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164);
+              // if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
               if (state->max < 5000)
                 return (29);
             }
@@ -1339,16 +1340,17 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       (strcmp (synctest10, "3131331111") == 0 ) ||
                       (strcmp (synctest10, "3331331111") == 0 )   )
             {
+              state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
 
               if (state->lastsynctype == 28) 
               {
-                if (opts->payload == 1) fprintf (stderr, "\n FSW   ");
-                if (opts->payload == 1) fprintf (stderr, " %s ", synctest10);
-                if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164); //see if we can get max to meet threshold first?
-                if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
+                // if (opts->payload == 1) fprintf (stderr, "\n FSW   ");
+                // if (opts->payload == 1) fprintf (stderr, " %s ", synctest10);
+                // if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164); //see if we can get max to meet threshold first?
+                // if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
                 if (state->max < 5000)
                   return (28);
               }
@@ -1362,16 +1364,17 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       (strcmp (synctest10, "1313113333") == 0 ) ||
                       (strcmp (synctest10, "1113113333") == 0 )   )
             {
+              state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
 
               if (state->lastsynctype == 29) 
               {
-                if (opts->payload == 1) fprintf (stderr, "\n FSW   ");
-                if (opts->payload == 1) fprintf (stderr, " %s ", synctest10);
-                if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164);
-                if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
+                // if (opts->payload == 1) fprintf (stderr, "\n FSW   ");
+                // if (opts->payload == 1) fprintf (stderr, " %s ", synctest10);
+                // if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164);
+                // if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
                 if (state->max < 5000)
                   return (29);
               }
