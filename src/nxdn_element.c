@@ -1114,36 +1114,43 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
   else if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
 
-#ifdef LIMAZULUTWEAKS
+// #ifdef LIMAZULUTWEAKS
 
-  //LimaZulu specific tweak, load keys from frequency value, if avalable -- untested
+//   //LimaZulu specific tweak, load keys from frequency value, if avalable -- untested
 
-  long int freq = 0;
-  uint8_t hash_bits[24];
-  memset (hash_bits, 0, sizeof(hash_bits));
-  uint16_t limazulu = 0;
+//   long int freq = 0;
+//   uint8_t hash_bits[24];
+//   memset (hash_bits, 0, sizeof(hash_bits));
+//   uint16_t limazulu = 0;
     
-  //if not available, then poll rigctl if its available
-  if (opts->use_rigctl == 1)
-    freq = GetCurrentFreq (opts->rigctl_sockfd);
+//   //if not available, then poll rigctl if its available
+//   if (opts->use_rigctl == 1)
+//     freq = GetCurrentFreq (opts->rigctl_sockfd);
 
-  //if using rtl input, we can ask for the current frequency tuned
-  else if (opts->audio_in_type == 3)
-    freq = (long int)opts->rtlsdr_center_freq;
+//   //if using rtl input, we can ask for the current frequency tuned
+//   else if (opts->audio_in_type == 3)
+//     freq = (long int)opts->rtlsdr_center_freq;
 
-  //since a frequency value will be larger than the 16-bit max, we need to hash it first
-  //the hash has to be run the same way as the import, so at a 24-bit depth, which hopefully
-  //will not lead to any duplicate key loads due to multiple CRC16 collisions on a larger value?
-  for (int i = 0; i < 24; i++)
-    hash_bits[i] = ((freq << i) & 0x800000) >> 23; //load into array for CRC16 
+//   //freq = 167831250; //hardset for  testing
 
-  if (freq) limazulu = ComputeCrcCCITT16d (hash_bits, 24);
-  limazulu = limazulu & 0xFFFF; //make sure no larger than 16-bits
+//   //since a frequency value will be larger than the 16-bit max, we need to hash it first
+//   //the hash has to be run the same way as the import, so at a 24-bit depth, which hopefully
+//   //will not lead to any duplicate key loads due to multiple CRC16 collisions on a larger value?
+//   for (int i = 0; i < 24; i++)
+//     hash_bits[i] = ((freq << i) & 0x800000) >> 23; //load into array for CRC16 
 
-  if (state->rkey_array[limazulu] != 0) 
-    state->R = state->rkey_array[limazulu];
+//   if (freq) limazulu = ComputeCrcCCITT16d (hash_bits, 24);
+//   limazulu = limazulu & 0xFFFF; //make sure no larger than 16-bits
 
-#endif //end LIMAZULUTWEAKS
+//   fprintf (stderr, "%s", KCYN);
+//   if (freq) fprintf (stderr, "\n Freq: %ld - Freq Hash: %0ld", freq, limazulu);
+//   if (state->rkey_array[limazulu] != 0) fprintf (stderr, " - Key Loaded: %lld", state->rkey_array[limazulu]);
+//   fprintf (stderr, "%s", KNRM);
+
+//   if (state->rkey_array[limazulu] != 0) 
+//     state->R = state->rkey_array[limazulu];
+
+// #endif //end LIMAZULUTWEAKS
 
   //Don't zero key if no keyloader
   if (CipherType != 0x1 && state->keyloader == 1) state->R = 0;

@@ -1,8 +1,6 @@
-#Ubuntu 18.04 uses 3.10.2 currently -- almost EOL
 #Ubuntu 20.04 uses 3.16.3
 #Ubuntu 22.04 uses 3.22.1
-#Arch currently on 3.26.1 -- new nag warning starts on this one, see below
-#cmake_minimum_required() should be called prior to this top-level project()
+#Arch currently on 3.26.3
 #Cygwin currently using 3.23.2 (or newer)
 cmake_minimum_required(VERSION 3.10.2)
 project(dsd-fme-aero)
@@ -36,7 +34,7 @@ endif ()
 #use cmake option -DLZ=ON to enable LimaZulu Requested NXDN Tweaks
 option(LZ
     "Build with new LimaZulu Requested NXDN Tweaks Enabled" OFF)
-if (NXDN)
+if (LZ)
     add_definitions(-DLIMAZULUTWEAKS) 
 endif ()
 
