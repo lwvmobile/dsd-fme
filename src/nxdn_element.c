@@ -96,6 +96,8 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
 
     //SRV_INFO
     case 0x19:
+      state->nxdn_last_rid = 0;
+      state->nxdn_last_tg = 0;
       NXDN_decode_srv_info(opts, state, ElementsContent);
       break;
 
@@ -124,6 +126,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
     //DISC
     case 0x11:
       NXDN_decode_VCALL(opts, state, ElementsContent);
+      memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
 
       //tune back to CC here - save about 1-2 seconds
       if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
@@ -461,6 +464,8 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
   if (state->nxdn_rcn == 1)
     sprintf (state->active_channel[0], "Active Ch: %d TG: %d; ", OFN, DestinationID);
 
+  state->last_active_time = time(NULL);
+
   //Add support for tuning data and group/private calls on trunking systems
   uint8_t tune = 0;
 
@@ -606,14 +611,14 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
 
 void NXDN_decode_Alias(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 {
-  uint8_t Alias1 = 0x0; //value of an ascii 'NULL' character
-  uint8_t Alias2 = 0x0;
-  uint8_t Alias3 = 0x0;
-  uint8_t Alias4 = 0x0;
+  uint8_t Alias1 = 0x20; //value of an ascii 'space' character
+  uint8_t Alias2 = 0x20;
+  uint8_t Alias3 = 0x20;
+  uint8_t Alias4 = 0x20;
   uint8_t blocknumber = 0; 
   uint8_t CrcCorrect = 0;
   
-  //alias can also hit on a facch1 so that would be with a non_sf_sacch attached
+  //alias can also hit on a facch1 -- do we still need this checkdown?
   if (state->nxdn_sacch_non_superframe == FALSE)
   {
     CrcCorrect = state->NxdnElementsContent.VCallCrcIsGood;
@@ -628,25 +633,25 @@ void NXDN_decode_Alias(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   Alias3 = (uint8_t)ConvertBitIntoBytes(&Message[56], 8);
   Alias4 = (uint8_t)ConvertBitIntoBytes(&Message[64], 8);
   //sanity check to prevent OOB array assignment
-  if (blocknumber > 0 && blocknumber < 5)
+  if (blocknumber > 0 && blocknumber < 4) //last 'block' may have been assigning garbage name values -- needs testing
   {
     //assign to index -1, since block number conveyed here is 1,2,3,4, and index values are 0,1,2,3
     //only assign if within valid range of ascii characters (not including diacritical extended alphabet)
-    //else assign "null" ascii character
+    //else assign "space" ascii character
 
     //since we are zeroing out the blocks on tx_rel and other conditions, better to just set nothing to bad Alias bytes
     //tends to zero out otherwise already good blocks set in a previous repitition.
     if (Alias1 > 0x19 && Alias1 < 0x7F) sprintf (state->nxdn_alias_block_segment[blocknumber-1][0], "%c", Alias1);
-    else ;// sprintf (state->nxdn_alias_block_segment[blocknumber-1][0], "%c", 0);
+    else ;// sprintf (state->nxdn_alias_block_segment[blocknumber-1][0], "%c", 32); //space
 
     if (Alias2 > 0x19 && Alias2 < 0x7F) sprintf (state->nxdn_alias_block_segment[blocknumber-1][1], "%c", Alias2);
-    else ; //sprintf (state->nxdn_alias_block_segment[blocknumber-1][1], "%c", 0);
+    else ; //sprintf (state->nxdn_alias_block_segment[blocknumber-1][1], "%c", 0); //space
 
     if (Alias3 > 0x19 && Alias3 < 0x7F) sprintf (state->nxdn_alias_block_segment[blocknumber-1][2], "%c", Alias3);
-    else ; //sprintf (state->nxdn_alias_block_segment[blocknumber-1][2], "%c", 0);
+    else ; //sprintf (state->nxdn_alias_block_segment[blocknumber-1][2], "%c", 0); //space
 
     if (Alias4 > 0x19 && Alias4 < 0x7F) sprintf (state->nxdn_alias_block_segment[blocknumber-1][3], "%c", Alias4);
-    else ; //sprintf (state->nxdn_alias_block_segment[blocknumber-1][3], "%c", 0);
+    else ; //sprintf (state->nxdn_alias_block_segment[blocknumber-1][3], "%c", 0); //space
   }
 
   //crc errs in one repitition may occlude an otherwise good alias, so test and change if needed
@@ -802,6 +807,12 @@ void NXDN_decode_srv_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
     }
   }
+
+  //clear stale active channel listing -- consider best placement for this (NXDN Type C Trunking -- inside SRV_INFO)
+	if ( (time(NULL) - state->last_active_time) > 3 )
+	{
+		memset (state->active_channel, 0, sizeof(state->active_channel));
+	}
 
 }
 
@@ -1291,12 +1302,21 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
 	//OSM messages
 	if (opcode == 0x4 || opcode == 0x0) //INFO 4
 	{
+    //clear stale active channel listing -- consider best placement for this (NXDN Type D Trunking -- inside a particular OSM Message?)
+    //may not be entirely necessary here in this context
+    if ( (time(NULL) - state->last_active_time) > 3 )
+    {
+      memset (state->active_channel, 0, sizeof(state->active_channel));
+    }
+
 		if (id == 2046)
 		{
 			fprintf (stderr, "Idle Repeater Message - ");
 			fprintf (stderr, "Area: %d; ", area);
 			fprintf (stderr, "Repeater 1: %d; ", rep1);
 			fprintf (stderr, "Repeater 2: %d; ", rep2);
+      sprintf (state->active_channel[rep1], "%s", "");
+      sprintf (state->active_channel[rep2], "%s", "");
 
 		} 
 		else if (id == 2045)
@@ -1366,6 +1386,7 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
       {
         if (gu == 0) sprintf (state->active_channel[rep1], "Active Ch: %d TG: %d-%d; ", rep1, rep2, id); //Group TG
         else sprintf (state->active_channel[rep1], "Active Ch: %d TGT: %d-%d; ", rep1, rep2, id); //Private TGT
+        state->last_active_time = time(NULL);
       }
 
       //start tuning section here

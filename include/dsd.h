@@ -658,6 +658,7 @@ typedef struct
   int lcn_freq_roll; //number we have 'rolled' to in search of the CC
   time_t last_cc_sync_time; //use this to start hunting for CC after signal lost
   time_t last_vc_sync_time; //flag for voice activity bursts, tune back on con+ after more than x seconds no voice
+  time_t last_active_time; //time the a 'call grant' was received, used to clear the active_channel strings after x seconds
   int is_con_plus; //con_plus flag for knowing its safe to skip payload channel after x seconds of no voice sync
 
   //new nxdn stuff

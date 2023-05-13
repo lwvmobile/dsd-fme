@@ -14,6 +14,12 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
   //reset some strings when returning from a call in case they didn't get zipped already
   sprintf (state->call_string[0], "%s", "                     "); //21 spaces
   sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+
+  //clear stale Active Channel messages here
+  if ( (time(NULL) - state->last_active_time) > 3 )
+  {
+    memset (state->active_channel, 0, sizeof(state->active_channel));
+  }
   
   int tsbkbit[196]; //tsbk bit array, 196 trellis encoded bits
   int tsbk_dibit[98];

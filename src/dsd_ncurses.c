@@ -2329,6 +2329,28 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       }
       printw ("]");
     }
+
+    //Group Name Labels from CSV import
+    for (int k = 0; k < state->group_tally; k++)
+    {
+      if (state->group_array[k].groupNumber == tgn)
+      {
+        attron(COLOR_PAIR(4));
+        printw (" [%s]", state->group_array[k].groupName);
+        printw ("[%s] ", state->group_array[k].groupMode);
+      }
+      else if (state->group_array[k].groupNumber == src)
+      {
+        attron(COLOR_PAIR(4));
+        printw (" [%s]", state->group_array[k].groupName);
+        printw ("[%s] ", state->group_array[k].groupMode);
+      }
+      if (state->carrier == 1)
+      {
+        attron(COLOR_PAIR(3));
+      }
+    }
+
     if (state->carrier == 1)
     {
       printw(" %s ", state->nxdn_call_type);

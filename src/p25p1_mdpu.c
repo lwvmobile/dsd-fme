@@ -28,6 +28,12 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   //reset some strings when returning from a call in case they didn't get zipped already
   sprintf (state->call_string[0], "%s", "                     "); //21 spaces
   sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+
+  //clear stale Active Channel messages here
+  if ( (time(NULL) - state->last_active_time) > 3 )
+  {
+    memset (state->active_channel, 0, sizeof(state->active_channel));
+  }
   
   int tsbkbit[196]; //tsbk bit array, 196 trellis encoded bits
   int tsbk_dibit[98];
@@ -306,6 +312,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 
       //add active channel to string for ncurses display
 			sprintf (state->active_channel[0], "Active Ch: %04X TG: %d ", channelt, group);
+      state->last_active_time = time(NULL);
 
       for (int i = 0; i < state->group_tally; i++)
       {
@@ -346,6 +353,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       			SetFreq(opts->rigctl_sockfd, freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+            state->last_vc_sync_time = time(NULL);
 					}
 					//rtl_udp
 					else if (opts->audio_in_type == 3)
@@ -353,6 +361,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 						rtl_udp_tune (opts, state, freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
 						opts->p25_is_tuned = 1;
+            state->last_vc_sync_time = time(NULL);
 					}
     		}    
   		}
@@ -428,7 +437,8 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
       			SetFreq(opts->rigctl_sockfd, freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
-						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+            state->last_vc_sync_time = time(NULL);
 					}
 					//rtl_udp
 					else if (opts->audio_in_type == 3)
@@ -436,6 +446,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 						rtl_udp_tune (opts, state, freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
 						opts->p25_is_tuned = 1;
+            state->last_vc_sync_time = time(NULL);
 					}
     		}    
   		}

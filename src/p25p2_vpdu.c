@@ -98,6 +98,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			//add active channel to string for ncurses display
 			sprintf (state->active_channel[0], "MFID90 Active Ch: %04X SG: %d; ", channel, sgroup);
+			state->last_active_time = time(NULL);
 
 			for (int i = 0; i < state->group_tally; i++)
       {
@@ -144,7 +145,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
       			SetFreq(opts->rigctl_sockfd, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
-						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+						state->last_vc_sync_time = time(NULL);
 					}
 					//rtl_udp
 					else if (opts->audio_in_type == 3)
@@ -152,6 +154,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						rtl_udp_tune (opts, state, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1;
+						state->last_vc_sync_time = time(NULL);
 					}
     		}    
   		}
@@ -180,6 +183,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			//add active channel to string for ncurses display
 			sprintf (state->active_channel[0], "MFID90 Active Ch: %04X SG: %d ", channel, sgroup);
+			state->last_active_time = time(NULL);
 
 			for (int i = 0; i < state->group_tally; i++)
       {
@@ -225,7 +229,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
       			SetFreq(opts->rigctl_sockfd, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
-						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+						state->last_vc_sync_time = time(NULL);
 					}
 					//rtl_udp
 					else if (opts->audio_in_type == 3)
@@ -233,6 +238,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						rtl_udp_tune (opts, state, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1;
+						state->last_vc_sync_time = time(NULL);
 					}
     		}    
   		}
@@ -268,6 +274,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			//add active channel to string for ncurses display
 			sprintf (state->active_channel[0], "MFID90 Active Ch: %04X SG: %d; Ch: %04X SG: %d; ", channel1, group1, channel2, group2);
+			state->last_active_time = time(NULL);
 
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
@@ -341,7 +348,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							SetFreq(opts->rigctl_sockfd, tunable_freq);
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
-							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+							state->last_vc_sync_time = time(NULL);
 							j = 8; //break loop
 							
 						}
@@ -351,6 +359,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							rtl_udp_tune (opts, state, tunable_freq);
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1;
+							state->last_vc_sync_time = time(NULL);
 							j = 8; //break loop
 						}
 					}    
@@ -399,6 +408,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			//add active channel to string for ncurses display
 			sprintf (state->active_channel[0], "Active Ch: %04X TG: %d; ", channel, group);
+			state->last_active_time = time(NULL);
 
 			for (int i = 0; i < state->group_tally; i++)
       {
@@ -449,6 +459,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
       			SetFreq(opts->rigctl_sockfd, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+						state->last_vc_sync_time = time(NULL);
 					}
 					//rtl_udp
 					else if (opts->audio_in_type == 3)
@@ -456,6 +467,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						rtl_udp_tune (opts, state, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1;
+						state->last_vc_sync_time = time(NULL);
 					}
     		}    
   		}
@@ -488,6 +500,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			//add active channel to string for ncurses display
 			sprintf (state->active_channel[0], "Active Ch: %04X TGT: %d; ", channel, target);
+			state->last_active_time = time(NULL);
 
 			//Skip tuning private calls if private calls is disabled
       if (opts->trunk_tune_private_calls == 0) goto SKIPCALL; 
@@ -538,7 +551,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
       			SetFreq(opts->rigctl_sockfd, freq);
 						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
-						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+						state->last_vc_sync_time = time(NULL); 
 					}
 					//rtl_udp
 					else if (opts->audio_in_type == 3)
@@ -546,6 +560,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						rtl_udp_tune (opts, state, freq);
 						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
 						opts->p25_is_tuned = 1;
+						state->last_vc_sync_time = time(NULL);
 					}
     		}    
   		}
@@ -591,7 +606,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
         fprintf (stderr, " Priority %d", svc1 & 0x7); //call priority
       }
 			freq1t = process_channel_to_freq (opts, state, channelt1);
-			freq1r = process_channel_to_freq (opts, state, channelr1);
+			if (channelr1 != 0 && channelr1 != 0xFFFF) freq1r = process_channel_to_freq (opts, state, channelr1);
 
 			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc2, channelt2, channelr2, group2, group2);
 			if (svc2 & 0x80) fprintf (stderr, " Emergency");
@@ -605,10 +620,11 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
         fprintf (stderr, " Priority %d", svc2 & 0x7); //call priority
       }
 			freq1t = process_channel_to_freq (opts, state, channelt2);
-			freq1r = process_channel_to_freq (opts, state, channelr2);
+			if (channelr2 != 0 && channelr2 != 0xFFFF) freq1r = process_channel_to_freq (opts, state, channelr2);
 
 			//add active channel to string for ncurses display
 			sprintf (state->active_channel[0], "Active Ch: %04X TG: %d; Ch: %04X TG: %d; ", channelt1, group1, channelt2, group2);
+			state->last_active_time = time(NULL);
 
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
@@ -690,7 +706,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
 							SetFreq(opts->rigctl_sockfd, tunable_freq);
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
-							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+							state->last_vc_sync_time = time(NULL);
 							j = 8; //break loop
 						}
 						//rtl_udp
@@ -699,6 +716,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							rtl_udp_tune (opts, state, tunable_freq);
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1;
+							state->last_vc_sync_time = time(NULL);
 							j = 8; //break loop
 						}
 					}    
@@ -774,6 +792,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			//add active channel to string for ncurses display
 			sprintf (state->active_channel[0], "Active Ch: %04X TG: %d; Ch: %04X TG: %d; Ch: %04X TG: %d; ", channel1, group1, channel2, group2, channel3, group3);
+			state->last_active_time = time(NULL);
 
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
@@ -866,7 +885,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							SetFreq(opts->rigctl_sockfd, tunable_freq);
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
-							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+							state->last_vc_sync_time = time(NULL);
 							j = 8; //break loop
 						}
 						//rtl_udp
@@ -876,6 +896,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1;
+							state->last_vc_sync_time = time(NULL);
 							j = 8; //break loop
 						}
 					}    
@@ -911,6 +932,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			//add active channel to string for ncurses display
 			sprintf (state->active_channel[0], "Active Ch: %04X TG: %d; Ch: %04X TG: %d; ", channel1, group1, channel2, group2);
+			state->last_active_time = time(NULL);
 
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
@@ -986,6 +1008,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+							state->last_vc_sync_time = time(NULL);
 							j = 8; //break loop
 						}
 						//rtl_udp
@@ -995,6 +1018,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1;
+							state->last_vc_sync_time = time(NULL);
 							j = 8; //break loop
 						}
 					}    
@@ -1038,7 +1062,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, " Group Voice Channel Grant Update - Explicit");
 			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc, channelt, channelr, group, group);
 			freq1 = process_channel_to_freq (opts, state, channelt);
-			freq2 = process_channel_to_freq (opts, state, channelr);
+			if (channelr != 0 && channelr != 0xFFFF) freq2 = process_channel_to_freq (opts, state, channelr); //one system had this as channel 0xFFFF -- look up any particular meaning for that
 
 			//don't set the tg here, one multiple grant updates, will mess up the TG value on current call
 			// if (slot == 0)
@@ -1095,7 +1119,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
       			SetFreq(opts->rigctl_sockfd, freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
-						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+						state->last_vc_sync_time = time(NULL);
 					}
 					//rtl_udp
 					else if (opts->audio_in_type == 3)
@@ -1103,6 +1128,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						rtl_udp_tune (opts, state, freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
 						opts->p25_is_tuned = 1;
+						state->last_vc_sync_time = time(NULL);
 					}
     		}    
   		}
