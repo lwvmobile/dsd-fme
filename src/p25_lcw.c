@@ -1,3 +1,11 @@
+/*-------------------------------------------------------------------------------
+ * p25_lcw.c
+ * P25p1 Link Control Word Decoding
+ *
+ * LWVMOBILE
+ * 2023-05 DSD-FME Florida Man Edition
+ *-----------------------------------------------------------------------------*/
+
 #include "dsd.h"
 
 //new p25_lcw function here -- TIA-102.AABF-D LCW Format Messages (if anybody wants to fill the rest out)
@@ -94,12 +102,14 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         {
           fprintf (stderr, "Ch: %04X TG: %d; ", channel1, group1);
           sprintf (state->active_channel[0], "Active Ch: %04X TG: %d; ", channel1, group1);
+          state->last_active_time = time(NULL);
         }
 
         if (channel2 && group2 && group1 != group2)
         {
           fprintf (stderr, "Ch: %04X TG: %d; ", channel2, group2);
           sprintf (state->active_channel[1], "Active Ch: %04X TG: %d; ", channel2, group2);
+          state->last_active_time = time(NULL);
         }
 
       }

@@ -45,7 +45,12 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
   
   if(IrrecoverableErrors == 0 && CRCCorrect == 1) 
   {
-    
+    //clear stale Active Channel messages here
+    if ( ((time(NULL) - state->last_active_time) > 3) && ((time(NULL) - state->last_vc_sync_time) > 3))
+    {
+      memset (state->active_channel, 0, sizeof(state->active_channel));
+    }
+
     //update time to prevent random 'Control Channel Signal Lost' hopping
     //in the middle of voice call on current Control Channel (con+ and t3)
     state->last_cc_sync_time = time(NULL); 
@@ -99,6 +104,21 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
         uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
 
+        //move mbc variables out of if statement
+        uint8_t mbc_lb = 0; //
+        uint8_t mbc_pf = 0;
+        uint8_t mbc_csbko = 0;
+        uint8_t mbc_res = 0;
+        uint8_t mbc_cc = 0;
+        uint8_t mbc_cdeftype = 0;
+        uint8_t mbc_res2 = 0;
+        unsigned long long int mbc_cdefparms = 0;
+        uint16_t mbc_lpchannum = 0;
+        uint16_t mbc_abs_tx_int = 0;
+        uint16_t mbc_abs_tx_step = 0;
+        uint16_t mbc_abs_rx_int = 0;
+        uint16_t mbc_abs_rx_step = 0;
+
         fprintf (stderr, "\n");
         //added my best guess as to how dsdplus arrives at a dmr channel value (seems pretty consistent) as C+
         fprintf (stderr, "  Ch [%03X] Cd [%04d] C+ [%04d] - TS [%d] - Target [%08d] - Source [%08d]", lpchannum, lpchannum, pluschannum, lcn, target, source);
@@ -107,36 +127,33 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         if (lpchannum == 0xFFF) //This is from an MBC, signalling an absolute and not a logical
         {
-          
           //7.1.1.1.2 Channel Grant Absolute Parameters CG_AP appended MBC PDU
-          uint8_t mbc_lb = cs_pdu_bits[96]; //
-          uint8_t mbc_pf = cs_pdu_bits[97];
-          uint8_t mbc_csbko = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[98], 6);
-          uint8_t mbc_res = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[104], 4);
-          uint8_t mbc_cc = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[108], 4);
-          uint8_t mbc_cdeftype = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[112], 4); //see 7.2.19.7 = 0 for channel parms, 1 through FFFF reserved
-          uint8_t mbc_res2 = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[116], 2);
-          unsigned long long int mbc_cdefparms = (unsigned long long int)ConvertBitIntoBytes(&cs_pdu_bits[118], 58); //see 7.2.19.7.1
+          mbc_lb = cs_pdu_bits[96]; //
+          mbc_pf = cs_pdu_bits[97];
+          mbc_csbko = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[98], 6);
+          mbc_res = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[104], 4);
+          mbc_cc = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[108], 4);
+          mbc_cdeftype = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[112], 4); //see 7.2.19.7 = 0 for channel parms, 1 through FFFF reserved
+          mbc_res2 = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[116], 2);
+          long long int mbc_cdefparms = (unsigned long long int)ConvertBitIntoBytes(&cs_pdu_bits[118], 58); //see 7.2.19.7.1
 
           //this is how you read the 58 parm bits according to the appendix 7.2.19.7.1
           if (mbc_cdeftype == 0) //if 0, then absolute channel parms
           {
-            uint16_t mbc_lpchannum = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[118], 12);
-            uint16_t mbc_abs_tx_int = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[130], 10);
-            uint16_t mbc_abs_tx_step = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[140], 13);
-            uint16_t mbc_abs_rx_int = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[153], 10);
-            uint16_t mbc_abs_rx_step = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[163], 13);
+            mbc_lpchannum = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[118], 12);
+            mbc_abs_tx_int = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[130], 10);
+            mbc_abs_tx_step = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[140], 13);
+            mbc_abs_rx_int = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[153], 10);
+            mbc_abs_rx_step = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[163], 13);
 
             //tx_int (Mhz) + (tx_step * 125) = tx_freq
             //rx_int (Mhz) + (rx_step * 125) = rx_freq
             fprintf (stderr, "\n");
             fprintf (stderr, "  ABS-CHAN [%03X][%04d] - RX INT [%d][%X] - RX STEP [%d][%X]", mbc_lpchannum, mbc_lpchannum, mbc_abs_rx_int, mbc_abs_rx_int, mbc_abs_rx_step, mbc_abs_rx_step );
-            //DOULBE CHECK APPENDIX C - C.1.1.2 Fixed Channel Plan for accurate information (found it after figuring out calc, so might be worth double checking)
             //The Frequency we want to tune is the RX Frequency
             freq = (mbc_abs_rx_int * 1000000 ) + (mbc_abs_rx_step * 125); 
-            //tx_freq = (mbc_abs_tx_int * 1000000 ) + (mbc_abs_tx_step * 125); 
-
           }
+          else fprintf (stderr, "\n  MBC Channel Grant - Unknown Parms: %015llX", mbc_cdefparms); //for any reserved values
         }
 
         //print frequency from absolute
@@ -150,9 +167,20 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
 
         //add active channel string to display
-        //NOTE: Need to reconfigure mbc variables so I can print them here when needed, just using abs freq for now
-        if (lpchannum != 0 && lpchannum != 0xFFF) sprintf (state->active_channel[0], "Active Ch: %d TG: %d; ", lpchannum, target);
-        else if (lpchannum == 0xFFF) sprintf (state->active_channel[0], "Active Freq: %.6lf TG: %d; ", (double)freq/1000000, target);
+        if (lpchannum != 0 && lpchannum != 0xFFF)
+        {
+          if (csbk_o == 49 || csbk_o == 50) sprintf (state->active_channel[lcn], "Active Group Ch: %d TG: %d; ", lpchannum, target);
+          else if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54) sprintf (state->active_channel[lcn], "Active Data Ch: %d TG: %d; ", lpchannum, target);
+          else sprintf (state->active_channel[lcn], "Active Private Ch: %d TG: %d; ", lpchannum, target);
+        } 
+        else if (lpchannum == 0xFFF)
+        {
+          if (csbk_o == 49 || csbk_o == 50) sprintf (state->active_channel[lcn], "Active Group Ch: %d TG: %d; ", mbc_lpchannum, target);
+          else if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54) sprintf (state->active_channel[lcn], "Active Data Ch: %d TG: %d; ", mbc_lpchannum, target);
+          else sprintf (state->active_channel[lcn], "Active Private Ch: %d TG: %d; ", mbc_lpchannum, target);
+        }
+        //update last active channel time
+        state->last_active_time = time(NULL);
 
         //Skip tuning group calls if group calls are disabled
         if (opts->trunk_tune_group_calls == 0 && csbk_o == 49) goto SKIPCALL; //TV_GRANT
@@ -883,6 +911,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           //additive strings for active channels
           memset (state->active_channel, 0, sizeof(state->active_channel));
           sprintf (state->active_channel[0], "Cap+ ");
+          state->last_active_time = time(NULL);
           
           k = 0;
           x = 0;
@@ -1106,6 +1135,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         //add active channel string for display
         sprintf (state->active_channel[0], "Active Ch: %d TG: %d; ", lcn, grpAddr);
+        state->last_active_time = time(NULL);
 
         //Skip tuning group calls if group calls are disabled
         if (opts->trunk_tune_group_calls == 0) goto SKIPCON;
@@ -1230,6 +1260,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         char xpt_active[20];
         if (xpt_seq == 0) sprintf (state->active_channel[0], "XPT "); //add initial if sequence 0
         else sprintf (state->active_channel[xpt_seq], "%s", ""); //blank current sequence to re-write to
+        state->last_active_time = time(NULL);
 
         //Print List of LCN with LSN Activity 
         for (i = 0; i < 6; i++) 
