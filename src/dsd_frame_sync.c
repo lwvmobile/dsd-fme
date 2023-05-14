@@ -231,10 +231,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   {
     t_max = 12; //based on Frame_Sync_2 pattern
   }
-  //if Phase 2 (or YSF in future), then only 20
+  //if Phase 2 (or YSF in future), then only 19
   else if (state->lastsynctype == 35 || state->lastsynctype == 36) //P2
   {
-    t_max = 20; 
+    t_max = 19; //Phase 2 S-ISCH is only 19
   }
   else t_max = 24; //24 for everything else
 
@@ -1279,18 +1279,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
           #ifdef NXDNTESTSYNC //use experimental sync detection based on multiple factors
           
-          //NXDN FSW sync and handling - testing with more exact syncs and also inlv (state->max)
-          //Theory is that pure noise is always much louder than an organized signal
-
-          //The state->max inlvl will hinge on the user setting an appropriate gain level
-          //so, this may not entirely be ideal, loud system may still not decode properly
-          //currently set to invlv 5000 or ~31% or less audio in level when dividing by 164
-
-          //Also, landing on other signal types will probably also 
-          //trigger this without squelch enabled
-
-          //NOTE: This test seems to work better for NXDN48 than it does for NXDN96
-
+          //NXDN FSW sync and handling - testing with more exact syncs patterns
           else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
           {
             strncpy (synctest10, (synctest_p - 9), 10); //FSW only
@@ -1300,86 +1289,103 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             //error will occur due to the demodulation issues internally
 
             //Preamble plus FSW, proceed right away
-            if ( (strcmp (synctest19, "3131133313131331131") == 0 ) ||
-                 (strcmp (synctest19, "3131133313331331131") == 0 ) ||
-                 (strcmp (synctest19, "3131133313131331111") == 0 ) ||
-                 (strcmp (synctest19, "3131133313331331111") == 0 )   )
+            if ( 
+                
+                    (strcmp (synctest19, "3131133313131331131") == 0 )
+                 || (strcmp (synctest19, "3131133313331331131") == 0 )
+                 || (strcmp (synctest19, "3131133313131331111") == 0 )
+                 || (strcmp (synctest19, "3131133313331331111") == 0 )   
+                 
+                )
             {
-              state->carrier = 1;
-              state->offset = synctest_pos;
-              state->max = ((state->max) + lmax) / 2;
-              state->min = ((state->min) + lmin) / 2;
+              // state->carrier = 1;
               state->lastsynctype = 28;
-              // if (opts->payload == 1) fprintf (stderr, "\n PANDF ");
-              // if (opts->payload == 1) fprintf (stderr, " %s ", synctest19);
-              // if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164);
-              // if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
-              if (state->max < 5000)
-                return (28);
-            }
-            else if ( (strcmp (synctest19, "1313311133131331131") == 0 ) ||
-                      (strcmp (synctest19, "1313311133331331131") == 0 ) ||
-                      (strcmp (synctest19, "1313311133131331111") == 0 ) ||
-                      (strcmp (synctest19, "1313311133331331111") == 0 )   )
-            {
-              state->carrier = 1;
+
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
+              
+              // if (opts->payload == 1)
+                // fprintf (stderr, "\n +PANDF ");
+              // if (opts->payload == 1)
+                // fprintf (stderr, " %s \n", synctest19);
+              return (28);
+            }
+            else if ( 
+
+                         (strcmp (synctest19, "1313311133131331131") == 0 )
+                      || (strcmp (synctest19, "1313311133331331131") == 0 )
+                      || (strcmp (synctest19, "1313311133131331111") == 0 )
+                      || (strcmp (synctest19, "1313311133331331111") == 0 )   
+                      
+                    )
+            {
+              // state->carrier = 1;
               state->lastsynctype = 29;
-              // if (opts->payload == 1) fprintf (stderr, "\n PANDF ");
-              // if (opts->payload == 1) fprintf (stderr, " %s ", synctest19);
-              // if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164);
-              // if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
-              if (state->max < 5000)
-                return (29);
+
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+              
+              // if (opts->payload == 1)
+                // fprintf (stderr, "\n -PANDF ");
+              // if (opts->payload == 1)
+                // fprintf (stderr, " %s \n", synctest19);
+              return (29);
             }
 
-            else if ( (strcmp (synctest10, "3131331131") == 0 ) ||
-                      (strcmp (synctest10, "3331331131") == 0 ) ||
-                      (strcmp (synctest10, "3131331111") == 0 ) ||
-                      (strcmp (synctest10, "3331331111") == 0 )   )
+            else if (
+                         (strcmp (synctest10, "3131331131") == 0 )
+                      || (strcmp (synctest10, "3331331131") == 0 )
+                      || (strcmp (synctest10, "3131331111") == 0 )
+                      || (strcmp (synctest10, "3331331111") == 0 )
+                      
+                    )
             {
-              state->carrier = 1;
+              // state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
 
               if (state->lastsynctype == 28) 
               {
-                // if (opts->payload == 1) fprintf (stderr, "\n FSW   ");
-                // if (opts->payload == 1) fprintf (stderr, " %s ", synctest10);
-                // if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164); //see if we can get max to meet threshold first?
-                // if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
-                if (state->max < 5000)
-                  return (28);
-              }
-              if (state->max < 5000)
                 state->lastsynctype = 28;
+                // if (opts->payload == 1)
+                  // fprintf (stderr, "\n +FSW   ");
+                // if (opts->payload == 1)
+                  // fprintf (stderr, " %s \n", synctest10);
+                return (28);
+              }
+
+              state->lastsynctype = 28;
+              
 
             }
 
-            else if ( (strcmp (synctest10, "1313113313") == 0 ) ||
-                      (strcmp (synctest10, "1113113313") == 0 ) ||
-                      (strcmp (synctest10, "1313113333") == 0 ) ||
-                      (strcmp (synctest10, "1113113333") == 0 )   )
+            else if ( 
+                      
+                         (strcmp (synctest10, "1313113313") == 0 )
+                      || (strcmp (synctest10, "1113113313") == 0 )
+                      || (strcmp (synctest10, "1313113333") == 0 )
+                      || (strcmp (synctest10, "1113113333") == 0 )   
+                      
+                    )
             {
-              state->carrier = 1;
+              // state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
 
               if (state->lastsynctype == 29) 
               {
-                // if (opts->payload == 1) fprintf (stderr, "\n FSW   ");
-                // if (opts->payload == 1) fprintf (stderr, " %s ", synctest10);
-                // if (opts->payload == 1) fprintf (stderr, " maxlvl %d ", state->max / 164);
-                // if (opts->payload == 1) fprintf (stderr, " minlvl %d ", state->min);
-                if (state->max < 5000)
-                  return (29);
-              }
-              if (state->max < 5000)
                 state->lastsynctype = 29;
+                // if (opts->payload == 1)
+                  // fprintf (stderr, "\n -FSW   ");
+                // if (opts->payload == 1)
+                  // fprintf (stderr, " %s \n", synctest10);
+                return (29);
+              }
+              state->lastsynctype = 29;              
 
             }
           }

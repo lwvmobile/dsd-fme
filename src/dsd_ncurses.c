@@ -49,7 +49,19 @@ int i = 0;
 char versionstr[25];
 unsigned long long int call_matrix[33][6];
 
-
+#ifdef LIMAZULUTWEAKS
+char * FM_bannerN[9] = {
+  "                                                         ",
+  " ██████╗  ██████╗██████╗               ███╗     ███████╗",
+  " ██╔══██╗██╔════╝██╔══██╗              ███║     ╚════██║",
+  " ██║  ██║╚█████╗ ██║  ██║              ███║       ███╔═╝",
+  " ██║  ██║ ╚═══██╗██║  ██║    Lima      ███║     ██╔══╝  ",
+  " ██████╔╝██████╔╝██████╔╝    Zulu      ████████╗███████╗",
+  " ╚═════╝ ╚═════╝ ╚═════╝  Edition III  ╚═══════╝╚══════╝",
+  "                                                        ",
+  "                                                        "
+};
+#else
 char * FM_bannerN[9] = {
   "                                                         ",
   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗ ",
@@ -61,7 +73,7 @@ char * FM_bannerN[9] = {
   "                                                         ",
   "                                                         "
 };
-
+#endif
 
 
 char * SyncTypes[44] = {
@@ -2070,11 +2082,19 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   //Start Printing Section
   erase();
+#ifdef LIMAZULUTWEAKS
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.0.0-95-g8485be9 Win32");
+    printw ("| Digital Speech Decoder: LimaZulu Edition - Aero %s \n", "v2.0.0-99-ge390251 Win32");
   }
+#else
+  if (opts->ncurses_compact == 1)
+  {
+    printw ("------------------------------------------------------------------------------\n");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.0.0-99-ge390251 Win32");
+  }
+#endif
   if (opts->ncurses_compact == 0)
   {
     attron(COLOR_PAIR(6));
@@ -2085,7 +2105,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4) printw (" MBElib %s", versionstr);
       if (i == 5) printw (" %s ", "Aero Win32"); //printw (" %s \n", GIT_TAG);
-      if (i == 6) printw (" %s \n", "v2.0.0-95-g8485be9"); //printw (" %s \n", GIT_TAG);
+      if (i == 6) printw (" %s \n", "v2.0.0-99-ge390251"); //printw (" %s \n", GIT_TAG);
       else printw ("\n");
     }
     attroff(COLOR_PAIR(6)); //6
