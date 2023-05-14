@@ -2149,6 +2149,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| RIGCTL Remote Control Client Established on Port [%d]\n", opts->rigctlportno);
   }
+  #ifdef PRETTY_COLORS
   if (opts->p25_trunk == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3) )
   {
     printw ("| Trunking -");
@@ -2168,6 +2169,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->trunk_use_allow_list == 1) printw (" - White List Mode\n");
     else printw (" - Black List Mode\n");
   }
+  #else //set on to UPPER CASE, off to lower case
+  if (opts->p25_trunk == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3) )
+  {
+    printw ("| Trunking -");
+    if (opts->trunk_tune_group_calls == 0) printw (" group(g)");
+    else printw (" GROUP(g)");
+    if (opts->trunk_tune_private_calls == 0) printw (" private(u)");
+    else printw (" PRIVATE(u)");
+    if (opts->trunk_tune_data_calls == 0) printw (" data(d)");
+    else printw (" DATA(d)");
+    if (opts->trunk_tune_enc_calls == 0) printw (" encrypted(e)");
+    else printw (" ENCRYPTED(e)");
+    printw (" Calls");
+    if (opts->trunk_use_allow_list == 1) printw (" - White List Mode\n");
+    else printw (" - Black List Mode\n");
+  }
+  #endif
   if (opts->reverse_mute == 1)
   {
     printw ("| Reverse Mute - Muting Unencrypted Voice\n");
