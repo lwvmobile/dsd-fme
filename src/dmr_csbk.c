@@ -762,7 +762,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint8_t bank_one = 0;
         uint8_t bank_two = 0;
         uint8_t b2_start = 0;
-        uint8_t block_num = state->cap_plus_block_num;
+        uint8_t block_num = state->cap_plus_block_num[ts];
         uint8_t pdflag = 0;
         uint8_t pdflag2 = 0;
         uint16_t private_target = 0;
@@ -781,7 +781,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //sanity check
         if (block_num > 6)
         {
-          state->cap_plus_block_num = 6;
+          state->cap_plus_block_num[ts] = 6;
           block_num = 6;
         }
 
@@ -796,13 +796,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           //NOTE: this has been changed to store per slot
           memset (state->cap_plus_csbk_bits[ts], 0, sizeof(state->cap_plus_csbk_bits[ts]));
           for (i = 0; i < 10*8; i++) state->cap_plus_csbk_bits[ts][i] = cs_pdu_bits[i];
-          state->cap_plus_block_num = 0;
+          state->cap_plus_block_num[ts] = 0;
         }
         else //appended block (fl 0) or final block (fl 1)
         {
           for (i = 0; i < 7*8; i++) state->cap_plus_csbk_bits[ts][i+80+(7*8*block_num)] = cs_pdu_bits[i+24];
           block_num++;
-          state->cap_plus_block_num++;
+          state->cap_plus_block_num[ts]++;
         }
         
         if (rest_channel != state->dmr_rest_channel)
@@ -1087,7 +1087,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             fprintf (stderr, "%s", KNRM);
           }
           memset (state->cap_plus_csbk_bits[ts], 0, sizeof(state->cap_plus_csbk_bits[ts]));
-          state->cap_plus_block_num = 0;
+          state->cap_plus_block_num[ts] = 0;
           
         } //if (fl == 1 || fl == 3)
       } //opcode == 0x3E
