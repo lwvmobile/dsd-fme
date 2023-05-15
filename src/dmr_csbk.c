@@ -852,11 +852,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //check for private activity on LSNs 1-8
         if (fl == 1 || fl == 3) 
         {
-          if (pdflag == 0x80)
+          if (pdflag) //== 0x80 //testing denny's 0x80 or 0x90 flag discovery
           {
             k = 0; //= 0
             fprintf (stderr, "\n");
-            fprintf (stderr, " F%X Private or Data Call - ", pdflag);
+            fprintf (stderr, " Bank One F%X Private or Data Call(s) - ", pdflag);
             for (int i = 0; i < 8; i++)
             {
               pch[i] = state->cap_plus_csbk_bits[ts][i+48+(group_tally*8)];
@@ -876,25 +876,25 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //end private/data call check on LSNs 1-8
 
         //check flag for appended private and/or data calls -- flag two still needs work or testing, double checking, etc, disable if issues arise
-        pdflag2 = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][48+(group_tally*8)+(pd_b2*16)], 8);  
+        pdflag2 = (uint8_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][56+(group_tally*8)+(pd_b2*16)], 8);  //48 -- had wrong value here (atleast in the one sample with the false positive)
 
         //check for private activity on LSNs 9-16
         if (fl == 1 || fl == 3) 
         {
           //then check to see if this byte has a value, should be 0x80, could be other?
           //this bytes location shifts depending on level of activity -- see banks above
-          if (pdflag2 == 0x80) //now looking to see if any appended data was added 
+          if (pdflag2) //== 0x80 //testing denny's 0x80 or 0x90 flag discovery
           {
             k = 0;
             fprintf (stderr, "\n");
-            fprintf (stderr, " F%X Private or Data Call - ", pdflag2);
+            fprintf (stderr, " Bank Two F%02X Private or Data Call(s) - ", pdflag2);
             for (int i = 0; i < 8; i++)
             {
-              pch[i+8] = state->cap_plus_csbk_bits[ts][i+56+(group_tally*8)+(pd_b2*16)]; //48
+              pch[i+8] = state->cap_plus_csbk_bits[ts][i+64+(group_tally*8)+(pd_b2*16)]; //56
               if (pch[i+8] == 1)
               {
                 fprintf (stderr, " LSN %02d:", i+1);
-                private_target = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][64+(k*16)+(group_tally*8)+(pd_b2*16)], 16); //64
+                private_target = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][64+(k*16)+(group_tally*8)+(pd_b2*16)], 16); //56 -- had wrong value here (atleast in the one sample with the false positive)
                 fprintf (stderr, " TGT %d;", private_target);
                 k++;
                 if (bank_two == 0) bank_two = 0xFF; //set all bits on so we can atleast parse all of them below in listing/display 
@@ -980,7 +980,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             }
             else if (pch[i] == 1) //private or data channels
             {
-              tg = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][(group_tally*8)+(x*16)+56], 16);
+              tg = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][(group_tally*8)+(x*16)+56], 16); //don't change this AGAIN!, this is correct!
               if (tg != 0) fprintf (stderr, "%5d;  ", tg);
               else fprintf (stderr, " P||D;  ");
               //flag as available for tuning if data calls enabled 
