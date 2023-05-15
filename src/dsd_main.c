@@ -370,7 +370,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
 
   //initialize cap+ bits and block num storage
   memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));  
-  state->cap_plus_block_num = 0;
+  memset (state->cap_plus_block_num, 0, sizeof(state->cap_plus_block_num));
 
   //init confirmed data individual block crc as invalid
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
@@ -921,7 +921,7 @@ initState (dsd_state * state)
   
   //initialize cap+ bits and block num storage
   memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));  
-  state->cap_plus_block_num = 0;
+  memset (state->cap_plus_block_num, 0, sizeof(state->cap_plus_block_num));
 
   //init confirmed data individual block crc as invalid
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));

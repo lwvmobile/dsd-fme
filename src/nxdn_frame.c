@@ -380,7 +380,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		limazulu = limazulu & 0xFFFF; //make sure no larger than 16-bits
 
 		fprintf (stderr, "%s", KYEL);
-		if (freq) fprintf (stderr, "\n Freq: %ld - Freq Hash: %0ld", freq, limazulu);
+		if (freq) fprintf (stderr, "\n Freq: %ld - Freq Hash: %d", freq, limazulu);
 		if (state->rkey_array[limazulu] != 0) fprintf (stderr, " - Key Loaded: %lld", state->rkey_array[limazulu]);
 		fprintf (stderr, "%s", KNRM);
 

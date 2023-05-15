@@ -1154,7 +1154,7 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 //   limazulu = limazulu & 0xFFFF; //make sure no larger than 16-bits
 
 //   fprintf (stderr, "%s", KCYN);
-//   if (freq) fprintf (stderr, "\n Freq: %ld - Freq Hash: %0ld", freq, limazulu);
+//   if (freq) fprintf (stderr, "\n Freq: %ld - Freq Hash: %d", freq, limazulu);
 //   if (state->rkey_array[limazulu] != 0) fprintf (stderr, " - Key Loaded: %lld", state->rkey_array[limazulu]);
 //   fprintf (stderr, "%s", KNRM);
 

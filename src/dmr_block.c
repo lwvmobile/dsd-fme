@@ -773,6 +773,7 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
   memset (state->dmr_lrrp_source, 0, sizeof(state->dmr_lrrp_source));
   memset (state->dmr_cach_fragment, 1, sizeof (state->dmr_cach_fragment));
   memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
+  memset (state->cap_plus_block_num, 0, sizeof(state->cap_plus_block_num));
   memset (state->data_header_valid, 0, sizeof(state->data_header_valid));
   memset (state->data_header_format, 7, sizeof(state->data_header_format));
   //reset some strings
