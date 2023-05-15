@@ -250,8 +250,17 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 	if (opcode == 0x4 && err == 0)
 	{
 		//disable to prevent blinking in ncurses terminal due to OSS preemption shim
-		//if (state->currentslot == 1) state->dmrburstL = 21;
-		//else state->dmrburstR = 21;
+		#ifdef AERO_BUILD
+		if (opts->audio_out_type != 5)
+		{
+			if (state->currentslot == 1) state->dmrburstL = 21;
+			else state->dmrburstR = 21;
+		}
+		#else
+		if (state->currentslot == 1) state->dmrburstL = 21;
+		else state->dmrburstR = 21;
+		#endif
+		
 		fprintf (stderr, " MAC_ACTIVE ");
 		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 1, SMAC);
@@ -508,8 +517,17 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 	if (opcode == 0x4 && err == 0)
 	{
 		//disable to prevent blinking in ncurses terminal due to OSS preemption shim
-		//if (state->currentslot == 0) state->dmrburstL = 21;
-		//else state->dmrburstR = 21;
+		#ifdef AERO_BUILD
+		if (opts->audio_out_type != 5)
+		{
+			if (state->currentslot == 0) state->dmrburstL = 21;
+			else state->dmrburstR = 21;
+		}
+		#else
+		if (state->currentslot == 0) state->dmrburstL = 21;
+		else state->dmrburstR = 21;
+		#endif
+		
 		fprintf (stderr, " MAC_ACTIVE ");
 		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 0, FMAC);

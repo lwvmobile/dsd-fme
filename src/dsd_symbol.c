@@ -119,7 +119,11 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             openPulseInput(opts); //open pulse input
           } 
           //else cleanup and exit
-          else cleanupAndExit(opts, state);             
+          else
+          {
+            if (opts->use_ncurses_terminal == 1) ncursesClose(opts);
+            cleanupAndExit(opts, state);     
+          }        
         }
       }
       else if (opts->audio_in_type == 3)
@@ -140,6 +144,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       //tcp socket input from SDR++ -- now with 1 retry if connection is broken
       else if (opts->audio_in_type == 8)
       {
+        #ifdef AERO_BUILD
         result = sf_read_short(opts->tcp_file_in, &sample, 1);
         if(result == 0) {
           fprintf (stderr, "\nConnection to TCP Server Interrupted. Trying again in 3 seconds.\n");
@@ -189,12 +194,56 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             {
               fprintf (stderr, "Connection to TCP Server Disconnected.\n");
               fprintf (stderr, "Closing DSD-FME.\n");
+              if (opts->use_ncurses_terminal == 1) ncursesClose(opts);
               cleanupAndExit(opts, state);
             }
             
           }
           
         }
+        #else
+        result = sf_read_short(opts->tcp_file_in, &sample, 1);
+        if(result == 0) {
+          fprintf (stderr, "\nConnection to TCP Server Interrupted. Trying again in 3 seconds.\n");
+          sample = 0;
+          sf_close(opts->tcp_file_in); //close current connection on this end
+          sleep (3); //halt all processing and wait 3 seconds
+
+          //attempt to reconnect to socket
+          opts->tcp_sockfd = 0;  
+          opts->tcp_sockfd = Connect(opts->tcp_hostname, opts->tcp_portno);
+          if (opts->tcp_sockfd != 0)
+          {
+            //reset audio input stream
+            opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
+            opts->audio_in_file_info->samplerate=opts->wav_sample_rate;
+            opts->audio_in_file_info->channels=1;
+            opts->audio_in_file_info->seekable=0;
+            opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
+            opts->tcp_file_in = sf_open_fd(opts->tcp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
+
+            if(opts->tcp_file_in == NULL)
+            {
+              fprintf(stderr, "Error, couldn't Reconnect to TCP with libsndfile: %s\n", sf_strerror(NULL));
+            }
+            else fprintf (stderr, "TCP Socket Reconnected Successfully.\n");
+          }
+          else fprintf (stderr, "TCP Socket Connection Error.\n");          
+
+          //now retry reading sample
+          result = sf_read_short(opts->tcp_file_in, &sample, 1);
+          if (result == 0) {
+            sf_close(opts->tcp_file_in);
+            opts->audio_in_type = 0; //set input type
+            opts->tcp_sockfd = 0; //added this line so we will know if it connected when using ncurses terminal keyboard shortcut
+            openPulseInput(opts); //open pulse inpput
+            sample = 0; //zero sample on bad result, keep the ball rolling
+            fprintf (stderr, "Connection to TCP Server Disconnected.\n");
+          }
+          
+        }
+        #endif
+        
       }
 
       //tcp socket input from SDR++ -- old method to open pulse or quit right away
@@ -480,7 +529,11 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         openPulseInput(opts); //open pulse input
       } 
       //else cleanup and exit
-      else cleanupAndExit(opts, state);
+      else
+      {
+        if (opts->use_ncurses_terminal == 1) ncursesClose(opts);
+        cleanupAndExit(opts, state);
+      }
     }
 
     //assign symbol/dibit values based on modulation type

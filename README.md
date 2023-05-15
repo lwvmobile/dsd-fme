@@ -1,6 +1,8 @@
 ## Notice
 
-This branch is for modifications to make a Windows 32-bit binary to be precompiled, please DO NOT use this branch if you are a Linux User, or copy any contents out of here to modify your existing setup!
+This branch is for development and experimentation. Results are not gauranteed to be stable.
+This branch will also attempt to consolidate the code bases for 'Main' and 'Aero' into one codeset
+with the differences needed for Aero (Cygwin) handled by cmake option `cmake -DAERO=ON ..` when building.
 
 ## License
 Copyright (C) 2010 DSD Author

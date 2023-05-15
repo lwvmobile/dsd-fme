@@ -64,7 +64,7 @@ char * FM_banner[9] = {
   " ██║  ██║ ╚═══██╗██║  ██║    ██╔══╝  ██║╚██╔╝██║██╔══╝  ",
   " ██████╔╝██████╔╝██████╔╝    ██║     ██║ ╚═╝ ██║███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝     ╚═╝     ╚═╝     ╚═╝╚══════╝",
-  " 'Aero' Edition       v2.0.0-99-ge390251 Windows 32-bit "
+  "                                                        "
 };
 #endif
 
@@ -436,10 +436,14 @@ initOpts (dsd_opts * opts)
   opts->p25status = 0;
   opts->p25tg = 0;
   opts->scoperate = 15;
+  #ifdef AERO_BUILD
   sprintf (opts->audio_in_dev, "/dev/dsp");
-  opts->audio_in_fd = -1;
-
   sprintf (opts->audio_out_dev, "/dev/dsp");
+  #else
+  sprintf (opts->audio_in_dev, "pulse");
+  sprintf (opts->audio_out_dev, "pulse");
+  #endif
+  opts->audio_in_fd = -1;
   opts->audio_out_fd = -1;
   opts->audio_out_fdR = -1;
 
@@ -976,20 +980,36 @@ usage ()
   printf ("  -Z            Log MBE/PDU Payloads to console\n");
   printf ("\n");
   printf ("Input/Output options:\n");
+  #ifdef AERO_BUILD
   printf ("  -i <device>   Audio input device (default is /dev/dsp)\n");
-  printf ("                pulse for pulse audio \n");
+  printf ("                pulse for pulse audio (will require pactl running in Cygwin)\n");
+  #else
+  printf ("  -i <device>   Audio input device (default is pulse)\n");
+  //NOTE: Fix some inputs to /dev/audio if required for linux, or just leave it as the more annoying /dev/dsp -- padsp bug opens multiple input streams...sometimes
+  printf ("                /dev/dsp for OSS audio (Depreciated: Will require padsp wrapper in Linux) \n");
+  #endif
   printf ("                rtl:dev:freq:gain:ppm:bw:sq:udp for rtl dongle (see below)\n");
   printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
   printf ("                tcp:192.168.7.5:7355 for custom address and port \n");
   printf ("                filename.bin for OP25/FME capture bin files\n");
   printf ("                filename.wav for 48K/1 wav files (SDR++, GQRX)\n");
   printf ("                filename.wav -s 96000 for 96K/1 wav files (DSDPlus)\n");
+  #ifdef AERO_BUILD
+  printf ("                (Use single quotes '\\directory\\audio file.wav' when directories/spaces are present)\n");
+  #else
   printf ("                (Use single quotes '/directory/audio file.wav' when directories/spaces are present)\n");
+  #endif
   // printf ("                (Windows - '\directory\audio file.wav' backslash, not forward slash)\n");
   printf ("  -s <rate>     Sample Rate of wav input files (48000 or 96000) Mono only!\n");
+  #ifdef AERO_BUILD
   printf ("  -o <device>   Audio output device (default is /dev/dsp)\n");
+  printf ("                pulse for pulse audio (will require pactl running in Cygwin)\n");
+  #else
+  printf ("  -o <device>   Audio output device (default is pulse)\n");
+  printf ("                /dev/dsp for OSS audio (Depreciated: Will require padsp wrapper in Linux) \n");
+  #endif
   printf ("                null for no audio output\n");
-  printf ("                pulse for pulse audio \n");
+  // printf ("                pulse for pulse audio \n");
   printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
@@ -1282,15 +1302,12 @@ main (int argc, char **argv)
   mbe_printVersion (versionstr);
 
   fprintf (stderr,"            Digital Speech Decoder: Florida Man Edition\n");
-  for (short int i = 1; i < 8; i++) {
-    //fprintf (stderr,"%s%s \n", FM_banner[i], KGRN); //cyan/blue text
-    fprintf (stderr,"%s\n", FM_banner[i]); //cyan/blue tex
+  for (short int i = 1; i < 7; i++) {
+    fprintf (stderr,"%s\n", FM_banner[i]);
   }
-  //fprintf (stderr,"%s", KNRM); //change back to normal
 
-  // git_tag not working in 32-bit cygwin? or issue with copy and paste, even with the .git folder?
-  // fprintf (stderr, "Github Build Version: %s \n", GIT_TAG);
-  // fprintf (stderr,"MBElib version %s\n", versionstr);
+  fprintf (stderr, "Github Build Version: %s%s \n", GIT_TAG);
+  fprintf (stderr,"MBElib version %s\n", versionstr);
 
   initOpts (&opts);
   initState (&state);
@@ -2135,9 +2152,14 @@ main (int argc, char **argv)
       }
       else 
       {
-        opts.audio_in_type = 5;
-        fprintf (stderr, "TCP Connection Failure - Using Pulse Audio Input.\n");
+        #ifdef AERO_BUILD
         sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
+        opts.audio_in_type = 5;
+        #else
+        sprintf (opts.audio_in_dev, "%s", "pulse");
+        fprintf (stderr, "TCP Connection Failure - Using %s Audio Input.\n", opts.audio_in_dev);
+        opts.audio_in_type = 0;
+        #endif
       }
       
     }
@@ -2217,25 +2239,35 @@ main (int argc, char **argv)
       rtl_ok = 1;
       #endif
 
+      #ifdef AERO_BUILD
       if (rtl_ok == 0) //not set, means rtl support isn't compiled/available
       {
         fprintf (stderr, "RTL Support not enabled/compiled, falling back to OSS /dev/dsp Audio Input.\n");
         sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
         opts.audio_in_type = 5;
       }
+      #else
+      if (rtl_ok == 0) //not set, means rtl support isn't compiled/available
+      {
+        fprintf (stderr, "RTL Support not enabled/compiled, falling back to Pulse Audio Audio Input.\n");
+        sprintf (opts.audio_in_dev, "%s", "pulse");
+        opts.audio_in_type = 0;
+      }
+      #endif
     }
 
     //doesn't work correctly, so just going to reroute to /dev/dsp instead
-    if((strncmp(opts.audio_in_dev, "udp", 3) == 0)) //udp socket input from SDR++, GQRX, and others
-    {
-      fprintf (stderr, "UDP Input not working, falling back to OSS /dev/dsp Audio Input.\n");
-      sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
-      opts.audio_in_type = 5;
-    }
+    // if((strncmp(opts.audio_in_dev, "udp", 3) == 0)) //udp socket input from SDR++, GQRX, and others
+    // {
+    //   fprintf (stderr, "UDP Input not working, falling back to OSS /dev/dsp Audio Input.\n");
+    //   sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
+    //   opts.audio_in_type = 5;
+    // }
 
     int fmt; 
     int speed = 48000; 
 
+    //NOTE: Might can use this code in an ifdef to be able to use /dev/audio under padsp in Linux
     if((strncmp(opts.audio_in_dev, "/dev/audio", 10) == 0))
     {
       sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
@@ -2380,7 +2412,7 @@ main (int argc, char **argv)
       }
       opts.pulse_digi_rate_out = 48000;
       opts.pulse_digi_out_channels = 1;
-      if (opts.audio_out_type == 0) openPulseOutput(&opts); //need to open it up for output?
+      if (opts.audio_out_type == 0) openPulseOutput(&opts);
       if (opts.audio_out_type == 5) openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
     }
 

@@ -611,13 +611,16 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
     //end reverse mute test
 
+    #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
     //OSS Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
     if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && state->dmrburstR == 16) 
     {
       opts->audio_out = 0;
       preempt = 1;
-      if (opts->payload == 0) fprintf (stderr, " *MUTED*"); 
+      if (opts->payload == 0)
+        fprintf (stderr, " *MUTED*"); 
     }
+    #endif
 
     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
     {
@@ -675,13 +678,16 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
     //end reverse mute test
 
+    #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
     //OSS Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
     if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && state->dmrburstL == 16) 
     {
       opts->audio_out = 0;
       preempt = 1;
-      if (opts->payload == 0) fprintf (stderr, " *MUTED*"); 
+      if (opts->payload == 0) 
+        fprintf (stderr, " *MUTED*"); 
     }
+    #endif
 
     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
     {

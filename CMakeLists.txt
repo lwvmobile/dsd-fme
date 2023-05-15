@@ -3,12 +3,19 @@
 #Arch currently on 3.26.3
 #Cygwin currently using 3.23.2 (or newer)
 cmake_minimum_required(VERSION 3.10.2)
-project(dsd-fme-aero)
+project(dsd-fme-zdev)
 
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
 #Set curses to ncurses, and wide true for ascii
 set(CURSES_NEED_NCURSES TRUE)
 set(CURSES_NEED_WIDE TRUE)
+
+#use cmake option -DAERO=ON to enable Aero Builds (OSS support and specific tweaks)
+option(AERO
+    "Build for Aero Environments (Cygwin)" OFF)
+if (AERO)
+    add_definitions(-DAERO_BUILD) 
+endif ()
 
 #use cmake option -DCOLORS=OFF to disable color output
 option(COLORS
@@ -70,24 +77,24 @@ list(APPEND SRCS "${CMAKE_CURRENT_BINARY_DIR}/git_ver.c")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
-ADD_EXECUTABLE(dsd-fme-aero ${SRCS} ${HEADERS})
-TARGET_LINK_LIBRARIES(dsd-fme-aero ${LIBS})
+ADD_EXECUTABLE(dsd-fme-zdev ${SRCS} ${HEADERS})
+TARGET_LINK_LIBRARIES(dsd-fme-zdev ${LIBS})
 
 include(GNUInstallDirs)
-install(TARGETS dsd-fme-aero DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS dsd-fme-zdev DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # man page
 find_program(HELP2MAN_FOUND help2man)
 if (HELP2MAN_FOUND)
-    add_custom_command(TARGET dsd-fme-aero POST_BUILD
+    add_custom_command(TARGET dsd-fme-zdev POST_BUILD
         COMMAND help2man
         ARGS -n "Digital Speech Decoder"
             --version-string=${GIT_TAG}
-            -o ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme-aero.1
+            -o ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme-zdev.1
             --no-info
-            $<TARGET_FILE:dsd-fme-aero>
+            $<TARGET_FILE:dsd-fme-zdev>
     )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme-aero.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme-zdev.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 endif()
 
 # uninstall target

@@ -475,10 +475,16 @@ void process_4V (dsd_opts * opts, dsd_state * state)
 		fprintf (stderr, "\n");
 	}
 
-	//set to 16 for MBE OSS shim to preempt audio
-	if (state->currentslot == 0) state->dmrburstL = 16;
-	else state->dmrburstR = 16;
-
+	#ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
+	//Cygwin OSS Slot Preference Pre-emption shim
+	if (opts->audio_out_type == 5)
+	{
+		//set to 16 for MBE OSS shim to preempt audio 
+		if (state->currentslot == 0) state->dmrburstL = 16;
+		else state->dmrburstR = 16;
+	}
+	#endif
+	
 	processMbeFrame (opts, state, NULL, ambe_fr1, NULL);
 	processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
 	processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
@@ -630,9 +636,15 @@ void process_2V (dsd_opts * opts, dsd_state * state)
 		fprintf (stderr, "\n");
 	}
 
-	//set to 16 for MBE OSS shim to preempt audio
-	if (state->currentslot == 0) state->dmrburstL = 16;
-	else state->dmrburstR = 16;
+	#ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
+	//Cygwin OSS Slot Preference Pre-emption shim
+	if (opts->audio_out_type == 5)
+	{
+		//set to 16 for MBE OSS shim to preempt audio 
+		if (state->currentslot == 0) state->dmrburstL = 16;
+		else state->dmrburstR = 16;
+	}
+	#endif
 
 	processMbeFrame (opts, state, NULL, ambe_fr1, NULL);
 	processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
@@ -860,14 +872,16 @@ void processP2 (dsd_opts * opts, dsd_state * state)
 	state->dmr_stereo = 0; 
 	state->p2_is_lcch = 0;
 
-	//bugfix for OSS dmrbust 16 shim, reset both to 0 upon exit
-	//in case or marginal signal and both get stuck on 16, indefinitely muting the non-preferred slot
-	//but...this can also cause at least one 4v/2v to get through on the other slot if the sync lines up that way
+	//bugfix for OSS slot preferred pre-emption on dual voices
+	//in case or marginal signal or bad decoding and both get stuck on 16, indefinitely muting the non-preferred slot
+	//BUG: This causes an annoying blink blink in ncurses, just FYI -- find a better workaround
+	#ifdef AERO_BUILD
 	if (opts->audio_out_type == 5)
 	{
 		//set both to blank value
 		state->dmrburstL = 17;
 		state->dmrburstR = 17;
 	}
+	#endif
   fprintf (stderr, "\n"); 
 }

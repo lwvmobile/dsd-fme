@@ -1506,7 +1506,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       src = 0;
       rn = 0;
       tgn = 0;
-      dcc = 0;
+      dcc = -1;
       tg = 0;
       tgR = 0;
       rd = 0;
@@ -2082,17 +2082,18 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   //Start Printing Section
   erase();
-#ifdef LIMAZULUTWEAKS
+#ifdef AERO_BUILD
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: LimaZulu Edition - Aero %s \n", "v2.0.0-99-ge390251 Win32");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", GIT_TAG);
+    // printw ("| Digital Speech Decoder: Florida Man Edition - zDEV %s \n", "v2.0.0-100-gae58fab Win32"); 
   }
 #else
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.0.0-99-ge390251 Win32");
+    printw ("| Digital Speech Decoder: Florida Man Edition - zDEV %s \n", GIT_TAG);
   }
 #endif
   if (opts->ncurses_compact == 0)
@@ -2104,8 +2105,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4) printw (" MBElib %s", versionstr);
-      if (i == 5) printw (" %s ", "Aero Win32"); //printw (" %s \n", GIT_TAG);
-      if (i == 6) printw (" %s \n", "v2.0.0-99-ge390251"); //printw (" %s \n", GIT_TAG);
+      #ifdef AERO_BUILD
+      if (i == 5) printw (" %s ", "Aero Win32");
+      if (i == 6) printw (" %s \n", GIT_TAG); //don't have the git dev package on my cygwin32 bit environment and can't get it now (32-bit no longer supported)
+      // if (i == 6) printw (" v2.0.0-100-gae58fab \n"); //put appropriate version in here later, or find the GIT_TAG package (git_revision) to build in cygwin
+      #else
+      if (i == 5) printw (" %s ", "zDEV BUILD");
+      if (i == 6) printw (" %s \n", GIT_TAG);
+      #endif
       else printw ("\n");
     }
     attroff(COLOR_PAIR(6)); //6
@@ -2539,7 +2546,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //This is the new one
     printw ("%s | ", state->call_string[0]);
     printw ("%s ", DMRBusrtTypes[state->dmrburstL]);
-    if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && state->dmrburstR == 16 && state->dmrburstL == 16) printw ("*M*"); 
+
+    #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
+    //
+    if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && state->dmrburstR == 16 && state->dmrburstL == 16) printw ("*M*");
+    //
+    #endif 
+
     printw ("\n");
 
     printw ("| V XTRA | "); //10 spaces
@@ -2735,7 +2748,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //THIS IS THE NEW ONE
       printw ("%s | ", state->call_string[1]);
       printw ("%s ", DMRBusrtTypes[state->dmrburstR]);
+      #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
+	    //
       if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && state->dmrburstR == 16 && state->dmrburstL == 16) printw ("*M*"); 
+      //
+      #endif
       printw ("\n");
       
       printw ("| V XTRA | "); //10 spaces
@@ -3273,23 +3290,26 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
   }
 
-//
-//  if (c == 32) //'space bar' replay last bin file (rework to do wav files too?)
-//  {
-//   struct stat stat_buf;
-//   if (stat(opts->audio_in_dev, &stat_buf) != 0)
-//   {
-//     fprintf (stderr,"Error, couldn't open %s\n", opts->audio_in_dev);
-//     goto SKIPR;
-//   }
-//   if (S_ISREG(stat_buf.st_mode))
-//   {
-//     opts->symbolfile = fopen(opts->audio_in_dev, "r");
-//     opts->audio_in_type = 4; //symbol capture bin files
-//   }
-//   SKIPR: ; //do nothing
-//  }
-//
+ #ifdef AERO_BUILD
+ //do nothing
+ #else
+ if (c == 32) //'space bar' replay last bin file (rework to do wav files too?)
+ {
+  struct stat stat_buf;
+  if (stat(opts->audio_in_dev, &stat_buf) != 0)
+  {
+    fprintf (stderr,"Error, couldn't open %s\n", opts->audio_in_dev);
+    goto SKIPR;
+  }
+  if (S_ISREG(stat_buf.st_mode))
+  {
+    opts->symbolfile = fopen(opts->audio_in_dev, "r");
+    opts->audio_in_type = 4; //symbol capture bin files
+  }
+  SKIPR: ; //do nothing
+ }
+ #endif
+
 
 
  if (c == 80) //'P' key - start per call wav files
@@ -3324,30 +3344,33 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //
-  // if (c == 115) //'s' key, stop playing wav or symbol in files
-  // {
-  //   if (opts->symbolfile != NULL)
-  //   {
-  //     if (opts->audio_in_type == 4) 
-  //     {
-  //       fclose(opts->symbolfile); 
-  //     }
-  //   }
+  #ifdef AERO_BUILD //this might be okay on Aero as well, will need to look into and/or test
+  // 
+  #else
+  if (c == 115) //'s' key, stop playing wav or symbol in files
+  {
+    if (opts->symbolfile != NULL)
+    {
+      if (opts->audio_in_type == 4) 
+      {
+        fclose(opts->symbolfile); 
+      }
+    }
 
-  //   if (opts->audio_in_type == 2) //wav input file
-  //   {
-  //     sf_close(opts->audio_in_file);
-  //   }
+    if (opts->audio_in_type == 2) //wav input file
+    {
+      sf_close(opts->audio_in_file);
+    }
 
-  //   if (opts->audio_out_type == 0)
-  //   {
-  //     opts->audio_in_type = 0;
-  //     openPulseInput(opts);
-  //   }
-  //   else opts->audio_in_type = 5;//cleanupAndExit(opts, state); 
+    if (opts->audio_out_type == 0)
+    {
+      opts->audio_in_type = 0;
+      openPulseInput(opts);
+    }
+    else opts->audio_in_type = 5;//cleanupAndExit(opts, state); 
     
-  // }
-  //
+  }
+  #endif
   
   //test jumping back to CC on group lockout instead of random frequency to break framesync
   if (state->lasttg != 0 && opts->frame_provoice != 1 && c == 49) //'1' key, lockout slot 1 or conventional tg from tuning/playback during session
