@@ -90,9 +90,17 @@ void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
 
+  //only do it here on the tweaks
+  #ifdef LIMAZULUTWEAKS
+  state->nxdn_last_ran = -1;
+  #endif
+
   //experimental conventional frequency scanner mode
   if (opts->scanner_mode == 1 && ( (time(NULL) - state->last_cc_sync_time) > opts->trunk_hangtime))
   {
+
+    //always do this one -- makes sense during scanning
+    state->nxdn_last_ran = -1;
 
     if (state->lcn_freq_roll >= state->lcn_freq_count)
     {

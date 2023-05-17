@@ -445,8 +445,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
   //zero out to fix call history 'scrolling' bug when changing decoding types
   state->nxdn_last_tg = 0;
-  state->nxdn_last_ran = 0;
-  state->nxdn_last_rid = 0;
+  state->nxdn_last_ran = -1; //0
+  state->nxdn_last_rid = 0; //0
 
   WINDOW *menu_win;
   WINDOW *test_win;
@@ -2346,8 +2346,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     
 
     printw ("| ");
+    #ifdef LIMAZULUTWEAKS
+    if (idas == 0) printw ("NXDN - RAN: [%02d] ", state->nxdn_last_ran);
+    if (idas == 1) printw ("IDAS - Area: [%02d] ", state->nxdn_last_ran);
+    #else
     if (idas == 0) printw ("NXDN - RAN: [%02d] ", rn);
     if (idas == 1) printw ("IDAS - Area: [%02d] ", rn);
+    #endif
     if (state->nxdn_location_site_code != 0)
     {
       printw ("Cat: [%s] ", state->nxdn_location_category);
@@ -3533,8 +3538,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     state->nxdn_location_sys_code = 0;
     sprintf (state->nxdn_location_category, "%s", " ");
 
-    state->nxdn_last_ran = 0;
-    state->nxdn_ran = 0;
+    state->nxdn_last_ran = -1; //0
+    state->nxdn_ran = 0; //0
 
     state->nxdn_rcn = 0;
     state->nxdn_base_freq = 0;

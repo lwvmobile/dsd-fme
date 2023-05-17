@@ -64,7 +64,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	uint8_t facch_bits_b[144];
 	uint8_t cac_bits[300];
 	uint8_t facch2_bits[348]; //facch2 or udch, same amount of bits
-	uint8_t facch3_bits[288]; //facch3 or udch2, same amoount of bits
+	uint8_t facch3_bits[288]; //facch3 or udch2, same amount of bits
 
 	//nxdn bit buffer, for easy assignment handling
 	int nxdn_bit_buffer[364]; 
