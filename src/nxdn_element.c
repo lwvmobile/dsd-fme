@@ -1384,8 +1384,8 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
       //add current active to display string -- may need tweaking on if to use rep1 (active ch), or rep2 (home prefix)
       if (rep1 != 0 && rep1 != 31) 
       {
-        if (gu == 0) sprintf (state->active_channel[rep1], "Active Ch: %d TG: %d-%d; ", rep1, rep2, id); //Group TG
-        else sprintf (state->active_channel[rep1], "Active Ch: %d TGT: %d-%d; ", rep1, rep2, id); //Private TGT
+        if (gu == 0) sprintf (state->active_channel[rep1], "Active Group Ch: %d TG: %d-%d; ", rep1, rep2, id); //Group TG
+        else sprintf (state->active_channel[rep1], "Active Private Ch: %d TGT: %d-%d; ", rep1, rep2, id); //Private TGT
         state->last_active_time = time(NULL);
       }
 
@@ -1431,7 +1431,8 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
         //check to see if the source/target candidate is blocked first
         if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0)) //DE is digital encrypted, B is block
         {
-          if (state->p25_cc_freq != 0 && state->last_vc_sync_time > 1 && freq != 0) //if we aren't already on a VC and have a valid frequency already
+          //will need to monitor, 1 second may be too long on idas, may need to try 0 or manipulate another way
+          if (state->p25_cc_freq != 0 && ((time(NULL) - state->last_vc_sync_time) > 1) && freq != 0) 
           {
             //rigctl
             if (opts->use_rigctl == 1)
