@@ -298,9 +298,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
             if (opts->audio_in_type == 3) //rtl dongle
             {
+              #ifdef USE_RTLSDR
               rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
               state->edacs_tuned_lcn = lcn;
-              opts->p25_is_tuned = 1; 
+              opts->p25_is_tuned = 1;
+              #endif
             }
 
           }
@@ -428,9 +430,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
               if (opts->audio_in_type == 3) //rtl dongle
               {
+                #ifdef USE_RTLSDR
                 rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
                 state->edacs_tuned_lcn = lcn;
-                opts->p25_is_tuned = 1; 
+                opts->p25_is_tuned = 1;
+                #endif
               }
 
             }

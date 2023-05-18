@@ -358,10 +358,12 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 					//rtl
 					else if (opts->audio_in_type == 3)
 					{
+            #ifdef USE_RTLSDR
 						rtl_dev_tune (opts, freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
 						opts->p25_is_tuned = 1;
             state->last_vc_sync_time = time(NULL);
+            #endif
 					}
     		}    
   		}
@@ -443,10 +445,12 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 					//rtl
 					else if (opts->audio_in_type == 3)
 					{
+            #ifdef USE_RTLSDR
 						rtl_dev_tune (opts, freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
 						opts->p25_is_tuned = 1;
             state->last_vc_sync_time = time(NULL);
+            #endif
 					}
     		}    
   		}

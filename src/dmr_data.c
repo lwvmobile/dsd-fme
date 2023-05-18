@@ -336,7 +336,9 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
 
       else if (opts->audio_in_type == 3) //rtl_fm tuning
       {
+        #ifdef USE_RTLSDR
         rtl_dev_tune(opts, state->p25_cc_freq);
+        #endif
       }
       opts->p25_is_tuned = 0;
       //zero out vc frequencies

@@ -319,6 +319,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
           //rtl
           else if (opts->audio_in_type == 3)
           {
+            #ifdef USE_RTLSDR
             state->lasttg = 0;
             state->lastsrc = 0;
             state->payload_algid = 0;
@@ -331,7 +332,8 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
             sprintf (state->active_channel[1], "%s", "");
             opts->p25_is_tuned = 0;
             state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
-            rtl_dev_tune (opts, state->p25_cc_freq); 
+            rtl_dev_tune (opts, state->p25_cc_freq);
+            #endif
           }
         }
       }

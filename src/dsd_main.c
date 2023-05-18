@@ -118,7 +118,9 @@ noCarrier (dsd_opts * opts, dsd_state * state)
       //rtl
       if (opts->audio_in_type == 3)
       {
+        #ifdef USE_RTLSDR
         rtl_dev_tune(opts, state->trunk_lcn_freq[state->lcn_freq_roll]);
+        #endif
       }
 
       if (state->lastsynctype != -1) fprintf (stderr, "Resume Scanning Mode\n");
@@ -153,8 +155,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
       //rtl
       else if (opts->audio_in_type == 3)
       {
+        #ifdef USE_RTLSDR
         rtl_dev_tune (opts, state->p25_cc_freq);
         state->dmr_rest_channel = -1;
+        #endif
       }
 
       opts->p25_is_tuned = 0; 
@@ -526,8 +530,8 @@ initOpts (dsd_opts * opts)
   opts->rtl_bandwidth = 12; //changed recommended default to 12, 24 for ProVoice
   opts->rtlsdr_ppm_error = 0; //initialize ppm with 0 value; bug reported by N.
   opts->rtlsdr_center_freq = 850000000; //set to an initial value (if user is using a channel map, then they won't need to specify anything other than -i rtl if desired)
-  //end RTL user options
   opts->rtl_started = 0;
+  //end RTL user options
   opts->pulse_raw_rate_in   = 48000;
   opts->pulse_raw_rate_out  = 48000; //
   opts->pulse_digi_rate_in  = 48000;
@@ -1048,7 +1052,6 @@ usage ()
   printf ("  -z            Set TDMA Voice Slot Preference when using OSS audio output (prevent lag and stuttering)\n");
   printf ("\n");
   printf ("RTL-SDR options:\n");
-  printf (" WARNING! Old CLI Switch Handling has been depreciated in favor of rtl:<parms>\n");
   printf (" Usage: rtl:dev:freq:gain:ppm:bw:sq:udp\n");
   printf ("  NOTE: all arguments after rtl are optional now for trunking, but user configuration is recommended\n");
   printf ("  dev  <num>    RTL-SDR Device Index Number\n");
@@ -1058,7 +1061,7 @@ usage ()
   printf ("  bw   <num>    RTL-SDR VFO Bandwidth kHz (default = 12)(6, 8, 12, 24)  \n");
   printf ("  sq   <num>    RTL-SDR Squelch Level (Optional)\n");
   printf ("  udp  <num>    RTL-SDR UDP Remote Port (Optional -- External Use Only)\n");
-  printf (" Example: dsd-fme-zdev -fs -i rtl -C cap_plus_channel.csv - T\n"); //put a good example here, probably trunking so user doesn't have to enter the 'optional' arguments
+  printf (" Example: dsd-fme-zdev -fs -i rtl -C cap_plus_channel.csv -T\n"); //put a good example here, probably trunking so user doesn't have to enter the 'optional' arguments
   printf (" Example: dsd-fme-zdev -fp -i rtl:0:851.375M:22:-2:12:0:6021\n");
   printf ("\n");
   printf ("Decoder options:\n");

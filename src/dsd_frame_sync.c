@@ -192,7 +192,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
       //rtl
       if (opts->audio_in_type == 3)
       {
+        #ifdef USE_RTLSDR
         rtl_dev_tune (opts, state->trunk_lcn_freq[state->lcn_freq_roll]);
+        #endif
       }
       
       fprintf (stderr, "Tuning to Frequency: %.06lf MHz\n", 

@@ -146,12 +146,14 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
         //rtl
         else if (opts->audio_in_type == 3)
         {
+          #ifdef USE_RTLSDR
           //extra safeguards due to sync issues with NXDN
           memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
           memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
           memset(state->active_channel, 0, sizeof(state->active_channel));
           opts->p25_is_tuned = 0;
-          rtl_dev_tune (opts, state->p25_cc_freq); 
+          rtl_dev_tune (opts, state->p25_cc_freq);
+          #endif
         }
       }
       
@@ -573,6 +575,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
       //rtl
       else if (opts->audio_in_type == 3)
       {
+        #ifdef USE_RTLSDR
         //extra safeguards due to sync issues with NXDN
         memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		    memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
@@ -599,6 +602,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
           fprintf (stderr, " Key Loaded: %lld", state->rkey_array[DestinationID]);
         }
         if (state->M == 1) state->nxdn_cipher_type = 0x1;
+        #endif
       }
       
     }    
@@ -1456,6 +1460,7 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
             //rtl
             else if (opts->audio_in_type == 3)
             {
+              #ifdef USE_RTLSDR
               //extra safeguards due to sync issues with NXDN
               memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
               memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
@@ -1470,6 +1475,7 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
               //TGT ID and Key ID could clash though if csv or system has both with different keys
               if (state->rkey_array[id] != 0) state->R = state->rkey_array[id];
               if (state->M == 1) state->nxdn_cipher_type = 0x1;
+              #endif
             }
             
           }    

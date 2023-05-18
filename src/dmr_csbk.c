@@ -252,10 +252,12 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 //rtl
                 else if (opts->audio_in_type == 3)
                 {
+                  #ifdef USE_RTLSDR
                   rtl_dev_tune (opts, freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1;
                   dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+                  #endif
                 }
 
               }
@@ -1058,11 +1060,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   //rtl
                   else if (opts->audio_in_type == 3)
                   {
+                    #ifdef USE_RTLSDR
                     rtl_dev_tune (opts, state->trunk_chan_map[j+1]);
                     state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
                     opts->p25_is_tuned = 1;
                     dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                     j = 11; //break loop
+                    #endif
                   }
 
                 }
@@ -1201,12 +1205,14 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               //rtl
               else if (opts->audio_in_type == 3)
               {
+                #ifdef USE_RTLSDR
                 rtl_dev_tune (opts, state->trunk_chan_map[lcn]);
                 state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
                 opts->p25_is_tuned = 1;
                 state->is_con_plus = 1; //flag on
                 state->last_vc_sync_time = time(NULL); //bugfix: set sync here so we don't immediately tune back to CC constantly.
                 dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+                #endif
               }
 
             }
@@ -1396,6 +1402,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 //rtl
                 else if (opts->audio_in_type == 3)
                 {
+                  #ifdef USE_RTLSDR
                   //debug 
                   fprintf (stderr, " - Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);
 
@@ -1404,6 +1411,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   opts->p25_is_tuned = 1;
                   dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                   j = 11; //break loop
+                  #endif
                 }
 
               }

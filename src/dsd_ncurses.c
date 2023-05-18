@@ -1658,18 +1658,23 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
   {
     openPulseInput(opts);
   }
-  #ifdef USE_RTLSDR
+  //fix location of this statement to inside the if statement and add conditions
   if (opts->audio_in_type == 3) //open rtl input if it is the specified input method
   {
     ncursesPrinter (opts, state); //run one rep to clear menu boxes out
+    #ifdef USE_RTLSDR 
     if (opts->rtl_started == 0)
     {
       opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
       open_rtlsdr_stream(opts);
     }
-
+    #elif AERO_BUILD
+    opts->audio_out_type = 3; //hopefully the audio stream is still/already open
+    #else
+    opts->audio_out_type = 0; //need to see if we need to open pulseoutput as well here?
+    openPulseOutput (opts);
+    #endif
   }
-  #endif
 
   if (opts->audio_in_type == 8) //re-open TCP input 'file'
   {
@@ -3412,7 +3417,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->p25_trunk == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
 
     //rtl
+    #ifdef USE_RTLSDR
     if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_dev_tune (opts, state->p25_cc_freq);
+    #endif
 
   }
 
@@ -3462,8 +3469,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //RIGCTL
     if (opts->p25_trunk == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
 
-    //rtl_udp
+    //rtl
+    #ifdef USE_RTLSDR
     if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_dev_tune (opts, state->p25_cc_freq);
+    #endif
 
   }
 

@@ -600,7 +600,15 @@ openAudioInDevice (dsd_opts * opts)
   }
   else if(strncmp(opts->audio_in_dev, "rtl", 3) == 0)
   {
+    #ifdef USE_RTLSDR
     opts->audio_in_type = 3;
+    #elif AERO_BUILD
+    opts->audio_in_type = 5;
+    sprintf (opts->audio_in_dev, "/dev/dsp");
+    #else
+    opts->audio_in_type = 0;
+    sprintf (opts->audio_in_dev, "pulse");
+    #endif
   }
   else if(strncmp(opts->audio_in_dev, "pulse", 5) == 0)
   {
