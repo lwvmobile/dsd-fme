@@ -41,19 +41,6 @@ int i = 0;
 char versionstr[25];
 unsigned long long int call_matrix[33][6];
 
-#ifdef LIMAZULUTWEAKS
-char * FM_bannerN[9] = {
-  "                                                         ",
-  " ██████╗  ██████╗██████╗               ███╗     ███████╗",
-  " ██╔══██╗██╔════╝██╔══██╗              ███║     ╚════██║",
-  " ██║  ██║╚█████╗ ██║  ██║              ███║       ███╔═╝",
-  " ██║  ██║ ╚═══██╗██║  ██║    Lima      ███║     ██╔══╝  ",
-  " ██████╔╝██████╔╝██████╔╝    Zulu      ████████╗███████╗",
-  " ╚═════╝ ╚═════╝ ╚═════╝  Edition III  ╚═══════╝╚══════╝",
-  "                                                        ",
-  "                                                        "
-};
-#else
 char * FM_bannerN[9] = {
   "                                                         ",
   " ██████╗  ██████╗██████╗     ███████╗███╗   ███╗███████╗ ",
@@ -65,8 +52,6 @@ char * FM_bannerN[9] = {
   "                                                         ",
   "                                                         "
 };
-#endif
-
 
 char * SyncTypes[44] = {
   "P25P1",
@@ -2073,14 +2058,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", GIT_TAG);
-    // printw ("| Digital Speech Decoder: Florida Man Edition - zDEV %s \n", "v2.0.0-100-gae58fab Win32"); 
+    // printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", GIT_TAG);
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.0.1-6 Win32");
+    printw ("------------------------------------------------------------------------------\n"); 
+  }
+#elif LIMAZULUTWEAKS
+  if (opts->ncurses_compact == 1)
+  {
+    printw ("------------------------------------------------------------------------------\n");
+    printw ("| Digital Speech Decoder: LimaZulu Edition IV: The Voyage Home \n");
+    printw ("------------------------------------------------------------------------------\n");
   }
 #else
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
     printw ("| Digital Speech Decoder: Florida Man Edition - zDEV %s \n", GIT_TAG);
+    printw ("------------------------------------------------------------------------------\n");
   }
 #endif
   if (opts->ncurses_compact == 0)
@@ -2105,6 +2099,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     attroff(COLOR_PAIR(6)); //6
     attron(COLOR_PAIR(4));
   }
+
+  //fix color/pair issue when compact and trunking enabled
+  if (opts->ncurses_compact == 1 && opts->p25_trunk == 1) attron(COLOR_PAIR(4));
 
   printw ("--Input Output----------------------------------------------------------------\n");
   if (opts->audio_in_type == 0)
@@ -3118,6 +3115,25 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           printw ("SRC [%8lld] ", call_matrix[9-j][2]);
           printw ("DCC [%02lld] ", call_matrix[9-j][4]);
         }
+
+        #ifdef LIMAZULUTWEAKS
+        //Group Name Labels from CSV import
+        for (int k = 0; k < state->group_tally; k++)
+        {
+          if (state->group_array[k].groupNumber == call_matrix[9-j][1])
+          {
+            attron(COLOR_PAIR(4));
+            printw ("[%s]", state->group_array[k].groupName);
+            printw ("[%s] ", state->group_array[k].groupMode);
+          }
+          else if (state->group_array[k].groupNumber == call_matrix[9-j][2])
+          {
+            attron(COLOR_PAIR(4));
+            printw ("[%s]", state->group_array[k].groupName);
+            printw ("[%s] ", state->group_array[k].groupMode);
+          }
+        }
+        #endif
 
         printw ("%s ", getDateC(call_matrix[9-j][5]) ); //You're welcome
         printw ("%s \n", getTimeC(call_matrix[9-j][5]) ); //Remus

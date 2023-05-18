@@ -51,8 +51,8 @@ char * FM_banner[9] = {
   " ██╔══██╗██╔════╝██╔══██╗              ███║     ╚════██║",
   " ██║  ██║╚█████╗ ██║  ██║    Lima      ███║       ███╔═╝",
   " ██║  ██║ ╚═══██╗██║  ██║    Zulu      ███║     ██╔══╝  ",
-  " ██████╔╝██████╔╝██████╔╝ Edition III  ████████╗███████╗",
-  " ╚═════╝ ╚═════╝ ╚═════╝ Windows 32-bit╚═══════╝╚══════╝",
+  " ██████╔╝██████╔╝██████╔╝ Edition IV   ████████╗███████╗",
+  " ╚═════╝ ╚═════╝ ╚═════╝               ╚═══════╝╚══════╝",
   "                                                        "
 };
 #else
@@ -93,14 +93,18 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   //only do it here on the tweaks
   #ifdef LIMAZULUTWEAKS
   state->nxdn_last_ran = -1;
+  state->nxdn_last_rid = 0;
+  state->nxdn_last_tg = 0;
   #endif
 
   //experimental conventional frequency scanner mode
   if (opts->scanner_mode == 1 && ( (time(NULL) - state->last_cc_sync_time) > opts->trunk_hangtime))
   {
 
-    //always do this one -- makes sense during scanning
+    //always do these -- makes sense during scanning
     state->nxdn_last_ran = -1;
+    state->nxdn_last_rid = 0;
+    state->nxdn_last_tg = 0;
 
     if (state->lcn_freq_roll >= state->lcn_freq_count)
     {
@@ -550,6 +554,9 @@ initOpts (dsd_opts * opts)
   opts->use_ncurses_terminal = 0;
   opts->ncurses_compact = 0;
   opts->ncurses_history = 1;
+  #ifdef LIMAZULUTWEAKS
+  opts->ncurses_compact = 1;
+  #endif
   opts->payload = 0;
   opts->inverted_dpmr = 0;
   opts->dmr_mono = 0;
@@ -1326,13 +1333,17 @@ main (int argc, char **argv)
   char versionstr[25];
   mbe_printVersion (versionstr);
 
+  #ifdef LIMAZULUTWEAKS
+  fprintf (stderr,"            Digital Speech Decoder: LimaZulu Edition IV\n");
+  #else
   fprintf (stderr,"            Digital Speech Decoder: Florida Man Edition\n");
+  #endif
   for (short int i = 1; i < 7; i++) {
     fprintf (stderr,"%s\n", FM_banner[i]);
   }
 
-  fprintf (stderr, "Github Build Version: %s \n", GIT_TAG);
-  fprintf (stderr,"MBElib version %s\n", versionstr);
+  fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
+  fprintf (stderr,"MBElib Version: %s\n", versionstr);
 
   initOpts (&opts);
   initState (&state);

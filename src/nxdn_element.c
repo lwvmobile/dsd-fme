@@ -1129,55 +1129,8 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
   else if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
 
-// #ifdef LIMAZULUTWEAKS
-
-//   //LimaZulu specific tweak, load keys from frequency value, if avalable -- untested
-
-//   long int freq = 0;
-//   uint8_t hash_bits[24];
-//   memset (hash_bits, 0, sizeof(hash_bits));
-//   uint16_t limazulu = 0;
-    
-//   //if not available, then poll rigctl if its available
-//   if (opts->use_rigctl == 1)
-//     freq = GetCurrentFreq (opts->rigctl_sockfd);
-
-//   //if using rtl input, we can ask for the current frequency tuned
-//   else if (opts->audio_in_type == 3)
-//     freq = (long int)opts->rtlsdr_center_freq;
-
-//   //freq = 167831250; //hardset for  testing
-
-//   //since a frequency value will be larger than the 16-bit max, we need to hash it first
-//   //the hash has to be run the same way as the import, so at a 24-bit depth, which hopefully
-//   //will not lead to any duplicate key loads due to multiple CRC16 collisions on a larger value?
-//   for (int i = 0; i < 24; i++)
-//     hash_bits[i] = ((freq << i) & 0x800000) >> 23; //load into array for CRC16 
-
-//   if (freq) limazulu = ComputeCrcCCITT16d (hash_bits, 24);
-//   limazulu = limazulu & 0xFFFF; //make sure no larger than 16-bits
-
-//   fprintf (stderr, "%s", KCYN);
-//   if (freq) fprintf (stderr, "\n Freq: %ld - Freq Hash: %d", freq, limazulu);
-//   if (state->rkey_array[limazulu] != 0) fprintf (stderr, " - Key Loaded: %lld", state->rkey_array[limazulu]);
-//   fprintf (stderr, "%s", KNRM);
-
-//   if (state->rkey_array[limazulu] != 0) 
-//     state->R = state->rkey_array[limazulu];
-
-// #endif //end LIMAZULUTWEAKS
-
   //Don't zero key if no keyloader
   if (CipherType != 0x1 && state->keyloader == 1) state->R = 0;
-
-  //NOTE: Broadcast Call appears to have values that aren't typical for VCALL, 
-  //so not applying any settings below if CallType == 0 (BC Call)
-
-  //NOTE: Above note may be in error; its possible that the issues I was having
-  //was from not resetting the entire SACCH superframe after reading it, and
-  //the samples in question having interwoven ALIAS and VCALL, and bad settings
-  //coming from a missed SF Part of Frame, if not reset, we could skip a SF POF 
-  //and still believe we have a good decode -- will need further testing #118
 
   /* Print the "Cipher Type" */
   if(CipherType != 0 && MessageType == 0x1)
