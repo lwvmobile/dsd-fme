@@ -12,20 +12,12 @@
 #include "dsd.h"
 #include "git_ver.h"
 
-//UDP Remote
-#include <arpa/inet.h>
-// #include <sys/socket.h>
-#include <netinet/in.h>
 
 #define BSIZE 999
 #define UDP_BUFLEN 5 //maximum UDP buffer length
 #define SRV_IP "127.0.0.1" //IP
 #define UDP_PORT 6020 //UDP port
 
-int handle; //for UDP
-unsigned short udp_port = UDP_PORT;
-char data[UDP_BUFLEN] = {0};
-struct sockaddr_in address;
 
 uint32_t temp_freq = -1;
 //
@@ -87,10 +79,10 @@ char * SyncTypes[44] = {
   "DSTAR",
   "NXDN VOICE",
   "NXDN VOICE",
-  "DMR ", //10
-  "DMR ",
-  "DMR ",
-  "DMR ",
+  "DMR", //10
+  "DMR",
+  "DMR",
+  "DMR",
   "EDACS/PV",
   "EDACS/PV",
   "NXDN VOICE", //DATA
@@ -109,9 +101,9 @@ char * SyncTypes[44] = {
   "NXDN",
   "YSF", //30
   "YSF",
-  "DMR ",
-  "DMR ",
-  "DMR ",
+  "DMR",
+  "DMR",
+  "DMR",
   "P25P2",
   "P25P2",
   "EDACS/PV", //37
@@ -676,16 +668,12 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
           box (entry_win, 0, 0);
-          mvwprintw(entry_win, 2, 2, " Enter RTL UDP Remote Port (Default = 6020)");
+          mvwprintw(entry_win, 2, 2, " Enter RTL UDP Port - Optional (Default = 0)");
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
           wscanw(entry_win, "%d", &opts->rtl_udp_port);
           noecho();
-          if (opts->rtl_udp_port == 0)
-          {
-            opts->rtl_udp_port = 6020;
-          }
 
           entry_win = newwin(8, WIDTH+22, starty+10, startx+10);
           box (entry_win, 0, 0);
@@ -728,7 +716,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
         }
 
-        if (choicec == 7) //RTL UDP Retune
+        if (choicec == 7) //RTL DEV Retune
         {
           //read in new rtl frequency
           #ifdef USE_RTLSDR
@@ -738,14 +726,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
-          wscanw(entry_win, "%d", &opts->rtlsdr_center_freq); //ld, or lld?
+          wscanw(entry_win, "%d", &opts->rtlsdr_center_freq);
           noecho();
-          //do the thing with the thing
-          data[0] = 0;
-          data[1] = opts->rtlsdr_center_freq & 0xFF;
-          data[2] = (opts->rtlsdr_center_freq >> 8) & 0xFF;
-          data[3] = (opts->rtlsdr_center_freq >> 16) & 0xFF;
-          data[4] = (opts->rtlsdr_center_freq >> 24) & 0xFF;
 
           temp_freq = opts->rtlsdr_center_freq;
           #endif
@@ -1718,11 +1700,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     c = getch(); //
   }
 
-  //use rtl_udp_tune
+  //use rtl_dev_tune
   #ifdef USE_RTLSDR
   if (temp_freq == opts->rtlsdr_center_freq)
   {
-    rtl_udp_tune (opts, state, temp_freq);
+    rtl_dev_tune (opts, temp_freq);
     temp_freq = -1;
   }
   #endif
@@ -2149,12 +2131,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_in_type == 3)
   {
-    printw ("| RTL2838UHIDIR Device #[%d]", opts->rtl_dev_index);
-    printw (" Gain [%i] dB -", opts->rtl_gain_value);
-    printw (" Squelch [%i]", opts->rtl_squelch_level);
-    printw (" VFO [%i] kHz\n", opts->rtl_bandwidth);
-    printw ("| Freq: [%d] Hz", opts->rtlsdr_center_freq); //%lld
-    printw (" - Tuning available on UDP Port [%i]\n", opts->rtl_udp_port);
+    printw ("| RTL2838UHIDIR: %d", opts->rtl_dev_index);
+    printw (" Gain: %idB", opts->rtl_gain_value);
+    printw (" PPM: %i", opts->rtlsdr_ppm_error);
+    printw (" SQ: %i", opts->rtl_squelch_level);
+    printw (" BW %i kHz", opts->rtl_bandwidth);
+    printw (" Frequency: %i Hz", opts->rtlsdr_center_freq); 
+    if (opts->rtl_udp_port != 0) printw ("\n| External Tuning on UDP Port: %i", opts->rtl_udp_port);
+    printw ("\n");
   }
   if (opts->audio_out_type == 0)
   {
@@ -3399,6 +3383,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
     memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 
+    memset (state->active_channel, 0, sizeof(state->active_channel));
+
     //reset dmr blocks
     dmr_reset_blocks (opts, state);
 
@@ -3422,8 +3408,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //RIGCTL
     if (opts->p25_trunk == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
 
-    //rtl_udp
-    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, state->p25_cc_freq);
+    //rtl
+    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_dev_tune (opts, state->p25_cc_freq);
 
   }
 
@@ -3448,6 +3434,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
     memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 
+    memset (state->active_channel, 0, sizeof(state->active_channel));
+
     //reset dmr blocks
     dmr_reset_blocks (opts, state);
 
@@ -3472,7 +3460,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->p25_trunk == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
 
     //rtl_udp
-    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_udp_tune (opts, state, state->p25_cc_freq);
+    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_dev_tune (opts, state->p25_cc_freq);
 
   }
 

@@ -1107,6 +1107,7 @@ void open_rtlsdr_stream(dsd_opts *opts);
 void cleanup_rtlsdr_stream();
 void get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state);
 void rtlsdr_sighandler();
+void rtl_dev_tune(dsd_opts * opts, long int frequency);
 #endif
 //DMR TRELLIS
 void CDMRTrellisTribitsToBits(const unsigned char* tribits, unsigned char* payload);

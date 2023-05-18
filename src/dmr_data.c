@@ -336,8 +336,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
 
       else if (opts->audio_in_type == 3) //rtl_fm tuning
       {
-        //UDP command to tune the RTL dongle
-        rtl_udp_tune(opts, state, state->p25_cc_freq);
+        rtl_dev_tune(opts, state->p25_cc_freq);
       }
       opts->p25_is_tuned = 0;
       //zero out vc frequencies

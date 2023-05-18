@@ -143,7 +143,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
           SetFreq(opts->rigctl_sockfd, state->p25_cc_freq); 
           
         }
-        //rtl_udp
+        //rtl
         else if (opts->audio_in_type == 3)
         {
           //extra safeguards due to sync issues with NXDN
@@ -151,7 +151,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
           memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
           memset(state->active_channel, 0, sizeof(state->active_channel));
           opts->p25_is_tuned = 0;
-          rtl_udp_tune (opts, state,  state->p25_cc_freq); 
+          rtl_dev_tune (opts, state->p25_cc_freq); 
         }
       }
       
@@ -570,7 +570,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
         } 
         if (state->M == 1) state->nxdn_cipher_type = 0x1;
       }
-      //rtl_udp
+      //rtl
       else if (opts->audio_in_type == 3)
       {
         //extra safeguards due to sync issues with NXDN
@@ -581,7 +581,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
         state->last_vc_sync_time = time(NULL);
         //
 
-        rtl_udp_tune (opts, state, freq); 
+        rtl_dev_tune (opts, freq); 
         state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
         opts->p25_is_tuned = 1;
 
@@ -1453,7 +1453,7 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
               if (state->rkey_array[id] != 0) state->R = state->rkey_array[id];
               if (state->M == 1) state->nxdn_cipher_type = 0x1;
             }
-            //rtl_udp
+            //rtl
             else if (opts->audio_in_type == 3)
             {
               //extra safeguards due to sync issues with NXDN
@@ -1463,7 +1463,7 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
               state->last_cc_sync_time = time(NULL);
               state->last_vc_sync_time = time(NULL); //should we use this here, or not?
               //
-              rtl_udp_tune (opts, state, freq); 
+              rtl_dev_tune (opts, freq); 
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
               opts->p25_is_tuned = 1;
               //check the rkey array for a scrambler key value

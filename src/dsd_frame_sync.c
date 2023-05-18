@@ -189,10 +189,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
         if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
         SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[state->lcn_freq_roll]);
       }
-      //rtludp
+      //rtl
       if (opts->audio_in_type == 3)
       {
-        rtl_udp_tune (opts, state, state->trunk_lcn_freq[state->lcn_freq_roll]);
+        rtl_dev_tune (opts, state->trunk_lcn_freq[state->lcn_freq_roll]);
       }
       
       fprintf (stderr, "Tuning to Frequency: %.06lf MHz\n", 

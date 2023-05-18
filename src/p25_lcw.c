@@ -316,7 +316,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
             if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
             SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
           }
-          //rtl_udp
+          //rtl
           else if (opts->audio_in_type == 3)
           {
             state->lasttg = 0;
@@ -331,7 +331,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
             sprintf (state->active_channel[1], "%s", "");
             opts->p25_is_tuned = 0;
             state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
-            rtl_udp_tune (opts, state,  state->p25_cc_freq); 
+            rtl_dev_tune (opts, state->p25_cc_freq); 
           }
         }
       }

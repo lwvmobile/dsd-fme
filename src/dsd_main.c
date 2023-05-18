@@ -115,10 +115,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
         if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
         SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[state->lcn_freq_roll]);
       }
-      //rtludp
+      //rtl
       if (opts->audio_in_type == 3)
       {
-        rtl_udp_tune (opts, state, state->trunk_lcn_freq[state->lcn_freq_roll]);
+        rtl_dev_tune(opts, state->trunk_lcn_freq[state->lcn_freq_roll]);
       }
 
       if (state->lastsynctype != -1) fprintf (stderr, "Resume Scanning Mode\n");
@@ -150,12 +150,11 @@ noCarrier (dsd_opts * opts, dsd_state * state)
         SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
         state->dmr_rest_channel = -1; //maybe?
       }
-
-      else if (opts->audio_in_type == 3) //rtl_fm tuning
+      //rtl
+      else if (opts->audio_in_type == 3)
       {
-        //UDP command to tune the RTL dongle
-        rtl_udp_tune(opts, state, state->p25_cc_freq);
-        state->dmr_rest_channel = -1; //maybe?
+        rtl_dev_tune (opts, state->p25_cc_freq);
+        state->dmr_rest_channel = -1;
       }
 
       opts->p25_is_tuned = 0; 
@@ -168,6 +167,9 @@ noCarrier (dsd_opts * opts, dsd_state * state)
       }
       state->last_cc_sync_time = time(NULL);
       //test to switch back to 10/4 P1 QPSK for P25 FDMA CC
+
+      //some P2 systems are C4FM, so this needs to be allowed on all P25 systems!
+      //but not to happen on NXDN48 or dPMR systems
       if (opts->mod_qpsk == 1 && state->p25_cc_is_tdma == 0)
       {
         state->samplesPerSymbol = 10;
@@ -515,13 +517,16 @@ initOpts (dsd_opts * opts)
   opts->delay = 0;
   opts->use_cosine_filter = 1;
   opts->unmute_encrypted_p25 = 0;
+  //all RTL user options
   opts->rtl_dev_index = 0;        //choose which device we want by index number
-  opts->rtl_gain_value = 26;    //mid value, 0 - AGC (not recommended) 49 highest value
+  opts->rtl_gain_value = 28;    //mid value, 0 - AGC (not recommended) 49 highest value
   opts->rtl_squelch_level = 0; //fully open by default, want to specify level for things like NXDN with false positives
-  opts->rtl_volume_multiplier = 1; //sample multiplier; 1 seems like a good value
-  opts->rtl_udp_port = 6020; //set UDP port for RTL remote
+  opts->rtl_volume_multiplier = 1; //sample multiplier; This multiplies the sample value to produce a higher 'inlvl' 
+  opts->rtl_udp_port = 0; //set UDP port for RTL remote -- 0 by default, will be making this optional for some external/legacy use cases (edacs-fm, etc)
   opts->rtl_bandwidth = 12; //changed recommended default to 12, 24 for ProVoice
   opts->rtlsdr_ppm_error = 0; //initialize ppm with 0 value; bug reported by N.
+  opts->rtlsdr_center_freq = 850000000; //set to an initial value (if user is using a channel map, then they won't need to specify anything other than -i rtl if desired)
+  //end RTL user options
   opts->rtl_started = 0;
   opts->pulse_raw_rate_in   = 48000;
   opts->pulse_raw_rate_out  = 48000; //
@@ -547,8 +552,15 @@ initOpts (dsd_opts * opts)
   opts->dmr_stereo = 1;
   opts->aggressive_framesync = 1; 
 
+  //this may not matter so much, since its already checked later on
+  //but better safe than sorry I guess
+  #ifdef AERO_BUILD
   opts->audio_in_type = 5;  
   opts->audio_out_type = 5; 
+  #else
+  opts->audio_in_type = 0;  
+  opts->audio_out_type = 0;
+  #endif
 
   opts->lrrp_file_output = 0;
 
@@ -978,13 +990,13 @@ usage ()
 {
 
   printf ("\n");
-  printf ("Usage: dsd-fme-aero [options]            Decoder/Trunking Mode\n");
-  printf ("  or:  dsd-fme-aero [options] -r <files> Read/Play saved mbe data from file(s)\n");
-  printf ("  or:  dsd-fme-aero -h                   Show help\n");
+  printf ("Usage: dsd-fme-zdev [options]            Decoder/Trunking Mode\n");
+  printf ("  or:  dsd-fme-zdev [options] -r <files> Read/Play saved mbe data from file(s)\n");
+  printf ("  or:  dsd-fme-zdev -h                   Show help\n");
   printf ("\n");
   printf ("Display Options:\n");
   printf ("  -N            Use NCurses Terminal\n");
-  printf ("                 dsd-fme-aero -N 2> log.ans \n");
+  printf ("                 dsd-fme-zdev -N 2> log.ans \n");
   printf ("  -Z            Log MBE/PDU Payloads to console\n");
   printf ("\n");
   printf ("Input/Output options:\n");
@@ -1038,14 +1050,16 @@ usage ()
   printf ("RTL-SDR options:\n");
   printf (" WARNING! Old CLI Switch Handling has been depreciated in favor of rtl:<parms>\n");
   printf (" Usage: rtl:dev:freq:gain:ppm:bw:sq:udp\n");
+  printf ("  NOTE: all arguments after rtl are optional now for trunking, but user configuration is recommended\n");
   printf ("  dev  <num>    RTL-SDR Device Index Number\n");
   printf ("  freq <num>    RTL-SDR Frequency (851800000 or 851.8M) \n");
-  printf ("  gain <num>    RTL-SDR Device Gain (0-49)(default = 26)(0 = Hardware AGC, not recommended)\n");
+  printf ("  gain <num>    RTL-SDR Device Gain (0-49)(default = 28)(0 = Hardware AGC, not recommended)\n");
   printf ("  ppm  <num>    RTL-SDR PPM Error (default = 0)\n");
   printf ("  bw   <num>    RTL-SDR VFO Bandwidth kHz (default = 12)(6, 8, 12, 24)  \n");
-  printf ("  sq   <num>    RTL-SDR Squelch Level (0 - Open, 25 - Little, 50 - Higher)\n");
-  printf ("  udp  <num>    RTL-SDR UDP Remote Port (default = 6020)\n");
-  printf (" Example: dsd-fme-aero -fp -i rtl:0:851.375M:22:-2:12:0:6021\n");
+  printf ("  sq   <num>    RTL-SDR Squelch Level (Optional)\n");
+  printf ("  udp  <num>    RTL-SDR UDP Remote Port (Optional -- External Use Only)\n");
+  printf (" Example: dsd-fme-zdev -fs -i rtl -C cap_plus_channel.csv - T\n"); //put a good example here, probably trunking so user doesn't have to enter the 'optional' arguments
+  printf (" Example: dsd-fme-zdev -fp -i rtl:0:851.375M:22:-2:12:0:6021\n");
   printf ("\n");
   printf ("Decoder options:\n");
   printf ("  -fa           Legacy Auto Detection (old methods default)\n");
@@ -1129,8 +1143,8 @@ usage ()
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking or Fast Scan VC/sync loss hangtime in seconds. (default = 1 second) (decimal values permitted) \n");
   printf ("\n");
-  printf (" Trunking Example TCP: dsd-fme-aero -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
-  printf (" Trunking Example RTL: dsd-fme-aero -fs -i rtl:0:450M:26:-2:8:0:6020 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
+  printf (" Trunking Example TCP: dsd-fme-zdev -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
+  printf (" Trunking Example RTL: dsd-fme-zdev -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
   printf ("\n");
   exit (0);
 }
@@ -1314,7 +1328,7 @@ main (int argc, char **argv)
     fprintf (stderr,"%s\n", FM_banner[i]);
   }
 
-  fprintf (stderr, "Github Build Version: %s%s \n", GIT_TAG);
+  fprintf (stderr, "Github Build Version: %s \n", GIT_TAG);
   fprintf (stderr,"MBElib version %s\n", versionstr);
 
   initOpts (&opts);
@@ -2174,7 +2188,6 @@ main (int argc, char **argv)
 
     if (opts.use_rigctl == 1)
     {
-      // opts.rigctl_sockfd = Connect(opts.rigctlhostname, opts.rigctlportno);
       opts.rigctl_sockfd = Connect(opts.rigctlhostname, opts.rigctlportno);
       if (opts.rigctl_sockfd != 0) opts.use_rigctl = 1;
       else
@@ -2217,7 +2230,7 @@ main (int argc, char **argv)
         int bw = 0;
         bw = atoi (curr);
         //check for proper values (6,8,12,24)
-        if (bw == 6 || bw == 8 || bw == 12 || bw == 24)
+        if (bw == 4 || bw == 6 || bw == 8 || bw == 12 || bw == 16 || bw == 24) //testing 4 and 16 as well for weak and/or nxdn48 systems
         {
           opts.rtl_bandwidth = bw;
         }

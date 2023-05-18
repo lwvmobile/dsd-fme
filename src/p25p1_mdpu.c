@@ -355,10 +355,10 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
             state->last_vc_sync_time = time(NULL);
 					}
-					//rtl_udp
+					//rtl
 					else if (opts->audio_in_type == 3)
 					{
-						rtl_udp_tune (opts, state, freq1);
+						rtl_dev_tune (opts, freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
 						opts->p25_is_tuned = 1;
             state->last_vc_sync_time = time(NULL);
@@ -440,10 +440,10 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
             state->last_vc_sync_time = time(NULL);
 					}
-					//rtl_udp
+					//rtl
 					else if (opts->audio_in_type == 3)
 					{
-						rtl_udp_tune (opts, state, freq1);
+						rtl_dev_tune (opts, freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
 						opts->p25_is_tuned = 1;
             state->last_vc_sync_time = time(NULL);
