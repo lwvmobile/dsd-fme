@@ -2131,12 +2131,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_in_type == 3)
   {
-    printw ("| RTL2838UHIDIR: %d", opts->rtl_dev_index);
-    printw (" Gain: %idB", opts->rtl_gain_value);
-    printw (" PPM: %i", opts->rtlsdr_ppm_error);
-    printw (" SQ: %i", opts->rtl_squelch_level);
-    printw (" BW %i kHz", opts->rtl_bandwidth);
-    printw (" Frequency: %i Hz", opts->rtlsdr_center_freq); 
+    printw ("| RTL Dev: %d;", opts->rtl_dev_index);
+    if (opts->rtl_gain_value == 0)
+      printw (" Gain: AGC;");
+    else
+      printw (" Gain: %idB;", opts->rtl_gain_value);
+    printw (" PPM: %i;", opts->rtlsdr_ppm_error);
+    printw (" SQ: %i;", opts->rtl_squelch_level);
+    printw (" BW: %i kHz;", opts->rtl_bandwidth);
+    printw (" FREQ: %i Hz;", opts->rtlsdr_center_freq); 
     if (opts->rtl_udp_port != 0) printw ("\n| External Tuning on UDP Port: %i", opts->rtl_udp_port);
     printw ("\n");
   }

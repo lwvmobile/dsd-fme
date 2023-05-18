@@ -517,9 +517,9 @@ initOpts (dsd_opts * opts)
   opts->delay = 0;
   opts->use_cosine_filter = 1;
   opts->unmute_encrypted_p25 = 0;
-  //all RTL user options
+  //all RTL user options -- enabled AGC by default due to weak signal related issues
   opts->rtl_dev_index = 0;        //choose which device we want by index number
-  opts->rtl_gain_value = 28;    //mid value, 0 - AGC (not recommended) 49 highest value
+  opts->rtl_gain_value = 0;     //mid value, 0 - AGC - 0 to 49 acceptable values
   opts->rtl_squelch_level = 0; //fully open by default, want to specify level for things like NXDN with false positives
   opts->rtl_volume_multiplier = 1; //sample multiplier; This multiplies the sample value to produce a higher 'inlvl' 
   opts->rtl_udp_port = 0; //set UDP port for RTL remote -- 0 by default, will be making this optional for some external/legacy use cases (edacs-fm, etc)
@@ -1384,7 +1384,7 @@ main (int argc, char **argv)
         break;
 
         case 'z':
-          sscanf (optarg, "%d", &opts.slot_preference);
+          sscanf (optarg, "%c", &opts.slot_preference);
           opts.slot_preference--; //user inputs 1 or 2, internally we want 0 and 1
           if (opts.slot_preference > 1) opts.slot_preference = 1;
           fprintf (stderr, "TDMA (DMR and P2) Slot Voice Preference is Slot %d. \n", opts.slot_preference+1);

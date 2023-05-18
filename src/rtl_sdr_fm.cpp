@@ -753,7 +753,7 @@ static void optimal_settings(int freq, int rate)
 		dm->output_scale = 1;}
 	d->freq = (uint32_t)capture_freq;
 	d->rate = (uint32_t)capture_rate;
-	fprintf (stderr, "Capture Frequency: %i Rate: %i \n", capture_freq, capture_rate);
+	// fprintf (stderr, "Capture Frequency: %i Rate: %i \n", capture_freq, capture_rate);
 }
 
 static void *controller_thread_fn(void *arg)
