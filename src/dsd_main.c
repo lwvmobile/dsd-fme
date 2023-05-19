@@ -1342,7 +1342,11 @@ main (int argc, char **argv)
     fprintf (stderr,"%s\n", FM_banner[i]);
   }
 
+  #ifdef AERO_BUILD
+  fprintf (stderr, "Build Version:  v2.0.1-7 Win32 \n");
+  #else
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
+  #endif
   fprintf (stderr,"MBElib Version: %s\n", versionstr);
 
   initOpts (&opts);

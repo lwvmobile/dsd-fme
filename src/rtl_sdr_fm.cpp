@@ -805,7 +805,7 @@ void dongle_init(struct dongle_state *s)
 	s->gain = AUTO_GAIN; // tenths of a dB
 	s->mute = 0;
 	s->direct_sampling = 0;
-	s->offset_tuning = 1; // initial tests show this works better enabled
+	s->offset_tuning = 0; //E4000 tuners only
 	s->demod_target = &demod;
 }
 
@@ -964,7 +964,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
 {
   struct sigaction sigact;
   int r;
-	rtl_bandwidth =  opts->rtl_bandwidth * 1000;
+	rtl_bandwidth =  opts->rtl_bandwidth * 1000 * 2; //going to double the value -- may clear up issue with user specified BW not what it seems
 	bandwidth_multiplier = (bandwidth_divisor / rtl_bandwidth);
 
 	//this needs to be initted first, then we set the parameters
@@ -1087,10 +1087,9 @@ void get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 	pthread_rwlock_unlock(&output.rw);
 }
 
-void rtl_dev_tune(dsd_opts * opts, long int frequency) 
+void rtl_dev_tune(dsd_opts * opts, long int frequency)
 {
 	int r;
-	uint32_t freq;
 	dongle.freq = opts->rtlsdr_center_freq = frequency;
 	optimal_settings(dongle.freq, demod.rate_in);
 	r = verbose_set_frequency(dongle.dev, dongle.freq);
