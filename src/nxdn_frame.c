@@ -396,7 +396,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 
 #endif //end LIMAZULUTWEAKS
 
-if (opts->scanner_mode = 1)
+if (opts->scanner_mode == 1)
 	state->last_cc_sync_time = time(NULL) + 2; //add a little extra hangtime between resuming scan
 
 	//Option/Steal Flags echoed in Voice, V+F, or Data 
