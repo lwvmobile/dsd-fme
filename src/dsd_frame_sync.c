@@ -455,8 +455,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             {
               goto SYNC_TEST_END;
               //should we update min/max here? yes or no?
-              state->max = ((state->max) + lmax) / 2;
-              state->min = ((state->min) + lmin) / 2;
+              // state->max = ((state->max) + lmax) / 2;
+              // state->min = ((state->min) + lmin) / 2;
             }
           }
 

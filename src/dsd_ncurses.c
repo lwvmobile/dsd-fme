@@ -2058,8 +2058,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    // printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", GIT_TAG);
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.0.1-9 Win32");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero \n", "v2.0.1-10 Win32");
     printw ("------------------------------------------------------------------------------\n"); 
   }
 #elif LIMAZULUTWEAKS
@@ -2088,8 +2087,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 4) printw (" MBElib %s", versionstr);
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Win32");
-      if (i == 6) printw (" %s \n", GIT_TAG); //don't have the git dev package on my cygwin32 bit environment and can't get it now (32-bit no longer supported)
-      // if (i == 6) printw (" v2.0.0-100-gae58fab \n"); //put appropriate version in here later, or find the GIT_TAG package (git_revision) to build in cygwin
+      if (i == 6) printw (" v2.0.1-10 Win32 \n");
       #else
       if (i == 5) printw (" %s ", "zDEV BUILD");
       if (i == 6) printw (" %s \n", GIT_TAG);

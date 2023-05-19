@@ -1094,7 +1094,7 @@ void rtl_dev_tune(dsd_opts * opts, long int frequency)
 	dongle.freq = opts->rtlsdr_center_freq = frequency;
 	optimal_settings(dongle.freq, demod.rate_in);
 	r = verbose_set_frequency(dongle.dev, dongle.freq);
-	dongle.mute = BUFFER_DUMP; //test this here -- seems to help with sample lag sending stale samples
+	// dongle.mute = BUFFER_DUMP; //test this here -- unsure if this does anything beneficial or anything at all, perceived 'lag' could be RMS related on NXDN48, DMR doesn't have the same symptoms.
 }
 
 //return RMS value (root means square) power level -- used as soft squelch inside of framesync
