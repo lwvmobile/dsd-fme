@@ -628,9 +628,9 @@ int verbose_set_frequency(rtlsdr_dev_t *dev, uint32_t frequency)
 	int r;
 	r = rtlsdr_set_center_freq(dev, frequency);
 	if (r < 0) {
-		fprintf (stderr, "WARNING: Failed to set center freq.\n");
+		fprintf (stderr, " WARNING: Failed to set center freq.\n");
 	} else {
-		fprintf (stderr, "Tuned to %u Hz.\n", frequency);
+		fprintf (stderr, " Tuned to %u Hz.\n", frequency);
 	}
 	return r;
 }
@@ -984,7 +984,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	}
 
 	dongle.dev_index = opts->rtl_dev_index;
-	demod.squelch_level = opts->rtl_squelch_level;
+	// demod.squelch_level = opts->rtl_squelch_level; //no longer used here, used in framesync vc rms value under select conditions
 	fprintf (stderr, "Setting RTL VFO Bandwidth to %d Hz\n", rtl_bandwidth);
 	fprintf (stderr, "Setting RTL Sample Multiplier to %d\n", bandwidth_multiplier);
 	fprintf (stderr, "Setting RTL Squelch Level to %d\n", demod.squelch_level);
@@ -1087,10 +1087,20 @@ void get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 	pthread_rwlock_unlock(&output.rw);
 }
 
+//function may lag since it isn't running as its own thread
 void rtl_dev_tune(dsd_opts * opts, long int frequency)
 {
 	int r;
 	dongle.freq = opts->rtlsdr_center_freq = frequency;
 	optimal_settings(dongle.freq, demod.rate_in);
 	r = verbose_set_frequency(dongle.dev, dongle.freq);
+	dongle.mute = BUFFER_DUMP; //test this here -- seems to help with sample lag sending stale samples
+}
+
+//return RMS value (root means square) power level -- used as soft squelch inside of framesync
+int rtl_return_rms()
+{
+	int sr = 0;
+	sr = rms(demod.lowpassed, demod.lp_len, 1);
+	return (sr);
 }

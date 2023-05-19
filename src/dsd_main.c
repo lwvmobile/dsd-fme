@@ -169,10 +169,11 @@ noCarrier (dsd_opts * opts, dsd_state * state)
       state->edacs_tuned_lcn = -1;
 
       //only for EDACS/PV
-      if (opts->frame_provoice == 1 && opts->wav_out_file != NULL)
+      if (opts->p25_trunk == 1 && opts->frame_provoice == 1 && opts->wav_out_file != NULL)
       {
         closeWavOutFile(opts, state);
       }
+
       state->last_cc_sync_time = time(NULL);
       //test to switch back to 10/4 P1 QPSK for P25 FDMA CC
 
@@ -528,13 +529,14 @@ initOpts (dsd_opts * opts)
   //all RTL user options -- enabled AGC by default due to weak signal related issues
   opts->rtl_dev_index = 0;        //choose which device we want by index number
   opts->rtl_gain_value = 0;     //mid value, 0 - AGC - 0 to 49 acceptable values
-  opts->rtl_squelch_level = 0; //fully open by default, want to specify level for things like NXDN with false positives
+  opts->rtl_squelch_level = 100; //100 by default, but only affects NXDN and dPMR during framesync test, compared to RMS value
   opts->rtl_volume_multiplier = 1; //sample multiplier; This multiplies the sample value to produce a higher 'inlvl' 
   opts->rtl_udp_port = 0; //set UDP port for RTL remote -- 0 by default, will be making this optional for some external/legacy use cases (edacs-fm, etc)
-  opts->rtl_bandwidth = 12; //changed recommended default to 12, 24 for ProVoice
-  opts->rtlsdr_ppm_error = 0; //initialize ppm with 0 value; bug reported by N.
+  opts->rtl_bandwidth = 6; //default was 12, but changed to 6 due to newer handling of rtl_bandwidth
+  opts->rtlsdr_ppm_error = 0; //initialize ppm with 0 value;
   opts->rtlsdr_center_freq = 850000000; //set to an initial value (if user is using a channel map, then they won't need to specify anything other than -i rtl if desired)
   opts->rtl_started = 0;
+  opts->rtl_rms = 0; //root means square power level on rtl input signal
   //end RTL user options
   opts->pulse_raw_rate_in   = 48000;
   opts->pulse_raw_rate_out  = 48000; //
@@ -1063,9 +1065,9 @@ usage ()
   printf ("  NOTE: all arguments after rtl are optional now for trunking, but user configuration is recommended\n");
   printf ("  dev  <num>    RTL-SDR Device Index Number\n");
   printf ("  freq <num>    RTL-SDR Frequency (851800000 or 851.8M) \n");
-  printf ("  gain <num>    RTL-SDR Device Gain (0-49)(default = 28)(0 = Hardware AGC, not recommended)\n");
+  printf ("  gain <num>    RTL-SDR Device Gain (0-49)(default = 0; Hardware AGC recommended)\n");
   printf ("  ppm  <num>    RTL-SDR PPM Error (default = 0)\n");
-  printf ("  bw   <num>    RTL-SDR VFO Bandwidth kHz (default = 12)(6, 8, 12, 24)  \n");
+  printf ("  bw   <num>    RTL-SDR Bandwidth kHz (default = 6)(4, 6, 8, 12, 16, 24)  \n");
   printf ("  sq   <num>    RTL-SDR Squelch Level (Optional)\n");
   printf ("  udp  <num>    RTL-SDR UDP Remote Port (Optional -- External Use Only)\n");
   printf (" Example: dsd-fme-zdev -fs -i rtl -C cap_plus_channel.csv -T\n"); //put a good example here, probably trunking so user doesn't have to enter the 'optional' arguments
@@ -1149,7 +1151,7 @@ usage ()
   printf ("                 (NOTE: P25 Data Channels Not Enabled (no handling) \n");
   printf ("  -U <port>     Enable RIGCTL/TCP; Set TCP Port for RIGCTL. (4532 on SDR++)\n");
   printf ("  -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
-  printf ("                 P25 - 7000-12000; P25 (QPSK) - 12000; NXDN48 - 4000; DMR - 7000; EDACS/PV - 12500;\n");
+  printf ("                 P25 - 7000-12000; P25 (QPSK) - 12000; NXDN48 - 7000; NXDN96: 9000; DMR - 7000; EDACS/PV - 12500;\n");
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking or Fast Scan VC/sync loss hangtime in seconds. (default = 1 second) (decimal values permitted) \n");
   printf ("\n");
@@ -1343,7 +1345,7 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version:  v2.0.1-7 Win32 \n");
+  fprintf (stderr, "Build Version:  v2.0.1-8 Win32 \n");
   #else
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
   #endif
@@ -2253,7 +2255,7 @@ main (int argc, char **argv)
           opts.rtl_bandwidth = bw;
         }
         else 
-          opts.rtl_bandwidth = 12; //safe default
+          opts.rtl_bandwidth = 6; //new safe default
       }
       else goto RTLEND; 
 

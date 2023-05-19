@@ -155,6 +155,8 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
           rtl_dev_tune (opts, state->p25_cc_freq);
           #endif
         }
+
+        state->last_cc_sync_time = time(NULL); //allow tuners a second to catch up, particularly rtl input
       }
       
       break;
@@ -795,7 +797,7 @@ void NXDN_decode_srv_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 
   //poll for current frequency, will always be the control channel
   //this PDU is constantly pumped out on the CC CAC Message
-  if (opts->p25_trunk == 1)
+  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 0) //changed this so the rtl tuning lag doesn't set RTCH frequency after tuning but before landing
   {
     long int ccfreq = 0;
     //if using rigctl, we can poll for the current frequency
@@ -805,7 +807,7 @@ void NXDN_decode_srv_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
     }
     //if using rtl input, we can ask for the current frequency tuned
-    else if (opts->audio_in_type == 3)
+    else if (opts->audio_in_type == 3) //after changing to rtl_dev_tune, this may lag a bit due to delay in sample delivery?
     {
       ccfreq = (long int)opts->rtlsdr_center_freq;
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;

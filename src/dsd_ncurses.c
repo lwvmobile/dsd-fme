@@ -2133,15 +2133,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_in_type == 3)
   {
-    printw ("| RTL Dev: %d;", opts->rtl_dev_index);
+    printw ("| RTL: %d;", opts->rtl_dev_index);
     if (opts->rtl_gain_value == 0)
       printw (" Gain: AGC;");
     else
       printw (" Gain: %idB;", opts->rtl_gain_value);
     printw (" PPM: %i;", opts->rtlsdr_ppm_error);
     printw (" SQ: %i;", opts->rtl_squelch_level);
+    printw (" RMS: %03i;", opts->rtl_rms);
     printw (" BW: %i kHz;", opts->rtl_bandwidth);
-    printw (" FREQ: %i Hz;", opts->rtlsdr_center_freq); 
+    printw (" FREQ: %i;", opts->rtlsdr_center_freq); 
     if (opts->rtl_udp_port != 0) printw ("\n| External Tuning on UDP Port: %i", opts->rtl_udp_port);
     printw ("\n");
   }
@@ -3437,6 +3438,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_dev_tune (opts, state->p25_cc_freq);
     #endif
 
+    state->last_cc_sync_time = time(NULL);
+
   }
 
   if (state->lasttgR != 0 && opts->frame_provoice != 1 && c == 50) //'2' key, lockout slot 2 tdma tgR from tuning/playback during session
@@ -3489,6 +3492,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     #ifdef USE_RTLSDR
     if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_dev_tune (opts, state->p25_cc_freq);
     #endif
+
+    state->last_cc_sync_time = time(NULL);
 
   }
 

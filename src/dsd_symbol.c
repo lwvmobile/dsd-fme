@@ -137,6 +137,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
           pa_simple_write(opts->pulse_raw_dev_out, (void*)&state->pulse_raw_out_buffer, 2, NULL);
         }
+        opts->rtl_rms = rtl_return_rms();
 
 #endif
       }
