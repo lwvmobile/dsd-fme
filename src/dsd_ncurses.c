@@ -2059,7 +2059,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("------------------------------------------------------------------------------\n");
     // printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", GIT_TAG);
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.0.1-7 Win32");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.0.1-9 Win32");
     printw ("------------------------------------------------------------------------------\n"); 
   }
 #elif LIMAZULUTWEAKS

@@ -177,9 +177,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
       state->last_cc_sync_time = time(NULL);
       //test to switch back to 10/4 P1 QPSK for P25 FDMA CC
 
-      //some P2 systems are C4FM, so this needs to be allowed on all P25 systems!
-      //but not to happen on NXDN48 or dPMR systems
-      if (opts->mod_qpsk == 1 && state->p25_cc_is_tdma == 0)
+      //reworked to always change back to 10/4 if p25_cc_is_tdma is set to 0 or 1 (inits on 2)
+      if (state->p25_cc_is_tdma == 0) //is set on signal from P25 TSBK or MAC_SIGNAL
       {
         state->samplesPerSymbol = 10;
         state->symbolCenter = 4;
@@ -1078,6 +1077,7 @@ usage ()
   printf ("  -ft           XDMA P25 and DMR BS/MS frame types (new default)\n");
   printf ("  -fs           DMR Stereo BS and MS Simplex\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
+  printf ("  -f2           Decode only P25 Phase 2**\n");
   printf ("  -fd           Decode only D-STAR\n");
   printf ("  -fr           Decode only DMR Mono - Single Slot Voice\n");
   printf ("  -fx           Decode only X2-TDMA\n");
@@ -1092,6 +1092,7 @@ usage ()
   printf ("  -xd           Expect inverted ICOM dPMR signal\n");
   printf ("\n");
   printf ("  * denotes frame types that cannot be auto-detected.\n");
+  printf ("  ** Phase 2 Single Frequency may require user to manually set WACN/SYSID/CC parameters if MAC_SIGNAL not present.\n");
   printf ("\n");
   printf ("Advanced Decoder options:\n");
   printf ("  -X <hex>      Manually Set P2 Parameters (WACN, SYSID, CC/NAC)\n");
@@ -1345,7 +1346,7 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version:  v2.0.1-8 Win32 \n");
+  fprintf (stderr, "Build Version:  v2.0.1-9 Win32 \n");
   #else
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
   #endif
@@ -1792,7 +1793,7 @@ main (int argc, char **argv)
               // opts.setmod_bw = 12000;
               opts.ssize = 36; //128 current default, fall back to old default on P1 only systems
               opts.msize = 15; //1024 current default, fall back to old default on P1 only systems
-              sprintf (opts.output_name, "P25P1");
+              sprintf (opts.output_name, "P25p1");
               fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
             }
           else if (optarg[0] == 'i')
@@ -1863,8 +1864,8 @@ main (int argc, char **argv)
                   opts.frame_dpmr = 0;
                   opts.frame_provoice = 0;
                   opts.frame_ysf = 0;
-                  state.samplesPerSymbol = 10; 
-                  state.symbolCenter = 4;
+                  state.samplesPerSymbol = 8; 
+                  state.symbolCenter = 3;
                   opts.mod_c4fm = 1;
                   opts.mod_qpsk = 0;
                   opts.mod_gfsk = 0;
@@ -1873,8 +1874,8 @@ main (int argc, char **argv)
                   state.dmr_stereo = 0;
                   opts.dmr_mono = 0;
                   // opts.setmod_bw = 12000;
-                  sprintf (opts.output_name, "P25P2");
-                  fprintf (stderr,"Decoding P25-P2 frames C4FM or OP25 Symbol Captures!\n");
+                  sprintf (opts.output_name, "P25p2");
+                  fprintf (stderr,"Decoding 6000 sps P25p2 frames only!\n");
                   }
               else if (optarg[0] == 's')
               {
@@ -2053,7 +2054,7 @@ main (int argc, char **argv)
               state.samplesPerSymbol = 8; 
               state.symbolCenter = 3; 
               // opts.setmod_bw = 12000;
-              fprintf (stderr,"Enabling 6000 sps P25p2 CQPSK.\n");
+              fprintf (stderr,"Enabling 6000 sps P25p2 QPSK.\n");
             }
           //test
           else if (optarg[0] == '3')
