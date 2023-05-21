@@ -283,12 +283,12 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 
       valid = 0;
 
-      //disabling again, causing issues with trunking P25
-      if (state->synctype == 1 && opts->p25_trunk == 1)
-        {
-          // Use the P25 heuristics if available
-          // valid = estimate_symbol(state->rf_mod, &(state->inv_p25_heuristics), state->last_dibit, symbol, &dibit);
-        }
+      //testing again, either on Voice channels only (when tuned) or with trunk disabled
+      if (state->synctype == 1 && (opts->p25_is_tuned == 1 || opts->p25_trunk == 0) && opts->use_heuristics == 1)
+      {
+        // Use the P25p1 heuristics if available
+        valid = estimate_symbol(state->rf_mod, &(state->inv_p25_heuristics), state->last_dibit, symbol, &dibit);
+      }
 
       if (valid == 0)
         {
@@ -347,12 +347,12 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 
       valid = 0;
 
-      //disabling again, causing issues with trunking P25
-      if (state->synctype == 0 && opts->p25_trunk == 1) 
-        {
-          // Use the P25 heuristics if available
-          // valid = estimate_symbol(state->rf_mod, &(state->p25_heuristics), state->last_dibit, symbol, &dibit);
-        }
+      //testing again, either on Voice channels only (when tuned) or with trunk disabled
+      if (state->synctype == 0 && (opts->p25_is_tuned == 1 || opts->p25_trunk == 0) && opts->use_heuristics == 1)
+      {
+        // Use the P25p1 heuristics if available
+        valid = estimate_symbol(state->rf_mod, &(state->p25_heuristics), state->last_dibit, symbol, &dibit);
+      }
 
       if (valid == 0)
         {

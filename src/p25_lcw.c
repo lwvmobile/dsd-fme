@@ -295,9 +295,20 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       //tune back to CC here - save about 1-2 seconds
       else if (lc_format == 0x4F) //# Call Termination/Cancellation 
       {
-        fprintf (stderr, " Call Termination/Cancellation");
+        fprintf (stderr, " Call Termination");
         if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
         {
+          
+          //Will we need to check for a symbolrate change here, can a P25p2 TDMA-CC system
+          //revert back to a phase 1 traffic channel or carry a phase 1 traffic channel?
+
+          //clear heuristics from current traffic channel
+          if (opts->frame_p25p1 == 1 && opts->use_heuristics == 1)
+          {
+            initialize_p25_heuristics(&state->p25_heuristics);
+            initialize_p25_heuristics(&state->inv_p25_heuristics);
+          }
+
           //rigctl
           if (opts->use_rigctl == 1)
           {

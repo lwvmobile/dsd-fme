@@ -90,6 +90,13 @@ void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
 
+  //clear heuristics from last carrier signal
+  if (opts->frame_p25p1 == 1 && opts->use_heuristics == 1)
+  {
+    initialize_p25_heuristics(&state->p25_heuristics);
+    initialize_p25_heuristics(&state->inv_p25_heuristics);
+  }
+
   //only do it here on the tweaks
   #ifdef LIMAZULUTWEAKS
   state->nxdn_last_ran = -1;
@@ -645,6 +652,9 @@ initOpts (dsd_opts * opts)
   opts->dsp_out_file[0] = 0;
   opts->use_dsp_output = 0;
 
+  //Use P25p1 heuristics
+  opts->use_heuristics = 0; 
+
 } //initopts
 
 void
@@ -985,6 +995,7 @@ initState (dsd_state * state)
   memset (state->late_entry_mi_fragment, 0, sizeof (state->late_entry_mi_fragment));
  
   initialize_p25_heuristics(&state->p25_heuristics);
+  initialize_p25_heuristics(&state->inv_p25_heuristics);
 
   state->dPMRVoiceFS2Frame.CalledIDOk  = 0;
   state->dPMRVoiceFS2Frame.CallingIDOk = 0;
@@ -1346,7 +1357,7 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version:  v2.0.1-11 Win32 \n");
+  fprintf (stderr, "Build Version:  v2.0.1-12 Win32 \n");
   #else
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
   #endif
@@ -1793,6 +1804,7 @@ main (int argc, char **argv)
               // opts.setmod_bw = 12000;
               opts.ssize = 36; //128 current default, fall back to old default on P1 only systems
               opts.msize = 15; //1024 current default, fall back to old default on P1 only systems
+              opts.use_heuristics = 1; //enable for Phase 1 only
               sprintf (opts.output_name, "P25p1");
               fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
             }

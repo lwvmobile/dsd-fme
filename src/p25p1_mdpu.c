@@ -337,14 +337,24 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
     		{
 					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
-					if (opts->mod_qpsk == 1)
+					// if (opts->mod_qpsk == 1)
+					// {
+					// 	int spacing = state->p25_chan_spac[channelt >> 12];
+					// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+					// 	{
+					// 		state->samplesPerSymbol = 8;
+					// 		state->symbolCenter = 3;
+					// 	}	
+					// }
+
+          //changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
+					if (1 == 1)
 					{
-						int spacing = state->p25_chan_spac[channelt >> 12];
-						if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						if (state->p25_chan_tdma[channelt >> 12] == 1)
 						{
 							state->samplesPerSymbol = 8;
 							state->symbolCenter = 3;
-						}	
+						}
 					}
 					//rigctl
           if (opts->use_rigctl == 1)
@@ -423,15 +433,26 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
     		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
     		{
+
 					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
-					if (opts->mod_qpsk == 1)
+					// if (opts->mod_qpsk == 1)
+					// {
+					// 	int spacing = state->p25_chan_spac[channelt >> 12];
+					// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+					// 	{
+					// 		state->samplesPerSymbol = 8;
+					// 		state->symbolCenter = 3;
+					// 	}	
+					// }
+
+          //changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
+					if (1 == 1)
 					{
-						int spacing = state->p25_chan_spac[channelt >> 12];
-						if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+						if (state->p25_chan_tdma[channelt >> 12] == 1)
 						{
 							state->samplesPerSymbol = 8;
 							state->symbolCenter = 3;
-						}	
+						}
 					}
 					//rigctl
           if (opts->use_rigctl == 1)

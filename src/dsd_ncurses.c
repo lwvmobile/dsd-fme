@@ -1153,7 +1153,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (choice == 2)
     {
       //setup Auto parameters--default ones
-      resetState (state); //use sparingly, may cause memory leak
+      // resetState (state); //use sparingly, may cause memory leak
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       sprintf (opts->output_name, "Legacy Auto");
@@ -1183,7 +1183,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (choice == 6)
     {
       //ProVoice Specifics
-      resetState (state); //use sparingly, may cause memory leak
+      // resetState (state); //use sparingly, may cause memory leak
       state->samplesPerSymbol = 5;
       state->symbolCenter = 2;
       sprintf (opts->output_name, "EDACS/PV");
@@ -1211,7 +1211,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (choice == 4)
     {
       //DSTAR
-      resetState (state); //use sparingly, may cause memory leak
+      // resetState (state); //use sparingly, may cause memory leak
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       sprintf (opts->output_name, "D-STAR");
@@ -1241,7 +1241,13 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (choice == 5)
     {
       //P25 P1
-      resetState (state); //use sparingly, may cause memory leak
+      // resetState (state); //use sparingly, may cause memory leak
+      opts->use_heuristics = 1;
+      if (opts->use_heuristics == 1)
+      {
+        initialize_p25_heuristics(&state->p25_heuristics);
+        initialize_p25_heuristics(&state->inv_p25_heuristics);
+      }
       opts->frame_p25p1 = 1;
       opts->frame_p25p2 = 0;
       state->samplesPerSymbol = 10;
@@ -1273,7 +1279,13 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (choice == 3)
     {
       //XDMA Stereo P25 1, 2, and DMR
-      resetState (state); //use sparingly, seems to cause issue when switching back to other formats
+      // resetState (state); //use sparingly, seems to cause issue when switching back to other formats
+      if (opts->use_heuristics == 1)
+      {
+        initialize_p25_heuristics(&state->p25_heuristics);
+        initialize_p25_heuristics(&state->inv_p25_heuristics);
+      }
+      opts->use_heuristics = 0;
       opts->frame_dmr = 1;
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
@@ -1302,7 +1314,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (choice == 7)
     {
       //set legacy DMR settings
-      resetState (state); //use sparingly, seems to cause issue when switching back to other formats
+      // resetState (state); //use sparingly, seems to cause issue when switching back to other formats
       opts->frame_dmr = 1;
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
@@ -1331,7 +1343,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (choice == 8)
     {
       //dPMR
-      resetState (state); //use sparingly, may cause memory leak
+      // resetState (state); //use sparingly, may cause memory leak
       state->samplesPerSymbol = 20;
       state->symbolCenter = 10;
       sprintf (opts->output_name, "dPMR");
@@ -1359,7 +1371,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (choice == 9)
     {
       //NXDN48
-      resetState (state); //use sparingly, may cause memory leak
+      // resetState (state); //use sparingly, may cause memory leak
       opts->frame_nxdn48 = 1;
       state->samplesPerSymbol = 20;
       state->symbolCenter = 10;
@@ -1388,7 +1400,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (choice == 10)
     {
       //NXDN96
-      resetState (state); //use sparingly, may cause memory leak
+      // resetState (state); //use sparingly, may cause memory leak
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       sprintf (opts->output_name, "NXDN96");
@@ -1415,7 +1427,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (choice == 11)
     {
       //Decode DMR Stereo (was X2-TDMA)
-      resetState (state); //use sparingly, may cause memory leak
+      // resetState (state); //use sparingly, may cause memory leak
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       // sprintf (opts->output_name, "X2-TDMA");
@@ -2058,7 +2070,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero \n", "v2.0.1-11 Win32");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero \n", "v2.0.1-12 Win32");
     printw ("------------------------------------------------------------------------------\n"); 
   }
 #elif LIMAZULUTWEAKS
@@ -2087,7 +2099,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 4) printw (" MBElib %s", versionstr);
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Win32");
-      if (i == 6) printw (" v2.0.1-11 Win32 \n");
+      if (i == 6) printw (" v2.0.1-12 Win32 \n");
       #else
       if (i == 5) printw (" %s ", "zDEV BUILD");
       if (i == 6) printw (" %s \n", GIT_TAG);
@@ -2251,11 +2263,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     level = (int) state->max / 164; //only update on carrier present
     if (opts->mod_qpsk == 1) level = (int) state->max / 328; //test values here
     reset = 1;
-  }
-  if (state->carrier == 0 && opts->reset_state == 1 && reset == 1)
-  {
-    resetState (state);
-    reset = 0;
   }
 
   printw ("--Audio Decode----------------------------------------------------------------\n");
@@ -3273,8 +3280,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
       state->rf_mod = 0;
-      state->samplesPerSymbol = 10;
-      state->symbolCenter = 4;
+      state->samplesPerSymbol = 8;
+      state->symbolCenter = 3;
     }
   }
 

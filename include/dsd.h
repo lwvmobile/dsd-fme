@@ -380,6 +380,9 @@ typedef struct
   uint8_t use_dsp_output;
   char dsp_out_file[2048];
 
+  //Use P25p1 heuristics
+  uint8_t use_heuristics;
+
 } dsd_opts;
 
 typedef struct
