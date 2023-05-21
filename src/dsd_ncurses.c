@@ -599,10 +599,6 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           #ifdef USE_RTLSDR
 
-          //could also benefit from having some control aside from UDP remote
-          //BUG: When squelch enabled, all processing halts, no more ncursesprinter until squelch broken
-          //make another submenu to control these values if tests go well
-
           entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
           box (entry_win, 0, 0);
           mvwprintw(entry_win, 2, 2, " Enter RTL Device Index Number");
@@ -612,7 +608,6 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           wscanw(entry_win, "%d", &opts->rtl_dev_index);
           noecho();
 
-          //this is NOT scanning (or printing) in the variable for some reason...why?
           entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
           box (entry_win, 0, 0);
           mvwprintw(entry_win, 2, 2, " Enter RTL Device PPM Error");
@@ -621,21 +616,19 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           refresh();
           wscanw(entry_win, "%d", &opts->rtlsdr_ppm_error);
           noecho();
-          //opts->rtlsdr_ppm_error = -1; //hard set override for testing
 
-          //apparently, scanning in an lld nukes later box entries for some reason
           entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
           box (entry_win, 0, 0);
           mvwprintw(entry_win, 2, 2, " Enter Frequency in Hz (851.8 MHz is 851800000 Hz) ");
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
-          wscanw(entry_win, "%d", &opts->rtlsdr_center_freq); //ld, or lld?
+          wscanw(entry_win, "%d", &opts->rtlsdr_center_freq);
           noecho();
 
           entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
           box (entry_win, 0, 0);
-          mvwprintw(entry_win, 2, 2, " Enter VFO Bandwidth (6, 8, 12, 16, 24, 48)");
+          mvwprintw(entry_win, 2, 2, " Enter BW (8, 12, 24, 48)(12 Recommended)");
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
@@ -644,7 +637,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
           box (entry_win, 0, 0);
-          mvwprintw(entry_win, 2, 2, " Enter RTL Gain Value (0-49) (0 = Auto Gain)");
+          mvwprintw(entry_win, 2, 2, " Enter RTL Gain Value (0-49) (0 = AGC)");
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
@@ -662,9 +655,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           entry_win = newwin(8, WIDTH+22, starty+10, startx+10);
           box (entry_win, 0, 0);
-          mvwprintw(entry_win, 2, 2, " Enter RTL Device Squelch Level or Enter 0");
-          mvwprintw(entry_win, 3, 2, " WARNING! Renders Terminal Unresponsive When No Signal!");
-          mvwprintw(entry_win, 4, 3, " ");
+          mvwprintw(entry_win, 2, 2, " Enter RTL RMS Squelch Level (NXDN/dPMR only)");
+          mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
           wscanw(entry_win, "%d", &opts->rtl_squelch_level);
@@ -675,11 +667,11 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           mvwprintw(entry_win, 2, 2, " Starting RTL Input. Cannot Release/Stop Until Exit.");
           mvwprintw(entry_win, 4, 2, " RTL Frequency: %d Hz", opts->rtlsdr_center_freq);
           mvwprintw(entry_win, 5, 2, " RTL Device Index Number: %d", opts->rtl_dev_index);
-          mvwprintw(entry_win, 6, 2, " RTL Device VFO Bandwidth: %d kHz", opts->rtl_bandwidth);
+          mvwprintw(entry_win, 6, 2, " RTL Device Bandwidth: %d kHz", opts->rtl_bandwidth);
           mvwprintw(entry_win, 7, 2, " RTL Device Gain: %d", opts->rtl_gain_value);
           mvwprintw(entry_win, 8, 2, " RTL Device UDP Port: %d", opts->rtl_udp_port);
           mvwprintw(entry_win, 9, 2, " RTL Device PPM: %d", opts->rtlsdr_ppm_error);
-          mvwprintw(entry_win, 10, 2, " RTL Device Squelch: %d", opts->rtl_squelch_level);
+          mvwprintw(entry_win, 10, 2, " RTL RMS Squelch: %d", opts->rtl_squelch_level);
           mvwprintw(entry_win, 12, 2, " Are You Sure?");
           mvwprintw(entry_win, 13, 2, " 1 = Yes, 2 = No ");
           mvwprintw(entry_win, 14, 3, " ");
@@ -691,6 +683,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           refresh();
 
           //works well, but can't release dongle later, so its a one way trip until exit
+          //TODO: Write function to release the dongle -- call cleanup_rtlsdr_stream()
           if (confirm == 1)
           {
             opts->audio_in_type = 3; //RTL input, only set this on confirm
@@ -2070,7 +2063,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero \n", "v2.0.1-12 Win32");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero \n", "v2.0.1-13 Win32");
     printw ("------------------------------------------------------------------------------\n"); 
   }
 #elif LIMAZULUTWEAKS
@@ -2099,7 +2092,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 4) printw (" MBElib %s", versionstr);
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Win32");
-      if (i == 6) printw (" v2.0.1-12 Win32 \n");
+      if (i == 6) printw (" v2.0.1-13 Win32 \n");
       #else
       if (i == 5) printw (" %s ", "zDEV BUILD");
       if (i == 6) printw (" %s \n", GIT_TAG);
@@ -2150,9 +2143,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw (" Gain: %idB;", opts->rtl_gain_value);
     printw (" PPM: %i;", opts->rtlsdr_ppm_error);
     printw (" SQ: %i;", opts->rtl_squelch_level);
-    printw (" RMS: %03i;", opts->rtl_rms);
+    printw (" RMS: %04i;", opts->rtl_rms);
     printw (" BW: %i kHz;", opts->rtl_bandwidth);
-    printw (" FREQ: %i;", opts->rtlsdr_center_freq); 
+    printw (" FRQ: %i;", opts->rtlsdr_center_freq); 
     if (opts->rtl_udp_port != 0) printw ("\n| External Tuning on UDP Port: %i", opts->rtl_udp_port);
     printw ("\n");
   }
@@ -3083,7 +3076,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //only print if a valid time was assigned to the matrix, and not EDACS/PV, and source is not zero
       if ( ((time(NULL) - call_matrix[9-j][5]) < 999999) && call_matrix[9-j][0] != 14 && call_matrix[9-j][0] != 15 && call_matrix[9-j][0] != 37 && call_matrix[9-j][0] != 38 && call_matrix[9-j][2] != 0) //
       {
-        printw ("| %s ", SyncTypes[call_matrix[9-j][0]]);
+        // printw ("| %s ", SyncTypes[call_matrix[9-j][0]]); //sync type
+
+        printw ("| ");
+        printw ("%s ", getDateC(call_matrix[9-j][5]) );
+        printw ("%s ", getTimeC(call_matrix[9-j][5]) );
+
         if (lls == 28 || lls == 29)
         {
           if (idas == 0) printw ("RAN [%02lld] ", call_matrix[9-j][1]);
@@ -3108,7 +3106,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         //DMR BS Types
         if (call_matrix[9-j][0] == 12 || call_matrix[9-j][0] == 13 || call_matrix[9-j][0] == 10 || call_matrix[9-j][0] == 11 )
         {
-          printw ("S[%lld] ", call_matrix[9-j][3]); //%d
+          // printw ("S[%lld] ", call_matrix[9-j][3]); //%d
           printw ("TGT [%8lld] ", call_matrix[9-j][1]);
           printw ("SRC [%8lld] ", call_matrix[9-j][2]);
           printw ("DCC [%02lld] ", call_matrix[9-j][4]);
@@ -3116,13 +3114,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         //DMR MS Types
         if (call_matrix[9-j][0] == 32 || call_matrix[9-j][0] == 33 || call_matrix[9-j][0] == 34 )
         {
-          printw ("S[%lld] ", call_matrix[9-j][3]);
+          // printw ("S[%lld] ", call_matrix[9-j][3]);
           printw ("TGT [%8lld] ", call_matrix[9-j][1]);
           printw ("SRC [%8lld] ", call_matrix[9-j][2]);
           printw ("DCC [%02lld] ", call_matrix[9-j][4]);
         }
 
-        #ifdef LIMAZULUTWEAKS
+        // #ifdef LIMAZULUTWEAKS
         //Group Name Labels from CSV import
         for (int k = 0; k < state->group_tally; k++)
         {
@@ -3139,10 +3137,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
             printw ("[%s] ", state->group_array[k].groupMode);
           }
         }
-        #endif
-
-        printw ("%s ", getDateC(call_matrix[9-j][5]) ); //You're welcome
-        printw ("%s \n", getTimeC(call_matrix[9-j][5]) ); //Remus
+        // #endif
+        printw ("\n");
       }
 
       //EDACS and ProVoice, outside of timestamp loop
@@ -3150,12 +3146,28 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         if (call_matrix[j][3] != 0) 
         {
-          printw ("| %s ", SyncTypes[call_matrix[j][0]]);
+          printw ("| ");
+          printw ("%s ", getDateC(call_matrix[j][5]) ); 
+          printw ("%s ", getTimeC(call_matrix[j][5]) );
           printw ("LCN [%2lld] ", call_matrix[j][1]);
           printw ("Group [%8lld] ", call_matrix[j][2]);
           printw ("Source [%8lld] ", call_matrix[j][3]);
-          printw ("%s ", getDateC(call_matrix[j][5]) ); 
-          printw ("%s \n", getTimeC(call_matrix[j][5]) ); 
+          //test
+          for (int k = 0; k < state->group_tally; k++)
+          {
+            if (state->group_array[k].groupNumber == call_matrix[j][2])
+            {
+              attron(COLOR_PAIR(4));
+              printw ("[%s] ", state->group_array[k].groupName);
+            }
+            else if (state->group_array[k].groupNumber == call_matrix[j][3])
+            {
+              attron(COLOR_PAIR(4));
+              printw ("[%s] ", state->group_array[k].groupName);
+            }
+          }
+          //end test
+          printw ("\n");
         }
          
       }

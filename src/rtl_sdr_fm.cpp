@@ -630,7 +630,7 @@ int verbose_set_frequency(rtlsdr_dev_t *dev, uint32_t frequency)
 	if (r < 0) {
 		fprintf (stderr, " WARNING: Failed to set center freq.\n");
 	} else {
-		fprintf (stderr, " Tuned to %u Hz.\n", frequency);
+		fprintf (stderr, " Tuned to %u Hz.\n", frequency); //consider disabling this
 	}
 	return r;
 }
@@ -964,7 +964,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
 {
   struct sigaction sigact;
   int r;
-	rtl_bandwidth =  opts->rtl_bandwidth * 1000 * 2; //going to double the value -- may clear up issue with user specified BW not what it seems
+	rtl_bandwidth =  opts->rtl_bandwidth * 1000; //reverted back to straight value
 	bandwidth_multiplier = (bandwidth_divisor / rtl_bandwidth);
 
 	//this needs to be initted first, then we set the parameters
@@ -985,15 +985,15 @@ void open_rtlsdr_stream(dsd_opts *opts)
 
 	dongle.dev_index = opts->rtl_dev_index;
 	// demod.squelch_level = opts->rtl_squelch_level; //no longer used here, used in framesync vc rms value under select conditions
-	fprintf (stderr, "Setting RTL VFO Bandwidth to %d Hz\n", rtl_bandwidth);
-	fprintf (stderr, "Setting RTL Sample Multiplier to %d\n", bandwidth_multiplier);
-	fprintf (stderr, "Setting RTL Squelch Level to %d\n", demod.squelch_level);
+	fprintf (stderr, "Setting RTL Bandwidth to %d Hz\n", rtl_bandwidth);
+	// fprintf (stderr, "Setting RTL Sample Multiplier to %d\n", bandwidth_multiplier);
+	fprintf (stderr, "Setting RTL RMS Squelch Level to %d\n", opts->rtl_squelch_level);
 	if (opts->rtl_udp_port != 0) port = opts->rtl_udp_port; //set this here, only open socket thread if set
 	if (opts->rtl_gain_value > 0) {
 		dongle.gain = opts->rtl_gain_value * 10; //multiple by ten to make it consitent with the way rtl_fm works
 	}
   volume_multiplier = opts->rtl_volume_multiplier;
-	fprintf (stderr, "Setting RTL Volume Multiplier to %d\n", volume_multiplier);
+	// fprintf (stderr, "Setting RTL Volume Multiplier to %d\n", volume_multiplier);
 
   /* quadruple sample_rate to limit to Δθ to ±π/2 */
 	demod.rate_in *= demod.post_downsample;
@@ -1026,7 +1026,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	} else {
 		dongle.gain = nearest_gain(dongle.dev, dongle.gain);
 		verbose_gain_set(dongle.dev, dongle.gain);
-		fprintf (stderr, "Setting RTL Nearest Gain to %d. \n", dongle.gain); //seems to be working now
+		// fprintf (stderr, "Setting RTL Nearest Gain to %d. \n", dongle.gain); //seems to be working now
 	}
 
   verbose_ppm_set(dongle.dev, dongle.ppm_error);
@@ -1094,7 +1094,6 @@ void rtl_dev_tune(dsd_opts * opts, long int frequency)
 	dongle.freq = opts->rtlsdr_center_freq = frequency;
 	optimal_settings(dongle.freq, demod.rate_in);
 	r = verbose_set_frequency(dongle.dev, dongle.freq);
-	// dongle.mute = BUFFER_DUMP; //test this here -- unsure if this does anything beneficial or anything at all, perceived 'lag' could be RMS related on NXDN48, DMR doesn't have the same symptoms.
 }
 
 //return RMS value (root means square) power level -- used as soft squelch inside of framesync

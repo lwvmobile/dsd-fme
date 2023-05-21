@@ -536,9 +536,9 @@ initOpts (dsd_opts * opts)
   opts->rtl_dev_index = 0;        //choose which device we want by index number
   opts->rtl_gain_value = 0;     //mid value, 0 - AGC - 0 to 49 acceptable values
   opts->rtl_squelch_level = 100; //100 by default, but only affects NXDN and dPMR during framesync test, compared to RMS value
-  opts->rtl_volume_multiplier = 1; //sample multiplier; This multiplies the sample value to produce a higher 'inlvl' 
+  opts->rtl_volume_multiplier = 1; //sample multiplier; This multiplies the sample value to produce a higher 'inlvl' (probably best left unused)
   opts->rtl_udp_port = 0; //set UDP port for RTL remote -- 0 by default, will be making this optional for some external/legacy use cases (edacs-fm, etc)
-  opts->rtl_bandwidth = 6; //default was 12, but changed to 6 due to newer handling of rtl_bandwidth
+  opts->rtl_bandwidth = 12; //default is 12, reverted back to normal on this (no inherent benefit)
   opts->rtlsdr_ppm_error = 0; //initialize ppm with 0 value;
   opts->rtlsdr_center_freq = 850000000; //set to an initial value (if user is using a channel map, then they won't need to specify anything other than -i rtl if desired)
   opts->rtl_started = 0;
@@ -1077,7 +1077,7 @@ usage ()
   printf ("  freq <num>    RTL-SDR Frequency (851800000 or 851.8M) \n");
   printf ("  gain <num>    RTL-SDR Device Gain (0-49)(default = 0; Hardware AGC recommended)\n");
   printf ("  ppm  <num>    RTL-SDR PPM Error (default = 0)\n");
-  printf ("  bw   <num>    RTL-SDR Bandwidth kHz (default = 6)(4, 6, 8, 12, 16, 24)  \n");
+  printf ("  bw   <num>    RTL-SDR Bandwidth kHz (default = 12)(4, 6, 8, 12, 16, 24)  \n");
   printf ("  sq   <num>    RTL-SDR Squelch Level (Optional)\n");
   printf ("  udp  <num>    RTL-SDR UDP Remote Port (Optional -- External Use Only)\n");
   printf (" Example: dsd-fme-zdev -fs -i rtl -C cap_plus_channel.csv -T\n"); //put a good example here, probably trunking so user doesn't have to enter the 'optional' arguments
@@ -1204,9 +1204,9 @@ if (opts->audio_in_type == 1)
     {
       opts->pulse_digi_rate_out = 24000; //rtl needs 24000 by 2 channel for DMR TDMA Stereo output
       opts->pulse_digi_out_channels = 2; //minimal crackling 'may' be observed, not sure, can't test to see on DMR with RTL
-      fprintf (stderr, "RTL Audio Rate Out set to 24000 Khz/2 Channel \n");
+      // fprintf (stderr, "RTL Audio Rate Out set to 24000 Khz/2 Channel \n");
     }
-    else fprintf (stderr, "RTL Audio Rate Out set to 48000 Khz/1 Channel \n");
+    // else fprintf (stderr, "RTL Audio Rate Out set to 48000 Khz/1 Channel \n");
     opts->pulse_raw_rate_out = 48000;
     opts->pulse_raw_out_channels = 1;
 
@@ -1357,7 +1357,7 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version:  v2.0.1-12 Win32 \n");
+  fprintf (stderr, "Build Version:  v2.0.1-13 Win32 \n");
   #else
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
   #endif
@@ -2268,7 +2268,7 @@ main (int argc, char **argv)
           opts.rtl_bandwidth = bw;
         }
         else 
-          opts.rtl_bandwidth = 6; //new safe default
+          opts.rtl_bandwidth = 12; //safe default -- provides best performance on most systems
       }
       else goto RTLEND; 
 
