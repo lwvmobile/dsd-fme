@@ -407,6 +407,13 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     closePulseInput(opts);
   }
 
+  if (opts->audio_in_type == 3)
+  {
+    #ifdef USE_RTLSDR
+    rtl_clean_queue();
+    #endif
+  }
+
   if (opts->audio_in_type == 8) //close TCP input SF file so we don't buffer audio while not decoding
   {
     sf_close(opts->tcp_file_in);
@@ -1658,6 +1665,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
       open_rtlsdr_stream(opts);
     }
+    rtl_clean_queue();
+    reset_dibit_buffer(state); //test and observe for any random issues, disable if needed
     #elif AERO_BUILD
     opts->audio_out_type = 3; //hopefully the audio stream is still/already open
     #else
@@ -2063,7 +2072,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero \n", "v2.0.1-13 Win32");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero \n", "v2.0.1-14 Win32");
     printw ("------------------------------------------------------------------------------\n"); 
   }
 #elif LIMAZULUTWEAKS
@@ -2092,7 +2101,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 4) printw (" MBElib %s", versionstr);
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Win32");
-      if (i == 6) printw (" v2.0.1-13 Win32 \n");
+      if (i == 6) printw (" v2.0.1-14 Win32 \n");
       #else
       if (i == 5) printw (" %s ", "zDEV BUILD");
       if (i == 6) printw (" %s \n", GIT_TAG);

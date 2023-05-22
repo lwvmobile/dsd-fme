@@ -1055,6 +1055,7 @@ bool QR_16_7_6_decode(unsigned char *rxBits);
 
 void InitAllFecFunction(void);
 void resetState (dsd_state * state);
+void reset_dibit_buffer(dsd_state * state);
 void dstar_header_decode(dsd_state * state, int radioheaderbuffer[660]);
 
 //P25 PDU Handler
@@ -1113,6 +1114,7 @@ void get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state);
 void rtlsdr_sighandler();
 void rtl_dev_tune(dsd_opts * opts, long int frequency);
 int rtl_return_rms();
+void rtl_clean_queue();
 #endif
 //DMR TRELLIS
 void CDMRTrellisTribitsToBits(const unsigned char* tribits, unsigned char* payload);

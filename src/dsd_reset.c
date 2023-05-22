@@ -120,3 +120,15 @@ void resetState (dsd_state * state)
   initialize_p25_heuristics(&state->p25_heuristics);
   initialize_p25_heuristics(&state->inv_p25_heuristics);
 }
+
+//simple function to reset the dibit buffer
+void reset_dibit_buffer(dsd_state * state)
+{
+	//Dibit Buffer -- Free Allocated Memory
+  free (state->dibit_buf);
+
+  //Dibit Buffer -- Memset/Init/Allocate Memory
+  state->dibit_buf = malloc (sizeof (int) * 1000000);
+  state->dibit_buf_p = state->dibit_buf + 200;
+  memset (state->dibit_buf, 0, sizeof (int) * 200);
+}

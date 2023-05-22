@@ -1415,7 +1415,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             //Preamble plus FSW, proceed right away
             if ( (strncmperr (synctest19, NXDN_PANDFSW, 19, 1) == 0) )
             {
-              // state->carrier = 1;
+              state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
@@ -1428,7 +1428,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             
             else if ( (strncmperr (synctest19, INV_NXDN_PANDFSW, 19, 1) == 0) )
             {
-              // state->carrier = 1;
+              state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
@@ -1441,7 +1441,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
             else if ( (strncmperr (synctest10, NXDN_FSW, 10, 1) == 0) )
             {
-              // state->carrier = 1;
+              state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
@@ -1459,7 +1459,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
             else if ( (strncmperr (synctest10, INV_NXDN_FSW, 10, 1) == 0) )
             {
-              // state->carrier = 1;
+              state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;

@@ -1094,6 +1094,8 @@ void rtl_dev_tune(dsd_opts * opts, long int frequency)
 	dongle.freq = opts->rtlsdr_center_freq = frequency;
 	optimal_settings(dongle.freq, demod.rate_in);
 	r = verbose_set_frequency(dongle.dev, dongle.freq);
+	rtl_clean_queue();
+
 }
 
 //return RMS value (root means square) power level -- used as soft squelch inside of framesync
@@ -1102,4 +1104,12 @@ int rtl_return_rms()
 	int sr = 0;
 	sr = rms(demod.lowpassed, demod.lp_len, 1);
 	return (sr);
+}
+
+//simple function to clear the rtl sample queue when tuning and during other events (ncurses menu open/close)
+void rtl_clean_queue()
+{
+	//insert method to clear the entire queue to prevent sample 'lag'
+	std::queue<int16_t> empty; //create an empty queue
+	std::swap( output.queue, empty ); //swap in empty queue to effectively zero out current queue
 }
