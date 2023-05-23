@@ -1314,6 +1314,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             {
               // state->carrier = 1;
               state->lastsynctype = 28;
+              state->last_cc_sync_time = time(NULL);
 
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
@@ -1336,6 +1337,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             {
               // state->carrier = 1;
               state->lastsynctype = 29;
+              state->last_cc_sync_time = time(NULL);
 
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
@@ -1364,6 +1366,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (state->lastsynctype == 28) 
               {
                 state->lastsynctype = 28;
+                state->last_cc_sync_time = time(NULL);
                 // if (opts->payload == 1)
                   // fprintf (stderr, "\n +FSW   ");
                 // if (opts->payload == 1)
@@ -1393,6 +1396,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if (state->lastsynctype == 29) 
               {
                 state->lastsynctype = 29;
+                state->last_cc_sync_time = time(NULL);
                 // if (opts->payload == 1)
                   // fprintf (stderr, "\n -FSW   ");
                 // if (opts->payload == 1)

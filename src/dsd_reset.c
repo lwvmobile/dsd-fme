@@ -9,10 +9,11 @@ void resetState (dsd_state * state)
   int i, j;
 
   //Dibit Buffer -- Free Allocated Memory
-  free (state->dibit_buf);
+  // free (state->dibit_buf);
 
   //Dibit Buffer -- Memset/Init/Allocate Memory
-  state->dibit_buf = malloc (sizeof (int) * 1000000);
+  // state->dibit_buf = malloc (sizeof (int) * 1000000);
+  
   state->dibit_buf_p = state->dibit_buf + 200;
   memset (state->dibit_buf, 0, sizeof (int) * 200);
   state->repeat = 0; //repeat frame?
@@ -125,10 +126,11 @@ void resetState (dsd_state * state)
 void reset_dibit_buffer(dsd_state * state)
 {
 	//Dibit Buffer -- Free Allocated Memory
-  free (state->dibit_buf);
+  // free (state->dibit_buf);
 
   //Dibit Buffer -- Memset/Init/Allocate Memory
-  state->dibit_buf = malloc (sizeof (int) * 1000000);
+  // state->dibit_buf = malloc (sizeof (int) * 1000000);
+
   state->dibit_buf_p = state->dibit_buf + 200;
   memset (state->dibit_buf, 0, sizeof (int) * 200);
 }

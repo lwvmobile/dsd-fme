@@ -1357,7 +1357,7 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version:  v2.0.1-14 Win32 \n");
+  fprintf (stderr, "Build Version:  v2.0.1-15 Win32 \n");
   #else
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
   #endif
@@ -1778,6 +1778,9 @@ main (int argc, char **argv)
               sprintf (opts.output_name, "EDACS/PV");
               fprintf (stderr,"Setting symbol rate to 9600 / second\n");
               fprintf (stderr,"Decoding only ProVoice frames.\n");
+              //rtl specific tweaks
+              opts.rtl_bandwidth = 24;
+              // opts.rtl_gain_value = 36;
             }
           else if (optarg[0] == '1')
             {
