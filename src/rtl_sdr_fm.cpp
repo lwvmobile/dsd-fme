@@ -628,9 +628,9 @@ int verbose_set_frequency(rtlsdr_dev_t *dev, uint32_t frequency)
 	int r;
 	r = rtlsdr_set_center_freq(dev, frequency);
 	if (r < 0) {
-		fprintf (stderr, " WARNING: Failed to set center freq.\n");
+		fprintf (stderr, " (WARNING: Failed to set Center Frequency). \n");
 	} else {
-		fprintf (stderr, " Tuned to %u Hz.\n", frequency); //consider disabling this
+		fprintf (stderr, " (Center Frequency: %u Hz.) \n", frequency);
 	}
 	return r;
 }
@@ -1091,10 +1091,19 @@ void get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 void rtl_dev_tune(dsd_opts * opts, long int frequency)
 {
 	int r;
+	if (opts->payload == 1)
+		fprintf (stderr, "\nTuning to %lu Hz.", frequency);
 	dongle.freq = opts->rtlsdr_center_freq = frequency;
 	optimal_settings(dongle.freq, demod.rate_in);
-	r = verbose_set_frequency(dongle.dev, dongle.freq);
+	if (opts->payload == 1)
+		fprintf (stderr, " (Center Frequency: %u Hz.) \n", dongle.freq);
+	r = rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+	if (r < 0)
+		fprintf (stderr, " (WARNING: Failed to set Center Frequency %u). \n", dongle.freq);
+
+	pthread_rwlock_wrlock(&output.rw); //prevent possible segfault when cleaning the queue
 	rtl_clean_queue();
+	pthread_rwlock_unlock(&output.rw); //resume 
 
 }
 
