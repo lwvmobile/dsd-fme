@@ -1112,6 +1112,9 @@ int rtl_return_rms()
 {
 	int sr = 0;
 	sr = rms(demod.lowpassed, demod.lp_len, 1);
+	// 'Fix' potential negative value overflow from the rms function -- Observed in Windows builds
+	sr = abs(sr);
+	if (sr > 9999) sr = 9999;
 	return (sr);
 }
 

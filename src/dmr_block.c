@@ -776,9 +776,9 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
   memset (state->cap_plus_block_num, 0, sizeof(state->cap_plus_block_num));
   memset (state->data_header_valid, 0, sizeof(state->data_header_valid));
   memset (state->data_header_format, 7, sizeof(state->data_header_format));
-  //reset some strings
-  sprintf (state->call_string[0], "%s", "                     "); //21 spaces
-  sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+  //reset some strings -- resetting call string here causes random blink on ncurses terminal (cap+)
+  // sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+  // sprintf (state->call_string[1], "%s", "                     "); //21 spaces
   sprintf (state->dmr_lrrp_gps[0], "%s", "");
   sprintf (state->dmr_lrrp_gps[1], "%s", "");
 }

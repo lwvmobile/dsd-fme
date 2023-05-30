@@ -342,6 +342,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         state->payload_miR = 0;
         state->payload_keyidR = 0;
       }
+      sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
     }
     
 

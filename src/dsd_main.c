@@ -134,7 +134,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
         #endif
       }
 
-      if (state->lastsynctype != -1) fprintf (stderr, "Resume Scanning Mode\n");
+      //print here not working as it should -- not always a -1 value on lastsynctype I presume
+      // if (state->lastsynctype != -1) fprintf (stderr, "Resume Scanning Mode\n");
 
     }
     state->lcn_freq_roll++;
@@ -1028,7 +1029,6 @@ usage ()
   printf ("                pulse for pulse audio (will require pactl running in Cygwin)\n");
   #else
   printf ("  -i <device>   Audio input device (default is pulse)\n");
-  //NOTE: Fix some inputs to /dev/audio if required for linux, or just leave it as the more annoying /dev/dsp -- padsp bug opens multiple input streams...sometimes
   printf ("                /dev/dsp for OSS audio (Depreciated: Will require padsp wrapper in Linux) \n");
   #endif
   printf ("                rtl:dev:freq:gain:ppm:bw:sq:udp for rtl dongle (see below)\n");
@@ -1079,7 +1079,7 @@ usage ()
   printf ("  ppm  <num>    RTL-SDR PPM Error (default = 0)\n");
   printf ("  bw   <num>    RTL-SDR Bandwidth kHz (default = 12)(4, 6, 8, 12, 16, 24)  \n");
   printf ("  sq   <num>    RTL-SDR Squelch Level (Optional)\n");
-  printf ("  udp  <num>    RTL-SDR UDP Remote Port (Optional -- External Use Only)\n");
+  printf ("  udp  <num>    RTL-SDR Legacy UDP Remote Port (Optional -- External Use Only)\n");
   printf (" Example: dsd-fme-zdev -fs -i rtl -C cap_plus_channel.csv -T\n"); //put a good example here, probably trunking so user doesn't have to enter the 'optional' arguments
   printf (" Example: dsd-fme-zdev -fp -i rtl:0:851.375M:22:-2:12:0:6021\n");
   printf ("\n");
@@ -1156,16 +1156,17 @@ usage ()
   printf ("                 Experimental -- Can only scan for sync with enabled decoders, don't mix NXDN and DMR/P25!\n");
   printf ("                 This is not a Trunking Feature, just scans through conventional frequencies fast!\n");
   printf ("  -W            Use Imported Group List as a Trunking Allow/White List -- Only Tune with Mode A\n");
-  printf ("  -p            Disable Tune to Private Calls (DMR TIII and P25)\n");
-  printf ("  -E            Disable Tune to Group Calls (DMR TIII, Con+, Cap+ and P25)\n");
+  printf ("  -p            Disable Tune to Private Calls (DMR TIII, P25, NXDN Type-C and Type-D)\n");
+  printf ("  -E            Disable Tune to Group Calls (DMR TIII, Con+, Cap+, P25, NXDN Type-C, and Type-D)\n");
   printf ("                 (NOTE: NXDN and EDACS, simply disable trunking if desired) \n");
-  printf ("  -e            Enable Tune to Data Calls (DMR TIII)\n");
+  printf ("  -e            Enable Tune to Data Calls (DMR TIII, Cap+, NXDN Type-C)\n");
+  printf ("                 (NOTE: No Clear Distinction between Cap+ Private Voice Calls and Data Calls -- Both enabled with Data Calls \n");
   printf ("                 (NOTE: P25 Data Channels Not Enabled (no handling) \n");
   printf ("  -U <port>     Enable RIGCTL/TCP; Set TCP Port for RIGCTL. (4532 on SDR++)\n");
   printf ("  -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
   printf ("                 P25 - 7000-12000; P25 (QPSK) - 12000; NXDN48 - 7000; NXDN96: 9000; DMR - 7000; EDACS/PV - 12500;\n");
   printf ("                 May vary based on system stregnth, etc.\n");
-  printf ("  -t <secs>     Set Trunking or Fast Scan VC/sync loss hangtime in seconds. (default = 1 second) (decimal values permitted) \n");
+  printf ("  -t <secs>     Set Trunking or Fast Scan VC/sync loss hangtime in seconds. (default = 1 second)\n");
   printf ("\n");
   printf (" Trunking Example TCP: dsd-fme-zdev -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
   printf (" Trunking Example RTL: dsd-fme-zdev -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
@@ -1357,7 +1358,7 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version:  v2.0.1-16 Win32 \n");
+  fprintf (stderr, "Build Version:  v2.0.1-17 Win32 \n");
   #else
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
   #endif
@@ -2324,7 +2325,7 @@ main (int argc, char **argv)
     int fmt; 
     int speed = 48000; 
 
-    //NOTE: Might can use this code in an ifdef to be able to use /dev/audio under padsp in Linux
+    //NOTE: Both /dev/audio AND /dev/dsp randomly open multiple input streams in Linux under padsp wrapper
     if((strncmp(opts.audio_in_dev, "/dev/audio", 10) == 0))
     {
       sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
