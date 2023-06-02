@@ -342,7 +342,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         state->payload_miR = 0;
         state->payload_keyidR = 0;
       }
-      sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
+      
     }
     
 
@@ -532,6 +532,10 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   }
 
   END_FLCO:
+  
+  //blank the call string here if its a TLC
+  if (type == 2) sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
+
   if (unk == 1 || pf == 1)
   {
     fprintf(stderr, " FLCO=0x%02X FID=0x%02X ", flco, fid);
