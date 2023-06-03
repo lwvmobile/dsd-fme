@@ -1,4 +1,4 @@
-ChannelNumber(dec),frequency(Hz) (do not delete this line or won't import properly)
+LSN(dec),frequency(Hz) (do not delete this line or won't import properly)
 1,858606250
 2,858606250
 3,859606250

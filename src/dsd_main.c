@@ -1014,13 +1014,13 @@ usage ()
 {
 
   printf ("\n");
-  printf ("Usage: dsd-fme-zdev [options]            Decoder/Trunking Mode\n");
-  printf ("  or:  dsd-fme-zdev [options] -r <files> Read/Play saved mbe data from file(s)\n");
-  printf ("  or:  dsd-fme-zdev -h                   Show help\n");
+  printf ("Usage: dsd-fme [options]            Decoder/Trunking Mode\n");
+  printf ("  or:  dsd-fme [options] -r <files> Read/Play saved mbe data from file(s)\n");
+  printf ("  or:  dsd-fme -h                   Show help\n");
   printf ("\n");
   printf ("Display Options:\n");
   printf ("  -N            Use NCurses Terminal\n");
-  printf ("                 dsd-fme-zdev -N 2> log.ans \n");
+  printf ("                 dsd-fme -N 2> log.ans \n");
   printf ("  -Z            Log MBE/PDU Payloads to console\n");
   printf ("\n");
   printf ("Input/Output options:\n");
@@ -1031,6 +1031,7 @@ usage ()
   printf ("  -i <device>   Audio input device (default is pulse)\n");
   printf ("                /dev/dsp for OSS audio (Depreciated: Will require padsp wrapper in Linux) \n");
   #endif
+  printf ("                rtl for rtl dongle (Default Values -- see below)\n");
   printf ("                rtl:dev:freq:gain:ppm:bw:sq:udp for rtl dongle (see below)\n");
   printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
   printf ("                tcp:192.168.7.5:7355 for custom address and port \n");
@@ -1052,7 +1053,6 @@ usage ()
   printf ("                /dev/dsp for OSS audio (Depreciated: Will require padsp wrapper in Linux) \n");
   #endif
   printf ("                null for no audio output\n");
-  // printf ("                pulse for pulse audio \n");
   printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
@@ -1063,12 +1063,12 @@ usage ()
   printf ("  -a            Enable Call Alert Beep (NCurses Terminal Only)\n");
   printf ("                 (Warning! Might be annoying.)\n");
   printf ("  -L <file>     Specify Filename for LRRP Data Output.\n");
-  printf ("  -Q <file>     Specify Filename for DSP Structured File Output. (placed in DSP folder)\n");
+  printf ("  -Q <file>     Specify Filename for OK-DMRlib Structured File Output. (placed in DSP folder)\n");
   printf ("  -c <file>     Output symbol capture to .bin file\n");
   printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
   printf ("  -V            Enable Audio Smoothing on Upsampled 48k/1 or 24k/2 Audio (Capital V)\n");
   printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
-  printf ("  -z            Set TDMA Voice Slot Preference when using OSS audio output (prevent lag and stuttering)\n");
+  printf ("  -z            Set TDMA Voice Slot Preference when using /dev/dsp audio output (prevent lag and stuttering)\n");
   printf ("\n");
   printf ("RTL-SDR options:\n");
   printf (" Usage: rtl:dev:freq:gain:ppm:bw:sq:udp\n");
@@ -1080,15 +1080,15 @@ usage ()
   printf ("  bw   <num>    RTL-SDR Bandwidth kHz (default = 12)(4, 6, 8, 12, 16, 24)  \n");
   printf ("  sq   <num>    RTL-SDR Squelch Level (Optional)\n");
   printf ("  udp  <num>    RTL-SDR Legacy UDP Remote Port (Optional -- External Use Only)\n");
-  printf (" Example: dsd-fme-zdev -fs -i rtl -C cap_plus_channel.csv -T\n"); //put a good example here, probably trunking so user doesn't have to enter the 'optional' arguments
-  printf (" Example: dsd-fme-zdev -fp -i rtl:0:851.375M:22:-2:12:0:6021\n");
+  printf (" Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T\n");
+  printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:6021\n");
   printf ("\n");
   printf ("Decoder options:\n");
   printf ("  -fa           Legacy Auto Detection (old methods default)\n");
   printf ("  -ft           XDMA P25 and DMR BS/MS frame types (new default)\n");
   printf ("  -fs           DMR Stereo BS and MS Simplex\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
-  printf ("  -f2           Decode only P25 Phase 2**\n");
+  printf ("  -f2           Decode only P25 Phase 2 (6000 sps) **\n");
   printf ("  -fd           Decode only D-STAR\n");
   printf ("  -fr           Decode only DMR Mono - Single Slot Voice\n");
   printf ("  -fx           Decode only X2-TDMA\n");
@@ -1121,12 +1121,12 @@ usage ()
   printf ("  -mc           Use only C4FM modulation optimizations\n");
   printf ("  -mg           Use only GFSK modulation optimizations\n");
   printf ("  -mq           Use only QPSK modulation optimizations\n");
-  printf ("  -m2           Use P25p2 6000 sps CQPSK modulation optimizations\n");
+  printf ("  -m2           Use P25p2 6000 sps QPSK modulation optimizations\n");
   //printf ("                 (4 Level, not 8 Level LSM) (this is honestly unknown since I can't verify what local systems are using)\n");
   printf ("  -F            Relax P25 Phase 2 MAC_SIGNAL CRC Checksum Pass/Fail\n");
   printf ("                 Use this feature to allow MAC_SIGNAL even if CRC errors.\n");
   printf ("  -F            Relax DMR RAS/CRC CSBK/DATA Pass/Fail\n");
-  printf ("                 Enabling on some systems could lead to bad voice/data decoding if bad or marginal signal\n");
+  printf ("                 Enabling on some systems could lead to bad channel assignments/site data decoding if bad or marginal signal\n");
   printf ("  -F            Relax NXDN SACCH/FACCH/CAC/F2U CRC Pass/Fail\n");
   printf ("                 Not recommended on NXDN, but can be bypassed if desired.\n");
   printf ("\n");
@@ -1141,7 +1141,7 @@ usage ()
   printf ("  -R <dec>      Manually Enter dPMR or NXDN EHR Scrambler Key Value (Decimal Value)\n");
   printf ("                 \n");
   printf ("  -k <file>     Import Key List from csv file.\n");
-  printf ("                  Only supports NXDN, DMR Basic Privacy and **tera 10-Char (decimal value) only. \n");
+  printf ("                  Only supports NXDN, DMR Basic Privacy and **tera 10-Char (decimal value). \n");
   printf ("                  (dPMR and **tera 32/64 char not supported, DMR uses TG value as key id -- EXPERIMENTAL!!). \n");
   printf ("                 \n");
   printf ("  -4            Force Privacy Key over FID and SVC bits \n");
@@ -1168,8 +1168,8 @@ usage ()
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking or Fast Scan VC/sync loss hangtime in seconds. (default = 1 second)\n");
   printf ("\n");
-  printf (" Trunking Example TCP: dsd-fme-zdev -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
-  printf (" Trunking Example RTL: dsd-fme-zdev -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
+  printf (" Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
+  printf (" Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
   printf ("\n");
   exit (0);
 }
@@ -1379,11 +1379,14 @@ main (int argc, char **argv)
         case 'h':
           usage ();
           exit (0);
+          
         case 'a':
           opts.call_alert = 1;
           break;
 
-        //Free'd up switches include 
+        //Free'd up switches include: I, b, J, j, n, O, v, y
+        //all numberals can be reclaimed, except for -4
+
         //make sure to put a colon : after each if they need an argument
         //or remove colon if no argument required
 
@@ -1392,7 +1395,7 @@ main (int argc, char **argv)
           opts.p25_trunk = 0; //turn off trunking mode if user enabled it
           break;
 
-        case 'k': //NXDN multi-key loader
+        case 'k': //multi-key loader
           strncpy(opts.key_in_file, optarg, 1023);
           opts.key_in_file[1023] = '\0';
           csvKeyImport(&opts, &state);
@@ -1517,13 +1520,13 @@ main (int argc, char **argv)
           state.symbolCenter = state.symbolCenter * opts.wav_interpolator;
           break;
 
-        case 'v':
-          sscanf (optarg, "%d", &opts.verbose);
-          break;
+        // case 'v':
+        //   sscanf (optarg, "%d", &opts.verbose);
+        //   break;
 
-        case 'n': //disable or reclaim?
-          state.use_throttle = 1;
-          break;
+        // case 'n': //disable or reclaim?
+        //   state.use_throttle = 1;
+        //   break;
 
         case 'K':
           sscanf (optarg, "%lld", &state.K);
