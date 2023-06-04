@@ -15,10 +15,13 @@
 void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state)
 {
   uint8_t SACCH[400]; //72
+  uint8_t sacch_bytes[10];
+
   uint32_t i;
   uint8_t CrcCorrect = 1;
 
   memset (SACCH, 0, sizeof (SACCH));
+  memset (sacch_bytes, 0, sizeof (sacch_bytes));
 
   /* Consider all SACCH CRC parts as correct */
   CrcCorrect = 1;
@@ -40,6 +43,17 @@ void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state)
   //reset the sacch field -- Github Issue #118
   memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
   memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, "\n");
+    fprintf (stderr, " Full SACCH Payload ");
+    for (i = 0; i < 9; i++)
+    {
+      sacch_bytes[i] = (uint8_t)ConvertBitIntoBytes(&SACCH[i*8], 8);
+      fprintf (stderr, "[%02X]", sacch_bytes[i]);
+    }
+  }
 
 
 } /* End NXDN_SACCH_Full_decode() */

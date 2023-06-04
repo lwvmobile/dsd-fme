@@ -123,7 +123,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 
 	if (crc != check)
 	{
-		fprintf (stderr, " FACCH");
+		fprintf (stderr, " FACCH1");
 		fprintf (stderr, "%s", KRED);
 		fprintf (stderr, " (CRC ERR)");
 		fprintf (stderr, "%s", KNRM);
@@ -135,7 +135,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	if (opts->payload == 1)
 	{
 		fprintf (stderr, "\n");
-		fprintf (stderr, " FACCH Payload ");
+		fprintf (stderr, " FACCH1 Payload ");
 		for (int i = 0; i < 12; i++)
 		{
 			fprintf (stderr, "[%02X]", m_data[i]); 
@@ -332,16 +332,17 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 			NXDN_SACCH_Full_decode (opts, state);
 		} 
 
-		if (opts->payload == 1)
-		{ 
-			fprintf (stderr, "\n"); 
-			fprintf (stderr, " SACCH SF Segment #%d ", part_of_frame+1);
-			for (int i = 0; i < 4; i++)
-			{
-				fprintf (stderr, "[%02X]", m_data[i]);
-			}
-			// if (crc != check) fprintf (stderr, " CRC ERR - %02X %02X", crc, check);
-		}
+		// if (opts->payload == 1)
+		// { 
+		// 	fprintf (stderr, "\n"); 
+		// 	fprintf (stderr, " SACCH SF Segment #%d ", part_of_frame+1);
+		// 	for (int i = 0; i < 4; i++)
+		// 	{
+		// 		fprintf (stderr, "[%02X]", m_data[i]);
+		// 	}
+		// 	// if (crc != check) fprintf (stderr, " CRC ERR - %02X %02X", crc, check);
+		// }
+
 	}	
 	
 }

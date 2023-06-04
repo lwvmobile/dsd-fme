@@ -464,9 +464,17 @@ if (opts->scanner_mode == 1)
 	if (facch2) nxdn_deperm_facch2_udch(opts, state, facch2_bits, 1);
 
 	//SHOULD be okay to run facch1's again on steal frames, will need testing
+	// if (facch & 1) nxdn_deperm_facch(opts, state, facch_bits_a);
+	// if (facch & 2) nxdn_deperm_facch(opts, state, facch_bits_b);
+
+	//only run facch in second slot if its not equal to the first one
 	if (facch & 1) nxdn_deperm_facch(opts, state, facch_bits_a);
-	if (facch & 2) nxdn_deperm_facch(opts, state, facch_bits_b);
-	
+	if (facch & 2)
+	{
+		if (memcmp (facch_bits_a, facch_bits_b, 144) != 0)
+			nxdn_deperm_facch(opts, state, facch_bits_b);
+	}
+
 	if (voice)
 	{
 		//restore MBE file open here

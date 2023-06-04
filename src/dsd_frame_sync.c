@@ -1291,9 +1291,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
             }
 
-          #ifdef NXDNTESTSYNC //use experimental sync detection based on multiple factors
+          // #ifdef NXDNTESTSYNC //
           
-          //NXDN FSW sync and handling - testing with more exact syncs patterns
+          //NXDN FSW sync and handling - using more exact frame sync values
           else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
           {
             strncpy (synctest10, (synctest_p - 9), 10); //FSW only
@@ -1408,79 +1408,79 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             }
           }
 
-          #else //use current 'more stable' NXDN Sync pattern detection
+          // #else //use previous NXDN Sync pattern detection
 
-          //NXDN FSW sync and handling - moved to very bottom of sync stack for falsing sanity
-          else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
-          {
-            strncpy (synctest10, (synctest_p - 9), 10); //FSW only
-            strncpy (synctest19, (synctest_p - 18), 19); //Preamble + FSW
+          // //NXDN FSW sync and handling - moved to very bottom of sync stack for falsing sanity
+          // else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
+          // {
+          //   strncpy (synctest10, (synctest_p - 9), 10); //FSW only
+          //   strncpy (synctest19, (synctest_p - 18), 19); //Preamble + FSW
 
-            //Preamble plus FSW, proceed right away
-            if ( (strncmperr (synctest19, NXDN_PANDFSW, 19, 1) == 0) )
-            {
-              state->carrier = 1;
-              state->offset = synctest_pos;
-              state->max = ((state->max) + lmax) / 2;
-              state->min = ((state->min) + lmin) / 2;
-              state->lastsynctype = 28;
-              state->last_cc_sync_time = time(NULL);
-              // if (opts->payload == 1) fprintf (stderr, "PANDF ");
-              // fprintf (stderr, " %s ", synctest19);
-              return (28);
-            }
+          //   //Preamble plus FSW, proceed right away
+          //   if ( (strncmperr (synctest19, NXDN_PANDFSW, 19, 1) == 0) )
+          //   {
+          //     state->carrier = 1;
+          //     state->offset = synctest_pos;
+          //     state->max = ((state->max) + lmax) / 2;
+          //     state->min = ((state->min) + lmin) / 2;
+          //     state->lastsynctype = 28;
+          //     state->last_cc_sync_time = time(NULL);
+          //     // if (opts->payload == 1) fprintf (stderr, "PANDF ");
+          //     // fprintf (stderr, " %s ", synctest19);
+          //     return (28);
+          //   }
             
-            else if ( (strncmperr (synctest19, INV_NXDN_PANDFSW, 19, 1) == 0) )
-            {
-              state->carrier = 1;
-              state->offset = synctest_pos;
-              state->max = ((state->max) + lmax) / 2;
-              state->min = ((state->min) + lmin) / 2;
-              state->lastsynctype = 29;
-              state->last_cc_sync_time = time(NULL);
-              // if (opts->payload == 1) fprintf (stderr, "PANDF ");
-              // fprintf (stderr, " %s ", synctest19);
-              return (29);
-            }
+          //   else if ( (strncmperr (synctest19, INV_NXDN_PANDFSW, 19, 1) == 0) )
+          //   {
+          //     state->carrier = 1;
+          //     state->offset = synctest_pos;
+          //     state->max = ((state->max) + lmax) / 2;
+          //     state->min = ((state->min) + lmin) / 2;
+          //     state->lastsynctype = 29;
+          //     state->last_cc_sync_time = time(NULL);
+          //     // if (opts->payload == 1) fprintf (stderr, "PANDF ");
+          //     // fprintf (stderr, " %s ", synctest19);
+          //     return (29);
+          //   }
 
-            else if ( (strncmperr (synctest10, NXDN_FSW, 10, 1) == 0) )
-            {
-              state->carrier = 1;
-              state->offset = synctest_pos;
-              state->max = ((state->max) + lmax) / 2;
-              state->min = ((state->min) + lmin) / 2;
+          //   else if ( (strncmperr (synctest10, NXDN_FSW, 10, 1) == 0) )
+          //   {
+          //     state->carrier = 1;
+          //     state->offset = synctest_pos;
+          //     state->max = ((state->max) + lmax) / 2;
+          //     state->min = ((state->min) + lmin) / 2;
 
-              if (state->lastsynctype == 28) 
-              {
-                state->last_cc_sync_time = time(NULL);
-                // if (opts->payload == 1) fprintf (stderr, "FSW   ");
-                // fprintf (stderr, " %s ", synctest10);
-                return (28);
-              }
-              state->lastsynctype = 28; //need two consecutive patterns to continue
+          //     if (state->lastsynctype == 28) 
+          //     {
+          //       state->last_cc_sync_time = time(NULL);
+          //       // if (opts->payload == 1) fprintf (stderr, "FSW   ");
+          //       // fprintf (stderr, " %s ", synctest10);
+          //       return (28);
+          //     }
+          //     state->lastsynctype = 28; //need two consecutive patterns to continue
 
-            }
+          //   }
 
-            else if ( (strncmperr (synctest10, INV_NXDN_FSW, 10, 1) == 0) )
-            {
-              state->carrier = 1;
-              state->offset = synctest_pos;
-              state->max = ((state->max) + lmax) / 2;
-              state->min = ((state->min) + lmin) / 2;
+          //   else if ( (strncmperr (synctest10, INV_NXDN_FSW, 10, 1) == 0) )
+          //   {
+          //     state->carrier = 1;
+          //     state->offset = synctest_pos;
+          //     state->max = ((state->max) + lmax) / 2;
+          //     state->min = ((state->min) + lmin) / 2;
 
-              if (state->lastsynctype == 29) 
-              {
-                state->last_cc_sync_time = time(NULL);
-                // if (opts->payload == 1) fprintf (stderr, "FSW   ");
-                // fprintf (stderr, " %s ", synctest10);
-                return (29);
-              }
-              state->lastsynctype = 29; //need two consecutive patterns to continue
+          //     if (state->lastsynctype == 29) 
+          //     {
+          //       state->last_cc_sync_time = time(NULL);
+          //       // if (opts->payload == 1) fprintf (stderr, "FSW   ");
+          //       // fprintf (stderr, " %s ", synctest10);
+          //       return (29);
+          //     }
+          //     state->lastsynctype = 29; //need two consecutive patterns to continue
 
-            }
-          }
+          //   }
+          // }
 
-          #endif //NXDN Sync Type Selection
+          // #endif //NXDN Sync Type Selection
 
           //Provoice Conventional -- Some False Positives due to shortened frame sync pattern, so use squelch if possible
           #ifdef PVCONVENTIONAL
