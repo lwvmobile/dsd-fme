@@ -3,7 +3,7 @@
 #Arch currently on 3.26.3
 #Cygwin currently using 3.23.2 (or newer)
 cmake_minimum_required(VERSION 3.10.2)
-project(dsd-fme-zdev)
+project(dsd-fme)
 
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
 #Set curses to ncurses, and wide true for ascii
@@ -32,11 +32,11 @@ if (PVC)
 endif ()
 
 #use cmake option -DNXDN=ON to enable new NXDN Sync Pattern Testing
-option(NXDN
-    "Build with new NXDN Sync Pattern Testing Enabled" OFF)
-if (NXDN)
-    add_definitions(-DNXDNTESTSYNC) 
-endif ()
+# option(NXDN
+#     "Build with new NXDN Sync Pattern Testing Enabled" OFF)
+# if (NXDN)
+#     add_definitions(-DNXDNTESTSYNC) 
+# endif ()
 
 #use cmake option -DLZ=ON to enable LimaZulu Requested NXDN Tweaks
 option(LZ
@@ -77,24 +77,24 @@ list(APPEND SRCS "${CMAKE_CURRENT_BINARY_DIR}/git_ver.c")
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
-ADD_EXECUTABLE(dsd-fme-zdev ${SRCS} ${HEADERS})
-TARGET_LINK_LIBRARIES(dsd-fme-zdev ${LIBS})
+ADD_EXECUTABLE(dsd-fme ${SRCS} ${HEADERS})
+TARGET_LINK_LIBRARIES(dsd-fme ${LIBS})
 
 include(GNUInstallDirs)
-install(TARGETS dsd-fme-zdev DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS dsd-fme DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # man page
 find_program(HELP2MAN_FOUND help2man)
 if (HELP2MAN_FOUND)
-    add_custom_command(TARGET dsd-fme-zdev POST_BUILD
+    add_custom_command(TARGET dsd-fme POST_BUILD
         COMMAND help2man
         ARGS -n "Digital Speech Decoder"
             --version-string=${GIT_TAG}
-            -o ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme-zdev.1
+            -o ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme.1
             --no-info
-            $<TARGET_FILE:dsd-fme-zdev>
+            $<TARGET_FILE:dsd-fme>
     )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme-zdev.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/dsd-fme.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 endif()
 
 # uninstall target
