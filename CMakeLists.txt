@@ -32,11 +32,11 @@ if (PVC)
 endif ()
 
 #use cmake option -DNXDN=ON to enable new NXDN Sync Pattern Testing
-# option(NXDN
-#     "Build with new NXDN Sync Pattern Testing Enabled" OFF)
-# if (NXDN)
-#     add_definitions(-DNXDNTESTSYNC) 
-# endif ()
+option(NXDN
+    "Build with new NXDN Sync Pattern Testing Enabled" OFF)
+if (NXDN)
+    add_definitions(-DNXDNTESTSYNC) 
+endif ()
 
 #use cmake option -DLZ=ON to enable LimaZulu Requested NXDN Tweaks
 option(LZ
