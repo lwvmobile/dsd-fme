@@ -448,11 +448,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->minref = state->min;
             }
 
-          //Test Using this as an improvement to framesync and good initial decodes
-          //better initial decodes observed on NXDN when using this, and also on P25
-          //test on other system types as well
-          state->max = ((state->max) + lmax) / 2;
-          state->min = ((state->min) + lmin) / 2;
 
           //if using an rtl input method, do not look for sync patterns if the rms value is lower than our 'soft squelch' level
           if (opts->audio_in_type == 3 && opts->rtl_rms < opts->rtl_squelch_level) //tests show floor level around 40, and signal breaking 100, default is 100 for level
@@ -460,10 +455,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             if (opts->frame_nxdn48 == 1 || opts->frame_nxdn96 == 1 || opts->frame_dpmr == 1)
             {
               //should we update min/max here? yes or no?
-              //NOTE: Startup on Sync seems to respond much faster with this on, perhaps this needs to move to always occur on every sync type
 
-              // state->max = ((state->max) + lmax) / 2;
-              // state->min = ((state->min) + lmin) / 2;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
 
               goto SYNC_TEST_END;
             }
