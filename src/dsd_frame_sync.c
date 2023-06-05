@@ -1365,7 +1365,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       
                     )
             {
-              state->carrier = 1;
+              // state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
@@ -1386,33 +1386,33 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             //Disabling Inverted Sync for testing -- using SDR++ or RTL Input, I only ever see positive sync pattern
             //This will also further reduce any FSW false positives, but at the cost of inverted sync 
 
-            // else if ( 
+            else if ( 
                       
-            //              (strcmp (synctest10, "1313113313") == 0 )
-            //           || (strcmp (synctest10, "1113113313") == 0 )
-            //           || (strcmp (synctest10, "1313113333") == 0 )
-            //           || (strcmp (synctest10, "1113113333") == 0 )
-            //           || (strcmp (synctest10, "1313133313") == 0 ) //
+                         (strcmp (synctest10, "1313113313") == 0 )
+                      || (strcmp (synctest10, "1113113313") == 0 )
+                      || (strcmp (synctest10, "1313113333") == 0 )
+                      || (strcmp (synctest10, "1113113333") == 0 )
+                      || (strcmp (synctest10, "1313133313") == 0 ) //
                       
-            //         )
-            // {
-            //   // state->carrier = 1;
-            //   state->offset = synctest_pos;
-            //   state->max = ((state->max) + lmax) / 2;
-            //   state->min = ((state->min) + lmin) / 2;
-            //   // state->last_cc_sync_time = time(NULL);
+                    )
+            {
+              // state->carrier = 1;
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+              // state->last_cc_sync_time = time(NULL);
 
-            //   if (state->lastsynctype == 29) 
-            //   {
-            //     state->last_cc_sync_time = time(NULL);
-            //     // if (opts->payload == 1)
-            //       // fprintf (stderr, "\n -FSW   ");
-            //     // if (opts->payload == 1)
-            //       // fprintf (stderr, " %s \n", synctest10);
-            //     return (29);
-            //   }
-            //   state->lastsynctype = 29;
-            // }
+              if (state->lastsynctype == 29) 
+              {
+                state->last_cc_sync_time = time(NULL);
+                // if (opts->payload == 1)
+                  // fprintf (stderr, "\n -FSW   ");
+                // if (opts->payload == 1)
+                  // fprintf (stderr, " %s \n", synctest10);
+                return (29);
+              }
+              state->lastsynctype = 29;
+            }
           }
 
           #else //use previously 'stable' NXDN Sync pattern detection
