@@ -2072,14 +2072,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.0.1-23 Win32");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.0.1-24 Win32");
     printw ("------------------------------------------------------------------------------\n"); 
   }
 #elif LIMAZULUTWEAKS
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: LimaZulu Edition IV: The Voyage Home \n");
+    printw ("| Digital Speech Decoder: LimaZulu Edition V: The Empire Strikes Back \n");
     printw ("------------------------------------------------------------------------------\n");
   }
 #else
@@ -2101,7 +2101,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 4) printw (" MBElib %s", versionstr);
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Win32");
-      if (i == 6) printw (" v2.0.1-23 Win32 \n");
+      if (i == 6) printw (" v2.0.1-24 Win32 \n");
       #else
       if (i == 5) printw (" %s ", "zDEV BUILD");
       // if (i == 5) printw (" %s ", "MAIN BUILD");

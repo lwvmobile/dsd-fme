@@ -448,15 +448,23 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->minref = state->min;
             }
 
+          //Test Using this as an improvement to framesync and good initial decodes
+          //better initial decodes observed on NXDN when using this, and also on P25
+          //test on other system types as well
+          state->max = ((state->max) + lmax) / 2;
+          state->min = ((state->min) + lmin) / 2;
+
           //if using an rtl input method, do not look for sync patterns if the rms value is lower than our 'soft squelch' level
           if (opts->audio_in_type == 3 && opts->rtl_rms < opts->rtl_squelch_level) //tests show floor level around 40, and signal breaking 100, default is 100 for level
           {
             if (opts->frame_nxdn48 == 1 || opts->frame_nxdn96 == 1 || opts->frame_dpmr == 1)
             {
               //should we update min/max here? yes or no?
+              //NOTE: Startup on Sync seems to respond much faster with this on, perhaps this needs to move to always occur on every sync type
+
               // state->max = ((state->max) + lmax) / 2;
               // state->min = ((state->min) + lmin) / 2;
-              
+
               goto SYNC_TEST_END;
             }
           }
@@ -1292,8 +1300,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
             }
 
-          #ifdef NXDNTESTSYNC //
-          
+          #ifdef NXDNTESTSYNC //Use Experimental FS
+
+          //NOTE: Current Issue with Syncing when using RTL Input on some NXDN48 Type-C Trunking System
           //NXDN FSW sync and handling - using more exact frame sync values
           else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
           {
@@ -1303,113 +1312,116 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             //Using Hard Coded Sync Strings with variations for the areas where the symbol
             //error will occur due to the demodulation issues internally
 
+            //Disabling the Preamble+FSW version for now
+            //its nearly impossible to catch it
+
             //Preamble plus FSW, proceed right away
-            if ( 
+            // if ( 
                 
-                    (strcmp (synctest19, "3131133313131331131") == 0 )
-                 || (strcmp (synctest19, "3131133313331331131") == 0 )
-                 || (strcmp (synctest19, "3131133313131331111") == 0 )
-                 || (strcmp (synctest19, "3131133313331331111") == 0 )   
+            //         (strcmp (synctest19, "3131133313131331131") == 0 )
+            //      || (strcmp (synctest19, "3131133313331331131") == 0 )
+            //      || (strcmp (synctest19, "3131133313131331111") == 0 )
+            //      || (strcmp (synctest19, "3131133313331331111") == 0 )   
                  
-                )
-            {
-              // state->carrier = 1;
-              state->lastsynctype = 28;
-              state->last_cc_sync_time = time(NULL);
-
-              state->offset = synctest_pos;
-              state->max = ((state->max) + lmax) / 2;
-              state->min = ((state->min) + lmin) / 2;
+            //     )
+            // {
+            //   state->carrier = 1;
+            //   state->offset = synctest_pos;
+            //   state->max = ((state->max) + lmax) / 2;
+            //   state->min = ((state->min) + lmin) / 2;
+            //   state->lastsynctype = 28;
+            //   state->last_cc_sync_time = time(NULL);
               
-              // if (opts->payload == 1)
-                // fprintf (stderr, "\n +PANDF ");
-              // if (opts->payload == 1)
-                // fprintf (stderr, " %s \n", synctest19);
-              return (28);
-            }
-            else if ( 
+            //   // if (opts->payload == 1)
+            //     // fprintf (stderr, "\n +PANDF ");
+            //   // if (opts->payload == 1)
+            //     // fprintf (stderr, " %s \n", synctest19);
+            //   return (28);
+            // }
+            // else if ( 
 
-                         (strcmp (synctest19, "1313311133131331131") == 0 )
-                      || (strcmp (synctest19, "1313311133331331131") == 0 )
-                      || (strcmp (synctest19, "1313311133131331111") == 0 )
-                      || (strcmp (synctest19, "1313311133331331111") == 0 )   
+            //              (strcmp (synctest19, "1313311133131331131") == 0 )
+            //           || (strcmp (synctest19, "1313311133331331131") == 0 )
+            //           || (strcmp (synctest19, "1313311133131331111") == 0 )
+            //           || (strcmp (synctest19, "1313311133331331111") == 0 )   
                       
-                    )
-            {
-              // state->carrier = 1;
-              state->lastsynctype = 29;
-              state->last_cc_sync_time = time(NULL);
-
-              state->offset = synctest_pos;
-              state->max = ((state->max) + lmax) / 2;
-              state->min = ((state->min) + lmin) / 2;
+            //         )
+            // {
+            //   // state->carrier = 1;
+            //   state->carrier = 1;
+            //   state->offset = synctest_pos;
+            //   state->max = ((state->max) + lmax) / 2;
+            //   state->min = ((state->min) + lmin) / 2;
+            //   state->lastsynctype = 29;
+            //   state->last_cc_sync_time = time(NULL);
               
-              // if (opts->payload == 1)
-                // fprintf (stderr, "\n -PANDF ");
-              // if (opts->payload == 1)
-                // fprintf (stderr, " %s \n", synctest19);
-              return (29);
-            }
+            //   // if (opts->payload == 1)
+            //     // fprintf (stderr, "\n -PANDF ");
+            //   // if (opts->payload == 1)
+            //     // fprintf (stderr, " %s \n", synctest19);
+            //   return (29);
+            // }
 
-            else if (
-                         (strcmp (synctest10, "3131331131") == 0 )
-                      || (strcmp (synctest10, "3331331131") == 0 )
+            if (
+                         (strcmp (synctest10, "3131331131") == 0 ) //this seems to be the most common 'correct' pattern on Type-C
+                      || (strcmp (synctest10, "3331331131") == 0 ) //this one hits on new sync but gives a bad lich code
                       || (strcmp (synctest10, "3131331111") == 0 )
                       || (strcmp (synctest10, "3331331111") == 0 )
+                      || (strcmp (synctest10, "3131311131") == 0 ) //First few FSW on NXDN48 Type-C seems to hit this for some reason
                       
                     )
             {
-              // state->carrier = 1;
+              state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
+              // state->last_cc_sync_time = time(NULL);
 
               if (state->lastsynctype == 28) 
               {
-                state->lastsynctype = 28;
                 state->last_cc_sync_time = time(NULL);
                 // if (opts->payload == 1)
-                  // fprintf (stderr, "\n +FSW   ");
+                //   fprintf (stderr, "\n +FSW   ");
                 // if (opts->payload == 1)
-                  // fprintf (stderr, " %s \n", synctest10);
+                //   fprintf (stderr, " %s \n", synctest10);
                 return (28);
               }
-
               state->lastsynctype = 28;
-              
-
             }
 
-            else if ( 
-                      
-                         (strcmp (synctest10, "1313113313") == 0 )
-                      || (strcmp (synctest10, "1113113313") == 0 )
-                      || (strcmp (synctest10, "1313113333") == 0 )
-                      || (strcmp (synctest10, "1113113333") == 0 )   
-                      
-                    )
-            {
-              // state->carrier = 1;
-              state->offset = synctest_pos;
-              state->max = ((state->max) + lmax) / 2;
-              state->min = ((state->min) + lmin) / 2;
+            //Disabling Inverted Sync for testing -- using SDR++ or RTL Input, I only ever see positive sync pattern
+            //This will also further reduce any FSW false positives, but at the cost of inverted sync 
 
-              if (state->lastsynctype == 29) 
-              {
-                state->lastsynctype = 29;
-                state->last_cc_sync_time = time(NULL);
-                // if (opts->payload == 1)
-                  // fprintf (stderr, "\n -FSW   ");
-                // if (opts->payload == 1)
-                  // fprintf (stderr, " %s \n", synctest10);
-                return (29);
-              }
-              state->lastsynctype = 29;              
+            // else if ( 
+                      
+            //              (strcmp (synctest10, "1313113313") == 0 )
+            //           || (strcmp (synctest10, "1113113313") == 0 )
+            //           || (strcmp (synctest10, "1313113333") == 0 )
+            //           || (strcmp (synctest10, "1113113333") == 0 )
+            //           || (strcmp (synctest10, "1313133313") == 0 ) //
+                      
+            //         )
+            // {
+            //   // state->carrier = 1;
+            //   state->offset = synctest_pos;
+            //   state->max = ((state->max) + lmax) / 2;
+            //   state->min = ((state->min) + lmin) / 2;
+            //   // state->last_cc_sync_time = time(NULL);
 
-            }
+            //   if (state->lastsynctype == 29) 
+            //   {
+            //     state->last_cc_sync_time = time(NULL);
+            //     // if (opts->payload == 1)
+            //       // fprintf (stderr, "\n -FSW   ");
+            //     // if (opts->payload == 1)
+            //       // fprintf (stderr, " %s \n", synctest10);
+            //     return (29);
+            //   }
+            //   state->lastsynctype = 29;
+            // }
           }
 
-          #else //use previous NXDN Sync pattern detection
+          #else //use previously 'stable' NXDN Sync pattern detection
 
           //NXDN FSW sync and handling - moved to very bottom of sync stack for falsing sanity
           else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
