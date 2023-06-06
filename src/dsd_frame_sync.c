@@ -456,8 +456,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             {
               //should we update min/max here? yes or no?
 
-              state->max = ((state->max) + lmax) / 2;
-              state->min = ((state->min) + lmin) / 2;
+              // state->max = ((state->max) + lmax) / 2;
+              // state->min = ((state->min) + lmin) / 2;
 
               goto SYNC_TEST_END;
             }
@@ -1319,7 +1319,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                  
             //     )
             // {
-            //   state->carrier = 1;
+            //   //state->carrier = 1;
             //   state->offset = synctest_pos;
             //   state->max = ((state->max) + lmax) / 2;
             //   state->min = ((state->min) + lmin) / 2;
@@ -1355,7 +1355,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             //     // fprintf (stderr, " %s \n", synctest19);
             //   return (29);
             // }
-
+            // else if (
             if (
                          (strcmp (synctest10, "3131331131") == 0 ) //this seems to be the most common 'correct' pattern on Type-C
                       || (strcmp (synctest10, "3331331131") == 0 ) //this one hits on new sync but gives a bad lich code
@@ -1365,6 +1365,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       
                     )
             {
+
               // state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
@@ -1383,9 +1384,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->lastsynctype = 28;
             }
 
-            //Disabling Inverted Sync for testing -- using SDR++ or RTL Input, I only ever see positive sync pattern
-            //This will also further reduce any FSW false positives, but at the cost of inverted sync 
-
             else if ( 
                       
                          (strcmp (synctest10, "1313113313") == 0 )
@@ -1396,6 +1394,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       
                     )
             {
+
               // state->carrier = 1;
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;

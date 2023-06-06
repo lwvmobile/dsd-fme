@@ -121,7 +121,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 		check = check | trellis_buf[84+i]; //80
 	}
 
-	if (crc != check)
+	if (crc != check && opts->payload == 1)
 	{
 		fprintf (stderr, " FACCH1");
 		fprintf (stderr, "%s", KRED);
@@ -254,7 +254,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, nsf_sacch); 
 		else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, nsf_sacch);
 
-		if (crc != check)
+		if (crc != check && opts->payload == 1)
 		{
 			fprintf (stderr, " SACCH NSF");
 			fprintf (stderr, "%s", KRED);
@@ -296,7 +296,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		else fprintf (stderr, "        ");
 		fprintf (stderr, "%s", KNRM);
 
-		if (crc != check)
+		if (crc != check && opts->payload == 1)
 		{
 			fprintf (stderr, " SACCH SF%d", sf);
 			fprintf (stderr, "%s", KRED);
@@ -429,7 +429,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 		check = check | trellis_buf[i+184];
 	}
 
-	if (crc != check)
+	if (crc != check && opts->payload == 1)
 	{
 		fprintf (stderr, "%s", KYEL);
 		if (type == 0) fprintf (stderr, " UDCH");
@@ -725,7 +725,7 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 
 	//NOTE: scch has its own message format, and thus, doesn't go to content element decoding
 	//like everything else does
-	if (crc != check)
+	if (crc != check && opts->payload == 1)
 	{
 		fprintf (stderr, "%s", KRED);
 		fprintf (stderr, " (CRC ERR)");
@@ -834,7 +834,7 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 		for (int i = 0; i < 12; i++) f3_udch2_bytes[i+(j*12)] = m_data[i];
 	}
 
-	if (crc[0] != check[0] || crc[1] != check[1])
+	if ( (crc[0] != check[0] || crc[1] != check[1]) && opts->payload == 1)
 	{
 		if (type == 0) fprintf (stderr, " UDCH2");
 		if (type == 1) fprintf (stderr, " FACCH3");

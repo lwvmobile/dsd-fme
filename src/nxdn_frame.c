@@ -252,7 +252,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		if (opts->payload == 1) 
 			fprintf (stderr, "L%02X - ", lich);
 	}
-	else if (voice || facch || sacch || facch2 || cac)
+	else if (voice || facch || sacch || facch2 || udch || cac)
 	{
 		if (opts->frame_nxdn48 == 1)
 		{
@@ -396,8 +396,8 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 
 #endif //end LIMAZULUTWEAKS
 
-if (opts->scanner_mode == 1)
-	state->last_cc_sync_time = time(NULL) + 2; //add a little extra hangtime between resuming scan
+	if (opts->scanner_mode == 1)
+		state->last_cc_sync_time = time(NULL) + 2; //add a little extra hangtime between resuming scan
 
 	//Option/Steal Flags echoed in Voice, V+F, or Data 
 	if (voice && !facch) //voice only, no facch steal
@@ -468,6 +468,7 @@ if (opts->scanner_mode == 1)
 	// if (facch & 2) nxdn_deperm_facch(opts, state, facch_bits_b);
 
 	//only run facch in second slot if its not equal to the first one
+	//ideally, this would work better AFTER decoding/FEC
 	if (facch & 1) nxdn_deperm_facch(opts, state, facch_bits_a);
 	if (facch & 2)
 	{
@@ -499,6 +500,7 @@ if (opts->scanner_mode == 1)
 					closeMbeOutFile (opts, state);
 				} 
 			}
+			//may need to reconsider this, due to double FACCH1 steals on some Type-C (ASSGN_DUP, etc) and Conventional Systems (random IDLE FACCH1 steal for no reason)
 			if (opts->frame_nxdn48 == 1) closeMbeOutFile (opts, state); //okay to close right away if nxdn48, no data/voice frames mixing
 		} 
 	}
