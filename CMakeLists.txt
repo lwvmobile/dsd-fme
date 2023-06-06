@@ -31,11 +31,11 @@ if (PVC)
     add_definitions(-DPVCONVENTIONAL) 
 endif ()
 
-#use cmake option -DNXDN=ON to enable new NXDN Sync Pattern Testing
+#use cmake option -DNXDN=ON to enable the old NXDN Sync Pattern
 option(NXDN
-    "Build with new NXDN Sync Pattern Testing Enabled" OFF)
+    "Build with Old NXDN Sync Pattern Enabled" OFF)
 if (NXDN)
-    add_definitions(-DNXDNTESTSYNC) 
+    add_definitions(-DNXDNOLDSYNC) 
 endif ()
 
 #use cmake option -DLZ=ON to enable LimaZulu Requested NXDN Tweaks
@@ -43,6 +43,13 @@ option(LZ
     "Build with new LimaZulu Requested NXDN Tweaks Enabled" OFF)
 if (LZ)
     add_definitions(-DLIMAZULUTWEAKS) 
+endif ()
+
+#use cmake option -DTONES to change default location of the tones.wav files (lwvmobile precompiled 'Aero' releases only)
+option(NXDN
+    "Build with tone wav files in the dsd-fme folder and not in /usr/share/" OFF)
+if (TN)
+    add_definitions(-DTONES) 
 endif ()
 
 include(git_revision)

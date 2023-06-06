@@ -133,16 +133,16 @@ char * DMRBusrtTypes[32] = {
 
 };
 
-
+#ifdef TONES //NOTE: This option is purely for the precompiled version that gets distributed, not other user Cygwin builds
 void beeper (dsd_opts * opts, dsd_state * state, int type)
 {
   FILE *beep;
   char wav_name[1024] = {0};
-
   if (opts->pulse_digi_rate_out == 8000) strncpy(wav_name, "tone8.wav", 1023);
   if (opts->pulse_digi_rate_out == 48000) strncpy(wav_name, "tone48.wav", 1023);
   if (opts->pulse_digi_rate_out == 24000) strncpy(wav_name, "tone24.wav", 1023);
   if (opts->audio_out_type == 5) strncpy(wav_name, "tone48.wav", 1023);
+
   wav_name[1023] = '\0';
   struct stat stat_buf;
   if (stat(wav_name, &stat_buf) == 0)
@@ -190,6 +190,61 @@ void beeper (dsd_opts * opts, dsd_state * state, int type)
   }
 
 }
+
+#else
+void beeper (dsd_opts * opts, dsd_state * state, int type)
+{
+  FILE *beep;
+  char wav_name[1024] = {0};
+
+  if (opts->pulse_digi_rate_out == 8000) strncpy(wav_name, "/usr/share/tone8.wav", 1023);
+  if (opts->pulse_digi_rate_out == 48000) strncpy(wav_name, "/usr/share/tone48.wav", 1023);
+  if (opts->pulse_digi_rate_out == 24000) strncpy(wav_name, "/usr/share/tone24.wav", 1023);
+  wav_name[1023] = '\0';
+  struct stat stat_buf;
+  if (stat(wav_name, &stat_buf) == 0)
+  {
+    beep = fopen (wav_name, "ro");
+    uint8_t buf[1024];
+    memset (buf, 0, sizeof(buf));
+    short blip = 0;
+    int loop = 1;
+    while (loop == 1)
+    {
+      fread(buf, sizeof(buf), 1, beep);
+      if ( feof (beep) )
+      {
+        loop = 0;
+      }
+      if (loop == 1)
+      {
+        //only beep on R if dmr_stereo is active and slot 2, else beep on L
+        if (type == 0 && opts->dmr_stereo == 1 && opts->audio_out == 1)
+        {
+          pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
+          //fprintf (stderr, "BEEP 0 24\n");
+        }
+        if (type == 1 && opts->dmr_stereo == 1 && opts->audio_out == 1)
+        {
+          pa_simple_write(opts->pulse_digi_dev_outR, buf, sizeof(buf), NULL);
+          //fprintf (stderr, "BEEP 1 24\n");
+        }
+        if (opts->dmr_stereo == 0 && opts->audio_out == 1)
+        {
+          pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
+          //fprintf (stderr, "BEEP 0 8\n");
+        }
+
+
+      }
+
+    }
+
+    fclose (beep);
+  }
+
+}
+#endif
 
 char * getDateN(void) {
   char datename[80]; //bug in 32-bit Ubuntu when using date in filename, date is garbage text
