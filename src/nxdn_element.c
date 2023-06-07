@@ -74,6 +74,8 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
   MessageType |= (ElementsContent[6] & 1) << 1;
   MessageType |= (ElementsContent[7] & 1) << 0;
 
+  nxdn_message_type (opts, state, MessageType);
+
   /* Save the "F1" and "F2" flags */
   state->NxdnElementsContent.F1 = ElementsContent[0];
   state->NxdnElementsContent.F2 = ElementsContent[1];
@@ -190,8 +192,6 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
       break;
     }
   } /* End switch(MessageType) */
-
-  nxdn_message_type (opts, state, MessageType);
 
 } /* End NXDN_Elements_Content_decode() */
 

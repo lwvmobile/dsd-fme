@@ -121,14 +121,6 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 		check = check | trellis_buf[84+i]; //80
 	}
 
-	if (crc != check && opts->payload == 1)
-	{
-		fprintf (stderr, " FACCH1");
-		fprintf (stderr, "%s", KRED);
-		fprintf (stderr, " (CRC ERR)");
-		fprintf (stderr, "%s", KNRM);
-	}
-
 	if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
 	else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
 
@@ -140,7 +132,12 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 		{
 			fprintf (stderr, "[%02X]", m_data[i]); 
 		}
-		// fprintf (stderr, " - %03X %03X", check, crc);
+		if (crc != check && opts->payload == 1)
+		{
+			fprintf (stderr, "%s", KRED);
+			fprintf (stderr, " (CRC ERR)");
+			fprintf (stderr, "%s", KNRM);
+		}
 	}
 
 }
@@ -251,16 +248,14 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 			state->nxdn_last_ran = ran;
 		} 
 
-		if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, nsf_sacch); 
-		else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, nsf_sacch);
+		fprintf (stderr, "PF 1/1");
 
-		if (crc != check && opts->payload == 1)
-		{
-			fprintf (stderr, " SACCH NSF");
-			fprintf (stderr, "%s", KRED);
-			fprintf (stderr, " (CRC ERR)");
-			fprintf (stderr, "%s", KNRM);
-		}
+		if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, nsf_sacch); 
+		// else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, nsf_sacch);
+
+		//I'm placing this here, my observation is that SACCH NSF 
+		//is almost always, if not always, just IDLE
+		else fprintf (stderr, " IDLE");
 
 		if (opts->payload == 1)
 		{ 
@@ -269,7 +264,15 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 			{
 				fprintf (stderr, "[%02X]", m_data[i]);
 			}
-			// if (crc != check) fprintf (stderr, " CRC ERR - %02X %02X", check, crc); 
+
+			if (crc != check)
+			{
+
+				fprintf (stderr, "%s", KRED);
+				fprintf (stderr, " (CRC ERR)");
+				fprintf (stderr, "%s", KNRM);
+			}
+
 		}
 		
 		//reset the sacch field -- Github Issue #118
@@ -296,9 +299,10 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		else fprintf (stderr, "        ");
 		fprintf (stderr, "%s", KNRM);
 
-		if (crc != check && opts->payload == 1)
+		fprintf (stderr, "PF %d/4", part_of_frame+1);
+
+		if (crc != check)
 		{
-			fprintf (stderr, " SACCH SF%d", sf);
 			fprintf (stderr, "%s", KRED);
 			fprintf (stderr, " (CRC ERR)");
 			fprintf (stderr, "%s", KNRM);
@@ -429,15 +433,10 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 		check = check | trellis_buf[i+184];
 	}
 
-	if (crc != check && opts->payload == 1)
-	{
-		fprintf (stderr, "%s", KYEL);
-		if (type == 0) fprintf (stderr, " UDCH");
-		if (type == 1) fprintf (stderr, " FACCH2");
-		fprintf (stderr, "%s", KRED);
-		fprintf (stderr, " (CRC ERR)");
-		fprintf (stderr, "%s", KNRM);
-	}
+	fprintf (stderr, "%s", KYEL);
+	if (type == 0) fprintf (stderr, " UDCH");
+	if (type == 1) fprintf (stderr, " FACCH2");
+	fprintf (stderr, "%s", KNRM);
 
 	uint8_t f2u_message_buffer[400]; //199
 	memset (f2u_message_buffer, 0, sizeof(f2u_message_buffer));
@@ -471,6 +470,14 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 			if (i == 13) fprintf (stderr, "\n  ");
 			fprintf (stderr, "[%02X]", m_data[i]); 
 		}
+		
+		if (crc != check)
+		{
+			fprintf (stderr, "%s", KRED);
+			fprintf (stderr, " (CRC ERR)");
+			fprintf (stderr, "%s", KNRM);
+		}
+
 		// if (crc != check) fprintf (stderr, " CRC ERR ");
 
 		if (type == 0)
@@ -725,12 +732,6 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 
 	//NOTE: scch has its own message format, and thus, doesn't go to content element decoding
 	//like everything else does
-	if (crc != check && opts->payload == 1)
-	{
-		fprintf (stderr, "%s", KRED);
-		fprintf (stderr, " (CRC ERR)");
-		fprintf (stderr, "%s", KNRM);
-	}
 
 	if (crc == check) NXDN_decode_scch (opts, state, trellis_buf, direction);
 	else if (opts->aggressive_framesync == 0) NXDN_decode_scch (opts, state, trellis_buf, direction);
@@ -744,7 +745,13 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 		{
 			fprintf (stderr, "[%02X]", m_data[i]);
 		}
-		// if (crc != check) fprintf (stderr, " CRC ERR - %02X %02X", check, crc); 
+
+		if (crc != check)
+		{
+			fprintf (stderr, "%s", KRED);
+			fprintf (stderr, " (CRC ERR)");
+			fprintf (stderr, "%s", KNRM);
+		} 
 	}
 
 	fprintf (stderr, "%s", KNRM);
@@ -834,14 +841,11 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 		for (int i = 0; i < 12; i++) f3_udch2_bytes[i+(j*12)] = m_data[i];
 	}
 
-	if ( (crc[0] != check[0] || crc[1] != check[1]) && opts->payload == 1)
-	{
-		if (type == 0) fprintf (stderr, " UDCH2");
-		if (type == 1) fprintf (stderr, " FACCH3");
-		fprintf (stderr, "%s", KRED);
-		fprintf (stderr, " (CRC ERR)");
-		fprintf (stderr, "%s", KNRM);
-	}
+	fprintf (stderr, "%s", KYEL);
+	if (type == 0) fprintf (stderr, " UDCH2");
+	if (type == 1) fprintf (stderr, " FACCH3");
+	fprintf (stderr, "%s", KNRM);
+
 
 	if (crc[0] == check[0] && crc[1] == check[1])
 	{
@@ -865,8 +869,17 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 			if (i == 12) fprintf (stderr, "\n  ");
 			fprintf (stderr, "[%02X]", f3_udch2_bytes[i]); 
 		}
-		// fprintf (stderr, " - %03X %03X", check[0], crc[0]);
-		// fprintf (stderr, " - %03X %03X", check[1], crc[1]);
+
+		if ( (crc[0] != check[0] || crc[1] != check[1]) && opts->payload == 1)
+		{
+
+			fprintf (stderr, "%s", KRED);
+			fprintf (stderr, " (CRC ERR)");
+			fprintf (stderr, "%s", KNRM);
+
+			// fprintf (stderr, " - %03X %03X", check[0], crc[0]);
+			// fprintf (stderr, " - %03X %03X", check[1], crc[1]);
+		}
 
 		if (type == 0)
 		{
