@@ -2,7 +2,7 @@
 
 ### Ubuntu 22.04/20.04/LM20/Debian Bullseye or Newer:
 
-Using the included download-and-install.sh should make for a simple and painless clone, build, and install on newer Debian/Ubuntu/Mint/Pi systems. Simply acquire or copy the script, and run it. Update: Ubuntu 22.04 and RPi Bullseye 64-bit has been tested working with the installer script and functions appropriately.
+Using the included download-and-install.sh should make for a simple and painless clone, build, and install on newer Debian/Ubuntu/Mint/Pi systems. Simply acquire or copy the script, and run it. Update: Ubuntu 23.04 and RPi Bullseye 64-bit has been tested working with the installer script and functions appropriately.
 
 If you need all dependencies build and installed first (only on Debian/Ubuntu/Mint/Pi), run:
 
@@ -20,18 +20,23 @@ chmod +x download-and-install-nodeps.sh
 ./download-and-install-nodeps.sh
 ```
 
-### Ubuntu 18.04/LM19/Buster Note:
-The above install.sh should now function on older system types. You can elect to manually follow the steps down below. Do NOT Manually build and install ITPP 4.3.1 on older systems, it is currently not wanting to build on Ubuntu 18.04 and Linux Mint 19. Install it from the repository instead.
-
 ## Manual Install
 
 First, install dependency packages. This guide will assume you are using Debian/Ubuntu based distros. Check your package manager for equivalent packages if different.
+
+Debian/Mint/Ubuntu/Pi
 
 ```
 sudo apt update
 sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev
 ```
-## Headless
+
+Fedora 36/37 -- from https://github.com/lwvmobile/dsd-fme/issues/99
+
+```
+sudo dnf install libsndfile-devel fftw-devel lapack-devel rtl-sdr-devel pulseaudio-libs-devel libusb-devel cmake git ncurses ncurses-devel gcc wget pavucontrol gcc-c++
+```
+## Headless Ubuntu Server/Pi
 
 If running headless, swap out pavucontrol for pulsemixer, and also install pulseaudio as well. Attempting to install pavucontrol in a headless environment may attempt to install a minimal desktop environment. Note: Default behavior of pulseaudio in a headless environment may be to be muted, so check by opening pulsemixer and unmuting and routing audio appropriately.
 
@@ -93,9 +98,40 @@ sudo make install
 sudo ldconfig
 
 ```
-Optional 'Virtual Sinks' for routing audio from SDR++ or GQRX, Media Players, etc. into DSD-FME
 
-You may wish to direct sound into DSD-FME via Virtual Sinks. You may set up a Virtual Sink or two on your machine for routing audio in and out of applications to other applications using the following command, and opening up pavucontrol "PulseAudio Volume Control" in the menu (or `pulsemixer` in headless mode) to change line out of application to virtual sink, and line in of DSD-FME to monitor of virtual sink. This command will not persist past a reboot, so you will need to invoke them each time you reboot, or search for how to add this to your conf files for persistency if desired.
+### Windows Cygwin Builds
+
+If using RTL input support, you must install libusb-win32 before proceed with Cygwin installation. You will also need to build and compile a version of librtlsdr, but this can be tricky, and personally, I had to resort to using a much older version of the source code to get it to build at all with the rtl support in the precompiled 'Aero' builds.
+
+Then install all dependencies available in the repo prior to building, either directly selecting them during setup with the setup-x86.exe or setup-x64.exe or by issuing a command similar to this:
+
+```
+setup-x64.exe --packages libpulse-devel,libpulse-mainloop-glib0,libpulse-simple0,libpulse0,pulseaudio,pulseaudio-debuginfo,pulseaudio-equalizer,pulseaudio-module-x11,pulseaudio-module-zeroconf,pulseaudio-utils,sox-fmt-pulseaudio,xfce-pulseaudio-plugin,libusb0,libusb1.0,libusb1.0-debuginfo,libusb1.0-devel,libncurses++w10,libncurses-devel,libncursesw10,ncurses,cmake,gcc-core,gcc-debuginfo,gcc-objc,git,make,socat,sox,sox-fmt-ao,unzip,wget,gcc-g++,libsndfile-devel
+```
+
+Then manually install ITPP and MBElib, see above install notes. Be sure to run `cp libmbe* /usr/lib` after compiling MBElib.
+
+Then you can build and install using
+
+```
+git clone https://github.com/lwvmobile/dsd-fme
+cd dsd-fme
+sudo cp tone8.wav /usr/share/
+sudo cp tone24.wav /usr/share/
+sudo cp tone48.wav /usr/share/
+sudo chmod 777 /usr/share/tone8.wav
+sudo chmod 777 /usr/share/tone24.wav
+sudo chmod 777 /usr/share/tone48.wav
+mkdir build
+cd build
+cmake -DAERO=ON ..
+make
+make install
+```
+
+### Virtual Sinks
+
+You may wish to direct sound into DSD-FME via Virtual Sinks. You may set up a Virtual Sink or two on your machine for routing audio in and out of applications to other applications using the following command, and opening up pavucontrol "PulseAudio Volume Control" in the menu (or `pulsemixer` in headless mode) to change line out of application to virtual sink, and line in of DSD-FME to monitor of virtual sink. This command will not persist past a reboot, so you will need to invoke them each time you reboot, or search for how to add this to your conf files for persistency if desired. Note: This setup is completely optional if using TCP Network Sink Audio and/or RTL Input.
 
 ```
 pactl load-module module-null-sink sink_name=virtual_sink  sink_properties=device.description=Virtual_Sink

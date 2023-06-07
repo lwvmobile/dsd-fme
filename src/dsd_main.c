@@ -1078,7 +1078,7 @@ usage ()
   printf ("  gain <num>    RTL-SDR Device Gain (0-49)(default = 0; Hardware AGC recommended)\n");
   printf ("  ppm  <num>    RTL-SDR PPM Error (default = 0)\n");
   printf ("  bw   <num>    RTL-SDR Bandwidth kHz (default = 12)(4, 6, 8, 12, 16, 24)  \n");
-  printf ("  sq   <num>    RTL-SDR Squelch Level (Optional)\n");
+  printf ("  sq   <num>    RTL-SDR Squelch Level vs RMS Value (Optional)\n");
   printf ("  udp  <num>    RTL-SDR Legacy UDP Remote Port (Optional -- External Use Only)\n");
   printf (" Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T\n");
   printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:6021\n");
@@ -1358,7 +1358,7 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version:  v2.0.1-27 Win32 \n");
+  fprintf (stderr, "Build Version:  v2.1 Win32 \n");
   #else
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
   #endif

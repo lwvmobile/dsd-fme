@@ -79,8 +79,8 @@ RTL-SDR options:
   freq <num>    RTL-SDR Frequency (851800000 or 851.8M) 
   gain <num>    RTL-SDR Device Gain (0-49)(default = 0; Hardware AGC recommended)
   ppm  <num>    RTL-SDR PPM Error (default = 0)
-  bw   <num>    RTL-SDR Bandwidth kHz (default = 12)(4, 6, 8, 12, 16, 24)  
-  sq   <num>    RTL-SDR Squelch Level (Optional)
+  bw   <num>    RTL-SDR Bandwidth kHz (default = 12)(8, 12, 16, 24)  
+  sq   <num>    RTL-SDR Squelch Level vs RMS Value (Optional)
   udp  <num>    RTL-SDR Legacy UDP Remote Port (Optional -- External Use Only)
  Example: dsd-fme-zdev -fs -i rtl -C cap_plus_channel.csv -T
  Example: dsd-fme-zdev -fp -i rtl:0:851.375M:22:-2:24:0:6021
@@ -165,7 +165,7 @@ c - toggle compact mode
 h - toggle call history
 z - toggle console payloads
 a - toggle call alert beep
-4 - force dmr privacy key assertion over fid and svc bits
+4 - force privacy key assertion over fid and svc bits
 i - toggle signal inversion on types that can't auto detect (dmr, dpmr)
 m - toggle c4fm/qpsk 10/4 (everything but phase 2 signal)
 M - toggle c4fm/qpsk 8/3 (phase 2 tdma control channel)
@@ -173,17 +173,20 @@ R - start capturing symbol capture bin (date/time name file)
 r - stop capturing symbol capture bin
 spacebar - replay last symbol capture bin (captures must be stopped first)
 s - stop playing symbol capture bin or wav input file
-P - start per call decoded wav files
-p - stop per call decoded wav files
+P - start per call decoded wav files (Capital P)
+p - stop per call decoded wav files (Lower p)
 t - toggle trunking (needs either rtl input, or rigctl connection)
 y - toggle scanner (needs either rtl input, or rigctl connection)
-1 - Lockout Tuning/Playback of TG in Slot 1 or Conventional (Current Session Only)
-2 - Lockout Tuning/Playback of TG in Slot 2 (Current Session Only)
+1 - Lockout Tuning/Playback of TG in Slot 1 or Conventional -- Current Session Only if no group.csv file specified
+2 - Lockout Tuning/Playback of TG in Slot 2 -- Current Session Only if no group.csv file specified
 0 - Toggle Audio Smoothing - May produce crackling if enabled on RTL/TCP or wav/bin files
 w - Toggle Trunking/Playback White List (Allow A Groups Only) / Black List (Block B or DE groups only) Mode
 g - Toggle Trunking Tuning to Group Calls (DMR T3, Con+, Cap+, P25, NXDN)
 u - Toggle Trunking Tuning to Private Calls (DMR T3, Cap+, P25)
 d - Toggle Trunking Tuning to Data Calls (DMR T3, NXDN)
 e - Toggle Trunking Tuning to Encrypted Calls (P25)
-
+8 - Connect to SDR++ TCP Audio Sink with Defaults/Retry Sink Connection on Disconnect
+9 - Connect to SDR++ RIGCTL Server with Defaults/Retry RIGCTL Connection
+D - Reset DMR Site Parms/Call Strings, etc.
+Z - Simulate NoCarrier/No VC/CC sync (capital Z)
 ```

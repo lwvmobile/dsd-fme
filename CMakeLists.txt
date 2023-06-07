@@ -52,6 +52,13 @@ if (TN)
     add_definitions(-DTONES) 
 endif ()
 
+#use cmake option -DZDEV to change designation of this build from MAIN to zDEV
+option(NXDN
+    "change designation of this build from MAIN to zDEV" OFF)
+if (ZDEV)
+    add_definitions(-DZDEV_BUILD) 
+endif ()
+
 include(git_revision)
 git_describe(GIT_TAG)
 

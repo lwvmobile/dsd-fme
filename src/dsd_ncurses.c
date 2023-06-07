@@ -2127,7 +2127,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.0.1-27 Win32");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.1 Win32");
     printw ("------------------------------------------------------------------------------\n"); 
   }
 #elif LIMAZULUTWEAKS
@@ -2137,11 +2137,18 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| Digital Speech Decoder: LimaZulu Edition V: The Empire Strikes Back \n");
     printw ("------------------------------------------------------------------------------\n");
   }
-#else
+#elif ZDEV_BUILD
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
     printw ("| Digital Speech Decoder: Florida Man Edition - zDEV %s \n", GIT_TAG);
+    printw ("------------------------------------------------------------------------------\n");
+  }
+#else
+  if (opts->ncurses_compact == 1)
+  {
+    printw ("------------------------------------------------------------------------------\n");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Main %s \n", GIT_TAG);
     printw ("------------------------------------------------------------------------------\n");
   }
 #endif
@@ -2156,10 +2163,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 4) printw (" MBElib %s", versionstr);
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Win32");
-      if (i == 6) printw (" v2.0.1-27 Win32 \n");
-      #else
+      if (i == 6) printw (" v2.1 Win32 \n");
+      #elif ZDEV_BUILD
       if (i == 5) printw (" %s ", "zDEV BUILD");
-      // if (i == 5) printw (" %s ", "MAIN BUILD");
+      if (i == 6) printw (" %s \n", GIT_TAG);
+      #else 
+      if (i == 5) printw (" %s ", "MAIN BUILD");
       if (i == 6) printw (" %s \n", GIT_TAG);
       #endif
       else printw ("\n");
