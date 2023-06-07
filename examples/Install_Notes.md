@@ -11,7 +11,7 @@ wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/main/download-and-insta
 chmod +x download-and-install.sh
 ./download-and-install.sh
 ```
-
+f
 If you have dependencies already installed (i.e. need a fresh clean install on a system with DSD-FME already or using system other than Debian/Ubuntu, etc), please run this instead:
 
 ```
@@ -101,7 +101,7 @@ sudo ldconfig
 
 ### Windows Cygwin Builds
 
-If using RTL input support, you must install libusb-win32 before proceed with Cygwin installation. You will also need to build and compile a version of librtlsdr, but this can be tricky, and personally, I had to resort to using a much older version of the source code to get it to build at all with the rtl support in the precompiled 'Aero' builds.
+If using RTL input support, you must install libusb-win32 before proceeding with Cygwin installation. You will also need to build and compile a version of librtlsdr, but this can be tricky, and personally, I had to resort to using a much older version of the source code to get it to build at all with the rtl support in the precompiled 'Aero' builds.
 
 Then install all dependencies available in the repo prior to building, either directly selecting them during setup with the setup-x86.exe or setup-x64.exe or by issuing a command similar to this:
 
@@ -116,14 +116,15 @@ Then you can build and install using
 ```
 git clone https://github.com/lwvmobile/dsd-fme
 cd dsd-fme
-sudo cp tone8.wav /usr/share/
-sudo cp tone24.wav /usr/share/
-sudo cp tone48.wav /usr/share/
-sudo chmod 777 /usr/share/tone8.wav
-sudo chmod 777 /usr/share/tone24.wav
-sudo chmod 777 /usr/share/tone48.wav
+cp tone8.wav /usr/share/
+cp tone24.wav /usr/share/
+cp tone48.wav /usr/share/
+chmod 777 /usr/share/tone8.wav
+chmod 777 /usr/share/tone24.wav
+chmod 777 /usr/share/tone48.wav
 mkdir build
 cd build
+# -DAERO=ON is optional, but recommended if you want the older OSS support as well
 cmake -DAERO=ON ..
 make
 make install

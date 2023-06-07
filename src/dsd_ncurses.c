@@ -200,6 +200,7 @@ void beeper (dsd_opts * opts, dsd_state * state, int type)
   if (opts->pulse_digi_rate_out == 8000) strncpy(wav_name, "/usr/share/tone8.wav", 1023);
   if (opts->pulse_digi_rate_out == 48000) strncpy(wav_name, "/usr/share/tone48.wav", 1023);
   if (opts->pulse_digi_rate_out == 24000) strncpy(wav_name, "/usr/share/tone24.wav", 1023);
+  if (opts->audio_out_type == 5) strncpy(wav_name, "/usr/share/tone24.wav", 1023);
   wav_name[1023] = '\0';
   struct stat stat_buf;
   if (stat(wav_name, &stat_buf) == 0)
