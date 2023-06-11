@@ -339,8 +339,9 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       //process embedded link control
       fprintf (stderr, "\n");
       dmr_data_burst_handler(opts, state, (uint8_t *)dummy_bits, 0xEB);
-      //check the single burst/reverse channel opportunity
-      dmr_sbrc (opts, state, power);
+      //check the single burst/reverse channel opportunity -- moved
+      // dmr_sbrc (opts, state, power);
+
     }
 
     if (internalslot == 1 && vc2 == 6) 
@@ -348,8 +349,9 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       //process embedded link control
       fprintf (stderr, "\n");
       dmr_data_burst_handler(opts, state, (uint8_t *)dummy_bits, 0xEB);
-      //check the single burst/reverse channel opportunity
-      dmr_sbrc (opts, state, power);
+      //check the single burst/reverse channel opportunity -- moved
+      // dmr_sbrc (opts, state, power);
+
     }
 
     if (opts->payload == 1) fprintf (stderr, "\n"); //extra line break necessary here
@@ -380,6 +382,10 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
     cach_err = dmr_cach (opts, state, cachdata); 
     if (opts->payload == 0) fprintf (stderr, "\n");
+
+    //run sbrc here to look for the late entry key and alg after we observe potential errors in VC6
+    if (internalslot == 0 && vc1 == 6) dmr_sbrc (opts, state, power);
+    if (internalslot == 1 && vc2 == 6) dmr_sbrc (opts, state, power);
 
     // run alg refresh after vc6 ambe processing
     if (internalslot == 0 && vc1 == 6) dmr_alg_refresh (opts, state);
