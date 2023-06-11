@@ -146,7 +146,8 @@ int csvChanImport(dsd_opts * opts, dsd_state * state) //channel map import
   return 0;
 }
 
-int csvKeyImport(dsd_opts * opts, dsd_state * state) //multi-key support
+//Decimal Variant of Key Import
+int csvKeyImportDec(dsd_opts * opts, dsd_state * state) //multi-key support
 {
   char filename[1024] = "filename.csv"; 
   sprintf (filename, "%s", opts->key_in_file);
@@ -205,6 +206,51 @@ int csvKeyImport(dsd_opts * opts, dsd_state * state) //multi-key support
     fprintf (stderr, "Key [%03lld] [%05lld]", keynumber, state->rkey_array[keynumber]);
     fprintf (stderr, "\n");
     hash = 0;
+    
+  }
+  fclose(fp);
+  return 0;
+}
+
+//Hex Variant of Key Import
+int csvKeyImportHex(dsd_opts * opts, dsd_state * state) //key import for rc4 keys
+{
+  char filename[1024] = "filename.csv";
+  sprintf (filename, "%s", opts->key_in_file);
+  char buffer[BSIZE];
+  FILE * fp;
+  fp = fopen(filename, "r");
+  if (fp == NULL) {
+    printf("Unable to open file '%s'\n", filename);
+    exit(1);
+  }
+  int row_count = 0;
+  int field_count = 0;
+  unsigned long long int keynumber;
+
+  while (fgets(buffer, BSIZE, fp)) {
+    field_count = 0;
+    row_count++;
+    if (row_count == 1)
+      continue; //don't want labels
+    char * field = strtok(buffer, ","); //seperate by comma
+    while (field) {
+
+      if (field_count == 0)
+      {
+        sscanf (field, "%llX", &keynumber);
+      }
+
+      if (field_count == 1)
+      {
+        sscanf (field, "%llX", &state->rkey_array[keynumber]);
+      }
+      
+      field = strtok(NULL, ",");
+      field_count++;
+    }
+    fprintf (stderr, "Key [%04llX] [%016llX]", keynumber, state->rkey_array[keynumber]);
+    fprintf (stderr, "\n");
     
   }
   fclose(fp);

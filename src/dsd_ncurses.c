@@ -332,15 +332,15 @@ char *choices[] = {
       "Decode Legacy Auto**",
 			"Decode XDMA (P25 and DMR BS/MS)",
 			"Decode D-STAR*",
-			"Decode P25-P1*",
+			"Decode P25p1*",
 			"Decode EDACS/PV",
-      "Decode DMR Mono*",
+      "Decode P25p2 ",
       "Decode dPMR",
       "Decode NXDN48",
       "Decode NXDN96",
       "Decode DMR Stereo", //was X2-TDMA*
       "Toggle Signal Inversion",
-      "Privacy Key Entry",
+      "Key Entry",
       "Reset Call History",
       "Toggle Payloads to Console",
       "Manually Set P2 Parameters", //16
@@ -1091,15 +1091,18 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->payload_keyid = 0;
       state->payload_keyidR = 0;
       short int option = 0;
-      entry_win = newwin(11, WIDTH+6, starty+10, startx+10);
+      entry_win = newwin(14, WIDTH+6, starty+10, startx+10);
       box (entry_win, 0, 0);
       mvwprintw(entry_win, 2, 2, "Key Type Selection");
       mvwprintw(entry_win, 3, 2, " ");
       mvwprintw(entry_win, 4, 2, "1 -  Basic Privacy ");
       mvwprintw(entry_win, 5, 2, "2 - **tera Privacy ");
       mvwprintw(entry_win, 6, 2, "3 - NXDN/dPMR Scrambler ");
-      mvwprintw(entry_win, 7, 2, "4 - Force Key Priority ");
-      mvwprintw(entry_win, 8, 3, " ");
+      mvwprintw(entry_win, 7, 2, "4 - Force BP/Scr Key Priority ");
+      mvwprintw(entry_win, 8, 3, "-------------------------------- ");
+      mvwprintw(entry_win, 9, 2, "5 - RC4 Key ");
+      mvwprintw(entry_win, 10, 2, "6 - Force DMR RC4 Priority/LE ");
+      mvwprintw(entry_win, 11, 3, " ");
       echo();
       refresh();
       wscanw(entry_win, "%hd", &option); //%d
@@ -1111,16 +1114,15 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         state->K = 0;
         entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
         box (entry_win, 0, 0);
-        mvwprintw(entry_win, 2, 2, "DMRA Privacy Key Number (DEC):");
+        mvwprintw(entry_win, 2, 2, "Basic Privacy Key Number (DEC):");
         mvwprintw(entry_win, 3, 3, " ");
         echo();
         refresh();
         wscanw(entry_win, "%lld", &state->K);
         noecho();
-        if (state->K > 255)
-        {
-          state->K = 255;
-        }
+        if (state->K > 255) state->K = 255;
+
+        state->keyloader = 0; //turn off keyloader
       }
       if (option == 2)
       {
@@ -1171,6 +1173,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         wscanw(entry_win, "%llX", &state->K4);
         noecho();
 
+        state->keyloader = 0; //turn off keyloader
       }
       if (option == 3)
       {
@@ -1183,20 +1186,49 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         refresh();
         wscanw(entry_win, "%lld", &state->R);
         noecho();
-        if (state->K > 0x7FFF)
-        {
-          state->K = 0x7FFF;
-        }
+        if (state->R > 0x7FFF) state->R = 0x7FFF;
+        
+        state->keyloader = 0; //turn off keyloader
       }
-      //toggle enforcement of privacy key over enc bit set on traffic
+      //toggle enforcement of basic privacy key over enc bit set on traffic
       if (option == 4)
       {
-        if (state->M == 0)
+        if (state->M == 1 || state->M == 0x21)
         {
-          state->M = 1;
+          state->M = 0;
         }
-        else state->M = 0;
+        else state->M = 1;
       }
+
+      if (option == 5)
+      {
+        state->R = 0;
+        entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
+        box (entry_win, 0, 0);
+        mvwprintw(entry_win, 2, 2, "RC4 Key Value (HEX):");
+        mvwprintw(entry_win, 3, 3, " ");
+        echo();
+        refresh();
+        wscanw(entry_win, "%llX", &state->R);
+        noecho();
+        if (state->R > 0xFFFFFFFFFF)
+        {
+          state->R = 0xFFFFFFFFFF;
+        }
+        state->RR = state->R; //assign for both slots
+        state->keyloader = 0; //turn off keyloader
+      }
+
+      //toggle enforcement of rc4 key over missing pi header/le on DMR
+      if (option == 6)
+      {
+        if (state->M == 1 || state->M == 0x21)
+        {
+          state->M = 0;
+        }
+        else state->M = 0x21;
+      }
+
       if (state->K == 0 && state->K1 == 0 && state->K2 == 0 && state->K3 == 0 && state->K4 == 0)
       {
         opts->dmr_mute_encL = 1;
@@ -1309,7 +1341,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       state->rf_mod = 0;
-      sprintf (opts->output_name, "P25P1");
+      sprintf (opts->output_name, "P25p1");
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
@@ -1369,24 +1401,22 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     }
     if (choice == 7)
     {
-      //set legacy DMR settings
       // resetState (state); //use sparingly, seems to cause issue when switching back to other formats
-      opts->frame_dmr = 1;
-      state->samplesPerSymbol = 10;
-      state->symbolCenter = 4;
-      state->rf_mod = 0;
-      sprintf (opts->output_name, "DMR Mono");
-      opts->dmr_mono = 1;
-      opts->dmr_stereo  = 0; //this value is the end user option
+      state->samplesPerSymbol = 8;
+      state->symbolCenter = 3;
+      sprintf (opts->output_name, "P25p2");
+      opts->dmr_mono = 0;
+      opts->dmr_stereo = 1; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 48000;
-      opts->pulse_digi_out_channels = 1;
+      opts->pulse_digi_rate_out = 24000;
+      opts->pulse_digi_out_channels = 2;
+      opts->frame_dmr = 0;
       opts->frame_dstar = 0;
       opts->frame_x2tdma = 0;
       opts->frame_p25p1 = 0;
+      opts->frame_p25p2 = 1;
       opts->frame_nxdn48 = 0;
       opts->frame_nxdn96 = 0;
-      //opts->frame_dmr = 0;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->frame_ysf = 0;
@@ -2163,13 +2193,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4) printw (" MBElib %s", versionstr);
       #ifdef AERO_BUILD
-      if (i == 5) printw (" %s ", "Aero Win32");
+      if (i == 5) printw (" %s ", "Aero Build");
       if (i == 6) printw (" v2.1 Win32 \n");
       #elif ZDEV_BUILD
-      if (i == 5) printw (" %s ", "zDEV BUILD");
+      if (i == 5) printw (" %s ", "zDEV Build");
       if (i == 6) printw (" %s \n", GIT_TAG);
       #else 
-      if (i == 5) printw (" %s ", "MAIN BUILD");
+      if (i == 5) printw (" %s ", "Main Build");
       if (i == 6) printw (" %s \n", GIT_TAG);
       #endif
       else printw ("\n");
@@ -2313,6 +2343,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (state->K != 0)  printw ("| Forcing Key Priority -- Moto BP Key: %03lld \n", state->K);
     if (state->K1 != 0) printw ("| Forcing Key Priority -- tera BP Key: %016llX \n", state->K1);
     if (state->K != 0 && state->K1 != 0) printw ("| Warning! Multiple DMR Key Types Loaded! \n"); //warning may not be required
+  }
+  if (state->M == 0x21)
+  {
+    if (state->R != 0)  printw ("| Forcing Key Priority -- RC4 Key: %010llX \n", state->R);
   }
   if (opts->scanner_mode == 1)
   {
@@ -2653,7 +2687,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL == 16 && state->payload_algid > 0 && (state->dmr_so & 0xCF) == 0x40)
     {
       attron(COLOR_PAIR(1));
-      printw ("ALG: [0x%02X] KEY: [0x%02X] MI: [0x%08X] ", state->payload_algid, state->payload_keyid, state->payload_mi);
+      printw ("ALG: 0x%02X KEY: 0x%02X MI: 0x%08X ", state->payload_algid, state->payload_keyid, state->payload_mi);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
@@ -2662,7 +2696,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL > 19 && state->payload_algid > 0 && state->payload_algid != 0x80)
     {
       attron(COLOR_PAIR(1));
-      printw ("ALG: [0x%02X] KEY: [0x%04X] MI: [0x%016llX] ", state->payload_algid, state->payload_keyid, state->payload_miP);
+      printw ("ALG: 0x%02X KEY: 0x%04X MI: 0x%016llX ", state->payload_algid, state->payload_keyid, state->payload_miP);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
@@ -2670,7 +2704,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (state->payload_algid == 0xAA || state->payload_algid == 0x21)
     {
       attron(COLOR_PAIR(1));
-      printw("ADP-RC4");
+      printw("RC4 ");
+      if (state->R != 0) { printw("Key: %010llX ", state->R); }
       attron(COLOR_PAIR(3));
     }
     if (state->payload_algid == 0x81 || state->payload_algid == 0x22)
@@ -2851,7 +2886,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if(state->dmrburstR == 16 && state->payload_algidR > 0 && (state->dmr_soR & 0xCF) == 0x40)
       {
         attron(COLOR_PAIR(1));
-        printw ("ALG: [0x%02X] KEY: [0x%02X] MI: [0x%08X] ", state->payload_algidR, state->payload_keyidR, state->payload_miR);
+        printw ("ALG: 0x%02X KEY: 0x%02X MI: 0x%08X ", state->payload_algidR, state->payload_keyidR, state->payload_miR);
         attroff(COLOR_PAIR(1));
         attron(COLOR_PAIR(3));
       }
@@ -2859,14 +2894,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if(state->dmrburstR > 19 && state->payload_algidR > 0 && state->payload_algidR != 0x80)
       {
         attron(COLOR_PAIR(1));
-        printw ("ALG: [0x%02X] KEY: [0x%04X] MI: [0x%016llX] ", state->payload_algidR, state->payload_keyidR, state->payload_miN);
+        printw ("ALG: 0x%02X KEY: 0x%04X MI: 0x%016llX ", state->payload_algidR, state->payload_keyidR, state->payload_miN);
         attroff(COLOR_PAIR(1));
         attron(COLOR_PAIR(3));
       }
       if (state->payload_algidR == 0xAA || state->payload_algidR == 0x21)
       {
         attron(COLOR_PAIR(1));
-        printw("ADP-RC4");
+        printw("RC4 ");
+        if (state->RR != 0) { printw("Key: %010llX ", state->RR); }
         attron(COLOR_PAIR(3));
       }
       if (state->payload_algidR == 0x81 || state->payload_algidR == 0x22)
@@ -3305,8 +3341,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (c == 52) // '4' key, toggle force privacy key over fid and svc (dmr)
   {
-    if (state->M == 1) state->M = 0;
+    if (state->M == 1 || state->M == 0x21) state->M = 0;
     else state->M = 1;
+  }
+
+  if (c == 54) // '6' key, toggle force rc4 key over missing pi header/late entry
+  {
+    if (state->M == 1 || state->M == 0x21) state->M = 0;
+    else state->M = 0x21;
   }
 
   if (c == 105) //'i' key, toggle signal inversion on inverted types

@@ -27,7 +27,7 @@ To scan through a mixture of DMR and P25 Conventional, use:
 To scan through NXDN48 only conventional, use: 
 `dsd-fme -fi -i tcp -C channel_map.csv -Y -U 4532 -N 2> log.ans` 
 
-To scan through NXDN98 only conventional, use: 
+To scan through NXDN96 only conventional, use: 
 `dsd-fme -fn -i tcp -C channel_map.csv -Y -U 4532 -N 2> log.ans`
 
 The Channel Map setup will be identical to any of the channel maps found for trunking systems, channel numbers do not matter and can be arbitrarily organized, and frequencies can be duplicated to be 'scanned' more frequently in larger CSV files. Scan speed by default is 1 second, and is most stable at that speed. This can be adjusted by using the `-t 2` option, for example, to specify 2 seconds of hang time per frequency. ~~If activity occurs on a frequency, an additional 2 seconds of 'hangtime' will occur on that frequency for any follow up voice activity.~~
@@ -165,7 +165,8 @@ c - toggle compact mode
 h - toggle call history
 z - toggle console payloads
 a - toggle call alert beep
-4 - force privacy key assertion over fid and svc bits
+4 - force privacy/scrambler key assertion over enc identifiers (dmr and nxdn)
+6 - force rc4 key assertion over missing pi header/le enc identifiers (dmr)
 i - toggle signal inversion on types that can't auto detect (dmr, dpmr)
 m - toggle c4fm/qpsk 10/4 (everything but phase 2 signal)
 M - toggle c4fm/qpsk 8/3 (phase 2 tdma control channel)

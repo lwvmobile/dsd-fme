@@ -1012,8 +1012,10 @@ uint8_t crc8(uint8_t bits[], unsigned int len);
 bool crc8_ok(uint8_t bits[], unsigned int len);
 uint8_t crc7(uint8_t bits[], unsigned int len);
 
-//LFSR code courtesy of https://github.com/mattames/LFSR/
+//LFSR and LFSRP code courtesy of https://github.com/mattames/LFSR/
 void LFSR(dsd_state * state);
+void LFSRP(dsd_state * state);
+
 void LFSRN (char * BufferIn, char * BufferOut, dsd_state * state);
 void LFSR64(dsd_state * state);
 
@@ -1101,7 +1103,8 @@ unsigned long long int edacs_bch (unsigned long long int message);
 int csvGroupImport(dsd_opts * opts, dsd_state * state);
 int csvLCNImport(dsd_opts * opts, dsd_state * state);
 int csvChanImport(dsd_opts * opts, dsd_state * state);
-int csvKeyImport(dsd_opts * opts, dsd_state * state);
+int csvKeyImportDec(dsd_opts * opts, dsd_state * state);
+int csvKeyImportHex(dsd_opts * opts, dsd_state * state);
 
 #ifdef __cplusplus
 extern "C" {

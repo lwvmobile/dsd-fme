@@ -171,6 +171,8 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
 
     // TODO: error correction of the LSD bytes...
     // TODO: do something useful with the LSD bytes...
+
+    state->dropL += 2; //need to skip 2 here for the LSD bytes
   }
 
   // IMBE 9

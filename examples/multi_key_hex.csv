@@ -1,0 +1,5 @@
+key id(hex), key value (hex) //10-char Hytera BP, RC4
+1,1234567890
+2,ABCDEF1234
+C,0B57935150
+64,0B57935150

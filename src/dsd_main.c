@@ -374,7 +374,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   //unload keys when using keylaoder
   if (state->keyloader == 1)
   {
-    state->R = 0; //NXDN
+    state->R = 0; //NXDN, or RC4 (slot 1)
+    state->RR = 0; //RC4 (slot 2)
     state->K = 0; //BP
     state->K1 = 0; //tera 10 char BP
     state->H = 0; //shim for above
@@ -1090,7 +1091,6 @@ usage ()
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -f2           Decode only P25 Phase 2 (6000 sps) **\n");
   printf ("  -fd           Decode only D-STAR\n");
-  printf ("  -fr           Decode only DMR Mono - Single Slot Voice\n");
   printf ("  -fx           Decode only X2-TDMA\n");
   printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
@@ -1130,9 +1130,10 @@ usage ()
   printf ("  -F            Relax NXDN SACCH/FACCH/CAC/F2U CRC Pass/Fail\n");
   printf ("                 Not recommended on NXDN, but can be bypassed if desired.\n");
   printf ("\n");
-  printf ("  -K <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)\n");
+  printf ("  -b <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)\n");
+  printf ("                 (NOTE: This used to be the 'K' option! \n");
   printf ("\n");
-  printf ("  -H <hex>      Manually Enter **tera 10/32/64 Char Privacy Hex Key (see example below)\n");
+  printf ("  -H <hex>      Manually Enter **tera 10/32/64 Char Basic Privacy Hex Key (see example below)\n");
   printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
   printf ("                 -H 0B57935150 \n");
   printf ("                 -H '736B9A9C5645288B 243AD5CB8701EF8A' \n");
@@ -1140,11 +1141,18 @@ usage ()
   printf ("\n");
   printf ("  -R <dec>      Manually Enter dPMR or NXDN EHR Scrambler Key Value (Decimal Value)\n");
   printf ("                 \n");
-  printf ("  -k <file>     Import Key List from csv file.\n");
-  printf ("                  Only supports NXDN, DMR Basic Privacy and **tera 10-Char (decimal value). \n");
+  printf ("  -1            Manually Enter RC4 Key Value (DMR, P25) (Hex Value) \n");
+  printf ("                 \n");
+  printf ("  -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.\n");
+  printf ("                  Only supports NXDN, DMR Basic Privacy (decimal value). \n");
   printf ("                  (dPMR and **tera 32/64 char not supported, DMR uses TG value as key id -- EXPERIMENTAL!!). \n");
   printf ("                 \n");
-  printf ("  -4            Force Privacy Key over FID and SVC bits \n");
+  printf ("  -K <file>     Import Key List from csv file (Hexidecimal Format) -- Capital 'K'.\n");
+  printf ("                  Use for Hex Value **tera 10-char BP keys and RC4 10-Char Hex Keys. \n");
+  printf ("                 \n");
+  printf ("  -4            Force Privacy Key over Encryption Identifiers (DMR BP and NXDN Scrambler) \n");
+  printf ("                 \n");
+  printf ("  -6            Force RC4 Key over Missing PI header/LE Encryption Identifiers (DMR) \n");
   printf ("\n");
   printf (" Trunking Options:\n");
   printf ("  -C <file>     Import Channel to Frequency Map (channum, freq) from csv file. (Capital C)                   \n");
@@ -1158,7 +1166,6 @@ usage ()
   printf ("  -W            Use Imported Group List as a Trunking Allow/White List -- Only Tune with Mode A\n");
   printf ("  -p            Disable Tune to Private Calls (DMR TIII, P25, NXDN Type-C and Type-D)\n");
   printf ("  -E            Disable Tune to Group Calls (DMR TIII, Con+, Cap+, P25, NXDN Type-C, and Type-D)\n");
-  printf ("                 (NOTE: NXDN and EDACS, simply disable trunking if desired) \n");
   printf ("  -e            Enable Tune to Data Calls (DMR TIII, Cap+, NXDN Type-C)\n");
   printf ("                 (NOTE: No Clear Distinction between Cap+ Private Voice Calls and Data Calls -- Both enabled with Data Calls \n");
   printf ("                 (NOTE: P25 Data Channels Not Enabled (no handling) \n");
@@ -1371,7 +1378,7 @@ main (int argc, char **argv)
 
   exitflag = 0;
 
-  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:YK:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
+  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1384,21 +1391,46 @@ main (int argc, char **argv)
           opts.call_alert = 1;
           break;
 
-        //Free'd up switches include: I, b, J, j, n, O, v, y
-        //all numberals can be reclaimed, except for -4
+        //Free'd up switches include: I, J, j, n, O, v, y
+        //all numerals have reclaimed, except for 4 and 0,1 (rc4 enforcement and single key)
 
         //make sure to put a colon : after each if they need an argument
         //or remove colon if no argument required
+
+        //NOTE: The 'K' option for single BP key has been swapped to 'b'
+        //'K' is now used for hexidecimal key.csv imports
+
+        //rc4 enforcement on DMR (due to missing the PI header)
+        case '0':
+          state.M = 0x21;
+          fprintf (stderr,"Force RC4 Key over Missing PI header/LE Encryption Identifiers (DMR)\n");
+          break;
+
+        //load single rc4 key
+        case '1':
+          sscanf (optarg, "%llX", &state.R);
+          state.RR = state.R; //put key on both sides
+          fprintf (stderr, "RC4 Encryption Key Value set to 0x%llX \n", state.R);
+          opts.unmute_encrypted_p25 = 0; 
+          state.keyloader = 0; //turn off keyloader
+          break;
 
         case 'Y': //conventional scanner mode
           opts.scanner_mode = 1; //enable scanner
           opts.p25_trunk = 0; //turn off trunking mode if user enabled it
           break;
 
-        case 'k': //multi-key loader
+        case 'k': //multi-key loader (dec)
           strncpy(opts.key_in_file, optarg, 1023);
           opts.key_in_file[1023] = '\0';
-          csvKeyImport(&opts, &state);
+          csvKeyImportDec(&opts, &state);
+          state.keyloader = 1;
+          break;
+
+        case 'K': //multi-key loader (hex)
+          strncpy(opts.key_in_file, optarg, 1023);
+          opts.key_in_file[1023] = '\0';
+          csvKeyImportHex(&opts, &state);
           state.keyloader = 1;
           break;
 
@@ -1465,28 +1497,23 @@ main (int argc, char **argv)
           break;
 
         case 'C': //new letter assignment for Channel import, flow down to allow temp numbers
-        case '1': //LCN to Frequency CSV Import <--> flow down to chanimport now, tell users to use a channel map for edacs
-        case '7': //Channel Map Frequency CSV Import
           strncpy(opts.chan_in_file, optarg, 1023);
           opts.chan_in_file[1023] = '\0';
           csvChanImport (&opts, &state);
           break;
 
         case 'G': //new letter assignment for group import, flow down to allow temp numbers
-        case '2': //Group CSV Import
           strncpy(opts.group_in_file, optarg, 1023);
           opts.group_in_file[1023] = '\0';
           csvGroupImport(&opts, &state);
           break;
 
         case 'T': //new letter assignment for trunking, flow down to allow temp numbers
-        case '3':
           opts.p25_trunk = 1;
           opts.scanner_mode = 0; //turn off scanner mode if user enabled it
           break;
 
         case 'U': //New letter assignment for RIGCTL TCP port, flow down to allow temp numbers
-        case '5': //RIGCTL TCP port
           sscanf (optarg, "%d", &opts.rigctlportno);
           if (opts.rigctlportno != 0) opts.use_rigctl = 1; 
           break;
@@ -1496,19 +1523,16 @@ main (int argc, char **argv)
         //may change to a different return on sync times and this will matter!
 
         case 't': //New letter assignment for Trunk Hangtime, flow down to allow temp numbers
-        case '6': //hangtime in seconds, default is 1; 
           sscanf (optarg, "%f", &opts.trunk_hangtime); //updated for float/decimal values
           fprintf (stderr, "Trunking or Fast Scanner Hang Time set to: %.02f sec\n", opts.trunk_hangtime);
           break;
         
         case 'q': //New letter assignment for Reverse Mute, flow down to allow temp numbers
-        case '8':
           opts.reverse_mute = 1;
           fprintf (stderr, "Reverse Mute\n");
           break;
         
         case 'B': //New letter assignment for RIGCTL SetMod BW, flow down to allow temp numbers
-        case '9': //rigctl setmod bandwidth;
           sscanf (optarg, "%d", &opts.setmod_bw);
           if (opts.setmod_bw > 25000) opts.setmod_bw = 25000; //not too high
           break;
@@ -1528,7 +1552,7 @@ main (int argc, char **argv)
         //   state.use_throttle = 1;
         //   break;
 
-        case 'K':
+        case 'b': //formerly Capital 'K'
           sscanf (optarg, "%lld", &state.K);
           if (state.K > 256)
           {
@@ -1572,7 +1596,7 @@ main (int argc, char **argv)
 
         case '4':
           state.M = 1;
-          fprintf (stderr,"Force Privacy Key Priority over FID and SVC bits.\n");
+          fprintf (stderr,"Force Privacy Key over Encryption Identifiers (DMR BP and NXDN Scrambler) \n");
           break;
 
         //manually set Phase 2 TDMA WACN/SYSID/CC
@@ -1990,15 +2014,15 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0; //
               state.rf_mod = 0;  //
-              opts.pulse_digi_rate_out = 48000;
-              opts.pulse_digi_out_channels = 1;
-              opts.dmr_mono = 1;
-              opts.dmr_stereo = 0;
+              opts.pulse_digi_rate_out = 24000;
+              opts.pulse_digi_out_channels = 2;
+              opts.dmr_mono = 0;
+              opts.dmr_stereo = 1;
               state.dmr_stereo = 0; //0
               // opts.setmod_bw = 7000;
-              sprintf (opts.output_name, "DMR Mono");
-              fprintf(stderr, "Notice: DMR cannot autodetect polarity. \n Use -xr option if Inverted Signal expected.\n");
-              fprintf (stderr,"Decoding only DMR Mono. \nUsing DMR Stereo '-fs' or XDMA '-ft' is highly encouraged.\n");
+              sprintf (opts.output_name, "DMR Stereo");
+              fprintf (stderr,"-fr / DMR Mono switch has been deprecated.\n");
+              fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
 
             }
           else if (optarg[0] == 'm')

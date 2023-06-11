@@ -120,6 +120,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		{
 			//reset fourv_counter and dropbyte on PTT
 			state->fourv_counter[0] = 0;
+			state->dropL = 256;
 
 			state->dmrburstL = 20;
 			fprintf (stderr, "\n VCH 0 - ");
@@ -142,6 +143,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 				fprintf (stderr, "\n         ALG ID 0x%02X", state->payload_algid);
 				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyid);
 				fprintf (stderr, " MI 0x%016llX", state->payload_miP);
+				if (state->R != 0 && state->payload_algid == 0xAA) fprintf (stderr, " Key 0x%010llX", state->R);
 				fprintf(stderr, " MPTT");
 				// fprintf (stderr, " %s", KRED);
 				// fprintf (stderr, "ENC");
@@ -153,6 +155,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		{
 			//reset fourv_counter and dropbyte on PTT
 			state->fourv_counter[1] = 0;
+			state->dropR = 256;
 			state->payload_algidR = 0; //zero this out as well
 
 			state->dmrburstR = 20;
@@ -176,6 +179,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 				fprintf (stderr, "\n         ALG ID 0x%02X", state->payload_algidR);
 				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyidR);
 				fprintf (stderr, " MI 0x%016llX", state->payload_miN);
+				if (state->RR != 0 && state->payload_algidR == 0xAA) fprintf (stderr, " Key 0x%010llX", state->RR);
 				fprintf(stderr, " MPTT");
 				// fprintf (stderr, " %s", KRED);
 				// fprintf (stderr, "ENC");
@@ -194,6 +198,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		{
 			
 			state->fourv_counter[0] = 0;
+			state->dropL = 256;
 			state->dmrburstL = 23;
 			state->payload_algid = 0; 
 			state->payload_keyid = 0; 
@@ -217,6 +222,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		{
 			
 			state->fourv_counter[1] = 0;
+			state->dropR = 256;
 			state->dmrburstR = 23;
 			state->payload_algidR = 0;
 			state->payload_keyidR	= 0;
@@ -369,6 +375,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		{
 			//reset fourv_counter and dropbyte on PTT
 			state->fourv_counter[0] = 0;
+			state->dropL = 256;
 
 			state->dmrburstL = 20;
 			fprintf (stderr, "\n VCH 0 - ");
@@ -391,6 +398,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 				fprintf (stderr, "\n         ALG ID 0x%02X", state->payload_algid);
 				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyid);
 				fprintf (stderr, " MI 0x%016llX", state->payload_miP);
+				if (state->R != 0 && state->payload_algid == 0xAA) fprintf (stderr, " Key 0x%010llX", state->R);
 				fprintf(stderr, " MPTT");
 				// fprintf (stderr, " %s", KRED);
 				// fprintf (stderr, "ENC");
@@ -402,6 +410,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		{
 			//reset fourv_counter and dropbyte on PTT
 			state->fourv_counter[1] = 0;
+			state->dropR = 256;
 
 			state->dmrburstR = 20;
 			fprintf (stderr, "\n VCH 1 - ");
@@ -424,6 +433,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 				fprintf (stderr, "\n         ALG ID 0x%02X", state->payload_algidR);
 				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyidR);
 				fprintf (stderr, " MI 0x%016llX", state->payload_miN);
+				if (state->RR != 0 && state->payload_algidR == 0xAA) fprintf (stderr, " Key 0x%010llX", state->RR);
 				fprintf(stderr, " MPTT");
 				// fprintf (stderr, " %s", KRED);
 				// fprintf (stderr, "ENC");
@@ -441,6 +451,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		{
 			
 			state->fourv_counter[0] = 0;
+			state->dropL = 256;
 			state->dmrburstL = 23;
 			state->payload_algid = 0; //zero this out as well
 			state->payload_keyid = 0;
@@ -464,6 +475,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		{
 			
 			state->fourv_counter[1] = 0;
+			state->dropR = 256;
 			state->dmrburstR = 23;
 			state->payload_algidR = 0; //zero this out as well
 			state->payload_keyidR = 0;

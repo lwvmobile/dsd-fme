@@ -17,6 +17,56 @@
 
 #include "dsd.h"
 
+//test for potential clashing with other key loading mechanisms (bp key loading on tgid, nxdn key loading, etc)
+void keyring(dsd_opts * opts, dsd_state * state)
+{
+	//keys now loaded from csv files with the -K key.csv file (capital K)
+  if (state->currentslot == 0)
+		state->R = state->rkey_array[state->payload_keyid];
+
+	if (state->currentslot == 1)
+		state->RR = state->rkey_array[state->payload_keyidR];
+
+}
+
+void RC4(int drop, uint8_t keylength, uint8_t messagelength, uint8_t key[], uint8_t cipher[], uint8_t plain[])
+{
+	int i, j, count;
+  uint8_t t, b;
+
+	//init Sbox
+	uint8_t S[256];
+  for(int i = 0; i < 256; i++) S[i] = i;
+
+	//Key Scheduling
+	j = 0;
+	for(i = 0; i < 256; i++)
+	{
+		j = (j + S[i] + key[i % keylength]) % 256;
+		t = S[i];
+		S[i] = S[j];
+		S[j] = t;
+	}
+
+	//Drop Bytes and Cipher Byte XOR
+	i = j = 0;
+	for(count = 0; count < (messagelength + drop); count++)
+	{
+		i = (i + 1) % 256;
+		j = (j + S[i]) % 256;
+		t = S[i];
+		S[i] = S[j];
+		S[j] = t;
+		b = S[(S[i] + S[j]) % 256];
+
+    //return mbe payload byte here
+		if (count >= drop)
+      plain[count - drop] = b^cipher[count - drop];
+
+	}
+
+}
+
 int Pr[256] = {
 0x0000, 0x1F00, 0xE300, 0xFC00, 0x2503, 0x3A03, 0xC603, 0xD903,
 0x4A05, 0x5505, 0xA905, 0xB605, 0x6F06, 0x7006, 0x8C06, 0x9306,
@@ -140,6 +190,13 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   unsigned long long int k;
   int x;
 
+  //these conditions should ensure no clashing with the BP/HBP/Scrambler key loading machanisms already coded in
+  if (state->currentslot == 0 && state->payload_algid != 0 && state->payload_algid != 0x80 && state->payload_keyid != 0 && state->keyloader == 1)
+    keyring (opts, state);
+
+  if (state->currentslot == 1 && state->payload_algidR != 0 && state->payload_algidR != 0x80 && state->payload_keyidR != 0 && state->keyloader == 1)
+    keyring (opts, state);
+
   //24-bit TG to 16-bit hash
   uint32_t hash = 0;
   uint8_t hash_bits[24];
@@ -192,7 +249,73 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 			mbe_demodulateImbe7200x4400Data (imbe_fr);
 			state->errs2 = mbe_eccImbe7200x4400Data (imbe_fr, imbe_d);
 
+      //P25p1 RC4 Handling
+      if (state->payload_algid == 0xAA && state->R != 0)
+      {
+        uint8_t cipher[11] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        uint8_t plain[11]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        uint8_t rckey[13]  = {0x00, 0x00, 0x00, 0x00, 0x00, // <- RC4 Key
+                              0x00, 0x00, 0x00, 0x00, 0x00, // <- MI
+                              0x00, 0x00, 0x00}; // <- MI cont.
 
+        //easier to manually load up rather than make a loop
+        rckey[0] = ((state->R & 0xFF00000000) >> 32);
+        rckey[1] = ((state->R & 0xFF000000) >> 24);
+        rckey[2] = ((state->R & 0xFF0000) >> 16);
+        rckey[3] = ((state->R & 0xFF00) >> 8);
+        rckey[4] = ((state->R & 0xFF) >> 0);
+
+        // load valid MI from state->payload_miP
+        rckey[5]  = ((state->payload_miP & 0xFF00000000000000) >> 56);
+        rckey[6]  = ((state->payload_miP & 0xFF000000000000) >> 48);
+        rckey[7]  = ((state->payload_miP & 0xFF0000000000) >> 40);
+        rckey[8]  = ((state->payload_miP & 0xFF00000000) >> 32);
+        rckey[9]  = ((state->payload_miP & 0xFF000000) >> 24);
+        rckey[10] = ((state->payload_miP & 0xFF0000) >> 16);
+        rckey[11] = ((state->payload_miP & 0xFF00) >> 8);
+        rckey[12] = ((state->payload_miP & 0xFF) >> 0);
+
+        // if (state->p25vc == 0)
+				// {
+				// 	fprintf (stderr, "%s", KYEL);
+				// 	fprintf (stderr, "\n RC4K ");
+				// 	for (short o = 0; o < 13; o++)
+				// 	{
+				// 		fprintf (stderr, "%02X", rckey[o]);
+				// 	}
+				// 	fprintf (stderr, "%s", KNRM);
+				// }
+
+        //load imbe_d into imbe_cipher octets
+				int z = 0;
+				for (i = 0; i < 11; i++)
+			  {
+			    cipher[i] = 0;
+					plain[i] = 0;
+			    for (short int j = 0; j < 8; j++)
+			    {
+			      cipher[i] = cipher[i] << 1;
+			      cipher[i] = cipher[i] + imbe_d[z];
+						imbe_d[z] = 0;
+			      z++;
+			    }
+				}
+
+        RC4(state->dropL, 13, 11, rckey, cipher, plain);
+        state->dropL += 11;
+
+        z = 0;
+				for (short p = 0; p < 11; p++)
+				{
+					for (short o = 0; o < 8; o++)
+					{
+						imbe_d[z] = (plain[p] & 0x80) >> 7;
+						plain[p] = plain[p] << 1;
+						z++;
+					}
+        }
+
+      }
 
 			mbe_processImbe4400Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
 																imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
@@ -299,8 +422,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
         //EXPERIMENTAL!!
         //load basic privacy key number from array by the tg value (if not forced)
-        //currently only Moto BP and Hytera 10 Char BP (converted to decimal)
-        if (state->M == 0)
+        //currently only Moto BP and Hytera 10 Char BP
+        if (state->M == 0 && state->payload_algid == 0)
         {
           //see if we need to hash a value larger than 16-bits
           hash = state->lasttg & 0xFFFFFF;
@@ -400,6 +523,155 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 					state->DMRvcL++;
 				}
 
+        //DMR RC4, Slot 1
+        if (state->currentslot == 0 && state->payload_algid == 0x21 && state->R != 0)
+				{
+					uint8_t cipher[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+					uint8_t plain[7]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+					uint8_t rckey[9]  = {0x00, 0x00, 0x00, 0x00, 0x00, // <- RC4 Key
+												 			 0x00, 0x00, 0x00, 0x00}; // <- MI
+
+					//easier to manually load up rather than make a loop
+					rckey[0] = ((state->R & 0xFF00000000) >> 32);
+					rckey[1] = ((state->R & 0xFF000000) >> 24);
+					rckey[2] = ((state->R & 0xFF0000) >> 16);
+					rckey[3] = ((state->R & 0xFF00) >> 8);
+					rckey[4] = ((state->R & 0xFF) >> 0);
+					rckey[5] = ((state->payload_mi & 0xFF000000) >> 24);
+					rckey[6] = ((state->payload_mi & 0xFF0000) >> 16);
+					rckey[7] = ((state->payload_mi & 0xFF00) >> 8);
+					rckey[8] = ((state->payload_mi & 0xFF) >> 0);
+
+					// if (opts->payload == 1)
+					// {
+					// 	fprintf (stderr, "%s", KYEL);
+					// 	fprintf (stderr, " RC4K ");
+					// 	for (short o = 0; o < 9; o++)
+					// 	{
+					// 		fprintf (stderr, "%02X", rckey[o]);
+					// 	}
+					// 	fprintf (stderr, "%s", KNRM);
+					// 	fprintf (stderr, "\n");
+					// }
+
+	 				short k = 0;
+	 				for (short o = 0; o < 7; o++)
+	 				{
+		 				short b = 0;
+		 				for (short p = 0; p < 8; p++)
+		 				{
+			 				b = b << 1;
+			 				b = b + ambe_d[k];
+			 				k++;
+			 				if (k == 49)
+			 				{
+				 				cipher[6] = ((b << 3) & 0x80); //set 7th octet/bit 49 accordingly
+				 				break;
+			 				}
+		 				}
+		 			  cipher[o] = b;
+	 				}
+
+          RC4(state->dropL, 9, 7, rckey, cipher, plain);
+          state->dropL += 7;
+
+          short z = 0;
+          for (short p = 0; p < 6; p++)
+          {
+            //convert bytes back to bits and load into ambe_d array.
+            short b = 0; //reset b to use again
+            for (short o = 0; o < 8; o++)
+            {
+              b = (( (plain[p] << o) & 0x80) >> 7);
+              ambe_d[z] = b;
+              z++;
+              if (z == 49)
+              {
+                ambe_d[48] = ( (plain[p] << o) & 0x80);
+                break;
+              }
+            }
+          }
+				}
+
+        //P25p2 RC4 Handling, VCH 0
+        if (state->currentslot == 0 && state->payload_algid == 0xAA && state->R != 0 && ((state->synctype == 35) || (state->synctype == 36)))
+				{
+					uint8_t cipher[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+					uint8_t plain[7]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+					uint8_t rckey[13] = {0x00, 0x00, 0x00, 0x00, 0x00, // <- RC4 Key
+												 			 0x00, 0x00, 0x00, 0x00, 0x00, // <- MI
+                               0x00, 0x00, 0x00}; // <- MI cont.
+
+					//easier to manually load up rather than make a loop
+					rckey[0] = ((state->R & 0xFF00000000) >> 32);
+					rckey[1] = ((state->R & 0xFF000000) >> 24);
+					rckey[2] = ((state->R & 0xFF0000) >> 16);
+					rckey[3] = ((state->R & 0xFF00) >> 8);
+					rckey[4] = ((state->R & 0xFF) >> 0);
+
+					// load valid MI from state->payload_miP
+					rckey[5]  = ((state->payload_miP & 0xFF00000000000000) >> 56);
+					rckey[6]  = ((state->payload_miP & 0xFF000000000000) >> 48);
+					rckey[7]  = ((state->payload_miP & 0xFF0000000000) >> 40);
+					rckey[8]  = ((state->payload_miP & 0xFF00000000) >> 32);
+					rckey[9]  = ((state->payload_miP & 0xFF000000) >> 24);
+					rckey[10] = ((state->payload_miP & 0xFF0000) >> 16);
+					rckey[11] = ((state->payload_miP & 0xFF00) >> 8);
+					rckey[12] = ((state->payload_miP & 0xFF) >> 0);
+
+					// if (opts->payload == 1)
+					// {
+					// 	fprintf (stderr, "%s", KYEL);
+					// 	fprintf (stderr, " RC4K ");
+					// 	for (short o = 0; o < 13; o++)
+					// 	{
+					// 		fprintf (stderr, "%02X", rckey[o]);
+					// 	}
+					// 	fprintf (stderr, "%s", KNRM);
+					// 	fprintf (stderr, "\n");
+					// }
+
+	 				short k = 0;
+	 				for (short o = 0; o < 7; o++)
+	 				{
+		 				short b = 0;
+		 				for (short p = 0; p < 8; p++)
+		 				{
+			 				b = b << 1;
+			 				b = b + ambe_d[k];
+			 				k++;
+			 				if (k == 49)
+			 				{
+				 				cipher[6] = ((b << 3) & 0x80); //set 7th octet/bit 49 accordingly
+				 				break;
+			 				}
+		 				}
+		 			  cipher[o] = b;
+	 				}
+
+          RC4(state->dropL, 13, 7, rckey, cipher, plain);
+          state->dropL += 7;
+
+          short z = 0;
+          for (short p = 0; p < 6; p++)
+          {
+            //convert bytes back to bits and load into ambe_d array.
+            short b = 0; //reset b to use again
+            for (short o = 0; o < 8; o++)
+            {
+              b = (( (plain[p] << o) & 0x80) >> 7);
+              ambe_d[z] = b;
+              z++;
+              if (z == 49)
+              {
+                ambe_d[48] = ( (plain[p] << o) & 0x80);
+                break;
+              }
+            }
+          }
+				}
+
       	mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
                                 	ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
@@ -429,8 +701,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
         //EXPERIMENTAL!!
         //load basic privacy key number from array by the tg value (if not forced)
-        //currently only Moto BP and Hytera 10 Char BP (converted to decimal)
-        if (state->M == 0)
+        //currently only Moto BP and Hytera 10 Char BP
+        if (state->M == 0 && state->payload_algidR == 0)
         {
           //see if we need to hash a value larger than 16-bits
           hash = state->lasttgR & 0xFFFFFF; 
@@ -530,6 +802,155 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 					state->DMRvcR++;
 				}
 
+        //DMR RC4, Slot 2
+        if (state->currentslot == 1 && state->payload_algidR == 0x21 && state->RR != 0)
+				{
+					uint8_t cipher[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+					uint8_t plain[7]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+					uint8_t rckey[9]  = {0x00, 0x00, 0x00, 0x00, 0x00, // <- RC4 Key
+												 			 0x00, 0x00, 0x00, 0x00}; // <- MI
+
+					//easier to manually load up rather than make a loop
+					rckey[0] = ((state->RR & 0xFF00000000) >> 32);
+					rckey[1] = ((state->RR & 0xFF000000) >> 24);
+					rckey[2] = ((state->RR & 0xFF0000) >> 16);
+					rckey[3] = ((state->RR & 0xFF00) >> 8);
+					rckey[4] = ((state->RR & 0xFF) >> 0);
+					rckey[5] = ((state->payload_miR & 0xFF000000) >> 24);
+					rckey[6] = ((state->payload_miR & 0xFF0000) >> 16);
+					rckey[7] = ((state->payload_miR & 0xFF00) >> 8);
+					rckey[8] = ((state->payload_miR & 0xFF) >> 0);
+
+					// if (opts->payload == 1)
+					// {
+					// 	fprintf (stderr, "%s", KYEL);
+					// 	fprintf (stderr, " RC4K ");
+					// 	for (short o = 0; o < 9; o++)
+					// 	{
+					// 		fprintf (stderr, "%02X", rckey[o]);
+					// 	}
+					// 	fprintf (stderr, "%s", KNRM);
+					// 	fprintf (stderr, "\n");
+					// }
+
+	 				short k = 0;
+	 				for (short o = 0; o < 7; o++)
+	 				{
+		 				short b = 0;
+		 				for (short p = 0; p < 8; p++)
+		 				{
+			 				b = b << 1;
+			 				b = b + ambe_d[k];
+			 				k++;
+			 				if (k == 49)
+			 				{
+				 				cipher[6] = ((b << 3) & 0x80); //set 7th octet/bit 49 accordingly
+				 				break;
+			 				}
+		 				}
+		 			  cipher[o] = b;
+	 				}
+
+          RC4(state->dropR, 9, 7, rckey, cipher, plain);
+          state->dropR += 7;
+
+          short z = 0;
+          for (short p = 0; p < 6; p++)
+          {
+            //convert bytes back to bits and load into ambe_d array.
+            short b = 0; //reset b to use again
+            for (short o = 0; o < 8; o++)
+            {
+              b = (( (plain[p] << o) & 0x80) >> 7);
+              ambe_d[z] = b;
+              z++;
+              if (z == 49)
+              {
+                ambe_d[48] = ( (plain[p] << o) & 0x80);
+                break;
+              }
+            }
+          }
+				}
+
+        //P25p2 RC4 Handling, VCH 1
+        if (state->currentslot == 1 && state->payload_algidR == 0xAA && state->RR != 0 && ((state->synctype == 35) || (state->synctype == 36)))
+				{
+					uint8_t cipher[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+					uint8_t plain[7]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+					uint8_t rckey[13] = {0x00, 0x00, 0x00, 0x00, 0x00, // <- RC4 Key
+												 			 0x00, 0x00, 0x00, 0x00, 0x00, // <- MI
+                               0x00, 0x00, 0x00}; // <- MI cont.
+
+					//easier to manually load up rather than make a loop
+					rckey[0] = ((state->RR & 0xFF00000000) >> 32);
+					rckey[1] = ((state->RR & 0xFF000000) >> 24);
+					rckey[2] = ((state->RR & 0xFF0000) >> 16);
+					rckey[3] = ((state->RR & 0xFF00) >> 8);
+					rckey[4] = ((state->RR & 0xFF) >> 0);
+
+					//state->payload_miN for VCH1/slot 2
+					rckey[5]  = ((state->payload_miN & 0xFF00000000000000) >> 56);
+					rckey[6]  = ((state->payload_miN & 0xFF000000000000) >> 48);
+					rckey[7]  = ((state->payload_miN & 0xFF0000000000) >> 40);
+					rckey[8]  = ((state->payload_miN & 0xFF00000000) >> 32);
+					rckey[9]  = ((state->payload_miN & 0xFF000000) >> 24);
+					rckey[10] = ((state->payload_miN & 0xFF0000) >> 16);
+					rckey[11] = ((state->payload_miN & 0xFF00) >> 8);
+					rckey[12] = ((state->payload_miN & 0xFF) >> 0);
+
+					// if (opts->payload == 1)
+					// {
+					// 	fprintf (stderr, "%s", KYEL);
+					// 	fprintf (stderr, " RC4K ");
+					// 	for (short o = 0; o < 13; o++)
+					// 	{
+					// 		fprintf (stderr, "%02X", rckey[o]);
+					// 	}
+					// 	fprintf (stderr, "%s", KNRM);
+					// 	fprintf (stderr, "\n");
+					// }
+
+	 				short k = 0;
+	 				for (short o = 0; o < 7; o++)
+	 				{
+		 				short b = 0;
+		 				for (short p = 0; p < 8; p++)
+		 				{
+			 				b = b << 1;
+			 				b = b + ambe_d[k];
+			 				k++;
+			 				if (k == 49)
+			 				{
+				 				cipher[6] = ((b << 3) & 0x80); //set 7th octet/bit 49 accordingly
+				 				break;
+			 				}
+		 				}
+		 			  cipher[o] = b;
+	 				}
+
+          RC4(state->dropR, 13, 7, rckey, cipher, plain);
+          state->dropR += 7;
+
+          short z = 0;
+          for (short p = 0; p < 6; p++)
+          {
+            //convert bytes back to bits and load into ambe_d array.
+            short b = 0; //reset b to use again
+            for (short o = 0; o < 8; o++)
+            {
+              b = (( (plain[p] << o) & 0x80) >> 7);
+              ambe_d[z] = b;
+              z++;
+              if (z == 49)
+              {
+                ambe_d[48] = ( (plain[p] << o) & 0x80);
+                break;
+              }
+            }
+          }
+				}
+
 				mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
 	                                ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);
 
@@ -584,7 +1005,10 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 		}
     else state->dmr_encL = 0;
 
-    //second checkdown for P25-2 WACN, SYSID, and CC set
+    //check for available R key
+    if (state->R != 0) state->dmr_encL = 0;
+
+    //second checkdown for P25p2 WACN, SYSID, and CC set
 		if (state->synctype == 35 || state->synctype == 36)
 		{
 			if (state->p2_wacn == 0 || state->p2_sysid == 0 || state->p2_cc == 0)
@@ -651,7 +1075,10 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 		}
     else state->dmr_encR = 0;
 
-    //second checkdown for P25-2 WACN, SYSID, and CC set
+    //check for available RR key
+    if (state->RR != 0) state->dmr_encR = 0;
+
+    //second checkdown for P25p2 WACN, SYSID, and CC set
 		if (state->synctype == 35 || state->synctype == 36)
 		{
 			if (state->p2_wacn == 0 || state->p2_sysid == 0 || state->p2_cc == 0)

@@ -552,6 +552,7 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 				fprintf (stderr, " ALG ID 0x%02X", state->payload_algid);
 				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyid);
 				fprintf (stderr, " MI 0x%016llX", state->payload_miP);
+				if (state->R != 0 && state->payload_algid == 0xAA) fprintf (stderr, " Key 0x%010llX", state->R);
 				fprintf (stderr, " ESSB");
 			}
 
@@ -567,6 +568,7 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 				fprintf (stderr, " ALG ID 0x%02X", state->payload_algidR);
 				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyidR);
 				fprintf (stderr, " MI 0x%016llX", state->payload_miN);
+				if (state->RR != 0 && state->payload_algidR == 0xAA) fprintf (stderr, " Key 0x%010llX", state->RR);
 				fprintf (stderr, " ESSB");
 			}
 
@@ -574,7 +576,11 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 	}
 	if (ec == -1 || ec >= 15)
 	{
-		//ESS R-S Failure
+		//ESS R-S Failure -- run LFSR on current MI if applicable
+		if (state->currentslot == 0 && state->payload_algid != 0x80 && state->payload_keyid != 0 && state->payload_miP != 0)
+			LFSRP(state);
+		if (state->currentslot == 1 && state->payload_algidR != 0x80 && state->payload_keyidR != 0 && state->payload_miN != 0)
+			LFSRP(state);
 	}
 	fprintf (stderr, "%s", KNRM);
 
@@ -650,6 +656,13 @@ void process_2V (dsd_opts * opts, dsd_state * state)
 	processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
 
 	process_ESS(opts, state);
+
+	//reset drop bytes after a 2V
+	if (state->currentslot == 0 && state->payload_algid == 0xAA)
+		state->dropL = 256;
+
+	if (state->currentslot == 1 && state->payload_algidR == 0xAA)
+		state->dropR = 256;
 
 }
 

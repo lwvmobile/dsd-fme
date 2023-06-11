@@ -13,6 +13,23 @@ void dmr_late_entry_mi_fragment (dsd_opts * opts, dsd_state * state, uint8_t vc,
 {
   
   uint8_t slot = state->currentslot;
+
+  //enforce RC4 due to missing PI header, but with valid SVC Opts
+  //ideally, this would be handled by VC-F single burst, but its not fully reliable compared to this
+  //due to multiple signalling occurring inside of it, depending on system type
+  if (state->M == 0x21)
+  {
+    if (slot == 0 && state->dmr_so & 0x40)
+    {
+      state->payload_algid = 0x21;
+      state->payload_keyid = 0xFF;
+    }
+    if (slot == 1 && state->dmr_soR & 0x40)
+    {
+      state->payload_algidR = 0x21;
+      state->payload_keyidR = 0xFF;
+    }
+  }
   
   //collect our fragments and place them into storage
   state->late_entry_mi_fragment[slot][vc][0] = (uint64_t)ConvertBitIntoBytes(&ambe_fr[3][0], 4);

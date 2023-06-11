@@ -172,6 +172,8 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 
     // TODO: error correction of the LSD bytes...
     // TODO: do something useful with the LSD bytes...
+
+    state->dropL += 2; //need to skip 2 here for the LSD bytes
   }
 
   // IMBE 9
@@ -182,6 +184,9 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 
   //set vc counter to 0
   state->p25vc = 0;
+
+  //reset dropbytes -- skip first 11 for next LCW
+  state->dropL = 267;
 
   if (opts->errorbars == 1)
     {
@@ -366,11 +371,11 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   if (irrecoverable_errors == 0)
   {
     fprintf (stderr, "%s", KYEL);
-    fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08llX%08llX%02llX", algidhex, kidhex, mihex1, mihex2, mihex3);
-    fprintf (stderr, "%s", KNRM);
-
+    fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%04X MI: 0x%08llX%08llX%02llX", algidhex, kidhex, mihex1, mihex2, mihex3);
     state->payload_algid = algidhex;
     state->payload_keyid = kidhex;
+    if (state->R != 0 && state->payload_algid == 0xAA) fprintf (stderr, " Key: %010llX", state->R);
+    fprintf (stderr, "%s", KNRM);
     //only use 64 MSB, trailing 8 bits aren't used, so no mihex3
     state->payload_miP = (mihex1 << 32) | (mihex2);
 
@@ -390,4 +395,45 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%s", KNRM);
   }
 
+  //run LFSR on the MI if we have irrecoverable errors here
+  if (irrecoverable_errors && state->payload_algid != 0x80 && state->payload_keyid != 0 && state->payload_miP != 0) 
+  {
+    LFSRP(state);
+    fprintf (stderr, "\n");
+  }
+
+}
+
+//LFSR code courtesy of https://github.com/mattames/LFSR/
+void LFSRP(dsd_state * state)
+{
+  //rework for P2 TDMA support
+  unsigned long long int lfsr = 0;
+  if (state->currentslot == 0)
+    lfsr = state->payload_miP;
+
+  if (state->currentslot == 1)
+    lfsr = state->payload_miN;
+
+  int cnt = 0;
+  for(cnt=0;cnt<64;cnt++)
+  {
+	  // Polynomial is C(x) = x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1
+    unsigned long long int bit  = ((lfsr >> 63) ^ (lfsr >> 61) ^ (lfsr >> 45) ^ (lfsr >> 37) ^ (lfsr >> 26) ^ (lfsr >> 14)) & 0x1;
+    lfsr =  (lfsr << 1) | (bit);
+  }
+
+  if (state->currentslot == 0)
+    state->payload_miP = lfsr;
+
+  if (state->currentslot == 1)
+    state->payload_miN = lfsr;
+
+  //print current ENC identifiers already known and new calculated MI
+  fprintf (stderr, "%s", KYEL);
+  if (state->currentslot == 0)
+    fprintf (stderr, " LDU2/ESS_B FEC ERR - ALG: 0x%02X KEY ID: 0x%04X LFSR MI: 0x%016llX", state->payload_algid, state->payload_keyid, state->payload_miP);
+  if (state->currentslot == 1)
+    fprintf (stderr, " LDU2/ESS_B FEC ERR - ALG: 0x%02X KEY ID: 0x%04X LFSR MI: 0x%016llX", state->payload_algidR, state->payload_keyidR, state->payload_miN);
+  fprintf (stderr, "%s", KNRM);
 }

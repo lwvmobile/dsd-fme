@@ -459,6 +459,9 @@ processHDU(dsd_opts* opts, dsd_state* state)
   mihex2 = (unsigned long long int)ConvertBitIntoBytes(&mi[32], 32);
   mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
 
+  //reset dropbytes - skip first 11 for LCW
+  state->dropL = 267; 
+
   //set vc counter to 0
   state->p25vc = 0;
 
@@ -466,10 +469,11 @@ processHDU(dsd_opts* opts, dsd_state* state)
   {
 
     fprintf (stderr, "%s", KYEL);
-    fprintf (stderr, " HDU  ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08llX%08llX%02llX", algidhex, kidhex, mihex1, mihex2, mihex3);
-    fprintf (stderr, "%s", KNRM);
+    fprintf (stderr, " HDU  ALG ID: 0x%02X KEY ID: 0x%04X MI: 0x%08llX%08llX%02llX", algidhex, kidhex, mihex1, mihex2, mihex3);
     state->payload_algid = algidhex;
     state->payload_keyid = kidhex;
+    if (state->R != 0 && state->payload_algid == 0xAA) fprintf (stderr, " Key: %010llX", state->R);
+    fprintf (stderr, "%s", KNRM);
     //only use 64 MSB, trailing 8 bits aren't used, so no mihex3
     state->payload_miP = (mihex1 << 32) | (mihex2);
 
