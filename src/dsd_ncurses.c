@@ -114,22 +114,22 @@ char * DMRBusrtTypes[32] = {
   "R-S ERR  ",
   "CRC ERR  ",
   "NULL     ",
-  "Voice ", 
+  "VOICE", 
   "         ",  
   "INIT     ",
   "INIT     ",
-  "MAC PTT",      //20
-  "MAC ACTIVE",   //21
-  "MAC HANGTIME", //22
-  "MAC PTT END",  //23
-  "MAC IDLE",     //24
+  "PTT",      //20 MAC
+  "VOICE",    //21 MAC_ACTIVE
+  "HANGTIME", //22 MAC
+  "PTT END",  //23 MAC
+  "IDLE",     //24 MAC
   "HDU",
-  "VOICE LDU", //26
-  "VOICE LDU",
-  "TDU/TDULC",
+  "VOICE",   //26 LDU1
+  "VOICE",   //27 LDU2
+  "TDU/LC",
   "TSBK",
-  "MAC SIGNAL",
-  "MAC SIGNAL"
+  "SIGNAL",  //MAC_SIGNAL
+  "SIGNAL"  //MAC_SIGNAL
 
 };
 
@@ -2218,7 +2218,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_in_type == 5)
   {
-    printw ("| OSS Audio  Input: [%2i] kHz [1] Channel\n", SAMPLE_RATE_IN);
+    printw ("| OSS Audio  Input: [%2i] kHz [1] Channel\n", SAMPLE_RATE_IN/1000);
   }
   if (opts->audio_in_type == 4)
   {
@@ -2262,7 +2262,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_out_type == 5)
   {
-    printw ("| OSS Audio Output: [%2i] kHz [1] Channel", SAMPLE_RATE_IN);
+    printw ("| OSS Audio Output: [%2i] kHz [1] Channel", SAMPLE_RATE_OUT/1000);
     if (state->audio_smoothing == 1) printw (" - Smoothing On");
     printw (" \n");
   }
@@ -2651,7 +2651,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
     //
-    if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && state->dmrburstR == 16 && state->dmrburstL == 16) printw ("*M*");
+    if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && ( state->dmrburstL == 16 || state->dmrburstL == 21) && (state->dmrburstR == 16 || state->dmrburstR == 21)) printw ("*M*");
     //
     #endif 
 
@@ -2853,7 +2853,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw ("%s ", DMRBusrtTypes[state->dmrburstR]);
       #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
 	    //
-      if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && state->dmrburstR == 16 && state->dmrburstL == 16) printw ("*M*"); 
+      if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && ( state->dmrburstL == 16 || state->dmrburstL == 21) && (state->dmrburstR == 16 || state->dmrburstR == 21) ) printw ("*M*"); 
       //
       #endif
       printw ("\n");

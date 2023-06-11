@@ -374,7 +374,7 @@ typedef struct
   uint8_t trunk_tune_enc_calls;
 
   //OSS audio - slot preference
-  uint8_t slot_preference;
+  int slot_preference;
 
   //'DSP' Format Output
   uint8_t use_dsp_output;

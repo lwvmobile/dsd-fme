@@ -479,9 +479,9 @@ void process_4V (dsd_opts * opts, dsd_state * state)
 	//Cygwin OSS Slot Preference Pre-emption shim
 	if (opts->audio_out_type == 5)
 	{
-		//set to 16 for MBE OSS shim to preempt audio 
-		if (state->currentslot == 0) state->dmrburstL = 16;
-		else state->dmrburstR = 16;
+		//set to 21 for MBE OSS shim to preempt audio 
+		if (state->currentslot == 0) state->dmrburstL = 21;
+		else state->dmrburstR = 21;
 	}
 	#endif
 	
@@ -646,9 +646,9 @@ void process_2V (dsd_opts * opts, dsd_state * state)
 	//Cygwin OSS Slot Preference Pre-emption shim
 	if (opts->audio_out_type == 5)
 	{
-		//set to 16 for MBE OSS shim to preempt audio 
-		if (state->currentslot == 0) state->dmrburstL = 16;
-		else state->dmrburstR = 16;
+		//set to 21 for MBE OSS shim to preempt audio 
+		if (state->currentslot == 0) state->dmrburstL = 21;
+		else state->dmrburstR = 21;
 	}
 	#endif
 
@@ -885,16 +885,5 @@ void processP2 (dsd_opts * opts, dsd_state * state)
 	state->dmr_stereo = 0; 
 	state->p2_is_lcch = 0;
 
-	//bugfix for OSS slot preferred pre-emption on dual voices
-	//in case or marginal signal or bad decoding and both get stuck on 16, indefinitely muting the non-preferred slot
-	//BUG: This causes an annoying blink blink in ncurses, just FYI -- find a better workaround
-	#ifdef AERO_BUILD
-	if (opts->audio_out_type == 5)
-	{
-		//set both to blank value
-		state->dmrburstL = 17;
-		state->dmrburstR = 17;
-	}
-	#endif
   fprintf (stderr, "\n"); 
 }

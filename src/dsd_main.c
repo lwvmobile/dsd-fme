@@ -1365,7 +1365,7 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version:  v2.1 Win32 \n");
+  fprintf (stderr, "Build Version: v2.1 Win32 \n");
   #else
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
   #endif
@@ -1452,14 +1452,13 @@ main (int argc, char **argv)
         break;
 
         case 'z':
-          sscanf (optarg, "%c", &opts.slot_preference);
-          opts.slot_preference--; //user inputs 1 or 2, internally we want 0 and 1
+          sscanf (optarg, "%d", &opts.slot_preference);
+          if (opts.slot_preference > 0) opts.slot_preference--; //user inputs 1 or 2, internally we want 0 and 1
           if (opts.slot_preference > 1) opts.slot_preference = 1;
           fprintf (stderr, "TDMA (DMR and P2) Slot Voice Preference is Slot %d. \n", opts.slot_preference+1);
           break;
 
         //Enable Audio Smoothing for Upsampled Audio
-        case '0': 
         case 'V':
           state.audio_smoothing = 1;
           break; 
@@ -2491,58 +2490,60 @@ main (int argc, char **argv)
       opts.playoffset = 0;
       opts.playoffsetR = 0;
       opts.delay = 0;
-      if (strlen(opts.wav_out_file) > 0 && opts.dmr_stereo_wav == 0)
-      {
-        openWavOutFile (&opts, &state);
-      }
+
+      //open wav file should be handled directly by the -w switch now
+      // if (strlen(opts.wav_out_file) > 0 && opts.dmr_stereo_wav == 0)
+      // {
+      //   openWavOutFile (&opts, &state);
+      // }
+
       opts.pulse_digi_rate_out = 48000;
       opts.pulse_digi_out_channels = 1;
       if (opts.audio_out_type == 0) openPulseOutput(&opts);
       if (opts.audio_out_type == 5) openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
     }
 
+    //this particular if-elseif-else could be rewritten to be a lot neater and simpler
     else if (strcmp (opts.audio_in_dev, opts.audio_out_dev) != 0)
     {
       opts.split = 1;
       opts.playoffset = 0;
       opts.playoffsetR = 0;
       opts.delay = 0;
-      if (strlen(opts.wav_out_file) > 0 && opts.dmr_stereo_wav == 0)
-        {
-          openWavOutFile (&opts, &state);
-        }
-      else
-        {
-          openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
-        }
+
+      //open wav file should be handled directly by the -w switch now
+      // if (strlen(opts.wav_out_file) > 0 && opts.dmr_stereo_wav == 0)
+      //   openWavOutFile (&opts, &state);
+
+      // else
+
       openAudioInDevice (&opts);
 
-
-      fprintf (stderr,"Press CTRL + C to close.\n");
+      // fprintf (stderr,"Press CTRL + C to close.\n");
     }
 
-  else
+    else
     {
       opts.split = 0;
-      opts.playoffset = 25;
-      opts.playoffsetR = 25;
+      opts.playoffset = 0; //not sure what the playoffset actually does for us
+      opts.playoffsetR = 0;
       opts.delay = 0;
       openAudioInDevice (&opts);
-      opts.audio_out_fd = opts.audio_in_fd;
+      // opts.audio_out_fd = opts.audio_in_fd; //not sure that this really does much anymore, other than cause problems
     }
 
-  if (opts.playfiles == 1)
+    if (opts.playfiles == 1)
     {
       state.aout_gain = 25; //BUGFIX: No audio output when playing back .amb/.imb files
       playMbeFiles (&opts, &state, argc, argv);
     }
 
-  else
+    else
     {
       liveScanner (&opts, &state);
     }
 
-  cleanupAndExit (&opts, &state);
+    cleanupAndExit (&opts, &state);
 
-  return (0);
+    return (0);
 }

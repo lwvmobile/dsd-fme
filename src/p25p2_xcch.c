@@ -276,13 +276,13 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 	{
 		if (state->currentslot == 1)
 		{
-			state->dmrburstL = 21;
+			state->dmrburstL = 22;
 			//close any open MBEout files
  			if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
 		} 
 		else
 		{
-			state->dmrburstR = 21;
+			state->dmrburstR = 22;
 			//close any open MBEout files
  			if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
 		}
