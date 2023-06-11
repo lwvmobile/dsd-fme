@@ -374,12 +374,16 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%04X MI: 0x%08llX%08llX%02llX", algidhex, kidhex, mihex1, mihex2, mihex3);
     state->payload_algid = algidhex;
     state->payload_keyid = kidhex;
-    if (state->R != 0 && state->payload_algid == 0xAA) fprintf (stderr, " Key: %010llX", state->R);
+    if (state->R != 0 && state->payload_algid == 0xAA)
+    {
+      fprintf (stderr, " Key: %010llX", state->R);
+      opts->unmute_encrypted_p25 = 1;
+    }
     fprintf (stderr, "%s", KNRM);
     //only use 64 MSB, trailing 8 bits aren't used, so no mihex3
     state->payload_miP = (mihex1 << 32) | (mihex2);
 
-    if (state->payload_algid != 0x80 && state->payload_algid != 0x0) //print on payload == 1
+    if (state->payload_algid != 0x80 && state->payload_algid != 0x0)
     {
       fprintf (stderr, "%s", KRED);
       fprintf (stderr, " ENC");

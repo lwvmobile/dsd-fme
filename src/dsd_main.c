@@ -51,7 +51,7 @@ char * FM_banner[9] = {
   " ██╔══██╗██╔════╝██╔══██╗              ███║     ╚════██║",
   " ██║  ██║╚█████╗ ██║  ██║    Lima      ███║       ███╔═╝",
   " ██║  ██║ ╚═══██╗██║  ██║    Zulu      ███║     ██╔══╝  ",
-  " ██████╔╝██████╔╝██████╔╝ Edition IV   ████████╗███████╗",
+  " ██████╔╝██████╔╝██████╔╝  Edition V   ████████╗███████╗",
   " ╚═════╝ ╚═════╝ ╚═════╝               ╚═══════╝╚══════╝",
   "                                                        "
 };
@@ -1141,7 +1141,7 @@ usage ()
   printf ("\n");
   printf ("  -R <dec>      Manually Enter dPMR or NXDN EHR Scrambler Key Value (Decimal Value)\n");
   printf ("                 \n");
-  printf ("  -1            Manually Enter RC4 Key Value (DMR, P25) (Hex Value) \n");
+  printf ("  -1 <hex>      Manually Enter RC4 Key Value (DMR, P25) (Hex Value) \n");
   printf ("                 \n");
   printf ("  -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.\n");
   printf ("                  Only supports NXDN, DMR Basic Privacy (decimal value). \n");
@@ -1152,7 +1152,7 @@ usage ()
   printf ("                 \n");
   printf ("  -4            Force Privacy Key over Encryption Identifiers (DMR BP and NXDN Scrambler) \n");
   printf ("                 \n");
-  printf ("  -6            Force RC4 Key over Missing PI header/LE Encryption Identifiers (DMR) \n");
+  printf ("  -0            Force RC4 Key over Missing PI header/LE Encryption Identifiers (DMR) \n");
   printf ("\n");
   printf (" Trunking Options:\n");
   printf ("  -C <file>     Import Channel to Frequency Map (channum, freq) from csv file. (Capital C)                   \n");
@@ -1365,7 +1365,7 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version: v2.1 Win32 \n");
+  fprintf (stderr, "Build Version: v2.1 Beta \n");
   #else
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
   #endif
