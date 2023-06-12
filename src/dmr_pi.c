@@ -26,6 +26,14 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
         fprintf (stderr, "%s ", KYEL);
         fprintf (stderr, "\n Slot 1");
         fprintf (stderr, " DMR PI H- ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algid, state->payload_keyid, state->payload_mi);
+
+        //Anytone RC4 Shim
+        if (state->payload_algid == 0x01)
+        {
+          fprintf (stderr, " Anytone (0x01)");
+          state->payload_algid = 0x21;
+        }
+
         fprintf (stderr, "%s ", KNRM);
         if (state->payload_algid != 0x21)
         {
@@ -53,6 +61,14 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
         fprintf (stderr, "%s ", KYEL);
         fprintf (stderr, "\n Slot 2");
         fprintf (stderr, " DMR PI H- ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algidR, state->payload_keyidR, state->payload_miR);
+
+        //Anytone RC4 Shim
+        if (state->payload_algidR == 0x01)
+        {
+          fprintf (stderr, " Anytone (0x01)");
+          state->payload_algidR = 0x21;
+        }
+
         fprintf (stderr, "%s ", KNRM);
         if (state->payload_algidR != 0x21)
         {
