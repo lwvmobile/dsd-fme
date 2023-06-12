@@ -627,6 +627,9 @@ initOpts (dsd_opts * opts)
   opts->dmr_dmrla_is_set = 0;
   opts->dmr_dmrla_n = 0;
 
+  //DMR Late Entry
+  opts->dmr_le = 0; //off by default until worked out some more
+
   //Trunking - Use Group List as Allow List
   opts->trunk_use_allow_list = 0; //disabled by default
 
@@ -1153,6 +1156,10 @@ usage ()
   printf ("  -4            Force Privacy Key over Encryption Identifiers (DMR BP and NXDN Scrambler) \n");
   printf ("                 \n");
   printf ("  -0            Force RC4 Key over Missing PI header/LE Encryption Identifiers (DMR) \n");
+  printf ("                 \n");
+  printf ("  -3            Enable DMR Late Entry Encryption Identifiers (VC6 Single Burst) \n");
+  printf ("                  Note: This is experimental and may produce false positives depending on system type, notably Cap+. \n");
+  printf ("                  Use -0 or -4 options above instead if needed. \n");
   printf ("\n");
   printf (" Trunking Options:\n");
   printf ("  -C <file>     Import Channel to Frequency Map (channum, freq) from csv file. (Capital C)                   \n");
@@ -1365,7 +1372,7 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version: v2.1 Beta \n");
+  fprintf (stderr, "Build Version: v2.1 Beta 2\n");
   #else
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
   #endif
@@ -1413,6 +1420,11 @@ main (int argc, char **argv)
           fprintf (stderr, "RC4 Encryption Key Value set to 0x%llX \n", state.R);
           opts.unmute_encrypted_p25 = 0; 
           state.keyloader = 0; //turn off keyloader
+          break;
+
+        case '3':
+          opts.dmr_le = 1;
+          fprintf (stderr,"DMR Late Entry Encryption Identifiers Enabled (VC6 Single Burst)\n");
           break;
 
         case 'Y': //conventional scanner mode

@@ -2158,7 +2158,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.1 Beta");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.1 Beta 2");
     printw ("------------------------------------------------------------------------------\n"); 
   }
 #elif LIMAZULUTWEAKS
@@ -2194,7 +2194,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 4) printw (" MBElib %s", versionstr);
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Build");
-      if (i == 6) printw (" v2.1 Beta \n");
+      if (i == 6) printw (" v2.1 Beta 2\n");
       #elif ZDEV_BUILD
       if (i == 5) printw (" %s ", "zDEV Build");
       if (i == 6) printw (" %s \n", GIT_TAG);
@@ -2701,7 +2701,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
 
-    if (state->payload_algid == 0xAA || state->payload_algid == 0x21)
+    //Anytone 0x01 will never show here since its converted to 0x21 for handling
+    if (state->payload_algid == 0xAA || state->payload_algid == 0x21 || state->payload_algid == 0x01)
     {
       attron(COLOR_PAIR(1));
       printw("RC4 ");
@@ -2898,7 +2899,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         attroff(COLOR_PAIR(1));
         attron(COLOR_PAIR(3));
       }
-      if (state->payload_algidR == 0xAA || state->payload_algidR == 0x21)
+
+      //Anytone 0x01 will never show here since its converted to 0x21 for handling
+      if (state->payload_algidR == 0xAA || state->payload_algidR == 0x21 || state->payload_algidR == 0x01)
       {
         attron(COLOR_PAIR(1));
         printw("RC4 ");

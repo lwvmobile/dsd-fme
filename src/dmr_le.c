@@ -222,12 +222,13 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
 
   if (opts->payload == 1) //hide the sb/rc behind the payload printer, won't be useful to most people
   {
-    fprintf (stderr, "\n %s", KCYN);
+    fprintf (stderr, "%s", KCYN);
     if (power == 0) fprintf (stderr, " SB: ");
     if (power == 1) fprintf (stderr, " RC: ");
     for(i = 0; i < 11; i++)
       fprintf (stderr, "%d", sbrc_return[i]);
     fprintf (stderr, " - %03X", sbrc_hex);
+    fprintf (stderr, "\n");
     fprintf (stderr, "%s", KNRM);
 
     if (crc_okay == 0)
@@ -244,7 +245,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   uint8_t key = (sbrc_hex >> 3) & 0xFF;
   uint8_t cap_site = (sbrc_hex >> 4) & 0x7; //signalling on Cap+ when voice errors (non voice VC6 is present)
 
-  if (1 == 1) //opts->payload == 1
+  if (opts->dmr_le == 1) //this will now require a user to switch it on or off until more testing/figuring can be done
   {
     if (irr_err != 0) ; //fprintf (stderr, "\n %s SLOT %d SB/RC (FEC ERR) %d %s \n", KRED, slot, irr_err, KNRM);
     if (irr_err == 0)
@@ -254,7 +255,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
       // {
       //   placeholder for future conditions
       // }
-      else //Finally have a consistent set-up for this
+      else //Finally have a consistent set-up for this -- spoke too soon, sadly
       {
         //the signalling here is always presents on good voice frames, if errs are [3][2] then its not a VC6 voice frame, but some other 'hidden' frame
         if (slot == 0 && state->errs < 3) 

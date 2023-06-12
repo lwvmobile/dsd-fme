@@ -380,12 +380,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr3, NULL);    
 
-    cach_err = dmr_cach (opts, state, cachdata); 
-    if (opts->payload == 0) fprintf (stderr, "\n");
-
     //run sbrc here to look for the late entry key and alg after we observe potential errors in VC6
     if (internalslot == 0 && vc1 == 6) dmr_sbrc (opts, state, power);
     if (internalslot == 1 && vc2 == 6) dmr_sbrc (opts, state, power);
+
+    cach_err = dmr_cach (opts, state, cachdata); 
+    if (opts->payload == 0) fprintf (stderr, "\n");
 
     // run alg refresh after vc6 ambe processing
     if (internalslot == 0 && vc1 == 6) dmr_alg_refresh (opts, state);

@@ -358,6 +358,9 @@ typedef struct
   uint8_t dmr_dmrla_is_set; //flag to tell us dmrla is set by the user
   uint8_t dmr_dmrla_n; //n value for dmrla
 
+  //DMR Late Entry
+  uint8_t dmr_le; //user option to turn on or turn off late entry for enc identifiers
+
   //Trunking - Use Group List as Allow List
   uint8_t trunk_use_allow_list;
 
