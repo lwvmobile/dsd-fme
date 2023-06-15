@@ -54,7 +54,7 @@ endif ()
 
 #use cmake option -DZDEV to change designation of this build from MAIN to zDEV
 option(ZDEV
-    "change designation of this build from MAIN to zDEV" OFF)
+    "change designation of this build from MAIN to zDEV" ON)
 if (ZDEV)
     add_definitions(-DZDEV_BUILD) 
 endif ()
