@@ -363,19 +363,6 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     memcpy (m2, ambe_fr2, sizeof(m2));
     memcpy (m3, ambe_fr3, sizeof(m3));
 
-    // if ( opts->audio_in_type == 5 && internalslot == 0 && state->dmrburstR != 16 ) //(OSS shim)
-    // {
-    //   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
-    //   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
-    //   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
-    // }
-    // if ( opts->audio_in_type == 5 && internalslot == 1 && state->dmrburstL != 16 ) //(OSS shim)
-    // {
-    //   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
-    //   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
-    //   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
-    // }
-
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
     processMbeFrame (opts, state, NULL, ambe_fr3, NULL);    

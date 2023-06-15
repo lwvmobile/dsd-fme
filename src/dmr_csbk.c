@@ -686,7 +686,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           if (gi == 0) target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16);
           source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[64], 16);
           int rest = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[60], 4);
-          fprintf (stderr, "Source: %d - Target: %d - Rest Channel: %d", source, target, rest);
+          fprintf (stderr, "Source: %d - Target: %d - Rest LSN: %d", source, target, rest);
         }
         else fprintf (stderr, "Source: %d - Target: %d ", source, target);
 
@@ -820,7 +820,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           opts->p25_is_tuned = 1;
         }
 
-        fprintf (stderr, " Capacity Plus Channel Status - FL: %d TS: %d RS: %d - Rest Channel %d", fl, ts, res, rest_channel);
+        fprintf (stderr, " Capacity Plus Channel Status - FL: %d TS: %d RS: %d - Rest LSN: %d", fl, ts, res, rest_channel);
         if (fl == 0) fprintf (stderr, " - Appended Block"); //have not yet observed a system use this fl value
         if (fl == 1) fprintf (stderr, " - Final Block"); 
         if (fl == 2) fprintf (stderr, " - Initial Block");
@@ -1017,6 +1017,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
           //Skip tuning group calls if group calls are disabled -- moved to individual switches in the parsing phase
           // if (opts->trunk_tune_group_calls == 0) goto SKIPCAP;
+
+          //Test allowing a group in the white list to preempt a call in progress and tune to a white listed call
+          if (opts->trunk_use_allow_list == 1) state->last_vc_sync_time = 0;
 
           //don't tune if vc on the current channel 
           if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
@@ -1353,6 +1356,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         //Skip tuning calls if group calls are disabled
         if (opts->trunk_tune_group_calls == 0) goto SKIPXPT;
+
+        //Test allowing a group in the white list to preempt a call in progress and tune to a white listed call
+        if (opts->trunk_use_allow_list == 1) state->last_vc_sync_time = 0;
 
         //don't tune if vc on the current channel 
         if ( (time(NULL) - state->last_vc_sync_time) > 2 ) //parenthesis error fixed

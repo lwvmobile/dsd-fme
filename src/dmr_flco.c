@@ -494,7 +494,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       if (restchannel != -1)
       {
         fprintf (stderr, "%s ", KYEL);
-        fprintf (stderr, "Cap+ R-Ch %d", restchannel);
+        fprintf (stderr, "Rest LSN: %d", restchannel);
       }
     }
   
