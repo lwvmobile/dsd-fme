@@ -46,14 +46,14 @@ if (LZ)
 endif ()
 
 #use cmake option -DTONES to change default location of the tones.wav files (lwvmobile precompiled 'Aero' releases only)
-option(NXDN
+option(TN
     "Build with tone wav files in the dsd-fme folder and not in /usr/share/" OFF)
 if (TN)
     add_definitions(-DTONES) 
 endif ()
 
 #use cmake option -DZDEV to change designation of this build from MAIN to zDEV
-option(NXDN
+option(ZDEV
     "change designation of this build from MAIN to zDEV" OFF)
 if (ZDEV)
     add_definitions(-DZDEV_BUILD) 
