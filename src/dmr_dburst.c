@@ -45,6 +45,13 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   uint8_t  LC_DataBytes[10];
   int Burst = -1;
 
+  memset (BPTCDeInteleavedData, 0, sizeof(BPTCDeInteleavedData));
+  memset (BPTCDmrDataBit, 0, sizeof(BPTCDmrDataBit));
+  memset (BPTCDmrDataByte, 0, sizeof(BPTCDmrDataByte));
+  memset (BptcDataMatrix, 0, sizeof(BptcDataMatrix));
+  memset (LC_DataBit, 0, sizeof(LC_DataBit));
+  memset (LC_DataBytes, 0, sizeof(LC_DataBytes));
+
   //PDU Bytes and Bits
   uint8_t  DMR_PDU[25]; 
   uint8_t  DMR_PDU_bits[196]; 

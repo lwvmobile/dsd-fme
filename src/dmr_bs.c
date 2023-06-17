@@ -96,6 +96,10 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //Run Loop while the getting is good
   while (loop == 1) {
 
+  memset (ambe_fr, 0, sizeof(ambe_fr));
+  memset (ambe_fr2, 0, sizeof(ambe_fr2));
+  memset (ambe_fr3, 0, sizeof(ambe_fr3));
+
   internalslot = -1; //reset here so we know if this value is being set properly
   for(i = 0; i < 12; i++)
   {
@@ -493,6 +497,10 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   char ambe_fr[4][24];
   char ambe_fr2[4][24];
   char ambe_fr3[4][24];
+
+  memset (ambe_fr, 0, sizeof(ambe_fr));
+  memset (ambe_fr2, 0, sizeof(ambe_fr2));
+  memset (ambe_fr3, 0, sizeof(ambe_fr3));
 
   //memcpy of ambe_fr for late entry
   char m1[4][24];
