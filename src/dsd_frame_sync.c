@@ -1606,7 +1606,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if ((opts->errorbars == 1) && (opts->verbose > 1) && (state->carrier == 1))
                 {
                   fprintf (stderr,"Sync: no sync\n");
-                  fprintf (stderr,"Press CTRL + C to close.\n"); 
+                  // fprintf (stderr,"Press CTRL + C to close.\n"); 
 
                 }
               noCarrier (opts, state);
