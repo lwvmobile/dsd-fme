@@ -433,6 +433,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         } 
         else
         {
+          //Observation: If RS3 is set, or just the bit at location 0001 0000,
+          //then the NEXT VC6 will be pre-empted for TXI
           //REMUS! Uncomment Line Below if desired
           // strcat (state->call_string[slot], " RES");
           fprintf(stderr, "RS%d ", (so & 0x30) >> 4);
@@ -512,14 +514,35 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       }
     }
 
-    if (state->K != 0 && fid == 0x10 && so & 0x40)
+    //BUGFIX: Include slot and algid so we don't accidentally print more than one loaded key
+    //this can happen on Missing PI header and LE when the keyloader has loaded a TG/Hash key and an RC4 key simultandeously
+    //subsequennt EMB would print two key values until call cleared out
+
+    if (state->K != 0 && fid == 0x10 && so & 0x40 && slot == 0 && state->payload_algid == 0)
+    {
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, "Key %lld ", state->K);
+      fprintf (stderr, "%s ", KNRM);
+    }
+
+    if (state->K != 0 && fid == 0x10 && so & 0x40 && slot == 1 && state->payload_algidR == 0)
     {
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, "Key %lld ", state->K);
       fprintf (stderr, "%s ", KNRM);
     } 
 
-    if (state->K1 != 0 && fid == 0x68 && so & 0x40)
+    if (state->K1 != 0 && fid == 0x68 && so & 0x40 && slot == 0 && state->payload_algid == 0)
+    {
+      if (state->K2 != 0) fprintf (stderr, "\n ");
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, "Key %010llX ", state->K1);
+      if (state->K2 != 0) fprintf (stderr, "%016llX ", state->K2);
+      if (state->K4 != 0) fprintf (stderr, "%016llX %016llX", state->K3, state->K4);
+      fprintf (stderr, "%s ", KNRM);
+    }
+
+    if (state->K1 != 0 && fid == 0x68 && so & 0x40 && slot == 1 && state->payload_algidR == 0)
     {
       if (state->K2 != 0) fprintf (stderr, "\n ");
       fprintf (stderr, "%s", KYEL);

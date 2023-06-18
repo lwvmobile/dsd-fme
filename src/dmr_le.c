@@ -178,13 +178,24 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   uint8_t slot = state->currentslot;
   uint8_t sbrc_interleaved[32];
   uint8_t sbrc_return[32];
+  uint8_t sbrc_retcrc[32]; //crc significant bits of the return for SB
   memset (sbrc_interleaved, 0, sizeof(sbrc_interleaved));
   memset (sbrc_return, 0, sizeof(sbrc_return));
+  memset (sbrc_retcrc, 0, sizeof(sbrc_retcrc));
   uint32_t irr_err = 0;
   uint32_t sbrc_hex = 0;
   uint16_t crc_extracted = 7777;
   uint16_t crc_computed = 9999;
-  uint8_t crc_okay = 0;
+  uint8_t crc7_okay = 0; //RC
+  uint8_t crc3_okay = 0; //TXI
+  uint8_t txi = 0; //SEE: https://patents.google.com/patent/US8271009B2
+  
+  //NOTE: Any previous mentions to Cap+ in this area may have been in error,
+  //The signalling observed here was actually TXI information, not Cap+ Specifically
+
+  //check to see if this a TXI system
+  if (slot == 0 && state->dmr_so & 0x20)  txi = 1;
+  if (slot == 1 && state->dmr_soR & 0x20) txi = 1;
 
   // 9.3.2 Pre-emption and power control Indicator (PI)
   // 0 - The embedded signalling carries information associated to the same logical channel or the Null embedded message
@@ -198,8 +209,11 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   //bad emb burst, never set a valid power indicator value (probably 9)
   if (power > 1) goto SBRC_END;
 
+  //arrange the return for proper order for the crc3 check
+  for (i = 0; i < 8; i++) sbrc_retcrc[i] = sbrc_return[i+3];
+
   //RC Channel CRC 7 Mask = 0x7A; CRC bits are used as privacy indicators on 
-  //Single Voice Burst F (see below), other moto values seem to exist there as well
+  //Single Voice Burst F (see below), other moto values seem to exist there as well -- See TXI patent
   if (power == 1) //RC
   {
     crc_extracted = 0;
@@ -209,15 +223,27 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
       crc_extracted = crc_extracted | sbrc_return[i+4];
     }
     crc_extracted = crc_extracted ^ 0x7A;
-    crc_computed = crc7((uint8_t *) sbrc_return, 11);
-    if (crc_extracted == crc_computed) crc_okay = 1;
+    crc_computed = crc7((uint8_t *) sbrc_return, 7);
+    if (crc_extracted == crc_computed) crc7_okay = 1;
   }
-  else crc_okay = 1; //SB
+  else //if (txi == 1) //if TXI -- but TXI systems also carry the non-crc protected ENC identifiers
+  {
+    crc_extracted = 0;
+    for (i = 0; i < 3; i++)
+    {
+      crc_extracted = crc_extracted << 1;
+      crc_extracted = crc_extracted | sbrc_return[i]; //first 3 most significant bits
+    }
+    crc_computed = crc3((uint8_t *) sbrc_retcrc, 8); //working now seems consistent as well 
+    if (crc_extracted == crc_computed) crc3_okay = 1;
+    // fprintf (stderr, " CRC EXT %02X, CRC CMP %02X", crc_extracted, crc_computed);
+  }
+  // else //crc_okay = 0; //CRC invalid / not available when is ENC Identifiers (I really hate that)
 
   for(i = 0; i < 11; i++)
   {
     sbrc_hex = sbrc_hex << 1;
-    sbrc_hex |= sbrc_return[i] & 1; //sbrc_return
+    sbrc_hex |= sbrc_return[i] & 1;
   }
 
   if (opts->payload == 1) //hide the sb/rc behind the payload printer, won't be useful to most people
@@ -227,48 +253,76 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
     if (power == 1) fprintf (stderr, " RC: ");
     for(i = 0; i < 11; i++)
       fprintf (stderr, "%d", sbrc_return[i]);
-    fprintf (stderr, " - %03X", sbrc_hex);
-    fprintf (stderr, "\n");
+    fprintf (stderr, " - %03X; ", sbrc_hex);
     fprintf (stderr, "%s", KNRM);
-
-    if (crc_okay == 0)
-    {
-      fprintf (stderr, "%s", KRED);
-      fprintf (stderr, " (CRC ERR)");
-      fprintf (stderr, "%s", KNRM);
-      fprintf (stderr, " CRC EXT %02X, CRC CMP %02X", crc_extracted, crc_computed);
-    }
-  }
     
-  uint8_t sbrc_opcode = sbrc_hex; 
+    // if (crc_okay == 0) //forego this since the crc can vary or not be used at all
+    // {
+    //   fprintf (stderr, "%s", KRED);
+    //   fprintf (stderr, " (CRC ERR)");
+    //   fprintf (stderr, "%s", KNRM);
+    //   fprintf (stderr, " CRC EXT %02X, CRC CMP %02X", crc_extracted, crc_computed);
+    // }
+
+    fprintf (stderr, "\n");
+  }
+  
+  uint8_t sbrc_opcode = sbrc_hex & 0x7; //opcode and alg the same bits, but the alg is present when CRC is bad (I know they are limited on bits, but I hate that idea)
   uint8_t alg = sbrc_hex & 0x7;
   uint8_t key = (sbrc_hex >> 3) & 0xFF;
-  uint8_t cap_site = (sbrc_hex >> 4) & 0x7; //signalling on Cap+ when voice errors (non voice VC6 is present)
+  uint8_t txi_delay = (sbrc_hex >> 3) & 0x1F; //middle five are the 'delay' value on a TXI system
 
   if (opts->dmr_le == 1) //this will now require a user to switch it on or off until more testing/figuring can be done
   {
-    if (irr_err != 0) ; //fprintf (stderr, "\n %s SLOT %d SB/RC (FEC ERR) %d %s \n", KRED, slot, irr_err, KNRM);
+    if (irr_err != 0) fprintf (stderr, "\n %s SLOT %d SB/RC (FEC ERR) %d %s \n", KRED, slot, irr_err, KNRM);
     if (irr_err == 0)
     {
-      if (sbrc_hex == 0) ; //NULL
+      if (sbrc_hex == 0) ; //NULL, do nothing
+
       //else if (placeholder for future conditions)
       // {
       //   placeholder for future conditions
       // }
-      else //Finally have a consistent set-up for this -- spoke too soon, sadly
+
+      else if (crc7_okay == 1)
       {
-        //the signalling here is always presents on good voice frames, if errs are [3][2] then its not a VC6 voice frame, but some other 'hidden' frame
-        if (slot == 0 && state->errs < 3) 
+        //do something with the reverse channel information
+      }
+
+      //if the call is interruptable (TXI) and the crc3 is okay
+      else if (crc3_okay == 1)
+      {
+        //opcodes -- 0 (NULL), BR Delay (3)
+        fprintf (stderr, "\n");
+        fprintf (stderr, " TXI Op: %X - ", sbrc_opcode);
+        if      (sbrc_opcode == 0) fprintf (stderr, " Null; ");
+        else if (sbrc_opcode == 3) 
+        {
+          if (txi_delay != 0)
+            fprintf (stderr, " BR Delay: %d - %d ms; ", txi_delay, txi_delay * 30); //could also indicate number of superframes until next VC6 pre-emption
+          else fprintf (stderr, "BR Delay: Irrelevant / Send at any time;");
+        }
+        else fprintf (stderr, " Unk; ");
+
+        if (opts->payload == 1) fprintf (stderr, "\n"); //only during payload
+
+      }
+
+      else //all that should be left in this field is the potential ENC identifiers
+      {
+
+        if (slot == 0) //may not need the state->errs anymore //&& state->errs < 3
         {
           if (state->dmr_so & 0x40 && key != 0 && state->payload_keyid == 0)
           {
             //if we aren't forcing a particular alg or privacy key set
             if (state->M == 0)
             {
+              fprintf (stderr, "\n");
               fprintf (stderr, "%s ", KYEL);
               fprintf (stderr, " Slot 1");
               fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
-              fprintf (stderr, "\n");
+              // fprintf (stderr, "\n");
               fprintf (stderr, "%s ", KNRM);
 
               state->payload_keyid = key;
@@ -278,18 +332,18 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
           }
         }
 
-        //the signalling here is always presents on good voice frames, if errs are [3][2] then its not a VC6 voice frame, but some other 'hidden' frame
-        if (slot == 1 && state->errsR < 3)
+        if (slot == 1) //may not need the state->errs anymore //&& state->errsR < 3
         {
           if (state->dmr_soR & 0x40 && key != 0 && state->payload_keyidR == 0)
           {
             //if we aren't forcing a particular alg or privacy key set
             if (state->M == 0)
             {
-              fprintf (stderr, "%s ", KYEL);
-              fprintf (stderr, " Slot 1");
-              fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
               fprintf (stderr, "\n");
+              fprintf (stderr, "%s ", KYEL);
+              fprintf (stderr, " Slot 2");
+              fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
+              // fprintf (stderr, "\n");
               fprintf (stderr, "%s ", KNRM);
 
               state->payload_keyidR = key;
@@ -322,5 +376,29 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
     fclose (pFile);
   } 
 
+}
+
+uint8_t crc3(uint8_t bits[], unsigned int len)
+{
+	uint8_t crc=0;
+	unsigned int K = 3;
+  //x^3+x+1
+	uint8_t poly[4] = {1,1,0,1};
+	uint8_t buf[256];
+	if (len+K > sizeof(buf)) {
+		return 0;
+	}
+	memset (buf, 0, sizeof(buf));
+	for (unsigned int i=0; i<len; i++){
+		buf[i] = bits[i];
+	}
+	for (unsigned int i=0; i<len; i++)
+		if (buf[i])
+			for (unsigned int j=0; j<K+1; j++)
+				buf[i+j] ^= poly[j];
+	for (unsigned int i=0; i<K; i++){
+		crc = (crc << 1) + buf[len + i];
+	}
+	return crc;
 }
 
