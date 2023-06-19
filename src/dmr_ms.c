@@ -87,7 +87,11 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   //so getDibit doesn't know to invert it before it gets here
 
   for (j = 0; j < 6; j++) { 
-  state->dmrburstL = 16; 
+  state->dmrburstL = 16;
+
+  memset (ambe_fr, 0, sizeof(ambe_fr));
+  memset (ambe_fr2, 0, sizeof(ambe_fr2));
+  memset (ambe_fr3, 0, sizeof(ambe_fr3));
 
   for(i = 0; i < 12; i++)
   {
@@ -370,7 +374,11 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   char ambe_fr[4][24];
   char ambe_fr2[4][24];
   char ambe_fr3[4][24];
-  char ambe_fr4[4][24]; //shim for crappy tdma direct, need more samples to see if this is really a necessary shim or not
+  char ambe_fr4[4][24];
+
+  memset (ambe_fr, 0, sizeof(ambe_fr));
+  memset (ambe_fr2, 0, sizeof(ambe_fr2));
+  memset (ambe_fr3, 0, sizeof(ambe_fr3));
 
   //memcpy of ambe_fr for late entry
   char m1[4][24];
