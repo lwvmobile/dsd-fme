@@ -380,25 +380,25 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
 
 uint8_t crc3(uint8_t bits[], unsigned int len)
 {
-	uint8_t crc=0;
-	unsigned int K = 3;
+  uint8_t crc=0;
+  unsigned int K = 3;
   //x^3+x+1 
-	uint8_t poly[4] = {1,1,0,1};
-	uint8_t buf[256];
-	if (len+K > sizeof(buf)) {
-		return 0;
-	}
-	memset (buf, 0, sizeof(buf));
-	for (unsigned int i=0; i<len; i++){
-		buf[i] = bits[i];
-	}
-	for (unsigned int i=0; i<len; i++)
-		if (buf[i])
-			for (unsigned int j=0; j<K+1; j++)
-				buf[i+j] ^= poly[j];
-	for (unsigned int i=0; i<K; i++){
-		crc = (crc << 1) + buf[len + i];
-	}
-	return crc;
+  uint8_t poly[4] = {1,1,0,1};
+  uint8_t buf[256];
+  if (len+K > sizeof(buf)) {
+    return 0;
+  }
+  memset (buf, 0, sizeof(buf));
+  for (unsigned int i=0; i<len; i++){
+    buf[i] = bits[i];
+  }
+  for (unsigned int i=0; i<len; i++)
+    if (buf[i])
+      for (unsigned int j=0; j<K+1; j++)
+        buf[i+j] ^= poly[j];
+  for (unsigned int i=0; i<K; i++){
+    crc = (crc << 1) + buf[len + i];
+  }
+  return crc;
 }
 
