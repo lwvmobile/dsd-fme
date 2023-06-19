@@ -13,6 +13,10 @@
 #dsd-fme -i tcp:192.168.7.8:7355 -U 4532 -T -f2 -m2 -N 2> log.ans
 #dsd-fme -i rtl:0:855.625M:0:-2:12 -T -f2 -m2 -N 2> log.ans
 
+#P25 P2 TDMA CC with C4FM
+#dsd-fme -i tcp:192.168.7.8:7355 -U 4532 -T -f2 -N 2> log.ans
+#dsd-fme -i rtl:0:855.625M:0:-2:12 -T -f2 -m2 -N 2> log.ans
+
 #DMR TIII, Con+, Cap+, XPT
 dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans
 #dsd-fme -fs -i rtl:0:450M:44:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans

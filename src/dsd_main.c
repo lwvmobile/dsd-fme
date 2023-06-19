@@ -1425,7 +1425,7 @@ main (int argc, char **argv)
           break;
 
         case '3':
-          opts.dmr_le = 1;
+          opts.dmr_le = 0;
           fprintf (stderr,"DMR Late Entry Encryption Identifiers Disabled (VC6 Single Burst)\n");
           break;
 

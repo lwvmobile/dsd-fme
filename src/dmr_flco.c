@@ -421,24 +421,17 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     if (fid == 0x10)
     {
       /* Check the "Service Option" bits */ 
-      if(so & 0x30)
+      if(so & 0x20)
       {
-        /* Experimentally determined with DSD+,
-        * is equal to 0x2, this is a TXI call */
-        if((so & 0x30) == 0x20)
-        {
-          //REMUS! Uncomment Line Below if desired
-          // strcat (state->call_string[slot], " TXI");
-          fprintf(stderr, "TXI ");
-        } 
-        else
-        {
-          //Observation: If RS3 is set, or just the bit at location 0001 0000,
-          //then the NEXT VC6 will be pre-empted for TXI
-          //REMUS! Uncomment Line Below if desired
-          // strcat (state->call_string[slot], " RES");
-          fprintf(stderr, "RS%d ", (so & 0x30) >> 4);
-        } 
+        //REMUS! Uncomment Line Below if desired
+        // strcat (state->call_string[slot], " TXI");
+        fprintf(stderr, "TXI ");
+      }
+      if (so & 0x10)
+      {
+        //REMUS! Uncomment Line Below if desired
+        // strcat (state->call_string[slot], " RPT");
+        fprintf(stderr, "RPT "); //Short way of saying the next SF's VC6 will be pre-empted/repeat frames for the TXI backwards channel
       }
       if(so & 0x08)
       {
