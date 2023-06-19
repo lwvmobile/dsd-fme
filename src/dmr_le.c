@@ -382,7 +382,7 @@ uint8_t crc3(uint8_t bits[], unsigned int len)
 {
 	uint8_t crc=0;
 	unsigned int K = 3;
-  //x^3+x+1
+  //x^3+x+1 
 	uint8_t poly[4] = {1,1,0,1};
 	uint8_t buf[256];
 	if (len+K > sizeof(buf)) {

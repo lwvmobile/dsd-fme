@@ -367,8 +367,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       saveAmbe2450Data (opts, state, ambe_d);
     }
   }
-	else if ((state->synctype == 28) || (state->synctype == 29)) //was 8 and 9
-	{
+  else if ((state->synctype == 28) || (state->synctype == 29)) //was 8 and 9
+  {
 
     state->errs = mbe_eccAmbe3600x2450C0 (ambe_fr);
     //state->errs2 = state->errs;
