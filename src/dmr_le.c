@@ -272,9 +272,15 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   uint8_t key = (sbrc_hex >> 3) & 0xFF;
   uint8_t txi_delay = (sbrc_hex >> 3) & 0x1F; //middle five are the 'delay' value on a TXI system
 
+  //Note: AES-256 Key 1 will pass a CRC3 due to its bit arrangement vs the CRC poly 1101
+  // if (irr_err == 0 && sbrc_hex = 0xD) crc3_okay = 0; //SB: 00000001101
+
+  //NOTE: on above, I belive that we need to check by opcode as well, as a CRC3 can have multiple collisions
+  //so we need to exclude op/alg 0 and 3 from the check (does algID 0x03/0x23 even exist?)
+
   if (opts->dmr_le == 1) //this will now require a user to switch it on or off until more testing/figuring can be done
   {
-    if (irr_err != 0) fprintf (stderr, "\n %s SLOT %d SB/RC (FEC ERR) %d %s \n", KRED, slot, irr_err, KNRM);
+    if (irr_err != 0) fprintf (stderr, "\n%s SLOT %d SB/RC (FEC ERR) %d %s \n", KRED, slot, irr_err, KNRM);
     if (irr_err == 0)
     {
       if (sbrc_hex == 0) ; //NULL, do nothing
@@ -289,8 +295,8 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
         //do something with the reverse channel information
       }
 
-      //if the call is interruptable (TXI) and the crc3 is okay
-      else if (crc3_okay == 1)
+      //if the call is interruptable (TXI) and the crc3 is okay and TXI Opcode
+      else if (crc3_okay == 1 && (sbrc_opcode == 0 || sbrc_opcode == 3) )
       {
         //opcodes -- 0 (NULL), BR Delay (3)
         fprintf (stderr, "\n");
