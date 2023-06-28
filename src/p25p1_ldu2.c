@@ -371,13 +371,18 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   if (irrecoverable_errors == 0)
   {
     fprintf (stderr, "%s", KYEL);
-    fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%04X MI: 0x%08llX%08llX%02llX", algidhex, kidhex, mihex1, mihex2, mihex3);
+    fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%04X MI: 0x%08llX%08llX", algidhex, kidhex, mihex1, mihex2);
     state->payload_algid = algidhex;
     state->payload_keyid = kidhex;
     if (state->R != 0 && state->payload_algid == 0xAA)
     {
       fprintf (stderr, " Key: %010llX", state->R);
       opts->unmute_encrypted_p25 = 1;
+    }
+    else if (state->payload_algid != 0 && state->payload_algid != 0x80)
+    {
+      //may want to mute this again, or may not want to
+      opts->unmute_encrypted_p25 = 0;
     }
     fprintf (stderr, "%s", KNRM);
     //only use 64 MSB, trailing 8 bits aren't used, so no mihex3

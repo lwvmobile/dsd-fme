@@ -2352,7 +2352,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| Fast Scan Mode Enabled ");
     if (state->lcn_freq_roll != 0) 
-      printw (" - Frequency: [%.06lf] Mhz", (double)state->trunk_lcn_freq[state->lcn_freq_roll-1]/1000000);
+      printw (" - Frequency: %.06lf Mhz", (double)state->trunk_lcn_freq[state->lcn_freq_roll-1]/1000000);
     printw (" Speed: %.02lf sec \n", opts->trunk_hangtime);  //not sure values less than 1 make a difference, may be system/environment dependent 
   }
 
@@ -2424,7 +2424,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         if (idas == 1) printw ("Monitoring RTCH2 Channel"); //Idas RTCH2 Channel
         if (state->p25_cc_freq != 0)
         {
-          printw (" - Frequency: [%.06lf] Mhz ", (double)state->p25_cc_freq/1000000);
+          printw (" - Frequency: %.06lf Mhz ", (double)state->p25_cc_freq/1000000);
         }
       } 
       else if (opts->p25_is_tuned == 1)
@@ -2433,7 +2433,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         if (idas == 1) printw ("Monitoring RTCH2 Channel"); //Idas RTCH2
         if (state->p25_vc_freq[0] != 0)
         {
-          printw (" - Frequency: [%.06lf] Mhz ", (double)state->p25_vc_freq[0]/1000000);
+          printw (" - Frequency: %.06lf Mhz ", (double)state->p25_vc_freq[0]/1000000);
         }
       }
 
@@ -2581,15 +2581,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw ("%s", state->dmr_site_parms); //site id, net id, etc 
       if (state->dmr_rest_channel > 0)
       {
-        printw ("Rest Channel: [%02d] ", state->dmr_rest_channel);
+        printw ("Rest LSN: %02d; ", state->dmr_rest_channel);
         if (state->trunk_chan_map[state->dmr_rest_channel] != 0)
         {
-          printw ("Freq: [%.06lf] Mhz", (double)state->trunk_chan_map[state->dmr_rest_channel]/1000000);
+          printw ("Freq: %.06lf Mhz", (double)state->trunk_chan_map[state->dmr_rest_channel]/1000000);
         }
       }
       else if (state->p25_cc_freq != 0)
       {
-        printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
+        printw ("Freq: %.06lf MHz", (double)state->p25_cc_freq/1000000);
       }
       
     }
@@ -2602,7 +2602,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw ("P25 P1 - [%05llX][%03llX][%03llX] RFSS: [%lld] SITE: [%lld] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p25_cc_freq != 0)
       {
-        printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
+        printw ("Freq: %.06lf MHz", (double)state->p25_cc_freq/1000000);
       }
     }
     else if (lls == 35 || lls == 36) //P2
@@ -2624,7 +2624,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         if (state->p25_cc_freq != 0)
         {
-          printw ("Freq: [%.06lf] MHz", (double)state->p25_cc_freq/1000000);
+          printw ("Freq: %.06lf MHz", (double)state->p25_cc_freq/1000000);
         }
       }
     }
@@ -2721,7 +2721,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw("Double DES");
       attron(COLOR_PAIR(3));
     }
-    if (state->payload_algid == 0x83 || state->payload_algid == 0x23)
+    if (state->payload_algid == 0x83)
     {
       attron(COLOR_PAIR(1));
       printw("Triple DES");
@@ -2914,7 +2914,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw("DES-OFB");
         attron(COLOR_PAIR(3));
       }
-      if (state->payload_algidR == 0x83 || state->payload_algidR == 0x23)
+      if (state->payload_algidR == 0x83)
       {
         attron(COLOR_PAIR(1));
         printw("Triple DES");
@@ -3049,7 +3049,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         if (state->p25_vc_freq[0] != 0)
         {
           attron(COLOR_PAIR(4));
-          printw ("Frequency: [%.06lf] MHz  ", (double)state->p25_vc_freq[0]/1000000);
+          printw ("Frequency: %.06lf MHz  ", (double)state->p25_vc_freq[0]/1000000);
         }
         if (state->carrier == 1) attron(COLOR_PAIR(3));
         else attroff(COLOR_PAIR(4));
