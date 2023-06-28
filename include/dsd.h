@@ -74,7 +74,7 @@
 #include <locale.h>
 #include <ncurses.h>
 
-static volatile int exitflag;
+extern volatile uint8_t exitflag; //fix for issue #136
 
 //group csv import struct
 typedef struct

@@ -26,6 +26,8 @@
 #include "provoice_const.h"
 #include "git_ver.h"
 
+volatile uint8_t exitflag; //fix for issue #136
+
 int pretty_colors()
 {
     fprintf (stderr,"%sred\n", KRED);
