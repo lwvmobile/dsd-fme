@@ -560,29 +560,15 @@ void closeWavOutFileRaw (dsd_opts * opts, dsd_state * state)
 
 void openSymbolOutFile (dsd_opts * opts, dsd_state * state)
 {
-  //Do something
+  closeSymbolOutFile(opts, state);
   opts->symbol_out_f = fopen (opts->symbol_out_file, "w");
-}
-
-void writeSymbolOutFile (dsd_opts * opts, dsd_state * state)
-{
-  //Do something
-
 }
 
 void closeSymbolOutFile (dsd_opts * opts, dsd_state * state)
 {
-  //Do something
-  if (opts->symbol_out == 1)
+  if (opts->symbol_out_f)
   {
-    if (opts->symbol_out_f != NULL)
-    {
-      fclose(opts->symbol_out_f);
-      opts->symbol_out_f = NULL;
-    }
-
-    opts->symbol_out = 0; //set flag to 1
-
+    fclose(opts->symbol_out_f);
+    opts->symbol_out_f = NULL;
   }
-
 }

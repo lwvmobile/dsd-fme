@@ -445,7 +445,7 @@ get_dibit_and_analog_signal (dsd_opts* opts, dsd_state* state, int* out_analog_s
   }
 
   //symbol/dibit file capture/writing
-  if (opts->symbol_out == 1)
+  if (opts->symbol_out_f)
   {
     //fprintf (stderr, "%d", dibit);
     fputc (dibit, opts->symbol_out_f);

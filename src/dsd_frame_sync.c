@@ -352,7 +352,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           dibit = 51;               // '3'
         }
 
-      if (opts->symbol_out == 1 && dibit != 0) 
+      if (opts->symbol_out_f && dibit != 0)
       {
         int csymbol = 0;
         if (dibit == 49)

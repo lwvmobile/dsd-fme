@@ -501,7 +501,6 @@ initOpts (dsd_opts * opts)
   //end import filenames
   opts->szNumbers[0] = 0;
   opts->symbol_out_f = NULL;
-  opts->symbol_out = 0;
   opts->mbe_out = 0;
   opts->mbe_outR = 0; //second slot on a TDMA system
   opts->wav_out_f = NULL;
@@ -1312,11 +1311,8 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
     closeWavOutFileL (opts, state);
     closeWavOutFileR (opts, state);
   }
-  if (opts->symbol_out == 1)
-  {
-    closeSymbolOutFile (opts, state);
-  }
-  
+  closeSymbolOutFile (opts, state);
+
   //close MBE out files
   if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
   if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
@@ -1698,7 +1694,6 @@ main (int argc, char **argv)
           strncpy(opts.symbol_out_file, optarg, 1023);
           opts.symbol_out_file[1023] = '\0';
           fprintf (stderr,"Writing + Appending symbol capture to file %s\n", opts.symbol_out_file);
-          opts.symbol_out = 1;
           openSymbolOutFile (&opts, &state);
           break;
 
