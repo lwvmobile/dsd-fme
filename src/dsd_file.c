@@ -575,9 +575,10 @@ void closeSymbolOutFile (dsd_opts * opts, dsd_state * state)
   //Do something
   if (opts->symbol_out == 1)
   {
-    if (opts->symbol_out_file != NULL) 
+    if (opts->symbol_out_f != NULL)
     {
-      fclose(opts->symbol_out_f); 
+      fclose(opts->symbol_out_f);
+      opts->symbol_out_f = NULL;
     }
 
     opts->symbol_out = 0; //set flag to 1
