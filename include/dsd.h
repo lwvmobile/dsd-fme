@@ -229,7 +229,6 @@ typedef struct
   char symbol_out_file[1024];
   char lrrp_out_file[1024];
   char szNumbers[1024]; //**tera 10/32/64 char str
-  short int symbol_out;
   short int mbe_out; //flag for mbe out, don't attempt fclose more than once
   short int mbe_outR; //flag for mbe out, don't attempt fclose more than once
   SNDFILE *wav_out_f;
@@ -838,7 +837,6 @@ void openWavOutFileR (dsd_opts * opts, dsd_state * state);
 void openWavOutFileRaw (dsd_opts * opts, dsd_state * state);
 void openSymbolOutFile (dsd_opts * opts, dsd_state * state);
 void closeSymbolOutFile (dsd_opts * opts, dsd_state * state);
-void writeSymbolOutFile (dsd_opts * opts, dsd_state * state);
 void writeRawSample (dsd_opts * opts, dsd_state * state, short sample);
 void closeWavOutFile (dsd_opts * opts, dsd_state * state);
 void closeWavOutFileL (dsd_opts * opts, dsd_state * state);

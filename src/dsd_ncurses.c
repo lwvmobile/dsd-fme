@@ -607,12 +607,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           wscanw(entry_win, "%s", opts->symbol_out_file); //&opts->symbol_out_file
           noecho();
 
-          if (opts->symbol_out_file[0] != 0) //NULL
-          {
-            opts->symbol_out = 1; //set flag to 1
-            openSymbolOutFile (opts, state);
-          }
-
+          openSymbolOutFile (opts, state);
         }
         if (choicec == 4)
         {
@@ -1030,16 +1025,10 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
         if (choicec == 16) //stop/close last file RECORDING
         {
-          if (opts->symbol_out == 1)
+          if (opts->symbol_out_f)
           {
-            if (opts->symbol_out_file[0] != 0) //NULL
-            {
-              fclose(opts->symbol_out_f); //free(): double free detected in tcache 2 (this is a new one) happens when closing more than once
-              sprintf (opts->audio_in_dev, "%s", opts->symbol_out_file); //swap output bin filename to input for quick replay
-            }
-
-            opts->symbol_out = 0; //set flag to 1
-
+            closeSymbolOutFile (opts, state);
+            sprintf (opts->audio_in_dev, "%s", opts->symbol_out_file); //swap output bin filename to input for quick replay
           }
           choicec = 18; //exit
         }
@@ -2278,11 +2267,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| Appending Raw Sig Audio WAV to file %s\n", opts->wav_out_file_raw);
   }
-  if (opts->symbol_out_file[0] != 0 && opts->symbol_out == 1)
+  if (opts->symbol_out_file[0] != 0)
   {
     printw ("| SymbolC Bin: %s\n", opts->symbol_out_file);
   }
-  if (opts->wav_out_file[0] != 0 && opts->dmr_stereo_wav == 0)
+  if (opts->wav_out_file[0] != 0)
   {
     printw ("| Decoded WAV: %s\n", opts->wav_out_file);
   }
@@ -3420,24 +3409,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (c == 82) //'R', save symbol capture bin with date/time string as name
   {
     sprintf (opts->symbol_out_file, "%s %s.bin", getDateN(), getTimeN());
-    if (opts->symbol_out_file[0] != 0)
-    {
-      opts->symbol_out = 1; //set flag to 1
-      openSymbolOutFile (opts, state);
-    }
+    openSymbolOutFile (opts, state);
   }
 
   if (c == 114) //'r' key, stop capturing symbol capture bin file
   {
-    if (opts->symbol_out == 1)
+    if (opts->symbol_out_f)
     {
-      if (opts->symbol_out_file[0] != 0)
-      {
-        fclose(opts->symbol_out_f); 
-        sprintf (opts->audio_in_dev, "%s", opts->symbol_out_file);
-      }
-
-      opts->symbol_out = 0;
+      closeSymbolOutFile (opts, state);
+      sprintf (opts->audio_in_dev, "%s", opts->symbol_out_file);
     }
   }
 
