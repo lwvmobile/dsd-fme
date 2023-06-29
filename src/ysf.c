@@ -357,10 +357,10 @@ int ysf_conv_dch2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, u
   uint8_t buf[100];
   memset (buf, 0, sizeof(buf));
   for (i=0; i<20; i++) {
-		for (j=0; j<5; j++) {
-			buf[j+(i*5)] = input[i+(j*20)];
-		}
-	}
+    for (j=0; j<5; j++) {
+      buf[j+(i*5)] = input[i+(j*20)];
+    }
+  }
 
   k = 0;
   //convert dibits to bits
@@ -414,21 +414,21 @@ int ysf_conv_dch2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, u
     ysf_dch_decode2 (opts, state, bn, bt, fn, ft, err, trellis_buf);
 
   if (opts->payload == 1)
-	{
+  {
     fprintf (stderr, "\n ");
-		fprintf (stderr, "DCH2: ");
-		for (i = 0; i < 12; i++)
-		{
-			fprintf (stderr, "[%02X]", m_data[i]); 
-		}
-		if (crc != 0)
-		{
-			fprintf (stderr, "%s", KRED);
-			fprintf (stderr, " (CRC ERR)");
-			fprintf (stderr, "%s", KNRM);
-		}
+    fprintf (stderr, "DCH2: ");
+    for (i = 0; i < 12; i++)
+    {
+      fprintf (stderr, "[%02X]", m_data[i]); 
+    }
+    if (crc != 0)
+    {
+      fprintf (stderr, "%s", KRED);
+      fprintf (stderr, " (CRC ERR)");
+      fprintf (stderr, "%s", KNRM);
+    }
     fprintf (stderr, " ");
-	}
+  }
 
 	return err;
 }
@@ -452,10 +452,10 @@ int ysf_conv_dch (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, ui
   uint8_t buf[180];
   memset (buf, 0, sizeof(buf));
   for (i=0; i<20; i++) { //20*9 = 180
-		for (j=0; j<9; j++) { 
-			buf[j+(i*9)] = input[i+(j*20)];
-		}
-	}
+    for (j=0; j<9; j++) { 
+      buf[j+(i*9)] = input[i+(j*20)];
+    }
+  }
 
   k = 0;
   //convert dibits to bits
@@ -509,21 +509,21 @@ int ysf_conv_dch (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, ui
     ysf_dch_decode (opts, state, bn, bt, fn, ft, err, trellis_buf);
 
   if (opts->payload == 1)
-	{
+  {
     fprintf (stderr, "\n ");
-		fprintf (stderr, "DCH1: ");
-		for (i = 0; i < 22; i++)
-		{
-			fprintf (stderr, "[%02X]", m_data[i]); 
-		}
-		if (crc != 0)
-		{
-			fprintf (stderr, "%s", KRED);
-			fprintf (stderr, " (CRC ERR)");
-			fprintf (stderr, "%s", KNRM);
-		}
+    fprintf (stderr, "DCH1: ");
+    for (i = 0; i < 22; i++)
+    {
+      fprintf (stderr, "[%02X]", m_data[i]); 
+    }
+    if (crc != 0)
+    {
+      fprintf (stderr, "%s", KRED);
+      fprintf (stderr, " (CRC ERR)");
+      fprintf (stderr, "%s", KNRM);
+    }
     fprintf (stderr, " ");
-	}
+  }
 
 	return err;
 }
@@ -547,10 +547,10 @@ int ysf_conv_fich (uint8_t input[], uint8_t dest[32])
   uint8_t buf[100];
   memset (buf, 0, sizeof(buf));
   for (i=0; i<20; i++) {
-		for (j=0; j<5; j++) {
-			buf[j+(i*5)] = input[i+(j*20)];
-		}
-	}
+    for (j=0; j<5; j++) {
+      buf[j+(i*5)] = input[i+(j*20)];
+    }
+  }
 
   k = 0;
   //convert dibits to bits
@@ -626,20 +626,20 @@ int ysf_conv_fich (uint8_t input[], uint8_t dest[32])
 
   //debug output
   // if (1 == 1)
-	// {
-	// 	fprintf (stderr, "FICH: ");
-	// 	for (i = 0; i < 12; i++)
-	// 	{
-	// 		fprintf (stderr, "[%02X]", m_data[i]); 
-	// 	}
-	// 	if (crc != 0)
-	// 	{
-	// 		fprintf (stderr, "%s", KRED);
-	// 		fprintf (stderr, " (CRC ERR)");
-	// 		fprintf (stderr, "%s", KNRM);
-	// 	}
+  // {
+  //   fprintf (stderr, "FICH: ");
+  //   for (i = 0; i < 12; i++)
+  //   {
+  //     fprintf (stderr, "[%02X]", m_data[i]); 
+  //   }
+  //   if (crc != 0)
+  //   {
+  //     fprintf (stderr, "%s", KRED);
+  //     fprintf (stderr, " (CRC ERR)");
+  //     fprintf (stderr, "%s", KNRM);
+  //   }
   //   fprintf (stderr, " ");
-	// }
+  // }
 
 	memcpy(dest, fich_bits, 32); //copy minus the crc16
 	return err;
@@ -674,9 +674,9 @@ void fr_demodulation(uint8_t out[], uint8_t in[], uint16_t n, uint32_t seed, uin
   // fprintf (stderr, "SEED = %X", seed);
   for (uint16_t i=0; i<n; i++)
   {
-      v = ((v * 173) + 13849) & 0xffff; //is this the same as below?
-      // v = (173 * v) + 13849 - (65536 * (((173 * v) + 13849) / 65536)); //from mbe_demodulateImbe7200x4400Data
-      out[i] = in[i] ^ (v >> 15);
+    v = ((v * 173) + 13849) & 0xffff; //is this the same as below?
+    // v = (173 * v) + 13849 - (65536 * (((173 * v) + 13849) / 65536)); //from mbe_demodulateImbe7200x4400Data
+    out[i] = in[i] ^ (v >> 15);
   }
 }
 
