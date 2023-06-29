@@ -2267,7 +2267,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| Appending Raw Sig Audio WAV to file %s\n", opts->wav_out_file_raw);
   }
-  if (opts->symbol_out_file[0] != 0)
+  if (opts->symbol_out_f) //don't display when not actively capturing
   {
     printw ("| SymbolC Bin: %s\n", opts->symbol_out_file);
   }
