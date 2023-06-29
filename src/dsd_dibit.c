@@ -264,18 +264,18 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
     }
 
   else if ((state->synctype == 1) || (state->synctype == 3)  || (state->synctype == 5)  ||
-          (state->synctype == 9)  || (state->synctype == 11) || (state->synctype == 13) ||
+          (state->synctype == 31) || (state->synctype == 11) || (state->synctype == 13) ||
           (state->synctype == 17) || (state->synctype == 29) || (state->synctype == 36) )
 
     {
       //  1 -P25p1
       //  3 -X2-TDMA (inverted signal voice frame)
       //  5 -X2-TDMA (inverted signal data frame)
-      //  9 -NXDN (inverted voice frame)
       // 11 -DMR (inverted signal voice frame)
       // 13 -DMR (inverted signal data frame)
       // 17 -NXDN (inverted data frame)
       // 29 -NXDN (inverted FSW)
+      // 31 -YSF 
       // 36 -P25p2 
 
       int valid;
@@ -340,6 +340,7 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
       // 12 +DMR (non inverted signal voice frame)
       // 16 +NXDN (non inverted data frame)
       // 28 +NXND (FSW)
+      // 30 +YSF
       // 35 +p25p2
 
       int valid;

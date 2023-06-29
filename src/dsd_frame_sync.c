@@ -228,13 +228,17 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   {
     t_max = 10;
   }
-  //else if dPMR
+  //dPMR
   else if (opts->frame_dpmr == 1)
   {
     t_max = 12; //based on Frame_Sync_2 pattern
   }
-  //if Phase 2 (or YSF in future), then only 19
-  else if (state->lastsynctype == 35 || state->lastsynctype == 36) //P2
+  else if (opts->frame_ysf == 1)
+  {
+    t_max = 20; //20 on YSF
+  }
+  //if Phase 2, then only 19
+  else if (state->lastsynctype == 35 || state->lastsynctype == 36 )
   {
     t_max = 19; //Phase 2 S-ISCH is only 19
   }
@@ -573,24 +577,20 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 }
             }
           //YSF sync
-          strncpy(synctest20, (synctest_p - 19), 20); //double check make sure this is right
+          strncpy(synctest20, (synctest_p - 19), 20);
           if(opts->frame_ysf == 1) //(opts->frame_ysf == 1
           {
             if (0 == 0) //opts->inverted_ysf == 0
             {
               if (strcmp(synctest20, FUSION_SYNC) == 0)
               {
+                printFrameSync (opts, state, "+YSF ", synctest_pos + 1, modulation);
                 state->carrier = 1;
                 state->offset = synctest_pos;
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
-                fprintf (stderr, "\nYSF FUSION SYNC \n");
-                opts->inverted_ysf = 0; //should we set this here?
+                opts->inverted_ysf = 0;
                 state->lastsynctype = 30;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 return (30);
               }
             }
@@ -601,17 +601,13 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             {
               if (strcmp(synctest20, INV_FUSION_SYNC) == 0)
               {
+                printFrameSync (opts, state, "-YSF ", synctest_pos + 1, modulation);
                 state->carrier = 1;
                 state->offset = synctest_pos;
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
-                fprintf (stderr, "\nINVERTED YSF FUSION SYNC \n");
-                opts->inverted_ysf = 1; //should we set this here?
+                opts->inverted_ysf = 1;
                 state->lastsynctype = 31;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 return (31);
               }
             }
