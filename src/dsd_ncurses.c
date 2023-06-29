@@ -85,7 +85,7 @@ char * SyncTypes[44] = {
   "NXDN",
   "NXDN",
   "YSF", //30
-  "YSF",
+  "YSF", //31
   "DMR",
   "DMR",
   "DMR",
@@ -338,7 +338,8 @@ char *choices[] = {
       "Decode dPMR",
       "Decode NXDN48",
       "Decode NXDN96",
-      "Decode DMR Stereo", //was X2-TDMA*
+      "Decode DMR TDMA",
+      "Decode YSF FUSION",
       "Toggle Signal Inversion",
       "Key Entry",
       "Reset Call History",
@@ -557,7 +558,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     }
 
     //Input Output Options
-    if (choice == 17)
+    if (choice == 18)
     {
       //test making a new window while other window is open
       test_win = newwin(HEIGHT-1, WIDTH+9, starty+5, startx+5);
@@ -1086,7 +1087,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     }
 
     //Privacy Key Entry
-    if (choice == 13)
+    if (choice == 14)
     {
       state->payload_keyid = 0;
       state->payload_keyidR = 0;
@@ -1540,6 +1541,32 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     }
     if (choice == 12)
     {
+      //Decode YSF Fusion
+      // resetState (state); //use sparingly, may cause memory leak
+      state->samplesPerSymbol = 10;
+      state->symbolCenter = 4;
+      sprintf (opts->output_name, "YSF");
+      opts->dmr_mono = 0;
+      opts->dmr_stereo  = 0; //this value is the end user option
+      state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
+      opts->pulse_digi_rate_out = 48000;
+      opts->pulse_digi_out_channels = 1;
+      opts->frame_dstar = 0;
+      opts->frame_x2tdma = 0;
+      opts->frame_p25p1 = 0;
+      opts->frame_nxdn48 = 0;
+      opts->frame_nxdn96 = 0;
+      opts->frame_dmr = 0;
+      opts->frame_dpmr = 0;
+      opts->frame_provoice = 0;
+      opts->frame_ysf = 1;
+      opts->mod_c4fm = 1;
+      opts->mod_qpsk = 0;
+      opts->mod_gfsk = 0;
+      state->rf_mod = 0;
+    }
+    if (choice == 13)
+    {
       //Set all signal for inversion or uninversion
       if (opts->inverted_dmr == 0)
       {
@@ -1557,7 +1584,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       }
 
     }
-    if (choice == 14) //reset call history (usually if janky output when switching modes)
+    if (choice == 15) //reset call history (usually if janky output when switching modes)
     {
       for (short int k = 0; k <= 9; k++)
       {
@@ -1582,7 +1609,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->lasttgR = 0;
     }
 
-    if (choice == 15) //toggle payload printing
+    if (choice == 16) //toggle payload printing
     {
       if (opts->payload == 0)
       {
@@ -1595,7 +1622,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         fprintf(stderr, "Payload Off\n");
       }
     }
-    if (choice == 16)
+    if (choice == 17)
     {
       //hardset P2 WACN, SYSID, and NAC
       entry_win = newwin(6, WIDTH+16, starty+10, startx+10);
@@ -1648,7 +1675,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
 
     }
-    if (choice == 18)
+    if (choice == 19)
     {
       short int lrrpchoice = 0;
       entry_win = newwin(10, WIDTH+16, starty+10, startx+10);
@@ -1714,7 +1741,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         opts->lrrp_out_file[0] = 0;
       }
     }
-    if (choice == 19)
+    if (choice == 20)
     {
       ncursesClose();
       //cleanup_rtlsdr_stream();
@@ -2407,6 +2434,66 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   			state->dstarradioheader[32], state->dstarradioheader[33], state->dstarradioheader[34], state->dstarradioheader[35],
   			state->dstarradioheader[36], state->dstarradioheader[37], state->dstarradioheader[38]);
     }
+  }
+
+  //YSF
+  if (lls == 30 || lls == 31)
+  {
+    // printw ("\n");
+    printw ("| ");
+    printw ("Yaesu Fusion - ");
+    //insert data type and frame information
+    if (state->ysf_dt == 0) printw("Voice/Data T1 ");
+    if (state->ysf_dt == 1) printw("Data Full Rate");
+    if (state->ysf_dt == 2) printw("Voice/Data T2 ");
+    if (state->ysf_dt == 3) printw("V/W  Full Rate");
+    printw (" ");
+    if (state->ysf_cm == 0) printw("Group/CQ ");
+    if (state->ysf_cm == 3) printw("Private  ");
+    if (state->ysf_cm == 1) printw("Reserved ");
+    if (state->ysf_cm == 2) printw("Reserved ");
+
+    if (state->ysf_fi == 0) printw("HC ");
+    if (state->ysf_fi == 1) printw("CC ");
+    if (state->ysf_fi == 2) printw("TC ");
+    if (state->ysf_fi == 3) printw("XX ");
+
+    printw ("\n");
+    printw ("| ");
+    printw ("TGT: %s ", state->ysf_tgt);
+    printw ("SRC: %s ", state->ysf_src);
+    printw ("\n");
+    printw ("| ");
+    printw ("UPL: %s ", state->ysf_upl);
+    printw ("DNL: %s ", state->ysf_dnl);
+    printw ("\n");
+    printw ("| ");
+    printw ("RM1: %s ", state->ysf_rm1);
+    printw ("RM2: %s ", state->ysf_rm2);
+    printw ("\n");
+    printw ("| ");
+    printw ("RM3: %s ", state->ysf_rm3);
+    printw ("RM4: %s ", state->ysf_rm4);
+
+    //these texts can get pretty long and out of sorts, and lots of 0x20 spaces
+    //just going to leave these to only be in the console output
+
+    // printw ("\n");
+    // printw ("| ");
+    // printw ("TXT: ");
+    // for (i = 4; i < 8; i++)
+    // {
+    //   for (int j = 0; j < 20; j++)
+    //   {
+    //     //no spaces and no asterisks
+    //     if (state->ysf_txt[i][j] != 0x2A)
+    //       printw ("%c", state->ysf_txt[i][j]);
+    //   }
+    //   // printw (" "); //just a single space between each 'block'
+    // } 
+
+    printw ("\n");
+
   }
 
   //NXDN

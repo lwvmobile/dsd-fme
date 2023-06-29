@@ -290,13 +290,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
     //ysf
     else if ((state->synctype == 30) || (state->synctype == 31))
     {
-      //Do stuff
-      //fprintf(stderr, "YSF Sync! \n");
-      if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
-      {
-        //openMbeOutFile (opts, state);
-      }
-      //sprintf(state->fsubtype, " VOICE        ");
+      //relocate MBEout to inside frame handling -- Not Working Currently for YSF
       processYSF(opts, state);
       return;
     }

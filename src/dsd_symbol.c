@@ -277,7 +277,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
       if (opts->use_cosine_filter)
         {
-          if ( (state->lastsynctype >= 10 && state->lastsynctype <= 13) || state->lastsynctype == 32 || state->lastsynctype == 33 || state->lastsynctype == 34)
+          if ( (state->lastsynctype >= 10 && state->lastsynctype <= 13) || state->lastsynctype == 32 || state->lastsynctype == 33 
+                || state->lastsynctype == 34 || state->lastsynctype == 30 || state->lastsynctype == 31)
           {
             sample = dmr_filter(sample);
           }

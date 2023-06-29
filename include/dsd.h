@@ -706,6 +706,20 @@ typedef struct
   //Upsampled Audio Smoothing
   uint8_t audio_smoothing;
 
+  //YSF Fusion Call Strings and Info
+  uint8_t ysf_dt; //data type -- VD1, VD2, Full Rate, etc.
+  uint8_t ysf_fi; //frame information -- HC, CC, TC
+  uint8_t ysf_cm; //group or private call
+  char ysf_tgt[11];
+  char ysf_src[11];
+  char ysf_upl[11];
+  char ysf_dnl[11];
+  char ysf_rm1[6];
+  char ysf_rm2[6];
+  char ysf_rm3[6];
+  char ysf_rm4[6];
+  char ysf_txt[21][21]; //text storage blocks
+
 } dsd_state;
 
 /*

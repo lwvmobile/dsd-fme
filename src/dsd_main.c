@@ -447,6 +447,20 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   sprintf (state->dpmr_caller_id, "%s", "      ");
   sprintf (state->dpmr_target_id, "%s", "      ");
 
+  //YSF Fusion Call Strings
+  sprintf (state->ysf_tgt, "%s", "          "); //10 spaces
+  sprintf (state->ysf_src, "%s", "          "); //10 spaces
+  sprintf (state->ysf_upl, "%s", "          "); //10 spaces
+  sprintf (state->ysf_dnl, "%s", "          "); //10 spaces
+  sprintf (state->ysf_rm1, "%s", "     "); //5 spaces
+  sprintf (state->ysf_rm2, "%s", "     "); //5 spaces
+  sprintf (state->ysf_rm3, "%s", "     "); //5 spaces
+  sprintf (state->ysf_rm4, "%s", "     "); //5 spaces
+  memset (state->ysf_txt, 0, sizeof(state->ysf_txt));
+  state->ysf_dt = 9;
+  state->ysf_fi = 9;
+  state->ysf_cm = 9;
+
 } //nocarrier
 
 void
@@ -1013,6 +1027,21 @@ initState (dsd_state * state)
   sprintf (state->dpmr_caller_id, "%s", "      ");
   sprintf (state->dpmr_target_id, "%s", "      ");
 
+  //YSF Fusion Call Strings
+  sprintf (state->ysf_tgt, "%s", "          "); //10 spaces
+  sprintf (state->ysf_src, "%s", "          "); //10 spaces
+  sprintf (state->ysf_upl, "%s", "          "); //10 spaces
+  sprintf (state->ysf_dnl, "%s", "          "); //10 spaces
+  sprintf (state->ysf_rm1, "%s", "     "); //5 spaces
+  sprintf (state->ysf_rm2, "%s", "     "); //5 spaces
+  sprintf (state->ysf_rm3, "%s", "     "); //5 spaces
+  sprintf (state->ysf_rm4, "%s", "     "); //5 spaces
+  memset (state->ysf_txt, 0, sizeof(state->ysf_txt));
+  state->ysf_dt = 9;
+  state->ysf_fi = 9;
+  state->ysf_cm = 9;
+
+
 } //init_state
 
 void
@@ -1101,6 +1130,7 @@ usage ()
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
   printf ("  -fp             Decode only EDACS/ProVoice*\n");
   printf ("  -fm             Decode only dPMR*\n");
+  printf ("  -fy             Decode only YSF*\n");
   printf ("  -l            Disable DMR, dPMR, and NXDN input filtering\n");
   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
   printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
@@ -1895,8 +1925,6 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 1;
-              state.samplesPerSymbol = 20; //10
-              state.symbolCenter = 10;
               opts.mod_c4fm = 1;
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
@@ -1907,8 +1935,7 @@ main (int argc, char **argv)
               state.dmr_stereo = 0;
               opts.dmr_mono = 0;
               sprintf (opts.output_name, "YSF");
-              fprintf (stderr,"Setting symbol rate to 2400 / second\n");
-              fprintf (stderr,"Decoding only YSF frames.\nNot working yet!\n");
+              fprintf (stderr,"Decoding only YSF frames. \n");
               }
               else if (optarg[0] == '2')
                 {
