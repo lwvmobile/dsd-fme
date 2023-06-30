@@ -2,7 +2,7 @@
  * ysf.c
  * Yaesu Fusion Decoder (WIP)
  *
- * Bits of code and ideas from DSDcc, Osmocom OP25, and gr-ysf sprinkled in
+ * Bits of code and ideas from DSDcc, Osmocom OP25, gr-ysf, Munaut sprinkled in
  *
  * LWVMOBILE
  * 2023-07 DSD-FME Florida Man Edition
@@ -132,7 +132,7 @@ const int vd2Interleave[104] = {
 25,  51,  77, 103
 };
 
-void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, int err, uint8_t input[])
+void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, int cm, uint8_t input[])
 {
   //TODO: Per Call WAV files using these strings
   int i, j, k;
@@ -141,6 +141,10 @@ void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt,
   char string1[11];
   char string2[11];
   char string3[21];
+  char rem1[6];
+  char rem2[6];
+  long long int tgt, src;
+  tgt = src = 0;
   char C;
 
   for (i = 0; i < 20; i++)
@@ -150,10 +154,25 @@ void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt,
     case 0: //CSD1
 
       //Destination / Target
-      memcpy (string1, dch_bytes, 10);
-      string1[10] = '\0';
-      fprintf (stderr, "TGT: ");
-      fprintf (stderr, "%s ", string1);
+      if (cm != 1)
+      {
+        memcpy (string1, dch_bytes, 10);
+        string1[10] = '\0';
+        fprintf (stderr, "DST: ");
+        fprintf (stderr, "%s ", string1);
+      }
+      else //Radio ID Mode -- updated in the 1V02 spec manual
+      {
+        memcpy (rem1, dch_bytes, 5);
+        rem1[5] = '\0';
+        fprintf (stderr, "DST RID: ");
+        fprintf (stderr, "%s ", rem1);
+
+        memcpy (rem2, dch_bytes+5, 5);
+        rem2[5] = '\0';
+        fprintf (stderr, "SRC RID: ");
+        fprintf (stderr, "%s ", rem2);
+      }
 
       //Source
       memcpy (string2, dch_bytes+10, 10);
@@ -192,13 +211,16 @@ void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt,
 
       break;
     case 2:
-      // fprintf (stderr, "TXT: ");
-      memcpy (string3, dch_bytes, 20);
-      string3[20] = '\0';
-      fprintf (stderr, "%s ", string3);
+      for (i = 0; i < 20; i++)
+      {
+        if (dch_bytes[i] > 0x19 && dch_bytes[i] < 0x7F)
+          fprintf (stderr, "%c", dch_bytes[i]);
+        else fprintf (stderr, ".");
+      }
+      fprintf (stderr, " ");
 
       // if (fn == 0) memset (state->ysf_txt, 0, sizeof(state->ysf_txt));
-      //copy text to txt storage -- works now (had to expand storage space), but is cumbersome in ncurses, especially when garbage strings show up
+      //copy text to txt storage -- works now (had to expand storage space), but is cumbersome in ncurses (too long)
       // if (fn < 20)
       // {
       //   //switch to checking each byte for a 'nice' ASCII character and 
@@ -220,7 +242,7 @@ void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt,
 
 }
 
-void ysf_dch_decode2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, int err, uint8_t input[])
+void ysf_dch_decode2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, int cm, uint8_t input[])
 {
   //TODO: Per Call WAV files using these strings
   int i, j, k;
@@ -236,13 +258,29 @@ void ysf_dch_decode2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt
   switch(fn){
     case 0:
       //Destination / Target
-      fprintf (stderr, "TGT: ");
-      memcpy (string, dch_bytes, 10);
-      string[10] = '\0';
-      fprintf (stderr, "%s", string);
+      if (cm != 1)
+      {
+        memcpy (string, dch_bytes, 10);
+        string[10] = '\0';
+        fprintf (stderr, "DST: ");
+        fprintf (stderr, "%s ", string);
+      }
+      else //Radio ID Mode -- updated in the 1V02 spec manual
+      {
+        memcpy (rem1, dch_bytes, 5);
+        rem1[5] = '\0';
+        fprintf (stderr, "DST RID: ");
+        fprintf (stderr, "%s ", rem1);
+
+        memcpy (rem2, dch_bytes+5, 5);
+        rem2[5] = '\0';
+        fprintf (stderr, "SRC RID: ");
+        fprintf (stderr, "%s ", rem2);
+      }
 
       memcpy (state->ysf_tgt, dch_bytes, 10);
       state->ysf_tgt[10] = '\0';
+      
 
       break;
     case 1:
@@ -337,7 +375,7 @@ static inline uint16_t crc16ysf(const uint8_t buf[], int len)
 }
 
 //modified version of nxdn_deperm_facch1 -- this one for V/D Type 2 CC DCH (100 dibit version)
-int ysf_conv_dch2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t input[])
+int ysf_conv_dch2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t cm, uint8_t input[])
 {
 
   int i, j, k, err;
@@ -410,30 +448,28 @@ int ysf_conv_dch2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, u
 
   //decode the callsign, etc, found in the DCH when no errors
   if (err == 0)
-    ysf_dch_decode2 (opts, state, bn, bt, fn, ft, err, trellis_buf);
+    ysf_dch_decode2 (opts, state, bn, bt, fn, ft, cm, trellis_buf);
+  else
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, "DCH (CRC ERR) ");
+    fprintf (stderr, "%s", KNRM);
+  }
 
   if (opts->payload == 1)
   {
     fprintf (stderr, "\n ");
     fprintf (stderr, "DCH2: ");
     for (i = 0; i < 12; i++)
-    {
       fprintf (stderr, "[%02X]", m_data[i]); 
-    }
-    if (crc != 0)
-    {
-      fprintf (stderr, "%s", KRED);
-      fprintf (stderr, " (CRC ERR)");
-      fprintf (stderr, "%s", KNRM);
-    }
-    fprintf (stderr, " ");
+
   }
 
 	return err;
 }
 
 //modified version of nxdn_deperm_facch1 -- this one for Full Rate, Type 1 CC, Headers and Terminators DCH (180 dibit version)
-int ysf_conv_dch (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t input[])
+int ysf_conv_dch (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t cm, uint8_t input[])
 {
   int i, j, k, err;
   uint8_t s0, s1;
@@ -505,23 +541,21 @@ int ysf_conv_dch (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, ui
 
   //decode the callsign, etc, found in the DCH when no errors
   if (err == 0)
-    ysf_dch_decode (opts, state, bn, bt, fn, ft, err, trellis_buf);
+    ysf_dch_decode (opts, state, bn, bt, fn, ft, cm, trellis_buf);
+  else
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, "DCH (CRC ERR) ");
+    fprintf (stderr, "%s", KNRM);
+  }
 
   if (opts->payload == 1)
   {
     fprintf (stderr, "\n ");
     fprintf (stderr, "DCH1: ");
     for (i = 0; i < 22; i++)
-    {
       fprintf (stderr, "[%02X]", m_data[i]); 
-    }
-    if (crc != 0)
-    {
-      fprintf (stderr, "%s", KRED);
-      fprintf (stderr, " (CRC ERR)");
-      fprintf (stderr, "%s", KNRM);
-    }
-    fprintf (stderr, " ");
+
   }
 
 	return err;
@@ -622,23 +656,6 @@ int ysf_conv_fich (uint8_t input[], uint8_t dest[32])
   memset (m_data, 0, sizeof (m_data));
   for (i = 0; i < 12; i++)
     m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
-
-  //debug output
-  // if (1 == 1)
-  // {
-  //   fprintf (stderr, "FICH: ");
-  //   for (i = 0; i < 12; i++)
-  //   {
-  //     fprintf (stderr, "[%02X]", m_data[i]); 
-  //   }
-  //   if (crc != 0)
-  //   {
-  //     fprintf (stderr, "%s", KRED);
-  //     fprintf (stderr, " (CRC ERR)");
-  //     fprintf (stderr, "%s", KNRM);
-  //   }
-  //   fprintf (stderr, " ");
-  // }
 
 	memcpy(dest, fich_bits, 32); //copy minus the crc16
 	return err;
@@ -804,55 +821,58 @@ void processYSF(dsd_opts * opts, dsd_state * state)
   }
 
   //print some useful decoded stuff
-  if (fi == 0) fprintf (stderr, "HC "); //Header
-  if (fi == 1) fprintf (stderr, "CC "); //Communication
-  if (fi == 2) fprintf (stderr, "TC "); //Terminator
-  if (fi == 3) fprintf (stderr, "XX "); //Test
-
-  if (dt == 0) fprintf (stderr, "V/D1 ");
-  if (dt == 1) fprintf (stderr, "DATA ");
-  if (dt == 2) fprintf (stderr, "V/D2 ");
-  if (dt == 3) fprintf (stderr, "VCHF ");
+  if (dt == 0 && err == 0) fprintf (stderr, "V/D1 "); //Voice/Data Type 1
+  if (dt == 1 && err == 0) fprintf (stderr, "DATA "); //Full Rate Voice
+  if (dt == 2 && err == 0) fprintf (stderr, "V/D2 "); //Voice/Data Type 2
+  if (dt == 3 && err == 0) fprintf (stderr, "VWFR "); //Full Rate Voice
 
   if (cm == 0) fprintf (stderr, "Group/CQ ");
   if (cm == 3) fprintf (stderr, "Private  ");
-  if (cm == 1) fprintf (stderr, "Res: 1   ");
+  if (cm == 1) fprintf (stderr, "RID Mode "); //Radio ID Mode -- updated in the 1V02 spec manual
   if (cm == 2) fprintf (stderr, "Res: 2   ");
 
-  if (vp == 0) fprintf (stderr, "Local (Simplex) ");
-  if (vp == 1) fprintf (stderr, "Internet (Rep)  ");
+  // if (vp == 0) fprintf (stderr, "Local (Simplex) ");
+  // if (vp == 1) fprintf (stderr, "Internet (Rep)  ");
 
-  if (mr == 0) fprintf (stderr, "(Direct Wave) ");
-  if (mr == 1) fprintf (stderr, "(Uplink Free) ");
-  if (mr == 2) fprintf (stderr, "(Uplink Busy) ");
+  if (vp == 0) fprintf (stderr, "-Simplex ");
+  if (vp == 1) fprintf (stderr, "Repeater ");
+
+  //disabling below lines, seems mostly redundant, 
+  //any Simplex is Direct Wave, and if its VoIP, then the Uplink is always busy (I think)
+
+  // if (mr == 0) fprintf (stderr, "(Direct Wave) ");
+  // if (mr == 1) fprintf (stderr, "(Uplink Free) ");
+  // if (mr == 2) fprintf (stderr, "(Uplink Busy) ");
   if (mr > 2 && mr < 7) fprintf (stderr, "Res: %03d ", mr);
+
+  if (fi == 0 && err == 0) fprintf (stderr, "HC \n "); //Header
+  if (fi == 1 && err == 0) fprintf (stderr, "CC ");    //Communication
+  if (fi == 2 && err == 0) fprintf (stderr, "TC \n "); //Terminator
+  if (fi == 3 && err == 0) fprintf (stderr, "XX ");    //Test
 
   if (st && sc != 69) fprintf (stderr, "SQL ");
   if (st && sc != 69) fprintf (stderr, "CODE: %03d ", sc);
 
-  //print out current block numbering and frame numbering
-  // fprintf (stderr, "BN: %d BT: %d FN: %d FT: %d ", bn, bt, fn, ft);
-
   //simplified version
-  if (ft != 0 && err == 0) //if frame total is greater than 0
+  if (err == 0 && opts->payload == 1)
     fprintf (stderr, "FN:%d-%d ", fn, ft);
-
-  if (opts->payload == 1)
-  {
-    fprintf (stderr, "\n FICH: ");
-    for (int i = 0; i < 4; i++)
-      fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&fich_decode[i*8], 8)); 
-  }
 
   if (err != 0)
   {
     fprintf (stderr, "%s", KRED);
     fprintf (stderr, "FICH ");
     if (err == -1)
-      fprintf (stderr, "(FEC ERR)");
+      fprintf (stderr, "(FEC ERR) ");
     if (err == -2)
-      fprintf (stderr, "(CRC ERR)");
+      fprintf (stderr, "(CRC ERR) ");
     fprintf (stderr, "%s", KNRM);
+  }
+
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, "\n FICH: ");
+    for (int i = 0; i < 4; i++)
+      fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&fich_decode[i*8], 8)); 
   }
 
   // if (fi == 0) fprintf (stderr, "%s", KGRN); //HC Channel
@@ -906,7 +926,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
     ysf_ehr (opts, state, vbuf, 0, 4);
 
     //send DCH to decoder
-    ysf_conv_dch (opts, state, bn, bt, fn, ft, dbuf);
+    ysf_conv_dch (opts, state, bn, bt, fn, ft, cm, dbuf);
 
   }
   
@@ -985,7 +1005,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
     }
 
     //process completed DCH
-    ysf_conv_dch2 (opts, state, bn, bt, fn, ft, dbuf);
+    ysf_conv_dch2 (opts, state, bn, bt, fn, ft, cm, dbuf);
 
   }
   
@@ -1082,7 +1102,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
     if (ft == 1 && fn == 0)
     {
       //process completed DCH -- use 2 for bn to switch CSD 3 info
-      ysf_conv_dch (opts, state, 2, bt, fn, ft, dbuf);
+      ysf_conv_dch (opts, state, 2, bt, fn, ft, cm, dbuf);
     }
   }
 
@@ -1104,9 +1124,9 @@ void processYSF(dsd_opts * opts, dsd_state * state)
     {
       //process completed DCH -- use i to for bn to switch CSD1 and CSD2 on HC and TC
       if (fi == 0 || fi == 2)
-        ysf_conv_dch (opts, state, i, bt, fn, ft, dbufFR[i]);
+        ysf_conv_dch (opts, state, i, bt, fn, ft, cm, dbufFR[i]);
       //using bn == 2 for full rate data and fn*2+1 for easier frame storage
-      else ysf_conv_dch (opts, state, 2, bt, fn*2+i, ft, dbufFR[i]);
+      else ysf_conv_dch (opts, state, 2, bt, fn*2+i, ft, cm, dbufFR[i]);
 
     }
     
