@@ -132,7 +132,7 @@ const int vd2Interleave[104] = {
 25,  51,  77, 103
 };
 
-void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, int cm, uint8_t input[])
+void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t cm, uint8_t input[])
 {
   //TODO: Per Call WAV files using these strings
   int i, j, k;
@@ -242,7 +242,7 @@ void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt,
 
 }
 
-void ysf_dch_decode2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, int cm, uint8_t input[])
+void ysf_dch_decode2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t cm, uint8_t input[])
 {
   //TODO: Per Call WAV files using these strings
   int i, j, k;
@@ -845,10 +845,10 @@ void processYSF(dsd_opts * opts, dsd_state * state)
   // if (mr == 2) fprintf (stderr, "(Uplink Busy) ");
   if (mr > 2 && mr < 7) fprintf (stderr, "Res: %03d ", mr);
 
-  if (fi == 0 && err == 0) fprintf (stderr, "HC \n "); //Header
-  if (fi == 1 && err == 0) fprintf (stderr, "CC ");    //Communication
-  if (fi == 2 && err == 0) fprintf (stderr, "TC \n "); //Terminator
-  if (fi == 3 && err == 0) fprintf (stderr, "XX ");    //Test
+  if (fi == 0 && err == 0) fprintf (stderr, "HC "); //Header
+  if (fi == 1 && err == 0) fprintf (stderr, "CC "); //Communication
+  if (fi == 2 && err == 0) fprintf (stderr, "TC "); //Terminator
+  if (fi == 3 && err == 0) fprintf (stderr, "XX "); //Test
 
   if (st && sc != 69) fprintf (stderr, "SQL ");
   if (st && sc != 69) fprintf (stderr, "CODE: %03d ", sc);
@@ -870,7 +870,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
 
   if (opts->payload == 1)
   {
-    fprintf (stderr, "\n FICH: ");
+    fprintf (stderr, " FICH: ");
     for (int i = 0; i < 4; i++)
       fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&fich_decode[i*8], 8)); 
   }
@@ -1119,7 +1119,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
 
     //clear old txt data
     // if (fi == 0) memset (state->ysf_txt, 0, sizeof(state->ysf_txt));
-
+    fprintf (stderr, "\n ");
     for (i = 0; i < 2; i++)
     {
       //process completed DCH -- use i to for bn to switch CSD1 and CSD2 on HC and TC
