@@ -2,8 +2,7 @@
  * ysf.c
  * Yaesu Fusion Decoder (WIP)
  *
- * Bits of code from DSDcc, Osmocom OP25, and gr-ysf sprinkled in
- *
+ * Bits of code and ideas from DSDcc, Osmocom OP25, and gr-ysf sprinkled in
  *
  * LWVMOBILE
  * 2023-07 DSD-FME Florida Man Edition
@@ -13,21 +12,21 @@
 /* thx gr-ysf fr_vch_decoder_bb_impl.cc * Copyright 2015 Mathias Weyland */
 // I hold Sylvain Munaut in high esteem for figuring this out.
 uint8_t fr_interleave[144] = {
-0,   7,  12,  19,  24,  31,  36,  43,  48,  55,  60,  67,     // [  0 -  11] yellow message
-72,  79,  84,  91,  96, 103, 108, 115, 120, 127, 132,         // [ 12 -  22] yellow FEC
-139,   1,   6,  13,  18,  25,  30,  37,  42,  49,  54,  61,   // [ 23 -  34] orange message
-66,  73,  78,  85,  90,  97, 102, 109, 114, 121, 126,         // [ 35 -  45] orange FEC
-133, 138,   2,   9,  14,  21,  26,  33,  38,  45,  50,  57,   // [ 46 -  57] red message
-62,  69,  74,  81,  86,  93,  98, 105, 110, 117, 122,         // [ 58 -  68] red FEC
-129, 134, 141,   3,   8,  15,  20,  27,  32,  39,  44,  51,   // [ 69 -  80] pink message
-56,  63,  68,  75,  80,  87,  92,  99, 104, 111, 116,         // [ 81 -  91] pink FEC
-123, 128, 135, 140,   4,  11,  16,  23,  28,  35,  40,        // [ 92 - 102] dark blue message
-47,  52,  59,  64,                                            // [103 - 106] dark blue FEC
-71,  76,  83,  88,  95, 100, 107, 112, 119, 124, 131,         // [107 - 117] light blue message
-136, 143,   5,  10,                                           // [118 - 121] light blue FEC
-17,  22,  29,  34,  41,  46,  53,  58,  65,  70,  77,         // [122 - 132] green message
-82,  89,  94, 101,                                            // [133 - 136] green FEC
-106, 113, 118, 125, 130, 137, 142,                            // [137 - 143] unprotected
+  0,   7,  12,  19,  24,  31,  36,  43,  48,  55,  60,  67,     // [  0 -  11] yellow message
+ 72,  79,  84,  91,  96, 103, 108, 115, 120, 127, 132,          // [ 12 -  22] yellow FEC
+139,   1,   6,  13,  18,  25,  30,  37,  42,  49,  54,  61,     // [ 23 -  34] orange message
+ 66,  73,  78,  85,  90,  97, 102, 109, 114, 121, 126,          // [ 35 -  45] orange FEC
+133, 138,   2,   9,  14,  21,  26,  33,  38,  45,  50,  57,     // [ 46 -  57] red message
+ 62,  69,  74,  81,  86,  93,  98, 105, 110, 117, 122,          // [ 58 -  68] red FEC
+129, 134, 141,   3,   8,  15,  20,  27,  32,  39,  44,  51,     // [ 69 -  80] pink message
+ 56,  63,  68,  75,  80,  87,  92,  99, 104, 111, 116,          // [ 81 -  91] pink FEC
+123, 128, 135, 140,   4,  11,  16,  23,  28,  35,  40,          // [ 92 - 102] dark blue message
+ 47,  52,  59,  64,                                             // [103 - 106] dark blue FEC
+ 71,  76,  83,  88,  95, 100, 107, 112, 119, 124, 131,          // [107 - 117] light blue message
+136, 143,   5,  10,                                             // [118 - 121] light blue FEC
+ 17,  22,  29,  34,  41,  46,  53,  58,  65,  70,  77,          // [122 - 132] green message
+ 82,  89,  94, 101,                                             // [133 - 136] green FEC
+106, 113, 118, 125, 130, 137, 142,                              // [137 - 143] unprotected
 };
 
 uint8_t pn95[512] =
@@ -103,7 +102,7 @@ const int YnZ[36] =
   13, 2, 12, 1, 11, 0
 };
 
-//M = 26, depth of 4; -- work on replacing this with a simple deinterleave function like FICH and DCH use
+//M = 26, depth of 4; -- from DSDcc
 const int vd2Interleave[104] = {
 0,  26,  52,  78,
 1,  27,  53,  79,
@@ -668,17 +667,6 @@ void pn95_lfsr() //test to see if this generates the correct bits now
 
 }
 
-void fr_demodulation(uint8_t out[], uint8_t in[], uint16_t n, uint32_t seed, uint8_t shift)
-{
-  uint32_t v = seed << shift;
-  // fprintf (stderr, "SEED = %X", seed);
-  for (uint16_t i=0; i<n; i++)
-  {
-    v = ((v * 173) + 13849) & 0xffff; //is this the same as below?
-    // v = (173 * v) + 13849 - (65536 * (((173 * v) + 13849) / 65536)); //from mbe_demodulateImbe7200x4400Data
-    out[i] = in[i] ^ (v >> 15);
-  }
-}
 
 void ysf_ehr (dsd_opts * opts, dsd_state * state, uint8_t dbuf[180], int start, int stop )
 {
@@ -741,6 +729,7 @@ void ysf_ehr (dsd_opts * opts, dsd_state * state, uint8_t dbuf[180], int start, 
 
 void processYSF(dsd_opts * opts, dsd_state * state)
 {
+  //TODO: Reorganize and remove unused variables and arrays, etc
   static uint8_t last_dt, last_fi; //if we can't get a good dt and fi, then just use the last one instead
   int i, j, k, l, err, vstart, vstop, dstart, dstop; //start stops are for Full Rate when we might have some portions of Data present in the Comm Channel
   int dibit;
@@ -785,7 +774,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
   //from nxdn_deperm_facch1 w/ nxdn convolutional decoder
   err = ysf_conv_fich (fichrawdibits, fich_decode);
 
-  //seems to still work better by just allowing all decoding, even with errs present
+  //if errors decoding fich, then just treat it like the last frame that came in
   if (err == 0)
   {
     fi = (uint8_t)ConvertBitIntoBytes(&fich_decode[0], 2);
@@ -808,17 +797,16 @@ void processYSF(dsd_opts * opts, dsd_state * state)
     last_dt = dt;
     last_fi = fi;
   }
-  // else goto END;
   else
   {
     dt = last_dt;
     fi = last_fi;
   }
 
-  //print some useful decoded shit
-  if (fi == 0) fprintf (stderr, "HC ");
-  if (fi == 1) fprintf (stderr, "CC ");
-  if (fi == 2) fprintf (stderr, "TC ");
+  //print some useful decoded stuff
+  if (fi == 0) fprintf (stderr, "HC "); //Header
+  if (fi == 1) fprintf (stderr, "CC "); //Communication
+  if (fi == 2) fprintf (stderr, "TC "); //Terminator
   if (fi == 3) fprintf (stderr, "XX "); //Test
 
   if (dt == 0) fprintf (stderr, "V/D1 ");
@@ -832,14 +820,14 @@ void processYSF(dsd_opts * opts, dsd_state * state)
   if (cm == 2) fprintf (stderr, "Reserved ");
 
   if (mr == 0) fprintf (stderr, "Direct Wave ");
-  if (mr == 1) fprintf (stderr, "Downlink (BUSY) ");
-  if (mr == 2) fprintf (stderr, "Downlink (FREE) ");
+  if (mr == 1) fprintf (stderr, "Downlink (Busy) ");
+  if (mr == 2) fprintf (stderr, "Downlink (Free) ");
 
   if (vp == 1) fprintf (stderr, "Local (Simplex) ");
   if (vp == 0) fprintf (stderr, "Internet (Rep) ");
 
-  // if (st && sc != 69) fprintf (stderr, "SQL ");
-  // if (st && sc != 69) fprintf (stderr, "CODE: %X ", sc);
+  if (st && sc != 69) fprintf (stderr, "SQL ");
+  if (st && sc != 69) fprintf (stderr, "CODE: %X ", sc);
 
   //print out current block numbering and frame numbering
   // fprintf (stderr, "BN: %d BT: %d FN: %d FT: %d ", bn, bt, fn, ft);
@@ -850,7 +838,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
 
   if (opts->payload == 1)
   {
-    fprintf (stderr, " FICH: ");
+    fprintf (stderr, "\n FICH: ");
     for (int i = 0; i < 4; i++)
       fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&fich_decode[i*8], 8)); 
   }
@@ -924,7 +912,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
     encoder).
   */
 
-  // V/D Mode Type 2 (w/ VeCH and bullshit ECC)
+  // V/D Mode Type 2 (w/ VeCH and bs ECC)
   if (fi == 1 && dt == 2)
   {
     int d = 0;
@@ -996,21 +984,11 @@ void processYSF(dsd_opts * opts, dsd_state * state)
 
   }
   
-  //Full-Rate AMBE+2 EFR (Supposed to work with IMBE?)
+  //Full-Rate AMBE+2 EFR (Works with IMBE decoder)
   uint8_t imbe_vch[144];
   memset (imbe_vch, 0, sizeof(imbe_vch));
-  uint8_t pNfr[144]; //144
-  uint32_t seed; //for fr_scramble from gr-ysf
-
   uint8_t imbe_raw[144];
-  char imbe_d[88];
 
-  //this is to setup and use the mbe_golay2312 (in, out); function
-  char in[23];
-  char out[23];
-  //hamming on u4-7
-  char hin[15];
-  char hout[15];
 
   //Voice FR Mode (Type 3 AMBE+2 Full Rate)
   if (fi == 1 && dt == 3)
@@ -1040,15 +1018,13 @@ void processYSF(dsd_opts * opts, dsd_state * state)
 
     for (dstart; dstart < dstop; dstart++)
     {
-      //get dibits for CSD3 Sub Header DCH -- double check this
+      //get dibits for CSD3 Sub Header DCH -- still need samples to test this with
       for (j = 0; j < 36; j++) //dbufFR[2][190]
       {
         if (dstart != 5) //only want the first 5
           dbuf[(dstart*36)+j] = getDibit(opts, state);
         else skipDibit(opts, state, 1); //skip the reserved bank
       } 
-        
-
     }
 
     for (vstart; vstart < vstop; vstart++)
@@ -1056,14 +1032,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
       
       //init a bunch of stuff
       memset (imbe_raw, 0, sizeof(imbe_raw));
-      memset (imbe_d, 0, sizeof(imbe_d));
       memset (imbe_fr, 0, sizeof(imbe_fr));
-      memset (pNfr, 0, sizeof(pNfr));
-
-      memset (in, 0, sizeof(in));
-      memset (out, 0, sizeof(out));
-      memset (hin, 0, sizeof(hin));
-      memset (hout, 0, sizeof(hout));
 
       for (j = 0; j < 72; j++)
       {
@@ -1081,75 +1050,27 @@ void processYSF(dsd_opts * opts, dsd_state * state)
       for (j = 0; j < 144; j++)
         imbe_vch[j] = imbe_raw[fr_interleave[j]];
 
-      //load the first 23 bits (u0) into a temp buffer for ecc
-      for (j = 0; j < 23; j++)
-        in[j] = imbe_vch[j];
-
-      //Run Golay 23,12 on u0 so we get a good demodulation pn sequence
-      state->errs = mbe_golay2312 (in, out);
-
-      //reload u0 back into imbe_vch buffer
-      for (j = 0; j < 23; j++)
-        imbe_vch[j] = out[j];
-
-      //obtain a seed value to feed the lfsr to demodulate the rest of this frame
-      seed = 45;
-      for (j = 0; j < 12; j++)
-      {
-        seed = seed << 1;
-        seed = seed | imbe_vch[j];
-      }
-
-      //NOTE: Perhaps AMBE+2 FR and IMBE just use a different demod PN sequence?
-
-      //demod/descramble with pn sequence
-      fr_demodulation  (imbe_vch+23, imbe_vch+23, 144-23-7, seed, 4);
-
-      //do manual error correction here on the rest
-      state->errs2 = 0;
-      for (k = 1; k < 4; k++)
-      {
-        memset (in, 0, sizeof(in));
-        memset (out, 0, sizeof(out));
-
-        //load the next 23 bits (u1, u2, u3) into a temp buffer for ecc
-        for (j = 0; j < 23; j++)
-          in[j] = imbe_vch[(k*23)+j]; //I think the FEC on u0 is incorrect in the interleave
-
-        //Run Golay 23,12 on u(k)
-        state->errs2 += mbe_golay2312 (in, out);
-
-        //reload u(k) back into imbe_vch buffer
-        for (j = 0; j < 23; j++)
-          imbe_vch[(k*23)+j] = out[j];
-      }
-
-      // for (k = 4; k < 7; k++)
-      // {
-      //   //TODO: hamming
-      // }
-
-      memset (imbe_raw, 0, sizeof(imbe_raw));
-
-      // FIXME: We should apply FEC here -- already working on it, chief
       k = 0;
-      for(j =  0; j <  12; j++) imbe_raw[k++] = imbe_vch[j]; // u0
-      for(j = 23; j <  35; j++) imbe_raw[k++] = imbe_vch[j]; // u1
-      for(j = 46; j <  58; j++) imbe_raw[k++] = imbe_vch[j]; // u2
-      for(j = 69; j <  81; j++) imbe_raw[k++] = imbe_vch[j]; // u3
-      for(j = 92; j < 103; j++) imbe_raw[k++] = imbe_vch[j]; // u4
-      for(j =107; j < 118; j++) imbe_raw[k++] = imbe_vch[j]; // u5
-      for(j =122; j < 133; j++) imbe_raw[k++] = imbe_vch[j]; // u6
-      for(j =137; j < 144; j++) imbe_raw[k++] = imbe_vch[j]; // u7
+      int n, m;
+      //load the bits into an imbe_fr backwards
+      for (n = 0; n < 4; n++)
+      {
+        for (m = 22; m >= 0; m--)
+          imbe_fr[n][m] = imbe_vch[k++];
+      }
+      for (n = 4; n < 7; n++)
+      {
+        for (m = 14; m >= 0; m--)
+          imbe_fr[n][m] = imbe_vch[k++];
+      }
+      for (m = 7; m >= 0; m--)
+        imbe_fr[7][m] = imbe_vch[k++];
 
-      mbe_processImbe4400Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
-        imbe_raw, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-
-      if (opts->payload == 1)
-        PrintIMBEData (opts, state, imbe_raw);
-
-      processAudio(opts, state);
-      playSynthesizedVoice (opts, state);
+      //fake it as P25p1 and sent to processMBEFrame
+      st = state->synctype;
+      state->synctype = 0; //P25p1
+      processMbeFrame(opts, state, imbe_fr, NULL, NULL);
+      state->synctype = st;
 
     }
 
@@ -1185,9 +1106,6 @@ void processYSF(dsd_opts * opts, dsd_state * state)
     }
     
   }
-
-  END:
-  // if (err != 0) skipDibit(opts, state, 360);
 
   //ending line break
   fprintf (stderr, "%s", KNRM);
