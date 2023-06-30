@@ -816,24 +816,25 @@ void processYSF(dsd_opts * opts, dsd_state * state)
 
   if (cm == 0) fprintf (stderr, "Group/CQ ");
   if (cm == 3) fprintf (stderr, "Private  ");
-  if (cm == 1) fprintf (stderr, "Reserved ");
-  if (cm == 2) fprintf (stderr, "Reserved ");
+  if (cm == 1) fprintf (stderr, "Res: 1   ");
+  if (cm == 2) fprintf (stderr, "Res: 2   ");
 
-  if (mr == 0) fprintf (stderr, "Direct Wave ");
-  if (mr == 1) fprintf (stderr, "Downlink (Busy) ");
-  if (mr == 2) fprintf (stderr, "Downlink (Free) ");
+  if (vp == 0) fprintf (stderr, "Local (Simplex) ");
+  if (vp == 1) fprintf (stderr, "Internet (Rep)  ");
 
-  if (vp == 1) fprintf (stderr, "Local (Simplex) ");
-  if (vp == 0) fprintf (stderr, "Internet (Rep) ");
+  if (mr == 0) fprintf (stderr, "(Direct Wave) ");
+  if (mr == 1) fprintf (stderr, "(Uplink Free) ");
+  if (mr == 2) fprintf (stderr, "(Uplink Busy) ");
+  if (mr > 2 && mr < 7) fprintf (stderr, "Res: %03d ", mr);
 
   if (st && sc != 69) fprintf (stderr, "SQL ");
-  if (st && sc != 69) fprintf (stderr, "CODE: %X ", sc);
+  if (st && sc != 69) fprintf (stderr, "CODE: %03d ", sc);
 
   //print out current block numbering and frame numbering
   // fprintf (stderr, "BN: %d BT: %d FN: %d FT: %d ", bn, bt, fn, ft);
 
   //simplified version
-  if (ft != 0) //if frame total is greater than 0
+  if (ft != 0 && err == 0) //if frame total is greater than 0
     fprintf (stderr, "FN:%d-%d ", fn, ft);
 
   if (opts->payload == 1)
@@ -846,6 +847,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
   if (err != 0)
   {
     fprintf (stderr, "%s", KRED);
+    fprintf (stderr, "FICH ");
     if (err == -1)
       fprintf (stderr, "(FEC ERR)");
     if (err == -2)
@@ -900,8 +902,11 @@ void processYSF(dsd_opts * opts, dsd_state * state)
 
     }
 
-    // send VCH to ehr voice handler -- buffer run
+    // send VCH to ehr voice handler
     ysf_ehr (opts, state, vbuf, 0, 4);
+
+    //send DCH to decoder
+    ysf_conv_dch (opts, state, bn, bt, fn, ft, dbuf);
 
   }
   
