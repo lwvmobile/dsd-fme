@@ -1732,8 +1732,6 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     }
     if (choice == 20)
     {
-      ncursesClose();
-      //cleanup_rtlsdr_stream();
       cleanupAndExit (opts, state);
     }
 
@@ -3414,7 +3412,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (c == 113) //'q' key, quit
   {
-    ncursesClose();
     cleanupAndExit (opts, state);
   }
 

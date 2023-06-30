@@ -26,7 +26,14 @@
 #include "provoice_const.h"
 #include "git_ver.h"
 
+#include <signal.h>
+
 volatile uint8_t exitflag; //fix for issue #136
+
+void handler(int)
+{
+  exitflag = 1;
+}
 
 int pretty_colors()
 {
@@ -1279,7 +1286,7 @@ if (opts->audio_out_type == 0)
   openPulseOutput(opts);
 }
 
-	while (1)
+    while (!exitflag)
     {
 
       noCarrier (opts, state);
@@ -1342,6 +1349,14 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
     closeWavOutFileR (opts, state);
   }
   closeSymbolOutFile (opts, state);
+  if (opts->rtl_started == 1)
+  {
+    cleanup_rtlsdr_stream();
+  }
+  if (opts->use_ncurses_terminal == 1)
+  {
+    ncursesClose(opts);
+  }
 
   //close MBE out files
   if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
@@ -2569,6 +2584,9 @@ main (int argc, char **argv)
       openAudioInDevice (&opts);
       // opts.audio_out_fd = opts.audio_in_fd; //not sure that this really does much anymore, other than cause problems
     }
+
+    signal(SIGINT, handler);
+    signal(SIGTERM, handler);
 
     if (opts.playfiles == 1)
     {

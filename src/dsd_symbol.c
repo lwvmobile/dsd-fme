@@ -121,7 +121,6 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           //else cleanup and exit
           else
           {
-            if (opts->use_ncurses_terminal == 1) ncursesClose(opts);
             cleanupAndExit(opts, state);     
           }        
         }
@@ -131,7 +130,10 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 #ifdef USE_RTLSDR
         // TODO: need to read demodulated stream here
         // get_rtlsdr_sample(&sample);
-        get_rtlsdr_sample(&sample, opts, state);
+        if (get_rtlsdr_sample(&sample, opts, state) < 0)
+        {
+          cleanupAndExit(opts, state);
+        }
         if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample < 32767 && sample > -32767)
         {
           state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
@@ -195,7 +197,6 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             {
               fprintf (stderr, "Connection to TCP Server Disconnected.\n");
               fprintf (stderr, "Closing DSD-FME.\n");
-              if (opts->use_ncurses_terminal == 1) ncursesClose(opts);
               cleanupAndExit(opts, state);
             }
             
@@ -533,7 +534,6 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       //else cleanup and exit
       else
       {
-        if (opts->use_ncurses_terminal == 1) ncursesClose(opts);
         cleanupAndExit(opts, state);
       }
     }
