@@ -1075,16 +1075,28 @@ void cleanup_rtlsdr_stream()
 // }
 
 //find way to modify this function to allow hopping (tuning) while squelched and send 0 sample?
-void get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
+int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 {
-	if (output.queue.empty())
+	while (output.queue.empty())
 	{
-		safe_cond_wait(&output.ready, &output.ready_m);
+		struct timespec ts;
+		clock_gettime(CLOCK_REALTIME, &ts);
+		ts.tv_nsec += 10e6;
+
+		pthread_mutex_lock(&output.ready_m);
+		pthread_cond_timedwait(&output.ready, &output.ready_m, &ts);
+		pthread_mutex_unlock(&output.ready_m);
+
+		if (exitflag)
+		{
+			return -1;
+		}
 	}
 	pthread_rwlock_wrlock(&output.rw);
 	*sample = output.queue.front() * volume_multiplier;
 	output.queue.pop();
 	pthread_rwlock_unlock(&output.rw);
+	return 0;
 }
 
 //function may lag since it isn't running as its own thread
