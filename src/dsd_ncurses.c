@@ -2428,16 +2428,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     // printw ("\n");
     printw ("| ");
-    printw ("Yaesu Fusion - ");
+    printw ("Fusion - ");
     //insert data type and frame information
-    if (state->ysf_dt == 0) printw("Voice/Data T1 ");
-    if (state->ysf_dt == 1) printw("Data Full Rate");
-    if (state->ysf_dt == 2) printw("Voice/Data T2 ");
-    if (state->ysf_dt == 3) printw("V/W  Full Rate");
+    if (state->ysf_dt == 0) printw("V/D1 ");
+    if (state->ysf_dt == 1) printw("DATA ");
+    if (state->ysf_dt == 2) printw("V/D2 ");
+    if (state->ysf_dt == 3) printw("VWFR ");
     printw (" ");
     if (state->ysf_cm == 0) printw("Group/CQ ");
     if (state->ysf_cm == 3) printw("Private  ");
-    if (state->ysf_cm == 1) printw("Reserved ");
+    if (state->ysf_cm == 1) printw("Radio ID ");
     if (state->ysf_cm == 2) printw("Reserved ");
 
     if (state->ysf_fi == 0) printw("HC ");
@@ -2447,7 +2447,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     printw ("\n");
     printw ("| ");
-    printw ("TGT: %s ", state->ysf_tgt);
+    //NOTE: In Radio ID Mode, the DST will be split on Destination and Source Radio ID values
+    printw ("DST: %s ", state->ysf_tgt);
     printw ("SRC: %s ", state->ysf_src);
     printw ("\n");
     printw ("| ");
