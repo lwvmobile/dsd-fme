@@ -258,7 +258,6 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   if( Golay_20_8_decode(SlotType) ) SlotTypeOk = 1;
   else
   {
-    SlotTypeOk = -1;
     SlotTypeOk = 0;
     goto END;
   }
