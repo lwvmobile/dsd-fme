@@ -536,7 +536,7 @@ initOpts (dsd_opts * opts)
   opts->frame_dmr = 1;
   opts->frame_dpmr = 0;
   opts->frame_provoice = 0;
-  opts->frame_ysf = 0; //forgot to init this, and Cygwin treated as it was turned on.
+  opts->frame_ysf = 1;
   opts->mod_c4fm = 1;
   opts->mod_qpsk = 0;
   opts->mod_gfsk = 0;
@@ -1126,11 +1126,11 @@ usage ()
   printf ("  -f2           Decode only P25 Phase 2 (6000 sps) **\n");
   printf ("  -fd           Decode only D-STAR\n");
   printf ("  -fx           Decode only X2-TDMA\n");
+  printf ("  -fy           Decode only YSF\n");
   printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
   printf ("  -fp             Decode only EDACS/ProVoice*\n");
   printf ("  -fm             Decode only dPMR*\n");
-  printf ("  -fy             Decode only YSF*\n");
   printf ("  -l            Disable DMR, dPMR, and NXDN input filtering\n");
   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
   printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
@@ -1152,8 +1152,8 @@ usage ()
   printf ("                 (default=36)\n");
   printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
   printf ("                 (default=15)\n");
-  printf ("  -ma           Auto-select modulation optimizations (default)\n");
-  printf ("  -mc           Use only C4FM modulation optimizations\n");
+  printf ("  -ma           Auto-select modulation optimizations\n");
+  printf ("  -mc           Use only C4FM modulation optimizations (default)\n");
   printf ("  -mg           Use only GFSK modulation optimizations\n");
   printf ("  -mq           Use only QPSK modulation optimizations\n");
   printf ("  -m2           Use P25p2 6000 sps QPSK modulation optimizations\n");
@@ -1774,11 +1774,11 @@ main (int argc, char **argv)
               opts.frame_dmr = 1;
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
-              opts.frame_ysf = 0;
+              opts.frame_ysf = 1;
               opts.pulse_digi_rate_out = 48000; // /dev/dsp does need this set to 48000 to properly process the upsampling
               opts.pulse_digi_out_channels = 1;
-              opts.dmr_stereo = 1; //switching in 'stereo' for 'mono'
-              opts.dmr_mono = 0;
+              opts.dmr_stereo = 0; //switching in 'stereo' for 'mono'
+              opts.dmr_mono = 1;
               state.dmr_stereo = 0;
               //opts.setmod_bw = 7000;
               sprintf (opts.output_name, "Legacy Auto");
@@ -2000,7 +2000,7 @@ main (int argc, char **argv)
                       opts.frame_dmr = 1;
                       opts.frame_dpmr = 0;
                       opts.frame_provoice = 0;
-                      opts.frame_ysf = 0;
+                      opts.frame_ysf = 1;
                       opts.mod_c4fm = 1;
                       opts.mod_qpsk = 0;
                       opts.mod_gfsk = 0;

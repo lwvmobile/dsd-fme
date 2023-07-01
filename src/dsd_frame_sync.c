@@ -233,7 +233,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   {
     t_max = 12; //based on Frame_Sync_2 pattern
   }
-  else if (opts->frame_ysf == 1)
+  else if (state->lastsynctype == 30 || state->lastsynctype == 31 )
   {
     t_max = 20; //20 on YSF
   }
