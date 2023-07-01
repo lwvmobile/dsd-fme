@@ -3,7 +3,7 @@
 `dsd-fme` is all you need to run for pulse input, pulse output, and auto detect for DMR BS/MS, and P25. To use other decoding methods which cannot be auto detected, please use the following command line switches. Make sure to route audio into and out of DSD-FME using pavucontrol and virtual sinks as needed.
 
 ```
--ft XDMA decoder class (P25 1 and 2, and DMR Stereo)
+-ft XDMA decoder class (P25p1 and p2, YSF, and DMR Stereo)
 -fs DMR Stereo, also may need to use -xr if inverted DMR
 -fa Legacy Auto (not recommended)
 -fi NXDN48
@@ -14,6 +14,7 @@
 -f1 P25P1
 -f2 P25P2 (may need to specify wacn/sys/nac manually)
 -fx X2-TDMA
+-fy YSF
 ```
 
 ## Conventional Frequency "Fast Scanner"

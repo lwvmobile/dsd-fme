@@ -539,7 +539,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       info_win = newwin(6, WIDTH+18, starty, startx+20);
       box (info_win, 0, 0);
       mvwprintw(info_win, 2, 2, " Legacy Auto can only detect the following:");
-      mvwprintw(info_win, 3, 2, " P25-P1, D-STAR, DMR Mono, and X2-TDMA");
+      mvwprintw(info_win, 3, 2, " P25p1, D-STAR, DMR Mono, YSF, and X2-TDMA");
       wrefresh(info_win);
     }
 
@@ -548,8 +548,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       info_win = newwin(7, WIDTH+18, starty, startx+20);
       box (info_win, 0, 0);
       mvwprintw(info_win, 2, 2, " XDMA Decoding Class Supports the following:");
-      mvwprintw(info_win, 3, 2, " P25-P1, P25-P2, and DMR Stereo BS/MS");
-      mvwprintw(info_win, 4, 2, " --C4FM / FSK4 only, and OP25 P2 Capture Bins");
+      mvwprintw(info_win, 3, 2, " P25p1, P25p2, YSF, and DMR BS/MS");
+      mvwprintw(info_win, 4, 2, " C4FM, FSK4, QPSK only (no H8D-QPSK)");
       wrefresh(info_win);
     }
 
@@ -1245,7 +1245,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dmr = 1;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
-      opts->frame_ysf = 0;
+      opts->frame_ysf = 1;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1378,7 +1378,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_nxdn96 = 0;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
-      opts->frame_ysf = 0;
+      opts->frame_ysf = 1;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
