@@ -64,7 +64,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
   unsigned char command = 0xFF;
   unsigned char mt1 = 0x1F;
   unsigned char mt2 = 0xF;
-  unsigned char mta = 0;
   unsigned char lcn = 0;
 
   //commands; may not use these anymore
@@ -72,10 +71,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
   unsigned int idcmd = 0xFD;
   unsigned int peercmd = 0xF88; //using for EA detection test
   unsigned int netcmd = 0xF3; //using for Networked Test
+  UNUSED2(vcmd, idcmd);
 
   state->edacs_vc_lcn = -1; //init on negative for ncurses and tuning
 
-  int i, j;
+  int i;
   int edacs_bit[241] = {0}; //zero out bit array and collect bits into it.
 
   for (i = 0; i < 240; i++) //288 bits every transmission minus 48 bit (24 dibit) sync pattern
@@ -381,6 +381,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int a = afs >> 7; 
         int fs = afs & 0x7F;
         int status  = (fr_1t & 0xF00000000) >> 32;
+        UNUSED(status);
         if (afs > 0) state->lastsrc = afs; 
         fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " AFS [0x%03X] [%02d-%03d] LCN [%02d]", afs, a, fs, lcn);

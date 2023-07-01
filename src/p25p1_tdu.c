@@ -32,6 +32,7 @@ processTDU (dsd_opts* opts, dsd_state* state)
         int status;
         status = getDibit (opts, state) + '0';
         // TODO: do something useful with the status bits...
+        UNUSED(status);
     }
     
     //reset some strings -- since its a tdu, blank out any call strings, only want during actual call

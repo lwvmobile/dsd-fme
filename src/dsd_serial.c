@@ -73,6 +73,7 @@ resumeScan (dsd_opts * opts, dsd_state * state)
 
   char cmd[16];
   ssize_t result;
+  UNUSED(result);
 
   if (opts->serial_fd > 0)
     {

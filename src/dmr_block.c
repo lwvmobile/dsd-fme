@@ -12,7 +12,7 @@
 void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t dheader_bits[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors)
 {
   
-  uint32_t i, j, k;
+  uint32_t i;
   uint8_t slot = state->currentslot;
 
   //clear out unified pdu 'superframe' slot
@@ -30,7 +30,8 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     uint8_t dpf = (uint8_t)ConvertBitIntoBytes(&dheader_bits[4], 4); //data packet format
     uint8_t sap = (uint8_t)ConvertBitIntoBytes(&dheader_bits[8], 4); //service access point
     uint8_t poc = (uint8_t)ConvertBitIntoBytes(&dheader_bits[8], 4); //padding octets
-    
+    UNUSED(ab);
+
     uint32_t target = (uint32_t)ConvertBitIntoBytes(&dheader_bits[16], 24); //destination llid 
     uint32_t source = (uint32_t)ConvertBitIntoBytes(&dheader_bits[40], 24); //source llid
 
@@ -121,6 +122,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     uint8_t p_sap  = (uint8_t)ConvertBitIntoBytes(&dheader_bits[0], 4);
     uint8_t p_mfid = (uint8_t)ConvertBitIntoBytes(&dheader_bits[8], 8);
     uint8_t p_pot  = (uint8_t)ConvertBitIntoBytes(&dheader_bits[3], 5); //looking for LRRP pot_report
+    UNUSED(p_pot);
 
     fprintf (stderr, "%s ", KGRN);
     fprintf (stderr, "\n");
@@ -379,6 +381,7 @@ void dmr_udt_cspdu_converter (dsd_opts * opts, dsd_state * state, uint8_t block_
   uint8_t udt_opcode = (uint8_t)ConvertBitIntoBytes(&block_bits[74], 6); //for observation testing
   cs_byte[1] = 0; //set mfid to zero for now (may use custom value if needed later)
   uint8_t udt_mfid = 0; //setting to zero
+  UNUSED2(udt_opcode, udt_mfid);
 
   //should be 34 total (maximum) after removing tailing CRC16 (initial and last block)
   for (i = 0; i < 34; i++) cs_byte[2+i] = block_bytes[12+i];
@@ -403,7 +406,7 @@ void dmr_udt_cspdu_converter (dsd_opts * opts, dsd_state * state, uint8_t block_
 //assemble the blocks as they come in, shuffle them into the unified dmr_pdu_sf
 void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_bytes[], uint8_t block_len, uint8_t databurst, uint8_t type)
 {
-  int i, j, k;
+  int i, j;
   uint8_t lb = 0; //mbc last block
   uint8_t pf = 0; //mbc protect flag
 

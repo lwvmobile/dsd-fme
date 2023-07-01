@@ -13,8 +13,7 @@
 //processing voice and/or data on both BS slots (channels) simultaneously
 void dmrBS (dsd_opts * opts, dsd_state * state)
 {
-  int i, j, k, l, dibit;
-  int *dibit_p;
+  int i, dibit;
   
   char ambe_fr[4][24];
   char ambe_fr2[4][24];
@@ -37,6 +36,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   uint8_t emb_ok = 0;
   uint8_t tact_okay = 0;
   uint8_t cach_err = 0;
+  UNUSED(cach_err);
 
   uint8_t internalslot;
   uint8_t vc1;
@@ -46,13 +46,13 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   uint8_t cc = 25;
   uint8_t power = 9; //power and pre-emption indicator
   uint8_t lcss = 9;
+  UNUSED2(cc, lcss);
   
   //would be ideal to grab all dibits and break them into bits to pass to new data handler?
   uint8_t dummy_bits[196]; 
   memset (dummy_bits, 0, sizeof(dummy_bits));
   
   //add time to mirror printFrameSync
-  time_t now;
   char * getTime(void) //get pretty hh:mm:ss timestamp
   {
     time_t t = time(NULL);
@@ -492,7 +492,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 //Process buffered half frame and 2nd half and then jump to full BS decoding
 void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 {
-  int i, j, k, l, dibit;
+  int i, dibit;
   int *dibit_p;
   char ambe_fr[4][24];
   char ambe_fr2[4][24];
@@ -512,6 +512,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   uint8_t tact_okay = 0;
   uint8_t cach_err = 0;
   uint8_t sync_okay = 1;
+  UNUSED(cach_err);
 
   uint8_t internalslot;
 
@@ -523,7 +524,6 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   19, 5, 20, 21, 22, 6, 23
   }; 
   //add time to mirror printFrameSync
-  time_t now;
   char * getTime(void) //get pretty hh:mm:ss timestamp
   {
     time_t t = time(NULL);

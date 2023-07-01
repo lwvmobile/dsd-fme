@@ -30,6 +30,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   int is_cap_plus = 0;
   int is_alias = 0;
   int is_gps = 0;
+  UNUSED(capsite);
 
   //XPT 'Things'
   int is_xpt = 0;
@@ -41,6 +42,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   uint8_t xpt_res_c = 0; //unknown values of other bits of the XPT LC
   uint8_t target_hash[24]; //for XPT (and others if desired, get the hash and compare against SLC or XPT Status CSBKs)
   uint8_t tg_hash = 0; //value of the hashed TG
+  UNUSED3(xpt_res_a, xpt_res_b, xpt_res_c);
 
   uint8_t slot = state->currentslot;
   uint8_t unk = 0; //flag for unknown FLCO + FID combo
@@ -590,7 +592,7 @@ uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25])
   int i, j;
   uint8_t err = 0;
   uint8_t tact_valid = 0; 
-  uint8_t cach_valid = 0;
+  UNUSED(tact_valid);
 
   bool h1, h2, h3, crc; 
 
@@ -603,6 +605,7 @@ uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25])
   uint8_t at = 0; //access type, set to 1 during continuous transmission mode 
   uint8_t slot = 2; //tdma time slot
   uint8_t lcss = 0; //link control start stop (9.3.3) NOTE: There is no Single fragment LC defined for CACH signalling
+  UNUSED2(at, slot);
 
   //cach_bits are already de-interleaved upon initial collection (still needs secodary slco de-interleave)
   for (i = 0; i < 7; i++)
@@ -764,6 +767,8 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   uint16_t netsite = (uint16_t)ConvertBitIntoBytes(&slco_bits[6], 12);
   uint8_t reg = slco_bits[18]; //registration required/not required or normalchanneltype/composite cch
   uint8_t csc = (uint16_t)ConvertBitIntoBytes(&slco_bits[19], 9); //common slot counter, 0-511
+  UNUSED(netsite);
+
   uint16_t net = 0;
 	uint16_t site = 0;
   char model_str[8];
@@ -775,8 +780,6 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   uint8_t ts2_hash = (uint8_t)ConvertBitIntoBytes(&slco_bits[20], 8); //ts2 address hash (crc8) //361-1 B.3.7
 
   //DMR Location Area - DMRLA - should probably be state variables so we can use this in both slc and csbk
-  uint16_t sys_area = 0;
-  uint16_t sub_area = 0;
   uint16_t sub_mask = 0x1;
   //tiny n 1-3; small 1-5; large 1-8; huge 1-10
   uint16_t n = 1; //The minimum value of DMRLA is normally ≥ 1, 0 is reserved
@@ -871,7 +874,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&slco_bits[4], 14);
     //fprintf (stderr, "\n  SYSCODE: %014b", syscode);
     //fprintf (stderr, "\n  SYSCODE: %02b.%b.%b", model, net, site); //won't show leading zeroes, but may not be required
-
+    UNUSED(syscode);
   }
   else if (slco == 0x3) //P_SYS_Parms
   {
@@ -886,7 +889,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&slco_bits[4], 14);
     //fprintf (stderr, "\n  SYSCODE: %014b", syscode);
     //fprintf (stderr, "\n  SYSCODE: %02b.%b.%b", model, net, site); //won't show leading zeroes, but may not be required
-
+    UNUSED(syscode);
   }
   else if (slco == 0x0) //null
     fprintf (stderr, " SLCO NULL ");
@@ -954,8 +957,6 @@ void dmr_embedded_alias_header (dsd_opts * opts, dsd_state * state, uint8_t lc_b
 {
   
   uint8_t slot = state->currentslot;
-  uint8_t pf; 
-  uint8_t res;
   uint8_t format = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 2); 
   uint8_t len;
 
@@ -982,6 +983,7 @@ void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_b
   uint8_t format = state->dmr_alias_format[slot]; //0=7-bit; 1=ISO8; 2=UTF-8; 3=UTF16BE
   uint8_t len =  state->dmr_alias_len[slot];
   uint8_t start; //starting position depends on context of block and format
+  UNUSED(format);
 
   //Cap Max Variation
   uint8_t fid = (uint8_t)ConvertBitIntoBytes(&lc_bits[8], 8);
@@ -1049,6 +1051,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   uint8_t res_a = lc_bits[1];
   uint8_t res_b = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 4);
   uint8_t pos_err = (uint8_t)ConvertBitIntoBytes(&lc_bits[20], 3);
+  UNUSED2(res_a, res_b);
   
   uint32_t lon_sign = lc_bits[23]; 
   uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[24], 24); 

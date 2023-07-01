@@ -29,6 +29,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
   csbk_pf  = ( (cs_pdu[0] & 0x40) >> 6 );
   csbk_o   =    cs_pdu[0] & 0x3F; 
   csbk_fid =    cs_pdu[1]; //feature set id
+  UNUSED(csbk_lb);
 
   //check, regardless of CRC err
   if (IrrecoverableErrors == 0)
@@ -103,6 +104,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //target and source are always the same bits
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
         uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
+        UNUSED2(st1, st3);
 
         //move mbc variables out of if statement
         uint8_t mbc_lb = 0; //
@@ -118,6 +120,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint16_t mbc_abs_tx_step = 0;
         uint16_t mbc_abs_rx_int = 0;
         uint16_t mbc_abs_rx_step = 0;
+        UNUSED5(mbc_lb, mbc_pf, mbc_csbko, mbc_res, mbc_cc);
+        UNUSED4(mbc_res2, mbc_cdefparms, mbc_abs_tx_int, mbc_abs_tx_step);
 
         fprintf (stderr, "\n");
         //added my best guess as to how dsdplus arrives at a dmr channel value (seems pretty consistent) as C+
@@ -294,14 +298,14 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint8_t nrandwait = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[31], 4);
         uint8_t regreq = cs_pdu_bits[35];
         uint8_t backoff = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[36], 4);
+        UNUSED5(reserved, tsccas, sync, offset, active);
+        UNUSED3(sf, nrandwait, backoff);
 
         uint8_t model = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 2);
         uint16_t net = 0;
         uint16_t site = 0;
 
         //DMR Location Area - DMRLA
-        uint16_t sys_area = 0;
-        uint16_t sub_area = 0;
         uint16_t sub_mask = 0x1;
         //tiny n 1-3; small 1-5; large 1-8; huge 1-10
         uint16_t n = 1; //The minimum value of DMRLA is normally ≥ 1, 0 is reserved
@@ -406,6 +410,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //fprintf (stderr, "\n  SYSCODE: %016b", syscode);
         //fprintf (stderr, "\n  SYSCODE: %02b.%b.%b", model, net, site); //won't show leading zeroes, but may not be required
         //fprintf (stderr, "\n  SYSCODE: %04X", syscode);
+        UNUSED(syscode);
       } 
 
       //P_CLEAR
@@ -427,6 +432,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint8_t gi = cs_pdu_bits[31];
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
         uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
+        UNUSED(reserved);
 
         if (gi)  fprintf (stderr, " Group");
         if (!gi) fprintf (stderr, " Private");
@@ -462,16 +468,17 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint8_t model = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 2);
         uint16_t net = 0;
         uint16_t site = 0;
+        UNUSED2(net, site);
 
         //DMR Location Area - DMRLA
-        uint16_t sys_area = 0;
-        uint16_t sub_area = 0;
         uint16_t sub_mask = 0x1;
         //tiny n 1-3; small 1-5; large 1-8; huge 1-10
         uint16_t n = 1; //The minimum value of DMRLA is normally ≥ 1, 0 is reserved
+        UNUSED(sub_mask);
 
         //channel number from Broadcast Parms 2
         uint16_t lpchannum = 0;
+        UNUSED(lpchannum);
 
         char model_str[8];
         char par_str[8]; //category A, B, AB, or reserved
@@ -561,7 +568,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16);
         //fprintf (stderr, "\n  SYSCODE: %016b", syscode);
         //fprintf (stderr, "\n  SYSCODE: %04X", syscode);
-
+        UNUSED(syscode);
       }
 
       if (csbk_o == 28) 
@@ -651,6 +658,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint8_t blocks = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[24], 8);
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
         uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
+        UNUSED2(res, blocks);
 
         uint8_t target_hash[24]; 
         uint8_t tg_hash = 0; 
@@ -1453,6 +1461,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint8_t xpt_site_rp[4];
         uint8_t xpt_site_u1[4];
         uint8_t xpt_site_u2[4];
+        UNUSED2(xpt_site_u1, xpt_site_u2);
 
         uint8_t xpt_sn = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[0], 2); 
 

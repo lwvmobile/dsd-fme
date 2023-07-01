@@ -45,7 +45,7 @@ static const uint8_t CNXDNConvolution_BRANCH_TABLE1[] = {0U, 0U, 0U, 0U, 2U, 2U,
 static const uint8_t CNXDNConvolution_BRANCH_TABLE2[] = {0U, 2U, 2U, 0U, 0U, 2U, 2U, 0U};
 
 static const unsigned int CNXDNConvolution_NUM_OF_STATES_D2 = 8U;
-static const unsigned int CNXDNConvolution_NUM_OF_STATES = 16U;
+//static const unsigned int CNXDNConvolution_NUM_OF_STATES = 16U;
 static const uint32_t     CNXDNConvolution_M = 4U;
 static const unsigned int CNXDNConvolution_K = 5U;
 

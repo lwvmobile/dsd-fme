@@ -139,7 +139,7 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
       else if (state->mbe_file_type > 0) //ambe files
       {
         readAmbe2450Data (opts, state, ambe_d);
-        int j, x;
+        int x;
         unsigned long long int k;
         if (state->K != 0) //apply Pr key
         {
@@ -185,7 +185,6 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   int i;
   char imbe_d[88];
   char ambe_d[49];
-  char ambe_d_str[50];
   unsigned long long int k;
   int x;
 

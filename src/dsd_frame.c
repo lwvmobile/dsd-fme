@@ -31,7 +31,7 @@ printFrameInfo (dsd_opts * opts, dsd_state * state)
   level = (int) state->max / 164;
   if (opts->verbose > 0)
     {
-      //fprintf (stderr,"inlvl: %2i%% ", level);
+      fprintf (stderr,"inlvl: %2i%% ", level);
     }
   if (state->nac != 0)
     {
@@ -59,8 +59,10 @@ processFrame (dsd_opts * opts, dsd_state * state)
   char duid[3];
   char nac[13];
   int level;
+  UNUSED2(nac, level);
 
   char status_0;
+  UNUSED(status_0);
   char bch_code[63];
   int index_bch_code;
   unsigned char parity;

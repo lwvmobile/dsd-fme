@@ -17,6 +17,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
   uint8_t lc_svcopt = (uint8_t)ConvertBitIntoBytes(&LCW_bits[16], 8); //service options
   uint8_t lc_pf = LCW_bits[0]; //protect flag
   uint8_t lc_sf = LCW_bits[1]; //Implicit / Explicit MFID Format
+  UNUSED2(lc_opcode, lc_sf);
 
   if (lc_pf == 1) //check the protect flag -- if set, its an encrypted lcw
   {
@@ -60,6 +61,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         uint16_t group = (uint16_t)ConvertBitIntoBytes(&LCW_bits[32], 16);
         uint32_t source = (uint32_t)ConvertBitIntoBytes(&LCW_bits[48], 24);
         fprintf (stderr, " - Group %d Source %d", group, source);
+        UNUSED2(res, explicit);
 
         //don't set this when zero, annoying blink occurs in ncurses
         if (group != 0) state->lasttg = group;
@@ -121,6 +123,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         uint16_t channelt = (uint16_t)ConvertBitIntoBytes(&LCW_bits[40], 16);
         uint16_t channelr = (uint16_t)ConvertBitIntoBytes(&LCW_bits[56], 16);
         fprintf (stderr, "Ch: %04X TG: %d; ", channelt, group1);
+        UNUSED(channelr);
       }
 
       else if (lc_format == 0x45)
@@ -257,6 +260,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         uint16_t channelr = (uint16_t)ConvertBitIntoBytes(&LCW_bits[48], 16);
         uint8_t cfva = (uint8_t)ConvertBitIntoBytes(&LCW_bits[64], 4);
         fprintf (stderr, " - RFSS %d Site %d CH %04X", rfssid, siteid, channelt);
+        UNUSED2(lra, channelr);
 
         //debug print only
         // fprintf (stderr, "\n  ");

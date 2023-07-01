@@ -64,14 +64,13 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   int flushing_bits[196]; //for flushing the trellis state machine
   memset (flushing_bits, 0, sizeof(flushing_bits));
 
-  int i, j, k, b, x, y;
+  int i, j, k, x;
   int ec[3]; //error value returned from (block_deinterleave)
   int err[2]; //error value returned from ccrc16 or crc32
   memset (ec, -2, sizeof(ec));
   memset (err, -2, sizeof(err));
 
   int skipdibit = 14; //initial status dibit will occur at 14, then add 36 each time it occurs
-  int protectbit = 0;
   int MFID = 0xFF; //Manufacturer ID
 
   uint8_t mpdu_byte[36];
@@ -214,12 +213,14 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       int channelt = (mpdu_byte[15] << 8) | mpdu_byte[16];
       int channelr = (mpdu_byte[17] << 8) | mpdu_byte[18];
       int ssc =  mpdu_byte[19];
+      UNUSED3(res_a, res_b, ssc);
       fprintf (stderr, "%s",KYEL);
       fprintf (stderr, "\n Network Status Broadcast MBT - Extended \n");
       fprintf (stderr, "  LRA [%02X] WACN [%05lX] SYSID [%03X] NAC [%03llX]\n", lra, wacn, sysid, state->p2_cc);
       fprintf (stderr, "  CHAN-T [%04X] CHAN-R [%04X]", channelt, channelr);
       long int ct_freq = process_channel_to_freq(opts, state, channelt);
       long int cr_freq = process_channel_to_freq(opts, state, channelr);
+      UNUSED(cr_freq);
       
       state->p25_cc_freq = ct_freq;
       state->p25_cc_is_tdma = 0; //flag off for CC tuning purposes when system is qpsk
@@ -293,6 +294,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 			int group = (mpdu_byte[18] << 8) | mpdu_byte[19];
 			long int freq1 = 0;
 			long int freq2 = 0;
+      UNUSED2(source, freq2);
       fprintf (stderr, "%s\n ",KYEL);
       if (svc & 0x80) fprintf (stderr, " Emergency");
       if (svc & 0x40) fprintf (stderr, " Encrypted");
@@ -391,6 +393,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 			long int target = (mpdu_byte[19] << 16) |(mpdu_byte[20] << 8) | mpdu_byte[21];
 			long int freq1 = 0;
 			long int freq2 = 0;
+      UNUSED(freq2);
       fprintf (stderr, "%s\n ",KYEL);
       if (svc & 0x80) fprintf (stderr, " Emergency");
       if (svc & 0x40) fprintf (stderr, " Encrypted");

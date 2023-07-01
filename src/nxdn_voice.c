@@ -55,11 +55,10 @@ const int nZ[36] = { 5, 3, 4, 2, 3, 1,
 
 void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182])
 {
-  int i, j, dibit;
+  int i;
   int start, stop;
   char ambe_fr[4][24];
 
-  unsigned char *pr;
   const int *w, *x, *y, *z;
 
   //these conditions will determine our starting and stopping value for voice

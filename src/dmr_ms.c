@@ -13,8 +13,7 @@
 void dmrMS (dsd_opts * opts, dsd_state * state)
 {
 
-  int i, j, k, l, dibit;
-  int *dibit_p;
+  int i, j, dibit;
   char ambe_fr[4][24];
   char ambe_fr2[4][24];
   char ambe_fr3[4][24];
@@ -32,20 +31,13 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   //cach
   char cachdata[25]; 
-  int cachInterleave[24] =
-  {0, 7, 8, 9, 1, 10,
-   11, 12, 2, 13, 14,
-   15, 3, 16, 4, 17, 18,
-   19, 5, 20, 21, 22, 6, 23
-  }; 
 
   //cach tact bits
   uint8_t tact_bits[7];
 
-  uint8_t emb_ok = 0;
   uint8_t tact_okay = 0;
-  uint8_t cach_err = 0;
   uint8_t EmbeddedSignallingOk = 0;
+  UNUSED(EmbeddedSignallingOk);
 
   uint8_t internalslot;
   uint8_t vc;
@@ -54,13 +46,13 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   uint8_t cc = 25;
   uint8_t power = 9; //power and pre-emption indicator
   uint8_t lcss = 9;
+  UNUSED2(cc, lcss);
 
   //dummy bits to pass to dburst for link control
   uint8_t dummy_bits[196];
   memset (dummy_bits, 0, sizeof (dummy_bits));
 
   //add time to mirror printFrameSync
-  time_t now;
   char * getTime(void) //get pretty hh:mm:ss timestamp
   {
     time_t t = time(NULL);
@@ -77,8 +69,6 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   }
 
   vc = 2;
-
-  short int skipcount = 0;
 
   //Hardset variables for MS/Mono
   state->currentslot = 0; //0
@@ -368,7 +358,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 //collect buffered 1st half and get 2nd half voice payload and then jump to full MS Voice decoding.
 void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 {
-  int i, j, k, l, dibit;
+  int i, dibit;
   int *dibit_p;
 
   char ambe_fr[4][24];
@@ -386,30 +376,12 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   char m3[4][24];
 
   const int *w, *x, *y, *z;
-  char sync[25];
-  char syncdata[48];
 
   //cach
   char cachdata[25]; 
-  int cachInterleave[24] =
-  {0, 7, 8, 9, 1, 10,
-   11, 12, 2, 13, 14,
-   15, 3, 16, 4, 17, 18,
-   19, 5, 20, 21, 22, 6, 23
-  };
-
-  int mutecurrentslot;
-  int msMode;
-  char cc[4];
-  char EmbeddedSignalling[16];
-
-  uint8_t emb_ok = 0;
-  uint8_t tact_okay = 0;
-  uint8_t cach_err = 0;
-  uint8_t EmbeddedSignallingOk = 0;
+  UNUSED(cachdata);
 
   //add time to mirror sync
-  time_t now;
   char * getTime(void) //get pretty hh:mm:ss timestamp
   {
     time_t t = time(NULL);
@@ -609,12 +581,11 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 //simplied to a simple data collector, and then passed on to dmr_data_sync for the usual processing
 void dmrMSData (dsd_opts * opts, dsd_state * state)
 {
-  int i, b, c;
+  int i;
   int dibit;
   int *dibit_p;
 
   //add time to mirror sync
-  time_t now;
   char * getTime(void) //get pretty hh:mm:ss timestamp
   {
     time_t t = time(NULL);

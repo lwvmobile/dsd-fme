@@ -32,7 +32,6 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
   // length is implicitly 192, with frame sync in first 10 dibits
 	uint8_t dbuf[182]; 
 	uint8_t lich;
-	int answer_len = 0;
 	uint8_t answer[32];
 	uint8_t sacch_answer[32];
 	int lich_parity_received;
@@ -43,8 +42,6 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	int udch = 0;
 	int sacch = 0;
 	int cac = 0;
-	int sr_structure;
-	int sr_ran;
 
 	//new, and even more confusing NXDN Type-D / "IDAS" acronyms
 	int idas = 0;
@@ -57,6 +54,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	uint8_t lich_fc = 0; //Functional Channel Type
 	uint8_t lich_op = 0; //Options
 	uint8_t direction; //inbound or outbound direction
+	UNUSED2(lich_fc, lich_op);
 
 	uint8_t lich_dibits[8]; 
 	uint8_t sacch_bits[60];

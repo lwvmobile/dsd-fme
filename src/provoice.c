@@ -23,7 +23,6 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   uint8_t spacer_bit[8]; //check this value to see if its a status thing (like P25 P1)
   memset (spacer_bit, 0, sizeof (spacer_bit));
-  uint8_t spacer = 0;
   uint16_t bf = 0; //the 16-bit value in-between imbe 2 and imbe 3 that is usually 2175
 
   fprintf (stderr," VOICE");

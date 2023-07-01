@@ -94,6 +94,8 @@ include_directories("${PROJECT_SOURCE_DIR}/include")
 ADD_EXECUTABLE(dsd-fme ${SRCS} ${HEADERS})
 TARGET_LINK_LIBRARIES(dsd-fme ${LIBS})
 
+target_compile_options(dsd-fme PRIVATE -Wunused-but-set-variable -Wunused-variable)
+
 include(GNUInstallDirs)
 install(TARGETS dsd-fme DESTINATION ${CMAKE_INSTALL_BINDIR})
 

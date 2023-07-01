@@ -26,9 +26,8 @@ void dstar_header_decode(dsd_state * state, int radioheaderbuffer[660]) {
 	unsigned char radioheader[41];
 	int octetcount, bitcount, loop;
 	unsigned char bit2octet[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
-	unsigned int FCSinheader;
-	unsigned int FCScalculated;
 	int len;
+	UNUSED(len);
 
 	scramble(radioheaderbuffer, radioheaderbuffer2);
 	deinterleave(radioheaderbuffer2, radioheaderbuffer);

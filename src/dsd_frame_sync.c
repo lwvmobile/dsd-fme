@@ -205,7 +205,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
     state->last_cc_sync_time = time(NULL); //set again to give another x seconds
   }
 
-  int i, j, t, o, dibit, sync, symbol, synctest_pos, lastt;
+  int i, t, dibit, sync, symbol, synctest_pos, lastt;
   char synctest[25];
   char synctest12[13]; //dPMR
   char synctest10[11]; //NXDN FSW only
@@ -217,10 +217,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   char synctest48[49]; //EDACS
   char modulation[8];
   char *synctest_p;
-  int symboltest_pos; //symbol test position, match to synctest_pos
-  int symboltest_p[10240]; //make this an array instead
   char synctest_buf[10240]; //what actually is assigned to this, can't find its use anywhere?
   int lmin, lmax, lidx;
+  UNUSED2(synctest18, synctest21);
   
   //assign t_max value based on decoding type expected (all non-auto decodes first)
   int t_max; //maximum values allowed for t will depend on decoding type - NXDN will be 10, others will be more
@@ -246,7 +245,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
   int lbuf[t_max], lbuf2[t_max];
   int lsum;
-  char spectrum[64];
   //init the lbuf
   memset (lbuf, 0, sizeof(lbuf));
   memset (lbuf2, 0, sizeof(lbuf2));
