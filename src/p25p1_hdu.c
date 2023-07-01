@@ -26,6 +26,7 @@ read_dibit (dsd_opts* opts, dsd_state* state, char* output, int* status_count, i
 {
     int dibit;
     int status;
+    UNUSED(status);
 
     if (*status_count == 35) {
 
@@ -65,7 +66,6 @@ read_dibit_update_analog_data (dsd_opts* opts, dsd_state* state, char* output, u
         AnalogSignal* analog_signal_array, int* analog_signal_index)
 {
   unsigned int i;
-  unsigned int debug_left, debug_right;
 
   for (i=0; i<count; i+=2)
     {
@@ -215,9 +215,8 @@ correct_golay_dibits_6(char* corrected_hex_data, int hex_count, AnalogSignal* an
 void
 processHDU(dsd_opts* opts, dsd_state* state)
 {
-  char mi[73], mfid[9], algid[9], kid[17], tgid[17], tmpstr[255];
+  char mi[73], mfid[9], algid[9], kid[17], tgid[17];
   int i, j;
-  long talkgroup;
   int algidhex, kidhex;
   char hex[6];
   int status_count;
@@ -225,6 +224,7 @@ processHDU(dsd_opts* opts, dsd_state* state)
   unsigned long long int mihex1, mihex2, mihex3;
   char hex_data[20][6];    // Data in hex-words (6 bit words). A total of 20 hex words.
   char hex_parity[16][6];  // Parity of the data, again in hex-word format. A total of 16 parity hex words.
+  UNUSED4(mfid, tgid, status, mihex3);
 
   int irrecoverable_errors;
 

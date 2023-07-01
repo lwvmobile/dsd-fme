@@ -35,7 +35,7 @@ void error(char *msg) {
 //
 int Connect (char *hostname, int portno)
 {
-    int sockfd, n;
+    int sockfd;
     struct sockaddr_in serveraddr;
     struct hostent *server;
 
@@ -222,9 +222,8 @@ bool GetSignalLevelEx(int sockfd, double *dBFS, int n_samp)
 //shoe in UDP input connection here...still having issues that I don't know how to resolve
 int UDPBind (char *hostname, int portno)
 {
-    int sockfd, n;
-    struct sockaddr_in serveraddr, client_addr;
-    struct hostent *server;
+    int sockfd;
+    struct sockaddr_in serveraddr;
 
     /* socket: create the socket */
     //UDP socket

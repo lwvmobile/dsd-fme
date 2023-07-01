@@ -201,7 +201,6 @@ static uint16_t crc16_ok(const uint8_t bits[], unsigned int len) {
 int crc16_lb_bridge (int payload[190], int len)
 {
   int err = -2;
-  uint16_t crc = -2;
   uint8_t buf[190] = {0};
 
   for (int i = 0; i < len+16; i++) //add +16 here so we load the entire frame but only run crc on the len portion
@@ -264,7 +263,6 @@ static uint16_t crc12_ok(const uint8_t bits[], unsigned int len) {
 int crc12_xb_bridge (int payload[190], int len)
 {
   int err = -5;
-  uint16_t crc = -2;
   uint8_t buf[190] = {0};
 
   //need to load up the 12 crc bits as well, else it will fail on the check, but not on the crc calc

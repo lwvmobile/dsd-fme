@@ -74,6 +74,12 @@
 #include <locale.h>
 #include <ncurses.h>
 
+#define UNUSED(x)                       ((void)x)
+#define UNUSED2(x1, x2)                 (UNUSED(x1), UNUSED(x2))
+#define UNUSED3(x1, x2, x3)             (UNUSED(x1), UNUSED(x2), UNUSED(x3))
+#define UNUSED4(x1, x2, x3, x4)         (UNUSED(x1), UNUSED(x2), UNUSED(x3), UNUSED(x4))
+#define UNUSED5(x1, x2, x3, x4, x5)     (UNUSED(x1), UNUSED(x2), UNUSED(x3), UNUSED(x4), UNUSED(x5))
+
 extern volatile uint8_t exitflag; //fix for issue #136
 
 //group csv import struct
@@ -921,12 +927,12 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182]);
 
 //OP25 NXDN CRC functions
-static inline int load_i(const uint8_t val[], int len);
-static uint8_t crc6(const uint8_t buf[], int len);
-static uint16_t crc12f(const uint8_t buf[], int len);
-static uint16_t crc15(const uint8_t buf[], int len);
-static uint16_t crc16cac(const uint8_t buf[], int len);
-static uint8_t crc7_scch(uint8_t bits[], int len); //converted from op25 crc6
+int load_i(const uint8_t val[], int len);
+uint8_t crc6(const uint8_t buf[], int len);
+uint16_t crc12f(const uint8_t buf[], int len);
+uint16_t crc15(const uint8_t buf[], int len);
+uint16_t crc16cac(const uint8_t buf[], int len);
+uint8_t crc7_scch(uint8_t bits[], int len); //converted from op25 crc6
 
 /* NXDN Convolution functions */
 void CNXDNConvolution_start(void);

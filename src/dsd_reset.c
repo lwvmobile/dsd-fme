@@ -6,7 +6,7 @@
 void resetState (dsd_state * state)
 {
 
-  int i, j;
+  int i;
 
   //Dibit Buffer -- Free Allocated Memory
   // free (state->dibit_buf);

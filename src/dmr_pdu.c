@@ -38,11 +38,7 @@ char * getDateL(void) {
 void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[])
 {
 
-  uint8_t message_len = 0;
   uint8_t slot = state->currentslot;
-  uint8_t blocks  = state->data_header_blocks[slot]; 
-  uint8_t padding = state->data_header_padding[slot];
-  uint8_t lrrp_conf = 0;
 
   //check for more available flag info, etc on these prior to running
   if (DMR_PDU[0] == 0x01) dmr_locn (opts, state, block_len, DMR_PDU);
@@ -59,7 +55,7 @@ void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR
 //this is by no means an extensive LRRP list and is prone to error (unless somebody has the manual or something)
 void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[])
 {
-  int i, j;
+  int i;
   uint16_t message_len = 0;
   uint8_t slot = state->currentslot;
   uint8_t blocks = state->data_header_blocks[slot];
@@ -96,6 +92,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
   uint16_t vel = 0;
   double velocity = 0;
   uint8_t vel_set = 0;
+  UNUSED(vel);
 
   //track, direction, degrees
   uint8_t degrees = 0;
@@ -417,7 +414,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
 
 void dmr_locn (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[])
 {
-  int i, j;
+  int i;
   uint8_t slot = state->currentslot;
   uint8_t blocks = state->data_header_blocks[slot];
   uint8_t padding = state->data_header_padding[slot];
@@ -467,8 +464,7 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
   //N is positive, E is positive?? Assuming its like a 2D plane
   int lat_sign = 1; //positive 1 or negative 1
   int lon_sign = 1; //positive 1 or negative 1
-  double lat_fin = 0;
-  double lon_fin = 0;
+  UNUSED2(lat_sign, lon_sign);
 
   //start looking for specific bytes corresponding to 'letters' A (time), NSEW (ordinal directions), etc
   for (i = 0; i < ( (blocks*block_len) - (padding+4) ); i++)

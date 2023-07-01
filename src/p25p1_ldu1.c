@@ -196,6 +196,7 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
       int status;
       status = getDibit (opts, state) + '0';
       // TODO: do something useful with the status bits...
+      UNUSED(status);
   }
 
   // Error correct the hex_data using Reed-Solomon hex_parity

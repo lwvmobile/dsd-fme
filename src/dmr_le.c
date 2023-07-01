@@ -189,6 +189,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   uint8_t crc7_okay = 0; //RC
   uint8_t crc3_okay = 0; //TXI
   uint8_t txi = 0; //SEE: https://patents.google.com/patent/US8271009B2
+  UNUSED(txi);
   
   //NOTE: Any previous mentions to Cap+ in this area may have been in error,
   //The signalling observed here was actually TXI information, not Cap+ Specifically

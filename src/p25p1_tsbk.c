@@ -41,7 +41,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
   int flushing_bits[196]; //for flushing the trellis state machine
   memset (flushing_bits, 0, sizeof(flushing_bits));
   
-  int i, j, k, b, x, y;
+  int i, j, k, x;
   int ec = -2; //error value returned from (block_deinterleave)
   int err = -2; //error value returned from crc16_lb_bridge
   int skipdibit = 14; //initial status dibit will occur at 14, then add 36 each time it occurs

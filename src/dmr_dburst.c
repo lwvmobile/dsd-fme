@@ -26,13 +26,13 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   uint32_t CRCCorrect       = 0;
   uint32_t IrrecoverableErrors = 0;
   uint8_t slot = state->currentslot;
-  uint8_t block = state->data_block_counter[slot];
 
   //confirmed data 
   uint8_t dbsn = 0; //data block serial number for confirmed data blocks
   uint8_t blockcounter = 0; //local block count
   uint8_t confdatabits[250]; //array to reshuffle conf data block bits into sequence for crc9 check
   memset (confdatabits, 0, sizeof(confdatabits));
+  UNUSED(dbsn);
 
   //BPTC 196x96 Specific
   uint8_t  BPTCDeInteleavedData[196];

@@ -208,7 +208,6 @@ void beeper (dsd_opts * opts, dsd_state * state, int type)
     beep = fopen (wav_name, "ro");
     uint8_t buf[1024];
     memset (buf, 0, sizeof(buf));
-    short blip = 0;
     int loop = 1;
     while (loop == 1)
     {
@@ -494,13 +493,10 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
   WINDOW *entry_win;
   WINDOW *info_win;
 	int highlight  = 1;
-  int highlightb = 1;
   int highlightc = 1;
 	int choice  = 0;
-  int choiceb = 0;
   int choicec = 0;
 	int c;
-  int d;
   int e;
 
   startx = 2;

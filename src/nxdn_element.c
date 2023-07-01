@@ -62,10 +62,7 @@ void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state)
 void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
                                   uint8_t CrcCorrect, uint8_t * ElementsContent)
 {
-  uint32_t i;
   uint8_t MessageType;
-  uint64_t CurrentIV = 0;
-  unsigned long long int FullMessage = 0;
   /* Get the "Message Type" field */
   MessageType  = (ElementsContent[2] & 1) << 5;
   MessageType |= (ElementsContent[3] & 1) << 4;
@@ -332,6 +329,7 @@ void nxdn_ca_info_handler (dsd_state * state, uint32_t ca_info)
   uint32_t step = (ca_info >> 21) & 0x3; //Stepping
   uint32_t base = (ca_info >> 18) & 0x7; //Base Frequency
   uint32_t spare = ca_info & 0x3FF;
+  UNUSED(spare);
 
   //set state variable here to tell us to use DFA or Channel Versions
   if (RCN == 1)
@@ -355,7 +353,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
   uint16_t DestinationID = 0;
   uint8_t  CallTimer = 0;
   uint16_t Channel = 0;
-  uint8_t  LocationIDOption = 0;
+  UNUSED(CallTimer);
 
   uint8_t  DuplexMode[32] = {0};
   uint8_t  TransmissionMode[32] = {0};
@@ -378,6 +376,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
   uint8_t  bw = 0;
   uint16_t OFN = 0;
   uint16_t IFN = 0;
+  UNUSED2(bw, IFN);
 
   /* Decode "CC Option" */
   CCOption = (uint8_t)ConvertBitIntoBytes(&Message[8], 8);
@@ -701,6 +700,7 @@ void NXDN_decode_cch_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   uint16_t channel2 = 0;
   long int freq1 = 0;
   long int freq2 = 0;
+  UNUSED2(channel2sts, freq2);
   
   //DFA
   uint8_t  bw1 = 0;
@@ -709,6 +709,7 @@ void NXDN_decode_cch_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   uint8_t  bw2 = 0;
   uint16_t OFN2 = 0;
   uint16_t IFN2 = 0;
+  UNUSED(bw2);
 
   location_id = (uint32_t)ConvertBitIntoBytes(&Message[8], 24);
   channel1sts = (uint8_t)ConvertBitIntoBytes(&Message[32], 6);
@@ -850,6 +851,7 @@ void NXDN_decode_site_info(dsd_opts * opts, dsd_state * state, uint8_t * Message
   uint16_t channel2 = 0;
   long int freq1 = 0;
   long int freq2 = 0;
+  UNUSED2(freq1, freq2);
 
   location_id = (uint32_t)ConvertBitIntoBytes(&Message[8], 24);
   cs_info     = (uint16_t)ConvertBitIntoBytes(&Message[32], 16);
@@ -908,21 +910,17 @@ void NXDN_decode_adj_site(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   uint32_t adj1_site = 0; 
   uint32_t adj2_site = 0;
   uint32_t adj3_site = 0;
-  uint32_t adj4_site = 0;
   //options -- 6.5.38. Adjacent Site Option -- 4 LSB are Site Number, 2 MSB are spares
   uint8_t  adj1_opt = 0;
   uint8_t  adj2_opt = 0;
   uint8_t  adj3_opt = 0;
-  uint8_t  adj4_opt = 0;
-  //channel or OFN
+ //channel or OFN
   uint16_t adj1_chan = 0;
   uint16_t adj2_chan = 0;
   uint16_t adj3_chan = 0;
-  uint16_t adj4_chan = 0;
   //DFA only BW value
   uint8_t adj1_bw = 0;
   uint8_t adj2_bw = 0;
-  uint8_t adj3_bw = 0;
 
   fprintf (stderr, "%s", KYEL);
 
@@ -1044,7 +1042,6 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   uint8_t  KeyID = 0;
   uint8_t  DuplexMode[32] = {0};
   uint8_t  TransmissionMode[32] = {0};
-  unsigned long long int FullMessage = 0;
 
   uint8_t MessageType;
   /* Get the "Message Type" field */
@@ -1085,6 +1082,7 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   uint8_t idas = 0;
   uint8_t rep1 = 0;
   uint8_t rep2 = 0;
+  UNUSED(rep2);
   if (strcmp (state->nxdn_location_category, "Type-D") == 0) idas = 1;
   if (idas)
   {
@@ -1192,7 +1190,6 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 
 void NXDN_decode_VCALL_IV(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 {
-  uint32_t i;
   state->payload_miN = 0; //zero out
   unsigned long long int IV = 0; 
 

@@ -89,6 +89,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		if (MAC[1+len_a] == 0xA3 && MAC[2+len_a] == 0x90)
 		{
 			int mfid = MAC[2+len_a];
+			UNUSED(mfid);
 			int channel  = (MAC[5+len_a] << 8) | MAC[6+len_a];
 			int sgroup = (MAC[7+len_a] << 8) | MAC[8+len_a];
 			long int freq = 0;
@@ -168,6 +169,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channelr = (MAC[7+len_a] << 8) | MAC[8+len_a];
 			int sgroup = (MAC[9+len_a] << 8) | MAC[10+len_a];
 			long int freq = 0;
+			UNUSED2(mfid, channelr);
 			fprintf (stderr, "\n MFID90 Group Regroup Channel Grant - Explicit");
 			fprintf (stderr, "\n  CHAN [%04X] Group [%d][%04X]", channel, sgroup, sgroup);
 			freq = process_channel_to_freq (opts, state, channel);
@@ -546,7 +548,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			long int freq1t = 0;
 			long int freq1r = 0;
 			long int freq2t = 0;
-			long int freq2r = 0;
+			UNUSED(freq1r);
 
 			fprintf (stderr, "\n Group Voice Channel Grant Update Multiple - Explicit");
 			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc1, channelt1, channelr1, group1, group1);
@@ -973,6 +975,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int group = (MAC[7+len_a] << 8) | MAC[8+len_a];
 			long int freq1 = 0;
 			long int freq2 = 0;
+			UNUSED(freq2);
 
 			fprintf (stderr, "\n");
 
@@ -1079,7 +1082,6 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		//Authentication Response - Abbreviated
 		if (MAC[1+len_a] == 0x78) 
 		{
-			int res1 = 0; //don't really care about this value, just setting it to zero
 			int source = (MAC[8+len_a] << 16) | (MAC[9+len_a] << 8) | MAC[10+len_a];
 			fprintf (stderr, "\n Authentication Response - Abbreviated \n");
 			fprintf (stderr, "  Source [%08d][%06X] ", source, source);
@@ -1378,6 +1380,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int len_grg = MAC[3+len_a] & 0x3F;
 			int grg = MAC[4+len_a] >> 5; //3 bits
 			int ssn = MAC[4+len_a] & 0x1F; //5 bits
+			UNUSED(ssn);
 			fprintf (stderr, "\n MFIDA4 Group Regroup Explicit Encryption Command\n");
 			//fprintf (stderr, " LEN [%02X] GRG [%02X]\n", len_grg, grg);
 			if (grg & 0x2) //if grg == wgid //&0x2 according to OP25
@@ -1389,6 +1392,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				int t2 = (MAC[12+len_a] << 8) | MAC[13+len_a];
 				int t3 = (MAC[14+len_a] << 8) | MAC[15+len_a];
 				int t4 = (MAC[16+len_a] << 8) | MAC[17+len_a];
+				UNUSED4(t1, t2, t3, t4);
 				fprintf (stderr, "  SG [%05d] KEY [%04X] ALG [%02X]\n  ", sg, key, alg);
 				int a = 0;
 				int wgid = 0;
@@ -1512,6 +1516,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channel = (MAC[7+len_a] << 8) | MAC[8+len_a];
 			int sysclass = MAC[9+len_a];
 			int lcolorcode = ((MAC[10+len_a] & 0xF) << 8) | MAC[11+len_a];
+			UNUSED(sysclass);
 			fprintf (stderr, "\n Network Status Broadcast - Abbreviated \n");
 			fprintf (stderr, "  LRA [%02X] WACN [%05X] SYSID [%03X] NAC [%03X] CHAN-T [%04X]", lra, lwacn, lsysid, lcolorcode, channel);
 			state->p25_cc_freq = process_channel_to_freq (opts, state, channel);
@@ -1541,6 +1546,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channelr = (MAC[9+len_a] << 8) | MAC[10+len_a];
 			int sysclass = MAC[9+len_a];
 			int lcolorcode = ((MAC[12+len_a] & 0xF) << 8) | MAC[13+len_a];
+			UNUSED(sysclass);
 			fprintf (stderr, "\n Network Status Broadcast - Extended \n");
 			fprintf (stderr, "  LRA [%02X] WACN [%05X] SYSID [%03X] NAC [%03X] CHAN-T [%04X] CHAN-R [%04X]", lra, lwacn, lsysid, lcolorcode, channelt, channelr);
 			state->p25_cc_freq = process_channel_to_freq (opts, state, channelt);

@@ -67,6 +67,7 @@ process_IMBE (dsd_opts* opts, dsd_state* state, int* status_count)
   int j, dibit, status;
   char imbe_fr[8][23];
   const int *w, *x, *y, *z;
+  UNUSED(status);
 
   w = iW;
   x = iX;

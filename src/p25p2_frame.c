@@ -375,6 +375,7 @@ void process_ISCH (dsd_opts * opts, dsd_state * state)
 			int free = (isch_decoded >> 2) & 0x1;
 			int isch_loc = (isch_decoded >> 3) & 0x3;
 			int chan_num = (isch_decoded >> 5) & 0x3;
+			UNUSED2(uf_count, free);
 			state->p2_vch_chan_num = chan_num;
 
 			//old rules for entire superframe worth
@@ -674,7 +675,6 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 	int err_counter = 0;
 
 	//add time to mirror printFrameSync
-  	time_t now;
   	char * getTime(void) //get pretty hh:mm:ss timestamp
   	{
     	time_t t = time(NULL);

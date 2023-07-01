@@ -41,16 +41,17 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 	int mco_a = 69;
 	//mco will tell us the number of octets to use in variable length MAC PDUs, need a table or something
 	mco_a = (payload[10] << 5) | (payload[11] << 4) | (payload[12] << 3) | (payload[13] << 2) | (payload[14] << 0) | (payload[15] << 0);
+	UNUSED3(mac_offset, b, mco_a);
 
 	//get the second mco after determining first message length, see what second mco is and plan accordingly
 	int mco_b = 69;
+	UNUSED(mco_b);
 
 	//attempt CRC12 check to validate or reject PDU
 	int err = -2;
 	if (state->p2_is_lcch == 0)
 	{
-		int len =
-		err = crc12_xb_bridge(payload, 180-12);
+		int err = crc12_xb_bridge(payload, 180-12);
 		if (err != 0) //CRC Failure, warn or skip.
 		{
 			if (SMAC[1] == 0x0) //NULL PDU Check, pass if NULL type
@@ -334,6 +335,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 	opcode = (payload[0] << 2) | (payload[1] << 1) | (payload[2] << 0);
 	int mac_offset = 0;
 	mac_offset = (payload[3] << 2) | (payload[4] << 1) | (payload[5] << 0);
+	UNUSED(mac_offset);
 
 	//attempt CRC check to validate or reject PDU
 	int err = -2;

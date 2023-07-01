@@ -33,11 +33,11 @@ static const uint8_t scramble_t[] = { //values are the position values we need t
 	168, 170, 171, 174, 175, 176, 177, 181
 };
 
-static const int PARITY[] = {
-  0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 
-  1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 
-  1, 0, 0, 1, 1, 0, 1, 0, 0, 1
-};
+// static const int PARITY[] = {
+//   0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 
+//   1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 
+//   1, 0, 0, 1, 1, 0, 1, 0, 0, 1
+// };
 
 //decoding functions here
 void nxdn_descramble(uint8_t dibits[], int len)
@@ -976,7 +976,7 @@ void LFSRN(char * BufferIn, char * BufferOut, dsd_state * state)
   state->payload_miN = lfsr & 0x7FFF;
 }
 
-static inline int load_i(const uint8_t val[], int len) {
+int load_i(const uint8_t val[], int len) {
 	int acc = 0;
 	for (int i=0; i<len; i++){
 		acc = (acc << 1) + (val[i] & 1);
@@ -984,7 +984,7 @@ static inline int load_i(const uint8_t val[], int len) {
 	return acc;
 }
 
-static uint8_t crc6(const uint8_t buf[], int len)
+uint8_t crc6(const uint8_t buf[], int len)
 {
 	uint8_t s[6];
 	uint8_t a;
@@ -1002,7 +1002,7 @@ static uint8_t crc6(const uint8_t buf[], int len)
 	return load_i(s, 6);
 }
 
-static uint16_t crc12f(const uint8_t buf[], int len)
+uint16_t crc12f(const uint8_t buf[], int len)
 {
 	uint8_t s[12];
 	uint8_t a;
@@ -1026,7 +1026,7 @@ static uint16_t crc12f(const uint8_t buf[], int len)
 	return load_i(s, 12);
 }
 
-static uint16_t crc15(const uint8_t buf[], int len)
+uint16_t crc15(const uint8_t buf[], int len)
 {
 	uint8_t s[15];
 	uint8_t a;
@@ -1053,7 +1053,7 @@ static uint16_t crc15(const uint8_t buf[], int len)
 	return load_i(s, 15);
 }
 
-static uint16_t crc16cac(const uint8_t buf[], int len)
+uint16_t crc16cac(const uint8_t buf[], int len)
 {
 	uint32_t crc = 0xc3ee; //not sure why this though
 	uint32_t poly = (1<<12) + (1<<5) + 1; //poly is fine
@@ -1066,7 +1066,7 @@ static uint16_t crc16cac(const uint8_t buf[], int len)
 	return crc & 0xffff;
 }
 
-static uint8_t crc7_scch(uint8_t bits[], int len)
+uint8_t crc7_scch(uint8_t bits[], int len)
 {
 	uint8_t s[7];
 	uint8_t a;

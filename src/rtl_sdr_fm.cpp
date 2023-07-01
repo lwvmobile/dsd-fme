@@ -908,12 +908,10 @@ static unsigned int chars_to_int(unsigned char* buf) {
 }
 
 static void *socket_thread_fn(void *arg) {
-	struct demod_state *d = static_cast<demod_state*>(arg);
-  int r, n;
-  int sockfd, newsockfd, portno;
-  socklen_t clilen;
+  int n;
+  int sockfd;
   unsigned char buffer[5];
-  struct sockaddr_in serv_addr, cli_addr;
+  struct sockaddr_in serv_addr;
 
 	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
@@ -935,7 +933,7 @@ static void *socket_thread_fn(void *arg) {
 
 	fprintf (stderr, "Main socket started! :-) Tuning enabled on UDP/%d \n", port);
 
-	int new_freq, demod_type, new_squelch, new_gain, agc_mode;
+	int new_freq;
 
 	while((n = read(sockfd,buffer,5)) != 0) {
 		if(buffer[0] == 0) {
@@ -962,7 +960,6 @@ void rtlsdr_sighandler()
 
 void open_rtlsdr_stream(dsd_opts *opts)
 {
-  struct sigaction sigact;
   int r;
 	rtl_bandwidth =  opts->rtl_bandwidth * 1000; //reverted back to straight value
 	bandwidth_multiplier = (bandwidth_divisor / rtl_bandwidth);

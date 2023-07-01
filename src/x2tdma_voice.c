@@ -39,6 +39,7 @@ processX2TDMAvoice (dsd_opts * opts, dsd_state * state)
   int mutecurrentslot;
   int algidhex, kidhex;
   int msMode;
+  UNUSED5(lcformat, mfid, lcinfo, cachdata, parity);
 
 #ifdef X2TDMA_DUMP
   int k;

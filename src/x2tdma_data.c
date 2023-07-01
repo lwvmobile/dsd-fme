@@ -29,6 +29,7 @@ processX2TDMAdata (dsd_opts * opts, dsd_state * state)
   char cc[4];
   int aiei;
   char bursttype[5];
+  UNUSED4(syncdata, cachdata, cc, aiei);
 
 #ifdef X2TDMA_DUMP
   int k;

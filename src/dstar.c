@@ -29,10 +29,8 @@
 
 void processDSTAR(dsd_opts * opts, dsd_state * state) {
 	// extracts AMBE frames from D-STAR voice frame
-	int i, j, dibit;
+	int i, dibit;
 	char ambe_fr[4][24];
-	unsigned char data[9];
-	unsigned int bits[4];
 	int framecount;
 	int sync_missed = 0;
 	unsigned char slowdata[4];
@@ -165,7 +163,7 @@ void processDSTAR(dsd_opts * opts, dsd_state * state) {
 
 void processDSTAR_HD(dsd_opts * opts, dsd_state * state) {
 
-	int i, j;
+	int j;
 	int radioheaderbuffer[660];
 
 	for (j = 0; j < 660; j++) {

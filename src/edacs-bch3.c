@@ -332,7 +332,8 @@ decode_bch()
 {
 	register int    i, j, u, q, t2, count = 0, syn_error = 0;
 	int             elp[1026][1024], d[1026], l[1026], u_lu[1026], s[1025];
-	int             root[200], loc[200], err[1024], reg[201];
+	int             root[200], loc[200], reg[201];
+	(void)(root);
 
 	t2 = 2 * t;
 

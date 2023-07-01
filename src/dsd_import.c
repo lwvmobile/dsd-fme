@@ -18,6 +18,7 @@ int csvGroupImport(dsd_opts * opts, dsd_state * state)
   int row_count = 0;
   int field_count = 0;
   long int group_number = 0; //local group number for array index value
+  UNUSED(group_number);
   int i = 0;
   while (fgets(buffer, BSIZE, fp)) {
     field_count = 0;

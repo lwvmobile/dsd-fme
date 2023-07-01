@@ -53,15 +53,10 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
   uint32_t CCH_EmergencyPriority[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
   uint32_t CCH_Reserved[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
   uint32_t CCH_SlowData[NB_OF_DPMR_VOICE_FRAME_TO_DECODE];
-  uint32_t *errs;
-  uint32_t *errs2;
-  uint8_t AmbeBitDescrambled[49] = {0};
-  uint32_t ScramblerKey = 0;
   uint32_t PartOfSuperFrame = 0;
-  uint32_t VoiceFrameFlag = 1; /* We consider the current frame as a voice frame */
-  uint32_t AttachedDataFlag = 0;
   uint8_t CalledID[8] = {0};
   uint8_t CallingID[8] = {0};
+  UNUSED(PartOfSuperFrame);
 
   /* First CCH (Control CHannel) - 72 bit */
   k = 0;

@@ -33,6 +33,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   int algidhex, kidhex;
   unsigned long long int mihex1, mihex2, mihex3;
   int status_count;
+  UNUSED(mihex3);
 
   char hex_data[16][6];    // Data in hex-words (6 bit words). A total of 16 hex words.
   char hex_parity[8][6];   // Parity of the data, again in hex-word format. A total of 12 parity hex words.
@@ -203,6 +204,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
       int status;
       status = getDibit (opts, state) + '0';
       // TODO: do something useful with the status bits...
+      UNUSED(status);
   }
 
   // Error correct the hex_data using Reed-Solomon hex_parity

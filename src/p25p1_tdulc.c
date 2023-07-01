@@ -305,6 +305,7 @@ processTDULC (dsd_opts* opts, dsd_state* state)
       int status;
       status = getDibit (opts, state) + '0';
       // TODO: do something useful with the status bits...
+      UNUSED(status);
   }
 
   // Put the corrected data into the DSD structures

@@ -315,7 +315,6 @@ int estimate_symbol(int rf_mod, P25Heuristics* heuristics, int previous_dibit, i
 static void debug_print_symbol_heuristics(int previous_dibit, int dibit, SymbolHeuristics* sh)
 {
     float mean, sd;
-    int k;
     int n;
 
     n = sh->count;

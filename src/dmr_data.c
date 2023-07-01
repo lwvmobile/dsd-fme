@@ -26,13 +26,14 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   char sync[25];
   char syncdata[48];
   char cachdata[25];
+  UNUSED(syncdata);
 
-  char bursttype[5];
   uint8_t burst;
   char info[196];
   unsigned char SlotType[20]; 
   unsigned int SlotTypeOk;
   uint8_t cach_err = 0;
+  UNUSED(cach_err);
 
   int cachInterleave[24] = 
   {0, 7, 8, 9, 1, 10,

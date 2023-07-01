@@ -423,10 +423,7 @@ void writeSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
 
 void writeRawSample (dsd_opts * opts, dsd_state * state, short sample)
 {
-  int n;
-  short aout_buf[160];
-  short *aout_buf_p;
-
+  //short aout_buf[160];
   //sf_write_short(opts->wav_out_raw, aout_buf, 160);
 
   //only write if actual audio, truncate silence
@@ -441,6 +438,7 @@ void
 playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 {
   ssize_t result;
+  UNUSED(result);
 
   if (state->audio_out_idx > opts->delay)
   {
@@ -475,6 +473,7 @@ void
 playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
 {
   ssize_t result;
+  UNUSED(result);
 
   if (state->audio_out_idxR > opts->delay)
   {
@@ -521,7 +520,7 @@ openAudioOutDevice (dsd_opts * opts, int speed)
   }
 	else
 	{
-		struct stat stat_buf;
+  // struct stat stat_buf;
   // if(stat(opts->audio_out_dev, &stat_buf) != 0 && strncmp(opts->audio_out_dev, "pulse", 5 != 0)) //HERE
   //   {
   //     fprintf (stderr,"Error, couldn't open %s\n", opts->audio_out_dev);

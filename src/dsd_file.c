@@ -127,6 +127,7 @@ void PrintIMBEData (dsd_opts * opts, dsd_state * state, char *imbe_d) //for P25P
   int i, j, k;
   unsigned char b;
   unsigned char err;
+  UNUSED(err);
 
   err = (unsigned char) state->errs2;
   k = 0;
@@ -162,6 +163,7 @@ void PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d)
   int i, j, k;
   unsigned char b;
   unsigned char err;
+  UNUSED(err);
 
   err = (unsigned char) state->errs2;
   k = 0;
