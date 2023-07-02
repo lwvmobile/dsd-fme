@@ -25,7 +25,9 @@
 #include "dsd.h"
 #include "nxdn_const.h"
 
-static const uint8_t scramble_t[] = { //values are the position values we need to invert in the descramble
+//NOTE: Descrambling was having an issue without a value inside the brackets, but only when
+//the PARITY table was disabled, was this due to a memory issue or overflow?
+static const uint8_t scramble_t[182] = { //values are the position values we need to invert in the descramble
 	2, 5, 6, 7, 10, 12, 14, 16, 17, 22, 23, 25, 26, 27, 28, 30, 33, 34, 36, 37, 38, 41, 45, 47,
 	52, 54, 56, 57, 59, 62, 63, 64, 65, 66, 67, 69, 70, 73, 76, 79, 81, 82, 84, 85, 86, 87, 88,
 	89, 92, 95, 96, 98, 100, 103, 104, 107, 108, 116, 117, 121, 122, 125, 127, 131, 132, 134,
@@ -33,11 +35,6 @@ static const uint8_t scramble_t[] = { //values are the position values we need t
 	168, 170, 171, 174, 175, 176, 177, 181
 };
 
-static const int PARITY[] = {
-  0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 
-  1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 
-  1, 0, 0, 1, 1, 0, 1, 0, 0, 1
-};
 
 //decoding functions here
 void nxdn_descramble(uint8_t dibits[], int len)
