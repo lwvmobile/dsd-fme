@@ -30,7 +30,7 @@
 
 volatile uint8_t exitflag; //fix for issue #136
 
-void handler(int)
+void handler(int zzz)
 {
   exitflag = 1;
 }
