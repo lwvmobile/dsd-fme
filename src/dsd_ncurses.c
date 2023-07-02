@@ -1728,7 +1728,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     }
     if (choice == 20)
     {
-      cleanupAndExit (opts, state);
+      exitflag = 1;
     }
 
 		if(choice != 0 && choice != 20)	/* User did a choice come out of the infinite loop */
@@ -3409,7 +3409,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (c == 113) //'q' key, quit
   {
-    cleanupAndExit (opts, state);
+    exitflag = 1;
   }
 
   if (c == 52) // '4' key, toggle force privacy key over fid and svc (dmr)
@@ -3579,7 +3579,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       opts->audio_in_type = 0;
       openPulseInput(opts);
     }
-    else opts->audio_in_type = 5;//cleanupAndExit(opts, state); 
+    else opts->audio_in_type = 5; //exitflag = 1; 
     
   }
   #endif
