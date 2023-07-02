@@ -223,7 +223,6 @@ unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* tr
 void CDMRTrellisDeinterleave(const unsigned char* data, signed char* dibits)
 {
 	int n;
-	signed char dibit;
 	//can only assume this is giving the correct dibits out, and not inverse or something.
 	/*
 	for (int i = 0; i < 98; i++) {
@@ -437,15 +436,15 @@ bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload)
     }
   }
 	unsigned char points[49U];
-	unsigned char reverse_points[49U];
+	// unsigned char reverse_points[49U];
 	CDMRTrellisDibitsToPoints(dibits, points);
 	//maybe keep point 49 at 49, since its the flush?
 	//fprintf (stderr, "\n Trellis Reverse Points inside Decoder\n  ");
-	for (short i = 0; i < 49; i++)
-	{
-		reverse_points[i] = points[48-i];
-		//fprintf (stderr, "#%d [%02u] ", i, reverse_points[i]);
-	}
+	// for (short i = 0; i < 49; i++)
+	// {
+	// 	reverse_points[i] = points[48-i];
+	// 	//fprintf (stderr, "#%d [%02u] ", i, reverse_points[i]);
+	// }
 	//reverse_points[48] = points[48];
 	//fprintf (stderr, "#%d [%02u] ", 48, reverse_points[48]);
 
