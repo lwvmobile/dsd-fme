@@ -135,17 +135,13 @@ const int vd2Interleave[104] = {
 void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t cm, uint8_t input[])
 {
   //TODO: Per Call WAV files using these strings
-  int i, j, k;
+  int i;
   char dch_bytes[20];
   memset (dch_bytes, 0, sizeof(dch_bytes));
   char string1[11];
   char string2[11];
-  char string3[21];
   char rem1[6];
   char rem2[6];
-  long long int tgt, src;
-  tgt = src = 0;
-  char C;
 
   for (i = 0; i < 20; i++)
     dch_bytes[i] = (char)ConvertBitIntoBytes(&input[i*8], 8);
@@ -245,7 +241,7 @@ void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt,
 void ysf_dch_decode2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t cm, uint8_t input[])
 {
   //TODO: Per Call WAV files using these strings
-  int i, j, k;
+  int i;
   char dch_bytes[20];
   memset (dch_bytes, 0, sizeof(dch_bytes));
   char string[11];
@@ -687,27 +683,22 @@ void pn95_lfsr() //test to see if this generates the correct bits now
 
 void ysf_ehr (dsd_opts * opts, dsd_state * state, uint8_t dbuf[180], int start, int stop )
 {
-  int i, j, k, dibit;
+  int i;
   char ambe_fr[4][24];
   memset (ambe_fr, 0, sizeof(ambe_fr));
 
-  unsigned char *pr;
   const int *w, *x, *y, *z;
 
   int st = state->synctype;
   state->synctype = 28;
 
   uint8_t b1, b2;
-
-  k = 0;
-
   for (start; start < stop; start++)
   {
     w = YnW;
     x = YnX;
     y = YnY;
     z = YnZ;
-    k = 0;
 
     //debug
     // fprintf (stderr, " DBUF = ");
@@ -750,7 +741,6 @@ void processYSF(dsd_opts * opts, dsd_state * state)
   static uint8_t last_dt, last_fi; //if we can't get a good dt and fi, then just use the last one instead
   int i, j, k, l, err, vstart, vstop, dstart, dstop; //start stops are for Full Rate when we might have some portions of Data present in the Comm Channel
   int dibit;
-  const int *w, *x, *y, *z;
   uint8_t fichdibits[100]; //fich dibits
   uint8_t fichrawdibits[100];
   uint8_t fichrawbits[200];
@@ -770,7 +760,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
 
   //fich information
   uint8_t fi = 9; //Header, Communications, or Terminator
-  uint8_t cs = 9; //Type of Callsign
+  // uint8_t cs = 9; //Type of Callsign
   uint8_t cm = 9; //Type of Call
   uint8_t bn = 9; //block number
   uint8_t bt = 9; //block total
@@ -795,7 +785,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
   if (err == 0)
   {
     fi = (uint8_t)ConvertBitIntoBytes(&fich_decode[0], 2);
-    cs = (uint8_t)ConvertBitIntoBytes(&fich_decode[2], 2);
+    // cs = (uint8_t)ConvertBitIntoBytes(&fich_decode[2], 2);
     cm = (uint8_t)ConvertBitIntoBytes(&fich_decode[4], 2);
     bn = (uint8_t)ConvertBitIntoBytes(&fich_decode[6], 2);
     bt = (uint8_t)ConvertBitIntoBytes(&fich_decode[8], 2);
@@ -898,7 +888,6 @@ void processYSF(dsd_opts * opts, dsd_state * state)
   uint8_t dch_bits[160];
   uint8_t vch_bits[6][72];
   uint8_t vech_bits[104];
-  uint8_t buf[100];
 
   memset (dch_bits, 0, sizeof(dch_bits));
   memset (vch_bits, 0, sizeof(vch_bits));
