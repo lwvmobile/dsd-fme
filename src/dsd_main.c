@@ -1334,6 +1334,9 @@ if (opts->audio_out_type == 0)
 void
 cleanupAndExit (dsd_opts * opts, dsd_state * state)
 {
+  // Signal that everything should shutdown.
+  exitflag = 1;
+
   noCarrier (opts, state);
   if (opts->wav_out_f != NULL)
   {
