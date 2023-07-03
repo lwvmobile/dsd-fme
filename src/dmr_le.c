@@ -321,7 +321,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
 
       }
 
-      else //all that should be left in this field is the potential ENC identifiers
+      else if (sbrc_opcode != 0 || sbrc_opcode != 3) //all that should be left in this field is the potential ENC identifiers
       {
 
         if (slot == 0) //may not need the state->errs anymore //&& state->errs < 3
