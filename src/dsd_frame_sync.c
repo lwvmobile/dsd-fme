@@ -81,6 +81,7 @@ char * getDate(void) {
 void
 printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset, char *modulation)
 {
+  UNUSED3(state, offset, modulation);
 
   if (opts->verbose > 0)
     {

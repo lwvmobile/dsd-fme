@@ -4,6 +4,7 @@
 void
 openSerial (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(state);
 
   struct termios tty;
   speed_t baud;

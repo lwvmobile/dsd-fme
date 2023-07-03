@@ -11,6 +11,8 @@
 //new p25_lcw function here -- TIA-102.AABF-D LCW Format Messages (if anybody wants to fill the rest out)
 void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t irrecoverable_errors)
 {
+  UNUSED(irrecoverable_errors);
+
   uint8_t lc_format = (uint8_t)ConvertBitIntoBytes(&LCW_bits[0], 8);  //format
   uint8_t lc_opcode = (uint8_t)ConvertBitIntoBytes(&LCW_bits[2], 8);  //opcode portion of format
   uint8_t lc_mfid   = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 8);  //mfid

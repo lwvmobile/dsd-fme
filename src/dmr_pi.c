@@ -12,6 +12,7 @@
 
 void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors)
 {
+  UNUSED2(opts, CRCCorrect);
 
   if((IrrecoverableErrors == 0)) 
   {

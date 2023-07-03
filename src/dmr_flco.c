@@ -14,6 +14,7 @@
 //combined flco handler (vlc, tlc, emb), minus the superfluous structs and strings
 void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors, uint8_t type)
 {
+  UNUSED(CRCCorrect);
 
   //force slot to 0 if using dmr mono handling
   if (opts->dmr_mono == 1) state->currentslot = 0;
@@ -955,6 +956,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
 //externalize embedded alias to keep the flco function relatively clean
 void dmr_embedded_alias_header (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 {
+  UNUSED(opts);
   
   uint8_t slot = state->currentslot;
   uint8_t format = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 2); 
@@ -976,6 +978,8 @@ void dmr_embedded_alias_header (dsd_opts * opts, dsd_state * state, uint8_t lc_b
 
 void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 {
+  UNUSED(opts);
+
   fprintf (stderr, "%s", KYEL);
   fprintf (stderr, " Embedded Alias: ");
   uint8_t slot = state->currentslot;
@@ -1044,6 +1048,8 @@ void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_b
 //externalize embedded GPS - Needs samples to test/fix function
 void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 {
+  UNUSED(opts);
+
   fprintf (stderr, "%s", KYEL);
   fprintf (stderr, " Embedded GPS:");
   uint8_t slot = state->currentslot;

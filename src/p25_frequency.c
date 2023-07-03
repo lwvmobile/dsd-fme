@@ -13,6 +13,7 @@
 //P25
 long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channel)
 {
+	UNUSED(opts);
 
 	//RX and SU TX frequencies.
 	//SU RX = (Base Frequency) + (Channel Number) x (Channel Spacing).
@@ -61,6 +62,8 @@ long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channe
 
 long int nxdn_channel_to_frequency(dsd_opts * opts, dsd_state * state, uint16_t channel)
 {
+	UNUSED(opts);
+
 	long int freq;
 	long int base = 0;
 	long int step = 0;
