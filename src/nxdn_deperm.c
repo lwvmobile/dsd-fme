@@ -898,6 +898,7 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 
 void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 {
+	UNUSED(opts);
 
 	//NOTE: Most Req/Resp (request and respone) share same message type but differ depending on channel type
 	//RTCH Outbound will take precedent when differences may occur (except CALL_ASSGN)

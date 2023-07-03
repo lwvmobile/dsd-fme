@@ -242,6 +242,7 @@ void nxdn_location_id_handler (dsd_state * state, uint32_t location_id, uint8_t 
 
 void nxdn_srv_info_handler (dsd_state * state, uint16_t svc_info)
 {
+  UNUSED(state);
   //handle the service information elements
   //Part 1-A Common Air Interface Ver.2.0
   //6.5.33. Service Information
@@ -268,6 +269,8 @@ void nxdn_srv_info_handler (dsd_state * state, uint16_t svc_info)
 
 void nxdn_rst_info_handler (dsd_state * state, uint32_t rst_info)
 {
+  UNUSED(state);
+
   //handle the restriction information elements
   //Part 1-A Common Air Interface Ver.2.0
   //6.5.34. Restriction Information
@@ -630,6 +633,8 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
 
 void NXDN_decode_Alias(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 {
+  UNUSED(opts);
+
   uint8_t Alias1 = 0x20; //value of an ascii 'space' character
   uint8_t Alias2 = 0x20;
   uint8_t Alias3 = 0x20;
@@ -1032,6 +1037,7 @@ void NXDN_decode_adj_site(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 
 void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 {
+  UNUSED(opts);
 
   uint8_t  CCOption = 0;
   uint8_t  CallType = 0;
@@ -1190,6 +1196,8 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 
 void NXDN_decode_VCALL_IV(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 {
+  UNUSED(opts);
+
   state->payload_miN = 0; //zero out
   unsigned long long int IV = 0; 
 

@@ -42,6 +42,8 @@ void dmr_late_entry_mi_fragment (dsd_opts * opts, dsd_state * state, uint8_t vc,
 
 void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(opts);
+
   uint8_t slot = state->currentslot;
   int i, j;
   int g[3]; 
@@ -124,6 +126,8 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
 
 void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(opts);
+
   if (state->currentslot == 0)
   {
     state->dropL = 256;
@@ -163,6 +167,8 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
 
 void dmr_alg_reset (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(opts);
+
   state->dropL = 256;
   state->dropR = 256;
   state->DMRvcL = 0;

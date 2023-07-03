@@ -194,6 +194,8 @@ void beeper (dsd_opts * opts, dsd_state * state, int type)
 #else
 void beeper (dsd_opts * opts, dsd_state * state, int type)
 {
+  UNUSED(state);
+
   FILE *beep;
   char wav_name[1024] = {0};
 
@@ -418,6 +420,8 @@ void print_menuc(WINDOW *menu_win, int highlight)
 
 void ncursesOpen (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED2(opts, state);
+
   // state->menuopen = 1; //flag the menu is open, stop processing getFrameSync
   mbe_printVersion (versionstr);
   setlocale(LC_ALL, "");
