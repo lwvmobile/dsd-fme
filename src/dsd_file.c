@@ -352,6 +352,8 @@ openMbeInFile (dsd_opts * opts, dsd_state * state)
 //slot 1
 void closeMbeOutFile (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(state);
+
   if (opts->mbe_out == 1)
   {
     if (opts->mbe_out_f != NULL)
@@ -369,6 +371,8 @@ void closeMbeOutFile (dsd_opts * opts, dsd_state * state)
 //slot 2
 void closeMbeOutFileR (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(state);
+
   if (opts->mbe_outR == 1)
   {
     if (opts->mbe_out_fR != NULL)
@@ -479,6 +483,7 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
 
 void openWavOutFile (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(state);
 
   SF_INFO info;
   info.samplerate = 8000; //8000
@@ -495,6 +500,7 @@ void openWavOutFile (dsd_opts * opts, dsd_state * state)
 
 void openWavOutFileL (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(state);
 
   SF_INFO info;
   info.samplerate = 8000; 
@@ -511,6 +517,7 @@ void openWavOutFileL (dsd_opts * opts, dsd_state * state)
 
 void openWavOutFileR (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(state);
 
   SF_INFO info;
   info.samplerate = 8000; //8000
@@ -527,6 +534,7 @@ void openWavOutFileR (dsd_opts * opts, dsd_state * state)
 
 void openWavOutFileRaw (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(state);
 
   SF_INFO info;
   info.samplerate = 48000; //8000
@@ -542,21 +550,29 @@ void openWavOutFileRaw (dsd_opts * opts, dsd_state * state)
 
 void closeWavOutFile (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(state);
+
   sf_close(opts->wav_out_f);
 }
 
 void closeWavOutFileL (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(state);
+
   sf_close(opts->wav_out_f);
 }
 
 void closeWavOutFileR (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(state);
+
   sf_close(opts->wav_out_fR);
 }
 
 void closeWavOutFileRaw (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(state);
+
   sf_close(opts->wav_out_raw);
 }
 
@@ -568,6 +584,8 @@ void openSymbolOutFile (dsd_opts * opts, dsd_state * state)
 
 void closeSymbolOutFile (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(state);
+
   if (opts->symbol_out_f)
   {
     fclose(opts->symbol_out_f);

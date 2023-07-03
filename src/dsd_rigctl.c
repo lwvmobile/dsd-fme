@@ -222,6 +222,8 @@ bool GetSignalLevelEx(int sockfd, double *dBFS, int n_samp)
 //shoe in UDP input connection here...still having issues that I don't know how to resolve
 int UDPBind (char *hostname, int portno)
 {
+    UNUSED(hostname);
+
     int sockfd;
     struct sockaddr_in serveraddr;
 
@@ -252,6 +254,8 @@ int UDPBind (char *hostname, int portno)
 //going to leave this function available, even if completely switched over to rtl_dev_tune now, may be useful in the future
 void rtl_udp_tune(dsd_opts * opts, dsd_state * state, long int frequency) 
 {
+    UNUSED(state);
+
     int handle; 
     unsigned short udp_port = opts->rtl_udp_port; 
     char data[5] = {0}; //data buffer size is 5 for UDP frequency tuning

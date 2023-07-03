@@ -22,6 +22,7 @@
 
 void keyring(dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(opts);
 
     if (state->currentslot == 0)
       state->R = state->rkey_array[state->payload_keyid];

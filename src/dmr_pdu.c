@@ -414,6 +414,8 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
 
 void dmr_locn (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[])
 {
+  UNUSED(opts);
+
   int i;
   uint8_t slot = state->currentslot;
   uint8_t blocks = state->data_header_blocks[slot];

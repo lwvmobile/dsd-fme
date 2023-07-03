@@ -30,8 +30,10 @@
 
 volatile uint8_t exitflag; //fix for issue #136
 
-void handler(int zzz)
+void handler(int sgnl)
 {
+  UNUSED(sgnl);
+
   exitflag = 1;
 }
 

@@ -109,6 +109,8 @@ void p2_dibit_buffer (dsd_opts * opts, dsd_state * state)
 
 void process_Frame_Scramble (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(opts);
+
   //The bits of the scramble sequence corresponding to signal bits that are not scrambled or not used are discarded.
   //descramble frame scrambled by LFSR of WACN, SysID, and CC(NAC)
   unsigned long long int seed = 0;
@@ -354,7 +356,9 @@ void process_SACCHs (dsd_opts * opts, dsd_state * state)
 
 void process_ISCH (dsd_opts * opts, dsd_state * state)
 {
-	isch = 0;
+  UNUSED(opts);
+
+  isch = 0;
   for (int i = 0; i < 40; i++)
   {
    	isch = isch << 1;

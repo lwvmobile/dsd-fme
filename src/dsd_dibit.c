@@ -118,6 +118,8 @@ print_datascope(dsd_opts* opts, dsd_state* state, int* sbuf2)
 static void
 use_symbol (dsd_opts* opts, dsd_state* state, int symbol)
 {
+  UNUSED(symbol);
+
   int i;
   int sbuf2[128];
   int lmin, lmax, lsum;

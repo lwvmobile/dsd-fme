@@ -406,6 +406,8 @@ void dmr_udt_cspdu_converter (dsd_opts * opts, dsd_state * state, uint8_t block_
 //assemble the blocks as they come in, shuffle them into the unified dmr_pdu_sf
 void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_bytes[], uint8_t block_len, uint8_t databurst, uint8_t type)
 {
+  UNUSED(databurst);
+
   int i, j;
   uint8_t lb = 0; //mbc last block
   uint8_t pf = 0; //mbc protect flag
@@ -767,6 +769,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 //or tuning away and we can no longer verify accurate data block reporting
 void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
 {
+  UNUSED(opts);
+
   memset (state->data_p_head, 0, sizeof(state->data_p_head));
   memset (state->data_conf_data, 0, sizeof(state->data_conf_data));
   memset (state->dmr_pdu_sf, 0, sizeof(state->dmr_pdu_sf));

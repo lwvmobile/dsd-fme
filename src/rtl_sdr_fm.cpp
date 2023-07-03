@@ -730,6 +730,8 @@ int verbose_reset_buffer(rtlsdr_dev_t *dev)
 
 static void optimal_settings(int freq, int rate)
 {
+	UNUSED(rate);
+
 	// giant ball of hacks
 	// seems unable to do a single pass, 2:1
 	int capture_freq, capture_rate;
@@ -908,6 +910,8 @@ static unsigned int chars_to_int(unsigned char* buf) {
 }
 
 static void *socket_thread_fn(void *arg) {
+  UNUSED(arg);
+
   int n;
   int sockfd;
   unsigned char buffer[5];
@@ -1074,6 +1078,8 @@ void cleanup_rtlsdr_stream()
 //find way to modify this function to allow hopping (tuning) while squelched and send 0 sample?
 int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 {
+	UNUSED2(opts, state);
+
 	while (output.queue.empty())
 	{
 		struct timespec ts;

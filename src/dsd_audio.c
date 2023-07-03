@@ -423,6 +423,8 @@ void writeSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
 
 void writeRawSample (dsd_opts * opts, dsd_state * state, short sample)
 {
+  UNUSED(state);
+
   //short aout_buf[160];
   //sf_write_short(opts->wav_out_raw, aout_buf, 160);
 
@@ -506,6 +508,8 @@ playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
 void
 openAudioOutDevice (dsd_opts * opts, int speed)
 {
+  UNUSED(speed);
+
   //converted to handle any calls to use portaudio
 	if(strncmp(opts->audio_out_dev, "pa:", 3) == 0)
 	{
