@@ -666,16 +666,16 @@ void NXDN_decode_Alias(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     //since we are zeroing out the blocks on tx_rel and other conditions, better to just set nothing to bad Alias bytes
     //tends to zero out otherwise already good blocks set in a previous repitition.
     if (Alias1 > 0x19 && Alias1 < 0x7F) sprintf (state->nxdn_alias_block_segment[blocknumber-1][0], "%c", Alias1);
-    else ;// sprintf (state->nxdn_alias_block_segment[blocknumber-1][0], "%c", 32); //space
+    //else sprintf (state->nxdn_alias_block_segment[blocknumber-1][0], "%c", 32); //space
 
     if (Alias2 > 0x19 && Alias2 < 0x7F) sprintf (state->nxdn_alias_block_segment[blocknumber-1][1], "%c", Alias2);
-    else ; //sprintf (state->nxdn_alias_block_segment[blocknumber-1][1], "%c", 0); //space
+    //else sprintf (state->nxdn_alias_block_segment[blocknumber-1][1], "%c", 0); //space
 
     if (Alias3 > 0x19 && Alias3 < 0x7F) sprintf (state->nxdn_alias_block_segment[blocknumber-1][2], "%c", Alias3);
-    else ; //sprintf (state->nxdn_alias_block_segment[blocknumber-1][2], "%c", 0); //space
+    //else sprintf (state->nxdn_alias_block_segment[blocknumber-1][2], "%c", 0); //space
 
     if (Alias4 > 0x19 && Alias4 < 0x7F) sprintf (state->nxdn_alias_block_segment[blocknumber-1][3], "%c", Alias4);
-    else ; //sprintf (state->nxdn_alias_block_segment[blocknumber-1][3], "%c", 0); //space
+    //else sprintf (state->nxdn_alias_block_segment[blocknumber-1][3], "%c", 0); //space
   }
 
   //crc errs in one repitition may occlude an otherwise good alias, so test and change if needed

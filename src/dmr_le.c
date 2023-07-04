@@ -9,7 +9,7 @@
 #include "dsd.h"
 
 //gather ambe_fr mi fragments for processing
-void dmr_late_entry_mi_fragment (dsd_opts * opts, dsd_state * state, uint8_t vc, char ambe_fr[4][24], char ambe_fr2[4][24], char ambe_fr3[4][24])
+void dmr_late_entry_mi_fragment (dsd_opts * opts, dsd_state * state, uint8_t vc, uint8_t ambe_fr[4][24], uint8_t ambe_fr2[4][24], uint8_t ambe_fr3[4][24])
 {
   
   uint8_t slot = state->currentslot;

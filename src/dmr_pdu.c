@@ -406,8 +406,6 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
     fprintf (stderr, "  Potential ARRP/LRRP Report (Debug): 0x%02X", report);
   }
 
-  LRRP_END:
-
   fprintf (stderr, "%s", KNRM);
   
 }

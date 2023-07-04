@@ -24,14 +24,14 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   char redundancyB[36];
 
   //memcpy of ambe_fr for late entry
-  char m1[4][24];
-  char m2[4][24];
-  char m3[4][24];
+  uint8_t m1[4][24];
+  uint8_t m2[4][24];
+  uint8_t m3[4][24];
   
   const int *w, *x, *y, *z;
   char sync[25];
   char syncdata[48];
-  char EmbeddedSignalling[16];
+  unsigned char EmbeddedSignalling[16];
 
   uint8_t emb_ok = 0;
   uint8_t tact_okay = 0;
@@ -82,7 +82,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   short int skipcount = 0;
 
   //cach
-  char cachdata[25]; 
+  uint8_t cachdata[25];
   int cachInterleave[24] =
   {0, 7, 8, 9, 1, 10,
    11, 12, 2, 13, 14,
@@ -503,9 +503,9 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   memset (ambe_fr3, 0, sizeof(ambe_fr3));
 
   //memcpy of ambe_fr for late entry
-  char m1[4][24];
-  char m2[4][24];
-  char m3[4][24];
+  uint8_t m1[4][24];
+  uint8_t m2[4][24];
+  uint8_t m3[4][24];
 
   const int *w, *x, *y, *z;
   char sync[25];
@@ -516,7 +516,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 
   uint8_t internalslot;
 
-  char cachdata[25]; 
+  uint8_t cachdata[25];
   int cachInterleave[24] =
   {0, 7, 8, 9, 1, 10,
   11, 12, 2, 13, 14,

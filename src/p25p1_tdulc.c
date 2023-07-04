@@ -216,7 +216,7 @@ void
 processTDULC (dsd_opts* opts, dsd_state* state)
 {
   int i;
-  char lcinfo[57], lcformat[9], mfid[9];
+  uint8_t lcinfo[57], lcformat[9], mfid[9];
 
   int status_count;
 

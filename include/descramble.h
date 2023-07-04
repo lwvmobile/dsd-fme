@@ -52,7 +52,7 @@ int traceBack (int * out, int * m_pathMemory0, int * m_pathMemory1, int * m_path
 					state = S2; // lower path
 				} else {
 					state = S0; // upper path
-				}; // end else - if
+				} // end else - if
 				out[loop]=0;
 				break;
 			
@@ -61,7 +61,7 @@ int traceBack (int * out, int * m_pathMemory0, int * m_pathMemory1, int * m_path
 					state = S2; // lower path
 				} else {
 					state = S0; // upper path
-				}; // end else - if
+				} // end else - if
 				out[loop]=1;
 				break;
 			
@@ -70,7 +70,7 @@ int traceBack (int * out, int * m_pathMemory0, int * m_pathMemory1, int * m_path
 					state = S3; // lower path
 				} else {
 					state = S1; // upper path
-				}; // end else - if
+				} // end else - if
 				out[loop]=0;
 				break;
 			
@@ -79,12 +79,12 @@ int traceBack (int * out, int * m_pathMemory0, int * m_pathMemory1, int * m_path
 					state = S3; // lower path
 				} else {
 					state = S1; // upper path
-				}; // end else - if
+				} // end else - if
 				out[loop]=1;
 				break;
 			
-		}; // end switch
-	}; // end for
+		} // end switch
+	} // end for
 
 return(length);
 }; // end function

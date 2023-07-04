@@ -28,7 +28,7 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
 {
   // extracts IMBE frames from LDU frame
   int i;
-  char lcformat[9], mfid[9], lcinfo[57];
+  uint8_t lcformat[9], mfid[9], lcinfo[57];
   char lsd1[9], lsd2[9];
 
   int status_count;

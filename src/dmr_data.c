@@ -25,7 +25,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   int *dibit_p;
   char sync[25];
   char syncdata[48];
-  char cachdata[25];
+  uint8_t cachdata[25];
   UNUSED(syncdata);
 
   uint8_t burst;

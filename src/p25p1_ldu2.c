@@ -28,7 +28,8 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 {
   // extracts IMBE frames from LDU frame
   int i;
-  char mi[73], algid[9], kid[17];
+  uint8_t mi[73];
+  char algid[9], kid[17];
   char lsd1[9], lsd2[9];
   int algidhex, kidhex;
   unsigned long long int mihex1, mihex2, mihex3;

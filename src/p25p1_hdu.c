@@ -215,7 +215,8 @@ correct_golay_dibits_6(char* corrected_hex_data, int hex_count, AnalogSignal* an
 void
 processHDU(dsd_opts* opts, dsd_state* state)
 {
-  char mi[73], mfid[9], algid[9], kid[17], tgid[17];
+  uint8_t mi[73];
+  char mfid[9], algid[9], kid[17], tgid[17];
   int i, j;
   int algidhex, kidhex;
   char hex[6];
