@@ -114,16 +114,16 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
    *  5 = -X2-TDMA (inverted signal data frame)
    *  6 = +D-STAR
    *  7 = -D-STAR
-   *  8 = +NXDN (non inverted voice frame)
-   *  9 = -NXDN (inverted voice frame)
+   *  8 = +M17 STR (non inverted stream frame)
+   *  9 = -M17 STR (inverted stream frame)
    * 10 = +DMR (non inverted signal data frame)
    * 11 = -DMR (inverted signal voice frame)
    * 12 = +DMR (non inverted signal voice frame)
    * 13 = -DMR (inverted signal data frame)
    * 14 = +ProVoice
    * 15 = -ProVoice
-   * 16 = +NXDN (non inverted data frame)
-   * 17 = -NXDN (inverted data frame)
+   * 16 = +M17 LSF (non inverted link frame)
+   * 17 = -M17 LSF (inverted link frame)
    * 18 = +D-STAR_HD
    * 19 = -D-STAR_HD
    * 20 = +dPMR Frame Sync 1
@@ -215,6 +215,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   char synctest20[21]; //YSF
   char synctest21[22]; //P25 S-OEMI (SACCH)
   char synctest48[49]; //EDACS
+  char synctest8[9]; //M17
   char modulation[8];
   char *synctest_p;
   int symboltest_pos; //symbol test position, match to synctest_pos
@@ -232,6 +233,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   else if (opts->frame_dpmr == 1)
   {
     t_max = 12; //based on Frame_Sync_2 pattern
+  }
+  else if (opts->frame_m17 == 1)
+  {
+    t_max = 8; //pfffffft....why (test with multiples of 8?) (might be an idea to do t_max *= 5 or something...for tests)
   }
   else if (state->lastsynctype == 30 || state->lastsynctype == 31 )
   {
@@ -578,41 +583,95 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             }
           //YSF sync
           strncpy(synctest20, (synctest_p - 19), 20);
-          if(opts->frame_ysf == 1) //(opts->frame_ysf == 1
+          if(opts->frame_ysf == 1) 
           {
-            if (0 == 0) //opts->inverted_ysf == 0
+            if (strcmp(synctest20, FUSION_SYNC) == 0)
             {
-              if (strcmp(synctest20, FUSION_SYNC) == 0)
-              {
-                printFrameSync (opts, state, "+YSF ", synctest_pos + 1, modulation);
-                state->carrier = 1;
-                state->offset = synctest_pos;
-                state->max = ((state->max) + lmax) / 2;
-                state->min = ((state->min) + lmin) / 2;
-                opts->inverted_ysf = 0;
-                state->lastsynctype = 30;
-                return (30);
-              }
+              printFrameSync (opts, state, "+YSF ", synctest_pos + 1, modulation);
+              state->carrier = 1;
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+              opts->inverted_ysf = 0;
+              state->lastsynctype = 30;
+              return (30);
             }
-          }
-          if(opts->frame_ysf == 1) //(opts->frame_ysf == 1
-          {
-            if (0 == 0) //opts->inverted_ysf == 1
+            else if (strcmp(synctest20, INV_FUSION_SYNC) == 0)
             {
-              if (strcmp(synctest20, INV_FUSION_SYNC) == 0)
-              {
-                printFrameSync (opts, state, "-YSF ", synctest_pos + 1, modulation);
-                state->carrier = 1;
-                state->offset = synctest_pos;
-                state->max = ((state->max) + lmax) / 2;
-                state->min = ((state->min) + lmin) / 2;
-                opts->inverted_ysf = 1;
-                state->lastsynctype = 31;
-                return (31);
-              }
+              printFrameSync (opts, state, "-YSF ", synctest_pos + 1, modulation);
+              state->carrier = 1;
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+              opts->inverted_ysf = 1;
+              state->lastsynctype = 31;
+              return (31);
             }
           }
           //end YSF sync
+
+          //M17 Sync -- Just Voice and LSF for now
+          strncpy(synctest8, (synctest_p - 7), 8);
+          if(opts->frame_m17 == 1) 
+          {
+            //may need to try the contents of this frame much like NXDN, only
+            //printFrameSync after good LICH validation etc
+            if (strcmp(synctest8, M17_STR) == 0)
+            {
+              if (opts->inverted_m17 == 0)
+              {
+                printFrameSync (opts, state, "+M17 STR", synctest_pos + 1, modulation);
+                state->carrier = 1;
+                state->offset = synctest_pos;
+                state->max = ((state->max) + lmax) / 2;
+                state->min = ((state->min) + lmin) / 2;
+                if (state->lastsynctype == 16)
+                  return (16); //reusing some of those old NXDN returns
+                state->lastsynctype = 16;
+                fprintf (stderr, "\n");
+              }
+              else
+              {
+                printFrameSync (opts, state, "-M17 LSF", synctest_pos + 1, modulation);
+                state->carrier = 1;
+                state->offset = synctest_pos;
+                state->max = ((state->max) + lmax) / 2;
+                state->min = ((state->min) + lmin) / 2;
+                if (state->lastsynctype == 9)
+                  return (9); //reusing some of those old NXDN returns
+                state->lastsynctype = 9;
+                fprintf (stderr, "\n");
+              }
+            }
+            else if (strcmp(synctest8, M17_LSF) == 0)
+            {
+              if (opts->inverted_m17 == 1)
+              {
+                printFrameSync (opts, state, "-M17 STR", synctest_pos + 1, modulation);
+                state->carrier = 1;
+                state->offset = synctest_pos;
+                state->max = ((state->max) + lmax) / 2;
+                state->min = ((state->min) + lmin) / 2;
+                if (state->lastsynctype == 17)
+                  return (17); //reusing some of those old NXDN returns
+                state->lastsynctype = 17;
+                fprintf (stderr, "\n");
+              }
+              else
+              {
+                printFrameSync (opts, state, "+M17 LSF", synctest_pos + 1, modulation);
+                state->carrier = 1;
+                state->offset = synctest_pos;
+                state->max = ((state->max) + lmax) / 2;
+                state->min = ((state->min) + lmin) / 2;
+                if (state->lastsynctype == 8)
+                  return (8); //reusing some of those old NXDN returns
+                state->lastsynctype = 8;
+                fprintf (stderr, "\n");
+              }
+            }
+          }
+          //end M17 
 
           //P25 P2 sync S-ISCH VCH
           strncpy(synctest20, (synctest_p - 19), 20);

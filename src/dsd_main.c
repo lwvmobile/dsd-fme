@@ -461,6 +461,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->ysf_fi = 9;
   state->ysf_cm = 9;
 
+  //M17 Storage
+  memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
+  memset (state->m17_lsf_err, 0, sizeof(state->m17_lsf_err));
+  
 } //nocarrier
 
 void
@@ -537,12 +541,14 @@ initOpts (dsd_opts * opts)
   opts->frame_dpmr = 0;
   opts->frame_provoice = 0;
   opts->frame_ysf = 1;
+  opts->frame_m17 = 0;
   opts->mod_c4fm = 1;
   opts->mod_qpsk = 0;
   opts->mod_gfsk = 0;
   opts->uvquality = 3;
   opts->inverted_x2tdma = 1;    // most transmitter + scanner + sound card combinations show inverted signals for this
   opts->inverted_dmr = 0;       // most transmitter + scanner + sound card combinations show non-inverted signals for this
+  opts->inverted_m17 = 0;
   opts->mod_threshold = 26;
   opts->ssize = 128; //36 default, max is 128, much cleaner data decodes on Phase 2 cqpsk at max
   opts->msize = 1024; //15 default, max is 1024, much cleaner data decodes on Phase 2 cqpsk at max
@@ -1041,6 +1047,9 @@ initState (dsd_state * state)
   state->ysf_fi = 9;
   state->ysf_cm = 9;
 
+  //M17 Storage
+  memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
+  memset (state->m17_lsf_err, 0, sizeof(state->m17_lsf_err));
 
 } //init_state
 
@@ -1127,6 +1136,7 @@ usage ()
   printf ("  -fd           Decode only D-STAR\n");
   printf ("  -fx           Decode only X2-TDMA\n");
   printf ("  -fy           Decode only YSF\n");
+  printf ("  -fz             Decode only M17*(not working)\n");
   printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
   printf ("  -fp             Decode only EDACS/ProVoice*\n");
@@ -1136,6 +1146,7 @@ usage ()
   printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
   printf ("  -xr           Expect inverted DMR signal\n");
   printf ("  -xd           Expect inverted ICOM dPMR signal\n");
+  printf ("  -xz           Expect inverted M17 signal\n");
   printf ("\n");
   printf ("  * denotes frame types that cannot be auto-detected.\n");
   printf ("  ** Phase 2 Single Frequency may require user to manually set WACN/SYSID/CC parameters if MAC_SIGNAL not present.\n");
@@ -1775,6 +1786,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 1;
+              opts.frame_m17 = 0;
               opts.pulse_digi_rate_out = 48000; // /dev/dsp does need this set to 48000 to properly process the upsampling
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0; //switching in 'stereo' for 'mono'
@@ -1795,6 +1807,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 0;
+              opts.frame_m17 = 0;
               opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
@@ -1816,6 +1829,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 0;
+              opts.frame_m17 = 0;
               opts.pulse_digi_rate_out = 48000;
               opts.pulse_digi_out_channels = 1;
               opts.dmr_stereo = 0;
@@ -1836,6 +1850,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 1;
               opts.frame_ysf = 0;
+              opts.frame_m17 = 0;
               state.samplesPerSymbol = 5;
               state.symbolCenter = 2;
               opts.mod_c4fm = 0;
@@ -1867,6 +1882,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 0;
+              opts.frame_m17 = 0;
               opts.dmr_stereo = 0;
               state.dmr_stereo = 0;
               opts.mod_c4fm = 1;
@@ -1896,6 +1912,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 0;
+              opts.frame_m17 = 0;
               state.samplesPerSymbol = 20;
               state.symbolCenter = 10;
               opts.mod_c4fm = 1;
@@ -1925,6 +1942,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 1;
+              opts.frame_m17 = 0;
               opts.mod_c4fm = 1;
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
@@ -1949,6 +1967,7 @@ main (int argc, char **argv)
                   opts.frame_dpmr = 0;
                   opts.frame_provoice = 0;
                   opts.frame_ysf = 0;
+                  opts.frame_m17 = 0;
                   state.samplesPerSymbol = 8; 
                   state.symbolCenter = 3;
                   opts.mod_c4fm = 1;
@@ -1975,6 +1994,7 @@ main (int argc, char **argv)
                 opts.frame_dpmr = 0;
                 opts.frame_provoice = 0;
                 opts.frame_ysf = 0;
+                opts.frame_m17 = 0;
                 opts.mod_c4fm = 1;
                 opts.mod_qpsk = 0;
                 opts.mod_gfsk = 0;
@@ -2001,6 +2021,7 @@ main (int argc, char **argv)
                       opts.frame_dpmr = 0;
                       opts.frame_provoice = 0;
                       opts.frame_ysf = 1;
+                      opts.frame_m17 = 0;
                       opts.mod_c4fm = 1;
                       opts.mod_qpsk = 0;
                       opts.mod_gfsk = 0;
@@ -2027,6 +2048,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 0;
+              opts.frame_m17 = 0;
               opts.mod_c4fm = 1;
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
@@ -2052,6 +2074,7 @@ main (int argc, char **argv)
               opts.frame_dpmr = 0;
               opts.frame_provoice = 0;
               opts.frame_ysf = 0;
+              opts.frame_m17 = 0;
               opts.mod_c4fm = 1;
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0; //
@@ -2078,7 +2101,8 @@ main (int argc, char **argv)
             opts.frame_dmr = 0;
             opts.frame_provoice = 0;
             opts.frame_dpmr = 1;
-            opts.frame_ysf = 0; //testing with NXDN48 parameters
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
             state.samplesPerSymbol = 20; //same as NXDN48 - 20
             state.symbolCenter = 10; //same as NXDN48 - 10
             opts.mod_c4fm = 1;
@@ -2093,6 +2117,32 @@ main (int argc, char **argv)
             sprintf (opts.output_name, "dPMR");
             fprintf(stderr, "Notice: dPMR cannot autodetect polarity. \n Use -xd option if Inverted Signal expected.\n");
             fprintf(stderr, "Decoding only dPMR frames.\n");
+          }
+          else if (optarg[0] == 'z') //placeholder letter
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 1;
+            opts.mod_c4fm = 1;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 0;
+            state.rf_mod = 0;
+            opts.pulse_digi_rate_out =  8000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.dmr_stereo = 0;
+            sprintf (opts.output_name, "M17");
+            fprintf(stderr, "Notice: M17 cannot autodetect polarity. \n Use -xz option if Inverted Signal expected.\n");
+            fprintf(stderr, "Decoding only M17 frames.(Not Working)\n");
           }
           break;
         //don't mess with the modulations unless you really need to
@@ -2179,20 +2229,25 @@ main (int argc, char **argv)
           break;
         case 'x':
           if (optarg[0] == 'x')
-            {
-              opts.inverted_x2tdma = 0;
-              fprintf (stderr,"Expecting non-inverted X2-TDMA signals.\n");
-            }
+          {
+            opts.inverted_x2tdma = 0;
+            fprintf (stderr,"Expecting non-inverted X2-TDMA signals.\n");
+          }
           else if (optarg[0] == 'r')
-            {
-              opts.inverted_dmr = 1;
-              fprintf (stderr,"Expecting inverted DMR signals.\n");
-            }
+          {
+            opts.inverted_dmr = 1;
+            fprintf (stderr,"Expecting inverted DMR signals.\n");
+          }
           else if (optarg[0] == 'd')
-            {
-              opts.inverted_dpmr = 1;
-              fprintf (stderr, "Expecting inverted ICOM dPMR signals.\n");
-            }
+          {
+            opts.inverted_dpmr = 1;
+            fprintf (stderr, "Expecting inverted ICOM dPMR signals.\n");
+          }
+          else if (optarg[0] == 'z')
+          {
+            opts.inverted_m17 = 1;
+            fprintf (stderr, "Expecting inverted M17 signals.\n");
+          }
           break;
         case 'A':
           sscanf (optarg, "%i", &opts.mod_threshold);

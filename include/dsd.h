@@ -309,6 +309,9 @@ typedef struct
   int inverted_ysf;
   short int aggressive_framesync;
 
+  int frame_m17;
+  int inverted_m17;
+
   FILE *symbolfile;
   int call_alert;
 
@@ -720,14 +723,25 @@ typedef struct
   char ysf_rm4[6];
   char ysf_txt[21][21]; //text storage blocks
 
+  //M17 Storage
+  uint8_t m17_lsf_err[6]; //golay segment FEC validity
+  uint8_t m17_lsf[280];
+
 } dsd_state;
 
 /*
  * Frame sync patterns
  */
 
-#define FUSION_SYNC     "31111311313113131131" //HA!
-#define INV_FUSION_SYNC "13333133131331313313" //HA!
+//The inverse of LSF also seems to be Stream Frame Type, only going to work on Stream mode for now
+// #define M17_LSF_PRE "1311113313"
+#define M17_LSF     "11113313" //"11113313"
+#define M17_STR     "33331131" //"33331131"
+// #define M17_BRT     "31331111"
+// #define M17_PKT     "13113333"
+
+#define FUSION_SYNC     "31111311313113131131"
+#define INV_FUSION_SYNC "13333133131331313313"
 
 #define INV_P25P1_SYNC "333331331133111131311111"
 #define P25P1_SYNC     "111113113311333313133333"
@@ -893,6 +907,7 @@ void processX2TDMAdata (dsd_opts * opts, dsd_state * state);
 void processX2TDMAvoice (dsd_opts * opts, dsd_state * state);
 void processDSTAR_HD (dsd_opts * opts, dsd_state * state);
 void processYSF(dsd_opts * opts, dsd_state * state); //YSF
+void processM17(dsd_opts * opts, dsd_state * state); //M17
 void processP2(dsd_opts * opts, dsd_state * state); //P2
 void processTSBK(dsd_opts * opts, dsd_state * state); //P25 Trunking Single Block
 void processMPDU(dsd_opts * opts, dsd_state * state); //P25 Multi Block PDU (SAP 0x61 FMT 0x15 or 0x17 for Trunking Blocks)
