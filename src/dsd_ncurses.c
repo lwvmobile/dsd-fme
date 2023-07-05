@@ -1822,16 +1822,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     lls = state->synctype;
   }
 
-  //NXDN
-  if (state->nxdn_last_rid > 0 && state->nxdn_last_rid != src)
+  //NXDN -- I really need to fix this better, but this is good enough for today
+  if (state->nxdn_last_rid != 0 && state->nxdn_last_rid != src)
   {
     src = state->nxdn_last_rid;
   }
-  if (state->nxdn_last_ran > -1 && state->nxdn_last_ran != rn)
+  if (state->nxdn_last_ran != -1 )
   {
     rn = state->nxdn_last_ran;
   }
-  if (state->nxdn_last_tg > 0 && state->nxdn_last_tg != tgn)
+  if (state->nxdn_last_tg != 0 && state->nxdn_last_tg != tgn)
   {
     tgn = state->nxdn_last_tg;
   }
@@ -1946,8 +1946,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   }
 
-  //NXDN
-  if ( call_matrix[9][2] != src && src > 0 && rn > -1 )
+  //NXDN -- I really need to fix this better, but this is good enough for today
+  if ( call_matrix[9][2] != src && src != 0 && rn != -1 )
   {
     for (short int k = 0; k < 9; k++)
     {
