@@ -1058,9 +1058,10 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
     #endif
 
+    state->debug_audio_errors += state->errs2 + state->errs;
+
     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
     {
-      state->debug_audio_errors += state->errs2;
       if (opts->audio_out == 1)
       {
         processAudio(opts, state);
@@ -1128,9 +1129,10 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
     #endif
 
+    state->debug_audio_errorsR += state->errs2R + state->errsR;
+
     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
     {
-      state->debug_audio_errorsR += state->errs2R;
       if (opts->audio_out == 1)
       {
         processAudioR(opts, state);
@@ -1145,7 +1147,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
   if (opts->dmr_mono == 0 && opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
   {
-    state->debug_audio_errors += state->errs2;
+    state->debug_audio_errors += state->errs2 + state->errs;
     if (opts->audio_out == 1)
     {
       processAudio(opts, state);

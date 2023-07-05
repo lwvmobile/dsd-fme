@@ -36,13 +36,13 @@
 
 
 /* Global variables ---------------------------------------------------------*/
-static const uint8_t CNXDNConvolution_BIT_MASK_TABLE[] = {0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U, 0x02U, 0x01U};
+static const uint8_t CNXDNConvolution_BIT_MASK_TABLE[8] = {0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U, 0x02U, 0x01U};
 
 #define WRITE_BIT1(p,i,b) p[(i)>>3] = (b) ? (p[(i)>>3] | CNXDNConvolution_BIT_MASK_TABLE[(i)&7]) : (p[(i)>>3] & ~CNXDNConvolution_BIT_MASK_TABLE[(i)&7])
 #define READ_BIT1(p,i)    (p[(i)>>3] & CNXDNConvolution_BIT_MASK_TABLE[(i)&7])
 
-static const uint8_t CNXDNConvolution_BRANCH_TABLE1[] = {0U, 0U, 0U, 0U, 2U, 2U, 2U, 2U};
-static const uint8_t CNXDNConvolution_BRANCH_TABLE2[] = {0U, 2U, 2U, 0U, 0U, 2U, 2U, 0U};
+static const uint8_t CNXDNConvolution_BRANCH_TABLE1[8] = {0U, 0U, 0U, 0U, 2U, 2U, 2U, 2U};
+static const uint8_t CNXDNConvolution_BRANCH_TABLE2[8] = {0U, 2U, 2U, 0U, 0U, 2U, 2U, 0U};
 
 static const unsigned int CNXDNConvolution_NUM_OF_STATES_D2 = 8U;
 static const unsigned int CNXDNConvolution_NUM_OF_STATES = 16U;
