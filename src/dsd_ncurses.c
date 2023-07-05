@@ -1822,15 +1822,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //NXDN
-  if (state->nxdn_last_rid > 0 && state->nxdn_last_rid != src);
+  if (state->nxdn_last_rid > 0 && state->nxdn_last_rid != src)
   {
     src = state->nxdn_last_rid;
   }
-  if (state->nxdn_last_ran > -1 && state->nxdn_last_ran != rn);
+  if (state->nxdn_last_ran > -1 && state->nxdn_last_ran != rn)
   {
     rn = state->nxdn_last_ran;
   }
-  if (state->nxdn_last_tg > 0 && state->nxdn_last_tg != tgn);
+  if (state->nxdn_last_tg > 0 && state->nxdn_last_tg != tgn)
   {
     tgn = state->nxdn_last_tg;
   }

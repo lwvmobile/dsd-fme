@@ -595,7 +595,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   if (is_ras == 1) CRCCorrect = crc_original_validity;
 
   //start printing relevant fec/crc/ras messages, don't print on idle or MBC continuation blocks (handled in dmr_block.c)
-  if (IrrecoverableErrors == 0 && CRCCorrect == 1 && databurst != 0x09 && databurst != 0x05) ; //fprintf(stderr, "(CRC OK)");
+  // if (IrrecoverableErrors == 0 && CRCCorrect == 1 && databurst != 0x09 && databurst != 0x05) fprintf(stderr, "(CRC OK)");
 
   // if (IrrecoverableErrors == 0 && CRCCorrect == 0 && databurst != 0x09 && databurst != 0x05)
   // {

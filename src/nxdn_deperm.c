@@ -448,12 +448,12 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 	if (crc == check)
 	{ 
 		if (type == 1) NXDN_Elements_Content_decode(opts, state, 1, f2u_message_buffer);
-		if (type == 0) ; //need handling for user data (text messages and AVL)
+		if (type == 0) {} //need handling for user data (text messages and AVL)
 	} 
 	else if (opts->aggressive_framesync == 0)
 	{
 		if (type == 1) NXDN_Elements_Content_decode(opts, state, 0, f2u_message_buffer);
-		if (type == 0) ; //need handling for user data (text messages and AVL)
+		if (type == 0) {} //need handling for user data (text messages and AVL)
 	} 
 
 	if (opts->payload == 1)
@@ -847,12 +847,12 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 	if (crc[0] == check[0] && crc[1] == check[1])
 	{
 		if (type == 1) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf);
-		if (type == 0) ; //need handling for user data (text messages and AVL)
+		if (type == 0) {} //need handling for user data (text messages and AVL)
 	}  
 	else if (opts->aggressive_framesync == 0) 
 	{
 		if (type == 1) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
-		if (type == 0) ; //need handling for user data (text messages and AVL)
+		if (type == 0) {} //need handling for user data (text messages and AVL)
 	}
 
 	if (opts->payload == 1)

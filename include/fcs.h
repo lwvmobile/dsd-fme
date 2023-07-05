@@ -75,7 +75,7 @@ for (loop=0; loop < size; loop++) {
 
 	m_crc = (m_crc >> 8) ^ ccittTab[tmp];
 
-}; // end for
+} // end for
 
 // calculate and save crc-value in fields 54 and 55 of dvframe
 m_crc = ~m_crc;

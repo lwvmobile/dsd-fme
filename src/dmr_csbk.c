@@ -1086,7 +1086,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             }
           } //end tuning
 
-          SKIPCAP: ;
+          // SKIPCAP: ;
           //debug print
           if (fl == 1 && opts->payload == 1)
           {
@@ -1491,7 +1491,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
     } //end Hytera XPT section
 
   }
-  END:
+
   fprintf (stderr, "%s", KNRM);  
 
 }
