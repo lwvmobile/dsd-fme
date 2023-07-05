@@ -1733,6 +1733,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (choice == 20)
     {
       exitflag = 1;
+      break;
     }
 
 		if(choice != 0 && choice != 20)	/* User did a choice come out of the infinite loop */
@@ -2296,7 +2297,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| SymbolC Bin: %s\n", opts->symbol_out_file);
   }
-  if (opts->wav_out_file[0] != 0)
+  if (opts->dmr_stereo_wav == 0 && opts->wav_out_file[0] != 0)
   {
     printw ("| Decoded WAV: %s\n", opts->wav_out_file);
   }
