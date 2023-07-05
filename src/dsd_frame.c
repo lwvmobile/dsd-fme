@@ -296,6 +296,14 @@ processFrame (dsd_opts * opts, dsd_state * state)
       processYSF(opts, state);
       return;
     }
+    //M17
+    else if ((state->synctype == 16) || (state->synctype == 9) || (state->synctype == 17) || (state->synctype == 8) )
+    {
+      // processM17(opts, state); //disabled until more work can be done
+      skipDibit(opts, state, 184);
+      fprintf (stderr, "\n");
+      return;
+    }
     //P25 P2
     else if ((state->synctype == 35) || (state->synctype == 36))
     {
