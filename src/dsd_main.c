@@ -471,9 +471,9 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->ysf_cm = 9;
 
   //M17 Storage
-  memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
-  memset (state->m17_lsf_err, 0, sizeof(state->m17_lsf_err));
-  
+  memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
+  state->m17_str_dt = 9;
+
 } //nocarrier
 
 void
@@ -556,7 +556,7 @@ initOpts (dsd_opts * opts)
   opts->uvquality = 3;
   opts->inverted_x2tdma = 1;    // most transmitter + scanner + sound card combinations show inverted signals for this
   opts->inverted_dmr = 0;       // most transmitter + scanner + sound card combinations show non-inverted signals for this
-  opts->inverted_m17 = 0;
+  opts->inverted_m17 = 0;       //samples from M17_Education seem to all be positive polarity (same from m17-tools programs)
   opts->mod_threshold = 26;
   opts->ssize = 128; //36 default, max is 128, much cleaner data decodes on Phase 2 cqpsk at max
   opts->msize = 1024; //15 default, max is 1024, much cleaner data decodes on Phase 2 cqpsk at max
@@ -1056,8 +1056,13 @@ initState (dsd_state * state)
   state->ysf_cm = 9;
 
   //M17 Storage
-  memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
-  memset (state->m17_lsf_err, 0, sizeof(state->m17_lsf_err));
+  memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
+  state->m17_str_dt = 9;
+  
+  #ifdef USE_CODEC2
+  state->codec2_3200 = codec2_create(CODEC2_MODE_3200);
+  state->codec2_1600 = codec2_create(CODEC2_MODE_1600);
+  #endif
 
 } //init_state
 
@@ -1144,7 +1149,7 @@ usage ()
   printf ("  -fd           Decode only D-STAR\n");
   printf ("  -fx           Decode only X2-TDMA\n");
   printf ("  -fy           Decode only YSF\n");
-  printf ("  -fz             Decode only M17*(not working)\n");
+  printf ("  -fz             Decode only M17*\n");
   printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
   printf ("  -fp             Decode only EDACS/ProVoice*\n");
@@ -1349,6 +1354,11 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
 {
   // Signal that everything should shutdown.
   exitflag = 1;
+  
+  #ifdef USE_CODEC2
+  codec2_destroy(state->codec2_1600);
+  codec2_destroy(state->codec2_3200);
+  #endif
 
   noCarrier (opts, state);
   if (opts->wav_out_f != NULL)
@@ -2157,7 +2167,7 @@ main (int argc, char **argv)
             state.dmr_stereo = 0;
             sprintf (opts.output_name, "M17");
             fprintf(stderr, "Notice: M17 cannot autodetect polarity. \n Use -xz option if Inverted Signal expected.\n");
-            fprintf(stderr, "Decoding only M17 frames.(Not Working)\n");
+            fprintf(stderr, "Decoding only M17 frames.\n");
           }
           break;
         //don't mess with the modulations unless you really need to
@@ -2260,7 +2270,7 @@ main (int argc, char **argv)
           }
           else if (optarg[0] == 'z')
           {
-            opts.inverted_m17 = 1;
+            opts.inverted_m17 = 0;
             fprintf (stderr, "Expecting inverted M17 signals.\n");
           }
           break;

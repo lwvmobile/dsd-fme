@@ -299,9 +299,9 @@ processFrame (dsd_opts * opts, dsd_state * state)
     //M17
     else if ((state->synctype == 16) || (state->synctype == 9) || (state->synctype == 17) || (state->synctype == 8) )
     {
-      // processM17(opts, state); //disabled until more work can be done
-      skipDibit(opts, state, 184);
-      fprintf (stderr, "\n");
+      if (state->synctype == 16 || state->synctype == 17)
+        processM17(opts, state);
+      else skipDibit(opts, state, 184); //8 and 9 will need seperate handling for LSF
       return;
     }
     //P25 P2

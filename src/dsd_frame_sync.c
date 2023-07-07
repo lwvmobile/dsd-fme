@@ -236,7 +236,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   }
   else if (opts->frame_m17 == 1)
   {
-    t_max = 8; //pfffffft....why (test with multiples of 8?) (might be an idea to do t_max *= 5 or something...for tests)
+    t_max = 8;
   }
   else if (state->lastsynctype == 30 || state->lastsynctype == 31 )
   {
@@ -613,8 +613,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           strncpy(synctest8, (synctest_p - 7), 8);
           if(opts->frame_m17 == 1) 
           {
-            //may need to try the contents of this frame much like NXDN, only
-            //printFrameSync after good LICH validation etc
             if (strcmp(synctest8, M17_STR) == 0)
             {
               if (opts->inverted_m17 == 0)
@@ -625,7 +623,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
                 if (state->lastsynctype == 16)
-                  return (16); //reusing some of those old NXDN returns
+                  return (16);
                 state->lastsynctype = 16;
                 fprintf (stderr, "\n");
               }
@@ -637,7 +635,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
                 if (state->lastsynctype == 9)
-                  return (9); //reusing some of those old NXDN returns
+                  return (9);
                 state->lastsynctype = 9;
                 fprintf (stderr, "\n");
               }
@@ -652,7 +650,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
                 if (state->lastsynctype == 17)
-                  return (17); //reusing some of those old NXDN returns
+                  return (17);
                 state->lastsynctype = 17;
                 fprintf (stderr, "\n");
               }
@@ -664,7 +662,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
                 if (state->lastsynctype == 8)
-                  return (8); //reusing some of those old NXDN returns
+                  return (8);
                 state->lastsynctype = 8;
                 fprintf (stderr, "\n");
               }

@@ -111,7 +111,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         {
 
           sf_close(opts->audio_in_file);
-          fprintf (stderr, "\n\nEnd of .wav file.\n");
+          fprintf (stderr, "\nEnd of %s\n", opts->audio_in_dev);
           //open pulse input if we are pulse output AND using ncurses terminal
           if (opts->audio_out_type == 0 && opts->use_ncurses_terminal == 1)
           {
@@ -248,34 +248,6 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         
       }
 
-      //tcp socket input from SDR++ -- old method to open pulse or quit right away
-      // else if (opts->audio_in_type == 8)
-      // {
-      //   result = sf_read_short(opts->tcp_file_in, &sample, 1);
-      //   if(result == 0) {
-
-      //     fprintf (stderr, "Connection to TCP Server Disconnected.\n");
-      //     //open pulse input if we are pulse output AND using ncurses terminal
-      //     if (opts->audio_out_type == 0 && opts->use_ncurses_terminal == 1)
-      //     {
-      //       opts->audio_in_type = 0; //set input type
-      //       openPulseInput(opts); //open pulse input
-      //     } 
-      //     //else cleanup and exit
-      //     else cleanupAndExit(opts, state);
-          
-      //   }
-      // }
-
-      //UDP Socket input...not working correct. Reads samples, but no sync
-      // else if (opts->audio_in_type == 6)
-      // {
-        //I think this doesn't get the entire dgram when we run sf_read_short on the udp dgram
-        // result = sf_read_short(opts->udp_file_in, &sample, 1); 
-        // if (sample != 0)
-        //   fprintf (stderr, "Result = %d Sample = %d \n", result, sample);
-      // }
-
       if (opts->use_cosine_filter)
         {
           if ( (state->lastsynctype >= 10 && state->lastsynctype <= 13) || state->lastsynctype == 32 || state->lastsynctype == 33 
@@ -284,8 +256,12 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             sample = dmr_filter(sample);
           }
 
-          else if (state->lastsynctype == 8  || state->lastsynctype == 9  ||
-               state->lastsynctype == 16 || state->lastsynctype == 17 ||
+          else if (state->lastsynctype == 8 || state->lastsynctype == 9 ||state->lastsynctype == 16 || state->lastsynctype == 17)
+          {
+            sample = m17_filter(sample);
+          }
+
+          else if ( 
                state->lastsynctype == 20 || state->lastsynctype == 21 ||
                state->lastsynctype == 22 || state->lastsynctype == 23 ||
                state->lastsynctype == 24 || state->lastsynctype == 25 ||
@@ -524,7 +500,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
     {
       // opts->audio_in_type = 0; //switch to pulse after playback, ncurses terminal can initiate replay if wanted
       fclose(opts->symbolfile);
-      fprintf (stderr, "\n\nEnd of .bin file\n");
+      fprintf (stderr, "\nEnd of %s\n", opts->audio_in_dev);
       //open pulse input if we are pulse output AND using ncurses terminal
       if (opts->audio_out_type == 0 && opts->use_ncurses_terminal == 1)
       {
