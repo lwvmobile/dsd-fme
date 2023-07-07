@@ -142,7 +142,7 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t lich_bits[96])
   uint8_t lich_reserve = (uint8_t)ConvertBitIntoBytes(&lich_decoded[43], 5); //lich_reserved
 
   if (err == 0)
-    fprintf (stderr, "LC: %d/6 RES: %02X ", lich_counter+1, lich_reserve); //do the same thing we did on fusion and nxdn
+    fprintf (stderr, "LC: %d/6 ", lich_counter+1);
   else fprintf (stderr, "LICH G24 ERR");
 
   //this is what 2.rrc is supposed to be -- according to m17-demod -- code fixed now and reflects this
@@ -190,55 +190,62 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t lich_bits[96])
 void M17processCodec2(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
 {
   int i;
-  unsigned char bytes[16];
   unsigned char bytes1[8];
   unsigned char bytes2[8];
 
   for (i = 0; i < 8; i++)
   {
-    bytes[i+0]  = (unsigned char)ConvertBitIntoBytes(&payload[i*8*1], 8);
-    bytes[i+8]  = (unsigned char)ConvertBitIntoBytes(&payload[i*8*2], 8);
-    bytes1[i]   = (unsigned char)ConvertBitIntoBytes(&payload[i*8*1], 8);
-    bytes2[i]   = (unsigned char)ConvertBitIntoBytes(&payload[i*8*2], 8);
+    bytes1[i]   = (unsigned char)ConvertBitIntoBytes(&payload[i*8+0], 8);
+    bytes2[i]   = (unsigned char)ConvertBitIntoBytes(&payload[i*8+64], 8);
   }
 
   //TODO: A switch to flip whether or not fullrate or halfrate
   //halfrate format not available yet in manual, but assuming 
   //it'll be either byte 1 or byte 2 when passed this far
+
   if (opts->payload == 1)
   {
     fprintf (stderr, "\n CODEC2: ");
-    for (i = 0; i < 16; i++)
-      fprintf (stderr, "%02X", bytes[i]);
+    for (i = 0; i < 8; i++)
+      fprintf (stderr, "%02X", bytes1[i]);
+    fprintf (stderr, " (3200)");
+
+    fprintf (stderr, "\n CODEC2: ");
+    for (i = 0; i < 8; i++)
+      fprintf (stderr, "%02X", bytes2[i]);
     fprintf (stderr, " (3200)");
   }
   
-  //TODO: Fix Speech Output speed/rate issues and also find/figure out potential memory overflow here
+  //TODO: Find/figure out potential memory overflow here
   #ifdef USE_CODEC2
   size_t nsam;
   nsam = codec2_samples_per_frame(state->codec2_3200);
 
-  //use pointer and allocate memory -- increasing allocation doesn't appear to cause any issues of note just yet
-  short * speech = malloc (sizeof (short) * (nsam*2)); //*2 
+  short samp1[nsam*2];
+  short samp2[nsam*2];
+  memset (samp1, 0, sizeof(samp1));
+  memset (samp2, 0, sizeof(samp2));
 
-  //original -- working but speech rate in .rrc files is too fast, but sounds really clean
-  //may need to collect enough samples first for smooth playback, or upsample them
-  codec2_decode(state->codec2_3200, speech, bytes);
-  pa_simple_write(opts->pulse_digi_dev_out, speech, nsam*2, NULL);
+  //okay, I think I have fixed the speech output, it sounds natural speed now
+  //even for an AI voice, but still have to use the 'big chungus' memory shim until I find the issue
 
-  //testing area
-  // codec2_decode(state->codec2_3200, speech, bytes1);
-  // codec2_decode(state->codec2_3200, speech, bytes2);
-  // pa_simple_write(opts->pulse_digi_dev_out, speech, nsam, NULL);
-  // pa_simple_write(opts->pulse_digi_dev_out, speech, nsam, NULL);
+  codec2_decode(state->codec2_3200, samp1, bytes1);
+  codec2_decode(state->codec2_3200, samp2, bytes2);
 
-  //testing area
-  // codec2_decode(state->codec2_3200, speech, bytes1);
-  // pa_simple_write(opts->pulse_digi_dev_out, speech, nsam, NULL);
-  // codec2_decode(state->codec2_3200, speech, bytes2);
-  // pa_simple_write(opts->pulse_digi_dev_out, speech, nsam, NULL);
+  if (opts->audio_out_type == 0)
+  {
+    pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
+    pa_simple_write(opts->pulse_digi_dev_out, samp2, nsam*2, NULL);
+  }
+    
+  if (opts->audio_out_type == 5)
+  {
+    write (opts->audio_out_fd, samp1, nsam*2);
+    write (opts->audio_out_fd, samp2, nsam*2);
+  }
 
-  free(speech); //ba dum tiss
+  //TODO: Wav file saving
+  //TODO: Codec2 Raw file saving
 
   #endif
 
@@ -342,7 +349,7 @@ void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t m17_bits[368])
   else if (state->m17_str_dt == 0) fprintf (stderr, "  RES;");
   else                             fprintf (stderr, "  UNK;");
 
-  if (opts->payload == 1)
+  if (opts->payload == 1 && state->m17_str_dt != 2)
   {
     fprintf (stderr, "\n STREAM: ");
     for (i = 0; i < 18; i++) 
@@ -393,7 +400,8 @@ void processM17(dsd_opts * opts, dsd_state * state)
   for (i = 0; i < 368; i++)
     m17_int_bits[i] = (m17_rnd_bits[i] ^ m17_scramble[i]) & 1;
 
-  //deinterleave the bit array using Quadratic Permutation Polynomial function π(x) = (45x + 92x2 ) mod 368
+  //deinterleave the bit array using Quadratic Permutation Polynomial
+  //function π(x) = (45x + 92x2 ) mod 368
   for (i = 0; i < 368; i++)
   {
     x = ((45*i)+(92*i*i)) % 368;
@@ -409,7 +417,7 @@ void processM17(dsd_opts * opts, dsd_state * state)
   if (lich_err == 0)
     M17prepareStream(opts, state, m17_bits);
 
-  if (lich_err != 0) state->lastsynctype = -1;
+  // if (lich_err != 0) state->lastsynctype = -1; //disable
 
   //ending linebreak
   fprintf (stderr, "\n");
