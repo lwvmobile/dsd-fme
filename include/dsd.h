@@ -74,6 +74,10 @@
 #include <locale.h>
 #include <ncurses.h>
 
+#ifdef USE_CODEC2
+#include <codec2/codec2.h>
+#endif
+
 extern volatile uint8_t exitflag; //fix for issue #136
 
 //group csv import struct
@@ -724,8 +728,14 @@ typedef struct
   char ysf_txt[21][21]; //text storage blocks
 
   //M17 Storage
-  uint8_t m17_lsf_err[6]; //golay segment FEC validity
-  uint8_t m17_lsf[280];
+  uint8_t m17_lsf[360];
+  uint8_t m17_str_dt; //stream contents
+
+  //Codec2
+  #ifdef USE_CODEC2
+  struct CODEC2 *codec2_3200; //M17 fullrate
+  struct CODEC2 *codec2_1600; //M17 halfrate
+  #endif
 
 } dsd_state;
 
@@ -734,9 +744,8 @@ typedef struct
  */
 
 //The inverse of LSF also seems to be Stream Frame Type, only going to work on Stream mode for now
-// #define M17_LSF_PRE "1311113313"
-#define M17_LSF     "11113313" //"11113313"
-#define M17_STR     "33331131" //"33331131"
+#define M17_LSF     "11113313"
+#define M17_STR     "33331131"
 // #define M17_BRT     "31331111"
 // #define M17_PKT     "13113333"
 
@@ -914,6 +923,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state); //P25 Multi Block PDU (SAP
 short dmr_filter(short sample);
 short nxdn_filter(short sample);
 short dpmr_filter(short sample);
+short m17_filter(short sample);
 
 int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr);
 uint64_t ConvertBitIntoBytes(uint8_t * BufferIn, uint32_t BitLength);

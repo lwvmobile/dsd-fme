@@ -28,20 +28,20 @@ Debian/Mint/Ubuntu/Pi
 
 ```
 sudo apt update
-sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev
+sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev libcodec2-dev
 ```
 
-Fedora 36/37 -- from https://github.com/lwvmobile/dsd-fme/issues/99
+Fedora (Recent Releases) -- from https://github.com/lwvmobile/dsd-fme/issues/99
 
 ```
-sudo dnf install libsndfile-devel fftw-devel lapack-devel rtl-sdr-devel pulseaudio-libs-devel libusb-devel cmake git ncurses ncurses-devel gcc wget pavucontrol gcc-c++
+sudo dnf install libsndfile-devel fftw-devel lapack-devel rtl-sdr-devel pulseaudio-libs-devel libusb-devel cmake git ncurses ncurses-devel gcc wget pavucontrol gcc-c++ codec2-devel
 ```
 ## Headless Ubuntu Server/Pi
 
 If running headless, swap out pavucontrol for pulsemixer, and also install pulseaudio as well. Attempting to install pavucontrol in a headless environment may attempt to install a minimal desktop environment. Note: Default behavior of pulseaudio in a headless environment may be to be muted, so check by opening pulsemixer and unmuting and routing audio appropriately.
 
 ```
-sudo apt install libpulse-dev libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev pulsemixer pulseaudio
+sudo apt install libpulse-dev libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev pulsemixer pulseaudio libcodec2-dev
 ```
 
 ### Build and Install ITPP - ONLY IF NOT IN REPO!!

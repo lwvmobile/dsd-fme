@@ -264,8 +264,9 @@ static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
     }
 
   else if ((state->synctype == 1) || (state->synctype == 3)  || (state->synctype == 5)  ||
-          (state->synctype == 31) || (state->synctype == 11) || (state->synctype == 13) ||
-          (state->synctype == 17) || (state->synctype == 29) || (state->synctype == 36) || (state->synctype == 16) )
+          (state->synctype == 9)  || (state->synctype == 11) || (state->synctype == 13) ||
+          (state->synctype == 17) || (state->synctype == 29) || (state->synctype == 31) ||
+          (state->synctype == 36)                                                           )
 
     {
       //  1 -P25p1
