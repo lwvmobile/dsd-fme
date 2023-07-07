@@ -458,15 +458,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
 
           //if using an rtl input method, do not look for sync patterns if the rms value is lower than our 'soft squelch' level
-          if (opts->audio_in_type == 3 && opts->rtl_rms < opts->rtl_squelch_level) //tests show floor level around 40, and signal breaking 100, default is 100 for level
+          if (opts->audio_in_type == 3 && opts->rtl_rms < opts->rtl_squelch_level)
           {
-            if (opts->frame_nxdn48 == 1 || opts->frame_nxdn96 == 1 || opts->frame_dpmr == 1)
+            if (opts->frame_nxdn48 == 1 || opts->frame_nxdn96 == 1 || opts->frame_dpmr == 1 || opts->frame_m17)
             {
-              //should we update min/max here? yes or no?
-
-              // state->max = ((state->max) + lmax) / 2;
-              // state->min = ((state->min) + lmin) / 2;
-
               goto SYNC_TEST_END;
             }
           }

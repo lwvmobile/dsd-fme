@@ -2472,7 +2472,11 @@ main (int argc, char **argv)
     // }
 
     int fmt; 
-    int speed = 48000; 
+    int speed = 48000;
+
+    //Codec2 only running at 8k output currently, need to match for OSS
+    if (opts.frame_m17 == 1)
+      speed = 8000;
 
     //NOTE: Both /dev/audio AND /dev/dsp randomly open multiple input streams in Linux under padsp wrapper
     if((strncmp(opts.audio_in_dev, "/dev/audio", 10) == 0))
