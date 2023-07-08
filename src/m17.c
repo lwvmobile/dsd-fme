@@ -187,50 +187,48 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t lich_bits[96])
   return err;
 }
 
-void M17processCodec2(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
+void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
 {
   int i;
-  unsigned char bytes1[8];
-  unsigned char bytes2[8];
+  unsigned char voice1[8];
+  unsigned char voice2[8];
 
   for (i = 0; i < 8; i++)
   {
-    bytes1[i]   = (unsigned char)ConvertBitIntoBytes(&payload[i*8+0], 8);
-    bytes2[i]   = (unsigned char)ConvertBitIntoBytes(&payload[i*8+64], 8);
+    voice1[i] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+0], 8);
+    voice2[i] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+64], 8);
   }
 
-  //TODO: A switch to flip whether or not fullrate or halfrate
-  //halfrate format not available yet in manual, but assuming 
-  //it'll be either byte 1 or byte 2 when passed this far
+  //TODO: Either Make seperate 3200 and 1600 handling, or make this handle both
+  //depends on how many bits 1600 needs and if its split the same as this
 
   if (opts->payload == 1)
   {
     fprintf (stderr, "\n CODEC2: ");
     for (i = 0; i < 8; i++)
-      fprintf (stderr, "%02X", bytes1[i]);
+      fprintf (stderr, "%02X", voice1[i]);
     fprintf (stderr, " (3200)");
 
     fprintf (stderr, "\n CODEC2: ");
     for (i = 0; i < 8; i++)
-      fprintf (stderr, "%02X", bytes2[i]);
+      fprintf (stderr, "%02X", voice2[i]);
     fprintf (stderr, " (3200)");
   }
   
-  //TODO: Find/figure out potential memory overflow here
+  //TODO: Rework parts of this (we already know nsam = 160 on 3200 and 320 on 1600, etc)
   #ifdef USE_CODEC2
   size_t nsam;
   nsam = codec2_samples_per_frame(state->codec2_3200);
 
-  short samp1[nsam*2];
-  short samp2[nsam*2];
+  short samp1[nsam];
+  short samp2[nsam];
   memset (samp1, 0, sizeof(samp1));
   memset (samp2, 0, sizeof(samp2));
 
-  //okay, I think I have fixed the speech output, it sounds natural speed now
-  //even for an AI voice, but still have to use the 'big chungus' memory shim until I find the issue
 
-  codec2_decode(state->codec2_3200, samp1, bytes1);
-  codec2_decode(state->codec2_3200, samp2, bytes2);
+  codec2_decode(state->codec2_3200, samp1, voice1);
+  codec2_decode(state->codec2_3200, samp2, voice2);
+
 
   if (opts->audio_out_type == 0)
   {
@@ -343,7 +341,7 @@ void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t m17_bits[368])
     payload[i] = trellis_buf[i+16];
 
   if (state->m17_str_dt == 2)
-    M17processCodec2(opts, state, payload);
+    M17processCodec2_3200(opts, state, payload);
   else if (state->m17_str_dt == 3) fprintf (stderr, "  V+D;"); //format not available yet in manual
   else if (state->m17_str_dt == 1) fprintf (stderr, " DATA;");
   else if (state->m17_str_dt == 0) fprintf (stderr, "  RES;");
@@ -362,7 +360,14 @@ void processM17(dsd_opts * opts, dsd_state * state)
 {
 
   int i, x;
-  uint8_t dbuf[184]; //384-bit frame - 16-bit (8 symbol) sync pattern
+
+  //NOTE: adding more space for dbuf seems to fix the memory issue, but I don't think this is
+  //the culprit, not entirely sure what is going on here, but the issue with Cygwin (32-bit)
+  //not working at all with this also is fixed by this and I can't seem to figure out why
+  //its probably something really dumb that I am completely blind on seeing here for some reason
+
+  
+  uint8_t dbuf[384]; //384-bit frame - 16-bit (8 symbol) sync pattern (184 dibits)
   uint8_t m17_rnd_bits[368]; //368 bits that are still scrambled (randomized)
   uint8_t m17_int_bits[368]; //368 bits that are still interleaved
   uint8_t m17_bits[368]; //368 bits that have been de-interleaved and de-scramble
@@ -375,10 +380,6 @@ void processM17(dsd_opts * opts, dsd_state * state)
   memset (m17_bits, 0, sizeof(m17_bits));
   memset (lich_bits, 0, sizeof(lich_bits));
 
-  //this is a shim to allot extra memory until I can find the overflow issue
-  //when decoding the codec2 data
-  uint8_t big_chungus[0xFFFF];
-  memset (big_chungus, 0, sizeof(big_chungus));
 
   /*
     Within the Physical Layer, the 368 Type 4 bits are randomized and combined with the 16-bit
@@ -387,7 +388,7 @@ void processM17(dsd_opts * opts, dsd_state * state)
 
   //load dibits into dibit buffer
   for (i = 0; i < 184; i++)
-    dbuf[i] = getDibit(opts, state);
+    dbuf[i] = (uint8_t) getDibit(opts, state);
 
   //convert dbuf into a bit array
   for (i = 0; i < 184; i++)
@@ -401,7 +402,7 @@ void processM17(dsd_opts * opts, dsd_state * state)
     m17_int_bits[i] = (m17_rnd_bits[i] ^ m17_scramble[i]) & 1;
 
   //deinterleave the bit array using Quadratic Permutation Polynomial
-  //function π(x) = (45x + 92x2 ) mod 368
+  //function π(x) = (45x + 92x^2 ) mod 368
   for (i = 0; i < 368; i++)
   {
     x = ((45*i)+(92*i*i)) % 368;

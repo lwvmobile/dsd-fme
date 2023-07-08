@@ -461,7 +461,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           //if using an rtl input method, do not look for sync patterns if the rms value is lower than our 'soft squelch' level
           if (opts->audio_in_type == 3 && opts->rtl_rms < opts->rtl_squelch_level)
           {
-            if (opts->frame_nxdn48 == 1 || opts->frame_nxdn96 == 1 || opts->frame_dpmr == 1 || opts->frame_m17)
+            if (opts->frame_nxdn48 == 1 || opts->frame_nxdn96 == 1 || opts->frame_dpmr == 1 || opts->frame_m17 == 1)
             {
               goto SYNC_TEST_END;
             }
