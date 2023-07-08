@@ -1769,7 +1769,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     rtl_clean_queue();
     reset_dibit_buffer(state); //test and observe for any random issues, disable if needed
     #elif AERO_BUILD
-    opts->audio_out_type = 3; //hopefully the audio stream is still/already open
+    opts->audio_out_type = 5; //hopefully the audio stream is still/already open //shouldn't this be 5? Was set to 3
     #else
     opts->audio_out_type = 0; //need to see if we need to open pulseoutput as well here?
     openPulseOutput (opts);

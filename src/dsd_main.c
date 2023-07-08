@@ -2270,7 +2270,7 @@ main (int argc, char **argv)
           }
           else if (optarg[0] == 'z')
           {
-            opts.inverted_m17 = 0;
+            opts.inverted_m17 = 1;
             fprintf (stderr, "Expecting inverted M17 signals.\n");
           }
           break;
