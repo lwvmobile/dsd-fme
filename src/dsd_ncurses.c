@@ -301,7 +301,7 @@ char * getTimeC(time_t t) //get pretty hh:mm:ss timestamp
 
 //testing a few things, going to put this into ncursesMenu
 #define WIDTH 36
-#define HEIGHT 23
+#define HEIGHT 25
 
 int startx = 0;
 int starty = 0;
@@ -1261,6 +1261,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->frame_ysf = 1;
+      opts->frame_m17 = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1291,6 +1292,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dpmr = 0;
       opts->frame_provoice = 1;
       opts->frame_ysf = 0;
+      opts->frame_m17 = 0;
       opts->mod_c4fm = 0;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 1;
@@ -1319,6 +1321,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->frame_ysf = 0;
+      opts->frame_m17 = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1357,6 +1360,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->frame_ysf = 0;
+      opts->frame_m17 = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1394,6 +1398,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->frame_ysf = 1;
+      opts->frame_m17 = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1421,6 +1426,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->frame_ysf = 0;
+      opts->frame_m17 = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1448,6 +1454,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dpmr = 1;
       opts->frame_provoice = 0;
       opts->frame_ysf = 0;
+      opts->frame_m17 = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1478,6 +1485,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->frame_ysf = 0;
+      opts->frame_m17 = 0;
       opts->mod_c4fm = 1;
       //opts->unmute_encrypted_p25 = 0;
       // opts->mod_qpsk = 0;
@@ -1505,6 +1513,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->frame_ysf = 0;
+      opts->frame_m17 = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1533,6 +1542,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->frame_ysf = 0;
+      opts->frame_m17 = 0;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1560,6 +1570,34 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->frame_ysf = 1;
+      opts->frame_m17 = 0;
+      opts->mod_c4fm = 1;
+      opts->mod_qpsk = 0;
+      opts->mod_gfsk = 0;
+      state->rf_mod = 0;
+    }
+    if (choice == 99) //TODO: Slot this into the menu choices, and maybe rearrange them into the correct order as well
+    {
+      //Decode M17
+      // resetState (state); //use sparingly, may cause memory leak
+      state->samplesPerSymbol = 10;
+      state->symbolCenter = 4;
+      sprintf (opts->output_name, "M17");
+      opts->dmr_mono = 0;
+      opts->dmr_stereo  = 0; //this value is the end user option
+      state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
+      opts->pulse_digi_rate_out = 8000;
+      opts->pulse_digi_out_channels = 1;
+      opts->frame_dstar = 0;
+      opts->frame_x2tdma = 0;
+      opts->frame_p25p1 = 0;
+      opts->frame_nxdn48 = 0;
+      opts->frame_nxdn96 = 0;
+      opts->frame_dmr = 0;
+      opts->frame_dpmr = 0;
+      opts->frame_provoice = 0;
+      opts->frame_ysf = 0;
+      opts->frame_m17 = 1;
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
@@ -1574,6 +1612,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         opts->inverted_dpmr = 1;
         opts->inverted_x2tdma = 1;
         opts->inverted_ysf = 1;
+        opts->inverted_m17 = 1;
       }
       else
       {
@@ -1581,6 +1620,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         opts->inverted_dpmr = 0;
         opts->inverted_x2tdma = 0;
         opts->inverted_ysf = 0;
+        opts->inverted_m17 = 0;
       }
 
     }
@@ -2434,6 +2474,75 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   			state->dstarradioheader[32], state->dstarradioheader[33], state->dstarradioheader[34], state->dstarradioheader[35],
   			state->dstarradioheader[36], state->dstarradioheader[37], state->dstarradioheader[38]);
     }
+  }
+
+  //M17
+  if (lls == 8 || lls == 9 || lls == 16 || lls == 17)
+  {
+
+    printw ("| ");
+    printw ("M17 - ");
+
+    //insert data type and frame information
+    if (state->m17_str_dt == 0) printw("Reserved");
+    if (state->m17_str_dt == 1) printw("Data ");
+    if (state->m17_str_dt == 2) printw("Voice (3200) ");
+    if (state->m17_str_dt == 3) printw("Voice (1600) + Data");
+    printw (" ");
+
+    printw ("\n");
+    printw ("| ");
+
+    printw ("DST: ");
+    if (state->m17_dst == 0xFFFFFFFFFFFF)
+      printw("BROADCAST ");
+    else if (state->m17_dst != 0 && state->m17_dst >= 0xEE6B28000000)
+      printw("RESERVED (%012llx) ", state->m17_dst);
+    else
+    {
+      // for (i = 0; i < 9; i++)
+      //   printw ("%c", state->m17_dst_csd[i]);
+      printw("%s", state->m17_dst_str);
+    }
+    
+    printw ("\n");
+    printw ("| ");
+
+    printw ("SRC: ");
+    if (state->m17_src != 0 && state->m17_src >= 0xEE6B28000000)
+      printw("RESERVED (%012llx)", state->m17_src);
+    else
+    {
+      // for (i = 0; i < 9; i++)
+      //   printw ("%c", state->m17_src_csd[i]);
+      printw("%s", state->m17_src_str);
+    }
+    
+    printw ("\n");
+    printw ("| ");
+
+
+    //fill in any extra info, like Meta (IV, etc)
+    if (state->m17_enc == 2)
+    {
+      printw (" Scrambler - Type: %d", state->m17_enc_st);
+    }
+
+    if (state->m17_enc == 1)
+    {
+      printw (" AES-CTR - IV: ");
+      //display packed meta as IV
+      for (i = 0; i < 14; i++)
+        printw ("%02X", state->m17_meta);
+    }
+
+    if (state->m17_enc == 3)
+    {
+      printw (" Reserved Enc - Type: %d", state->m17_enc_st);
+    }   
+
+    printw ("\n");
+
   }
 
   //YSF
@@ -3451,6 +3560,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       opts->inverted_dpmr = 1;
       opts->inverted_x2tdma = 1;
       opts->inverted_ysf = 1;
+      opts->inverted_m17 = 1;
     }
     else
     {
@@ -3458,6 +3568,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       opts->inverted_dpmr = 0;
       opts->inverted_x2tdma = 0;
       opts->inverted_ysf = 0;
+      opts->inverted_m17 = 0;
     }
   }
 

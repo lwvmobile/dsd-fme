@@ -465,6 +465,17 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
   state->m17_str_dt = 9;
 
+  state->m17_dst = 0;
+  state->m17_src = 0;
+  memset(state->m17_dst_csd, 0, sizeof(state->m17_dst_csd));
+  memset(state->m17_src_csd, 0, sizeof(state->m17_src_csd));
+  sprintf (state->m17_dst_str, "%s", "");
+  sprintf (state->m17_src_str, "%s", "");
+
+  state->m17_enc = 0;
+  state->m17_enc_st = 0;
+  memset(state->m17_meta, 0, sizeof(state->m17_meta));
+
 } //nocarrier
 
 void
@@ -1050,6 +1061,18 @@ initState (dsd_state * state)
   //M17 Storage
   memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
   state->m17_str_dt = 9;
+
+  state->m17_dst = 0;
+  state->m17_src = 0;
+  memset(state->m17_dst_csd, 0, sizeof(state->m17_dst_csd));
+  memset(state->m17_src_csd, 0, sizeof(state->m17_src_csd));
+  sprintf (state->m17_dst_str, "%s", "");
+  sprintf (state->m17_src_str, "%s", "");
+
+  state->m17_enc = 0;
+  state->m17_enc_st = 0;
+  memset(state->m17_meta, 0, sizeof(state->m17_meta));
+
   
   #ifdef USE_CODEC2
   state->codec2_3200 = codec2_create(CODEC2_MODE_3200);

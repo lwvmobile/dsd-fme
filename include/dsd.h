@@ -731,6 +731,19 @@ typedef struct
   uint8_t m17_lsf[360];
   uint8_t m17_str_dt; //stream contents
 
+  unsigned long long int m17_dst;
+  unsigned long long int m17_src;
+
+  char m17_dst_csd[20];
+  char m17_src_csd[20];
+
+  char m17_src_str[50];
+  char m17_dst_str[50];
+
+  uint8_t m17_meta[14]; //packed meta
+  uint8_t m17_enc;      //enc type
+  uint8_t m17_enc_st;   //scrambler or data subtye
+
   //Codec2
   #ifdef USE_CODEC2
   struct CODEC2 *codec2_3200; //M17 fullrate
@@ -746,6 +759,11 @@ typedef struct
 //The inverse of LSF also seems to be Stream Frame Type, only going to work on Stream mode for now
 #define M17_LSF     "11113313"
 #define M17_STR     "33331131"
+//alternating with last symbol opposite of first symbol of LSF
+#define M17_PRE     "31313131"
+#define M17_PIV     "13131313"
+#define M17_PRE_LSF "3131313133331131" //Preamble + LSF
+#define M17_PIV_LSF "1313131311113313" //Preamble + LSF
 // #define M17_BRT     "31331111"
 // #define M17_PKT     "13113333"
 
@@ -916,7 +934,8 @@ void processX2TDMAdata (dsd_opts * opts, dsd_state * state);
 void processX2TDMAvoice (dsd_opts * opts, dsd_state * state);
 void processDSTAR_HD (dsd_opts * opts, dsd_state * state);
 void processYSF(dsd_opts * opts, dsd_state * state); //YSF
-void processM17(dsd_opts * opts, dsd_state * state); //M17
+void processM17STR(dsd_opts * opts, dsd_state * state); //M17 (STR)
+void processM17LSF(dsd_opts * opts, dsd_state * state); //M17 (LSF)
 void processP2(dsd_opts * opts, dsd_state * state); //P2
 void processTSBK(dsd_opts * opts, dsd_state * state); //P25 Trunking Single Block
 void processMPDU(dsd_opts * opts, dsd_state * state); //P25 Multi Block PDU (SAP 0x61 FMT 0x15 or 0x17 for Trunking Blocks)
