@@ -89,7 +89,7 @@ void M17decodeCSD(dsd_state * state, unsigned long long int dst, unsigned long l
       dst = dst / 40;
     }
     //assign completed CSD to a more useful string instead
-    sprintf (state->m17_dst_str, "%c%c%c%c%c%c%c%c%c\0", 
+    sprintf (state->m17_dst_str, "%c%c%c%c%c%c%c%c%c", 
     state->m17_dst_csd[0], state->m17_dst_csd[1], state->m17_dst_csd[2], state->m17_dst_csd[3], 
     state->m17_dst_csd[4], state->m17_dst_csd[5], state->m17_dst_csd[6], state->m17_dst_csd[7], state->m17_dst_csd[8]);
 
@@ -114,7 +114,7 @@ void M17decodeCSD(dsd_state * state, unsigned long long int dst, unsigned long l
       src = src / 40;
     }
     //assign completed CSD to a more useful string instead
-    sprintf (state->m17_src_str, "%c%c%c%c%c%c%c%c%c\0", 
+    sprintf (state->m17_src_str, "%c%c%c%c%c%c%c%c%c", 
     state->m17_src_csd[0], state->m17_src_csd[1], state->m17_src_csd[2], state->m17_src_csd[3], 
     state->m17_src_csd[4], state->m17_src_csd[5], state->m17_src_csd[6], state->m17_src_csd[7], state->m17_src_csd[8]);
 

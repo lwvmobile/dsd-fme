@@ -2533,7 +2533,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw (" AES-CTR - IV: ");
       //display packed meta as IV
       for (i = 0; i < 14; i++)
-        printw ("%02X", state->m17_meta);
+        printw ("%02X", state->m17_meta[i]);
     }
 
     if (state->m17_enc == 3)
