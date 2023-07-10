@@ -216,7 +216,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   char synctest20[21]; //YSF
   char synctest21[22]; //P25 S-OEMI (SACCH)
   char synctest48[49]; //EDACS
-  char synctest8[9]; //M17
+  char synctest8[9];   //M17
+  char synctest16[17]; //M17 Preamble
   char modulation[8];
   char *synctest_p;
   char synctest_buf[10240]; //what actually is assigned to this, can't find its use anywhere?
@@ -604,11 +605,42 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           }
           //end YSF sync
 
-          //M17 Sync -- Just Voice and LSF for now
+          //M17 Sync -- Just STR and LSF for now
+          strncpy(synctest16, (synctest_p - 15), 16);
           strncpy(synctest8, (synctest_p - 7), 8);
           if(opts->frame_m17 == 1) 
           {
-            if (strcmp(synctest8, M17_STR) == 0)
+            //preambles will skip dibits in an attempt to prime the 
+            //demodulator but not attempt any decoding
+            if (strcmp(synctest8, M17_PRE) == 0)
+            {
+              if (opts->inverted_m17 == 0)
+              {
+                printFrameSync (opts, state, "+M17 PREAMBLE", synctest_pos + 1, modulation);
+                state->carrier = 1;
+                state->offset = synctest_pos;
+                state->max = ((state->max) + lmax) / 2;
+                state->min = ((state->min) + lmin) / 2;
+                state->lastsynctype = 98;
+                fprintf (stderr, "\n");
+                return (98);
+              }
+            }
+            else if (strcmp(synctest8, M17_PIV) == 0)
+            {
+              if (opts->inverted_m17 == 1)
+              {
+                printFrameSync (opts, state, "-M17 PREAMBLE", synctest_pos + 1, modulation);
+                state->carrier = 1;
+                state->offset = synctest_pos;
+                state->max = ((state->max) + lmax) / 2;
+                state->min = ((state->min) + lmin) / 2;
+                state->lastsynctype = 99;
+                fprintf (stderr, "\n");
+                return (99);
+              }
+            }
+            else if (strcmp(synctest8, M17_STR) == 0)
             {
               if (opts->inverted_m17 == 0)
               {
@@ -617,8 +649,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 state->offset = synctest_pos;
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
-                if (state->lastsynctype == 16)
+                if (state->lastsynctype == 16 || state->lastsynctype == 8)
+                {
+                  state->lastsynctype = 16;
                   return (16);
+                }
                 state->lastsynctype = 16;
                 fprintf (stderr, "\n");
               }
@@ -629,8 +664,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 state->offset = synctest_pos;
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
-                if (state->lastsynctype == 9)
+                if (state->lastsynctype == 99)
+                {
+                  state->lastsynctype = 9;
                   return (9);
+                }
                 state->lastsynctype = 9;
                 fprintf (stderr, "\n");
               }
@@ -644,8 +682,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 state->offset = synctest_pos;
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
-                if (state->lastsynctype == 17)
+                if (state->lastsynctype == 17 || state->lastsynctype == 9)
+                {
+                  state->lastsynctype = 17;
                   return (17);
+                }
                 state->lastsynctype = 17;
                 fprintf (stderr, "\n");
               }
@@ -656,8 +697,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 state->offset = synctest_pos;
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
-                if (state->lastsynctype == 8)
+                if (state->lastsynctype == 98)
+                {
+                  state->lastsynctype = 8;
                   return (8);
+                }
                 state->lastsynctype = 8;
                 fprintf (stderr, "\n");
               }

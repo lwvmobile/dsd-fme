@@ -2,8 +2,8 @@
  * m17.c
  * M17 Decoder (WIP)
  *
- * M17_SCRAMBLER (m17_scramble) Bit Array from SDR++
- * Base40 CharMap from m17-tools
+ * m17_scramble Bit Array from SDR++
+ * CRC16 from M17-Implementations (thanks again, sp5wwp)
  *
  * LWVMOBILE
  * 2023-07 DSD-FME Florida Man Edition
@@ -37,32 +37,97 @@ uint8_t m17_scramble[369] = {
 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1 
 };
 
-char b40[41] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.";
+char b40[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.";
 
-/*
-2.5.4
-LSF CRC
-M17 uses a non-standard version of 16-bit CRC with polynomial x16 + x14 + x12 + x11 + x8 +
-x5 + x4 + x2 + 1 or 0×5935 and initial value of 0×FFFF. This polynomial allows for detecting all
-errors up to hamming distance of 5 with payloads up to 241 bits, which is less than the amount
-of data in each frame.
-*/
+uint8_t p1[62] = {
+1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1,
+1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1,
+0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1
+};
 
-uint16_t crc16m17(const uint8_t buf[], int len)
+//from M17_Implementations -- sp5wwp -- should have just looked here to begin with
+//this setup looks very similar to the OP25 variant of crc16, but with a few differences (uses packed bytes)
+uint16_t crc16m17(const uint8_t *in, const uint16_t len)
 {
+  uint32_t crc = 0xFFFF; //init val
   uint16_t poly = 0x5935;
-  uint16_t crc = 0xFFFF;
-  for(int i=0; i<len; i++) 
+  for(uint16_t i=0; i<len; i++)
   {
-    uint8_t bit = buf[i] & 1;
-    crc = ((crc << 1) | bit) & 0x1ffff;
-    if (crc & 0x10000) crc = (crc & 0xffff) ^ poly;
+    crc^=in[i]<<8;
+    for(uint8_t j=0; j<8; j++)
+    {
+      crc<<=1;
+      if(crc&0x10000)
+        crc=(crc^poly)&0xFFFF;
+    }
   }
 
-  return crc & 0xffff;
+  return crc&(0xFFFF);
 }
 
-void M17decodeLSF(dsd_state * state, dsd_opts * opts)
+void M17decodeCSD(dsd_state * state, unsigned long long int dst, unsigned long long int src)
+{
+  //evaluate dst and src, and determine if they need to be converted to calsign
+  int i, j;
+  char c;
+  unsigned long long int value;
+
+  if (dst == 0xFFFFFFFFFFFF) 
+    fprintf (stderr, " DST: BROADCAST");
+  else if (dst == 0)
+    fprintf (stderr, " DST: RESERVED %012llx", dst);
+  else if (dst >= 0xEE6B28000000)
+    fprintf (stderr, " DST: RESERVED %012llx", dst);
+  else
+  {
+    fprintf (stderr, " DST: ");
+    for (i = 0; i < 9; i++)
+    {
+      c = b40[dst % 40];
+      state->m17_dst_csd[i] = c;
+      fprintf (stderr, "%c", c);
+      dst = dst / 40;
+    }
+    //assign completed CSD to a more useful string instead
+    sprintf (state->m17_dst_str, "%c%c%c%c%c%c%c%c%c\0", 
+    state->m17_dst_csd[0], state->m17_dst_csd[1], state->m17_dst_csd[2], state->m17_dst_csd[3], 
+    state->m17_dst_csd[4], state->m17_dst_csd[5], state->m17_dst_csd[6], state->m17_dst_csd[7], state->m17_dst_csd[8]);
+
+    //debug
+    // fprintf (stderr, "DT: %s", state->m17_dst_str);
+  }
+
+  if (src == 0xFFFFFFFFFFFF) 
+    fprintf (stderr, " SRC:  UNKNOWN FFFFFFFFFFFF");
+  else if (src == 0)
+    fprintf (stderr, " SRC: RESERVED %012llx", src);
+  else if (src >= 0xEE6B28000000)
+    fprintf (stderr, " SRC: RESERVED %012llx", src);
+  else
+  {
+    fprintf (stderr, " SRC: ");
+    for (i = 0; i < 9; i++)
+    {
+      c = b40[src % 40];
+      state->m17_src_csd[i] = c;
+      fprintf (stderr, "%c", c);
+      src = src / 40;
+    }
+    //assign completed CSD to a more useful string instead
+    sprintf (state->m17_src_str, "%c%c%c%c%c%c%c%c%c\0", 
+    state->m17_src_csd[0], state->m17_src_csd[1], state->m17_src_csd[2], state->m17_src_csd[3], 
+    state->m17_src_csd[4], state->m17_src_csd[5], state->m17_src_csd[6], state->m17_src_csd[7], state->m17_src_csd[8]);
+
+    //debug
+    // fprintf (stderr, "ST: %s", state->m17_src_str);
+  }
+
+  //debug
+  // fprintf (stderr, " DST: %012llX SRC: %012llX", state->m17_dst, state->m17_src);
+
+}
+
+void M17decodeLSF(dsd_state * state)
 {
   int i;
   
@@ -78,30 +143,56 @@ void M17decodeLSF(dsd_state * state, dsd_opts * opts)
   uint8_t lsf_cn = (lsf_type >> 7) & 0xF;
   uint8_t lsf_rs = (lsf_type >> 11) & 0x1F;
 
-  //store this so we can reference it for playing voice and/or decoding data
+  //store this so we can reference it for playing voice and/or decoding data, dst/src etc
   state->m17_str_dt = lsf_dt;
+  state->m17_dst = lsf_dst;
+  state->m17_src = lsf_src;
 
   fprintf (stderr, "\n");
 
-  //debug
-  // fprintf (stderr, " LSF TYPE: %04X", lsf_type);
-  // if (lsf_ps == 0) fprintf (stderr, " PACKET - ");
-  // if (lsf_ps == 1) fprintf (stderr, " STREAM - ");
+  //packet or stream
+  if (lsf_ps == 0) fprintf (stderr, " P-");
+  if (lsf_ps == 1) fprintf (stderr, " S-");
 
-  //TODO: Base40 Callsigns
   fprintf (stderr, " CAN: %d", lsf_cn);
-  fprintf (stderr, " DST: %012llX SRC: %012llX", lsf_dst, lsf_src);
+  M17decodeCSD(state, lsf_dst, lsf_src);
+
+  if (lsf_et != 0) fprintf (stderr, " ENC");
   
   if (lsf_dt == 0) fprintf (stderr, " Reserved");
   if (lsf_dt == 1) fprintf (stderr, " Data");
   if (lsf_dt == 2) fprintf (stderr, " Voice (3200bps)");
   if (lsf_dt == 3) fprintf (stderr, " Voice + Data");
 
-  if (lsf_et != 0) fprintf (stderr, " ENC");
-  if (lsf_et == 1)
-    fprintf (stderr, " Scrambler - %d", lsf_es);
-  if (lsf_et == 2) fprintf (stderr, " AES-CTR");
+  if (lsf_rs != 0) fprintf (stderr, " RS: %02X", lsf_rs);
 
+  if (lsf_et == 1) fprintf (stderr, " AES-CTR");
+  if (lsf_et == 2) fprintf (stderr, " Scrambler - %d", lsf_es);
+
+  state->m17_enc = lsf_et;
+  state->m17_enc_st = lsf_es;
+
+  //pack meta bits into 14 bytes
+  for (i = 0; i < 14; i++)
+    state->m17_meta[i] = (uint8_t)ConvertBitIntoBytes(&state->m17_lsf[(i*8)+112], 8);
+
+  //Examine the Meta data
+  if (lsf_et == 0 && state->m17_meta[0] != 0) //not sure if this applies universally, or just to text data byte 0 for null data
+  {
+    fprintf (stderr,  " Meta:");
+    if (lsf_es == 0) fprintf (stderr, " Text Data");
+    if (lsf_es == 1) fprintf (stderr, " GNSS Pos");
+    if (lsf_es == 2) fprintf (stderr, " Extended CSD");
+    if (lsf_es == 3) fprintf (stderr, " Reserved");
+  }
+  
+  if (lsf_et == 1)
+  {
+    fprintf (stderr, " IV: ");
+    for (i = 0; i < 14; i++)
+      fprintf (stderr, "%02X", state->m17_meta[i]);
+  }
+  
 }
 
 int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t lich_bits[96])
@@ -113,6 +204,10 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t lich_bits[96])
   uint8_t lich_decoded[48];
   uint8_t temp[96];
   bool g[4];
+
+  //for testing bit arrangement vs the crc code
+  uint8_t bs[240];
+  memset(bs, 1, sizeof(bs));
 
   uint16_t crc_cmp = 0;
   uint16_t crc_ext = 0;
@@ -145,8 +240,7 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t lich_bits[96])
     fprintf (stderr, "LC: %d/6 ", lich_counter+1);
   else fprintf (stderr, "LICH G24 ERR");
 
-  //this is what 2.rrc is supposed to be -- according to m17-demod -- code fixed now and reflects this
-  //SRC: AB2CDE, DEST: BROADCAST, STR:V/V, ENC:NONE, CAN:10, NONCE: 0000000000000000000000000000, CRC: 99af
+  if (err = 0 && lich_reserve != 0) fprintf(stderr, " LRS: %d", lich_reserve);
 
   //transfer to storage
   for (i = 0; i < 40; i++)
@@ -159,15 +253,23 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t lich_bits[96])
       fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&lich_decoded[i*8], 8)); 
   }
 
+  uint8_t lsf_packed[30];
+  memset (lsf_packed, 0, sizeof(lsf_packed));
+
   if (lich_counter == 5)
   {
-    crc_cmp = crc16m17 (state->m17_lsf, 240);
+
+    //need to pack bytes for the sw5wwp variant of the crc (might as well, may be useful in the future)
+    for (i = 0; i < 30; i++)
+      lsf_packed[i] = (uint8_t)ConvertBitIntoBytes(&state->m17_lsf[i*8], 8);
+
+    crc_cmp = crc16m17(lsf_packed, 28);
     crc_ext = (uint16_t)ConvertBitIntoBytes(&state->m17_lsf[224], 16);
 
     if (crc_cmp != crc_ext) crc_err = 1;
 
     if (crc_err == 0)
-      M17decodeLSF(state, opts);
+      M17decodeLSF(state);
 
     if (opts->payload == 1)
     {
@@ -175,22 +277,29 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t lich_bits[96])
       for (i = 0; i < 30; i++)
       {
         if (i == 15) fprintf (stderr, "\n      ");
-        fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&state->m17_lsf[i*8], 8));
+        fprintf (stderr, "[%02X]", lsf_packed[i]);
       }
     }
 
-    // if (crc_err != 0) 
-      // fprintf (stderr, " %04X - %04X (CRC ERR)", crc_cmp, crc_ext);
-    if (crc_err == 1) fprintf (stderr, " LSF CRC ERR");
+    memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
+
+    //debug
+    // fprintf (stderr, " E-%04X; C-%04X (CRC CHK)", crc_ext, crc_cmp);
+
+    if (crc_err == 1) fprintf (stderr, " EMB LSF CRC ERR");
   }
 
   return err;
 }
 
-void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
+void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
 {
+
+  //If payload is the same from the stream in this mode, I suppose we could use this area to parse
+  //or send off the remaining data to be handled or decoded , or just print out the raw data bytes
+
   int i;
-  unsigned char voice1[8];
+  unsigned char voice1[8]; //codec2_bytes_per_frame
   unsigned char voice2[8];
 
   for (i = 0; i < 8; i++)
@@ -199,8 +308,86 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[1
     voice2[i] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+64], 8);
   }
 
-  //TODO: Either Make seperate 3200 and 1600 handling, or make this handle both
-  //depends on how many bits 1600 needs and if its split the same as this
+  //TODO: Add some decryption methods
+  if (state->m17_enc != 0)
+  {
+    //process scrambler or AES-CTR decryption 
+    //(no AES-CTR right now, Scrambler should be easy enough)
+  }
+
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, "\n CODEC2: ");
+    for (i = 0; i < 8; i++)
+      fprintf (stderr, "%02X", voice1[i]);
+    fprintf (stderr, " (1600)");
+
+    fprintf (stderr, "\n LSDATA: "); //low speed data
+    for (i = 0; i < 8; i++)
+      fprintf (stderr, "%02X", voice2[i]);
+  }
+  
+  #ifdef USE_CODEC2
+  size_t nsam;
+  nsam = 320; //codec2_samples_per_frame(state->codec2_1600);
+
+  short samp1[nsam];
+  // short samp2[nsam];
+  memset (samp1, 0, sizeof(samp1));
+  // memset (samp2, 0, sizeof(samp2));
+
+
+  codec2_decode(state->codec2_1600, samp1, voice1);
+  // codec2_decode(state->codec2_1600, samp2, voice2);
+
+
+  if (opts->audio_out_type == 0 && state->m17_enc == 0)
+  {
+    pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
+    // pa_simple_write(opts->pulse_digi_dev_out, samp2, nsam*2, NULL);
+  }
+    
+  if (opts->audio_out_type == 5 && state->m17_enc == 0)
+  {
+    write (opts->audio_out_fd, samp1, nsam*2);
+    // write (opts->audio_out_fd, samp2, nsam*2);
+  }
+
+  //WIP: Wav file saving -- still need a way to open/close/label wav files similar to call history
+  if(opts->wav_out_f != NULL && state->m17_enc == 0)
+  {
+    sf_write_short(opts->wav_out_f, samp1, nsam);
+    // sf_write_short(opts->wav_out_f, samp2, nsam);
+  }
+
+  //TODO: Codec2 Raw file saving
+  // if(mbe_out_dir)
+  // {
+
+  // }
+
+  #endif
+
+}
+
+void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
+{
+  int i;
+  unsigned char voice1[8]; //codec2_bytes_per_frame
+  unsigned char voice2[8];
+
+  for (i = 0; i < 8; i++)
+  {
+    voice1[i] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+0], 8);
+    voice2[i] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+64], 8);
+  }
+
+  //TODO: Add some decryption methods
+  if (state->m17_enc != 0)
+  {
+    //process scrambler or AES-CTR decryption 
+    //(no AES-CTR right now, Scrambler should be easy enough)
+  }
 
   if (opts->payload == 1)
   {
@@ -215,10 +402,9 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[1
     fprintf (stderr, " (3200)");
   }
   
-  //TODO: Rework parts of this (we already know nsam = 160 on 3200 and 320 on 1600, etc)
   #ifdef USE_CODEC2
   size_t nsam;
-  nsam = codec2_samples_per_frame(state->codec2_3200);
+  nsam = 160; //codec2_samples_per_frame(state->codec2_3200);
 
   short samp1[nsam];
   short samp2[nsam];
@@ -230,20 +416,30 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[1
   codec2_decode(state->codec2_3200, samp2, voice2);
 
 
-  if (opts->audio_out_type == 0)
+  if (opts->audio_out_type == 0 && state->m17_enc == 0)
   {
     pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
     pa_simple_write(opts->pulse_digi_dev_out, samp2, nsam*2, NULL);
   }
     
-  if (opts->audio_out_type == 5)
+  if (opts->audio_out_type == 5 && state->m17_enc == 0)
   {
     write (opts->audio_out_fd, samp1, nsam*2);
     write (opts->audio_out_fd, samp2, nsam*2);
   }
 
-  //TODO: Wav file saving
+  //WIP: Wav file saving -- still need a way to open/close/label wav files similar to call history
+  if(opts->wav_out_f != NULL && state->m17_enc == 0)
+  {
+    sf_write_short(opts->wav_out_f, samp1, nsam);
+    sf_write_short(opts->wav_out_f, samp2, nsam);
+  }
+
   //TODO: Codec2 Raw file saving
+  // if(mbe_out_dir)
+  // {
+
+  // }
 
   #endif
 
@@ -251,13 +447,6 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[1
 
 void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t m17_bits[368])
 {
-  //this function will prepare Stream frames
-
-  // Scheme P2 is for frames (excluding LICH chunks, which are coded differently). This takes 296
-  // encoded bits and selects 272 of them. Every 12th bit is being punctured out, leaving 272 bits.
-  // The full matrix shall have 12 entries with 11 being ones.
-
-  // P2 = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
 
   int i, j, k, x; 
   uint8_t m17_punc[310]; //25 * 11 = 275
@@ -342,21 +531,22 @@ void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t m17_bits[368])
 
   if (state->m17_str_dt == 2)
     M17processCodec2_3200(opts, state, payload);
-  else if (state->m17_str_dt == 3) fprintf (stderr, "  V+D;"); //format not available yet in manual
+  else if (state->m17_str_dt == 3)
+    M17processCodec2_1600(opts, state, payload);
   else if (state->m17_str_dt == 1) fprintf (stderr, " DATA;");
   else if (state->m17_str_dt == 0) fprintf (stderr, "  RES;");
-  else                             fprintf (stderr, "  UNK;");
+  // else                             fprintf (stderr, "  UNK;");
 
-  if (opts->payload == 1 && state->m17_str_dt != 2)
+  if (opts->payload == 1 && state->m17_str_dt < 2)
   {
     fprintf (stderr, "\n STREAM: ");
     for (i = 0; i < 18; i++) 
-      fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8)); 
+      fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8));
   }
 
 }
 
-void processM17(dsd_opts * opts, dsd_state * state)
+void processM17STR(dsd_opts * opts, dsd_state * state)
 {
 
   int i, x;
@@ -379,12 +569,6 @@ void processM17(dsd_opts * opts, dsd_state * state)
   memset (m17_int_bits, 0, sizeof(m17_int_bits));
   memset (m17_bits, 0, sizeof(m17_bits));
   memset (lich_bits, 0, sizeof(lich_bits));
-
-
-  /*
-    Within the Physical Layer, the 368 Type 4 bits are randomized and combined with the 16-bit
-    Stream Sync Burst, which results in a complete frame of 384 bits (384 bits / 9600bps = 40 ms).
-  */
 
   //load dibits into dibit buffer
   for (i = 0; i < 184; i++)
@@ -423,4 +607,140 @@ void processM17(dsd_opts * opts, dsd_state * state)
   //ending linebreak
   fprintf (stderr, "\n");
 
-} //end processM17
+} //end processM17STR
+
+void processM17LSF(dsd_opts * opts, dsd_state * state)
+{
+
+  //NOTE1: Pretty sure the flow here is all correct, but the initial (and only)
+  //LSF frame is demodulated incorrectly, so more than likely, this frame will
+  //always be bad since there is only one sent before STR
+
+  //NOTE2: Even with the preamble detection and LSF sync, we still get bad decode on this
+
+  int i, j, k, x;
+  uint8_t dbuf[384]; //384-bit frame - 16-bit (8 symbol) sync pattern (184 dibits)
+  uint8_t m17_rnd_bits[500]; //368 bits that are still scrambled (randomized)
+  uint8_t m17_int_bits[500]; //368 bits that are still interleaved
+  uint8_t m17_bits[500]; //368 bits that have been de-interleaved and de-scramble
+  uint8_t m17_depunc[500]; //488 bits after depuncturing
+
+  memset (dbuf, 0, sizeof(dbuf));
+  memset (m17_rnd_bits, 0, sizeof(m17_rnd_bits));
+  memset (m17_int_bits, 0, sizeof(m17_int_bits));
+  memset (m17_bits, 0, sizeof(m17_bits));
+  memset (m17_depunc, 0, sizeof(m17_depunc));
+
+  //load dibits into dibit buffer
+  for (i = 0; i < 184; i++)
+    dbuf[i] = (uint8_t) getDibit(opts, state);
+
+  //convert dbuf into a bit array
+  for (i = 0; i < 184; i++)
+  {
+    m17_rnd_bits[i*2+0] = (dbuf[i] >> 1) & 1;
+    m17_rnd_bits[i*2+1] = (dbuf[i] >> 0) & 1;
+  }
+
+  //descramble the frame
+  for (i = 0; i < 368; i++)
+    m17_int_bits[i] = (m17_rnd_bits[i] ^ m17_scramble[i]) & 1;
+
+  //deinterleave the bit array using Quadratic Permutation Polynomial
+  //function π(x) = (45x + 92x^2 ) mod 368
+  for (i = 0; i < 368; i++)
+  {
+    x = ((45*i)+(92*i*i)) % 368;
+    m17_bits[i] = m17_int_bits[x];
+  }
+
+  j = 0; k = 0; x = 0;
+
+  // P1 Depuncture
+  for (i = 0; i < 488; i++)
+  {
+    if (p1[k++] == 1) m17_depunc[x++] = m17_bits[j++];
+    else m17_depunc[x++] = 1;
+
+    if (k == 61) k = 0; //61 -- should reset 8 times againt the array
+
+  }
+
+  //debug -- values seem okay at end of run
+  // fprintf (stderr, "K = %d; J = %d; X = %d", k, j, x);
+
+  //setup the convolutional decoder
+  uint8_t temp[500];
+  uint8_t s0;
+  uint8_t s1;
+  uint8_t m_data[32];
+  uint8_t trellis_buf[400];
+  memset (trellis_buf, 0, sizeof(trellis_buf));
+  memset (temp, 0, sizeof (temp));
+  memset (m_data, 0, sizeof (m_data));
+
+  for (i = 0; i < 488; i++)
+    temp[i] = m17_depunc[i] << 1; 
+
+  CNXDNConvolution_start();
+  for (i = 0; i < 244; i++)
+  {
+    s0 = temp[(2*i)];
+    s1 = temp[(2*i)+1];
+
+    CNXDNConvolution_decode(s0, s1);
+  }
+
+  CNXDNConvolution_chainback(m_data, 240);
+
+  //244/8 = 30, last 4 (244-248) are trailing zeroes
+  for(i = 0; i < 30; i++)
+  {
+    trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
+    trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
+    trellis_buf[(i*8)+2] = (m_data[i] >> 5) & 1;
+    trellis_buf[(i*8)+3] = (m_data[i] >> 4) & 1;
+    trellis_buf[(i*8)+4] = (m_data[i] >> 3) & 1;
+    trellis_buf[(i*8)+5] = (m_data[i] >> 2) & 1;
+    trellis_buf[(i*8)+6] = (m_data[i] >> 1) & 1;
+    trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
+  }
+
+  memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
+  memcpy (state->m17_lsf, trellis_buf, 240);
+
+  uint8_t lsf_packed[30];
+  memset (lsf_packed, 0, sizeof(lsf_packed));
+
+  //need to pack bytes for the sw5wwp variant of the crc (might as well, may be useful in the future)
+  for (i = 0; i < 30; i++)
+    lsf_packed[i] = (uint8_t)ConvertBitIntoBytes(&state->m17_lsf[i*8], 8);
+
+  uint16_t crc_cmp = crc16m17(lsf_packed, 28);
+  uint16_t crc_ext = (uint16_t)ConvertBitIntoBytes(&state->m17_lsf[224], 16);
+  int crc_err = 0;
+
+  if (crc_cmp != crc_ext) crc_err = 1;
+
+  if (crc_err == 0)
+    M17decodeLSF(state);
+
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, "\n LSF: ");
+    for (i = 0; i < 30; i++)
+    {
+      if (i == 15) fprintf (stderr, "\n      ");
+      fprintf (stderr, "[%02X]", lsf_packed[i]);
+    }
+  }
+
+  //debug
+  // fprintf (stderr, " E-%04X; C-%04X (CRC CHK)", crc_ext, crc_cmp);
+
+  if (crc_err == 1) fprintf (stderr, " CRC ERR");
+
+  //ending linebreak
+  fprintf (stderr, "\n");
+
+} //end processM17LSF

@@ -640,6 +640,47 @@ openAudioInDevice (dsd_opts * opts)
     }
   }
 
+  //test .rrc files with hardset wav file settings
+  else if (strncmp(extension, ".rrc", 3) == 0)
+	{
+    //debug
+    fprintf (stderr, "Opening M17 .rrc headless wav file\n");
+    
+    opts->audio_in_type = 2;
+    opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
+    opts->audio_in_file_info->samplerate = 48000;
+    opts->audio_in_file_info->channels = 1;
+    opts->audio_in_file_info->seekable = 0;
+    opts->audio_in_file_info->format = SF_FORMAT_RAW | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
+    opts->audio_in_file = sf_open(opts->audio_in_dev, SFM_READ, opts->audio_in_file_info);
+
+    if(opts->audio_in_file == NULL)
+    {
+      fprintf(stderr, "Error, couldn't open %s with libsndfile: %s\n", opts->audio_in_dev, sf_strerror(NULL));
+      exit(1);
+    }
+	}
+
+  //TODO: test .sym files as symbol capture .bin files
+  else if (strncmp(extension, ".sym", 3) == 0)
+	{
+    struct stat stat_buf;
+    if (stat(opts->audio_in_dev, &stat_buf) != 0)
+    {
+      fprintf (stderr,"Error, couldn't open bin file %s\n", opts->audio_in_dev);
+      exit(1);
+    }
+    if (S_ISREG(stat_buf.st_mode))
+    {
+      opts->symbolfile = fopen(opts->audio_in_dev, "r");
+      opts->audio_in_type = 4; //symbol capture bin files
+    }
+    else
+    {
+      opts->audio_in_type = 0;
+    }
+  }
+
   else if (strncmp(extension, ".bin", 3) == 0)
 	{
     struct stat stat_buf;
