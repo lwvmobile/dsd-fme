@@ -144,6 +144,10 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
       NXDN_decode_VCALL(opts, state, ElementsContent);
       memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
 
+      #ifdef LIMAZULUTWEAKS
+      ; //do nothing -- testing errors on CAC messages when returning quickly from RTCH
+      #else
+
       //tune back to CC here - save about 1-2 seconds
       if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
       {
@@ -174,7 +178,8 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
 
         state->last_cc_sync_time = time(NULL); //allow tuners a second to catch up, particularly rtl input
       }
-      
+
+      #endif
       break;
 
     //Idle
