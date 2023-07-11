@@ -132,7 +132,7 @@ const int vd2Interleave[104] = {
 25,  51,  77, 103
 };
 
-void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t cm, uint8_t input[])
+void ysf_dch_decode (dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t cm, uint8_t input[])
 {
   //TODO: Per Call WAV files using these strings
   int i;
@@ -142,6 +142,8 @@ void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt,
   char string2[11];
   char rem1[6];
   char rem2[6];
+
+  UNUSED3(bt, fn, ft);
 
   for (i = 0; i < 20; i++)
     dch_bytes[i] = (char)ConvertBitIntoBytes(&input[i*8], 8);
@@ -238,7 +240,7 @@ void ysf_dch_decode (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt,
 
 }
 
-void ysf_dch_decode2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t cm, uint8_t input[])
+void ysf_dch_decode2 (dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t cm, uint8_t input[])
 {
   //TODO: Per Call WAV files using these strings
   int i;
@@ -247,6 +249,8 @@ void ysf_dch_decode2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt
   char string[11];
   char rem1[6];
   char rem2[6];
+
+  UNUSED4(bn, bt, fn, ft);
 
   for (i = 0; i < 10; i++)
     dch_bytes[i] = (char)ConvertBitIntoBytes(&input[i*8], 8);
@@ -444,7 +448,7 @@ int ysf_conv_dch2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, u
 
   //decode the callsign, etc, found in the DCH when no errors
   if (err == 0)
-    ysf_dch_decode2 (opts, state, bn, bt, fn, ft, cm, trellis_buf);
+    ysf_dch_decode2 (state, bn, bt, fn, ft, cm, trellis_buf);
   else
   {
     fprintf (stderr, "%s", KRED);
@@ -537,7 +541,7 @@ int ysf_conv_dch (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, ui
 
   //decode the callsign, etc, found in the DCH when no errors
   if (err == 0)
-    ysf_dch_decode (opts, state, bn, bt, fn, ft, cm, trellis_buf);
+    ysf_dch_decode (state, bn, bt, fn, ft, cm, trellis_buf);
   else
   {
     fprintf (stderr, "%s", KRED);
@@ -618,7 +622,7 @@ int ysf_conv_fich (uint8_t input[], uint8_t dest[32])
   }
 
   uint8_t fich_bits[12*4];
-  char temp_b[24];
+  uint8_t temp_b[24];
   bool g[4];
 
   // run golay 24_12 error correction

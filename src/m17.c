@@ -68,9 +68,8 @@ uint16_t crc16m17(const uint8_t *in, const uint16_t len)
 void M17decodeCSD(dsd_state * state, unsigned long long int dst, unsigned long long int src)
 {
   //evaluate dst and src, and determine if they need to be converted to calsign
-  int i, j;
+  int i;
   char c;
-  unsigned long long int value;
 
   if (dst == 0xFFFFFFFFFFFF) 
     fprintf (stderr, " DST: BROADCAST");
@@ -448,7 +447,7 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[1
 void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t m17_bits[368])
 {
 
-  int i, j, k, x; 
+  int i, k, x; 
   uint8_t m17_punc[310]; //25 * 11 = 275
   memset (m17_punc, 0, sizeof(m17_punc));
   for (i = 0; i < 272; i++)
