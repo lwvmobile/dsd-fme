@@ -2225,14 +2225,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.1 ");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.1b (20230714)");
     printw ("------------------------------------------------------------------------------\n"); 
   }
 #elif LIMAZULUTWEAKS
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: LimaZulu Edition V: The Empire Strikes Back \n");
+    printw ("| Digital Speech Decoder: LimaZulu Edition VI: Return of the Zulu \n");
     printw ("------------------------------------------------------------------------------\n");
   }
 #elif ZDEV_BUILD
@@ -2261,7 +2261,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 4) printw (" MBElib %s", versionstr);
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Build");
-      if (i == 6) printw (" v2.1 \n");
+      if (i == 6) printw (" v2.1b (20230714) \n");
       #elif ZDEV_BUILD
       if (i == 5) printw (" %s ", "zDEV Build");
       if (i == 6) printw (" %s \n", GIT_TAG);
@@ -2640,13 +2640,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     
 
     printw ("| ");
-    #ifdef LIMAZULUTWEAKS
+    // #ifdef LIMAZULUTWEAKS
     if (idas == 0) printw ("NXDN - RAN: [%02d] ", state->nxdn_last_ran);
     if (idas == 1) printw ("IDAS - Area: [%02d] ", state->nxdn_last_ran);
-    #else
-    if (idas == 0) printw ("NXDN - RAN: [%02d] ", rn);
-    if (idas == 1) printw ("IDAS - Area: [%02d] ", rn);
-    #endif
+    // #else
+    // if (idas == 0) printw ("NXDN - RAN: [%02d] ", rn);
+    // if (idas == 1) printw ("IDAS - Area: [%02d] ", rn);
+    // #endif
     if (state->nxdn_location_site_code != 0)
     {
       printw ("Cat: [%s] ", state->nxdn_location_category);
