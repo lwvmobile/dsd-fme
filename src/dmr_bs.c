@@ -96,6 +96,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //Run Loop while the getting is good
   while (loop == 1) {
 
+  if (exitflag == 1)
+  {
+    cleanupAndExit (opts, state);
+  }
+
   memset (ambe_fr, 0, sizeof(ambe_fr));
   memset (ambe_fr2, 0, sizeof(ambe_fr2));
   memset (ambe_fr3, 0, sizeof(ambe_fr3));
