@@ -1823,321 +1823,321 @@ main (int argc, char **argv)
 
         case 'f':
           if (optarg[0] == 'a')
-            {
-              opts.frame_dstar = 1;
-              opts.frame_x2tdma = 1;
-              opts.frame_p25p1 = 1;
-              opts.frame_p25p2 = 0;
-              opts.frame_nxdn48 = 0;
-              opts.frame_nxdn96 = 0;
-              opts.frame_dmr = 1;
-              opts.frame_dpmr = 0;
-              opts.frame_provoice = 0;
-              opts.frame_ysf = 1;
-              opts.frame_m17 = 0;
-              opts.pulse_digi_rate_out = 48000; // /dev/dsp does need this set to 48000 to properly process the upsampling
-              opts.pulse_digi_out_channels = 1;
-              opts.dmr_stereo = 0; //switching in 'stereo' for 'mono'
-              opts.dmr_mono = 1;
-              state.dmr_stereo = 0;
-              //opts.setmod_bw = 7000;
-              sprintf (opts.output_name, "Legacy Auto");
-            }
+          {
+            opts.frame_dstar = 1;
+            opts.frame_x2tdma = 1;
+            opts.frame_p25p1 = 1;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 1;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_ysf = 1;
+            opts.frame_m17 = 0;
+            opts.pulse_digi_rate_out = 48000; // /dev/dsp does need this set to 48000 to properly process the upsampling
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0; //switching in 'stereo' for 'mono'
+            opts.dmr_mono = 1;
+            state.dmr_stereo = 0;
+            //opts.setmod_bw = 7000;
+            sprintf (opts.output_name, "Legacy Auto");
+          }
           else if (optarg[0] == 'd')
-            {
-              opts.frame_dstar = 1;
-              opts.frame_x2tdma = 0;
-              opts.frame_p25p1 = 0;
-              opts.frame_p25p2 = 0;
-              opts.frame_nxdn48 = 0;
-              opts.frame_nxdn96 = 0;
-              opts.frame_dmr = 0;
-              opts.frame_dpmr = 0;
-              opts.frame_provoice = 0;
-              opts.frame_ysf = 0;
-              opts.frame_m17 = 0;
-              opts.pulse_digi_rate_out = 48000;
-              opts.pulse_digi_out_channels = 1;
-              opts.dmr_stereo = 0;
-              state.dmr_stereo = 0;
-              opts.dmr_mono = 0;
-              state.rf_mod = 0;
-              sprintf (opts.output_name, "D-STAR");
-              fprintf (stderr,"Decoding only D-STAR frames.\n");
-            }
+          {
+            opts.frame_dstar = 1;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            state.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.rf_mod = 0;
+            sprintf (opts.output_name, "D-STAR");
+            fprintf (stderr,"Decoding only D-STAR frames.\n");
+          }
           else if (optarg[0] == 'x')
-            {
-              opts.frame_dstar = 0;
-              opts.frame_x2tdma = 1;
-              opts.frame_p25p1 = 0;
-              opts.frame_p25p2 = 0;
-              opts.frame_nxdn48 = 0;
-              opts.frame_nxdn96 = 0;
-              opts.frame_dmr = 0;
-              opts.frame_dpmr = 0;
-              opts.frame_provoice = 0;
-              opts.frame_ysf = 0;
-              opts.frame_m17 = 0;
-              opts.pulse_digi_rate_out = 48000;
-              opts.pulse_digi_out_channels = 1;
-              opts.dmr_stereo = 0;
-              opts.dmr_mono = 0;
-              state.dmr_stereo = 0;
-              sprintf (opts.output_name, "X2-TDMA");
-              fprintf (stderr,"Decoding only X2-TDMA frames.\n");
-            }
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 1;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.dmr_stereo = 0;
+            sprintf (opts.output_name, "X2-TDMA");
+            fprintf (stderr,"Decoding only X2-TDMA frames.\n");
+          }
           else if (optarg[0] == 'p')
-            {
-              opts.frame_dstar = 0;
-              opts.frame_x2tdma = 0;
-              opts.frame_p25p1 = 0;
-              opts.frame_p25p2 = 0;
-              opts.frame_nxdn48 = 0;
-              opts.frame_nxdn96 = 0;
-              opts.frame_dmr = 0;
-              opts.frame_dpmr = 0;
-              opts.frame_provoice = 1;
-              opts.frame_ysf = 0;
-              opts.frame_m17 = 0;
-              state.samplesPerSymbol = 5;
-              state.symbolCenter = 2;
-              opts.mod_c4fm = 0;
-              opts.mod_qpsk = 0;
-              opts.mod_gfsk = 1;
-              state.rf_mod = 2;
-              opts.pulse_digi_rate_out = 48000;
-              opts.pulse_digi_out_channels = 1;
-              opts.dmr_stereo = 0;
-              opts.dmr_mono = 0;
-              state.dmr_stereo = 0;
-              // opts.setmod_bw = 12500;
-              sprintf (opts.output_name, "EDACS/PV");
-              fprintf (stderr,"Setting symbol rate to 9600 / second\n");
-              fprintf (stderr,"Decoding only ProVoice frames.\n");
-              //rtl specific tweaks
-              opts.rtl_bandwidth = 24;
-              // opts.rtl_gain_value = 36;
-            }
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 1;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            state.samplesPerSymbol = 5;
+            state.symbolCenter = 2;
+            opts.mod_c4fm = 0;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 1;
+            state.rf_mod = 2;
+            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.dmr_stereo = 0;
+            // opts.setmod_bw = 12500;
+            sprintf (opts.output_name, "EDACS/PV");
+            fprintf (stderr,"Setting symbol rate to 9600 / second\n");
+            fprintf (stderr,"Decoding only ProVoice frames.\n");
+            //rtl specific tweaks
+            opts.rtl_bandwidth = 24;
+            // opts.rtl_gain_value = 36;
+          }
           else if (optarg[0] == '1')
-            {
-              opts.frame_dstar = 0;
-              opts.frame_x2tdma = 0;
-              opts.frame_p25p1 = 1;
-              opts.frame_p25p2 = 0;
-              opts.frame_nxdn48 = 0;
-              opts.frame_nxdn96 = 0;
-              opts.frame_dmr = 0;
-              opts.frame_dpmr = 0;
-              opts.frame_provoice = 0;
-              opts.frame_ysf = 0;
-              opts.frame_m17 = 0;
-              opts.dmr_stereo = 0;
-              state.dmr_stereo = 0;
-              opts.mod_c4fm = 1;
-              opts.mod_qpsk = 0;
-              opts.mod_gfsk = 0;
-              state.rf_mod = 0; //
-              opts.dmr_stereo = 0;
-              opts.dmr_mono = 0;
-              opts.pulse_digi_rate_out = 48000;
-              opts.pulse_digi_out_channels = 1;
-              // opts.setmod_bw = 12000;
-              opts.ssize = 36; //128 current default, fall back to old default on P1 only systems
-              opts.msize = 15; //1024 current default, fall back to old default on P1 only systems
-              opts.use_heuristics = 1; //enable for Phase 1 only
-              sprintf (opts.output_name, "P25p1");
-              fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
-            }
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 1;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            opts.dmr_stereo = 0;
+            state.dmr_stereo = 0;
+            opts.mod_c4fm = 1;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 0;
+            state.rf_mod = 0; //
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            // opts.setmod_bw = 12000;
+            opts.ssize = 36; //128 current default, fall back to old default on P1 only systems
+            opts.msize = 15; //1024 current default, fall back to old default on P1 only systems
+            opts.use_heuristics = 1; //enable for Phase 1 only
+            sprintf (opts.output_name, "P25p1");
+            fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
+          }
           else if (optarg[0] == 'i')
-            {
-              opts.frame_dstar = 0;
-              opts.frame_x2tdma = 0;
-              opts.frame_p25p1 = 0;
-              opts.frame_p25p2 = 0;
-              opts.frame_nxdn48 = 1;
-              opts.frame_nxdn96 = 0;
-              opts.frame_dmr = 0;
-              opts.frame_dpmr = 0;
-              opts.frame_provoice = 0;
-              opts.frame_ysf = 0;
-              opts.frame_m17 = 0;
-              state.samplesPerSymbol = 20;
-              state.symbolCenter = 10;
-              opts.mod_c4fm = 1;
-              opts.mod_qpsk = 0;
-              opts.mod_gfsk = 0;
-              state.rf_mod = 0;
-              opts.pulse_digi_rate_out = 48000;
-              opts.pulse_digi_out_channels = 1;
-              opts.dmr_stereo = 0;
-              state.dmr_stereo = 0;
-              opts.dmr_mono = 0;
-              // opts.setmod_bw = 4000; //causing issues
-              sprintf (opts.output_name, "NXDN48");
-              fprintf (stderr,"Setting symbol rate to 2400 / second\n");
-              fprintf (stderr,"Decoding only NXDN 4800 baud frames.\n");
-            }
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 1;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            state.samplesPerSymbol = 20;
+            state.symbolCenter = 10;
+            opts.mod_c4fm = 1;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 0;
+            state.rf_mod = 0;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            state.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            // opts.setmod_bw = 4000; //causing issues
+            sprintf (opts.output_name, "NXDN48");
+            fprintf (stderr,"Setting symbol rate to 2400 / second\n");
+            fprintf (stderr,"Decoding only NXDN 4800 baud frames.\n");
+          }
           else if (optarg[0] == 'y')
-            {
-              opts.frame_dstar = 0;
-              opts.frame_x2tdma = 0;
-              opts.frame_p25p1 = 0;
-              opts.frame_p25p2 = 0;
-              opts.frame_p25p2 = 0;
-              opts.frame_nxdn48 = 0;
-              opts.frame_nxdn96 = 0;
-              opts.frame_dmr = 0;
-              opts.frame_dpmr = 0;
-              opts.frame_provoice = 0;
-              opts.frame_ysf = 1;
-              opts.frame_m17 = 0;
-              opts.mod_c4fm = 1;
-              opts.mod_qpsk = 0;
-              opts.mod_gfsk = 0;
-              state.rf_mod = 0;
-              opts.pulse_digi_rate_out = 48000;
-              opts.pulse_digi_out_channels = 1;
-              opts.dmr_stereo = 0;
-              state.dmr_stereo = 0;
-              opts.dmr_mono = 0;
-              sprintf (opts.output_name, "YSF");
-              fprintf (stderr,"Decoding only YSF frames. \n");
-              }
-              else if (optarg[0] == '2')
-                {
-                  opts.frame_dstar = 0;
-                  opts.frame_x2tdma = 0;
-                  opts.frame_p25p1 = 0;
-                  opts.frame_p25p2 = 1;
-                  opts.frame_nxdn48 = 0;
-                  opts.frame_nxdn96 = 0;
-                  opts.frame_dmr = 0;
-                  opts.frame_dpmr = 0;
-                  opts.frame_provoice = 0;
-                  opts.frame_ysf = 0;
-                  opts.frame_m17 = 0;
-                  state.samplesPerSymbol = 8; 
-                  state.symbolCenter = 3;
-                  opts.mod_c4fm = 1;
-                  opts.mod_qpsk = 0;
-                  opts.mod_gfsk = 0;
-                  state.rf_mod = 0;
-                  opts.dmr_stereo = 1;
-                  state.dmr_stereo = 0;
-                  opts.dmr_mono = 0;
-                  // opts.setmod_bw = 12000;
-                  sprintf (opts.output_name, "P25p2");
-                  fprintf (stderr,"Decoding 6000 sps P25p2 frames only!\n");
-                  }
-              else if (optarg[0] == 's')
-              {
-                opts.frame_dstar = 0;
-                opts.frame_x2tdma = 0;
-                opts.frame_p25p1 = 0;
-                opts.frame_p25p2 = 0;
-                opts.inverted_p2 = 0; 
-                opts.frame_nxdn48 = 0;
-                opts.frame_nxdn96 = 0;
-                opts.frame_dmr = 1;
-                opts.frame_dpmr = 0;
-                opts.frame_provoice = 0;
-                opts.frame_ysf = 0;
-                opts.frame_m17 = 0;
-                opts.mod_c4fm = 1;
-                opts.mod_qpsk = 0;
-                opts.mod_gfsk = 0;
-                state.rf_mod = 0;
-                opts.dmr_stereo = 1;
-                opts.dmr_mono = 0;
-                // opts.setmod_bw = 7000;
-                opts.pulse_digi_rate_out = 24000;
-                opts.pulse_digi_out_channels = 2;
-                sprintf (opts.output_name, "DMR Stereo");
-                
-                fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
-              }
-                  else if (optarg[0] == 't')
-                    {
-                      opts.frame_dstar = 0;
-                      opts.frame_x2tdma = 1;
-                      opts.frame_p25p1 = 1;
-                      opts.frame_p25p2 = 1;
-                      opts.inverted_p2 = 0;
-                      opts.frame_nxdn48 = 0;
-                      opts.frame_nxdn96 = 0;
-                      opts.frame_dmr = 1;
-                      opts.frame_dpmr = 0;
-                      opts.frame_provoice = 0;
-                      opts.frame_ysf = 1;
-                      opts.frame_m17 = 0;
-                      opts.mod_c4fm = 1;
-                      opts.mod_qpsk = 0;
-                      opts.mod_gfsk = 0;
-                      //Need a new demodulator is needed to handle p2 cqpsk
-                      //or consider using an external modulator (GNURadio?)
-                      state.rf_mod = 0;
-                      opts.dmr_stereo = 1;
-                      opts.dmr_mono = 0;
-                      // opts.setmod_bw = 12000; //safe default on both DMR and P25
-                      opts.pulse_digi_rate_out = 24000;
-                      opts.pulse_digi_out_channels = 2;
-                      sprintf (opts.output_name, "XDMA");
-                      fprintf (stderr,"Decoding XDMA P25 and DMR\n");
-                      }
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_ysf = 1;
+            opts.frame_m17 = 0;
+            opts.mod_c4fm = 1;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 0;
+            state.rf_mod = 0;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            state.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            sprintf (opts.output_name, "YSF");
+            fprintf (stderr,"Decoding only YSF frames. \n");
+            }
+          else if (optarg[0] == '2')
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 1;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            state.samplesPerSymbol = 8; 
+            state.symbolCenter = 3;
+            opts.mod_c4fm = 1;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 0;
+            state.rf_mod = 0;
+            opts.dmr_stereo = 1;
+            state.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            // opts.setmod_bw = 12000;
+            sprintf (opts.output_name, "P25p2");
+            fprintf (stderr,"Decoding 6000 sps P25p2 frames only!\n");
+            }
+          else if (optarg[0] == 's')
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.inverted_p2 = 0; 
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 1;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            opts.mod_c4fm = 1;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 0;
+            state.rf_mod = 0;
+            opts.dmr_stereo = 1;
+            opts.dmr_mono = 0;
+            // opts.setmod_bw = 7000;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 2;
+            sprintf (opts.output_name, "DMR Stereo");
+            
+            fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
+          }
+          else if (optarg[0] == 't')
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 1;
+            opts.frame_p25p1 = 1;
+            opts.frame_p25p2 = 1;
+            opts.inverted_p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 1;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_ysf = 1;
+            opts.frame_m17 = 0;
+            opts.mod_c4fm = 1;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 0;
+            //Need a new demodulator is needed to handle p2 cqpsk
+            //or consider using an external modulator (GNURadio?)
+            state.rf_mod = 0;
+            opts.dmr_stereo = 1;
+            opts.dmr_mono = 0;
+            // opts.setmod_bw = 12000; //safe default on both DMR and P25
+            opts.pulse_digi_rate_out = 24000;
+            opts.pulse_digi_out_channels = 2;
+            sprintf (opts.output_name, "XDMA");
+            fprintf (stderr,"Decoding XDMA P25 and DMR\n");
+            }
           else if (optarg[0] == 'n')
-            {
-              opts.frame_dstar = 0;
-              opts.frame_x2tdma = 0;
-              opts.frame_p25p1 = 0;
-              opts.frame_p25p2 = 0;
-              opts.frame_nxdn48 = 0;
-              opts.frame_nxdn96 = 1;
-              opts.frame_dmr = 0;
-              opts.frame_dpmr = 0;
-              opts.frame_provoice = 0;
-              opts.frame_ysf = 0;
-              opts.frame_m17 = 0;
-              opts.mod_c4fm = 1;
-              opts.mod_qpsk = 0;
-              opts.mod_gfsk = 0;
-              state.rf_mod = 0;
-              opts.pulse_digi_rate_out = 48000;
-              opts.pulse_digi_out_channels = 1;
-              opts.dmr_stereo = 0;
-              opts.dmr_mono = 0;
-              state.dmr_stereo = 0;
-              // opts.setmod_bw = 7000; //causing issues
-              sprintf (opts.output_name, "NXDN96");
-              fprintf (stderr,"Decoding only NXDN 9600 baud frames.\n");
-            }
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 1;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            opts.mod_c4fm = 1;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 0;
+            state.rf_mod = 0;
+            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.dmr_stereo = 0;
+            // opts.setmod_bw = 7000; //causing issues
+            sprintf (opts.output_name, "NXDN96");
+            fprintf (stderr,"Decoding only NXDN 9600 baud frames.\n");
+          }
           else if (optarg[0] == 'r')
-            {
-              opts.frame_dstar = 0;
-              opts.frame_x2tdma = 0;
-              opts.frame_p25p1 = 0;
-              opts.frame_p25p2 = 0;
-              opts.frame_nxdn48 = 0;
-              opts.frame_nxdn96 = 0;
-              opts.frame_dmr = 1;
-              opts.frame_dpmr = 0;
-              opts.frame_provoice = 0;
-              opts.frame_ysf = 0;
-              opts.frame_m17 = 0;
-              opts.mod_c4fm = 1;
-              opts.mod_qpsk = 0;
-              opts.mod_gfsk = 0; //
-              state.rf_mod = 0;  //
-              opts.pulse_digi_rate_out = 24000;
-              opts.pulse_digi_out_channels = 2;
-              opts.dmr_mono = 0;
-              opts.dmr_stereo = 1;
-              state.dmr_stereo = 0; //0
-              // opts.setmod_bw = 7000;
-              sprintf (opts.output_name, "DMR Stereo");
-              fprintf (stderr,"-fr / DMR Mono switch has been deprecated.\n");
-              fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 1;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            opts.mod_c4fm = 1;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 0; //
+            state.rf_mod = 0;  //
+            opts.pulse_digi_rate_out = 24000;
+            opts.pulse_digi_out_channels = 2;
+            opts.dmr_mono = 0;
+            opts.dmr_stereo = 1;
+            state.dmr_stereo = 0; //0
+            // opts.setmod_bw = 7000;
+            sprintf (opts.output_name, "DMR Stereo");
+            fprintf (stderr,"-fr / DMR Mono switch has been deprecated.\n");
+            fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
 
-            }
+          }
           else if (optarg[0] == 'm')
           {
             opts.frame_dstar = 0;
