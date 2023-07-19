@@ -635,7 +635,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         if (choicec == 5)
         {
           char wav_file_directory[1024];
-          sprintf (wav_file_directory, "./WAV");
+          sprintf (wav_file_directory, "%s", opts->wav_out_dir);
           wav_file_directory[1023] = '\0';
           if (stat(wav_file_directory, &st_wav) == -1)
           {
@@ -645,8 +645,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           }
           opts->dmr_stereo_wav = 1;
           //catch all in case of no file name set, won't crash or something
-          sprintf (opts->wav_out_file, "./WAV/DSD-FME-X1.wav");
-          sprintf (opts->wav_out_fileR, "./WAV/DSD-FME-X2.wav");
+          sprintf (opts->wav_out_file, "./%s/DSD-FME-X1.wav", opts->wav_out_dir); //
+          sprintf (opts->wav_out_fileR, "./%s/DSD-FME-X2.wav", opts->wav_out_dir); //
           openWavOutFileL (opts, state);
           openWavOutFileR (opts, state);
 
@@ -2010,7 +2010,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "./WAV/%s %s NXDN - RAN %d - TGT %d - SRC %d.wav", getDateN(), getTimeN(), rn, tgn, src);
+      sprintf (opts->wav_out_file, "./%s/%s %s NXDN - RAN %d - TGT %d - SRC %d.wav", opts->wav_out_dir, getDateN(), getTimeN(), rn, tgn, src);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2047,7 +2047,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "./WAV/%s %s MS - CC %d - TG %d - RD %d.wav", getDateN(), getTimeN(), dcc, tg, rd);
+      sprintf (opts->wav_out_file, "./%s/%s %s MS - CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), getTimeN(), dcc, tg, rd);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2090,7 +2090,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
 
-      sprintf (opts->wav_out_file, "./WAV/%s %s CC %d - TG %d - RD %d.wav", getDateN(), getTimeN(), dcc, tg, rd);
+      sprintf (opts->wav_out_file, "./%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), getTimeN(), dcc, tg, rd);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2132,7 +2132,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileR (opts, state);
-      sprintf (opts->wav_out_fileR, "./WAV/%s %s CC %d - TG %d - RD %d.wav", getDateN(), getTimeN(), dcc, tgR, rdR);
+      sprintf (opts->wav_out_fileR, "./%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), getTimeN(), dcc, tgR, rdR);
       openWavOutFileR (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2173,7 +2173,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "./WAV/%s %s P1 - NAC %X - TGT %d - SRC %d.wav", getDateN(), getTimeN(), nc, tg, rd);
+      sprintf (opts->wav_out_file, "./%s/%s %s P1 - NAC %X - TGT %d - SRC %d.wav", opts->wav_out_dir, getDateN(), getTimeN(), nc, tg, rd);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -3643,7 +3643,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
  if (c == 80) //'P' key - start per call wav files
  {
   char wav_file_directory[1024];
-  sprintf (wav_file_directory, "./WAV");
+  sprintf (wav_file_directory, "./%s", opts->wav_out_dir);
   wav_file_directory[1023] = '\0';
   if (stat(wav_file_directory, &st_wav) == -1)
   {
@@ -3653,8 +3653,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   opts->dmr_stereo_wav = 1;
   //catch all in case of no file name set, won't crash or something
-  sprintf (opts->wav_out_file, "./WAV/DSD-FME-T1.wav");
-  sprintf (opts->wav_out_fileR, "./WAV/DSD-FME-T2.wav");
+  sprintf (opts->wav_out_file, "./%s/DSD-FME-T1.wav", opts->wav_out_dir);
+  sprintf (opts->wav_out_fileR, "./%s/DSD-FME-T2.wav",  opts->wav_out_dir);
   openWavOutFileL (opts, state); 
   openWavOutFileR (opts, state); 
  }

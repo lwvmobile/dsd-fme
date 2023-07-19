@@ -517,6 +517,7 @@ initOpts (dsd_opts * opts)
   opts->split = 0;
   opts->playoffset = 0;
   opts->playoffsetR = 0;
+  sprintf (opts->wav_out_dir, "%s", "WAV");
   opts->mbe_out_dir[0] = 0;
   opts->mbe_out_file[0] = 0;
   opts->mbe_out_fileR[0] = 0; //second slot on a TDMA system
@@ -1136,7 +1137,9 @@ usage ()
   printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
-  printf ("  -w <file>     Output synthesized speech to a .wav file, legacy auto modes only.\n");
+  printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n");
+  printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
+  printf ("                 (Single Nested Directory Only! Use Before the -P option!)\n");
   printf ("  -P            Enable Per Call WAV file saving in XDMA and NXDN decoding classes\n");
   printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
   printf ("                 (Running in console will use static wav files)\n");
@@ -1736,22 +1739,51 @@ main (int argc, char **argv)
           fprintf (stderr,"Writing + Appending LRRP data to file %s\n", opts.lrrp_out_file);
           break;
 
+        case '7': //make a custom wav file directory in the current working directory -- use this before -P
+          strncpy(opts.wav_out_dir, optarg, 511);
+          opts.wav_out_dir[511] = '\0';
+          if (stat(opts.wav_out_dir, &st) == -1)
+          {
+            fprintf (stderr, "%s directory does not exist\n", opts.wav_out_dir);
+            fprintf (stderr, "Creating directory %s to save wav files\n", opts.wav_out_dir);
+            mkdir(opts.wav_out_dir, 0700);
+          }
+          else fprintf (stderr,"Writing wav decoded audio files to directory %s\n", opts.wav_out_dir);
+          break;
+
         case 'P': //TDMA/NXDN Per Call - was T, now is P
-        sprintf (wav_file_directory, "./WAV"); 
-        wav_file_directory[1023] = '\0';
-        if (stat(wav_file_directory, &st) == -1)
-        {
-          fprintf (stderr, "-P %s WAV file directory does not exist\n", wav_file_directory);
-          fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
-          mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
-        }
-        fprintf (stderr,"XDMA and NXDN Per Call Wav File Saving Enabled. (NCurses Terminal Only)\n");
-        sprintf (opts.wav_out_file, "./WAV/DSD-FME-X1.wav"); 
-        sprintf (opts.wav_out_fileR, "./WAV/DSD-FME-X2.wav");
-        opts.dmr_stereo_wav = 1;
-        openWavOutFileL (&opts, &state); 
-        openWavOutFileR (&opts, &state); 
-        break;
+          sprintf (wav_file_directory, "%s", opts.wav_out_dir); 
+          wav_file_directory[1023] = '\0';
+          if (stat(wav_file_directory, &st) == -1)
+          {
+            fprintf (stderr, "-P %s WAV file directory does not exist\n", wav_file_directory);
+            fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
+            mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
+          }
+          fprintf (stderr,"XDMA and NXDN Per Call Wav File Saving Enabled. (NCurses Terminal Only)\n");
+          sprintf (opts.wav_out_file, "./%s/DSD-FME-X1.wav", opts.wav_out_dir); 
+          sprintf (opts.wav_out_fileR, "./%s/DSD-FME-X2.wav", opts.wav_out_dir);
+          opts.dmr_stereo_wav = 1;
+          openWavOutFileL (&opts, &state); 
+          openWavOutFileR (&opts, &state); 
+          break;
+
+        // case 'P': //TDMA/NXDN Per Call - was T, now is P
+        //   sprintf (wav_file_directory, "./WAV"); 
+        //   wav_file_directory[1023] = '\0';
+        //   if (stat(wav_file_directory, &st) == -1)
+        //   {
+        //     fprintf (stderr, "-P %s WAV file directory does not exist\n", wav_file_directory);
+        //     fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
+        //     mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
+        //   }
+        //   fprintf (stderr,"XDMA and NXDN Per Call Wav File Saving Enabled. (NCurses Terminal Only)\n");
+        //   sprintf (opts.wav_out_file, "./WAV/DSD-FME-X1.wav"); 
+        //   sprintf (opts.wav_out_fileR, "./WAV/DSD-FME-X2.wav");
+        //   opts.dmr_stereo_wav = 1;
+        //   openWavOutFileL (&opts, &state); 
+        //   openWavOutFileR (&opts, &state); 
+        //   break;
 
         case 'F':
           opts.aggressive_framesync = 0;
@@ -1767,10 +1799,12 @@ main (int argc, char **argv)
           strncpy(opts.audio_in_dev, optarg, 2047);
           opts.audio_in_dev[2047] = '\0';
           break;
+
         case 'o':
           strncpy(opts.audio_out_dev, optarg, 1023);
           opts.audio_out_dev[1023] = '\0';
           break;
+
         case 'd':
           strncpy(opts.mbe_out_dir, optarg, 1023);
           opts.mbe_out_dir[1023] = '\0';
@@ -1781,7 +1815,6 @@ main (int argc, char **argv)
             mkdir(opts.mbe_out_dir, 0700); //user read write execute, needs execute for some reason or segfault
           }
           else fprintf (stderr,"Writing mbe data files to directory %s\n", opts.mbe_out_dir);
-          // fprintf (stderr,"Writing mbe data temporarily disabled!\n");
           break;
 
         case 'c': 

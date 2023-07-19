@@ -233,6 +233,7 @@ typedef struct
   float audio_gainR;
   int audio_out;
   int dmr_stereo_wav;
+  char wav_out_dir[512];
   char wav_out_file[1024];
   char wav_out_fileR[1024];
   char wav_out_file_raw[1024];
