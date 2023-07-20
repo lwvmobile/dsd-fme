@@ -993,6 +993,10 @@ void processYSF(dsd_opts * opts, dsd_state * state)
         PrintAMBEData (opts, state, ambe_d);
 
       processAudio(opts, state);
+      
+      if (opts->wav_out_f != NULL)
+        writeSynthesizedVoice (opts, state);
+
       playSynthesizedVoice (opts, state);
 
     }
