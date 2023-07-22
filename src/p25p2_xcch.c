@@ -51,7 +51,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 	int err = -2;
 	if (state->p2_is_lcch == 0)
 	{
-		int err = crc12_xb_bridge(payload, 180-12);
+		err = crc12_xb_bridge(payload, 180-12);
 		if (err != 0) //CRC Failure, warn or skip.
 		{
 			if (SMAC[1] == 0x0) //NULL PDU Check, pass if NULL type
