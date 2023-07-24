@@ -9,6 +9,8 @@
  * 2022-08 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
+//TODO: Simulate Tone by playing AMBE FF32D2D2D2D880 x 4 on call alert (NXDN Foreign Lady Chirp on End)
+
 #include "dsd.h"
 #include "git_ver.h"
 
@@ -2251,10 +2253,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 5) printw (" %s ", "Aero Build");
       if (i == 6) printw (" v2.1c (20230720) \n");
       #elif ZDEV_BUILD
-      if (i == 5) printw (" %s ", "zDEV3 Build");
+      if (i == 5) printw (" %s ", "Audio WIP ");
       if (i == 6) printw (" %s \n", GIT_TAG);
       #else 
-      if (i == 5) printw (" %s ", "zDEV3 Build");
+      if (i == 5) printw (" %s ", "Audio WIP");
       if (i == 6) printw (" %s \n", GIT_TAG);
       #endif
       else printw ("\n");
@@ -2269,11 +2271,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ("--Input Output----------------------------------------------------------------\n");
   if (opts->audio_in_type == 0)
   {
-    printw ("| Pulse Audio  Input: [%2i] kHz [%i] Channel\n", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
+    printw ("| Pulse Audio Input: %i kHz; %i Channel;\n", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
   }
   if (opts->audio_in_type == 5)
   {
-    printw ("| OSS Audio  Input: [%2i] kHz [1] Channel\n", SAMPLE_RATE_IN/1000);
+    printw ("| OSS Audio Input: %i kHz; 1 Channel;\n", SAMPLE_RATE_IN/1000);
   }
   if (opts->audio_in_type == 4)
   {
@@ -2311,14 +2313,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_out_type == 0)
   {
-    printw ("| Pulse Audio Output: [%2i] kHz [%i] Channel", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels);
-    if (state->audio_smoothing == 1) printw (" - Smoothing On");
+    printw ("| Pulse Audio Output: %i kHz; %i Channel; Auto Gain: %.1f;", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
+    if (opts->floating_point == 1) printw (" Floating Point;");
+
     printw (" \n");
   }
   if (opts->audio_out_type == 5)
   {
-    printw ("| OSS Audio Output: [%2i] kHz [1] Channel", SAMPLE_RATE_OUT/1000);
-    if (state->audio_smoothing == 1) printw (" - Smoothing On");
+    printw ("| OSS Audio Output: %i kHz; %d Channel; Auto Gain %.1f;", SAMPLE_RATE_OUT/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //nly on short
+    if (opts->floating_point == 1) printw (" Floating Point;");
     printw (" \n");
   }
   if (opts->monitor_input_audio == 1)
@@ -2784,7 +2789,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     else if (lls == 0 || lls == 1) //P1
     {
-      printw ("P25 P1 - [%05llX][%03llX][%03llX] RFSS: [%lld] SITE: [%lld] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
+      printw ("P25p1  - [%05llX][%03llX][%03llX] RFSS: [%lld] SITE: [%lld] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p25_cc_freq != 0)
       {
         printw ("Freq: %.06lf MHz", (double)state->p25_cc_freq/1000000);
@@ -2792,7 +2797,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     else if (lls == 35 || lls == 36) //P2
     {
-      printw ("P25 P2 - [%05llX][%03llX][%03llX] RFSS: [%lld] SITE: [%lld] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
+      printw ("P25p2  - [%05llX][%03llX][%03llX] RFSS: [%lld] SITE: [%lld] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p2_wacn == 0 || state->p2_sysid == 0 || state->p2_cc == 0)
       {
         attron(COLOR_PAIR(2));
@@ -2834,11 +2839,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("%s | ", state->call_string[0]);
     printw ("%s ", DMRBusrtTypes[state->dmrburstL]);
 
-    #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
-    //
-    if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && ( state->dmrburstL == 16 || state->dmrburstL == 21) && (state->dmrburstR == 16 || state->dmrburstR == 21)) printw ("*M*");
-    //
-    #endif 
+    // #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
+    // //
+    // if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && ( state->dmrburstL == 16 || state->dmrburstL == 21) && (state->dmrburstR == 16 || state->dmrburstR == 21)) printw ("*M*");
+    // //
+    // #endif 
 
     printw ("\n");
 
@@ -3037,11 +3042,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //THIS IS THE NEW ONE
       printw ("%s | ", state->call_string[1]);
       printw ("%s ", DMRBusrtTypes[state->dmrburstR]);
-      #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
-	    //
-      if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && ( state->dmrburstL == 16 || state->dmrburstL == 21) && (state->dmrburstR == 16 || state->dmrburstR == 21) ) printw ("*M*"); 
-      //
-      #endif
+      // #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
+	    // //
+      // if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && ( state->dmrburstL == 16 || state->dmrburstL == 21) && (state->dmrburstR == 16 || state->dmrburstR == 21) ) printw ("*M*"); 
+      // //
+      // #endif
       printw ("\n");
       
       printw ("| V XTRA | "); //10 spaces
@@ -3482,6 +3487,24 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (c == 27) //esc key, open menu
   {
     ncursesMenu (opts, state); //just a quick test
+  }
+
+  if (c == 43) //+ key, increment aout_gain
+  {
+    if (state->aout_gain < 50)
+      state->aout_gain++;
+    //probably won't use aout_gainR with new short and float systems
+    if (state->aout_gainR < 50)
+      state->aout_gainR++;
+  }
+
+  if (c == 45) //- key, decrement aout_gain
+  {
+    if (state->aout_gain > 0)
+      state->aout_gain--;
+    //probably won't use aout_gainR with new short and float systems
+    if (state->aout_gainR > 0)
+      state->aout_gainR--;
   }
 
   if (c == 122) //'z' key, toggle payload to console

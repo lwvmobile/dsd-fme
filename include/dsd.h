@@ -65,7 +65,7 @@
 #include <pulse/error.h>      //PULSE AUDIO
 
 #define SAMPLE_RATE_IN 48000 //48000
-#define SAMPLE_RATE_OUT 48000 //8000,
+#define SAMPLE_RATE_OUT 8000 //8000
 
 #ifdef USE_RTLSDR
 #include <rtl-sdr.h>
@@ -399,6 +399,9 @@ typedef struct
   //Use P25p1 heuristics
   uint8_t use_heuristics;
 
+  //Use floating point audio output
+  int floating_point;
+
 } dsd_opts;
 
 typedef struct
@@ -420,6 +423,22 @@ typedef struct
   float *audio_out_temp_buf_p;
   float audio_out_temp_bufR[160];
   float *audio_out_temp_buf_pR;
+  //new stereo float sample storage
+  float f_l[160]; //single sample left
+  float f_r[160]; //single sample right
+  float f_l4[4][160]; //quad sample for up to a P25p2 4V
+  float f_r4[4][160]; //quad sample for up to a P25p2 4V
+  //new stereo short sample storage
+  short s_l[160]; //single sample left
+  short s_r[160]; //single sample right
+  short s_l4[4][160]; //quad sample for up to a P25p2 4V
+  short s_r4[4][160]; //quad sample for up to a P25p2 4V
+  //new stereo short sample storage tapped from 48_k internal upsampling
+  short s_lu[160*6]; //single sample left
+  short s_ru[160*6]; //single sample right
+  short s_l4u[4][160*6]; //quad sample for up to a P25p2 4V
+  short s_r4u[4][160*6]; //quad sample for up to a P25p2 4V
+  //end 
   int audio_out_idx;
   int audio_out_idx2;
   int audio_out_idxR;
@@ -872,8 +891,31 @@ void closePulseInput (dsd_opts * opts);
 void closePulseOutput (dsd_opts * opts);
 void writeSynthesizedVoice (dsd_opts * opts, dsd_state * state);
 void writeSynthesizedVoiceR (dsd_opts * opts, dsd_state * state);
-void playSynthesizedVoice (dsd_opts * opts, dsd_state * state);
-void playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state);
+void playSynthesizedVoice (dsd_opts * opts, dsd_state * state);   //short mono output
+void playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state);  //short mono output rigth (obsolete)?
+//new float stuff
+void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state);  //float stereo mix
+void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state); //float stereo mix 3v2 DMR...and X2-TDMA
+void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state); //float stereo mix 4v2 P25p2
+// void playSynthesizedVoiceFL (dsd_opts * opts, dsd_state * state);  //float left when using stereo configuration
+void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state);  //float mono
+
+void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state);   //short stereo mix
+void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state);  //short stereo mix 3v2 DMR...and X2-TDMA
+void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state);  //short stereo mix 4v2 P25p2
+
+void upsampleF (float invalue, float prev, float outbuf[6]);
+void playSynthesizedVoiceFS3_48k (dsd_opts * opts, dsd_state * state);
+void playSynthesizedVoiceFS4_48k (dsd_opts * opts, dsd_state * state);
+
+void upsampleS (short invalue, short prev, short outbuf[6]);
+void playSynthesizedVoiceSS3_48k (dsd_opts * opts, dsd_state * state);
+void playSynthesizedVoiceSS4_48k (dsd_opts * opts, dsd_state * state);
+
+//borrowed from CODEC2 for testing
+void fdmdv_8_to_48_float(float out48k[], float in8k[], int n);
+
+//
 void openAudioOutDevice (dsd_opts * opts, int speed);
 void openAudioInDevice (dsd_opts * opts);
 

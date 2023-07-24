@@ -480,20 +480,71 @@ void process_4V (dsd_opts * opts, dsd_state * state)
 		fprintf (stderr, "\n");
 	}
 
-	#ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
-	//Cygwin OSS Slot Preference Pre-emption shim
-	if (opts->audio_out_type == 5)
-	{
-		//set to 21 for MBE OSS shim to preempt audio 
-		if (state->currentslot == 0) state->dmrburstL = 21;
-		else state->dmrburstR = 21;
-	}
-	#endif
+	// #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
+	// //Cygwin OSS Slot Preference Pre-emption shim
+	// if (opts->audio_out_type == 5)
+	// {
+	// 	//set to 21 for MBE OSS shim to preempt audio 
+	// 	if (state->currentslot == 0) state->dmrburstL = 21;
+	// 	else state->dmrburstR = 21;
+	// }
+	// #endif
 	
 	processMbeFrame (opts, state, NULL, ambe_fr1, NULL);
+	if(state->currentslot == 0)
+	{
+		memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+		memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+		memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
+	}
+	else
+	{
+		memcpy(state->f_r4[0], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
+		memcpy(state->s_r4[0], state->s_r, sizeof(state->s_r));
+		memcpy(state->s_r4u[0], state->s_ru, sizeof(state->s_ru));
+	}
+
 	processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+	if(state->currentslot == 0)
+	{
+		memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+		memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+		memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
+	}
+	else
+	{
+		memcpy(state->f_r4[1], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
+		memcpy(state->s_r4[1], state->s_r, sizeof(state->s_r));
+		memcpy(state->s_r4u[1], state->s_ru, sizeof(state->s_ru));
+	}
+
 	processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+	if(state->currentslot == 0)
+	{
+		memcpy(state->f_l4[2], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+		memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
+		memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
+	}
+	else
+	{
+		memcpy(state->f_r4[2], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
+		memcpy(state->s_r4[2], state->s_r, sizeof(state->s_r));
+		memcpy(state->s_r4u[2], state->s_ru, sizeof(state->s_ru));
+	}
+
 	processMbeFrame (opts, state, NULL, ambe_fr4, NULL);
+	if(state->currentslot == 0)
+	{
+		memcpy(state->f_l4[3], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+		memcpy(state->s_l4[3], state->s_l, sizeof(state->s_l));
+		memcpy(state->s_l4u[3], state->s_lu, sizeof(state->s_lu));
+	}
+	else
+	{
+		memcpy(state->f_r4[3], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
+		memcpy(state->s_r4[3], state->s_r, sizeof(state->s_r));
+		memcpy(state->s_r4u[3], state->s_ru, sizeof(state->s_ru));
+	}
 
 }
 
@@ -647,18 +698,44 @@ void process_2V (dsd_opts * opts, dsd_state * state)
 		fprintf (stderr, "\n");
 	}
 
-	#ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
-	//Cygwin OSS Slot Preference Pre-emption shim
-	if (opts->audio_out_type == 5)
-	{
-		//set to 21 for MBE OSS shim to preempt audio 
-		if (state->currentslot == 0) state->dmrburstL = 21;
-		else state->dmrburstR = 21;
-	}
-	#endif
+	// #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
+	// //Cygwin OSS Slot Preference Pre-emption shim
+	// if (opts->audio_out_type == 5)
+	// {
+	// 	//set to 21 for MBE OSS shim to preempt audio 
+	// 	if (state->currentslot == 0) state->dmrburstL = 21;
+	// 	else state->dmrburstR = 21;
+	// }
+	// #endif
 
 	processMbeFrame (opts, state, NULL, ambe_fr1, NULL);
+	if(state->currentslot == 0)
+	{
+		memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+		memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+		memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
+	}
+	else
+	{
+		memcpy(state->f_r4[0], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
+		memcpy(state->s_r4[0], state->s_r, sizeof(state->s_r));
+		memcpy(state->s_r4u[0], state->s_ru, sizeof(state->s_ru));
+	}
+
 	processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+	if(state->currentslot == 0)
+	{
+		memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+		memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+		memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
+
+	}
+	else
+	{
+		memcpy(state->f_r4[1], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
+		memcpy(state->s_r4[1], state->s_r, sizeof(state->s_r));
+		memcpy(state->s_r4u[1], state->s_ru, sizeof(state->s_ru));
+	}
 
 	process_ESS(opts, state);
 
@@ -696,7 +773,7 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 
   for (ts_counter = 0; ts_counter < 4; ts_counter++) //12
   {
-
+		int sacch = 0;
 		p2_duid[0] = p2bit[0+(ts_counter*360)];
 		p2_duid[1] = p2bit[1+(ts_counter*360)];
 		p2_duid[2] = p2bit[74+(ts_counter*360)];
@@ -706,7 +783,7 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		p2_duid[6] = p2bit[318+(ts_counter*360)];
 		p2_duid[7] = p2bit[319+(ts_counter*360)];
 
-		//process p2_duid with (8,4,4) encoding/decoding
+		//process p2_duid with (8,4,4) encoding/decoding (hamming?)
 		int p2_duid_complete = 0;
 		for (int i = 0; i < 8; i++)
 		{
@@ -738,7 +815,11 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
       	if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_fR == NULL)) openMbeOutFileR (opts, state);
 			}
 		}
-		else fprintf (stderr, "VCH S ");
+		else
+		{
+			sacch = 1;
+			fprintf (stderr, "VCH S ");
+		}
 
 		//check to see when last voice activity occurred in order to allow tuning on phase 2
 		//mac_signal or mac_idle when no more voice activity on current channel
@@ -843,6 +924,19 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		//add 360 bits to each counter
 		vc_counter = vc_counter + 360;
 
+		//WIP: The skip issue was fixed with this check and also with a check to play the extra samples on a 2V
+		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
+				playSynthesizedVoiceFS4 (opts, state);
+
+		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 48000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
+				playSynthesizedVoiceFS4_48k (opts, state);
+
+		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
+				playSynthesizedVoiceSS4 (opts, state);
+
+		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 48000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
+				playSynthesizedVoiceSS4_48k (opts, state);
+
 		//flip slots after each TS processed
 		if (state->currentslot == 0)
 		{
@@ -886,6 +980,7 @@ void processP2 (dsd_opts * opts, dsd_state * state)
 
 	//process DUID will run through all collected frames and handle them appropriately
   process_P2_DUID (opts, state);
+
 	state->dmr_stereo = 0; 
 	state->p2_is_lcch = 0;
 

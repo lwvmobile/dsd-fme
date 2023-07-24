@@ -101,6 +101,14 @@ void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
 
+  //is this not being set properly?
+  if (opts->floating_point == 1)
+  {
+    //test for WIP auto gain, disable later if needbe
+    state->aout_gain = 25.0f;
+    state->aout_gainR = 25.0f;
+  }
+
   //clear heuristics from last carrier signal
   if (opts->frame_p25p1 == 1 && opts->use_heuristics == 1)
   {
@@ -286,17 +294,18 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   sprintf (state->slot1light, "%s", "");
   sprintf (state->slot2light, "%s", "");
   state->firstframe = 0;
-  if (opts->audio_gain == (float) 0)
-  {
-    if (state->audio_smoothing == 0) state->aout_gain = 15; //15
-    else state->aout_gain = 25; //25
-  }
+  //this really isn't the best placement for this sort of check
+  // if (opts->audio_gain == (float) 0)
+  // {
+  //   if (state->audio_smoothing == 0) state->aout_gain = 15; //15
+  //   else state->aout_gain = 25; //25
+  // }
 
-  if (opts->audio_gainR == (float) 0)
-  {
-    if (state->audio_smoothing == 0) state->aout_gainR = 15; //15
-    else state->aout_gainR = 25; //25
-  }
+  // if (opts->audio_gainR == (float) 0)
+  // {
+  //   if (state->audio_smoothing == 0) state->aout_gainR = 15; //15
+  //   else state->aout_gainR = 25; //25
+  // }
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
   state->aout_max_buf_idx = 0;
@@ -485,12 +494,35 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->m17_enc_st = 0;
   memset(state->m17_meta, 0, sizeof(state->m17_meta));
 
+  //set float temp buffer to baseline
+  memset (state->audio_out_temp_buf, 0.1f, sizeof(state->audio_out_temp_buf));
+  memset (state->audio_out_temp_bufR, 0.1f, sizeof(state->audio_out_temp_bufR));
+
+  //set float temp buffer to baseline
+  memset (state->f_l, 0.1f, sizeof(state->f_l));
+  memset (state->f_r, 0.1f, sizeof(state->f_r));
+
+  //set float temp buffer to baseline
+  memset (state->f_l4, 0.1f, sizeof(state->f_l4));
+  memset (state->f_r4, 0.1f, sizeof(state->f_r4));
+
+  //zero out the short sample storage buffers
+  memset (state->s_l, 1, sizeof(state->s_l));
+  memset (state->s_r, 1, sizeof(state->s_r));
+  memset (state->s_l4, 1, sizeof(state->s_l4));
+  memset (state->s_r4, 1, sizeof(state->s_r4));
+
+  memset (state->s_lu, 1, sizeof(state->s_lu));
+  memset (state->s_ru, 1, sizeof(state->s_ru));
+  memset (state->s_l4u, 1, sizeof(state->s_l4u));
+  memset (state->s_r4u, 1, sizeof(state->s_r4u));
+
 } //nocarrier
 
 void
 initOpts (dsd_opts * opts)
 {
-
+  opts->floating_point = 0; //use floating point audio output
   opts->onesymbol = 10;
   opts->mbe_in_file[0] = 0;
   opts->mbe_in_f = NULL;
@@ -589,9 +621,9 @@ initOpts (dsd_opts * opts)
   opts->rtl_rms = 0; //root means square power level on rtl input signal
   //end RTL user options
   opts->pulse_raw_rate_in   = 48000;
-  opts->pulse_raw_rate_out  = 48000; //
+  opts->pulse_raw_rate_out  = 48000;//
   opts->pulse_digi_rate_in  = 48000;
-  opts->pulse_digi_rate_out = 24000; //new default for XDMA
+  opts->pulse_digi_rate_out = 8000; //
   opts->pulse_raw_in_channels   = 1;
   opts->pulse_raw_out_channels  = 1;
   opts->pulse_digi_in_channels  = 1; //2
@@ -700,7 +732,10 @@ initOpts (dsd_opts * opts)
   opts->use_dsp_output = 0;
 
   //Use P25p1 heuristics
-  opts->use_heuristics = 0; 
+  opts->use_heuristics = 0;
+
+  // if (opts->floating_point == 1)
+  //   state->aout_gain = 25.0f; 
 
 } //initopts
 
@@ -723,6 +758,28 @@ initState (dsd_state * state)
 
   //Upsampled Audio Smoothing
   state->audio_smoothing = 0;
+
+  memset (state->audio_out_temp_buf, 0.1f, sizeof(state->audio_out_temp_buf));
+  memset (state->audio_out_temp_bufR, 0.1f, sizeof(state->audio_out_temp_bufR));
+
+  //set float temp buffer to baseline
+  memset (state->f_l, 0.1f, sizeof(state->f_l));
+  memset (state->f_r, 0.1f, sizeof(state->f_r));
+
+  //set float temp buffer to baseline
+  memset (state->f_l4, 0.1f, sizeof(state->f_l4));
+  memset (state->f_r4, 0.1f, sizeof(state->f_r4));
+
+  //zero out the short sample storage buffers
+  memset (state->s_l, 1, sizeof(state->s_l));
+  memset (state->s_r, 1, sizeof(state->s_r));
+  memset (state->s_l4, 1, sizeof(state->s_l4));
+  memset (state->s_r4, 1, sizeof(state->s_r4));
+
+  memset (state->s_lu, 1, sizeof(state->s_lu));
+  memset (state->s_ru, 1, sizeof(state->s_ru));
+  memset (state->s_l4u, 1, sizeof(state->s_l4u));
+  memset (state->s_r4u, 1, sizeof(state->s_r4u));
 
   state->audio_out_buf = malloc (sizeof (short) * 1000000);
   state->audio_out_bufR = malloc (sizeof (short) * 1000000);
@@ -800,8 +857,8 @@ initState (dsd_state * state)
   state->firstframe = 0;
   sprintf (state->slot1light, "%s", "");
   sprintf (state->slot2light, "%s", "");
-  state->aout_gain = 0;
-  state->aout_gainR = 0;
+  state->aout_gain = 15; //was 0
+  state->aout_gainR = 15; //was 0
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
   state->aout_max_buf_idx = 0;
@@ -1136,7 +1193,7 @@ usage ()
   printf ("                null for no audio output\n");
   printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
-  printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
+  printf ("  -g <float>    Audio output gain (default = 0 = auto, disable = -1)\n");
   printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n");
   printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
   printf ("                 (Single Nested Directory Only! Use Before the -P option!)\n");
@@ -1152,6 +1209,7 @@ usage ()
   printf ("  -V            Enable Audio Smoothing on Upsampled 48k/1 or 24k/2 Audio (Capital V)\n");
   printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
   printf ("  -z            Set TDMA Voice Slot Preference when using /dev/dsp audio output (prevent lag and stuttering)\n");
+  printf ("  -y            Enable Experimental Pulse Audio Float Audio Output\n");
   printf ("\n");
   printf ("RTL-SDR options:\n");
   printf (" Usage: rtl:dev:freq:gain:ppm:bw:sq:udp\n");
@@ -1276,38 +1334,38 @@ void
 liveScanner (dsd_opts * opts, dsd_state * state)
 {
 
-if (opts->audio_in_type == 1)
-{
-  opts->pulse_digi_rate_out = 48000; 
-  opts->pulse_digi_out_channels = 1;
-  if (opts->dmr_stereo == 1)
-  {
-    opts->pulse_digi_rate_out = 24000; 
-    opts->pulse_digi_out_channels = 2;
-    fprintf (stderr, "STDIN Audio Rate Out set to 24000 Khz/2 Channel \n");
-  }
-  else fprintf (stderr, "STDIN Audio Rate Out set to 48000 Khz/1 Channel \n");
-  opts->pulse_raw_rate_out = 48000;
-  opts->pulse_raw_out_channels = 1;
+// if (opts->audio_in_type == 1)
+// {
+//   opts->pulse_digi_rate_out = 48000; 
+//   opts->pulse_digi_out_channels = 1;
+//   if (opts->dmr_stereo == 1)
+//   {
+//     opts->pulse_digi_rate_out = 24000; 
+//     opts->pulse_digi_out_channels = 2;
+//     fprintf (stderr, "STDIN Audio Rate Out set to 24000 Khz/2 Channel \n");
+//   }
+//   else fprintf (stderr, "STDIN Audio Rate Out set to 48000 Khz/1 Channel \n");
+//   opts->pulse_raw_rate_out = 48000;
+//   opts->pulse_raw_out_channels = 1;
 
-}
+// }
 
 #ifdef USE_RTLSDR
   if(opts->audio_in_type == 3)
   {
     //still need this section mostly due the the crackling on the rtl dongle when upsampled
     //probably need to dig a little deeper, maybe inlvl releated?
-    opts->pulse_digi_rate_out = 48000; //revert to 8K/1 for RTL input, random crackling otherwise
-    opts->pulse_digi_out_channels = 1;
-    if (opts->dmr_stereo == 1)
-    {
-      opts->pulse_digi_rate_out = 24000; //rtl needs 24000 by 2 channel for DMR TDMA Stereo output
-      opts->pulse_digi_out_channels = 2; //minimal crackling 'may' be observed, not sure, can't test to see on DMR with RTL
-      // fprintf (stderr, "RTL Audio Rate Out set to 24000 Khz/2 Channel \n");
-    }
-    // else fprintf (stderr, "RTL Audio Rate Out set to 48000 Khz/1 Channel \n");
-    opts->pulse_raw_rate_out = 48000;
-    opts->pulse_raw_out_channels = 1;
+    // opts->pulse_digi_rate_out = 48000; //revert to 8K/1 for RTL input, random crackling otherwise
+    // opts->pulse_digi_out_channels = 1;
+    // if (opts->dmr_stereo == 1)
+    // {
+    //   opts->pulse_digi_rate_out = 24000; //rtl needs 24000 by 2 channel for DMR TDMA Stereo output
+    //   opts->pulse_digi_out_channels = 2; //minimal crackling 'may' be observed, not sure, can't test to see on DMR with RTL
+    //   // fprintf (stderr, "RTL Audio Rate Out set to 24000 Khz/2 Channel \n");
+    // }
+    // // else fprintf (stderr, "RTL Audio Rate Out set to 48000 Khz/1 Channel \n");
+    // opts->pulse_raw_rate_out = 48000;
+    // opts->pulse_raw_out_channels = 1;
 
     open_rtlsdr_stream(opts);
     opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
@@ -1482,7 +1540,7 @@ main (int argc, char **argv)
 
   exitflag = 0;
 
-  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
+  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1522,6 +1580,13 @@ main (int argc, char **argv)
         case '3':
           opts.dmr_le = 0;
           fprintf (stderr,"DMR Late Entry Encryption Identifiers Disabled (VC6 Single Burst)\n");
+          break;
+
+        case 'y': //use experimental 'float' audio output
+          opts.floating_point = 1; //enable floating point audio output
+          opts.audio_gain = 0;
+          state.aout_gain = 25.0f; //seems like a nonimal value for float during testing anyways
+          fprintf (stderr,"Enabling Experimental Floating Point Audio Output\n");
           break;
 
         case 'Y': //conventional scanner mode
@@ -1868,7 +1933,7 @@ main (int argc, char **argv)
             opts.frame_provoice = 0;
             opts.frame_ysf = 1;
             opts.frame_m17 = 0;
-            opts.pulse_digi_rate_out = 48000; // /dev/dsp does need this set to 48000 to properly process the upsampling
+            opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 1;
             opts.dmr_stereo = 0; //switching in 'stereo' for 'mono'
             opts.dmr_mono = 1;
@@ -1889,7 +1954,7 @@ main (int argc, char **argv)
             opts.frame_provoice = 0;
             opts.frame_ysf = 0;
             opts.frame_m17 = 0;
-            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 1;
             opts.dmr_stereo = 0;
             state.dmr_stereo = 0;
@@ -1911,7 +1976,7 @@ main (int argc, char **argv)
             opts.frame_provoice = 0;
             opts.frame_ysf = 0;
             opts.frame_m17 = 0;
-            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 1;
             opts.dmr_stereo = 0;
             opts.dmr_mono = 0;
@@ -1938,7 +2003,7 @@ main (int argc, char **argv)
             opts.mod_qpsk = 0;
             opts.mod_gfsk = 1;
             state.rf_mod = 2;
-            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 1;
             opts.dmr_stereo = 0;
             opts.dmr_mono = 0;
@@ -2112,7 +2177,7 @@ main (int argc, char **argv)
             opts.dmr_stereo = 1;
             opts.dmr_mono = 0;
             // opts.setmod_bw = 12000; //safe default on both DMR and P25
-            opts.pulse_digi_rate_out = 24000;
+            opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 2;
             sprintf (opts.output_name, "XDMA");
             fprintf (stderr,"Decoding XDMA P25 and DMR\n");
@@ -2134,7 +2199,7 @@ main (int argc, char **argv)
             opts.mod_qpsk = 0;
             opts.mod_gfsk = 0;
             state.rf_mod = 0;
-            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 1;
             opts.dmr_stereo = 0;
             opts.dmr_mono = 0;
@@ -2160,7 +2225,7 @@ main (int argc, char **argv)
             opts.mod_qpsk = 0;
             opts.mod_gfsk = 0; //
             state.rf_mod = 0;  //
-            opts.pulse_digi_rate_out = 24000;
+            opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 2;
             opts.dmr_mono = 0;
             opts.dmr_stereo = 1;
@@ -2190,7 +2255,7 @@ main (int argc, char **argv)
             opts.mod_qpsk = 0;
             opts.mod_gfsk = 0;
             state.rf_mod = 0;
-            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 1;
             opts.dmr_stereo = 0;
             opts.dmr_mono = 0;
@@ -2519,19 +2584,22 @@ main (int argc, char **argv)
       #endif
     }
 
-    //doesn't work correctly, so just going to reroute to /dev/dsp instead
-    // if((strncmp(opts.audio_in_dev, "udp", 3) == 0)) //udp socket input from SDR++, GQRX, and others
-    // {
-    //   fprintf (stderr, "UDP Input not working, falling back to OSS /dev/dsp Audio Input.\n");
-    //   sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
-    //   opts.audio_in_type = 5;
-    // }
-
     int fmt; 
-    int speed = 48000;
+    int speed;
 
+    //The long of the short is that PADSP can open multiple virtual /dev/dsp devices each with different sampling rates and channel configurations
+    //but the instance inside of Cygwin is a single instance tied to one sample rate AND one channel configuration, so if you change it on the output, it
+    //also changes on the input, and the way dsd handles this is to upsample output to make it work correctly, so if we were to make a true short stereo mix,
+    //we would have to handle upsampling for it as well in Cygwin (alternatively, find another output method, like RTAudio, or something else)
 
-    //NOTE: Both /dev/audio AND /dev/dsp randomly open multiple input streams in Linux under padsp wrapper
+    //It should be noted that Pulse Audio instances do not have this same issue, and can run at different input/rate and output/rate/channel configurations
+
+    //TL:DR; the only reason /dev/dsp works as both input and output in Cygwin is because both input and output are exactly 1 channel - 48k
+
+    //TODO: Test opening OSS input as 2-channel 48k, and see if we can read it in, if not, then double samplespersymble and center
+    //doing so will break the filters though
+
+    speed = 48000;
     if((strncmp(opts.audio_in_dev, "/dev/audio", 10) == 0))
     {
       sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
@@ -2551,7 +2619,6 @@ main (int argc, char **argv)
       if (opts.audio_in_fd == -1)
       {
         fprintf (stderr, "Error, couldn't open %s\n", opts.audio_in_dev);
-        opts.audio_out = 0;
       }
       
       fmt = 0;
@@ -2578,10 +2645,7 @@ main (int argc, char **argv)
       opts.audio_in_type = 5; //5 will become OSS input type
     }
 
-    //Codec2 only running at 8k output currently, need to match for OSS
-    if (opts.frame_m17 == 1)
-      speed = 8000;
-
+    //check for OSS output
     if((strncmp(opts.audio_out_dev, "/dev/audio", 10) == 0))
     {
       sprintf (opts.audio_out_dev, "%s", "/dev/dsp");
@@ -2597,8 +2661,7 @@ main (int argc, char **argv)
     if((strncmp(opts.audio_out_dev, "/dev/dsp", 8) == 0))
     {
       fprintf (stderr, "OSS Output %s.\n", opts.audio_out_dev);
-      opts.audio_out_fd = open (opts.audio_out_dev, O_RDWR);     //O_WRONLY
-      opts.audio_out_fdR = open (opts.audio_out_dev, O_RDWR);
+      opts.audio_out_fd = open (opts.audio_out_dev, O_RDWR);
       if (opts.audio_out_fd == -1)
       {
         fprintf (stderr, "Error, couldn't open #1 %s\n", opts.audio_out_dev);
@@ -2606,49 +2669,37 @@ main (int argc, char **argv)
         exit(1);
       }
 
-      if (opts.audio_out_fdR == -1)
-      {
-        fprintf (stderr, "Error, couldn't open #2 %s\n", opts.audio_out_dev);
-        opts.audio_out = 0;
-        exit(1);
-      }
       fmt = 0;
       if (ioctl (opts.audio_out_fd, SNDCTL_DSP_RESET) < 0)
       {
         fprintf (stderr, "ioctl reset error \n");
       }
-      if (ioctl (opts.audio_out_fdR, SNDCTL_DSP_RESET) < 0)
-      {
-        fprintf (stderr, "ioctl reset error \n");
-      }
+
       fmt = speed;
       if (ioctl (opts.audio_out_fd, SNDCTL_DSP_SPEED, &fmt) < 0)
       {
         fprintf (stderr, "ioctl speed error \n");
       }
-      if (ioctl (opts.audio_out_fdR, SNDCTL_DSP_SPEED, &fmt) < 0)
-      {
-        fprintf (stderr, "ioctl speed error \n");
-      }
-      fmt = 0;
+
+      fmt = 0; //this seems okay to be 1 or 0, not sure what the difference really is (works in stereo on 0)
       if (ioctl (opts.audio_out_fd, SNDCTL_DSP_STEREO, &fmt) < 0)
       {
         fprintf (stderr, "ioctl stereo error \n");
       }
-      if (ioctl (opts.audio_out_fdR, SNDCTL_DSP_STEREO, &fmt) < 0)
-      {
-        fprintf (stderr, "ioctl stereo error \n");
-      }
+
       fmt = AFMT_S16_LE;
       if (ioctl (opts.audio_out_fd, SNDCTL_DSP_SETFMT, &fmt) < 0)
       {
         fprintf (stderr, "ioctl setfmt error \n");
       }
-      if (ioctl (opts.audio_out_fdR, SNDCTL_DSP_SETFMT, &fmt) < 0)
-      {
-        fprintf (stderr, "ioctl setfmt error \n");
-      }
-      
+
+      //setup for one or two-channel configuration -- OSS -- cygwin OSS does not like this at all, even when set to 1
+      // fmt = opts.pulse_digi_out_channels; //number of channels is also be a problem for Cygwin...
+      // if (ioctl (opts.audio_out_fd, SNDCTL_DSP_CHANNELS, &fmt) < 0)
+      // {
+      //   fprintf (stderr, "ioctl channels error \n");
+      // }
+
       opts.audio_out_type = 5; //5 will become OSS output type
     }
 
@@ -2668,19 +2719,19 @@ main (int argc, char **argv)
       opts.audio_out = 0; //turn off so we won't playSynthesized
     }
 
-    if (opts.playfiles == 1)
+    if((strncmp(opts.audio_out_dev, "-", 1) == 0))
+    {
+      opts.audio_out_fd = fileno(stdout); //STDOUT_FILENO;
+      opts.audio_out_type = 1; //using 1 for stdout to match input stdin as 1
+      fprintf(stderr, "Audio Out Device: -\n");
+    }
+
+    if (opts.playfiles == 1) //redo?
     {
       opts.split = 1;
       opts.playoffset = 0;
       opts.playoffsetR = 0;
       opts.delay = 0;
-
-      //open wav file should be handled directly by the -w switch now
-      // if (strlen(opts.wav_out_file) > 0 && opts.dmr_stereo_wav == 0)
-      // {
-      //   openWavOutFile (&opts, &state);
-      // }
-
       opts.pulse_digi_rate_out = 48000;
       opts.pulse_digi_out_channels = 1;
       if (opts.audio_out_type == 0) openPulseOutput(&opts);
@@ -2709,11 +2760,10 @@ main (int argc, char **argv)
     else
     {
       opts.split = 0;
-      opts.playoffset = 0; //not sure what the playoffset actually does for us
+      opts.playoffset = 0;
       opts.playoffsetR = 0;
       opts.delay = 0;
       openAudioInDevice (&opts);
-      // opts.audio_out_fd = opts.audio_in_fd; //not sure that this really does much anymore, other than cause problems
     }
 
     signal(SIGINT, handler);
@@ -2727,6 +2777,8 @@ main (int argc, char **argv)
 
     else
     {
+      //debug
+      fprintf (stderr, "AIT: %d AOT: %d RATE: %d GAIN: %f \n", opts.audio_in_type, opts.audio_out_type, opts.pulse_digi_rate_out, state.aout_gain);
       liveScanner (&opts, &state);
     }
 

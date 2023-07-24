@@ -373,8 +373,51 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     memcpy (m3, ambe_fr3, sizeof(m3));
 
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
+    if(internalslot == 0)
+    {
+      memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
+    }
+      
+    else
+    {
+      memcpy(state->f_r4[0], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
+      memcpy(state->s_r4[0], state->s_r, sizeof(state->s_r));
+      memcpy(state->s_r4u[0], state->s_ru, sizeof(state->s_ru));
+    }
+      
+    
     processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
-    processMbeFrame (opts, state, NULL, ambe_fr3, NULL);    
+    if(internalslot == 0)
+    {
+      memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
+    }
+      
+    else
+    {
+      memcpy(state->f_r4[1], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
+      memcpy(state->s_r4[1], state->s_r, sizeof(state->s_r));
+      memcpy(state->s_r4u[1], state->s_ru, sizeof(state->s_ru));
+    }
+
+    processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+    if(internalslot == 0)
+    {
+      memcpy(state->f_l4[2], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
+    }
+      
+    else
+    {
+      memcpy(state->f_r4[2], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
+      memcpy(state->s_r4[2], state->s_r, sizeof(state->s_r));
+      memcpy(state->s_r4u[2], state->s_ru, sizeof(state->s_ru));
+    }
+      
 
     //run sbrc here to look for the late entry key and alg after we observe potential errors in VC6
     if (internalslot == 0 && vc1 == 6) dmr_sbrc (opts, state, power);
@@ -437,6 +480,18 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   }
 
   SKIP:
+
+  //both working now, will need support added for ENC audio and no key
+  //NOTE: We want this to play regardless of whether the slot is voice or data, to play silence in one slot and voice in the second, or voices in both
+  if (internalslot == 0 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000)
+    playSynthesizedVoiceFS3 (opts, state); //Float Stereo Mix 3v2
+  if (internalslot == 0 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 48000)
+    playSynthesizedVoiceFS3_48k (opts, state); //Float Stereo Mix 3v2
+  if (internalslot == 0 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000)
+    playSynthesizedVoiceSS3 (opts, state); //Short Stereo Mix 3v2
+  if (internalslot == 0 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 48000)
+    playSynthesizedVoiceSS3_48k (opts, state); //Short Stereo Mix 3v2
+
   if (skipcount > 2) //after 2 consecutive data frames, drop back to getFrameSync and process with dmr_data_sync
   {
     //set tests to all good so we don't get a bogus/redundant voice error 
@@ -722,9 +777,49 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   memcpy (m3, ambe_fr3, sizeof(m3));
 
   if (opts->payload == 1) fprintf (stderr, "\n"); //extra line break necessary here
+  // processMbeFrame (opts, state, NULL, ambe_fr, NULL);
+  // processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+  // processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
+  if(internalslot == 0)
+  {
+    memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+    memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+  }
+    
+  else
+  {
+    memcpy(state->f_r4[0], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
+    memcpy(state->s_r4[0], state->s_r, sizeof(state->s_r));
+  }
+    
+
   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+  if(internalslot == 0)
+  {
+    memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+    memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+  }
+    
+  else
+  {
+    memcpy(state->f_r4[1], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
+    memcpy(state->s_r4[1], state->s_r, sizeof(state->s_r));
+  }
+
   processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+  if(internalslot == 0)
+  {
+    memcpy(state->f_l4[2], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+    memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
+  }
+    
+  else
+  {
+    memcpy(state->f_r4[2], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
+    memcpy(state->s_r4[2], state->s_r, sizeof(state->s_r));
+  }
 
   //collect the mi fragment
   dmr_late_entry_mi_fragment (opts, state, 1, m1, m2, m3);
@@ -734,6 +829,16 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 
   //update voice sync time for trunking purposes (particularly Con+)
   if (opts->p25_is_tuned == 1) state->last_vc_sync_time = time(NULL);
+
+  //NOTE: Only play on slot 0, if slot 1, then it'll play after the next TDMA frame in the BS loop instead
+  if (internalslot == 0 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000)
+    playSynthesizedVoiceFS3 (opts, state); //Float Stereo Mix 3v2
+  if (internalslot == 0 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 48000)
+    playSynthesizedVoiceFS3_48k (opts, state); //Float Stereo Mix 3v2
+  if (internalslot == 0 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000)
+    playSynthesizedVoiceSS3 (opts, state); //Short Stereo Mix 3v2
+  if (internalslot == 0 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 48000)
+    playSynthesizedVoiceSS3_48k (opts, state); //Short Stereo Mix 3v2
 
   dmrBS (opts, state); //bootstrap into full TDMA frame for BS mode
   END:

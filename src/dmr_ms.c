@@ -280,15 +280,59 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     if (state->directmode == 0)
     {
       processMbeFrame (opts, state, NULL, ambe_fr, NULL);
+        memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+        memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+        memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
       processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+        memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+        memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+        memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
       processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+        memcpy(state->f_l4[2], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+        memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
+        memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
     }
     else
     {
       processMbeFrame (opts, state, NULL, ambe_fr4, NULL); //play duplicate of 2 here to smooth audio on tdma direct
+        memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+        memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+        memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
       processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+        memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+        memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+        memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
       processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+        memcpy(state->f_l4[2], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+        memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
+        memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
     }
+  }
+
+  if (opts->floating_point == 0)
+  {
+    // processAudio(opts, state); //needed here? -- nothign to test it with
+
+    // if (opts->wav_out_f != NULL)
+    //   writeSynthesizedVoice (opts, state);
+
+    // if (opts->pulse_digi_out_channels == 1)
+    //   playSynthesizedVoice(opts, state);
+
+    if(opts->pulse_digi_out_channels == 2)
+      playSynthesizedVoiceSS3(opts, state);
+  }
+
+  if (opts->floating_point == 1) //float audio is really quiet now (look into it)
+  {
+
+    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+    
+    // if (opts->pulse_digi_out_channels == 1)
+      // playSynthesizedVoiceFM3(opts, state);
+
+    if(opts->pulse_digi_out_channels == 2)
+      playSynthesizedVoiceFS3(opts, state);
   }
 
   if (vc == 6)
@@ -557,14 +601,58 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   if (state->directmode == 0)
   {
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
+      memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
     processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+      memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
     processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+      memcpy(state->f_l4[2], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
   }
   else
   {
-    processMbeFrame (opts, state, NULL, ambe_fr4, NULL); //play duplicate of 2 here to smooth audio
+    processMbeFrame (opts, state, NULL, ambe_fr4, NULL); //play duplicate of 2 here to smooth audio on tdma direct
+      memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
     processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+      memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
     processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+      memcpy(state->f_l4[2], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
+  }
+
+  if (opts->floating_point == 0)
+  {
+    // processAudio(opts, state); //NOTE: -fa switch will not work with this set up -- honestly shouldn't be needed
+
+    // if (opts->wav_out_f != NULL)
+    //   writeSynthesizedVoice (opts, state);
+
+    // if (opts->pulse_digi_out_channels == 1)
+    //   playSynthesizedVoice(opts, state);
+
+    if(opts->pulse_digi_out_channels == 2)
+      playSynthesizedVoiceSS3(opts, state);
+  }
+
+  if (opts->floating_point == 1) //float audio is really quiet now (look into it)
+  {
+
+    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+    
+    // if (opts->pulse_digi_out_channels == 1)
+    //   playSynthesizedVoiceFM(opts, state);
+
+    if(opts->pulse_digi_out_channels == 2)
+      playSynthesizedVoiceFS3(opts, state);
   }
 
   //collect the mi fragment

@@ -89,6 +89,13 @@ void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182
 
     }
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
+
+    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+    
+    if (opts->floating_point == 0)
+      playSynthesizedVoice(opts, state);
+    if (opts->floating_point == 1)
+      playSynthesizedVoiceFM(opts, state);
   }
   
   if (opts->payload == 1)

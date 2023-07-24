@@ -21,14 +21,15 @@ pa_sample_spec ss;
 pa_sample_spec tt;
 pa_sample_spec zz;
 pa_sample_spec cc;
+pa_sample_spec ff; //float
 
 void closePulseOutput (dsd_opts * opts)
 {
   pa_simple_free (opts->pulse_digi_dev_out);
-  if (opts->dmr_stereo == 1)
-  {
-    pa_simple_free (opts->pulse_digi_dev_outR);
-  }
+  // if (opts->dmr_stereo == 1)
+  // {
+  //   pa_simple_free (opts->pulse_digi_dev_outR);
+  // }
 }
 
 void closePulseInput (dsd_opts * opts)
@@ -40,32 +41,35 @@ void openPulseOutput(dsd_opts * opts)
 {
 
   ss.format = PA_SAMPLE_S16NE;
-  ss.channels = opts->pulse_raw_out_channels; //doing tests with 2 channels at 22050 for 44100 audio default in pulse
-  ss.rate = opts->pulse_raw_rate_out; //48000
+  ss.channels = opts->pulse_raw_out_channels;
+  ss.rate = opts->pulse_raw_rate_out;
 
   tt.format = PA_SAMPLE_S16NE;
-  tt.channels = opts->pulse_digi_out_channels; //doing tests with 2 channels at 22050 for 44100 audio default in pulse
-  tt.rate = opts->pulse_digi_rate_out; //48000, switches to 8000 when using RTL dongle
+  tt.channels = opts->pulse_digi_out_channels;
+  tt.rate = opts->pulse_digi_rate_out;
+
+  ff.format = PA_SAMPLE_FLOAT32NE;
+  ff.channels = opts->pulse_digi_out_channels;
+  ff.rate = opts->pulse_digi_rate_out;
 
   if (opts->monitor_input_audio == 1)
   {
     opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME3", PA_STREAM_PLAYBACK, NULL, "Raw Audio Out", &ss, NULL, NULL, NULL);
   }
 
-//tt
-  pa_channel_map* left = 0; //NULL and 0 are same in this context
-  pa_channel_map* right = 0; //NULL and 0 are same in this context
+  pa_channel_map* fl = 0; //NULL and 0 are same in this context
+  pa_channel_map* ss = 0; //NULL and 0 are same in this context
 
-  if (opts->dmr_stereo == 0)
+  if (opts->floating_point == 0)
   {
-    opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &tt, left, NULL, NULL);
+    opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &tt, ss, NULL, NULL);
 
   }
 
-  if (opts->dmr_stereo == 1)
+  if (opts->floating_point == 1)
   {
-    opts->pulse_digi_dev_out  = pa_simple_new(NULL, "DSD-FME1", PA_STREAM_PLAYBACK, NULL, "XDMA SLOT 1", &tt, left, NULL, NULL);
-    opts->pulse_digi_dev_outR = pa_simple_new(NULL, "DSD-FME2", PA_STREAM_PLAYBACK, NULL, "XDMA SLOT 2", &tt, right, NULL, NULL);
+    opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &ff, fl, NULL, NULL);
+
   }
 
 }
@@ -197,6 +201,8 @@ processAudio (dsd_opts * opts, dsd_state * state)
               *state->audio_out_float_buf_p = -32768.0F;
             }
           *state->audio_out_buf_p = (short) *state->audio_out_float_buf_p;
+          //tap the pointer here and store the short upsample buffer samples
+          state->s_lu[n] = (short) *state->audio_out_float_buf_p;
           state->audio_out_buf_p++;
           state->audio_out_float_buf_p++;
         }
@@ -215,6 +221,10 @@ processAudio (dsd_opts * opts, dsd_state * state)
               *state->audio_out_temp_buf_p = -32768.0F;
             }
           *state->audio_out_buf_p = (short) *state->audio_out_temp_buf_p;
+          //tap the pointer here and store the short buffer samples
+          state->s_l[n] = (short) *state->audio_out_temp_buf_p;
+          //debug
+          // fprintf (stderr, " %d", state->s_l[n]);
           state->audio_out_buf_p++;
           state->audio_out_temp_buf_p++;
           state->audio_out_idx++;
@@ -339,6 +349,8 @@ processAudioR (dsd_opts * opts, dsd_state * state)
               *state->audio_out_float_buf_pR = -32768.0F;
             }
           *state->audio_out_buf_pR = (short) *state->audio_out_float_buf_pR;
+          //tap the pointer here and store the short upsample buffer samples
+          state->s_ru[n] = (short) *state->audio_out_float_buf_pR;
           state->audio_out_buf_pR++;
           state->audio_out_float_buf_pR++;
         }
@@ -357,6 +369,8 @@ processAudioR (dsd_opts * opts, dsd_state * state)
               *state->audio_out_temp_buf_pR = -32768.0F;
             }
           *state->audio_out_buf_pR = (short) *state->audio_out_temp_buf_pR;
+          //tap the pointer here and store the short buffer samples
+          state->s_r[n] = (short) *state->audio_out_temp_buf_pR;
           state->audio_out_buf_pR++;
           state->audio_out_temp_buf_pR++;
           state->audio_out_idxR++;

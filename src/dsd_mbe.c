@@ -24,11 +24,11 @@ void keyring(dsd_opts * opts, dsd_state * state)
 {
   UNUSED(opts);
 
-    if (state->currentslot == 0)
-      state->R = state->rkey_array[state->payload_keyid];
+  if (state->currentslot == 0)
+    state->R = state->rkey_array[state->payload_keyid];
 
-    if (state->currentslot == 1)
-      state->RR = state->rkey_array[state->payload_keyidR];
+  if (state->currentslot == 1)
+    state->RR = state->rkey_array[state->payload_keyidR];
 }
 
 void RC4(int drop, uint8_t keylength, uint8_t messagelength, uint8_t key[], uint8_t cipher[], uint8_t plain[])
@@ -528,7 +528,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         uint8_t cipher[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         uint8_t plain[7]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         uint8_t rckey[9]  = {0x00, 0x00, 0x00, 0x00, 0x00, // <- RC4 Key
-                              0x00, 0x00, 0x00, 0x00}; // <- MI
+                             0x00, 0x00, 0x00, 0x00}; // <- MI
 
         //easier to manually load up rather than make a loop
         rckey[0] = ((state->R & 0xFF00000000) >> 32);
@@ -606,8 +606,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         uint8_t cipher[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         uint8_t plain[7]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         uint8_t rckey[13] = {0x00, 0x00, 0x00, 0x00, 0x00, // <- RC4 Key
-                              0x00, 0x00, 0x00, 0x00, 0x00, // <- MI
-                              0x00, 0x00, 0x00}; // <- MI cont.
+                             0x00, 0x00, 0x00, 0x00, 0x00, // <- MI
+                             0x00, 0x00, 0x00}; // <- MI cont.
 
         //easier to manually load up rather than make a loop
         rckey[0] = ((state->R & 0xFF00000000) >> 32);
@@ -811,21 +811,21 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       //DMR RC4, Slot 2
       if (state->currentslot == 1 && state->payload_algidR == 0x21 && state->RR != 0)
       {
-      uint8_t cipher[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-      uint8_t plain[7]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-      uint8_t rckey[9]  = {0x00, 0x00, 0x00, 0x00, 0x00, // <- RC4 Key
-                            0x00, 0x00, 0x00, 0x00}; // <- MI
+        uint8_t cipher[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        uint8_t plain[7]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        uint8_t rckey[9]  = {0x00, 0x00, 0x00, 0x00, 0x00, // <- RC4 Key
+                             0x00, 0x00, 0x00, 0x00}; // <- MI
 
-      //easier to manually load up rather than make a loop
-      rckey[0] = ((state->RR & 0xFF00000000) >> 32);
-      rckey[1] = ((state->RR & 0xFF000000) >> 24);
-      rckey[2] = ((state->RR & 0xFF0000) >> 16);
-      rckey[3] = ((state->RR & 0xFF00) >> 8);
-      rckey[4] = ((state->RR & 0xFF) >> 0);
-      rckey[5] = ((state->payload_miR & 0xFF000000) >> 24);
-      rckey[6] = ((state->payload_miR & 0xFF0000) >> 16);
-      rckey[7] = ((state->payload_miR & 0xFF00) >> 8);
-      rckey[8] = ((state->payload_miR & 0xFF) >> 0);
+        //easier to manually load up rather than make a loop
+        rckey[0] = ((state->RR & 0xFF00000000) >> 32);
+        rckey[1] = ((state->RR & 0xFF000000) >> 24);
+        rckey[2] = ((state->RR & 0xFF0000) >> 16);
+        rckey[3] = ((state->RR & 0xFF00) >> 8);
+        rckey[4] = ((state->RR & 0xFF) >> 0);
+        rckey[5] = ((state->payload_miR & 0xFF000000) >> 24);
+        rckey[6] = ((state->payload_miR & 0xFF0000) >> 16);
+        rckey[7] = ((state->payload_miR & 0xFF00) >> 8);
+        rckey[8] = ((state->payload_miR & 0xFF) >> 0);
 
         // if (opts->payload == 1)
         // {
@@ -891,8 +891,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         uint8_t cipher[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         uint8_t plain[7]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         uint8_t rckey[13] = {0x00, 0x00, 0x00, 0x00, 0x00, // <- RC4 Key
-                              0x00, 0x00, 0x00, 0x00, 0x00, // <- MI
-                              0x00, 0x00, 0x00}; // <- MI cont.
+                             0x00, 0x00, 0x00, 0x00, 0x00, // <- MI
+                             0x00, 0x00, 0x00}; // <- MI cont.
 
         //easier to manually load up rather than make a loop
         rckey[0] = ((state->RR & 0xFF00000000) >> 32);
@@ -1047,30 +1047,35 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
     //end reverse mute test
 
-    #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
-    //OSS Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
-    if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && (state->dmrburstR == 16 || state->dmrburstR == 21) ) 
-    {
-      opts->audio_out = 0;
-      preempt = 1;
-      if (opts->payload == 0)
-        fprintf (stderr, " *MUTED*"); 
-    }
-    #endif
+    //No more Slot Pre-emption...ever
+    // #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
+    // //OSS Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
+    // if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && (state->dmrburstR == 16 || state->dmrburstR == 21) ) 
+    // {
+    //   opts->audio_out = 0;
+    //   preempt = 1;
+    //   if (opts->payload == 0)
+    //     fprintf (stderr, " *MUTED*"); 
+    // }
+    // #endif
 
     state->debug_audio_errors += state->errs2 + state->errs;
 
     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
     {
-      if (opts->audio_out == 1)
+      if (opts->audio_out == 1 && opts->floating_point == 0 ) //&& opts->pulse_digi_rate_out == 8000
       {
         processAudio(opts, state);
       }
-      if (opts->audio_out == 1)
-      {
-        playSynthesizedVoice (opts, state);
-      }
+      // if (opts->audio_out == 1)
+      // {
+      //   playSynthesizedVoice (opts, state);
+      // }
     }
+
+    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l)); //these are for mono or FDMA where we don't need to buffer and wait for a stereo mix 
+    // playSynthesizedVoiceFL (opts, state); //Float Left
+
   }
 
   if (opts->dmr_stereo == 1 && state->currentslot == 1) 
@@ -1118,45 +1123,54 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
     //end reverse mute test
 
-    #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
-    //OSS Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
-    if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && (state->dmrburstL == 16 || state->dmrburstL == 21) ) 
-    {
-      opts->audio_out = 0;
-      preempt = 1;
-      if (opts->payload == 0) 
-        fprintf (stderr, " *MUTED*"); 
-    }
-    #endif
+    // #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
+    // //OSS Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
+    // if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && (state->dmrburstL == 16 || state->dmrburstL == 21) ) 
+    // {
+    //   opts->audio_out = 0;
+    //   preempt = 1;
+    //   if (opts->payload == 0) 
+    //     fprintf (stderr, " *MUTED*"); 
+    // }
+    // #endif
 
     state->debug_audio_errorsR += state->errs2R + state->errsR;
 
     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
     {
-      if (opts->audio_out == 1)
+      if (opts->audio_out == 1 && opts->floating_point == 0 ) //&& opts->pulse_digi_rate_out == 8000
       {
         processAudioR(opts, state);
       }
-      if (opts->audio_out == 1)
-      {
-        playSynthesizedVoiceR (opts, state);
-      }
+      // if (opts->audio_out == 1)
+      // {
+      //   playSynthesizedVoiceR (opts, state);
+      // }
     }
+
+    memcpy (state->f_r, state->audio_out_temp_bufR, sizeof(state->f_r));
+    // playSynthesizedVoiceFR (opts, state); //Float Right
+
   }
 
   //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
   if (opts->dmr_mono == 0 && opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
   {
     state->debug_audio_errors += state->errs2 + state->errs;
-    if (opts->audio_out == 1)
+    if (opts->audio_out == 1 && opts->floating_point == 0 ) //&& opts->pulse_digi_rate_out == 8000
     {
       processAudio(opts, state);
     }
-    if (opts->audio_out == 1)
-    {
-      playSynthesizedVoice (opts, state);
-    }
+  //   if (opts->audio_out == 1)
+  //   {
+  //     playSynthesizedVoice (opts, state);
+  //   }
+      // playSynthesizedVoiceFL (opts, state);
+
+      memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l)); //P25p1 FDMA 8k/1 channel -f1 switch
   }
+
+  // playSynthesizedVoiceFS (opts, state); //Float Stereo Mix -- disable and move this later on
 
   //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
   if (opts->wav_out_f != NULL && opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0))

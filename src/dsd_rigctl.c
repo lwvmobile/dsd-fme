@@ -280,3 +280,43 @@ void rtl_udp_tune(dsd_opts * opts, dsd_state * state, long int frequency)
 
     close (handle); //close socket after sending.
 }
+
+// int udp_sock_con(dsd_opts * opts, dsd_state * state) 
+// {
+//     UNUSED(state);
+//     UNUSED(opts);
+
+//     int handle, err; //convert handle and address to state variables
+//     handle = err = 0;
+//     unsigned short udp_port = 9999; 
+//     struct sockaddr_in address;
+//     handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+//     if (handle != 0)
+//     {
+//         fprintf (stderr, " UDP Socket Error \n");
+//         return (handle);
+//     }
+//     memset((char * ) & address, 0, sizeof(address));
+//     address.sin_family = AF_INET;
+//     err = address.sin_addr.s_addr = inet_addr("127.0.0.1"); //make user configurable later
+//     if (err != 0)
+//     {
+//         fprintf (stderr, " UDP inet_addr Error \n");
+//         return (err);
+//     }
+//     address.sin_port = htons(udp_port);
+//     if (err != 0)
+//     {
+//         fprintf (stderr, " UDP htons Error \n");
+//         return (err);
+//     }
+//     // close (handle); //close socket after sending. //leave open for the blaster
+// }
+
+// int udp_sock_send(dsd_opts * opts, dsd_state * state, short samp[320]) 
+// {
+//     UNUSED(state);
+//     UNUSED(opts);
+
+//     sendto(handle, samp, 320, 0, (const struct sockaddr * ) & address, sizeof(struct sockaddr_in));
+// }

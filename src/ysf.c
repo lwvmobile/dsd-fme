@@ -729,6 +729,32 @@ void ysf_ehr (dsd_opts * opts, dsd_state * state, uint8_t dbuf[180], int start, 
 
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
 
+    if (opts->floating_point == 0)
+    {
+      // processAudio(opts, state); //needed here? -- nothign to test it with
+
+      if (opts->wav_out_f != NULL)
+        writeSynthesizedVoice (opts, state);
+
+      if (opts->pulse_digi_out_channels == 1)
+        playSynthesizedVoice(opts, state);
+
+      if(opts->pulse_digi_out_channels == 2)
+        playSynthesizedVoiceSS(opts, state);
+    }
+
+    if (opts->floating_point == 1) //float audio is really quiet now (look into it)
+    {
+
+      memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+      
+      if (opts->pulse_digi_out_channels == 1)
+        playSynthesizedVoiceFM(opts, state);
+
+      if(opts->pulse_digi_out_channels == 2)
+        playSynthesizedVoiceFS(opts, state);
+    }
+
   }
   
   if (opts->payload == 1)
@@ -986,18 +1012,37 @@ void processYSF(dsd_opts * opts, dsd_state * state)
 
       state->errs2 = vech_bits[103]; //should be zero, but if it isn't, then its an error
 
+      state->debug_audio_errors += state->errs2;
+
       mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
                                 ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
       if (opts->payload == 1)
         PrintAMBEData (opts, state, ambe_d);
 
-      processAudio(opts, state);
-      
-      if (opts->wav_out_f != NULL)
-        writeSynthesizedVoice (opts, state);
+      if (opts->floating_point == 0)
+      {
+        processAudio(opts, state);
 
-      playSynthesizedVoice (opts, state);
+        if (opts->wav_out_f != NULL)
+          writeSynthesizedVoice (opts, state);
+        if (opts->pulse_digi_out_channels == 1)
+          playSynthesizedVoice(opts, state);
+
+        if(opts->pulse_digi_out_channels == 2)
+          playSynthesizedVoiceSS(opts, state);
+      }
+      
+      if (opts->floating_point == 1)
+      {
+        memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+
+        if (opts->pulse_digi_out_channels == 1)
+          playSynthesizedVoiceFM(opts, state);
+
+        if(opts->pulse_digi_out_channels == 2)
+          playSynthesizedVoiceFS(opts, state);
+        }
 
     }
 
@@ -1093,6 +1138,32 @@ void processYSF(dsd_opts * opts, dsd_state * state)
       state->synctype = 0; //P25p1
       processMbeFrame(opts, state, imbe_fr, NULL, NULL);
       state->synctype = st;
+
+      if (opts->floating_point == 0)
+      {
+        // processAudio(opts, state); //needed here? -- seems to be running from within mbelib
+
+        if (opts->wav_out_f != NULL)
+          writeSynthesizedVoice (opts, state);
+
+        if (opts->pulse_digi_out_channels == 1)
+          playSynthesizedVoice(opts, state);
+
+        if(opts->pulse_digi_out_channels == 2)
+          playSynthesizedVoiceSS(opts, state);
+      }
+      
+      if (opts->floating_point == 1) //float audio is really quiet now (look into it)
+      {
+
+        memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+
+        if (opts->pulse_digi_out_channels == 1)
+          playSynthesizedVoiceFM(opts, state);
+
+        if(opts->pulse_digi_out_channels == 2)
+          playSynthesizedVoiceFS(opts, state);
+      }
 
     }
 
