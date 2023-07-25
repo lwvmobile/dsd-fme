@@ -1,19 +1,21 @@
 #include "dsd.h"
 
-void agf (dsd_opts * opts, dsd_state * state, float samp[160])
+void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 {
   int i, run;
   run = 1;
   float empty[160];
   memset (empty, 0.1f, sizeof(empty));
 
-  if(opts->pulse_digi_out_channels == 2){}; //compiler warning garbo
-
   float max = 0.0f;
   float mmax = 0.75f;
   float mmin = -0.75f;
   float df; //decimation value
-  df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gain);
+
+  if (slot == 0)
+    df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gain);
+  if (slot == 1)
+    df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gainR);
 
   //this comparison is to determine whether or not to run gain on 'empty' samples (2v last 2, silent frames, etc)
   if (memcmp(empty, samp, sizeof(empty)) == 0) run = 0;
@@ -27,17 +29,28 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160])
     if (samp[i] > mmax)
       samp[i] = mmax;
     if (samp[i] < mmin)
-      samp[i] = mmin; //this could have been an issue before "-mmin"?
+      samp[i] = mmin;
 
-    //max value
+    //determine max value for adjustments
     if (fabs(samp[i]) > max)
       max = samp[i];
+
 
   }
 
   //crude auto gain for float values
-  if (max < 0.351f && max > 0.1f && state->aout_gain < 42) state->aout_gain += 0.33f; //state->aout_gain++;
-  if (max > 0.35f && state->aout_gain > 1) state->aout_gain -= 0.33f; //state->aout_gain--;
+  if (slot == 0)
+  {
+    if (max < 0.351f && max > 0.1f && state->aout_gain < 42) state->aout_gain += 0.33f; //state->aout_gain++;
+    if (max > 0.35f && state->aout_gain > 1) state->aout_gain -= 0.33f; //state->aout_gain--;
+  }
+
+  if (slot == 1)
+  {
+    if (max < 0.351f && max > 0.1f && state->aout_gainR < 42) state->aout_gainR += 0.33f; //state->aout_gain++;
+    if (max > 0.35f && state->aout_gainR > 1) state->aout_gainR -= 0.33f; //state->aout_gain--;
+  }
+  
 
   AGF_END: ; //do nothing
 
@@ -107,12 +120,12 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
   //TODO: add option to bypass enc with a toggle as well
 
   //run autogain on the f_ buffers
-  agf (opts, state, state->f_l4[0]);
-  agf (opts, state, state->f_r4[0]);
-  agf (opts, state, state->f_l4[1]);
-  agf (opts, state, state->f_r4[1]);
-  agf (opts, state, state->f_l4[2]);
-  agf (opts, state, state->f_r4[2]);
+  agf (opts, state, state->f_l4[0],0);
+  agf (opts, state, state->f_r4[0],1);
+  agf (opts, state, state->f_l4[1],0);
+  agf (opts, state, state->f_r4[1],1);
+  agf (opts, state, state->f_l4[2],0);
+  agf (opts, state, state->f_r4[2],1);
 
   //interleave left and right channels from the temp (float) buffer with makeshift 'volume' decimation
   for (i = 0; i < 160; i++)
@@ -428,15 +441,15 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
   memset (empty, 0.1f, sizeof(empty));
 
   //run autogain on the f_ buffers
-  agf (opts, state, state->f_l4[0]);
-  agf (opts, state, state->f_r4[0]);
-  agf (opts, state, state->f_l4[1]);
-  agf (opts, state, state->f_r4[1]);
-  agf (opts, state, state->f_l4[2]); //doing 2 and 3 here will break the memcmp below, so we also do it on empty
-  agf (opts, state, state->f_r4[2]);
-  agf (opts, state, state->f_l4[3]);
-  agf (opts, state, state->f_r4[3]);
-  agf (opts, state, empty); //running empty may cause auto gain control issues, and also any auto gain applied here will invalidate the memcmp
+  agf (opts, state, state->f_l4[0],0);
+  agf (opts, state, state->f_r4[0],1);
+  agf (opts, state, state->f_l4[1],0);
+  agf (opts, state, state->f_r4[1],1);
+  agf (opts, state, state->f_l4[2],0); //doing 2 and 3 here will break the memcmp below, so we also do it on empty
+  agf (opts, state, state->f_r4[2],1);
+  agf (opts, state, state->f_l4[3],0);
+  agf (opts, state, state->f_r4[3],1);
+  agf (opts, state, empty,2); //running empty may cause auto gain control issues, and also any auto gain applied here will invalidate the memcmp
 
   //interleave left and right channels from the temp (float) buffer with makeshift 'volume' decimation
   for (i = 0; i < 160; i++)
@@ -735,7 +748,7 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
   //TODO: add option to bypass enc with a toggle as well
 
   //run autogain on the f_ buffers
-  agf (opts, state, state->f_l);
+  agf (opts, state, state->f_l,0);
 
   //at this point, if both channels are still flagged as enc, then we can skip all playback/writing functions
   if (encL)
@@ -800,7 +813,7 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
 void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
 {
   
-  agf(opts, state, state->f_l);
+  agf(opts, state, state->f_l,0);
 
   if (opts->audio_out_type == 0)
     pa_simple_write(opts->pulse_digi_dev_out, state->f_l, 160*4, NULL);

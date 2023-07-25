@@ -1586,6 +1586,7 @@ main (int argc, char **argv)
           opts.floating_point = 1; //enable floating point audio output
           opts.audio_gain = 0;
           state.aout_gain = 25.0f; //seems like a nonimal value for float during testing anyways
+          state.aout_gainR = 25.0f; //seems like a nonimal value for float during testing anyways
           fprintf (stderr,"Enabling Experimental Floating Point Audio Output\n");
           break;
 

@@ -2303,17 +2303,18 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw (" Gain: AGC;");
     else
       printw (" Gain: %idB;", opts->rtl_gain_value);
-    printw (" PPM: %i;", opts->rtlsdr_ppm_error);
-    printw (" SQ: %i;", opts->rtl_squelch_level);
-    printw (" RMS: %04i;", opts->rtl_rms);
-    printw (" BW: %i kHz;", opts->rtl_bandwidth);
-    printw (" FRQ: %i;", opts->rtlsdr_center_freq); 
+      printw (" PPM: %i;", opts->rtlsdr_ppm_error);
+      printw (" SQ: %i;", opts->rtl_squelch_level);
+      printw (" RMS: %04i;", opts->rtl_rms);
+      printw (" BW: %i kHz;", opts->rtl_bandwidth);
+      printw (" FRQ: %i;", opts->rtlsdr_center_freq); 
     if (opts->rtl_udp_port != 0) printw ("\n| External Tuning on UDP Port: %i", opts->rtl_udp_port);
     printw ("\n");
   }
   if (opts->audio_out_type == 0)
   {
-    printw ("| Pulse Audio Output: %i kHz; %i Channel; Auto Gain: %.1f;", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    printw ("| Pulse Audio Output: %i kHz; %i Channel; G: %.1f%%;", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    if (opts->pulse_digi_out_channels == 2) printw (" G: %.1f%%;", state->aout_gainR*2);
     if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
     if (opts->floating_point == 1) printw (" Floating Point;");
 
@@ -2321,7 +2322,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_out_type == 5)
   {
-    printw ("| OSS Audio Output: %i kHz; %d Channel; Auto Gain %.1f;", SAMPLE_RATE_OUT/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    printw ("| Pulse Audio Output: %i kHz; %i Channel; G: %.1f%%;", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    if (opts->pulse_digi_out_channels == 2) printw (" G: %.1f%%;", state->aout_gainR*2);
     if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //nly on short
     if (opts->floating_point == 1) printw (" Floating Point;");
     printw (" \n");
