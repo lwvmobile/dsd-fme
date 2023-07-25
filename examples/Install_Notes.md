@@ -61,7 +61,7 @@ cd ..
 cd ..
 ```
 
-MBELib is considered a requirement in this build. You must read this notice prior to continuing. [MBElib Patent Notice](https://github.com/lwvmobile/mbelib#readme "MBElib Patent Notice") This version of MBELib is 1.3.2 and prints to STDERR, using the stock 1.3.0 MBElib may cause problems with print alignments if paired with this version of DSD-FME, or cause future compatibility issues.
+MBELib is considered a requirement in this build. You must read this notice prior to continuing. [MBElib Patent Notice](https://github.com/lwvmobile/mbelib#readme "MBElib Patent Notice") 
 
 ```
 git clone https://github.com/lwvmobile/mbelib
@@ -77,7 +77,20 @@ cd ..
 ```
 
 Note: Some environment/distro users (Cygwin, Arch, and others) may need to manually copy any libmbe files found in the build folder to the /usr/lib folder on root.
-`sudo cp libmbe* /usr/lib`
+
+```
+cp libmbe* /usr/lib
+cp cygmbe* /usr/lib
+cp cygmbe* /bin
+```
+
+or
+
+```
+sudo cp libmbe* /usr/lib
+sudo cp cygmbe* /usr/lib
+sudo cp cygmbe* /bin
+```
 
 Finish by running these steps to clone and build DSD-FME.
 
