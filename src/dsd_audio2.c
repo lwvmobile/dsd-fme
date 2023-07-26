@@ -41,15 +41,27 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
   //crude auto gain for float values
   if (slot == 0)
   {
-    if (max < 0.351f && max > 0.1f && state->aout_gain < 42) state->aout_gain += 0.33f; //state->aout_gain++;
-    if (max > 0.35f && state->aout_gain > 1) state->aout_gain -= 0.33f; //state->aout_gain--;
+    if (max < 0.351f && max > 0.1f && state->aout_gain < 42.0f) state->aout_gain++; 
+    if (max > 0.35f && state->aout_gain > 1.0f) state->aout_gain--;
   }
 
   if (slot == 1)
   {
-    if (max < 0.351f && max > 0.1f && state->aout_gainR < 42) state->aout_gainR += 0.33f; //state->aout_gain++;
-    if (max > 0.35f && state->aout_gainR > 1) state->aout_gainR -= 0.33f; //state->aout_gain--;
+    if (max < 0.351f && max > 0.1f && state->aout_gainR < 42) state->aout_gainR++;
+    if (max > 0.35f && state->aout_gainR > 1) state->aout_gainR--;
   }
+
+  // if (slot == 0)
+  // {
+  //   if (max < 0.351f && max > 0.1f && state->aout_gain < 42.0f) state->aout_gain += 0.33f;
+  //   if (max > 0.35f && state->aout_gain > 1.0f) state->aout_gain -= 0.33f;
+  // }
+
+  // if (slot == 1)
+  // {
+  //   if (max < 0.351f && max > 0.1f && state->aout_gainR < 42) state->aout_gainR += 0.33f;
+  //   if (max > 0.35f && state->aout_gainR > 1) state->aout_gainR -= 0.33f;
+  // }
   
 
   AGF_END: ; //do nothing

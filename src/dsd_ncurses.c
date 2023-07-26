@@ -2313,8 +2313,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_out_type == 0)
   {
-    printw ("| Pulse Audio Output: %i kHz; %i Channel; G: %.1f%%;", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
-    if (opts->pulse_digi_out_channels == 2) printw (" G: %.1f%%;", state->aout_gainR*2);
+    printw ("| Pulse Audio Output: %i kHz; %i Channel; G: %.1f%%", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    if (opts->pulse_digi_out_channels == 2) printw (" G: %.1f%%", state->aout_gainR*2);
     if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
     if (opts->floating_point == 1) printw (" Floating Point;");
 
@@ -2322,8 +2322,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_out_type == 5)
   {
-    printw ("| Pulse Audio Output: %i kHz; %i Channel; G: %.1f%%;", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
-    if (opts->pulse_digi_out_channels == 2) printw (" G: %.1f%%;", state->aout_gainR*2);
+    printw ("| Pulse Audio Output: %i kHz; %i Channel; G: %.1f%%", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    if (opts->pulse_digi_out_channels == 2) printw (" G: %.1f%%", state->aout_gainR*2);
     if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //nly on short
     if (opts->floating_point == 1) printw (" Floating Point;");
     printw (" \n");
@@ -3493,20 +3493,33 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (c == 43) //+ key, increment aout_gain
   {
-    if (state->aout_gain < 50)
-      state->aout_gain++;
-    //probably won't use aout_gainR with new short and float systems
-    if (state->aout_gainR < 50)
-      state->aout_gainR++;
+    // if (state->aout_gain < 50)
+    //   state->aout_gain++;
+    // //probably won't use aout_gainR with new short and float systems
+    // if (state->aout_gainR < 50)
+    //   state->aout_gainR++;
+
+    if (opts->audio_gain < 50)
+      opts->audio_gain++;
+
+    state->aout_gain = opts->audio_gain;
+    state->aout_gainR = opts->audio_gain;
+
   }
 
   if (c == 45) //- key, decrement aout_gain
   {
-    if (state->aout_gain > 0)
-      state->aout_gain--;
-    //probably won't use aout_gainR with new short and float systems
-    if (state->aout_gainR > 0)
-      state->aout_gainR--;
+    // if (state->aout_gain > 0)
+    //   state->aout_gain--;
+    // //probably won't use aout_gainR with new short and float systems
+    // if (state->aout_gainR > 0)
+    //   state->aout_gainR--;
+
+    if (opts->audio_gain > 1)
+      opts->audio_gain--;
+
+    state->aout_gain = opts->audio_gain;
+    state->aout_gainR = opts->audio_gain;
   }
 
   if (c == 122) //'z' key, toggle payload to console

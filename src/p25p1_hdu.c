@@ -502,5 +502,9 @@ processHDU(dsd_opts* opts, dsd_state* state)
       fprintf (stderr, " HDU FEC ERR \n");
       fprintf (stderr, "%s", KNRM);
   }
+
+  //reset gain
+  if (opts->floating_point == 1)
+    state->aout_gain = opts->audio_gain;
   
 }

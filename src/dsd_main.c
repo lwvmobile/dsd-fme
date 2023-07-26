@@ -101,12 +101,10 @@ void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
 
-  //is this not being set properly?
   if (opts->floating_point == 1)
   {
-    //test for WIP auto gain, disable later if needbe
-    state->aout_gain = 25.0f;
-    state->aout_gainR = 25.0f;
+    state->aout_gain = opts->audio_gain;
+    state->aout_gainR = opts->audio_gain;
   }
 
   //clear heuristics from last carrier signal
@@ -294,18 +292,6 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   sprintf (state->slot1light, "%s", "");
   sprintf (state->slot2light, "%s", "");
   state->firstframe = 0;
-  //this really isn't the best placement for this sort of check
-  // if (opts->audio_gain == (float) 0)
-  // {
-  //   if (state->audio_smoothing == 0) state->aout_gain = 15; //15
-  //   else state->aout_gain = 25; //25
-  // }
-
-  // if (opts->audio_gainR == (float) 0)
-  // {
-  //   if (state->audio_smoothing == 0) state->aout_gainR = 15; //15
-  //   else state->aout_gainR = 25; //25
-  // }
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
   state->aout_max_buf_idx = 0;
@@ -1193,7 +1179,8 @@ usage ()
   printf ("                null for no audio output\n");
   printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
-  printf ("  -g <float>    Audio output gain (default = 0 = auto, disable = -1)\n");
+  printf ("  -g <float>    Audio output gain (SHORT) -- (default = 0 = auto, disable = -1)\n");
+  printf ("  -g <float>    Audio Base Gain (FLOAT) -- (0 - 45)\n"); //re-write this to make it clear!
   printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n");
   printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
   printf ("                 (Single Nested Directory Only! Use Before the -P option!)\n");
@@ -1333,6 +1320,17 @@ usage ()
 void
 liveScanner (dsd_opts * opts, dsd_state * state)
 {
+
+  if (opts->floating_point == 1)
+  {
+    //use this for now, but see if we can really start on zero later on
+    //when we have a more normalized gain attack
+    if (opts->audio_gain == 0)
+      opts->audio_gain = 25.0f;
+    
+    opts->audio_gain /= 2.0f;
+    if (opts->audio_gain > 45.0f) opts->audio_gain = 45.0f;
+  }
 
 // if (opts->audio_in_type == 1)
 // {
@@ -1584,9 +1582,6 @@ main (int argc, char **argv)
 
         case 'y': //use experimental 'float' audio output
           opts.floating_point = 1; //enable floating point audio output
-          opts.audio_gain = 0;
-          state.aout_gain = 25.0f; //seems like a nonimal value for float during testing anyways
-          state.aout_gainR = 25.0f; //seems like a nonimal value for float during testing anyways
           fprintf (stderr,"Enabling Experimental Floating Point Audio Output\n");
           break;
 
@@ -1893,23 +1888,23 @@ main (int argc, char **argv)
         case 'g':
           sscanf (optarg, "%f", &opts.audio_gain);
           if (opts.audio_gain < (float) 0 )
-            {
-              fprintf (stderr,"Disabling audio out gain setting\n");
-              opts.audio_gainR = opts.audio_gain;
-            }
+          {
+            fprintf (stderr,"Disabling audio out gain setting\n");
+            opts.audio_gainR = opts.audio_gain;
+          }
           else if (opts.audio_gain == (float) 0)
-            {
-              opts.audio_gain = (float) 0;
-              opts.audio_gainR = opts.audio_gain;
-              fprintf (stderr,"Enabling audio out auto-gain\n");
-            }
+          {
+            opts.audio_gain = (float) 0;
+            opts.audio_gainR = opts.audio_gain;
+            fprintf (stderr,"Enabling audio out auto-gain\n");
+          }
           else
-            {
-              fprintf (stderr,"Setting audio out gain to %f\n", opts.audio_gain);
-              opts.audio_gainR = opts.audio_gain;
-              state.aout_gain = opts.audio_gain;
-              state.aout_gainR = opts.audio_gain;
-            }
+          {
+            fprintf (stderr,"Setting audio out gain to %f\n", opts.audio_gain);
+            opts.audio_gainR = opts.audio_gain;
+            state.aout_gain = opts.audio_gain;
+            state.aout_gainR = opts.audio_gain;
+          }
           break;
 
         case 'w':
@@ -2778,8 +2773,7 @@ main (int argc, char **argv)
 
     else
     {
-      //debug
-      fprintf (stderr, "AIT: %d AOT: %d RATE: %d GAIN: %f \n", opts.audio_in_type, opts.audio_out_type, opts.pulse_digi_rate_out, state.aout_gain);
+
       liveScanner (&opts, &state);
     }
 

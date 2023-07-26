@@ -150,6 +150,10 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 				// fprintf (stderr, "ENC");
 			}
 
+			//reset gain
+			if (opts->floating_point == 1)
+				state->aout_gain = opts->audio_gain;
+
 		}
 
 		if (state->currentslot == 0)
@@ -186,6 +190,10 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 				// fprintf (stderr, "ENC");
 			}
 
+			//reset gain
+			if (opts->floating_point == 1)
+				state->aout_gainR = opts->audio_gain;
+
 		}
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -216,7 +224,11 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
  			if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
 
 			//blank the call string here -- slot variable is already flipped accordingly for sacch
-			sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
+			sprintf (state->call_string[slot], "%s", "                     "); //21 spaces -- wrong placement!
+
+			//reset gain
+			if (opts->floating_point == 1)
+				state->aout_gain = opts->audio_gain;
 
 		}
 		if (state->currentslot == 0)
@@ -238,6 +250,14 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 
 			//close any open MBEout files
 			if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
+
+			//blank the call string here -- slot variable is already flipped accordingly for sacch
+			sprintf (state->call_string[slot], "%s", "                     "); //21 spaces -- wrong placement!
+
+			//reset gain
+			if (opts->floating_point == 1)
+				state->aout_gainR = opts->audio_gain;
+
 		}
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -406,6 +426,10 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 				// fprintf (stderr, "ENC");
 			}
 
+			//reset gain
+			if (opts->floating_point == 1)
+				state->aout_gain = opts->audio_gain;
+
 		}
 
 		if (state->currentslot == 1)
@@ -441,6 +465,10 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 				// fprintf (stderr, "ENC");
 			}
 
+			//reset gain
+			if (opts->floating_point == 1)
+				state->aout_gainR = opts->audio_gain;
+
 		}
 		fprintf (stderr, "%s", KNRM);
 
@@ -471,6 +499,10 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 
 			//blank the call string here 
 			sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
+
+			//reset gain
+			if (opts->floating_point == 1)
+				state->aout_gain = opts->audio_gain; //reset
 			
 		}
 		if (state->currentslot == 1)
@@ -492,6 +524,10 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 
 			//close any open MBEout files
 			if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
+
+			//reset gain
+			if (opts->floating_point == 1)
+				state->aout_gainR = opts->audio_gain;
 		}
 		fprintf (stderr, "%s", KNRM);
 	}

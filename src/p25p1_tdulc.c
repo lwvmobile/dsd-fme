@@ -447,4 +447,8 @@ processTDULC (dsd_opts* opts, dsd_state* state)
   sprintf (state->call_string[0], "%s", "                     "); //21 spaces
   sprintf (state->call_string[1], "%s", "                     "); //21 spaces
 
+  //reset gain
+  if (opts->floating_point == 1)
+    state->aout_gain = opts->audio_gain;
+
 }

@@ -334,6 +334,9 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         state->payload_algid = 0;
         state->payload_mi = 0;
         state->payload_keyid = 0;
+        //reset gain
+        if (opts->floating_point == 1)
+          state->aout_gain = opts->audio_gain;
       }
       if (state->currentslot == 1)
       {
@@ -344,6 +347,9 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         state->payload_algidR = 0;
         state->payload_miR = 0;
         state->payload_keyidR = 0;
+        //reset gain
+        if (opts->floating_point == 1)
+          state->aout_gainR = opts->audio_gain; 
       }
       
     }

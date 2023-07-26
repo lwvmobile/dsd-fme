@@ -950,6 +950,13 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		sprintf (state->nxdn_call_type, "%s", "");
 	}
+
+	if (MessageType == 0x07 ||MessageType == 0x08 || MessageType == 0x11)
+	{
+		//reset gain
+		if (opts->floating_point == 1)
+			state->aout_gain = opts->audio_gain;
+	}
 	 
 }
 
