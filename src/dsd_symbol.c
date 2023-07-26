@@ -17,6 +17,27 @@
 
 #include "dsd.h"
 
+//testing sending samples into this to get an RMS value
+int disctap_rms(int16_t *samples, int len, int step) //use samplespersymbol as len
+/* largely lifted from rtl_power */
+{
+	int i;
+	long p, t, s;
+	double dc, err;
+
+	p = t = 0L;
+	for (i=0; i<len; i+=step) {
+		s = (long)samples[i];
+		t += s;
+		p += s * s;
+	}
+	/* correct for dc offset in squares */
+	dc = (double)(t*step) / (double)len;
+	err = t * 2 * dc - dc * dc * len;
+
+	return (int)sqrt((p-err) / len);
+}
+
 int
 getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 {

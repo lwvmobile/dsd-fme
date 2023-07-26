@@ -1,4 +1,25 @@
+/*-------------------------------------------------------------------------------
+ * 
+ * 
+ *
+ * TODO: Fill me in'
+ * 
+ *
+ * LWVMOBILE
+ * 2023-07 DSD-FME Florida Man Edition
+ *-----------------------------------------------------------------------------*/
+
 #include "dsd.h"
+
+//TODO: Add audio handling for left over types (X2-TDMA, dPMR, Provoice...MBEPlayback?)
+//TODO: Test All voice decoders with all combos 'short mono, short stereo, float mono, float stereo)
+//TODO: Look at upscaling on M17 codec 2 audio for OSS support and backport to 2.1b
+//TODO: Clean comments and unused code in here
+//TODO: Change + and - keys to allow switching to '0' on shorts for auto or manual with values
+
+//CHECKLIST(PULSE): DMR BS(OK) DMR MS (OK) P25p1 (OK) P25p2 (OK) YSF (OK) NXDN (OK) M17 (short only!) pV (OK) dPMR (OK) MBEplayback (OK) X2-TDMA (who cares lol)
+
+//TODO: WAV File saving (works fine on shorts, but on float, writing short to wav is not auto-gained, so super quiet, either convert to float wav files, or run processAudio AFTER memcpy of the temp_buf)
 
 void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 {
@@ -7,9 +28,9 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
   float empty[160];
   memset (empty, 0.1f, sizeof(empty));
 
-  float max = 0.0f;
   float mmax = 0.75f;
   float mmin = -0.75f;
+  float aavg = 0.0f; //average of the absolute value
   float df; //decimation value
 
   if (slot == 0)
@@ -23,7 +44,10 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 
   for (i = 0; i < 160; i++)
   {
+
     samp[i] = samp[i] / df;
+
+    aavg += fabsf(samp[i]);
 
     //simple clipping
     if (samp[i] > mmax)
@@ -31,39 +55,25 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
     if (samp[i] < mmin)
       samp[i] = mmin;
 
-    //determine max value for adjustments
-    if (fabs(samp[i]) > max)
-      max = samp[i];
-
-
   }
 
-  //crude auto gain for float values
+  aavg /= 160.0f;
+
   if (slot == 0)
   {
-    if (max < 0.351f && max > 0.1f && state->aout_gain < 42.0f) state->aout_gain++; 
-    if (max > 0.35f && state->aout_gain > 1.0f) state->aout_gain--;
+    if (aavg < 0.075f && state->aout_gain < 42.0f) state->aout_gain += 1.0f;
+    if (aavg >= 0.075f && state->aout_gain > 1.0f) state->aout_gain -= 1.0f;
   }
 
   if (slot == 1)
   {
-    if (max < 0.351f && max > 0.1f && state->aout_gainR < 42) state->aout_gainR++;
-    if (max > 0.35f && state->aout_gainR > 1) state->aout_gainR--;
+    if (aavg < 0.075f && state->aout_gainR < 42.0f) state->aout_gainR += 1.0f;
+    if (aavg >= 0.075f && state->aout_gainR > 1.0f) state->aout_gainR -= 1.0f;
   }
 
-  // if (slot == 0)
-  // {
-  //   if (max < 0.351f && max > 0.1f && state->aout_gain < 42.0f) state->aout_gain += 0.33f;
-  //   if (max > 0.35f && state->aout_gain > 1.0f) state->aout_gain -= 0.33f;
-  // }
-
-  // if (slot == 1)
-  // {
-  //   if (max < 0.351f && max > 0.1f && state->aout_gainR < 42) state->aout_gainR += 0.33f;
-  //   if (max > 0.35f && state->aout_gainR > 1) state->aout_gainR -= 0.33f;
-  // }
+  //debug 
+  // fprintf (stderr, "\nS%d - DF = %f AAVG = %f", slot, df, aavg);
   
-
   AGF_END: ; //do nothing
 
 }

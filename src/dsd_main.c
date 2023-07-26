@@ -720,9 +720,6 @@ initOpts (dsd_opts * opts)
   //Use P25p1 heuristics
   opts->use_heuristics = 0;
 
-  // if (opts->floating_point == 1)
-  //   state->aout_gain = 25.0f; 
-
 } //initopts
 
 void
@@ -1323,13 +1320,9 @@ liveScanner (dsd_opts * opts, dsd_state * state)
 
   if (opts->floating_point == 1)
   {
-    //use this for now, but see if we can really start on zero later on
-    //when we have a more normalized gain attack
-    if (opts->audio_gain == 0)
-      opts->audio_gain = 25.0f;
-    
+    //continue testing for as high as we can go without it suddenly clipping
     opts->audio_gain /= 2.0f;
-    if (opts->audio_gain > 45.0f) opts->audio_gain = 45.0f;
+    if (opts->audio_gain > 42.0f) opts->audio_gain = 42.0f;
   }
 
 // if (opts->audio_in_type == 1)
