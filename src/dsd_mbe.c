@@ -123,7 +123,7 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
       {
         readImbe4400Data (opts, state, imbe_d);
         mbe_processImbe4400Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-        if (opts->audio_out == 1)
+        if (opts->audio_out == 1 && opts->floating_point == 0)
         {
           processAudio(opts, state);
         }
@@ -132,9 +132,14 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
           writeSynthesizedVoice (opts, state);
         }
 
-        if (opts->audio_out == 1)
+        if (opts->audio_out == 1 && opts->floating_point == 0)
         {
           playSynthesizedVoice (opts, state);
+        }
+        if (opts->floating_point == 1)
+        {
+          memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+          playSynthesizedVoiceFM (opts, state);
         }
       }
       else if (state->mbe_file_type > 0) //ambe files
@@ -158,7 +163,7 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
         //dstar ambe
         if (state->mbe_file_type == 2) mbe_processAmbe2400Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
-        if (opts->audio_out == 1)
+        if (opts->audio_out == 1 && opts->floating_point == 0)
         {
           processAudio(opts, state);
         }
@@ -166,9 +171,15 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
         {
           writeSynthesizedVoice (opts, state);
         }
-        if (opts->audio_out == 1)
+
+        if (opts->audio_out == 1 && opts->floating_point == 0)
         {
           playSynthesizedVoice (opts, state);
+        }
+        if (opts->floating_point == 1)
+        {
+          memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+          playSynthesizedVoiceFM (opts, state);
         }
       }
       if (exitflag == 1)

@@ -477,6 +477,10 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
       for(i = start; i < end; i++)
       {
         processMbeFrame (opts, state, NULL, ambe_fr[i], NULL);
+        if (opts->floating_point == 0)
+          playSynthesizedVoice(opts, state);
+        if (opts->floating_point == 1)
+          playSynthesizedVoiceFM(opts, state);
       } 
 
       //set the correct sync type again and flag off the cipher

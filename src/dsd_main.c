@@ -1546,6 +1546,7 @@ main (int argc, char **argv)
         case 'h':
           usage ();
           exit (0);
+          break; //probably isn't required, but just making sure it doesn't do anything bizarre
           
         case 'a':
           opts.call_alert = 1;
@@ -2728,7 +2729,7 @@ main (int argc, char **argv)
       opts.playoffset = 0;
       opts.playoffsetR = 0;
       opts.delay = 0;
-      opts.pulse_digi_rate_out = 48000;
+      opts.pulse_digi_rate_out = 8000;
       opts.pulse_digi_out_channels = 1;
       if (opts.audio_out_type == 0) openPulseOutput(&opts);
       if (opts.audio_out_type == 5) openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
