@@ -309,28 +309,17 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     }
   }
 
+  //TODO: Consider copying f_l to f_r for left and right channel saturation on MS mode
   if (opts->floating_point == 0)
   {
-    // processAudio(opts, state); //needed here? -- nothign to test it with
-
-    // if (opts->wav_out_f != NULL)
-    //   writeSynthesizedVoice (opts, state);
-
-    // if (opts->pulse_digi_out_channels == 1)
-    //   playSynthesizedVoice(opts, state);
-
+    memcpy (state->s_r4, state->s_l4, sizeof(state->s_l4));
     if(opts->pulse_digi_out_channels == 2)
       playSynthesizedVoiceSS3(opts, state);
   }
 
-  if (opts->floating_point == 1) //float audio is really quiet now (look into it)
+  if (opts->floating_point == 1) 
   {
-
-    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
-    
-    // if (opts->pulse_digi_out_channels == 1)
-      // playSynthesizedVoiceFM3(opts, state);
-
+    memcpy (state->f_r4, state->f_l4, sizeof(state->f_l4));
     if(opts->pulse_digi_out_channels == 2)
       playSynthesizedVoiceFS3(opts, state);
   }
@@ -629,28 +618,18 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
       memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
   }
 
+
+  //TODO: Consider copying f_l to f_r for left and right channel saturation on MS mode
   if (opts->floating_point == 0)
   {
-    // processAudio(opts, state); //NOTE: -fa switch will not work with this set up -- honestly shouldn't be needed
-
-    // if (opts->wav_out_f != NULL)
-    //   writeSynthesizedVoice (opts, state);
-
-    // if (opts->pulse_digi_out_channels == 1)
-    //   playSynthesizedVoice(opts, state);
-
+    memcpy (state->s_r4, state->s_l4, sizeof(state->s_l4));
     if(opts->pulse_digi_out_channels == 2)
       playSynthesizedVoiceSS3(opts, state);
   }
 
-  if (opts->floating_point == 1) //float audio is really quiet now (look into it)
+  if (opts->floating_point == 1) 
   {
-
-    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
-    
-    // if (opts->pulse_digi_out_channels == 1)
-    //   playSynthesizedVoiceFM(opts, state);
-
+    memcpy (state->f_r4, state->f_l4, sizeof(state->f_l4));
     if(opts->pulse_digi_out_channels == 2)
       playSynthesizedVoiceFS3(opts, state);
   }
