@@ -45,6 +45,26 @@ uint8_t p1[62] = {
 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1
 };
 
+//produce 6 short samples (48k) for every 1 short sample (8k)
+void upsampleM17 (short invalue, short prev, short outbuf[6])
+{
+
+  float c, d;
+
+  c = prev;
+  d = invalue;
+
+  // basic triangle interpolation
+  outbuf[0] = c = ((invalue * (float) 0.166) + (c * (float) 0.834));
+  outbuf[1] = c = ((invalue * (float) 0.332) + (c * (float) 0.668));
+  outbuf[2] = c = ((invalue * (float) 0.500) + (c * (float) 0.5));
+  outbuf[3] = c = ((invalue * (float) 0.668) + (c * (float) 0.332));
+  outbuf[4] = c = ((invalue * (float) 0.834) + (c * (float) 0.166));
+  outbuf[5] = c = d;
+  prev = d; //shift prev to the last d value for the next repitition
+
+}
+
 //from M17_Implementations -- sp5wwp -- should have just looked here to begin with
 //this setup looks very similar to the OP25 variant of crc16, but with a few differences (uses packed bytes)
 uint16_t crc16m17(const uint8_t *in, const uint16_t len)
@@ -294,12 +314,8 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t lich_bits[96])
 
 void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
 {
-
-  //If payload is the same from the stream in this mode, I suppose we could use this area to parse
-  //or send off the remaining data to be handled or decoded , or just print out the raw data bytes
-
   int i;
-  unsigned char voice1[8]; //codec2_bytes_per_frame
+  unsigned char voice1[8];
   unsigned char voice2[8];
 
   for (i = 0; i < 8; i++)
@@ -329,35 +345,47 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t payload[1
   
   #ifdef USE_CODEC2
   size_t nsam;
-  nsam = 320; //codec2_samples_per_frame(state->codec2_1600);
+  nsam = 160;
 
-  short samp1[nsam];
-  // short samp2[nsam];
-  memset (samp1, 0, sizeof(samp1));
-  // memset (samp2, 0, sizeof(samp2));
-
+  //converted to using allocated memory pointers to prevent the overflow issues
+  short * samp1 = malloc (sizeof(short) * nsam);
+  short * upsamp = malloc (sizeof(short) * nsam * 6);
+  short * out = malloc (sizeof(short) * 6);
+  short prev;
+  int j;
 
   codec2_decode(state->codec2_1600, samp1, voice1);
-  // codec2_decode(state->codec2_1600, samp2, voice2);
 
-
-  if (opts->audio_out_type == 0 && state->m17_enc == 0)
+  if (opts->audio_out_type == 0 && state->m17_enc == 0) //Pulse Audio
   {
     pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
-    // pa_simple_write(opts->pulse_digi_dev_out, samp2, nsam*2, NULL);
-  }
-    
-  if (opts->audio_out_type == 5 && state->m17_enc == 0)
-  {
-    write (opts->audio_out_fd, samp1, nsam*2);
-    // write (opts->audio_out_fd, samp2, nsam*2);
+
   }
 
+  #ifdef AERO_BUILD
+  if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS w/ required upsample to 48k
+  {
+    //upsample to 48k and then play
+    prev = samp1[0];
+    for (i = 0; i < 160; i++)
+    {
+      upsampleM17 (samp1[i], prev, out);
+      for (j = 0; j < 6; j++) upsamp[(i*6)+j] = out[j];
+    }
+    write (opts->audio_out_fd, upsamp, nsam*2*6);
+  }
+  #else
+  if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS via PADSP at 8k
+  {
+    write (opts->audio_out_fd, samp1, nsam*2);
+  }
+  #endif
+
+
   //WIP: Wav file saving -- still need a way to open/close/label wav files similar to call history
-  if(opts->wav_out_f != NULL && state->m17_enc == 0)
+  if(opts->wav_out_f != NULL && state->m17_enc == 0) //WAV
   {
     sf_write_short(opts->wav_out_f, samp1, nsam);
-    // sf_write_short(opts->wav_out_f, samp2, nsam);
   }
 
   //TODO: Codec2 Raw file saving
@@ -366,6 +394,10 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t payload[1
 
   // }
 
+  free (samp1);
+  free (upsamp);
+  free (out);
+
   #endif
 
 }
@@ -373,7 +405,7 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t payload[1
 void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
 {
   int i;
-  unsigned char voice1[8]; //codec2_bytes_per_frame
+  unsigned char voice1[8];
   unsigned char voice2[8];
 
   for (i = 0; i < 8; i++)
@@ -404,32 +436,62 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[1
   
   #ifdef USE_CODEC2
   size_t nsam;
-  nsam = 160; //codec2_samples_per_frame(state->codec2_3200);
+  nsam = 160;
 
-  short samp1[nsam];
-  short samp2[nsam];
-  memset (samp1, 0, sizeof(samp1));
-  memset (samp2, 0, sizeof(samp2));
-
+  //converted to using allocated memory pointers to prevent the overflow issues
+  short * samp1 = malloc (sizeof(short) * nsam);
+  short * samp2 = malloc (sizeof(short) * nsam);
+  short * upsamp = malloc (sizeof(short) * nsam * 6);
+  short * out = malloc (sizeof(short) * 6);
+  short prev;
+  int j;
 
   codec2_decode(state->codec2_3200, samp1, voice1);
   codec2_decode(state->codec2_3200, samp2, voice2);
 
-
-  if (opts->audio_out_type == 0 && state->m17_enc == 0)
+  if (opts->audio_out_type == 0 && state->m17_enc == 0) //Pulse Audio
   {
     pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
     pa_simple_write(opts->pulse_digi_dev_out, samp2, nsam*2, NULL);
   }
-    
-  if (opts->audio_out_type == 5 && state->m17_enc == 0)
+
+  #ifdef AERO_BUILD
+  if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS w/ required upsample to 48k
+  {
+    //upsample to 48k and then play
+    // prev = samp1[0];
+    prev = 0;
+    for (i = 0; i < 160; i++)
+    {
+      upsampleM17 (samp1[i], prev, out);
+      for (j = 0; j < 6; j++) upsamp[(i*6)+j] = out[j];
+    }
+    write (opts->audio_out_fd, upsamp, nsam*2*6);
+    prev = samp2[0];
+    for (i = 0; i < 160; i++)
+    {
+      upsampleM17 (samp2[i], prev, out);
+      for (j = 0; j < 6; j++) upsamp[(i*6)+j] = out[j];
+    }
+    write (opts->audio_out_fd, upsamp, nsam*2*6);
+  }
+  #else
+  if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS via PADSP at 8k
+  {
+    write (opts->audio_out_fd, samp1, nsam*2);
+    write (opts->audio_out_fd, samp2, nsam*2);
+  }
+  #endif
+
+
+  if (opts->audio_out_type == 1 && state->m17_enc == 0) //STDOUT
   {
     write (opts->audio_out_fd, samp1, nsam*2);
     write (opts->audio_out_fd, samp2, nsam*2);
   }
 
   //WIP: Wav file saving -- still need a way to open/close/label wav files similar to call history
-  if(opts->wav_out_f != NULL && state->m17_enc == 0)
+  if(opts->wav_out_f != NULL && state->m17_enc == 0) //WAV
   {
     sf_write_short(opts->wav_out_f, samp1, nsam);
     sf_write_short(opts->wav_out_f, samp2, nsam);
@@ -440,6 +502,11 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[1
   // {
 
   // }
+
+  free (samp1);
+  free (samp2);
+  free (upsamp);
+  free (out);
 
   #endif
 
