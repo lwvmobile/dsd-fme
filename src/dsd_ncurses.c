@@ -2436,19 +2436,25 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->mod_gfsk == 1) printw ("[GFSK]");
   printw ( "[%d] \n", (48000*opts->wav_interpolator)/state->samplesPerSymbol);
   printw ("| Decoding:    [%s] \n", opts->output_name);
-  printw ("| In Level:    [%02d%%] \n", level); 
+  printw ("| In Level:    [%02d%%] \n", level);
+  
   if (opts->dmr_stereo == 0)
   {
-    printw ("| Voice Error: [%i][%i] \n", state->errs, state->errs2);
+    printw ("| Voice Error: [%i][%i]", state->errs, state->errs2);
+    if (opts->slot1_on == 0) printw (" OFF");
+    if (opts->slot1_on == 1) printw (" ON");
+    printw ("\n");
   }
 
   if (opts->dmr_stereo == 1)
   {
-    printw ("| Voice ErrS1: [%i][%i] Slot 1", state->errs, state->errs2);
+    printw ("| Voice ErrS1: [%i][%i] Slot 1 (1)", state->errs, state->errs2);
     if (opts->slot1_on == 0) printw (" OFF");
+    if (opts->slot1_on == 1) printw (" ON");
     printw ("\n");
-    printw ("| Voice ErrS2: [%i][%i] Slot 2", state->errsR, state->errs2R);
+    printw ("| Voice ErrS2: [%i][%i] Slot 2 (2)", state->errsR, state->errs2R);
     if (opts->slot2_on == 0) printw (" OFF");
+    if (opts->slot2_on == 1) printw (" ON");
     printw ("\n");
   }
   printw ("------------------------------------------------------------------------------\n");
