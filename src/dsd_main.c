@@ -1194,8 +1194,10 @@ usage ()
   printf ("  -Q <file>     Specify Filename for OK-DMRlib Structured File Output. (placed in DSP folder)\n");
   printf ("  -c <file>     Output symbol capture to .bin file\n");
   printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
-  // printf ("  -V            Enable Audio Smoothing on Upsampled 48k/1 or 24k/2 Audio (Capital V)\n");
   printf ("  -V <num>      Enable TDMA Voice Synthesis on Slot 1 (1), Slot 2 (2), or Both (3); Default is 3; \n");
+  // #ifdef AERO_BUILD
+  printf ("                If using /dev/dsp input and output at 48k1, launch two instances of DSD-FME w -V 1 and -V 2 if needed");
+  // #endif
   printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
   printf ("  -z            Set TDMA Voice Slot Preference when using /dev/dsp audio output (prevent lag and stuttering)\n");
   printf ("  -y            Enable Experimental Pulse Audio Float Audio Output\n");
@@ -1644,6 +1646,8 @@ main (int argc, char **argv)
           if (opts.slot2_on == 1) fprintf (stderr, "on Slot 2");
 
           if (slotson == 0) fprintf (stderr, "Disabled");
+          //disable slot preference if not 1 or 2
+          if (slotson == 1 || slotson == 2) opts.slot_preference = 3;
           fprintf (stderr, "\n");
           break;
 

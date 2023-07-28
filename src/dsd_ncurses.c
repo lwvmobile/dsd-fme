@@ -3484,18 +3484,30 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     ncursesMenu (opts, state); //just a quick test
   }
 
+  //toggling when 48k/1 OSS still has some lag -- needed to clear out the buffer when switching
   if (c == 49) // '1' key, toggle slot1 on
   {
     //switching, but want to control each seperately plz
     if (opts->slot1_on == 1)
     {
       opts->slot1_on = 0;
-      // opts->slot_preference = 1;
+      opts->slot_preference = 1; //slot 2
+      //clear any previously buffered audio
+      state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
+      state->audio_out_buf_p = state->audio_out_buf + 100;
+      memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
+      memset (state->audio_out_buf, 0, 100 * sizeof (short));
+      state->audio_out_idx2 = 0;
+      state->audio_out_idx = 0;
     }
     else if (opts->slot1_on == 0)
     {
       opts->slot1_on = 1;
-      // opts->slot_preference = 0;
+      if (opts->audio_out_type == 5) //OSS 48k/1 
+      {
+        opts->slot_preference = 0; //slot 1
+        opts->slot2_on = 0; //turn off slot 2
+      }
     }
   }
 
@@ -3505,12 +3517,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->slot2_on == 1)
     {
       opts->slot2_on = 0;
-      // opts->slot_preference = 1;
+      opts->slot_preference = 0; //slot 1
+      //clear any previously buffered audio
+      state->audio_out_float_buf_pR = state->audio_out_float_bufR + 100;
+      state->audio_out_buf_pR = state->audio_out_bufR + 100;
+      memset (state->audio_out_float_bufR, 0, 100 * sizeof (float));
+      memset (state->audio_out_bufR, 0, 100 * sizeof (short));
+      state->audio_out_idx2R = 0;
+      state->audio_out_idxR = 0;
     }
     else if (opts->slot2_on == 0)
     {
       opts->slot2_on = 1;
-      // opts->slot_preference = 0;
+      if (opts->audio_out_type == 5) //OSS 48k/1 
+      {
+        opts->slot_preference = 1; //slot 2
+        opts->slot1_on = 0; //turn off slot 1
+      }
     }
   }
 
