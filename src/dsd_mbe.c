@@ -245,8 +245,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
   }
 
-  //set flag to not play audio this time, but won't prevent writing to wav files
-  if (strcmp(mode, "B") == 0) opts->audio_out = 0;
+  //set flag to not play audio this time, but won't prevent writing to wav files -- disabled for now
+  // if (strcmp(mode, "B") == 0) opts->audio_out = 0; //causes a buzzing now (probably due to not running processAudio before the SS3 or SS4)
 
   //end set playback mode for this frame
 
@@ -1058,30 +1058,29 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
     //end reverse mute test
 
-    //No more Slot Pre-emption...ever
-    // #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
-    // //OSS Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
-    // if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && (state->dmrburstR == 16 || state->dmrburstR == 21) ) 
-    // {
-    //   opts->audio_out = 0;
-    //   preempt = 1;
-    //   if (opts->payload == 0)
-    //     fprintf (stderr, " *MUTED*"); 
-    // }
-    // #endif
+    //OSS 48k/1 Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
+    if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && (state->dmrburstR == 16 || state->dmrburstR == 21) ) 
+    {
+      opts->audio_out = 0;
+      preempt = 1;
+      if (opts->payload == 0 && opts->slot1_on == 1) 
+        fprintf (stderr, " *MUTED*"); 
+      else if (opts->payload == 0 && opts->slot1_on == 0) 
+        fprintf (stderr, " *OFF*"); 
+    }
 
     state->debug_audio_errors += state->errs2 + state->errs;
 
     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
     {
-      if (opts->audio_out == 1 && opts->floating_point == 0 ) //&& opts->pulse_digi_rate_out == 8000
+      if (opts->audio_out == 1 && opts->floating_point == 0 ) //&& opts->slot1_on == 1
       {
         processAudio(opts, state);
       }
-      // if (opts->audio_out == 1)
-      // {
-      //   playSynthesizedVoice (opts, state);
-      // }
+      if (opts->audio_out == 1 && opts->floating_point == 0 && opts->audio_out_type == 5 && opts->slot1_on == 1) //for OSS 48k 1 channel configs -- relocate later if possible
+      {
+        playSynthesizedVoice (opts, state); //it may be more beneficial to move this to each individual decoding type to handle, but ultimately, let's just simpifly mbe handling instead 
+      }
     }
 
     memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l)); //these are for mono or FDMA where we don't need to buffer and wait for a stereo mix 
@@ -1134,29 +1133,29 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
     //end reverse mute test
 
-    // #ifdef AERO_BUILD //FUN FACT: OSS stutters only on Cygwin, using padsp in linux, it actually opens two virtual /dev/dsp audio streams for output
-    // //OSS Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
-    // if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && (state->dmrburstL == 16 || state->dmrburstL == 21) ) 
-    // {
-    //   opts->audio_out = 0;
-    //   preempt = 1;
-    //   if (opts->payload == 0) 
-    //     fprintf (stderr, " *MUTED*"); 
-    // }
-    // #endif
+    //OSS 48k/1 Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
+    if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && (state->dmrburstL == 16 || state->dmrburstL == 21) ) 
+    {
+      opts->audio_out = 0;
+      preempt = 1;
+      if (opts->payload == 0 && opts->slot2_on == 1) 
+        fprintf (stderr, " *MUTED*"); 
+      else if (opts->payload == 0 && opts->slot2_on == 0) 
+        fprintf (stderr, " *OFF*");
+    }
 
     state->debug_audio_errorsR += state->errs2R + state->errsR;
 
     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
     {
-      if (opts->audio_out == 1 && opts->floating_point == 0 ) //&& opts->pulse_digi_rate_out == 8000
+      if (opts->audio_out == 1 && opts->floating_point == 0) //&& opts->slot2_on == 1
       {
         processAudioR(opts, state);
       }
-      // if (opts->audio_out == 1)
-      // {
-      //   playSynthesizedVoiceR (opts, state);
-      // }
+      if (opts->audio_out == 1 && opts->floating_point == 0 && opts->audio_out_type == 5 && opts->slot2_on == 1) //for OSS 48k 1 channel configs -- relocate later if possible
+      {
+        playSynthesizedVoiceR (opts, state);
+      }
     }
 
     memcpy (state->f_r, state->audio_out_temp_bufR, sizeof(state->f_r));
@@ -1215,8 +1214,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     preempt = 0; 
   }
 
-  //reset audio out flag for next repitition
-  if (strcmp(mode, "B") == 0) opts->audio_out = 1;
+  //reset audio out flag for next repitition --disabled for now
+  // if (strcmp(mode, "B") == 0) opts->audio_out = 1;
+
   //restore flag for null output type
   if (opts->audio_out_type == 9) opts->audio_out = 0;
 }

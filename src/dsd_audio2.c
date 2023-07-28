@@ -903,7 +903,7 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
   if (opts->audio_out_type == 0) //Pulse Audio
     pa_simple_write(opts->pulse_digi_dev_out, stereo_samp1, 320*2, NULL);
 
-  if (opts->audio_out_type == 1 || opts->audio_out_type == 5) //STDOUT or OSS
+  if (opts->audio_out_type == 1 || opts->audio_out_type == 2) //STDOUT or OSS 8k/2
     write (opts->audio_out_fd, stereo_samp1, 320*2);
 
 
@@ -1042,7 +1042,7 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
   }
   
 
-  if (opts->audio_out_type == 1 || opts->audio_out_type == 5) //STDOUT or OSS
+  if (opts->audio_out_type == 1 || opts->audio_out_type == 2) //STDOUT or OSS 8k/2channel
   {
     write (opts->audio_out_fd, stereo_samp1, 320*2);
     write (opts->audio_out_fd, stereo_samp2, 320*2);
@@ -1192,11 +1192,11 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
   }
   
 
-  if (opts->audio_out_type == 1 || opts->audio_out_type == 5) //STDOUT or OSS
+  if (opts->audio_out_type == 1 || opts->audio_out_type == 2) //STDOUT or OSS 8k/2channel
   {
     write (opts->audio_out_fd, stereo_samp1, 320*2);
     write (opts->audio_out_fd, stereo_samp2, 320*2);
-    //only play these two if not a single 2v or double 2v (minor skip can still occur on a 4v and 2v combo, but will probably only be perceivable if one is a tone)
+    //only play these two if not a single 2v or double 2v
     if (memcmp(empty, stereo_samp3, sizeof(empty)) != 0)
       write (opts->audio_out_fd, stereo_samp3, 320*2);
     if (memcmp(empty, stereo_samp4, sizeof(empty)) != 0)

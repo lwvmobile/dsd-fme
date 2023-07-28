@@ -2594,22 +2594,39 @@ main (int argc, char **argv)
       #endif
     }
 
+    //moved these to be checked prior to checking OSS for the split for 1-48k, or variable configurations
+    if((strncmp(opts.audio_in_dev, "pulse", 5) == 0))
+    {
+      opts.audio_in_type = 0;
+    }
+
+    if((strncmp(opts.audio_out_dev, "pulse", 5) == 0))
+    {
+      opts.audio_out_type = 0;
+    }
+
+    if((strncmp(opts.audio_out_dev, "null", 4) == 0))
+    {
+      opts.audio_out_type = 9; //9 for NULL, or mute output
+      opts.audio_out = 0; //turn off so we won't playSynthesized
+    }
+
+    if((strncmp(opts.audio_out_dev, "-", 1) == 0))
+    {
+      opts.audio_out_fd = fileno(stdout); //STDOUT_FILENO;
+      opts.audio_out_type = 1; //using 1 for stdout to match input stdin as 1
+      fprintf(stderr, "Audio Out Device: -\n");
+    }
+
     int fmt; 
     int speed;
 
     //The long of the short is that PADSP can open multiple virtual /dev/dsp devices each with different sampling rates and channel configurations
     //but the instance inside of Cygwin is a single instance tied to one sample rate AND one channel configuration, so if you change it on the output, it
-    //also changes on the input, and the way dsd handles this is to upsample output to make it work correctly, so if we were to make a true short stereo mix,
-    //we would have to handle upsampling for it as well in Cygwin (alternatively, find another output method, like RTAudio, or something else)
+    //also changes on the input, and the way dsd handles this is to upsample output to make it work correctly, so in order to be able to change the output
+    //to a variable config, it cannot be the input as well
 
-    //It should be noted that Pulse Audio instances do not have this same issue, and can run at different input/rate and output/rate/channel configurations
 
-    //TL:DR; the only reason /dev/dsp works as both input and output in Cygwin is because both input and output are exactly 1 channel - 48k
-
-    //TODO: Test opening OSS input as 2-channel 48k, and see if we can read it in, if not, then double samplespersymble and center
-    //doing so will break the filters though
-
-    speed = 48000;
     if((strncmp(opts.audio_in_dev, "/dev/audio", 10) == 0))
     {
       sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
@@ -2622,6 +2639,7 @@ main (int argc, char **argv)
       fprintf (stderr, "Switching to /dev/dsp.\n");
     }
 
+    speed = 48000; //hardset to 48000
     if((strncmp(opts.audio_in_dev, "/dev/dsp", 8) == 0))
     {
       fprintf (stderr, "OSS Input %s.\n", opts.audio_in_dev);
@@ -2668,72 +2686,108 @@ main (int argc, char **argv)
       fprintf (stderr, "Switching to /dev/dsp.\n");
     }
 
-    if((strncmp(opts.audio_out_dev, "/dev/dsp", 8) == 0))
+    if (opts.audio_in_type == 5) //if((strncmp(opts.audio_in_dev, "/dev/dsp", 8) == 0)) or 'split' == 0
     {
-      fprintf (stderr, "OSS Output %s.\n", opts.audio_out_dev);
-      opts.audio_out_fd = open (opts.audio_out_dev, O_RDWR);
-      if (opts.audio_out_fd == -1)
+
+      if((strncmp(opts.audio_out_dev, "/dev/dsp", 8) == 0))
       {
-        fprintf (stderr, "Error, couldn't open #1 %s\n", opts.audio_out_dev);
-        opts.audio_out = 0;
-        exit(1);
+        fprintf (stderr, "OSS Output %s.\n", opts.audio_out_dev);
+        opts.audio_out_fd = open (opts.audio_out_dev, O_RDWR);
+        if (opts.audio_out_fd == -1)
+        {
+          fprintf (stderr, "Error, couldn't open #1 %s\n", opts.audio_out_dev);
+          opts.audio_out = 0;
+          exit(1);
+        }
+
+        fmt = 0;
+        if (ioctl (opts.audio_out_fd, SNDCTL_DSP_RESET) < 0)
+        {
+          fprintf (stderr, "ioctl reset error \n");
+        }
+
+        fmt = speed;
+        if (ioctl (opts.audio_out_fd, SNDCTL_DSP_SPEED, &fmt) < 0)
+        {
+          fprintf (stderr, "ioctl speed error \n");
+        }
+
+        fmt = 0; //this seems okay to be 1 or 0, not sure what the difference really is (works in stereo on 0)
+        if (ioctl (opts.audio_out_fd, SNDCTL_DSP_STEREO, &fmt) < 0)
+        {
+          fprintf (stderr, "ioctl stereo error \n");
+        }
+
+        fmt = AFMT_S16_LE;
+        if (ioctl (opts.audio_out_fd, SNDCTL_DSP_SETFMT, &fmt) < 0)
+        {
+          fprintf (stderr, "ioctl setfmt error \n");
+        }
+
+        opts.audio_out_type = 5; //5 for 1 channel - 48k OSS 16-bit short output (matching with input) 
+        opts.pulse_digi_rate_out = 48000; //this is used to force to upsample
+        opts.pulse_digi_out_channels = 1;
+        opts.audio_gain = 0;
       }
-
-      fmt = 0;
-      if (ioctl (opts.audio_out_fd, SNDCTL_DSP_RESET) < 0)
-      {
-        fprintf (stderr, "ioctl reset error \n");
-      }
-
-      fmt = speed;
-      if (ioctl (opts.audio_out_fd, SNDCTL_DSP_SPEED, &fmt) < 0)
-      {
-        fprintf (stderr, "ioctl speed error \n");
-      }
-
-      fmt = 0; //this seems okay to be 1 or 0, not sure what the difference really is (works in stereo on 0)
-      if (ioctl (opts.audio_out_fd, SNDCTL_DSP_STEREO, &fmt) < 0)
-      {
-        fprintf (stderr, "ioctl stereo error \n");
-      }
-
-      fmt = AFMT_S16_LE;
-      if (ioctl (opts.audio_out_fd, SNDCTL_DSP_SETFMT, &fmt) < 0)
-      {
-        fprintf (stderr, "ioctl setfmt error \n");
-      }
-
-      //setup for one or two-channel configuration -- OSS -- cygwin OSS does not like this at all, even when set to 1
-      // fmt = opts.pulse_digi_out_channels; //number of channels is also be a problem for Cygwin...
-      // if (ioctl (opts.audio_out_fd, SNDCTL_DSP_CHANNELS, &fmt) < 0)
-      // {
-      //   fprintf (stderr, "ioctl channels error \n");
-      // }
-
-      opts.audio_out_type = 5; //5 will become OSS output type
     }
 
-    if((strncmp(opts.audio_in_dev, "pulse", 5) == 0))
+    if (opts.audio_in_type != 5) //split == 1
     {
-      opts.audio_in_type = 0;
-    }
 
-    if((strncmp(opts.audio_out_dev, "pulse", 5) == 0))
-    {
-      opts.audio_out_type = 0;
-    }
+      if((strncmp(opts.audio_out_dev, "/dev/dsp", 8) == 0))
+      {
+        fprintf (stderr, "OSS Output %s.\n", opts.audio_out_dev);
+        opts.audio_out_fd = open (opts.audio_out_dev, O_WRONLY);
+        if (opts.audio_out_fd == -1)
+        {
+          fprintf (stderr, "Error, couldn't open %s\n", opts.audio_out_dev);
+          opts.audio_out = 0;
+          exit(1);
+        }
 
-    if((strncmp(opts.audio_out_dev, "null", 4) == 0))
-    {
-      opts.audio_out_type = 9; //9 for NULL, or mute output
-      opts.audio_out = 0; //turn off so we won't playSynthesized
-    }
+        //Setup the device. Note that it's important to set the sample format, number of channels and sample rate exactly in this order. Some devices depend on the order. 
 
-    if((strncmp(opts.audio_out_dev, "-", 1) == 0))
-    {
-      opts.audio_out_fd = fileno(stdout); //STDOUT_FILENO;
-      opts.audio_out_type = 1; //using 1 for stdout to match input stdin as 1
-      fprintf(stderr, "Audio Out Device: -\n");
+        fmt = 0;
+        if (ioctl (opts.audio_out_fd, SNDCTL_DSP_RESET) < 0)
+        {
+          fprintf (stderr, "ioctl reset error \n");
+        }
+
+        fmt = AFMT_S16_LE; //Sample Format
+        if (ioctl (opts.audio_out_fd, SNDCTL_DSP_SETFMT, &fmt) < 0)
+        {
+          fprintf (stderr, "ioctl setfmt error \n");
+        }
+
+        fmt = opts.pulse_digi_out_channels; //number of channels //was 2
+        if (ioctl (opts.audio_out_fd, SNDCTL_DSP_CHANNELS, &fmt) < 0)
+        {
+          fprintf (stderr, "ioctl channel error \n");
+        }
+
+        speed = opts.pulse_digi_rate_out; //since we have split input/output, we want 2-channel/8k //8000 -- mirror pulse rate instead
+        fmt = speed; //output rate
+        if (ioctl (opts.audio_out_fd, SNDCTL_DSP_SPEED, &fmt) < 0)
+        {
+          fprintf (stderr, "ioctl speed error \n");
+        }
+        if (opts.pulse_digi_out_channels == 2)
+          fmt = 1;
+        else fmt = 0; 
+
+        if (ioctl (opts.audio_out_fd, SNDCTL_DSP_STEREO, &fmt) < 0)
+        {
+          fprintf (stderr, "ioctl stereo error \n");
+        }
+
+        //TODO: Multiple output returns based on 8k/1, 8k/2, or maybe 48k/1? (2,3,5)??
+        if (opts.pulse_digi_out_channels == 2)
+          opts.audio_out_type = 2; //2 for 2 channel 8k OSS 16-bit short output
+        else opts.audio_out_type = 5;
+
+        //debug 
+        fprintf (stderr, "Using OSS Output with %dk/%d channel configuration.\n", opts.pulse_digi_rate_out, opts.pulse_digi_out_channels);
+      }
     }
 
     if (opts.playfiles == 1) //redo?

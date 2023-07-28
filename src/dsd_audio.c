@@ -460,7 +460,7 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
   {
     if (opts->audio_out_type == 5) //OSS
     {
-      //OSS
+      //OSS 48k/1
       result = write (opts->audio_out_fd, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2));
       state->audio_out_idx = 0;
     }
@@ -496,8 +496,8 @@ playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
     // output synthesized speech to sound card
 		if (opts->audio_out_type == 5) //OSS
     {
-      //OSS
-      result = write (opts->audio_out_fdR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2));
+      //OSS 48k/1
+      result = write (opts->audio_out_fd, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2));
       state->audio_out_idxR = 0;
     }
 		else if (opts->audio_out_type == 0)
