@@ -889,35 +889,24 @@ typedef struct
 void processdPMRvoice (dsd_opts * opts, dsd_state * state);
 void processAudio (dsd_opts * opts, dsd_state * state);
 void processAudioR (dsd_opts * opts, dsd_state * state);
-void openPulseInput (dsd_opts * opts);  //not sure if we need to just pass opts, or opts and state yet
-void openPulseOutput (dsd_opts * opts);  //not sure if we need to just pass opts, or opts and state yet
+void openPulseInput (dsd_opts * opts);
+void openPulseOutput (dsd_opts * opts);
 void closePulseInput (dsd_opts * opts);
 void closePulseOutput (dsd_opts * opts);
 void writeSynthesizedVoice (dsd_opts * opts, dsd_state * state);
 void writeSynthesizedVoiceR (dsd_opts * opts, dsd_state * state);
-void playSynthesizedVoice (dsd_opts * opts, dsd_state * state);   //short mono output
-void playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state);  //short mono output rigth (obsolete)?
+void playSynthesizedVoice (dsd_opts * opts, dsd_state * state);   //short mono output slot 1
+void playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state);  //short mono output slot 2
 //new float stuff
 void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state);  //float stereo mix
-void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state); //float stereo mix 3v2 DMR...and X2-TDMA
+void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state); //float stereo mix 3v2 DMR
 void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state); //float stereo mix 4v2 P25p2
-// void playSynthesizedVoiceFL (dsd_opts * opts, dsd_state * state);  //float left when using stereo configuration
 void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state);  //float mono
-
+//new short stuff
 void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state);   //short stereo mix
-void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state);  //short stereo mix 3v2 DMR...and X2-TDMA
+void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state);  //short stereo mix 3v2 DMR
 void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state);  //short stereo mix 4v2 P25p2
-
-void upsampleF (float invalue, float prev, float outbuf[6]);
-void playSynthesizedVoiceFS3_48k (dsd_opts * opts, dsd_state * state);
-void playSynthesizedVoiceFS4_48k (dsd_opts * opts, dsd_state * state);
-
-void upsampleS (short invalue, short prev, short outbuf[6]);
-void playSynthesizedVoiceSS3_48k (dsd_opts * opts, dsd_state * state);
-void playSynthesizedVoiceSS4_48k (dsd_opts * opts, dsd_state * state);
-
-//borrowed from CODEC2 for testing
-void fdmdv_8_to_48_float(float out48k[], float in8k[], int n);
+void upsampleS (short invalue, short prev, short outbuf[6]); //upsample 8k to 48k short in M17
 
 //
 void openAudioOutDevice (dsd_opts * opts, int speed);

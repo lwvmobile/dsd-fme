@@ -17,8 +17,8 @@
 
 #include "dsd.h"
 
-//NOTE: I attempted to fix the atrocious tab/space alignnment issues that happened in this file,
-//it looks fine in VSCodium, but no telling how it will translate when pushed to Github or another editor
+//NOTE: This set of functions will be reorganized and simplified (hopefully) or at least
+//a more logical flow will be established to jive with the new audio handling
 
 void keyring(dsd_opts * opts, dsd_state * state)
 {
@@ -1084,7 +1084,6 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
 
     memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l)); //these are for mono or FDMA where we don't need to buffer and wait for a stereo mix 
-    // playSynthesizedVoiceFL (opts, state); //Float Left
 
   }
 
@@ -1159,7 +1158,6 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
 
     memcpy (state->f_r, state->audio_out_temp_bufR, sizeof(state->f_r));
-    // playSynthesizedVoiceFR (opts, state); //Float Right
 
   }
 
@@ -1175,12 +1173,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   //   {
   //     playSynthesizedVoice (opts, state);
   //   }
-      // playSynthesizedVoiceFL (opts, state);
 
       memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l)); //P25p1 FDMA 8k/1 channel -f1 switch
   }
-
-  // playSynthesizedVoiceFS (opts, state); //Float Stereo Mix -- disable and move this later on
 
   //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
   if (opts->wav_out_f != NULL && opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0))

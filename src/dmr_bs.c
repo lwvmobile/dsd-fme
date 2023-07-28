@@ -485,12 +485,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //NOTE: We want this to play regardless of whether the slot is voice or data, to play silence in one slot and voice in the second, or voices in both
   if (internalslot == 0 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000)
     playSynthesizedVoiceFS3 (opts, state); //Float Stereo Mix 3v2
-  if (internalslot == 0 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 48000)
-    playSynthesizedVoiceFS3_48k (opts, state); //Float Stereo Mix 3v2
   if (internalslot == 0 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000)
     playSynthesizedVoiceSS3 (opts, state); //Short Stereo Mix 3v2
-  if (internalslot == 0 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 48000)
-    playSynthesizedVoiceSS3_48k (opts, state); //Short Stereo Mix 3v2
 
   if (skipcount > 2) //after 2 consecutive data frames, drop back to getFrameSync and process with dmr_data_sync
   {
@@ -833,12 +829,8 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   //NOTE: Only play on slot 0, if slot 1, then it'll play after the next TDMA frame in the BS loop instead
   if (internalslot == 0 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000)
     playSynthesizedVoiceFS3 (opts, state); //Float Stereo Mix 3v2
-  if (internalslot == 0 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 48000)
-    playSynthesizedVoiceFS3_48k (opts, state); //Float Stereo Mix 3v2
   if (internalslot == 0 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000)
     playSynthesizedVoiceSS3 (opts, state); //Short Stereo Mix 3v2
-  if (internalslot == 0 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 48000)
-    playSynthesizedVoiceSS3_48k (opts, state); //Short Stereo Mix 3v2
 
   dmrBS (opts, state); //bootstrap into full TDMA frame for BS mode
   END:

@@ -928,14 +928,8 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
 				playSynthesizedVoiceFS4 (opts, state);
 
-		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 48000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
-				playSynthesizedVoiceFS4_48k (opts, state);
-
 		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
 				playSynthesizedVoiceSS4 (opts, state);
-
-		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 48000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
-				playSynthesizedVoiceSS4_48k (opts, state);
 
 		//flip slots after each TS processed
 		if (state->currentslot == 0)

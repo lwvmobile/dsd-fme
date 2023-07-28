@@ -2803,7 +2803,6 @@ main (int argc, char **argv)
       opts.pulse_digi_rate_out = 8000;
       opts.pulse_digi_out_channels = 1;
       if (opts.audio_out_type == 0) openPulseOutput(&opts);
-      if (opts.audio_out_type == 5) openAudioOutDevice (&opts, SAMPLE_RATE_OUT);
     }
 
     //this particular if-elseif-else could be rewritten to be a lot neater and simpler

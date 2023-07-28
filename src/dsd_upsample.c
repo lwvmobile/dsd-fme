@@ -136,3 +136,23 @@ upsample (dsd_state * state, float invalue)
   }
 
 }
+
+//produce 6 short samples (48k) for every 1 short sample (8k)
+void upsampleS (short invalue, short prev, short outbuf[6])
+{
+
+  float c, d;
+
+  c = prev;
+  d = invalue;
+
+  // basic triangle interpolation
+  outbuf[0] = c = ((invalue * (float) 0.166) + (c * (float) 0.834));
+  outbuf[1] = c = ((invalue * (float) 0.332) + (c * (float) 0.668));
+  outbuf[2] = c = ((invalue * (float) 0.500) + (c * (float) 0.5));
+  outbuf[3] = c = ((invalue * (float) 0.668) + (c * (float) 0.332));
+  outbuf[4] = c = ((invalue * (float) 0.834) + (c * (float) 0.166));
+  outbuf[5] = c = d;
+  prev = d; //shift prev to the last d value for the next repitition
+
+}
