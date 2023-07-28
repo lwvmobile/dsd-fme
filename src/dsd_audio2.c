@@ -141,6 +141,12 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
 
   //TODO: add option to bypass enc with a toggle as well
 
+  //CHEAT: Using the slot on/off, use that to set encL or encR back on
+  //as a simple way to turn off voice synthesis in a particular slot
+  //its not really 'disabled', we just aren't playing it
+  if (opts->slot1_on == 0) encL = 1;
+  if (opts->slot2_on == 0) encR = 1;
+
   //run autogain on the f_ buffers
   agf (opts, state, state->f_l4[0],0);
   agf (opts, state, state->f_r4[0],1);
@@ -505,6 +511,12 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
     if (!encR)
       stereo_samp4[i*2+1] = state->f_r4[3][i];
   }
+
+  //CHEAT: Using the slot on/off, use that to set encL or encR back on
+  //as a simple way to turn off voice synthesis in a particular slot
+  //its not really 'disabled', we just aren't playing it
+  if (opts->slot1_on == 0) encL = 1;
+  if (opts->slot2_on == 0) encR = 1;
 
   if (encL && encR)
     goto END_FS4;
@@ -987,6 +999,12 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
 
   //TODO: add option to bypass enc with a toggle as well
 
+  //CHEAT: Using the slot on/off, use that to set encL or encR back on
+  //as a simple way to turn off voice synthesis in a particular slot
+  //its not really 'disabled', we just aren't playing it
+  if (opts->slot1_on == 0) encL = 1;
+  if (opts->slot2_on == 0) encR = 1;
+
   //interleave left and right channels from the short storage area
   for (i = 0; i < 160; i++)
   {
@@ -1118,6 +1136,12 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
 
 
   //TODO: add option to bypass enc with a toggle as well
+
+  //CHEAT: Using the slot on/off, use that to set encL or encR back on
+  //as a simple way to turn off voice synthesis in a particular slot
+  //its not really 'disabled', we just aren't playing it
+  if (opts->slot1_on == 0) encL = 1;
+  if (opts->slot2_on == 0) encR = 1;
 
   //interleave left and right channels from the short storage area
   for (i = 0; i < 160; i++)

@@ -710,8 +710,12 @@ initOpts (dsd_opts * opts)
   //OSS audio - Slot Preference
   //slot preference is used during OSS audio playback to
   //prefer one tdma voice slot over another when both are playing back
-  //this is a fix to cygwin stuttering when both slots have voice
+  //this is a fix to OSS 48k/1 output
   opts->slot_preference = 0; //default prefer slot 1 -- state->currentslot = 0;
+
+  //hardset slots to synthesize
+  opts->slot1_on = 1;
+  opts->slot2_on = 1;
 
   //dsp structured file
   opts->dsp_out_file[0] = 0;
@@ -1190,7 +1194,8 @@ usage ()
   printf ("  -Q <file>     Specify Filename for OK-DMRlib Structured File Output. (placed in DSP folder)\n");
   printf ("  -c <file>     Output symbol capture to .bin file\n");
   printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
-  printf ("  -V            Enable Audio Smoothing on Upsampled 48k/1 or 24k/2 Audio (Capital V)\n");
+  // printf ("  -V            Enable Audio Smoothing on Upsampled 48k/1 or 24k/2 Audio (Capital V)\n");
+  printf ("  -V <num>      Enable TDMA Voice Synthesis on Slot 1 (1), Slot 2 (2), or Both (3); Default is 3; \n");
   printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
   printf ("  -z            Set TDMA Voice Slot Preference when using /dev/dsp audio output (prevent lag and stuttering)\n");
   printf ("  -y            Enable Experimental Pulse Audio Float Audio Output\n");
@@ -1531,7 +1536,7 @@ main (int argc, char **argv)
 
   exitflag = 0;
 
-  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
+  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1622,10 +1627,25 @@ main (int argc, char **argv)
           fprintf (stderr, "TDMA (DMR and P2) Slot Voice Preference is Slot %d. \n", opts.slot_preference+1);
           break;
 
-        //Enable Audio Smoothing for Upsampled Audio
+        //Enable Audio Smoothing for Upsampled Audio -- Perm Disable?
+        // case 'V':
+        //   state.audio_smoothing = 1;
+        //   break;
+
         case 'V':
-          state.audio_smoothing = 1;
-          break; 
+          int slotson = 3;
+          sscanf (optarg, "%d", &slotson);
+          if (slotson > 3) slotson = 3;
+          opts.slot1_on = (slotson & 1) >> 0;
+          opts.slot2_on = (slotson & 2) >> 1;
+          fprintf (stderr, "TDMA Voice Synthesis ");
+          if (opts.slot1_on == 1) fprintf (stderr, "on Slot 1");
+          if (slotson == 3) fprintf (stderr, " and ");
+          if (opts.slot2_on == 1) fprintf (stderr, "on Slot 2");
+
+          if (slotson == 0) fprintf (stderr, "Disabled");
+          fprintf (stderr, "\n");
+          break;
 
         //Trunking - Use Group List as Allow List
         case 'W':

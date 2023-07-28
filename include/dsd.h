@@ -389,8 +389,12 @@ typedef struct
   //Trunking - Tune Enc Calls (P25 only on applicable grants with svc opts)
   uint8_t trunk_tune_enc_calls;
 
-  //OSS audio - slot preference
+  //OSS audio 48k/1 - slot preference
   int slot_preference;
+
+  //hard set slots to synthesize
+  int slot1_on;
+  int slot2_on;
 
   //'DSP' Format Output
   uint8_t use_dsp_output;

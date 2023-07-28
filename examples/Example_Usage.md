@@ -179,9 +179,9 @@ P - start per call decoded wav files (Capital P)
 p - stop per call decoded wav files (Lower p)
 t - toggle trunking (needs either rtl input, or rigctl connection)
 y - toggle scanner (needs either rtl input, or rigctl connection)
-1 - Lockout Tuning/Playback of TG in Slot 1 or Conventional -- Current Session Only if no group.csv file specified
-2 - Lockout Tuning/Playback of TG in Slot 2 -- Current Session Only if no group.csv file specified
 0 - Toggle Audio Smoothing - May produce crackling if enabled on RTL/TCP or wav/bin files
+1 - Toggle Voice Synthesis in TDMA Slot 1 (DMR and P25)
+2 - Toggle Voice Synthesis in TDMA Slot 2 (DMR and P25)
 w - Toggle Trunking/Playback White List (Allow A Groups Only) / Black List (Block B or DE groups only) Mode
 g - Toggle Trunking Tuning to Group Calls (DMR T3, Con+, Cap+, P25, NXDN)
 u - Toggle Trunking Tuning to Private Calls (DMR T3, Cap+, P25)
@@ -191,4 +191,7 @@ e - Toggle Trunking Tuning to Encrypted Calls (P25)
 9 - Connect to SDR++ RIGCTL Server with Defaults/Retry RIGCTL Connection
 D - Reset DMR Site Parms/Call Strings, etc.
 Z - Simulate NoCarrier/No VC/CC sync (capital Z)
+
+! - Lockout Tuning/Playback of TG in Slot 1 or Conventional -- Current Session Only if no group.csv file specified
+@ - Lockout Tuning/Playback of TG in Slot 2 -- Current Session Only if no group.csv file specified
 ```

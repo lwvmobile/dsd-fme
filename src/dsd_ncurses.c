@@ -2444,8 +2444,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->dmr_stereo == 1)
   {
-    printw ("| Voice ErrS1: [%i][%i] \n", state->errs, state->errs2);
-    printw ("| Voice ErrS2: [%i][%i] \n", state->errsR, state->errs2R);
+    printw ("| Voice ErrS1: [%i][%i] Slot 1", state->errs, state->errs2);
+    if (opts->slot1_on == 0) printw (" OFF");
+    printw ("\n");
+    printw ("| Voice ErrS2: [%i][%i] Slot 2", state->errsR, state->errs2R);
+    if (opts->slot2_on == 0) printw (" OFF");
+    printw ("\n");
   }
   printw ("------------------------------------------------------------------------------\n");
 
@@ -3491,6 +3495,36 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     ncursesMenu (opts, state); //just a quick test
   }
 
+  if (c == 49) // '1' key, toggle slot1 on
+  {
+    //switching, but want to control each seperately plz
+    if (opts->slot1_on == 1)
+    {
+      opts->slot1_on = 0;
+      // opts->slot_preference = 1;
+    }
+    else if (opts->slot1_on == 0)
+    {
+      opts->slot1_on = 1;
+      // opts->slot_preference = 0;
+    }
+  }
+
+  if (c == 50) // '2' key, toggle slot2 on
+  {
+    //switching, but want to control each seperately plz
+    if (opts->slot2_on == 1)
+    {
+      opts->slot2_on = 0;
+      // opts->slot_preference = 1;
+    }
+    else if (opts->slot2_on == 0)
+    {
+      opts->slot2_on = 1;
+      // opts->slot_preference = 0;
+    }
+  }
+
   if (c == 43) //+ key, increment aout_gain
   {
     // if (state->aout_gain < 50)
@@ -3738,8 +3772,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   #endif
   
-  //test jumping back to CC on group lockout instead of random frequency to break framesync
-  if (state->lasttg != 0 && opts->frame_provoice != 1 && c == 49) //'1' key, lockout slot 1 or conventional tg from tuning/playback during session
+  //makes buzzing sound when locked out in new audio config and short, probably something to do with processaudio running or not running 
+  if (state->lasttg != 0 && opts->frame_provoice != 1 && c == 33) //SHIFT+'1' key (exclamation point), lockout slot 1 or conventional tg from tuning/playback during session
   {
     state->group_array[state->group_tally].groupNumber = state->lasttg;
     sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
@@ -3794,7 +3828,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   }
 
-  if (state->lasttgR != 0 && opts->frame_provoice != 1 && c == 50) //'2' key, lockout slot 2 tdma tgR from tuning/playback during session
+  if (state->lasttgR != 0 && opts->frame_provoice != 1 && c == 64) //SHIFT+'2' key (@ at sign), lockout slot 2 tdma tgR from tuning/playback during session
   {
     state->group_array[state->group_tally].groupNumber = state->lasttgR;
     sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
