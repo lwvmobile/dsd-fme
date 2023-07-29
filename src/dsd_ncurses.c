@@ -314,7 +314,7 @@ char *choicesc[] = {
       "Save Decoded Audio WAV (Legacy Mode)",
       "Save Signal to Symbol Capture Bin",
       "Toggle Muting Encrypted Traffic    ",
-      "Save Per Call Decoded WAV (XDMA and NXDN)",
+      "Save Per Call Decoded WAV (AUTO and NXDN)",
       "Setup and Start RTL Input ",
       "Retune RTL Dongle         ",
       "Toggle C4FM/QPSK (P2 TDMA CC)",
@@ -332,10 +332,10 @@ char *choicesc[] = {
 
 char *choices[] = {
       "Resume Decoding",
-      "Decode Legacy Auto**",
-			"Decode XDMA (P25 and DMR BS/MS)",
-			"Decode D-STAR*",
-			"Decode P25p1*",
+      "Decode AUTO",
+			"Decode M17",
+			"Decode D-STAR",
+			"Decode P25p1",
 			"Decode EDACS/PV",
       "Decode P25p2 ",
       "Decode dPMR",
@@ -377,26 +377,6 @@ void print_menu(WINDOW *menu_win, int highlight)
 	}
 	wrefresh(menu_win);
 }
-
-// void print_menub(WINDOW *menu_win, int highlight)
-// {
-// 	int x, y, i;
-//
-// 	x = 2;
-// 	y = 2;
-// 	box(menu_win, 0, 0);
-// 	for(i = 0; i < n_choicesb; ++i)
-// 	{	if(highlight == i + 1) /* High light the present choice */
-// 		{	wattron(menu_win, A_REVERSE);
-// 			mvwprintw(menu_win, y, x, "%s", choicesb[i]);
-// 			wattroff(menu_win, A_REVERSE);
-// 		}
-// 		else
-// 			mvwprintw(menu_win, y, x, "%s", choicesb[i]);
-// 		++y;
-// 	}
-// 	wrefresh(menu_win);
-// }
 
 void print_menuc(WINDOW *menu_win, int highlight)
 {
@@ -545,21 +525,12 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
 		print_menu(menu_win, highlight);
 
-    //test print info boxes on side of certain options
-    if (highlight == 2)
-    {
-      info_win = newwin(6, WIDTH+18, starty, startx+20);
-      box (info_win, 0, 0);
-      mvwprintw(info_win, 2, 2, " Legacy Auto can only detect the following:");
-      mvwprintw(info_win, 3, 2, " P25p1, D-STAR, DMR Mono, YSF, and X2-TDMA");
-      wrefresh(info_win);
-    }
 
-    if (highlight == 3)
+    if (highlight == 2)
     {
       info_win = newwin(7, WIDTH+18, starty, startx+20);
       box (info_win, 0, 0);
-      mvwprintw(info_win, 2, 2, " XDMA Decoding Class Supports the following:");
+      mvwprintw(info_win, 2, 2, " AUTO Decoding Class Supports the following:");
       mvwprintw(info_win, 3, 2, " P25p1, P25p2, YSF, and DMR BS/MS");
       mvwprintw(info_win, 4, 2, " C4FM, FSK4, QPSK only (no H8D-QPSK)");
       wrefresh(info_win);
@@ -1236,7 +1207,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       break;
     }
 
-    if (choice == 2)
+    if (choice == 99)
     {
       //setup Auto parameters--default ones
       // resetState (state); //use sparingly, may cause memory leak
@@ -1366,9 +1337,9 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       break;
     }
 
-    if (choice == 3)
+    if (choice == 2)
     {
-      //XDMA Stereo P25 1, 2, and DMR
+      //AUTO Stereo P25 1, 2, and DMR
       // resetState (state); //use sparingly, seems to cause issue when switching back to other formats
       if (opts->use_heuristics == 1)
       {
@@ -1380,7 +1351,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       state->rf_mod = 0;
-      sprintf (opts->output_name, "XDMA");
+      sprintf (opts->output_name, "AUTO");
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 1; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
@@ -1573,7 +1544,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->mod_gfsk = 0;
       state->rf_mod = 0;
     }
-    if (choice == 99) //TODO: Slot this into the menu choices, and maybe rearrange them into the correct order as well
+    if (choice == 3)
     {
       //Decode M17
       // resetState (state); //use sparingly, may cause memory leak

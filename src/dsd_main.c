@@ -621,13 +621,13 @@ initOpts (dsd_opts * opts)
   opts->pulse_raw_in_channels   = 1;
   opts->pulse_raw_out_channels  = 1;
   opts->pulse_digi_in_channels  = 1; //2
-  opts->pulse_digi_out_channels = 2; //new default for XDMA
+  opts->pulse_digi_out_channels = 2; //new default for AUTO
 
   opts->wav_sample_rate = 48000; //default value (DSDPlus uses 96000 on raw signal wav files)
   opts->wav_interpolator = 1; //default factor of 1 on 48000; 2 on 96000; sample rate / decimator
   opts->wav_decimator = 48000; //maybe for future use?
 
-  sprintf (opts->output_name, "XDMA");
+  sprintf (opts->output_name, "AUTO");
   opts->pulse_flush = 1; //set 0 to flush, 1 for flushed
   opts->use_ncurses_terminal = 0;
   opts->ncurses_compact = 0;
@@ -1193,7 +1193,7 @@ usage ()
   printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n");
   printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
   printf ("                 (Single Nested Directory Only! Use Before the -P option!)\n");
-  printf ("  -P            Enable Per Call WAV file saving in XDMA and NXDN decoding classes\n");
+  printf ("  -P            Enable Per Call WAV file saving in AUTO and NXDN decoding classes\n");
   printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
   printf ("                 (Running in console will use static wav files)\n");
   printf ("  -a            Enable Call Alert Beep (NCurses Terminal Only)\n");
@@ -1224,8 +1224,8 @@ usage ()
   printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:6021\n");
   printf ("\n");
   printf ("Decoder options:\n");
-  printf ("  -fa           Legacy Auto Detection (old methods default)\n");
-  printf ("  -ft           XDMA P25 and DMR BS/MS frame types (new default)\n");
+  printf ("  -fa           Auto Detection\n");
+  printf ("  -ft           AUTO P25, YSF, and DMR BS/MS frame types (new default)\n");
   printf ("  -fs           DMR Stereo BS and MS Simplex\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -f2           Decode only P25 Phase 2 (6000 sps) **\n");
@@ -1852,30 +1852,13 @@ main (int argc, char **argv)
             fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
             mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
           }
-          fprintf (stderr,"XDMA and NXDN Per Call Wav File Saving Enabled. (NCurses Terminal Only)\n");
+          fprintf (stderr,"AUTO and NXDN Per Call Wav File Saving Enabled. (NCurses Terminal Only)\n");
           sprintf (opts.wav_out_file, "./%s/DSD-FME-X1.wav", opts.wav_out_dir); 
           sprintf (opts.wav_out_fileR, "./%s/DSD-FME-X2.wav", opts.wav_out_dir);
           opts.dmr_stereo_wav = 1;
           openWavOutFileL (&opts, &state); 
           openWavOutFileR (&opts, &state); 
           break;
-
-        // case 'P': //TDMA/NXDN Per Call - was T, now is P
-        //   sprintf (wav_file_directory, "./WAV"); 
-        //   wav_file_directory[1023] = '\0';
-        //   if (stat(wav_file_directory, &st) == -1)
-        //   {
-        //     fprintf (stderr, "-P %s WAV file directory does not exist\n", wav_file_directory);
-        //     fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
-        //     mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
-        //   }
-        //   fprintf (stderr,"XDMA and NXDN Per Call Wav File Saving Enabled. (NCurses Terminal Only)\n");
-        //   sprintf (opts.wav_out_file, "./WAV/DSD-FME-X1.wav"); 
-        //   sprintf (opts.wav_out_fileR, "./WAV/DSD-FME-X2.wav");
-        //   opts.dmr_stereo_wav = 1;
-        //   openWavOutFileL (&opts, &state); 
-        //   openWavOutFileR (&opts, &state); 
-        //   break;
 
         case 'F':
           opts.aggressive_framesync = 0;
@@ -1947,12 +1930,13 @@ main (int argc, char **argv)
           break;
 
         case 'f':
-          if (optarg[0] == 'a')
+          if (optarg[0] == 'a') //
           {
-            opts.frame_dstar = 1;
+            opts.frame_dstar = 0;
             opts.frame_x2tdma = 1;
             opts.frame_p25p1 = 1;
-            opts.frame_p25p2 = 0;
+            opts.frame_p25p2 = 1;
+            opts.inverted_p2 = 0;
             opts.frame_nxdn48 = 0;
             opts.frame_nxdn96 = 0;
             opts.frame_dmr = 1;
@@ -1960,13 +1944,16 @@ main (int argc, char **argv)
             opts.frame_provoice = 0;
             opts.frame_ysf = 1;
             opts.frame_m17 = 0;
+            opts.mod_c4fm = 1;
+            opts.mod_qpsk = 0;
+            state.rf_mod = 0;
+            opts.dmr_stereo = 1;
+            opts.dmr_mono = 0;
+            // opts.setmod_bw = 12000; //safe default on both DMR and P25
             opts.pulse_digi_rate_out = 8000;
-            opts.pulse_digi_out_channels = 1;
-            opts.dmr_stereo = 0; //switching in 'stereo' for 'mono'
-            opts.dmr_mono = 1;
-            state.dmr_stereo = 0;
-            //opts.setmod_bw = 7000;
-            sprintf (opts.output_name, "Legacy Auto");
+            opts.pulse_digi_out_channels = 2;
+            sprintf (opts.output_name, "AUTO");
+            fprintf (stderr,"Decoding AUTO P25, YSF, and DMR\n");
           }
           else if (optarg[0] == 'd')
           {
@@ -2206,9 +2193,9 @@ main (int argc, char **argv)
             // opts.setmod_bw = 12000; //safe default on both DMR and P25
             opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 2;
-            sprintf (opts.output_name, "XDMA");
-            fprintf (stderr,"Decoding XDMA P25 and DMR\n");
-            }
+            sprintf (opts.output_name, "AUTO");
+            fprintf (stderr,"Decoding AUTO P25, YSF, and DMR\n");
+          }
           else if (optarg[0] == 'n')
           {
             opts.frame_dstar = 0;
