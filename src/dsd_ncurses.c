@@ -2197,7 +2197,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.1c (20230720)");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "AW (20230729)");
     printw ("------------------------------------------------------------------------------\n"); 
   }
 #elif LIMAZULUTWEAKS
@@ -2218,7 +2218,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Main %s \n", GIT_TAG);
+    printw ("| Digital Speech Decoder: Florida Man Edition - AW (WIP) %s \n", GIT_TAG);
     printw ("------------------------------------------------------------------------------\n");
   }
 #endif
