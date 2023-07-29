@@ -290,181 +290,6 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t lich_bits[96])
   return err;
 }
 
-// void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
-// {
-
-//   int i;
-//   unsigned char voice1[8];
-//   unsigned char voice2[8];
-
-//   for (i = 0; i < 8; i++)
-//   {
-//     voice1[i] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+0], 8);
-//     voice2[i] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+64], 8);
-//   }
-
-//   //TODO: Add some decryption methods
-//   if (state->m17_enc != 0)
-//   {
-//     //process scrambler or AES-CTR decryption 
-//     //(no AES-CTR right now, Scrambler should be easy enough)
-//   }
-
-//   if (opts->payload == 1)
-//   {
-//     fprintf (stderr, "\n CODEC2: ");
-//     for (i = 0; i < 8; i++)
-//       fprintf (stderr, "%02X", voice1[i]);
-//     fprintf (stderr, " (1600)");
-
-//     fprintf (stderr, "\n A_DATA: "); //arbitrary data
-//     for (i = 0; i < 8; i++)
-//       fprintf (stderr, "%02X", voice2[i]);
-//   }
-  
-//   #ifdef USE_CODEC2
-//   size_t nsam;
-//   nsam = 320;
-
-//   short samp1[nsam];
-//   memset (samp1, 0, sizeof(samp1));
-
-//   codec2_decode(state->codec2_1600, samp1, voice1);
-
-//   if (opts->audio_out_type == 0 && state->m17_enc == 0) //Pulse Audio
-//   {
-//     pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
-//   }
-    
-//   if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS
-//   {
-//     write (opts->audio_out_fd, samp1, nsam*2);
-//   }
-
-//   if (opts->audio_out_type == 1 && state->m17_enc == 0) //STDOUT
-//   {
-//     write (opts->audio_out_fd, samp1, nsam*2);
-//   }
-
-//   //WIP: Wav file saving -- still need a way to open/close/label wav files similar to call history
-//   if(opts->wav_out_f != NULL && state->m17_enc == 0) //WAV
-//   {
-//     sf_write_short(opts->wav_out_f, samp1, nsam);
-//   }
-
-//   //TODO: Codec2 Raw file saving
-//   // if(mbe_out_dir)
-//   // {
-
-//   // }
-
-//   #endif
-
-// }
-
-// void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
-// {
-//   int i;
-//   unsigned char voice1[8];
-//   unsigned char voice2[8];
-
-//   for (i = 0; i < 8; i++)
-//   {
-//     voice1[i] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+0], 8);
-//     voice2[i] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+64], 8);
-//   }
-
-//   //TODO: Add some decryption methods
-//   if (state->m17_enc != 0)
-//   {
-//     //process scrambler or AES-CTR decryption 
-//     //(no AES-CTR right now, Scrambler should be easy enough)
-//   }
-
-//   if (opts->payload == 1)
-//   {
-//     fprintf (stderr, "\n CODEC2: ");
-//     for (i = 0; i < 8; i++)
-//       fprintf (stderr, "%02X", voice1[i]);
-//     fprintf (stderr, " (3200)");
-
-//     fprintf (stderr, "\n CODEC2: ");
-//     for (i = 0; i < 8; i++)
-//       fprintf (stderr, "%02X", voice2[i]);
-//     fprintf (stderr, " (3200)");
-//   }
-  
-//   #ifdef USE_CODEC2
-//   size_t nsam;
-//   nsam = 160;
-//   short samp1[nsam];
-//   short samp2[nsam];
-//   memset (samp1, 0, sizeof(samp1));
-//   memset (samp2, 0, sizeof(samp2));
-
-//   short upsamp[nsam*6]; //having more than one causes a memory overflow issue
-//   // short upsamp3[nsam*6]; //having more than one causes a memory overflow issue
-//   short out[6];
-//   short prev;
-//   int j;
-//   memset (upsamp, 0, sizeof(upsamp));
-//   memset (out, 0, sizeof(out));
-
-//   //Still thinking codec2_decode causes a memory overflow
-//   codec2_decode(state->codec2_3200, samp1, voice1);
-//   codec2_decode(state->codec2_3200, samp2, voice2);
-
-//   if (opts->audio_out_type == 0 && state->m17_enc == 0) //Pulse Audio
-//   {
-//     pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
-//     pa_simple_write(opts->pulse_digi_dev_out, samp2, nsam*2, NULL);
-//   }
-    
-//   if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS
-//   {
-//     // write (opts->audio_out_fd, samp1, nsam*2);
-//     // write (opts->audio_out_fd, samp2, nsam*2);
-
-//     //upsample to 48k and then play
-//     prev = samp1[0];
-//     for (i = 0; i < 160; i++)
-//     {
-//       upsampleS (samp1[i], prev, out);
-//       for (j = 0; j < 6; j++) upsamp[(i*6)+j] = out[j];
-//     }
-//     write (opts->audio_out_fd, upsamp, nsam*2*6);
-//     prev = samp2[0];
-//     for (i = 0; i < 160; i++)
-//     {
-//       upsampleS (samp2[i], prev, out);
-//       for (j = 0; j < 6; j++) upsamp[(i*6)+j] = out[j];
-//     }
-//     write (opts->audio_out_fd, upsamp, nsam*2*6);
-//   }
-
-//   if (opts->audio_out_type == 1 && state->m17_enc == 0) //STDOUT
-//   {
-//     write (opts->audio_out_fd, samp1, nsam*2);
-//     write (opts->audio_out_fd, samp2, nsam*2);
-//   }
-
-//   //WIP: Wav file saving -- still need a way to open/close/label wav files similar to call history
-//   if(opts->wav_out_f != NULL && state->m17_enc == 0) //WAV
-//   {
-//     sf_write_short(opts->wav_out_f, samp1, nsam);
-//     sf_write_short(opts->wav_out_f, samp2, nsam);
-//   }
-
-//   //TODO: Codec2 Raw file saving
-//   // if(mbe_out_dir)
-//   // {
-
-//   // }
-
-//   #endif
-
-// }
-
 void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
 {
 
@@ -515,10 +340,8 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t payload[1
     pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
   }
     
-  if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS
+  if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS 48k/1
   {
-    // write (opts->audio_out_fd, samp1, nsam*2);
-
     //upsample to 48k and then play
     prev = samp1[0];
     for (i = 0; i < 160; i++)
@@ -531,6 +354,11 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t payload[1
   }
 
   if (opts->audio_out_type == 1 && state->m17_enc == 0) //STDOUT
+  {
+    write (opts->audio_out_fd, samp1, nsam*2);
+  }
+
+  if (opts->audio_out_type == 2 && state->m17_enc == 0) //OSS 8k/1
   {
     write (opts->audio_out_fd, samp1, nsam*2);
   }
@@ -608,11 +436,8 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[1
     pa_simple_write(opts->pulse_digi_dev_out, samp2, nsam*2, NULL);
   }
     
-  if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS
+  if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS 48k/1
   {
-    // write (opts->audio_out_fd, samp1, nsam*2);
-    // write (opts->audio_out_fd, samp2, nsam*2);
-
     //upsample to 48k and then play
     prev = samp1[0];
     for (i = 0; i < 160; i++)
@@ -631,6 +456,12 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[1
   }
 
   if (opts->audio_out_type == 1 && state->m17_enc == 0) //STDOUT
+  {
+    write (opts->audio_out_fd, samp1, nsam*2);
+    write (opts->audio_out_fd, samp2, nsam*2);
+  }
+
+  if (opts->audio_out_type == 2 && state->m17_enc == 0) //OSS 8k/1 
   {
     write (opts->audio_out_fd, samp1, nsam*2);
     write (opts->audio_out_fd, samp2, nsam*2);

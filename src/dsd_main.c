@@ -103,6 +103,12 @@ void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
 
+#ifdef AERO_BUILD
+//TODO: Investigate why getSymbol needs to be run first in this context...truly confused here
+if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
+  for (int i = 0; i < 960; i++) getSymbol(opts, state, 1); //I think this is actually just framesync being a pain
+#endif
+
   if (opts->floating_point == 1)
   {
     state->aout_gain = opts->audio_gain;
@@ -638,8 +644,8 @@ initOpts (dsd_opts * opts)
   //this may not matter so much, since its already checked later on
   //but better safe than sorry I guess
   #ifdef AERO_BUILD
-  opts->audio_in_type = 5;  
-  opts->audio_out_type = 5; 
+  opts->audio_in_type = 9;  //only assign when configured
+  opts->audio_out_type = 9; //only assign when configured
   #else
   opts->audio_in_type = 0;  
   opts->audio_out_type = 0;
@@ -1387,6 +1393,12 @@ if (opts->audio_out_type == 0)
   // openPulseInput(opts); //test to see if we still randomly hang up in ncurses and tcp input if we open this and leave it opened
   openPulseOutput(opts);
 }
+
+#ifdef AERO_BUILD
+//TODO: Investigate why getSymbol needs to be run first in this context...truly confused here
+if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
+  for (int i = 0; i < 960; i++) getSymbol(opts, state, 1); //I think this is actually just framesync being a pain
+#endif
 
     while (!exitflag)
     {
@@ -2788,6 +2800,8 @@ main (int argc, char **argv)
         //TODO: Multiple output returns based on 8k/1, 8k/2, or maybe 48k/1? (2,3,5)??
         if (opts.pulse_digi_out_channels == 2)
           opts.audio_out_type = 2; //2 for 2 channel 8k OSS 16-bit short output
+        else if (opts.frame_m17 == 1)
+          opts.audio_out_type = 2;
         else opts.audio_out_type = 5;
 
         //debug 
