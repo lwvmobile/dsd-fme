@@ -97,6 +97,8 @@ unsigned long long int p2vars = 0;
 
 char * pEnd; //bugfix
 
+int slotson = 3;
+
 void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
@@ -1525,9 +1527,9 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version: v2.1c (20230720)\n");
+  fprintf (stderr, "Build Version: AW (WIP) \n");
   #else
-  fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
+  fprintf (stderr, "Build Version: AW (WIP) %s \n", GIT_TAG);
   #endif
   fprintf (stderr,"MBElib Version: %s\n", versionstr);
 
@@ -1635,7 +1637,6 @@ main (int argc, char **argv)
         //   break;
 
         case 'V':
-          int slotson = 3;
           sscanf (optarg, "%d", &slotson);
           if (slotson > 3) slotson = 3;
           opts.slot1_on = (slotson & 1) >> 0;

@@ -456,6 +456,19 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
   ssize_t result;
   UNUSED(result);
 
+  //don't synthesize voice if slot is turned off
+  if (opts->slot1_on == 0)
+  {
+    //clear any previously buffered audio
+    state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
+    state->audio_out_buf_p = state->audio_out_buf + 100;
+    memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
+    memset (state->audio_out_buf, 0, 100 * sizeof (short));
+    state->audio_out_idx2 = 0;
+    state->audio_out_idx = 0;
+    goto end_psv;
+  } 
+
   if (state->audio_out_idx > opts->delay)
   {
     if (opts->audio_out_type == 5) //OSS
@@ -473,6 +486,8 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 
 
   }
+
+  end_psv:
 
   if (state->audio_out_idx2 >= 800000)
   {

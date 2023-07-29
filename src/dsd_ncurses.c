@@ -2251,12 +2251,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 4) printw (" MBElib %s", versionstr);
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Build");
-      if (i == 6) printw (" v2.1c (20230720) \n");
+      if (i == 6) printw (" AW (WIP) \n");
       #elif ZDEV_BUILD
-      if (i == 5) printw (" %s ", "Audio WIP ");
+      if (i == 5) printw (" %s ", "AW (WIP)");
       if (i == 6) printw (" %s \n", GIT_TAG);
       #else 
-      if (i == 5) printw (" %s ", "Audio WIP");
+      if (i == 5) printw (" %s ", "AW (WIP)");
       if (i == 6) printw (" %s \n", GIT_TAG);
       #endif
       else printw ("\n");

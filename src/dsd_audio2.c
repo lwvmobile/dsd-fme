@@ -409,6 +409,8 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
 
   //TODO: add option to bypass enc with a toggle as well
 
+  if (opts->slot1_on == 0) encL = 1;
+
   //run autogain on the f_ buffers
   agf (opts, state, state->f_l,0);
 
@@ -477,11 +479,15 @@ void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
   
   agf(opts, state, state->f_l,0);
 
+  if (opts->slot1_on == 0) goto vfm_end;
+
   if (opts->audio_out_type == 0)
     pa_simple_write(opts->pulse_digi_dev_out, state->f_l, 160*4, NULL);
 
   if (opts->audio_out_type == 1 || opts->audio_out_type == 5)
     write(opts->audio_out_fd, state->f_l, 160*4);
+
+  vfm_end:
 
   if (state->audio_out_idx2 >= 800000)
   {
@@ -511,6 +517,8 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
   //TODO: Enc Checkdown -- would need to cover more ground than otherwise would like for it to, these should ultimately be passed to each encoding type decoder instead
 
   //TODO: add option to bypass enc with a toggle as well
+
+  if (opts->slot1_on == 0) encL = 1;
 
   //interleave left and right channels from the short storage area
   for (i = 0; i < 160; i++)
