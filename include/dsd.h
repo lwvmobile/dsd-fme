@@ -891,6 +891,7 @@ void processAudio (dsd_opts * opts, dsd_state * state);
 void processAudioR (dsd_opts * opts, dsd_state * state);
 void openPulseInput (dsd_opts * opts);
 void openPulseOutput (dsd_opts * opts);
+void openOSSOutput (dsd_opts * opts);
 void closePulseInput (dsd_opts * opts);
 void closePulseOutput (dsd_opts * opts);
 void writeSynthesizedVoice (dsd_opts * opts, dsd_state * state);

@@ -11,8 +11,8 @@
 
 #include "dsd.h"
 
-//TODO: Test All voice decoders with all combos 'short mono, short stereo, float mono, float stereo)
-//TODO: Clean comments and unused code in here
+//TODO: Test All voice decoders with all combos (short mono, short stereo, float mono, float stereo)
+//TODO: Need Method To Dynamically Close and Open any OSS instances when changing decoding classes from Ncurses Menu (particularly rate and/or channel configs)
 
 //CHECKLIST(PULSE): DMR BS(OK) DMR MS (OK) P25p1 (OK) P25p2 (OK) YSF (OK) NXDN (OK) M17 (short only!) pV (OK) dPMR (OK) MBEplayback (OK) X2-TDMA (who cares lol) D-STAR (WIP)
 //TODO: WAV File saving (works fine on shorts, but on float, writing short to wav is not auto-gained, 

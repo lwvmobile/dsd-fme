@@ -464,6 +464,12 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     closePulseOutput (opts);
   }
 
+  //close OSS output 
+  if (opts->audio_out_type == 2 || opts->audio_out_type == 5)
+  {
+    close (opts->audio_out_fd);
+  }
+
   if (opts->audio_in_type == 0) //close pulse input if it is the specified input method
   {
     closePulseInput(opts);
@@ -1271,7 +1277,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 48000;
+      opts->pulse_digi_rate_out = 8000;
       opts->pulse_digi_out_channels = 1;
       opts->frame_dstar = 0;
       opts->frame_x2tdma = 0;
@@ -1300,7 +1306,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 48000;
+      opts->pulse_digi_rate_out = 8000;
       opts->pulse_digi_out_channels = 1;
       opts->frame_dstar = 1;
       opts->frame_x2tdma = 0;
@@ -1340,7 +1346,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 48000;
+      opts->pulse_digi_rate_out = 8000;
       opts->pulse_digi_out_channels = 1;
       opts->frame_dstar = 0;
       opts->frame_x2tdma = 0;
@@ -1378,7 +1384,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 1; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 24000;
+      opts->pulse_digi_rate_out = 8000;
       opts->pulse_digi_out_channels = 2;
       opts->frame_dstar = 0;
       opts->frame_x2tdma = 0;
@@ -1405,7 +1411,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->dmr_mono = 0;
       opts->dmr_stereo = 1; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 24000;
+      opts->pulse_digi_rate_out = 8000;
       opts->pulse_digi_out_channels = 2;
       opts->frame_dmr = 0;
       opts->frame_dstar = 0;
@@ -1434,7 +1440,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 48000;
+      opts->pulse_digi_rate_out = 8000;
       opts->pulse_digi_out_channels = 1;
       opts->frame_dstar = 0;
       opts->frame_x2tdma = 0;
@@ -1465,7 +1471,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 48000;
+      opts->pulse_digi_rate_out = 8000;
       opts->pulse_digi_out_channels = 1;
       opts->frame_dstar = 0;
       opts->frame_x2tdma = 0;
@@ -1493,7 +1499,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 48000;
+      opts->pulse_digi_rate_out = 8000;
       opts->pulse_digi_out_channels = 1;
       opts->frame_dstar = 0;
       opts->frame_x2tdma = 0;
@@ -1522,7 +1528,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 1; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 24000;
+      opts->pulse_digi_rate_out = 8000;
       opts->pulse_digi_out_channels = 2;
       opts->frame_dstar = 0;
       opts->frame_x2tdma = 0;
@@ -1550,7 +1556,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
-      opts->pulse_digi_rate_out = 48000;
+      opts->pulse_digi_rate_out = 8000;
       opts->pulse_digi_out_channels = 1;
       opts->frame_dstar = 0;
       opts->frame_x2tdma = 0;
@@ -1791,6 +1797,11 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
   if (opts->audio_out == 1 && opts->audio_out_type == 0)
   {
     openPulseOutput (opts);
+  }
+
+  if (opts->audio_out_type == 2 || opts->audio_out_type == 5)
+  {
+    openOSSOutput (opts);
   }
   
 
