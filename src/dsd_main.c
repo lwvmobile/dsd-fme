@@ -159,9 +159,6 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
         #endif
       }
 
-      //print here not working as it should -- not always a -1 value on lastsynctype I presume
-      // if (state->lastsynctype != -1) fprintf (stderr, "Resume Scanning Mode\n");
-
     }
     state->lcn_freq_roll++;
     state->last_cc_sync_time = time(NULL);
@@ -1340,39 +1337,9 @@ liveScanner (dsd_opts * opts, dsd_state * state)
     if (opts->audio_gain > 42.0f) opts->audio_gain = 42.0f;
   }
 
-// if (opts->audio_in_type == 1)
-// {
-//   opts->pulse_digi_rate_out = 48000; 
-//   opts->pulse_digi_out_channels = 1;
-//   if (opts->dmr_stereo == 1)
-//   {
-//     opts->pulse_digi_rate_out = 24000; 
-//     opts->pulse_digi_out_channels = 2;
-//     fprintf (stderr, "STDIN Audio Rate Out set to 24000 Khz/2 Channel \n");
-//   }
-//   else fprintf (stderr, "STDIN Audio Rate Out set to 48000 Khz/1 Channel \n");
-//   opts->pulse_raw_rate_out = 48000;
-//   opts->pulse_raw_out_channels = 1;
-
-// }
-
 #ifdef USE_RTLSDR
   if(opts->audio_in_type == 3)
   {
-    //still need this section mostly due the the crackling on the rtl dongle when upsampled
-    //probably need to dig a little deeper, maybe inlvl releated?
-    // opts->pulse_digi_rate_out = 48000; //revert to 8K/1 for RTL input, random crackling otherwise
-    // opts->pulse_digi_out_channels = 1;
-    // if (opts->dmr_stereo == 1)
-    // {
-    //   opts->pulse_digi_rate_out = 24000; //rtl needs 24000 by 2 channel for DMR TDMA Stereo output
-    //   opts->pulse_digi_out_channels = 2; //minimal crackling 'may' be observed, not sure, can't test to see on DMR with RTL
-    //   // fprintf (stderr, "RTL Audio Rate Out set to 24000 Khz/2 Channel \n");
-    // }
-    // // else fprintf (stderr, "RTL Audio Rate Out set to 48000 Khz/1 Channel \n");
-    // opts->pulse_raw_rate_out = 48000;
-    // opts->pulse_raw_out_channels = 1;
-
     open_rtlsdr_stream(opts);
     opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
   }
@@ -1390,7 +1357,6 @@ if (opts->audio_in_type == 0)
 
 if (opts->audio_out_type == 0)
 {
-  // openPulseInput(opts); //test to see if we still randomly hang up in ncurses and tcp input if we open this and leave it opened
   openPulseOutput(opts);
 }
 
