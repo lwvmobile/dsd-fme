@@ -488,7 +488,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   if (internalslot == 0 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000)
     playSynthesizedVoiceSS3 (opts, state); //Short Stereo Mix 3v2
 
-  if (skipcount > 2) //after 2 consecutive data frames, drop back to getFrameSync and process with dmr_data_sync
+  if (skipcount > 3) //after 3 onsecutive data frames, drop back to getFrameSync and process with dmr_data_sync (need one more in order to push last voice on slot 2 only voice)
   {
     //set tests to all good so we don't get a bogus/redundant voice error 
     cach_err = 0;
@@ -515,6 +515,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
  //close any open MBEout files
  if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
  if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
+
+ //clear out any stale audio storage buffers
+ memset (state->f_l4, 0.1f, sizeof(state->f_l4));
+ memset (state->f_r4, 0.1f, sizeof(state->f_r4));
+ memset (state->s_l4, 0, sizeof(state->s_l4));
+ memset (state->s_r4, 0, sizeof(state->s_r4));
 
  //if we have a tact or emb err, then produce sync pattern/err message
  if (tact_okay != 1 || emb_ok != 1)

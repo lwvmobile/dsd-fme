@@ -19,6 +19,11 @@
 
 //TODO: Continue to work on AGF function for best gain/normalization
 
+//TODO: Either clear out stale s_l4 and f_l4 buffers or push playback on them somehow (particularly DMR)
+//stale buffered audio may be present when playing voice in slot 2 but the last sample isn't played but 
+//is later played when the DMR BS loop resumes on a new call in slot 1...may need to expand the BS loop to cover an extra tdma frame to force the push
+//or just clear the stale values upon exit of the BS loop
+
 void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 {
   int i, run;
