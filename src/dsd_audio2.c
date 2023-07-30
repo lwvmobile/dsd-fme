@@ -10,6 +10,7 @@
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
+#include <math.h>
 
 //TODO: Test All voice decoders with all combos (short mono, short stereo, float mono, float stereo)
 //TODO: Need Method To Dynamically Close and Open any OSS instances when changing decoding classes from Ncurses Menu (particularly rate and/or channel configs)
@@ -865,6 +866,27 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
     memset (state->audio_out_float_bufR, 0, 100 * sizeof (float));
     memset (state->audio_out_bufR, 0, 100 * sizeof (short));
     state->audio_out_idx2R = 0;
+  }
+
+}
+
+//largely borrowed from Boatbod OP25 (simplified single tone ID version)
+void soft_tonef (float samp[160], int n, int ID, int AD)
+{
+  int i;
+  float step1, step2, amplitude, freq1, freq2;
+
+  // Synthesize tones
+  freq1 = 31.25 * ID; freq2 = freq1;
+  step1 = 2 * M_PI * freq1 / 8000.0f;
+  step2 = 2 * M_PI * freq2 / 8000.0f;
+  amplitude = AD * 75.0f;
+
+  for (i = 0; i < 160; i++)
+  {
+    samp[i] = (float) ( amplitude * (sin((n) * step1)/2 + sin((n) * step2)/2) );
+    samp[i] /= 8000.0f;
+    n++;
   }
 
 }

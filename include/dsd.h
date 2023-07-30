@@ -961,6 +961,7 @@ int getSymbol (dsd_opts * opts, dsd_state * state, int have_sync);
 void upsample (dsd_state * state, float invalue);
 void processDSTAR (dsd_opts * opts, dsd_state * state);
 
+void soft_tonef (float samp[160], int n, int ID, int AD);
 //new p25lcw
 void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t irrecoverable_errors);
 

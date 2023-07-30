@@ -135,120 +135,108 @@ char * DMRBusrtTypes[32] = {
 
 };
 
-#ifdef TONES //NOTE: This option is purely for the precompiled version that gets distributed, not other user Cygwin builds
-void beeper (dsd_opts * opts, dsd_state * state, int type)
-{
-  FILE *beep;
-  char wav_name[1024] = {0};
-  if (opts->pulse_digi_rate_out == 8000) strncpy(wav_name, "tone8.wav", 1023);
-  if (opts->pulse_digi_rate_out == 48000) strncpy(wav_name, "tone48.wav", 1023);
-  if (opts->pulse_digi_rate_out == 24000) strncpy(wav_name, "tone24.wav", 1023);
-  if (opts->audio_out_type == 5) strncpy(wav_name, "tone48.wav", 1023);
-
-  wav_name[1023] = '\0';
-  struct stat stat_buf;
-  if (stat(wav_name, &stat_buf) == 0)
-  {
-    beep = fopen (wav_name, "ro");
-    uint8_t buf[1024];
-    memset (buf, 0, sizeof(buf));
-    short blip = 0;
-    int loop = 1;
-    while (loop == 1)
-    {
-      fread(buf, sizeof(buf), 1, beep);
-      if ( feof (beep) )
-      {
-        loop = 0;
-      }
-      if (loop == 1)
-      {
-        //only beep on R if dmr_stereo is active and slot 2, else beep on L
-        if (type == 0 && opts->dmr_stereo == 1 && opts->audio_out == 1)
-        {
-          if (opts->audio_out_type == 0) pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
-          if (opts->audio_out_type == 5) write (opts->audio_out_fd, buf, sizeof(buf));
-          //fprintf (stderr, "BEEP 0 24\n");
-        }
-        if (type == 1 && opts->dmr_stereo == 1 && opts->audio_out == 1)
-        {
-          if (opts->audio_out_type == 0) pa_simple_write(opts->pulse_digi_dev_outR, buf, sizeof(buf), NULL);
-          if (opts->audio_out_type == 5) write (opts->audio_out_fd, buf, sizeof(buf));
-          //fprintf (stderr, "BEEP 1 24\n");
-        }
-        if (opts->dmr_stereo == 0 && opts->audio_out == 1)
-        {
-          if (opts->audio_out_type == 0) pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
-          if (opts->audio_out_type == 5) write (opts->audio_out_fd, buf, sizeof(buf));
-          //fprintf (stderr, "BEEP 0 8\n");
-        }
-
-
-      }
-
-    }
-
-    fclose (beep);
-  }
-
-}
-
-#else
-void beeper (dsd_opts * opts, dsd_state * state, int type)
+//Sorry Remus :(
+void beeper (dsd_opts * opts, dsd_state * state, int lr)
 {
   UNUSED(state);
+  int i, j, n;
+  //use lr as left or right channel designation in stereo config
+  float samp_f[160];  //mono float sample
+  float samp_fs[320]; //stereo float sample
+  short samp_s[160];  //mono short sample
+  short samp_ss[320]; //stereo short sample
+  short samp_su[960]; //mono short upsample
+  short outbuf[6];    //temp storage for upsample
 
-  FILE *beep;
-  char wav_name[1024] = {0};
+  n = 0; //rolling sine wave 'degree'
 
-  if (opts->pulse_digi_rate_out == 8000) strncpy(wav_name, "/usr/share/tone8.wav", 1023);
-  if (opts->pulse_digi_rate_out == 48000) strncpy(wav_name, "/usr/share/tone48.wav", 1023);
-  if (opts->pulse_digi_rate_out == 24000) strncpy(wav_name, "/usr/share/tone24.wav", 1023);
-  if (opts->audio_out_type == 5) strncpy(wav_name, "/usr/share/tone24.wav", 1023);
-  wav_name[1023] = '\0';
-  struct stat stat_buf;
-  if (stat(wav_name, &stat_buf) == 0)
+  //each j increment is 20 ms at 160 samples / 8 kHz
+  for (j = 0; j < 3; j++)
   {
-    beep = fopen (wav_name, "ro");
-    uint8_t buf[1024];
-    memset (buf, 0, sizeof(buf));
-    int loop = 1;
-    while (loop == 1)
+    //'zero' out stereo mix samples
+    memset (samp_fs, 0.1f, sizeof(samp_fs));
+    memset (samp_ss, 0, sizeof(samp_ss));
+
+    //generate a tone (ID=45, AD=103, rolling n value)
+    soft_tonef(samp_f, n, 45, 103);
+
+    //convert float to short if required
+    if (opts->floating_point == 0)
     {
-      fread(buf, sizeof(buf), 1, beep);
-      if ( feof (beep) )
+      mbe_floattoshort(samp_f, samp_s);
+      for (i = 0; i < 160; i++)
       {
-        loop = 0;
+        samp_s[i] *= 4000; //apply gain
+        samp_ss[(i*2)+lr] = samp_s[i];
       }
-      if (loop == 1)
-      {
-        //only beep on R if dmr_stereo is active and slot 2, else beep on L
-        if (type == 0 && opts->dmr_stereo == 1 && opts->audio_out == 1)
-        {
-          pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
-          //fprintf (stderr, "BEEP 0 24\n");
-        }
-        if (type == 1 && opts->dmr_stereo == 1 && opts->audio_out == 1)
-        {
-          pa_simple_write(opts->pulse_digi_dev_outR, buf, sizeof(buf), NULL);
-          //fprintf (stderr, "BEEP 1 24\n");
-        }
-        if (opts->dmr_stereo == 0 && opts->audio_out == 1)
-        {
-          pa_simple_write(opts->pulse_digi_dev_out, buf, sizeof(buf), NULL);
-          //fprintf (stderr, "BEEP 0 8\n");
-        }
-
-
-      }
-
     }
 
-    fclose (beep);
+    //load returned tone sample into appropriate channel -- left = +0; right = +1;
+    for (i = 0; i < 160; i++)
+      samp_fs[(i*2)+lr] = samp_f[i];
+
+    //play sample 3 times (20ms x 3 = 60ms)
+    if (opts->audio_out_type == 0) //Pulse Audio
+    {
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 1)
+        pa_simple_write(opts->pulse_digi_dev_out, samp_fs, 320*4, NULL);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 1)
+        pa_simple_write(opts->pulse_digi_dev_out, samp_f,  160*4, NULL);
+
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 0)
+        pa_simple_write(opts->pulse_digi_dev_out, samp_ss, 320*2, NULL);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 0)
+        pa_simple_write(opts->pulse_digi_dev_out, samp_s,  160*2, NULL);
+      
+    }
+
+    else if (opts->audio_out_type == 1) //STDOUT
+    {
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 1)
+        write(opts->audio_out_fd, samp_fs, 320*4);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 1)
+        write(opts->audio_out_fd, samp_f,  160*4);
+
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 0)
+        write(opts->audio_out_fd, samp_ss, 320*2);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 0)
+        write(opts->audio_out_fd, samp_s,  160*2);
+    }
+
+    else if (opts->audio_out_type == 2) //OSS Variable Output (no float)
+    {
+
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 0)
+        write(opts->audio_out_fd, samp_ss, 320*2);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 0)
+        write(opts->audio_out_fd, samp_s,  160*2);
+    }
+
+    else if (opts->audio_out_type == 5) //OSS 48k/1 configuration with upsample
+    {
+      short prev = 0;
+      for (i = 0; i < 160; i++)
+      {
+        upsampleS (samp_s[i], prev, outbuf);
+        samp_su[(i*6)+0] = outbuf[0];
+        samp_su[(i*6)+1] = outbuf[1];
+        samp_su[(i*6)+2] = outbuf[2];
+        samp_su[(i*6)+3] = outbuf[3];
+        samp_su[(i*6)+4] = outbuf[4];
+        samp_su[(i*6)+5] = outbuf[5];
+      }
+      
+      write (opts->audio_out_fd, samp_su, 960*2);
+    }
+    
   }
 
 }
-#endif
 
 char * getDateN(void) {
   char datename[80]; //bug in 32-bit Ubuntu when using date in filename, date is garbage text

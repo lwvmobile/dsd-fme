@@ -97,12 +97,6 @@ Finish by running these steps to clone and build DSD-FME.
 ```
 git clone https://github.com/lwvmobile/dsd-fme
 cd dsd-fme
-sudo cp tone8.wav /usr/share/
-sudo cp tone24.wav /usr/share/
-sudo cp tone48.wav /usr/share/
-sudo chmod 777 /usr/share/tone8.wav
-sudo chmod 777 /usr/share/tone24.wav
-sudo chmod 777 /usr/share/tone48.wav
 mkdir build
 cd build
 cmake ..
@@ -129,12 +123,6 @@ Then you can build and install using
 ```
 git clone https://github.com/lwvmobile/dsd-fme
 cd dsd-fme
-cp tone8.wav /usr/share/
-cp tone24.wav /usr/share/
-cp tone48.wav /usr/share/
-chmod 777 /usr/share/tone8.wav
-chmod 777 /usr/share/tone24.wav
-chmod 777 /usr/share/tone48.wav
 mkdir build
 cd build
 # -DAERO=ON is optional, but recommended if you want the older OSS support as well
@@ -163,15 +151,4 @@ cmake ..
 make -j `nproc`
 sudo make install
 sudo ldconfig
-```
-
-If the call alert wav files aren't playing, then make sure to run the following in the dsd-fme folder to copy the wav files to the /usr/share/ folder and give them adequate permission to be accessed.
-
-```
-sudo cp tone8.wav /usr/share/
-sudo cp tone24.wav /usr/share/
-sudo cp tone48.wav /usr/share/
-sudo chmod 777 /usr/share/tone8.wav
-sudo chmod 777 /usr/share/tone24.wav
-sudo chmod 777 /usr/share/tone48.wav
 ```
