@@ -951,7 +951,6 @@ void initState (dsd_state * state);
 void usage ();
 void liveScanner (dsd_opts * opts, dsd_state * state);
 void cleanupAndExit (dsd_opts * opts, dsd_state * state);
-// void sigfun (int sig); //not necesary
 int main (int argc, char **argv);
 void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv);
 void processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char ambe_fr[4][24], char imbe7100_fr[7][24]);
@@ -961,7 +960,10 @@ int getSymbol (dsd_opts * opts, dsd_state * state, int have_sync);
 void upsample (dsd_state * state, float invalue);
 void processDSTAR (dsd_opts * opts, dsd_state * state);
 
+//new cleaner, sleaker, nicer mbe handler...maybe -- wrap around ifdef later on with cmake options
+void soft_mbe (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char ambe_fr[4][24], char imbe7100_fr[7][24]);
 void soft_tonef (float samp[160], int n, int ID, int AD);
+
 //new p25lcw
 void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t irrecoverable_errors);
 
