@@ -1315,7 +1315,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   sprintf (state->ftype, "D-STAR ");
                   if (opts->errorbars == 1)
                     {
-                      printFrameSync (opts, state, "+D-STAR ", synctest_pos + 1, modulation);
+                      printFrameSync (opts, state, "+D-STAR VOICE", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 6;
                   if ( opts->monitor_input_audio == 1)
@@ -1334,7 +1334,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   sprintf (state->ftype, "D-STAR ");
                   if (opts->errorbars == 1)
                     {
-                      printFrameSync (opts, state, "-D-STAR ", synctest_pos + 1, modulation);
+                      printFrameSync (opts, state, "-D-STAR VOICE", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 7;
                   if ( opts->monitor_input_audio == 1)
@@ -1353,7 +1353,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                    sprintf (state->ftype, "D-STAR_HD ");
                    if (opts->errorbars == 1)
                      {
-                       printFrameSync (opts, state, "+D-STAR_HD ", synctest_pos + 1, modulation);
+                       printFrameSync (opts, state, "+D-STAR HEADER ", synctest_pos + 1, modulation);
                      }
                    state->lastsynctype = 18;
                    if ( opts->monitor_input_audio == 1)
@@ -1372,7 +1372,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                    sprintf (state->ftype, " D-STAR_HD");
                    if (opts->errorbars == 1)
                      {
-                       printFrameSync (opts, state, "-D-STAR_HD ", synctest_pos + 1, modulation);
+                       printFrameSync (opts, state, "-D-STAR HEADER ", synctest_pos + 1, modulation);
                      }
                    state->lastsynctype = 19;
                    if ( opts->monitor_input_audio == 1)

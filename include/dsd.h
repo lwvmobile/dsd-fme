@@ -672,9 +672,6 @@ typedef struct
   int symbol_throttle; //throttle speed
   int use_throttle; //only use throttle if set to 1
 
-  //dstar header for ncurses
-  unsigned char dstarradioheader[41];
-
   //dmr trunking stuff
   int dmr_rest_channel;
   int dmr_mfid; //just when 'fid' is used as a manufacturer ID and not a feature set id
@@ -755,6 +752,12 @@ typedef struct
   char ysf_rm3[6];
   char ysf_rm4[6];
   char ysf_txt[21][21]; //text storage blocks
+
+  //DSTAR Call Strings and Info
+  char dstar_rpt1[9];
+  char dstar_rpt2[9];
+  char dstar_dst[9];
+  char dstar_src[13];
 
   //M17 Storage
   uint8_t m17_lsf[360];

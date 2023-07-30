@@ -1936,27 +1936,27 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   }
 
-  //D-STAR, work on adding the headers later
-  if ( (lls == 6 || lls == 7 || lls == 18 || lls == 19) && (time(NULL) - call_matrix[9][5] > 5) && state->carrier == 1)
-  {
-    for (short int k = 0; k < 9; k++)
-    {
-      call_matrix[k][0] = call_matrix[k+1][0];
-      call_matrix[k][1] = call_matrix[k+1][1];
-      call_matrix[k][2] = call_matrix[k+1][2];
-      call_matrix[k][3] = call_matrix[k+1][3];
-      call_matrix[k][4] = call_matrix[k+1][4];
-      call_matrix[k][5] = call_matrix[k+1][5];
-    }
+  //DSTAR
+  // if ( (lls == 6 || lls == 7 || lls == 18 || lls == 19) && (time(NULL) - call_matrix[9][5] > 5) && state->carrier == 1)
+  // {
+  //   for (short int k = 0; k < 9; k++)
+  //   {
+  //     call_matrix[k][0] = call_matrix[k+1][0];
+  //     call_matrix[k][1] = call_matrix[k+1][1];
+  //     call_matrix[k][2] = call_matrix[k+1][2];
+  //     call_matrix[k][3] = call_matrix[k+1][3];
+  //     call_matrix[k][4] = call_matrix[k+1][4];
+  //     call_matrix[k][5] = call_matrix[k+1][5];
+  //   }
 
-    call_matrix[9][0] = lls;
-    call_matrix[9][1] = 1;
-    call_matrix[9][2] = 1;
-    call_matrix[9][3] = 1;
-    call_matrix[9][4] = 1;
-    call_matrix[9][5] = time(NULL);
+  //   call_matrix[9][0] = lls;
+  //   call_matrix[9][1] = 1;
+  //   call_matrix[9][2] = 1;
+  //   call_matrix[9][3] = 1;
+  //   call_matrix[9][4] = 1;
+  //   call_matrix[9][5] = time(NULL);
 
-  }
+  // }
 
   //NXDN -- I really need to fix this better, but this is good enough for today
   if ( call_matrix[9][2] != src && src != 0 && rn != -1 )
@@ -2430,25 +2430,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ("------------------------------------------------------------------------------\n");
 
   printw ("--Call Info-------------------------------------------------------------------\n");
-  //DSTAR...what a pain...
+  //DSTAR
   if (lls == 6 || lls == 7 || lls == 18 || lls == 19)
   {
-    if (state->dstarradioheader[3] != 0) //
-    {
-      printw ("| RPT 2: [%c%c%c%c%c%c%c%c] ", state->dstarradioheader[3], state->dstarradioheader[4],
-  			state->dstarradioheader[5], state->dstarradioheader[6], state->dstarradioheader[7], state->dstarradioheader[8],
-  			state->dstarradioheader[9], state->dstarradioheader[10]);
-      printw ("RPT 1: [%c%c%c%c%c%c%c%c] \n| ", state->dstarradioheader[11], state->dstarradioheader[12],
-  			state->dstarradioheader[13], state->dstarradioheader[14], state->dstarradioheader[15], state->dstarradioheader[16],
-  			state->dstarradioheader[17], state->dstarradioheader[18]);
-      printw ("YOUR:  [%c%c%c%c%c%c%c%c] ", state->dstarradioheader[19], state->dstarradioheader[20],
-  			state->dstarradioheader[21], state->dstarradioheader[22], state->dstarradioheader[23], state->dstarradioheader[24],
-  			state->dstarradioheader[25], state->dstarradioheader[26]);
-      printw ("MY: [%c%c%c%c%c%c%c%c] [%c%c%c%c]\n", state->dstarradioheader[27],
-  			state->dstarradioheader[28], state->dstarradioheader[29], state->dstarradioheader[30], state->dstarradioheader[31],
-  			state->dstarradioheader[32], state->dstarradioheader[33], state->dstarradioheader[34], state->dstarradioheader[35],
-  			state->dstarradioheader[36], state->dstarradioheader[37], state->dstarradioheader[38]);
-    }
+    printw ("| %s ", SyncTypes[lls]);
+    printw ("\n");
+    printw ("| RPT2: %s", state->dstar_rpt2);
+    printw (" RPT1: %s", state->dstar_rpt1);
+    printw ("\n");
+    printw ("| DEST: %s", state->dstar_dst);
+    printw ("  SRC: %s", state->dstar_src);
+    printw ("\n");
   }
 
   //M17
@@ -3328,13 +3320,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
   }
 
-
-  if (lls == 6 || lls == 7 || lls == 18 || lls == 19)
-  {
-    printw ("| %s ", SyncTypes[lls]);
-    //printw ("%s", state->dmr_branding);
-    printw ("\n");
-  }
   //fence bottom
   printw ("------------------------------------------------------------------------------\n");
   //colors off

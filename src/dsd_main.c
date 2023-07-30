@@ -470,6 +470,12 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
   state->ysf_fi = 9;
   state->ysf_cm = 9;
 
+  //DSTAR Call Strings
+  sprintf (state->dstar_rpt1, "%s", "        "); //8 spaces
+  sprintf (state->dstar_rpt2, "%s", "        "); //8 spaces
+  sprintf (state->dstar_dst,  "%s", "        "); //8 spaces
+  sprintf (state->dstar_src,  "%s", "        "); //8 spaces
+
   //M17 Storage
   memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
   state->m17_str_dt = 9;
@@ -941,8 +947,6 @@ initState (dsd_state * state)
 
   state->payload_miP = 0;
 
-  memset(state->dstarradioheader, 0, 41);
-
   //initialize dmr data header source
   state->dmr_lrrp_source[0] = 0;
   state->dmr_lrrp_source[1] = 0;
@@ -1115,6 +1119,12 @@ initState (dsd_state * state)
   state->ysf_dt = 9;
   state->ysf_fi = 9;
   state->ysf_cm = 9;
+
+  //DSTAR Call Strings
+  sprintf (state->dstar_rpt1, "%s", "        "); //8 spaces
+  sprintf (state->dstar_rpt2, "%s", "        "); //8 spaces
+  sprintf (state->dstar_dst,  "%s", "        "); //8 spaces
+  sprintf (state->dstar_src,  "%s", "        "); //8 spaces
 
   //M17 Storage
   memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
