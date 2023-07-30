@@ -13,11 +13,11 @@
 #include <math.h>
 
 //TODO: Test All voice decoders with all combos (short mono, short stereo, float mono, float stereo)
-//TODO: Need Method To Dynamically Close and Open any OSS instances when changing decoding classes from Ncurses Menu (particularly rate and/or channel configs)
-
-//CHECKLIST(PULSE): DMR BS(OK) DMR MS (OK) P25p1 (OK) P25p2 (OK) YSF (OK) NXDN (OK) M17 (short only!) pV (OK) dPMR (OK) MBEplayback (OK) X2-TDMA (who cares lol) D-STAR (WIP)
+//CHECKLIST(PULSE): DMR BS(OK) DMR MS (OK) P25p1 (OK) P25p2 (OK) YSF (OK) NXDN (OK) M17 (short only!) pV (OK) dPMR (OK) MBEplayback (OK) X2-TDMA (who cares lol) D-STAR (OK)
 //TODO: WAV File saving (works fine on shorts, but on float, writing short to wav is not auto-gained, 
 //so super quiet, either convert to float wav files, or run processAudio AFTER memcpy of the temp_buf)
+
+//TODO: Continue to work on AGF function for best gain/normalization
 
 void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 {
@@ -30,6 +30,7 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
   float mmin = -0.75f;
   float aavg = 0.0f; //average of the absolute value
   float df; //decimation value
+  df = 8000.0f; //test value -- this would be the ideal perfect value if everybody spoke directly into the mic at a reasonable volume
 
   if (slot == 0)
     df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gain);
@@ -52,6 +53,9 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
       samp[i] = mmax;
     if (samp[i] < mmin)
       samp[i] = mmin;
+
+    //may have been a tad too loud on the high end
+    // samp[i] *= 0.5f; //testing various values here
 
   }
 
@@ -276,6 +280,12 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
     }
   }
 
+  //CHEAT: Using the slot on/off, use that to set encL or encR back on
+  //as a simple way to turn off voice synthesis in a particular slot
+  //its not really 'disabled', we just aren't playing it
+  if (opts->slot1_on == 0) encL = 1;
+  if (opts->slot2_on == 0) encR = 1;
+
   //note, always set a stereo float mix to a baseline value and not zero!
   memset (stereo_samp1, 0.1f, sizeof(stereo_samp1));
   memset (stereo_samp2, 0.1f, sizeof(stereo_samp2));
@@ -327,12 +337,6 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
     if (!encR)
       stereo_samp4[i*2+1] = state->f_r4[3][i];
   }
-
-  //CHEAT: Using the slot on/off, use that to set encL or encR back on
-  //as a simple way to turn off voice synthesis in a particular slot
-  //its not really 'disabled', we just aren't playing it
-  if (opts->slot1_on == 0) encL = 1;
-  if (opts->slot2_on == 0) encR = 1;
 
   if (encL && encR)
     goto END_FS4;
@@ -418,7 +422,6 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
   //at this point, if both channels are still flagged as enc, then we can skip all playback/writing functions
   if (encL)
     goto FS_END;
-
 
   //interleave left and right channels from the temp (float) buffer with makeshift 'volume' decimation
   for (i = 0; i < 160; i++)
