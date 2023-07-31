@@ -1312,10 +1312,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
                   state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "D-STAR ");
+                  sprintf (state->ftype, "DSTAR ");
                   if (opts->errorbars == 1)
                     {
-                      printFrameSync (opts, state, "+D-STAR VOICE ", synctest_pos + 1, modulation);
+                      printFrameSync (opts, state, "+DSTAR VOICE ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 6;
                   if ( opts->monitor_input_audio == 1)
@@ -1331,10 +1331,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->offset = synctest_pos;
                   state->max = ((state->max) + lmax) / 2;
                   state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "D-STAR ");
+                  sprintf (state->ftype, "DSTAR ");
                   if (opts->errorbars == 1)
                     {
-                      printFrameSync (opts, state, "-D-STAR VOICE ", synctest_pos + 1, modulation);
+                      printFrameSync (opts, state, "-DSTAR VOICE ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 7;
                   if ( opts->monitor_input_audio == 1)
@@ -1350,10 +1350,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                    state->offset = synctest_pos;
                    state->max = ((state->max) + lmax) / 2;
                    state->min = ((state->min) + lmin) / 2;
-                   sprintf (state->ftype, "D-STAR_HD ");
+                   sprintf (state->ftype, "DSTAR_HD ");
                    if (opts->errorbars == 1)
                      {
-                       printFrameSync (opts, state, "+D-STAR HEADER", synctest_pos + 1, modulation);
+                       printFrameSync (opts, state, "+DSTAR HEADER", synctest_pos + 1, modulation);
                      }
                    state->lastsynctype = 18;
                    if ( opts->monitor_input_audio == 1)
@@ -1369,10 +1369,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                    state->offset = synctest_pos;
                    state->max = ((state->max) + lmax) / 2;
                    state->min = ((state->min) + lmin) / 2;
-                   sprintf (state->ftype, " D-STAR_HD");
+                   sprintf (state->ftype, " DSTAR_HD");
                    if (opts->errorbars == 1)
                      {
-                       printFrameSync (opts, state, "-D-STAR HEADER", synctest_pos + 1, modulation);
+                       printFrameSync (opts, state, "-DSTAR HEADER", synctest_pos + 1, modulation);
                      }
                    state->lastsynctype = 19;
                    if ( opts->monitor_input_audio == 1)

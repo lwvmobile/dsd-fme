@@ -62,8 +62,8 @@ char * SyncTypes[44] = {
   "X2TDMA DATA",
   "X2TDMA VOICE",
   "X2TDMA VOICE",
-  "DSTAR",
-  "DSTAR",
+  "DSTAR", //voice
+  "DSTAR", //voice
   "NXDN VOICE",
   "NXDN VOICE",
   "DMR", //10
@@ -74,8 +74,8 @@ char * SyncTypes[44] = {
   "EDACS/PV",
   "NXDN VOICE", //DATA
   "NXDN VOICE", //DATA
-  "DSTAR HD",
-  "DSTAR HD",
+  "DSTAR", //header
+  "DSTAR", //header
   "dPMR", //20
   "dPMR",
   "dPMR",
@@ -322,7 +322,7 @@ char *choices[] = {
       "Resume Decoding",
       "Decode AUTO",
 			"Decode M17",
-			"Decode D-STAR",
+			"Decode DSTAR",
 			"Decode P25p1",
 			"Decode EDACS/PV",
       "Decode P25p2 ",
@@ -1261,7 +1261,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       // resetState (state); //use sparingly, may cause memory leak
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
-      sprintf (opts->output_name, "D-STAR");
+      sprintf (opts->output_name, "DSTAR");
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 0; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
@@ -2443,7 +2443,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("\n");
     printw ("| TEXT: %s", state->dstar_txt);
     printw ("\n");
-    printw ("| XTRA: %s", state->dstar_gps);
+    printw ("| DATA: %s", state->dstar_gps);
     printw ("\n");
   }
 

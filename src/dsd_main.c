@@ -1240,7 +1240,7 @@ usage ()
   printf ("  -fs           DMR Stereo BS and MS Simplex\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -f2           Decode only P25 Phase 2 (6000 sps) **\n");
-  printf ("  -fd           Decode only D-STAR\n");
+  printf ("  -fd           Decode only DSTAR\n");
   printf ("  -fx           Decode only X2-TDMA\n");
   printf ("  -fy           Decode only YSF\n");
   printf ("  -fz             Decode only M17*\n");
@@ -1954,8 +1954,8 @@ main (int argc, char **argv)
             state.dmr_stereo = 0;
             opts.dmr_mono = 0;
             state.rf_mod = 0;
-            sprintf (opts.output_name, "D-STAR");
-            fprintf (stderr,"Decoding only D-STAR frames.\n");
+            sprintf (opts.output_name, "DSTAR");
+            fprintf (stderr,"Decoding only DSTAR frames.\n");
           }
           else if (optarg[0] == 'x')
           {

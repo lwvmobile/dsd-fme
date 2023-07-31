@@ -16,10 +16,10 @@
 *
 */
 
-#include "fcs.h"
 #include "descramble.h"
 #include "dstar_header.h"
 #include "dsd.h"
+// #include "fcs.h" //error:  multiple definition of `calc_fcs'; CMakeFiles/dsd-fme.dir/src/dstar.c.o:dstar.c:(.text+0x0): first defined here
 
 void dstar_header_decode(dsd_state * state, int radioheaderbuffer[660])
 {
@@ -64,6 +64,10 @@ void dstar_header_decode(dsd_state * state, int radioheaderbuffer[660])
 	str2[8] = '\0';
 	str3[8] = '\0';
 	str4[12] = '\0';
+
+	//TODO: Add fcs_calc to header as well
+	// uint16_t crc_ext = (radioheader[39] << 8) + radioheader[40];
+  // uint16_t crc_cmp = calc_fcs(radioheader, 39);
 
 	//debug
 	// fprintf (stderr, "\n HD: ");

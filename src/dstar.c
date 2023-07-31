@@ -1,6 +1,6 @@
 #include "dsd.h"
 #include "dstar_const.h"
-#include "dstar_header.h"
+#include "fcs.h"
 
 //simplified DSTAR
 void processDSTAR(dsd_opts * opts, dsd_state * state)
@@ -74,33 +74,23 @@ uint8_t sd_d[48] =
  1,1,0,0, //C
  1,0,0,1};//9
 
-uint16_t crc16ds(uint8_t *buf, int len)
-{
-  uint32_t poly = 0x1021; //1021, 0811, 8408, 8810
-  uint32_t crc = 0x0; //0, of FFFF
-  for(int i=0; i<len; i++) 
-  {
-    uint8_t bit = buf[i] & 1;
-    crc = ((crc << 1) | bit) & 0x1ffff;
-    if (crc & 0x10000) crc = (crc & 0xffff) ^ poly;
-  }
-  crc = crc ^ 0xffff;
-  return crc & 0xffff;
-}
-
+//no so simplified Slow Data
 void processDSTAR_SD(dsd_opts * opts, dsd_state * state, uint8_t * sd)
 {
 
   int i, j, len;
   uint8_t sd_bytes[60]; //raw slow data packed into bytes
-  uint8_t hd_bytes[51]; //storage for packed bytes sans the header indicator byte (0x55)
+  uint8_t hd_bytes[60]; //storage for packed bytes sans the header indicator byte (0x55)
+  uint8_t payload[60]; //unchanged copy of sd_bytes for payload printing
   uint8_t rev[480]; //storage for reversing the bit order
   memset (sd_bytes, 0, sizeof(sd_bytes));
   memset (hd_bytes, 0, sizeof(hd_bytes));
+  memset (payload, 0, sizeof(payload));
 
   //apply the descrambler
   for (i = 0; i < 480; i++)
     sd[i] ^= sd_d[i%24];
+
   //reverse the bit order
   for (i = 0; i < 480; i++)
     rev[i] = sd[479-i];
@@ -112,24 +102,11 @@ void processDSTAR_SD(dsd_opts * opts, dsd_state * state, uint8_t * sd)
   for (i = 0; i < 60; i++)
     sd_bytes[59-i] = (uint8_t)ConvertBitIntoBytes(&sd[i*8+0], 8);
 
+  //make a copy to payload that won't be altered
+  memcpy (payload, sd_bytes, sizeof(payload));
+
   len = sd_bytes[0] & 0xF;
   len += 1;
-
-  //load payload bytes without the header indicator byte
-  // for (i = 0, j = 1; i < 50; i++)
-  // {
-  //   hd_bytes[i] = sd_bytes[j];
-  //   if (j == 5)  j++;
-  //   if (j == 11) j++;
-  //   if (j == 17) j++;
-  //   if (j == 23) j++;
-  //   if (j == 29) j++;
-  //   if (j == 35) j++;
-  //   if (j == 41) j++;
-  //   if (j == 47) j++;
-  //   if (j == 53) j++;
-  //   j++;
-  // }
 
   //load payload bytes without the header indicator byte
   for (i = 0, j = 0; i < 50; i++)
@@ -144,30 +121,12 @@ void processDSTAR_SD(dsd_opts * opts, dsd_state * state, uint8_t * sd)
     if (j == len*6-1)  j++;
     if (j == len*7-1)  j++;
     if (j == len*8-1)  j++;
-    if (j == len*9-1)  j++;    
+    if (j == len*9-1)  j++;
   }
 
-  uint8_t hd_bits[660];
-  memset (hd_bits, 0, sizeof(hd_bits));
-
-  for(i = 0; i < 50; i++) 
-  {
-    hd_bits[(i*8)+0] = (hd_bytes[i] >> 7) & 1;
-    hd_bits[(i*8)+1] = (hd_bytes[i] >> 6) & 1;
-    hd_bits[(i*8)+2] = (hd_bytes[i] >> 5) & 1;
-    hd_bits[(i*8)+3] = (hd_bytes[i] >> 4) & 1;
-    hd_bits[(i*8)+4] = (hd_bytes[i] >> 3) & 1;
-    hd_bits[(i*8)+5] = (hd_bytes[i] >> 2) & 1;
-    hd_bits[(i*8)+6] = (hd_bytes[i] >> 1) & 1;
-    hd_bits[(i*8)+7] = (hd_bytes[i] >> 0) & 1;
-  }
-
-  uint16_t crc_ext = 0;
-  uint16_t crc_cmp = 0;
-
-  //todo: fix me
-  crc_ext = (uint16_t)ConvertBitIntoBytes(&hd_bits[312], 16);
-  crc_cmp = crc16ds(hd_bits, 312+16);
+  //works on header format -- may not work on others
+  uint16_t crc_ext = (hd_bytes[39] << 8) + hd_bytes[40];
+  uint16_t crc_cmp = calc_fcs(hd_bytes, 39);
 
   char str1[9];
 	char str2[9];
@@ -177,69 +136,138 @@ void processDSTAR_SD(dsd_opts * opts, dsd_state * state, uint8_t * sd)
   char strt[60];
   memset (strf, 0x20, sizeof(strf));
   memset (strt, 0x20, sizeof(strf));
-
 	memcpy (str1, hd_bytes+3,  8);
 	memcpy (str2, hd_bytes+11, 8);
 	memcpy (str3, hd_bytes+19, 8);
 	memcpy (str4, hd_bytes+27, 12);
-  memcpy (strf, sd_bytes+3,  56); //copy the entire thing as a string -- full
-  memcpy (strt, hd_bytes+3,  46); //copy the entire thing as a string -- truncated
-
-	str1[8]  = '\0';
+  str1[8]  = '\0';
 	str2[8]  = '\0';
 	str3[8]  = '\0';
 	str4[12] = '\0';
+
+  //safety check, don't want to load nasty values into the strings
+  for (i = 1; i < 60; i++)
+  {
+    //substitue non-ascii characters for spaces
+    if (sd_bytes[i] < 0x20)
+      sd_bytes[i] = 0x20;
+    else if (sd_bytes[i] > 0x7E)
+      sd_bytes[i] = 0x20;
+
+    //substitue non-ascii characters for spaces
+    if (hd_bytes[i] < 0x20)
+      hd_bytes[i] = 0x20;
+    else if (hd_bytes[i] > 0x7E)
+      hd_bytes[i] = 0x20;
+
+    //replace terminating ffffffff (repeating 0x66 values) with NULL (0x00)
+    if (i < 59)
+    {
+      if (sd_bytes[i] == 0x66 && sd_bytes[i+1] == 0x66)
+        sd_bytes[i] = 0x00;
+
+      if (hd_bytes[i] == 0x66 && hd_bytes[i+1] == 0x66)
+        hd_bytes[i] = 0x00;
+    }
+
+    if (i == 59 && sd_bytes[i] == 0x66)
+      sd_bytes[i] = 0x00;
+
+    if (i == 59 && hd_bytes[i] == 0x66)
+      hd_bytes[i] = 0x00;
+
+  }
+
+  memcpy (strf, sd_bytes+1, 58); //copy the entire thing as a string -- full
+  memcpy (strt, hd_bytes+1, 48); //copy the entire thing as a string -- truncated
   strf[59] = '\0';
   strt[59] = '\0';
 
   if (sd_bytes[0] == 0x55) //header format
   {
 
-    fprintf (stderr, " RPT 2: %s", str1);
-    fprintf (stderr, " RPT 1: %s", str2);
-    fprintf (stderr, " DST: %s", str3);
-    fprintf (stderr, " SRC: %s", str4);
-
-    //check flags for info
-    if (sd_bytes[1] & 0x80) fprintf (stderr, " DATA");
-    if (sd_bytes[1] & 0x40) fprintf (stderr, " REPEATER");
-    if (sd_bytes[1] & 0x20) fprintf (stderr, " INTERRUPTED");
-    if (sd_bytes[1] & 0x10) fprintf (stderr, " CONTROL SIGNAL");
-    if (sd_bytes[1] & 0x08) fprintf (stderr, " URGENT");
-
-    if (crc_cmp == crc_ext) //crc_cmp == crc_ext
+    if (crc_cmp == crc_ext)
     {
+      fprintf (stderr, " RPT 2: %s", str1);
+      fprintf (stderr, " RPT 1: %s", str2);
+      fprintf (stderr, " DST: %s", str3);
+      fprintf (stderr, " SRC: %s", str4);
+
+      //check flags for info
+      if (sd_bytes[1] & 0x80) fprintf (stderr, " DATA");
+      if (sd_bytes[1] & 0x40) fprintf (stderr, " REPEATER");
+      if (sd_bytes[1] & 0x20) fprintf (stderr, " INTERRUPTED");
+      if (sd_bytes[1] & 0x10) fprintf (stderr, " CONTROL SIGNAL");
+      if (sd_bytes[1] & 0x08) fprintf (stderr, " URGENT");
+
       memcpy (state->dstar_rpt2, str1, sizeof(str1));
       memcpy (state->dstar_rpt1, str2, sizeof(str2));
       memcpy (state->dstar_dst, str3, sizeof(str3));
       memcpy (state->dstar_src, str4, sizeof(str4));
     }
-    else fprintf (stderr, " (CRC ERR)");
+    else fprintf (stderr, " SLOW DATA - HEADER FORMAT (CRC ERR)");
 
   }
 
-  else //any other format (test, nmea gps, etc)
+  //I'm tired of trying to work out all the nuances here, so if its wrong, it is what it is
+  //I really doubt anybody who likes DSTAR uses this anyways.
+  else //any other format (text, nmea gps, etc)
   {
+    //I'd have to rewrite the upper loading portion for a consistent good crc when the header
+    //indicator bytes have different len values, so these will most likely always fail a crc,
+    //but I am going to leave them active since I have the 'safety' check in place to prevent
+    //rouge non-ascii values doing odd things in the terminal and in ncurses
 
-    fprintf (stderr, " %s", strf);
-    if (crc_cmp == crc_ext) //crc_cmp == crc_ext
+    //sure would be a lot easier if there was seperate and uniform opcodes for all the data types,
+    //instead of having to over analyze everyhign to figure out what is text, and GPS, and APRS
+    if (1 == 1) //crc_cmp == crc_ext
     {
-      if (sd_bytes[0] == 0x40) //fixed-form text (5 bytes each piece)
-        memcpy (state->dstar_txt, strf, sizeof(strf));
-      else memcpy (state->dstar_gps, strt, sizeof(strt));
+      //fixed-form at 5 bytes, use the truncated (Some Interleaved APRS/GPS TEXT combos may display incorrectly)
+      if (sd_bytes[0] == 0x35)
+      {
+        fprintf (stderr, " DATA:");
+        fprintf (stderr, " %s", strt);
+        memcpy (state->dstar_gps, strt, sizeof(strt));
+      }
+      //free-form text at 5 bytes, use the truncated
+      else if (sd_bytes[0] == 0x40)
+      {
+        fprintf (stderr, " TEXT:");
+        fprintf (stderr, " %s", strt);
+        memcpy (state->dstar_txt, strt, sizeof(strt));
+      }
+      //any other 5 byte block value
+      else if (sd_bytes[0] & 0x05)
+      {
+        fprintf (stderr, " _UNK:");
+        fprintf (stderr, " %s", strt);
+        memcpy (state->dstar_txt, strt, sizeof(strt));
+      }
+      //coded squelch data
+      else if (sd_bytes[0] == 0xC2)
+      {
+        fprintf (stderr, " SQL: %02X (%03d)", payload[1], payload[1]);
+        sprintf (state->dstar_gps, " SQL: %02X (%03d) ", payload[1], payload[1]);
+      }
+      //any variable len block values
+      else //print entire thing
+      {
+        fprintf (stderr, " _UNK:");
+        fprintf (stderr, " %s", strf);
+        memcpy (state->dstar_gps, strf, sizeof(strf));
+      } 
     }
-    else fprintf (stderr, " (CRC ERR)");
+    // if (crc_cmp != crc_ext) fprintf (stderr, " (CRC ERR)");
   }
-
 
   if (opts->payload == 1)
   {
     fprintf (stderr, "\n SD: ");
-    for (i = 0; i < 60; i++)      
-      fprintf (stderr, "%02X ", sd_bytes[i]);
-    fprintf (stderr, "\n SD: ");
-    for (i = 0; i < 50; i++)      
-      fprintf (stderr, "%02X ", hd_bytes[i]);
+    for (i = 0; i < 60; i++)
+    {
+      fprintf (stderr, "[%02X]", payload[i]);
+      if (i == 29) fprintf (stderr, "\n     ");
+    }
 
     if (crc_cmp != crc_ext)
       fprintf (stderr, "CRC - EXT: %04X CMP: %04X", crc_ext, crc_cmp);
