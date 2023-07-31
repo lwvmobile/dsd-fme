@@ -66,12 +66,22 @@ void dstar_header_decode(dsd_state * state, int radioheaderbuffer[660])
 	str4[12] = '\0';
 
 	//debug
-	// fprintf (stderr, " %02X %02X %02X", radioheader[0], radioheader[1], radioheader[2]);
+	// fprintf (stderr, "\n HD: ");
+	// for (int i = 0; i < 40; i++)
+	// 	fprintf (stderr, "%02X ", radioheader[i]);
+	// fprintf (stderr, "\n");
 
 	fprintf (stderr, " RPT 2: %s", str1);
 	fprintf (stderr, " RPT 1: %s", str2);
 	fprintf (stderr, " DST: %s", str3);
 	fprintf (stderr, " SRC: %s", str4);
+
+	//check flags for info
+	if (radioheader[0] & 0x80) fprintf (stderr, " DATA");
+	if (radioheader[0] & 0x40) fprintf (stderr, " REPEATER");
+	if (radioheader[0] & 0x20) fprintf (stderr, " INTERRUPTED");
+	if (radioheader[0] & 0x10) fprintf (stderr, " CONTROL SIGNAL");
+	if (radioheader[0] & 0x08) fprintf (stderr, " URGENT");
 
 	memcpy (state->dstar_rpt2, str1, sizeof(str1));
 	memcpy (state->dstar_rpt1, str2, sizeof(str2));

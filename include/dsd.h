@@ -758,6 +758,8 @@ typedef struct
   char dstar_rpt2[9];
   char dstar_dst[9];
   char dstar_src[13];
+  char dstar_txt[60];
+  char dstar_gps[60];
 
   //M17 Storage
   uint8_t m17_lsf[360];
@@ -979,7 +981,8 @@ void processTDULC (dsd_opts * opts, dsd_state * state);
 void processProVoice (dsd_opts * opts, dsd_state * state);
 void processX2TDMAdata (dsd_opts * opts, dsd_state * state);
 void processX2TDMAvoice (dsd_opts * opts, dsd_state * state);
-void processDSTAR_HD (dsd_opts * opts, dsd_state * state);
+void processDSTAR_HD (dsd_opts * opts, dsd_state * state); //DSTAR Header
+void processDSTAR_SD (dsd_opts * opts, dsd_state * state, uint8_t * sd); //DSTAR Slow Data
 void processYSF(dsd_opts * opts, dsd_state * state); //YSF
 void processM17STR(dsd_opts * opts, dsd_state * state); //M17 (STR)
 void processM17LSF(dsd_opts * opts, dsd_state * state); //M17 (LSF)

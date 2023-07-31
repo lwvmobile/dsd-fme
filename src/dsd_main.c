@@ -475,6 +475,8 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
   sprintf (state->dstar_rpt2, "%s", "        "); //8 spaces
   sprintf (state->dstar_dst,  "%s", "        "); //8 spaces
   sprintf (state->dstar_src,  "%s", "        "); //8 spaces
+  sprintf (state->dstar_txt,  "%s", "        "); //8 spaces
+  sprintf (state->dstar_gps,  "%s", "        "); //8 spaces
 
   //M17 Storage
   memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
@@ -1125,6 +1127,8 @@ initState (dsd_state * state)
   sprintf (state->dstar_rpt2, "%s", "        "); //8 spaces
   sprintf (state->dstar_dst,  "%s", "        "); //8 spaces
   sprintf (state->dstar_src,  "%s", "        "); //8 spaces
+  sprintf (state->dstar_txt,  "%s", "        "); //8 spaces
+  sprintf (state->dstar_gps,  "%s", "        "); //8 spaces
 
   //M17 Storage
   memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
