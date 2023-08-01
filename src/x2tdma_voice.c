@@ -511,8 +511,8 @@ processX2TDMAvoice (dsd_opts * opts, dsd_state * state)
             }
           else
             {
-              processMbeFrame (opts, state, NULL, ambe_fr, NULL);
-              processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+              soft_mbe (opts, state, NULL, ambe_fr, NULL);
+              soft_mbe (opts, state, NULL, ambe_fr2, NULL);
             }
         }
 
@@ -533,7 +533,7 @@ processX2TDMAvoice (dsd_opts * opts, dsd_state * state)
         }
       if (mutecurrentslot == 0)
         {
-          processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+          soft_mbe (opts, state, NULL, ambe_fr3, NULL);
         }
 
       // CACH

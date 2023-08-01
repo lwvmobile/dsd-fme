@@ -582,8 +582,8 @@ initOpts (dsd_opts * opts)
   opts->serial_baud = 115200;
   sprintf (opts->serial_dev, "/dev/ttyUSB0");
   opts->resume = 0;
-  opts->frame_dstar = 0;
-  opts->frame_x2tdma = 0;
+  opts->frame_dstar = 1;
+  opts->frame_x2tdma = 1;
   opts->frame_p25p1 = 1;
   opts->frame_p25p2 = 1;
   opts->frame_nxdn48 = 0;
@@ -1236,7 +1236,7 @@ usage ()
   printf ("\n");
   printf ("Decoder options:\n");
   printf ("  -fa           Auto Detection\n");
-  printf ("  -ft           AUTO P25, YSF, and DMR BS/MS frame types (new default)\n");
+  printf ("  -ft           TDMA Trunking P25p1 Control and Voice, P25p2 Trunked Channels, and DMR\n");
   printf ("  -fs           DMR Stereo BS and MS Simplex\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -f2           Decode only P25 Phase 2 (6000 sps) **\n");
@@ -1912,7 +1912,7 @@ main (int argc, char **argv)
         case 'f':
           if (optarg[0] == 'a') //
           {
-            opts.frame_dstar = 0;
+            opts.frame_dstar = 1;
             opts.frame_x2tdma = 1;
             opts.frame_p25p1 = 1;
             opts.frame_p25p2 = 1;
@@ -1933,7 +1933,7 @@ main (int argc, char **argv)
             opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 2;
             sprintf (opts.output_name, "AUTO");
-            fprintf (stderr,"Decoding AUTO P25, YSF, and DMR\n");
+            fprintf (stderr,"Decoding AUTO P25, YSF, DSTAR, X2-TDMA, and DMR\n");
           }
           else if (optarg[0] == 'd')
           {
@@ -1971,7 +1971,7 @@ main (int argc, char **argv)
             opts.frame_ysf = 0;
             opts.frame_m17 = 0;
             opts.pulse_digi_rate_out = 8000;
-            opts.pulse_digi_out_channels = 1;
+            opts.pulse_digi_out_channels = 2;
             opts.dmr_stereo = 0;
             opts.dmr_mono = 0;
             state.dmr_stereo = 0;
@@ -2144,14 +2144,15 @@ main (int argc, char **argv)
             // opts.setmod_bw = 7000;
             opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 2;
-            sprintf (opts.output_name, "DMR Stereo");
+            sprintf (opts.output_name, "DMR");
             
             fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
           }
+          //change ft to only do P25 and DMR (TDMA trunking modes)
           else if (optarg[0] == 't')
           {
             opts.frame_dstar = 0;
-            opts.frame_x2tdma = 1;
+            opts.frame_x2tdma = 0;
             opts.frame_p25p1 = 1;
             opts.frame_p25p2 = 1;
             opts.inverted_p2 = 0;
@@ -2160,7 +2161,7 @@ main (int argc, char **argv)
             opts.frame_dmr = 1;
             opts.frame_dpmr = 0;
             opts.frame_provoice = 0;
-            opts.frame_ysf = 1;
+            opts.frame_ysf = 0;
             opts.frame_m17 = 0;
             opts.mod_c4fm = 1;
             opts.mod_qpsk = 0;
@@ -2173,8 +2174,8 @@ main (int argc, char **argv)
             // opts.setmod_bw = 12000; //safe default on both DMR and P25
             opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 2;
-            sprintf (opts.output_name, "AUTO");
-            fprintf (stderr,"Decoding AUTO P25, YSF, and DMR\n");
+            sprintf (opts.output_name, "TDMA");
+            fprintf (stderr,"Decoding P25 and DMR\n");
           }
           else if (optarg[0] == 'n')
           {

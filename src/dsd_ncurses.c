@@ -302,7 +302,7 @@ char *choicesc[] = {
   "Save Decoded Audio WAV (Legacy Mode)",
   "Save Signal to Symbol Capture Bin",
   "Toggle Muting Encrypted Traffic    ",
-  "Save Per Call Decoded WAV (AUTO and NXDN)",
+  "Save Per Call Decoded WAV (AUTO/TDMA and NXDN)",
   "Setup and Start RTL Input ",
   "Retune RTL Dongle         ",
   "Toggle C4FM/QPSK (P2 TDMA CC)",
@@ -317,25 +317,25 @@ char *choicesc[] = {
   "Toggle Call Alert Beep     ",
   "Resume Decoding"
   };
-
+//make tweaks for TDMA and AUTO?
 char *choices[] = {
   "Resume Decoding",
   "Decode AUTO",
-  "Decode M17",
+  "Decode TDMA",
   "Decode DSTAR",
-  "Decode P25p1",
+  "Decode M17",
   "Decode EDACS/PV",
-  "Decode P25p2 ",
+  "Decode P25p2",
   "Decode dPMR",
   "Decode NXDN48",
   "Decode NXDN96",
-  "Decode DMR TDMA",
-  "Decode YSF FUSION",
+  "Decode DMR",
+  "Decode YSF",
   "Toggle Signal Inversion",
   "Key Entry",
   "Reset Call History",
   "Toggle Payloads to Console",
-  "Manually Set P2 Parameters", //16
+  "Manually Set p2 Parameters", //16
   "Input & Output Options",
   "LRRP Data to File",
   "Exit DSD-FME",
@@ -519,8 +519,28 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       info_win = newwin(7, WIDTH+18, starty, startx+20);
       box (info_win, 0, 0);
       mvwprintw(info_win, 2, 2, " AUTO Decoding Class Supports the following:");
-      mvwprintw(info_win, 3, 2, " P25p1, P25p2, YSF, and DMR BS/MS");
-      mvwprintw(info_win, 4, 2, " C4FM, FSK4, QPSK only (no H8D-QPSK)");
+      mvwprintw(info_win, 3, 2, " P25p1, YSF, DSTAR, X2-TDMA and DMR");
+      mvwprintw(info_win, 4, 2, " C4FM or QPSK @ 4800bps (no H8D-QPSK)");
+      wrefresh(info_win);
+    }
+
+    if (highlight == 3)
+    {
+      info_win = newwin(7, WIDTH+18, starty, startx+20);
+      box (info_win, 0, 0);
+      mvwprintw(info_win, 2, 2, " TDMA Trunking Class Supports the following:");
+      mvwprintw(info_win, 3, 2, " P25p1 Voice/Control, P25p2 Traffic, and DMR");
+      mvwprintw(info_win, 4, 2, " C4FM or QPSK @ 4800 or 6000 (no H8D-QPSK)");
+      wrefresh(info_win);
+    }
+
+    if (highlight == 7)
+    {
+      info_win = newwin(7, WIDTH+18, starty, startx+20);
+      box (info_win, 0, 0);
+      mvwprintw(info_win, 2, 2, " P25p2 Control (MAC_SIGNAL) or Single Voice Freq.");
+      mvwprintw(info_win, 3, 2, " NOTE: Manually set WACN/SYSID/CC on Voice Only");
+      mvwprintw(info_win, 4, 2, " C4FM or QPSK @ 6000 (no H8D-QPSK)");
       wrefresh(info_win);
     }
 
@@ -1195,7 +1215,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       break;
     }
 
-    if (choice == 99)
+    if (choice == 99) //UNUSED
     {
       //setup Auto parameters--default ones
       // resetState (state); //use sparingly, may cause memory leak
@@ -1286,9 +1306,9 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->unmute_encrypted_p25 = 0;
       break;
     }
-    if (choice == 5)
+    if (choice == 3) //was 5, changed to 3 and also made it the TDMA class
     {
-      //P25 P1
+      //TDMA -- was P25p1 only
       // resetState (state); //use sparingly, may cause memory leak
       opts->use_heuristics = 1;
       if (opts->use_heuristics == 1)
@@ -1297,22 +1317,21 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         initialize_p25_heuristics(&state->inv_p25_heuristics);
       }
       opts->frame_p25p1 = 1;
-      opts->frame_p25p2 = 0;
+      opts->frame_p25p2 = 1;
+      opts->frame_dmr = 1;
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       state->rf_mod = 0;
-      sprintf (opts->output_name, "P25p1");
+      sprintf (opts->output_name, "TDMA");
       opts->dmr_mono = 0;
-      opts->dmr_stereo  = 0; //this value is the end user option
+      opts->dmr_stereo  = 1; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
       opts->pulse_digi_rate_out = 8000;
-      opts->pulse_digi_out_channels = 1;
+      opts->pulse_digi_out_channels = 2;
       opts->frame_dstar = 0;
       opts->frame_x2tdma = 0;
-      //opts->frame_p25p1 = 0;
       opts->frame_nxdn48 = 0;
       opts->frame_nxdn96 = 0;
-      opts->frame_dmr = 0;
       opts->frame_dpmr = 0;
       opts->frame_provoice = 0;
       opts->frame_ysf = 0;
@@ -1320,7 +1339,6 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->mod_c4fm = 1;
       opts->mod_qpsk = 0;
       opts->mod_gfsk = 0;
-      // state->rf_mod = 0;
       opts->unmute_encrypted_p25 = 0;
       break;
     }
@@ -1483,7 +1501,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
       // sprintf (opts->output_name, "X2-TDMA");
-      sprintf (opts->output_name, "DMR Stereo");
+      sprintf (opts->output_name, "DMR");
       opts->dmr_mono = 0;
       opts->dmr_stereo  = 1; //this value is the end user option
       state->dmr_stereo = 0; //this values toggles on and off depending on voice or data handling
@@ -1532,7 +1550,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       opts->mod_gfsk = 0;
       state->rf_mod = 0;
     }
-    if (choice == 3)
+    if (choice == 5) //was 3
     {
       //Decode M17
       // resetState (state); //use sparingly, may cause memory leak

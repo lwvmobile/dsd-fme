@@ -48,10 +48,20 @@ void soft_demod_ambe2_ehr(dsd_state * state, char ambe2_ehr[4][24], char ambe_d[
 
 }
 
-//AMBE DSTAR -- break down to smaller components later on (no real point to do it right now)
+//AMBE One Shot (DSTAR)
 void soft_demod_ambe_dstar(dsd_opts * opts, dsd_state * state, char ambe_fr[4][24], char ambe_d[49])
 {
   mbe_processAmbe3600x2400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, 
+    state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+  if (opts->floating_point == 1)
+    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+  else processAudio(opts, state);
+}
+
+//AMBE+2 One Shot (X2-TDMA)
+void soft_demod_ambe_x2(dsd_opts * opts, dsd_state * state, char ambe_fr[4][24], char ambe_d[49])
+{
+  mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, 
     state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
   if (opts->floating_point == 1)
     memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
@@ -101,10 +111,37 @@ void soft_mbe (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char amb
     if(opts->payload == 1)
       PrintAMBEData (opts, state, ambe_d);
 
-    if (opts->floating_point == 0)
+    if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
       playSynthesizedVoice(opts, state);
-    if (opts->floating_point == 1)
+    if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)
       playSynthesizedVoiceFM(opts, state);
+    if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 2)
+      playSynthesizedVoiceSS(opts, state);
+    if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 2)
+      playSynthesizedVoiceFS(opts, state);
+
+    if (opts->wav_out_f != NULL)
+      writeSynthesizedVoice (opts, state);
+
+    if (opts->mbe_out_f != NULL)
+      saveAmbe2450Data (opts, state, ambe_d);
+  }
+
+  //X2-TDMA AMBE
+  else if (state->synctype >= 2 && state->synctype <= 5)
+  {
+    soft_demod_ambe_x2(opts, state, ambe_fr, ambe_d);
+    if(opts->payload == 1)
+      PrintAMBEData (opts, state, ambe_d);
+
+    if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
+      playSynthesizedVoice(opts, state);
+    if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)
+      playSynthesizedVoiceFM(opts, state);
+    if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 2)
+      playSynthesizedVoiceSS(opts, state);
+    if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 2)
+      playSynthesizedVoiceFS(opts, state);
 
     if (opts->wav_out_f != NULL)
       writeSynthesizedVoice (opts, state);
