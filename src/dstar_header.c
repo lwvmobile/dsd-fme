@@ -67,7 +67,7 @@ void dstar_header_decode(dsd_state * state, int radioheaderbuffer[660])
 
 	//TODO: Add fcs_calc to header as well
 	// uint16_t crc_ext = (radioheader[39] << 8) + radioheader[40];
-  // uint16_t crc_cmp = calc_fcs(radioheader, 39);
+	// uint16_t crc_cmp = calc_fcs(radioheader, 39);
 
 	//debug
 	// fprintf (stderr, "\n HD: ");

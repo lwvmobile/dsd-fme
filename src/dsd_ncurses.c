@@ -298,48 +298,48 @@ int startx = 0;
 int starty = 0;
 
 char *choicesc[] = {
-      "Return",
-      "Save Decoded Audio WAV (Legacy Mode)",
-      "Save Signal to Symbol Capture Bin",
-      "Toggle Muting Encrypted Traffic    ",
-      "Save Per Call Decoded WAV (AUTO and NXDN)",
-      "Setup and Start RTL Input ",
-      "Retune RTL Dongle         ",
-      "Toggle C4FM/QPSK (P2 TDMA CC)",
-      "Toggle C4FM/QPSK (P1 FDMA CC)", 
-      "Start TCP Direct Link Audio",
-      "Configure RIGCTL",
-      "Stop All Decoded WAV Saving",
-      "Read OP25/FME Symbol Capture Bin",
-      "Replay Last Symbol Capture Bin",
-      "Stop & Close Symbol Capture Bin Playback",
-      "Stop & Close Symbol Capture Bin Saving",
-      "Toggle Call Alert Beep     ",
-			"Resume Decoding"
-      };
+  "Return",
+  "Save Decoded Audio WAV (Legacy Mode)",
+  "Save Signal to Symbol Capture Bin",
+  "Toggle Muting Encrypted Traffic    ",
+  "Save Per Call Decoded WAV (AUTO and NXDN)",
+  "Setup and Start RTL Input ",
+  "Retune RTL Dongle         ",
+  "Toggle C4FM/QPSK (P2 TDMA CC)",
+  "Toggle C4FM/QPSK (P1 FDMA CC)", 
+  "Start TCP Direct Link Audio",
+  "Configure RIGCTL",
+  "Stop All Decoded WAV Saving",
+  "Read OP25/FME Symbol Capture Bin",
+  "Replay Last Symbol Capture Bin",
+  "Stop & Close Symbol Capture Bin Playback",
+  "Stop & Close Symbol Capture Bin Saving",
+  "Toggle Call Alert Beep     ",
+  "Resume Decoding"
+  };
 
 char *choices[] = {
-      "Resume Decoding",
-      "Decode AUTO",
-			"Decode M17",
-			"Decode DSTAR",
-			"Decode P25p1",
-			"Decode EDACS/PV",
-      "Decode P25p2 ",
-      "Decode dPMR",
-      "Decode NXDN48",
-      "Decode NXDN96",
-      "Decode DMR TDMA",
-      "Decode YSF FUSION",
-      "Toggle Signal Inversion",
-      "Key Entry",
-      "Reset Call History",
-      "Toggle Payloads to Console",
-      "Manually Set P2 Parameters", //16
-      "Input & Output Options",
-      "LRRP Data to File",
-			"Exit DSD-FME",
-		  };
+  "Resume Decoding",
+  "Decode AUTO",
+  "Decode M17",
+  "Decode DSTAR",
+  "Decode P25p1",
+  "Decode EDACS/PV",
+  "Decode P25p2 ",
+  "Decode dPMR",
+  "Decode NXDN48",
+  "Decode NXDN96",
+  "Decode DMR TDMA",
+  "Decode YSF FUSION",
+  "Toggle Signal Inversion",
+  "Key Entry",
+  "Reset Call History",
+  "Toggle Payloads to Console",
+  "Manually Set P2 Parameters", //16
+  "Input & Output Options",
+  "LRRP Data to File",
+  "Exit DSD-FME",
+  };
 
 
 int n_choices = sizeof(choices) / sizeof(char *);

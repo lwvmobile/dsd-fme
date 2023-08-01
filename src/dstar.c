@@ -129,21 +129,21 @@ void processDSTAR_SD(dsd_opts * opts, dsd_state * state, uint8_t * sd)
   uint16_t crc_cmp = calc_fcs(hd_bytes, 39);
 
   char str1[9];
-	char str2[9];
-	char str3[9];
-	char str4[13];
+  char str2[9];
+  char str3[9];
+  char str4[13];
   char strf[60];
   char strt[60];
   memset (strf, 0x20, sizeof(strf));
   memset (strt, 0x20, sizeof(strf));
-	memcpy (str1, hd_bytes+3,  8);
-	memcpy (str2, hd_bytes+11, 8);
-	memcpy (str3, hd_bytes+19, 8);
-	memcpy (str4, hd_bytes+27, 12);
+  memcpy (str1, hd_bytes+3,  8);
+  memcpy (str2, hd_bytes+11, 8);
+  memcpy (str3, hd_bytes+19, 8);
+  memcpy (str4, hd_bytes+27, 12);
   str1[8]  = '\0';
-	str2[8]  = '\0';
-	str3[8]  = '\0';
-	str4[12] = '\0';
+  str2[8]  = '\0';
+  str3[8]  = '\0';
+  str4[12] = '\0';
 
   //safety check, don't want to load nasty values into the strings
   for (i = 1; i < 60; i++)
