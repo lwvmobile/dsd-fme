@@ -555,8 +555,8 @@ initOpts (dsd_opts * opts)
   opts->mbe_out_path[0] = 0;
   opts->mbe_out_f = NULL;
   opts->mbe_out_fR = NULL; //second slot on a TDMA system
-  opts->audio_gain = 0; //0
-  opts->audio_gainR = 0; //0
+  opts->audio_gain = 0;
+  opts->audio_gainR = 0;
   opts->audio_out = 1;
   opts->wav_out_file[0] = 0;
   opts->wav_out_fileR[0] = 0;
@@ -857,8 +857,8 @@ initState (dsd_state * state)
   state->firstframe = 0;
   sprintf (state->slot1light, "%s", "");
   sprintf (state->slot2light, "%s", "");
-  state->aout_gain = 15; //was 0
-  state->aout_gainR = 15; //was 0
+  state->aout_gain = 10;
+  state->aout_gainR = 10;
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
   state->aout_max_buf_idx = 0;
@@ -2719,7 +2719,7 @@ main (int argc, char **argv)
 
     if (opts.playfiles == 1)
     {
-      state.aout_gain = 25; //BUGFIX: No audio output when playing back .amb/.imb files
+
       playMbeFiles (&opts, &state, argc, argv);
     }
 

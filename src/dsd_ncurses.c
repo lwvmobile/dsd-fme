@@ -2272,12 +2272,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_in_type == 8)
   {
-    printw ("| Direct TCP Input: Port [%d] Sample Rate [%d] \n", opts->tcp_portno, opts->wav_sample_rate);
+    printw ("| Direct TCP Input: Port: %d; Sample Rate: %d; \n", opts->tcp_portno, opts->wav_sample_rate);
   }
 
   if (opts->audio_in_type == 2)
   {
-    printw ("| Direct WAV File Input: %s Sample Rate [%d] \n", opts->audio_in_dev, opts->wav_sample_rate);
+    printw ("| Direct WAV File Input: %s; Sample Rate: %d; \n", opts->audio_in_dev, opts->wav_sample_rate);
   }
   if (opts->audio_in_type == 1)
   {
@@ -2385,6 +2385,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->reverse_mute == 1)
   {
     printw ("| Reverse Mute - Muting Unencrypted Voice\n");
+  }
+  if (opts->call_alert == 1)
+  {
+    printw ("| Call Alert Tone Enabled\n");
   }
   if (opts->aggressive_framesync == 0) printw ("| Selective CRC ERR Bypass Enabled (RAS) \n");
   if (state->M == 1)
@@ -2630,17 +2634,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     printw ("| ");
     // #ifdef LIMAZULUTWEAKS
-    if (idas == 0) printw ("NXDN - RAN: [%02d] ", state->nxdn_last_ran);
-    if (idas == 1) printw ("IDAS - Area: [%02d] ", state->nxdn_last_ran);
+    if (idas == 0) printw ("NXDN - RAN: %02d; ", state->nxdn_last_ran);
+    if (idas == 1) printw ("IDAS - Area: %02d; ", state->nxdn_last_ran);
     // #else
     // if (idas == 0) printw ("NXDN - RAN: [%02d] ", rn);
     // if (idas == 1) printw ("IDAS - Area: [%02d] ", rn);
     // #endif
     if (state->nxdn_location_site_code != 0)
     {
-      printw ("Cat: [%s] ", state->nxdn_location_category);
-      printw ("Sys Code: [%d] ", state->nxdn_location_sys_code);
-      printw ("Site Code: [%d] ", state->nxdn_location_site_code);
+      printw ("Cat: %s; ", state->nxdn_location_category);
+      printw ("Sys Code: %d; ", state->nxdn_location_sys_code);
+      printw ("Site Code: %d; ", state->nxdn_location_site_code);
     }
 
     //if system supports Direct Frequency Assignment
@@ -2760,7 +2764,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| ");
     if (lls > 1 && lls < 30)
     {
-      printw ("DMR BS - DCC: [%02i] ", dcc);
+      printw ("DMR BS - DCC: %02i; ", dcc);
       // printw ("%s %s", state->dmr_branding, state->dmr_branding_sub);
       printw ("%s ", state->dmr_branding);
       printw ("%s", state->dmr_branding_sub);
@@ -2781,11 +2785,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     else if (lls == 32 || lls == 33 || lls == 34)
     {
-      printw ("DMR MS - DCC: [%02i] ", dcc);
+      printw ("DMR MS - DCC: %02i; ", dcc);
     }
     else if (lls == 0 || lls == 1) //P1
     {
-      printw ("P25p1  - [%05llX][%03llX][%03llX] RFSS: [%lld] SITE: [%lld] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
+      printw ("P25p1  - %05llX:%03llX:%03llX; RFSS: %lld SITE: %lld ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p25_cc_freq != 0)
       {
         printw ("Freq: %.06lf MHz", (double)state->p25_cc_freq/1000000);
@@ -2793,7 +2797,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     else if (lls == 35 || lls == 36) //P2
     {
-      printw ("P25p2  - [%05llX][%03llX][%03llX] RFSS: [%lld] SITE: [%lld] ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
+      printw ("P25p2  - %05llX:%03llX:%03llX; RFSS: %lld SITE: %lld ", state->p2_wacn, state->p2_sysid, state->p2_cc, state->p2_rfssid, state->p2_siteid);
       if (state->p2_wacn == 0 || state->p2_sysid == 0 || state->p2_cc == 0)
       {
         attron(COLOR_PAIR(2));
