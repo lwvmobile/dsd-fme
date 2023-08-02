@@ -1199,8 +1199,8 @@ usage ()
   printf ("                null for no audio output\n");
   printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
-  printf ("  -g <float>    Audio output gain (SHORT) -- (default = 0 = auto, disable = -1)\n");
-  printf ("  -g <float>    Audio Manual Gain (FLOAT) -- (0 = 100\%)(Manual = 1 - 50)\n");
+  printf ("  -g <float>    Audio Output Gain (SHORT) -- (default = 0 = auto, disable = -1)\n");
+  printf ("  -g <float>    Audio Manual Gain (FLOAT) -- (0 = 100%%)(Manual: 1 = 2%%; 50 = 100%%)\n");
   printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n");
   printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
   printf ("                 (Single Nested Directory Only! Use Before the -P option!)\n");
