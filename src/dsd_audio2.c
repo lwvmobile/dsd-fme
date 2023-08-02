@@ -6,52 +6,43 @@
  * 
  *
  * LWVMOBILE
- * 2023-07 DSD-FME Florida Man Edition
+ * 2023-08 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
 #include <math.h>
 
-//TODO: Test All voice decoders with all combos (short mono, short stereo, float mono, float stereo)
-//CHECKLIST(PULSE): DMR BS(OK) DMR MS (OK) P25p1 (OK) P25p2 (OK) YSF (OK) NXDN (OK) M17 (short only!) pV (OK) dPMR (OK) MBEplayback (OK) X2-TDMA (who cares lol) D-STAR (OK)
 //TODO: WAV File saving (works fine on shorts, but on float, writing short to wav is not auto-gained, 
 //so super quiet, either convert to float wav files, or run processAudio AFTER memcpy of the temp_buf)
 
-//TODO: Continue to work on AGF function for best gain/normalization
-
-//TODO: Either clear out stale s_l4 and f_l4 buffers or push playback on them somehow (particularly DMR)
-//stale buffered audio may be present when playing voice in slot 2 but the last sample isn't played but 
-//is later played when the DMR BS loop resumes on a new call in slot 1...may need to expand the BS loop to cover an extra tdma frame to force the push
-//or just clear the stale values upon exit of the BS loop
-
+//simple method -- produces cleaner results, but can be muted (or very loud) at times
+//has manual control only, no auto gain
 void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 {
-  int i, run;
-  run = 1;
-  float empty[160];
-  memset (empty, 0.1f, sizeof(empty));
-
+  int i;
   float mmax = 0.75f;
   float mmin = -0.75f;
-  float aavg = 0.0f; //average of the absolute value
-  float df; //decimation value
-  df = 8000.0f; //test value -- this would be the ideal perfect value if everybody spoke directly into the mic at a reasonable volume
+  float df = 3276.7f;
 
-  if (slot == 0)
-    df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gain);
-  if (slot == 1)
-    df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gainR);
+  //Default gain value of 1.0f on audio_gain == 0
+  float gain = 1.0f;
 
-  //this comparison is to determine whether or not to run gain on 'empty' samples (2v last 2, silent frames, etc)
-  if (memcmp(empty, samp, sizeof(empty)) == 0) run = 0;
-  if (run == 0) goto AGF_END;
+  //make it so that gain is 1.0f on 25.0f aout, and 2.0f on 50 aout
+  if (opts->audio_gain != 0 && slot == 0)
+    gain = state->aout_gain / 25.0f;
+
+  if (opts->audio_gain != 0 && slot == 1)
+    gain = state->aout_gainR / 25.0f;
+  
+  //mono output handles slightly different, need to further decimate
+  if (opts->pulse_digi_out_channels == 1)
+    df *= 4.0f;
 
   for (i = 0; i < 160; i++)
   {
-
-    samp[i] = samp[i] / df;
-
-    aavg += fabsf(samp[i]);
+    //simple decimation
+    samp[i] /= df;
+    samp[i] *= 0.65f;
 
     //simple clipping
     if (samp[i] > mmax)
@@ -59,29 +50,10 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
     if (samp[i] < mmin)
       samp[i] = mmin;
 
-    //may have been a tad too loud on the high end
-    // samp[i] *= 0.5f; //testing various values here
-
+    //user gain factor
+    samp[i] *= gain;
+    
   }
-
-  aavg /= 160.0f;
-
-  if (slot == 0)
-  {
-    if (aavg < 0.075f && state->aout_gain < 42.0f) state->aout_gain += 1.0f;
-    if (aavg >= 0.075f && state->aout_gain > 1.0f) state->aout_gain -= 1.0f;
-  }
-
-  if (slot == 1)
-  {
-    if (aavg < 0.075f && state->aout_gainR < 42.0f) state->aout_gainR += 1.0f;
-    if (aavg >= 0.075f && state->aout_gainR > 1.0f) state->aout_gainR -= 1.0f;
-  }
-
-  //debug 
-  // fprintf (stderr, "\nS%d - DF = %f AAVG = %f", slot, df, aavg);
-  
-  AGF_END: ; //do nothing
 
 }
 
@@ -884,6 +856,12 @@ void soft_tonef (float samp[160], int n, int ID, int AD)
   int i;
   float step1, step2, amplitude, freq1, freq2;
 
+  float gain = 1.0f;
+
+  //needs opts and state to work....don't feel like doing the changes
+  // if (opts->audio_gain != 0 && slot == 0)
+  //   gain = state->aout_gain / 25.0f;
+
   // Synthesize tones
   freq1 = 31.25 * ID; freq2 = freq1;
   step1 = 2 * M_PI * freq1 / 8000.0f;
@@ -894,7 +872,137 @@ void soft_tonef (float samp[160], int n, int ID, int AD)
   {
     samp[i] = (float) ( amplitude * (sin((n) * step1)/2 + sin((n) * step2)/2) );
     samp[i] /= 8000.0f;
+    samp[i] *= gain;
     n++;
   }
 
 }
+
+//older version, does better at normalizing audio, but also sounds 'flatter' and 'muddier'
+//probably too much compression and adjustments on the sine wave
+// void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
+// {
+//   int i, j, run;
+//   run = 1;
+//   float empty[160];
+//   memset (empty, 0.1f, sizeof(empty));
+
+//   float mmax = 0.75f;
+//   float mmin = -0.75f;
+//   float aavg = 0.0f; //average of the absolute value
+//   float df; //decimation value
+//   df = 3276.7f; //test value -- this would be the ideal perfect value if everybody spoke directly into the mic at a reasonable volume
+
+//   //this comparison is to determine whether or not to run gain on 'empty' samples (2v last 2, silent frames, etc)
+//   if (memcmp(empty, samp, sizeof(empty)) == 0) run = 0;
+//   if (run == 0) goto AGF_END;
+
+//   for (j = 0; j < 8; j++)
+//   {
+
+//     if (slot == 0)
+//       df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gain);
+//     if (slot == 1)
+//       df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gainR);
+
+//     for (i = 0; i < 20; i++)
+//     {
+
+//       samp[(j*20)+i] = samp[(j*20)+i] / df;
+
+//       aavg += fabsf(samp[i]);
+
+//       //simple clipping
+//       if (samp[(j*20)+i] > mmax)
+//         samp[(j*20)+i] = mmax;
+//       if (samp[(j*20)+i] < mmin)
+//         samp[(j*20)+i] = mmin;
+
+//     } //i loop
+
+//     aavg /= 20.0f; //optimal value?
+
+//     //debug 
+//     // fprintf (stderr, "\nS%d - DF = %f AAVG = %f", slot, df, aavg);
+
+//     if (slot == 0)
+//     {
+//       if (aavg < 0.075f && state->aout_gain < 46.0f) state->aout_gain += 0.5f;
+//       if (aavg >= 0.075f && state->aout_gain > 1.0f) state->aout_gain -= 0.5f;
+//     }
+
+//     if (slot == 1)
+//     {
+//       if (aavg < 0.075f && state->aout_gainR < 46.0f) state->aout_gainR += 0.5f;
+//       if (aavg >= 0.075f && state->aout_gainR > 1.0f) state->aout_gainR -= 0.5f;
+//     }
+
+//     // aavg = 0.0f; //reset?
+
+//   } //j loop
+  
+//   AGF_END: ; //do nothing
+
+// }
+
+//the previous version, not quite as good at audio gain normalization, but keeping it just in case
+// void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
+// {
+//   int i, run;
+//   run = 1;
+//   float empty[160];
+//   memset (empty, 0.1f, sizeof(empty));
+
+//   float mmax = 0.75f;
+//   float mmin = -0.75f;
+//   float aavg = 0.0f; //average of the absolute value
+//   float df; //decimation value
+//   df = 8000.0f; //test value -- this would be the ideal perfect value if everybody spoke directly into the mic at a reasonable volume
+
+//   if (slot == 0)
+//     df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gain);
+//   if (slot == 1)
+//     df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gainR);
+
+//   //this comparison is to determine whether or not to run gain on 'empty' samples (2v last 2, silent frames, etc)
+//   if (memcmp(empty, samp, sizeof(empty)) == 0) run = 0;
+//   if (run == 0) goto AGF_END;
+
+//   for (i = 0; i < 160; i++)
+//   {
+
+//     samp[i] = samp[i] / df;
+
+//     aavg += fabsf(samp[i]);
+
+//     //simple clipping
+//     if (samp[i] > mmax)
+//       samp[i] = mmax;
+//     if (samp[i] < mmin)
+//       samp[i] = mmin;
+
+//     //may have been a tad too loud on the high end
+//     // samp[i] *= 0.5f; //testing various values here
+
+//   }
+
+//   aavg /= 160.0f;
+
+//   if (slot == 0)
+//   {
+//     if (aavg < 0.075f && state->aout_gain < 42.0f) state->aout_gain += 1.0f;
+//     if (aavg >= 0.075f && state->aout_gain > 1.0f) state->aout_gain -= 1.0f;
+//   }
+
+//   if (slot == 1)
+//   {
+//     if (aavg < 0.075f && state->aout_gainR < 42.0f) state->aout_gainR += 1.0f;
+//     if (aavg >= 0.075f && state->aout_gainR > 1.0f) state->aout_gainR -= 1.0f;
+//   }
+
+//   //debug 
+//   // fprintf (stderr, "\nS%d - DF = %f AAVG = %f", slot, df, aavg);
+  
+//   AGF_END: ; //do nothing
+
+// }

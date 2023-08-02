@@ -1200,7 +1200,7 @@ usage ()
   printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <float>    Audio output gain (SHORT) -- (default = 0 = auto, disable = -1)\n");
-  printf ("  -g <float>    Audio Base Gain (FLOAT) -- (0 - 45)\n"); //re-write this to make it clear!
+  printf ("  -g <float>    Audio Manual Gain (FLOAT) -- (0 = 100\%)(Manual = 1 - 50)\n");
   printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n");
   printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
   printf ("                 (Single Nested Directory Only! Use Before the -P option!)\n");
@@ -1346,9 +1346,9 @@ liveScanner (dsd_opts * opts, dsd_state * state)
 
   if (opts->floating_point == 1)
   {
-    //continue testing for as high as we can go without it suddenly clipping
-    opts->audio_gain /= 2.0f;
-    if (opts->audio_gain > 42.0f) opts->audio_gain = 42.0f;
+    // opts->audio_gain /= 2.0f;
+    if (opts->audio_gain > 50.0f) opts->audio_gain = 50.0f;
+    if (opts->audio_gain < 0.0f) opts->audio_gain = 0.0f;
   }
 
 #ifdef USE_RTLSDR

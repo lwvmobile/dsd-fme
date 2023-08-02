@@ -3520,13 +3520,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
   }
 
-  if (c == 43) //+ key, increment aout_gain
+  if (c == 43) //+ key, increment audio_gain
   {
-    // if (state->aout_gain < 50)
-    //   state->aout_gain++;
-    // //probably won't use aout_gainR with new short and float systems
-    // if (state->aout_gainR < 50)
-    //   state->aout_gainR++;
 
     if (opts->audio_gain < 50)
       opts->audio_gain++;
@@ -3536,15 +3531,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   }
 
-  if (c == 45) //- key, decrement aout_gain
+  if (c == 45) //- key, decrement audio_gain
   {
-    // if (state->aout_gain > 0)
-    //   state->aout_gain--;
-    // //probably won't use aout_gainR with new short and float systems
-    // if (state->aout_gainR > 0)
-    //   state->aout_gainR--;
 
-    if (opts->audio_gain > 1)
+    if (opts->audio_gain > 0)
       opts->audio_gain--;
 
     state->aout_gain = opts->audio_gain;

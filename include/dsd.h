@@ -908,12 +908,12 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state);  //float stere
 void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state); //float stereo mix 3v2 DMR
 void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state); //float stereo mix 4v2 P25p2
 void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state);  //float mono
+void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot); //float gain control
 //new short stuff
 void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state);   //short stereo mix
 void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state);  //short stereo mix 3v2 DMR
 void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state);  //short stereo mix 4v2 P25p2
-void upsampleS (short invalue, short prev, short outbuf[6]); //upsample 8k to 48k short in M17
-
+void upsampleS (short invalue, short prev, short outbuf[6]); //upsample 8k to 48k short
 //
 void openAudioOutDevice (dsd_opts * opts, int speed);
 void openAudioInDevice (dsd_opts * opts);

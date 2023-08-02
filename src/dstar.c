@@ -45,6 +45,10 @@ void processDSTAR(dsd_opts * opts, dsd_state * state)
     if (j == 20)
       processDSTAR_SD(opts, state, sd);
 
+    //since we are in a long loop, use this to improve response time in ncurses
+    if (opts->use_ncurses_terminal == 1)
+      ncursesPrinter(opts, state);
+
   }
 
   fprintf (stderr, "\n");
