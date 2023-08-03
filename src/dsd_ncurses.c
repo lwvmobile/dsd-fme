@@ -9,7 +9,6 @@
  * 2022-08 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
-//TODO: Simulate Tone by playing AMBE FF32D2D2D2D880 x 4 on call alert (NXDN Foreign Lady Chirp on End)
 
 #include "dsd.h"
 #include "git_ver.h"
@@ -2387,14 +2386,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else printw (" - Black List Mode\n");
   }
   #endif
-  if (opts->reverse_mute == 1)
-  {
-    printw ("| Reverse Mute - Muting Unencrypted Voice\n");
-  }
-  if (opts->call_alert == 1)
-  {
-    printw ("| Call Alert Tone Enabled\n");
-  }
   if (opts->aggressive_framesync == 0) printw ("| Selective CRC ERR Bypass Enabled (RAS) \n");
   if (state->M == 1)
   {
@@ -2414,6 +2405,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw (" - Frequency: %.06lf Mhz", (double)state->trunk_lcn_freq[state->lcn_freq_roll-1]/1000000);
     printw (" Speed: %.02lf sec \n", opts->trunk_hangtime);  //not sure values less than 1 make a difference, may be system/environment dependent 
   }
+
+  if (opts->reverse_mute == 1) printw ("| Reverse Mute - Muting Unencrypted Voice\n");
+  if (opts->call_alert == 1)   printw ("| Call Alert Tone Enabled\n");
+
 
   printw ("------------------------------------------------------------------------------\n");
   attroff(COLOR_PAIR(4));
@@ -3885,11 +3880,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   }
 
-  if (c == 48) //'0' key, toggle upsampled audio smoothing
-  {
-    if (state->audio_smoothing == 1) state->audio_smoothing = 0;
-    else state->audio_smoothing = 1; 
-  }
+  // if (c == 48) //'0' key, toggle upsampled audio smoothing
+  // {
+  //   if (state->audio_smoothing == 1) state->audio_smoothing = 0;
+  //   else state->audio_smoothing = 1; 
+  // }
 
   if (opts->p25_trunk == 1 && c == 119) //'w' key, toggle white list/black list mode 
   {

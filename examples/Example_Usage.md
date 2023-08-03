@@ -179,7 +179,6 @@ P - start per call decoded wav files (Capital P)
 p - stop per call decoded wav files (Lower p)
 t - toggle trunking (needs either rtl input, or rigctl connection)
 y - toggle scanner (needs either rtl input, or rigctl connection)
-0 - Toggle Audio Smoothing - May produce crackling if enabled on RTL/TCP or wav/bin files
 1 - Toggle Voice Synthesis in TDMA Slot 1 or FDMA Conventional Voice
 2 - Toggle Voice Synthesis in TDMA Slot 2
 w - Toggle Trunking/Playback White List (Allow A Groups Only) / Black List (Block B or DE groups only) Mode
