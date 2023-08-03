@@ -17,45 +17,45 @@
 
 //simple method -- produces cleaner results, but can be muted (or very loud) at times
 //has manual control only, no auto gain
-void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
-{
-  int i;
-  float mmax = 0.75f;
-  float mmin = -0.75f;
-  float df = 3276.7f;
+// void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
+// {
+//   int i;
+//   float mmax = 0.75f;
+//   float mmin = -0.75f;
+//   float df = 3276.7f;
 
-  //Default gain value of 1.0f on audio_gain == 0
-  float gain = 1.0f;
+//   //Default gain value of 1.0f on audio_gain == 0
+//   float gain = 1.0f;
 
-  //make it so that gain is 1.0f on 25.0f aout, and 2.0f on 50 aout
-  if (opts->audio_gain != 0 && slot == 0)
-    gain = state->aout_gain / 25.0f;
+//   //make it so that gain is 1.0f on 25.0f aout, and 2.0f on 50 aout
+//   if (opts->audio_gain != 0 && slot == 0)
+//     gain = state->aout_gain / 25.0f;
 
-  if (opts->audio_gain != 0 && slot == 1)
-    gain = state->aout_gainR / 25.0f;
+//   if (opts->audio_gain != 0 && slot == 1)
+//     gain = state->aout_gainR / 25.0f;
   
-  //mono output handles slightly different, need to further decimate
-  if (opts->pulse_digi_out_channels == 1)
-    df *= 4.0f;
+//   //mono output handles slightly different, need to further decimate
+//   if (opts->pulse_digi_out_channels == 1)
+//     df *= 4.0f;
 
-  for (i = 0; i < 160; i++)
-  {
-    //simple decimation
-    samp[i] /= df;
-    samp[i] *= 0.65f;
+//   for (i = 0; i < 160; i++)
+//   {
+//     //simple decimation
+//     samp[i] /= df;
+//     samp[i] *= 0.65f;
 
-    //simple clipping
-    if (samp[i] > mmax)
-      samp[i] = mmax;
-    if (samp[i] < mmin)
-      samp[i] = mmin;
+//     //simple clipping
+//     if (samp[i] > mmax)
+//       samp[i] = mmax;
+//     if (samp[i] < mmin)
+//       samp[i] = mmin;
 
-    //user gain factor
-    samp[i] *= gain;
+//     //user gain factor
+//     samp[i] *= gain;
     
-  }
+//   }
 
-}
+// }
 
 //float stereo mix 3v2 DMR
 void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
@@ -375,7 +375,7 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
 
 }
 
-//float stereo mix -- when using P25p1 and P25p2, we need to send P25p1 to this, also DMR MS/Simplex and YSF
+//float stereo mix -- when using Float Stereo Output, we need to send P25p1, DMR MS/Simplex, DStar, and YSF here
 void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
 {
 
@@ -386,7 +386,7 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
   //note, always set a stereo float mix to a baseline value and not zero!
   memset (stereo_samp1, 0.1f, sizeof(stereo_samp1));
 
-  //TODO: ENC Check on P25p1, NXDN, dPMR, etc
+  //TODO: ENC Check on P25p1, DMR MS, etc
   encL = 0;
 
   //TODO: add option to bypass enc with a toggle as well
@@ -459,6 +459,10 @@ void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
 {
   
   agf(opts, state, state->f_l,0);
+
+  //mono needs an additional decimation
+  for (int i = 0; i < 160; i++)
+    state->f_l[i] *= 0.5f;
 
   if (opts->slot1_on == 0) goto vfm_end;
 
@@ -879,80 +883,82 @@ void soft_tonef (float samp[160], int n, int ID, int AD)
 }
 
 //older version, does better at normalizing audio, but also sounds 'flatter' and 'muddier'
-//probably too much compression and adjustments on the samples
+//probably too much compression and adjustments on the samples (tones have a slight tremolo effect)
 //Remus, enable this one and disable the one above if you prefer
-// void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
-// {
-//   int i, j, run;
-//   run = 1;
-//   float empty[160];
-//   memset (empty, 0.1f, sizeof(empty));
+void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
+{
+  int i, j, run;
+  run = 1;
+  float empty[160];
+  memset (empty, 0.1f, sizeof(empty));
 
-//   float mmax = 0.75f;
-//   float mmin = -0.75f;
-//   float aavg = 0.0f; //average of the absolute value
-//   float df; //decimation value
-//   df = 3277.0f; //test value
+  float mmax = 0.90f;
+  float mmin = -0.90f;
+  float aavg = 0.0f; //average of the absolute value
+  float df; //decimation value
+  df = 3277.0f; //test value
 
-//   //trying things
-//   float gain = 1.0f;
+  //trying things
+  float gain = 1.0f;
 
-//   if (opts->audio_gain != 0)
-//     gain = opts->audio_gain / 25.0f;
+  if (opts->audio_gain != 0)
+    gain = opts->audio_gain / 25.0f;
 
-//   //this comparison is to determine whether or not to run gain on 'empty' samples (2v last 2, silent frames, etc)
-//   if (memcmp(empty, samp, sizeof(empty)) == 0) run = 0;
-//   if (run == 0) goto AGF_END;
+  //this comparison is to determine whether or not to run gain on 'empty' samples (2v last 2, silent frames, etc)
+  if (memcmp(empty, samp, sizeof(empty)) == 0) run = 0;
+  if (run == 0) goto AGF_END;
 
-//   for (j = 0; j < 8; j++)
-//   {
+  for (j = 0; j < 8; j++)
+  {
 
-//     if (slot == 0)
-//       df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gain);
-//     if (slot == 1)
-//       df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gainR);
+    if (slot == 0)
+      df = 384.0f * (50.0f - state->aout_gain);
+    if (slot == 1)
+      df = 384.0f * (50.0f - state->aout_gainR);
 
-//     for (i = 0; i < 20; i++)
-//     {
+    for (i = 0; i < 20; i++)
+    {
 
-//       samp[(j*20)+i] = samp[(j*20)+i] / df;
+      samp[(j*20)+i] = samp[(j*20)+i] / df;
 
-//       samp[(j*20)+i] *= gain * 0.75f;
+      // samp[(j*20)+i] *= gain;
+      // aavg += fabsf(samp[i]);
 
-//       aavg += fabsf(samp[i]);
+      //simple clipping
+      if (samp[(j*20)+i] > mmax)
+        samp[(j*20)+i] = mmax;
+      if (samp[(j*20)+i] < mmin)
+        samp[(j*20)+i] = mmin;
 
-//       //simple clipping
-//       if (samp[(j*20)+i] > mmax)
-//         samp[(j*20)+i] = mmax;
-//       if (samp[(j*20)+i] < mmin)
-//         samp[(j*20)+i] = mmin;
+      samp[(j*20)+i] *= gain * 0.8f;
+      aavg += fabsf(samp[i]);
 
-//     } //i loop
+    } //i loop
 
-//     aavg /= 20.0f; //optimal value?
+    aavg /= 20.0f; //average of the 20 samples
 
-//     //debug 
-//     // fprintf (stderr, "\nS%d - DF = %f AAVG = %f", slot, df, aavg);
+    //debug 
+    // fprintf (stderr, "\nS%d - DF = %f AAVG = %f", slot, df, aavg);
 
-//     if (slot == 0)
-//     {
-//       if (aavg < 0.075f && state->aout_gain < 46.0f) state->aout_gain += 0.5f;
-//       if (aavg >= 0.075f && state->aout_gain > 1.0f) state->aout_gain -= 0.5f;
-//     }
+    if (slot == 0)
+    {
+      if (aavg < 0.075f && state->aout_gain < 46.0f) state->aout_gain += 0.5f;
+      if (aavg >= 0.075f && state->aout_gain > 1.0f) state->aout_gain -= 0.5f;
+    }
 
-//     if (slot == 1)
-//     {
-//       if (aavg < 0.075f && state->aout_gainR < 46.0f) state->aout_gainR += 0.5f;
-//       if (aavg >= 0.075f && state->aout_gainR > 1.0f) state->aout_gainR -= 0.5f;
-//     }
+    if (slot == 1)
+    {
+      if (aavg < 0.075f && state->aout_gainR < 46.0f) state->aout_gainR += 0.5f;
+      if (aavg >= 0.075f && state->aout_gainR > 1.0f) state->aout_gainR -= 0.5f;
+    }
 
-//     // aavg = 0.0f; //reset?
+    aavg = 0.0f; //reset
 
-//   } //j loop
+  } //j loop
   
-//   AGF_END: ; //do nothing
+  AGF_END: ; //do nothing
 
-// }
+}
 
 //the previous version, not quite as good at audio gain normalization, but keeping it just in case
 // void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
