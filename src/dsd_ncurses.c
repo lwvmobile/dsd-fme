@@ -3533,6 +3533,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     state->aout_gain = opts->audio_gain;
     state->aout_gainR = opts->audio_gain;
 
+    opts->audio_gainR = opts->audio_gain;
+
   }
 
   if (c == 45) //- key, decrement audio_gain
@@ -3550,6 +3552,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       state->aout_gain = 25;
       state->aout_gainR = 25;
     }
+
+    opts->audio_gainR = opts->audio_gain;
 
   }
 
