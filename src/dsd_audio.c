@@ -287,8 +287,7 @@ processAudio (dsd_opts * opts, dsd_state * state)
 
   // copy audio data to output buffer and upsample if necessary
   state->audio_out_temp_buf_p = state->audio_out_temp_buf;
-  //we only want to upsample when using sample rates greater than 8k for output,
-  //hard set to 8k for RTL mono and MBE playback, otherwise crackling may occur.
+  //we only want to upsample when using sample rates greater than 8k for output
   if (opts->pulse_digi_rate_out > 8000)
     {
       for (n = 0; n < 160; n++)
@@ -436,7 +435,6 @@ processAudioR (dsd_opts * opts, dsd_state * state)
   // copy audio data to output buffer and upsample if necessary
   state->audio_out_temp_buf_pR = state->audio_out_temp_bufR;
   //we only want to upsample when using sample rates greater than 8k for output,
-  //hard set to 8k for RTL mono and MBE playback, otherwise crackling may occur.
   if (opts->pulse_digi_rate_out > 8000)
     {
       for (n = 0; n < 160; n++)

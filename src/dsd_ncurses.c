@@ -2299,23 +2299,28 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->rtl_udp_port != 0) printw ("\n| External Tuning on UDP Port: %i", opts->rtl_udp_port);
     printw ("\n");
   }
+
   if (opts->audio_out_type == 0)
   {
-    printw ("| Pulse Audio Output: %i kHz; %i Channel; G: %.1f%%", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
-    if (opts->pulse_digi_out_channels == 2) printw (" G: %.1f%%", state->aout_gainR*2);
-    if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
-    if (opts->floating_point == 1) printw (" Floating Point;");
-
+    printw ("| Pulse Audio Output: %i kHz; %i Ch; G: %02.0f%%", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
+    if (opts->floating_point == 1) printw (" FBG: %02.0f%%;", opts->audio_gain*2);
+    if (opts->audio_gain == 0) printw (" (+/-) Auto");
+    if (opts->audio_gain > 0) printw (" (+/-) Manual");
+    // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
     printw (" \n");
   }
+
   if (opts->audio_out_type == 5 || opts->audio_out_type == 2)
   {
-    printw ("| OSS Audio Output: %i kHz; %i Channel; G: %.1f%%", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
-    if (opts->pulse_digi_out_channels == 2) printw (" G: %.1f%%", state->aout_gainR*2);
-    if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //nly on short
-    if (opts->floating_point == 1) printw (" Floating Point;");
+    printw ("| OSS Audio Output: %i kHz; %i Ch; G: %02.0f%%", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
+    if (opts->audio_gain == 0) printw (" (+/-) Auto");
+    if (opts->audio_gain > 0) printw (" (+/-) Manual");
+    // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
     printw (" \n");
   }
+
   if (opts->monitor_input_audio == 1)
   {
     printw ("| Monitoring Source Audio when Carrier Present and No Sync Detected\n");
@@ -3543,6 +3548,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     state->aout_gain = opts->audio_gain;
     state->aout_gainR = opts->audio_gain;
+
+    //reset to default on 0 for auto
+    if (opts->audio_gain == 0)
+    {
+      state->aout_gain = 25;
+      state->aout_gainR = 25;
+    }
+
   }
 
   if (c == 122) //'z' key, toggle payload to console

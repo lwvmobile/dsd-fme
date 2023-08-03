@@ -857,8 +857,8 @@ initState (dsd_state * state)
   state->firstframe = 0;
   sprintf (state->slot1light, "%s", "");
   sprintf (state->slot2light, "%s", "");
-  state->aout_gain = 10;
-  state->aout_gainR = 10;
+  state->aout_gain = 25.0f;
+  state->aout_gainR = 25.0f;
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
   state->aout_max_buf_idx = 0;
@@ -1346,7 +1346,7 @@ liveScanner (dsd_opts * opts, dsd_state * state)
 
   if (opts->floating_point == 1)
   {
-    // opts->audio_gain /= 2.0f;
+    
     if (opts->audio_gain > 50.0f) opts->audio_gain = 50.0f;
     if (opts->audio_gain < 0.0f) opts->audio_gain = 0.0f;
   }

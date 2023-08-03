@@ -879,7 +879,8 @@ void soft_tonef (float samp[160], int n, int ID, int AD)
 }
 
 //older version, does better at normalizing audio, but also sounds 'flatter' and 'muddier'
-//probably too much compression and adjustments on the sine wave
+//probably too much compression and adjustments on the samples
+//Remus, enable this one and disable the one above if you prefer
 // void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 // {
 //   int i, j, run;
@@ -891,7 +892,13 @@ void soft_tonef (float samp[160], int n, int ID, int AD)
 //   float mmin = -0.75f;
 //   float aavg = 0.0f; //average of the absolute value
 //   float df; //decimation value
-//   df = 3276.7f; //test value -- this would be the ideal perfect value if everybody spoke directly into the mic at a reasonable volume
+//   df = 3277.0f; //test value
+
+//   //trying things
+//   float gain = 1.0f;
+
+//   if (opts->audio_gain != 0)
+//     gain = opts->audio_gain / 25.0f;
 
 //   //this comparison is to determine whether or not to run gain on 'empty' samples (2v last 2, silent frames, etc)
 //   if (memcmp(empty, samp, sizeof(empty)) == 0) run = 0;
@@ -909,6 +916,8 @@ void soft_tonef (float samp[160], int n, int ID, int AD)
 //     {
 
 //       samp[(j*20)+i] = samp[(j*20)+i] / df;
+
+//       samp[(j*20)+i] *= gain * 0.75f;
 
 //       aavg += fabsf(samp[i]);
 
