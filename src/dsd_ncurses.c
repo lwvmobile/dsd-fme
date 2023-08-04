@@ -3827,6 +3827,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     state->last_cc_sync_time = time(NULL);
 
+    //if P25p2 VCH and going back to P25p1 CC, flip symbolrate
+    if (state->p25_cc_is_tdma == 0)
+    {
+      state->samplesPerSymbol = 10;
+      state->symbolCenter = 4;
+    }
+
   }
 
   if (state->lasttgR != 0 && opts->frame_provoice != 1 && c == 64) //SHIFT+'2' key (@ at sign), lockout slot 2 tdma tgR from tuning/playback during session
@@ -3881,6 +3888,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     #endif
 
     state->last_cc_sync_time = time(NULL);
+
+    //if P25p2 VCH and going back to P25p1 CC, flip symbolrate
+    if (state->p25_cc_is_tdma == 0)
+    {
+      state->samplesPerSymbol = 10;
+      state->symbolCenter = 4;
+    }
 
   }
 

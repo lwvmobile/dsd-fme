@@ -207,7 +207,7 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
       state->last_cc_sync_time = time(NULL);
       //test to switch back to 10/4 P1 QPSK for P25 FDMA CC
 
-      //reworked to always change back to 10/4 if p25_cc_is_tdma is set to 0 or 1 (inits on 2)
+      //if P25p2 VCH and going back to P25p1 CC, flip symbolrate
       if (state->p25_cc_is_tdma == 0) //is set on signal from P25 TSBK or MAC_SIGNAL
       {
         state->samplesPerSymbol = 10;

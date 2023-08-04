@@ -154,8 +154,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   if (state->dmr_rest_channel == -1 && opts->p25_is_tuned == 0 && opts->p25_trunk == 1 && ( (time(NULL) - state->last_cc_sync_time) > (opts->trunk_hangtime + 0) ) ) //was 3, go to hangtime value
   {
 
-    //test to switch back to 10/4 P1 QPSK for P25 FDMA CC
-    if (opts->mod_qpsk == 1 && state->p25_cc_is_tdma == 0)
+    //if P25p2 VCH and going back to P25p1 CC, flip symbolrate
+    if (state->p25_cc_is_tdma == 0)
     {
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
