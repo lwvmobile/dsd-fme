@@ -494,16 +494,16 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
   memset(state->m17_meta, 0, sizeof(state->m17_meta));
 
   //set float temp buffer to baseline
-  memset (state->audio_out_temp_buf, 0.1f, sizeof(state->audio_out_temp_buf));
-  memset (state->audio_out_temp_bufR, 0.1f, sizeof(state->audio_out_temp_bufR));
+  memset (state->audio_out_temp_buf, 0.0f, sizeof(state->audio_out_temp_buf));
+  memset (state->audio_out_temp_bufR, 0.0f, sizeof(state->audio_out_temp_bufR));
 
   //set float temp buffer to baseline
-  memset (state->f_l, 0.1f, sizeof(state->f_l));
-  memset (state->f_r, 0.1f, sizeof(state->f_r));
+  memset (state->f_l, 0.0f, sizeof(state->f_l));
+  memset (state->f_r, 0.0f, sizeof(state->f_r));
 
   //set float temp buffer to baseline
-  memset (state->f_l4, 0.1f, sizeof(state->f_l4));
-  memset (state->f_r4, 0.1f, sizeof(state->f_r4));
+  memset (state->f_l4, 0.0f, sizeof(state->f_l4));
+  memset (state->f_r4, 0.0f, sizeof(state->f_r4));
 
   //zero out the short sample storage buffers
   memset (state->s_l, 1, sizeof(state->s_l));
@@ -759,16 +759,16 @@ initState (dsd_state * state)
   //Upsampled Audio Smoothing
   state->audio_smoothing = 0;
 
-  memset (state->audio_out_temp_buf, 0.1f, sizeof(state->audio_out_temp_buf));
-  memset (state->audio_out_temp_bufR, 0.1f, sizeof(state->audio_out_temp_bufR));
+  memset (state->audio_out_temp_buf, 0.0f, sizeof(state->audio_out_temp_buf));
+  memset (state->audio_out_temp_bufR, 0.0f, sizeof(state->audio_out_temp_bufR));
 
   //set float temp buffer to baseline
-  memset (state->f_l, 0.1f, sizeof(state->f_l));
-  memset (state->f_r, 0.1f, sizeof(state->f_r));
+  memset (state->f_l, 0.0f, sizeof(state->f_l));
+  memset (state->f_r, 0.0f, sizeof(state->f_r));
 
   //set float temp buffer to baseline
-  memset (state->f_l4, 0.1f, sizeof(state->f_l4));
-  memset (state->f_r4, 0.1f, sizeof(state->f_r4));
+  memset (state->f_l4, 0.0f, sizeof(state->f_l4));
+  memset (state->f_r4, 0.0f, sizeof(state->f_r4));
 
   //zero out the short sample storage buffers
   memset (state->s_l, 1, sizeof(state->s_l));

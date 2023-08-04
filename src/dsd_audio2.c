@@ -71,10 +71,9 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
   float stereo_samp2[320]; //8k 2-channel stereo interleave mix
   float stereo_samp3[320]; //8k 2-channel stereo interleave mix
 
-  //note, always set a stereo float mix to a baseline value and not zero!
-  memset (stereo_samp1, 0.1f, sizeof(stereo_samp1));
-  memset (stereo_samp2, 0.1f, sizeof(stereo_samp2));
-  memset (stereo_samp3, 0.1f, sizeof(stereo_samp3));
+  memset (stereo_samp1, 0.0f, sizeof(stereo_samp1));
+  memset (stereo_samp2, 0.0f, sizeof(stereo_samp2));
+  memset (stereo_samp3, 0.0f, sizeof(stereo_samp3));
 
   //dmr enc checkdown for whether or not to fill the stereo sample or not for playback or writing
   encL = encR = 0;
@@ -181,12 +180,12 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
 
   FS3_END:
 
-  memset (state->audio_out_temp_buf, 0.1f, sizeof(state->audio_out_temp_buf));
-  memset (state->audio_out_temp_bufR, 0.1f, sizeof(state->audio_out_temp_bufR));
+  memset (state->audio_out_temp_buf, 0.0f, sizeof(state->audio_out_temp_buf));
+  memset (state->audio_out_temp_bufR, 0.0f, sizeof(state->audio_out_temp_bufR));
 
   //set float temp buffer to baseline
-  memset (state->f_l4, 0.1f, sizeof(state->f_l4));
-  memset (state->f_r4, 0.1f, sizeof(state->f_r4));
+  memset (state->f_l4, 0.0f, sizeof(state->f_l4));
+  memset (state->f_r4, 0.0f, sizeof(state->f_r4));
 
   //if we don't run processAudio, then I don't think we really need any of the items below active
   state->audio_out_idx = 0;
@@ -211,6 +210,23 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
   }
 
 }
+
+//NOTE: On FS4 and SS4 voice, the longer the transmission, the more the function will start to lag
+//the entire DSD-FME loop due to the skipping of playback on SACCH frames (causes noticeable skip when it does play them),
+//this isn't a major problem, since the buffer can handle it, but it does delay return to CC until the end
+//of the call on busy systems where both VCH slots are constantly busy with voice
+//the longer the call, the more delayed until returning to the control channel
+
+//NOTE: Disabling voice synthesis clears up the delay issue (obviosly since we aren't having to wait on it to play)
+//disabling voice in only one slot will also fix most random stutter from the 4v in one slot, and 2v in the other slot
+
+//NOTE: The same skip may be occurring on the main and v2.1b branches of DSD-FME as well, so that may be due to the 4v/2v and
+//playing back immediately instead of buffering x number of samples or 4v/2v to get a smoother playback
+
+//NOTE: When using capture bins for playback, this issue is not as observable compared to real time reception due to how fast
+//we can blow through pure data on bin files compared to waiting for the real time reception
+
+//its usually a lot more noticeable on dual voices than single (probably due to various arrangements of dual 4v/2v in each superframe)
 
 //float stereo mix 4v2 P25p2
 void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
@@ -263,13 +279,12 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
   if (opts->slot1_on == 0) encL = 1;
   if (opts->slot2_on == 0) encR = 1;
 
-  //note, always set a stereo float mix to a baseline value and not zero!
-  memset (stereo_samp1, 0.1f, sizeof(stereo_samp1));
-  memset (stereo_samp2, 0.1f, sizeof(stereo_samp2));
-  memset (stereo_samp3, 0.1f, sizeof(stereo_samp3));
-  memset (stereo_samp4, 0.1f, sizeof(stereo_samp4));
+  memset (stereo_samp1, 0.0f, sizeof(stereo_samp1));
+  memset (stereo_samp2, 0.0f, sizeof(stereo_samp2));
+  memset (stereo_samp3, 0.0f, sizeof(stereo_samp3));
+  memset (stereo_samp4, 0.0f, sizeof(stereo_samp4));
 
-  memset (empty, 0.1f, sizeof(empty));
+  memset (empty, 0.0f, sizeof(empty));
 
   //run autogain on the f_ buffers
   agf (opts, state, state->f_l4[0],0);
@@ -280,7 +295,7 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
   agf (opts, state, state->f_r4[2],1);
   agf (opts, state, state->f_l4[3],0);
   agf (opts, state, state->f_r4[3],1);
-  agf (opts, state, empty,2); //running empty may cause auto gain control issues, and also any auto gain applied here will invalidate the memcmp
+  agf (opts, state, empty,2); //running empty may invalidate the memcmp, ideally both this empty and an empty f_ should come out with the same result anyways
 
   //interleave left and right channels from the temp (float) buffer with makeshift 'volume' decimation
   for (i = 0; i < 160; i++)
@@ -344,12 +359,12 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
 
   END_FS4:
 
-  memset (state->audio_out_temp_buf, 0.1f, sizeof(state->audio_out_temp_buf));
-  memset (state->audio_out_temp_bufR, 0.1f, sizeof(state->audio_out_temp_bufR));
+  memset (state->audio_out_temp_buf, 0.0f, sizeof(state->audio_out_temp_buf));
+  memset (state->audio_out_temp_bufR, 0.0f, sizeof(state->audio_out_temp_bufR));
 
   //set float temp buffer to baseline
-  memset (state->f_l4, 0.1f, sizeof(state->f_l4));
-  memset (state->f_r4, 0.1f, sizeof(state->f_r4));
+  memset (state->f_l4, 0.0f, sizeof(state->f_l4));
+  memset (state->f_r4, 0.0f, sizeof(state->f_r4));
 
   //if we don't run processAudio, then I don't think we really need any of the items below active
   state->audio_out_idx = 0;
@@ -383,8 +398,7 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
   int encL;
   float stereo_samp1[320]; //8k 2-channel stereo interleave mix
 
-  //note, always set a stereo float mix to a baseline value and not zero!
-  memset (stereo_samp1, 0.1f, sizeof(stereo_samp1));
+  memset (stereo_samp1, 0.0f, sizeof(stereo_samp1));
 
   //TODO: ENC Check on P25p1, DMR MS, etc
   encL = 0;
@@ -424,12 +438,12 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
 
   FS_END:
 
-  memset (state->audio_out_temp_buf, 0.1f, sizeof(state->audio_out_temp_buf));
-  memset (state->audio_out_temp_bufR, 0.1f, sizeof(state->audio_out_temp_bufR));
+  memset (state->audio_out_temp_buf, 0.0f, sizeof(state->audio_out_temp_buf));
+  memset (state->audio_out_temp_bufR, 0.0f, sizeof(state->audio_out_temp_bufR));
 
   //set float temp buffer to baseline
-  memset (state->f_l4, 0.1f, sizeof(state->f_l4));
-  memset (state->f_r4, 0.1f, sizeof(state->f_r4));
+  memset (state->f_l4, 0.0f, sizeof(state->f_l4));
+  memset (state->f_r4, 0.0f, sizeof(state->f_r4));
 
   //if we don't run processAudio, then I don't think we really need any of the items below active
   state->audio_out_idx = 0;
@@ -890,7 +904,7 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
   int i, j, run;
   run = 1;
   float empty[160];
-  memset (empty, 0.1f, sizeof(empty));
+  memset (empty, 0.0f, sizeof(empty));
 
   float mmax = 0.90f;
   float mmin = -0.90f;
@@ -966,7 +980,7 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 //   int i, run;
 //   run = 1;
 //   float empty[160];
-//   memset (empty, 0.1f, sizeof(empty));
+//   memset (empty, 0.0f, sizeof(empty));
 
 //   float mmax = 0.75f;
 //   float mmin = -0.75f;

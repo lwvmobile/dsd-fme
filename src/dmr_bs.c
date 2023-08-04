@@ -517,8 +517,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
  if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
 
  //clear out any stale audio storage buffers
- memset (state->f_l4, 0.1f, sizeof(state->f_l4));
- memset (state->f_r4, 0.1f, sizeof(state->f_r4));
+ memset (state->f_l4, 0.0f, sizeof(state->f_l4));
+ memset (state->f_r4, 0.0f, sizeof(state->f_r4));
  memset (state->s_l4, 0, sizeof(state->s_l4));
  memset (state->s_r4, 0, sizeof(state->s_r4));
 
