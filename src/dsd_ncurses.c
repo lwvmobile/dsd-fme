@@ -14,14 +14,8 @@
 #include "git_ver.h"
 
 
-#define BSIZE 999
-#define UDP_BUFLEN 5 //maximum UDP buffer length
-#define SRV_IP "127.0.0.1" //IP
-#define UDP_PORT 6020 //UDP port
-
-
 uint32_t temp_freq = -1;
-//
+
 
 //struct for checking existence of directory to write to
 struct stat st_wav = {0};
@@ -2266,7 +2260,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->audio_in_type == 4)
   {
-    printw ("| Direct Symbol Bin Input: %s \n", opts->audio_in_dev);
+    printw ("| Symbol Bin Input: %s \n", opts->audio_in_dev);
   }
 
   if (opts->audio_in_type == 8)
@@ -2295,7 +2289,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw (" RMS: %04i;", opts->rtl_rms);
       printw (" BW: %i kHz;", opts->rtl_bandwidth);
       printw (" FRQ: %i;", opts->rtlsdr_center_freq); 
-    if (opts->rtl_udp_port != 0) printw ("\n| External Tuning on UDP Port: %i", opts->rtl_udp_port);
+    if (opts->rtl_udp_port != 0) printw ("\n| External RTL Tuning on UDP Port: %i", opts->rtl_udp_port);
     printw ("\n");
   }
 
@@ -2334,7 +2328,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if (opts->symbol_out_f) //don't display when not actively capturing
   {
-    printw ("| SymbolC Bin: %s\n", opts->symbol_out_file);
+    printw ("| Symbol Bin Output: %s\n", opts->symbol_out_file);
   }
   if (opts->dmr_stereo_wav == 0 && opts->wav_out_file[0] != 0)
   {
@@ -2716,7 +2710,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(1));
       printw ("IV: [%016llX] ", state->payload_miN);
       attron(COLOR_PAIR(2));
-      printw ("DES-OFB  ");
+      printw ("DES1 ");
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
     }
@@ -2896,19 +2890,19 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (state->payload_algid == 0x81 || state->payload_algid == 0x22)
     {
       attron(COLOR_PAIR(1));
-      printw("DES-OFB");
+      printw("DES1 ");
       attron(COLOR_PAIR(3));
     }
     if (state->payload_algid == 0x82)
     {
       attron(COLOR_PAIR(1));
-      printw("Double DES");
+      printw("DES2 ");
       attron(COLOR_PAIR(3));
     }
     if (state->payload_algid == 0x83)
     {
       attron(COLOR_PAIR(1));
-      printw("Triple DES");
+      printw("DES3 ");
       attron(COLOR_PAIR(3));
     }
     if (state->payload_algid == 0x85 || state->payload_algid == 0x24)
@@ -3090,13 +3084,19 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (state->payload_algidR == 0x81 || state->payload_algidR == 0x22)
       {
         attron(COLOR_PAIR(1));
-        printw("DES-OFB");
+        printw("DES1 ");
+        attron(COLOR_PAIR(3));
+      }
+      if (state->payload_algidR == 0x82)
+      {
+        attron(COLOR_PAIR(1));
+        printw("DES2 ");
         attron(COLOR_PAIR(3));
       }
       if (state->payload_algidR == 0x83)
       {
         attron(COLOR_PAIR(1));
-        printw("Triple DES");
+        printw("DES3 ");
         attron(COLOR_PAIR(3));
       }
       if (state->payload_algidR == 0x85 || state->payload_algidR == 0x24)
