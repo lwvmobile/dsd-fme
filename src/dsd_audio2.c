@@ -474,11 +474,12 @@ void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
   
   agf(opts, state, state->f_l,0);
 
-  //mono needs an additional decimation
-  for (int i = 0; i < 160; i++)
-    state->f_l[i] *= 0.5f;
+  //mono may need an additional decimation
+  // for (int i = 0; i < 160; i++)
+  //   state->f_l[i] *= 0.5f;
 
-  if (opts->slot1_on == 0) goto vfm_end;
+  if (opts->slot1_on == 0)
+    goto vfm_end;
 
   if (opts->audio_out_type == 0)
     pa_simple_write(opts->pulse_digi_dev_out, state->f_l, 160*4, NULL);
@@ -496,8 +497,9 @@ void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
     memset (state->audio_out_buf, 0, 100 * sizeof (short));
     state->audio_out_idx2 = 0;
   }
-
-  memset (state->audio_out_temp_buf, 0, sizeof(state->audio_out_temp_buf));
+  
+  memset (state->f_l, 0.0f, sizeof(state->f_l));
+  memset (state->audio_out_temp_buf, 0.0f, sizeof(state->audio_out_temp_buf));
 
 }
 
