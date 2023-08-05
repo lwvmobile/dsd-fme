@@ -193,6 +193,8 @@ D - Reset DMR Site Parms/Call Strings, etc.
 Z - Simulate NoCarrier/No VC/CC sync (capital Z)
 ```
 
-Sending Audio to a Icecast 2 Server via FFmpeg (Windows)
-# Make sure to enable "Stereo Mix" from Volume Control Panel and then disable Windows Sounds.
-ffmpeg -f dshow -i audio="Stereo Mix (Realtek High Definition Audio)" -c:a aac -b:a 64k -content_type 'audio/aac' -vn -f adts icecast://source:password@192.168.5.251:8844/DSDFME
+## Sending Audio to a Icecast 2 Server via FFmpeg (Windows)
+
+Make sure to enable "Stereo Mix" from Volume Control Panel and then disable Windows Sounds.
+
+`ffmpeg -f dshow -i audio="Stereo Mix (Realtek High Definition Audio)" -c:a aac -b:a 64k -content_type 'audio/aac' -vn -f adts icecast://source:password@192.168.5.251:8844/DSDFME`
