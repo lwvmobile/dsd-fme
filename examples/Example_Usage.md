@@ -100,7 +100,7 @@ and in a second terminal tab, same folder, run
 
 EDACS Trunking (w/ channel map import)
 
---EDACS/PV Trunking using RIGCTL and TCP Direct Link Audio inside of SDR++ (Tested and Working on EDACS/EDACS-EA with Provoice only, no analog voice monitoring)
+--EDACS/PV Trunking using RIGCTL and TCP Direct Link Audio inside of SDR++ (Tested and Working on EDACS/EDACS-EA with Provoice, Analog Voice Monitoring and Per Call is Experimental)
 
 `dsd-fme -i tcp -fp -C channel_map.csv -G group.csv -T -U 4532 -N 2> log.ans`
 

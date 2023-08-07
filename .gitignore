@@ -7,3 +7,4 @@ build
 examples
 *.bin
 *.ans
+*.patch

@@ -1906,6 +1906,7 @@ main (int argc, char **argv)
               sprintf (opts.output_name, "EDACS/PV");
               fprintf (stderr,"Setting symbol rate to 9600 / second\n");
               fprintf (stderr,"Decoding only ProVoice frames.\n");
+              fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
               //rtl specific tweaks
               opts.rtl_bandwidth = 24;
               // opts.rtl_gain_value = 36;
