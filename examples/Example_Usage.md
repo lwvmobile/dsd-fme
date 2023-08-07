@@ -198,3 +198,28 @@ Z - Simulate NoCarrier/No VC/CC sync (capital Z)
 Sending Audio to a Icecast 2 Server via FFmpeg (Windows)
 # Make sure to enable "Stereo Mix" from Volume Control Panel and then disable Windows Sounds.
 ffmpeg -f dshow -i audio="Stereo Mix (Realtek High Definition Audio)" -c:a aac -b:a 64k -content_type 'audio/aac' -vn -f adts icecast://source:password@192.168.5.251:8844/DSDFME
+
+## Sending Audio to a Icecast 2 Server via FFmpeg (Linux w/ Pulse Audio)
+
+`pactl list short sources`
+
+Choose Desired Device to Cast:
+
+```
+0 auto_null.monitor       module-null-sink.c      s16le 2ch 48000Hz       IDLE
+1	alsa_output.pci-0000_0d_00.3.analog-stereo.monitor	module-alsa-card.c	s16le 2ch 44100Hz	RUNNING
+2	alsa_input.pci-0000_0d_00.3.analog-stereo	module-alsa-card.c	s16le 2ch 44100Hz	RUNNING
+3	virtual_sink.monitor	module-null-sink.c	s16le 2ch 44100Hz	RUNNING
+4	virtual_sink2.monitor	module-null-sink.c	s16le 2ch 44100Hz	RUNNING
+7	alsa_output.pci-0000_0b_00.1.hdmi-stereo-extra1.monitor	module-alsa-card.c	s16le 2ch 44100Hz	RUNNING
+```
+
+Example: 
+
+```
+francis@12cores:~$ pactl list short sources
+0       auto_null.monitor       module-null-sink.c      s16le 2ch 48000Hz       IDLE
+francis@12coresx:~$ ffmpeg -f pulse -i 0 -c:a libmp3lame -ab 64k -f mp3 icecast://source:password@XXXXXXXXX:8000
+
+
+```
