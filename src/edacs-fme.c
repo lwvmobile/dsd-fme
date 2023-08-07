@@ -14,7 +14,7 @@
  * 1994-7
  *
  * LWVMOBILE
- * 2022-10 Version EDACS-FM Florida Man Edition
+ * 2023-08 Version EDACS-FM Florida Man Edition
  *-----------------------------------------------------------------------------*/
 #include "dsd.h"
 
@@ -47,6 +47,201 @@ char * getTimeE(void) //get pretty hh:mm:ss timestamp
   curr = strtok(NULL, " ");
 
   return curr;
+}
+
+void openWavOutFile48k (dsd_opts * opts, dsd_state * state)
+{
+  UNUSED(state);
+  SF_INFO info;
+  info.samplerate = 48000; //48k for analog output (has to match input)
+  info.channels = 1;
+  info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
+  opts->wav_out_f = sf_open (opts->wav_out_file, SFM_RDWR, &info);
+
+  if (opts->wav_out_f == NULL)
+  {
+    fprintf (stderr,"Error - could not open wav output file %s\n", opts->wav_out_file);
+    return;
+  }
+}
+
+//generic rms type function
+long int gen_rms(short *samples, int len, int step)
+{
+  
+  int i;
+  long int rms;
+  long p, t, s;
+  double dc, err;
+
+  p = t = 0L;
+  for (i=0; i<len; i+=step) {
+    s = (long)samples[i];
+    t += s;
+    p += s * s;
+  }
+  /* correct for dc offset in squares */
+  dc = (double)(t*step) / (double)len;
+  err = t * 2 * dc - dc * dc * len;
+
+  rms = (long int)sqrt((p-err) / len);
+  //make sure it doesnt' randomly feed us a large negative value (overflow?)
+  if (rms < 0) rms = 150; //could also consider returning 0 and making it return the last known good value instead
+  return rms;
+}
+
+//listening to and playing back analog audio
+void edacs_analog(dsd_opts * opts, dsd_state * state)
+{
+
+  int i;
+  short analog1[960];
+  short analog2[960];
+  short analog3[960];
+  short sample = 0; 
+
+  state->last_cc_sync_time = time(NULL);
+  state->last_vc_sync_time = time(NULL);
+
+  memset (analog1, 0, sizeof(analog1));
+  memset (analog2, 0, sizeof(analog2));
+  memset (analog3, 0, sizeof(analog3));
+
+  long int rms = opts->rtl_squelch_level + 1; //one more for the initial loop phase
+  long int sql = opts->rtl_squelch_level;
+
+  fprintf (stderr, "\n");
+
+  while (!exitflag && rms > sql)
+  { 
+    //this will only work on 48k/1 short output
+    if (opts->audio_in_type == 0)
+    {
+      for (i = 0; i < 960; i++)
+      {
+        pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
+        analog1[i] = sample;
+      }
+
+      for (i = 0; i < 960; i++)
+      {
+        pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
+        analog2[i] = sample;
+      }
+
+      for (i = 0; i < 960; i++)
+      {
+        pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
+        analog3[i] = sample;
+      }
+      //this rms will only work properly (for now) with squelch enabled in SDR++ or other
+      rms = gen_rms(analog3, 960, 1);
+    }
+
+    //TCP Input -- TODO: Error Handling if connection drops
+    if (opts->audio_in_type == 8)
+    {
+      for (i = 0; i < 960; i++)
+      {
+        sf_read_short(opts->tcp_file_in, &sample, 1);
+        analog1[i] = sample;
+      }
+
+      for (i = 0; i < 960; i++)
+      {
+        sf_read_short(opts->tcp_file_in, &sample, 1);
+        analog2[i] = sample;
+      }
+
+      for (i = 0; i < 960; i++)
+      {
+        sf_read_short(opts->tcp_file_in, &sample, 1);
+        analog3[i] = sample;
+      }
+      //this rms will only work properly (for now) with squelch enabled in SDR++
+      rms = gen_rms(analog3, 960, 1);
+    }
+
+    //RTL Input
+    #ifdef USE_RTLSDR
+    if (opts->audio_in_type == 3)
+    {
+      for (i = 0; i < 960; i++)
+      {
+        get_rtlsdr_sample(&sample, opts, state);
+        analog1[i] = sample;
+      }
+
+      for (i = 0; i < 960; i++)
+      {
+        get_rtlsdr_sample(&sample, opts, state);
+        analog2[i] = sample;
+      }
+
+      for (i = 0; i < 960; i++)
+      {
+        get_rtlsdr_sample(&sample, opts, state);
+        analog3[i] = sample;
+      }
+      //the rtl rms value works properly without needing a 'hard' squelch value
+      rms = rtl_return_rms();
+    }
+    #endif
+
+    if (opts->audio_out_type == 0 && opts->floating_point == 0 && opts->slot1_on == 1)
+    {
+      pa_simple_write(opts->pulse_digi_dev_out, analog1, 960*2, NULL);
+      pa_simple_write(opts->pulse_digi_dev_out, analog2, 960*2, NULL);
+      pa_simple_write(opts->pulse_digi_dev_out, analog3, 960*2, NULL);
+    }
+
+    if (opts->audio_out_type == 5 && opts->floating_point == 0 && opts->slot1_on == 1)
+    {
+      write (opts->audio_out_fd, analog1, 960*2);
+      write (opts->audio_out_fd, analog1, 960*2);
+      write (opts->audio_out_fd, analog1, 960*2);
+    }
+
+    opts->rtl_rms = rms;
+
+    //NOTE: On really busy EDACS systems, this could end up being incorrect if we decode an extra frame or two
+    //before tuning and setting due to slight tuner lag and another frame has another call in it
+    int afs = state->lastsrc;
+    int a = afs >> 7;
+    int fs = afs & 0x7F;
+    int lcn = state->edacs_vc_lcn;
+
+    printFrameSync (opts, state, " EDACS", 0, "A");
+
+    if (rms < sql) fprintf (stderr, "%s", KRED);
+    else fprintf (stderr, "%s", KGRN);
+
+    fprintf (stderr, " Analog RMS: %04ld SQL: %ld", rms, sql);
+    if (afs != 0)
+      fprintf (stderr, " AFS [0x%03X] [%02d-%03d] LCN [%02d]", afs, a, fs, lcn);
+
+    fprintf (stderr, "%s", KNRM);
+
+    if (opts->floating_point == 1)
+      fprintf (stderr, "Analog Floating Point Output Not Supported");
+
+    if (rms > sql) fprintf (stderr, "\n");
+
+    //Update Ncurses Terminal
+    if (opts->use_ncurses_terminal == 1)
+      ncursesPrinter(opts, state);
+
+    //WIP: Write Analog Samples to wav file, easy enough, 
+    //but needs wav to be opened as 48k, or downsampled
+    //working on 48k version of openWavOutFile
+    if (opts->wav_out_f != NULL)
+    {
+      sf_write_short(opts->wav_out_f, analog1, 960);
+      sf_write_short(opts->wav_out_f, analog2, 960);
+      sf_write_short(opts->wav_out_f, analog3, 960);
+    }
+    
+  }
 }
 
 void edacs(dsd_opts * opts, dsd_state * state)
@@ -128,32 +323,32 @@ void edacs(dsd_opts * opts, dsd_state * state)
   {
 
     //ESK on/off detection, I honestly don't remember the logic for this anymore, but it works fine
-	  if ( (((fr_1t & 0xF000000000) >> 36) != 0xB)  && (((fr_1t & 0xF000000000) >> 36) != 0x1) && (((fr_1t & 0xFF00000000) >> 32) != 0xF3) )
-	  {
+    if ( (((fr_1t & 0xF000000000) >> 36) != 0xB)  && (((fr_1t & 0xF000000000) >> 36) != 0x1) && (((fr_1t & 0xFF00000000) >> 32) != 0xF3) )
+    {
       //experimenting with values here, not too high, and not too low
-		  if ( (((fr_1t & 0xF000000000) >> 36) <= 0x8 ))
+      if ( (((fr_1t & 0xF000000000) >> 36) <= 0x8 ))
       { 
-		    state->esk_mask = 0xA0;
+        state->esk_mask = 0xA0;
       }
       //ideal value would be 5, but some other values exist that don't allow it
-		  if ( (((fr_1t & 0xF000000000) >> 36) > 0x8 ) )
+      if ( (((fr_1t & 0xF000000000) >> 36) > 0x8 ) )
       { 
-		    state->esk_mask = 0x0;
+        state->esk_mask = 0x0;
       }
 	  }
 
     //Standard/Networked Auto Detection
-	  //if (command == netcmd) //netcmd is F3 Standard/Networked (I think)
+    //if (command == netcmd) //netcmd is F3 Standard/Networked (I think)
     if ( (fr_1t >> 32 == netcmd) || (fr_1t >> 32 == (netcmd ^ 0xA0)) ) 
     { 
-		  state->ea_mode = 0; //disable extended addressing mode
-	  }
+      state->ea_mode = 0; //disable extended addressing mode
+    }
 
     //EA Auto detection //peercmd is 0xF88 peer site relay 0xFF80000000 >> 28
-	  if (fr_1t >> 28 == peercmd || fr_1t >> 28 == (peercmd ^ 0xA00) )
+    if (fr_1t >> 28 == peercmd || fr_1t >> 28 == (peercmd ^ 0xA00) )
     {
-		  state->ea_mode = 1; //enable extended addressing mode
-	  }
+      state->ea_mode = 1; //enable extended addressing mode
+    }
 
     //Start Extended Addressing Mode 
     if (state->ea_mode == 1)
@@ -288,6 +483,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             {
               sprintf (opts->wav_out_file, "./WAV/%s %s pV Site %lld TG %d SRC %d.wav", getDateE(), getTimeE(), state->edacs_site_id, group, source);
               openWavOutFile (opts, state);
+              // openWavOutFile48k (opts, state); //debug for testing analog wav only
             }
             
             //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
@@ -296,8 +492,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
               if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
       		    SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
               state->edacs_tuned_lcn = lcn;
-              opts->p25_is_tuned = 1; 
-              
+              opts->p25_is_tuned = 1;
+              //debug testing (since I don't have EDACS standard w/ Analog nearby)
+              // edacs_analog(opts, state);
             }
 
             if (opts->audio_in_type == 3) //rtl dongle
@@ -306,6 +503,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
               rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
+              //debug testing (since I don't have EDACS standard w/ Analog nearby)
+              // edacs_analog(opts, state);
               #endif
             }
 
@@ -405,46 +604,52 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
         }
 
+        //NOTE: Restructured below so that analog and digital are handled the same, just that when
+        //its analog, it will now start edacs_analog which will while loop analog samples until
+        //signal level drops (RMS, or a dotting sequence is detected)
+
+        //analog working now with edacs_analog
         if (command == 0xEE)
-        {
-          //no handling for raw audio yet...that works properly atleast
           fprintf (stderr, " Analog"); 
-        }
-        else //Digital Call (ProVoice, hopefully not Aegis in 2022)
-        {
+
+        //Digital Call (ProVoice, hopefully, and not Aegis in 2022)
+        else
           fprintf (stderr, " Digital");
-          //this is working now with the new import setup
-          if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
+
+
+        //this is working now with the new import setup
+        if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
+        {
+          if (lcn < 26 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
           {
-            if (lcn < 26 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
+            //openwav file and do per call right here
+            if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
-              //openwav file and do per call right here
-              if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
-              {
-                sprintf (opts->wav_out_file, "./WAV/%s %s pV Site %lld AFS %X.wav", getDateE(), getTimeE(), state->edacs_site_id, afs);
-                openWavOutFile (opts, state);
-              }
-
-              if (opts->use_rigctl == 1)
-              {
-                if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
-      		      SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because our index starts at zero
-                state->edacs_tuned_lcn = lcn;
-                opts->p25_is_tuned = 1; 
-              }
-
-              if (opts->audio_in_type == 3) //rtl dongle
-              {
-                #ifdef USE_RTLSDR
-                rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
-                state->edacs_tuned_lcn = lcn;
-                opts->p25_is_tuned = 1;
-                #endif
-              }
-
+              sprintf (opts->wav_out_file, "./WAV/%s %s pV Site %lld AFS %02d-%03d - %X.wav", getDateE(), getTimeE(), state->edacs_site_id, a, fs, afs);
+              if (command == 0xEF) openWavOutFile (opts, state); //digital
+              if (command == 0xEE) openWavOutFile48k (opts, state); //analog at 48k
             }
-          
+
+            if (opts->use_rigctl == 1)
+            {
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+              SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because our index starts at zero
+              state->edacs_tuned_lcn = lcn;
+              opts->p25_is_tuned = 1;
+              if (command == 0xEE) edacs_analog(opts, state);
+            }
+
+            if (opts->audio_in_type == 3) //rtl dongle
+            {
+              #ifdef USE_RTLSDR
+              rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+              state->edacs_tuned_lcn = lcn;
+              opts->p25_is_tuned = 1;
+              if (command == 0xEE) edacs_analog(opts, state);
+              #endif
+            }
           }
+        
         }
         fprintf (stderr, "%s", KNRM);
       }
