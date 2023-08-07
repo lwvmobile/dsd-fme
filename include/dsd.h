@@ -280,7 +280,7 @@ typedef struct
   int rtl_udp_port;
   int rtl_bandwidth;
   int rtl_started;
-  int rtl_rms;
+  long int rtl_rms;
   int monitor_input_audio;
   int pulse_raw_rate_in;
   int pulse_raw_rate_out;
@@ -1229,7 +1229,7 @@ void cleanup_rtlsdr_stream();
 int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state);
 void rtlsdr_sighandler();
 void rtl_dev_tune(dsd_opts * opts, long int frequency);
-int rtl_return_rms();
+long int rtl_return_rms();
 void rtl_clean_queue();
 #endif
 //DMR TRELLIS
