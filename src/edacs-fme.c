@@ -19,7 +19,11 @@
 #include "dsd.h"
 
 char * getDateE(void) {
-  char datename[99]; //might honestly just need a much smaller size, and not a larger one
+  #ifdef AERO_BUILD
+  char datename[80];
+  #else
+  char datename[99];
+  #endif
   char * curr2;
   struct tm * to;
   time_t t;

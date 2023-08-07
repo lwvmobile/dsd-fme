@@ -67,7 +67,11 @@ char * getTime(void) //get pretty hh:mm:ss timestamp
 }
 
 char * getDate(void) {
-  char datename[32];
+  #ifdef AERO_BUILD
+  char datename[80];
+  #else
+  char datename[99];
+  #endif
   char * curr2;
   struct tm * to;
   time_t t;

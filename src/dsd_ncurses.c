@@ -248,7 +248,11 @@ void beeper (dsd_opts * opts, dsd_state * state, int type)
 #endif
 
 char * getDateN(void) {
-  char datename[80]; //bug in 32-bit Ubuntu when using date in filename, date is garbage text
+  #ifdef AERO_BUILD
+  char datename[80];
+  #else
+  char datename[99];
+  #endif
   char * curr2;
   struct tm * to;
   time_t t;
@@ -274,9 +278,9 @@ char * getTimeN(void) //get pretty hh:mm:ss timestamp
 
   return curr;
 }
-
+//this version is broken now in Cygwin with the 80 value, reverted back
 char * getDateC(time_t t) {
-  char datename[99]; //Ubuntu 32-bit, use 80; everything else, use 99
+  char datename[99];
   char * curr2;
   struct tm * to;
 
