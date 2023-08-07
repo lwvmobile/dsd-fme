@@ -34,7 +34,11 @@ char * getTimeF(void) //get pretty hh:mm:ss timestamp
 }
 
 char * getDateF(void) {
-  char datename[80]; //32-bit needs this to be 80
+  #ifdef AERO_BUILD
+  char datename[80];
+  #else
+  char datename[99];
+  #endif
   char * curr2;
   struct tm * to;
   time_t t;
