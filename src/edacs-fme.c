@@ -69,22 +69,22 @@ void openWavOutFile48k (dsd_opts * opts, dsd_state * state)
 long int gen_rms(short *samples, int len, int step)
 {
   
-	int i;
+  int i;
   long int rms;
-	long p, t, s;
-	double dc, err;
+  long p, t, s;
+  double dc, err;
 
-	p = t = 0L;
-	for (i=0; i<len; i+=step) {
-		s = (long)samples[i];
-		t += s;
-		p += s * s;
-	}
-	/* correct for dc offset in squares */
-	dc = (double)(t*step) / (double)len;
-	err = t * 2 * dc - dc * dc * len;
+  p = t = 0L;
+  for (i=0; i<len; i+=step) {
+    s = (long)samples[i];
+    t += s;
+    p += s * s;
+  }
+  /* correct for dc offset in squares */
+  dc = (double)(t*step) / (double)len;
+  err = t * 2 * dc - dc * dc * len;
 
-	rms = (long int)sqrt((p-err) / len);
+  rms = (long int)sqrt((p-err) / len);
   //make sure it doesnt' randomly feed us a large negative value (overflow?)
   if (rms < 0) rms = 150; //could also consider returning 0 and making it return the last known good value instead
   return rms;
@@ -318,32 +318,32 @@ void edacs(dsd_opts * opts, dsd_state * state)
   {
 
     //ESK on/off detection, I honestly don't remember the logic for this anymore, but it works fine
-	  if ( (((fr_1t & 0xF000000000) >> 36) != 0xB)  && (((fr_1t & 0xF000000000) >> 36) != 0x1) && (((fr_1t & 0xFF00000000) >> 32) != 0xF3) )
-	  {
+    if ( (((fr_1t & 0xF000000000) >> 36) != 0xB)  && (((fr_1t & 0xF000000000) >> 36) != 0x1) && (((fr_1t & 0xFF00000000) >> 32) != 0xF3) )
+    {
       //experimenting with values here, not too high, and not too low
-		  if ( (((fr_1t & 0xF000000000) >> 36) <= 0x8 ))
+      if ( (((fr_1t & 0xF000000000) >> 36) <= 0x8 ))
       { 
-		    state->esk_mask = 0xA0;
+        state->esk_mask = 0xA0;
       }
       //ideal value would be 5, but some other values exist that don't allow it
-		  if ( (((fr_1t & 0xF000000000) >> 36) > 0x8 ) )
+      if ( (((fr_1t & 0xF000000000) >> 36) > 0x8 ) )
       { 
-		    state->esk_mask = 0x0;
+        state->esk_mask = 0x0;
       }
-	  }
+    }
 
     //Standard/Networked Auto Detection
-	  //if (command == netcmd) //netcmd is F3 Standard/Networked (I think)
+    //if (command == netcmd) //netcmd is F3 Standard/Networked (I think)
     if ( (fr_1t >> 32 == netcmd) || (fr_1t >> 32 == (netcmd ^ 0xA0)) ) 
     { 
-		  state->ea_mode = 0; //disable extended addressing mode
-	  }
+      state->ea_mode = 0; //disable extended addressing mode
+    }
 
     //EA Auto detection //peercmd is 0xF88 peer site relay 0xFF80000000 >> 28
-	  if (fr_1t >> 28 == peercmd || fr_1t >> 28 == (peercmd ^ 0xA00) )
+    if (fr_1t >> 28 == peercmd || fr_1t >> 28 == (peercmd ^ 0xA00) )
     {
-		  state->ea_mode = 1; //enable extended addressing mode
-	  }
+      state->ea_mode = 1; //enable extended addressing mode
+    }
 
     //Start Extended Addressing Mode 
     if (state->ea_mode == 1)
