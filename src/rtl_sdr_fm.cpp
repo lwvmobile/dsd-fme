@@ -463,11 +463,14 @@ void dc_block_filter(struct demod_state *fm)
 	}
 	fm->dc_avg = avg;
 }
-
-int rms(int16_t *samples, int len, int step)
+//TODO: Fix This so we don't get random negative values in Cygwin (or 32-bit builds?)
+//Fixed -- I honestly think the issue is Cygwin can't keep up and if it can't run enough samples in the other thread,
+//then it reports some jank values, really unsure, I've never seen the issue in Linux side though
+long int rms(int16_t *samples, int len, int step)
 /* largely lifted from rtl_power */
 {
 	int i;
+	long int rms;
 	long p, t, s;
 	double dc, err;
 
@@ -481,7 +484,10 @@ int rms(int16_t *samples, int len, int step)
 	dc = (double)(t*step) / (double)len;
 	err = t * 2 * dc - dc * dc * len;
 
-	return (int)sqrt((p-err) / len);
+	rms = (long int)sqrt((p-err) / len);
+	//going with a value that's easy to figure out when its done the thing
+	if (rms < 0){ rms = 999; } //need to text nxdn with this setup to make sure it isn't broken in Windows Cygwin now
+	return rms;
 }
 
 void full_demod(struct demod_state *d)
@@ -1108,13 +1114,10 @@ void rtl_dev_tune(dsd_opts * opts, long int frequency)
 }
 
 //return RMS value (root means square) power level -- used as soft squelch inside of framesync
-int rtl_return_rms()
+long int rtl_return_rms()
 {
-	int sr = 0;
+	long int sr = 0;
 	sr = rms(demod.lowpassed, demod.lp_len, 1);
-	// 'Fix' potential negative value overflow from the rms function -- Observed in Windows builds
-	sr = abs(sr);
-	if (sr > 9999) sr = 9999;
 	return (sr);
 }
 

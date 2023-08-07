@@ -2319,7 +2319,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw (" Gain: %idB;", opts->rtl_gain_value);
     printw (" PPM: %i;", opts->rtlsdr_ppm_error);
     printw (" SQ: %i;", opts->rtl_squelch_level);
-    printw (" RMS: %04i;", opts->rtl_rms);
+    printw (" RMS: %04li;", opts->rtl_rms);
     printw (" BW: %i kHz;", opts->rtl_bandwidth);
     printw (" FRQ: %i;", opts->rtlsdr_center_freq); 
     if (opts->rtl_udp_port != 0) printw ("\n| External Tuning on UDP Port: %i", opts->rtl_udp_port);
