@@ -1997,7 +1997,7 @@ main (int argc, char **argv)
             opts.mod_qpsk = 0;
             opts.mod_gfsk = 1;
             state.rf_mod = 2;
-            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 1;
             opts.dmr_stereo = 0;
             opts.dmr_mono = 0;

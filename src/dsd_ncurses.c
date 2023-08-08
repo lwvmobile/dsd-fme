@@ -387,7 +387,9 @@ void print_menuc(WINDOW *menu_win, int highlight)
 
 void ncursesOpen (dsd_opts * opts, dsd_state * state)
 {
-  UNUSED2(opts, state);
+  //this is primarily used to push a quick audio blip through OSS so it will show up in the mixer immediately
+  if (opts->audio_out_type == 2 || opts->audio_out_type == 5)
+    beeper (opts, state, 0);
 
   // state->menuopen = 1; //flag the menu is open, stop processing getFrameSync
   mbe_printVersion (versionstr);
@@ -2305,6 +2307,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->audio_gain == 0) printw (" (+/-) Auto");
     if (opts->audio_gain > 0) printw (" (+/-) Manual");
     // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
+    printw (" \n");
+  }
+
+  if (opts->audio_out_type == 0 && opts->frame_provoice == 1)
+  {
+    printw ("| Pulse Audio Output: %i kHz; %i Ch; RMS: %04d Analog", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->rtl_rms);
     printw (" \n");
   }
 

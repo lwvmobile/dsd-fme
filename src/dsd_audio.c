@@ -26,10 +26,8 @@ pa_sample_spec ff; //float
 void closePulseOutput (dsd_opts * opts)
 {
   pa_simple_free (opts->pulse_digi_dev_out);
-  // if (opts->dmr_stereo == 1)
-  // {
-  //   pa_simple_free (opts->pulse_digi_dev_outR);
-  // }
+  if (opts->frame_provoice == 1) //EDACS analog calls
+    pa_simple_free (opts->pulse_raw_dev_out);
 }
 
 void closePulseInput (dsd_opts * opts)
@@ -52,25 +50,18 @@ void openPulseOutput(dsd_opts * opts)
   ff.channels = opts->pulse_digi_out_channels;
   ff.rate = opts->pulse_digi_rate_out;
 
-  if (opts->monitor_input_audio == 1)
-  {
-    opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME3", PA_STREAM_PLAYBACK, NULL, "Raw Audio Out", &ss, NULL, NULL, NULL);
-  }
+  //reconfigured to open when using edacs so we can have a analog audio out that runs at 48k1 and not 8k1 float/short
+  if (opts->frame_provoice == 1)
+    opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME3", PA_STREAM_PLAYBACK, NULL, "EDACS/Analog", &ss, NULL, NULL, NULL);
 
   pa_channel_map* fl = 0; //NULL and 0 are same in this context
   pa_channel_map* ss = 0; //NULL and 0 are same in this context
 
   if (opts->floating_point == 0)
-  {
     opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &tt, ss, NULL, NULL);
 
-  }
-
   if (opts->floating_point == 1)
-  {
     opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &ff, fl, NULL, NULL);
-
-  }
 
 }
 
@@ -167,6 +158,10 @@ void openOSSOutput (dsd_opts * opts)
       {
         fprintf (stderr, "ioctl channel error \n");
       }
+
+      //if using split with OSS output, and using EDACS w/ Analog, we have to use 48k
+      if (opts->frame_provoice == 1)
+        opts->pulse_digi_rate_out = 48000;
 
       speed = opts->pulse_digi_rate_out; //since we have split input/output, we want to mirror pulse rate out
       fmt = speed; //output rate

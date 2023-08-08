@@ -91,7 +91,7 @@ long int gen_rms(short *samples, int len, int step)
 }
 
 //listening to and playing back analog audio
-void edacs_analog(dsd_opts * opts, dsd_state * state)
+void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn)
 {
 
   int i;
@@ -188,28 +188,24 @@ void edacs_analog(dsd_opts * opts, dsd_state * state)
     }
     #endif
 
-    if (opts->audio_out_type == 0 && opts->floating_point == 0 && opts->slot1_on == 1)
+    //reconfigured to use seperate audio out stream that is always 48k short
+    if (opts->audio_out_type == 0 && opts->slot1_on == 1)
     {
-      pa_simple_write(opts->pulse_digi_dev_out, analog1, 960*2, NULL);
-      pa_simple_write(opts->pulse_digi_dev_out, analog2, 960*2, NULL);
-      pa_simple_write(opts->pulse_digi_dev_out, analog3, 960*2, NULL);
+      pa_simple_write(opts->pulse_raw_dev_out, analog1, 960*2, NULL);
+      pa_simple_write(opts->pulse_raw_dev_out, analog2, 960*2, NULL);
+      pa_simple_write(opts->pulse_raw_dev_out, analog3, 960*2, NULL);
     }
 
+    //added a condition check so that if OSS output and 8K, switches to 48K when opening OSS
     if (opts->audio_out_type == 5 && opts->floating_point == 0 && opts->slot1_on == 1)
     {
       write (opts->audio_out_fd, analog1, 960*2);
-      write (opts->audio_out_fd, analog1, 960*2);
-      write (opts->audio_out_fd, analog1, 960*2);
+      write (opts->audio_out_fd, analog2, 960*2);
+      write (opts->audio_out_fd, analog3, 960*2);
     }
 
     opts->rtl_rms = rms;
 
-    //NOTE: On really busy EDACS systems, this could end up being incorrect if we decode an extra frame or two
-    //before tuning and setting due to slight tuner lag and another frame has another call in it
-    int afs = state->lastsrc;
-    int a = afs >> 7;
-    int fs = afs & 0x7F;
-    int lcn = state->edacs_vc_lcn;
 
     printFrameSync (opts, state, " EDACS", 0, "A");
 
@@ -218,7 +214,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state)
 
     fprintf (stderr, " Analog RMS: %04ld SQL: %ld", rms, sql);
     if (afs != 0)
-      fprintf (stderr, " AFS [0x%03X] [%02d-%03d] LCN [%02d]", afs, a, fs, lcn);
+      fprintf (stderr, " AFS [0x%03X] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
 
     fprintf (stderr, "%s", KNRM);
 
@@ -494,7 +490,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
               //debug testing (since I don't have EDACS standard w/ Analog nearby)
-              // edacs_analog(opts, state);
+              // edacs_analog(opts, state, group, lcn);
             }
 
             if (opts->audio_in_type == 3) //rtl dongle
@@ -504,7 +500,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
               //debug testing (since I don't have EDACS standard w/ Analog nearby)
-              // edacs_analog(opts, state);
+              // edacs_analog(opts, state, group, lcn);
               #endif
             }
 
@@ -636,7 +632,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because our index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              if (command == 0xEE) edacs_analog(opts, state);
+              if (command == 0xEE) edacs_analog(opts, state, afs, lcn);
             }
 
             if (opts->audio_in_type == 3) //rtl dongle
@@ -645,7 +641,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              if (command == 0xEE) edacs_analog(opts, state);
+              if (command == 0xEE) edacs_analog(opts, state, afs, lcn);
               #endif
             }
           }
