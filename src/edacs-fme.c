@@ -190,9 +190,9 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
 
     if (opts->audio_out_type == 0)
     {
-      pa_simple_write(opts->pulse_digi_dev_out, analog1, 960*2, NULL);
-      pa_simple_write(opts->pulse_digi_dev_out, analog2, 960*2, NULL);
-      pa_simple_write(opts->pulse_digi_dev_out, analog3, 960*2, NULL);
+      pa_simple_write(opts->pulse_raw_dev_out, analog1, 960*2, NULL);
+      pa_simple_write(opts->pulse_raw_dev_out, analog2, 960*2, NULL);
+      pa_simple_write(opts->pulse_raw_dev_out, analog3, 960*2, NULL);
     }
 
     if (opts->audio_out_type == 5)

@@ -744,10 +744,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             			fprintf (stderr, " P2 Missing Parameters            ");
             			fprintf (stderr, "%s", KNRM);
             		}
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL);
                 return (35); //35
               }
@@ -783,10 +779,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             		}
 
                 state->lastsynctype = 36; //36
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL);
                 return (36); //36
               }
@@ -818,10 +810,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   printFrameSync (opts, state, "+dPMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 21;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 return (21);
               }
               if(strcmp(synctest12, DPMR_FRAME_SYNC_3) == 0)
@@ -854,10 +842,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 }
 
                 state->lastsynctype = 25;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 return (25);
               }
               if(strcmp(synctest12, INV_DPMR_FRAME_SYNC_3) == 0)
@@ -896,20 +880,12 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   //state->firstframe = 1;
                 }
                 state->lastsynctype = 33; //33
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 return (33); //33
               }
               else //inverted MS voice frame
               {
                 sprintf(state->ftype, "DMR MS");
                 state->lastsynctype = 32;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 return (32);
               }
             }
@@ -936,10 +912,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   //state->firstframe = 1;
                 }
                 state->lastsynctype = 34;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 return (34);
               }
             }
@@ -965,20 +937,12 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   //state->firstframe = 1;
                 }
                 state->lastsynctype = 32;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 return (32);
               }
               else //inverted MS data frame
               {
                 sprintf(state->ftype, "DMR MS");
                 state->lastsynctype = 33;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 return (33);
               }
 
@@ -1001,10 +965,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 10;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL); 
                 return (10);
               }
@@ -1021,10 +981,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->firstframe = 1;
                 }
                 state->lastsynctype = 11;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL); 
                 return (11); //11
               }
@@ -1046,10 +1002,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   //printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 33;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL);
                 return (33);
               }
@@ -1066,10 +1018,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->firstframe = 1;
                 }
                 state->lastsynctype = 32;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL);
                 return (32);
               }
@@ -1091,10 +1039,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   //printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 33;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL);
                 return (33);
               }
@@ -1111,10 +1055,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->firstframe = 1;
                 }
                 state->lastsynctype = 32;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL);
                 return (32);
               }
@@ -1140,10 +1080,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->firstframe = 1;
                 }
                 state->lastsynctype = 12;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL); 
                 return (12);
               }
@@ -1157,10 +1093,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 13;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL); 
                 return (13);
               }
@@ -1186,10 +1118,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->firstframe = 1;
                 }
                 state->lastsynctype = 32;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL);
                 return (32); //treat Direct Mode same as MS mode for now
               }
@@ -1226,10 +1154,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->firstframe = 1;
                 }
                 state->lastsynctype = 32;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL);
                 return (32);
               }
@@ -1242,10 +1166,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   //printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 33;
-                if ( opts->monitor_input_audio == 1)
-                {
-                  pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                }
                 state->last_cc_sync_time = time(NULL);
                 return (33);
               }
@@ -1323,11 +1243,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, "+D-STAR ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 6;
-                  if ( opts->monitor_input_audio == 1)
-                  {
-
-                    pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                  }
                   return (6);
                 }
               if (strcmp (synctest, INV_DSTAR_SYNC) == 0)
@@ -1342,11 +1257,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                       printFrameSync (opts, state, "-D-STAR ", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 7;
-                  if ( opts->monitor_input_audio == 1)
-                  {
-
-                    pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                  }
                   return (7);
                 }
               if (strcmp (synctest, DSTAR_HD) == 0)
@@ -1361,11 +1271,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                        printFrameSync (opts, state, "+D-STAR_HD ", synctest_pos + 1, modulation);
                      }
                    state->lastsynctype = 18;
-                   if ( opts->monitor_input_audio == 1)
-                   {
-
-                     pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                   }
                    return (18);
                  }
               if (strcmp (synctest, INV_DSTAR_HD) == 0)
@@ -1380,11 +1285,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                        printFrameSync (opts, state, "-D-STAR_HD ", synctest_pos + 1, modulation);
                      }
                    state->lastsynctype = 19;
-                   if ( opts->monitor_input_audio == 1)
-                   {
-
-                     pa_simple_flush(opts->pulse_raw_dev_out, NULL);
-                   }
                    return (19);
                  }
 

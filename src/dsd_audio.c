@@ -26,9 +26,11 @@ void closePulseOutput (dsd_opts * opts)
 {
   pa_simple_free (opts->pulse_digi_dev_out);
   if (opts->dmr_stereo == 1)
-  {
     pa_simple_free (opts->pulse_digi_dev_outR);
-  }
+
+  if (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) //EDACS analog calls and/or monitoring source analog audio
+    pa_simple_free (opts->pulse_raw_dev_out);
+
 }
 
 void closePulseInput (dsd_opts * opts)
@@ -47,10 +49,9 @@ void openPulseOutput(dsd_opts * opts)
   tt.channels = opts->pulse_digi_out_channels; //doing tests with 2 channels at 22050 for 44100 audio default in pulse
   tt.rate = opts->pulse_digi_rate_out; //48000, switches to 8000 when using RTL dongle
 
-  if (opts->monitor_input_audio == 1)
-  {
-    opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME3", PA_STREAM_PLAYBACK, NULL, "Raw Audio Out", &ss, NULL, NULL, NULL);
-  }
+  //reconfigured to open when using edacs or raw analog monitor so we can have a analog audio out that runs at 48k1 and not 8k1 float/short
+  if (opts->frame_provoice == 1 || opts->monitor_input_audio == 1)
+    opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME3", PA_STREAM_PLAYBACK, NULL, "Analog", &ss, 0, NULL, NULL);
 
 //tt
   pa_channel_map* left = 0; //NULL and 0 are same in this context

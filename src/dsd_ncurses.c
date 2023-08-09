@@ -2331,15 +2331,22 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (state->audio_smoothing == 1) printw (" - Smoothing On");
     printw (" \n");
   }
+  if ( opts->audio_out_type == 0 && (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
+  {
+    printw ("| Pulse Audio Output: %i kHz; %i Ch; RMS: %04ld Analog", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->rtl_rms);
+    printw (" \n");
+  }
   if (opts->audio_out_type == 5)
   {
     printw ("| OSS Audio Output: [%2i] kHz [1] Channel", SAMPLE_RATE_OUT/1000);
+    if (opts->frame_provoice == 1 || opts->monitor_input_audio == 1)
+      printw (" - Analog RMS: %04ld Analog", opts->rtl_rms);
     if (state->audio_smoothing == 1) printw (" - Smoothing On");
     printw (" \n");
   }
   if (opts->monitor_input_audio == 1)
   {
-    printw ("| Monitoring Source Audio when Carrier Present and No Sync Detected\n");
+    printw ("| Monitoring Source Audio when Carrier Present and No Sync Detected (WIP)\n");
   }
   if (opts->mbe_out_dir[0] != 0 && opts->dmr_stereo == 0)
   {
