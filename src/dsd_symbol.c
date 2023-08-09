@@ -295,7 +295,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           //seems to be working now, but RMS values are lower on actual analog signal than on no signal but noise
           if ( opts->rtl_rms > opts->rtl_squelch_level )
           {
-            if (opts->audio_out_type == 1)
+            if (opts->audio_out_type == 0)
               pa_simple_write(opts->pulse_raw_dev_out, state->analog_out, 960*2, NULL);
 
             //NOTE: I haven't personally tested this in Cygwin, so it might suck or lag, who knows
