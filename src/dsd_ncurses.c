@@ -2333,7 +2333,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   if ( opts->audio_out_type == 0 && (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
   {
-    printw ("| Pulse Audio Output: %i kHz; %i Ch; RMS: %04ld Analog", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->rtl_rms);
+    printw ("| Pulse Audio Output: %i kHz; %i Ch; RMS: %04ld ", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->rtl_rms);
     printw (" \n");
   }
   if (opts->audio_out_type == 5)
