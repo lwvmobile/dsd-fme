@@ -152,14 +152,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       else if (opts->audio_in_type == 3)
       {
 #ifdef USE_RTLSDR
-        // TODO: need to read demodulated stream here
-        // get_rtlsdr_sample(&sample);
+        // Read demodulated stream here
         get_rtlsdr_sample(&sample, opts, state);
-        if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample < 32767 && sample > -32767)
-        {
-          state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
-          pa_simple_write(opts->pulse_raw_dev_out, (void*)&state->pulse_raw_out_buffer, 2, NULL);
-        }
         opts->rtl_rms = rtl_return_rms();
 
 #endif
@@ -298,7 +292,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             if (opts->audio_out_type == 0)
               pa_simple_write(opts->pulse_raw_dev_out, state->analog_out, 960*2, NULL);
 
-            //NOTE: I haven't personally tested this in Cygwin, so it might suck or lag, who knows
+            //NOTE: Worked okay earlier in Cygwin, so should be fine
             if (opts->audio_out_type == 5)
               write (opts->audio_out_fd, state->analog_out, 960*2);
           }

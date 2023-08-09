@@ -1134,8 +1134,7 @@ usage ()
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
   printf ("  -w <file>     Output synthesized speech to a .wav file, legacy auto modes only.\n");
-  printf ("  -8            Enable Experimental Source Audio Monitor (OSS and Pulse Audio at 48k1)\n");
-  printf ("                 (Caution! May Cause High CPU usage or break when using RTL input!)\n");
+  printf ("  -8            Enable Experimental Source Audio Monitor (OSS at 48k1 and Pulse Audio)\n");
   printf ("                 (Its recommended to use Squelch in SDR++ or GQRX, etc, if monitoring mixed analog/digital)\n");
   printf ("  -P            Enable Per Call WAV file saving in XDMA and NXDN decoding classes\n");
   printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
@@ -1305,8 +1304,6 @@ if (opts->audio_in_type == 1)
 
     open_rtlsdr_stream(opts);
     opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
-    //safety disable due to HIGH CPU usage this causes when using RTL input
-    if (opts->monitor_input_audio == 1) opts->monitor_input_audio = 0;
   }
 #endif
 
@@ -1502,8 +1499,7 @@ main (int argc, char **argv)
         //experimental audio monitoring
         case '8':
           opts.monitor_input_audio = 1;
-          fprintf (stderr,"Experimental Raw Analog Source Monitoring Enabled (Pulse Audio Only!)\n");
-          fprintf (stderr,"WARNING! May Cause HIGH CPU Usage and/or break when using RTL Input\n");
+          fprintf (stderr,"Experimental Raw Analog Source Monitoring Enabled\n");
           break;
 
         //rc4 enforcement on DMR (due to missing the PI header)
