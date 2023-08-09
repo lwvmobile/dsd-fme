@@ -283,9 +283,32 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           //debug
           // opts->rtl_rms = 101;
 
+          //make it a little quieter
+          for (int x = 0; x < 960; x++)
+            state->analog_out[x] /= 4;
+
+
+
           //seems to be working now, but RMS values are lower on actual analog signal than on no signal but noise
-          if ( (opts->audio_out_type == 0) && (opts->rtl_rms > opts->rtl_squelch_level) )
-            pa_simple_write(opts->pulse_raw_dev_out, state->analog_out, 960*2, NULL);
+          if ( opts->rtl_rms > opts->rtl_squelch_level )
+          {
+            if (opts->audio_out_type == 0)
+              pa_simple_write(opts->pulse_raw_dev_out, state->analog_out, 960*2, NULL);
+
+            //NOTE: Worked okay earlier in Cygwin, so should be fine -- can only operate at 48k1, else slow mode lag
+
+            //This one will only operate when OSS 48k1 (when both input and output are OSS audio)
+            if (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1)
+              write (opts->audio_out_fd, state->analog_out, 960*2);
+
+            //STDOUT, but only when operating at 48k1 (no go just yet)
+            // if (opts->audio_out_type == 1 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1)
+            //   write (opts->audio_out_fd, state->analog_out, 960*2);
+
+            //OSS 8k1 (no go just yet)
+            // if (opts->audio_out_type == 2 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1)
+            //   write (opts->audio_out_fd, state->analog_out, 960*2);
+          }
 
           memset (state->analog_out, 0, sizeof(state->analog_out));
           state->analog_sample_counter = 0;

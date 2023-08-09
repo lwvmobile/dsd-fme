@@ -2323,6 +2323,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->audio_gain == 0) printw (" (+/-) Auto");
     if (opts->audio_gain > 0) printw (" (+/-) Manual");
     // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
+    if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) || opts->frame_provoice == 1)
+      printw (" - Analog RMS: %04ld ", opts->rtl_rms);
     printw (" \n");
   }
 

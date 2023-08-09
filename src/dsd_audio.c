@@ -119,8 +119,8 @@ void openOSSOutput (dsd_opts * opts)
       }
 
       opts->audio_out_type = 5; //5 for 1 channel - 48k OSS 16-bit short output (matching with input) 
-      opts->pulse_digi_rate_out = 48000; //this is used to force to upsample
-      opts->pulse_digi_out_channels = 1;
+      opts->pulse_digi_rate_out = 48000; //this is used to force to upsample and also allow source audio monitor conditional check
+      opts->pulse_digi_out_channels = 1; //this is used to allow source audio monitor conditional check
       opts->audio_gain = 0;
     }
   }
