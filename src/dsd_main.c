@@ -661,7 +661,7 @@ initOpts (dsd_opts * opts)
   opts->dmr_mute_encL = 1;
   opts->dmr_mute_encR = 1;
 
-  opts->monitor_input_audio = 0;
+  opts->monitor_input_audio = 0; //enable with -8
 
   opts->inverted_p2 = 0;
   opts->p2counter = 0;
@@ -785,6 +785,10 @@ initState (dsd_state * state)
   state->audio_out_bufR = malloc (sizeof (short) * 1000000);
   memset (state->audio_out_buf, 0, 100 * sizeof (short));
   memset (state->audio_out_bufR, 0, 100 * sizeof (short));
+  //analog/raw signal audio buffers
+  state->analog_sample_counter = 0; //when it reaches 960, then dump the raw/analog audio signal and reset
+  memset (state->analog_out, 0, sizeof(state->analog_out) );
+  //
   state->audio_out_buf_p = state->audio_out_buf + 100;
   state->audio_out_buf_pR = state->audio_out_bufR + 100;
   state->audio_out_float_buf = malloc (sizeof (float) * 1000000);
@@ -1204,6 +1208,9 @@ usage ()
   printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n");
   printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
   printf ("                 (Single Nested Directory Only! Use Before the -P option!)\n");
+  printf ("  -8            Enable Experimental Source Audio Monitor (Pulse Audio Output Only!)\n");
+  printf ("                 (Caution! May Cause High CPU usage or break when using RTL input!)\n");
+  printf ("                 (Its recommended to use Squelch in SDR++ or GQRX, etc, if monitoring mixed analog/digital)\n");
   printf ("  -P            Enable Per Call WAV file saving in AUTO and NXDN decoding classes\n");
   printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
   printf ("                 (Running in console will use static wav files)\n");
@@ -1309,9 +1316,6 @@ usage ()
   printf ("                 \n");
   printf ("  -3            Disable DMR Late Entry Encryption Identifiers (VC6 Single Burst) \n");
   printf ("                  Note: Disable this if false positives on Voice ENC occur. \n");
-  // printf ("  -3            Enable DMR Late Entry Encryption Identifiers (VC6 Single Burst) \n");
-  // printf ("                  Note: This is experimental and may produce false positives depending on system type, notably TXI. \n");
-  // printf ("                  Use -0 or -4 options above instead if needed. \n");
   printf ("\n");
   printf (" Trunking Options:\n");
   printf ("  -C <file>     Import Channel to Frequency Map (channum, freq) from csv file. (Capital C)                   \n");
@@ -1356,6 +1360,8 @@ liveScanner (dsd_opts * opts, dsd_state * state)
   {
     open_rtlsdr_stream(opts);
     opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
+    //safety disable due to HIGH CPU usage this causes when using RTL input
+    if (opts->monitor_input_audio == 1) opts->monitor_input_audio = 0;
   }
 #endif
 
@@ -1554,6 +1560,13 @@ main (int argc, char **argv)
 
         //NOTE: The 'K' option for single BP key has been swapped to 'b'
         //'K' is now used for hexidecimal key.csv imports
+
+        //experimental audio monitoring
+        case '8':
+          opts.monitor_input_audio = 1;
+          fprintf (stderr,"Experimental Raw Analog Source Monitoring Enabled (Pulse Audio Only!)\n");
+          fprintf (stderr,"WARNING! May Cause HIGH CPU Usage and/or break when using RTL Input\n");
+          break;
 
         //rc4 enforcement on DMR (due to missing the PI header)
         case '0':

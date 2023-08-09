@@ -17,25 +17,27 @@
 
 #include "dsd.h"
 
-//testing sending samples into this to get an RMS value
-int disctap_rms(int16_t *samples, int len, int step) //use samplespersymbol as len
-/* largely lifted from rtl_power */
+long int raw_rms(int16_t *samples, int len, int step) //use samplespersymbol as len
 {
-	int i;
-	long p, t, s;
-	double dc, err;
+  
+  int i;
+  long int rms;
+  long p, t, s;
+  double dc, err;
 
-	p = t = 0L;
-	for (i=0; i<len; i+=step) {
-		s = (long)samples[i];
-		t += s;
-		p += s * s;
-	}
-	/* correct for dc offset in squares */
-	dc = (double)(t*step) / (double)len;
-	err = t * 2 * dc - dc * dc * len;
+  p = t = 0L;
+  for (i=0; i<len; i+=step) {
+    s = (long)samples[i];
+    t += s;
+    p += s * s;
+  }
+  /* correct for dc offset in squares */
+  dc = (double)(t*step) / (double)len;
+  err = t * 2 * dc - dc * dc * len;
 
-	return (int)sqrt((p-err) / len);
+  rms = (long int)sqrt((p-err) / len);
+  if (rms < 0) rms = 150;
+  return rms;
 }
 
 int
@@ -267,6 +269,44 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         }
         #endif
         
+      }
+
+      //LM server reports massive 'Q overrun, queueing locally' and CPU usage spikes to over 40% on pulse audio daemon 
+      //main issue appears to be using this with rtl input -- issues due to threading, or sampling rate? or just rtl_fm doing its thing and causing issues?
+      //works fine when using SDR++ as input on the remote and NOT when using rtl direct input
+      //Went back and tested EDACS analog calls with RTL input, and it doesn't even flinch there or cause any HIGH CPU usage, so no idea why it does so here
+      if (have_sync == 0 && opts->monitor_input_audio == 1)
+      {
+        //sanity check to prevent an overflow
+        if (state->analog_sample_counter > 959)
+          state->analog_sample_counter = 959;
+
+        state->analog_out[state->analog_sample_counter++] = sample;    
+
+        if (state->analog_sample_counter == 960)
+        {
+          //get an rms value if not using the rtl built in version
+          if (opts->audio_in_type != 3)
+            opts->rtl_rms = raw_rms(state->analog_out, 960, 1);
+
+          //debug
+          // opts->rtl_rms = 101;
+
+          //seems to be working now, but RMS values are lower on actual analog signal than on no signal but noise
+          if ( (opts->audio_out_type == 0) && (opts->rtl_rms > opts->rtl_squelch_level) )
+            pa_simple_write(opts->pulse_raw_dev_out, state->analog_out, 960*2, NULL);
+
+          memset (state->analog_out, 0, sizeof(state->analog_out));
+          state->analog_sample_counter = 0;
+        }
+
+      }
+
+      if (have_sync == 1 && opts->monitor_input_audio == 1)
+      {
+        //zero out and reset counter
+        memset (state->analog_out, 0, sizeof(state->analog_out));
+        state->analog_sample_counter = 0;
       }
 
       if (opts->use_cosine_filter)

@@ -26,7 +26,7 @@ pa_sample_spec ff; //float
 void closePulseOutput (dsd_opts * opts)
 {
   pa_simple_free (opts->pulse_digi_dev_out);
-  if (opts->frame_provoice == 1) //EDACS analog calls
+  if (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) //EDACS analog calls and/or monitoring source analog audio
     pa_simple_free (opts->pulse_raw_dev_out);
 }
 
@@ -50,9 +50,9 @@ void openPulseOutput(dsd_opts * opts)
   ff.channels = opts->pulse_digi_out_channels;
   ff.rate = opts->pulse_digi_rate_out;
 
-  //reconfigured to open when using edacs so we can have a analog audio out that runs at 48k1 and not 8k1 float/short
-  if (opts->frame_provoice == 1)
-    opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME3", PA_STREAM_PLAYBACK, NULL, "EDACS/Analog", &ss, NULL, NULL, NULL);
+  //reconfigured to open when using edacs or raw analog monitor so we can have a analog audio out that runs at 48k1 and not 8k1 float/short
+  if (opts->frame_provoice == 1 || opts->monitor_input_audio == 1)
+    opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME3", PA_STREAM_PLAYBACK, NULL, "Analog", &ss, 0, NULL, NULL);
 
   pa_channel_map* fl = 0; //NULL and 0 are same in this context
   pa_channel_map* ss = 0; //NULL and 0 are same in this context

@@ -427,6 +427,9 @@ typedef struct
   float *audio_out_temp_buf_p;
   float audio_out_temp_bufR[160];
   float *audio_out_temp_buf_pR;
+  //analog/raw signal audio buffers
+  short analog_out[960];
+  int analog_sample_counter;
   //new stereo float sample storage
   float f_l[160]; //single sample left
   float f_r[160]; //single sample right
