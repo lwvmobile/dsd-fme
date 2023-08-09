@@ -23,10 +23,10 @@ cmake ..
 make -j `nproc`
 sudo make install
 sudo ldconfig
-sudo cp /usr/local/lib/libmbe.a /usr/lib/libmbe.a
-sudo cp /usr/local/lib/libmbe.so /usr/lib/libmbe.so
-sudo cp /usr/local/lib/libmbe.so.1 /usr/lib/libmbe.so.1 # ldconfig: /usr/lib/libmbe.so.1 is not a symbolic link
-sudo cp /usr/local/lib/libmbe.so.1.3 /usr/lib/libmbe.so.1.3
+#sudo cp /usr/local/lib/libmbe.a /usr/lib/libmbe.a
+sudo cp /usr/local/lib/libmbe.so /usr/lib/libmbe.so #this is the only one we need to copy 
+#sudo cp /usr/local/lib/libmbe.so.1 /usr/lib/libmbe.so.1
+#sudo cp /usr/local/lib/libmbe.so.1.3 /usr/lib/libmbe.so.1.3
 cd ..
 cd ..
 
