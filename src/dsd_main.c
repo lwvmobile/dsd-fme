@@ -1209,7 +1209,6 @@ usage ()
   printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
   printf ("                 (Single Nested Directory Only! Use Before the -P option!)\n");
   printf ("  -8            Enable Experimental Source Audio Monitor (Pulse Audio Output Only!)\n");
-  printf ("                 (Caution! May Cause High CPU usage or break when using RTL input!)\n");
   printf ("                 (Its recommended to use Squelch in SDR++ or GQRX, etc, if monitoring mixed analog/digital)\n");
   printf ("  -P            Enable Per Call WAV file saving in AUTO and NXDN decoding classes\n");
   printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
@@ -1360,8 +1359,6 @@ liveScanner (dsd_opts * opts, dsd_state * state)
   {
     open_rtlsdr_stream(opts);
     opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
-    //safety disable due to HIGH CPU usage this causes when using RTL input
-    if (opts->monitor_input_audio == 1) opts->monitor_input_audio = 0;
   }
 #endif
 
@@ -1565,7 +1562,6 @@ main (int argc, char **argv)
         case '8':
           opts.monitor_input_audio = 1;
           fprintf (stderr,"Experimental Raw Analog Source Monitoring Enabled (Pulse Audio Only!)\n");
-          fprintf (stderr,"WARNING! May Cause HIGH CPU Usage and/or break when using RTL Input\n");
           break;
 
         //rc4 enforcement on DMR (due to missing the PI header)

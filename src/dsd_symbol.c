@@ -151,17 +151,10 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       else if (opts->audio_in_type == 3)
       {
 #ifdef USE_RTLSDR
-        // TODO: need to read demodulated stream here
-        // get_rtlsdr_sample(&sample);
+        // Read demodulated stream here
         if (get_rtlsdr_sample(&sample, opts, state) < 0)
-        {
           cleanupAndExit(opts, state);
-        }
-        if (opts->monitor_input_audio == 1 && state->lastsynctype == -1 && sample < 32767 && sample > -32767)
-        {
-          state->pulse_raw_out_buffer = sample; //steal raw out buffer sample here?
-          pa_simple_write(opts->pulse_raw_dev_out, (void*)&state->pulse_raw_out_buffer, 2, NULL);
-        }
+        //update root means square power level
         opts->rtl_rms = rtl_return_rms();
 
 #endif
@@ -271,10 +264,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         
       }
 
-      //LM server reports massive 'Q overrun, queueing locally' and CPU usage spikes to over 40% on pulse audio daemon 
-      //main issue appears to be using this with rtl input -- issues due to threading, or sampling rate? or just rtl_fm doing its thing and causing issues?
-      //works fine when using SDR++ as input on the remote and NOT when using rtl direct input
-      //Went back and tested EDACS analog calls with RTL input, and it doesn't even flinch there or cause any HIGH CPU usage, so no idea why it does so here
+      //Fixed the RTL monitoring bug, it was left active up above (very old and jank test code),
+      //so it was constantly spamming pulse audio server with very small samples, then coming here as well. 
       if (have_sync == 0 && opts->monitor_input_audio == 1)
       {
         //sanity check to prevent an overflow
