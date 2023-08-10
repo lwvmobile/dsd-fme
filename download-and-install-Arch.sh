@@ -3,7 +3,7 @@ clear
 echo DSD-FME Digital Speech Decoder - Florida Man Edition Auto Installer For Arch Linux
 echo This will install the required packages, clone, build, and install DSD-FME only.
 echo This has been tested on Arch 2023.08.01 and Manjaro XFCE 22.1.3 Minimal.
-
+echo 
 echo MBELib is considered a requirement on this build.
 echo You must view this notice prior to continuing. 
 echo The Patent Notice can be found at the site below.
