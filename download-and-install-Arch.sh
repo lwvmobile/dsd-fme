@@ -16,7 +16,7 @@ Y='y'
 if [[ $Y == $ANSWER ]]; then
 
 sudo pacman -Syu #always run a full update first, partial upgrades aren't supported in Arch -- including downloading dependencies, that may require an updated dependency, and breaks same dependency on another package, a.k.a, dependency hell
-sudo pacman -S libpulse cmake ncurses lapack perl fftw rtl-sdr codec2 base-devel libsndfile git wget rtl-sdr
+sudo pacman -S libpulse cmake ncurses lapack perl fftw rtl-sdr codec2 base-devel libsndfile git wget
 
 echo Installing itpp 4.3.1 from Arch Strike --Tested on Arch 2023.08.01 and Manjaro XFCE 22.1.3 Minimal
 wget https://mirror.archstrike.org/x86_64/archstrike/itpp-4.3.1-3-x86_64.pkg.tar.xz
