@@ -2239,13 +2239,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| Digital Speech Decoder: LimaZulu Edition VI: Return of the Zulu \n");
     printw ("------------------------------------------------------------------------------\n");
   }
-#elif ZDEV_BUILD
-  if (opts->ncurses_compact == 1)
-  {
-    printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - zDEV %s \n", GIT_TAG);
-    printw ("------------------------------------------------------------------------------\n");
-  }
 #else
   if (opts->ncurses_compact == 1)
   {
@@ -2263,13 +2256,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4 && opts->frame_m17 == 0) printw (" MBElib %s", versionstr);
+      #ifdef USE_CODEC2
       if (i == 4 && opts->frame_m17 == 1) printw (" CODEC2");
+      #endif
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Build");
       if (i == 6) printw (" v2.1b (20230726) \n");
-      #elif ZDEV_BUILD
-      if (i == 5) printw (" %s ", "zDEV Build");
-      if (i == 6) printw (" %s \n", GIT_TAG);
       #else 
       if (i == 5) printw (" %s ", "Main Build");
       if (i == 6) printw (" %s \n", GIT_TAG);

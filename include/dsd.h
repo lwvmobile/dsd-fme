@@ -949,7 +949,6 @@ short nxdn_filter(short sample);
 short dpmr_filter(short sample);
 short m17_filter(short sample);
 
-int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr);
 uint64_t ConvertBitIntoBytes(uint8_t * BufferIn, uint32_t BitLength);
 
 void ncursesOpen (dsd_opts * opts, dsd_state * state);
