@@ -1091,6 +1091,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8_t cs_pdu[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors);
 void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[]);
 uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25]);
+uint32_t dmr_34(uint8_t * input, uint8_t treturn[18]); //simplier trellis decoder
+void beeper (dsd_opts * opts, dsd_state * state, int lr); //the tone beeper function
 
 //Embedded Alias and GPS
 void dmr_embedded_alias_header (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
@@ -1236,15 +1238,7 @@ void rtl_dev_tune(dsd_opts * opts, long int frequency);
 long int rtl_return_rms();
 void rtl_clean_queue();
 #endif
-//DMR TRELLIS
-void CDMRTrellisTribitsToBits(const unsigned char* tribits, unsigned char* payload);
-unsigned int CDMRTrellisCheckCode(const unsigned char* points, unsigned char* tribits);
-bool CDMRTrellisFixCode(unsigned char* points, unsigned int failPos, unsigned char* payload);
-void CDMRTrellisDeinterleave(const unsigned char* data, signed char* dibits);
-void CDMRTrellisDibitsToPoints(const signed char* dibits, unsigned char* points);
-void CDMRTrellisPointsToDibits(const unsigned char* points, signed char* dibits);
-void CDMRTrellisBitsToTribits(const unsigned char* payload, unsigned char* tribits);
-bool CDMRTrellisDecode(const unsigned char* data, unsigned char* payload);
+
 
 //Phase 2 Helper Functions
 int ez_rs28_ess (int payload[96], int parity[168]); //ezpwd bridge for FME
