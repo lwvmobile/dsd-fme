@@ -418,34 +418,30 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
   }
 
-  //the ugly one
+  //the sexy one
   if (is_trellis)
   {
     CRCExtracted = 0;
     CRCComputed = 0;
     IrrecoverableErrors = 1; 
-    bool trellis_good = TRUE;
 
     uint8_t tdibits[98];
     memset (tdibits, 0, sizeof(tdibits));
 
     //reconstitute info bits into reverse ordered dibits for the trellis decoder
     for (i = 0; i < 98; i++)
-    {
-      tdibits[97-i] = (info[i*2] << 1) | info[i*2+1]; 
-    }
+      tdibits[i] = (info[i*2] << 1) | info[i*2+1]; 
 
-    unsigned char TrellisReturn[18];
+    uint8_t TrellisReturn[18];
     memset (TrellisReturn, 0, sizeof(TrellisReturn));
+    IrrecoverableErrors = dmr_34(tdibits, TrellisReturn);
 
-    trellis_good = CDMRTrellisDecode(tdibits, TrellisReturn);
-    if (trellis_good == TRUE) IrrecoverableErrors = 0;
-    // else (fprintf (stderr, " Trellis Failure")); //debug print
+    //debug -- its a lot easier to hear the number of errors, than to eyeball it
+    // if (IrrecoverableErrors) beeper (opts, state, slot);
 
     for (i = 0; i < pdu_len; i++) //18
-    {
-      DMR_PDU[i] = (uint8_t)TrellisReturn[i+pdu_start]; 
-    }
+      DMR_PDU[i] = TrellisReturn[i+pdu_start]; 
+
 
     for(i = 0, j = 0; i < 18; i++, j+=8)
     {
@@ -483,7 +479,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       } 
       else
       {
-        // IrrecoverableErrors = 9; //set as a shim since the trellis decoder is a pain to fix
+        
         state->data_block_crc_valid[slot][blockcounter] = 0;
       } 
 
@@ -505,7 +501,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
   }
 
-  if (is_full) //Rate 1 Data
+  if (is_full) //Rate 1 Data -- todo: fix padding bits, the four padding bits are on bit 96,97,98,99
   {
     CRCExtracted = 0;
     CRCComputed = 0;
