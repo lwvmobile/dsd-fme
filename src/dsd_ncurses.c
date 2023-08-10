@@ -2236,7 +2236,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
       if (i == 4 && opts->frame_m17 == 0) printw (" MBElib %s", versionstr);
+      #ifdef USE_CODEC2
       if (i == 4 && opts->frame_m17 == 1) printw (" CODEC2");
+      #endif
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Build");
       if (i == 6) printw (" AW (WIP) \n");

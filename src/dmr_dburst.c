@@ -428,7 +428,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     uint8_t tdibits[98];
     memset (tdibits, 0, sizeof(tdibits));
 
-    //reconstitute info bits into reverse ordered dibits for the trellis decoder
+    //reconstitute info bits into dibits for the trellis decoder
     for (i = 0; i < 98; i++)
       tdibits[i] = (info[i*2] << 1) | info[i*2+1]; 
 
@@ -439,9 +439,8 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     //debug -- its a lot easier to hear the number of errors, than to eyeball it
     // if (IrrecoverableErrors) beeper (opts, state, slot);
 
-    for (i = 0; i < pdu_len; i++) //18
+    for (i = 0; i < pdu_len; i++)
       DMR_PDU[i] = TrellisReturn[i+pdu_start]; 
-
 
     for(i = 0, j = 0; i < 18; i++, j+=8)
     {
@@ -467,7 +466,6 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       CRCExtracted = CRCExtracted ^ crcmask;
 
       //reorganize the DMR_PDU_bits array into confdatabits, just for CRC9 check
-      //confirmed working now!
       for(i = 0; i < 128; i++) confdatabits[i] = DMR_PDU_bits[i + 16];
       for(i = 0; i < 7; i++) confdatabits[i + 128] = DMR_PDU_bits[i];
 
@@ -478,10 +476,8 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
         state->data_block_crc_valid[slot][blockcounter] = 1;
       } 
       else
-      {
-        
         state->data_block_crc_valid[slot][blockcounter] = 0;
-      } 
+
 
     }
 
