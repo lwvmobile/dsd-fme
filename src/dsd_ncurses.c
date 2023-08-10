@@ -2262,7 +2262,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw("%s", FM_bannerN[i]);
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
-      if (i == 4) printw (" MBElib %s", versionstr);
+      if (i == 4 && opts->frame_m17 == 0) printw (" MBElib %s", versionstr);
+      if (i == 4 && opts->frame_m17 == 1) printw (" CODEC2");
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Build");
       if (i == 6) printw (" v2.1b (20230726) \n");
@@ -2492,14 +2493,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
 
     printw ("| ");
-    printw ("M17 - ");
+    printw ("M17: ");
 
     //insert data type and frame information
     if (state->m17_str_dt == 0) printw("Reserved");
     if (state->m17_str_dt == 1) printw("Data ");
     if (state->m17_str_dt == 2) printw("Voice (3200) ");
     if (state->m17_str_dt == 3) printw("Voice (1600) + Data");
-    printw (" ");
 
     printw ("\n");
     printw ("| ");
@@ -2510,11 +2510,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else if (state->m17_dst != 0 && state->m17_dst >= 0xEE6B28000000)
       printw("RESERVED (%012llx) ", state->m17_dst);
     else
-    {
-      // for (i = 0; i < 9; i++)
-      //   printw ("%c", state->m17_dst_csd[i]);
       printw("%s", state->m17_dst_str);
-    }
     
     printw ("\n");
     printw ("| ");
@@ -2523,12 +2519,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (state->m17_src != 0 && state->m17_src >= 0xEE6B28000000)
       printw("RESERVED (%012llx)", state->m17_src);
     else
-    {
-      // for (i = 0; i < 9; i++)
-      //   printw ("%c", state->m17_src_csd[i]);
       printw("%s", state->m17_src_str);
-    }
+
     
+    printw ("\n");
+    printw ("| ");
+
+    printw ("CAN: %02d ", state->m17_can);
+
     printw ("\n");
     printw ("| ");
 

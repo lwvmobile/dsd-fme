@@ -167,6 +167,7 @@ void M17decodeLSF(dsd_state * state)
   state->m17_str_dt = lsf_dt;
   state->m17_dst = lsf_dst;
   state->m17_src = lsf_src;
+  state->m17_can = lsf_cn;
 
   fprintf (stderr, "\n");
 

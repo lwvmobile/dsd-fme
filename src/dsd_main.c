@@ -467,6 +467,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
 
   state->m17_dst = 0;
   state->m17_src = 0;
+  state->m17_can = 0;
   memset(state->m17_dst_csd, 0, sizeof(state->m17_dst_csd));
   memset(state->m17_src_csd, 0, sizeof(state->m17_src_csd));
   sprintf (state->m17_dst_str, "%s", "");
@@ -1069,6 +1070,7 @@ initState (dsd_state * state)
 
   state->m17_dst = 0;
   state->m17_src = 0;
+  state->m17_can = 0;
   memset(state->m17_dst_csd, 0, sizeof(state->m17_dst_csd));
   memset(state->m17_src_csd, 0, sizeof(state->m17_src_csd));
   sprintf (state->m17_dst_str, "%s", "");
@@ -1466,6 +1468,10 @@ main (int argc, char **argv)
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
   #endif
   fprintf (stderr,"MBElib Version: %s\n", versionstr);
+
+  #ifdef USE_CODEC2
+  fprintf (stderr,"CODEC2 Support Enabled\n");
+  #endif
 
   initOpts (&opts);
   initState (&state);
