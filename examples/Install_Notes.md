@@ -11,8 +11,18 @@ wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/main/download-and-insta
 chmod +x download-and-install.sh
 ./download-and-install.sh
 ```
-f
-If you have dependencies already installed (i.e. need a fresh clean install on a system with DSD-FME already or using system other than Debian/Ubuntu, etc), please run this instead:
+
+### Arch Based Distros:
+
+```
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/main/download-and-install-Arch.sh
+chmod +x download-and-install-Arch.sh
+./download-and-install-Arch.sh
+```
+
+### Other:
+
+If you have dependencies already installed, please run this instead:
 
 ```
 wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/main/download-and-install-nodeps.sh
@@ -34,8 +44,20 @@ sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack
 Fedora 36/37 -- from https://github.com/lwvmobile/dsd-fme/issues/99
 
 ```
+sudo dnf update
 sudo dnf install libsndfile-devel fftw-devel lapack-devel rtl-sdr-devel pulseaudio-libs-devel libusb-devel cmake git ncurses ncurses-devel gcc wget pavucontrol gcc-c++
 ```
+
+Arch -- https://github.com/lwvmobile/dsd-fme/issues/153 and https://github.com/lwvmobile/dsd-fme/issues/153
+
+```
+sudo pacman -Syu
+sudo pacman -S libpulse cmake ncurses lapack perl fftw rtl-sdr codec2 base-devel libsndfile git wget rtl-sdr
+wget https://mirror.archstrike.org/x86_64/archstrike/itpp-4.3.1-3-x86_64.pkg.tar.xz
+sudo pacman -U itpp-4.3.1-3-x86_64.pkg.tar.xz
+```
+
+
 ## Headless Ubuntu Server/Pi
 
 If running headless, swap out pavucontrol for pulsemixer, and also install pulseaudio as well. Attempting to install pavucontrol in a headless environment may attempt to install a minimal desktop environment. Note: Default behavior of pulseaudio in a headless environment may be to be muted, so check by opening pulsemixer and unmuting and routing audio appropriately.
