@@ -770,6 +770,7 @@ typedef struct
 
   unsigned long long int m17_dst;
   unsigned long long int m17_src;
+  uint8_t m17_can;
 
   char m17_dst_csd[20];
   char m17_src_csd[20];
