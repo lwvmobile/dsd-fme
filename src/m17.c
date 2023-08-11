@@ -40,9 +40,10 @@ uint8_t m17_scramble[369] = {
 char b40[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.";
 
 uint8_t p1[62] = {
-1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1,
-1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1,
-0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1
+1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1,
+1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1,
+1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1,
+1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1
 };
 
 //from M17_Implementations -- sp5wwp -- should have just looked here to begin with
@@ -195,7 +196,7 @@ void M17decodeLSF(dsd_state * state)
   
 }
 
-int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t lich_bits[96])
+int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t * lich_bits)
 {
   int i, j, err;
   err = 0;
@@ -291,7 +292,7 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t lich_bits[96])
   return err;
 }
 
-void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
+void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t * payload)
 {
 
   int i;
@@ -384,7 +385,7 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t payload[1
 
 }
 
-void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[128])
+void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t * payload)
 {
   int i;
   unsigned char voice1[8];
@@ -490,17 +491,17 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t payload[1
 
 }
 
-void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t m17_bits[368])
+void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t * m17_bits)
 {
 
   int i, k, x; 
-  uint8_t m17_punc[310]; //25 * 11 = 275
+  uint8_t m17_punc[275]; //25 * 11 = 275
   memset (m17_punc, 0, sizeof(m17_punc));
   for (i = 0; i < 272; i++)
     m17_punc[i] = m17_bits[i+96];
 
   //depuncture the bits
-  uint8_t m17_depunc[310]; //25 * 12 = 300
+  uint8_t m17_depunc[300]; //25 * 12 = 300
   memset (m17_depunc, 0, sizeof(m17_depunc));
   k = 0; x = 0;
   for (i = 0; i < 25; i++)
@@ -524,7 +525,7 @@ void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t m17_bits[368])
   uint8_t s0;
   uint8_t s1;
   uint8_t m_data[28];
-  uint8_t trellis_buf[400];
+  uint8_t trellis_buf[144];
   memset (trellis_buf, 0, sizeof(trellis_buf));
   memset (temp, 0, sizeof (temp));
   memset (m_data, 0, sizeof (m_data));
@@ -596,13 +597,7 @@ void processM17STR(dsd_opts * opts, dsd_state * state)
 
   int i, x;
 
-  //NOTE: adding more space for dbuf seems to fix the memory issue, but I don't think this is
-  //the culprit, not entirely sure what is going on here, but the issue with Cygwin (32-bit)
-  //not working at all with this also is fixed by this and I can't seem to figure out why
-  //its probably something really dumb that I am completely blind on seeing here for some reason
-
-  
-  uint8_t dbuf[384]; //384-bit frame - 16-bit (8 symbol) sync pattern (184 dibits)
+  uint8_t dbuf[184]; //384-bit frame - 16-bit (8 symbol) sync pattern (184 dibits)
   uint8_t m17_rnd_bits[368]; //368 bits that are still scrambled (randomized)
   uint8_t m17_int_bits[368]; //368 bits that are still interleaved
   uint8_t m17_bits[368]; //368 bits that have been de-interleaved and de-scramble
@@ -657,12 +652,9 @@ void processM17STR(dsd_opts * opts, dsd_state * state)
 void processM17LSF(dsd_opts * opts, dsd_state * state)
 {
 
-  //NOTE1: Pretty sure the flow here is all correct, but the initial (and only)
-  //LSF frame is demodulated incorrectly, so more than likely, this frame will
-  //always be bad since there is only one sent before STR
-
-  //NOTE2: Even with the preamble detection and LSF sync, we still get bad decode on this
-
+  //NOTE: Have not been able to get this to work successfully, but considering
+  //there is only one LSF frame at the beginning of TX, its probably just as easy to
+  //use and rely on the STR frame and embedded LSF chunk, which does work properly
   int i, j, k, x;
   uint8_t dbuf[184]; //384-bit frame - 16-bit (8 symbol) sync pattern (184 dibits)
   uint8_t m17_rnd_bits[368]; //368 bits that are still scrambled (randomized)
@@ -719,7 +711,7 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
   uint8_t s0;
   uint8_t s1;
   uint8_t m_data[30];
-  uint8_t trellis_buf[244];
+  uint8_t trellis_buf[240]; //30*8 = 240
   memset (trellis_buf, 0, sizeof(trellis_buf));
   memset (temp, 0, sizeof (temp));
   memset (m_data, 0, sizeof (m_data));
