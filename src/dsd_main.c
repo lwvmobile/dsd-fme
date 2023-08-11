@@ -1288,8 +1288,6 @@ usage ()
   printf ("                 Use this feature to allow MAC_SIGNAL even if CRC errors.\n");
   printf ("  -F            Relax DMR RAS/CRC CSBK/DATA Pass/Fail\n");
   printf ("                 Enabling on some systems could lead to bad channel assignments/site data decoding if bad or marginal signal\n");
-  printf ("  -F            Relax NXDN SACCH/FACCH/CAC/F2U CRC Pass/Fail\n");
-  printf ("                 Not recommended on NXDN, but can be bypassed if desired.\n");
   printf ("\n");
   printf ("  -b <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)\n");
   printf ("                 (NOTE: This used to be the 'K' option! \n");
