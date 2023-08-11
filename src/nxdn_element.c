@@ -14,8 +14,8 @@
 
 void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state)
 {
-  uint8_t SACCH[400]; //72
-  uint8_t sacch_bytes[10];
+  uint8_t SACCH[72]; //72
+  uint8_t sacch_bytes[9];
 
   uint32_t i;
   uint8_t CrcCorrect = 1;
@@ -38,7 +38,7 @@ void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state)
   /* Decodes the element content */
   // currently only going to run this if all four CRCs are good
   if (CrcCorrect == 1) NXDN_Elements_Content_decode(opts, state, CrcCorrect, SACCH);
-  else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, SACCH);
+  // else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, SACCH);
 
   //reset the sacch field -- Github Issue #118
   memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));

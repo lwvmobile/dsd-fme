@@ -49,9 +49,9 @@ void nxdn_descramble(uint8_t dibits[], int len)
 
 void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 {
-	uint8_t deperm[200]; //144
-	uint8_t depunc[200]; //192
-	uint8_t trellis_buf[400]; //96
+	uint8_t deperm[144]; //144
+	uint8_t depunc[192]; //192
+	uint8_t trellis_buf[96]; //96
 	uint16_t crc = 0; //crc calculated by function
 	uint16_t check = 0; //crc from payload for comparison
 	int out;
@@ -70,7 +70,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	}
 
 	//switch to the convolutional decoder
-	uint8_t temp[210];
+	uint8_t temp[200];
 	uint8_t s0;
   uint8_t s1;
 	uint8_t m_data[20]; //13
@@ -79,17 +79,10 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	memset (trellis_buf, 0, sizeof(trellis_buf));
 
 	for (int i = 0; i < 192; i++)
-	{
 		temp[i] = depunc[i] << 1; 
-	}
-
-	for (int i = 0; i < 8; i++)
-	{
-		temp[i+192] = 0;
-	}
 
 	CNXDNConvolution_start();
-  for (int i = 0U; i < 100U; i++) 
+  for (int i = 0; i < 96; i++) 
   {
     s0 = temp[(2*i)];
     s1 = temp[(2*i)+1];
@@ -97,7 +90,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
     CNXDNConvolution_decode(s0, s1);
   }
 
-  CNXDNConvolution_chainback(m_data, 96U);
+  CNXDNConvolution_chainback(m_data, 92);
 
 	for(int i = 0; i < 12; i++)
   {
@@ -119,7 +112,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	}
 
 	if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
-	else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
+	// else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
 
 	if (opts->payload == 1)
 	{
@@ -143,9 +136,9 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 {
 	//see about initializing these variables
-	uint8_t deperm[200]; //60 
-	uint8_t depunc[200]; //72
-	uint8_t trellis_buf[400]; //32
+	uint8_t deperm[60]; //60 
+	uint8_t depunc[72]; //72
+	uint8_t trellis_buf[32]; //32
 
 	memset (deperm, 0, sizeof(deperm));
 	memset (depunc, 0, sizeof(depunc));
@@ -176,27 +169,20 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	}
 
 	//switch to the convolutional decoder
-	uint8_t temp[90];
+	uint8_t temp[80];
 	uint8_t s0;
   uint8_t s1;
-	uint8_t m_data[10]; //5
+	uint8_t m_data[5]; //5
 
 	memset (temp, 0, sizeof (temp));
 	memset (m_data, 0, sizeof (m_data));
 	memset (trellis_buf, 0, sizeof(trellis_buf));
 
 	for (int i = 0; i < 72; i++)
-	{
 		temp[i] = depunc[i] << 1; 
-	}
-
-	for (int i = 0; i < 8; i++)
-	{
-		temp[i+72] = 0; 
-	}
 
 	CNXDNConvolution_start();
-  for (int i = 0U; i < 36U; i++) //40
+  for (int i = 0; i < 36; i++)
   {
     s0 = temp[(2*i)];
     s1 = temp[(2*i)+1];
@@ -205,7 +191,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
   }
 
 	//stored as 5 bytes, will need to convert to trellis_buf after running
-  CNXDNConvolution_chainback(m_data, 32U); //36
+  CNXDNConvolution_chainback(m_data, 32);
 
 	for(int i = 0; i < 4; i++)
   {
@@ -232,7 +218,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		if (state->nxdn_last_ran != -1) fprintf (stderr, " RAN %02d ", state->nxdn_last_ran);
 		else fprintf (stderr, "        ");
 
-		uint8_t nsf_sacch[400];
+		uint8_t nsf_sacch[26];
 		memset (nsf_sacch, 0, sizeof(nsf_sacch));
 		for (int i = 0; i < 26; i++)
 		{
@@ -350,9 +336,9 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 
 void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[348], uint8_t type)
 {
-	uint8_t deperm[500]; //348
-	uint8_t depunc[500]; //406
-	uint8_t trellis_buf[400]; //199
+	uint8_t deperm[348]; //348
+	uint8_t depunc[406]; //406
+	uint8_t trellis_buf[208]; //199
 	int id = 0;
 	uint16_t crc = 0;
 	uint16_t check = 0;
@@ -381,26 +367,19 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 	}
 	
 	//switch to the convolutional decoder
-	uint8_t temp[500]; //220, this one was way too small
+	uint8_t temp[406];
 	uint8_t s0;
   uint8_t s1;
-	uint8_t m_data[52]; //26
+	uint8_t m_data[26]; //26
 	memset (trellis_buf, 0, sizeof(trellis_buf));
 	memset (temp, 0, sizeof (temp));
 	memset (m_data, 0, sizeof (m_data));
 
 	for (int i = 0; i < 406; i++)
-	{
 		temp[i] = depunc[i] << 1; 
-	}
-
-	for (int i = 0; i < 8; i++)
-	{
-		temp[i+203] = 0; 
-	}
 
 	CNXDNConvolution_start();
-  for (int i = 0U; i < 207U; i++) 
+  for (int i = 0; i < 203; i++) 
   {
     s0 = temp[(2*i)];
     s1 = temp[(2*i)+1];
@@ -409,7 +388,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
   }
 
 	//numerals seem okay now
-  CNXDNConvolution_chainback(m_data, 203U); 
+  CNXDNConvolution_chainback(m_data, 199); 
 
 	for(int i = 0; i < 26; i++)
   {
@@ -440,7 +419,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 
 	//just going to leave this all here in case its needed, like in cac,
 	//don't have any samples with f2 or udch data in it
-	for (int i = 0; i < 199-8; i++) 
+	for (int i = 0; i < 199-8-15; i++) 
 	{
 		f2u_message_buffer[i] = trellis_buf[i+8]; 
 	}
@@ -450,11 +429,11 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 		if (type == 1) NXDN_Elements_Content_decode(opts, state, 1, f2u_message_buffer);
 		if (type == 0) ; //need handling for user data (text messages and AVL)
 	} 
-	else if (opts->aggressive_framesync == 0)
-	{
-		if (type == 1) NXDN_Elements_Content_decode(opts, state, 0, f2u_message_buffer);
-		if (type == 0) ; //need handling for user data (text messages and AVL)
-	} 
+	// else if (opts->aggressive_framesync == 0)
+	// {
+	// 	if (type == 1) NXDN_Elements_Content_decode(opts, state, 0, f2u_message_buffer);
+	// 	if (type == 0) {} //need handling for user data (text messages and AVL)
+	// } 
 
 	if (opts->payload == 1)
 	{
@@ -495,9 +474,9 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 
 void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 {
-	uint8_t deperm[500]; //300
-	uint8_t depunc[500]; //350
-	uint8_t trellis_buf[400]; //171
+	uint8_t deperm[300]; //300
+	uint8_t depunc[350]; //350
+	uint8_t trellis_buf[176]; //176
 	int id = 0;
 	int ran = 0;
 	uint16_t crc = 0;
@@ -526,21 +505,19 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 	}
 
 	//switch to the convolutional decoder
-	uint8_t temp[360];
+	uint8_t temp[179];
 	uint8_t s0;
   uint8_t s1;
-	uint8_t m_data[52]; //26
+	uint8_t m_data[22]; //26
 	memset (trellis_buf, 0, sizeof(trellis_buf));
 	memset (temp, 0, sizeof (temp));
 	memset (m_data, 0, sizeof (m_data));
 
 	for (int i = 0; i < 350; i++)
-	{
 		temp[i] = depunc[i] << 1; 
-	}
 
 	CNXDNConvolution_start();
-  for (int i = 0U; i < 179U; i++) 
+  for (int i = 0; i < 175; i++) //179
   {
     s0 = temp[(2*i)];
     s1 = temp[(2*i)+1];
@@ -548,7 +525,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
     CNXDNConvolution_decode(s0, s1);
   }
 
-  CNXDNConvolution_chainback(m_data, 175U); 
+  CNXDNConvolution_chainback(m_data, 171); //175
 
 	for(int i = 0; i < 22; i++)
   {
@@ -564,11 +541,11 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 
 	crc = crc16cac(trellis_buf, 171); 
 
-	uint8_t cac_message_buffer[400]; //171
+	uint8_t cac_message_buffer[147]; //171
 	memset (cac_message_buffer, 0, sizeof(cac_message_buffer));
 
-	//shift the cac_message into the appropriate byte arrangement for element_decoder -- skip SR field
-	for (int i = 0; i < 160; i++)
+	//shift the cac_message into the appropriate byte arrangement for element_decoder -- skip SR field and ending crc
+	for (int i = 0; i < 147; i++)
 	{
 		cac_message_buffer[i] = trellis_buf[i+8];
 	}
@@ -594,7 +571,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 	}
 
 	if (crc == 0) NXDN_Elements_Content_decode(opts, state, 1, cac_message_buffer);
-	else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, cac_message_buffer);  
+	// else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, cac_message_buffer);  
 
 	if (opts->payload == 1)
 	{
@@ -618,9 +595,9 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 	fprintf (stderr, " SCCH");
 
 	//see about initializing these variables
-	uint8_t deperm[200]; //60 
-	uint8_t depunc[200]; //72
-	uint8_t trellis_buf[400]; //32
+	uint8_t deperm[60]; //60 
+	uint8_t depunc[72]; //72
+	uint8_t trellis_buf[32]; //32
 
 	memset (deperm, 0, sizeof(deperm));
 	memset (depunc, 0, sizeof(depunc));
@@ -650,27 +627,20 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 	}
 
 	//switch to the convolutional decoder
-	uint8_t temp[90];
+	uint8_t temp[72];
 	uint8_t s0;
   uint8_t s1;
-	uint8_t m_data[10]; //5
+	uint8_t m_data[5]; //5
 
 	memset (temp, 0, sizeof (temp));
 	memset (m_data, 0, sizeof (m_data));
 	memset (trellis_buf, 0, sizeof(trellis_buf));
 
 	for (int i = 0; i < 72; i++)
-	{
 		temp[i] = depunc[i] << 1; 
-	}
-
-	for (int i = 0; i < 8; i++)
-	{
-		temp[i+72] = 0; 
-	}
 
 	CNXDNConvolution_start();
-  for (int i = 0U; i < 36U; i++) 
+  for (int i = 0; i < 36; i++) 
   {
     s0 = temp[(2*i)];
     s1 = temp[(2*i)+1];
@@ -678,7 +648,7 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
     CNXDNConvolution_decode(s0, s1);
   }
 
-  CNXDNConvolution_chainback(m_data, 32U);
+  CNXDNConvolution_chainback(m_data, 32);
 
 	for(int i = 0; i < 4; i++)
   {
@@ -731,7 +701,7 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 	//like everything else does
 
 	if (crc == check) NXDN_decode_scch (opts, state, trellis_buf, direction);
-	else if (opts->aggressive_framesync == 0) NXDN_decode_scch (opts, state, trellis_buf, direction);
+	// else if (opts->aggressive_framesync == 0) NXDN_decode_scch (opts, state, trellis_buf, direction);
 
 	fprintf (stderr, "%s", KNRM);
 
@@ -757,9 +727,9 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 
 void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[288], uint8_t type)
 {
-	uint8_t deperm[300]; //144
-	uint8_t depunc[300]; //192
-	uint8_t trellis_buf[600]; //96
+	uint8_t deperm[144]; //144
+	uint8_t depunc[192]; //192
+	uint8_t trellis_buf[96]; //96
 	uint8_t f3_udch2[288]; //completed bitstream without crc and tailing bits attached
 	uint8_t f3_udch2_bytes[36]; //completed bytes - with crc and tail
 	uint16_t crc[2]; //crc calculated by function
@@ -767,10 +737,10 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 	int out;
 
 	//switch to the convolutional decoder
-	uint8_t temp[500];
+	uint8_t temp[192];
 	uint8_t s0;
   uint8_t s1;
-	uint8_t m_data[40]; //13
+	uint8_t m_data[12]; //13
 	memset (temp, 0, sizeof(temp));
 	memset (m_data, 0, sizeof(m_data));
 	memset (trellis_buf, 0, sizeof(trellis_buf));
@@ -794,17 +764,10 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 		}
 
 		for (int i = 0; i < 192; i++)
-		{
 			temp[i] = depunc[i] << 1; 
-		}
-
-		for (int i = 0; i < 8; i++)
-		{
-			temp[i+192] = 0;
-		}
 
 		CNXDNConvolution_start();
-		for (int i = 0U; i < 100U; i++) 
+		for (int i = 0; i < 96; i++) 
 		{
 			s0 = temp[(2*i)];
 			s1 = temp[(2*i)+1];
@@ -812,7 +775,7 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 			CNXDNConvolution_decode(s0, s1);
 		}
 
-		CNXDNConvolution_chainback(m_data, 96U);
+		CNXDNConvolution_chainback(m_data, 92);
 
 		for(int i = 0; i < 12; i++)
 		{
@@ -849,11 +812,11 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 		if (type == 1) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf);
 		if (type == 0) ; //need handling for user data (text messages and AVL)
 	}  
-	else if (opts->aggressive_framesync == 0) 
-	{
-		if (type == 1) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
-		if (type == 0) ; //need handling for user data (text messages and AVL)
-	}
+	// else if (opts->aggressive_framesync == 0) 
+	// {
+	// 	if (type == 1) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
+	// 	if (type == 0) {} //need handling for user data (text messages and AVL)
+	// }
 
 	if (opts->payload == 1)
 	{
