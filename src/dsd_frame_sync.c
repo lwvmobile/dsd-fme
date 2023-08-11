@@ -220,7 +220,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   }
   else t_max = 24; //24 for everything else
 
-  int lbuf[t_max], lbuf2[t_max];
+  int lbuf[48], lbuf2[48]; //if we use t_max in these arrays, and t >=  t_max in condition below, then it can overflow those checks in there if t exceeds t_max
   int lsum;
   char spectrum[64];
   //init the lbuf
