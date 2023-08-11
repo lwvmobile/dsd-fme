@@ -1324,8 +1324,8 @@ if (opts->audio_out_type == 0)
 }
 
 #ifdef AERO_BUILD
-//TODO: Investigate why getSymbol needs to be run first in this context...truly confused here
-if(opts->frame_m17 == 1 && opts->audio_in_type != 0 && opts->audio_out_type != 0) //
+//TODO: More Random Cygwin Related M17 Bugs to sort out
+if(opts->frame_m17 == 1 && opts->audio_in_type != 0)
   for (int i = 0; i < 960; i++) getSymbol(opts, state, 1); //I think this is actually just framesync being a pain
 #endif
 
@@ -1461,7 +1461,7 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version: v2.1b (20230726)\n");
+  fprintf (stderr, "Build Version: v2.1b (20230811)\n");
   #else
   fprintf (stderr, "Build Version:  %s \n", GIT_TAG);
   #endif

@@ -2229,7 +2229,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_compact == 1)
   {
     printw ("------------------------------------------------------------------------------\n");
-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.1b (20230726)");
+    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "v2.1b (20230811)");
     printw ("------------------------------------------------------------------------------\n"); 
   }
 #elif LIMAZULUTWEAKS
@@ -2261,7 +2261,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       #endif
       #ifdef AERO_BUILD
       if (i == 5) printw (" %s ", "Aero Build");
-      if (i == 6) printw (" v2.1b (20230726) \n");
+      if (i == 6) printw (" v2.1b (20230811) \n");
       #else 
       if (i == 5) printw (" %s ", "Main Build");
       if (i == 6) printw (" %s \n", GIT_TAG);
