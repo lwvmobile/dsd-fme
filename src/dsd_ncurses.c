@@ -2261,12 +2261,20 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ("--Input Output----------------------------------------------------------------\n");
   if (opts->audio_in_type == 0)
   {
-    printw ("| Pulse Audio Input: %i kHz; %i Channel;\n", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
+    printw ("| Pulse Audio Input: %i kHz; %i Channel; ", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
+    if (opts->use_rigctl == 1)
+      printw ("RIG: %s:%d; ", opts->tcp_hostname, opts->rigctlportno);
+    printw ("\n");
   }
+
   if (opts->audio_in_type == 5)
   {
-    printw ("| OSS Audio Input: %i kHz; 1 Channel;\n", SAMPLE_RATE_IN/1000);
+    printw ("| OSS Audio Input: %i kHz; 1 Channel;", SAMPLE_RATE_IN/1000);
+    if (opts->use_rigctl == 1)
+      printw ("RIG: %s:%d; ", opts->tcp_hostname, opts->rigctlportno);
+    printw ("\n");
   }
+
   if (opts->audio_in_type == 4)
   {
     printw ("| Symbol Bin Input: %s \n", opts->audio_in_dev);
@@ -2274,18 +2282,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_in_type == 8)
   {
-    printw ("| Direct TCP Input: Port: %d; Sample Rate: %d; \n", opts->tcp_portno, opts->wav_sample_rate);
+    printw ("| TCP Audio Input: %s:%d; %d kHz 1 Channel; ", opts->tcp_hostname, opts->tcp_portno, opts->wav_sample_rate/1000);
+    if (opts->use_rigctl == 1)
+      printw ("RIG: %s:%d; ", opts->tcp_hostname, opts->rigctlportno);
+    printw ("\n");
   }
 
   if (opts->audio_in_type == 2)
   {
-    printw ("| Direct WAV File Input: %s; Sample Rate: %d; \n", opts->audio_in_dev, opts->wav_sample_rate);
+    printw ("| WAV Audio Input: %s; %d kHz; \n", opts->audio_in_dev, opts->wav_sample_rate);
   }
+
   if (opts->audio_in_type == 1)
   {
     printw ("| STDIN Standard Input: - Menu Disabled when using STDIN!\n");
     // printw ("| NCURSES Menu Disabled when using STDIN! - Use CTRL + C to Close. \n");
   }
+
   if (opts->audio_in_type == 3)
   {
     printw ("| RTL: %d;", opts->rtl_dev_index);
@@ -2309,13 +2322,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->floating_point == 1) printw (" FBG: %02.0f%%;", opts->audio_gain*2);
     if (opts->audio_gain == 0) printw (" (+/-) Auto");
     if (opts->audio_gain > 0) printw (" (+/-) Manual");
+    if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
     printw (" \n");
   }
 
   if ( opts->audio_out_type == 0 && (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
   {
-    printw ("| Pulse Audio Output: %i kHz; %i Ch; RMS: %04ld Analog", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->rtl_rms);
+    printw ("| Pulse Audio Output: %i kHz; %i Ch; Analog Monitor RMS: %04ld ", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->rtl_rms);
     printw (" \n");
   }
 
@@ -2325,41 +2339,45 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
     if (opts->audio_gain == 0) printw (" (+/-) Auto");
     if (opts->audio_gain > 0) printw (" (+/-) Manual");
+    if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
-    if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) || opts->frame_provoice == 1)
-      printw (" - Analog RMS: %04ld ", opts->rtl_rms);
+    if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) &&  (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
+      printw (" - Monitor RMS: %04ld ", opts->rtl_rms);
     printw (" \n");
   }
 
-  if (opts->monitor_input_audio == 1)
-  {
-    printw ("| Monitoring Source Audio when Carrier Present and No Sync Detected (WIP)\n");
-  }
+  // if (opts->monitor_input_audio == 1)
+  // {
+  //   printw ("| Monitoring Source Audio when Carrier Present and No Sync Detected (WIP)\n");
+  // }
+
   if (opts->mbe_out_dir[0] != 0 && opts->dmr_stereo == 0)
   {
     printw ("| Writing MBE data files to directory %s\n", opts->mbe_out_dir);
   }
-  if (opts->wav_out_file_raw[0] != 0 && opts->audio_in_type == 0)
-  {
-    printw ("| Appending Raw Sig Audio WAV to file %s\n", opts->wav_out_file_raw);
-  }
+
+  //Redo this?
+  // if (opts->wav_out_file_raw[0] != 0 && opts->audio_in_type == 0)
+  // {
+  //   printw ("| Appending Raw Sig Audio WAV to file %s\n", opts->wav_out_file_raw);
+  // }
+
   if (opts->symbol_out_f) //don't display when not actively capturing
   {
     printw ("| Symbol Bin Output: %s\n", opts->symbol_out_file);
   }
+
   if (opts->dmr_stereo_wav == 0 && opts->wav_out_file[0] != 0)
   {
-    printw ("| Decoded WAV: %s\n", opts->wav_out_file);
+    printw ("| Decoded WAV Outut: %s\n", opts->wav_out_file);
   }
+
   if (opts->dmr_stereo_wav == 1) //opts->wav_out_file[0] != 0 &&
   {
     printw ("| Per Call - %s\n", opts->wav_out_file);
     if (opts->dmr_stereo == 1) printw ("| Per Call - %s\n", opts->wav_out_fileR);
   }
-  if (opts->use_rigctl == 1)
-  {
-    printw ("| RIGCTL Remote Control Client Established on Port [%d]\n", opts->rigctlportno);
-  }
+
   #ifdef PRETTY_COLORS
   if (opts->p25_trunk == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3) )
   {
@@ -2397,7 +2415,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else printw (" - Black List Mode\n");
   }
   #endif
-  if (opts->aggressive_framesync == 0) printw ("| Selective CRC ERR Bypass Enabled (RAS) \n");
+  // if (opts->aggressive_framesync == 0) printw ("| Selective CRC ERR Bypass Enabled (RAS) \n");
   if (state->M == 1)
   {
     if (state->R != 0)  printw ("| Forcing Key Priority -- NXDN Sc Key: %05lld \n", state->R);
@@ -2409,16 +2427,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     if (state->R != 0)  printw ("| Forcing Key Priority -- RC4 Key: %010llX \n", state->R);
   }
+
   if (opts->scanner_mode == 1)
   {
-    printw ("| Fast Scan Mode Enabled ");
+    printw ("| Fast Scan Mode: ");
     if (state->lcn_freq_roll != 0) 
       printw (" - Frequency: %.06lf Mhz", (double)state->trunk_lcn_freq[state->lcn_freq_roll-1]/1000000);
     printw (" Speed: %.02lf sec \n", opts->trunk_hangtime);  //not sure values less than 1 make a difference, may be system/environment dependent 
   }
 
   if (opts->reverse_mute == 1) printw ("| Reverse Mute - Muting Unencrypted Voice\n");
-  if (opts->call_alert == 1)   printw ("| Call Alert Tone Enabled\n");
+  // if (opts->call_alert == 1)   printw ("| Call Alert Tone Enabled\n");
 
 
   printw ("------------------------------------------------------------------------------\n");
@@ -2438,7 +2457,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->mod_c4fm == 1) printw ("[C4FM]");
   if (opts->mod_gfsk == 1) printw ("[GFSK]");
   printw ( "[%d] \n", (48000*opts->wav_interpolator)/state->samplesPerSymbol);
-  printw ("| Decoding:    [%s] \n", opts->output_name);
+  printw ("| Decoding:    [%s] ", opts->output_name);
+  if (opts->aggressive_framesync == 0) printw ("CRC/(RAS) ");
+  printw ("\n");
   printw ("| In Level:    [%02d%%] \n", level);
   
   if (opts->dmr_stereo == 0)
