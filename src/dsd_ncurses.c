@@ -2319,7 +2319,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| Pulse Audio Output: %i kHz; %i Ch; G: %02.0f%%", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
     if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
-    if (opts->floating_point == 1) printw (" FBG: %02.0f%%;", opts->audio_gain*2);
+    if (opts->floating_point == 1) printw (" FLOAT: %02.0f%%;", opts->audio_gain*2);
     if (opts->audio_gain == 0) printw (" (+/-) Auto");
     if (opts->audio_gain > 0) printw (" (+/-) Manual");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
@@ -2369,7 +2369,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->dmr_stereo_wav == 0 && opts->wav_out_file[0] != 0)
   {
-    printw ("| Decoded WAV Outut: %s\n", opts->wav_out_file);
+    printw ("| Decoded WAV Output: %s\n", opts->wav_out_file);
   }
 
   if (opts->dmr_stereo_wav == 1) //opts->wav_out_file[0] != 0 &&
