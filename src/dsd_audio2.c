@@ -917,6 +917,10 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
   //trying things
   float gain = 1.0f;
 
+  //test increasing gain on DMR EP samples with degraded AMBE samples
+  if (state->payload_algid == 0x21 || state->payload_algidR == 0x21)
+    gain = 1.75f;
+
   if (opts->audio_gain != 0)
     gain = opts->audio_gain / 25.0f;
 
@@ -946,8 +950,9 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
       if (samp[(j*20)+i] < mmin)
         samp[(j*20)+i] = mmin;
 
-      samp[(j*20)+i] *= gain * 0.8f;
       aavg += fabsf(samp[i]);
+
+      samp[(j*20)+i] *= gain * 0.8f;
 
     } //i loop
 
