@@ -1245,7 +1245,7 @@ usage ()
   printf ("Decoder options:\n");
   printf ("  -fa           Auto Detection\n");
   printf ("  -ft           TDMA Trunking P25p1 Control and Voice, P25p2 Trunked Channels, and DMR\n");
-  printf ("  -fs           DMR Stereo BS and MS Simplex\n");
+  printf ("  -fs           DMR TDMA BS and MS Simplex\n");
   printf ("  -f1           Decode only P25 Phase 1\n");
   printf ("  -f2           Decode only P25 Phase 2 (6000 sps) **\n");
   printf ("  -fd           Decode only DSTAR\n");

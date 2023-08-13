@@ -136,7 +136,7 @@ void M17decodeLSF(dsd_state * state)
   uint16_t lsf_type = (uint16_t)ConvertBitIntoBytes(&state->m17_lsf[96], 16);
 
   //this is the way the manual/code expects you to read these bits
-  uint8_t lsf_ps = (lsf_type >> 0) & 0x1;
+  // uint8_t lsf_ps = (lsf_type >> 0) & 0x1;
   uint8_t lsf_dt = (lsf_type >> 1) & 0x3;
   uint8_t lsf_et = (lsf_type >> 3) & 0x3;
   uint8_t lsf_es = (lsf_type >> 5) & 0x3;
@@ -152,8 +152,8 @@ void M17decodeLSF(dsd_state * state)
   fprintf (stderr, "\n");
 
   //packet or stream
-  if (lsf_ps == 0) fprintf (stderr, " P-");
-  if (lsf_ps == 1) fprintf (stderr, " S-");
+  // if (lsf_ps == 0) fprintf (stderr, " P-");
+  // if (lsf_ps == 1) fprintf (stderr, " S-");
 
   fprintf (stderr, " CAN: %d", lsf_cn);
   M17decodeCSD(state, lsf_dst, lsf_src);
@@ -190,7 +190,7 @@ void M17decodeLSF(dsd_state * state)
   if (lsf_et == 1)
   {
     fprintf (stderr, " IV: ");
-    for (i = 0; i < 14; i++)
+    for (i = 0; i < 16; i++)
       fprintf (stderr, "%02X", state->m17_meta[i]);
   }
   
@@ -565,6 +565,10 @@ void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t * m17_bits)
 
   end = trellis_buf[0];
   fn = (uint16_t)ConvertBitIntoBytes(&trellis_buf[1], 15);
+
+  //insert fn bits into meta 14 and meta 15 for Initialization Vector
+  state->m17_meta[14] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[1], 7);
+  state->m17_meta[15] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[8], 8);
 
   if (opts->payload == 1)
     fprintf (stderr, " FSN: %05d", fn);

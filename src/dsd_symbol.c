@@ -308,6 +308,10 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             //OSS 8k1 (no go just yet)
             // if (opts->audio_out_type == 2 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1)
             //   write (opts->audio_out_fd, state->analog_out, 960*2);
+
+            //test updating the sync time, so we can hold here while trunking or fast scanning
+            state->last_cc_sync_time = time(NULL);
+            state->last_vc_sync_time = time(NULL);
           }
 
           memset (state->analog_out, 0, sizeof(state->analog_out));

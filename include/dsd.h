@@ -778,7 +778,7 @@ typedef struct
   char m17_src_str[50];
   char m17_dst_str[50];
 
-  uint8_t m17_meta[14]; //packed meta
+  uint8_t m17_meta[16]; //packed meta
   uint8_t m17_enc;      //enc type
   uint8_t m17_enc_st;   //scrambler or data subtye
 
