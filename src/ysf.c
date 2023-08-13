@@ -812,7 +812,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
 
   //print some useful decoded stuff
   if (dt == 0 && err == 0) fprintf (stderr, "V/D1 "); //Voice/Data Type 1
-  if (dt == 1 && err == 0) fprintf (stderr, "DATA "); //Full Rate Voice
+  if (dt == 1 && err == 0) fprintf (stderr, "DATA "); //Full Rate Data
   if (dt == 2 && err == 0) fprintf (stderr, "V/D2 "); //Voice/Data Type 2
   if (dt == 3 && err == 0) fprintf (stderr, "VWFR "); //Full Rate Voice
 

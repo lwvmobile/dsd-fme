@@ -295,6 +295,10 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             //NOTE: Worked okay earlier in Cygwin, so should be fine
             if (opts->audio_out_type == 5)
               write (opts->audio_out_fd, state->analog_out, 960*2);
+
+            //test hold on scan/trunking
+            state->last_cc_sync_time = time(NULL);
+            state->last_vc_sync_time = time(NULL);
           }
 
           memset (state->analog_out, 0, sizeof(state->analog_out));

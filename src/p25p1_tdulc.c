@@ -446,4 +446,9 @@ processTDULC (dsd_opts* opts, dsd_state* state)
   sprintf (state->call_string[0], "%s", "                     "); //21 spaces
   sprintf (state->call_string[1], "%s", "                     "); //21 spaces
 
+  //zero out on termination
+  state->payload_algid = 0;
+  state->payload_keyid = 0;
+  state->payload_miP = 0;
+
 }

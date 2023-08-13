@@ -582,7 +582,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->dropL += 7;
 
         short z = 0;
-        for (short p = 0; p < 6; p++)
+        for (short p = 0; p <= 6; p++)
         {
           //convert bytes back to bits and load into ambe_d array.
           short b = 0; //reset b to use again
@@ -660,7 +660,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->dropL += 7;
 
         short z = 0;
-        for (short p = 0; p < 6; p++)
+        for (short p = 0; p <= 6; p++)
         {
           //convert bytes back to bits and load into ambe_d array.
           short b = 0; //reset b to use again
@@ -867,7 +867,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->dropR += 7;
 
         short z = 0;
-        for (short p = 0; p < 6; p++)
+        for (short p = 0; p <= 6; p++)
         {
           //convert bytes back to bits and load into ambe_d array.
           short b = 0; //reset b to use again
@@ -945,7 +945,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->dropR += 7;
 
         short z = 0;
-        for (short p = 0; p < 6; p++)
+        for (short p = 0; p <= 6; p++)
         {
           //convert bytes back to bits and load into ambe_d array.
           short b = 0; //reset b to use again
