@@ -75,7 +75,7 @@ int dibit = 0;
 int vc_counter = 0;
 int framing_counter = 0;
 
-unsigned long long int isch = 0;
+uint64_t isch = 0;
 int isch_decoded = -1;
 int p2_duid[8] = {0};
 int16_t duid_decoded = 0;
