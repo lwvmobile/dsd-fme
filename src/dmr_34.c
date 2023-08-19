@@ -60,6 +60,14 @@ uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
   for (i = 0; i < 49; i++) 
     point[i] = constellation_map[nibs[i]];
 
+  //debug view points -- point[0] should be zero
+  // fprintf (stderr, "\n P =");
+  // for (i = 0; i < 49; i++) 
+  //   fprintf (stderr, " %02d", point[i]);
+
+  //free-bee on err correction, point[0] should always be zero (flush bits)
+  point[0] = 0;
+
   //convert constellation points into tribit values using the FSM
   uint8_t state = 0;
   uint32_t tribits[49];
@@ -82,16 +90,31 @@ uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
     if (tribits[i] > 7)
     {
       irr_err++; //tally number of errors
-      state = 0; //just using this for now, ideally we want to try to correct errors
-    }
 
-    //TODO: Implement some form/attempt to correct errors here
+      //debug position of error and state value
+      // fprintf (stderr, " %d:%d;", i, state);
+
+      //Make a hard decision and flip point to fit in current state
+      point[i] ^= 7; //lucky number 7 (0111)
+
+      //NOTE: Ideally, a full path metric to find the surviving path
+      //is the best way to correct this, but it is also complex and no garauntee to fix errs
+
+      //decrement one and try again
+      if (i != 0) i--;
+     
+    }
 
   }
 
-  //if there are no errors, then convert tribits into a return payload
+  //debug view tribits/states
+  // fprintf (stderr, "\n T =");
+  // for (i = 0; i < 49; i++) 
+  //   fprintf (stderr, " %02d", tribits[i]);
+
+  //convert tribits into a return payload
   uint32_t temp = 0;
-  if (irr_err == 0)
+  if (1 == 1) //irr_err == 0
   {
     //break into chunks of 24 bit values and shuffle into 8-bit (byte) treturn values
     for (i = 0; i < 6; i++)
@@ -103,6 +126,10 @@ uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
       treturn[(i*3)+2] = (temp >>  0) & 0xFF;
     }
   }
+
+  //trellis point/state err tally
+  if (irr_err != 0)
+    fprintf (stderr, " ERR = %d", irr_err);
 
   return (irr_err);
 }
