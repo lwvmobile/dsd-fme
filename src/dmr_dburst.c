@@ -436,8 +436,8 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     memset (TrellisReturn, 0, sizeof(TrellisReturn));
     IrrecoverableErrors = dmr_34(tdibits, TrellisReturn);
 
-    //debug -- its a lot easier to hear the number of errors, than to eyeball it
-    // if (IrrecoverableErrors) beeper (opts, state, slot);
+    //NOTE: IrrecoverableErrors in this context are a tally of errors from trellis
+    //they may have been successfully corrected, the CRC will reveal as much
 
     for (i = 0; i < pdu_len; i++)
       DMR_PDU[i] = TrellisReturn[i+pdu_start]; 
@@ -597,7 +597,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
   // } 
 
-  if (IrrecoverableErrors != 0 && databurst != 0x09) //&& databurst != 0x05
+  if (IrrecoverableErrors != 0 && databurst != 0x08 && databurst != 0x09) //&& databurst != 0x05
   {
     fprintf (stderr, "%s", KRED);
     fprintf(stderr, " (FEC ERR)");
