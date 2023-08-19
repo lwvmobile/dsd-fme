@@ -16,7 +16,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
   uint8_t slot = state->currentslot;
 
   //clear out unified pdu 'superframe' slot
-  for (short int i = 0; i < 288; i++) state->dmr_pdu_sf[slot][i] = 0;
+  for (int i = 0; i < 24*127; i++) state->dmr_pdu_sf[slot][i] = 0;
 
   //reset block counter to 1
   state->data_block_counter[slot] = 1;
@@ -320,7 +320,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     }
 
     //block storage sanity
-    if (state->data_header_blocks[slot] > 9) state->data_header_blocks[slot] = 9;
+    if (state->data_header_blocks[slot] > 127) state->data_header_blocks[slot] = 127;
     //assuming we didn't receive the initial data header block on a p_head and then decremented it
     //3 or 4 seems to be the average safe value
     if (state->data_header_blocks[slot] < 1) state->data_header_blocks[slot] = 4; 
@@ -442,7 +442,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
   //sanity check, setting block_len and block values to sane numbers in case of missing header, else could overload array (crash) or print out
   if (blocks < 1) blocks = 1; //changed blocks from uint8_t to int
-  if (blocks > 9) blocks = 9;
+  if (blocks > 127) blocks = 127;
   if (block_len == 0) block_len = 18;
   if (block_len > 24) block_len = 24;
 
@@ -549,11 +549,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         fprintf (stderr, "\n Slot %d - Multi Block PDU Message\n  ", slot+1);
         for (i = 0; i < ((blocks+1)*block_len); i++) 
         {
+          if ( (i != 0) && (i % 12 == 0) ) fprintf (stderr, "\n  "); 
           fprintf (stderr, "[%02X]", state->dmr_pdu_sf[slot][i]);
-          if (i == 11 || i == 23 || i == 35 || i == 47 || i == 59 || i == 71 || i == 83 || i == 95) 
-          {
-            fprintf (stderr, "\n  "); 
-          }
         }
 
         //debug print
@@ -719,7 +716,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   {
 
     //clear out unified pdu 'superframe' slot
-    for (short int i = 0; i < 288; i++)
+    for (int i = 0; i < 24*127; i++)
     {
       state->dmr_pdu_sf[slot][i] = 0;
     }
@@ -742,7 +739,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   {
 
     //clear out unified pdu 'superframe' slot
-    for (short int i = 0; i < 288; i++)
+    for (int i = 0; i < 24*127; i++)
     {
       state->dmr_pdu_sf[slot][i] = 0;
     }

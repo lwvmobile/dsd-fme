@@ -497,20 +497,18 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
   }
 
-  if (is_full) //Rate 1 Data -- todo: fix padding bits, the four padding bits are on bit 96,97,98,99
+  if (is_full) //Rate 1 Data
   {
     CRCExtracted = 0;
     CRCComputed = 0;
     IrrecoverableErrors = 0; //implicit, since there is no encoding
 
-    for (i = 0; i < 24; i++)
-    {
+    for (i = 0; i < 12; i++)
       DMR_PDU[i] = (uint8_t)ConvertBitIntoBytes(&info[i*8], 8);
-    }
-    //leftover 4 bits, manual doesn't say which 4 so assuming last 4
-    //pushing last 4 to 25 and shifting it
-    DMR_PDU[25] = (uint8_t)ConvertBitIntoBytes(&info[192], 4);
-    DMR_PDU[25] = DMR_PDU[25] << 4;
+
+    //Skip Padding Bits (96,97,98,99)
+    for (i = 0; i < 12; i++)
+      DMR_PDU[i+12] = (uint8_t)ConvertBitIntoBytes(&info[(i*8)+100], 8);
 
     //set CRC to correct on unconfirmed 1 rate data blocks (for reporting due to no CRC available on these)
     if (state->data_conf_data[slot] == 0) CRCCorrect = 1;
