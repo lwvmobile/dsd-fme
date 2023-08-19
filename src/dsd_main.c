@@ -1336,6 +1336,7 @@ usage ()
   printf ("                 P25 - 7000-12000; P25 (QPSK) - 12000; NXDN48 - 7000; NXDN96: 9000; DMR - 7000; EDACS/PV - 12500;\n");
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking or Fast Scan VC/sync loss hangtime in seconds. (default = 1 second)\n");
+  printf ("  -9            Force Enable EDACS Standard or Networked Mode on Systems without a netcmd (temp fix) \n");
   printf ("\n");
   printf (" Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
   printf (" Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
@@ -1539,7 +1540,7 @@ main (int argc, char **argv)
 
   exitflag = 0;
 
-  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
+  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1561,6 +1562,11 @@ main (int argc, char **argv)
 
         //NOTE: The 'K' option for single BP key has been swapped to 'b'
         //'K' is now used for hexidecimal key.csv imports
+
+        case '9': //This is a temporary fix for RR issue until a permanent fix can be found
+          state.ea_mode = 0;
+          fprintf (stderr,"Force Enabling EDACS Standard/Networked Mode Mode\n");
+          break;
 
         //experimental audio monitoring
         case '8':
