@@ -1360,6 +1360,12 @@ liveScanner (dsd_opts * opts, dsd_state * state)
   {
     open_rtlsdr_stream(opts);
     opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
+    #ifdef __arm__
+    fprintf (stderr, "WARNING: RMS Function is Disabled on ARM Devices (Raspberry Pi) due to High CPU use. \n");
+    fprintf (stderr, "RMS/Squelch Functionality for NXDN, dPMR, EDACS Analog, M17 and Raw Audio Monitor are unavailable and these modes will not function properly. \n");
+    if (opts->monitor_input_audio == 1) opts->monitor_input_audio = 0;
+    opts->rtl_squelch_level = 0;
+    #endif
   }
 #endif
 

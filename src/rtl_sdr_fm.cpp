@@ -1130,7 +1130,11 @@ void rtl_dev_tune(dsd_opts * opts, long int frequency)
 long int rtl_return_rms()
 {
 	long int sr = 0;
+	#ifdef __arm__
+	sr = 100;
+	#else
 	sr = rms(demod.lowpassed, demod.lp_len, 1);
+	#endif
 	return (sr);
 }
 
