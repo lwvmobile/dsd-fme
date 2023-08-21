@@ -196,6 +196,13 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       pa_simple_write(opts->pulse_raw_dev_out, analog3, 960*2, NULL);
     }
 
+    if (opts->audio_out_type == 8) //UDP Audio
+    {
+      udp_socket_blaster (opts, state, 960*2, analog1);
+      udp_socket_blaster (opts, state, 960*2, analog2);
+      udp_socket_blaster (opts, state, 960*2, analog3);
+    }
+
     //added a condition check so that if OSS output and 8K, switches to 48K when opening OSS
     if (opts->audio_out_type == 5 && opts->floating_point == 0 && opts->slot1_on == 1)
     {

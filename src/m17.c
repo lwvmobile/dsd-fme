@@ -341,6 +341,11 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t * payload
   {
     pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
   }
+
+  if (opts->audio_out_type == 0 && state->m17_enc == 0) //UDP Audio
+  {
+    udp_socket_blaster (opts, state, nsam*2, samp1);
+  }
     
   if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS 48k/1
   {
@@ -436,6 +441,12 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t * payload
   {
     pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
     pa_simple_write(opts->pulse_digi_dev_out, samp2, nsam*2, NULL);
+  }
+
+  if (opts->audio_out_type == 0 && state->m17_enc == 0) //UDP Audio
+  {
+    udp_socket_blaster (opts, state, nsam*2, samp1);
+    udp_socket_blaster (opts, state, nsam*2, samp2);
   }
     
   if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS 48k/1

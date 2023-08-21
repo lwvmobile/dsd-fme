@@ -718,22 +718,23 @@ openAudioInDevice (dsd_opts * opts)
     }
   }
 
-  else if (strncmp(opts->audio_in_dev, "udp", 3) == 0)
-  {
-    opts->audio_in_type = 6;
-    opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
-    opts->audio_in_file_info->samplerate=opts->wav_sample_rate;
-    opts->audio_in_file_info->channels=1;
-    opts->audio_in_file_info->seekable=0;
-    opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
-    opts->udp_file_in = sf_open_fd(opts->udp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
+  // else if (strncmp(opts->audio_in_dev, "udp", 3) == 0)
+  // {
+  //   opts->audio_in_type = 6;
+  //   opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
+  //   opts->audio_in_file_info->samplerate=opts->wav_sample_rate;
+  //   opts->audio_in_file_info->channels=1;
+  //   opts->audio_in_file_info->seekable=0;
+  //   opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;
+  //   opts->udp_file_in = sf_open_fd(opts->udp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
 
-    if(opts->udp_file_in == NULL)
-    {
-      fprintf(stderr, "Error, couldn't open UDP with libsndfile: %s\n", sf_strerror(NULL));
-      exit(1);
-    }
-  }
+  //   if(opts->udp_file_in == NULL)
+  //   {
+  //     fprintf(stderr, "Error, couldn't open UDP with libsndfile: %s\n", sf_strerror(NULL));
+  //     exit(1);
+  //   }
+  // }
+
   else if(strncmp(opts->audio_in_dev, "rtl", 3) == 0)
   {
     #ifdef USE_RTLSDR

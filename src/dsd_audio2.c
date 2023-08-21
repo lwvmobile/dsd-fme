@@ -169,6 +169,13 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
     pa_simple_write(opts->pulse_digi_dev_out, stereo_samp3, 320*4, NULL);
   }
 
+  if (opts->audio_out_type == 8) //UDP Audio
+  {
+    udp_socket_blaster (opts, state, 320*4, stereo_samp1);
+    udp_socket_blaster (opts, state, 320*4, stereo_samp2);
+    udp_socket_blaster (opts, state, 320*4, stereo_samp3);
+  }
+
   //No OSS, since we can't use float output, but STDOUT can with play, aplay, etc
 
   if (opts->audio_out_type == 1) //STDOUT (still need these seperated? or not really?)
@@ -344,6 +351,17 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
       pa_simple_write(opts->pulse_digi_dev_out, stereo_samp4, 320*4, NULL);
   }
 
+  if (opts->audio_out_type == 8) //UDP Audio
+  {
+    udp_socket_blaster (opts, state, 320*4, stereo_samp1);
+    udp_socket_blaster (opts, state, 320*4, stereo_samp2);
+    //only play these two if not a single 2v or double 2v (minor skip can still occur on a 4v and 2v combo, but will probably only be perceivable if one is a tone)
+    if (memcmp(empty, stereo_samp3, sizeof(empty)) != 0)
+      udp_socket_blaster (opts, state, 320*4, stereo_samp3);
+    if (memcmp(empty, stereo_samp4, sizeof(empty)) != 0)
+      udp_socket_blaster (opts, state, 320*4, stereo_samp4);
+  }
+
   //No OSS, since we can't use float output, but the STDOUT can with play, aplay, etc
 
   if (opts->audio_out_type == 1) //STDOUT
@@ -429,6 +447,8 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
   if (opts->audio_out_type == 0) //Pulse Audio
     pa_simple_write(opts->pulse_digi_dev_out, stereo_samp1, 320*4, NULL); //switch to sizeof(stereo_samp1) * 2?
 
+  if (opts->audio_out_type == 8) //UDP Audio
+    udp_socket_blaster (opts, state, 320*4, stereo_samp1);
 
   //No OSS, since we can't use float output, but STDOUT can with play, aplay, etc
 
@@ -483,6 +503,9 @@ void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_out_type == 0)
     pa_simple_write(opts->pulse_digi_dev_out, state->f_l, 160*4, NULL);
+
+  if (opts->audio_out_type == 8) //UDP Audio
+    udp_socket_blaster (opts, state, 160*4, state->f_l);
 
   if (opts->audio_out_type == 1 || opts->audio_out_type == 5)
     write(opts->audio_out_fd, state->f_l, 160*4);
@@ -539,6 +562,9 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_out_type == 0) //Pulse Audio
     pa_simple_write(opts->pulse_digi_dev_out, stereo_samp1, 320*2, NULL);
+
+  if (opts->audio_out_type == 8) //UDP Audio
+    udp_socket_blaster (opts, state, 320*2, stereo_samp1);
 
   if (opts->audio_out_type == 1 || opts->audio_out_type == 2) //STDOUT or OSS 8k/2
     write (opts->audio_out_fd, stereo_samp1, 320*2);
@@ -677,7 +703,13 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
     pa_simple_write(opts->pulse_digi_dev_out, stereo_samp2, 320*2, NULL);
     pa_simple_write(opts->pulse_digi_dev_out, stereo_samp3, 320*2, NULL);
   }
-  
+
+  if (opts->audio_out_type == 8) //UDP Audio
+  {
+    udp_socket_blaster (opts, state, 320*2, stereo_samp1);
+    udp_socket_blaster (opts, state, 320*2, stereo_samp2);
+    udp_socket_blaster (opts, state, 320*2, stereo_samp3);
+  }
 
   if (opts->audio_out_type == 1 || opts->audio_out_type == 2) //STDOUT or OSS 8k/2channel
   {
@@ -826,6 +858,17 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
       pa_simple_write(opts->pulse_digi_dev_out, stereo_samp3, 320*2, NULL);
     if (memcmp(empty, stereo_samp4, sizeof(empty)) != 0)
       pa_simple_write(opts->pulse_digi_dev_out, stereo_samp4, 320*2, NULL);
+  }
+
+  if (opts->audio_out_type == 8) //UDP Audio
+  {
+    udp_socket_blaster (opts, state, 320*2, stereo_samp1);
+    udp_socket_blaster (opts, state, 320*2, stereo_samp2);
+    //only play these two if not a single 2v or double 2v (minor skip can still occur on a 4v and 2v combo, but will probably only be perceivable if one is a tone)
+    if (memcmp(empty, stereo_samp3, sizeof(empty)) != 0)
+      udp_socket_blaster (opts, state, 320*2, stereo_samp3);
+    if (memcmp(empty, stereo_samp4, sizeof(empty)) != 0)
+      udp_socket_blaster (opts, state, 320*2, stereo_samp4);
   }
   
 
