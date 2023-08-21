@@ -304,8 +304,8 @@ int udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * d
 
     //send audio or data to socket
     err = sendto(opts->udp_sockfd, data, nsam, 0, (const struct sockaddr * ) & address, sizeof(struct sockaddr_in));
-    if (err < 0) fprintf (stderr, "\n UDP SENDTO ERR %d", err); //return value here is size_t number of characters sent, or -1 for failure
-    if (err < nsam) fprintf (stderr, "\n UDP Underflow %d", err); //I'm not even sure if this is possible
+    if (err < 0) fprintf (stderr, "\n UDP SENDTO ERR %ld", err); //return value here is size_t number of characters sent, or -1 for failure
+    if (err < nsam) fprintf (stderr, "\n UDP Underflow %ld", err); //I'm not even sure if this is possible
 }
 
 int udp_socket_connect(dsd_opts * opts, dsd_state * state)
