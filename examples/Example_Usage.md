@@ -223,3 +223,13 @@ francis@12coresx:~$ ffmpeg -f pulse -i 0 -c:a libmp3lame -ab 64k -f mp3 icecast:
 
 
 ```
+
+## Sending Audio to UDP Target/Port
+
+Audio can be sent to a target address on your local area network with the UDP blaster using the `-o udp:targetaddress:port` option.
+
+Example:
+`dsd-fme -fs -o udp:192.168.7.8:23470`
+
+Receiving End:
+`socat stdio udp-listen:23470 | play -q -b 16 -r 8000 -c2 -t s16 -`

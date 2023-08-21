@@ -337,4 +337,13 @@ int udp_socket_connect(dsd_opts * opts, dsd_state * state)
         return (err);
     }
 
+    // For some reason, setting a broadcast to all isn't working
+    // int broadcastEnable = 1;
+    // err = setsockopt(opts->udp_sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
+    // if (err < 0)
+    // {
+    //     fprintf (stderr, " UDP Broadcast Set Error \n");
+    //     return (err);
+    // }
+
 }

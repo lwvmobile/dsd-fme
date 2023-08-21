@@ -678,7 +678,7 @@ initOpts (dsd_opts * opts)
   //UDP Socket Blaster Audio
   opts->udp_sockfd = 0;
   opts->udp_portno = 23456; //default port, same os OP25's sockaudio.py
-  sprintf (opts->udp_hostname, "%s", "0.0.0.0");
+  sprintf (opts->udp_hostname, "%s", "127.0.0.1");
 
   //tcp input options
   opts->tcp_sockfd = 0;
@@ -1203,8 +1203,8 @@ usage ()
   printf ("                /dev/dsp for OSS audio (Depreciated: Will require padsp wrapper in Linux) \n");
   #endif
   printf ("                null for no audio output\n");
-  printf ("                udp for UDP socket blaster output (default host 0.0.0.0 (broadcast) default port 23456)\n");
-  printf ("                udp:127.0.0.1:23470 for UDP socket blaster output (Custom Address and Port\n");
+  printf ("                udp for UDP socket blaster output (default host 127.0.0.1; default port 23456)\n");
+  printf ("                udp:192.168.7.8:23470 for UDP socket blaster output (Target Address and Port\n");
   printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <float>    Audio Output Gain  (Default: 0 = Auto;        )\n");
@@ -2657,6 +2657,12 @@ main (int argc, char **argv)
       }
 
       opts.audio_out_type = 8;
+
+      if (opts.monitor_input_audio == 1 || opts.frame_provoice == 1)
+      {
+        fprintf (stderr, "NOTICE: Raw Audio Monitoring and Analog Calls Unavailable over UDP Audio Output\n");
+        opts.monitor_input_audio = 0;
+      }
 
     }
 
