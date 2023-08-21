@@ -586,6 +586,11 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
       pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); 
       state->audio_out_idx = 0;
     }
+    else if (opts->audio_out_type == 8) //UDP Audio Out -- Forgot some things still use this for now
+    {
+      udp_socket_blaster (opts, state, (state->audio_out_idx * 2), (state->audio_out_buf_p - state->audio_out_idx));
+      state->audio_out_idx = 0;
+    }
     else state->audio_out_idx = 0; //failsafe for audio_out == 0
 
 
@@ -622,6 +627,11 @@ playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
 		else if (opts->audio_out_type == 0)
     {
       pa_simple_write(opts->pulse_digi_dev_outR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); 
+      state->audio_out_idxR = 0;
+    }
+    else if (opts->audio_out_type == 8) //UDP Audio Out -- Not sure how this would handle, but R never gets called anymore, so just here for symmetry
+    {
+      udp_socket_blaster (opts, state, (state->audio_out_idxR * 2), (state->audio_out_buf_pR - state->audio_out_idxR));
       state->audio_out_idxR = 0;
     }
     else state->audio_out_idxR = 0; //failsafe for audio_out == 0
