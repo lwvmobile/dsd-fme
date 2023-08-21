@@ -30,6 +30,8 @@ void error(char *msg) {
     exit(0);
 }
 
+struct sockaddr_in address;
+
 //
 // Connect
 //
@@ -281,42 +283,58 @@ void rtl_udp_tune(dsd_opts * opts, dsd_state * state, long int frequency)
     close (handle); //close socket after sending.
 }
 
-// int udp_sock_con(dsd_opts * opts, dsd_state * state) 
-// {
-//     UNUSED(state);
-//     UNUSED(opts);
+int udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data)
+{
+    UNUSED(state);
+    size_t err = 0;
 
-//     int handle, err; //convert handle and address to state variables
-//     handle = err = 0;
-//     unsigned short udp_port = 9999; 
-//     struct sockaddr_in address;
-//     handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-//     if (handle != 0)
-//     {
-//         fprintf (stderr, " UDP Socket Error \n");
-//         return (handle);
-//     }
-//     memset((char * ) & address, 0, sizeof(address));
-//     address.sin_family = AF_INET;
-//     err = address.sin_addr.s_addr = inet_addr("127.0.0.1"); //make user configurable later
-//     if (err != 0)
-//     {
-//         fprintf (stderr, " UDP inet_addr Error \n");
-//         return (err);
-//     }
-//     address.sin_port = htons(udp_port);
-//     if (err != 0)
-//     {
-//         fprintf (stderr, " UDP htons Error \n");
-//         return (err);
-//     }
-//     // close (handle); //close socket after sending. //leave open for the blaster
-// }
+    //listen with:
 
-// int udp_sock_send(dsd_opts * opts, dsd_state * state, short samp[320]) 
-// {
-//     UNUSED(state);
-//     UNUSED(opts);
+    //short 8k/2
+    //socat stdio udp-listen:23456 | play -q -b 16 -r 8000 -c2 -t s16 -
 
-//     sendto(handle, samp, 320, 0, (const struct sockaddr * ) & address, sizeof(struct sockaddr_in));
-// }
+    //short 48k/2
+    //socat stdio udp-listen:23456 | play -q -b 16 -r 48000 -c2 -t s16 -
+
+    //float 8k/2
+    //socat stdio udp-listen:23456 | play -q -e float -b 32 -r 8000 -c2 -t f32 -
+
+    //float 8k/1
+    //socat stdio udp-listen:23456 | play -q -e float -b 32 -r 8000 -c1 -t f32 -
+
+    //send audio or data to socket
+    err = sendto(opts->udp_sockfd, data, nsam, 0, (const struct sockaddr * ) & address, sizeof(struct sockaddr_in));
+    if (err < 0) fprintf (stderr, "\n UDP SENDTO ERR %d", err); //return value here is size_t number of characters sent, or -1 for failure
+    if (err < nsam) fprintf (stderr, "\n UDP Underflow %d", err); //I'm not even sure if this is possible
+}
+
+int udp_socket_connect(dsd_opts * opts, dsd_state * state)
+{
+    UNUSED(state);
+    UNUSED(opts);
+
+    int handle, err; //convert handle and address to state variables
+    handle = err = 0;
+    unsigned short udp_port = opts->udp_portno;
+    opts->udp_sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (opts->udp_sockfd < 0) //is this correct?
+    {
+        fprintf (stderr, " UDP Socket Error \n");
+        return (handle);
+    }
+    memset((char * ) & address, 0, sizeof(address));
+    address.sin_family = AF_INET;
+    err = address.sin_addr.s_addr = inet_addr(opts->udp_hostname);
+    if (err < 0)
+    {
+        fprintf (stderr, " UDP inet_addr Error \n");
+        return (err);
+    }
+    address.sin_port = htons(udp_port);
+    if (err < 0)
+    {
+        fprintf (stderr, " UDP htons Error \n");
+        return (err);
+    }
+
+}

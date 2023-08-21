@@ -185,6 +185,22 @@ void beeper (dsd_opts * opts, dsd_state * state, int lr)
       
     }
 
+    else if (opts->audio_out_type == 8) //UDP Audio
+    {
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 1)
+        udp_socket_blaster (opts, state, 320*4, samp_fs);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 1)
+        udp_socket_blaster (opts, state, 160*4, samp_f);
+
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 0)
+        udp_socket_blaster (opts, state, 320*2, samp_ss);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 0)
+        udp_socket_blaster (opts, state, 160*2, samp_s);
+      
+    }
+
     else if (opts->audio_out_type == 1) //STDOUT
     {
       if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 1)
@@ -454,10 +470,6 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     sf_close(opts->tcp_file_in);
   }
 
-  if (opts->audio_in_type == 5) //close UDP input SF file so we don't buffer audio while not decoding
-  {
-    // sf_close(opts->udp_file_in); //disable for testing
-  }
 
   state->payload_keyid = 0;
   state->payload_keyidR = 0;
@@ -1810,10 +1822,6 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     opts->tcp_file_in = sf_open_fd(opts->tcp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
   }
 
-  if (opts->audio_in_type == 5) //re-open UDP input 'file'
-  {
-    // opts->udp_file_in = sf_open_fd(opts->udp_sockfd, SFM_READ, opts->audio_in_file_info, 0);
-  }
 
   //update sync time on cc sync so we don't immediately go CC hunting when exiting the menu
   state->last_cc_sync_time = time(NULL);
@@ -2341,6 +2349,18 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->audio_gain > 0) printw (" (+/-) Manual");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
+    if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) &&  (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
+      printw (" - Monitor RMS: %04ld ", opts->rtl_rms);
+    printw (" \n");
+  }
+
+  if (opts->audio_out_type == 8)
+  {
+    printw ("| UDP Audio Output: %s:%d; %d kHz %d Ch; %02.0f%%", opts->udp_hostname, opts->udp_portno, opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
+    if (opts->audio_gain == 0) printw (" (+/-) Auto");
+    if (opts->audio_gain > 0) printw (" (+/-) Manual");
+    if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) &&  (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
       printw (" - Monitor RMS: %04ld ", opts->rtl_rms);
     printw (" \n");

@@ -331,11 +331,10 @@ typedef struct
   int rigctlportno;
   char rigctlhostname[1024];
 
-  //udp socket for GQRX, SDR++, etc
+  //UDP Socket Blaster Audio
   int udp_sockfd;
   int udp_portno;
-  char * udp_hostname;
-  SNDFILE *udp_file_in;
+  char udp_hostname[1024];
 
   //tcp socket for SDR++, etc
   int tcp_sockfd;
@@ -1223,6 +1222,10 @@ int csvLCNImport(dsd_opts * opts, dsd_state * state);
 int csvChanImport(dsd_opts * opts, dsd_state * state);
 int csvKeyImportDec(dsd_opts * opts, dsd_state * state);
 int csvKeyImportHex(dsd_opts * opts, dsd_state * state);
+
+//UDP Socket Connect and UDP Socket Blaster (audio output)
+int udp_socket_connect(dsd_opts * opts, dsd_state * state);
+int udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
 
 #ifdef __cplusplus
 extern "C" {

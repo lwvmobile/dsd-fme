@@ -675,10 +675,10 @@ initOpts (dsd_opts * opts)
   opts->rigctlportno = 4532; //TCP Port Number; GQRX - 7356; SDR++ - 4532
   sprintf (opts->rigctlhostname, "%s", "localhost");
 
-  //udp input options
+  //UDP Socket Blaster Audio
   opts->udp_sockfd = 0;
-  opts->udp_portno = 7355; //default favored by GQRX and SDR++
-  opts->udp_hostname = "localhost";
+  opts->udp_portno = 23456; //default port, same os OP25's sockaudio.py
+  sprintf (opts->udp_hostname, "%s", "0.0.0.0");
 
   //tcp input options
   opts->tcp_sockfd = 0;
@@ -1203,6 +1203,8 @@ usage ()
   printf ("                /dev/dsp for OSS audio (Depreciated: Will require padsp wrapper in Linux) \n");
   #endif
   printf ("                null for no audio output\n");
+  printf ("                udp for UDP socket blaster output (default host 0.0.0.0 (broadcast) default port 23456)\n");
+  printf ("                udp:127.0.0.1:23470 for UDP socket blaster output (Custom Address and Port\n");
   printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <float>    Audio Output Gain  (Default: 0 = Auto;        )\n");
@@ -1469,6 +1471,9 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
   {
     ncursesClose(opts);
   }
+
+  if (opts->udp_sockfd)
+    close (opts->udp_sockfd);
 
   //close MBE out files
   if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
@@ -2609,6 +2614,50 @@ main (int argc, char **argv)
     if((strncmp(opts.audio_in_dev, "pulse", 5) == 0))
     {
       opts.audio_in_type = 0;
+    }
+
+    //UDP Socket Blaster Audio Output Setup
+    if((strncmp(opts.audio_out_dev, "udp", 3) == 0))
+    {
+      
+      //read in values
+      fprintf (stderr, "UDP Blaster Output: ");
+      char * curr;
+
+      curr = strtok(opts.audio_out_dev, ":"); //should be 'udp'
+      if (curr != NULL) ; //continue
+      else goto UDPEND; //end early with preset values
+
+      curr = strtok(NULL, ":"); //udp blaster hostname
+      if (curr != NULL)
+        strncpy (opts.udp_hostname, curr, 1023); //set address to blast to
+      
+      curr = strtok(NULL, ":"); //udp blaster port
+      if (curr != NULL)
+        opts.udp_portno = atoi (curr);
+
+      UDPEND:
+      fprintf (stderr, "%s:", opts.udp_hostname);
+      fprintf (stderr, "%d \n", opts.udp_portno);
+
+      int err = udp_socket_connect(&opts, &state);
+      if (err < 0)
+      {
+        fprintf (stderr, "Error Configuring UDP Socket for UDP Blaster Audio :( \n");
+        #ifdef AERO_BUILD
+        sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
+        opts.audio_in_type = 5;
+        //since I can't determine what the configuration will be for 48k1 or 8k2 here(lazy), need to exit
+        exitflag = 1;
+        #else
+        sprintf (opts.audio_out_dev, "%s", "pulse");
+        opts.audio_out_type = 0;
+        #endif
+
+      }
+
+      opts.audio_out_type = 8;
+
     }
 
     if((strncmp(opts.audio_out_dev, "pulse", 5) == 0))
