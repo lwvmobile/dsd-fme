@@ -626,7 +626,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         #endif
 
         //disable analog calls on UDP Audio Output
-        if (opts->audio_out_type == 3 && command == 0xEE)
+        if (opts->audio_out_type == 8 && command == 0xEE)
           command = 0;
 
         //this is working now with the new import setup
