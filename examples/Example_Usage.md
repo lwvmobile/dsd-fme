@@ -227,9 +227,34 @@ francis@12coresx:~$ ffmpeg -f pulse -i 0 -c:a libmp3lame -ab 64k -f mp3 icecast:
 ## Sending Audio to UDP Target/Port
 
 Audio can be sent to a target address on your local area network with the UDP blaster using the `-o udp:targetaddress:port` option.
+Note: Any analog audio monitoring will not function properly over UDP port (rate difference issues)
 
-Example:
+Example (Short 8k/2):
 `dsd-fme -fs -o udp:192.168.7.8:23470`
 
-Receiving End:
-`socat stdio udp-listen:23470 | play -q -b 16 -r 8000 -c2 -t s16 -`
+Receiving End (Short 8k/2):
+`socat stdio udp-listen:23470 | play --buffer 640 -q -b 16 -r 8000 -c2 -t s16 -`
+
+Example (Short 8k/1):
+`dsd-fme -f1 -o udp:192.168.7.8:23469`
+
+Receiving End (Short 8k/1):
+`socat stdio udp-listen:23469 | play --buffer 320 -q -b 16 -r 8000 -c1 -t s16 -`
+
+Example (Float 8k/2):
+`dsd-fme -ft -y -o udp:192.168.7.8:23468`
+
+Receiving End (Float 8k/2):
+`socat stdio udp-listen:23468 | play --buffer 1280 -q -b 16 -r 8000 -c2 -t f32 -`
+
+Example (Float 8k/1):
+`dsd-fme -fi -y -o udp:192.168.7.8:23467`
+
+Receiving End (Float 8k/1):
+`socat stdio udp-listen:23467 | play --buffer 640 -q -b 16 -r 8000 -c1 -t f32 -`
+
+Note: --buffer option in play is calculated by (channels * samples * sizeof(samples)), 
+where samples is 160 for mono, 320 for stereo, and short samples are 2 and float samples are 4.
+This is vital to prevent 'lag' or cut-off audio when the UDP audio doesn't fill the default buffer size.
+
+Note2: Be sure to start the receiving end AFTER starting DSD-FME. If DSD-FME is restarted, make sure to restart the receiving end as well, as socat/UDP closes the UDP port listening when DSD-FME closes the UDP socket.

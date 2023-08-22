@@ -291,16 +291,16 @@ int udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * d
     //listen with:
 
     //short 8k/2
-    //socat stdio udp-listen:23456 | play -q -b 16 -r 8000 -c2 -t s16 -
+    //socat stdio udp-listen:23456 | play --buffer 320*2 -q -b 16 -r 8000 -c2 -t s16 -
 
-    //short 48k/2
-    //socat stdio udp-listen:23456 | play -q -b 16 -r 48000 -c2 -t s16 -
+    //short 8k/1
+    //socat stdio udp-listen:23456 | play --buffer 160*2 -q -b 16 -r 48000 -c2 -t s16 -
 
     //float 8k/2
-    //socat stdio udp-listen:23456 | play -q -e float -b 32 -r 8000 -c2 -t f32 -
+    //socat stdio udp-listen:23456 | play --buffer 320*4 -q -e float -b 32 -r 8000 -c2 -t f32 -
 
     //float 8k/1
-    //socat stdio udp-listen:23456 | play -q -e float -b 32 -r 8000 -c1 -t f32 -
+    //socat stdio udp-listen:23456 | play --buffer 160*4 -q -e float -b 32 -r 8000 -c1 -t f32 -
 
     //send audio or data to socket
     err = sendto(opts->udp_sockfd, data, nsam, 0, (const struct sockaddr * ) & address, sizeof(struct sockaddr_in));
@@ -311,39 +311,38 @@ int udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * d
 int udp_socket_connect(dsd_opts * opts, dsd_state * state)
 {
     UNUSED(state);
-    UNUSED(opts);
 
-    int handle, err; //convert handle and address to state variables
-    handle = err = 0;
-    unsigned short udp_port = opts->udp_portno;
-    opts->udp_sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (opts->udp_sockfd < 0) //is this correct?
+    long int err = 0;
+    err = opts->udp_sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (err < 0)
     {
-        fprintf (stderr, " UDP Socket Error \n");
-        return (handle);
+        fprintf (stderr, " UDP Socket Error %ld\n", err);
+        return (err);
     }
+
+    // Don't think this is needed, but doesn't seem to hurt to keep it here either
+    int broadcastEnable = 1;
+    err = setsockopt(opts->udp_sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
+    if (err < 0)
+    {
+        fprintf (stderr, " UDP Broadcast Set Error %ld\n", err);
+        return (err);
+    }
+
     memset((char * ) & address, 0, sizeof(address));
     address.sin_family = AF_INET;
     err = address.sin_addr.s_addr = inet_addr(opts->udp_hostname);
-    if (err < 0)
+    if (err < 0) //error in this context reports back 32-bit inet_addr reversed order byte pairs
     {
-        fprintf (stderr, " UDP inet_addr Error \n");
-        return (err);
-    }
-    address.sin_port = htons(udp_port);
-    if (err < 0)
-    {
-        fprintf (stderr, " UDP htons Error \n");
+        fprintf (stderr, " UDP inet_addr Error %ld\n", err);
         return (err);
     }
 
-    // For some reason, setting a broadcast to all isn't working
-    // int broadcastEnable = 1;
-    // err = setsockopt(opts->udp_sockfd, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
-    // if (err < 0)
-    // {
-    //     fprintf (stderr, " UDP Broadcast Set Error \n");
-    //     return (err);
-    // }
+    address.sin_port = htons(opts->udp_portno);
+    if (err < 0)
+    {
+        fprintf (stderr, " UDP htons Error %ld\n", err);
+        return (err);
+    }
 
 }
