@@ -604,10 +604,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
         else
           fprintf (stderr, " Digital");
 
-        //disable analog calls on RTL Input on ARM devices due to High CPU usage from RTL RMS function
+        //skip analog calls on RTL Input on ARM devices due to High CPU usage from RTL RMS function
         #ifdef __arm__
         if (command == 0xEE && opts->audio_in_type == 3)
-          command = 0;
+          goto ENDPV;
         #endif
 
         //this is working now with the new import setup
@@ -663,7 +663,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
     } //end Standard or Networked
 
-  } 
+  }
+
+  ENDPV:
 
   fprintf (stderr, "\n");
 
