@@ -2524,12 +2524,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
 
     //fill in any extra info, like Meta (IV, etc)
-    if (state->m17_enc == 2)
+    if (state->m17_enc == 1)
     {
       printw (" Scrambler - Type: %d", state->m17_enc_st);
     }
 
-    if (state->m17_enc == 1)
+    if (state->m17_enc == 2)
     {
       printw (" AES-CTR - IV: ");
       //display packed meta as IV
