@@ -207,7 +207,7 @@ void M17decodeLSF(dsd_state * state)
     if (lsf_es == 3) fprintf (stderr, " Reserved");
   }
   
-  if (lsf_et == 1)
+  if (lsf_et == 2)
   {
     fprintf (stderr, " IV: ");
     for (i = 0; i < 16; i++)
