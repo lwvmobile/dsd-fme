@@ -157,8 +157,6 @@ void M17decodeLSF(dsd_state * state)
 
   fprintf (stderr, " CAN: %d", lsf_cn);
   M17decodeCSD(state, lsf_dst, lsf_src);
-
-  if (lsf_et != 0) fprintf (stderr, " ENC");
   
   if (lsf_dt == 0) fprintf (stderr, " Reserved");
   if (lsf_dt == 1) fprintf (stderr, " Data");
@@ -167,8 +165,9 @@ void M17decodeLSF(dsd_state * state)
 
   if (lsf_rs != 0) fprintf (stderr, " RS: %02X", lsf_rs);
 
-  if (lsf_et == 1) fprintf (stderr, " AES-CTR");
-  if (lsf_et == 2) fprintf (stderr, " Scrambler - %d", lsf_es);
+  if (lsf_et != 0) fprintf (stderr, " ENC:");
+  if (lsf_et == 2) fprintf (stderr, " AES-CTR");
+  if (lsf_et == 1) fprintf (stderr, " Scrambler - %d", lsf_es);
 
   state->m17_enc = lsf_et;
   state->m17_enc_st = lsf_es;
