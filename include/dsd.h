@@ -1079,7 +1079,8 @@ uint8_t crc8(uint8_t bits[], unsigned int len);
 bool crc8_ok(uint8_t bits[], unsigned int len);
 //modified CRC functions for SB/RC
 uint8_t crc7(uint8_t bits[], unsigned int len);
-uint8_t crc3(uint8_t bits[], unsigned int len); 
+uint8_t crc3(uint8_t bits[], unsigned int len);
+uint8_t crc4(uint8_t bits[], unsigned int len); 
 
 //LFSR and LFSRP code courtesy of https://github.com/mattames/LFSR/
 void LFSR(dsd_state * state);

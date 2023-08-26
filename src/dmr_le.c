@@ -51,6 +51,12 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
   uint64_t go_test = 0;
   uint64_t mi_corrected = 0;
   uint64_t go_corrected = 0;
+
+  uint8_t mi_bits[36];
+  memset (mi_bits, 0, sizeof(mi_bits));
+  uint8_t mi_crc_cmp = 0;
+  uint8_t mi_crc_ext = 1;
+  uint8_t mi_crc_ok = 0;
   
   mi_test = (state->late_entry_mi_fragment[slot][1][0] << 32L) | (state->late_entry_mi_fragment[slot][2][0] << 28) | (state->late_entry_mi_fragment[slot][3][0] << 24) |
             (state->late_entry_mi_fragment[slot][1][1] << 20) | (state->late_entry_mi_fragment[slot][2][1] << 16) | (state->late_entry_mi_fragment[slot][3][1] << 12) |
@@ -77,11 +83,21 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
       mi_corrected |= mi_go_bits[i];
       go_corrected = go_corrected << 1;
       go_corrected |= mi_go_bits[i+12];
+      //manipulate for crc check
+      mi_bits[i+(j*12)] = mi_go_bits[i];
     }
   }
 
   int mi_final = 0; 
   mi_final = (mi_corrected >> 4) & 0xFFFFFFFF;
+
+  mi_crc_ext = (uint8_t)ConvertBitIntoBytes(&mi_bits[32], 4);
+  mi_crc_cmp = crc4(mi_bits, 32);
+  if (mi_crc_ext == mi_crc_cmp)
+    mi_crc_ok = 1;
+
+  //debug -- working now
+  // fprintf (stderr, " LE MI: %09llX; CRC EXT: %X; CRC CMP: %X; \n", mi_corrected, mi_crc_ext, mi_crc_cmp);
 
   if (g[0] && g[1] && g[2])
   {
@@ -90,8 +106,11 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
       if (state->payload_mi != mi_final) 
       {
         fprintf (stderr, "%s", KCYN);
-        fprintf (stderr, " Slot 1 PI/LFSR and Late Entry MI Mismatch - %08X : %08X \n", state->payload_mi, mi_final);
-        state->payload_mi = mi_final; 
+        fprintf (stderr, " Slot 1 PI/LFSR and Late Entry MI Mismatch - %08X : %08X ", state->payload_mi, mi_final);
+        state->payload_mi = mi_final;
+        if (mi_crc_ok == 1) fprintf (stderr, "(CRC OK)");
+        else fprintf (stderr, "(CRC ERR)");
+        fprintf (stderr, "\n");
         fprintf (stderr, "%s", KNRM);
       }
       //run afterwards, or le verification won't match up properly
@@ -106,8 +125,11 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
       if (state->payload_miR != mi_final)
       {
         fprintf (stderr, "%s", KCYN);
-        fprintf (stderr, " Slot 2 PI/LFSR and Late Entry MI Mismatch - %08X : %08X \n", state->payload_miR, mi_final);
+        fprintf (stderr, " Slot 2 PI/LFSR and Late Entry MI Mismatch - %08X : %08X ", state->payload_miR, mi_final);
         state->payload_miR = mi_final;
+        if (mi_crc_ok == 1) fprintf (stderr, "(CRC OK)");
+        else fprintf (stderr, "(CRC ERR)");
+        fprintf (stderr, "\n");
         fprintf (stderr, "%s", KNRM);
       }
       //run afterwards, or le verification won't match up properly
@@ -268,7 +290,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   }
   
   uint8_t sbrc_opcode = sbrc_hex & 0x7; //opcode and alg the same bits, but the alg is present when CRC is bad (I know they are limited on bits, but I hate that idea)
-  uint8_t alg = sbrc_hex & 0x7;
+  uint8_t alg = sbrc_hex & 0x7; //SEE: https://patents.google.com/patent/EP2347540B1/en
   uint8_t key = (sbrc_hex >> 3) & 0xFF;
   uint8_t txi_delay = (sbrc_hex >> 3) & 0x1F; //middle five are the 'delay' value on a TXI system
 
@@ -299,16 +321,24 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
       else if (crc3_okay == 1 && (sbrc_opcode == 0 || sbrc_opcode == 3) )
       {
         //opcodes -- 0 (NULL), BR Delay (3)
-        fprintf (stderr, "\n");
-        fprintf (stderr, " TXI Op: %X - ", sbrc_opcode);
+        if (opts->payload == 0) fprintf (stderr, "\n");
+        fprintf (stderr, "%s", KCYN);
+        fprintf (stderr, " TXI Op: %X -", sbrc_opcode);
         if      (sbrc_opcode == 0) fprintf (stderr, " Null; ");
         else if (sbrc_opcode == 3) 
         {
           if (txi_delay != 0)
-            fprintf (stderr, " BR Delay: %d - %d ms; ", txi_delay, txi_delay * 30); //could also indicate number of superframes until next VC6 pre-emption
+            fprintf (stderr, " BR Delay: %d - %d ms;", txi_delay, txi_delay * 30); //could also indicate number of superframes until next VC6 pre-emption
           else fprintf (stderr, "BR Delay: Irrelevant / Send at any time;");
+
+          //alignment of inbound backwards channel and outbound burst
+          if (txi_delay == 2) fprintf (stderr, " SF3, Burst E;"); //E is inbound
+          if (txi_delay == 4) fprintf (stderr, " SF3, Burst D;"); //D is inbound
+          if (txi_delay == 6) fprintf (stderr, " SF3, Burst C;"); //C is inbound
+          if (txi_delay == 8) fprintf (stderr, " SF3, Burst B;"); //B is inbound
         }
         else fprintf (stderr, " Unk; ");
+        fprintf (stderr, "%s", KNRM);
 
         if (opts->payload == 1) fprintf (stderr, "\n"); //only during payload
 
@@ -328,9 +358,8 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
               fprintf (stderr, "%s", KCYN);
               fprintf (stderr, " Slot 1");
               fprintf (stderr, " DMR LE SB ALG ID: 0x%02X KEY ID: 0x%02X", alg + 0x20, key);
-              // fprintf (stderr, "\n");
               fprintf (stderr, "%s ", KNRM);
-
+              if (opts->payload == 1) fprintf (stderr, "\n");
               state->payload_keyid = key;
               state->payload_algid = alg + 0x20; //assuming DMRA approved alg values (moto patent)
             }
@@ -349,9 +378,8 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
               fprintf (stderr, "%s", KCYN);
               fprintf (stderr, " Slot 2");
               fprintf (stderr, " DMR LE SB ALG ID: 0x%02X KEY ID: 0x%02X", alg + 0x20, key);
-              // fprintf (stderr, "\n");
               fprintf (stderr, "%s ", KNRM);
-
+              if (opts->payload == 1) fprintf (stderr, "\n");
               state->payload_keyidR = key;
               state->payload_algidR = alg + 0x20; //assuming DMRA approved alg values (moto patent)
             }
@@ -408,3 +436,26 @@ uint8_t crc3(uint8_t bits[], unsigned int len)
   return crc;
 }
 
+uint8_t crc4(uint8_t bits[], unsigned int len)
+{
+  uint8_t crc=0;
+  unsigned int K = 4;
+  //x^4+x+1 
+  uint8_t poly[5] = {1,0,0,1,1};
+  uint8_t buf[256];
+  if (len+K > sizeof(buf)) {
+    return 0;
+  }
+  memset (buf, 0, sizeof(buf));
+  for (unsigned int i=0; i<len; i++){
+    buf[i] = bits[i];
+  }
+  for (unsigned int i=0; i<len; i++)
+    if (buf[i])
+      for (unsigned int j=0; j<K+1; j++)
+        buf[i+j] ^= poly[j];
+  for (unsigned int i=0; i<K; i++){
+    crc = (crc << 1) + buf[len + i];
+  }
+  return crc ^ 0xF; //invert
+}
