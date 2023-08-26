@@ -321,7 +321,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
 
       }
 
-      else if (sbrc_opcode != 0 || sbrc_opcode != 3) //all that should be left in this field is the potential ENC identifiers
+      else if (sbrc_opcode != 0 && sbrc_opcode != 3) //all that should be left in this field is the potential ENC identifiers
       {
 
         if (slot == 0) //may not need the state->errs anymore //&& state->errs < 3
@@ -332,9 +332,9 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
             if (state->M == 0)
             {
               fprintf (stderr, "\n");
-              fprintf (stderr, "%s ", KYEL);
+              fprintf (stderr, "%s", KCYN);
               fprintf (stderr, " Slot 1");
-              fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
+              fprintf (stderr, " DMR LE SB ALG ID: 0x%02X KEY ID: 0x%02X", alg + 0x20, key);
               // fprintf (stderr, "\n");
               fprintf (stderr, "%s ", KNRM);
 
@@ -353,9 +353,9 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
             if (state->M == 0)
             {
               fprintf (stderr, "\n");
-              fprintf (stderr, "%s ", KYEL);
+              fprintf (stderr, "%s", KCYN);
               fprintf (stderr, " Slot 2");
-              fprintf (stderr, " DMR LE SB ALG ID: %X KEY ID: %0X", alg + 0x20, key);
+              fprintf (stderr, " DMR LE SB ALG ID: 0x%02X KEY ID: 0x%02X", alg + 0x20, key);
               // fprintf (stderr, "\n");
               fprintf (stderr, "%s ", KNRM);
 
