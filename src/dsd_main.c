@@ -1534,9 +1534,9 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version: AW (WIP) \n");
+  fprintf (stderr, "Build Version: AW (20230901) \n");
   #else
-  fprintf (stderr, "Build Version: AW (WIP) %s \n", GIT_TAG);
+  fprintf (stderr, "Build Version: AW %s \n", GIT_TAG);
   #endif
   fprintf (stderr,"MBElib Version: %s\n", versionstr);
 
