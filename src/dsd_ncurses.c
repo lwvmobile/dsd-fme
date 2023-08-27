@@ -404,8 +404,10 @@ void print_menuc(WINDOW *menu_win, int highlight)
 void ncursesOpen (dsd_opts * opts, dsd_state * state)
 {
   //this is primarily used to push a quick audio blip through OSS so it will show up in the mixer immediately
-  if (opts->audio_out_type == 2 || opts->audio_out_type == 5)
-    beeper (opts, state, 0);
+  // if (opts->audio_out_type == 2 || opts->audio_out_type == 5)
+  //   beeper (opts, state, 0); //causes crash in Cygwin when mixed input/output
+
+  UNUSED(opts); UNUSED(state);
 
   // state->menuopen = 1; //flag the menu is open, stop processing getFrameSync
   mbe_printVersion (versionstr);
