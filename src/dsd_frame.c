@@ -153,19 +153,19 @@ processFrame (dsd_opts * opts, dsd_state * state)
       {
 
         sprintf (state->fsubtype, " VOICE        ");
-        if (opts->dmr_stereo == 0 && state->synctype < 32) // -T option for DMR (TDMA) stereo
+        if (opts->dmr_stereo == 0 && state->synctype < 32)
         {
           sprintf (state->slot1light, " slot1 ");
           sprintf (state->slot2light, " slot2 ");
           //we can safely open MBE on any MS or mono handling
           if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state); 
-          dmrMSBootstrap (opts, state); 
+          if (opts->p25_trunk == 0) dmrMSBootstrap (opts, state); 
         }
         if (opts->dmr_mono == 1 && state->synctype == 32)
         {
           //we can safely open MBE on any MS or mono handling
           if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
-          dmrMSBootstrap (opts, state); 
+          if (opts->p25_trunk == 0) dmrMSBootstrap (opts, state); 
         }
         if (opts->dmr_stereo == 1) //opts->dmr_stereo == 1
         {
@@ -174,7 +174,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
           {
             //we can safely open MBE on any MS or mono handling
             if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
-            dmrMSBootstrap (opts, state); //bootstrap into MS Bootstrap (voice only)
+            if (opts->p25_trunk == 0) dmrMSBootstrap (opts, state); //bootstrap into MS Bootstrap (voice only)
           }
           else dmrBSBootstrap (opts, state); //bootstrap into BS Bootstrap
         }
@@ -183,7 +183,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
       {
         if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
         if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
-        dmrMSData (opts, state);
+        if (opts->p25_trunk == 0) dmrMSData (opts, state);
       }
       else
       {
@@ -195,7 +195,6 @@ processFrame (dsd_opts * opts, dsd_state * state)
           state->err_str[0] = 0;
           sprintf (state->slot1light, " slot1 ");
           sprintf (state->slot2light, " slot2 ");
-          state->payload_miP = 0; //zero out when switching back to data sync
           dmr_data_sync (opts, state);
         }
         //switch dmr_stereo to 0 when handling BS data frame syncs with processDMRdata
@@ -207,7 +206,6 @@ processFrame (dsd_opts * opts, dsd_state * state)
           state->dmr_stereo = 0; //set the state to zero for handling pure data frames
           sprintf (state->slot1light, " slot1 ");
           sprintf (state->slot2light, " slot2 ");
-          state->payload_miP = 0; //zero out when switching back to data sync
           dmr_data_sync (opts, state);
         }
       }
