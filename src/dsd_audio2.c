@@ -421,6 +421,27 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
   //TODO: ENC Check on P25p1, DMR MS, etc
   encL = 0;
 
+  //Enc Checkdown -- P25p1 when run with -ft -y switch
+  if (state->synctype == 0 || state->synctype == 1)
+  {
+    if (state->payload_algid != 0 && state->payload_algid != 0x80)
+    {
+      encL = 1;
+    }
+  }
+  
+  //checkdown to see if we can lift the 'mute' if a key is available
+  if (encL)
+  {
+    if (state->payload_algid == 0xAA)
+    {
+      if (state->R != 0)
+      {
+        encL = 0;
+      }
+    }
+  }
+
   //TODO: add option to bypass enc with a toggle as well
 
   if (opts->slot1_on == 0) encL = 1;
@@ -498,6 +519,38 @@ void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
   // for (int i = 0; i < 160; i++)
   //   state->f_l[i] *= 0.5f;
 
+  int encL = 0;
+
+  //Enc Checkdown -- P25p1 when run with -ft -y switch
+  if (state->synctype == 0 || state->synctype == 1)
+  {
+    if (state->payload_algid != 0 && state->payload_algid != 0x80)
+    {
+      encL = 1;
+    }
+  }
+
+  //NXDN
+  if (state->nxdn_cipher_type != 0)
+  {
+    encL = 1;
+  }
+
+  //checkdown to see if we can lift the 'mute' if a key is available
+  if (encL)
+  {
+    if (state->payload_algid == 0xAA || state->nxdn_cipher_type == 0x1)
+    {
+      if (state->R != 0)
+      {
+        encL = 0;
+      }
+    }
+  }
+
+  if (encL == 1)
+    goto vfm_end;
+
   if (opts->slot1_on == 0)
     goto vfm_end;
 
@@ -535,11 +588,29 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
   short stereo_samp1[320]; //8k 2-channel stereo interleave mix
   memset (stereo_samp1, 1, sizeof(stereo_samp1));
 
-  //dmr enc checkdown for whether or not to fill the stereo sample or not for playback or writing
+  //enc checkdown for whether or not to fill the stereo sample or not for playback or writing
   encL = 0;
 
-  //TODO: Enc Checkdown -- would need to cover more ground than otherwise would like for it to, these should ultimately be passed to each encoding type decoder instead
+  //Enc Checkdown -- P25p1 when run with -ft switch
+  if (state->synctype == 0 || state->synctype == 1)
+  {
+    if (state->payload_algid != 0 && state->payload_algid != 0x80)
+    {
+      encL = 1;
+    }
+  }
 
+  //checkdown to see if we can lift the 'mute' if a key is available
+  if (encL)
+  {
+    if (state->payload_algid == 0xAA)
+    {
+      if (state->R != 0)
+      {
+        encL = 0;
+      }
+    }
+  }
   //TODO: add option to bypass enc with a toggle as well
 
   if (opts->slot1_on == 0) encL = 1;
@@ -577,8 +648,8 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
   state->audio_out_idxR = 0;
 
   //set float temp buffer to baseline
-  memset (state->s_l4, 1, sizeof(state->s_l4));
-  memset (state->s_r4, 1, sizeof(state->s_r4));
+  memset (state->s_l, 1, sizeof(state->s_l));
+  memset (state->s_r, 1, sizeof(state->s_r));
 
   if (state->audio_out_idx2 >= 800000)
   {
