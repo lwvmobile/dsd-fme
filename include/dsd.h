@@ -824,6 +824,10 @@ typedef struct
 #define INV_PROVOICE_EA_SYNC "13313133113113333311313133133311"
 #define PROVOICE_EA_SYNC     "31131311331331111133131311311133"
 
+//EDACS/PV dotting sequence
+#define DOTTING_SEQUENCE_A  "11111111111111111111111111111111" //0x5555
+#define DOTTING_SEQUENCE_B  "33333333333333333333333333333333" //0xAAAA
+
 //define the provoice conventional string pattern to default 85/85 if not enabled, else mute it so we won't double sync on accident in frame_sync
 #ifdef PVCONVENTIONAL
 #define PROVOICE_CONV        "00000000000000000000000000000000" //all zeroes should be unobtainable string in the frame_sync synctests
@@ -1167,7 +1171,8 @@ int UDPBind (char *hostname, int portno);
 
 //EDACS
 void edacs(dsd_opts * opts, dsd_state * state);
-unsigned long long int edacs_bch (unsigned long long int message); 
+unsigned long long int edacs_bch (unsigned long long int message);
+void eot_cc(dsd_opts * opts, dsd_state * state); //end of TX return to CC
 
 //csv imports
 int csvGroupImport(dsd_opts * opts, dsd_state * state);

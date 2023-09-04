@@ -671,4 +671,55 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
 }
 
+void eot_cc(dsd_opts * opts, dsd_state * state)
+{
+
+  fprintf (stderr, "EOT; \n");
+
+  //jump back to CC here
+  if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
+  {
+    
+    //rigctl
+    if (opts->use_rigctl == 1)
+    {
+      state->lasttg = 0;
+      state->lastsrc = 0;
+      state->payload_algid = 0; 
+      state->payload_keyid = 0;
+      state->payload_miP = 0;
+      //reset some strings
+      sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+      sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+      sprintf (state->active_channel[0], "%s", "");
+      sprintf (state->active_channel[1], "%s", "");
+      opts->p25_is_tuned = 0;
+      state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+      if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+      SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
+    }
+
+    //rtl
+    else if (opts->audio_in_type == 3)
+    {
+      #ifdef USE_RTLSDR
+      state->lasttg = 0;
+      state->lastsrc = 0;
+      state->payload_algid = 0;
+      state->payload_keyid = 0;
+      state->payload_miP = 0;
+      //reset some strings
+      sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+      sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+      sprintf (state->active_channel[0], "%s", "");
+      sprintf (state->active_channel[1], "%s", "");
+      opts->p25_is_tuned = 0;
+      state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+      rtl_dev_tune (opts, state->p25_cc_freq);
+      #endif
+    }
+
+  }
+}
+
  
