@@ -927,6 +927,7 @@ void openAudioInDevice (dsd_opts * opts);
 
 int getDibit (dsd_opts * opts, dsd_state * state);
 int get_dibit_and_analog_signal (dsd_opts * opts, dsd_state * state, int * out_analog_signal);
+int digitize (dsd_opts* opts, dsd_state* state, int symbol);
 
 void skipDibit (dsd_opts * opts, dsd_state * state, int count);
 void saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d);
