@@ -1191,9 +1191,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->lastsynctype = 37; 
               return (37);
             }
-            else if ((strcmp (synctest32, DOTTING_SEQUENCE_A) == 0) || (strcmp (synctest32, DOTTING_SEQUENCE_B) == 0))
+            else if ((strcmp (synctest48, DOTTING_SEQUENCE_A) == 0) || (strcmp (synctest48, DOTTING_SEQUENCE_B) == 0))
             {
-              printFrameSync (opts, state, " EDACS DOTTING SEQUENCE; ", synctest_pos + 1, modulation);
+              printFrameSync (opts, state, " EDACS DOTTING SEQUENCE: ", synctest_pos + 1, modulation);
               eot_cc (opts, state);
             }
 

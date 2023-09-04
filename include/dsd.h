@@ -856,9 +856,9 @@ typedef struct
 #define INV_PROVOICE_EA_SYNC "13313133113113333311313133133311"
 #define PROVOICE_EA_SYNC     "31131311331331111133131311311133"
 
-//EDACS/PV dotting sequence
-#define DOTTING_SEQUENCE_A  "11111111111111111111111111111111" //0x5555
-#define DOTTING_SEQUENCE_B  "33333333333333333333333333333333" //0xAAAA
+//EDACS/PV EOT dotting sequence
+#define DOTTING_SEQUENCE_A  "131313131313131313131313131313131313131313131313" //0xAAAA...
+#define DOTTING_SEQUENCE_B  "313131313131313131313131313131313131313131313131" //0x5555...
 
 //define the provoice conventional string pattern to default 85/85 if not enabled, else mute it so we won't double sync on accident in frame_sync
 #ifdef PVCONVENTIONAL
@@ -868,7 +868,7 @@ typedef struct
 #define PROVOICE_CONV        "13131333111311311313131313131313" //TX 85 RX 85 (default programming value)
 #define INV_PROVOICE_CONV    "31313111333133133131313131313131" //TX 85 RX 85 (default programming value)
 #endif
-//we use the short sync instead of the default 85/85 wnen PVCONVENTIONAL is defined by cmake
+//we use the short sync instead of the default 85/85 when PVCONVENTIONAL is defined by cmake
 #define PROVOICE_CONV_SHORT                 "1313133311131131" //16-bit short pattern, last 16-bits change based on TX an RX values
 #define INV_PROVOICE_CONV_SHORT             "3131311133313313"
 //In this pattern (inverted polarity, the norm for PV) 3 is bit 0, and 1 is bit 1 (2 level GFSK)
