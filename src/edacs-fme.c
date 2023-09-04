@@ -215,7 +215,6 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       fprintf (stderr, " AFS [0x%03X] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
 
     fprintf (stderr, "%s", KNRM);
-    if (rms > sql) fprintf (stderr, "\n");
 
     //Update Ncurses Terminal
     if (opts->use_ncurses_terminal == 1)
@@ -230,6 +229,26 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       sf_write_short(opts->wav_out_f, analog2, 960);
       sf_write_short(opts->wav_out_f, analog3, 960);
     }
+
+    //digitize analog samples for a dotting sequence check
+    unsigned long long int sr = 0;
+    for (i = 0; i < 960; i+=5) //Samples Per Symbol is 5, so incrememnt every 5
+    {
+      sr = sr << 1;
+      sr += digitize (opts, state, (int)analog1[i]);
+    }
+
+    //debug
+    // fprintf (stderr, " SR: %016llX", sr);
+
+    if (sr == 0xAAAAAAAAAAAAAAAA || sr == 0x5555555555555555)
+    {
+      fprintf (stderr, " EDACS DOTTING SEQUENCE: ");
+      rms = 0; //break while loop by dropping rms value
+      fprintf (stderr, "\n");
+    }
+
+    if (rms > sql) fprintf (stderr, "\n");
     
   }
 }

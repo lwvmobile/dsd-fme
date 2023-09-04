@@ -217,8 +217,7 @@ invert_dibit(int dibit)
     return -1;
 }
 
-static int digitize (dsd_opts* opts, dsd_state* state, int symbol)
-//int digitize (dsd_opts* opts, dsd_state* state, int symbol)
+int digitize (dsd_opts* opts, dsd_state* state, int symbol)
 {
   // determine dibit state
   if ((state->synctype == 6) || (state->synctype == 14)|| (state->synctype == 18) || (state->synctype == 37))
