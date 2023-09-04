@@ -1141,56 +1141,61 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
           //ProVoice and EDACS sync
           if (opts->frame_provoice == 1)
+          {
+            strncpy (synctest32, (synctest_p - 31), 32);
+            strncpy (synctest48, (synctest_p - 47), 48);
+            if ((strcmp (synctest32, PROVOICE_SYNC) == 0) || (strcmp (synctest32, PROVOICE_EA_SYNC) == 0))
             {
-              strncpy (synctest32, (synctest_p - 31), 32);
-              strncpy (synctest48, (synctest_p - 47), 48);
-              if ((strcmp (synctest32, PROVOICE_SYNC) == 0) || (strcmp (synctest32, PROVOICE_EA_SYNC) == 0))
-              {
-                  state->last_cc_sync_time = time(NULL);
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "ProVoice ");
-                  if (opts->errorbars == 1)
-                  printFrameSync (opts, state, "+PV   ", synctest_pos + 1, modulation);
-                  state->lastsynctype = 14;
-                  return (14);
-              }
-              else if ((strcmp (synctest32, INV_PROVOICE_SYNC) == 0) || (strcmp (synctest32, INV_PROVOICE_EA_SYNC) == 0))
-              {
-                  state->last_cc_sync_time = time(NULL);
-                  state->carrier = 1;
-                  state->offset = synctest_pos;
-                  state->max = ((state->max) + lmax) / 2;
-                  state->min = ((state->min) + lmin) / 2;
-                  sprintf (state->ftype, "ProVoice ");
-                  printFrameSync (opts, state, "-PV   ", synctest_pos + 1, modulation);
-                  state->lastsynctype = 15;
-                  return (15);
-              }
-              else if ( strcmp (synctest48, EDACS_SYNC) == 0)
-              {
                 state->last_cc_sync_time = time(NULL);
                 state->carrier = 1;
                 state->offset = synctest_pos;
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
-                printFrameSync (opts, state, "-EDACS", synctest_pos + 1, modulation);
-                state->lastsynctype = 38; 
-                return (38);
-              }
-              else if ( strcmp (synctest48, INV_EDACS_SYNC) == 0)
-              {
+                sprintf (state->ftype, "ProVoice ");
+                if (opts->errorbars == 1)
+                printFrameSync (opts, state, "+PV   ", synctest_pos + 1, modulation);
+                state->lastsynctype = 14;
+                return (14);
+            }
+            else if ((strcmp (synctest32, INV_PROVOICE_SYNC) == 0) || (strcmp (synctest32, INV_PROVOICE_EA_SYNC) == 0))
+            {
                 state->last_cc_sync_time = time(NULL);
                 state->carrier = 1;
                 state->offset = synctest_pos;
                 state->max = ((state->max) + lmax) / 2;
                 state->min = ((state->min) + lmin) / 2;
-                printFrameSync (opts, state, "+EDACS", synctest_pos + 1, modulation);
-                state->lastsynctype = 37; 
-                return (37);
-              }
+                sprintf (state->ftype, "ProVoice ");
+                printFrameSync (opts, state, "-PV   ", synctest_pos + 1, modulation);
+                state->lastsynctype = 15;
+                return (15);
+            }
+            else if ( strcmp (synctest48, EDACS_SYNC) == 0)
+            {
+              state->last_cc_sync_time = time(NULL);
+              state->carrier = 1;
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+              printFrameSync (opts, state, "-EDACS", synctest_pos + 1, modulation);
+              state->lastsynctype = 38; 
+              return (38);
+            }
+            else if ( strcmp (synctest48, INV_EDACS_SYNC) == 0)
+            {
+              state->last_cc_sync_time = time(NULL);
+              state->carrier = 1;
+              state->offset = synctest_pos;
+              state->max = ((state->max) + lmax) / 2;
+              state->min = ((state->min) + lmin) / 2;
+              printFrameSync (opts, state, "+EDACS", synctest_pos + 1, modulation);
+              state->lastsynctype = 37; 
+              return (37);
+            }
+            else if ((strcmp (synctest32, DOTTING_SEQUENCE_A) == 0) || (strcmp (synctest32, DOTTING_SEQUENCE_B) == 0))
+            {
+              printFrameSync (opts, state, " EDACS DOTTING SEQUENCE; ", synctest_pos + 1, modulation);
+              eot_cc (opts, state);
+            }
 
           }
          
