@@ -356,7 +356,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
       { 
         state->esk_mask = 0x0;
       }
-	  }
+    }
 
     //Standard/Networked Auto Detection
     //if (command == netcmd) //netcmd is F3 Standard/Networked (I think)
