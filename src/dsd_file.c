@@ -534,7 +534,7 @@ void openWavOutFileRaw (dsd_opts * opts, dsd_state * state)
   info.samplerate = 48000; //8000
   info.channels = 1;
   info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
-  opts->wav_out_raw = sf_open (opts->wav_out_file_raw, SFM_RDWR, &info);
+  opts->wav_out_raw = sf_open (opts->wav_out_file_raw, SFM_WRITE, &info);
   if (opts->wav_out_raw == NULL)
   {
     fprintf (stderr,"Error - could not open raw wav output file %s\n", opts->wav_out_file_raw);

@@ -1136,6 +1136,7 @@ usage ()
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
   printf ("  -w <file>     Output synthesized speech to a .wav file, legacy auto modes only.\n");
+  printf ("  -6 <file>     Output raw audio .wav file (48K/1). (WARNING! Large File Sizes 1 Hour ~= 360 MB)\n");
   printf ("  -8            Enable Experimental Source Audio Monitor (OSS at 48k1 and Pulse Audio)\n");
   printf ("                 (Its recommended to use Squelch in SDR++ or GQRX, etc, if monitoring mixed analog/digital)\n");
   printf ("  -P            Enable Per Call WAV file saving in XDMA and NXDN decoding classes\n");
@@ -1837,6 +1838,13 @@ main (int argc, char **argv)
           fprintf (stderr,"Writing + Appending decoded audio to file %s\n", opts.wav_out_file);
           opts.dmr_stereo_wav = 0;
           openWavOutFile (&opts, &state);
+          break;
+
+        case '6':
+          strncpy(opts.wav_out_file_raw, optarg, 1023);
+          opts.wav_out_file_raw[1023] = '\0';
+          fprintf (stderr,"Writing raw audio to file %s\n", opts.wav_out_file_raw);
+          openWavOutFileRaw (&opts, &state);
           break;
 
         case 'f':

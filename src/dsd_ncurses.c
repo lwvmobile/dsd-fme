@@ -2345,9 +2345,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| Writing MBE data files to directory %s\n", opts->mbe_out_dir);
   }
-  if (opts->wav_out_file_raw[0] != 0 && opts->audio_in_type == 0)
+  if (opts->wav_out_raw)
   {
-    printw ("| Appending Raw Sig Audio WAV to file %s\n", opts->wav_out_file_raw);
+    printw ("| Raw Audio Output: %s\n", opts->wav_out_file_raw);
   }
   if (opts->symbol_out_file[0] != 0 && opts->symbol_out == 1)
   {

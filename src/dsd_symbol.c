@@ -265,7 +265,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       }
 
       //Source Audio Monitoring
-      if (have_sync == 0 && opts->monitor_input_audio == 1)
+      if (have_sync == 0)
       {
         //sanity check to prevent an overflow
         if (state->analog_sample_counter > 959)
@@ -276,18 +276,18 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         if (state->analog_sample_counter == 960)
         {
           //get an rms value if not using the rtl built in version
-          if (opts->audio_in_type != 3)
+          if (opts->audio_in_type != 3 && opts->monitor_input_audio == 1)
             opts->rtl_rms = raw_rms(state->analog_out, 960, 1);
 
           //debug
           // opts->rtl_rms = 101;
 
           //make it a little quieter
-          for (int x = 0; x < 960; x++)
-            state->analog_out[x] /= 4;
+          // for (int x = 0; x < 960; x++)
+          //   state->analog_out[x] /= 4;
 
           //seems to be working now, but RMS values are lower on actual analog signal than on no signal but noise
-          if ( opts->rtl_rms > opts->rtl_squelch_level )
+          if ( (opts->rtl_rms > opts->rtl_squelch_level) && (opts->monitor_input_audio == 1) )
           {
             if (opts->audio_out_type == 0)
               pa_simple_write(opts->pulse_raw_dev_out, state->analog_out, 960*2, NULL);
@@ -301,17 +301,41 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             state->last_vc_sync_time = time(NULL);
           }
 
+          //raw wav file saving -- only write when not NXDN, dPMR, or M17 due to noise that can cause tons of false positives when no sync
+          if (opts->wav_out_raw != NULL && opts->frame_nxdn48 == 0 && opts->frame_nxdn96 == 0 && opts->frame_dpmr == 0 && opts->frame_m17 == 0)
+          {
+            sf_write_short(opts->wav_out_raw, state->analog_out, 960);
+            sf_write_sync (opts->wav_out_raw);
+          }
+
           memset (state->analog_out, 0, sizeof(state->analog_out));
           state->analog_sample_counter = 0;
         }
 
       }
 
-      if (have_sync == 1 && opts->monitor_input_audio == 1)
+      if (have_sync == 1)
       {
-        //zero out and reset counter
-        memset (state->analog_out, 0, sizeof(state->analog_out));
-        state->analog_sample_counter = 0;
+        //sanity check to prevent an overflow
+        if (state->analog_sample_counter > 959)
+          state->analog_sample_counter = 959;
+
+        state->analog_out[state->analog_sample_counter++] = sample; 
+
+        if (state->analog_sample_counter == 960)
+        {
+          //raw wav file saving -- file size on this blimps pretty fast 1 min ~= 6 MB;  1 hour ~= 360 MB;
+          if (opts->wav_out_raw != NULL)
+          {
+            sf_write_short(opts->wav_out_raw, state->analog_out, 960);
+            sf_write_sync (opts->wav_out_raw);
+          }
+
+          //zero out and reset counter
+          memset (state->analog_out, 0, sizeof(state->analog_out));
+          state->analog_sample_counter = 0;
+        }
+
       }
 
       if (opts->use_cosine_filter)
