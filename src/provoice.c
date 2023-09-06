@@ -41,7 +41,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
   {
     fprintf (stderr, "%s", KGRN);
     fprintf (stderr, " Site: %lld AFS: %d-%d LCN: %d ", 
-              state->edacs_site_id, (state->lasttg >> 7) & 0xF, state->lasttg & 0x7F, state->edacs_tuned_lcn);
+              state->edacs_site_id, (state->lastsrc >> 7) & 0xF, state->lastsrc & 0x7F, state->edacs_tuned_lcn);
     fprintf (stderr, "%s", KNRM);
   }
 
