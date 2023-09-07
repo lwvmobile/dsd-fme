@@ -539,6 +539,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
   //run group/source analysis and tune if available/desired
   //group list mode so we can look and see if we need to block tuning any groups, etc
 	char mode[8]; //allow, block, digital, enc, etc
+  sprintf (mode, "%s", "");
 
   //if we are using allow/whitelist mode, then write 'B' to mode for block
   //comparison below will look for an 'A' to write to mode if it is allowed
@@ -546,16 +547,18 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
 
   for (int i = 0; i < state->group_tally; i++)
   {
-    if (state->group_array[i].groupNumber == DestinationID) //source, or destination?
+    if (state->group_array[i].groupNumber == DestinationID && DestinationID != 0) //destination, if it isn't 0
     {
       fprintf (stderr, " [%s]", state->group_array[i].groupName);
       strcpy (mode, state->group_array[i].groupMode);
+      break;
     }
     //might not be ideal if both source and group/target are both in the array
-    else if (state->group_array[i].groupNumber == SourceUnitID) //source, or destination?
+    else if (state->group_array[i].groupNumber == SourceUnitID && DestinationID == 0) //source, if destination is 0
     {
       fprintf (stderr, " [%s]", state->group_array[i].groupName);
       strcpy (mode, state->group_array[i].groupMode);
+      break;
     }
   }
 
@@ -1394,6 +1397,7 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
         //run group/tgt analysis and tune if available/desired
         //group list mode so we can look and see if we need to block tuning any groups, etc
         char mode[8]; //allow, block, digital, enc, etc
+        sprintf (mode, "%s", "");
 
         //if we are using allow/whitelist mode, then write 'B' to mode for block
         //comparison below will look for an 'A' to write to mode if it is allowed
@@ -1405,6 +1409,7 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
           {
             fprintf (stderr, " [%s]", state->group_array[i].groupName);
             strcpy (mode, state->group_array[i].groupMode);
+            break;
           }
         }
 

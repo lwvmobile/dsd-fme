@@ -227,6 +227,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
   //set playback mode for this frame
   char mode[8];
+  sprintf (mode, "%s", "");
 
   //if we are using allow/whitelist mode, then write 'B' to mode for block
   //comparison below will look for an 'A' to write to mode if it is allowed
@@ -242,6 +243,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     if (state->group_array[i].groupNumber == groupNumber)
     {
       strcpy (mode, state->group_array[i].groupMode);
+      break;
     }
   }
 

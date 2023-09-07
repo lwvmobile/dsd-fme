@@ -475,6 +475,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d]", group, source, lcn);
 
         char mode[8]; //allow, block, digital enc
+        sprintf (mode, "%s", "");
 
         //if we are using allow/whitelist mode, then write 'B' to mode for block
         //comparison below will look for an 'A' to write to mode if it is allowed
@@ -486,6 +487,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           {
             fprintf (stderr, " [%s]", state->group_array[i].groupName);
             strcpy (mode, state->group_array[i].groupMode);
+            break;
           }
         }
 
@@ -611,6 +613,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, " AFS [0x%03X] [%02d-%03d] LCN [%02d]", afs, a, fs, lcn);
 
         char mode[8]; //allow, block, digital enc
+        sprintf (mode, "%s", "");
 
         //if we are using allow/whitelist mode, then write 'B' to mode for block
         //comparison below will look for an 'A' to write to mode if it is allowed
@@ -622,6 +625,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           {
             fprintf (stderr, " [%s]", state->group_array[i].groupName);
             strcpy (mode, state->group_array[i].groupMode);
+            break;
           }
         }
 
