@@ -76,6 +76,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 	//group list mode so we can look and see if we need to block tuning any groups, etc
 	char mode[8]; //allow, block, digital, enc, etc
+	sprintf (mode, "%s", "");
 
 	//if we are using allow/whitelist mode, then write 'B' to mode for block
 	//comparison below will look for an 'A' to write to mode if it is allowed
@@ -106,6 +107,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
         {
           fprintf (stderr, " [%s]", state->group_array[i].groupName);
           strcpy (mode, state->group_array[i].groupMode);
+					break;
         }
       }
 
@@ -182,6 +184,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
         {
           fprintf (stderr, " [%s]", state->group_array[i].groupName);
           strcpy (mode, state->group_array[i].groupMode);
+					break;
         }
       }
 
@@ -293,6 +296,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					{
 						fprintf (stderr, " [%s]", state->group_array[i].groupName);
 						strcpy (mode, state->group_array[i].groupMode);
+						break;
 					}
 				}
 
@@ -389,6 +393,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
         {
           fprintf (stderr, " [%s]", state->group_array[i].groupName);
           strcpy (mode, state->group_array[i].groupMode);
+					break;
         }
       }
 
@@ -479,6 +484,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
         {
           fprintf (stderr, " [%s]", state->group_array[i].groupName);
           strcpy (mode, state->group_array[i].groupMode);
+					break;
         }
       }
 
@@ -626,6 +632,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					{
 						fprintf (stderr, " [%s]", state->group_array[i].groupName);
 						strcpy (mode, state->group_array[i].groupMode);
+						break;
 					}
 				}
 
@@ -794,6 +801,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					{
 						fprintf (stderr, " [%s]", state->group_array[i].groupName);
 						strcpy (mode, state->group_array[i].groupMode);
+						break;
 					}
 				}
 
@@ -907,6 +915,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					{
 						fprintf (stderr, " [%s]", state->group_array[i].groupName);
 						strcpy (mode, state->group_array[i].groupMode);
+						break;
 					}
 				}
 
@@ -1005,6 +1014,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
         {
           fprintf (stderr, " [%s]", state->group_array[i].groupName);
           strcpy (mode, state->group_array[i].groupMode);
+					break;
         }
       }
 

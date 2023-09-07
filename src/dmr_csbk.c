@@ -221,6 +221,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
           {
             char mode[8]; //allow, block, digital, enc, etc
+            sprintf (mode, "%s", "");
 
             //if we are using allow/whitelist mode, then write 'B' to mode for block
             //comparison below will look for an 'A' to write to mode if it is allowed
@@ -232,6 +233,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               {
                 fprintf (stderr, " [%s]", state->group_array[i].groupName);
                 strcpy (mode, state->group_array[i].groupMode);
+                break;
               }
             } 
 
@@ -1027,6 +1029,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             for (j = start; j < end; j++) //go through the channels stored looking for active ones to tune to
             {
               char mode[8]; //allow, block, digital, enc, etc
+              sprintf (mode, "%s", "");
 
               //if we are using allow/whitelist mode, then write 'B' to mode for block
               //comparison below will look for an 'A' to write to mode if it is allowed
@@ -1038,6 +1041,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 {
                   fprintf (stderr, " [%s]", state->group_array[i].groupName);
                   strcpy (mode, state->group_array[i].groupMode);
+                  break;
                 }
               }
 
@@ -1171,6 +1175,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
 
         char mode[8]; //allow, block, digital, enc, etc
+        sprintf (mode, "%s", "");
 
         //if we are using allow/whitelist mode, then write 'B' to mode for block
         //comparison below will look for an 'A' to write to mode if it is allowed
@@ -1182,6 +1187,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           {
             fprintf (stderr, " [%s]", state->group_array[i].groupName);
             strcpy (mode, state->group_array[i].groupMode);
+            break;
           }
         }
 
@@ -1366,6 +1372,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           for (j = 0; j < 6; j++) //go through the channels stored looking for active ones to tune to
           {
             char mode[8]; //allow, block, digital, enc, etc
+            sprintf (mode, "%s", "");
 
             //if we are using allow/whitelist mode, then write 'B' to mode for block
             //comparison below will look for an 'A' to write to mode if it is allowed
@@ -1380,6 +1387,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               {
                 fprintf (stderr, " [%s]", state->group_array[i].groupName);
                 strcpy (mode, state->group_array[i].groupMode);
+                break;
               }
             }
 
