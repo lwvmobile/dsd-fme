@@ -656,6 +656,7 @@ typedef struct
   int dmr_vc_lcn;
   int dmr_vc_lsn;
   int dmr_tuned_lcn;
+  uint16_t dmr_cc_lpcn; //dmr t3 logical physical channel number
 
   //edacs
   int ea_mode;

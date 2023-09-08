@@ -120,8 +120,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint16_t mbc_abs_rx_step = 0;
 
         fprintf (stderr, "\n");
-        //added my best guess as to how dsdplus arrives at a dmr channel value (seems pretty consistent) as C+
-        fprintf (stderr, "  Ch [%03X] Cd [%04d] C+ [%04d] - TS [%d] - Target [%08d] - Source [%08d]", lpchannum, lpchannum, pluschannum, lcn, target, source);
+        //rewrote this to make it clear which is the lpcn, timeslot (lcn), and the combination of both (DSDPlus style combined LSN) on channel numbering
+        //the TS is displayed as a +1 since while the bit values are 0 or 1, the slot numbering in the manual specifically states TDMA channel (slot) 1 or TDMA channel (slot) 2
+        fprintf (stderr, "  LPCN: %04d; TS: %d; LPCN+TS: %04d; Target: %08d - Source: %08d", lpchannum, lcn+1, pluschannum, target, source);
 
         if (st2) fprintf (stderr, " Emergency");
 
@@ -149,7 +150,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             //tx_int (Mhz) + (tx_step * 125) = tx_freq
             //rx_int (Mhz) + (rx_step * 125) = rx_freq
             fprintf (stderr, "\n");
-            fprintf (stderr, "  ABS-CHAN [%03X][%04d] - RX INT [%d][%X] - RX STEP [%d][%X]", mbc_lpchannum, mbc_lpchannum, mbc_abs_rx_int, mbc_abs_rx_int, mbc_abs_rx_step, mbc_abs_rx_step );
+            fprintf (stderr, "  RX ABS LPCN: %04d; RX INT: %d; RX STEP: %d;", mbc_lpchannum, mbc_abs_rx_int, mbc_abs_rx_step );
             //The Frequency we want to tune is the RX Frequency
             freq = (mbc_abs_rx_int * 1000000 ) + (mbc_abs_rx_step * 125); 
           }
@@ -157,13 +158,16 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
 
         //print frequency from absolute
-        if (freq != 0 && lpchannum == 0xFFF) fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
+        if (freq != 0 && lpchannum == 0xFFF)
+          fprintf (stderr, "\n  Frequency: %.6lf MHz", (double)freq/1000000);
 
         //run external channel map function on logical
         if (lpchannum != 0 && lpchannum != 0xFFF)
         {
           freq = state->trunk_chan_map[lpchannum];
-          (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
+          if (freq != 0)
+            fprintf (stderr, "\n  Frequency: %.6lf MHz", (double)freq/1000000);
+          else fprintf (stderr, "\n  Frequency Not Found in Channel Map;");
         }
 
         //add active channel string to display
