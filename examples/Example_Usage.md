@@ -134,14 +134,16 @@ Trunking Note1: All samples above can also be run with the RTL input method and 
 
 Trunking Note2: QPSK Phase 1 and Phase 2 Systems may be subceptible to LSM distortion issues, but seem to do okay, but require really good signal. Some CRC issues still occur with Phase 2 TDMA LCCH Mac Signal that can affect reliability, I believe this issue is ultimately caused by the PSK demodulation inside of FME. I also don't believe this will work on 8-level PSK, but I cannot determine that at the moment. Update: I have improved the LCCH Mac Signal decoding my increasing the QPSK decision point buffers to their maximum values. 
 
-Trunking Note3: DMR Trunking has been coded, and some testing and tweaks have been carried out. Cap+, Con+, and TIII systems seem to do well with trunking now. Placing the frequency for the control channel at channel map 0 in your channel_map.csv file is not required now if using RIGCTL or the RTL Input, both can poll the VFO for the current frequency if it believes its on a control channel, but setting a fake channel number (i.e. 999) first with the CC frequency will result in finding the CC faster on startup if desired. If you need to map out your channels for TIII, you can observe the console output and look for channel numbers. For conveniece I have included the DSDPlus channel numbering (as best as I can figure it, but they seem consistent) into the console print so it will make it easier for users from DSDPlus to map frequencies into the channel_map.csv file. Make sure your channel numbers are the Cd (channel decimal) values from the log, and not the C+ (dsdplus) values. Notice: TIII Site ID value needs work to determine proper DMRLA values for system area and sub area.
+Trunking Note3: DMR Trunking has been coded, and some testing and tweaks have been carried out. Cap+, Con+, and TIII systems seem to do well with trunking now. Placing the frequency for the control channel at channel map 0 in your channel_map.csv file is not required now if using RIGCTL or the RTL Input, both can poll the VFO for the current frequency if it believes its on a control channel, but setting a fake channel number (i.e. 999) first with the CC frequency will result in finding the CC faster on startup if desired. If you need to map out your channels for TIII, you can observe the console output and look for channel numbers. For conveniece I have included the DSDPlus style LSN-esque numbering into the console print so it will make it easier for users from DSDPlus to map frequencies into the channel_map.csv file. Make sure your channel numbers are the lpcn (12-bit logical physical channel number - decimal format) values from the log, and not the LPCN+TS (13-bit DSDPlus LSN) values. Notice: TIII Site ID value needs work to determine proper DMRLA values for system area and sub area.
 
 ```
+00:43:00 Sync: +DMR  [slot1]  slot2  | Color Code=00 | CSBK
  Talkgroup Voice Channel Grant (TV_GRANT) - Logical
-  Ch [036] Cd [0054] C+ [0110] - TS [1] - Target [01900500] - Source [01900505]
+  LPCN: 0075; TS: 2; LPCN+TS: 0152; Target: 16518173 - Source: 16533625
+
 ```
 
-Use channel 54 in your import file, which would correspond to dsdplus channels 109 and 110 (109 = TS0 / 110 = TS1).
+Use channel 75 in your import file, which would correspond to dsdplus channels 151 and 152 (151 = TS1 / 152 = TS2).
 
 For Connect Plus, enumerate your list from 1 to the last channel and add the frequency. For Capacity Plus, LSN 1 and 2 will share the same frequency, 3 and 4 will share, 5 and 6 will share, and 7-8 will share, as Capacity Plus counts each 'channel' as two seperate channels (LSN), one for each time slot. Capacity Plus Quirk: DSD-FME makes its best effort to follow the rest channel in the event that the sync is lost for longer than the hangtime, but occassionally, DSD-FME may lose the rest channel and will have to hunt through all frequencies to find it again.
 

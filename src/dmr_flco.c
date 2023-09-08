@@ -748,10 +748,11 @@ uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25])
     if (h1 && h2 && h3 && crc) dmr_slco (opts, state, slco_bits);
     else
     {
-      fprintf (stderr, "\n");
+      if (opts->payload == 0) fprintf (stderr, "\n");
       fprintf (stderr, "%s", KRED);
       fprintf (stderr, " SLCO CRC ERR");
       fprintf (stderr, "%s", KNRM);
+      if (opts->payload == 1) fprintf (stderr, "\n");
     } 
     
   }
