@@ -434,6 +434,49 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //initial line break
         fprintf (stderr, "\n");
         fprintf (stderr, " Clear (P_CLEAR) ");
+
+        //TODO: Code below needs testing when I can use a remote again (when Internet services returns properly)
+        //don't run the code when user has enabled tuning of data only calls
+
+        //return to CC if no voice activity past hangtime value (avoid return if voice in other timeslot)
+        if ( ((time(NULL) - state->last_vc_sync_time) > opts->trunk_hangtime) && opts->trunk_tune_data_calls == 0) //was 2 seconds
+        {
+          if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
+          {
+            
+            //rigctl
+            if (opts->use_rigctl == 1)
+            {
+              dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+              //reset some strings
+              sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+              sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+              sprintf (state->active_channel[0], "%s", "");
+              sprintf (state->active_channel[1], "%s", "");
+              opts->p25_is_tuned = 0;
+              state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+              SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
+            }
+
+            //rtl
+            else if (opts->audio_in_type == 3)
+            {
+              #ifdef USE_RTLSDR
+              dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+              //reset some strings
+              sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+              sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+              sprintf (state->active_channel[0], "%s", "");
+              sprintf (state->active_channel[1], "%s", "");
+              opts->p25_is_tuned = 0;
+              state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+              rtl_dev_tune (opts, state->p25_cc_freq);
+              #endif
+            }
+
+          }
+        }
       } 
 
       //(P_PROTECT)
