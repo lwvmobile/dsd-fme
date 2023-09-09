@@ -3288,6 +3288,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           attron(COLOR_PAIR(4));
           printw ("Frequency: %.06lf MHz  ", (double)state->p25_vc_freq[0]/1000000);
         }
+
+        //TG Hold, if specified by user
+        if (state->tg_hold != 0) printw ("TG HOLD: %d", state->tg_hold);
+
         if (state->carrier == 1) attron(COLOR_PAIR(3));
         else attroff(COLOR_PAIR(4));
         printw ("\n");
@@ -3527,6 +3531,21 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (c == 27) //esc key, open menu
   {
     ncursesMenu (opts, state); //just a quick test
+  }
+
+  //use k and l keys to test tg hold toggles on slots 1 and slots 2
+  if (c == 107) //'k' key, hold tg on slot 1 for trunking purposes, or toggle clear
+  {
+    if (state->tg_hold == 0)
+      state->tg_hold = state->lasttg;
+    else state->tg_hold = 0;
+  }
+
+  if (c == 108) //'k' key, hold tg on slot 2 for trunking purposes, or toggle clear
+  {
+    if (state->tg_hold == 0)
+      state->tg_hold = state->lasttgR;
+    else state->tg_hold = 0;
   }
 
   //toggling when 48k/1 OSS still has some lag -- needed to clear out the buffer when switching

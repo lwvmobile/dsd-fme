@@ -207,6 +207,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //if not a data channel grant (only tuning to voice channel grants)
         if (csbk_o == 48 || csbk_o == 49 || csbk_o == 50 || csbk_o == 53) //48, 49, 50 are voice grants, 51 and 52 are data grants, 53 Duplex Private Voice, 54 Duplex Private Data
         {
+          
+          //if tg hold is specified and matches target, allow for a call pre-emption by nullifying the last vc sync time
+          if (state->tg_hold != 0 && state->tg_hold == target)
+            state->last_vc_sync_time = 0;
+
           //TIII tuner fix if voice assignment occurs to the control channel itself,
           //then it may not want to resume tuning due to no framesync loss after call ends
           if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
@@ -243,7 +248,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 strcpy (mode, state->group_array[i].groupMode);
                 break;
               }
-            } 
+            }
+
+            //TG hold on DMR T3 Systems -- block non-matching target, allow matching target
+            if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
+            if (state->tg_hold != 0 && state->tg_hold == target) sprintf (mode, "%s", "A");
 
             if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
             {

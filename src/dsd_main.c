@@ -1035,6 +1035,7 @@ initState (dsd_state * state)
   state->dmr_rest_channel = -1; //init on -1
   state->dmr_mfid = -1; //
   state->dmr_cc_lpcn = 0;
+  state->tg_hold = 0;
 
   //new nxdn stuff
   state->nxdn_part_of_frame = 0;

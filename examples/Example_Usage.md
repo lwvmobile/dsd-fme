@@ -195,6 +195,10 @@ Z - Simulate NoCarrier/No VC/CC sync (capital Z)
 
 ! - Lockout Tuning/Playback of TG in Slot 1 or Conventional -- Current Session Only if no group.csv file specified
 @ - Lockout Tuning/Playback of TG in Slot 2 -- Current Session Only if no group.csv file specified
+
+k - Hold TG in Slot 1 or Conventional, or clear current hold (Testing/WIP: DMR T3 Only)
+l - Hold TG in Slot 2 on TDMA Systems, or clear current hold (Testing/WIP: DMR T3 Only)
+
 ```
 
 Sending Audio to a Icecast 2 Server via FFmpeg (Windows)
