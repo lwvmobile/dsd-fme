@@ -1087,6 +1087,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           //Test allowing a group in the white list to preempt a call in progress and tune to a white listed call
           if (opts->trunk_use_allow_list == 1) state->last_vc_sync_time = 0;
 
+          //Test allowing a tg hold to pre-empt a call in progress and tune to the hold TG
+          if (state->tg_hold != 0) state->last_vc_sync_time = 0;
+
+          //TODO: Consider a method to allow moving the frequency to the rest channel
+          //when a TG hold is specified but nether slow carries the TG on Hold;
+          //may need to use slow link control for that
+
           //don't tune if vc on the current channel 
           if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
           {
@@ -1108,6 +1115,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   break;
                 }
               }
+
+              //TG hold on DMR Cap+ -- block non-matching target, allow matching target
+              if (state->tg_hold != 0 && state->tg_hold != t_tg[j]) sprintf (mode, "%s", "B");
+              if (state->tg_hold != 0 && state->tg_hold == t_tg[j]) sprintf (mode, "%s", "A");
 
               //without priority, this will tune the first one it finds (if group isn't blocked)
               if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
@@ -1238,6 +1249,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
         }
 
+        //if tg hold is specified and matches target, allow for a call pre-emption by nullifying the last vc sync time
+        if (state->tg_hold != 0 && state->tg_hold == grpAddr)
+          state->last_vc_sync_time = 0;
+
         char mode[8]; //allow, block, digital, enc, etc
         sprintf (mode, "%s", "");
 
@@ -1254,6 +1269,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             break;
           }
         }
+
+        //TG hold on DMR Con+ -- block non-matching target, allow matching target
+        if (state->tg_hold != 0 && state->tg_hold != grpAddr) sprintf (mode, "%s", "B");
+        if (state->tg_hold != 0 && state->tg_hold == grpAddr) sprintf (mode, "%s", "A");
 
         //don't tune if currently a vc on the control channel
         if ( (opts->trunk_tune_group_calls == 1) && (time(NULL) - state->last_vc_sync_time > 2) ) 
@@ -1430,6 +1449,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //Test allowing a group in the white list to preempt a call in progress and tune to a white listed call
         if (opts->trunk_use_allow_list == 1) state->last_vc_sync_time = 0;
 
+        //Test allowing a tg hold to pre-empt a call in progress and tune to the hold TG
+        if (state->tg_hold != 0) state->last_vc_sync_time = 0;
+
+        //TODO: Consider a method to allow moving the frequency to the free repeater channel
+        //when a TG hold is specified but nether slot carries the TG on Hold;
+        //unsure of viable method when both slots are busy
+
         //don't tune if vc on the current channel 
         if ( (time(NULL) - state->last_vc_sync_time) > 2 ) //parenthesis error fixed
         {
@@ -1454,6 +1480,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 break;
               }
             }
+
+            //TG hold on DMR XPT -- block non-matching target, allow matching target
+            if (state->tg_hold != 0 && state->tg_hold != t_tg[j+xpt_bank]) sprintf (mode, "%s", "B");
+            if (state->tg_hold != 0 && state->tg_hold == t_tg[j+xpt_bank]) sprintf (mode, "%s", "A");
 
             //without priority, this will tune the first one it finds (if group isn't blocked)
             if (t_tg[j+xpt_bank] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
