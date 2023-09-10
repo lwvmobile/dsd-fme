@@ -1870,7 +1870,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     rn = state->nxdn_last_ran;
   }
-  if (state->nxdn_last_tg != 0 && state->nxdn_last_tg != tgn)
+  if (state->nxdn_last_tg != tgn)
   {
     tgn = state->nxdn_last_tg;
   }
@@ -3541,7 +3541,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else state->tg_hold = 0;
   }
 
-  if (c == 108) //'k' key, hold tg on slot 2 for trunking purposes, or toggle clear
+  if (c == 108) //'l' key, hold tg on slot 2 for trunking purposes, or toggle clear
   {
     if (state->tg_hold == 0)
       state->tg_hold = state->lasttgR;
