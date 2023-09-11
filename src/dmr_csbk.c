@@ -261,6 +261,18 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 //RIGCTL
                 if (opts->use_rigctl == 1)
                 {
+                  //we will want to set these values here, some Tier 3 systems prefer P_Protects (Tait) over VLC and TLC headers
+                  //and is faster than waiting on good embedded link control
+                  if (lcn == 0)
+                  {
+                    state->lasttg = target;
+                    state->lastsrc = source;
+                  }
+                  if (lcn == 1)
+                  {
+                    state->lasttgR = target;
+                    state->lastsrcR = source;
+                  }
                   if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
                   SetFreq(opts->rigctl_sockfd, freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
@@ -272,6 +284,18 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 else if (opts->audio_in_type == 3)
                 {
                   #ifdef USE_RTLSDR
+                  //we will want to set these values here, some Tier 3 systems prefer P_Protects (Tait) over VLC and TLC headers
+                  //and is faster than waiting on good embedded link control
+                  if (lcn == 0)
+                  {
+                    state->lasttg = target;
+                    state->lastsrc = source;
+                  }
+                  if (lcn == 1)
+                  {
+                    state->lasttgR = target;
+                    state->lastsrcR = source;
+                  }
                   rtl_dev_tune (opts, freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1;
