@@ -644,7 +644,25 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " P_MAINT ");
+        fprintf (stderr, " P_MAINT -");
+
+        //I can't recall ever seeing a p_maint use, always see a p_clear though
+        uint16_t pm_res1 = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 12);
+        uint8_t  pm_kind = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[28], 3);
+        uint8_t  pm_res2 = cs_pdu_bits[31];
+        uint32_t pm_target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24); //should be TSI (clear the call)
+        uint32_t pm_source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
+
+        if (pm_kind == 0) fprintf (stderr, "Disconnect; ");
+        else fprintf (stderr, " Res Kind: %02X", pm_kind);
+
+        if (pm_res1) fprintf (stderr, "Res A: %03X", pm_res1);
+        if (pm_res2) fprintf (stderr, "Res B: 1");
+
+        fprintf (stderr, "Target: %d; Source: %d; ", pm_target, pm_source);
+
+        //check the source and/or target for special gateway identifiers
+        dmr_gateway_identifier (pm_source, pm_target);
       }
 
       if (csbk_o == 30) 
