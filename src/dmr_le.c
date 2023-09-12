@@ -356,7 +356,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
 
         if (slot == 0) //may not need the state->errs anymore //&& state->errs < 3
         {
-          if (state->dmr_so & 0x40 && key != 0 && state->payload_keyid == 0)
+          if (state->dmr_so & 0x40 && key != 0 && alg != 0)
           {
             //if we aren't forcing a particular alg or privacy key set
             if (state->M == 0)
@@ -367,8 +367,10 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
               fprintf (stderr, " DMR LE SB ALG ID: 0x%02X KEY ID: 0x%02X", alg + 0x20, key);
               fprintf (stderr, "%s ", KNRM);
               if (opts->payload == 1) fprintf (stderr, "\n");
-              state->payload_keyid = key;
-              state->payload_algid = alg + 0x20; //assuming DMRA approved alg values (moto patent)
+              if (state->payload_keyid != key)
+                state->payload_keyid = key;
+              if (state->payload_algid != alg)
+                state->payload_algid = alg + 0x20; //assuming DMRA approved alg values (moto patent)
             }
 
           }
@@ -376,7 +378,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
 
         if (slot == 1) //may not need the state->errs anymore //&& state->errsR < 3
         {
-          if (state->dmr_soR & 0x40 && key != 0 && state->payload_keyidR == 0)
+          if (state->dmr_soR & 0x40 && key != 0 && alg != 0)
           {
             //if we aren't forcing a particular alg or privacy key set
             if (state->M == 0)
@@ -387,8 +389,10 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
               fprintf (stderr, " DMR LE SB ALG ID: 0x%02X KEY ID: 0x%02X", alg + 0x20, key);
               fprintf (stderr, "%s ", KNRM);
               if (opts->payload == 1) fprintf (stderr, "\n");
-              state->payload_keyidR = key;
-              state->payload_algidR = alg + 0x20; //assuming DMRA approved alg values (moto patent)
+              if (state->payload_keyidR != key)
+                state->payload_keyidR = key;
+              if (state->payload_algidR != alg)
+                state->payload_algidR = alg + 0x20; //assuming DMRA approved alg values (moto patent)
             }
 
           }
