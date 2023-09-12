@@ -3570,7 +3570,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (opts->audio_out_type == 5) //OSS 48k/1 
       {
         opts->slot_preference = 0; //slot 1
-        opts->slot2_on = 0; //turn off slot 2
+        // opts->slot2_on = 0; //turn off slot 2
       }
     }
   }
@@ -3596,7 +3596,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (opts->audio_out_type == 5) //OSS 48k/1 
       {
         opts->slot_preference = 1; //slot 2
-        opts->slot1_on = 0; //turn off slot 1
+        // opts->slot1_on = 0; //turn off slot 1
       }
     }
   }
