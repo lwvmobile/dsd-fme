@@ -190,10 +190,10 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   int x;
 
   //these conditions should ensure no clashing with the BP/HBP/Scrambler key loading machanisms already coded in
-  if (state->currentslot == 0 && state->payload_algid != 0 && state->payload_algid != 0x80 && state->payload_keyid != 0 && state->keyloader == 1)
+  if (state->currentslot == 0 && state->payload_algid != 0 && state->payload_algid != 0x80 && state->keyloader == 1)
     keyring (opts, state);
 
-  if (state->currentslot == 1 && state->payload_algidR != 0 && state->payload_algidR != 0x80 && state->payload_keyidR != 0 && state->keyloader == 1)
+  if (state->currentslot == 1 && state->payload_algidR != 0 && state->payload_algidR != 0x80 && state->keyloader == 1)
     keyring (opts, state);
 
   //24-bit TG to 16-bit hash
