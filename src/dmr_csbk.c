@@ -108,13 +108,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
         UNUSED2(st1, st3);
 
-        //broadcast calls do not carry src or tgt info
-        if (csbk_o == 50)
-        {
-          //seeting to all MS units and Dispatch? May need to just set to 0 and see what emb pulls out of it
-          target = 0xFFFFFF; //ALLMSI
-          source = 0xFFFECB; //DISPATI
-        }
+        //broadcast calls show no tgt/src info in ETSI manaual, but seem to correspond with same values in embedded link control
+        // if (csbk_o == 50)
+        // {
+        //   //seeting to all MS units and Dispatch? May need to just set to 0 and see what emb pulls out of it
+        //   target = 0xFFFFFF; //ALLMSI
+        //   source = 0xFFFECB; //DISPATI
+        // }
 
         //move mbc variables out of if statement
         uint8_t mbc_lb = 0; //
