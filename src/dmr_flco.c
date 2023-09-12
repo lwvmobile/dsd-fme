@@ -417,17 +417,17 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     //REMUS! Uncomment Line Below if desired
     // else strcat (state->call_string[slot], "          ");
 
-    //Motorola FID 0x10 Only
-    if (fid == 0x10)
+    
+    if (1 == 1) //fid == 0x10
     {
       /* Check the "Service Option" bits */ 
-      if(so & 0x20)
+      if( (fid == 0x10) && (so & 0x20) ) //Motorola FID 0x10 Only
       {
         //REMUS! Uncomment Line Below if desired
         // strcat (state->call_string[slot], " TXI");
         fprintf(stderr, "TXI ");
       }
-      if (so & 0x10)
+      if ( (fid == 0x10) && (so & 0x10) ) //Motorola FID 0x10 Only
       {
         //REMUS! Uncomment Line Below if desired
         // strcat (state->call_string[slot], " RPT");
