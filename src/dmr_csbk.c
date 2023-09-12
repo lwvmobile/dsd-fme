@@ -64,7 +64,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       fprintf (stderr, "%s", KYEL); 
       
       //7.1.1.1.1 Channel Grant CSBK/MBC PDU
-      if (csbk_o > 47 && csbk_o < 55 )
+      if (csbk_o >= 48 && csbk_o <= 56 )
       {
 
         //maintain this to allow users to hardset the cc freq as map[0]; otherwise, set from rigctl or rtl freq at c_aloha_sys_parms
@@ -83,6 +83,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (csbk_o == 52) fprintf (stderr, " Talkgroup Data Channel Grant: Single Item (TD_GRANT)");
         if (csbk_o == 53) fprintf (stderr, " Duplex Private Voice Channel Grant (PV_GRANT_DX)");
         if (csbk_o == 54) fprintf (stderr, " Duplex Private Data Channel Grant (PD_GRANT_DX)");
+        if (csbk_o == 55) fprintf (stderr, " Private Data Channel Grant: Multi Item (PD_GRANT)");
+        if (csbk_o == 56) fprintf (stderr, " Talkgroup Data Channel Grant: Multi Item (TD_GRANT)");
 
         //Logical Physical Channel Number
         uint16_t lpchannum = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 12); 
@@ -104,6 +106,14 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
         uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
 
+        //broadcast calls do not carry src or tgt info
+        if (csbk_o == 50)
+        {
+          //seeting to all MS units and Dispatch? May need to just set to 0 and see what emb pulls out of it
+          target = 0xFFFFFF; //ALLMSI
+          source = 0xFFFECB; //DISPATI
+        }
+
         //move mbc variables out of if statement
         uint8_t mbc_lb = 0; //
         uint8_t mbc_pf = 0;
@@ -122,9 +132,12 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "\n");
         //rewrote this to make it clear which is the lpcn, timeslot (lcn), and the combination of both (DSDPlus style combined LSN) on channel numbering
         //the TS is displayed as a +1 since while the bit values are 0 or 1, the slot numbering in the manual specifically states TDMA channel (slot) 1 or TDMA channel (slot) 2
-        fprintf (stderr, "  LPCN: %04d; TS: %d; LPCN+TS: %04d; Target: %08d - Source: %08d", lpchannum, lcn+1, pluschannum, target, source);
+        fprintf (stderr, "  LPCN: %04d; TS: %d; LPCN+TS: %04d; Target: %08d - Source: %08d ", lpchannum, lcn+1, pluschannum, target, source);
 
-        if (st2) fprintf (stderr, " Emergency");
+        if (st2) fprintf (stderr, "Emergency; ");
+
+        //check for special gateway identifiers (probably just on broadcast?)
+        dmr_gateway_identifier (source, target);
 
         if (lpchannum == 0xFFF) //This is from an MBC, signalling an absolute and not a logical
         {
@@ -192,7 +205,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (csbk_o == 50) csbk_o = 49; //flip to normal group call for group tuning
 
         //Allow tuning of data calls if user wishes by flipping the csbk_o to a group voice call
-        if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54)
+        if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54 || csbk_o == 55 || csbk_o == 56)
         {
           if (opts->trunk_tune_data_calls == 1) csbk_o = 49;
         }
@@ -669,7 +682,14 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " C_ACKVIT ");
+        fprintf (stderr, " C_ACKVIT (Ackvitation/Authorization) ");
+      }
+
+      if (csbk_o == 33) 
+      {
+        //initial line break
+        fprintf (stderr, "\n");
+        fprintf (stderr, " C_ACKD (Acknowledgement)");
       }
 
       if (csbk_o == 31) 
