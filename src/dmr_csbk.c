@@ -467,7 +467,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (p_kind == 3) fprintf (stderr, " Enable Target MS PTT (EN_PTT_ONE_MS)");
 
         fprintf (stderr, "\n");
-        fprintf (stderr, "  Target [%08d] - Source [%08d]", target, source);
+        fprintf (stderr, "  Source: %08d; Target: %08d; ", source, target);
+
+        //check the source and/or target for special gateway identifiers
+        dmr_gateway_identifier (source, target);
 
       }
 
@@ -598,7 +601,43 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       {
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " C_AHOY ");
+        fprintf (stderr, " C_AHOY - ");
+        //C_AHOY is always a single block CSBK, no need to check or deal with continuation blocks
+        uint16_t svc_opt = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 7);
+        uint8_t svc_flag = cs_pdu_bits[23]; //service kind flag
+        uint8_t als_flag = cs_pdu_bits[24]; //ambient listening service requested
+        uint8_t ahoy_gi  = cs_pdu_bits[25]; //group or individual
+        uint8_t ahoy_bf  = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[26], 2); //UDT blocks to follow (if required)
+        uint8_t svc_kind = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[28], 4); //'Call' Type
+        uint32_t ahoy_target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
+        uint32_t ahoy_source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
+
+
+        if (ahoy_gi == 0) fprintf (stderr, "Private ");
+        else fprintf (stderr, "Group ");
+
+        //need to put SVC OPT decoding in here, maybe just copy and paste from FLC?
+
+        fprintf (stderr, "FID: %02X SVC: %02X ", csbk_fid, svc_opt);
+        if (svc_kind == 0 || svc_kind == 1) fprintf (stderr, "Voice Call ");
+        else if (svc_kind == 2 || svc_kind == 3) fprintf (stderr, "Packet Data Call ");
+        else if (svc_kind == 4 || svc_kind == 5) fprintf (stderr, "UDT Short Data Call ");
+        else if (svc_kind == 6) fprintf (stderr, "UDT Short Data Polling Service ");
+        else if (svc_kind == 7) fprintf (stderr, "Status Transport Service ");
+        else if (svc_kind == 8) fprintf (stderr, "Call Diversion Service ");
+        else if (svc_kind == 9) fprintf (stderr, "Call Answer Service ");
+        else if (svc_kind == 10) fprintf (stderr, "Full Duplex Voice Call ");
+        else if (svc_kind == 11) fprintf (stderr, "Full Duplex Packet Data Call ");
+        else if (svc_kind == 12) fprintf (stderr, "Reserved ");
+        else if (svc_kind == 13) fprintf (stderr, "Supplimentary Service (Stun/Revive/Kill/Auth): ");
+        else if (svc_kind == 14) fprintf (stderr, "Registration/Authentication ");
+        else if (svc_kind == 15) fprintf (stderr, "Cancel Call Service ");
+
+        fprintf (stderr, "Target: %d; Source: %d; ", ahoy_target, ahoy_source);
+
+        //check the source and/or target for special gateway identifiers
+        dmr_gateway_identifier (ahoy_source, ahoy_target);
+
       }
 
       if (csbk_o == 42) 
@@ -1521,4 +1560,43 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
   END:
   fprintf (stderr, "%s", KNRM);  
 
+}
+
+//translate special gateway identifier addresses
+void dmr_gateway_identifier (uint32_t source, uint32_t target)
+{
+  int i;
+  uint32_t id;
+  for (i = 0; i < 2; i++)
+  {
+    if (i == 0) id = source;
+    else id = target;
+    if (id == 0xFFFEC0) fprintf (stderr, "PSTNI; ");
+    if (id == 0xFFFEC1) fprintf (stderr, "PABXI; ");
+    if (id == 0xFFFEC2) fprintf (stderr, "LINEI; ");
+    if (id == 0xFFFEC3) fprintf (stderr, "IPI; ");
+    if (id == 0xFFFEC4) fprintf (stderr, "SUPLI; ");
+    if (id == 0xFFFEC5) fprintf (stderr, "SDMI; ");
+    if (id == 0xFFFEC6) fprintf (stderr, "REGI; ");
+    if (id == 0xFFFEC7) fprintf (stderr, "MSI; ");
+    if (id == 0xFFFEC8) fprintf (stderr, "RESERVED; ");
+    if (id == 0xFFFEC9) fprintf (stderr, "DIVERTI; ");
+    if (id == 0xFFFECA) fprintf (stderr, "TSI; ");
+    if (id == 0xFFFECB) fprintf (stderr, "DISPATI; ");
+    if (id == 0xFFFECC) fprintf (stderr, "STUNI; ");
+    if (id == 0xFFFECD) fprintf (stderr, "AUTHI; ");
+    if (id == 0xFFFECE) fprintf (stderr, "GPI; ");
+    if (id == 0xFFFECF) fprintf (stderr, "KILLI; ");
+    if (id == 0xFFFED0) fprintf (stderr, "PSTNDI; ");
+    if (id == 0xFFFED1) fprintf (stderr, "PABXDI; ");
+    if (id == 0xFFFED2) fprintf (stderr, "LINEDI; ");
+    if (id == 0xFFFED3) fprintf (stderr, "DISPATDI; ");
+    if (id == 0xFFFED4) fprintf (stderr, "ALLMSI; ");
+    if (id == 0xFFFED5) fprintf (stderr, "IPDI; ");
+    if (id == 0xFFFED6) fprintf (stderr, "DGNAI; ");
+    if (id == 0xFFFED7) fprintf (stderr, "TATTSI; ");
+    if (id == 0xFFFFFD) fprintf (stderr, "ALLMSIDL; ");
+    if (id == 0xFFFFFE) fprintf (stderr, "ALLMSIDZ; ");
+    if (id == 0xFFFFFF) fprintf (stderr, "ALLMSID; ");
+  }
 }
