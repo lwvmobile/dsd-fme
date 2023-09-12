@@ -1098,6 +1098,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[]);
 uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25]);
 uint32_t dmr_34(uint8_t * input, uint8_t treturn[18]); //simplier trellis decoder
 void beeper (dsd_opts * opts, dsd_state * state, int lr); //the tone beeper function
+void dmr_gateway_identifier (uint32_t source, uint32_t target); //translate special addresses
 
 //Embedded Alias and GPS
 void dmr_embedded_alias_header (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
