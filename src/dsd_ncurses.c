@@ -13,6 +13,12 @@
 #include "dsd.h"
 #include "git_ver.h"
 
+#ifdef USE_RTLSDR
+#include <rtl-sdr.h>
+//use to list out all detected RTL dongles
+char vendor[256], product[256], serial[256], userdev[256];
+int device_count = 0;
+#endif
 
 uint32_t temp_freq = -1;
 
@@ -315,7 +321,7 @@ char *choicesc[] = {
   "Save Decoded Audio WAV (Legacy Mode)",
   "Save Signal to Symbol Capture Bin",
   "Toggle Muting Encrypted Traffic    ",
-  "Save Per Call Decoded WAV (AUTO/TDMA and NXDN)",
+  "Save Per Call Decoded WAV",
   "Setup and Start RTL Input ",
   "Retune RTL Dongle         ",
   "Toggle C4FM/QPSK (P2 TDMA CC)",
@@ -660,7 +666,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
           box (entry_win, 0, 0);
-          mvwprintw(entry_win, 2, 2, " Enter RTL Device Index Number");
+          mvwprintw(entry_win, 2, 2, " RTL Device Index or Serial Number:");
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
@@ -669,7 +675,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
           box (entry_win, 0, 0);
-          mvwprintw(entry_win, 2, 2, " Enter RTL Device PPM Error");
+          mvwprintw(entry_win, 2, 2, " RTL Device PPM Error:");
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
@@ -678,7 +684,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
           box (entry_win, 0, 0);
-          mvwprintw(entry_win, 2, 2, " Enter Frequency in Hz (851.8 MHz is 851800000 Hz) ");
+          mvwprintw(entry_win, 2, 2, " Frequency in Hz (851.8 MHz is 851800000 Hz): ");
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
@@ -687,7 +693,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
           box (entry_win, 0, 0);
-          mvwprintw(entry_win, 2, 2, " Enter BW (8, 12, 24, 48)(12 Recommended)");
+          mvwprintw(entry_win, 2, 2, " BW (8, 12, 24, 48)(12 Recommended): ");
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
@@ -696,7 +702,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
           box (entry_win, 0, 0);
-          mvwprintw(entry_win, 2, 2, " Enter RTL Gain Value (0-49) (0 = AGC)");
+          mvwprintw(entry_win, 2, 2, " RTL Gain Value (0-49) (0 = AGC): ");
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
@@ -705,7 +711,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
           box (entry_win, 0, 0);
-          mvwprintw(entry_win, 2, 2, " Enter RTL UDP Port - Optional (Default = 0)");
+          mvwprintw(entry_win, 2, 2, " RTL UDP Port - Legacy/Optional (Default = 0): ");
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
@@ -714,18 +720,47 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           entry_win = newwin(8, WIDTH+22, starty+10, startx+10);
           box (entry_win, 0, 0);
-          mvwprintw(entry_win, 2, 2, " Enter RTL RMS Squelch Level (NXDN/dPMR only)");
+          mvwprintw(entry_win, 2, 2, " RTL RMS Squelch Level (NXDN/dPMR/Analog/Raw only): ");
           mvwprintw(entry_win, 3, 3, " ");
           echo();
           refresh();
           wscanw(entry_win, "%d", &opts->rtl_squelch_level);
           noecho();
 
+          //use to list out all detected RTL dongles
+          device_count = rtlsdr_get_device_count();
+          if (!device_count)
+          {
+            fprintf(stderr, "No supported devices found.\n");
+          }
+          else fprintf(stderr, "Found %d device(s):\n", device_count);
+          for (int i = 0; i < device_count; i++)
+          {
+            rtlsdr_get_device_usb_strings(i, vendor, product, serial);
+            fprintf(stderr, "  %d:  %s, %s, SN: %s\n", i, vendor, product, serial);
+
+            sprintf (userdev, "%08d", opts->rtl_dev_index);
+
+            //check by index first, then by serial
+            if (opts->rtl_dev_index == i)
+            {
+              fprintf (stderr, "Selected Device #%d with Serial Number: %s \n", i, serial);
+              break;
+            }
+            else if (strcmp (userdev, serial) == 0)
+            {
+              fprintf (stderr, "Selected Device #%d with Serial Number: %s \n", i, serial);
+              opts->rtl_dev_index = i;
+              break;
+            }
+            
+          }
+
           entry_win = newwin(17, WIDTH+20, starty+10, startx+10);
           box (entry_win, 0, 0);
           mvwprintw(entry_win, 2, 2, " Starting RTL Input. Cannot Release/Stop Until Exit.");
           mvwprintw(entry_win, 4, 2, " RTL Frequency: %d Hz", opts->rtlsdr_center_freq);
-          mvwprintw(entry_win, 5, 2, " RTL Device Index Number: %d", opts->rtl_dev_index);
+          mvwprintw(entry_win, 5, 2, " RTL Device Index Number: %d; SN:%s", opts->rtl_dev_index, serial);
           mvwprintw(entry_win, 6, 2, " RTL Device Bandwidth: %d kHz", opts->rtl_bandwidth);
           mvwprintw(entry_win, 7, 2, " RTL Device Gain: %d", opts->rtl_gain_value);
           mvwprintw(entry_win, 8, 2, " RTL Device UDP Port: %d", opts->rtl_udp_port);
