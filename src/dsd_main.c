@@ -2441,6 +2441,10 @@ main (int argc, char **argv)
     if((strncmp(opts.audio_in_dev, "rtl", 3) == 0)) //rtl dongle input
     {
       uint8_t rtl_ok = 0;
+      //use to list out all detected RTL dongles
+      char vendor[256], product[256], serial[256], userdev[256];
+      int device_count = 0;
+      
       #ifdef USE_RTLSDR
       fprintf (stderr, "RTL Input: ");
       char * curr; 
@@ -2490,9 +2494,6 @@ main (int argc, char **argv)
 
       RTLEND:
 
-      //use to list out all detected RTL dongles
-      char vendor[256], product[256], serial[256], userdev[256];
-      int i, device_count = 0;
       device_count = rtlsdr_get_device_count();
       if (!device_count)
       {
@@ -2500,7 +2501,7 @@ main (int argc, char **argv)
         exitflag = 1;
       }
       else fprintf(stderr, "Found %d device(s):\n", device_count);
-      for (i = 0; i < device_count; i++)
+      for (int i = 0; i < device_count; i++)
       {
         rtlsdr_get_device_usb_strings(i, vendor, product, serial);
         fprintf(stderr, "  %d:  %s, %s, SN: %s\n", i, vendor, product, serial);
