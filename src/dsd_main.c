@@ -28,6 +28,10 @@
 
 #include <signal.h>
 
+#ifdef USE_RTLSDR
+#include <rtl-sdr.h>
+#endif
+
 volatile uint8_t exitflag; //fix for issue #136
 
 void handler(int sgnl)
@@ -1237,7 +1241,7 @@ usage ()
   printf ("RTL-SDR options:\n");
   printf (" Usage: rtl:dev:freq:gain:ppm:bw:sq:udp\n");
   printf ("  NOTE: all arguments after rtl are optional now for trunking, but user configuration is recommended\n");
-  printf ("  dev  <num>    RTL-SDR Device Index Number\n");
+  printf ("  dev  <num>    RTL-SDR Device Index Number or 8 Digit Serial Number, no strings! (default 0)\n");
   printf ("  freq <num>    RTL-SDR Frequency (851800000 or 851.8M) \n");
   printf ("  gain <num>    RTL-SDR Device Gain (0-49)(default = 0; Hardware AGC recommended)\n");
   printf ("  ppm  <num>    RTL-SDR PPM Error (default = 0)\n");
@@ -2591,6 +2595,37 @@ main (int argc, char **argv)
       else goto RTLEND;
 
       RTLEND:
+
+      //use to list out all detected RTL dongles
+      char vendor[256], product[256], serial[256], userdev[256];
+      int i, device_count = 0;
+      device_count = rtlsdr_get_device_count();
+      if (!device_count)
+      {
+        fprintf(stderr, "No supported devices found.\n");
+        exitflag = 1;
+      }
+      else fprintf(stderr, "Found %d device(s):\n", device_count);
+      for (i = 0; i < device_count; i++)
+      {
+        rtlsdr_get_device_usb_strings(i, vendor, product, serial);
+        fprintf(stderr, "  %d:  %s, %s, SN: %s\n", i, vendor, product, serial);
+
+        sprintf (userdev, "%08d", opts.rtl_dev_index);
+
+        //check by index first, then by serial
+        if (opts.rtl_dev_index == i)
+        {
+          fprintf (stderr, "Selected Device #%d with Serial Number: %s \n", i, serial);
+        }
+        else if (strcmp (userdev, serial) == 0)
+        {
+          fprintf (stderr, "Selected Device #%d with Serial Number: %s \n", i, serial);
+          opts.rtl_dev_index = i;
+        }
+        
+      }
+
       fprintf (stderr, "Dev %d ", opts.rtl_dev_index);
       fprintf (stderr, "Freq %d ", opts.rtlsdr_center_freq);
       fprintf (stderr, "Gain %d ", opts.rtl_gain_value);
