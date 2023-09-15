@@ -2219,6 +2219,7 @@ main (int argc, char **argv)
             // opts.setmod_bw = 12000; //safe default on both DMR and P25
             opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 2;
+            opts.use_heuristics = 1; //enable for Phase 1 on -ft switch (testing)
             sprintf (opts.output_name, "TDMA");
             fprintf (stderr,"Decoding P25 and DMR\n");
           }

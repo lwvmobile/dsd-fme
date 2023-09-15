@@ -34,9 +34,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   {
     memset (state->active_channel, 0, sizeof(state->active_channel));
   }
-  
+
   int tsbkbit[196]; //tsbk bit array, 196 trellis encoded bits
-  int tsbk_dibit[98];
+  uint8_t tsbk_dibit[98];
 
   memset (tsbkbit, 0, sizeof(tsbkbit));
   memset (tsbk_dibit, 0, sizeof(tsbk_dibit));
@@ -110,16 +110,11 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 
     }
 
-    //flushing the trellis state machine
-    if (j == 0)
-    {
-      bd_bridge(flushing_bits, tsbk_byte);
-      //reset tsbk_byte afterwards
-      memset (tsbk_byte, 0, sizeof(tsbk_byte));
-    } 
+    //send tsbkbit to block_deinterleave and return tsbk_byte
+    // ec[j] = bd_bridge(tsbkbit, tsbk_byte);
 
     //send tsbkbit to block_deinterleave and return tsbk_byte
-    ec[j] = bd_bridge(tsbkbit, tsbk_byte);
+    ec[j] = p25_12 (tsbk_dibit, tsbk_byte);
 
     //too many bit manipulations!
     k = 0;
@@ -162,12 +157,12 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   MFID = mpdu_byte[2];
 
   //group list mode so we can look and see if we need to block tuning any groups, etc
-	char mode[8]; //allow, block, digital, enc, etc
+  char mode[8]; //allow, block, digital, enc, etc
   sprintf (mode, "%s", "");
 
-	//if we are using allow/whitelist mode, then write 'B' to mode for block
-	//comparison below will look for an 'A' to write to mode if it is allowed
-	if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+  //if we are using allow/whitelist mode, then write 'B' to mode for block
+  //comparison below will look for an 'A' to write to mode if it is allowed
+  if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
 
   fprintf (stderr, "%s",KGRN);
   fprintf (stderr, " P25 MBF FMT: %02X SAP: %02X", fmt, sap);
@@ -241,36 +236,36 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       } 
     }
     //RFSS Status Broadcast - Extended 6.2.15.2
-		else if (opcode == 0x3A) 
-		{
-			int lra = mpdu_byte[3];
-			int lsysid = ((mpdu_byte[4] & 0xF) << 8) | mpdu_byte[5];
-			int rfssid = mpdu_byte[12];
-			int siteid = mpdu_byte[13];
-			int channelt = (mpdu_byte[14] << 8) | mpdu_byte[15];
+    else if (opcode == 0x3A) 
+    {
+      int lra = mpdu_byte[3];
+      int lsysid = ((mpdu_byte[4] & 0xF) << 8) | mpdu_byte[5];
+      int rfssid = mpdu_byte[12];
+      int siteid = mpdu_byte[13];
+      int channelt = (mpdu_byte[14] << 8) | mpdu_byte[15];
       int channelr = (mpdu_byte[16] << 8) | mpdu_byte[17];
-			int sysclass = mpdu_byte[18];
+      int sysclass = mpdu_byte[18];
       fprintf (stderr, "%s",KYEL);
-			fprintf (stderr, "\n RFSS Status Broadcast MBF - Extended \n");
-			fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%02X] SITE ID [%02X]\n  CHAN-T [%04X] CHAN-R [%02X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channelt, channelr, sysclass);
-			process_channel_to_freq (opts, state, channelt);
-			process_channel_to_freq (opts, state, channelr);
+      fprintf (stderr, "\n RFSS Status Broadcast MBF - Extended \n");
+      fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%02X] SITE ID [%02X]\n  CHAN-T [%04X] CHAN-R [%02X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channelt, channelr, sysclass);
+      process_channel_to_freq (opts, state, channelt);
+      process_channel_to_freq (opts, state, channelr);
 
-			state->p2_siteid = siteid;
-			state->p2_rfssid = rfssid;
-		}
+      state->p2_siteid = siteid;
+      state->p2_rfssid = rfssid;
+    }
 
     //Adjacent Status Broadcast (ADJ_STS_BCST) Extended 6.2.2.2
     else if (opcode == 0x3C) 
     {
       int lra = mpdu_byte[3];
       int cfva = mpdu_byte[4] >> 4;
-			int lsysid = ((mpdu_byte[4] & 0xF) << 8) | mpdu_byte[5];
-			int rfssid = mpdu_byte[8];
-			int siteid = mpdu_byte[9];
-			int channelt = (mpdu_byte[12] << 8) | mpdu_byte[13];
-			int channelr = (mpdu_byte[14] << 8) | mpdu_byte[15];
-			int sysclass = mpdu_byte[16];  
+      int lsysid = ((mpdu_byte[4] & 0xF) << 8) | mpdu_byte[5];
+      int rfssid = mpdu_byte[8];
+      int siteid = mpdu_byte[9];
+      int channelt = (mpdu_byte[12] << 8) | mpdu_byte[13];
+      int channelr = (mpdu_byte[14] << 8) | mpdu_byte[15];
+      int sysclass = mpdu_byte[16];  
       long int wacn = (mpdu_byte[17] << 12) | (mpdu_byte[18] << 4) | (mpdu_byte[19] >> 4);
       fprintf (stderr, "%s",KYEL);
       fprintf (stderr, "\n Adjacent Status Broadcast - Extended\n");
@@ -289,12 +284,12 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     else if (opcode == 0x0) 
     {
       int svc = mpdu_byte[8];
-			int channelt  = (mpdu_byte[14] << 8) | mpdu_byte[15];
-			int channelr  = (mpdu_byte[16] << 8) | mpdu_byte[17];
+      int channelt  = (mpdu_byte[14] << 8) | mpdu_byte[15];
+      int channelr  = (mpdu_byte[16] << 8) | mpdu_byte[17];
       long int source = (mpdu_byte[3] << 16) |(mpdu_byte[4] << 8) | mpdu_byte[5];
-			int group = (mpdu_byte[18] << 8) | mpdu_byte[19];
-			long int freq1 = 0;
-			long int freq2 = 0;
+      int group = (mpdu_byte[18] << 8) | mpdu_byte[19];
+      long int freq1 = 0;
+      long int freq2 = 0;
       UNUSED2(source, freq2);
       fprintf (stderr, "%s\n ",KYEL);
       if (svc & 0x80) fprintf (stderr, " Emergency");
@@ -308,13 +303,13 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         if (svc & 0x8) fprintf (stderr, " R"); //reserved bit is on
         fprintf (stderr, " Priority %d", svc & 0x7); //call priority
       }
-			fprintf (stderr, " Group Voice Channel Grant Update - Extended");
-			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc, channelt, channelr, group, group);
-			freq1 = process_channel_to_freq (opts, state, channelt);
-			freq2 = process_channel_to_freq (opts, state, channelr);
+      fprintf (stderr, " Group Voice Channel Grant Update - Extended");
+      fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc, channelt, channelr, group, group);
+      freq1 = process_channel_to_freq (opts, state, channelt);
+      freq2 = process_channel_to_freq (opts, state, channelr);
 
       //add active channel to string for ncurses display
-			sprintf (state->active_channel[0], "Active Ch: %04X TG: %d ", channelt, group);
+      sprintf (state->active_channel[0], "Active Ch: %04X TG: %d ", channelt, group);
       state->last_active_time = time(NULL);
 
       for (int i = 0; i < state->group_tally; i++)
@@ -328,59 +323,59 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       }
 
       
-			//Skip tuning group calls if group calls are disabled
-			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
+      //Skip tuning group calls if group calls are disabled
+      if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
       //Skip tuning encrypted calls if enc calls are disabled
       if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
 
-			//tune if tuning available
-			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
-  		{
-				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-    		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
-    		{
-					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
-					// if (opts->mod_qpsk == 1)
-					// {
-					// 	int spacing = state->p25_chan_spac[channelt >> 12];
-					// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
-					// 	{
-					// 		state->samplesPerSymbol = 8;
-					// 		state->symbolCenter = 3;
-					// 	}	
-					// }
+      //tune if tuning available
+      if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+      {
+        //reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+        if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
+        {
+          //testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+          // if (opts->mod_qpsk == 1)
+          // {
+          // 	int spacing = state->p25_chan_spac[channelt >> 12];
+          // 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+          // 	{
+          // 		state->samplesPerSymbol = 8;
+          // 		state->symbolCenter = 3;
+          // 	}	
+          // }
 
           //changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
-					if (1 == 1)
-					{
-						if (state->p25_chan_tdma[channelt >> 12] == 1)
-						{
-							state->samplesPerSymbol = 8;
-							state->symbolCenter = 3;
-						}
-					}
-					//rigctl
+          if (1 == 1)
+          {
+            if (state->p25_chan_tdma[channelt >> 12] == 1)
+            {
+              state->samplesPerSymbol = 8;
+              state->symbolCenter = 3;
+            }
+          }
+          //rigctl
           if (opts->use_rigctl == 1)
-					{
-						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-      			SetFreq(opts->rigctl_sockfd, freq1);
-						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
-						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+          {
+            if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+            SetFreq(opts->rigctl_sockfd, freq1);
+            state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
+            opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
             state->last_vc_sync_time = time(NULL);
-					}
-					//rtl
-					else if (opts->audio_in_type == 3)
-					{
+          }
+          //rtl
+          else if (opts->audio_in_type == 3)
+          {
             #ifdef USE_RTLSDR
-						rtl_dev_tune (opts, freq1);
-						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
-						opts->p25_is_tuned = 1;
+            rtl_dev_tune (opts, freq1);
+            state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
+            opts->p25_is_tuned = 1;
             state->last_vc_sync_time = time(NULL);
             #endif
-					}
-    		}    
-  		}
+          }
+        }    
+      }
     }
 
     //Unit to Unit Voice Channel Grant - Extended
@@ -388,13 +383,13 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     {
       //I'm not doing EVERY element of this, just enough for tuning!
       int svc = mpdu_byte[8];
-			int channelt  = (mpdu_byte[22] << 8) | mpdu_byte[23];
-			int channelr  = (mpdu_byte[24] << 8) | mpdu_byte[25]; //optional!
+      int channelt  = (mpdu_byte[22] << 8) | mpdu_byte[23];
+      int channelr  = (mpdu_byte[24] << 8) | mpdu_byte[25]; //optional!
       //using source and target address, not source and target id (is this correct?)
       long int source = (mpdu_byte[3] << 16) |(mpdu_byte[4] << 8) | mpdu_byte[5];
-			long int target = (mpdu_byte[19] << 16) |(mpdu_byte[20] << 8) | mpdu_byte[21];
-			long int freq1 = 0;
-			long int freq2 = 0;
+      long int target = (mpdu_byte[19] << 16) |(mpdu_byte[20] << 8) | mpdu_byte[21];
+      long int freq1 = 0;
+      long int freq2 = 0;
       UNUSED(freq2);
       fprintf (stderr, "%s\n ",KYEL);
       if (svc & 0x80) fprintf (stderr, " Emergency");
@@ -408,13 +403,13 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         if (svc & 0x8) fprintf (stderr, " R"); //reserved bit is on
         fprintf (stderr, " Priority %d", svc & 0x7); //call priority
       }
-			fprintf (stderr, " Unit to Unit Voice Channel Grant Update - Extended");
-			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Source [%ld][%04lX] Target [%ld][%04lX]", svc, channelt, channelr, source, source, target, target);
-			freq1 = process_channel_to_freq (opts, state, channelt);
-			freq2 = process_channel_to_freq (opts, state, channelr); //optional!
+      fprintf (stderr, " Unit to Unit Voice Channel Grant Update - Extended");
+      fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Source [%ld][%04lX] Target [%ld][%04lX]", svc, channelt, channelr, source, source, target, target);
+      freq1 = process_channel_to_freq (opts, state, channelt);
+      freq2 = process_channel_to_freq (opts, state, channelr); //optional!
 
       //add active channel to string for ncurses display
-			sprintf (state->active_channel[0], "Active Ch: %04X TGT: %ld; ", channelt, target);
+      sprintf (state->active_channel[0], "Active Ch: %04X TGT: %ld; ", channelt, target);
 
       for (int i = 0; i < state->group_tally; i++)
       {
@@ -427,60 +422,60 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       }
 
       
-			//Skip tuning private calls if group calls are disabled
-			if (opts->trunk_tune_private_calls == 0) goto SKIPCALL;
+      //Skip tuning private calls if group calls are disabled
+      if (opts->trunk_tune_private_calls == 0) goto SKIPCALL;
 
       //Skip tuning encrypted calls if enc calls are disabled
       if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
 
-			//tune if tuning available
-			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
-  		{
-				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-    		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
-    		{
+      //tune if tuning available
+      if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+      {
+        //reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+        if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
+        {
 
-					//testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
-					// if (opts->mod_qpsk == 1)
-					// {
-					// 	int spacing = state->p25_chan_spac[channelt >> 12];
-					// 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
-					// 	{
-					// 		state->samplesPerSymbol = 8;
-					// 		state->symbolCenter = 3;
-					// 	}	
-					// }
+          //testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
+          // if (opts->mod_qpsk == 1)
+          // {
+          // 	int spacing = state->p25_chan_spac[channelt >> 12];
+          // 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
+          // 	{
+          // 		state->samplesPerSymbol = 8;
+          // 		state->symbolCenter = 3;
+          // 	}	
+          // }
 
           //changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
-					if (1 == 1)
-					{
-						if (state->p25_chan_tdma[channelt >> 12] == 1)
-						{
-							state->samplesPerSymbol = 8;
-							state->symbolCenter = 3;
-						}
-					}
-					//rigctl
+          if (1 == 1)
+          {
+            if (state->p25_chan_tdma[channelt >> 12] == 1)
+            {
+              state->samplesPerSymbol = 8;
+              state->symbolCenter = 3;
+            }
+          }
+          //rigctl
           if (opts->use_rigctl == 1)
-					{
-						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-      			SetFreq(opts->rigctl_sockfd, freq1);
-						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
-						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+          {
+            if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+            SetFreq(opts->rigctl_sockfd, freq1);
+            state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
+            opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
             state->last_vc_sync_time = time(NULL);
-					}
-					//rtl
-					else if (opts->audio_in_type == 3)
-					{
+          }
+          //rtl
+          else if (opts->audio_in_type == 3)
+          {
             #ifdef USE_RTLSDR
-						rtl_dev_tune (opts, freq1);
-						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
-						opts->p25_is_tuned = 1;
+            rtl_dev_tune (opts, freq1);
+            state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
+            opts->p25_is_tuned = 1;
             state->last_vc_sync_time = time(NULL);
             #endif
-					}
-    		}    
-  		}
+          }
+        }    
+      }
     }
 
     else

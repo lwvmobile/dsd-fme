@@ -20,9 +20,9 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
   {
     memset (state->active_channel, 0, sizeof(state->active_channel));
   }
-  
+
   int tsbkbit[196]; //tsbk bit array, 196 trellis encoded bits
-  int tsbk_dibit[98];
+  uint8_t tsbk_dibit[98];
 
   memset (tsbkbit, 0, sizeof(tsbkbit));
   memset (tsbk_dibit, 0, sizeof(tsbk_dibit));
@@ -38,15 +38,13 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
   int tsbk_decoded_bits[190]; //decoded bits from tsbk_bytes for sending to crc16_lb_bridge
   memset (tsbk_decoded_bits, 0, sizeof(tsbk_decoded_bits));
 
-  int flushing_bits[196]; //for flushing the trellis state machine
-  memset (flushing_bits, 0, sizeof(flushing_bits));
-  
   int i, j, k, x;
   int ec = -2; //error value returned from (block_deinterleave)
   int err = -2; //error value returned from crc16_lb_bridge
   int skipdibit = 14; //initial status dibit will occur at 14, then add 36 each time it occurs
   int protectbit = 0;
   int MFID = 0xFF; //Manufacturer ID - Might be beneficial to NOT send anything but standard 0x00 or 0x01 messages
+  int lb = 0; //last block
 
   //TODO: Don't Print TSBKs/vPDUs unless verbosity levels set higher
 
@@ -74,16 +72,14 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
 
     }
 
-    //flushing the trellis state machine
-    if (j == 0)
-    {
-      bd_bridge(flushing_bits, tsbk_byte);
-      //reset tsbk_byte afterwards
-      memset (tsbk_byte, 0, sizeof(tsbk_byte));
-    }
+    //send to p25_12
+    ec = p25_12 (tsbk_dibit, tsbk_byte);
+
+    //debug err tally from 1/2 decoder
+    // if (ec) fprintf (stderr, " #%d ERR = %d;", j+1, ec);
 
     //send tsbkbit to block_deinterleave and return tsbk_byte
-    ec = bd_bridge(tsbkbit, tsbk_byte);
+    // ec = bd_bridge(tsbkbit, tsbk_byte);
 
     //too many bit manipulations!
     k = 0;
@@ -132,13 +128,14 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
 
     //check the protect bit, don't run if protected
     protectbit = (tsbk_byte[0] >> 6) & 0x1;
+    lb         = (tsbk_byte[0] >> 7) & 0x1;
 
     //Don't run NET_STS out of this, or will set wrong NAC/CC //&& PDU[1] != 0x49 && PDU[1] != 0x45
     //0x49 is telephone grant, 0x46 Unit to Unit Channel Answer Request (seems bogus) (mfid 90)
     // if (MFID < 0x2 && protectbit == 0 && err == 0 && ec == 0 && PDU[1] != 0x7B )
     //running with A4 and 90 causing some false positives when sending to vPDU, issuing bad call grants to nowhere!
     // if ( (MFID < 0x2 || MFID == 0xA4 || MFID == 0x90) && protectbit == 0 && err == 0 && ec == 0 && PDU[1] != 0x7B )  
-    if (MFID < 0x2 && protectbit == 0 && err == 0 && ec == 0 && PDU[1] != 0x7B ) 
+    if (MFID < 0x2 && protectbit == 0 && err == 0 && PDU[1] != 0x7B ) 
     {
       fprintf (stderr, "%s",KYEL);
       process_MAC_VPDU(opts, state, 0, PDU);
@@ -195,14 +192,14 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
         {
           fprintf (stderr, "[%02X]", tsbk_byte[i]);
         }
-        fprintf (stderr, "\n MFID %02X Protected: %d Last Block: %d", MFID, protectbit, (tsbk_byte[0] >> 7) );
+        fprintf (stderr, "\n MFID %02X Protected: %d Last Block: %d", MFID, protectbit, lb);
         
         if (ec != 0) 
         {
           fprintf (stderr, "%s",KRED);
-          fprintf (stderr, " (FEC ERR)");
+          fprintf (stderr, " ERR = %d", ec);
         }
-        else if (err != 0) 
+        if (err != 0) 
         {
           fprintf (stderr, "%s",KRED);
           fprintf (stderr, " (CRC ERR)");
@@ -218,10 +215,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     MFID = 0xFF;
 
     //check for last block bit
-    if ( (tsbk_byte[0] >> 7) == 1 ) 
-    {
-      j = 4; //set j to break the loop early
-    }
+    if (lb) break;
   }
 
   fprintf (stderr, "%s ", KNRM);

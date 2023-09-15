@@ -981,6 +981,8 @@ void soft_tonef (float samp[160], int n, int ID, int AD);
 
 //new p25lcw
 void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t irrecoverable_errors);
+//new p25 1/2 rate decoder
+int p25_12(uint8_t * input, uint8_t treturn[12]);
 
 void processP25lcw (dsd_opts * opts, dsd_state * state, char *lcformat, char *mfid, char *lcinfo);
 void processHDU (dsd_opts * opts, dsd_state * state);
