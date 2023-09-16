@@ -30,6 +30,51 @@ uint8_t p25_fsm[16] = {
 13,2,1,14,
 9,6,5,10 };
 
+uint8_t p25_ecc[16] = {
+2,12,1,15,
+14,0,13,3,
+9,7,10,4,
+5,11,6,8 };
+
+int count_bits(uint8_t b, int slen)
+{
+  int i = 0; int j = 0;
+  for (j = 0; j < slen; j++)
+  {
+    if ( (b & 1) == 1) i++;
+    b = b >> 1;
+  }
+  return i;
+}
+
+uint8_t find_min(uint8_t list[4], int len)
+{
+  int min = list[0];
+  uint8_t index = 0;
+  int unique = 1; //start with flagged on, list[0] could be the min
+  int i;
+
+  for (i = 1; i < len; i++)
+  {
+    if (list[i] < min)
+    {
+      min = list[i];
+      index = (uint8_t)i;
+      unique = 1;
+    } 
+    else if (list[i] == min)
+    {
+      unique = 0; //only change to 0 if another non-unique match is found
+
+    }
+  }
+
+  if (unique == 0)
+      return 0xF;
+
+  return index;
+}
+
 
 int p25_12(uint8_t * input, uint8_t treturn[12])
 {
@@ -63,7 +108,7 @@ int p25_12(uint8_t * input, uint8_t treturn[12])
   //   fprintf (stderr, " %02d", point[i]);
 
   //free-bee on err correction, point[0] should always be zero (flush bits)
-  // point[0] = 0;
+  point[0] = 0;
 
   //convert constellation points into tdibit values using the FSM
   uint8_t state = 0;
@@ -72,11 +117,12 @@ int p25_12(uint8_t * input, uint8_t treturn[12])
   memset (tdibits, 0xF, sizeof(tdibits));
   uint8_t hd[4]; //array of the four fsm words hamming distance
   memset (hd, 0, sizeof(hd));
+  uint8_t min = 0;
 
   for (i = 0; i < 49; i++)
   {
 
-    //just quickly peek for the correct state of the current point in the fsm
+    //just quickly peek for the location of the current point in the fsm
     for (j = 0; j < 16; j++)
     {
       if (p25_fsm[j] == point[i])
@@ -102,8 +148,24 @@ int p25_12(uint8_t * input, uint8_t treturn[12])
       //debug position of error and state value
       // fprintf (stderr, " %d:%d;", i, state);
 
+      //this method only seems to be reliable up to 1-2 bit errors...sometimes
+      for (j = 0; j < 4; j++)
+        hd[j] = count_bits (  ((nibs[i] ^ p25_ecc[(state*4)+j]) & 0xF ), 4 );
+      min = find_min (hd, 4);
+
+      if (min != 15) //unique value returned
+      {
+        tdibits[i] = state = min;
+        irr_err--; //decrement 'corrected' point err
+      }
+
       //use the predicted correct state/value at output instead -- last resort
-      tdibits[i] = state = temp_s; //this still performs better than the min hamming distance method
+      else
+        tdibits[i] = state = temp_s;
+
+      temp_s = 0;
+      memset (hd, 0, sizeof(hd));
+      min = 0;
 
     }
 
@@ -125,41 +187,5 @@ int p25_12(uint8_t * input, uint8_t treturn[12])
   return (irr_err);
 }
 
-int count_bits(uint8_t b, int slen)
-{
-  int i = 0; int j = 0;
-  for (j = 0; j < slen; j++)
-  {
-    if ( (b & 1) == 1) i++;
-    b = b >> 1;
-  }
-  return i;
-}
 
-uint8_t find_min(uint8_t list[4], int len)
-{
-  int min = list[0];
-  uint8_t index = 0;
-  int unique = 1;
-  int i;
 
-  for (i = 1; i < len; i++)
-  {
-    if (list[i] < min)
-    {
-      min = list[i];
-      index = (uint8_t)i;
-      unique = 1;
-    } 
-    else if (list[i] == min)
-    {
-      unique = 0;
-
-    }
-  }
-
-  if (unique == 0)
-      return 0xF;
-
-  return index;
-}
