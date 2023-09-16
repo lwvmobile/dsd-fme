@@ -34,6 +34,45 @@ uint8_t fsm[64] = {
 2, 10, 6, 14, 0,  8, 4, 12,
 6, 14, 0,  8, 4, 12, 2, 10};
 
+int count_bits2(uint8_t b, int slen)
+{
+  int i = 0; int j = 0;
+  for (j = 0; j < slen; j++)
+  {
+    if ( (b & 1) == 1) i++;
+    b = b >> 1;
+  }
+  return i;
+}
+
+uint8_t find_min2(uint8_t list[8], int len)
+{
+  int min = list[0];
+  uint8_t index = 0;
+  int unique = 1; //start with flagged on, list[0] could be the min
+  int i;
+
+  for (i = 1; i < len; i++)
+  {
+    if (list[i] < min)
+    {
+      min = list[i];
+      index = (uint8_t)i;
+      unique = 1;
+    } 
+    else if (list[i] == min)
+    {
+      unique = 0; //only change to 0 if another non-unique match is found
+
+    }
+  }
+
+  if (unique == 0)
+      return 0xF;
+
+  return index;
+}
+
 uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
 {
   int i, j;
@@ -66,12 +105,15 @@ uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
   //   fprintf (stderr, " %02d", point[i]);
 
   //free-bee on err correction, point[0] should always be zero (flush bits)
-  point[0] = 0;
+  // point[0] = 0;
 
   //convert constellation points into tribit values using the FSM
   uint8_t state = 0;
   uint32_t tribits[49];
   memset (tribits, 0xF, sizeof(tribits));
+  uint8_t hd[8];
+  memset (hd, 0, sizeof(hd));
+  uint8_t min = 0;
 
   for (i = 0; i < 49; i++)
   {
@@ -91,17 +133,39 @@ uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
     {
       irr_err++; //tally number of errors
 
-      //debug position of error and state value
-      // fprintf (stderr, " %d:%d;", i, state);
+      //debug point, position of error, and state value
+      fprintf (stderr, "\n P: %d, %d:%d; ", point[i], i, state);
+
+      for (j = 0; j < 8; j++)
+        hd[j] = count_bits2 (  ((point[i] ^ fsm[(state*8)+j]) & 0xF ), 4 );
+      min = find_min2 (hd, 8);
+
+      //debug hamming and min values
+      // fprintf (stderr, "MIN: %d; HD: ", min);
+      // for (j = 0; j < 8; j++)
+      //   fprintf (stderr, "%d,", hd[j]);
+      // fprintf (stderr, ";");
+
+      //P: 0, 34:2; MIN: 0; HD: 1,2,2,3,2,3,3,4,;
+
+      if (min != 15)
+      {
+        point[i] = fsm[(state*8)+min]; //this should return a point that is in the current state
+        // irr_err--; //decrement 'corrected' point err
+      }
 
       //Make a hard decision and flip point to fit in current state
-      point[i] ^= 7; //lucky number 7 (0111)
+      else
+        point[i] ^= 7; //lucky number 7 (0111)
 
-      //NOTE: Ideally, a full path metric to find the surviving path
-      //is the best way to correct this, but it is also complex and no garauntee to fix errs
+      memset (hd, 0, sizeof(hd));
+      min = 0;
 
       //decrement one and try again
       if (i != 0) i--;
+
+      //NOTE: Ideally, a full path metric to find the most likely path
+      //is the best way to correct this, but it is also complex and no guarantee to fix errs
      
     }
 
