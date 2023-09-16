@@ -134,7 +134,7 @@ uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
       irr_err++; //tally number of errors
 
       //debug point, position of error, and state value
-      fprintf (stderr, "\n P: %d, %d:%d; ", point[i], i, state);
+      // fprintf (stderr, "\n P: %d, %d:%d; ", point[i], i, state);
 
       for (j = 0; j < 8; j++)
         hd[j] = count_bits2 (  ((point[i] ^ fsm[(state*8)+j]) & 0xF ), 4 );
