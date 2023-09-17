@@ -924,11 +924,50 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
    
   else if (slco == 0xF)
   {
-    fprintf (stderr, " SLCO Capacity Plus Site: %d - Rest Channel %d - RS: %02X", capsite, restchannel, cap_reserved);
+    fprintf (stderr, " SLCO Capacity Plus Site: %d - Rest LSN: %d - RS: %02X", capsite, restchannel, cap_reserved);
     //assign to cc freq if available
     if (state->trunk_chan_map[restchannel] != 0)
     {
       state->p25_cc_freq = state->trunk_chan_map[restchannel];
+    }
+
+    //extra handling for TG hold while trunking enabled
+    if (state->tg_hold != 0 && opts->p25_trunk == 1)
+    {
+      //if both slots are voice,
+      if (state->dmrburstL == 16 && state->dmrburstR == 16)
+      {
+        //but nether is the TG on hold
+        if ( (state->tg_hold != state->lasttg) && (state->tg_hold != state->lasttgR) )
+        {
+          //tune to the current rest channel so we can observe its channel status csbks for the TG on hold
+          if (state->p25_cc_freq != 0)
+          {
+            //RIGCTL
+            if (opts->use_rigctl == 1)
+            {
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+              SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+              state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+              opts->p25_is_tuned = 0;
+              state->last_cc_sync_time = time(NULL);
+              dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+            }
+
+            //rtl
+            else if (opts->audio_in_type == 3)
+            {
+              #ifdef USE_RTLSDR
+              rtl_dev_tune (opts, state->p25_cc_freq);
+              state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+              opts->p25_is_tuned = 0;
+              state->last_cc_sync_time = time(NULL);
+              dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+              #endif
+            }
+          }
+        }
+      }
     }
 
   }
