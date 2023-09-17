@@ -1195,8 +1195,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           if (state->tg_hold != 0) state->last_vc_sync_time = 0;
 
           //TODO: Consider a method to allow moving the frequency to the rest channel
-          //when a TG hold is specified but nether slow carries the TG on Hold;
-          //may need to use slow link control for that
+          //when a TG hold is specified but nether slot carries the TG on Hold;
+          //CODED: using slow link control for that
 
           //don't tune if vc on the current channel 
           if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
@@ -1235,6 +1235,24 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   //RIGCTL
                   if (opts->use_rigctl == 1)
                   {
+
+                    //may need the code below to TG hold (just in case SLC comes before a VLC or a VC6 EMB and immediately goes to the rest channel)
+                    //disable or tweak code below if these are reversed somehow or causes issues
+                    if (state->tg_hold != 0)
+                    {
+                      if ( (j&1) == 0 ) //slot 1 LSN
+                      {
+                        state->lasttg = t_tg[j];
+                        // state->lastsrc = source;
+                      }
+                      else //slot 2 LSN
+                      {
+                        state->lasttgR = t_tg[j];
+                        // state->lastsrcR = source;
+                      }
+                      //end TG set on tune
+                    }
+
                     if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
                     SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+1]); 
                     state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
@@ -1247,6 +1265,24 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   else if (opts->audio_in_type == 3)
                   {
                     #ifdef USE_RTLSDR
+
+                    //may need the code below to TG hold (just in case SLC comes before a VLC or a VC6 EMB and immediately goes to the rest channel)
+                    //disable or tweak code below if these are reversed somehow or causes issues
+                    if (state->tg_hold != 0)
+                    {
+                      if ( (j&1) == 0 ) //slot 1 LSN
+                      {
+                        state->lasttg = t_tg[j];
+                        // state->lastsrc = source;
+                      }
+                      else //slot 2 LSN
+                      {
+                        state->lasttgR = t_tg[j];
+                        // state->lastsrcR = source;
+                      }
+                      //end TG set on tune
+                    }
+
                     rtl_dev_tune (opts, state->trunk_chan_map[j+1]);
                     state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
                     opts->p25_is_tuned = 1;
@@ -1558,7 +1594,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         //TODO: Consider a method to allow moving the frequency to the free repeater channel
         //when a TG hold is specified but nether slot carries the TG on Hold;
-        //unsure of viable method when both slots are busy
+        //CODED: using Free repeater in SLC to change over if required
 
         //don't tune if vc on the current channel 
         if ( (time(NULL) - state->last_vc_sync_time) > 2 ) //parenthesis error fixed
@@ -1600,6 +1636,24 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 //RIGCTL
                 if (opts->use_rigctl == 1)
                 {
+
+                  //may need the code below to TG hold (just in case SLC comes before a VLC or a VC6 EMB and immediately goes to the free lcn channel)
+                  //disable or tweak code below if these are reversed somehow or causes issues
+                  if (state->tg_hold != 0)
+                  {
+                    if ( (j&1) == 0 ) //slot 1 LSN
+                    {
+                      state->lasttg = t_tg[j+xpt_bank];
+                      // state->lastsrc = source;
+                    }
+                    else //slot 2 LSN
+                    {
+                      state->lasttgR = t_tg[j+xpt_bank];
+                      // state->lastsrcR = source;
+                    }
+                    //end TG set on tune
+                  }
+
                   //debug 
                   fprintf (stderr, " - Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);
 
@@ -1615,6 +1669,24 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 else if (opts->audio_in_type == 3)
                 {
                   #ifdef USE_RTLSDR
+
+                  //may need the code below to TG hold (just in case SLC comes before a VLC or a VC6 EMB and immediately goes to the free lcn channel)
+                  //disable or tweak code below if these are reversed somehow or causes issues
+                  if (state->tg_hold != 0)
+                  {
+                    if ( (j&1) == 0 ) //slot 1 LSN
+                    {
+                      state->lasttg = t_tg[j+xpt_bank];
+                      // state->lastsrc = source;
+                    }
+                    else //slot 2 LSN
+                    {
+                      state->lasttgR = t_tg[j+xpt_bank];
+                      // state->lastsrcR = source;
+                    }
+                    //end TG set on tune
+                  }
+
                   //debug 
                   fprintf (stderr, " - Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);
 
