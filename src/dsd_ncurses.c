@@ -2516,6 +2516,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ( "[%d] \n", (48000*opts->wav_interpolator)/state->samplesPerSymbol);
   printw ("| Decoding:    [%s] ", opts->output_name);
   if (opts->aggressive_framesync == 0) printw ("CRC/(RAS) ");
+  //debug -- troubleshoot voice tuning after grant on DMR CC, subsequent grant may not tune because tuner isn't available
+  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1) printw ("Tuner Locked ");
+  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 0) printw ("Tuner Available ");
   printw ("\n");
   printw ("| In Level:    [%02d%%] \n", level);
   

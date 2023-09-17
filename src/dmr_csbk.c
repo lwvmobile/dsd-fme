@@ -486,10 +486,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             {
               dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
               //reset some strings
-              sprintf (state->call_string[0], "%s", "                     "); //21 spaces
-              sprintf (state->call_string[1], "%s", "                     "); //21 spaces
-              sprintf (state->active_channel[0], "%s", "");
-              sprintf (state->active_channel[1], "%s", "");
+              sprintf (state->call_string[state->currentslot], "%s", "                     "); //21 spaces
+              sprintf (state->active_channel[state->currentslot], "%s", "");
+              state->last_vc_sync_time = 0;
+              state->last_cc_sync_time = time(NULL);
               opts->p25_is_tuned = 0;
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
               if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
@@ -502,10 +502,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               #ifdef USE_RTLSDR
               dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
               //reset some strings
-              sprintf (state->call_string[0], "%s", "                     "); //21 spaces
-              sprintf (state->call_string[1], "%s", "                     "); //21 spaces
-              sprintf (state->active_channel[0], "%s", "");
-              sprintf (state->active_channel[1], "%s", "");
+              sprintf (state->call_string[state->currentslot], "%s", "                     "); //21 spaces
+              sprintf (state->active_channel[state->currentslot], "%s", "");
+              state->last_cc_sync_time = time(NULL);
+              state->last_vc_sync_time = 0;
               opts->p25_is_tuned = 0;
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
               rtl_dev_tune (opts, state->p25_cc_freq);
