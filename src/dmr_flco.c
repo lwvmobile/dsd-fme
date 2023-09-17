@@ -981,6 +981,60 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
 
     //add string for ncurses terminal display
     sprintf (state->dmr_site_parms, "Free LCN - %d ", xpt_free);
+
+    //extra handling for TG hold while trunking enabled
+    if (state->tg_hold != 0 && opts->p25_trunk == 1)
+    {
+      //if both slots are voice,
+      if (state->dmrburstL == 16 && state->dmrburstR == 16)
+      {
+        //but nether is the TG on hold
+        if ( (state->tg_hold != state->lasttg) && (state->tg_hold != state->lasttgR) )
+        {
+          //convert xpt_free from lcn to lsn -- up to 8 voice repeaters
+          if      (xpt_free == 2) xpt_free = 3;
+          else if (xpt_free == 3) xpt_free = 5;
+          else if (xpt_free == 4) xpt_free = 7;
+          else if (xpt_free == 5) xpt_free = 9;
+          else if (xpt_free == 6) xpt_free = 11;
+          else if (xpt_free == 7) xpt_free = 13;
+          else if (xpt_free == 8) xpt_free = 15;
+
+          //check to see if the XPT free channel converted to lsn is available in the map
+          if (state->trunk_chan_map[xpt_free] != 0)
+          {
+            state->p25_cc_freq = state->trunk_chan_map[xpt_free];
+          }
+
+          //tune to the current rest channel so we can observe its channel status csbks for the TG on hold
+          if (state->p25_cc_freq != 0)
+          {
+            //RIGCTL
+            if (opts->use_rigctl == 1)
+            {
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+              SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+              state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+              opts->p25_is_tuned = 0;
+              state->last_cc_sync_time = time(NULL);
+              dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+            }
+
+            //rtl
+            else if (opts->audio_in_type == 3)
+            {
+              #ifdef USE_RTLSDR
+              rtl_dev_tune (opts, state->p25_cc_freq);
+              state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+              opts->p25_is_tuned = 0;
+              state->last_cc_sync_time = time(NULL);
+              dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+              #endif
+            }
+          }
+        }
+      }
+    }
   }
     
   else fprintf (stderr, " SLCO Unknown - %d ", slco);
