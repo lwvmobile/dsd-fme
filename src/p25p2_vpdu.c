@@ -1116,7 +1116,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channel = (MAC[7+len_a] << 8) | MAC[8+len_a];
 			int sysclass = MAC[9+len_a];
 			fprintf (stderr, "\n RFSS Status Broadcast - Implicit \n");
-			fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%02X] SITE ID [%02X] CHAN [%04X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channel, sysclass);
+			fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%03d] SITE ID [%03d] CHAN [%04X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channel, sysclass);
 			process_channel_to_freq (opts, state, channel);
 			
 			state->p2_siteid = siteid;
@@ -1134,7 +1134,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channelr = (MAC[9+len_a] << 8) | MAC[10+len_a];
 			int sysclass = MAC[11+len_a];
 			fprintf (stderr, "\n RFSS Status Broadcast - Explicit \n");
-			fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%02X] SITE ID [%02X]\n  CHAN-T [%04X] CHAN-R [%02X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channelt, channelr, sysclass);
+			fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%03d] SITE ID [%03d]\n  CHAN-T [%04X] CHAN-R [%02X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channelt, channelr, sysclass);
 			process_channel_to_freq (opts, state, channelt);
 			process_channel_to_freq (opts, state, channelr);
 
@@ -1298,7 +1298,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			{
 
 				fprintf (stderr, "\n Secondary Control Channel Broadcast - Explicit\n");
-				fprintf (stderr, "  RFSS [%03d] SITE ID [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", rfssid, siteid, channelt, channelr, sysclass);
+				fprintf (stderr, "  RFSS [%03d] SITE ID [%03d] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", rfssid, siteid, channelt, channelr, sysclass);
 
 				process_channel_to_freq (opts, state, channelt);
 				process_channel_to_freq (opts, state, channelr);
@@ -1324,7 +1324,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			{
 
 				fprintf (stderr, "\n Secondary Control Channel Broadcast - Implicit\n");
-				fprintf (stderr, "  RFSS[%03d] SITE ID [%03X] CHAN1 [%04X] SSC [%02X] CHAN2 [%04X] SSC [%02X]", rfssid, siteid, channel1, sysclass1, channel2, sysclass2);
+				fprintf (stderr, "  RFSS[%03d] SITE ID [%03d] CHAN1 [%04X] SSC [%02X] CHAN2 [%04X] SSC [%02X]", rfssid, siteid, channel1, sysclass1, channel2, sysclass2);
 
 				freq1 = process_channel_to_freq (opts, state, channel1);
 				freq2 = process_channel_to_freq (opts, state, channel2);
@@ -1582,7 +1582,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channelt = (MAC[7+len_a] << 8) | MAC[8+len_a];
 			int sysclass = MAC[9+len_a];
 			fprintf (stderr, "\n Adjacent Status Broadcast - Abbreviated\n");
-			fprintf (stderr, "  LRA [%02X] RFSS[%03d] SYSID [%03X] SITE [%03X] CHAN-T [%04X] SSC [%02X]\n  ", lra, rfssid, lsysid, siteid, channelt, sysclass);
+			fprintf (stderr, "  LRA [%02X] RFSS[%03d] SITE [%03d] SYSID [%03X] CHAN-T [%04X] SSC [%02X]\n  ", lra, rfssid, siteid, lsysid, channelt, sysclass);
 			if (cfva & 0x8) fprintf (stderr, " Conventional");
 			if (cfva & 0x4) fprintf (stderr, " Failure Condition");
 			if (cfva & 0x2) fprintf (stderr, " Up to Date (Correct)");
@@ -1605,7 +1605,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channelr = (MAC[9+len_a] << 8) | MAC[10+len_a];
 			int sysclass = MAC[11+len_a];  //need to re-check this 
 			fprintf (stderr, "\n Adjacent Status Broadcast - Extended\n");
-			fprintf (stderr, "  LRA [%02X] RFSS[%03d] SYSID [%03X] SITE [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]\n  ", lra, rfssid, lsysid, siteid, channelt, channelr, sysclass);
+			fprintf (stderr, "  LRA [%02X] RFSS[%03d] SITE [%03d] SYSID [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]\n  ", lra, rfssid, siteid, lsysid, channelt, channelr, sysclass);
 			if (cfva & 0x8) fprintf (stderr, " Conventional");
 			if (cfva & 0x4) fprintf (stderr, " Failure Condition");
 			if (cfva & 0x2) fprintf (stderr, " Up to Date (Correct)");

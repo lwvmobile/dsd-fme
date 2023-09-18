@@ -247,7 +247,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       int sysclass = mpdu_byte[18];
       fprintf (stderr, "%s",KYEL);
       fprintf (stderr, "\n RFSS Status Broadcast MBF - Extended \n");
-      fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%02X] SITE ID [%02X]\n  CHAN-T [%04X] CHAN-R [%02X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channelt, channelr, sysclass);
+      fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%03d] SITE ID [%03d]\n  CHAN-T [%04X] CHAN-R [%02X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channelt, channelr, sysclass);
       process_channel_to_freq (opts, state, channelt);
       process_channel_to_freq (opts, state, channelr);
 
@@ -269,7 +269,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       long int wacn = (mpdu_byte[17] << 12) | (mpdu_byte[18] << 4) | (mpdu_byte[19] >> 4);
       fprintf (stderr, "%s",KYEL);
       fprintf (stderr, "\n Adjacent Status Broadcast - Extended\n");
-      fprintf (stderr, "  LRA [%02X] CFVA [%X] RFSS[%03d] SYSID [%03X] SITE [%03X]\n  CHAN-T [%04X] CHAN-R [%04X] SSC [%02X] WACN [%05lX]\n  ", lra, cfva, rfssid, lsysid, siteid, channelt, channelr, sysclass, wacn);
+      fprintf (stderr, "  LRA [%02X] CFVA [%X] RFSS[%03d] SITE [%03d] SYSID [%03X]\n  CHAN-T [%04X] CHAN-R [%04X] SSC [%02X] WACN [%05lX]\n  ", lra, cfva, rfssid, siteid, lsysid, channelt, channelr, sysclass, wacn);
       if (cfva & 0x8) fprintf (stderr, " Conventional");
       if (cfva & 0x4) fprintf (stderr, " Failure Condition");
       if (cfva & 0x2) fprintf (stderr, " Up to Date (Correct)");
