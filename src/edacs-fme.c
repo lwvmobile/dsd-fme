@@ -642,10 +642,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, " Digital");
 
         //skip analog calls on RTL Input on ARM devices due to High CPU usage from RTL RMS function
-        #ifdef __arm__
-        if (command == 0xEE && opts->audio_in_type == 3)
-          goto ENDPV;
-        #endif
+        // #ifdef __arm__
+        // if (command == 0xEE && opts->audio_in_type == 3)
+        //   goto ENDPV;
+        // #endif
 
         //skip analog calls on UDP Audio Output
         if (command == 0xEE && opts->audio_out_type == 8)

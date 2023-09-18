@@ -1130,11 +1130,15 @@ void rtl_dev_tune(dsd_opts * opts, long int frequency)
 long int rtl_return_rms()
 {
 	long int sr = 0;
-	#ifdef __arm__
-	sr = 100;
-	#else
-	sr = rms(demod.lowpassed, demod.lp_len, 1);
-	#endif
+	// #ifdef __arm__
+	// sr = 100;
+	// #else
+	//debug -- on main machine, lp_len is around 6420, so this probably contributes to very high CPU usage
+	// fprintf (stderr, "LP_LEN: %d \n", demod.lp_len);
+	//I've found that just using a sample size of 160 will give us a good approximation without killing the CPU
+	// sr = rms(demod.lowpassed, demod.lp_len, 1);
+	sr = rms(demod.lowpassed, 160, 1); //I wonder what a reasonable value would be for #2 (input len) there
+	// #endif
 	return (sr);
 }
 
