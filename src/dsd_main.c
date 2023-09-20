@@ -1470,10 +1470,14 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
     closeWavOutFileR (opts, state);
   }
   closeSymbolOutFile (opts, state);
+
+  #ifdef USE_RTLSDR
   if (opts->rtl_started == 1)
   {
     cleanup_rtlsdr_stream();
   }
+  #endif
+
   if (opts->use_ncurses_terminal == 1)
   {
     ncursesClose(opts);
@@ -2654,6 +2658,7 @@ main (int argc, char **argv)
         sprintf (opts.audio_in_dev, "%s", "pulse");
         opts.audio_in_type = 0;
       }
+      UNUSED(vendor); UNUSED(product); UNUSED(serial); UNUSED(userdev); UNUSED(device_count);
       #endif
     }
 

@@ -784,6 +784,9 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
             choicec = 18; //exit to decoder screen only if confirmed, otherwise, just go back
           }
 
+          #else
+          UNUSED(confirm);
+
           #endif
 
         }
