@@ -191,13 +191,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (lpchannum != 0 && lpchannum != 0xFFF)
         {
           if (csbk_o == 49 || csbk_o == 50) sprintf (state->active_channel[lcn], "Active Group Ch: %d TG: %d; ", lpchannum, target);
-          else if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54) sprintf (state->active_channel[lcn], "Active Data Ch: %d TG: %d; ", lpchannum, target);
+          else if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54 || csbk_o == 55 || csbk_o == 56) sprintf (state->active_channel[lcn], "Active Data Ch: %d TG: %d; ", lpchannum, target);
           else sprintf (state->active_channel[lcn], "Active Private Ch: %d TG: %d; ", lpchannum, target);
         } 
         else if (lpchannum == 0xFFF)
         {
           if (csbk_o == 49 || csbk_o == 50) sprintf (state->active_channel[lcn], "Active Group Ch: %d TG: %d; ", mbc_lpchannum, target);
-          else if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54) sprintf (state->active_channel[lcn], "Active Data Ch: %d TG: %d; ", mbc_lpchannum, target);
+          else if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54 || csbk_o == 55 || csbk_o == 56) sprintf (state->active_channel[lcn], "Active Data Ch: %d TG: %d; ", mbc_lpchannum, target);
           else sprintf (state->active_channel[lcn], "Active Private Ch: %d TG: %d; ", mbc_lpchannum, target);
         }
         //update last active channel time
