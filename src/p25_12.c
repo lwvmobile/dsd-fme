@@ -62,11 +62,11 @@ uint8_t find_min(uint8_t list[4], int len)
       index = (uint8_t)i;
       unique = 1;
     } 
-    else if (list[i] == min)
-    {
-      unique = 0; //only change to 0 if another non-unique match is found
+    // else if (list[i] == min)
+    // {
+    //   unique = 0; //only change to 0 if another non-unique match is found
 
-    }
+    // }
   }
 
   if (unique == 0)
@@ -102,13 +102,10 @@ int p25_12(uint8_t * input, uint8_t treturn[12])
   for (i = 0; i < 49; i++) 
     point[i] = p25_constellation_map[nibs[i]];
 
-  //debug view points -- point[0] should be zero
+  //debug view points
   // fprintf (stderr, "\n P =");
   // for (i = 0; i < 49; i++) 
   //   fprintf (stderr, " %02d", point[i]);
-
-  //free-bee on err correction, point[0] should always be zero (flush bits)
-  point[0] = 0;
 
   //convert constellation points into tdibit values using the FSM
   uint8_t state = 0;
