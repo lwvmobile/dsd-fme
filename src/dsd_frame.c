@@ -403,7 +403,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
           if (new_nac != state->nac) {
               // NAC fixed by error correction
               state->nac = new_nac;
-              if (state->p2_hardset == 0 && new_nac != 0)
+              //apparently, both 0 and 0xFFF can the BCH code on signal drop
+              if (state->p2_hardset == 0 && new_nac != 0 & new_nac != 0xFFF)
               {
                 state->p2_cc = new_nac;
               }
