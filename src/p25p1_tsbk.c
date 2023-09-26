@@ -142,8 +142,41 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%s",KNRM);
     }
 
+    //look at Harris Opcodes and payload portion of TSBK
+    else if (MFID == 0xA4 && protectbit == 0 && err == 0)
+    {
+      //TODO: Add Known Opcodes from Manual (all one of them)
+      fprintf (stderr, "%s",KCYN);
+      fprintf (stderr, "\n MFID A4 (Harris); Opcode: %02X; ", tsbk_byte[0] & 0x3F);
+      for (i = 2; i < 10; i++)
+        fprintf (stderr, "%02X", tsbk_byte[i]);
+      fprintf (stderr, " %s",KNRM);
+
+      //This seems to follow the same structure as the MFID 90 Group Regroup Add Command
+			
+			//MFID A4 Opcode 1 on TSBK / Opcode 0x41 on vPDU
+			// P25 PDU Payload #1 [81][A4] [11][0D] [83][4E] [84][2A] [84][EE] -------[39][30]
+ 			// MFID A4 Protected: 0 Last Block: 1
+
+			//these values do seem to change, but not often, but seem to pair up into 16-bit values
+			// P25 PDU Payload #1 [81][A4] [11][0D] [84][2A] [84][EE] [FF][FF] -------[4D][2F]
+			// MFID A4 Protected: 0 Last Block: 1
+
+    }
+
+    //look at Motorola Opcodes and payload portion of TSBK
+    else if (MFID == 0x90 && protectbit == 0 && err == 0)
+    {
+      //TODO: Add Known Opcodes from Manual -- will probably want to add the voice grants
+      fprintf (stderr, "%s",KCYN);
+      fprintf (stderr, "\n MFID 90 (Moto); Opcode: %02X; ", tsbk_byte[0] & 0x3F);
+      for (i = 2; i < 10; i++)
+        fprintf (stderr, "%02X", tsbk_byte[i]);
+      fprintf (stderr, " %s",KNRM);
+    }
+
     //set our WACN and SYSID here now that we have valid ec and crc/checksum
-    else if (protectbit == 0 && err == 0 && ec == 0 && (tsbk_byte[0] & 0x3F) == 0x3B) 
+    else if (protectbit == 0 && err == 0 && (tsbk_byte[0] & 0x3F) == 0x3B) 
     {
       long int wacn = (tsbk_byte[3] << 12) | (tsbk_byte[4] << 4) | (tsbk_byte[5] >> 4);
       int sysid = ((tsbk_byte[5] & 0xF) << 8) | tsbk_byte[6];

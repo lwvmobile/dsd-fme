@@ -1167,6 +1167,31 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		// 	fprintf (stderr, "\n Telephone Interconnect Voice Channel Grant Update ");	
 		// }
 
+		//TODO: Restructure this function to group standard Opcodes away from MFID 90 and MFID A4, and Unknown MFID
+		//or just go to if-elseif-else layout (probably easier that way)
+		//Unknown Harris A4 Opcodes
+		if (MAC[1+len_a] != 0xB0 && MAC[2+len_a] == 0xA4)
+		{
+			// 6.2.36 Manufacturer Specific regarding octet 3 as len
+			int len = MAC[3+len_a] & 0x3F;
+			int res = MAC[3+len_a] >> 6;
+			if (len > 24)
+				len = 24; //should never exceed this len, but just in case it does
+			fprintf (stderr, "\n MFID A4 (Harris); Res: %d; Len: %d; Opcode: %02X; ", res, len, MAC[1+len_a]);
+      for (i = 1; i < len; i++)
+        fprintf (stderr, "%02X", MAC[i+len_a]); //might not be a good idea to run this, or it may overflow
+		
+		}
+
+		/*
+		Maybe this is why some of these SYNC_BCST PDUs have zeroes in most fields
+
+		Information provided in the SYNC_BCST message may be used for purposes other
+		than providing synchronization to a TDMA voice channel. These purposes are beyond
+		the scope of this document. SUs not interested in synchronization with the TDMA voice
+		channel may ignore the status of the US bit.
+		*/
+
 		//Synchronization Broadcast (SYNC_BCST)
 		if (MAC[1+len_a] == 0x70)
 		{

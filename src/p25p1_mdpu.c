@@ -478,6 +478,28 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       }
     }
 
+    //look at Harris Opcodes and payload portion of TSBK
+    else if (MFID == 0xA4)
+    {
+      //TODO: Add Known Opcodes from Manual (all one of them)
+      fprintf (stderr, "%s",KCYN);
+      fprintf (stderr, "\n MFID A4 (Harris); Opcode: %02X; ", opcode);
+      for (i = 0; i < (12*(blks+1)%37); i++)
+        fprintf (stderr, "%02X", mpdu_byte[i]);
+      fprintf (stderr, " %s",KNRM);
+    }
+
+    //look at Motorola Opcodes and payload portion of TSBK
+    else if (MFID == 0x90)
+    {
+      //TODO: Add Known Opcodes from Manual
+      fprintf (stderr, "%s",KCYN);
+      fprintf (stderr, "\n MFID 90 (Moto); Opcode: %02X; ", mpdu_byte[0] & 0x3F);
+      for (i = 0; i < (12*(blks+1)%37); i++)
+        fprintf (stderr, "%02X", mpdu_byte[i]);
+      fprintf (stderr, " %s",KNRM);
+    }
+
     else
     {
       //convert mpdu_byte to vPDU format and get indication of what the message was

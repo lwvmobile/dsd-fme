@@ -153,7 +153,7 @@ int p25_12(uint8_t * input, uint8_t treturn[12])
       if (min != 15) //unique value returned
       {
         tdibits[i] = state = min;
-        irr_err--; //decrement 'corrected' point err
+        // irr_err--; //decrement 'corrected' point err
       }
 
       //use the predicted correct state/value at output instead -- last resort
