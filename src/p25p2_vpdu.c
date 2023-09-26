@@ -106,24 +106,24 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			state->last_active_time = time(NULL);
 
 			for (int i = 0; i < state->group_tally; i++)
-      {
-        if (state->group_array[i].groupNumber == sgroup)
-        {
-          fprintf (stderr, " [%s]", state->group_array[i].groupName);
-          strcpy (mode, state->group_array[i].groupMode);
+			{
+				if (state->group_array[i].groupNumber == sgroup)
+				{
+					fprintf (stderr, " [%s]", state->group_array[i].groupName);
+					strcpy (mode, state->group_array[i].groupMode);
 					break;
-        }
-      }
+				}
+			}
 
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			//tune if tuning available
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
-  		{
+			{
 				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-    		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
-    		{
+				if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+				{
 					//changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
 					if (1 == 1)
 					{
@@ -135,10 +135,10 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					}
 					
 					//rigctl
-          if (opts->use_rigctl == 1)
+					if (opts->use_rigctl == 1)
 					{
 						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-      			SetFreq(opts->rigctl_sockfd, freq);
+						SetFreq(opts->rigctl_sockfd, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
 						state->last_vc_sync_time = time(NULL);
@@ -153,8 +153,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						state->last_vc_sync_time = time(NULL);
 						#endif
 					}
-    		}    
-  		}
+				}    
+			}
 			//if playing back files, and we still want to see what freqs are in use in the ncurses terminal
 			//might only want to do these on a grant update, and not a grant by itself?
 			if (opts->p25_trunk == 0)
@@ -184,24 +184,24 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			state->last_active_time = time(NULL);
 
 			for (int i = 0; i < state->group_tally; i++)
-      {
-        if (state->group_array[i].groupNumber == sgroup)
-        {
-          fprintf (stderr, " [%s]", state->group_array[i].groupName);
-          strcpy (mode, state->group_array[i].groupMode);
+			{
+				if (state->group_array[i].groupNumber == sgroup)
+				{
+					fprintf (stderr, " [%s]", state->group_array[i].groupName);
+					strcpy (mode, state->group_array[i].groupMode);
 					break;
-        }
-      }
+				}
+			}
 
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			//tune if tuning available
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
-  		{
+			{
 				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-    		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
-    		{
+				if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+				{
 					//changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
 					if (1 == 1)
 					{
@@ -212,10 +212,10 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						}
 					}
 					
-          if (opts->use_rigctl == 1)
+					if (opts->use_rigctl == 1)
 					{
 						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-      			SetFreq(opts->rigctl_sockfd, freq);
+						SetFreq(opts->rigctl_sockfd, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
 						state->last_vc_sync_time = time(NULL);
@@ -230,8 +230,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						state->last_vc_sync_time = time(NULL);
 						#endif
 					}
-    		}    
-  		}
+				}    
+			}
 			//if playing back files, and we still want to see what freqs are in use in the ncurses terminal
 			//might only want to do these on a grant update, and not a grant by itself?
 			if (opts->p25_trunk == 0)
@@ -373,16 +373,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			fprintf (stderr, "\n");
 			if (svc & 0x80) fprintf (stderr, " Emergency");
-      if (svc & 0x40) fprintf (stderr, " Encrypted");
+			if (svc & 0x40) fprintf (stderr, " Encrypted");
 
-      if (opts->payload == 1) //hide behind payload due to len
-      {
-        if (svc & 0x20) fprintf (stderr, " Duplex");
-        if (svc & 0x10) fprintf (stderr, " Packet");
-        else fprintf (stderr, " Circuit");
-        if (svc & 0x8) fprintf (stderr, " R"); //reserved bit is on
-        fprintf (stderr, " Priority %d", svc & 0x7); //call priority
-      }
+			if (opts->payload == 1) //hide behind payload due to len
+			{
+				if (svc & 0x20) fprintf (stderr, " Duplex");
+				if (svc & 0x10) fprintf (stderr, " Packet");
+				else fprintf (stderr, " Circuit");
+				if (svc & 0x8) fprintf (stderr, " R"); //reserved bit is on
+				fprintf (stderr, " Priority %d", svc & 0x7); //call priority
+			}
 
 			fprintf (stderr, " Group Voice Channel Grant Update");
 			fprintf (stderr, "\n  SVC [%02X] CHAN [%04X] Group [%d] Source [%d]", svc, channel, group, source);
@@ -393,27 +393,27 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			state->last_active_time = time(NULL);
 
 			for (int i = 0; i < state->group_tally; i++)
-      {
-        if (state->group_array[i].groupNumber == group)
-        {
-          fprintf (stderr, " [%s]", state->group_array[i].groupName);
-          strcpy (mode, state->group_array[i].groupMode);
+			{
+				if (state->group_array[i].groupNumber == group)
+				{
+					fprintf (stderr, " [%s]", state->group_array[i].groupName);
+					strcpy (mode, state->group_array[i].groupMode);
 					break;
-        }
-      }
+				}
+			}
 
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			//Skip tuning encrypted calls if enc calls are disabled
-      if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
+			if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
 
 			//tune if tuning available
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
-  		{
+			{
 				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-    		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
-    		{
+				if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+				{
 					//changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
 					if (1 == 1)
 					{
@@ -425,10 +425,10 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					}
 
 					//rigctl
-          if (opts->use_rigctl == 1)
+					if (opts->use_rigctl == 1)
 					{
 						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-      			SetFreq(opts->rigctl_sockfd, freq);
+						SetFreq(opts->rigctl_sockfd, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
 						state->last_vc_sync_time = time(NULL);
@@ -443,8 +443,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						state->last_vc_sync_time = time(NULL);
 						#endif
 					}
-    		}    
-  		}
+				}    
+			}
 			//if playing back files, and we still want to see what freqs are in use in the ncurses terminal
 			//might only want to do these on a grant update, and not a grant by itself?
 			if (opts->p25_trunk == 0)
@@ -477,28 +477,28 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			state->last_active_time = time(NULL);
 
 			//Skip tuning private calls if private calls is disabled
-      if (opts->trunk_tune_private_calls == 0) goto SKIPCALL; 
+			if (opts->trunk_tune_private_calls == 0) goto SKIPCALL; 
 
 			//Skip tuning encrypted calls if enc calls are disabled -- abb formats do not carry svc bits :(
-      if (opts->trunk_tune_enc_calls == 0) goto SKIPCALL; //enable, or disable?
+			if (opts->trunk_tune_enc_calls == 0) goto SKIPCALL; //enable, or disable?
 
 			//unit to unit needs work, may fail under certain conditions (first blocked, second allowed, etc) (labels should still work though)
 			for (int i = 0; i < state->group_tally; i++)
-      {
-        if (state->group_array[i].groupNumber == source || state->group_array[i].groupNumber == target)
-        {
-          fprintf (stderr, " [%s]", state->group_array[i].groupName);
-          strcpy (mode, state->group_array[i].groupMode);
+			{
+				if (state->group_array[i].groupNumber == source || state->group_array[i].groupNumber == target)
+				{
+					fprintf (stderr, " [%s]", state->group_array[i].groupName);
+					strcpy (mode, state->group_array[i].groupMode);
 					break;
-        }
-      }
+				}
+			}
 
 			//tune if tuning available
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
-  		{
+			{
 				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-    		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
-    		{
+				if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+				{
 					//changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
 					if (1 == 1)
 					{
@@ -510,10 +510,10 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					}
 
 					//rigctl
-          if (opts->use_rigctl == 1)
+					if (opts->use_rigctl == 1)
 					{
 						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-      			SetFreq(opts->rigctl_sockfd, freq);
+						SetFreq(opts->rigctl_sockfd, freq);
 						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
 						state->last_vc_sync_time = time(NULL); 
@@ -528,8 +528,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						state->last_vc_sync_time = time(NULL);
 						#endif
 					}
-    		}    
-  		}
+				}    
+			}
 			if (opts->p25_trunk == 0)
 			{
 				if (target == state->lasttg || target == state->lasttgR)
@@ -562,29 +562,29 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n Group Voice Channel Grant Update Multiple - Explicit");
 			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc1, channelt1, channelr1, group1, group1);
 			if (svc1 & 0x80) fprintf (stderr, " Emergency");
-      if (svc1 & 0x40) fprintf (stderr, " Encrypted");
-      if (opts->payload == 1) //hide behind payload due to len
-      {
-        if (svc1 & 0x20) fprintf (stderr, " Duplex");
-        if (svc1 & 0x10) fprintf (stderr, " Packet");
-        else fprintf (stderr, " Circuit");
-        if (svc1 & 0x8) fprintf (stderr, " R"); //reserved bit is on
-        fprintf (stderr, " Priority %d", svc1 & 0x7); //call priority
-      }
+			if (svc1 & 0x40) fprintf (stderr, " Encrypted");
+			if (opts->payload == 1) //hide behind payload due to len
+			{
+				if (svc1 & 0x20) fprintf (stderr, " Duplex");
+				if (svc1 & 0x10) fprintf (stderr, " Packet");
+				else fprintf (stderr, " Circuit");
+				if (svc1 & 0x8) fprintf (stderr, " R"); //reserved bit is on
+				fprintf (stderr, " Priority %d", svc1 & 0x7); //call priority
+			}
 			freq1t = process_channel_to_freq (opts, state, channelt1);
 			if (channelr1 != 0 && channelr1 != 0xFFFF) freq1r = process_channel_to_freq (opts, state, channelr1);
 
 			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc2, channelt2, channelr2, group2, group2);
 			if (svc2 & 0x80) fprintf (stderr, " Emergency");
-      if (svc2 & 0x40) fprintf (stderr, " Encrypted");
-      if (opts->payload == 1) //hide behind payload due to len
-      {
-        if (svc2 & 0x20) fprintf (stderr, " Duplex");
-        if (svc2 & 0x10) fprintf (stderr, " Packet");
-        else fprintf (stderr, " Circuit");
-        if (svc2 & 0x8) fprintf (stderr, " R"); //reserved bit is on
-        fprintf (stderr, " Priority %d", svc2 & 0x7); //call priority
-      }
+			if (svc2 & 0x40) fprintf (stderr, " Encrypted");
+			if (opts->payload == 1) //hide behind payload due to len
+			{
+				if (svc2 & 0x20) fprintf (stderr, " Duplex");
+				if (svc2 & 0x10) fprintf (stderr, " Packet");
+				else fprintf (stderr, " Circuit");
+				if (svc2 & 0x8) fprintf (stderr, " R"); //reserved bit is on
+				fprintf (stderr, " Priority %d", svc2 & 0x7); //call priority
+			}
 			freq1t = process_channel_to_freq (opts, state, channelt2);
 			if (channelr2 != 0 && channelr2 != 0xFFFF) freq1r = process_channel_to_freq (opts, state, channelr2);
 
@@ -596,7 +596,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			//Skip tuning encrypted calls if enc calls are disabled
-      if ( (svc1 & 0x40) && (svc2 & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
+			if ( (svc1 & 0x40) && (svc2 & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
 
 			int loop = 1;
 			if (channelt2 == channelt2) loop = 1;
@@ -711,41 +711,41 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n Group Voice Channel Grant Update Multiple - Implicit");
 			fprintf (stderr, "\n  Channel 1 [%04X] Group 1 [%d][%04X]", channel1, group1, group1);
 			if (so1 & 0x80) fprintf (stderr, " Emergency");
-      if (so1 & 0x40) fprintf (stderr, " Encrypted");
-      if (opts->payload == 1) //hide behind payload due to len
-      {
-        if (so1 & 0x20) fprintf (stderr, " Duplex");
-        if (so1 & 0x10) fprintf (stderr, " Packet");
-        else fprintf (stderr, " Circuit");
-        if (so1 & 0x8) fprintf (stderr, " R"); //reserved bit is on
-        fprintf (stderr, " Priority %d", so1 & 0x7); //call priority
-      }
+			if (so1 & 0x40) fprintf (stderr, " Encrypted");
+			if (opts->payload == 1) //hide behind payload due to len
+			{
+				if (so1 & 0x20) fprintf (stderr, " Duplex");
+				if (so1 & 0x10) fprintf (stderr, " Packet");
+				else fprintf (stderr, " Circuit");
+				if (so1 & 0x8) fprintf (stderr, " R"); //reserved bit is on
+				fprintf (stderr, " Priority %d", so1 & 0x7); //call priority
+			}
 			freq1 = process_channel_to_freq (opts, state, channel1);
 
 			fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
 			if (so2 & 0x80) fprintf (stderr, " Emergency");
-      if (so2 & 0x40) fprintf (stderr, " Encrypted");
-      if (opts->payload == 1) //hide behind payload due to len
-      {
-        if (so2 & 0x20) fprintf (stderr, " Duplex");
-        if (so2 & 0x10) fprintf (stderr, " Packet");
-        else fprintf (stderr, " Circuit");
-        if (so2 & 0x8) fprintf (stderr, " R"); //reserved bit is on
-        fprintf (stderr, " Priority %d", so2 & 0x7); //call priority
-      }
+			if (so2 & 0x40) fprintf (stderr, " Encrypted");
+			if (opts->payload == 1) //hide behind payload due to len
+			{
+				if (so2 & 0x20) fprintf (stderr, " Duplex");
+				if (so2 & 0x10) fprintf (stderr, " Packet");
+				else fprintf (stderr, " Circuit");
+				if (so2 & 0x8) fprintf (stderr, " R"); //reserved bit is on
+				fprintf (stderr, " Priority %d", so2 & 0x7); //call priority
+			}
 			freq2 = process_channel_to_freq (opts, state, channel2);
 
 			fprintf (stderr, "\n  Channel 3 [%04X] Group 3 [%d][%04X]", channel3, group3, group3);
 			if (so3 & 0x80) fprintf (stderr, " Emergency");
-      if (so3 & 0x40) fprintf (stderr, " Encrypted");
-      if (opts->payload == 1) //hide behind payload due to len
-      {
-        if (so3 & 0x20) fprintf (stderr, " Duplex");
-        if (so3 & 0x10) fprintf (stderr, " Packet");
-        else fprintf (stderr, " Circuit");
-        if (so3 & 0x8) fprintf (stderr, " R"); //reserved bit is on
-        fprintf (stderr, " Priority %d", so3 & 0x7); //call priority
-      }
+			if (so3 & 0x40) fprintf (stderr, " Encrypted");
+			if (opts->payload == 1) //hide behind payload due to len
+			{
+				if (so3 & 0x20) fprintf (stderr, " Duplex");
+				if (so3 & 0x10) fprintf (stderr, " Packet");
+				else fprintf (stderr, " Circuit");
+				if (so3 & 0x8) fprintf (stderr, " R"); //reserved bit is on
+				fprintf (stderr, " Priority %d", so3 & 0x7); //call priority
+			}
 			freq3 = process_channel_to_freq (opts, state, channel3);
 
 			//add active channel to string for ncurses display
@@ -756,7 +756,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			//Skip tuning encrypted calls if enc calls are disabled
-      if ( (so1 & 0x40) && (so2 & 0x40) && (so3 & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
+			if ( (so1 & 0x40) && (so2 & 0x40) && (so3 & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
 
 			int loop = 3;
 
@@ -888,7 +888,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			//Skip tuning encrypted calls if enc calls are disabled -- abb formats do not carry svc bits :(
-      if (opts->trunk_tune_enc_calls == 0) goto SKIPCALL; //enable, or disable?
+			if (opts->trunk_tune_enc_calls == 0) goto SKIPCALL; //enable, or disable?
 
 			int loop = 1;
 			if (channel1 == channel2) loop = 1;
@@ -992,16 +992,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n");
 
 			if (svc & 0x80) fprintf (stderr, " Emergency");
-      if (svc & 0x40) fprintf (stderr, " Encrypted");
+			if (svc & 0x40) fprintf (stderr, " Encrypted");
 
-      if (opts->payload == 1) //hide behind payload due to len
-      {
-        if (svc & 0x20) fprintf (stderr, " Duplex");
-        if (svc & 0x10) fprintf (stderr, " Packet");
-        else fprintf (stderr, " Circuit");
-        if (svc & 0x8) fprintf (stderr, " R"); //reserved bit is on
-        fprintf (stderr, " Priority %d", svc & 0x7); //call priority
-      }
+			if (opts->payload == 1) //hide behind payload due to len
+			{
+				if (svc & 0x20) fprintf (stderr, " Duplex");
+				if (svc & 0x10) fprintf (stderr, " Packet");
+				else fprintf (stderr, " Circuit");
+				if (svc & 0x8) fprintf (stderr, " R"); //reserved bit is on
+				fprintf (stderr, " Priority %d", svc & 0x7); //call priority
+			}
 			fprintf (stderr, " Group Voice Channel Grant Update - Explicit");
 			fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Group [%d][%04X]", svc, channelt, channelr, group, group);
 			freq1 = process_channel_to_freq (opts, state, channelt);
@@ -1015,27 +1015,27 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			// else state->lasttgR = group;
 
 			for (int i = 0; i < state->group_tally; i++)
-      {
-        if (state->group_array[i].groupNumber == group)
-        {
-          fprintf (stderr, " [%s]", state->group_array[i].groupName);
-          strcpy (mode, state->group_array[i].groupMode);
+			{
+				if (state->group_array[i].groupNumber == group)
+				{
+					fprintf (stderr, " [%s]", state->group_array[i].groupName);
+					strcpy (mode, state->group_array[i].groupMode);
 					break;
-        }
-      }
+				}
+			}
 
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			//Skip tuning encrypted calls if enc calls are disabled
-      if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
+			if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
 
 			//tune if tuning available
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
-  		{
+			{
 				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-    		if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
-    		{
+				if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
+				{
 
 					//changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
 					if (1 == 1)
@@ -1048,10 +1048,10 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					}
 
 					//rigctl
-          if (opts->use_rigctl == 1)
+					if (opts->use_rigctl == 1)
 					{
 						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-      			SetFreq(opts->rigctl_sockfd, freq1);
+						SetFreq(opts->rigctl_sockfd, freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
 						state->last_vc_sync_time = time(NULL);
@@ -1066,8 +1066,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						state->last_vc_sync_time = time(NULL);
 						#endif
 					}
-    		}    
-  		}
+				}    
+			}
 			if (opts->p25_trunk == 0)
 			{
 				if (group == state->lasttg || group == state->lasttgR)
@@ -1185,8 +1185,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			// if ( (len + len_a) > 24) len = 24-len_a; //not required, since we can only go to 24 anyways
 			//end sanity checks
 			fprintf (stderr, "\n MFID A4 (Harris); Res: %d; Len: %d; Opcode: %02llX; ", res, len, MAC[1+len_a]);
-      for (i = 1; i < len; i++)
-        fprintf (stderr, "%02llX", MAC[i+len_a]);
+			for (i = 1; i < len; i++)
+				fprintf (stderr, "%02llX", MAC[i+len_a]);
 		}
 
 		/*
@@ -1222,7 +1222,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int seconds = slots / 135; //very rough estimation, but may be close enough for grins
 			if (seconds > 59) seconds = 59; //sanity check for rounding error
 			fprintf (stderr, "  Date: 20%02d.%02d.%02d Time: %02d:%02d:%02d UTC\n", 
-			          year, month, day, hour, min, seconds); 
+								year, month, day, hour, min, seconds); 
 			fprintf (stderr, "  Local Time Offset: %.01f Hours;", offhour);
 			//if ist bit is set, then time on system may be considered invalid (i.e., no external time sync)
 			if (ist == 1)
@@ -1260,7 +1260,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			fprintf (stderr, "\n Identifier Update UHF/VHF\n");
 			fprintf (stderr, "  Channel Identifier [%01X] BW [%01X] Transmit Offset [%04X]\n  Channel Spacing [%03X] Base Frequency [%08lX] [%09ld]",
-			                    state->p25_chan_iden, bw_vu, state->p25_trans_off[iden], state->p25_chan_spac[iden], state->p25_base_freq[iden], state->p25_base_freq[iden] * 5);
+													state->p25_chan_iden, bw_vu, state->p25_trans_off[iden], state->p25_chan_spac[iden], state->p25_base_freq[iden], state->p25_base_freq[iden] * 5);
 		}
 
 		//identifier update (Non-TDMA 6.2.22) (Non-VHF-UHF) //with signed offset, bit trans_off >> 8; bit number 9
@@ -1278,7 +1278,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			fprintf (stderr, "\n Identifier Update (8.3.1.23)\n");
 			fprintf (stderr, "  Channel Identifier [%01X] BW [%01X] Transmit Offset [%04X]\n  Channel Spacing [%03X] Base Frequency [%08lX] [%09ld]",
-			                    state->p25_chan_iden, bw, state->p25_trans_off[iden], state->p25_chan_spac[iden], state->p25_base_freq[iden], state->p25_base_freq[iden] * 5);
+													state->p25_chan_iden, bw, state->p25_trans_off[iden], state->p25_chan_spac[iden], state->p25_base_freq[iden], state->p25_base_freq[iden] * 5);
 		}
 
 		//identifier update for TDMA, Abbreviated
@@ -1294,7 +1294,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			fprintf (stderr, "\n Identifier Update for TDMA - Abbreviated\n");
 			fprintf (stderr, "  Channel Identifier [%01X] Channel Type [%01X] Transmit Offset [%04X]\n  Channel Spacing [%03X] Base Frequency [%08lX] [%09ld]",
-			                    state->p25_chan_iden, state->p25_chan_type[iden], state->p25_trans_off[iden], state->p25_chan_spac[iden], state->p25_base_freq[iden], state->p25_base_freq[iden] * 5);
+													state->p25_chan_iden, state->p25_chan_type[iden], state->p25_trans_off[iden], state->p25_chan_spac[iden], state->p25_base_freq[iden], state->p25_base_freq[iden] * 5);
 		}
 
 		//identifier update for TDMA, Extended
@@ -1312,7 +1312,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			fprintf (stderr, "\n Identifier Update for TDMA - Extended\n");
 			fprintf (stderr, "  Channel Identifier [%01X] Channel Type [%01X] Transmit Offset [%04X]\n  Channel Spacing [%03X] Base Frequency [%08lX] [%09ld]",
-			                    state->p25_chan_iden, state->p25_chan_type[iden], state->p25_trans_off[iden], state->p25_chan_spac[iden], state->p25_base_freq[iden], state->p25_base_freq[iden] * 5);
+													state->p25_chan_iden, state->p25_chan_type[iden], state->p25_trans_off[iden], state->p25_chan_spac[iden], state->p25_base_freq[iden], state->p25_base_freq[iden] * 5);
 			fprintf (stderr, "\n  WACN [%04X] SYSID [%04X]", lwacn, lsysid);
 		}
 
@@ -1362,12 +1362,12 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			}
 
 			//place the cc freq into the list at index 0 if 0 is empty so we can hunt for rotating CCs without user LCN list
-      if (state->trunk_lcn_freq[1] == 0)
-      {
-        state->trunk_lcn_freq[1] = freq1; 
+			if (state->trunk_lcn_freq[1] == 0)
+			{
+				state->trunk_lcn_freq[1] = freq1; 
 				state->trunk_lcn_freq[2] = freq2;
 				state->lcn_freq_count = 3; //increment to three
-      }
+			}
 
 			state->p2_siteid = siteid;
 			state->p2_rfssid = rfssid; 
@@ -1578,11 +1578,11 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			}
 
 			//place the cc freq into the list at index 0 if 0 is empty, or not the same, 
-      //so we can hunt for rotating CCs without user LCN list
+			//so we can hunt for rotating CCs without user LCN list
 			if (state->trunk_lcn_freq[0] == 0 || state->trunk_lcn_freq[0] != state->p25_cc_freq)
-      {
-        state->trunk_lcn_freq[0] = state->p25_cc_freq; 
-      } 
+			{
+				state->trunk_lcn_freq[0] = state->p25_cc_freq; 
+			} 
 
 		}
 		//network status broadcast, extended
