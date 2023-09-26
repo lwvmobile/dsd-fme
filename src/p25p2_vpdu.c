@@ -1412,14 +1412,20 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		//MFIDA4 Group Regroup Explicit Encryption Command
 		if (MAC[1+len_a] == 0xB0 && MAC[2+len_a] == 0xA4) //&& MAC[2+len_a] == 0xA4
 		{
-			int len_grg = MAC[3+len_a] & 0x3F;
-			int grg = MAC[4+len_a] >> 5; //3 bits
+			int len_grg = MAC[3+len_a] & 0x3F; //MFID Len in Octets
+			int grg = MAC[4+len_a] >> 5; //3 bits //TIA-102.AABH 4.3.1.1 GRG_Options
 			int ssn = MAC[4+len_a] & 0x1F; //5 bits
-			UNUSED(ssn);
-			fprintf (stderr, "\n MFIDA4 Group Regroup Explicit Encryption Command\n");
-			//fprintf (stderr, " LEN [%02X] GRG [%02X]\n", len_grg, grg);
-			if (grg & 0x2) //if grg == wgid //&0x2 according to OP25
-			{
+
+			fprintf (stderr, "\n MFID A4 Group Regroup Explicit Encryption Command\n");
+			if (len_grg) fprintf (stderr, " Len: %02d", len_grg); //debug
+			if (grg & 3) fprintf (stderr, " Simulselect"); //one-way regroup
+			else fprintf (stderr, " Patch"); //two-way regroup
+			if (grg & 1) fprintf (stderr, " Active"); //activated
+			else fprintf (stderr, " Inactive"); //deactivated
+			fprintf (stderr, " SSN: %02d \n", ssn);
+
+			if ( (grg & 0x2) == 2) //group WGID to supergroup
+			{ 
 				int sg =  (MAC[5+len_a] << 8) | MAC[6+len_a];
 				int key = (MAC[7+len_a] << 8) | MAC[8+len_a];
 				int alg = MAC[9+len_a];
@@ -1428,10 +1434,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				int t3 = (MAC[14+len_a] << 8) | MAC[15+len_a];
 				int t4 = (MAC[16+len_a] << 8) | MAC[17+len_a];
 				UNUSED4(t1, t2, t3, t4);
-				fprintf (stderr, "  SG [%05d] KEY [%04X] ALG [%02X]\n  ", sg, key, alg);
+				fprintf (stderr, "  SG: %d; KEY: %04X; ALG: %02X;\n  ", sg, key, alg);
 				int a = 0;
 				int wgid = 0;
-				//worried a bad decode may cause an oob array crash on this one
+
+				//sanity check
+				// if ((len_grg + len_a > 20)) len_grg = 20 - len_a;
+
 				for (int i = 10; i < len_grg;)
 				{
 					//failsafe to prevent oob array
@@ -1440,24 +1449,23 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						goto END_PDU;
 					}
 					wgid = (MAC[10+len_a+a] << 8) | MAC[11+len_a+a];
-					fprintf (stderr, "WGID [%05d][%02X] ", wgid, wgid);
+					fprintf (stderr, "WGID: %d; ", wgid);
 					a = a + 2;
 					i = i + 2;
 				}
 
 			}
-			else //if grg == wuid
+
+			else if ( (grg & 0x2) == 0) //individual WUID to supergroup
 			{
 				int sg =  (MAC[5+len_a] << 8) | MAC[6+len_a];
 				int key = (MAC[7+len_a] << 8) | MAC[8+len_a];
 				int t1 = (MAC[9+len_a] << 16) | (MAC[10+len_a] << 8) | MAC[11+len_a];
 				int t2 = (MAC[12+len_a] << 16) | (MAC[13+len_a] << 8) | MAC[14+len_a];
 				int t3 = (MAC[15+len_a] << 16) | (MAC[16+len_a] << 8) | MAC[17+len_a];
-				fprintf (stderr, "  SG [%02X] KEY [%04X]", sg, key);
-				fprintf (stderr, " U1 [%02X] U2 [%02X] U3 [%02X] ", t1, t2, t3);
-
+				fprintf (stderr, "  SG: %d KEY: %04X", sg, key);
+				fprintf (stderr, " WUID: %d; WUID: %d; WUID: %d; ", t1, t2, t3);
 			}
-
 
 		}
 
