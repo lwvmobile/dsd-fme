@@ -1177,9 +1177,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int res = MAC[3+len_a] >> 6;
 			if (len > 24)
 				len = 24; //should never exceed this len, but just in case it does
-			fprintf (stderr, "\n MFID A4 (Harris); Res: %d; Len: %d; Opcode: %02X; ", res, len, MAC[1+len_a]);
+			fprintf (stderr, "\n MFID A4 (Harris); Res: %d; Len: %d; Opcode: %02llX; ", res, len, MAC[1+len_a]);
       for (i = 1; i < len; i++)
-        fprintf (stderr, "%02X", MAC[i+len_a]); //might not be a good idea to run this, or it may overflow
+        fprintf (stderr, "%02llX", MAC[i+len_a]); //might not be a good idea to run this, or it may overflow
 		
 		}
 

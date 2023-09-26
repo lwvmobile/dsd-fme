@@ -153,14 +153,14 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, " %s",KNRM);
 
       //This seems to follow the same structure as the MFID 90 Group Regroup Add Command
-			
-			//MFID A4 Opcode 1 on TSBK / Opcode 0x41 on vPDU
-			// P25 PDU Payload #1 [81][A4] [11][0D] [83][4E] [84][2A] [84][EE] -------[39][30]
- 			// MFID A4 Protected: 0 Last Block: 1
 
-			//these values do seem to change, but not often, but seem to pair up into 16-bit values
-			// P25 PDU Payload #1 [81][A4] [11][0D] [84][2A] [84][EE] [FF][FF] -------[4D][2F]
-			// MFID A4 Protected: 0 Last Block: 1
+      //MFID A4 Opcode 1 on TSBK / Opcode 0x41 on vPDU
+      // P25 PDU Payload #1 [81][A4] [11][0D] [83][4E] [84][2A] [84][EE] -------[39][30]
+      // MFID A4 Protected: 0 Last Block: 1
+
+      //these values do seem to change, but not often, but seem to pair up into 16-bit values
+      // P25 PDU Payload #1 [81][A4] [11][0D] [84][2A] [84][EE] [FF][FF] -------[4D][2F]
+      // MFID A4 Protected: 0 Last Block: 1
 
     }
 
