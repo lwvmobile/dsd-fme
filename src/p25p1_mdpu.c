@@ -478,8 +478,8 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       }
     }
 
-    //look at Harris Opcodes and payload portion of TSBK
-    else if (MFID == 0xA4)
+    //look at Harris Opcodes and payload portion of MPDU
+    else if (MFID == 0xA4) 
     {
       //TODO: Add Known Opcodes from Manual (all one of them)
       fprintf (stderr, "%s",KCYN);
@@ -489,15 +489,110 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, " %s",KNRM);
     }
 
-    //look at Motorola Opcodes and payload portion of TSBK
+    //look at Motorola Opcodes and payload portion of MPDU
     else if (MFID == 0x90)
     {
-      //TODO: Add Known Opcodes from Manual
-      fprintf (stderr, "%s",KCYN);
-      fprintf (stderr, "\n MFID 90 (Moto); Opcode: %02X; ", mpdu_byte[0] & 0x3F);
-      for (i = 0; i < (12*(blks+1)%37); i++)
-        fprintf (stderr, "%02X", mpdu_byte[i]);
-      fprintf (stderr, " %s",KNRM);
+      //TIA-102.AABH
+      if (opcode == 0x02)
+      {
+        int svc = mpdu_byte[8]; //Just the Res, P-bit, and more res bits
+        int channelt  = (mpdu_byte[12] << 8) | mpdu_byte[13];
+        int channelr  = (mpdu_byte[14] << 8) | mpdu_byte[15];
+        long int source = (mpdu_byte[3] << 16) |(mpdu_byte[4] << 8) | mpdu_byte[5];
+        int group = (mpdu_byte[16] << 8) | mpdu_byte[17];
+        long int freq1 = 0;
+        long int freq2 = 0;
+        UNUSED2(source, freq2);
+        fprintf (stderr, "%s\n ",KYEL);
+
+        //unsure if this follows for GRG
+        // if (svc & 0x80) fprintf (stderr, " Emergency"); 
+        
+        if (svc & 0x40) fprintf (stderr, " Encrypted"); //P-bit
+
+        //unsure if this follows for GRG
+        // if (opts->payload == 1) //hide behind payload due to len
+        // {
+        //   if (svc & 0x20) fprintf (stderr, " Duplex");
+        //   if (svc & 0x10) fprintf (stderr, " Packet");
+        //   else fprintf (stderr, " Circuit");
+        //   if (svc & 0x8) fprintf (stderr, " R"); //reserved bit is on
+        //   fprintf (stderr, " Priority %d", svc & 0x7); //call priority
+        // }
+
+        fprintf (stderr, " MFID90 Group Regroup Channel Grant - Explicit");
+        fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] SG [%d][%04X]", svc, channelt, channelr, group, group);
+        freq1 = process_channel_to_freq (opts, state, channelt);
+        freq2 = process_channel_to_freq (opts, state, channelr);
+
+        //add active channel to string for ncurses display
+        sprintf (state->active_channel[0], "MFID90 Ch: %04X SG: %d ", channelt, group);
+        state->last_active_time = time(NULL);
+
+        for (int i = 0; i < state->group_tally; i++)
+        {
+          if (state->group_array[i].groupNumber == group)
+          {
+            fprintf (stderr, " [%s]", state->group_array[i].groupName);
+            strcpy (mode, state->group_array[i].groupMode);
+            break;
+          }
+        }
+
+        
+        //Skip tuning group calls if group calls are disabled
+        if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
+
+        //Skip tuning encrypted calls if enc calls are disabled
+        if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
+
+        //tune if tuning available
+        if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+        {
+          //reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+          if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
+          {
+
+            //changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
+            if (1 == 1)
+            {
+              if (state->p25_chan_tdma[channelt >> 12] == 1)
+              {
+                state->samplesPerSymbol = 8;
+                state->symbolCenter = 3;
+              }
+            }
+            //rigctl
+            if (opts->use_rigctl == 1)
+            {
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+              SetFreq(opts->rigctl_sockfd, freq1);
+              state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
+              opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+              state->last_vc_sync_time = time(NULL);
+            }
+            //rtl
+            else if (opts->audio_in_type == 3)
+            {
+              #ifdef USE_RTLSDR
+              rtl_dev_tune (opts, freq1);
+              state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
+              opts->p25_is_tuned = 1;
+              state->last_vc_sync_time = time(NULL);
+              #endif
+            }
+          }    
+        }
+      }
+
+      else
+      {
+        fprintf (stderr, "%s",KCYN);
+        fprintf (stderr, "\n MFID 90 (Moto); Opcode: %02X; ", mpdu_byte[0] & 0x3F);
+        for (i = 0; i < (12*(blks+1)%37); i++)
+          fprintf (stderr, "%02X", mpdu_byte[i]);
+        fprintf (stderr, " %s",KNRM);
+      }
     }
 
     else
