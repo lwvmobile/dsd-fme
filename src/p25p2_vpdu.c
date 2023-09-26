@@ -18,10 +18,10 @@ static const uint8_t mac_msg_len[256] = {
 	 0,  0,  0,  0,  9,  7,  0,  0, 10,  0,  7,  0, 10,  8, 14,  7, //5F
 	 9,  9,  0,  0,  9,  0,  0,  9, 10,  0,  7, 10, 10,  7,  0,  9, //6F
 	 9, 29,  9,  9,  9,  9, 10, 13,  9,  9,  9, 11,  9,  9,  0,  0, //7F
-	 8,  0,  0,  7, 11,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //8F
+	 8,  18,  0,  7, 11,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7, //8F (needed to add 81 and 8f for Harris)
 	 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //9F
 	16,  0,  0, 11, 13, 11, 11, 11, 10,  0,  0,  0,  0,  0,  0,  0, //AF
-	 17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //BF, b0 was 0, set to 17
+	17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //BF, B0 was 0, set to 17 (Harris again)
 	11,  0,  0,  8, 15, 12, 15, 32, 12, 12,  0, 27, 14, 29, 29, 32, //CF
 	 0,  0,  0,  0,  0,  0,  9,  0, 14, 29, 11, 27, 14,  0, 40, 11, //DF 
 	28,  0,  0, 14, 17, 14,  0,  0, 16,  8, 11,  0, 13, 19,  0,  0, //EF
@@ -31,6 +31,9 @@ static const uint8_t mac_msg_len[256] = {
 //MAC PDU 3-bit Opcodes BBAC (8.4.1) p 123:
 //0 - reserved //1 - Mac PTT //2 - Mac End PTT //3 - Mac Idle //4 - Mac Active
 //5 - reserved //6 - Mac Hangtime //7 - reserved //Mac PTT BBAC p80
+
+//TODO: Check for Non standard MFIDs first MAC[1], then set len on the MAC[2] if
+//the result from the len table is 0 (had to manually enter a few observed values from Harris)
 
 void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned long long int MAC[24])
 {
@@ -1084,7 +1087,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		}
 
 		//MFID90 Group Regroup Add Command
-		if (MAC[1+len_a] == 0x81) //needs MAC message len update, may work same as explicit enc regroup?
+		if (MAC[1+len_a] == 0x81 && MAC[2+len_a] == 0x90) //needs MAC message len update, may work same as explicit enc regroup?
 		{
 			fprintf (stderr, "\n MFID90 Group Regroup Add Command ");	
 		}
@@ -1175,12 +1178,15 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			// 6.2.36 Manufacturer Specific regarding octet 3 as len
 			int len = MAC[3+len_a] & 0x3F;
 			int res = MAC[3+len_a] >> 6;
+			//sanity check that we don't exceed the max MAC array size
 			if (len > 24)
 				len = 24; //should never exceed this len, but just in case it does
+			//sanity check that we don't pick this up in a second message and exceed the MAC array
+			// if ( (len + len_a) > 24) len = 24-len_a; //not required, since we can only go to 24 anyways
+			//end sanity checks
 			fprintf (stderr, "\n MFID A4 (Harris); Res: %d; Len: %d; Opcode: %02llX; ", res, len, MAC[1+len_a]);
       for (i = 1; i < len; i++)
-        fprintf (stderr, "%02llX", MAC[i+len_a]); //might not be a good idea to run this, or it may overflow
-		
+        fprintf (stderr, "%02llX", MAC[i+len_a]);
 		}
 
 		/*
@@ -1417,7 +1423,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int ssn = MAC[4+len_a] & 0x1F; //5 bits
 
 			fprintf (stderr, "\n MFID A4 Group Regroup Explicit Encryption Command\n");
-			if (len_grg) fprintf (stderr, " Len: %02d", len_grg); //debug
+			// if (len_grg) fprintf (stderr, " Len: %02d", len_grg); //debug
 			if (grg & 3) fprintf (stderr, " Simulselect"); //one-way regroup
 			else fprintf (stderr, " Patch"); //two-way regroup
 			if (grg & 1) fprintf (stderr, " Active"); //activated
