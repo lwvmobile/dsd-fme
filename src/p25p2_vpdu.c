@@ -1092,21 +1092,32 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n MFID90 Group Regroup Add Command ");	
 		}
 
+		//TODO: Fix These two commented out
 		//Authentication Response - Abbreviated
-		if (MAC[1+len_a] == 0x78) 
-		{
-			int source = (MAC[8+len_a] << 16) | (MAC[9+len_a] << 8) | MAC[10+len_a];
-			fprintf (stderr, "\n Authentication Response - Abbreviated \n");
-			fprintf (stderr, "  Source [%08d][%06X] ", source, source);
-		}
+		// if (MAC[1+len_a] == 0x78) 
+		// {
+		// 	int source = (MAC[8+len_a] << 16) | (MAC[9+len_a] << 8) | MAC[10+len_a];
+		// 	fprintf (stderr, "\n Authentication Response - Abbreviated \n");
+		// 	fprintf (stderr, "  Source [%08d][%06X] ", source, source);
+		// }
 
 		//Authentication Response - Extended
-		if (MAC[1+len_a] == 0xF8) 
+		// if (MAC[1+len_a] == 0xF8) 
+		// {
+		// 	//only partial data will print on this, do we really care about the SUID?
+		// 	int source = (MAC[5+len_a] << 16) | (MAC[6+len_a] << 8) | MAC[7+len_a];
+		// 	fprintf (stderr, "\n Authentication Response - Extended \n");
+		// 	fprintf (stderr, "  Source [%08d][%06X] ", source, source);
+		// }
+
+		//System Service Broadcast
+		if (MAC[1+len_a] == 0x78) 
 		{
-			//only partial data will print on this, do we really care about the SUID?
-			int source = (MAC[5+len_a] << 16) | (MAC[6+len_a] << 8) | MAC[7+len_a];
-			fprintf (stderr, "\n Authentication Response - Extended \n");
-			fprintf (stderr, "  Source [%08d][%06X] ", source, source);
+			int SSA = (MAC[3+len_a] << 16) | (MAC[4+len_a] << 8) | MAC[5+len_a];
+			int SSS = (MAC[6+len_a] << 16) | (MAC[7+len_a] << 8) | MAC[8+len_a];
+			int RPL = MAC[9+len_a];
+			fprintf (stderr, "\n System Service Broadcast - Abbreviated \n");
+			fprintf (stderr, "  SSA: %06X; SSS: %06X; RPL: %02X", SSA, SSS, RPL);
 		}
 
 		//RFSS Status Broadcast - Implicit
