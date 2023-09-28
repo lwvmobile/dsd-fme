@@ -45,17 +45,16 @@ static const uint8_t CNXDNConvolution_BRANCH_TABLE1[8] = {0U, 0U, 0U, 0U, 2U, 2U
 static const uint8_t CNXDNConvolution_BRANCH_TABLE2[8] = {0U, 2U, 2U, 0U, 0U, 2U, 2U, 0U};
 
 static const unsigned int CNXDNConvolution_NUM_OF_STATES_D2 = 8U;
-//static const unsigned int CNXDNConvolution_NUM_OF_STATES = 16U;
 static const uint32_t     CNXDNConvolution_M = 4U;
 static const unsigned int CNXDNConvolution_K = 5U;
 
 //NOTE:
-static uint16_t   m_metrics1[16U];
-static uint16_t   m_metrics2[16U];
-static uint64_t   m_decisions[300U]; //300
-static uint16_t * m_oldMetrics = NULL;
-static uint16_t * m_newMetrics = NULL;
-static uint64_t * m_dp = NULL;
+uint16_t   m_metrics1[16];
+uint16_t   m_metrics2[16];
+uint64_t   m_decisions[8*300];
+uint16_t * m_oldMetrics = NULL;
+uint16_t * m_newMetrics = NULL;
+uint64_t * m_dp = NULL;
 
 /* Functions ----------------------------------------------------------------*/
 
@@ -163,10 +162,12 @@ void CNXDNConvolution_start(void)
   m_newMetrics = m_metrics2;
   m_dp = m_decisions;
 
-  memset(m_metrics1, 0x00U, sizeof(m_metrics1));
-  memset(m_metrics2, 0x00U, sizeof(m_metrics2));
-  memset(m_decisions, 0x00U, sizeof(m_decisions));
+}
 
-  for (int x = 0; x < 4; x++) CNXDNConvolution_decode(0U, 0U);
+void CNXDNConvolution_init()
+{
+  memset(m_metrics1, 0xFF, 16*sizeof(uint16_t));
+  memset(m_metrics2, 0xFF, 16*sizeof(uint16_t));
+  // memset(m_decisions,0xFF, 8*300*sizeof(uint64_t));
 }
 

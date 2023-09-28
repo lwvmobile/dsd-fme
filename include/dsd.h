@@ -1040,6 +1040,7 @@ void CNXDNConvolution_start(void);
 void CNXDNConvolution_decode(uint8_t s0, uint8_t s1);
 void CNXDNConvolution_chainback(unsigned char* out, unsigned int nBits);
 void CNXDNConvolution_encode(const unsigned char* in, unsigned char* out, unsigned int nBits);
+void CNXDNConvolution_init();
 
 //keeping these
 void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state);

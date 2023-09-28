@@ -1559,6 +1559,7 @@ main (int argc, char **argv)
   initState (&state);
 
   InitAllFecFunction();
+  // CNXDNConvolution_init(); //seems to function better without initting it
 
   exitflag = 0;
 
