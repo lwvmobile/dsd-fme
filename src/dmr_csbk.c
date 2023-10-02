@@ -468,15 +468,29 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       //P_CLEAR
       if (csbk_o == 46)
       {
+
+        //NOTE: Do not zero out lasttg/lastsrc in TLC FLCO when using p_clear, otherwise,
+        //it will affect the conditions below and fail to trigger on tg_hold
+
+        //test misc conditions to trigger a clear and immediately return to CC
+        int clear = 0;
+
+        //if no voice activity or data call (when enabled) within trunk_hangtime seconds
+        if ( ((time(NULL) - state->last_vc_sync_time) > opts->trunk_hangtime) && opts->trunk_tune_data_calls == 0) clear = 1;
+
+        //if no voice in the opposite slot currently or data call (when enabled) -- might can disable data call condition here
+        if (state->currentslot == 0 && state->dmrburstR != 16) clear = 2; //&& opts->trunk_tune_data_calls == 0
+        if (state->currentslot == 1 && state->dmrburstL != 16) clear = 3; //&& opts->trunk_tune_data_calls == 0
+
+        //if we have a tg hold in place that matches traffic that was just on this slot (this will override other calls in the opposite slot)
+        if (state->currentslot == 0 && state->tg_hold == state->lasttg && state->tg_hold != 0)  clear = 4;
+        if (state->currentslot == 1 && state->tg_hold == state->lasttgR && state->tg_hold != 0) clear = 5; 
+
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " Clear (P_CLEAR) ");
+        fprintf (stderr, " Clear (P_CLEAR) %d", clear);
 
-        //TODO: Code below needs testing when I can use a remote again (when Internet services returns properly)
-        //don't run the code when user has enabled tuning of data only calls
-
-        //return to CC if no voice activity past hangtime value (avoid return if voice in other timeslot)
-        if ( ((time(NULL) - state->last_vc_sync_time) > opts->trunk_hangtime) && opts->trunk_tune_data_calls == 0) //was 2 seconds
+        if (clear)
         {
           if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
           {
