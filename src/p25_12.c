@@ -3,7 +3,7 @@
  * P25p1 1/2 Rate Simple Trellis Decoder
  *
  * LWVMOBILE
- * 2023-09 DSD-FME Florida Man Edition
+ * 2023-10 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
@@ -30,7 +30,10 @@ uint8_t p25_fsm[16] = {
 13,2,1,14,
 9,6,5,10 };
 
-uint8_t p25_ecc[16] = {
+//this is a dibit-pair to trellis dibit transition matrix (SDRTrunk and Ossmann)
+//when evaluating hamming distance, we want to use this xor the dibit-pair nib,
+//and not the fsm xor the constellation point
+uint8_t p25_dtm[16] = {
 2,12,1,15,
 14,0,13,3,
 9,7,10,4,
@@ -51,7 +54,6 @@ uint8_t find_min(uint8_t list[4], int len)
 {
   int min = list[0];
   uint8_t index = 0;
-  int unique = 1; //start with flagged on, list[0] could be the min
   int i;
 
   for (i = 1; i < len; i++)
@@ -60,17 +62,13 @@ uint8_t find_min(uint8_t list[4], int len)
     {
       min = list[i];
       index = (uint8_t)i;
-      unique = 1;
-    } 
-    // else if (list[i] == min)
-    // {
-    //   unique = 0; //only change to 0 if another non-unique match is found
+    }
 
-    // }
+    //NOTE: Disqualifying result on uniqueness can impact decoding
+    //let the CRC determine if the result is good or bad
+    //its not uncommon for two values of the same min
+    //distance to emerge, so its 50/50 each time
   }
-
-  if (unique == 0)
-      return 0xF;
 
   return index;
 }
@@ -109,7 +107,6 @@ int p25_12(uint8_t * input, uint8_t treturn[12])
 
   //convert constellation points into tdibit values using the FSM
   uint8_t state = 0;
-  uint8_t temp_s = 0;
   uint8_t tdibits[49]; //trellis dibits 1/2 rate
   memset (tdibits, 0xF, sizeof(tdibits));
   uint8_t hd[4]; //array of the four fsm words hamming distance
@@ -118,14 +115,6 @@ int p25_12(uint8_t * input, uint8_t treturn[12])
 
   for (i = 0; i < 49; i++)
   {
-
-    //just quickly peek for the location of the current point in the fsm
-    for (j = 0; j < 16; j++)
-    {
-      if (p25_fsm[j] == point[i])
-        temp_s = j&3; //set position to correct state output value
-    }
-
 
     for (j = 0; j < 4; j++)
     {
@@ -147,20 +136,10 @@ int p25_12(uint8_t * input, uint8_t treturn[12])
 
       //this method only seems to be reliable up to 1-2 bit errors...sometimes
       for (j = 0; j < 4; j++)
-        hd[j] = count_bits (  ((nibs[i] ^ p25_ecc[(state*4)+j]) & 0xF ), 4 );
+        hd[j] = count_bits (  ((nibs[i] ^ p25_dtm[(state*4)+j]) & 0xF ), 4 );
       min = find_min (hd, 4);
+      tdibits[i] = state = min;
 
-      if (min != 15) //unique value returned
-      {
-        tdibits[i] = state = min;
-        // irr_err--; //decrement 'corrected' point err
-      }
-
-      //use the predicted correct state/value at output instead -- last resort
-      else
-        tdibits[i] = state = temp_s;
-
-      temp_s = 0;
       memset (hd, 0, sizeof(hd));
       min = 0;
 
@@ -179,7 +158,7 @@ int p25_12(uint8_t * input, uint8_t treturn[12])
 
   //trellis point/state err tally
   // if (irr_err != 0)
-  //   fprintf (stderr, " ERR = %d", irr_err);
+  //   fprintf (stderr, " P_ERR = %d", irr_err);
 
   return (irr_err);
 }
