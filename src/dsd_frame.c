@@ -31,7 +31,8 @@ printFrameInfo (dsd_opts * opts, dsd_state * state)
   level = (int) state->max / 164;
   if (opts->verbose > 0)
     {
-      fprintf (stderr,"inlvl: %2i%% ", level);
+      // fprintf (stderr,"inlvl: %2i%% ", level);
+      UNUSED(level);
     }
   if (state->nac != 0)
     {

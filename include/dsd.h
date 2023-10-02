@@ -1199,6 +1199,10 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 //P25 Channel to Frequency
 long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channel);
 
+//P25 CRC Functions
+int crc16_lb_bridge (int payload[190], int len);
+int crc12_xb_bridge (int payload[190], int len);
+
 //NXDN Channel to Frequency, Courtesy of IcomIcR20 on RR Forums
 long int nxdn_channel_to_frequency (dsd_opts * opts, dsd_state * state, uint16_t channel);
 
@@ -1255,14 +1259,11 @@ void rtl_clean_queue();
 #endif
 
 
-//Phase 2 Helper Functions
+//Phase 2 RS/FEC Functions
 int ez_rs28_ess (int payload[96], int parity[168]); //ezpwd bridge for FME
 int ez_rs28_facch (int payload[156], int parity[114]); //ezpwd bridge for FME
 int ez_rs28_sacch (int payload[180], int parity[132]); //ezpwd bridge for FME
 int isch_lookup (uint64_t isch); //isch map lookup
-int bd_bridge (int payload[196], uint8_t decoded[12]); //bridge to Michael Ossmann Block De-interleaver and 1/2 rate trellis decoder
-int crc16_lb_bridge (int payload[190], int len);
-int crc12_xb_bridge (int payload[190], int len);
 
 #ifdef __cplusplus
 }

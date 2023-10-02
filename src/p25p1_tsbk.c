@@ -29,7 +29,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
 
   int dibit = 0;
 
-  uint8_t tsbk_byte[12]; //12 byte return from bd_bridge (block_deinterleave)
+  uint8_t tsbk_byte[12]; //12 byte return from p25_12
   memset (tsbk_byte, 0, sizeof(tsbk_byte));
 
   unsigned long long int PDU[24]; //24 byte PDU to send to the tsbk_byte vPDU handler, should be same formats (mostly)
@@ -39,7 +39,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
   memset (tsbk_decoded_bits, 0, sizeof(tsbk_decoded_bits));
 
   int i, j, k, x;
-  int ec = -2; //error value returned from (block_deinterleave)
+  int ec = -2; //error value returned from p25_12
   int err = -2; //error value returned from crc16_lb_bridge
   int skipdibit = 14; //initial status dibit will occur at 14, then add 36 each time it occurs
   int protectbit = 0;
@@ -77,9 +77,6 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
 
     //debug err tally from 1/2 decoder
     // if (ec) fprintf (stderr, " #%d ERR = %d;", j+1, ec);
-
-    //send tsbkbit to block_deinterleave and return tsbk_byte
-    // ec = bd_bridge(tsbkbit, tsbk_byte);
 
     //too many bit manipulations!
     k = 0;

@@ -43,7 +43,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 
   int dibit = 0;
 
-  uint8_t tsbk_byte[12]; //12 byte return from bd_bridge (block_deinterleave)
+  uint8_t tsbk_byte[12]; //12 byte return from p25_12
   memset (tsbk_byte, 0, sizeof(tsbk_byte));
 
   unsigned long long int PDU[24];
@@ -65,7 +65,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   memset (flushing_bits, 0, sizeof(flushing_bits));
 
   int i, j, k, x;
-  int ec[3]; //error value returned from (block_deinterleave)
+  int ec[3]; //error value returned from p25_12
   int err[2]; //error value returned from ccrc16 or crc32
   memset (ec, -2, sizeof(ec));
   memset (err, -2, sizeof(err));
@@ -110,11 +110,11 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 
     }
 
-    //send tsbkbit to block_deinterleave and return tsbk_byte
-    // ec[j] = bd_bridge(tsbkbit, tsbk_byte);
-
-    //send tsbkbit to block_deinterleave and return tsbk_byte
-    ec[j] = p25_12 (tsbk_dibit, tsbk_byte);
+    //send tsbkbit to p25_12 and return tsbk_byte
+    if (j == 0) ec[j] = p25_12 (tsbk_dibit, tsbk_byte);
+    //TODO: 3/4 Rate Decodes -- should be able to use the same decoder as DMR 34 rate
+    //else if (rate34)
+    else ec[j] = p25_12 (tsbk_dibit, tsbk_byte);
 
     //too many bit manipulations!
     k = 0;
