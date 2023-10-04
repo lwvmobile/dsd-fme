@@ -490,10 +490,30 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, "\n");
         fprintf (stderr, " Clear (P_CLEAR) %d", clear);
 
+        //check to see if this is a dummy csbk sent from link control to signal return to tscc
+        if (clear && csbk_fid == 255)  fprintf (stderr, " No Encrypted Call Trunking; Return to CC; ");
+        if (!clear && csbk_fid == 255) fprintf (stderr, " No Encrypted Call Trunking; Other Slot Busy; ");
+
         if (clear)
         {
           if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
           {
+
+            //display/le bug fix when p_clear activated
+            // if (state->currentslot == 0)
+            // {
+            //   state->payload_mi = 0;
+            //   state->payload_algid = 0;
+            //   state->payload_keyid = 0;
+            //   state->dmr_so = 0;
+            // }
+            // if (state->currentslot == 1)
+            // {
+            //   state->payload_miR = 0;
+            //   state->payload_algidR = 0;
+            //   state->payload_keyidR = 0;
+            //   state->dmr_soR = 0;
+            // }
             
             //rigctl
             if (opts->use_rigctl == 1)

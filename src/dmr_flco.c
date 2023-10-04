@@ -422,6 +422,45 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       // strcat (state->call_string[slot], " Encrypted");
       fprintf (stderr, "%s", KRED);
       fprintf(stderr, "Encrypted ");
+
+      //experimental TG LO/B if ENC trunked following disabled //DMR -- LO Trunked Enc Calls WIP; #121
+      if (opts->p25_trunk == 1 && opts->trunk_tune_enc_calls == 0) //&& type != 2
+      {
+        int i, lo = 0;
+        uint32_t t = 0; char gm[8]; char gn[50];
+
+        //check to see if this group already exists, or has already been locked out, or is allowed
+        for (i = 0; i <= state->group_tally; i++)
+        {
+          t = (uint32_t)state->group_array[i].groupNumber;
+          if (target == t && t != 0)
+          {
+            lo = 1;
+            //write current mode and name to temp strings
+            sprintf (gm, "%s", state->group_array[i].groupMode);
+            sprintf (gn, "%s", state->group_array[i].groupName);
+            break;
+          }
+        }
+
+        //if group doesn't exist, or isn't locked out, then do so now.
+        if (lo == 0)
+        {
+          state->group_array[state->group_tally].groupNumber = target;
+          sprintf (state->group_array[state->group_tally].groupMode, "%s", "DE");
+          sprintf (state->group_array[state->group_tally].groupName, "%s", "ENC LO");
+          sprintf (gm, "%s", "DE");
+          sprintf (gn, "%s", "ENC LO");
+          state->group_tally++;
+        }
+
+        //Craft a fake CSBK pdu send it to run as a p_clear to return to CC if available
+        uint8_t dummy[12]; uint8_t* dbits; memset (dummy, 0, sizeof(dummy)); dummy[0] = 46; dummy[1] = 255;
+        if ( (strcmp(gm, "DE") == 0) && (strcmp(gn, "ENC LO") == 0)  ) //&& (opts->trunk_tune_data_calls == 0)
+          dmr_cspdu (opts, state, dbits, dummy, 1, 0);
+
+      }
+      
     }
     //REMUS! Uncomment Line Below if desired
     // else strcat (state->call_string[slot], "          ");
