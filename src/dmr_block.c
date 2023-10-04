@@ -330,7 +330,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     //REMUS! Uncomment these lines if desired
     if (dpf != 15 && dpf != 1)
     {
-      sprintf (state->dmr_lrrp_gps[slot], "Data Call - %s SRC [%d] DST [%d] ", sap_string, source, target);
+      sprintf (state->dmr_lrrp_gps[slot], "Data Call - %s TGT: %d SRC: %d ", sap_string, target, source);
       if (a == 1) strcat (state->dmr_lrrp_gps[slot], "- RSP REQ ");
     }
 
