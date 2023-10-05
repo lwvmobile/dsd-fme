@@ -483,6 +483,16 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
     }
   }
 
+  //TG Hold during VCALL_ASSGN_DUP, allow tuning to TG hold channel assignment
+  if (MessageType == 0x5 && opts->p25_is_tuned == 1 && opts->p25_trunk == 1)
+  {
+    if ( state->tg_hold != 0 && state->tg_hold == DestinationID ) 
+    {
+      MessageType = 0x04; //convert to VCALL
+      // opts->p25_is_tuned = 0; //open tuning back up to tune
+    }
+  }
+
   //assign active call to string (might place inside of tune decision to get multiple ones?)
   if (state->nxdn_rcn == 0)
     sprintf (state->active_channel[0], "Active Ch: %d TG: %d; ", Channel, DestinationID);
@@ -560,6 +570,14 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
       strcpy (mode, state->group_array[i].groupMode);
       break;
     }
+  }
+
+  //TG hold on NXDN -- block non-matching target, allow matching DestinationID
+  if (state->tg_hold != 0 && state->tg_hold != DestinationID) sprintf (mode, "%s", "B");
+  if (state->tg_hold != 0 && state->tg_hold == DestinationID) 
+  {
+    sprintf (mode, "%s", "A");
+    opts->p25_is_tuned = 0; //unlock tuner at this stage and not above check
   }
 
   //check to see if the source/target candidate is blocked first
@@ -1562,7 +1580,7 @@ char * NXDN_Call_Type_To_Str(uint8_t CallType)
   {
     case 0:  Ptr = "Broadcast Call";        break;
     case 1:  Ptr = "Group Call";            break;
-    case 2:  Ptr = "Transmission Release";  break; //"Unspecified Call" This value is used only on TX_REL message.
+    case 2:  Ptr = "Idle";                  break; //"Unspecified Call" This value is used only on Idle Burst TX_REL message.
     case 3:  Ptr = "Session Call";          break; //"reserved" is session call on Type D
     case 4:  Ptr = "Private Call";          break;
     case 5:  Ptr = "Reserved";              break;
