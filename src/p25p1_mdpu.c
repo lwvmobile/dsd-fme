@@ -322,6 +322,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         }
       }
 
+      //TG hold on P25p1 Ext -- block non-matching target, allow matching group
+      if (state->tg_hold != 0 && state->tg_hold != group) sprintf (mode, "%s", "B");
+      if (state->tg_hold != 0 && state->tg_hold == group) sprintf (mode, "%s", "A");
       
       //Skip tuning group calls if group calls are disabled
       if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
@@ -421,6 +424,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         }
       }
 
+      //TG hold on P25p1 Ext UU -- may not be ideal/feasible to use these on private calls
+      // if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
+      // if (state->tg_hold != 0 && state->tg_hold == target) sprintf (mode, "%s", "A");
       
       //Skip tuning private calls if group calls are disabled
       if (opts->trunk_tune_private_calls == 0) goto SKIPCALL;
@@ -539,6 +545,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
           }
         }
 
+        //TG hold on MFID90 GRG -- block non-matching target, allow matching group
+        if (state->tg_hold != 0 && state->tg_hold != group) sprintf (mode, "%s", "B");
+        if (state->tg_hold != 0 && state->tg_hold == group) sprintf (mode, "%s", "A");
         
         //Skip tuning group calls if group calls are disabled
         if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;

@@ -93,7 +93,9 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
 
       }
 
-      //uses explicit bit?
+      //TODO: Allow Tuning from Call Grants either in LDU1 or TDULC? (TDMA to p1 fallback?)
+      //TODO: Allow TG Hold overrides here  either in LDU1 or TDULC?
+      //NOTE: If we have an active TG hold, we really should't be here anyways
       else if (lc_format == 0x42) //is this group only, or group and private?
       {
         fprintf (stderr, " Group Voice Channel Update - ");

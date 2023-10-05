@@ -115,6 +115,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				}
 			}
 
+			//TG hold on MFID90 GRG -- block non-matching super group, allow matching group
+			if (state->tg_hold != 0 && state->tg_hold != sgroup) sprintf (mode, "%s", "B");
+			if (state->tg_hold != 0 && state->tg_hold == sgroup)
+			{
+				sprintf (mode, "%s", "A");
+				opts->p25_is_tuned = 0; //unlock tuner
+			}
+
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
@@ -191,6 +199,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					strcpy (mode, state->group_array[i].groupMode);
 					break;
 				}
+			}
+
+			//TG hold on MFID90 GRG -- block non-matching super group, allow matching group
+			if (state->tg_hold != 0 && state->tg_hold != sgroup) sprintf (mode, "%s", "B");
+			if (state->tg_hold != 0 && state->tg_hold == sgroup)
+			{
+				sprintf (mode, "%s", "A");
+				opts->p25_is_tuned = 0; //unlock tuner
 			}
 
 			//Skip tuning group calls if group calls are disabled
@@ -305,6 +321,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					}
 				}
 
+				//TG hold on MFID90 GRG -- block non-matching super group, allow matching group
+				if (state->tg_hold != 0 && state->tg_hold != tunable_group) sprintf (mode, "%s", "B");
+				if (state->tg_hold != 0 && state->tg_hold == tunable_group)
+				{
+					sprintf (mode, "%s", "A");
+					opts->p25_is_tuned = 0; //unlock tuner
+				}
+
 				//check to see if the group candidate is blocked first
 				if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0)) //DE is digital encrypted, B is block
 				{
@@ -402,6 +426,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				}
 			}
 
+			//TG hold on GRP_V -- block non-matching group, allow matching group
+			if (state->tg_hold != 0 && state->tg_hold != group) sprintf (mode, "%s", "B");
+			if (state->tg_hold != 0 && state->tg_hold == group)
+			{
+				sprintf (mode, "%s", "A");
+				opts->p25_is_tuned = 0; //unlock tuner
+			}
+
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
@@ -492,6 +524,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					break;
 				}
 			}
+
+			//TG hold on UU_V -- may not want to allow these in case of TG and RID both are same
+			// if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
+			// if (state->tg_hold != 0 && state->tg_hold == target)
+			// {
+			// 	sprintf (mode, "%s", "A");
+			// 	opts->p25_is_tuned = 0; //unlock tuner
+			// }
 
 			//tune if tuning available
 			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
@@ -639,6 +679,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						strcpy (mode, state->group_array[i].groupMode);
 						break;
 					}
+				}
+
+				//TG hold on GRP_V Multi -- block non-matching group, allow matching group
+				if (state->tg_hold != 0 && state->tg_hold != tunable_group) sprintf (mode, "%s", "B");
+				if (state->tg_hold != 0 && state->tg_hold == tunable_group)
+				{
+					sprintf (mode, "%s", "A");
+					opts->p25_is_tuned = 0; //unlock tuner
 				}
 
 				//tune if tuning available
@@ -810,6 +858,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					}
 				}
 
+				//TG hold on GRP_V Multi -- block non-matching group, allow matching group
+				if (state->tg_hold != 0 && state->tg_hold != tunable_group) sprintf (mode, "%s", "B");
+				if (state->tg_hold != 0 && state->tg_hold == tunable_group)
+				{
+					sprintf (mode, "%s", "A");
+					opts->p25_is_tuned = 0; //unlock tuner
+				}
+
 				//check to see if the group candidate is blocked first
 				if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0)) //DE is digital encrypted, B is block
 				{
@@ -924,6 +980,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					}
 				}
 
+				//TG hold on GRP_V Multi -- block non-matching group, allow matching group
+				if (state->tg_hold != 0 && state->tg_hold != tunable_group) sprintf (mode, "%s", "B");
+				if (state->tg_hold != 0 && state->tg_hold == tunable_group)
+				{
+					sprintf (mode, "%s", "A");
+					opts->p25_is_tuned = 0; //unlock tuner
+				}
+
 				//check to see if the group candidate is blocked first
 				if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0)) //DE is digital encrypted, B is block
 				{
@@ -1022,6 +1086,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					strcpy (mode, state->group_array[i].groupMode);
 					break;
 				}
+			}
+
+			//TG hold on GRP_V Exp -- block non-matching group, allow matching group
+			if (state->tg_hold != 0 && state->tg_hold != group) sprintf (mode, "%s", "B");
+			if (state->tg_hold != 0 && state->tg_hold == group)
+			{
+				sprintf (mode, "%s", "A");
+				opts->p25_is_tuned = 0; //unlock tuner
 			}
 
 			//Skip tuning group calls if group calls are disabled

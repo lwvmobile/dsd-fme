@@ -214,6 +214,10 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
           }
         }
 
+        //TG hold on MFID90 GRG -- block non-matching target, allow matching group
+        if (state->tg_hold != 0 && state->tg_hold != group) sprintf (mode, "%s", "B");
+        if (state->tg_hold != 0 && state->tg_hold == group) sprintf (mode, "%s", "A");
+
         //Skip tuning group calls if group calls are disabled
         if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
@@ -309,6 +313,9 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
             }
           }
 
+          //TG hold on MFID90 GRG -- block non-matching target, allow matching group
+          if (state->tg_hold != 0 && state->tg_hold != tempg) sprintf (mode, "%s", "B");
+          if (state->tg_hold != 0 && state->tg_hold == tempg) sprintf (mode, "%s", "A");
 
           //Skip tuning group calls if group calls are disabled
           if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
