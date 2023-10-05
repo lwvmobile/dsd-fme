@@ -1218,6 +1218,45 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   {
     state->dmr_encL = 0;
   }
+
+  //experimental TG LO/B if ENC trunked following disabled //NXDN -- LO Trunked Enc Calls WIP; #121
+  if (opts->p25_trunk == 1 && opts->trunk_tune_enc_calls == 0 && MessageType == 0x1)
+  {
+    int i, lo = 0;
+    uint16_t t = 0; char gm[8]; char gn[50];
+
+    //check to see if this group already exists, or has already been locked out, or is allowed
+    for (i = 0; i <= state->group_tally; i++)
+    {
+      t = (uint16_t)state->group_array[i].groupNumber;
+      if (DestinationID == t && t != 0)
+      {
+        lo = 1;
+        //write current mode and name to temp strings
+        sprintf (gm, "%s", state->group_array[i].groupMode);
+        sprintf (gn, "%s", state->group_array[i].groupName);
+        break;
+      }
+    }
+
+    //if group doesn't exist, or isn't locked out, then do so now.
+    if (lo == 0)
+    {
+      state->group_array[state->group_tally].groupNumber = DestinationID;
+      sprintf (state->group_array[state->group_tally].groupMode, "%s", "DE");
+      sprintf (state->group_array[state->group_tally].groupName, "%s", "ENC LO");
+      sprintf (gm, "%s", "DE");
+      sprintf (gn, "%s", "ENC LO");
+      state->group_tally++;
+    }
+
+    //Craft a fake DISC Message send it to return to CC
+    uint8_t dbits[96]; memset (dbits, 0, sizeof(dbits)); dbits[3] = 1; dbits[7] = 1; //DISC = 0x11; 
+    if ( (strcmp(gm, "DE") == 0) && (strcmp(gn, "ENC LO") == 0)  )
+      NXDN_Elements_Content_decode (opts, state, 1, dbits);
+
+  }
+
 } /* End NXDN_decode_VCALL() */
 
 void NXDN_decode_VCALL_IV(dsd_opts * opts, dsd_state * state, uint8_t * Message)
