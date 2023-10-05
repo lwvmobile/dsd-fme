@@ -259,6 +259,76 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 				state->aout_gainR = opts->audio_gain;
 
 		}
+
+		//TEST: Return to CC on MAC_END_PTT if other slot is idle...
+		//NOTE: This may or may not work well, need to run some tests first
+		//I really need to look into what SUIDs do when there is a MAC_END_PTT
+		//do they linger momentarily, or immediately go back to the CC?
+
+		//NOTE: Disable return later on if not desirable to use
+
+		//end_ptt in this slot, idle in the other slot (Normal Slots)
+		if ( ((state->currentslot == 0) && (state->dmrburstL == 24)) ||
+		     ((state->currentslot == 1) && (state->dmrburstR == 24))   )
+		{
+			if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1)
+			{
+
+				//if P25p2 VCH and going back to P25p1 CC, flip symbolrate
+				if (state->p25_cc_is_tdma == 0)
+				{
+					state->samplesPerSymbol = 10;
+					state->symbolCenter = 4;
+				}
+
+				//rigctl
+				if (opts->use_rigctl == 1)
+				{
+					state->lasttg = 0;
+					state->lastsrc = 0;
+					state->lasttgR = 0;
+					state->lastsrcR = 0;
+					state->payload_algid = 0; 
+					state->payload_keyid = 0;
+					state->payload_algidR = 0; 
+					state->payload_keyidR = 0;
+					// state->payload_miP = 0;
+					//reset some strings
+					sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+					sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+					sprintf (state->active_channel[0], "%s", "");
+					sprintf (state->active_channel[1], "%s", "");
+					opts->p25_is_tuned = 0;
+					state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+					if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+					SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
+				}
+				//rtl
+				else if (opts->audio_in_type == 3)
+				{
+					#ifdef USE_RTLSDR
+					state->lasttg = 0;
+					state->lastsrc = 0;
+					state->lasttgR = 0;
+					state->lastsrcR = 0;
+					state->payload_algid = 0; 
+					state->payload_keyid = 0;
+					state->payload_algidR = 0; 
+					state->payload_keyidR = 0;
+					// state->payload_miP = 0;
+					//reset some strings
+					sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+					sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+					sprintf (state->active_channel[0], "%s", "");
+					sprintf (state->active_channel[1], "%s", "");
+					opts->p25_is_tuned = 0;
+					state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+					rtl_dev_tune (opts, state->p25_cc_freq);
+					#endif
+				}
+			}
+		}
+
 		fprintf (stderr, "%s", KNRM);
 	}
 	if (opcode == 0x3 && err == 0)
@@ -529,6 +599,71 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			if (opts->floating_point == 1)
 				state->aout_gainR = opts->audio_gain;
 		}
+
+		//NOTE: Disable return later on if not desirable to use
+
+		//end_ptt in this slot, idle in the other slot (Normal Slots)
+		if ( ((state->currentslot == 0) && (state->dmrburstR == 24)) ||
+		     ((state->currentslot == 1) && (state->dmrburstL == 24))   )
+		{
+			if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1)
+			{
+				
+				//if P25p2 VCH and going back to P25p1 CC, flip symbolrate
+				if (state->p25_cc_is_tdma == 0)
+				{
+					state->samplesPerSymbol = 10;
+					state->symbolCenter = 4;
+				}
+
+				//rigctl
+				if (opts->use_rigctl == 1)
+				{
+					state->lasttg = 0;
+					state->lastsrc = 0;
+					state->lasttgR = 0;
+					state->lastsrcR = 0;
+					state->payload_algid = 0; 
+					state->payload_keyid = 0;
+					state->payload_algidR = 0; 
+					state->payload_keyidR = 0;
+					// state->payload_miP = 0;
+					//reset some strings
+					sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+					sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+					sprintf (state->active_channel[0], "%s", "");
+					sprintf (state->active_channel[1], "%s", "");
+					opts->p25_is_tuned = 0;
+					state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+					if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+					SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
+				}
+				//rtl
+				else if (opts->audio_in_type == 3)
+				{
+					#ifdef USE_RTLSDR
+					state->lasttg = 0;
+					state->lastsrc = 0;
+					state->lasttgR = 0;
+					state->lastsrcR = 0;
+					state->payload_algid = 0; 
+					state->payload_keyid = 0;
+					state->payload_algidR = 0; 
+					state->payload_keyidR = 0;
+					// state->payload_miP = 0;
+					//reset some strings
+					sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+					sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+					sprintf (state->active_channel[0], "%s", "");
+					sprintf (state->active_channel[1], "%s", "");
+					opts->p25_is_tuned = 0;
+					state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+					rtl_dev_tune (opts, state->p25_cc_freq);
+					#endif
+				}
+			}
+		}
+
 		fprintf (stderr, "%s", KNRM);
 	}
 	if (opcode == 0x3 && err == 0)
