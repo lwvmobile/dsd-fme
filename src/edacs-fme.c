@@ -254,11 +254,8 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     // fprintf (stderr, " SR: %016llX", sr);
 
     if (sr == 0xAAAAAAAAAAAAAAAA || sr == 0x5555555555555555)
-    {
-      fprintf (stderr, " EDACS DOTTING SEQUENCE: ");
       rms = 0; //break while loop by dropping rms value
-      fprintf (stderr, "\n");
-    }
+
 
     if (rms > sql) fprintf (stderr, "\n");
     

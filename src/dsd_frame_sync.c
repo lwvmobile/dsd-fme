@@ -1193,8 +1193,12 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             }
             else if ((strcmp (synctest48, DOTTING_SEQUENCE_A) == 0) || (strcmp (synctest48, DOTTING_SEQUENCE_B) == 0))
             {
-              printFrameSync (opts, state, " EDACS DOTTING SEQUENCE: ", synctest_pos + 1, modulation);
-              eot_cc (opts, state);
+              //only print and execute Dotting Sequence if Trunking and Tuned so we don't get multiple prints on this
+              if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1)
+              {
+                printFrameSync (opts, state, " EDACS  DOTTING SEQUENCE: ", synctest_pos + 1, modulation);
+                eot_cc (opts, state);
+              }
             }
 
           }
