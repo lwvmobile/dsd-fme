@@ -1431,6 +1431,14 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
           }
         }
 
+        //TG hold on IDAS -- block non-matching target, allow matching DestinationID
+        if (state->tg_hold != 0 && state->tg_hold != id) sprintf (mode, "%s", "B");
+        if (state->tg_hold != 0 && state->tg_hold == id) 
+        {
+          sprintf (mode, "%s", "A");
+          opts->p25_is_tuned = 0; //unlock tuner at this stage and not above check
+        }
+
         long int freq = 0;
         freq = nxdn_channel_to_frequency(opts, state, rep1);
 
