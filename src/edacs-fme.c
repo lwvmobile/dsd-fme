@@ -491,6 +491,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
         }
 
+        //TG hold on EDACS EA -- block non-matching target, allow matching group
+        if (state->tg_hold != 0 && state->tg_hold != group) sprintf (mode, "%s", "B");
+        if (state->tg_hold != 0 && state->tg_hold == group) sprintf (mode, "%s", "A");
+
         if (mt1 == 0x1) fprintf (stderr, " TDMA Call"); //never observed, wonder if any EDACS systems ever carried a TDMA signal (X2-TDMA?)
         if (mt1 == 0x2) fprintf (stderr, " Group Data Call"); //Never Seen this one before
         if (mt1 == 0x3) fprintf (stderr, " Digital Call"); //ProVoice, this is what we always get on SLERS EA
@@ -628,6 +632,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
             break;
           }
         }
+
+        //TG hold on EDACS Standard/Net -- block non-matching target, allow matching afs (decimal)
+        if (state->tg_hold != 0 && state->tg_hold != afs) sprintf (mode, "%s", "B");
+        if (state->tg_hold != 0 && state->tg_hold == afs) sprintf (mode, "%s", "A");
 
         //NOTE: Restructured below so that analog and digital are handled the same, just that when
         //its analog, it will now start edacs_analog which will while loop analog samples until
