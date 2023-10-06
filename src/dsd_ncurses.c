@@ -1361,7 +1361,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     {
       //TDMA -- was P25p1 only
       // resetState (state); //use sparingly, may cause memory leak
-      opts->use_heuristics = 1;
+      // opts->use_heuristics = 1; //Causes issues with Voice Wide
       if (opts->use_heuristics == 1)
       {
         initialize_p25_heuristics(&state->p25_heuristics);
@@ -1403,7 +1403,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         initialize_p25_heuristics(&state->p25_heuristics);
         initialize_p25_heuristics(&state->inv_p25_heuristics);
       }
-      opts->use_heuristics = 0;
+      // opts->use_heuristics = 0;
       opts->frame_dmr = 1;
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;

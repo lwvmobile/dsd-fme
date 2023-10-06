@@ -2086,7 +2086,7 @@ main (int argc, char **argv)
             // opts.setmod_bw = 12000;
             opts.ssize = 36; //128 current default, fall back to old default on P1 only systems
             opts.msize = 15; //1024 current default, fall back to old default on P1 only systems
-            opts.use_heuristics = 1; //enable for Phase 1 only
+            // opts.use_heuristics = 1; //Causes issues with Voice Wide
             sprintf (opts.output_name, "P25p1");
             fprintf (stderr,"Decoding only P25 Phase 1 frames.\n");
           }
@@ -2224,7 +2224,7 @@ main (int argc, char **argv)
             // opts.setmod_bw = 12000; //safe default on both DMR and P25
             opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 2;
-            opts.use_heuristics = 1; //enable for Phase 1 on -ft switch (testing)
+            // opts.use_heuristics = 1; //Causes issues with Voice Wide 
             sprintf (opts.output_name, "TDMA");
             fprintf (stderr,"Decoding P25 and DMR\n");
           }
