@@ -317,6 +317,10 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
             initialize_p25_heuristics(&state->inv_p25_heuristics);
           }
 
+          //re-enable both slots (failsafe)
+          opts->slot1_on = 1;
+          opts->slot2_on = 1;
+
           //rigctl
           if (opts->use_rigctl == 1)
           {
