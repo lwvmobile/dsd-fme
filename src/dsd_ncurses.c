@@ -2519,6 +2519,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ( "[%d] \n", (48000*opts->wav_interpolator)/state->samplesPerSymbol);
   printw ("| Decoding:    [%s] ", opts->output_name);
   if (opts->aggressive_framesync == 0) printw ("CRC/(RAS) ");
+  //TG Hold on EDACS, if specified by user
+  if ( (opts->frame_provoice == 1) && (state->tg_hold != 0) ) 
+    printw ("TG HOLD: %d; ", state->tg_hold);
   //debug -- troubleshoot voice tuning after grant on DMR CC, subsequent grant may not tune because tuner isn't available
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1) printw ("Tuner Locked ");
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 0) printw ("Tuner Available ");
@@ -2846,6 +2849,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (state->carrier == 1) attron(COLOR_PAIR(3));
       else attroff(COLOR_PAIR(4));
     }
+
+    //TG Hold, if specified by user
+    if (state->tg_hold != 0) printw ("TG HOLD: %d", state->tg_hold);
 
     printw("\n");
   }
@@ -3580,6 +3586,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (state->tg_hold == 0)
       state->tg_hold = state->lasttg;
     else state->tg_hold = 0;
+
+    if ( (opts->frame_nxdn48 == 1 || opts->frame_nxdn96 == 1) && (state->tg_hold == 0) )
+      state->tg_hold = state->nxdn_last_tg;
   }
 
   if (c == 108) //'l' key, hold tg on slot 2 for trunking purposes, or toggle clear
