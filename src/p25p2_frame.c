@@ -11,7 +11,7 @@
 #include "dsd.h"
 
 //DUID Look Up Table from OP25
-static const int16_t duid_lookup[256] = {
+static const int16_t duid_lookup[256] = { //128 triggers false 4V on bad signal
 	0,0,0,-1,0,-1,-1,1,0,-1,-1,4,-1,8,2,-1,
 	0,-1,-1,1,-1,1,1,1,-1,3,9,-1,5,-1,-1,1,
 	0,-1,-1,10,-1,6,2,-1,-1,3,2,-1,2,-1,2,2,
@@ -20,7 +20,7 @@ static const int16_t duid_lookup[256] = {
 	-1,13,7,-1,5,-1,-1,1,5,-1,-1,4,5,5,5,-1,
 	-1,6,7,-1,6,6,-1,6,14,-1,-1,4,-1,6,2,-1,
 	7,-1,7,7,-1,6,7,-1,-1,3,7,-1,5,-1,-1,15,
-	0,-1,-1,10,-1,8,12,-1,-1,8,9,-1,8,8,-1,8,
+	-1,-1,-1,10,-1,8,12,-1,-1,8,9,-1,8,8,-1,8, //first value was 0 for 4V, changing to -1 for testing -- 1000 0000 (perfect 4V should be 0000 0000, so is this the correct hamming distance?)
 	-1,13,9,-1,11,-1,-1,1,9,-1,9,9,-1,8,9,-1,
 	-1,10,10,10,11,-1,-1,10,14,-1,-1,10,-1,8,2,-1,
 	11,-1,-1,10,11,11,11,-1,-1,3,9,-1,11,-1,-1,15,
@@ -74,11 +74,12 @@ int p2xbit[4320] = {0}; //bits xored from p2bit and p2lbit
 int dibit = 0;
 int vc_counter = 0;
 int framing_counter = 0;
+int voice = 0; //if voice in vch 0 or vch 1
 
 uint64_t isch = 0;
 int isch_decoded = -1;
-int p2_duid[8] = {0};
-int16_t duid_decoded = 0;
+uint8_t p2_duid[8] = {0};
+int16_t duid_decoded = -1;
 
 int ess_b[2][96] = {0}; //96 bits for 4 - 24 bit ESS_B fields starting bit 168 (RS 44,16,29)
 int ess_a[2][168] = {0}; //ESS_A 1 (96 bit) and 2 (72 bit) fields, starting at bit 168 and bit 266 (RS Parity)
@@ -773,7 +774,8 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 
   for (ts_counter = 0; ts_counter < 4; ts_counter++) //12
   {
-		int sacch = 0;
+		duid_decoded = -2;
+		int sacch = 0; UNUSED(sacch);
 		p2_duid[0] = p2bit[0+(ts_counter*360)];
 		p2_duid[1] = p2bit[1+(ts_counter*360)];
 		p2_duid[2] = p2bit[74+(ts_counter*360)];
@@ -783,7 +785,7 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		p2_duid[6] = p2bit[318+(ts_counter*360)];
 		p2_duid[7] = p2bit[319+(ts_counter*360)];
 
-		//process p2_duid with (8,4,4) encoding/decoding (hamming?)
+		//process p2_duid with (8,4,4) encoding/decoding
 		int p2_duid_complete = 0;
 		for (int i = 0; i < 8; i++)
 		{
@@ -803,6 +805,7 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 			//open MBEout file - slot 1 - USE WITH CAUTION on Phase 2! Consider using a symbol capture bin instead!
 			if (duid_decoded == 0 || duid_decoded == 6) //4V or 2V (voice)
 			{
+				voice = 1;
 				if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
 			}
 		}
@@ -812,6 +815,7 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 			//open MBEout file - slot 2 - USE WITH CAUTION on Phase 2! Consider using a symbol capture bin instead!
 			if (duid_decoded == 0 || duid_decoded == 6) //4V or 2V (voice)
 			{
+				voice = 1;
       	if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_fR == NULL)) openMbeOutFileR (opts, state);
 			}
 		}
@@ -835,6 +839,8 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		if (duid_decoded == 0)
 		{
 			fprintf (stderr, " 4V %d", state->fourv_counter[state->currentslot]+1);
+			//debug see which 4V and which 2V randomly pop on Duke P25p2 CC (8 bit binary code)
+			// fprintf (stderr, " DUID: %d", p2_duid_complete);
 			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
 					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
 			{
@@ -845,6 +851,8 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		else if (duid_decoded == 6)
 		{
 			fprintf (stderr, " 2V");
+			//debug see which 4V and which 2V randomly pop on Duke P25p2 CC (8 bit binary code)
+			// fprintf (stderr, " DUID: %d", p2_duid_complete);
 			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
 					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
 			{
@@ -925,10 +933,10 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		vc_counter = vc_counter + 360;
 
 		//WIP: The skip issue was fixed with this check and also with a check to play the extra samples on a 2V
-		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
+		if (voice == 1 && ts_counter & 1 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
 				playSynthesizedVoiceFS4 (opts, state);
 
-		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
+		if (voice == 1 && ts_counter & 1 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
 				playSynthesizedVoiceSS4 (opts, state);
 
 		//flip slots after each TS processed
@@ -941,12 +949,13 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 			state->currentslot = 0;
 		}
 
+		//reset voice after each compliment of 2 slots
+		if (ts_counter & 1)
+			voice = 0;
+
   }
 	END:
-	if (1 == 2)
-	{
-		//go directly to END if 2 consecutive DUID errors occur
-	}
+	voice = 0; //reset before exit
 
 }
 
@@ -954,6 +963,7 @@ void processP2 (dsd_opts * opts, dsd_state * state)
 {
 	state->dmr_stereo = 1; 
 	p2_dibit_buffer (opts, state);
+	voice = 0;
 
 	//look at our ISCH values and determine location in superframe before running frame scramble
 	for (framing_counter = 0; framing_counter < 4; framing_counter++)
