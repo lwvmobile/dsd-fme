@@ -424,8 +424,8 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         }
       }
 
-      //TG hold on P25p1 Ext UU -- may not be ideal/feasible to use these on private calls
-      // if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
+      //TG hold on P25p1 Ext UU -- will want to disable UU_V grants while TG Hold enabled
+      if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
       // if (state->tg_hold != 0 && state->tg_hold == target) sprintf (mode, "%s", "A");
       
       //Skip tuning private calls if group calls are disabled

@@ -525,8 +525,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				}
 			}
 
-			//TG hold on UU_V -- may not want to allow these in case of TG and RID both are same
-			// if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
+			//TG hold on UU_V -- will want to disable UU_V grants while TG Hold enabled
+			if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
 			// if (state->tg_hold != 0 && state->tg_hold == target)
 			// {
 			// 	sprintf (mode, "%s", "A");
