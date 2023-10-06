@@ -130,6 +130,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
     {
       state->samplesPerSymbol = 10;
       state->symbolCenter = 4;
+      //re-enable both slots
+      opts->slot1_on = 1;
+      opts->slot2_on = 1;
     }
 
     //start going through the lcn/frequencies CC/signal hunting

@@ -216,6 +216,9 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
       {
         state->samplesPerSymbol = 10;
         state->symbolCenter = 4;
+        //re-enable both slots
+        opts->slot1_on = 1;
+        opts->slot2_on = 1;
       }
     }
     //zero out vc frequencies?

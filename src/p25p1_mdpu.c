@@ -356,6 +356,20 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
             {
               state->samplesPerSymbol = 8;
               state->symbolCenter = 3;
+
+              //shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
+              //this will only occur in realtime tuning, not not required .bin or .wav playback
+              if (channelt & 1) //VCH1
+              {
+                opts->slot1_on = 0;
+                opts->slot2_on = 1;
+              }
+              else //VCH0
+              {
+                opts->slot1_on = 1;
+                opts->slot2_on = 0;
+              }
+
             }
           }
           //rigctl
@@ -459,6 +473,20 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
             {
               state->samplesPerSymbol = 8;
               state->symbolCenter = 3;
+
+              //shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
+              //this will only occur in realtime tuning, not not required .bin or .wav playback
+              if (channelt & 1) //VCH1
+              {
+                opts->slot1_on = 0;
+                opts->slot2_on = 1;
+              }
+              else //VCH0
+              {
+                opts->slot1_on = 1;
+                opts->slot2_on = 0;
+              }
+
             }
           }
           //rigctl
@@ -569,6 +597,20 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
               {
                 state->samplesPerSymbol = 8;
                 state->symbolCenter = 3;
+
+                //shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
+                //this will only occur in realtime tuning, not not required .bin or .wav playback
+                if (channelt & 1) //VCH1
+                {
+                  opts->slot1_on = 0;
+                  opts->slot2_on = 1;
+                }
+                else //VCH0
+                {
+                  opts->slot1_on = 1;
+                  opts->slot2_on = 0;
+                }
+
               }
             }
             //rigctl

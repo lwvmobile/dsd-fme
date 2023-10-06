@@ -279,6 +279,9 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 				{
 					state->samplesPerSymbol = 10;
 					state->symbolCenter = 4;
+					//re-enable both slots
+					opts->slot1_on = 1;
+					opts->slot2_on = 1;
 				}
 
 				//rigctl
@@ -614,6 +617,9 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 				{
 					state->samplesPerSymbol = 10;
 					state->symbolCenter = 4;
+					//re-enable both slots
+					opts->slot1_on = 1;
+					opts->slot2_on = 1;
 				}
 
 				//rigctl
