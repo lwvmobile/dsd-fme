@@ -932,11 +932,11 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		//add 360 bits to each counter
 		vc_counter = vc_counter + 360;
 
-		//WIP: The skip issue was fixed with this check and also with a check to play the extra samples on a 2V
-		if (voice == 1 && ts_counter & 1 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
+		//WIP: revert from voice to !sacch -- voice was causing blip/stutter on single and dual voice (!sacch is still smoother playback)
+		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000)
 				playSynthesizedVoiceFS4 (opts, state);
 
-		if (voice == 1 && ts_counter & 1 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000) //this should be a real TS value %2 and non-inverted frames, so 0-9, need a way to get real TS number each go around
+		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000)
 				playSynthesizedVoiceSS4 (opts, state);
 
 		//flip slots after each TS processed
