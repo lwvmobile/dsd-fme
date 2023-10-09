@@ -67,8 +67,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 	//assigning here if OECI MAC SIGNAL, after passing RS and CRC
 	if (state->p2_is_lcch == 1)
 	{
-		if (slot == 1) state->dmrburstL = 30;
-		else state->dmrburstR = 30;
+		//fix for blinking SIGNAL on Slot 2 during inverted slot in Ncurses
+		//TEMP: assume LCH 0 is the SIGNAL slot, fix for blinking SIGNAL on Slot 2 during inverted slot
+		if (type == 0 && slot == 0) state->dmrburstL = 30;
+		if (type == 1 && slot == 0) state->dmrburstL = 30;
+		// if (type == 0 && slot == 1) state->dmrburstR = 30; 
+		// if (type == 1 && slot == 1) state->dmrburstR = 30;
+
 	}
 
 
@@ -1382,21 +1387,44 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 		//TODO: Restructure this function to group standard Opcodes away from MFID 90 and MFID A4, and Unknown MFID
 		//or just go to if-elseif-else layout (probably easier that way)
-		//Unknown Harris A4 Opcodes
+		//Harris A4 Opcodes
 		if (MAC[1+len_a] != 0xB0 && MAC[2+len_a] == 0xA4)
 		{
 			// 6.2.36 Manufacturer Specific regarding octet 3 as len
 			int len = MAC[3+len_a] & 0x3F;
 			int res = MAC[3+len_a] >> 6;
+			int k = 0;
+
+			//NOTE: slot is already checked
+			
 			//sanity check that we don't exceed the max MAC array size
 			if (len > 24)
 				len = 24; //should never exceed this len, but just in case it does
-			//sanity check that we don't pick this up in a second message and exceed the MAC array
-			// if ( (len + len_a) > 24) len = 24-len_a; //not required, since we can only go to 24 anyways
-			//end sanity checks
-			fprintf (stderr, "\n MFID A4 (Harris); Res: %d; Len: %d; Opcode: %02llX; ", res, len, MAC[1+len_a]);
-			for (i = 1; i < len; i++)
-				fprintf (stderr, "%02llX", MAC[i+len_a]);
+
+			//Harris "Talker" Alias -- Not always in the SACCH, has been seen in the FACCH as well (before MAC_PTT)
+			if (MAC[1+len_a] == 0xA8) //1010 1000 (so, its opcode is 0x28, with the b = 0b10 value for manufacturer message?)
+			{
+				fprintf (stderr, "\n MFID A4 (Harris); VCH %d Talker Alias: ", slot);
+				for (i = 4; i < len; i++) //this should be okay
+				{
+					if ( (MAC[i+len_a] > 0x19) && (MAC[i+len_a] < 0x7F) )
+						fprintf (stderr, "%c", (char)MAC[i+len_a]);
+					else fprintf (stderr, " ");
+
+					if ( (MAC[i+len_a] > 0x19) && (MAC[i+len_a] < 0x7F) )
+						state->dmr_alias_block_segment[slot][0][k/4][k%4] = MAC[i+len_a];
+					else state->dmr_alias_block_segment[slot][0][k/4][k%4] = 0x20;
+					k++;
+				}
+			}
+
+			else
+			{
+				fprintf (stderr, "\n MFID A4 (Harris); Res: %d; Len: %d; Opcode: %02llX; ", res, len, MAC[1+len_a] & 0x3F); //first two bits are the b0 and b1 
+				for (i = 4; i < len; i++)
+					fprintf (stderr, "%02llX", MAC[i+len_a]);
+			}
+			
 		}
 
 		/*

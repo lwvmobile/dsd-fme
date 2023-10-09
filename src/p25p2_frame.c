@@ -798,10 +798,9 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		fprintf (stderr,"%s ", getTime());
 		fprintf (stderr, "       P25p2 ");
 
-		//print our VCH channel number, or print S for SACCH since its inverted
-		if (state->currentslot == 0 && duid_decoded != 3 && duid_decoded != 12)
+		if (state->currentslot == 0 && duid_decoded != 3 && duid_decoded != 12 && duid_decoded != 13 && duid_decoded != 4)
 		{
-			fprintf (stderr, "VCH 0 ");
+			fprintf (stderr, "LCH 0 ");
 			//open MBEout file - slot 1 - USE WITH CAUTION on Phase 2! Consider using a symbol capture bin instead!
 			if (duid_decoded == 0 || duid_decoded == 6) //4V or 2V (voice)
 			{
@@ -809,9 +808,9 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 				if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
 			}
 		}
-		else if (state->currentslot == 1 && duid_decoded != 3 && duid_decoded != 12)
+		else if (state->currentslot == 1 && duid_decoded != 3 && duid_decoded != 12 && duid_decoded != 13 && duid_decoded != 4)
 		{
-			fprintf (stderr, "VCH 1 ");
+			fprintf (stderr, "LCH 1 ");
 			//open MBEout file - slot 2 - USE WITH CAUTION on Phase 2! Consider using a symbol capture bin instead!
 			if (duid_decoded == 0 || duid_decoded == 6) //4V or 2V (voice)
 			{
@@ -819,10 +818,21 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
       	if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_fR == NULL)) openMbeOutFileR (opts, state);
 			}
 		}
+		//The LCCH may occupy LCH 0 or LCH 1 or both. BBAD 3.3 p8
+		else if (duid_decoded == 13) //MAC_SIGNAL, or clear LCCH
+		{
+			// sacch = 1; //only an 'inverted' slot when its TS index 10 or 11
+			fprintf (stderr, "LCCH  ");
+		}
+		else if (duid_decoded == 4) //Scrambled LCCH (TDMA_CC only...look in the manual again)
+		{
+			// sacch = 1; //only an 'inverted' slot when its TS index 10 or 11
+			fprintf (stderr, "LCCHs ");
+		}
 		else
 		{
-			sacch = 1;
-			fprintf (stderr, "VCH S ");
+			sacch = 1; //always an "inverted" sacch slot
+			fprintf (stderr, "SACCH ");
 		}
 
 		//check to see when last voice activity occurred in order to allow tuning on phase 2
@@ -891,7 +901,6 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		}
 		else if (duid_decoded == 4)
 		{
-			fprintf (stderr, " LCCH Sc"); //w/ scrambling
 			if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0 &&
 					state->p2_wacn != 0xFFFFF && state->p2_cc != 0xFFF && state->p2_sysid != 0xFFF)
 			{
@@ -932,12 +941,19 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		//add 360 bits to each counter
 		vc_counter = vc_counter + 360;
 
-		//WIP: revert from voice to !sacch -- voice was causing blip/stutter on single and dual voice (!sacch is still smoother playback)
+		//NOTE: Could be an issue if MAC_SIGNAL onn LCH 1 and voice in LCH 0? It might Stutter?
 		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000)
 				playSynthesizedVoiceFS4 (opts, state);
 
 		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000)
 				playSynthesizedVoiceSS4 (opts, state);
+
+		//debug: fix burst indicator for ncurses if marginal signal
+		// if (voice)
+		// {
+		// 	if (state->currentslot == 0) state->dmrburstL = 21;
+		// 	else state->dmrburstR = 21;
+		// }
 
 		//flip slots after each TS processed
 		if (state->currentslot == 0)

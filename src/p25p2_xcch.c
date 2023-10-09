@@ -260,10 +260,14 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 
 		}
 
-		//TEST: Return to CC on MAC_END_PTT if other slot is idle...
-		//NOTE: This may or may not work well, need to run some tests first
-		//I really need to look into what SUIDs do when there is a MAC_END_PTT
-		//do they linger momentarily, or immediately go back to the CC?
+		//Return to CC on MAC_END_PTT if other slot is idle
+		//TODO: Look at the source address of the END_PTT, if it is 0xFFFFFF, then its from the FNE?
+		//if from the FNE, that may be when we know channel teardown will really occur vs using MAC_END_PTT directly
+
+		/*
+		Upon receipt of a MAC_END_PTT PDU on the assigned VCH, and having verified it contains the
+		correct color code, the SU shall return to the idle state on the control channel.
+		*/
 
 		//NOTE: Disable return later on if not desirable to use
 
@@ -603,6 +607,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 				state->aout_gainR = opts->audio_gain;
 		}
 
+		//Return to CC on MAC_END_PTT if other slot is idle
 		//NOTE: Disable return later on if not desirable to use
 
 		//end_ptt in this slot, idle in the other slot (Normal Slots)
