@@ -30,7 +30,7 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
   int i;
   uint8_t lcformat[9], mfid[9], lcinfo[57];
   char lsd1[9], lsd2[9];
-
+  uint8_t lsd_hex1, lsd_hex2;
   int status_count;
 
   char hex_data[12][6];    // Data in hex-words (6 bit words). A total of 12 hex words.
@@ -221,9 +221,12 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
       {
         read_dibit(opts, state, cyclic_parity+i, &status_count, NULL, NULL);
       }
+      lsd_hex1 = 0;
     for (i=0; i<8; i++)
       {
+        lsd_hex1 = lsd_hex1 << 1;
         lsd1[i] = lsd[i] + '0';
+        lsd_hex1 |= (uint8_t)lsd[i];
       }
 
     for (i=0; i<=6; i+=2)
@@ -234,13 +237,16 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
       {
         read_dibit(opts, state, cyclic_parity+i, &status_count, NULL, NULL);
       }
+      lsd_hex2 = 0;
     for (i=0; i<8; i++)
       {
+        lsd_hex2 = lsd_hex2 << 1;
         lsd2[i] = lsd[i] + '0';
+        lsd_hex2 |= (uint8_t)lsd[i];
       }
 
-    // TODO: error correction of the LSD bytes...
-    // TODO: do something useful with the LSD bytes...
+    // TODO: error correction of the LSD bytes... <--THIS!
+    // TODO: do something useful with the LSD bytes... <--THIS!
 
     state->dropL += 2; //need to skip 2 here for the LSD bytes
   }
@@ -451,7 +457,63 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
     {
       fprintf (stderr, "[%02X]", LCW_bytes[i]);
     }
-    
+
+    //view Low Speed Data
+    fprintf (stderr, "%s",KCYN);
+    fprintf (stderr, "    LSD: %02X %02X ", lsd_hex1, lsd_hex2);
+    if ( (lsd_hex1 > 0x19) && (lsd_hex1 < 0x7F) ) fprintf (stderr, "(%c", lsd_hex1);
+    else fprintf (stderr, "( ");
+    if ( (lsd_hex2 > 0x19) && (lsd_hex2 < 0x7F) )fprintf (stderr, "%c)", lsd_hex2);
+    else fprintf (stderr, " )");
+
     fprintf (stderr, "%s\n", KNRM);
   }
+
+  //TEST: Store LSD into array if 0x02 0x08 (opcode and len?)
+  int k = 0;
+  if (state->dmr_alias_format[0] == 0x02)
+  {
+    k = state->data_block_counter[0];
+    if ( (lsd_hex1 > 0x19) && (lsd_hex1 < 0x7F) )
+      state->dmr_alias_block_segment[0][0][k/4][k%4] = (char)lsd_hex1;
+    else state->dmr_alias_block_segment[0][0][k/4][k%4] = 0x20;
+    k++;
+    if ( (lsd_hex2 > 0x19) && (lsd_hex2 < 0x7F) )
+      state->dmr_alias_block_segment[0][0][k/4][k%4] = (char)lsd_hex2;
+    else state->dmr_alias_block_segment[0][0][k/4][k%4] = 0x20;
+    k++;
+    state->data_block_counter[0] = k;
+  }
+
+  //reset format, len, counter.
+  if (lsd_hex1 == 0x02)
+  {
+    state->dmr_alias_format[0] = 0x02;
+    if (lsd_hex2 > 8) lsd_hex2 = 8; //sanity check
+    state->dmr_alias_len[0] = lsd_hex2;
+    state->data_block_counter[0] = 0;
+  }
+
+  if ( (k >= state->dmr_alias_len[0]) && (state->dmr_alias_format[0] == 0x02) )
+  {
+    //print out what we've gathered
+    fprintf (stderr, "%s",KCYN);
+    fprintf (stderr, " LSD Soft ID: ");
+    for (i = 0; i < 4; i++)
+    {
+      for (int j = 0; j < 4; j++)
+      {
+        fprintf (stderr, "%c", state->dmr_alias_block_segment[0][0][i][j]);
+      }
+    }
+    fprintf (stderr, "%s",KNRM);
+    fprintf (stderr, "\n");
+
+    //reset values
+    state->dmr_alias_format[0] = 0;
+    state->data_block_counter[0] = 0;
+    state->dmr_alias_len[0] = 0;
+    // memset (state->dmr_alias_block_segment, 0, sizeof(state->dmr_alias_block_segment));
+  }
+
 }

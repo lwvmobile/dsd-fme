@@ -3061,7 +3061,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     attron(COLOR_PAIR(4));
 
-    if(state->dmrburstL == 16) //only during call
+    if(state->dmrburstL == 16 || state->dmrburstL == 21 || state->dmrburstL == 26 || state->dmrburstL == 27) //only during call
     {
 
       attron(COLOR_PAIR(4));
@@ -3255,7 +3255,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
       attron(COLOR_PAIR(4));
 
-      if(state->dmrburstR == 16) //only during call
+      if(state->dmrburstR == 16 || state->dmrburstR == 21) //only during call
       {
         
         //Embedded GPS (not LRRP)
