@@ -30,8 +30,8 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
   int i;
   uint8_t lcformat[9], mfid[9], lcinfo[57];
   char lsd1[9], lsd2[9];
-  uint8_t lsd_hex1, lsd_hex2;
-  int status_count;
+  uint8_t lsd_hex1, lsd_hex2; uint8_t lowspeeddata[32]; memset (lowspeeddata, 0, sizeof(lowspeeddata));
+  int status_count; int lsd1_okay, lsd2_okay = 0;
 
   char hex_data[12][6];    // Data in hex-words (6 bit words). A total of 12 hex words.
   char hex_parity[12][6];  // Parity of the data, again in hex-word format. A total of 12 parity hex words.
@@ -227,6 +227,8 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
         lsd_hex1 = lsd_hex1 << 1;
         lsd1[i] = lsd[i] + '0';
         lsd_hex1 |= (uint8_t)lsd[i];
+        lowspeeddata[i+0] = (uint8_t)lsd1[i];
+        lowspeeddata[i+8] = (uint8_t)cyclic_parity[i];
       }
 
     for (i=0; i<=6; i+=2)
@@ -243,6 +245,8 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
         lsd_hex2 = lsd_hex2 << 1;
         lsd2[i] = lsd[i] + '0';
         lsd_hex2 |= (uint8_t)lsd[i];
+        lowspeeddata[i+16] = (uint8_t)lsd2[i];
+        lowspeeddata[i+24] = (uint8_t)cyclic_parity[i];
       }
 
     // TODO: error correction of the LSD bytes... <--THIS!
@@ -449,6 +453,10 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
     fprintf (stderr, "%s\n", KNRM);
   }
 
+  //WIP: LSD FEC
+  lsd1_okay = p25p1_lsd_fec (lowspeeddata+0);
+  lsd2_okay = p25p1_lsd_fec (lowspeeddata+16);
+
   if (opts->payload == 1)
   {
     fprintf (stderr, "%s",KCYN);
@@ -461,11 +469,12 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
     //view Low Speed Data
     fprintf (stderr, "%s",KCYN);
     fprintf (stderr, "    LSD: %02X %02X ", lsd_hex1, lsd_hex2);
-    if ( (lsd_hex1 > 0x19) && (lsd_hex1 < 0x7F) ) fprintf (stderr, "(%c", lsd_hex1);
+    if ( (lsd_hex1 > 0x19) && (lsd_hex1 < 0x7F) && (lsd1_okay == 1) ) fprintf (stderr, "(%c", lsd_hex1);
     else fprintf (stderr, "( ");
-    if ( (lsd_hex2 > 0x19) && (lsd_hex2 < 0x7F) )fprintf (stderr, "%c)", lsd_hex2);
+    if ( (lsd_hex2 > 0x19) && (lsd_hex2 < 0x7F) && (lsd2_okay == 1) ) fprintf (stderr, "%c)", lsd_hex2);
     else fprintf (stderr, " )");
-
+    if (lsd1_okay == 0) fprintf (stderr, " L1 ERR");
+    if (lsd2_okay == 0) fprintf (stderr, " L2 ERR");
     fprintf (stderr, "%s\n", KNRM);
   }
 
@@ -474,19 +483,19 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
   if (state->dmr_alias_format[0] == 0x02)
   {
     k = state->data_block_counter[0];
-    if ( (lsd_hex1 > 0x19) && (lsd_hex1 < 0x7F) )
+    if ( (lsd_hex1 > 0x19) && (lsd_hex1 < 0x7F) && (lsd1_okay == 1) )
       state->dmr_alias_block_segment[0][0][k/4][k%4] = (char)lsd_hex1;
-    else state->dmr_alias_block_segment[0][0][k/4][k%4] = 0x20;
+    // else state->dmr_alias_block_segment[0][0][k/4][k%4] = 0x20;
     k++;
-    if ( (lsd_hex2 > 0x19) && (lsd_hex2 < 0x7F) )
+    if ( (lsd_hex2 > 0x19) && (lsd_hex2 < 0x7F) && (lsd2_okay == 1) )
       state->dmr_alias_block_segment[0][0][k/4][k%4] = (char)lsd_hex2;
-    else state->dmr_alias_block_segment[0][0][k/4][k%4] = 0x20;
+    // else state->dmr_alias_block_segment[0][0][k/4][k%4] = 0x20;
     k++;
     state->data_block_counter[0] = k;
   }
 
   //reset format, len, counter.
-  if (lsd_hex1 == 0x02)
+  if (lsd_hex1 == 0x02 && lsd1_okay == 1 && lsd2_okay == 1)
   {
     state->dmr_alias_format[0] = 0x02;
     if (lsd_hex2 > 8) lsd_hex2 = 8; //sanity check
