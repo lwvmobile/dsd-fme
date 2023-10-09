@@ -1548,7 +1548,7 @@ main (int argc, char **argv)
   }
 
   #ifdef AERO_BUILD
-  fprintf (stderr, "Build Version: AW (20230915) \n");
+  fprintf (stderr, "Build Version: AW (20231015) \n");
   #else
   fprintf (stderr, "Build Version: AW %s \n", GIT_TAG);
   #endif

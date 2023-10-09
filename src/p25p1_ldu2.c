@@ -513,7 +513,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "%s", KNRM);
   }
 
-  fprintf (stderr, "\n", KNRM);
+  fprintf (stderr, "\n");
 
   //TEST: Store LSD into array if 0x02 0x08 (opcode and len?)
   int k = 0;
