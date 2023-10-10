@@ -74,6 +74,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		// if (type == 0 && slot == 1) state->dmrburstR = 30; 
 		// if (type == 1 && slot == 1) state->dmrburstR = 30;
 
+		//Temp Fix: Disable Slot Playback when MAC_SIGNAL present (good CRC),
+		//during trunking, will re-enable when call grant is received, prevent lagging:
+		if (opts->p25_trunk == 1 && opts->p25_is_tuned == 0) opts->slot1_on = 0;
+		if (opts->p25_trunk == 1 && opts->p25_is_tuned == 0) opts->slot2_on = 0;
+
+		//TODO: Iron out issues with audio playing in every non SACCH slot when no voice present
+		//without it stuttering during actual voice
+
 	}
 
 
