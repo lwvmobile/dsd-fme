@@ -1467,15 +1467,21 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			
 			int seconds = slots / 135; //very rough estimation, but may be close enough for grins
 			if (seconds > 59) seconds = 59; //sanity check for rounding error
-			fprintf (stderr, "  Date: 20%02d.%02d.%02d Time: %02d:%02d:%02d UTC\n", 
-								year, month, day, hour, min, seconds); 
-			fprintf (stderr, "  Local Time Offset: %.01f Hours;", offhour);
-			//if ist bit is set, then time on system may be considered invalid (i.e., no external time sync)
-			if (ist == 1)
+
+			if (year != 0) //if time is synced in this PDU
 			{
-				fprintf (stderr, " Invalid System Time ");
+				fprintf (stderr, "  Date: 20%02d.%02d.%02d Time: %02d:%02d:%02d UTC\n", 
+								year, month, day, hour, min, seconds); 
+				fprintf (stderr, "  Local Time Offset: %.01f Hours;", offhour);
+				//if ist bit is set, then time on system may be considered invalid (i.e., no external time sync)
+				if (ist == 1)
+				{
+					fprintf (stderr, " External System Time Sync; ");
+				}
+				else fprintf (stderr, " Local System Time Sync; ");
 			}
-			else fprintf (stderr, " Valid System Time ");
+			fprintf (stderr, " Sync Slots: %d; ", slots); //Sync Slots -- This may not be accurate if out of scope of the PDU
+			
 
 		}
 
