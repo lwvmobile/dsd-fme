@@ -1366,6 +1366,11 @@ liveScanner (dsd_opts * opts, dsd_state * state)
     if (opts->audio_gain > 50.0f) opts->audio_gain = 50.0f;
     if (opts->audio_gain < 0.0f) opts->audio_gain = 0.0f;
   }
+  else if (opts->audio_gain == 0)
+  {
+    state->aout_gain  = 15.0f;
+    state->aout_gainR = 15.0f;
+  }
 
 #ifdef USE_RTLSDR
   if(opts->audio_in_type == 3)

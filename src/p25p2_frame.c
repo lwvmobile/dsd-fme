@@ -941,6 +941,10 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		//add 360 bits to each counter
 		vc_counter = vc_counter + 360;
 
+		//debug enable both slots before playback
+		// opts->slot1_on = 1;
+		// opts->slot2_on = 1;
+
 		//NOTE: Could be an issue if MAC_SIGNAL onn LCH 1 and voice in LCH 0? It might Stutter?
 		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000)
 				playSynthesizedVoiceFS4 (opts, state);
