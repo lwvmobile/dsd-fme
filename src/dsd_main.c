@@ -1334,7 +1334,7 @@ usage ()
   printf ("  -G <file>     Import Group List Allow/Block and Label from csv file.\n");
   printf ("                 (See group.csv for example)\n");
   printf ("  -T            Enable Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input\n");
-  printf ("  -Y            Enable Fast Scanning Mode with RIGCTL/TCP or RTL Input (Lower z) \n");
+  printf ("  -Y            Enable Scanning Mode with RIGCTL/TCP or RTL Input (Lower z) \n");
   printf ("                 Experimental -- Can only scan for sync with enabled decoders, don't mix NXDN and DMR/P25!\n");
   printf ("                 This is not a Trunking Feature, just scans through conventional frequencies fast!\n");
   printf ("  -W            Use Imported Group List as a Trunking Allow/White List -- Only Tune with Mode A\n");
@@ -1347,7 +1347,7 @@ usage ()
   printf ("  -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
   printf ("                 P25 - 7000-12000; P25 (QPSK) - 12000; NXDN48 - 7000; NXDN96: 9000; DMR - 7000; EDACS/PV - 12500;\n");
   printf ("                 May vary based on system stregnth, etc.\n");
-  printf ("  -t <secs>     Set Trunking or Fast Scan VC/sync loss hangtime in seconds. (default = 1 second)\n");
+  printf ("  -t <secs>     Set Trunking or Scan Speed VC/sync loss hangtime in seconds. (default = 1 second)\n");
   printf ("  -9            Force Enable EDACS Standard or Networked Mode on Systems without a netcmd (temp fix) \n");
   printf ("\n");
   printf (" Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
@@ -1754,7 +1754,7 @@ main (int argc, char **argv)
 
         case 't': //New letter assignment for Trunk Hangtime, flow down to allow temp numbers
           sscanf (optarg, "%f", &opts.trunk_hangtime); //updated for float/decimal values
-          fprintf (stderr, "Trunking or Fast Scanner Hang Time set to: %.02f sec\n", opts.trunk_hangtime);
+          fprintf (stderr, "Trunking or Scanner Speed/Hang Time set to: %.02f sec\n", opts.trunk_hangtime);
           break;
         
         case 'q': //New letter assignment for Reverse Mute, flow down to allow temp numbers
