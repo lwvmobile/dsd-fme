@@ -6,7 +6,7 @@
  * 
  *
  * LWVMOBILE
- * 2023-08 DSD-FME Florida Man Edition
+ * 2023-10 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
@@ -124,6 +124,48 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
   //its not really 'disabled', we just aren't playing it
   if (opts->slot1_on == 0) encL = 1;
   if (opts->slot2_on == 0) encR = 1;
+
+  //WIP: Mute if on B list (or not W list)
+  char modeL[8];
+  sprintf (modeL, "%s", "");
+  char modeR[8];
+  sprintf (modeR, "%s", "");
+
+  int TGL = state->lasttg;
+  int TGR = state->lasttgR;
+
+  //if we are using allow/whitelist mode, then write 'B' to mode for block
+  //comparison below will look for an 'A' to write to mode if it is allowed
+  if (opts->trunk_use_allow_list == 1)
+  {
+    sprintf (modeL, "%s", "B");
+    sprintf (modeR, "%s", "B");
+  }
+
+  for (i = 0; i < state->group_tally; i++)
+  {
+    if (state->group_array[i].groupNumber == TGL)
+    {
+      strcpy (modeL, state->group_array[i].groupMode);
+      // break; //need to keep going to check other potential slot group
+    }
+    if (state->group_array[i].groupNumber == TGR)
+    {
+      strcpy (modeR, state->group_array[i].groupMode);
+      // break; //need to keep going to check other potential slot group
+    }
+  }
+
+  //flag either left or right as 'enc' to mute if B
+  if (strcmp(modeL, "B") == 0) encL = 1;
+  if (strcmp(modeR, "B") == 0) encR = 1;
+
+  //if TG Hold in place, mute anything but that TG
+  if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
+  if (state->tg_hold != 0 && state->tg_hold != TGR) encR = 1;
+  //likewise, override and unmute if TG hold matches TG
+  if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
+  if (state->tg_hold != 0 && state->tg_hold == TGR) encR = 0;
 
   //run autogain on the f_ buffers
   agf (opts, state, state->f_l4[0],0);
@@ -286,6 +328,48 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
   if (opts->slot1_on == 0) encL = 1;
   if (opts->slot2_on == 0) encR = 1;
 
+  //WIP: Mute if on B list (or not W list)
+  char modeL[8];
+  sprintf (modeL, "%s", "");
+  char modeR[8];
+  sprintf (modeR, "%s", "");
+
+  int TGL = state->lasttg;
+  int TGR = state->lasttgR;
+
+  //if we are using allow/whitelist mode, then write 'B' to mode for block
+  //comparison below will look for an 'A' to write to mode if it is allowed
+  if (opts->trunk_use_allow_list == 1)
+  {
+    sprintf (modeL, "%s", "B");
+    sprintf (modeR, "%s", "B");
+  }
+
+  for (i = 0; i < state->group_tally; i++)
+  {
+    if (state->group_array[i].groupNumber == TGL)
+    {
+      strcpy (modeL, state->group_array[i].groupMode);
+      // break; //need to keep going to check other potential slot group
+    }
+    if (state->group_array[i].groupNumber == TGR)
+    {
+      strcpy (modeR, state->group_array[i].groupMode);
+      // break; //need to keep going to check other potential slot group
+    }
+  }
+
+  //flag either left or right as 'enc' to mute if B
+  if (strcmp(modeL, "B") == 0) encL = 1;
+  if (strcmp(modeR, "B") == 0) encR = 1;
+
+  //if TG Hold in place, mute anything but that TG
+  if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
+  if (state->tg_hold != 0 && state->tg_hold != TGR) encR = 1;
+  //likewise, override and unmute if TG hold matches TG
+  if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
+  if (state->tg_hold != 0 && state->tg_hold == TGR) encR = 0;
+
   memset (stereo_samp1, 0.0f, sizeof(stereo_samp1));
   memset (stereo_samp2, 0.0f, sizeof(stereo_samp2));
   memset (stereo_samp3, 0.0f, sizeof(stereo_samp3));
@@ -446,6 +530,34 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
 
   if (opts->slot1_on == 0) encL = 1;
 
+  //WIP: Mute if on B list (or not W list)
+  char modeL[8];
+  sprintf (modeL, "%s", "");
+
+  int TGL = state->lasttg;
+
+  //if we are using allow/whitelist mode, then write 'B' to mode for block
+  //comparison below will look for an 'A' to write to mode if it is allowed
+  if (opts->trunk_use_allow_list == 1)
+    sprintf (modeL, "%s", "B");
+
+  for (int i = 0; i < state->group_tally; i++)
+  {
+    if (state->group_array[i].groupNumber == TGL)
+    {
+      strcpy (modeL, state->group_array[i].groupMode);
+      break;
+    }
+  }
+
+  //flag either left or right as 'enc' to mute if B
+  if (strcmp(modeL, "B") == 0) encL = 1;
+
+  //if TG Hold in place, mute anything but that TG
+  if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
+  //likewise, override and unmute if TG hold matches TG
+  if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
+
   //run autogain on the f_ buffers
   agf (opts, state, state->f_l,0);
 
@@ -548,6 +660,36 @@ void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
     }
   }
 
+  //WIP: Mute if on B list (or not W list)
+  char modeL[8];
+  sprintf (modeL, "%s", "");
+
+  int TGL = state->lasttg;
+  if (opts->frame_nxdn48 == 1 || opts->frame_nxdn96 == 1)
+    TGL = state->nxdn_last_tg;
+
+  //if we are using allow/whitelist mode, then write 'B' to mode for block
+  //comparison below will look for an 'A' to write to mode if it is allowed
+  if (opts->trunk_use_allow_list == 1)
+    sprintf (modeL, "%s", "B");
+
+  for (int i = 0; i < state->group_tally; i++)
+  {
+    if (state->group_array[i].groupNumber == TGL)
+    {
+      strcpy (modeL, state->group_array[i].groupMode);
+      break;
+    }
+  }
+
+  //flag either left or right as 'enc' to mute if B
+  if (strcmp(modeL, "B") == 0) encL = 1;
+
+  //if TG Hold in place, mute anything but that TG
+  if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
+  //likewise, override and unmute if TG hold matches TG
+  if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
+
   if (encL == 1)
     goto vfm_end;
 
@@ -614,6 +756,34 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
   //TODO: add option to bypass enc with a toggle as well
 
   if (opts->slot1_on == 0) encL = 1;
+
+  //WIP: Mute if on B list (or not W list)
+  char modeL[8];
+  sprintf (modeL, "%s", "");
+
+  int TGL = state->lasttg;
+
+  //if we are using allow/whitelist mode, then write 'B' to mode for block
+  //comparison below will look for an 'A' to write to mode if it is allowed
+  if (opts->trunk_use_allow_list == 1)
+    sprintf (modeL, "%s", "B");
+
+  for (int i = 0; i < state->group_tally; i++)
+  {
+    if (state->group_array[i].groupNumber == TGL)
+    {
+      strcpy (modeL, state->group_array[i].groupMode);
+      break;
+    }
+  }
+
+  //flag either left or right as 'enc' to mute if B
+  if (strcmp(modeL, "B") == 0) encL = 1;
+
+  //if TG Hold in place, mute anything but that TG
+  if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
+  //likewise, override and unmute if TG hold matches TG
+  if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
 
   //interleave left and right channels from the short storage area
   for (i = 0; i < 160; i++)
@@ -738,6 +908,48 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
   //its not really 'disabled', we just aren't playing it
   if (opts->slot1_on == 0) encL = 1;
   if (opts->slot2_on == 0) encR = 1;
+
+  //WIP: Mute if on B list (or not W list)
+  char modeL[8];
+  sprintf (modeL, "%s", "");
+  char modeR[8];
+  sprintf (modeR, "%s", "");
+
+  int TGL = state->lasttg;
+  int TGR = state->lasttgR;
+
+  //if we are using allow/whitelist mode, then write 'B' to mode for block
+  //comparison below will look for an 'A' to write to mode if it is allowed
+  if (opts->trunk_use_allow_list == 1)
+  {
+    sprintf (modeL, "%s", "B");
+    sprintf (modeR, "%s", "B");
+  }
+
+  for (i = 0; i < state->group_tally; i++)
+  {
+    if (state->group_array[i].groupNumber == TGL)
+    {
+      strcpy (modeL, state->group_array[i].groupMode);
+      // break; //need to keep going to check other potential slot group
+    }
+    if (state->group_array[i].groupNumber == TGR)
+    {
+      strcpy (modeR, state->group_array[i].groupMode);
+      // break; //need to keep going to check other potential slot group
+    }
+  }
+
+  //flag either left or right as 'enc' to mute if B
+  if (strcmp(modeL, "B") == 0) encL = 1;
+  if (strcmp(modeR, "B") == 0) encR = 1;
+
+  //if TG Hold in place, mute anything but that TG
+  if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
+  if (state->tg_hold != 0 && state->tg_hold != TGR) encR = 1;
+  //likewise, override and unmute if TG hold matches TG
+  if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
+  if (state->tg_hold != 0 && state->tg_hold == TGR) encR = 0;
 
   //interleave left and right channels from the short storage area
   for (i = 0; i < 160; i++)
@@ -882,6 +1094,48 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
   //its not really 'disabled', we just aren't playing it
   if (opts->slot1_on == 0) encL = 1;
   if (opts->slot2_on == 0) encR = 1;
+
+  //WIP: Mute if on B list (or not W list)
+  char modeL[8];
+  sprintf (modeL, "%s", "");
+  char modeR[8];
+  sprintf (modeR, "%s", "");
+
+  int TGL = state->lasttg;
+  int TGR = state->lasttgR;
+
+  //if we are using allow/whitelist mode, then write 'B' to mode for block
+  //comparison below will look for an 'A' to write to mode if it is allowed
+  if (opts->trunk_use_allow_list == 1)
+  {
+    sprintf (modeL, "%s", "B");
+    sprintf (modeR, "%s", "B");
+  }
+
+  for (i = 0; i < state->group_tally; i++)
+  {
+    if (state->group_array[i].groupNumber == TGL)
+    {
+      strcpy (modeL, state->group_array[i].groupMode);
+      // break; //need to keep going to check other potential slot group
+    }
+    if (state->group_array[i].groupNumber == TGR)
+    {
+      strcpy (modeR, state->group_array[i].groupMode);
+      // break; //need to keep going to check other potential slot group
+    }
+  }
+
+  //flag either left or right as 'enc' to mute if B
+  if (strcmp(modeL, "B") == 0) encL = 1;
+  if (strcmp(modeR, "B") == 0) encR = 1;
+
+  //if TG Hold in place, mute anything but that TG
+  if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
+  if (state->tg_hold != 0 && state->tg_hold != TGR) encR = 1;
+  //likewise, override and unmute if TG hold matches TG
+  if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
+  if (state->tg_hold != 0 && state->tg_hold == TGR) encR = 0;
 
   //interleave left and right channels from the short storage area
   for (i = 0; i < 160; i++)
