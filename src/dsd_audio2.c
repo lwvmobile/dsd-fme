@@ -160,7 +160,7 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
   if (strcmp(modeL, "B") == 0) encL = 1;
   if (strcmp(modeR, "B") == 0) encR = 1;
 
-  //if TG Hold in place, mute anything but that TG
+  //if TG Hold in place, mute anything but that TG #132
   if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
   if (state->tg_hold != 0 && state->tg_hold != TGR) encR = 1;
   //likewise, override and unmute if TG hold matches TG
@@ -363,7 +363,7 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
   if (strcmp(modeL, "B") == 0) encL = 1;
   if (strcmp(modeR, "B") == 0) encR = 1;
 
-  //if TG Hold in place, mute anything but that TG
+  //if TG Hold in place, mute anything but that TG #132
   if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
   if (state->tg_hold != 0 && state->tg_hold != TGR) encR = 1;
   //likewise, override and unmute if TG hold matches TG
@@ -553,7 +553,7 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
   //flag either left or right as 'enc' to mute if B
   if (strcmp(modeL, "B") == 0) encL = 1;
 
-  //if TG Hold in place, mute anything but that TG
+  //if TG Hold in place, mute anything but that TG #132
   if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
   //likewise, override and unmute if TG hold matches TG
   if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
@@ -685,7 +685,7 @@ void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
   //flag either left or right as 'enc' to mute if B
   if (strcmp(modeL, "B") == 0) encL = 1;
 
-  //if TG Hold in place, mute anything but that TG
+  //if TG Hold in place, mute anything but that TG #132
   if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
   //likewise, override and unmute if TG hold matches TG
   if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
@@ -780,7 +780,7 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
   //flag either left or right as 'enc' to mute if B
   if (strcmp(modeL, "B") == 0) encL = 1;
 
-  //if TG Hold in place, mute anything but that TG
+  //if TG Hold in place, mute anything but that TG #132
   if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
   //likewise, override and unmute if TG hold matches TG
   if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
@@ -944,7 +944,7 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
   if (strcmp(modeL, "B") == 0) encL = 1;
   if (strcmp(modeR, "B") == 0) encR = 1;
 
-  //if TG Hold in place, mute anything but that TG
+  //if TG Hold in place, mute anything but that TG #132
   if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
   if (state->tg_hold != 0 && state->tg_hold != TGR) encR = 1;
   //likewise, override and unmute if TG hold matches TG
@@ -1130,7 +1130,7 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
   if (strcmp(modeL, "B") == 0) encL = 1;
   if (strcmp(modeR, "B") == 0) encR = 1;
 
-  //if TG Hold in place, mute anything but that TG
+  //if TG Hold in place, mute anything but that TG #132
   if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
   if (state->tg_hold != 0 && state->tg_hold != TGR) encR = 1;
   //likewise, override and unmute if TG hold matches TG
