@@ -1491,7 +1491,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			else
 			{
 				fprintf (stderr, "\n MFID A4 (Harris); Res: %d; Len: %d; Opcode: %02llX; ", res, len, MAC[1+len_a] & 0x3F); //first two bits are the b0 and b1 
-				for (i = 4; i < len; i++)
+				for (i = 4; i <= len; i++)
 					fprintf (stderr, "%02llX", MAC[i+len_a]);
 			}
 			
@@ -1532,17 +1532,18 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			if (year != 0) //if time is synced in this PDU
 			{
-				fprintf (stderr, "  Date: 20%02d.%02d.%02d Time: %02d:%02d:%02d UTC\n", 
-								year, month, day, hour, min, seconds); 
-				fprintf (stderr, "  Local Time Offset: %.01f Hours;", offhour);
+				fprintf (stderr, "  Date: 20%02d.%02d.%02d Time: %02d:%02d:%02d UTC", 
+								year, month, day, hour, min, seconds);
+				if (offhour != 0)
+					fprintf (stderr, "\n  Local Time Offset: %.01f Hours;", offhour);
 				//if ist bit is set, then time on system may be considered invalid (i.e., no external time sync)
 				if (ist == 1)
 				{
 					fprintf (stderr, " External System Time Sync; ");
 				}
-				else fprintf (stderr, " Local System Time Sync; ");
+				// else fprintf (stderr, " No System Time Sync; ");
 			}
-			fprintf (stderr, " Sync Slots: %d; ", slots); //Sync Slots -- This may not be accurate if out of scope of the PDU
+			else fprintf (stderr, " Sync Slots: %d; ", slots); //Sync Slots -- This may not be accurate if out of scope of the PDU
 			
 
 		}
@@ -1733,18 +1734,22 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		if (MAC[1+len_a] == 0xB0 && MAC[2+len_a] == 0xA4) //&& MAC[2+len_a] == 0xA4
 		{
 			int len_grg = MAC[3+len_a] & 0x3F; //MFID Len in Octets
-			int grg = MAC[4+len_a] >> 5; //3 bits //TIA-102.AABH 4.3.1.1 GRG_Options
-			int ssn = MAC[4+len_a] & 0x1F; //5 bits
+			int tga = MAC[4+len_a] >> 5; //3 bit TGA values from GRG_Options
+			int ssn = MAC[4+len_a] & 0x1F; //5 bit SSN from from GRG_Options
 
-			fprintf (stderr, "\n MFID A4 Group Regroup Explicit Encryption Command\n");
+			fprintf (stderr, "\n MFID A4 (Harris) Group Regroup Explicit Encryption Command\n");
 			// if (len_grg) fprintf (stderr, " Len: %02d", len_grg); //debug
-			if (grg & 3) fprintf (stderr, " Simulselect"); //one-way regroup
+			if ( (tga & 4) == 4) fprintf (stderr, " Simulselect"); //one-way regroup
 			else fprintf (stderr, " Patch"); //two-way regroup
-			if (grg & 1) fprintf (stderr, " Active"); //activated
-			else fprintf (stderr, " Inactive"); //deactivated
-			fprintf (stderr, " SSN: %02d \n", ssn);
+			if (tga & 1) fprintf (stderr, " Active;"); //activated
+			else fprintf (stderr, " Inactive;"); //deactivated
 
-			if ( (grg & 0x2) == 2) //group WGID to supergroup
+			//debug
+			// fprintf (stderr, " T:%d G:%d A:%d;", (tga >> 2) & 1, (tga >> 1) & 1, tga & 1);
+
+			fprintf (stderr, " SSN: %02d;", ssn);
+
+			if ( (tga & 0x2) == 2) //group WGID to supergroup
 			{ 
 				int sg =  (MAC[5+len_a] << 8) | MAC[6+len_a];
 				int key = (MAC[7+len_a] << 8) | MAC[8+len_a];
@@ -1754,14 +1759,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				int t3 = (MAC[14+len_a] << 8) | MAC[15+len_a];
 				int t4 = (MAC[16+len_a] << 8) | MAC[17+len_a];
 				UNUSED4(t1, t2, t3, t4);
-				fprintf (stderr, "  SG: %d; KEY: %04X; ALG: %02X;\n  ", sg, key, alg);
+				fprintf (stderr, " SG: %d; KEY: %04X; ALG: %02X;\n  ", sg, key, alg);
 				int a = 0;
 				int wgid = 0;
 
 				//sanity check
 				// if ((len_grg + len_a > 20)) len_grg = 20 - len_a;
 
-				for (int i = 10; i < len_grg;)
+				for (int i = 10; i <= len_grg;)
 				{
 					//failsafe to prevent oob array
 					if ( (i + len_a) > 20)
@@ -1776,7 +1781,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			}
 
-			else if ( (grg & 0x2) == 0) //individual WUID to supergroup
+			else if ( (tga & 0x2) == 0) //individual WUID to supergroup
 			{
 				int sg =  (MAC[5+len_a] << 8) | MAC[6+len_a];
 				int key = (MAC[7+len_a] << 8) | MAC[8+len_a];

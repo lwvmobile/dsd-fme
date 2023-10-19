@@ -142,12 +142,43 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     //look at Harris Opcodes and payload portion of TSBK
     else if (MFID == 0xA4 && protectbit == 0 && err == 0)
     {
-      //TODO: Add Known Opcodes from Manual (all one of them)
-      fprintf (stderr, "%s",KCYN);
-      fprintf (stderr, "\n MFID A4 (Harris); Opcode: %02X; ", tsbk_byte[0] & 0x3F);
-      for (i = 2; i < 10; i++)
-        fprintf (stderr, "%02X", tsbk_byte[i]);
-      fprintf (stderr, " %s",KNRM);
+
+      //MFIDA4 Group Regroup Explicit Encryption Command
+      if ( (tsbk_byte[0] & 0x3F) == 0x30)
+      {
+        fprintf (stderr, "%s",KCYN);
+        fprintf (stderr, "\n MFID A4 (Harris) Group Regroup Explicit Encryption Command\n");
+        int sg = (tsbk_byte[3] << 8) | tsbk_byte[4];
+        int key = (tsbk_byte[5] << 8) | tsbk_byte[6];
+        int add = (tsbk_byte[7] << 16) | (tsbk_byte[8] << 8) | tsbk_byte[9];
+        int tga = tsbk_byte[2] >> 5; //3 bit TGA from GRG_Options
+        int ssn = tsbk_byte[2] & 0x1F; //5 bit SSN from GRG_Options
+
+        if ( (tga & 0x2) == 2) //WGID or WUID (working group id or working unit id)
+          fprintf (stderr, "  SG: %d; KEY: %04X; WGID: %d; ", sg, key, add);
+        else fprintf (stderr, "  SG: %d; KEY: %04X; WUID: %d; ", sg, key, add);
+
+        if ( (tga & 0x4) == 4) fprintf (stderr, " Simulselect"); //one-way regroup
+        else fprintf (stderr, " Patch"); //two-way regroup
+
+        if (tga & 1) fprintf (stderr, " Active;"); //activated
+        else fprintf (stderr, " Inactive;"); //deactivated
+
+        //debug
+        // fprintf (stderr, " T:%d G:%d A:%d;", (tga >> 2) & 1, (tga >> 1) & 1, tga & 1);
+
+        fprintf (stderr, " SSN: %02d \n", ssn);
+        fprintf (stderr, " %s",KNRM);
+      }
+      else
+      {
+        fprintf (stderr, "%s",KCYN);
+        fprintf (stderr, "\n MFID A4 (Harris); Opcode: %02X; ", tsbk_byte[0] & 0x3F);
+        for (i = 2; i < 10; i++)
+          fprintf (stderr, "%02X", tsbk_byte[i]);
+        fprintf (stderr, " %s",KNRM);
+      }
+      
 
       //This seems to follow the same structure as the MFID 90 Group Regroup Add Command
 
