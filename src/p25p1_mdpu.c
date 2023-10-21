@@ -513,7 +513,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     }
 
     //Telephone Interconnect Voice Channel Grant (or Update) -- Explicit Channel Form
-    if ( (opcode == 0x8 || opcode == 0x9) && MFID < 2) //This form does allow for other MFID's but Moto has a seperate function on 9
+    else if ( (opcode == 0x8 || opcode == 0x9) && MFID < 2) //This form does allow for other MFID's but Moto has a seperate function on 9
     {
       //TELE_INT_CH_GRANT or TELE_INT_CH_GRANT_UPDT
       int svc = mpdu_byte[8];
