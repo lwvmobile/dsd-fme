@@ -512,6 +512,127 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       }
     }
 
+    //Telephone Interconnect Voice Channel Grant (or Update) -- Explicit Channel Form
+    if ( (opcode == 0x8 || opcode == 0x9) && MFID < 2) //This form does allow for other MFID's but Moto has a seperate function on 9
+    {
+      //TELE_INT_CH_GRANT or TELE_INT_CH_GRANT_UPDT
+      int svc = mpdu_byte[8];
+      int channel = (mpdu_byte[12] << 8) | mpdu_byte[13];
+      int timer   = (mpdu_byte[16] << 8) | mpdu_byte[17];
+      int target  = (mpdu_byte[3] << 16) | (mpdu_byte[4] << 8) | mpdu_byte[5];
+      long int freq = 0;
+      fprintf (stderr, "\n");
+      if (svc & 0x80) fprintf (stderr, " Emergency");
+      if (svc & 0x40) fprintf (stderr, " Encrypted");
+
+      if (opts->payload == 1) //hide behind payload due to len
+      {
+        if (svc & 0x20) fprintf (stderr, " Duplex");
+        if (svc & 0x10) fprintf (stderr, " Packet");
+        else fprintf (stderr, " Circuit");
+        if (svc & 0x8) fprintf (stderr, " R"); //reserved bit is on
+        fprintf (stderr, " Priority %d", svc & 0x7); //call priority
+      }
+
+      fprintf (stderr, " Telephone Interconnect Voice Channel Grant");
+      if ( opcode & 1) fprintf (stderr, " Update");
+      fprintf (stderr, " Extended");
+      fprintf (stderr, "\n  CHAN: %04X; Timer: %f Seconds; Target: %d;", channel, (float)timer*0.1f, target); //timer unit is 100 ms, or 0.1 seconds
+      freq = process_channel_to_freq (opts, state, channel);
+
+      //add active channel to string for ncurses display
+      sprintf (state->active_channel[0], "Active Tele Ch: %04X TGT: %d; ", channel, target);
+      state->last_active_time = time(NULL);
+
+      //Skip tuning private calls if private calls is disabled (are telephone int calls private, or talkgroup?)
+      if (opts->trunk_tune_private_calls == 0) goto SKIPCALL; 
+
+      //Skip tuning encrypted calls if enc calls are disabled
+      if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
+
+      //telephone only has a target address (manual shows combined source/target of 24-bits)
+      for (int i = 0; i < state->group_tally; i++)
+      {
+        if (state->group_array[i].groupNumber == target)
+        {
+          fprintf (stderr, " [%s]", state->group_array[i].groupName);
+          strcpy (mode, state->group_array[i].groupMode);
+          break;
+        }
+      }
+
+      //TG hold on UU_V -- will want to disable UU_V grants while TG Hold enabled -- same for Telephone?
+      if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
+      // if (state->tg_hold != 0 && state->tg_hold == target)
+      // {
+      // 	sprintf (mode, "%s", "A");
+      // 	opts->p25_is_tuned = 0; //unlock tuner
+      // }
+
+      //tune if tuning available
+      if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+      {
+        //reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+        if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+        {
+          //changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
+          if (1 == 1)
+          {
+            if (state->p25_chan_tdma[channel >> 12] == 1)
+            {
+              state->samplesPerSymbol = 8;
+              state->symbolCenter = 3;
+
+              //shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
+              //this will only occur in realtime tuning, not not required .bin or .wav playback
+              if (channel & 1) //VCH1
+              {
+                opts->slot1_on = 0;
+                opts->slot2_on = 1;
+              }
+              else //VCH0
+              {
+                opts->slot1_on = 1;
+                opts->slot2_on = 0;
+              }
+            }
+
+          }
+
+          //rigctl
+          if (opts->use_rigctl == 1)
+          {
+            if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+            SetFreq(opts->rigctl_sockfd, freq);
+            if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+            opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+            state->last_vc_sync_time = time(NULL); 
+          }
+          //rtl
+          else if (opts->audio_in_type == 3)
+          {
+            #ifdef USE_RTLSDR
+            rtl_dev_tune (opts, freq);
+            if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+            opts->p25_is_tuned = 1;
+            state->last_vc_sync_time = time(NULL);
+            #endif
+          }
+        }    
+      }
+      if (opts->p25_trunk == 0)
+      {
+        if (target == state->lasttg || target == state->lasttgR)
+        {
+          //P1 FDMA
+          if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+          //P2 TDMA
+          else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+        }
+      }
+
+    }
+
     //look at Harris Opcodes and payload portion of MPDU
     else if (MFID == 0xA4) 
     {
@@ -539,23 +660,10 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         UNUSED2(source, freq2);
         fprintf (stderr, "%s\n ",KYEL);
 
-        //unsure if this follows for GRG
-        // if (svc & 0x80) fprintf (stderr, " Emergency"); 
-        
         if (svc & 0x40) fprintf (stderr, " Encrypted"); //P-bit
 
-        //unsure if this follows for GRG
-        // if (opts->payload == 1) //hide behind payload due to len
-        // {
-        //   if (svc & 0x20) fprintf (stderr, " Duplex");
-        //   if (svc & 0x10) fprintf (stderr, " Packet");
-        //   else fprintf (stderr, " Circuit");
-        //   if (svc & 0x8) fprintf (stderr, " R"); //reserved bit is on
-        //   fprintf (stderr, " Priority %d", svc & 0x7); //call priority
-        // }
-
         fprintf (stderr, " MFID90 Group Regroup Channel Grant - Explicit");
-        fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] SG [%d][%04X]", svc, channelt, channelr, group, group);
+        fprintf (stderr, "\n  RES/P [%02X] CHAN-T [%04X] CHAN-R [%04X] SG [%d][%04X]", svc, channelt, channelr, group, group);
         freq1 = process_channel_to_freq (opts, state, channelt);
         freq2 = process_channel_to_freq (opts, state, channelr);
 

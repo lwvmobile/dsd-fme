@@ -463,7 +463,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				fprintf (stderr, " Priority %d", svc & 0x7); //call priority
 			}
 
-			fprintf (stderr, " Group Voice Channel Grant Update");
+			fprintf (stderr, " Group Voice Channel Grant");
 			fprintf (stderr, "\n  SVC [%02X] CHAN [%04X] Group [%d] Source [%d]", svc, channel, group, source);
 			freq = process_channel_to_freq (opts, state, channel);
 
@@ -558,6 +558,136 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 				}
 			}
+		}
+
+		//Telephone Interconnect Voice Channel Grant (or Update) -- Implicit and Explicit (MFID != Moto and opcode 8 and opcode 9)
+		if (MAC[1+len_a] == 0x48 || MAC[1+len_a] == 0x49 || MAC[1+len_a] == 0xC8 || MAC[1+len_a] == 0xC9)
+		{
+			//TELE_INT_CH_GRANT or TELE_INT_CH_GRANT_UPDT
+			int k = 1; //vPDU
+			if (MAC[len_a] == 0x07) k = 0; //TSBK
+			int svc = MAC[2+len_a+k];
+			int channel = (MAC[3+len_a+k] << 8) | MAC[4+len_a+k];
+			int timer   = (MAC[5+len_a+k] << 8) | MAC[6+len_a+k];
+			int target  = (MAC[7+len_a+k] << 16) | (MAC[8+len_a+k] << 8) | MAC[9+len_a+k];
+			long int freq = 0;
+			if ( MAC[1+len_a] & 0x80) //vPDU only
+			{
+				timer   = (MAC[8+len_a] << 8) | MAC[9+len_a];
+				target  = (MAC[10+len_a] << 16) | (MAC[11+len_a] << 8) | MAC[12+len_a];
+			}
+
+			fprintf (stderr, "\n");
+			if (svc & 0x80) fprintf (stderr, " Emergency");
+			if (svc & 0x40) fprintf (stderr, " Encrypted");
+
+			if (opts->payload == 1) //hide behind payload due to len
+			{
+				if (svc & 0x20) fprintf (stderr, " Duplex");
+				if (svc & 0x10) fprintf (stderr, " Packet");
+				else fprintf (stderr, " Circuit");
+				if (svc & 0x8) fprintf (stderr, " R"); //reserved bit is on
+				fprintf (stderr, " Priority %d", svc & 0x7); //call priority
+			}
+
+			fprintf (stderr, " Telephone Interconnect Voice Channel Grant");
+			if ( MAC[1+len_a] & 0x01) fprintf (stderr, " Update");
+			if ( MAC[1+len_a] & 0x80) fprintf (stderr, " Explicit");
+			else fprintf (stderr, " Implicit");
+			fprintf (stderr, "\n  CHAN: %04X; Timer: %f Seconds; Target: %d;", channel, (float)timer*0.1f, target); //timer unit is 100 ms, or 0.1 seconds
+			freq = process_channel_to_freq (opts, state, channel);
+
+			//add active channel to string for ncurses display
+			sprintf (state->active_channel[0], "Active Tele Ch: %04X TGT: %d; ", channel, target);
+			state->last_active_time = time(NULL);
+
+			//Skip tuning private calls if private calls is disabled (are telephone int calls private, or talkgroup?)
+			if (opts->trunk_tune_private_calls == 0) goto SKIPCALL; 
+
+			//Skip tuning encrypted calls if enc calls are disabled
+			if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
+
+			//telephone only has a target address (manual shows combined source/target of 24-bits)
+			for (int i = 0; i < state->group_tally; i++)
+			{
+				if (state->group_array[i].groupNumber == target)
+				{
+					fprintf (stderr, " [%s]", state->group_array[i].groupName);
+					strcpy (mode, state->group_array[i].groupMode);
+					break;
+				}
+			}
+
+			//TG hold on UU_V -- will want to disable UU_V grants while TG Hold enabled -- same for Telephone?
+			if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
+			// if (state->tg_hold != 0 && state->tg_hold == target)
+			// {
+			// 	sprintf (mode, "%s", "A");
+			// 	opts->p25_is_tuned = 0; //unlock tuner
+			// }
+
+			//tune if tuning available
+			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+			{
+				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+				if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+				{
+					//changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
+					if (1 == 1)
+					{
+						if (state->p25_chan_tdma[channel >> 12] == 1)
+						{
+							state->samplesPerSymbol = 8;
+							state->symbolCenter = 3;
+
+							//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
+							//this will only occur in realtime tuning, not not required .bin or .wav playback
+							if (channel & 1) //VCH1
+							{
+								opts->slot1_on = 0;
+								opts->slot2_on = 1;
+							}
+							else //VCH0
+							{
+								opts->slot1_on = 1;
+								opts->slot2_on = 0;
+							}
+						}
+
+					}
+
+					//rigctl
+					if (opts->use_rigctl == 1)
+					{
+						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+						SetFreq(opts->rigctl_sockfd, freq);
+						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+						state->last_vc_sync_time = time(NULL); 
+					}
+					//rtl
+					else if (opts->audio_in_type == 3)
+					{
+						#ifdef USE_RTLSDR
+						rtl_dev_tune (opts, freq);
+						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+						opts->p25_is_tuned = 1;
+						state->last_vc_sync_time = time(NULL);
+						#endif
+					}
+				}    
+			}
+			if (opts->p25_trunk == 0)
+			{
+				if (target == state->lasttg || target == state->lasttgR)
+				{
+					//P1 FDMA
+					if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+					//P2 TDMA
+					else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+				}
+			}
+
 		}
 
 		//Unit-to-Unit Voice Service Channel Grant (UU_V_CH_GRANT), or Grant Update (same format)
@@ -1304,32 +1434,15 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n MFID90 Group Regroup Add Command ");	
 		}
 
-		//TODO: Fix These two commented out
-		//Authentication Response - Abbreviated
-		// if (MAC[1+len_a] == 0x78) 
-		// {
-		// 	int source = (MAC[8+len_a] << 16) | (MAC[9+len_a] << 8) | MAC[10+len_a];
-		// 	fprintf (stderr, "\n Authentication Response - Abbreviated \n");
-		// 	fprintf (stderr, "  Source [%08d][%06X] ", source, source);
-		// }
-
-		//Authentication Response - Extended
-		// if (MAC[1+len_a] == 0xF8) 
-		// {
-		// 	//only partial data will print on this, do we really care about the SUID?
-		// 	int source = (MAC[5+len_a] << 16) | (MAC[6+len_a] << 8) | MAC[7+len_a];
-		// 	fprintf (stderr, "\n Authentication Response - Extended \n");
-		// 	fprintf (stderr, "  Source [%08d][%06X] ", source, source);
-		// }
-
 		//System Service Broadcast
 		if (MAC[1+len_a] == 0x78) 
 		{
+			int TWV = MAC[2+len_a]; //TWUID Validity
 			int SSA = (MAC[3+len_a] << 16) | (MAC[4+len_a] << 8) | MAC[5+len_a];
 			int SSS = (MAC[6+len_a] << 16) | (MAC[7+len_a] << 8) | MAC[8+len_a];
 			int RPL = MAC[9+len_a];
 			fprintf (stderr, "\n System Service Broadcast - Abbreviated \n");
-			fprintf (stderr, "  SSA: %06X; SSS: %06X; RPL: %02X", SSA, SSS, RPL);
+			fprintf (stderr, "  TWV: %02X SSA: %06X; SSS: %06X; RPL: %02X", TWV, SSA, SSS, RPL);
 		}
 
 		//RFSS Status Broadcast - Implicit
@@ -1381,18 +1494,6 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			
 		}
 
-		//Telephone Interconnect Voice Channel Grant (TELE_INT_CH_GRANT) //look at PDU for this, see if this is tunable
-		// if (MAC[1+len_a] == 0x48 && MAC[2+len_a] != 0x90)
-		// {
-		// 	fprintf (stderr, "\n Telephone Interconnect Voice Channel Grant ");	
-		// }
-
-		// //Telephone Interconnect Voice Channel Grant Update (TELE_INT_CH_GRANT_UPDT)
-		// if (MAC[1+len_a] == 0x49 && MAC[2+len_a] != 0x90)
-		// {
-		// 	fprintf (stderr, "\n Telephone Interconnect Voice Channel Grant Update ");	
-		// }
-
 		//TODO: Restructure this function to group standard Opcodes away from MFID 90 and MFID A4, and Unknown MFID
 		//or just go to if-elseif-else layout (probably easier that way)
 		//Harris A4 Opcodes
@@ -1427,8 +1528,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			//Harris "Talker" Alias -- Not always in the SACCH, has been seen in the FACCH as well (before MAC_PTT)
 			if (MAC[1+len_a] == 0xA8) //1010 1000 (so, its opcode is 0x28, with the b = 0b10 value for manufacturer message?)
 			{
-				fprintf (stderr, "\n MFID A4 (Harris); VCH %d; SRC: %d; Talker Alias: ", slot, tsrc);
-				for (i = 4; i <= len; i++) //len doesn't seem to include the CRC12/CRC16
+				fprintf (stderr, "\n MFID A4 (Harris); VCH %d; TG: %d; SRC: %d; Talker Alias: ", slot, ttg, tsrc);
+				for (i = 4; i <= len; i++) //len doesn't seem to include the CRC12
 				{
 					if ( (MAC[i+len_a] > 0x19) && (MAC[i+len_a] < 0x7F) )
 						fprintf (stderr, "%c", (char)MAC[i+len_a]);
@@ -1485,7 +1586,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				}
 
 				//debug
-				fprintf (stderr, "\n WR: %d SRC: %d Res: %d Len: %d STR: %s", wr, tsrc, res, len, str);
+				fprintf (stderr, "\n WR: %d TG: %d SRC: %d Res: %d Len: %d STR: %s", wr, ttg, tsrc, res, len, str);
 			}
 
 			else
@@ -1794,14 +1895,125 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 		}
 
+		//Unit Registration Response -- Extended vPDU (MBT will not make it here)
+		if ( MAC[1+len_a] == 0xEC && MAC[0] != 0x07)
+		{
+			int res = (MAC[3+len_a] >> 2) & 0x3F;
+			int RV = (MAC[2+len_a] >> 0) & 0x3;
+			int src = (MAC[8+len_a] << 16) | (MAC[9+len_a] << 8) | MAC[10+len_a];
+			int uwacn = (MAC[4+len_a] << 12) | (MAC[5+len_a] << 4) | ((MAC[6+len_a] & 0xF0) >> 4); 
+			int usys = ((MAC[6+len_a] & 0xF) << 8) | MAC[7+len_a];
+			fprintf (stderr, "\n Unit Registration Response - WACN: %05X; SYS: %03X; SRC: %d", uwacn, usys, src);
+			if (res) fprintf (stderr, " RES: %d;", res);
+			if (RV == 0) fprintf (stderr, " REG_ACCEPT;");
+			if (RV == 1) fprintf (stderr, " REG_FAIL;"); //RFSS was unable to verify
+			if (RV == 2) fprintf (stderr, " REG_DENY;"); //Not allowed at this location
+			if (RV == 3) fprintf (stderr, " REG_REFUSED;"); //WUID invalid but re-register after a user stimulus
+			fprintf (stderr, " - Extended;");
+		}
+
+		//Unit Registration Response -- Abbreviated TSBK and vPDU
+		if (MAC[1+len_a] == 0x6C)
+		{
+			/*
+			Unit Registration Response TSBK
+			P25 PDU Payload
+				[07][6C][01][EC][72][70][EC][72][70][EC][00][00]
+				[00][00][00][00][00][00][00][00][00][00][00][00]
+			*/
+			int k = 1; //vPDU is one octet higher than TSBK
+			if (MAC[len_a] == 0x07) k = 0;
+			int res = (MAC[2+len_a+k] >> 6) & 0x3;
+			int RV = (MAC[2+len_a+k] >> 4) & 0x3;
+			int usite = ((MAC[2+len_a+k] & 0xF) << 8) | MAC[3+len_a+k];
+			int sid = (MAC[4+len_a+k] << 16) | (MAC[5+len_a+k] << 8) | MAC[6+len_a+k];
+			int src = (MAC[7+len_a+k] << 16) | (MAC[8+len_a+k] << 8) | MAC[9+len_a+k];
+			fprintf (stderr, "\n Unit Registration Response - SITE: %03X SRC_ID: %d SRC: %d", usite, sid, src );
+			if (res) fprintf (stderr, " RES: %d;", res);
+			if (RV == 0) fprintf (stderr, " REG_ACCEPT;");
+			if (RV == 1) fprintf (stderr, " REG_FAIL;"); //RFSS was unable to verify
+			if (RV == 2) fprintf (stderr, " REG_DENY;"); //Not allowed at this location
+			if (RV == 3) fprintf (stderr, " REG_REFUSED;"); //WUID invalid but re-register after a user stimulus
+
+		}
+
+		//Unit Registration Command -- TSBK and vPDU
+		if (MAC[1+len_a] == 0x6D && MAC[0+len_a] != 0x07)
+		{
+			int k = 2; //vPDU is two octets higher than TSBK
+			if (MAC[len_a] == 0x07) k = 0;
+			int src = (MAC[2+len_a+k] << 16) | (MAC[3+len_a+k] << 8) | MAC[4+len_a+k];
+			int tgt = (MAC[5+len_a+k] << 16) | (MAC[6+len_a+k] << 8) | MAC[7+len_a+k];
+			fprintf (stderr, "\n Unit Registration - SRC: %d; TGT: %d;", src, tgt);
+		}
+
+		//Unit Deregistration Acknowlegement (TSBK and vPDU are the same)
+		if (MAC[1+len_a] == 0x6F)
+		{
+			int src = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
+			int uwacn = (MAC[3+len_a] << 12) | (MAC[4+len_a] << 4) | ((MAC[5+len_a] & 0xF0) >> 4); 
+			int usys = ((MAC[5+len_a] & 0xF) << 8) | MAC[6+len_a];
+			fprintf (stderr, "\n Unit Deregistration Acknowlegement - WACN: %05X; SYS: %03X; SRC: %d", uwacn, usys, src);
+			if (MAC[1+len_a] == 0xEF) fprintf (stderr, " - Extended;");
+		}
+
+		//Authentication Demand
+		if (MAC[1+len_a] == 0x71 || MAC[1+len_a] == 0xF1)
+		{
+			fprintf (stderr, "\n Authentication Demand;");
+			if (MAC[1+len_a] == 0xF1) fprintf (stderr, " - Extended;");
+		}
+
+		//Authentication FNE Response
+		if (MAC[1+len_a] == 0x72 || MAC[1+len_a] == 0xF2)
+		{
+			fprintf (stderr, "\n Authentication FNE Response;");
+			if (MAC[1+len_a] == 0xF2) fprintf (stderr, " - Extended;");
+		}
+
+		//MAC_Release for Forced/Unforced Audio or Call Preemption vPDU
+		if (MAC[1+len_a] == 0x31)
+		{
+			int uf = (MAC[2+len_a] >> 7) & 1;
+			int ca = (MAC[2+len_a] >> 6) & 1;
+			int resr1 = MAC[2+len_a] & 0x1F;
+			int add = (MAC[3+len_a] << 16) | (MAC[4+len_a] << 8) | MAC[5+len_a];
+			int resr2 = MAC[6+len_a] >> 4;
+			int cc = ( (MAC[6+len_a] & 0xF) << 8) | MAC[7+len_a];
+
+			fprintf (stderr, "\n MAC Release:  ");
+			if(uf) fprintf (stderr, "Forced; ");
+			else fprintf (stderr, "Unforced; ");
+			if(ca) fprintf (stderr, "Audio Preemption; ");
+			else fprintf (stderr, "Call Preemption; ");
+			fprintf (stderr, "RES1: %d; ", resr1);
+			fprintf (stderr, "RES2: %d; ", resr2);
+			fprintf (stderr, "TGT: %d; ", add);
+			fprintf (stderr, "CC: %03X; ", cc);
+
+			// if (slot == 0) state->lastsrc = 0;
+			// if (slot == 1) state->lastsrcR = 0;
+		}
+
 		//1 or 21, group voice channel message, abb and ext
 		if (MAC[1+len_a] == 0x1 || MAC[1+len_a] == 0x21)
 		{
 			int svc =  MAC[2+len_a];
 			int gr  = (MAC[3+len_a] << 8) | MAC[4+len_a];
 			int src = (MAC[5+len_a] << 16) | (MAC[6+len_a] << 8) | MAC[7+len_a];
+			unsigned long long int src_suid = 0;
 
-			fprintf (stderr, "\n VCH %d - TG %d SRC %d ", slot, gr, src);
+			if (MAC[1+len_a] == 0x21)
+			{
+				src_suid = (MAC[8+len_a] << 48) | (MAC[9+len_a] << 40) | (MAC[10+len_a] << 32) | (MAC[11+len_a] << 24) |
+										(MAC[12+len_a] << 16) | (MAC[13+len_a] << 8) | (MAC[14+len_a] << 0);
+
+				src = src_suid & 0xFFFFFF; //last 24 of completed SUID?
+			}
+
+			fprintf (stderr, "\n VCH %d - TG: %d; SRC: %d; ", slot, gr, src);
+
+			if (MAC[1+len_a] == 0x21) fprintf (stderr, "SUID: %lld; ", src_suid);
 
 			if (svc & 0x80) fprintf (stderr, " Emergency");
 			if (svc & 0x40) fprintf (stderr, " Encrypted");
@@ -1822,6 +2034,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			else if (svc & 0x40) strcat (state->call_string[slot], " Encrypted  ");
 			else strcat (state->call_string[slot], "            ");
 
+			if (MAC[1+len_a] == 0x21) fprintf (stderr, " - Extended ");
+			else fprintf (stderr, " - Abbreviated ");
+
 			if (slot == 0)
 			{
 				state->lasttg = gr;
@@ -1833,6 +2048,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				if (src != 0) state->lastsrcR = src;
 			}
 		}
+
 		//1 or 21, group voice channel message, abb and ext
 		if (MAC[1+len_a] == 0x2 || MAC[1+len_a] == 0x22)
 		{

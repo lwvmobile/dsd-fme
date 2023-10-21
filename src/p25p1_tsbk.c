@@ -127,12 +127,9 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     protectbit = (tsbk_byte[0] >> 6) & 0x1;
     lb         = (tsbk_byte[0] >> 7) & 0x1;
 
-    //Don't run NET_STS out of this, or will set wrong NAC/CC //&& PDU[1] != 0x49 && PDU[1] != 0x45
-    //0x49 is telephone grant, 0x46 Unit to Unit Channel Answer Request (seems bogus) (mfid 90)
-    // if (MFID < 0x2 && protectbit == 0 && err == 0 && ec == 0 && PDU[1] != 0x7B )
-    //running with A4 and 90 causing some false positives when sending to vPDU, issuing bad call grants to nowhere!
-    // if ( (MFID < 0x2 || MFID == 0xA4 || MFID == 0x90) && protectbit == 0 && err == 0 && ec == 0 && PDU[1] != 0x7B )  
-    if (MFID < 0x2 && protectbit == 0 && err == 0 && PDU[1] != 0x7B ) 
+    //Don't run NET_STS out of this, or will set wrong NAC/CC
+    //Note: Running MFID 90 (moto) opcode 9 GRG Delete or Reserve will falsely trigger a telephone interconnect grant
+    if (MFID < 0x2 && protectbit == 0 && err == 0 && PDU[1] != 0x7B )
     {
       fprintf (stderr, "%s",KYEL);
       process_MAC_VPDU(opts, state, 0, PDU);
@@ -178,18 +175,6 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "%02X", tsbk_byte[i]);
         fprintf (stderr, " %s",KNRM);
       }
-      
-
-      //This seems to follow the same structure as the MFID 90 Group Regroup Add Command
-
-      //MFID A4 Opcode 1 on TSBK / Opcode 0x41 on vPDU
-      // P25 PDU Payload #1 [81][A4] [11][0D] [83][4E] [84][2A] [84][EE] -------[39][30]
-      // MFID A4 Protected: 0 Last Block: 1
-
-      //these values do seem to change, but not often, but seem to pair up into 16-bit values
-      // P25 PDU Payload #1 [81][A4] [11][0D] [84][2A] [84][EE] [FF][FF] -------[4D][2F]
-      // MFID A4 Protected: 0 Last Block: 1
-
     }
 
     //look at Motorola Opcodes and payload portion of TSBK

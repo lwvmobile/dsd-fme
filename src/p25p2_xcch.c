@@ -36,6 +36,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 	opcode = (payload[0] << 2) | (payload[1] << 1) | (payload[2] << 0);
 	int mac_offset = 0;
 	mac_offset = (payload[3] << 2) | (payload[4] << 1) | (payload[5] << 0);
+	int res = (payload[6] << 1) | (payload[7] << 0);
 	int b = 9;
 	b = (payload[8] << 1) | (payload[9] << 0); //combined b1 and b2
 	int mco_a = 69;
@@ -132,6 +133,16 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			fprintf (stderr, "TG %d ", state->lasttg);
 			fprintf (stderr, "SRC %d ", state->lastsrc);
 
+			/*
+			When the talker radio is initiating an individual call (unit to unit or telephone interconnect), the reserved group ID of zero
+			is used in the group address portion of the MAC_PTT PDU and the source ID is that of the talker radio.
+
+			The outbound SACCH for the talker radio containing the talker ID information is required at the
+			talker radio site and optional at other sites. (So, if its from an external site, then it can be zero?)
+			
+			*/
+
+			// if (state->lastsrc == 0) fprintf (stderr, "External ");
 
 			state->payload_algid =  SMAC[10];
 			state->payload_keyid = (SMAC[11] << 8) | SMAC[12];
@@ -172,6 +183,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			fprintf (stderr, "TG %d ", state->lasttgR);
 			fprintf (stderr, "SRC %d ", state->lastsrcR);
 
+			// if (state->lastsrcR == 0) fprintf (stderr, "External ");
 
 			state->payload_algidR =  SMAC[10];
 			state->payload_keyidR = (SMAC[11] << 8) | SMAC[12];
@@ -195,6 +207,17 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 				state->aout_gainR = opts->audio_gain;
 
 		}
+
+		if (opts->payload == 1)
+		{
+			fprintf (stderr, "\n MAC_PTT_PAYLOAD_S OFFSET: %d RES: %d \n ", mac_offset, res);
+			for (int i = 0; i < 24; i++)
+			{
+				if (i == 12) fprintf (stderr, "\n ");
+				fprintf (stderr, "[%02llX]", SMAC[i]);
+			}
+		}
+
 		fprintf (stderr, "%s", KNRM);
 	}
 	//do not permit MAC_PTT_END with CRC errs, help prevent false positives on calls
@@ -432,6 +455,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 	opcode = (payload[0] << 2) | (payload[1] << 1) | (payload[2] << 0);
 	int mac_offset = 0;
 	mac_offset = (payload[3] << 2) | (payload[4] << 1) | (payload[5] << 0);
+	int res = (payload[6] << 1) | (payload[7] << 0);
 	UNUSED(mac_offset);
 
 	//attempt CRC check to validate or reject PDU
@@ -485,6 +509,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			fprintf (stderr, "TG %d ", state->lasttg);
 			fprintf (stderr, "SRC %d ", state->lastsrc);
 
+			// if (state->lastsrc == 0) fprintf (stderr, "External ");
 
 			state->payload_algid =  FMAC[10];
 			state->payload_keyid = (FMAC[11] << 8) | FMAC[12];
@@ -524,6 +549,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			fprintf (stderr, "TG %d ", state->lasttgR);
 			fprintf (stderr, "SRC %d ", state->lastsrcR);
 
+			// if (state->lastsrcR == 0) fprintf (stderr, "External ");
 
 			state->payload_algidR =  FMAC[10];
 			state->payload_keyidR = (FMAC[11] << 8) | FMAC[12];
@@ -546,6 +572,16 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			if (opts->floating_point == 1)
 				state->aout_gainR = opts->audio_gain;
 
+		}
+
+		if (opts->payload == 1)
+		{
+			fprintf (stderr, "\n MAC_PTT_PAYLOAD_F OFFSET: %d RES: %d \n ", mac_offset, res);
+			for (int i = 0; i < 24; i++)
+			{
+				if (i == 12) fprintf (stderr, "\n ");
+				fprintf (stderr, "[%02llX]", FMAC[i]);
+			}
 		}
 		fprintf (stderr, "%s", KNRM);
 
