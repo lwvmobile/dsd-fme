@@ -504,6 +504,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%s", KNRM);
   }
 
+  #ifdef SOFTID
   if (opts->payload == 1)
   {     
     //view Low Speed Data
@@ -547,6 +548,10 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 
   if ( (k >= state->dmr_alias_len[0]) && (state->dmr_alias_format[0] == 0x02) )
   {
+    //storage for completed string
+    char str[16]; int wr = 0; int tsrc = state->lastsrc; int z = 0; k = 0;
+    for (i = 0; i < 16; i++) str[i] = 0;
+
     //print out what we've gathered
     fprintf (stderr, "%s",KCYN);
     fprintf (stderr, " LSD Soft ID: ");
@@ -555,8 +560,45 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
       for (int j = 0; j < 4; j++)
       {
         fprintf (stderr, "%c", state->dmr_alias_block_segment[0][0][i][j]);
+        if (state->dmr_alias_block_segment[0][0][i][j] != 0) str[k++] = state->dmr_alias_block_segment[0][0][i][j];
       }
     }
+
+    //debug
+    // fprintf (stderr, " STR: %s", str);
+
+    //assign to tg name string
+    if (tsrc != 0)
+    {
+      for (int x = 0; x < state->group_tally; x++)
+      {
+        if (state->group_array[x].groupNumber == tsrc)
+        {
+          wr = 1; //already in there, so no need to assign it
+          z = x;
+          break;
+        }
+      }
+
+      //if not already in there, so save it there now
+      if (wr == 0)
+      {
+        state->group_array[state->group_tally].groupNumber = tsrc;
+        sprintf (state->group_array[state->group_tally].groupMode, "%s", "D");
+        sprintf (state->group_array[state->group_tally].groupName, "%s", str);
+        state->group_tally++;
+      }
+
+      //if its in there, but doesn't match (bad/partial decode)
+      else if (strcmp(str, state->group_array[z].groupName) != 0)
+      {
+        state->group_array[z].groupNumber = tsrc;
+        sprintf (state->group_array[z].groupMode, "%s", "D");
+        sprintf (state->group_array[z].groupName, "%s", str);
+      }
+      
+    }
+
     fprintf (stderr, "%s",KNRM);
     fprintf (stderr, "\n");
 
@@ -566,6 +608,11 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     state->dmr_alias_len[0] = 0;
     // memset (state->dmr_alias_block_segment, 0, sizeof(state->dmr_alias_block_segment));
   }
+  #else
+  UNUSED2(lsd1_okay, lsd2_okay);
+  fprintf (stderr, "%s",KNRM);
+  fprintf (stderr, "\n");
+  #endif //SOFTID
 
   //run LFSR on the MI if we have irrecoverable errors here
   if (irrecoverable_errors && state->payload_algid != 0x80 && state->payload_keyid != 0 && state->payload_miP != 0) 

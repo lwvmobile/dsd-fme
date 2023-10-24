@@ -473,6 +473,7 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
       fprintf (stderr, "[%02X]", LCW_bytes[i]);
     }
 
+    #ifdef SOFTID
     //view Low Speed Data
     fprintf (stderr, "%s",KCYN);
     fprintf (stderr, "    LSD: %02X %02X ", lsd_hex1, lsd_hex2);
@@ -482,9 +483,10 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
     else fprintf (stderr, " )");
     if (lsd1_okay == 0) fprintf (stderr, " L1 ERR");
     if (lsd2_okay == 0) fprintf (stderr, " L2 ERR");
+    #endif
     fprintf (stderr, "%s\n", KNRM);
   }
-
+  #ifdef SOFTID
   //TEST: Store LSD into array if 0x02 0x08 (opcode and len?)
   int k = 0;
   if (state->dmr_alias_format[0] == 0x02)
@@ -512,6 +514,10 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
 
   if ( (k >= state->dmr_alias_len[0]) && (state->dmr_alias_format[0] == 0x02) )
   {
+    //storage for completed string
+    char str[16]; int wr = 0; int tsrc = state->lastsrc; int z = 0; k = 0;
+    for (i = 0; i < 16; i++) str[i] = 0;
+
     //print out what we've gathered
     fprintf (stderr, "%s",KCYN);
     fprintf (stderr, " LSD Soft ID: ");
@@ -520,16 +526,50 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
       for (int j = 0; j < 4; j++)
       {
         fprintf (stderr, "%c", state->dmr_alias_block_segment[0][0][i][j]);
+        if (state->dmr_alias_block_segment[0][0][i][j] != 0) str[k++] = state->dmr_alias_block_segment[0][0][i][j];
       }
     }
+
+    //debug
+    // fprintf (stderr, " STR: %s", str);
+
+    //assign to tg name string
+    if (tsrc != 0)
+    {
+      for (int x = 0; x < state->group_tally; x++)
+      {
+        if (state->group_array[x].groupNumber == tsrc)
+        {
+          wr = 1; //already in there, so no need to assign it
+          z = x;
+          break;
+        }
+      }
+
+      //if not already in there, so save it there now
+      if (wr == 0)
+      {
+        state->group_array[state->group_tally].groupNumber = tsrc;
+        sprintf (state->group_array[state->group_tally].groupMode, "%s", "D");
+        sprintf (state->group_array[state->group_tally].groupName, "%s", str);
+        state->group_tally++;
+      }
+
+      //if its in there, but doesn't match (bad/partial decode)
+      else if (strcmp(str, state->group_array[z].groupName) != 0)
+      {
+        state->group_array[z].groupNumber = tsrc;
+        sprintf (state->group_array[z].groupMode, "%s", "D");
+        sprintf (state->group_array[z].groupName, "%s", str);
+      }
+      
+    }
+
     fprintf (stderr, "%s",KNRM);
     fprintf (stderr, "\n");
-
-    //reset values
-    state->dmr_alias_format[0] = 0;
-    state->data_block_counter[0] = 0;
-    state->dmr_alias_len[0] = 0;
-    // memset (state->dmr_alias_block_segment, 0, sizeof(state->dmr_alias_block_segment));
   }
+  #else
+  UNUSED2(lsd1_okay, lsd2_okay);
+  #endif //SOFTID
 
 }

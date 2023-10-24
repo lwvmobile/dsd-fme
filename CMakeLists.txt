@@ -39,6 +39,13 @@ if (LZ)
     add_definitions(-DLIMAZULUTWEAKS) 
 endif ()
 
+#use cmake option -DSID=ON to enable P25p1 Soft ID decoding -- Experimental
+option(SID
+    "Build with P25p1 LSD/Soft ID Enabled" OFF)
+if (SID)
+    add_definitions(-DSOFTID) 
+endif ()
+
 
 include(git_revision)
 git_describe(GIT_TAG)
