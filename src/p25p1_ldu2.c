@@ -459,6 +459,13 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   mihex2 = (unsigned long long int)ConvertBitIntoBytes(&mi[32], 32);
   mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
 
+  //NOTE: LSD is also encrypted if voice is encrypted, so let's just zip it for now
+  if (state->payload_algid != 0x80)
+  {
+    lsd_hex1 = 0;
+    lsd_hex2 = 0;
+  }
+
   //WIP: LSD FEC
   lsd1_okay = p25p1_lsd_fec (lowspeeddata+0);
   lsd2_okay = p25p1_lsd_fec (lowspeeddata+16);
@@ -495,13 +502,6 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%s", KRED);
       fprintf (stderr, " LDU2 FEC ERR ");
       fprintf (stderr, "%s", KNRM);
-  }
-
-  //NOTE: LSD is also encrypted if voice is encrypted, so let's just zip it for now
-  if (state->payload_algid != 0x80)
-  {
-    lsd_hex1 = 0;
-    lsd_hex2 = 0;
   }
 
   if (opts->payload == 1)

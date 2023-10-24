@@ -210,7 +210,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
         //   fprintf (stderr, " Priority %d", svc & 0x7); //call priority
         // }
 
-        fprintf (stderr, " MFID90 Group Regroup Channel Grant");
+        fprintf (stderr, " MFID 90 (Moto) Group Regroup Channel Grant");
         fprintf (stderr, "\n  SVC [%02X] CHAN [%04X] SG [%d][%04X]", svc, channel, group, group);
         freq1 = process_channel_to_freq (opts, state, channel);
 
@@ -309,7 +309,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
         long int tempf = 0; //temp freq
 
         fprintf (stderr, "%s\n ",KYEL);
-        fprintf (stderr, " MFID90 Group Regroup Channel Grant Update");
+        fprintf (stderr, " MFID 90 (Moto) Group Regroup Channel Grant Update");
         fprintf (stderr, "\n  CHAN1 [%04X] SG [%d][%04X] CHAN2 [%04X] SG [%d][%04X]", channel1, group1, group1, channel2, group2, group2);
         freq1 = process_channel_to_freq (opts, state, channel1);
         freq2 = process_channel_to_freq (opts, state, channel2);
@@ -393,6 +393,98 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
         }
 
       }
+
+      else if ( (tsbk_byte[0] & 0x3F) == 0x00)
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " MFID 90 (Moto) Group Regroup Add: ");
+        for (i = 2; i < 10; i++)
+          fprintf (stderr, "%02X", tsbk_byte[i]);
+      }
+
+      else if ( (tsbk_byte[0] & 0x3F) == 0x01 )
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " MFID 90 (Moto) Group Regroup Delete: ");
+        for (i = 2; i < 10; i++)
+          fprintf (stderr, "%02X", tsbk_byte[i]);
+      }
+
+      else if ( (tsbk_byte[0] & 0x3F) == 0x04 )
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " MFID 90 (Moto) Extended Function: ");
+        for (i = 2; i < 10; i++)
+          fprintf (stderr, "%02X", tsbk_byte[i]);
+      }
+
+      else if ( (tsbk_byte[0] & 0x3F) == 0x06 )
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " MFID 90 (Moto) Queued Response: ");
+        for (i = 2; i < 10; i++)
+          fprintf (stderr, "%02X", tsbk_byte[i]);
+      }
+
+      else if ( (tsbk_byte[0] & 0x3F) == 0x07 )
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " MFID 90 (Moto) Deny Response: ");
+        for (i = 2; i < 10; i++)
+          fprintf (stderr, "%02X", tsbk_byte[i]);
+      }
+
+      else if ( (tsbk_byte[0] & 0x3F) == 0x08 )
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " MFID 90 (Moto) Acknoledge Response: ");
+        for (i = 2; i < 10; i++)
+          fprintf (stderr, "%02X", tsbk_byte[i]);
+      }
+
+
+      //Some of these Opcodes that aren't found in any TIA manual come from SDRTrunk, 
+      //but can't verify the accuracy of their meaning/context
+      // else if ( (tsbk_byte[0] & 0x3F) == 0x05 )
+      // {
+      //   fprintf (stderr, "\n");
+      //   fprintf (stderr, " MFID 90 (Moto) Traffic Channel: "); //not sure about this one, don't understand what it means when its on a control channel (activity? but never seems to change even while call grants in progress)
+      //   for (i = 2; i < 10; i++)
+      //     fprintf (stderr, "%02X", tsbk_byte[i]);
+      // }
+
+      // else if ( (tsbk_byte[0] & 0x3F) == 0x09 )
+      // {
+      //   fprintf (stderr, "\n");
+      //   fprintf (stderr, " MFID 90 (Moto) Channel Loading: "); //don't understand the context for this one, waiting on units to arrive on channel?
+      //   for (i = 2; i < 10; i++)
+      //     fprintf (stderr, "%02X", tsbk_byte[i]);
+      // }
+
+      // else if ( (tsbk_byte[0] & 0x3F) == 0x0B )
+      // {
+      //   fprintf (stderr, "\n");
+      //   fprintf (stderr, " MFID 90 (Moto) Control Channel: "); //this appears to echo the 16-bit channel number for the main control channel/RFSS
+      //   for (i = 2; i < 10; i++)
+      //     fprintf (stderr, "%02X", tsbk_byte[i]);
+      // }
+
+      // else if ( (tsbk_byte[0] & 0x3F) == 0x0E )
+      // {
+      //   fprintf (stderr, "\n");
+      //   fprintf (stderr, " MFID 90 (Moto) Control Channel Planned Shutdown: ");
+      //   for (i = 2; i < 10; i++)
+      //     fprintf (stderr, "%02X", tsbk_byte[i]);
+      // }
+
+      // else if ( (tsbk_byte[0] & 0x3F) == 0x10 )
+      // {
+      //   fprintf (stderr, "\n");
+      //   fprintf (stderr, " MFID 90 (Moto) Something: "); //observed, but no idea
+      //   for (i = 2; i < 10; i++)
+      //     fprintf (stderr, "%02X", tsbk_byte[i]);
+      // }
+
       else
       {
         fprintf (stderr, "%s",KCYN);

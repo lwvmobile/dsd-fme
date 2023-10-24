@@ -1252,6 +1252,8 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 
     }
 
+    fprintf(stderr, "\n DEV NOTE: If you see this message, please submit samples to https://github.com/lwvmobile/dsd-fme/issues/164 ");
+
   }
 
   fprintf (stderr, "%s", KNRM);

@@ -14,7 +14,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
   UNUSED(irrecoverable_errors);
 
   uint8_t lc_format = (uint8_t)ConvertBitIntoBytes(&LCW_bits[0], 8);  //format
-  uint8_t lc_opcode = (uint8_t)ConvertBitIntoBytes(&LCW_bits[2], 8);  //opcode portion of format
+  uint8_t lc_opcode = (uint8_t)ConvertBitIntoBytes(&LCW_bits[2], 6);  //opcode portion of format
   uint8_t lc_mfid   = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 8);  //mfid
   uint8_t lc_svcopt = (uint8_t)ConvertBitIntoBytes(&LCW_bits[16], 8); //service options
   uint8_t lc_pf = LCW_bits[0]; //protect flag
@@ -273,7 +273,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         // if (cfva & 0x4) fprintf (stderr, " Failure Condition");
         // if (cfva & 0x2) fprintf (stderr, " Up to Date (Correct)");
         // else fprintf (stderr, " Last Known");
-        if (cfva & 0x1) fprintf (stderr, "- Connection Active");
+        if (cfva & 0x1) fprintf (stderr, " - Connection Active");
         // process_channel_to_freq (opts, state, channelt);
         //end debug, way too much for a simple link control line 
 
@@ -364,8 +364,39 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       else fprintf (stderr, " Unknown Format %02X MFID %02X SVC %02X", lc_format, lc_mfid, lc_svcopt);
     }
 
+    //MFID 90 Embedded GPS -- SDRTrunk shows this is a LCW with the same format as 
+    //DMR Embedded GPS FLC (I have not observed this opcode for accuracy)
+    else if (lc_mfid == 0x90 && lc_opcode == 0x6)
+    {
+      fprintf (stderr, " MFID90 (Moto)");
+      dmr_embedded_gps (opts, state, LCW_bits);
+    }
+
+    else if (lc_mfid == 0x90 && lc_opcode == 0x0)
+      fprintf (stderr, " MFID90 (Moto) Group Regroup Channel User (LCGRGR)");
+
+    else if (lc_mfid == 0x90 && lc_opcode == 0x1)
+      fprintf (stderr, " MFID90 (Moto) Group Regroup Channel Update (LCGRGU)");
+
+    else if (lc_mfid == 0x90 && lc_opcode == 0x3)
+      fprintf (stderr, " MFID90 (Moto) Group Regroup Add");
+
+    else if (lc_mfid == 0x90 && lc_opcode == 0x4)
+      fprintf (stderr, " MFID90 (Moto) Group Regroup Delete");
+
+    //Still unclear whether or not this signals the end of a call grant,
+    //or just the end of the current talker talking, so we won't tune away here
+    //MFID90 still uses the standard Call Termination as well at teardown
+    else if (lc_mfid == 0x90 && lc_opcode == 0xF)
+      fprintf (stderr, " MFID90 (Moto) Call Termination");
+
     //not a duplicate, this one will print if not MFID 0 or 1
-    else fprintf (stderr, " Unknown Format %02X MFID %02X ", lc_format, lc_mfid);
+    else
+    {
+      fprintf (stderr, " Unknown Format %02X MFID %02X ", lc_format, lc_mfid);
+      if (lc_mfid == 0x90) fprintf (stderr, "(Moto)");
+      else if (lc_mfid == 0xA4) fprintf (stderr, "(Harris)");
+    }
   }
 
   //ending line break
