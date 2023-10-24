@@ -27,7 +27,7 @@ uint32_t temp_freq = -1;
 struct stat st_wav = {0};
 
 int reset = 0;
-
+char * timestr;
 int tg;
 int tgR;
 int tgn;
@@ -264,26 +264,29 @@ char * getDateN(void) {
   time_t t;
   t = time(NULL);
   to = localtime( & t);
-  strftime(datename, sizeof(datename), "%Y-%m-%d", to);
+  strftime(datename, sizeof(datename), "%Y%m%d", to);
   curr2 = strtok(datename, " ");
   return curr2;
 }
 
 time_t nowN;
-char * getTimeN(void) //get pretty hh:mm:ss timestamp
+
+//fix from YorgosTheodorakis fork -- https://github.com/YorgosTheodorakis/dsd-fme/commit/7884ee555521a887d388152b3b1f11f20433a94b
+char * getTimeN(void) //get pretty hhmmss timestamp
 {
+  char * curr = (char *) malloc(9);
   time_t t = time(NULL);
-
-  char * curr;
-  char * stamp = asctime(localtime( & t));
-
-  curr = strtok(stamp, " ");
-  curr = strtok(NULL, " ");
-  curr = strtok(NULL, " ");
-  curr = strtok(NULL, " ");
-
+  struct tm * ptm = localtime(& t);
+  sprintf(
+    curr,
+    "%02d%02d%02d",
+    ptm->tm_hour,
+    ptm->tm_min,
+    ptm->tm_sec
+  );
   return curr;
 }
+
 //this version is broken now in Cygwin with the 80 value, reverted back
 char * getDateC(time_t t) {
   char datename[99];
@@ -599,7 +602,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         print_menuc(test_win, highlightc);
         if (choicec == 2)
         {
-          sprintf (opts->wav_out_file, "%s %s DSD-FME-DECODED.wav", getDateN(), getTimeN());
+          sprintf (opts->wav_out_file, "%s %s DSD-FME-DECODED.wav", getDateN(), timestr);
           openWavOutFile (opts, state);
         }
         if (choicec == 3)
@@ -1875,6 +1878,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   uint8_t idas = 0;
   int level = 0;
   int c = 0;
+  timestr = getTimeN();
 
   if (opts->audio_in_type != 1) //can't run getch/menu when using STDIN -
   {
@@ -2047,7 +2051,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "./%s/%s %s NXDN - RAN %d - TGT %d - SRC %d.wav", opts->wav_out_dir, getDateN(), getTimeN(), rn, tgn, src);
+      sprintf (opts->wav_out_file, "./%s/%s %s NXDN - RAN %d - TGT %d - SRC %d.wav", opts->wav_out_dir, getDateN(), timestr, rn, tgn, src);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2084,7 +2088,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "./%s/%s %s MS - CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), getTimeN(), dcc, tg, rd);
+      sprintf (opts->wav_out_file, "./%s/%s %s MS - CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), timestr, dcc, tg, rd);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2127,7 +2131,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
 
-      sprintf (opts->wav_out_file, "./%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), getTimeN(), dcc, tg, rd);
+      sprintf (opts->wav_out_file, "./%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), timestr, dcc, tg, rd);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2169,7 +2173,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileR (opts, state);
-      sprintf (opts->wav_out_fileR, "./%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), getTimeN(), dcc, tgR, rdR);
+      sprintf (opts->wav_out_fileR, "./%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), timestr, dcc, tgR, rdR);
       openWavOutFileR (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2210,7 +2214,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "./%s/%s %s P1 - NAC %X - TGT %d - SRC %d.wav", opts->wav_out_dir, getDateN(), getTimeN(), nc, tg, rd);
+      sprintf (opts->wav_out_file, "./%s/%s %s P1 - NAC %X - TGT %d - SRC %d.wav", opts->wav_out_dir, getDateN(), timestr, nc, tg, rd);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -3805,7 +3809,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (c == 82) //'R', save symbol capture bin with date/time string as name
   {
-    sprintf (opts->symbol_out_file, "%s %s.bin", getDateN(), getTimeN());
+    sprintf (opts->symbol_out_file, "%s %s.bin", getDateN(), timestr);
     openSymbolOutFile (opts, state);
   }
 
