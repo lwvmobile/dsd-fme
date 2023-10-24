@@ -1124,6 +1124,8 @@ void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR
 void dmr_reset_blocks (dsd_opts * opts, dsd_state * state);
 void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[]);
 void dmr_locn (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[]);
+char * getTimeL(void);
+char * getDateL(void);
 
 //dmr alg stuff
 void dmr_alg_reset (dsd_opts * opts, dsd_state * state);

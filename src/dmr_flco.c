@@ -1197,13 +1197,16 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   uint8_t res_b = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 4);
   uint8_t pos_err = (uint8_t)ConvertBitIntoBytes(&lc_bits[20], 3);
   UNUSED2(res_a, res_b);
+
+  char deg_glyph[4];
+  sprintf (deg_glyph, "%s", "°");
   
   uint32_t lon_sign = lc_bits[23]; 
   uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[24], 24); 
   uint32_t lat_sign = lc_bits[48]; 
   uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[49], 23); 
-
-  double lat_unit = (double)180/ pow (2.0, 24); //180 divided by 2^24
+  //todo: check these again to make sure they are valid (works now on single sample acquired in NE)
+  double lat_unit = (double)180/ pow (2.0, 23); //180 divided by 2^23
   double lon_unit = (double)360/ pow (2.0, 25); //360 divided by 2^25
 
   char latstr[3];
@@ -1211,7 +1214,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   sprintf (latstr, "%s", "N");
   sprintf (lonstr, "%s", "E");
 
-  //run calculations and print (still cannot verify as accurate)
+  //run calculations and print (works now on single sample acquired in NE)
   //7.2.16 and 7.2.17 (two's compliment)
 
   double latitude = 0;  
@@ -1237,7 +1240,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
     //sanity check
     if (abs (latitude) < 90 && abs(longitude) < 180)
     {
-      fprintf (stderr, " Lat: %.5lf %s Lon: %.5lf %s", latitude, latstr, longitude, lonstr);
+      fprintf (stderr, " Lat: %.5lf%s%s Lon: %.5lf%s%s", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr);
 
       //7.2.15 Position Error
       uint16_t position_error = 2 * pow(10, pos_err); //2 * 10^pos_err 
@@ -1247,12 +1250,34 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
       //save to array for ncurses
       if (pos_err != 0x7)
       {
-        sprintf (state->dmr_embedded_gps[slot], "E-GPS (%lf %s %lf %s) Err: %dm", latitude, latstr, longitude, lonstr, position_error);
+        sprintf (state->dmr_embedded_gps[slot], "GPS: (%lf%s%s %lf%s%s) Err: %dm", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, position_error);
+      }
+
+      //save to LRRP report for mapping/logging
+      FILE * pFile; //file pointer
+      if (opts->lrrp_file_output == 1)
+      {
+        int src = 0;
+        if (slot == 0) src = state->lasttg;
+        if (slot == 1) src = state->lasttgR;
+
+        //open file by name that is supplied in the ncurses terminal, or cli
+        pFile = fopen (opts->lrrp_out_file, "a");
+        fprintf (pFile, "%s\t", getDateL() );
+        fprintf (pFile, "%s\t", getTimeL() );
+        fprintf (pFile, "%08d\t", src);
+        fprintf (pFile, "%.5lf\t", latitude);
+        fprintf (pFile, "%.5lf\t", longitude);
+        fprintf (pFile, "0\t " ); //zero for velocity
+        fprintf (pFile, "0\t " ); //zero for azimuth
+        fprintf (pFile, "\n");
+        fclose (pFile);
+
       }
 
     }
 
-    fprintf(stderr, "\n DEV NOTE: If you see this message, please submit samples to https://github.com/lwvmobile/dsd-fme/issues/164 ");
+    fprintf(stderr, "\n DEV NOTE: If you see this message, but incorrect lat/lon,\n please submit samples to https://github.com/lwvmobile/dsd-fme/issues/164 ");
 
   }
 
