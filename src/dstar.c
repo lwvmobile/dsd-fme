@@ -226,68 +226,8 @@ void processDSTAR_SD(dsd_opts * opts, dsd_state * state, uint8_t * sd)
     //fixed-form at 5 bytes, evaluate
     if (sd_bytes[0] == 0x35)
     {
-      //TODO: Check type for $$CRC, etc (may really be API51 label "circle-2d"?)
-      // if (strcmp(type, "$$CRC") == 0) //APRS
-      // {
-      //   fprintf (stderr, " APRS - ");
-      //   sprintf (state->dstar_gps, "APRS - ");
-      //   //LAT
-      //   memcpy (temp, sd_bytes+38, 2);
-      //   fprintf (stderr, "Lat: %sd ", temp);
-      //   strcat (state->dstar_gps, "Lat: ");
-      //   strcat (state->dstar_gps, temp);
-      //   strcat (state->dstar_gps, "d ");
-      //   memcpy (temp, sd_bytes+40, 2);
-      //   fprintf (stderr, "%sm ", temp);
-      //   strcat (state->dstar_gps, temp);
-      //   strcat (state->dstar_gps, "m ");
-      //   memcpy (temp, sd_bytes+44, 2);
-      //   fprintf (stderr, "%ss ", temp);
-      //   strcat (state->dstar_gps, temp);
-      //   strcat (state->dstar_gps, "s ");
-      //   if (sd_bytes[46] > 0x19 && sd_bytes[46] < 0x7F)
-      //     fprintf (stderr, "%c", sd_bytes[46]);
-      //   if (sd_bytes[46] > 0x19 && sd_bytes[46] < 0x7F)
-      //   {
-      //     if (sd_bytes[46] == 0x4E)
-      //       strcat (state->dstar_gps, "N ");
-      //     else if (sd_bytes[46] == 0x53)
-      //       strcat (state->dstar_gps, "S ");
-      //   }
-      //   fprintf (stderr, "; ");
 
-      //   //LON
-      //   memcpy (tempa, sd_bytes+49, 3);
-      //   fprintf (stderr, "Lon: %sd ", tempa);
-      //   strcat (state->dstar_gps, "Lon: ");
-      //   strcat (state->dstar_gps, tempa);
-      //   strcat (state->dstar_gps, "d ");
-      //   memcpy (temp, sd_bytes+52, 2);
-      //   fprintf (stderr, "%sm ", temp);
-      //   strcat (state->dstar_gps, temp);
-      //   strcat (state->dstar_gps, "m ");
-      //   memcpy (temp, sd_bytes+56, 2);
-      //   fprintf (stderr, "%ss ", temp);
-      //   strcat (state->dstar_gps, temp);
-      //   strcat (state->dstar_gps, "s ");
-      //   if (sd_bytes[58] > 0x19 && sd_bytes[58] < 0x7F)
-      //     fprintf (stderr, "%c", sd_bytes[58]);
-      //   if (sd_bytes[46] > 0x19 && sd_bytes[46] < 0x7F)
-      //   {
-      //     if (sd_bytes[46] == 0x45)
-      //       strcat (state->dstar_gps, "E ");
-      //     else if (sd_bytes[46] == 0x57)
-      //       strcat (state->dstar_gps, "W ");
-      //   }
-      //   fprintf (stderr, "; ");
-
-      //   //sample now working and showing Borsigstraße Ratingen, Germany
-      //   //but still unsure if this is truly DMS, or Decimal (decimal conversion doesn't line up with FL)
-
-      //   //another sample shows this data off by one octet, so this seems to be a variable len deal
-      //   //which kind of sucks and makes it a true pain to work with.
-      // }
-
+      //might as well just dump both of these outputs
       if (strcmp(type, "$$CRC") == 0) //APRS
       {
         memset (strt, 0x20, sizeof(strt)); //space fill
@@ -298,11 +238,102 @@ void processDSTAR_SD(dsd_opts * opts, dsd_state * state, uint8_t * sd)
           if ( (sd_bytes[i] > 0x19) && (sd_bytes[i] < 0x7F) )
           {
             fprintf (stderr, "%c", sd_bytes[i]);
-            strt[i] = sd_bytes[i];
+            // strt[i] = sd_bytes[i];
           }
         }
-        strt[59] = '\0';
-        memcpy (state->dstar_gps, strt, sizeof(strt));
+        // strt[59] = '\0';
+        // memcpy (state->dstar_gps, strt, sizeof(strt));
+      }
+
+      if (strcmp(type, "$$CRC") == 0) //APRS
+      {
+        fprintf (stderr, "\n APRS - ");
+        sprintf (state->dstar_gps, "APRS - ");
+        uint8_t aprs[51];
+        int k = 0;
+        memset (aprs, 0, sizeof(aprs));
+        //reshuffle (yet again) into an easier format to manipulate for aprs
+        for (i = 1; i < 59; i++)
+        {
+          if (i % 6 == 0 ) i++;
+          aprs[k] = sd_bytes[i];
+          if ( (aprs[k] > 0x19) && (aprs[k] < 0x7F) )
+            aprs[i] = 0x20;
+          k++;
+        }
+        //start by looking for the ! exclamation point token
+        int start = -1;
+        for (i = 30; i < 40; i++)
+        {
+          if (aprs[i] == 0x21)
+          {
+            start = i+1;
+            break;
+          }
+        }
+        //if not found, then skip (bad decode)
+        if (start == -1)
+          goto SKIP;
+
+        //debug 
+        // fprintf (stderr, "S: %d; ", start); //38, or 39
+
+        //LAT
+        memcpy (temp, aprs+start, 2);
+        start += 2;
+        fprintf (stderr, "Lat: %sd ", temp);
+        strcat (state->dstar_gps, "Lat: ");
+        strcat (state->dstar_gps, temp);
+        strcat (state->dstar_gps, "d ");
+        memcpy (temp, aprs+start, 2);
+        start += 3;
+        fprintf (stderr, "%sm ", temp);
+        strcat (state->dstar_gps, temp);
+        strcat (state->dstar_gps, "m ");
+        memcpy (temp, aprs+start, 2);
+        start+=1;
+        fprintf (stderr, "%ss ", temp);
+        strcat (state->dstar_gps, temp);
+        strcat (state->dstar_gps, "s ");
+        fprintf (stderr, "%c", aprs[start]);
+        if (sd_bytes[start] == 0x4E)
+          strcat (state->dstar_gps, "N ");
+        else if (sd_bytes[start] == 0x53)
+          strcat (state->dstar_gps, "S ");
+        fprintf (stderr, "; ");
+
+        //LON
+        start += 3;
+        memcpy (tempa, aprs+start, 3);
+        start += 3;
+        fprintf (stderr, "Lon: %sd ", tempa);
+        strcat (state->dstar_gps, "Lon: ");
+        strcat (state->dstar_gps, tempa);
+        strcat (state->dstar_gps, "d ");
+        memcpy (temp, aprs+start, 2);
+        start += 3; //3
+        fprintf (stderr, "%sm ", temp);
+        strcat (state->dstar_gps, temp);
+        strcat (state->dstar_gps, "m ");
+        memcpy (temp, aprs+start, 2);
+        start += 2;
+        fprintf (stderr, "%ss ", temp);
+        strcat (state->dstar_gps, temp);
+        strcat (state->dstar_gps, "s ");
+        fprintf (stderr, "%c", aprs[start]);
+        if (aprs[start] == 0x45)
+          strcat (state->dstar_gps, "E ");
+        else if (aprs[start] == 0x57)
+          strcat (state->dstar_gps, "W ");
+        fprintf (stderr, "; ");
+
+        //Got the feeling nobody will actually ever see this message, but who knows
+        fprintf(stderr, "\n DEV NOTE: If you see this message, but incorrect lat/lon,\n please submit samples to https://github.com/lwvmobile/dsd-fme/issues/164 ");
+
+        SKIP: ; //do nothing
+
+        //this seems to work okay with a few samples, but wouldn't be surprised if it broke down
+        //randomly on different users, depending on location and what else in in $$CRC
       }
       else
       {
