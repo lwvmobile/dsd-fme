@@ -178,7 +178,8 @@ int ez_rs28_sacch (int payload[180], int parity[132])
   return (ec);
 }
 
-std::map <std::uint64_t, int> isch_map;
+//std::map <std::uint64_t, int> isch_map;
+std::map <uint64_t, int> isch_map; //User Noted GCC potential compiler error fix on BB OP25
 void map_isch()
 {
 	isch_map[0x184229d461ULL] = 0;
