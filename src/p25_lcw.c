@@ -408,7 +408,6 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
 //my earlier assumption that this was the same format as DMR Embedded GPS was incorrect
 void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 {
-  UNUSED(opts);
 
   fprintf (stderr, "%s", KYEL);
   fprintf (stderr, " LCW GPS:");
@@ -417,7 +416,6 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   uint8_t res_a = lc_bits[1];
   uint8_t res_b = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 7);
   uint8_t expired = lc_bits[23]; //this bit seems to indicate that the GPS coordinates are out of date or fresh
-  UNUSED2(res_a, res_b);
 
   char deg_glyph[4];
   sprintf (deg_glyph, "%s", "°");
@@ -454,19 +452,21 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
     //sanity check
     if (abs (latitude) < 90 && abs(longitude) < 180)
     {
-      fprintf (stderr, " Lat: %.5lf%s%s Lon: %.5lf%s%s", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr);
+      fprintf (stderr, " Lat: %.5lf%s%s Lon: %.5lf%s%s ", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr);
 
       if (expired)
       {
-        fprintf (stderr, " Expired; ");
+        fprintf (stderr, "Expired; ");
         sprintf (valid, "%s", "Expired");
       }
+      else if (!expired)
+        fprintf (stderr, "Current; ");
 
       if (res_a)
-        fprintf (stderr, " RES_A: %d; ", res_a);
+        fprintf (stderr, "RES_A: %d; ", res_a);
 
       if (res_b)
-        fprintf (stderr, " RES_B: %02X; ", res_b);
+        fprintf (stderr, "RES_B: %02X; ", res_b);
 
       //save to array for ncurses
       sprintf (state->dmr_embedded_gps[slot], "APX GPS: (%lf%s%s %lf%s%s) %s", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, valid);
