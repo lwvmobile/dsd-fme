@@ -2040,10 +2040,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       call_matrix[k][5] = call_matrix[k+1][5];
     }
     call_matrix[9][0] = lls;
-    call_matrix[9][1] = rn;
+    call_matrix[9][1] = tgn; //was rn, switch to tgn so it'll show tg in call history
     call_matrix[9][2] = src;
     call_matrix[9][3] = 0;
-    call_matrix[9][4] = tgn;
+    call_matrix[9][4] = rn; //was tgn, switched with rn
     call_matrix[9][5] = time(NULL);
 
     //open wav file if enabled and both rd and tg are not 0
@@ -3483,9 +3483,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
         if (lls == 28 || lls == 29)
         {
-          if (idas == 0) printw ("RAN [%02lld] ", call_matrix[9-j][1]);
-          if (idas == 1) printw ("Area [%02lld] ", call_matrix[9-j][1]);
-          printw ("TG [%5lld] ", call_matrix[9-j][4]);
+          if (idas == 0) printw ("RAN [%02lld] ", call_matrix[9-j][4]);
+          if (idas == 1) printw ("Area [%02lld] ", call_matrix[9-j][4]);
+          printw ("TG [%5lld] ", call_matrix[9-j][1]);
           printw ("RID [%5lld] ", call_matrix[9-j][2]);
         }
         //dPMR

@@ -158,6 +158,12 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
           opts->p25_is_tuned = 0;
           if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
           SetFreq(opts->rigctl_sockfd, state->p25_cc_freq); 
+
+          state->nxdn_last_rid = 0;
+          state->nxdn_last_tg = 0;
+          if (state->M == 0)
+            state->nxdn_cipher_type = 0;
+          sprintf (state->nxdn_call_type, "%s", "");
           
         }
         //rtl
@@ -170,6 +176,12 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
           memset(state->active_channel, 0, sizeof(state->active_channel));
           opts->p25_is_tuned = 0;
           rtl_dev_tune (opts, state->p25_cc_freq);
+
+          state->nxdn_last_rid = 0;
+          state->nxdn_last_tg = 0;
+          if (state->M == 0)
+            state->nxdn_cipher_type = 0;
+          sprintf (state->nxdn_call_type, "%s", "");
           #endif
         }
 
