@@ -1109,6 +1109,7 @@ void dmr_gateway_identifier (uint32_t source, uint32_t target); //translate spec
 void dmr_embedded_alias_header (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
 void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
 void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
+void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
 
 //"DMR STEREO"
 void dmrBSBootstrap (dsd_opts * opts, dsd_state * state);

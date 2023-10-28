@@ -369,7 +369,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
     else if (lc_mfid == 0x90 && lc_opcode == 0x6)
     {
       fprintf (stderr, " MFID90 (Moto)");
-      dmr_embedded_gps (opts, state, LCW_bits);
+      apx_embedded_gps (opts, state, LCW_bits);
     }
 
     else if (lc_mfid == 0x90 && lc_opcode == 0x0)
@@ -403,4 +403,103 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
   fprintf (stderr, "\n");
 
 }
+
+//This Function has been redone and variables fixed to mirror SDRTrunk 
+//my earlier assumption that this was the same format as DMR Embedded GPS was incorrect
+void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
+{
+  UNUSED(opts);
+
+  fprintf (stderr, "%s", KYEL);
+  fprintf (stderr, " LCW GPS:");
+  uint8_t slot = state->currentslot;
+  uint8_t pf = lc_bits[0];
+  uint8_t res_a = lc_bits[1];
+  uint8_t res_b = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 7);
+  uint8_t expired = lc_bits[23]; //this bit seems to indicate that the GPS coordinates are out of date or fresh
+  UNUSED2(res_a, res_b);
+
+  char deg_glyph[4];
+  sprintf (deg_glyph, "%s", "°");
+  
+  uint32_t lon_sign = lc_bits[48]; 
+  uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[49], 23); 
+  uint32_t lat_sign = lc_bits[24];
+  uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[25], 23); 
+  //todo: acquire more samples for additional validation
+  double lat_unit = 90.0f / 0x7FFFFF;
+  double lon_unit = 180.0f / 0x7FFFFF;
+
+  char latstr[3];
+  char lonstr[3];
+  char valid[9];
+  sprintf (latstr, "%s", "N");
+  sprintf (lonstr, "%s", "E");
+  sprintf (valid, "%s", "Current");
+
+  double latitude = 0;  
+  double longitude = 0; 
+
+  if (pf) fprintf (stderr, " Protected");
+  else
+  {
+    if (lat_sign)
+      sprintf (latstr, "%s", "S");
+    latitude = ((double)lat * lat_unit);
+
+    if (lon_sign)
+      sprintf (lonstr, "%s", "W");
+    longitude = ((double)lon * lon_unit);
+
+    //sanity check
+    if (abs (latitude) < 90 && abs(longitude) < 180)
+    {
+      fprintf (stderr, " Lat: %.5lf%s%s Lon: %.5lf%s%s", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr);
+
+      if (expired)
+      {
+        fprintf (stderr, " Expired; ");
+        sprintf (valid, "%s", "Expired");
+      }
+
+      if (res_a)
+        fprintf (stderr, " RES_A: %d; ", res_a);
+
+      if (res_b)
+        fprintf (stderr, " RES_B: %02X; ", res_b);
+
+      //save to array for ncurses
+      sprintf (state->dmr_embedded_gps[slot], "APX GPS: (%lf%s%s %lf%s%s) %s", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, valid);
+
+      //save to LRRP report for mapping/logging
+      FILE * pFile; //file pointer
+      if (opts->lrrp_file_output == 1)
+      {
+        int src = 0;
+        if (slot == 0) src = state->lasttg;
+        if (slot == 1) src = state->lasttgR;
+
+        //open file by name that is supplied in the ncurses terminal, or cli
+        pFile = fopen (opts->lrrp_out_file, "a");
+        fprintf (pFile, "%s\t", getDateL() );
+        fprintf (pFile, "%s\t", getTimeL() );
+        fprintf (pFile, "%08d\t", src);
+        fprintf (pFile, "%.5lf\t", latitude);
+        fprintf (pFile, "%.5lf\t", longitude);
+        fprintf (pFile, "0\t " ); //zero for velocity
+        fprintf (pFile, "0\t " ); //zero for azimuth
+        fprintf (pFile, "\n");
+        fclose (pFile);
+
+      }
+
+    }
+
+    fprintf(stderr, "\n DEV NOTE: If you see this message, but incorrect lat/lon,\n please submit samples to https://github.com/lwvmobile/dsd-fme/issues/164 ");
+
+  }
+
+  fprintf (stderr, "%s", KNRM);
+}
+
 

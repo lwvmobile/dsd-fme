@@ -1184,7 +1184,7 @@ void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_b
   
 }
 
-//externalize embedded GPS - Needs samples to test/fix function
+//externalize embedded GPS - Needs samples to test/fix function -- reverted back to original format
 void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 {
   UNUSED(opts);
@@ -1205,8 +1205,8 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[24], 24); 
   uint32_t lat_sign = lc_bits[48]; 
   uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[49], 23); 
-  //todo: check these again to make sure they are valid (works now on single sample acquired in NE)
-  double lat_unit = (double)180/ pow (2.0, 23); //180 divided by 2^23
+  
+  double lat_unit = (double)180/ pow (2.0, 24); //180 divided by 2^24
   double lon_unit = (double)360/ pow (2.0, 25); //360 divided by 2^25
 
   char latstr[3];
@@ -1214,7 +1214,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   sprintf (latstr, "%s", "N");
   sprintf (lonstr, "%s", "E");
 
-  //run calculations and print (works now on single sample acquired in NE)
+  //run calculations and print (still cannot verify as accurate for DMR)
   //7.2.16 and 7.2.17 (two's compliment)
 
   double latitude = 0;  
