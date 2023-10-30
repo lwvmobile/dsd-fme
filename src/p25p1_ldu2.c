@@ -567,8 +567,8 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     //debug
     // fprintf (stderr, " STR: %s", str);
 
-    //assign to tg name string
-    if (tsrc != 0)
+    //assign to tg name string, but only if not trunking (this could clash with ENC LO functionality)
+    if (tsrc != 0) //&& opts->p25_trunk == 0 //should never get here if enc, should be zeroed out, but could potentially slip if HDU is missed and offchance of 02 opcode
     {
       for (int x = 0; x < state->group_tally; x++)
       {
@@ -584,7 +584,10 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
       if (wr == 0)
       {
         state->group_array[state->group_tally].groupNumber = tsrc;
-        sprintf (state->group_array[state->group_tally].groupMode, "%s", "D");
+        if (state->nxdn_cipher_type != 0 && opts->trunk_tune_enc_calls == 0 && state->R == 0)
+          sprintf (state->group_array[state->group_tally].groupMode, "%s", "DE");
+        else
+         sprintf (state->group_array[state->group_tally].groupMode, "%s", "D");
         sprintf (state->group_array[state->group_tally].groupName, "%s", str);
         state->group_tally++;
       }
@@ -593,7 +596,10 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
       else if (strcmp(str, state->group_array[z].groupName) != 0)
       {
         state->group_array[z].groupNumber = tsrc;
-        sprintf (state->group_array[z].groupMode, "%s", "D");
+        if (state->nxdn_cipher_type != 0 && opts->trunk_tune_enc_calls == 0 && state->R == 0)
+          sprintf (state->group_array[state->group_tally].groupMode, "%s", "DE");
+        else
+         sprintf (state->group_array[state->group_tally].groupMode, "%s", "D");
         sprintf (state->group_array[z].groupName, "%s", str);
       }
       
