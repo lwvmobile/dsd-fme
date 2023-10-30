@@ -505,11 +505,15 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
     }
   }
 
+  //use DUP to display any other rolling active channels while on a call (from the dup message)
+  int dup = 0;
+  if (MessageType == 0x5) dup = 1;
+
   //assign active call to string (might place inside of tune decision to get multiple ones?)
   if (state->nxdn_rcn == 0)
-    sprintf (state->active_channel[0], "Active Ch: %d TG: %d; ", Channel, DestinationID);
+    sprintf (state->active_channel[dup], "Active Ch: %d TG: %d SRC: %d; ", Channel, DestinationID, SourceUnitID);
   if (state->nxdn_rcn == 1)
-    sprintf (state->active_channel[0], "Active Ch: %d TG: %d; ", OFN, DestinationID);
+    sprintf (state->active_channel[dup], "Active Ch: %d TG: %d SRC: %d; ", OFN, DestinationID, SourceUnitID);
 
   state->last_active_time = time(NULL);
 
@@ -1231,8 +1235,8 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     state->dmr_encL = 0;
   }
 
-  //experimental TG LO/B if ENC trunked following disabled //NXDN -- LO Trunked Enc Calls WIP; #121
-  if (opts->p25_trunk == 1 && opts->trunk_tune_enc_calls == 0 && MessageType == 0x1)
+  //TG ENC LO/B if ENC trunked following disabled #121 -- was locking out everything
+  if (opts->p25_trunk == 1 && opts->trunk_tune_enc_calls == 0 && MessageType == 0x1 && state->dmr_encL == 1)
   {
     int i, lo = 0;
     uint16_t t = 0; char gm[8]; char gn[50];

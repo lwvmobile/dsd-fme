@@ -2249,16 +2249,16 @@ main (int argc, char **argv)
             opts.frame_provoice = 0;
             opts.frame_ysf = 0;
             opts.frame_m17 = 0;
-            opts.mod_c4fm = 1;
+            opts.mod_c4fm = 0;
             opts.mod_qpsk = 0;
-            opts.mod_gfsk = 0;
+            opts.mod_gfsk = 1;
             state.rf_mod = 0;
             opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 1;
             opts.dmr_stereo = 0;
             opts.dmr_mono = 0;
             state.dmr_stereo = 0;
-            // opts.setmod_bw = 7000; //causing issues
+            // opts.setmod_bw = 12000; //causing issues
             sprintf (opts.output_name, "NXDN96");
             fprintf (stderr,"Decoding only NXDN 9600 baud frames.\n");
           }
