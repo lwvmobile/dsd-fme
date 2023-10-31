@@ -588,6 +588,20 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
     }
   }
 
+  //check purely by SourceUnitID as last resort -- this is a bugfix to block individual radios on selected systems
+  if ((strcmp(mode, "") == 0))
+  {
+    for (int i = 0; i < state->group_tally; i++)
+    {
+      if (state->group_array[i].groupNumber == SourceUnitID)
+      {
+        fprintf (stderr, " [%s]", state->group_array[i].groupName);
+        strcpy (mode, state->group_array[i].groupMode);
+        break;
+      }
+    }
+  }
+
   //TG hold on NXDN -- block non-matching target, allow matching DestinationID
   if (state->tg_hold != 0 && state->tg_hold != DestinationID) sprintf (mode, "%s", "B");
   if (state->tg_hold != 0 && state->tg_hold == DestinationID) 
