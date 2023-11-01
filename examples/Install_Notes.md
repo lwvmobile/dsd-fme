@@ -173,3 +173,32 @@ make -j `nproc`
 sudo make install
 sudo ldconfig
 ```
+
+### Applying Patches -- Recommended For Advanced Users Only
+
+More experimental or potentially functionality changing or temperamental features may be included as seperate .patch files inside of the patch folder, and are not included in the source code by default. 
+If users wish to try or use these patches, then they can apply patches and build/rebuild with the following procedure. Make sure you have changed to the dsd-fme directory first, either by the top
+command, or by otherwise opening the terminal to the clone folder.
+
+```
+cd dsd-fme
+git apply patch/patchname.patch
+cd build
+make
+sudo make install
+```
+
+If you later wish to update to the latest version via `git pull`, you may first need to reset any patches, perform the `git pull`, and then reapply patches.
+A procedure for this is similar to, but not limited to:
+
+```
+cd dsd-fme
+git reset --hard
+git pull
+git apply patch/xyz.patch
+cd build
+make
+sudo make install
+```
+
+NOTE: Patches can potential break over time with further changes to code, requiring merge resolution or other manual intervention to re-apply patches.
