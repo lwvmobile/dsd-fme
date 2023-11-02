@@ -550,7 +550,7 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
       if (wr == 0)
       {
         state->group_array[state->group_tally].groupNumber = tsrc;
-        if (state->nxdn_cipher_type != 0 && opts->trunk_tune_enc_calls == 0 && state->R == 0)
+        if (state->payload_algid != 0x80 && opts->trunk_tune_enc_calls == 0 && state->R == 0)
           sprintf (state->group_array[state->group_tally].groupMode, "%s", "DE");
         else
          sprintf (state->group_array[state->group_tally].groupMode, "%s", "D");
@@ -562,7 +562,7 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
       else if (strcmp(str, state->group_array[z].groupName) != 0)
       {
         state->group_array[z].groupNumber = tsrc;
-        if (state->nxdn_cipher_type != 0 && opts->trunk_tune_enc_calls == 0 && state->R == 0)
+        if (state->payload_algid != 0x80 && opts->trunk_tune_enc_calls == 0 && state->R == 0)
           sprintf (state->group_array[state->group_tally].groupMode, "%s", "DE");
         else
          sprintf (state->group_array[state->group_tally].groupMode, "%s", "D");
