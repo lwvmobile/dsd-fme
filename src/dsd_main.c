@@ -1348,7 +1348,7 @@ usage ()
   printf ("                 P25 - 7000-12000; P25 (QPSK) - 12000; NXDN48 - 7000; NXDN96: 9000; DMR - 7000; EDACS/PV - 12500;\n");
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking or Scan Speed VC/sync loss hangtime in seconds. (default = 1 second)\n");
-  printf ("  -9            Force Enable EDACS Standard or Networked Mode on Systems without a netcmd (temp fix) \n");
+  printf ("  -9            Force Enable EDACS Standard or Networked Mode if Auto Detection Fails \n");
   printf ("\n");
   printf (" Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
   printf (" Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");

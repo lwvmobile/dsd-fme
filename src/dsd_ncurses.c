@@ -2523,12 +2523,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ( "[%d] \n", (48000*opts->wav_interpolator)/state->samplesPerSymbol);
   printw ("| Decoding:    [%s] ", opts->output_name);
   if (opts->aggressive_framesync == 0) printw ("CRC/(RAS) ");
-  //TG Hold on EDACS, if specified by user
-  if ( (opts->frame_provoice == 1) && (state->tg_hold != 0) ) 
-    printw ("TG HOLD: %d; ", state->tg_hold);
   //debug -- troubleshoot voice tuning after grant on DMR CC, subsequent grant may not tune because tuner isn't available
-  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1) printw ("Tuner Locked ");
+  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1) printw ("Tuner Locked    ");
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 0) printw ("Tuner Available ");
+  //TG Hold on EDACS, if specified by user
+  if ( (opts->frame_provoice == 1) && (state->tg_hold != 0) )
+  {
+    if (state->ea_mode == 1) printw ("TG HOLD: %d; ", state->tg_hold);
+    else printw ("TG HOLD: %d [%02d-%03d]; ", state->tg_hold, (state->tg_hold >> 7 ) & 0xF, state->tg_hold & 0x7F);
+  }
   printw ("\n");
   printw ("| In Level:    [%02d%%] \n", level);
   
@@ -3423,13 +3426,20 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         attron (COLOR_PAIR(3)); 
         if (state->ea_mode == 1) printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
-        else printw (" AFS [%d][%02d-%03d]", call_matrix[i][3], a, fs );
+        else printw (" AFS [%lld][%02d-%03d]", call_matrix[i][3], a, fs );
         for (int k = 0; k < state->group_tally; k++)
         {
-          if (state->group_array[k].groupNumber == call_matrix[i][2])
+          if (state->group_array[k].groupNumber == call_matrix[i][2] && call_matrix[i][2] != 0)
           {
             printw (" [%s]", state->group_array[k].groupName);
             printw ("[%s]", state->group_array[k].groupMode);
+            break;
+          }
+          else if (state->group_array[k].groupNumber == call_matrix[i][3] && call_matrix[i][3] != 0)
+          {
+            printw (" [%s]", state->group_array[k].groupName);
+            printw ("[%s]", state->group_array[k].groupMode);
+            break;
           }
         }
         attroff (COLOR_PAIR(3)); 
@@ -3439,13 +3449,20 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         attron (COLOR_PAIR(2)); 
         if (state->ea_mode == 1) printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
-        else printw (" AFS [%d][%02d-%03d]", call_matrix[i][3], a, fs );
+        else printw (" AFS [%lld][%02d-%03d]", call_matrix[i][3], a, fs );
         for (int k = 0; k < state->group_tally; k++)
         {
-          if (state->group_array[k].groupNumber == call_matrix[i][2])
+          if (state->group_array[k].groupNumber == call_matrix[i][2] && call_matrix[i][2] != 0)
           {
             printw (" [%s]", state->group_array[k].groupName);
             printw ("[%s]", state->group_array[k].groupMode);
+            break;
+          }
+          else if (state->group_array[k].groupNumber == call_matrix[i][3] && call_matrix[i][3] != 0)
+          {
+            printw (" [%s]", state->group_array[k].groupName);
+            printw ("[%s]", state->group_array[k].groupMode);
+            break;
           }
         }
         attroff (COLOR_PAIR(2)); 
@@ -3549,20 +3566,31 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           printw ("%s ", getDateC(call_matrix[j][5]) ); 
           printw ("%s ", getTimeC(call_matrix[j][5]) );
           printw ("LCN [%2lld] ", call_matrix[j][1]);
-          printw ("Group [%8lld] ", call_matrix[j][2]);
-          printw ("Source [%8lld] ", call_matrix[j][3]);
+          if (state->ea_mode == 1)
+          {
+            printw ("Group [%8lld] ", call_matrix[j][2]);
+            printw ("Source [%8lld] ", call_matrix[j][3]);
+          }
+          else 
+          {
+            int a  = (call_matrix[j][3] >> 7) & 0xF; 
+            int fs = call_matrix[j][3] & 0x7F;
+            printw (" AFS [%lld][%02d-%03d]", call_matrix[j][3], a, fs );
+          }          
           //test
           for (int k = 0; k < state->group_tally; k++)
           {
-            if (state->group_array[k].groupNumber == call_matrix[j][2])
+            if (state->group_array[k].groupNumber == call_matrix[j][2] && call_matrix[j][2] != 0)
             {
               attron(COLOR_PAIR(4));
               printw ("[%s] ", state->group_array[k].groupName);
+              break;
             }
-            else if (state->group_array[k].groupNumber == call_matrix[j][3])
+            else if (state->group_array[k].groupNumber == call_matrix[j][3] && call_matrix[j][3] != 0)
             {
               attron(COLOR_PAIR(4));
               printw ("[%s] ", state->group_array[k].groupName);
+              break;
             }
           }
           //end test
@@ -3593,6 +3621,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     if ( (opts->frame_nxdn48 == 1 || opts->frame_nxdn96 == 1) && (state->tg_hold == 0) )
       state->tg_hold = state->nxdn_last_tg;
+
+    else if (opts->frame_provoice == 1 && state->ea_mode == 0)
+      state->tg_hold = state->lastsrc;
   }
 
   if (c == 108) //'l' key, hold tg on slot 2 for trunking purposes, or toggle clear

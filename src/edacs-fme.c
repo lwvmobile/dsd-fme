@@ -14,7 +14,7 @@
  * 1994-7
  *
  * LWVMOBILE
- * 2023-08 Version EDACS-FM Florida Man Edition
+ * 2023-11 Version EDACS-FM Florida Man Edition
  *-----------------------------------------------------------------------------*/
 #include "dsd.h"
 
@@ -96,6 +96,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
 {
 
   int i;
+  int count = 5; //RMS has a 5 count (5 * 180ms) now before cutting off;
   short analog1[960];
   short analog2[960];
   short analog3[960];
@@ -113,7 +114,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
 
   fprintf (stderr, "\n");
 
-  while (!exitflag && rms > sql)
+  while (!exitflag && count > 0)
   { 
     //this will only work on 48k/1 short output
     if (opts->audio_in_type == 0)
@@ -217,14 +218,18 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
 
     printFrameSync (opts, state, " EDACS", 0, "A");
 
-    if (rms < sql) fprintf (stderr, "%s", KRED);
-    else fprintf (stderr, "%s", KGRN);
+    if (rms < sql) count--;
+    else count = 5;
+
+    if (rms > sql) fprintf(stderr, "%s", KGRN);
+    else fprintf(stderr, "%s", KRED);
 
     fprintf (stderr, " Analog RMS: %04ld SQL: %ld", rms, sql);
     if (afs != 0)
       fprintf (stderr, " AFS [%d] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
 
-    fprintf (stderr, "%s", KNRM);
+    //debug, view hit counter
+    // fprintf (stderr, " CNT: %d; ", count);
 
     if (opts->floating_point == 1)
       fprintf (stderr, "Analog Floating Point Output Not Supported");
@@ -255,10 +260,11 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     // fprintf (stderr, " SR: %016llX", sr);
 
     if (sr == 0xAAAAAAAAAAAAAAAA || sr == 0x5555555555555555)
-      rms = 0; //break while loop by dropping rms value
+      count = 0; //break while loop, sr will not equal these if just random noise
 
+    fprintf (stderr, "%s", KNRM);
 
-    if (rms > sql) fprintf (stderr, "\n");
+    if (count > 0) fprintf (stderr, "\n");
     
   }
 }
