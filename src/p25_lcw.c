@@ -410,7 +410,7 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 {
 
   fprintf (stderr, "%s", KYEL);
-  fprintf (stderr, " LCW GPS:");
+  fprintf (stderr, " GPS:");
   uint8_t slot = state->currentslot;
   uint8_t pf = lc_bits[0];
   uint8_t res_a = lc_bits[1];
@@ -427,6 +427,8 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   //todo: acquire more samples for additional validation
   double lat_unit = 90.0f / 0x7FFFFF;
   double lon_unit = 180.0f / 0x7FFFFF;
+  double lon_sf = 1.0f; //float value we can multiple longitude with
+  double lat_sf = 1.0f; //float value we can multiple latitude with
 
   char latstr[3];
   char lonstr[3];
@@ -442,17 +444,23 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   else
   {
     if (lat_sign)
+    {
       sprintf (latstr, "%s", "S");
+      lat_sf = -1.0f;
+    }
     latitude = ((double)lat * lat_unit);
 
     if (lon_sign)
+    {
       sprintf (lonstr, "%s", "W");
+      lon_sf = -1.0f;
+    }
     longitude = ((double)lon * lon_unit);
 
     //sanity check
     if (abs (latitude) < 90 && abs(longitude) < 180)
     {
-      fprintf (stderr, " Lat: %.5lf%s%s Lon: %.5lf%s%s ", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr);
+      fprintf (stderr, " Lat: %.5lf%s%s Lon: %.5lf%s%s (%.5lf, %.5lf) ", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, latitude * lat_sf, longitude * lon_sf);
 
       if (expired)
       {
@@ -469,7 +477,7 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
         fprintf (stderr, "RES_B: %02X; ", res_b);
 
       //save to array for ncurses
-      sprintf (state->dmr_embedded_gps[slot], "APX GPS: (%lf%s%s %lf%s%s) %s", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, valid);
+      sprintf (state->dmr_embedded_gps[slot], "GPS: %lf%s%s %lf%s%s %s", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, valid);
 
       //save to LRRP report for mapping/logging
       FILE * pFile; //file pointer
@@ -495,7 +503,7 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 
     }
 
-    fprintf(stderr, "\n DEV NOTE: If you see this message, but incorrect lat/lon,\n please submit samples to https://github.com/lwvmobile/dsd-fme/issues/164 ");
+
 
   }
 

@@ -1184,7 +1184,7 @@ void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_b
   
 }
 
-//externalize embedded GPS - Needs samples to test/fix function -- reverted back to original format
+//externalize embedded GPS - Confirmed working now on NE, NW, SE, and SW coordinates
 void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 {
   UNUSED(opts);
@@ -1205,6 +1205,8 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[24], 24); 
   uint32_t lat_sign = lc_bits[48]; 
   uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[49], 23); 
+  double lon_sf = 1.0f; //float value we can multiple longitude with
+  double lat_sf = 1.0f; //float value we can multiple latitude with
   
   double lat_unit = (double)180/ pow (2.0, 24); //180 divided by 2^24
   double lon_unit = (double)360/ pow (2.0, 25); //360 divided by 2^25
@@ -1214,7 +1216,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   sprintf (latstr, "%s", "N");
   sprintf (lonstr, "%s", "E");
 
-  //run calculations and print (still cannot verify as accurate for DMR)
+  //run calculations and print
   //7.2.16 and 7.2.17 (two's compliment)
 
   double latitude = 0;  
@@ -1227,6 +1229,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
     {
       lat = 0x800001 - lat;
       sprintf (latstr, "%s", "S");
+      lat_sf = -1.0f;
     } 
     latitude = ((double)lat * lat_unit);
 
@@ -1234,24 +1237,26 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
     {
       lon = 0x1000001 - lon;
       sprintf (lonstr, "%s", "W");
+      lon_sf = -1.0f;
     } 
     longitude = ((double)lon * lon_unit);
 
     //sanity check
     if (abs (latitude) < 90 && abs(longitude) < 180)
     {
-      fprintf (stderr, " Lat: %.5lf%s%s Lon: %.5lf%s%s", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr);
+      fprintf (stderr, " Lat: %.5lf%s%s Lon: %.5lf%s%s (%.5lf, %.5lf)", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, lat_sf * latitude, lon_sf * longitude);
 
       //7.2.15 Position Error
       uint16_t position_error = 2 * pow(10, pos_err); //2 * 10^pos_err 
-      if (pos_err == 0x7 ) fprintf (stderr, " Position Error: Unknown or Invalid");
-      else fprintf (stderr, " Position Error: Less than %dm", position_error);
+      if (pos_err == 0x7 ) fprintf (stderr, "\n  Position Error: Unknown or Invalid");
+      else fprintf (stderr, "\n  Position Error: Less than %dm", position_error);
 
       //save to array for ncurses
       if (pos_err != 0x7)
       {
-        sprintf (state->dmr_embedded_gps[slot], "GPS: (%lf%s%s %lf%s%s) Err: %dm", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, position_error);
+        sprintf (state->dmr_embedded_gps[slot], "GPS: %.5lf%s%s %.5lf%s%s Err: %dm", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, position_error);
       }
+      else sprintf (state->dmr_embedded_gps[slot], "GPS: %.5lf%s%s %.5lf%s%s Unknown Pos Err", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr);
 
       //save to LRRP report for mapping/logging
       FILE * pFile; //file pointer
@@ -1277,7 +1282,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 
     }
 
-    fprintf(stderr, "\n DEV NOTE: If you see this message, but incorrect lat/lon,\n please submit samples to https://github.com/lwvmobile/dsd-fme/issues/164 ");
+
 
   }
 
