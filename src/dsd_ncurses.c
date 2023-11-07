@@ -3068,7 +3068,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     attron(COLOR_PAIR(4));
 
-    if(state->dmrburstL == 16 || state->dmrburstL == 21 || state->dmrburstL == 26 || state->dmrburstL == 27) //only during call
+    if(state->dmrburstL == 16 || state->dmrburstL == 21 || state->dmrburstL == 26  || state->dmrburstL == 27 || state->dmrburstL == 32) //only during call
     {
 
       attron(COLOR_PAIR(4));
@@ -3122,8 +3122,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     printw ("\n");
 
-    //Slot 2 [1] //Don't print on MS mode
-    if (lls < 30 || lls == 35 || lls == 36)
+    //Slot 2 [1] -- Also Including DMR MS now to keep the display more 'uniform' in nature
+    // if (lls < 30 || lls == 35 || lls == 36)
     { 
       printw ("| SLOT 2 - ");
       if (state->dmrburstR < 16 && state->carrier == 1 && state->lasttgR > 0 && state->lastsrcR > 0)
