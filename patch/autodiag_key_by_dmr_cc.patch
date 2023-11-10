@@ -1,0 +1,532 @@
+diff --git a/include/dsd.h b/include/dsd.h
+index 07205cc..d23d08e 100644
+--- a/include/dsd.h
++++ b/include/dsd.h
+@@ -17,6 +17,28 @@
+  * PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
++ //IMPORTANT NOTE REGARDING THIS PATCH:
++ //Nobody should use this patch unless they very specificallyw ant to be able to
++ //load Hex or Dec Keys for DMR by the DMR Color Code! Otherwise, do not apply or use this patch!
++ //The HEX import function has been altered to import CC,KeyID(hex), Key(hex) with -K
++ //The DEC import function has been altered to import CC,TG(dec),key(dec) with -k for bp
++
++ //Expected csv format will be this:
++ /*
++ cc,kid(hex),key(hex)
++ 1,1,123456ABCDE
++ 1,11,FEDCBA4321
++ 14,7,1234567890
++
++ or
++
++ cc,tg(dec),bp key(dec)
++ 1,1,70
++ 1,11,23
++ 14,7,69
++
++ */
++
+ //defined by CMakeLists.txt -- Disable by using cmake -DCOLORS=OFF ..
+ #ifdef PRETTY_COLORS
+ #define KNRM  "\x1B[0m"
+@@ -727,9 +749,12 @@ typedef struct
+   uint8_t nxdn_bw;
+ 
+   //multi-key array
+-  unsigned long long int rkey_array[0xFFFF];
++  unsigned long long int rkey_array[1]; //had to make this smaller for cygwin/ncurses to prevent it from crashing (running out of stack memory?) NOTE: Disabled any calls to the rkey array with this patch (including imports)
+   int keyloader; //let us know the keyloader is active
+ 
++  //multi-key array by cc for dmr only
++  uint64_t cckey_array[16][0x1FFF]; //this is as large as I can meake this array for autodiag for the cygwin build and it not crash immediately
++
+   //dmr late entry mi
+   uint64_t late_entry_mi_fragment[2][7][3];
+ 
+@@ -1244,6 +1269,9 @@ int csvLCNImport(dsd_opts * opts, dsd_state * state);
+ int csvChanImport(dsd_opts * opts, dsd_state * state);
+ int csvKeyImportDec(dsd_opts * opts, dsd_state * state);
+ int csvKeyImportHex(dsd_opts * opts, dsd_state * state);
++//autodiag key import by dmr cc by tg hash or key id
++int csvKeyImportDecCC(dsd_opts * opts, dsd_state * state);
++int csvKeyImportHexCC(dsd_opts * opts, dsd_state * state);
+ 
+ //UDP Socket Connect and UDP Socket Blaster (audio output)
+ int udp_socket_connect(dsd_opts * opts, dsd_state * state);
+diff --git a/src/dsd_import.c b/src/dsd_import.c
+index 572895a..b5c5ce3 100644
+--- a/src/dsd_import.c
++++ b/src/dsd_import.c
+@@ -181,7 +181,7 @@ int csvKeyImportDec(dsd_opts * opts, dsd_state * state) //multi-key support
+       if (field_count == 0)
+       {
+         sscanf (field, "%lld", &keynumber);
+-        if (keynumber > 0xFFFF) //if larger than 16-bits, get its hash instead
++        if (keynumber > 0x1FFF) //if larger than 16-bits, get its hash instead
+         {
+           keynumber = keynumber & 0xFFFFFF; //truncate to 24-bits (max allowed)
+           for (int i = 0; i < 24; i++)
+@@ -189,7 +189,7 @@ int csvKeyImportDec(dsd_opts * opts, dsd_state * state) //multi-key support
+             hash_bits[i] = ((keynumber << i) & 0x800000) >> 23; //load into array for CRC16 
+           }
+           hash = ComputeCrcCCITT16d (hash_bits, 24);
+-          keynumber = hash & 0xFFFF; //make sure its no larger than 16-bits
++          keynumber = hash & 0x1FFF; //make sure its no larger than 16-bits
+           fprintf (stderr, "Hashed ");
+         }
+         
+@@ -257,3 +257,131 @@ int csvKeyImportHex(dsd_opts * opts, dsd_state * state) //key import for rc4 key
+   fclose(fp);
+   return 0;
+ }
++
++//Hex Variant of Key Import w/ CC deliniation for DMR
++int csvKeyImportHexCC(dsd_opts * opts, dsd_state * state) //key import for rc4 keys
++{
++  char filename[1024] = "filename.csv";
++  sprintf (filename, "%s", opts->key_in_file);
++  char buffer[BSIZE];
++  FILE * fp;
++  fp = fopen(filename, "r");
++  if (fp == NULL) {
++    printf("Unable to open file '%s'\n", filename);
++    exit(1);
++  }
++  int row_count = 0;
++  int field_count = 0;
++  unsigned long long int keynumber;
++  unsigned long long int keyvalue = 0;
++  unsigned long long int cc;
++
++  while (fgets(buffer, BSIZE, fp)) {
++    field_count = 0;
++    row_count++;
++    if (row_count == 1)
++      continue; //don't want labels
++    char * field = strtok(buffer, ","); //seperate by comma
++    while (field) {
++
++      if (field_count == 0)
++      {
++        sscanf (field, "%lld", &cc); //NOTE: Was %d
++      }
++
++      if (field_count == 1)
++      {
++        sscanf (field, "%llX", &keynumber);
++      }
++
++      if (field_count == 2)
++      {
++        sscanf (field, "%llX", &keyvalue);
++        state->cckey_array[cc][keynumber] = keyvalue & 0xFFFFFFFFFF;
++      }
++      
++      field = strtok(NULL, ",");
++      field_count++;
++    }
++
++    //TODO: Figure out why this seeems to 'skip' an extra line for when importing (format of csv file?)
++    //Had to change the variable type of cc from uint8_t to unsigned long long int (no idea why that fixed it)
++    fprintf (stderr, "CC [%02lld] Key [%02llX] [%010llX]", cc, keynumber, state->cckey_array[cc][keynumber]);
++    fprintf (stderr, "\n");
++    
++  }
++  fclose(fp);
++  return 0;
++}
++
++//Decimal Variant of Key Import
++int csvKeyImportDecCC(dsd_opts * opts, dsd_state * state) //multi-key support
++{
++  char filename[1024] = "filename.csv"; 
++  sprintf (filename, "%s", opts->key_in_file);
++
++  char buffer[BSIZE];
++  FILE * fp;
++  fp = fopen(filename, "r");
++  if (fp == NULL) {
++    printf("Unable to open file '%s'\n", filename);
++    exit(1);
++  }
++  int row_count = 0;
++  int field_count = 0;
++  
++  unsigned long long int keynumber = 0;
++  unsigned long long int keyvalue = 0;
++  unsigned long long int cc = 0;
++
++  uint16_t hash = 0;
++  uint8_t hash_bits[24];
++  memset (hash_bits, 0, sizeof(hash_bits));
++
++  while (fgets(buffer, BSIZE, fp)) {
++    field_count = 0;
++    row_count++;
++    if (row_count == 1)
++      continue; //don't want labels
++    char * field = strtok(buffer, ","); //seperate by comma
++    while (field) {
++
++      if (field_count == 0)
++      {
++        sscanf (field, "%lld", &cc); //NOTE: Was just %d
++      }
++
++      if (field_count == 1)
++      {
++        sscanf (field, "%lld", &keynumber);
++        if (keynumber > 0x1FFF) //if larger than 16-bits, get its hash instead
++        {
++          keynumber = keynumber & 0xFFFFFF; //truncate to 24-bits (max allowed)
++          for (int i = 0; i < 24; i++)
++          {
++            hash_bits[i] = ((keynumber << i) & 0x800000) >> 23; //load into array for CRC16 
++          }
++          hash = ComputeCrcCCITT16d (hash_bits, 24);
++          keynumber = hash & 0x1FFF; //make sure its no larger than 16-bits
++          fprintf (stderr, "Hashed ");
++        }
++        
++      }
++
++      if (field_count == 2)
++      {
++        sscanf (field, "%lld", &keyvalue);
++        state->cckey_array[cc][keynumber] = keyvalue & 0xFFFFFFFFFF; //doesn't exceed 40-bit value
++      }
++      
++      field = strtok(NULL, ",");
++      field_count++;
++    }
++    fprintf (stderr, "CC [%02d] Key [%03lld] [%05lld]", cc, keynumber, state->cckey_array[cc][keynumber]);
++    fprintf (stderr, "\n");
++    hash = 0;
++    
++  }
++  fclose(fp);
++  return 0;
++}
+\ No newline at end of file
+diff --git a/src/dsd_main.c b/src/dsd_main.c
+index 979f5b9..656e5da 100644
+--- a/src/dsd_main.c
++++ b/src/dsd_main.c
+@@ -1069,6 +1069,9 @@ initState (dsd_state * state)
+   memset (state->rkey_array, 0, sizeof(state->rkey_array));
+   state->keyloader = 0; //keyloader off  
+ 
++  //multi-key array by cc for dmr only
++  memset (state->cckey_array, 0, sizeof(state->cckey_array));
++
+   //Remus DMR End Call Alert Beep
+   state->dmr_end_alert[0] = 0;
+   state->dmr_end_alert[1] = 0;
+@@ -1224,8 +1227,8 @@ usage ()
+   printf ("  -6 <file>     Output raw audio .wav file (48K/1). (WARNING! Large File Sizes 1 Hour ~= 360 MB)\n");
+   printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
+   printf ("                 (Single Nested Directory Only! Use Before the -P option!)\n");
+-  printf ("  -8            Enable Experimental Source Audio Monitor (Pulse Audio Output Only!)\n");
+-  printf ("                 (Its recommended to use Squelch in SDR++ or GQRX, etc, if monitoring mixed analog/digital)\n");
++  // printf ("  -8            Enable Experimental Source Audio Monitor (Pulse Audio Output Only!)\n");
++  // printf ("                 (Its recommended to use Squelch in SDR++ or GQRX, etc, if monitoring mixed analog/digital)\n");
+   printf ("  -P            Enable Per Call WAV file saving in AUTO and NXDN decoding classes\n");
+   printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
+   printf ("                 (Running in console will use static wav files)\n");
+@@ -1323,6 +1326,12 @@ usage ()
+   printf ("  -K <file>     Import Key List from csv file (Hexidecimal Format) -- Capital 'K'.\n");
+   printf ("                  Use for Hex Value **tera 10-char BP keys and RC4 10-Char Hex Keys. \n");
+   printf ("                 \n");
++  printf ("  -8 <file>     Import Key (Key Value by DMR CC) from csv file (Decimal Format). \n");
++  printf ("                  Loads Decimal BP key value by DMR CC from a csv import file. \n");
++  printf ("                 \n");
++  printf ("  -9 <file>     Import Key (Key Value by DMR CC) from csv file (Hexidecimal Format).\n");
++  printf ("                  Loads RC4 10-Char Hex Keys by DMR CC from a csv import file. \n");
++  printf ("                 \n");
+   printf ("  -4            Force Privacy Key over Encryption Identifiers (DMR BP and NXDN Scrambler) \n");
+   printf ("                 \n");
+   printf ("  -0            Force RC4 Key over Missing PI header/LE Encryption Identifiers (DMR) \n");
+@@ -1555,9 +1564,9 @@ main (int argc, char **argv)
+   }
+ 
+   #ifdef AERO_BUILD
+-  fprintf (stderr, "Build Version: AW (20231015) \n");
++  fprintf (stderr, "Build Version: autodiag AW (20231110) \n");
+   #else
+-  fprintf (stderr, "Build Version: AW %s \n", GIT_TAG);
++  fprintf (stderr, "Build Version: autodiag AW %s \n", GIT_TAG);
+   #endif
+   fprintf (stderr,"MBElib Version: %s\n", versionstr);
+ 
+@@ -1637,17 +1646,31 @@ main (int argc, char **argv)
+           opts.p25_trunk = 0; //turn off trunking mode if user enabled it
+           break;
+ 
+-        case 'k': //multi-key loader (dec)
++        // case 'k': //multi-key loader (dec)
++        //   strncpy(opts.key_in_file, optarg, 1023);
++        //   opts.key_in_file[1023] = '\0';
++        //   csvKeyImportDec(&opts, &state);
++        //   state.keyloader = 1;
++        //   break;
++
++        // case 'K': //multi-key loader (hex)
++        //   strncpy(opts.key_in_file, optarg, 1023);
++        //   opts.key_in_file[1023] = '\0';
++        //   csvKeyImportHex(&opts, &state);
++        //   state.keyloader = 1;
++        //   break;
++
++        case 'k': //multi-key loader (dec and hash) w/ CC deliniation for DMR
+           strncpy(opts.key_in_file, optarg, 1023);
+           opts.key_in_file[1023] = '\0';
+-          csvKeyImportDec(&opts, &state);
++          csvKeyImportDecCC(&opts, &state);
+           state.keyloader = 1;
+           break;
+ 
+-        case 'K': //multi-key loader (hex)
++        case 'K': //multi-key loader (hex) w/ CC deliniation for DMR
+           strncpy(opts.key_in_file, optarg, 1023);
+           opts.key_in_file[1023] = '\0';
+-          csvKeyImportHex(&opts, &state);
++          csvKeyImportHexCC(&opts, &state);
+           state.keyloader = 1;
+           break;
+ 
+diff --git a/src/dsd_mbe.c b/src/dsd_mbe.c
+index 4c13a6a..1c0d008 100644
+--- a/src/dsd_mbe.c
++++ b/src/dsd_mbe.c
+@@ -24,11 +24,17 @@ void keyring(dsd_opts * opts, dsd_state * state)
+ {
+   UNUSED(opts);
+ 
++  // if (state->currentslot == 0)
++  //   state->R = state->rkey_array[state->payload_keyid];
++
++  // if (state->currentslot == 1)
++  //   state->RR = state->rkey_array[state->payload_keyidR];
++
+   if (state->currentslot == 0)
+-    state->R = state->rkey_array[state->payload_keyid];
++    state->R = state->cckey_array[state->dmr_color_code][state->payload_keyid];
+ 
+   if (state->currentslot == 1)
+-    state->RR = state->rkey_array[state->payload_keyidR];
++    state->RR = state->cckey_array[state->dmr_color_code][state->payload_keyidR];
+ }
+ 
+ void RC4(int drop, uint8_t keylength, uint8_t messagelength, uint8_t key[], uint8_t cipher[], uint8_t plain[])
+@@ -437,23 +443,30 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
+       //currently only Moto BP and Hytera 10 Char BP
+       if (state->M == 0 && state->payload_algid == 0)
+       {
+-        //see if we need to hash a value larger than 16-bits
++        //see if we need to hash a value larger than 0x1FFF bits
+         hash = state->lasttg & 0xFFFFFF;
+         // fprintf (stderr, "TG: %lld Hash: %ld ", state->lasttg, hash); 
+-        if (hash > 0xFFFF) //if greater than 16-bits
++        if (hash > 0x1FFF) //if greater than 16-bits
+         {
+           for (int i = 0; i < 24; i++)
+           {
+             hash_bits[i] = ((hash << i) & 0x800000) >> 23; //load into array for CRC16 
+           }
+           hash = ComputeCrcCCITT16d (hash_bits, 24);
+-          hash = hash & 0xFFFF; //make sure its no larger than 16-bits
++          hash = hash & 0x1FFF; //make sure its no larger than 0x1FFF bits
+           // fprintf (stderr, "Hash: %d ", hash);
+         }
+-        if (state->rkey_array[hash] != 0)
++        // if (state->rkey_array[hash] != 0)
++        // {
++        //   state->K = state->rkey_array[hash] & 0xFF; //doesn't exceed 255
++        //   state->K1 = state->H = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
++        //   opts->dmr_mute_encL = 0;
++        //   // fprintf (stderr, "Key: %X ", state->rkey_array[hash]);
++        // }
++        if (state->cckey_array[state->dmr_color_code][hash] != 0)
+         {
+-          state->K = state->rkey_array[hash] & 0xFF; //doesn't exceed 255
+-          state->K1 = state->H = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
++          state->K = state->cckey_array[state->dmr_color_code][hash] & 0xFF; //doesn't exceed 255
++          state->K1 = state->H = state->cckey_array[state->dmr_color_code][hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
+           opts->dmr_mute_encL = 0;
+           // fprintf (stderr, "Key: %X ", state->rkey_array[hash]);
+         }
+@@ -723,23 +736,30 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
+       //currently only Moto BP and Hytera 10 Char BP
+       if (state->M == 0 && state->payload_algidR == 0)
+       {
+-        //see if we need to hash a value larger than 16-bits
++        //see if we need to hash a value larger than 0x1FFF bits
+         hash = state->lasttgR & 0xFFFFFF; 
+         // fprintf (stderr, "TG: %lld Hash: %ld ", state->lasttgR, hash);
+-        if (hash > 0xFFFF) //if greater than 16-bits
++        if (hash > 0x1FFF) //if greater than 16-bits
+         {
+           for (int i = 0; i < 24; i++)
+           {
+             hash_bits[i] = ((hash << i) & 0x800000) >> 23; //load into array for CRC16 
+           }
+           hash = ComputeCrcCCITT16d (hash_bits, 24);
+-          hash = hash & 0xFFFF; //make sure its no larger than 16-bits
++          hash = hash & 0x1FFF; //make sure its no larger than 0x1FFF bits
+           // fprintf (stderr, "Hash: %d ", hash);
+         }
+-        if (state->rkey_array[hash] != 0)
++        // if (state->rkey_array[hash] != 0)
++        // {
++        //   state->K = state->rkey_array[hash] & 0xFF; //doesn't exceed 255
++        //   state->K1 = state->H = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
++        //   opts->dmr_mute_encR = 0;
++        //   // fprintf (stderr, "Key: %X ", state->rkey_array[hash]);
++        // }
++        if (state->cckey_array[state->dmr_color_code][hash] != 0)
+         {
+-          state->K = state->rkey_array[hash] & 0xFF; //doesn't exceed 255
+-          state->K1 = state->H = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
++          state->K = state->cckey_array[state->dmr_color_code][hash] & 0xFF; //doesn't exceed 255
++          state->K1 = state->H = state->cckey_array[state->dmr_color_code][hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
+           opts->dmr_mute_encR = 0;
+           // fprintf (stderr, "Key: %X ", state->rkey_array[hash]);
+         }
+diff --git a/src/dsd_ncurses.c b/src/dsd_ncurses.c
+index 304dfc2..9e6aee7 100644
+--- a/src/dsd_ncurses.c
++++ b/src/dsd_ncurses.c
+@@ -2254,7 +2254,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+   if (opts->ncurses_compact == 1)
+   {
+     printw ("------------------------------------------------------------------------------\n");
+-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "AW (20231015)");
++    printw ("| Digital Speech Decoder: Florida Man Edition - autodiag %s \n", "AW (20231110)");
+     printw ("------------------------------------------------------------------------------\n"); 
+   }
+ #elif LIMAZULUTWEAKS
+@@ -2275,7 +2275,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+   if (opts->ncurses_compact == 1)
+   {
+     printw ("------------------------------------------------------------------------------\n");
+-    printw ("| Digital Speech Decoder: Florida Man Edition - AW %s \n", GIT_TAG);
++    printw ("| Digital Speech Decoder: Florida Man Edition - autodiag %s \n", GIT_TAG);
+     printw ("------------------------------------------------------------------------------\n");
+   }
+ #endif
+@@ -2292,13 +2292,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+       if (i == 4 && opts->frame_m17 == 1) printw (" CODEC2");
+       #endif
+       #ifdef AERO_BUILD
+-      if (i == 5) printw (" %s ", "Aero Build");
+-      if (i == 6) printw (" AW (20231015) \n");
++      if (i == 5) printw (" %s ", "autodiag");
++      if (i == 6) printw (" AW (20231110) \n");
+       #elif ZDEV_BUILD
+       if (i == 5) printw (" %s ", "AW ");
+       if (i == 6) printw (" %s \n", GIT_TAG);
+       #else 
+-      if (i == 5) printw (" %s ", "AW ");
++      if (i == 5) printw (" %s ", "autodiag ");
+       if (i == 6) printw (" %s \n", GIT_TAG);
+       #endif
+       else printw ("\n");
+diff --git a/src/nxdn_element.c b/src/nxdn_element.c
+index 8907cab..1e82dde 100644
+--- a/src/nxdn_element.c
++++ b/src/nxdn_element.c
+@@ -638,12 +638,12 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
+ 
+         //check the rkey array for a scrambler key value
+         //TGT ID and Key ID could clash though if csv or system has both with different keys
+-        if (state->rkey_array[DestinationID] != 0)
+-        {
+-          state->R = state->rkey_array[DestinationID];
+-          fprintf (stderr, " %s", KYEL);
+-          fprintf (stderr, " Key Loaded: %lld", state->rkey_array[DestinationID]);
+-        } 
++        // if (state->rkey_array[DestinationID] != 0)
++        // {
++        //   state->R = state->rkey_array[DestinationID];
++        //   fprintf (stderr, " %s", KYEL);
++        //   fprintf (stderr, " Key Loaded: %lld", state->rkey_array[DestinationID]);
++        // } 
+         if (state->M == 1) state->nxdn_cipher_type = 0x1;
+       }
+       //rtl
+@@ -669,12 +669,12 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
+ 
+         //check the rkey array for a scrambler key value
+         //TGT ID and Key ID could clash though if csv or system has both with different keys
+-        if (state->rkey_array[DestinationID] != 0)
+-        {
+-          state->R = state->rkey_array[DestinationID];
+-          fprintf (stderr, " %s", KYEL);
+-          fprintf (stderr, " Key Loaded: %lld", state->rkey_array[DestinationID]);
+-        }
++        // if (state->rkey_array[DestinationID] != 0)
++        // {
++        //   state->R = state->rkey_array[DestinationID];
++        //   fprintf (stderr, " %s", KYEL);
++        //   fprintf (stderr, " Key Loaded: %lld", state->rkey_array[DestinationID]);
++        // }
+         if (state->M == 1) state->nxdn_cipher_type = 0x1;
+         #endif
+       }
+@@ -1202,8 +1202,8 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
+   //check the rkey array for a scrambler key value
+   //check by keyid first, then by tgt id
+   //TGT ID and Key ID could clash though if csv or system has both with different keys
+-  if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
+-  else if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
++  // if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
++  // else if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
+ 
+   //Don't zero key if no keyloader
+   if (CipherType != 0x1 && state->keyloader == 1) state->R = 0;
+@@ -1533,8 +1533,8 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
+               opts->p25_is_tuned = 1;
+               //check the rkey array for a scrambler key value
+               //TGT ID and Key ID could clash though if csv or system has both with different keys
+-              if (state->rkey_array[id] != 0) state->R = state->rkey_array[id];
+-              if (state->M == 1) state->nxdn_cipher_type = 0x1;
++              // if (state->rkey_array[id] != 0) state->R = state->rkey_array[id];
++              // if (state->M == 1) state->nxdn_cipher_type = 0x1;
+             }
+             //rtl
+             else if (opts->audio_in_type == 3)
+@@ -1552,8 +1552,8 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
+               opts->p25_is_tuned = 1;
+               //check the rkey array for a scrambler key value
+               //TGT ID and Key ID could clash though if csv or system has both with different keys
+-              if (state->rkey_array[id] != 0) state->R = state->rkey_array[id];
+-              if (state->M == 1) state->nxdn_cipher_type = 0x1;
++              // if (state->rkey_array[id] != 0) state->R = state->rkey_array[id];
++              // if (state->M == 1) state->nxdn_cipher_type = 0x1;
+               #endif
+             }
+             
+diff --git a/src/nxdn_frame.c b/src/nxdn_frame.c
+index 4650ec2..2347082 100644
+--- a/src/nxdn_frame.c
++++ b/src/nxdn_frame.c
+@@ -379,13 +379,13 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
+ 
+ 		fprintf (stderr, "%s", KYEL);
+ 		if (freq) fprintf (stderr, "\n Freq: %ld - Freq Hash: %d", freq, limazulu);
+-		if (state->rkey_array[limazulu] != 0) fprintf (stderr, " - Key Loaded: %lld", state->rkey_array[limazulu]);
++		// if (state->rkey_array[limazulu] != 0) fprintf (stderr, " - Key Loaded: %lld", state->rkey_array[limazulu]);
+ 		fprintf (stderr, "%s", KNRM);
+ 
+-		if (state->rkey_array[limazulu] != 0) 
+-			state->R = state->rkey_array[limazulu];
++		// if (state->rkey_array[limazulu] != 0) 
++		// 	state->R = state->rkey_array[limazulu];
+ 
+-		if (state->R != 0 && state->M == 1) state->nxdn_cipher_type = 0x1;
++		// if (state->R != 0 && state->M == 1) state->nxdn_cipher_type = 0x1;
+ 
+ 		//add additional time to last_sync_time for LimaZulu to hold on current frequency
+ 		//a little longer without affecting normal scan time on trunk_hangtime variable
