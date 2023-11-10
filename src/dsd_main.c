@@ -1166,6 +1166,8 @@ initState (dsd_state * state)
   state->codec2_1600 = codec2_create(CODEC2_MODE_1600);
   #endif
 
+  state->dmr_color_code = 15;
+
 } //init_state
 
 void
