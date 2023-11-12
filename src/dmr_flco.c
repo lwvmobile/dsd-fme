@@ -826,6 +826,31 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   uint8_t ts1_hash = (uint8_t)ConvertBitIntoBytes(&slco_bits[12], 8); //ts1 address hash (crc8) //361-1 B.3.7
   uint8_t ts2_hash = (uint8_t)ConvertBitIntoBytes(&slco_bits[20], 8); //ts2 address hash (crc8) //361-1 B.3.7
 
+  char ts1_str[25]; sprintf (ts1_str, "%s", "");
+  char ts2_str[25]; sprintf (ts2_str, "%s", "");
+
+  if      (ts1_act == 0b0000) sprintf (ts1_str, "%s", "Idle");
+  else if (ts1_act == 0b0010) sprintf (ts1_str, "%s", "Group CSBK");
+  else if (ts1_act == 0b0011) sprintf (ts1_str, "%s", "Ind CSBK");
+  else if (ts1_act == 0b1000) sprintf (ts1_str, "%s", "Group Voice");
+  else if (ts1_act == 0b1001) sprintf (ts1_str, "%s", "Ind Voice");
+  else if (ts1_act == 0b1010) sprintf (ts1_str, "%s", "Ind Data");
+  else if (ts1_act == 0b1011) sprintf (ts1_str, "%s", "Group Data");
+  else if (ts1_act == 0b1100) sprintf (ts1_str, "%s", "Group Emergency");
+  else if (ts1_act == 0b1101) sprintf (ts1_str, "%s", "Ind Emergency");
+  else                        sprintf (ts1_str, "Res %X", ts1_act);
+
+  if      (ts2_act == 0b0000) sprintf (ts2_str, "%s", "Idle");
+  else if (ts2_act == 0b0010) sprintf (ts2_str, "%s", "Group CSBK");
+  else if (ts2_act == 0b0011) sprintf (ts2_str, "%s", "Ind CSBK");
+  else if (ts2_act == 0b1000) sprintf (ts2_str, "%s", "Group Voice");
+  else if (ts2_act == 0b1001) sprintf (ts2_str, "%s", "Ind Voice");
+  else if (ts2_act == 0b1010) sprintf (ts2_str, "%s", "Ind Data");
+  else if (ts2_act == 0b1011) sprintf (ts2_str, "%s", "Group Data");
+  else if (ts2_act == 0b1100) sprintf (ts2_str, "%s", "Group Emergency");
+  else if (ts2_act == 0b1101) sprintf (ts2_str, "%s", "Ind Emergency");
+  else                        sprintf (ts2_str, "Res %X", ts1_act);
+
   //DMR Location Area - DMRLA - should probably be state variables so we can use this in both slc and csbk
   uint16_t sub_mask = 0x1;
   //tiny n 1-3; small 1-5; large 1-8; huge 1-10
@@ -941,7 +966,11 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   else if (slco == 0x0) //null
     fprintf (stderr, " SLCO NULL ");
   else if (slco == 0x1)
-    fprintf (stderr, " SLCO Activity Update TS1: %X Hash: %02X TS2: %X Hash: %02X", ts1_act, ts1_hash, ts2_act, ts2_hash); //102 361-2 7.1.3.2 
+  {
+    fprintf (stderr, " Activity Update"); //102 361-2 7.1.3.2
+    fprintf (stderr, " TS1: %s; Hash: %d;", ts1_str, ts1_hash);
+    fprintf (stderr, " TS2: %s; Hash: %d;", ts2_str, ts2_hash);
+  } 
   else if (slco == 0x9)
   {
     fprintf (stderr, " SLCO Connect Plus Voice Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
