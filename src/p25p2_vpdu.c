@@ -1586,7 +1586,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				}
 
 				//debug
-				fprintf (stderr, "\n WR: %d TG: %d SRC: %d Res: %d Len: %d STR: %s", wr, ttg, tsrc, res, len, str);
+				// fprintf (stderr, "\n WR: %d TG: %d SRC: %d Res: %d Len: %d STR: %s", wr, ttg, tsrc, res, len, str);
 			}
 
 			else

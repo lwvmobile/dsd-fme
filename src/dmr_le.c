@@ -307,9 +307,20 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   //NOTE: on above, I belive that we need to check by opcode as well, as a CRC3 can have multiple collisions
   //so we need to exclude op/alg 0 and 3 from the check (does algID 0x03/0x23 even exist?)
 
-  if (opts->dmr_le == 1) //this will now require a user to switch it on or off until more testing/figuring can be done
+  if (opts->dmr_le == 1)
   {
-    if (irr_err != 0) fprintf (stderr, "\n%s SLOT %d SB/RC (FEC ERR) %d %s \n", KRED, slot, irr_err, KNRM);
+    if (irr_err != 0)
+    {
+      uint32_t sbrcpl = 0;
+      for(i = 0; i < 32; i++)
+      {
+        sbrcpl = sbrcpl << 1;
+        sbrcpl |= sbrc_interleaved[i] & 1;
+      }
+      if (opts->payload == 0) fprintf (stderr, "\n");
+      fprintf (stderr, "%s SLOT %d SB/RC (FEC ERR) E:%d; I:%08X D:%03X; %s ", KRED, slot+1, irr_err, sbrcpl, sbrc_hex, KNRM);
+      if (opts->payload == 1) fprintf (stderr, "\n");
+    }
     if (irr_err == 0)
     {
       if (sbrc_hex == 0) ; //NULL, do nothing
