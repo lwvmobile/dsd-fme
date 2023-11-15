@@ -1032,6 +1032,8 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 //end
 void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType);
 void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182]);
+//Osmocom OP25 12 Rate Trellis Decoder (for NXDN, M17, YSF, etc)
+void trellis_decode(uint8_t result[], const uint8_t source[], int result_len);
 
 //OP25 NXDN CRC functions
 int load_i(const uint8_t val[], int len);

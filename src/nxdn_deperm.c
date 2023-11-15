@@ -52,7 +52,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	uint8_t deperm[144]; //144
 	uint8_t depunc[192]; //192
 	uint8_t trellis_buf[96]; //96
-	uint16_t crc = 0; //crc calculated by function
+	uint16_t crc = 1; //crc calculated by function
 	uint16_t check = 0; //crc from payload for comparison
 	int out;
 
@@ -111,6 +111,30 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 		check = check | trellis_buf[84+i]; //80
 	}
 
+	//debug
+	// if (crc == check)
+		// fprintf (stderr, " Pass 1 ");
+
+	//if the crc fails, attempt again with the other trellis decoder
+	if (crc != check)
+	{
+		//debug
+		// fprintf (stderr, " Pass 2 "); 
+		crc = 1; check = 0;
+		memset (trellis_buf, 0, sizeof(trellis_buf));
+		memset (m_data, 0, sizeof(m_data));
+		trellis_decode(trellis_buf, depunc, 92);
+		//fill m_data bytes with trellis_buf
+		for(int i = 0; i < 12; i++)
+			m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
+		crc = crc12f (trellis_buf, 84);
+		for (int i = 0; i < 12; i++)
+		{
+			check = check << 1;
+			check = check | trellis_buf[i+84];
+		}
+	}
+
 	if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
 	// else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
 
@@ -145,7 +169,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	memset (trellis_buf, 0, sizeof(trellis_buf));
 
 	int o = 0;
-	uint8_t crc = 0; //value computed by crc6 on payload
+	uint8_t crc = 1; //value computed by crc6 on payload
 	uint8_t check = 0; //value pulled from last 6 bits
 	int sf = 0;
 	int ran = 0;
@@ -210,6 +234,30 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	{
 		check = check << 1;
 		check = check | trellis_buf[i+26];
+	}
+
+	//debug
+	// if (crc == check)
+	// 	fprintf (stderr, " Pass 1 ");
+
+	//if the crc fails, attempt again with the other trellis decoder
+	if (crc != check)
+	{
+		//debug
+		// fprintf (stderr, " Pass 2 "); 
+		crc = 1; check = 0;
+		memset (trellis_buf, 0, sizeof(trellis_buf));
+		memset (m_data, 0, sizeof(m_data));
+		trellis_decode(trellis_buf, depunc, 32);
+		//fill m_data bytes with trellis_buf
+		for(int i = 0; i < 4; i++)
+			m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
+		crc = crc6(trellis_buf, 26); //32
+		for (int i = 0; i < 6; i++)
+		{
+			check = check << 1;
+			check = check | trellis_buf[i+26];
+		}
 	}
 
 	//FIRST! If part of a non_superframe, and CRC is good, send directly to NXDN_Elements_Content_decode
@@ -284,12 +332,12 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 
 		fprintf (stderr, "PF %d/4", part_of_frame+1);
 
-		if (crc != check)
-		{
-			fprintf (stderr, "%s", KRED);
-			fprintf (stderr, " (CRC ERR)");
-			fprintf (stderr, "%s", KNRM);
-		}
+		// if (crc != check)
+		// {
+		// 	fprintf (stderr, "%s", KRED);
+		// 	fprintf (stderr, " (CRC ERR)");
+		// 	fprintf (stderr, "%s", KNRM);
+		// }
 		
 		//reset scrambler seed to key value on new superframe
 		if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1) state->payload_miN = 0;
@@ -319,16 +367,16 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 			NXDN_SACCH_Full_decode (opts, state);
 		} 
 
-		// if (opts->payload == 1)
-		// { 
-		// 	fprintf (stderr, "\n"); 
-		// 	fprintf (stderr, " SACCH SF Segment #%d ", part_of_frame+1);
-		// 	for (int i = 0; i < 4; i++)
-		// 	{
-		// 		fprintf (stderr, "[%02X]", m_data[i]);
-		// 	}
-		// 	// if (crc != check) fprintf (stderr, " CRC ERR - %02X %02X", crc, check);
-		// }
+		if (opts->payload == 1)
+		{ 
+			fprintf (stderr, "\n"); 
+			fprintf (stderr, " SACCH SF Segment #%d ", part_of_frame+1);
+			for (int i = 0; i < 4; i++)
+			{
+				fprintf (stderr, "[%02X]", m_data[i]);
+			}
+			if (crc != check) fprintf (stderr, " CRC ERR - %02X %02X", crc, check);
+		}
 
 	}	
 	
