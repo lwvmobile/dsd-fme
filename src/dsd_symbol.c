@@ -386,7 +386,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
               {
                 //sample = dmr_filter(sample); //work on filter later
               }
-              else if (opts->frame_nxdn96 == 0) //disable NXDN96 filter, allow internal RTL or SDR++ Low Pass Filter instead
+              else
               {
                 sample = dmr_filter(sample);
               }

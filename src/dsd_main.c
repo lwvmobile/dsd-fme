@@ -2255,9 +2255,9 @@ main (int argc, char **argv)
             opts.frame_provoice = 0;
             opts.frame_ysf = 0;
             opts.frame_m17 = 0;
-            opts.mod_c4fm = 0;
+            opts.mod_c4fm = 1;
             opts.mod_qpsk = 0;
-            opts.mod_gfsk = 1;
+            opts.mod_gfsk = 0;
             state.rf_mod = 0;
             opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 1;

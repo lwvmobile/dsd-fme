@@ -1269,6 +1269,13 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     state->nxdn_key = KeyID;
     state->nxdn_cipher_type = CipherType;
   }
+  else
+  {
+    state->nxdn_last_rid = 0;
+    state->nxdn_last_tg = 0;
+    sprintf (state->str50a, "%s", "");
+    memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
+  }
 
   //set enc bit here so we can tell playSynthesizedVoice whether or not to play enc traffic
   if (state->nxdn_cipher_type != 0)
