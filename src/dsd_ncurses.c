@@ -25,7 +25,7 @@ uint32_t temp_freq = -1;
 
 //struct for checking existence of directory to write to
 struct stat st_wav = {0};
-
+static char alias_ch[10][50];
 int reset = 0;
 char * timestr;
 int tg;
@@ -415,6 +415,10 @@ void ncursesOpen (dsd_opts * opts, dsd_state * state)
   //this is primarily used to push a quick audio blip through OSS so it will show up in the mixer immediately
   // if (opts->audio_out_type == 2 || opts->audio_out_type == 5)
   //   beeper (opts, state, 0); //causes crash in Cygwin when mixed input/output
+  
+  //terminate all values
+  for (int i = 0; i < 10; i++)
+    sprintf (alias_ch[i], "%s", "");
 
   UNUSED(opts); UNUSED(state);
 
@@ -1654,7 +1658,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     }
     if (choice == 15) //reset call history (usually if janky output when switching modes)
     {
-      for (short int k = 0; k <= 9; k++)
+      for (short int k = 0; k < 10; k++)
       {
         call_matrix[k][0] = 0;
         call_matrix[k][1] = 0;
@@ -1662,6 +1666,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         call_matrix[k][3] = 0;
         call_matrix[k][4] = 0;
         call_matrix[k][5] = 0;
+        sprintf (alias_ch[k], "%s", "");
       }
       src = 0;
       rn = 0;
@@ -1675,6 +1680,11 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->lastsrcR = 0;
       state->lasttg = 0;
       state->lasttgR = 0;
+      state->nxdn_last_ran = -1;
+      state->nxdn_last_rid = 0;
+      state->nxdn_last_tg = 0;
+      sprintf (state->str50a, "%s", "");
+      sprintf (state->str50b, "%s", "");
     }
 
     if (choice == 16) //toggle payload printing
@@ -1904,7 +1914,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //NXDN -- I really need to fix this better, but this is good enough for today
-  if (state->nxdn_last_rid != 0 && state->nxdn_last_rid != src)
+  if (state->nxdn_last_rid != src)
   {
     src = state->nxdn_last_rid;
   }
@@ -2038,6 +2048,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       call_matrix[k][3] = call_matrix[k+1][3];
       call_matrix[k][4] = call_matrix[k+1][4];
       call_matrix[k][5] = call_matrix[k+1][5];
+      sprintf (alias_ch[k], "%s", alias_ch[k+1]);
     }
     call_matrix[9][0] = lls;
     call_matrix[9][1] = tgn; //was rn, switch to tgn so it'll show tg in call history
@@ -2045,6 +2056,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][3] = 0;
     call_matrix[9][4] = rn; //was tgn, switched with rn
     call_matrix[9][5] = time(NULL);
+    sprintf (alias_ch[9], "%s", "");
+    sprintf (state->str50a, "%s", "");
 
     //open wav file if enabled and both rd and tg are not 0
     if (opts->dmr_stereo_wav == 1 && src != 0 ) //&& tgn != 0, some TG can be 0 on NXDN
@@ -2061,6 +2074,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
 
   }
+  
+  //TODO: Find better placement for these
+  if ( strcmp(state->str50a, "") != 0 )
+    sprintf (alias_ch[9], "%s", state->str50a);
+
+  //tdma only
+  // if ( strcmp(state->str50b, "") != 0 )
+  //   sprintf (alias_ch[5], "%s", state->str50a);
 
   //DMR MS
   if ( call_matrix[9][2] != rd && lls == 32)
@@ -2757,24 +2778,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| ");
     printw ("TGT: [%5d] ", tgn);
     printw ("SRC: [%5d] ", src);
-    if (state->nxdn_alias_block_segment[0][0] > 0) 
-    {
-      printw ("ALIAS: [");
-      for (int i = 0; i < 4; i++)
-      {
-        for (int j = 0; j < 4; j++)
-        {
-          printw ("%s", state->nxdn_alias_block_segment[i][j]); 
-        }
-      }
-      printw ("]");
-    }
+    // if (state->nxdn_alias_block_segment[0][0] > 0) //consider disabling this
+      printw ("Alias: [%s]", alias_ch[9]);
 
     //Group Name Labels from CSV import
     for (int k = 0; k < state->group_tally; k++)
     {
       if (state->group_array[k].groupNumber == tgn)
       {
+        printw ("TG: ");
         attron(COLOR_PAIR(4));
         printw (" [%s]", state->group_array[k].groupName);
         printw ("[%s] ", state->group_array[k].groupMode);
@@ -2783,7 +2795,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         attron(COLOR_PAIR(4));
         printw (" [%s]", state->group_array[k].groupName);
-        printw ("[%s] ", state->group_array[k].groupMode);
       }
       if (state->carrier == 1)
       {
@@ -3553,6 +3564,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
             printw ("[%s] ", state->group_array[k].groupMode);
           }
         }
+
+        //alias values here
+        printw ("%s", alias_ch[9-j]);
+
         // #endif
         printw ("\n");
       }

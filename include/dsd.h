@@ -783,6 +783,10 @@ typedef struct
   uint8_t m17_enc;      //enc type
   uint8_t m17_enc_st;   //scrambler or data subtye
 
+  //misc str storage
+  char str50a[50];
+  char str50b[50];
+
   //Codec2
   #ifdef USE_CODEC2
   struct CODEC2 *codec2_3200; //M17 fullrate

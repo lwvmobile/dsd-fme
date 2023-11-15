@@ -691,11 +691,14 @@ void NXDN_decode_Alias(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 {
   UNUSED(opts);
 
-  uint8_t Alias1 = 0x20; //value of an ascii 'space' character
+  uint8_t Alias1 = 0x20;
   uint8_t Alias2 = 0x20;
   uint8_t Alias3 = 0x20;
   uint8_t Alias4 = 0x20;
   uint8_t blocknumber = 0; 
+  uint8_t total = 0;
+  uint8_t unk1 = 0;
+  uint8_t unk2 = 0;
   uint8_t CrcCorrect = 0;
   
   //alias can also hit on a facch1 -- do we still need this checkdown?
@@ -708,12 +711,23 @@ void NXDN_decode_Alias(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 
   //FACCH Payload [3F][68][82][04][2 <- block number4] "[69][6F][6E][20]" <- 4 alias octets [00][7F][1C]
   blocknumber = (uint8_t)ConvertBitIntoBytes(&Message[32], 4) & 0x7; // & 0x7, might just be three bits, unsure
+  total = (uint8_t)ConvertBitIntoBytes(&Message[36], 4) & 0x7; //second value seems to be total number of blocks? or len of alias in this segment?
+  unk1 = (uint8_t)ConvertBitIntoBytes(&Message[8], 8); //unknown values in first two bytes after the opcode
+  unk2 = (uint8_t)ConvertBitIntoBytes(&Message[16], 8); //could be related to the format of these (Iso8? etc)
+  UNUSED4(unk1, unk2, total, blocknumber);
   Alias1 = (uint8_t)ConvertBitIntoBytes(&Message[40], 8);
   Alias2 = (uint8_t)ConvertBitIntoBytes(&Message[48], 8);
   Alias3 = (uint8_t)ConvertBitIntoBytes(&Message[56], 8);
   Alias4 = (uint8_t)ConvertBitIntoBytes(&Message[64], 8);
+
+  char str_a[120]; char str_b[50];
+
+  //debug/test
+  // fprintf (stderr, " U1: %02X U2: %02X;", unk1, unk2);
+  // fprintf (stderr, " A:%d/%d; ", blocknumber, total);
+
   //sanity check to prevent OOB array assignment
-  if (blocknumber > 0 && blocknumber < 4) //last 'block' may have been assigning garbage name values -- needs testing
+  if (blocknumber > 0 && blocknumber < 4) //last 'block' may have been assigning garbage name values -- I'm honestly not sure block'4' contains Alias data, but other data or something
   {
     //assign to index -1, since block number conveyed here is 1,2,3,4, and index values are 0,1,2,3
     //only assign if within valid range of ascii characters (not including diacritical extended alphabet)
@@ -722,16 +736,33 @@ void NXDN_decode_Alias(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     //since we are zeroing out the blocks on tx_rel and other conditions, better to just set nothing to bad Alias bytes
     //tends to zero out otherwise already good blocks set in a previous repitition.
     if (Alias1 > 0x19 && Alias1 < 0x7F) sprintf (state->nxdn_alias_block_segment[blocknumber-1][0], "%c", Alias1);
-    //else sprintf (state->nxdn_alias_block_segment[blocknumber-1][0], "%c", 32); //space
+    // else sprintf (state->nxdn_alias_block_segment[blocknumber-1][0], "%c", 0x20); //space
 
     if (Alias2 > 0x19 && Alias2 < 0x7F) sprintf (state->nxdn_alias_block_segment[blocknumber-1][1], "%c", Alias2);
-    //else sprintf (state->nxdn_alias_block_segment[blocknumber-1][1], "%c", 0); //space
+    // else sprintf (state->nxdn_alias_block_segment[blocknumber-1][1], "%c", 0x20); //space
 
     if (Alias3 > 0x19 && Alias3 < 0x7F) sprintf (state->nxdn_alias_block_segment[blocknumber-1][2], "%c", Alias3);
-    //else sprintf (state->nxdn_alias_block_segment[blocknumber-1][2], "%c", 0); //space
+    // else sprintf (state->nxdn_alias_block_segment[blocknumber-1][2], "%c", 0x20); //space
 
     if (Alias4 > 0x19 && Alias4 < 0x7F) sprintf (state->nxdn_alias_block_segment[blocknumber-1][3], "%c", Alias4);
-    //else sprintf (state->nxdn_alias_block_segment[blocknumber-1][3], "%c", 0); //space
+    // else sprintf (state->nxdn_alias_block_segment[blocknumber-1][3], "%c", 0x20); //space
+
+    sprintf (str_a, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
+      state->nxdn_alias_block_segment[0][0], state->nxdn_alias_block_segment[0][1], state->nxdn_alias_block_segment[0][2], state->nxdn_alias_block_segment[0][3],
+      state->nxdn_alias_block_segment[1][0], state->nxdn_alias_block_segment[1][1], state->nxdn_alias_block_segment[1][2], state->nxdn_alias_block_segment[1][3],
+      state->nxdn_alias_block_segment[2][0], state->nxdn_alias_block_segment[2][1], state->nxdn_alias_block_segment[2][2], state->nxdn_alias_block_segment[2][3],
+      state->nxdn_alias_block_segment[3][0], state->nxdn_alias_block_segment[3][1], state->nxdn_alias_block_segment[3][2], state->nxdn_alias_block_segment[3][3]);
+
+    //juggle strings here so we don't get compiler warnings on assignment size
+    memcpy (str_b, str_a, 48); str_b[49] = '\0';
+
+    //one noteable issue is that on conventional, its possible to decode an alias before decong the src id
+    //just depends on reception and if VCALL is decoded before Alias, this will lead to alias being assigned
+    //to incorrect src values or placement in the ncurses terminal's call history section
+
+    if (state->nxdn_last_rid != 0)
+      sprintf (state->str50a, "%s", str_b);
+
   }
 
   //crc errs in one repitition may occlude an otherwise good alias, so test and change if needed

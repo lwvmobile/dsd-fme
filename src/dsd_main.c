@@ -501,6 +501,10 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
   state->m17_enc_st = 0;
   memset(state->m17_meta, 0, sizeof(state->m17_meta));
 
+  //misc str storage
+  sprintf (state->str50a, "%s", "");
+  sprintf (state->str50b, "%s", "");
+
   //set float temp buffer to baseline
   memset (state->audio_out_temp_buf, 0.0f, sizeof(state->audio_out_temp_buf));
   memset (state->audio_out_temp_bufR, 0.0f, sizeof(state->audio_out_temp_bufR));
