@@ -3437,7 +3437,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         attron (COLOR_PAIR(3)); 
         if (state->ea_mode == 1) printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
-        else printw (" AFS [%lld][%02d-%03d]", call_matrix[i][3], a, fs );
+        else printw (" AFS [%03lld][%02d-%03d]", call_matrix[i][3], a, fs );
         for (int k = 0; k < state->group_tally; k++)
         {
           if (state->group_array[k].groupNumber == call_matrix[i][2] && call_matrix[i][2] != 0)
@@ -3460,7 +3460,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         attron (COLOR_PAIR(2)); 
         if (state->ea_mode == 1) printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
-        else printw (" AFS [%lld][%02d-%03d]", call_matrix[i][3], a, fs );
+        else printw (" AFS [%03lld][%02d-%03d]", call_matrix[i][3], a, fs );
         for (int k = 0; k < state->group_tally; k++)
         {
           if (state->group_array[k].groupNumber == call_matrix[i][2] && call_matrix[i][2] != 0)
@@ -3590,7 +3590,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           {
             int a  = (call_matrix[j][3] >> 7) & 0xF; 
             int fs = call_matrix[j][3] & 0x7F;
-            printw (" AFS [%lld][%02d-%03d]", call_matrix[j][3], a, fs );
+            printw (" AFS [%03lld][%02d-%03d]", call_matrix[j][3], a, fs );
           }          
           //test
           for (int k = 0; k < state->group_tally; k++)

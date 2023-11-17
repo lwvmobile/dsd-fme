@@ -226,7 +226,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
 
     fprintf (stderr, " Analog RMS: %04ld SQL: %ld", rms, sql);
     if (afs != 0)
-      fprintf (stderr, " AFS [%d] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
+      fprintf (stderr, " AFS [%03d] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
 
     //debug, view hit counter
     // fprintf (stderr, " CNT: %d; ", count);
@@ -618,7 +618,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         UNUSED(status);
         if (afs > 0) state->lastsrc = afs; 
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " AFS [%d] [%02d-%03d] LCN [%02d]", afs, a, fs, lcn);
+        fprintf (stderr, " AFS [%03d] [%02d-%03d] LCN [%02d]", afs, a, fs, lcn);
 
         char mode[8]; //allow, block, digital enc
         sprintf (mode, "%s", "");
@@ -671,7 +671,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             //openwav file and do per call right here
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
-              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld AFS %02d-%03d - %d.wav", getDateE(), getTimeE(), state->edacs_site_id, a, fs, afs);
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld AFS %02d-%03d - %03d.wav", getDateE(), getTimeE(), state->edacs_site_id, a, fs, afs);
               if (command == 0xEF) openWavOutFile (opts, state); //digital
               if (command == 0xEE) openWavOutFile48k (opts, state); //analog at 48k
             }
@@ -715,6 +715,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
       }
 
     } //end Standard or Networked
+
+    //supply user warning to use -9 switch if decoding doesn't start shortly
+    else fprintf (stderr, " Net/EA Auto Detect; Use -9 CLI Switch For Standard;");
 
   }
 
