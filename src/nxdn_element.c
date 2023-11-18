@@ -86,6 +86,15 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
   /* Decode the right "Message Type" */
   switch(MessageType)
   {
+
+    /*
+    //Note: CAC Message with same Message Type -- This is a private call request and rejection (TODO: Seperate handling depending on CAC, FACCH< Sacch, etc)
+    20:56:15 Sync: NXDN96  RCCH  Data   RAN 01  CAC VCALL (VCALL_REQ)
+      Private Call - Half Duplex 9600bps/EHR (02) - Src=211 - Dst/TG=1603 
+    20:56:15 Sync: NXDN96  RCCH  Data   RAN 01  CAC DISC (VCALL_REJECTION)
+      Private Call -        Disconnect       - Src=1603 - Dst/TG=211 
+
+    */
     //Debug: Disable DUP messages if they cause random issues with Type-C trunking (i.e. changing SRC ang TGT IDs, hopping in the middle of calls, etc)
 
     //VCALL_ASSGN_DUP
@@ -469,8 +478,8 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
 
   /* Print the "Voice Call Option" */
   if (MessageType == 0x4 || MessageType == 0x5) NXDN_Voice_Call_Option_To_Str(VoiceCallOption, DuplexMode, TransmissionMode);
-  if (MessageType == 0x4 || MessageType == 0x5) fprintf(stderr, "%s %s - ", DuplexMode, TransmissionMode);
-  else fprintf (stderr, "   Data Call Assignment - "); //DCALL_ASSGN or DCALL_ASSGN_DUP
+  if (MessageType == 0x4 || MessageType == 0x5) fprintf(stderr, "%s %s (%02X) - ", DuplexMode, TransmissionMode, VoiceCallOption);
+  else fprintf (stderr, "   Data Call Assignment (%02X) - ", VoiceCallOption); //DCALL_ASSGN or DCALL_ASSGN_DUP
 
   /* Print Source ID and Destination ID (Talk Group or Unit ID) */
   fprintf(stderr, "Src=%u - Dst/TG=%u ", SourceUnitID & 0xFFFF, DestinationID & 0xFFFF);
@@ -632,7 +641,9 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
         opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
 
         //set rid and tg when we actually tune to it
-        state->nxdn_last_rid = SourceUnitID;   
+        //only assign rid if not spare and not reserved (happens on private calls, unsure of its significance)
+        if ( (VoiceCallOption & 0xF) < 4) //ideally, only want 0, 2, or 3
+          state->nxdn_last_rid = SourceUnitID;
         state->nxdn_last_tg = DestinationID;
         sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType));
 
@@ -663,7 +674,9 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
         opts->p25_is_tuned = 1;
 
         //set rid and tg when we actually tune to it
-        state->nxdn_last_rid = SourceUnitID;   
+        //only assign rid if not spare and not reserved (happens on private calls, unsure of its significance)
+        if ( (VoiceCallOption & 0xF) < 4) //ideally, only want 0, 2, or 3
+          state->nxdn_last_rid = SourceUnitID;  
         state->nxdn_last_tg = DestinationID;
         sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType));
 
@@ -1217,7 +1230,7 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 
   /* Print the "Voice Call Option" */
   if (MessageType == 0x1) NXDN_Voice_Call_Option_To_Str(VoiceCallOption, DuplexMode, TransmissionMode);
-  if (MessageType == 0x1) fprintf(stderr, "%s %s - ", DuplexMode, TransmissionMode);
+  if (MessageType == 0x1) fprintf(stderr, "%s %s (%02X) - ", DuplexMode, TransmissionMode, VoiceCallOption);
   else if (MessageType == 0x07) fprintf (stderr, "Transmission Release Ex - "); //TX_REL_EX
   else if (MessageType == 0x08) fprintf (stderr, "  Transmission Release  - "); //TX_REL
   else if (MessageType == 0x11) fprintf (stderr, "       Disconnect       - "); //DISC
@@ -1264,7 +1277,9 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   //only grab if VCALL
   if(MessageType == 0x1)
   {
-    state->nxdn_last_rid = SourceUnitID;   
+    //only assign rid if not spare and not reserved (happens on private calls, unsure of its significance)
+    if ( (VoiceCallOption & 0xF) < 4) //ideally, only want 0, 2, or 3
+      state->nxdn_last_rid = SourceUnitID;   
     state->nxdn_last_tg = DestinationID;
     state->nxdn_key = KeyID;
     state->nxdn_cipher_type = CipherType;
@@ -1717,12 +1732,25 @@ void NXDN_Voice_Call_Option_To_Str(uint8_t VoiceCallOption, uint8_t * Duplex, ui
   if(VoiceCallOption & 0x10) strcpy((char *)Duplex, "Duplex");
   else strcpy((char *)Duplex, "Half Duplex");
 
-  switch(VoiceCallOption & 0x17)
-  {
-    case 0: Ptr = "4800bps/EHR"; break;
-    case 2: Ptr = "9600bps/EHR"; break;
-    case 3: Ptr = "9600bps/EFR"; break;
-    default: Ptr = "Reserved Voice Call Option";  break;
+  switch(VoiceCallOption & 0xF)
+  { //added all options, getting a random one on an NXDN96 System, need to know what it is
+    case 0:  Ptr = "4800bps/EHR"; break;
+    case 1:  Ptr = "Reserved 1";  break;
+    case 2:  Ptr = "9600bps/EHR"; break;
+    case 3:  Ptr = "9600bps/EFR"; break;
+    case 4:  Ptr = "Reserved 4";  break;
+    case 5:  Ptr = "Reserved 5";  break;
+    case 6:  Ptr = "Reserved 6";  break;
+    case 7:  Ptr = "Reserved 7";  break;
+    case 8:  Ptr = "4800bps/EHR S:1"; break; //spare bit enabled
+    case 9:  Ptr = "Reserved 9; S:1"; break; //spare bit enabled
+    case 10: Ptr = "9600bps/EHR S:1"; break; //spare bit enabled
+    case 11: Ptr = "9600bps/EFR S:1"; break; //spare bit enabled
+    case 12: Ptr = "Reserved C; S1;"; break; //spare bit enabled
+    case 13: Ptr = "Reserved D; S1";  break; //spare bit enabled
+    case 14: Ptr = "Reserved E; S1";  break; //spare bit enabled
+    case 15: Ptr = "Reserved F: S1";  break; //spare bit enabled
+    default: Ptr = "Unk;";  break; //should never get here
   }
 
   strcpy((char *)TransmissionMode, Ptr);
