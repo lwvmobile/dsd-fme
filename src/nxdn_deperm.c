@@ -457,6 +457,30 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 		check = check | trellis_buf[i+184];
 	}
 
+	//debug
+	// if (crc == check)
+		// fprintf (stderr, " Pass 1 ");
+
+	//if the crc fails, attempt again with the other trellis decoder
+	if (crc != check)
+	{
+		//debug
+		// fprintf (stderr, " Pass 2 "); 
+		crc = 1; check = 0;
+		memset (trellis_buf, 0, sizeof(trellis_buf));
+		memset (m_data, 0, sizeof(m_data));
+		trellis_decode(trellis_buf, depunc, 199);
+		//fill m_data bytes with trellis_buf
+		for(int i = 0; i < 26; i++)
+			m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
+		crc = crc15(trellis_buf, 199);
+		for (int i = 0; i < 15; i++)
+		{
+			check = check << 1;
+			check = check | trellis_buf[i+184];
+		}
+	}
+
 	fprintf (stderr, "%s", KYEL);
 	if (type == 0) fprintf (stderr, " UDCH");
 	if (type == 1) fprintf (stderr, " FACCH2");
@@ -483,6 +507,31 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 	// 	if (type == 0) {} //need handling for user data (text messages and AVL)
 	// } 
 
+	if (type == 0 && crc == check)
+	{
+		fprintf (stderr, "\n UDCH Data: "  );
+		for (int i = 0; i < 24; i++) //all but last crc portion
+			fprintf (stderr, "%02X", m_data[i]);
+
+		fprintf (stderr, "\n UDCH Data: ASCII - "  );
+		for (int i = 0; i < 24; i++) //remove crc portion
+		{
+			if (m_data[i] <= 0x7E && m_data[i] >=0x20)
+			{
+				fprintf (stderr, "%c", m_data[i]);
+			}
+			else fprintf (stderr, " ");
+		}
+
+		if (crc != check)
+		{
+			fprintf (stderr, "%s", KRED);
+			fprintf (stderr, " (CRC ERR)");
+			fprintf (stderr, "%s", KNRM);
+		}
+
+	}
+
 	if (opts->payload == 1)
 	{
 		fprintf (stderr, "\n");
@@ -504,18 +553,18 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 
 		// if (crc != check) fprintf (stderr, " CRC ERR ");
 
-		if (type == 0)
-		{
-			fprintf (stderr, "\n UDCH Data: ASCII - "  );
-			for (int i = 0; i < 24; i++) //remove crc portion
-			{
-				if (m_data[i] <= 0x7E && m_data[i] >=0x20)
-				{
-					fprintf (stderr, "%c", m_data[i]);
-				}
-				else fprintf (stderr, " ");
-			}
-		}
+		// if (type == 0)
+		// {
+		// 	fprintf (stderr, "\n UDCH Data: ASCII - "  );
+		// 	for (int i = 0; i < 24; i++) //remove crc portion
+		// 	{
+		// 		if (m_data[i] <= 0x7E && m_data[i] >=0x20)
+		// 		{
+		// 			fprintf (stderr, "%c", m_data[i]);
+		// 		}
+		// 		else fprintf (stderr, " ");
+		// 	}
+		// }
 	}  
 
 }
@@ -588,6 +637,23 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
   }
 
 	crc = crc16cac(trellis_buf, 171); 
+
+	//debug
+	// if (crc == 0)
+	// 	fprintf (stderr, " Pass 1 ");
+
+	if (crc != 0)
+	{
+		//debug
+		// fprintf (stderr, " Pass 2 "); 
+		memset (trellis_buf, 0, sizeof(trellis_buf));
+		memset (m_data, 0, sizeof(m_data));
+		trellis_decode(trellis_buf, depunc, 171);
+		//fill m_data bytes with trellis_buf
+		for(int i = 0; i < 22; i++)
+			m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
+		crc = crc16cac(trellis_buf, 171);
+	}
 
 	uint8_t cac_message_buffer[147]; //171
 	memset (cac_message_buffer, 0, sizeof(cac_message_buffer));
@@ -717,6 +783,30 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 		check = check | trellis_buf[i+25];
 	}
 
+	//debug
+	// if (crc == check)
+		// fprintf (stderr, " Pass 1 ");
+
+	//if the crc fails, attempt again with the other trellis decoder
+	if (crc != check)
+	{
+		//debug
+		// fprintf (stderr, " Pass 2 "); 
+		crc = 1; check = 0;
+		memset (trellis_buf, 0, sizeof(trellis_buf));
+		memset (m_data, 0, sizeof(m_data));
+		trellis_decode(trellis_buf, depunc, 32); //32?
+		//fill m_data bytes with trellis_buf
+		for(int i = 0; i < 4; i++)
+			m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
+		crc = crc7_scch(trellis_buf, 25);
+		for (int i = 0; i < 6; i++)
+		{
+			check = check << 1;
+			check = check | trellis_buf[i+25];
+		}
+	}
+
 	//check the sf early for scrambler reset, if required
 	sf = (trellis_buf[0] << 1) | trellis_buf[1];
 	if      (sf == 3) part_of_frame = 0;
@@ -844,6 +934,31 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 			check[j] = check[j] | trellis_buf[84+i]; //84
 		
 		}
+
+		//debug
+		// if (crc[j] == check[j])
+		// 	fprintf (stderr, "P:%d Pass 1 ", j);
+
+		//if the crc fails, attempt again with the other trellis decoder
+		if (crc[j] != check[j])
+		{
+			//debug
+			// fprintf (stderr, "P:%d Pass 2 ", j); 
+			crc[j] = 1; check[j] = 0;
+			memset (trellis_buf, 0, sizeof(trellis_buf));
+			memset (m_data, 0, sizeof(m_data));
+			trellis_decode(trellis_buf, depunc, 92);
+			//fill m_data bytes with trellis_buf
+			for(int i = 0; i < 12; i++)
+				m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
+			crc[j] = crc12f (trellis_buf, 84);
+			for (int i = 0; i < 12; i++)
+			{
+				check[j] = check[j] << 1;
+				check[j] = check[j] | trellis_buf[i+84];
+			}
+		}
+
 		//transfer to storage sans crc and tail bits
 		for (int i = 0; i < 80; i++) f3_udch2[i+(j*80)] = trellis_buf[i];
 		for (int i = 0; i < 12; i++) f3_udch2_bytes[i+(j*12)] = m_data[i];
@@ -865,6 +980,38 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 	// 	if (type == 1) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
 	// 	if (type == 0) {} //need handling for user data (text messages and AVL)
 	// }
+
+	if (type == 0)
+	{
+		fprintf (stderr, "\n UDCH2 Data: "  );
+		for (int i = 0; i < 22; i++) //all but last crc portion
+		{
+			if (i == 10)
+			{
+				fprintf (stderr, " "); //space seperator?
+				i = 12;  //skip first crc portion
+			}
+			fprintf (stderr, "%02X", f3_udch2_bytes[i]);
+		}
+
+		fprintf (stderr, "\n UDCH2 Data: ASCII - "  );
+		for (int i = 0; i < 22; i++) //all but last crc portion
+		{
+			if (i == 10) i = 12;  //skip first crc portion
+			if (f3_udch2_bytes[i] <= 0x7E && f3_udch2_bytes[i] >=0x20)
+			{
+				fprintf (stderr, "%c", f3_udch2_bytes[i]);
+			}
+			else fprintf (stderr, " ");
+		}
+
+		if (crc[0] != check[0] && crc[1] != check[1])
+		{
+			fprintf (stderr, "%s", KRED);
+			fprintf (stderr, " (CRC ERR)");
+			fprintf (stderr, "%s", KNRM);
+		}
+	}
 
 	if (opts->payload == 1)
 	{
@@ -889,19 +1036,19 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 			// fprintf (stderr, " - %03X %03X", check[1], crc[1]);
 		}
 
-		if (type == 0)
-		{
-			fprintf (stderr, "\n UDCH2 Data: ASCII - "  );
-			for (int i = 0; i < 22; i++) //all but last crc portion
-			{
-				if (i == 12) i = 14;  //skip first crc portion
-				if (f3_udch2_bytes[i] <= 0x7E && f3_udch2_bytes[i] >=0x20)
-				{
-					fprintf (stderr, "%c", f3_udch2_bytes[i]);
-				}
-				else fprintf (stderr, " ");
-			}
-		}
+		// if (type == 0)
+		// {
+		// 	fprintf (stderr, "\n UDCH2 Data: ASCII - "  );
+		// 	for (int i = 0; i < 22; i++) //all but last crc portion
+		// 	{
+		// 		if (i == 12) i = 14;  //skip first crc portion
+		// 		if (f3_udch2_bytes[i] <= 0x7E && f3_udch2_bytes[i] >=0x20)
+		// 		{
+		// 			fprintf (stderr, "%c", f3_udch2_bytes[i]);
+		// 		}
+		// 		else fprintf (stderr, " ");
+		// 	}
+		// }
 		
 	}
 
