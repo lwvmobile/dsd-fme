@@ -1075,7 +1075,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
     {
-      if (opts->audio_out == 1 && opts->floating_point == 0 ) //&& opts->slot1_on == 1
+      if ( opts->floating_point == 0 ) //opts->audio_out == 1 && //needed to remove for AERO OSS so we could still save wav files during dual voices
       {
         processAudio(opts, state);
       }
@@ -1149,7 +1149,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
     {
-      if (opts->audio_out == 1 && opts->floating_point == 0) //&& opts->slot2_on == 1
+      if ( opts->floating_point == 0) //opts->audio_out == 1 && //needed to remove for AERO OSS so we could still save wav files during dual voices
       {
         processAudioR(opts, state);
       }
