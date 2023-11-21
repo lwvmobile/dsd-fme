@@ -1,0 +1,103 @@
+diff --git a/.gitignore b/.gitignore
+index 67d5d1c..1d8d34e 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -7,4 +7,3 @@ build
+ examples
+ *.bin
+ *.ans
+-*.patch
+diff --git a/src/dmr_block.c b/src/dmr_block.c
+index 893b0e8..e7f9de7 100644
+--- a/src/dmr_block.c
++++ b/src/dmr_block.c
+@@ -783,6 +783,6 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
+   //reset some strings -- resetting call string here causes random blink on ncurses terminal (cap+)
+   // sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+   // sprintf (state->call_string[1], "%s", "                     "); //21 spaces
+-  sprintf (state->dmr_lrrp_gps[0], "%s", "");
+-  sprintf (state->dmr_lrrp_gps[1], "%s", "");
++  // sprintf (state->dmr_lrrp_gps[0], "%s", ""); //disabled for dmr data call persistence #174
++  // sprintf (state->dmr_lrrp_gps[1], "%s", ""); //disabled for dmr data call persistence #174
+ }
+\ No newline at end of file
+diff --git a/src/dsd_main.c b/src/dsd_main.c
+index 58174be..7ecb997 100644
+--- a/src/dsd_main.c
++++ b/src/dsd_main.c
+@@ -257,10 +257,10 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
+   //zero out right away if not trunking
+   if (opts->p25_trunk == 0)
+   {
+-    state->lasttg = 0;
+-    state->lastsrc = 0;
+-    state->lasttgR = 0;
+-    state->lastsrcR = 0;
++    // state->lasttg = 0; //disabled for dmr voice call persistence #174
++    // state->lastsrc = 0; //disabled for dmr voice call persistence #174
++    // state->lasttgR = 0; //disabled for dmr voice call persistence #174
++    // state->lastsrcR = 0; //disabled for dmr voice call persistence #174
+ 
+     //zero out vc frequencies?
+     state->p25_vc_freq[0] = 0;
+@@ -290,10 +290,10 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
+   //mainly bugfix for ncurses and per call wavs (edacs) and also signal fade, etc
+   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && time(NULL) - state->last_cc_sync_time > opts->trunk_hangtime) 
+   {
+-    state->lasttg = 0;
+-    state->lastsrc = 0;
+-    state->lasttgR = 0;
+-    state->lastsrcR = 0;
++    // state->lasttg = 0; //disabled for dmr voice call persistence #174
++    // state->lastsrc = 0; //disabled for dmr voice call persistence #174
++    // state->lasttgR = 0; //disabled for dmr voice call persistence #174
++    // state->lastsrcR = 0; //disabled for dmr voice call persistence #174
+ 
+   }
+     
+@@ -431,7 +431,7 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
+   memset(state->dmr_alias_len, 0, sizeof(state->dmr_alias_len));
+   memset(state->dmr_alias_block_segment, 0, sizeof(state->dmr_alias_block_segment));
+   memset(state->dmr_embedded_gps, 0, sizeof(state->dmr_embedded_gps));
+-  memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
++  // memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
+ 
+   // memset(state->active_channel, 0, sizeof(state->active_channel));
+ 
+diff --git a/src/dsd_ncurses.c b/src/dsd_ncurses.c
+index 4646e77..e9ecab1 100644
+--- a/src/dsd_ncurses.c
++++ b/src/dsd_ncurses.c
+@@ -3104,7 +3104,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+     }
+ 
+     //LRRP
+-    if(state->dmrburstL != 16) //only during data and no trunking
++    // if(state->dmrburstL != 16) //only during data and no trunking //disabled for dmr data call persistence #174
+     {
+       attron(COLOR_PAIR(4));
+       printw  ("%s", state->dmr_lrrp_gps[0]);
+@@ -3298,7 +3298,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+       }
+ 
+       //LRRP
+-      if(state->dmrburstR != 16) //only during data and no trunking
++      // if(state->dmrburstR != 16) //only during data and no trunking //disabled for dmr data call persistence #174
+       {
+         attron(COLOR_PAIR(4));
+         printw  ("%s", state->dmr_lrrp_gps[1]);
+@@ -3978,10 +3978,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+     dmr_reset_blocks (opts, state);
+ 
+     //zero out additional items
+-    state->lasttg = 0;
+-    state->lasttgR = 0;
+-    state->lastsrc = 0;
+-    state->lastsrcR = 0;
++    // state->lasttg = 0; //disabled for dmr voice call persistence #174
++    // state->lasttgR = 0; //disabled for dmr voice call persistence #174
++    // state->lastsrc = 0; //disabled for dmr voice call persistence #174
++    // state->lastsrcR = 0; //disabled for dmr voice call persistence #174
+     state->payload_algid = 0;
+     state->payload_algidR = 0;
+     state->payload_keyid = 0;
