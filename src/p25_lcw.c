@@ -364,8 +364,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       else fprintf (stderr, " Unknown Format %02X MFID %02X SVC %02X", lc_format, lc_mfid, lc_svcopt);
     }
 
-    //MFID 90 Embedded GPS -- SDRTrunk shows this is a LCW with the same format as 
-    //DMR Embedded GPS FLC (I have not observed this opcode for accuracy)
+    //MFID 90 Embedded GPS
     else if (lc_mfid == 0x90 && lc_opcode == 0x6)
     {
       fprintf (stderr, " MFID90 (Moto)");
@@ -384,11 +383,11 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
     else if (lc_mfid == 0x90 && lc_opcode == 0x4)
       fprintf (stderr, " MFID90 (Moto) Group Regroup Delete");
 
-    //Still unclear whether or not this signals the end of a call grant,
-    //or just the end of the current talker talking, so we won't tune away here
-    //MFID90 still uses the standard Call Termination as well at teardown
     else if (lc_mfid == 0x90 && lc_opcode == 0xF)
-      fprintf (stderr, " MFID90 (Moto) Call Termination");
+    {
+      uint32_t src = (uint32_t)ConvertBitIntoBytes(&LCW_bits[48], 24);
+      fprintf (stderr, " MFID90 (Moto) Talker EOT; SRC: %d", src);
+    }
 
     //not a duplicate, this one will print if not MFID 0 or 1
     else

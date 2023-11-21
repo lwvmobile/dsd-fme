@@ -443,7 +443,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       }
 
 
-      //Some of these Opcodes that aren't found in any TIA manual come from SDRTrunk, 
+      //Some of these Opcodes that aren't found in any TIA manual come from SDRTrunk (or other sources), 
       //but can't verify the accuracy of their meaning/context
       // else if ( (tsbk_byte[0] & 0x3F) == 0x05 )
       // {
@@ -478,6 +478,22 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       // }
 
       // else if ( (tsbk_byte[0] & 0x3F) == 0x10 )
+      // {
+      //   fprintf (stderr, "\n");
+      //   fprintf (stderr, " MFID 90 (Moto) Something: "); //observed, but no idea
+      //   for (i = 2; i < 10; i++)
+      //     fprintf (stderr, "%02X", tsbk_byte[i]);
+      // }
+
+      // else if ( (tsbk_byte[0] & 0x3F) == 0x15 ) //noted on RR, but not observed as of yet, this may actualy be a LCW and not a TSBK?
+      // {
+      //   fprintf (stderr, "\n");
+      //   fprintf (stderr, " MFID 90 (Moto) Talker Alias: ");
+      //   for (i = 2; i < 10; i++)
+      //     fprintf (stderr, "%02X", tsbk_byte[i]);
+      // }
+
+      // else if ( (tsbk_byte[0] & 0x3F) == 0x16 )
       // {
       //   fprintf (stderr, "\n");
       //   fprintf (stderr, " MFID 90 (Moto) Something: "); //observed, but no idea
@@ -527,7 +543,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       if (opts->payload == 1)
       {
         fprintf (stderr, "%s",KCYN);
-        fprintf (stderr, "\n P25 PDU Payload #%d ", j);
+        fprintf (stderr, "\n P25 PDU Payload #%d ", j+1);
         for (i = 0; i < 12; i++)
         {
           fprintf (stderr, "[%02X]", tsbk_byte[i]);
