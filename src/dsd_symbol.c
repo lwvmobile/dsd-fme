@@ -267,6 +267,14 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       //reworked a bit to allow raw audio wav file saving without the monitoring poriton active 
       if (have_sync == 0)
       {
+
+        //do an extra checkfor carrier signal so that random raw audio spurts don't play during decoding
+        if ( (state->carrier == 1) && ((time(NULL) - state->last_vc_sync_time) < 2))
+        {
+          memset (state->analog_out, 0, sizeof(state->analog_out));
+          state->analog_sample_counter = 0;
+        }
+
         //sanity check to prevent an overflow
         if (state->analog_sample_counter > 959)
           state->analog_sample_counter = 959;
