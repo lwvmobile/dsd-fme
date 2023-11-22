@@ -479,7 +479,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
       if (state->samplesPerSymbol == 20) //nxdn 4800 baud 2400 symbol rate
         {
-          if ((i >= 9) && (i <= 11))
+          // if ((i >= 9) && (i <= 11))
+          if ((i >= 7) && (i <= 13)) //7, 13 working good on multiple nxdn48, fewer random errors
             {
               sum += sample;
               count++;
@@ -498,12 +499,23 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           if (state->rf_mod == 0)
             {
               // 0: C4FM modulation
-
-              if ((i >= state->symbolCenter - 1) && (i <= state->symbolCenter + 2))
-                {
-                  sum += sample;
-                  count++;
-                }
+              if ((opts->frame_p25p1 == 1) && (i >= state->symbolCenter - 2) && (i <= state->symbolCenter + 2))
+              {
+                sum += sample;
+                count++;
+              }
+              //testing dmr may be slightly off compared to P25, particularly wav recording at narrower bandwidth?
+              else if ((opts->frame_dmr == 1) && (i >= state->symbolCenter - 1) && (i <= state->symbolCenter + 2))
+              {
+                sum += sample;
+                count++;
+              }
+              //anything else
+              else if ((i >= state->symbolCenter - 2) && (i <= state->symbolCenter + 2))
+              {
+                sum += sample;
+                count++;
+              }
 
 #ifdef TRACE_DSD
               if (i == state->symbolCenter - 1) {
@@ -514,7 +526,18 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
               }
 #endif
             }
-          else
+            else if (state->rf_mod == 1) //QPSK
+            {
+              //going one left, two on the right for QPSK, local system seems to favor that
+              //with same PPM setting used on C4FM, unsure if that works on other systems, just
+              //testing things now, not like QPSK works well here anyways
+              if ((i == state->symbolCenter - 1) || (i == state->symbolCenter + 2)) //1,2
+              {
+                sum += sample;
+                count++;
+              }
+            }
+          else //GFSK
             {
               // 1: QPSK modulation
               // 2: GFSK modulation
@@ -523,12 +546,23 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
               // comes one sample too late.
               // This change makes a significant improvement in the BER, at least for
               // this file.
-              //if ((i == state->symbolCenter) || (i == state->symbolCenter + 1))
+              // if ((i == state->symbolCenter) || (i == state->symbolCenter + 1))
+              //GFSK should ideally be the same on the left and right, I would think
+              //I have not observed a system that would benefit from this alignment
               if ((i == state->symbolCenter - 1) || (i == state->symbolCenter + 1))
-                {
-                  sum += sample;
-                  count++;
-                }
+              {
+                sum += sample;
+                count++;
+              }
+
+              //MISC Notes: When using RTL input, NXDN96 at BW:16 NXDN48 at BW:12
+              //I am beginning to suspect that RTL input is halfing the bandwidth, which
+              //is my original consclusion back when I was working on it last, unsure
+              //or the best course on that, could just be a rtl_fm flaw
+              //P25 may also work better at 16 as well now, hard to tell the difference since both are good
+              //DMR may not be any different on 12 or 16 
+              //most likely though, this all will just depend on signal stregth more than anything
+              //as to how much BW you should set
 
 #ifdef TRACE_DSD
               //if (i == state->symbolCenter) {

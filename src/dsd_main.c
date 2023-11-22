@@ -1351,7 +1351,7 @@ usage ()
   printf ("                 (NOTE: P25 Data Channels Not Enabled (no handling) \n");
   printf ("  -U <port>     Enable RIGCTL/TCP; Set TCP Port for RIGCTL. (4532 on SDR++)\n");
   printf ("  -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
-  printf ("                 P25 - 7000-12000; P25 (QPSK) - 12000; NXDN48 - 7000; NXDN96: 9000; DMR - 7000; EDACS/PV - 12500;\n");
+  printf ("                 P25 - 12000; NXDN48 - 7000; NXDN96: 12000; DMR - 7000-12000; EDACS/PV - 12000-24000;\n"); //redo this, or check work, or whatever
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking or Scan Speed VC/sync loss hangtime in seconds. (default = 1 second)\n");
   printf ("  -9            Force Enable EDACS Standard or Networked Mode if Auto Detection Fails \n");
