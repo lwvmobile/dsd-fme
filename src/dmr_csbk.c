@@ -1262,7 +1262,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               if (t_tg[j] != 0 && state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0)) 
               {
                 //debug print for tuning verification
-                fprintf (stderr, "\n LSN/TG to tune to: %d - %d", j+1, t_tg[j]);
+                // fprintf (stderr, "\n LSN/TG to tune to: %d - %d", j+1, t_tg[j]);
                 
                 if (state->trunk_chan_map[j+1] != 0) //if we have a valid frequency
                 {
@@ -1286,12 +1286,12 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                       }
                       //end TG set on tune
                     }
-
+                    if (GetCurrentFreq(opts->rigctl_sockfd) != state->trunk_chan_map[j+1])
+                      dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
                     if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
                     SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+1]); 
                     state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
                     opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
-                    dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                     j = 11; //break loop
                   }
 
@@ -1316,11 +1316,17 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                       }
                       //end TG set on tune
                     }
-
-                    rtl_dev_tune (opts, state->trunk_chan_map[j+1]);
+                    uint32_t temp = (uint32_t)state->trunk_chan_map[j+1];
+                    if (opts->rtlsdr_center_freq != temp)
+                    {
+                      dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
+                      rtl_dev_tune (opts, state->trunk_chan_map[j+1]); //unlike rigctl, using this actually interrupts signal decodes (rtl_clean_queue)
+                      //debug print for tuning verification
+                      // fprintf (stderr, "\n RTL LSN/TG to tune to: %d - %d", j+1, t_tg[j]);
+                    }
+                    // else fprintf (stderr, "\n DONT RTL LSN/TG to tune to: %d - %d", j+1, t_tg[j]); //debug
                     state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
                     opts->p25_is_tuned = 1;
-                    dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                     j = 11; //break loop
                     #endif
                   }
@@ -1689,13 +1695,14 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   }
 
                   //debug 
-                  fprintf (stderr, " - Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);
+                  // fprintf (stderr, " - Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);
+                  if (GetCurrentFreq(opts->rigctl_sockfd) != state->trunk_chan_map[j+xpt_bank+1])
+                    dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
 
                   if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
                   SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+xpt_bank+1]); 
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+xpt_bank+1];
                   opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
-                  dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                   j = 11; //break loop
                 }
 
@@ -1721,13 +1728,17 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                     //end TG set on tune
                   }
 
-                  //debug 
-                  fprintf (stderr, " - Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);
-
-                  rtl_dev_tune (opts, state->trunk_chan_map[j+xpt_bank+1]);
+                  uint32_t temp = (uint32_t)state->trunk_chan_map[j+xpt_bank+1];
+                    if (opts->rtlsdr_center_freq != temp)
+                    {
+                      dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
+                      rtl_dev_tune (opts, state->trunk_chan_map[j+xpt_bank+1]); //unlike rigctl, using this actually interrupts signal decodes (rtl_clean_queue)
+                      //debug print for tuning verification
+                      fprintf (stderr, " - Tune to Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);
+                    }
+                    else fprintf (stderr, " - Dont Tune Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);                 
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+xpt_bank+1];
                   opts->p25_is_tuned = 1;
-                  dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
                   j = 11; //break loop
                   #endif
                 }
