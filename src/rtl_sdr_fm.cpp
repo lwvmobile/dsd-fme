@@ -815,7 +815,7 @@ void dongle_init(struct dongle_state *s)
 	s->demod_target = &demod;
 }
 
-void demod_init(struct demod_state *s)
+void demod_init_ro2(struct demod_state *s)
 {
 	s->rate_in = rtl_bandwidth;
 	s->rate_out = rtl_bandwidth;
@@ -830,6 +830,34 @@ void demod_init(struct demod_state *s)
 	s->custom_atan = 0;
 	s->deemph = 0;
 	s->rate_out2 = rtl_bandwidth;  // -1 flag for disabled -- this enables low_pass_real, seems to work okay
+	s->mode_demod = &fm_demod;
+	s->pre_j = s->pre_r = s->now_r = s->now_j = 0;
+	s->prev_lpr_index = 0;
+	s->deemph_a = 0;
+	s->now_lpr = 0;
+	s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
+	s->dc_avg = 0;
+	pthread_rwlock_init(&s->rw, NULL);
+	pthread_cond_init(&s->ready, NULL);
+	pthread_mutex_init(&s->ready_m, NULL);
+	s->output_target = &output;
+}
+
+void demod_init(struct demod_state *s)
+{
+	s->rate_in = rtl_bandwidth;
+	s->rate_out = rtl_bandwidth;
+	s->squelch_level = 0;
+	s->conseq_squelch = 10;
+	s->terminate_on_squelch = 0;
+	s->squelch_hits = 11;
+	s->downsample_passes = 0;
+	s->comp_fir_size = 0;
+	s->prev_index = 0;
+	s->post_downsample = 1;  //1 -- once this works, default = 4 -- doesn't work on the official rtl-sdr source code either
+	s->custom_atan = 0;
+	s->deemph = 0;
+	s->rate_out2 = -1;  // -1 flag for disabled -- this enables low_pass_real, seems to work okay
 	s->mode_demod = &fm_demod;
 	s->pre_j = s->pre_r = s->now_r = s->now_j = 0;
 	s->prev_lpr_index = 0;
@@ -974,7 +1002,10 @@ void open_rtlsdr_stream(dsd_opts *opts)
 
 	//this needs to be initted first, then we set the parameters
   dongle_init(&dongle);
-  demod_init(&demod);
+	//init with low pass if decoding P25 or EDACS/Provoice
+	if (opts->frame_p25p1 == 1 || opts->frame_provoice == 1)
+  	demod_init_ro2(&demod);
+	else demod_init(&demod);
   output_init(&output);
   controller_init(&controller);
 
