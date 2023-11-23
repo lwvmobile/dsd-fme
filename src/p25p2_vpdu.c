@@ -1422,10 +1422,241 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			}
 		}
 
+		//SNDCP Data Page Response -- ISP
+		// if (MAC[1+len_a] == 0x53)
+		// {
+		// 	fprintf (stderr, "\n SNDCP Data Page Response ");
+		// 	int dso = MAC[3+len_a];
+		// 	int ans = MAC[4+len_a];
+		// 	int dac = (MAC[5+len_a] << 8) | MAC[6+len_a];
+		// 	int source  = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
+		// 	fprintf (stderr, "\n ANS: %02X; DSO: %02X DAC: %02X; Source: %d;", ans, dso, dac, source);
+		// 	if (ans == 0x20)      fprintf (stderr, " - Proceed;");
+		// 	else if (ans == 0x21) fprintf (stderr, " - Deny;");
+		// 	else if (ans == 0x22) fprintf (stderr, " - Wait;");
+		// 	else                  fprintf (stderr, " - Other;"); //unspecified
+		// }
+
+		//SNDCP Reconnect Request -- ISP
+		// if (MAC[1+len_a] == 0x54)
+		// {
+		// 	fprintf (stderr, "\n SNDCP Reconnect Request ");
+		// 	int dso = MAC[3+len_a];
+		// 	int dac = (MAC[4+len_a] << 8) | MAC[5+len_a];
+		// 	int ds  = (MAC[6+len_a] >> 7) & 1;
+		// 	int res = MAC[6+len_a] & 7;
+		// 	int source  = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
+		// 	fprintf (stderr, "\n DS: %d; DSO: %02X DAC: %02X; RES: %02X; Source: %d;", ds, dso, dac, res, source);
+		// }
+
+		//SNDCP Data Channel Grant
+		if (MAC[1+len_a] == 0x54)
+		{
+			fprintf (stderr, "\n SNDCP Data Channel Grant - Explicit");
+			int dso = MAC[2+len_a];
+			int channelt = (MAC[3+len_a] << 8) | MAC[4+len_a];
+			int channelr = (MAC[5+len_a] << 8) | MAC[6+len_a];
+			int target   = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
+			fprintf (stderr, "\n  DSO: %02X; CHAN-T: %04X; CHAN-R: %04X; Target: %d;", dso, channelt, channelr, target);
+
+			for (int i = 0; i < state->group_tally; i++)
+			{
+				if (state->group_array[i].groupNumber == target)
+				{
+					fprintf (stderr, " [%s]", state->group_array[i].groupName);
+					strcpy (mode, state->group_array[i].groupMode);
+					break;
+				}
+			}
+
+			long int freq = process_channel_to_freq (opts, state, channelt);
+
+			//add active channel to string for ncurses display
+			sprintf (state->active_channel[0], "Active Data Ch: %04X TGT: %d; ", channelt, target);
+			state->last_active_time = time(NULL);
+
+			//Skip tuning data calls if data calls is disabled
+			if (opts->trunk_tune_data_calls == 0) goto SKIPCALL;
+
+			//TG hold on UU_V -- will want to disable UU_V grants while TG Hold enabled
+			if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
+
+			//tune if tuning available
+			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+			{
+				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+				if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+				{
+					//changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
+					if (1 == 1)
+					{
+						if (state->p25_chan_tdma[channelt >> 12] == 1)
+						{
+							state->samplesPerSymbol = 8;
+							state->symbolCenter = 3;
+
+							//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
+							//this will only occur in realtime tuning, not not required .bin or .wav playback
+							if (channelt & 1) //VCH1
+							{
+								opts->slot1_on = 0;
+								opts->slot2_on = 1;
+							}
+							else //VCH0
+							{
+								opts->slot1_on = 1;
+								opts->slot2_on = 0;
+							}
+						}
+
+					}
+
+					//rigctl
+					if (opts->use_rigctl == 1)
+					{
+						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+						SetFreq(opts->rigctl_sockfd, freq);
+						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+						state->last_vc_sync_time = time(NULL); 
+					}
+					//rtl
+					else if (opts->audio_in_type == 3)
+					{
+						#ifdef USE_RTLSDR
+						rtl_dev_tune (opts, freq);
+						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+						opts->p25_is_tuned = 1;
+						state->last_vc_sync_time = time(NULL);
+						#endif
+					}
+				}    
+			}
+			if (opts->p25_trunk == 0)
+			{
+				if (target == state->lasttg || target == state->lasttgR)
+				{
+					//P1 FDMA
+					if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+					//P2 TDMA
+					else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+				}
+			}
+
+		}
+
+		//SNDCP Data Page Request
+		if (MAC[1+len_a] == 0x55)
+		{
+			fprintf (stderr, "\n SNDCP Data Page Request ");
+			int dso = MAC[2+len_a];
+			int dac = (MAC[3+len_a] << 8) | MAC[4+len_a];
+			int target = (MAC[5+len_a] << 16) | (MAC[6+len_a] << 8) | MAC[7+len_a];
+			//P25p1 TSBK is shifted slightly on these two values
+			if (state->synctype == 0 || state->synctype == 1)
+			{
+				dac = (MAC[5+len_a] << 8) | MAC[6+len_a];
+				target = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
+			}
+			fprintf (stderr, "\n  DSO: %02X; DAC: %02X; Target: %d;", dso, dac, target);
+		}
+
 		//SNDCP Data Channel Announcement
 		if (MAC[1+len_a] == 0xD6)
 		{
-			fprintf (stderr, "\n SNDCP Data Channel Announcement ");	
+			fprintf (stderr, "\n SNDCP Data Channel Announcement ");
+			int aa = (MAC[2+len_a] >> 7) & 1;
+			int ra = (MAC[2+len_a] >> 6) & 1;
+			int dso = MAC[2+len_a];
+			int channelt = (MAC[4+len_a] << 8) | MAC[5+len_a];
+			int channelr = (MAC[6+len_a] << 8) | MAC[7+len_a];
+			int dac = (MAC[8+len_a] << 8) | MAC[9+len_a];
+			if (channelt != 0)
+				fprintf (stderr, "\n  AA: %d; RA: %d; DSO: %02X; DAC: %02X; CHAN-T: %04X; CHAN-R: %04X;", aa, ra, dso, dac, channelt, channelr);
+			else fprintf (stderr, "- Null");
+			long int freq = 0;
+			if (channelt != 0)
+				freq = process_channel_to_freq (opts, state, channelt);
+
+			//nothing to do but skip
+			// if (channelt == 0) 
+				goto SKIPCALL; //this is just an announcement, and not a grant/tunable action
+
+			//add active channel to string for ncurses display
+			if (channelt != 0)
+			{
+				sprintf (state->active_channel[0], "Active Data Ch: %04X Annoucement; ", channelt);
+				state->last_active_time = time(NULL);
+			}
+
+			//Skip tuning data calls if data calls is disabled
+			if (opts->trunk_tune_data_calls == 0) goto SKIPCALL;
+
+			//just skip altogether if a tg hold
+			if (state->tg_hold != 0) goto SKIPCALL; 
+
+			//tune if tuning available -- not even sure if you tune with these or not...
+			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
+			{
+				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
+				if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
+				{
+					//changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
+					if (1 == 1)
+					{
+						if (state->p25_chan_tdma[channelt >> 12] == 1)
+						{
+							state->samplesPerSymbol = 8;
+							state->symbolCenter = 3;
+
+							//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
+							//this will only occur in realtime tuning, not not required .bin or .wav playback
+							if (channelt & 1) //VCH1
+							{
+								opts->slot1_on = 0;
+								opts->slot2_on = 1;
+							}
+							else //VCH0
+							{
+								opts->slot1_on = 1;
+								opts->slot2_on = 0;
+							}
+						}
+
+					}
+
+					//rigctl
+					if (opts->use_rigctl == 1)
+					{
+						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+						SetFreq(opts->rigctl_sockfd, freq);
+						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+						state->last_vc_sync_time = time(NULL); 
+					}
+					//rtl
+					else if (opts->audio_in_type == 3)
+					{
+						#ifdef USE_RTLSDR
+						rtl_dev_tune (opts, freq);
+						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+						opts->p25_is_tuned = 1;
+						state->last_vc_sync_time = time(NULL);
+						#endif
+					}
+				}    
+			}
+			if (opts->p25_trunk == 0)
+			{
+				// if (target == state->lasttg || target == state->lasttgR)
+				{
+					//P1 FDMA
+					if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+					//P2 TDMA
+					else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
+				}
+			}
+
 		}
 
 		//MFID90 Group Regroup Add Command
@@ -1481,18 +1712,23 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			state->p2_rfssid = rfssid;
 		}
 
-		//Unit-to-Unit Answer Request (UU_ANS_REQ)
-		if (MAC[1+len_a] == 0x45 && MAC[2+len_a] != 0x90)
-		{
-			int svc     = MAC[2+len_a];
-			int answer  = MAC[3+len_a];
-			int target  = (MAC[4+len_a] << 16) | (MAC[5+len_a] << 8) | MAC[6+len_a];
-			int source  = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
+		//Unit-to-Unit Answer Request (UU_ANS_REQ) -- ISP?
+		// if (MAC[1+len_a] == 0x45 && MAC[2+len_a] != 0x90)
+		// {
+		// 	int svc     = MAC[2+len_a];
+		// 	int ans  = MAC[3+len_a];
+		// 	int target  = (MAC[4+len_a] << 16) | (MAC[5+len_a] << 8) | MAC[6+len_a];
+		// 	int source  = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
 
-			fprintf (stderr, "\n Unit to Unit Channel Answer Request");
-			fprintf (stderr, "\n  SVC [%02X] Answer [%02X] Source [%d] Target [%d]", svc, answer, source, target);
+		// 	fprintf (stderr, "\n Unit to Unit Channel Answer Request");
+		// 	fprintf (stderr, "\n  SVC [%02X] Answer [%02X] Source [%d] Target [%d]", svc, ans, source, target);
+
+		// 	if (ans == 0x20)      fprintf (stderr, " - Proceed;");
+		// 	else if (ans == 0x21) fprintf (stderr, " - Deny;");
+		// 	else if (ans == 0x22) fprintf (stderr, " - Wait;");
+		// 	else                  fprintf (stderr, " - Other;"); //unspecified
 			
-		}
+		// }
 
 		//TODO: Restructure this function to group standard Opcodes away from MFID 90 and MFID A4, and Unknown MFID
 		//or just go to if-elseif-else layout (probably easier that way)
