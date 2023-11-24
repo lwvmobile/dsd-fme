@@ -389,6 +389,19 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       fprintf (stderr, " MFID90 (Moto) Talker EOT; SRC: %d", src);
     }
 
+    //observed format value on SNDCP data channels
+    else if (lc_format == 0x58)
+    {
+      //will need to look for the appropriate values to fill in here from the manual, 
+      //MFID values seem to look like a counter of some sort? offset maybe? or block number?
+      fprintf (stderr, " SNDCP Data Channel LCW %02X", lc_format);
+    }
+
+    //observed format value on SNDCP data channels
+    else if (lc_format == 0x63) //based on the SAP of the same value found in BAHA-A (unconfirmed, but may make sense?)
+      fprintf (stderr, " Protected Format LCW %02X", lc_format);
+
+
     //not a duplicate, this one will print if not MFID 0 or 1
     else
     {

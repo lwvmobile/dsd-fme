@@ -585,7 +585,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
       if (opts->errorbars == 1)
       {
         printFrameInfo (opts, state);
-        fprintf (stderr," MBF\n"); //multi block format PDU
+        fprintf (stderr," MPDU\n"); //multi block format PDU
       }
       if (opts->mbe_out_dir[0] != 0)
       {
@@ -597,7 +597,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
         resumeScan (opts, state);
       }
       state->lastp25type = 4;
-      sprintf (state->fsubtype, " MBF          ");
+      sprintf (state->fsubtype, " MPDU         ");
 
       processMPDU(opts, state);
     }
