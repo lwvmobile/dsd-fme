@@ -127,6 +127,10 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     protectbit = (tsbk_byte[0] >> 6) & 0x1;
     lb         = (tsbk_byte[0] >> 7) & 0x1;
 
+    //zero out data calls after returning from a SNDCP data channel
+    if (err == 0)
+      sprintf (state->dmr_lrrp_gps[0], "%s", "");
+
     //Don't run NET_STS out of this, or will set wrong NAC/CC
     //Note: Running MFID 90 (moto) opcode 9 GRG Delete or Reserve will falsely trigger a telephone interconnect grant
     if (MFID < 0x2 && protectbit == 0 && err == 0 && PDU[1] != 0x7B )

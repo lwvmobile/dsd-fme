@@ -3,53 +3,64 @@
  * P25p1 Multi Block PDU and Multi Block Trunking
  *
  * LWVMOBILE
- * 2023-03 DSD-FME Florida Man Edition
+ * 2023-12 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
 
-void processSAP(uint8_t SAP)
+void processRSP(uint8_t C, uint8_t T, uint8_t S, char * rsp_string)
 {
 
-  if      (SAP == 0)  fprintf (stderr, " User Data;");
-  else if (SAP == 1)  fprintf (stderr, " Encrypted User Data;");
-  else if (SAP == 2)  fprintf (stderr, " Circuit Data;");
-  else if (SAP == 3)  fprintf (stderr, " Circuit Data Control;");
-  else if (SAP == 4)  fprintf (stderr, " Packet Data;");
-  else if (SAP == 5)  fprintf (stderr, " Address Resolution Protocol;");
-  else if (SAP == 6)  fprintf (stderr, " SNDCP Packet Data Control;");
-  else if (SAP == 31) fprintf (stderr, " Extended Address;");
-  else if (SAP == 32) fprintf (stderr, " Registration and Authorization;");
-  else if (SAP == 33) fprintf (stderr, " Channel Reassignment;");
-  else if (SAP == 34) fprintf (stderr, " System Configuration;");
-  else if (SAP == 35) fprintf (stderr, " Mobile Radio Loopback;");
-  else if (SAP == 36) fprintf (stderr, " Mobile Radio Statistics;");
-  else if (SAP == 37) fprintf (stderr, " Mobile Radio Out of Service;");
-  else if (SAP == 38) fprintf (stderr, " Mobile Radio Paging;");
-  else if (SAP == 39) fprintf (stderr, " Mobile Radio Configuration;");
-  else if (SAP == 40) fprintf (stderr, " Unencrypted Key Management;");
-  else if (SAP == 41) fprintf (stderr, " Encrypted Key Management;");
-  else if (SAP == 61) fprintf (stderr, " Trunking Control;");
-  else if (SAP == 63) fprintf (stderr, " Encrypted Trunking Control;");
-
-  //speculative values below based on observation and guess work
-
-  //MPDUs immediately following this seems to be encrypted based on the padding octets being non-zeroes (or could just be a decoder failure)
-  else if (SAP == 8)  fprintf (stderr, " Encrytion Parameters?;");
-  //observed values, but no idea, they all seem to have the same octet values (address of some sort?)
-  else if (SAP == 0x9)   fprintf (stderr, " Unknown SAP;");
-  else if (SAP == 0xA)   fprintf (stderr, " Unknown SAP;");
-  else if (SAP == 0xB)   fprintf (stderr, " Unknown SAP;");
-  else if (SAP == 0xC)   fprintf (stderr, " Unknown SAP;");
-  else if (SAP == 0xE)   fprintf (stderr, " Unknown SAP;");
-  else if (SAP == 0x2E)  fprintf (stderr, " Unknown SAP;");
+  if      (C == 0)  sprintf (rsp_string, " ACK (Success);");
+  else if (C == 2)  sprintf (rsp_string, " SACK (Retry);");
+  else if (C == 1)
+  {
+    if      (T == 0) sprintf (rsp_string, " NACK (Illegal Format);");
+    else if (T == 1) sprintf (rsp_string, " NACK (CRC32 Failure);");
+    else if (T == 2) sprintf (rsp_string, " NACK (Memory Full);");
+    else if (T == 3) sprintf (rsp_string, " NACK (FSN Sequence Error);");
+    else if (T == 4) sprintf (rsp_string, " NACK (Undeliverable);");
+    else if (T == 5) sprintf (rsp_string, " NACK (NS/VR Sequence Error);"); //depreciated
+    else if (T == 6) sprintf (rsp_string, " NACK (Invalid User on System);");
+  }
   
-  //catch all for everything else
-  else                fprintf (stderr, " Unknown SAP;");
+  fprintf (stderr, " Response Packet:%s C: %X; T: %X; S: %X; ", rsp_string, C, T, S);
 
 }
 
-static uint32_t crc32mbf(uint8_t buf[], int len)
+void processSAP(uint8_t SAP, char * sap_string)
+{
+
+  if      (SAP == 0)  sprintf (sap_string, " User Data;");
+  else if (SAP == 1)  sprintf (sap_string, " Encrypted User Data;");
+  else if (SAP == 2)  sprintf (sap_string, " Circuit Data;");
+  else if (SAP == 3)  sprintf (sap_string, " Circuit Data Control;");
+  else if (SAP == 4)  sprintf (sap_string, " Packet Data;");
+  else if (SAP == 5)  sprintf (sap_string, " Address Resolution Protocol;");
+  else if (SAP == 6)  sprintf (sap_string, " SNDCP Packet Data Control;");
+  else if (SAP == 31) sprintf (sap_string, " Extended Address;");
+  else if (SAP == 32) sprintf (sap_string, " Registration and Authorization;");
+  else if (SAP == 33) sprintf (sap_string, " Channel Reassignment;");
+  else if (SAP == 34) sprintf (sap_string, " System Configuration;");
+  else if (SAP == 35) sprintf (sap_string, " Mobile Radio Loopback;");
+  else if (SAP == 36) sprintf (sap_string, " Mobile Radio Statistics;");
+  else if (SAP == 37) sprintf (sap_string, " Mobile Radio Out of Service;");
+  else if (SAP == 38) sprintf (sap_string, " Mobile Radio Paging;");
+  else if (SAP == 39) sprintf (sap_string, " Mobile Radio Configuration;");
+  else if (SAP == 40) sprintf (sap_string, " Unencrypted Key Management;");
+  else if (SAP == 41) sprintf (sap_string, " Encrypted Key Management;");
+  else if (SAP == 61) sprintf (sap_string, " Trunking Control;");
+  else if (SAP == 63) sprintf (sap_string, " Encrypted Trunking Control;");
+ 
+  //catch all for everything else
+  else                sprintf (sap_string, " Unknown SAP;");
+
+  fprintf (stderr, "SAP: 0x%02X;%s ", SAP, sap_string);
+
+}
+
+// static uint32_t crc32mbf(uint8_t buf[], int len)
+static uint32_t crc32mbf(uint8_t * buf, int len)
 {	
   uint32_t g = 0x04c11db7;
   uint64_t crc = 0;
@@ -83,6 +94,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   memset (tsbk_dibit, 0, sizeof(tsbk_dibit));
 
   int dibit = 0;
+  int r34 = 0;
 
   uint8_t tsbk_byte[12]; //12 byte return from p25_12
   memset (tsbk_byte, 0, sizeof(tsbk_byte));
@@ -90,38 +102,38 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   uint8_t r34byte_b[18];
   memset (r34byte_b, 0, sizeof(r34byte_b));
 
-  uint8_t r34bytes[18*10]; //18 octets at 10 blocks (unsure of maximum needed, going with 10?)
+  //TODO: Expand storage to be able to hold 127 blocks + 1 header of data at 144 bits (18 octets
+  uint8_t r34bytes[18*129]; //18 octets at 129 blocks (a little extra padding)
   memset (r34bytes, 0, sizeof(r34bytes));
 
-  int r34 = 0;
+  unsigned long long int PDU[18*129];
+  memset (PDU, 0, 18*129*sizeof(unsigned long long int));
 
-  //these expansions may be overkill, will need to look at them
-  //and find optimal values for them at a later time
-  unsigned long long int PDU[24*10];
-  memset (PDU, 0, sizeof(PDU));
-
-  int tsbk_decoded_bits[190*10]; //decoded bits from tsbk_bytes for sending to crc16_lb_bridge
+  int tsbk_decoded_bits[18*129*8]; //decoded bits from tsbk_bytes for sending to crc16_lb_bridge
   memset (tsbk_decoded_bits, 0, sizeof(tsbk_decoded_bits));
 
-  uint8_t mpdu_decoded_bits[288*20];
+  uint8_t mpdu_decoded_bits[18*129*8];
   memset (mpdu_decoded_bits, 0, sizeof(mpdu_decoded_bits));
 
-  uint8_t mpdu_crc_bits[196*20]; 
+  uint8_t mpdu_crc_bits[18*129*8]; 
   memset (mpdu_crc_bits, 0, sizeof(mpdu_crc_bits));
 
-  uint8_t mpdu_crc_bytes[24*10];
+  uint8_t mpdu_crc9_bits[18*129*8]; 
+  memset (mpdu_crc9_bits, 0, sizeof(mpdu_crc9_bits));
+
+  uint8_t mpdu_crc_bytes[18*129];
   memset (mpdu_crc_bytes, 0, sizeof(mpdu_crc_bytes));
 
-  int i, j, k, x;
-  int ec[10]; //error value returned from p25_12 or 34
-  int err[2]; //error value returned from ccrc16 or crc32
+  int i, j, k, x, z, l; z = 0; l = 0;
+  int ec[129]; //error value returned from p25_12 or 34 trellis decoder
+  int err[2]; //error value returned from crc16 on header and crc32 on full message
   memset (ec, -2, sizeof(ec));
   memset (err, -2, sizeof(err));
 
   int skipdibit = 14; //initial status dibit will occur at 14, then add 36 each time it occurs
   int MFID = 0xFF; //Manufacturer ID
 
-  uint8_t mpdu_byte[36];
+  uint8_t mpdu_byte[18*129];
   memset (mpdu_byte, 0, sizeof(mpdu_byte));
 
   uint8_t an = 0;
@@ -131,25 +143,36 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   uint8_t blks = 0; 
   uint8_t opcode = 0;
 
-  uint32_t target1 = 0;
-  uint32_t target2 = 0; //enchanced addressing value
+  uint32_t address = 0; //source, or destination address depending on the io bit (outbound is target)
+  // uint32_t target2 = 0; //enhanced addressing source value found in a second 1/2 rate header
   uint8_t fmf = 0;
   uint8_t pad = 0;
   uint8_t ns = 0;
   uint8_t fsnf = 0;
   uint8_t offset = 0;
 
-  int end = 3; //ending value for data gathering repititions
+  //response packet
+  uint8_t class = 0;
+  uint8_t type = 0;
+  uint8_t status = 0;
+
+  int end = 3; //ending value for data gathering repetitions (default at 3)
 
   //CRC32
   uint32_t CRCComputed = 0;
   uint32_t CRCExtracted = 0;
 
+  int stop = 101;
+  int start = 0;
+
   //collect x-len reps of 101 dibits (98 valid dibits with status dibits interlaced)
   for (j = 0; j < end; j++)
   {
     k = 0;
-    for (i = 0; i < 101; i++)
+    if (j == 3) //may need to do this for multiple alignments, unsure, or change this part to work more...better....still need to triple check this
+      start = 1; //fixes decoding error past j 2 repitition, since the status dibit is perfectly aligned at the starting value at that point
+    else start = 0; 
+    for (i = start; i < stop; i++)
     {
 
       dibit = getDibit(opts, state);
@@ -164,7 +187,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 
       if (i+(j*101) == skipdibit) 
       {
-        skipdibit += 36; //was set to 35, this was the bug
+        skipdibit += 36;
       }
 
     }
@@ -172,15 +195,33 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     //send header to p25_12 and return tsbk_byte
     if (j == 0) ec[j] = p25_12 (tsbk_dibit, tsbk_byte);
 
-    //look at the header now and determine whether or not to 
-    //decode using 34 or 12 rate decoders
     else if (r34)
     {
+      //debug
+      // fprintf (stderr, " J:%d;", j); //use this with the P_ERR inside of 34 rate decoder to see where the failures occur
+
       ec[j] = dmr_34 (tsbk_dibit, r34byte_b);
 
       //shuffle 34 rate data into array
       if (j != 0) //should never happen, but just in case
         memcpy (r34bytes+((j-1)*18), r34byte_b, sizeof(r34byte_b));
+
+      for (i = 2; i < 18; i++)
+      {
+        for (x = 0; x < 8; x++)
+          mpdu_crc_bits[z++] = ((r34byte_b[i] << x) & 0x80) >> 7;
+      }
+
+      //arrangement for confirmed data crc9 check
+      //unlike DMR, the first 7 bits of this arrangement are the DBSN, not the last 7 bits
+      for (x = 0; x < 7; x++)
+        mpdu_crc9_bits[l++] = ((r34byte_b[0] << x) & 0x80) >> 7;
+      for (i = 2; i < 18; i++)
+      {
+        for (x = 0; x < 8; x++)
+          mpdu_crc9_bits[l++] = ((r34byte_b[i] << x) & 0x80) >> 7;
+      }
+
     }
     else ec[j] = p25_12 (tsbk_dibit, tsbk_byte);
 
@@ -216,8 +257,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       mpdu_byte[i+(j*12)] = byte; //add to completed MBF format 12 rate bytes
     }
 
-    //check header data to see if this is a 12 rate trunking setup, or
-    //34 rate packet data unit
+    //check header data to see if this is a 12 rate, or 4 rate packet data unit
     if (j == 0 && err[0] == 0)
     {
       an   = (mpdu_byte[0] >> 6) & 0x1;
@@ -226,8 +266,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       sap  = mpdu_byte[1] & 0x3F;
       blks = mpdu_byte[6] & 0x7F;
       MFID = mpdu_byte[2];
-      target1 = (mpdu_byte[3] << 16) | (mpdu_byte[4] << 8) | mpdu_byte[5]; //LLID, inbound is the source, outbound is the target
-      target2 = (mpdu_byte[6] << 16) | (mpdu_byte[7] << 8) | mpdu_byte[8]; //unknown which octets convey the secondary address value
+      address = (mpdu_byte[3] << 16) | (mpdu_byte[4] << 8) | mpdu_byte[5]; //LLID, inbound is the source, outbound is the target
 
       fmf = (mpdu_byte[6] >> 7) & 0x1;
       pad = mpdu_byte[7] & 0x1F;
@@ -235,51 +274,49 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       fsnf = mpdu_byte[8] & 0xF;
       offset = mpdu_byte[9] & 0x3F;
 
+      //response packet
+      class  = (mpdu_byte[1] >> 6) & 0x3;
+      type   = (mpdu_byte[1] >> 3) & 0x7;
+      status = (mpdu_byte[1] >> 0) & 0x7;
+
       if (an == 1 && fmt == 0b10110) //confirmed data packet header block
         r34 = 1;
 
-      //set end value to number of blocks + 1 (block gathering for variable len)
-      end = blks + 1;
+      //set end value to number of blocks + 1 header (block gathering for variable len)
+      if (sap != 61 && sap != 63) //if not a trunking control block, this fixes an annoyance TSBK/TDULC blink in ncurses
+        end = blks + 1;           //(TDU follows any Trunking MPDU, not sure if that's an error in handling, or actual behavior)
 
-      //sanity check
-      if (end > 10) end = 10;  //TODO: Increase storage for handling these (unsure of upper limit)
+      //sanity check -- since blks is only 7 bit anyways, this probably isn't needed now
+      if (end > 128) end = 128;  //Storage for up to 127 blocks plus 1 header
 
-      //old method for figuring this out, still unclear in the manual which is considered 12 rate, and which are 34 rate
-      // if ((sap == 0x3D) && ((fmt == 0x17) || (fmt == 0x15))) ; //MBT format 12 rate
-      // else r34 = 1; //set flag to decode as 34 rate data PDU (confirmed)
     }
     
   }
 
-  //group list mode so we can look and see if we need to block tuning any groups, etc
-  char mode[8]; //allow, block, digital, enc, etc
-  sprintf (mode, "%s", "");
-
-  //if we are using allow/whitelist mode, then write 'B' to mode for block
-  //comparison below will look for an 'A' to write to mode if it is allowed
-  if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
-
   if (err[0] == 0)
   {
     fprintf (stderr, "%s",KGRN);
-    fprintf (stderr, " P25 Data - AN: %d; IO: %d; FMT: %02X; SAP: 0x%02X;", an, io, fmt, sap);
-    processSAP(sap); //decode SAP to see what kind of data we are dealing with
-
-    fprintf (stderr, "\n F: %d; Blocks: %02X; Pad: %d; NS: %d; FSNF: %d; Offset: %d; MFID: %02X;", fmf, blks, pad, ns, fsnf, offset, MFID);
+    fprintf (stderr, " P25 Data - AN: %d; IO: %d; FMT: %02X; ", an, io, fmt);
+    char sap_string[40];
+    char rsp_string[40];
+    if (fmt != 3) processSAP (sap, sap_string); //decode SAP to see what kind of data we are dealing with
+    else          processRSP (class, type, status, rsp_string); //decode the response type (ack, nack, sack)
+    if (sap != 61 && sap != 63) //Not too interested in viewing these on trunking control, just data packets mostly
+      fprintf (stderr, "\n F: %d; Blocks: %02X; Pad: %d; NS: %d; FSNF: %d; Offset: %d; MFID: %02X;", fmf, blks, pad, ns, fsnf, offset, MFID);
     if (io == 1 && sap != 61 && sap != 63) //destination address if IO bit set
-      fprintf (stderr, " Target: %d;", target1);
+      fprintf (stderr, " Address: %d;", address);
 
-    // if (sap == 31) //still unclear on which octets or SAP convey this address, this sap is for extended address (same thing?)
-    //   fprintf (stderr, " Source: %d;", target2); //unsure if this is a source address, manual just says a second address
-    UNUSED(target2);
+    //Print to Data Call String for Ncurses Terminal (if not trunking control or response packet)
+    if (sap != 61 && sap != 63 && fmt != 3)
+      sprintf (state->dmr_lrrp_gps[0], "Data Call:%s SAP:%02X; Address: %d; ", sap_string, sap, address);
 
-    //TODO: Print to Data Call String for Ncurses Terminal
   } 
   else //crc error, so we can't validate information as accurate
   {
     fprintf (stderr, "%s",KRED);
     fprintf (stderr, " P25 Data Header CRC Error");
     fprintf (stderr, "%s",KNRM);
+    sprintf (state->dmr_lrrp_gps[0], "Data Call: Header Error; Unknown Format/SAP;");
     end = 1; //go ahead and end after this loop
   }
 
@@ -292,23 +329,20 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     if (fmt == 0x17) opcode = mpdu_byte[7] & 0x3F; //alt MBT
     else opcode = mpdu_byte[12] & 0x3F; //unconf MBT
     fprintf (stderr, " - OP: %02X", opcode);
-  
+
 
     //CRC32 is now working! 
-    for (i = 0; i < 196; i++) mpdu_crc_bits[i] = mpdu_decoded_bits[i+96];
-    for (i = 0; i < 24; i++) mpdu_crc_bytes[i] = mpdu_byte[i+12];
-    if (blks == 1) //blocks to follow is 1
-    {
-      CRCExtracted = (uint32_t)ConvertBitIntoBytes(&mpdu_crc_bits[96-32], 32);
-      CRCComputed  = crc32mbf(mpdu_crc_bytes, 96-32);
-      if (CRCComputed == CRCExtracted) err[1] = 0;
-    }
-    if (blks == 2) //blocks to follow is 2
-    {
-      CRCExtracted = (uint32_t)ConvertBitIntoBytes(&mpdu_crc_bits[192-32], 32);
-      CRCComputed  = crc32mbf(mpdu_crc_bytes, 192-32);
-      if (CRCComputed == CRCExtracted) err[1] = 0;
-    }
+    CRCExtracted = (mpdu_byte[(12*(blks+1))-4] << 24) | (mpdu_byte[(12*(blks+1))-3] << 16) | (mpdu_byte[(12*(blks+1))-2] << 8) | (mpdu_byte[(12*(blks+1))-1] << 0);
+    CRCComputed  = crc32mbf(mpdu_byte+12, (96*blks)-32);
+    if (CRCComputed == CRCExtracted) err[1] = 0;
+
+    //group list mode so we can look and see if we need to block tuning any groups, etc
+    char mode[8]; //allow, block, digital, enc, etc
+    sprintf (mode, "%s", "");
+
+    //if we are using allow/whitelist mode, then write 'B' to mode for block
+    //comparison below will look for an 'A' to write to mode if it is allowed
+    if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
 
     //just going to do a couple for now -- the extended format will not be vPDU compatible :(
     if (err[0] == 0 && err[1] == 0 && io == 1 && fmt == 0x17) //ALT Format
@@ -926,63 +960,67 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   else if (r34 == 1 && err[0] == 0) //start 34 rate dump if good header crc
   {
 
-    //WIP: CRC32 (skip the CRC9, not really needed when you can just do the completed one) 
-    // for (i = 0; i < 196; i++) mpdu_crc_bits[i] = mpdu_decoded_bits[i+96+16];
-    // for (i = 0; i < 16; i++) mpdu_crc_bytes[i] = mpdu_byte[i+12+2];
-
-    // if (blks == 1) //blocks to follow is 1
-    // {
-    //   CRCExtracted = (uint32_t)ConvertBitIntoBytes(&mpdu_crc_bits[96-32], 32);
-    //   CRCComputed  = crc32mbf(mpdu_crc_bytes, 96-32);
-    //   if (CRCComputed == CRCExtracted) err[1] = 0;
-    // }
-    // if (blks == 2) //blocks to follow is 2
-    // {
-    //   CRCExtracted = (uint32_t)ConvertBitIntoBytes(&mpdu_crc_bits[192-32], 32);
-    //   CRCComputed  = crc32mbf(mpdu_crc_bytes, 192-32);
-    //   if (CRCComputed == CRCExtracted) err[1] = 0;
-    // }
-
-    
-    //TODO: Combine both of these into one PDU bit set and run CRC on it, etc
-    //TODO: Handle the Confirmed Data Aspects of this format (CRC9 and DBSN)
-    //TOOD: Decode some LRRP and/or Text Message Formats, etc
-    // if (opts->payload == 1)
+    // if (opts->payload == 1) //always dump these for now since users are actively choosing to tune to these grants
     {
       fprintf (stderr, "%s",KCYN);
-      fprintf (stderr, "\n P25 MPDU Payload \n  ");
+      fprintf (stderr, "\n P25 MPDU 34 Rate Payload \n  ");
       for (i = 0; i < 12; i++) //header
         fprintf (stderr, "[%02X]", mpdu_byte[i]);
       fprintf (stderr, " Header \n  ");
 
+      memset (mpdu_byte, 0, sizeof(mpdu_byte));
+      for (i = 0; i < 16*10; i++) //16*(blks+1)
+        mpdu_byte[i] = (uint8_t)ConvertBitIntoBytes(&mpdu_crc_bits[i*8], 8);
+
+      CRCExtracted = (uint32_t)ConvertBitIntoBytes(&mpdu_crc_bits[(128*blks)-32], 32);
+      CRCComputed  = crc32mbf(mpdu_byte, (128*blks)-32);
+      if (CRCComputed == CRCExtracted) err[1] = 0;
+
+      int next = 0;
       //variable len printing
-      for (i = 0; i < 18*blks; i++)
+      for (i = 2; i <= 18*blks; i++) //<= only because we want that final DBSN/CRC9 printed out
       {
         if (i == 18 || i == 36 || i == 54 || i == 72 || i == 90)
-          fprintf (stderr, "\n  ");
-        fprintf (stderr, "[%02X]", r34bytes[i]);
+        {
+          uint8_t dbsn = r34bytes[i-18] >> 1; //get the previous DBSN at this point
+          uint16_t crc9_ext = ((r34bytes[i-18] & 1) << 8) | r34bytes[i-17];
+          uint16_t crc9_cmp = ComputeCrc9Bit(mpdu_crc9_bits+next, 135);
+          next += 135;
+          if (crc9_ext == crc9_cmp)
+            fprintf (stderr, " DBSN: %d;", dbsn+1);
+          else
+          {
+            fprintf (stderr, "%s",KRED);
+            fprintf (stderr, " CRC ERR;");
+            fprintf (stderr, "%s",KCYN);
+            // fprintf (stderr, " EXT: %03X; CMP: %03X", crc9_ext, crc9_cmp);
+          }
+          if (i != 18*blks) i += 2; //skip the next DBSN/CRC9
+          if (i != 18*blks) fprintf (stderr, "\n  ");
+        }
+        if (i != 18*blks) fprintf (stderr, "[%02X]", r34bytes[i]);
       }
 
-      // if (err[1] != 0) 
-      // {
-      //   fprintf (stderr, "%s",KRED);
-      //   fprintf (stderr, " (MPDU CRC32 ERR)");
-      //   fprintf (stderr, "%s",KCYN);
-      //   fprintf (stderr, " CRC EXT %08X CMP %08X", CRCExtracted, CRCComputed); //TODO
-      // }
-
-      fprintf (stderr, "\n P25 MPDU ASCII: ");
-
-
-      for (i = 2; i < (18*blks)-4; i++) //skip the first DBSN/CRC9 and Final CRC32
+      if (err[1] != 0) 
       {
-        if (i == 16 || i == 32 || i == 48 || i == 60 || i == 72)
-          i += 2; // skip the next DBSN/CRC9 values
-        if (r34bytes[i] <= 0x7E && r34bytes[i] >=0x20)
+        fprintf (stderr, "%s",KRED);
+        fprintf (stderr, "\n  (MPDU CRC32 ERR)");
+        fprintf (stderr, "%s",KCYN);
+        fprintf (stderr, " CRC EXT %08X CMP %08X", CRCExtracted, CRCComputed);
+      }
+      else //testing for grins
+        dmr_pdu (opts, state, blks*16, mpdu_byte);
+
+      // if (sap == 0) //user data
+      {
+        fprintf (stderr, "%s",KCYN);
+        fprintf (stderr, "\n P25 MPDU ASCII: ");
+        for (i = 0; i < (16*blks)-4; i++)
         {
-          fprintf (stderr, "%c", r34bytes[i]);
+          if (mpdu_byte[i] <= 0x7E && mpdu_byte[i] >=0x20)
+            fprintf (stderr, "%c", mpdu_byte[i]);
+          else fprintf (stderr, " ");
         }
-        else fprintf (stderr, " ");
       }
 
       fprintf (stderr, "%s ", KNRM);
@@ -990,18 +1028,48 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 
     }
   } //end r34
-  else if (err[0] == 0)
+  else if (err[0] == 0) //12 rate unconfirmed data
   {
-    //just print the header
+
+    if (blks != 0)
+    {
+      CRCExtracted = (mpdu_byte[(12*(blks+1))-4] << 24) | (mpdu_byte[(12*(blks+1))-3] << 16) | (mpdu_byte[(12*(blks+1))-2] << 8) | (mpdu_byte[(12*(blks+1))-1] << 0);
+      CRCComputed  = crc32mbf(mpdu_byte+12, (96*blks)-32);
+      if (CRCComputed == CRCExtracted) err[1] = 0;
+    }
+    else err[1] = 0; //No CRC32 on a lonely header
+
     // if (opts->payload == 1)
     {
       fprintf (stderr, "%s",KCYN);
-      fprintf (stderr, "\n P25 MPDU Header: ");
-      for (i = 0; i < 12; i++) //header
+      fprintf (stderr, "\n P25 MPDU 12 Rate Payload: \n  ");
+      for (i = 0; i < 12*(blks+1); i++) //header and payload combined
+      {
+        if (i == 12) fprintf (stderr, " Header");
+        if (i == 12 || i == 24 || i == 36 || i == 48 || i == 60 || i == 72 || i == 84 || i == 90)
+          fprintf (stderr, "\n  ");
         fprintf (stderr, "[%02X]", mpdu_byte[i]);
-      fprintf (stderr, "%s",KNRM);
-      fprintf (stderr, "\n");
+      }
     }
+
+    if (err[1] != 0) 
+    {
+      fprintf (stderr, "%s",KRED);
+      fprintf (stderr, "\n  (MPDU CRC32 ERR)");
+      fprintf (stderr, "%s",KCYN);
+      fprintf (stderr, " CRC EXT %08X CMP %08X", CRCExtracted, CRCComputed);
+    }
+    else if (blks != 0) //testing for grins
+        dmr_pdu (opts, state, blks*16, mpdu_byte);
+
+    fprintf (stderr, "%s",KNRM);
+    fprintf (stderr, "\n");
+
   }
-  else fprintf (stderr, "\n");
+  else //crc header failure or other
+  {
+    fprintf (stderr, "%s",KNRM);
+    fprintf (stderr, "\n");
+  }
+  
 }
