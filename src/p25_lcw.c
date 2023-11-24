@@ -309,6 +309,12 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
           
           //Will we need to check for a symbolrate change here, can a P25p2 TDMA-CC system
           //revert back to a phase 1 traffic channel or carry a phase 1 traffic channel?
+          if (state->p25_cc_is_tdma == 1)
+          {
+            state->samplesPerSymbol = 8;
+            state->symbolCenter = 3;
+            opts->frame_p25p1 = 0; //turn it back off
+          }
 
           //clear heuristics from current traffic channel
           if (opts->frame_p25p1 == 1 && opts->use_heuristics == 1)

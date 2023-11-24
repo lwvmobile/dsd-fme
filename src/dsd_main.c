@@ -220,6 +220,15 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
         opts->slot1_on = 1;
         opts->slot2_on = 1;
       }
+      //if P25p1 SNDCP channel (or revert) and going to a P25 TDMA CC
+      else if (state->p25_cc_is_tdma == 1)
+      {
+        state->samplesPerSymbol = 8;
+        state->symbolCenter = 3;
+        //re-enable both slots (in case of late entry voice, MAC_SIGNAL can turn them back off)
+        opts->slot1_on = 1;
+        opts->slot2_on = 1;
+      }
     }
     //zero out vc frequencies?
     state->p25_vc_freq[0] = 0;

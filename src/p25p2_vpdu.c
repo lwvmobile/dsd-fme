@@ -1509,6 +1509,19 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							}
 						}
 
+						//because SNDCP data channels are Phase 1 channels, we will want to check to see if we need
+						//to enable p1 frames and switch sample rate in reverse if on a TDMA-CC system
+						//in the future, we may consider needing to do this if an SU causes the sytem to revert to P1 on a channel?
+						else if (state->p25_chan_tdma[channelt >> 12] == 0 && state->p25_cc_is_tdma == 1)
+						{
+							state->samplesPerSymbol = 10;
+							state->symbolCenter = 4;
+							opts->frame_p25p1 = 1; //enable, just in case it isn't already
+
+							//enable voice on slot 1 (just in case they start talking too, but probably won't)
+							opts->slot1_on = 1;
+						} 
+
 					}
 
 					//rigctl
