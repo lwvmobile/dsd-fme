@@ -499,23 +499,24 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           if (state->rf_mod == 0)
             {
               // 0: C4FM modulation
-              if ((opts->frame_p25p1 == 1) && (i >= state->symbolCenter - 2) && (i <= state->symbolCenter + 2))
+ 
+              //EXPERIMENTAL: manipulate the left edge depending on sync type
+              //TODO: See if we can manipulate this a bit more based on AFC or similar type function
+              int l_edge = 2;
+              int r_edge = 2;
+
+              if (state->synctype == 30 || state->synctype == 31) l_edge = 1; //YSF (need to test with new recordings at BW:12000)
+              else if ((state->lastsynctype >= 10 && state->lastsynctype <= 13) || state->lastsynctype == 32 || state->lastsynctype == 33) l_edge = 1;
+              else l_edge = 2; //P25 and NXDN96 perform better, DMR doesn't seem to care too much, but may favor 1 and not 2
+
+              if ((i >= state->symbolCenter - l_edge) && (i <= state->symbolCenter + r_edge))
               {
                 sum += sample;
                 count++;
               }
-              //testing dmr may be slightly off compared to P25, particularly wav recording at narrower bandwidth?
-              else if ((opts->frame_dmr == 1) && (i >= state->symbolCenter - 1) && (i <= state->symbolCenter + 2))
-              {
-                sum += sample;
-                count++;
-              }
-              //anything else
-              else if ((i >= state->symbolCenter - 2) && (i <= state->symbolCenter + 2))
-              {
-                sum += sample;
-                count++;
-              }
+
+              //debug: show what was selected for the left edge
+              // fprintf (stderr, "  L:%d", l_edge);
 
 #ifdef TRACE_DSD
               if (i == state->symbolCenter - 1) {
