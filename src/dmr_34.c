@@ -1,9 +1,9 @@
 /*-------------------------------------------------------------------------------
  * dmr_34.c
- * DMR 3/4 Rate Simple Trellis Decoder
+ * DMR (and P25) 3/4 Rate Simple Trellis Decoder
  *
  * LWVMOBILE
- * 2023-10 DSD-FME Florida Man Edition
+ * 2023-12 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
@@ -41,7 +41,7 @@ uint8_t fix_34(uint8_t * p, uint8_t state, int position)
   uint8_t temp_s, tri, t;
 
   //status of surviving paths -- debug
-  int s[8]; UNUSED(s); UNUSED(survivors);
+  int s[8];
   memset (s, 0, 8*sizeof(int));
 
   //assign all potentially correct points to temporary storage
@@ -111,7 +111,7 @@ uint8_t fix_34(uint8_t * p, uint8_t state, int position)
   }
 
   //debug
-  // fprintf (stderr, "START: %d; BEST_P: %d; BEST_V: %d; Survivors: %d; Point: %d", position, best_p, best_v, survivors, temp_p[best_v]);
+  // fprintf (stderr, "START: %d; BEST_P: %d; BEST_V: %d; Survivors: %d; Point: %d; ", position, best_p, best_v, survivors, temp_p[best_v]);
 
   return temp_p[best_v]; //return the point value of the best path's starting point value
 }
@@ -180,7 +180,7 @@ uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
       // point[i] ^= 7; //lucky number 7 (0111) //fallback
 
       //decrement one and resume decoding
-      if (i != 0) i--;
+      i--;
      
     }
 
