@@ -316,7 +316,8 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "%s",KRED);
     fprintf (stderr, " P25 Data Header CRC Error");
     fprintf (stderr, "%s",KNRM);
-    sprintf (state->dmr_lrrp_gps[0], "Data Call: Header Error; Unknown Format/SAP;");
+    //Don't add to the data call string, can occur when tuning from control channel with MBT blocks
+    // sprintf (state->dmr_lrrp_gps[0], "Data Call: Header Error; Unknown Format/SAP;");
     end = 1; //go ahead and end after this loop
   }
 

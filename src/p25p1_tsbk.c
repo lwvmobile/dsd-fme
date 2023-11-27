@@ -147,7 +147,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       //MFIDA4 Group Regroup Explicit Encryption Command
       if ( (tsbk_byte[0] & 0x3F) == 0x30)
       {
-        fprintf (stderr, "%s",KCYN);
+        fprintf (stderr, "%s",KYEL);
         fprintf (stderr, "\n MFID A4 (Harris) Group Regroup Explicit Encryption Command\n");
         int sg = (tsbk_byte[3] << 8) | tsbk_byte[4];
         int key = (tsbk_byte[5] << 8) | tsbk_byte[6];
@@ -401,6 +401,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       else if ( (tsbk_byte[0] & 0x3F) == 0x00)
       {
         fprintf (stderr, "\n");
+        fprintf (stderr, "%s",KYEL);
         fprintf (stderr, " MFID 90 (Moto) Group Regroup Add: ");
         for (i = 2; i < 10; i++)
           fprintf (stderr, "%02X", tsbk_byte[i]);
@@ -409,6 +410,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       else if ( (tsbk_byte[0] & 0x3F) == 0x01 )
       {
         fprintf (stderr, "\n");
+        fprintf (stderr, "%s",KYEL);
         fprintf (stderr, " MFID 90 (Moto) Group Regroup Delete: ");
         for (i = 2; i < 10; i++)
           fprintf (stderr, "%02X", tsbk_byte[i]);
@@ -417,6 +419,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       else if ( (tsbk_byte[0] & 0x3F) == 0x04 )
       {
         fprintf (stderr, "\n");
+        fprintf (stderr, "%s",KYEL);
         fprintf (stderr, " MFID 90 (Moto) Extended Function: ");
         for (i = 2; i < 10; i++)
           fprintf (stderr, "%02X", tsbk_byte[i]);
@@ -425,6 +428,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       else if ( (tsbk_byte[0] & 0x3F) == 0x06 )
       {
         fprintf (stderr, "\n");
+        fprintf (stderr, "%s",KYEL);
         fprintf (stderr, " MFID 90 (Moto) Queued Response: ");
         for (i = 2; i < 10; i++)
           fprintf (stderr, "%02X", tsbk_byte[i]);
@@ -433,6 +437,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       else if ( (tsbk_byte[0] & 0x3F) == 0x07 )
       {
         fprintf (stderr, "\n");
+        fprintf (stderr, "%s",KYEL);
         fprintf (stderr, " MFID 90 (Moto) Deny Response: ");
         for (i = 2; i < 10; i++)
           fprintf (stderr, "%02X", tsbk_byte[i]);
@@ -441,6 +446,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       else if ( (tsbk_byte[0] & 0x3F) == 0x08 )
       {
         fprintf (stderr, "\n");
+        fprintf (stderr, "%s",KYEL);
         fprintf (stderr, " MFID 90 (Moto) Acknoledge Response: ");
         for (i = 2; i < 10; i++)
           fprintf (stderr, "%02X", tsbk_byte[i]);

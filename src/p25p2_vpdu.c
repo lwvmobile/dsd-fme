@@ -1584,91 +1584,12 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channelt = (MAC[4+len_a] << 8) | MAC[5+len_a];
 			int channelr = (MAC[6+len_a] << 8) | MAC[7+len_a];
 			int dac = (MAC[8+len_a] << 8) | MAC[9+len_a];
-			if (channelt != 0)
-				fprintf (stderr, "\n  AA: %d; RA: %d; DSO: %02X; DAC: %02X; CHAN-T: %04X; CHAN-R: %04X;", aa, ra, dso, dac, channelt, channelr);
-			else fprintf (stderr, "- Null");
-			long int freq = 0;
+			fprintf (stderr, "\n  AA: %d; RA: %d; DSO: %02X; DAC: %02X; CHAN-T: %04X; CHAN-R: %04X;", aa, ra, dso, dac, channelt, channelr);
+			long int freq = 0; UNUSED(freq);
 			if (channelt != 0)
 				freq = process_channel_to_freq (opts, state, channelt);
-
-			//nothing to do but skip
-			// if (channelt == 0) 
-				goto SKIPCALL; //this is just an announcement, and not a grant/tunable action
-
-			//add active channel to string for ncurses display
-			if (channelt != 0)
-			{
-				sprintf (state->active_channel[0], "Active Data Ch: %04X Annoucement; ", channelt);
-				state->last_active_time = time(NULL);
-			}
-
-			//Skip tuning data calls if data calls is disabled
-			if (opts->trunk_tune_data_calls == 0) goto SKIPCALL;
-
-			//just skip altogether if a tg hold
-			if (state->tg_hold != 0) goto SKIPCALL; 
-
-			//tune if tuning available -- not even sure if you tune with these or not...
-			if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
-			{
-				//reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
-				if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq != 0) //if we aren't already on a VC and have a valid frequency
-				{
-					//changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
-					if (1 == 1)
-					{
-						if (state->p25_chan_tdma[channelt >> 12] == 1)
-						{
-							state->samplesPerSymbol = 8;
-							state->symbolCenter = 3;
-
-							//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
-							//this will only occur in realtime tuning, not not required .bin or .wav playback
-							if (channelt & 1) //VCH1
-							{
-								opts->slot1_on = 0;
-								opts->slot2_on = 1;
-							}
-							else //VCH0
-							{
-								opts->slot1_on = 1;
-								opts->slot2_on = 0;
-							}
-						}
-
-					}
-
-					//rigctl
-					if (opts->use_rigctl == 1)
-					{
-						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-						SetFreq(opts->rigctl_sockfd, freq);
-						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
-						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
-						state->last_vc_sync_time = time(NULL); 
-					}
-					//rtl
-					else if (opts->audio_in_type == 3)
-					{
-						#ifdef USE_RTLSDR
-						rtl_dev_tune (opts, freq);
-						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
-						opts->p25_is_tuned = 1;
-						state->last_vc_sync_time = time(NULL);
-						#endif
-					}
-				}    
-			}
-			if (opts->p25_trunk == 0)
-			{
-				// if (target == state->lasttg || target == state->lasttgR)
-				{
-					//P1 FDMA
-					if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
-					//P2 TDMA
-					else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
-				}
-			}
+			if (channelr != 0)
+				freq = process_channel_to_freq (opts, state, channelt);
 
 		}
 

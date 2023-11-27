@@ -193,20 +193,6 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         fprintf (stderr, " Call Alert");
       }
 
-      else if (lc_format == 0x57) 
-      {
-        fprintf (stderr, " Extended Function Command");
-      }
-
-      else if (lc_format == 0x58) 
-      {
-        fprintf (stderr, " Channel Identifier Update");
-      }
-
-      else if (lc_format == 0x59) 
-      {
-        fprintf (stderr, " Channel Identifier Update VU");
-      }
 
       else if (lc_format == 0x5A) 
       {
@@ -303,7 +289,8 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       //tune back to CC here - save about 1-2 seconds
       else if (lc_format == 0x4F) //# Call Termination/Cancellation 
       {
-        fprintf (stderr, " Call Termination");
+        uint32_t tgt = (uint32_t)ConvertBitIntoBytes(&LCW_bits[48], 24); //can be individual, or all units (0xFFFFFF)
+        fprintf (stderr, " Call Termination; TGT: %d;", tgt);
         if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
         {
           
@@ -370,6 +357,47 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       else fprintf (stderr, " Unknown Format %02X MFID %02X SVC %02X", lc_format, lc_mfid, lc_svcopt);
     }
 
+    //TODO: Look through all LCW format messages and move here if they don't use the MFID field
+    //just going to add/fix a few values I've observed for now, one issue with doing so may
+    //be where there is a reserved field that is also used as an MFID, i.e., Call Termination 0xF vs Moto Talker EOT 0xF with
+    //the reserved field showing the 0x90 for moto in it, and Harris 0xA vs Unit to Unit Voice Call 0xA
+
+    //TODO: Add Identification of Special SU Address values
+    //0 - No Unit
+    //1-0xFFFFFB - Assignable Units
+    //0xFFFFFC - FNE 16777212
+    //0xFFFFFD - System Default (FNE Calling Functions, Registration, Mobility)
+    //0xFFFFFE - Registration Default (registration transactions from SU)
+    //0xFFFFFF - All Units
+
+    //This lc_format doesn't use the MFID field
+    else if (lc_format == 0x42) 
+      fprintf (stderr, " Conventional Fallback Indication");
+
+    //This lc_format doesn't use the MFID field
+    else if (lc_format == 0x57)
+      fprintf (stderr, " Extended Function Command");
+
+    //This lc_format doesn't use the MFID field
+    else if (lc_format == 0x58)
+    {
+      uint8_t iden = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 4);
+      uint32_t base = (uint32_t)ConvertBitIntoBytes(&LCW_bits[40], 32);
+      fprintf (stderr, " Channel Identifier Update VU; Iden: %X; Base: %d;", iden, base*5);
+    }
+
+    //This lc_format doesn't use the MFID field
+    else if (lc_format == 0x59)
+    {
+      uint8_t iden = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 4);
+      uint32_t base = (uint32_t)ConvertBitIntoBytes(&LCW_bits[40], 32);
+      fprintf (stderr, " Channel Identifier Update VU; Iden: %X; Base: %d;", iden, base*5);
+    }
+    
+    //This lc_format doesn't use the MFID field
+    else if (lc_format == 0x63) 
+      fprintf (stderr, " RFSS Status Broadcast");
+
     //MFID 90 Embedded GPS
     else if (lc_mfid == 0x90 && lc_opcode == 0x6)
     {
@@ -392,21 +420,19 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
     else if (lc_mfid == 0x90 && lc_opcode == 0xF)
     {
       uint32_t src = (uint32_t)ConvertBitIntoBytes(&LCW_bits[48], 24);
-      fprintf (stderr, " MFID90 (Moto) Talker EOT; SRC: %d", src);
+      fprintf (stderr, " MFID90 (Moto) Talker EOT; SRC: %d;", src);
     }
 
-    //observed format value on SNDCP data channels
-    else if (lc_format == 0x58)
+    //observed format value on Harris SNDCP data channel (Phase 2 CC to Phase 1 MPDU channel)
+    else if (lc_mfid == 0xA4 && lc_format == 0x0A)
     {
-      //will need to look for the appropriate values to fill in here from the manual, 
-      //MFID values seem to look like a counter of some sort? offset maybe? or block number?
-      fprintf (stderr, " SNDCP Data Channel LCW %02X", lc_format);
+      //Could also just be a Unit to Unit Voice Channel User using the reserved field as the MFID?
+      //if it were similar to Unit to Unit though, the TGT and SRC values seem to be reversed
+      //this appears to be a data channel indicator, has a matching target and the FNE address in it
+      uint32_t src = (uint32_t)ConvertBitIntoBytes(&LCW_bits[24], 24);
+      uint32_t tgt = (uint32_t)ConvertBitIntoBytes(&LCW_bits[48], 24);
+      fprintf (stderr, " MFIDA4 (Harris) Data Channel; SRC: %d; TGT: %d;", src, tgt);
     }
-
-    //observed format value on SNDCP data channels
-    else if (lc_format == 0x63) //based on the SAP of the same value found in BAHA-A (unconfirmed, but may make sense?)
-      fprintf (stderr, " Protected Format LCW %02X", lc_format);
-
 
     //not a duplicate, this one will print if not MFID 0 or 1
     else
