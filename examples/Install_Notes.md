@@ -7,7 +7,7 @@ Using the included download-and-install.sh should make for a simple and painless
 If you need all dependencies build and installed first (only on Debian/Ubuntu/Mint/Pi), run:
 
 ```
-wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/main/download-and-install.sh
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/audio_work/download-and-install.sh
 chmod +x download-and-install.sh
 ./download-and-install.sh
 ```
@@ -25,7 +25,7 @@ chmod +x download-and-install-Arch.sh
 If you have dependencies already installed, please run this instead:
 
 ```
-wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/main/download-and-install-nodeps.sh
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/audio_work/download-and-install-nodeps.sh
 chmod +x download-and-install-nodeps.sh
 ./download-and-install-nodeps.sh
 ```

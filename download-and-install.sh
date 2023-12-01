@@ -13,7 +13,7 @@ ANSWER=$(printf "$ANSWER"|tr '[:upper:]' '[:lower:]')
 if [ "$ANSWER" = "y" ]; then
   sudo apt update
   sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev libcodec2-dev
-  chkitpp=$(sudo apt search libitpp-dev 2>&1|grep -ci "installed")
+  chkitpp=$(sudo apt list libitpp-dev 2>&1|grep -ci "installed")
   if [ "$chkitpp" -lt "1" ];then 
     printf "\nFor some reason, ITPP did NOT install!\nYou may have to manually install it.\n\n"
     read -p "Press Enter to exit..." x
