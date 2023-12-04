@@ -35,6 +35,96 @@ static const uint8_t mac_msg_len[256] = {
 //TODO: Check for Non standard MFIDs first MAC[1], then set len on the MAC[2] if
 //the result from the len table is 0 (had to manually enter a few observed values from Harris)
 
+void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
+{
+
+	uint8_t lat_sign, lat_deg, lat_min = 0;
+	uint8_t lon_sign, lon_deg, lon_min = 0;
+	uint16_t lat_mmin = 0;
+	uint16_t lon_mmin = 0;
+
+	//potentially in this PDU, but unverifiable without documentation or reasonable proof
+	uint16_t speed = 0; UNUSED(speed);
+	uint16_t angle = 0; UNUSED(angle);
+	//unknown location, if it actually exists here, or units of measurement
+	speed = (uint16_t)ConvertBitIntoBytes(&input[128], 8); //number of significant bits?
+	angle = (uint16_t)ConvertBitIntoBytes(&input[136], 8); //number of significant bits?
+
+	float lat_dec = 0.0f;
+	float lon_dec = 0.0f;
+
+	char latord[3];
+	char lonord[3];
+	sprintf (latord, "%s", "N");
+	sprintf (lonord, "%s", "E");
+
+	char deg_glyph[4];
+	sprintf (deg_glyph, "%s", "°");
+
+	//This appears to be similar to the NMEA GPGGA format (DDmm.mm) but 
+	//octets are ordered in least significant to most significant value
+	lat_mmin = (uint16_t)ConvertBitIntoBytes(&input[40], 16); //? bits required, but grabbing two octets
+	lat_min  = (uint8_t)ConvertBitIntoBytes(&input[58], 6);  //6 bits required to get 60
+	lat_deg  = (uint8_t)ConvertBitIntoBytes(&input[65], 7); //7 bits required to get 90
+	lat_sign = input[72]; //64
+
+	lon_mmin = (uint16_t)ConvertBitIntoBytes(&input[72], 16); //? bits required, but grabbing two octets
+	lon_min  = (uint8_t)ConvertBitIntoBytes(&input[90], 6);  //6 bits required to get 60 (could also include the 4 bits starting at 86)
+	lon_deg  = (uint8_t)ConvertBitIntoBytes(&input[96], 8); //8 bits required to get 180 
+	lon_sign = input[88]; //88, unsure of a correct location, but on the sample with 0 minutes, this lonely bit was flagged on
+
+	//unused, maybe we will use them still somehow if we also display ddmmss format
+	if (lat_sign)
+		sprintf (latord, "%s", "S");
+
+	if (lon_sign) 
+		sprintf (lonord, "%s", "W");
+
+	//calculate decimal representation (was a pain to figure out the sub minute values)
+	lat_dec = ( (float)lat_deg + ((float)lat_min/60.0f) + ((float)lat_mmin/600000.0f) );
+	lon_dec = ( (float)lon_deg + ((float)lon_min/60.0f) + ((float)lon_mmin/600000.0f) );
+
+	if (lat_sign)
+		lat_dec *= -1.0f;
+
+	if (lon_sign) 
+		lon_dec *= -1.0f;
+
+	fprintf (stderr, " GPS: %f%s, %f%s", lat_dec, deg_glyph, lon_dec, deg_glyph);
+	// fprintf (stderr, " Speed: %d kph; Track: %d%s;", speed, angle, deg_glyph);
+
+	//line break
+	fprintf (stderr, "\n");
+
+	//save to array for ncurses
+	sprintf (state->dmr_embedded_gps[slot], "GPS: (%f%s, %f%s)", lat_dec, deg_glyph, lon_dec, deg_glyph);
+
+	//save to LRRP report for mapping/logging
+	FILE * pFile; //file pointer
+	if (opts->lrrp_file_output == 1)
+	{
+		int src = 0;
+		if (slot == 0) src = state->lastsrc;
+		if (slot == 1) src = state->lastsrcR;
+
+		//open file by name that is supplied in the ncurses terminal, or cli
+		pFile = fopen (opts->lrrp_out_file, "a");
+		fprintf (pFile, "%s\t", getDateL() );
+		fprintf (pFile, "%s\t", getTimeL() );
+		fprintf (pFile, "%08d\t", src);
+		fprintf (pFile, "%.5lf\t", lat_dec);
+		fprintf (pFile, "%.5lf\t", lon_dec);
+		fprintf (pFile, "0\t " ); //zero for velocity
+		fprintf (pFile, "0\t " ); //zero for azimuth
+		fprintf (pFile, "\n");
+		fclose (pFile);
+
+	}
+
+	//NOTE: There are quite a few left over octets, 10?, (not including potential speed/angle)
+	//so, plenty of space for other information, currently unknown what that would be
+}
+
 void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned long long int MAC[24])
 {
 	//handle variable content MAC PDUs (Active, Idle, Hangtime, or Signal)
@@ -1766,6 +1856,39 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					fprintf (stderr, "%02llX", MAC[i+len_a]);
 			}
 			
+		}
+
+		//This is now confirmed to have the Harris Talker GPS, but the structure is unusual compared to other MFID messages, 
+		//the A4 indicator is one octet more to the 'right' than is normative, so I cannot verify the len value (0x11, or 17).
+		//Its possible the 0x80 is the 'Manufacturer Message' Opcode, which in the manual shows the rest of the
+		//octets are not normative, and as such, can't say there is a len value (but should assume entire the SACCH/FACCH field)
+		if (MAC[len_a+1] == 0x80 && MAC[len_a+2] != 0xA4 && MAC[len_a+2] != 0x90)
+		{
+			int unk1 = MAC[len_a+1]; //assuming this is the octet set for the 'manufacturer specific' message, may only be the MSBit
+			int unk2 = MAC[len_a+2]; //This field is observed as 0xAA, unknown if this is an opcode, or other MFID
+			int mfid = MAC[len_a+3]; //This is where the 0xA4 (Harris) Identifier is found in this message, as opposed to +2
+			int len  = MAC[len_a+4]; //0x11 or 17 dec sounds reasonable, but cannot verify
+			fprintf (stderr, "\n MFID %02X (Harris); Len: %d; Opcode: %02X/%02X;", mfid, len, unk1, unk2);
+
+			//convert bytes to bits, may move this up top
+			uint8_t mac_bits[24*8];
+			memset (mac_bits, 0, sizeof(mac_bits));
+			int l, x, z = 0;
+			for (l = 0; l < 24; l++)
+			{
+				for (x = 0; x < 8; x++)
+					mac_bits[z++] = (((uint8_t)MAC[l] << x) & 0x80) >> 7;
+			}
+
+			harris_gps (opts, state, slot, mac_bits);
+
+			//debug - just dump payload
+			for (i = 0; i < 24; i++)
+					fprintf (stderr, " %02llX", MAC[i]);
+
+			fprintf(stderr, "\n DEV NOTE: If you see this message, but incorrect lat/lon,\n please submit samples to https://github.com/lwvmobile/dsd-fme/issues");
+			len_b = 17;
+
 		}
 
 		/*
