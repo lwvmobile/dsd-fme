@@ -88,7 +88,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
   int lat_sign = 1; //positive 1, or negative 1
   int lon_sign = 1; //positive 1, or negative 1
 
-  //speed/velocity
+  //speed -- NOTE: Velocity is Speed + Direction
   uint16_t vel = 0;
   double velocity = 0;
   uint8_t vel_set = 0;
@@ -237,8 +237,8 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
       case 0x6C: //speed-hor
         if (message_len > 0 && vel_set == 0)
         {
-          vel = (DMR_PDU[i+1] << 8) + DMR_PDU[i+2]; //don't think this is meant to be shifted, but doing it anyways for comparison
-          velocity = ( ((double)( (DMR_PDU[i+1] ) + DMR_PDU[i+2] )) / ( (double)128));
+          vel = (DMR_PDU[i+1] << 8) + DMR_PDU[i+2]; //raw value
+          velocity = ( ((double)( (DMR_PDU[i+1] << 8) + DMR_PDU[i+2] )) / ( (double)255.0f)); //mps
           vel_set = 1;
           i += 2;
           lrrp_confidence++;
@@ -346,12 +346,20 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
         fprintf (stderr, "  Lon: %.5lf", lon_fin);
         fprintf (stderr, " (%.5lf, %.5lf)", lat_fin , lon_fin);
 
-        if (opts->lrrp_file_output == 1)
-        {
-          fprintf (pFile, "%.5lf\t", lat_fin);
-          fprintf (pFile, "%.5lf\t", lon_fin);
-        }
+        // if (opts->lrrp_file_output == 1)
+        // {
+        //   fprintf (pFile, "%.5lf\t", lat_fin);
+        //   fprintf (pFile, "%.5lf\t", lon_fin);
+        // }
 
+      }
+       //always print into the lrrp file, even if zeroes, keep alignment correct
+      if (opts->lrrp_file_output == 1)
+      {
+        fprintf (pFile, "%.5lf\t", lat_fin);
+        fprintf (pFile, "%.5lf\t", lon_fin);
+        //
+        //
       }
       if (rad)
       {
@@ -366,15 +374,19 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
       if (vel_set)
       {
         fprintf (stderr, "\n");
-        fprintf (stderr, "  LRRP - Velocity: %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity));
-        if (opts->lrrp_file_output == 1) fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
+        fprintf (stderr, "  LRRP - Speed: %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity));
+        // if (opts->lrrp_file_output == 1) fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
       }
+      //always print into the lrrp file, even if zeroes, keep alignment correct
+      if (opts->lrrp_file_output == 1) fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
       if (deg_set)
       {
         fprintf (stderr, "\n");
         fprintf (stderr, "  LRRP - Track: %d%s", degrees, deg_glyph);
-        if (opts->lrrp_file_output == 1) fprintf (pFile, "%d\t",degrees);
+        // if (opts->lrrp_file_output == 1) fprintf (pFile, "%d\t",degrees);
       }
+      //always print into the lrrp file, even if zeroes, keep alignment correct
+      if (opts->lrrp_file_output == 1) fprintf (pFile, "%d\t",degrees);
 
       //close open file
       if (opts->lrrp_file_output == 1)
