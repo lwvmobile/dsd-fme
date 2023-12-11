@@ -43,20 +43,38 @@ void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
 	uint16_t lat_mmin = 0;
 	uint16_t lon_mmin = 0;
 
-	//potentially in this PDU, but unverifiable without documentation or reasonable proof
-	uint16_t speed = 0; UNUSED(speed);
-	uint16_t angle = 0; UNUSED(angle);
-	//unknown location, if it actually exists here, or units of measurement
-	speed = (uint16_t)ConvertBitIntoBytes(&input[128], 8); //number of significant bits?
-	angle = (uint16_t)ConvertBitIntoBytes(&input[136], 8); //number of significant bits?
+	//potentially in this PDU, but unverifiable without documentation or reasonable 
+	//mathematical proof vs map points and direction of travel / distance over time (assuming the radio is facing that direction)
+	uint16_t rspeed = (uint16_t)ConvertBitIntoBytes(&input[136], 8); //MSB //136
+	rspeed = (rspeed << 8) + (uint16_t)ConvertBitIntoBytes(&input[128], 8); //LSB //128
+
+	//this works okay for example of driver driving due west at the speed limit of the road (fluke?)
+	uint16_t rangle = (uint16_t)ConvertBitIntoBytes(&input[120], 8); //120,8
+	float fspeed = (float)rspeed;
+	float fangle = (float)rangle;
+	
+	fspeed /= 255.0f; //unit value of 1 bit
+	fspeed *= 1.56f; //this is based on an observation of a driver moving approx 210 meters in about 8 seconds and this makes it just under the speed limit on the road there
+	// fangle *= 360.0f/255.0f; //unit value of 1 bit
+	fangle *= 2.0f; //may exceed 360 degrees as is (use %)
+
+	int s, a = 0;
+	s = (int)fspeed * 3.6;
+	a = (int)fangle % 360;
+
+	//fix and quality indicators?
+	uint8_t fix = input[147]; UNUSED(fix);
+	uint8_t quality = (uint16_t)ConvertBitIntoBytes(&input[148], 3); UNUSED(quality);
+
+	//timestamp (16-bit value w/ appended 17th bit to MSB)
+	uint32_t rtime = (uint32_t)ConvertBitIntoBytes(&input[104], 16); //seconds since midnight since last GPS fix (whatever the radio has as internal time)
+	rtime |= input[144] << 16; //test appending this as bit 17 (observed this bit set after the afternoon 0xFFFF rollover)
+	uint32_t thour = rtime / 3600;
+	uint32_t tmin  = (rtime % 3600) / 60;
+	uint32_t tsec  = (rtime % 3600) % 60;
 
 	float lat_dec = 0.0f;
 	float lon_dec = 0.0f;
-
-	char latord[3];
-	char lonord[3];
-	sprintf (latord, "%s", "N");
-	sprintf (lonord, "%s", "E");
 
 	char deg_glyph[4];
 	sprintf (deg_glyph, "%s", "°");
@@ -69,16 +87,13 @@ void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
 	lat_sign = input[72]; //64
 
 	lon_mmin = (uint16_t)ConvertBitIntoBytes(&input[72], 16); //? bits required, but grabbing two octets
-	lon_min  = (uint8_t)ConvertBitIntoBytes(&input[90], 6);  //6 bits required to get 60 (could also include the 4 bits starting at 86)
+	lon_min  = (uint8_t)ConvertBitIntoBytes(&input[90], 6);  //6 bits required to get 60
 	lon_deg  = (uint8_t)ConvertBitIntoBytes(&input[96], 8); //8 bits required to get 180 
 	lon_sign = input[88]; //88, unsure of a correct location, but on the sample with 0 minutes, this lonely bit was flagged on
 
-	//unused, maybe we will use them still somehow if we also display ddmmss format
-	if (lat_sign)
-		sprintf (latord, "%s", "S");
-
-	if (lon_sign) 
-		sprintf (lonord, "%s", "W");
+	int src = 0;
+	if (slot == 0) src = state->lastsrc;
+	if (slot == 1) src = state->lastsrcR;
 
 	//calculate decimal representation (was a pain to figure out the sub minute values)
 	lat_dec = ( (float)lat_deg + ((float)lat_min/60.0f) + ((float)lat_mmin/600000.0f) );
@@ -90,11 +105,26 @@ void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
 	if (lon_sign) 
 		lon_dec *= -1.0f;
 
-	fprintf (stderr, " GPS: %f%s, %f%s", lat_dec, deg_glyph, lon_dec, deg_glyph);
-	// fprintf (stderr, " Speed: %d kph; Track: %d%s;", speed, angle, deg_glyph);
-
 	//line break
 	fprintf (stderr, "\n");
+	fprintf (stderr, " GPS: %f%s, %f%s;", lat_dec, deg_glyph, lon_dec, deg_glyph);
+
+	//gps fix time
+	// fprintf (stderr, " RT: %05X;", rtime); //debug
+	fprintf (stderr, " LTS: %02d:%02d:%02d UTC;", thour, tmin, tsec);  //last time synced to GPS
+	
+	//speed and direction
+	// fprintf (stderr, " RSPD: %04X;", rspeed); //debug
+	// fprintf (stderr, " RANG: %02X;", rangle); //debug
+	// fprintf (stderr, " MPS: %06.02f;", fspeed);
+	// fprintf (stderr, " KPH: %06.02f;", fspeed * 3.6f);
+	// fprintf (stderr, " MPH: %06.02f;", fspeed * 2.2369f);
+	fprintf (stderr, " DIR: %03d%s;", a, deg_glyph);
+
+	// fprintf (stderr, " FIX: %d", fix);
+	// fprintf (stderr, " QLT: %02d", quality);
+
+	// fprintf (stderr, " SRC: %08d;", src);
 
 	//save to array for ncurses
 	sprintf (state->dmr_embedded_gps[slot], "GPS: (%f%s, %f%s)", lat_dec, deg_glyph, lon_dec, deg_glyph);
@@ -103,26 +133,23 @@ void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
 	FILE * pFile; //file pointer
 	if (opts->lrrp_file_output == 1)
 	{
-		int src = 0;
-		if (slot == 0) src = state->lastsrc;
-		if (slot == 1) src = state->lastsrcR;
-
 		//open file by name that is supplied in the ncurses terminal, or cli
 		pFile = fopen (opts->lrrp_out_file, "a");
 		fprintf (pFile, "%s\t", getDateL() );
 		fprintf (pFile, "%s\t", getTimeL() );
 		fprintf (pFile, "%08d\t", src);
-		fprintf (pFile, "%.5lf\t", lat_dec);
-		fprintf (pFile, "%.5lf\t", lon_dec);
-		fprintf (pFile, "0\t " ); //zero for velocity
-		fprintf (pFile, "0\t " ); //zero for azimuth
+		fprintf (pFile, "%.6lf\t", lat_dec);
+		fprintf (pFile, "%.6lf\t", lon_dec);
+		fprintf (pFile, "%d\t ", s);
+		fprintf (pFile, "%d\t ", a);
 		fprintf (pFile, "\n");
 		fclose (pFile);
 
 	}
 
-	//NOTE: There are quite a few left over octets, 10?, (not including potential speed/angle)
-	//so, plenty of space for other information, currently unknown what that would be
+	//NOTE: Thanks to DSheirer (SDRTrunk) for helping me work out a few of the things in here
+	//not entirely convinced on some of these calcs (speed, angle, and TS) but sure these bits
+	//are actual speed/direction/timestamps judging from what the coordinates show on a map
 }
 
 void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned long long int MAC[24])
@@ -1883,10 +1910,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			harris_gps (opts, state, slot, mac_bits);
 
 			//debug - just dump payload
-			for (i = 0; i < 24; i++)
-					fprintf (stderr, " %02llX", MAC[i]);
+			// for (i = 0; i < 24; i++)
+			// 		fprintf (stderr, " %02llX", MAC[i]);
 
-			fprintf(stderr, "\n DEV NOTE: If you see this message, but incorrect lat/lon,\n please submit samples to https://github.com/lwvmobile/dsd-fme/issues");
 			len_b = 17;
 
 		}
@@ -1903,8 +1929,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		//Synchronization Broadcast (SYNC_BCST)
 		if (MAC[1+len_a] == 0x70)
 		{
-			fprintf (stderr, "\n Synchronization Broadcast \n");
+			//NOTE: I've observed the minute value on Harris (Duke) does not work the same (rolls over every ~3 minutes)
+			//as it does on a Moto system (actual minute value), may want to expose and check mm or mc bits (AABC-D Page 199-200)
+			fprintf (stderr, "\n Synchronization Broadcast");
+			int us  =   (MAC[3+len_a] >> 3) & 0x1; //synced or unsynced FDMA to TDMA
 			int ist =   (MAC[3+len_a] >> 2) & 0x1; //IST bit tells us if time is realiable, synced to external source
+			int mm  =   (MAC[3+len_a] >> 1) & 0x1; //Minute / Microslot Boundary Unlocked
+			int mc  =   (((MAC[3+len_a] >> 0) & 0x1) << 1) + (((MAC[4+len_a] >> 7) & 0x1) << 0); //Minute Correction
+			int vl  =   (MAC[4+len_a] >> 6) & 0x1; //Local Time Offset if Valid
 			int ltoff = (MAC[4+len_a] & 0x3F);
 			int year  = MAC[5+len_a] >> 1;
 			int month = ((MAC[5+len_a] & 0x1) << 3) | (MAC[6+len_a] >> 5);
@@ -1914,6 +1946,17 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int slots = ((MAC[8+len_a] & 0x1F) << 8) | MAC[9+len_a];
 			int sign = (ltoff & 0b100000) >> 5;
 			float offhour = 0;
+
+			if (opts->payload == 1)
+			{
+				fprintf (stderr, "\n");
+				if (us)  fprintf (stderr, " Unsynchronized Slots;");
+				if (ist) fprintf (stderr, " External System Time Sync;");
+				if (mm)  fprintf (stderr, " Minute / Microslots Boundary Unlocked;"); //just a rolling counter
+				if (mc)  fprintf (stderr, " Minute Correction: +%.01f ms;", (float)mc * 2.5f);
+				if (vl)  fprintf (stderr, " Local Time Offset Valid;");
+			}
+
 			//calculate local time (on system) by looking at offset and subtracting 30 minutes increments, or divide by 2 for hourly
 			if (sign == 1)
 			{
@@ -1926,20 +1969,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			if (year != 0) //if time is synced in this PDU
 			{
-				fprintf (stderr, "  Date: 20%02d.%02d.%02d Time: %02d:%02d:%02d UTC", 
+				fprintf (stderr, "\n  Date: 20%02d.%02d.%02d Time: %02d:%02d:%02d UTC", 
 								year, month, day, hour, min, seconds);
-				if (offhour != 0)
+				if (offhour != 0) //&& vl == 1
 					fprintf (stderr, "\n  Local Time Offset: %.01f Hours;", offhour);
-				//if ist bit is set, then time on system may be considered invalid (i.e., no external time sync)
-				if (ist == 1)
-				{
-					fprintf (stderr, " External System Time Sync; ");
-				}
-				// else fprintf (stderr, " No System Time Sync; ");
 			}
-			else fprintf (stderr, " Sync Slots: %d; ", slots); //Sync Slots -- This may not be accurate if out of scope of the PDU
-			
-
+			if (opts->payload == 1)
+				fprintf (stderr, "\n US: %d; IST: %d; MM: %d; MC: %d; VL: %d; Sync Slots: %d; ", us, ist, mm, mc, vl, slots);
 		}
 
 		//identifier update VHF/UHF 
