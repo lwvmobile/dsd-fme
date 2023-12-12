@@ -130,7 +130,6 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   memset (ec, -2, sizeof(ec));
   memset (err, -2, sizeof(err));
 
-  int skipdibit = 14; //initial status dibit will occur at 14, then add 36 each time it occurs
   int MFID = 0xFF; //Manufacturer ID
 
   uint8_t mpdu_byte[18*129];
@@ -165,32 +164,52 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   int stop = 101;
   int start = 0;
 
-  //collect x-len reps of 101 dibits (98 valid dibits with status dibits interlaced)
+  //now using modulus on skipdibit values
+  int skipdibit = 36-14; //when we arrive here, we are at this position in the counter after reading FS, NID, DUID, and Parity dibits
+  int status_count = 1; //we have already skipped the Status 1 dibit before arriving here
+  int dibit_count = 0; //number of gathered dibits
+  UNUSED(status_count); //debug counter
+
+  //collect x-len reps of 100 or 101 dibits (98 valid dibits with two or three status dibits sprinkled in)
   for (j = 0; j < end; j++)
   {
     k = 0;
-    if (j == 3) //may need to do this for multiple alignments, unsure, or change this part to work more...better....still need to triple check this
-      start = 1; //fixes decoding error past j 2 repitition, since the status dibit is perfectly aligned at the starting value at that point
-    else start = 0; 
+    dibit_count = 0;
     for (i = start; i < stop; i++)
     {
-
       dibit = getDibit(opts, state);
-
-      if (i+(j*101) != skipdibit) //
+      if ( (skipdibit / 36) == 0)
       {
-        tsbk_dibit[k] =   dibit;
-        tsbkbit[k*2]   = (dibit >> 1) & 1;
-        tsbkbit[k*2+1] = (dibit & 1);
-        k++;
+        dibit_count++;
+        tsbk_dibit[k++] = dibit;
       }
-
-      if (i+(j*101) == skipdibit) 
+      else
       {
-        skipdibit += 36;
-      }
+        skipdibit = 0;
+        status_count++;
 
+        // fprintf (stderr, " S:%02d; D:%03d; i:%03d;", status_count, (j*101)+i+57, i); //debug Status Count, Total Dibit Count, and i (compare to symbol rx table)
+        // fprintf (stderr, " S:%02d; CD:%02d; i:%03d; d:%d;", status_count, dibit_count, i, dibit); //debug Status Count, Current Dibit Count, i, and status dibit
+        
+        //debug, intepret status dibit (no fec or parity, so could easily be errroneous, could also be different on a data channel vs conventional?)
+        // if (dibit == 0) fprintf (stderr, " Unknown - Use for Talk Around;");
+        // if (dibit == 1) fprintf (stderr, " Inbound Channel Busy;");
+        // if (dibit == 2) fprintf (stderr, " Unknown - Use for Inbound or Outbound;");
+        // if (dibit == 3) fprintf (stderr, " Inbound Channel Idle;");
+
+        //this is used to skip gathering one dibit as well since we only will end up skipping 2 status dibits (getting 99 instead of 98, throwing alignment off)
+        // if (i > 92) start = 1; //testing values (i > 101-(36*3)-101)? may need longer 3/4 rata messages for comparison/correction (fall back to this if issues arise)
+        // else start = 0;
+      }
+      
+      skipdibit++; //increment
+
+      //this is used to skip gathering one dibit as well since we only will end up skipping 2 status dibits (getting 99 instead of 98, throwing alignment off)
+      if (dibit_count == 98) //this could cause an issue though if the next bit read is supposed to be a status dibit (unsure) it may not matter, should be handled as first read in next rep
+        break;
     }
+
+    // fprintf (stderr, " DC: %d\n", dibit_count); //debug
 
     //send header to p25_12 and return tsbk_byte
     if (j == 0) ec[j] = p25_12 (tsbk_dibit, tsbk_byte);
