@@ -87,10 +87,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     memset (state->active_channel, 0, sizeof(state->active_channel));
   }
 
-  int tsbkbit[196]; //tsbk bit array, 196 trellis encoded bits
   uint8_t tsbk_dibit[98];
-
-  memset (tsbkbit, 0, sizeof(tsbkbit));
   memset (tsbk_dibit, 0, sizeof(tsbk_dibit));
 
   int dibit = 0;

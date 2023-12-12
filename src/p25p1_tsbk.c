@@ -21,10 +21,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     memset (state->active_channel, 0, sizeof(state->active_channel));
   }
 
-  int tsbkbit[196]; //tsbk bit array, 196 trellis encoded bits
   uint8_t tsbk_dibit[98];
-
-  memset (tsbkbit, 0, sizeof(tsbkbit));
   memset (tsbk_dibit, 0, sizeof(tsbk_dibit));
 
   int dibit = 0;
@@ -41,12 +38,17 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
   int i, j, k, x;
   int ec = -2; //error value returned from p25_12
   int err = -2; //error value returned from crc16_lb_bridge
-  int skipdibit = 14; //initial status dibit will occur at 14, then add 36 each time it occurs
+
   int protectbit = 0;
   int MFID = 0xFF; //Manufacturer ID - Might be beneficial to NOT send anything but standard 0x00 or 0x01 messages
   int lb = 0; //last block
 
-  //TODO: Don't Print TSBKs/vPDUs unless verbosity levels set higher
+  //now using modulus on skipdibit values (this was unneccesary on TSBK, but doing it to keep the two roughly the same code wise)
+  int skipdibit = 36-14; //when we arrive here, we are at this position in the counter after reading FS, NID, DUID, and Parity dibits
+  int status_count = 1; //we have already skipped the Status 1 dibit before arriving here
+  int dibit_count = 0; //number of gathered dibits
+  UNUSED(status_count); //debug counter
+  UNUSED(dibit_count); //debug counter
 
   //collect three reps of 101 dibits (98 valid dibits with status dibits interlaced)
   for (j = 0; j < 3; j++)
@@ -56,23 +58,29 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     {
 
       dibit = getDibit(opts, state);
-
-      if (i+(j*101) != skipdibit) //
+      if ( (skipdibit / 36) == 0)
       {
-        tsbk_dibit[k] =   dibit;
-        tsbkbit[k*2]   = (dibit >> 1) & 1;
-        tsbkbit[k*2+1] = (dibit & 1);
-        k++;
+        dibit_count++;
+        tsbk_dibit[k++] = dibit;
       }
 
-      if (i+(j*101) == skipdibit) 
+      else
       {
-        skipdibit += 36;
+        skipdibit = 0;
+        status_count++;
+
+        // fprintf (stderr, " S:%02d; D:%03d; i:%03d;", status_count, (j*101)+i+57, i); //debug Status Count, Total Dibit Count, and i (compare to symbol rx table)
+        // fprintf (stderr, " S:%02d; CD:%02d; i:%03d; d:%d;", status_count, dibit_count, i, dibit); //debug Status Count, Current Dibit Count, i, and status dibit
+
       }
+
+      skipdibit++; //increment
 
     }
 
-    //send to p25_12
+    // fprintf (stderr, " DC: %d", dibit_count); //debug
+
+    //send to p25_12 and return tsbk_byte
     ec = p25_12 (tsbk_dibit, tsbk_byte);
 
     //debug err tally from 1/2 decoder
