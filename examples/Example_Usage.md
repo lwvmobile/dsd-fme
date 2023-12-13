@@ -8,13 +8,13 @@
 -fa Legacy Auto (not recommended)
 -fi NXDN48
 -fn NXDN96
--fp ProVoice
+-fp EDACS/Provoice
 -fm dPMR, also may need to use -xd if inverted dPMR.
--fr DMR Mono, also may need to use -xr if inverted DMR.
 -f1 P25P1
--f2 P25P2 (may need to specify wacn/sys/nac manually)
+-f2 P25P2 (may need to specify wacn/sys/nac manually if traffic channel)
 -fx X2-TDMA
 -fy YSF
+-fz M17 Audio
 ```
 
 ## Conventional Frequency Scanner
@@ -201,9 +201,13 @@ l - Hold TG in Slot 2 on TDMA Systems, or clear current hold (Testing/WIP: DMR T
 
 ```
 
-Sending Audio to a Icecast 2 Server via FFmpeg (Windows)
-# Make sure to enable "Stereo Mix" from Volume Control Panel and then disable Windows Sounds.
+## Sending Audio to a Icecast 2 Server via FFmpeg (Windows)
+
+Make sure to enable "Stereo Mix" from Volume Control Panel and then disable Windows Sounds.
+
+```
 ffmpeg -f dshow -i audio="Stereo Mix (Realtek High Definition Audio)" -c:a aac -b:a 64k -content_type 'audio/aac' -vn -f adts icecast://source:password@192.168.5.251:8844/DSDFME
+```
 
 ## Sending Audio to a Icecast 2 Server via FFmpeg (Linux w/ Pulse Audio)
 

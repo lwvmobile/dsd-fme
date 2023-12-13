@@ -86,6 +86,7 @@ MBELib is considered a requirement in this build. You must read this notice prio
 
 ```
 git clone https://github.com/lwvmobile/mbelib
+git checkout ambe_tones
 cd mbelib
 mkdir build
 cd build

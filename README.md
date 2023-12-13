@@ -6,9 +6,9 @@ DSD-FME is an evolution of the original DSD project from 'DSD Author' using the 
 
 This project wouldn't be possible without a few good people providing me plenty of sample audio files to run over and over again. Special thanks to jurek1111, KrisMar, noamlivne, racingfan360, iScottyBotty, LimaZulu, Forts, thewraithe2008, RayAir, Cretu, and others for the many hours of wav samples and information provided by them. Most importantly, HRH17, whose insight, information, samples, and willingness to let me remote into a computer half-way across the globe in order to test trunking features are what make DSD-FME what it has become. I'd also like to thank mrscanner2008 for providing an additional remote where additional NXDN Type-C, 'Idas' Type-D, and XPT decoding and trunking could be sorted out. Thanks to volo-zyko for cleaning up a lot of code. Thank you everybody.
 
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/main/dsd-fme2.png)
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/audio_work/dsd-fme2.png)
 
-![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/main/dsd-fme3.png)
+![DSD-FME](https://github.com/lwvmobile/dsd-fme/blob/audio_work/dsd-fme3.png)
 
 ## Information
 

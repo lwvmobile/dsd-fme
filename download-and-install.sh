@@ -31,7 +31,7 @@ if [ "$ANSWER" = "y" ]; then
   cd $cdir
   git clone https://github.com/lwvmobile/dsd-fme
   cd dsd-fme
-  git checkout audio_work
+  #git checkout audio_work
   mkdir build
   cd build
   cmake ..
