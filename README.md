@@ -12,7 +12,7 @@ This project wouldn't be possible without a few good people providing me plenty 
 
 ## Information
 
-See the [examples](https://github.com/lwvmobile/dsd-fme/tree/main/examples "examples") folder for information on [cloning and installing](https://github.com/lwvmobile/dsd-fme/blob/main/examples/Install_Notes.md "cloning and installing"), [example usage](https://github.com/lwvmobile/dsd-fme/blob/main/examples/Example_Usage.md "example usage"), and [trunking examples](https://github.com/lwvmobile/dsd-fme/blob/main/examples/trunking.sh "trunking examples").
+See the [examples](https://github.com/lwvmobile/dsd-fme/tree/audio_work/examples "examples") folder for information on [cloning and installing](https://github.com/lwvmobile/dsd-fme/blob/audio_work/examples/Install_Notes.md "cloning and installing"), [example usage](https://github.com/lwvmobile/dsd-fme/blob/audio_work/examples/Example_Usage.md "example usage"), and [trunking examples](https://github.com/lwvmobile/dsd-fme/blob/audio_work/examples/trunking.sh "trunking examples").
 
 ## License
 Copyright (C) 2010 DSD Author
