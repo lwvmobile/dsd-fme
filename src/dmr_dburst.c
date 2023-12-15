@@ -10,10 +10,10 @@
  *-----------------------------------------------------------------------------*/
 
 //WIP:  Unified Single Block Data - USBD -- TODO: USBD LIP Protocol Handling
-//WIP:  UDT Header and Blocks (coded - need samples)
+//WIP:  UDT Header and Blocks (Assembly Working Now, Need UDT Protocol Handling Function)
+//WIP:  UDT Full Message CRC16 (Seems to work, but need to test more, could be just sample w/ errors in it)
 //WIP:  CRC9/CRC32 on Rate 1 Data (need samples)
-//WIP:  Reverse Channel Signalling - RC single burst BPTC/7-bit CRC (rc interleave) and when to run RC and not SB
-//WIP:  Single Burst Embedded LC - Non-RC single burst LC - Look for Late Entry Alg/Key
+//TODO: Address areas that require reading of ISO7, ISO8, and UTF-16 string formats
 
 #include "dsd.h"
 

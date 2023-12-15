@@ -118,6 +118,9 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     uint8_t udt_pf = dheader_bits[73];
     uint8_t udt_op = (uint8_t)ConvertBitIntoBytes(&dheader_bits[74], 6);
 
+    //ETSI TS 102 361-4 V1.12.1 (2023-07) p281 
+    udt_uab += 1; //add 1 internally, up to 4 appended blocks are carried, min is 1
+
     //p_head
     uint8_t p_sap  = (uint8_t)ConvertBitIntoBytes(&dheader_bits[0], 4);
     uint8_t p_mfid = (uint8_t)ConvertBitIntoBytes(&dheader_bits[8], 8);
@@ -229,6 +232,9 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
 
       //set data header to valid
       state->data_header_valid[slot] = 1;
+
+      //reset block counter to zero
+      state->data_block_counter[slot] = 0;
 
       //send to assembler as type 3, rearrange into CSBK type PDU (to verify), and send to dmr_cspdu
       dmr_block_assembler (opts, state, dheader, 12, 0x0B, 3);
@@ -422,7 +428,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   uint32_t CRCExtracted = 0;
   uint32_t IrrecoverableErrors = 0; 
 
-  uint8_t dmr_pdu_sf_bits[8*24*50]; //give plenty of space so we don't go oob
+  uint8_t dmr_pdu_sf_bits[8*24*129]; //give plenty of space so we don't go oob
 
   //MBC Header and Block CRC
   uint8_t mbc_crc_good[2]; //header and blocks crc pass/fail local storage
@@ -435,7 +441,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   uint8_t is_udt = 0;
   if (type == 3)
   {
-    blocks = state->data_block_counter[slot];
+    blocks = state->data_header_blocks[slot];
     is_udt = 1;
     type = 2;
   }
@@ -607,15 +613,18 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
     if (is_udt)
     {
-      blocks = state->data_header_blocks[slot];
-      if (blocks == blockcounter) lb = 1; //double check
-      pf = 0; //flag off is set from bit in error
+      lb = 0; //set to zero, data header may erroneously the lb flag check above (IG)
+      pf = 0; //set to zero, data header may erroneously the pf flag check above (A)
+      if (blocks == blockcounter) lb = 1; //seems to work now with the +1 on udt_uab
+      
+      //debug -- evaluate current block count vs the number of expected blocks
+      // fprintf (stderr, " BL: %d; BC: %d; ", blocks, blockcounter);
     }
 
     //last block arrived and we have a valid data header, time to send to cspdu decoder
     if (lb == 1 && state->data_header_valid[slot] == 1) 
     {
-      for(i = 0, j = 0; i < 12*4; i++, j+=8) //4 blocks max?
+      for(i = 0, j = 0; i < 12*6; i++, j+=8) //4 blocks max?
       {
         dmr_pdu_sf_bits[j + 0] = (state->dmr_pdu_sf[slot][i] >> 7) & 0x01;
         dmr_pdu_sf_bits[j + 1] = (state->dmr_pdu_sf[slot][i] >> 6) & 0x01;
@@ -645,12 +654,21 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         CRCExtracted = CRCExtracted | (uint32_t)(dmr_pdu_sf_bits[i + 96*(1+blocks) - 16] & 1); 
       }
 
-      uint8_t mbc_block_bits[12*8*3];
+      uint8_t mbc_block_bits[12*8*6]; //needed more room
       memset (mbc_block_bits, 0, sizeof(mbc_block_bits));
       //shift continuation blocks and last block into seperate array for crc check
-      for (i = 0; i < 12*8*3; i++) //only doing 3 blocks (4 minus the header)
+      for (i = 0; i < 12*8*3; i++) //only doing 3 blocks (4 minus the header), probably need to re-evalutate this
       {
         mbc_block_bits[i] = dmr_pdu_sf_bits[i+96]; //skip mbc header
+      }
+
+      if (is_udt)
+      {
+        memset (mbc_block_bits, 0, sizeof(mbc_block_bits));
+        for (i = 0; i < 12*8*blocks; i++)
+        {
+          mbc_block_bits[i] = dmr_pdu_sf_bits[i+96]; //skip udt header
+        }
       }
 
       CRCComputed = ComputeCrcCCITT16d (mbc_block_bits, ((blocks+0)*96)-16 );
@@ -680,8 +698,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
       //cspdu will only act on any fid/opcodes if good CRC to prevent falsing on control signalling
       if (!is_udt && !pf) dmr_cspdu (opts, state, dmr_pdu_sf_bits, state->dmr_pdu_sf[slot], CRCCorrect, IrrecoverableErrors);
 
-      //will need to reassemble partially before sending to dmr_pdu or dmr_cspdu for handling -- needs testing
-      if (is_udt && !pf) dmr_udt_cspdu_converter (opts, state, state->dmr_pdu_sf[slot], dmr_pdu_sf_bits, CRCCorrect, IrrecoverableErrors);
+      //will need to reassemble partially before sending to dmr_pdu or dmr_cspdu for handling -- disabled, TODO: redo this to read UDT directly
+      // if (is_udt && !pf) dmr_udt_cspdu_converter (opts, state, state->dmr_pdu_sf[slot], dmr_pdu_sf_bits, CRCCorrect, IrrecoverableErrors);
 
       //Full Super Frame MBC/UDT - Debug Output
       if (opts->payload == 1)
@@ -703,6 +721,22 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         fprintf (stderr, "%s ", KNRM);
       }
 
+      //This is a placeholder, TODO: Write Function to handle UDT and also handle ISO7, ISO8, and UTF16 text/aliases, etc
+      if (is_udt) //only on ISO8 opcode //&& (state->dmr_pdu_sf[slot][9] & 0x7F) == 0x1A
+      {
+        fprintf (stderr, "%s", KCYN);
+        if (opts->payload == 0)
+          fprintf (stderr, "\n ");
+        fprintf (stderr, "Unified Data Transport - ASCII: "  );
+        for (i = 12; i < ((blocks+1)*12)-2; i++)
+        {
+          if (state->dmr_pdu_sf[slot][i] <= 0x7E && state->dmr_pdu_sf[slot][i] >=0x20)
+          {
+            fprintf (stderr, "%c", state->dmr_pdu_sf[slot][i]);
+          }
+          else fprintf (stderr, " ");
+        }
+      }
     } //end last block flag on MBC
 
   } //end type 2 (MBC Header and Continuation)
