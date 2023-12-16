@@ -187,6 +187,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
       else if (udt_format == 0x08) sprintf (udtf_string, "%s", "Manu Spec"); //Manufacturer Specific
       else if (udt_format == 0x09) sprintf (udtf_string, "%s", "Manu Spec"); //Manufacturer Specific
       else if (udt_format == 0x0A) sprintf (udtf_string, "%s", "Mixed UTF"); //Appended block contains addr and 16-bit UTF-16BE
+      else if (udt_format == 0x0B) sprintf (udtf_string, "%s", "LIP LOCN");
       else                         sprintf (udtf_string, "%s", "Reserved");
     }
 
@@ -372,41 +373,206 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
 
 }
 
-//convert UDT to a CSBK friendly PDU format
-void dmr_udt_cspdu_converter (dsd_opts * opts, dsd_state * state, uint8_t block_bytes[], uint8_t block_bits[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors)
+void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes, uint32_t CRCCorrect)
 {
+  //TODO: double check end rep values to Text Format Modes vs padnibs/uab values
+  //TODO: Make Text Format Modes seperate function to be used more generically by other things
+  //TODO: NMEA/LIP Format (make seperate functions, LIP also used by USBD)
   int i, j;
+  UNUSED(CRCCorrect);
+  UNUSED(opts);
+  UNUSED(state);
 
-  //rearrange UDT data to a CSBK message format
-  uint8_t cs_byte[48]; //12 x 4, 2 bit AB should mean only 3 total appended blocks, so 4 all together (minus rearrangement)
-  memset (cs_byte, 0, sizeof (cs_byte));
-  uint8_t cs_bits[48*8];
-  memset (cs_bits, 0, sizeof (cs_bits));
-
-  cs_byte[0] = (uint8_t)ConvertBitIntoBytes(&block_bits[73], 7); //lb, pf and opcode byte
-  uint8_t udt_opcode = (uint8_t)ConvertBitIntoBytes(&block_bits[74], 6); //for observation testing
-  cs_byte[1] = 0; //set mfid to zero for now (may use custom value if needed later)
-  uint8_t udt_mfid = 0; //setting to zero
-  UNUSED2(udt_opcode, udt_mfid);
-
-  //should be 34 total (maximum) after removing tailing CRC16 (initial and last block)
-  for (i = 0; i < 34; i++) cs_byte[2+i] = block_bytes[12+i];
+  uint8_t cs_bits[8*12*5]; //maximum of 1 header and 4 blocks at 96 bits
+  UNUSED(cs_bits);
 
   //bytes to bits
-  for(i = 0, j = 0; i < 36; i++, j+=8) //4 blocks max?
+  for(i = 0, j = 0; i < 36; i++, j+=8)
   {
-    cs_bits[j + 0] = (cs_byte[i] >> 7) & 0x01;
-    cs_bits[j + 1] = (cs_byte[i] >> 6) & 0x01;
-    cs_bits[j + 2] = (cs_byte[i] >> 5) & 0x01;
-    cs_bits[j + 3] = (cs_byte[i] >> 4) & 0x01;
-    cs_bits[j + 4] = (cs_byte[i] >> 3) & 0x01;
-    cs_bits[j + 5] = (cs_byte[i] >> 2) & 0x01;
-    cs_bits[j + 6] = (cs_byte[i] >> 1) & 0x01;
-    cs_bits[j + 7] = (cs_byte[i] >> 0) & 0x01;
+    cs_bits[j + 0] = (block_bytes[i] >> 7) & 0x01;
+    cs_bits[j + 1] = (block_bytes[i] >> 6) & 0x01;
+    cs_bits[j + 2] = (block_bytes[i] >> 5) & 0x01;
+    cs_bits[j + 3] = (block_bytes[i] >> 4) & 0x01;
+    cs_bits[j + 4] = (block_bytes[i] >> 3) & 0x01;
+    cs_bits[j + 5] = (block_bytes[i] >> 2) & 0x01;
+    cs_bits[j + 6] = (block_bytes[i] >> 1) & 0x01;
+    cs_bits[j + 7] = (block_bytes[i] >> 0) & 0x01;
   }
 
-  dmr_cspdu (opts, state, cs_bits, cs_byte, CRCCorrect, IrrecoverableErrors);
-  
+  //Unified Data Transport (UDT) -- already checked, but may need a few of these here as well
+  uint8_t udt_ig = cs_bits[0]; //group or individual data
+  uint8_t udt_a  = cs_bits[1]; //response required
+  uint8_t udt_res = (uint8_t)ConvertBitIntoBytes(&cs_bits[2], 2);
+  uint8_t udt_format1 = (uint8_t)ConvertBitIntoBytes(&cs_bits[4], 4); //header format of UDT
+  uint8_t udt_sap = (uint8_t)ConvertBitIntoBytes(&cs_bits[8], 4);
+  uint8_t udt_format2 = (uint8_t)ConvertBitIntoBytes(&cs_bits[12], 4); //UDT Format referenced below
+  uint32_t udt_target = (uint32_t)ConvertBitIntoBytes(&cs_bits[16], 24);
+  uint32_t udt_source = (uint32_t)ConvertBitIntoBytes(&cs_bits[40], 24);
+  uint8_t udt_padnib = (uint8_t)ConvertBitIntoBytes(&cs_bits[64], 5);
+  uint8_t udt_zero = cs_bits[69]; //should always be zero?
+  uint8_t udt_uab = (uint8_t)ConvertBitIntoBytes(&cs_bits[70], 2) + 1; //udt appended blocks
+  uint8_t udt_sf = cs_bits[72];
+  uint8_t udt_pf = cs_bits[73];
+  uint8_t udt_op = (uint8_t)ConvertBitIntoBytes(&cs_bits[74], 6);
+  UNUSED4(udt_ig, udt_a, udt_res, udt_format1);
+  UNUSED4(udt_sap, udt_format2, udt_target, udt_source);
+  UNUSED4(udt_padnib, udt_zero, udt_sf, udt_pf);
+  UNUSED(udt_op);
+
+  //number of repititions required in various bit grabs
+  int end = 3; UNUSED(end);
+
+  //char strings
+  uint8_t iso7c;
+  uint8_t iso8c;
+  uint16_t utf16c;
+
+  //appended addresses -- max is 15 across 4 blocks
+  uint32_t address[16]; memset (address, 0, sizeof(address)); UNUSED(address);
+  uint8_t add_res = (uint8_t)ConvertBitIntoBytes(&cs_bits[96], 7); UNUSED(add_res);
+  uint8_t add_ok = cs_bits[103];
+
+  //BCD Format (Dialer Digits) -- max is 92 digits
+  uint8_t bcd_digits[93]; memset (bcd_digits, 0, sizeof(bcd_digits)); UNUSED(bcd_digits);
+
+  //initial linebreak
+  fprintf (stderr, "%s", KCYN);
+  fprintf (stderr, "\n ");
+
+  if      (udt_format2 == 0x00) ; //do we really want to do anything with this?
+  else if (udt_format2 == 0x01) //appended addresses
+  {
+    if (udt_uab == 1) end = 3;
+    if (udt_uab == 2) end = 7;
+    if (udt_uab == 3) end = 11;
+    if (udt_uab == 4) end = 15;
+    if (add_res) fprintf (stderr, "RES: %d; ", add_res);
+    fprintf (stderr, "OK: %d; ", add_ok); 
+    fprintf (stderr, "ADDR:");
+    for (i = 0; i < end; i++)
+    {
+      fprintf (stderr, " %d;", (uint32_t)ConvertBitIntoBytes(&cs_bits[(i*24)+104], 24));
+    }
+  }
+  else if (udt_format2 == 0x02) //BCD 4-bit Dialer Digits
+  {
+    if (udt_uab == 1) end = 20;
+    if (udt_uab == 2) end = 44;
+    if (udt_uab == 3) end = 95;
+    if (udt_uab == 4) end = 92;
+    end -= udt_padnib; //subtract padnib since its also 4 bits
+
+    fprintf (stderr, "BCD: ");
+    for (i = 0; i < end; i++)
+    {
+      fprintf (stderr, "%d", (uint8_t)ConvertBitIntoBytes(&cs_bits[(i*4)+96], 4));
+    }
+  }
+  else if (udt_format2 == 0x03) //ISO7 format
+  {
+    if (udt_uab == 1) end = 11;
+    if (udt_uab == 2) end = 25;
+    if (udt_uab == 3) end = 38;
+    if (udt_uab == 4) end = 52;
+    end -= udt_padnib/7; //is this correct?
+    fprintf (stderr, "ISO7: "  );
+    for (i = 0; i < end; i++) //max 368/7 = 52 character max?
+    {
+      iso7c = (uint8_t)ConvertBitIntoBytes(&cs_bits[(i*7)+96], 7);
+      if (iso7c >= 0x20 && iso7c <= 0x7E) //Standard ASCII Set
+        fprintf (stderr, "%c", iso7c);
+      else fprintf (stderr, " ");
+    }
+  }
+  else if (udt_format2 == 0x04) //ISO8 format
+  {
+    fprintf (stderr, "ISO8: "  );
+    if (udt_uab == 1) end = 10;
+    if (udt_uab == 2) end = 22;
+    if (udt_uab == 3) end = 34;
+    if (udt_uab == 4) end = 46;
+    end -= udt_padnib/8; //is this correct?
+    for (i = 0; i < end; i++)
+    {
+      iso8c = (uint8_t)ConvertBitIntoBytes(&cs_bits[(i*8)+96], 8);
+      if (iso8c >= 0x20 && iso8c <= 0x7E) //Standard ASCII Set
+        fprintf (stderr, "%c", iso8c);
+      // else if (iso8c >= 0x81 && iso8c <= 0xFE) //Extended ASCII Set
+      //   fprintf (stderr, "%c", iso8c);
+      else fprintf (stderr, " ");
+    }
+  }
+  else if (udt_format2 == 0x07) //UTF16 format
+  {
+    if (udt_uab == 1) end = 5;
+    if (udt_uab == 2) end = 11;
+    if (udt_uab == 3) end = 17;
+    if (udt_uab == 4) end = 23;
+    end -= udt_padnib/4; //example, 4 blocks sets 23 - (20nibs/4bits) = 18 chars
+    fprintf (stderr, "UTF16: "  );
+    for (i = 0; i < end; i++) //368/16 = 23 character max?
+    {
+      utf16c = (uint16_t)ConvertBitIntoBytes(&cs_bits[(i*16)+96], 16);
+      if (utf16c >= 0x20 && utf16c != 0x7F) //avoid control chars
+        fprintf (stderr, "%lc", utf16c); //will using lc work here? May depend on console locale settings?
+      else fprintf (stderr, " ");
+    }
+  }
+  else if (udt_format2 == 0x06) //IP
+  {
+    if (udt_uab == 1) //IP4
+    {
+      fprintf (stderr, "IP4: ");
+      fprintf (stderr, "%d.",(uint8_t)ConvertBitIntoBytes(&cs_bits[96+0], 8));
+      fprintf (stderr, "%d.",(uint8_t)ConvertBitIntoBytes(&cs_bits[96+8], 8));
+      fprintf (stderr, "%d.",(uint8_t)ConvertBitIntoBytes(&cs_bits[96+16], 8));
+      fprintf (stderr, "%d", (uint8_t)ConvertBitIntoBytes(&cs_bits[96+24], 8));
+    }
+    else //IP6
+    {
+      //TODO: 8 by 4 hex seperated by colons
+      fprintf (stderr, "IP6: ");
+      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+0], 16));
+      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+16], 16));
+      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+32], 16));
+      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+48], 16));
+      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+56], 16));
+      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+72], 16));
+      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+88], 16));
+      fprintf (stderr, "%04X", (uint16_t)ConvertBitIntoBytes(&cs_bits[96+104], 16));
+    }
+  }
+  else if (udt_format2 == 0x0A) //Mixed Address/UTF16
+  {
+    fprintf (stderr, "Address: %d", (uint32_t)ConvertBitIntoBytes(&cs_bits[96+8], 24));
+    fprintf (stderr, "Text: "  );
+    for (i = 0; i < 21; i++) //368/16 = 21 character max
+    {
+      utf16c = (uint16_t)ConvertBitIntoBytes(&cs_bits[(i*16)+96], 16);
+      if (utf16c >= 0x20 && utf16c != 0x7F) //avoid control chars
+        fprintf (stderr, "%c", utf16c);
+      else fprintf (stderr, " ");
+    }
+  }
+  else if (udt_format2 == 0x0A)
+  {
+    fprintf (stderr, "NMEA LOCN: "  ); //TODO: Add function to decode NMEA formats
+  }
+  else if (udt_format2 == 0x0B)
+  {
+    fprintf (stderr, "LIP LOCN: "  ); //TODO: Add function to decode LIP formats
+  }
+  else if (udt_format2 == 0x08 || udt_format2 == 0x09)
+  {
+    fprintf (stderr, "MANUFACTURER SPEC %02X: ", udt_format2);
+    //use -Z to expose this
+  }
+  else
+  {
+    fprintf (stderr, "Reserved %02X: ", udt_format2);
+    //use -Z to expose this
+  }
+  fprintf (stderr, "%s", KNRM);
 }
 
 //assemble the blocks as they come in, shuffle them into the unified dmr_pdu_sf
@@ -698,8 +864,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
       //cspdu will only act on any fid/opcodes if good CRC to prevent falsing on control signalling
       if (!is_udt && !pf) dmr_cspdu (opts, state, dmr_pdu_sf_bits, state->dmr_pdu_sf[slot], CRCCorrect, IrrecoverableErrors);
 
-      //will need to reassemble partially before sending to dmr_pdu or dmr_cspdu for handling -- disabled, TODO: redo this to read UDT directly
-      // if (is_udt && !pf) dmr_udt_cspdu_converter (opts, state, state->dmr_pdu_sf[slot], dmr_pdu_sf_bits, CRCCorrect, IrrecoverableErrors);
+      //send to udt decoder for handling
+      if (is_udt && !pf) dmr_udt_decoder (opts, state, state->dmr_pdu_sf[slot], CRCCorrect);
 
       //Full Super Frame MBC/UDT - Debug Output
       if (opts->payload == 1)
@@ -722,21 +888,21 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
       }
 
       //This is a placeholder, TODO: Write Function to handle UDT and also handle ISO7, ISO8, and UTF16 text/aliases, etc
-      if (is_udt) //only on ISO8 opcode //&& (state->dmr_pdu_sf[slot][9] & 0x7F) == 0x1A
-      {
-        fprintf (stderr, "%s", KCYN);
-        if (opts->payload == 0)
-          fprintf (stderr, "\n ");
-        fprintf (stderr, "Unified Data Transport - ASCII: "  );
-        for (i = 12; i < ((blocks+1)*12)-2; i++)
-        {
-          if (state->dmr_pdu_sf[slot][i] <= 0x7E && state->dmr_pdu_sf[slot][i] >=0x20)
-          {
-            fprintf (stderr, "%c", state->dmr_pdu_sf[slot][i]);
-          }
-          else fprintf (stderr, " ");
-        }
-      }
+      // if (is_udt) //only on ISO8 opcode //&& (state->dmr_pdu_sf[slot][9] & 0x7F) == 0x1A
+      // {
+      //   fprintf (stderr, "%s", KCYN);
+      //   if (opts->payload == 0)
+      //     fprintf (stderr, "\n ");
+      //   fprintf (stderr, "Unified Data Transport - ASCII: "  );
+      //   for (i = 12; i < ((blocks+1)*12)-2; i++)
+      //   {
+      //     if (state->dmr_pdu_sf[slot][i] <= 0x7E && state->dmr_pdu_sf[slot][i] >=0x20)
+      //     {
+      //       fprintf (stderr, "%c", state->dmr_pdu_sf[slot][i]);
+      //     }
+      //     else fprintf (stderr, " ");
+      //   }
+      // }
     } //end last block flag on MBC
 
   } //end type 2 (MBC Header and Continuation)
