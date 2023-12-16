@@ -508,7 +508,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 2) end = 11;
     if (udt_uab == 3) end = 17;
     if (udt_uab == 4) end = 23;
-    end -= udt_padnib/4; //example, 4 blocks sets 23 - (20nibs/4bits) = 18 chars
+    end -= udt_padnib/4; //example, 4 blocks sets 23 - (20nibs/4bits) = 18 chars, may need to check this again
     fprintf (stderr, "UTF16: "  );
     for (i = 0; i < end; i++) //368/16 = 23 character max?
     {
@@ -544,13 +544,18 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   }
   else if (udt_format2 == 0x0A) //Mixed Address/UTF16
   {
+    if (udt_uab == 1) end = 3;
+    if (udt_uab == 2) end = 9;
+    if (udt_uab == 3) end = 15;
+    if (udt_uab == 4) end = 21;
+    end -= udt_padnib/4; //is this correct?
     fprintf (stderr, "Address: %d", (uint32_t)ConvertBitIntoBytes(&cs_bits[96+8], 24));
     fprintf (stderr, "Text: "  );
-    for (i = 0; i < 21; i++) //368/16 = 21 character max
+    for (i = 0; i < end; i++) //368/16 = 21 character max
     {
       utf16c = (uint16_t)ConvertBitIntoBytes(&cs_bits[(i*16)+96], 16);
       if (utf16c >= 0x20 && utf16c != 0x7F) //avoid control chars
-        fprintf (stderr, "%c", utf16c);
+        fprintf (stderr, "%lc", utf16c);
       else fprintf (stderr, " ");
     }
   }
