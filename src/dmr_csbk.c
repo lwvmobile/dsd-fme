@@ -85,7 +85,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (csbk_o == 53) fprintf (stderr, " Duplex Private Voice Channel Grant (PV_GRANT_DX)");
         if (csbk_o == 54) fprintf (stderr, " Duplex Private Data Channel Grant (PD_GRANT_DX)");
         if (csbk_o == 55) fprintf (stderr, " Private Data Channel Grant: Multi Item (PD_GRANT)");
-        if (csbk_o == 56) fprintf (stderr, " Talkgroup Data Channel Grant: Multi Item (TD_GRANT)");
+        if (csbk_o == 56 && state->synctype != 33) //when not MS Data Sync (shares same OPcode as BS_DWN_ACT)
+          fprintf (stderr, " Talkgroup Data Channel Grant: Multi Item (TD_GRANT)");
 
         //Logical Physical Channel Number
         uint16_t lpchannum = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 12); 
@@ -834,11 +835,11 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
       }
 
-      if (csbk_o == 56)
+      if (csbk_o == 56 && state->synctype == 33) //only run on MS Data sync pattern
       {
         fprintf (stderr, "\n");
         fprintf (stderr, " BS Outbound Activation (BS_Dwn_Act) - ");
-
+        //Inbound CSBK only from MS source to 'wake' the repeater up (best that I understand)
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
         uint32_t source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
         fprintf (stderr, "Target [%d] - Source [%d] ", target, source);
