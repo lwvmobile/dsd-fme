@@ -121,6 +121,13 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     //ETSI TS 102 361-4 V1.12.1 (2023-07) p281 
     udt_uab += 1; //add 1 internally, up to 4 appended blocks are carried, min is 1
 
+    //NMEA Specific Fix for unspecified MFID format w/ 2 appended blocks (UAB 2) p291
+    if (udt_uab == 0x5 && udt_uab == 3)
+      udt_uab = 2; //set to two if long unspecified format
+
+    //Note: NMEA Reserved value UAB 3 is not referenced in ETSI, so unknown number of 
+    //appended blocks but we will assume it is supposed to be 4 appended blocks
+
     //p_head
     uint8_t p_sap  = (uint8_t)ConvertBitIntoBytes(&dheader_bits[0], 4);
     uint8_t p_mfid = (uint8_t)ConvertBitIntoBytes(&dheader_bits[8], 8);
@@ -373,15 +380,112 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
 
 }
 
+void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t src, int type)
+{
+  int slot = state->currentslot;
+
+  //NOTE: The Only difference between Short (type == 1) and Long Format (type == 2) 
+  //is the utc_ss3 on short vs utc_ss6 and inclusion of COG value on long
+
+  //NOTE: MFID Specific Formats are not handled here, unknown, could be added if worked out
+  //they could share most of the same elements and use the large spare bits in block 2 for extra
+  // uint8_t mfid = (uint8_t)ConvertBitIntoBytes(&input[88], 8); //on type 3, last octet of first block carries MFID
+
+  // uint8_t nmea_c = input[0];  //encrypted -- checked before we get here
+  uint8_t nmea_ns = input[1]; //north/south (lat sign)
+  uint8_t nmea_ew = input[2]; //east/west (lon sign)
+  uint8_t nmea_q = input[3]; //Quality Indicator (no fix or fix valid)
+  uint8_t nmea_speed = (uint8_t)ConvertBitIntoBytes(&input[4], 7); //speed in knots (127 = greater than 126 knots)
+
+  //Latitude Bits
+  uint8_t nmea_ndeg = (uint8_t)ConvertBitIntoBytes(&input[11], 7); //Latitude Degrees
+  uint8_t nmea_nmin = (uint8_t)ConvertBitIntoBytes(&input[18], 6); //Latitude Minutes
+  uint16_t nmea_nminf = (uint16_t)ConvertBitIntoBytes(&input[24], 14); //Latitude Fractions of Minutes
+
+  //Longitude Bits
+  uint8_t nmea_edeg = (uint8_t)ConvertBitIntoBytes(&input[38], 8); //Longitude Degrees
+  uint8_t nmea_emin = (uint8_t)ConvertBitIntoBytes(&input[46], 6); //Longitude Minutes
+  uint16_t nmea_eminf = (uint16_t)ConvertBitIntoBytes(&input[52], 14); //Longitude Fractions of Minutes
+
+  //UTC Time and COG
+  uint8_t nmea_utc_hh  = (uint8_t)ConvertBitIntoBytes(&input[66], 5);
+  uint8_t nmea_utc_mm  = (uint8_t)ConvertBitIntoBytes(&input[71], 6);
+  //seconds and the addition of COG is the difference between short and long formats
+  uint8_t nmea_utc_ss3 = (uint8_t)ConvertBitIntoBytes(&input[77], 3); //seconds in 10s
+  uint8_t nmea_utc_ss6 = (uint8_t)ConvertBitIntoBytes(&input[77], 6); //seconds in 1s
+  uint16_t nmea_cog = (uint16_t)ConvertBitIntoBytes(&input[103], 9); //course over ground in degrees
+
+  //lat and lon conversion
+  char deg_glyph[4];
+	sprintf (deg_glyph, "%s", "°");
+  float latitude = 0.0f;
+  float longitude = 0.0f;
+  float m_unit = 1.0f / 60.0f;     //unit to convert min into decimal value - (1/60)*60 minutes = 1 degree
+  float mm_unit = 1.0f / 1000.0f;  //unit to convert minf into decimal value - (0000 - 9999) 0.0001×9999 = .9999 minutes, so its sub 1 minute decimal
+
+  //speed conversion
+  float fmps, fmph, fkph = 0.0f; //conversion of knots to mps, kph, and mph values
+  fmps = (float)nmea_speed * 0.514444; UNUSED(fmps);
+  fmph = (float)nmea_speed * 1.15078f; UNUSED(fmph);
+  fkph = (float)nmea_speed * 1.852f;
+
+  //calculate decimal representation of latidude and longitude (need some samples to test)
+	latitude  = ( (float)nmea_ndeg + ((float)nmea_nmin*m_unit) + ((float)nmea_nminf*mm_unit) );
+	longitude = ( (float)nmea_edeg + ((float)nmea_emin*m_unit) + ((float)nmea_eminf*mm_unit) );
+
+  if (!nmea_ns) latitude  *= -1.0f; //0 is South, 1 is North
+  if (nmea_ew)  longitude *= -1.0f; //0 is West, 1 is East
+
+  fprintf (stderr, " GPS: %f%s, %f%s;", latitude, deg_glyph, longitude, deg_glyph);
+
+  //Speed in Knots
+  if (nmea_speed > 126)
+    fprintf (stderr, " SPD > 126 knots or %f kph;", fkph);
+  else
+    fprintf (stderr, " SPD: %d knots; %f kph;", nmea_speed, fkph);
+
+  //Print UTC Time and COG according to Format Type
+  if (type == 1)
+    fprintf (stderr, " FIX: %d; %02d:%02d:%02d UTC; Short Format;", nmea_q, nmea_utc_hh, nmea_utc_mm, nmea_utc_ss3);
+  if (type == 2)
+    fprintf (stderr, " FIX: %d; %02d:%02d:%02d UTC; COG: %d%s; Long Format;", nmea_q, nmea_utc_hh, nmea_utc_mm, nmea_utc_ss6, nmea_cog, deg_glyph);
+
+  //save to ncurses string
+  sprintf (state->dmr_embedded_gps[slot], "GPS: (%f%s, %f%s)", latitude, deg_glyph, longitude, deg_glyph);
+
+  //save to LRRP report for mapping/logging
+	FILE * pFile; //file pointer
+	if (opts->lrrp_file_output == 1)
+	{
+    int s = (int)fkph; //rounded interger format for the log report
+    int a = 0;
+    if (type == 2)
+      a = nmea_cog; //long format only
+		//open file by name that is supplied in the ncurses terminal, or cli
+		pFile = fopen (opts->lrrp_out_file, "a");
+		fprintf (pFile, "%s\t", getDateL() );
+		fprintf (pFile, "%s\t", getTimeL() ); //could switch to UTC time if desired, but would require local user offset
+		fprintf (pFile, "%08d\t", src);
+		fprintf (pFile, "%.6lf\t", latitude);
+		fprintf (pFile, "%.6lf\t", longitude);
+		fprintf (pFile, "%d\t ", s);
+		fprintf (pFile, "%d\t ", a);
+		fprintf (pFile, "\n");
+		fclose (pFile);
+
+	}
+
+}
+
 void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes, uint32_t CRCCorrect)
 {
   //TODO: double check end rep values to Text Format Modes vs padnibs/uab values
   //TODO: Make Text Format Modes seperate function to be used more generically by other things
-  //TODO: NMEA/LIP Format (make seperate functions, LIP also used by USBD)
+  //TODO: LIP Format (make seperate functions, LIP also used by USBD)
   int i, j;
   UNUSED(CRCCorrect);
   UNUSED(opts);
-  UNUSED(state);
+  int slot = state->currentslot;
 
   uint8_t cs_bits[8*12*5]; //maximum of 1 header and 4 blocks at 96 bits
   UNUSED(cs_bits);
@@ -435,9 +539,18 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   //BCD Format (Dialer Digits) -- max is 92 digits
   uint8_t bcd_digits[93]; memset (bcd_digits, 0, sizeof(bcd_digits)); UNUSED(bcd_digits);
 
+  //NMEA Debug Testing (need real world samples)
+  // udt_format2 = 0x5;
+  // for (int i = 0; i < 8; i++) cs_bits[184+i] = 0; //spare bits to zero
+  // cs_bits[96] = 0; //enc bit to zero
+  // uint8_t test[96*4]; memset (test, 1, sizeof(test)); // all ones test vector
+  // nmea_iec_61162_1 (opts, state, test, udt_source, 1);
+  // nmea_iec_61162_1 (opts, state, cs_bits+96, udt_source, 2);
+
   //initial linebreak
   fprintf (stderr, "%s", KCYN);
   fprintf (stderr, "\n ");
+  fprintf (stderr, "Slot %d - SRC: %d; TGT: %d; UDT ", slot+1, udt_source, udt_target);
 
   if      (udt_format2 == 0x00) ; //do we really want to do anything with this?
   else if (udt_format2 == 0x01) //appended addresses
@@ -502,7 +615,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       else fprintf (stderr, " ");
     }
   }
-  else if (udt_format2 == 0x07) //UTF16 format
+  else if (udt_format2 == 0x07) //UTF-16BE format
   {
     if (udt_uab == 1) end = 5;
     if (udt_uab == 2) end = 11;
@@ -530,7 +643,6 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     }
     else //IP6
     {
-      //TODO: 8 by 4 hex seperated by colons
       fprintf (stderr, "IP6: ");
       fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+0], 16));
       fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+16], 16));
@@ -542,7 +654,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       fprintf (stderr, "%04X", (uint16_t)ConvertBitIntoBytes(&cs_bits[96+104], 16));
     }
   }
-  else if (udt_format2 == 0x0A) //Mixed Address/UTF16
+  else if (udt_format2 == 0x0A) //Mixed Address/UTF-16BE
   {
     if (udt_uab == 1) end = 3;
     if (udt_uab == 2) end = 9;
@@ -559,9 +671,21 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       else fprintf (stderr, " ");
     }
   }
-  else if (udt_format2 == 0x0A)
+  else if (udt_format2 == 0x05)
   {
-    fprintf (stderr, "NMEA LOCN: "  ); //TODO: Add function to decode NMEA formats
+    //Would be nice to be able to test these all out to make sure the conditions are okay, etc
+    fprintf (stderr, "NMEA"  );
+    if (cs_bits[96] == 1) //check if its encrypted first
+      fprintf (stderr, " Encrypted Format :("  ); //sad face
+    else if (udt_uab == 1)
+      nmea_iec_61162_1 (opts, state, cs_bits+96, udt_source, 1); //short format w/ 1 appended block
+    else if (udt_uab == 2) 
+      nmea_iec_61162_1 (opts, state, cs_bits+96, udt_source, 2); //standard long format w/ 2 appended blocks
+    //check the 'spare' bits from 184 to 192 to see if this is a manufacturer specific nmea format
+    else if (udt_uab == 3) //mfid format w/ 2 appended blocks -- format unspecified -- this may fail to trigger due to block assembler
+      fprintf  (stderr, " Unspecified MFID Format: %02X;", (uint8_t)ConvertBitIntoBytes(&cs_bits[184], 8));
+    else //this may fail to trigger due to block assembler also
+      fprintf (stderr, " Reserved Format; ");
   }
   else if (udt_format2 == 0x0B)
   {
@@ -569,7 +693,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   }
   else if (udt_format2 == 0x08 || udt_format2 == 0x09)
   {
-    fprintf (stderr, "MANUFACTURER SPEC %02X: ", udt_format2);
+    fprintf (stderr, "MFID SPEC %02X: ", udt_format2);
     //use -Z to expose this
   }
   else
