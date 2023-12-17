@@ -420,8 +420,12 @@ void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint
 	sprintf (deg_glyph, "%s", "°");
   float latitude = 0.0f;
   float longitude = 0.0f;
+  // float m_unit = 1.0f / 60.0f;     //unit to convert min into decimal value - (1/60)*60 minutes = 1 degree
+  // float mm_unit = 1.0f / 10000.0f;  //unit to convert minf into decimal value - (0000 - 9999) 0.0001×9999 = .9999 minutes, so its sub 1 minute decimal
+
+  //testing w/ Harris NMEA like values (ran tests over there with this code, this seems to work on those values)
   float m_unit = 1.0f / 60.0f;     //unit to convert min into decimal value - (1/60)*60 minutes = 1 degree
-  float mm_unit = 1.0f / 1000.0f;  //unit to convert minf into decimal value - (0000 - 9999) 0.0001×9999 = .9999 minutes, so its sub 1 minute decimal
+  float mm_unit = 1.0f / 600000.0f;  //unit to convert minf into decimal value - (0000 - 9999) 0.0001×9999 = .9999 minutes, so its sub 1 minute decimal
 
   //speed conversion
   float fmps, fmph, fkph = 0.0f; //conversion of knots to mps, kph, and mph values
@@ -454,26 +458,26 @@ void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint
   sprintf (state->dmr_embedded_gps[slot], "GPS: (%f%s, %f%s)", latitude, deg_glyph, longitude, deg_glyph);
 
   //save to LRRP report for mapping/logging
-	FILE * pFile; //file pointer
-	if (opts->lrrp_file_output == 1)
-	{
+  FILE * pFile; //file pointer
+  if (opts->lrrp_file_output == 1)
+  {
     int s = (int)fkph; //rounded interger format for the log report
     int a = 0;
     if (type == 2)
       a = nmea_cog; //long format only
-		//open file by name that is supplied in the ncurses terminal, or cli
-		pFile = fopen (opts->lrrp_out_file, "a");
-		fprintf (pFile, "%s\t", getDateL() );
-		fprintf (pFile, "%s\t", getTimeL() ); //could switch to UTC time if desired, but would require local user offset
-		fprintf (pFile, "%08d\t", src);
-		fprintf (pFile, "%.6lf\t", latitude);
-		fprintf (pFile, "%.6lf\t", longitude);
-		fprintf (pFile, "%d\t ", s);
-		fprintf (pFile, "%d\t ", a);
-		fprintf (pFile, "\n");
-		fclose (pFile);
+    //open file by name that is supplied in the ncurses terminal, or cli
+    pFile = fopen (opts->lrrp_out_file, "a");
+    fprintf (pFile, "%s\t", getDateL() );
+    fprintf (pFile, "%s\t", getTimeL() ); //could switch to UTC time if desired, but would require local user offset
+    fprintf (pFile, "%08d\t", src);
+    fprintf (pFile, "%.6lf\t", latitude);
+    fprintf (pFile, "%.6lf\t", longitude);
+    fprintf (pFile, "%d\t ", s);
+    fprintf (pFile, "%d\t ", a);
+    fprintf (pFile, "\n");
+    fclose (pFile);
 
-	}
+  }
 
 }
 
@@ -682,9 +686,9 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     else if (udt_uab == 2) 
       nmea_iec_61162_1 (opts, state, cs_bits+96, udt_source, 2); //standard long format w/ 2 appended blocks
     //check the 'spare' bits from 184 to 192 to see if this is a manufacturer specific nmea format
-    else if (udt_uab == 3) //mfid format w/ 2 appended blocks -- format unspecified -- this may fail to trigger due to block assembler
+    else if (udt_uab == 3) //mfid format w/ 2 appended blocks -- format unspecified
       fprintf  (stderr, " Unspecified MFID Format: %02X;", (uint8_t)ConvertBitIntoBytes(&cs_bits[184], 8));
-    else //this may fail to trigger due to block assembler also
+    else
       fprintf (stderr, " Reserved Format; ");
   }
   else if (udt_format2 == 0x0B)
@@ -1015,23 +1019,6 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         if (pf) fprintf (stderr, "MBC/UDT Header/Blocks Protected ");
         fprintf (stderr, "%s ", KNRM);
       }
-
-      //This is a placeholder, TODO: Write Function to handle UDT and also handle ISO7, ISO8, and UTF16 text/aliases, etc
-      // if (is_udt) //only on ISO8 opcode //&& (state->dmr_pdu_sf[slot][9] & 0x7F) == 0x1A
-      // {
-      //   fprintf (stderr, "%s", KCYN);
-      //   if (opts->payload == 0)
-      //     fprintf (stderr, "\n ");
-      //   fprintf (stderr, "Unified Data Transport - ASCII: "  );
-      //   for (i = 12; i < ((blocks+1)*12)-2; i++)
-      //   {
-      //     if (state->dmr_pdu_sf[slot][i] <= 0x7E && state->dmr_pdu_sf[slot][i] >=0x20)
-      //     {
-      //       fprintf (stderr, "%c", state->dmr_pdu_sf[slot][i]);
-      //     }
-      //     else fprintf (stderr, " ");
-      //   }
-      // }
     } //end last block flag on MBC
 
   } //end type 2 (MBC Header and Continuation)
