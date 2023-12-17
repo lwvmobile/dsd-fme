@@ -35,6 +35,122 @@ static const uint8_t mac_msg_len[256] = {
 //TODO: Check for Non standard MFIDs first MAC[1], then set len on the MAC[2] if
 //the result from the len table is 0 (had to manually enter a few observed values from Harris)
 
+//restructured the Harris GPS to flow more like the DMR UDT NMEA Format when possible
+void nmea_harris (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t src, int slot)
+{
+
+	//GPS working, Time Working (old method), COG and Speed are logical on due west sample
+	//TODO: Fiddle/Test various ns and ew bits for proper signs incase its located elsewhere
+
+  uint8_t nmea_ns = input[72]; //north/south (lat sign) //72
+  uint8_t nmea_ew = input[88]; //east/west (lon sign)  //88
+  uint8_t nmea_q = input[147]; //Quality Indicator (last fix or current fix)
+  // uint8_t nmea_speed = (uint8_t)ConvertBitIntoBytes(&input[129], 7); //129,7
+	uint8_t nmea_speed = (uint8_t)ConvertBitIntoBytes(&input[129], 6); //this works without speed manip /2 on due west sample and also doesn't overlap with cog
+
+  //Latitude Bits
+  uint8_t nmea_ndeg = (uint8_t)ConvertBitIntoBytes(&input[65], 7); //Latitude Degrees
+  uint8_t nmea_nmin = (uint8_t)ConvertBitIntoBytes(&input[58], 6); //Latitude Minutes
+  uint16_t nmea_nminf = (uint16_t)ConvertBitIntoBytes(&input[42], 14); //Latitude Fractions of Minutes
+
+  //Longitude Bits
+  uint8_t nmea_edeg = (uint8_t)ConvertBitIntoBytes(&input[96], 8); //Longitude Degrees
+  uint8_t nmea_emin = (uint8_t)ConvertBitIntoBytes(&input[90], 6); //Longitude Minutes
+  uint16_t nmea_eminf = (uint16_t)ConvertBitIntoBytes(&input[74], 14); //Longitude Fractions of Minutes
+
+  //NOTE: Removed UTC hh.mm.ss6 format found in DMR UDT, could not make it work
+	//with bits already established for time and it works extremely well as is
+
+	//Course Over Ground in Degrees (0-360)
+  uint16_t nmea_cog = (uint16_t)ConvertBitIntoBytes(&input[135], 9) % 360; //course over ground in degrees //working on due west sample without %360
+
+	//timestamp (16-bit value w/ appended 17th bit to MSB)
+	uint32_t rtime = (uint32_t)ConvertBitIntoBytes(&input[104], 16);
+	rtime |= input[144] << 16; //this bit is flagged on after 0xFFFF rollover in the late afternoon
+	uint32_t thour = rtime / 3600;
+	uint32_t tmin  = (rtime % 3600) / 60;
+	uint32_t tsec  = (rtime % 3600) % 60;
+
+  //lat and lon conversion
+  char deg_glyph[4];
+	sprintf (deg_glyph, "%s", "°");
+  float latitude = 0.0f;
+  float longitude = 0.0f;
+  float m_unit = 1.0f / 60.0f;
+  float mm_unit = 1.0f / 600000.0f;
+
+	//debug speed adjustments
+	// nmea_speed /= 2;
+
+  //speed conversion
+  float fmps, fmph, fkph = 0.0f; //conversion of knots to mps, kph, and mph values
+  fmps = (float)nmea_speed * 0.514444; UNUSED(fmps);
+  fmph = (float)nmea_speed * 1.15078f; UNUSED(fmph);
+  fkph = (float)nmea_speed * 1.852f;
+
+  //calculate decimal representation of latidude and longitude (need some samples to test)
+	latitude  = ( (float)nmea_ndeg + ((float)nmea_nmin*m_unit) + ((float)nmea_nminf*mm_unit) );
+	longitude = ( (float)nmea_edeg + ((float)nmea_emin*m_unit) + ((float)nmea_eminf*mm_unit) );
+
+	//This is opposite (seemingly) compared to the version specified by DMR UDT NMEA, could still be different bits involved (to be tested)
+  if (nmea_ns) latitude  *= -1.0f; //1 is South, 0 is North
+  if (nmea_ew) longitude *= -1.0f; //1 is West, 0 is East
+
+	fprintf (stderr, "\n");
+
+	fprintf (stderr, " VCH: %d - SRC: %08d;", slot, src);
+  fprintf (stderr, " GPS: %f%s, %f%s;", latitude, deg_glyph, longitude, deg_glyph);
+
+  //Speed in Knots (assuming in knots, and not in mps, or kph)
+  if (nmea_speed > 126)
+    fprintf (stderr, " SPD > 126 knots or %f MPH;", fmph);
+  else
+    fprintf (stderr, " SPD: %d knots; %f mph;", nmea_speed, fmph);
+
+	//Course Over Ground (COG)
+	fprintf (stderr, " COG: %03d%s;", nmea_cog, deg_glyph); //%360
+
+	//debug speed
+	fprintf (stderr, " RSPD: %02X;", nmea_speed);
+
+	//debug cog
+	fprintf (stderr, " RCOG: %03X;", nmea_cog >> 0);
+
+  //UTC Time
+	fprintf (stderr, " T: %02d:%02d:%02d UTC;", thour, tmin, tsec);
+
+	//Fix Indicator
+	if (nmea_q) fprintf (stderr, " Current Fix;");
+	else fprintf (stderr, " Last Fix;");
+
+  //save to ncurses string
+  sprintf (state->dmr_embedded_gps[slot], "GPS: (%f%s, %f%s)", latitude, deg_glyph, longitude, deg_glyph);
+
+  //save to LRRP report for mapping/logging
+  FILE * pFile; //file pointer
+  if (opts->lrrp_file_output == 1)
+  {
+		//rounded interger formats for the log report
+    int s = (int)fkph;
+    int a = nmea_cog;
+
+    //open file by name that is supplied in the ncurses terminal, or cli
+    pFile = fopen (opts->lrrp_out_file, "a");
+    fprintf (pFile, "%s\t", getDateL() );
+    fprintf (pFile, "%s\t", getTimeL() ); //could switch to UTC time on PDU if desired
+    fprintf (pFile, "%08d\t", src);
+    fprintf (pFile, "%.6lf\t", latitude);
+    fprintf (pFile, "%.6lf\t", longitude);
+    fprintf (pFile, "%d\t ", s);
+    fprintf (pFile, "%d\t ", a);
+    fprintf (pFile, "\n");
+    fclose (pFile);
+
+  }
+
+}
+
+//fallback version (if desired/required)
 void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
 {
 
@@ -1907,7 +2023,12 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					mac_bits[z++] = (((uint8_t)MAC[l] << x) & 0x80) >> 7;
 			}
 
-			harris_gps (opts, state, slot, mac_bits);
+			int tsrc = 0;
+			if (slot == 0 && state->lastsrc != 0) tsrc = state->lastsrc;
+			if (slot == 1 && state->lastsrcR != 0) tsrc = state->lastsrcR;
+
+			// harris_gps (opts, state, slot, mac_bits); //fallback
+			nmea_harris (opts, state, mac_bits+0, tsrc, slot); //new
 
 			//debug - just dump payload
 			// for (i = 0; i < 24; i++)
