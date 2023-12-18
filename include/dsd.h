@@ -1111,11 +1111,15 @@ uint32_t dmr_34(uint8_t * input, uint8_t treturn[18]); //simplier trellis decode
 void beeper (dsd_opts * opts, dsd_state * state, int lr); //the tone beeper function
 void dmr_gateway_identifier (uint32_t source, uint32_t target); //translate special addresses
 
-//Embedded Alias and GPS
+//Embedded Alias and GPS reports
 void dmr_embedded_alias_header (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
 void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
 void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
 void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
+void lip_protocol_decoder (dsd_opts * opts, dsd_state * state, uint8_t * input);
+void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t src, int type);
+void nmea_harris (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t src, int slot);
+void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input);
 
 //"DMR STEREO"
 void dmrBSBootstrap (dsd_opts * opts, dsd_state * state);

@@ -6,13 +6,13 @@
  * Source: https://github.com/LouisErigHerve/dsd/blob/master/src/dmr_sync.c
  *
  * LWVMOBILE
- * 2022-12 DSD-FME Florida Man Edition
+ * 2023-12 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
-//WIP:  Unified Single Block Data - USBD -- TODO: USBD LIP Protocol Handling
-//WIP:  UDT Header and Blocks (Assembly Working Now, Need UDT Protocol Handling Function)
-//WIP:  UDT Full Message CRC16 (Seems to work, but need to test more, could be just sample w/ errors in it)
-//WIP:  CRC9/CRC32 on Rate 1 Data (need samples)
+//TODO: Test USBD LIP Decoder with Real World Samples (if/when available)
+//TODO: Test UDT NMEA and LIP Decoders with Real World Samples (if/when available)
+//WIP:  Move all extra decoders for location, etc, to a new file and add prototypes to dsd.h  
+//TODO: Test CRC9/CRC32 on Rate 1 Data with Real World Samples (if/when available)
 //TODO: Address areas that require reading of ISO7, ISO8, and UTF-16 string formats
 
 #include "dsd.h"
@@ -575,8 +575,8 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     //TODO: provide more robust handling at a later date -- ETSI TS 102 361-4 V1.11.1 (2021-01) 6.6.11.3
     usbd_st = (uint8_t)ConvertBitIntoBytes(&DMR_PDU_bits[0], 4);
     fprintf (stderr, "%s\n", KYEL);
-    fprintf (stderr, " Unified Single Block Data - ");
-    if (usbd_st == 0) fprintf (stderr, "Location Information Protocol");
+    fprintf (stderr, " USBD - ");
+    if (usbd_st == 0) lip_protocol_decoder (opts, state, DMR_PDU_bits);
     else if (usbd_st > 8) fprintf (stderr, "Manufacturer Specific Service %d ", usbd_st);
     else fprintf (stderr, "Reserved %d ", usbd_st);
   }
