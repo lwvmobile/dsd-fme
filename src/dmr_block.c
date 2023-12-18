@@ -438,7 +438,7 @@ void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint
 	longitude = ( (float)nmea_edeg + ((float)nmea_emin*m_unit) + ((float)nmea_eminf*mm_unit) );
 
   if (!nmea_ns) latitude  *= -1.0f; //0 is South, 1 is North
-  if (nmea_ew)  longitude *= -1.0f; //0 is West, 1 is East
+  if (!nmea_ew) longitude *= -1.0f; //0 is West, 1 is East
 
   fprintf (stderr, " GPS: %f%s, %f%s;", latitude, deg_glyph, longitude, deg_glyph);
 

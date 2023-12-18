@@ -40,13 +40,15 @@ void nmea_harris (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t 
 {
 
 	//GPS working, Time Working (old method), COG and Speed are logical on due west sample
-	//TODO: Fiddle/Test various ns and ew bits for proper signs incase its located elsewhere
+	//TODO: Fiddle/Test various ns and ew bits for proper signs in case its located elsewhere
+	//UPDATE: Found two contiguous bits that always work on all my accumulated samples
+	//the bits also place it with the 'lone' flagged bit observed prior
 
-  uint8_t nmea_ns = input[72]; //north/south (lat sign) //72
-  uint8_t nmea_ew = input[88]; //east/west (lon sign)  //88
+  uint8_t nmea_ns = input[88]; //north/south (lat sign) //72 previously used bit
+  uint8_t nmea_ew = input[89]; //east/west (lon sign)  //88 previously used bit
   uint8_t nmea_q = input[147]; //Quality Indicator (last fix or current fix)
   // uint8_t nmea_speed = (uint8_t)ConvertBitIntoBytes(&input[129], 7); //129,7
-	uint8_t nmea_speed = (uint8_t)ConvertBitIntoBytes(&input[129], 6); //this works without speed manip /2 on due west sample and also doesn't overlap with cog
+	uint8_t nmea_speed = (uint8_t)ConvertBitIntoBytes(&input[129], 6); //this is one bit shorter than called for, but I believe it works
 
   //Latitude Bits
   uint8_t nmea_ndeg = (uint8_t)ConvertBitIntoBytes(&input[65], 7); //Latitude Degrees
@@ -79,22 +81,23 @@ void nmea_harris (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t 
   float m_unit = 1.0f / 60.0f;
   float mm_unit = 1.0f / 600000.0f;
 
-	//debug speed adjustments
-	// nmea_speed /= 2;
-
   //speed conversion
   float fmps, fmph, fkph = 0.0f; //conversion of knots to mps, kph, and mph values
   fmps = (float)nmea_speed * 0.514444; UNUSED(fmps);
   fmph = (float)nmea_speed * 1.15078f; UNUSED(fmph);
-  fkph = (float)nmea_speed * 1.852f;
+  fkph = (float)nmea_speed * 1.852f;   UNUSED(fkph);
 
   //calculate decimal representation of latidude and longitude (need some samples to test)
 	latitude  = ( (float)nmea_ndeg + ((float)nmea_nmin*m_unit) + ((float)nmea_nminf*mm_unit) );
 	longitude = ( (float)nmea_edeg + ((float)nmea_emin*m_unit) + ((float)nmea_eminf*mm_unit) );
 
 	//This is opposite (seemingly) compared to the version specified by DMR UDT NMEA, could still be different bits involved (to be tested)
-  if (nmea_ns) latitude  *= -1.0f; //1 is South, 0 is North
-  if (nmea_ew) longitude *= -1.0f; //1 is West, 0 is East
+  // if (nmea_ns) latitude  *= -1.0f; //1 is South, 0 is North
+  // if (nmea_ew) longitude *= -1.0f; //1 is West, 0 is East
+
+	//DMR UDT NMEA original version (working now with new bit selection 88 and 89 like how DMR UDT NMEA format specifies)
+	if (!nmea_ns) latitude  *= -1.0f; //0 is South, 1 is North
+  if (!nmea_ew) longitude *= -1.0f; //0 is West, 1 is East
 
 	fprintf (stderr, "\n");
 
@@ -103,18 +106,18 @@ void nmea_harris (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t 
 
   //Speed in Knots (assuming in knots, and not in mps, or kph)
   if (nmea_speed > 126)
-    fprintf (stderr, " SPD > 126 knots or %f MPH;", fmph);
+    fprintf (stderr, " SPD > 126 knots or %f MPH;", fmph); //using MPH here, its Harris, they're in the U.S.
   else
-    fprintf (stderr, " SPD: %d knots; %f mph;", nmea_speed, fmph);
+    fprintf (stderr, " SPD: %d knots; %f MPH;", nmea_speed, fmph);
 
 	//Course Over Ground (COG)
 	fprintf (stderr, " COG: %03d%s;", nmea_cog, deg_glyph); //%360
 
 	//debug speed
-	fprintf (stderr, " RSPD: %02X;", nmea_speed);
+	// fprintf (stderr, " RSPD: %02X;", nmea_speed);
 
 	//debug cog
-	fprintf (stderr, " RCOG: %03X;", nmea_cog >> 0);
+	// fprintf (stderr, " RCOG: %03X;", nmea_cog >> 0);
 
   //UTC Time
 	fprintf (stderr, " T: %02d:%02d:%02d UTC;", thour, tmin, tsec);
@@ -147,6 +150,14 @@ void nmea_harris (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t 
     fclose (pFile);
 
   }
+
+	//NOTE: There seems to be a few more octets left undecoded in this PDU
+	//not including the CRC obviously, unsure of their meaning, could relate
+	//to other GPS functions like precision, etc, unknown.
+
+	//NOTE2: All these values are just best effort based on observation and 
+	//making map points match using logic and distance over time for speed and course
+	//without any documentation, any of these values may still be wrong
 
 }
 
