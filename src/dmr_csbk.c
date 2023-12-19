@@ -1806,6 +1806,21 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
     } //end Hytera XPT section
 
+    //misc discovered but not uncovered CSBKs
+    if (csbk_o == 41 && csbk_fid == 0x10)
+    {
+      //initial line break
+      fprintf (stderr, "\n"); 
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, " Moto Data Annoucement: %02X; ", csbk_o);
+      for (int i = 2; i < 10; i++)
+        fprintf (stderr, "%02X ", cs_pdu[i]);
+
+      //SDRTrunk suggest this could be a data channel revert announcement
+      //I'm not even sure what a revert data channel is
+      //Moto Unknown Data Opcode: 29; 00 00 00 39 04 FC 00 00
+    }
+
   }
 
   fprintf (stderr, "%s", KNRM);  
