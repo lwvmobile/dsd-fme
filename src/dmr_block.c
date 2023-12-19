@@ -450,6 +450,9 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   // nmea_iec_61162_1 (opts, state, test, udt_source, 1);
   // nmea_iec_61162_1 (opts, state, cs_bits+96, udt_source, 2);
 
+  //LIP Debug Testing (need real world samples)
+  // udt_format2 = 0x0B;
+
   //initial linebreak
   fprintf (stderr, "%s", KCYN);
   fprintf (stderr, "\n ");
@@ -592,7 +595,12 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   }
   else if (udt_format2 == 0x0B)
   {
-    fprintf (stderr, "LIP LOCN: "  ); //TODO: Add function to decode LIP formats
+    //unsure of how this is structured for UDT Blocks, would assume one appended block of same format
+    //but could also be full blown LIP protocol that is also found in tetra that would require the PDU
+    //type bit to be read and then to decode accordingly, this assumes its the modified Short PDU that USBD uses
+    fprintf (stderr, "\n");
+    lip_protocol_decoder (opts, state, cs_bits+96); //start on first appended block, and not header
+
   }
   else if (udt_format2 == 0x08 || udt_format2 == 0x09)
   {
