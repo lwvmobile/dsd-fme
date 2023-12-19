@@ -760,6 +760,82 @@ bool Hamming_16_11_4_decode(unsigned char *rxBits, unsigned char *decodedBits, i
 
 // ========================================================================================
 
+void rand_test_20_8() //from dforsi as a pull request to DSDcc
+{
+    unsigned char msg[8];
+    unsigned char codeword[20], xcodeword[20];
+    int idx1, idx2, idx3 = 0;
+    int dataIn, dataOut; UNUSED(dataIn); //don't know why its reporting dataIn as unused for
+    int passCount = 0, failCount = 0, parityFailCount = 0;
+
+    // Run multiple times, to randomly corrupt different bits
+    // Takes about 10 seconds on a fast PC
+    for (int repeat = 0; repeat < 100000/2; repeat++)
+    {
+        // Exhaustively test all 8-bit inputs
+        for (int dataIn = 0; dataIn < 256; dataIn++)
+        {
+            // Convert to array of bits
+            for (int j = 0; j < 8; j++) {
+                msg[j] = (dataIn >> j) & 1;
+            }
+
+            // Encode
+            Golay_20_8_encode(msg, codeword);
+
+            // Save copy of uncorrupted codeword
+            memcpy(xcodeword, codeword, 20*sizeof(unsigned char));
+
+            //change the seed each time, using time(NULL) will only change the seed once every second, otherwise resets it to the same seed
+            srand(dataIn+dataOut);
+
+            // Randomly corrupt up to 3 bits
+            idx1 = rand() % 20;
+            idx2 = rand() % 20;
+            idx3 = rand() % 20;
+            codeword[idx1] ^= codeword[idx1];
+            codeword[idx2] ^= codeword[idx2];
+            codeword[idx3] ^= codeword[idx3];
+
+            //flip the parity bit
+            // codeword[19] ^= 1;
+
+            bool fail = false;
+            // Decode and correct errors
+            dataOut = 0;
+            if (Golay_20_8_decode(codeword))
+            {
+                // Check data is corrected
+                for (int j = 0; j < 8; j++) {
+                    dataOut |= codeword[j] << j;
+                }
+                if (dataIn != dataOut) {
+                    fail = true;
+                }
+
+                // Check also that parity has been corrected, as we previously had a bug with this
+                if (memcmp(codeword, xcodeword, 20)) {
+                    parityFailCount++;
+                }
+            }
+            else
+            {
+                fail = true;
+            }
+            if (fail)
+            {
+                fprintf (stderr, "\n Decode Failed: IN:%05X; OUT:%05X; IDX: %d, %d, %d; ", dataIn, dataOut, idx1, idx2, idx3);
+                failCount++;
+            }
+            else
+            {
+                passCount++;
+                // fprintf (stderr, "\n Decode Passed: IN:%05X; OUT:%05X; IDX: %d, %d, %d; ", dataIn, dataOut, idx1, idx2, idx3);
+            }
+        }
+    }
+    fprintf (stderr, "\n Passcount: %d; Failcount: %d; Parity Fail Count: %d \n", passCount, failCount, parityFailCount);
+}
 
 void Golay_20_8_init()
 {
@@ -806,7 +882,7 @@ void Golay_20_8_init()
                 syndromeIP = syndromeI ^ (1 << (11-ip));
                 Golay_20_8_m_corr[syndromeIP][0] = i1;
                 Golay_20_8_m_corr[syndromeIP][1] = i2;
-                Golay_20_8_m_corr[syndromeIP][2] = 12 + ip;
+                Golay_20_8_m_corr[syndromeIP][2] = 8 + ip;
             }
         }
 
@@ -824,14 +900,14 @@ void Golay_20_8_init()
         {
             syndromeIP1 = syndromeI ^ (1 << (11-ip1));
             Golay_20_8_m_corr[syndromeIP1][0] = i1;
-            Golay_20_8_m_corr[syndromeIP1][1] = 12 + ip1;
+            Golay_20_8_m_corr[syndromeIP1][1] = 8 + ip1;
 
             for (ip2 = ip1+1; ip2 < 12; ip2++) // 1 more bit flip in parity
             {
                 syndromeIP2 = syndromeIP1 ^ (1 << (11-ip2));
                 Golay_20_8_m_corr[syndromeIP2][0] = i1;
-                Golay_20_8_m_corr[syndromeIP2][1] = 12 + ip1;
-                Golay_20_8_m_corr[syndromeIP2][2] = 12 + ip2;
+                Golay_20_8_m_corr[syndromeIP2][1] = 8 + ip1;
+                Golay_20_8_m_corr[syndromeIP2][2] = 8 + ip2;
             }
         }
     }
@@ -840,23 +916,25 @@ void Golay_20_8_init()
     for (ip1 = 0; ip1 < 12; ip1++) // 1 bit flip in parity
     {
         syndromeIP1 =  (1 << (11-ip1));
-        Golay_20_8_m_corr[syndromeIP1][0] = 12 + ip1;
+        Golay_20_8_m_corr[syndromeIP1][0] = 8 + ip1;
 
         for (ip2 = ip1+1; ip2 < 12; ip2++) // 1 more bit flip in parity
         {
             syndromeIP2 = syndromeIP1 ^ (1 << (11-ip2));
-            Golay_20_8_m_corr[syndromeIP2][0] = 12 + ip1;
-            Golay_20_8_m_corr[syndromeIP2][1] = 12 + ip2;
+            Golay_20_8_m_corr[syndromeIP2][0] = 8 + ip1;
+            Golay_20_8_m_corr[syndromeIP2][1] = 8 + ip2;
 
             for (ip3 = ip2+1; ip3 < 12; ip3++) // 1 more bit flip in parity
             {
                 syndromeIP3 = syndromeIP2 ^ (1 << (11-ip3));
-                Golay_20_8_m_corr[syndromeIP3][0] = 12 + ip1;
-                Golay_20_8_m_corr[syndromeIP3][1] = 12 + ip2;
-                Golay_20_8_m_corr[syndromeIP3][2] = 12 + ip3;
+                Golay_20_8_m_corr[syndromeIP3][0] = 8 + ip1;
+                Golay_20_8_m_corr[syndromeIP3][1] = 8 + ip2;
+                Golay_20_8_m_corr[syndromeIP3][2] = 8 + ip3;
             }
         }
     }
+
+    // rand_test_20_8(); //test
 }
 
 // Not very efficient but encode is used for unit testing only
