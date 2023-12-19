@@ -12,7 +12,7 @@
 void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t dheader_bits[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors)
 {
   
-  uint32_t i;
+  int i;
   uint8_t slot = state->currentslot;
 
   //clear out unified pdu 'superframe' slot
@@ -314,21 +314,32 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     {
       fprintf (stderr, " - P_SAP %02d [%s] - MFID %02X [%s]", p_sap, sap_string, p_mfid, mfid_string);
 
-      //look for LRRP potential report 0x1F (may be others as well)
-      //this could just be a sap == 1, which is 'reserved', unsure (or maybe no actual correlation?)
-      if (p_sap != 1) state->data_header_blocks[slot]--; //decrement the blocks to follow count in order to pass CRC32 and properly assemble blocks
-      else //add block to start of the dmr_pdu_sf since it probably contains vital LRRP data (0x1F report) -- won't pass CRC32 either way
+      //p_sap 1 on mfid 10 (moto) is a pain, and doesn't assemble correctly for some reason
+      //two extra duplicate blocks are transmitted at the end for some reason -- system unique error?
+      if (p_sap != 1) 
+        state->data_header_blocks[slot]--;
+      else
       {
+        //this method will assemble with the duplicate blocks and include the header as well
+        // state->data_header_blocks[slot]++;
+        // state->data_header_blocks[slot]++;
+        // int blocks = state->data_header_blocks[slot]-1;
+        // for(i = 0; i < 12; i++)
+        //   state->dmr_pdu_sf[slot][i+(blocks*12)] = dheader[i];
+        // state->data_block_counter[slot]++;
+
+        //this method will just include the prop_pdu header as a data block and assemble the data blocks as a message, excluding duplicates
         int blocks = state->data_header_blocks[slot]-1;
-        if (blocks < 1) blocks = 4; //safety value
-        if (blocks > 9) blocks = 9;
-        for(i = 0; i < 12; i++) state->dmr_pdu_sf[slot][i+(blocks*12)] = dheader[i];
+        for(i = 0; i < 12; i++)
+          state->dmr_pdu_sf[slot][i+(blocks*12)] = dheader[i];
         state->data_block_counter[slot]++;
-        //no matter how you assemble this, with or without the p_head block(s), there is ALWAYS a CRC32 Failure
+
+        //this method will NOT include the prop_pdu header as a data block and assemble the data blocks as a message, excluding duplicates
+        // state->data_header_blocks[slot]--; UNUSED(i);
+
+        //no matter how you assemble this, with or without the p_head block(s) or extra blocks, there is ALWAYS a CRC32 Failure
         //even when it continues to pass on other SAP values, SAP 1 must have a different checksum?
         //Users trying to get this will want to enable -F to bypass the CRC32 failure
-
-        //a recent discovery on a few systems and samples show the existence of multiple Prop Head Packets (how does that work)
       }
 
     }
