@@ -210,8 +210,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (csbk_o == 50) csbk_o = 49; //flip to normal group call for group tuning
 
         //Allow tuning of data calls if user wishes by flipping the csbk_o to a group voice call
+        int data_call = 0;
         if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54 || csbk_o == 55 || csbk_o == 56)
         {
+          data_call = 1; //don't add data calls to call history until redone
           if (opts->trunk_tune_data_calls == 1) csbk_o = 49;
         }
 
@@ -277,21 +279,25 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 {
                   //we will want to set these values here, some Tier 3 systems prefer P_Protects (Tait) over VLC and TLC headers
                   //and is faster than waiting on good embedded link control
-                  if (lcn == 0)
+                  if (lcn == 0 && data_call == 0)
                   {
                     state->lasttg = target;
                     state->lastsrc = source;
                   }
-                  if (lcn == 1)
+                  if (lcn == 1 && data_call == 0)
                   {
                     state->lasttgR = target;
                     state->lastsrcR = source;
                   }
-                  if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
-                  SetFreq(opts->rigctl_sockfd, freq);
+                  //Guess I forgot to add this condition here
+                  if (GetCurrentFreq(opts->rigctl_sockfd) != freq)
+                    dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
+                  if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+                  if (GetCurrentFreq(opts->rigctl_sockfd) != freq)
+                    SetFreq(opts->rigctl_sockfd, freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
-                  dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+                  
                 }
 
                 //rtl
@@ -300,20 +306,25 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   #ifdef USE_RTLSDR
                   //we will want to set these values here, some Tier 3 systems prefer P_Protects (Tait) over VLC and TLC headers
                   //and is faster than waiting on good embedded link control
-                  if (lcn == 0)
+                  if (lcn == 0 && data_call == 0)
                   {
                     state->lasttg = target;
                     state->lastsrc = source;
                   }
-                  if (lcn == 1)
+                  if (lcn == 1 && data_call == 0)
                   {
                     state->lasttgR = target;
                     state->lastsrcR = source;
                   }
-                  rtl_dev_tune (opts, freq);
+                  //Guess I forgot to add this condition here
+                  uint32_t tempf = (uint32_t)freq;
+                  if (opts->rtlsdr_center_freq != tempf)
+                    dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
+                  if (opts->rtlsdr_center_freq != tempf)
+                    rtl_dev_tune (opts, freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1;
-                  dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+
                   #endif
                 }
 
@@ -519,7 +530,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             //rigctl
             if (opts->use_rigctl == 1)
             {
-              dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+              //Guess I forgot to add this condition here
+              if (GetCurrentFreq(opts->rigctl_sockfd) != state->p25_cc_freq)
+                dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
               //reset some strings
               sprintf (state->call_string[state->currentslot], "%s", "                     "); //21 spaces
               sprintf (state->active_channel[state->currentslot], "%s", "");
@@ -528,14 +541,18 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               opts->p25_is_tuned = 0;
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
               if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-              SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
+              if (GetCurrentFreq(opts->rigctl_sockfd) != state->p25_cc_freq)
+                SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
             }
 
             //rtl
             else if (opts->audio_in_type == 3)
             {
               #ifdef USE_RTLSDR
-              dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+              //Guess I forgot to add this condition here
+              uint32_t tempf = (uint32_t)state->p25_cc_freq;
+              if (opts->rtlsdr_center_freq != tempf)
+                dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
               //reset some strings
               sprintf (state->call_string[state->currentslot], "%s", "                     "); //21 spaces
               sprintf (state->active_channel[state->currentslot], "%s", "");
@@ -543,7 +560,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               state->last_vc_sync_time = 0;
               opts->p25_is_tuned = 0;
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
-              rtl_dev_tune (opts, state->p25_cc_freq);
+              if (opts->rtlsdr_center_freq != tempf)
+                rtl_dev_tune (opts, state->p25_cc_freq);
               #endif
             }
 
@@ -1730,14 +1748,14 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   }
 
                   uint32_t temp = (uint32_t)state->trunk_chan_map[j+xpt_bank+1];
-                    if (opts->rtlsdr_center_freq != temp)
-                    {
-                      dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
-                      rtl_dev_tune (opts, state->trunk_chan_map[j+xpt_bank+1]); //unlike rigctl, using this actually interrupts signal decodes (rtl_clean_queue)
-                      //debug print for tuning verification
-                      fprintf (stderr, " - Tune to Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);
-                    }
-                    else fprintf (stderr, " - Dont Tune Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);                 
+                  if (opts->rtlsdr_center_freq != temp)
+                  {
+                    dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
+                    rtl_dev_tune (opts, state->trunk_chan_map[j+xpt_bank+1]); //unlike rigctl, using this actually interrupts signal decodes (rtl_clean_queue)
+                    //debug print for tuning verification
+                    fprintf (stderr, " - Tune to Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);
+                  }
+                  else fprintf (stderr, " - Dont Tune Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);                 
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+xpt_bank+1];
                   opts->p25_is_tuned = 1;
                   j = 11; //break loop
