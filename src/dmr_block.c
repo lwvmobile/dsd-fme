@@ -469,9 +469,13 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   fprintf (stderr, "\n ");
   fprintf (stderr, "Slot %d - SRC: %d; TGT: %d; UDT ", slot+1, udt_source, udt_target);
 
-  if      (udt_format2 == 0x00) ; //do we really want to do anything with this?
+  if (udt_format2 == 0x00)
+  {
+    fprintf (stderr, "Binary Data;"); 
+  }
   else if (udt_format2 == 0x01) //appended addresses
   {
+    fprintf (stderr, "Appended Addressing;\n ");
     if (udt_uab == 1) end = 3;
     if (udt_uab == 2) end = 7;
     if (udt_uab == 3) end = 11;
@@ -492,7 +496,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 4) end = 92;
     end -= udt_padnib; //subtract padnib since its also 4 bits
 
-    fprintf (stderr, "BCD: ");
+    fprintf (stderr, "Dialer BCD: ");
     for (i = 0; i < end; i++)
     {
       fprintf (stderr, "%d", (uint8_t)ConvertBitIntoBytes(&cs_bits[(i*4)+96], 4));
@@ -505,7 +509,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 3) end = 38;
     if (udt_uab == 4) end = 52;
     end -= udt_padnib/7; //is this correct?
-    fprintf (stderr, "ISO7: "  );
+    fprintf (stderr, "ISO7 Text: "  );
     for (i = 0; i < end; i++) //max 368/7 = 52 character max?
     {
       iso7c = (uint8_t)ConvertBitIntoBytes(&cs_bits[(i*7)+96], 7);
@@ -516,7 +520,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   }
   else if (udt_format2 == 0x04) //ISO8 format
   {
-    fprintf (stderr, "ISO8: "  );
+    fprintf (stderr, "ISO8 Text: "  );
     if (udt_uab == 1) end = 10;
     if (udt_uab == 2) end = 22;
     if (udt_uab == 3) end = 34;
@@ -539,7 +543,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 3) end = 17;
     if (udt_uab == 4) end = 23;
     end -= udt_padnib/4; //example, 4 blocks sets 23 - (20nibs/4bits) = 18 chars, may need to check this again
-    fprintf (stderr, "UTF16: "  );
+    fprintf (stderr, "UTF16 Text: "  );
     for (i = 0; i < end; i++) //368/16 = 23 character max?
     {
       utf16c = (uint16_t)ConvertBitIntoBytes(&cs_bits[(i*16)+96], 16);
