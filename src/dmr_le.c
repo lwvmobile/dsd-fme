@@ -109,7 +109,7 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
       {
         fprintf (stderr, "%s", KCYN);
         fprintf (stderr, " Slot 1 PI/LFSR and Late Entry MI Mismatch - %08X : %08X ", state->payload_mi, mi_final);
-        state->payload_mi = mi_final;
+        if (mi_crc_ok == 1) state->payload_mi = mi_final;
         if (mi_crc_ok == 1) fprintf (stderr, "(CRC OK)");
         else fprintf (stderr, "(CRC ERR)");
         fprintf (stderr, "\n");
@@ -128,7 +128,7 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
       {
         fprintf (stderr, "%s", KCYN);
         fprintf (stderr, " Slot 2 PI/LFSR and Late Entry MI Mismatch - %08X : %08X ", state->payload_miR, mi_final);
-        state->payload_miR = mi_final;
+        if (mi_crc_ok == 1) state->payload_miR = mi_final;
         if (mi_crc_ok == 1) fprintf (stderr, "(CRC OK)");
         else fprintf (stderr, "(CRC ERR)");
         fprintf (stderr, "\n");
