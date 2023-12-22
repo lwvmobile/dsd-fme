@@ -29,7 +29,8 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     uint8_t ab = (uint8_t)ConvertBitIntoBytes(&dheader_bits[2], 2); //appended blocks
     uint8_t dpf = (uint8_t)ConvertBitIntoBytes(&dheader_bits[4], 4); //data packet format
     uint8_t sap = (uint8_t)ConvertBitIntoBytes(&dheader_bits[8], 4); //service access point
-    uint8_t poc = (uint8_t)ConvertBitIntoBytes(&dheader_bits[12], 4); //padding octets
+    uint8_t mpoc = dheader_bits[3]; //most significant bit of the 5-bit Pad Octet Count
+    uint8_t poc = (uint8_t)ConvertBitIntoBytes(&dheader_bits[12], 4) + (mpoc << 4); //padding octets
     UNUSED(ab);
 
     uint32_t target = (uint32_t)ConvertBitIntoBytes(&dheader_bits[16], 24); //destination llid 
