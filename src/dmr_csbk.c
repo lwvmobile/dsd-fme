@@ -1830,7 +1830,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       //initial line break
       fprintf (stderr, "\n"); 
       fprintf (stderr, "%s", KYEL);
-      fprintf (stderr, " Moto Data Annoucement: %02X; ", csbk_o);
+      fprintf (stderr, " Moto Data Channel: %02X; ", csbk_o);
       for (int i = 2; i < 10; i++)
         fprintf (stderr, "%02X ", cs_pdu[i]);
 
