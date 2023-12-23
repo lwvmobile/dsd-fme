@@ -787,11 +787,17 @@ uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25])
     if (h1 && h2 && h3 && crc) dmr_slco (opts, state, slco_bits);
     else
     {
-      if (opts->payload == 0) fprintf (stderr, "\n");
+      //this line break issue is wracking on my OCD for clean line breaks
+      if (opts->payload == 1 && state->dmrburstL == 16 && state->currentslot == 0) ; //no line break if current slot is voice with payload enabled
+      else if (opts->payload == 1 && state->dmrburstR == 16 && state->currentslot == 1) ; //no line break if current slot is voice with payload enabled
+      else fprintf (stderr, "\n");
       fprintf (stderr, "%s", KRED);
       fprintf (stderr, " SLCO CRC ERR");
       fprintf (stderr, "%s", KNRM);
-      if (opts->payload == 1) fprintf (stderr, "\n");
+      if (opts->payload == 1 && state->dmrburstL == 16 && state->currentslot == 0) //if current slot is voice with payload enabled
+        fprintf (stderr, "\n");
+      else if (opts->payload == 1 && state->dmrburstR == 16 && state->currentslot == 1) //if current slot is voice with payload enabled
+        fprintf (stderr, "\n");
     } 
     
   }
