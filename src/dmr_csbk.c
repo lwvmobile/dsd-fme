@@ -800,11 +800,33 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         fprintf (stderr, " C_ACKVIT (Ackvitation/Authorization) ");
       }
 
-      if (csbk_o == 33) 
+      if (csbk_o == 32 || csbk_o == 33 || csbk_o == 34 || csbk_o == 35) 
       {
         //initial line break
-        fprintf (stderr, "\n");
-        fprintf (stderr, " C_ACKD (Acknowledgement)");
+        fprintf (stderr, "\n"); //(Acknowledgement)
+        if (csbk_o == 32) fprintf (stderr, " C_ACKD Outbound TSCC; ");
+        if (csbk_o == 33) fprintf (stderr, " C_ACKU Inbound TSCC; ");
+        if (csbk_o == 34) fprintf (stderr, " P_ACKD Outbound Payload; ");
+        if (csbk_o == 35) fprintf (stderr, " P_ACKU Inbound Payload; ");
+
+        uint8_t response_info = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 7);
+        uint8_t reason_code = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[23], 8);
+        uint8_t ack_res1 = cs_pdu_bits[31];
+
+        uint32_t ack_target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[32], 24);
+        uint32_t ack_source = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
+
+        //response_info and reason_code start to get really convoluted on decoding them
+        //for each opcode, so I am just going to put the values out to the console, 
+        //look at ETSI TS 102 361-4 V1.12.1 7.2.7 for more info
+
+        fprintf (stderr, "Response: %02X; Reason: %02X; ", response_info, reason_code);
+        if (ack_res1) fprintf (stderr, " Res: %d", ack_res1);
+        fprintf (stderr, "Target: %d; Source: %d; ", ack_target, ack_source);
+
+        //check the source and/or target for special gateway identifiers
+        dmr_gateway_identifier (ack_source, ack_target);
+
       }
 
       if (csbk_o == 31) 
@@ -1881,5 +1903,10 @@ void dmr_gateway_identifier (uint32_t source, uint32_t target)
     if (id == 0xFFFFFD) fprintf (stderr, "ALLMSIDL; ");
     if (id == 0xFFFFFE) fprintf (stderr, "ALLMSIDZ; ");
     if (id == 0xFFFFFF) fprintf (stderr, "ALLMSID; ");
+
+    //NOTE: Observed address values of 64250, or 0xFAFA have been observed
+    //on some Moto Tier 2 and Cap+ Systems, and 0xFAFAFA has been observed
+    //on some Moto Tier 3 (CapMax) Systems, unsure if these are unique to that
+    //manufacturer, or not, usually associated with Data Headers and PDU Messages
   }
 }
