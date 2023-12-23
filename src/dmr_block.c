@@ -508,7 +508,13 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     fprintf (stderr, "Dialer BCD: ");
     for (i = 0; i < end; i++)
     {
-      fprintf (stderr, "%d", (uint8_t)ConvertBitIntoBytes(&cs_bits[(i*4)+96], 4));
+      //dialer digits 7.2.9
+      int digit = (int)ConvertBitIntoBytes(&cs_bits[(i*4)+96], 4);
+      if (digit <  10) fprintf (stderr, "%d", digit); //numbers 0-9
+      else if (digit == 10) fprintf (stderr, "*"); //asterisk/star
+      else if (digit == 11) fprintf (stderr, "#"); //pound/hash
+      else if (digit == 15) fprintf (stderr, " "); //null character
+      else fprintf (stderr, "R:%X", digit); //reserved values on 12,13, and 14
     }
   }
   else if (udt_format2 == 0x03) //ISO7 format
