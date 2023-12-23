@@ -317,20 +317,28 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
 
       //p_sap 1 on mfid 10 (moto) is a pain, and doesn't assemble correctly for some reason
       //two extra duplicate blocks are transmitted at the end for some reason -- system unique error?
-      if (p_sap != 1) 
-        state->data_header_blocks[slot]--;
+      if (p_sap != 1)
+      {
+        //sanity check to prevent segfault (this happened when the regular header was not received beforehand)
+        if (state->data_header_blocks[slot] > 1)
+          state->data_header_blocks[slot]--;
+      }
       else
       {
         //this method will assemble with the duplicate blocks and include the header as well
         // state->data_header_blocks[slot]++;
         // state->data_header_blocks[slot]++;
         // int blocks = state->data_header_blocks[slot]-1;
+        // if (blocks > 127) blocks = 127;
+        // if (blocks < 1) blocks = 4; //safety value
         // for(i = 0; i < 12; i++)
         //   state->dmr_pdu_sf[slot][i+(blocks*12)] = dheader[i];
         // state->data_block_counter[slot]++;
 
         //this method will just include the prop_pdu header as a data block and assemble the data blocks as a message, excluding duplicates
         int blocks = state->data_header_blocks[slot]-1;
+        if (blocks > 127) blocks = 127;
+        if (blocks < 1) blocks = 4;
         for(i = 0; i < 12; i++)
           state->dmr_pdu_sf[slot][i+(blocks*12)] = dheader[i];
         state->data_block_counter[slot]++;
