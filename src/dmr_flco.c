@@ -979,7 +979,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   } 
   else if (slco == 0x9)
   {
-    fprintf (stderr, " SLCO Connect Plus Voice Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
+    fprintf (stderr, " SLCO Connect Plus Traffic Channel - Net ID: %d Site ID: %d", con_netid, con_siteid);
     sprintf (state->dmr_site_parms, "%d-%d ", con_netid, con_siteid);
   }
     
@@ -994,6 +994,14 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
       ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
     }
+
+    //if using rtl input, we can ask for the current frequency tuned
+    if (opts->audio_in_type == 3 && opts->p25_is_tuned == 0)
+    {
+      ccfreq = (long int)opts->rtlsdr_center_freq;
+      if (ccfreq != 0) state->p25_cc_freq = ccfreq;
+    }
+    
   }
    
   else if (slco == 0xF)

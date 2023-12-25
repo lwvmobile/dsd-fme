@@ -1408,7 +1408,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
     //Connect+ Section
     if (csbk_fid == 0x06)
     {
-
+      //Con+ Adjacent Site 
       if (csbk_o == 0x01)
       {
         uint8_t nb1 = cs_pdu[2] & 0x3F; 
@@ -1420,51 +1420,73 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //initial line break
         fprintf (stderr, "\n"); 
         fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Connect Plus Neighbors\n");
-        fprintf (stderr, "  NB1(%02d), NB2(%02d), NB3(%02d), NB4(%02d), NB5(%02d)", nb1, nb2, nb3, nb4, nb5);
+        fprintf (stderr, " Connect Plus Adjacent Sites:");
+        if (nb1 != 0) fprintf (stderr, " %d;", nb1);
+        if (nb2 != 0) fprintf (stderr, " %d;", nb2);
+        if (nb3 != 0) fprintf (stderr, " %d;", nb3);
+        if (nb4 != 0) fprintf (stderr, " %d;", nb4);
+        if (nb5 != 0) fprintf (stderr, " %d;", nb5);
+        if (nb1 == 0) fprintf (stderr, " None Listed;");
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
 
       }
 
+      //Con+ Voice Channel Grant
       if (csbk_o == 0x03)
       {
+
+        /*
+        //this was a private voice call, see if a bit is flipped somewhere to indicate as much, octet 9?
+        Connect Plus Voice Channel Grant; Target: 118903; Source: 151015; LCN: 1; TS: 0;
+        DMR PDU Payload [83][06][02][4D][E7][01][D0][77][10][03][C2][CA] <-- 03 private?
+
+        //this was from a group voice call
+        18:06:29 Sync: +DMR  [slot1]  slot2  | Color Code=01 | CSBK
+        Connect Plus Voice Channel Grant; Target: 1216; Source: 113114; LCN: 2; TS: 1;
+        DMR PDU Payload [83][06][01][B9][DA][00][04][C0][28][02][AA][FF] <--02 group?
+
+        //the 02/03 holds up on a few samples from different systems, also seems
+        //that encrypted calls are not bit flipped here
+        */
         
         //initial line break
         fprintf (stderr, "\n");
         uint32_t srcAddr = ( (cs_pdu[2] << 16) + (cs_pdu[3] << 8) + cs_pdu[4] ); 
         uint32_t grpAddr = ( (cs_pdu[5] << 16) + (cs_pdu[6] << 8) + cs_pdu[7] ); 
         uint8_t  lcn     = ( (cs_pdu[8] & 0xF0 ) >> 4 ); 
-        uint8_t  tslot   = ( (cs_pdu[8] & 0x08 ) >> 3 );  
+        uint8_t  tslot   = ( (cs_pdu[8] & 0x08 ) >> 3 ) & 1;  
+        uint8_t  opt     =    cs_pdu[9]; //call options? May only be a few of the LSB honestly
         fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Connect Plus Voice Channel Grant\n");
-        fprintf (stderr, "  srcAddr(%8d), grpAddr(%8d), LCN(%d), TS(%d)",srcAddr, grpAddr, lcn, tslot);
+        if (opt == 2)
+          fprintf (stderr, " Connect Plus Group Voice Channel Grant;");
+        else if (opt == 3)
+          fprintf (stderr, " Connect Plus Private Voice Channel Grant;");
+        else fprintf (stderr, " Connect Plus Unknown %02X Channel Grant;", opt);
+        fprintf (stderr, " Target: %d; Source: %d; LCN: %d; TS: %d;", grpAddr, srcAddr, lcn, tslot);
+        // fprintf (stderr, " OPT: %02X;", opt); //debug
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
 
         //add active channel string for display
-        sprintf (state->active_channel[0], "Active Ch: %d TG: %d; ", lcn, grpAddr);
+        sprintf (state->active_channel[tslot], "Active VCh: %d TG: %d; ", lcn, grpAddr);
         state->last_active_time = time(NULL);
 
         //Skip tuning group calls if group calls are disabled
-        if (opts->trunk_tune_group_calls == 0) goto SKIPCON;
+        if (opts->trunk_tune_group_calls == 0 && opt == 2) goto SKIPCON;
 
-        //if using rigctl we can set an unknown or updated cc frequency 
-        //by polling rigctl for the current frequency
-        if (opts->use_rigctl == 1 && opts->p25_is_tuned == 0)
-        {
-          ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
-          if (ccfreq != 0) state->p25_cc_freq = ccfreq;
-        }
+        //Skip tuning private calls if private calls are disabled
+        if (opts->trunk_tune_private_calls == 0 && opt == 3) goto SKIPCON;
 
-        //if using rtl input, we can ask for the current frequency tuned
-        if (opts->audio_in_type == 3 && opts->p25_is_tuned == 0)
-        {
-          ccfreq = (long int)opts->rtlsdr_center_freq;
-          if (ccfreq != 0) state->p25_cc_freq = ccfreq;
-        }
+        //skip tuning if opt is not 2 or 3 (assume group call option)
+        if (opts->trunk_tune_group_calls == 0 && opt != 2 && opt != 3) goto SKIPCON;
+
+        //NOTE: Only set CC Frequency from SLC since it will tell us
+        //when we are on a control channel, and not a payload channel,
+        //these CSBKs can come on payload channels as well and cause
+        //FME to return to a dead air channel and start searching
 
         //shim in here for ncurses freq display when not trunking (playback, not live)
         if (opts->p25_trunk == 0 && state->trunk_chan_map[lcn] != 0)
@@ -1499,8 +1521,16 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (state->tg_hold != 0 && state->tg_hold != grpAddr) sprintf (mode, "%s", "B");
         if (state->tg_hold != 0 && state->tg_hold == grpAddr) sprintf (mode, "%s", "A");
 
-        //don't tune if currently a vc on the control channel
-        if ( (opts->trunk_tune_group_calls == 1) && (time(NULL) - state->last_vc_sync_time > 2) ) 
+        //TG Hop if the target here matches the target currently listening to (may be better to just rely on TG hold for this)
+        // if (state->currentslot == 1 && state->lasttg  == grpAddr) state->last_vc_sync_time = 0; //opposite slot if TLC in current
+        // if (state->currentslot == 0 && state->lasttgR == grpAddr) state->last_vc_sync_time = 0; //opposite slot if TLC in current
+
+        time_t waitsec = 2;
+        if (opts->trunk_tune_data_calls == 1)
+          waitsec = 4; //increase time for a data call before hopping
+
+        //don't tune if currently a vc on the control channel, but allow hopping form one VC to another VC if the former is in long TLC/Idle mode
+        if ( (opts->trunk_tune_group_calls == 1) && (time(NULL) - state->last_vc_sync_time > waitsec) ) 
         {
           
           if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0) ) 
@@ -1537,6 +1567,133 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }  
 
         SKIPCON: ; //do nothing
+
+      }
+
+      //Con+ Data Channel Grant
+      if (csbk_o == 0x06)
+      {
+        
+        //initial line break
+        fprintf (stderr, "\n");
+        uint32_t dtarget = ( (cs_pdu[2] << 16) + (cs_pdu[3] << 8) + cs_pdu[4] ); 
+        uint8_t  lcn     = ( (cs_pdu[5] & 0xF0 ) >> 4 ); 
+        uint8_t  tslot   = ( (cs_pdu[5] & 0x08 ) >> 3 ) & 1;  
+        fprintf (stderr, "%s", KYEL);
+        fprintf (stderr, " Connect Plus Data Channel Grant;");
+        fprintf (stderr, " Target: %d; LCN: %d; TS: %d;", dtarget, lcn, tslot);
+        state->dmr_mfid = 0x06; 
+        sprintf (state->dmr_branding, "%s", "Motorola");
+        sprintf(state->dmr_branding_sub, "Con+ ");
+
+        //Skip tuning data calls if data calls are disabled
+        if (opts->trunk_tune_data_calls == 0) goto SKIPCOND;
+
+        //add active channel string for display
+        sprintf (state->active_channel[tslot], "Active DCh: %d TG: %d; ", lcn, dtarget);
+        state->last_active_time = time(NULL);
+
+        //NOTE: Only set CC Frequency from SLC since it will tell us
+        //when we are on a control channel, and not a payload channel,
+        //these CSBKs can come on payload channels as well and cause
+        //FME to return to a dead air channel and start searching
+
+        //shim in here for ncurses freq display when not trunking (playback, not live)
+        if (opts->p25_trunk == 0 && state->trunk_chan_map[lcn] != 0)
+        {
+          //just set to both for now, could go on tslot later
+          state->p25_vc_freq[0] = state->trunk_chan_map[lcn];
+          state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
+        }
+
+        //if tg hold is specified and matches target, allow for a call pre-emption by nullifying the last vc sync time
+        // if (state->tg_hold != 0 && state->tg_hold == dtarget)
+        //   state->last_vc_sync_time = 0;
+
+        char mode[8]; //allow, block, digital, enc, etc
+        sprintf (mode, "%s", "");
+
+        //if we are using allow/whitelist mode, then write 'B' to mode for block
+        //comparison below will look for an 'A' to write to mode if it is allowed
+        if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+
+        for (int i = 0; i < state->group_tally; i++)
+        {
+          if (state->group_array[i].groupNumber == dtarget)
+          {
+            fprintf (stderr, " [%s]", state->group_array[i].groupName);
+            strcpy (mode, state->group_array[i].groupMode);
+            break;
+          }
+        }
+
+        //TG hold on DMR Con+ -- block non-matching target, allow matching target
+        // if (state->tg_hold != 0 && state->tg_hold != dtarget) sprintf (mode, "%s", "B");
+        // if (state->tg_hold != 0 && state->tg_hold == dtarget) sprintf (mode, "%s", "A");
+
+        //don't tune if currently a vc on the control channel
+        if ( (opts->trunk_tune_data_calls == 1) && (time(NULL) - state->last_vc_sync_time > 2) ) 
+        {
+          
+          if (state->p25_cc_freq != 0 && opts->p25_trunk == 1 && (strcmp(mode, "B") != 0) && (strcmp(mode, "DE") != 0) ) 
+          {
+            if (state->trunk_chan_map[lcn] != 0) //if we have a valid frequency
+            {
+              //RIGCTL
+              if (opts->use_rigctl == 1)
+              {
+                if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+                SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[lcn]); 
+                state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
+                opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
+                state->is_con_plus = 1; //flag on
+                state->last_vc_sync_time = time(NULL); //bugfix: set sync here so we don't immediately tune back to CC constantly.
+                dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+              }
+
+              //rtl
+              else if (opts->audio_in_type == 3)
+              {
+                #ifdef USE_RTLSDR
+                rtl_dev_tune (opts, state->trunk_chan_map[lcn]);
+                state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
+                opts->p25_is_tuned = 1;
+                state->is_con_plus = 1; //flag on
+                state->last_vc_sync_time = time(NULL); //bugfix: set sync here so we don't immediately tune back to CC constantly.
+                dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away
+                #endif
+              }
+
+            }
+          }
+        }  
+
+        SKIPCOND: ; //do nothing
+
+      }
+
+      //Con+ Channel or Call Termination
+      if (csbk_o == 0x0C)
+      {
+        //could just be a data call terminator (like TD_LC)
+        //only observed this after a data header or response ack packet
+        //so, its only for data? or the data header and response is a call termination signal?
+        //to be studied some more, will test using the p_clear logic to see 
+        //if trunking is faster, or if it breaks
+
+        //initial line break
+        fprintf (stderr, "\n");
+        uint32_t ttarget = ( (cs_pdu[2] << 16) + (cs_pdu[3] << 8) + cs_pdu[4] ); 
+        fprintf (stderr, "%s", KYEL);
+        // fprintf (stderr, " Connect Plus Channel Termination;");
+        fprintf (stderr, " Connect Plus Data Call Termination;");
+        fprintf (stderr, " Target: %d;", ttarget);
+        //NOTE: Octet 6 seems to have a value (0x0B), but the rest are all zeroes, doesn't line up with an LCN or TS value
+        //test other Con+ systems, see if those have any values in those octets to figure out, also saw
+        //another octet 9? with an 01 in it a few times, could have been a timeslot bit
+        state->dmr_mfid = 0x06; 
+        sprintf (state->dmr_branding, "%s", "Motorola");
+        sprintf(state->dmr_branding_sub, "Con+ ");
 
       }
 

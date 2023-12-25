@@ -326,18 +326,25 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && state->is_con_plus == 1)
   {
     //bug fixed that caused hopping from CC to VC; decreased to 2 seconds.
-    if ( (time(NULL) - state->last_vc_sync_time > 2) ) 
+    time_t waitsec = 2;
+    if (opts->trunk_tune_data_calls == 1)
+      waitsec = 4; //increase time for a data call before hopping
+    if ( (time(NULL) - state->last_vc_sync_time > waitsec) ) 
     {
       if (opts->use_rigctl == 1) //rigctl tuning
       {
         if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
         SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+        //debug
+        fprintf (stderr, " Con+ Timeout; Return to CC;");
       }
 
       else if (opts->audio_in_type == 3) //rtl_fm tuning
       {
         #ifdef USE_RTLSDR
         rtl_dev_tune(opts, state->p25_cc_freq);
+        //debug
+        fprintf (stderr, " Con+ Timeout; Return to CC;");
         #endif
       }
       opts->p25_is_tuned = 0;
