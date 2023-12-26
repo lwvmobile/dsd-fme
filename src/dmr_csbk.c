@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------------
  * dmr_csbk.c
- * DMR Control Signal Data PDU (CSBK, MBC, UDT) Handler and Related Functions
+ * DMR Control Signal Data PDU (CSBK, MBC) Handler and Related Functions
  *
  * Portions of Connect+ code reworked from Boatbod OP25
  * Source: https://github.com/LouisErigHerve/dsd/blob/master/src/dmr_sync.c
@@ -9,12 +9,12 @@
  * Source: https://github.com/LinuxSheeple-E/dsd/blob/Feature/DMRECC/dmr_csbk.c
  *
  * LWVMOBILE
- * 2022-12 DSD-FME Florida Man Edition
+ * 2023-12 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
 
-//function for handling Control Signalling PDUs (CSBK, MBC, UDT) messages
+//function for handling Control Signalling PDUs (CSBK, MBC) messages
 void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8_t cs_pdu[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors)
 {
   
@@ -34,7 +34,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
   //check, regardless of CRC err
   if (IrrecoverableErrors == 0)
   {
-    //Hytera XPT CSBK Check -- if bits 0 and 1 are used as lcss, gi, ts, then this bit may be set on
+    //Hytera XPT CSBK Check -- if bits 0 and 1 are used as lcss, gi, ts, then the pf bit may be set on
     if ( csbk_fid == 0x68 && (csbk_o == 0x0A || csbk_o == 0x0B) ) csbk_pf = 0; 
     if (csbk_pf == 1) //check the protect flag, don't run if set
     {
@@ -168,7 +168,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             //tx_int (Mhz) + (tx_step * 125) = tx_freq
             //rx_int (Mhz) + (rx_step * 125) = rx_freq
             fprintf (stderr, "\n");
-            fprintf (stderr, "  RX ABS LPCN: %04d; RX INT: %d; RX STEP: %d;", mbc_lpchannum, mbc_abs_rx_int, mbc_abs_rx_step );
+            fprintf (stderr, "  RX APCN: %04d; RX INT: %d; RX STEP: %d;", mbc_lpchannum, mbc_abs_rx_int, mbc_abs_rx_step );
             //The Frequency we want to tune is the RX Frequency
             freq = (mbc_abs_rx_int * 1000000 ) + (mbc_abs_rx_step * 125); 
           }
@@ -351,105 +351,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
       {
         //initial line break
         fprintf (stderr, "\n");
-        uint8_t reserved = cs_pdu_bits[16];
-        uint8_t tsccas = cs_pdu_bits[17];
-        uint8_t sync = cs_pdu_bits[18];
-        uint8_t version = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[19], 3); //Document Version Control
-        uint8_t offset = cs_pdu_bits[22]; //0-TSCC uses aligned timing; 1-TSCC uses offset timing
-        uint8_t active = cs_pdu_bits[23]; //Active_Connection
-        uint8_t mask = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[24], 5);
-        uint8_t sf = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[29], 2); //service function
-        uint8_t nrandwait = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[31], 4);
-        uint8_t regreq = cs_pdu_bits[35];
-        uint8_t backoff = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[36], 4);
-        UNUSED5(reserved, tsccas, sync, offset, active);
-        UNUSED3(sf, nrandwait, backoff);
 
-        uint8_t model = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 2);
-        uint16_t net = 0;
-        uint16_t site = 0;
-
-        //DMR Location Area - DMRLA
-        uint16_t sub_mask = 0x1;
-        //tiny n 1-3; small 1-5; large 1-8; huge 1-10
-        uint16_t n = 1; //The minimum value of DMRLA is normally ≥ 1, 0 is reserved
-
-
-        char model_str[8];
-        char par_str[8]; //category A, B, AB, or reserved
-
-        sprintf (model_str, "%s", " ");
-        sprintf (par_str, "%s", "Res");
-
-        if (model == 0) //Tiny
-        {
-          net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 9);
-          site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[51], 3);
-          sprintf (model_str, "%s", "Tiny");
-          n = 3;
-        }
-        else if (model == 1) //Small
-        {
-          net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 7);
-          site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[49], 5);
-          sprintf (model_str, "%s", "Small");
-          n = 5;
-        }
-        else if (model == 2) //Large
-        {
-          net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 4);
-          site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[46], 8);
-          sprintf (model_str, "%s", "Large");
-          n = 8;
-        }
-        else if (model == 3) //Huge
-        {
-          net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 2);
-          site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[44], 10);
-          sprintf (model_str, "%s", "Huge");
-          n = 10;
-        }
-
-        //honestly can't say that this is accurate, just a guess
-        uint8_t is_capmax = 0; //capmax(mot) flag
-        if (csbk_fid == 0x10)
-        {
-          n = 0;
-          is_capmax = 1;
-          opts->dmr_dmrla_is_set = 1;
-          opts->dmr_dmrla_n = 0;
-          sprintf (state->dmr_branding, "%s", "Motorola");
-          sprintf (state->dmr_branding_sub, "%s", "CapMax ");
-        } 
-
-        if (opts->dmr_dmrla_is_set == 1) n = opts->dmr_dmrla_n;
-
-        if (n == 0) sub_mask = 0x0;
-        if (n == 1) sub_mask = 0x1;
-        if (n == 2) sub_mask = 0x3;
-        if (n == 3) sub_mask = 0x7;
-        if (n == 4) sub_mask = 0xF;
-        if (n == 5) sub_mask = 0x1F;
-        if (n == 6) sub_mask = 0x3F;
-        if (n == 7) sub_mask = 0x7F;
-        if (n == 8) sub_mask = 0xFF;
-        if (n == 9) sub_mask = 0x1FF;
-        if (n == 10) sub_mask = 0x3FF;
-
-        uint8_t par = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[54], 2);
-        if (par == 1) sprintf (par_str, "%s", "A ");
-        if (par == 2) sprintf (par_str, "%s", "B ");
-        if (par == 3) sprintf (par_str, "%s", "AB");
-
-        uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24); 
-        
-        if (n != 0) fprintf (stderr, " C_ALOHA_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d Cat: %s\n  Reg Req: %d V: %d Mask: %02X MS: %d", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, par_str, regreq, version, mask, target);
-        else fprintf (stderr, " C_ALOHA_SYS_PARMS - %s - Net ID: %d Site ID: %d Cat: %s\n  Reg Req: %d V: %d Mask: %02X MS: %d", model_str, net, site, par_str, regreq, version, mask, target);
-        if (is_capmax) fprintf (stderr, " Capacity Max ");
-
-        //add string for ncurses terminal display
-        if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1 );
-        else sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net, site);
+        dmr_decode_syscode(opts, state, cs_pdu_bits, csbk_fid, 0);
 
         //if using rigctl we can set an unknown or updated cc frequency 
         //by polling rigctl for the current frequency
@@ -465,16 +368,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           ccfreq = (long int)opts->rtlsdr_center_freq;
           if (ccfreq != 0) state->p25_cc_freq = ccfreq;
         }
-
-        //nullify any previous branding sub (bugfix for bad assignments or system type switching)
-        //sprintf(state->dmr_branding_sub, "%s", "");
-
-        //debug print
-        uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16);
-        //fprintf (stderr, "\n  SYSCODE: %016b", syscode);
-        //fprintf (stderr, "\n  SYSCODE: %02b.%b.%b", model, net, site); //won't show leading zeroes, but may not be required
-        //fprintf (stderr, "\n  SYSCODE: %04X", syscode);
-        UNUSED(syscode);
+        
       } 
 
       //P_CLEAR
@@ -598,11 +492,12 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
       }
 
-      if (csbk_o == 40) //0x28 //check to see if these are fid 0 only, or also in other manufacturer fids
+      if (csbk_o == 40) //0x28
       {
+        int i;
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " Announcements (C_BCAST)"); //site it, vote for etc etc
+        fprintf (stderr, " Announcements (C_BCAST)");
         uint8_t a_type = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[16], 5);
         if (a_type == 0) fprintf (stderr, " Announce/Withdraw TSCC (Ann_WD_TSCC)");
         if (a_type == 1) fprintf (stderr, " Specify Call Timer Parameters (CallTimer_Parms)");
@@ -612,114 +507,303 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (a_type == 5) fprintf (stderr, " Announce Logical Channel/Frequency Relationship (Chan_Freq)");
         if (a_type == 6) fprintf (stderr, " Adjacent Site Information (Adjacent_Site)");
         if (a_type == 7) fprintf (stderr, " General Site Parameters (Gen_Site_Params)");
-        if (a_type > 7 && a_type < 0x1E) fprintf (stderr, " Reserved %02X", a_type);
-        if (a_type == 0x1E || a_type == 0x1F) fprintf (stderr, " Manufacturer Specific %02X", a_type);
+        if (a_type > 7 && a_type < 0x1E) fprintf (stderr, " Reserved: %02X", a_type);
+        if (a_type == 0x1E || a_type == 0x1F) fprintf (stderr, " Manufacturer Specific: %02X", a_type);
 
-        //sysidcode, probably would have been easier to make this its own external function
-        uint8_t model = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 2);
-        uint16_t net = 0;
-        uint16_t site = 0;
-        UNUSED2(net, site);
+        //parms1 start 21, len 14
+        uint16_t bparms1 = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[21], 14);
+        uint8_t bpbits1[14]; for (i = 0; i < 14; i++) bpbits1[i] = cs_pdu_bits[21+i];
 
-        //DMR Location Area - DMRLA
-        uint16_t sub_mask = 0x1;
-        //tiny n 1-3; small 1-5; large 1-8; huge 1-10
-        uint16_t n = 1; //The minimum value of DMRLA is normally ≥ 1, 0 is reserved
-        UNUSED(sub_mask);
+        //registration required
+        uint8_t reg_req = cs_pdu_bits[35];
 
-        //channel number from Broadcast Parms 2
-        uint16_t lpchannum = 0;
-        UNUSED(lpchannum);
+        //backoff number
+        uint8_t backoff = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[36], 4);
 
-        char model_str[8];
-        char par_str[8]; //category A, B, AB, or reserved
-
-        sprintf (model_str, "%s", " ");
-        sprintf (par_str, "%s", "Res");
-
-        if (model == 0) //Tiny
-        {
-          net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 9);
-          site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[51], 3);
-          sprintf (model_str, "%s", "Tiny");
-          n = 3;
-        }
-        else if (model == 1) //Small
-        {
-          net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 7);
-          site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[49], 5);
-          sprintf (model_str, "%s", "Small");
-          n = 5;
-        }
-        else if (model == 2) //Large
-        {
-          net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 4);
-          site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[46], 8);
-          sprintf (model_str, "%s", "Large");
-          n = 8;
-        }
-        else if (model == 3) //Huge
-        {
-          net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 2);
-          site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[44], 10);
-          sprintf (model_str, "%s", "Huge");
-          n = 10;
-        }
-
-        //disabled until this can be sorted/fleshed out by type, going to use aloha only for now
-
-        //honestly can't say that this is accurate, just a guess
-        // uint8_t is_capmax = 0; //capmax(mot) flag
-        // if (csbk_fid == 0x10)
-        // {
-        //   n = 0;
-        //   is_capmax = 1;
-        //   opts->dmr_dmrla_is_set = 1;
-        //   opts->dmr_dmrla_n = 0;
-        //   sprintf (state->dmr_branding, "%s", "Motorola");
-        //   sprintf (state->dmr_branding_sub, "%s", "CapMax ");
-        // } 
-
-        if (opts->dmr_dmrla_is_set == 1) n = opts->dmr_dmrla_n;
-
-        if (n == 0) sub_mask = 0x0;
-        if (n == 1) sub_mask = 0x1;
-        if (n == 2) sub_mask = 0x3;
-        if (n == 3) sub_mask = 0x7;
-        if (n == 4) sub_mask = 0xF;
-        if (n == 5) sub_mask = 0x1F;
-        if (n == 6) sub_mask = 0x3F;
-        if (n == 7) sub_mask = 0x7F;
-        if (n == 8) sub_mask = 0xFF;
-        if (n == 9) sub_mask = 0x1FF;
-        if (n == 10) sub_mask = 0x3FF;
-
-        uint8_t par = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[54], 2);
-        if (par == 1) sprintf (par_str, "%s", "A ");
-        if (par == 2) sprintf (par_str, "%s", "B ");
-        if (par == 3) sprintf (par_str, "%s", "AB");
-
-        uint32_t parms2 = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24); 
-        lpchannum = parms2 & 0xFFF; //7.2.19.7, for DSDPlus, this value is (lpchannum << 1) + 1;
-
-        //disabled until this can be sorted/fleshed out by type, going to use aloha only for now
-
-        // if (a_type == 2 || a_type == 7)
-        // {
-        //   fprintf (stderr, "\n");
-        //   if (n != 0) fprintf (stderr, "  C_BCAST_SYS_PARMS - %s - Net ID: %d Site ID: %d.%d Cat: %s Cd: %d C+: %d", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, par_str, lpchannum, (lpchannum << 1)+1 );
-        //   else fprintf (stderr, "  C_BCAST_SYS_PARMS - %s - Net ID: %d Site ID: %d Cat: %s Cd: %d C+: %d", model_str, net, site, par_str, lpchannum, (lpchannum << 1)+1 );
-        //   if (is_capmax) fprintf (stderr, " Capacity Max");
-
-        //   //add string for ncurses terminal display, if not adjacent site info
-        //   if (a_type != 6 && n != 0)  sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1);
-        //   if (a_type != 6 && n == 0)  sprintf (state->dmr_site_parms, "TIII - %s %d-%d ", model_str, net, site);
-        // }
+        //syscode start 40, len 16
+        uint16_t syscode = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 14);
         
-        uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 16);
-        //fprintf (stderr, "\n  SYSCODE: %016b", syscode);
-        //fprintf (stderr, "\n  SYSCODE: %04X", syscode);
-        UNUSED(syscode);
+        //parms2 start 56, len 24
+        uint32_t bparms2 = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24);
+        uint8_t bpbits2[24]; for (i = 0; i < 24; i++) bpbits2[i] = cs_pdu_bits[56+i];
+
+        //MBC parms for when they will be needed
+        uint8_t mbc_lb = cs_pdu_bits[96]; UNUSED(mbc_lb);
+        uint8_t mbc_pf = cs_pdu_bits[97]; UNUSED(mbc_pf);
+        uint8_t mbc_csbko = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[98], 6);
+        uint8_t mbc_res = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[104], 4);
+        uint8_t mbc_cc = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[108], 4);
+        uint8_t mbc_cdeftype = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[112], 4);
+        uint8_t mbc_res2 = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[116], 2);
+        unsigned long long int mbc_cdefparms = (unsigned long long int)ConvertBitIntoBytes(&cs_pdu_bits[118], 58);
+        uint16_t mbc_lpchannum = 0;
+        uint16_t mbc_abs_tx_int = 0;
+        uint16_t mbc_abs_tx_step = 0;
+        uint16_t mbc_abs_rx_int = 0;
+        uint16_t mbc_abs_rx_step = 0;
+        long int freqt, freqr = 0;
+
+        //common value among some a_types
+        uint16_t a_channel = (uint16_t)ConvertBitIntoBytes(&bpbits2[12], 12);
+
+        //Ann_WD_TSCC
+        if (a_type == 0)
+        {
+          //Color Codes and Flags
+          uint8_t ann_res = (uint8_t)ConvertBitIntoBytes(&bpbits1[0], 4);
+          uint8_t cc_ch1 = (uint8_t)ConvertBitIntoBytes(&bpbits1[4], 4);
+          uint8_t cc_ch2 = (uint8_t)ConvertBitIntoBytes(&bpbits1[8], 4);
+          uint8_t ch1_flag = bpbits1[13];
+          uint8_t ch2_flag = bpbits1[14];
+
+          uint16_t bcast_ch1 = (uint16_t)ConvertBitIntoBytes(&bpbits2[0], 12);
+          uint16_t bcast_ch2 = (uint16_t)ConvertBitIntoBytes(&bpbits2[12], 12);
+
+          fprintf (stderr, "\n");
+          if (ann_res) fprintf (stderr, " Res: %X;", ann_res);
+          fprintf (stderr, " LPCN CH1: %d; CC: %d;", bcast_ch1, cc_ch1);
+          if (ch1_flag == 0) fprintf (stderr, " Add;");
+          if (ch1_flag == 1) fprintf (stderr, " Remove;");
+
+          fprintf (stderr, " LPCN CH2: %d; CC: %d;", bcast_ch2, cc_ch2);
+          if (ch2_flag == 0) fprintf (stderr, " Add;");
+          if (ch2_flag == 1) fprintf (stderr, " Remove;");
+        }
+
+        //CallTimer_parms
+        if (a_type == 1)
+        {
+          //7.9.19.2 Table 7.70
+          uint16_t t_emerg_timer = (uint16_t)ConvertBitIntoBytes(&bpbits1[0], 9);
+          uint8_t t_packet_timer = (uint8_t)ConvertBitIntoBytes(&bpbits1[9], 5);
+
+          uint16_t t_msms_timer = (uint16_t)ConvertBitIntoBytes(&bpbits1[0], 9);
+          uint16_t t_msline_timer = (uint16_t)ConvertBitIntoBytes(&bpbits1[0], 9);
+
+          //just doing the raw values here, and not the decoded values, see clause A.1, Tables A.2, A.3, A.4, A.5
+          fprintf (stderr, "\n");
+          fprintf (stderr, " Timers - Emergency: %d; Packet: %d; MS-MS: %d; Line: %d; ", t_emerg_timer, t_packet_timer, t_msms_timer, t_msline_timer);
+        }
+
+        //Local_Time
+        if (a_type == 3)
+        {
+          uint8_t lt_day = (uint8_t)ConvertBitIntoBytes(&bpbits1[0], 5); //1-31
+          uint8_t lt_mon = (uint8_t)ConvertBitIntoBytes(&bpbits1[5], 4); //1-12, or 0 if not broadcast
+          uint8_t lt_off = (uint8_t)ConvertBitIntoBytes(&bpbits1[9], 4); //0-14 hours, or 15 if not broadcast
+          uint8_t lt_off_sign = bpbits1[13]; //0 is positive offset, 1 is negative offset
+          
+          uint8_t lt_hour = (uint8_t)ConvertBitIntoBytes(&bpbits2[0], 5); //0-23
+          uint8_t lt_mins = (uint8_t)ConvertBitIntoBytes(&bpbits2[5], 6); //0-59
+          uint8_t lt_secs = (uint8_t)ConvertBitIntoBytes(&bpbits2[11], 6); //0-59
+          uint8_t lt_dofw = (uint8_t)ConvertBitIntoBytes(&bpbits2[17], 3); //day of week
+          uint8_t lt_off_fr = (uint8_t)ConvertBitIntoBytes(&bpbits2[20], 2); //0 = 0; 1 = +15 mins; 2 = +30 mins; 3 = +45 mins;
+          uint8_t lt_res = (uint8_t)ConvertBitIntoBytes(&bpbits2[22], 2);
+
+          int localhour = lt_hour;
+          int localmin  = lt_mins;
+          int offset = lt_off;
+          if (lt_off_sign) offset *= -1;
+
+          //I wonder if local offset will require rollover or rollunder
+          if (lt_off_sign == 1) localhour = lt_hour - lt_off;
+          if (lt_off_sign == 0) localhour = lt_hour + lt_off;
+          
+          if (lt_off_fr == 1) localmin += 15;
+          if (lt_off_fr == 2) localmin += 30;
+          if (lt_off_fr == 3) localmin += 45;
+
+          fprintf (stderr, "\n");
+          if (lt_mon != 0 && lt_day != 0) 
+            fprintf (stderr, " Date: %d.%d;", lt_mon, lt_day);
+          //day of the week, 1 is Sunday, 7 is Saturday, 0 not broadcasted
+          if (lt_dofw == 1) fprintf (stderr, " Sunday;");
+          if (lt_dofw == 2) fprintf (stderr, " Monday;");
+          if (lt_dofw == 3) fprintf (stderr, " Tuesday;");
+          if (lt_dofw == 4) fprintf (stderr, " Wednesday;");
+          if (lt_dofw == 5) fprintf (stderr, " Thursday;");
+          if (lt_dofw == 6) fprintf (stderr, " Friday;");
+          if (lt_dofw == 7) fprintf (stderr, " Saturday;");
+          fprintf (stderr, " UTC Time: %02d:%02d:%02d;", lt_hour, lt_mins, lt_secs);
+          if (lt_off != 15) fprintf (stderr, " Local: %02d:%02d:%02d;", localhour, localmin, lt_secs);
+          if (lt_off != 15) fprintf (stderr, " Offset: %d;", offset);
+          if (lt_res) fprintf (stderr, " Res: %d;", lt_res);
+
+        }
+
+        //Chan_Freq
+        if (a_type == 5)
+        {
+          // if (a_channel != 0xFFF) fprintf (stderr, " LPCN: %d;", a_channel);
+          if (a_channel == 0) fprintf (stderr, " LPCN: Null;");
+          if (a_channel != 0)
+          {
+            if (mbc_cdeftype == 0) //if 0, then absolute channel parms
+            {
+              mbc_lpchannum = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[118], 12);
+              mbc_abs_tx_int = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[130], 10);
+              mbc_abs_tx_step = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[140], 13);
+              mbc_abs_rx_int = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[153], 10);
+              mbc_abs_rx_step = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[163], 13);
+              freqr = (mbc_abs_rx_int * 1000000 ) + (mbc_abs_rx_step * 125);
+              freqt = (mbc_abs_tx_int * 1000000 ) + (mbc_abs_tx_step * 125);
+
+              if (a_channel == 0xFFF) fprintf (stderr, "\n APCN: %04d;", mbc_lpchannum); //absolute physical channel number
+              else if (a_channel != 0) fprintf (stderr, "\n LPCN: %04d;", mbc_lpchannum); //logical physical channel number
+              fprintf (stderr, " RX Base: %d; RX Step: %d; RX Freq: %ld;", mbc_abs_rx_int * 1000000, mbc_abs_rx_step * 125, freqr);
+              fprintf (stderr, "\n            "); //12 spaces
+              fprintf (stderr, " TX Base: %d; TX Step: %d; TX Freq: %ld;", mbc_abs_tx_int * 1000000, mbc_abs_tx_step * 125, freqt);
+
+              //experimental -- assign a_channel or mbc_lpchannum and freqr to channel map if not available
+              if (a_channel != 0 && a_channel != 0xFFF && freqr != 0)
+              {
+                if (state->trunk_chan_map[a_channel] == 0)
+                {
+                  state->trunk_chan_map[a_channel] = freqr;
+                  //add to rotation for CC Hunting on extended noframesync
+                  state->trunk_lcn_freq[state->lcn_freq_count++%25] = freqr; //no not exceed 25 entries
+                  if (state->lcn_freq_count > 25) state->lcn_freq_count = 25;
+                }
+              }
+
+              //this one probably doesn't matter, I think that both values have the same channel number (a_channel and mbc_lpchannum)
+              //and also since absolute channel grants will also have these values available to figure out frequency to tune to
+              // if (a_channel == 0xFFF && freqr != 0)
+              // {
+              //   if (state->trunk_chan_map[mbc_lpchannum] == 0 && mbc_lpchannum != 0xFFFF && mbc_lpchannum != 0)
+              //   {
+              //     state->trunk_chan_map[mbc_lpchannum] = freqr;
+              //     //add to rotation for CC Hunting on extended noframesync
+              //     state->trunk_lcn_freq[state->lcn_freq_count++%25] = freqr; //no not exceed 25 entries
+              //     if (state->lcn_freq_count > 25) state->lcn_freq_count = 25;
+              //   }
+              // }
+              
+            }
+            else 
+            {
+              fprintf (stderr, "\n Unknown CDEFType: %X; CDEFParms: %015llX", mbc_cdeftype, mbc_cdefparms);
+              fprintf (stderr, " MBC Op: %02X;", mbc_csbko);
+              // fprintf (stderr, " CC: %d;", mbc_cc); //not on chan_freq
+              fprintf (stderr, " RES1: %X;", mbc_res);
+              fprintf (stderr, " RES2: %X;", mbc_res2);
+            }
+          }
+        }
+
+        //Vote Now, Adjacent Site, 
+        if (a_type == 2 || a_type == 6)
+        {
+          uint8_t active_ava = bpbits2[0];
+          uint8_t active_con = bpbits2[1];
+          uint8_t c_chan_pri = (uint8_t)ConvertBitIntoBytes(&bpbits2[2], 3);
+          uint8_t a_chan_pri = (uint8_t)ConvertBitIntoBytes(&bpbits2[5], 3);
+          uint8_t a_reserved = (uint8_t)ConvertBitIntoBytes(&bpbits2[8], 4);
+
+          fprintf (stderr, "\n");
+          dmr_decode_syscode(opts, state, cs_pdu_bits, csbk_fid, 1);
+
+          // fprintf (stderr, "\n");
+          if (active_ava == 1) ; //fprintf (stderr, " Active Connection Information Available;");
+          else fprintf (stderr, " Active Connection Information Not Available;");
+
+          if (active_ava == 1)
+          {
+            if (active_con == 1) fprintf (stderr, " Connection Active;");
+            // fprintf (stderr, " Confirmed Channel Priority: %d;", c_chan_pri);
+            // fprintf (stderr, " Active Channel Priority: %d;", a_chan_pri);
+            fprintf (stderr, " CC Pri: %d;", c_chan_pri);
+            fprintf (stderr, " AC Pri: %d;", a_chan_pri);
+            if (a_reserved) fprintf (stderr, " Res: %X;", a_reserved);
+            if (a_channel != 0xFFF) fprintf (stderr, " LPCN: %d;", a_channel);
+            if (a_channel == 0) fprintf (stderr, " LPCN: Null;");
+            if (a_channel == 0xFFF)
+            {
+              if (mbc_cdeftype == 0) //if 0, then absolute channel parms
+              {
+                mbc_lpchannum = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[118], 12);
+                mbc_abs_tx_int = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[130], 10);
+                mbc_abs_tx_step = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[140], 13);
+                mbc_abs_rx_int = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[153], 10);
+                mbc_abs_rx_step = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[163], 13);
+                freqr = (mbc_abs_rx_int * 1000000 ) + (mbc_abs_rx_step * 125);
+                freqt = (mbc_abs_tx_int * 1000000 ) + (mbc_abs_tx_step * 125);
+
+                fprintf (stderr, "\n APCN: %04d;", mbc_lpchannum); //absolute physical channel number
+                fprintf (stderr, " RX Base: %d; RX Step: %d; RX Freq: %ld;", mbc_abs_rx_int * 1000000, mbc_abs_rx_step * 125, freqr);
+                fprintf (stderr, "\n            "); //12 spaces
+                fprintf (stderr, " TX Base: %d; TX Step: %d; TX Freq: %ld;", mbc_abs_tx_int * 1000000, mbc_abs_tx_step * 125, freqt);
+                
+              }
+              else 
+              {
+                fprintf (stderr, "\n Unknown CDEFType: %X; CDEFParms: %015llX", mbc_cdeftype, mbc_cdefparms);
+                fprintf (stderr, " MBC Op: %02X;", mbc_csbko);
+                if (a_type == 2)
+                  fprintf (stderr, " CC: %d;", mbc_cc);
+                fprintf (stderr, " RES1: %X;", mbc_res);
+                fprintf (stderr, " RES2: %X;", mbc_res2);
+              }
+            }
+          }
+
+        }
+
+        //Gen_Site_Parms
+        if (a_type == 7)
+        {
+          //parms1 are all reserved values
+
+          //current (confirmed site information)
+          uint8_t csi = (uint8_t)ConvertBitIntoBytes(&bpbits1[0], 8); //see clause 7.2.40
+          //Network Information
+          uint8_t nin = (uint8_t)ConvertBitIntoBytes(&bpbits2[16], 8); //see clause 7.2.41
+
+          //the second bit of the CSI, the rest are reserved (wasteful)
+          uint8_t hibernate_flag = bpbits1[1];
+
+          //the first bit of the nin, the rest are reserved (yet again)
+          uint8_t reg_tg_sub = bpbits2[0]; //if the MS has to send TG during Registration Process (Zzzzzz)
+
+          fprintf (stderr, "\n");
+          fprintf (stderr, " Hibernate Flag: %d; Reg Flag: %d; RES1: %d; RES2: %X; RES3: %X; BPARMS1: %X", hibernate_flag, reg_tg_sub, bpbits1[0], csi & 0x3F, nin & 0x7F, bparms1);
+        }
+
+        //MassReg
+        if (a_type == 4)
+        {
+          uint8_t reg_window = (uint8_t)ConvertBitIntoBytes(&bpbits1[5], 4); //7.2.19.5.1 Table 7.77 convert raw to seconds
+          uint8_t aloha_mask = (uint8_t)ConvertBitIntoBytes(&bpbits1[9], 5);
+          //ADDRNull or MS Individual Address
+          uint8_t reg_address = (uint8_t)ConvertBitIntoBytes(&bpbits2[16], 8); //see clause 7.2.41
+
+          fprintf (stderr, "\n"); //raw value only on the reg window, see aforementioned table
+          fprintf (stderr, " Reg Window: %X; Aloha Mask: %02X; Target: %d; ", reg_window, aloha_mask, reg_address);
+          dmr_gateway_identifier(0,reg_address);
+        }
+
+        //debug
+        if (opts->payload == 1)
+        {
+          fprintf (stderr, "\n ");
+          fprintf (stderr, " SYS: %04X;", syscode);
+          fprintf (stderr, " Reg: %d;", reg_req);
+          fprintf (stderr, " Backoff: %X;", backoff); //7.2.5, Table 7.39
+          fprintf (stderr, " BParms1: %04X;", bparms1);
+          fprintf (stderr, " BParms2: %06X;", bparms2);
+          if (mbc_cdefparms != 0) //if this isn't an MBC block, then these will all be zeroes
+          {
+            fprintf (stderr, "\n ");
+            fprintf (stderr, " MBC Op: %02X;", mbc_csbko);
+            if (a_type == 2)
+              fprintf (stderr, " CC: %d;", mbc_cc);
+            fprintf (stderr, " RES1: %X;", mbc_res);
+            fprintf (stderr, " RES2: %X;", mbc_res2);
+            fprintf (stderr, " CDEFTYPE: %X;", mbc_cdeftype);
+            fprintf (stderr, " CDEFPARMS: %015llX;", mbc_cdefparms);
+          }
+        }
+
       }
 
       if (csbk_o == 28) 
@@ -2070,4 +2154,157 @@ void dmr_gateway_identifier (uint32_t source, uint32_t target)
     //on some Moto Tier 3 (CapMax) Systems, unsure if these are unique to that
     //manufacturer, or not, usually associated with Data Headers and PDU Messages
   }
+}
+
+void dmr_decode_syscode(dsd_opts * opts, dsd_state * state, uint8_t * cs_pdu_bits, int csbk_fid, int type)
+{
+  //TODO: Probably return specific elements of just the aloha to its own area, and just do the syscode here
+  int i;
+  //copy and paste code into here, use type to determine whether or not to set current site info or not
+  uint8_t reserved = cs_pdu_bits[16];
+  uint8_t tsccas = cs_pdu_bits[17];
+  uint8_t sync = cs_pdu_bits[18];
+  uint8_t version = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[19], 3); //Document Version Control
+  uint8_t offset = cs_pdu_bits[22]; //0-TSCC uses aligned timing; 1-TSCC uses offset timing
+  uint8_t active = cs_pdu_bits[23]; //Active_Connection
+  uint8_t mask = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[24], 5);
+  uint8_t sf = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[29], 2); //service function
+  uint8_t nrandwait = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[31], 4);
+  uint8_t regreq = cs_pdu_bits[35];
+  uint8_t backoff = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[36], 4);
+  UNUSED5(reserved, tsccas, sync, offset, active);
+  UNUSED3(sf, nrandwait, backoff);
+
+  //bparms1
+  uint8_t bpbits1[14]; for (i = 0; i < 14; i++) bpbits1[i] = cs_pdu_bits[21+i];
+
+  //if not C_ALOHA_SYS_PARMS, overwrite syscode with bparms1 (too lazy method) 
+  if (type != 0)
+  {
+    for (i = 0; i < 14; i++)
+      cs_pdu_bits[40+i] = bpbits1[i];
+  }
+
+  //raw syscode
+  uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 14);
+
+  uint8_t model = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 2);
+  uint16_t net = 0;
+  uint16_t site = 0;
+
+  //DMR Location Area - DMRLA
+  uint16_t sub_mask = 0x1;
+  //tiny n 1-3; small 1-5; large 1-8; huge 1-10
+  uint16_t n = 1; //The minimum value of DMRLA is normally ≥ 1, 0 is reserved
+
+
+  char model_str[8];
+  char par_str[8]; //category A, B, AB, or reserved
+
+  sprintf (model_str, "%s", " ");
+  sprintf (par_str, "%s", "Res");
+
+  if (model == 0) //Tiny
+  {
+    net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 9);
+    site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[51], 3);
+    sprintf (model_str, "%s", "Tiny");
+    n = 3;
+  }
+  else if (model == 1) //Small
+  {
+    net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 7);
+    site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[49], 5);
+    sprintf (model_str, "%s", "Small");
+    n = 5;
+  }
+  else if (model == 2) //Large
+  {
+    net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 4);
+    site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[46], 8);
+    sprintf (model_str, "%s", "Large");
+    n = 8;
+  }
+  else if (model == 3) //Huge
+  {
+    net  = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[42], 2);
+    site = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[44], 10);
+    sprintf (model_str, "%s", "Huge");
+    n = 10;
+  }
+
+  //honestly can't say that this is accurate, just a guess
+  uint8_t is_capmax = 0; //capmax(mot) flag
+  if (csbk_fid == 0x10)
+  {
+    n = 0;
+    is_capmax = 1;
+    opts->dmr_dmrla_is_set = 1;
+    opts->dmr_dmrla_n = 0;
+    sprintf (state->dmr_branding, "%s", "Motorola");
+    sprintf (state->dmr_branding_sub, "%s", "CapMax ");
+  } 
+
+  if (opts->dmr_dmrla_is_set == 1) n = opts->dmr_dmrla_n;
+
+  if (n == 0) sub_mask = 0x0;
+  if (n == 1) sub_mask = 0x1;
+  if (n == 2) sub_mask = 0x3;
+  if (n == 3) sub_mask = 0x7;
+  if (n == 4) sub_mask = 0xF;
+  if (n == 5) sub_mask = 0x1F;
+  if (n == 6) sub_mask = 0x3F;
+  if (n == 7) sub_mask = 0x7F;
+  if (n == 8) sub_mask = 0xFF;
+  if (n == 9) sub_mask = 0x1FF;
+  if (n == 10) sub_mask = 0x3FF;
+
+  uint8_t par = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[54], 2);
+  if (par == 1) sprintf (par_str, "%s", "A");
+  if (par == 2) sprintf (par_str, "%s", "B");
+  if (par == 3) sprintf (par_str, "%s", "AB");
+
+  uint32_t target = (uint32_t)ConvertBitIntoBytes(&cs_pdu_bits[56], 24); 
+
+  if (type == 0)
+  {
+    //considering not adding a +1 to these values (will need to consult the docs first)
+    //TODO: Change SLC to mirror this output format
+    if (n != 0) fprintf (stderr, " C_ALOHA_SYS_PARMS: %s; Net ID: %d; Site ID: %d.%d; Cat: %s;", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, par_str);
+    else fprintf (stderr, " C_ALOHA_SYS_PARMS: %s; Net ID: %d; Site ID: %d;", model_str, net, site);
+    fprintf (stderr, " SYS: %04X;", syscode); //#192
+    if (is_capmax) fprintf (stderr, " Capacity Max");
+    
+    if (opts->payload == 1)
+    {
+      fprintf (stderr, "\n");
+      if (reserved) fprintf (stderr, " Res: %04X;", reserved);
+      if (tsccas) fprintf (stderr, " TSCCAS;");
+      if (sync) fprintf (stderr, " Sync;");
+      fprintf (stderr, " Ver: %d;", version);
+      if (offset) fprintf (stderr, " Offset;");
+      if (active) fprintf (stderr, " Active Connection;");
+      fprintf (stderr, " SF: %d;", sf); //service function
+      fprintf (stderr, " NR: %X;", nrandwait); //what is this for again?
+      if (regreq) fprintf (stderr, " Reg Required;");
+      fprintf (stderr, " Backoff: %X;", backoff);
+      if (mask) fprintf (stderr, " Mask: %02X;", mask);
+      if (target) fprintf (stderr, " MS: %d; ", target);
+      dmr_gateway_identifier(0,target); //its either 0, or possibly ALLMSI, or a specifically targeted value?
+    }
+
+    //add string for ncurses terminal display
+    if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d; SYS: %04X; ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, syscode );
+    else sprintf (state->dmr_site_parms, "TIII - %s %d-%d; SYS: %04X; ", model_str, net, site, syscode);
+  }
+
+  if (type == 1)
+  {
+    //NOTE: I just wrote bparms1 into the area where syscode is when it is an adj_site (or votenow site)
+    if (n != 0) fprintf (stderr, " %s; Net ID: %d; Site ID: %d.%d;", model_str, net+1, (site>>n)+1, (site & sub_mask)+1); //par_string available here?
+    else fprintf (stderr, " %s; Net ID: %d; Site ID: %d;", model_str, net, site);
+    fprintf (stderr, " SYS: %04X;", syscode); //#192
+    // if (is_capmax) fprintf (stderr, "Capacity Max ");
+  }
+
 }
