@@ -187,6 +187,29 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "%02X", tsbk_byte[i]);
         fprintf (stderr, " %s",KNRM);
       }
+
+      if (opts->payload == 1)
+      {
+        fprintf (stderr, "%s",KCYN);
+        fprintf (stderr, "\n P25 PDU Payload #%d ", j+1);
+        for (i = 0; i < 12; i++)
+        {
+          fprintf (stderr, "[%02X]", tsbk_byte[i]);
+        }
+        fprintf (stderr, "\n MFID %02X Protected: %d Last Block: %d", MFID, protectbit, lb);
+        
+        if (ec != 0) 
+        {
+          fprintf (stderr, "%s",KRED);
+          fprintf (stderr, " ERR = %d", ec);
+        }
+        if (err != 0) 
+        {
+          fprintf (stderr, "%s",KRED);
+          fprintf (stderr, " (CRC ERR)");
+        }
+        fprintf (stderr, "%s ", KNRM);
+      }
     }
 
     //look at Motorola Opcodes and payload portion of TSBK
@@ -526,6 +549,29 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
         for (i = 2; i < 10; i++)
           fprintf (stderr, "%02X", tsbk_byte[i]);
         fprintf (stderr, " %s",KNRM);
+      }
+
+      if (opts->payload == 1)
+      {
+        fprintf (stderr, "%s",KCYN);
+        fprintf (stderr, "\n P25 PDU Payload #%d ", j+1);
+        for (i = 0; i < 12; i++)
+        {
+          fprintf (stderr, "[%02X]", tsbk_byte[i]);
+        }
+        fprintf (stderr, "\n MFID %02X Protected: %d Last Block: %d", MFID, protectbit, lb);
+        
+        if (ec != 0) 
+        {
+          fprintf (stderr, "%s",KRED);
+          fprintf (stderr, " ERR = %d", ec);
+        }
+        if (err != 0) 
+        {
+          fprintf (stderr, "%s",KRED);
+          fprintf (stderr, " (CRC ERR)");
+        }
+        fprintf (stderr, "%s ", KNRM);
       }
 
       SKIPCALL: ; //do nothing
