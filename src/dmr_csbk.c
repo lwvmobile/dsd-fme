@@ -2242,7 +2242,7 @@ void dmr_decode_syscode(dsd_opts * opts, dsd_state * state, uint8_t * cs_pdu_bit
     opts->dmr_dmrla_is_set = 1;
     opts->dmr_dmrla_n = 0;
     sprintf (state->dmr_branding, "%s", "Motorola");
-    sprintf (state->dmr_branding_sub, "%s", "CapMax ");
+    // sprintf (state->dmr_branding_sub, "%s", "CapMax ");
   } 
 
   if (opts->dmr_dmrla_is_set == 1) n = opts->dmr_dmrla_n;
@@ -2294,8 +2294,10 @@ void dmr_decode_syscode(dsd_opts * opts, dsd_state * state, uint8_t * cs_pdu_bit
     }
 
     //add string for ncurses terminal display
-    if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d; SYS: %04X; ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, syscode );
-    else sprintf (state->dmr_site_parms, "TIII - %s %d-%d; SYS: %04X; ", model_str, net, site, syscode);
+    // if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d; SYS: %04X; ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, syscode );
+    // else sprintf (state->dmr_site_parms, "TIII - %s %d-%d; SYS: %04X; ", model_str, net, site, syscode);
+    if (n != 0) sprintf (state->dmr_site_parms, "TIII %s:%d-%d.%d;%04X; ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, syscode );
+    else sprintf (state->dmr_site_parms, "TIII %s:%d-%d;%04X; ", model_str, net, site, syscode);
   }
 
   if (type == 1)

@@ -940,8 +940,10 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     fprintf (stderr, " SYS: %04X;", syscode); //#192
 
     //add string for ncurses terminal display
-    if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d; SYS: %04X; ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, syscode );
-    else sprintf (state->dmr_site_parms, "TIII - %s %d-%d; SYS: %04X; ", model_str, net, site, syscode);
+    // if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d; SYS: %04X; ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, syscode );
+    // else sprintf (state->dmr_site_parms, "TIII - %s %d-%d; SYS: %04X; ", model_str, net, site, syscode);
+    if (n != 0) sprintf (state->dmr_site_parms, "TIII %s:%d-%d.%d;%04X; ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, syscode );
+    else sprintf (state->dmr_site_parms, "TIII %s:%d-%d;%04X; ", model_str, net, site, syscode);
 
     //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
     if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
@@ -959,8 +961,10 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     fprintf (stderr, " SYS: %04X;", syscode); //#192
 
     //add string for ncurses terminal display
-    if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d; SYS: %04X; ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, syscode );
-    else sprintf (state->dmr_site_parms, "TIII - %s %d-%d; SYS: %04X; ", model_str, net, site, syscode);
+    // if (n != 0) sprintf (state->dmr_site_parms, "TIII - %s %d-%d.%d; SYS: %04X; ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, syscode );
+    // else sprintf (state->dmr_site_parms, "TIII - %s %d-%d; SYS: %04X; ", model_str, net, site, syscode);
+    if (n != 0) sprintf (state->dmr_site_parms, "TIII %s:%d-%d.%d;%04X; ", model_str, net+1, (site>>n)+1, (site & sub_mask)+1, syscode );
+    else sprintf (state->dmr_site_parms, "TIII %s:%d-%d;%04X; ", model_str, net, site, syscode);
   }
   else if (slco == 0x0) //null
     fprintf (stderr, " SLCO NULL ");
