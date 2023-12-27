@@ -1,0 +1,319 @@
+diff --git a/src/p25p1_mdpu.c b/src/p25p1_mdpu.c
+index 7d29860..00c1828 100644
+--- a/src/p25p1_mdpu.c
++++ b/src/p25p1_mdpu.c
+@@ -527,13 +527,13 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
+                 //this will only occur in realtime tuning, not not required .bin or .wav playback
+                 if (channelt & 1) //VCH1
+                 {
+-                  opts->slot1_on = 0;
+-                  opts->slot2_on = 1;
++                  //opts->slot1_on = 0;
++                  opts->slot_preference = 1;
+                 }
+                 else //VCH0
+                 {
+-                  opts->slot1_on = 1;
+-                  opts->slot2_on = 0;
++                  opts->slot_preference = 0;
++                  //opts->slot2_on = 0;
+                 }
+ 
+               }
+@@ -644,13 +644,13 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
+                 //this will only occur in realtime tuning, not not required .bin or .wav playback
+                 if (channelt & 1) //VCH1
+                 {
+-                  opts->slot1_on = 0;
+-                  opts->slot2_on = 1;
++                  //opts->slot1_on = 0;
++                  opts->slot_preference = 1;
+                 }
+                 else //VCH0
+                 {
+-                  opts->slot1_on = 1;
+-                  opts->slot2_on = 0;
++                  opts->slot_preference = 0;
++                  //opts->slot2_on = 0;
+                 }
+ 
+               }
+@@ -753,13 +753,13 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
+                 //this will only occur in realtime tuning, not not required .bin or .wav playback
+                 if (channel & 1) //VCH1
+                 {
+-                  opts->slot1_on = 0;
+-                  opts->slot2_on = 1;
++                  //opts->slot1_on = 0;
++                  opts->slot_preference = 1;
+                 }
+                 else //VCH0
+                 {
+-                  opts->slot1_on = 1;
+-                  opts->slot2_on = 0;
++                  opts->slot_preference = 0;
++                  //opts->slot2_on = 0;
+                 }
+               }
+ 
+@@ -876,13 +876,13 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
+                   //this will only occur in realtime tuning, not not required .bin or .wav playback
+                   if (channelt & 1) //VCH1
+                   {
+-                    opts->slot1_on = 0;
+-                    opts->slot2_on = 1;
++                    //opts->slot1_on = 0;
++                    opts->slot_preference = 1;
+                   }
+                   else //VCH0
+                   {
+-                    opts->slot1_on = 1;
+-                    opts->slot2_on = 0;
++                    opts->slot_preference = 0;
++                    //opts->slot2_on = 0;
+                   }
+ 
+                 }
+diff --git a/src/p25p1_tsbk.c b/src/p25p1_tsbk.c
+index c801b7f..345335a 100644
+--- a/src/p25p1_tsbk.c
++++ b/src/p25p1_tsbk.c
+@@ -294,13 +294,13 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
+                 //this will only occur in realtime tuning, not not required .bin or .wav playback
+                 if (channel & 1) //VCH1
+                 {
+-                  opts->slot1_on = 0;
+-                  opts->slot2_on = 1;
++                  //opts->slot1_on = 0;
++                  opts->slot_preference = 1;
+                 }
+                 else //VCH0
+                 {
+-                  opts->slot1_on = 1;
+-                  opts->slot2_on = 0;
++                  opts->slot_preference = 0;
++                  //opts->slot2_on = 0;
+                 }
+ 
+               }
+diff --git a/src/p25p2_vpdu.c b/src/p25p2_vpdu.c
+index 468b71a..1b14d71 100644
+--- a/src/p25p2_vpdu.c
++++ b/src/p25p2_vpdu.c
+@@ -75,8 +75,6 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 
+ 		//Temp Fix: Disable Slot Playback when MAC_SIGNAL present (good CRC),
+ 		//during trunking, will re-enable when call grant is received, prevent lagging:
+-		if (opts->p25_trunk == 1 && opts->p25_is_tuned == 0) opts->slot1_on = 0;
+-		if (opts->p25_trunk == 1 && opts->p25_is_tuned == 0) opts->slot2_on = 0;
+ 
+ 		//TODO: Iron out issues with audio playing in every non SACCH slot when no voice present
+ 		//without it stuttering during actual voice
+@@ -156,13 +154,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 							//this will only occur in realtime tuning, not not required .bin or .wav playback
+ 							if (channel & 1) //VCH1
+ 							{
+-								opts->slot1_on = 0;
+-								opts->slot2_on = 1;
++								//opts->slot1_on = 0;
++								opts->slot_preference = 1;
+ 							}
+ 							else //VCH0
+ 							{
+-								opts->slot1_on = 1;
+-								opts->slot2_on = 0;
++								opts->slot_preference = 0;
++								//opts->slot2_on = 0;
+ 							}
+ 
+ 						}
+@@ -256,13 +254,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 							//this will only occur in realtime tuning, not not required .bin or .wav playback
+ 							if (channel & 1) //VCH1
+ 							{
+-								opts->slot1_on = 0;
+-								opts->slot2_on = 1;
++								//opts->slot1_on = 0;
++								opts->slot_preference = 1;
+ 							}
+ 							else //VCH0
+ 							{
+-								opts->slot1_on = 1;
+-								opts->slot2_on = 0;
++								opts->slot_preference = 0;
++								//opts->slot2_on = 0;
+ 							}
+ 
+ 						}
+@@ -387,13 +385,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 								//this will only occur in realtime tuning, not not required .bin or .wav playback
+ 								if (tunable_chan & 1) //VCH1
+ 								{
+-									opts->slot1_on = 0;
+-									opts->slot2_on = 1;
++									//opts->slot1_on = 0;
++									opts->slot_preference = 1;
+ 								}
+ 								else //VCH0
+ 								{
+-									opts->slot1_on = 1;
+-									opts->slot2_on = 0;
++									opts->slot_preference = 0;
++									//opts->slot2_on = 0;
+ 								}
+ 
+ 							}
+@@ -512,13 +510,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 							//this will only occur in realtime tuning, not not required .bin or .wav playback
+ 							if (channel & 1) //VCH1
+ 							{
+-								opts->slot1_on = 0;
+-								opts->slot2_on = 1;
++								//opts->slot1_on = 0;
++								opts->slot_preference = 1;
+ 							}
+ 							else //VCH0
+ 							{
+-								opts->slot1_on = 1;
+-								opts->slot2_on = 0;
++								opts->slot_preference = 0;
++								//opts->slot2_on = 0;
+ 							}
+ 
+ 						}
+@@ -643,13 +641,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 							//this will only occur in realtime tuning, not not required .bin or .wav playback
+ 							if (channel & 1) //VCH1
+ 							{
+-								opts->slot1_on = 0;
+-								opts->slot2_on = 1;
++								//opts->slot1_on = 0;
++								opts->slot_preference = 1;
+ 							}
+ 							else //VCH0
+ 							{
+-								opts->slot1_on = 1;
+-								opts->slot2_on = 0;
++								opts->slot_preference = 0;
++								//opts->slot2_on = 0;
+ 							}
+ 						}
+ 
+@@ -749,13 +747,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 							//this will only occur in realtime tuning, not not required .bin or .wav playback
+ 							if (channel & 1) //VCH1
+ 							{
+-								opts->slot1_on = 0;
+-								opts->slot2_on = 1;
++								//opts->slot1_on = 0;
++								opts->slot_preference = 1;
+ 							}
+ 							else //VCH0
+ 							{
+-								opts->slot1_on = 1;
+-								opts->slot2_on = 0;
++								opts->slot_preference = 0;
++								//opts->slot2_on = 0;
+ 							}
+ 						}
+ 
+@@ -919,13 +917,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 								//this will only occur in realtime tuning, not not required .bin or .wav playback
+ 								if (tunable_chan & 1) //VCH1
+ 								{
+-									opts->slot1_on = 0;
+-									opts->slot2_on = 1;
++									//opts->slot1_on = 0;
++									opts->slot_preference = 1;
+ 								}
+ 								else //VCH0
+ 								{
+-									opts->slot1_on = 1;
+-									opts->slot2_on = 0;
++									opts->slot_preference = 0;
++									//opts->slot2_on = 0;
+ 								}
+ 
+ 							}
+@@ -1110,13 +1108,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 								//this will only occur in realtime tuning, not not required .bin or .wav playback
+ 								if (tunable_chan & 1) //VCH1
+ 								{
+-									opts->slot1_on = 0;
+-									opts->slot2_on = 1;
++									//opts->slot1_on = 0;
++									opts->slot_preference = 1;
+ 								}
+ 								else //VCH0
+ 								{
+-									opts->slot1_on = 1;
+-									opts->slot2_on = 0;
++									opts->slot_preference = 0;
++									//opts->slot2_on = 0;
+ 								}
+ 
+ 							}
+@@ -1246,13 +1244,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 								//this will only occur in realtime tuning, not not required .bin or .wav playback
+ 								if (tunable_chan & 1) //VCH1
+ 								{
+-									opts->slot1_on = 0;
+-									opts->slot2_on = 1;
++									//opts->slot1_on = 0;
++									opts->slot_preference = 1;
+ 								}
+ 								else //VCH0
+ 								{
+-									opts->slot1_on = 1;
+-									opts->slot2_on = 0;
++									opts->slot_preference = 0;
++									//opts->slot2_on = 0;
+ 								}
+ 
+ 							}
+@@ -1375,13 +1373,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 							//this will only occur in realtime tuning, not not required .bin or .wav playback
+ 							if (channelt & 1) //VCH1
+ 							{
+-								opts->slot1_on = 0;
+-								opts->slot2_on = 1;
++								//opts->slot1_on = 0;
++								opts->slot_preference = 1;
+ 							}
+ 							else //VCH0
+ 							{
+-								opts->slot1_on = 1;
+-								opts->slot2_on = 0;
++								opts->slot_preference = 0;
++								//opts->slot2_on = 0;
+ 							}
+ 							
+ 						}
+@@ -1498,13 +1496,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 							//this will only occur in realtime tuning, not not required .bin or .wav playback
+ 							if (channelt & 1) //VCH1
+ 							{
+-								opts->slot1_on = 0;
+-								opts->slot2_on = 1;
++								//opts->slot1_on = 0;
++								opts->slot_preference = 1;
+ 							}
+ 							else //VCH0
+ 							{
+-								opts->slot1_on = 1;
+-								opts->slot2_on = 0;
++								opts->slot_preference = 0;
++								//opts->slot2_on = 0;
+ 							}
+ 						}
+ 
+@@ -1516,9 +1514,6 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
+ 							state->samplesPerSymbol = 10;
+ 							state->symbolCenter = 4;
+ 							opts->frame_p25p1 = 1; //enable, just in case it isn't already
+-
+-							//enable voice on slot 1 (just in case they start talking too, but probably won't)
+-							opts->slot1_on = 1;
+ 						} 
+ 
+ 					}
