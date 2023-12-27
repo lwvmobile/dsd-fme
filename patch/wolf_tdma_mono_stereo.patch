@@ -1,0 +1,452 @@
+diff --git a/src/dsd_audio2.c b/src/dsd_audio2.c
+index a836afc..5eaf3c4 100644
+--- a/src/dsd_audio2.c
++++ b/src/dsd_audio2.c
+@@ -906,8 +906,31 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
+   //CHEAT: Using the slot on/off, use that to set encL or encR back on
+   //as a simple way to turn off voice synthesis in a particular slot
+   //its not really 'disabled', we just aren't playing it
+-  if (opts->slot1_on == 0) encL = 1;
+-  if (opts->slot2_on == 0) encR = 1;
++  // if (opts->slot1_on == 0) encL = 1;
++  // if (opts->slot2_on == 0) encR = 1;
++
++  //this may have some unintended side effects that I haven't tested/explored yet, that's why its a patch only
++  //particularly in regards to 'Aero' Builds with their OSS Jank and slot_preference = 3 by default
++  //if rounds of testing in various scenaries looks good, I may expand this to P25p2 and the Float Variants as well
++  if (opts->slot1_on == 0 && opts->slot2_on == 1 && encR == 0) //slot 1 is hard off and slot 2 is on
++    memcpy (state->s_l4, state->s_r4, sizeof(state->s_l4)); //copy right to left
++  else if (opts->slot1_on == 1 && opts->slot2_on == 0 && encL == 0) //slot 2 is hard off and slot 1 is on
++    memcpy (state->s_r4, state->s_l4, sizeof(state->s_r4)); //copy left to right
++  else if (opts->slot_preference == 0 && state->dmrburstL == 16 && encL == 0) //slot 1 is preferred, and voice in slot 1
++    memcpy (state->s_r4, state->s_l4, sizeof(state->s_r4)); //copy left to right
++  else if (opts->slot_preference == 1 && state->dmrburstR == 16 && encR == 0) //slot 2 is preferred, and voice in slot 2
++    memcpy (state->s_l4, state->s_r4, sizeof(state->s_l4)); //copy right to left
++  else if (state->dmrburstL == 16 && state->dmrburstR != 16 && encL == 0) //voice in left, no voice in right
++    memcpy (state->s_r4, state->s_l4, sizeof(state->s_r4)); //copy left to right
++  else if (state->dmrburstR == 16 && state->dmrburstL != 16 && encR == 0) //voice in right, no voice in left
++    memcpy (state->s_l4, state->s_r4, sizeof(state->s_l4)); //copy right to left
++  //else if voice in both, and both slots on, and no preference on slot, then regular stereo interleave (left and right channels)
++
++  if (opts->slot1_on == 0 && opts->slot2_on == 0) //both slots are hard off, disable playback
++  {
++    encL = 1;
++    encR = 1;
++  }
+ 
+   //WIP: Mute if on B list (or not W list)
+   char modeL[8];
+@@ -944,12 +967,37 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
+   if (strcmp(modeL, "B") == 0) encL = 1;
+   if (strcmp(modeR, "B") == 0) encR = 1;
+ 
++  //check to see if we need to enable slot and toggle slot preference here
++  //this method will always favor slot 2 (this is a patch anyways, so....meh)
++  if (strcmp(modeL, "A") == 0)
++  {
++    opts->slot1_on = 1;
++    opts->slot_preference = 0;
++  }
++  if (strcmp(modeR, "A") == 0)
++  {
++    opts->slot2_on = 1;
++    opts->slot_preference = 1;
++  }
++
+   //if TG Hold in place, mute anything but that TG #132
+-  if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
+-  if (state->tg_hold != 0 && state->tg_hold != TGR) encR = 1;
+-  //likewise, override and unmute if TG hold matches TG
+-  if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
+-  if (state->tg_hold != 0 && state->tg_hold == TGR) encR = 0;
++  if (state->tg_hold != 0 && state->tg_hold != TGL) 
++    encL = 1;
++  if (state->tg_hold != 0 && state->tg_hold != TGR)
++    encR = 1;
++  //likewise, override and unmute if TG hold matches TG (and turn on slot and set preference)
++  if (state->tg_hold != 0 && state->tg_hold == TGL)
++  {
++    encL = 0;
++    opts->slot1_on = 1;
++    opts->slot_preference = 0;
++  }
++  if (state->tg_hold != 0 && state->tg_hold == TGR)
++  {
++    encR = 0;
++    opts->slot2_on = 1;
++    opts->slot_preference = 1;
++  }
+ 
+   //interleave left and right channels from the short storage area
+   for (i = 0; i < 160; i++)
+@@ -1092,8 +1140,31 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
+   //CHEAT: Using the slot on/off, use that to set encL or encR back on
+   //as a simple way to turn off voice synthesis in a particular slot
+   //its not really 'disabled', we just aren't playing it
+-  if (opts->slot1_on == 0) encL = 1;
+-  if (opts->slot2_on == 0) encR = 1;
++  // if (opts->slot1_on == 0) encL = 1;
++  // if (opts->slot2_on == 0) encR = 1;
++
++  //this may have some unintended side effects that I haven't tested/explored yet, that's why its a patch only
++  //particularly in regards to 'Aero' Builds with their OSS Jank and slot_preference = 3 by default
++  //if rounds of testing in various scenaries looks good, I may expand this to P25p2 and the Float Variants as well
++  if (opts->slot1_on == 0 && opts->slot2_on == 1 && encR == 0) //slot 1 is hard off and slot 2 is on
++    memcpy (state->s_l4, state->s_r4, sizeof(state->s_l4)); //copy right to left
++  else if (opts->slot1_on == 1 && opts->slot2_on == 0 && encL == 0) //slot 2 is hard off and slot 1 is on
++    memcpy (state->s_r4, state->s_l4, sizeof(state->s_r4)); //copy left to right
++  else if (opts->slot_preference == 0 && state->dmrburstL == 21 && encL == 0) //slot 1 is preferred, and voice in slot 1
++    memcpy (state->s_r4, state->s_l4, sizeof(state->s_r4)); //copy left to right
++  else if (opts->slot_preference == 1 && state->dmrburstR == 21 && encR == 0) //slot 2 is preferred, and voice in slot 2
++    memcpy (state->s_l4, state->s_r4, sizeof(state->s_l4)); //copy right to left
++  else if (state->dmrburstL == 21 && state->dmrburstR != 21 && encL == 0) //voice in left, no voice in right
++    memcpy (state->s_r4, state->s_l4, sizeof(state->s_r4)); //copy left to right
++  else if (state->dmrburstR == 21 && state->dmrburstL != 21 && encR == 0) //voice in right, no voice in left
++    memcpy (state->s_l4, state->s_r4, sizeof(state->s_l4)); //copy right to left
++  //else if voice in both, and both slots on, and no preference on slot, then regular stereo interleave (left and right channels)
++
++  if (opts->slot1_on == 0 && opts->slot2_on == 0) //both slots are hard off, disable playback
++  {
++    encL = 1;
++    encR = 1;
++  }
+ 
+   //WIP: Mute if on B list (or not W list)
+   char modeL[8];
+@@ -1130,12 +1201,37 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
+   if (strcmp(modeL, "B") == 0) encL = 1;
+   if (strcmp(modeR, "B") == 0) encR = 1;
+ 
++  //check to see if we need to enable slot and toggle slot preference here
++  //this method will always favor slot 2 (this is a patch anyways, so....meh)
++  if (strcmp(modeL, "A") == 0)
++  {
++    opts->slot1_on = 1;
++    opts->slot_preference = 0;
++  }
++  if (strcmp(modeR, "A") == 0)
++  {
++    opts->slot2_on = 1;
++    opts->slot_preference = 1;
++  }
++
+   //if TG Hold in place, mute anything but that TG #132
+-  if (state->tg_hold != 0 && state->tg_hold != TGL) encL = 1;
+-  if (state->tg_hold != 0 && state->tg_hold != TGR) encR = 1;
+-  //likewise, override and unmute if TG hold matches TG
+-  if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
+-  if (state->tg_hold != 0 && state->tg_hold == TGR) encR = 0;
++  if (state->tg_hold != 0 && state->tg_hold != TGL) 
++    encL = 1;
++  if (state->tg_hold != 0 && state->tg_hold != TGR)
++    encR = 1;
++  //likewise, override and unmute if TG hold matches TG (and turn on slot and set preference)
++  if (state->tg_hold != 0 && state->tg_hold == TGL)
++  {
++    encL = 0;
++    opts->slot1_on = 1;
++    opts->slot_preference = 0;
++  }
++  if (state->tg_hold != 0 && state->tg_hold == TGR)
++  {
++    encR = 0;
++    opts->slot2_on = 1;
++    opts->slot_preference = 1;
++  }
+ 
+   //interleave left and right channels from the short storage area
+   for (i = 0; i < 160; i++)
+@@ -1238,6 +1334,226 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
+ 
+ }
+ 
++//short stereo mix 18v superframe
++void playSynthesizedVoiceSS18 (dsd_opts * opts, dsd_state * state)
++{
++
++  //NOTE: This will run once every superframe during a sacch field
++  //exact implementation to be determined
++
++  int i, j;
++  uint8_t encL, encR;
++
++  short stereo_sf[18][320]; //8k 2-channel stereo interleave mix for full superframe
++  // memset (stereo_sf, 1, 18*sizeof(short)); //I don't think 18*sizeof(short) was large enough, should probably be 18*320*sizeof(short)
++  memset (stereo_sf, 1, sizeof(stereo_sf));
++
++  short empty[320];
++  memset (empty, 1, sizeof(empty));
++
++  //p25p2 enc checkdown for whether or not to fill the stereo sample or not for playback or writing
++  encL = encR = 1;
++  if (state->payload_algid == 0 || state->payload_algid == 0x80)
++    encL = 0;
++  if (state->payload_algidR == 0 || state->payload_algidR == 0x80)
++    encR = 0;
++
++  //checkdown to see if we can lift the 'mute' if a key is available
++  if (encL)
++  {
++    if (state->payload_algid == 0xAA)
++    {
++      if (state->R != 0)
++      {
++        encL = 0;
++      }
++    }
++  }
++
++  if (encR)
++  {
++    if (state->payload_algidR == 0xAA)
++    {
++      if (state->RR != 0)
++      {
++        encR = 0;
++      }
++    }
++  }
++
++
++  //TODO: add option to bypass enc with a toggle as well
++
++  //CHEAT: Using the slot on/off, use that to set encL or encR back on
++  //as a simple way to turn off voice synthesis in a particular slot
++  //its not really 'disabled', we just aren't playing it
++  // if (opts->slot1_on == 0) encL = 1;
++  // if (opts->slot2_on == 0) encR = 1;
++
++  //this may have some unintended side effects that I haven't tested/explored yet, that's why its a patch only
++  //particularly in regards to 'Aero' Builds with their OSS Jank and slot_preference = 3 by default
++  //if rounds of testing in various scenaries looks good, I may expand this to P25p2 and the Float Variants as well
++  if (opts->slot1_on == 0 && opts->slot2_on == 1 && encR == 0) //slot 1 is hard off and slot 2 is on
++    memcpy (state->s_l4, state->s_r4, sizeof(state->s_l4)); //copy right to left
++  else if (opts->slot1_on == 1 && opts->slot2_on == 0 && encL == 0) //slot 2 is hard off and slot 1 is on
++    memcpy (state->s_r4, state->s_l4, sizeof(state->s_r4)); //copy left to right
++  else if (opts->slot_preference == 0 && state->dmrburstL == 21 && encL == 0) //slot 1 is preferred, and voice in slot 1
++    memcpy (state->s_r4, state->s_l4, sizeof(state->s_r4)); //copy left to right
++  else if (opts->slot_preference == 1 && state->dmrburstR == 21 && encR == 0) //slot 2 is preferred, and voice in slot 2
++    memcpy (state->s_l4, state->s_r4, sizeof(state->s_l4)); //copy right to left
++  else if (state->dmrburstL == 21 && state->dmrburstR != 21 && encL == 0) //voice in left, no voice in right
++    memcpy (state->s_r4, state->s_l4, sizeof(state->s_r4)); //copy left to right
++  else if (state->dmrburstR == 21 && state->dmrburstL != 21 && encR == 0) //voice in right, no voice in left
++    memcpy (state->s_l4, state->s_r4, sizeof(state->s_l4)); //copy right to left
++  //else if voice in both, and both slots on, and no preference on slot, then regular stereo interleave (left and right channels)
++
++  if (opts->slot1_on == 0 && opts->slot2_on == 0) //both slots are hard off, disable playback
++  {
++    encL = 1;
++    encR = 1;
++  }
++
++  //WIP: Mute if on B list (or not W list)
++  char modeL[8];
++  sprintf (modeL, "%s", "");
++  char modeR[8];
++  sprintf (modeR, "%s", "");
++
++  int TGL = state->lasttg;
++  int TGR = state->lasttgR;
++
++  //if we are using allow/whitelist mode, then write 'B' to mode for block
++  //comparison below will look for an 'A' to write to mode if it is allowed
++  if (opts->trunk_use_allow_list == 1)
++  {
++    sprintf (modeL, "%s", "B");
++    sprintf (modeR, "%s", "B");
++  }
++
++  for (i = 0; i < state->group_tally; i++)
++  {
++    if (state->group_array[i].groupNumber == TGL)
++    {
++      strcpy (modeL, state->group_array[i].groupMode);
++      // break; //need to keep going to check other potential slot group
++    }
++    if (state->group_array[i].groupNumber == TGR)
++    {
++      strcpy (modeR, state->group_array[i].groupMode);
++      // break; //need to keep going to check other potential slot group
++    }
++  }
++
++  //flag either left or right as 'enc' to mute if B
++  if (strcmp(modeL, "B") == 0) encL = 1;
++  if (strcmp(modeR, "B") == 0) encR = 1;
++
++  //check to see if we need to enable slot and toggle slot preference here
++  //this method will always favor slot 2 (this is a patch anyways, so....meh)
++  if (strcmp(modeL, "A") == 0)
++  {
++    opts->slot1_on = 1;
++    opts->slot_preference = 0;
++  }
++  if (strcmp(modeR, "A") == 0)
++  {
++    opts->slot2_on = 1;
++    opts->slot_preference = 1;
++  }
++
++  //if TG Hold in place, mute anything but that TG #132
++  if (state->tg_hold != 0 && state->tg_hold != TGL) 
++    encL = 1;
++  if (state->tg_hold != 0 && state->tg_hold != TGR)
++    encR = 1;
++  //likewise, override and unmute if TG hold matches TG (and turn on slot and set preference)
++  if (state->tg_hold != 0 && state->tg_hold == TGL)
++  {
++    encL = 0;
++    opts->slot1_on = 1;
++    opts->slot_preference = 0;
++  }
++  if (state->tg_hold != 0 && state->tg_hold == TGR)
++  {
++    encR = 0;
++    opts->slot2_on = 1;
++    opts->slot_preference = 1;
++  }
++
++  //at this point, if both channels are still flagged as enc, then we can skip all playback/writing functions
++  if (encL && encR)
++    goto SS18_END;
++
++  //interleave left and right channels from the short storage area
++  for (j = 0; j < 18; j++)
++  {
++    for (i = 0; i < 160; i++)
++    {
++      if (!encL)
++        stereo_sf[j][i*2+0] = state->s_l4[j][i];
++      if (!encR)
++        stereo_sf[j][i*2+1] = state->s_r4[j][i];
++    }
++  }
++
++  if (opts->audio_out_type == 0) //Pulse Audio
++  {
++    for (j = 0; j < 18; j++)
++    {
++      if (memcmp(empty, stereo_sf[j], sizeof(empty)) != 0) //may not work as intended because its stereo and one will have something in it most likely
++        pa_simple_write(opts->pulse_digi_dev_out, stereo_sf[j], 320*2, NULL);
++    }
++  }
++
++  if (opts->audio_out_type == 8) //UDP Audio
++  {
++    for (j = 0; j < 18; j++)
++    {
++      if (memcmp(empty, stereo_sf[j], sizeof(empty)) != 0) //may not work as intended because its stereo and one will have something in it most likely
++        udp_socket_blaster (opts, state, 320*2, stereo_sf[j]);
++    }
++  }
++  
++
++  if (opts->audio_out_type == 1 || opts->audio_out_type == 2) //STDOUT or OSS 8k/2channel
++  {
++    for (j = 0; j < 18; j++)
++    {
++      if (memcmp(empty, stereo_sf[j], sizeof(empty)) != 0) //may not work as intended because its stereo and one will have something in it most likely
++        write (opts->audio_out_fd, stereo_sf[j], 320*2);
++    }
++  }
++
++  SS18_END:
++
++  //run cleanup since we pulled stuff from processAudio
++  state->audio_out_idx = 0;
++  state->audio_out_idxR = 0;
++
++  //set float temp buffer to baseline
++  memset (state->s_l4, 1, sizeof(state->s_l4));
++  memset (state->s_r4, 1, sizeof(state->s_r4));
++
++  if (state->audio_out_idx2 >= 800000)
++  {
++    state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
++    state->audio_out_buf_p = state->audio_out_buf + 100;
++    memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
++    memset (state->audio_out_buf, 0, 100 * sizeof (short));
++    state->audio_out_idx2 = 0;
++  }
++
++  if (state->audio_out_idx2R >= 800000)
++  {
++    state->audio_out_float_buf_pR = state->audio_out_float_bufR + 100;
++    state->audio_out_buf_pR = state->audio_out_bufR + 100;
++    memset (state->audio_out_float_bufR, 0, 100 * sizeof (float));
++    memset (state->audio_out_bufR, 0, 100 * sizeof (short));
++    state->audio_out_idx2R = 0;
++  }
++
++}
++
+ //largely borrowed from Boatbod OP25 (simplified single tone ID version)
+ void soft_tonef (float samp[160], int n, int ID, int AD)
+ {
+diff --git a/src/dsd_main.c b/src/dsd_main.c
+index 1d2616b..924bf00 100644
+--- a/src/dsd_main.c
++++ b/src/dsd_main.c
+@@ -745,7 +745,7 @@ initOpts (dsd_opts * opts)
+   //slot preference is used during OSS audio playback to
+   //prefer one tdma voice slot over another when both are playing back
+   //this is a fix to OSS 48k/1 output
+-  opts->slot_preference = 0; //default prefer slot 1 -- state->currentslot = 0;
++  opts->slot_preference = 2; //default prefer slot 1 -- state->currentslot = 0;
+ 
+   //hardset slots to synthesize
+   opts->slot1_on = 1;
+diff --git a/src/dsd_ncurses.c b/src/dsd_ncurses.c
+index 4646e77..fc3f28b 100644
+--- a/src/dsd_ncurses.c
++++ b/src/dsd_ncurses.c
+@@ -2568,11 +2568,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+   {
+     printw ("| Voice Error: [%i][%i] Slot 1 (1)", state->errs, state->errs2);
+     if (opts->slot1_on == 0) printw (" OFF");
+-    if (opts->slot1_on == 1) printw (" ON");
++    if (opts->slot1_on == 1) printw (" ON"); if (opts->slot_preference == 0) printw (" *Preferred");
+     printw ("\n");
+     printw ("| Voice Error: [%i][%i] Slot 2 (2)", state->errsR, state->errs2R);
+     if (opts->slot2_on == 0) printw (" OFF");
+-    if (opts->slot2_on == 1) printw (" ON");
++    if (opts->slot2_on == 1) printw (" ON"); if (opts->slot_preference == 1) printw (" *Preferred");
+     printw ("\n");
+   }
+   printw ("------------------------------------------------------------------------------\n");
+@@ -3654,8 +3654,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+     //switching, but want to control each seperately plz
+     if (opts->slot1_on == 1)
+     {
+-      opts->slot1_on = 0;
+-      opts->slot_preference = 1; //slot 2
++      opts->slot1_on = 0; if (opts->slot_preference == 0) opts->slot_preference = 2;
++      // opts->slot_preference = 1; //slot 2
+       //clear any previously buffered audio
+       state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
+       state->audio_out_buf_p = state->audio_out_buf + 100;
+@@ -3680,8 +3680,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+     //switching, but want to control each seperately plz
+     if (opts->slot2_on == 1)
+     {
+-      opts->slot2_on = 0;
+-      opts->slot_preference = 0; //slot 1
++      opts->slot2_on = 0; if (opts->slot_preference == 1) opts->slot_preference = 2; 
++      // opts->slot_preference = 0; //slot 1
+       //clear any previously buffered audio
+       state->audio_out_float_buf_pR = state->audio_out_float_bufR + 100;
+       state->audio_out_buf_pR = state->audio_out_bufR + 100;
+@@ -3701,6 +3701,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+     }
+   }
+ 
++  if (c == 51) //'3' key, cycle slot preferences
++  {
++    if (opts->slot_preference < 2)
++      opts->slot_preference++;
++    else opts->slot_preference = 0; 
++  }
++
+   if (c == 43) //+ key, increment audio_gain
+   {
+ 
