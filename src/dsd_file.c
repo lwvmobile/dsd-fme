@@ -17,19 +17,19 @@
 
 #include "dsd.h"
 
-time_t nowF;
-char * getTimeF(void) //get pretty hh:mm:ss timestamp
+//fix from YorgosTheodorakis fork -- https://github.com/YorgosTheodorakis/dsd-fme/commit/7884ee555521a887d388152b3b1f11f20433a94b
+char * getTimeF(void) //get pretty hhmmss timestamp
 {
+  char * curr = (char *) malloc(9);
   time_t t = time(NULL);
-
-  char * curr;
-  char * stamp = asctime(localtime( & t));
-
-  curr = strtok(stamp, " ");
-  curr = strtok(NULL, " ");
-  curr = strtok(NULL, " ");
-  curr = strtok(NULL, " ");
-
+  struct tm * ptm = localtime(& t);
+  sprintf(
+    curr,
+    "%02d%02d%02d",
+    ptm->tm_hour,
+    ptm->tm_min,
+    ptm->tm_sec
+  );
   return curr;
 }
 
@@ -44,7 +44,7 @@ char * getDateF(void) {
   time_t t;
   t = time(NULL);
   to = localtime( & t);
-  strftime(datename, sizeof(datename), "%Y-%m-%d", to);
+  strftime(datename, sizeof(datename), "%Y%m%d", to);
   curr2 = strtok(datename, " ");
   return curr2;
 }
