@@ -9,10 +9,6 @@
 #dsd-fme -i tcp:192.168.7.8:7355 -U 4532 -T -mq -N 2> log.ans
 #dsd-fme -i rtl:0:855.625M:0:-2:12 -T -mq -N 2> log.ans
 
-#P25 P2 TDMA CC with QPSK (Simulcast)
-#dsd-fme -i tcp:192.168.7.8:7355 -U 4532 -T -f2 -m2 -N 2> log.ans
-#dsd-fme -i rtl:0:855.625M:0:-2:12 -T -f2 -m2 -N 2> log.ans
-
 #P25 P2 TDMA CC with C4FM
 #dsd-fme -i tcp:192.168.7.8:7355 -U 4532 -T -f2 -N 2> log.ans
 #dsd-fme -i rtl:0:855.625M:0:-2:12 -T -f2 -m2 -N 2> log.ans

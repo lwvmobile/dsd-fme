@@ -20,7 +20,7 @@
 ## Conventional Frequency Scanner
 This feature is used to allow DSD-FME to use RIGCTL or RTL input and cycle through frequencies to attain a frame sync. 
 
-This works almost identically to how the trunkng methods work, but instead of locking onto a control channel and tuning based on its decoding, it tunes through all loaded frequencies in a CSV file and stops when it finds a frame sync. This method is meant for loading a bunch of conventional non-trunking frequencies that signal only when voice or short data bursts are present (DMR T2, Conventional P25 P1, Conventional NXDN, etc) and decode them until the frame sync stops and then resume its scan. This method uses SDR++ RIGCTL, or RTL internal handling to go through signal. -Y is the scan switch. Note: This method will perform at a level rivaling a real hardware scanner, SDR tuning is not nearly as fast or reliable at locking onto signal.
+This works almost identically to how the trunkng methods work, but instead of locking onto a control channel and tuning based on its decoding, it tunes through all loaded frequencies in a CSV file and stops when it finds a frame sync. This method is meant for loading a bunch of conventional non-trunking frequencies that signal only when voice or short data bursts are present (DMR T2, Conventional P25 P1, Conventional NXDN, etc) and decode them until the frame sync stops and then resume its scan. This method uses SDR++ RIGCTL, or RTL internal handling to go through signal. -Y is the scan switch. Note: This method will NOT perform at a level similar to a real hardware scanner, SDR tuning is not nearly as fast or reliable at locking onto signal.
 
 To scan through a mixture of DMR and P25 Conventional, use:
 `dsd-fme -i tcp -C channel_map.csv -G group.csv -Y -U 4532 -N 2> log.ans` 
@@ -31,7 +31,7 @@ To scan through NXDN48 only conventional, use:
 To scan through NXDN96 only conventional, use: 
 `dsd-fme -fn -i tcp -C channel_map.csv -Y -U 4532 -N 2> log.ans`
 
-The Channel Map setup will be identical to any of the channel maps found for trunking systems, channel numbers do not matter and can be arbitrarily organized, and frequencies can be duplicated to be 'scanned' more frequently in larger CSV files. Scan speed by default is 1 second, and is most stable at that speed. This can be adjusted by using the `-t 2` option, for example, to specify 2 seconds of hang time per frequency. ~~If activity occurs on a frequency, an additional 2 seconds of 'hangtime' will occur on that frequency for any follow up voice activity.~~
+The Channel Map setup will be identical to any of the channel maps found for trunking systems, channel numbers do not matter and can be arbitrarily organized, and frequencies can be duplicated to be 'scanned' more frequently in larger CSV files. Scan speed by default is 1 second, and is most stable at that speed. This can be adjusted by using the `-t 2` option, for example, to specify 2 seconds of hang time per frequency. ~~If activity occurs on a frequency, an additional 2 seconds of 'hangtime' will occur on that frequency for any follow up voice activity.~~ Using `-t 0` will forego the one second wait time, and this can work in some situations, but is not advised as it may skip during the middle of transmissions, or skip over them entirely without a framesync.
 
 Please Note: DMR Simplex may not behave well on scan, I have not been able to test it as such, but given the nature of the on-off timeslot signalling on DMR Simplex, missed frame syncs and skipping/resuming scan may occur.
 
@@ -233,6 +233,8 @@ francis@12coresx:~$ ffmpeg -f pulse -i 0 -c:a libmp3lame -ab 64k -f mp3 icecast:
 
 
 ```
+
+Note: Do not run this command for ffmpeg/icecast piped to the main dsd-fme command, make sure these are running in seperate terminals.
 
 ## Sending Audio to UDP Target/Port
 
