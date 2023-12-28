@@ -709,13 +709,16 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
           if (active_ava == 1)
           {
-            if (active_con == 1) fprintf (stderr, " Connection Active;");
+            // if (active_con == 1) fprintf (stderr, " Connection Active;");
+            if (active_con == 1)
+              fprintf (stderr, " Online;");
+            else fprintf (stderr, " Offline;");
             // fprintf (stderr, " Confirmed Channel Priority: %d;", c_chan_pri);
             // fprintf (stderr, " Active Channel Priority: %d;", a_chan_pri);
             fprintf (stderr, " CC Pri: %d;", c_chan_pri);
             fprintf (stderr, " AC Pri: %d;", a_chan_pri);
             if (a_reserved) fprintf (stderr, " Res: %X;", a_reserved);
-            if (a_channel != 0xFFF) fprintf (stderr, " LPCN: %d;", a_channel);
+            if (a_channel != 0xFFF && a_channel != 0) fprintf (stderr, " LPCN: %d;", a_channel);
             if (a_channel == 0) fprintf (stderr, " LPCN: Null;");
             if (a_channel == 0xFFF)
             {
