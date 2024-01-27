@@ -1349,7 +1349,7 @@ usage ()
   printf ("  -G <file>     Import Group List Allow/Block and Label from csv file.\n");
   printf ("                 (See group.csv for example)\n");
   printf ("  -T            Enable Trunking Features (NXDN/P25/EDACS/DMR) with RIGCTL/TCP or RTL Input\n");
-  printf ("  -Y            Enable Scanning Mode with RIGCTL/TCP or RTL Input (Lower z) \n");
+  printf ("  -Y            Enable Scanning Mode with RIGCTL/TCP or RTL Input \n");
   printf ("                 Experimental -- Can only scan for sync with enabled decoders, don't mix NXDN and DMR/P25!\n");
   printf ("                 This is not a Trunking Feature, just scans through conventional frequencies fast!\n");
   printf ("  -W            Use Imported Group List as a Trunking Allow/White List -- Only Tune with Mode A\n");
@@ -1357,7 +1357,7 @@ usage ()
   printf ("  -E            Disable Tune to Group Calls (DMR TIII, Con+, Cap+, P25, NXDN Type-C, and Type-D)\n");
   printf ("  -e            Enable Tune to Data Calls (DMR TIII, Cap+, NXDN Type-C)\n");
   printf ("                 (NOTE: No Clear Distinction between Cap+ Private Voice Calls and Data Calls -- Both enabled with Data Calls \n");
-  printf ("                 (NOTE: P25 Data Channels Not Enabled (no handling) \n");
+  printf ("  -I <dec>      Specify TG to Hold During Trunking (DMR, P25, NXDN Type-C Trunking)\n");
   printf ("  -U <port>     Enable RIGCTL/TCP; Set TCP Port for RIGCTL. (4532 on SDR++)\n");
   printf ("  -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
   printf ("                 P25 - 12000; NXDN48 - 7000; NXDN96: 12000; DMR - 7000-12000; EDACS/PV - 12000-24000;\n"); //redo this, or check work, or whatever
@@ -1586,7 +1586,7 @@ main (int argc, char **argv)
 
   exitflag = 0;
 
-  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:")) != -1)
+  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1608,6 +1608,12 @@ main (int argc, char **argv)
 
         //NOTE: The 'K' option for single BP key has been swapped to 'b'
         //'K' is now used for hexidecimal key.csv imports
+
+        //specify TG Hold value
+        case 'I':
+          sscanf (optarg, "%d", &state.tg_hold);
+          fprintf (stderr, "TG Hold set to %d \n", state.tg_hold);
+          break;
 
         case '9': //This is a temporary fix for RR issue until a permanent fix can be found
           state.ea_mode = 0;

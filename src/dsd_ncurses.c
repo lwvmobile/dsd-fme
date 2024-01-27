@@ -2533,8 +2533,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     attron(COLOR_PAIR(3));
     level = (int) state->max / 164; //only update on carrier present
     if (opts->mod_qpsk == 1) level = (int) state->max / 328; //test values here
+    if (opts->audio_in_type == 4) level = 50; //hard set when reading symbol bin files, otherwise, it will just be near zero
+    if (level > 100) level = 100; //cap max at 100 to prevent it going over
     reset = 1;
   }
+  else level = 0;
 
   printw ("--Audio Decode----------------------------------------------------------------\n");
   printw ("| Demod/Rate:  ");
@@ -4193,6 +4196,157 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     opts->rigctl_sockfd = Connect(opts->rigctlhostname, opts->rigctlportno);
     if (opts->rigctl_sockfd != 0) opts->use_rigctl = 1;
     else opts->use_rigctl = 0;
+  }
+
+  //if trunking and user wants to just go back to the control channel and skip this call
+  if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && c == 67) //Capital C key - Return to CC
+  {
+
+    //extra safeguards due to sync issues with NXDN
+    memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+    memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+
+    memset (state->active_channel, 0, sizeof(state->active_channel));
+
+    //reset dmr blocks
+    dmr_reset_blocks (opts, state);
+
+    //zero out additional items
+    state->lasttg = 0;
+    state->lasttgR = 0;
+    state->lastsrc = 0;
+    state->lastsrcR = 0;
+    state->payload_algid = 0;
+    state->payload_algidR = 0;
+    state->payload_keyid = 0;
+    state->payload_keyidR = 0;
+    state->payload_mi = 0;
+    state->payload_miR = 0;
+    state->payload_miP = 0;
+    state->payload_miN = 0;
+    opts->p25_is_tuned = 0;
+    state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+
+    //tune back to the control channel
+    //RIGCTL
+    if (opts->p25_trunk == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+
+    //rtl
+    #ifdef USE_RTLSDR
+    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_dev_tune (opts, state->p25_cc_freq);
+    #endif
+
+    state->last_cc_sync_time = time(NULL);
+
+    //if P25p2 VCH and going back to P25p1 CC, flip symbolrate
+    if (state->p25_cc_is_tdma == 0)
+    {
+      state->samplesPerSymbol = 10;
+      state->symbolCenter = 4;
+    }
+
+    //if P25p1 Data Revert on P25p2 TDMA CC, flip symbolrate
+    if (state->p25_cc_is_tdma == 1)
+    {
+      state->samplesPerSymbol = 8;
+      state->symbolCenter = 3;
+    }
+
+    fprintf (stderr, "\n User Activated Return to CC; \n "); 
+
+  }
+
+  //if trunking or scanning, manually cycle forward through channels loaded (can be run without trunking or scanning enabled)
+  if ( (opts->use_rigctl == 1 || opts->audio_in_type == 3) && c == 76) //Capital L key - Cycle Channels Forward
+  {
+
+    //extra safeguards due to sync issues with NXDN
+    memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+    memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+
+    memset (state->active_channel, 0, sizeof(state->active_channel));
+
+    //reset dmr blocks
+    dmr_reset_blocks (opts, state);
+
+    //zero out additional items
+    state->lasttg = 0;
+    state->lasttgR = 0;
+    state->lastsrc = 0;
+    state->lastsrcR = 0;
+    state->payload_algid = 0;
+    state->payload_algidR = 0;
+    state->payload_keyid = 0;
+    state->payload_keyidR = 0;
+    state->payload_mi = 0;
+    state->payload_miR = 0;
+    state->payload_miP = 0;
+    state->payload_miN = 0;
+    opts->p25_is_tuned = 0;
+    state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+
+    //just copy and pasted the cycle logic for CC/signal hunting on no sync
+    if (state->lcn_freq_roll >= state->lcn_freq_count) //fixed this to skip the extra wait out at the end of the list
+    {
+      state->lcn_freq_roll = 0; //reset to zero
+    }
+
+    //roll an extra value up if the current is the same as what's already loaded -- faster hunting on Cap+, etc
+    if (state->lcn_freq_roll != 0)
+    {
+      if (state->trunk_lcn_freq[state->lcn_freq_roll-1] == state->trunk_lcn_freq[state->lcn_freq_roll])
+      {
+        state->lcn_freq_roll++;
+        //check roll again if greater than expected, then go back to zero
+        if (state->lcn_freq_roll >= state->lcn_freq_count) 
+        {
+          state->lcn_freq_roll = 0; //reset to zero
+        } 
+      }
+    }
+
+    //check that we have a non zero value first, then tune next frequency
+    if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0) 
+    {
+      //rigctl
+      if (opts->use_rigctl == 1)
+      {
+        if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+        SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[state->lcn_freq_roll]);
+      }
+      //rtl
+      if (opts->audio_in_type == 3)
+      {
+        #ifdef USE_RTLSDR
+        rtl_dev_tune (opts, state->trunk_lcn_freq[state->lcn_freq_roll]);
+        #endif
+      }
+
+      fprintf (stderr, "\n User Activated Channel Cycle;");
+      fprintf (stderr, "  Tuning to Frequency: %.06lf MHz\n", 
+                (double)state->trunk_lcn_freq[state->lcn_freq_roll]/1000000);
+
+    }
+    state->lcn_freq_roll++;
+    state->last_cc_sync_time = time(NULL);
+
+
+    //may need to test to see if we want to do the conditional below or not for symbol rate flipping
+
+    //if P25p2 VCH and going back to P25p1 CC, flip symbolrate
+    if (state->p25_cc_is_tdma == 0)
+    {
+      state->samplesPerSymbol = 10;
+      state->symbolCenter = 4;
+    }
+
+    //if P25p1 Data Revert on P25p2 TDMA CC, flip symbolrate
+    if (state->p25_cc_is_tdma == 1)
+    {
+      state->samplesPerSymbol = 8;
+      state->symbolCenter = 3;
+    } 
+
   }
 
   //anything with an entry box will need the inputs and outputs stopped first

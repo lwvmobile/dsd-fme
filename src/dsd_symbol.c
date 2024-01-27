@@ -264,16 +264,17 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         
       }
 
+      //BUG REPORT: 1. DMR Simplex doesn't work with raw wav files. 2. Using the monitor w/ wav file saving may produce undecodable wav files.
       //reworked a bit to allow raw audio wav file saving without the monitoring poriton active 
       if (have_sync == 0)
       {
 
         //do an extra checkfor carrier signal so that random raw audio spurts don't play during decoding
-        if ( (state->carrier == 1) && ((time(NULL) - state->last_vc_sync_time) < 2))
-        {
-          memset (state->analog_out, 0, sizeof(state->analog_out));
-          state->analog_sample_counter = 0;
-        }
+        // if ( (state->carrier == 1) && ((time(NULL) - state->last_vc_sync_time) < 2)) /This probably doesn't work correctly since we update time check when playing raw audio
+        // {
+        //   memset (state->analog_out, 0, sizeof(state->analog_out));
+        //   state->analog_sample_counter = 0;
+        // } //This is the root cause of issue listed above, will evaluate further at a later time for a more elegant solution, or determine if anything is negatively impacted by removing this
 
         //sanity check to prevent an overflow
         if (state->analog_sample_counter > 959)
@@ -295,7 +296,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           //   state->analog_out[x] /= 4;
 
           //seems to be working now, but RMS values are lower on actual analog signal than on no signal but noise
-          if ( (opts->rtl_rms > opts->rtl_squelch_level) && (opts->monitor_input_audio == 1) )
+          if ( (opts->rtl_rms > opts->rtl_squelch_level) && opts->monitor_input_audio == 1 && state->carrier == 0 ) //added carrier check here in lieu of disabling it above
           {
             if (opts->audio_out_type == 0)
               pa_simple_write(opts->pulse_raw_dev_out, state->analog_out, 960*2, NULL);

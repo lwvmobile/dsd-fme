@@ -196,8 +196,11 @@ Z - Simulate NoCarrier/No VC/CC sync (capital Z)
 ! - Lockout Tuning/Playback of TG in Slot 1 or Conventional -- Current Session Only if no group.csv file specified
 @ - Lockout Tuning/Playback of TG in Slot 2 -- Current Session Only if no group.csv file specified
 
-k - Hold TG in Slot 1 or Conventional, or clear current hold (Testing/WIP: DMR T3 Only)
-l - Hold TG in Slot 2 on TDMA Systems, or clear current hold (Testing/WIP: DMR T3 Only)
+k - Hold TG in Slot 1 or Conventional, or clear current hold
+l - Hold TG in Slot 2 on TDMA Systems, or clear current hold
+
+C - Drop Call and Return to CC during trunking operation
+L - Manual Cycle Forward Channel Tuned when RIGCTL or using RTL input and channel csv loaded
 
 ```
 

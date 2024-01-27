@@ -406,10 +406,28 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
     }
 
     else if (lc_mfid == 0x90 && lc_opcode == 0x0)
+    {
+      //needed to fill this in, since tuning this on P1 will just leave the TG/SRC as zeroes
       fprintf (stderr, " MFID90 (Moto) Group Regroup Channel User (LCGRGR)");
+      uint32_t sg = (uint32_t)ConvertBitIntoBytes(&LCW_bits[32], 16);
+      uint32_t src = (uint32_t)ConvertBitIntoBytes(&LCW_bits[48], 24);
+      fprintf (stderr, " SG: %d; SRC: %d;", sg, src);
+      if (LCW_bits[16] == 1) fprintf (stderr, " Res;"); //res bit (octet 2)
+      if (LCW_bits[17] == 1) fprintf (stderr, " ENC;"); //P-bit (octet 2)
+      if (LCW_bits[31] == 1) fprintf (stderr, " EXT;"); //Full SUID next LC (external) (octet 3)
+      state->lasttg = sg;
+      state->lastsrc = src;
+    }
 
     else if (lc_mfid == 0x90 && lc_opcode == 0x1)
+    {
       fprintf (stderr, " MFID90 (Moto) Group Regroup Channel Update (LCGRGU)");
+      uint32_t sg = (uint32_t)ConvertBitIntoBytes(&LCW_bits[24], 16);
+      uint32_t ch = (uint32_t)ConvertBitIntoBytes(&LCW_bits[56], 16);
+      fprintf (stderr, " SG: %d; CH: %04X;", sg, ch);
+      if (LCW_bits[16] == 1) fprintf (stderr, " Res;"); //res bit (octet 2)
+      if (LCW_bits[17] == 1) fprintf (stderr, " ENC;"); //P-bit (octet 2)
+    }
 
     else if (lc_mfid == 0x90 && lc_opcode == 0x3)
       fprintf (stderr, " MFID90 (Moto) Group Regroup Add");

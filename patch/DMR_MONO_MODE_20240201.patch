@@ -1,0 +1,51 @@
+diff --git a/src/dmr_pi.c b/src/dmr_pi.c
+index 55dfb83..33fb3ba 100644
+--- a/src/dmr_pi.c
++++ b/src/dmr_pi.c
+@@ -14,6 +14,9 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
+ {
+   UNUSED2(opts, CRCCorrect);
+ 
++  //force slot to 0 if using dmr mono handling
++  if (opts->dmr_mono == 1) state->currentslot = 0;
++
+   if((IrrecoverableErrors == 0)) 
+   {
+ 
+diff --git a/src/dsd_frame.c b/src/dsd_frame.c
+index 3b2a3e1..ba32618 100644
+--- a/src/dsd_frame.c
++++ b/src/dsd_frame.c
+@@ -160,7 +160,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
+           sprintf (state->slot2light, " slot2 ");
+           //we can safely open MBE on any MS or mono handling
+           if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state); 
+-          if (opts->p25_trunk == 0) dmrMSBootstrap (opts, state); 
++          // if (opts->p25_trunk == 0) //line disabled to allow mono mode while trunking
++            dmrMSBootstrap (opts, state); 
+         }
+         if (opts->dmr_mono == 1 && state->synctype == 32)
+         {
+diff --git a/src/dsd_main.c b/src/dsd_main.c
+index 7be5912..8db6dc3 100644
+--- a/src/dsd_main.c
++++ b/src/dsd_main.c
+@@ -2302,13 +2302,13 @@ main (int argc, char **argv)
+             state.rf_mod = 0;  //
+             opts.pulse_digi_rate_out = 8000;
+             opts.pulse_digi_out_channels = 2;
+-            opts.dmr_mono = 0;
+-            opts.dmr_stereo = 1;
++            opts.dmr_mono = 1;
++            opts.dmr_stereo = 0; //not sure if this will break anything
+             state.dmr_stereo = 0; //0
+             // opts.setmod_bw = 7000;
+-            sprintf (opts.output_name, "DMR Stereo");
+-            fprintf (stderr,"-fr / DMR Mono switch has been deprecated.\n");
+-            fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
++            sprintf (opts.output_name, "DMR Mono");
++            // fprintf (stderr,"-fr / DMR Mono switch enabled. \n NOTE: Some ENC options in Slot 2 may not work properly.\n");
++            fprintf (stderr,"\n Decoding DMR Stereo BS/MS Simplex in Mono Single Slot Only Configuration.\n");
+ 
+           }
+           else if (optarg[0] == 'm')

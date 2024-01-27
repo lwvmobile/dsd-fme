@@ -845,6 +845,10 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 			state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
 			memset (state->active_channel, 0, sizeof (state->active_channel)); //zero out here? I think this will be fine
 		}
+		else if (duid_decoded == 13 && ((time(NULL) - state->last_active_time) > 2) && opts->p25_is_tuned == 0) //should we use && opts->p25_is_tuned == 1?
+		{
+			memset (state->active_channel, 0, sizeof (state->active_channel)); //zero out here? I think this will be fine
+		}
 
 		if (duid_decoded == 0)
 		{

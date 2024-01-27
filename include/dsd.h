@@ -731,7 +731,7 @@ typedef struct
   int keyloader; //let us know the keyloader is active
 
   //dmr late entry mi
-  uint64_t late_entry_mi_fragment[2][7][3];
+  uint64_t late_entry_mi_fragment[2][8][3];
 
   //dmr manufacturer branding and sub_branding (i.e., Motorola and Con+)
   char dmr_branding[20];

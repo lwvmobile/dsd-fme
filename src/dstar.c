@@ -328,7 +328,7 @@ void processDSTAR_SD(dsd_opts * opts, dsd_state * state, uint8_t * sd)
         fprintf (stderr, "; ");
 
         //Got the feeling nobody will actually ever see this message, but who knows
-        fprintf(stderr, "\n DEV NOTE: If you see this message, but incorrect lat/lon,\n please submit samples to https://github.com/lwvmobile/dsd-fme/issues/164 ");
+        // fprintf(stderr, "\n DEV NOTE: If you see this message, but incorrect lat/lon,\n please submit samples to https://github.com/lwvmobile/dsd-fme/issues/164 ");
 
         SKIP: ; //do nothing
 

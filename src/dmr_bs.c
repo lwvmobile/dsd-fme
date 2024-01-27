@@ -75,8 +75,18 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //Init the color code status
   state->color_code_ok = 0;
 
-  vc1 = 2;
-  vc2 = 2;
+  //if coming from the bootsrap, then the slot will still be assigned the last value
+  //we want to set only that vc value to 2, the other to 7
+  if (state->currentslot == 0)
+  {
+    vc1 = 2;
+    vc2 = 7;
+  }
+  if (state->currentslot == 1)
+  {
+    vc1 = 7;
+    vc2 = 2;
+  }
 
   short int loop = 1;
   short int skipcount = 0;
@@ -273,7 +283,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       }
       else fprintf (stderr,"Sync: -DMR  ");
       
-      vc1 = 1;
+      vc1 = 7; //set to 7 so we can see that we should not be on a VC unless a framesync comes in for it first
 
       //close MBEout file - slot 1
       if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state); 
@@ -286,7 +296,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       }
       else fprintf (stderr,"Sync: -DMR  ");
 
-      vc2 = 1;
+      vc2 = 7; //set to 7 so we can see that we should not be on a VC unless a framesync comes in for it first
 
       //close MBEout file - slot 2
       if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
@@ -297,7 +307,49 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     goto SKIP;
   }
 
-  //only play voice on no data sync
+  //check to see if we are expecting a VC at this point vc > 7
+  if (strcmp (sync, DMR_BS_DATA_SYNC) != 0 && internalslot == 0 && vc1 > 6)
+  {
+    fprintf (stderr,"%s ", getTime());
+
+    //simplifying things
+    char polarity[3];
+    char light[18];
+
+    sprintf (light, "%s", " [SLOT1]  slot2  ");
+    fprintf (stderr,"Sync: %sDMR %s", polarity, light);
+    fprintf (stderr, "%s", KCYN);
+    fprintf (stderr, "| Frame Sync Err: %d", vc1);
+    fprintf (stderr, "%s", KNRM);
+    fprintf (stderr, "\n");
+    vc1++;
+    //this should give it enough time to find the next frame sync pattern, if it exists, if not, then trigger a resync
+    if ( vc1 > 13 ) goto END;
+    else goto SKIP;
+  }
+
+  //check to see if we are expecting a VC at this point vc > 7
+  if (strcmp (sync, DMR_BS_DATA_SYNC) != 0 && internalslot == 1 && vc2 > 6)
+  {
+    fprintf (stderr,"%s ", getTime());
+
+    //simplifying things
+    char polarity[3];
+    char light[18];
+
+    sprintf (light, "%s", "  slot1  [SLOT2] ");
+    fprintf (stderr,"Sync: %sDMR %s", polarity, light);
+    fprintf (stderr, "%s", KCYN);
+    fprintf (stderr, "| Frame Sync Err: %d", vc2);
+    fprintf (stderr, "%s", KNRM);
+    fprintf (stderr, "\n");
+    vc2++;
+    //this should give it enough time to find the next frame sync pattern, if it exists, if not, then trigger a resync
+    if ( vc2 > 13 ) goto END;
+    else goto SKIP;
+  }
+
+  //only play voice on no data sync, and VC values are within expected values 1-6
   if (strcmp (sync, DMR_BS_DATA_SYNC) != 0) //we already have a tact ecc check, so we won't get here without that, see if there is any other eccs we can run just to make sure 
   {
 
@@ -430,7 +482,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0 && vc1 == 6) dmr_alg_refresh (opts, state);
     if (internalslot == 1 && vc2 == 6) dmr_alg_refresh (opts, state);
 
-    dmr_late_entry_mi_fragment (opts, state, vc, m1, m2, m3);
+    dmr_late_entry_mi_fragment (opts, state, vc%7, m1, m2, m3);
 
     //increment the vc counters
     if (internalslot == 0) vc1++;

@@ -1077,6 +1077,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     {
       if ( opts->floating_point == 0 ) //opts->audio_out == 1 && //needed to remove for AERO OSS so we could still save wav files during dual voices
       {
+        #ifdef AERO_BUILD
+        if(opts->audio_out == 1 && opts->slot1_on == 1) //add conditional check here, otherwise some lag occurs on dual voices with OSS48k/1 input due to buffered audio
+        #endif
         processAudio(opts, state);
       }
       if (opts->audio_out == 1 && opts->floating_point == 0 && opts->audio_out_type == 5 && opts->slot1_on == 1) //for OSS 48k 1 channel configs -- relocate later if possible
@@ -1151,6 +1154,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     {
       if ( opts->floating_point == 0) //opts->audio_out == 1 && //needed to remove for AERO OSS so we could still save wav files during dual voices
       {
+        #ifdef AERO_BUILD
+        if(opts->audio_out == 1 && opts->slot2_on == 1) //add conditional check here, otherwise some lag occurs on dual voices with OSS48k/1 input due to buffered audio
+        #endif
         processAudioR(opts, state);
       }
       if (opts->audio_out == 1 && opts->floating_point == 0 && opts->audio_out_type == 5 && opts->slot2_on == 1) //for OSS 48k 1 channel configs -- relocate later if possible

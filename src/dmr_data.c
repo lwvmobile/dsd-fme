@@ -336,7 +336,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
         if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
         SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
         //debug
-        fprintf (stderr, " Con+ Timeout; Return to CC;");
+        fprintf (stderr, " Con+ Timeout; Return to CC; \n");
       }
 
       else if (opts->audio_in_type == 3) //rtl_fm tuning
@@ -344,7 +344,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
         #ifdef USE_RTLSDR
         rtl_dev_tune(opts, state->p25_cc_freq);
         //debug
-        fprintf (stderr, " Con+ Timeout; Return to CC;");
+        fprintf (stderr, " Con+ Timeout; Return to CC; \n");
         #endif
       }
       opts->p25_is_tuned = 0;

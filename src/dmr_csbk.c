@@ -13,7 +13,7 @@
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
-
+#define PCLEAR_TUNE_AWAY //disable if slower return is preferred
 //function for handling Control Signalling PDUs (CSBK, MBC) messages
 void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8_t cs_pdu[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors)
 {
@@ -297,6 +297,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                     SetFreq(opts->rigctl_sockfd, freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+                  state->last_vc_sync_time = time(NULL); //set here so a random p_clear on the opposite slot doesn't send us back to the CC
                   
                 }
 
@@ -324,6 +325,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                     rtl_dev_tune (opts, freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1;
+                  state->last_vc_sync_time = time(NULL); //set here so a random p_clear on the opposite slot doesn't send us back to the CC
 
                   #endif
                 }
@@ -395,7 +397,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //initial line break
         fprintf (stderr, "\n");
         fprintf (stderr, " Clear (P_CLEAR) %d", clear);
-
+        #ifdef PCLEAR_TUNE_AWAY
         //check to see if this is a dummy csbk sent from link control to signal return to tscc
         if (clear && csbk_fid == 255)  fprintf (stderr, " No Encrypted Call Trunking; Return to CC; ");
         if (!clear && csbk_fid == 255) fprintf (stderr, " No Encrypted Call Trunking; Other Slot Busy; ");
@@ -461,6 +463,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
           }
         }
+        #endif
       } 
 
       //(P_PROTECT)
