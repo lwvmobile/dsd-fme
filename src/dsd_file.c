@@ -396,6 +396,8 @@ void openMbeOutFile (dsd_opts * opts, dsd_state * state)
 
   int i, j;
   char ext[5];
+  char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
+  timestr = getTimeF();
 
   //phase 1 and provoice
   if ( (state->synctype == 0) || (state->synctype == 1) || (state->synctype == 14) || (state->synctype == 15) )
@@ -421,7 +423,7 @@ void openMbeOutFile (dsd_opts * opts, dsd_state * state)
 
   state->tgcount = 0;
 
-  sprintf (opts->mbe_out_file, "%s %s S1%s", getDateF(), getTimeF(), ext);
+  sprintf (opts->mbe_out_file, "%s %s S1%s", getDateF(), timestr, ext);
 
   sprintf (opts->mbe_out_path, "%s%s", opts->mbe_out_dir, opts->mbe_out_file);
 
@@ -436,6 +438,7 @@ void openMbeOutFile (dsd_opts * opts, dsd_state * state)
   fprintf (opts->mbe_out_f, "%s", ext);
 
   fflush (opts->mbe_out_f);
+  free (timestr); //free allocated memory to prevent memory leak
 }
 
 void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
@@ -443,6 +446,8 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
 
   int i, j;
   char ext[5];
+  char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
+  timestr = getTimeF();
 
   //phase 1 and provoice
   if ( (state->synctype == 0) || (state->synctype == 1) || (state->synctype == 14) || (state->synctype == 15) )
@@ -468,7 +473,7 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
 
   state->tgcount = 0;
 
-  sprintf (opts->mbe_out_fileR, "%s %s S2%s", getDateF(), getTimeF(), ext);
+  sprintf (opts->mbe_out_fileR, "%s %s S2%s", getDateF(), timestr, ext);
 
   sprintf (opts->mbe_out_path, "%s%s", opts->mbe_out_dir, opts->mbe_out_fileR);
 
@@ -483,6 +488,7 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
   fprintf (opts->mbe_out_fR, "%s", ext);
 
   fflush (opts->mbe_out_fR);
+  free (timestr); //free allocated memory to prevent memory leak
 }
 
 void openWavOutFile (dsd_opts * opts, dsd_state * state)

@@ -297,6 +297,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
   unsigned int netcmd = 0xF3; //using for Networked Test
   UNUSED2(vcmd, idcmd);
 
+  char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
+  timestr = getTimeE();
+
   state->edacs_vc_lcn = -1; //init on negative for ncurses and tuning
 
   int i;
@@ -512,7 +515,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             //openwav file and do per call right here, should probably check as well to make sure we have a valid trunking method active (rigctl, rtl)
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
-              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %d SRC %d.wav", getDateE(), getTimeE(), state->edacs_site_id, group, source);
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %d SRC %d.wav", getDateE(), timestr, state->edacs_site_id, group, source);
               openWavOutFile (opts, state);
               // openWavOutFile48k (opts, state); //debug for testing analog wav only
             }
@@ -671,7 +674,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             //openwav file and do per call right here
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
-              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld AFS %02d-%03d - %03d.wav", getDateE(), getTimeE(), state->edacs_site_id, a, fs, afs);
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld AFS %02d-%03d - %03d.wav", getDateE(), timestr, state->edacs_site_id, a, fs, afs);
               if (command == 0xEF) openWavOutFile (opts, state); //digital
               if (command == 0xEE) openWavOutFile48k (opts, state); //analog at 48k
             }
@@ -722,7 +725,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
   }
 
   ENDPV:
-
+  free (timestr); //free allocated memory to prevent memory leak
   fprintf (stderr, "\n");
 
 }

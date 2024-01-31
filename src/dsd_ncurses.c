@@ -1853,7 +1853,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
   //fix location of this statement to inside the if statement and add conditions
   if (opts->audio_in_type == 3) //open rtl input if it is the specified input method
   {
-    ncursesPrinter (opts, state); //run one rep to clear menu boxes out
+    // ncursesPrinter (opts, state); //not sure why this was placed here originally, but causes a double free core dump when calling free(timestr)
     #ifdef USE_RTLSDR 
     if (opts->rtl_started == 0)
     {
@@ -4352,6 +4352,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //anything with an entry box will need the inputs and outputs stopped first
   //so probably just write a function to handle c input, and when c = certain values 
   //needing an entry box, then stop all of those
+
+  //allocated memory pointer needs to be free'd each time
+  //if issues arise, just delete this line.
+  //TODO: Redo this in edacs and file, making a seperate char * timestr instead of calling GetTime
+  //directly from the sprintf command
+  free (timestr);
 
 } //end ncursesPrinter
 
