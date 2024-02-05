@@ -703,6 +703,7 @@ typedef struct
   time_t last_cc_sync_time; //use this to start hunting for CC after signal lost
   time_t last_vc_sync_time; //flag for voice activity bursts, tune back on con+ after more than x seconds no voice
   time_t last_active_time; //time the a 'call grant' was received, used to clear the active_channel strings after x seconds
+  time_t last_t3_tune_time; //last time a DMR T3 grant was received, this is used to prevent a rogue p_clear condition from immediately sending back to CC
   int is_con_plus; //con_plus flag for knowing its safe to skip payload channel after x seconds of no voice sync
 
   //new nxdn stuff

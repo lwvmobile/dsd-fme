@@ -297,7 +297,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                     SetFreq(opts->rigctl_sockfd, freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
-                  state->last_vc_sync_time = time(NULL); //set here so a random p_clear on the opposite slot doesn't send us back to the CC
+                  state->last_vc_sync_time = time(NULL);
+                  state->last_t3_tune_time = time(NULL); //set here so a random p_clear on the opposite slot doesn't send us back to the CC
                   
                 }
 
@@ -325,7 +326,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                     rtl_dev_tune (opts, freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1;
-                  state->last_vc_sync_time = time(NULL); //set here so a random p_clear on the opposite slot doesn't send us back to the CC
+                  state->last_vc_sync_time = time(NULL);
+                  state->last_t3_tune_time = time(NULL); //set here so a random p_clear on the opposite slot doesn't send us back to the CC
 
                   #endif
                 }
@@ -405,6 +407,9 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //if we have a tg hold in place that matches traffic that was just on this slot (this will override other calls in the opposite slot)
         if (state->currentslot == 0 && state->tg_hold == state->lasttg && state->tg_hold != 0)  clear = 4;
         if (state->currentslot == 1 && state->tg_hold == state->lasttgR && state->tg_hold != 0) clear = 5;
+
+        //make sure we aren't sent back immediately by an p_clear condition upon first tuning (i.e., random ENC LO, or end of Data Call)
+        if ( time(NULL)-state->last_t3_tune_time < 1) clear = 0; //one second should be an optimal time, not too short, but not too long
 
         //initial line break
         fprintf (stderr, "\n");
