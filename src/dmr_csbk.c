@@ -394,10 +394,6 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (state->currentslot == 0 && (state->dmrburstR != 16 && state->dmrburstR != 0 && state->dmrburstR != 1)) clear = 2;
         if (state->currentslot == 1 && (state->dmrburstL != 16 && state->dmrburstL != 0 && state->dmrburstL != 1)) clear = 3;
 
-        //if we have a tg hold in place that matches traffic that was just on this slot (this will override other calls in the opposite slot)
-        if (state->currentslot == 0 && state->tg_hold == state->lasttg && state->tg_hold != 0)  clear = 4;
-        if (state->currentslot == 1 && state->tg_hold == state->lasttgR && state->tg_hold != 0) clear = 5;
-
         //if tuning and decoding data is desired, then do a secondary check here for data headers and blocks in the opposite slot
         if (opts->trunk_tune_data_calls == 1)
         {
@@ -405,6 +401,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           if (state->currentslot == 0 && (state->dmrburstR == 6 || state->dmrburstR == 7 || state->dmrburstR == 8 || state->dmrburstR == 10)) clear = 21;
           if (state->currentslot == 1 && (state->dmrburstL == 6 || state->dmrburstL == 7 || state->dmrburstL == 8 || state->dmrburstL == 10)) clear = 22;
         }
+
+        //if we have a tg hold in place that matches traffic that was just on this slot (this will override other calls in the opposite slot)
+        if (state->currentslot == 0 && state->tg_hold == state->lasttg && state->tg_hold != 0)  clear = 4;
+        if (state->currentslot == 1 && state->tg_hold == state->lasttgR && state->tg_hold != 0) clear = 5;
 
         //initial line break
         fprintf (stderr, "\n");
