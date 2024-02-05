@@ -817,9 +817,9 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
   state->audio_out_idx = 0;
   state->audio_out_idxR = 0;
 
-  //set float temp buffer to baseline
-  memset (state->s_l, 1, sizeof(state->s_l));
-  memset (state->s_r, 1, sizeof(state->s_r));
+  //set short temp buffer to baseline
+  memset (state->s_l, 0, sizeof(state->s_l));
+  memset (state->s_r, 0, sizeof(state->s_r));
 
   if (state->audio_out_idx2 >= 800000)
   {
@@ -855,9 +855,9 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
   short stereo_samp2[320]; //8k 2-channel stereo interleave mix
   short stereo_samp3[320]; //8k 2-channel stereo interleave mix
 
-  memset (stereo_samp1, 1, sizeof(stereo_samp1));
-  memset (stereo_samp2, 1, sizeof(stereo_samp2));
-  memset (stereo_samp3, 1, sizeof(stereo_samp3));
+  memset (stereo_samp1, 0, sizeof(stereo_samp1));
+  memset (stereo_samp2, 0, sizeof(stereo_samp2));
+  memset (stereo_samp3, 0, sizeof(stereo_samp3));
 
   //dmr enc checkdown for whether or not to fill the stereo sample or not for playback or writing
   encL = encR = 0;
@@ -1007,9 +1007,9 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
   state->audio_out_idx = 0;
   state->audio_out_idxR = 0;
 
-  //set float temp buffer to baseline
-  memset (state->s_l4, 1, sizeof(state->s_l4));
-  memset (state->s_r4, 1, sizeof(state->s_r4));
+  //set short temp buffer to baseline
+  memset (state->s_l4, 0, sizeof(state->s_l4));
+  memset (state->s_r4, 0, sizeof(state->s_r4));
 
   if (state->audio_out_idx2 >= 800000)
   {
@@ -1048,12 +1048,12 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
 
   short empty[320]; //this is used to see if we want to play a single 2v or double 2v or not
 
-  memset (stereo_samp1, 1, sizeof(stereo_samp1));
-  memset (stereo_samp2, 1, sizeof(stereo_samp2));
-  memset (stereo_samp3, 1, sizeof(stereo_samp3));
-  memset (stereo_samp4, 1, sizeof(stereo_samp4));
+  memset (stereo_samp1, 0, sizeof(stereo_samp1));
+  memset (stereo_samp2, 0, sizeof(stereo_samp2));
+  memset (stereo_samp3, 0, sizeof(stereo_samp3));
+  memset (stereo_samp4, 0, sizeof(stereo_samp4));
 
-  memset (empty, 1, sizeof(empty));
+  memset (empty, 0, sizeof(empty));
   
 
   //p25p2 enc checkdown for whether or not to fill the stereo sample or not for playback or writing
@@ -1214,9 +1214,9 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
   state->audio_out_idx = 0;
   state->audio_out_idxR = 0;
 
-  //set float temp buffer to baseline
-  memset (state->s_l4, 1, sizeof(state->s_l4));
-  memset (state->s_r4, 1, sizeof(state->s_r4));
+  //set short temp buffer to baseline
+  memset (state->s_l4, 0, sizeof(state->s_l4));
+  memset (state->s_r4, 0, sizeof(state->s_r4));
 
   if (state->audio_out_idx2 >= 800000)
   {

@@ -252,7 +252,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
       crc_extracted = crc_extracted | sbrc_return[i+4];
     }
     crc_extracted = crc_extracted ^ 0x7A;
-    crc_computed = crc7((uint8_t *) sbrc_return, 7);
+    crc_computed = crc7((uint8_t *) sbrc_return, 4); //#187 fix
     if (crc_extracted == crc_computed) crc7_okay = 1;
   }
   else //if (txi == 1) //if TXI -- but TXI systems also carry the non-crc protected ENC identifiers
@@ -332,7 +332,18 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
 
       else if (crc7_okay == 1)
       {
-        //do something with the reverse channel information
+        //decode the reverse channel information ETSI TS 102 361-4 V1.12.1 (2023-07) p 103 Table 6.32: MS Reverse Channel (RC) Command Information Elements
+        if (opts->payload == 0) fprintf (stderr, "\n");
+        fprintf (stderr, "%s", KCYN);
+        sbrc_hex = sbrc_hex >> 7; //set value to its 4-bit form
+        if (sbrc_hex == 0)      fprintf (stderr, " RC: Increase Power By One Step;");
+        else if (sbrc_hex == 1) fprintf (stderr, " RC: Decrease Power By One Step;");
+        else if (sbrc_hex == 2) fprintf (stderr, " RC: Set Power To Highest;");
+        else if (sbrc_hex == 3) fprintf (stderr, " RC: Set Power To Lowest;");
+        else if (sbrc_hex == 4) fprintf (stderr, " RC: Cease Transmission Command;");
+        else if (sbrc_hex == 5) fprintf (stderr, " RC: Cease Transmission Request;");
+        else                    fprintf (stderr, " RC: Reserved %02X;", sbrc_hex);
+        fprintf (stderr, "%s", KNRM);
       }
 
       //if the call is interruptable (TXI) and the crc3 is okay and TXI Opcode

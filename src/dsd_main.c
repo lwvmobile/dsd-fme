@@ -527,15 +527,15 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
   memset (state->f_r4, 0.0f, sizeof(state->f_r4));
 
   //zero out the short sample storage buffers
-  memset (state->s_l, 1, sizeof(state->s_l));
-  memset (state->s_r, 1, sizeof(state->s_r));
-  memset (state->s_l4, 1, sizeof(state->s_l4));
-  memset (state->s_r4, 1, sizeof(state->s_r4));
+  memset (state->s_l, 0, sizeof(state->s_l));
+  memset (state->s_r, 0, sizeof(state->s_r));
+  memset (state->s_l4, 0, sizeof(state->s_l4));
+  memset (state->s_r4, 0, sizeof(state->s_r4));
 
-  memset (state->s_lu, 1, sizeof(state->s_lu));
-  memset (state->s_ru, 1, sizeof(state->s_ru));
-  memset (state->s_l4u, 1, sizeof(state->s_l4u));
-  memset (state->s_r4u, 1, sizeof(state->s_r4u));
+  memset (state->s_lu, 0, sizeof(state->s_lu));
+  memset (state->s_ru, 0, sizeof(state->s_ru));
+  memset (state->s_l4u, 0, sizeof(state->s_l4u));
+  memset (state->s_r4u, 0, sizeof(state->s_r4u));
 
 } //nocarrier
 
@@ -792,15 +792,15 @@ initState (dsd_state * state)
   memset (state->f_r4, 0.0f, sizeof(state->f_r4));
 
   //zero out the short sample storage buffers
-  memset (state->s_l, 1, sizeof(state->s_l));
-  memset (state->s_r, 1, sizeof(state->s_r));
-  memset (state->s_l4, 1, sizeof(state->s_l4));
-  memset (state->s_r4, 1, sizeof(state->s_r4));
+  memset (state->s_l, 0, sizeof(state->s_l));
+  memset (state->s_r, 0, sizeof(state->s_r));
+  memset (state->s_l4, 0, sizeof(state->s_l4));
+  memset (state->s_r4, 0, sizeof(state->s_r4));
 
-  memset (state->s_lu, 1, sizeof(state->s_lu));
-  memset (state->s_ru, 1, sizeof(state->s_ru));
-  memset (state->s_l4u, 1, sizeof(state->s_l4u));
-  memset (state->s_r4u, 1, sizeof(state->s_r4u));
+  memset (state->s_lu, 0, sizeof(state->s_lu));
+  memset (state->s_ru, 0, sizeof(state->s_ru));
+  memset (state->s_l4u, 0, sizeof(state->s_l4u));
+  memset (state->s_r4u, 0, sizeof(state->s_r4u));
 
   state->audio_out_buf = malloc (sizeof (short) * 1000000);
   state->audio_out_bufR = malloc (sizeof (short) * 1000000);

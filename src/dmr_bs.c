@@ -313,11 +313,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     fprintf (stderr,"%s ", getTime());
 
     //simplifying things
-    char polarity[3];
+    // char polarity[3];
     char light[18];
 
     sprintf (light, "%s", " [SLOT1]  slot2  ");
-    fprintf (stderr,"Sync: %sDMR %s", polarity, light);
+    fprintf (stderr,"Sync:  DMR %s", light);
     fprintf (stderr, "%s", KCYN);
     fprintf (stderr, "| Frame Sync Err: %d", vc1);
     fprintf (stderr, "%s", KNRM);
@@ -334,11 +334,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     fprintf (stderr,"%s ", getTime());
 
     //simplifying things
-    char polarity[3];
+    // char polarity[3];
     char light[18];
 
     sprintf (light, "%s", "  slot1  [SLOT2] ");
-    fprintf (stderr,"Sync: %sDMR %s", polarity, light);
+    fprintf (stderr,"Sync:  DMR %s", light);
     fprintf (stderr, "%s", KCYN);
     fprintf (stderr, "| Frame Sync Err: %d", vc2);
     fprintf (stderr, "%s", KNRM);

@@ -17,6 +17,13 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
   if((IrrecoverableErrors == 0)) 
   {
 
+    //update cc amd vc sync time for trunking purposes (particularly Con+)
+    if (opts->p25_is_tuned == 1)
+    {
+      state->last_vc_sync_time = time(NULL);
+      state->last_cc_sync_time = time(NULL);
+    } 
+
     if (state->currentslot == 0)
     {
       state->payload_algid = PI_BYTE[0];

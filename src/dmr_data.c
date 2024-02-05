@@ -354,6 +354,19 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
       memset (state->active_channel, 0, sizeof(state->active_channel));
       state->last_cc_sync_time = time(NULL);
       state->is_con_plus = 0; //con+ flag off
+
+      //display/le/buzzer bug fix when con+ cc return (bug not observed here, 
+      //but could happen like it does on TIII with mixed enc and clear calls w/ ENC LO is activated)
+      state->payload_mi = 0;
+      state->payload_algid = 0;
+      state->payload_keyid = 0;
+      state->dmr_so = 0;
+      
+      state->payload_miR = 0;
+      state->payload_algidR = 0;
+      state->payload_keyidR = 0;
+      state->dmr_soR = 0;
+
     }
   }
 

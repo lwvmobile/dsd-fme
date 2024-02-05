@@ -1,0 +1,425 @@
+diff --git a/src/dmr_csbk.c b/src/dmr_csbk.c
+index bfa05af..e68588f 100644
+--- a/src/dmr_csbk.c
++++ b/src/dmr_csbk.c
+@@ -453,6 +453,25 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
+               //rigctl
+               if (opts->use_rigctl == 1)
+               {
++                if (state->currentslot == 0)
++                {
++                  //close any perCall wav files that are open
++                  if (opts->dmr_stereo_wav == 1 && opts->wav_out_f != NULL)
++                  {
++                    closeWavOutFileL (opts, state);
++                    opts->wav_out_f = NULL;
++                  }
++                }
++                else if (state->currentslot == 1)
++                {
++                  //close any perCall wav files that are open
++                  if (opts->dmr_stereo_wav == 1 && opts->wav_out_fR != NULL)
++                  {
++                    closeWavOutFileR (opts, state);
++                    opts->wav_out_fR = NULL;
++                  }
++                }
++
+                 //Guess I forgot to add this condition here
+                 if (GetCurrentFreq(opts->rigctl_sockfd) != state->p25_cc_freq)
+                   dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
+@@ -487,6 +506,26 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
+               else if (opts->audio_in_type == 3)
+               {
+                 #ifdef USE_RTLSDR
++                
++                if (state->currentslot == 0)
++                {
++                  //close any perCall wav files that are open
++                  if (opts->dmr_stereo_wav == 1 && opts->wav_out_f != NULL)
++                  {
++                    closeWavOutFileL (opts, state);
++                    opts->wav_out_f = NULL;
++                  }
++                }
++                else if (state->currentslot == 1)
++                {
++                  //close any perCall wav files that are open
++                  if (opts->dmr_stereo_wav == 1 && opts->wav_out_fR != NULL)
++                  {
++                    closeWavOutFileR (opts, state);
++                    opts->wav_out_fR = NULL;
++                  }
++                }
++
+                 //Guess I forgot to add this condition here
+                 uint32_t tempf = (uint32_t)state->p25_cc_freq;
+                 if (opts->rtlsdr_center_freq != tempf)
+diff --git a/src/dmr_flco.c b/src/dmr_flco.c
+index 2811027..656693c 100644
+--- a/src/dmr_flco.c
++++ b/src/dmr_flco.c
+@@ -10,6 +10,38 @@
+  *-----------------------------------------------------------------------------*/
+ 
+ #include "dsd.h"
++//I really just need to make ONE consolidated date and time function that works correctly
++char * getDateFLC(void) {
++  #ifdef AERO_BUILD
++  char datename[80];
++  #else
++  char datename[99];
++  #endif
++  char * curr2;
++  struct tm * to;
++  time_t t;
++  t = time(NULL);
++  to = localtime( & t);
++  strftime(datename, sizeof(datename), "%Y%m%d", to);
++  curr2 = strtok(datename, " ");
++  return curr2;
++}
++
++//fix from YorgosTheodorakis fork -- https://github.com/YorgosTheodorakis/dsd-fme/commit/7884ee555521a887d388152b3b1f11f20433a94b
++char * getTimeFLC(void) //get pretty hhmmss timestamp
++{
++  char * curr = (char *) malloc(9);
++  time_t t = time(NULL);
++  struct tm * ptm = localtime(& t);
++  sprintf(
++    curr,
++    "%02d%02d%02d",
++    ptm->tm_hour,
++    ptm->tm_min,
++    ptm->tm_sec
++  );
++  return curr;
++}
+ 
+ //combined flco handler (vlc, tlc, emb), minus the superfluous structs and strings
+ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors, uint8_t type)
+@@ -304,6 +336,14 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
+         state->dmr_so = so;
+         state->lasttg = target;
+         state->lastsrc = source;
++        char * timestr;
++        timestr = getTimeFLC();
++        //open wav file here if not already opened
++        if (opts->dmr_stereo_wav == 1 && opts->wav_out_f == NULL)
++        {
++          sprintf (opts->wav_out_file, "./%s/%s %s CC %d - TG %d - RD %d", opts->wav_out_dir, getDateFLC(), timestr, state->dmr_color_code, target, source);
++          openWavOutFileL (opts, state);
++        }
+       }
+       if (state->currentslot == 1)
+       {
+@@ -311,6 +351,14 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
+         state->dmr_soR = so;
+         state->lasttgR = target;
+         state->lastsrcR = source;
++        char * timestr;
++        timestr = getTimeFLC();
++        //open wav file here if not already opened
++        if (opts->dmr_stereo_wav == 1 && opts->wav_out_fR == NULL)
++        {
++          sprintf (opts->wav_out_fileR, "./%s/%s %s CC %d - TG %d - RD %d", opts->wav_out_dir, getDateFLC(), timestr, state->dmr_color_code, target, source);
++          openWavOutFileR (opts, state);
++        }
+       }
+ 
+       //update cc amd vc sync time for trunking purposes (particularly Con+)
+@@ -337,6 +385,12 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
+         //reset gain
+         if (opts->floating_point == 1)
+           state->aout_gain = opts->audio_gain;
++        //close any perCall wav files that are open
++        if (opts->dmr_stereo_wav == 1 && opts->wav_out_f != NULL)
++        {
++          closeWavOutFileL (opts, state);
++          opts->wav_out_f = NULL;
++        }
+       }
+       if (state->currentslot == 1)
+       {
+@@ -350,6 +404,12 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
+         //reset gain
+         if (opts->floating_point == 1)
+           state->aout_gainR = opts->audio_gain; 
++        //close any perCall wav files that are open
++        if (opts->dmr_stereo_wav == 1 && opts->wav_out_fR != NULL)
++        {
++          closeWavOutFileR (opts, state);
++          opts->wav_out_fR = NULL;
++        }
+       }
+       
+     }
+diff --git a/src/dsd_file.c b/src/dsd_file.c
+index 67607e5..dae7862 100644
+--- a/src/dsd_file.c
++++ b/src/dsd_file.c
+@@ -563,6 +563,19 @@ void closeWavOutFile (dsd_opts * opts, dsd_state * state)
+   UNUSED(state);
+ 
+   sf_close(opts->wav_out_f);
++  char shell[2065], newfilename[1032];
++  int result;
++  sprintf (newfilename, "%s.wav", opts->wav_out_file);
++#ifdef AERO_BUILD
++  result = rename (opts->wav_out_file, newfilename);
++  UNUSED(shell);
++#else
++  sprintf (shell, "mv '%s' '%s'", opts->wav_out_file, newfilename);
++  result = system (shell);
++#endif
++  // fprintf (stderr, "\n Close WAV FileF %s; Result: %d \n", newfilename, result);
++  UNUSED(result);
++
+ }
+ 
+ void closeWavOutFileL (dsd_opts * opts, dsd_state * state)
+@@ -570,6 +583,19 @@ void closeWavOutFileL (dsd_opts * opts, dsd_state * state)
+   UNUSED(state);
+ 
+   sf_close(opts->wav_out_f);
++  char shell[2065], newfilename[1032];
++  int result;
++  sprintf (newfilename, "%s.wav", opts->wav_out_file);
++#ifdef AERO_BUILD
++  result = rename (opts->wav_out_file, newfilename);
++  UNUSED(shell);
++#else
++  sprintf (shell, "mv '%s' '%s'", opts->wav_out_file, newfilename);
++  result = system (shell);
++#endif
++  // fprintf (stderr, "\n Close WAV FileL %s; Result: %d \n", newfilename, result);
++  UNUSED(result);
++
+ }
+ 
+ void closeWavOutFileR (dsd_opts * opts, dsd_state * state)
+@@ -577,6 +603,18 @@ void closeWavOutFileR (dsd_opts * opts, dsd_state * state)
+   UNUSED(state);
+ 
+   sf_close(opts->wav_out_fR);
++  char shell[2065], newfilename[1032];
++  int result;
++  sprintf (newfilename, "%s.wav", opts->wav_out_fileR);
++#ifdef AERO_BUILD
++  result = rename (opts->wav_out_fileR, newfilename);
++  UNUSED(shell);
++#else
++  sprintf (shell, "mv '%s' '%s'", opts->wav_out_fileR, newfilename);
++  result = system (shell);
++#endif
++  // fprintf (stderr, "\n Close WAV FileR %s; Result: %d \n", newfilename, result);
++  UNUSED(result);
+ }
+ 
+ void closeWavOutFileRaw (dsd_opts * opts, dsd_state * state)
+diff --git a/src/dsd_main.c b/src/dsd_main.c
+index eb27948..67c4de7 100644
+--- a/src/dsd_main.c
++++ b/src/dsd_main.c
+@@ -107,6 +107,19 @@ void
+ noCarrier (dsd_opts * opts, dsd_state * state)
+ {
+ 
++  //close any perCall wav files that are open
++  if (opts->dmr_stereo_wav == 1 && opts->wav_out_f != NULL)
++  {
++    closeWavOutFileL (opts, state);
++    opts->wav_out_f = NULL;
++  }
++  if (opts->dmr_stereo_wav == 1 && opts->wav_out_fR != NULL)
++  {
++    closeWavOutFileR (opts, state);
++    opts->wav_out_fR = NULL;
++  }
++  //end perCall wav file close
++
+ #ifdef AERO_BUILD
+ //TODO: Investigate why getSymbol needs to be run first in this context...truly confused here
+ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
+@@ -1568,9 +1581,9 @@ main (int argc, char **argv)
+   }
+ 
+   #ifdef AERO_BUILD
+-  fprintf (stderr, "Build Version: AW (20231015) \n");
++  fprintf (stderr, "Build Version: AW (20231214) G Build\n");
+   #else
+-  fprintf (stderr, "Build Version: AW %s \n", GIT_TAG);
++  fprintf (stderr, "Build Version: AW %s G Build\n", GIT_TAG);
+   #endif
+   fprintf (stderr,"MBElib Version: %s\n", versionstr);
+ 
+diff --git a/src/dsd_mbe.c b/src/dsd_mbe.c
+index cc3a928..46820cb 100644
+--- a/src/dsd_mbe.c
++++ b/src/dsd_mbe.c
+@@ -1197,7 +1197,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
+     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
+     {
+       //write wav to per call on left channel Slot 1
+-      writeSynthesizedVoice (opts, state);
++      if (opts->wav_out_f != NULL)
++        writeSynthesizedVoice (opts, state);
+     }
+   }
+ 
+@@ -1207,7 +1208,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
+     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
+     {
+       //write wav to per call on right channel Slot 2
+-      writeSynthesizedVoiceR (opts, state);
++      if (opts->wav_out_fR != NULL)
++        writeSynthesizedVoiceR (opts, state);
+     }
+   }
+ 
+diff --git a/src/dsd_ncurses.c b/src/dsd_ncurses.c
+index 7de3ffb..faa379e 100644
+--- a/src/dsd_ncurses.c
++++ b/src/dsd_ncurses.c
+@@ -999,7 +999,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
+         if (choicec == 12)
+         {
+           //flesh out all closewavs and sprint "" wav filenames
+-          closeWavOutFile (opts, state);
++          // closeWavOutFile (opts, state);
+           closeWavOutFileL (opts, state);
+           closeWavOutFileR (opts, state);
+           //closeWavOutFileRaw (opts, state);
+@@ -2063,6 +2063,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+     if (opts->dmr_stereo_wav == 1 && src != 0 ) //&& tgn != 0, some TG can be 0 on NXDN
+     {
+       //close old first, assign name based on time and radio, open wav file
++      if (opts->wav_out_f != NULL)
+       closeWavOutFileL (opts, state);
+       sprintf (opts->wav_out_file, "./%s/%s %s NXDN - RAN %d - TGT %d - SRC %d.wav", opts->wav_out_dir, getDateN(), timestr, rn, tgn, src);
+       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
+@@ -2105,13 +2106,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+     call_matrix[9][5] = time(NULL);
+ 
+     //open wav file if enabled and both rd and tg are not 0
+-    if (opts->dmr_stereo_wav == 1 && rd != 0 && tg != 0)
+-    {
+-      //close old first, assign name based on time and radio, open wav file
+-      closeWavOutFileL (opts, state);
+-      sprintf (opts->wav_out_file, "./%s/%s %s MS - CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), timestr, dcc, tg, rd);
+-      openWavOutFileL (opts, state); //testing for now, will want to move to per call later
+-    }
++    // if (opts->dmr_stereo_wav == 1 && rd != 0 && tg != 0)
++    // {
++    //   //close old first, assign name based on time and radio, open wav file
++    //   if (opts->wav_out_f != NULL)
++    //     closeWavOutFileL (opts, state);
++    //   sprintf (opts->wav_out_file, "./%s/%s %s MS - CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), timestr, dcc, tg, rd);
++    //   openWavOutFileL (opts, state); //testing for now, will want to move to per call later
++    // }
+ 
+     if (opts->call_alert == 1 && rd != 0 && tg != 0)
+     {
+@@ -2126,7 +2128,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+   }
+ 
+   //DMR BS Slot 1 - matrix 0-4
+-  if ( call_matrix[4][2] != rd && (lls == 11 || lls == 12 || lls == 10 || lls == 13 || lls == 35 || lls == 36) )
++  if ( call_matrix[4][2] != rd && (lls == 11 || lls == 12 || lls == 10 || lls == 13 ) ) //|| lls == 35 || lls == 36
+   {
+ 
+     for (short int k = 0; k < 4; k++)
+@@ -2147,14 +2149,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+     call_matrix[4][5] = time(NULL);
+ 
+     //open wav file if enabled and both rd and tg are not 0
+-    if (opts->dmr_stereo_wav == 1 && rd != 0 && tg != 0)
+-    {
+-      //close old first, assign name based on time and radio, open wav file
+-      closeWavOutFileL (opts, state);
+-
+-      sprintf (opts->wav_out_file, "./%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), timestr, dcc, tg, rd);
+-      openWavOutFileL (opts, state); //testing for now, will want to move to per call later
+-    }
++    // if (opts->dmr_stereo_wav == 1 && rd != 0 && tg != 0)
++    // {
++    //   //close old first, assign name based on time and radio, open wav file
++    //   if (opts->wav_out_f != NULL)
++    //     closeWavOutFileL (opts, state);
++    //   sprintf (opts->wav_out_file, "./%s/%s %s CC %d - TG %d - RD %d",  opts->wav_out_dir, getDateN(), timestr, dcc, tg, rd);
++    //   openWavOutFileL (opts, state); //testing for now, will want to move to per call later
++    // }
+ 
+     if (opts->call_alert == 1 && rd != 0 && tg != 0)
+     {
+@@ -2190,20 +2192,21 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+     call_matrix[9][5] = time(NULL);
+ 
+     //open wav file if enabled and both rdR and tgR are not 0
+-    if (opts->dmr_stereo_wav == 1 && rdR != 0 && tgR != 0)
+-    {
+-      //close old first, assign name based on time and radio, open wav file
+-      closeWavOutFileR (opts, state);
+-      sprintf (opts->wav_out_fileR, "./%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), timestr, dcc, tgR, rdR);
+-      openWavOutFileR (opts, state); //testing for now, will want to move to per call later
+-    }
++    // if (opts->dmr_stereo_wav == 1 && rdR != 0 && tgR != 0)
++    // {
++    //   //close old first, assign name based on time and radio, open wav file
++    //   if (opts->wav_out_fR != NULL)
++    //     closeWavOutFileR (opts, state);
++    //   sprintf (opts->wav_out_fileR, "./%s/%s %s CC %d - TG %d - RD %d",  opts->wav_out_dir, getDateN(), timestr, dcc, tgR, rdR);
++    //   openWavOutFileR (opts, state); //testing for now, will want to move to per call later
++    // }
+ 
+-    if (opts->call_alert == 1 && rdR != 0 && tgR != 0)
+-    {
+-      //fprintf (stderr, "BEEP 1 BS RIGHT\n");
+-      beeper (opts, state, 1);
+-      state->dmr_end_alert[1] = 0; //new voice frame, okay to beep at the end of it
+-    }
++    // if (opts->call_alert == 1 && rdR != 0 && tgR != 0)
++    // {
++    //   //fprintf (stderr, "BEEP 1 BS RIGHT\n");
++    //   beeper (opts, state, 1);
++    //   state->dmr_end_alert[1] = 0; //new voice frame, okay to beep at the end of it
++    // }
+ 
+     memset(state->dmr_alias_block_segment[1], 0, sizeof(state->dmr_alias_block_segment[1]));
+     sprintf (state->dmr_embedded_gps[1], "%s", "");
+@@ -2275,7 +2278,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+   if (opts->ncurses_compact == 1)
+   {
+     printw ("------------------------------------------------------------------------------\n");
+-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "AW (20231015)");
++    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "AW (20231214)");
+     printw ("------------------------------------------------------------------------------\n"); 
+   }
+ #elif LIMAZULUTWEAKS
+@@ -2313,13 +2316,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+       if (i == 4 && opts->frame_m17 == 1) printw (" CODEC2");
+       #endif
+       #ifdef AERO_BUILD
+-      if (i == 5) printw (" %s ", "Aero Build");
+-      if (i == 6) printw (" AW (20231015) \n");
++      if (i == 5) printw (" %s ", "G Build");
++      if (i == 6) printw (" AW (20231214) \n");
+       #elif ZDEV_BUILD
+-      if (i == 5) printw (" %s ", "AW ");
++      if (i == 5) printw (" %s ", "AW G Build");
+       if (i == 6) printw (" %s \n", GIT_TAG);
+       #else 
+-      if (i == 5) printw (" %s ", "AW ");
++      if (i == 5) printw (" %s ", "AW G Build");
+       if (i == 6) printw (" %s \n", GIT_TAG);
+       #endif
+       else printw ("\n");
+@@ -3916,7 +3919,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+   if (c == 112) //'p' key - stop all per call wav files
+   {
+     //hope this one doesn't cause random crashing or garbage writing
+-    closeWavOutFile (opts, state);
++    // closeWavOutFile (opts, state);
+     closeWavOutFileL (opts, state);
+     closeWavOutFileR (opts, state);
+     sprintf (opts->wav_out_file, "%s", "");

@@ -380,90 +380,150 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //NOTE: Do not zero out lasttg/lastsrc in TLC FLCO when using p_clear, otherwise,
         //it will affect the conditions below and fail to trigger on tg_hold
 
-        //test misc conditions to trigger a clear and immediately return to CC
+        //test misc conditions to trigger a clear and immediately return to CC, or remain on current VC;
         int clear = 0;
+        int pslot = state->currentslot; //this slot
+        int oslot = (state->currentslot ^ 1) & 1; //opposite slot
+        pslot++; oslot++; //set to 1 and 2 and not 0 and 1
 
-        //if no voice activity or data call (when enabled) within trunk_hangtime seconds
-        if ( ((time(NULL) - state->last_vc_sync_time) > opts->trunk_hangtime) && opts->trunk_tune_data_calls == 0) clear = 1;
+        //if the other slot is IDLE or TLC condition -- May consider disabling this one
+        // if (state->currentslot == 0 && (state->dmrburstR == 9 && state->dmrburstR == 7)) clear = 1;
+        // if (state->currentslot == 0 && (state->dmrburstL == 9 && state->dmrburstL == 7)) clear = 1;
 
-        //if no voice in the opposite slot currently or data call (when enabled) -- might can disable data call condition here
-        if (state->currentslot == 0 && state->dmrburstR != 16) clear = 2; //&& opts->trunk_tune_data_calls == 0
-        if (state->currentslot == 1 && state->dmrburstL != 16) clear = 3; //&& opts->trunk_tune_data_calls == 0
+        //if no voice header, pi header, or voice sync in the opposite slot currently
+        if (state->currentslot == 0 && (state->dmrburstR != 16 && state->dmrburstR != 0 && state->dmrburstR != 1)) clear = 2;
+        if (state->currentslot == 1 && (state->dmrburstL != 16 && state->dmrburstL != 0 && state->dmrburstL != 1)) clear = 3;
 
         //if we have a tg hold in place that matches traffic that was just on this slot (this will override other calls in the opposite slot)
         if (state->currentslot == 0 && state->tg_hold == state->lasttg && state->tg_hold != 0)  clear = 4;
-        if (state->currentslot == 1 && state->tg_hold == state->lasttgR && state->tg_hold != 0) clear = 5; 
+        if (state->currentslot == 1 && state->tg_hold == state->lasttgR && state->tg_hold != 0) clear = 5;
+
+        //if tuning and decoding data is desired, then do a secondary check here for data headers and blocks in the opposite slot
+        if (opts->trunk_tune_data_calls == 1)
+        {
+          //if no data header or data block sync in the opposite slot currently
+          if (state->currentslot == 0 && (state->dmrburstR == 6 || state->dmrburstR == 7 || state->dmrburstR == 8 || state->dmrburstR == 10)) clear = 21;
+          if (state->currentslot == 1 && (state->dmrburstL == 6 || state->dmrburstL == 7 || state->dmrburstL == 8 || state->dmrburstL == 10)) clear = 22;
+        }
 
         //initial line break
         fprintf (stderr, "\n");
-        fprintf (stderr, " Clear (P_CLEAR) %d", clear);
+        fprintf (stderr, " Clear (P_CLEAR) ");
         #ifdef PCLEAR_TUNE_AWAY
-        //check to see if this is a dummy csbk sent from link control to signal return to tscc
-        if (clear && csbk_fid == 255)  fprintf (stderr, " No Encrypted Call Trunking; Return to CC; ");
-        if (!clear && csbk_fid == 255) fprintf (stderr, " No Encrypted Call Trunking; Other Slot Busy; ");
 
-        if (clear)
+        if (opts->p25_trunk == 1)
         {
-          if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
+
+          //check the p_clear logic and report status
+          if      (clear && csbk_fid == 255)  fprintf (stderr, " Slot %d No Encrypted Call Trunking; Slot %d Free; Return to CC; ", pslot, oslot);
+          else if (!clear && csbk_fid == 255) fprintf (stderr, " Slot %d No Encrypted Call Trunking; Slot %d Busy; Remain on VC;", pslot, oslot);
+          else if (!clear)                    fprintf (stderr, " Slot %d Clear; Slot %d Busy; Remain on VC;", pslot, oslot);
+          else if (clear == 1)                fprintf (stderr, " Slot %d Clear; Slot %d Idle; Return to CC;", pslot, oslot);
+          else if (clear == 2 || clear == 3)  fprintf (stderr, " Slot %d Clear; Slot %d Free; Return to CC;", pslot, oslot);
+          else if (clear == 4 || clear == 5)  fprintf (stderr, " Slot %d Clear w/ TG Hold %d; Slot %d Activity Override; Return to CC; ", pslot, state->tg_hold, oslot);
+          //NOTE: Below clears are just conditions for reporting, and not clear to tune away, so they are set back to zero
+          else if (clear == 21 || clear == 22)
           {
-
-            //display/le bug fix when p_clear activated
-            // if (state->currentslot == 0)
-            // {
-            //   state->payload_mi = 0;
-            //   state->payload_algid = 0;
-            //   state->payload_keyid = 0;
-            //   state->dmr_so = 0;
-            // }
-            // if (state->currentslot == 1)
-            // {
-            //   state->payload_miR = 0;
-            //   state->payload_algidR = 0;
-            //   state->payload_keyidR = 0;
-            //   state->dmr_soR = 0;
-            // }
-            
-            //rigctl
-            if (opts->use_rigctl == 1)
-            {
-              //Guess I forgot to add this condition here
-              if (GetCurrentFreq(opts->rigctl_sockfd) != state->p25_cc_freq)
-                dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
-              //reset some strings
-              sprintf (state->call_string[state->currentslot], "%s", "                     "); //21 spaces
-              sprintf (state->active_channel[state->currentslot], "%s", "");
-              state->last_vc_sync_time = 0;
-              state->last_cc_sync_time = time(NULL);
-              opts->p25_is_tuned = 0;
-              state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
-              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-              if (GetCurrentFreq(opts->rigctl_sockfd) != state->p25_cc_freq)
-                SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
-            }
-
-            //rtl
-            else if (opts->audio_in_type == 3)
-            {
-              #ifdef USE_RTLSDR
-              //Guess I forgot to add this condition here
-              uint32_t tempf = (uint32_t)state->p25_cc_freq;
-              if (opts->rtlsdr_center_freq != tempf)
-                dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
-              //reset some strings
-              sprintf (state->call_string[state->currentslot], "%s", "                     "); //21 spaces
-              sprintf (state->active_channel[state->currentslot], "%s", "");
-              state->last_cc_sync_time = time(NULL);
-              state->last_vc_sync_time = 0;
-              opts->p25_is_tuned = 0;
-              state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
-              if (opts->rtlsdr_center_freq != tempf)
-                rtl_dev_tune (opts, state->p25_cc_freq);
-              #endif
-            }
-
+            fprintf (stderr, " Slot %d Clear; Slot %d Data; Remain on DC;", pslot, oslot);
+            clear = 0; //flag as 0 so we won't tune away until data call is completed
           }
-        }
-        #endif
+
+          if (clear)
+          {
+            if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
+            {
+
+              //display/le/buzzer bug fix when p_clear activated (unsure why this was disabled)
+              //clear only the current slot initially, then clear both if tuning to a different freq
+              if (state->currentslot == 0)
+              {
+                state->payload_mi = 0;
+                state->payload_algid = 0;
+                state->payload_keyid = 0;
+                state->dmr_so = 0;
+              }
+              if (state->currentslot == 1)
+              {
+                state->payload_miR = 0;
+                state->payload_algidR = 0;
+                state->payload_keyidR = 0;
+                state->dmr_soR = 0;
+              }
+              
+              //rigctl
+              if (opts->use_rigctl == 1)
+              {
+                //Guess I forgot to add this condition here
+                if (GetCurrentFreq(opts->rigctl_sockfd) != state->p25_cc_freq)
+                  dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
+
+                //clear both if tuning away to another frequency
+                if (GetCurrentFreq(opts->rigctl_sockfd) != state->p25_cc_freq)
+                {
+                  state->payload_mi = 0;
+                  state->payload_algid = 0;
+                  state->payload_keyid = 0;
+                  state->dmr_so = 0;
+
+                  state->payload_miR = 0;
+                  state->payload_algidR = 0;
+                  state->payload_keyidR = 0;
+                  state->dmr_soR = 0;
+                }
+
+                //reset some strings
+                sprintf (state->call_string[state->currentslot], "%s", "                     "); //21 spaces
+                sprintf (state->active_channel[state->currentslot], "%s", "");
+                state->last_vc_sync_time = 0;
+                state->last_cc_sync_time = time(NULL);
+                opts->p25_is_tuned = 0;
+                state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+                if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+                if (GetCurrentFreq(opts->rigctl_sockfd) != state->p25_cc_freq)
+                  SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
+              }
+
+              //rtl
+              else if (opts->audio_in_type == 3)
+              {
+                #ifdef USE_RTLSDR
+                //Guess I forgot to add this condition here
+                uint32_t tempf = (uint32_t)state->p25_cc_freq;
+                if (opts->rtlsdr_center_freq != tempf)
+                  dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
+
+                //clear both if tuning away to another frequency
+                if (opts->rtlsdr_center_freq != tempf)
+                {
+                  state->payload_mi = 0;
+                  state->payload_algid = 0;
+                  state->payload_keyid = 0;
+                  state->dmr_so = 0;
+
+                  state->payload_miR = 0;
+                  state->payload_algidR = 0;
+                  state->payload_keyidR = 0;
+                  state->dmr_soR = 0;
+                }
+
+                //reset some strings
+                sprintf (state->call_string[state->currentslot], "%s", "                     "); //21 spaces
+                sprintf (state->active_channel[state->currentslot], "%s", "");
+                state->last_cc_sync_time = time(NULL);
+                state->last_vc_sync_time = 0;
+                opts->p25_is_tuned = 0;
+                state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+                if (opts->rtlsdr_center_freq != tempf)
+                  rtl_dev_tune (opts, state->p25_cc_freq);
+                #endif
+              }
+
+            }
+          }
+        } //end if trunking is enabled
+        #else
+        UNUSED (clear); UNUSED(pslot); UNUSED(oslot);
+        #endif //end if PCLEAR_TUNE_AWAY is enabled in code 
       } 
 
       //(P_PROTECT)
@@ -492,6 +552,21 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         //check the source and/or target for special gateway identifiers
         dmr_gateway_identifier (source, target);
+
+        //change this slot burst type to VLC so the revamped p_clear doesn't tune away 
+        if (opts->p25_trunk == 1)
+        {
+          if (gi && opts->trunk_tune_group_calls == 1)
+          {
+            if (state->currentslot == 0) state->dmrburstL = 1;
+            else state->dmrburstR = 1;
+          }
+          if (!gi && opts->trunk_tune_private_calls == 1)
+          {
+            if (state->currentslot == 0) state->dmrburstL = 1;
+            else state->dmrburstR = 1;
+          }
+        }
 
       }
 

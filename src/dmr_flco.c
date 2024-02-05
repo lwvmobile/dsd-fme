@@ -445,18 +445,18 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
         //if group doesn't exist, or isn't locked out, then do so now.
         if (lo == 0)
-        {
+        { //changing from DE to B to fit the rest of the lockout logic ("Buzzer Fix")
           state->group_array[state->group_tally].groupNumber = target;
-          sprintf (state->group_array[state->group_tally].groupMode, "%s", "DE");
+          sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
           sprintf (state->group_array[state->group_tally].groupName, "%s", "ENC LO");
-          sprintf (gm, "%s", "DE");
+          sprintf (gm, "%s", "B");
           sprintf (gn, "%s", "ENC LO");
           state->group_tally++;
         }
 
         //Craft a fake CSBK pdu send it to run as a p_clear to return to CC if available
         uint8_t dummy[12]; uint8_t* dbits; memset (dummy, 0, sizeof(dummy)); dummy[0] = 46; dummy[1] = 255;
-        if ( (strcmp(gm, "DE") == 0) && (strcmp(gn, "ENC LO") == 0)  ) //&& (opts->trunk_tune_data_calls == 0)
+        if ( (strcmp(gm, "B") == 0) && (strcmp(gn, "ENC LO") == 0)  ) //&& (opts->trunk_tune_data_calls == 0)
           dmr_cspdu (opts, state, dbits, dummy, 1, 0);
 
       }
