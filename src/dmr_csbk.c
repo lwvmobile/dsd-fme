@@ -409,7 +409,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (state->currentslot == 1 && state->tg_hold == state->lasttgR && state->tg_hold != 0) clear = 5;
 
         //make sure we aren't sent back immediately by an p_clear condition upon first tuning (i.e., random ENC LO, or end of Data Call)
-        if ( time(NULL)-state->last_t3_tune_time < 1) clear = 0; //one second should be an optimal time, not too short, but not too long
+        //one second default on hangtime should be an optimal time, but let it be user configurable with hangtime option
+        if ( time(NULL)-state->last_t3_tune_time < opts->trunk_hangtime) clear = 0;
 
         //initial line break
         fprintf (stderr, "\n");

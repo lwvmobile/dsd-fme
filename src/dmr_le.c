@@ -323,7 +323,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
     }
     if (irr_err == 0)
     {
-      if (sbrc_hex == 0) ; //NULL, do nothing
+      if (sbrc_hex == 0 && crc7_okay == 0) ; //NULL Single Burst, do nothing (changed to allow the 0 value of RC below to trigger)
 
       //else if (placeholder for future conditions)
       // {
