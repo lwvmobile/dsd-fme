@@ -575,7 +575,7 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
 
   if (state->audio_out_idx > opts->delay)
   {
-    if (opts->audio_out_type == 5) //OSS
+    if (opts->audio_out_type == 5 || opts->audio_out_type == 1) //OSS
     {
       //OSS 48k/1
       result = write (opts->audio_out_fd, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2));
