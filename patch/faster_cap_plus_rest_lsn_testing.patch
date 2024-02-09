@@ -1,0 +1,200 @@
+diff --git a/src/dmr_csbk.c b/src/dmr_csbk.c
+index 477711f..eb8fb1d 100644
+--- a/src/dmr_csbk.c
++++ b/src/dmr_csbk.c
+@@ -423,6 +423,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
+           //check the p_clear logic and report status
+           if      (clear && csbk_fid == 255)  fprintf (stderr, " Slot %d No Encrypted Call Trunking; Slot %d Free; Return to CC; ", pslot, oslot);
+           else if (!clear && csbk_fid == 255) fprintf (stderr, " Slot %d No Encrypted Call Trunking; Slot %d Busy; Remain on VC;", pslot, oslot);
++          else if (clear && csbk_fid == 254)  fprintf (stderr, " Cap+ Rest LSN Change: %d; Slot %d Free; Slot %d Free; Go To Rest LSN;", state->dmr_rest_channel, pslot, oslot); //disabled
++          else if (!clear && csbk_fid == 254) fprintf (stderr, " Cap+ Rest LSN Change: %d; Slot %d Free; Slot %d Busy; Remain on LSN;", state->dmr_rest_channel, pslot, oslot); //disabled
++          else if (clear && csbk_fid == 253)  fprintf (stderr, " Cap+ Rest LSN Change: %d; No CSBK Channel Activity; Go To Rest LSN;", state->dmr_rest_channel);
++          else if (!clear && csbk_fid == 253) fprintf (stderr, " Cap+ Rest LSN Change: %d; CSBK Channel Activity; Remain on LSN;", state->dmr_rest_channel); //this should never happen in code
+           else if (!clear)                    fprintf (stderr, " Slot %d Clear; Slot %d Busy; Remain on VC;", pslot, oslot);
+           else if (clear == 1)                fprintf (stderr, " Slot %d Clear; Slot %d Idle; Return to CC;", pslot, oslot);
+           else if (clear == 2 || clear == 3)  fprintf (stderr, " Slot %d Clear; Slot %d Free; Return to CC;", pslot, oslot);
+@@ -441,14 +445,14 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
+ 
+               //display/le/buzzer bug fix when p_clear activated (unsure why this was disabled)
+               //clear only the current slot initially, then clear both if tuning to a different freq
+-              if (state->currentslot == 0)
++              if (state->currentslot == 0 && csbk_fid != 253) //don't reset on Cap+ since we aren't testing based on the current TS 
+               {
+                 state->payload_mi = 0;
+                 state->payload_algid = 0;
+                 state->payload_keyid = 0;
+                 state->dmr_so = 0;
+               }
+-              if (state->currentslot == 1)
++              if (state->currentslot == 1 && csbk_fid != 253)
+               {
+                 state->payload_miR = 0;
+                 state->payload_algidR = 0;
+@@ -1199,6 +1203,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
+         //tg and channel info for trunking purposes
+         uint16_t t_tg[24];
+         char cap_active[20]; //local string to concantenate to active channel stuff
++        uint8_t empty[24]; //used to evaluate whether or not all channels are idle or not with memcmp after loading
+ 
+         //sanity check
+         if (block_num > 6)
+@@ -1211,6 +1216,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
+         memset (t_tg, 0, sizeof(t_tg));
+         memset (ch, 0, sizeof(ch));
+         memset (pch, 0, sizeof(pch));
++        memset (empty, 0, sizeof(empty));
+ 
+         //treating FL as a form of LCSS
+         if (fl == 2 || fl == 3) //initial or single block (fl2 or fl3) 
+@@ -1227,6 +1233,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
+           state->cap_plus_block_num[ts]++;
+         }
+         
++        //move assignment until later when evaluating for a p_clear condition
+         if (rest_channel != state->dmr_rest_channel)
+         {
+           state->dmr_rest_channel = rest_channel; 
+@@ -1235,7 +1242,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
+         //assign to cc freq to follow during no sync
+         if (state->trunk_chan_map[rest_channel] != 0)
+         {
+-          state->p25_cc_freq = state->trunk_chan_map[rest_channel];
++          // state->p25_cc_freq = state->trunk_chan_map[rest_channel];
+           //set to always tuned
+           opts->p25_is_tuned = 1;
+         }
+@@ -1405,15 +1412,15 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
+               tg = (uint16_t)ConvertBitIntoBytes(&state->cap_plus_csbk_bits[ts][(group_tally*8)+(x*16)+56], 16); //don't change this AGAIN!, this is correct!
+               if (tg != 0) fprintf (stderr, "%5d;  ", tg);
+               else fprintf (stderr, " P||D;  ");
+-              //flag as available for tuning if data calls enabled 
+-              if (opts->trunk_tune_data_calls == 1) t_tg[i] = tg; //ch[i] = 1;
++              //flag as available for tuning if private calls enabled 
++              if (opts->trunk_tune_private_calls == 1) t_tg[i] = tg; //ch[i] = 1;
+               if (tg != 0) x++;
+ 
+               //add active channel to display string
+               
+               //NOTE: Consider only adding this if user toggled or else 
+               //lots of short data bursts blink in and out
+-              if (1 == 1) //opts->trunk_tune_data_calls
++              if (1 == 1) //opts->trunk_tune_private_calls
+               {
+                 sprintf (cap_active, "LSN:%d PC:%d; ", i+1, tg);
+                 strcat (state->active_channel[i+1], cap_active);
+@@ -1508,6 +1515,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
+                     SetFreq(opts->rigctl_sockfd, state->trunk_chan_map[j+1]); 
+                     state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
+                     opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
++                    state->last_vc_sync_time = time(NULL);
+                     j = 11; //break loop
+                   }
+ 
+@@ -1543,6 +1551,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
+                     // else fprintf (stderr, "\n DONT RTL LSN/TG to tune to: %d - %d", j+1, t_tg[j]); //debug
+                     state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[j+1];
+                     opts->p25_is_tuned = 1;
++                    state->last_vc_sync_time = time(NULL);
+                     j = 11; //break loop
+                     #endif
+                   }
+@@ -1570,6 +1579,25 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
+           }
+           memset (state->cap_plus_csbk_bits[ts], 0, sizeof(state->cap_plus_csbk_bits[ts]));
+           state->cap_plus_block_num[ts] = 0;
++
++          //check here to see if we can go to the current rest lsn, if not already on it
++          int busy = memcmp (empty, t_tg, sizeof(empty));
++
++          //testing (don't keep setting on quick data call LSN flip flops but same frequency for rest channel, other misc conditions)
++          // if (!busy && rest_channel != state->dmr_rest_channel && opts->p25_trunk == 1 && state->p25_cc_freq != state->trunk_chan_map[rest_channel])
++          if (!busy && opts->p25_trunk == 1 && state->p25_cc_freq != state->trunk_chan_map[rest_channel])
++          {
++            //assign now, ideally, this should always trigger a positive p_clear when needed
++            // state->dmr_rest_channel = rest_channel;
++
++            //update frequency
++            if (state->trunk_chan_map[rest_channel] != 0)
++              state->p25_cc_freq = state->trunk_chan_map[rest_channel];
++
++            //Craft a fake CSBK pdu send it to run as a p_clear to go to rest channel if its available (no calls currently)
++            uint8_t dummy[12]; uint8_t* dbits; memset (dummy, 0, sizeof(dummy)); dummy[0] = 46; dummy[1] = 253;
++              dmr_cspdu (opts, state, dbits, dummy, 1, 0);
++          }
+           
+         } //if (fl == 1 || fl == 3)
+       } //opcode == 0x3E
+diff --git a/src/dmr_flco.c b/src/dmr_flco.c
+index 2811027..4ab36d4 100644
+--- a/src/dmr_flco.c
++++ b/src/dmr_flco.c
+@@ -354,15 +354,18 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
+       
+     }
+     
+-
+-    if (restchannel != state->dmr_rest_channel && restchannel != -1)
++    //only assign this value here if not trunking
++    // if (opts->p25_trunk == 0) //may be safe to always do this now with code changes, will want to test at some point (tg hold w/ dual voice / slco may optimally need this set)
+     {
+-      state->dmr_rest_channel = restchannel;
+-      //assign to cc freq
+-      if (state->trunk_chan_map[restchannel] != 0)
++      if (restchannel != state->dmr_rest_channel && restchannel != -1)
+       {
+-        state->p25_cc_freq = state->trunk_chan_map[restchannel];
+-      } 
++        state->dmr_rest_channel = restchannel;
++        //assign to cc freq
++        // if (state->trunk_chan_map[restchannel] != 0)
++        // {
++        //   state->p25_cc_freq = state->trunk_chan_map[restchannel];
++        // } 
++      }
+     }
+ 
+     if (type == 1) fprintf (stderr, "%s \n", KGRN);
+@@ -1004,21 +1007,35 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
+   else if (slco == 0xF)
+   {
+     fprintf (stderr, " SLCO Capacity Plus Site: %d - Rest LSN: %d - RS: %02X", capsite, restchannel, cap_reserved);
+-    //assign to cc freq if available
+-    if (state->trunk_chan_map[restchannel] != 0)
+-    {
+-      state->p25_cc_freq = state->trunk_chan_map[restchannel];
+-    }
+ 
+     //extra handling for TG hold while trunking enabled
+-    if (state->tg_hold != 0 && opts->p25_trunk == 1)
++    if (state->tg_hold != 0 && opts->p25_trunk == 1) //logic seems to be fixed now for new rest lsn logic and other considerations
+     {
+-      //if both slots are voice,
+-      if (state->dmrburstL == 16 && state->dmrburstR == 16)
++      //debug
++      // fprintf (stderr, " TG HOLD Both Slots Busy Check; ");
++
++      //if both slots have some cobination of vlc, pi, voice, or tlc
++      int busy = 0;
++      if ( (state->dmrburstL == 16 || state->dmrburstL == 0 || state->dmrburstL == 1 || state->dmrburstL == 2) && 
++           (state->dmrburstR == 16 || state->dmrburstR == 0 || state->dmrburstR == 1 || state->dmrburstR == 2)) busy = 1;
++      if (busy)
+       {
++
++        //debug
++        // fprintf (stderr, " Busy; ");
++
+         //but nether is the TG on hold
+         if ( (state->tg_hold != state->lasttg) && (state->tg_hold != state->lasttgR) )
+         {
++          //debug
++          // fprintf (stderr, " Neither Slot is TG on Hold; ");
++
++          //assign to cc freq if available -- move to right before needed for new logic on rest lsn
++          if (state->trunk_chan_map[restchannel] != 0)
++          {
++            state->p25_cc_freq = state->trunk_chan_map[restchannel];
++          }
++
+           //tune to the current rest channel so we can observe its channel status csbks for the TG on hold
+           if (state->p25_cc_freq != 0)
+           {
