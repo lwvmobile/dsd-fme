@@ -133,7 +133,7 @@ bool SetFreq(int sockfd, long int freq)
     Send(sockfd, buf);
     Recv(sockfd, buf);
 
-    if (strcmp(buf, "RPRT 1") == 0 )
+    if (strcmp(buf, "RPRT 1\n") == 0 ) //sdr++ has a linebreak here, is that in all versions of the protocol?
         return false;
 
     return true;
@@ -143,11 +143,19 @@ bool SetModulation(int sockfd, int bandwidth)
 {
     char buf[BUFSIZE];
     //the bandwidth is now a user/system based configurable variable
-    sprintf (buf, "M FM %d\n", bandwidth); 
+    sprintf (buf, "M NFM %d\n", bandwidth); //SDR++ has changed the token from FM to NFM, even if Ryzerth fixes it later, users may still have an older version
     Send(sockfd, buf);
     Recv(sockfd, buf);
 
-    if (strcmp(buf, "RPRT 1") == 0 )
+    //if it fails the first time, send the other token instead
+    if (strcmp(buf, "RPRT 1\n") == 0 ) //sdr++ has a linebreak here, is that in all versions of the protocol?
+    {
+        sprintf (buf, "M FM %d\n", bandwidth); //anything not SDR++
+        Send(sockfd, buf);
+        Recv(sockfd, buf);
+    }
+
+    if (strcmp(buf, "RPRT 1\n") == 0 )
         return false;
 
     return true;

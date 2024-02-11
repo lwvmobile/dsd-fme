@@ -3996,9 +3996,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     opts->p25_is_tuned = 0;
     state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
 
-    //tune back to the control channel
+    //tune back to the control channel -- NOTE: Doesn't work correctly on EDACS Analog Voice
     //RIGCTL
-    if (opts->p25_trunk == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+    if (opts->p25_trunk == 1 && opts->use_rigctl == 1)
+    {
+      if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+      SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+    }
 
     //rtl
     #ifdef USE_RTLSDR
@@ -4058,9 +4062,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     opts->p25_is_tuned = 0;
     state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
 
-    //tune back to the control channel
+    //tune back to the control channel -- NOTE: Doesn't work correctly on EDACS Analog Voice
     //RIGCTL
-    if (opts->p25_trunk == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+    if (opts->p25_trunk == 1 && opts->use_rigctl == 1)
+    {
+      if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+      SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+    }
 
     //rtl
     #ifdef USE_RTLSDR
@@ -4227,9 +4235,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     opts->p25_is_tuned = 0;
     state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
 
-    //tune back to the control channel
+    //tune back to the control channel -- NOTE: Doesn't work correctly on EDACS Analog Voice
     //RIGCTL
-    if (opts->p25_trunk == 1 && opts->use_rigctl == 1) SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+    if (opts->p25_trunk == 1 && opts->use_rigctl == 1)
+    {
+      if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+      SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+    }
 
     //rtl
     #ifdef USE_RTLSDR

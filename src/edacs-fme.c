@@ -91,6 +91,43 @@ long int gen_rms(short *samples, int len, int step)
   return rms;
 }
 
+//modified from version found in rtl_fm
+static short avg = 0; //move outside so it can have an initial value that isn't batshit insane
+void analog_deemph_filter(short * input, int len)
+{
+	// static short avg;  // cheating...
+	int i, d;
+
+  int a = (int)round(1.0/((1.0-exp(-1.0/(96000 * 75e-6))))); //48000 is rate out, but doubling it sounds 'beefier'
+	// de-emph IIR
+	// avg = avg * (1 - alpha) + sample * alpha;
+	for (i = 0; i < len; i++) {
+		d = input[i] - avg;
+		if (d > 0) {
+			avg += (d + a/2) / a;
+		} else {
+			avg += (d - a/2) / a;
+		}
+		input[i] = (short)avg;
+	}
+}
+//modified from version found in rtl_fm
+static int dc_avg = 0;
+void analog_dc_block_filter(short * input, int len)
+{
+	int i, avg;
+	int64_t sum = 0;
+	for (i=0; i < len; i++) {
+		sum += input[i];
+	}
+	avg = sum / len;
+	avg = (avg + dc_avg * 9) / 10;
+	for (i=0; i < len; i++) {
+		input[i] -= avg;
+	}
+	dc_avg = avg;
+}
+
 //listening to and playing back analog audio
 void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn)
 {
@@ -190,6 +227,24 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     }
     #endif
 
+    //digitize analog samples for a dotting sequence check -- moved here before filtering is applied
+    unsigned long long int sr = 0;
+    for (i = 0; i < 960; i+=5) //Samples Per Symbol is 5, so incrememnt every 5
+    {
+      sr = sr << 1;
+      sr += digitize (opts, state, (int)analog1[i]);
+    }
+
+    //test running analog audio through a deemphasis filter
+    analog_deemph_filter(analog1, 960);
+    analog_deemph_filter(analog2, 960);
+    analog_deemph_filter(analog3, 960);
+    //and dc_block filter analog_dc_block_filter
+    analog_dc_block_filter(analog1, 960);
+    analog_dc_block_filter(analog2, 960);
+    analog_dc_block_filter(analog3, 960);
+
+
     //reconfigured to use seperate audio out stream that is always 48k short
     if (opts->audio_out_type == 0 && opts->slot1_on == 1)
     {
@@ -248,13 +303,13 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       sf_write_short(opts->wav_out_f, analog3, 960);
     }
 
-    //digitize analog samples for a dotting sequence check
-    unsigned long long int sr = 0;
-    for (i = 0; i < 960; i+=5) //Samples Per Symbol is 5, so incrememnt every 5
-    {
-      sr = sr << 1;
-      sr += digitize (opts, state, (int)analog1[i]);
-    }
+    // //digitize analog samples for a dotting sequence check
+    // unsigned long long int sr = 0;
+    // for (i = 0; i < 960; i+=5) //Samples Per Symbol is 5, so incrememnt every 5
+    // {
+    //   sr = sr << 1;
+    //   sr += digitize (opts, state, (int)analog1[i]);
+    // }
 
     //debug
     // fprintf (stderr, " SR: %016llX", sr);
@@ -681,7 +736,12 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
             if (opts->use_rigctl == 1)
             {
-              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+              //only set bandwidth IF we have an original one to fall back to (experimental, but requires user to set the -B 12000 value manually)
+              // if (opts->setmod_bw != 0 && command == 0xEE) SetModulation(opts->rigctl_sockfd, 7000); //narrower bandwidth, but has issues with dotting sequence
+              // else if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+              
+              if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+
               SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because our index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
@@ -734,6 +794,10 @@ void eot_cc(dsd_opts * opts, dsd_state * state)
 {
 
   fprintf (stderr, "EOT; \n");
+
+  //set here so that when returning to the CC, it doesn't go into an immediate hunt if not immediately acquired
+  state->last_cc_sync_time = time(NULL);
+  state->last_vc_sync_time = time(NULL);
 
   //jump back to CC here
   if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
