@@ -92,47 +92,52 @@ long int gen_rms(short *samples, int len, int step)
 }
 
 //modified from version found in rtl_fm
-static short avg = 0; //move outside so it can have an initial value that isn't batshit insane
+static short avg = 0;
 void analog_deemph_filter(short * input, int len)
 {
 	// static short avg;  // cheating...
 	int i, d;
 
-  int a = (int)round(1.0/((1.0-exp(-1.0/(96000 * 75e-6))))); //48000 is rate out, but doubling it sounds 'beefier'
+  // int a = (int)round(1.0/((1.0-exp(-1.0/(96000 * 75e-6))))); //48000 is rate out, but doubling it sounds 'beefier'
+  int a = 8; //result of calc above is 8, so save a cycle on the low end CPUs
+
 	// de-emph IIR
 	// avg = avg * (1 - alpha) + sample * alpha;
-	for (i = 0; i < len; i++) {
-		d = input[i] - avg;
-		if (d > 0) {
-			avg += (d + a/2) / a;
-		} else {
-			avg += (d - a/2) / a;
-		}
-		input[i] = (short)avg;
+
+	for (i = 0; i < len; i++)
+  {
+    d = input[i] - avg;
+    if (d > 0)
+      avg += (d + a/2) / a;
+    else
+      avg += (d - a/2) / a;
+
+    input[i] = (short)avg;
 	}
 }
+
 //modified from version found in rtl_fm
 static int dc_avg = 0;
 void analog_dc_block_filter(short * input, int len)
 {
-	int i, avg;
-	int64_t sum = 0;
-	for (i=0; i < len; i++) {
-		sum += input[i];
-	}
-	avg = sum / len;
-	avg = (avg + dc_avg * 9) / 10;
-	for (i=0; i < len; i++) {
-		input[i] -= avg;
-	}
-	dc_avg = avg;
+  int i, avg;
+  int64_t sum = 0;
+  for (i=0; i < len; i++)
+    sum += input[i];
+
+  avg = sum / len;
+  avg = (avg + dc_avg * 9) / 10;
+  for (i=0; i < len; i++)
+    input[i] -= (short)avg; 
+
+  dc_avg = avg;
 }
 
 //listening to and playing back analog audio
 void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn)
 {
 
-  int i;
+  int i, result;
   int count = 5; //RMS has a 5 count (5 * 180ms) now before cutting off;
   short analog1[960];
   short analog2[960];
@@ -177,26 +182,56 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       rms = gen_rms(analog3, 960, 1);
     }
 
-    //TCP Input -- TODO: Error Handling if connection drops
+    //NOTE: The core dumps observed previously were due to SDR++ Remote Server connection dropping due to Internet/Other issues
+    //and unlike in the main livescanner loop where it just hangs, this loop will cause a core dump. The observed issue 
+    //has not occurred when using SDR++ on local hardware, just the remote server software over the Internet.
+
+    //NOTE: The fix below does not apply to above observed issue, as the TCP connection will not drop, there will just
+    //not be a sample to read in and it hangs on sf_short read until it crashes out, the fix below will prevent issues
+    //when SDR++ is closed locally, or the TCP connection closes suddenly.
+
+    //TCP Input w/ Simple TCP Error Detection Implemented to prevent hard crash if TCP drops off
     if (opts->audio_in_type == 8)
     {
       for (i = 0; i < 960; i++)
       {
-        sf_read_short(opts->tcp_file_in, &sample, 1);
+        result = sf_read_short(opts->tcp_file_in, &sample, 1);
+        if (result == 0)
+        {
+          sf_close(opts->tcp_file_in);
+          fprintf (stderr, "Connection to TCP Server Disconnected (EDACS Analog).\n");
+          fprintf (stderr, "Closing DSD-FME.\n");
+          cleanupAndExit(opts, state);
+        }
         analog1[i] = sample;
       }
 
       for (i = 0; i < 960; i++)
       {
-        sf_read_short(opts->tcp_file_in, &sample, 1);
+        result = sf_read_short(opts->tcp_file_in, &sample, 1);
+        if (result == 0)
+        {
+          sf_close(opts->tcp_file_in);
+          fprintf (stderr, "Connection to TCP Server Disconnected (EDACS Analog).\n");
+          fprintf (stderr, "Closing DSD-FME.\n");
+          cleanupAndExit(opts, state);
+        }
         analog2[i] = sample;
       }
 
       for (i = 0; i < 960; i++)
       {
-        sf_read_short(opts->tcp_file_in, &sample, 1);
+        result = sf_read_short(opts->tcp_file_in, &sample, 1);
+        if (result == 0)
+        {
+          sf_close(opts->tcp_file_in);
+          fprintf (stderr, "Connection to TCP Server Disconnected (EDACS Analog).\n");
+          fprintf (stderr, "Closing DSD-FME.\n");
+          cleanupAndExit(opts, state);
+        }
         analog3[i] = sample;
       }
+      
       //this rms will only work properly (for now) with squelch enabled in SDR++
       rms = gen_rms(analog3, 960, 1);
     }
@@ -268,6 +303,14 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       write (opts->audio_out_fd, analog3, 960*2);
     }
 
+    //STDOUT -- I don't see the harm of adding this here, will be fine for analog only or digital only (non-mixed analog and digital)
+    if (opts->audio_out_type == 1 && opts->floating_point == 0 && opts->slot1_on == 1)
+    {
+      write (opts->audio_out_fd, analog1, 960*2);
+      write (opts->audio_out_fd, analog2, 960*2);
+      write (opts->audio_out_fd, analog3, 960*2);
+    }
+
     opts->rtl_rms = rms;
 
 
@@ -293,23 +336,13 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     if (opts->use_ncurses_terminal == 1)
       ncursesPrinter(opts, state);
 
-    //WIP: Write Analog Samples to wav file, easy enough, 
-    //but needs wav to be opened as 48k, or downsampled
-    //working on 48k version of openWavOutFile
+    //write to wav file if opened
     if (opts->wav_out_f != NULL)
     {
       sf_write_short(opts->wav_out_f, analog1, 960);
       sf_write_short(opts->wav_out_f, analog2, 960);
       sf_write_short(opts->wav_out_f, analog3, 960);
     }
-
-    // //digitize analog samples for a dotting sequence check
-    // unsigned long long int sr = 0;
-    // for (i = 0; i < 960; i+=5) //Samples Per Symbol is 5, so incrememnt every 5
-    // {
-    //   sr = sr << 1;
-    //   sr += digitize (opts, state, (int)analog1[i]);
-    // }
 
     //debug
     // fprintf (stderr, " SR: %016llX", sr);
