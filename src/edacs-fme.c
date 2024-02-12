@@ -91,20 +91,57 @@ long int gen_rms(short *samples, int len, int step)
   return rms;
 }
 
+//super generic pre-emphasis filter with alpha value of 1 for short sample input / output
+static short pstate = 1;
+void analog_preemph_filter(short * input, int len)
+{
+  int i;
+  for (i = 0; i < len; i++)
+  {
+    //debug
+    // fprintf (stderr, " I:%d;", input[i]);
+
+    input[i] = input[i] - 1 * pstate;
+    pstate = input[i];
+
+    //debug
+    // fprintf (stderr, " O:%d;;", input[i]);
+
+    //increase gain value slightly
+    input[i] *= 1.5;
+
+    //debug
+    // fprintf (stderr, " O2:%d;;;", input[i]);
+  }
+}
+
+//super generic short sample clipping filter, prevent short values from exceeding tolerable clip value
+void analog_clipping_filter(short * input, int len)
+{
+  int i;
+  for (i = 0; i < len; i++)
+  {
+    if (input[i] > 32760)
+      input[i] = 32760;
+    else if (input[i] < -32760)
+      input[i] = -32760;
+  }
+}
+
 //modified from version found in rtl_fm
 static short avg = 0;
 void analog_deemph_filter(short * input, int len)
 {
-	// static short avg;  // cheating...
-	int i, d;
+  // static short avg;  // cheating...
+  int i, d;
 
   // int a = (int)round(1.0/((1.0-exp(-1.0/(96000 * 75e-6))))); //48000 is rate out, but doubling it sounds 'beefier'
   int a = 8; //result of calc above is 8, so save a cycle on the low end CPUs
 
-	// de-emph IIR
-	// avg = avg * (1 - alpha) + sample * alpha;
+  // de-emph IIR
+  // avg = avg * (1 - alpha) + sample * alpha;
 
-	for (i = 0; i < len; i++)
+  for (i = 0; i < len; i++)
   {
     d = input[i] - avg;
     if (d > 0)
@@ -113,7 +150,7 @@ void analog_deemph_filter(short * input, int len)
       avg += (d - a/2) / a;
 
     input[i] = (short)avg;
-	}
+  }
 }
 
 //modified from version found in rtl_fm
@@ -136,6 +173,10 @@ void analog_dc_block_filter(short * input, int len)
 //listening to and playing back analog audio
 void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn)
 {
+  //reset static states for new channel
+  pstate = 1;
+  avg = 0;
+  dc_avg = 0;
 
   int i, result;
   int count = 5; //RMS has a 5 count (5 * 180ms) now before cutting off;
@@ -270,7 +311,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       sr += digitize (opts, state, (int)analog1[i]);
     }
 
-    //test running analog audio through a deemphasis filter
+    //test running analog audio through a de-emphasis filter
     analog_deemph_filter(analog1, 960);
     analog_deemph_filter(analog2, 960);
     analog_deemph_filter(analog3, 960);
@@ -278,7 +319,14 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     analog_dc_block_filter(analog1, 960);
     analog_dc_block_filter(analog2, 960);
     analog_dc_block_filter(analog3, 960);
-
+    //test running analog audio through a pre-emphasis filter
+    analog_preemph_filter(analog1, 960);
+    analog_preemph_filter(analog2, 960);
+    analog_preemph_filter(analog3, 960);
+    //test running analog short sample clipping filter
+    analog_clipping_filter(analog1, 960);
+    analog_clipping_filter(analog2, 960);
+    analog_clipping_filter(analog3, 960);
 
     //reconfigured to use seperate audio out stream that is always 48k short
     if (opts->audio_out_type == 0 && opts->slot1_on == 1)
@@ -769,11 +817,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
             if (opts->use_rigctl == 1)
             {
-              //only set bandwidth IF we have an original one to fall back to (experimental, but requires user to set the -B 12000 value manually)
-              // if (opts->setmod_bw != 0 && command == 0xEE) SetModulation(opts->rigctl_sockfd, 7000); //narrower bandwidth, but has issues with dotting sequence
-              // else if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+              //only set bandwidth IF we have an original one to fall back to (experimental, but requires user to set the -B 12000 or -B 24000 value manually)
+              if (opts->setmod_bw != 0 && command == 0xEE) SetModulation(opts->rigctl_sockfd, 7000); //narrower bandwidth, but has issues with dotting sequence
+              else if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
               
-              if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+              // if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
 
               SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because our index starts at zero
               state->edacs_tuned_lcn = lcn;

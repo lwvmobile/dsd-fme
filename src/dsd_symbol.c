@@ -288,12 +288,21 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           if (opts->audio_in_type != 3  && opts->monitor_input_audio == 1)
             opts->rtl_rms = raw_rms(state->analog_out, 960, 1);
 
-          //debug
-          // opts->rtl_rms = 101;
+          //raw wav file saving -- only write when not NXDN, dPMR, or M17 due to noise that can cause tons of false positives when no sync
+          if (opts->wav_out_raw != NULL && opts->frame_nxdn48 == 0 && opts->frame_nxdn96 == 0 && opts->frame_dpmr == 0 && opts->frame_m17 == 0)
+          {
+            sf_write_short(opts->wav_out_raw, state->analog_out, 960);
+            sf_write_sync (opts->wav_out_raw);
+          }
 
-          //make it a little quieter
-          // for (int x = 0; x < 960; x++)
-          //   state->analog_out[x] /= 4;
+          //test running analog audio through a de-emphasis filter
+          analog_deemph_filter(state->analog_out, 960);
+          //and dc_block filter analog_dc_block_filter
+          analog_dc_block_filter(state->analog_out, 960);
+          //test running analog audio through a pre-emphasis filter
+          analog_preemph_filter(state->analog_out, 960);
+          //test running analog short sample clipping filter
+          analog_clipping_filter(state->analog_out, 960);
 
           //seems to be working now, but RMS values are lower on actual analog signal than on no signal but noise
           if ( (opts->rtl_rms > opts->rtl_squelch_level) && opts->monitor_input_audio == 1 && state->carrier == 0 ) //added carrier check here in lieu of disabling it above
@@ -323,12 +332,12 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             state->last_vc_sync_time = time(NULL);
           }
 
-          //raw wav file saving -- only write when not NXDN, dPMR, or M17 due to noise that can cause tons of false positives when no sync
-          if (opts->wav_out_raw != NULL && opts->frame_nxdn48 == 0 && opts->frame_nxdn96 == 0 && opts->frame_dpmr == 0 && opts->frame_m17 == 0)
-          {
-            sf_write_short(opts->wav_out_raw, state->analog_out, 960);
-            sf_write_sync (opts->wav_out_raw);
-          }
+          //raw wav file saving -- save the WAV file samples before we apply filtering to them
+          // if (opts->wav_out_raw != NULL && opts->frame_nxdn48 == 0 && opts->frame_nxdn96 == 0 && opts->frame_dpmr == 0 && opts->frame_m17 == 0)
+          // {
+          //   sf_write_short(opts->wav_out_raw, state->analog_out, 960);
+          //   sf_write_sync (opts->wav_out_raw);
+          // }
 
           memset (state->analog_out, 0, sizeof(state->analog_out));
           state->analog_sample_counter = 0;

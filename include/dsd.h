@@ -1250,6 +1250,12 @@ void edacs(dsd_opts * opts, dsd_state * state);
 unsigned long long int edacs_bch (unsigned long long int message);
 void eot_cc(dsd_opts * opts, dsd_state * state); //end of TX return to CC
 
+//misc generic audio filtering for analog at 48k/1
+void analog_deemph_filter(short * input, int len);
+void analog_preemph_filter(short * input, int len);
+void analog_dc_block_filter(short * input, int len);
+void analog_clipping_filter(short * input, int len);
+
 //csv imports
 int csvGroupImport(dsd_opts * opts, dsd_state * state);
 int csvLCNImport(dsd_opts * opts, dsd_state * state);
