@@ -419,6 +419,11 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		//roll the voice scrambler LFSR here if key available to advance seed (usually just needed on NXDN96)
 		if (state->nxdn_cipher_type == 0x1 && state->R != 0) 
 		{
+			if (state->payload_miN == 0)
+			{
+				state->payload_miN = state->R;
+			}
+
 			char ambe_temp[49] = {0};
 			char ambe_d[49] = {0};
 			for (int i = 0; i < 4; i++)
@@ -436,6 +441,11 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		//roll the voice scrambler LFSR here if key available to advance seed -- half rotation on a facch steal
 		if (state->nxdn_cipher_type == 0x1 && state->R != 0)
 		{
+			if (state->payload_miN == 0)
+			{
+				state->payload_miN = state->R;
+			}
+
 			char ambe_temp[49] = {0};
 			char ambe_d[49] = {0};
 			for (int i = 0; i < 2; i++)
