@@ -150,9 +150,9 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
       NXDN_decode_VCALL(opts, state, ElementsContent);
       memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
 
-      #ifdef LIMAZULUTWEAKS
-      ; //do nothing -- testing errors on CAC messages when returning quickly from RTCH
-      #else
+      // #ifdef LIMAZULUTWEAKS
+      // ; //do nothing -- testing errors on CAC messages when returning quickly from RTCH
+      // #else
 
       //tune back to CC here - save about 1-2 seconds
       if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
@@ -197,7 +197,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
         state->last_cc_sync_time = time(NULL); //allow tuners a second to catch up, particularly rtl input
       }
 
-      #endif
+      // #endif
       break;
 
     //Idle
@@ -654,6 +654,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
           state->R = state->rkey_array[DestinationID];
           fprintf (stderr, " %s", KYEL);
           fprintf (stderr, " Key Loaded: %lld", state->rkey_array[DestinationID]);
+          state->payload_miN = state->R; //should be okay to load here, will test
         } 
         if (state->M == 1) state->nxdn_cipher_type = 0x1;
       }
@@ -687,6 +688,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
           state->R = state->rkey_array[DestinationID];
           fprintf (stderr, " %s", KYEL);
           fprintf (stderr, " Key Loaded: %lld", state->rkey_array[DestinationID]);
+          state->payload_miN = state->R; //should be okay to load here, will test
         }
         if (state->M == 1) state->nxdn_cipher_type = 0x1;
         #endif

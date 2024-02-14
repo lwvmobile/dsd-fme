@@ -280,6 +280,8 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		} 
 
 		fprintf (stderr, "PF 1/1");
+		if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
+		else if (state->M == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
 
 		if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, nsf_sacch); 
 		// else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, nsf_sacch);
@@ -331,6 +333,11 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		fprintf (stderr, "%s", KNRM);
 
 		fprintf (stderr, "PF %d/4", part_of_frame+1);
+		if (part_of_frame == 0)
+		{
+			if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
+			else if (state->M == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
+		}
 
 		// if (crc != check)
 		// {
@@ -340,7 +347,33 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		// }
 		
 		//reset scrambler seed to key value on new superframe
-		if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1) state->payload_miN = 0;
+		// if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1) state->payload_miN = 0;
+
+		//reset scrambler seed to key value on new superframe
+		if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1)
+		{
+			if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
+			else if (state->M == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
+		}
+		//this seems to work much better now
+		else if (part_of_frame != 0 && state->nxdn_cipher_type == 0x1)
+		{
+			if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
+			else if (state->M == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
+
+			//advance seed by required number of turns depending on the current pf value
+			int start = 0; int end = part_of_frame;
+			char ambe_temp[49] = {0};
+			char ambe_d[49] = {0};
+			for (start = 0; start < end; start++)
+			{
+				//run 4 times
+				LFSRN(ambe_temp, ambe_d, state);
+				LFSRN(ambe_temp, ambe_d, state);
+				LFSRN(ambe_temp, ambe_d, state);
+				LFSRN(ambe_temp, ambe_d, state);
+			}
+		}
 
 		if (crc == check)
 		{
@@ -568,7 +601,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 	}  
 
 }
-
+static int cac_fail = 0;
 void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 {
 	uint8_t deperm[300]; //300
@@ -682,6 +715,49 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 		fprintf (stderr, "%s", KRED);
 		fprintf (stderr, " (CRC ERR)");
 		fprintf (stderr, "%s", KNRM);
+	}
+
+	//check for accumulative cac failures and reset if multiple errors pile up 
+	//(LZ issue and also issue very occasssionally noticed on remote)
+	if (crc != 0) cac_fail++;
+	else cac_fail = 0;
+
+	//reset some parameters if CAC continues to fail
+	if (cac_fail >= 5)
+	{
+		//simple reset
+		state->synctype = 0;
+		state->lastsynctype = -1;
+		state->carrier = 0;
+		state->last_cc_sync_time = time(NULL)+2; //probably not necesary
+		cac_fail = 0; //reset
+
+		//more advanced modulator reset
+		state->center = 0;
+		state->jitter = -1;
+		state->synctype = -1;
+		state->min = -15000;
+		state->max = 15000;
+		state->lmid = 0;
+		state->umid = 0;
+		state->minref = -12000;
+		state->maxref = 12000;
+		state->lastsample = 0;
+		for (int i = 0; i < 128; i++) state->sbuf[i] = 0;
+		state->sidx = 0;
+		for (int i = 0; i < 1024; i++) state->maxbuf[i] = 15000;
+		for (int i = 0; i < 1024; i++) state->minbuf[i] = -15000;
+		state->midx = 0;
+		state->symbolcnt = 0;
+
+		//reset the dibit buffer
+		state->dibit_buf_p = state->dibit_buf + 200;
+		memset (state->dibit_buf, 0, sizeof (int) * 200);
+		state->offset = 0;
+
+		//debug notification
+		// fprintf (stderr, " RESET CARRIER; ");
+
 	}
 
 	if (crc == 0) NXDN_Elements_Content_decode(opts, state, 1, cac_message_buffer);
@@ -816,7 +892,14 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 	else part_of_frame = 0; 
 
 	//reset scrambler seed to key value on new superframe
-	if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1) state->payload_miN = 0;
+	// if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1) state->payload_miN = 0;
+
+	//reset scrambler seed to key value on new superframe
+	if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1)
+	{
+		if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
+		else if (state->M == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
+	}
 
 	/*
 	4.3.2. Mapping to Functional Channel
