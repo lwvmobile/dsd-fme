@@ -321,15 +321,36 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
     skipDibit (opts, state, 12 + 49 + 5);
   }
 
+  #define CON_TUNEAWAY //disable if slower tune back is desired
+
+  #ifdef CON_TUNEAWAY
   //if using con+ trunking and last voice observed more than x seconds ago, snap back to con+ cc
   //con+ voice channels can have extremely long idle periods without properly tearing down
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && state->is_con_plus == 1)
   {
-    //bug fixed that caused hopping from CC to VC; decreased to 2 seconds.
+    //wait time on call
     time_t waitsec = 2;
-    if (opts->trunk_tune_data_calls == 1)
-      waitsec = 4; //increase time for a data call before hopping
-    if ( (time(NULL) - state->last_vc_sync_time > waitsec) ) 
+
+    //TLC seems to continue to roll during call timer, so its possible that is the indication to stay on the channel
+    //NOTE: Some Con+ systems seem to just spam the call grant up until the RF channel is torn down which is not very effecient for trunking purposes
+    //you either sit there until the framesync is lost, or go back on the condition below and just get sent back for nothing, not all CON+ does this
+
+    //switching to a more nuanced logic on CON+, look for any voice related activity before going back, including TLC hold on call/slot
+    int clear = 0;
+    if ( (state->dmrburstL != 16 && state->dmrburstL != 0 && state->dmrburstL != 1 && state->dmrburstL != 2) && 
+         (state->dmrburstR != 16 && state->dmrburstR != 0 && state->dmrburstR != 1 && state->dmrburstR != 2) ) clear = 1;
+    
+    //second check for data activity if data calls are permitted to tune, and voice calls are already clear
+    if (opts->trunk_tune_data_calls == 1 && clear == 1)
+    {
+      clear = 0; //reset
+      //if no data header or data block sync in either slot
+      if ( (state->dmrburstL != 6 && state->dmrburstL != 7 && state->dmrburstL != 8 && state->dmrburstL != 10) && 
+            (state->dmrburstR != 6 && state->dmrburstR != 7 && state->dmrburstR != 8 && state->dmrburstR != 10) ) clear = 1;
+    }
+
+    //if a clear condition is available and the internal timer has expired, go back to CC
+    if ( (time(NULL) - state->last_vc_sync_time > waitsec) && (clear == 1) )
     {
       if (opts->use_rigctl == 1) //rigctl tuning
       {
@@ -369,5 +390,5 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
 
     }
   }
-
+  #endif
 } 

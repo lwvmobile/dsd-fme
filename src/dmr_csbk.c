@@ -1110,6 +1110,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         }
         else fprintf (stderr, "Source: %d - Target: %d ", source, target);
 
+        //if trunking and data calls allowed, convert preamble burst to a DATA header burst to hold p_clear or con+
+        if (opts->p25_trunk == 1 && opts->trunk_tune_data_calls == 1)
+        {
+          if (state->currentslot == 0) state->dmrburstL = 6;
+          else state->dmrburstR = 6;
+        }
+
       }
       //end tier 2 csbks
 
