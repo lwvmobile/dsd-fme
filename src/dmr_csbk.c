@@ -1642,7 +1642,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         else if (opt == 3)
           fprintf (stderr, " Connect Plus Private Voice Channel Grant;");
         else fprintf (stderr, " Connect Plus Unknown %02X Channel Grant;", opt);
-        fprintf (stderr, " Target: %d; Source: %d; LCN: %d; TS: %d;", grpAddr, srcAddr, lcn, tslot);
+        fprintf (stderr, " Target: %d; Source: %d; LCN: %d; TS: %d;", grpAddr, srcAddr, lcn, tslot+1);
         // fprintf (stderr, " OPT: %02X;", opt); //debug
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
@@ -1759,7 +1759,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         uint8_t  tslot   = ( (cs_pdu[5] & 0x08 ) >> 3 ) & 1;  
         fprintf (stderr, "%s", KYEL);
         fprintf (stderr, " Connect Plus Data Channel Grant;");
-        fprintf (stderr, " Target: %d; LCN: %d; TS: %d;", dtarget, lcn, tslot);
+        fprintf (stderr, " Target: %d; LCN: %d; TS: %d;", dtarget, lcn, tslot+1);
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
