@@ -986,7 +986,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     sprintf (state->dmr_site_parms, "%d-%d ", con_netid, con_siteid);
 
     //if using rigctl we can set an unknown cc frequency by polling rigctl for the current frequency
-    if (opts->use_rigctl == 1 && state->p25_cc_freq == 0) //if not set from channel map 0
+    if (opts->use_rigctl == 1 && opts->p25_is_tuned == 0)
     {
       ccfreq = GetCurrentFreq (opts->rigctl_sockfd);
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
