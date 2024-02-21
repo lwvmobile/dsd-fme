@@ -370,6 +370,20 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
 
+		if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1)
+		{
+			if (state->currentslot == 1)
+			{
+				opts->slot1_on = 0;
+				opts->slot2_on = 1;
+			}
+			else
+			{
+				opts->slot1_on = 1;
+				opts->slot2_on = 0;
+			}
+		}
+
 		//blank the call string here -- slot variable is already flipped accordingly for sacch
 		sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
 
@@ -741,6 +755,20 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 0, FMAC);
 		fprintf (stderr, "%s", KNRM);
+
+		if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1)
+		{
+			if (state->currentslot == 0)
+			{
+				opts->slot1_on = 0;
+				opts->slot2_on = 1;
+			}
+			else
+			{
+				opts->slot1_on = 1;
+				opts->slot2_on = 0;
+			}
+		}
 
 		//blank the call string here 
 		sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
