@@ -257,9 +257,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     //  0 +P25p1
     //  1 -P25p1
     state->errs = mbe_eccImbe7200x4400C0 (imbe_fr);
-    //state->errs2 = state->errs;
+    state->errs2 = state->errs;
     mbe_demodulateImbe7200x4400Data (imbe_fr);
-    state->errs2 = mbe_eccImbe7200x4400Data (imbe_fr, imbe_d);
+    state->errs2 += mbe_eccImbe7200x4400Data (imbe_fr, imbe_d);
 
     //P25p1 RC4 Handling
     if (state->payload_algid == 0xAA && state->R != 0)
@@ -350,9 +350,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   {
 
     state->errs = mbe_eccImbe7100x4400C0 (imbe7100_fr);
-    //state->errs2 = state->errs;
+    state->errs2 = state->errs;
     mbe_demodulateImbe7100x4400Data (imbe7100_fr);
-    state->errs2 = mbe_eccImbe7100x4400Data (imbe7100_fr, imbe_d);
+    state->errs2 += mbe_eccImbe7100x4400Data (imbe7100_fr, imbe_d);
 
     if (opts->payload == 1)
     {
@@ -384,9 +384,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   {
 
     state->errs = mbe_eccAmbe3600x2450C0 (ambe_fr);
-    //state->errs2 = state->errs;
+    state->errs2 = state->errs;
     mbe_demodulateAmbe3600x2450Data (ambe_fr);
-    state->errs2 = mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+    state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
     if ( (state->nxdn_cipher_type == 0x01 && state->R > 0) ||
           (state->M == 1 && state->R > 0) )
@@ -428,9 +428,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     {
 
       state->errs = mbe_eccAmbe3600x2450C0 (ambe_fr);
-      //state->errs2 = state->errs;
+      state->errs2 = state->errs;
       mbe_demodulateAmbe3600x2450Data (ambe_fr);
-      state->errs2 = mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+      state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
       //EXPERIMENTAL!!
       //load basic privacy key number from array by the tg value (if not forced)
@@ -714,9 +714,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     {
 
       state->errsR = mbe_eccAmbe3600x2450C0 (ambe_fr);
-      //state->errs2R = state->errsR;
+      state->errs2R = state->errsR;
       mbe_demodulateAmbe3600x2450Data (ambe_fr);
-      state->errs2R = mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+      state->errs2R += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
       //EXPERIMENTAL!!
       //load basic privacy key number from array by the tg value (if not forced)
@@ -1071,7 +1071,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         fprintf (stderr, " *OFF*"); 
     }
 
-    state->debug_audio_errors += state->errs2 + state->errs;
+    state->debug_audio_errors += state->errs2;
 
     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
     {
@@ -1148,7 +1148,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         fprintf (stderr, " *OFF*");
     }
 
-    state->debug_audio_errorsR += state->errs2R + state->errsR;
+    state->debug_audio_errorsR += state->errs2R;
 
     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
     {
@@ -1172,7 +1172,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
   if (opts->dmr_mono == 0 && opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
   {
-    state->debug_audio_errors += state->errs2 + state->errs;
+    state->debug_audio_errors += state->errs2;
     if (opts->audio_out == 1 && opts->floating_point == 0 ) //&& opts->pulse_digi_rate_out == 8000
     {
       processAudio(opts, state);

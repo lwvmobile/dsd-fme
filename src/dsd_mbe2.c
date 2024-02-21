@@ -23,9 +23,10 @@
 void soft_demod_imbe7200 (dsd_state * state, char imbe_fr7200[8][23], char imbe_d[88])
 {
   state->errs = mbe_eccImbe7200x4400C0 (imbe_fr7200);
+  state->errs2 = state->errs;
   mbe_demodulateImbe7200x4400Data (imbe_fr7200);
-  state->errs2 = mbe_eccImbe7200x4400Data (imbe_fr7200, imbe_d);
-  state->debug_audio_errors += state->errs2 + state->errs;
+  state->errs2 += mbe_eccImbe7200x4400Data (imbe_fr7200, imbe_d);
+  state->debug_audio_errors += state->errs2;
 
 }
 
@@ -33,9 +34,10 @@ void soft_demod_imbe7200 (dsd_state * state, char imbe_fr7200[8][23], char imbe_
 void soft_demod_imbe7100 (dsd_state * state, char imbe_fr7100[7][24], char imbe_d[88])
 {
   state->errs = mbe_eccImbe7100x4400C0 (imbe_fr7100);
+  state->errs2 = state->errs;
   mbe_demodulateImbe7100x4400Data (imbe_fr7100);
-  state->errs2 = mbe_eccImbe7100x4400Data (imbe_fr7100, imbe_d);
-  state->debug_audio_errors += state->errs2 + state->errs;
+  state->errs2 += mbe_eccImbe7100x4400Data (imbe_fr7100, imbe_d);
+  state->debug_audio_errors += state->errs2;
 
 }
 
@@ -43,8 +45,9 @@ void soft_demod_imbe7100 (dsd_state * state, char imbe_fr7100[7][24], char imbe_
 void soft_demod_ambe2_ehr(dsd_state * state, char ambe2_ehr[4][24], char ambe_d[49])
 {
   state->errs = mbe_eccAmbe3600x2450C0 (ambe2_ehr);
+  state->errs2 = state->errs;
   mbe_demodulateAmbe3600x2450Data (ambe2_ehr);
-  state->errs2 = mbe_eccAmbe3600x2450Data (ambe2_ehr, ambe_d);
+  state->errs2 += mbe_eccAmbe3600x2450Data (ambe2_ehr, ambe_d);
 
 }
 
