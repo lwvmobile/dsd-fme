@@ -338,9 +338,9 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
 
     if (opts->audio_out_type == 8) //UDP Audio
     {
-      udp_socket_blaster (opts, state, 960*2, analog1);
-      udp_socket_blaster (opts, state, 960*2, analog2);
-      udp_socket_blaster (opts, state, 960*2, analog3);
+      udp_socket_blasterA (opts, state, 960*2, analog1);
+      udp_socket_blasterA (opts, state, 960*2, analog2);
+      udp_socket_blasterA (opts, state, 960*2, analog3);
     }
 
     //added a condition check so that if OSS output and 8K, switches to 48K when opening OSS
@@ -798,9 +798,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //   goto ENDPV;
         // #endif
 
-        //skip analog calls on UDP Audio Output
-        if (command == 0xEE && opts->audio_out_type == 8)
-          goto ENDPV;
+
+
+
 
         //this is working now with the new import setup
         if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
@@ -865,7 +865,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
   }
 
-  ENDPV:
+
   free (timestr); //free allocated memory to prevent memory leak
   fprintf (stderr, "\n");
 

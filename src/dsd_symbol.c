@@ -311,7 +311,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
               pa_simple_write(opts->pulse_raw_dev_out, state->analog_out, 960*2, NULL);
 
             if (opts->audio_out_type == 8)
-              udp_socket_blaster (opts, state, 960*2, state->analog_out);
+              udp_socket_blasterA (opts, state, 960*2, state->analog_out);
 
             //NOTE: Worked okay earlier in Cygwin, so should be fine -- can only operate at 48k1, else slow mode lag
 

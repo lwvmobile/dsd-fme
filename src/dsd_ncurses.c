@@ -2429,6 +2429,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) &&  (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
       printw (" - Monitor RMS: %04ld ", opts->rtl_rms);
     printw (" \n");
+    if (opts->udp_sockfdA != 0) //Analog Output on udp port +2
+    {
+      printw ("| UDP Audio Output: %s:%d; 48 kHz 1 Ch; Analog Output; ", opts->udp_hostname, opts->udp_portno+2);
+      printw (" \n");
+    }
   }
 
   // if (opts->monitor_input_audio == 1)

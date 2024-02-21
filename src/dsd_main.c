@@ -696,7 +696,8 @@ initOpts (dsd_opts * opts)
   sprintf (opts->rigctlhostname, "%s", "localhost");
 
   //UDP Socket Blaster Audio
-  opts->udp_sockfd = 0;
+  opts->udp_sockfd  = 0;
+  opts->udp_sockfdA = 0;
   opts->udp_portno = 23456; //default port, same os OP25's sockaudio.py
   sprintf (opts->udp_hostname, "%s", "127.0.0.1");
 
@@ -1509,6 +1510,9 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
 
   if (opts->udp_sockfd)
     close (opts->udp_sockfd);
+
+  if (opts->udp_sockfdA)
+    close (opts->udp_sockfdA);
 
   //close MBE out files
   if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
@@ -2743,8 +2747,23 @@ main (int argc, char **argv)
 
       if (opts.monitor_input_audio == 1 || opts.frame_provoice == 1)
       {
-        fprintf (stderr, "NOTICE: Raw Audio Monitoring and Analog Calls Unavailable over UDP Audio Output\n");
-        opts.monitor_input_audio = 0;
+        err = udp_socket_connectA(&opts, &state);
+        if (err < 0)
+        {
+          fprintf (stderr, "Error Configuring UDP Socket for UDP Blaster Audio Analog :( \n");
+          opts.udp_sockfdA = 0;
+          opts.monitor_input_audio = 0;
+        }
+        else
+        {
+          fprintf (stderr, "UDP Blaster Output (Analog): ");
+          fprintf (stderr, "%s:", opts.udp_hostname);
+          fprintf (stderr, "%d \n", opts.udp_portno+2);
+        }
+
+        //this functionality is disabled when trunking EDACS, but we still use the behavior for analog channel monitoring
+        if (opts.frame_provoice == 1 && opts.p25_trunk == 1)
+          opts.monitor_input_audio = 0;
       }
 
     }

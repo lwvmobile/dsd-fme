@@ -31,6 +31,7 @@ void error(char *msg) {
 }
 
 struct sockaddr_in address;
+struct sockaddr_in addressA;
 
 //
 // Connect
@@ -316,6 +317,23 @@ int udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * d
     if (err < nsam) fprintf (stderr, "\n UDP Underflow %ld", err); //I'm not even sure if this is possible
 }
 
+//Analog UDP port on +2 of normal open socket
+int udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void * data)
+{
+    UNUSED(state);
+    size_t err = 0;
+
+    //listen with:
+
+    //short 48k/1
+    //socat stdio udp-listen:23456 | play --buffer 960*2 -q -b 16 -r 48000 -c1 -t s16 -
+
+    //send audio or data to socket
+    err = sendto(opts->udp_sockfdA, data, nsam, 0, (const struct sockaddr * ) & addressA, sizeof(struct sockaddr_in));
+    if (err < 0) fprintf (stderr, "\n UDP SENDTO ERR %ld", err); //return value here is size_t number of characters sent, or -1 for failure
+    if (err < nsam) fprintf (stderr, "\n UDP Underflow %ld", err); //I'm not even sure if this is possible
+}
+
 int udp_socket_connect(dsd_opts * opts, dsd_state * state)
 {
     UNUSED(state);
@@ -347,6 +365,45 @@ int udp_socket_connect(dsd_opts * opts, dsd_state * state)
     }
 
     address.sin_port = htons(opts->udp_portno);
+    if (err < 0)
+    {
+        fprintf (stderr, " UDP htons Error %ld\n", err);
+        return (err);
+    }
+
+}
+
+int udp_socket_connectA(dsd_opts * opts, dsd_state * state)
+{
+    UNUSED(state);
+
+    long int err = 0;
+    err = opts->udp_sockfdA = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (err < 0)
+    {
+        fprintf (stderr, " UDP Socket Error %ld\n", err);
+        return (err);
+    }
+
+    // Don't think this is needed, but doesn't seem to hurt to keep it here either
+    int broadcastEnable = 1;
+    err = setsockopt(opts->udp_sockfdA, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
+    if (err < 0)
+    {
+        fprintf (stderr, " UDP Broadcast Set Error %ld\n", err);
+        return (err);
+    }
+
+    memset((char * ) & addressA, 0, sizeof(addressA));
+    addressA.sin_family = AF_INET;
+    err = addressA.sin_addr.s_addr = inet_addr(opts->udp_hostname);
+    if (err < 0) //error in this context reports back 32-bit inet_addr reversed order byte pairs
+    {
+        fprintf (stderr, " UDP inet_addr Error %ld\n", err);
+        return (err);
+    }
+
+    addressA.sin_port = htons(opts->udp_portno+2); //plus 2 to current port assignment for the analog port value
     if (err < 0)
     {
         fprintf (stderr, " UDP htons Error %ld\n", err);

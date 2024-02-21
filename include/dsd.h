@@ -332,7 +332,8 @@ typedef struct
   char rigctlhostname[1024];
 
   //UDP Socket Blaster Audio
-  int udp_sockfd;
+  int udp_sockfd;   //digital
+  int udp_sockfdA; //analog 48k1
   int udp_portno;
   char udp_hostname[1024];
 
@@ -1265,7 +1266,9 @@ int csvKeyImportHex(dsd_opts * opts, dsd_state * state);
 
 //UDP Socket Connect and UDP Socket Blaster (audio output)
 int udp_socket_connect(dsd_opts * opts, dsd_state * state);
+int udp_socket_connectA(dsd_opts * opts, dsd_state * state);
 int udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
+int udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
 
 #ifdef __cplusplus
 extern "C" {
