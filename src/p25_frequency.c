@@ -25,6 +25,10 @@ long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channe
 	(Channel Spacing) x (0.125 kHz).
 	*/
 
+	//return 0 if channel value is 0 or 0xFFFF
+	if (channel == 0) return 0;
+	if (channel == 0xFFFF) return 0;
+
 	//Note: Base Frequency is calculated as (Base Frequency) x (0.000005 MHz) from the IDEN_UP message.
 
 	long int freq = -1;

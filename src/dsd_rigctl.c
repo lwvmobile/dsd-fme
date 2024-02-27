@@ -411,3 +411,62 @@ int udp_socket_connectA(dsd_opts * opts, dsd_state * state)
     }
 
 }
+
+void return_to_cc (dsd_opts * opts, dsd_state * state)
+{
+    //extra safeguards due to sync issues with NXDN
+    memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+    memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+
+    memset (state->active_channel, 0, sizeof(state->active_channel));
+
+    //reset dmr blocks
+    dmr_reset_blocks (opts, state);
+
+    //zero out additional items
+    state->lasttg = 0;
+    state->lasttgR = 0;
+    state->lastsrc = 0;
+    state->lastsrcR = 0;
+    state->payload_algid = 0;
+    state->payload_algidR = 0;
+    state->payload_keyid = 0;
+    state->payload_keyidR = 0;
+    state->payload_mi = 0;
+    state->payload_miR = 0;
+    state->payload_miP = 0;
+    state->payload_miN = 0;
+    opts->p25_is_tuned = 0;
+    state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
+
+    //tune back to the control channel -- NOTE: Doesn't work correctly on EDACS Analog Voice
+    //RIGCTL
+    if (opts->p25_trunk == 1 && opts->use_rigctl == 1)
+    {
+        if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+        SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
+    }
+
+    //rtl
+    #ifdef USE_RTLSDR
+    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_dev_tune (opts, state->p25_cc_freq);
+    #endif
+
+    state->last_cc_sync_time = time(NULL);
+
+    //if P25p2 VCH and going back to P25p1 CC, flip symbolrate
+    if (state->p25_cc_is_tdma == 0)
+    {
+        state->samplesPerSymbol = 10;
+        state->symbolCenter = 4;
+    }
+
+    //if P25p1 Data Revert on P25p2 TDMA CC, flip symbolrate
+    if (state->p25_cc_is_tdma == 1)
+    {
+        state->samplesPerSymbol = 8;
+        state->symbolCenter = 3;
+    }
+
+    // fprintf (stderr, "\n User Activated Return to CC; \n ");
+}

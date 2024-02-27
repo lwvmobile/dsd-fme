@@ -315,11 +315,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n MFID90 Group Regroup Channel Grant Update");
 			fprintf (stderr, "\n  Channel 1 [%04X] Group 1 [%d][%04X]", channel1, group1, group1);
 			freq1 = process_channel_to_freq (opts, state, channel1);
-			fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
-			freq2 = process_channel_to_freq (opts, state, channel2);
+			if (channel2 != channel1 && channel2 != 0 && channel2 != 0xFFFF)
+			{
+				fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
+				freq2 = process_channel_to_freq (opts, state, channel2);
+			}
 
 			//add active channel to string for ncurses display
-			sprintf (state->active_channel[0], "MFID90 Active Ch: %04X SG: %d; Ch: %04X SG: %d; ", channel1, group1, channel2, group2);
+			if (channel2 != channel1 && channel2 != 0 && channel2 != 0xFFFF)
+				sprintf (state->active_channel[0], "MFID90 Active Ch: %04X SG: %d; Ch: %04X SG: %d; ", channel1, group1, channel2, group2);
+			else sprintf (state->active_channel[0], "MFID90 Active Ch: %04X SG: %d; ", channel1, group1);
 			state->last_active_time = time(NULL);
 
 			//Skip tuning group calls if group calls are disabled
@@ -710,7 +715,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (opts->trunk_tune_private_calls == 0) goto SKIPCALL; 
 
 			//Skip tuning encrypted calls if enc calls are disabled -- abb formats do not carry svc bits :(
-			if (opts->trunk_tune_enc_calls == 0) goto SKIPCALL; //enable, or disable?
+			// if (opts->trunk_tune_enc_calls == 0) goto SKIPCALL; //enable, or disable?
 
 			//unit to unit needs work, may fail under certain conditions (first blocked, second allowed, etc) (labels should still work though)
 			for (int i = 0; i < state->group_tally; i++)
@@ -996,41 +1001,52 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			}
 			freq1 = process_channel_to_freq (opts, state, channel1);
 
-			fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
-			if (so2 & 0x80) fprintf (stderr, " Emergency");
-			if (so2 & 0x40) fprintf (stderr, " Encrypted");
-			if (opts->payload == 1) //hide behind payload due to len
+			if (channel2 != channel1 && channel2 != 0 && channel2 != 0xFFFF)
 			{
-				if (so2 & 0x20) fprintf (stderr, " Duplex");
-				if (so2 & 0x10) fprintf (stderr, " Packet");
-				else fprintf (stderr, " Circuit");
-				if (so2 & 0x8) fprintf (stderr, " R"); //reserved bit is on
-				fprintf (stderr, " Priority %d", so2 & 0x7); //call priority
+				fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
+				if (so2 & 0x80) fprintf (stderr, " Emergency");
+				if (so2 & 0x40) fprintf (stderr, " Encrypted");
+				if (opts->payload == 1) //hide behind payload due to len
+				{
+					if (so2 & 0x20) fprintf (stderr, " Duplex");
+					if (so2 & 0x10) fprintf (stderr, " Packet");
+					else fprintf (stderr, " Circuit");
+					if (so2 & 0x8) fprintf (stderr, " R"); //reserved bit is on
+					fprintf (stderr, " Priority %d", so2 & 0x7); //call priority
+				}
+				freq2 = process_channel_to_freq (opts, state, channel2);
 			}
-			freq2 = process_channel_to_freq (opts, state, channel2);
 
-			fprintf (stderr, "\n  Channel 3 [%04X] Group 3 [%d][%04X]", channel3, group3, group3);
-			if (so3 & 0x80) fprintf (stderr, " Emergency");
-			if (so3 & 0x40) fprintf (stderr, " Encrypted");
-			if (opts->payload == 1) //hide behind payload due to len
+			if (channel3 != channel2 && channel3 != 0 && channel3 != 0xFFFF)
 			{
-				if (so3 & 0x20) fprintf (stderr, " Duplex");
-				if (so3 & 0x10) fprintf (stderr, " Packet");
-				else fprintf (stderr, " Circuit");
-				if (so3 & 0x8) fprintf (stderr, " R"); //reserved bit is on
-				fprintf (stderr, " Priority %d", so3 & 0x7); //call priority
+				fprintf (stderr, "\n  Channel 3 [%04X] Group 3 [%d][%04X]", channel3, group3, group3);
+				if (so3 & 0x80) fprintf (stderr, " Emergency");
+				if (so3 & 0x40) fprintf (stderr, " Encrypted");
+				if (opts->payload == 1) //hide behind payload due to len
+				{
+					if (so3 & 0x20) fprintf (stderr, " Duplex");
+					if (so3 & 0x10) fprintf (stderr, " Packet");
+					else fprintf (stderr, " Circuit");
+					if (so3 & 0x8) fprintf (stderr, " R"); //reserved bit is on
+					fprintf (stderr, " Priority %d", so3 & 0x7); //call priority
+				}
+				freq3 = process_channel_to_freq (opts, state, channel3);
 			}
-			freq3 = process_channel_to_freq (opts, state, channel3);
 
 			//add active channel to string for ncurses display
 			sprintf (state->active_channel[0], "Active Ch: %04X TG: %d; Ch: %04X TG: %d; Ch: %04X TG: %d; ", channel1, group1, channel2, group2, channel3, group3);
+
+			//add active channel to string for ncurses display (multi check)
+			// if (channel3 != channel2 && channel2 != channel1 && channel3 != 0 && channel3 != 0xFFFF)
+			// 	sprintf (state->active_channel[0], "Active Ch: %04X TG: %d; Ch: %04X TG: %d; Ch: %04X TG: %d; ", channel1, group1, channel2, group2, channel3, group3);
+
 			state->last_active_time = time(NULL);
 
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			//Skip tuning encrypted calls if enc calls are disabled
-			if ( (so1 & 0x40) && (so2 & 0x40) && (so3 & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
+			if ( (so1 & 0x40) && (so2 & 0x40) && (so3 & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL; //this?
 
 			int loop = 3;
 
@@ -1173,18 +1189,23 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n Group Voice Channel Grant Update - Implicit");
 			fprintf (stderr, "\n  Channel 1 [%04X] Group 1 [%d][%04X]", channel1, group1, group1);
 			freq1 = process_channel_to_freq (opts, state, channel1);
-			fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
-			freq2 = process_channel_to_freq (opts, state, channel2);
+			if (channel2 != channel1 && channel2 != 0 && channel2 != 0xFFFF)
+			{
+				fprintf (stderr, "\n  Channel 2 [%04X] Group 2 [%d][%04X]", channel2, group2, group2);
+				freq2 = process_channel_to_freq (opts, state, channel2);
+			}
 
 			//add active channel to string for ncurses display
-			sprintf (state->active_channel[0], "Active Ch: %04X TG: %d; Ch: %04X TG: %d; ", channel1, group1, channel2, group2);
+			if (channel2 != channel1 && channel2 != 0 && channel2 != 0xFFFF)
+				sprintf (state->active_channel[0], "Active Ch: %04X TG: %d; Ch: %04X TG: %d; ", channel1, group1, channel2, group2);
+			else sprintf (state->active_channel[0], "Active Ch: %04X TG: %d; ", channel1, group1);
 			state->last_active_time = time(NULL);
 
 			//Skip tuning group calls if group calls are disabled
 			if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
 			//Skip tuning encrypted calls if enc calls are disabled -- abb formats do not carry svc bits :(
-			if (opts->trunk_tune_enc_calls == 0) goto SKIPCALL; //enable, or disable?
+			// if (opts->trunk_tune_enc_calls == 0) goto SKIPCALL; //enable, or disable?
 
 			int loop = 1;
 			if (channel1 == channel2) loop = 1;

@@ -386,7 +386,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
           if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
           //Skip tuning encrypted calls if enc calls are disabled
-          if (opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
+          // if (opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
 
           //tune if tuning available
           if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))

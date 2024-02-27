@@ -630,6 +630,70 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 			}
 
 		}
+
+		#define P25p2_ENC_LO //disable if this behavior is detremental
+		#ifdef P25p2_ENC_LO
+
+		//If trunking and tuning ENC calls is disabled, lock out and go back to CC
+		int enc_lo = 1;
+		int ttg = 0; //checking to a valid TG will help make sure we have a good MAC_PTT or SACCH Channel Update First
+		int alg = 0; //set alg and key based on current slot values
+		unsigned long long int key = 0;
+
+		if (state->currentslot == 0)
+		{
+			ttg = state->lasttg;
+			alg = state->payload_algid;
+			if (alg == 0xAA) key = state->R;
+			// else if (future condition) key = 1;
+			// else if (future condition) key = 1;
+		}
+
+		if (state->currentslot == 1)
+		{
+			ttg = state->lasttgR;
+			alg = state->payload_algidR;
+			if (alg == 0xAA) key = state->RR;
+			// else if (future condition) key = 1;
+			// else if (future condition) key = 1;
+		}
+
+		if (alg != 0 && opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && opts->trunk_tune_enc_calls == 0)
+		{
+			//NOTE: This may still cause an issue IF we havent' loaded the key yet from keyloader
+			if (alg == 0xAA && key != 0) enc_lo = 0;
+			// else if (future condition) enc_lo = 0;
+			// else if (future condition) enc_lo = 0;
+
+			//if this is locked out by conditions above, then write it into the TG mode if we have a TG value assigned
+			if (enc_lo == 1 && ttg != 0)
+			{
+				int xx = 0; int enc_wr = 0;
+				for (xx = 0; xx < state->group_tally; xx++)
+				{
+					if (state->group_array[xx].groupNumber == ttg)
+					{
+						enc_wr = 1; //already in there, so no need to assign it
+						break;
+					}
+				}
+
+				//if not already in there, so save it there now
+				if (enc_wr == 0)
+				{
+					state->group_array[state->group_tally].groupNumber = ttg;
+					sprintf (state->group_array[state->group_tally].groupMode, "%s", "DE");
+					sprintf (state->group_array[state->group_tally].groupName, "%s", "ENC LO"); //was xx and not state->group_tally
+					state->group_tally++;
+				}
+
+				//return to the control channel -- NOTE: Disabled, just mark as lockout for now, return would require complex check of the other slot activity
+				// fprintf (stderr, " No Enc Following on P25p2 Trunking; Return to CC; \n");
+				// return_to_cc (opts, state);
+			}
+		}
+		#endif //P25p2_ENC_LO
+
 	}
 	if (ec == -1 || ec >= 15)
 	{

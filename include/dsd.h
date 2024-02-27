@@ -1251,6 +1251,9 @@ void edacs(dsd_opts * opts, dsd_state * state);
 unsigned long long int edacs_bch (unsigned long long int message);
 void eot_cc(dsd_opts * opts, dsd_state * state); //end of TX return to CC
 
+//Generic Tuning Functions
+void return_to_cc (dsd_opts * opts, dsd_state * state);
+
 //misc generic audio filtering for analog at 48k/1
 void analog_deemph_filter(short * input, int len);
 void analog_preemph_filter(short * input, int len);
