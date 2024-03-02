@@ -1308,12 +1308,12 @@ void Golay_24_12_init()
     }
 }
 
-// Not very efficient but encode is used for unit testing only
+// Not very efficient but encode is used for unit testing only, I think this is wrong for M17
 void Golay_24_12_encode(unsigned char *origBits, unsigned char *encodedBits)
 {
     int i = 0, j = 0;
 
-    memset(encodedBits, 0, 24);
+    // memset(encodedBits, 0, 24);
 
     for (i = 0; i < 12; i++)
     {
@@ -1326,7 +1326,7 @@ void Golay_24_12_encode(unsigned char *origBits, unsigned char *encodedBits)
     for (i = 0; i < 24; i++)
     {
         encodedBits[i] %= 2;
-        // fprintf (stderr, "%b", encodedBits[i]); //disable later on
+    //     fprintf (stderr, "%b", encodedBits[i]); //disable later on
     }
 }
 

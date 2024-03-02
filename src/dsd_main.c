@@ -625,6 +625,7 @@ initOpts (dsd_opts * opts)
   opts->ssize = 128; //36 default, max is 128, much cleaner data decodes on Phase 2 cqpsk at max
   opts->msize = 1024; //15 default, max is 1024, much cleaner data decodes on Phase 2 cqpsk at max
   opts->playfiles = 0;
+  opts->m17encoder = 0;
   opts->delay = 0;
   opts->use_cosine_filter = 1;
   opts->unmute_encrypted_p25 = 0;
@@ -1270,6 +1271,9 @@ usage ()
   printf ("  udp  <num>    RTL-SDR Legacy UDP Remote Port (Optional -- External Use Only)\n");
   printf (" Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T\n");
   printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:6021\n");
+  printf ("\n");
+  printf ("Encoder options:\n");
+  printf ("  -fZ           M17 Stream Voice Encoder\n");
   printf ("\n");
   printf ("Decoder options:\n");
   printf ("  -fa           Auto Detection\n");
@@ -2370,6 +2374,13 @@ main (int argc, char **argv)
             fprintf(stderr, "Notice: M17 cannot autodetect polarity. \n Use -xz option if Inverted Signal expected.\n");
             fprintf(stderr, "Decoding only M17 frames.\n");
           }
+          else if (optarg[0] == 'Z') //Captial Z to Run the M17 encoder
+          {
+            opts.m17encoder = 1;
+            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_out_channels = 1;
+            sprintf (opts.output_name, "M17 Encoder");
+          }
           break;
         //don't mess with the modulations unless you really need to
         case 'm':
@@ -2904,6 +2915,27 @@ main (int argc, char **argv)
     {
 
       playMbeFiles (&opts, &state, argc, argv);
+    }
+
+    else if (opts.m17encoder == 1)
+    {
+      opts.pulse_digi_rate_out = 8000;
+      
+      //open any inputs, if not alread opened, OSS input and output already handled
+      if (opts.audio_in_type == 0) openPulseInput(&opts);
+
+      #ifdef USE_RTLSDR
+      else if(opts.audio_in_type == 3)
+      {
+        open_rtlsdr_stream(&opts);
+        opts.rtl_started = 1;
+      }
+      #endif
+
+      //open any outputs, if not already opened
+      if (opts.audio_out_type == 0) openPulseOutput(&opts);
+      //All input and output now opened and handled correctly, so let's not break things by tweaking
+      encodeM17STR(&opts, &state);
     }
 
     else

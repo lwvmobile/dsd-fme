@@ -1,12 +1,12 @@
 /*-------------------------------------------------------------------------------
  * m17.c
- * M17 Decoder (WIP)
+ * M17 Decoder and Decoder (LSF and STR)
  *
  * m17_scramble Bit Array from SDR++
  * CRC16 from M17-Implementations (thanks again, sp5wwp)
  *
  * LWVMOBILE
- * 2023-07 DSD-FME Florida Man Edition
+ * 2024-03 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 #include "dsd.h"
 
@@ -239,7 +239,14 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t * lich_bits)
     fprintf (stderr, "LC: %d/6 ", lich_counter+1);
   else fprintf (stderr, "LICH G24 ERR");
 
-  if (err = 0 && lich_reserve != 0) fprintf(stderr, " LRS: %d", lich_reserve);
+  // if (err == 0 && lich_reserve != 0) fprintf(stderr, " LRS: %d", lich_reserve);
+
+  //This is not M17 standard, but use the LICH reserved bits to signal data type and CAN value
+  if (err == 0 && opts->m17encoder == 1) //only use when using built in encoder
+  {
+    state->m17_str_dt = lich_reserve & 0x3;
+    state->m17_can = (lich_reserve >> 2) & 0x7;
+  }
 
   //transfer to storage
   for (i = 0; i < 40; i++)
@@ -795,3 +802,487 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
   fprintf (stderr, "\n");
 
 } //end processM17LSF
+
+//debug M17STR for the encoder to pass bits into
+void processM17STR_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_bits)
+{
+
+  int i, x;
+  uint8_t m17_int_bits[368]; //368 bits that are still interleaved
+  uint8_t m17_bits[368]; //368 bits that have been de-interleaved and de-scrambled
+  uint8_t lich_bits[96];
+  int lich_err = -1;
+
+  memset (m17_int_bits, 0, sizeof(m17_int_bits));
+  memset (m17_bits, 0, sizeof(m17_bits));
+  memset (lich_bits, 0, sizeof(lich_bits));
+
+  //descramble the frame
+  for (i = 0; i < 368; i++)
+    m17_int_bits[i] = (m17_rnd_bits[i] ^ m17_scramble[i]) & 1;
+
+  //deinterleave the bit array using Quadratic Permutation Polynomial
+  //function π(x) = (45x + 92x^2 ) mod 368
+  for (i = 0; i < 368; i++)
+  {
+    x = ((45*i)+(92*i*i)) % 368; UNUSED(x);
+    m17_bits[i] = m17_int_bits[x];
+  }
+
+  for (i = 0; i < 96; i++)
+    lich_bits[i] = m17_bits[i];
+
+  //check lich first, and handle LSF chunk and completed LSF
+  lich_err = M17processLICH(state, opts, lich_bits);
+
+  if (lich_err == 0)
+    M17prepareStream(opts, state, m17_bits);
+
+
+} //end processM17STR_debug
+
+//simple convolutional encoder
+void simple_conv_encoder (uint8_t * input, uint8_t * output, int len)
+{
+  int i, k = 0;
+  uint8_t g1 = 0;
+  uint8_t g2 = 0;
+  uint8_t d  = 0;
+  uint8_t d1 = 0;
+  uint8_t d2 = 0;
+  uint8_t d3 = 0;
+  uint8_t d4 = 0;
+
+  for (i = 0U; i < len; i++)
+  {
+    d = input[i];
+
+    g1 = (d + d3 + d4) & 1;
+    g2 = (d + d1 + d2 + d4) & 1;
+
+    d4 = d3;
+    d3 = d2;
+    d2 = d1;
+    d1 = d;
+
+    output[k++] = g1;
+    output[k++] = g2;
+  }
+}
+
+//dibits-symbols map (TX)
+const int8_t symbol_map[4]={+1, +3, -1, -3};
+
+//encode and create audio of a Project M17 STR signal
+void encodeM17STR(dsd_opts * opts, dsd_state * state)
+{
+
+  //TODO: Cleanup Tons of Unused Arrays and Variables
+  //TODO: Switch to M17 Viterbi Decoder?
+
+  //User Defined Variables
+  uint8_t can = 7;
+  //numerical representation of dst and src after encoding, or special/reserved value
+  unsigned long long int dst = 0;
+  unsigned long long int src = 0;
+  //DST and SRC Callsign Data (up to 9 characters in the b40 array)
+  char d40[] = "ABCDEFGHI"; UNUSED(d40); //DST
+  char s40[] = "IHGFEDCBA"; UNUSED(s40); //SRC
+  //end User Defined Variables
+  
+  int i, j, k, x; //basic utility counters
+  short sample = 0;
+  size_t nsam = 160;  //number of samples to be read in (default is for codec2 3200 bps)
+  size_t nbit = 64; //number of bits in each frame
+
+  #ifdef USE_CODEC2
+  nsam = codec2_samples_per_frame(state->codec2_3200);
+  nbit = codec2_bits_per_frame(state->codec2_3200);
+  #endif
+
+  short * samp1 = malloc (sizeof(short) * nsam);
+  short * samp2 = malloc (sizeof(short) * nsam);
+
+  short voice1[nsam]; //read in xxx ms of audio from input source
+  short voice2[nsam]; //read in xxx ms of audio from input source
+  
+  int fsn, eot = 0;  //frame sequence number and eot bit
+  int lich_cnt = 0; //lich frame number counter
+
+  uint8_t m17_lich[48]; UNUSED(m17_lich); //48-bit LICH (chunk+lich_cnt+reserved bits)
+  uint8_t lsf_chunk[6][48]; UNUSED(lsf_chunk); //40 bit chunks of link information spread across 6 frames
+  uint8_t lsf_chunkr[6][48]; UNUSED(lsf_chunkr); //reverse order bits
+  uint8_t m17_lsf[240]; UNUSED(m17_lsf); //the complete LSF
+
+  memset (m17_lich, 0, sizeof(m17_lich));
+  memset (lsf_chunk, 0, sizeof(lsf_chunk));
+  memset (lsf_chunkr, 0, sizeof(lsf_chunkr));
+  memset (m17_lsf, 0, sizeof(m17_lsf));
+
+  //NOTE: Most lich and lsf_chunk bits can be pre-set before the while loop,
+  //only need to refresh the lich_cnt value and golay (no meta/IV/enc)
+  uint16_t lsf_dt = 2; //voice (3200bps)
+  uint16_t lsf_et = 0; UNUSED(lsf_et);
+  uint16_t lsf_es = 0; UNUSED(lsf_es);
+  uint16_t lsf_cn = can; //can value
+  uint16_t lsf_rs = 0; UNUSED(lsf_rs);
+
+  uint16_t lsf_fi = 0; //16-bit frame information
+  lsf_fi = (lsf_dt << 1) + (lsf_cn << 7);
+  for (i = 0; i < 16; i++) m17_lsf[96+i] = (lsf_fi >> 15-i) & 1;
+
+  //TODO: Only the below if not reserved values "BROADCAST", "ALL", etc
+
+  //Convert base40 CSD to numerical values (lifted from libM17)
+  for(i = strlen((const char*)d40)-1; i >= 0; i--)
+  {
+    for(j = 0; j < 40; j++)
+    {
+      if(d40[i]==b40[j])
+      {
+        dst=dst*40+j;
+        break;
+      }
+    }
+  }
+
+  for(i = strlen((const char*)s40)-1; i >= 0; i--)
+  {
+    for(j = 0; j < 40; j++)
+    {
+      if(s40[i]==b40[j])
+      {
+        src=src*40+j;
+        break;
+      }
+    }
+  }
+  //end CSD conversion
+
+  for (i = 0; i < 48; i++) m17_lsf[i] = (dst >> 47ULL-(unsigned long long int)i) & 1;
+  for (i = 0; i < 48; i++) m17_lsf[i+48] = (src >> 47ULL-(unsigned long long int)i) & 1;
+
+  //compute the CRC16 for LSF
+  uint16_t crc_cmp = 0;
+  uint8_t lsf_packed[30];
+  memset (lsf_packed, 0, sizeof(lsf_packed));
+  for (i = 0; i < 30; i++)
+      lsf_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_lsf[i*8], 8);
+  crc_cmp = crc16m17(lsf_packed, 28);
+
+  //attach the crc16 bits to the end of the LSF data
+  for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> 15-i) & 1;
+
+
+  fprintf (stderr, "M17 Voice Stream Encoding: %ld Samples and %ld Bits Per Frame (3200 bps); ", nsam, nbit);
+  
+  //TODO: Make this Ncurses + Transmit Button?
+  while (!exitflag) //while the software is running
+  {
+    //read some audio samples from mic and load them into an audio buffer
+    //NOTE: Reconfigured to use default 48k input, take 1 out of every 6 samples (Codec2 is 8k encoder)
+    if (opts->audio_in_type == 0) //pulse audio
+    {
+      for (i = 0; i < nsam; i++)
+      {
+        for (j = 0; j < 6; j++)
+          pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
+        voice1[i] = sample; //only store the 6th sample
+      }
+
+      for (i = 0; i < nsam; i++)
+      {
+        for (j = 0; j < 6; j++)
+          pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
+        voice2[i] = sample; //only store the 6th sample
+      }
+    }
+
+    else if (opts->audio_in_type == 1) //stdin
+    {
+      int result = 0;
+      for (i = 0; i < nsam; i++)
+      {
+        for (j = 0; j < 6; j++)
+          result = sf_read_short(opts->audio_in_file, &sample, 1);
+        voice1[i] = sample;
+        if (result == 0)
+        {
+          sf_close(opts->audio_in_file);
+          fprintf (stderr, "Connection to STDIN Disconnected.\n");
+          fprintf (stderr, "Closing DSD-FME.\n");
+          exitflag = 1;
+          break;
+        }
+      }
+
+      for (i = 0; i < nsam; i++)
+      {
+        for (j = 0; j < 6; j++)
+          result = sf_read_short(opts->audio_in_file, &sample, 1);
+        voice2[i] = sample;
+        if (result == 0)
+        {
+          sf_close(opts->audio_in_file);
+          fprintf (stderr, "Connection to STDIN Disconnected.\n");
+          fprintf (stderr, "Closing DSD-FME.\n");
+          exitflag = 1;
+          break;
+        }
+      }
+    }
+
+    else if (opts->audio_in_type == 5) //OSS, testing working
+    {
+      for (i = 0; i < nsam; i++)
+      {
+        for (j = 0; j < 6; j++)
+          read (opts->audio_in_fd, &sample, 2);
+        voice1[i] = sample;
+      }
+
+      for (i = 0; i < nsam; i++)
+      {
+        for (j = 0; j < 6; j++)
+          read (opts->audio_in_fd, &sample, 2);
+        voice2[i] = sample;
+      }
+    }
+
+    else if (opts->audio_in_type == 8) //TCP
+    {
+      int result = 0;
+      for (i = 0; i < nsam; i++)
+      {
+        for (j = 0; j < 6; j++)
+          result = sf_read_short(opts->tcp_file_in, &sample, 1);
+        voice1[i] = sample;
+        if (result == 0)
+        {
+          sf_close(opts->tcp_file_in);
+          fprintf (stderr, "Connection to TCP Server Disconnected.\n");
+          fprintf (stderr, "Closing DSD-FME.\n");
+          exitflag = 1;
+          break;
+        }
+      }
+
+      for (i = 0; i < nsam; i++)
+      {
+        for (j = 0; j < 6; j++)
+          result = sf_read_short(opts->tcp_file_in, &sample, 1);
+        voice2[i] = sample;
+        if (result == 0)
+        {
+          sf_close(opts->tcp_file_in);
+          fprintf (stderr, "Connection to TCP Server Disconnected.\n");
+          fprintf (stderr, "Closing DSD-FME.\n");
+          exitflag = 1;
+          break;
+        }
+      }
+    }
+
+    else if (opts->audio_in_type == 3)
+    {
+      #ifdef USE_RTLSDR
+      for (i = 0; i < nsam; i++)
+      {
+        for (j = 0; j < 6; j++)
+          if (get_rtlsdr_sample(&sample, opts, state) < 0)
+            cleanupAndExit(opts, state);
+        voice1[i] = sample;
+      }
+
+      for (i = 0; i < nsam; i++)
+      {
+        for (j = 0; j < 6; j++)
+          if (get_rtlsdr_sample(&sample, opts, state) < 0)
+            cleanupAndExit(opts, state);
+        voice2[i] = sample;
+      }
+      #endif
+    }
+
+    //convert out audio input into CODEC2 (3200bps) 8 byte data stream
+    uint8_t vc1_bytes[8]; memset (vc1_bytes, 0, sizeof(vc1_bytes));
+    uint8_t vc2_bytes[8]; memset (vc2_bytes, 0, sizeof(vc2_bytes));
+
+    #ifdef USE_CODEC2
+    codec2_encode(state->codec2_3200, vc1_bytes, voice1);
+    codec2_encode(state->codec2_3200, vc2_bytes, voice2);
+    #endif
+
+    //start assembling our completed frame
+
+    //STR frame sync pattern - 0xFF5D //-3, -3, -3, -3, +3, +3, -3, +3
+    uint8_t m17_str_fs[16] = {1,1,1,1,1,1,1,1,0,1,0,1,1,1,0,1}; UNUSED(m17_str_fs);
+
+    //Data/Voice Portion of Stream Data Link Layer w/ FSN
+    uint8_t m17_v1[148]; memset (m17_v1, 0, sizeof(m17_v1)); UNUSED(m17_v1);
+
+    //Data/Voice Portion of Stream Data Link Layer w/ FSN (after Convolutional Encode)
+    uint8_t m17_v1c[296]; memset (m17_v1c, 0, sizeof(m17_v1c)); UNUSED(m17_v1c);
+
+    //Data/Voice Portion of Stream Data Link Layer w/ FSN (after P2 Puncturing)
+    uint8_t m17_v1p[272]; memset (m17_v1p, 0, sizeof(m17_v1p)); UNUSED(m17_v1p);
+
+    //LSF Chunk + LICH CNT of Stream Data Link Layer
+    uint8_t m17_l1[48]; memset (m17_l1, 0, sizeof(m17_l1)); UNUSED(m17_l1);
+
+    //LSF Chunk + LICH CNT of Stream Data Link Layer (after Golay 24,12 Encoding)
+    uint8_t m17_l1g[96]; memset (m17_l1g, 0, sizeof(m17_l1g)); UNUSED(m17_l1g);
+
+    //Type 4c - Combined LSF Content Chuck and Voice/Data (96 + 272)
+    uint8_t m17_t4c[368]; memset (m17_t4c, 0, sizeof(m17_t4c)); UNUSED(m17_t4c);
+
+    //Type 4i - Interleaved Bits
+    uint8_t m17_t4i[368]; memset (m17_t4i, 0, sizeof(m17_t4i)); UNUSED(m17_t4i);
+
+    //Type 4s - Interleaved Bits with Scrambling Applied
+    uint8_t m17_t4s[368]; memset (m17_t4s, 0, sizeof(m17_t4s)); UNUSED(m17_t4s);
+
+    //OTA Symbol Convertion (best variable type for this? int16?)
+    uint8_t m17_sym[184]; memset (m17_sym, 0, sizeof(m17_sym)); UNUSED(m17_sym);
+
+    //insert the voice bytes into voice bits, and voice bits into v1 in their appropriate location
+    uint8_t v1_bits[64]; memset (v1_bits, 0, sizeof(v1_bits)); UNUSED(v1_bits);
+    uint8_t v2_bits[64]; memset (v2_bits, 0, sizeof(v2_bits)); UNUSED(v2_bits);
+
+    k = 0; x = 0;
+    for (j = 0; j < 8; j++)
+    {
+      for (i = 0; i < 8; i++)
+      {
+        v1_bits[k++] = (vc1_bytes[j] >> 7-i) & 1;
+        v2_bits[x++] = (vc2_bytes[j] >> 7-i) & 1;
+      }
+    }
+
+    for (i = 0; i < 64; i++)
+    {
+      m17_v1[i+16]    = v1_bits[i];
+      m17_v1[i+16+64] = v2_bits[i];
+    }
+
+    //set end of tx bit on the exitflag (sig)
+    if (exitflag) eot = 1;
+    m17_v1[0] = (uint8_t)eot; //set as first bit of the stream
+    //set current frame number as bits 1-15 of the v1 stream
+    for (i = 0; i < 15; i++)
+      m17_v1[i+1] = ( (uint8_t)(fsn >> 14-i) ) &1;
+    fsn++; //increment the frame sequence number
+
+    //Use the convolutional encoder to encode the voice / data stream
+    simple_conv_encoder (m17_v1, m17_v1c, 144); //seems to be working now, or at least, the same bits before and after on the playback side
+
+    //use the P2 puncture to...puncture and collapse the voice / data stream
+    k = 0; x = 0;
+    for (i = 0; i < 25; i++)
+    {
+      m17_v1p[k++] = m17_v1c[x++];
+      m17_v1p[k++] = m17_v1c[x++];
+      m17_v1p[k++] = m17_v1c[x++];
+      m17_v1p[k++] = m17_v1c[x++];
+      m17_v1p[k++] = m17_v1c[x++];
+      m17_v1p[k++] = m17_v1c[x++];
+      if (k == 272) break; //quit early on last set of i when 272 k bits reached
+      m17_v1p[k++] = m17_v1c[x++];
+      if (k == 272) break; //quit early on last set of i when 272 k bits reached
+      m17_v1p[k++] = m17_v1c[x++];
+      if (k == 272) break; //quit early on last set of i when 272 k bits reached
+      m17_v1p[k++] = m17_v1c[x++];
+      if (k == 272) break; //quit early on last set of i when 272 k bits reached
+      m17_v1p[k++] = m17_v1c[x++];
+      m17_v1p[k++] = m17_v1c[x++];
+      x++;
+    }
+
+    //add punctured voice / data bits to the combined frame
+    for (i = 0; i < 272; i++)
+      m17_t4c[i+96] = m17_v1p[i];
+
+    //ignore the LSF/LICH reserved bits (unused currently)
+
+    //load up the lsf chunk for this cnt
+    for (i = 0; i < 40; i++)
+      lsf_chunk[lich_cnt][i] = m17_lsf[((lich_cnt)*40)+i];
+
+    //update lich_cnt in the current LSF chunk
+    lsf_chunk[lich_cnt][40] = (lich_cnt >> 2) & 1;
+    lsf_chunk[lich_cnt][41] = (lich_cnt >> 1) & 1;
+    lsf_chunk[lich_cnt][42] = (lich_cnt >> 0) & 1;
+
+    //This is not M17 standard (yet), but use the LICH reserved bits to signal dt
+    lsf_chunk[lich_cnt][46] = (lsf_dt >> 1) & 1;
+    lsf_chunk[lich_cnt][47] = (lsf_dt >> 0) & 1;
+    //use the last 3 bits of reserved to signal the can value
+    lsf_chunk[lich_cnt][43] = (lsf_cn >> 2) & 1;
+    lsf_chunk[lich_cnt][44] = (lsf_cn >> 1) & 1;
+    lsf_chunk[lich_cnt][45] = (lsf_cn >> 0) & 1;
+
+    //encode with golay 24,12 and load into m17_lig
+    Golay_24_12_encode (lsf_chunk[lich_cnt]+00, m17_l1g+00);
+    Golay_24_12_encode (lsf_chunk[lich_cnt]+12, m17_l1g+24);
+    Golay_24_12_encode (lsf_chunk[lich_cnt]+24, m17_l1g+48);
+    Golay_24_12_encode (lsf_chunk[lich_cnt]+36, m17_l1g+72);
+
+    //add lsf chunk to the combined frame
+    for (i = 0; i < 96; i++)
+      m17_t4c[i] = m17_l1g[i];
+
+    //interleave the bit array using Quadratic Permutation Polynomial
+    //function π(x) = (45x + 92x^2 ) mod 368
+    for (i = 0; i < 368; i++)
+    {
+      x = ((45*i)+(92*i*i)) % 368;
+      m17_t4i[x] = m17_t4c[i];
+    }
+
+    //scramble the frame
+    for (i = 0; i < 368; i++)
+      m17_t4s[i] = (m17_t4i[i] ^ m17_scramble[i]) & 1;
+
+    //-----------------------------------------
+
+    //decode stream with the M17STR_debug
+    fprintf (stderr, "\n M17 STR (ENCODER): ");
+    processM17STR_debug(opts, state, m17_t4s);
+
+    //load bits inti a dibit array plus the framesync bits
+    uint8_t output_dibits[192]; memset (output_dibits, 0, sizeof(output_dibits)); UNUSED(output_dibits);
+    for (i = 0; i < 8; i++)
+      output_dibits[i] = (m17_str_fs[i*2+0] << 1) + (m17_str_fs[i*2+1] << 0);
+
+    //load rest of combined frame
+    for (i = 0; i < 184; i++)
+      output_dibits[i+8] = (m17_t4s[i*2+0] << 1) + (m17_t4s[i*2+1] << 0);
+
+    //Start working on converting the bitsream to an audio stream
+
+    //convert to symbols @ 4800 bps
+    int output_symbols[192]; memset (output_symbols, 0, sizeof(output_symbols)); UNUSED(output_symbols);
+    for (i = 0; i < 192; i++)
+      output_symbols[i] = symbol_map[output_dibits[i]];
+
+    //debug output symbols
+    // fprintf (stderr, "\n sym:");
+    // for (i = 0; i < 192; i++)
+    // {
+    //   if (i%24 == 0) fprintf (stderr, "\n");
+    //   fprintf (stderr, " %d", output_symbols[i]);
+    // }
+
+    //TODO: symbols to audio
+
+    //end by incrementing lich_cnt, reset on 6
+    lich_cnt++;
+    if (lich_cnt == 6) lich_cnt = 0;
+    
+  }
+  
+  //free allocated memory
+  free(samp1);
+  free(samp2);
+
+}
