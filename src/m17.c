@@ -880,6 +880,13 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //TODO: Cleanup Tons of Unused Arrays and Variables
   //TODO: Switch to M17 Viterbi Decoder?
 
+  //Enable frame, TX and Ncurses Printer
+  opts->frame_m17 = 1;
+  state->m17encoder_tx = 1;
+  
+  if (opts->use_ncurses_terminal == 1)
+    ncursesOpen(opts, state);
+
   //User Defined Variables
   uint8_t can = 7;
   //numerical representation of dst and src after encoding, or special/reserved value
@@ -976,7 +983,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
   fprintf (stderr, "M17 Voice Stream Encoding: %ld Samples and %ld Bits Per Frame (3200 bps); ", nsam, nbit);
   
-  //TODO: Make this Ncurses + Transmit Button?
+
   while (!exitflag) //while the software is running
   {
     //read some audio samples from mic and load them into an audio buffer
@@ -1246,38 +1253,58 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     //-----------------------------------------
 
     //decode stream with the M17STR_debug
-    fprintf (stderr, "\n M17 STR (ENCODER): ");
-    processM17STR_debug(opts, state, m17_t4s);
+    if (state->m17encoder_tx == 1) //when enabled by user key press in ncurses
+    {
 
-    //load bits inti a dibit array plus the framesync bits
-    uint8_t output_dibits[192]; memset (output_dibits, 0, sizeof(output_dibits)); UNUSED(output_dibits);
-    for (i = 0; i < 8; i++)
-      output_dibits[i] = (m17_str_fs[i*2+0] << 1) + (m17_str_fs[i*2+1] << 0);
+      //Enable Carrier, synctype, etc
+      state->carrier = 1;
+      state->synctype = 8;
+      fprintf (stderr, "\n M17 STR (ENCODER): ");
+      processM17STR_debug(opts, state, m17_t4s);
 
-    //load rest of combined frame
-    for (i = 0; i < 184; i++)
-      output_dibits[i+8] = (m17_t4s[i*2+0] << 1) + (m17_t4s[i*2+1] << 0);
+      //load bits inti a dibit array plus the framesync bits
+      uint8_t output_dibits[192]; memset (output_dibits, 0, sizeof(output_dibits)); UNUSED(output_dibits);
+      for (i = 0; i < 8; i++)
+        output_dibits[i] = (m17_str_fs[i*2+0] << 1) + (m17_str_fs[i*2+1] << 0);
 
-    //Start working on converting the bitsream to an audio stream
+      //load rest of combined frame
+      for (i = 0; i < 184; i++)
+        output_dibits[i+8] = (m17_t4s[i*2+0] << 1) + (m17_t4s[i*2+1] << 0);
 
-    //convert to symbols @ 4800 bps
-    int output_symbols[192]; memset (output_symbols, 0, sizeof(output_symbols)); UNUSED(output_symbols);
-    for (i = 0; i < 192; i++)
-      output_symbols[i] = symbol_map[output_dibits[i]];
+      //Start working on converting the bitsream to an audio stream
 
-    //debug output symbols
-    // fprintf (stderr, "\n sym:");
-    // for (i = 0; i < 192; i++)
-    // {
-    //   if (i%24 == 0) fprintf (stderr, "\n");
-    //   fprintf (stderr, " %d", output_symbols[i]);
-    // }
+      //convert to symbols @ 4800 bps
+      int output_symbols[192]; memset (output_symbols, 0, sizeof(output_symbols)); UNUSED(output_symbols);
+      for (i = 0; i < 192; i++)
+        output_symbols[i] = symbol_map[output_dibits[i]];
 
-    //TODO: symbols to audio
+      //debug output symbols
+      // fprintf (stderr, "\n sym:");
+      // for (i = 0; i < 192; i++)
+      // {
+      //   if (i%24 == 0) fprintf (stderr, "\n");
+      //   fprintf (stderr, " %d", output_symbols[i]);
+      // }
 
-    //end by incrementing lich_cnt, reset on 6
-    lich_cnt++;
-    if (lich_cnt == 6) lich_cnt = 0;
+      //TODO: symbols to audio
+
+      //end by incrementing lich_cnt, reset on 6
+      lich_cnt++;
+      if (lich_cnt == 6) lich_cnt = 0;
+
+    } //end if (state->m17encoder_tx)
+
+    else //if not tx, reset values, drop carrier and sync
+    {
+      lich_cnt = 0;
+      fsn = 0;
+      state->carrier = 0;
+      state->synctype = -1;
+    }
+
+    //refresh ncurses printer
+    if (opts->use_ncurses_terminal == 1)
+      ncursesPrinter(opts, state);
     
   }
   

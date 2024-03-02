@@ -785,6 +785,7 @@ typedef struct
   uint8_t m17_meta[16]; //packed meta
   uint8_t m17_enc;      //enc type
   uint8_t m17_enc_st;   //scrambler or data subtye
+  int m17encoder_tx; //if TX (encode + decode) M17 Stream is enabled
 
   //misc str storage
   char str50a[50];

@@ -2551,6 +2551,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->mod_gfsk == 1) printw ("[GFSK]");
   printw ( "[%d] \n", (48000*opts->wav_interpolator)/state->samplesPerSymbol);
   printw ("| Decoding:    [%s] ", opts->output_name);
+  if (opts->m17encoder == 1) printw ("(\\) Toggle TX; ");
   if (opts->aggressive_framesync == 0) printw ("CRC/(RAS) ");
   //debug -- troubleshoot voice tuning after grant on DMR CC, subsequent grant may not tune because tuner isn't available
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1) printw ("Tuner Locked    ");
@@ -3632,7 +3633,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //keyboard shortcuts - codes same as ascii codes
   if (c == 27) //esc key, open menu
   {
-    ncursesMenu (opts, state); //just a quick test
+    if (opts->m17encoder == 0) //don't allow menu if using M17 encoder
+      ncursesMenu (opts, state);
   }
 
   //use k and l keys to test tg hold toggles on slots 1 and slots 2
@@ -4364,6 +4366,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       state->symbolCenter = 3;
     } 
 
+  }
+
+  if (opts->m17encoder == 1 && c == 92) //'\' key - toggle M17 encoder Encode + TX 
+  {
+    if (state->m17encoder_tx == 0) state->m17encoder_tx = 1;
+    else state->m17encoder_tx = 0;
   }
 
   //anything with an entry box will need the inputs and outputs stopped first
