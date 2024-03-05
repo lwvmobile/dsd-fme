@@ -880,7 +880,41 @@ const int8_t symbol_map[4] = {+1, +3, -1, -3};
 void encodeM17STR(dsd_opts * opts, dsd_state * state)
 {
 
+  //TODO: Standard IP Framing
+  uint8_t magic[4] = {0x4D, 0x31, 0x37, 0x20}; UNUSED(magic);
+  uint8_t sid[2]; memset (sid, 0, sizeof(sid)); UNUSED(sid);
+
   //TODO: Finish creating audio of the encoded signal
+
+  //NONCE
+  time_t ts = time(NULL); //timestamp since epoch / "Unix Time"
+  srand(ts); //randomizer seed based on timestamp
+
+  //Stream ID value
+  sid[0] = rand() & 0xFF;
+  sid[1] = rand() & 0xFF;
+
+  //initialize a nonce (if ENC is required in future)
+  uint8_t nonce[14]; memset (nonce, 0, sizeof(nonce));
+  //32bit LSB of the timestamp
+  nonce[0]  = (ts >> 24) & 0xFF;
+  nonce[1]  = (ts >> 16) & 0xFF;
+  nonce[2]  = (ts >> 8)  & 0xFF;
+  nonce[3]  = (ts >> 0)  & 0xFF;
+  //64-bit of rnd data
+  nonce[4]  = rand() & 0xFF;
+  nonce[5]  = rand() & 0xFF;
+  nonce[6]  = rand() & 0xFF;
+  nonce[7]  = rand() & 0xFF;
+  nonce[8]  = rand() & 0xFF;
+  nonce[9]  = rand() & 0xFF;
+  nonce[10] = rand() & 0xFF;
+  nonce[11] = rand() & 0xFF;
+  //The last two octets are the CTR_HIGH value (upper 16 bits of the frame number),
+  //but you would need to talk non-stop for over 20 minutes to roll it, so just using rnd
+  //also, using zeroes seems like it may be a security issue, so using rnd as a base
+  nonce[12] = rand() & 0xFF;
+  nonce[13] = rand() & 0xFF;
 
   //Enable frame, TX and Ncurses Printer
   opts->frame_m17 = 1;
@@ -902,6 +936,11 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   int i, j, k, x;    //basic utility counters
   short sample = 0;  //individual audio sample from source
   size_t nsam = 160; //number of samples to be read in (default is for codec2 3200 bps)
+
+  //debug print nonce
+  // fprintf (stderr, " nonce:");
+  // for (i = 0; i < 14; i++)
+  //   fprintf (stderr, " %02X", nonce[i]);
 
   #ifdef USE_CODEC2
   nsam = codec2_samples_per_frame(state->codec2_3200);
@@ -935,8 +974,11 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   lsf_fi = (lsf_dt << 1) + (lsf_et << 3) + (lsf_es << 5) + (lsf_cn << 7) + (lsf_rs << 11);
   for (i = 0; i < 16; i++) m17_lsf[96+i] = (lsf_fi >> 15-i) & 1;
 
-  //TODO: Only encode CSD if not a reserved value
   //Convert base40 CSD to numerical values (lifted from libM17)
+
+  //Only if not already set as numerical value
+  if (dst == 0)
+  {
   for(i = strlen((const char*)d40)-1; i >= 0; i--)
   {
     for(j = 0; j < 40; j++)
@@ -945,10 +987,13 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       {
         dst=dst*40+j;
         break;
+        }
       }
     }
   }
 
+  if (src == 0)
+  {
   for(i = strlen((const char*)s40)-1; i >= 0; i--)
   {
     for(j = 0; j < 40; j++)
@@ -957,6 +1002,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       {
         src=src*40+j;
         break;
+        }
       }
     }
   }
@@ -965,6 +1011,20 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //load dst and src values into the LSF
   for (i = 0; i < 48; i++) m17_lsf[i] = (dst >> 47ULL-(unsigned long long int)i) & 1;
   for (i = 0; i < 48; i++) m17_lsf[i+48] = (src >> 47ULL-(unsigned long long int)i) & 1;
+
+  //load the nonce from packed bytes to a bitwise iv array
+  uint8_t iv[112]; memset(iv, 0, sizeof(iv));
+  k = 0;
+  for (j = 0; j < 14; j++)
+  {
+    for (i = 0; i < 8; i++)
+      iv[k++] = (nonce[j] >> 7-i)&1;
+  }
+  //if AES enc employed, insert the iv into LSF
+  if (lsf_et == 2)
+  {
+    for (i = 0; i < 112; i++) m17_lsf[i+112] = iv[i];
+  }
 
   //pack and compute the CRC16 for LSF
   uint16_t crc_cmp = 0;
@@ -1283,13 +1343,25 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       //TODO: symbols to audio
 
+      //TODO: Send via Standard IP Framing
+
       //increment lich_cnt, reset on 6
       lich_cnt++;
       if (lich_cnt == 6) lich_cnt = 0;
 
-      //increment frame sequency number, trunc to maximum value
+      //increment frame sequency number, trunc to maximum value, roll nonce if needed
       fsn++;
-      fsn &= 0x7FFF;
+      if (fsn > 0x7FFF)
+      {
+        fsn = 0;
+        nonce[13]++;
+        if (nonce[13] > 0xFF)
+        {
+          nonce[13] = 0; //roll over to zero of exceeds 0xFF
+          nonce[12]++;
+          nonce[12] &= 0xFF; //trunc for potential rollover (doesn't spill over)
+        }
+      }
 
     } //end if (state->m17encoder_tx)
 
@@ -1299,6 +1371,30 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       fsn = 0;
       state->carrier = 0;
       state->synctype = -1;
+
+      //update randomizer seed and SID
+      srand(ts); //randomizer seed based on time
+
+      //update Stream ID
+      sid[0] = rand() & 0xFF;
+      sid[1] = rand() & 0xFF;
+
+      //update nonce
+      nonce[0]  = (ts >> 24) & 0xFF;
+      nonce[1]  = (ts >> 16) & 0xFF;
+      nonce[2]  = (ts >> 8)  & 0xFF;
+      nonce[3]  = (ts >> 0)  & 0xFF;
+      nonce[4]  = rand() & 0xFF;
+      nonce[5]  = rand() & 0xFF;
+      nonce[6]  = rand() & 0xFF;
+      nonce[7]  = rand() & 0xFF;
+      nonce[8]  = rand() & 0xFF;
+      nonce[9]  = rand() & 0xFF;
+      nonce[10] = rand() & 0xFF;
+      nonce[11] = rand() & 0xFF;
+      nonce[12] = rand() & 0xFF;
+      nonce[13] = rand() & 0xFF;
+
     }
 
     //refresh ncurses printer, if enabled
