@@ -702,6 +702,12 @@ initOpts (dsd_opts * opts)
   opts->udp_portno = 23456; //default port, same os OP25's sockaudio.py
   sprintf (opts->udp_hostname, "%s", "127.0.0.1");
 
+  //M17 UDP Port and hostname
+  opts->m17_use_ip = 0;      //if enabled, open UDP and broadcast IP frame
+  opts->m17_portno = 17000; //default is 17000
+  opts->m17_udp_sock = 0;  //actual UDP socket for M17 to send to
+  sprintf (opts->m17_hostname, "%s", "127.0.0.1");
+
   //tcp input options
   opts->tcp_sockfd = 0;
   opts->tcp_portno = 7355; //default favored by SDR++

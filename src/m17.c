@@ -885,11 +885,51 @@ const int8_t symbol_map[4] = {+1, +3, -1, -3};
 void encodeM17STR(dsd_opts * opts, dsd_state * state)
 {
 
-  //TODO: Standard IP Framing
+  //TODO: Finish creating audio of the encoded signal
+
+  //Enable frame, TX and Ncurses Printer
+  opts->frame_m17 = 1;
+  state->m17encoder_tx = 1;
+  
+  if (opts->use_ncurses_terminal == 1)
+    ncursesOpen(opts, state);
+
+  //User Defined Variables
+  int use_ip = 0; //1 to enable IP Frame Broadcast over UDP
+  int udpport = 17000; //port number for M17 IP Frmae (default is 17000)
+  sprintf (opts->m17_hostname, "%s", "127.0.0.1"); //enter IP address or hostname here
+  uint8_t can = 7; //channel access number
+  //numerical representation of dst and src after b40 encoding, or special/reserved value
+  unsigned long long int dst = 0;
+  unsigned long long int src = 0;
+  //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
+  char d40[] = "BROADCAST"; //DST
+  char s40[] = "DSD-FME  "; //SRC
+  //end User Defined Variables
+  
+  int i, j, k, x;    //basic utility counters
+  short sample = 0;  //individual audio sample from source
+  size_t nsam = 160; //number of samples to be read in (default is for codec2 3200 bps)
+
+  //WIP: Open UDP port to 17000 and see if any other config info is necessary for running standard IP frames, etc,
+  //or perhaps just also configure an input format for that ip streaming method, may need to handle UDP control packets (conn, ackn, nack, ping, pong, disc)
+  int sock_err;
+  if (use_ip == 1)
+  {
+    opts->m17_portno = udpport;
+    sock_err = udp_socket_connectM17(opts, state);
+    if (sock_err < 0)
+    {
+      fprintf (stderr, "Error Configuring UDP Socket for M17 IP Frame :( \n");
+      use_ip = 0;
+    }
+    else opts->m17_use_ip = 1;
+  }
+  //TODO: See if we need to send a conn and/or receice any ackn/nack/ping/pong commands later
+
+  //WIP: Standard IP Framing
   uint8_t magic[4] = {0x4D, 0x31, 0x37, 0x20}; UNUSED(magic);
   uint8_t sid[2]; memset (sid, 0, sizeof(sid)); UNUSED(sid);
-
-  //TODO: Finish creating audio of the encoded signal
 
   //NONCE
   time_t ts = time(NULL); //timestamp since epoch / "Unix Time"
@@ -920,27 +960,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //also, using zeroes seems like it may be a security issue, so using rnd as a base
   nonce[12] = rand() & 0xFF;
   nonce[13] = rand() & 0xFF;
-
-  //Enable frame, TX and Ncurses Printer
-  opts->frame_m17 = 1;
-  state->m17encoder_tx = 1;
-  
-  if (opts->use_ncurses_terminal == 1)
-    ncursesOpen(opts, state);
-
-  //User Defined Variables
-  uint8_t can = 7; //channel access number
-  //numerical representation of dst and src after b40 encoding, or special/reserved value
-  unsigned long long int dst = 0;
-  unsigned long long int src = 0;
-  //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
-  char d40[] = "BROADCAST"; //DST
-  char s40[] = "DSD-FME  "; //SRC
-  //end User Defined Variables
-  
-  int i, j, k, x;    //basic utility counters
-  short sample = 0;  //individual audio sample from source
-  size_t nsam = 160; //number of samples to be read in (default is for codec2 3200 bps)
 
   //debug print nonce
   // fprintf (stderr, " nonce:");
@@ -1347,8 +1366,68 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       UNUSED(output_symbols);
 
       //TODO: symbols to audio
+      
+      //Contruct an IP frame using previously created arrays
+      uint8_t m17_ip_frame[432]; memset (m17_ip_frame, 0, sizeof(m17_ip_frame)); UNUSED(m17_ip_frame);
+      uint8_t m17_ip_packed[54]; memset (m17_ip_packed, 0, sizeof(m17_ip_packed)); UNUSED(m17_ip_packed);
+      uint16_t ip_crc = 0; UNUSED(ip_crc);
 
-      //TODO: Send via Standard IP Framing
+      //NOTE: The Manual doesn't say much about this area, so assuming the elements are arranged as per the table
+      //add MAGIC
+      k = 0;
+      for (j = 0; j < 4; j++)
+      {
+        for (i = 0; i < 8; i++)
+          m17_ip_frame[k++] = (magic[j] >> 7-i) &1;
+      }
+
+      //add StreamID to ip_frame
+      for (j = 0; j < 2; j++)
+      {
+        for (i = 0; i < 8; i++)
+          m17_ip_frame[k++] = (sid[j] >> 7-i) &1;
+      }
+
+      //add the current LSF, sans CRC
+      for (i = 0; i < 224; i++)
+        m17_ip_frame[k++] = m17_lsf[i];
+
+      //add current fsn value
+      for (i = 0; i < 16; i++)
+        m17_ip_frame[k++] = (fsn >> 15-i)&1;
+
+      //voice and/or data payload
+      for (i = 0; i < 64; i++)
+        m17_ip_frame[k++] = v1_bits[i];
+
+      //voice and/or data payload
+      for (i = 0; i < 64; i++)
+        m17_ip_frame[k++] = v2_bits[i];
+
+      //pack current bit array into a byte array for a CRC check
+      for (i = 0; i < 52; i++)
+        m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_ip_frame[i*8], 8);
+      ip_crc = crc16m17(m17_ip_packed, 52);
+
+      //add CRC value to the ip frame
+      for (i = 0; i < 16; i++)
+        m17_ip_frame[k++] = (ip_crc >> 15-i)&1;
+      
+      //pack it into the byte array as well
+      for (i = 52; i < 54; i++)
+        m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_ip_frame[i*8], 8);
+
+      //debug print packed byte output for IP frame
+      // fprintf (stderr, "\n IP: ");
+      // for (i = 0; i < 54; i++)
+      // {
+      //   if ( (i%12)==0) fprintf (stderr, "\n");
+      //   fprintf (stderr, " %02X", m17_ip_packed[i]);
+      // }
+
+      //WIP: Send packed IP frame to UDP port 17000 if opened successfully
+      if (opts->m17_use_ip == 1)
+        m17_socket_blaster (opts, state, 54, m17_ip_packed);
 
       //increment lich_cnt, reset on 6
       lich_cnt++;

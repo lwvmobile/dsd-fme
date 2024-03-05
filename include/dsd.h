@@ -338,6 +338,12 @@ typedef struct
   int udp_portno;
   char udp_hostname[1024];
 
+  //M17 UDP for IP frame output
+  int m17_use_ip;     //if enabled, open UDP and broadcast IP frame
+  int m17_portno;    //default is 17000
+  int m17_udp_sock; //actual UDP socket for M17 to send to
+  char m17_hostname[1024];
+
   //tcp socket for SDR++, etc
   int tcp_sockfd;
   int tcp_portno;
@@ -1275,6 +1281,8 @@ int udp_socket_connect(dsd_opts * opts, dsd_state * state);
 int udp_socket_connectA(dsd_opts * opts, dsd_state * state);
 int udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
 int udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
+int udp_socket_connectM17(dsd_opts * opts, dsd_state * state);
+int m17_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
 
 #ifdef __cplusplus
 extern "C" {
