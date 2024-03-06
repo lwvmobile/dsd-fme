@@ -999,6 +999,69 @@ void simple_conv_encoder (uint8_t * input, uint8_t * output, int len)
 //dibits-symbols map
 const int8_t symbol_map[4] = {+1, +3, -1, -3};
 
+//prototype for converting bit array to symbols to RF/Audio
+void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
+{
+
+  int i;
+
+  //LSF frame sync pattern - 0x55F7 +3, +3, +3, +3, -3, -3, +3, -3
+  uint8_t m17_lsf_fs[16] = {0,1,0,1,0,1,0,1,1,1,1,1,0,1,1,1};
+
+  //STR frame sync pattern - 0xFF5D (-3, -3, -3, -3, +3, +3, -3, +3)
+  uint8_t m17_str_fs[16] = {1,1,1,1,1,1,1,1,0,1,0,1,1,1,0,1};
+
+  //load bits inti a dibit array plus the framesync bits
+  uint8_t output_dibits[192]; memset (output_dibits, 0, sizeof(output_dibits));
+
+  // if (type == 0) //TODO: Preamble (just repeat the preamble x number of times to make 192 symbols)
+  // {
+  //   for (i = 0; i < 8; i++)
+  //     output_dibits[i] = (m17_lsf_fs[i*2+0] << 1) + (m17_lsf_fs[i*2+1] << 0);
+  // }
+
+  //load frame sync pattern
+  if (type == 1) //LSF
+  {
+    for (i = 0; i < 8; i++)
+      output_dibits[i] = (m17_lsf_fs[i*2+0] << 1) + (m17_lsf_fs[i*2+1] << 0);
+  }
+
+  if (type == 2) //Stream
+  {
+    for (i = 0; i < 8; i++)
+      output_dibits[i] = (m17_str_fs[i*2+0] << 1) + (m17_str_fs[i*2+1] << 0);
+  }
+
+  //load rest of frame
+  for (i = 0; i < 184; i++)
+    output_dibits[i+8] = (input[i*2+0] << 1) + (input[i*2+1] << 0);
+
+  //convert to symbols
+  int output_symbols[192]; memset (output_symbols, 0, sizeof(output_symbols)); UNUSED(output_symbols);
+  for (i = 0; i < 192; i++)
+    output_symbols[i] = symbol_map[output_dibits[i]];
+
+  //debug output symbols
+  // fprintf (stderr, "\n sym:");
+  // for (i = 0; i < 192; i++)
+  // {
+  //   if (i%24 == 0) fprintf (stderr, "\n");
+  //   fprintf (stderr, " %d", output_symbols[i]);
+  // }
+
+  //save symbols to symbol capture bin file format
+  if (opts->symbol_out_f)
+  {
+    for (i = 0; i < 192; i++)
+      fputc (output_dibits[i], opts->symbol_out_f);
+  }
+
+  //TODO: symbols to audio
+  UNUSED(opts); UNUSED(state);
+
+}
+
 //encode and create audio of a Project M17 Stream signal
 void encodeM17STR(dsd_opts * opts, dsd_state * state)
 {
@@ -1106,7 +1169,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   memset (m17_lsf, 0, sizeof(m17_lsf));
 
   //NOTE: Most lich and lsf_chunk bits can be pre-set before the while loop,
-  //only need to refresh the lich_cnt value and golay (no meta/IV/enc)
+  //only need to refresh the lich_cnt value, nonce, and golay
   uint16_t lsf_dt   = 2; //voice (3200bps)
   uint16_t lsf_et   = 0; //encryption type
   uint16_t lsf_es   = 0; //encryption sub-type
@@ -1164,10 +1227,12 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     for (i = 0; i < 8; i++)
       iv[k++] = (nonce[j] >> 7-i)&1;
   }
+
   //if AES enc employed, insert the iv into LSF
   if (lsf_et == 2)
   {
-    for (i = 0; i < 112; i++) m17_lsf[i+112] = iv[i];
+    for (i = 0; i < 112; i++)
+      m17_lsf[i+112] = iv[i];
   }
 
   //pack and compute the CRC16 for LSF
@@ -1181,7 +1246,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //attach the crc16 bits to the end of the LSF data
   for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> 15-i) & 1;
 
-  //WIP: Craft and Send Initial LSF frame to be decoded
+  //Craft and Send Initial LSF frame to be decoded
 
   //LSF w/ convolutional encoding (double check array sizes)
   uint8_t m17_lsfc[488]; memset (m17_lsfc, 0, sizeof(m17_lsfc)); UNUSED(m17_lsfc);
@@ -1195,7 +1260,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //LSF w/ Scrambling
   uint8_t m17_lsfs[368]; memset (m17_lsfs, 0, sizeof(m17_lsfs)); UNUSED(m17_lsfs);
 
-  //Use the convolutional encoder to encode the voice / data stream
+  //Use the convolutional encoder to encode the LSF Frame
   simple_conv_encoder (m17_lsf, m17_lsfc, 244);
 
   //P1 puncture
@@ -1218,8 +1283,11 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   for (i = 0; i < 368; i++)
     m17_lsfs[i] = (m17_lsfi[i] ^ m17_scramble[i]) & 1;
 
-  fprintf (stderr, "\n M17 Stream (ENCODER): ");
+  fprintf (stderr, "\n M17 LSF (ENCODER): ");
       processM17LSF_debug(opts, state, m17_lsfc);
+
+  //encodeM17RF
+  encodeM17RF (opts, state, m17_lsfs, 1);
 
   while (!exitflag) //while the software is running
   {
@@ -1368,9 +1436,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
     //initialize and start assembling the completed frame
 
-    //STR frame sync pattern - 0xFF5D (-3, -3, -3, -3, +3, +3, -3, +3)
-    uint8_t m17_str_fs[16] = {1,1,1,1,1,1,1,1,0,1,0,1,1,1,0,1};
-
     //Data/Voice Portion of Stream Data Link Layer w/ FSN
     uint8_t m17_v1[148]; memset (m17_v1, 0, sizeof(m17_v1));
 
@@ -1489,6 +1554,14 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     for (i = 0; i < 368; i++)
       m17_t4s[i] = (m17_t4i[i] ^ m17_scramble[i]) & 1;
 
+    //debug insert 3 random bit flips in the finished stream to test conv decoder
+    // int rnd1 = rand()%368;
+    // int rnd2 = rand()%368;
+    // int rnd3 = rand()%368;
+    // m17_t4s[rnd1] ^= 1;
+    // m17_t4s[rnd2] ^= 1;
+    // m17_t4s[rnd3] ^= 1;
+
     //-----------------------------------------
 
     //decode stream with the M17STR_debug
@@ -1500,38 +1573,17 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "\n M17 Stream (ENCODER): ");
       processM17STR_debug(opts, state, m17_t4s);
 
-      //load bits inti a dibit array plus the framesync bits
-      uint8_t output_dibits[192]; memset (output_dibits, 0, sizeof(output_dibits));
-      for (i = 0; i < 8; i++)
-        output_dibits[i] = (m17_str_fs[i*2+0] << 1) + (m17_str_fs[i*2+1] << 0);
-
-      //load rest of combined frame
-      for (i = 0; i < 184; i++)
-        output_dibits[i+8] = (m17_t4s[i*2+0] << 1) + (m17_t4s[i*2+1] << 0);
-
-      //Start working on converting the bitsream to an audio stream
-
-      //convert to symbols @ 4800 bps
-      int output_symbols[192]; memset (output_symbols, 0, sizeof(output_symbols)); UNUSED(output_symbols);
-      for (i = 0; i < 192; i++)
-        output_symbols[i] = symbol_map[output_dibits[i]];
-
-      //debug output symbols
-      // fprintf (stderr, "\n sym:");
-      // for (i = 0; i < 192; i++)
-      // {
-      //   if (i%24 == 0) fprintf (stderr, "\n");
-      //   fprintf (stderr, " %d", output_symbols[i]);
-      // }
-
-      //TODO: symbols to audio
+      //encodeM17RF
+      encodeM17RF (opts, state, m17_t4s, 2);
       
       //Contruct an IP frame using previously created arrays
       uint8_t m17_ip_frame[432]; memset (m17_ip_frame, 0, sizeof(m17_ip_frame)); UNUSED(m17_ip_frame);
       uint8_t m17_ip_packed[54]; memset (m17_ip_packed, 0, sizeof(m17_ip_packed)); UNUSED(m17_ip_packed);
       uint16_t ip_crc = 0; UNUSED(ip_crc);
 
-      //NOTE: The Manual doesn't say much about this area, so assuming the elements are arranged as per the table
+      //NOTE: The Manual doesn't say much about this area, so assuming 
+      //the elements are arranged as per the table
+
       //add MAGIC
       k = 0;
       for (j = 0; j < 4; j++)
@@ -1540,7 +1592,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
           m17_ip_frame[k++] = (magic[j] >> 7-i) &1;
       }
 
-      //add StreamID to ip_frame
+      //add StreamID
       for (j = 0; j < 2; j++)
       {
         for (i = 0; i < 8; i++)
@@ -1551,9 +1603,12 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       for (i = 0; i < 224; i++)
         m17_ip_frame[k++] = m17_lsf[i];
 
+      //add eot bit flag
+      m17_ip_frame[k++] = eot&1;
+
       //add current fsn value
-      for (i = 0; i < 16; i++)
-        m17_ip_frame[k++] = (fsn >> 15-i)&1;
+      for (i = 0; i < 15; i++)
+        m17_ip_frame[k++] = (fsn >> 14-i)&1;
 
       //voice and/or data payload
       for (i = 0; i < 64; i++)
@@ -1572,7 +1627,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       for (i = 0; i < 16; i++)
         m17_ip_frame[k++] = (ip_crc >> 15-i)&1;
       
-      //pack it into the byte array as well
+      //pack CRC into the byte array as well
       for (i = 52; i < 54; i++)
         m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_ip_frame[i*8], 8);
 
