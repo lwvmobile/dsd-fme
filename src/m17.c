@@ -811,6 +811,124 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
 
 } //end processM17LSF
 
+// void processM17LSF_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_bits)
+void processM17LSF_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_depunc)
+{
+
+  //NOTE: Having run a full debug on all steps, I am convinced that the number of punctures
+  //renders the current convolutional decoder useless to fix the holes in an LSF frame
+
+  //Skipping to the deconvolution step renders the correct frame info and crc value
+  //We can still send the full LSF as intended over IP frame or RF without this step
+
+  //TODO: Switch to M17 Viterbi Decoder for better performance
+
+  int i, x; UNUSED(x);
+  uint8_t m17_int_bits[368]; //368 bits that are still interleaved
+  uint8_t m17_bits[368]; //368 bits that have been de-interleaved and de-scramble
+  // uint8_t m17_depunc[488]; //488 bits after depuncturing
+
+  memset (m17_int_bits, 0, sizeof(m17_int_bits));
+  memset (m17_bits, 0, sizeof(m17_bits));
+  // memset (m17_depunc, 0, sizeof(m17_depunc));
+
+  //descramble the frame
+  // for (i = 0; i < 368; i++)
+  //   m17_int_bits[i] = (m17_rnd_bits[i] ^ m17_scramble[i]) & 1;
+
+  //deinterleave the bit array using Quadratic Permutation Polynomial
+  //function π(x) = (45x + 92x^2 ) mod 368
+  // for (i = 0; i < 368; i++)
+  // {
+  //   x = ((45*i)+(92*i*i)) % 368;
+  //   m17_bits[i] = m17_int_bits[x];
+  // }
+
+  //P1 Depuncture
+  // x = 0;
+  // for (i = 0; i < 488; i++)
+  // {
+  //   if (p1[i%61] == 1)
+  //     m17_depunc[i] = m17_bits[x++];
+  //   else m17_depunc[i] = 0;
+  // }
+
+  //setup the convolutional decoder
+  uint8_t temp[488];
+  uint8_t s0;
+  uint8_t s1;
+  uint8_t m_data[30];
+  uint8_t trellis_buf[240]; //30*8 = 240
+  memset (trellis_buf, 0, sizeof(trellis_buf));
+  memset (temp, 0, sizeof (temp));
+  memset (m_data, 0, sizeof (m_data));
+
+  for (i = 0; i < 488; i++)
+    temp[i] = m17_depunc[i] << 1; 
+
+  CNXDNConvolution_start();
+  for (i = 0; i < 244; i++)
+  {
+    s0 = temp[(2*i)];
+    s1 = temp[(2*i)+1];
+
+    CNXDNConvolution_decode(s0, s1);
+  }
+
+  CNXDNConvolution_chainback(m_data, 240);
+
+  //244/8 = 30, last 4 (244-248) are trailing zeroes
+  for(i = 0; i < 30; i++)
+  {
+    trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
+    trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
+    trellis_buf[(i*8)+2] = (m_data[i] >> 5) & 1;
+    trellis_buf[(i*8)+3] = (m_data[i] >> 4) & 1;
+    trellis_buf[(i*8)+4] = (m_data[i] >> 3) & 1;
+    trellis_buf[(i*8)+5] = (m_data[i] >> 2) & 1;
+    trellis_buf[(i*8)+6] = (m_data[i] >> 1) & 1;
+    trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
+  }
+
+  memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
+  memcpy (state->m17_lsf, trellis_buf, 240);
+
+  uint8_t lsf_packed[30];
+  memset (lsf_packed, 0, sizeof(lsf_packed));
+
+  //need to pack bytes for the sw5wwp variant of the crc (might as well, may be useful in the future)
+  for (i = 0; i < 30; i++)
+    lsf_packed[i] = (uint8_t)ConvertBitIntoBytes(&state->m17_lsf[i*8], 8);
+
+  uint16_t crc_cmp = crc16m17(lsf_packed, 28);
+  uint16_t crc_ext = (uint16_t)ConvertBitIntoBytes(&state->m17_lsf[224], 16);
+  int crc_err = 0;
+
+  if (crc_cmp != crc_ext) crc_err = 1;
+
+  if (crc_err == 0)
+    M17decodeLSF(state);
+
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, "\n LSF: ");
+    for (i = 0; i < 30; i++)
+    {
+      if (i == 15) fprintf (stderr, "\n      ");
+      fprintf (stderr, "[%02X]", lsf_packed[i]);
+    }
+  }
+
+  //debug
+  // fprintf (stderr, " E-%04X; C-%04X (CRC CHK)", crc_ext, crc_cmp);
+
+  if (crc_err == 1) fprintf (stderr, " CRC ERR");
+
+  //ending linebreak
+  // fprintf (stderr, "\n");
+
+} //end processM17LSF_debug
+
 //debug M17STR for the encoder to pass bits into
 void processM17STR_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_bits)
 {
@@ -976,8 +1094,10 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   short voice1[nsam]; //read in xxx ms of audio from input source
   short voice2[nsam]; //read in xxx ms of audio from input source
   
-  int fsn, eot = 0;  //frame sequence number and eot bit
-  int lich_cnt = 0; //lich frame number counter
+  //frame sequence number and eot bit (fixes initial FSN of 17152)
+  uint8_t fsn = 0;
+  uint8_t eot = 0;
+  uint8_t lich_cnt = 0; //lich frame number counter
 
   uint8_t lsf_chunk[6][48]; //40 bit chunks of link information spread across 6 frames
   uint8_t m17_lsf[240];    //the complete LSF
@@ -1003,30 +1123,30 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //Only if not already set as numerical value
   if (dst == 0)
   {
-  for(i = strlen((const char*)d40)-1; i >= 0; i--)
-  {
-    for(j = 0; j < 40; j++)
+    for(i = strlen((const char*)d40)-1; i >= 0; i--)
     {
-      if(d40[i]==b40[j])
+      for(j = 0; j < 40; j++)
       {
-        dst=dst*40+j;
-        break;
-        }
+        if(d40[i]==b40[j])
+        {
+          dst=dst*40+j;
+          break;
+          }
       }
     }
   }
 
   if (src == 0)
   {
-  for(i = strlen((const char*)s40)-1; i >= 0; i--)
-  {
-    for(j = 0; j < 40; j++)
+    for(i = strlen((const char*)s40)-1; i >= 0; i--)
     {
-      if(s40[i]==b40[j])
+      for(j = 0; j < 40; j++)
       {
-        src=src*40+j;
-        break;
-        }
+        if(s40[i]==b40[j])
+        {
+          src=src*40+j;
+          break;
+          }
       }
     }
   }
@@ -1060,7 +1180,47 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
   //attach the crc16 bits to the end of the LSF data
   for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> 15-i) & 1;
-  
+
+  //WIP: Craft and Send Initial LSF frame to be decoded
+
+  //LSF w/ convolutional encoding (double check array sizes)
+  uint8_t m17_lsfc[488]; memset (m17_lsfc, 0, sizeof(m17_lsfc)); UNUSED(m17_lsfc);
+
+  //LSF w/ P1 Puncturing
+  uint8_t m17_lsfp[368]; memset (m17_lsfp, 0, sizeof(m17_lsfp)); UNUSED(m17_lsfp);
+
+  //LSF w/ Interleave
+  uint8_t m17_lsfi[368]; memset (m17_lsfi, 0, sizeof(m17_lsfi)); UNUSED(m17_lsfi);
+
+  //LSF w/ Scrambling
+  uint8_t m17_lsfs[368]; memset (m17_lsfs, 0, sizeof(m17_lsfs)); UNUSED(m17_lsfs);
+
+  //Use the convolutional encoder to encode the voice / data stream
+  simple_conv_encoder (m17_lsf, m17_lsfc, 244);
+
+  //P1 puncture
+  x = 0;
+  for (i = 0; i < 488; i++)
+  {
+    if (p1[i%61] == 1)
+      m17_lsfp[x++] = m17_lsfc[i];
+  }
+
+  //interleave the bit array using Quadratic Permutation Polynomial
+  //function π(x) = (45x + 92x^2 ) mod 368
+  for (i = 0; i < 368; i++)
+  {
+    x = ((45*i)+(92*i*i)) % 368;
+    m17_lsfi[x] = m17_lsfp[i];
+  }
+
+  //scramble/randomize the frame
+  for (i = 0; i < 368; i++)
+    m17_lsfs[i] = (m17_lsfi[i] ^ m17_scramble[i]) & 1;
+
+  fprintf (stderr, "\n M17 Stream (ENCODER): ");
+      processM17LSF_debug(opts, state, m17_lsfc);
+
   while (!exitflag) //while the software is running
   {
     //read some audio samples from source and load them into an audio buffer
@@ -1352,7 +1512,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       //Start working on converting the bitsream to an audio stream
 
       //convert to symbols @ 4800 bps
-      int output_symbols[192]; memset (output_symbols, 0, sizeof(output_symbols));
+      int output_symbols[192]; memset (output_symbols, 0, sizeof(output_symbols)); UNUSED(output_symbols);
       for (i = 0; i < 192; i++)
         output_symbols[i] = symbol_map[output_dibits[i]];
 
@@ -1363,7 +1523,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       //   if (i%24 == 0) fprintf (stderr, "\n");
       //   fprintf (stderr, " %d", output_symbols[i]);
       // }
-      UNUSED(output_symbols);
 
       //TODO: symbols to audio
       
@@ -1482,7 +1641,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       nonce[12] = rand() & 0xFF;
       nonce[13] = rand() & 0xFF;
 
-
       //load the nonce from packed bytes to a bitwise iv array
       memset(iv, 0, sizeof(iv));
       k = 0;
@@ -1491,6 +1649,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         for (i = 0; i < 8; i++)
           iv[k++] = (nonce[j] >> 7-i)&1;
       }
+
       //if AES enc employed, insert the iv into LSF
       if (lsf_et == 2)
       {
