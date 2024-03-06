@@ -1456,6 +1456,9 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       state->carrier = 0;
       state->synctype = -1;
 
+      //update timestamp
+      ts = time(NULL);
+
       //update randomizer seed and SID
       srand(ts); //randomizer seed based on time
 
@@ -1478,6 +1481,30 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       nonce[11] = rand() & 0xFF;
       nonce[12] = rand() & 0xFF;
       nonce[13] = rand() & 0xFF;
+
+
+      //load the nonce from packed bytes to a bitwise iv array
+      memset(iv, 0, sizeof(iv));
+      k = 0;
+      for (j = 0; j < 14; j++)
+      {
+        for (i = 0; i < 8; i++)
+          iv[k++] = (nonce[j] >> 7-i)&1;
+      }
+      //if AES enc employed, insert the iv into LSF
+      if (lsf_et == 2)
+      {
+        for (i = 0; i < 112; i++) m17_lsf[i+112] = iv[i];
+      }
+
+      //repack, new CRC, and update rest of lsf as well
+      memset (lsf_packed, 0, sizeof(lsf_packed));
+      for (i = 0; i < 30; i++)
+        lsf_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_lsf[i*8], 8);
+      crc_cmp = crc16m17(lsf_packed, 28);
+
+      //attach the crc16 bits to the end of the LSF data
+      for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> 15-i) & 1;
 
     }
 
