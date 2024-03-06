@@ -1787,6 +1787,9 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       //flag on when restarting the encoder
       new_lsf = 1;
 
+      //flush meta last, primarily the last two octets with the lich_cnt in them
+      memset(state->m17_meta, 0, sizeof(state->m17_meta));
+
     }
 
     //refresh ncurses printer, if enabled
