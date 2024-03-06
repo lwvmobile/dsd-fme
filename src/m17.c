@@ -1,9 +1,9 @@
 /*-------------------------------------------------------------------------------
  * m17.c
- * M17 Decoder and Decoder (LSF and STR)
+ * M17 Decoder and Encoder
  *
  * m17_scramble Bit Array from SDR++
- * CRC16 from M17-Implementations (thanks again, sp5wwp)
+ * CRC16, CSD encoder from libM17 / M17-Implementations (thanks again, sp5wwp)
  *
  * LWVMOBILE
  * 2024-03 DSD-FME Florida Man Edition
@@ -46,7 +46,7 @@ uint8_t p1[62] = {
 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1
 };
 
-//from M17_Implementations -- sp5wwp -- should have just looked here to begin with
+//from M17_Implementations / libM17 -- sp5wwp -- should have just looked here to begin with
 //this setup looks very similar to the OP25 variant of crc16, but with a few differences (uses packed bytes)
 uint16_t crc16m17(const uint8_t *in, const uint16_t len)
 {
@@ -1170,6 +1170,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
   //NOTE: Most lich and lsf_chunk bits can be pre-set before the while loop,
   //only need to refresh the lich_cnt value, nonce, and golay
+  uint16_t lsf_ps   = 1; //packet or stream indicator bit
   uint16_t lsf_dt   = 2; //voice (3200bps)
   uint16_t lsf_et   = 0; //encryption type
   uint16_t lsf_es   = 0; //encryption sub-type
@@ -1178,7 +1179,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
   //compose the 16-bit frame information from the above sub elements
   uint16_t lsf_fi = 0;
-  lsf_fi = (lsf_dt << 1) + (lsf_et << 3) + (lsf_es << 5) + (lsf_cn << 7) + (lsf_rs << 11);
+  lsf_fi = (lsf_ps & 1) + (lsf_dt << 1) + (lsf_et << 3) + (lsf_es << 5) + (lsf_cn << 7) + (lsf_rs << 11);
   for (i = 0; i < 16; i++) m17_lsf[96+i] = (lsf_fi >> 15-i) & 1;
 
   //Convert base40 CSD to numerical values (lifted from libM17)
@@ -1284,7 +1285,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     m17_lsfs[i] = (m17_lsfi[i] ^ m17_scramble[i]) & 1;
 
   fprintf (stderr, "\n M17 LSF (ENCODER): ");
-      processM17LSF_debug(opts, state, m17_lsfc);
+  processM17LSF_debug(opts, state, m17_lsfc);
 
   //encodeM17RF
   encodeM17RF (opts, state, m17_lsfs, 1);
@@ -1554,7 +1555,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     for (i = 0; i < 368; i++)
       m17_t4s[i] = (m17_t4i[i] ^ m17_scramble[i]) & 1;
 
-    //debug insert 3 random bit flips in the finished stream to test conv decoder
+    //debug insert 3 random bit flips in the finished stream to test conv/golay
     // int rnd1 = rand()%368;
     // int rnd2 = rand()%368;
     // int rnd3 = rand()%368;
