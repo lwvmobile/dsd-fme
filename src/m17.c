@@ -172,10 +172,14 @@ void M17decodeLSF(dsd_state * state)
   state->m17_enc = lsf_et;
   state->m17_enc_st = lsf_es;
 
-  //compare incoming META/IV value on AES, if timestamp 32-bits are not a match (or at least 24 bit, warn user of potential replay/compromise)
-  uint32_t tsn = (time(NULL) & 0xFFFFFFFF) >> 8; //evaluate 24 bits (within a 255 second window)
-  uint32_t tsi = (uint32_t)ConvertBitIntoBytes(&state->m17_lsf[112], 24);
-  if (lsf_et == 2 && tsn != tsi) fprintf (stderr, " \n WARNING! NONCE/IV REPLAY!");
+  //compare incoming META/IV value on AES, if timestamp 32-bits are not within a time 5 minute window, then throw a warning
+  uint32_t tsn = (time(NULL) & 0xFFFFFFFF); //current LSB 32-bit value
+  uint32_t tsi = (uint32_t)ConvertBitIntoBytes(&state->m17_lsf[112], 32); //OTA LSB 32-bit value
+  uint32_t dif = abs(tsn-tsi);
+  if (lsf_et == 2 && dif > 3600) fprintf (stderr, " \n Warning! Time Difference > %d secs; Potential NONCE/IV Replay!\n", dif);
+
+  //debug
+  // fprintf (stderr, "TSN: %ld; TSI: %ld; DIF: %ld;", tsn, tsi, dif);
 
   //pack meta bits into 14 bytes
   for (i = 0; i < 14; i++)
