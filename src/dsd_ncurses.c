@@ -4373,6 +4373,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     if (state->m17encoder_tx == 0) state->m17encoder_tx = 1;
     else state->m17encoder_tx = 0;
+
+    //flag on the EOT marker to send last frame after toggling encoder to zero
+    if (state->m17encoder_tx == 0) state->m17encoder_eot = 1;
+    
   }
 
   //anything with an entry box will need the inputs and outputs stopped first

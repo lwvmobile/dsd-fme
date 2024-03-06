@@ -951,7 +951,7 @@ void processM17STR_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_b
   //function π(x) = (45x + 92x^2 ) mod 368
   for (i = 0; i < 368; i++)
   {
-    x = ((45*i)+(92*i*i)) % 368; UNUSED(x);
+    x = ((45*i)+(92*i*i)) % 368;
     m17_bits[i] = m17_int_bits[x];
   }
 
@@ -1109,8 +1109,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //TODO: See if we need to send a conn and/or receice any ackn/nack/ping/pong commands later
 
   //WIP: Standard IP Framing
-  uint8_t magic[4] = {0x4D, 0x31, 0x37, 0x20}; UNUSED(magic);
-  uint8_t sid[2]; memset (sid, 0, sizeof(sid)); UNUSED(sid);
+  uint8_t magic[4] = {0x4D, 0x31, 0x37, 0x20};
+  uint8_t sid[2]; memset (sid, 0, sizeof(sid));
 
   //NONCE
   time_t ts = time(NULL); //timestamp since epoch / "Unix Time"
@@ -1250,16 +1250,16 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //Craft and Send Initial LSF frame to be decoded
 
   //LSF w/ convolutional encoding (double check array sizes)
-  uint8_t m17_lsfc[488]; memset (m17_lsfc, 0, sizeof(m17_lsfc)); UNUSED(m17_lsfc);
+  uint8_t m17_lsfc[488]; memset (m17_lsfc, 0, sizeof(m17_lsfc));
 
   //LSF w/ P1 Puncturing
-  uint8_t m17_lsfp[368]; memset (m17_lsfp, 0, sizeof(m17_lsfp)); UNUSED(m17_lsfp);
+  uint8_t m17_lsfp[368]; memset (m17_lsfp, 0, sizeof(m17_lsfp));
 
   //LSF w/ Interleave
-  uint8_t m17_lsfi[368]; memset (m17_lsfi, 0, sizeof(m17_lsfi)); UNUSED(m17_lsfi);
+  uint8_t m17_lsfi[368]; memset (m17_lsfi, 0, sizeof(m17_lsfi));
 
   //LSF w/ Scrambling
-  uint8_t m17_lsfs[368]; memset (m17_lsfs, 0, sizeof(m17_lsfs)); UNUSED(m17_lsfs);
+  uint8_t m17_lsfs[368]; memset (m17_lsfs, 0, sizeof(m17_lsfs));
 
   //Use the convolutional encoder to encode the LSF Frame
   simple_conv_encoder (m17_lsf, m17_lsfc, 244);
@@ -1284,11 +1284,9 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   for (i = 0; i < 368; i++)
     m17_lsfs[i] = (m17_lsfi[i] ^ m17_scramble[i]) & 1;
 
-  fprintf (stderr, "\n M17 LSF (ENCODER): ");
-  processM17LSF_debug(opts, state, m17_lsfc);
-
-  //encodeM17RF
-  encodeM17RF (opts, state, m17_lsfs, 1);
+  //flag to determine if we send a new LSF frame for new encode
+  //only send once at the appropriate time when encoder is toggled on
+  int new_lsf = 1;
 
   while (!exitflag) //while the software is running
   {
@@ -1481,9 +1479,11 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       m17_v1[i+16+64] = v2_bits[i];
     }
 
-    //set end of tx bit on the exitflag (sig)
+    //set end of tx bit on the exitflag (sig, results not gauranteed) or toggle eot flag (always triggers)
     if (exitflag) eot = 1;
+    if (state->m17encoder_eot) eot = 1;
     m17_v1[0] = (uint8_t)eot; //set as first bit of the stream
+
     //set current frame number as bits 1-15 of the v1 stream
     for (i = 0; i < 15; i++)
       m17_v1[i+1] = ( (uint8_t)(fsn >> 14-i) ) &1;
@@ -1571,6 +1571,20 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       //Enable Carrier, synctype, etc
       state->carrier = 1;
       state->synctype = 8;
+
+      //send LSF frame once, if new encode session
+      if (new_lsf == 1)
+      {
+        fprintf (stderr, "\n M17 LSF    (ENCODER): ");
+        processM17LSF_debug(opts, state, m17_lsfc);
+
+        //encodeM17RF
+        encodeM17RF (opts, state, m17_lsfs, 1);
+
+        //flag off after sending
+        new_lsf = 0;
+      }
+
       fprintf (stderr, "\n M17 Stream (ENCODER): ");
       processM17STR_debug(opts, state, m17_t4s);
 
@@ -1578,8 +1592,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       encodeM17RF (opts, state, m17_t4s, 2);
       
       //Contruct an IP frame using previously created arrays
-      uint8_t m17_ip_frame[432]; memset (m17_ip_frame, 0, sizeof(m17_ip_frame)); UNUSED(m17_ip_frame);
-      uint8_t m17_ip_packed[54]; memset (m17_ip_packed, 0, sizeof(m17_ip_packed)); UNUSED(m17_ip_packed);
+      uint8_t m17_ip_frame[432]; memset (m17_ip_frame, 0, sizeof(m17_ip_frame));
+      uint8_t m17_ip_packed[54]; memset (m17_ip_packed, 0, sizeof(m17_ip_packed));
       uint16_t ip_crc = 0; UNUSED(ip_crc);
 
       //NOTE: The Manual doesn't say much about this area, so assuming 
@@ -1720,6 +1734,23 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       //attach the crc16 bits to the end of the LSF data
       for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> 15-i) & 1;
+
+      //flush the last frame with the eot bit on
+      if (eot)
+      {
+        fprintf (stderr, "\n M17 Stream (ENCODER): ");
+        processM17STR_debug(opts, state, m17_t4s);
+
+        //encodeM17RF
+        encodeM17RF (opts, state, m17_t4s, 2);
+
+        //reset indicators
+        eot = 0;
+        state->m17encoder_eot = 0;
+      }
+
+      //flag on when restarting the encoder
+      new_lsf = 1;
 
     }
 

@@ -1181,6 +1181,7 @@ initState (dsd_state * state)
   state->m17_enc = 0;
   state->m17_enc_st = 0;
   state->m17encoder_tx = 0;
+  state->m17encoder_eot = 0;
   memset(state->m17_meta, 0, sizeof(state->m17_meta));
 
   
