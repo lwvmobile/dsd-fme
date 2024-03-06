@@ -1711,6 +1711,11 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       nonce[12] = rand() & 0xFF;
       nonce[13] = rand() & 0xFF;
 
+      //debug print nonce
+      // fprintf (stderr, "\n nonce:");
+      // for (i = 0; i < 14; i++)
+      //   fprintf (stderr, " %02X", nonce[i]);
+
       //load the nonce from packed bytes to a bitwise iv array
       memset(iv, 0, sizeof(iv));
       k = 0;
@@ -1734,6 +1739,36 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       //attach the crc16 bits to the end of the LSF data
       for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> 15-i) & 1;
+
+      //Recraft and Prepare New LSF frame for next encoding session
+      //this is primarily to make sure the LSF has the refreshed nonce
+      memset (m17_lsfc, 0, sizeof(m17_lsfc));
+      memset (m17_lsfp, 0, sizeof(m17_lsfp));
+      memset (m17_lsfi, 0, sizeof(m17_lsfi));
+      memset (m17_lsfs, 0, sizeof(m17_lsfs));
+
+      //Use the convolutional encoder to encode the LSF Frame
+      simple_conv_encoder (m17_lsf, m17_lsfc, 244);
+
+      //P1 puncture
+      x = 0;
+      for (i = 0; i < 488; i++)
+      {
+        if (p1[i%61] == 1)
+          m17_lsfp[x++] = m17_lsfc[i];
+      }
+
+      //interleave the bit array using Quadratic Permutation Polynomial
+      //function π(x) = (45x + 92x^2 ) mod 368
+      for (i = 0; i < 368; i++)
+      {
+        x = ((45*i)+(92*i*i)) % 368;
+        m17_lsfi[x] = m17_lsfp[i];
+      }
+
+      //scramble/randomize the frame
+      for (i = 0; i < 368; i++)
+        m17_lsfs[i] = (m17_lsfi[i] ^ m17_scramble[i]) & 1;
 
       //flush the last frame with the eot bit on
       if (eot)
