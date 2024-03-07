@@ -1161,8 +1161,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   short voice1[nsam]; //read in xxx ms of audio from input source
   short voice2[nsam]; //read in xxx ms of audio from input source
   
-  //frame sequence number and eot bit (fixes initial FSN of 17152)
-  uint8_t fsn = 0;
+  //frame sequence number and eot bit
+  uint16_t fsn = 0;
   uint8_t eot = 0;
   uint8_t lich_cnt = 0; //lich frame number counter
 
