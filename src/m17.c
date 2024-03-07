@@ -1007,7 +1007,7 @@ const int8_t symbol_map[4] = {+1, +3, -1, -3};
 void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
 {
 
-  int i;
+  int i, j;
 
   //LSF frame sync pattern - 0x55F7 +3, +3, +3, +3, -3, -3, +3, -3
   uint8_t m17_lsf_fs[16] = {0,1,0,1,0,1,0,1,1,1,1,1,0,1,1,1};
@@ -1042,7 +1042,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
     output_dibits[i+8] = (input[i*2+0] << 1) + (input[i*2+1] << 0);
 
   //convert to symbols
-  int output_symbols[192]; memset (output_symbols, 0, sizeof(output_symbols)); UNUSED(output_symbols);
+  int output_symbols[192]; memset (output_symbols, 0, 192*sizeof(int));
   for (i = 0; i < 192; i++)
     output_symbols[i] = symbol_map[output_dibits[i]];
 
@@ -1061,8 +1061,49 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
       fputc (output_dibits[i], opts->symbol_out_f);
   }
 
-  //TODO: symbols to audio
-  UNUSED(opts); UNUSED(state);
+  //WIP: symbols to audio
+
+  //upsample 10x
+  int output_up[192*10]; memset (output_up, 0, 192*10*sizeof(int));
+  for (i = 0; i < 192; i++)
+  {
+    for (j = 0; j < 10; j++)
+      output_up[(i*10)+j] = output_symbols[i];
+  }
+
+  //debug upsample
+  // fprintf (stderr, "\n up:");
+  // for (i = 0; i < 1920; i++)
+  // {
+  //   if (i%24 == 0) fprintf (stderr, "\n");
+  //   fprintf (stderr, " %d", output_up[i]);
+  // }
+
+  //filter + gain (voltage) //m17_filter
+  short baseband[1920]; memset (baseband, 0, 1920*sizeof(short));
+  for (i = 0; i < 1920; i++)
+  {
+    baseband[i] = output_up[i] * 10000; //optimal value?
+    baseband[i] = m17_filter(baseband[i]);
+  }
+
+  //debug baseband
+  // fprintf (stderr, "\n bb:");
+  // for (i = 0; i < 1920; i++)
+  // {
+  //   if (i%24 == 0) fprintf (stderr, "\n");
+  //   fprintf (stderr, " %d", baseband[i]);
+  // }
+
+  //test playing back this audio now -- working and sync achieved, yay!
+  if (opts->audio_out_type == 0 && opts->monitor_input_audio == 1) //TODO: Open the analog output device, use -8 for now
+  {
+    pa_simple_write(opts->pulse_raw_dev_out, baseband, 1920*2, NULL);
+  }
+
+  //TODO: Other audio output methods, probably just the 'analog' out and stdout? or something?
+  //NOTE: May need to disable the debug decoding when playing out real audio?
+  UNUSED(state);
 
 }
 
