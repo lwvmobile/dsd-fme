@@ -1157,8 +1157,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 {
 
   //WIP: Finish creating audio of the encoded signal
-  short empty[1920]; memset (empty, 0, 20*sizeof(short)); //empty audio sample for dead air on wav file output
-  uint8_t nil[368]; memset (nil, 0, sizeof(nil)); //empty array to send to RF during Preamble and EOT Marker
+  short empty[1920]; //empty audio sample for dead air on wav file output
+  uint8_t nil[368]; //empty array to send to RF during Preamble and EOT Marker
 
   //Enable frame, TX and Ncurses Printer
   opts->frame_m17 = 1;
@@ -1673,6 +1673,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         else fprintf (stderr, " To Audio Out Device Type: %d; ", opts->audio_out_type);
 
         //encodeM17RF
+        memset (nil, 0, sizeof(nil));
         encodeM17RF (opts, state, nil, 3); //Preamble
         // for (i = 0; i < 6; i++) //test sending multiple LSF OTA
         encodeM17RF (opts, state, m17_lsfs, 1); //LSF
@@ -1878,7 +1879,20 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
         //encodeM17RF
         encodeM17RF (opts, state, m17_t4s, 2); //Last Stream Frame
+        memset (nil, 0, sizeof(nil));
         encodeM17RF (opts, state, nil, 5);    //EOT Marker
+
+        //if saving a wav file of baseband audio, insert dead air time
+        //so subsequent encodes have a little bit of breathing room
+        if (opts->wav_out_raw != NULL)
+        {
+          memset (empty, 0, 1920*sizeof(short)); //bugfix
+          for (i = 0; i < 4; i++)
+          {
+            sf_write_short(opts->wav_out_raw, empty, 1920);
+            sf_write_sync (opts->wav_out_raw);
+          } 
+        }
 
         //reset indicators
         eot = 0;
@@ -1891,13 +1905,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       //flush decoder side meta last, primarily the last two octets with the lich_cnt in them
       memset(state->m17_meta, 0, sizeof(state->m17_meta));
 
-      //if saving a wav file of baseband audio, insert dead air time
-      //so subsequent encodes have a little bit of breathing room
-      if (opts->wav_out_raw != NULL) //triggering random M17 sync on these for some reason, may need to implement an RMS check on wav files now?
-      {
-        sf_write_short(opts->wav_out_raw, empty, 2*1920);
-        sf_write_sync (opts->wav_out_raw);
-      }
 
     }
 
