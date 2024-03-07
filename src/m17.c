@@ -1872,7 +1872,9 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       if (eot)
       {
         fprintf (stderr, "\n M17 Stream (ENCODER): ");
-        processM17STR_debug(opts, state, m17_t4s);
+        if (opts->monitor_input_audio == 0)
+          processM17STR_debug(opts, state, m17_t4s);
+        else fprintf (stderr, " To Audio Out Device Type: %d; ", opts->audio_out_type);
 
         //encodeM17RF
         encodeM17RF (opts, state, m17_t4s, 2); //Last Stream Frame
