@@ -379,7 +379,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
           else if (state->lastsynctype == 8 || state->lastsynctype == 9 ||state->lastsynctype == 16 || state->lastsynctype == 17)
           {
-            sample = m17_filter(sample);
+            // sample = m17_filter(sample); //disable, not working as expected
           }
 
           else if ( 

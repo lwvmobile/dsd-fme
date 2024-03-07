@@ -1009,6 +1009,15 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
 
   int i, j;
 
+  //Preamble A - 0x7777 (+3, -3, +3, -3, +3, -3, +3, -3)
+  uint8_t m17_preamble_a[16] = {0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1};
+
+  //Preamble B - 0xEEEE (+3, -3, +3, -3, +3, -3, +3, -3)
+  uint8_t m17_preamble_b[16] = {1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0};
+
+  //EOT Marker - 0x555D
+  uint8_t m17_eot_marker[16] = {0,1,0,1, 0,1,0,1, 0,1,0,1,1,1,0,1};
+
   //LSF frame sync pattern - 0x55F7 +3, +3, +3, +3, -3, -3, +3, -3
   uint8_t m17_lsf_fs[16] = {0,1,0,1,0,1,0,1,1,1,1,1,0,1,1,1};
 
@@ -1018,11 +1027,26 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   //load bits inti a dibit array plus the framesync bits
   uint8_t output_dibits[192]; memset (output_dibits, 0, sizeof(output_dibits));
 
-  // if (type == 0) //TODO: Preamble (just repeat the preamble x number of times to make 192 symbols)
-  // {
-  //   for (i = 0; i < 8; i++)
-  //     output_dibits[i] = (m17_lsf_fs[i*2+0] << 1) + (m17_lsf_fs[i*2+1] << 0);
-  // }
+  //Preamble (just repeat the preamble 12 times to make 192 symbols)
+  if (type == 3) //A Pattern prepends LSF (last symbol opposite of first symbol to prevent zero-crossing)
+  {
+    for (i = 0; i < 192; i++)
+      output_dibits[i] = (m17_preamble_a[ (i*2+0)%16 ] << 1) + (m17_preamble_a[ (i*2+1)%16 ] << 0);
+  }
+
+  //Preamble (just repeat the preamble 12 times to make 192 symbols)
+  if (type == 4) //B Pattern prepends BERT? (last symbol opposite of first symbol to prevent zero-crossing)
+  {
+    for (i = 0; i < 192; i++)
+      output_dibits[i] = (m17_preamble_b[ (i*2+0)%16 ] << 1) + (m17_preamble_b[ (i*2+1)%16 ] << 0);
+  }
+
+  //EOT Marker (just repeat the EOT marker 12 times to make 192 symbols)
+  if (type == 5) //B Pattern prepends BERT? (last symbol opposite of first symbol to prevent zero-crossing)
+  {
+    for (i = 0; i < 192; i++)
+      output_dibits[i] = (m17_eot_marker[ (i*2+0)%16 ] << 1) + (m17_eot_marker[ (i*2+1)%16 ] << 0);
+  }
 
   //load frame sync pattern
   if (type == 1) //LSF
@@ -1037,9 +1061,12 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
       output_dibits[i] = (m17_str_fs[i*2+0] << 1) + (m17_str_fs[i*2+1] << 0);
   }
 
-  //load rest of frame
-  for (i = 0; i < 184; i++)
-    output_dibits[i+8] = (input[i*2+0] << 1) + (input[i*2+1] << 0);
+  //load rest of frame (if not preamble, or EOT marker)
+  if (type < 3)
+  {
+    for (i = 0; i < 184; i++)
+      output_dibits[i+8] = (input[i*2+0] << 1) + (input[i*2+1] << 0);
+  }
 
   //convert to symbols
   int output_symbols[192]; memset (output_symbols, 0, 192*sizeof(int));
@@ -1054,7 +1081,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   //   fprintf (stderr, " %d", output_symbols[i]);
   // }
 
-  //save symbols to symbol capture bin file format
+  //save symbols (dibits, actually) to symbol capture bin file format
   if (opts->symbol_out_f)
   {
     for (i = 0; i < 192; i++)
@@ -1079,12 +1106,12 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   //   fprintf (stderr, " %d", output_up[i]);
   // }
 
-  //filter + gain (voltage) //m17_filter
+  //craft baseband with gain + filter //m17_filter not working as expected, so disabling here and for OTA demodulation
   short baseband[1920]; memset (baseband, 0, 1920*sizeof(short));
   for (i = 0; i < 1920; i++)
   {
-    baseband[i] = output_up[i] * 10000; //optimal value?
-    baseband[i] = m17_filter(baseband[i]);
+    baseband[i] = output_up[i] * 7168.0f;  //optimal value?
+    // baseband[i] = m17_filter(baseband[i]); //(find/make suitable replacement)
   }
 
   //debug baseband
@@ -1095,14 +1122,32 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   //   fprintf (stderr, " %d", baseband[i]);
   // }
 
-  //test playing back this audio now -- working and sync achieved, yay!
-  if (opts->audio_out_type == 0 && opts->monitor_input_audio == 1) //TODO: Open the analog output device, use -8 for now
+  //playing back signal audio into device/udp
+  //NOTE: Open the analog output device, use -8
+  if (opts->monitor_input_audio == 1)
   {
-    pa_simple_write(opts->pulse_raw_dev_out, baseband, 1920*2, NULL);
+    //Pulse Audio
+    if (opts->audio_out_type == 0)
+      pa_simple_write(opts->pulse_raw_dev_out, baseband, 1920*2, NULL);
+    
+    //UDP
+    if (opts->audio_out_type == 8)
+      udp_socket_blasterA (opts, state, 1920*2, baseband);
+
+    //STDOUT or OSS 48k/1
+    if (opts->audio_out_type == 1 || opts->audio_out_type == 5)
+      write (opts->audio_out_fd, baseband, 1920*2);
+
+  }
+  
+  //if we have a raw signal wav file, write to it now
+  if (opts->wav_out_raw != NULL)
+  {
+    sf_write_short(opts->wav_out_raw, baseband, 1920);
+    sf_write_sync (opts->wav_out_raw);
   }
 
-  //TODO: Other audio output methods, probably just the 'analog' out and stdout? or something?
-  //NOTE: May need to disable the debug decoding when playing out real audio?
+  //NOTE: May need to disable the debug decoding when playing out real audio? Could lag/stutter.
   UNUSED(state);
 
 }
@@ -1111,7 +1156,9 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
 void encodeM17STR(dsd_opts * opts, dsd_state * state)
 {
 
-  //TODO: Finish creating audio of the encoded signal
+  //WIP: Finish creating audio of the encoded signal
+  short empty[1920]; memset (empty, 0, 20*sizeof(short)); //empty audio sample for dead air on wav file output
+  uint8_t nil[368]; memset (nil, 0, sizeof(nil)); //empty array to send to RF during Preamble and EOT Marker
 
   //Enable frame, TX and Ncurses Printer
   opts->frame_m17 = 1;
@@ -1621,17 +1668,23 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       if (new_lsf == 1)
       {
         fprintf (stderr, "\n M17 LSF    (ENCODER): ");
-        processM17LSF_debug(opts, state, m17_lsfc);
+        if (opts->monitor_input_audio == 0)
+          processM17LSF_debug(opts, state, m17_lsfc);
+        else fprintf (stderr, " To Audio Out Device Type: %d; ", opts->audio_out_type);
 
         //encodeM17RF
-        encodeM17RF (opts, state, m17_lsfs, 1);
+        encodeM17RF (opts, state, nil, 3); //Preamble
+        // for (i = 0; i < 6; i++) //test sending multiple LSF OTA
+        encodeM17RF (opts, state, m17_lsfs, 1); //LSF
 
         //flag off after sending
         new_lsf = 0;
       }
 
       fprintf (stderr, "\n M17 Stream (ENCODER): ");
-      processM17STR_debug(opts, state, m17_t4s);
+      if (opts->monitor_input_audio == 0)
+        processM17STR_debug(opts, state, m17_t4s);
+      else fprintf (stderr, " To Audio Out Device Type: %d; ", opts->audio_out_type);
 
       //encodeM17RF
       encodeM17RF (opts, state, m17_t4s, 2);
@@ -1822,7 +1875,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         processM17STR_debug(opts, state, m17_t4s);
 
         //encodeM17RF
-        encodeM17RF (opts, state, m17_t4s, 2);
+        encodeM17RF (opts, state, m17_t4s, 2); //Last Stream Frame
+        encodeM17RF (opts, state, nil, 5);    //EOT Marker
 
         //reset indicators
         eot = 0;
@@ -1832,8 +1886,16 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       //flag on when restarting the encoder
       new_lsf = 1;
 
-      //flush meta last, primarily the last two octets with the lich_cnt in them
+      //flush decoder side meta last, primarily the last two octets with the lich_cnt in them
       memset(state->m17_meta, 0, sizeof(state->m17_meta));
+
+      //if saving a wav file of baseband audio, insert dead air time
+      //so subsequent encodes have a little bit of breathing room
+      if (opts->wav_out_raw != NULL) //triggering random M17 sync on these for some reason, may need to implement an RMS check on wav files now?
+      {
+        sf_write_short(opts->wav_out_raw, empty, 2*1920);
+        sf_write_sync (opts->wav_out_raw);
+      }
 
     }
 

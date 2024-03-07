@@ -1282,6 +1282,11 @@ usage ()
   printf ("\n");
   printf ("Encoder options:\n");
   printf ("  -fZ           M17 Stream Voice Encoder\n");
+  printf (" Example: dsd-fme -fZ -i pulse -6 m17signal.wav -N 2> m17encoderlog.ans\n");
+  printf ("   Run M17 Encoding, listening to pulse audio server, with internal decode/playback and output to 48k/1 wav file\n");
+  printf ("\n");
+  printf (" Example: dsd-fme -fZ -i tcp -8 -o pulse -N 2> m17encoderlog.ans\n");
+  printf ("   Run M17 Encoding, listening to default tcp input, without internal decode/playback and output to 48k/1 analog output device\n");
   printf ("\n");
   printf ("Decoder options:\n");
   printf ("  -fa           Auto Detection\n");
