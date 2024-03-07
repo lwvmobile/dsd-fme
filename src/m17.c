@@ -1382,8 +1382,35 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
   while (!exitflag) //while the software is running
   {
+
+    //if not decoding internally, assign values for ncurses display
+    if (opts->monitor_input_audio == 1)
+    {
+      sprintf (state->m17_src_str, "%s", s40);
+      sprintf (state->m17_dst_str, "%s", d40);
+      state->m17_src = src;
+      state->m17_dst = dst;
+      state->m17_can = can;
+      state->m17_str_dt = lsf_dt;
+      state->m17_enc = lsf_et;
+      state->m17_enc_st = lsf_es;
+      for (i = 0; i < 16; i++)
+        state->m17_meta[i] = 0;
+      if (lsf_et == 2)
+      {
+        for (i = 0; i < 14; i++)
+          state->m17_meta[i] = nonce[i];
+        for (i = 0; i < 8; i++)
+        {
+          state->m17_meta[14] <<= 1;
+          state->m17_meta[15] <<= 1;
+          state->m17_meta[14] += ((fsn >> 7) >> 7-i) & 1;
+          state->m17_meta[15] += ((fsn >> 0) >> 7-i) & 1;
+        }
+      }
+    }
+
     //read some audio samples from source and load them into an audio buffer
-    //NOTE: Reconfigured to use default 48k input, take 1 out of every 6 samples (Codec2 is 8k encoder)
     if (opts->audio_in_type == 0) //pulse audio
     {
       for (i = 0; i < nsam; i++)
