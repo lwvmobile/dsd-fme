@@ -1257,6 +1257,17 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   short sample = 0;  //individual audio sample from source
   size_t nsam = 160; //number of samples to be read in (default is for codec2 3200 bps)
 
+  //if saving a wav file of baseband audio, insert initial dead air time
+  if (opts->wav_out_raw != NULL)
+  {
+    memset (empty, 0, 1920*sizeof(short)); //bugfix
+    for (i = 0; i < 20; i++)
+    {
+      sf_write_short(opts->wav_out_raw, empty, 1920);
+      sf_write_sync (opts->wav_out_raw);
+    } 
+  }
+
   //WIP: Open UDP port to 17000 and see if any other config info is necessary for running standard IP frames, etc,
   //or perhaps just also configure an input format for that ip streaming method, may need to handle UDP control packets (conn, ackn, nack, ping, pong, disc)
   int sock_err;
@@ -1936,6 +1947,15 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       // fprintf (stderr, "\n nonce:");
       // for (i = 0; i < 14; i++)
       //   fprintf (stderr, " %02X", nonce[i]);
+
+      //Viterbi decoder seems to respond better to non-zero fill, so, when no enc is used
+      //let's set the lsf_es to 2 for RES, and fill the nonce value with repeating 0x69
+      if (lsf_et == 0)
+      {
+        lsf_es = 3; //RES
+        for (i = 0; i < 14; i++)
+          nonce[i] = 0x69;
+      }
 
       //load the nonce from packed bytes to a bitwise iv array
       memset(iv, 0, sizeof(iv));
