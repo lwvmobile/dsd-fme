@@ -688,7 +688,7 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
   //NOTE: Have not been able to get this to work successfully, but considering
   //there is only one LSF frame at the beginning of TX, its probably just as easy to
   //use and rely on the STR frame and embedded LSF chunk, which does work properly
-  int i, j, k, x;
+  int i, x;
   uint8_t dbuf[184]; //384-bit frame - 16-bit (8 symbol) sync pattern (184 dibits)
   uint8_t m17_rnd_bits[368]; //368 bits that are still scrambled (randomized)
   uint8_t m17_int_bits[368]; //368 bits that are still interleaved
@@ -724,16 +724,13 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
     m17_bits[i] = m17_int_bits[x];
   }
 
-  j = 0; k = 0; x = 0;
-
   // P1 Depuncture
+  x = 0;
   for (i = 0; i < 488; i++)
   {
-    if (p1[k++] == 1) m17_depunc[x++] = m17_bits[j++];
-    else m17_depunc[x++] = 0;
-
-    if (k == 61) k = 0; //61 -- should reset 8 times againt the array
-
+    if (p1[i%61] == 1)
+      m17_depunc[i] = m17_bits[x++];
+    else m17_depunc[i] = 0;
   }
 
   //debug -- values seem okay at end of run
@@ -1332,12 +1329,16 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   uint16_t crc_cmp = 0;
   uint8_t lsf_packed[30];
   memset (lsf_packed, 0, sizeof(lsf_packed));
-  for (i = 0; i < 30; i++)
+  for (i = 0; i < 28; i++)
       lsf_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_lsf[i*8], 8);
   crc_cmp = crc16m17(lsf_packed, 28);
 
   //attach the crc16 bits to the end of the LSF data
   for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> 15-i) & 1;
+
+  //pack the CRC
+  for (i = 28; i < 30; i++)
+      lsf_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_lsf[i*8], 8);
 
   //Craft and Send Initial LSF frame to be decoded
 
@@ -1694,6 +1695,15 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       //send LSF frame once, if new encode session
       if (new_lsf == 1)
       {
+
+        //debug LSF before (see after in decoder for comparison)
+        // fprintf (stderr, "\n LSF: ");
+        // for (i = 0; i < 30; i++)
+        // {
+        //   if ((i%15)==0) fprintf (stderr, "\n");
+        //   fprintf (stderr, " %02X", lsf_packed[i]);
+        // }
+
         fprintf (stderr, "\n M17 LSF    (ENCODER): ");
         if (opts->monitor_input_audio == 0)
           processM17LSF_debug(opts, state, m17_lsfc);
@@ -1859,12 +1869,16 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       //repack, new CRC, and update rest of lsf as well
       memset (lsf_packed, 0, sizeof(lsf_packed));
-      for (i = 0; i < 30; i++)
+      for (i = 0; i < 28; i++)
         lsf_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_lsf[i*8], 8);
       crc_cmp = crc16m17(lsf_packed, 28);
 
       //attach the crc16 bits to the end of the LSF data
       for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> 15-i) & 1;
+
+      //repack the CRC
+      for (i = 28; i < 30; i++)
+          lsf_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_lsf[i*8], 8);
 
       //Recraft and Prepare New LSF frame for next encoding session
       //this is primarily to make sure the LSF has the refreshed nonce
