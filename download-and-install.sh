@@ -28,15 +28,16 @@ if [ "$ANSWER" = "y" ]; then
   make -j $(nproc)
   sudo make install
   sudo ldconfig
+# make install for Debian 12
   cd $cdir
   git clone https://github.com/lwvmobile/dsd-fme
   cd dsd-fme
-  #git checkout audio_work
   mkdir build
   cd build
   cmake ..
   make -j $(nproc)
   sudo make install
+  # make install (for Debian 12 as ldconfig dos not work on Debian 12 for x64)
   sudo ldconfig
 else
   printf "\nSorry, you cannot build DSD-FME without acknowledging the Patent Notice.\nExiting...\n\n"
