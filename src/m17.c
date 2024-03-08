@@ -1154,14 +1154,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   //   fprintf (stderr, " %d", output_symbols[i]);
   // }
 
-  //save symbols (dibits, actually) to symbol capture bin file format
-  if (opts->symbol_out_f)
-  {
-    for (i = 0; i < 192; i++)
-      fputc (output_dibits[i], opts->symbol_out_f);
-  }
-
-  //WIP: symbols to audio
+  //symbols to audio
 
   //upsample 10x
   int output_up[192*10]; memset (output_up, 0, 192*10*sizeof(int));
@@ -1194,6 +1187,21 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   //   if (i%24 == 0) fprintf (stderr, "\n");
   //   fprintf (stderr, " %d", baseband[i]);
   // }
+
+  //dead air type, output to all enabled formats zero sample to simulate dead air
+  //NOTE: 25 rounds is approximately 1 second even, seems optimal
+  if (type == 9)
+  {
+    memset (output_dibits, 0xFF, sizeof(output_dibits)); //NOTE: 0xFF works better on bin files
+    memset (baseband, 0, 1920*sizeof(short));
+  }
+
+  //save symbols (dibits, actually) to symbol capture bin file format
+  if (opts->symbol_out_f)
+  {
+    for (i = 0; i < 192; i++)
+      fputc (output_dibits[i], opts->symbol_out_f);
+  }
 
   //playing back signal audio into device/udp
   //NOTE: Open the analog output device, use -8
@@ -1230,8 +1238,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 {
 
   //WIP: Finish creating audio of the encoded signal
-  short empty[1920]; //empty audio sample for dead air on wav file output
-  uint8_t nil[368]; //empty array to send to RF during Preamble and EOT Marker
+  uint8_t nil[368]; //empty array to send to RF during Preamble, EOT Marker, or Dead Air
+  memset (nil, 0, sizeof(nil));
 
   //Enable frame, TX and Ncurses Printer
   opts->frame_m17 = 1;
@@ -1257,16 +1265,9 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   short sample = 0;  //individual audio sample from source
   size_t nsam = 160; //number of samples to be read in (default is for codec2 3200 bps)
 
-  //if saving a wav file of baseband audio, insert initial dead air time
-  if (opts->wav_out_raw != NULL)
-  {
-    memset (empty, 0, 1920*sizeof(short)); //bugfix
-    for (i = 0; i < 20; i++)
-    {
-      sf_write_short(opts->wav_out_raw, empty, 1920);
-      sf_write_sync (opts->wav_out_raw);
-    } 
-  }
+  //send dead air with type 9
+  for (i = 0; i < 25; i++)
+    encodeM17RF (opts, state, nil, 9);
 
   //WIP: Open UDP port to 17000 and see if any other config info is necessary for running standard IP frames, etc,
   //or perhaps just also configure an input format for that ip streaming method, may need to handle UDP control packets (conn, ackn, nack, ping, pong, disc)
@@ -1355,12 +1356,13 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
   //Viterbi decoder seems to respond better to non-zero fill, so, when no enc is used
   //let's set the lsf_es to 2 for RES, and fill the nonce value with repeating 0x69
-  if (lsf_et == 0)
-  {
-    lsf_es = 3; //RES
-    for (i = 0; i < 14; i++)
-      nonce[i] = 0x69;
-  }
+  //NOTE: This has seemingly been fixed with the dead air tweaks
+  // if (lsf_et == 0)
+  // {
+  //   lsf_es = 3; //RES
+  //   for (i = 0; i < 14; i++)
+  //     nonce[i] = 0x69;
+  // }
 
   //compose the 16-bit frame information from the above sub elements
   uint16_t lsf_fi = 0;
@@ -1415,7 +1417,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   }
 
   //if AES enc employed, insert the iv into LSF
-  // if (lsf_et == 2) //disable to allow the 0x69 repeating non-zero fill on RES
+  if (lsf_et == 2)
   {
     for (i = 0; i < 112; i++)
       m17_lsf[i+112] = iv[i];
@@ -1950,12 +1952,13 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       //Viterbi decoder seems to respond better to non-zero fill, so, when no enc is used
       //let's set the lsf_es to 2 for RES, and fill the nonce value with repeating 0x69
-      if (lsf_et == 0)
-      {
-        lsf_es = 3; //RES
-        for (i = 0; i < 14; i++)
-          nonce[i] = 0x69;
-      }
+      //NOTE: This has seemingly been fixed with the dead air tweaks
+      // if (lsf_et == 0)
+      // {
+      //   lsf_es = 3; //RES
+      //   for (i = 0; i < 14; i++)
+      //     nonce[i] = 0x69;
+      // }
 
       //load the nonce from packed bytes to a bitwise iv array
       memset(iv, 0, sizeof(iv));
@@ -1967,7 +1970,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       }
 
       //if AES enc employed, insert the iv into LSF
-      // if (lsf_et == 2) //disable to allow the 0x69 repeating non-zero fill on RES
+      if (lsf_et == 2) //disable to allow the 0x69 repeating non-zero fill on RES
       {
         for (i = 0; i < 112; i++) m17_lsf[i+112] = iv[i];
       }
@@ -2028,17 +2031,9 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         memset (nil, 0, sizeof(nil));
         encodeM17RF (opts, state, nil, 5);    //EOT Marker
 
-        //if saving a wav file of baseband audio, insert dead air time
-        //so subsequent encodes have a little bit of breathing room
-        if (opts->wav_out_raw != NULL)
-        {
-          memset (empty, 0, 1920*sizeof(short)); //bugfix
-          for (i = 0; i < 4; i++)
-          {
-            sf_write_short(opts->wav_out_raw, empty, 1920);
-            sf_write_sync (opts->wav_out_raw);
-          } 
-        }
+        //send dead air with type 9
+        for (i = 0; i < 25; i++)
+          encodeM17RF (opts, state, nil, 9);
 
         //reset indicators
         eot = 0;
