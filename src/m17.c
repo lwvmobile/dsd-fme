@@ -688,6 +688,9 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
   //Not yet working on actual signal, but debug version works
   //most likely frame sync / demodulation related issue
 
+  //NOTE: Viterbi Decoder seems to respnd better 
+  //when the 112-bit nonce value isn't all zeroes
+
   //TODO: Work on implementing a symbol buffer of some sort 
   //when the preamble starts? 
   
@@ -1339,6 +1342,15 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   uint16_t lsf_cn = can; //can value
   uint16_t lsf_rs   = 0; //reserved bits
 
+  //Viterbi decoder seems to respond better to non-zero fill, so, when no enc is used
+  //let's set the lsf_es to 2 for RES, and fill the nonce value with repeating 0x69
+  if (lsf_et == 0)
+  {
+    lsf_es = 3; //RES
+    for (i = 0; i < 14; i++)
+      nonce[i] = 0x69;
+  }
+
   //compose the 16-bit frame information from the above sub elements
   uint16_t lsf_fi = 0;
   lsf_fi = (lsf_ps & 1) + (lsf_dt << 1) + (lsf_et << 3) + (lsf_es << 5) + (lsf_cn << 7) + (lsf_rs << 11);
@@ -1392,7 +1404,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   }
 
   //if AES enc employed, insert the iv into LSF
-  if (lsf_et == 2)
+  // if (lsf_et == 2) //disable to allow the 0x69 repeating non-zero fill on RES
   {
     for (i = 0; i < 112; i++)
       m17_lsf[i+112] = iv[i];
@@ -1935,7 +1947,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       }
 
       //if AES enc employed, insert the iv into LSF
-      if (lsf_et == 2)
+      // if (lsf_et == 2) //disable to allow the 0x69 repeating non-zero fill on RES
       {
         for (i = 0; i < 112; i++) m17_lsf[i+112] = iv[i];
       }
@@ -2019,6 +2031,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       //flush decoder side meta last, primarily the last two octets with the lich_cnt in them
       memset(state->m17_meta, 0, sizeof(state->m17_meta));
 
+      //flush decoder side lsf, may be redundant, but using to make sure no stale values loaded during debug
+      memset(state->m17_lsf, 0, sizeof(state->m17_lsf));
 
     }
 
