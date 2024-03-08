@@ -1062,6 +1062,14 @@ void CNXDNConvolution_chainback(unsigned char* out, unsigned int nBits);
 void CNXDNConvolution_encode(const unsigned char* in, unsigned char* out, unsigned int nBits);
 void CNXDNConvolution_init();
 
+//libM17 viterbi decoder
+uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, const uint16_t len);
+uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, const uint16_t in_len, const uint16_t p_len);
+void viterbi_decode_bit(uint16_t s0, uint16_t s1, const size_t pos);
+uint32_t viterbi_chainback(uint8_t* out, size_t pos, uint16_t len);
+void viterbi_reset(void);
+uint16_t q_abs_diff(const uint16_t v1, const uint16_t v2);
+
 //keeping these
 void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state);
 void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,

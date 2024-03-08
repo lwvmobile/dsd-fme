@@ -812,7 +812,7 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
 
 } //end processM17LSF
 
-// void processM17LSF_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_bits)
+//This version is the older method, skipping the depuncturing and just doing deconv
 void processM17LSF_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_depunc)
 {
 
@@ -930,6 +930,124 @@ void processM17LSF_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_depun
 
 } //end processM17LSF_debug
 
+//This will be the stripped out version to switch over to the libM17 viterbi decoder
+void processM17LSF_debug2(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_bits)
+{
+
+  //NOTE: Having run a full debug on all steps, I am convinced that the number of punctures
+  //renders the current convolutional decoder useless to fix the holes in an LSF frame
+
+  //Skipping to the deconvolution step renders the correct frame info and crc value
+  //We can still send the full LSF as intended over IP frame or RF without this step
+
+  //TODO: Switch to M17 Viterbi Decoder for better performance
+
+  int i, x;
+  uint8_t m17_int_bits[368]; //368 bits that are still interleaved
+  uint8_t m17_bits[368]; //368 bits that have been de-interleaved and de-scramble
+  uint8_t m17_depunc[488]; //488 bits after depuncturing
+
+  memset (m17_int_bits, 0, sizeof(m17_int_bits));
+  memset (m17_bits, 0, sizeof(m17_bits));
+  memset (m17_depunc, 0, sizeof(m17_depunc));
+
+  //descramble the frame
+  for (i = 0; i < 368; i++)
+    m17_int_bits[i] = (m17_rnd_bits[i] ^ m17_scramble[i]) & 1;
+
+  //deinterleave the bit array using Quadratic Permutation Polynomial
+  //function π(x) = (45x + 92x^2 ) mod 368
+  for (i = 0; i < 368; i++)
+  {
+    x = ((45*i)+(92*i*i)) % 368;
+    m17_bits[i] = m17_int_bits[x];
+  }
+
+  //P1 Depuncture
+  x = 0;
+  for (i = 0; i < 488; i++)
+  {
+    if (p1[i%61] == 1)
+      m17_depunc[i] = m17_bits[x++];
+    else m17_depunc[i] = 0;
+  }
+
+  //setup the convolutional decoder
+  uint8_t temp[488];
+  uint8_t s0;
+  uint8_t s1;
+  uint8_t m_data[30];
+  uint8_t trellis_buf[240]; //30*8 = 240
+  memset (trellis_buf, 0, sizeof(trellis_buf));
+  memset (temp, 0, sizeof (temp));
+  memset (m_data, 0, sizeof (m_data));
+
+  for (i = 0; i < 488; i++)
+    temp[i] = m17_depunc[i] << 1; 
+
+  CNXDNConvolution_start();
+  for (i = 0; i < 244; i++)
+  {
+    s0 = temp[(2*i)];
+    s1 = temp[(2*i)+1];
+
+    CNXDNConvolution_decode(s0, s1);
+  }
+
+  CNXDNConvolution_chainback(m_data, 240);
+
+  //244/8 = 30, last 4 (244-248) are trailing zeroes
+  for(i = 0; i < 30; i++)
+  {
+    trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
+    trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
+    trellis_buf[(i*8)+2] = (m_data[i] >> 5) & 1;
+    trellis_buf[(i*8)+3] = (m_data[i] >> 4) & 1;
+    trellis_buf[(i*8)+4] = (m_data[i] >> 3) & 1;
+    trellis_buf[(i*8)+5] = (m_data[i] >> 2) & 1;
+    trellis_buf[(i*8)+6] = (m_data[i] >> 1) & 1;
+    trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
+  }
+
+  memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
+  memcpy (state->m17_lsf, trellis_buf, 240);
+
+  uint8_t lsf_packed[30];
+  memset (lsf_packed, 0, sizeof(lsf_packed));
+
+  //need to pack bytes for the sw5wwp variant of the crc (might as well, may be useful in the future)
+  for (i = 0; i < 30; i++)
+    lsf_packed[i] = (uint8_t)ConvertBitIntoBytes(&state->m17_lsf[i*8], 8);
+
+  uint16_t crc_cmp = crc16m17(lsf_packed, 28);
+  uint16_t crc_ext = (uint16_t)ConvertBitIntoBytes(&state->m17_lsf[224], 16);
+  int crc_err = 0;
+
+  if (crc_cmp != crc_ext) crc_err = 1;
+
+  if (crc_err == 0)
+    M17decodeLSF(state);
+
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, "\n LSF: ");
+    for (i = 0; i < 30; i++)
+    {
+      if (i == 15) fprintf (stderr, "\n      ");
+      fprintf (stderr, "[%02X]", lsf_packed[i]);
+    }
+  }
+
+  //debug
+  // fprintf (stderr, " E-%04X; C-%04X (CRC CHK)", crc_ext, crc_cmp);
+
+  if (crc_err == 1) fprintf (stderr, " CRC ERR");
+
+  //ending linebreak
+  // fprintf (stderr, "\n");
+
+} //end processM17LSF_debug2
+
 //debug M17STR for the encoder to pass bits into
 void processM17STR_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_bits)
 {
@@ -1009,7 +1127,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   //Preamble A - 0x7777 (+3, -3, +3, -3, +3, -3, +3, -3)
   uint8_t m17_preamble_a[16] = {0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1};
 
-  //Preamble B - 0xEEEE (+3, -3, +3, -3, +3, -3, +3, -3)
+  //Preamble B - 0xEEEE (-3, +3, -3, +3, -3, +3, -3, +3)
   uint8_t m17_preamble_b[16] = {1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0};
 
   //EOT Marker - 0x555D
@@ -1697,7 +1815,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       {
 
         //debug LSF before (see after in decoder for comparison)
-        // fprintf (stderr, "\n LSF: ");
+        // fprintf (stderr, "\n lsf: ");
         // for (i = 0; i < 30; i++)
         // {
         //   if ((i%15)==0) fprintf (stderr, "\n");
@@ -1707,6 +1825,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "\n M17 LSF    (ENCODER): ");
         if (opts->monitor_input_audio == 0)
           processM17LSF_debug(opts, state, m17_lsfc);
+          // processM17LSF_debug(opts, state, m17_lsfs);
         else fprintf (stderr, " To Audio Out Device Type: %d; ", opts->audio_out_type);
 
         //encodeM17RF
