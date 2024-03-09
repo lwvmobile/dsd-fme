@@ -1076,46 +1076,56 @@ void simple_conv_encoder (uint8_t * input, uint8_t * output, int len)
 //dibits-symbols map
 const int8_t symbol_map[4] = {+1, +3, -1, -3};
 
-//prototype for converting bit array to symbols to RF/Audio
+//convert bit array into symbols and RF/Audio
 void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
 {
+
+  //NOTE: Reorganized type numbers as following:
+  //Single Digit numbers 1,2,3,4 are LSF, STR, PKT, and BRT
+  //Double Digit numbers 11,33,55,99 are preamble, EOT, or Dead Air
 
   int i, j;
 
   //Preamble A - 0x7777 (+3, -3, +3, -3, +3, -3, +3, -3)
-  uint8_t m17_preamble_a[16] = {0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1};
+  uint8_t m17_preamble_a[16] = {0,1,1,1, 0,1,1,1, 0,1,1,1, 0,1,1,1};
 
   //Preamble B - 0xEEEE (-3, +3, -3, +3, -3, +3, -3, +3)
-  uint8_t m17_preamble_b[16] = {1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0};
+  uint8_t m17_preamble_b[16] = {1,1,1,0, 1,1,1,0, 1,1,1,0, 1,1,1,0};
 
   //EOT Marker - 0x555D
-  uint8_t m17_eot_marker[16] = {0,1,0,1, 0,1,0,1, 0,1,0,1,1,1,0,1};
+  uint8_t m17_eot_marker[16] = {0,1,0,1, 0,1,0,1, 0,1,0,1, 1,1,0,1};
 
   //LSF frame sync pattern - 0x55F7 +3, +3, +3, +3, -3, -3, +3, -3
-  uint8_t m17_lsf_fs[16] = {0,1,0,1,0,1,0,1,1,1,1,1,0,1,1,1};
+  uint8_t m17_lsf_fs[16] = {0,1,0,1, 0,1,0,1, 1,1,1,1, 0,1,1,1};
 
   //STR frame sync pattern - 0xFF5D (-3, -3, -3, -3, +3, +3, -3, +3)
-  uint8_t m17_str_fs[16] = {1,1,1,1,1,1,1,1,0,1,0,1,1,1,0,1};
+  uint8_t m17_str_fs[16] = {1,1,1,1, 1,1,1,1 ,0,1,0,1, 1,1,0,1};
+
+  //PKT frame sync pattern - 0x75FF (-3, -3, -3, -3, +3, +3, -3, +3)
+  uint8_t m17_pkt_fs[16] = {0,1,1,1, 0,1,0,1,1,1,1,1,1,1,1,1};
+
+  //BRT frame sync pattern - 0xDF55 (-3, +3, -3, -3, +3, +3, +3, +3)
+  uint8_t m17_brt_fs[16] = {1,1,0,1, 1,1,1,1, 0,1,0,1, 0,1,0,1};
 
   //load bits inti a dibit array plus the framesync bits
   uint8_t output_dibits[192]; memset (output_dibits, 0, sizeof(output_dibits));
 
   //Preamble (just repeat the preamble 12 times to make 192 symbols)
-  if (type == 3) //A Pattern prepends LSF (last symbol opposite of first symbol to prevent zero-crossing)
+  if (type == 11) //A Pattern prepends LSF (last symbol opposite of first symbol to prevent zero-crossing)
   {
     for (i = 0; i < 192; i++)
       output_dibits[i] = (m17_preamble_a[ (i*2+0)%16 ] << 1) + (m17_preamble_a[ (i*2+1)%16 ] << 0);
   }
 
   //Preamble (just repeat the preamble 12 times to make 192 symbols)
-  if (type == 4) //B Pattern prepends BERT? (last symbol opposite of first symbol to prevent zero-crossing)
+  if (type == 33) //B Pattern prepends ??? (last symbol opposite of first symbol to prevent zero-crossing)
   {
     for (i = 0; i < 192; i++)
       output_dibits[i] = (m17_preamble_b[ (i*2+0)%16 ] << 1) + (m17_preamble_b[ (i*2+1)%16 ] << 0);
   }
 
   //EOT Marker (just repeat the EOT marker 12 times to make 192 symbols)
-  if (type == 5) //B Pattern prepends BERT? (last symbol opposite of first symbol to prevent zero-crossing)
+  if (type == 55)
   {
     for (i = 0; i < 192; i++)
       output_dibits[i] = (m17_eot_marker[ (i*2+0)%16 ] << 1) + (m17_eot_marker[ (i*2+1)%16 ] << 0);
@@ -1134,8 +1144,20 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
       output_dibits[i] = (m17_str_fs[i*2+0] << 1) + (m17_str_fs[i*2+1] << 0);
   }
 
-  //load rest of frame (if not preamble, or EOT marker)
-  if (type < 3)
+  if (type == 3) //PKT
+  {
+    for (i = 0; i < 8; i++)
+      output_dibits[i] = (m17_pkt_fs[i*2+0] << 1) + (m17_pkt_fs[i*2+1] << 0);
+  }
+
+  if (type == 4) //BRT
+  {
+    for (i = 0; i < 8; i++)
+      output_dibits[i] = (m17_brt_fs[i*2+0] << 1) + (m17_brt_fs[i*2+1] << 0);
+  }
+
+  //load rest of frame (if not preamble, EOT marker, or dead air)
+  if (type < 5)
   {
     for (i = 0; i < 184; i++)
       output_dibits[i+8] = (input[i*2+0] << 1) + (input[i*2+1] << 0);
@@ -1190,7 +1212,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
 
   //dead air type, output to all enabled formats zero sample to simulate dead air
   //NOTE: 25 rounds is approximately 1 second even, seems optimal
-  if (type == 9)
+  if (type == 99)
   {
     memset (output_dibits, 0xFF, sizeof(output_dibits)); //NOTE: 0xFF works better on bin files
     memset (baseband, 0, 1920*sizeof(short));
@@ -1265,9 +1287,9 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   short sample = 0;  //individual audio sample from source
   size_t nsam = 160; //number of samples to be read in (default is for codec2 3200 bps)
 
-  //send dead air with type 9
+  //send dead air with type 99
   for (i = 0; i < 25; i++)
-    encodeM17RF (opts, state, nil, 9);
+    encodeM17RF (opts, state, nil, 99);
 
   //WIP: Open UDP port to 17000 and see if any other config info is necessary for running standard IP frames, etc,
   //or perhaps just also configure an input format for that ip streaming method, may need to handle UDP control packets (conn, ackn, nack, ping, pong, disc)
@@ -1751,7 +1773,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     lsf_chunk[lich_cnt][46] = (lsf_dt >> 1) & 1;
     lsf_chunk[lich_cnt][47] = (lsf_dt >> 0) & 1;
 
-    //encode with golay 24,12 and load into m17_lig
+    //encode with golay 24,12 and load into m17_l1g
     Golay_24_12_encode (lsf_chunk[lich_cnt]+00, m17_l1g+00);
     Golay_24_12_encode (lsf_chunk[lich_cnt]+12, m17_l1g+24);
     Golay_24_12_encode (lsf_chunk[lich_cnt]+24, m17_l1g+48);
@@ -1807,9 +1829,9 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
           processM17LSF_debug2(opts, state, m17_lsfs);
         else fprintf (stderr, " To Audio Out Device Type: %d; ", opts->audio_out_type);
 
-        //encodeM17RF
+        //convert bit array into symbols and RF/Audio
         memset (nil, 0, sizeof(nil));
-        encodeM17RF (opts, state, nil, 3); //Preamble
+        encodeM17RF (opts, state, nil, 11); //Preamble
         // for (i = 0; i < 6; i++) //test sending multiple LSF OTA
         encodeM17RF (opts, state, m17_lsfs, 1); //LSF
 
@@ -1822,7 +1844,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         processM17STR_debug(opts, state, m17_t4s);
       else fprintf (stderr, " To Audio Out Device Type: %d; ", opts->audio_out_type);
 
-      //encodeM17RF
+      //convert bit array into symbols and RF/Audio
       encodeM17RF (opts, state, m17_t4s, 2);
       
       //Contruct an IP frame using previously created arrays
@@ -2026,14 +2048,14 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
           processM17STR_debug(opts, state, m17_t4s);
         else fprintf (stderr, " To Audio Out Device Type: %d; ", opts->audio_out_type);
 
-        //encodeM17RF
+        //convert bit array into symbols and RF/Audio
         encodeM17RF (opts, state, m17_t4s, 2); //Last Stream Frame
         memset (nil, 0, sizeof(nil));
-        encodeM17RF (opts, state, nil, 5);    //EOT Marker
+        encodeM17RF (opts, state, nil, 55);    //EOT Marker
 
-        //send dead air with type 9
+        //send dead air with type 99
         for (i = 0; i < 25; i++)
-          encodeM17RF (opts, state, nil, 9);
+          encodeM17RF (opts, state, nil, 99);
 
         //reset indicators
         eot = 0;
