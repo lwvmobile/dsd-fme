@@ -812,7 +812,7 @@ typedef struct
  * Frame sync patterns
  */
 
-//The inverse of LSF also seems to be Stream Frame Type, only going to work on Stream mode for now
+//M17 Sync Patterns
 #define M17_LSF     "11113313"
 #define M17_STR     "33331131"
 //alternating with last symbol opposite of first symbol of LSF
@@ -820,8 +820,8 @@ typedef struct
 #define M17_PIV     "13131313"
 #define M17_PRE_LSF "3131313133331131" //Preamble + LSF
 #define M17_PIV_LSF "1313131311113313" //Preamble + LSF
-// #define M17_BRT     "31331111"
-// #define M17_PKT     "13113333"
+#define M17_BRT     "31331111"
+#define M17_PKT     "13113333"
 
 #define FUSION_SYNC     "31111311313113131131"
 #define INV_FUSION_SYNC "13333133131331313313"
@@ -1016,6 +1016,7 @@ void processDSTAR_HD (dsd_opts * opts, dsd_state * state); //DSTAR Header
 void processDSTAR_SD (dsd_opts * opts, dsd_state * state, uint8_t * sd); //DSTAR Slow Data
 void processYSF(dsd_opts * opts, dsd_state * state); //YSF
 void processM17STR(dsd_opts * opts, dsd_state * state); //M17 (STR)
+void processM17PKT(dsd_opts * opts, dsd_state * state); //M17 (PKT)
 void processM17LSF(dsd_opts * opts, dsd_state * state); //M17 (LSF)
 void encodeM17STR(dsd_opts * opts, dsd_state * state); //M17 (STR) encoder
 void encodeM17BRT(dsd_opts * opts, dsd_state * state); //M17 (BRT) encoder

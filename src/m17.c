@@ -2542,3 +2542,93 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
 
   }
 }
+
+//WIP PKT decoder
+void processM17PKT(dsd_opts * opts, dsd_state * state)
+{
+ 
+  int i, j, k, x;
+  uint8_t dbuf[184]; //384-bit (192 symbol) frame - 16-bit (8 symbol) sync pattern (184 dibits)
+  uint8_t m17_int_bits[368]; //368 bits that are still interleaved
+  uint8_t m17_rnd_bits[368]; //368 bits that are still scrambled
+  uint16_t m17_bits[368];    //368 bits that have been de-interleaved and de-scrambled
+  uint16_t m17_depunc[488]; //488 weighted byte representation of bits after depuncturing
+  uint8_t pkt_packed[50];
+  uint8_t pkt_bytes[48];
+
+  uint32_t v_err = 0; //errors in viterbi decoder
+  UNUSED(v_err);
+
+  memset (dbuf, 0, sizeof(dbuf));
+  memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
+  memset (m17_int_bits, 0, sizeof(m17_int_bits));
+  memset (m17_bits, 0, sizeof(m17_bits));
+  memset (m17_rnd_bits, 0, sizeof(m17_rnd_bits));
+  memset (m17_depunc, 0, sizeof(m17_depunc));
+
+  memset (pkt_packed, 0, sizeof(pkt_packed));
+  memset (pkt_bytes, 0, sizeof(pkt_bytes));
+
+
+  //load dibits into dibit buffer
+  for (i = 0; i < 184; i++)
+    dbuf[i] = getDibit(opts, state);
+
+  //convert dbuf into a bit array
+  for (i = 0; i < 184; i++)
+  {
+    m17_rnd_bits[i*2+0] = (dbuf[i] >> 1) & 1;
+    m17_rnd_bits[i*2+1] = (dbuf[i] >> 0) & 1;
+  }
+
+  //descramble the frame
+  for (i = 0; i < 368; i++)
+    m17_int_bits[i] = (m17_rnd_bits[i] ^ m17_scramble[i]) & 1;
+
+  //deinterleave the bit array using Quadratic Permutation Polynomial
+  //function π(x) = (45x + 92x^2 ) mod 368
+  for (i = 0; i < 368; i++)
+  {
+    x = ((45*i)+(92*i*i)) % 368;
+    m17_bits[i] = m17_int_bits[x];
+  }
+
+  //P3 Depuncture and Add Weights
+  x = 0;
+  for (i = 0; i < 420; i++)
+  {
+    if (p3[i%8] == 1)
+      m17_depunc[i] = m17_bits[x++];
+    else m17_depunc[i] = 0;
+
+    if (m17_depunc[i])
+      m17_depunc[i] = 0xFFFF;
+    else m17_depunc[i] = 0x7FFF;
+  }
+
+
+  //use the libM17 Viterbi Decoder
+  uint16_t len = 420;
+  v_err = viterbi_decode(pkt_bytes, m17_depunc, len);
+  // v_err -= 3932040; //cost negation (double check this as well as unit, meaning, etc)
+
+  //debug
+  fprintf (stderr, "\n pkt_bytes: \n");
+  for (i = 0; i < 26; i++)
+    fprintf (stderr, " %02X", pkt_bytes[i]);
+
+  //copy + left shift one octet
+  memcpy (pkt_packed, pkt_bytes+1, 25);
+
+  //Unpack bytes into bits??
+  
+
+  //zero out after decoding
+  memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
+
+  //ending linebreak
+  fprintf (stderr, "\n");
+
+  UNUSED(j); UNUSED(k);
+
+} //end processM17LSF

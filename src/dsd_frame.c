@@ -270,12 +270,18 @@ processFrame (dsd_opts * opts, dsd_state * state)
       return;
     }
     //M17
-    else if ((state->synctype == 16) || (state->synctype == 9) || (state->synctype == 17) || (state->synctype == 8) || (state->synctype == 99) || (state->synctype == 98))
+    else if ((state->synctype == 16) || (state->synctype == 9)  || (state->synctype == 17) || (state->synctype == 8)  || 
+             (state->synctype == 76) || (state->synctype == 77) || (state->synctype == 86) || (state->synctype == 87) ||
+             (state->synctype == 99) || (state->synctype == 98) )
     {
       if (state->synctype == 98 || state->synctype == 99) //preamble only
         skipDibit(opts, state, 8); //skip dibits to prime the demodulator
       else if (state->synctype == 16 || state->synctype == 17)
         processM17STR(opts, state);
+      else if (state->synctype == 76 || state->synctype == 77) {} //Not available yet
+      //   processM17BRT(opts, state); //Not available yet
+      else if (state->synctype == 86 || state->synctype == 87)
+        processM17PKT(opts, state);
       else 
         processM17LSF(opts, state);
       return;

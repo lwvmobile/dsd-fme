@@ -613,6 +613,39 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 return (99);
               }
             }
+            else if (strcmp(synctest8, M17_PKT) == 0)
+            {
+              if (opts->inverted_m17 == 0)
+              {
+                printFrameSync (opts, state, "+M17 PKT", synctest_pos + 1, modulation);
+                state->carrier = 1;
+                state->offset = synctest_pos;
+                state->max = ((state->max) + lmax) / 2;
+                state->min = ((state->min) + lmin) / 2;
+                if (state->lastsynctype == 86 || state->lastsynctype == 8)
+                {
+                  state->lastsynctype = 86;
+                  return (86);
+                }
+                state->lastsynctype = 86;
+                fprintf (stderr, "\n");
+              }
+              // else //unknown, -BRT?
+              // {
+              //   printFrameSync (opts, state, "-M17 BRT", synctest_pos + 1, modulation);
+              //   state->carrier = 1;
+              //   state->offset = synctest_pos;
+              //   state->max = ((state->max) + lmax) / 2;
+              //   state->min = ((state->min) + lmin) / 2;
+              //   if (state->lastsynctype == 77)
+              //   {
+              //     state->lastsynctype = 77;
+              //     return (77);
+              //   }
+              //   state->lastsynctype = 77;
+              //   fprintf (stderr, "\n");
+              // }
+            }
             else if (strcmp(synctest8, M17_STR) == 0)
             {
               if (opts->inverted_m17 == 0)

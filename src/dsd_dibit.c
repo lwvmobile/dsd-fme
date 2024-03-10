@@ -267,7 +267,8 @@ int digitize (dsd_opts* opts, dsd_state* state, int symbol)
   else if ((state->synctype == 1) || (state->synctype == 3)  || (state->synctype == 5)  ||
           (state->synctype == 9)  || (state->synctype == 11) || (state->synctype == 13) ||
           (state->synctype == 17) || (state->synctype == 29) || (state->synctype == 31) ||
-          (state->synctype == 36) || (state->synctype == 99)                              )
+          (state->synctype == 77) || (state->synctype == 87) ||(state->synctype == 36) || 
+          (state->synctype == 99)                              )
 
     {
       //  1 -P25p1
@@ -280,6 +281,8 @@ int digitize (dsd_opts* opts, dsd_state* state, int symbol)
       // 29 -NXDN (inverted FSW)
       // 31 -YSF 
       // 36 -P25p2 
+      // 77 -M17 BRT
+      // 87 -M17 PKT
       // 99 -M17 Preamble
 
       int valid;
@@ -349,6 +352,8 @@ int digitize (dsd_opts* opts, dsd_state* state, int symbol)
       // 28 +NXND (FSW)
       // 30 +YSF
       // 35 +p25p2
+      // 76 +M17 BRT
+      // 86 +M17 PKT
       // 98 +M17 Preamble
 
       int valid;
