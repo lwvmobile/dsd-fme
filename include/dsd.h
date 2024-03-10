@@ -778,6 +778,8 @@ typedef struct
 
   //M17 Storage
   uint8_t m17_lsf[360];
+  uint8_t m17_pkt[850];
+  uint8_t m17_pbc_ct; //pbc packet counter
   uint8_t m17_str_dt; //stream contents
 
   unsigned long long int m17_dst;

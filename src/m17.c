@@ -2421,7 +2421,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //only send once at the appropriate time when encoder is toggled on
   int new_lsf = 1;
 
-  uint8_t pbc = 1; //packet/octet counter
+  uint8_t pbc = 0; //packet/octet counter
   uint8_t eot = 0; //end of tx bit
 
   while (!exitflag)
@@ -2469,7 +2469,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     if (ptr/8 >= tlen)
     {
       eot = 1;
-      pbc = 25-2-pad; //set to total minus pad minus crc
+      pbc = 25-pad; //set to total minus pad minus crc
     }
     m17_p1[200] = eot;
 
@@ -2543,11 +2543,18 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   }
 }
 
+void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
+{
+  //TODO: Decode the completed packet
+  UNUSED(opts); UNUSED(state); UNUSED(input); UNUSED(len);
+
+}
+
 //WIP PKT decoder
 void processM17PKT(dsd_opts * opts, dsd_state * state)
 {
  
-  int i, j, k, x;
+  int i, x;
   uint8_t dbuf[184]; //384-bit (192 symbol) frame - 16-bit (8 symbol) sync pattern (184 dibits)
   uint8_t m17_int_bits[368]; //368 bits that are still interleaved
   uint8_t m17_rnd_bits[368]; //368 bits that are still scrambled
@@ -2613,22 +2620,68 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   // v_err -= 3932040; //cost negation (double check this as well as unit, meaning, etc)
 
   //debug
-  fprintf (stderr, "\n pkt_bytes: \n");
-  for (i = 0; i < 26; i++)
-    fprintf (stderr, " %02X", pkt_bytes[i]);
+  // fprintf (stderr, "\n pkt_bytes: \n");
+  // for (i = 0; i < 27; i++)
+  //   fprintf (stderr, " %02X", pkt_bytes[i]);
 
   //copy + left shift one octet
-  memcpy (pkt_packed, pkt_bytes+1, 25);
+  memcpy (pkt_packed, pkt_bytes+1, 26);
 
-  //Unpack bytes into bits??
-  
+  //debug
+  // fprintf (stderr, "\n pkt_packed: \n");
+  // for (i = 0; i < 26; i++)
+  //   fprintf (stderr, " %02X", pkt_packed[i]);
 
-  //zero out after decoding
-  memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
+  uint8_t counter = (pkt_packed[25] >> 2) & 0x1F;
+  uint8_t eot = (pkt_packed[25] >> 7) & 1;
+
+  //Not sure if it would be better to set state pbc_ct by counter if not EOT?
+  if (!eot) state->m17_pbc_ct = counter;
+  else state->m17_pbc_ct++; //increment if eot
+
+  int ptr = state->m17_pbc_ct*25;
+  int end = ptr + 25;
+
+  //Not sure if it would be better to set state pbc_ct by counter if not EOT?
+  if (!eot) state->m17_pbc_ct = counter;
+  else state->m17_pbc_ct++; //increment if eot
+
+  //debug counter and eot value
+  if (!eot) fprintf (stderr, " CNT: %d; CT: %d; EOT: %d;", state->m17_pbc_ct, counter, eot);
+  else fprintf (stderr, " CNT: %d; CB: %d; EOT: %d;", state->m17_pbc_ct, counter, eot);
+
+  //put packet into storage
+  memcpy (state->m17_pkt+ptr, pkt_packed, 25);
+
+  if (eot)
+  {
+    //do a CRC check
+    uint16_t crc_cmp = crc16m17(state->m17_pkt, end-2);
+    uint16_t crc_ext = (state->m17_pkt[end-2] << 8) + state->m17_pkt[end-1];
+
+    if (crc_cmp != crc_ext) //working!
+      fprintf (stderr, " CRC ERR; C: %04X; E: %04X", crc_cmp, crc_ext);
+    else decodeM17PKT(opts, state, state->m17_pkt, end);
+
+    //debug
+    fprintf (stderr, "\n pkt_full:");
+    for (i = 0; i < end; i++)
+    {
+      if ( (i%25) == 0 && i != 0)
+        fprintf (stderr, "\n          ");
+      fprintf (stderr, " %02X", state->m17_pkt[i]);
+    }
+    
+
+    //reset after processing
+    memset (state->m17_pkt, 1, sizeof(state->m17_pkt));
+    state->m17_pbc_ct = 0;
+  }
+
+  //increment pbc counter last
+  // state->m17_pbc_ct++; //disabled in lieu of the counter/eot check
 
   //ending linebreak
   fprintf (stderr, "\n");
 
-  UNUSED(j); UNUSED(k);
-
-} //end processM17LSF
+} //end processM17PKT

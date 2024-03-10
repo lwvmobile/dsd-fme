@@ -496,6 +496,8 @@ if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
 
   //M17 Storage
   memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
+  memset (state->m17_pkt, 1, sizeof(state->m17_pkt));
+  state->m17_pbc_ct = 0;
   state->m17_str_dt = 9;
 
   state->m17_dst = 0;
@@ -1170,6 +1172,8 @@ initState (dsd_state * state)
 
   //M17 Storage
   memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
+  memset (state->m17_pkt, 1, sizeof(state->m17_pkt));
+  state->m17_pbc_ct = 0;
   state->m17_str_dt = 9;
 
   state->m17_dst = 0;
