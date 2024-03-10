@@ -1979,7 +1979,7 @@ main (int argc, char **argv)
         case 'c': 
           strncpy(opts.symbol_out_file, optarg, 1023);
           opts.symbol_out_file[1023] = '\0';
-          fprintf (stderr,"Writing + Appending symbol capture to file %s\n", opts.symbol_out_file);
+          fprintf (stderr,"Writing symbol capture to file %s\n", opts.symbol_out_file);
           openSymbolOutFile (&opts, &state);
           break;
 

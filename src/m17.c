@@ -2236,8 +2236,27 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
   char d40[] = "BROADCAST"; //DST
   char s40[] = "DSD-FME  "; //SRC
-  char text[] = "This is a simple text message sent over M17 Packet Data";
-  int tlen = strlen((const char*)text); //-1 needed?
+
+  //Default
+  // char text[] = "This is a simple text message sent over M17 Packet Data.";
+
+  //short
+  //NOTE: Having issues on the short as well, will need to investigate (fixed with else if eot == 1 and state pbc == 0 condition)
+  // char text[] = "Lorem";
+
+  //medium
+  //NOTE: This is truncated for some reason, will need to investigate (pad/len issue) adding more spaces at end of string fixes it, but only due to circumstance
+  // char text[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+
+  //large
+  //NOTE: This one works quite well, and uses fewer blocks than I thought it would.
+  // char text[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+
+  //Preamble of the Declaration of Independence (U.S.A.)
+  //NOTE: This one actually fills out all 31 blocks, and properly truncates itself (at Form) and attaches the CRC properly
+  char text[] = "When in the Course of human events, it becomes necessary for one people to dissolve the political bands which have connected them with another, and to assume among the powers of the earth, the separate and equal station to which the Laws of Nature and of Nature's God entitle them, a decent respect to the opinions of mankind requires that they should declare the causes which impel them to the separation. We hold these truths to be self-evident, that all men are created equal, that they are endowed by their Creator with certain unalienable Rights, that among these are Life, Liberty and the pursuit of Happiness.--That to secure these rights, Governments are instituted among Men, deriving their just powers from the consent of the governed, --That whenever any Form of Government becomes destructive of these ends, it is the Right of the People to alter or to abolish it, and to institute new Government, laying its foundation on such principles and organizing its powers in such form, as to them shall seem most likely to effect their Safety and Happiness. Prudence, indeed, will dictate that Governments long established should not be changed for light and transient causes; and accordingly all experience hath shewn, that mankind are more disposed to suffer, while evils are sufferable, than to right themselves by abolishing the forms to which they are accustomed. But when a long train of abuses and usurpations, pursuing invariably the same Object evinces a design to reduce them under absolute Despotism, it is their right, it is their duty, to throw off such Government, and to provide new Guards for their future security.--Such has been the patient sufferance of these Colonies; and such is now the necessity which constrains them to alter their former Systems of Government. The history of the present King of Great Britain is a history of repeated injuries and usurpations, all having in direct object the establishment of an absolute Tyranny over these States. To prove this, let Facts be submitted to a candid world.";
+
+  int tlen = strlen((const char*)text);
   int ptr = 0; //ptr to current position of the text
   int pad = 0; //amount of padding to apply to last frame
   //end User Defined Variables
@@ -2246,7 +2265,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   if (tlen > 25*31 - 2) tlen = (25*31)-2;
 
   //debug tlen value
-  fprintf (stderr, " TL: %d", tlen);
+  fprintf (stderr, " STRLEN: %d", tlen);
 
   //send dead air with type 99
   for (i = 0; i < 25; i++)
@@ -2372,18 +2391,21 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
 
   //Convert a string text message into UTF-8 octets and load into full 
   i = 0; k = 16; //skip first two octets?
-  //0x05 is SMS //needed?
+  //0x05 is SMS
   m17_p1_full[5] = 1; m17_p1_full[7] = 1;
 
   uint8_t cbyte; //byte representation of a single string char
   int block = 0; //number of blocks in total
+  fprintf (stderr, "\n TEXT: ");
   for (i = 0; i < tlen; i++)
   {
     cbyte = (uint8_t)text[ptr++];
+    fprintf (stderr, "%c", cbyte);
     for (j = 0; j < 8; j++)
       m17_p1_full[k++] = (cbyte >> 7-j) & 1;
     if (ptr >= tlen) break;
   }
+  fprintf (stderr, "\n");
 
   //end UTF-8 Encoding
 
@@ -2396,13 +2418,16 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   }
 
   //debug block, pad, K and ptr position
-  fprintf (stderr, " BLOCK: %d; PAD: %d; K: %d; PTR: %d; ", block, pad, k, ptr);
+  fprintf (stderr, " BLOCK: %02d; PAD: %02d; MOD: %02d; K: %04d; PTR: %04d;", block, pad, pad%25, k, ptr);
 
   //Calculate the CRC and attach it here
   uint8_t m17_p1_packed[31*25]; memset (m17_p1_packed, 0, sizeof(m17_p1_packed));
   for (i = 0; i < (25*block)-2; i++)
     m17_p1_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_p1_full[i*8], 8);
   crc_cmp = crc16m17(m17_p1_packed, (25*block)-2);
+
+  //debug dump CRC (when pad is literally zero)
+  fprintf (stderr, " CRC: %04X", crc_cmp);
 
   ptr = (block*25*8) - 16;
 
@@ -2446,7 +2471,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
       ptr = 0;
     }
 
-    //PKT - 206 bits of Packet Data
+    //PKT - 206 bits of Packet Data + 4 trailing bits
     uint8_t m17_p1[210]; memset (m17_p1, 0, sizeof(m17_p1));
 
     //PKT - 420 bits of Packet Data (after Convolutional Encode)
@@ -2658,7 +2683,8 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
 
   //Not sure if it would be better to set state pbc_ct by counter if not EOT?
   if (!eot) state->m17_pbc_ct = counter;
-  else state->m17_pbc_ct++; //increment if eot
+  else if (eot && state->m17_pbc_ct == 0) {} //pass if single block packet (bugfix super short text messages)
+  else if (eot && state->m17_pbc_ct != 0) state->m17_pbc_ct++; //increment if eot and counter not zero
 
   int ptr = state->m17_pbc_ct*25;
   int end = ptr + 25;
@@ -2668,8 +2694,8 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   else state->m17_pbc_ct++; //increment if eot
 
   //debug counter and eot value
-  if (!eot) fprintf (stderr, " CNT: %d; CT: %d; EOT: %d;", state->m17_pbc_ct, counter, eot);
-  else fprintf (stderr, " CNT: %d; CB: %d; EOT: %d;", state->m17_pbc_ct, counter, eot);
+  if (!eot) fprintf (stderr, " CNT: %02d; CT: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
+  else fprintf (stderr, " CNT: %02d; CB: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
 
   //put packet into storage
   memcpy (state->m17_pkt+ptr, pkt_packed, 25);
