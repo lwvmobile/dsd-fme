@@ -46,6 +46,8 @@ uint8_t p1[62] = {
 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1
 };
 
+uint8_t p3[62] = {1, 1, 1, 1, 1, 1, 1, 0};
+
 //from M17_Implementations / libM17 -- sp5wwp -- should have just looked here to begin with
 //this setup looks very similar to the OP25 variant of crc16, but with a few differences (uses packed bytes)
 uint16_t crc16m17(const uint8_t *in, const uint16_t len)
@@ -2220,7 +2222,323 @@ void encodeM17BRT(dsd_opts * opts, dsd_state * state)
 //encode and create audio of a Project M17 PKT signal
 void encodeM17PKT(dsd_opts * opts, dsd_state * state)
 {
-  UNUSED(opts); UNUSED(state);
-  //TODO: This whole thing
-  fprintf (stderr, "\n M17 Packet (ENCODER): ");
+
+  uint8_t nil[368]; //empty array
+  memset (nil, 0, sizeof(nil));
+
+  int i, j, k, x; //basic utility counters
+
+  //User Defined Variables
+  uint8_t can = 7; //channel access number
+  //numerical representation of dst and src after b40 encoding, or special/reserved value
+  unsigned long long int dst = 0;
+  unsigned long long int src = 0;
+  //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
+  char d40[] = "BROADCAST"; //DST
+  char s40[] = "DSD-FME  "; //SRC
+  char text[] = "This is a simple text message sent over M17 Packet Data";
+  int tlen = strlen((const char*)text)-1; //-1 needed?
+  int ptr = 0; //ptr to current position of the text
+  int pad = 0; //amount of padding to apply to last frame
+  //end User Defined Variables
+
+  //sanity check, tlen cannot exceed maximum len needed for crc and control
+  if (tlen > 25*31 - 2) tlen = (25*31)-2;
+
+  //debug tlen value
+  fprintf (stderr, " TL: %d", tlen);
+
+  //send dead air with type 99
+  for (i = 0; i < 25; i++)
+    encodeM17RF (opts, state, nil, 99);
+
+  //send preamble_a for the LSF frame
+  encodeM17RF (opts, state, nil, 33);
+
+  //NOTE: PKT mode does not seem to have a format specified by M17 standard,
+  //so I will assume that you do not send PKT data over IP to a reflector
+
+  uint8_t m17_lsf[240];
+  memset (m17_lsf, 0, sizeof(m17_lsf));
+
+  //Setup LSF Variables, these are not sent in chunks like with voice
+  //but only once at start of PKT TX
+  uint16_t lsf_ps   = 0; //packet or stream indicator bit
+  uint16_t lsf_dt   = 1; //Data
+  uint16_t lsf_et   = 0; //encryption type
+  uint16_t lsf_es   = 0; //encryption sub-type
+  uint16_t lsf_cn = can; //can value
+  uint16_t lsf_rs   = 0; //reserved bits
+
+  //compose the 16-bit frame information from the above sub elements
+  uint16_t lsf_fi = 0;
+  lsf_fi = (lsf_ps & 1) + (lsf_dt << 1) + (lsf_et << 3) + (lsf_es << 5) + (lsf_cn << 7) + (lsf_rs << 11);
+  for (i = 0; i < 16; i++) m17_lsf[96+i] = (lsf_fi >> 15-i) & 1;
+
+  //Convert base40 CSD to numerical values (lifted from libM17)
+
+  //Only if not already set as numerical value
+  if (dst == 0)
+  {
+    for(i = strlen((const char*)d40)-1; i >= 0; i--)
+    {
+      for(j = 0; j < 40; j++)
+      {
+        if(d40[i]==b40[j])
+        {
+          dst=dst*40+j;
+          break;
+          }
+      }
+    }
+  }
+
+  if (src == 0)
+  {
+    for(i = strlen((const char*)s40)-1; i >= 0; i--)
+    {
+      for(j = 0; j < 40; j++)
+      {
+        if(s40[i]==b40[j])
+        {
+          src=src*40+j;
+          break;
+          }
+      }
+    }
+  }
+  //end CSD conversion
+
+  //load dst and src values into the LSF
+  for (i = 0; i < 48; i++) m17_lsf[i] = (dst >> 47ULL-(unsigned long long int)i) & 1;
+  for (i = 0; i < 48; i++) m17_lsf[i+48] = (src >> 47ULL-(unsigned long long int)i) & 1;
+
+  //TODO: Any extra meta fills (extended callsign, etc?)
+
+  //pack and compute the CRC16 for LSF
+  uint16_t crc_cmp = 0;
+  uint8_t lsf_packed[30];
+  memset (lsf_packed, 0, sizeof(lsf_packed));
+  for (i = 0; i < 28; i++)
+      lsf_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_lsf[i*8], 8);
+  crc_cmp = crc16m17(lsf_packed, 28);
+
+  //attach the crc16 bits to the end of the LSF data
+  for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> 15-i) & 1;
+
+  //pack the CRC
+  for (i = 28; i < 30; i++)
+      lsf_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_lsf[i*8], 8);
+
+  //Craft and Send Initial LSF frame to be decoded
+
+  //LSF w/ convolutional encoding (double check array sizes)
+  uint8_t m17_lsfc[488]; memset (m17_lsfc, 0, sizeof(m17_lsfc));
+
+  //LSF w/ P1 Puncturing
+  uint8_t m17_lsfp[368]; memset (m17_lsfp, 0, sizeof(m17_lsfp));
+
+  //LSF w/ Interleave
+  uint8_t m17_lsfi[368]; memset (m17_lsfi, 0, sizeof(m17_lsfi));
+
+  //LSF w/ Scrambling
+  uint8_t m17_lsfs[368]; memset (m17_lsfs, 0, sizeof(m17_lsfs));
+
+  //Use the convolutional encoder to encode the LSF Frame
+  simple_conv_encoder (m17_lsf, m17_lsfc, 244);
+
+  //P1 puncture
+  x = 0;
+  for (i = 0; i < 488; i++)
+  {
+    if (p1[i%61] == 1)
+      m17_lsfp[x++] = m17_lsfc[i];
+  }
+
+  //interleave the bit array using Quadratic Permutation Polynomial
+  //function π(x) = (45x + 92x^2 ) mod 368
+  for (i = 0; i < 368; i++)
+  {
+    x = ((45*i)+(92*i*i)) % 368;
+    m17_lsfi[x] = m17_lsfp[i];
+  }
+
+  //scramble/randomize the frame
+  for (i = 0; i < 368; i++)
+    m17_lsfs[i] = (m17_lsfi[i] ^ m17_scramble[i]) & 1;
+
+  //a full sized complete packet paylaod to break into smaller frames
+  uint8_t m17_p1_full[31*200]; memset (m17_p1_full, 0, sizeof(m17_p1_full));
+
+  //Convert a string text message into UTF-8 octets and load into full 
+  i = 0; k = 16; //skip first two octets?
+  //0x05 is SMS //needed?
+  m17_p1_full[5] = 1; m17_p1_full[7] = 1;
+
+  uint8_t cbyte; //byte representation of a single string char
+  int block = 0; //number of blocks in total
+  for (i = 0; i < tlen; i++)
+  {
+    cbyte = (uint8_t)text[ptr++];
+    for (j = 0; j < 8; j++)
+      m17_p1_full[k++] = (cbyte >> 7-j) & 1;
+    if (ptr >= tlen) break;
+  }
+
+  //end UTF-8 Encoding
+
+  if (ptr >= tlen)
+  {
+    block = (ptr / 25);
+    if (ptr%25) block++;
+    pad = (block * 25) - ptr;
+    pad -= 2; //subtract two for the CRC
+  }
+
+  //debug block, pad, K and ptr position
+  fprintf (stderr, " BLOCK: %d; PAD: %d; K: %d; PTR: %d; ", block, pad, k, ptr);
+
+  //Calculate the CRC and attach it here
+  uint8_t m17_p1_packed[31*25]; memset (m17_p1_packed, 0, sizeof(m17_p1_packed));
+  for (i = 0; i < (25*block)-2; i++)
+    m17_p1_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_p1_full[i*8], 8);
+  crc_cmp = crc16m17(m17_p1_packed, (25*block)-2);
+
+  ptr = (block*25*8) - 16;
+
+  //attach the crc16 bits to the end of the LSF data
+  for (i = 0; i < 16; i++) m17_p1_full[ptr+i] = (crc_cmp >> 15-i) & 1;
+
+  //debug the full payload
+  fprintf (stderr, "\n M17 Packet      FULL: ");
+  for (i = 0; i < 25*block; i++)
+  {
+    if ( (i%25) == 0 && i != 0 ) fprintf (stderr, "\n                       ");
+    fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(&m17_p1_full[i*8], 8));
+  }
+
+  //flag to determine if we send a new LSF frame for new encode
+  //only send once at the appropriate time when encoder is toggled on
+  int new_lsf = 1;
+
+  uint8_t pbc = 1; //packet/octet counter
+  uint8_t eot = 0; //end of tx bit
+
+  while (!exitflag)
+  {
+    //send LSF frame once, if new encode session
+    if (new_lsf == 1)
+    {
+
+      fprintf (stderr, "\n M17 LSF    (ENCODER): ");
+      processM17LSF_debug2(opts, state, m17_lsfs);
+
+      //convert bit array into symbols and RF/Audio
+      memset (nil, 0, sizeof(nil));
+      encodeM17RF (opts, state, nil, 11); //Preamble
+      // for (i = 0; i < 6; i++) //test sending multiple LSF OTA
+      encodeM17RF (opts, state, m17_lsfs, 1); //LSF
+
+      //flag off after sending
+      new_lsf = 0;
+
+      //reset ptr value to use during chunk loading
+      ptr = 0;
+    }
+
+    //PKT - 206 bits of Packet Data
+    uint8_t m17_p1[210]; memset (m17_p1, 0, sizeof(m17_p1));
+
+    //PKT - 420 bits of Packet Data (after Convolutional Encode)
+    uint8_t m17_p2c[420]; memset (m17_p2c, 0, sizeof(m17_p2c));
+
+    //PKT - 368 bits of Packet Data (after P2 Puncturing)
+    uint8_t m17_p3p[368]; memset (m17_p3p, 0, sizeof(m17_p3p));
+
+    //PKT - 368 bits of Packet Data (after Interleaving)
+    uint8_t m17_p4i[368]; memset (m17_p4i, 0, sizeof(m17_p4i));
+
+    //PKT - 368 bits of Packet Data (after Scrambling)
+    uint8_t m17_p4s[368]; memset (m17_p4s, 0, sizeof(m17_p4s));
+
+    //Break the full payload into 25 octet chunks and load into p1
+    for (i = 0; i < 200; i++)
+      m17_p1[i] = m17_p1_full[ptr++];
+
+    //Trigger EOT when out of data to encode
+    if (ptr/8 >= tlen)
+    {
+      eot = 1;
+      pbc = 25-2-pad; //set to total minus pad minus crc
+    }
+    m17_p1[200] = eot;
+
+    //set pbc counter to last 5 bits
+    for (i = 0; i < 5; i++)
+      m17_p1[201+i] = (pbc >> 4-i) & 1;
+
+    //Use the convolutional encoder to encode the packet data
+    simple_conv_encoder (m17_p1, m17_p2c, 210); //206 + 4 trailing bits
+
+    //P3 puncture
+    x = 0;
+    for (i = 0; i < 420; i++)
+    {
+      if (p3[i%8] == 1)
+        m17_p3p[x++] = m17_p2c[i];
+    }
+
+    //debug X bit positions
+    // fprintf (stderr, " X: %d", x);
+
+    //interleave the bit array using Quadratic Permutation Polynomial
+    //function π(x) = (45x + 92x^2 ) mod 368
+    for (i = 0; i < 368; i++)
+    {
+      x = ((45*i)+(92*i*i)) % 368;
+      m17_p4i[x] = m17_p3p[i];
+    }
+
+    //scramble/randomize the frame
+    for (i = 0; i < 368; i++)
+      m17_p4s[i] = (m17_p4i[i] ^ m17_scramble[i]) & 1;
+
+    //debug insert 3 random bit flip in the finished PKT frame
+    // int rnd1 = rand()%368;
+    // int rnd2 = rand()%368;
+    // int rnd3 = rand()%368;
+    // m17_b4s[rnd1] ^= 1;
+    // m17_b4s[rnd2] ^= 1;
+    // m17_b4s[rnd3] ^= 1;
+
+    //-----------------------------------------
+
+
+    fprintf (stderr, "\n M17 Packet (ENCODER): ");
+
+    //Dump Output of the current Packet Frame
+    for (i = 0; i < 26; i++)
+      fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(&m17_p1[i*8], 8));
+
+    //convert bit array into symbols and RF/Audio
+    encodeM17RF (opts, state, m17_p4s, 4);
+
+    //send the EOT Marker and some dead air
+    if (eot)
+    {
+      memset (nil, 0, sizeof(nil));
+      encodeM17RF (opts, state, nil, 55); //EOT Marker
+
+      //send dead air with type 99
+      for (i = 0; i < 25; i++)
+        encodeM17RF (opts, state, nil, 99);
+
+      //shut it down
+      exitflag = 1;
+    }
+
+    //increment packet / byte counter
+    pbc++;
+
+  }
 }
