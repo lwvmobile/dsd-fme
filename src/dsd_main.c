@@ -626,6 +626,8 @@ initOpts (dsd_opts * opts)
   opts->msize = 1024; //15 default, max is 1024, much cleaner data decodes on Phase 2 cqpsk at max
   opts->playfiles = 0;
   opts->m17encoder = 0;
+  opts->m17encoderbrt = 0;
+  opts->m17encoderpkt = 0;
   opts->delay = 0;
   opts->use_cosine_filter = 1;
   opts->unmute_encrypted_p25 = 0;
@@ -1287,6 +1289,11 @@ usage ()
   printf ("\n");
   printf (" Example: dsd-fme -fZ -i tcp -8 -o pulse -N 2> m17encoderlog.ans\n");
   printf ("   Run M17 Encoding, listening to default tcp input, without internal decode/playback and output to 48k/1 analog output device\n");
+  printf ("\n");
+  printf ("  -fB           M17 BERT Encoder\n");
+  printf (" Example: dsd-fme -fB -6 m17bert.wav\n");
+  printf ("  -fP           M17 Packet Encoder\n");
+  printf (" Example: dsd-fme -fP -6 m17pkt.wav (NOTE: WIP)\n");
   printf ("\n");
   printf ("Decoder options:\n");
   printf ("  -fa           Auto Detection\n");
@@ -2387,12 +2394,26 @@ main (int argc, char **argv)
             fprintf(stderr, "Notice: M17 cannot autodetect polarity. \n Use -xz option if Inverted Signal expected.\n");
             fprintf(stderr, "Decoding only M17 frames.\n");
           }
-          else if (optarg[0] == 'Z') //Captial Z to Run the M17 encoder
+          else if (optarg[0] == 'Z') //Captial Z to Run the M17 STR encoder
           {
             opts.m17encoder = 1;
             opts.pulse_digi_rate_out = 48000;
             opts.pulse_digi_out_channels = 1;
             sprintf (opts.output_name, "M17 Encoder");
+          }
+          else if (optarg[0] == 'B') //Captial B to Run the M17 BRT encoder
+          {
+            opts.m17encoderbrt = 1;
+            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_out_channels = 1;
+            sprintf (opts.output_name, "M17 BERT");
+          }
+          else if (optarg[0] == 'P') //Captial P to Run the M17 PKT encoder
+          {
+            opts.m17encoderpkt = 1;
+            opts.pulse_digi_rate_out = 48000;
+            opts.pulse_digi_out_channels = 1;
+            sprintf (opts.output_name, "M17 Packet");
           }
           break;
         //don't mess with the modulations unless you really need to
@@ -2949,6 +2970,22 @@ main (int argc, char **argv)
       if (opts.audio_out_type == 0) openPulseOutput(&opts);
       //All input and output now opened and handled correctly, so let's not break things by tweaking
       encodeM17STR(&opts, &state);
+    }
+
+    else if (opts.m17encoderbrt == 1)
+    {
+      opts.pulse_digi_rate_out = 8000;
+      //open any outputs, if not already opened
+      if (opts.audio_out_type == 0) openPulseOutput(&opts);
+      encodeM17BRT(&opts, &state); 
+    }
+
+    else if (opts.m17encoderpkt == 1)
+    {
+      opts.pulse_digi_rate_out = 8000;
+      //open any outputs, if not already opened
+      if (opts.audio_out_type == 0) openPulseOutput(&opts);
+      encodeM17PKT(&opts, &state);
     }
 
     else

@@ -271,6 +271,8 @@ typedef struct
   int msize;
   int playfiles;
   int m17encoder;
+  int m17encoderbrt;
+  int m17encoderpkt;
   int delay;
   int use_cosine_filter;
   int unmute_encrypted_p25;
@@ -1016,6 +1018,8 @@ void processYSF(dsd_opts * opts, dsd_state * state); //YSF
 void processM17STR(dsd_opts * opts, dsd_state * state); //M17 (STR)
 void processM17LSF(dsd_opts * opts, dsd_state * state); //M17 (LSF)
 void encodeM17STR(dsd_opts * opts, dsd_state * state); //M17 (STR) encoder
+void encodeM17BRT(dsd_opts * opts, dsd_state * state); //M17 (BRT) encoder
+void encodeM17PKT(dsd_opts * opts, dsd_state * state); //M17 (PKT) encoder
 void processP2(dsd_opts * opts, dsd_state * state); //P2
 void processTSBK(dsd_opts * opts, dsd_state * state); //P25 Trunking Single Block
 void processMPDU(dsd_opts * opts, dsd_state * state); //P25 Multi Block PDU (SAP 0x61 FMT 0x15 or 0x17 for Trunking Blocks)

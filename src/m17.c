@@ -1118,7 +1118,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   }
 
   //Preamble (just repeat the preamble 12 times to make 192 symbols)
-  if (type == 33) //B Pattern prepends ??? (last symbol opposite of first symbol to prevent zero-crossing)
+  if (type == 33) //B Pattern prepends BRT (last symbol opposite of first symbol to prevent zero-crossing)
   {
     for (i = 0; i < 192; i++)
       output_dibits[i] = (m17_preamble_b[ (i*2+0)%16 ] << 1) + (m17_preamble_b[ (i*2+1)%16 ] << 0);
@@ -1144,16 +1144,16 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
       output_dibits[i] = (m17_str_fs[i*2+0] << 1) + (m17_str_fs[i*2+1] << 0);
   }
 
-  if (type == 3) //PKT
-  {
-    for (i = 0; i < 8; i++)
-      output_dibits[i] = (m17_pkt_fs[i*2+0] << 1) + (m17_pkt_fs[i*2+1] << 0);
-  }
-
-  if (type == 4) //BRT
+  if (type == 3) //BRT
   {
     for (i = 0; i < 8; i++)
       output_dibits[i] = (m17_brt_fs[i*2+0] << 1) + (m17_brt_fs[i*2+1] << 0);
+  }
+
+  if (type == 4) //PKT
+  {
+    for (i = 0; i < 8; i++)
+      output_dibits[i] = (m17_pkt_fs[i*2+0] << 1) + (m17_pkt_fs[i*2+1] << 0);
   }
 
   //load rest of frame (if not preamble, EOT marker, or dead air)
@@ -1209,6 +1209,10 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   //   if (i%24 == 0) fprintf (stderr, "\n");
   //   fprintf (stderr, " %d", baseband[i]);
   // }
+
+  //debug insert random 'noise' into the baseband audio
+  // for (i = 0; i < 40; i++)
+  //   baseband[i] -= rand()& 0x7FFF;
 
   //dead air type, output to all enabled formats zero sample to simulate dead air
   //NOTE: 25 rounds is approximately 1 second even, seems optimal
@@ -2083,4 +2087,140 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   free(samp1);
   free(samp2);
 
+}
+
+//encode and create audio of a Project M17 BERT signal
+void encodeM17BRT(dsd_opts * opts, dsd_state * state)
+{
+
+  //NOTE: BERT will not use the nucrses terminal,
+  //just strictly for making a BERT test signal
+  
+  uint8_t nil[368]; //empty array
+  memset (nil, 0, sizeof(nil));
+
+  int i, j, k, x; //basic utility counters
+
+  //send dead air with type 99
+  for (i = 0; i < 25; i++)
+    encodeM17RF (opts, state, nil, 99);
+
+  //send preamble_b for the BERT frame
+  encodeM17RF (opts, state, nil, 33);
+
+  //BERT - 197 bits generated from a PRBS9 Generator
+  uint8_t m17_b1[201]; memset (m17_b1, 0, sizeof(m17_b1));
+
+  uint16_t lfsr = 1; //starting value of the LFSR
+  uint16_t  bit = 1; //result bit of taps XOR
+  m17_b1[0] = 1;
+
+  while (!exitflag)
+  {
+
+    //Generate sequence (if doing 197 at a time)
+    // for (j = 0; j < 197; j++)
+    // {
+    //   bit = ( (lfsr >> 8) ^ (lfsr ^ 4) ) & 1;
+    //   lfsr = (lfsr << 1) | bit;
+    //   m17_b1[j] = bit;
+    // }
+
+    //BERT (reversed sequence for output)
+    uint8_t m17_b1r[208]; memset (m17_b1r, 0, sizeof(m17_b1r));
+
+    //BERT (after Convolutional Encode)
+    uint8_t m17_b1c[402]; memset (m17_b1c, 0, sizeof(m17_b1c));
+
+    //BERT (after P2 Puncturing)
+    uint8_t m17_b2p[368]; memset (m17_b2p, 0, sizeof(m17_b2p));
+
+    //BERT (Interleaved Bits)
+    uint8_t m17_b3i[368]; memset (m17_b3i, 0, sizeof(m17_b3i));
+
+    //BERT (Scrambling Applied)
+    uint8_t m17_b4s[368]; memset (m17_b4s, 0, sizeof(m17_b4s));
+
+    simple_conv_encoder (m17_b1, m17_b1c, 201); //197+4
+
+    //use the P2 puncture to...puncture and collapse the BERT Frame
+    k = 0; x = 0;
+    for (i = 0; i < 34; i++)
+    {
+      m17_b2p[k++] = m17_b1c[x++];
+      m17_b2p[k++] = m17_b1c[x++];
+      m17_b2p[k++] = m17_b1c[x++];
+      m17_b2p[k++] = m17_b1c[x++];
+      m17_b2p[k++] = m17_b1c[x++];
+      //quit early on last set of i when 368 k bits reached 
+      //index from 0 to 367,so 368 is breakpoint with k++
+      if (k == 368) break;
+      m17_b2p[k++] = m17_b1c[x++];
+      m17_b2p[k++] = m17_b1c[x++];
+      m17_b2p[k++] = m17_b1c[x++];
+      m17_b2p[k++] = m17_b1c[x++];
+      m17_b2p[k++] = m17_b1c[x++];
+      m17_b2p[k++] = m17_b1c[x++];
+      x++;
+    }
+
+    //debug K and X bit positions
+    fprintf (stderr, " K: %d; X: %d", k, x);
+
+    //interleave the bit array using Quadratic Permutation Polynomial
+    //function π(x) = (45x + 92x^2 ) mod 368
+    for (i = 0; i < 368; i++)
+    {
+      x = ((45*i)+(92*i*i)) % 368;
+      m17_b3i[x] = m17_b2p[i];
+    }
+
+    //scramble/randomize the frame
+    for (i = 0; i < 368; i++)
+      m17_b4s[i] = (m17_b3i[i] ^ m17_scramble[i]) & 1;
+
+    //debug insert 3 random bit flip in the finished BERT frame
+    // int rnd1 = rand()%368;
+    // int rnd2 = rand()%368;
+    // int rnd3 = rand()%368;
+    // m17_b4s[rnd1] ^= 1;
+    // m17_b4s[rnd2] ^= 1;
+    // m17_b4s[rnd3] ^= 1;
+
+    //-----------------------------------------
+
+    fprintf (stderr, "\n M17 BERT   (ENCODER): ");
+
+    //reverse the sequence and shift so it appears correct on display
+    for (i = 0; i < 197; i++)
+      m17_b1r[i+3] = m17_b1[196-i];
+    
+    //Dump Output of the BERT array (reversed and shifted sequence)
+    for (i = 0; i < 25; i++)
+      fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(&m17_b1r[i*8], 8));
+
+    //convert bit array into symbols and RF/Audio
+    encodeM17RF (opts, state, m17_b4s, 3);
+
+    //advance sequence if doing 1 bit each BERT frame
+    bit = ( (lfsr >> 8) ^ (lfsr ^ 4) ) & 1;
+    lfsr = (lfsr << 1) | bit;
+
+    //shift the array once and put the result bit into the zero position
+    //NOTE: The endian-ness of this may be opposite of what is expected
+    for (j = 1; j < 197; j++)
+      m17_b1[197-j] = m17_b1[197-j-1];
+    m17_b1[0] = bit;
+
+    //end sequence advancement
+
+  }
+}
+
+//encode and create audio of a Project M17 PKT signal
+void encodeM17PKT(dsd_opts * opts, dsd_state * state)
+{
+  UNUSED(opts); UNUSED(state);
+  //TODO: This whole thing
+  fprintf (stderr, "\n M17 Packet (ENCODER): ");
 }
