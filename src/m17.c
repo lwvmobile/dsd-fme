@@ -2237,7 +2237,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   char d40[] = "BROADCAST"; //DST
   char s40[] = "DSD-FME  "; //SRC
   char text[] = "This is a simple text message sent over M17 Packet Data";
-  int tlen = strlen((const char*)text)-1; //-1 needed?
+  int tlen = strlen((const char*)text); //-1 needed?
   int ptr = 0; //ptr to current position of the text
   int pad = 0; //amount of padding to apply to last frame
   //end User Defined Variables
@@ -2545,8 +2545,29 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
 
 void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
 {
-  //TODO: Decode the completed packet
-  UNUSED(opts); UNUSED(state); UNUSED(input); UNUSED(len);
+  //WIP: Decode the completed packet
+  UNUSED(opts); UNUSED(state); UNUSED(len);
+  int i;
+
+  uint8_t protocol = input[0];
+  fprintf (stderr, " Protocol:");
+  if (protocol == 0) fprintf (stderr, " Raw;");
+  else if (protocol == 1) fprintf (stderr, " AX.25;");
+  else if (protocol == 2) fprintf (stderr, " APRS;");
+  else if (protocol == 3) fprintf (stderr, " 6LoWPAN;");
+  else if (protocol == 4) fprintf (stderr, " IPv4;");
+  else if (protocol == 5) fprintf (stderr, " SMS;");
+  else if (protocol == 6) fprintf (stderr, " Winlink;");
+  else fprintf (stderr, " Res: %02X;", protocol);
+
+  //simple UTF-8 SMS Decoder
+  if (protocol == 5)
+  {
+    fprintf (stderr, "\n");
+    fprintf (stderr, " TEXT: ");
+    for (i = 2; i < len; i++)
+      fprintf (stderr, "%c", input[i]);
+  }
 
 }
 
@@ -2661,7 +2682,7 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
 
     if (crc_cmp != crc_ext) //working!
       fprintf (stderr, " CRC ERR; C: %04X; E: %04X", crc_cmp, crc_ext);
-    else decodeM17PKT(opts, state, state->m17_pkt, end);
+    else decodeM17PKT(opts, state, state->m17_pkt, end-2);
 
     //debug
     fprintf (stderr, "\n pkt_full:");
