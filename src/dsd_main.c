@@ -107,11 +107,11 @@ void
 noCarrier (dsd_opts * opts, dsd_state * state)
 {
 
-#ifdef AERO_BUILD
-//TODO: Investigate why getSymbol needs to be run first in this context...truly confused here
-if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
-  for (int i = 0; i < 960; i++) getSymbol(opts, state, 1); //I think this is actually just framesync being a pain
-#endif
+// #ifdef AERO_BUILD //NOTE: Blame seems to be synctest8 not being initialized (will continue to test)
+// //TODO: Investigate why getSymbol needs to be run first in this context...truly confused here
+// if(opts->frame_m17 == 1) //&& opts->audio_in_type == 5
+//   for (int i = 0; i < 960; i++) getSymbol(opts, state, 1); //I think this is actually just framesync being a pain
+// #endif
 
   if (opts->floating_point == 1)
   {
@@ -1446,11 +1446,11 @@ if (opts->audio_out_type == 0)
   openPulseOutput(opts);
 }
 
-#ifdef AERO_BUILD
-//TODO: More Random Cygwin Related M17 Bugs to sort out
-if(opts->frame_m17 == 1 && opts->audio_in_type != 0)
-  for (int i = 0; i < 960; i++) getSymbol(opts, state, 1); //I think this is actually just framesync being a pain
-#endif
+// #ifdef AERO_BUILD //NOTE: Blame seems to be synctest8 not being initialized (will continue to test)
+// //TODO: More Random Cygwin Related M17 Bugs to sort out
+// if(opts->frame_m17 == 1)
+//   for (int i = 0; i < 960; i++) getSymbol(opts, state, 1); //I think this is actually just framesync being a pain
+// #endif
 
     while (!exitflag)
     {

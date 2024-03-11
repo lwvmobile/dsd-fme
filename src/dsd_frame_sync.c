@@ -184,10 +184,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   char synctest[25];
   char synctest12[13]; //dPMR
   char synctest10[11]; //NXDN FSW only
-  char synctest18[19];
   char synctest32[33];
   char synctest20[21]; //YSF
-  char synctest21[22]; //P25 S-OEMI (SACCH)
   char synctest48[49]; //EDACS
   char synctest8[9];   //M17
   char synctest16[17]; //M17 Preamble
@@ -195,8 +193,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   char *synctest_p;
   char synctest_buf[10240]; //what actually is assigned to this, can't find its use anywhere?
   int lmin, lmax, lidx;
-  UNUSED2(synctest18, synctest21);
-  
+
   //assign t_max value based on decoding type expected (all non-auto decodes first)
   int t_max; //maximum values allowed for t will depend on decoding type - NXDN will be 10, others will be more
   if (opts->frame_nxdn48 == 1 || opts->frame_nxdn96 == 1)
@@ -233,11 +230,13 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   t = 0;
   synctest10[10] = 0; 
   synctest[24] = 0;
+  synctest8[8] = 0;   //M17, wasn't initialized or terminated (source of much pain and frustration in Cygwin)
   synctest12[12] = 0;
-  synctest18[18] = 0;
+  synctest16[16] = 0; //M17, wasn't initialized or terminated (source of much pain and frustration in Cygwin)
   synctest48[48] = 0;
   synctest32[32] = 0;
   synctest20[20] = 0;
+  modulation[7] = 0;  //not initialized or terminated (unsure if this would be an issue or not)
   synctest_pos = 0;
   synctest_p = synctest_buf + 10;
   sync = 0;
