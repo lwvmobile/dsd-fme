@@ -2237,35 +2237,48 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   char d40[] = "DSD-FME  "; //DST
   char s40[] = "DSD-FME  "; //SRC
 
+  // dst = 0xEE6B28000000; //viterbi debug values
+  // src = 0xEE6B28000000; //viterbi debug values
+
   //Default
-  // char text[] = "This is a simple text message sent over M17 Packet Data.";
+  // char text[] = "This is a simple SMS text message sent over M17 Packet Data.";
 
   //short
-  //NOTE: Having issues on the short as well, will need to investigate (fixed with else if eot == 1 and state pbc == 0 condition)
+  //NOTE: Pad and PBC working now (if including protocol byte)
   // char text[] = "Lorem";
 
   //medium
-  //NOTE: This is truncated for some reason, will need to investigate (pad/len issue) adding more spaces at end of string fixes it, but only due to circumstance
+  //NOTE: Pad and PBC working now
   // char text[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
 
   //large
-  //NOTE: This one works quite well, and uses fewer blocks than I thought it would.
-  // char text[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+  //NOTE: Pad and PBC working now
+  char text[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
   //Preamble of the Declaration of Independence (U.S.A.)
-  //NOTE: This one actually fills out all 31 blocks, and properly truncates itself (at Form) and attaches the CRC properly
-  char text[] = "When in the Course of human events, it becomes necessary for one people to dissolve the political bands which have connected them with another, and to assume among the powers of the earth, the separate and equal station to which the Laws of Nature and of Nature's God entitle them, a decent respect to the opinions of mankind requires that they should declare the causes which impel them to the separation. We hold these truths to be self-evident, that all men are created equal, that they are endowed by their Creator with certain unalienable Rights, that among these are Life, Liberty and the pursuit of Happiness.--That to secure these rights, Governments are instituted among Men, deriving their just powers from the consent of the governed, --That whenever any Form of Government becomes destructive of these ends, it is the Right of the People to alter or to abolish it, and to institute new Government, laying its foundation on such principles and organizing its powers in such form, as to them shall seem most likely to effect their Safety and Happiness. Prudence, indeed, will dictate that Governments long established should not be changed for light and transient causes; and accordingly all experience hath shewn, that mankind are more disposed to suffer, while evils are sufferable, than to right themselves by abolishing the forms to which they are accustomed. But when a long train of abuses and usurpations, pursuing invariably the same Object evinces a design to reduce them under absolute Despotism, it is their right, it is their duty, to throw off such Government, and to provide new Guards for their future security.--Such has been the patient sufferance of these Colonies; and such is now the necessity which constrains them to alter their former Systems of Government. The history of the present King of Great Britain is a history of repeated injuries and usurpations, all having in direct object the establishment of an absolute Tyranny over these States. To prove this, let Facts be submitted to a candid world.";
-
-  int tlen = strlen((const char*)text);
-  int ptr = 0; //ptr to current position of the text
-  int pad = 0; //amount of padding to apply to last frame
+  //NOTE: Pad and PBC working now (if you include the terminator on block 31)
+  // char text[] = "When in the Course of human events, it becomes necessary for one people to dissolve the political bands which have connected them with another, and to assume among the powers of the earth, the separate and equal station to which the Laws of Nature and of Nature's God entitle them, a decent respect to the opinions of mankind requires that they should declare the causes which impel them to the separation. We hold these truths to be self-evident, that all men are created equal, that they are endowed by their Creator with certain unalienable Rights, that among these are Life, Liberty and the pursuit of Happiness.--That to secure these rights, Governments are instituted among Men, deriving their just powers from the consent of the governed, --That whenever any Form of Government becomes destructive of these ends, it is the Right of the People to alter or to abolish it, and to institute new Government, laying its foundation on such principles and organizing its powers in such form, as to them shall seem most likely to effect their Safety and Happiness. Prudence, indeed, will dictate that Governments long established should not be changed for light and transient causes; and accordingly all experience hath shewn, that mankind are more disposed to suffer, while evils are sufferable, than to right themselves by abolishing the forms to which they are accustomed. But when a long train of abuses and usurpations, pursuing invariably the same Object evinces a design to reduce them under absolute Despotism, it is their right, it is their duty, to throw off such Government, and to provide new Guards for their future security.--Such has been the patient sufferance of these Colonies; and such is now the necessity which constrains them to alter their former Systems of Government. The history of the present King of Great Britain is a history of repeated injuries and usurpations, all having in direct object the establishment of an absolute Tyranny over these States. To prove this, let Facts be submitted to a candid world.";
   //end User Defined Variables
 
-  //sanity check, tlen cannot exceed maximum len needed for crc and control
-  if (tlen > 25*31 - 2) tlen = (25*31)-2;
+  int tlen = strlen((const char*)text);
+  int mlen = tlen/771; //overflow in case multiple tx encodes are required
+  int ptr = 0;  //ptr to current position of the text
+  int pad = 0; //amount of padding to apply to last frame
+
+  //sanity check, if tlen%25 is 23 or 24, need to increment to another block value
+  if ( (tlen%25) > 23) tlen += (tlen%23) + 1;
+
+  //sanity check, maximum strlen should not exceed 771 for a full encode
+  if (tlen > 771) tlen = 771;
+
+  //insert a zero byte as the terminator
+  // text[tlen++] = 0x00;
 
   //debug tlen value
-  fprintf (stderr, " STRLEN: %d", tlen);
+  fprintf (stderr, " STRLEN: %d; MLEN: %d;", tlen, mlen);
+
+  //TODO: Handle Super Long Message Overflow by restarting loop at next pointer position
+  //and completing the entire message in multiple LSF/Payload Chunks?
 
   //send dead air with type 99
   for (i = 0; i < 25; i++)
@@ -2288,6 +2301,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   uint16_t lsf_es   = 0; //encryption sub-type
   uint16_t lsf_cn = can; //can value
   uint16_t lsf_rs   = 0; //reserved bits
+  uint8_t protocol  = 5; //SMS Protocol
 
   //compose the 16-bit frame information from the above sub elements
   uint16_t lsf_fi = 0;
@@ -2389,14 +2403,15 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //a full sized complete packet paylaod to break into smaller frames
   uint8_t m17_p1_full[31*200]; memset (m17_p1_full, 0, sizeof(m17_p1_full));
 
-  //Convert a string text message into UTF-8 octets and load into full 
-  i = 0; k = 16; //skip first two octets?
-  //0x05 is SMS
-  m17_p1_full[5] = 1; m17_p1_full[7] = 1;
+  //load protocol value into first 8 bits
+  k = 0;
+  for (i = 0; i < 8; i++)
+    m17_p1_full[k++] = (protocol >> 7-i) & 1; 
 
+  //Convert a string text message into UTF-8 octets and load into full if using SMS (we are)
   uint8_t cbyte; //byte representation of a single string char
   int block = 0; //number of blocks in total
-  fprintf (stderr, "\n TEXT: ");
+  fprintf (stderr, "\n SMS:\n      ");
   for (i = 0; i < tlen; i++)
   {
     cbyte = (uint8_t)text[ptr++];
@@ -2404,21 +2419,39 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     for (j = 0; j < 8; j++)
       m17_p1_full[k++] = (cbyte >> 7-j) & 1;
     if (ptr >= tlen) break;
+
+    //add line break to keep it under 80 columns
+    if ( (i%71) == 0 && i != 0)
+      fprintf (stderr, "\n      ");
   }
   fprintf (stderr, "\n");
 
+  //insert a zero byte as the terminator
+  text[tlen++] = 0x00;
+  ptr++;
+
   //end UTF-8 Encoding
 
-  if (ptr >= tlen)
+  //old method
+  // if (ptr >= tlen)
+  // {
+  //   block = (ptr / 25);
+  //   if (ptr%25) block++;
+  //   pad = (block * 25) - ptr;
+  //   pad -= 2; //subtract two for the CRC
+  // }
+
+  //new method
+  block = (ptr / 25) + 1;
+  pad = (block * 25) - ptr;
+  if (pad < 2)
   {
-    block = (ptr / 25);
-    if (ptr%25) block++;
-    pad = (block * 25) - ptr;
-    pad -= 2; //subtract two for the CRC
+    block++; //Test for exact value here
+    pad = 25-pad; //seems to be working now
   }
 
   //debug block, pad, K and ptr position
-  fprintf (stderr, " BLOCK: %02d; PAD: %02d; MOD: %02d; K: %04d; PTR: %04d;", block, pad, pad%25, k, ptr);
+  fprintf (stderr, " BLOCK: %02d; PAD: %02d; K: %04d; PTR: %04d;", block, pad-2, k, ptr);
 
   //Calculate the CRC and attach it here
   uint8_t m17_p1_packed[31*25]; memset (m17_p1_packed, 0, sizeof(m17_p1_packed));
@@ -2491,10 +2524,10 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
       m17_p1[i] = m17_p1_full[ptr++];
 
     //Trigger EOT when out of data to encode
-    if (ptr/8 >= tlen)
+    if (ptr/8 >= block*25)
     {
       eot = 1;
-      pbc = 25-pad; //set to total minus pad minus crc
+      pbc = 25-pad; //may need to recheck this yet again on all
     }
     m17_p1[200] = eot;
 
@@ -2545,6 +2578,9 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     for (i = 0; i < 26; i++)
       fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(&m17_p1[i*8], 8));
 
+    //debug PBC
+    fprintf (stderr, " PBC: %d;", pbc);
+
     //convert bit array into symbols and RF/Audio
     encodeM17RF (opts, state, m17_p4s, 4);
 
@@ -2588,10 +2624,19 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
   //simple UTF-8 SMS Decoder
   if (protocol == 5)
   {
-    fprintf (stderr, "\n");
-    fprintf (stderr, " TEXT: ");
-    for (i = 2; i < len; i++)
+    fprintf (stderr, "\n SMS:\n      ");
+    for (i = 1; i < len; i++)
+    {
       fprintf (stderr, "%c", input[i]);
+
+      //add line break to keep it under 80 columns
+      if ( (i%71) == 0 && i != 0)
+        fprintf (stderr, "\n      ");
+    }
+  }
+  else //if
+  {
+    //decode or just dump the raw data?
   }
 
 }
@@ -2707,16 +2752,19 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
     uint16_t crc_ext = (state->m17_pkt[end-2] << 8) + state->m17_pkt[end-1];
 
     if (crc_cmp != crc_ext) //working!
-      fprintf (stderr, " CRC ERR; C: %04X; E: %04X", crc_cmp, crc_ext);
+      fprintf (stderr, " (CRC ERR) ");
     else decodeM17PKT(opts, state, state->m17_pkt, end-2);
 
-    //debug
-    fprintf (stderr, "\n pkt_full:");
-    for (i = 0; i < end; i++)
+    if (opts->payload == 1)
     {
-      if ( (i%25) == 0 && i != 0)
-        fprintf (stderr, "\n          ");
-      fprintf (stderr, " %02X", state->m17_pkt[i]);
+      fprintf (stderr, "\n PKT:");
+      for (i = 0; i < end; i++)
+      {
+        if ( (i%25) == 0 && i != 0)
+          fprintf (stderr, "\n     ");
+        fprintf (stderr, " %02X", state->m17_pkt[i]);
+      }
+      fprintf (stderr, "\n      CRC - C: %04X; E: %04X", crc_cmp, crc_ext);
     }
     
 
