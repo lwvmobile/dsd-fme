@@ -2261,7 +2261,6 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //end User Defined Variables
 
   int tlen = strlen((const char*)text);
-  int mlen = tlen/771; //overflow in case multiple tx encodes are required
   int ptr = 0;  //ptr to current position of the text
   int pad = 0; //amount of padding to apply to last frame
 
@@ -2275,7 +2274,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   // text[tlen++] = 0x00;
 
   //debug tlen value
-  fprintf (stderr, " STRLEN: %d; MLEN: %d;", tlen, mlen);
+  // fprintf (stderr, " STRLEN: %d; ", tlen);
 
   //TODO: Handle Super Long Message Overflow by restarting loop at next pointer position
   //and completing the entire message in multiple LSF/Payload Chunks?
@@ -2451,7 +2450,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   }
 
   //debug block, pad, K and ptr position
-  fprintf (stderr, " BLOCK: %02d; PAD: %02d; K: %04d; PTR: %04d;", block, pad-2, k, ptr);
+  // fprintf (stderr, " BLOCK: %02d; PAD: %02d; K: %04d; PTR: %04d;", block, pad-2, k, ptr);
 
   //Calculate the CRC and attach it here
   uint8_t m17_p1_packed[31*25]; memset (m17_p1_packed, 0, sizeof(m17_p1_packed));
@@ -2460,7 +2459,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   crc_cmp = crc16m17(m17_p1_packed, (25*block)-2);
 
   //debug dump CRC (when pad is literally zero)
-  fprintf (stderr, " CRC: %04X", crc_cmp);
+  // fprintf (stderr, " CRC: %04X", crc_cmp);
 
   ptr = (block*25*8) - 16;
 
@@ -2474,6 +2473,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     if ( (i%25) == 0 && i != 0 ) fprintf (stderr, "\n                       ");
     fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(&m17_p1_full[i*8], 8));
   }
+  fprintf (stderr, "\n");
 
   //flag to determine if we send a new LSF frame for new encode
   //only send once at the appropriate time when encoder is toggled on
@@ -2579,7 +2579,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(&m17_p1[i*8], 8));
 
     //debug PBC
-    fprintf (stderr, " PBC: %d;", pbc);
+    // fprintf (stderr, " PBC: %d;", pbc);
 
     //convert bit array into symbols and RF/Audio
     encodeM17RF (opts, state, m17_p4s, 4);
@@ -2739,8 +2739,8 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   else state->m17_pbc_ct++; //increment if eot
 
   //debug counter and eot value
-  if (!eot) fprintf (stderr, " CNT: %02d; CT: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
-  else fprintf (stderr, " CNT: %02d; CB: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
+  // if (!eot) fprintf (stderr, " CNT: %02d; CT: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
+  // else fprintf (stderr, " CNT: %02d; CB: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
 
   //put packet into storage
   memcpy (state->m17_pkt+ptr, pkt_packed, 25);
@@ -2767,7 +2767,6 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "\n      CRC - C: %04X; E: %04X", crc_cmp, crc_ext);
     }
     
-
     //reset after processing
     memset (state->m17_pkt, 1, sizeof(state->m17_pkt));
     state->m17_pbc_ct = 0;
