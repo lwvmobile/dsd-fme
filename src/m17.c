@@ -1285,7 +1285,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   unsigned long long int dst = 0;
   unsigned long long int src = 0;
   //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
-  char d40[] = "BROADCAST"; //DST
+  char d40[] = "DSD-FME  "; //DST
   char s40[] = "DSD-FME  "; //SRC
   //end User Defined Variables
   
@@ -1399,8 +1399,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
   //Convert base40 CSD to numerical values (lifted from libM17)
 
-  //Only if not already set as numerical value
-  if (dst == 0)
+  //Only if not already set to a reserved value
+  if (dst < 0xEE6B27FFFFFF)
   {
     for(i = strlen((const char*)d40)-1; i >= 0; i--)
     {
@@ -1415,7 +1415,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     }
   }
 
-  if (src == 0)
+  if (src < 0xEE6B27FFFFFF)
   {
     for(i = strlen((const char*)s40)-1; i >= 0; i--)
     {
@@ -2234,7 +2234,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   unsigned long long int dst = 0;
   unsigned long long int src = 0;
   //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
-  char d40[] = "BROADCAST"; //DST
+  char d40[] = "DSD-FME  "; //DST
   char s40[] = "DSD-FME  "; //SRC
 
   //Default
@@ -2274,7 +2274,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //send preamble_a for the LSF frame
   encodeM17RF (opts, state, nil, 33);
 
-  //NOTE: PKT mode does not seem to have a format specified by M17 standard,
+  //NOTE: PKT mode does not seem to have an IP format specified by M17 standard,
   //so I will assume that you do not send PKT data over IP to a reflector
 
   uint8_t m17_lsf[240];
@@ -2296,8 +2296,8 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
 
   //Convert base40 CSD to numerical values (lifted from libM17)
 
-  //Only if not already set as numerical value
-  if (dst == 0)
+  //Only if not already set to a reserved value
+  if (dst < 0xEE6B27FFFFFF)
   {
     for(i = strlen((const char*)d40)-1; i >= 0; i--)
     {
@@ -2312,7 +2312,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     }
   }
 
-  if (src == 0)
+  if (src < 0xEE6B27FFFFFF)
   {
     for(i = strlen((const char*)s40)-1; i >= 0; i--)
     {
