@@ -290,6 +290,8 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t * lich_bits)
 
     if (crc_err == 0)
       M17decodeLSF(state);
+    else if (opts->aggressive_framesync == 0)
+      M17decodeLSF(state);
 
     if (opts->payload == 1)
     {
@@ -794,6 +796,9 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
   if (crc_err == 0)
     M17decodeLSF(state);
 
+  else if (opts->aggressive_framesync == 0)
+    M17decodeLSF(state);
+
   if (opts->payload == 1)
   {
     fprintf (stderr, "\n LSF: ");
@@ -886,6 +891,8 @@ void processM17LSF_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_depun
   if (crc_cmp != crc_ext) crc_err = 1;
 
   if (crc_err == 0)
+    M17decodeLSF(state);
+  else if (opts->aggressive_framesync == 0)
     M17decodeLSF(state);
 
   if (opts->payload == 1)
@@ -985,6 +992,8 @@ void processM17LSF_debug2(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_
   if (crc_cmp != crc_ext) crc_err = 1;
 
   if (crc_err == 0)
+    M17decodeLSF(state);
+  else if (opts->aggressive_framesync == 0)
     M17decodeLSF(state);
 
   if (opts->payload == 1)
