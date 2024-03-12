@@ -2527,7 +2527,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     if (m17_p1_packed[x] == 0) break; //stop at the termination byte
     x++;
   }
-  crc_cmp = crc16m17(m17_p1_packed, x);
+  crc_cmp = crc16m17(m17_p1_packed+1, x-1);
 
   //debug dump CRC (when pad is literally zero)
   fprintf (stderr, " X: %d; LAST: %02X; TERM: %02X; CRC: %04X", x, m17_p1_packed[x-1], m17_p1_packed[x], crc_cmp);
@@ -2823,7 +2823,7 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   if (eot)
   {
     //do a CRC check
-    uint16_t crc_cmp = crc16m17(state->m17_pkt, total);
+    uint16_t crc_cmp = crc16m17(state->m17_pkt+1, total-1);
     uint16_t crc_ext = (state->m17_pkt[end-2] << 8) + state->m17_pkt[end-1];
 
     if (crc_cmp == crc_ext)
