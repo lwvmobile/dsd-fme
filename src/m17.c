@@ -797,7 +797,7 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
     M17decodeLSF(state);
 
   else if (opts->aggressive_framesync == 0)
-    M17decodeLSF(state);
+      M17decodeLSF(state);
 
   if (opts->payload == 1)
   {
@@ -893,7 +893,7 @@ void processM17LSF_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_depun
   if (crc_err == 0)
     M17decodeLSF(state);
   else if (opts->aggressive_framesync == 0)
-    M17decodeLSF(state);
+      M17decodeLSF(state);
 
   if (opts->payload == 1)
   {
@@ -994,7 +994,7 @@ void processM17LSF_debug2(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_
   if (crc_err == 0)
     M17decodeLSF(state);
   else if (opts->aggressive_framesync == 0)
-    M17decodeLSF(state);
+      M17decodeLSF(state);
 
   if (opts->payload == 1)
   {
@@ -1297,7 +1297,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   char d40[11] = "DSD-FME  "; //DST
   char s40[11] = "DSD-FME  "; //SRC
   //end User Defined Variables
-  
+
   //configure User Defined Variables, if defined at CLI
   if (state->m17_can_en != 0) //is 0 a valid number?
     can = state->m17_can_en;
@@ -1307,6 +1307,12 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
   if (state->str50b[0] != 0)
     sprintf (d40, "%s", state->str50b);
+
+  //if special values, then assign them
+  if (strcmp (d40, "BROADCAST") == 0)
+    dst = 0xFFFFFFFFFFFF;
+  if (strcmp (d40, "ALL") == 0)
+    dst = 0xFFFFFFFFFFFF;
   //end
   
   int i, j, k, x;    //basic utility counters
@@ -2299,6 +2305,12 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   // strncpy (d40, state->str50b, 9);
   // s40[10] = '\0';
   // d40[10] = '\0';
+
+  //if special values, then assign them
+  if (strcmp (d40, "BROADCAST") == 0)
+    dst = 0xFFFFFFFFFFFF;
+  if (strcmp (d40, "ALL") == 0)
+    dst = 0xFFFFFFFFFFFF;
 
   //debug
   // fprintf (stderr, " SRC: %s; DST: %s; SRC_D: %llX; DST_D: %llX; SLEN %d; DLEN: %d;", s40, d40, src, dst, strlen(s40), strlen(d40) );

@@ -2982,6 +2982,13 @@ main (int argc, char **argv)
       //read in values
       //string in format of M17:can:src_csd:dst_csd
 
+      //check and capatalize any letters in the CSD
+      for (int i = 0; state.m17dat[i]!='\0'; i++)
+      {
+        if(state.m17dat[i] >= 'a' && state.m17dat[i] <= 'z')
+          state.m17dat[i] = state.m17dat[i] -32;
+      }
+
       fprintf (stderr, "M17 User Data: ");
       char * curr;
       
