@@ -502,8 +502,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
 
   state->m17_dst = 0;
   state->m17_src = 0;
-  state->m17_can = 0;     //can value that was decoded from signal
-  state->m17_can_en = 0; //can value supplied to the encoding side
+  state->m17_can = 0;
   memset(state->m17_dst_csd, 0, sizeof(state->m17_dst_csd));
   memset(state->m17_src_csd, 0, sizeof(state->m17_src_csd));
   sprintf (state->m17_dst_str, "%s", "");
@@ -514,10 +513,11 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset(state->m17_meta, 0, sizeof(state->m17_meta));
 
   //misc str storage
-  memset (state->str50a, 0, 50*sizeof(char));
-  memset (state->str50b, 0, 50*sizeof(char));
-  memset (state->m17sms, 0, 800*sizeof(char));
-  sprintf (state->m17dat, "%s", "");
+  sprintf (state->str50a, "%s", "");
+  // memset (state->str50b, 0, 50*sizeof(char));
+  // memset (state->str50c, 0, 50*sizeof(char));
+  // memset (state->m17sms, 0, 800*sizeof(char));
+  // sprintf (state->m17dat, "%s", "");
 
   //set float temp buffer to baseline
   memset (state->audio_out_temp_buf, 0.0f, sizeof(state->audio_out_temp_buf));
@@ -1179,9 +1179,17 @@ initState (dsd_state * state)
   state->m17_pbc_ct = 0;
   state->m17_str_dt = 9;
 
+  //misc str storage
+  sprintf (state->str50a, "%s", "");
+  memset (state->str50b, 0, 50*sizeof(char));
+  memset (state->str50c, 0, 50*sizeof(char));
+  memset (state->m17sms, 0, 800*sizeof(char));
+  sprintf (state->m17dat, "%s", "");
+
   state->m17_dst = 0;
   state->m17_src = 0;
-  state->m17_can = 0;
+  state->m17_can = 0;     //can value that was decoded from signal
+  state->m17_can_en = -1; //can value supplied to the encoding side
   memset(state->m17_dst_csd, 0, sizeof(state->m17_dst_csd));
   memset(state->m17_src_csd, 0, sizeof(state->m17_src_csd));
   sprintf (state->m17_dst_str, "%s", "");
@@ -3006,8 +3014,8 @@ main (int argc, char **argv)
       curr = strtok(NULL, ":"); //m17 src address
       if (curr != NULL)
       {
-        strncpy (state.str50a, curr, 9); //only read first 9
-        state.str50a[9] = '\0';
+        strncpy (state.str50c, curr, 9); //only read first 9
+        state.str50c[9] = '\0';
       }
       
       curr = strtok(NULL, ":"); //m17 dst address
@@ -3027,7 +3035,7 @@ main (int argc, char **argv)
       // fprintf (stderr, " %s;", state.m17dat);
 
       //debug print
-      fprintf (stderr, " M17:%d:%s:%s; \n ", state.m17_can_en, state.str50a, state.str50b);
+      fprintf (stderr, " M17:%d:%s:%s; \n ", state.m17_can_en, state.str50c, state.str50b);
     }
 
     if (opts.playfiles == 1)

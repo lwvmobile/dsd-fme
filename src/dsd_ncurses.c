@@ -1684,7 +1684,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       state->nxdn_last_rid = 0;
       state->nxdn_last_tg = 0;
       sprintf (state->str50a, "%s", "");
-      sprintf (state->str50b, "%s", "");
+      memset  (state->str50b, 0, 50*sizeof(char));
     }
 
     if (choice == 16) //toggle payload printing

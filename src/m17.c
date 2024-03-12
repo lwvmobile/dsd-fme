@@ -1299,11 +1299,11 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //end User Defined Variables
 
   //configure User Defined Variables, if defined at CLI
-  if (state->m17_can_en != 0) //is 0 a valid number?
+  if (state->m17_can_en != -1) //has a set value
     can = state->m17_can_en;
 
-  if (state->str50a[0] != 0)
-    sprintf (s40, "%s", state->str50a);
+  if (state->str50c[0] != 0)
+    sprintf (s40, "%s", state->str50c);
 
   if (state->str50b[0] != 0)
     sprintf (d40, "%s", state->str50b);
@@ -2288,11 +2288,11 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //end User Defined Variables
 
   //configure User Defined Variables, if defined at CLI
-  if (state->m17_can_en != 0) //is 0 a valid number?
+  if (state->m17_can_en != -1) //has a set value
     can = state->m17_can_en;
 
-  if (state->str50a[0] != 0)
-    sprintf (s40, "%s", state->str50a);
+  if (state->str50c[0] != 0)
+    sprintf (s40, "%s", state->str50c);
 
   if (state->str50b[0] != 0)
     sprintf (d40, "%s", state->str50b);
@@ -2301,7 +2301,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     sprintf (text, "%s", state->m17sms);
 
   // switch to this if issues crop up (cygwin, etc)
-  // strncpy (s40, state->str50a, 9);
+  // strncpy (s40, state->str50c, 9);
   // strncpy (d40, state->str50b, 9);
   // s40[10] = '\0';
   // d40[10] = '\0';

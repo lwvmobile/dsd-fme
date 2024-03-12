@@ -784,8 +784,8 @@ typedef struct
 
   unsigned long long int m17_dst;
   unsigned long long int m17_src;
-  uint8_t m17_can;     //can value that was decoded from signal
-  uint8_t m17_can_en; //can value supplied to the encoding side
+  uint8_t m17_can; //can value that was decoded from signal
+  int m17_can_en; //can value supplied to the encoding side
 
   char m17_dst_csd[20];
   char m17_src_csd[20];
@@ -802,6 +802,7 @@ typedef struct
   //misc str storage
   char str50a[50];
   char str50b[50];
+  char str50c[50];
   char m17dat[50];  //user supplied m17 data input string
   char m17sms[800]; //user supplied sms text string
 
