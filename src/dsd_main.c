@@ -495,14 +495,15 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   sprintf (state->dstar_gps,  "%s", "        "); //8 spaces
 
   //M17 Storage
-  memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
-  memset (state->m17_pkt, 1, sizeof(state->m17_pkt));
+  memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
+  memset (state->m17_pkt, 0, sizeof(state->m17_pkt));
   state->m17_pbc_ct = 0;
   state->m17_str_dt = 9;
 
   state->m17_dst = 0;
   state->m17_src = 0;
-  state->m17_can = 0;
+  state->m17_can = 0;     //can value that was decoded from signal
+  state->m17_can_en = 0; //can value supplied to the encoding side
   memset(state->m17_dst_csd, 0, sizeof(state->m17_dst_csd));
   memset(state->m17_src_csd, 0, sizeof(state->m17_src_csd));
   sprintf (state->m17_dst_str, "%s", "");
@@ -513,8 +514,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset(state->m17_meta, 0, sizeof(state->m17_meta));
 
   //misc str storage
-  sprintf (state->str50a, "%s", "");
-  sprintf (state->str50b, "%s", "");
+  memset (state->str50a, 0, 50*sizeof(char));
+  memset (state->str50b, 0, 50*sizeof(char));
+  memset (state->m17sms, 0, 800*sizeof(char));
+  sprintf (state->m17dat, "%s", "");
 
   //set float temp buffer to baseline
   memset (state->audio_out_temp_buf, 0.0f, sizeof(state->audio_out_temp_buf));
@@ -1171,8 +1174,8 @@ initState (dsd_state * state)
   sprintf (state->dstar_gps,  "%s", "        "); //8 spaces
 
   //M17 Storage
-  memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
-  memset (state->m17_pkt, 1, sizeof(state->m17_pkt));
+  memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
+  memset (state->m17_pkt, 0, sizeof(state->m17_pkt));
   state->m17_pbc_ct = 0;
   state->m17_str_dt = 9;
 
@@ -1288,17 +1291,22 @@ usage ()
   printf ("\n");
   printf ("Encoder options:\n");
   printf ("  -fZ           M17 Stream Voice Encoder\n");
-  printf (" Example: dsd-fme -fZ -i pulse -6 m17signal.wav -N 2> m17encoderlog.ans\n");
+  printf (" Example: dsd-fme -fZ -M M17:9:DSD-FME:LWVMOBILE -i pulse -6 m17signal.wav -N 2> m17encoderlog.ans\n");
   printf ("   Run M17 Encoding, listening to pulse audio server, with internal decode/playback and output to 48k/1 wav file\n");
   printf ("\n");
-  printf (" Example: dsd-fme -fZ -i tcp -8 -o pulse -N 2> m17encoderlog.ans\n");
+  printf (" Example: dsd-fme -fZ -M M17:9:DSD-FME:LWVMOBILE -i tcp -8 -o pulse -N 2> m17encoderlog.ans\n");
   printf ("   Run M17 Encoding, listening to default tcp input, without internal decode/playback and output to 48k/1 analog output device\n");
   printf ("\n");
-  printf ("  -fB           M17 BERT Encoder\n");
-  printf (" Example: dsd-fme -fB -6 m17bert.wav\n");
   printf ("  -fP           M17 Packet Encoder\n");
-  printf (" Example: dsd-fme -fP -6 m17pkt.wav (NOTE: WIP)\n");
+  printf (" Example: dsd-fme -fP -M M17:9:DSD-FME:LWVMOBILE -6 m17pkt.wav -S 'Hello World'\n");
   printf ("\n");
+  printf ("  -fB           M17 BERT Encoder\n");
+  printf (" Example: dsd-fme -fB -M M17:9:DSD-FME:LWVMOBILE -6 m17bert.wav\n");
+  printf ("\n");
+  printf ("  -M            M17 Encoding User Configuration String: M17:CAN:SRC:DST (see examples above).\n");
+  printf ("                  CAN 1-15; SRC and DST have to be no more than 9 UPPER base40 characters\n");
+  printf ("                  BASE40: '  ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.'\n");
+  printf ("  -S            M17 Encoding Packet SMS String: No more than 772 chars, use single quotations (see example above).\n");
   printf ("Decoder options:\n");
   printf ("  -fa           Auto Detection\n");
   printf ("  -ft           TDMA Trunking P25p1 Control and Voice, P25p2 Trunked Channels, and DMR\n");
@@ -1330,11 +1338,11 @@ usage ()
   printf ("                 (Value defaults to max n bit value for site model size)\n");
   printf ("                 (Setting 0 will show full Site ID, no area/subarea)\n");
   printf ("\n");
-  printf ("  -A <num>      QPSK modulation auto detection threshold (default=26)\n");
-  printf ("  -S <num>      Symbol buffer size for QPSK decision point tracking\n");
-  printf ("                 (default=36)\n");
-  printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
-  printf ("                 (default=15)\n");
+  // printf ("  -A <num>      QPSK modulation auto detection threshold (default=26)\n");
+  // printf ("  -S <num>      Symbol buffer size for QPSK decision point tracking\n");
+  // printf ("                 (default=36)\n");
+  // printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
+  // printf ("                 (default=15)\n");
   printf ("  -ma           Auto-select modulation optimizations\n");
   printf ("  -mc           Use only C4FM modulation optimizations (default)\n");
   printf ("  -mg           Use only GFSK modulation optimizations\n");
@@ -1642,6 +1650,19 @@ main (int argc, char **argv)
         //NOTE: The 'K' option for single BP key has been swapped to 'b'
         //'K' is now used for hexidecimal key.csv imports
 
+        //Specify M17 encoder User Data (CAN, DST, SRC values)
+        //NOTE: Disabled QPSK settings by borrowing these switches (nobody probalby used them anyways)
+        case 'M':
+          strncpy(state.m17dat, optarg, 49);
+          state.m17dat[49] = '\0';
+          break;
+
+        //Specify M17 encoder SMS Message (truncates at 772)
+        case 'S':
+          strncpy(state.m17sms, optarg, 772);
+          state.m17sms[772] = '\0';
+          break;
+        
         //specify TG Hold value
         case 'I':
           sscanf (optarg, "%d", &state.tg_hold);
@@ -2527,30 +2548,34 @@ main (int argc, char **argv)
         case 'A':
           sscanf (optarg, "%i", &opts.mod_threshold);
           fprintf (stderr,"Setting C4FM/QPSK auto detection threshold to %i\n", opts.mod_threshold);
-        case 'S':
-          sscanf (optarg, "%i", &opts.ssize);
-          if (opts.ssize > 128)
-            {
-              opts.ssize = 128;
-            }
-          else if (opts.ssize < 1)
-            {
-              opts.ssize = 1;
-            }
-          fprintf (stderr,"Setting QPSK symbol buffer to %i\n", opts.ssize);
-          break;
-        case 'M':
-          sscanf (optarg, "%i", &opts.msize);
-          if (opts.msize > 1024)
-            {
-              opts.msize = 1024;
-            }
-          else if (opts.msize < 1)
-            {
-              opts.msize = 1;
-            }
-          fprintf (stderr,"Setting QPSK Min/Max buffer to %i\n", opts.msize);
-          break;
+          break; //this was missing a break
+        
+        //Disabled and switches reassigned to M17 User Data Argumeents
+        // case 'S': //disabled, using for M17 encoder user SMS message
+        //   sscanf (optarg, "%i", &opts.ssize);
+        //   if (opts.ssize > 128)
+        //     {
+        //       opts.ssize = 128;
+        //     }
+        //   else if (opts.ssize < 1)
+        //     {
+        //       opts.ssize = 1;
+        //     }
+        //   fprintf (stderr,"Setting QPSK symbol buffer to %i\n", opts.ssize);
+        //   break;
+        // case 'M': //disabled, using for M17 user data
+        //   sscanf (optarg, "%i", &opts.msize);
+        //   if (opts.msize > 1024)
+        //     {
+        //       opts.msize = 1024;
+        //     }
+        //   else if (opts.msize < 1)
+        //     {
+        //       opts.msize = 1;
+        //     }
+        //   fprintf (stderr,"Setting QPSK Min/Max buffer to %i\n", opts.msize);
+        //   break;
+
         case 'r':
           opts.playfiles = 1;
           opts.errorbars = 0;
@@ -2948,6 +2973,53 @@ main (int argc, char **argv)
 
     signal(SIGINT, handler);
     signal(SIGTERM, handler);
+
+    //read in any user supplied M17 CAN and/or CSD data
+    if((strncmp(state.m17dat, "M17", 3) == 0))
+    {
+      //read in values
+      //string in format of M17:can:src_csd:dst_csd
+
+      fprintf (stderr, "M17 User Data: ");
+      char * curr;
+      
+      // if((strncmp(state.m17dat, "M17", 3) == 0))
+      // goto M17END;
+      
+      curr = strtok(state.m17dat, ":"); //should be 'M17'
+      if (curr != NULL) ; //continue
+      else goto M17END; //end early with preset values
+
+      curr = strtok(NULL, ":"); //m17 channel access number
+      if (curr != NULL)
+        state.m17_can_en = atoi(curr);
+
+      curr = strtok(NULL, ":"); //m17 src address
+      if (curr != NULL)
+      {
+        strncpy (state.str50a, curr, 9); //only read first 9
+        state.str50a[9] = '\0';
+      }
+      
+      curr = strtok(NULL, ":"); //m17 dst address
+      if (curr != NULL)
+      {
+        strncpy (state.str50b, curr, 9); //only read first 9
+        state.str50b[9] = '\0';
+      }
+
+      M17END: ; //do nothing
+
+      //check to make sure can value is no greater than 15 (4 bit value)
+      if (state.m17_can_en > 15)
+        state.m17_can_en = 15;
+
+      //debug print m17dat string
+      // fprintf (stderr, " %s;", state.m17dat);
+
+      //debug print
+      fprintf (stderr, " M17:%d:%s:%s; \n ", state.m17_can_en, state.str50a, state.str50b);
+    }
 
     if (opts.playfiles == 1)
     {

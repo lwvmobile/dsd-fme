@@ -301,7 +301,7 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t * lich_bits)
       }
     }
 
-    memset (state->m17_lsf, 1, sizeof(state->m17_lsf));
+    memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
 
     //debug
     // fprintf (stderr, " E-%04X; C-%04X (CRC CHK)", crc_ext, crc_cmp);
@@ -1109,7 +1109,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   //BRT frame sync pattern - 0xDF55 (-3, +3, -3, -3, +3, +3, +3, +3)
   uint8_t m17_brt_fs[16] = {1,1,0,1, 1,1,1,1, 0,1,0,1, 0,1,0,1};
 
-  //load bits inti a dibit array plus the framesync bits
+  //load bits into a dibit array plus the framesync bits
   uint8_t output_dibits[192]; memset (output_dibits, 0, sizeof(output_dibits));
 
   //Preamble (just repeat the preamble 12 times to make 192 symbols)
@@ -1256,7 +1256,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
     sf_write_sync (opts->wav_out_raw);
   }
 
-  //NOTE: May need to disable the debug decoding when playing out real audio? Could lag/stutter.
+  //NOTE: Internal voice decoding is disabled when tx audio over a hardware device, wav/bin still enabled
   UNUSED(state);
 
 }
@@ -1285,9 +1285,20 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   unsigned long long int dst = 0;
   unsigned long long int src = 0;
   //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
-  char d40[] = "DSD-FME  "; //DST
-  char s40[] = "DSD-FME  "; //SRC
+  char d40[11] = "DSD-FME  "; //DST
+  char s40[11] = "DSD-FME  "; //SRC
   //end User Defined Variables
+  
+  //configure User Defined Variables, if defined at CLI
+  if (state->m17_can_en != 0) //is 0 a valid number?
+    can = state->m17_can_en;
+
+  if (state->str50a[0] != 0)
+    sprintf (s40, "%s", state->str50a);
+
+  if (state->str50b[0] != 0)
+    sprintf (d40, "%s", state->str50b);
+  //end
   
   int i, j, k, x;    //basic utility counters
   short sample = 0;  //individual audio sample from source
@@ -1856,7 +1867,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       //Contruct an IP frame using previously created arrays
       uint8_t m17_ip_frame[432]; memset (m17_ip_frame, 0, sizeof(m17_ip_frame));
       uint8_t m17_ip_packed[54]; memset (m17_ip_packed, 0, sizeof(m17_ip_packed));
-      uint16_t ip_crc = 0; UNUSED(ip_crc);
+      uint16_t ip_crc = 0;
 
       //NOTE: The Manual doesn't say much about this area, so assuming 
       //the elements are arranged as per the table
@@ -2234,8 +2245,8 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   unsigned long long int dst = 0;
   unsigned long long int src = 0;
   //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
-  char d40[] = "DSD-FME  "; //DST
-  char s40[] = "DSD-FME  "; //SRC
+  char d40[11] = "DSD-FME  "; //DST
+  char s40[11] = "DSD-FME  "; //SRC
 
   // dst = 0xEE6B28000000; //viterbi debug values
   // src = 0xEE6B28000000; //viterbi debug values
@@ -2260,6 +2271,30 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   // char text[] = "When in the Course of human events, it becomes necessary for one people to dissolve the political bands which have connected them with another, and to assume among the powers of the earth, the separate and equal station to which the Laws of Nature and of Nature's God entitle them, a decent respect to the opinions of mankind requires that they should declare the causes which impel them to the separation. We hold these truths to be self-evident, that all men are created equal, that they are endowed by their Creator with certain unalienable Rights, that among these are Life, Liberty and the pursuit of Happiness.--That to secure these rights, Governments are instituted among Men, deriving their just powers from the consent of the governed, --That whenever any Form of Government becomes destructive of these ends, it is the Right of the People to alter or to abolish it, and to institute new Government, laying its foundation on such principles and organizing its powers in such form, as to them shall seem most likely to effect their Safety and Happiness. Prudence, indeed, will dictate that Governments long established should not be changed for light and transient causes; and accordingly all experience hath shewn, that mankind are more disposed to suffer, while evils are sufferable, than to right themselves by abolishing the forms to which they are accustomed. But when a long train of abuses and usurpations, pursuing invariably the same Object evinces a design to reduce them under absolute Despotism, it is their right, it is their duty, to throw off such Government, and to provide new Guards for their future security.--Such has been the patient sufferance of these Colonies; and such is now the necessity which constrains them to alter their former Systems of Government. The history of the present King of Great Britain is a history of repeated injuries and usurpations, all having in direct object the establishment of an absolute Tyranny over these States. To prove this, let Facts be submitted to a candid world.";
 
   //end User Defined Variables
+
+  //configure User Defined Variables, if defined at CLI
+  if (state->m17_can_en != 0) //is 0 a valid number?
+    can = state->m17_can_en;
+
+  if (state->str50a[0] != 0)
+    sprintf (s40, "%s", state->str50a);
+
+  if (state->str50b[0] != 0)
+    sprintf (d40, "%s", state->str50b);
+
+  if (state->m17sms[0] != 0)
+    sprintf (text, "%s", state->m17sms);
+
+  // switch to this if issues crop up (cygwin, etc)
+  // strncpy (s40, state->str50a, 9);
+  // strncpy (d40, state->str50b, 9);
+  // s40[10] = '\0';
+  // d40[10] = '\0';
+
+  //debug
+  // fprintf (stderr, " SRC: %s; DST: %s; SRC_D: %llX; DST_D: %llX; SLEN %d; DLEN: %d;", s40, d40, src, dst, strlen(s40), strlen(d40) );
+
+  //end CLI Configuration
 
   //send dead air with type 99
   for (i = 0; i < 25; i++)
@@ -2322,6 +2357,9 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     }
   }
   //end CSD conversion
+
+  //debug
+  // fprintf (stderr, "\n SRC: %s; DST: %s; SRC_D: %llX; DST_D: %llX", s40, d40, src, dst);
 
   //load dst and src values into the LSF
   for (i = 0; i < 48; i++) m17_lsf[i] = (dst >> 47ULL-(unsigned long long int)i) & 1;
@@ -2788,7 +2826,7 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
     }
     
     //reset after processing
-    memset (state->m17_pkt, 1, sizeof(state->m17_pkt));
+    memset (state->m17_pkt, 0, sizeof(state->m17_pkt));
     state->m17_pbc_ct = 0;
   }
 
