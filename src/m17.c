@@ -2244,40 +2244,22 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   // char text[] = "This is a simple SMS text message sent over M17 Packet Data.";
 
   //short
-  //NOTE: Pad and PBC working now (if including protocol byte)
+  //NOTE: Working on full payload w/o padding
   // char text[] = "Lorem";
 
   //medium
-  //NOTE: Pad and PBC working now
+  //NOTE: Fixed w/ the pad < 1, then add a block (not just if 0)
   // char text[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
 
   //large
-  //NOTE: Pad and PBC working now
+  //NOTE: Working on full payload w/o padding
   char text[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
   //Preamble of the Declaration of Independence (U.S.A.)
-  //NOTE: Pad and PBC working now (if you include the terminator on block 31)
+  //NOTE: Fixed again with block != 31 check and manual terminator insertion into text byte 772
   // char text[] = "When in the Course of human events, it becomes necessary for one people to dissolve the political bands which have connected them with another, and to assume among the powers of the earth, the separate and equal station to which the Laws of Nature and of Nature's God entitle them, a decent respect to the opinions of mankind requires that they should declare the causes which impel them to the separation. We hold these truths to be self-evident, that all men are created equal, that they are endowed by their Creator with certain unalienable Rights, that among these are Life, Liberty and the pursuit of Happiness.--That to secure these rights, Governments are instituted among Men, deriving their just powers from the consent of the governed, --That whenever any Form of Government becomes destructive of these ends, it is the Right of the People to alter or to abolish it, and to institute new Government, laying its foundation on such principles and organizing its powers in such form, as to them shall seem most likely to effect their Safety and Happiness. Prudence, indeed, will dictate that Governments long established should not be changed for light and transient causes; and accordingly all experience hath shewn, that mankind are more disposed to suffer, while evils are sufferable, than to right themselves by abolishing the forms to which they are accustomed. But when a long train of abuses and usurpations, pursuing invariably the same Object evinces a design to reduce them under absolute Despotism, it is their right, it is their duty, to throw off such Government, and to provide new Guards for their future security.--Such has been the patient sufferance of these Colonies; and such is now the necessity which constrains them to alter their former Systems of Government. The history of the present King of Great Britain is a history of repeated injuries and usurpations, all having in direct object the establishment of an absolute Tyranny over these States. To prove this, let Facts be submitted to a candid world.";
+
   //end User Defined Variables
-
-  int tlen = strlen((const char*)text);
-  int ptr = 0;  //ptr to current position of the text
-  int pad = 0; //amount of padding to apply to last frame
-
-  //sanity check, if tlen%25 is 23 or 24, need to increment to another block value
-  if ( (tlen%25) > 23) tlen += (tlen%23) + 1;
-
-  //sanity check, maximum strlen should not exceed 771 for a full encode
-  if (tlen > 771) tlen = 771;
-
-  //insert a zero byte as the terminator
-  // text[tlen++] = 0x00;
-
-  //debug tlen value
-  // fprintf (stderr, " STRLEN: %d; ", tlen);
-
-  //TODO: Handle Super Long Message Overflow by restarting loop at next pointer position
-  //and completing the entire message in multiple LSF/Payload Chunks?
 
   //send dead air with type 99
   for (i = 0; i < 25; i++)
@@ -2407,17 +2389,49 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   for (i = 0; i < 8; i++)
     m17_p1_full[k++] = (protocol >> 7-i) & 1; 
 
-  //Convert a string text message into UTF-8 octets and load into full if using SMS (we are)
-  uint8_t cbyte; //byte representation of a single string char
+  //byte representation of a single string char
+  uint8_t cbyte;
+
+  //counter values
+  int tlen = strlen((const char*)text);
   int block = 0; //number of blocks in total
+  int ptr = 0;  //ptr to current position of the text
+  int pad = 0; //amount of padding to apply to last frame
+  int lst = 0; //amount of significant octets in the last block
+
+  //encode elements
+  uint8_t pbc = 0; //packet/octet counter
+  uint8_t eot = 0; //end of tx bit
+
+  //sanity check, if tlen%25 is 23 or 24, need to increment to another block value
+  if ( (tlen%25) > 23) tlen += (tlen%23) + 1;
+
+  //sanity check, maximum strlen should not exceed 771 for a full encode
+  if (tlen > 771) tlen = 771;
+
+  //insert a zero byte as the terminator
+  text[tlen++] = 0x00;
+
+  //insert one at the last available byte position
+  text[772] = 0x00;
+
+  //debug tlen value
+  // fprintf (stderr, " STRLEN: %d; ", tlen);
+
+  //Convert a string text message into UTF-8 octets and load into full if using SMS (we are)
   fprintf (stderr, "\n SMS:\n      ");
   for (i = 0; i < tlen; i++)
   {
-    cbyte = (uint8_t)text[ptr++];
+    cbyte = (uint8_t)text[ptr];
     fprintf (stderr, "%c", cbyte);
+
     for (j = 0; j < 8; j++)
       m17_p1_full[k++] = (cbyte >> 7-j) & 1;
-    if (ptr >= tlen) break;
+
+    if (cbyte == 0) break; //if terminator reached
+
+    ptr++; //increment pointer
+    
 
     //add line break to keep it under 80 columns
     if ( (i%71) == 0 && i != 0)
@@ -2425,45 +2439,43 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   }
   fprintf (stderr, "\n");
 
-  //insert a zero byte as the terminator
-  text[tlen++] = 0x00;
-  ptr++;
-
   //end UTF-8 Encoding
 
-  //old method
-  // if (ptr >= tlen)
-  // {
-  //   block = (ptr / 25);
-  //   if (ptr%25) block++;
-  //   pad = (block * 25) - ptr;
-  //   pad -= 2; //subtract two for the CRC
-  // }
 
-  //new method
+  //calculate blocks, pad, and last values for pbc
   block = (ptr / 25) + 1;
-  pad = (block * 25) - ptr;
-  if (pad < 2)
+  pad = (block * 25) - ptr - 4;
+  // if (pad == 0 && block != 31) //fallback if issues arise
+  if (pad < 1 && block != 31)
   {
-    block++; //Test for exact value here
-    pad = 25-pad; //seems to be working now
+    block++;
+    pad = (block * 25) - ptr - 4;
   }
+  lst = 23-pad; //pbc value for last block out
 
-  //debug block, pad, K and ptr position
-  // fprintf (stderr, " BLOCK: %02d; PAD: %02d; K: %04d; PTR: %04d;", block, pad-2, k, ptr);
+  //sanity check block value
+  // if (block > 31) block = 31;
+  
+  //debug position values
+  fprintf (stderr, " BLOCK: %02d; PAD: %02d; LST: %d; K: %04d; PTR: %04d;", block, pad, lst, k, ptr);
 
   //Calculate the CRC and attach it here
+  x = 0;
   uint8_t m17_p1_packed[31*25]; memset (m17_p1_packed, 0, sizeof(m17_p1_packed));
-  for (i = 0; i < (25*block)-2; i++)
-    m17_p1_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_p1_full[i*8], 8);
-  crc_cmp = crc16m17(m17_p1_packed, (25*block)-2);
+  for (i = 0; i < 25*31; i++)
+  {
+    m17_p1_packed[x] = (uint8_t)ConvertBitIntoBytes(&m17_p1_full[i*8], 8);
+    if (m17_p1_packed[x] == 0) break; //stop at the termination byte
+    x++;
+  }
+  crc_cmp = crc16m17(m17_p1_packed, x);
 
   //debug dump CRC (when pad is literally zero)
-  // fprintf (stderr, " CRC: %04X", crc_cmp);
+  fprintf (stderr, " X: %d; LAST: %02X; TERM: %02X; CRC: %04X", x, m17_p1_packed[x-1], m17_p1_packed[x], crc_cmp);
 
   ptr = (block*25*8) - 16;
 
-  //attach the crc16 bits to the end of the LSF data
+  //attach the crc16 bits to the end of the PKT data
   for (i = 0; i < 16; i++) m17_p1_full[ptr+i] = (crc_cmp >> 15-i) & 1;
 
   //debug the full payload
@@ -2478,9 +2490,6 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //flag to determine if we send a new LSF frame for new encode
   //only send once at the appropriate time when encoder is toggled on
   int new_lsf = 1;
-
-  uint8_t pbc = 0; //packet/octet counter
-  uint8_t eot = 0; //end of tx bit
 
   while (!exitflag)
   {
@@ -2527,7 +2536,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     if (ptr/8 >= block*25)
     {
       eot = 1;
-      pbc = 25-pad; //may need to recheck this yet again on all
+      pbc = lst;
     }
     m17_p1[200] = eot;
 
@@ -2607,7 +2616,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
 void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
 {
   //WIP: Decode the completed packet
-  UNUSED(opts); UNUSED(state); UNUSED(len);
+  UNUSED(opts); UNUSED(state);
   int i;
 
   uint8_t protocol = input[0];
@@ -2718,11 +2727,6 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   //copy + left shift one octet
   memcpy (pkt_packed, pkt_bytes+1, 26);
 
-  //debug
-  // fprintf (stderr, "\n pkt_packed: \n");
-  // for (i = 0; i < 26; i++)
-  //   fprintf (stderr, " %02X", pkt_packed[i]);
-
   uint8_t counter = (pkt_packed[25] >> 2) & 0x1F;
   uint8_t eot = (pkt_packed[25] >> 7) & 1;
 
@@ -2732,28 +2736,44 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   else if (eot && state->m17_pbc_ct != 0) state->m17_pbc_ct++; //increment if eot and counter not zero
 
   int ptr = state->m17_pbc_ct*25;
+  int total = ptr + counter - 1;
   int end = ptr + 25;
 
   //Not sure if it would be better to set state pbc_ct by counter if not EOT?
-  if (!eot) state->m17_pbc_ct = counter;
-  else state->m17_pbc_ct++; //increment if eot
+  // if (!eot) state->m17_pbc_ct = counter;
+  // else state->m17_pbc_ct++; //increment if eot
 
   //debug counter and eot value
-  // if (!eot) fprintf (stderr, " CNT: %02d; CT: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
-  // else fprintf (stderr, " CNT: %02d; CB: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
+  if (!eot) fprintf (stderr, " CNT: %02d; PBC: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
+  else fprintf (stderr, " CNT: %02d; LST: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
 
   //put packet into storage
   memcpy (state->m17_pkt+ptr, pkt_packed, 25);
 
+  //debug TOTAL and its value
+  // fprintf (stderr, " T: %d; P: %02X", total, state->m17_pkt[total]);
+
+  //debug
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, "\n pkt: ");
+    for (i = 0; i < 26; i++)
+      fprintf (stderr, " %02X", pkt_packed[i]);
+  }
+
   if (eot)
   {
     //do a CRC check
-    uint16_t crc_cmp = crc16m17(state->m17_pkt, end-2);
+    uint16_t crc_cmp = crc16m17(state->m17_pkt, total);
     uint16_t crc_ext = (state->m17_pkt[end-2] << 8) + state->m17_pkt[end-1];
 
-    if (crc_cmp != crc_ext) //working!
+    if (crc_cmp == crc_ext)
+      decodeM17PKT(opts, state, state->m17_pkt, end-2);
+    else if (opts->aggressive_framesync == 0) //CRC Bypass, check anyways (if enabled)
+      decodeM17PKT(opts, state, state->m17_pkt, end-2); //end-2, or do full contents? 25*31-2
+
+    if (crc_cmp != crc_ext)
       fprintf (stderr, " (CRC ERR) ");
-    else decodeM17PKT(opts, state, state->m17_pkt, end-2);
 
     if (opts->payload == 1)
     {
