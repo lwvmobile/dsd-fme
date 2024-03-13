@@ -1274,6 +1274,7 @@ usage ()
   printf ("                 (Warning! Might be annoying.)\n");
   printf ("  -L <file>     Specify Filename for LRRP Data Output.\n");
   printf ("  -Q <file>     Specify Filename for OK-DMRlib Structured File Output. (placed in DSP folder)\n");
+  printf ("  -Q <file>     Specify Filename for M17 Binary File Output. (placed in DSP folder)\n");
   printf ("  -c <file>     Output symbol capture to .bin file\n");
   printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
   printf ("  -V <num>      Enable TDMA Voice Synthesis on Slot 1 (1), Slot 2 (2), or Both (3); Default is 3; \n");
@@ -1739,14 +1740,14 @@ main (int argc, char **argv)
         if (stat(wav_file_directory, &st) == -1)
         {
           fprintf (stderr, "-Q %s DSP file directory does not exist\n", wav_file_directory);
-          fprintf (stderr, "Creating directory %s to save DSP Structured files\n", wav_file_directory);
+          fprintf (stderr, "Creating directory %s to save DSP Structured or M17 Binary Stream files\n", wav_file_directory);
           mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
         }
         //read in filename
         //sprintf (opts.wav_out_file, "./WAV/DSD-FME-X1.wav");
         strncpy(dsp_filename, optarg, 1023);
         sprintf(opts.dsp_out_file, "%s/%s", wav_file_directory, dsp_filename);
-        fprintf (stderr, "Saving DSP Structured files to %s\n", opts.dsp_out_file);
+        fprintf (stderr, "Saving DSP Structured or M17 Binary Stream files to %s\n", opts.dsp_out_file);
         opts.use_dsp_output = 1;
         break;
 

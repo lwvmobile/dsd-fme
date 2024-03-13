@@ -1300,10 +1300,26 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   }
 
   //save symbols (dibits, actually) to symbol capture bin file format
-  if (opts->symbol_out_f)
+  if (opts->symbol_out_f) //use -c output.bin to use this format (default type for DSD-FME)
   {
     for (i = 0; i < 192; i++)
       fputc (output_dibits[i], opts->symbol_out_f);
+  }
+
+  //save binary format (M17_Implementations Compatible? Untested as of yet)
+  if (opts->use_dsp_output) //use -Q output.bin to use this format, will be placed in the DSP folder (reusing DSP)
+  {
+    FILE * pFile; //file pointer
+    pFile = fopen (opts->dsp_out_file, "w");
+    uint8_t output_binary[384]; memset (output_binary, 0, sizeof(output_binary));
+    for (i = 0; i < 192; i++)
+    {
+      output_binary[i*2+0] = (output_dibits[i] >> 1) & 1;
+      output_binary[i*2+1] = (output_dibits[i] >> 0) & 1;
+      fputc (output_binary[i*2+0], pFile);
+      fputc (output_dibits[i*2+1], pFile);
+    }
+    fclose(pFile);
   }
 
   //playing back signal audio into device/udp
@@ -2593,7 +2609,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     if (m17_p1_packed[x] == 0) break; //stop at the termination byte
     x++;
   }
-  crc_cmp = crc16m17(m17_p1_packed+1, x-1);
+  crc_cmp = crc16m17(m17_p1_packed, x+1); //+1 on len to make it match Woj's calculated value of 0x2F6F on the default sample
 
   //debug dump CRC (when pad is literally zero)
   fprintf (stderr, " X: %d; LAST: %02X; TERM: %02X; CRC: %04X", x, m17_p1_packed[x-1], m17_p1_packed[x], crc_cmp);
@@ -2885,7 +2901,7 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   if (eot)
   {
     //do a CRC check
-    uint16_t crc_cmp = crc16m17(state->m17_pkt+1, total-1);
+    uint16_t crc_cmp = crc16m17(state->m17_pkt, total+1); //+1 on len to make it match Woj's calculated value of 0x2F6F on the default sample
     uint16_t crc_ext = (state->m17_pkt[end-2] << 8) + state->m17_pkt[end-1];
 
     if (crc_cmp == crc_ext)
