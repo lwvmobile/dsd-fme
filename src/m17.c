@@ -2855,18 +2855,14 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   uint8_t counter = (pkt_packed[25] >> 2) & 0x1F;
   uint8_t eot = (pkt_packed[25] >> 7) & 1;
 
-  //Not sure if it would be better to set state pbc_ct by counter if not EOT?
-  if (!eot) state->m17_pbc_ct = counter;
-  else if (eot && state->m17_pbc_ct == 0) {} //pass if single block packet (bugfix super short text messages)
-  else if (eot && state->m17_pbc_ct != 0) state->m17_pbc_ct++; //increment if eot and counter not zero
+  //disabled these checks, this fails if 2 blocks are sent, better just to keep track of it by internal counter
+  // if (!eot) state->m17_pbc_ct = counter;
+  // else if (eot && state->m17_pbc_ct == 0) {} //pass if single block packet (bugfix super short text messages)
+  // else if (eot && state->m17_pbc_ct != 0) state->m17_pbc_ct++; //increment if eot and counter not zero
 
   int ptr = state->m17_pbc_ct*25;
   int total = ptr + counter - 1;
   int end = ptr + 25;
-
-  //Not sure if it would be better to set state pbc_ct by counter if not EOT?
-  // if (!eot) state->m17_pbc_ct = counter;
-  // else state->m17_pbc_ct++; //increment if eot
 
   //debug counter and eot value
   if (!eot) fprintf (stderr, " CNT: %02d; PBC: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
@@ -2918,7 +2914,7 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   }
 
   //increment pbc counter last
-  // state->m17_pbc_ct++; //disabled in lieu of the counter/eot check
+  if (!eot) state->m17_pbc_ct++;
 
   //ending linebreak
   fprintf (stderr, "\n");
