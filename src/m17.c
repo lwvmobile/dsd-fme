@@ -1087,6 +1087,39 @@ void simple_conv_encoder (uint8_t * input, uint8_t * output, int len)
 //dibits-symbols map
 const int8_t symbol_map[4] = {+1, +3, -1, -3};
 
+//sample RRC filter for 48kHz sample rate
+//alpha=0.5, span=8, sps=10, gain=sqrt(sps)
+float m17_rrc[81] =
+{
+	-0.003195702904062073f, -0.002930279157647190f, -0.001940667871554463f,
+	-0.000356087678023658f,  0.001547011339077758f,  0.003389554791179751f,
+	 0.004761898604225673f,  0.005310860846138910f,  0.004824746306020221f,
+	 0.003297923526848786f,  0.000958710871218619f, -0.001749908029791816f,
+	-0.004238694106631223f, -0.005881783042101693f, -0.006150256456781309f,
+	-0.004745376707651645f, -0.001704189656473565f,  0.002547854551539951f,
+	 0.007215575568844704f,  0.011231038205363532f,  0.013421952197060707f,
+	 0.012730475385624438f,  0.008449554307303753f,  0.000436744366018287f,
+	-0.010735380379191660f, -0.023726883538258272f, -0.036498030780605324f,
+	-0.046500883189991064f, -0.050979050575999614f, -0.047340680079891187f,
+	-0.033554880492651755f, -0.008513823955725943f,  0.027696543159614194f,
+	 0.073664520037517042f,  0.126689053778116234f,  0.182990955139333916f,
+	 0.238080025892859704f,  0.287235637987091563f,  0.326040247765297220f,
+	 0.350895727088112619f,  0.359452932027607974f,  0.350895727088112619f,
+	 0.326040247765297220f,  0.287235637987091563f,  0.238080025892859704f,
+	 0.182990955139333916f,  0.126689053778116234f,  0.073664520037517042f,
+	 0.027696543159614194f, -0.008513823955725943f, -0.033554880492651755f,
+	-0.047340680079891187f, -0.050979050575999614f, -0.046500883189991064f,
+	-0.036498030780605324f, -0.023726883538258272f, -0.010735380379191660f,
+	 0.000436744366018287f,  0.008449554307303753f,  0.012730475385624438f,
+	 0.013421952197060707f,  0.011231038205363532f,  0.007215575568844704f,
+	 0.002547854551539951f, -0.001704189656473565f, -0.004745376707651645f,
+	-0.006150256456781309f, -0.005881783042101693f, -0.004238694106631223f,
+	-0.001749908029791816f,  0.000958710871218619f,  0.003297923526848786f,
+	 0.004824746306020221f,  0.005310860846138910f,  0.004761898604225673f,
+	 0.003389554791179751f,  0.001547011339077758f, -0.000356087678023658f,
+	-0.001940667871554463f, -0.002930279157647190f, -0.003195702904062073f
+};
+
 //convert bit array into symbols and RF/Audio
 void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
 {
@@ -1095,7 +1128,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   //Single Digit numbers 1,2,3,4 are LSF, STR, PKT, and BRT
   //Double Digit numbers 11,33,55,99 are preamble, EOT, or Dead Air
 
-  int i, j;
+  int i, j, k, x;
 
   //Preamble A - 0x7777 (+3, -3, +3, -3, +3, -3, +3, -3)
   uint8_t m17_preamble_a[16] = {0,1,1,1, 0,1,1,1, 0,1,1,1, 0,1,1,1};
@@ -1205,12 +1238,45 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   //   fprintf (stderr, " %d", output_up[i]);
   // }
 
-  //craft baseband with gain + filter //m17_filter not working as expected, so disabling here and for OTA demodulation
+  //craft baseband with deviation + filter
   short baseband[1920]; memset (baseband, 0, 1920*sizeof(short));
-  for (i = 0; i < 1920; i++)
+
+  //simple, no filtering
+  if (opts->use_cosine_filter == 0)
   {
-    baseband[i] = output_up[i] * 7168.0f;  //optimal value?
-    // baseband[i] = m17_filter(baseband[i]); //(find/make suitable replacement)
+    for (i = 0; i < 1920; i++)
+      baseband[i] = output_up[i] * 7168.0f;
+  }
+  
+  //version w/ filtering lifted from M17_Implementations / libM17
+  else if (opts->use_cosine_filter == 1)
+  {
+    float mem[81]; memset (mem, 0.0f, 81*sizeof(float));
+    float mac = 0.0f;
+    x = 0;
+    for (i = 0; i < 192; i++)
+    {
+      mem[0] = (float)output_symbols[i] * 7168.0f;
+
+      for (j = 0; j < 10; j++)
+      {
+
+        mac = 0.0f;
+
+        //calc the sum of products
+        for (k = 0; k < 81; k++)
+          mac += mem[k]*m17_rrc[k]*sqrtf(10.0);
+
+        //shift the delay line right by 1
+        for (k = 80; k > 0; k--)
+          mem[k] = mem[k-1];
+
+        mem[0] = 0.0f;
+
+        baseband[x++] = (short)mac;
+      }
+
+    }
   }
 
   //debug baseband

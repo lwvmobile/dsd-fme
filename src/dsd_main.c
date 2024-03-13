@@ -2428,6 +2428,9 @@ main (int argc, char **argv)
             sprintf (opts.output_name, "M17");
             fprintf(stderr, "Notice: M17 cannot autodetect polarity. \n Use -xz option if Inverted Signal expected.\n");
             fprintf(stderr, "Decoding only M17 frames.\n");
+
+            //disable RRC filter for now
+            opts.use_cosine_filter = 0;
           }
           else if (optarg[0] == 'Z') //Captial Z to Run the M17 STR encoder
           {
@@ -3046,6 +3049,9 @@ main (int argc, char **argv)
 
     else if (opts.m17encoder == 1)
     {
+      //disable RRC filter for now
+      opts.use_cosine_filter = 0;
+
       opts.pulse_digi_rate_out = 8000;
       
       //open any inputs, if not alread opened, OSS input and output already handled
@@ -3075,6 +3081,9 @@ main (int argc, char **argv)
 
     else if (opts.m17encoderpkt == 1)
     {
+      //disable RRC filter for now
+      opts.use_cosine_filter = 0;
+
       opts.pulse_digi_rate_out = 8000;
       //open any outputs, if not already opened
       if (opts.audio_out_type == 0) openPulseOutput(&opts);

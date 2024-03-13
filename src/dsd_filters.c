@@ -1,7 +1,7 @@
 //M17 Filter -- RRC Alpha = 0.5 S/s 48000 with 81 taps
-#define M17ZEROS 80 //ONLY SEE 79 THOUGH
-float m17gain = 6.92820323f; //sqrt of 48  //10.0f
-static float m17xv[M17ZEROS+1];
+#define M17ZEROS 80 
+float m17gain = 3.16227766f; //sqrt of 10.0f
+static float m17xv[81];
 
 //sample RRC filter for 48kHz sample rate
 //alpha=0.5, span=8, sps=10, gain=sqrt(sps)
