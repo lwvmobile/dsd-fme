@@ -1360,8 +1360,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   unsigned long long int dst = 0;
   unsigned long long int src = 0;
   //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
-  char d40[11] = "DSD-FME  "; //DST
-  char s40[11] = "DSD-FME  "; //SRC
+  char d40[50] = "DSD-FME  "; //DST
+  char s40[50] = "DSD-FME  "; //SRC
   //end User Defined Variables
 
   //configure User Defined Variables, if defined at CLI
@@ -2326,26 +2326,26 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   unsigned long long int dst = 0;
   unsigned long long int src = 0;
   //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
-  char d40[11] = "DSD-FME  "; //DST
-  char s40[11] = "DSD-FME  "; //SRC
+  char d40[50] = "DSD-FME  "; //DST
+  char s40[50] = "DSD-FME  "; //SRC
 
   // dst = 0xEE6B28000000; //viterbi debug values
   // src = 0xEE6B28000000; //viterbi debug values
 
   //Default
-  // char text[] = "This is a simple SMS text message sent over M17 Packet Data.";
+  // char text[800] = "This is a simple SMS text message sent over M17 Packet Data.";
 
   //short
   //NOTE: Working on full payload w/o padding
-  // char text[] = "Lorem";
+  // char text[800] = "Lorem";
 
   //medium
   //NOTE: Fixed w/ the pad < 1, then add a block (not just if 0)
-  // char text[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+  // char text[800] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
 
   //large
   //NOTE: Working on full payload w/o padding
-  char text[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+  char text[800] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
   //Preamble of the Declaration of Independence (U.S.A.)
   //NOTE: Fixed again with block != 31 check and manual terminator insertion into text byte 772
