@@ -1310,7 +1310,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   if (opts->use_dsp_output) //use -Q output.bin to use this format, will be placed in the DSP folder (reusing DSP)
   {
     FILE * pFile; //file pointer
-    pFile = fopen (opts->dsp_out_file, "w");
+    pFile = fopen (opts->dsp_out_file, "a"); //append, not write
     uint8_t output_binary[384]; memset (output_binary, 0, sizeof(output_binary));
     for (i = 0; i < 192; i++)
     {
