@@ -1306,18 +1306,28 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
       fputc (output_dibits[i], opts->symbol_out_f);
   }
 
-  //save binary format (M17_Implementations Compatible? Untested as of yet)
+  /* //reference from m17-packet-encode.c
+  //standard mode - int16 symbol stream
+    else if(out_type==1)
+    {
+        for(uint16_t i=0; i<pkt_sym_cnt; i++)
+        {
+            int16_t val=full_packet[i];
+            fwrite(&val, 2, 1, fp);
+        }
+    }
+  */
+
+  //save symbol stream format (M17_Implementations)
   if (opts->use_dsp_output) //use -Q output.bin to use this format, will be placed in the DSP folder (reusing DSP)
   {
     FILE * pFile; //file pointer
     pFile = fopen (opts->dsp_out_file, "a"); //append, not write
-    uint8_t output_binary[384]; memset (output_binary, 0, sizeof(output_binary));
+    int16_t val = 0;
     for (i = 0; i < 192; i++)
     {
-      output_binary[i*2+0] = (output_dibits[i] >> 1) & 1;
-      output_binary[i*2+1] = (output_dibits[i] >> 0) & 1;
-      fputc (output_binary[i*2+0], pFile);
-      fputc (output_dibits[i*2+1], pFile);
+      val = (int16_t)output_symbols[i];
+      fwrite(&val, 2, 1, pFile);
     }
     fclose(pFile);
   }
