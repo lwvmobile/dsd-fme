@@ -273,3 +273,19 @@ where samples is 160 for mono, 320 for stereo, and short samples are 2 and float
 This is vital to prevent 'lag' or cut-off audio when the UDP audio doesn't fill the default buffer size.
 
 Note2: Be sure to start the receiving end AFTER starting DSD-FME. If DSD-FME is restarted, make sure to restart the receiving end as well, as socat/UDP closes the UDP port listening when DSD-FME closes the UDP socket.
+
+## Record 48k/1 audio with rtl_fm
+
+You can record suitable audio to feed as input to dsd-fme with `-i` using rtl_fm:
+
+`rtl_fm -M nfm -f [FREQ] -s 48k -g 42 -l 20 > input.wav`
+
+You can also combine that with `socat` to send the audio to a remote dsd-fme instance in real time while keeping a local copy on the host where the RTL-SDR dongle is:
+
+`rtl_fm -M fm -f [FREQ] -s 48k -g 42 -l 20 | tee input.wav | socat -u - TCP-LISTEN:1234,forever,reuseaddr`
+
+On the remote side where dsd-fme is, use the TCP input:
+
+`dsd-fme -i tcp:192.168.7.8:1234 -N`
+
+Note: As always, when using rtl_fm, play with `-l` and `-g` to find a good squelch and gain values for your environment - you will know if the squelch is the right value when `input.wav` does not increase in size in the absence of useful signal on the monitored frequency.
