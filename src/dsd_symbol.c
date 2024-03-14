@@ -222,6 +222,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         #else
         result = sf_read_short(opts->tcp_file_in, &sample, 1);
         if(result == 0) {
+          TCP_RETRY:
+          if (exitflag == 1) cleanupAndExit(opts, state); //needed to break the loop on ctrl+c
           fprintf (stderr, "\nConnection to TCP Server Interrupted. Trying again in 3 seconds.\n");
           sample = 0;
           sf_close(opts->tcp_file_in); //close current connection on this end
@@ -246,7 +248,11 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             }
             else fprintf (stderr, "TCP Socket Reconnected Successfully.\n");
           }
-          else fprintf (stderr, "TCP Socket Connection Error.\n");          
+          else
+          {
+            fprintf (stderr, "TCP Socket Connection Error.\n");
+            if (opts->frame_m17 == 1) goto TCP_RETRY; //if using m17 encoder/decoder, just keep looping to keep alive
+          }
 
           //now retry reading sample
           result = sf_read_short(opts->tcp_file_in, &sample, 1);

@@ -2637,6 +2637,7 @@ main (int argc, char **argv)
       if (curr != NULL) opts.tcp_portno = atoi (curr);
 
       TCPEND:
+      if (exitflag == 1) cleanupAndExit(&opts, &state); //needed to break the loop on ctrl+c
       fprintf (stderr, "%s:", opts.tcp_hostname);
       fprintf (stderr, "%d \n", opts.tcp_portno);
       opts.tcp_sockfd = Connect(opts.tcp_hostname, opts.tcp_portno);
@@ -2653,6 +2654,11 @@ main (int argc, char **argv)
         sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
         opts.audio_in_type = 5;
         #else
+        if (opts.frame_m17 == 1)
+        {
+          sleep(1);
+          goto TCPEND; //try again if using M17 encoder / decoder over TCP
+        }
         sprintf (opts.audio_in_dev, "%s", "pulse");
         fprintf (stderr, "TCP Connection Failure - Using %s Audio Input.\n", opts.audio_in_dev);
         opts.audio_in_type = 0;
