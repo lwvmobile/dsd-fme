@@ -302,11 +302,11 @@ Using the `-8` option (raw audio monitor) will instead send encoded raw audio to
 
 To send a voice stream out of stdout into SOCAT TCP to a second/remote DSD-FME session to decode:
 
-Encode:
+Encode (Upper Z):
 
 `dsd-fme -fZ -8 -i pulse -M M17:9:LWVMOBILE:DSD-FME:48000 -o - | socat stdio tcp-listen:7355,forever,reuseaddr`
 
-Decode: 
+Decode (Lower z): 
 
 `dsd-fme -fz -i tcp:192.168.7.8:7355`
 
@@ -328,5 +328,31 @@ CAN 1-15; SRC and DST have to be no more than 9 UPPER base40 characters.
 BASE40: '  ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.'
 Input Rate Default is 48000; Use Multiples of 8000 up to 48000.
 Values not entered into the M17: string are set to default values. M17:7:DSD-FME:DSD-FME:48000
+
+Fun Example Transmuting OTA Analog Things into M17:
+
+Start up in sequence.
+
+Terminal #1 (RTL Input):
+`dsd-fme -fZ -8 -M M17:1:ANALOG:M17:48000 -i rtl:0:162.425M -o - | socat stdio tcp-listen:7310,forever,reuseaddr`
+
+Terminal #2:
+`dsd-fme -fz -i tcp:127.0.0.1:7310`
+
+Fun Example Transmuting OTA Digital Things into M17:
+
+Start up all three of these in sequence.
+
+Terminal #1 (connecting to SDR++):
+`dsd-fme -fi -i tcp:127.0.0.1:7355 -o - | socat stdio tcp-listen:7300,forever,reuseaddr`
+
+Terminal #2:
+`dsd-fme -fZ -8 -M M17:2:NXDN:M17:8000 -i tcp:127.0.0.1:7300 -o - | socat stdio tcp-listen:7301,forever,reuseaddr`
+
+Terminal #3:
+`dsd-fme -fz -i tcp:127.0.0.1:7301`
+
+Note: Transmuting only carries over voice when audio is output, and will not carry any ID values, or any other data payloads.
+This mode is only meant for educational or fun purposes, please do not retransmit stuff that doesn't belong to you.
 
 Information on this section will be updated as features are added or modified, etc. If you need help with a particular function and can't find a suitable answer, always open a new issue here, or make contact on the radio reference forum for additional examples, guidance, ideas, help, etc.
