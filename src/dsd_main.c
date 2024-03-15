@@ -3071,6 +3071,10 @@ main (int argc, char **argv)
       if (curr != NULL)
         state.m17_vox = atoi(curr);
 
+      curr = strtok(NULL, ":"); //m17 UDP/IP Frame enable
+      if (curr != NULL)
+        opts.m17_use_ip = atoi(curr);
+
       M17END: ; //do nothing
 
       //check to make sure can value is no greater than 15 (4 bit value)

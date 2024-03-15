@@ -1366,7 +1366,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
 void encodeM17STR(dsd_opts * opts, dsd_state * state)
 {
 
-  //WIP: Finish creating audio of the encoded signal
+  //WIP: IP Frame Things and User Variables for Reflectors, etc
   uint8_t nil[368]; //empty array to send to RF during Preamble, EOT Marker, or Dead Air
   memset (nil, 0, sizeof(nil));
 
@@ -1381,6 +1381,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   int use_ip = 0; //1 to enable IP Frame Broadcast over UDP
   int udpport = 17000; //port number for M17 IP Frmae (default is 17000)
   sprintf (opts->m17_hostname, "%s", "127.0.0.1"); //enter IP address or hostname here
+  uint8_t reflector_module = 0x41; //'A', single letter reflector module A-Z, 0x41 is A
   uint8_t can = 7; //channel access number
   //numerical representation of dst and src after b40 encoding, or special/reserved value
   unsigned long long int dst = 0;
@@ -1421,7 +1422,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //WIP: Open UDP port to 17000 and see if any other config info is necessary for running standard IP frames, etc,
   //or perhaps just also configure an input format for that ip streaming method, may need to handle UDP control packets (conn, ackn, nack, ping, pong, disc)
   int sock_err;
-  if (use_ip == 1)
+  if (opts->m17_use_ip == 1)
   {
     opts->m17_portno = udpport;
     sock_err = udp_socket_connectM17(opts, state);
@@ -1430,13 +1431,21 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "Error Configuring UDP Socket for M17 IP Frame :( \n");
       use_ip = 0;
     }
-    else opts->m17_use_ip = 1;
+    else use_ip = 1;
   }
-  //TODO: See if we need to send a conn and/or receice any ackn/nack/ping/pong commands later
+  //TODO: See if we need to send a conn and/or receive any ackn/nack/ping/pong commands later
 
   //WIP: Standard IP Framing
   uint8_t magic[4] = {0x4D, 0x31, 0x37, 0x20};
-  uint8_t sid[2]; memset (sid, 0, sizeof(sid));
+  uint8_t ackn[4]  = {0x41, 0x43, 0x4B, 0x4E}; UNUSED(ackn);
+  uint8_t nack[4]  = {0x4E, 0x41, 0x43, 0x4B}; UNUSED(nack);
+  uint8_t conn[11]; memset (conn, 0, sizeof(conn));
+  uint8_t disc[10]; memset (disc, 0, sizeof(disc));
+  uint8_t ping[10]; memset (ping, 0, sizeof(ping));
+  uint8_t pong[10]; memset (pong, 0, sizeof(pong));
+  uint8_t retn[10]; memset (retn, 0, sizeof(retn));
+  int udp_return = 0; UNUSED(udp_return);
+  uint8_t sid[2];   memset (sid, 0, sizeof(sid));
 
   //NONCE
   time_t ts = time(NULL); //timestamp since epoch / "Unix Time"
@@ -1551,6 +1560,54 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     }
   }
   //end CSD conversion
+
+  //Setup conn, disc, ping, pong values
+  conn[0] = 0x43; conn[1] = 0x4F; conn[2] = 0x4E; conn[3] = 0x4E; conn[10] = reflector_module;
+  disc[0] = 0x44; disc[1] = 0x49; disc[2] = 0x53; disc[3] = 0x43;
+  ping[0] = 0x50; ping[1] = 0x49; ping[2] = 0x4E; ping[3] = 0x47;
+  pong[0] = 0x50; pong[1] = 0x4F; pong[2] = 0x4E; pong[3] = 0x47;
+
+  for (i = 0; i < 6; i++)
+  {
+    conn[i+4] = (src >> 48-(8*i)) & 0xFF;
+    disc[i+4] = (src >> 48-(8*i)) & 0xFF;
+    ping[i+4] = (src >> 48-(8*i)) & 0xFF;
+    pong[i+4] = (src >> 48-(8*i)) & 0xFF;
+  }
+
+  //debug
+  // fprintf (stderr, " CONN: ");
+  // for (i = 0; i < 11; i++)
+  //   fprintf (stderr, " %02X", conn[i]);
+
+  //SEND CONN to reflector
+  if (use_ip == 1)
+    udp_return = m17_socket_blaster (opts, state, 11, conn);
+
+  //WIP: Read UDP ACKN/NACK value, disable use_ip if NULL or nack return
+  // if (use_ip && udp_return) //disabled for now, need to look into how to view the return or received value
+  // {
+  //   retn[0] = (udp_return >> 24) & 0xFF;
+  //   retn[1] = (udp_return >> 16) & 0xFF;
+  //   retn[2] = (udp_return >> 8)  & 0xFF;
+  //   retn[3] = (udp_return >> 0)  & 0xFF;
+  //   if (memcmp (nack, retn, 4) == 0) use_ip = 0;
+
+  //   if (use_ip) fprintf (stderr, "\n Connected to reflector successfully!");
+  //   else fprintf (stderr, "\n NACK from reflector!");
+
+  //   //debug
+  //   fprintf (stderr, " RETURN: %08llX; RETN: ", udp_return);
+  //   for (i = 0; i < 4; i++)
+  //     fprintf (stderr, " %02X", retn[i]);
+
+  //   memset (retn, 0, sizeof(retn));
+  // }
+  // else
+  // {
+  //   use_ip = 0;
+  //   fprintf (stderr, "\n No Reply from Reflector!");
+  // }
 
   //load dst and src values into the LSF
   for (i = 0; i < 48; i++) m17_lsf[i] = (dst >> 47ULL-(unsigned long long int)i) & 1;
@@ -2071,8 +2128,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       // }
 
       //WIP: Send packed IP frame to UDP port 17000 if opened successfully
-      if (opts->m17_use_ip == 1)
-        m17_socket_blaster (opts, state, 54, m17_ip_packed);
+      if (use_ip == 1)
+        udp_return = m17_socket_blaster (opts, state, 54, m17_ip_packed);
 
       //increment lich_cnt, reset on 6
       lich_cnt++;
@@ -2246,6 +2303,10 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       ncursesPrinter(opts, state);
     
   }
+
+  //SEND DISC to reflector
+  if (use_ip == 1)
+    udp_return = m17_socket_blaster (opts, state, 10, disc);
   
   //free allocated memory
   free(samp1);

@@ -338,17 +338,18 @@ int udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void * 
 int m17_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data)
 {
     UNUSED(state);
-    size_t err = 0;
+    unsigned long long int err = 0;
 
     //listen with:
 
-    //54 packed bytes
+    //XX packed bytes
     //socat stdio udp-listen:17000 | (decoder)
 
     //send audio or data to socket
     err = sendto(opts->m17_udp_sock, data, nsam, 0, (const struct sockaddr * ) & addressM17, sizeof(struct sockaddr_in));
-    if (err < 0) fprintf (stderr, "\n UDP SENDTO ERR %ld", err); //return value here is size_t number of characters sent, or -1 for failure
-    if (err < nsam) fprintf (stderr, "\n UDP Underflow %ld", err); //I'm not even sure if this is possible
+    //RETURN Value should be ACKN or NACK, or PING, or PONG
+
+    return (err);
 }
 
 int udp_socket_connect(dsd_opts * opts, dsd_state * state)
