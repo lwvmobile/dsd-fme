@@ -1410,6 +1410,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   int i, j, k, x;    //basic utility counters
   short sample = 0;  //individual audio sample from source
   size_t nsam = 160; //number of samples to be read in (default is for codec2 3200 bps)
+  int dec = state->m17_rate / 8000; //number of samples to run before selecting a sample from source input
 
   //send dead air with type 99
   for (i = 0; i < 25; i++)
@@ -1660,14 +1661,14 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     {
       for (i = 0; i < nsam; i++)
       {
-        for (j = 0; j < 6; j++)
+        for (j = 0; j < dec; j++)
           pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
         voice1[i] = sample; //only store the 6th sample
       }
 
       for (i = 0; i < nsam; i++)
       {
-        for (j = 0; j < 6; j++)
+        for (j = 0; j < dec; j++)
           pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
         voice2[i] = sample; //only store the 6th sample
       }
@@ -1678,7 +1679,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       int result = 0;
       for (i = 0; i < nsam; i++)
       {
-        for (j = 0; j < 6; j++)
+        for (j = 0; j < dec; j++)
           result = sf_read_short(opts->audio_in_file, &sample, 1);
         voice1[i] = sample;
         if (result == 0)
@@ -1693,7 +1694,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       for (i = 0; i < nsam; i++)
       {
-        for (j = 0; j < 6; j++)
+        for (j = 0; j < dec; j++)
           result = sf_read_short(opts->audio_in_file, &sample, 1);
         voice2[i] = sample;
         if (result == 0)
@@ -1711,14 +1712,14 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     {
       for (i = 0; i < nsam; i++)
       {
-        for (j = 0; j < 6; j++)
+        for (j = 0; j < dec; j++)
           read (opts->audio_in_fd, &sample, 2);
         voice1[i] = sample;
       }
 
       for (i = 0; i < nsam; i++)
       {
-        for (j = 0; j < 6; j++)
+        for (j = 0; j < dec; j++)
           read (opts->audio_in_fd, &sample, 2);
         voice2[i] = sample;
       }
@@ -1729,7 +1730,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       int result = 0;
       for (i = 0; i < nsam; i++)
       {
-        for (j = 0; j < 6; j++)
+        for (j = 0; j < dec; j++)
           result = sf_read_short(opts->tcp_file_in, &sample, 1);
         voice1[i] = sample;
         if (result == 0)
@@ -1744,7 +1745,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       for (i = 0; i < nsam; i++)
       {
-        for (j = 0; j < 6; j++)
+        for (j = 0; j < dec; j++)
           result = sf_read_short(opts->tcp_file_in, &sample, 1);
         voice2[i] = sample;
         if (result == 0)
@@ -1763,7 +1764,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       #ifdef USE_RTLSDR
       for (i = 0; i < nsam; i++)
       {
-        for (j = 0; j < 6; j++)
+        for (j = 0; j < dec; j++)
           if (get_rtlsdr_sample(&sample, opts, state) < 0)
             cleanupAndExit(opts, state);
         voice1[i] = sample;
@@ -1771,7 +1772,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       for (i = 0; i < nsam; i++)
       {
-        for (j = 0; j < 6; j++)
+        for (j = 0; j < dec; j++)
           if (get_rtlsdr_sample(&sample, opts, state) < 0)
             cleanupAndExit(opts, state);
         voice2[i] = sample;

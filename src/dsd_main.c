@@ -1190,6 +1190,7 @@ initState (dsd_state * state)
   state->m17_src = 0;
   state->m17_can = 0;     //can value that was decoded from signal
   state->m17_can_en = -1; //can value supplied to the encoding side
+  state->m17_rate = 48000; //sampling rate for audio input
   memset(state->m17_dst_csd, 0, sizeof(state->m17_dst_csd));
   memset(state->m17_src_csd, 0, sizeof(state->m17_src_csd));
   sprintf (state->m17_dst_str, "%s", "");
@@ -1312,9 +1313,11 @@ usage ()
   printf ("  -fB           M17 BERT Encoder\n");
   printf (" Example: dsd-fme -fB -M M17:9:DSD-FME:LWVMOBILE -6 m17bert.wav\n");
   printf ("\n");
-  printf ("  -M            M17 Encoding User Configuration String: M17:CAN:SRC:DST (see examples above).\n");
-  printf ("                  CAN 1-15; SRC and DST have to be no more than 9 UPPER base40 characters\n");
+  printf ("  -M            M17 Encoding User Configuration String: M17:CAN:SRC:DST:INPUT_RATE (see examples above).\n");
+  printf ("                  CAN 1-15; SRC and DST have to be no more than 9 UPPER base40 characters.\n");
   printf ("                  BASE40: '  ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.'\n");
+  printf ("                  Input Rate Default is 48000; Use Multiples of 8000 up to 48000.\n");
+  printf ("                  Values not entered into the M17: string are set to default values.\n");
   printf ("  -S            M17 Encoding Packet SMS String: No more than 772 chars, use single quotations (see example above).\n");
   printf ("Decoder options:\n");
   printf ("  -fa           Auto Detection\n");
@@ -2998,7 +3001,7 @@ main (int argc, char **argv)
     if((strncmp(state.m17dat, "M17", 3) == 0))
     {
       //read in values
-      //string in format of M17:can:src_csd:dst_csd
+      //string in format of M17:can:src_csd:dst_csd:input_rate
 
       //check and capatalize any letters in the CSD
       for (int i = 0; state.m17dat[i]!='\0'; i++)
@@ -3035,6 +3038,10 @@ main (int argc, char **argv)
         state.str50b[9] = '\0';
       }
 
+      curr = strtok(NULL, ":"); //m17 input audio rate
+      if (curr != NULL)
+        state.m17_rate = atoi(curr);
+
       M17END: ; //do nothing
 
       //check to make sure can value is no greater than 15 (4 bit value)
@@ -3045,7 +3052,7 @@ main (int argc, char **argv)
       // fprintf (stderr, " %s;", state.m17dat);
 
       //debug print
-      fprintf (stderr, " M17:%d:%s:%s; \n ", state.m17_can_en, state.str50c, state.str50b);
+      fprintf (stderr, " M17:%d:%s:%s:%d; \n ", state.m17_can_en, state.str50c, state.str50b, state.m17_rate);
     }
 
     if (opts.playfiles == 1)

@@ -786,6 +786,7 @@ typedef struct
   unsigned long long int m17_src;
   uint8_t m17_can; //can value that was decoded from signal
   int m17_can_en; //can value supplied to the encoding side
+  int m17_rate;  //sampling rate for audio input
 
   char m17_dst_csd[20];
   char m17_src_csd[20];
