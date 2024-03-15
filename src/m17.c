@@ -1411,6 +1411,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   short sample = 0;  //individual audio sample from source
   size_t nsam = 160; //number of samples to be read in (default is for codec2 3200 bps)
   int dec = state->m17_rate / 8000; //number of samples to run before selecting a sample from source input
+  int sql_hit = 11; //squelch hits, hit enough, and deactivate vox
+  int eot_out =  1; //if we have already sent the eot out once
 
   //send dead air with type 99
   for (i = 0; i < 25; i++)
@@ -1777,9 +1779,13 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
             cleanupAndExit(opts, state);
         voice2[i] = sample;
       }
-      opts->rtl_rms = rtl_return_rms();
+      
       #endif
     }
+
+    //read in RMS value for vox function; NOTE: may not work correctly on STDIN and TCP due to blocking when no samples to read
+    if (opts->audio_in_type == 3) opts->rtl_rms = rtl_return_rms();
+    else opts->rtl_rms = raw_rms(voice1, nsam, 1) / 2; //dividing by two so mic isn't so sensitive on vox
 
     //decimate audio input (default 100% on mic is WAY TOO LOUD for the encoder, fine tune in volume control)
     for (i = 0; i < 160; i++)
@@ -1842,6 +1848,25 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     {
       m17_v1[i+16]    = v1_bits[i];
       m17_v1[i+16+64] = v2_bits[i];
+    }
+
+    //tally consecutive squelch hits based on RMS value, or reset
+    if (opts->rtl_rms > opts->rtl_squelch_level) sql_hit = 0;
+    else sql_hit++; //may eventually roll over to 0 again 
+
+    //if vox enabled, toggle tx/eot with sql_hit comparison
+    if (state->m17_vox == 1)
+    {
+      if (sql_hit > 10 && lich_cnt == 0) //licn_cnt 0 to prevent new LSF popping out
+      {
+        state->m17encoder_tx = 0;
+        eot = 1;
+      }
+      else
+      {
+        state->m17encoder_tx = 1;
+        eot = 0;
+      }
     }
 
     //set end of tx bit on the exitflag (sig, results not gauranteed) or toggle eot flag (always triggers)
@@ -1962,12 +1987,22 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
         //flag off after sending
         new_lsf = 0;
+
+        //flag to indicate to send one eot afterwards
+        eot_out = 0;
       }
 
       fprintf (stderr, "\n M17 Stream (ENCODER): ");
       if (opts->monitor_input_audio == 0)
         processM17STR_debug(opts, state, m17_t4s);
       else fprintf (stderr, " To Audio Out Device Type: %d; ", opts->audio_out_type);
+
+      //debug RMS Value
+      if (state->m17_vox == 1)
+      {
+        fprintf (stderr, " RMS: %04ld", opts->rtl_rms);
+        fprintf (stderr, " SQL HIT: %d;", sql_hit);
+      }
 
       //convert bit array into symbols and RF/Audio
       encodeM17RF (opts, state, m17_t4s, 2);
@@ -2166,12 +2201,19 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         m17_lsfs[i] = (m17_lsfi[i] ^ m17_scramble[i]) & 1;
 
       //flush the last frame with the eot bit on
-      if (eot)
+      if (eot && !eot_out)
       {
         fprintf (stderr, "\n M17 Stream (ENCODER): ");
         if (opts->monitor_input_audio == 0)
           processM17STR_debug(opts, state, m17_t4s);
         else fprintf (stderr, " To Audio Out Device Type: %d; ", opts->audio_out_type);
+
+        //debug RMS Value
+        if (state->m17_vox == 1)
+        {
+          fprintf (stderr, " RMS: %04ld", opts->rtl_rms);
+          fprintf (stderr, " SQL HIT: %d;", sql_hit);
+        }
 
         //convert bit array into symbols and RF/Audio
         encodeM17RF (opts, state, m17_t4s, 2); //Last Stream Frame
@@ -2184,6 +2226,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
         //reset indicators
         eot = 0;
+        eot_out = 1;
         state->m17encoder_eot = 0;
       }
 

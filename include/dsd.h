@@ -787,6 +787,7 @@ typedef struct
   uint8_t m17_can; //can value that was decoded from signal
   int m17_can_en; //can value supplied to the encoding side
   int m17_rate;  //sampling rate for audio input
+  int m17_vox;  //vox enabled via RMS value
 
   char m17_dst_csd[20];
   char m17_src_csd[20];
@@ -1285,6 +1286,7 @@ void eot_cc(dsd_opts * opts, dsd_state * state); //end of TX return to CC
 void return_to_cc (dsd_opts * opts, dsd_state * state);
 
 //misc generic audio filtering for analog at 48k/1
+long int raw_rms(short *samples, int len, int step);
 void analog_deemph_filter(short * input, int len);
 void analog_preemph_filter(short * input, int len);
 void analog_dc_block_filter(short * input, int len);

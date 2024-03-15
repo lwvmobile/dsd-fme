@@ -1191,6 +1191,7 @@ initState (dsd_state * state)
   state->m17_can = 0;     //can value that was decoded from signal
   state->m17_can_en = -1; //can value supplied to the encoding side
   state->m17_rate = 48000; //sampling rate for audio input
+  state->m17_vox = 0; //vox mode enabled on M17 encoder
   memset(state->m17_dst_csd, 0, sizeof(state->m17_dst_csd));
   memset(state->m17_src_csd, 0, sizeof(state->m17_src_csd));
   sprintf (state->m17_dst_str, "%s", "");
@@ -3065,6 +3066,10 @@ main (int argc, char **argv)
       curr = strtok(NULL, ":"); //m17 input audio rate
       if (curr != NULL)
         state.m17_rate = atoi(curr);
+
+      curr = strtok(NULL, ":"); //m17 vox enable
+      if (curr != NULL)
+        state.m17_vox = atoi(curr);
 
       M17END: ; //do nothing
 
