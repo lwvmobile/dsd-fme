@@ -27,11 +27,11 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   fprintf (stderr," VOICE");
 
-  //print group and source values if EA trunked
+  //print group/target and source values if EA trunked
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && state->ea_mode == 1)
   {
     fprintf (stderr, "%s", KGRN);
-    fprintf (stderr, " Site: %lld Group: %d Source: %d LCN: %d ", 
+    fprintf (stderr, " Site: %lld Group/Target: %d Source: %d LCN: %d ", 
               state->edacs_site_id, state->lasttg, state->lastsrc, state->edacs_tuned_lcn);
     fprintf (stderr, "%s", KNRM);
   }
