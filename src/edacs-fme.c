@@ -520,7 +520,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
       command = ((fr_1t & 0xFF00000000) >> 32) ^ state->esk_mask;
       mt1 = (command & 0xF8) >> 3;
       mt2 = (fr_1t & 0x780000000) >> 31;
-      lcn = (fr_1t & 0x3E0000000) >> 29; //only valid during calls, status 
 
       //Site ID
       unsigned long long int site_id = 0; //we probably could just make this an int as well as the state variables
@@ -603,6 +602,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
       // mt1 0x3 is Digital group voice call, 0x2 Group Data Channel, 0x1 TDMA call
       else if (mt1 >= 0x1 && mt1 <= 0x3)
       {
+        lcn = (fr_1t & 0x3E0000000) >> 29;
+
         //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
         if (lcn > state->edacs_lcn_count && lcn < 26) 
         {
@@ -682,6 +683,73 @@ void edacs(dsd_opts * opts, dsd_state * state)
           
         }
       }
+      //I-Call Grant Update
+      else if (mt1 == 0x10)
+      {
+        lcn = (fr_4t & 0xFF00000000) >> 32;
+
+        //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
+        if (lcn > state->edacs_lcn_count && lcn < 26) 
+        {
+          state->edacs_lcn_count = lcn;
+        }
+
+        int target = (fr_1t & 0xFFFFF000) >> 12;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        if (source != 0) state->lastsrc = source;
+        if (lcn != 0)    state->edacs_vc_lcn = lcn;
+        fprintf (stderr, "%s", KGRN);
+        fprintf (stderr, " I-Call Target [%08d] Source [%08d] LCN[%02d]", target, source, lcn);
+
+        char mode[8]; //allow, block, digital enc
+        sprintf (mode, "%s", "");
+
+        //if we are using allow/whitelist mode, then write 'B' to mode for block - no allow/whitelist support for i-calls
+        if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+
+        if (mt2 == 0x10) fprintf (stderr, " Analog Call");
+        if (mt2 == 0x14) fprintf (stderr, " Digital Call");
+        fprintf (stderr, "%s", KNRM);
+
+        //this is working now with the new import setup
+        if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
+        {
+          if (lcn < 26 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
+          {
+            //openwav file and do per call right here, should probably check as well to make sure we have a valid trunking method active (rigctl, rtl)
+            if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
+            {
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %d SRC %d.wav", getDateE(), timestr, state->edacs_site_id, target, source);
+              openWavOutFile (opts, state);
+              // openWavOutFile48k (opts, state); //debug for testing analog wav only
+            }
+            
+            //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
+            if (opts->use_rigctl == 1)
+            {
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+      		    SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
+              state->edacs_tuned_lcn = lcn;
+              opts->p25_is_tuned = 1;
+              //debug testing (since I don't have EDACS standard w/ Analog nearby)
+              // edacs_analog(opts, state, target, lcn);
+            }
+
+            if (opts->audio_in_type == 3) //rtl dongle
+            {
+              #ifdef USE_RTLSDR
+              rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+              state->edacs_tuned_lcn = lcn;
+              opts->p25_is_tuned = 1;
+              //debug testing (since I don't have EDACS standard w/ Analog nearby)
+              // edacs_analog(opts, state, target, lcn);
+              #endif
+            }
+
+          }
+          
+        }
+      }
       else //print frames for debug/analysis
       {
         fprintf (stderr, " FR_1 [%010llX]", fr_1t);
@@ -743,6 +811,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //voice call assignment
       else if (command == 0xEE || command == 0xEF)
       {
+        lcn = (fr_1t & 0x3E0000000) >> 29;
 
         if (lcn > state->edacs_lcn_count && lcn < 26) 
         {
