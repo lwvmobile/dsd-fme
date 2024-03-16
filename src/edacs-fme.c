@@ -696,7 +696,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
         int target = (fr_1t & 0xFFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
-        if (target != 0)  state->lasttg = target;
+        if (target != 0)  state->lasttg = target + 100000; //Use IDs > 100000 to represent i-call targets to differentiate from TGs
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
         fprintf (stderr, "%s", KGRN);

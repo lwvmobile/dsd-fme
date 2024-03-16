@@ -3446,8 +3446,18 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if ((i != state->edacs_cc_lcn) && time(NULL) - call_matrix[i][5] < 2) 
       {
         attron (COLOR_PAIR(3)); 
-        if (state->ea_mode == 1) printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
-        else printw (" AFS [%03lld][%02d-%03d]", call_matrix[i][3], a, fs );
+        if (state->ea_mode == 1) {
+          if (call_matrix[i][2] > 100000)
+            // I-Call
+            printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2] - 100000, call_matrix[i][3] );
+          else
+            // Group call
+            printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
+        }
+        else
+        {
+          printw (" AFS [%03lld][%02d-%03d]", call_matrix[i][3], a, fs );
+        }
         for (int k = 0; k < state->group_tally; k++)
         {
           if (state->group_array[k].groupNumber == call_matrix[i][2] && call_matrix[i][2] != 0)
@@ -3469,8 +3479,18 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if ( (i != state->edacs_cc_lcn) && (time(NULL) - call_matrix[i][5] >= 2) && (time(NULL) - call_matrix[i][5] < 5) ) 
       {
         attron (COLOR_PAIR(2)); 
-        if (state->ea_mode == 1) printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
-        else printw (" AFS [%03lld][%02d-%03d]", call_matrix[i][3], a, fs );
+        if (state->ea_mode == 1) {
+          if (call_matrix[i][2] > 100000)
+            // I-Call
+            printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2] - 100000, call_matrix[i][3] );
+          else
+            // Group call
+            printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
+        }
+        else
+        {
+          printw (" AFS [%03lld][%02d-%03d]", call_matrix[i][3], a, fs );
+        }
         for (int k = 0; k < state->group_tally; k++)
         {
           if (state->group_array[k].groupNumber == call_matrix[i][2] && call_matrix[i][2] != 0)
@@ -3593,7 +3613,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           printw ("LCN [%2lld] ", call_matrix[j][1]);
           if (state->ea_mode == 1)
           {
-            printw ("Group [%8lld] ", call_matrix[j][2]);
+            if (call_matrix[j][2] > 100000)
+              // I-Call
+              printw ("Target [%8lld] ", call_matrix[j][2] - 100000);
+            else
+              // Group call
+              printw ("Group [%8lld] ", call_matrix[j][2]);
             printw ("Source [%8lld] ", call_matrix[j][3]);
           }
           else 
