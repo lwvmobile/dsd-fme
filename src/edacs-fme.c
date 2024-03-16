@@ -644,7 +644,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KNRM);
 
         //this is working now with the new import setup
-        if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
+        if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
         {
           if (lcn < 26 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
           {
@@ -660,7 +660,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (opts->use_rigctl == 1)
             {
               if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
-      		    SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
+              SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
               //debug testing (since I don't have EDACS standard w/ Analog nearby)
@@ -803,7 +803,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
 
         //this is working now with the new import setup
-        if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
+        if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
         {
           if (lcn < 26 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
           {
