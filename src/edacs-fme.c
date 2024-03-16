@@ -600,8 +600,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //   fprintf (stderr, " Kick Command?");
       // }
       //Voice Call Grant Update
-      // mt1 0x3 is Digital group voice call, 0x2 Group Data Channel, 0x1 TDMA call
-      else if (mt1 >= 0x1 && mt1 <= 0x3)
+      // mt1 0x6 is analog group voice call, 0x3 is Digital group voice call, 0x2 Group Data Channel, 0x1 TDMA call
+      else if ((mt1 >= 0x1 && mt1 <= 0x3) || mt1 == 0x6)
       {
         //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
         if (lcn > state->edacs_lcn_count && lcn < 26) 
@@ -641,6 +641,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (mt1 == 0x1) fprintf (stderr, " TDMA Call"); //never observed, wonder if any EDACS systems ever carried a TDMA signal (X2-TDMA?)
         if (mt1 == 0x2) fprintf (stderr, " Group Data Call"); //Never Seen this one before
         if (mt1 == 0x3) fprintf (stderr, " Digital Call"); //ProVoice, this is what we always get on SLERS EA
+        if (mt1 == 0x6) fprintf (stderr, " Analog Call"); //analog, to at least log that we recognize it
         fprintf (stderr, "%s", KNRM);
 
         //this is working now with the new import setup
