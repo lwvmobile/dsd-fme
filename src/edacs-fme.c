@@ -372,7 +372,10 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
 
     fprintf (stderr, " Analog RMS: %04ld SQL: %ld", rms, sql);
     if (afs != 0)
-      fprintf (stderr, " AFS [%03d] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
+    {
+      if (state->ea_mode == 0) fprintf (stderr, " AFS [%03d] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
+      else fprintf (stderr, " TG/TGT: [%d] LCN [%02d]", afs, lcn);
+    }
 
     //debug, view hit counter
     // fprintf (stderr, " CNT: %d; ", count);
@@ -654,8 +657,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
               sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %d SRC %d.wav", getDateE(), timestr, state->edacs_site_id, group, source);
-              openWavOutFile (opts, state);
-              // openWavOutFile48k (opts, state); //debug for testing analog wav only
+              if (mt1 != 0x6) //digital
+                openWavOutFile (opts, state);
+              else //analog
+                openWavOutFile48k (opts, state); //
             }
             
             //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
@@ -665,8 +670,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
               SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              //debug testing (since I don't have EDACS standard w/ Analog nearby)
-              // edacs_analog(opts, state, group, lcn);
+              if (mt1 == 0x6) //analog
+                edacs_analog(opts, state, group, lcn);
             }
 
             if (opts->audio_in_type == 3) //rtl dongle
@@ -675,8 +680,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
               rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              //debug testing (since I don't have EDACS standard w/ Analog nearby)
-              // edacs_analog(opts, state, group, lcn);
+              if (mt1 == 0x6) //analog
+                edacs_analog(opts, state, group, lcn);
               #endif
             }
 
@@ -722,8 +727,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
               sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %d SRC %d.wav", getDateE(), timestr, state->edacs_site_id, target, source);
-              openWavOutFile (opts, state);
-              // openWavOutFile48k (opts, state); //debug for testing analog wav only
+              if (mt2 == 0x14) //digital
+                openWavOutFile (opts, state);
+              else //analog
+                openWavOutFile48k (opts, state); //
             }
             
             //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
@@ -733,8 +740,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
               SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              //debug testing (since I don't have EDACS standard w/ Analog nearby)
-              // edacs_analog(opts, state, target, lcn);
+              //
+              if (mt2 == 0x10)
+                edacs_analog(opts, state, target, lcn);
             }
 
             if (opts->audio_in_type == 3) //rtl dongle
@@ -743,8 +751,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
               rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              //debug testing (since I don't have EDACS standard w/ Analog nearby)
-              // edacs_analog(opts, state, target, lcn);
+              //
+              if (mt2 == 0x10)
+                edacs_analog(opts, state, target, lcn);
               #endif
             }
 
