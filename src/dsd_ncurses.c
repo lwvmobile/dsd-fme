@@ -3618,7 +3618,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
               printw ("Target [%8lld] Source [%8lld] I-Call", call_matrix[j][2] - 100000, call_matrix[j][3]);
             else
               // Group call
-              printw ("Target [%8lld] Source [%8lld]", call_matrix[j][2] - 100000, call_matrix[j][3]);
+              printw ("Target [%8lld] Source [%8lld]", call_matrix[j][2], call_matrix[j][3]);
           }
           else 
           {
