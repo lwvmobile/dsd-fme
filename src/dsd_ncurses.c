@@ -3449,10 +3449,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         if (state->ea_mode == 1) {
           if (call_matrix[i][2] > 100000)
             // I-Call
-            printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2] - 100000, call_matrix[i][3] );
+            printw (" TGT [%8lld] SRC [%8lld] I-Call", call_matrix[i][2] - 100000, call_matrix[i][3] );
           else
             // Group call
-            printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
+            printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
         }
         else
         {
@@ -3482,10 +3482,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         if (state->ea_mode == 1) {
           if (call_matrix[i][2] > 100000)
             // I-Call
-            printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2] - 100000, call_matrix[i][3] );
+            printw (" TGT [%8lld] SRC [%8lld] I-Call", call_matrix[i][2] - 100000, call_matrix[i][3] );
           else
             // Group call
-            printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
+            printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
         }
         else
         {
@@ -3615,11 +3615,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           {
             if (call_matrix[j][2] > 100000)
               // I-Call
-              printw ("Target [%8lld] ", call_matrix[j][2] - 100000);
+              printw ("Target [%8lld] Source [%8lld] I-Call", call_matrix[j][2] - 100000, call_matrix[j][3]);
             else
               // Group call
-              printw ("Group [%8lld] ", call_matrix[j][2]);
-            printw ("Source [%8lld] ", call_matrix[j][3]);
+              printw ("Target [%8lld] Source [%8lld]", call_matrix[j][2] - 100000, call_matrix[j][3]);
           }
           else 
           {
