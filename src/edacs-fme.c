@@ -602,8 +602,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //   fprintf (stderr, " Kick Command?");
       // }
       //Voice Call Grant Update
-      // mt1 0x6 is analog group voice call, 0x3 is Digital group voice call, 0x2 Group Data Channel, 0x1 TDMA call
-      else if ((mt1 >= 0x1 && mt1 <= 0x3) || mt1 == 0x6)
+      // mt1 0x12 is analog group voice call, 0x3 is Digital group voice call, 0x2 Group Data Channel, 0x1 TDMA call
+      else if ((mt1 >= 0x1 && mt1 <= 0x3) || mt1 == 0x12)
       {
         lcn = (fr_1t & 0x3E0000000) >> 29;
 
@@ -645,7 +645,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (mt1 == 0x1) fprintf (stderr, " TDMA Call"); //never observed, wonder if any EDACS systems ever carried a TDMA signal (X2-TDMA?)
         if (mt1 == 0x2) fprintf (stderr, " Group Data Call"); //Never Seen this one before
         if (mt1 == 0x3) fprintf (stderr, " Digital Call"); //ProVoice, this is what we always get on SLERS EA
-        if (mt1 == 0x6) fprintf (stderr, " Analog Call"); //analog, to at least log that we recognize it
+        if (mt1 == 0x12) fprintf (stderr, " Analog Call"); //analog, to at least log that we recognize it
         fprintf (stderr, "%s", KNRM);
 
         //this is working now with the new import setup
@@ -657,7 +657,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
               sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %d SRC %d.wav", getDateE(), timestr, state->edacs_site_id, group, source);
-              if (mt1 != 0x6) //digital
+              if (mt1 != 0x12) //digital
                 openWavOutFile (opts, state);
               else //analog
                 openWavOutFile48k (opts, state); //
@@ -670,7 +670,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              if (mt1 == 0x6) //analog
+              if (mt1 == 0x12) //analog
                 edacs_analog(opts, state, group, lcn);
             }
 
@@ -690,9 +690,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
       }
       //I-Call Grant Update
-      else if (mt1 == 0x10)
+      else if (mt1 == 0x4)
       {
-        lcn = (fr_4t & 0xFF00000000) >> 32;
+        lcn = (fr_4t & 0x1F00000000) >> 32;
 
         //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
         if (lcn > state->edacs_lcn_count && lcn < 26) 
@@ -702,7 +702,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
         int target = (fr_1t & 0xFFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
-        if (target != 0)  state->lasttg = target + 100000; //Use IDs > 100000 to represent i-call targets to differentiate from TGs
+        if (target != 0) state->lasttg = target + 100000; //Use IDs > 100000 to represent i-call targets to differentiate from TGs
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
         fprintf (stderr, "%s", KGRN);
