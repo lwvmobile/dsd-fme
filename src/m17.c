@@ -2724,7 +2724,17 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     if (m17_p1_packed[x] == 0) break; //stop at the termination byte
     x++;
   }
-  crc_cmp = crc16m17(m17_p1_packed, x+1); //+1 on len to make it match Woj's calculated value of 0x2F6F on the default sample
+
+  //NOTE to self: Revert changes in this commit, if issues with CRC on PKT, or
+  //the CRC really does go on the last 16 bits of the payload
+
+  //debug dump the packed payload up to x, or x+1
+  // fprintf (stderr, "\n P1P:");
+  // for (i = 0; i < x+1; i++)
+  //   fprintf (stderr, "%02X", m17_p1_packed[i]);
+  // fprintf (stderr, "\n");
+
+  crc_cmp = crc16m17(m17_p1_packed, x+1); //either x, or x+1?
 
   //debug dump CRC (when pad is literally zero)
   fprintf (stderr, " X: %d; LAST: %02X; TERM: %02X; CRC: %04X", x, m17_p1_packed[x-1], m17_p1_packed[x], crc_cmp);
@@ -2732,7 +2742,9 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   ptr = (block*25*8) - 16;
 
   //attach the crc16 bits to the end of the PKT data
-  for (i = 0; i < 16; i++) m17_p1_full[ptr+i] = (crc_cmp >> 15-i) & 1;
+  // for (i = 0; i < 16; i++) m17_p1_full[ptr+i] = (crc_cmp >> 15-i) & 1; //this one puts it as the last 16-bits of the full payload
+
+  for (i = 0; i < 16; i++) m17_p1_full[k++] = (crc_cmp >> 15-i) & 1; //this one puts it immediately after the terminating byte
 
   //debug the full payload
   fprintf (stderr, "\n M17 Packet      FULL: ");
@@ -3016,13 +3028,16 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   if (eot)
   {
     //do a CRC check
-    uint16_t crc_cmp = crc16m17(state->m17_pkt, total+1); //+1 on len to make it match Woj's calculated value of 0x2F6F on the default sample
-    uint16_t crc_ext = (state->m17_pkt[end-2] << 8) + state->m17_pkt[end-1];
+    uint16_t crc_cmp = crc16m17(state->m17_pkt, total+1); //total, or total+1?
+    // uint16_t crc_ext = (state->m17_pkt[end-2] << 8) + state->m17_pkt[end-1]; //extract from last 16-bits of the payload, or
+    uint16_t crc_ext = (state->m17_pkt[total+1] << 8) + state->m17_pkt[total+2]; //immediately after the terminating byte
 
     if (crc_cmp == crc_ext)
-      decodeM17PKT(opts, state, state->m17_pkt, end-2);
+      // decodeM17PKT(opts, state, state->m17_pkt, end-2);
+      decodeM17PKT(opts, state, state->m17_pkt, total); //end-2 if CRC at the end, total if CRC after term
     else if (opts->aggressive_framesync == 0) //CRC Bypass, check anyways (if enabled)
-      decodeM17PKT(opts, state, state->m17_pkt, end-2); //end-2, or do full contents? 25*31-2
+      // decodeM17PKT(opts, state, state->m17_pkt, end-2);
+      decodeM17PKT(opts, state, state->m17_pkt, total); //end-2 if CRC at the end, total if CRC after term
 
     if (crc_cmp != crc_ext)
       fprintf (stderr, " (CRC ERR) ");
