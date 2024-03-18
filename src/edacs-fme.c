@@ -711,15 +711,20 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " I-Call Target [%08d] Source [%08d] LCN[%02d]", target, source, lcn);
 
+        //mt2 is 0x8 or 0xC when grant is first given, then 0xA or 0xE when call is in progress
+        if      (mt2 == 0x8 || mt2 == 0xA) fprintf (stderr, " Analog Call");
+        else if (mt2 == 0xC || mt2 == 0xE) fprintf (stderr, " Digital Call");
+        else                               fprintf (stderr, " Unknown Type");
+        fprintf (stderr, "%s", KNRM);
+
         char mode[8]; //allow, block, digital enc
         sprintf (mode, "%s", "");
 
+        //if we don't know what type of call it is, then write 'B' to mode for block - no point trying to tune to it
+        if (mt2 != 0x8 && mt2 != 0xA && mt2 != 0xC && mt2 != 0xE) sprintf (mode, "%s", "B");
+
         //if we are using allow/whitelist mode, then write 'B' to mode for block - no allow/whitelist support for i-calls
         if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
-
-        if (mt2 == 0xA) fprintf (stderr, " Analog Call");
-        if (mt2 == 0xE) fprintf (stderr, " Digital Call");
-        fprintf (stderr, "%s", KNRM);
 
         //this is working now with the new import setup
         if (opts->trunk_tune_private_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
@@ -730,7 +735,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
               sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %d SRC %d.wav", getDateE(), timestr, state->edacs_site_id, target, source);
-              if (mt2 == 0xE) //digital
+              if (mt2 == 0xC || mt2 == 0xE) //digital
                 openWavOutFile (opts, state);
               else //analog
                 openWavOutFile48k (opts, state); //
@@ -744,7 +749,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
               //
-              if (mt2 == 0xA) //analog
+              if (mt2 == 0x8 || mt2 == 0xA) //analog
                 edacs_analog(opts, state, target, lcn);
             }
 
