@@ -624,6 +624,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d]", group, source, lcn);
 
+        if      (mt1 == 0x1)  fprintf (stderr, " TDMA Call"); //never observed, wonder if any EDACS systems ever carried a TDMA signal (X2-TDMA?)
+        else if (mt1 == 0x2)  fprintf (stderr, " Group Data Call"); //Never Seen this one before
+        else if (mt1 == 0x3)  fprintf (stderr, " Digital Call"); //ProVoice, this is what we always get on SLERS EA
+        else if (mt1 == 0x12) fprintf (stderr, " Analog Call"); //analog, to at least log that we recognize it
+        else                  fprintf (stderr, " Unknown Type");
+        fprintf (stderr, "%s", KNRM);
+
         char mode[8]; //allow, block, digital enc
         sprintf (mode, "%s", "");
 
@@ -644,12 +651,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //TG hold on EDACS EA -- block non-matching target, allow matching group
         if (state->tg_hold != 0 && state->tg_hold != group) sprintf (mode, "%s", "B");
         if (state->tg_hold != 0 && state->tg_hold == group) sprintf (mode, "%s", "A");
-
-        if (mt1 == 0x1) fprintf (stderr, " TDMA Call"); //never observed, wonder if any EDACS systems ever carried a TDMA signal (X2-TDMA?)
-        if (mt1 == 0x2) fprintf (stderr, " Group Data Call"); //Never Seen this one before
-        if (mt1 == 0x3) fprintf (stderr, " Digital Call"); //ProVoice, this is what we always get on SLERS EA
-        if (mt1 == 0x12) fprintf (stderr, " Analog Call"); //analog, to at least log that we recognize it
-        fprintf (stderr, "%s", KNRM);
 
         //this is working now with the new import setup
         if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
