@@ -852,7 +852,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //voice call assignment
       else if (command == 0xEE || command == 0xEF)
       {
-        lcn = (fr_1t & 0x3E0000000) >> 29;
 
         if (lcn > state->edacs_lcn_count && lcn < 26) 
         {
