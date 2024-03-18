@@ -760,6 +760,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
         }
       }
+      //Login
+      else if (mt1 == 0x19)
+      {
+        int group  = (fr_1t & 0xFFFF000) >> 12;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, " Login Group [%08d] Source [%08d]", group, source);
+      }
       else //print frames for debug/analysis
       {
         fprintf (stderr, " FR_1 [%010llX]", fr_1t);
