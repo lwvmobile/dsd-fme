@@ -527,16 +527,19 @@ void edacs(dsd_opts * opts, dsd_state * state)
       mt1 = (command & 0xF8) >> 3;
       mt2 = (fr_1t & 0x780000000) >> 31;
 
+      //Site ID
+      unsigned long long int site_id = 0; //we probably could just make this an int as well as the state variables
+
       //MT1 of 0x1F indicates to use MT2 for the opcode. See US patent US7546135B2, Figure 2b.
-      if (mt1 == 0x1F) {
+      if (mt1 == 0x1F)
+      {
 
         //Test Call (not seen in the wild, see US patent US7546135B2, Figure 2b)
         if (mt2 == 0x0)
         {
           fprintf (stderr, " Initiate Test Call");
         }
-        //Site ID
-        unsigned long long int site_id = 0; //we probably could just make this an int as well as the state variables
+        
         else if (mt2 == 0xA)
         {
           site_id = ((fr_1 & 0x1F000) >> 12) | ((fr_1 & 0x1F000000) >> 19);
