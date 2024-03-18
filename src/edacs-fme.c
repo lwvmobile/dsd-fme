@@ -765,7 +765,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
       {
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
-        fprintf (stderr, " Login Group [%08d] Source [%08d]", group, source);
+        fprintf (stderr, " Login Group [%05d] Source [%08d]", group, source);
       }
       else //print frames for debug/analysis
       {
