@@ -530,6 +530,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //Site ID
       unsigned long long int site_id = 0; //we probably could just make this an int as well as the state variables
 
+      //add mt1 and mt2 for easy debug / decode 
+      if (opts->payload == 1)
+        fprintf (stderr, " MT1: %02X; MT2: %X; ", mt1, mt2);
+
       //MT1 of 0x1F indicates to use MT2 for the opcode. See US patent US7546135B2, Figure 2b.
       if (mt1 == 0x1F)
       {
@@ -611,17 +615,26 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
         }
         
+        //disabling kick command, data looks like its just FFFF, no actual values, can't verify accuracy
+        // else if (mt2 == 0xB) //KICK LISTING for EA?? Unverified, but probably observed in Unitrunker way back when.
+        // {
+        //   int kicked = (fr_4t & 0xFFFFF000) >> 12;
+        //   fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+        //   fprintf (stderr, " FR_3 [%010llX]", fr_3);
+        //   fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+        //   fprintf (stderr, " FR_6 [%010llX]", fr_6);
+        //   fprintf (stderr, " %08d REG/DEREG/AUTH?", kicked);
+        // }
+        // else //print frames for debug/analysis
+
+        if (opts->payload == 1)
+        {
+          fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+          fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+        }
+        
       }
-      //disabling kick command, data looks like its just FFFF, no actual values, can't verify accuracy
-      // else if (mt1 == 0x1F && mt2 == 0xB) //KICK LISTING for EA?? Unverified, but probably observed in Unitrunker way back when.
-      // {
-      //   int kicked = (fr_4t & 0xFFFFF000) >> 12;
-      //   fprintf (stderr, " FR_1 [%010llX]", fr_1t);
-      //   fprintf (stderr, " FR_3 [%010llX]", fr_3);
-      //   fprintf (stderr, " FR_4 [%010llX]", fr_4t);
-      //   fprintf (stderr, " FR_6 [%010llX]", fr_6);
-      //   fprintf (stderr, " Kick Command?");
-      // }
+
       //Voice Call Grant Update
       // mt1 0x12 is analog group voice call, 0x3 is Digital group voice call, 0x2 Group Data Channel, 0x1 TDMA call
       else if ((mt1 >= 0x1 && mt1 <= 0x3) || mt1 == 0x12)
