@@ -527,72 +527,87 @@ void edacs(dsd_opts * opts, dsd_state * state)
       mt1 = (command & 0xF8) >> 3;
       mt2 = (fr_1t & 0x780000000) >> 31;
 
-      //Site ID
-      unsigned long long int site_id = 0; //we probably could just make this an int as well as the state variables
-      if (mt1 == 0x1F && mt2 == 0xA)
-      {
-        site_id = ((fr_1 & 0x1F000) >> 12) | ((fr_1 & 0x1F000000) >> 19);
-        fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Site ID [%02llX][%03lld] Extended Addressing", site_id, site_id);
-        fprintf (stderr, "%s", KNRM);
-        state->edacs_site_id = site_id;
-      }
-      //Patch Groups
-      else if (mt1 == 0x1F && mt2 == 0xC)
-      {
-        int patch_site = ((fr_4t & 0xFF00000000) >> 32); //is site info valid, 0 for all sites? else patch only good on site listed?
-        int sourcep = ((fr_1t & 0xFFFF000) >> 12);
-        int targetp = ((fr_4t & 0xFFFF000) >> 12);
-        fprintf (stderr, " Patch -- Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
-      }
-      //Adjacent Sites
-      else if (mt1 == 0x1F && mt2 == 0x1)
-      {
-        fprintf (stderr, " Adjacent Site");
-        if ( ((fr_1t & 0xFF000) >> 12) > 0 )
+      //MT1 of 0x1F indicates to use MT2 for the opcode. See US patent 20030190923, Figure 2b.
+      if (mt1 == 0x1F) {
+
+        //Test Call (not seen in the wild, see US patent 20030190923, Figure 2b)
+        if (mt2 == 0x0)
         {
-          int adj = (fr_1t & 0xFF000) >> 12;
-          int adj_l = (fr_1t & 0x1F000000) >> 24;
-          fprintf (stderr, " [%02X][%03d] on CC LCN [%02d]", adj, adj, adj_l);
+          fprintf (stderr, " Initiate Test Call");
         }
-      }
-      //Control Channel LCN
-      else if (mt1 == 0x1F && mt2 == 0x8)
-      {
-        fprintf (stderr, " Control Channel LCN");
-        if (((fr_4t >> 12) & 0x1F) != 0)
+        //Site ID
+        unsigned long long int site_id = 0; //we probably could just make this an int as well as the state variables
+        else if (mt2 == 0xA)
         {
-          state->edacs_cc_lcn = ((fr_4t >> 12) & 0x1F);
-          if (state->edacs_cc_lcn > state->edacs_lcn_count && lcn < 26) //26, or 27. shouldn't matter don't think cc lcn will give a status lcn val 
+          site_id = ((fr_1 & 0x1F000) >> 12) | ((fr_1 & 0x1F000000) >> 19);
+          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, " Site ID [%02llX][%03lld] Extended Addressing", site_id, site_id);
+          fprintf (stderr, "%s", KNRM);
+          state->edacs_site_id = site_id;
+        }
+        //Patch Groups
+        else if (mt2 == 0xC)
+        {
+          int patch_site = ((fr_4t & 0xFF00000000) >> 32); //is site info valid, 0 for all sites? else patch only good on site listed?
+          int sourcep = ((fr_1t & 0xFFFF000) >> 12);
+          int targetp = ((fr_4t & 0xFFFF000) >> 12);
+          fprintf (stderr, " Patch -- Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
+        }
+        //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
+        else if (mt2 == 0xD)
+        {
+          fprintf (stderr, " Serial Number Request");
+        }
+        //Adjacent Sites
+        else if (mt2 == 0x1)
+        {
+          fprintf (stderr, " Adjacent Site");
+          if ( ((fr_1t & 0xFF000) >> 12) > 0 )
           {
-            state->edacs_lcn_count = state->edacs_cc_lcn;
-          }
-          fprintf (stderr, " [%d]", state->edacs_cc_lcn);
-
-          //check for control channel lcn frequency if not provided in channel map or in the lcn list
-          if (state->trunk_lcn_freq[state->edacs_cc_lcn-1] == 0)
-          {
-            long int lcnfreq = 0;
-            //if using rigctl, we can ask for the currrent frequency
-            if (opts->use_rigctl == 1)
-            {
-              lcnfreq = GetCurrentFreq (opts->rigctl_sockfd);
-              if (lcnfreq != 0) state->trunk_lcn_freq[state->edacs_cc_lcn-1] = lcnfreq;
-            }
-            //if using rtl input, we can ask for the current frequency tuned
-            if (opts->audio_in_type == 3)
-            {
-              lcnfreq = (long int)opts->rtlsdr_center_freq;
-              if (lcnfreq != 0) state->trunk_lcn_freq[state->edacs_cc_lcn-1] = lcnfreq;
-            }
-          }
-
-          //set trunking cc here so we know where to come back to
-          if (opts->p25_trunk == 1 && state->trunk_lcn_freq[state->edacs_cc_lcn-1] != 0)
-          {
-            state->p25_cc_freq = state->trunk_lcn_freq[state->edacs_cc_lcn-1]; //index starts at zero, lcn's locally here start at 1
+            int adj = (fr_1t & 0xFF000) >> 12;
+            int adj_l = (fr_1t & 0x1F000000) >> 24;
+            fprintf (stderr, " [%02X][%03d] on CC LCN [%02d]", adj, adj, adj_l);
           }
         }
+        //Control Channel LCN
+        else if (mt2 == 0x8)
+        {
+          fprintf (stderr, " Control Channel LCN");
+          if (((fr_4t >> 12) & 0x1F) != 0)
+          {
+            state->edacs_cc_lcn = ((fr_4t >> 12) & 0x1F);
+            if (state->edacs_cc_lcn > state->edacs_lcn_count && lcn < 26) //26, or 27. shouldn't matter don't think cc lcn will give a status lcn val 
+            {
+              state->edacs_lcn_count = state->edacs_cc_lcn;
+            }
+            fprintf (stderr, " [%d]", state->edacs_cc_lcn);
+
+            //check for control channel lcn frequency if not provided in channel map or in the lcn list
+            if (state->trunk_lcn_freq[state->edacs_cc_lcn-1] == 0)
+            {
+              long int lcnfreq = 0;
+              //if using rigctl, we can ask for the currrent frequency
+              if (opts->use_rigctl == 1)
+              {
+                lcnfreq = GetCurrentFreq (opts->rigctl_sockfd);
+                if (lcnfreq != 0) state->trunk_lcn_freq[state->edacs_cc_lcn-1] = lcnfreq;
+              }
+              //if using rtl input, we can ask for the current frequency tuned
+              if (opts->audio_in_type == 3)
+              {
+                lcnfreq = (long int)opts->rtlsdr_center_freq;
+                if (lcnfreq != 0) state->trunk_lcn_freq[state->edacs_cc_lcn-1] = lcnfreq;
+              }
+            }
+
+            //set trunking cc here so we know where to come back to
+            if (opts->p25_trunk == 1 && state->trunk_lcn_freq[state->edacs_cc_lcn-1] != 0)
+            {
+              state->p25_cc_freq = state->trunk_lcn_freq[state->edacs_cc_lcn-1]; //index starts at zero, lcn's locally here start at 1
+            }
+          }
+        }
+        
       }
       //disabling kick command, data looks like its just FFFF, no actual values, can't verify accuracy
       // else if (mt1 == 0x1F && mt2 == 0xB) //KICK LISTING for EA?? Unverified, but probably observed in Unitrunker way back when.
