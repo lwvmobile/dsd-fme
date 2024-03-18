@@ -527,10 +527,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
       mt1 = (command & 0xF8) >> 3;
       mt2 = (fr_1t & 0x780000000) >> 31;
 
-      //MT1 of 0x1F indicates to use MT2 for the opcode. See US patent 20030190923, Figure 2b.
+      //MT1 of 0x1F indicates to use MT2 for the opcode. See US patent US7546135B2, Figure 2b.
       if (mt1 == 0x1F) {
 
-        //Test Call (not seen in the wild, see US patent 20030190923, Figure 2b)
+        //Test Call (not seen in the wild, see US patent US7546135B2, Figure 2b)
         if (mt2 == 0x0)
         {
           fprintf (stderr, " Initiate Test Call");
