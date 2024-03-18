@@ -735,7 +735,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             //openwav file and do per call right here, should probably check as well to make sure we have a valid trunking method active (rigctl, rtl)
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
-              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %d SRC %d.wav", getDateE(), timestr, state->edacs_site_id, target, source);
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %d SRC %d I-Call.wav", getDateE(), timestr, state->edacs_site_id, target, source);
               if (mt2 == 0xC || mt2 == 0xE) //digital
                 openWavOutFile (opts, state);
               else //analog
