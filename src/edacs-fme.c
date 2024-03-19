@@ -203,9 +203,9 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     }
 
     // analog audio filtering
-    lpf (state, analog1, 960);
-    lpf (state, analog2, 960);
-    lpf (state, analog3, 960);
+    // lpf (state, analog1, 960);
+    // lpf (state, analog2, 960);
+    // lpf (state, analog3, 960);
 
     hpf (state, analog1, 960);
     hpf (state, analog2, 960);
