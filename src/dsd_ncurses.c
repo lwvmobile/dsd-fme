@@ -2568,7 +2568,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   
   if (opts->dmr_stereo == 0)
   {
-    printw ("| Voice Error: [%i][%i]", state->errs, state->errs2);
+    printw ("| Voice Error: [%X][%X]", state->errs&0xF, state->errs2&0xF);
     if (opts->slot1_on == 0) printw (" OFF");
     if (opts->slot1_on == 1) printw (" ON");
     printw ("\n");
@@ -2576,11 +2576,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->dmr_stereo == 1)
   {
-    printw ("| Voice Error: [%i][%i] Slot 1 (1)", state->errs, state->errs2);
+    printw ("| Voice Error: [%X][%X] Slot 1 (1)", state->errs&0xF, state->errs2&0xF);
     if (opts->slot1_on == 0) printw (" OFF");
     if (opts->slot1_on == 1) printw (" ON");
     printw ("\n");
-    printw ("| Voice Error: [%i][%i] Slot 2 (2)", state->errsR, state->errs2R);
+    printw ("| Voice Error: [%X][%X] Slot 2 (2)", state->errsR&0xF, state->errs2R&0xF);
     if (opts->slot2_on == 0) printw (" OFF");
     if (opts->slot2_on == 1) printw (" ON");
     printw ("\n");
