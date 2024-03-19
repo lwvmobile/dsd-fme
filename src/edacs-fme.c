@@ -66,118 +66,9 @@ void openWavOutFile48k (dsd_opts * opts, dsd_state * state)
   }
 }
 
-//generic rms type function
-long int gen_rms(short *samples, int len, int step)
-{
-  
-  int i;
-  long int rms;
-  long p, t, s;
-  double dc, err;
-
-  p = t = 0L;
-  for (i=0; i<len; i+=step) {
-    s = (long)samples[i];
-    t += s;
-    p += s * s;
-  }
-  /* correct for dc offset in squares */
-  dc = (double)(t*step) / (double)len;
-  err = t * 2 * dc - dc * dc * len;
-
-  rms = (long int)sqrt((p-err) / len);
-  //make sure it doesnt' randomly feed us a large negative value (overflow?)
-  if (rms < 0) rms = 150; //could also consider returning 0 and making it return the last known good value instead
-  return rms;
-}
-
-//super generic pre-emphasis filter with alpha value of 1 for short sample input / output
-static short pstate = 1;
-void analog_preemph_filter(short * input, int len)
-{
-  int i;
-  for (i = 0; i < len; i++)
-  {
-    //debug
-    // fprintf (stderr, " I:%d;", input[i]);
-
-    input[i] = input[i] - 1 * pstate;
-    pstate = input[i];
-
-    //debug
-    // fprintf (stderr, " O:%d;;", input[i]);
-
-    //increase gain value slightly
-    input[i] *= 1.5;
-
-    //debug
-    // fprintf (stderr, " O2:%d;;;", input[i]);
-  }
-}
-
-//super generic short sample clipping filter, prevent short values from exceeding tolerable clip value
-void analog_clipping_filter(short * input, int len)
-{
-  int i;
-  for (i = 0; i < len; i++)
-  {
-    if (input[i] > 32760)
-      input[i] = 32760;
-    else if (input[i] < -32760)
-      input[i] = -32760;
-  }
-}
-
-//modified from version found in rtl_fm
-static short avg = 0;
-void analog_deemph_filter(short * input, int len)
-{
-  // static short avg;  // cheating...
-  int i, d;
-
-  // int a = (int)round(1.0/((1.0-exp(-1.0/(96000 * 75e-6))))); //48000 is rate out, but doubling it sounds 'beefier'
-  int a = 8; //result of calc above is 8, so save a cycle on the low end CPUs
-
-  // de-emph IIR
-  // avg = avg * (1 - alpha) + sample * alpha;
-
-  for (i = 0; i < len; i++)
-  {
-    d = input[i] - avg;
-    if (d > 0)
-      avg += (d + a/2) / a;
-    else
-      avg += (d - a/2) / a;
-
-    input[i] = (short)avg;
-  }
-}
-
-//modified from version found in rtl_fm
-static int dc_avg = 0;
-void analog_dc_block_filter(short * input, int len)
-{
-  int i, avg;
-  int64_t sum = 0;
-  for (i=0; i < len; i++)
-    sum += input[i];
-
-  avg = sum / len;
-  avg = (avg + dc_avg * 9) / 10;
-  for (i=0; i < len; i++)
-    input[i] -= (short)avg; 
-
-  dc_avg = avg;
-}
-
 //listening to and playing back analog audio
 void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn)
 {
-  //reset static states for new channel
-  pstate = 1;
-  avg = 0;
-  dc_avg = 0;
-
   int i, result;
   int count = 5; //RMS has a 5 count (5 * 180ms) now before cutting off;
   short analog1[960];
@@ -220,7 +111,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
         analog3[i] = sample;
       }
       //this rms will only work properly (for now) with squelch enabled in SDR++ or other
-      rms = gen_rms(analog3, 960, 1);
+      rms = raw_rms(analog3, 960, 1);
     }
 
     //NOTE: The core dumps observed previously were due to SDR++ Remote Server connection dropping due to Internet/Other issues
@@ -274,7 +165,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       }
       
       //this rms will only work properly (for now) with squelch enabled in SDR++
-      rms = gen_rms(analog3, 960, 1);
+      rms = raw_rms(analog3, 960, 1);
     }
 
     //RTL Input
@@ -311,22 +202,14 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       sr += digitize (opts, state, (int)analog1[i]);
     }
 
-    //test running analog audio through a de-emphasis filter
-    analog_deemph_filter(analog1, 960);
-    analog_deemph_filter(analog2, 960);
-    analog_deemph_filter(analog3, 960);
-    //and dc_block filter analog_dc_block_filter
-    analog_dc_block_filter(analog1, 960);
-    analog_dc_block_filter(analog2, 960);
-    analog_dc_block_filter(analog3, 960);
-    //test running analog audio through a pre-emphasis filter
-    analog_preemph_filter(analog1, 960);
-    analog_preemph_filter(analog2, 960);
-    analog_preemph_filter(analog3, 960);
-    //test running analog short sample clipping filter
-    analog_clipping_filter(analog1, 960);
-    analog_clipping_filter(analog2, 960);
-    analog_clipping_filter(analog3, 960);
+    // analog audio filtering
+    lpf (state, analog1, 960);
+    lpf (state, analog2, 960);
+    lpf (state, analog3, 960);
+
+    hpf (state, analog1, 960);
+    hpf (state, analog2, 960);
+    hpf (state, analog3, 960);
 
     //reconfigured to use seperate audio out stream that is always 48k short
     if (opts->audio_out_type == 0 && opts->slot1_on == 1)

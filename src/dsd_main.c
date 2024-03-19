@@ -691,6 +691,7 @@ initOpts (dsd_opts * opts)
   opts->dmr_mute_encR = 1;
 
   opts->monitor_input_audio = 0; //enable with -8
+  opts->analog_only = 0; //only turned on with -fA
 
   opts->inverted_p2 = 0;
   opts->p2counter = 0;
@@ -1636,7 +1637,7 @@ main (int argc, char **argv)
 
   initOpts (&opts);
   initState (&state);
-
+  init_audio_filters(&state); //audio filters
   InitAllFecFunction();
   // CNXDNConvolution_init(); //seems to function better without initting it
 
@@ -2103,6 +2104,7 @@ main (int argc, char **argv)
             opts.dmr_mono = 0;
             state.rf_mod = 0;
             opts.monitor_input_audio = 1;
+            opts.analog_only = 1;
             sprintf (opts.output_name, "Analog Monitor");
             fprintf (stderr,"Only Monitoring Passive Analog Signal\n");
           }

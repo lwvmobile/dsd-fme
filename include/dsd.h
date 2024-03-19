@@ -86,6 +86,35 @@
 
 extern volatile uint8_t exitflag; //fix for issue #136
 
+//new audio filter stuff from: https://github.com/NedSimao/FilteringLibrary
+typedef struct {
+    float coef[2];
+    float v_out[2];
+}LPFilter;
+
+typedef struct {
+    float coef;
+    float v_out[2];
+    float v_in[2];
+
+}HPFilter;
+
+typedef struct {
+    LPFilter lpf;
+    HPFilter hpf;
+    float out_in;
+}PBFilter;
+
+typedef struct {
+    float alpha;
+    float beta;
+
+    float vin[3];
+    float vout[3];
+
+}NOTCHFilter;
+//end new filters
+
 //group csv import struct
 typedef struct
 {
@@ -285,6 +314,7 @@ typedef struct
   int rtl_started;
   long int rtl_rms;
   int monitor_input_audio;
+  int analog_only;
   int pulse_raw_rate_in;
   int pulse_raw_rate_out;
   int pulse_digi_rate_in;
@@ -629,6 +659,13 @@ typedef struct
 
 
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
+
+  //new audio filter structs
+  LPFilter RCFilter;
+  HPFilter HRCFilter;
+  LPFilter RCFilter8;
+  HPFilter HRCFilter8;
+  // PBFilter PBF;
 
   char dpmr_caller_id[20];
   char dpmr_target_id[20];
@@ -1285,12 +1322,22 @@ void eot_cc(dsd_opts * opts, dsd_state * state); //end of TX return to CC
 //Generic Tuning Functions
 void return_to_cc (dsd_opts * opts, dsd_state * state);
 
-//misc generic audio filtering for analog at 48k/1
+//misc audio filtering for analog
 long int raw_rms(short *samples, int len, int step);
-void analog_deemph_filter(short * input, int len);
-void analog_preemph_filter(short * input, int len);
-void analog_dc_block_filter(short * input, int len);
-void analog_clipping_filter(short * input, int len);
+void init_audio_filters(dsd_state * state);
+void lpf(dsd_state * state, short * input, int len);
+void hpf(dsd_state * state, short * input, int len);
+void lpf8(dsd_state * state, short * input, int len);
+void hpf8(dsd_state * state, short * input, int len);
+//from: https://github.com/NedSimao/FilteringLibrary
+void LPFilter_Init(LPFilter *filter, float cutoffFreqHz, float sampleTimeS);
+float LPFilter_Update(LPFilter *filter, float v_in);
+void HPFilter_Init(HPFilter *filter, float cutoffFreqHz, float sampleTimeS);
+float HPFilter_Update(HPFilter *filter, float v_in);
+void PBFilter_Init(PBFilter *filter, float HPF_cutoffFreqHz, float LPF_cutoffFreqHz, float sampleTimeS);
+float PBFilter_Update(PBFilter *filter, float v_in);
+void NOTCHFilter_Init(NOTCHFilter *filter, float centerFreqHz, float notchWidthHz, float sampleTimeS);
+float NOTCHFilter_Update(NOTCHFilter *filter, float vin);
 
 //csv imports
 int csvGroupImport(dsd_opts * opts, dsd_state * state);

@@ -195,7 +195,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   int lmin, lmax, lidx;
 
   //assign t_max value based on decoding type expected (all non-auto decodes first)
-  int t_max; //maximum values allowed for t will depend on decoding type - NXDN will be 10, others will be more
+  int t_max = 24; //initialize as an actual value to prevent any overflow related issues
   if (opts->frame_nxdn48 == 1 || opts->frame_nxdn96 == 1)
   {
     t_max = 10;
@@ -217,6 +217,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   else if (state->lastsynctype == 35 || state->lastsynctype == 36 )
   {
     t_max = 19; //Phase 2 S-ISCH is only 19
+  }
+  else if (opts->analog_only == 1) //shim to make sure this is set to a reasonable value
+  {
+    t_max = 24;
   }
   else t_max = 24; //24 for everything else
 

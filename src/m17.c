@@ -1852,6 +1852,12 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       voice2[i] *= (float)state->aout_gain/ (float)25.0f;
     }
 
+    //run lpf and hpf
+    // lpf8 (state, voice1, 160);
+    // lpf8 (state, voice2, 160);
+    hpf8 (state, voice1, 160);
+    hpf8 (state, voice2, 160);
+
     //convert out audio input into CODEC2 (3200bps) 8 byte data stream
     uint8_t vc1_bytes[8]; memset (vc1_bytes, 0, sizeof(vc1_bytes));
     uint8_t vc2_bytes[8]; memset (vc2_bytes, 0, sizeof(vc2_bytes));

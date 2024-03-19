@@ -17,29 +17,6 @@
 
 #include "dsd.h"
 
-long int raw_rms(int16_t *samples, int len, int step) //use samplespersymbol as len
-{
-  
-  int i;
-  long int rms;
-  long p, t, s;
-  double dc, err;
-
-  p = t = 0L;
-  for (i=0; i<len; i+=step) {
-    s = (long)samples[i];
-    t += s;
-    p += s * s;
-  }
-  /* correct for dc offset in squares */
-  dc = (double)(t*step) / (double)len;
-  err = t * 2 * dc - dc * dc * len;
-
-  rms = (long int)sqrt((p-err) / len);
-  if (rms < 0) rms = 150;
-  return rms;
-}
-
 int
 getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 {
@@ -301,14 +278,9 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             sf_write_sync (opts->wav_out_raw);
           }
 
-          //test running analog audio through a de-emphasis filter
-          analog_deemph_filter(state->analog_out, 960);
-          //and dc_block filter analog_dc_block_filter
-          analog_dc_block_filter(state->analog_out, 960);
-          //test running analog audio through a pre-emphasis filter
-          analog_preemph_filter(state->analog_out, 960);
-          //test running analog short sample clipping filter
-          analog_clipping_filter(state->analog_out, 960);
+          // analog audio filtering
+          // lpf (state, state->analog_out, 960);
+          hpf (state, state->analog_out, 960);
 
           //seems to be working now, but RMS values are lower on actual analog signal than on no signal but noise
           if ( (opts->rtl_rms > opts->rtl_squelch_level) && opts->monitor_input_audio == 1 && state->carrier == 0 ) //added carrier check here in lieu of disabling it above
