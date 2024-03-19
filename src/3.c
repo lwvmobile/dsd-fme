@@ -468,6 +468,12 @@ void init_audio_filters (dsd_state * state)
 	LPFilter_Init(&state->RCFilter8, 160, (float)1/(float)8000);
   HPFilter_Init(&state->HRCFilter8, 160, (float)1/(float)8000);
 
+	//left and right variants for stereo output testing on digital voice samples
+  LPFilter_Init(&state->RCFilterL, 960, (float)1/(float)48000);
+  HPFilter_Init(&state->HRCFilterL, 960, (float)1/(float)48000);
+  LPFilter_Init(&state->RCFilterR, 960, (float)1/(float)48000);
+  HPFilter_Init(&state->HRCFilterR, 960, (float)1/(float)48000);
+
 	//PBFilter_Init(PBFilter *filter, float HPF_cutoffFreqHz, float LPF_cutoffFreqHz, float sampleTimeS);
 	// void NOTCHFilter_Init(NOTCHFilter *filter, float centerFreqHz, float notchWidthHz, float sampleTimeS);
 

@@ -666,6 +666,10 @@ typedef struct
   LPFilter RCFilter8;
   HPFilter HRCFilter8;
   // PBFilter PBF;
+  LPFilter RCFilterL;
+  HPFilter HRCFilterL;
+  LPFilter RCFilterR;
+  HPFilter HRCFilterR;
 
   char dpmr_caller_id[20];
   char dpmr_target_id[20];
