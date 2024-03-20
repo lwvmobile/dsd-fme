@@ -1857,6 +1857,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     {
       hpf (state, voice1, 160);
       hpf (state, voice2, 160);
+      pbf (state, voice1, 160);
+      pbf (state, voice2, 160);
     }
 
     //convert out audio input into CODEC2 (3200bps) 8 byte data stream

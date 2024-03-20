@@ -471,11 +471,13 @@ void init_audio_filters (dsd_state * state)
   HPFilter_Init(&state->HRCFilterR, 960, (float)1/(float)48000);
 
 	//PBFilter_Init(PBFilter *filter, float HPF_cutoffFreqHz, float LPF_cutoffFreqHz, float sampleTimeS);
-	// void NOTCHFilter_Init(NOTCHFilter *filter, float centerFreqHz, float notchWidthHz, float sampleTimeS);
+	//NOTCHFilter_Init(NOTCHFilter *filter, float centerFreqHz, float notchWidthHz, float sampleTimeS);
 
-	//unclear what we should set up for these, output is super quiet after using them
-	PBFilter_Init(&state->PBF, 48000, 12000, (float)1/(float)48000);
-	NOTCHFilter_Init(&state->NF, 48000, 12000, (float)1/(float)48000);
+	//TODO: Make PBFilter initiazation values based on rtl bandwidth values?
+
+	//passband filter working (seems to be), notch filter unsure which values to use
+	PBFilter_Init(&state->PBF, 8000, 12000, (float)1/(float)1536000); //RTL Sampling at 1536000 S/s.
+	NOTCHFilter_Init(&state->NF, 1000, 4000, (float)1/(float)1536000); //this one probably isn't set up correctly
 	
 }
 
@@ -524,7 +526,8 @@ void pbf(dsd_state * state, short * input, int len)
   for (i = 0; i < len; i++)
 	{
 		// fprintf (stderr, "\n in: %05d", input[i]);
-		input[i] = PBFilter_Update(&state->PBF, input[i]);
+		// input[i] = PBFilter_Update(&state->PBF, input[i]); //filter only
+		input[i] = PBFilter_Update(&state->PBF, input[i]) * 1.5f; //add a little extra gain back
 		// fprintf (stderr, "\n out: %05d", input[i]);
 	}
 }

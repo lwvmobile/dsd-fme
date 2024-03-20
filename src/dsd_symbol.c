@@ -279,8 +279,16 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           }
 
           // analog audio filtering
-          // lpf (state, state->analog_out, 960);
+          // lpf(state, state->analog_out, 960);
           hpf (state, state->analog_out, 960);
+
+          //analog sounds really good now, still a tad bit quiet though
+          if (opts->audio_in_type == 3) //passband filter if using rtl_fm
+            pbf(state, state->analog_out, 960);
+
+          //unsure if this one helps anymore or not, probably not be setup correctly
+          // if (opts->audio_in_type == 3) //notch filter if using rtl_fm
+          //   nf(state, state->analog_out, 960);
 
           //seems to be working now, but RMS values are lower on actual analog signal than on no signal but noise
           if ( (opts->rtl_rms > opts->rtl_squelch_level) && opts->monitor_input_audio == 1 && state->carrier == 0 ) //added carrier check here in lieu of disabling it above
