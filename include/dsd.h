@@ -663,9 +663,8 @@ typedef struct
   //new audio filter structs
   LPFilter RCFilter;
   HPFilter HRCFilter;
-  LPFilter RCFilter8;
-  HPFilter HRCFilter8;
-  // PBFilter PBF;
+  PBFilter PBF;
+  NOTCHFilter NF;
   LPFilter RCFilterL;
   HPFilter HRCFilterL;
   LPFilter RCFilterR;
@@ -1331,8 +1330,8 @@ long int raw_rms(short *samples, int len, int step);
 void init_audio_filters(dsd_state * state);
 void lpf(dsd_state * state, short * input, int len);
 void hpf(dsd_state * state, short * input, int len);
-void lpf8(dsd_state * state, short * input, int len);
-void hpf8(dsd_state * state, short * input, int len);
+void pbf(dsd_state * state, short * input, int len);
+void nf(dsd_state * state, short * input, int len);
 //from: https://github.com/NedSimao/FilteringLibrary
 void LPFilter_Init(LPFilter *filter, float cutoffFreqHz, float sampleTimeS);
 float LPFilter_Update(LPFilter *filter, float v_in);

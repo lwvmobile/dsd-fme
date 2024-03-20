@@ -464,10 +464,6 @@ void init_audio_filters (dsd_state * state)
   LPFilter_Init(&state->RCFilter, 960, (float)1/(float)48000);
   HPFilter_Init(&state->HRCFilter, 960, (float)1/(float)48000);
 
-	//still unsure if 8k sounds good or not (may be the walkie-talkie is too close to SDR, even outside)
-	LPFilter_Init(&state->RCFilter8, 160, (float)1/(float)8000);
-  HPFilter_Init(&state->HRCFilter8, 160, (float)1/(float)8000);
-
 	//left and right variants for stereo output testing on digital voice samples
   LPFilter_Init(&state->RCFilterL, 960, (float)1/(float)48000);
   HPFilter_Init(&state->HRCFilterL, 960, (float)1/(float)48000);
@@ -477,6 +473,9 @@ void init_audio_filters (dsd_state * state)
 	//PBFilter_Init(PBFilter *filter, float HPF_cutoffFreqHz, float LPF_cutoffFreqHz, float sampleTimeS);
 	// void NOTCHFilter_Init(NOTCHFilter *filter, float centerFreqHz, float notchWidthHz, float sampleTimeS);
 
+	//unclear what we should set up for these, output is super quiet after using them
+	PBFilter_Init(&state->PBF, 48000, 12000, (float)1/(float)48000);
+	NOTCHFilter_Init(&state->NF, 48000, 12000, (float)1/(float)48000);
 	
 }
 
@@ -487,7 +486,11 @@ void lpf(dsd_state * state, short * input, int len)
 {
   int i;
   for (i = 0; i < len; i++)
-    input[i] = LPFilter_Update(&state->RCFilter, input[i]);
+	{
+		// fprintf (stderr, "\n in: %05d", input[i]);
+		input[i] = LPFilter_Update(&state->RCFilter, input[i]);
+		// fprintf (stderr, "\n out: %05d", input[i]);
+	}
 }
 
 //hpf
@@ -495,23 +498,35 @@ void hpf(dsd_state * state, short * input, int len)
 {
   int i;
   for (i = 0; i < len; i++)
-    input[i] = HPFilter_Update(&state->HRCFilter, input[i]);
+	{
+		// fprintf (stderr, "\n in: %05d", input[i]);
+		input[i] = HPFilter_Update(&state->HRCFilter, input[i]);
+		// fprintf (stderr, "\n out: %05d", input[i]);
+	}
 }
 
-//lpf
-void lpf8(dsd_state * state, short * input, int len)
+//nf
+void nf(dsd_state * state, short * input, int len)
 {
   int i;
   for (i = 0; i < len; i++)
-    input[i] = LPFilter_Update(&state->RCFilter8, input[i]);
+	{
+		// fprintf (stderr, "\n in: %05d", input[i]);
+		input[i] = NOTCHFilter_Update(&state->NF, input[i]);
+		// fprintf (stderr, "\n out: %05d", input[i]);
+	}
 }
 
-//hpf
-void hpf8(dsd_state * state, short * input, int len)
+//pbf
+void pbf(dsd_state * state, short * input, int len)
 {
   int i;
   for (i = 0; i < len; i++)
-    input[i] = HPFilter_Update(&state->HRCFilter8, input[i]);
+	{
+		// fprintf (stderr, "\n in: %05d", input[i]);
+		input[i] = PBFilter_Update(&state->PBF, input[i]);
+		// fprintf (stderr, "\n out: %05d", input[i]);
+	}
 }
 
 //Generic RMS function derived from RTL_FM (RTL_SDR) RMS code (doesnt' really work correctly outside of RTL)
