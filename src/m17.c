@@ -1840,7 +1840,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       #endif
     }
 
-    //read in RMS value for vox function; NOTE: may not work correctly on STDIN and TCP due to blocking when no samples to read
+    //read in RMS value for vox function; NOTE: will not work correctly SOCAT STDIO TCP due to blocking when no samples to read
     if (opts->audio_in_type == 3) opts->rtl_rms = rtl_return_rms();
     else opts->rtl_rms = raw_rms(voice1, nsam, 1) / 2; //dividing by two so mic isn't so sensitive on vox
 
@@ -1852,11 +1852,12 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       voice2[i] *= (float)state->aout_gain/ (float)25.0f;
     }
 
-    //run lpf and hpf
-    // lpf8 (state, voice1, 160);
-    // lpf8 (state, voice2, 160);
-    // hpf (state, voice1, 160);
-    // hpf (state, voice2, 160);
+    //run hpf if from the dongle, mic input doesn't need it, and if using SDR++, use the high pass filter there instead
+    if (opts->audio_in_type == 3)
+    {
+      hpf (state, voice1, 160);
+      hpf (state, voice2, 160);
+    }
 
     //convert out audio input into CODEC2 (3200bps) 8 byte data stream
     uint8_t vc1_bytes[8]; memset (vc1_bytes, 0, sizeof(vc1_bytes));
