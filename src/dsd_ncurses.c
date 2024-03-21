@@ -2552,7 +2552,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->mod_gfsk == 1) printw ("[GFSK]");
   printw ( "[%d] \n", (48000*opts->wav_interpolator)/state->samplesPerSymbol);
   if (opts->m17encoder == 1) printw ("| Encoding:    [%s] ", opts->output_name);
-  if (opts->m17encoder == 1) printw ("(\\) \n");
+  if (opts->m17encoder == 1) printw (" Toggle (\\); ");
+  if (opts->m17encoder == 1) printw (" Mic Gain (/|*): %02.0f%% \n", opts->audio_gainA);
   printw ("| Decoding:    [%s] ", opts->output_name);
   if (opts->aggressive_framesync == 0) printw ("CRC/(RAS) ");
   //debug -- troubleshoot voice tuning after grant on DMR CC, subsequent grant may not tune because tuner isn't available

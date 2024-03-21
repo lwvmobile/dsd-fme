@@ -1844,14 +1844,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     if (opts->audio_in_type == 3) opts->rtl_rms = rtl_return_rms();
     else opts->rtl_rms = raw_rms(voice1, nsam, 1) / 2; //dividing by two so mic isn't so sensitive on vox
 
-    //decimate audio input (default 100% on mic is WAY TOO LOUD for the encoder, fine tune in volume control)
-    for (i = 0; i < 160; i++)
-    {
-      //NOTE: Use + and - in ncurses to fine tune manually
-      voice1[i] *= (float)state->aout_gain/ (float)25.0f;
-      voice2[i] *= (float)state->aout_gain/ (float)25.0f;
-    }
-
     //run hpf if from the dongle, mic input doesn't need it, and if using SDR++, use the high pass filter there instead
     if (opts->audio_in_type == 3)
     {
@@ -1860,6 +1852,10 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       pbf (state, voice1, 160);
       pbf (state, voice2, 160);
     }
+
+    //manual adjustment to gain, after filtering them
+    analog_gain (opts, state, voice1, 160);
+    analog_gain (opts, state, voice2, 160);
 
     //NOTE: Similar to EDACS analog, if calculating raw rms here after filtering,
     //anytime the walkie-talkie is held open but no voice, the center spike is removed,
