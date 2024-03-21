@@ -2801,7 +2801,7 @@ main (int argc, char **argv)
       fprintf (stderr, "SQ %d ", opts.rtl_squelch_level);
       fprintf (stderr, "UDP %d \n", opts.rtl_udp_port);
       opts.audio_in_type = 3;
-      state.audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
+      opts.rtl_volume_multiplier = 2; //double, see if this cleans up weak decodes from RTL_FM
       rtl_ok = 1;
       #endif
 
