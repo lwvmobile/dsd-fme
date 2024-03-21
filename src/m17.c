@@ -1861,6 +1861,12 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       pbf (state, voice2, 160);
     }
 
+    //NOTE: Similar to EDACS analog, if calculating raw rms here after filtering,
+    //anytime the walkie-talkie is held open but no voice, the center spike is removed,
+    //and counts against the squelch hits making vox mode inconsistent
+    // if (opts->audio_in_type != 3)
+    //   opts->rtl_rms = raw_rms(voice1, 160, 1);
+
     //convert out audio input into CODEC2 (3200bps) 8 byte data stream
     uint8_t vc1_bytes[8]; memset (vc1_bytes, 0, sizeof(vc1_bytes));
     uint8_t vc2_bytes[8]; memset (vc2_bytes, 0, sizeof(vc2_bytes));

@@ -235,6 +235,12 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     pbf (state, analog2, 960);
     pbf (state, analog3, 960);
 
+    //NOTE: Ideally, we would run raw_rms for TCP/VS here, but the analog spike on EDACS (STM)
+    //system gets filtered out, and when they hold the radio open and don't talk,
+    //it counts against the squelch hit as no audio, so we will just have to use
+    //the squelch checkbox in SDR++ and similar when using those input methods
+    // if (opts->audio_in_type != 3)
+    //   rms = raw_rms(analog3, 960, 1);
 
     //reconfigured to use seperate audio out stream that is always 48k short
     if (opts->audio_out_type == 0 && opts->slot1_on == 1)

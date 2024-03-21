@@ -290,6 +290,11 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           //pass band filter
           pbf(state, state->analog_out, 960);
 
+          //Running RMS after filtering does remove the analog spike from the RMS value
+          //but noise floor noise will still produce higher values
+          // if (opts->audio_in_type != 3  && opts->monitor_input_audio == 1)
+          //   opts->rtl_rms = raw_rms(state->analog_out, 960, 1);
+
           //seems to be working now, but RMS values are lower on actual analog signal than on no signal but noise
           if ( (opts->rtl_rms > opts->rtl_squelch_level) && opts->monitor_input_audio == 1 && state->carrier == 0 ) //added carrier check here in lieu of disabling it above
           {
