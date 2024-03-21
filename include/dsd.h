@@ -260,6 +260,7 @@ typedef struct
   FILE *symbol_out_f;
   float audio_gain;
   float audio_gainR;
+  float audio_gainA;
   int audio_out;
   int dmr_stereo_wav;
   char wav_out_dir[512];

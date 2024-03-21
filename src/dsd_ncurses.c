@@ -2334,7 +2334,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ("--Input Output----------------------------------------------------------------\n");
   if (opts->audio_in_type == 0)
   {
-    printw ("| Pulse Audio Input: %i kHz; %i Channel; ", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
+    printw ("| Pulse Signal Input:  %i kHz; %i Ch; ", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
     if (opts->use_rigctl == 1)
       printw ("RIG: %s:%d; ", opts->tcp_hostname, opts->rigctlportno);
     printw ("\n");
@@ -2342,7 +2342,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_in_type == 5)
   {
-    printw ("| OSS Audio Input: %i kHz; 1 Channel;", SAMPLE_RATE_IN/1000);
+    printw ("| OSS Signal Input: %i kHz; 1 Ch;", SAMPLE_RATE_IN/1000);
     if (opts->use_rigctl == 1)
       printw ("RIG: %s:%d; ", opts->tcp_hostname, opts->rigctlportno);
     printw ("\n");
@@ -2355,7 +2355,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_in_type == 8)
   {
-    printw ("| TCP Audio Input: %s:%d; %d kHz 1 Channel; ", opts->tcp_hostname, opts->tcp_portno, opts->wav_sample_rate/1000);
+    printw ("| TCP Signal Input: %s:%d; %d kHz; 1 Ch; ", opts->tcp_hostname, opts->tcp_portno, opts->wav_sample_rate/1000);
     if (opts->use_rigctl == 1)
       printw ("RIG: %s:%d; ", opts->tcp_hostname, opts->rigctlportno);
     printw ("\n");
@@ -2390,11 +2390,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_out_type == 0)
   {
-    printw ("| Pulse Audio Output: %i kHz; %i Ch; G: %02.0f%%", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    printw ("| Pulse Digital Output: %i kHz; %i Ch; G: %02.0f%%", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
     if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
     if (opts->floating_point == 1) printw (" FLOAT: %02.0f%%;", opts->audio_gain*2);
-    if (opts->audio_gain == 0) printw (" (+/-) Auto");
-    if (opts->audio_gain > 0) printw (" (+/-) Manual");
+    if (opts->audio_gain == 0) printw (" (+|-) Auto");
+    if (opts->audio_gain > 0) printw (" (+|-) Manual");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
     printw (" \n");
@@ -2402,7 +2402,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if ( opts->audio_out_type == 0 && (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
   {
-    printw ("| Pulse Audio Output: %i kHz; %i Ch; Analog Monitor RMS: %04ld ", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->rtl_rms);
+    printw ("| Pulse Analog Output: %i kHz; %i Ch; G: %02.0f%% (/|*) Manual", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->audio_gainA);
+    if (opts->audio_in_type != 3) printw (" RMS: %04ld;", opts->rtl_rms);
     printw (" \n");
   }
 
@@ -2421,7 +2422,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_out_type == 8)
   {
-    printw ("| UDP Audio Output: %s:%d; %d kHz %d Ch; %02.0f%%", opts->udp_hostname, opts->udp_portno, opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
+    printw ("| UDP Digital Output: %s:%d; %d kHz %d Ch; %02.0f%%", opts->udp_hostname, opts->udp_portno, opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
     if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
     if (opts->audio_gain == 0) printw (" (+/-) Auto");
     if (opts->audio_gain > 0) printw (" (+/-) Manual");
@@ -2431,7 +2432,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw (" \n");
     if (opts->udp_sockfdA != 0) //Analog Output on udp port +2
     {
-      printw ("| UDP Audio Output: %s:%d; 48 kHz 1 Ch; Analog Output; ", opts->udp_hostname, opts->udp_portno+2);
+      printw ("| UDP Analog Output: %s:%d; 48 kHz 1 Ch; Analog Output; ", opts->udp_hostname, opts->udp_portno+2);
       printw (" \n");
     }
   }
@@ -3743,6 +3744,18 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     opts->audio_gainR = opts->audio_gain;
 
+  }
+
+  if (c == 42) // * key, increment audio_gainA
+  {
+    if (opts->audio_gainA < 100)
+      opts->audio_gainA++;
+  }
+
+  if (c == 47) // / key, decrement audio_gainA
+  {
+    if (opts->audio_gainA > 0)
+      opts->audio_gainA--;
   }
 
   if (c == 122) //'z' key, toggle payload to console

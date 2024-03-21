@@ -1425,7 +1425,7 @@ void analog_gain (dsd_opts * opts, dsd_state * state, short * input, int len)
   int i;
   UNUSED(state);
 
-  float gain = 1.0f + (opts->audio_gain / 25.0f);
+  float gain = (opts->audio_gainA / 100.0f) * 3.0f; //scale 0x - 3x
 
   for (i = 0; i < len; i++)
     input[i] *= gain;
