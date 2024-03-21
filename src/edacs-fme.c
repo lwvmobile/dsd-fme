@@ -530,9 +530,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //Site ID
       unsigned long long int site_id = 0; //we probably could just make this an int as well as the state variables
 
-      //add mt1 and mt2 for easy debug / decode 
+      //Add raw payloads and MT1/MT2 for easy debug
       if (opts->payload == 1)
+      {
+        fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+        fprintf (stderr, " FR_4 [%010llX]", fr_4t);
         fprintf (stderr, " MT1: %02X; MT2: %X; ", mt1, mt2);
+      }
 
       //MT1 of 0x1F indicates to use MT2 for the opcode. See US patent US7546135B2, Figure 2b.
       if (mt1 == 0x1F)
@@ -542,28 +546,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (mt2 == 0x0)
         {
           fprintf (stderr, " Initiate Test Call");
-        }
-        
-        else if (mt2 == 0xA)
-        {
-          site_id = ((fr_1 & 0x1F000) >> 12) | ((fr_1 & 0x1F000000) >> 19);
-          fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Site ID [%02llX][%03lld] Extended Addressing", site_id, site_id);
-          fprintf (stderr, "%s", KNRM);
-          state->edacs_site_id = site_id;
-        }
-        //Patch Groups
-        else if (mt2 == 0xC)
-        {
-          int patch_site = ((fr_4t & 0xFF00000000) >> 32); //is site info valid, 0 for all sites? else patch only good on site listed?
-          int sourcep = ((fr_1t & 0xFFFF000) >> 12);
-          int targetp = ((fr_4t & 0xFFFF000) >> 12);
-          fprintf (stderr, " Patch -- Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
-        }
-        //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
-        else if (mt2 == 0xD)
-        {
-          fprintf (stderr, " Serial Number Request");
         }
         //Adjacent Sites
         else if (mt2 == 0x1)
@@ -614,7 +596,15 @@ void edacs(dsd_opts * opts, dsd_state * state)
             }
           }
         }
-        
+        //Site ID
+        else if (mt2 == 0xA)
+        {
+          site_id = ((fr_1 & 0x1F000) >> 12) | ((fr_1 & 0x1F000000) >> 19);
+          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, " Site ID [%02llX][%03lld] Extended Addressing", site_id, site_id);
+          fprintf (stderr, "%s", KNRM);
+          state->edacs_site_id = site_id;
+        }
         //disabling kick command, data looks like its just FFFF, no actual values, can't verify accuracy
         // else if (mt2 == 0xB) //KICK LISTING for EA?? Unverified, but probably observed in Unitrunker way back when.
         // {
@@ -625,16 +615,30 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //   fprintf (stderr, " FR_6 [%010llX]", fr_6);
         //   fprintf (stderr, " %08d REG/DEREG/AUTH?", kicked);
         // }
-        // else //print frames for debug/analysis
-
-        if (opts->payload == 1)
+        //Patch Groups
+        else if (mt2 == 0xC)
         {
-          fprintf (stderr, " FR_1 [%010llX]", fr_1t);
-          fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+          int patch_site = ((fr_4t & 0xFF00000000) >> 32); //is site info valid, 0 for all sites? else patch only good on site listed?
+          int sourcep = ((fr_1t & 0xFFFF000) >> 12);
+          int targetp = ((fr_4t & 0xFFFF000) >> 12);
+          fprintf (stderr, " Patch -- Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
+        }
+        //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
+        else if (mt2 == 0xD)
+        {
+          fprintf (stderr, " Serial Number Request");
+        }
+        else
+        {
+          fprintf (stderr, " Unknown Command");
+          if (opts->payload != 1)
+          {
+            fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+            fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+          }
         }
         
       }
-
       //Voice Call Grant Update
       // mt1 0x12 is analog group voice call, 0x3 is Digital group voice call, 0x2 Group Data Channel, 0x1 TDMA call
       else if ((mt1 >= 0x1 && mt1 <= 0x3) || mt1 == 0x12)
@@ -807,11 +811,15 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, " Login Group [%05d] Source [%08d]", group, source);
       }
-      else //print frames for debug/analysis
+      //Unknown command, print frames for debug/analysis
+      else
       {
-        fprintf (stderr, " FR_1 [%010llX]", fr_1t);
-        fprintf (stderr, " FR_4 [%010llX]", fr_4t);
         fprintf (stderr, " Unknown Command");
+        if (opts->payload != 1)
+        {
+          fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+          fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+        }
       }
 
     }
