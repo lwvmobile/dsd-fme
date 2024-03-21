@@ -278,19 +278,17 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             sf_write_sync (opts->wav_out_raw);
           }
 
-          //manual gain control -- seems to work better if applied before filtering
+          //manual gain control
           analog_gain (opts, state, state->analog_out, 960);
 
-          // analog audio filtering
+          //low pass filter
           // lpf(state, state->analog_out, 960);
+
+          //high pass filter
           hpf (state, state->analog_out, 960);
 
-          //analog sounds really good now
+          //pass band filter
           pbf(state, state->analog_out, 960);
-
-          //unsure if this one helps anymore or not, probably not be setup correctly
-          // if (opts->audio_in_type == 3) //notch filter if using rtl_fm
-          //   nf(state, state->analog_out, 960);
 
           //seems to be working now, but RMS values are lower on actual analog signal than on no signal but noise
           if ( (opts->rtl_rms > opts->rtl_squelch_level) && opts->monitor_input_audio == 1 && state->carrier == 0 ) //added carrier check here in lieu of disabling it above

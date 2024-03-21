@@ -1349,68 +1349,6 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 
 }
 
-//the previous version, not quite as good at audio gain normalization, but keeping it just in case
-// void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
-// {
-//   int i, run;
-//   run = 1;
-//   float empty[160];
-//   memset (empty, 0.0f, sizeof(empty));
-
-//   float mmax = 0.75f;
-//   float mmin = -0.75f;
-//   float aavg = 0.0f; //average of the absolute value
-//   float df; //decimation value
-//   df = 8000.0f; //test value -- this would be the ideal perfect value if everybody spoke directly into the mic at a reasonable volume
-
-//   if (slot == 0)
-//     df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gain);
-//   if (slot == 1)
-//     df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gainR);
-
-//   //this comparison is to determine whether or not to run gain on 'empty' samples (2v last 2, silent frames, etc)
-//   if (memcmp(empty, samp, sizeof(empty)) == 0) run = 0;
-//   if (run == 0) goto AGF_END;
-
-//   for (i = 0; i < 160; i++)
-//   {
-
-//     samp[i] = samp[i] / df;
-
-//     aavg += fabsf(samp[i]);
-
-//     //simple clipping
-//     if (samp[i] > mmax)
-//       samp[i] = mmax;
-//     if (samp[i] < mmin)
-//       samp[i] = mmin;
-
-//     //may have been a tad too loud on the high end
-//     // samp[i] *= 0.5f; //testing various values here
-
-//   }
-
-//   aavg /= 160.0f;
-
-//   if (slot == 0)
-//   {
-//     if (aavg < 0.075f && state->aout_gain < 42.0f) state->aout_gain += 1.0f;
-//     if (aavg >= 0.075f && state->aout_gain > 1.0f) state->aout_gain -= 1.0f;
-//   }
-
-//   if (slot == 1)
-//   {
-//     if (aavg < 0.075f && state->aout_gainR < 42.0f) state->aout_gainR += 1.0f;
-//     if (aavg >= 0.075f && state->aout_gainR > 1.0f) state->aout_gainR -= 1.0f;
-//   }
-
-//   //debug 
-//   // fprintf (stderr, "\nS%d - DF = %f AAVG = %f", slot, df, aavg);
-  
-//   AGF_END: ; //do nothing
-
-// }
-
 //automatic gain short mono for analog audio and some digital mono (WIP)
 void agsm (dsd_opts * opts, dsd_state * state, short * input, int len)
 {
@@ -1418,10 +1356,10 @@ void agsm (dsd_opts * opts, dsd_state * state, short * input, int len)
 
   UNUSED(state);
 
-  float avg = 0.0f;        //will float be suffient?
+  float avg = 0.0f;        //average of 20 samples
   float coeff = 0.0f;     //gain coeffiecient
-  float max = 0.0f;      //the highest sample value he wave
-  float den = 1500.0f;  //denominator value
+  float max = 0.0f;      //the highest sample value
+  float nom = 1500.0f;  //nominator value
   float gain = (25.0f / opts->audio_gain); UNUSED(gain);
   float samp[960]; memset (samp, 0.0f, 960*sizeof(float));
 
@@ -1449,7 +1387,7 @@ void agsm (dsd_opts * opts, dsd_state * state, short * input, int len)
 
     avg /= 20;
     
-    coeff = fabsf (den / max);
+    coeff = fabsf (nom / max);
 
 
     //apply the coefficient to bring the max value to our desired maximum value
@@ -1481,14 +1419,13 @@ void agsm (dsd_opts * opts, dsd_state * state, short * input, int len)
 }
 
 //until analog agc is fixed, going to use a manual gain control on this
-//that scales a bit differently on the 1-50 index values
 void analog_gain (dsd_opts * opts, dsd_state * state, short * input, int len)
 {
 
   int i;
   UNUSED(state);
 
-  float gain = 1.0f + (opts->audio_gain / 25.0f); //range is 1 - 3?
+  float gain = 1.0f + (opts->audio_gain / 25.0f);
 
   for (i = 0; i < len; i++)
     input[i] *= gain;

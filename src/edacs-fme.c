@@ -207,15 +207,17 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     analog_gain (opts, state, analog2, 960);
     analog_gain (opts, state, analog3, 960);
 
-    // analog audio filtering
+    // low pass filter
     // lpf (state, analog1, 960);
     // lpf (state, analog2, 960);
     // lpf (state, analog3, 960);
 
+    //high pass filter
     hpf (state, analog1, 960);
     hpf (state, analog2, 960);
     hpf (state, analog3, 960);
 
+    //pass band filter
     pbf (state, analog1, 960);
     pbf (state, analog2, 960);
     pbf (state, analog3, 960);
