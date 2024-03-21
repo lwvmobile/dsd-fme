@@ -648,12 +648,27 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
         
       }
+      //TDMA Group Grant Update (never observed, unknown if ever used on any EDACS system)
+      else if (mt1 == 0x1)
+      {
+        lcn = (fr_1t & 0x3E0000000) >> 29;
+        int group  = (fr_1t & 0xFFFF000) >> 12;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d] Data Group Call", group, source, lcn);
+      }
+      //Data Group Grant Update
+      else if (mt1 == 0x2)
+      {
+        lcn = (fr_1t & 0x3E0000000) >> 29;
+        int group  = (fr_1t & 0xFFFF000) >> 12;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d] TDMA Group Call", group, source, lcn);
+      }
       //Voice Call Grant Update
       // MT1 value determines the type of group call:
-      // - 0x01 TDMA (never observed, unknown if ever used on any EDACS systems)
       // - 0x03 digital group voice (ProVoice, standard on SLERS EA)
       // - 0x12 analog group voice
-      else if (mt1 == 0x01 || mt1 == 0x03 || mt1 == 0x12)
+      else if (mt1 == 0x03 || mt1 == 0x12)
       {
         lcn = (fr_1t & 0x3E0000000) >> 29;
 
@@ -675,8 +690,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d]", group, source, lcn);
 
-        if      (mt1 == 0x1)  fprintf (stderr, " TDMA Group Call");
-        else if (mt1 == 0x3)  fprintf (stderr, " Digital Group Call");
+        if      (mt1 == 0x3)  fprintf (stderr, " Digital Group Call");
         else if (mt1 == 0x12) fprintf (stderr, " Analog Group Call");
         else                  fprintf (stderr, " Unknown Call Type");
         fprintf (stderr, "%s", KNRM);
@@ -742,14 +756,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
           
         }
-      }
-      //Data Group Grant Update
-      else if (mt1 == 0x2)
-      {
-        lcn = (fr_1t & 0x3E0000000) >> 29;
-        int group  = (fr_1t & 0xFFFF000) >> 12;
-        int source = (fr_4t & 0xFFFFF000) >> 12;
-        fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d] Data Group Call", group, source, lcn);
       }
       //I-Call Grant Update
       else if (mt1 == 0x4)
