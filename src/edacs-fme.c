@@ -374,10 +374,13 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     else fprintf(stderr, "%s", KRED);
 
     fprintf (stderr, " Analog RMS: %04ld SQL: %ld", rms, sql);
-    if (afs != 0)
+    if (state->ea_mode == 0) {
+      fprintf (stderr, " AFS [%03d] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
+    }
+    else
     {
-      if (state->ea_mode == 0) fprintf (stderr, " AFS [%03d] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
-      else fprintf (stderr, " TG/TGT: [%d] LCN [%02d]", afs, lcn);
+      if (afs == -1) fprintf (stderr, " TGT [ SYSTEM ] LCN [%02d] All-Call", lcn);
+      else           fprintf (stderr, " TGT [%08d] LCN [%02d]", afs, lcn);}
     }
 
     //debug, view hit counter
@@ -824,6 +827,76 @@ void edacs(dsd_opts * opts, dsd_state * state)
             }
 
           }
+        }
+      }
+      //System All-Call Grant Update
+      else if (mt1 == 0x16)
+      {
+        lcn = (fr_1t & 0x3E0000000) >> 29;
+
+        //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
+        if (lcn > state->edacs_lcn_count && lcn < 26) 
+        {
+          state->edacs_lcn_count = lcn;
+        }
+
+        int is_digital = (fr_1t & 0x10000000) >> 28;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+                         state->lasttg = -1; // represent system all-call as TG -1 to differentiate from real TGs
+        if (source != 0) state->lastsrc = source;
+        if (lcn != 0)    state->edacs_vc_lcn = lcn;
+        fprintf (stderr, "%s", KGRN);
+        fprintf (stderr, " Source [%08d] LCN[%02d]", source, lcn);
+
+        if (is_digital == 0) fprintf (stderr, " Analog System All-Call");
+        else                 fprintf (stderr, " Digital System All-Call");
+        fprintf (stderr, "%s", KNRM);
+
+        char mode[8]; //allow, block, digital enc
+        sprintf (mode, "%s", "");
+
+        //if we are using allow/whitelist mode, then write 'A' to mode for allow - always allow all-calls by default
+        if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "A");
+
+        //this is working now with the new import setup
+        if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
+        {
+          if (lcn > 0 && lcn < 26 && state->edacs_cc_lcn != 0 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
+          {
+            //openwav file and do per call right here, should probably check as well to make sure we have a valid trunking method active (rigctl, rtl)
+            if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
+            {
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld SRC %d All-Call.wav", getDateE(), timestr, state->edacs_site_id, source);
+              if (is_digital == 1)
+                openWavOutFile (opts, state);
+              else
+                openWavOutFile48k (opts, state);
+            }
+            
+            //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
+            if (opts->use_rigctl == 1)
+            {
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+              SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
+              state->edacs_tuned_lcn = lcn;
+              opts->p25_is_tuned = 1;
+              if (is_digital == 0)
+                edacs_analog(opts, state, -1, lcn);
+            }
+
+            if (opts->audio_in_type == 3) //rtl dongle
+            {
+              #ifdef USE_RTLSDR
+              rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+              state->edacs_tuned_lcn = lcn;
+              opts->p25_is_tuned = 1;
+              if (is_digital == 0)
+                edacs_analog(opts, state, -1, lcn);
+              #endif
+            }
+
+          }
+          
         }
       }
       //Login
