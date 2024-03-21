@@ -1410,3 +1410,86 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 //   AGF_END: ; //do nothing
 
 // }
+
+//automatic gain short mono for analog audio and some digital mono (WIP)
+void agsm (dsd_opts * opts, dsd_state * state, short * input, int len)
+{
+  int i, j;
+
+  UNUSED(state);
+
+  float avg = 0.0f;        //will float be suffient?
+  float coeff = 0.0f;     //gain coeffiecient
+  float max = 0.0f;      //the highest sample value he wave
+  float den = 1500.0f;  //denominator value
+  float gain = (25.0f / opts->audio_gain); UNUSED(gain);
+  float samp[960]; memset (samp, 0.0f, 960*sizeof(float));
+
+  //assign internal float from short input
+  for (i = 0; i < len; i++)
+    samp[i] = (float)input[i];
+
+  // gain = 2.5f;
+  // for (i = 0; i < len; i++)
+  //   samp[i] *= gain;
+
+  for (j = 0; j < len/20; j++)
+  {
+
+    for (i = 0; i < 20; i++)
+    {
+      if ( fabsf (samp[(j*20)+i]) > max)
+      {
+        max = fabsf (samp[(j*20)+i]);
+      }
+    }
+
+    for (i = 0; i < 20; i++)
+      avg += (float)samp[(j*20)+i];
+
+    avg /= 20;
+    
+    coeff = fabsf (den / max);
+
+
+    //apply the coefficient to bring the max value to our desired maximum value
+    for (i = 0; i < 20; i++)
+    {
+      if ( fabsf (samp[(j*20)+i]) > 110.0f) //try not to apply to near zero values
+        samp[(j*20)+i] *= coeff;
+    }
+    
+    //debug
+    // fprintf (stderr, "\n M: %f; C: %f; A: %f; ", max, coeff, avg);
+
+    max = 0; //reset
+    avg = 0; //reset
+
+  } //end j loop
+
+  // debug
+  // for (i = 0; i < len; i++)
+  // {
+  //   fprintf (stderr, " in: %d", input[i]);
+  //   fprintf (stderr, " out: %f", samp[i]);
+  // }
+    
+  //return new smaple values post agc
+  for (i = 0; i < len; i++)
+    input[i] = (short)samp[i];
+
+}
+
+//until analog agc is fixed, going to use a manual gain control on this
+//that scales a bit differently on the 1-50 index values
+void analog_gain (dsd_opts * opts, dsd_state * state, short * input, int len)
+{
+
+  int i;
+  UNUSED(state);
+
+  float gain = 1.0f + (opts->audio_gain / 25.0f); //range is 1 - 3?
+
+  for (i = 0; i < len; i++)
+    input[i] *= gain;
+}

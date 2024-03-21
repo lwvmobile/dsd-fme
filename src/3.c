@@ -526,9 +526,7 @@ void pbf(dsd_state * state, short * input, int len)
   for (i = 0; i < len; i++)
 	{
 		// fprintf (stderr, "\n in: %05d", input[i]);
-		// input[i] = PBFilter_Update(&state->PBF, input[i]); //filter only
-		input[i] = PBFilter_Update(&state->PBF, input[i]) * 1.5f; //add a little extra gain back
-		// fprintf (stderr, "\n out: %05d", input[i]);
+		input[i] = PBFilter_Update(&state->PBF, input[i]);
 	}
 }
 

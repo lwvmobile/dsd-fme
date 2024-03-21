@@ -202,6 +202,11 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       sr += digitize (opts, state, (int)analog1[i]);
     }
 
+    //manual gain control
+    analog_gain (opts, state, analog1, 960);
+    analog_gain (opts, state, analog2, 960);
+    analog_gain (opts, state, analog3, 960);
+
     // analog audio filtering
     // lpf (state, analog1, 960);
     // lpf (state, analog2, 960);
@@ -211,13 +216,10 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     hpf (state, analog2, 960);
     hpf (state, analog3, 960);
 
-    //TODO: Test this somehow, the EDACS analog remote only ATM (Should be alright though)
-    if (opts->audio_in_type == 3)
-    {
-      pbf (state, analog1, 960);
-      pbf (state, analog2, 960);
-      pbf (state, analog3, 960);
-    }
+    pbf (state, analog1, 960);
+    pbf (state, analog2, 960);
+    pbf (state, analog3, 960);
+
 
     //reconfigured to use seperate audio out stream that is always 48k short
     if (opts->audio_out_type == 0 && opts->slot1_on == 1)

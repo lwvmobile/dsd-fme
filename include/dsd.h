@@ -983,6 +983,8 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state); //float stere
 void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state); //float stereo mix 4v2 P25p2
 void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state);  //float mono
 void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot); //float gain control
+void agsm (dsd_opts * opts, dsd_state * state, short * input, int len); //short gain control for analog things
+void analog_gain (dsd_opts * opts, dsd_state * state, short * input, int len); //manual gain handling for analong things
 //new short stuff
 void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state);   //short stereo mix
 void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state);  //short stereo mix 3v2 DMR

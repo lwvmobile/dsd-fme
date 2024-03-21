@@ -278,13 +278,15 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             sf_write_sync (opts->wav_out_raw);
           }
 
+          //manual gain control -- seems to work better if applied before filtering
+          analog_gain (opts, state, state->analog_out, 960);
+
           // analog audio filtering
           // lpf(state, state->analog_out, 960);
           hpf (state, state->analog_out, 960);
 
-          //analog sounds really good now, still a tad bit quiet though
-          if (opts->audio_in_type == 3) //passband filter if using rtl_fm
-            pbf(state, state->analog_out, 960);
+          //analog sounds really good now
+          pbf(state, state->analog_out, 960);
 
           //unsure if this one helps anymore or not, probably not be setup correctly
           // if (opts->audio_in_type == 3) //notch filter if using rtl_fm
