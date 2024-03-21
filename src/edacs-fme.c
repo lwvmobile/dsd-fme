@@ -122,6 +122,10 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     //not be a sample to read in and it hangs on sf_short read until it crashes out, the fix below will prevent issues
     //when SDR++ is closed locally, or the TCP connection closes suddenly.
 
+    //NOTE: Observed two segfaults on EDACS STM analog when doing radio tests or otherwise holding the radio
+    //open for extremely long periods of time, could be an issue in digitize where dibit_buf_p is not
+    //reset for an extended period of time and overflows, may need to reset buffer occassionally here
+
     //TCP Input w/ Simple TCP Error Detection Implemented to prevent hard crash if TCP drops off
     if (opts->audio_in_type == 8)
     {
@@ -201,6 +205,15 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       sr = sr << 1;
       sr += digitize (opts, state, (int)analog1[i]);
     }
+
+    //Bugfix for buffer overflow from using digitize function, reset buffers
+    if (state->dibit_buf_p > state->dibit_buf + 900000)
+      state->dibit_buf_p = state->dibit_buf + 200;
+
+    //dmr buffer
+    if (state->dmr_payload_p > state->dmr_payload_buf + 900000)
+      state->dmr_payload_p = state->dmr_payload_buf + 200;
+
 
     //manual gain control
     analog_gain (opts, state, analog1, 960);
