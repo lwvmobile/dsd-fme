@@ -678,10 +678,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           state->edacs_lcn_count = lcn;
         }
 
-        int is_digital;
-        if (mt1 == 0x12) is_digital = 0;
-        else             is_digital = 1;
-
+        int is_digital = (mt1 == 0x3) ? 1 : 0;
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
                          state->lasttg = group; // 0 is a valid TG, it's the all-call for agency 0
@@ -690,9 +687,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d]", group, source, lcn);
 
-        if      (mt1 == 0x3)  fprintf (stderr, " Digital Group Call");
-        else if (mt1 == 0x12) fprintf (stderr, " Analog Group Call");
-        else                  fprintf (stderr, " Unknown Call Type");
+        if (is_digital == 0) fprintf (stderr, " Analog Group Call");
+        else                 fprintf (stderr, " Digital Group Call");
         fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
@@ -768,11 +764,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           state->edacs_lcn_count = lcn;
         }
 
-        //mt2 is 0x8 or 0xC when grant is first given, then 0xA or 0xE when call is in progress
-        int is_digital = -1;
-        if      (mt2 == 0x8 || mt2 == 0xA) is_digital = 0;
-        else if (mt2 == 0xC || mt2 == 0xE) is_digital = 1;
-
+        int is_digital = (fr_1t & 0x200000000) >> 33;
         int target = (fr_1t & 0xFFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         if (target != 0) state->lasttg = target + 100000; //Use IDs > 100000 to represent i-call targets to differentiate from TGs
@@ -781,16 +773,12 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " Target [%08d] Source [%08d] LCN[%02d]", target, source, lcn);
 
-        if      (is_digital == 0) fprintf (stderr, " Analog I-Call");
-        else if (is_digital == 1) fprintf (stderr, " Digital I-Call");
-        else                      fprintf (stderr, " Unknown I-Call Type");
+        if (is_digital == 0) fprintf (stderr, " Analog I-Call");
+        else                 fprintf (stderr, " Digital I-Call");
         fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
         sprintf (mode, "%s", "");
-
-        //if we don't know what type of call it is, then write 'B' to mode for block - no point trying to tune to it
-        if (is_digital != 0 && is_digital != 1) sprintf (mode, "%s", "B");
 
         //if we are using allow/whitelist mode, then write 'B' to mode for block - no allow/whitelist support for i-calls
         if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
