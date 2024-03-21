@@ -543,7 +543,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (mt1 == 0x1F)
           fprintf (stderr, "; MT2: %X)", mt2);
         else 
-          fprintf (stderr, ")");
+          fprintf (stderr, ")        ");
       }
 
       //MT1 of 0x1F indicates to use MT2 for the opcode. See US patent US7546135B2, Figure 2b.
