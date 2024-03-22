@@ -1420,7 +1420,7 @@ usage ()
   printf ("                 P25 - 12000; NXDN48 - 7000; NXDN96: 12000; DMR - 7000-12000; EDACS/PV - 12000-24000;\n"); //redo this, or check work, or whatever
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking or Scan Speed VC/sync loss hangtime in seconds. (default = 1 second)\n");
-  printf ("  -9            Force Enable EDACS Standard or Networked Mode if Auto Detection Fails \n");
+  // printf ("  -9            Force Enable EDACS Standard or Networked Mode if Auto Detection Fails \n");
   printf ("\n");
   printf (" Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
   printf (" Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
@@ -1688,10 +1688,11 @@ main (int argc, char **argv)
           fprintf (stderr, "TG Hold set to %d \n", state.tg_hold);
           break;
 
-        // case '9': //This is a temporary fix for RR issue until a permanent fix can be found
-        //   state.ea_mode = 0;
-        //   fprintf (stderr,"Force Enabling EDACS Standard/Networked Mode Mode\n");
-        //   break;
+        case '9': //Leaving Enabled to maintain backwards compatability 
+          state.ea_mode = 0;
+          state.esk_mask = 0;
+          fprintf (stderr,"Force Enabling EDACS Standard/Networked Mode Mode without ESK.\n");
+          break;
 
         //experimental audio monitoring
         case '8':

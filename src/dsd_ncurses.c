@@ -2563,6 +2563,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw(" ESK Mask: %02X", state->esk_mask);
     printw (" (A) Toggle; ");
     printw ("\n");
+  }
   #endif
   // if (opts->aggressive_framesync == 0) printw ("| Selective CRC ERR Bypass Enabled (RAS) \n");
   if (state->M == 1)
