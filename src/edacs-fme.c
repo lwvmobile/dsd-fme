@@ -671,8 +671,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //Voice Call Grant Update
       // MT1 value determines the type of group call:
       // - 0x03 digital group voice (ProVoice, standard on SLERS EA)
-      // - 0x12 analog group voice
-      else if (mt1 == 0x03 || mt1 == 0x12)
+      // - 0x06 analog group voice
+      else if (mt1 == 0x3 || mt1 == 0x6)
       {
         lcn = (fr_1t & 0x3E0000000) >> 29;
 
