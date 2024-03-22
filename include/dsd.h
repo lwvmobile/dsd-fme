@@ -436,6 +436,12 @@ typedef struct
   int slot1_on;
   int slot2_on;
 
+  //enable filter options
+  int use_lpf;
+  int use_hpf;
+  int use_pbf;
+  int use_hpf_d;
+
   //'DSP' Format Output
   uint8_t use_dsp_output;
   char dsp_out_file[2048];

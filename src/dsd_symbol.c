@@ -279,16 +279,24 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           }
 
           //low pass filter
-          // lpf(state, state->analog_out, 960);
+          if (opts->use_lpf == 1)
+            lpf(state, state->analog_out, 960);
 
           //high pass filter
-          hpf (state, state->analog_out, 960);
+          if (opts->use_hpf == 1)
+            hpf (state, state->analog_out, 960);
 
           //pass band filter
-          pbf(state, state->analog_out, 960);
+          if (opts->use_pbf == 1)
+            pbf(state, state->analog_out, 960);
 
           //manual gain control
-          analog_gain (opts, state, state->analog_out, 960);
+          if (opts->audio_gainA > 0.0f)
+            analog_gain (opts, state, state->analog_out, 960);
+
+          //automatic gain control
+          else
+            agsm(opts, state, state->analog_out, 960);
 
           //Running RMS after filtering does remove the analog spike from the RMS value
           //but noise floor noise will still produce higher values

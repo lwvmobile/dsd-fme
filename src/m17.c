@@ -1844,18 +1844,40 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     if (opts->audio_in_type == 3) opts->rtl_rms = rtl_return_rms();
     else opts->rtl_rms = raw_rms(voice1, nsam, 1) / 2; //dividing by two so mic isn't so sensitive on vox
 
-    //run hpf if from the dongle, mic input doesn't need it, and if using SDR++, use the high pass filter there instead
-    if (opts->audio_in_type == 3)
+    //low pass filter
+    if (opts->use_lpf == 1)
+    {
+      lpf (state, voice1, 160);
+      lpf (state, voice2, 160);
+    }
+
+    //high pass filter
+    if (opts->use_hpf == 1)
     {
       hpf (state, voice1, 160);
       hpf (state, voice2, 160);
+    }
+    
+    //passband filter
+    if (opts->use_pbf == 1)
+    {
       pbf (state, voice1, 160);
       pbf (state, voice2, 160);
     }
 
-    //manual adjustment to gain, after filtering them
-    analog_gain (opts, state, voice1, 160);
-    analog_gain (opts, state, voice2, 160);
+    //manual gain control
+    if (opts->audio_gainA > 0.0f)
+    {
+      analog_gain (opts, state, voice1, 160);
+      analog_gain (opts, state, voice2, 160);
+    }
+
+    //automatic gain control
+    else
+    {
+      agsm (opts, state, voice1, 160);
+      agsm (opts, state, voice2, 160);
+    }
 
     //NOTE: Similar to EDACS analog, if calculating raw rms here after filtering,
     //anytime the walkie-talkie is held open but no voice, the center spike is removed,

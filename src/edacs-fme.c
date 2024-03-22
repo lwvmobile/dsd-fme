@@ -215,24 +215,44 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       state->dmr_payload_p = state->dmr_payload_buf + 200;
 
     // low pass filter
-    // lpf (state, analog1, 960);
-    // lpf (state, analog2, 960);
-    // lpf (state, analog3, 960);
+    if (opts->use_lpf == 1)
+    {
+      lpf (state, analog1, 960);
+      lpf (state, analog2, 960);
+      lpf (state, analog3, 960);
+    }
 
     //high pass filter
-    hpf (state, analog1, 960);
-    hpf (state, analog2, 960);
-    hpf (state, analog3, 960);
+    if (opts->use_hpf == 1)
+    {
+      hpf (state, analog1, 960);
+      hpf (state, analog2, 960);
+      hpf (state, analog3, 960);
+    }
 
     //pass band filter
-    pbf (state, analog1, 960);
-    pbf (state, analog2, 960);
-    pbf (state, analog3, 960);
+    if (opts->use_pbf == 1)
+    {
+      pbf (state, analog1, 960);
+      pbf (state, analog2, 960);
+      pbf (state, analog3, 960);
+    }
 
     //manual gain control
-    analog_gain (opts, state, analog1, 960);
-    analog_gain (opts, state, analog2, 960);
-    analog_gain (opts, state, analog3, 960);
+    if (opts->audio_gainA > 0.0f)
+    {
+      analog_gain (opts, state, analog1, 960);
+      analog_gain (opts, state, analog2, 960);
+      analog_gain (opts, state, analog3, 960);
+    }
+
+    //automatic gain control
+    else
+    {
+      agsm (opts, state, analog1, 960);
+      agsm (opts, state, analog2, 960);
+      agsm (opts, state, analog3, 960);
+    }
 
     //NOTE: Ideally, we would run raw_rms for TCP/VS here, but the analog spike on EDACS (STM)
     //system gets filtered out, and when they hold the radio open and don't talk,

@@ -2395,6 +2395,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->floating_point == 1) printw (" FLOAT: %02.0f%%;", opts->audio_gain*2);
     if (opts->audio_gain == 0) printw (" (+|-) Auto");
     if (opts->audio_gain > 0) printw (" (+|-) Manual");
+    if (opts->use_hpf_d == 1) printw (" HPF");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
     printw (" \n");
@@ -2402,8 +2403,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if ( opts->audio_out_type == 0 && (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
   {
-    printw ("| Pulse Analog Output: %i kHz; %i Ch; G: %02.0f%% (/|*) Manual", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->audio_gainA);
-    if (opts->audio_in_type != 3) printw (" RMS: %04ld;", opts->rtl_rms);
+    printw ("| Pulse Analog Output: %i kHz; %i Ch; G: %02.0f%% (/|*) Manual ", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->audio_gainA);
+    if (opts->audio_in_type != 3) printw ("RMS: %04ld; ", opts->rtl_rms);
+    if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
+    if (opts->use_hpf == 1) printw ("HP|");     else printw ("  |");
+    if (opts->use_pbf == 1) printw ("PB|");     else printw ("  |");
     printw (" \n");
   }
 
@@ -2413,6 +2417,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
     if (opts->audio_gain == 0) printw (" (+/-) Auto");
     if (opts->audio_gain > 0) printw (" (+/-) Manual");
+    if (opts->use_hpf_d == 1) printw (" HPF");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
     if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) &&  (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
@@ -2426,13 +2431,18 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
     if (opts->audio_gain == 0) printw (" (+/-) Auto");
     if (opts->audio_gain > 0) printw (" (+/-) Manual");
+    if (opts->use_hpf_d == 1) printw (" HPF");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) &&  (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
       printw (" - Monitor RMS: %04ld ", opts->rtl_rms);
     printw (" \n");
     if (opts->udp_sockfdA != 0) //Analog Output on udp port +2
     {
-      printw ("| UDP Analog Output: %s:%d; 48 kHz 1 Ch; Analog Output; ", opts->udp_hostname, opts->udp_portno+2);
+      printw ("| UDP Analog Output: %s:%d; 48 kHz 1 Ch; ", opts->udp_hostname, opts->udp_portno+2);
+      if (opts->audio_in_type != 3) printw ("RMS: %04ld; ", opts->rtl_rms);
+      if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
+      if (opts->use_hpf == 1) printw ("HP|");     else printw ("  |");
+      if (opts->use_pbf == 1) printw ("PB|");     else printw ("  |");
       printw (" \n");
     }
   }
@@ -2553,7 +2563,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ( "[%d] \n", (48000*opts->wav_interpolator)/state->samplesPerSymbol);
   if (opts->m17encoder == 1) printw ("| Encoding:    [%s] ", opts->output_name);
   if (opts->m17encoder == 1) printw (" Toggle (\\); ");
-  if (opts->m17encoder == 1) printw (" Mic Gain (/|*): %02.0f%% \n", opts->audio_gainA);
+  if (opts->m17encoder == 1) printw (" Mic Gain (/|*): %02.0f%% ", opts->audio_gainA);
+  if (opts->m17encoder == 1)
+  {
+    if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
+    if (opts->use_hpf == 1) printw ("HP|");     else printw ("  |");
+    if (opts->use_pbf == 1) printw ("PB|");     else printw ("  |");
+    printw ("\n");
+  }
   printw ("| Decoding:    [%s] ", opts->output_name);
   if (opts->aggressive_framesync == 0) printw ("CRC/(RAS) ");
   //debug -- troubleshoot voice tuning after grant on DMR CC, subsequent grant may not tune because tuner isn't available
@@ -4381,6 +4398,30 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       state->symbolCenter = 3;
     } 
 
+  }
+
+  if (c == 86) // 'V' Key, toggle LPF
+  {
+    if (opts->use_lpf == 0) opts->use_lpf = 1;
+    else opts->use_lpf = 0;
+  }
+
+  if (c == 66) // 'B' Key, toggle HPF
+  {
+    if (opts->use_hpf == 0) opts->use_hpf = 1;
+    else opts->use_hpf = 0;
+  }
+
+  if (c == 78) // 'N' Key, toggle PBF
+  {
+    if (opts->use_pbf == 0) opts->use_pbf = 1;
+    else opts->use_pbf = 0;
+  }
+
+  if (c == 72) // 'H' Key, toggle HPF on digital
+  {
+    if (opts->use_hpf_d == 0) opts->use_hpf_d = 1;
+    else opts->use_hpf_d = 0;
   }
 
   if (opts->m17encoder == 1 && c == 92) //'\' key - toggle M17 encoder Encode + TX 

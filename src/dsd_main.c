@@ -768,6 +768,12 @@ initOpts (dsd_opts * opts)
   opts->slot1_on = 1;
   opts->slot2_on = 1;
 
+  //enable filter options
+  opts->use_lpf = 0;
+  opts->use_hpf = 1;
+  opts->use_pbf = 1;
+  opts->use_hpf_d = 0;
+
   //dsp structured file
   opts->dsp_out_file[0] = 0;
   opts->use_dsp_output = 0;
@@ -2470,6 +2476,10 @@ main (int argc, char **argv)
             opts.m17encoder = 1;
             opts.pulse_digi_rate_out = 48000;
             opts.pulse_digi_out_channels = 1;
+            //filters disabled by default, use ncurses VBN switches
+            opts.use_lpf = 0;
+            opts.use_hpf = 0;
+            opts.use_pbf = 0;
             sprintf (opts.output_name, "M17 Encoder");
           }
           else if (optarg[0] == 'B') //Captial B to Run the M17 BRT encoder
