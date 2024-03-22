@@ -442,6 +442,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
   unsigned int peercmd = 0xF88; //using for EA detection test
   unsigned int netcmd = 0xF3; //using for Networked Test
   UNUSED2(vcmd, idcmd);
+  UNUSED2(peercmd, netcmd);
 
   char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
   timestr = getTimeE();
@@ -496,34 +497,15 @@ void edacs(dsd_opts * opts, dsd_state * state)
   else //BCH Pass, continue from here.
   {
 
-    //ESK on/off detection, I honestly don't remember the logic for this anymore, but it works fine
-    if ( (((fr_1t & 0xF000000000) >> 36) != 0xB)  && (((fr_1t & 0xF000000000) >> 36) != 0x1) && (((fr_1t & 0xFF00000000) >> 32) != 0xF3) )
-    {
-      //experimenting with values here, not too high, and not too low
-      if ( (((fr_1t & 0xF000000000) >> 36) <= 0x8 ))
-      { 
-        state->esk_mask = 0xA0;
-      }
-      //ideal value would be 5, but some other values exist that don't allow it
-      if ( (((fr_1t & 0xF000000000) >> 36) > 0x8 ) )
-      { 
-        state->esk_mask = 0x0;
-      }
-    }
-
-    //Standard/Networked Auto Detection
-    //if (command == netcmd) //netcmd is F3 Standard/Networked (I think)
-    if ( (fr_1t >> 32 == netcmd) || (fr_1t >> 32 == (netcmd ^ 0xA0)) ) 
-    { 
-      state->ea_mode = 0; //disable extended addressing mode
-    }
-
-    //EA Auto detection //peercmd is 0xF88 peer site relay 0xFF80000000 >> 28
-    if (fr_1t >> 28 == peercmd || fr_1t >> 28 == (peercmd ^ 0xA00) )
-    {
-      state->ea_mode = 1; //enable extended addressing mode
-    }
-
+    //Auto Detection Modes Have Been Removed due to reliability issues, 
+    //users will now need to manually specify these options:
+    /*
+      -fh             Decode only EDACS Standard/ProVoice*\n");
+      -fH             Decode only EDACS Standard/ProVoice with ESK 0xA0*\n");
+      -fe             Decode only EDACS EA/ProVoice*\n");
+      -fE             Decode only EDACS EA/ProVoice with ESK 0xA0*\n");
+    */
+    
     //Start Extended Addressing Mode 
     if (state->ea_mode == 1)
     {
@@ -1081,7 +1063,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
     } //end Standard or Networked
 
     //supply user warning to use -9 switch if decoding doesn't start shortly
-    else fprintf (stderr, " Net/EA Auto Detect; Use -9 CLI Switch For Standard;");
+    else fprintf (stderr, " Detected: Use -fh, -fH, -fe, or -fE for std, esk, ea, or ea-esk;");
 
   }
 
