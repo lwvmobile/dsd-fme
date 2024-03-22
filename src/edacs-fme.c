@@ -683,6 +683,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
 
         int is_digital = (mt1 == 0x3) ? 1 : 0;
+        int is_emergency = (fr_4t & 0x100000000) >> 32;
+        int is_tx_trunking = (fr_4t & 0x200000000) >> 33;
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
                          state->lasttg = group; // 0 is a valid TG, it's the all-call for agency 0
@@ -693,6 +695,16 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
         if (is_digital == 0) fprintf (stderr, " Analog Group Call");
         else                 fprintf (stderr, " Digital Group Call");
+
+        //Trunking mode is correlated to (but not guaranteed to match) the type of call:
+        // - emergency calls - usually message trunking
+        // - normal calls - usually transmission trunking
+        if (is_tx_trunking == 0) fprintf (stderr, " (message trunking)");
+        if (is_emergency == 1)
+        {
+          fprintf (stderr, "%s", KRED);
+          fprintf (stderr, " EMERGENCY");
+        }
         fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
