@@ -742,7 +742,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
       }
       //I-Call Grant Update
-      else if (mt1 == 0x4)
+      else if (mt1 == 0x10)
       {
         lcn = (fr_4t & 0x1F00000000) >> 32;
 
