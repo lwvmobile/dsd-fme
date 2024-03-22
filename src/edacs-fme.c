@@ -374,10 +374,14 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     else fprintf(stderr, "%s", KRED);
 
     fprintf (stderr, " Analog RMS: %04ld SQL: %ld", rms, sql);
-    if (afs != 0)
+    if (state->ea_mode == 0)
     {
-      if (state->ea_mode == 0) fprintf (stderr, " AFS [%03d] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
-      else fprintf (stderr, " TG/TGT: [%d] LCN [%02d]", afs, lcn);
+      fprintf (stderr, " AFS [%03d] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
+    }
+    else
+    {
+      if (afs == -1) fprintf (stderr, " TGT [ SYSTEM ] LCN [%02d] All-Call", lcn);
+      else           fprintf (stderr, " TGT [%08d] LCN [%02d]", afs, lcn);
     }
 
     //debug, view hit counter
@@ -530,9 +534,18 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //Site ID
       unsigned long long int site_id = 0; //we probably could just make this an int as well as the state variables
 
-      //add mt1 and mt2 for easy debug / decode 
+      //Add raw payloads and MT1/MT2 for easy debug
       if (opts->payload == 1)
-        fprintf (stderr, " MT1: %02X; MT2: %X; ", mt1, mt2);
+      {
+        fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+        fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+        fprintf (stderr, " (MT1: %02X", mt1);
+        // MT2 is meaningless if MT1 is not 0x1F
+        if (mt1 == 0x1F)
+          fprintf (stderr, "; MT2: %X)", mt2);
+        else 
+          fprintf (stderr, ")        ");
+      }
 
       //MT1 of 0x1F indicates to use MT2 for the opcode. See US patent US7546135B2, Figure 2b.
       if (mt1 == 0x1F)
@@ -542,28 +555,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (mt2 == 0x0)
         {
           fprintf (stderr, " Initiate Test Call");
-        }
-        
-        else if (mt2 == 0xA)
-        {
-          site_id = ((fr_1 & 0x1F000) >> 12) | ((fr_1 & 0x1F000000) >> 19);
-          fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Site ID [%02llX][%03lld] Extended Addressing", site_id, site_id);
-          fprintf (stderr, "%s", KNRM);
-          state->edacs_site_id = site_id;
-        }
-        //Patch Groups
-        else if (mt2 == 0xC)
-        {
-          int patch_site = ((fr_4t & 0xFF00000000) >> 32); //is site info valid, 0 for all sites? else patch only good on site listed?
-          int sourcep = ((fr_1t & 0xFFFF000) >> 12);
-          int targetp = ((fr_4t & 0xFFFF000) >> 12);
-          fprintf (stderr, " Patch -- Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
-        }
-        //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
-        else if (mt2 == 0xD)
-        {
-          fprintf (stderr, " Serial Number Request");
         }
         //Adjacent Sites
         else if (mt2 == 0x1)
@@ -614,7 +605,15 @@ void edacs(dsd_opts * opts, dsd_state * state)
             }
           }
         }
-        
+        //Site ID
+        else if (mt2 == 0xA)
+        {
+          site_id = ((fr_1 & 0x1F000) >> 12) | ((fr_1 & 0x1F000000) >> 19);
+          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, " Site ID [%02llX][%03lld] Extended Addressing", site_id, site_id);
+          fprintf (stderr, "%s", KNRM);
+          state->edacs_site_id = site_id;
+        }
         //disabling kick command, data looks like its just FFFF, no actual values, can't verify accuracy
         // else if (mt2 == 0xB) //KICK LISTING for EA?? Unverified, but probably observed in Unitrunker way back when.
         // {
@@ -625,19 +624,52 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //   fprintf (stderr, " FR_6 [%010llX]", fr_6);
         //   fprintf (stderr, " %08d REG/DEREG/AUTH?", kicked);
         // }
-        // else //print frames for debug/analysis
-
-        if (opts->payload == 1)
+        //Patch Groups
+        else if (mt2 == 0xC)
         {
-          fprintf (stderr, " FR_1 [%010llX]", fr_1t);
-          fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+          int patch_site = ((fr_4t & 0xFF00000000) >> 32); //is site info valid, 0 for all sites? else patch only good on site listed?
+          int sourcep = ((fr_1t & 0xFFFF000) >> 12);
+          int targetp = ((fr_4t & 0xFFFF000) >> 12);
+          fprintf (stderr, " Patch -- Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
+        }
+        //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
+        else if (mt2 == 0xD)
+        {
+          fprintf (stderr, " Serial Number Request");
+        }
+        else
+        {
+          fprintf (stderr, " Unknown Command");
+          // Only print the payload if we haven't already printed it
+          if (opts->payload != 1)
+          {
+            fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+            fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+          }
         }
         
       }
-
+      //TDMA Group Grant Update (never observed, unknown if ever used on any EDACS system)
+      else if (mt1 == 0x1)
+      {
+        lcn = (fr_1t & 0x3E0000000) >> 29;
+        int group  = (fr_1t & 0xFFFF000) >> 12;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d] Data Group Call", group, source, lcn);
+      }
+      //Data Group Grant Update
+      else if (mt1 == 0x2)
+      {
+        lcn = (fr_1t & 0x3E0000000) >> 29;
+        int group  = (fr_1t & 0xFFFF000) >> 12;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d] TDMA Group Call", group, source, lcn);
+      }
       //Voice Call Grant Update
-      // mt1 0x12 is analog group voice call, 0x3 is Digital group voice call, 0x2 Group Data Channel, 0x1 TDMA call
-      else if ((mt1 >= 0x1 && mt1 <= 0x3) || mt1 == 0x12)
+      // MT1 value determines the type of group call:
+      // - 0x03 digital group voice (ProVoice, standard on SLERS EA)
+      // - 0x12 analog group voice
+      else if (mt1 == 0x03 || mt1 == 0x12)
       {
         lcn = (fr_1t & 0x3E0000000) >> 29;
 
@@ -647,19 +679,17 @@ void edacs(dsd_opts * opts, dsd_state * state)
           state->edacs_lcn_count = lcn;
         }
 
+        int is_digital = (mt1 == 0x3) ? 1 : 0;
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
-        if (group != 0)  state->lasttg = group;
+                         state->lasttg = group; // 0 is a valid TG, it's the all-call for agency 0
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
         fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d]", group, source, lcn);
 
-        if      (mt1 == 0x1)  fprintf (stderr, " TDMA Call"); //never observed, wonder if any EDACS systems ever carried a TDMA signal (X2-TDMA?)
-        else if (mt1 == 0x2)  fprintf (stderr, " Group Data Call"); //Never Seen this one before
-        else if (mt1 == 0x3)  fprintf (stderr, " Digital Call"); //ProVoice, this is what we always get on SLERS EA
-        else if (mt1 == 0x12) fprintf (stderr, " Analog Call"); //analog, to at least log that we recognize it
-        else                  fprintf (stderr, " Unknown Type");
+        if (is_digital == 0) fprintf (stderr, " Analog Group Call");
+        else                 fprintf (stderr, " Digital Group Call");
         fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
@@ -692,10 +722,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
               sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %d SRC %d.wav", getDateE(), timestr, state->edacs_site_id, group, source);
-              if (mt1 != 0x12) //digital
+              if (is_digital == 1)
                 openWavOutFile (opts, state);
-              else //analog
-                openWavOutFile48k (opts, state); //
+              else
+                openWavOutFile48k (opts, state);
             }
             
             //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
@@ -705,7 +735,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              if (mt1 == 0x12) //analog
+              if (is_digital == 0)
                 edacs_analog(opts, state, group, lcn);
             }
 
@@ -715,7 +745,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              if (mt1 == 0x6) //analog
+              if (is_digital == 0)
                 edacs_analog(opts, state, group, lcn);
               #endif
             }
@@ -735,25 +765,21 @@ void edacs(dsd_opts * opts, dsd_state * state)
           state->edacs_lcn_count = lcn;
         }
 
+        int is_digital = (fr_1t & 0x200000000) >> 33;
         int target = (fr_1t & 0xFFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         if (target != 0) state->lasttg = target + 100000; //Use IDs > 100000 to represent i-call targets to differentiate from TGs
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " I-Call Target [%08d] Source [%08d] LCN[%02d]", target, source, lcn);
+        fprintf (stderr, " Target [%08d] Source [%08d] LCN[%02d]", target, source, lcn);
 
-        //mt2 is 0x8 or 0xC when grant is first given, then 0xA or 0xE when call is in progress
-        if      (mt2 == 0x8 || mt2 == 0xA) fprintf (stderr, " Analog Call");
-        else if (mt2 == 0xC || mt2 == 0xE) fprintf (stderr, " Digital Call");
-        else                               fprintf (stderr, " Unknown Type");
+        if (is_digital == 0) fprintf (stderr, " Analog I-Call");
+        else                 fprintf (stderr, " Digital I-Call");
         fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
         sprintf (mode, "%s", "");
-
-        //if we don't know what type of call it is, then write 'B' to mode for block - no point trying to tune to it
-        if (mt2 != 0x8 && mt2 != 0xA && mt2 != 0xC && mt2 != 0xE) sprintf (mode, "%s", "B");
 
         //if we are using allow/whitelist mode, then write 'B' to mode for block - no allow/whitelist support for i-calls
         if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
@@ -767,10 +793,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
               sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %d SRC %d I-Call.wav", getDateE(), timestr, state->edacs_site_id, target, source);
-              if (mt2 == 0xC || mt2 == 0xE) //digital
+              if (is_digital == 1)
                 openWavOutFile (opts, state);
-              else //analog
-                openWavOutFile48k (opts, state); //
+              else
+                openWavOutFile48k (opts, state);
             }
             
             //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
@@ -780,8 +806,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              //
-              if (mt2 == 0x8 || mt2 == 0xA) //analog
+              if (is_digital == 0)
                 edacs_analog(opts, state, target, lcn);
             }
 
@@ -791,13 +816,82 @@ void edacs(dsd_opts * opts, dsd_state * state)
               rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              //
-              if (mt2 == 0x10)
+              if (is_digital == 0)
                 edacs_analog(opts, state, target, lcn);
               #endif
             }
 
           }
+        }
+      }
+      //System All-Call Grant Update
+      else if (mt1 == 0x16)
+      {
+        lcn = (fr_1t & 0x3E0000000) >> 29;
+
+        //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
+        if (lcn > state->edacs_lcn_count && lcn < 26) 
+        {
+          state->edacs_lcn_count = lcn;
+        }
+
+        int is_digital = (fr_1t & 0x10000000) >> 28;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+                         state->lasttg = -1; // represent system all-call as TG -1 to differentiate from real TGs
+        if (source != 0) state->lastsrc = source;
+        if (lcn != 0)    state->edacs_vc_lcn = lcn;
+        fprintf (stderr, "%s", KGRN);
+        fprintf (stderr, " Source [%08d] LCN[%02d]", source, lcn);
+
+        if (is_digital == 0) fprintf (stderr, " Analog System All-Call");
+        else                 fprintf (stderr, " Digital System All-Call");
+        fprintf (stderr, "%s", KNRM);
+
+        char mode[8]; //allow, block, digital enc
+        sprintf (mode, "%s", "");
+
+        //if we are using allow/whitelist mode, then write 'A' to mode for allow - always allow all-calls by default
+        if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "A");
+
+        //this is working now with the new import setup
+        if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
+        {
+          if (lcn > 0 && lcn < 26 && state->edacs_cc_lcn != 0 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
+          {
+            //openwav file and do per call right here, should probably check as well to make sure we have a valid trunking method active (rigctl, rtl)
+            if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
+            {
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld SRC %d All-Call.wav", getDateE(), timestr, state->edacs_site_id, source);
+              if (is_digital == 1)
+                openWavOutFile (opts, state);
+              else
+                openWavOutFile48k (opts, state);
+            }
+            
+            //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
+            if (opts->use_rigctl == 1)
+            {
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+              SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
+              state->edacs_tuned_lcn = lcn;
+              opts->p25_is_tuned = 1;
+              if (is_digital == 0)
+                edacs_analog(opts, state, -1, lcn);
+            }
+
+            if (opts->audio_in_type == 3) //rtl dongle
+            {
+              #ifdef USE_RTLSDR
+              rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+              state->edacs_tuned_lcn = lcn;
+              opts->p25_is_tuned = 1;
+              if (is_digital == 0)
+                edacs_analog(opts, state, -1, lcn);
+              #endif
+            }
+
+          }
+          
         }
       }
       //Login
@@ -807,11 +901,16 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, " Login Group [%05d] Source [%08d]", group, source);
       }
-      else //print frames for debug/analysis
+      //Unknown command
+      else
       {
-        fprintf (stderr, " FR_1 [%010llX]", fr_1t);
-        fprintf (stderr, " FR_4 [%010llX]", fr_4t);
         fprintf (stderr, " Unknown Command");
+        // Only print the payload if we haven't already printed it
+        if (opts->payload != 1)
+        {
+          fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+          fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+        }
       }
 
     }
