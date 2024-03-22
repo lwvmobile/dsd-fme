@@ -529,9 +529,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, " (MT1: %02X", mt1);
         // MT2 is meaningless if MT1 is not 0x1F
         if (mt1 == 0x1F)
-          fprintf (stderr, "; MT2: %X)", mt2);
+          fprintf (stderr, "; MT2: %X) ", mt2);
         else 
-          fprintf (stderr, ")        ");
+          fprintf (stderr, ")         ");
       }
 
       //MT1 of 0x1F indicates to use MT2 for the opcode. See US patent US7546135B2, Figure 2b.
