@@ -655,7 +655,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d] Data Group Call", group, source, lcn);
+        fprintf (stderr, " Group [%05d] Source [%08d] LCN [%02d] Data Group Call", group, source, lcn);
         fprintf (stderr, "%s", KNRM);
       }
       //Data Group Grant Update
@@ -665,7 +665,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d] TDMA Group Call", group, source, lcn);
+        fprintf (stderr, " Group [%05d] Source [%08d] LCN [%02d] TDMA Group Call", group, source, lcn);
         fprintf (stderr, "%s", KNRM);
       }
       //Voice Call Grant Update
@@ -689,7 +689,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d]", group, source, lcn);
+        fprintf (stderr, " Group [%05d] Source [%08d] LCN [%02d]", group, source, lcn);
 
         if (is_digital == 0) fprintf (stderr, " Analog Group Call");
         else                 fprintf (stderr, " Digital Group Call");
@@ -775,7 +775,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Target [%08d] Source [%08d] LCN[%02d]", target, source, lcn);
+        fprintf (stderr, " Target [%08d] Source [%08d] LCN [%02d]", target, source, lcn);
 
         if (is_digital == 0) fprintf (stderr, " Analog I-Call");
         else                 fprintf (stderr, " Digital I-Call");
@@ -844,7 +844,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Source [%08d] LCN[%02d]", source, lcn);
+        fprintf (stderr, " Source [%08d] LCN [%02d]", source, lcn);
 
         if (is_digital == 0) fprintf (stderr, " Analog System All-Call");
         else                 fprintf (stderr, " Digital System All-Call");
