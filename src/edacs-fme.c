@@ -314,6 +314,12 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
 
     fprintf (stderr, "%s", KNRM);
 
+    #ifdef PRETTY_COLORS
+    {} //do nothing
+    #else
+    fprintf (stderr, "SQL HIT: %d; ", 5-cnt); //add cnt since user can't see red or green
+    #endif
+
     if (count > 0) fprintf (stderr, "\n");
     
   }
