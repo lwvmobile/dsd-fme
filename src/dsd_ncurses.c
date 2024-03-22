@@ -2505,6 +2505,65 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else printw (" - Black List Mode\n");
   }
   #endif
+  //print additional information for EDACS modes and toggles
+  #ifdef PRETTY_COLORS
+  if (opts->p25_trunk == 1 && opts->frame_provoice == 1)
+  {
+    printw ("| \\--EDACS -");
+    if (state->ea_mode == -1)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" Standard/Network");
+      printw (" Extended Address");
+      attron(COLOR_PAIR(4));
+    }
+    else if (state->ea_mode == 0)
+    {
+      printw (" Standard/Network");
+      attron(COLOR_PAIR(2));
+      printw (" Extended Address");
+      attron(COLOR_PAIR(4));
+    }
+    else if (state->ea_mode == 1)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" Standard/Network");
+      attron(COLOR_PAIR(4));
+      printw (" Extended Address");      
+    }
+    printw (" (S) Mode;");
+
+    printw(" ESK Mask: %02X", state->esk_mask);
+    printw (" (A); ");
+
+    attron(COLOR_PAIR(4));
+    printw ("\n");
+  }
+  #else //set on to UPPER CASE, off to lower case
+  if (opts->p25_trunk == 1 && opts->frame_provoice == 1)
+  {
+    printw ("| \\--EDACS -");
+    if (state->ea_mode == -1)
+    {
+      printw (" standard/network");
+      printw (" extended address");
+    }
+    else if (state->ea_mode == 0)
+    {
+      printw (" STANDARD/NETWORK");
+      printw (" extended address");
+    }
+    else if (state->ea_mode == 1)
+    {
+      printw (" standard/network");
+      printw (" EXTENDED ADDRESS");      
+    }
+    printw (" (S) Mode (Toggle);");
+
+    printw(" ESK Mask: %02X", state->esk_mask);
+    printw (" (A) Toggle; ");
+    printw ("\n");
+  #endif
   // if (opts->aggressive_framesync == 0) printw ("| Selective CRC ERR Bypass Enabled (RAS) \n");
   if (state->M == 1)
   {

@@ -504,7 +504,12 @@ void edacs(dsd_opts * opts, dsd_state * state)
       -fH             Decode only EDACS Standard/ProVoice with ESK 0xA0*\n");
       -fe             Decode only EDACS EA/ProVoice*\n");
       -fE             Decode only EDACS EA/ProVoice with ESK 0xA0*\n");
+
+      (A) key toggles mode; (S) key toggles mask value in ncurses
     */
+
+    //TODO: Consider re-adding the auto code to make a suggestion to users
+    //as to which mode to proceed in?
     
     //Start Extended Addressing Mode 
     if (state->ea_mode == 1)
@@ -1062,7 +1067,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
     } //end Standard or Networked
 
-    //supply user warning to use -9 switch if decoding doesn't start shortly
+    //let users know they need to select an operational mode with the switches below
     else fprintf (stderr, " Detected: Use -fh, -fH, -fe, or -fE for std, esk, ea, or ea-esk;");
 
   }
