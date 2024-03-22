@@ -497,7 +497,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
   {
 
     //ESK on/off detection, I honestly don't remember the logic for this anymore, but it works fine
-    if ( (((fr_1t & 0xF000000000) >> 36) != 0xB)  && (((fr_1t & 0xF000000000) >> 36) != 0x1) && (((fr_1t & 0xFF00000000) >> 32) != 0xF3) )
+    if ((((fr_1t & 0xF000000000) >> 36) != 0xB) &&
+        (((fr_1t & 0xF000000000) >> 36) != 0x3) &&
+        (((fr_1t & 0xF000000000) >> 36) != 0x1) &&
+        (((fr_1t & 0xFF00000000) >> 32) != 0xF3) )
     {
       //experimenting with values here, not too high, and not too low
       if ( (((fr_1t & 0xF000000000) >> 36) <= 0x8 ))
@@ -668,8 +671,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //Voice Call Grant Update
       // MT1 value determines the type of group call:
       // - 0x03 digital group voice (ProVoice, standard on SLERS EA)
-      // - 0x12 analog group voice
-      else if (mt1 == 0x03 || mt1 == 0x12)
+      // - 0x06 analog group voice
+      else if (mt1 == 0x3 || mt1 == 0x6)
       {
         lcn = (fr_1t & 0x3E0000000) >> 29;
 
