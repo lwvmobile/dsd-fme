@@ -214,12 +214,6 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     if (state->dmr_payload_p > state->dmr_payload_buf + 900000)
       state->dmr_payload_p = state->dmr_payload_buf + 200;
 
-
-    //manual gain control
-    analog_gain (opts, state, analog1, 960);
-    analog_gain (opts, state, analog2, 960);
-    analog_gain (opts, state, analog3, 960);
-
     // low pass filter
     // lpf (state, analog1, 960);
     // lpf (state, analog2, 960);
@@ -234,6 +228,11 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     pbf (state, analog1, 960);
     pbf (state, analog2, 960);
     pbf (state, analog3, 960);
+
+    //manual gain control
+    analog_gain (opts, state, analog1, 960);
+    analog_gain (opts, state, analog2, 960);
+    analog_gain (opts, state, analog3, 960);
 
     //NOTE: Ideally, we would run raw_rms for TCP/VS here, but the analog spike on EDACS (STM)
     //system gets filtered out, and when they hold the radio open and don't talk,

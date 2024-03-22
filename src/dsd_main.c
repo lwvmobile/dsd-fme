@@ -583,7 +583,7 @@ initOpts (dsd_opts * opts)
   opts->mbe_out_fR = NULL; //second slot on a TDMA system
   opts->audio_gain = 0;
   opts->audio_gainR = 0;
-  opts->audio_gainA = 30.0f; //scale of 1 - 100
+  opts->audio_gainA = 20.0f; //scale of 1 - 100
   opts->audio_out = 1;
   opts->wav_out_file[0] = 0;
   opts->wav_out_fileR[0] = 0;
