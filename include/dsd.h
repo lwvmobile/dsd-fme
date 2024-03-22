@@ -695,7 +695,7 @@ typedef struct
 
   //edacs
   int ea_mode;
-  int esk_mode;
+
   unsigned short esk_mask;
   unsigned long long int edacs_site_id;
   int edacs_lcn_count; //running tally of lcn's observed on edacs system

@@ -2505,6 +2505,66 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else printw (" - Black List Mode\n");
   }
   #endif
+  //print additional information for EDACS modes and toggles
+  #ifdef PRETTY_COLORS
+  if (opts->p25_trunk == 1 && opts->frame_provoice == 1)
+  {
+    printw ("| \\--EDACS -");
+    if (state->ea_mode == -1)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" Standard/Network");
+      printw (" Extended Address");
+      attron(COLOR_PAIR(4));
+    }
+    else if (state->ea_mode == 0)
+    {
+      printw (" Standard/Network");
+      attron(COLOR_PAIR(2));
+      printw (" Extended Address");
+      attron(COLOR_PAIR(4));
+    }
+    else if (state->ea_mode == 1)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" Standard/Network");
+      attron(COLOR_PAIR(4));
+      printw (" Extended Address");      
+    }
+    printw (" Mode (S);");
+
+    printw(" ESK Mask: %02X", state->esk_mask);
+    printw (" (A); ");
+
+    attron(COLOR_PAIR(4));
+    printw ("\n");
+  }
+  #else //set on to UPPER CASE, off to lower case
+  if (opts->p25_trunk == 1 && opts->frame_provoice == 1)
+  {
+    printw ("| \\--EDACS -");
+    if (state->ea_mode == -1)
+    {
+      printw (" standard/network");
+      printw (" extended address");
+    }
+    else if (state->ea_mode == 0)
+    {
+      printw (" STANDARD/NETWORK");
+      printw (" extended address");
+    }
+    else if (state->ea_mode == 1)
+    {
+      printw (" standard/network");
+      printw (" EXTENDED ADDRESS");      
+    }
+    printw (" Mode (S);");
+
+    printw(" ESK Mask: %02X", state->esk_mask);
+    printw (" (A) Toggle; ");
+    printw ("\n");
+  }
+  #endif
   // if (opts->aggressive_framesync == 0) printw ("| Selective CRC ERR Bypass Enabled (RAS) \n");
   if (state->M == 1)
   {
@@ -4410,6 +4470,31 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //flag on the EOT marker to send last frame after toggling encoder to zero
     if (state->m17encoder_tx == 0) state->m17encoder_eot = 1;
     
+  }
+
+  if(opts->frame_provoice == 1 && c == 65) //'A' Key, toggle ESK mask 0xA0
+  {
+    if (state->esk_mask == 0) state->esk_mask = 0xA0;
+    else state->esk_mask = 0;
+  }
+
+  if(opts->frame_provoice == 1 && c == 83) //'S' Key, toggle STD or EA mode and reset
+  {
+    if (state->ea_mode == -1) state->ea_mode = 0;
+    else if (state->ea_mode == 0) state->ea_mode = 1;
+    else state->ea_mode = 0;
+
+    //reset -- test to make sure these don't do weird things when reset
+    state->edacs_site_id = 0;
+    state->edacs_lcn_count = 0;
+    state->edacs_cc_lcn = 0;
+    state->edacs_vc_lcn = 0;
+    state->edacs_tuned_lcn = -1;
+    state->p25_cc_freq = 0;
+    opts->p25_is_tuned = 0;
+    state->lasttg = 0;
+    state->lastsrc = 0;
+
   }
 
   //anything with an entry box will need the inputs and outputs stopped first
