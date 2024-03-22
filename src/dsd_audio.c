@@ -309,7 +309,7 @@ processAudio (dsd_opts * opts, dsd_state * state)
           //tap the pointer here and store the short upsample buffer samples
           state->s_lu[n] = (short) *state->audio_out_float_buf_p;
           //hpf test
-          state->s_lu[n] = HPFilter_Update(&state->HRCFilterL, state->s_lu[n]);
+          // state->s_lu[n] = HPFilter_Update(&state->HRCFilterL, state->s_lu[n]);
           state->audio_out_buf_p++;
           state->audio_out_float_buf_p++;
         }
@@ -331,7 +331,7 @@ processAudio (dsd_opts * opts, dsd_state * state)
           //tap the pointer here and store the short buffer samples
           state->s_l[n] = (short) *state->audio_out_temp_buf_p;
           //hpf test
-          state->s_l[n] = HPFilter_Update(&state->HRCFilterL, state->s_l[n]);
+          // state->s_l[n] = HPFilter_Update(&state->HRCFilterL, state->s_l[n]);
           //debug
           // fprintf (stderr, " %d", state->s_l[n]);
           state->audio_out_buf_p++;
@@ -460,7 +460,7 @@ processAudioR (dsd_opts * opts, dsd_state * state)
           //tap the pointer here and store the short upsample buffer samples
           state->s_ru[n] = (short) *state->audio_out_float_buf_pR;
           //hpf test
-          state->s_ru[n] = HPFilter_Update(&state->HRCFilterR, state->s_ru[n]);
+          // state->s_ru[n] = HPFilter_Update(&state->HRCFilterR, state->s_ru[n]);
           state->audio_out_buf_pR++;
           state->audio_out_float_buf_pR++;
         }
@@ -482,7 +482,7 @@ processAudioR (dsd_opts * opts, dsd_state * state)
           //tap the pointer here and store the short buffer samples
           state->s_r[n] = (short) *state->audio_out_temp_buf_pR;
           //hpf test
-          state->s_r[n] = HPFilter_Update(&state->HRCFilterR, state->s_r[n]);
+          // state->s_r[n] = HPFilter_Update(&state->HRCFilterR, state->s_r[n]);
           state->audio_out_buf_pR++;
           state->audio_out_temp_buf_pR++;
           state->audio_out_idxR++;
