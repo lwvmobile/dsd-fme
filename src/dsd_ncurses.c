@@ -4412,6 +4412,31 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     
   }
 
+  if(opts->frame_provoice == 1 && c == 65) //'A' Key, toggle ESK mask 0xA0
+  {
+    if (state->esk_mask == 0) state->esk_mask = 0xA0;
+    else state->esk_mask = 0;
+  }
+
+  if(opts->frame_provoice == 1 && c == 83) //'S' Key, toggle STD or EA mode and reset
+  {
+    if (state->ea_mode == -1) state->ea_mode = 0;
+    else if (state->ea_mode == 0) state->ea_mode = 1;
+    else state->ea_mode = 0;
+
+    //reset -- test to make sure these don't do weird things when reset
+    state->edacs_site_id = 0;
+    state->edacs_lcn_count = 0;
+    state->edacs_cc_lcn = 0;
+    state->edacs_vc_lcn = 0;
+    state->edacs_tuned_lcn = -1;
+    state->p25_cc_freq = 0;
+    opts->p25_is_tuned = 0;
+    state->lasttg = 0;
+    state->lastsrc = 0;
+
+  }
+
   //anything with an entry box will need the inputs and outputs stopped first
   //so probably just write a function to handle c input, and when c = certain values 
   //needing an entry box, then stop all of those
