@@ -374,13 +374,14 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     else fprintf(stderr, "%s", KRED);
 
     fprintf (stderr, " Analog RMS: %04ld SQL: %ld", rms, sql);
-    if (state->ea_mode == 0) {
+    if (state->ea_mode == 0)
+    {
       fprintf (stderr, " AFS [%03d] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
     }
     else
     {
       if (afs == -1) fprintf (stderr, " TGT [ SYSTEM ] LCN [%02d] All-Call", lcn);
-      else           fprintf (stderr, " TGT [%08d] LCN [%02d]", afs, lcn);}
+      else           fprintf (stderr, " TGT [%08d] LCN [%02d]", afs, lcn);
     }
 
     //debug, view hit counter
