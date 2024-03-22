@@ -338,24 +338,27 @@ uint16_t q_abs_diff(const uint16_t v1, const uint16_t v2)
 // #define LFC 100
 
 
-void LPFilter_Init(LPFilter *filter, float cutoffFreqHz, float sampleTimeS){
-float RC=0.0;
-RC=1.0/(2*PI*cutoffFreqHz);
-filter->coef[0]=sampleTimeS/(sampleTimeS+RC);
-filter->coef[1]=RC/(sampleTimeS+RC);
+void LPFilter_Init(LPFilter *filter, float cutoffFreqHz, float sampleTimeS)
+{
 
-filter->v_out[0]=0.0;
-filter->v_out[1]=0.0;
+	float RC=0.0;
+	RC=1.0/(2*PI*cutoffFreqHz);
+	filter->coef[0]=sampleTimeS/(sampleTimeS+RC);
+	filter->coef[1]=RC/(sampleTimeS+RC);
+
+	filter->v_out[0]=0.0;
+	filter->v_out[1]=0.0;
 
 }
 
 
-float LPFilter_Update(LPFilter *filter, float v_in){
+float LPFilter_Update(LPFilter *filter, float v_in)
+{
 
-filter->v_out[1]=filter->v_out[0];
-filter->v_out[0]=(filter->coef[0]*v_in) + (filter->coef[1]*filter->v_out[1]);
+	filter->v_out[1]=filter->v_out[0];
+	filter->v_out[0]=(filter->coef[0]*v_in) + (filter->coef[1]*filter->v_out[1]);
 
-return (filter->v_out[0]);
+	return (filter->v_out[0]);
 
 }
 
@@ -363,34 +366,34 @@ return (filter->v_out[0]);
 /********************************************************************************************************
  *                              HIGH PASS FILTER
 ********************************************************************************************************/
-void HPFilter_Init(HPFilter *filter, float cutoffFreqHz, float sampleTimeS){
-float RC=0.0;
-RC=1.0/(2*PI*cutoffFreqHz);
+void HPFilter_Init(HPFilter *filter, float cutoffFreqHz, float sampleTimeS)
+{
 
-filter->coef=RC/(sampleTimeS+RC);
+	float RC=0.0;
+	RC=1.0/(2*PI*cutoffFreqHz);
 
-filter->v_in[0]=0.0;
-filter->v_in[1]=0.0;
+	filter->coef=RC/(sampleTimeS+RC);
 
-filter->v_out[0]=0.0;
-filter->v_out[1]=0.0;
+	filter->v_in[0]=0.0;
+	filter->v_in[1]=0.0;
+
+	filter->v_out[0]=0.0;
+	filter->v_out[1]=0.0;
 
 }
 
 
-float HPFilter_Update(HPFilter *filter, float v_in){
+float HPFilter_Update(HPFilter *filter, float v_in)
+{
     
-filter->v_in[1]=filter->v_in[0];
-filter->v_in[0]=v_in;
-    
+	filter->v_in[1]=filter->v_in[0];
+	filter->v_in[0]=v_in;
 
-filter->v_out[1]=filter->v_out[0];
+	filter->v_out[1]=filter->v_out[0];
+	filter->v_out[0]=filter->coef * (filter->v_in[0] - filter->v_in[1]+filter->v_out[1]);
 
-filter->v_out[0]=filter->coef * (filter->v_in[0] - filter->v_in[1]+filter->v_out[1]);
+	return (filter->v_out[0]);
 
-
-
-return (filter->v_out[0]);
 }
 
 /********************************************************************************************************
@@ -398,19 +401,25 @@ return (filter->v_out[0]);
 ********************************************************************************************************/
 
 
-void PBFilter_Init(PBFilter *filter, float HPF_cutoffFreqHz, float LPF_cutoffFreqHz, float sampleTimeS){
-LPFilter_Init(&filter->lpf, LPF_cutoffFreqHz, sampleTimeS);
-HPFilter_Init(&filter->hpf, HPF_cutoffFreqHz, sampleTimeS);
-filter->out_in=0.0;
+void PBFilter_Init(PBFilter *filter, float HPF_cutoffFreqHz, float LPF_cutoffFreqHz, float sampleTimeS)
+{
+
+	LPFilter_Init(&filter->lpf, LPF_cutoffFreqHz, sampleTimeS);
+	HPFilter_Init(&filter->hpf, HPF_cutoffFreqHz, sampleTimeS);
+
+	filter->out_in=0.0;
 
 }
 
-float PBFilter_Update(PBFilter *filter, float v_in){
-filter->out_in=HPFilter_Update(&filter->hpf, v_in);
+float PBFilter_Update(PBFilter *filter, float v_in)
+{
 
-filter->out_in=LPFilter_Update(&filter->lpf, filter->out_in);
+	filter->out_in=HPFilter_Update(&filter->hpf, v_in);
 
-return (filter->out_in);
+	filter->out_in=LPFilter_Update(&filter->lpf, filter->out_in);
+
+	return (filter->out_in);
+
 }
 
 /********************************************************************************************************
@@ -418,44 +427,49 @@ return (filter->out_in);
 ********************************************************************************************************/
 
 
-void NOTCHFilter_Init(NOTCHFilter *filter, float centerFreqHz, float notchWidthHz, float sampleTimeS){
-//filter frequency to angular (rad/s)
-float w0_rps=2.0 * PI *centerFreqHz;
-float ww_rps=2.0 * PI *notchWidthHz;
+void NOTCHFilter_Init(NOTCHFilter *filter, float centerFreqHz, float notchWidthHz, float sampleTimeS)
+{
 
-//pre warp center frequency
-float w0_pw_rps=(2.0/sampleTimeS) * tanf(0.5 * w0_rps * sampleTimeS);
+	//filter frequency to angular (rad/s)
+	float w0_rps=2.0 * PI *centerFreqHz;
+	float ww_rps=2.0 * PI *notchWidthHz;
 
-//computing filter coefficients
+	//pre warp center frequency
+	float w0_pw_rps=(2.0/sampleTimeS) * tanf(0.5 * w0_rps * sampleTimeS);
 
-filter->alpha=4.0 + w0_rps*w0_pw_rps*sampleTimeS*sampleTimeS;
-filter->beta=2.0*ww_rps*sampleTimeS;
+	//computing filter coefficients
 
-//clearing input and output  buffers
+	filter->alpha=4.0 + w0_rps*w0_pw_rps*sampleTimeS*sampleTimeS;
+	filter->beta=2.0*ww_rps*sampleTimeS;
 
-for (uint8_t n=0; n<3; n++){
-    filter->vin[n]=0;
-    filter->vout[n]=0;
+	//clearing input and output  buffers
+
+	for (uint8_t n=0; n<3; n++)
+	{
+		filter->vin[n]=0;
+		filter->vout[n]=0;
+	}
+
 }
 
-}
+float NOTCHFilter_Update(NOTCHFilter *filter, float vin)
+{
 
-float NOTCHFilter_Update(NOTCHFilter *filter, float vin){
-    //shifting samples
-    filter->vin[2]=filter->vin[1];
-    filter->vin[1]=filter->vin[0];
+	//shifting samples
+	filter->vin[2]=filter->vin[1];
+	filter->vin[1]=filter->vin[0];
 
-    filter->vout[2]=filter->vout[1];
-    filter->vout[1]=filter->vout[0];
+	filter->vout[2]=filter->vout[1];
+	filter->vout[1]=filter->vout[0];
 
-    filter->vin[0]=vin;
+	filter->vin[0]=vin;
 
-    //compute new output
-    filter->vout[0]=(filter->alpha*filter->vin[0] + 2.0 *(filter->alpha -8.0)*filter->vin[1] + filter->alpha*filter->vin[2]
-    -(2.0f*(filter->alpha-8.0)*filter->vout[1]+(filter->alpha-filter->beta)*filter->vout[2]))/(filter->alpha+filter->beta);
+	//compute new output
+	filter->vout[0]=(filter->alpha*filter->vin[0] + 2.0 *(filter->alpha -8.0)*filter->vin[1] + filter->alpha*filter->vin[2]
+	-(2.0f*(filter->alpha-8.0)*filter->vout[1]+(filter->alpha-filter->beta)*filter->vout[2]))/(filter->alpha+filter->beta);
 
 
-    return (filter->vout[0]);
+	return (filter->vout[0]);
 }
 
 void init_audio_filters (dsd_state * state)
@@ -473,11 +487,12 @@ void init_audio_filters (dsd_state * state)
 	//PBFilter_Init(PBFilter *filter, float HPF_cutoffFreqHz, float LPF_cutoffFreqHz, float sampleTimeS);
 	//NOTCHFilter_Init(NOTCHFilter *filter, float centerFreqHz, float notchWidthHz, float sampleTimeS);
 
-	//TODO: Make PBFilter initiazation values based on rtl bandwidth values?
+	//NOTE: PBFilter_init also inits a LPF and HPF, but on another set of filters, might be worth
+	//testing just using the PBFilter by itself and see how it does without the hpf used
 
-	//passband filter working (seems to be), notch filter unsure which values to use
+	//passband filter working (seems to be), notch filter unsure which values to use, doesn't have any appreciable affect when used as is
 	PBFilter_Init(&state->PBF, 8000, 12000, (float)1/(float)1536000); //RTL Sampling at 1536000 S/s.
-	NOTCHFilter_Init(&state->NF, 1000, 4000, (float)1/(float)1536000); //this one probably isn't set up correctly
+	NOTCHFilter_Init(&state->NF, 1000, 4000, (float)1/(float)1536000);
 	
 }
 

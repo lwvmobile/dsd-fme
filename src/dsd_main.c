@@ -583,7 +583,7 @@ initOpts (dsd_opts * opts)
   opts->mbe_out_fR = NULL; //second slot on a TDMA system
   opts->audio_gain = 0;
   opts->audio_gainR = 0;
-  opts->audio_gainA = 50.0f; //scale of 1 - 100
+  opts->audio_gainA = 30.0f; //scale of 1 - 100
   opts->audio_out = 1;
   opts->wav_out_file[0] = 0;
   opts->wav_out_fileR[0] = 0;
@@ -2177,14 +2177,14 @@ main (int argc, char **argv)
             opts.dmr_stereo = 0;
             opts.dmr_mono = 0;
             state.dmr_stereo = 0;
-            // opts.setmod_bw = 12500;
+            // opts.setmod_bw = 16000;
             sprintf (opts.output_name, "EDACS/PV");
             fprintf (stderr,"Setting symbol rate to 9600 / second\n");
             fprintf (stderr,"Decoding only ProVoice frames.\n");
             fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
-            //rtl specific tweaks
+            //misc tweaks
             opts.rtl_bandwidth = 24;
-            // opts.rtl_gain_value = 36;
+            opts.audio_gainA = 50.0f;
           }
           else if (optarg[0] == '1')
           {
