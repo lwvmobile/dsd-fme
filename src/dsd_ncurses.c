@@ -3507,12 +3507,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         attron (COLOR_PAIR(3)); 
         if (state->ea_mode == 1) {
-          if (call_matrix[i][2] > 100000)
-            // I-Call
-            printw (" TGT [%8lld] SRC [%8lld] I-Call", call_matrix[i][2] - 100000, call_matrix[i][3] );
-          else if (call_matrix[i][2] == -1)
+          if (call_matrix[i][2] + 1 == 0)
             // System all-call
             printw (" TGT [ SYSTEM ] SRC [%8lld] All-Call", call_matrix[i][3] );
+          else if (call_matrix[i][2] > 100000)
+            // I-Call
+            printw (" TGT [%8lld] SRC [%8lld] I-Call", call_matrix[i][2] - 100000, call_matrix[i][3] );
           else
             // Group call
             printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
@@ -3543,12 +3543,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         attron (COLOR_PAIR(2)); 
         if (state->ea_mode == 1) {
-          if (call_matrix[i][2] > 100000)
-            // I-Call
-            printw (" TGT [%8lld] SRC [%8lld] I-Call", call_matrix[i][2] - 100000, call_matrix[i][3] );
-          else if (call_matrix[i][2] == -1)
+          if (call_matrix[i][2] + 1 == 0)
             // System all-call
             printw (" TGT [ SYSTEM ] SRC [%8lld] All-Call", call_matrix[i][3] );
+          else if (call_matrix[i][2] > 100000)
+            // I-Call
+            printw (" TGT [%8lld] SRC [%8lld] I-Call", call_matrix[i][2] - 100000, call_matrix[i][3] );
           else
             // Group call
             printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
@@ -3679,12 +3679,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           printw ("LCN [%2lld] ", call_matrix[j][1]);
           if (state->ea_mode == 1)
           {
-            if (call_matrix[j][2] > 100000)
-              // I-Call
-              printw ("Target [%8lld] Source [%8lld] I-Call", call_matrix[j][2] - 100000, call_matrix[j][3]);
-            else if (call_matrix[j][2] == -1)
+            if (call_matrix[j][2] + 1 == 0)
               // System all-call
               printw ("Target [ SYSTEM ] Source [%8lld] All-Call", call_matrix[j][3]);
+            else if (call_matrix[j][2] > 100000)
+              // I-Call
+              printw ("Target [%8lld] Source [%8lld] I-Call", call_matrix[j][2] - 100000, call_matrix[j][3]);
             else
               // Group call
               printw ("Target [%8lld] Source [%8lld]", call_matrix[j][2], call_matrix[j][3]);
