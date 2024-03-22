@@ -541,11 +541,14 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //Test Call (not seen in the wild, see US patent US7546135B2, Figure 2b)
         if (mt2 == 0x0)
         {
+          fprintf (stderr, "%s", KYEL);
           fprintf (stderr, " Initiate Test Call");
+          fprintf (stderr, "%s", KNRM);
         }
         //Adjacent Sites
         else if (mt2 == 0x1)
         {
+          fprintf (stderr, "%s", KYEL);
           fprintf (stderr, " Adjacent Site");
           if ( ((fr_1t & 0xFF000) >> 12) > 0 )
           {
@@ -553,10 +556,12 @@ void edacs(dsd_opts * opts, dsd_state * state)
             int adj_l = (fr_1t & 0x1F000000) >> 24;
             fprintf (stderr, " [%02X][%03d] on CC LCN [%02d]", adj, adj, adj_l);
           }
+          fprintf (stderr, "%s", KNRM);
         }
         //Control Channel LCN
         else if (mt2 == 0x8)
         {
+          fprintf (stderr, "%s", KYEL);
           fprintf (stderr, " Control Channel LCN");
           if (((fr_4t >> 12) & 0x1F) != 0)
           {
@@ -591,6 +596,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               state->p25_cc_freq = state->trunk_lcn_freq[state->edacs_cc_lcn-1]; //index starts at zero, lcn's locally here start at 1
             }
           }
+          fprintf (stderr, "%s", KNRM);
         }
         //Site ID
         else if (mt2 == 0xA)
@@ -617,16 +623,22 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int patch_site = ((fr_4t & 0xFF00000000) >> 32); //is site info valid, 0 for all sites? else patch only good on site listed?
           int sourcep = ((fr_1t & 0xFFFF000) >> 12);
           int targetp = ((fr_4t & 0xFFFF000) >> 12);
+          fprintf (stderr, "%s", KYEL);
           fprintf (stderr, " Patch -- Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
+          fprintf (stderr, "%s", KNRM);
         }
         //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
         else if (mt2 == 0xD)
         {
+          fprintf (stderr, "%s", KYEL);
           fprintf (stderr, " Serial Number Request");
+          fprintf (stderr, "%s", KNRM);
         }
         else
         {
+          fprintf (stderr, "%s", KMAG);
           fprintf (stderr, " Unknown Command");
+          fprintf (stderr, "%s", KNRM);
           // Only print the payload if we haven't already printed it
           if (opts->payload != 1)
           {
@@ -642,7 +654,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
         lcn = (fr_1t & 0x3E0000000) >> 29;
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d] Data Group Call", group, source, lcn);
+        fprintf (stderr, "%s", KNRM);
       }
       //Data Group Grant Update
       else if (mt1 == 0x2)
@@ -650,7 +664,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
         lcn = (fr_1t & 0x3E0000000) >> 29;
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d] TDMA Group Call", group, source, lcn);
+        fprintf (stderr, "%s", KNRM);
       }
       //Voice Call Grant Update
       // MT1 value determines the type of group call:
@@ -886,12 +902,16 @@ void edacs(dsd_opts * opts, dsd_state * state)
       {
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, "%s", KYEL);
         fprintf (stderr, " Login Group [%05d] Source [%08d]", group, source);
+        fprintf (stderr, "%s", KNRM);
       }
       //Unknown command
       else
       {
+        fprintf (stderr, "%s", KMAG);
         fprintf (stderr, " Unknown Command");
+        fprintf (stderr, "%s", KNRM);
         // Only print the payload if we haven't already printed it
         if (opts->payload != 1)
         {
