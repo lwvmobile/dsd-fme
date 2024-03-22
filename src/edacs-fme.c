@@ -1068,7 +1068,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
     } //end Standard or Networked
 
     //let users know they need to select an operational mode with the switches below
-    else fprintf (stderr, " Detected: Use -fh, -fH, -fe, or -fE for std, esk, ea, or ea-esk;");
+    else 
+    {
+      fprintf (stderr, " Detected: Use -fh, -fH, -fe, or -fE for std, esk, ea, or ea-esk;");
+      fprintf (stderr, "\n");
+      fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+      fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+    }
 
   }
 

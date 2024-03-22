@@ -2531,7 +2531,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(4));
       printw (" Extended Address");      
     }
-    printw (" (S) Mode;");
+    printw (" Mode (S);");
 
     printw(" ESK Mask: %02X", state->esk_mask);
     printw (" (A); ");
@@ -2558,7 +2558,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw (" standard/network");
       printw (" EXTENDED ADDRESS");      
     }
-    printw (" (S) Mode (Toggle);");
+    printw (" Mode (S);");
 
     printw(" ESK Mask: %02X", state->esk_mask);
     printw (" (A) Toggle; ");
