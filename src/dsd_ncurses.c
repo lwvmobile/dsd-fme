@@ -725,6 +725,17 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           wscanw(entry_win, "%d", &opts->rtl_udp_port);
           noecho();
 
+          entry_win = newwin(6, WIDTH+18, starty+10, startx+10);
+          box (entry_win, 0, 0);
+          mvwprintw(entry_win, 2, 2, " RTL Vol Multiplier (1,2,3) (Default = 1): ");
+          mvwprintw(entry_win, 3, 3, " ");
+          echo();
+          refresh();
+          wscanw(entry_win, "%d", &opts->rtl_volume_multiplier);
+          if (opts->rtl_volume_multiplier > 3 || opts->rtl_volume_multiplier < 0)
+            opts->rtl_volume_multiplier = 1;
+          noecho();
+
           entry_win = newwin(8, WIDTH+22, starty+10, startx+10);
           box (entry_win, 0, 0);
           mvwprintw(entry_win, 2, 2, " RTL RMS Squelch Level (NXDN/dPMR/Analog/Raw only): ");
@@ -763,19 +774,20 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
             
           }
 
-          entry_win = newwin(17, WIDTH+20, starty+10, startx+10);
+          entry_win = newwin(18, WIDTH+20, starty+10, startx+10);
           box (entry_win, 0, 0);
           mvwprintw(entry_win, 2, 2, " Starting RTL Input. Cannot Release/Stop Until Exit.");
           mvwprintw(entry_win, 4, 2, " RTL Frequency: %d Hz", opts->rtlsdr_center_freq);
           mvwprintw(entry_win, 5, 2, " RTL Device Index Number: %d; SN:%s", opts->rtl_dev_index, serial);
           mvwprintw(entry_win, 6, 2, " RTL Device Bandwidth: %d kHz", opts->rtl_bandwidth);
           mvwprintw(entry_win, 7, 2, " RTL Device Gain: %d", opts->rtl_gain_value);
-          mvwprintw(entry_win, 8, 2, " RTL Device UDP Port: %d", opts->rtl_udp_port);
-          mvwprintw(entry_win, 9, 2, " RTL Device PPM: %d", opts->rtlsdr_ppm_error);
-          mvwprintw(entry_win, 10, 2, " RTL RMS Squelch: %d", opts->rtl_squelch_level);
-          mvwprintw(entry_win, 12, 2, " Are You Sure?");
-          mvwprintw(entry_win, 13, 2, " 1 = Yes, 2 = No ");
-          mvwprintw(entry_win, 14, 3, " ");
+          mvwprintw(entry_win, 8, 2, " RTL Volume Multiplier: %d", opts->rtl_volume_multiplier);
+          mvwprintw(entry_win, 9, 2, " RTL Device UDP Port: %d", opts->rtl_udp_port);
+          mvwprintw(entry_win, 10, 2, " RTL Device PPM: %d", opts->rtlsdr_ppm_error);
+          mvwprintw(entry_win, 11, 2, " RTL RMS Squelch: %d", opts->rtl_squelch_level);
+          mvwprintw(entry_win, 13, 2, " Are You Sure?");
+          mvwprintw(entry_win, 14, 2, " 1 = Yes, 2 = No ");
+          mvwprintw(entry_win, 15, 3, " ");
           echo();
           refresh();
           wscanw(entry_win, "%d", &confirm);
@@ -2376,13 +2388,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| RTL: %d;", opts->rtl_dev_index);
     if (opts->rtl_gain_value == 0)
-      printw (" Gain: AGC;");
+      printw (" G: AGC;");
     else
-      printw (" Gain: %idB;", opts->rtl_gain_value);
+      printw (" G: %idB;", opts->rtl_gain_value);
+      printw (" V: %iX;", opts->rtl_volume_multiplier);
       printw (" PPM: %i;", opts->rtlsdr_ppm_error);
       printw (" SQ: %i;", opts->rtl_squelch_level);
       printw (" RMS: %04li;", opts->rtl_rms);
-      printw (" BW: %i kHz;", opts->rtl_bandwidth);
+      printw (" BW: %i;", opts->rtl_bandwidth);
       printw (" FRQ: %i;", opts->rtlsdr_center_freq); 
     if (opts->rtl_udp_port != 0) printw ("\n| External RTL Tuning on UDP Port: %i", opts->rtl_udp_port);
     printw ("\n");

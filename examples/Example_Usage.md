@@ -74,7 +74,7 @@ Detailed Setup:
 
 ```
 RTL-SDR options:
- Usage: rtl:dev:freq:gain:ppm:bw:sq:udp
+ Usage: rtl:dev:freq:gain:ppm:bw:sq:vol
   NOTE: all arguments after rtl are optional now for trunking, but user configuration is recommended
   dev  <num>    RTL-SDR Device Index Number
   freq <num>    RTL-SDR Frequency (851800000 or 851.8M) 
@@ -82,9 +82,9 @@ RTL-SDR options:
   ppm  <num>    RTL-SDR PPM Error (default = 0)
   bw   <num>    RTL-SDR Bandwidth kHz (default = 12)(8, 12, 16, 24)  
   sq   <num>    RTL-SDR Squelch Level vs RMS Value (Optional)
-  udp  <num>    RTL-SDR Legacy UDP Remote Port (Optional -- External Use Only)
- Example: dsd-fme-zdev -fs -i rtl -C cap_plus_channel.csv -T
- Example: dsd-fme-zdev -fp -i rtl:0:851.375M:22:-2:24:0:6021
+  vol  <num>    RTL-SDR Sample 'Volume' Multiplier (default = 1)(1,2,3)
+ Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T
+ Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:2
 
 ```
 

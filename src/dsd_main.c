@@ -1245,7 +1245,7 @@ usage ()
   printf ("                /dev/dsp for OSS audio (Depreciated: Will require padsp wrapper in Linux) \n");
   #endif
   printf ("                rtl for rtl dongle (Default Values -- see below)\n");
-  printf ("                rtl:dev:freq:gain:ppm:bw:sq:udp for rtl dongle (see below)\n");
+  printf ("                rtl:dev:freq:gain:ppm:bw:sq:vol for rtl dongle (see below)\n");
   printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
   printf ("                tcp:192.168.7.5:7355 for custom address and port \n");
   printf ("                filename.bin for OP25/FME capture bin files\n");
@@ -1292,12 +1292,12 @@ usage ()
   // #ifdef AERO_BUILD
   printf ("                If using /dev/dsp input and output at 48k1, launch two instances of DSD-FME w -V 1 and -V 2 if needed");
   // #endif
-  printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
+  // printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
   printf ("  -z            Set TDMA Voice Slot Preference when using /dev/dsp audio output (prevent lag and stuttering)\n");
   printf ("  -y            Enable Experimental Pulse Audio Float Audio Output\n");
   printf ("\n");
   printf ("RTL-SDR options:\n");
-  printf (" Usage: rtl:dev:freq:gain:ppm:bw:sq:udp\n");
+  printf (" Usage: rtl:dev:freq:gain:ppm:bw:sq:vol\n");
   printf ("  NOTE: all arguments after rtl are optional now for trunking, but user configuration is recommended\n");
   printf ("  dev  <num>    RTL-SDR Device Index Number or 8 Digit Serial Number, no strings! (default 0)\n");
   printf ("  freq <num>    RTL-SDR Frequency (851800000 or 851.8M) \n");
@@ -1305,9 +1305,10 @@ usage ()
   printf ("  ppm  <num>    RTL-SDR PPM Error (default = 0)\n");
   printf ("  bw   <num>    RTL-SDR Bandwidth kHz (default = 12)(4, 6, 8, 12, 16, 24)  \n");
   printf ("  sq   <num>    RTL-SDR Squelch Level vs RMS Value (Optional)\n");
-  printf ("  udp  <num>    RTL-SDR Legacy UDP Remote Port (Optional -- External Use Only)\n");
+  // printf ("  udp  <num>    RTL-SDR Legacy UDP Remote Port (Optional -- External Use Only)\n"); //NOTE: This is still available as an option in the ncurses menu
+  printf ("  vol  <num>    RTL-SDR Sample 'Volume' Multiplier (default = 1)(1,2,3)\n");
   printf (" Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T\n");
-  printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:6021\n");
+  printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:2\n");
   printf ("\n");
   printf ("Encoder options:\n");
   printf ("  -fZ           M17 Stream Voice Encoder\n");
@@ -2771,8 +2772,12 @@ main (int argc, char **argv)
       if (curr != NULL) opts.rtl_squelch_level = atoi (curr);
       else goto RTLEND;
 
-      curr = strtok(NULL, ":"); //rtl udp port "-U"
-      if (curr != NULL) opts.rtl_udp_port = atoi (curr);
+      // curr = strtok(NULL, ":"); //rtl udp port "-U"
+      // if (curr != NULL) opts.rtl_udp_port = atoi (curr);
+      // else goto RTLEND;
+
+      curr = strtok(NULL, ":"); //rtl sample / volume multiplier
+      if (curr != NULL) opts.rtl_volume_multiplier = atoi (curr);
       else goto RTLEND;
 
       RTLEND:
@@ -2804,15 +2809,19 @@ main (int argc, char **argv)
         
       }
 
+      if (opts.rtl_volume_multiplier > 3 || opts.rtl_volume_multiplier < 0)
+        opts.rtl_volume_multiplier = 1; //I wonder if you could flip polarity by using -1
+
       fprintf (stderr, "Dev %d ", opts.rtl_dev_index);
       fprintf (stderr, "Freq %d ", opts.rtlsdr_center_freq);
       fprintf (stderr, "Gain %d ", opts.rtl_gain_value);
       fprintf (stderr, "PPM %d ", opts.rtlsdr_ppm_error);
       fprintf (stderr, "BW %d ", opts.rtl_bandwidth);
       fprintf (stderr, "SQ %d ", opts.rtl_squelch_level);
-      fprintf (stderr, "UDP %d \n", opts.rtl_udp_port);
+      // fprintf (stderr, "UDP %d \n", opts.rtl_udp_port);
+      fprintf (stderr, "VOL %d \n", opts.rtl_volume_multiplier);
       opts.audio_in_type = 3;
-      opts.rtl_volume_multiplier = 2; //double, see if this cleans up weak decodes from RTL_FM
+      // opts.rtl_volume_multiplier = 2; //TODO: Make this an extra value on the end
       rtl_ok = 1;
       #endif
 
