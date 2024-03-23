@@ -56,7 +56,7 @@ char * getTimeE(void) //get pretty hhmmss timestamp
 char* get_lcn_status_string(int lcn)
 {
   if (lcn == 26 || lcn == 27)
-    return "[Unknown Status]";
+    return "[Reserved LCN Status]";
   if (lcn == 28)
     return "[Convert To Callee]";
   else if (lcn == 29)
