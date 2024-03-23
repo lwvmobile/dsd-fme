@@ -725,7 +725,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
         fprintf (stderr, " :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
 
-        fprintf (stderr, " :: Group [%05d] Source [%08d] LCN [%02d]", group, source, lcn);
+        fprintf (stderr, " :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
 
         //Trunking mode is correlated to (but not guaranteed to match) the type of call:
         // - emergency calls - usually message trunking
