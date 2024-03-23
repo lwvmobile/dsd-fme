@@ -544,6 +544,7 @@ typedef struct
   char slot0light[8];
   float aout_gain;
   float aout_gainR;
+  float aout_gainA;
   float aout_max_buf[200];
   float aout_max_bufR[200];
   float *aout_max_buf_p;

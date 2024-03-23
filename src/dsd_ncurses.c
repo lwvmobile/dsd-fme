@@ -2403,7 +2403,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if ( opts->audio_out_type == 0 && (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
   {
-    printw ("| Pulse Analog Output: %i kHz; %i Ch; G: %02.0f%% (/|*) Manual ", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->audio_gainA);
+    printw ("| Pulse Analog Output: %i kHz; %i Ch; G: %02.0f%% (/|*) ", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->audio_gainA);
+    if (opts->audio_gainA == 0.0f) printw ("Auto   ");
+    else printw ("Manual ");
     if (opts->audio_in_type != 3) printw ("RMS: %04ld; ", opts->rtl_rms);
     if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
     if (opts->use_hpf == 1) printw ("HP|");     else printw ("  |");

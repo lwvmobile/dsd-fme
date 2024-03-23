@@ -1352,58 +1352,47 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 //automatic gain short mono for analog audio and some digital mono (WIP)
 void agsm (dsd_opts * opts, dsd_state * state, short * input, int len)
 {
-  int i, j;
+  int i;
 
-  UNUSED(state);
+  UNUSED(opts);
+
+  //NOTE: This seems to be doing better now that I got it worked out properly
+  //This may produce a mild buzz sound though on the low end
 
   float avg = 0.0f;        //average of 20 samples
   float coeff = 0.0f;     //gain coeffiecient
   float max = 0.0f;      //the highest sample value
-  float nom = 1500.0f;  //nominator value
-  float gain = (25.0f / opts->audio_gain); UNUSED(gain);
+  float nom = 4800.0f;  //nominator value for 48k
   float samp[960]; memset (samp, 0.0f, 960*sizeof(float));
 
   //assign internal float from short input
   for (i = 0; i < len; i++)
     samp[i] = (float)input[i];
 
-  // gain = 2.5f;
-  // for (i = 0; i < len; i++)
-  //   samp[i] *= gain;
-
-  for (j = 0; j < len/20; j++)
+  for (i = 0; i < len; i++)
   {
-
-    for (i = 0; i < 20; i++)
+    if ( fabsf (samp[i]) > max)
     {
-      if ( fabsf (samp[(j*20)+i]) > max)
-      {
-        max = fabsf (samp[(j*20)+i]);
-      }
+      max = fabsf (samp[i]);
     }
+  }
 
-    for (i = 0; i < 20; i++)
-      avg += (float)samp[(j*20)+i];
+  for (i = 0; i < len; i++)
+    avg += (float)samp[i];
 
-    avg /= 20;
+  avg /= (float)len;
+  
+  coeff = fabsf (nom / max);
+
+  //keep coefficient with tolerable range when silence to prevent crackle/buzz
+  if (coeff > 3.0f) coeff = 3.0f;
+
+  //apply the coefficient to bring the max value to our desired maximum value
+  for (i = 0; i < 20; i++)
+    samp[i] *= coeff;
     
-    coeff = fabsf (nom / max);
-
-
-    //apply the coefficient to bring the max value to our desired maximum value
-    for (i = 0; i < 20; i++)
-    {
-      if ( fabsf (samp[(j*20)+i]) > 110.0f) //try not to apply to near zero values
-        samp[(j*20)+i] *= coeff;
-    }
-    
-    //debug
-    // fprintf (stderr, "\n M: %f; C: %f; A: %f; ", max, coeff, avg);
-
-    max = 0; //reset
-    avg = 0; //reset
-
-  } //end j loop
+  //debug
+  // fprintf (stderr, "\n M: %f; C: %f; A: %f; ", max, coeff, avg);
 
   // debug
   // for (i = 0; i < len; i++)
@@ -1415,6 +1404,8 @@ void agsm (dsd_opts * opts, dsd_state * state, short * input, int len)
   //return new smaple values post agc
   for (i = 0; i < len; i++)
     input[i] = (short)samp[i];
+
+  state->aout_gainA = coeff; //store for internal use
 
 }
 

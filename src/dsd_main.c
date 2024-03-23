@@ -907,6 +907,7 @@ initState (dsd_state * state)
   sprintf (state->slot2light, "%s", "");
   state->aout_gain = 25.0f;
   state->aout_gainR = 25.0f;
+  state->aout_gainA = 0.0f; //use purely as a display or internal value, no user setting
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
   state->aout_max_buf_idx = 0;
