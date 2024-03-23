@@ -562,7 +562,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int status = (fr_1t & 0xFF000) >> 12;
           int source = (fr_4t & 0xFFFFF000) >> 12;
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Status/Message :: Status ID [%03d] Source [%08d]", status, source);
+          if (status == 248) fprintf (stderr, " Status Request :: Target [%08d]", source);
+          else               fprintf (stderr, " Message Acknowledgement :: Status [%03d] Source [%08d]", status, source);
           fprintf (stderr, "%s", KNRM);
         }
         //Control Channel LCN
