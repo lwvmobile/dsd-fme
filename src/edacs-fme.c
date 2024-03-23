@@ -53,6 +53,22 @@ char * getTimeE(void) //get pretty hhmmss timestamp
   return curr;
 }
 
+char* get_lcn_status_string(int lcn)
+{
+  if (lcn == 26 || lcn == 27)
+    return "[Unknown Status]"
+  if (lcn == 28)
+    return "[Convert To Callee]";
+  else if (lcn == 29)
+    return "[Call Queued]";
+  else if (lcn == 30)
+    return "[System Busy]";
+  else if (lcn == 31)
+    return "[Call Denied]";
+  else
+    return "";
+}
+
 void openWavOutFile48k (dsd_opts * opts, dsd_state * state)
 {
   UNUSED(state);
@@ -552,7 +568,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           {
             int adj = (fr_1t & 0xFF000) >> 12;
             int adj_l = (fr_1t & 0x1F000000) >> 24;
-            fprintf (stderr, " :: Site ID [%02X][%03d] on CC LCN [%02d]", adj, adj, adj_l);
+            fprintf (stderr, " :: Site ID [%02X][%03d] on CC LCN [%02d]%s", adj, adj, adj_l, get_lcn_status_string(lcn));
           }
           fprintf (stderr, "%s", KNRM);
         }
@@ -578,7 +594,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             {
               state->edacs_lcn_count = state->edacs_cc_lcn;
             }
-            fprintf (stderr, " :: LCN [%d]", state->edacs_cc_lcn);
+            fprintf (stderr, " :: LCN [%d]%s", state->edacs_cc_lcn, get_lcn_status_string(lcn));
 
             //check for control channel lcn frequency if not provided in channel map or in the lcn list
             if (state->trunk_lcn_freq[state->edacs_cc_lcn-1] == 0)
@@ -664,7 +680,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Data Group Call :: Group [%05d] Source [%08d] LCN [%02d]", group, source, lcn);
+        fprintf (stderr, " Data Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
       }
       //Data Group Grant Update
@@ -674,7 +690,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " TDMA Group Call :: Group [%05d] Source [%08d] LCN [%02d]", group, source, lcn);
+        fprintf (stderr, " TDMA Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn))
         fprintf (stderr, "%s", KNRM);
       }
       //Voice Call Grant Update
@@ -704,7 +720,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (is_digital == 0) fprintf (stderr, " Analog Group Call");
         else                 fprintf (stderr, " Digital Group Call");
 
-        fprintf (stderr, " :: Group [%05d] Source [%08d] LCN [%02d]", group, source, lcn);
+        fprintf (stderr, " :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
 
         //Trunking mode is correlated to (but not guaranteed to match) the type of call:
         // - emergency calls - usually message trunking
@@ -801,7 +817,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (is_digital == 0) fprintf (stderr, " Analog I-Call");
         else                 fprintf (stderr, " Digital I-Call");
 
-        fprintf (stderr, " :: Target [%08d] Source [%08d] LCN [%02d]", target, source, lcn);
+        fprintf (stderr, " :: Target [%08d] Source [%08d] LCN [%02d]%s", target, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
@@ -856,7 +872,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         lcn  = (fr_4t & 0x1F00000000) >> 32;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Channel Assignment (Unknown Data) :: Source [%08d] LCN [%02d]", source, lcn);
+        fprintf (stderr, " Channel Assignment (Unknown Data) :: Source [%08d] LCN [%02d]%s", source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
       }
       //System All-Call Grant Update
@@ -880,7 +896,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (is_digital == 0) fprintf (stderr, " Analog System All-Call");
         else                 fprintf (stderr, " Digital System All-Call");
         
-        fprintf (stderr, " :: Source [%08d] LCN [%02d]", source, lcn);
+        fprintf (stderr, " :: Source [%08d] LCN [%02d]%s", source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
