@@ -56,7 +56,7 @@ char * getTimeE(void) //get pretty hhmmss timestamp
 char* get_lcn_status_string(int lcn)
 {
   if (lcn == 26 || lcn == 27)
-    return "[Unknown Status]"
+    return "[Unknown Status]";
   if (lcn == 28)
     return "[Convert To Callee]";
   else if (lcn == 29)
@@ -690,7 +690,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " TDMA Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn))
+        fprintf (stderr, " TDMA Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
       }
       //Voice Call Grant Update
