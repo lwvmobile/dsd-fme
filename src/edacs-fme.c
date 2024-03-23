@@ -53,6 +53,22 @@ char * getTimeE(void) //get pretty hhmmss timestamp
   return curr;
 }
 
+char* get_lcn_status_string(int lcn)
+{
+  if (lcn == 26 || lcn == 27)
+    return "[Reserved LCN Status]";
+  if (lcn == 28)
+    return "[Convert To Callee]";
+  else if (lcn == 29)
+    return "[Call Queued]";
+  else if (lcn == 30)
+    return "[System Busy]";
+  else if (lcn == 31)
+    return "[Call Denied]";
+  else
+    return "";
+}
+
 void openWavOutFile48k (dsd_opts * opts, dsd_state * state)
 {
   UNUSED(state);
@@ -431,11 +447,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
   unsigned long long int fr_4m = 0xFFFFFFF; //28-bit 7X message portion to pass to bch handler
   unsigned long long int fr_4t = 0xFFFFFFFFFF; //40 bit return from BCH with poly attached
 
-  unsigned char command = 0xFF;
-  unsigned char mt1 = 0x1F;
-  unsigned char mt2 = 0xF;
-  unsigned char lcn = 0;
-
   //commands; may not use these anymore
   unsigned int vcmd = 0xEE; //voice command variable
   unsigned int idcmd = 0xFD;
@@ -511,15 +522,18 @@ void edacs(dsd_opts * opts, dsd_state * state)
     //TODO: Consider re-adding the auto code to make a suggestion to users
     //as to which mode to proceed in?
     
+    //Account for ESK, if any
+    fr_1t = fr_1t ^ (((unsigned long long int)state->esk_mask) << 32);
+
     //Start Extended Addressing Mode 
     if (state->ea_mode == 1)
     {
-      command = ((fr_1t & 0xFF00000000) >> 32) ^ state->esk_mask;
-      mt1 = (command & 0xF8) >> 3;
-      mt2 = (fr_1t & 0x780000000) >> 31;
+      unsigned char mt1 = (fr_1t & 0xF800000000) >> 35;
+      unsigned char mt2 = (fr_1t & 0x780000000) >> 31;
 
-      //Site ID
+      //TODO: initialize where they are actually used
       unsigned long long int site_id = 0; //we probably could just make this an int as well as the state variables
+      unsigned char lcn = 0;
 
       //Add raw payloads and MT1/MT2 for easy debug
       if (opts->payload == 1)
@@ -554,15 +568,25 @@ void edacs(dsd_opts * opts, dsd_state * state)
           {
             int adj = (fr_1t & 0xFF000) >> 12;
             int adj_l = (fr_1t & 0x1F000000) >> 24;
-            fprintf (stderr, " [%02X][%03d] on CC LCN [%02d]", adj, adj, adj_l);
+            fprintf (stderr, " :: Site ID [%02X][%03d] on CC LCN [%02d]%s", adj, adj, adj_l, get_lcn_status_string(lcn));
           }
+          fprintf (stderr, "%s", KNRM);
+        }
+        //Status/Message
+        else if (mt2 == 0x4)
+        {
+          int status = (fr_1t & 0xFF000) >> 12;
+          int source = (fr_4t & 0xFFFFF000) >> 12;
+          fprintf (stderr, "%s", KYEL);
+          if (status == 248) fprintf (stderr, " Status Request :: Target [%08d]", source);
+          else               fprintf (stderr, " Message Acknowledgement :: Status [%03d] Source [%08d]", status, source);
           fprintf (stderr, "%s", KNRM);
         }
         //Control Channel LCN
         else if (mt2 == 0x8)
         {
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Control Channel LCN");
+          fprintf (stderr, " Control Channel");
           if (((fr_4t >> 12) & 0x1F) != 0)
           {
             state->edacs_cc_lcn = ((fr_4t >> 12) & 0x1F);
@@ -570,7 +594,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             {
               state->edacs_lcn_count = state->edacs_cc_lcn;
             }
-            fprintf (stderr, " [%d]", state->edacs_cc_lcn);
+            fprintf (stderr, " :: LCN [%d]%s", state->edacs_cc_lcn, get_lcn_status_string(lcn));
 
             //check for control channel lcn frequency if not provided in channel map or in the lcn list
             if (state->trunk_lcn_freq[state->edacs_cc_lcn-1] == 0)
@@ -603,7 +627,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         {
           site_id = ((fr_1 & 0x1F000) >> 12) | ((fr_1 & 0x1F000000) >> 19);
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Site ID [%02llX][%03lld] Extended Addressing", site_id, site_id);
+          fprintf (stderr, " Extended Addressing :: Site ID [%02llX][%03lld]", site_id, site_id);
           fprintf (stderr, "%s", KNRM);
           state->edacs_site_id = site_id;
         }
@@ -624,7 +648,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int sourcep = ((fr_1t & 0xFFFF000) >> 12);
           int targetp = ((fr_4t & 0xFFFF000) >> 12);
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Patch -- Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
+          fprintf (stderr, " Patch :: Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
           fprintf (stderr, "%s", KNRM);
         }
         //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
@@ -642,6 +666,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           // Only print the payload if we haven't already printed it
           if (opts->payload != 1)
           {
+            fprintf (stderr, " ::");
             fprintf (stderr, " FR_1 [%010llX]", fr_1t);
             fprintf (stderr, " FR_4 [%010llX]", fr_4t);
           }
@@ -655,7 +680,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Group [%05d] Source [%08d] LCN [%02d] Data Group Call", group, source, lcn);
+        fprintf (stderr, " Data Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
       }
       //Data Group Grant Update
@@ -665,7 +690,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Group [%05d] Source [%08d] LCN [%02d] TDMA Group Call", group, source, lcn);
+        fprintf (stderr, " TDMA Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
       }
       //Voice Call Grant Update
@@ -683,6 +708,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
 
         int is_digital = (mt1 == 0x3) ? 1 : 0;
+        int is_update = (fr_1t & 0x10000000) >> 28;
         int is_emergency = (fr_4t & 0x100000000) >> 32;
         int is_tx_trunking = (fr_4t & 0x200000000) >> 33;
         int group  = (fr_1t & 0xFFFF000) >> 12;
@@ -690,16 +716,19 @@ void edacs(dsd_opts * opts, dsd_state * state)
                          state->lasttg = group; // 0 is a valid TG, it's the all-call for agency 0
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
-        fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Group [%05d] Source [%08d] LCN [%02d]", group, source, lcn);
 
+        fprintf (stderr, "%s", KGRN);
         if (is_digital == 0) fprintf (stderr, " Analog Group Call");
         else                 fprintf (stderr, " Digital Group Call");
+        if (is_update == 0) fprintf (stderr, " Assignment");
+        else                fprintf (stderr, " Update");
+
+        fprintf (stderr, " :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
 
         //Trunking mode is correlated to (but not guaranteed to match) the type of call:
         // - emergency calls - usually message trunking
         // - normal calls - usually transmission trunking
-        if (is_tx_trunking == 0) fprintf (stderr, " (message trunking)");
+        if (is_tx_trunking == 0) fprintf (stderr, " [Message Trunking]");
         if (is_emergency == 1)
         {
           fprintf (stderr, "%s", KRED);
@@ -781,16 +810,20 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
 
         int is_digital = (fr_1t & 0x200000000) >> 33;
+        int is_update = (fr_1t & 0x100000000) >> 32;
         int target = (fr_1t & 0xFFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         if (target != 0) state->lasttg = target + 100000; //Use IDs > 100000 to represent i-call targets to differentiate from TGs
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
-        fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Target [%08d] Source [%08d] LCN [%02d]", target, source, lcn);
 
+        fprintf (stderr, "%s", KGRN);
         if (is_digital == 0) fprintf (stderr, " Analog I-Call");
         else                 fprintf (stderr, " Digital I-Call");
+        if (is_update == 0) fprintf (stderr, " Assignment");
+        else                fprintf (stderr, " Update");
+
+        fprintf (stderr, " :: Target [%08d] Source [%08d] LCN [%02d]%s", target, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
@@ -839,6 +872,15 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
         }
       }
+      //Channel assignment (unknown reason, just know it assigns an LCN in the expected order; believed related to data)
+      else if (mt1 == 0x12)
+      {
+        lcn  = (fr_4t & 0x1F00000000) >> 32;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, "%s", KYEL);
+        fprintf (stderr, " Channel Assignment (Unknown Data) :: Source [%08d] LCN [%02d]%s", source, lcn, get_lcn_status_string(lcn));
+        fprintf (stderr, "%s", KNRM);
+      }
       //System All-Call Grant Update
       else if (mt1 == 0x16)
       {
@@ -851,15 +893,19 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
 
         int is_digital = (fr_1t & 0x10000000) >> 28;
+        int is_update = (fr_1t & 0x8000000) >> 27;
         int source = (fr_4t & 0xFFFFF000) >> 12;
                          state->lasttg = -1; // represent system all-call as TG -1 to differentiate from real TGs
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
-        fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Source [%08d] LCN [%02d]", source, lcn);
 
+        fprintf (stderr, "%s", KGRN);
         if (is_digital == 0) fprintf (stderr, " Analog System All-Call");
         else                 fprintf (stderr, " Digital System All-Call");
+        if (is_update == 0) fprintf (stderr, " Assignment");
+        else                fprintf (stderr, " Update");
+        
+        fprintf (stderr, " :: Source [%08d] LCN [%02d]%s", source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
@@ -915,7 +961,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Login Group [%05d] Source [%08d]", group, source);
+        fprintf (stderr, " Login :: Group [%05d] Source [%08d]", group, source);
         fprintf (stderr, "%s", KNRM);
       }
       //Unknown command
@@ -927,6 +973,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         // Only print the payload if we haven't already printed it
         if (opts->payload != 1)
         {
+          fprintf (stderr, " ::");
           fprintf (stderr, " FR_1 [%010llX]", fr_1t);
           fprintf (stderr, " FR_4 [%010llX]", fr_4t);
         }
@@ -936,9 +983,39 @@ void edacs(dsd_opts * opts, dsd_state * state)
     //Start Standard or Networked Mode
     else if (state->ea_mode == 0)
     {
-      //standard or networked
-      command = ((fr_1t & 0xFF00000000) >> 32) ^ state->esk_mask;
-      lcn     = (fr_1t & 0xF8000000) >> 27;
+      //TODO: migrate away from these legacy variables
+      unsigned char command = (fr_1t & 0xFF00000000) >> 32;
+      unsigned char lcn     = (fr_1t & 0xF8000000) >> 27;
+
+      unsigned char mt_a = (fr_1t & 0xE000000000) >> 37;
+      unsigned char mt_b = (fr_1t & 0x1C00000000) >> 34;
+      unsigned char mt_d = (fr_1t & 0x3E0000000) >> 29;
+
+      //Add raw payloads and MT-A/MT-B/MT-D for easy debug
+      if (opts->payload == 1)
+      {
+        fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+        fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+        fprintf (stderr, " (MT-A: %X) ", mt_a);
+        // MT-B is meaningless if MT-A is not 0x7
+        if (mt_a == 0x7)
+        {
+          fprintf (stderr, "; MT-B: %X", mt_b);
+          // MT-D is meaningless if MT-B is not 0x7
+          if (mt_b == 0x7)
+          {
+            fprintf (stderr, "; MT-D: %02X) ", mt_d);
+          }
+          else
+          {
+            fprintf (stderr, ")           ");
+          }
+        }
+        else
+        {
+          fprintf (stderr, ")                    ");
+        }
+      }
 
       //site ID and CC LCN
       if (command == 0xFD)
