@@ -842,6 +842,15 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
         }
       }
+      //Channel assignment (unknown reason, just know it assigns an LCN in the expected order; believed related to data)
+      else if (mt1 == 0x12)
+      {
+        lcn  = (fr_4t & 0x1F00000000) >> 32;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, "%s", KYEL);
+        fprintf (stderr, " Channel Assignment (Unknown Data) :: Source [%08d] LCN [%02d]", source, lcn);
+        fprintf (stderr, "%s", KNRM);
+      }
       //System All-Call Grant Update
       else if (mt1 == 0x16)
       {
