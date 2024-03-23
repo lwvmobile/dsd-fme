@@ -507,7 +507,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
     //as to which mode to proceed in?
     
     //Account for ESK, if any
-    fr_1t = fr_1t ^ (state->esk_mask << 32);
+    fr_1t = fr_1t ^ (((unsigned long long int)state->esk_mask) << 32);
 
     //Start Extended Addressing Mode 
     if (state->ea_mode == 1)
