@@ -708,6 +708,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
 
         int is_digital = (mt1 == 0x3) ? 1 : 0;
+        int is_update = (fr_1t & 0x10000000) >> 28;
         int is_emergency = (fr_4t & 0x100000000) >> 32;
         int is_tx_trunking = (fr_4t & 0x200000000) >> 33;
         int group  = (fr_1t & 0xFFFF000) >> 12;
@@ -719,6 +720,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KGRN);
         if (is_digital == 0) fprintf (stderr, " Analog Group Call");
         else                 fprintf (stderr, " Digital Group Call");
+        if (is_update == 0) fprintf (stderr, " Assignment");
+        else                fprintf (stderr, " Update");
 
         fprintf (stderr, " :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
 
@@ -807,6 +810,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
 
         int is_digital = (fr_1t & 0x200000000) >> 33;
+        int is_update = (fr_1t & 0x100000000) >> 32;
         int target = (fr_1t & 0xFFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         if (target != 0) state->lasttg = target + 100000; //Use IDs > 100000 to represent i-call targets to differentiate from TGs
@@ -816,6 +820,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KGRN);
         if (is_digital == 0) fprintf (stderr, " Analog I-Call");
         else                 fprintf (stderr, " Digital I-Call");
+        if (is_update == 0) fprintf (stderr, " Assignment");
+        else                fprintf (stderr, " Update");
 
         fprintf (stderr, " :: Target [%08d] Source [%08d] LCN [%02d]%s", target, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
@@ -887,6 +893,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
 
         int is_digital = (fr_1t & 0x10000000) >> 28;
+        int is_update = (fr_1t & 0x8000000) >> 27;
         int source = (fr_4t & 0xFFFFF000) >> 12;
                          state->lasttg = -1; // represent system all-call as TG -1 to differentiate from real TGs
         if (source != 0) state->lastsrc = source;
@@ -895,6 +902,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KGRN);
         if (is_digital == 0) fprintf (stderr, " Analog System All-Call");
         else                 fprintf (stderr, " Digital System All-Call");
+        if (is_update == 0) fprintf (stderr, " Assignment");
+        else                fprintf (stderr, " Update");
         
         fprintf (stderr, " :: Source [%08d] LCN [%02d]%s", source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
