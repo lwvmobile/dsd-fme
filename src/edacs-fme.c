@@ -1028,7 +1028,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group = (fr_1t & 0x7FF000) >> 12;
 
         fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Voice Group Channel Assignment :: Group [%04d] LID [%05d] LCN [%02d]", group, lid, lcn);
+        fprintf (stderr, " Voice Group Channel Assignment :: Group [%04d] LID [%05d] LCN [%02d]%s", group, lid, lcn, get_lcn_status_string(lcn));
         if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
         if (is_emergency == 1)
         {
@@ -1058,7 +1058,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         else                       fprintf (stderr, " Group [%04d]", group);
         if (is_from_lid == 1) fprintf (stderr, " -->");
         else                  fprintf (stderr, " <--");
-        fprintf (stderr, " Port [%02d] LCN [%02d]", port, lcn);
+        fprintf (stderr, " Port [%02d] LCN [%02d]%s", port, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
       }
       //Login Acknowledge (6.2.4.4)
@@ -1100,7 +1100,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           else             fprintf (stderr, " [Reserved]");
           if (is_individual_id == 1) fprintf (stderr, " LID [%05d]", lid);
           else                       fprintf (stderr, " Group [%04d]", group);
-          fprintf (stderr, " LCN [%02d]", lcn);
+          fprintf (stderr, " LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
           fprintf (stderr, "%s", KNRM);
 
           // TODO: Actually process the call
@@ -1127,8 +1127,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
           else                    fprintf (stderr, " Voice Individual Channel Update ::");
           if (is_digital == 0) fprintf (stderr, " Analog");
           else                 fprintf (stderr, " Digital");
-          if (is_individual == 0) fprintf (stderr, " Group [%04d] LCN [%02d]", target, lcn);
-          else                    fprintf (stderr, " LID [%05d] LCN [%02d]", target, lcn);
+          if (is_individual == 0) fprintf (stderr, " Group [%04d]", target);
+          else                    fprintf (stderr, " LID [%05d]", target);
+          fprintf (stderr, " LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
           if (mt_c == 0 || mt_c == 1) fprintf (stderr, " [message trunking]");
           if (is_emergency == 1)
           {
@@ -1256,7 +1257,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, " Individual Call Channel Assignment :: Type");
           if (call_type == 1) fprintf (stderr, " [Voice]");
           else                fprintf (stderr, " [Reserved]");
-          fprintf (stderr, " Caller [%05d] Callee [%05d] LCN [%02d]", source, target, lcn);
+          fprintf (stderr, " Caller [%05d] Callee [%05d] LCN [%02d]%s", source, target, lcn, get_lcn_status_string(lcn));
           if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
           fprintf (stderr, "%s", KNRM);
 
@@ -1273,7 +1274,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, " Console ");
           if (is_drop == 0) fprintf (stderr, " Unkey");
           else              fprintf (stderr, " Drop");
-          fprintf (stderr, " :: LID [%05d] LCN [%02d]", lid, lcn);
+          fprintf (stderr, " :: LID [%05d] LCN [%02d]%s", lid, lcn, get_lcn_status_string(lcn));
           fprintf (stderr, "%s", KNRM);
         }
         //Use MT-D
@@ -1297,7 +1298,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             int adj_site_id = (fr_1t & 0x1F0000) >> 16;
 
             fprintf (stderr, "%s", KYEL);
-            fprintf (stderr, " Adjacent Site Control Channel :: Site ID [%02X][%03d] Index [%1d] LCN [%02d]", adj_site_id, adj_site_id, adj_site_index, adj_cc_lcn);
+            fprintf (stderr, " Adjacent Site Control Channel :: Site ID [%02X][%03d] Index [%1d] LCN [%02d]%s", adj_site_id, adj_site_id, adj_site_index, adj_cc_lcn, get_lcn_status_string(lcn));
             if (adj_site_id == 0 && adj_site_index == 0)      fprintf (stderr, " [Adjacency Table Reset]");
             else if (adj_site_id != 0 && adj_site_index == 0) fprintf (stderr, " [Priority System Definition]");
             else if (adj_site_id == 0 && adj_site_index != 0) fprintf (stderr, " [Adjacencies Table Length Definition]");
@@ -1372,7 +1373,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             int group = (fr_1t & 0x7FF000) >> 12;
 
             fprintf (stderr, "%s", KYEL);
-            fprintf (stderr, " Assignment to Auxiliary CC :: Group [%04d] Aux CC LCN [%02d]", group, aux_cc_lcn);
+            fprintf (stderr, " Assignment to Auxiliary CC :: Group [%04d] Aux CC LCN [%02d]%s", group, aux_cc_lcn, get_lcn_status_string(lcn));
             fprintf (stderr, "%s", KNRM);
           }
           //Initiate Test Call Command (6.2.4.16)
@@ -1411,7 +1412,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             int site_id = (fr_1t & 0x1F000) >> 12;
 
             fprintf (stderr, "%s", KYEL);
-            fprintf (stderr, " Standard/Networked :: Site ID [%02X][%03d] Priority [%1d] CC LCN [%02d]", site_id, site_id, priority, cc_lcn);
+            fprintf (stderr, " Standard/Networked :: Site ID [%02X][%03d] Priority [%1d] CC LCN [%02d]%s", site_id, site_id, priority, cc_lcn, get_lcn_status_string(lcn));
             if (is_failsoft == 1)
             {
               fprintf (stderr, "%s", KRED);
@@ -1479,7 +1480,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             fprintf (stderr, " ::");
             if (qualifier == 1) fprintf (stderr, " [Voice]");
             else                fprintf (stderr, " [Reserved]");
-            fprintf (stderr, " LID [%05d] LCN [%02d]", lid, lcn);
+            fprintf (stderr, " LID [%05d] LCN [%02d]%s", lid, lcn, get_lcn_status_string(lcn));
             if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
             fprintf (stderr, "%s", KNRM);
 
