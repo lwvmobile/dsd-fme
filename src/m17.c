@@ -1840,17 +1840,50 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       #endif
     }
 
-    //read in RMS value for vox function; NOTE: may not work correctly on STDIN and TCP due to blocking when no samples to read
+    //read in RMS value for vox function; NOTE: will not work correctly SOCAT STDIO TCP due to blocking when no samples to read
     if (opts->audio_in_type == 3) opts->rtl_rms = rtl_return_rms();
     else opts->rtl_rms = raw_rms(voice1, nsam, 1) / 2; //dividing by two so mic isn't so sensitive on vox
 
-    //decimate audio input (default 100% on mic is WAY TOO LOUD for the encoder, fine tune in volume control)
-    for (i = 0; i < 160; i++)
+    //low pass filter
+    if (opts->use_lpf == 1)
     {
-      //NOTE: Use + and - in ncurses to fine tune manually
-      voice1[i] *= (float)state->aout_gain/ (float)25.0f;
-      voice2[i] *= (float)state->aout_gain/ (float)25.0f;
+      lpf (state, voice1, 160);
+      lpf (state, voice2, 160);
     }
+
+    //high pass filter
+    if (opts->use_hpf == 1)
+    {
+      hpf (state, voice1, 160);
+      hpf (state, voice2, 160);
+    }
+    
+    //passband filter
+    if (opts->use_pbf == 1)
+    {
+      pbf (state, voice1, 160);
+      pbf (state, voice2, 160);
+    }
+
+    //manual gain control
+    if (opts->audio_gainA > 0.0f)
+    {
+      analog_gain (opts, state, voice1, 160);
+      analog_gain (opts, state, voice2, 160);
+    }
+
+    //automatic gain control
+    else
+    {
+      agsm (opts, state, voice1, 160);
+      agsm (opts, state, voice2, 160);
+    }
+
+    //NOTE: Similar to EDACS analog, if calculating raw rms here after filtering,
+    //anytime the walkie-talkie is held open but no voice, the center spike is removed,
+    //and counts against the squelch hits making vox mode inconsistent
+    // if (opts->audio_in_type != 3)
+    //   opts->rtl_rms = raw_rms(voice1, 160, 1);
 
     //convert out audio input into CODEC2 (3200bps) 8 byte data stream
     uint8_t vc1_bytes[8]; memset (vc1_bytes, 0, sizeof(vc1_bytes));

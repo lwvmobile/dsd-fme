@@ -583,6 +583,7 @@ initOpts (dsd_opts * opts)
   opts->mbe_out_fR = NULL; //second slot on a TDMA system
   opts->audio_gain = 0;
   opts->audio_gainR = 0;
+  opts->audio_gainA = 20.0f; //scale of 1 - 100
   opts->audio_out = 1;
   opts->wav_out_file[0] = 0;
   opts->wav_out_fileR[0] = 0;
@@ -691,6 +692,7 @@ initOpts (dsd_opts * opts)
   opts->dmr_mute_encR = 1;
 
   opts->monitor_input_audio = 0; //enable with -8
+  opts->analog_only = 0; //only turned on with -fA
 
   opts->inverted_p2 = 0;
   opts->p2counter = 0;
@@ -765,6 +767,12 @@ initOpts (dsd_opts * opts)
   //hardset slots to synthesize
   opts->slot1_on = 1;
   opts->slot2_on = 1;
+
+  //enable filter options
+  opts->use_lpf = 0;
+  opts->use_hpf = 1;
+  opts->use_pbf = 1;
+  opts->use_hpf_d = 0;
 
   //dsp structured file
   opts->dsp_out_file[0] = 0;
@@ -899,6 +907,7 @@ initState (dsd_state * state)
   sprintf (state->slot2light, "%s", "");
   state->aout_gain = 25.0f;
   state->aout_gainR = 25.0f;
+  state->aout_gainA = 0.0f; //use purely as a display or internal value, no user setting
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
   state->aout_max_buf_idx = 0;
@@ -1640,7 +1649,7 @@ main (int argc, char **argv)
 
   initOpts (&opts);
   initState (&state);
-
+  init_audio_filters(&state); //audio filters
   InitAllFecFunction();
   // CNXDNConvolution_init(); //seems to function better without initting it
 
@@ -2027,6 +2036,7 @@ main (int argc, char **argv)
 
         case 'g':
           sscanf (optarg, "%f", &opts.audio_gain);
+          opts.audio_gainA = opts.audio_gain; //straight assignment
           if (opts.audio_gain < (float) 0 )
           {
             fprintf (stderr,"Disabling audio out gain setting\n");
@@ -2108,6 +2118,7 @@ main (int argc, char **argv)
             opts.dmr_mono = 0;
             state.rf_mod = 0;
             opts.monitor_input_audio = 1;
+            opts.analog_only = 1;
             sprintf (opts.output_name, "Analog Monitor");
             fprintf (stderr,"Only Monitoring Passive Analog Signal\n");
           }
@@ -2178,14 +2189,14 @@ main (int argc, char **argv)
             opts.dmr_stereo = 0;
             opts.dmr_mono = 0;
             state.dmr_stereo = 0;
-            // opts.setmod_bw = 12500;
+            // opts.setmod_bw = 16000;
             sprintf (opts.output_name, "EDACS/PV");
             fprintf (stderr,"Setting symbol rate to 9600 / second\n");
             fprintf (stderr,"Decoding only ProVoice frames.\n");
             fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
-            //rtl specific tweaks
+            //misc tweaks
             opts.rtl_bandwidth = 24;
-            // opts.rtl_gain_value = 36;
+            opts.audio_gainA = 50.0f;
           }
           else if (optarg[0] == 'h') //standard / net w/o ESK
           {
@@ -2611,6 +2622,10 @@ main (int argc, char **argv)
             opts.m17encoder = 1;
             opts.pulse_digi_rate_out = 48000;
             opts.pulse_digi_out_channels = 1;
+            //filters disabled by default, use ncurses VBN switches
+            opts.use_lpf = 0;
+            opts.use_hpf = 0;
+            opts.use_pbf = 0;
             sprintf (opts.output_name, "M17 Encoder");
           }
           else if (optarg[0] == 'B') //Captial B to Run the M17 BRT encoder
@@ -2942,7 +2957,7 @@ main (int argc, char **argv)
       fprintf (stderr, "SQ %d ", opts.rtl_squelch_level);
       fprintf (stderr, "UDP %d \n", opts.rtl_udp_port);
       opts.audio_in_type = 3;
-      state.audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
+      opts.rtl_volume_multiplier = 2; //double, see if this cleans up weak decodes from RTL_FM
       rtl_ok = 1;
       #endif
 

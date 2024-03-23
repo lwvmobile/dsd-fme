@@ -951,6 +951,18 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
   if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
   if (state->tg_hold != 0 && state->tg_hold == TGR) encR = 0;
 
+  //test hpf
+  if (opts->use_hpf_d == 1)
+  {
+    hpf_dL(state, state->s_l4[0], 160);
+    hpf_dL(state, state->s_l4[1], 160);
+    hpf_dL(state, state->s_l4[2], 160);
+
+    hpf_dR(state, state->s_r4[0], 160);
+    hpf_dR(state, state->s_r4[1], 160);
+    hpf_dR(state, state->s_r4[2], 160);
+  }
+
   //interleave left and right channels from the short storage area
   for (i = 0; i < 160; i++)
   {
@@ -1349,64 +1361,75 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 
 }
 
-//the previous version, not quite as good at audio gain normalization, but keeping it just in case
-// void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
-// {
-//   int i, run;
-//   run = 1;
-//   float empty[160];
-//   memset (empty, 0.0f, sizeof(empty));
+//automatic gain short mono for analog audio and some digital mono (WIP)
+void agsm (dsd_opts * opts, dsd_state * state, short * input, int len)
+{
+  int i;
 
-//   float mmax = 0.75f;
-//   float mmin = -0.75f;
-//   float aavg = 0.0f; //average of the absolute value
-//   float df; //decimation value
-//   df = 8000.0f; //test value -- this would be the ideal perfect value if everybody spoke directly into the mic at a reasonable volume
+  UNUSED(opts);
 
-//   if (slot == 0)
-//     df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gain);
-//   if (slot == 1)
-//     df = (384.0f / (float)opts->pulse_digi_out_channels) * (50.0f - state->aout_gainR);
+  //NOTE: This seems to be doing better now that I got it worked out properly
+  //This may produce a mild buzz sound though on the low end
 
-//   //this comparison is to determine whether or not to run gain on 'empty' samples (2v last 2, silent frames, etc)
-//   if (memcmp(empty, samp, sizeof(empty)) == 0) run = 0;
-//   if (run == 0) goto AGF_END;
+  float avg = 0.0f;        //average of 20 samples
+  float coeff = 0.0f;     //gain coeffiecient
+  float max = 0.0f;      //the highest sample value
+  float nom = 4800.0f;  //nominator value for 48k
+  float samp[960]; memset (samp, 0.0f, 960*sizeof(float));
 
-//   for (i = 0; i < 160; i++)
-//   {
+  //assign internal float from short input
+  for (i = 0; i < len; i++)
+    samp[i] = (float)input[i];
 
-//     samp[i] = samp[i] / df;
+  for (i = 0; i < len; i++)
+  {
+    if ( fabsf (samp[i]) > max)
+    {
+      max = fabsf (samp[i]);
+    }
+  }
 
-//     aavg += fabsf(samp[i]);
+  for (i = 0; i < len; i++)
+    avg += (float)samp[i];
 
-//     //simple clipping
-//     if (samp[i] > mmax)
-//       samp[i] = mmax;
-//     if (samp[i] < mmin)
-//       samp[i] = mmin;
-
-//     //may have been a tad too loud on the high end
-//     // samp[i] *= 0.5f; //testing various values here
-
-//   }
-
-//   aavg /= 160.0f;
-
-//   if (slot == 0)
-//   {
-//     if (aavg < 0.075f && state->aout_gain < 42.0f) state->aout_gain += 1.0f;
-//     if (aavg >= 0.075f && state->aout_gain > 1.0f) state->aout_gain -= 1.0f;
-//   }
-
-//   if (slot == 1)
-//   {
-//     if (aavg < 0.075f && state->aout_gainR < 42.0f) state->aout_gainR += 1.0f;
-//     if (aavg >= 0.075f && state->aout_gainR > 1.0f) state->aout_gainR -= 1.0f;
-//   }
-
-//   //debug 
-//   // fprintf (stderr, "\nS%d - DF = %f AAVG = %f", slot, df, aavg);
+  avg /= (float)len;
   
-//   AGF_END: ; //do nothing
+  coeff = fabsf (nom / max);
 
-// }
+  //keep coefficient with tolerable range when silence to prevent crackle/buzz
+  if (coeff > 3.0f) coeff = 3.0f;
+
+  //apply the coefficient to bring the max value to our desired maximum value
+  for (i = 0; i < 20; i++)
+    samp[i] *= coeff;
+    
+  //debug
+  // fprintf (stderr, "\n M: %f; C: %f; A: %f; ", max, coeff, avg);
+
+  // debug
+  // for (i = 0; i < len; i++)
+  // {
+  //   fprintf (stderr, " in: %d", input[i]);
+  //   fprintf (stderr, " out: %f", samp[i]);
+  // }
+    
+  //return new smaple values post agc
+  for (i = 0; i < len; i++)
+    input[i] = (short)samp[i];
+
+  state->aout_gainA = coeff; //store for internal use
+
+}
+
+//until analog agc is fixed, going to use a manual gain control on this
+void analog_gain (dsd_opts * opts, dsd_state * state, short * input, int len)
+{
+
+  int i;
+  UNUSED(state);
+
+  float gain = (opts->audio_gainA / 100.0f) * 5.0f; //scale 0x - 5x
+
+  for (i = 0; i < len; i++)
+    input[i] *= gain;
+}
