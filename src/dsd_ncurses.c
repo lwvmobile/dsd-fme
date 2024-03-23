@@ -3490,9 +3490,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     for (i = 1; i <= state->edacs_lcn_count; i++)
     {
-      //shim 443 afs in here for display purposes
-      int a  = (call_matrix[i][3] >> 7) & 0xF; 
-      int fs = call_matrix[i][3] & 0x7F;
+      // Compute 4:4:3 AFS for display purposes only
+      int a  = (call_matrix[i][2] >> 7) & 0xF;
+      int fs = call_matrix[i][2] & 0x7F;
       printw ("| - LCN [%02d][%.06lf] MHz", i, (double)state->trunk_lcn_freq[i-1]/1000000); 
       
       //print Control Channel on LCN line with the current Control Channel
@@ -3519,7 +3519,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         }
         else
         {
-          printw (" AFS [%03lld][%02d-%03d]", call_matrix[i][3], a, fs );
+          if (call_matrix[i][2] + 1 == 0)
+            // System all-call
+            printw (" TGT [SYSTEM][SYSTEM] SRC [%5lld] All-Call", call_matrix[i][3] );
+          else if (call_matrix[i][2] > 10000)
+            // I-Call
+            printw (" TGT [%6lld][------] SRC [%5lld] I-Call", call_matrix[i][2] - 10000, call_matrix[i][3] );
+          else
+            // Group call
+            printw (" TGT [%6lld][%02d-%03d] SRC [%5lld]", call_matrix[i][2], a, fs, call_matrix[i][3] );
         }
         for (int k = 0; k < state->group_tally; k++)
         {
@@ -3555,7 +3563,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         }
         else
         {
-          printw (" AFS [%03lld][%02d-%03d]", call_matrix[i][3], a, fs );
+          if (call_matrix[i][2] + 1 == 0)
+            // System all-call
+            printw (" TGT [SYSTEM][SYSTEM] SRC [%5lld] All-Call", call_matrix[i][3] );
+          else if (call_matrix[i][2] > 10000)
+            // I-Call
+            printw (" TGT [%6lld][------] SRC [%5lld] I-Call", call_matrix[i][2] - 10000, call_matrix[i][3] );
+          else
+            // Group call
+            printw (" TGT [%6lld][%02d-%03d] SRC [%5lld]", call_matrix[i][2], a, fs, call_matrix[i][3] );
         }
         for (int k = 0; k < state->group_tally; k++)
         {
@@ -3691,9 +3707,18 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           }
           else 
           {
-            int a  = (call_matrix[j][3] >> 7) & 0xF; 
-            int fs = call_matrix[j][3] & 0x7F;
-            printw (" AFS [%03lld][%02d-%03d]", call_matrix[j][3], a, fs );
+            // Compute 4:4:3 AFS for display purposes only
+            int a  = (call_matrix[j][2] >> 7) & 0xF; 
+            int fs = call_matrix[j][2] & 0x7F;
+            if (call_matrix[j][2] + 1 == 0)
+              // System all-call
+              printw ("Target [SYSTEM][SYSTEM] Source [%5lld] All-Call", call_matrix[j][3]);
+            else if (call_matrix[j][2] > 10000)
+              // I-Call
+              printw ("Target [%6lld][------] Source [%5lld] I-Call", call_matrix[j][2] - 10000, call_matrix[j][3]);
+            else
+              // Group call
+              printw ("Target [%6lld][%02d-%03d] Source [%5lld]", call_matrix[j][2], a, fs, call_matrix[j][3]);
           }          
           //test
           for (int k = 0; k < state->group_tally; k++)
