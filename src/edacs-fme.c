@@ -961,6 +961,36 @@ void edacs(dsd_opts * opts, dsd_state * state)
       unsigned char command = (fr_1t & 0xFF00000000) >> 32;
       unsigned char lcn     = (fr_1t & 0xF8000000) >> 27;
 
+      unsigned char mt_a = (fr_1t & 0xE000000000) >> 37;
+      unsigned char mt_b = (fr_1t & 0x1C00000000) >> 34;
+      unsigned char mt_d = (fr_1t & 0x3E0000000) >> 29;
+
+      //Add raw payloads and MT-A/MT-B/MT-D for easy debug
+      if (opts->payload == 1)
+      {
+        fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+        fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+        fprintf (stderr, " (MT-A: %X) ", mt_a);
+        // MT-B is meaningless if MT-A is not 0x7
+        if (mt_a == 0x7)
+        {
+          fprintf (stderr, "; MT-B: %X", mt_b);
+          // MT-D is meaningless if MT-B is not 0x7
+          if (mt_b == 0x7)
+          {
+            fprintf (stderr, "; MT-D: %02X) ", mt_d);
+          }
+          else
+          {
+            fprintf (stderr, ")           ");
+          }
+        }
+        else
+        {
+          fprintf (stderr, ")                    ");
+        }
+      }
+
       //site ID and CC LCN
       if (command == 0xFD)
       {
