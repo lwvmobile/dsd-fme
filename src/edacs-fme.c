@@ -725,7 +725,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //Trunking mode is correlated to (but not guaranteed to match) the type of call:
         // - emergency calls - usually message trunking
         // - normal calls - usually transmission trunking
-        if (is_tx_trunking == 0) fprintf (stderr, " (message trunking)");
+        if (is_tx_trunking == 0) fprintf (stderr, " [Message Trunking]");
         if (is_emergency == 1)
         {
           fprintf (stderr, "%s", KRED);
