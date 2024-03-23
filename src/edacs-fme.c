@@ -1373,7 +1373,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             int group = (fr_1t & 0x7FF000) >> 12;
 
             fprintf (stderr, "%s", KYEL);
-            fprintf (stderr, " Assignment to Auxiliary CC :: Group [%04d] Aux CC LCN [%02d]%s", group, aux_cc_lcn, get_lcn_status_string(lcn));
+            fprintf (stderr, " Assignment to Auxiliary CC :: Group [%04d] Aux CC LCN [%02d]%s", group, aux_cc_lcn, get_lcn_status_string(aux_cc_lcn));
             fprintf (stderr, "%s", KNRM);
           }
           //Initiate Test Call Command (6.2.4.16)
