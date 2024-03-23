@@ -15,6 +15,9 @@
  *
  * LWVMOBILE
  * 2023-11 Version EDACS-FM Florida Man Edition
+ * 
+ * ilyacodes
+ * 2024-03 added EA i-call and login message decoding
  *-----------------------------------------------------------------------------*/
 #include "dsd.h"
 
@@ -48,6 +51,22 @@ char * getTimeE(void) //get pretty hhmmss timestamp
     ptm->tm_sec
   );
   return curr;
+}
+
+char* get_lcn_status_string(int lcn)
+{
+  if (lcn == 26 || lcn == 27)
+    return "[Reserved LCN Status]";
+  if (lcn == 28)
+    return "[Convert To Callee]";
+  else if (lcn == 29)
+    return "[Call Queued]";
+  else if (lcn == 30)
+    return "[System Busy]";
+  else if (lcn == 31)
+    return "[Call Denied]";
+  else
+    return "";
 }
 
 void openWavOutFile48k (dsd_opts * opts, dsd_state * state)
@@ -371,8 +390,15 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     else fprintf(stderr, "%s", KRED);
 
     fprintf (stderr, " Analog RMS: %04ld SQL: %ld", rms, sql);
-    if (afs != 0)
+    if (state->ea_mode == 0)
+    {
       fprintf (stderr, " AFS [%03d] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
+    }
+    else
+    {
+      if (afs == -1) fprintf (stderr, " TGT [ SYSTEM ] LCN [%02d] All-Call", lcn);
+      else           fprintf (stderr, " TGT [%08d] LCN [%02d]", afs, lcn);
+    }
 
     //debug, view hit counter
     // fprintf (stderr, " CNT: %d; ", count);
@@ -421,17 +447,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
   unsigned long long int fr_4m = 0xFFFFFFF; //28-bit 7X message portion to pass to bch handler
   unsigned long long int fr_4t = 0xFFFFFFFFFF; //40 bit return from BCH with poly attached
 
-  unsigned char command = 0xFF;
-  unsigned char mt1 = 0x1F;
-  unsigned char mt2 = 0xF;
-  unsigned char lcn = 0;
-
   //commands; may not use these anymore
   unsigned int vcmd = 0xEE; //voice command variable
   unsigned int idcmd = 0xFD;
   unsigned int peercmd = 0xF88; //using for EA detection test
   unsigned int netcmd = 0xF3; //using for Networked Test
   UNUSED2(vcmd, idcmd);
+  UNUSED2(peercmd, netcmd);
 
   char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
   timestr = getTimeE();
@@ -486,136 +508,233 @@ void edacs(dsd_opts * opts, dsd_state * state)
   else //BCH Pass, continue from here.
   {
 
-    //ESK on/off detection, I honestly don't remember the logic for this anymore, but it works fine
-    if ( (((fr_1t & 0xF000000000) >> 36) != 0xB)  && (((fr_1t & 0xF000000000) >> 36) != 0x1) && (((fr_1t & 0xFF00000000) >> 32) != 0xF3) )
-    {
-      //experimenting with values here, not too high, and not too low
-      if ( (((fr_1t & 0xF000000000) >> 36) <= 0x8 ))
-      { 
-        state->esk_mask = 0xA0;
-      }
-      //ideal value would be 5, but some other values exist that don't allow it
-      if ( (((fr_1t & 0xF000000000) >> 36) > 0x8 ) )
-      { 
-        state->esk_mask = 0x0;
-      }
-    }
+    //Auto Detection Modes Have Been Removed due to reliability issues, 
+    //users will now need to manually specify these options:
+    /*
+      -fh             Decode only EDACS Standard/ProVoice*\n");
+      -fH             Decode only EDACS Standard/ProVoice with ESK 0xA0*\n");
+      -fe             Decode only EDACS EA/ProVoice*\n");
+      -fE             Decode only EDACS EA/ProVoice with ESK 0xA0*\n");
 
-    //Standard/Networked Auto Detection
-    //if (command == netcmd) //netcmd is F3 Standard/Networked (I think)
-    if ( (fr_1t >> 32 == netcmd) || (fr_1t >> 32 == (netcmd ^ 0xA0)) ) 
-    { 
-      state->ea_mode = 0; //disable extended addressing mode
-    }
+      (A) key toggles mode; (S) key toggles mask value in ncurses
+    */
 
-    //EA Auto detection //peercmd is 0xF88 peer site relay 0xFF80000000 >> 28
-    if (fr_1t >> 28 == peercmd || fr_1t >> 28 == (peercmd ^ 0xA00) )
-    {
-      state->ea_mode = 1; //enable extended addressing mode
-    }
+    //TODO: Consider re-adding the auto code to make a suggestion to users
+    //as to which mode to proceed in?
+    
+    //Account for ESK, if any
+    fr_1t = fr_1t ^ (((unsigned long long int)state->esk_mask) << 32);
 
     //Start Extended Addressing Mode 
     if (state->ea_mode == 1)
     {
-      command = ((fr_1t & 0xFF00000000) >> 32) ^ state->esk_mask;
-      mt1 = (command & 0xF8) >> 3;
-      mt2 = (fr_1t & 0x780000000) >> 31;
-      lcn = (fr_1t & 0x3E0000000) >> 29; //only valid during calls, status 
+      unsigned char mt1 = (fr_1t & 0xF800000000) >> 35;
+      unsigned char mt2 = (fr_1t & 0x780000000) >> 31;
 
-      //Site ID
+      //TODO: initialize where they are actually used
       unsigned long long int site_id = 0; //we probably could just make this an int as well as the state variables
-      if (mt1 == 0x1F && mt2 == 0xA)
+      unsigned char lcn = 0;
+
+      //Add raw payloads and MT1/MT2 for easy debug
+      if (opts->payload == 1)
       {
-        site_id = ((fr_1 & 0x1F000) >> 12) | ((fr_1 & 0x1F000000) >> 19);
-        fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Site ID [%02llX][%03lld] Extended Addressing", site_id, site_id);
+        fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+        fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+        fprintf (stderr, " (MT1: %02X", mt1);
+        // MT2 is meaningless if MT1 is not 0x1F
+        if (mt1 == 0x1F)
+          fprintf (stderr, "; MT2: %X) ", mt2);
+        else 
+          fprintf (stderr, ")         ");
+      }
+
+      //MT1 of 0x1F indicates to use MT2 for the opcode. See US patent US7546135B2, Figure 2b.
+      if (mt1 == 0x1F)
+      {
+
+        //Test Call (not seen in the wild, see US patent US7546135B2, Figure 2b)
+        if (mt2 == 0x0)
+        {
+          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, " Initiate Test Call");
+          fprintf (stderr, "%s", KNRM);
+        }
+        //Adjacent Sites
+        else if (mt2 == 0x1)
+        {
+          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, " Adjacent Site");
+          if ( ((fr_1t & 0xFF000) >> 12) > 0 )
+          {
+            int adj = (fr_1t & 0xFF000) >> 12;
+            int adj_l = (fr_1t & 0x1F000000) >> 24;
+            fprintf (stderr, " :: Site ID [%02X][%03d] on CC LCN [%02d]%s", adj, adj, adj_l, get_lcn_status_string(lcn));
+          }
+          fprintf (stderr, "%s", KNRM);
+        }
+        //Status/Message
+        else if (mt2 == 0x4)
+        {
+          int status = (fr_1t & 0xFF000) >> 12;
+          int source = (fr_4t & 0xFFFFF000) >> 12;
+          fprintf (stderr, "%s", KYEL);
+          if (status == 248) fprintf (stderr, " Status Request :: Target [%08d]", source);
+          else               fprintf (stderr, " Message Acknowledgement :: Status [%03d] Source [%08d]", status, source);
+          fprintf (stderr, "%s", KNRM);
+        }
+        //Control Channel LCN
+        else if (mt2 == 0x8)
+        {
+          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, " Control Channel");
+          if (((fr_4t >> 12) & 0x1F) != 0)
+          {
+            state->edacs_cc_lcn = ((fr_4t >> 12) & 0x1F);
+            if (state->edacs_cc_lcn > state->edacs_lcn_count && lcn < 26) //26, or 27. shouldn't matter don't think cc lcn will give a status lcn val 
+            {
+              state->edacs_lcn_count = state->edacs_cc_lcn;
+            }
+            fprintf (stderr, " :: LCN [%d]%s", state->edacs_cc_lcn, get_lcn_status_string(lcn));
+
+            //check for control channel lcn frequency if not provided in channel map or in the lcn list
+            if (state->trunk_lcn_freq[state->edacs_cc_lcn-1] == 0)
+            {
+              long int lcnfreq = 0;
+              //if using rigctl, we can ask for the currrent frequency
+              if (opts->use_rigctl == 1)
+              {
+                lcnfreq = GetCurrentFreq (opts->rigctl_sockfd);
+                if (lcnfreq != 0) state->trunk_lcn_freq[state->edacs_cc_lcn-1] = lcnfreq;
+              }
+              //if using rtl input, we can ask for the current frequency tuned
+              if (opts->audio_in_type == 3)
+              {
+                lcnfreq = (long int)opts->rtlsdr_center_freq;
+                if (lcnfreq != 0) state->trunk_lcn_freq[state->edacs_cc_lcn-1] = lcnfreq;
+              }
+            }
+
+            //set trunking cc here so we know where to come back to
+            if (opts->p25_trunk == 1 && state->trunk_lcn_freq[state->edacs_cc_lcn-1] != 0)
+            {
+              state->p25_cc_freq = state->trunk_lcn_freq[state->edacs_cc_lcn-1]; //index starts at zero, lcn's locally here start at 1
+            }
+          }
+          fprintf (stderr, "%s", KNRM);
+        }
+        //Site ID
+        else if (mt2 == 0xA)
+        {
+          site_id = ((fr_1 & 0x1F000) >> 12) | ((fr_1 & 0x1F000000) >> 19);
+          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, " Extended Addressing :: Site ID [%02llX][%03lld]", site_id, site_id);
+          fprintf (stderr, "%s", KNRM);
+          state->edacs_site_id = site_id;
+        }
+        //disabling kick command, data looks like its just FFFF, no actual values, can't verify accuracy
+        // else if (mt2 == 0xB) //KICK LISTING for EA?? Unverified, but probably observed in Unitrunker way back when.
+        // {
+        //   int kicked = (fr_4t & 0xFFFFF000) >> 12;
+        //   fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+        //   fprintf (stderr, " FR_3 [%010llX]", fr_3);
+        //   fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+        //   fprintf (stderr, " FR_6 [%010llX]", fr_6);
+        //   fprintf (stderr, " %08d REG/DEREG/AUTH?", kicked);
+        // }
+        //Patch Groups
+        else if (mt2 == 0xC)
+        {
+          int patch_site = ((fr_4t & 0xFF00000000) >> 32); //is site info valid, 0 for all sites? else patch only good on site listed?
+          int sourcep = ((fr_1t & 0xFFFF000) >> 12);
+          int targetp = ((fr_4t & 0xFFFF000) >> 12);
+          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, " Patch :: Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
+          fprintf (stderr, "%s", KNRM);
+        }
+        //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
+        else if (mt2 == 0xD)
+        {
+          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, " Serial Number Request");
+          fprintf (stderr, "%s", KNRM);
+        }
+        else
+        {
+          fprintf (stderr, "%s", KMAG);
+          fprintf (stderr, " Unknown Command");
+          fprintf (stderr, "%s", KNRM);
+          // Only print the payload if we haven't already printed it
+          if (opts->payload != 1)
+          {
+            fprintf (stderr, " ::");
+            fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+            fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+          }
+        }
+        
+      }
+      //TDMA Group Grant Update (never observed, unknown if ever used on any EDACS system)
+      else if (mt1 == 0x1)
+      {
+        lcn = (fr_1t & 0x3E0000000) >> 29;
+        int group  = (fr_1t & 0xFFFF000) >> 12;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, "%s", KGRN);
+        fprintf (stderr, " Data Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
-        state->edacs_site_id = site_id;
       }
-      //Patch Groups
-      else if (mt1 == 0x1F && mt2 == 0xC)
+      //Data Group Grant Update
+      else if (mt1 == 0x2)
       {
-        int patch_site = ((fr_4t & 0xFF00000000) >> 32); //is site info valid, 0 for all sites? else patch only good on site listed?
-        int sourcep = ((fr_1t & 0xFFFF000) >> 12);
-        int targetp = ((fr_4t & 0xFFFF000) >> 12);
-        fprintf (stderr, " Patch -- Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
+        lcn = (fr_1t & 0x3E0000000) >> 29;
+        int group  = (fr_1t & 0xFFFF000) >> 12;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, "%s", KGRN);
+        fprintf (stderr, " TDMA Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
+        fprintf (stderr, "%s", KNRM);
       }
-      //Adjacent Sites
-      else if (mt1 == 0x1F && mt2 == 0x1)
-      {
-        fprintf (stderr, " Adjacent Site");
-        if ( ((fr_1t & 0xFF000) >> 12) > 0 )
-        {
-          int adj = (fr_1t & 0xFF000) >> 12;
-          int adj_l = (fr_1t & 0x1F000000) >> 24;
-          fprintf (stderr, " [%02X][%03d] on CC LCN [%02d]", adj, adj, adj_l);
-        }
-      }
-      //Control Channel LCN
-      else if (mt1 == 0x1F && mt2 == 0x8)
-      {
-        fprintf (stderr, " Control Channel LCN");
-        if (((fr_4t >> 12) & 0x1F) != 0)
-        {
-          state->edacs_cc_lcn = ((fr_4t >> 12) & 0x1F);
-          if (state->edacs_cc_lcn > state->edacs_lcn_count && lcn < 26) //26, or 27. shouldn't matter don't think cc lcn will give a status lcn val 
-          {
-            state->edacs_lcn_count = state->edacs_cc_lcn;
-          }
-          fprintf (stderr, " [%d]", state->edacs_cc_lcn);
-
-          //check for control channel lcn frequency if not provided in channel map or in the lcn list
-          if (state->trunk_lcn_freq[state->edacs_cc_lcn-1] == 0)
-          {
-            long int lcnfreq = 0;
-            //if using rigctl, we can ask for the currrent frequency
-            if (opts->use_rigctl == 1)
-            {
-              lcnfreq = GetCurrentFreq (opts->rigctl_sockfd);
-              if (lcnfreq != 0) state->trunk_lcn_freq[state->edacs_cc_lcn-1] = lcnfreq;
-            }
-            //if using rtl input, we can ask for the current frequency tuned
-            if (opts->audio_in_type == 3)
-            {
-              lcnfreq = (long int)opts->rtlsdr_center_freq;
-              if (lcnfreq != 0) state->trunk_lcn_freq[state->edacs_cc_lcn-1] = lcnfreq;
-            }
-          }
-
-          //set trunking cc here so we know where to come back to
-          if (opts->p25_trunk == 1 && state->trunk_lcn_freq[state->edacs_cc_lcn-1] != 0)
-          {
-            state->p25_cc_freq = state->trunk_lcn_freq[state->edacs_cc_lcn-1]; //index starts at zero, lcn's locally here start at 1
-          }
-        }
-      }
-      //disabling kick command, data looks like its just FFFF, no actual values, can't verify accuracy
-      // else if (mt1 == 0x1F && mt2 == 0xB) //KICK LISTING for EA?? Unverified, but probably observed in Unitrunker way back when.
-      // {
-      //   int kicked = (fr_4t & 0xFFFFF000) >> 12;
-      //   fprintf (stderr, " FR_1 [%010llX]", fr_1t);
-      //   fprintf (stderr, " FR_3 [%010llX]", fr_3);
-      //   fprintf (stderr, " FR_4 [%010llX]", fr_4t);
-      //   fprintf (stderr, " FR_6 [%010llX]", fr_6);
-      //   fprintf (stderr, " Kick Command?");
-      // }
       //Voice Call Grant Update
-      // mt1 0x3 is Digital group voice call, 0x2 Group Data Channel, 0x1 TDMA call
-      else if (mt1 >= 0x1 && mt1 <= 0x3)
+      // MT1 value determines the type of group call:
+      // - 0x03 digital group voice (ProVoice, standard on SLERS EA)
+      // - 0x06 analog group voice
+      else if (mt1 == 0x3 || mt1 == 0x6)
       {
+        lcn = (fr_1t & 0x3E0000000) >> 29;
+
         //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
         if (lcn > state->edacs_lcn_count && lcn < 26) 
         {
           state->edacs_lcn_count = lcn;
         }
 
+        int is_digital = (mt1 == 0x3) ? 1 : 0;
+        int is_update = (fr_1t & 0x10000000) >> 28;
+        int is_emergency = (fr_4t & 0x100000000) >> 32;
+        int is_tx_trunking = (fr_4t & 0x200000000) >> 33;
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
-        if (group != 0)  state->lasttg = group;
+                         state->lasttg = group; // 0 is a valid TG, it's the all-call for agency 0
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
+
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Group [%05d] Source [%08d] LCN[%02d]", group, source, lcn);
+        if (is_digital == 0) fprintf (stderr, " Analog Group Call");
+        else                 fprintf (stderr, " Digital Group Call");
+        if (is_update == 0) fprintf (stderr, " Assignment");
+        else                fprintf (stderr, " Update");
+
+        fprintf (stderr, " :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
+
+        //Trunking mode is correlated to (but not guaranteed to match) the type of call:
+        // - emergency calls - usually message trunking
+        // - normal calls - usually transmission trunking
+        if (is_tx_trunking == 0) fprintf (stderr, " [Message Trunking]");
+        if (is_emergency == 1)
+        {
+          fprintf (stderr, "%s", KRED);
+          fprintf (stderr, " EMERGENCY");
+        }
+        fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
         sprintf (mode, "%s", "");
@@ -638,33 +757,30 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (state->tg_hold != 0 && state->tg_hold != group) sprintf (mode, "%s", "B");
         if (state->tg_hold != 0 && state->tg_hold == group) sprintf (mode, "%s", "A");
 
-        if (mt1 == 0x1) fprintf (stderr, " TDMA Call"); //never observed, wonder if any EDACS systems ever carried a TDMA signal (X2-TDMA?)
-        if (mt1 == 0x2) fprintf (stderr, " Group Data Call"); //Never Seen this one before
-        if (mt1 == 0x3) fprintf (stderr, " Digital Call"); //ProVoice, this is what we always get on SLERS EA
-        fprintf (stderr, "%s", KNRM);
-
         //this is working now with the new import setup
-        if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
+        if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
         {
-          if (lcn < 26 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
+          if (lcn > 0 && lcn < 26 && state->edacs_cc_lcn != 0 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
           {
             //openwav file and do per call right here, should probably check as well to make sure we have a valid trunking method active (rigctl, rtl)
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
               sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %d SRC %d.wav", getDateE(), timestr, state->edacs_site_id, group, source);
-              openWavOutFile (opts, state);
-              // openWavOutFile48k (opts, state); //debug for testing analog wav only
+              if (is_digital == 1)
+                openWavOutFile (opts, state);
+              else
+                openWavOutFile48k (opts, state);
             }
             
             //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
             if (opts->use_rigctl == 1)
             {
               if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
-      		    SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
+              SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              //debug testing (since I don't have EDACS standard w/ Analog nearby)
-              // edacs_analog(opts, state, group, lcn);
+              if (is_digital == 0)
+                edacs_analog(opts, state, group, lcn);
             }
 
             if (opts->audio_in_type == 3) //rtl dongle
@@ -673,8 +789,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
               rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              //debug testing (since I don't have EDACS standard w/ Analog nearby)
-              // edacs_analog(opts, state, group, lcn);
+              if (is_digital == 0)
+                edacs_analog(opts, state, group, lcn);
               #endif
             }
 
@@ -682,20 +798,224 @@ void edacs(dsd_opts * opts, dsd_state * state)
           
         }
       }
-      else //print frames for debug/analysis
+      //I-Call Grant Update
+      else if (mt1 == 0x10)
       {
-        fprintf (stderr, " FR_1 [%010llX]", fr_1t);
-        fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+        lcn = (fr_4t & 0x1F00000000) >> 32;
+
+        //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
+        if (lcn > state->edacs_lcn_count && lcn < 26) 
+        {
+          state->edacs_lcn_count = lcn;
+        }
+
+        int is_digital = (fr_1t & 0x200000000) >> 33;
+        int is_update = (fr_1t & 0x100000000) >> 32;
+        int target = (fr_1t & 0xFFFFF000) >> 12;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        if (target != 0) state->lasttg = target + 100000; //Use IDs > 100000 to represent i-call targets to differentiate from TGs
+        if (source != 0) state->lastsrc = source;
+        if (lcn != 0)    state->edacs_vc_lcn = lcn;
+
+        fprintf (stderr, "%s", KGRN);
+        if (is_digital == 0) fprintf (stderr, " Analog I-Call");
+        else                 fprintf (stderr, " Digital I-Call");
+        if (is_update == 0) fprintf (stderr, " Assignment");
+        else                fprintf (stderr, " Update");
+
+        fprintf (stderr, " :: Target [%08d] Source [%08d] LCN [%02d]%s", target, source, lcn, get_lcn_status_string(lcn));
+        fprintf (stderr, "%s", KNRM);
+
+        char mode[8]; //allow, block, digital enc
+        sprintf (mode, "%s", "");
+
+        //if we are using allow/whitelist mode, then write 'B' to mode for block - no allow/whitelist support for i-calls
+        if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+
+        //this is working now with the new import setup
+        if (opts->trunk_tune_private_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
+        {
+          if (lcn > 0 && lcn < 26 && state->edacs_cc_lcn != 0 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
+          {
+            //openwav file and do per call right here, should probably check as well to make sure we have a valid trunking method active (rigctl, rtl)
+            if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
+            {
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %d SRC %d I-Call.wav", getDateE(), timestr, state->edacs_site_id, target, source);
+              if (is_digital == 1)
+                openWavOutFile (opts, state);
+              else
+                openWavOutFile48k (opts, state);
+            }
+            
+            //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
+            if (opts->use_rigctl == 1)
+            {
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+              SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
+              state->edacs_tuned_lcn = lcn;
+              opts->p25_is_tuned = 1;
+              if (is_digital == 0)
+                edacs_analog(opts, state, target, lcn);
+            }
+
+            if (opts->audio_in_type == 3) //rtl dongle
+            {
+              #ifdef USE_RTLSDR
+              rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+              state->edacs_tuned_lcn = lcn;
+              opts->p25_is_tuned = 1;
+              if (is_digital == 0)
+                edacs_analog(opts, state, target, lcn);
+              #endif
+            }
+
+          }
+        }
+      }
+      //Channel assignment (unknown reason, just know it assigns an LCN in the expected order; believed related to data)
+      else if (mt1 == 0x12)
+      {
+        lcn  = (fr_4t & 0x1F00000000) >> 32;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, "%s", KYEL);
+        fprintf (stderr, " Channel Assignment (Unknown Data) :: Source [%08d] LCN [%02d]%s", source, lcn, get_lcn_status_string(lcn));
+        fprintf (stderr, "%s", KNRM);
+      }
+      //System All-Call Grant Update
+      else if (mt1 == 0x16)
+      {
+        lcn = (fr_1t & 0x3E0000000) >> 29;
+
+        //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
+        if (lcn > state->edacs_lcn_count && lcn < 26) 
+        {
+          state->edacs_lcn_count = lcn;
+        }
+
+        int is_digital = (fr_1t & 0x10000000) >> 28;
+        int is_update = (fr_1t & 0x8000000) >> 27;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+                         state->lasttg = -1; // represent system all-call as TG -1 to differentiate from real TGs
+        if (source != 0) state->lastsrc = source;
+        if (lcn != 0)    state->edacs_vc_lcn = lcn;
+
+        fprintf (stderr, "%s", KGRN);
+        if (is_digital == 0) fprintf (stderr, " Analog System All-Call");
+        else                 fprintf (stderr, " Digital System All-Call");
+        if (is_update == 0) fprintf (stderr, " Assignment");
+        else                fprintf (stderr, " Update");
+        
+        fprintf (stderr, " :: Source [%08d] LCN [%02d]%s", source, lcn, get_lcn_status_string(lcn));
+        fprintf (stderr, "%s", KNRM);
+
+        char mode[8]; //allow, block, digital enc
+        sprintf (mode, "%s", "");
+
+        //if we are using allow/whitelist mode, then write 'A' to mode for allow - always allow all-calls by default
+        if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "A");
+
+        //this is working now with the new import setup
+        if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
+        {
+          if (lcn > 0 && lcn < 26 && state->edacs_cc_lcn != 0 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
+          {
+            //openwav file and do per call right here, should probably check as well to make sure we have a valid trunking method active (rigctl, rtl)
+            if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
+            {
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld SRC %d All-Call.wav", getDateE(), timestr, state->edacs_site_id, source);
+              if (is_digital == 1)
+                openWavOutFile (opts, state);
+              else
+                openWavOutFile48k (opts, state);
+            }
+            
+            //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
+            if (opts->use_rigctl == 1)
+            {
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+              SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
+              state->edacs_tuned_lcn = lcn;
+              opts->p25_is_tuned = 1;
+              if (is_digital == 0)
+                edacs_analog(opts, state, -1, lcn);
+            }
+
+            if (opts->audio_in_type == 3) //rtl dongle
+            {
+              #ifdef USE_RTLSDR
+              rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+              state->edacs_tuned_lcn = lcn;
+              opts->p25_is_tuned = 1;
+              if (is_digital == 0)
+                edacs_analog(opts, state, -1, lcn);
+              #endif
+            }
+
+          }
+          
+        }
+      }
+      //Login
+      else if (mt1 == 0x19)
+      {
+        int group  = (fr_1t & 0xFFFF000) >> 12;
+        int source = (fr_4t & 0xFFFFF000) >> 12;
+        fprintf (stderr, "%s", KYEL);
+        fprintf (stderr, " Login :: Group [%05d] Source [%08d]", group, source);
+        fprintf (stderr, "%s", KNRM);
+      }
+      //Unknown command
+      else
+      {
+        fprintf (stderr, "%s", KMAG);
         fprintf (stderr, " Unknown Command");
+        fprintf (stderr, "%s", KNRM);
+        // Only print the payload if we haven't already printed it
+        if (opts->payload != 1)
+        {
+          fprintf (stderr, " ::");
+          fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+          fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+        }
       }
 
     }
     //Start Standard or Networked Mode
     else if (state->ea_mode == 0)
     {
-      //standard or networked
-      command = ((fr_1t & 0xFF00000000) >> 32) ^ state->esk_mask;
-      lcn     = (fr_1t & 0xF8000000) >> 27;
+      //TODO: migrate away from these legacy variables
+      unsigned char command = (fr_1t & 0xFF00000000) >> 32;
+      unsigned char lcn     = (fr_1t & 0xF8000000) >> 27;
+
+      unsigned char mt_a = (fr_1t & 0xE000000000) >> 37;
+      unsigned char mt_b = (fr_1t & 0x1C00000000) >> 34;
+      unsigned char mt_d = (fr_1t & 0x3E0000000) >> 29;
+
+      //Add raw payloads and MT-A/MT-B/MT-D for easy debug
+      if (opts->payload == 1)
+      {
+        fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+        fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+        fprintf (stderr, " (MT-A: %X) ", mt_a);
+        // MT-B is meaningless if MT-A is not 0x7
+        if (mt_a == 0x7)
+        {
+          fprintf (stderr, "; MT-B: %X", mt_b);
+          // MT-D is meaningless if MT-B is not 0x7
+          if (mt_b == 0x7)
+          {
+            fprintf (stderr, "; MT-D: %02X) ", mt_d);
+          }
+          else
+          {
+            fprintf (stderr, ")           ");
+          }
+        }
+        else
+        {
+          fprintf (stderr, ")                    ");
+        }
+      }
 
       //site ID and CC LCN
       if (command == 0xFD)
@@ -798,14 +1118,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //   goto ENDPV;
         // #endif
 
-
-
-
-
         //this is working now with the new import setup
-        if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
+        if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
         {
-          if (lcn < 26 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
+          if (lcn > 0 && lcn < 26 && state->edacs_cc_lcn != 0 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
           {
             //openwav file and do per call right here
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
@@ -860,8 +1176,14 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
     } //end Standard or Networked
 
-    //supply user warning to use -9 switch if decoding doesn't start shortly
-    else fprintf (stderr, " Net/EA Auto Detect; Use -9 CLI Switch For Standard;");
+    //let users know they need to select an operational mode with the switches below
+    else 
+    {
+      fprintf (stderr, " Detected: Use -fh, -fH, -fe, or -fE for std, esk, ea, or ea-esk;");
+      fprintf (stderr, "\n");
+      fprintf (stderr, " FR_1 [%010llX]", fr_1t);
+      fprintf (stderr, " FR_4 [%010llX]", fr_4t);
+    }
 
   }
 
