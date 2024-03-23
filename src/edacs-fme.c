@@ -554,7 +554,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           {
             int adj = (fr_1t & 0xFF000) >> 12;
             int adj_l = (fr_1t & 0x1F000000) >> 24;
-            fprintf (stderr, " [%02X][%03d] on CC LCN [%02d]", adj, adj, adj_l);
+            fprintf (stderr, " :: Site ID [%02X][%03d] on CC LCN [%02d]", adj, adj, adj_l);
           }
           fprintf (stderr, "%s", KNRM);
         }
@@ -562,7 +562,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         else if (mt2 == 0x8)
         {
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Control Channel LCN");
+          fprintf (stderr, " Control Channel");
           if (((fr_4t >> 12) & 0x1F) != 0)
           {
             state->edacs_cc_lcn = ((fr_4t >> 12) & 0x1F);
@@ -570,7 +570,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             {
               state->edacs_lcn_count = state->edacs_cc_lcn;
             }
-            fprintf (stderr, " [%d]", state->edacs_cc_lcn);
+            fprintf (stderr, " :: LCN [%d]", state->edacs_cc_lcn);
 
             //check for control channel lcn frequency if not provided in channel map or in the lcn list
             if (state->trunk_lcn_freq[state->edacs_cc_lcn-1] == 0)
@@ -603,7 +603,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         {
           site_id = ((fr_1 & 0x1F000) >> 12) | ((fr_1 & 0x1F000000) >> 19);
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Site ID [%02llX][%03lld] Extended Addressing", site_id, site_id);
+          fprintf (stderr, " Extended Addressing :: Site ID [%02llX][%03lld]", site_id, site_id);
           fprintf (stderr, "%s", KNRM);
           state->edacs_site_id = site_id;
         }
@@ -624,7 +624,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int sourcep = ((fr_1t & 0xFFFF000) >> 12);
           int targetp = ((fr_4t & 0xFFFF000) >> 12);
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Patch -- Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
+          fprintf (stderr, " Patch :: Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
           fprintf (stderr, "%s", KNRM);
         }
         //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
@@ -642,6 +642,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           // Only print the payload if we haven't already printed it
           if (opts->payload != 1)
           {
+            fprintf (stderr, " ::");
             fprintf (stderr, " FR_1 [%010llX]", fr_1t);
             fprintf (stderr, " FR_4 [%010llX]", fr_4t);
           }
@@ -655,7 +656,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Group [%05d] Source [%08d] LCN [%02d] Data Group Call", group, source, lcn);
+        fprintf (stderr, " Data Group Call :: Group [%05d] Source [%08d] LCN [%02d]", group, source, lcn);
         fprintf (stderr, "%s", KNRM);
       }
       //Data Group Grant Update
@@ -665,7 +666,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Group [%05d] Source [%08d] LCN [%02d] TDMA Group Call", group, source, lcn);
+        fprintf (stderr, " TDMA Group Call :: Group [%05d] Source [%08d] LCN [%02d]", group, source, lcn);
         fprintf (stderr, "%s", KNRM);
       }
       //Voice Call Grant Update
@@ -690,11 +691,12 @@ void edacs(dsd_opts * opts, dsd_state * state)
                          state->lasttg = group; // 0 is a valid TG, it's the all-call for agency 0
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
-        fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Group [%05d] Source [%08d] LCN [%02d]", group, source, lcn);
 
+        fprintf (stderr, "%s", KGRN);
         if (is_digital == 0) fprintf (stderr, " Analog Group Call");
         else                 fprintf (stderr, " Digital Group Call");
+
+        fprintf (stderr, " :: Group [%05d] Source [%08d] LCN [%02d]", group, source, lcn);
 
         //Trunking mode is correlated to (but not guaranteed to match) the type of call:
         // - emergency calls - usually message trunking
@@ -786,11 +788,12 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (target != 0) state->lasttg = target + 100000; //Use IDs > 100000 to represent i-call targets to differentiate from TGs
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
-        fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Target [%08d] Source [%08d] LCN [%02d]", target, source, lcn);
 
+        fprintf (stderr, "%s", KGRN);
         if (is_digital == 0) fprintf (stderr, " Analog I-Call");
         else                 fprintf (stderr, " Digital I-Call");
+
+        fprintf (stderr, " :: Target [%08d] Source [%08d] LCN [%02d]", target, source, lcn);
         fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
@@ -855,11 +858,12 @@ void edacs(dsd_opts * opts, dsd_state * state)
                          state->lasttg = -1; // represent system all-call as TG -1 to differentiate from real TGs
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
-        fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Source [%08d] LCN [%02d]", source, lcn);
 
+        fprintf (stderr, "%s", KGRN);
         if (is_digital == 0) fprintf (stderr, " Analog System All-Call");
         else                 fprintf (stderr, " Digital System All-Call");
+        
+        fprintf (stderr, " :: Source [%08d] LCN [%02d]", source, lcn);
         fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
@@ -915,7 +919,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
         fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Login Group [%05d] Source [%08d]", group, source);
+        fprintf (stderr, " Login :: Group [%05d] Source [%08d]", group, source);
         fprintf (stderr, "%s", KNRM);
       }
       //Unknown command
@@ -927,6 +931,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         // Only print the payload if we haven't already printed it
         if (opts->payload != 1)
         {
+          fprintf (stderr, " ::");
           fprintf (stderr, " FR_1 [%010llX]", fr_1t);
           fprintf (stderr, " FR_4 [%010llX]", fr_4t);
         }
