@@ -1130,7 +1130,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           if (is_individual == 0) fprintf (stderr, " Group [%04d]", target);
           else                    fprintf (stderr, " LID [%05d]", target);
           fprintf (stderr, " LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
-          if (mt_c == 0 || mt_c == 1) fprintf (stderr, " [message trunking]");
+          if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
           if (is_emergency == 1)
           {
             fprintf (stderr, "%s", KRED);
@@ -1298,7 +1298,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             int adj_site_id = (fr_1t & 0x1F0000) >> 16;
 
             fprintf (stderr, "%s", KYEL);
-            fprintf (stderr, " Adjacent Site Control Channel :: Site ID [%02X][%03d] Index [%1d] LCN [%02d]%s", adj_site_id, adj_site_id, adj_site_index, adj_cc_lcn, get_lcn_status_string(lcn));
+            fprintf (stderr, " Adjacent Site Control Channel :: Site ID [%02X][%03d] Index [%1d] LCN [%02d]%s", adj_site_id, adj_site_id, adj_site_index, adj_cc_lcn, get_lcn_status_string(adj_cc_lcn));
             if (adj_site_id == 0 && adj_site_index == 0)      fprintf (stderr, " [Adjacency Table Reset]");
             else if (adj_site_id != 0 && adj_site_index == 0) fprintf (stderr, " [Priority System Definition]");
             else if (adj_site_id == 0 && adj_site_index != 0) fprintf (stderr, " [Adjacencies Table Length Definition]");
@@ -1393,7 +1393,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             int target = (fr_1t & 0x3FFF000) >> 12;
 
             fprintf (stderr, "%s", KYEL);
-            fprintf (stderr, " Unit Enable/Disable ::", target);
+            fprintf (stderr, " Unit Enable/Disable ::");
             if (qualifier == 0x0)      fprintf (stderr, " [Temporary Disable]");
             else if (qualifier == 0x1) fprintf (stderr, " [Corrupt Personality]");
             else if (qualifier == 0x2) fprintf (stderr, " [Revoke Logical ID]");
