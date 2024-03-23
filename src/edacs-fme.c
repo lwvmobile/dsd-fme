@@ -1115,18 +1115,123 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int group = (fr_1t & 0x7FF000) >> 12;
           int lid = ((fr_1t & 0x1FC0000) >> 11) | ((fr_4t & 0x7F000) >> 12);
 
+          //Abstract away to a target, and be sure to check whether it's an individual call later
+          int target = (is_individual == 0) ? group : lid;
+          
+          //Technically only MT-C 0x1 and 0x3 are defined in TSB 69.3 - using and extrapolating on legacy code
+          int is_tx_trunk = (mt_c == 2 || mt_c == 3) ? 1 : 0;
+          int is_digital = (mt_c == 1 || mt_c == 3) ? 1 : 0;
+
+          fprintf (stderr, "%s", KYEL);
+          if (is_individual == 0) fprintf (stderr, " Voice Group Channel Update ::");
+          else                    fprintf (stderr, " Voice Individual Channel Update ::");
+          if (is_digital == 0) fprintf (stderr, " Analog");
+          else                 fprintf (stderr, " Digital");
+          if (is_individual == 0) fprintf (stderr, " Group [%04d] LCN [%02d]", target, lcn);
+          else                    fprintf (stderr, " LID [%05d] LCN [%02d]", target, lcn);
+          if (mt_c == 0 || mt_c == 1) fprintf (stderr, " [message trunking]");
           if (is_emergency == 1)
           {
             fprintf (stderr, "%s", KRED);
             fprintf (stderr, " EMERGENCY");
           }
-          fprintf (stderr, "%s", KYEL);
-          if (is_individual == 0) fprintf (stderr, " Voice Group Channel Update :: Group [%04d] LCN [%02d]", group, lcn);
-          else                    fprintf (stderr, " Voice Individual Channel Update :: LID [%05d] LCN [%02d]", lid, lcn);
-          if (mt_c == 0 || mt_c == 1) fprintf (stderr, " [message trunking]");
           fprintf (stderr, "%s", KNRM);
 
-          // TODO: Actually process the call
+          //LCNs >= 26 are reserved to indicate status (queued, busy, denied, etc)
+          if (lcn > state->edacs_lcn_count && lcn < 26)
+          {
+            state->edacs_lcn_count = lcn;
+          }
+          state->edacs_vc_lcn = lcn;
+
+          //If we have the same target already in progress, we can keep the source ID since we know it (and don't get
+          //it in this CC message). But if we have a different target, we should clear out to a source ID of 0.
+          if (is_individual == 0)
+          {
+            if (state->lasttg != target) {
+              state->lasttg = target;
+              state->lastsrc = 0;
+            }
+          }
+          else
+          {
+            //Use IDs > 10000 to represent i-call targets to differentiate from TGs
+            if (state->lasttg != target + 10000) {
+              state->lasttg = target + 10000;
+              state->lastsrc = 0;
+            }
+          }
+
+          char mode[8]; //allow, block, digital enc
+          sprintf (mode, "%s", "");
+
+          //if we are using allow/whitelist mode, then write 'B' to mode for block
+          //comparison below will look for an 'A' to write to mode if it is allowed
+          if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
+
+          //Individual calls always remain blocked if in allow/whitelist mode
+          if (is_individual == 0)
+          {
+            //Get group mode for calls that are in the allow/whitelist
+            for (int i = 0; i < state->group_tally; i++)
+            {
+              if (state->group_array[i].groupNumber == target)
+              {
+                strcpy (mode, state->group_array[i].groupMode);
+                break;
+              }
+            }
+            //TG hold on EDACS Standard/Net -- block non-matching target, allow matching group
+            if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
+            if (state->tg_hold != 0 && state->tg_hold == target) sprintf (mode, "%s", "A");
+          }
+
+          //NOTE: Restructured below so that analog and digital are handled the same, just that when
+          //its analog, it will now start edacs_analog which will while loop analog samples until
+          //signal level drops (RMS, or a dotting sequence is detected)
+
+          //this is working now with the new import setup
+          if (((is_individual == 0 && opts->trunk_tune_group_calls == 1) || (is_individual == 1 && opts->trunk_tune_private_calls == 1)) &&
+              opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
+          {
+            if (lcn > 0 && lcn < 26 && state->edacs_cc_lcn != 0 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
+            {
+              //openwav file and do per call right here
+              if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
+              {
+                if (is_individual == 0) sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %04d SRC %05d.wav", getDateE(), timestr, state->edacs_site_id, target, state->lastsrc);
+                else                    sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %05d SRC %05d I-Call.wav", getDateE(), timestr, state->edacs_site_id, target, state->lastsrc);
+                if (is_digital == 0) openWavOutFile48k (opts, state); //analog at 48k
+                else                 openWavOutFile (opts, state); //digital
+              }
+
+              if (opts->use_rigctl == 1)
+              {
+                //only set bandwidth IF we have an original one to fall back to (experimental, but requires user to set the -B 12000 or -B 24000 value manually)
+                if (opts->setmod_bw != 0)
+                {
+                  if (is_digital == 0) SetModulation(opts->rigctl_sockfd, 7000); //narrower bandwidth, but has issues with dotting sequence
+                  else                 SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+                }
+
+                SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because our index starts at zero
+                state->edacs_tuned_lcn = lcn;
+                opts->p25_is_tuned = 1;
+                if (is_digital == 0) edacs_analog(opts, state, target, lcn);
+              }
+
+              if (opts->audio_in_type == 3) //rtl dongle
+              {
+                #ifdef USE_RTLSDR
+                rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+                state->edacs_tuned_lcn = lcn;
+                opts->p25_is_tuned = 1;
+                if (is_digital == 0) edacs_analog(opts, state, target, lcn);
+                #endif
+              }
+            }
+          
+          }
         }
         //System Assigned ID (6.2.4.8)
         else if (mt_b == 0x4)
@@ -1441,111 +1546,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, " FR_1 [%010llX]", fr_1t);
           fprintf (stderr, " FR_4 [%010llX]", fr_4t);
         }
-      }
-
-      //TODO: migrate away from this legacy variable
-      unsigned char command = (fr_1t & 0xFF00000000) >> 32;
-
-      //voice call assignment
-      if (command == 0xEE || command == 0xEF)
-      {
-        //TODO: migrate away from this legacy variable
-        unsigned char lcn = (fr_1t & 0xF8000000) >> 27;
-
-        if (lcn > state->edacs_lcn_count && lcn < 26) 
-        {
-          state->edacs_lcn_count = lcn;
-        }
-        state->edacs_vc_lcn = lcn;
-        //just going to use the default 4-4-3 A-FS scheme, making it user configurable would be a pain
-        int afs = (fr_1t & 0x7FF000) >> 12;
-        int a = afs >> 7; 
-        int fs = afs & 0x7F;
-        int status  = (fr_1t & 0xF00000000) >> 32;
-        UNUSED(status);
-        if (afs > 0) state->lastsrc = afs; 
-        fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " AFS [%03d] [%02d-%03d] LCN [%02d]", afs, a, fs, lcn);
-
-        char mode[8]; //allow, block, digital enc
-        sprintf (mode, "%s", "");
-
-        //if we are using allow/whitelist mode, then write 'B' to mode for block
-        //comparison below will look for an 'A' to write to mode if it is allowed
-        if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
-
-        for (int i = 0; i < state->group_tally; i++)
-        {
-          if (state->group_array[i].groupNumber == afs)
-          {
-            fprintf (stderr, " [%s]", state->group_array[i].groupName);
-            strcpy (mode, state->group_array[i].groupMode);
-            break;
-          }
-        }
-
-        //TG hold on EDACS Standard/Net -- block non-matching target, allow matching afs (decimal)
-        if (state->tg_hold != 0 && state->tg_hold != afs) sprintf (mode, "%s", "B");
-        if (state->tg_hold != 0 && state->tg_hold == afs) sprintf (mode, "%s", "A");
-
-        //NOTE: Restructured below so that analog and digital are handled the same, just that when
-        //its analog, it will now start edacs_analog which will while loop analog samples until
-        //signal level drops (RMS, or a dotting sequence is detected)
-
-        //analog working now with edacs_analog
-        if (command == 0xEE)
-          fprintf (stderr, " Analog"); 
-
-        //Digital Call (ProVoice, hopefully, and not Aegis in 2022)
-        else
-          fprintf (stderr, " Digital");
-
-        //skip analog calls on RTL Input on ARM devices due to High CPU usage from RTL RMS function
-        // #ifdef __arm__
-        // if (command == 0xEE && opts->audio_in_type == 3)
-        //   goto ENDPV;
-        // #endif
-
-        //this is working now with the new import setup
-        if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
-        {
-          if (lcn > 0 && lcn < 26 && state->edacs_cc_lcn != 0 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
-          {
-            //openwav file and do per call right here
-            if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
-            {
-              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld AFS %02d-%03d - %03d.wav", getDateE(), timestr, state->edacs_site_id, a, fs, afs);
-              if (command == 0xEF) openWavOutFile (opts, state); //digital
-              if (command == 0xEE) openWavOutFile48k (opts, state); //analog at 48k
-            }
-
-            if (opts->use_rigctl == 1)
-            {
-              //only set bandwidth IF we have an original one to fall back to (experimental, but requires user to set the -B 12000 or -B 24000 value manually)
-              if (opts->setmod_bw != 0 && command == 0xEE) SetModulation(opts->rigctl_sockfd, 7000); //narrower bandwidth, but has issues with dotting sequence
-              else if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-              
-              // if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-
-              SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because our index starts at zero
-              state->edacs_tuned_lcn = lcn;
-              opts->p25_is_tuned = 1;
-              if (command == 0xEE) edacs_analog(opts, state, afs, lcn);
-            }
-
-            if (opts->audio_in_type == 3) //rtl dongle
-            {
-              #ifdef USE_RTLSDR
-              rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
-              state->edacs_tuned_lcn = lcn;
-              opts->p25_is_tuned = 1;
-              if (command == 0xEE) edacs_analog(opts, state, afs, lcn);
-              #endif
-            }
-          }
-        
-        }
-        fprintf (stderr, "%s", KNRM);
       }
 
     } //end Standard or Networked
