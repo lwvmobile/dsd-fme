@@ -479,10 +479,10 @@ void init_audio_filters (dsd_state * state)
   HPFilter_Init(&state->HRCFilter, 960, (float)1/(float)48000);
 
 	//left and right variants for stereo output testing on digital voice samples
-  LPFilter_Init(&state->RCFilterL, 960, (float)1/(float)48000);
-  HPFilter_Init(&state->HRCFilterL, 960, (float)1/(float)48000);
-  LPFilter_Init(&state->RCFilterR, 960, (float)1/(float)48000);
-  HPFilter_Init(&state->HRCFilterR, 960, (float)1/(float)48000);
+  LPFilter_Init(&state->RCFilterL, 960, (float)1/(float)16000);
+  HPFilter_Init(&state->HRCFilterL, 960, (float)1/(float)16000);
+  LPFilter_Init(&state->RCFilterR, 960, (float)1/(float)16000);
+  HPFilter_Init(&state->HRCFilterR, 960, (float)1/(float)16000);
 
 	//PBFilter_Init(PBFilter *filter, float HPF_cutoffFreqHz, float LPF_cutoffFreqHz, float sampleTimeS);
 	//NOTCHFilter_Init(NOTCHFilter *filter, float centerFreqHz, float notchWidthHz, float sampleTimeS);
@@ -518,6 +518,30 @@ void hpf(dsd_state * state, short * input, int len)
 	{
 		// fprintf (stderr, "\n in: %05d", input[i]);
 		input[i] = HPFilter_Update(&state->HRCFilter, input[i]);
+		// fprintf (stderr, "\n out: %05d", input[i]);
+	}
+}
+
+//hpf digital left
+void hpf_dL(dsd_state * state, short * input, int len)
+{
+  int i;
+  for (i = 0; i < len; i++)
+	{
+		// fprintf (stderr, "\n in: %05d", input[i]);
+		input[i] = HPFilter_Update(&state->HRCFilterL, input[i]);
+		// fprintf (stderr, "\n out: %05d", input[i]);
+	}
+}
+
+//hpf digital right
+void hpf_dR(dsd_state * state, short * input, int len)
+{
+  int i;
+  for (i = 0; i < len; i++)
+	{
+		// fprintf (stderr, "\n in: %05d", input[i]);
+		input[i] = HPFilter_Update(&state->HRCFilterR, input[i]);
 		// fprintf (stderr, "\n out: %05d", input[i]);
 	}
 }

@@ -951,6 +951,18 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
   if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
   if (state->tg_hold != 0 && state->tg_hold == TGR) encR = 0;
 
+  //test hpf
+  if (opts->use_hpf_d == 1)
+  {
+    hpf_dL(state, state->s_l4[0], 160);
+    hpf_dL(state, state->s_l4[1], 160);
+    hpf_dL(state, state->s_l4[2], 160);
+
+    hpf_dR(state, state->s_r4[0], 160);
+    hpf_dR(state, state->s_r4[1], 160);
+    hpf_dR(state, state->s_r4[2], 160);
+  }
+
   //interleave left and right channels from the short storage area
   for (i = 0; i < 160; i++)
   {

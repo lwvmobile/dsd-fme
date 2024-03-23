@@ -1342,6 +1342,8 @@ void lpf(dsd_state * state, short * input, int len);
 void hpf(dsd_state * state, short * input, int len);
 void pbf(dsd_state * state, short * input, int len);
 void nf(dsd_state * state, short * input, int len);
+void hpf_dL(dsd_state * state, short * input, int len);
+void hpf_dR(dsd_state * state, short * input, int len);
 //from: https://github.com/NedSimao/FilteringLibrary
 void LPFilter_Init(LPFilter *filter, float cutoffFreqHz, float sampleTimeS);
 float LPFilter_Update(LPFilter *filter, float v_in);

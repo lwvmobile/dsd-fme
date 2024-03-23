@@ -306,9 +306,6 @@ processAudio (dsd_opts * opts, dsd_state * state)
               *state->audio_out_float_buf_p = -32768.0F;
             }
           *state->audio_out_buf_p = (short) *state->audio_out_float_buf_p;
-          //hpf
-          if (opts->use_hpf_d == 1)
-            *state->audio_out_float_buf_p = HPFilter_Update(&state->HRCFilterL, *state->audio_out_float_buf_p);
           //tap the pointer here and store the short upsample buffer samples
           state->s_lu[n] = (short) *state->audio_out_float_buf_p;
           state->audio_out_buf_p++;
@@ -329,9 +326,6 @@ processAudio (dsd_opts * opts, dsd_state * state)
               *state->audio_out_temp_buf_p = -32768.0F;
             }
           *state->audio_out_buf_p = (short) *state->audio_out_temp_buf_p;
-          //hpf
-          if (opts->use_hpf_d == 1)
-            *state->audio_out_float_buf_p = HPFilter_Update(&state->HRCFilterL, *state->audio_out_float_buf_p);
           //tap the pointer here and store the short buffer samples
           state->s_l[n] = (short) *state->audio_out_temp_buf_p;
           //debug
@@ -459,9 +453,6 @@ processAudioR (dsd_opts * opts, dsd_state * state)
               *state->audio_out_float_buf_pR = -32768.0F;
             }
           *state->audio_out_buf_pR = (short) *state->audio_out_float_buf_pR;
-          //hpf
-          if (opts->use_hpf_d == 1)
-            *state->audio_out_float_buf_pR = HPFilter_Update(&state->HRCFilterR, *state->audio_out_float_buf_pR);
           //tap the pointer here and store the short upsample buffer samples
           state->s_ru[n] = (short) *state->audio_out_float_buf_pR;
           state->audio_out_buf_pR++;
@@ -482,9 +473,6 @@ processAudioR (dsd_opts * opts, dsd_state * state)
               *state->audio_out_temp_buf_pR = -32768.0F;
             }
           *state->audio_out_buf_pR = (short) *state->audio_out_temp_buf_pR;
-          //hpf
-          if (opts->use_hpf_d == 1)
-            *state->audio_out_float_buf_pR = HPFilter_Update(&state->HRCFilterR, *state->audio_out_float_buf_pR);
           //tap the pointer here and store the short buffer samples
           state->s_r[n] = (short) *state->audio_out_temp_buf_pR;
           state->audio_out_buf_pR++;
