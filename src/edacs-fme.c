@@ -431,11 +431,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
   unsigned long long int fr_4m = 0xFFFFFFF; //28-bit 7X message portion to pass to bch handler
   unsigned long long int fr_4t = 0xFFFFFFFFFF; //40 bit return from BCH with poly attached
 
-  unsigned char command = 0xFF;
-  unsigned char mt1 = 0x1F;
-  unsigned char mt2 = 0xF;
-  unsigned char lcn = 0;
-
   //commands; may not use these anymore
   unsigned int vcmd = 0xEE; //voice command variable
   unsigned int idcmd = 0xFD;
@@ -511,15 +506,18 @@ void edacs(dsd_opts * opts, dsd_state * state)
     //TODO: Consider re-adding the auto code to make a suggestion to users
     //as to which mode to proceed in?
     
+    //Account for ESK, if any
+    fr_1t = fr_1t ^ (state->esk_mask << 32);
+
     //Start Extended Addressing Mode 
     if (state->ea_mode == 1)
     {
-      command = ((fr_1t & 0xFF00000000) >> 32) ^ state->esk_mask;
-      mt1 = (command & 0xF8) >> 3;
-      mt2 = (fr_1t & 0x780000000) >> 31;
+      unsigned char mt1 = (fr_1t & 0xF800000000) >> 35;
+      unsigned char mt2 = (fr_1t & 0x780000000) >> 31;
 
-      //Site ID
+      //TODO: initialize where they are actually used
       unsigned long long int site_id = 0; //we probably could just make this an int as well as the state variables
+      unsigned char lcn = 0;
 
       //Add raw payloads and MT1/MT2 for easy debug
       if (opts->payload == 1)
@@ -959,9 +957,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
     //Start Standard or Networked Mode
     else if (state->ea_mode == 0)
     {
-      //standard or networked
-      command = ((fr_1t & 0xFF00000000) >> 32) ^ state->esk_mask;
-      lcn     = (fr_1t & 0xF8000000) >> 27;
+      //TODO: migrate away from these legacy variables
+      unsigned char command = (fr_1t & 0xFF00000000) >> 32;
+      unsigned char lcn     = (fr_1t & 0xF8000000) >> 27;
 
       //site ID and CC LCN
       if (command == 0xFD)
