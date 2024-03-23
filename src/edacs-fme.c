@@ -1412,7 +1412,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             int site_id = (fr_1t & 0x1F000) >> 12;
 
             fprintf (stderr, "%s", KYEL);
-            fprintf (stderr, " Standard/Networked :: Site ID [%02X][%03d] Priority [%1d] CC LCN [%02d]%s", site_id, site_id, priority, cc_lcn, get_lcn_status_string(lcn));
+            fprintf (stderr, " Standard/Networked :: Site ID [%02X][%03d] Priority [%1d] CC LCN [%02d]%s", site_id, site_id, priority, cc_lcn, get_lcn_status_string(cc_lcn));
             if (is_failsoft == 1)
             {
               fprintf (stderr, "%s", KRED);
