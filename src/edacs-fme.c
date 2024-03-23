@@ -1027,14 +1027,14 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int is_tx_trunk = (fr_1t & 0x800000) >> 23;
         int group = (fr_1t & 0x7FF000) >> 12;
 
+        fprintf (stderr, "%s", KYEL);
+        fprintf (stderr, " Voice Group Channel Assignment :: Group [%04d] LID [%05d] LCN [%02d]", group, lid, lcn);
+        if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
         if (is_emergency == 1)
         {
           fprintf (stderr, "%s", KRED);
           fprintf (stderr, " EMERGENCY");
         }
-        fprintf (stderr, "%s", KYEL);
-        fprintf (stderr, " Voice Group Channel Assignment :: Group [%04d] LID [%05d] LCN [%02d]", group, lid, lcn);
-        if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
         fprintf (stderr, "%s", KNRM);
 
         // TODO: Actually process the call
