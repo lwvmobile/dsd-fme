@@ -3502,7 +3502,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       // Compute 4:4:3 AFS for display purposes only
       int a  = (call_matrix[i][2] >> 7) & 0xF;
       int fs = call_matrix[i][2] & 0x7F;
-      printw ("| - LCN [%02d][%.06lf] MHz", i, (double)state->trunk_lcn_freq[i-1]/1000000);
+      printw ("| - LCN [%02d][%010.06lf] MHz", i, (double)state->trunk_lcn_freq[i-1]/1000000);
 
       //print Control Channel on LCN line with the current Control Channel
       if ( (i) == state->edacs_cc_lcn)
