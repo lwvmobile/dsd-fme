@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------------
- * EDACS-FME 
+ * EDACS-FME
  * A program for decoding EDACS (ported to DSD-FME)
  * https://github.com/lwvmobile/edacs-fm
  *
@@ -15,9 +15,9 @@
  *
  * LWVMOBILE
  * 2023-11 Version EDACS-FM Florida Man Edition
- * 
+ *
  * ilyacodes
- * 2024-03 added EA i-call and login message decoding
+ * 2024-03 rewrite EDACS standard parsing to spec, add reverse-engineered EA messages
  *-----------------------------------------------------------------------------*/
 #include "dsd.h"
 
@@ -88,7 +88,7 @@ void openWavOutFile48k (dsd_opts * opts, dsd_state * state)
 //generic rms type function
 long int gen_rms(short *samples, int len, int step)
 {
-  
+
   int i;
   long int rms;
   long p, t, s;
@@ -184,7 +184,7 @@ void analog_dc_block_filter(short * input, int len)
   avg = sum / len;
   avg = (avg + dc_avg * 9) / 10;
   for (i=0; i < len; i++)
-    input[i] -= (short)avg; 
+    input[i] -= (short)avg;
 
   dc_avg = avg;
 }
@@ -202,7 +202,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
   short analog1[960];
   short analog2[960];
   short analog3[960];
-  short sample = 0; 
+  short sample = 0;
 
   state->last_cc_sync_time = time(NULL);
   state->last_vc_sync_time = time(NULL);
@@ -217,7 +217,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
   fprintf (stderr, "\n");
 
   while (!exitflag && count > 0)
-  { 
+  {
     //this will only work on 48k/1 short output
     if (opts->audio_in_type == 0)
     {
@@ -243,7 +243,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     }
 
     //NOTE: The core dumps observed previously were due to SDR++ Remote Server connection dropping due to Internet/Other issues
-    //and unlike in the main livescanner loop where it just hangs, this loop will cause a core dump. The observed issue 
+    //and unlike in the main livescanner loop where it just hangs, this loop will cause a core dump. The observed issue
     //has not occurred when using SDR++ on local hardware, just the remote server software over the Internet.
 
     //NOTE: The fix below does not apply to above observed issue, as the TCP connection will not drop, there will just
@@ -291,7 +291,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
         }
         analog3[i] = sample;
       }
-      
+
       //this rms will only work properly (for now) with squelch enabled in SDR++
       rms = gen_rms(analog3, 960, 1);
     }
@@ -427,7 +427,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     fprintf (stderr, "%s", KNRM);
 
     if (count > 0) fprintf (stderr, "\n");
-    
+
   }
 }
 
@@ -437,7 +437,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
   unsigned long long int fr_1 = 0xFFFFFFFFFF; //40-bit frames
   unsigned long long int fr_2 = 0; //each is a 40 bit frame that repeats 3 times
   unsigned long long int fr_3 = 0; //two messages per frame
-  unsigned long long int fr_4 = 0xFFFFFFFFFF; 
+  unsigned long long int fr_4 = 0xFFFFFFFFFF;
   unsigned long long int fr_5 = 0;
   unsigned long long int fr_6 = 0;
 
@@ -473,18 +473,18 @@ void edacs(dsd_opts * opts, dsd_state * state)
   {
     //only fr_1 and fr4 are going to matter
     fr_1 = fr_1 << 1;
-    fr_1 = fr_1 | edacs_bit[i]; 
+    fr_1 = fr_1 | edacs_bit[i];
     fr_2 = fr_2 << 1;
     fr_2 = fr_2 | edacs_bit[i+40];
     fr_3 = fr_3 << 1;
     fr_3 = fr_3 | edacs_bit[i+80];
-    
-    fr_4 = fr_4 << 1; 
-    fr_4 = fr_4 | edacs_bit[i+120]; 
+
+    fr_4 = fr_4 << 1;
+    fr_4 = fr_4 | edacs_bit[i+120];
     fr_5 = fr_5 << 1;
     fr_5 = fr_5 | edacs_bit[i+160];
     fr_6 = fr_6 << 1;
-    fr_6 = fr_6 | edacs_bit[i+200]; 
+    fr_6 = fr_6 | edacs_bit[i+200];
 
   }
 
@@ -508,7 +508,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
   else //BCH Pass, continue from here.
   {
 
-    //Auto Detection Modes Have Been Removed due to reliability issues, 
+    //Auto Detection Modes Have Been Removed due to reliability issues,
     //users will now need to manually specify these options:
     /*
       -fh             Decode only EDACS Standard/ProVoice*\n");
@@ -521,7 +521,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
     //TODO: Consider re-adding the auto code to make a suggestion to users
     //as to which mode to proceed in?
-    
+
     //Color scheme:
     // - KRED - critical information (emergency, failsoft, etc)
     // - KYEL - system data
@@ -536,7 +536,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
     fr_1t = fr_1t ^ fr_esk_mask;
     fr_4t = fr_4t ^ fr_esk_mask;
 
-    //Start Extended Addressing Mode 
+    //Start Extended Addressing Mode
     if (state->ea_mode == 1)
     {
       unsigned char mt1 = (fr_1t & 0xF800000000) >> 35;
@@ -555,7 +555,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         // MT2 is meaningless if MT1 is not 0x1F
         if (mt1 == 0x1F)
           fprintf (stderr, "; MT2: %X) ", mt2);
-        else 
+        else
           fprintf (stderr, ")         ");
       }
 
@@ -601,7 +601,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           if (((fr_4t >> 12) & 0x1F) != 0)
           {
             state->edacs_cc_lcn = ((fr_4t >> 12) & 0x1F);
-            if (state->edacs_cc_lcn > state->edacs_lcn_count && lcn < 26) //26, or 27. shouldn't matter don't think cc lcn will give a status lcn val 
+            if (state->edacs_cc_lcn > state->edacs_lcn_count && lcn < 26) //26, or 27. shouldn't matter don't think cc lcn will give a status lcn val
             {
               state->edacs_lcn_count = state->edacs_cc_lcn;
             }
@@ -682,7 +682,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             fprintf (stderr, " FR_4 [%010llX]", fr_4t);
           }
         }
-        
+
       }
       //TDMA Group Grant Update (never observed, unknown if ever used on any EDACS system)
       else if (mt1 == 0x1)
@@ -713,7 +713,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         lcn = (fr_1t & 0x3E0000000) >> 29;
 
         //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
-        if (lcn > state->edacs_lcn_count && lcn < 26) 
+        if (lcn > state->edacs_lcn_count && lcn < 26)
         {
           state->edacs_lcn_count = lcn;
         }
@@ -768,7 +768,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (state->tg_hold != 0 && state->tg_hold == group) sprintf (mode, "%s", "A");
 
         //this is working now with the new import setup
-        if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
+        if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
         {
           if (lcn > 0 && lcn < 26 && state->edacs_cc_lcn != 0 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
           {
@@ -781,11 +781,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
               else
                 openWavOutFile48k (opts, state);
             }
-            
+
             //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
             if (opts->use_rigctl == 1)
             {
-              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
               SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
@@ -805,7 +805,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             }
 
           }
-          
+
         }
       }
       //I-Call Grant Update
@@ -814,7 +814,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         lcn = (fr_4t & 0x1F00000000) >> 32;
 
         //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
-        if (lcn > state->edacs_lcn_count && lcn < 26) 
+        if (lcn > state->edacs_lcn_count && lcn < 26)
         {
           state->edacs_lcn_count = lcn;
         }
@@ -843,7 +843,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
 
         //this is working now with the new import setup
-        if (opts->trunk_tune_private_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
+        if (opts->trunk_tune_private_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
         {
           if (lcn > 0 && lcn < 26 && state->edacs_cc_lcn != 0 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
           {
@@ -856,11 +856,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
               else
                 openWavOutFile48k (opts, state);
             }
-            
+
             //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
             if (opts->use_rigctl == 1)
             {
-              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
               SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
@@ -897,7 +897,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         lcn = (fr_1t & 0x3E0000000) >> 29;
 
         //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
-        if (lcn > state->edacs_lcn_count && lcn < 26) 
+        if (lcn > state->edacs_lcn_count && lcn < 26)
         {
           state->edacs_lcn_count = lcn;
         }
@@ -914,7 +914,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         else                 fprintf (stderr, " Digital System All-Call");
         if (is_update == 0) fprintf (stderr, " Assignment");
         else                fprintf (stderr, " Update");
-        
+
         fprintf (stderr, " :: Source [%08d] LCN [%02d]%s", source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
 
@@ -925,7 +925,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "A");
 
         //this is working now with the new import setup
-        if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block 
+        if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
         {
           if (lcn > 0 && lcn < 26 && state->edacs_cc_lcn != 0 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
           {
@@ -938,11 +938,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
               else
                 openWavOutFile48k (opts, state);
             }
-            
+
             //do condition here, in future, will allow us to use tuning methods as well, or rtl_udp as well
             if (opts->use_rigctl == 1)
             {
-              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+              if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
               SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because the lcn index starts at zero
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
@@ -962,7 +962,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             }
 
           }
-          
+
         }
       }
       //Login
@@ -1114,7 +1114,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
           //Abstract away to a target, and be sure to check whether it's an individual call later
           int target = (is_individual_id == 0) ? group : lid;
-          
+
           fprintf (stderr, "%s", KMAG);
           fprintf (stderr, " Interconnect Channel Assignment :: Type");
           if (mt_c == 0x2) fprintf (stderr, " [Voice]");
@@ -1138,7 +1138,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
           //Abstract away to a target, and be sure to check whether it's an individual call later
           int target = (is_individual == 0) ? group : lid;
-          
+
           //Technically only MT-C 0x1 and 0x3 are defined in TSB 69.3 - using and extrapolating on legacy code
           int is_tx_trunk = (mt_c == 2 || mt_c == 3) ? 1 : 0;
           int is_digital = (mt_c == 1 || mt_c == 3) ? 1 : 0;
@@ -1259,7 +1259,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
                 #endif
               }
             }
-          
+
           }
         }
         //System Assigned ID (6.2.4.8)
@@ -1455,7 +1455,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             state->edacs_site_id = site_id;
 
             //LCNs >= 26 are reserved to indicate status (queued, busy, denied, etc)
-            if (state->edacs_cc_lcn > state->edacs_lcn_count && cc_lcn < 26) 
+            if (state->edacs_cc_lcn > state->edacs_lcn_count && cc_lcn < 26)
             {
               state->edacs_lcn_count = state->edacs_cc_lcn;
             }
@@ -1580,7 +1580,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
     } //end Standard or Networked
 
     //let users know they need to select an operational mode with the switches below
-    else 
+    else
     {
       fprintf (stderr, " Detected: Use -fh, -fH, -fe, or -fE for std, esk, ea, or ea-esk;");
       fprintf (stderr, "\n");
@@ -1608,13 +1608,13 @@ void eot_cc(dsd_opts * opts, dsd_state * state)
   //jump back to CC here
   if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
   {
-    
+
     //rigctl
     if (opts->use_rigctl == 1)
     {
       state->lasttg = 0;
       state->lastsrc = 0;
-      state->payload_algid = 0; 
+      state->payload_algid = 0;
       state->payload_keyid = 0;
       state->payload_miP = 0;
       //reset some strings
@@ -1625,7 +1625,7 @@ void eot_cc(dsd_opts * opts, dsd_state * state)
       opts->p25_is_tuned = 0;
       state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
       if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-      SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
+      SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
     }
 
     //rtl
@@ -1651,4 +1651,4 @@ void eot_cc(dsd_opts * opts, dsd_state * state)
   }
 }
 
- 
+
