@@ -532,7 +532,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
     // - KWHT - unknown/reserved
 
     //Account for ESK, if any
-    fr_1t = fr_1t ^ (((unsigned long long int)state->esk_mask) << 32);
+    unsigned long long int fr_esk_mask = ((unsigned long long int)state->esk_mask) << 32;
+    fr_1t = fr_1t ^ fr_esk_mask;
+    fr_4t = fr_4t ^ fr_esk_mask;
 
     //Start Extended Addressing Mode 
     if (state->ea_mode == 1)
@@ -1026,34 +1028,25 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //April 1998. Where real world systems are found to diverge from this bulletin, please note the basis for the
       //deviation.
 
-      //Reverse engineered from Quebec STM system; occurs immediately prior to Voice Group Channel Update
-      if (mt_a == 0x0)
-      {
-        //LID and transmission trunking values are not confirmed, need validation
-        int lid = ((fr_1t & 0x1FC0000000) >> 23) | ((fr_4t & 0xFE0000000) >> 29);
-        int lcn = (fr_1t & 0x1F000000) >> 24;
-        int is_tx_trunk = (fr_1t & 0x800000) >> 23;
-        int group = (fr_1t & 0x7FF000) >> 12;
-
-        fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Voice Group Channel Assignment :: Analog Group [%04d] LID [%05d] LCN [%02d]%s", group, lid, lcn, get_lcn_status_string(lcn));
-        if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
-        fprintf (stderr, "%s", KNRM);
-
-        // TODO: Actually process the call
-      }
+      //MT-A 0 and 1 as analog/digital mode indicator reverse engineered from Quebec STM and San Antonio/Bexar Co
+      //systems; occurs immediately prior to Voice Group Channel Update.
+      //
       //Voice Group Channel Assignment (6.2.4.1)
       //Emergency Voice Group Channel Assignment (6.2.4.2)
-      else if (mt_a == 0x2 || mt_a == 0x3)
+      if (mt_a == 0x0 || mt_a == 0x1 || mt_a == 0x2 || mt_a == 0x3)
       {
-        int is_emergency = (mt_a == 0x3) ? 1 : 0;
+        int is_digital = (mt_a == 0x2 || mt_a == 0x3) ? 1 : 0;
+        int is_emergency = (mt_a == 0x1 || mt_a == 0x3) ? 1 : 0;
         int lid = ((fr_1t & 0x1FC0000000) >> 23) | ((fr_4t & 0xFE0000000) >> 29);
         int lcn = (fr_1t & 0x1F000000) >> 24;
         int is_tx_trunk = (fr_1t & 0x800000) >> 23;
         int group = (fr_1t & 0x7FF000) >> 12;
 
         fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " Voice Group Channel Assignment :: Group [%04d] LID [%05d] LCN [%02d]%s", group, lid, lcn, get_lcn_status_string(lcn));
+        fprintf (stderr, " Voice Group Channel Assignment ::");
+        if (is_digital == 0) fprintf (stderr, " Analog");
+        else                 fprintf (stderr, " Digital");
+        fprintf (stderr, " Group [%04d] LID [%05d] LCN [%02d]%s", group, lid, lcn, get_lcn_status_string(lcn));
         if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
         if (is_emergency == 1)
         {
@@ -1119,12 +1112,15 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int lid = (fr_1t & 0x3FFF000) >> 12;
           int group = (fr_1t & 0x7FF000) >> 12;
 
+          //Abstract away to a target, and be sure to check whether it's an individual call later
+          int target = (is_individual_id == 0) ? group : lid;
+          
           fprintf (stderr, "%s", KMAG);
           fprintf (stderr, " Interconnect Channel Assignment :: Type");
           if (mt_c == 0x2) fprintf (stderr, " [Voice]");
           else             fprintf (stderr, " [Reserved]");
-          if (is_individual_id == 1) fprintf (stderr, " LID [%05d]", lid);
-          else                       fprintf (stderr, " Group [%04d]", group);
+          if (is_individual_id == 1) fprintf (stderr, " LID [%05d]", target);
+          else                       fprintf (stderr, " Group [%04d]", target);
           fprintf (stderr, " LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
           fprintf (stderr, "%s", KNRM);
 

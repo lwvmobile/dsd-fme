@@ -180,9 +180,9 @@ M - toggle c4fm/qpsk 8/3 (phase 2 tdma control channel)
 R - start capturing symbol capture bin (date/time name file)
 r - stop capturing symbol capture bin
 spacebar - replay last symbol capture bin (captures must be stopped first)
-s - stop playing symbol capture bin or wav input file
+s - stop playing symbol capture bin or wav input file (lower s)
 P - start per call decoded wav files (Capital P)
-p - stop per call decoded wav files (Lower p)
+p - stop per call decoded wav files (lower p)
 t - toggle trunking (needs either rtl input, or rigctl connection)
 y - toggle scanner (needs either rtl input, or rigctl connection)
 1 - Toggle Voice Synthesis in TDMA Slot 1 or FDMA Conventional Voice
@@ -206,8 +206,8 @@ l - Hold TG in Slot 2 on TDMA Systems, or clear current hold
 C - Drop Call and Return to CC during trunking operation
 L - Manual Cycle Forward Channel Tuned when RIGCTL or using RTL input and channel csv loaded
 
-S - Toggle Between EDACS Standard/Network and Extended Addressing Mode
-A - Toggle EDACS ESK Mask
+S - Toggle between EDACS Standard/Network and Extended Addressing mode (Capital S)
+A - Toggle EDACS ESK Mask (none vs A0)
 
 ```
 
