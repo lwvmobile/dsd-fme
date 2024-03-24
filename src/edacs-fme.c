@@ -522,6 +522,15 @@ void edacs(dsd_opts * opts, dsd_state * state)
     //TODO: Consider re-adding the auto code to make a suggestion to users
     //as to which mode to proceed in?
     
+    //Color scheme:
+    // - KRED - critical information (emergency, failsoft, etc)
+    // - KYEL - system data
+    // - KGRN - voice group calls
+    // - KCYN - voice individual calls
+    // - KMAG - voice other calls (interconnect, all-call, etc)
+    // - KBLU - subscriber data
+    // - KWHT - unknown/reserved
+
     //Account for ESK, if any
     fr_1t = fr_1t ^ (((unsigned long long int)state->esk_mask) << 32);
 
@@ -577,7 +586,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         {
           int status = (fr_1t & 0xFF000) >> 12;
           int source = (fr_4t & 0xFFFFF000) >> 12;
-          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, "%s", KBLU);
           if (status == 248) fprintf (stderr, " Status Request :: Target [%08d]", source);
           else               fprintf (stderr, " Message Acknowledgement :: Status [%03d] Source [%08d]", status, source);
           fprintf (stderr, "%s", KNRM);
@@ -660,7 +669,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
         else
         {
-          fprintf (stderr, "%s", KMAG);
+          fprintf (stderr, "%s", KWHT);
           fprintf (stderr, " Unknown Command");
           fprintf (stderr, "%s", KNRM);
           // Only print the payload if we haven't already printed it
@@ -679,7 +688,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         lcn = (fr_1t & 0x3E0000000) >> 29;
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
-        fprintf (stderr, "%s", KGRN);
+        fprintf (stderr, "%s", KBLU);
         fprintf (stderr, " Data Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
       }
@@ -731,7 +740,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (is_emergency == 1)
         {
           fprintf (stderr, "%s", KRED);
-          fprintf (stderr, " EMERGENCY");
+          fprintf (stderr, " [EMERGENCY]");
         }
         fprintf (stderr, "%s", KNRM);
 
@@ -816,7 +825,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
 
-        fprintf (stderr, "%s", KGRN);
+        fprintf (stderr, "%s", KCYN);
         if (is_digital == 0) fprintf (stderr, " Analog I-Call");
         else                 fprintf (stderr, " Digital I-Call");
         if (is_update == 0) fprintf (stderr, " Assignment");
@@ -876,7 +885,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
       {
         lcn  = (fr_4t & 0x1F00000000) >> 32;
         int source = (fr_4t & 0xFFFFF000) >> 12;
-        fprintf (stderr, "%s", KYEL);
+        fprintf (stderr, "%s", KBLU);
         fprintf (stderr, " Channel Assignment (Unknown Data) :: Source [%08d] LCN [%02d]%s", source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
       }
@@ -898,7 +907,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
 
-        fprintf (stderr, "%s", KGRN);
+        fprintf (stderr, "%s", KMAG);
         if (is_digital == 0) fprintf (stderr, " Analog System All-Call");
         else                 fprintf (stderr, " Digital System All-Call");
         if (is_update == 0) fprintf (stderr, " Assignment");
@@ -959,14 +968,14 @@ void edacs(dsd_opts * opts, dsd_state * state)
       {
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
-        fprintf (stderr, "%s", KYEL);
+        fprintf (stderr, "%s", KBLU);
         fprintf (stderr, " Login :: Group [%05d] Source [%08d]", group, source);
         fprintf (stderr, "%s", KNRM);
       }
       //Unknown command
       else
       {
-        fprintf (stderr, "%s", KMAG);
+        fprintf (stderr, "%s", KWHT);
         fprintf (stderr, " Unknown Command");
         fprintf (stderr, "%s", KNRM);
         // Only print the payload if we haven't already printed it
@@ -991,7 +1000,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
       {
         fprintf (stderr, " FR_1 [%010llX]", fr_1t);
         fprintf (stderr, " FR_4 [%010llX]", fr_4t);
-        fprintf (stderr, " (MT-A: %X) ", mt_a);
+        fprintf (stderr, " (MT-A: %X", mt_a);
         // MT-B is meaningless if MT-A is not 0x7
         if (mt_a == 0x7)
         {
@@ -1017,9 +1026,25 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //April 1998. Where real world systems are found to diverge from this bulletin, please note the basis for the
       //deviation.
 
+      //Reverse engineered from Quebec STM system; occurs immediately prior to Voice Group Channel Update
+      if (mt_a == 0x0)
+      {
+        //LID and transmission trunking values are not confirmed, need validation
+        int lid = ((fr_1t & 0x1FC0000000) >> 23) | ((fr_4t & 0xFE0000000) >> 29);
+        int lcn = (fr_1t & 0x1F000000) >> 24;
+        int is_tx_trunk = (fr_1t & 0x800000) >> 23;
+        int group = (fr_1t & 0x7FF000) >> 12;
+
+        fprintf (stderr, "%s", KGRN);
+        fprintf (stderr, " Voice Group Channel Assignment :: Analog Group [%04d] LID [%05d] LCN [%02d]%s", group, lid, lcn, get_lcn_status_string(lcn));
+        if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
+        fprintf (stderr, "%s", KNRM);
+
+        // TODO: Actually process the call
+      }
       //Voice Group Channel Assignment (6.2.4.1)
       //Emergency Voice Group Channel Assignment (6.2.4.2)
-      if (mt_a == 0x2 || mt_a == 0x3)
+      else if (mt_a == 0x2 || mt_a == 0x3)
       {
         int is_emergency = (mt_a == 0x3) ? 1 : 0;
         int lid = ((fr_1t & 0x1FC0000000) >> 23) | ((fr_4t & 0xFE0000000) >> 29);
@@ -1027,13 +1052,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int is_tx_trunk = (fr_1t & 0x800000) >> 23;
         int group = (fr_1t & 0x7FF000) >> 12;
 
-        fprintf (stderr, "%s", KYEL);
+        fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " Voice Group Channel Assignment :: Group [%04d] LID [%05d] LCN [%02d]%s", group, lid, lcn, get_lcn_status_string(lcn));
-        if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
+        if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
         if (is_emergency == 1)
         {
           fprintf (stderr, "%s", KRED);
-          fprintf (stderr, " EMERGENCY");
+          fprintf (stderr, " [EMERGENCY]");
         }
         fprintf (stderr, "%s", KNRM);
 
@@ -1050,7 +1075,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int lid = (fr_1t & 0x3FFF000) >> 12;
         int group = (fr_1t & 0x7FF000) >> 12;
 
-        fprintf (stderr, "%s", KYEL);
+        fprintf (stderr, "%s", KBLU);
         fprintf (stderr, " Data Call Channel Assignment :: Type");
         if (is_individual_call == 1) fprintf (stderr, " [Individual]");
         else                         fprintf (stderr, " [Group]");
@@ -1067,7 +1092,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int group = (fr_1t & 0x1FFC000000) >> 26;
         int lid = (fr_1t & 0x3FFF000) >> 12;
 
-        fprintf (stderr, "%s", KYEL);
+        fprintf (stderr, "%s", KBLU);
         fprintf (stderr, " Login Acknowledgement :: Group [%04d] LID [%05d]", group, lid);
         fprintf (stderr, "%s", KNRM);
       }
@@ -1080,7 +1105,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int status = (fr_1t & 0x3FC000000) >> 26;
           int lid = (fr_1t & 0x3FFF000) >> 12;
 
-          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, "%s", KBLU);
           if (status == 248) fprintf (stderr, " Status Request :: LID [%05d]", lid);
           else               fprintf (stderr, " Message Acknowledgement :: Status [%03d] LID [%05d]", status, lid);
           fprintf (stderr, "%s", KNRM);
@@ -1094,7 +1119,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int lid = (fr_1t & 0x3FFF000) >> 12;
           int group = (fr_1t & 0x7FF000) >> 12;
 
-          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, "%s", KMAG);
           fprintf (stderr, " Interconnect Channel Assignment :: Type");
           if (mt_c == 0x2) fprintf (stderr, " [Voice]");
           else             fprintf (stderr, " [Reserved]");
@@ -1122,19 +1147,26 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int is_tx_trunk = (mt_c == 2 || mt_c == 3) ? 1 : 0;
           int is_digital = (mt_c == 1 || mt_c == 3) ? 1 : 0;
 
-          fprintf (stderr, "%s", KYEL);
-          if (is_individual == 0) fprintf (stderr, " Voice Group Channel Update ::");
-          else                    fprintf (stderr, " Voice Individual Channel Update ::");
+          if (is_individual == 0)
+          {
+            fprintf (stderr, "%s", KGRN);
+            fprintf (stderr, " Voice Group Channel Update ::");
+          }
+          else
+          {
+            fprintf (stderr, "%s", KCYN);
+            fprintf (stderr, " Voice Individual Channel Update ::");
+          }
           if (is_digital == 0) fprintf (stderr, " Analog");
           else                 fprintf (stderr, " Digital");
           if (is_individual == 0) fprintf (stderr, " Group [%04d]", target);
           else                    fprintf (stderr, " LID [%05d]", target);
           fprintf (stderr, " LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
-          if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
+          if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
           if (is_emergency == 1)
           {
             fprintf (stderr, "%s", KRED);
-            fprintf (stderr, " EMERGENCY");
+            fprintf (stderr, " [EMERGENCY]");
           }
           fprintf (stderr, "%s", KNRM);
 
@@ -1253,12 +1285,12 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int target = (fr_1t & 0x3FFF000) >> 12;
           int source = (fr_4t & 0x3FFF000) >> 12;
 
-          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, "%s", KCYN);
           fprintf (stderr, " Individual Call Channel Assignment :: Type");
           if (call_type == 1) fprintf (stderr, " [Voice]");
           else                fprintf (stderr, " [Reserved]");
           fprintf (stderr, " Caller [%05d] Callee [%05d] LCN [%02d]%s", source, target, lcn, get_lcn_status_string(lcn));
-          if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
+          if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
           fprintf (stderr, "%s", KNRM);
 
           // TODO: Actually process the call
@@ -1392,7 +1424,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             int qualifier = (fr_1t & 0xC000000) >> 26;
             int target = (fr_1t & 0x3FFF000) >> 12;
 
-            fprintf (stderr, "%s", KYEL);
+            fprintf (stderr, "%s", KBLU);
             fprintf (stderr, " Unit Enable/Disable ::");
             if (qualifier == 0x0)      fprintf (stderr, " [Temporary Disable]");
             else if (qualifier == 0x1) fprintf (stderr, " [Corrupt Personality]");
@@ -1473,7 +1505,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             int is_tx_trunk = (fr_1t & 0x200000) >> 21;
             int lid = ((fr_1t & 0x7F000) >> 5) | ((fr_4t & 0x7F000) >> 12);
 
-            fprintf (stderr, "%s", KYEL);
+            fprintf (stderr, "%s", KMAG);
             fprintf (stderr, " System All-Call Channel");
             if (is_update == 0) fprintf (stderr, " Assignment");
             else                fprintf (stderr, " Update");
@@ -1481,7 +1513,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (qualifier == 1) fprintf (stderr, " [Voice]");
             else                fprintf (stderr, " [Reserved]");
             fprintf (stderr, " LID [%05d] LCN [%02d]%s", lid, lcn, get_lcn_status_string(lcn));
-            if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
+            if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
             fprintf (stderr, "%s", KNRM);
 
             // TODO: Actually process the call
@@ -1507,7 +1539,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           //Reserved command (MT-D)
           else
           {
-            fprintf (stderr, "%s", KMAG);
+            fprintf (stderr, "%s", KWHT);
             fprintf (stderr, " Reserved Command (MT-D)");
             fprintf (stderr, "%s", KNRM);
             // Only print the payload if we haven't already printed it
@@ -1522,7 +1554,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //Reserved command (MT-B)
         else
         {
-          fprintf (stderr, "%s", KMAG);
+          fprintf (stderr, "%s", KWHT);
           fprintf (stderr, " Reserved Command (MT-B)");
           fprintf (stderr, "%s", KNRM);
           // Only print the payload if we haven't already printed it
@@ -1537,7 +1569,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //Reserved command (MT-A)
       else
       {
-        fprintf (stderr, "%s", KMAG);
+        fprintf (stderr, "%s", KWHT);
         fprintf (stderr, " Reserved Command (MT-A)");
         fprintf (stderr, "%s", KNRM);
         // Only print the payload if we haven't already printed it
