@@ -740,7 +740,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (is_emergency == 1)
         {
           fprintf (stderr, "%s", KRED);
-          fprintf (stderr, " EMERGENCY");
+          fprintf (stderr, " [EMERGENCY]");
         }
         fprintf (stderr, "%s", KNRM);
 
@@ -1037,7 +1037,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
         fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " Voice Group Channel Assignment :: Analog Group [%04d] LID [%05d] LCN [%02d]%s", group, lid, lcn, get_lcn_status_string(lcn));
-        if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
+        if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
         fprintf (stderr, "%s", KNRM);
 
         // TODO: Actually process the call
@@ -1054,11 +1054,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
         fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " Voice Group Channel Assignment :: Group [%04d] LID [%05d] LCN [%02d]%s", group, lid, lcn, get_lcn_status_string(lcn));
-        if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
+        if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
         if (is_emergency == 1)
         {
           fprintf (stderr, "%s", KRED);
-          fprintf (stderr, " EMERGENCY");
+          fprintf (stderr, " [EMERGENCY]");
         }
         fprintf (stderr, "%s", KNRM);
 
@@ -1162,11 +1162,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
           if (is_individual == 0) fprintf (stderr, " Group [%04d]", target);
           else                    fprintf (stderr, " LID [%05d]", target);
           fprintf (stderr, " LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
-          if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
+          if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
           if (is_emergency == 1)
           {
             fprintf (stderr, "%s", KRED);
-            fprintf (stderr, " EMERGENCY");
+            fprintf (stderr, " [EMERGENCY]");
           }
           fprintf (stderr, "%s", KNRM);
 
@@ -1290,7 +1290,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           if (call_type == 1) fprintf (stderr, " [Voice]");
           else                fprintf (stderr, " [Reserved]");
           fprintf (stderr, " Caller [%05d] Callee [%05d] LCN [%02d]%s", source, target, lcn, get_lcn_status_string(lcn));
-          if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
+          if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
           fprintf (stderr, "%s", KNRM);
 
           // TODO: Actually process the call
@@ -1513,7 +1513,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (qualifier == 1) fprintf (stderr, " [Voice]");
             else                fprintf (stderr, " [Reserved]");
             fprintf (stderr, " LID [%05d] LCN [%02d]%s", lid, lcn, get_lcn_status_string(lcn));
-            if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
+            if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
             fprintf (stderr, "%s", KNRM);
 
             // TODO: Actually process the call
