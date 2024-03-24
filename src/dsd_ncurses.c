@@ -3687,7 +3687,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //EDACS and ProVoice, outside of timestamp loop
       if (call_matrix[j][0] == 14 || call_matrix[j][0] == 15 || call_matrix[j][0] == 37 || call_matrix[j][0] == 38 )
       {
-        if (call_matrix[j][3] != 0) 
+        if (call_matrix[j][2] != 0) 
         {
           printw ("| ");
           printw ("%s ", getDateC(call_matrix[j][5]) ); 
