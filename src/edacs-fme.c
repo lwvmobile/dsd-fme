@@ -1173,23 +1173,12 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
           state->edacs_vc_lcn = lcn;
 
-          //If we have the same target already in progress, we can keep the source ID since we know it (and don't get
-          //it in this CC message). But if we have a different target, we should clear out to a source ID of 0.
-          if (is_individual == 0)
-          {
-            if (state->lasttg != target) {
-              state->lasttg = target;
-              state->lastsrc = 0;
-            }
-          }
-          else
-          {
-            //Use IDs > 10000 to represent i-call targets to differentiate from TGs
-            if (state->lasttg != target + 10000) {
-              state->lasttg = target + 10000;
-              state->lastsrc = 0;
-            }
-          }
+          //Use IDs > 10000 to represent i-call targets to differentiate from TGs
+          if (is_individual == 0) state->lasttg = target;
+          else                    state->lasttg = target + 10000;
+
+          //Alas, EDACS standard does not provide a source LID on channel updates - try to work around this on the display end instead
+          state->lastsrc = 0;
 
           char mode[8]; //allow, block, digital enc
           sprintf (mode, "%s", "");

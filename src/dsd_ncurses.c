@@ -2011,7 +2011,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       call_matrix[state->edacs_vc_lcn][0] = lls;
       call_matrix[state->edacs_vc_lcn][1] = state->edacs_vc_lcn;
       call_matrix[state->edacs_vc_lcn][2] = state->lasttg;
-      call_matrix[state->edacs_vc_lcn][3] = state->lastsrc;
+      //EDACS standard does not provide source LIDs on channel update messages; instead, for the sake of display, let's
+      //assume the prior source for a given LCN is still accurate, unless we have an updated one provided.
+      //
+      //If you MUST have perfectly-accurate source LIDs, look at the logged CC messages yourself - incorrect source LIDs
+      //may be displayed if we miss an initial call channel assignment.
+      if (state->ea_mode == 1 || state->lastsrc != 0)
+        call_matrix[state->edacs_vc_lcn][3] = state->lastsrc;
       call_matrix[state->edacs_vc_lcn][4] = 1;
       call_matrix[state->edacs_vc_lcn][5] = time(NULL);
     }
