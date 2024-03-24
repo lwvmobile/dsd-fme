@@ -1017,9 +1017,25 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //April 1998. Where real world systems are found to diverge from this bulletin, please note the basis for the
       //deviation.
 
+      //Reverse engineered from Quebec STM system; occurs immediately prior to Voice Group Channel Update
+      if (mt_a == 0x0)
+      {
+        //LID and transmission trunking values are not confirmed, need validation
+        int lid = ((fr_1t & 0x1FC0000000) >> 23) | ((fr_4t & 0xFE0000000) >> 29);
+        int lcn = (fr_1t & 0x1F000000) >> 24;
+        int is_tx_trunk = (fr_1t & 0x800000) >> 23;
+        int group = (fr_1t & 0x7FF000) >> 12;
+
+        fprintf (stderr, "%s", KYEL);
+        fprintf (stderr, " Voice Group Channel Assignment :: Analog Group [%04d] LID [%05d] LCN [%02d]%s", group, lid, lcn, get_lcn_status_string(lcn));
+        if (is_tx_trunk == 0) fprintf (stderr, " [message trunking]");
+        fprintf (stderr, "%s", KNRM);
+
+        // TODO: Actually process the call
+      }
       //Voice Group Channel Assignment (6.2.4.1)
       //Emergency Voice Group Channel Assignment (6.2.4.2)
-      if (mt_a == 0x2 || mt_a == 0x3)
+      else if (mt_a == 0x2 || mt_a == 0x3)
       {
         int is_emergency = (mt_a == 0x3) ? 1 : 0;
         int lid = ((fr_1t & 0x1FC0000000) >> 23) | ((fr_4t & 0xFE0000000) >> 29);
