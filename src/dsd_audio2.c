@@ -12,6 +12,9 @@
 #include "dsd.h"
 #include <math.h>
 
+//NOTE: Tones produce ringing sound when put through the hpf_d, may want to look into tweaking it,
+//or looking for a way to store is_tone by glancing at ambe_d values and not running hpf_d on them
+
 //TODO: WAV File saving (works fine on shorts, but on float, writing short to wav is not auto-gained, 
 //so super quiet, either convert to float wav files, or run processAudio AFTER memcpy of the temp_buf)
 
@@ -785,6 +788,10 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
   //likewise, override and unmute if TG hold matches TG
   if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
 
+  //test hpf
+  if (opts->use_hpf_d == 1)
+    hpf_dL(state, state->s_l, 160);
+
   //interleave left and right channels from the short storage area
   for (i = 0; i < 160; i++)
   {
@@ -1057,7 +1064,7 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
   short stereo_samp2[320]; //8k 2-channel stereo interleave mix
   short stereo_samp3[320]; //8k 2-channel stereo interleave mix
   short stereo_samp4[320];
-
+  short empss[160]; //this is used to see if we want to run HPF on an empty set
   short empty[320]; //this is used to see if we want to play a single 2v or double 2v or not
 
   memset (stereo_samp1, 0, sizeof(stereo_samp1));
@@ -1066,7 +1073,7 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
   memset (stereo_samp4, 0, sizeof(stereo_samp4));
 
   memset (empty, 0, sizeof(empty));
-  
+  memset (empss, 0, sizeof(empss));
 
   //p25p2 enc checkdown for whether or not to fill the stereo sample or not for playback or writing
   encL = encR = 1;
@@ -1148,6 +1155,24 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
   //likewise, override and unmute if TG hold matches TG
   if (state->tg_hold != 0 && state->tg_hold == TGL) encL = 0;
   if (state->tg_hold != 0 && state->tg_hold == TGR) encR = 0;
+
+  //test hpf
+  if (opts->use_hpf_d == 1)
+  {
+    hpf_dL(state, state->s_l4[0], 160);
+    hpf_dL(state, state->s_l4[1], 160);
+    if (memcmp(empss, state->s_l4[2], sizeof(empss)) != 0)
+      hpf_dL(state, state->s_l4[2], 160);
+    if (memcmp(empss, state->s_l4[3], sizeof(empss)) != 0)
+      hpf_dL(state, state->s_l4[3], 160);
+
+    hpf_dR(state, state->s_r4[0], 160);
+    hpf_dR(state, state->s_r4[1], 160);
+    if (memcmp(empss, state->s_r4[2], sizeof(empss)) != 0)
+      hpf_dR(state, state->s_r4[2], 160);
+    if (memcmp(empss, state->s_r4[3], sizeof(empss)) != 0)
+      hpf_dR(state, state->s_r4[3], 160);
+  }
 
   //interleave left and right channels from the short storage area
   for (i = 0; i < 160; i++)
