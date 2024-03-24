@@ -239,8 +239,8 @@ typedef struct
   SF_INFO *audio_in_file_info;
 
   uint32_t rtlsdr_center_freq;
-  int rtlsdr_ppm_error; 
-  int audio_in_type; 
+  int rtlsdr_ppm_error;
+  int audio_in_type;
   char audio_out_dev[1024];
   int audio_out_fd;
   int audio_out_fdR; //right channel audio for OSS hack
@@ -398,7 +398,7 @@ typedef struct
   char group_in_file[1024];
   char lcn_in_file[1024];
   char chan_in_file[1024];
-  char key_in_file[1024];  
+  char key_in_file[1024];
   //end import filenames
 
   //reverse mute
@@ -491,7 +491,7 @@ typedef struct
   short s_ru[160*6]; //single sample right
   short s_l4u[4][160*6]; //quad sample for up to a P25p2 4V
   short s_r4u[4][160*6]; //quad sample for up to a P25p2 4V
-  //end 
+  //end
   int audio_out_idx;
   int audio_out_idx2;
   int audio_out_idxR;
@@ -654,7 +654,7 @@ typedef struct
 
   char dmr_cach_fragment[4][17]; //unsure of size, will need to check/verify
   int dmr_cach_counter; //counter for dmr_cach_fragments 0-3; not sure if needed yet.
-  
+
   //dmr talker alias new/fixed stuff
   uint8_t dmr_alias_format[2]; //per slot
   uint8_t dmr_alias_len[2]; //per slot
@@ -743,7 +743,7 @@ typedef struct
 
   //edacs
   int ea_mode;
-  int esk_mode;
+
   unsigned short esk_mask;
   unsigned long long int edacs_site_id;
   int edacs_lcn_count; //running tally of lcn's observed on edacs system
@@ -1240,7 +1240,7 @@ bool crc8_ok(uint8_t bits[], unsigned int len);
 //modified CRC functions for SB/RC
 uint8_t crc7(uint8_t bits[], unsigned int len);
 uint8_t crc3(uint8_t bits[], unsigned int len);
-uint8_t crc4(uint8_t bits[], unsigned int len); 
+uint8_t crc4(uint8_t bits[], unsigned int len);
 
 //LFSR and LFSRP code courtesy of https://github.com/mattames/LFSR/
 void LFSR(dsd_state * state);
