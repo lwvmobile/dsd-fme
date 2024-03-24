@@ -7,6 +7,9 @@
  *
  * LWVMOBILE
  * 2022-08 DSD-FME Florida Man Edition
+ *
+ * ilyacodes
+ * 2024-03 EDACS-FME display improvements
  *-----------------------------------------------------------------------------*/
 
 
@@ -110,13 +113,13 @@ char * DMRBusrtTypes[32] = {
   "R34D     ",
   "IDLE     ",
   "R1_D     ",
-  "ERR      ", 
+  "ERR      ",
   "DUID ERR ",
   "R-S ERR  ",
   "CRC ERR  ",
   "NULL     ",
-  "VOICE", 
-  "         ",  
+  "VOICE",
+  "         ",
   "INIT     ",
   "INIT     ",
   "PTT",      //20 MAC
@@ -188,7 +191,7 @@ void beeper (dsd_opts * opts, dsd_state * state, int lr)
 
       if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 0)
         pa_simple_write(opts->pulse_digi_dev_out, samp_s,  160*2, NULL);
-      
+
     }
 
     else if (opts->audio_out_type == 8) //UDP Audio
@@ -204,7 +207,7 @@ void beeper (dsd_opts * opts, dsd_state * state, int lr)
 
       if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 0)
         udp_socket_blaster (opts, state, 160*2, samp_s);
-      
+
     }
 
     else if (opts->audio_out_type == 1) //STDOUT
@@ -245,10 +248,10 @@ void beeper (dsd_opts * opts, dsd_state * state, int lr)
         samp_su[(i*6)+4] = outbuf[4];
         samp_su[(i*6)+5] = outbuf[5];
       }
-      
+
       write (opts->audio_out_fd, samp_su, 960*2);
     }
-    
+
   }
 
 }
@@ -328,7 +331,7 @@ char *choicesc[] = {
   "Setup and Start RTL Input ",
   "Retune RTL Dongle         ",
   "Toggle C4FM/QPSK (P2 TDMA CC)",
-  "Toggle C4FM/QPSK (P1 FDMA CC)", 
+  "Toggle C4FM/QPSK (P1 FDMA CC)",
   "Start TCP Direct Link Audio",
   "Configure RIGCTL",
   "Stop All Decoded WAV Saving",
@@ -415,7 +418,7 @@ void ncursesOpen (dsd_opts * opts, dsd_state * state)
   //this is primarily used to push a quick audio blip through OSS so it will show up in the mixer immediately
   // if (opts->audio_out_type == 2 || opts->audio_out_type == 5)
   //   beeper (opts, state, 0); //causes crash in Cygwin when mixed input/output
-  
+
   //terminate all values
   for (int i = 0; i < 10; i++)
     sprintf (alias_ch[i], "%s", "");
@@ -462,7 +465,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     closePulseOutput (opts);
   }
 
-  //close OSS output 
+  //close OSS output
   if (opts->audio_out_type == 2 || opts->audio_out_type == 5)
   {
     close (opts->audio_out_fd);
@@ -760,7 +763,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
               opts->rtl_dev_index = i;
               break;
             }
-            
+
           }
 
           entry_win = newwin(17, WIDTH+20, starty+10, startx+10);
@@ -861,7 +864,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         //   if (opts->audio_out == 0)
         //   {
         //     opts->audio_out = 1;
-        //     opts->audio_out_type = 0; 
+        //     opts->audio_out_type = 0;
         //     // state->audio_out_buf_p = 0;
         //     // state->audio_out_buf_pR = 0;
         //     state->audio_out_idx = 0;
@@ -933,7 +936,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
               opts->audio_in_type = 0;
             }
             else opts->audio_in_type = 5;
-            
+
           }
 
           state->audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
@@ -1222,7 +1225,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         wscanw(entry_win, "%lld", &state->R);
         noecho();
         if (state->R > 0x7FFF) state->R = 0x7FFF;
-        
+
         state->keyloader = 0; //turn off keyloader
       }
       //toggle enforcement of basic privacy key over enc bit set on traffic
@@ -1844,7 +1847,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
   {
     openOSSOutput (opts);
   }
-  
+
 
   if (opts->audio_in_type == 0) //reopen pulse input if it is the specified input method
   {
@@ -1854,7 +1857,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
   if (opts->audio_in_type == 3) //open rtl input if it is the specified input method
   {
     // ncursesPrinter (opts, state); //not sure why this was placed here originally, but causes a double free core dump when calling free(timestr)
-    #ifdef USE_RTLSDR 
+    #ifdef USE_RTLSDR
     if (opts->rtl_started == 0)
     {
       opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
@@ -1892,7 +1895,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_in_type != 1) //can't run getch/menu when using STDIN -
   {
-    timeout(0);  // 
+    timeout(0);  //
     c = getch(); //
   }
 
@@ -1908,7 +1911,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //Variable reset/set section
 
   //set lls sync types
-  if (state->synctype >= 0 && state->synctype < 39) 
+  if (state->synctype >= 0 && state->synctype < 39)
   {
     lls = state->synctype;
   }
@@ -2002,16 +2005,22 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //Edacs - ProVoice
   if ( (lls == 14 || lls == 15 || lls == 37 || lls == 38) && state->carrier == 1)
   {
-   
-    if (state->edacs_vc_lcn != -1)      
+
+    if (state->edacs_vc_lcn != -1)
     {
       call_matrix[state->edacs_vc_lcn][0] = lls;
       call_matrix[state->edacs_vc_lcn][1] = state->edacs_vc_lcn;
-      call_matrix[state->edacs_vc_lcn][2] = state->lasttg; 
-      call_matrix[state->edacs_vc_lcn][3] = state->lastsrc; 
+      call_matrix[state->edacs_vc_lcn][2] = state->lasttg;
+      //EDACS standard does not provide source LIDs on channel update messages; instead, for the sake of display, let's
+      //assume the prior source for a given LCN is still accurate, unless we have an updated one provided.
+      //
+      //If you MUST have perfectly-accurate source LIDs, look at the logged CC messages yourself - incorrect source LIDs
+      //may be displayed if we miss an initial call channel assignment.
+      if (state->ea_mode == 1 || state->lastsrc != 0)
+        call_matrix[state->edacs_vc_lcn][3] = state->lastsrc;
       call_matrix[state->edacs_vc_lcn][4] = 1;
       call_matrix[state->edacs_vc_lcn][5] = time(NULL);
-    } 
+    }
 
   }
 
@@ -2074,7 +2083,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
 
   }
-  
+
   //TODO: Find better placement for these
   if ( strcmp(state->str50a, "") != 0 )
     sprintf (alias_ch[9], "%s", state->str50a);
@@ -2257,7 +2266,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //     state->lastsrc = 0;
   //     rd = 0;
   //     tg = 0;
-  //   } 
+  //   }
   //   if (state->dmrburstR == 2 && state->dmr_end_alert[1] == 0) //if TLC and flag not tripped
   //   {
   //     beeper (opts, state, 1);
@@ -2266,7 +2275,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //     state->lastsrcR = 0;
   //     rdR = 0;
   //     tgR = 0;
-  //   } 
+  //   }
   // }
 
   //Start Printing Section
@@ -2276,7 +2285,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("------------------------------------------------------------------------------\n");
     printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "AW (20231015)");
-    printw ("------------------------------------------------------------------------------\n"); 
+    printw ("------------------------------------------------------------------------------\n");
   }
 #elif LIMAZULUTWEAKS
   if (opts->ncurses_compact == 1)
@@ -2318,7 +2327,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       #elif ZDEV_BUILD
       if (i == 5) printw (" %s ", "AW ");
       if (i == 6) printw (" %s \n", GIT_TAG);
-      #else 
+      #else
       if (i == 5) printw (" %s ", "AW ");
       if (i == 6) printw (" %s \n", GIT_TAG);
       #endif
@@ -2383,7 +2392,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw (" SQ: %i;", opts->rtl_squelch_level);
       printw (" RMS: %04li;", opts->rtl_rms);
       printw (" BW: %i kHz;", opts->rtl_bandwidth);
-      printw (" FRQ: %i;", opts->rtlsdr_center_freq); 
+      printw (" FRQ: %i;", opts->rtlsdr_center_freq);
     if (opts->rtl_udp_port != 0) printw ("\n| External RTL Tuning on UDP Port: %i", opts->rtl_udp_port);
     printw ("\n");
   }
@@ -2505,6 +2514,66 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else printw (" - Black List Mode\n");
   }
   #endif
+  //print additional information for EDACS modes and toggles
+  #ifdef PRETTY_COLORS
+  if (opts->p25_trunk == 1 && opts->frame_provoice == 1)
+  {
+    printw ("| \\--EDACS -");
+    if (state->ea_mode == -1)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" Standard/Network");
+      printw (" Extended Address");
+      attron(COLOR_PAIR(4));
+    }
+    else if (state->ea_mode == 0)
+    {
+      printw (" Standard/Network");
+      attron(COLOR_PAIR(2));
+      printw (" Extended Address");
+      attron(COLOR_PAIR(4));
+    }
+    else if (state->ea_mode == 1)
+    {
+      attron(COLOR_PAIR(2));
+      printw (" Standard/Network");
+      attron(COLOR_PAIR(4));
+      printw (" Extended Address");
+    }
+    printw (" Mode (S);");
+
+    printw(" ESK Mask: %02X", state->esk_mask);
+    printw (" (A); ");
+
+    attron(COLOR_PAIR(4));
+    printw ("\n");
+  }
+  #else //set on to UPPER CASE, off to lower case
+  if (opts->p25_trunk == 1 && opts->frame_provoice == 1)
+  {
+    printw ("| \\--EDACS -");
+    if (state->ea_mode == -1)
+    {
+      printw (" standard/network");
+      printw (" extended address");
+    }
+    else if (state->ea_mode == 0)
+    {
+      printw (" STANDARD/NETWORK");
+      printw (" extended address");
+    }
+    else if (state->ea_mode == 1)
+    {
+      printw (" standard/network");
+      printw (" EXTENDED ADDRESS");
+    }
+    printw (" Mode (S);");
+
+    printw(" ESK Mask: %02X", state->esk_mask);
+    printw (" (A) Toggle; ");
+    printw ("\n");
+  }
+  #endif
   // if (opts->aggressive_framesync == 0) printw ("| Selective CRC ERR Bypass Enabled (RAS) \n");
   if (state->M == 1)
   {
@@ -2521,9 +2590,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->scanner_mode == 1)
   {
     printw ("| Scan Mode: ");
-    if (state->lcn_freq_roll != 0) 
+    if (state->lcn_freq_roll != 0)
       printw (" Frequency: %.06lf Mhz", (double)state->trunk_lcn_freq[state->lcn_freq_roll-1]/1000000);
-    printw (" Speed: %.02lf sec \n", opts->trunk_hangtime);  //not sure values less than 1 make a difference, may be system/environment dependent 
+    printw (" Speed: %.02lf sec \n", opts->trunk_hangtime);  //not sure values less than 1 make a difference, may be system/environment dependent
   }
 
   if (opts->reverse_mute == 1) printw ("| Reverse Mute - Muting Unencrypted Voice\n");
@@ -2565,7 +2634,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   printw ("\n");
   printw ("| In Level:    [%02d%%] \n", level);
-  
+
   if (opts->dmr_stereo == 0)
   {
     printw ("| Voice Error: [%X][%X]", state->errs&0xF, state->errs2&0xF);
@@ -2588,7 +2657,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   printw ("------------------------------------------------------------------------------\n");
 
   printw ("--Call Info-------------------------------------------------------------------\n");
-  
+
   //DSTAR
   if (lls == 6 || lls == 7 || lls == 18 || lls == 19)
   {
@@ -2629,7 +2698,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw("RESERVED (%012llx) ", state->m17_dst);
     else
       printw("%s", state->m17_dst_str);
-    
+
     printw ("\n");
     printw ("| ");
 
@@ -2639,7 +2708,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else
       printw("%s", state->m17_src_str);
 
-    
+
     printw ("\n");
     printw ("| ");
 
@@ -2666,7 +2735,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (state->m17_enc == 3)
     {
       printw (" Reserved Enc - Type: %d", state->m17_enc_st);
-    }   
+    }
 
     printw ("\n");
 
@@ -2727,7 +2796,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //       printw ("%c", state->ysf_txt[i][j]);
     //   }
     //   // printw (" "); //just a single space between each 'block'
-    // } 
+    // }
 
     printw ("\n");
 
@@ -2750,7 +2819,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         {
           printw (" - Frequency: %.06lf Mhz ", (double)state->p25_cc_freq/1000000);
         }
-      } 
+      }
       else if (opts->p25_is_tuned == 1)
       {
         if (idas == 0) printw ("Monitoring RTCH Channel"); //Traffic Channel
@@ -2763,8 +2832,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
       printw ("\n");
     }
-      
-    
+
+
 
     printw ("| ");
     // #ifdef LIMAZULUTWEAKS
@@ -2862,10 +2931,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
 
     //Active Trunking Channels (NXDN and IDAS)
-    if (1 == 1) //opts->p25_trunk 
+    if (1 == 1) //opts->p25_trunk
     {
       printw ("\n");
-      printw ("| "); 
+      printw ("| ");
 
       //active channel display
       attron(COLOR_PAIR(4));
@@ -2883,8 +2952,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     printw("\n");
   }
-  
-  //P25 and DMR BS/MS 
+
+  //P25 and DMR BS/MS
   if (  lls == 0 || lls == 1 || lls == 12 || lls == 13 || lls == 10 ||
         lls == 11 || lls == 32 || lls == 33 || lls == 34 || lls == 35 || lls == 36)
   {
@@ -2895,7 +2964,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       // printw ("%s %s", state->dmr_branding, state->dmr_branding_sub);
       printw ("%s ", state->dmr_branding);
       printw ("%s", state->dmr_branding_sub);
-      printw ("%s", state->dmr_site_parms); //site id, net id, etc 
+      printw ("%s", state->dmr_site_parms); //site id, net id, etc
       if (state->dmr_rest_channel > 0)
       {
         printw ("Rest LSN: %02d; ", state->dmr_rest_channel);
@@ -2908,7 +2977,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         printw ("Freq: %.06lf MHz", (double)state->p25_cc_freq/1000000);
       }
-      
+
     }
     else if (lls == 32 || lls == 33 || lls == 34)
     {
@@ -2937,7 +3006,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw (" Phase 2 Invalid Parameters ");
         attron(COLOR_PAIR(3));
       }
-      else 
+      else
       {
         if (state->p25_cc_freq != 0)
         {
@@ -3059,7 +3128,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     //Not always correct, or correct at all, depends on context
     //this is already in the call_string anyways
-    
+
     // if(state->dmrburstL == 16 && state->dmr_so == 0x40 && state->R == 0) //0100 0000
     // {
     //   attron(COLOR_PAIR(2));
@@ -3096,13 +3165,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
       //Embedded GPS (not LRRP)
       printw  ("%s ", state->dmr_embedded_gps[0]);
-            
+
       //Embedded Talker Alias Blocks
       for (int i = 0; i < 4; i++)
       {
         for (int j = 0; j < 7; j++)
         {
-          printw ("%s", state->dmr_alias_block_segment[0][i][j]); 
+          printw ("%s", state->dmr_alias_block_segment[0][i][j]);
         }
       }
 
@@ -3145,7 +3214,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     //Slot 2 [1] -- Also Including DMR MS now to keep the display more 'uniform' in nature
     // if (lls < 30 || lls == 35 || lls == 36)
-    { 
+    {
       printw ("| SLOT 2 - ");
       if (state->dmrburstR < 16 && state->carrier == 1 && state->lasttgR > 0 && state->lastsrcR > 0)
       {
@@ -3161,10 +3230,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw ("%s | ", state->call_string[1]);
       printw ("%s ", DMRBusrtTypes[state->dmrburstR]);
 
-      if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && ( state->dmrburstL == 16 || state->dmrburstL == 21) && (state->dmrburstR == 16 || state->dmrburstR == 21) ) printw ("*M*"); 
+      if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && ( state->dmrburstL == 16 || state->dmrburstL == 21) && (state->dmrburstR == 16 || state->dmrburstR == 21) ) printw ("*M*");
 
       printw ("\n");
-      
+
       printw ("| V XTRA | "); //10 spaces
 
       if(state->dmrburstR == 16 && state->payload_algidR == 0 && (state->dmr_soR & 0xCF) == 0x40) //4F or CF mask?
@@ -3285,7 +3354,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
       if(state->dmrburstR == 16 || state->dmrburstR == 21) //only during call
       {
-        
+
         //Embedded GPS (not LRRP)
         attron(COLOR_PAIR(4));
         printw  ("%s ", state->dmr_embedded_gps[1]);
@@ -3295,7 +3364,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         {
           for (int j = 0; j < 7; j++)
           {
-            printw ("%s", state->dmr_alias_block_segment[1][i][j]); 
+            printw ("%s", state->dmr_alias_block_segment[1][i][j]);
           }
         }
 
@@ -3313,7 +3382,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         attron(COLOR_PAIR(4));
         printw  ("%s", state->dmr_lrrp_gps[1]);
       }
-      
+
       //Group Name Labels from CSV import
       if (state->dmrburstR == 16 || state->dmrburstR > 19)
       {
@@ -3401,7 +3470,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //EDACS and ProVoice
   if (lls == 14 || lls == 15 || lls == 37 || lls == 38)
   {
-    attroff (COLOR_PAIR(3)); //colors off for EDACS 
+    attroff (COLOR_PAIR(3)); //colors off for EDACS
     if (state->edacs_site_id != 0)
     {
       if (opts->p25_is_tuned == 0)
@@ -3412,8 +3481,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         printw ("| Monitoring Voice Channel - LCN [%02d]\n", state->edacs_tuned_lcn);
         //since we are tuned, keep updating the time so it doesn't disappear during call
-        call_matrix[state->edacs_tuned_lcn][5] = time(NULL); 
-      } 
+        call_matrix[state->edacs_tuned_lcn][5] = time(NULL);
+      }
       printw ("| SITE [%03lld][%02llX]", state->edacs_site_id, state->edacs_site_id);
 
       if (state->ea_mode == 1)
@@ -3430,11 +3499,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     for (i = 1; i <= state->edacs_lcn_count; i++)
     {
-      //shim 443 afs in here for display purposes
-      int a  = (call_matrix[i][3] >> 7) & 0xF; 
-      int fs = call_matrix[i][3] & 0x7F;
-      printw ("| - LCN [%02d][%.06lf] MHz", i, (double)state->trunk_lcn_freq[i-1]/1000000); 
-      
+      // Compute 4:4:3 AFS for display purposes only
+      int a  = (call_matrix[i][2] >> 7) & 0xF;
+      int fs = call_matrix[i][2] & 0x7F;
+      printw ("| - LCN [%02d][%010.06lf] MHz", i, (double)state->trunk_lcn_freq[i-1]/1000000);
+
       //print Control Channel on LCN line with the current Control Channel
       if ( (i) == state->edacs_cc_lcn)
       {
@@ -3443,11 +3512,32 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         attroff (COLOR_PAIR(1));
       }
       //print active calls on corresponding LCN line
-      if ((i != state->edacs_cc_lcn) && time(NULL) - call_matrix[i][5] < 2) 
+      if ((i != state->edacs_cc_lcn) && time(NULL) - call_matrix[i][5] < 2)
       {
-        attron (COLOR_PAIR(3)); 
-        if (state->ea_mode == 1) printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
-        else printw (" AFS [%03lld][%02d-%03d]", call_matrix[i][3], a, fs );
+        attron (COLOR_PAIR(3));
+        if (state->ea_mode == 1) {
+          if (call_matrix[i][2] + 1 == 0)
+            // System all-call
+            printw (" TGT [ SYSTEM ] SRC [%8lld] All-Call", call_matrix[i][3] );
+          else if (call_matrix[i][2] > 100000)
+            // I-Call
+            printw (" TGT [%8lld] SRC [%8lld] I-Call", call_matrix[i][2] - 100000, call_matrix[i][3] );
+          else
+            // Group call
+            printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
+        }
+        else
+        {
+          if (call_matrix[i][2] + 1 == 0)
+            // System all-call
+            printw (" TGT [SYSTEM][SYSTEM] SRC [%5lld] All-Call", call_matrix[i][3] );
+          else if (call_matrix[i][2] > 10000)
+            // I-Call
+            printw (" TGT [%6lld][ UNIT ] SRC [%5lld] I-Call", call_matrix[i][2] - 10000, call_matrix[i][3] );
+          else
+            // Group call
+            printw (" TGT [%6lld][%02d-%03d] SRC [%5lld]", call_matrix[i][2], a, fs, call_matrix[i][3] );
+        }
         for (int k = 0; k < state->group_tally; k++)
         {
           if (state->group_array[k].groupNumber == call_matrix[i][2] && call_matrix[i][2] != 0)
@@ -3463,14 +3553,35 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
             break;
           }
         }
-        attroff (COLOR_PAIR(3)); 
+        attroff (COLOR_PAIR(3));
       }
-      //print dying or dead calls in red for x seconds longer 
-      if ( (i != state->edacs_cc_lcn) && (time(NULL) - call_matrix[i][5] >= 2) && (time(NULL) - call_matrix[i][5] < 5) ) 
+      //print dying or dead calls in red for x seconds longer
+      if ( (i != state->edacs_cc_lcn) && (time(NULL) - call_matrix[i][5] >= 2) && (time(NULL) - call_matrix[i][5] < 5) )
       {
-        attron (COLOR_PAIR(2)); 
-        if (state->ea_mode == 1) printw (" TG [%5lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
-        else printw (" AFS [%03lld][%02d-%03d]", call_matrix[i][3], a, fs );
+        attron (COLOR_PAIR(2));
+        if (state->ea_mode == 1) {
+          if (call_matrix[i][2] + 1 == 0)
+            // System all-call
+            printw (" TGT [ SYSTEM ] SRC [%8lld] All-Call", call_matrix[i][3] );
+          else if (call_matrix[i][2] > 100000)
+            // I-Call
+            printw (" TGT [%8lld] SRC [%8lld] I-Call", call_matrix[i][2] - 100000, call_matrix[i][3] );
+          else
+            // Group call
+            printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
+        }
+        else
+        {
+          if (call_matrix[i][2] + 1 == 0)
+            // System all-call
+            printw (" TGT [SYSTEM][SYSTEM] SRC [%5lld] All-Call", call_matrix[i][3] );
+          else if (call_matrix[i][2] > 10000)
+            // I-Call
+            printw (" TGT [%6lld][ UNIT ] SRC [%5lld] I-Call", call_matrix[i][2] - 10000, call_matrix[i][3] );
+          else
+            // Group call
+            printw (" TGT [%6lld][%02d-%03d] SRC [%5lld]", call_matrix[i][2], a, fs, call_matrix[i][3] );
+        }
         for (int k = 0; k < state->group_tally; k++)
         {
           if (state->group_array[k].groupNumber == call_matrix[i][2] && call_matrix[i][2] != 0)
@@ -3486,14 +3597,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
             break;
           }
         }
-        attroff (COLOR_PAIR(2)); 
+        attroff (COLOR_PAIR(2));
       }
       if (i == state->edacs_tuned_lcn && opts->p25_is_tuned == 1) printw (" **T**"); //asterisk which lcn is opened
       printw ("\n");
     }
     if (state->carrier == 1)
     {
-      attron (COLOR_PAIR(3)); 
+      attron (COLOR_PAIR(3));
     }
   }
 
@@ -3585,23 +3696,39 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //EDACS and ProVoice, outside of timestamp loop
       if (call_matrix[j][0] == 14 || call_matrix[j][0] == 15 || call_matrix[j][0] == 37 || call_matrix[j][0] == 38 )
       {
-        if (call_matrix[j][3] != 0) 
+        if (call_matrix[j][2] != 0)
         {
           printw ("| ");
-          printw ("%s ", getDateC(call_matrix[j][5]) ); 
+          printw ("%s ", getDateC(call_matrix[j][5]) );
           printw ("%s ", getTimeC(call_matrix[j][5]) );
           printw ("LCN [%2lld] ", call_matrix[j][1]);
           if (state->ea_mode == 1)
           {
-            printw ("Group [%8lld] ", call_matrix[j][2]);
-            printw ("Source [%8lld] ", call_matrix[j][3]);
+            if (call_matrix[j][2] + 1 == 0)
+              // System all-call
+              printw ("Target [ SYSTEM ] Source [%8lld] All-Call", call_matrix[j][3]);
+            else if (call_matrix[j][2] > 100000)
+              // I-Call
+              printw ("Target [%8lld] Source [%8lld] I-Call", call_matrix[j][2] - 100000, call_matrix[j][3]);
+            else
+              // Group call
+              printw ("Target [%8lld] Source [%8lld]", call_matrix[j][2], call_matrix[j][3]);
           }
-          else 
+          else
           {
-            int a  = (call_matrix[j][3] >> 7) & 0xF; 
-            int fs = call_matrix[j][3] & 0x7F;
-            printw (" AFS [%03lld][%02d-%03d]", call_matrix[j][3], a, fs );
-          }          
+            // Compute 4:4:3 AFS for display purposes only
+            int a  = (call_matrix[j][2] >> 7) & 0xF;
+            int fs = call_matrix[j][2] & 0x7F;
+            if (call_matrix[j][2] + 1 == 0)
+              // System all-call
+              printw ("Target [SYSTEM][SYSTEM] Source [%5lld] All-Call", call_matrix[j][3]);
+            else if (call_matrix[j][2] > 10000)
+              // I-Call
+              printw ("Target [%6lld][ UNIT ] Source [%5lld] I-Call", call_matrix[j][2] - 10000, call_matrix[j][3]);
+            else
+              // Group call
+              printw ("Target [%6lld][%02d-%03d] Source [%5lld]", call_matrix[j][2], a, fs, call_matrix[j][3]);
+          }
           //test
           for (int k = 0; k < state->group_tally; k++)
           {
@@ -3621,7 +3748,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           //end test
           printw ("\n");
         }
-         
+
       }
     } //end Call History
     //fence bottom
@@ -3678,7 +3805,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else if (opts->slot1_on == 0)
     {
       opts->slot1_on = 1;
-      if (opts->audio_out_type == 5) //OSS 48k/1 
+      if (opts->audio_out_type == 5) //OSS 48k/1
       {
         opts->slot_preference = 0; //slot 1
         // opts->slot2_on = 0; //turn off slot 2
@@ -3704,7 +3831,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else if (opts->slot2_on == 0)
     {
       opts->slot2_on = 1;
-      if (opts->audio_out_type == 5) //OSS 48k/1 
+      if (opts->audio_out_type == 5) //OSS 48k/1
       {
         opts->slot_preference = 1; //slot 2
         // opts->slot1_on = 0; //turn off slot 1
@@ -3910,14 +4037,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     fprintf (stderr, "-T %s wav file directory does not exist\n", wav_file_directory);
     fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
-    mkdir(wav_file_directory, 0700); 
+    mkdir(wav_file_directory, 0700);
   }
   opts->dmr_stereo_wav = 1;
   //catch all in case of no file name set, won't crash or something
   sprintf (opts->wav_out_file, "./%s/DSD-FME-T1.wav", opts->wav_out_dir);
   sprintf (opts->wav_out_fileR, "./%s/DSD-FME-T2.wav",  opts->wav_out_dir);
-  openWavOutFileL (opts, state); 
-  openWavOutFileR (opts, state); 
+  openWavOutFileL (opts, state);
+  openWavOutFileR (opts, state);
  }
 
   //this one could cause issues, but seems okay
@@ -3934,15 +4061,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   //
   #ifdef AERO_BUILD //this might be okay on Aero as well, will need to look into and/or test
-  // 
+  //
   #else
   if (c == 115) //'s' key, stop playing wav or symbol in files
   {
     if (opts->symbolfile != NULL)
     {
-      if (opts->audio_in_type == 4) 
+      if (opts->audio_in_type == 4)
       {
-        fclose(opts->symbolfile); 
+        fclose(opts->symbolfile);
       }
     }
 
@@ -3956,12 +4083,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       opts->audio_in_type = 0;
       openPulseInput(opts);
     }
-    else opts->audio_in_type = 5; //exitflag = 1; 
-    
+    else opts->audio_in_type = 5; //exitflag = 1;
+
   }
   #endif
-  
-  //makes buzzing sound when locked out in new audio config and short, probably something to do with processaudio running or not running 
+
+  //makes buzzing sound when locked out in new audio config and short, probably something to do with processaudio running or not running
   if (state->lasttg != 0 && opts->frame_provoice != 1 && c == 33) //SHIFT+'1' key (exclamation point), lockout slot 1 or conventional tg from tuning/playback during session
   {
     state->group_array[state->group_tally].groupNumber = state->lasttg;
@@ -4097,40 +4224,40 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   // if (c == 48) //'0' key, toggle upsampled audio smoothing
   // {
   //   if (state->audio_smoothing == 1) state->audio_smoothing = 0;
-  //   else state->audio_smoothing = 1; 
+  //   else state->audio_smoothing = 1;
   // }
 
-  if (opts->p25_trunk == 1 && c == 119) //'w' key, toggle white list/black list mode 
+  if (opts->p25_trunk == 1 && c == 119) //'w' key, toggle white list/black list mode
   {
     if (opts->trunk_use_allow_list == 1) opts->trunk_use_allow_list = 0;
-    else opts->trunk_use_allow_list = 1; 
+    else opts->trunk_use_allow_list = 1;
   }
 
   if (opts->p25_trunk == 1 && c == 117) //'u' key, toggle tune private calls
   {
     if (opts->trunk_tune_private_calls == 1) opts->trunk_tune_private_calls = 0;
-    else opts->trunk_tune_private_calls = 1; 
+    else opts->trunk_tune_private_calls = 1;
   }
 
   if (opts->p25_trunk == 1 && c == 100) //'d' key, toggle tune data calls
   {
     if (opts->trunk_tune_data_calls == 1) opts->trunk_tune_data_calls = 0;
-    else opts->trunk_tune_data_calls = 1; 
+    else opts->trunk_tune_data_calls = 1;
   }
 
   if (opts->p25_trunk == 1 && c == 101) //'e' key, toggle tune enc calls (P25 only on certain grants)
   {
     if (opts->trunk_tune_enc_calls == 1) opts->trunk_tune_enc_calls = 0;
-    else opts->trunk_tune_enc_calls = 1; 
+    else opts->trunk_tune_enc_calls = 1;
   }
 
   if (opts->p25_trunk == 1 && c == 103) //'g' key, toggle tune group calls
   {
     if (opts->trunk_tune_group_calls == 1) opts->trunk_tune_group_calls = 0;
-    else opts->trunk_tune_group_calls = 1; 
+    else opts->trunk_tune_group_calls = 1;
   }
 
-  if (c == 70) //'F' key - toggle agressive sync/crc failure/ras 
+  if (c == 70) //'F' key - toggle agressive sync/crc failure/ras
   {
     if (opts->aggressive_framesync == 0) opts->aggressive_framesync = 1;
     else opts->aggressive_framesync = 0;
@@ -4138,7 +4265,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (c == 68) //'D' key - Reset DMR Site Parms/Call Strings, etc.
   {
-    //dmr trunking/ncurses stuff 
+    //dmr trunking/ncurses stuff
     state->dmr_rest_channel = -1; //init on -1
     state->dmr_mfid = -1; //
 
@@ -4200,7 +4327,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         if (opts->audio_in_type == 0) closePulseInput(opts);
         fprintf (stderr, "TCP Socket Connected Successfully.\n");
         opts->audio_in_type = 8;
-      } 
+      }
     }
     else fprintf (stderr, "TCP Socket Connection Error.\n");
   }
@@ -4272,7 +4399,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       state->symbolCenter = 3;
     }
 
-    fprintf (stderr, "\n User Activated Return to CC; \n "); 
+    fprintf (stderr, "\n User Activated Return to CC; \n ");
 
   }
 
@@ -4318,15 +4445,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         state->lcn_freq_roll++;
         //check roll again if greater than expected, then go back to zero
-        if (state->lcn_freq_roll >= state->lcn_freq_count) 
+        if (state->lcn_freq_roll >= state->lcn_freq_count)
         {
           state->lcn_freq_roll = 0; //reset to zero
-        } 
+        }
       }
     }
 
     //check that we have a non zero value first, then tune next frequency
-    if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0) 
+    if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0)
     {
       //rigctl
       if (opts->use_rigctl == 1)
@@ -4343,7 +4470,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       }
 
       fprintf (stderr, "\n User Activated Channel Cycle;");
-      fprintf (stderr, "  Tuning to Frequency: %.06lf MHz\n", 
+      fprintf (stderr, "  Tuning to Frequency: %.06lf MHz\n",
                 (double)state->trunk_lcn_freq[state->lcn_freq_roll]/1000000);
 
     }
@@ -4365,22 +4492,47 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       state->samplesPerSymbol = 8;
       state->symbolCenter = 3;
-    } 
+    }
 
   }
 
-  if (opts->m17encoder == 1 && c == 92) //'\' key - toggle M17 encoder Encode + TX 
+  if (opts->m17encoder == 1 && c == 92) //'\' key - toggle M17 encoder Encode + TX
   {
     if (state->m17encoder_tx == 0) state->m17encoder_tx = 1;
     else state->m17encoder_tx = 0;
 
     //flag on the EOT marker to send last frame after toggling encoder to zero
     if (state->m17encoder_tx == 0) state->m17encoder_eot = 1;
-    
+
+  }
+
+  if(opts->frame_provoice == 1 && c == 65) //'A' Key, toggle ESK mask 0xA0
+  {
+    if (state->esk_mask == 0) state->esk_mask = 0xA0;
+    else state->esk_mask = 0;
+  }
+
+  if(opts->frame_provoice == 1 && c == 83) //'S' Key, toggle STD or EA mode and reset
+  {
+    if (state->ea_mode == -1) state->ea_mode = 0;
+    else if (state->ea_mode == 0) state->ea_mode = 1;
+    else state->ea_mode = 0;
+
+    //reset -- test to make sure these don't do weird things when reset
+    state->edacs_site_id = 0;
+    state->edacs_lcn_count = 0;
+    state->edacs_cc_lcn = 0;
+    state->edacs_vc_lcn = 0;
+    state->edacs_tuned_lcn = -1;
+    state->p25_cc_freq = 0;
+    opts->p25_is_tuned = 0;
+    state->lasttg = 0;
+    state->lastsrc = 0;
+
   }
 
   //anything with an entry box will need the inputs and outputs stopped first
-  //so probably just write a function to handle c input, and when c = certain values 
+  //so probably just write a function to handle c input, and when c = certain values
   //needing an entry box, then stop all of those
 
   //allocated memory pointer needs to be free'd each time
