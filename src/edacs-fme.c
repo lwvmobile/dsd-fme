@@ -527,7 +527,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
     // - KYEL - system data
     // - KGRN - voice group calls
     // - KCYN - voice individual calls
-    // - KMAG - voice all-calls
+    // - KMAG - voice other calls (interconnect, all-call, etc)
     // - KBLU - subscriber data
     // - KWHT - unknown/reserved
 
@@ -1119,7 +1119,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int lid = (fr_1t & 0x3FFF000) >> 12;
           int group = (fr_1t & 0x7FF000) >> 12;
 
-          fprintf (stderr, "%s", KGRN);
+          fprintf (stderr, "%s", KMAG);
           fprintf (stderr, " Interconnect Channel Assignment :: Type");
           if (mt_c == 0x2) fprintf (stderr, " [Voice]");
           else             fprintf (stderr, " [Reserved]");
