@@ -76,12 +76,22 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
   short analog3[960];
   short sample = 0; 
 
+  #define DEBUG_ANALOG //enable to digitize analog if 'data' bursts heard
+
+  uint8_t d1[192];
+  uint8_t d2[192];
+  uint8_t d3[192];
+
   state->last_cc_sync_time = time(NULL);
   state->last_vc_sync_time = time(NULL);
 
   memset (analog1, 0, sizeof(analog1));
   memset (analog2, 0, sizeof(analog2));
   memset (analog3, 0, sizeof(analog3));
+
+  memset (d1, 0, sizeof(d1));
+  memset (d2, 0, sizeof(d2));
+  memset (d3, 0, sizeof(d3));
 
   long int rms = opts->rtl_squelch_level + 1; //one more for the initial loop phase
   long int sql = opts->rtl_squelch_level;
@@ -205,6 +215,17 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       sr = sr << 1;
       sr += digitize (opts, state, (int)analog1[i]);
     }
+
+    #ifdef DEBUG_ANALOG
+    //save digitized samples to array for looking into those 'data' sounding bursts,
+    //this format assumes the same sample per symbol rateused in EDACS/PV
+    for (i = 0; i < 192; i++) //Samples Per Symbol is 5, so incrememnt every 5
+    {
+      d1[i] = digitize (opts, state, (int)analog1[i*5]);
+      d2[i] = digitize (opts, state, (int)analog2[i*5]);
+      d3[i] = digitize (opts, state, (int)analog3[i*5]);
+    }
+    #endif
 
     //Bugfix for buffer overflow from using digitize function, reset buffers
     if (state->dibit_buf_p > state->dibit_buf + 900000)
@@ -337,6 +358,24 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     {} //do nothing
     #else
     fprintf (stderr, "SQL HIT: %d; ", 5-cnt); //add cnt since user can't see red or green
+    #endif
+
+    #ifdef DEBUG_ANALOG
+    //debug digitized version of analog out when data bursts may be present
+    //NOTE: Without a 'framesync' these could be shifted into odd positions
+    if (opts->payload == 1)
+    {
+      fprintf (stderr, "\n A_DUMP: ");
+      for (i = 0; i < 24; i++)
+        fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(&d1[i*8], 8));
+      fprintf (stderr, "\n         ");
+      for (i = 0; i < 24; i++)
+        fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(&d2[i*8], 8));
+      fprintf (stderr, "\n         ");
+      for (i = 0; i < 24; i++)
+        fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(&d3[i*8], 8));
+      // fprintf (stderr, "\n");
+    }
     #endif
 
     if (count > 0) fprintf (stderr, "\n");
