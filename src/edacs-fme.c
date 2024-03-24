@@ -532,7 +532,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
     // - KWHT - unknown/reserved
 
     //Account for ESK, if any
-    fr_1t = fr_1t ^ (((unsigned long long int)state->esk_mask) << 32);
+    unsigned long long int fr_esk_mask = ((unsigned long long int)state->esk_mask) << 32;
+    fr_1t = fr_1t ^ fr_esk_mask;
+    fr_4t = fr_4t ^ fr_esk_mask;
 
     //Start Extended Addressing Mode 
     if (state->ea_mode == 1)
