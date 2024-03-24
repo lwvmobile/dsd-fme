@@ -1119,12 +1119,15 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int lid = (fr_1t & 0x3FFF000) >> 12;
           int group = (fr_1t & 0x7FF000) >> 12;
 
+          //Abstract away to a target, and be sure to check whether it's an individual call later
+          int target = (is_individual_id == 0) ? group : lid;
+          
           fprintf (stderr, "%s", KMAG);
           fprintf (stderr, " Interconnect Channel Assignment :: Type");
           if (mt_c == 0x2) fprintf (stderr, " [Voice]");
           else             fprintf (stderr, " [Reserved]");
-          if (is_individual_id == 1) fprintf (stderr, " LID [%05d]", lid);
-          else                       fprintf (stderr, " Group [%04d]", group);
+          if (is_individual_id == 1) fprintf (stderr, " LID [%05d]", target);
+          else                       fprintf (stderr, " Group [%04d]", target);
           fprintf (stderr, " LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
           fprintf (stderr, "%s", KNRM);
 
