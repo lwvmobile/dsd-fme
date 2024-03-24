@@ -1056,8 +1056,8 @@ initState (dsd_state * state)
 
   //edacs - may need to make these user configurable instead for stability on non-ea systems
   state->ea_mode = -1; //init on -1, 0 is standard, 1 is ea
-  state->esk_mode = -1; //same as above, but with esk or not
-  state->esk_mask = 0x0; //toggles from 0x0 to 0xA0 if esk mode enabled
+
+  state->esk_mask = 0x0; //esk mask value
   state->edacs_site_id = 0;
   state->edacs_lcn_count = 0;
   state->edacs_cc_lcn = 0;
@@ -1343,7 +1343,11 @@ usage ()
   printf ("  -fz             Decode only M17*\n");
   printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
-  printf ("  -fp             Decode only EDACS/ProVoice*\n");
+  printf ("  -fp             Decode only ProVoice*\n");
+  printf ("  -fh             Decode only EDACS Standard/ProVoice*\n");
+  printf ("  -fH             Decode only EDACS Standard/ProVoice with ESK 0xA0*\n");
+  printf ("  -fe             Decode only EDACS EA/ProVoice*\n");
+  printf ("  -fE             Decode only EDACS EA/ProVoice with ESK 0xA0*\n");
   printf ("  -fm             Decode only dPMR*\n");
   printf ("  -l            Disable DMR, dPMR, and NXDN input filtering\n");
   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
@@ -1426,7 +1430,7 @@ usage ()
   printf ("                 P25 - 12000; NXDN48 - 7000; NXDN96: 12000; DMR - 7000-12000; EDACS/PV - 12000-24000;\n"); //redo this, or check work, or whatever
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking or Scan Speed VC/sync loss hangtime in seconds. (default = 1 second)\n");
-  printf ("  -9            Force Enable EDACS Standard or Networked Mode if Auto Detection Fails \n");
+  // printf ("  -9            Force Enable EDACS Standard or Networked Mode if Auto Detection Fails \n");
   printf ("\n");
   printf (" Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
   printf (" Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
@@ -1694,9 +1698,10 @@ main (int argc, char **argv)
           fprintf (stderr, "TG Hold set to %d \n", state.tg_hold);
           break;
 
-        case '9': //This is a temporary fix for RR issue until a permanent fix can be found
+        case '9': //Leaving Enabled to maintain backwards compatability 
           state.ea_mode = 0;
-          fprintf (stderr,"Force Enabling EDACS Standard/Networked Mode Mode\n");
+          state.esk_mask = 0;
+          fprintf (stderr,"Force Enabling EDACS Standard/Networked Mode Mode without ESK.\n");
           break;
 
         //experimental audio monitoring
@@ -2190,9 +2195,134 @@ main (int argc, char **argv)
             fprintf (stderr,"Setting symbol rate to 9600 / second\n");
             fprintf (stderr,"Decoding only ProVoice frames.\n");
             fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
-            //misc tweaks
-            opts.rtl_bandwidth = 24;
-            opts.audio_gainA = 50.0f;
+          }
+          else if (optarg[0] == 'h') //standard / net w/o ESK
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 1;
+            state.ea_mode = 0;
+            state.esk_mask = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            state.samplesPerSymbol = 5;
+            state.symbolCenter = 2;
+            opts.mod_c4fm = 0;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 1;
+            state.rf_mod = 2;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.dmr_stereo = 0;
+            // opts.setmod_bw = 12500;
+            sprintf (opts.output_name, "EDACS/PV");
+            fprintf (stderr,"Setting symbol rate to 9600 / second\n");
+            fprintf (stderr,"Decoding EDACS STD/NET and ProVoice frames.\n");
+            fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
+          }
+          else if (optarg[0] == 'H') //standard / net w/ ESK
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 1;
+            state.ea_mode = 0;
+            state.esk_mask = 0xA0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            state.samplesPerSymbol = 5;
+            state.symbolCenter = 2;
+            opts.mod_c4fm = 0;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 1;
+            state.rf_mod = 2;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.dmr_stereo = 0;
+            // opts.setmod_bw = 12500;
+            sprintf (opts.output_name, "EDACS/PV");
+            fprintf (stderr,"Setting symbol rate to 9600 / second\n");
+            fprintf (stderr,"Decoding EDACS STD/NET w/ ESK and ProVoice frames.\n");
+            fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
+          }
+          else if (optarg[0] == 'e') //extended addressing w/o ESK
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 1;
+            state.ea_mode = 1;
+            state.esk_mask = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            state.samplesPerSymbol = 5;
+            state.symbolCenter = 2;
+            opts.mod_c4fm = 0;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 1;
+            state.rf_mod = 2;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.dmr_stereo = 0;
+            // opts.setmod_bw = 12500;
+            sprintf (opts.output_name, "EDACS/PV");
+            fprintf (stderr,"Setting symbol rate to 9600 / second\n");
+            fprintf (stderr,"Decoding EDACS Extended Addressing and ProVoice frames.\n");
+            fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
+          }
+          else if (optarg[0] == 'E') //extended addressing w/ ESK
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 1;
+            state.ea_mode = 1;
+            state.esk_mask = 0xA0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            state.samplesPerSymbol = 5;
+            state.symbolCenter = 2;
+            opts.mod_c4fm = 0;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 1;
+            state.rf_mod = 2;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.dmr_stereo = 0;
+            // opts.setmod_bw = 12500;
+            sprintf (opts.output_name, "EDACS/PV");
+            fprintf (stderr,"Setting symbol rate to 9600 / second\n");
+            fprintf (stderr,"Decoding EDACS Extended Addressing w/ ESK and ProVoice frames.\n");
+            fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
           }
           else if (optarg[0] == '1')
           {
@@ -2821,7 +2951,6 @@ main (int argc, char **argv)
       // fprintf (stderr, "UDP %d \n", opts.rtl_udp_port);
       fprintf (stderr, "VOL %d \n", opts.rtl_volume_multiplier);
       opts.audio_in_type = 3;
-      // opts.rtl_volume_multiplier = 2; //TODO: Make this an extra value on the end
       rtl_ok = 1;
       #endif
 

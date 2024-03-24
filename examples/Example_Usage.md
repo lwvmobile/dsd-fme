@@ -8,7 +8,11 @@
 -fa Legacy Auto (not recommended)
 -fi NXDN48
 -fn NXDN96
--fp EDACS/Provoice
+-fp Provoice
+-fh EDACS Standard / Network
+-fH EDACS Standard / Network with ESK
+-fe EDACS Extended Addresssing
+-fE EDACS Extended Addressing with ESK
 -fm dPMR, also may need to use -xd if inverted dPMR.
 -f1 P25P1
 -f2 P25P2 (may need to specify wacn/sys/nac manually if traffic channel)
@@ -100,11 +104,11 @@ and in a second terminal tab, same folder, run
 
 EDACS Trunking (w/ channel map import)
 
---EDACS/PV Trunking using RIGCTL and TCP Direct Link Audio inside of SDR++ (Tested and Working on EDACS/EDACS-EA with Provoice, Analog Voice Monitoring and Per Call is Experimental)
+--EDACS/PV Trunking using RIGCTL and TCP Direct Link Audio inside of SDR++ (see switches above for STD/NET, EA, and ESK modes)
 
-`dsd-fme -i tcp -fp -C channel_map.csv -G group.csv -T -U 4532 -N 2> log.ans`
+`dsd-fme -i tcp -fE -C channel_map.csv -G group.csv -T -U 4532 -N 2> log.ans`
 
---NXDN48 Trunking (standard band plan) with SDR++ (untested for frequency accuracy)
+--NXDN48 Trunking (Direct Frequency Assignment) with SDR++ (untested for frequency accuracy)
 
 `dsd-fme -fi -i tcp -T -U 4532 -N 2> log.ans`
 
@@ -201,6 +205,9 @@ l - Hold TG in Slot 2 on TDMA Systems, or clear current hold
 
 C - Drop Call and Return to CC during trunking operation
 L - Manual Cycle Forward Channel Tuned when RIGCTL or using RTL input and channel csv loaded
+
+S - Toggle Between EDACS Standard/Network and Extended Addressing Mode
+A - Toggle EDACS ESK Mask
 
 ```
 
