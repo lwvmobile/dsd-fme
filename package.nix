@@ -7,6 +7,7 @@
 , pulseaudio
 , rtl-sdr
 , itpp
+, codec2
 , portaudioSupport ? true
 , portaudio ? null
 }:
@@ -26,6 +27,7 @@ stdenv.mkDerivation {
     rtl-sdr
     ncurses.dev
     pulseaudio.dev
+    codec2
   ] ++ lib.optionals portaudioSupport [ portaudio ];
 
   doCheck = true;
