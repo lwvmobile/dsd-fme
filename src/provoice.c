@@ -214,12 +214,12 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   processMbeFrame (opts, state, NULL, NULL, imbe7100_fr1);
   if (opts->floating_point == 0)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 1)
     playSynthesizedVoiceFM(opts, state);
   processMbeFrame (opts, state, NULL, NULL, imbe7100_fr2);
   if (opts->floating_point == 0)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 1)
     playSynthesizedVoiceFM(opts, state);
 
@@ -392,12 +392,12 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   processMbeFrame (opts, state, NULL, NULL, imbe7100_fr1);
   if (opts->floating_point == 0)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 1)
     playSynthesizedVoiceFM(opts, state);
   processMbeFrame (opts, state, NULL, NULL, imbe7100_fr2);
   if (opts->floating_point == 0)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 1)
     playSynthesizedVoiceFM(opts, state);
 

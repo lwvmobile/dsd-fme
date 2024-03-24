@@ -994,6 +994,8 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot); //floa
 void agsm (dsd_opts * opts, dsd_state * state, short * input, int len); //short gain control for analog things
 void analog_gain (dsd_opts * opts, dsd_state * state, short * input, int len); //manual gain handling for analong things
 //new short stuff
+void playSynthesizedVoiceMS (dsd_opts * opts, dsd_state * state);    //short mono mix
+void playSynthesizedVoiceMSR (dsd_opts * opts, dsd_state * state);   //short mono mix R (needed for OSS 48k input/output)
 void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state);   //short stereo mix
 void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state);  //short stereo mix 3v2 DMR
 void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state);  //short stereo mix 4v2 P25p2

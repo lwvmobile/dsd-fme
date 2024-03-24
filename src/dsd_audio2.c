@@ -724,6 +724,128 @@ void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
 
 }
 
+//Mono - Short (SB16LE) - Drop-in replacement for playSyntesizedVoice, but easier to manipulate
+void playSynthesizedVoiceMS (dsd_opts * opts, dsd_state * state)
+{
+  int i;
+  size_t len = state->audio_out_idx;
+
+  //debug
+  // fprintf (stderr, " L LEN: %d", len);
+
+  short mono_samp[len];
+  memset (mono_samp, 0, len*sizeof(short));
+
+  if (opts->slot1_on == 0)
+    goto MS_END;
+
+  if (len == 160)
+  {
+    for (i = 0; i < len; i++)
+     mono_samp[i] = state->s_l[i];
+  }
+  else if (len == 960)
+  {
+    state->audio_out_buf_p -= 960; //rewind first
+    for (i = 0; i < len; i++)
+    {
+      mono_samp[i] = *state->audio_out_buf_p;
+      state->audio_out_buf_p++;
+    }
+  }
+
+  if (opts->use_hpf_d == 1)
+    hpf_dL(state, state->s_l, len);
+
+  if (opts->audio_out_type == 0) //Pulse Audio
+    pa_simple_write(opts->pulse_digi_dev_out, mono_samp, len*2, NULL);
+
+  if (opts->audio_out_type == 8) //UDP Audio
+    udp_socket_blaster (opts, state, len*2, mono_samp);
+
+  if (opts->audio_out_type == 1 || opts->audio_out_type == 2 || opts->audio_out_type == 5) //STDOUT or OSS
+    write (opts->audio_out_fd, mono_samp, len*2);
+
+  MS_END:
+
+  //run cleanup since we pulled stuff from processAudio
+  state->audio_out_idx = 0;
+
+  //set short temp buffer to baseline
+  memset (state->s_l, 0, sizeof(state->s_l));
+
+  if (state->audio_out_idx2 >= 800000)
+  {
+    state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
+    state->audio_out_buf_p = state->audio_out_buf + 100;
+    memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
+    memset (state->audio_out_buf, 0, 100 * sizeof (short));
+    state->audio_out_idx2 = 0;
+  }
+
+}
+
+//Mono - Short (SB16LE) - Drop-in replacement for playSyntesizedVoiceR, but easier to manipulate
+void playSynthesizedVoiceMSR (dsd_opts * opts, dsd_state * state)
+{
+  int i;
+  size_t len = state->audio_out_idxR;
+
+  //debug
+  // fprintf (stderr, " R LEN: %d", len);
+
+  short mono_samp[len];
+  memset (mono_samp, 0, len*sizeof(short));
+
+  if (opts->slot2_on == 0)
+    goto MS_ENDR;
+
+  if (len == 160)
+  {
+    for (i = 0; i < len; i++)
+     mono_samp[i] = state->s_r[i];
+  }
+  else if (len == 960)
+  {
+    state->audio_out_buf_pR -= 960; //rewind first
+    for (i = 0; i < len; i++)
+    {
+      mono_samp[i] = *state->audio_out_buf_pR;
+      state->audio_out_buf_pR++;
+    }
+  }
+
+  if (opts->use_hpf_d == 1)
+    hpf_dR(state, mono_samp, len);
+
+  if (opts->audio_out_type == 0) //Pulse Audio
+    pa_simple_write(opts->pulse_digi_dev_out, mono_samp, len*2, NULL);
+
+  if (opts->audio_out_type == 8) //UDP Audio
+    udp_socket_blaster (opts, state, len*2, mono_samp);
+
+  if (opts->audio_out_type == 1 || opts->audio_out_type == 2 || opts->audio_out_type == 5) //STDOUT or OSS
+    write (opts->audio_out_fd, mono_samp, len*2);
+
+  MS_ENDR:
+
+  //run cleanup since we pulled stuff from processAudioR
+  state->audio_out_idxR = 0;
+
+  //set short temp buffer to baseline
+  memset (state->s_r, 0, sizeof(state->s_r));
+
+  if (state->audio_out_idx2R >= 800000)
+  {
+    state->audio_out_float_buf_pR = state->audio_out_float_bufR + 100;
+    state->audio_out_buf_pR = state->audio_out_bufR + 100;
+    memset (state->audio_out_float_bufR, 0, 100 * sizeof (float));
+    memset (state->audio_out_bufR, 0, 100 * sizeof (short));
+    state->audio_out_idx2R = 0;
+  }
+
+}
+
 //Stereo Mix - Short (SB16LE) -- When Playing Short FDMA samples when setup for stereo output
 void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
 {
@@ -731,7 +853,7 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
   int i;
   int encL;
   short stereo_samp1[320]; //8k 2-channel stereo interleave mix
-  memset (stereo_samp1, 1, sizeof(stereo_samp1));
+  memset (stereo_samp1, 0, sizeof(stereo_samp1));
 
   //enc checkdown for whether or not to fill the stereo sample or not for playback or writing
   encL = 0;

@@ -737,7 +737,7 @@ void ysf_ehr (dsd_opts * opts, dsd_state * state, uint8_t dbuf[180], int start, 
         writeSynthesizedVoice (opts, state);
 
       if (opts->pulse_digi_out_channels == 1)
-        playSynthesizedVoice(opts, state);
+        playSynthesizedVoiceMS(opts, state);
 
       if(opts->pulse_digi_out_channels == 2)
         playSynthesizedVoiceSS(opts, state);
@@ -1027,7 +1027,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
         if (opts->wav_out_f != NULL)
           writeSynthesizedVoice (opts, state);
         if (opts->pulse_digi_out_channels == 1)
-          playSynthesizedVoice(opts, state);
+          playSynthesizedVoiceMS(opts, state);
 
         if(opts->pulse_digi_out_channels == 2)
           playSynthesizedVoiceSS(opts, state);
@@ -1147,7 +1147,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
           writeSynthesizedVoice (opts, state);
 
         if (opts->pulse_digi_out_channels == 1)
-          playSynthesizedVoice(opts, state);
+          playSynthesizedVoiceMS(opts, state);
 
         if(opts->pulse_digi_out_channels == 2)
           playSynthesizedVoiceSS(opts, state);
