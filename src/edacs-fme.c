@@ -991,7 +991,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
       {
         fprintf (stderr, " FR_1 [%010llX]", fr_1t);
         fprintf (stderr, " FR_4 [%010llX]", fr_4t);
-        fprintf (stderr, " (MT-A: %X) ", mt_a);
+        fprintf (stderr, " (MT-A: %X", mt_a);
         // MT-B is meaningless if MT-A is not 0x7
         if (mt_a == 0x7)
         {
