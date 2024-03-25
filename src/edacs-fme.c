@@ -690,8 +690,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
         lcn = (fr_1t & 0x3E0000000) >> 29;
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
-        fprintf (stderr, "%s", KBLU);
-        fprintf (stderr, " Data Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
+        fprintf (stderr, "%s", KGRN);
+        fprintf (stderr, " TDMA Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
       }
       //Data Group Grant Update
@@ -700,8 +700,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
         lcn = (fr_1t & 0x3E0000000) >> 29;
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
-        fprintf (stderr, "%s", KGRN);
-        fprintf (stderr, " TDMA Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
+        fprintf (stderr, "%s", KBLU);
+        fprintf (stderr, " Data Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
       }
       //Voice Call Grant Update
