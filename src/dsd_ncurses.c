@@ -3511,54 +3511,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw (" Control Channel");
         attroff (COLOR_PAIR(1));
       }
+
+      int print_call = 0;
       //print active calls on corresponding LCN line
       if ((i != state->edacs_cc_lcn) && time(NULL) - call_matrix[i][5] < 2)
       {
+        print_call = 3;
         attron (COLOR_PAIR(3));
-        if (state->ea_mode == 1) {
-          if (call_matrix[i][2] + 1 == 0)
-            // System all-call
-            printw (" TGT [ SYSTEM ] SRC [%8lld] All-Call", call_matrix[i][3] );
-          else if (call_matrix[i][2] > 100000)
-            // I-Call
-            printw (" TGT [%8lld] SRC [%8lld] I-Call", call_matrix[i][2] - 100000, call_matrix[i][3] );
-          else
-            // Group call
-            printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
-        }
-        else
-        {
-          if (call_matrix[i][2] + 1 == 0)
-            // System all-call
-            printw (" TGT [SYSTEM][SYSTEM] SRC [%5lld] All-Call", call_matrix[i][3] );
-          else if (call_matrix[i][2] > 10000)
-            // I-Call
-            printw (" TGT [%6lld][ UNIT ] SRC [%5lld] I-Call", call_matrix[i][2] - 10000, call_matrix[i][3] );
-          else
-            // Group call
-            printw (" TGT [%6lld][%02d-%03d] SRC [%5lld]", call_matrix[i][2], a, fs, call_matrix[i][3] );
-        }
-        for (int k = 0; k < state->group_tally; k++)
-        {
-          if (state->group_array[k].groupNumber == call_matrix[i][2] && call_matrix[i][2] != 0)
-          {
-            printw (" [%s]", state->group_array[k].groupName);
-            printw ("[%s]", state->group_array[k].groupMode);
-            break;
-          }
-          else if (state->group_array[k].groupNumber == call_matrix[i][3] && call_matrix[i][3] != 0)
-          {
-            printw (" [%s]", state->group_array[k].groupName);
-            printw ("[%s]", state->group_array[k].groupMode);
-            break;
-          }
-        }
-        attroff (COLOR_PAIR(3));
       }
       //print dying or dead calls in red for x seconds longer
-      if ( (i != state->edacs_cc_lcn) && (time(NULL) - call_matrix[i][5] >= 2) && (time(NULL) - call_matrix[i][5] < 5) )
+      else if ( (i != state->edacs_cc_lcn) && (time(NULL) - call_matrix[i][5] >= 2) && (time(NULL) - call_matrix[i][5] < 5) )
       {
+        print_call = 2;
         attron (COLOR_PAIR(2));
+      }
+
+      if (print_call != 0)
+      {
         if (state->ea_mode == 1) {
           if (call_matrix[i][2] + 1 == 0)
             // System all-call
@@ -3597,9 +3566,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
             break;
           }
         }
-        attroff (COLOR_PAIR(2));
+
+        if (print_call == 3)
+          attroff (COLOR_PAIR(3));
+        else if (print_call == 2)
+          attroff (COLOR_PAIR(2));
       }
-      if (i == state->edacs_tuned_lcn && opts->p25_is_tuned == 1) printw (" **T**"); //asterisk which lcn is opened
+
+      if (i == state->edacs_tuned_lcn && opts->p25_is_tuned == 1) printw (" **T**"); //asterisk which lcn is tuned
       printw ("\n");
     }
     if (state->carrier == 1)
