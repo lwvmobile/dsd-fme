@@ -542,6 +542,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
       unsigned char mt1 = (fr_1t & 0xF800000000) >> 35;
       unsigned char mt2 = (fr_1t & 0x780000000) >> 31;
 
+      state->edacs_vc_call_type = 0;
+
       //TODO: initialize where they are actually used
       unsigned long long int site_id = 0; //we probably could just make this an int as well as the state variables
       unsigned char lcn = 0;
@@ -1028,6 +1030,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
       unsigned char mt_a = (fr_1t & 0xE000000000) >> 37;
       unsigned char mt_b = (fr_1t & 0x1C00000000) >> 34;
       unsigned char mt_d = (fr_1t & 0x3E0000000) >> 29;
+
+      state->edacs_vc_call_type = 0;
 
       //Add raw payloads and MT-A/MT-B/MT-D for easy debug
       if (opts->payload == 1)

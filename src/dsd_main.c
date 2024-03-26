@@ -1047,7 +1047,7 @@ initState (dsd_state * state)
 
   //edacs - may need to make these user configurable instead for stability on non-ea systems
   state->ea_mode = -1; //init on -1, 0 is standard, 1 is ea
-
+  state->edacs_vc_call_type = 0;
   state->esk_mask = 0x0; //esk mask value
   state->edacs_site_id = 0;
   state->edacs_lcn_count = 0;
