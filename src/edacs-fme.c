@@ -1244,7 +1244,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int mt_c = (fr_1t & 0x300000000) >> 32;
           int lcn = (fr_1t & 0xF8000000) >> 27;
           int is_individual = (fr_1t & 0x4000000) >> 26;
-          int is_emergency = is_individual ^ (fr_1t & 0x2000000) >> 25; //Emergency is exclusive with being an individual call
+          int is_emergency = 0;
+          if (is_individual == 0)
+            is_emergency = (fr_1t & 0x2000000) >> 25;
           int group = (fr_1t & 0x7FF000) >> 12;
           int lid = (fr_1t & 0x3FFF000) >> 12;
           int source = (fr_4t & 0x3FFF000) >> 12; //Source only present in individual calls
