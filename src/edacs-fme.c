@@ -729,7 +729,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
                          state->lasttg = group; // 0 is a valid TG, it's the all-call for agency 0
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
-                               state->edacs_vc_call_type  = EDACS_IS_GROUP;
+                               state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_GROUP;
         if (is_digital == 1)   state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
         if (is_emergency == 1) state->edacs_vc_call_type |= EDACS_IS_EMERGENCY;
 
