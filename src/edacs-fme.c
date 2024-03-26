@@ -1226,16 +1226,31 @@ void edacs(dsd_opts * opts, dsd_state * state)
           //Abstract away to a target, and be sure to check whether it's an individual call later
           int target = (is_individual_id == 0) ? group : lid;
 
+          //Technically only MT-C 0x2 is defined in TSB 69.3 - using and extrapolating on legacy code
+          int is_digital = (mt_c == 2 || mt_c == 3) ? 1 : 0;
+
           fprintf (stderr, "%s", KMAG);
           fprintf (stderr, " Interconnect Channel Assignment :: Type");
-          if (mt_c == 0x2) fprintf (stderr, " [Voice]");
-          else             fprintf (stderr, " [Reserved]");
+          if (is_digital == 0) fprintf (stderr, " Analog");
+          else                 fprintf (stderr, " Digital");
           if (is_individual_id == 1) fprintf (stderr, " LID [%05d]", target);
           else                       fprintf (stderr, " Group [%04d]", target);
           fprintf (stderr, " LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
           fprintf (stderr, "%s", KNRM);
 
-          // TODO: Actually process the call
+          //LCNs >= 26 are reserved to indicate status (queued, busy, denied, etc)
+          if (lcn > state->edacs_lcn_count && lcn < 26)
+          {
+            state->edacs_lcn_count = lcn;
+          }
+          state->edacs_vc_lcn = lcn;
+
+          //Call info for state
+          state->lasttg = 0;
+          state->lastsrc = target;
+
+                               state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_INTERCONNECT;
+          if (is_digital == 1) state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
         }
         //Channel Updates (6.2.4.7)
         //Source/caller being present in individual call channel updates reverse engineered from Montreal STM system
