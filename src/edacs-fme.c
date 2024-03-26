@@ -726,9 +726,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int source = (fr_4t & 0xFFFFF000) >> 12;
 
         //Call info for state
+        if (lcn != 0)    state->edacs_vc_lcn = lcn;
                          state->lasttg = group; // 0 is a valid TG, it's the all-call for agency 0
         if (source != 0) state->lastsrc = source;
-        if (lcn != 0)    state->edacs_vc_lcn = lcn;
+
+        //Call type for state
                                state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_GROUP;
         if (is_digital == 1)   state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
         if (is_emergency == 1) state->edacs_vc_call_type |= EDACS_IS_EMERGENCY;
@@ -830,9 +832,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int source = (fr_4t & 0xFFFFF000) >> 12;
 
         //Call info for state
+        if (lcn != 0)    state->edacs_vc_lcn = lcn;
         if (target != 0) state->lasttg = target;
         if (source != 0) state->lastsrc = source;
-        if (lcn != 0)    state->edacs_vc_lcn = lcn;
+
+        //Call type for state
                              state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_INDIVIDUAL;
         if (is_digital == 1) state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
 
@@ -907,9 +911,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
 
         //Call info for state
-        if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
-                         state->edacs_vc_call_type = EDACS_IS_INDIVIDUAL;
+        if (source != 0) state->lastsrc = source;
+
+        //Call type for state
+        state->edacs_vc_call_type = EDACS_IS_INDIVIDUAL;
       }
       //System All-Call Grant Update
       else if (mt1 == 0x16)
@@ -927,9 +933,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int source = (fr_4t & 0xFFFFF000) >> 12;
 
         //Call info for state
+        if (lcn != 0)    state->edacs_vc_lcn = lcn;
                          state->lasttg = 0;
         if (source != 0) state->lastsrc = source;
-        if (lcn != 0)    state->edacs_vc_lcn = lcn;
+
+        //Call type for state
                                state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_ALL_CALL;
         if (is_digital == 1)   state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
 
@@ -1084,11 +1092,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
         {
           state->edacs_lcn_count = lcn;
         }
-        state->edacs_vc_lcn = lcn;
 
         //Call info for state
-        state->lasttg = group;
-        state->lastsrc = lid;
+        if (lcn != 0) state->edacs_vc_lcn = lcn;
+                      state->lasttg = group;
+                      state->lastsrc = lid;
+
+        //Call type for state
                                state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_GROUP;
         if (is_digital == 1)   state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
         if (is_emergency == 1) state->edacs_vc_call_type |= EDACS_IS_EMERGENCY;
@@ -1187,12 +1197,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
         {
           state->edacs_lcn_count = lcn;
         }
-        state->edacs_vc_lcn = lcn;
 
         //Call info for state
-        state->lasttg = target;
-        state->lastsrc = 0;
+        if (lcn != 0) state->edacs_vc_lcn = lcn;
+                      state->lasttg = target;
+                      state->lastsrc = 0;
 
+        //Call type for state
         if (is_individual_call == 0) state->edacs_vc_call_type = EDACS_IS_GROUP;
         else                         state->edacs_vc_call_type = EDACS_IS_INDIVIDUAL;
       }
@@ -1249,12 +1260,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
           {
             state->edacs_lcn_count = lcn;
           }
-          state->edacs_vc_lcn = lcn;
 
           //Call info for state
-          state->lasttg = 0;
-          state->lastsrc = target;
+          if (lcn != 0) state->edacs_vc_lcn = lcn;
+                        state->lasttg = 0;
+                        state->lastsrc = target;
 
+          //Call type for state
                                state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_INTERCONNECT;
           if (is_digital == 1) state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
         }
@@ -1305,13 +1317,14 @@ void edacs(dsd_opts * opts, dsd_state * state)
           {
             state->edacs_lcn_count = lcn;
           }
-          state->edacs_vc_lcn = lcn;
 
           //Call info for state
-          state->lasttg = target;
-          //Alas, EDACS standard does not provide a source LID on channel updates - try to work around this on the display end instead
-          state->lastsrc = 0;
+          if (lcn != 0) state->edacs_vc_lcn = lcn;
+                        state->lasttg = target;
+                        //Alas, EDACS standard does not provide a source LID on channel updates - try to work around this on the display end instead
+                        state->lastsrc = 0;
 
+          //Call type for state
                                   state->edacs_vc_call_type  = EDACS_IS_VOICE;
           if (is_individual == 0) state->edacs_vc_call_type |= EDACS_IS_GROUP;
           else                    state->edacs_vc_call_type |= EDACS_IS_INDIVIDUAL;
@@ -1421,12 +1434,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
           {
             state->edacs_lcn_count = lcn;
           }
-          state->edacs_vc_lcn = lcn;
 
           //Call info for state
-          state->lasttg = target;
-          state->lastsrc = source;
+          if (lcn != 0) state->edacs_vc_lcn = lcn;
+                        state->lasttg = target;
+                        state->lastsrc = source;
 
+          //Call type for state
                                state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_INDIVIDUAL;
           if (is_digital == 1) state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
 
@@ -1708,12 +1722,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
             {
               state->edacs_lcn_count = lcn;
             }
-            state->edacs_vc_lcn = lcn;
 
             //Call info for state
-            state->lasttg = 0;
-            state->lastsrc = lid;
+            if (lcn != 0) state->edacs_vc_lcn = lcn;
+                          state->lasttg = 0;
+                          state->lastsrc = lid;
 
+            //Call type for state
                                  state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_ALL_CALL;
             if (is_digital == 1) state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
 
