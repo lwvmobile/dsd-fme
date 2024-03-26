@@ -3735,9 +3735,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
                 printw ("Unknown call type");
 
               // Call flags
-              if ((call_matrix[i][4] & EDACS_IS_DIGITAL) == 0)   printw (" [Ana]");
+              if ((call_matrix[j][4] & EDACS_IS_DIGITAL) == 0)   printw (" [Ana]");
               else                                               printw (" [Dig]");
-              if ((call_matrix[i][4] & EDACS_IS_EMERGENCY) != 0) printw ("[EM]");
+              if ((call_matrix[j][4] & EDACS_IS_EMERGENCY) != 0) printw ("[EM]");
             }
             else
               // Data call
@@ -3769,9 +3769,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
                 printw ("Unknown call type");
 
               // Call flags
-              if ((call_matrix[i][4] & EDACS_IS_DIGITAL) == 0)   printw (" [Ana]");
+              if ((call_matrix[j][4] & EDACS_IS_DIGITAL) == 0)   printw (" [Ana]");
               else                                               printw (" [Dig]");
-              if ((call_matrix[i][4] & EDACS_IS_EMERGENCY) != 0) printw ("[EM]");
+              if ((call_matrix[j][4] & EDACS_IS_EMERGENCY) != 0) printw ("[EM]");
             }
             else
               // Data call
