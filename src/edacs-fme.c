@@ -1682,7 +1682,69 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
             fprintf (stderr, "%s", KNRM);
 
-            // TODO: Actually process the call
+            //LCNs >= 26 are reserved to indicate status (queued, busy, denied, etc)
+            if (lcn > state->edacs_lcn_count && lcn < 26)
+            {
+              state->edacs_lcn_count = lcn;
+            }
+            state->edacs_vc_lcn = lcn;
+
+            //Call info for state
+            state->lasttg = 0;
+            state->lastsrc = lid;
+
+                                 state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_ALL_CALL;
+            if (is_digital == 1) state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
+
+            char mode[8]; //allow, block, digital enc
+            sprintf (mode, "%s", "");
+
+            //if we are using allow/whitelist mode, then write 'A' to mode for allow - always allow all-calls by default
+            if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "A");
+
+            //NOTE: Restructured below so that analog and digital are handled the same, just that when
+            //its analog, it will now start edacs_analog which will while loop analog samples until
+            //signal level drops (RMS, or a dotting sequence is detected)
+
+            //this is working now with the new import setup
+            if ((opts->trunk_tune_group_calls == 1) && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
+            {
+              if (lcn > 0 && lcn < 26 && state->edacs_cc_lcn != 0 && state->trunk_lcn_freq[lcn-1] != 0) //don't tune if zero (not loaded or otherwise)
+              {
+                //openwav file and do per call right here
+                if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
+                {
+                  sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld SRC %05d All-Call.wav", getDateE(), timestr, state->edacs_site_id, state->lastsrc);
+                  if (is_digital == 0) openWavOutFile48k (opts, state); //analog at 48k
+                  else                 openWavOutFile (opts, state); //digital
+                }
+
+                if (opts->use_rigctl == 1)
+                {
+                  //only set bandwidth IF we have an original one to fall back to (experimental, but requires user to set the -B 12000 or -B 24000 value manually)
+                  if (opts->setmod_bw != 0)
+                  {
+                    if (is_digital == 0) SetModulation(opts->rigctl_sockfd, 7000); //narrower bandwidth, but has issues with dotting sequence
+                    else                 SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
+                  }
+
+                  SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because our index starts at zero
+                  state->edacs_tuned_lcn = lcn;
+                  opts->p25_is_tuned = 1;
+                  if (is_digital == 0) edacs_analog(opts, state, target, lcn);
+                }
+
+                if (opts->audio_in_type == 3) //rtl dongle
+                {
+                  #ifdef USE_RTLSDR
+                  rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+                  state->edacs_tuned_lcn = lcn;
+                  opts->p25_is_tuned = 1;
+                  if (is_digital == 0) edacs_analog(opts, state, target, lcn);
+                  #endif
+                }
+              }
+            }
           }
           //Dynamic Regrouping (6.2.4.20)
           else if (mt_d == 0x10)
