@@ -1046,7 +1046,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
       //April 1998. Where real world systems are found to diverge from this bulletin, please note the basis for the
       //deviation.
 
-      //MT-A 0 and 1 as analog/digital mode indicator reverse engineered from Quebec STM and San Antonio/Bexar Co
+      //MT-A 0 and 1 as analog/digital mode indicator reverse engineered from Montreal STM and San Antonio/Bexar Co
       //systems; occurs immediately prior to Voice Group Channel Update.
       //
       //Voice Group Channel Assignment (6.2.4.1)
@@ -1224,14 +1224,16 @@ void edacs(dsd_opts * opts, dsd_state * state)
           // TODO: Actually process the call
         }
         //Channel Updates (6.2.4.7)
+        //Source/caller being present in individual call channel updates reverse engineered from Montreal STM system
         else if (mt_b == 0x3)
         {
           int mt_c = (fr_1t & 0x300000000) >> 32;
           int lcn = (fr_1t & 0xF8000000) >> 27;
           int is_individual = (fr_1t & 0x4000000) >> 26;
-          int is_emergency = (fr_1t & 0x2000000) >> 25;
+          int is_emergency = is_individual ^ (fr_1t & 0x2000000) >> 25; //Emergency is exclusive with being an individual call
           int group = (fr_1t & 0x7FF000) >> 12;
-          int lid = ((fr_1t & 0x1FC0000) >> 11) | ((fr_4t & 0x7F000) >> 12);
+          int lid = (fr_1t & 0x3FFF000) >> 12;
+          int source = (fr_4t & 0x3FFF000) >> 12; //Source only present in individual calls
 
           //Abstract away to a target, and be sure to check whether it's an individual call later
           int target = (is_individual == 0) ? group : lid;
@@ -1253,7 +1255,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           if (is_digital == 0) fprintf (stderr, " Analog");
           else                 fprintf (stderr, " Digital");
           if (is_individual == 0) fprintf (stderr, " Group [%04d]", target);
-          else                    fprintf (stderr, " LID [%05d]", target);
+          else                    fprintf (stderr, " Callee [%05d] Caller [%05d]", target, source);
           fprintf (stderr, " LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
           if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
           if (is_emergency == 1)
@@ -1362,19 +1364,20 @@ void edacs(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "%s", KNRM);
         }
         //Individual Call Channel Assignment (6.2.4.9)
+        //Analog and digital flag reverse engineered from Montreal STM system
         else if (mt_b == 0x5)
         {
           int is_tx_trunk = (fr_1t & 0x200000000) >> 33;
           int lcn = (fr_1t & 0xF8000000) >> 27;
-          int call_type = (fr_1t & 0x4000000) >> 26;
+          int is_digital = (fr_1t & 0x4000000) >> 26;
           int target = (fr_1t & 0x3FFF000) >> 12;
           int source = (fr_4t & 0x3FFF000) >> 12;
 
           fprintf (stderr, "%s", KCYN);
-          fprintf (stderr, " Individual Call Channel Assignment :: Type");
-          if (call_type == 1) fprintf (stderr, " [Voice]");
-          else                fprintf (stderr, " [Reserved]");
-          fprintf (stderr, " Caller [%05d] Callee [%05d] LCN [%02d]%s", source, target, lcn, get_lcn_status_string(lcn));
+          fprintf (stderr, " Individual Call Channel Assignment ::");
+          if (is_digital == 0) fprintf (stderr, " Analog");
+          else                 fprintf (stderr, " Digital");
+          fprintf (stderr, " Callee [%05d] Caller [%05d] LCN [%02d]%s", target, source, lcn, get_lcn_status_string(lcn));
           if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
           fprintf (stderr, "%s", KNRM);
 
@@ -1582,21 +1585,22 @@ void edacs(dsd_opts * opts, dsd_state * state)
             }
           }
           //System All-Call (6.2.4.19)
+          //Analog and digital flag extrapolated from reverse engineering of other messages
           else if (mt_d == 0x0F)
           {
             int lcn = (fr_1t & 0x1F000000) >> 24;
-            int qualifier = (fr_1t & 0x800000) >> 23;
+            int is_digital = (fr_1t & 0x800000) >> 23;
             int is_update = (fr_1t & 0x400000) >> 22;
             int is_tx_trunk = (fr_1t & 0x200000) >> 21;
-            int lid = ((fr_1t & 0x7F000) >> 5) | ((fr_4t & 0x7F000) >> 12);
+            int lid = ((fr_1t & 0x7F000) >> 12) | ((fr_4t & 0xFE000) >> 6);
 
             fprintf (stderr, "%s", KMAG);
             fprintf (stderr, " System All-Call Channel");
             if (is_update == 0) fprintf (stderr, " Assignment");
             else                fprintf (stderr, " Update");
             fprintf (stderr, " ::");
-            if (qualifier == 1) fprintf (stderr, " [Voice]");
-            else                fprintf (stderr, " [Reserved]");
+            if (is_digital == 0) fprintf (stderr, " Analog");
+            else                 fprintf (stderr, " Digital");
             fprintf (stderr, " LID [%05d] LCN [%02d]%s", lid, lcn, get_lcn_status_string(lcn));
             if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
             fprintf (stderr, "%s", KNRM);
