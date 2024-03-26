@@ -702,6 +702,16 @@ typedef struct
   int edacs_cc_lcn; //current lcn for the edacs control channel
   int edacs_vc_lcn; //current lcn for any active vc (not the one we are tuned/tuning to)
   int edacs_tuned_lcn; //the vc we are currently tuned to...above variable is for updating all in the matrix
+  int edacs_vc_call_type; //the type of call on the given VC - see defines below
+
+  //flags for EDACS call type
+  #define EDACS_IS_VOICE        0x01
+  #define EDACS_IS_DIGITAL      0x02
+  #define EDACS_IS_EMERGENCY    0x04
+  #define EDACS_IS_GROUP        0x08
+  #define EDACS_IS_INDIVIDUAL   0x10
+  #define EDACS_IS_ALL_CALL     0x20
+  #define EDACS_IS_INTERCONNECT 0x40
 
   //trunking group and lcn freq list
   long int trunk_lcn_freq[26]; //max number on an EDACS system, should be enough on DMR too hopefully

@@ -2012,13 +2012,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       call_matrix[state->edacs_vc_lcn][1] = state->edacs_vc_lcn;
       call_matrix[state->edacs_vc_lcn][2] = state->lasttg;
       //EDACS standard does not provide source LIDs on channel update messages; instead, for the sake of display, let's
-      //assume the prior source for a given LCN is still accurate, unless we have an updated one provided.
+      //assume the prior source for a given LCN is still accurate, unless we have an updated one provided (or the call
+      //type has changed under us).
       //
       //If you MUST have perfectly-accurate source LIDs, look at the logged CC messages yourself - incorrect source LIDs
       //may be displayed if we miss an initial call channel assignment.
-      if (state->ea_mode == 1 || state->lastsrc != 0)
+      if (state->ea_mode == 1 || (state->lastsrc != 0 && call_matrix[state->edacs_vc_lcn][4] == state->edacs_vc_call_type))
         call_matrix[state->edacs_vc_lcn][3] = state->lastsrc;
-      call_matrix[state->edacs_vc_lcn][4] = 1;
+      call_matrix[state->edacs_vc_lcn][4] = state->edacs_vc_call_type;
       call_matrix[state->edacs_vc_lcn][5] = time(NULL);
     }
 
@@ -3529,27 +3530,63 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (print_call != 0)
       {
         if (state->ea_mode == 1) {
-          if (call_matrix[i][2] + 1 == 0)
+          // Voice call
+          if (call_matrix[i][4] & EDACS_IS_VOICE != 0)
+          {
             // System all-call
-            printw (" TGT [ SYSTEM ] SRC [%8lld] All-Call", call_matrix[i][3] );
-          else if (call_matrix[i][2] > 100000)
+            if (call_matrix[i][4] & EDACS_IS_GROUP != 0)
+              printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
             // I-Call
-            printw (" TGT [%8lld] SRC [%8lld] I-Call", call_matrix[i][2] - 100000, call_matrix[i][3] );
+            else if (call_matrix[i][4] & EDACS_IS_INDIVIDUAL != 0)
+              printw (" TGT [%8lld] SRC [%8lld] I-Call", call_matrix[i][2], call_matrix[i][3] );
+            // System all-call
+            else if (call_matrix[i][4] & EDACS_IS_ALL_CALL != 0)
+              printw (" TGT [ SYSTEM ] SRC [%8lld] All-Call", call_matrix[i][3] );
+            // Interconnect call
+            else if (call_matrix[i][4] & EDACS_IS_INTERCONNECT != 0)
+              printw (" TGT [ SYSTEM ] SRC [%8lld] Interconnect", call_matrix[i][3] );
+            // Unknown call
+            else
+              printw (" Unknown call type" );
+
+            // Call flags
+            if (call_matrix[i][4] & EDACS_IS_DIGITAL == 0)   printw (" [Ana]");
+            else                                             printw (" [Dig]");
+            if (call_matrix[i][4] & EDACS_IS_EMERGENCY != 0) printw ("[EM]");
+          }
           else
-            // Group call
-            printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
+            // Data call
+            printw (" TGT [  DATA  ] SRC [%8lld] Data", call_matrix[i][3] );
         }
         else
         {
-          if (call_matrix[i][2] + 1 == 0)
-            // System all-call
-            printw (" TGT [SYSTEM][SYSTEM] SRC [%5lld] All-Call", call_matrix[i][3] );
-          else if (call_matrix[i][2] > 10000)
-            // I-Call
-            printw (" TGT [%6lld][ UNIT ] SRC [%5lld] I-Call", call_matrix[i][2] - 10000, call_matrix[i][3] );
-          else
+          // Voice call
+          if (call_matrix[i][4] & EDACS_IS_VOICE != 0)
+          {
             // Group call
-            printw (" TGT [%6lld][%02d-%03d] SRC [%5lld]", call_matrix[i][2], a, fs, call_matrix[i][3] );
+            if (call_matrix[i][4] & EDACS_IS_GROUP != 0)
+              printw (" TGT [%6lld][%02d-%03d] SRC [%5lld]", call_matrix[i][2], a, fs, call_matrix[i][3] );
+            // I-Call
+            else if (call_matrix[i][4] & EDACS_IS_INDIVIDUAL != 0)
+              printw (" TGT [%6lld][ UNIT ] SRC [%5lld] I-Call", call_matrix[i][2], call_matrix[i][3] );
+            // System all-call
+            else if (call_matrix[i][4] & EDACS_IS_ALL_CALL != 0)
+              printw (" TGT [    SYSTEM    ] SRC [%5lld] All-Call", call_matrix[i][3] );
+            // Interconnect call
+            else if (call_matrix[i][4] & EDACS_IS_INTERCONNECT != 0)
+              printw (" TGT [    SYSTEM    ] SRC [%5lld] Interconnect", call_matrix[i][3] );
+            // Unknown call
+            else
+              printw (" Unknown call type" );
+
+            // Call flags
+            if (call_matrix[i][4] & EDACS_IS_DIGITAL == 0)   printw (" [Ana]");
+            else                                             printw (" [Dig]");
+            if (call_matrix[i][4] & EDACS_IS_EMERGENCY != 0) printw ("[EM]");
+          }
+          else
+            // Data call
+            printw (" TGT [     DATA     ] SRC [%8lld] Data", call_matrix[i][3] );
         }
         for (int k = 0; k < state->group_tally; k++)
         {
@@ -3678,30 +3715,67 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           printw ("LCN [%2lld] ", call_matrix[j][1]);
           if (state->ea_mode == 1)
           {
-            if (call_matrix[j][2] + 1 == 0)
-              // System all-call
-              printw ("Target [ SYSTEM ] Source [%8lld] All-Call", call_matrix[j][3]);
-            else if (call_matrix[j][2] > 100000)
-              // I-Call
-              printw ("Target [%8lld] Source [%8lld] I-Call", call_matrix[j][2] - 100000, call_matrix[j][3]);
-            else
+            // Voice call
+            if (call_matrix[j][4] & EDACS_IS_VOICE != 0)
+            {
               // Group call
-              printw ("Target [%8lld] Source [%8lld]", call_matrix[j][2], call_matrix[j][3]);
+              if (call_matrix[j][4] & EDACS_IS_GROUP != 0)
+                printw ("Target [%8lld] Source [%8lld]", call_matrix[j][2], call_matrix[j][3]);
+              // I-Call
+              else if (call_matrix[j][4] & EDACS_IS_INDIVIDUAL != 0)
+                printw ("Target [%8lld] Source [%8lld] I-Call", call_matrix[j][2], call_matrix[j][3]);
+              // System all-call
+              else if (call_matrix[j][4] & EDACS_IS_ALL_CALL != 0)
+                printw ("Target [ SYSTEM ] Source [%8lld] All-Call", call_matrix[j][3]);
+              // Interconnect
+              else if (call_matrix[j][4] & EDACS_IS_INTERCONNECT != 0)
+                printw ("Target [ SYSTEM ] Source [%8lld] Interconnect", call_matrix[j][3]);
+              // Unknown call
+              else
+                printw ("Unknown call type");
+
+              // Call flags
+              if (call_matrix[i][4] & EDACS_IS_DIGITAL == 0)   printw (" [Ana]");
+              else                                             printw (" [Dig]");
+              if (call_matrix[i][4] & EDACS_IS_EMERGENCY != 0) printw ("[EM]");
+            }
+            else
+              // Data call
+              printw ("Target [  DATA  ] Source [%8lld] Data", call_matrix[j][3]);
           }
           else
           {
-            // Compute 4:4:3 AFS for display purposes only
-            int a  = (call_matrix[j][2] >> 7) & 0xF;
-            int fs = call_matrix[j][2] & 0x7F;
-            if (call_matrix[j][2] + 1 == 0)
-              // System all-call
-              printw ("Target [SYSTEM][SYSTEM] Source [%5lld] All-Call", call_matrix[j][3]);
-            else if (call_matrix[j][2] > 10000)
-              // I-Call
-              printw ("Target [%6lld][ UNIT ] Source [%5lld] I-Call", call_matrix[j][2] - 10000, call_matrix[j][3]);
-            else
+            // Voice call
+            if (call_matrix[j][4] & EDACS_IS_VOICE != 0)
+            {
+              // Compute 4:4:3 AFS for display purposes only
+              int a  = (call_matrix[j][2] >> 7) & 0xF;
+              int fs = call_matrix[j][2] & 0x7F;
+
               // Group call
-              printw ("Target [%6lld][%02d-%03d] Source [%5lld]", call_matrix[j][2], a, fs, call_matrix[j][3]);
+              if (call_matrix[j][4] & EDACS_IS_GROUP != 0)
+                printw ("Target [%6lld][%02d-%03d] Source [%5lld]", call_matrix[j][2], a, fs, call_matrix[j][3]);
+              // I-Call
+              else if (call_matrix[j][4] & EDACS_IS_INDIVIDUAL != 0)
+                printw ("Target [%6lld][ UNIT ] Source [%5lld] I-Call", call_matrix[j][2], call_matrix[j][3]);
+              // System all-call
+              else if (call_matrix[j][4] & EDACS_IS_ALL_CALL != 0)
+                printw ("Target [    SYSTEM    ] Source [%5lld] All-Call", call_matrix[j][3]);
+              // Interconnect
+              else if (call_matrix[j][4] & EDACS_IS_INTERCONNECT != 0)
+                printw ("Target [    SYSTEM    ] Source [%5lld] Interconnect", call_matrix[j][3]);
+              // Unknown call
+              else
+                printw ("Unknown call type");
+
+              // Call flags
+              if (call_matrix[i][4] & EDACS_IS_DIGITAL == 0)   printw (" [Ana]");
+              else                                             printw (" [Dig]");
+              if (call_matrix[i][4] & EDACS_IS_EMERGENCY != 0) printw ("[EM]");
+            }
+            else
+              // Data call
+              printw ("Target [     DATA     ] Source [%5lld] Data", call_matrix[j][3]);
           }
           //test
           for (int k = 0; k < state->group_tally; k++)
@@ -4498,6 +4572,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     state->edacs_cc_lcn = 0;
     state->edacs_vc_lcn = 0;
     state->edacs_tuned_lcn = -1;
+    state->edacs_vc_call_type = 0;
     state->p25_cc_freq = 0;
     opts->p25_is_tuned = 0;
     state->lasttg = 0;

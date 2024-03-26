@@ -724,9 +724,14 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int is_tx_trunking = (fr_4t & 0x200000000) >> 33;
         int group  = (fr_1t & 0xFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
+
+        //Call info for state
                          state->lasttg = group; // 0 is a valid TG, it's the all-call for agency 0
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
+                               state->edacs_vc_call_type  = EDACS_IS_GROUP;
+        if (is_digital == 1)   state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
+        if (is_emergency == 1) state->edacs_vc_call_type |= EDACS_IS_EMERGENCY;
 
         fprintf (stderr, "%s", KGRN);
         if (is_digital == 0) fprintf (stderr, " Analog Group Call");
@@ -823,9 +828,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int is_update = (fr_1t & 0x100000000) >> 32;
         int target = (fr_1t & 0xFFFFF000) >> 12;
         int source = (fr_4t & 0xFFFFF000) >> 12;
-        if (target != 0) state->lasttg = target + 100000; //Use IDs > 100000 to represent i-call targets to differentiate from TGs
+
+        //Call info for state
+        if (target != 0) state->lasttg = target;
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
+                             state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_INDIVIDUAL;
+        if (is_digital == 1) state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
 
         fprintf (stderr, "%s", KCYN);
         if (is_digital == 0) fprintf (stderr, " Analog I-Call");
@@ -890,6 +899,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KBLU);
         fprintf (stderr, " Channel Assignment (Unknown Data) :: Source [%08d] LCN [%02d]%s", source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
+
+        //Call info for state
+        if (source != 0) state->lastsrc = source;
+        if (lcn != 0)    state->edacs_vc_lcn = lcn;
+                         state->edacs_vc_call_type = EDACS_IS_INDIVIDUAL;
       }
       //System All-Call Grant Update
       else if (mt1 == 0x16)
@@ -905,9 +919,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int is_digital = (fr_1t & 0x10000000) >> 28;
         int is_update = (fr_1t & 0x8000000) >> 27;
         int source = (fr_4t & 0xFFFFF000) >> 12;
-                         state->lasttg = -1; // represent system all-call as TG -1 to differentiate from real TGs
+
+        //Call info for state
+                         state->lasttg = 0;
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
+                               state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_ALL_CALL;
+        if (is_digital == 1)   state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
 
         fprintf (stderr, "%s", KMAG);
         if (is_digital == 0) fprintf (stderr, " Analog System All-Call");
@@ -1061,8 +1079,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
           state->edacs_lcn_count = lcn;
         }
         state->edacs_vc_lcn = lcn;
+
+        //Call info for state
         state->lasttg = group;
         state->lastsrc = lid;
+                               state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_GROUP;
+        if (is_digital == 1)   state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
+        if (is_emergency == 1) state->edacs_vc_call_type |= EDACS_IS_EMERGENCY;
 
         char mode[8]; //allow, block, digital enc
         sprintf (mode, "%s", "");
@@ -1139,12 +1162,15 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int lid = (fr_1t & 0x3FFF000) >> 12;
         int group = (fr_1t & 0x7FF000) >> 12;
 
+        //Abstract away to a target, and be sure to check whether it's an individual call later
+        int target = (is_individual_id == 0) ? group : lid;
+
         fprintf (stderr, "%s", KBLU);
         fprintf (stderr, " Data Call Channel Assignment :: Type");
         if (is_individual_call == 1) fprintf (stderr, " [Individual]");
         else                         fprintf (stderr, " [Group]");
-        if (is_individual_id == 1) fprintf (stderr, " LID [%05d]", lid);
-        else                       fprintf (stderr, " Group [%04d]", group);
+        if (is_individual_id == 1) fprintf (stderr, " LID [%05d]", target);
+        else                       fprintf (stderr, " Group [%04d]", target);
         if (is_from_lid == 1) fprintf (stderr, " -->");
         else                  fprintf (stderr, " <--");
         fprintf (stderr, " Port [%02d] LCN [%02d]%s", port, lcn, get_lcn_status_string(lcn));
@@ -1244,12 +1270,16 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
           state->edacs_vc_lcn = lcn;
 
-          //Use IDs > 10000 to represent i-call targets to differentiate from TGs
-          if (is_individual == 0) state->lasttg = target;
-          else                    state->lasttg = target + 10000;
-
+          //Call info for state
+          state->lasttg = target;
           //Alas, EDACS standard does not provide a source LID on channel updates - try to work around this on the display end instead
           state->lastsrc = 0;
+
+                                  state->edacs_vc_call_type  = EDACS_IS_VOICE;
+          if (is_individual == 0) state->edacs_vc_call_type |= EDACS_IS_GROUP;
+          else                    state->edacs_vc_call_type |= EDACS_IS_INDIVIDUAL;
+          if (is_digital == 1)    state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
+          if (is_emergency == 1)  state->edacs_vc_call_type |= EDACS_IS_EMERGENCY;
 
           char mode[8]; //allow, block, digital enc
           sprintf (mode, "%s", "");
