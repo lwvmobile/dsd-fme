@@ -900,6 +900,12 @@ void edacs(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, " Channel Assignment (Unknown Data) :: Source [%08d] LCN [%02d]%s", source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
 
+        //LCNs greater than 26 are considered status values, "Busy, Queue, Deny, etc"
+        if (lcn > state->edacs_lcn_count && lcn < 26)
+        {
+          state->edacs_lcn_count = lcn;
+        }
+
         //Call info for state
         if (source != 0) state->lastsrc = source;
         if (lcn != 0)    state->edacs_vc_lcn = lcn;
@@ -1187,8 +1193,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
         state->lasttg = target;
         state->lastsrc = 0;
 
-        if (is_individual_call == 0) state->edacs_vc_call_type  = EDACS_IS_GROUP;
-        else                         state->edacs_vc_call_type  = EDACS_IS_INDIVIDUAL;
+        if (is_individual_call == 0) state->edacs_vc_call_type = EDACS_IS_GROUP;
+        else                         state->edacs_vc_call_type = EDACS_IS_INDIVIDUAL;
       }
       //Login Acknowledge (6.2.4.4)
       else if (mt_a == 0x6)
