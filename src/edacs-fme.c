@@ -1733,7 +1733,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
                   SetFreq(opts->rigctl_sockfd, state->trunk_lcn_freq[lcn-1]); //minus one because our index starts at zero
                   state->edacs_tuned_lcn = lcn;
                   opts->p25_is_tuned = 1;
-                  if (is_digital == 0) edacs_analog(opts, state, target, lcn);
+                  if (is_digital == 0) edacs_analog(opts, state, 0, lcn);
                 }
 
                 if (opts->audio_in_type == 3) //rtl dongle
@@ -1742,7 +1742,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
                   rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
                   state->edacs_tuned_lcn = lcn;
                   opts->p25_is_tuned = 1;
-                  if (is_digital == 0) edacs_analog(opts, state, target, lcn);
+                  if (is_digital == 0) edacs_analog(opts, state, 0, lcn);
                   #endif
                 }
               }
