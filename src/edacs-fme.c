@@ -1175,6 +1175,20 @@ void edacs(dsd_opts * opts, dsd_state * state)
         else                  fprintf (stderr, " <--");
         fprintf (stderr, " Port [%02d] LCN [%02d]%s", port, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
+
+        //LCNs >= 26 are reserved to indicate status (queued, busy, denied, etc)
+        if (lcn > state->edacs_lcn_count && lcn < 26)
+        {
+          state->edacs_lcn_count = lcn;
+        }
+        state->edacs_vc_lcn = lcn;
+
+        //Call info for state
+        state->lasttg = target;
+        state->lastsrc = 0;
+
+        if (is_individual_call == 0) state->edacs_vc_call_type  = EDACS_IS_GROUP;
+        else                         state->edacs_vc_call_type  = EDACS_IS_INDIVIDUAL;
       }
       //Login Acknowledge (6.2.4.4)
       else if (mt_a == 0x6)
