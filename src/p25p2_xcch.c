@@ -122,6 +122,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		{
 			//reset fourv_counter and dropbyte on PTT
 			state->fourv_counter[0] = 0;
+			state->voice_counter[0] = 0;
 			state->dropL = 256;
 
 			state->dmrburstL = 20;
@@ -171,6 +172,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		{
 			//reset fourv_counter and dropbyte on PTT
 			state->fourv_counter[1] = 0;
+			state->voice_counter[1] = 0;
 			state->dropR = 256;
 			state->payload_algidR = 0; //zero this out as well
 
@@ -230,6 +232,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		{
 			
 			state->fourv_counter[0] = 0;
+			state->voice_counter[0] = 0;
 			state->dropL = 256;
 			state->dmrburstL = 23;
 			state->payload_algid = 0; 
@@ -258,6 +261,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		{
 			
 			state->fourv_counter[1] = 0;
+			state->voice_counter[1] = 0;
 			state->dropR = 256;
 			state->dmrburstR = 23;
 			state->payload_algidR = 0;
@@ -370,19 +374,19 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		process_MAC_VPDU(opts, state, 1, SMAC);
 		fprintf (stderr, "%s", KNRM);
 
-		if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1)
-		{
-			if (state->currentslot == 1)
-			{
-				opts->slot1_on = 0;
-				opts->slot2_on = 1;
-			}
-			else
-			{
-				opts->slot1_on = 1;
-				opts->slot2_on = 0;
-			}
-		}
+		// if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1)
+		// {
+		// 	if (state->currentslot == 1)
+		// 	{
+		// 		opts->slot1_on = 0;
+		// 		opts->slot2_on = 1;
+		// 	}
+		// 	else
+		// 	{
+		// 		opts->slot1_on = 1;
+		// 		opts->slot2_on = 0;
+		// 	}
+		// }
 
 		//blank the call string here -- slot variable is already flipped accordingly for sacch
 		sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
@@ -512,6 +516,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		{
 			//reset fourv_counter and dropbyte on PTT
 			state->fourv_counter[0] = 0;
+			state->voice_counter[0] = 0;
 			state->dropL = 256;
 
 			state->dmrburstL = 20;
@@ -552,6 +557,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		{
 			//reset fourv_counter and dropbyte on PTT
 			state->fourv_counter[1] = 0;
+			state->voice_counter[1] = 0;
 			state->dropR = 256;
 
 			state->dmrburstR = 20;
@@ -608,6 +614,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		{
 			
 			state->fourv_counter[0] = 0;
+			state->voice_counter[0] = 0;
 			state->dropL = 256;
 			state->dmrburstL = 23;
 			state->payload_algid = 0; //zero this out as well
@@ -636,6 +643,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		{
 			
 			state->fourv_counter[1] = 0;
+			state->voice_counter[1] = 0;
 			state->dropR = 256;
 			state->dmrburstR = 23;
 			state->payload_algidR = 0; //zero this out as well
@@ -737,6 +745,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			state->payload_keyid = 0;
 			state->dmrburstL = 24;
 			state->fourv_counter[0] = 0;
+			state->voice_counter[0] = 0;
 			state->lastsrc = 0;
 			state->lasttg = 0;
 
@@ -747,6 +756,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			state->payload_keyidR = 0;
 			state->dmrburstR = 24;
 			state->fourv_counter[1] = 0;
+			state->voice_counter[1] = 0;
 			state->lastsrcR = 0;
 			state->lasttgR = 0;
 
@@ -756,19 +766,19 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		process_MAC_VPDU(opts, state, 0, FMAC);
 		fprintf (stderr, "%s", KNRM);
 
-		if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1)
-		{
-			if (state->currentslot == 0)
-			{
-				opts->slot1_on = 0;
-				opts->slot2_on = 1;
-			}
-			else
-			{
-				opts->slot1_on = 1;
-				opts->slot2_on = 0;
-			}
-		}
+		// if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1)
+		// {
+		// 	if (state->currentslot == 0)
+		// 	{
+		// 		opts->slot1_on = 0;
+		// 		opts->slot2_on = 1;
+		// 	}
+		// 	else
+		// 	{
+		// 		opts->slot1_on = 1;
+		// 		opts->slot2_on = 0;
+		// 	}
+		// }
 
 		//blank the call string here 
 		sprintf (state->call_string[slot], "%s", "                     "); //21 spaces

@@ -115,7 +115,7 @@ void soft_mbe (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char amb
       PrintAMBEData (opts, state, ambe_d);
 
     if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
-      playSynthesizedVoice(opts, state);
+      playSynthesizedVoiceMS(opts, state);
     if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)
       playSynthesizedVoiceFM(opts, state);
     if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 2)
@@ -138,7 +138,7 @@ void soft_mbe (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char amb
       PrintAMBEData (opts, state, ambe_d);
 
     if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
-      playSynthesizedVoice(opts, state);
+      playSynthesizedVoiceMS(opts, state);
     if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)
       playSynthesizedVoiceFM(opts, state);
     if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 2)

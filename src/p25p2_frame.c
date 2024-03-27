@@ -490,18 +490,27 @@ void process_4V (dsd_opts * opts, dsd_state * state)
 	// 	else state->dmrburstR = 21;
 	// }
 	// #endif
+
+	//unsure of the best location for these counter resets
+	if (state->voice_counter[0] >= 18)
+		state->voice_counter[0] = 0;
+
+	if (state->voice_counter[1] >= 18)
+		state->voice_counter[1] = 0;
 	
 	processMbeFrame (opts, state, NULL, ambe_fr1, NULL);
 	if(state->currentslot == 0)
 	{
 		memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
-		memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+		// memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+		memcpy(state->s_l4[(state->voice_counter[0]++)%18], state->s_l, sizeof(state->s_l));
 		memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
 	}
 	else
 	{
 		memcpy(state->f_r4[0], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
-		memcpy(state->s_r4[0], state->s_r, sizeof(state->s_r));
+		// memcpy(state->s_r4[0], state->s_r, sizeof(state->s_r));
+		memcpy(state->s_r4[(state->voice_counter[1]++)%18], state->s_r, sizeof(state->s_r));
 		memcpy(state->s_r4u[0], state->s_ru, sizeof(state->s_ru));
 	}
 
@@ -509,13 +518,15 @@ void process_4V (dsd_opts * opts, dsd_state * state)
 	if(state->currentslot == 0)
 	{
 		memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
-		memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+		// memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+		memcpy(state->s_l4[(state->voice_counter[0]++)%18], state->s_l, sizeof(state->s_l));
 		memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
 	}
 	else
 	{
 		memcpy(state->f_r4[1], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
-		memcpy(state->s_r4[1], state->s_r, sizeof(state->s_r));
+		// memcpy(state->s_r4[1], state->s_r, sizeof(state->s_r));
+		memcpy(state->s_r4[(state->voice_counter[1]++)%18], state->s_r, sizeof(state->s_r));
 		memcpy(state->s_r4u[1], state->s_ru, sizeof(state->s_ru));
 	}
 
@@ -523,13 +534,15 @@ void process_4V (dsd_opts * opts, dsd_state * state)
 	if(state->currentslot == 0)
 	{
 		memcpy(state->f_l4[2], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
-		memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
+		// memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
+		memcpy(state->s_l4[(state->voice_counter[0]++)%18], state->s_l, sizeof(state->s_l));
 		memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
 	}
 	else
 	{
 		memcpy(state->f_r4[2], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
-		memcpy(state->s_r4[2], state->s_r, sizeof(state->s_r));
+		// memcpy(state->s_r4[2], state->s_r, sizeof(state->s_r));
+		memcpy(state->s_r4[(state->voice_counter[1]++)%18], state->s_r, sizeof(state->s_r));
 		memcpy(state->s_r4u[2], state->s_ru, sizeof(state->s_ru));
 	}
 
@@ -537,13 +550,15 @@ void process_4V (dsd_opts * opts, dsd_state * state)
 	if(state->currentslot == 0)
 	{
 		memcpy(state->f_l4[3], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
-		memcpy(state->s_l4[3], state->s_l, sizeof(state->s_l));
+		// memcpy(state->s_l4[3], state->s_l, sizeof(state->s_l));
+		memcpy(state->s_l4[(state->voice_counter[0]++)%18], state->s_l, sizeof(state->s_l));
 		memcpy(state->s_l4u[3], state->s_lu, sizeof(state->s_lu));
 	}
 	else
 	{
 		memcpy(state->f_r4[3], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
-		memcpy(state->s_r4[3], state->s_r, sizeof(state->s_r));
+		// memcpy(state->s_r4[3], state->s_r, sizeof(state->s_r));
+		memcpy(state->s_r4[(state->voice_counter[1]++)%18], state->s_r, sizeof(state->s_r));
 		memcpy(state->s_r4u[3], state->s_ru, sizeof(state->s_ru));
 	}
 
@@ -773,17 +788,26 @@ void process_2V (dsd_opts * opts, dsd_state * state)
 	// }
 	// #endif
 
+	//unsure of the best location for these counter resets
+	if (state->voice_counter[0] >= 18)
+		state->voice_counter[0] = 0;
+
+	if (state->voice_counter[1] >= 18)
+		state->voice_counter[1] = 0;
+
 	processMbeFrame (opts, state, NULL, ambe_fr1, NULL);
 	if(state->currentslot == 0)
 	{
 		memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
-		memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+		// memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+		memcpy(state->s_l4[(state->voice_counter[0]++)%18], state->s_l, sizeof(state->s_l));
 		memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
 	}
 	else
 	{
 		memcpy(state->f_r4[0], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
-		memcpy(state->s_r4[0], state->s_r, sizeof(state->s_r));
+		// memcpy(state->s_r4[0], state->s_r, sizeof(state->s_r));
+		memcpy(state->s_r4[(state->voice_counter[1]++)%18], state->s_r, sizeof(state->s_r));
 		memcpy(state->s_r4u[0], state->s_ru, sizeof(state->s_ru));
 	}
 
@@ -791,17 +815,19 @@ void process_2V (dsd_opts * opts, dsd_state * state)
 	if(state->currentslot == 0)
 	{
 		memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
-		memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+		// memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+		memcpy(state->s_l4[(state->voice_counter[0]++)%18], state->s_l, sizeof(state->s_l));
 		memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
 
 	}
 	else
 	{
 		memcpy(state->f_r4[1], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
-		memcpy(state->s_r4[1], state->s_r, sizeof(state->s_r));
+		// memcpy(state->s_r4[1], state->s_r, sizeof(state->s_r));
+		memcpy(state->s_r4[(state->voice_counter[1]++)%18], state->s_r, sizeof(state->s_r));
 		memcpy(state->s_r4u[1], state->s_ru, sizeof(state->s_ru));
 	}
-
+	// if (state->currentslot == 0) state->voice_counter[0] = 0; if (state->currentslot == 1) state->voice_counter[1] = 0;
 	process_ESS(opts, state);
 
 	//reset drop bytes after a 2V
@@ -908,10 +934,20 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 			opts->p25_is_tuned = 0;
 			state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
 			memset (state->active_channel, 0, sizeof (state->active_channel)); //zero out here? I think this will be fine
+			//clear out stale voice samples left in the buffer and reset counter value
+			state->voice_counter[0] = 0;
+			state->voice_counter[1] = 0;
+			memset(state->s_l4, 0, sizeof(state->s_l4));
+			memset(state->s_r4, 0, sizeof(state->s_r4));
 		}
 		else if (duid_decoded == 13 && ((time(NULL) - state->last_active_time) > 2) && opts->p25_is_tuned == 0) //should we use && opts->p25_is_tuned == 1?
 		{
 			memset (state->active_channel, 0, sizeof (state->active_channel)); //zero out here? I think this will be fine
+			//clear out stale voice samples left in the buffer and reset counter value
+			state->voice_counter[0] = 0;
+			state->voice_counter[1] = 0;
+			memset(state->s_l4, 0, sizeof(state->s_l4));
+			memset(state->s_r4, 0, sizeof(state->s_r4));
 		}
 
 		if (duid_decoded == 0)
@@ -998,6 +1034,8 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 			state->p2_is_lcch = 0;
 			state->fourv_counter[0] = 0;
 			state->fourv_counter[1] = 0;
+			state->voice_counter[0] = 0;
+  		state->voice_counter[1] = 0;
 
 			goto END;
 		}
@@ -1017,8 +1055,22 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 1 && opts->pulse_digi_rate_out == 8000)
 				playSynthesizedVoiceFS4 (opts, state);
 
-		if (sacch == 0 && ts_counter & 1 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000)
-				playSynthesizedVoiceSS4 (opts, state);
+		// if (sacch == 0 && ts_counter & 1 && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000)
+		// 		playSynthesizedVoiceSS4 (opts, state);
+
+		// fprintf (stderr, " VCH0: %d;", state->voice_counter[0]); //debug
+		// fprintf (stderr, " VCH1: %d;", state->voice_counter[1]); //debug
+
+		//this works, but may still have an element of 'dual voice stutter' which was my initial complaint, but shouldn't 'lag' during trunking operations (hopefully)
+		if ( (state->voice_counter[0] >= 18 || state->voice_counter[1] >= 18 ) && opts->floating_point == 0 && opts->pulse_digi_rate_out == 8000 && ts_counter & 1)
+		{
+			//debug test, see what each counter is at during playback on dual voice
+			// fprintf (stderr, " VC1: %02d; VC2: %02d;", state->voice_counter[0], state->voice_counter[1] );
+
+			playSynthesizedVoiceSS18 (opts, state);
+			state->voice_counter[0] = 0; //reset
+			state->voice_counter[1] = 0; //reset
+		}
 
 		//debug: fix burst indicator for ncurses if marginal signal
 		// if (voice)

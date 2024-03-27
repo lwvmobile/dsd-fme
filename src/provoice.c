@@ -27,12 +27,19 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   fprintf (stderr," VOICE");
 
-  //print group and source values if EA trunked
+  //print group/target and source values if EA trunked
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && state->ea_mode == 1)
   {
     fprintf (stderr, "%s", KGRN);
-    fprintf (stderr, " Site: %lld Group: %d Source: %d LCN: %d ", 
-              state->edacs_site_id, state->lasttg, state->lastsrc, state->edacs_tuned_lcn);
+    if (state->lasttg > 100000) {
+      // I-Call
+      fprintf (stderr, " Site: %lld Target: %d Source: %d LCN: %d ", 
+                state->edacs_site_id, state->lasttg - 100000, state->lastsrc, state->edacs_tuned_lcn);
+    } else {
+      // Group call
+      fprintf (stderr, " Site: %lld Group: %d Source: %d LCN: %d ", 
+                state->edacs_site_id, state->lasttg, state->lastsrc, state->edacs_tuned_lcn);
+    }
     fprintf (stderr, "%s", KNRM);
   }
   //print afs value if standard/networked trunked
@@ -214,12 +221,12 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   processMbeFrame (opts, state, NULL, NULL, imbe7100_fr1);
   if (opts->floating_point == 0)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 1)
     playSynthesizedVoiceFM(opts, state);
   processMbeFrame (opts, state, NULL, NULL, imbe7100_fr2);
   if (opts->floating_point == 0)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 1)
     playSynthesizedVoiceFM(opts, state);
 
@@ -392,12 +399,12 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   processMbeFrame (opts, state, NULL, NULL, imbe7100_fr1);
   if (opts->floating_point == 0)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 1)
     playSynthesizedVoiceFM(opts, state);
   processMbeFrame (opts, state, NULL, NULL, imbe7100_fr2);
   if (opts->floating_point == 0)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 1)
     playSynthesizedVoiceFM(opts, state);
 

@@ -65,7 +65,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 #endif
   process_IMBE (opts, state, &status_count);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 2)
     playSynthesizedVoiceSS(opts, state);
   if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)
@@ -79,7 +79,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 #endif
   process_IMBE (opts, state, &status_count);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 2)
     playSynthesizedVoiceSS(opts, state);
   if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)
@@ -100,7 +100,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 #endif
   process_IMBE (opts, state, &status_count);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 2)
     playSynthesizedVoiceSS(opts, state);
   if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)
@@ -121,7 +121,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 #endif
   process_IMBE (opts, state, &status_count);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 2)
     playSynthesizedVoiceSS(opts, state);
   if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)
@@ -142,7 +142,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 #endif
   process_IMBE (opts, state, &status_count);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 2)
     playSynthesizedVoiceSS(opts, state);
   if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)
@@ -163,7 +163,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 #endif
   process_IMBE (opts, state, &status_count);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 2)
     playSynthesizedVoiceSS(opts, state);
   if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)
@@ -184,7 +184,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 #endif
   process_IMBE (opts, state, &status_count);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)
     playSynthesizedVoiceFM(opts, state);
   if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 2)
@@ -203,7 +203,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 #endif
   process_IMBE (opts, state, &status_count);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 2)
     playSynthesizedVoiceSS(opts, state);
   if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)
@@ -264,7 +264,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 #endif
   process_IMBE (opts, state, &status_count);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 1)
-    playSynthesizedVoice(opts, state);
+    playSynthesizedVoiceMS(opts, state);
   if (opts->floating_point == 0 && opts->pulse_digi_out_channels == 2)
     playSynthesizedVoiceSS(opts, state);
   if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 1)

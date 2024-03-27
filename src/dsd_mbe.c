@@ -134,7 +134,7 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
 
         if (opts->audio_out == 1 && opts->floating_point == 0)
         {
-          playSynthesizedVoice (opts, state);
+          playSynthesizedVoiceMS (opts, state);
         }
         if (opts->floating_point == 1)
         {
@@ -174,7 +174,7 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
 
         if (opts->audio_out == 1 && opts->floating_point == 0)
         {
-          playSynthesizedVoice (opts, state);
+          playSynthesizedVoiceMS (opts, state);
         }
         if (opts->floating_point == 1)
         {
@@ -1084,7 +1084,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       }
       if (opts->audio_out == 1 && opts->floating_point == 0 && opts->audio_out_type == 5 && opts->slot1_on == 1) //for OSS 48k 1 channel configs -- relocate later if possible
       {
-        playSynthesizedVoice (opts, state); //it may be more beneficial to move this to each individual decoding type to handle, but ultimately, let's just simpifly mbe handling instead 
+        playSynthesizedVoiceMS (opts, state); //it may be more beneficial to move this to each individual decoding type to handle, but ultimately, let's just simpifly mbe handling instead 
       }
     }
 
@@ -1161,7 +1161,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       }
       if (opts->audio_out == 1 && opts->floating_point == 0 && opts->audio_out_type == 5 && opts->slot2_on == 1) //for OSS 48k 1 channel configs -- relocate later if possible
       {
-        playSynthesizedVoiceR (opts, state);
+        playSynthesizedVoiceMSR (opts, state);
       }
     }
 

@@ -8,7 +8,11 @@
 -fa Legacy Auto (not recommended)
 -fi NXDN48
 -fn NXDN96
--fp EDACS/Provoice
+-fp Provoice
+-fh EDACS Standard / Network
+-fH EDACS Standard / Network with ESK
+-fe EDACS Extended Addresssing
+-fE EDACS Extended Addressing with ESK
 -fm dPMR, also may need to use -xd if inverted dPMR.
 -f1 P25P1
 -f2 P25P2 (may need to specify wacn/sys/nac manually if traffic channel)
@@ -74,7 +78,7 @@ Detailed Setup:
 
 ```
 RTL-SDR options:
- Usage: rtl:dev:freq:gain:ppm:bw:sq:udp
+ Usage: rtl:dev:freq:gain:ppm:bw:sq:vol
   NOTE: all arguments after rtl are optional now for trunking, but user configuration is recommended
   dev  <num>    RTL-SDR Device Index Number
   freq <num>    RTL-SDR Frequency (851800000 or 851.8M) 
@@ -82,9 +86,9 @@ RTL-SDR options:
   ppm  <num>    RTL-SDR PPM Error (default = 0)
   bw   <num>    RTL-SDR Bandwidth kHz (default = 12)(8, 12, 16, 24)  
   sq   <num>    RTL-SDR Squelch Level vs RMS Value (Optional)
-  udp  <num>    RTL-SDR Legacy UDP Remote Port (Optional -- External Use Only)
- Example: dsd-fme-zdev -fs -i rtl -C cap_plus_channel.csv -T
- Example: dsd-fme-zdev -fp -i rtl:0:851.375M:22:-2:24:0:6021
+  vol  <num>    RTL-SDR Sample 'Volume' Multiplier (default = 1)(1,2,3)
+ Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T
+ Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:2
 
 ```
 
@@ -100,11 +104,11 @@ and in a second terminal tab, same folder, run
 
 EDACS Trunking (w/ channel map import)
 
---EDACS/PV Trunking using RIGCTL and TCP Direct Link Audio inside of SDR++ (Tested and Working on EDACS/EDACS-EA with Provoice, Analog Voice Monitoring and Per Call is Experimental)
+--EDACS/PV Trunking using RIGCTL and TCP Direct Link Audio inside of SDR++ (see switches above for STD/NET, EA, and ESK modes)
 
-`dsd-fme -i tcp -fp -C channel_map.csv -G group.csv -T -U 4532 -N 2> log.ans`
+`dsd-fme -i tcp -fE -C channel_map.csv -G group.csv -T -U 4532 -N 2> log.ans`
 
---NXDN48 Trunking (standard band plan) with SDR++ (untested for frequency accuracy)
+--NXDN48 Trunking (Direct Frequency Assignment) with SDR++ (untested for frequency accuracy)
 
 `dsd-fme -fi -i tcp -T -U 4532 -N 2> log.ans`
 
@@ -176,9 +180,9 @@ M - toggle c4fm/qpsk 8/3 (phase 2 tdma control channel)
 R - start capturing symbol capture bin (date/time name file)
 r - stop capturing symbol capture bin
 spacebar - replay last symbol capture bin (captures must be stopped first)
-s - stop playing symbol capture bin or wav input file
+s - stop playing symbol capture bin or wav input file (lower s)
 P - start per call decoded wav files (Capital P)
-p - stop per call decoded wav files (Lower p)
+p - stop per call decoded wav files (lower p)
 t - toggle trunking (needs either rtl input, or rigctl connection)
 y - toggle scanner (needs either rtl input, or rigctl connection)
 1 - Toggle Voice Synthesis in TDMA Slot 1 or FDMA Conventional Voice
@@ -201,6 +205,9 @@ l - Hold TG in Slot 2 on TDMA Systems, or clear current hold
 
 C - Drop Call and Return to CC during trunking operation
 L - Manual Cycle Forward Channel Tuned when RIGCTL or using RTL input and channel csv loaded
+
+S - Toggle between EDACS Standard/Network and Extended Addressing mode (Capital S)
+A - Toggle EDACS ESK Mask (none vs A0)
 
 ```
 

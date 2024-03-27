@@ -86,6 +86,35 @@
 
 extern volatile uint8_t exitflag; //fix for issue #136
 
+//new audio filter stuff from: https://github.com/NedSimao/FilteringLibrary
+typedef struct {
+    float coef[2];
+    float v_out[2];
+}LPFilter;
+
+typedef struct {
+    float coef;
+    float v_out[2];
+    float v_in[2];
+
+}HPFilter;
+
+typedef struct {
+    LPFilter lpf;
+    HPFilter hpf;
+    float out_in;
+}PBFilter;
+
+typedef struct {
+    float alpha;
+    float beta;
+
+    float vin[3];
+    float vout[3];
+
+}NOTCHFilter;
+//end new filters
+
 //group csv import struct
 typedef struct
 {
@@ -210,8 +239,8 @@ typedef struct
   SF_INFO *audio_in_file_info;
 
   uint32_t rtlsdr_center_freq;
-  int rtlsdr_ppm_error; 
-  int audio_in_type; 
+  int rtlsdr_ppm_error;
+  int audio_in_type;
   char audio_out_dev[1024];
   int audio_out_fd;
   int audio_out_fdR; //right channel audio for OSS hack
@@ -231,6 +260,7 @@ typedef struct
   FILE *symbol_out_f;
   float audio_gain;
   float audio_gainR;
+  float audio_gainA;
   int audio_out;
   int dmr_stereo_wav;
   char wav_out_dir[512];
@@ -285,6 +315,7 @@ typedef struct
   int rtl_started;
   long int rtl_rms;
   int monitor_input_audio;
+  int analog_only;
   int pulse_raw_rate_in;
   int pulse_raw_rate_out;
   int pulse_digi_rate_in;
@@ -367,7 +398,7 @@ typedef struct
   char group_in_file[1024];
   char lcn_in_file[1024];
   char chan_in_file[1024];
-  char key_in_file[1024];  
+  char key_in_file[1024];
   //end import filenames
 
   //reverse mute
@@ -404,6 +435,12 @@ typedef struct
   //hard set slots to synthesize
   int slot1_on;
   int slot2_on;
+
+  //enable filter options
+  int use_lpf;
+  int use_hpf;
+  int use_pbf;
+  int use_hpf_d;
 
   //'DSP' Format Output
   uint8_t use_dsp_output;
@@ -447,14 +484,14 @@ typedef struct
   //new stereo short sample storage
   short s_l[160]; //single sample left
   short s_r[160]; //single sample right
-  short s_l4[4][160]; //quad sample for up to a P25p2 4V
-  short s_r4[4][160]; //quad sample for up to a P25p2 4V
+  short s_l4[18][160]; //quad sample for up to a P25p2 4V
+  short s_r4[18][160]; //quad sample for up to a P25p2 4V
   //new stereo short sample storage tapped from 48_k internal upsampling
   short s_lu[160*6]; //single sample left
   short s_ru[160*6]; //single sample right
   short s_l4u[4][160*6]; //quad sample for up to a P25p2 4V
   short s_r4u[4][160*6]; //quad sample for up to a P25p2 4V
-  //end 
+  //end
   int audio_out_idx;
   int audio_out_idx2;
   int audio_out_idxR;
@@ -507,6 +544,7 @@ typedef struct
   char slot0light[8];
   float aout_gain;
   float aout_gainR;
+  float aout_gainA;
   float aout_max_buf[200];
   float aout_max_bufR[200];
   float *aout_max_buf_p;
@@ -616,7 +654,7 @@ typedef struct
 
   char dmr_cach_fragment[4][17]; //unsure of size, will need to check/verify
   int dmr_cach_counter; //counter for dmr_cach_fragments 0-3; not sure if needed yet.
-  
+
   //dmr talker alias new/fixed stuff
   uint8_t dmr_alias_format[2]; //per slot
   uint8_t dmr_alias_len[2]; //per slot
@@ -629,6 +667,16 @@ typedef struct
 
 
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
+
+  //new audio filter structs
+  LPFilter RCFilter;
+  HPFilter HRCFilter;
+  PBFilter PBF;
+  NOTCHFilter NF;
+  LPFilter RCFilterL;
+  HPFilter HRCFilterL;
+  LPFilter RCFilterR;
+  HPFilter HRCFilterR;
 
   char dpmr_caller_id[20];
   char dpmr_target_id[20];
@@ -664,6 +712,7 @@ typedef struct
   int p2_vch_chan_num; //vch channel number (0 or 1, not the 0-11 TS)
   int ess_b[2][96]; //external storage for ESS_B fragments
   int fourv_counter[2]; //external reference counter for ESS_B fragment collection
+  int voice_counter[2]; //external reference counter for 18V x 2 P25p2 Superframe
   int p2_is_lcch; //flag to tell us when a frame is lcch and not sacch
 
   //iden freq storage for frequency calculations
@@ -695,13 +744,23 @@ typedef struct
 
   //edacs
   int ea_mode;
-  int esk_mode;
+
   unsigned short esk_mask;
   unsigned long long int edacs_site_id;
   int edacs_lcn_count; //running tally of lcn's observed on edacs system
   int edacs_cc_lcn; //current lcn for the edacs control channel
   int edacs_vc_lcn; //current lcn for any active vc (not the one we are tuned/tuning to)
   int edacs_tuned_lcn; //the vc we are currently tuned to...above variable is for updating all in the matrix
+  int edacs_vc_call_type; //the type of call on the given VC - see defines below
+
+  //flags for EDACS call type
+  #define EDACS_IS_VOICE        0x01
+  #define EDACS_IS_DIGITAL      0x02
+  #define EDACS_IS_EMERGENCY    0x04
+  #define EDACS_IS_GROUP        0x08
+  #define EDACS_IS_INDIVIDUAL   0x10
+  #define EDACS_IS_ALL_CALL     0x20
+  #define EDACS_IS_INTERCONNECT 0x40
 
   //trunking group and lcn freq list
   long int trunk_lcn_freq[26]; //max number on an EDACS system, should be enough on DMR too hopefully
@@ -943,10 +1002,15 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state); //float stere
 void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state); //float stereo mix 4v2 P25p2
 void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state);  //float mono
 void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot); //float gain control
+void agsm (dsd_opts * opts, dsd_state * state, short * input, int len); //short gain control for analog things
+void analog_gain (dsd_opts * opts, dsd_state * state, short * input, int len); //manual gain handling for analong things
 //new short stuff
+void playSynthesizedVoiceMS (dsd_opts * opts, dsd_state * state);    //short mono mix
+void playSynthesizedVoiceMSR (dsd_opts * opts, dsd_state * state);   //short mono mix R (needed for OSS 48k input/output)
 void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state);   //short stereo mix
 void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state);  //short stereo mix 3v2 DMR
 void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state);  //short stereo mix 4v2 P25p2
+void playSynthesizedVoiceSS18 (dsd_opts * opts, dsd_state * state); //short stereo mix 18V Superframe
 void upsampleS (short invalue, short prev, short outbuf[6]); //upsample 8k to 48k short
 //
 void openAudioOutDevice (dsd_opts * opts, int speed);
@@ -1188,7 +1252,7 @@ bool crc8_ok(uint8_t bits[], unsigned int len);
 //modified CRC functions for SB/RC
 uint8_t crc7(uint8_t bits[], unsigned int len);
 uint8_t crc3(uint8_t bits[], unsigned int len);
-uint8_t crc4(uint8_t bits[], unsigned int len); 
+uint8_t crc4(uint8_t bits[], unsigned int len);
 
 //LFSR and LFSRP code courtesy of https://github.com/mattames/LFSR/
 void LFSR(dsd_state * state);
@@ -1285,12 +1349,24 @@ void eot_cc(dsd_opts * opts, dsd_state * state); //end of TX return to CC
 //Generic Tuning Functions
 void return_to_cc (dsd_opts * opts, dsd_state * state);
 
-//misc generic audio filtering for analog at 48k/1
+//misc audio filtering for analog
 long int raw_rms(short *samples, int len, int step);
-void analog_deemph_filter(short * input, int len);
-void analog_preemph_filter(short * input, int len);
-void analog_dc_block_filter(short * input, int len);
-void analog_clipping_filter(short * input, int len);
+void init_audio_filters(dsd_state * state);
+void lpf(dsd_state * state, short * input, int len);
+void hpf(dsd_state * state, short * input, int len);
+void pbf(dsd_state * state, short * input, int len);
+void nf(dsd_state * state, short * input, int len);
+void hpf_dL(dsd_state * state, short * input, int len);
+void hpf_dR(dsd_state * state, short * input, int len);
+//from: https://github.com/NedSimao/FilteringLibrary
+void LPFilter_Init(LPFilter *filter, float cutoffFreqHz, float sampleTimeS);
+float LPFilter_Update(LPFilter *filter, float v_in);
+void HPFilter_Init(HPFilter *filter, float cutoffFreqHz, float sampleTimeS);
+float HPFilter_Update(HPFilter *filter, float v_in);
+void PBFilter_Init(PBFilter *filter, float HPF_cutoffFreqHz, float LPF_cutoffFreqHz, float sampleTimeS);
+float PBFilter_Update(PBFilter *filter, float v_in);
+void NOTCHFilter_Init(NOTCHFilter *filter, float centerFreqHz, float notchWidthHz, float sampleTimeS);
+float NOTCHFilter_Update(NOTCHFilter *filter, float vin);
 
 //csv imports
 int csvGroupImport(dsd_opts * opts, dsd_state * state);

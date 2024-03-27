@@ -359,37 +359,46 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t * payload
 
   codec2_decode(state->codec2_1600, samp1, voice1);
 
-  if (opts->audio_out_type == 0 && state->m17_enc == 0) //Pulse Audio
-  {
-    pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
-  }
+  //hpf_d on codec2 sounds better than not on those .rrc samples
+  if (opts->use_hpf_d == 1)
+    hpf_dL(state, samp1, nsam);
 
-  if (opts->audio_out_type == 8 && state->m17_enc == 0) //UDP Audio
+  if (opts->slot1_on == 1) //playback if enabled
   {
-    udp_socket_blaster (opts, state, nsam*2, samp1);
-  }
     
-  if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS 48k/1
-  {
-    //upsample to 48k and then play
-    prev = samp1[0];
-    for (i = 0; i < 160; i++)
+    if (opts->audio_out_type == 0 && state->m17_enc == 0) //Pulse Audio
     {
-      upsampleS (samp1[i], prev, out);
-      for (j = 0; j < 6; j++) upsamp[(i*6)+j] = out[j];
+      pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
     }
-    write (opts->audio_out_fd, upsamp, nsam*2*6);
 
-  }
+    if (opts->audio_out_type == 8 && state->m17_enc == 0) //UDP Audio
+    {
+      udp_socket_blaster (opts, state, nsam*2, samp1);
+    }
+      
+    if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS 48k/1
+    {
+      //upsample to 48k and then play
+      prev = samp1[0];
+      for (i = 0; i < 160; i++)
+      {
+        upsampleS (samp1[i], prev, out);
+        for (j = 0; j < 6; j++) upsamp[(i*6)+j] = out[j];
+      }
+      write (opts->audio_out_fd, upsamp, nsam*2*6);
 
-  if (opts->audio_out_type == 1 && state->m17_enc == 0) //STDOUT
-  {
-    write (opts->audio_out_fd, samp1, nsam*2);
-  }
+    }
 
-  if (opts->audio_out_type == 2 && state->m17_enc == 0) //OSS 8k/1
-  {
-    write (opts->audio_out_fd, samp1, nsam*2);
+    if (opts->audio_out_type == 1 && state->m17_enc == 0) //STDOUT
+    {
+      write (opts->audio_out_fd, samp1, nsam*2);
+    }
+
+    if (opts->audio_out_type == 2 && state->m17_enc == 0) //OSS 8k/1
+    {
+      write (opts->audio_out_fd, samp1, nsam*2);
+    }
+
   }
 
   //WIP: Wav file saving -- still need a way to open/close/label wav files similar to call history
@@ -459,47 +468,59 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t * payload
   codec2_decode(state->codec2_3200, samp1, voice1);
   codec2_decode(state->codec2_3200, samp2, voice2);
 
-  if (opts->audio_out_type == 0 && state->m17_enc == 0) //Pulse Audio
+  //hpf_d on codec2 sounds better than not on those .rrc samples
+  if (opts->use_hpf_d == 1)
   {
-    pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
-    pa_simple_write(opts->pulse_digi_dev_out, samp2, nsam*2, NULL);
+    hpf_dL(state, samp1, nsam);
+    hpf_dL(state, samp2, nsam);
   }
 
-  if (opts->audio_out_type == 8 && state->m17_enc == 0) //UDP Audio
+  if (opts->slot1_on == 1) //playback if enabled
   {
-    udp_socket_blaster (opts, state, nsam*2, samp1);
-    udp_socket_blaster (opts, state, nsam*2, samp2);
-  }
-    
-  if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS 48k/1
-  {
-    //upsample to 48k and then play
-    prev = samp1[0];
-    for (i = 0; i < 160; i++)
+
+    if (opts->audio_out_type == 0 && state->m17_enc == 0) //Pulse Audio
     {
-      upsampleS (samp1[i], prev, out);
-      for (j = 0; j < 6; j++) upsamp[(i*6)+j] = out[j];
+      pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
+      pa_simple_write(opts->pulse_digi_dev_out, samp2, nsam*2, NULL);
     }
-    write (opts->audio_out_fd, upsamp, nsam*2*6);
-    prev = samp2[0];
-    for (i = 0; i < 160; i++)
+
+    if (opts->audio_out_type == 8 && state->m17_enc == 0) //UDP Audio
     {
-      upsampleS (samp2[i], prev, out);
-      for (j = 0; j < 6; j++) upsamp[(i*6)+j] = out[j];
+      udp_socket_blaster (opts, state, nsam*2, samp1);
+      udp_socket_blaster (opts, state, nsam*2, samp2);
     }
-    write (opts->audio_out_fd, upsamp, nsam*2*6);
-  }
+      
+    if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS 48k/1
+    {
+      //upsample to 48k and then play
+      prev = samp1[0];
+      for (i = 0; i < 160; i++)
+      {
+        upsampleS (samp1[i], prev, out);
+        for (j = 0; j < 6; j++) upsamp[(i*6)+j] = out[j];
+      }
+      write (opts->audio_out_fd, upsamp, nsam*2*6);
+      prev = samp2[0];
+      for (i = 0; i < 160; i++)
+      {
+        upsampleS (samp2[i], prev, out);
+        for (j = 0; j < 6; j++) upsamp[(i*6)+j] = out[j];
+      }
+      write (opts->audio_out_fd, upsamp, nsam*2*6);
+    }
 
-  if (opts->audio_out_type == 1 && state->m17_enc == 0) //STDOUT
-  {
-    write (opts->audio_out_fd, samp1, nsam*2);
-    write (opts->audio_out_fd, samp2, nsam*2);
-  }
+    if (opts->audio_out_type == 1 && state->m17_enc == 0) //STDOUT
+    {
+      write (opts->audio_out_fd, samp1, nsam*2);
+      write (opts->audio_out_fd, samp2, nsam*2);
+    }
 
-  if (opts->audio_out_type == 2 && state->m17_enc == 0) //OSS 8k/1 
-  {
-    write (opts->audio_out_fd, samp1, nsam*2);
-    write (opts->audio_out_fd, samp2, nsam*2);
+    if (opts->audio_out_type == 2 && state->m17_enc == 0) //OSS 8k/1 
+    {
+      write (opts->audio_out_fd, samp1, nsam*2);
+      write (opts->audio_out_fd, samp2, nsam*2);
+    }
+
   }
 
   //WIP: Wav file saving -- still need a way to open/close/label wav files similar to call history
@@ -1840,17 +1861,50 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       #endif
     }
 
-    //read in RMS value for vox function; NOTE: may not work correctly on STDIN and TCP due to blocking when no samples to read
+    //read in RMS value for vox function; NOTE: will not work correctly SOCAT STDIO TCP due to blocking when no samples to read
     if (opts->audio_in_type == 3) opts->rtl_rms = rtl_return_rms();
     else opts->rtl_rms = raw_rms(voice1, nsam, 1) / 2; //dividing by two so mic isn't so sensitive on vox
 
-    //decimate audio input (default 100% on mic is WAY TOO LOUD for the encoder, fine tune in volume control)
-    for (i = 0; i < 160; i++)
+    //low pass filter
+    if (opts->use_lpf == 1)
     {
-      //NOTE: Use + and - in ncurses to fine tune manually
-      voice1[i] *= (float)state->aout_gain/ (float)25.0f;
-      voice2[i] *= (float)state->aout_gain/ (float)25.0f;
+      lpf (state, voice1, 160);
+      lpf (state, voice2, 160);
     }
+
+    //high pass filter
+    if (opts->use_hpf == 1)
+    {
+      hpf (state, voice1, 160);
+      hpf (state, voice2, 160);
+    }
+    
+    //passband filter
+    if (opts->use_pbf == 1)
+    {
+      pbf (state, voice1, 160);
+      pbf (state, voice2, 160);
+    }
+
+    //manual gain control
+    if (opts->audio_gainA > 0.0f)
+    {
+      analog_gain (opts, state, voice1, 160);
+      analog_gain (opts, state, voice2, 160);
+    }
+
+    //automatic gain control
+    else
+    {
+      agsm (opts, state, voice1, 160);
+      agsm (opts, state, voice2, 160);
+    }
+
+    //NOTE: Similar to EDACS analog, if calculating raw rms here after filtering,
+    //anytime the walkie-talkie is held open but no voice, the center spike is removed,
+    //and counts against the squelch hits making vox mode inconsistent
+    // if (opts->audio_in_type != 3)
+    //   opts->rtl_rms = raw_rms(voice1, 160, 1);
 
     //convert out audio input into CODEC2 (3200bps) 8 byte data stream
     uint8_t vc1_bytes[8]; memset (vc1_bytes, 0, sizeof(vc1_bytes));

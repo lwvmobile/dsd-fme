@@ -77,6 +77,13 @@ static uint32_t crc32mbf(uint8_t * buf, int len)
 void processMPDU(dsd_opts * opts, dsd_state * state)
 {
 
+  //p25p2 18v reset counters and buffers
+  state->voice_counter[0] = 0; //reset
+  state->voice_counter[1] = 0; //reset
+  memset (state->s_l4, 0, sizeof(state->s_l4));
+  memset (state->s_r4, 0, sizeof(state->s_r4));
+  opts->slot_preference = 2;
+
   //reset some strings when returning from a call in case they didn't get zipped already
   sprintf (state->call_string[0], "%s", "                     "); //21 spaces
   sprintf (state->call_string[1], "%s", "                     "); //21 spaces

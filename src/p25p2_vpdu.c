@@ -154,16 +154,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 							//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
 							//this will only occur in realtime tuning, not not required .bin or .wav playback
-							if (channel & 1) //VCH1
-							{
-								opts->slot1_on = 0;
-								opts->slot2_on = 1;
-							}
-							else //VCH0
-							{
-								opts->slot1_on = 1;
-								opts->slot2_on = 0;
-							}
+							// if (channel & 1) //VCH1
+							// {
+							// 	opts->slot1_on = 0;
+							// 	opts->slot2_on = 1;
+							// }
+							// else //VCH0
+							// {
+							// 	opts->slot1_on = 1;
+							// 	opts->slot2_on = 0;
+							// }
 
 						}
 					}
@@ -254,16 +254,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 							//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
 							//this will only occur in realtime tuning, not not required .bin or .wav playback
-							if (channel & 1) //VCH1
-							{
-								opts->slot1_on = 0;
-								opts->slot2_on = 1;
-							}
-							else //VCH0
-							{
-								opts->slot1_on = 1;
-								opts->slot2_on = 0;
-							}
+							// if (channel & 1) //VCH1
+							// {
+							// 	opts->slot1_on = 0;
+							// 	opts->slot2_on = 1;
+							// }
+							// else //VCH0
+							// {
+							// 	opts->slot1_on = 1;
+							// 	opts->slot2_on = 0;
+							// }
 
 						}
 					}
@@ -390,16 +390,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 								//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
 								//this will only occur in realtime tuning, not not required .bin or .wav playback
-								if (tunable_chan & 1) //VCH1
-								{
-									opts->slot1_on = 0;
-									opts->slot2_on = 1;
-								}
-								else //VCH0
-								{
-									opts->slot1_on = 1;
-									opts->slot2_on = 0;
-								}
+								// if (tunable_chan & 1) //VCH1
+								// {
+								// 	opts->slot1_on = 0;
+								// 	opts->slot2_on = 1;
+								// }
+								// else //VCH0
+								// {
+								// 	opts->slot1_on = 1;
+								// 	opts->slot2_on = 0;
+								// }
 
 							}
 						}
@@ -515,16 +515,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 							//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
 							//this will only occur in realtime tuning, not not required .bin or .wav playback
-							if (channel & 1) //VCH1
-							{
-								opts->slot1_on = 0;
-								opts->slot2_on = 1;
-							}
-							else //VCH0
-							{
-								opts->slot1_on = 1;
-								opts->slot2_on = 0;
-							}
+							// if (channel & 1) //VCH1
+							// {
+							// 	opts->slot1_on = 0;
+							// 	opts->slot2_on = 1;
+							// }
+							// else //VCH0
+							// {
+							// 	opts->slot1_on = 1;
+							// 	opts->slot2_on = 0;
+							// }
 
 						}
 					}
@@ -646,16 +646,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 							//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
 							//this will only occur in realtime tuning, not not required .bin or .wav playback
-							if (channel & 1) //VCH1
-							{
-								opts->slot1_on = 0;
-								opts->slot2_on = 1;
-							}
-							else //VCH0
-							{
-								opts->slot1_on = 1;
-								opts->slot2_on = 0;
-							}
+							// if (channel & 1) //VCH1
+							// {
+							// 	opts->slot1_on = 0;
+							// 	opts->slot2_on = 1;
+							// }
+							// else //VCH0
+							// {
+							// 	opts->slot1_on = 1;
+							// 	opts->slot2_on = 0;
+							// }
 						}
 
 					}
@@ -752,16 +752,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 							//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
 							//this will only occur in realtime tuning, not not required .bin or .wav playback
-							if (channel & 1) //VCH1
-							{
-								opts->slot1_on = 0;
-								opts->slot2_on = 1;
-							}
-							else //VCH0
-							{
-								opts->slot1_on = 1;
-								opts->slot2_on = 0;
-							}
+							// if (channel & 1) //VCH1
+							// {
+							// 	opts->slot1_on = 0;
+							// 	opts->slot2_on = 1;
+							// }
+							// else //VCH0
+							// {
+							// 	opts->slot1_on = 1;
+							// 	opts->slot2_on = 0;
+							// }
 						}
 
 					}
@@ -922,16 +922,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 								//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
 								//this will only occur in realtime tuning, not not required .bin or .wav playback
-								if (tunable_chan & 1) //VCH1
-								{
-									opts->slot1_on = 0;
-									opts->slot2_on = 1;
-								}
-								else //VCH0
-								{
-									opts->slot1_on = 1;
-									opts->slot2_on = 0;
-								}
+								// if (tunable_chan & 1) //VCH1
+								// {
+								// 	opts->slot1_on = 0;
+								// 	opts->slot2_on = 1;
+								// }
+								// else //VCH0
+								// {
+								// 	opts->slot1_on = 1;
+								// 	opts->slot2_on = 0;
+								// }
 
 							}
 						}
@@ -1124,16 +1124,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 								//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
 								//this will only occur in realtime tuning, not not required .bin or .wav playback
-								if (tunable_chan & 1) //VCH1
-								{
-									opts->slot1_on = 0;
-									opts->slot2_on = 1;
-								}
-								else //VCH0
-								{
-									opts->slot1_on = 1;
-									opts->slot2_on = 0;
-								}
+								// if (tunable_chan & 1) //VCH1
+								// {
+								// 	opts->slot1_on = 0;
+								// 	opts->slot2_on = 1;
+								// }
+								// else //VCH0
+								// {
+								// 	opts->slot1_on = 1;
+								// 	opts->slot2_on = 0;
+								// }
 
 							}
 						}
@@ -1265,16 +1265,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 								//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
 								//this will only occur in realtime tuning, not not required .bin or .wav playback
-								if (tunable_chan & 1) //VCH1
-								{
-									opts->slot1_on = 0;
-									opts->slot2_on = 1;
-								}
-								else //VCH0
-								{
-									opts->slot1_on = 1;
-									opts->slot2_on = 0;
-								}
+								// if (tunable_chan & 1) //VCH1
+								// {
+								// 	opts->slot1_on = 0;
+								// 	opts->slot2_on = 1;
+								// }
+								// else //VCH0
+								// {
+								// 	opts->slot1_on = 1;
+								// 	opts->slot2_on = 0;
+								// }
 
 							}
 						}
@@ -1394,16 +1394,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 							//shim fix to stutter/lag by only enabling slot on the target/channel we tuned to
 							//this will only occur in realtime tuning, not not required .bin or .wav playback
-							if (channelt & 1) //VCH1
-							{
-								opts->slot1_on = 0;
-								opts->slot2_on = 1;
-							}
-							else //VCH0
-							{
-								opts->slot1_on = 1;
-								opts->slot2_on = 0;
-							}
+							// if (channelt & 1) //VCH1
+							// {
+							// 	opts->slot1_on = 0;
+							// 	opts->slot2_on = 1;
+							// }
+							// else //VCH0
+							// {
+							// 	opts->slot1_on = 1;
+							// 	opts->slot2_on = 0;
+							// }
 							
 						}
 

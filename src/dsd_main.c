@@ -382,6 +382,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   }
   state->fourv_counter[0] = 0;
   state->fourv_counter[1] = 0;
+  state->voice_counter[0] = 0;
+  state->voice_counter[1] = 0;
 
   //values displayed in ncurses terminal
   // state->p25_vc_freq[0] = 0;
@@ -583,6 +585,7 @@ initOpts (dsd_opts * opts)
   opts->mbe_out_fR = NULL; //second slot on a TDMA system
   opts->audio_gain = 0;
   opts->audio_gainR = 0;
+  opts->audio_gainA = 50.0f; //scale of 1 - 100
   opts->audio_out = 1;
   opts->wav_out_file[0] = 0;
   opts->wav_out_fileR[0] = 0;
@@ -691,6 +694,7 @@ initOpts (dsd_opts * opts)
   opts->dmr_mute_encR = 1;
 
   opts->monitor_input_audio = 0; //enable with -8
+  opts->analog_only = 0; //only turned on with -fA
 
   opts->inverted_p2 = 0;
   opts->p2counter = 0;
@@ -760,11 +764,20 @@ initOpts (dsd_opts * opts)
   //slot preference is used during OSS audio playback to
   //prefer one tdma voice slot over another when both are playing back
   //this is a fix to OSS 48k/1 output
+  #ifdef AERO_BUILD
   opts->slot_preference = 0; //default prefer slot 1 -- state->currentslot = 0;
-
+  #else
+  opts->slot_preference = 2; //use 2 since integrating the Stereo Channel Patch;
+  #endif
   //hardset slots to synthesize
   opts->slot1_on = 1;
   opts->slot2_on = 1;
+
+  //enable filter options
+  opts->use_lpf = 0;
+  opts->use_hpf = 1;
+  opts->use_pbf = 1;
+  opts->use_hpf_d = 1;
 
   //dsp structured file
   opts->dsp_out_file[0] = 0;
@@ -899,6 +912,7 @@ initState (dsd_state * state)
   sprintf (state->slot2light, "%s", "");
   state->aout_gain = 25.0f;
   state->aout_gainR = 25.0f;
+  state->aout_gainA = 0.0f; //use purely as a display or internal value, no user setting
   memset (state->aout_max_buf, 0, sizeof (float) * 200);
   state->aout_max_buf_p = state->aout_max_buf;
   state->aout_max_buf_idx = 0;
@@ -956,6 +970,8 @@ initState (dsd_state * state)
   }
   state->fourv_counter[0] = 0;
   state->fourv_counter[1] = 0;
+  state->voice_counter[0] = 0;
+  state->voice_counter[1] = 0;
 
   state->K = 0;
   state->R = 0;
@@ -1047,8 +1063,8 @@ initState (dsd_state * state)
 
   //edacs - may need to make these user configurable instead for stability on non-ea systems
   state->ea_mode = -1; //init on -1, 0 is standard, 1 is ea
-  state->esk_mode = -1; //same as above, but with esk or not
-  state->esk_mask = 0x0; //toggles from 0x0 to 0xA0 if esk mode enabled
+  state->edacs_vc_call_type = 0;
+  state->esk_mask = 0x0; //esk mask value
   state->edacs_site_id = 0;
   state->edacs_lcn_count = 0;
   state->edacs_cc_lcn = 0;
@@ -1236,7 +1252,7 @@ usage ()
   printf ("                /dev/dsp for OSS audio (Depreciated: Will require padsp wrapper in Linux) \n");
   #endif
   printf ("                rtl for rtl dongle (Default Values -- see below)\n");
-  printf ("                rtl:dev:freq:gain:ppm:bw:sq:udp for rtl dongle (see below)\n");
+  printf ("                rtl:dev:freq:gain:ppm:bw:sq:vol for rtl dongle (see below)\n");
   printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
   printf ("                tcp:192.168.7.5:7355 for custom address and port \n");
   printf ("                filename.bin for OP25/FME capture bin files\n");
@@ -1283,12 +1299,12 @@ usage ()
   // #ifdef AERO_BUILD
   printf ("                If using /dev/dsp input and output at 48k1, launch two instances of DSD-FME w -V 1 and -V 2 if needed");
   // #endif
-  printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
+  // printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
   printf ("  -z            Set TDMA Voice Slot Preference when using /dev/dsp audio output (prevent lag and stuttering)\n");
   printf ("  -y            Enable Experimental Pulse Audio Float Audio Output\n");
   printf ("\n");
   printf ("RTL-SDR options:\n");
-  printf (" Usage: rtl:dev:freq:gain:ppm:bw:sq:udp\n");
+  printf (" Usage: rtl:dev:freq:gain:ppm:bw:sq:vol\n");
   printf ("  NOTE: all arguments after rtl are optional now for trunking, but user configuration is recommended\n");
   printf ("  dev  <num>    RTL-SDR Device Index Number or 8 Digit Serial Number, no strings! (default 0)\n");
   printf ("  freq <num>    RTL-SDR Frequency (851800000 or 851.8M) \n");
@@ -1296,9 +1312,10 @@ usage ()
   printf ("  ppm  <num>    RTL-SDR PPM Error (default = 0)\n");
   printf ("  bw   <num>    RTL-SDR Bandwidth kHz (default = 12)(4, 6, 8, 12, 16, 24)  \n");
   printf ("  sq   <num>    RTL-SDR Squelch Level vs RMS Value (Optional)\n");
-  printf ("  udp  <num>    RTL-SDR Legacy UDP Remote Port (Optional -- External Use Only)\n");
+  // printf ("  udp  <num>    RTL-SDR Legacy UDP Remote Port (Optional -- External Use Only)\n"); //NOTE: This is still available as an option in the ncurses menu
+  printf ("  vol  <num>    RTL-SDR Sample 'Volume' Multiplier (default = 1)(1,2,3)\n");
   printf (" Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T\n");
-  printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:6021\n");
+  printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:2\n");
   printf ("\n");
   printf ("Encoder options:\n");
   printf ("  -fZ           M17 Stream Voice Encoder\n");
@@ -1333,7 +1350,11 @@ usage ()
   printf ("  -fz             Decode only M17*\n");
   printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
-  printf ("  -fp             Decode only EDACS/ProVoice*\n");
+  printf ("  -fp             Decode only ProVoice*\n");
+  printf ("  -fh             Decode only EDACS Standard/ProVoice*\n");
+  printf ("  -fH             Decode only EDACS Standard/ProVoice with ESK 0xA0*\n");
+  printf ("  -fe             Decode only EDACS EA/ProVoice*\n");
+  printf ("  -fE             Decode only EDACS EA/ProVoice with ESK 0xA0*\n");
   printf ("  -fm             Decode only dPMR*\n");
   printf ("  -l            Disable DMR, dPMR, and NXDN input filtering\n");
   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
@@ -1416,7 +1437,7 @@ usage ()
   printf ("                 P25 - 12000; NXDN48 - 7000; NXDN96: 12000; DMR - 7000-12000; EDACS/PV - 12000-24000;\n"); //redo this, or check work, or whatever
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking or Scan Speed VC/sync loss hangtime in seconds. (default = 1 second)\n");
-  printf ("  -9            Force Enable EDACS Standard or Networked Mode if Auto Detection Fails \n");
+  // printf ("  -9            Force Enable EDACS Standard or Networked Mode if Auto Detection Fails \n");
   printf ("\n");
   printf (" Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
   printf (" Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
@@ -1636,7 +1657,7 @@ main (int argc, char **argv)
 
   initOpts (&opts);
   initState (&state);
-
+  init_audio_filters(&state); //audio filters
   InitAllFecFunction();
   // CNXDNConvolution_init(); //seems to function better without initting it
 
@@ -1684,9 +1705,10 @@ main (int argc, char **argv)
           fprintf (stderr, "TG Hold set to %d \n", state.tg_hold);
           break;
 
-        case '9': //This is a temporary fix for RR issue until a permanent fix can be found
+        case '9': //Leaving Enabled to maintain backwards compatability 
           state.ea_mode = 0;
-          fprintf (stderr,"Force Enabling EDACS Standard/Networked Mode Mode\n");
+          state.esk_mask = 0;
+          fprintf (stderr,"Force Enabling EDACS Standard/Networked Mode Mode without ESK.\n");
           break;
 
         //experimental audio monitoring
@@ -2022,6 +2044,7 @@ main (int argc, char **argv)
 
         case 'g':
           sscanf (optarg, "%f", &opts.audio_gain);
+          opts.audio_gainA = opts.audio_gain; //straight assignment
           if (opts.audio_gain < (float) 0 )
           {
             fprintf (stderr,"Disabling audio out gain setting\n");
@@ -2103,6 +2126,7 @@ main (int argc, char **argv)
             opts.dmr_mono = 0;
             state.rf_mod = 0;
             opts.monitor_input_audio = 1;
+            opts.analog_only = 1;
             sprintf (opts.output_name, "Analog Monitor");
             fprintf (stderr,"Only Monitoring Passive Analog Signal\n");
           }
@@ -2173,10 +2197,149 @@ main (int argc, char **argv)
             opts.dmr_stereo = 0;
             opts.dmr_mono = 0;
             state.dmr_stereo = 0;
-            // opts.setmod_bw = 12500;
+            // opts.setmod_bw = 16000;
             sprintf (opts.output_name, "EDACS/PV");
             fprintf (stderr,"Setting symbol rate to 9600 / second\n");
             fprintf (stderr,"Decoding only ProVoice frames.\n");
+            fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
+            //misc tweaks
+            opts.rtl_bandwidth = 24;
+          }
+          else if (optarg[0] == 'h') //standard / net w/o ESK
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 1;
+            state.ea_mode = 0;
+            state.esk_mask = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            state.samplesPerSymbol = 5;
+            state.symbolCenter = 2;
+            opts.mod_c4fm = 0;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 1;
+            state.rf_mod = 2;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.dmr_stereo = 0;
+            // opts.setmod_bw = 12500;
+            sprintf (opts.output_name, "EDACS/PV");
+            fprintf (stderr,"Setting symbol rate to 9600 / second\n");
+            fprintf (stderr,"Decoding EDACS STD/NET and ProVoice frames.\n");
+            fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
+            //rtl specific tweaks
+            opts.rtl_bandwidth = 24;
+            // opts.rtl_gain_value = 36;
+          }
+          else if (optarg[0] == 'H') //standard / net w/ ESK
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 1;
+            state.ea_mode = 0;
+            state.esk_mask = 0xA0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            state.samplesPerSymbol = 5;
+            state.symbolCenter = 2;
+            opts.mod_c4fm = 0;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 1;
+            state.rf_mod = 2;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.dmr_stereo = 0;
+            // opts.setmod_bw = 12500;
+            sprintf (opts.output_name, "EDACS/PV");
+            fprintf (stderr,"Setting symbol rate to 9600 / second\n");
+            fprintf (stderr,"Decoding EDACS STD/NET w/ ESK and ProVoice frames.\n");
+            fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
+            //rtl specific tweaks
+            opts.rtl_bandwidth = 24;
+            // opts.rtl_gain_value = 36;
+          }
+          else if (optarg[0] == 'e') //extended addressing w/o ESK
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 1;
+            state.ea_mode = 1;
+            state.esk_mask = 0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            state.samplesPerSymbol = 5;
+            state.symbolCenter = 2;
+            opts.mod_c4fm = 0;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 1;
+            state.rf_mod = 2;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.dmr_stereo = 0;
+            // opts.setmod_bw = 12500;
+            sprintf (opts.output_name, "EDACS/PV");
+            fprintf (stderr,"Setting symbol rate to 9600 / second\n");
+            fprintf (stderr,"Decoding EDACS Extended Addressing and ProVoice frames.\n");
+            fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
+            //rtl specific tweaks
+            opts.rtl_bandwidth = 24;
+            // opts.rtl_gain_value = 36;
+          }
+          else if (optarg[0] == 'E') //extended addressing w/ ESK
+          {
+            opts.frame_dstar = 0;
+            opts.frame_x2tdma = 0;
+            opts.frame_p25p1 = 0;
+            opts.frame_p25p2 = 0;
+            opts.frame_nxdn48 = 0;
+            opts.frame_nxdn96 = 0;
+            opts.frame_dmr = 0;
+            opts.frame_dpmr = 0;
+            opts.frame_provoice = 1;
+            state.ea_mode = 1;
+            state.esk_mask = 0xA0;
+            opts.frame_ysf = 0;
+            opts.frame_m17 = 0;
+            state.samplesPerSymbol = 5;
+            state.symbolCenter = 2;
+            opts.mod_c4fm = 0;
+            opts.mod_qpsk = 0;
+            opts.mod_gfsk = 1;
+            state.rf_mod = 2;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            opts.dmr_stereo = 0;
+            opts.dmr_mono = 0;
+            state.dmr_stereo = 0;
+            // opts.setmod_bw = 12500;
+            sprintf (opts.output_name, "EDACS/PV");
+            fprintf (stderr,"Setting symbol rate to 9600 / second\n");
+            fprintf (stderr,"Decoding EDACS Extended Addressing w/ ESK and ProVoice frames.\n");
             fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
             //rtl specific tweaks
             opts.rtl_bandwidth = 24;
@@ -2466,6 +2629,11 @@ main (int argc, char **argv)
             opts.m17encoder = 1;
             opts.pulse_digi_rate_out = 48000;
             opts.pulse_digi_out_channels = 1;
+            //filters disabled by default, use ncurses VBN switches
+            opts.use_lpf = 0;
+            opts.use_hpf = 0;
+            opts.use_pbf = 0;
+            opts.dmr_stereo = 0;
             sprintf (opts.output_name, "M17 Encoder");
           }
           else if (optarg[0] == 'B') //Captial B to Run the M17 BRT encoder
@@ -2756,8 +2924,12 @@ main (int argc, char **argv)
       if (curr != NULL) opts.rtl_squelch_level = atoi (curr);
       else goto RTLEND;
 
-      curr = strtok(NULL, ":"); //rtl udp port "-U"
-      if (curr != NULL) opts.rtl_udp_port = atoi (curr);
+      // curr = strtok(NULL, ":"); //rtl udp port "-U"
+      // if (curr != NULL) opts.rtl_udp_port = atoi (curr);
+      // else goto RTLEND;
+
+      curr = strtok(NULL, ":"); //rtl sample / volume multiplier
+      if (curr != NULL) opts.rtl_volume_multiplier = atoi (curr);
       else goto RTLEND;
 
       RTLEND:
@@ -2789,15 +2961,19 @@ main (int argc, char **argv)
         
       }
 
+      if (opts.rtl_volume_multiplier > 3 || opts.rtl_volume_multiplier < 0)
+        opts.rtl_volume_multiplier = 1; //I wonder if you could flip polarity by using -1
+
       fprintf (stderr, "Dev %d ", opts.rtl_dev_index);
       fprintf (stderr, "Freq %d ", opts.rtlsdr_center_freq);
       fprintf (stderr, "Gain %d ", opts.rtl_gain_value);
       fprintf (stderr, "PPM %d ", opts.rtlsdr_ppm_error);
       fprintf (stderr, "BW %d ", opts.rtl_bandwidth);
       fprintf (stderr, "SQ %d ", opts.rtl_squelch_level);
-      fprintf (stderr, "UDP %d \n", opts.rtl_udp_port);
+      // fprintf (stderr, "UDP %d \n", opts.rtl_udp_port);
+      fprintf (stderr, "VOL %d \n", opts.rtl_volume_multiplier);
       opts.audio_in_type = 3;
-      state.audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
+      // opts.rtl_volume_multiplier = 2; //TODO: Make this an extra value on the end
       rtl_ok = 1;
       #endif
 

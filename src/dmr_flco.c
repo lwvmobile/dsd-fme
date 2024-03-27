@@ -354,15 +354,18 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       
     }
     
-
-    if (restchannel != state->dmr_rest_channel && restchannel != -1)
+    //only assign this value here if not trunking
+    // if (opts->p25_trunk == 0) //may be safe to always do this now with code changes, will want to test at some point (tg hold w/ dual voice / slco may optimally need this set)
     {
-      state->dmr_rest_channel = restchannel;
-      //assign to cc freq
-      if (state->trunk_chan_map[restchannel] != 0)
+      if (restchannel != state->dmr_rest_channel && restchannel != -1)
       {
-        state->p25_cc_freq = state->trunk_chan_map[restchannel];
-      } 
+        state->dmr_rest_channel = restchannel;
+        //assign to cc freq
+        // if (state->trunk_chan_map[restchannel] != 0)
+        // {
+        //   state->p25_cc_freq = state->trunk_chan_map[restchannel];
+        // } 
+      }
     }
 
     if (type == 1) fprintf (stderr, "%s \n", KGRN);
@@ -1004,21 +1007,35 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   else if (slco == 0xF)
   {
     fprintf (stderr, " SLCO Capacity Plus Site: %d - Rest LSN: %d - RS: %02X", capsite, restchannel, cap_reserved);
-    //assign to cc freq if available
-    if (state->trunk_chan_map[restchannel] != 0)
-    {
-      state->p25_cc_freq = state->trunk_chan_map[restchannel];
-    }
 
     //extra handling for TG hold while trunking enabled
-    if (state->tg_hold != 0 && opts->p25_trunk == 1)
+    if (state->tg_hold != 0 && opts->p25_trunk == 1) //logic seems to be fixed now for new rest lsn logic and other considerations
     {
-      //if both slots are voice,
-      if (state->dmrburstL == 16 && state->dmrburstR == 16)
+      //debug
+      // fprintf (stderr, " TG HOLD Both Slots Busy Check; ");
+
+      //if both slots have some cobination of vlc, pi, voice, or tlc
+      int busy = 0;
+      if ( (state->dmrburstL == 16 || state->dmrburstL == 0 || state->dmrburstL == 1 || state->dmrburstL == 2) && 
+           (state->dmrburstR == 16 || state->dmrburstR == 0 || state->dmrburstR == 1 || state->dmrburstR == 2)) busy = 1;
+      if (busy)
       {
+
+        //debug
+        // fprintf (stderr, " Busy; ");
+
         //but nether is the TG on hold
         if ( (state->tg_hold != state->lasttg) && (state->tg_hold != state->lasttgR) )
         {
+          //debug
+          // fprintf (stderr, " Neither Slot is TG on Hold; ");
+
+          //assign to cc freq if available -- move to right before needed for new logic on rest lsn
+          if (state->trunk_chan_map[restchannel] != 0)
+          {
+            state->p25_cc_freq = state->trunk_chan_map[restchannel];
+          }
+
           //tune to the current rest channel so we can observe its channel status csbks for the TG on hold
           if (state->p25_cc_freq != 0)
           {
