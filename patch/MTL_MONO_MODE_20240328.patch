@@ -1,0 +1,152 @@
+diff --git a/src/dmr_pi.c b/src/dmr_pi.c
+index 7542c61..d1c8e39 100644
+--- a/src/dmr_pi.c
++++ b/src/dmr_pi.c
+@@ -14,6 +14,9 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
+ {
+   UNUSED2(opts, CRCCorrect);
+ 
++  //force slot to 0 if using dmr mono handling
++  if (opts->dmr_mono == 1) state->currentslot = 0;
++
+   if((IrrecoverableErrors == 0)) 
+   {
+ 
+diff --git a/src/dsd_audio2.c b/src/dsd_audio2.c
+index 756e468..13316df 100644
+--- a/src/dsd_audio2.c
++++ b/src/dsd_audio2.c
+@@ -988,6 +988,9 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
+   memset (stereo_samp2, 0, sizeof(stereo_samp2));
+   memset (stereo_samp3, 0, sizeof(stereo_samp3));
+ 
++  if (opts->dmr_mono == 1)
++    memcpy (state->s_r4, state->s_l4, sizeof(state->s_r4));
++
+   //dmr enc checkdown for whether or not to fill the stereo sample or not for playback or writing
+   encL = encR = 0;
+   encL = (state->dmr_so  >> 6) & 0x1;
+@@ -1070,8 +1073,16 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
+   }
+ 
+   //flag either left or right as 'enc' to mute if B
+-  if (strcmp(modeL, "B") == 0) encL = 1;
+-  if (strcmp(modeR, "B") == 0) encR = 1;
++  if (strcmp(modeL, "B") == 0)
++  {
++    encL = 1;
++    encR = 1;
++  }
++  if (strcmp(modeR, "B") == 0)
++  {
++    encR = 1;
++    encL = 1;
++  }
+ 
+   //check to see if we need to enable slot and toggle slot preference here
+   //this method will always favor slot 2 (this is a patch anyways, so....meh)
+diff --git a/src/dsd_frame.c b/src/dsd_frame.c
+index 577169c..275abb6 100644
+--- a/src/dsd_frame.c
++++ b/src/dsd_frame.c
+@@ -160,7 +160,8 @@ processFrame (dsd_opts * opts, dsd_state * state)
+           sprintf (state->slot2light, " slot2 ");
+           //we can safely open MBE on any MS or mono handling
+           if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state); 
+-          if (opts->p25_trunk == 0) dmrMSBootstrap (opts, state); 
++          // if (opts->p25_trunk == 0) //line disabled to allow mono mode while trunking
++            dmrMSBootstrap (opts, state); 
+         }
+         if (opts->dmr_mono == 1 && state->synctype == 32)
+         {
+diff --git a/src/dsd_main.c b/src/dsd_main.c
+index 3ca7788..22462a0 100644
+--- a/src/dsd_main.c
++++ b/src/dsd_main.c
+@@ -1645,9 +1645,9 @@ main (int argc, char **argv)
+   }
+ 
+   #ifdef AERO_BUILD
+-  fprintf (stderr, "Build Version: AW (20231015) \n");
++  fprintf (stderr, "Build Version: AW MTL (20240201) \n");
+   #else
+-  fprintf (stderr, "Build Version: AW %s \n", GIT_TAG);
++  fprintf (stderr, "Build Version: AW MTL %s \n", GIT_TAG);
+   #endif
+   fprintf (stderr,"MBElib Version: %s\n", versionstr);
+ 
+@@ -2474,14 +2474,18 @@ main (int argc, char **argv)
+             opts.mod_qpsk = 0;
+             opts.mod_gfsk = 0;
+             state.rf_mod = 0;
+-            opts.dmr_stereo = 1;
+-            opts.dmr_mono = 0;
++            // opts.dmr_stereo = 1;
++            // opts.dmr_mono = 0;
+             // opts.setmod_bw = 7000;
+             opts.pulse_digi_rate_out = 8000;
+             opts.pulse_digi_out_channels = 2;
+-            sprintf (opts.output_name, "DMR");
+-            
+-            fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
++            opts.dmr_mono = 1;
++            opts.dmr_stereo = 0; //not sure if this will break anything
++            state.dmr_stereo = 0; //0
++            // opts.setmod_bw = 7000;
++            sprintf (opts.output_name, "DMR Mono");
++            // fprintf (stderr,"-fr / DMR Mono switch enabled. \n NOTE: Some ENC options in Slot 2 may not work properly.\n");
++            fprintf (stderr,"\n Decoding DMR Stereo BS/MS Simplex in Mono Single Slot Only Configuration.\n");
+           }
+           //change ft to only do P25 and DMR (TDMA trunking modes)
+           else if (optarg[0] == 't')
+@@ -2558,13 +2562,13 @@ main (int argc, char **argv)
+             state.rf_mod = 0;  //
+             opts.pulse_digi_rate_out = 8000;
+             opts.pulse_digi_out_channels = 2;
+-            opts.dmr_mono = 0;
+-            opts.dmr_stereo = 1;
++            opts.dmr_mono = 1;
++            opts.dmr_stereo = 0; //not sure if this will break anything
+             state.dmr_stereo = 0; //0
+             // opts.setmod_bw = 7000;
+-            sprintf (opts.output_name, "DMR Stereo");
+-            fprintf (stderr,"-fr / DMR Mono switch has been deprecated.\n");
+-            fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
++            sprintf (opts.output_name, "DMR Mono");
++            // fprintf (stderr,"-fr / DMR Mono switch enabled. \n NOTE: Some ENC options in Slot 2 may not work properly.\n");
++            fprintf (stderr,"\n Decoding DMR Stereo BS/MS Simplex in Mono Single Slot Only Configuration.\n");
+ 
+           }
+           else if (optarg[0] == 'm')
+diff --git a/src/dsd_ncurses.c b/src/dsd_ncurses.c
+index 73965dc..e5b38aa 100644
+--- a/src/dsd_ncurses.c
++++ b/src/dsd_ncurses.c
+@@ -2297,8 +2297,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+   if (opts->ncurses_compact == 1)
+   {
+     printw ("------------------------------------------------------------------------------\n");
+-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "AW (20231015)");
+-    printw ("------------------------------------------------------------------------------\n");
++    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "AW MTL (20240328)");
++    printw ("------------------------------------------------------------------------------\n"); 
+   }
+ #elif LIMAZULUTWEAKS
+   if (opts->ncurses_compact == 1)
+@@ -2336,12 +2336,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+       #endif
+       #ifdef AERO_BUILD
+       if (i == 5) printw (" %s ", "Aero Build");
+-      if (i == 6) printw (" AW (20231015) \n");
++      if (i == 6) printw (" AW MTL (20240328) \n");
+       #elif ZDEV_BUILD
+-      if (i == 5) printw (" %s ", "AW ");
++      if (i == 5) printw (" %s ", "AW MTL");
+       if (i == 6) printw (" %s \n", GIT_TAG);
+-      #else
+-      if (i == 5) printw (" %s ", "AW ");
++      #else 
++      if (i == 5) printw (" %s ", "AW MTL");
+       if (i == 6) printw (" %s \n", GIT_TAG);
+       #endif
+       else printw ("\n");
