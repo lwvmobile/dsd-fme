@@ -1,0 +1,35 @@
+diff --git a/src/dsd_main.c b/src/dsd_main.c
+index 22462a0..b22bdba 100644
+--- a/src/dsd_main.c
++++ b/src/dsd_main.c
+@@ -1645,7 +1645,7 @@ main (int argc, char **argv)
+   }
+ 
+   #ifdef AERO_BUILD
+-  fprintf (stderr, "Build Version: AW MTL (20240201) \n");
++  fprintf (stderr, "Build Version: AW MTL (20240326) \n");
+   #else
+   fprintf (stderr, "Build Version: AW MTL %s \n", GIT_TAG);
+   #endif
+diff --git a/src/dsd_ncurses.c b/src/dsd_ncurses.c
+index 6bca068..5df919b 100644
+--- a/src/dsd_ncurses.c
++++ b/src/dsd_ncurses.c
+@@ -2297,7 +2297,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+   if (opts->ncurses_compact == 1)
+   {
+     printw ("------------------------------------------------------------------------------\n");
+-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "AW MTL (20240201)");
++    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "AW MTL (20240326)");
+     printw ("------------------------------------------------------------------------------\n"); 
+   }
+ #elif LIMAZULUTWEAKS
+@@ -2336,7 +2336,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+       #endif
+       #ifdef AERO_BUILD
+       if (i == 5) printw (" %s ", "Aero Build");
+-      if (i == 6) printw (" AW MTL (20240201) \n");
++      if (i == 6) printw (" AW MTL (20240326) \n");
+       #elif ZDEV_BUILD
+       if (i == 5) printw (" %s ", "AW MTL");
+       if (i == 6) printw (" %s \n", GIT_TAG);
