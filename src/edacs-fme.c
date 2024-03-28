@@ -383,7 +383,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     #ifdef PRETTY_COLORS
     {} //do nothing
     #else
-    fprintf (stderr, "SQL HIT: %d; ", 5-cnt); //add cnt since user can't see red or green
+    fprintf (stderr, "SQL HIT: %d; ", 5-count); //add count since user can't see red or green
     #endif
 
     #ifdef DEBUG_ANALOG
