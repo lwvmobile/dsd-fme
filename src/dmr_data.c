@@ -321,73 +321,24 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
     skipDibit (opts, state, 12 + 49 + 5);
   }
 
-  #define CON_TUNEAWAY //disable if slower tune back is desired
+  #define CON_TUNEAWAY //disable if any unlock issues noted on the logic
 
   #ifdef CON_TUNEAWAY
-  //if using con+ trunking and last voice observed more than x seconds ago, snap back to con+ cc
-  //con+ voice channels can have extremely long idle periods without properly tearing down
+  //simplified, if IDLE condition, drop cc and vc sync time so when RF channel tears down, we go back much quicker
+  //NOTE: This was adopted, because going back to the CC early and then to be sent back to the channel grant, 
+  //only for it to tear down and being sent back to the CC again isn't very efficient for trunk tracking
+  //NOTE: This will still leave the tuner in the 'locked' state when tuning a voice channel grant on the CC,
+  //and will remain locked until a new voice channel grant is received, but its just asthetic, trying to fix it
+  //is too much of a hassle and causes other issues like CC hunting, etc.
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && state->is_con_plus == 1)
   {
-    //wait time on call
-    time_t waitsec = 2;
-
-    //TLC seems to continue to roll during call timer, so its possible that is the indication to stay on the channel
-    //NOTE: Some Con+ systems seem to just spam the call grant up until the RF channel is torn down which is not very effecient for trunking purposes
-    //you either sit there until the framesync is lost, or go back on the condition below and just get sent back for nothing, not all CON+ does this
-
-    //switching to a more nuanced logic on CON+, look for any voice related activity before going back, including TLC hold on call/slot
     int clear = 0;
-    if ( (state->dmrburstL != 16 && state->dmrburstL != 0 && state->dmrburstL != 1 && state->dmrburstL != 2) && 
-         (state->dmrburstR != 16 && state->dmrburstR != 0 && state->dmrburstR != 1 && state->dmrburstR != 2) ) clear = 1;
-    
-    //second check for data activity if data calls are permitted to tune, and voice calls are already clear
-    if (opts->trunk_tune_data_calls == 1 && clear == 1)
+    //IF both slots currently signalling IDLE
+    if (state->dmrburstL == 9 && state->dmrburstR == 9) clear = 1;
+    if (clear == 1)
     {
-      clear = 0; //reset
-      //if no data header or data block sync in either slot
-      if ( (state->dmrburstL != 6 && state->dmrburstL != 7 && state->dmrburstL != 8 && state->dmrburstL != 10) && 
-            (state->dmrburstR != 6 && state->dmrburstR != 7 && state->dmrburstR != 8 && state->dmrburstR != 10) ) clear = 1;
-    }
-
-    //if a clear condition is available and the internal timer has expired, go back to CC
-    if ( (time(NULL) - state->last_vc_sync_time > waitsec) && (clear == 1) )
-    {
-      if (opts->use_rigctl == 1) //rigctl tuning
-      {
-        if (opts->setmod_bw != 0) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
-        SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
-        //debug
-        fprintf (stderr, " Con+ Timeout; Return to CC; \n");
-      }
-
-      else if (opts->audio_in_type == 3) //rtl_fm tuning
-      {
-        #ifdef USE_RTLSDR
-        rtl_dev_tune(opts, state->p25_cc_freq);
-        //debug
-        fprintf (stderr, " Con+ Timeout; Return to CC; \n");
-        #endif
-      }
-      opts->p25_is_tuned = 0;
-      //zero out vc frequencies
-      state->p25_vc_freq[0] = 0;
-      state->p25_vc_freq[1] = 0;
-      memset (state->active_channel, 0, sizeof(state->active_channel));
-      state->last_cc_sync_time = time(NULL);
-      state->is_con_plus = 0; //con+ flag off
-
-      //display/le/buzzer bug fix when con+ cc return (bug not observed here, 
-      //but could happen like it does on TIII with mixed enc and clear calls w/ ENC LO is activated)
-      state->payload_mi = 0;
-      state->payload_algid = 0;
-      state->payload_keyid = 0;
-      state->dmr_so = 0;
-      
-      state->payload_miR = 0;
-      state->payload_algidR = 0;
-      state->payload_keyidR = 0;
-      state->dmr_soR = 0;
-
+      state->last_cc_sync_time = 0;
+      state->last_vc_sync_time = 0;
     }
   }
   #endif
