@@ -3921,10 +3921,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
   }
 
-  if (c == 51) //'3' key, toggle slot preference on 48k/1
+  // if (c == 51) //'3' key, toggle slot preference on 48k/1
+  // {
+  //   if (opts->slot_preference == 1) opts->slot_preference = 0;
+  //   else opts->slot_preference = 1;
+  // }
+
+  if (c == 51) //'3' key, cycle slot preference
   {
-    if (opts->slot_preference == 1) opts->slot_preference = 0;
-    else opts->slot_preference = 1;
+    if (opts->slot_preference == 0 || opts->slot_preference == 1) opts->slot_preference++;
+    else opts->slot_preference = 0;
   }
 
   if (c == 43) //+ key, increment audio_gain
