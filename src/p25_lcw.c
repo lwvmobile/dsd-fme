@@ -147,15 +147,19 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
 
       else if (lc_format == 0x49)
       {
-        fprintf (stderr, " Souce ID Extension");
+        fprintf (stderr, " Source ID Extension -");
+        uint32_t nid = (uint32_t)ConvertBitIntoBytes(&LCW_bits[16], 24);
+        uint32_t src = (uint32_t)ConvertBitIntoBytes(&LCW_bits[40], 24);
+        fprintf (stderr, " Full SUID: %08X-%08d", nid, src);
+
       }
 
       else if (lc_format == 0x4A) 
       {
         fprintf (stderr, " Unit to Unit Voice Channel User – Extended");
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&LCW_bits[16], 24);
-        uint32_t suid   = (uint32_t)ConvertBitIntoBytes(&LCW_bits[40], 24);
-        fprintf (stderr, "TGT: %04X SUID: %d; ", target, suid);
+        uint32_t src   = (uint32_t)ConvertBitIntoBytes(&LCW_bits[40], 24);
+        fprintf (stderr, "TGT: %d; SRC: %d; ", target, src);
       }
 
       else if (lc_format == 0x50)

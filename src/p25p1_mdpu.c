@@ -576,8 +576,13 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         int channelt  = (mpdu_byte[22] << 8) | mpdu_byte[23];
         int channelr  = (mpdu_byte[24] << 8) | mpdu_byte[25]; //optional!
         //using source and target address, not source and target id (is this correct?)
-        long int source = (mpdu_byte[3] << 16) |(mpdu_byte[4] << 8) | mpdu_byte[5];
+        long int source = (mpdu_byte[3] << 16)  | (mpdu_byte[4] << 8) | mpdu_byte[5];
         long int target = (mpdu_byte[19] << 16) |(mpdu_byte[20] << 8) | mpdu_byte[21];
+        //TODO: Test Full Values added here for SUID, particular tgt_nid and tgt_sid
+        long int src_nid = (mpdu_byte[12] << 24) | (mpdu_byte[13] << 16) | (mpdu_byte[14] << 8) | mpdu_byte[15];
+        long int src_sid = (mpdu_byte[16] << 16) | (mpdu_byte[17] << 8) | mpdu_byte[18];
+        long int tgt_nid = (mpdu_byte[26] << 16) | (mpdu_byte[27] << 8) | mpdu_byte[28]; //only has 3 octets on tgt nid, partial only?
+        long int tgt_sid = (mpdu_byte[29] << 16) | (mpdu_byte[30] << 8) | mpdu_byte[31];
         long int freq1 = 0;
         long int freq2 = 0;
         UNUSED(freq2);
@@ -594,7 +599,8 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, " Priority %d", svc & 0x7); //call priority
         }
         fprintf (stderr, " Unit to Unit Voice Channel Grant Update - Extended");
-        fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Source [%ld][%04lX] Target [%ld][%04lX]", svc, channelt, channelr, source, source, target, target);
+        // fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Source [%ld][%04lX] Target [%ld][%04lX]", svc, channelt, channelr, source, source, target, target);
+        fprintf (stderr, "\n  SVC: %02X; CHAN-T: %04X; CHAN-R: %04X; SRC: %d; TGT: %d; FULL SRC: %08X-%08d; FULL TGT: %08X-%08d;", svc, channelt, channelr, source, target, src_nid, src_sid, tgt_nid, tgt_sid);
         freq1 = process_channel_to_freq (opts, state, channelt);
         freq2 = process_channel_to_freq (opts, state, channelr); //optional!
 

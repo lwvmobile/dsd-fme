@@ -695,16 +695,31 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		}
 
 		//Unit-to-Unit Voice Service Channel Grant (UU_V_CH_GRANT), or Grant Update (same format)
-		if (MAC[1+len_a] == 0x44 || MAC[1+len_a] == 0x46) //double check these opcodes
+		if (MAC[1+len_a] == 0x44 || MAC[1+len_a] == 0x46 || MAC[1+len_a] == 0xC4) //double check these opcodes
 		{
 			int channel = (MAC[2+len_a] << 8) | MAC[3+len_a];
 			int target  = (MAC[4+len_a] << 16) | (MAC[5+len_a] << 8) | MAC[6+len_a];
 			int source  = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
+			unsigned long long int src_suid = 0;
 			long int freq = 0;
+
+			if (MAC[1+len_a] == 0x21)
+			{
+				src_suid = (MAC[6+len_a] << 48ULL) | (MAC[7+len_a] << 40ULL) | (MAC[8+len_a] << 32ULL) | (MAC[9+len_a] << 24ULL) |
+										(MAC[10+len_a] << 16ULL) | (MAC[11+len_a] << 8ULL) | (MAC[12+len_a] << 0ULL);
+
+				source = src_suid & 0xFFFFFF;
+
+				target  = (MAC[13+len_a] << 16) | (MAC[14+len_a] << 8) | MAC[15+len_a];
+
+				// channel = (MAC[4+len_a] << 8) | MAC[5+len_a]; //CH-R, above is CH-T value
+			}
 
 			fprintf (stderr, "\n Unit to Unit Channel Grant");
 			if ( MAC[1+len_a] == 0x46) fprintf (stderr, " Update");
-			fprintf (stderr, "\n  CHAN [%04X] Source [%d] Target [%d]", channel, source, target);
+			if ( MAC[1+len_a] == 0xC4) fprintf (stderr, " Extended");
+			fprintf (stderr, "\n  CHAN: %04X; SRC: %d; TGT: %d; ", channel, source, target);
+			if (MAC[1+len_a] == 0xC4) fprintf (stderr, "SUID: %08llX-%08d; ", src_suid >> 24, source);
 			freq = process_channel_to_freq (opts, state, channel);
 
 			//add active channel to string for ncurses display
@@ -2242,15 +2257,15 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			if (MAC[1+len_a] == 0x21)
 			{
-				src_suid = (MAC[8+len_a] << 48) | (MAC[9+len_a] << 40) | (MAC[10+len_a] << 32) | (MAC[11+len_a] << 24) |
-										(MAC[12+len_a] << 16) | (MAC[13+len_a] << 8) | (MAC[14+len_a] << 0);
+				src_suid = (MAC[8+len_a] << 48ULL) | (MAC[9+len_a] << 40ULL) | (MAC[10+len_a] << 32ULL) | (MAC[11+len_a] << 24ULL) |
+										(MAC[12+len_a] << 16ULL) | (MAC[13+len_a] << 8ULL) | (MAC[14+len_a] << 0ULL);
 
 				src = src_suid & 0xFFFFFF; //last 24 of completed SUID?
 			}
 
 			fprintf (stderr, "\n VCH %d - TG: %d; SRC: %d; ", slot, gr, src);
 
-			if (MAC[1+len_a] == 0x21) fprintf (stderr, "SUID: %lld; ", src_suid);
+			if (MAC[1+len_a] == 0x21) fprintf (stderr, "SUID: %08llX-%08d; ", src_suid >> 24, src);
 
 			if (svc & 0x80) fprintf (stderr, " Emergency");
 			if (svc & 0x40) fprintf (stderr, " Encrypted");
@@ -2286,14 +2301,25 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			}
 		}
 
-		//1 or 21, group voice channel message, abb and ext
+		//1 or 21, unit to unit voice channel message, abb and ext
 		if (MAC[1+len_a] == 0x2 || MAC[1+len_a] == 0x22)
 		{
 			int svc =  MAC[2+len_a];
 			int gr  = (MAC[3+len_a] << 16) | (MAC[4+len_a] << 8) | MAC[5+len_a];
 			int src = (MAC[6+len_a] << 16) | (MAC[7+len_a] << 8) | MAC[8+len_a];
+			unsigned long long int src_suid = 0;
 
-			fprintf (stderr, "\n VCH %d - TG %d SRC %d ", slot, gr, src);
+			if (MAC[1+len_a] == 0x21)
+			{
+				src_suid = (MAC[9+len_a] << 48ULL) | (MAC[10+len_a] << 40ULL) | (MAC[11+len_a] << 32ULL) | (MAC[12+len_a] << 24ULL) |
+										(MAC[13+len_a] << 16ULL) | (MAC[14+len_a] << 8ULL) | (MAC[15+len_a] << 0ULL);
+
+				src = src_suid & 0xFFFFFF;
+			}
+
+			fprintf (stderr, "\n VCH %d - TGT: %d; SRC %d; ", slot, gr, src);
+
+			if (MAC[1+len_a] == 0x22) fprintf (stderr, "SUID: %08llX-%08d; ", src_suid >> 24, src);
 
 			if (svc & 0x80) fprintf (stderr, " Emergency");
 			if (svc & 0x40) fprintf (stderr, " Encrypted");
