@@ -600,7 +600,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         }
         fprintf (stderr, " Unit to Unit Voice Channel Grant Update - Extended");
         // fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Source [%ld][%04lX] Target [%ld][%04lX]", svc, channelt, channelr, source, source, target, target);
-        fprintf (stderr, "\n  SVC: %02X; CHAN-T: %04X; CHAN-R: %04X; SRC: %d; TGT: %d; FULL SRC: %08X-%08d; FULL TGT: %08X-%08d;", svc, channelt, channelr, source, target, src_nid, src_sid, tgt_nid, tgt_sid);
+        fprintf (stderr, "\n  SVC: %02X; CHAN-T: %04X; CHAN-R: %04X; SRC: %ld; TGT: %ld; FULL SRC: %08lX-%08ld; FULL TGT: %08lX-%08ld;", svc, channelt, channelr, source, target, src_nid, src_sid, tgt_nid, tgt_sid);
         freq1 = process_channel_to_freq (opts, state, channelt);
         freq2 = process_channel_to_freq (opts, state, channelr); //optional!
 
