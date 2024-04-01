@@ -1847,6 +1847,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         for (j = 0; j < dec; j++)
           if (get_rtlsdr_sample(&sample, opts, state) < 0)
             cleanupAndExit(opts, state);
+        sample *= opts->rtl_volume_multiplier;
         voice1[i] = sample;
       }
 
@@ -1855,6 +1856,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         for (j = 0; j < dec; j++)
           if (get_rtlsdr_sample(&sample, opts, state) < 0)
             cleanupAndExit(opts, state);
+        sample *= opts->rtl_volume_multiplier;
         voice2[i] = sample;
       }
       

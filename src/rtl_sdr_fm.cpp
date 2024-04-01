@@ -1027,6 +1027,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
   int r;
 	rtl_bandwidth =  opts->rtl_bandwidth * 1000; //reverted back to straight value
 	bandwidth_multiplier = (bandwidth_divisor / rtl_bandwidth);
+	volume_multiplier = 1; //moved to external handling to be more dynamic
 
 	//this needs to be initted first, then we set the parameters
   dongle_init(&dongle);
@@ -1057,9 +1058,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	if (opts->rtl_udp_port != 0) port = opts->rtl_udp_port; //set this here, only open socket thread if set
 	if (opts->rtl_gain_value > 0) {
 		dongle.gain = opts->rtl_gain_value * 10; //multiple by ten to make it consitent with the way rtl_fm works
-	}
-  volume_multiplier = opts->rtl_volume_multiplier;
-	// fprintf (stderr, "Setting RTL Volume Multiplier to %d\n", volume_multiplier);
+	}	
 
   /* quadruple sample_rate to limit to Δθ to ±π/2 */
 	demod.rate_in *= demod.post_downsample;

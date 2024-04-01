@@ -214,6 +214,8 @@ V - Toggle Low  Pass Filter on Analog Voice or Raw Signal Monitoring
 B - Toggle High Pass Filter on Analog Voice or Raw Signal Monitoring
 N - Toggle Passband  Filter on Analog Voice or Raw Signal Monitoring
 
+v - Cycle RTL Input Volume Multiplier 1X, 2X, 3X (lower v)
+
 ```
 
 ## Sending Audio to a Icecast 2 Server via FFmpeg (Windows)

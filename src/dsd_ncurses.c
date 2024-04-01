@@ -4602,6 +4602,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   }
 
+  if (c == 118 && opts->audio_in_type == 3) //'v' key, cycle rtl volume multiplier, when active
+  {
+    if (opts->rtl_volume_multiplier == 1 || opts->rtl_volume_multiplier == 2) opts->rtl_volume_multiplier++;
+    else opts->rtl_volume_multiplier = 1;
+  }
+
   if (c == 86) // 'V' Key, toggle LPF
   {
     if (opts->use_lpf == 0) opts->use_lpf = 1;

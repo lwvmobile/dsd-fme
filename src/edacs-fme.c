@@ -208,18 +208,21 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       for (i = 0; i < 960; i++)
       {
         get_rtlsdr_sample(&sample, opts, state);
+        sample *= opts->rtl_volume_multiplier;
         analog1[i] = sample;
       }
 
       for (i = 0; i < 960; i++)
       {
         get_rtlsdr_sample(&sample, opts, state);
+        sample *= opts->rtl_volume_multiplier;
         analog2[i] = sample;
       }
 
       for (i = 0; i < 960; i++)
       {
         get_rtlsdr_sample(&sample, opts, state);
+        sample *= opts->rtl_volume_multiplier;
         analog3[i] = sample;
       }
       //the rtl rms value works properly without needing a 'hard' squelch value

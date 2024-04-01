@@ -133,6 +133,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           cleanupAndExit(opts, state);
         //update root means square power level
         opts->rtl_rms = rtl_return_rms();
+        sample *= opts->rtl_volume_multiplier;
 
 #endif
       }
