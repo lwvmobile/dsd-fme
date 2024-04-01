@@ -811,7 +811,7 @@ typedef struct
   int dmr_end_alert[2]; //dmr TLC end call alert beep has already played once flag
 
   //Bitmap Filtering Options
-  uint8_t audio_smoothing;
+  int audio_smoothing;
 
   //YSF Fusion Call Strings and Info
   uint8_t ysf_dt; //data type -- VD1, VD2, Full Rate, etc.
