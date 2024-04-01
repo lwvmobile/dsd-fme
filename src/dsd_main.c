@@ -776,7 +776,7 @@ initOpts (dsd_opts * opts)
   //enable filter options
   opts->use_lpf = 0;
   opts->use_hpf = 1;
-  opts->use_pbf = 1;
+  opts->use_pbf = 0;
   opts->use_hpf_d = 1;
 
   //dsp structured file
