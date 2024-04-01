@@ -1277,8 +1277,9 @@ usage ()
   printf ("                udp:192.168.7.8:23470 for UDP socket blaster output (Target Address and Port\n");
   printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
-  printf ("  -g <float>    Audio Output Gain  (Default: 0 = Auto;        )\n");
-  printf ("                                   (Manual:  1 = 2%%; 50 = 100%%)\n");
+  printf ("  -g <float>    Audio Digital Output Gain  (Default: 0 = Auto;        )\n");
+  printf ("                                           (Manual:  1 = 2%%; 50 = 100%%)\n");
+  printf ("  -n <float>    Audio Analog  Output Gain  (Default: 0 = Auto; 0-100%%  )\n");
   printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n");
   printf ("  -6 <file>     Output raw audio .wav file (48K/1). (WARNING! Large File Sizes 1 Hour ~= 360 MB)\n");
   printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
@@ -1665,7 +1666,7 @@ main (int argc, char **argv)
 
   exitflag = 0;
 
-  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:")) != -1)
+  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1786,11 +1787,13 @@ main (int argc, char **argv)
           if (opts.slot_preference > 1) opts.slot_preference = 1;
           fprintf (stderr, "TDMA (DMR and P2) Slot Voice Preference is Slot %d. \n", opts.slot_preference+1);
           break;
-
         
-
-
-
+        case 'n': //manually set analog audio output gain 
+          sscanf (optarg, "%f", &opts.audio_gainA);
+          if (opts.audio_gainA > 100.0f) opts.audio_gainA = 100.0f;
+          else if (opts.audio_gainA < 0.0f) opts.audio_gainA = 0.0f;
+          fprintf (stderr, "Analog Audio Out Gain set to %f;\n", opts.audio_gainA);
+          break;
 
         case 'V':
           sscanf (optarg, "%d", &slotson);
@@ -2059,7 +2062,7 @@ main (int argc, char **argv)
 
         case 'g':
           sscanf (optarg, "%f", &opts.audio_gain);
-          opts.audio_gainA = opts.audio_gain; //straight assignment
+          
           if (opts.audio_gain < (float) 0 )
           {
             fprintf (stderr,"Disabling audio out gain setting\n");
