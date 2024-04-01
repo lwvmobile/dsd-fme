@@ -2416,9 +2416,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| Pulse Digital Output: %i kHz; %i Ch; G: %02.0f%%", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
     if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
     if (opts->floating_point == 1) printw (" FLOAT: %02.0f%%;", opts->audio_gain*2);
-    if (opts->audio_gain == 0) printw (" (+|-) Auto");
-    if (opts->audio_gain > 0) printw (" (+|-) Manual");
-    if (opts->use_hpf_d == 1) printw (" HPF");
+    if (opts->audio_gain == 0) printw (" (+|-) Auto  ");
+    if (opts->audio_gain > 0)  printw (" (+|-) Manual");
+    if (opts->use_hpf_d == 1)  printw (" HPF");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
     printw (" \n");
@@ -2440,9 +2440,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| OSS Audio Output: %i kHz; %i Ch; G: %02.0f%%", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
     if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
-    if (opts->audio_gain == 0) printw (" (+/-) Auto");
-    if (opts->audio_gain > 0) printw (" (+/-) Manual");
-    if (opts->use_hpf_d == 1) printw (" HPF");
+    if (opts->audio_gain == 0) printw (" (+/-) Auto  ");
+    if (opts->audio_gain > 0)  printw (" (+/-) Manual");
+    if (opts->use_hpf_d == 1)  printw (" HPF");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
     if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) &&  (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
@@ -2454,9 +2454,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| UDP Digital Output: %s:%d; %d kHz %d Ch; %02.0f%%", opts->udp_hostname, opts->udp_portno, opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
     if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
-    if (opts->audio_gain == 0) printw (" (+/-) Auto");
-    if (opts->audio_gain > 0) printw (" (+/-) Manual");
-    if (opts->use_hpf_d == 1) printw (" HPF");
+    if (opts->audio_gain == 0) printw (" (+/-) Auto  ");
+    if (opts->audio_gain > 0)  printw (" (+/-) Manual");
+    if (opts->use_hpf_d == 1)  printw (" HPF");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) &&  (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
       printw (" - Monitor RMS: %04ld ", opts->rtl_rms);

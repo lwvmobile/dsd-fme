@@ -209,6 +209,11 @@ L - Manual Cycle Forward Channel Tuned when RIGCTL or using RTL input and channe
 S - Toggle between EDACS Standard/Network and Extended Addressing mode (Capital S)
 A - Toggle EDACS ESK Mask (none vs A0)
 
+H - Toggle High Pass Filter on Digital Sythesized Voice
+V - Toggle Low  Pass Filter on Analog Voice or Raw Signal Monitoring
+B - Toggle High Pass Filter on Analog Voice or Raw Signal Monitoring
+N - Toggle Passband  Filter on Analog Voice or Raw Signal Monitoring
+
 ```
 
 ## Sending Audio to a Icecast 2 Server via FFmpeg (Windows)
