@@ -810,7 +810,7 @@ typedef struct
   //Remus DMR End Call Alert Beep
   int dmr_end_alert[2]; //dmr TLC end call alert beep has already played once flag
 
-  //Upsampled Audio Smoothing
+  //Bitmap Filtering Options
   uint8_t audio_smoothing;
 
   //YSF Fusion Call Strings and Info

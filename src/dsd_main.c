@@ -805,7 +805,7 @@ initState (dsd_state * state)
   //dmr buffer end
   state->repeat = 0;
 
-  //Upsampled Audio Smoothing
+  //Bitmap Filtering Options
   state->audio_smoothing = 0;
 
   memset (state->audio_out_temp_buf, 0.0f, sizeof(state->audio_out_temp_buf));
@@ -1302,6 +1302,8 @@ usage ()
   // printf ("                 (Audio Smoothing is now disabled on all upsampled output by default -- fix crackle/buzz bug)\n");
   printf ("  -z            Set TDMA Voice Slot Preference when using /dev/dsp audio output (prevent lag and stuttering)\n");
   printf ("  -y            Enable Experimental Pulse Audio Float Audio Output\n");
+  printf ("  -v <hex>      Set Filtering Bitmap Options (Advanced Option)\n");
+  printf ("                1 1 1 1 (0xF): PBF/LPF/HPF/HPFD on\n");
   printf ("\n");
   printf ("RTL-SDR options:\n");
   printf (" Usage: rtl:dev:freq:gain:ppm:bw:sq:vol\n");
@@ -1785,10 +1787,10 @@ main (int argc, char **argv)
           fprintf (stderr, "TDMA (DMR and P2) Slot Voice Preference is Slot %d. \n", opts.slot_preference+1);
           break;
 
-        //Enable Audio Smoothing for Upsampled Audio -- Perm Disable?
-        // case 'V':
-        //   state.audio_smoothing = 1;
-        //   break;
+        
+
+
+
 
         case 'V':
           sscanf (optarg, "%d", &slotson);
@@ -1886,13 +1888,26 @@ main (int argc, char **argv)
           state.symbolCenter = state.symbolCenter * opts.wav_interpolator;
           break;
 
-        // case 'v':
-        //   sscanf (optarg, "%d", &opts.verbose);
-        //   break;
+        case 'v': //set filters via bitmap values 0b1111
+          sscanf (optarg, "%X", &state.audio_smoothing);
+          if (state.audio_smoothing & 1) opts.use_hpf_d = 1;
+          else opts.use_hpf_d = 0;
 
-        // case 'n': //disable or reclaim?
-        //   state.use_throttle = 1;
-        //   break;
+          if (state.audio_smoothing & 2) opts.use_hpf = 1;
+          else opts.use_hpf = 0;
+
+          if (state.audio_smoothing & 4) opts.use_lpf = 1;
+          else opts.use_lpf = 0;
+
+          if (state.audio_smoothing & 8) opts.use_pbf = 1;
+          else opts.use_pbf = 0;
+
+          if (opts.use_hpf_d == 1) fprintf (stderr, "High Pass Filter on Digital Enabled\n");
+          if (opts.use_hpf == 1)   fprintf (stderr, "High Pass Filter on Analog  Enabled\n");
+          if (opts.use_lpf == 1)   fprintf (stderr, "Low  Pass Filter on Analog  Enabled\n");
+          if (opts.use_pbf == 1)   fprintf (stderr, "Pass Band Filter on Analog  Enabled\n");
+
+          break;
 
         case 'b': //formerly Capital 'K'
           sscanf (optarg, "%lld", &state.K);
@@ -2840,7 +2855,7 @@ main (int argc, char **argv)
       if (opts.tcp_sockfd != 0)
       {
         opts.audio_in_type = 8;
-        state.audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
+        
         fprintf (stderr, "TCP Connection Success!\n");
         // openAudioInDevice(&opts); //do this to see if it makes it work correctly
       }

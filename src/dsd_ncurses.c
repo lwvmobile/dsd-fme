@@ -951,7 +951,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           }
 
-          state->audio_smoothing = 0; //disable smoothing to prevent random crackling/buzzing
+          
 
           TCP_END: ; //do nothing
 
@@ -2420,7 +2420,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->audio_gain > 0)  printw (" (+|-) Manual");
     if (opts->use_hpf_d == 1)  printw (" HPF");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
-    // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
+
     printw (" \n");
   }
 
@@ -2444,7 +2444,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->audio_gain > 0)  printw (" (+/-) Manual");
     if (opts->use_hpf_d == 1)  printw (" HPF");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
-    // if (state->audio_smoothing == 1 && opts->floating_point == 0) printw (" Smoothing On;"); //only on short
+
     if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) &&  (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
       printw (" - Monitor RMS: %04ld ", opts->rtl_rms);
     printw (" \n");
@@ -4326,12 +4326,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
 
   }
-
-  // if (c == 48) //'0' key, toggle upsampled audio smoothing
-  // {
-  //   if (state->audio_smoothing == 1) state->audio_smoothing = 0;
-  //   else state->audio_smoothing = 1;
-  // }
 
   if (opts->p25_trunk == 1 && c == 119) //'w' key, toggle white list/black list mode
   {
