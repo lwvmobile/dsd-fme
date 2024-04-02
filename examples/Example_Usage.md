@@ -288,6 +288,8 @@ This is vital to prevent 'lag' or cut-off audio when the UDP audio doesn't fill 
 
 Note2: Be sure to start the receiving end AFTER starting DSD-FME. If DSD-FME is restarted, make sure to restart the receiving end as well, as socat/UDP closes the UDP port listening when DSD-FME closes the UDP socket.
 
+Note3: netcat can be used in place of socat if needed by using `netcat -ulp 23456 | play --buffer 320 -q -b 16 -r 8000 -c1 -t s16 -`
+
 ## Record 48k/1 audio with rtl_fm
 
 You can record suitable audio to feed as input to dsd-fme with `-i` using rtl_fm:
