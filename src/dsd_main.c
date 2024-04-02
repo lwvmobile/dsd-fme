@@ -643,7 +643,7 @@ initOpts (dsd_opts * opts)
   opts->rtl_dev_index = 0;        //choose which device we want by index number
   opts->rtl_gain_value = 0;     //mid value, 0 - AGC - 0 to 49 acceptable values
   opts->rtl_squelch_level = 100; //100 by default, but only affects NXDN and dPMR during framesync test, compared to RMS value
-  opts->rtl_volume_multiplier = 1; //sample multiplier; This multiplies the sample value to produce a higher 'inlvl' (probably best left unused)
+  opts->rtl_volume_multiplier = 2; //sample multiplier; This multiplies the sample value to produce a higher 'inlvl' for the demodulator
   opts->rtl_udp_port = 0; //set UDP port for RTL remote -- 0 by default, will be making this optional for some external/legacy use cases (edacs-fm, etc)
   opts->rtl_bandwidth = 12; //default is 12, reverted back to normal on this (no inherent benefit)
   opts->rtlsdr_ppm_error = 0; //initialize ppm with 0 value;
@@ -1316,7 +1316,7 @@ usage ()
   printf ("  bw   <num>    RTL-SDR Bandwidth kHz (default = 12)(4, 6, 8, 12, 16, 24)  \n");
   printf ("  sq   <num>    RTL-SDR Squelch Level vs RMS Value (Optional)\n");
   // printf ("  udp  <num>    RTL-SDR Legacy UDP Remote Port (Optional -- External Use Only)\n"); //NOTE: This is still available as an option in the ncurses menu
-  printf ("  vol  <num>    RTL-SDR Sample 'Volume' Multiplier (default = 1)(1,2,3)\n");
+  printf ("  vol  <num>    RTL-SDR Sample 'Volume' Multiplier (default = 2)(1,2,3)\n");
   printf (" Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T\n");
   printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:2\n");
   printf ("\n");

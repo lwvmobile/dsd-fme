@@ -86,7 +86,7 @@ RTL-SDR options:
   ppm  <num>    RTL-SDR PPM Error (default = 0)
   bw   <num>    RTL-SDR Bandwidth kHz (default = 12)(8, 12, 16, 24)  
   sq   <num>    RTL-SDR Squelch Level vs RMS Value (Optional)
-  vol  <num>    RTL-SDR Sample 'Volume' Multiplier (default = 1)(1,2,3)
+  vol  <num>    RTL-SDR Sample 'Volume' Multiplier (default = 2)(1,2,3)
  Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T
  Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:2
 

@@ -723,7 +723,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 	else cac_fail = 0;
 
 	//reset some parameters if CAC continues to fail
-	if (cac_fail >= 5)
+	if (cac_fail > 10)
 	{
 		//simple reset
 		state->synctype = 0;
