@@ -2470,7 +2470,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw (" \n");
     if (opts->udp_sockfdA != 0) //Analog Output on udp port +2
     {
-      printw ("| UDP Analog Output: %s:%d; 48 kHz 1 Ch; G: %02.0f%% (/|*)", opts->udp_hostname, opts->udp_portno+2, opts->audio_gainA);
+      printw ("| UDP Analog Output: %s:%d; 48 kHz 1 Ch; G: %02.0f%% (/|*) ", opts->udp_hostname, opts->udp_portno+2, opts->audio_gainA);
+      if (opts->audio_gainA == 0.0f) printw ("A ");
+      else printw ("M ");
       if (opts->audio_in_type != 3) printw ("RMS: %04ld; ", opts->rtl_rms);
       if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
       if (opts->use_hpf == 1) printw ("HP|");     else printw ("  |");
