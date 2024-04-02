@@ -776,7 +776,7 @@ initOpts (dsd_opts * opts)
   //enable filter options
   opts->use_lpf = 0;
   opts->use_hpf = 1;
-  opts->use_pbf = 0;
+  opts->use_pbf = 1;
   opts->use_hpf_d = 1;
 
   //dsp structured file
@@ -2991,7 +2991,7 @@ main (int argc, char **argv)
       // fprintf (stderr, "UDP %d \n", opts.rtl_udp_port);
       fprintf (stderr, "VOL %d \n", opts.rtl_volume_multiplier);
       opts.audio_in_type = 3;
-      // opts.rtl_volume_multiplier = 2; //TODO: Make this an extra value on the end
+      
       rtl_ok = 1;
       #endif
 
