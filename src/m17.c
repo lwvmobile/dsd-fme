@@ -1146,7 +1146,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
 {
 
   //NOTE: Reorganized type numbers as following:
-  //Single Digit numbers 1,2,3,4 are LSF, STR, PKT, and BRT
+  //Single Digit numbers 1,2,3,4 are LSF, STR, BRT, and PKT
   //Double Digit numbers 11,33,55,99 are preamble, EOT, or Dead Air
 
   int i, j, k, x;
@@ -1339,16 +1339,16 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
     }
   */
 
-  //save symbol stream format (M17_Implementations)
+  //save symbol stream format (M17_Implementations), output to float values that m17-packet-decode can read
   if (opts->use_dsp_output) //use -Q output.bin to use this format, will be placed in the DSP folder (reusing DSP)
   {
     FILE * pFile; //file pointer
     pFile = fopen (opts->dsp_out_file, "a"); //append, not write
-    int16_t val = 0;
+    float val = 0;
     for (i = 0; i < 192; i++)
     {
-      val = (int16_t)output_symbols[i];
-      fwrite(&val, 2, 1, pFile);
+      val = (float)output_symbols[i];
+      fwrite(&val, 4, 1, pFile);
     }
     fclose(pFile);
   }
