@@ -217,7 +217,7 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t * lich_bits)
   bool g[4];
 
   uint8_t lich_counter = 0;
-  uint8_t lich_reserve = 0;
+  uint8_t lich_reserve = 0; UNUSED(lich_reserve);
 
   uint16_t crc_cmp = 0;
   uint16_t crc_ext = 0;
@@ -256,11 +256,11 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t * lich_bits)
   // if (err == 0 && lich_reserve != 0) fprintf(stderr, " LRS: %d", lich_reserve);
 
   //This is not M17 standard, but use the LICH reserved bits to signal data type and CAN value
-  if (err == 0 && opts->m17encoder == 1) //only use when using built in encoder
-  {
-    state->m17_str_dt = lich_reserve & 0x3;
-    state->m17_can = (lich_reserve >> 2) & 0x7;
-  }
+  // if (err == 0 && opts->m17encoder == 1) //only use when using built in encoder
+  // {
+  //   state->m17_str_dt = lich_reserve & 0x3;
+  //   state->m17_can = (lich_reserve >> 2) & 0x7;
+  // }
 
   //transfer to storage
   for (i = 0; i < 40; i++)
@@ -715,10 +715,10 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
   //not quite as good as it needs to be, need better decision making on the punctured bit
   
   int i, j, k, x;
-  uint8_t dbuf[184]; //384-bit frame - 16-bit (8 symbol) sync pattern (184 dibits)
-  uint8_t m17_rnd_bits[368]; //368 bits that are still scrambled (randomized)
+  uint8_t dbuf[184];           //384-bit frame - 16-bit (8 symbol) sync pattern (184 dibits)
+  uint8_t m17_rnd_bits[368];  //368 bits that are still scrambled (randomized)
   uint8_t m17_int_bits[368]; //368 bits that are still interleaved
-  uint8_t m17_bits[368]; //368 bits that have been de-interleaved and de-scramble
+  uint8_t m17_bits[368];    //368 bits that have been de-interleaved and de-scrambled
   uint8_t m17_depunc[500]; //488 bits after depuncturing
 
   memset (dbuf, 0, sizeof(dbuf));
@@ -871,16 +871,16 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
 
 } //end processM17LSF
 
-//This version is the older method, skipping the depuncturing and just doing deconv
+//original version using nxdn convolutional decoder, used for encoder debug
 void processM17LSF_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_bits)
 {
 
-  //NOTE: Why is this being a pain in the ass now?
+  //NOTE: Same as OTA processM17LSF, sans dibit collection
 
   int i, j, k, x;
 
   uint8_t m17_int_bits[368]; //368 bits that are still interleaved
-  uint8_t m17_bits[368]; //368 bits that have been de-interleaved and de-scramble
+  uint8_t m17_bits[368];    //368 bits that have been de-interleaved and de-scramble
   uint8_t m17_depunc[500]; //488 bits after depuncturing
 
   memset (m17_int_bits, 0, sizeof(m17_int_bits));
@@ -1004,11 +1004,16 @@ void processM17LSF_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_b
 
 } //end processM17LSF_debug
 
+//this debug version using the libm17 viterbi decoder plus weight states
 void processM17LSF_debug2(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_bits)
 {
-  //Working: Switched to libM17 Viterbi Decoder
+  //Working: Switched to libM17 Viterbi Decoder, but the logic for weigted 'soft bits'
+  //isn't as well as it could be, really wants the symbol values to make estimations
+
+  //TODO: See if noted above can be tweaked using dibit buffer values or something
+
   int i, j, k, x;
-  uint8_t m17_int_bits[368]; //368 bits that are still interleaved
+  uint8_t m17_int_bits[368];  //368 bits that are still interleaved
   uint16_t m17_bits[368];    //368 bits that have been de-interleaved and de-scrambled
   uint16_t m17_depunc[488]; //488 weighted byte representation of bits after depuncturing
   uint8_t lsf_bytes[31];
@@ -1604,16 +1609,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   uint16_t lsf_cn = can; //can value
   uint16_t lsf_rs   = 0; //reserved bits
 
-  //Viterbi decoder seems to respond better to non-zero fill, so, when no enc is used
-  //let's set the lsf_es to 2 for RES, and fill the nonce value with repeating 0x69
-  //NOTE: This has seemingly been fixed with the dead air tweaks
-  // if (lsf_et == 0)
-  // {
-  //   lsf_es = 3; //RES
-  //   for (i = 0; i < 14; i++)
-  //     nonce[i] = 0x69;
-  // }
-
   //compose the 16-bit frame information from the above sub elements
   uint16_t lsf_fi = 0;
   lsf_fi = (lsf_ps & 1) + (lsf_dt << 1) + (lsf_et << 3) + (lsf_es << 5) + (lsf_cn << 7) + (lsf_rs << 11);
@@ -2100,9 +2095,9 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     lsf_chunk[lich_cnt][42] = (lich_cnt >> 0) & 1;
 
     //This is not M17 standard, but use the LICH reserved bits to signal can and dt
-    lsf_chunk[lich_cnt][43] = (lsf_cn >> 2) & 1;
-    lsf_chunk[lich_cnt][44] = (lsf_cn >> 1) & 1;
-    lsf_chunk[lich_cnt][45] = (lsf_cn >> 0) & 1;
+    // lsf_chunk[lich_cnt][43] = (lsf_cn >> 2) & 1;
+    // lsf_chunk[lich_cnt][44] = (lsf_cn >> 1) & 1;
+    // lsf_chunk[lich_cnt][45] = (lsf_cn >> 0) & 1;
 
     lsf_chunk[lich_cnt][46] = (lsf_dt >> 1) & 1;
     lsf_chunk[lich_cnt][47] = (lsf_dt >> 0) & 1;
@@ -2315,16 +2310,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       // fprintf (stderr, "\n nonce:");
       // for (i = 0; i < 14; i++)
       //   fprintf (stderr, " %02X", nonce[i]);
-
-      //Viterbi decoder seems to respond better to non-zero fill, so, when no enc is used
-      //let's set the lsf_es to 2 for RES, and fill the nonce value with repeating 0x69
-      //NOTE: This has seemingly been fixed with the dead air tweaks
-      // if (lsf_et == 0)
-      // {
-      //   lsf_es = 3; //RES
-      //   for (i = 0; i < 14; i++)
-      //     nonce[i] = 0x69;
-      // }
 
       //load the nonce from packed bytes to a bitwise iv array
       memset(iv, 0, sizeof(iv));
@@ -2586,9 +2571,6 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
   char d40[50] = "DSD-FME  "; //DST
   char s40[50] = "DSD-FME  "; //SRC
-
-  // dst = 0xEE6B28000000; //viterbi debug values
-  // src = 0xEE6B28000000; //viterbi debug values
 
   //Default
   // char text[800] = "This is a simple SMS text message sent over M17 Packet Data.";
