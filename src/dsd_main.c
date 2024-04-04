@@ -1662,7 +1662,7 @@ main (int argc, char **argv)
   initState (&state);
   init_audio_filters(&state); //audio filters
   InitAllFecFunction();
-  // CNXDNConvolution_init(); //seems to function better without initting it
+  CNXDNConvolution_init();
 
   exitflag = 0;
 

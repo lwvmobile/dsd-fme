@@ -166,8 +166,8 @@ void CNXDNConvolution_start(void)
 
 void CNXDNConvolution_init()
 {
-  memset(m_metrics1, 0xFF, 16*sizeof(uint16_t));
-  memset(m_metrics2, 0xFF, 16*sizeof(uint16_t));
-  // memset(m_decisions,0xFF, 8*300*sizeof(uint64_t));
+  memset(m_metrics1, 0x0, 16*sizeof(uint16_t));
+  memset(m_metrics2, 0x0, 16*sizeof(uint16_t));
+  memset(m_decisions,0x0, 8*300*sizeof(uint64_t));
 }
 
