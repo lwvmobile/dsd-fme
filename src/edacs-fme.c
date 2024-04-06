@@ -349,7 +349,10 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     fprintf (stderr, " Analog RMS: %04ld SQL: %ld", rms, sql);
     if (state->ea_mode == 0)
     {
-      fprintf (stderr, " AFS [%03d] [%02d-%03d] LCN [%02d]", afs, afs >> 7, afs & 0x7F, lcn);
+      int a = (afs >> 7) & 0xF;
+      int f = (afs >> 3) & 0xF;
+      int s = afs & 0x7;
+      fprintf (stderr, " AFS [%03d] [%02d-%02d%01d] LCN [%02d]", afs, a, f, s, lcn);
     }
     else
     {
