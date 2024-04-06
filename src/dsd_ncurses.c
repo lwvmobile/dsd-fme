@@ -3544,8 +3544,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     for (i = 1; i <= state->edacs_lcn_count; i++)
     {
       // Compute 4:4:3 AFS for display purposes only
-      int a  = (call_matrix[i][2] >> 7) & 0xF;
-      int fs = call_matrix[i][2] & 0x7F;
+      int a = (call_matrix[i][2] >> 7) & 0xF;
+      int f = (call_matrix[i][2] >> 3) & 0xF;
+      int s = call_matrix[i][2] & 0x7;
       printw ("| - LCN [%02d][%010.06lf] MHz", i, (double)state->trunk_lcn_freq[i-1]/1000000);
 
       //print Control Channel on LCN line with the current Control Channel
@@ -3608,7 +3609,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           {
             // Group call
             if ((call_matrix[i][4] & EDACS_IS_GROUP) != 0)
-              printw (" TGT [%6lld][%02d-%03d] SRC [%5lld]", call_matrix[i][2], a, fs, call_matrix[i][3] );
+              printw (" TGT [%6lld][%02d-%02d%01d] SRC [%5lld]", call_matrix[i][2], a, f, s, call_matrix[i][3] );
             // I-Call
             else if ((call_matrix[i][4] & EDACS_IS_INDIVIDUAL) != 0)
               printw (" TGT [%6lld][ UNIT ] SRC [%5lld] I-Call", call_matrix[i][2], call_matrix[i][3] );
@@ -3792,12 +3793,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
             if ((call_matrix[j][4] & EDACS_IS_VOICE) != 0)
             {
               // Compute 4:4:3 AFS for display purposes only
-              int a  = (call_matrix[j][2] >> 7) & 0xF;
-              int fs = call_matrix[j][2] & 0x7F;
+              int a = (call_matrix[j][2] >> 7) & 0xF;
+              int f = (call_matrix[j][2] >> 3) & 0xF;
+              int s = call_matrix[j][2] & 0x7;
 
               // Group call
               if ((call_matrix[j][4] & EDACS_IS_GROUP) != 0)
-                printw ("Target [%6lld][%02d-%03d] Source [%5lld]", call_matrix[j][2], a, fs, call_matrix[j][3]);
+                printw ("Target [%6lld][%02d-%02d%01d] Source [%5lld]", call_matrix[j][2], a, f, s, call_matrix[j][3]);
               // I-Call
               else if ((call_matrix[j][4] & EDACS_IS_INDIVIDUAL) != 0)
                 printw ("Target [%6lld][ UNIT ] Source [%5lld] I-Call", call_matrix[j][2], call_matrix[j][3]);
