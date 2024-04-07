@@ -1347,7 +1347,8 @@ usage ()
   printf ("                  BASE40: '  ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.'\n");
   printf ("                  Input Rate Default is 48000; Use Multiples of 8000 up to 48000.\n");
   printf ("                  Values not entered into the M17: string are set to default values.\n");
-  printf ("  -S            M17 Encoding Packet SMS String: No more than 772 chars, use single quotations (see example above).\n");
+  printf ("  -S            M17 Packet Encoder SMS String: No more than 772 chars, use single quotations (see example above).\n");
+  printf ("  -S            M17 Stream Encoder SMS String: No more than  48 chars, activates 1600 voice  (best if broken into six 8 char chunks).\n");
   printf ("Decoder options:\n");
   printf ("  -fa           Auto Detection\n");
   printf ("  -fA           Passive Analog Audio Monitor\n");
@@ -1710,6 +1711,7 @@ main (int argc, char **argv)
         case 'S':
           strncpy(state.m17sms, optarg, 772);
           state.m17sms[772] = '\0';
+          state.m17_str_dt = 3; //flip this so that STR encoder knows to use 1600 voice + data
           break;
         
         //specify TG Hold value

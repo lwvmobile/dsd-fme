@@ -1101,6 +1101,7 @@ void processM17LSF(dsd_opts * opts, dsd_state * state); //M17 (LSF)
 void encodeM17STR(dsd_opts * opts, dsd_state * state); //M17 (STR) encoder
 void encodeM17BRT(dsd_opts * opts, dsd_state * state); //M17 (BRT) encoder
 void encodeM17PKT(dsd_opts * opts, dsd_state * state); //M17 (PKT) encoder
+void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len); //M17 (PKT) decoder
 void processP2(dsd_opts * opts, dsd_state * state); //P2
 void processTSBK(dsd_opts * opts, dsd_state * state); //P25 Trunking Single Block
 void processMPDU(dsd_opts * opts, dsd_state * state); //P25 Multi Block PDU (SAP 0x61 FMT 0x15 or 0x17 for Trunking Blocks)

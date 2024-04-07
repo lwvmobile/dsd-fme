@@ -419,6 +419,14 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t * payload
 
   #endif
 
+  //handle arbitrary data
+  uint8_t adata[9]; adata[0] = 99; //set so pkt decoder will rip these out as just utf-8 chars
+  for (i = 0; i < 8; i++)
+    adata[i+1] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+64], 8);
+  
+  fprintf (stderr, "\n"); //linebreak
+  decodeM17PKT (opts, state, adata, 9); //decode Arbitrary Data as UTF-8
+
 }
 
 void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t * payload)
@@ -1463,6 +1471,11 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
 void encodeM17STR(dsd_opts * opts, dsd_state * state)
 {
 
+  //set stream type value here so we can change 3200 or 1600 accordingly
+  uint8_t st = 2; //stream type: 0 = res; 1 = data; 2 = voice(3200); 3 = voice(1600) + data;
+  if (state->m17_str_dt == 3) st = 3; //this is flagged on IF -S user text string is called at CLI
+  else st = 2; //otherwise, just use 1600 voice (if data is required, using PKT mode is probably preferred over Stream Data)
+
   //WIP: IP Frame Things and User Variables for Reflectors, etc
   uint8_t nil[368]; //empty array to send to RF during Preamble, EOT Marker, or Dead Air
   memset (nil, 0, sizeof(nil));
@@ -1580,7 +1593,11 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //   fprintf (stderr, " %02X", nonce[i]);
 
   #ifdef USE_CODEC2
-  nsam = codec2_samples_per_frame(state->codec2_3200);
+  if      (st == 2)
+    nsam = codec2_samples_per_frame(state->codec2_3200);
+  else if (st == 3)
+    nsam = codec2_samples_per_frame(state->codec2_1600);
+  else nsam = 320; //safety default
   #endif
 
   short * samp1 = malloc (sizeof(short) * nsam);
@@ -1603,7 +1620,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //NOTE: Most lich and lsf_chunk bits can be pre-set before the while loop,
   //only need to refresh the lich_cnt value, nonce, and golay
   uint16_t lsf_ps   = 1; //packet or stream indicator bit
-  uint16_t lsf_dt   = 2; //voice (3200bps)
+  uint16_t lsf_dt  = st; //stream type
   uint16_t lsf_et   = 0; //encryption type
   uint16_t lsf_es   = 0; //encryption sub-type
   uint16_t lsf_cn = can; //can value
@@ -1812,11 +1829,14 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         voice1[i] = sample; //only store the 6th sample
       }
 
-      for (i = 0; i < nsam; i++)
+      if (st == 2)
       {
-        for (j = 0; j < dec; j++)
-          pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
-        voice2[i] = sample; //only store the 6th sample
+        for (i = 0; i < nsam; i++)
+        {
+          for (j = 0; j < dec; j++)
+            pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
+          voice2[i] = sample; //only store the 6th sample
+        }
       }
     }
 
@@ -1838,18 +1858,21 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         }
       }
 
-      for (i = 0; i < nsam; i++)
+      if (st == 2)
       {
-        for (j = 0; j < dec; j++)
-          result = sf_read_short(opts->audio_in_file, &sample, 1);
-        voice2[i] = sample;
-        if (result == 0)
+        for (i = 0; i < nsam; i++)
         {
-          sf_close(opts->audio_in_file);
-          fprintf (stderr, "Connection to STDIN Disconnected.\n");
-          fprintf (stderr, "Closing DSD-FME.\n");
-          exitflag = 1;
-          break;
+          for (j = 0; j < dec; j++)
+            result = sf_read_short(opts->audio_in_file, &sample, 1);
+          voice2[i] = sample;
+          if (result == 0)
+          {
+            sf_close(opts->audio_in_file);
+            fprintf (stderr, "Connection to STDIN Disconnected.\n");
+            fprintf (stderr, "Closing DSD-FME.\n");
+            exitflag = 1;
+            break;
+          }
         }
       }
     }
@@ -1863,11 +1886,14 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         voice1[i] = sample;
       }
 
-      for (i = 0; i < nsam; i++)
+      if (st == 2)
       {
-        for (j = 0; j < dec; j++)
-          read (opts->audio_in_fd, &sample, 2);
-        voice2[i] = sample;
+        for (i = 0; i < nsam; i++)
+        {
+          for (j = 0; j < dec; j++)
+            read (opts->audio_in_fd, &sample, 2);
+          voice2[i] = sample;
+        }
       }
     }
 
@@ -1889,18 +1915,21 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         }
       }
 
-      for (i = 0; i < nsam; i++)
+      if (st == 2)
       {
-        for (j = 0; j < dec; j++)
-          result = sf_read_short(opts->tcp_file_in, &sample, 1);
-        voice2[i] = sample;
-        if (result == 0)
+        for (i = 0; i < nsam; i++)
         {
-          sf_close(opts->tcp_file_in);
-          fprintf (stderr, "Connection to TCP Server Disconnected.\n");
-          fprintf (stderr, "Closing DSD-FME.\n");
-          exitflag = 1;
-          break;
+          for (j = 0; j < dec; j++)
+            result = sf_read_short(opts->tcp_file_in, &sample, 1);
+          voice2[i] = sample;
+          if (result == 0)
+          {
+            sf_close(opts->tcp_file_in);
+            fprintf (stderr, "Connection to TCP Server Disconnected.\n");
+            fprintf (stderr, "Closing DSD-FME.\n");
+            exitflag = 1;
+            break;
+          }
         }
       }
     }
@@ -1917,15 +1946,18 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         voice1[i] = sample;
       }
 
-      for (i = 0; i < nsam; i++)
+      if (st == 2)
       {
-        for (j = 0; j < dec; j++)
-          if (get_rtlsdr_sample(&sample, opts, state) < 0)
-            cleanupAndExit(opts, state);
-        sample *= opts->rtl_volume_multiplier;
-        voice2[i] = sample;
+        for (i = 0; i < nsam; i++)
+        {
+          for (j = 0; j < dec; j++)
+            if (get_rtlsdr_sample(&sample, opts, state) < 0)
+              cleanupAndExit(opts, state);
+          sample *= opts->rtl_volume_multiplier;
+          voice2[i] = sample;
+        }
       }
-      
+
       #endif
     }
 
@@ -1937,35 +1969,40 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     if (opts->use_lpf == 1)
     {
       lpf (state, voice1, 160);
-      lpf (state, voice2, 160);
+      if (st == 2)
+        lpf (state, voice2, 160);
     }
 
     //high pass filter
     if (opts->use_hpf == 1)
     {
       hpf (state, voice1, 160);
-      hpf (state, voice2, 160);
+      if (st == 2)
+        hpf (state, voice2, 160);
     }
     
     //passband filter
     if (opts->use_pbf == 1)
     {
       pbf (state, voice1, 160);
-      pbf (state, voice2, 160);
+      if (st == 2)
+        pbf (state, voice2, 160);
     }
 
     //manual gain control
     if (opts->audio_gainA > 0.0f)
     {
       analog_gain (opts, state, voice1, 160);
-      analog_gain (opts, state, voice2, 160);
+      if (st == 2)
+        analog_gain (opts, state, voice2, 160);
     }
 
     //automatic gain control
     else
     {
       agsm (opts, state, voice1, 160);
-      agsm (opts, state, voice2, 160);
+      if (st == 2)
+        agsm (opts, state, voice2, 160);
     }
 
     //NOTE: Similar to EDACS analog, if calculating raw rms here after filtering,
@@ -1979,10 +2016,19 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     uint8_t vc2_bytes[8]; memset (vc2_bytes, 0, sizeof(vc2_bytes));
 
     #ifdef USE_CODEC2
-    codec2_encode(state->codec2_3200, vc1_bytes, voice1);
-    codec2_encode(state->codec2_3200, vc2_bytes, voice2);
+    if (st == 2)
+    {
+      codec2_encode(state->codec2_3200, vc1_bytes, voice1);
+      codec2_encode(state->codec2_3200, vc2_bytes, voice2);
+    }
+    if (st == 3)
+      codec2_encode(state->codec2_1600, vc1_bytes, voice1);
     #endif
 
+    //Fill vc2_bytes with arbitrary data, UTF-8 chars (up to 48)
+    if (st == 3)
+      memcpy (vc2_bytes, state->m17sms+(lich_cnt*8), 8);
+    
     //initialize and start assembling the completed frame
 
     //Data/Voice Portion of Stream Data Link Layer w/ FSN
@@ -2099,8 +2145,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     // lsf_chunk[lich_cnt][44] = (lsf_cn >> 1) & 1;
     // lsf_chunk[lich_cnt][45] = (lsf_cn >> 0) & 1;
 
-    lsf_chunk[lich_cnt][46] = (lsf_dt >> 1) & 1;
-    lsf_chunk[lich_cnt][47] = (lsf_dt >> 0) & 1;
+    // lsf_chunk[lich_cnt][46] = (lsf_dt >> 1) & 1;
+    // lsf_chunk[lich_cnt][47] = (lsf_dt >> 0) & 1;
 
     //encode with golay 24,12 and load into m17_l1g
     Golay_24_12_encode (lsf_chunk[lich_cnt]+00, m17_l1g+00);
@@ -3005,6 +3051,7 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
   else if (protocol == 4) fprintf (stderr, " IPv4;");
   else if (protocol == 5) fprintf (stderr, " SMS;");
   else if (protocol == 6) fprintf (stderr, " Winlink;");
+  else if (protocol == 99)fprintf (stderr, " 1600 Arbitrary Data;"); //internal format only
   else fprintf (stderr, " Res: %02X;", protocol);
 
   //simple UTF-8 SMS Decoder
@@ -3018,6 +3065,15 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
       //add line break to keep it under 80 columns
       if ( (i%71) == 0 && i != 0)
         fprintf (stderr, "\n      ");
+    }
+  }
+  else if (protocol == 99) //Just dump the 1600 Arbitrary Data as UTF-8 Encoded Test w/ len 9
+  {
+    fprintf (stderr, " ");
+    for (i = 1; i < len; i++)
+    {
+      fprintf (stderr, "%c", input[i]);
+
     }
   }
   else //if
