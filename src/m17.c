@@ -187,14 +187,14 @@ void M17decodeLSF(dsd_state * state)
   for (i = 0; i < 14; i++)
     state->m17_meta[i] = (uint8_t)ConvertBitIntoBytes(&state->m17_lsf[(i*8)+112], 8);
 
-  //Examine the Meta data
+  //Decode Meta Data
   if (lsf_et == 0 && state->m17_meta[0] != 0) //not sure if this applies universally, or just to text data byte 0 for null data
   {
-    fprintf (stderr,  " Meta:");
-    if (lsf_es == 0) fprintf (stderr, " Text Data");
-    if (lsf_es == 1) fprintf (stderr, " GNSS Pos");
-    if (lsf_es == 2) fprintf (stderr, " Extended CSD");
-    if (lsf_es == 3) fprintf (stderr, " Reserved");
+    uint8_t meta[15]; meta[0] = lsf_es + 90; //add identifier for pkt decoder
+    for (i = 0; i < 14; i++) meta[i+1] = state->m17_lsf[i];
+    fprintf (stderr, "\n ");
+    //Note: We don't have opts here, so in the future, if we need it, we will need to pass it here
+    decodeM17PKT (NULL, state, meta, 15); //decode META
   }
   
   if (lsf_et == 2)
@@ -3055,7 +3055,10 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
   else if (protocol == 4) fprintf (stderr, " IPv4;");
   else if (protocol == 5) fprintf (stderr, " SMS;");
   else if (protocol == 6) fprintf (stderr, " Winlink;");
-  else if (protocol == 99)fprintf (stderr, " 1600 Arbitrary Data;"); //internal format only
+  else if (protocol == 90)fprintf (stderr, " Meta Text Data;"); //internal format only from meta
+  else if (protocol == 91)fprintf (stderr, " Meta GNSS Position Data;"); //internal format only from meta
+  else if (protocol == 92)fprintf (stderr, " Meta Extended CSD;"); //internal format only from meta
+  else if (protocol == 99)fprintf (stderr, " 1600 Arbitrary Data;"); //internal format only from 1600
   else fprintf (stderr, " Res: %02X;", protocol);
 
   //simple UTF-8 SMS Decoder
@@ -3071,18 +3074,56 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
         fprintf (stderr, "\n      ");
     }
   }
-  else if (protocol == 99) //Just dump the 1600 Arbitrary Data as UTF-8 Encoded Test w/ len 9
+  // else if (protocol == 90)
+  // {
+  //   //treat Extended CSD as Base40? or UTF-8?
+  // }
+  else if (protocol == 91)
+  {
+    //Decode GNSS Elements
+    uint8_t  data_source  = input[1];
+    uint8_t  station_type = input[2];
+    uint8_t  lat_deg_int  = input[3];
+    uint32_t lat_deg_dec  = (input[4] << 8) + input[5];
+    uint8_t  lon_deg_int  = input[6];
+    uint32_t lon_deg_dec  = (input[7] << 8) + input[8];
+    uint8_t  indicators   = input[9]; //nsew, validity bits
+    uint16_t altitude     = (input[10] << 8) + input[11];
+    uint16_t bearing      = (input[12] << 8) + input[13];
+    uint8_t  speed        = input[14];
+
+    fprintf (stderr, "\n Latitude: %03d.%05d ", lat_deg_int, lat_deg_dec * 65535);
+    if (indicators & 1) fprintf (stderr, "S;");
+    else                fprintf (stderr, "N;");
+    fprintf (stderr, " Longitude: %03d.%05d ", lon_deg_int, lon_deg_dec * 65535);
+    if (indicators & 2) fprintf (stderr, "W;");
+    else                fprintf (stderr, "E;");
+    if (indicators & 4) fprintf (stderr, "Altitude: %d;", altitude + 1500);
+    if (indicators & 8) fprintf (stderr, "Speed: %d MPH;", speed);
+    if (indicators & 0x10) fprintf (stderr, "Bearing: %d Degrees;", bearing);
+
+    if      (data_source == 0) fprintf (stderr, " M17 Client;");
+    else if (data_source == 1) fprintf (stderr, " OpenRTX;");
+    else if (data_source == 0xFF) fprintf (stderr, " Other;");
+    else fprintf (stderr, " Reserved Data Source: %02X;", data_source);
+
+    if      (station_type == 0) fprintf (stderr, " Fixed Station;");
+    else if (station_type == 1) fprintf (stderr, " Mobile Station;");
+    else if (station_type == 2) fprintf (stderr, " Handheld;");
+    else fprintf (stderr, " Reserved Station Type: %02X;", station_type);
+
+  }
+  else if (protocol >= 90) //dump any other formats sent as text
   {
     fprintf (stderr, " ");
     for (i = 1; i < len; i++)
-    {
       fprintf (stderr, "%c", input[i]);
-
-    }
   }
-  else //if
+  else
   {
-    //decode or just dump the raw data?
+    fprintf (stderr, " ");
+    for (i = 1; i < len; i++)
+      fprintf (stderr, "%02X", input[i]);
   }
 
 }
