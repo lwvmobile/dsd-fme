@@ -163,7 +163,7 @@ void M17decodeLSF(dsd_state * state)
   if (lsf_dt == 0) fprintf (stderr, " Reserved");
   if (lsf_dt == 1) fprintf (stderr, " Data");
   if (lsf_dt == 2) fprintf (stderr, " Voice (3200bps)");
-  if (lsf_dt == 3) fprintf (stderr, " Voice + Data");
+  if (lsf_dt == 3) fprintf (stderr, " Voice (1600bps)");
 
   if (lsf_rs != 0) fprintf (stderr, " RS: %02X", lsf_rs);
 
@@ -424,8 +424,12 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t * payload
   for (i = 0; i < 8; i++)
     adata[i+1] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+64], 8);
   
-  fprintf (stderr, "\n"); //linebreak
-  decodeM17PKT (opts, state, adata, 9); //decode Arbitrary Data as UTF-8
+  //look and see if the payload has stuff in it first, if not, then run this
+  if (adata[1] != 0 || adata[2] != 0 || adata[3] != 0 || adata[4] != 0 || adata[5] != 0 || adata[6] != 0 || adata[7] != 0 || adata[8] != 0)
+  {
+    fprintf (stderr, "\n"); //linebreak
+    decodeM17PKT (opts, state, adata, 9); //decode Arbitrary Data as UTF-8
+  }
 
 }
 
@@ -1473,8 +1477,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
   //set stream type value here so we can change 3200 or 1600 accordingly
   uint8_t st = 2; //stream type: 0 = res; 1 = data; 2 = voice(3200); 3 = voice(1600) + data;
-  if (state->m17_str_dt == 3) st = 3; //this is flagged on IF -S user text string is called at CLI
-  else st = 2; //otherwise, just use 1600 voice (if data is required, using PKT mode is probably preferred over Stream Data)
+  if (state->m17_str_dt == 3) st = 3; //this is set to 3 IF -S user text string is called at CLI
+  else st = 2; //otherwise, just use 32066 voice
 
   //WIP: IP Frame Things and User Variables for Reflectors, etc
   uint8_t nil[368]; //empty array to send to RF during Preamble, EOT Marker, or Dead Air
@@ -1520,7 +1524,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   
   int i, j, k, x;    //basic utility counters
   short sample = 0;  //individual audio sample from source
-  size_t nsam = 160; //number of samples to be read in (default is for codec2 3200 bps)
+  size_t nsam = 160; //number of samples to be read in (default is 160 samples for codec2 3200 bps)
   int dec = state->m17_rate / 8000; //number of samples to run before selecting a sample from source input
   int sql_hit = 11; //squelch hits, hit enough, and deactivate vox
   int eot_out =  1; //if we have already sent the eot out once
@@ -1597,7 +1601,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     nsam = codec2_samples_per_frame(state->codec2_3200);
   else if (st == 3)
     nsam = codec2_samples_per_frame(state->codec2_1600);
-  else nsam = 320; //safety default
+  else nsam = 160; //default to 160 if RES or DATA, even if we don't handle those
   #endif
 
   short * samp1 = malloc (sizeof(short) * nsam);
