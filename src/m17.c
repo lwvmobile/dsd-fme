@@ -3074,10 +3074,30 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
         fprintf (stderr, "\n      ");
     }
   }
-  // else if (protocol == 90)
-  // {
-  //   //treat Extended CSD as Base40? or UTF-8?
-  // }
+  //Extended Call Sign Data
+  else if (protocol == 92)
+  {
+    unsigned long long int src  = ((unsigned long long int)input[1] << 40ULL) + ((unsigned long long int)input[2] << 32ULL) + (input[3] << 24ULL) + (input[4]  << 16ULL) + (input[5]  << 8ULL) + (input[6]  << 0ULL);
+    unsigned long long int dst  = ((unsigned long long int)input[7] << 40ULL) + ((unsigned long long int)input[8] << 32ULL) + (input[9] << 24ULL) + (input[10] << 16ULL) + (input[11] << 8ULL) + (input[12] << 0ULL);
+    fprintf (stderr, " CF1: "); //Originator
+    for (i = 0; i < 9; i++)
+    {
+      char c = b40[src % 40];
+      fprintf (stderr, "%c", c);
+      src = src / 40;
+    }
+    if (dst != 0) //if used
+    {
+      fprintf (stderr, " REF: "); //Reflector Name
+      for (i = 0; i < 9; i++)
+      {
+        char c = b40[dst % 40];
+        fprintf (stderr, "%c", c);
+        dst = dst / 40;
+      }
+    }
+  }
+  //GNSS Positioning
   else if (protocol == 91)
   {
     //Decode GNSS Elements
@@ -3113,12 +3133,14 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
     else fprintf (stderr, " Reserved Station Type: %02X;", station_type);
 
   }
-  else if (protocol >= 90) //dump any other formats sent as text
+  //Any Other Text Based
+  else if (protocol >= 90)
   {
     fprintf (stderr, " ");
     for (i = 1; i < len; i++)
       fprintf (stderr, "%c", input[i]);
   }
+  //Any Other Raw Data as Hex
   else
   {
     fprintf (stderr, " ");
