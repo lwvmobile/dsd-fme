@@ -3543,10 +3543,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     for (i = 1; i <= state->edacs_lcn_count; i++)
     {
-      // Compute 4:4:3 AFS for display purposes only
-      int a = (call_matrix[i][2] >> 7) & 0xF;
-      int f = (call_matrix[i][2] >> 3) & 0xF;
-      int s = call_matrix[i][2] & 0x7;
+      // Compute AFS for display purposes only
+      int a = (call_matrix[i][2] >> state->edacs_a_shift) & state->edacs_a_mask;
+      int f = (call_matrix[i][2] >> state->edacs_f_shift) & state->edacs_f_mask;
+      int s = call_matrix[i][2] & state->edacs_s_mask;
       printw ("| - LCN [%02d][%010.06lf] MHz", i, (double)state->trunk_lcn_freq[i-1]/1000000);
 
       //print Control Channel on LCN line with the current Control Channel
@@ -3792,10 +3792,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
             // Voice call
             if ((call_matrix[j][4] & EDACS_IS_VOICE) != 0)
             {
-              // Compute 4:4:3 AFS for display purposes only
-              int a = (call_matrix[j][2] >> 7) & 0xF;
-              int f = (call_matrix[j][2] >> 3) & 0xF;
-              int s = call_matrix[j][2] & 0x7;
+              // Compute AFS for display purposes only
+              int a = (call_matrix[j][2] >> state->edacs_a_shift) & state->edacs_a_mask;
+              int f = (call_matrix[j][2] >> state->edacs_f_shift) & state->edacs_f_mask;
+              int s = call_matrix[j][2] & state->edacs_s_mask;
 
               // Group call
               if ((call_matrix[j][4] & EDACS_IS_GROUP) != 0)

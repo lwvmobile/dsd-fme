@@ -1070,6 +1070,14 @@ initState (dsd_state * state)
   state->edacs_cc_lcn = 0;
   state->edacs_vc_lcn = 0;
   state->edacs_tuned_lcn = -1;
+  state->edacs_a_bits = 4;   //  Agency Significant Bits
+  state->edacs_f_bits = 4;   //   Fleet Significant Bits
+  state->edacs_s_bits = 3;   //Subfleet Significant Bits
+  state->edacs_a_shift = 7;  //Calculated Shift for A Bits
+  state->edacs_f_shift = 3;  //Calculated Shift for F Bits
+  state->edacs_a_mask = 0xF; //Calculated Mask for A Bits
+  state->edacs_f_mask = 0xF; //Calculated Mask for F Bits
+  state->edacs_s_mask = 0x7; //Calculated Mask for S Bits
 
   //trunking
   memset (state->trunk_lcn_freq, 0, sizeof(state->trunk_lcn_freq));
@@ -1356,6 +1364,8 @@ usage ()
   printf ("  -fp             Decode only ProVoice*\n");
   printf ("  -fh             Decode only EDACS Standard/ProVoice*\n");
   printf ("  -fH             Decode only EDACS Standard/ProVoice with ESK 0xA0*\n");
+  printf ("  -fh344          Decode only EDACS Standard/ProVoice and set AFS to 344 or custom 11-bit scheme*\n");
+  printf ("  -fH434             Decode only EDACS Standard/ProVoice and set AFS to 344 or custom 11-bit scheme with ESK 0xA0*\n");
   printf ("  -fe             Decode only EDACS EA/ProVoice*\n");
   printf ("  -fE             Decode only EDACS EA/ProVoice with ESK 0xA0*\n");
   printf ("  -fm             Decode only dPMR*\n");
@@ -2225,6 +2235,16 @@ main (int argc, char **argv)
           }
           else if (optarg[0] == 'h') //standard / net w/o ESK
           {
+            // does it make sense to do it this way?
+            if (optarg[1] != 0)
+            {
+              char abits[2]; abits[0] = optarg[1]; abits[1] = 0;
+              char fbits[2]; fbits[0] = optarg[2]; fbits[1] = 0;
+              char sbits[2]; sbits[0] = optarg[3]; sbits[1] = 0;
+              state.edacs_a_bits = atoi (&abits[0]);
+              state.edacs_f_bits = atoi (&fbits[0]);
+              state.edacs_s_bits = atoi (&sbits[0]);
+            }
             opts.frame_dstar = 0;
             opts.frame_x2tdma = 0;
             opts.frame_p25p1 = 0;
@@ -2254,12 +2274,34 @@ main (int argc, char **argv)
             fprintf (stderr,"Setting symbol rate to 9600 / second\n");
             fprintf (stderr,"Decoding EDACS STD/NET and ProVoice frames.\n");
             fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
+            //sanity check, make sure we tally up to 11 bits, or set to default values
+            if (optarg[1] != 0)
+            {
+              if ( (state.edacs_a_bits + state.edacs_f_bits + state.edacs_s_bits) != 11)
+              {
+                fprintf (stderr, "Invalid AFS Configuration: Reverting to Default.\n");
+                state.edacs_a_bits = 4;
+                state.edacs_f_bits = 4;
+                state.edacs_s_bits = 3;
+              }
+              fprintf (stderr, "AFS Setup in %d:%d:%d configuration.\n", state.edacs_a_bits, state.edacs_f_bits, state.edacs_s_bits);
+            }
             //rtl specific tweaks
             opts.rtl_bandwidth = 24;
             // opts.rtl_gain_value = 36;
           }
           else if (optarg[0] == 'H') //standard / net w/ ESK
           {
+            // does it make sense to do it this way?
+            if (optarg[1] != 0)
+            {
+              char abits[2]; abits[0] = optarg[1]; abits[1] = 0;
+              char fbits[2]; fbits[0] = optarg[2]; fbits[1] = 0;
+              char sbits[2]; sbits[0] = optarg[3]; sbits[1] = 0;
+              state.edacs_a_bits = atoi (&abits[0]);
+              state.edacs_f_bits = atoi (&fbits[0]);
+              state.edacs_s_bits = atoi (&sbits[0]);
+            }
             opts.frame_dstar = 0;
             opts.frame_x2tdma = 0;
             opts.frame_p25p1 = 0;
@@ -2289,6 +2331,18 @@ main (int argc, char **argv)
             fprintf (stderr,"Setting symbol rate to 9600 / second\n");
             fprintf (stderr,"Decoding EDACS STD/NET w/ ESK and ProVoice frames.\n");
             fprintf (stderr,"EDACS Analog Voice Channels are Experimental.\n");
+            //sanity check, make sure we tally up to 11 bits, or set to default values
+            if (optarg[1] != 0)
+            {
+              if ( (state.edacs_a_bits + state.edacs_f_bits + state.edacs_s_bits) != 11)
+              {
+                fprintf (stderr, "Invalid AFS Configuration: Reverting to Default.\n");
+                state.edacs_a_bits = 4;
+                state.edacs_f_bits = 4;
+                state.edacs_s_bits = 3;
+              }
+              fprintf (stderr, "AFS Setup in %d:%d:%d configuration.\n", state.edacs_a_bits, state.edacs_f_bits, state.edacs_s_bits);
+            }
             //rtl specific tweaks
             opts.rtl_bandwidth = 24;
             // opts.rtl_gain_value = 36;

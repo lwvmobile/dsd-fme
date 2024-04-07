@@ -752,6 +752,14 @@ typedef struct
   int edacs_vc_lcn; //current lcn for any active vc (not the one we are tuned/tuning to)
   int edacs_tuned_lcn; //the vc we are currently tuned to...above variable is for updating all in the matrix
   int edacs_vc_call_type; //the type of call on the given VC - see defines below
+  int edacs_a_bits;  //  Agency Significant Bits
+  int edacs_f_bits;  //   Fleet Significant Bits
+  int edacs_s_bits;  //Subfleet Significant Bits
+  int edacs_a_shift; //Calculated Shift for A Bits
+  int edacs_f_shift; //Calculated Shift for F Bits
+  int edacs_a_mask;  //Calculated Mask for A Bits
+  int edacs_f_mask;  //Calculated Mask for F Bits
+  int edacs_s_mask;  //Calculated Mask for S Bits
 
   //flags for EDACS call type
   #define EDACS_IS_VOICE        0x01

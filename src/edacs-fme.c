@@ -349,9 +349,9 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     fprintf (stderr, " Analog RMS: %04ld SQL: %ld", rms, sql);
     if (state->ea_mode == 0)
     {
-      int a = (afs >> 7) & 0xF;
-      int f = (afs >> 3) & 0xF;
-      int s = afs & 0x7;
+      int a = (afs >> state->edacs_a_shift) & state->edacs_a_mask;
+      int f = (afs >> state->edacs_f_shift) & state->edacs_f_mask;
+      int s = afs & state->edacs_s_mask;
       fprintf (stderr, " AFS [%03d] [%02d-%02d%01d] LCN [%02d]", afs, a, f, s, lcn);
     }
     else
@@ -430,14 +430,51 @@ void edacs(dsd_opts * opts, dsd_state * state)
   unsigned long long int fr_1t = 0xFFFFFFFFFF; //40 bit return from BCH with poly attached
   unsigned long long int fr_4m = 0xFFFFFFF; //28-bit 7X message portion to pass to bch handler
   unsigned long long int fr_4t = 0xFFFFFFFFFF; //40 bit return from BCH with poly attached
+  
+  //calculate afs shifts and masks (if user cycles them around)
 
-  //commands; may not use these anymore
-  unsigned int vcmd = 0xEE; //voice command variable
-  unsigned int idcmd = 0xFD;
-  unsigned int peercmd = 0xF88; //using for EA detection test
-  unsigned int netcmd = 0xF3; //using for Networked Test
-  UNUSED2(vcmd, idcmd);
-  UNUSED2(peercmd, netcmd);
+  //quick sanity check, if bit tallies are not 11, reset to default 4:4:3 configuration
+  if ( (state->edacs_a_bits + state->edacs_f_bits + state->edacs_s_bits) != 11)
+  {
+    state->edacs_a_bits = 4;
+    state->edacs_f_bits = 4;
+    state->edacs_s_bits = 3;
+  }
+
+  //calculate shifts by totalling preceeding bits
+  state->edacs_a_shift = state->edacs_f_bits + state->edacs_s_bits;
+  state->edacs_f_shift = state->edacs_s_bits;
+
+  //calculate masks via overkill copy and paste
+  if (state->edacs_a_bits == 1)  state->edacs_a_mask = 0x1;
+  if (state->edacs_a_bits == 2)  state->edacs_a_mask = 0x3;
+  if (state->edacs_a_bits == 3)  state->edacs_a_mask = 0x7;
+  if (state->edacs_a_bits == 4)  state->edacs_a_mask = 0xF;
+  if (state->edacs_a_bits == 5)  state->edacs_a_mask = 0x1F;
+  if (state->edacs_a_bits == 6)  state->edacs_a_mask = 0x3F;
+  if (state->edacs_a_bits == 7)  state->edacs_a_mask = 0x7F;
+  if (state->edacs_a_bits == 8)  state->edacs_a_mask = 0xFF;
+  if (state->edacs_a_bits == 9)  state->edacs_a_mask = 0x1FF;
+
+  if (state->edacs_f_bits == 1)  state->edacs_s_mask = 0x1;
+  if (state->edacs_f_bits == 2)  state->edacs_s_mask = 0x3;
+  if (state->edacs_f_bits == 3)  state->edacs_s_mask = 0x7;
+  if (state->edacs_f_bits == 4)  state->edacs_s_mask = 0xF;
+  if (state->edacs_f_bits == 5)  state->edacs_s_mask = 0x1F;
+  if (state->edacs_f_bits == 6)  state->edacs_s_mask = 0x3F;
+  if (state->edacs_f_bits == 7)  state->edacs_s_mask = 0x7F;
+  if (state->edacs_f_bits == 8)  state->edacs_s_mask = 0xFF;
+  if (state->edacs_f_bits == 9)  state->edacs_s_mask = 0x1FF;
+
+  if (state->edacs_s_bits == 1)  state->edacs_s_mask = 0x1;
+  if (state->edacs_s_bits == 2)  state->edacs_s_mask = 0x3;
+  if (state->edacs_s_bits == 3)  state->edacs_s_mask = 0x7;
+  if (state->edacs_s_bits == 4)  state->edacs_s_mask = 0xF;
+  if (state->edacs_s_bits == 5)  state->edacs_s_mask = 0x1F;
+  if (state->edacs_s_bits == 6)  state->edacs_s_mask = 0x3F;
+  if (state->edacs_s_bits == 7)  state->edacs_s_mask = 0x7F;
+  if (state->edacs_s_bits == 8)  state->edacs_s_mask = 0xFF;
+  if (state->edacs_s_bits == 9)  state->edacs_s_mask = 0x1FF;
 
   char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
   timestr = getTimeE();
