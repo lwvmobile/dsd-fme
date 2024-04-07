@@ -303,6 +303,7 @@ typedef struct
   int m17encoder;
   int m17encoderbrt;
   int m17encoderpkt;
+  int m17decoderip;
   int delay;
   int use_cosine_filter;
   int unmute_encrypted_p25;
@@ -1098,6 +1099,7 @@ void processYSF(dsd_opts * opts, dsd_state * state); //YSF
 void processM17STR(dsd_opts * opts, dsd_state * state); //M17 (STR)
 void processM17PKT(dsd_opts * opts, dsd_state * state); //M17 (PKT)
 void processM17LSF(dsd_opts * opts, dsd_state * state); //M17 (LSF)
+void processM17IPF(dsd_opts * opts, dsd_state * state); //M17 (IPF)
 void encodeM17STR(dsd_opts * opts, dsd_state * state); //M17 (STR) encoder
 void encodeM17BRT(dsd_opts * opts, dsd_state * state); //M17 (BRT) encoder
 void encodeM17PKT(dsd_opts * opts, dsd_state * state); //M17 (PKT) encoder

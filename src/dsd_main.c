@@ -636,6 +636,7 @@ initOpts (dsd_opts * opts)
   opts->m17encoder = 0;
   opts->m17encoderbrt = 0;
   opts->m17encoderpkt = 0;
+  opts->m17decoderip = 0;
   opts->delay = 0;
   opts->use_cosine_filter = 1;
   opts->unmute_encrypted_p25 = 0;
@@ -1599,6 +1600,9 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
 
   if (opts->udp_sockfdA)
     close (opts->udp_sockfdA);
+
+  if (opts->m17_udp_sock)
+    close (opts->m17_udp_sock);
 
   //close MBE out files
   if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
@@ -2724,6 +2728,13 @@ main (int argc, char **argv)
             opts.pulse_digi_out_channels = 1;
             sprintf (opts.output_name, "M17 Packet");
           }
+          else if (optarg[0] == 'U') //Captial U to Run the M17 UDP IPF decoder
+          {
+            opts.m17decoderip = 1;
+            opts.pulse_digi_rate_out = 8000;
+            opts.pulse_digi_out_channels = 1;
+            sprintf (opts.output_name, "M17 IP Frame");
+          }
           break;
         //don't mess with the modulations unless you really need to
         case 'm':
@@ -3335,7 +3346,7 @@ main (int argc, char **argv)
       // fprintf (stderr, " %s;", state.m17dat);
 
       //debug print
-      fprintf (stderr, " M17:%d:%s:%s:%d; \n ", state.m17_can_en, state.str50c, state.str50b, state.m17_rate);
+      fprintf (stderr, " M17:%d:%s:%s:%d:%d:%d; \n ", state.m17_can_en, state.str50c, state.str50b, state.m17_rate, state.m17_vox, opts.m17_use_ip);
     }
 
     if (opts.playfiles == 1)
@@ -3385,6 +3396,14 @@ main (int argc, char **argv)
       //open any outputs, if not already opened
       if (opts.audio_out_type == 0) openPulseOutput(&opts);
       encodeM17PKT(&opts, &state);
+    }
+
+    else if (opts.m17decoderip == 1)
+    {
+      opts.pulse_digi_rate_out = 8000;
+      //open any outputs, if not already opened
+      if (opts.audio_out_type == 0) openPulseOutput(&opts);
+      processM17IPF(&opts, &state);
     }
 
     else
