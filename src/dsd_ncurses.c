@@ -2578,8 +2578,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     printw (" Mode (S);");
 
-    printw(" ESK Mask: %02X", state->esk_mask);
-    printw (" (A); ");
+    printw(" ESK: %02X", state->esk_mask);
+    printw (" (A);");
+
+    if (state->ea_mode == 0)
+      printw (" AFS: %d:%d:%d;", state->edacs_a_bits, state->edacs_f_bits, state->edacs_s_bits);
 
     attron(COLOR_PAIR(4));
     printw ("\n");
@@ -2605,8 +2608,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     printw (" Mode (S);");
 
-    printw(" ESK Mask: %02X", state->esk_mask);
+    printw(" ESK: %02X", state->esk_mask);
     printw (" (A) Toggle; ");
+
+    if (state->ea_mode == 0)
+      printw (" AFS: %d:%d:%d;", state->edacs_a_bits, state->edacs_f_bits, state->edacs_s_bits);
+
     printw ("\n");
   }
   #endif

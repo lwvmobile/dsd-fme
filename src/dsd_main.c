@@ -1365,7 +1365,7 @@ usage ()
   printf ("  -fh             Decode only EDACS Standard/ProVoice*\n");
   printf ("  -fH             Decode only EDACS Standard/ProVoice with ESK 0xA0*\n");
   printf ("  -fh344          Decode only EDACS Standard/ProVoice and set AFS to 344 or custom 11-bit scheme*\n");
-  printf ("  -fH434             Decode only EDACS Standard/ProVoice and set AFS to 344 or custom 11-bit scheme with ESK 0xA0*\n");
+  printf ("  -fH434          Decode only EDACS Standard/ProVoice and set AFS to 344 or custom 11-bit scheme with ESK 0xA0*\n");
   printf ("  -fe             Decode only EDACS EA/ProVoice*\n");
   printf ("  -fE             Decode only EDACS EA/ProVoice with ESK 0xA0*\n");
   printf ("  -fm             Decode only dPMR*\n");
