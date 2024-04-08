@@ -2680,8 +2680,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //TG Hold on EDACS, if specified by user
   if ( (opts->frame_provoice == 1) && (state->tg_hold != 0) )
   {
+    // Compute AFS for display purposes only
+    int a = (state->tg_hold >> state->edacs_a_shift) & state->edacs_a_mask;
+    int f = (state->tg_hold >> state->edacs_f_shift) & state->edacs_f_mask;
+    int s = state->tg_hold & state->edacs_s_mask;
     if (state->ea_mode == 1) printw ("TG HOLD: %d; ", state->tg_hold);
-    else printw ("TG HOLD: %d [%02d-%03d]; ", state->tg_hold, (state->tg_hold >> 7 ) & 0xF, state->tg_hold & 0x7F);
+    else printw ("TG HOLD: %d [%02d-%02d%01d]; ", state->tg_hold, a, f, s);
   }
   printw ("\n");
   printw ("| In Level:    [%02d%%] \n", level);
