@@ -2735,6 +2735,7 @@ main (int argc, char **argv)
             opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 1;
             sprintf (opts.output_name, "M17 IP Frame");
+            fprintf (stderr, "Decoding M17 UDP/IP Frames.\n");
           }
           break;
         //don't mess with the modulations unless you really need to
@@ -3342,6 +3343,14 @@ main (int argc, char **argv)
       //check to make sure can value is no greater than 15 (4 bit value)
       if (state.m17_can_en > 15)
         state.m17_can_en = 15;
+
+      //if vox is greater than 1, assume user meant 'yes' and set to one
+      if (state.m17_vox > 1)
+        state.m17_vox = 1;
+
+      //if use_ip is greater than 1, assume user meant 'yes' and set to one
+      if (opts.m17_use_ip > 1)
+        opts.m17_use_ip = 1;
 
       //debug print m17dat string
       // fprintf (stderr, " %s;", state.m17dat);

@@ -1451,6 +1451,10 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   if (opts->use_ncurses_terminal == 1)
     ncursesOpen(opts, state);
 
+  //if using the ncurses terminal, disable TX on startup until user toggles it with the '\' key, if not vox enabled
+  if (opts->use_ncurses_terminal == 1 && state->m17encoder_tx == 1 && state->m17_vox == 0)
+    state->m17encoder_tx = 0;
+
   //User Defined Variables
   int use_ip = 0; //1 to enable IP Frame Broadcast over UDP
   int udpport = 17000; //port number for M17 IP Frmae (default is 17000)
@@ -1503,6 +1507,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "Error Configuring UDP Socket for M17 IP Frame :( \n");
       use_ip = 0;
+      opts->m17_use_ip = 0;
     }
     else use_ip = 1;
   }

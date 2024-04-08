@@ -2481,16 +2481,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
   }
 
-  // if (opts->monitor_input_audio == 1)
-  // {
-  //   printw ("| Monitoring Source Audio when Carrier Present and No Sync Detected (WIP)\n");
-  // }
+  if (opts->m17_use_ip == 1)
+    printw ("| M17 UDP IP Frame Output: 127.0.0.1:17000\n");
 
   if (opts->mbe_out_dir[0] != 0 && opts->dmr_stereo == 0)
   {
     printw ("| Writing MBE data files to directory %s\n", opts->mbe_out_dir);
   }
-
 
   if (opts->wav_out_raw)
   {
@@ -2663,8 +2660,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->mod_gfsk == 1) printw ("[GFSK]");
   printw ( "[%d] \n", (48000*opts->wav_interpolator)/state->samplesPerSymbol);
   if (opts->m17encoder == 1) printw ("| Encoding:    [%s] ", opts->output_name);
-  if (opts->m17encoder == 1) printw (" Toggle (\\); ");
-  if (opts->m17encoder == 1) printw (" Mic Gain (/|*): %02.0f%% ", opts->audio_gainA);
+  if (opts->m17encoder == 1 && state->m17encoder_tx == 1 && state->m17_vox == 0) printw (" TX (\\) ON ;");
+  if (opts->m17encoder == 1 && state->m17encoder_tx == 0 && state->m17_vox == 0) printw (" TX (\\) OFF;");
+  if (opts->m17encoder == 1 && state->m17_vox == 1) printw (" Vox Mode;");
+  if (opts->m17encoder == 1) printw (" Input Gain (/|*): %02.0f%% ", opts->audio_gainA);
   if (opts->m17encoder == 1)
   {
     if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
