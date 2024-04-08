@@ -1302,7 +1302,7 @@ usage ()
   printf ("                 (Warning! Might be annoying.)\n");
   printf ("  -L <file>     Specify Filename for LRRP Data Output.\n");
   printf ("  -Q <file>     Specify Filename for OK-DMRlib Structured File Output. (placed in DSP folder)\n");
-  printf ("  -Q <file>     Specify Filename for M17 Binary File Output. (placed in DSP folder)\n");
+  printf ("  -Q <file>     Specify Filename for M17 Float Stream Output. (placed in DSP folder)\n");
   printf ("  -c <file>     Output symbol capture to .bin file\n");
   printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
   printf ("  -V <num>      Enable TDMA Voice Synthesis on Slot 1 (1), Slot 2 (2), or Both (3); Default is 3; \n");
@@ -1371,7 +1371,7 @@ usage ()
   printf ("  -fe             Decode only EDACS EA/ProVoice*\n");
   printf ("  -fE             Decode only EDACS EA/ProVoice with ESK 0xA0*\n");
   printf ("  -fm             Decode only dPMR*\n");
-  printf ("  -fm             Decode only M17 UDP-IP Frames From STDIN***(Testing)\n");
+  printf ("  -fU             Decode only M17 UDP/IP Frames From STDIN***(Testing)\n");
   printf ("  -l            Disable DMR, dPMR, NXDN, M17 input filtering\n");
   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
   printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
@@ -1794,7 +1794,7 @@ main (int argc, char **argv)
         //sprintf (opts.wav_out_file, "./WAV/DSD-FME-X1.wav");
         strncpy(dsp_filename, optarg, 1023);
         sprintf(opts.dsp_out_file, "%s/%s", wav_file_directory, dsp_filename);
-        fprintf (stderr, "Saving DSP Structured or M17 Binary Stream files to %s\n", opts.dsp_out_file);
+        fprintf (stderr, "Saving DSP Structured or M17 Float Stream Output to %s\n", opts.dsp_out_file);
         opts.use_dsp_output = 1;
         break;
 

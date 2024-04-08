@@ -1321,14 +1321,6 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   for (i = 0; i < 192; i++)
     output_symbols[i] = symbol_map[output_dibits[i]];
 
-  //debug output symbols
-  // fprintf (stderr, "\n sym:");
-  // for (i = 0; i < 192; i++)
-  // {
-  //   if (i%24 == 0) fprintf (stderr, "\n");
-  //   fprintf (stderr, " %d", output_symbols[i]);
-  // }
-
   //symbols to audio
 
   //upsample 10x
@@ -1338,14 +1330,6 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
     for (j = 0; j < 10; j++)
       output_up[(i*10)+j] = output_symbols[i];
   }
-
-  //debug upsample
-  // fprintf (stderr, "\n up:");
-  // for (i = 0; i < 1920; i++)
-  // {
-  //   if (i%24 == 0) fprintf (stderr, "\n");
-  //   fprintf (stderr, " %d", output_up[i]);
-  // }
 
   //craft baseband with deviation + filter
   short baseband[1920]; memset (baseband, 0, 1920*sizeof(short));
@@ -1388,18 +1372,6 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
     }
   }
 
-  //debug baseband
-  // fprintf (stderr, "\n bb:");
-  // for (i = 0; i < 1920; i++)
-  // {
-  //   if (i%24 == 0) fprintf (stderr, "\n");
-  //   fprintf (stderr, " %d", baseband[i]);
-  // }
-
-  //debug insert random 'noise' into the baseband audio
-  // for (i = 0; i < 40; i++)
-  //   baseband[i] -= rand()& 0x7FFF;
-
   //dead air type, output to all enabled formats zero sample to simulate dead air
   //NOTE: 25 rounds is approximately 1 second even, seems optimal
   if (type == 99)
@@ -1414,18 +1386,6 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
     for (i = 0; i < 192; i++)
       fputc (output_dibits[i], opts->symbol_out_f);
   }
-
-  /* //reference from m17-packet-encode.c
-  //standard mode - int16 symbol stream
-    else if(out_type==1)
-    {
-        for(uint16_t i=0; i<pkt_sym_cnt; i++)
-        {
-            int16_t val=full_packet[i];
-            fwrite(&val, 2, 1, fp);
-        }
-    }
-  */
 
   //save symbol stream format (M17_Implementations), output to float values that m17-packet-decode can read
   if (opts->use_dsp_output) //use -Q output.bin to use this format, will be placed in the DSP folder (reusing DSP)
@@ -1480,7 +1440,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   if (state->m17_str_dt == 3) st = 3; //this is set to 3 IF -S user text string is called at CLI
   else st = 2; //otherwise, just use 32066 voice
 
-  //WIP: IP Frame Things and User Variables for Reflectors, etc
+  //IP Frame Things and User Variables for Reflectors, etc
   uint8_t nil[368]; //empty array to send to RF during Preamble, EOT Marker, or Dead Air
   memset (nil, 0, sizeof(nil));
 
@@ -1533,8 +1493,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   for (i = 0; i < 25; i++)
     encodeM17RF (opts, state, nil, 99);
 
-  //WIP: Open UDP port to 17000 and see if any other config info is necessary for running standard IP frames, etc,
-  //or perhaps just also configure an input format for that ip streaming method, may need to handle UDP control packets (conn, ackn, nack, ping, pong, disc)
+  //Open UDP port to 17000 and see if any other config info is necessary for running standard IP frames, etc,
   int sock_err;
   if (opts->m17_use_ip == 1)
   {
@@ -1547,9 +1506,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     }
     else use_ip = 1;
   }
-  //TODO: See if we need to send a conn and/or receive any ackn/nack/ping/pong commands later
 
-  //WIP: Standard IP Framing
+  //Standard IP Framing
   uint8_t magic[4] = {0x4D, 0x31, 0x37, 0x20};
   uint8_t ackn[4]  = {0x41, 0x43, 0x4B, 0x4E}; UNUSED(ackn);
   uint8_t nack[4]  = {0x4E, 0x41, 0x43, 0x4B}; UNUSED(nack);
@@ -1560,8 +1518,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   uint8_t retn[10]; memset (retn, 0, sizeof(retn));
   int udp_return = 0; UNUSED(udp_return);
   uint8_t sid[2];   memset (sid, 0, sizeof(sid));
-
-  //IP Frame
   uint8_t m17_ip_frame[432]; memset (m17_ip_frame, 0, sizeof(m17_ip_frame));
   uint8_t m17_ip_packed[54]; memset (m17_ip_packed, 0, sizeof(m17_ip_packed));
   uint16_t ip_crc = 0;
@@ -1595,11 +1551,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //also, using zeroes seems like it may be a security issue, so using rnd as a base
   nonce[12] = rand() & 0xFF;
   nonce[13] = rand() & 0xFF;
-
-  //debug print nonce
-  // fprintf (stderr, " nonce:");
-  // for (i = 0; i < 14; i++)
-  //   fprintf (stderr, " %02X", nonce[i]);
 
   #ifdef USE_CODEC2
   if      (st == 2)
@@ -1688,40 +1639,12 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     pong[i+4] = (src >> 48-(8*i)) & 0xFF;
   }
 
-  //debug
-  // fprintf (stderr, " CONN: ");
-  // for (i = 0; i < 11; i++)
-  //   fprintf (stderr, " %02X", conn[i]);
-
   //SEND CONN to reflector
   if (use_ip == 1)
     udp_return = m17_socket_blaster (opts, state, 11, conn);
 
-  //WIP: Read UDP ACKN/NACK value, disable use_ip if NULL or nack return
-  // if (use_ip && udp_return) //disabled for now, need to look into how to view the return or received value
-  // {
-  //   retn[0] = (udp_return >> 24) & 0xFF;
-  //   retn[1] = (udp_return >> 16) & 0xFF;
-  //   retn[2] = (udp_return >> 8)  & 0xFF;
-  //   retn[3] = (udp_return >> 0)  & 0xFF;
-  //   if (memcmp (nack, retn, 4) == 0) use_ip = 0;
-
-  //   if (use_ip) fprintf (stderr, "\n Connected to reflector successfully!");
-  //   else fprintf (stderr, "\n NACK from reflector!");
-
-  //   //debug
-  //   fprintf (stderr, " RETURN: %08llX; RETN: ", udp_return);
-  //   for (i = 0; i < 4; i++)
-  //     fprintf (stderr, " %02X", retn[i]);
-
-  //   memset (retn, 0, sizeof(retn));
-  // }
-  // else
-  // {
-  //   use_ip = 0;
-  //   fprintf (stderr, "\n No Reply from Reflector!");
-  // }
-
+  //TODO: Read UDP ACKN/NACK value, disable use_ip if NULL or nack return
+  
   //load dst and src values into the LSF
   for (i = 0; i < 48; i++) m17_lsf[i] = (dst >> 47ULL-(unsigned long long int)i) & 1;
   for (i = 0; i < 48; i++) m17_lsf[i+48] = (src >> 47ULL-(unsigned long long int)i) & 1;
@@ -2179,14 +2102,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     for (i = 0; i < 368; i++)
       m17_t4s[i] = (m17_t4i[i] ^ m17_scramble[i]) & 1;
 
-    //debug insert 3 random bit flips in the finished stream to test conv/golay
-    // int rnd1 = rand()%368;
-    // int rnd2 = rand()%368;
-    // int rnd3 = rand()%368;
-    // m17_t4s[rnd1] ^= 1;
-    // m17_t4s[rnd2] ^= 1;
-    // m17_t4s[rnd3] ^= 1;
-
     //-----------------------------------------
 
     //decode stream with the M17STR_debug
@@ -2200,14 +2115,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       if (new_lsf == 1)
       {
 
-        //debug LSF before (see after in decoder for comparison)
-        // fprintf (stderr, "\n lsf: ");
-        // for (i = 0; i < 30; i++)
-        // {
-        //   if ((i%15)==0) fprintf (stderr, "\n");
-        //   fprintf (stderr, " %02X", lsf_packed[i]);
-        // }
-
         fprintf (stderr, "\n M17 LSF    (ENCODER): ");
         if (opts->monitor_input_audio == 0)
           processM17LSF_debug(opts, state, m17_lsfs);
@@ -2216,7 +2123,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         //convert bit array into symbols and RF/Audio
         memset (nil, 0, sizeof(nil));
         encodeM17RF (opts, state, nil, 11); //Preamble
-        // for (i = 0; i < 6; i++) //test sending multiple LSF OTA
         encodeM17RF (opts, state, m17_lsfs, 1); //LSF
 
         //flag off after sending
@@ -2296,15 +2202,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       for (i = 52; i < 54; i++)
         m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_ip_frame[i*8], 8);
 
-      //debug print packed byte output for IP frame
-      // fprintf (stderr, "\n IP: ");
-      // for (i = 0; i < 54; i++)
-      // {
-      //   if ( (i%12)==0) fprintf (stderr, "\n");
-      //   fprintf (stderr, " %02X", m17_ip_packed[i]);
-      // }
-
-      //WIP: Send packed IP frame to UDP port 17000 if opened successfully
+      //Send packed IP frame to UDP port 17000 if opened successfully
       if (use_ip == 1)
         udp_return = m17_socket_blaster (opts, state, 54, m17_ip_packed);
 
@@ -2414,11 +2312,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       nonce[12] = rand() & 0xFF;
       nonce[13] = rand() & 0xFF;
 
-      //debug print nonce
-      // fprintf (stderr, "\n nonce:");
-      // for (i = 0; i < 14; i++)
-      //   fprintf (stderr, " %02X", nonce[i]);
-
       //load the nonce from packed bytes to a bitwise iv array
       memset(iv, 0, sizeof(iv));
       k = 0;
@@ -2508,14 +2401,6 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         //send IP Frame with EOT bit
         if (use_ip == 1)
           udp_return = m17_socket_blaster (opts, state, 54, m17_ip_packed);
-
-        //debug print packed byte output for IP frame
-        // fprintf (stderr, "\n IP: ");
-        // for (i = 0; i < 54; i++)
-        // {
-        //   if ( (i%12)==0) fprintf (stderr, "\n");
-        //   fprintf (stderr, " %02X", m17_ip_packed[i]);
-        // }
 
         //reset indicators
         eot = 0;
@@ -2730,20 +2615,11 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   if (state->m17sms[0] != 0)
     sprintf (text, "%s", state->m17sms);
 
-  // switch to this if issues crop up (cygwin, etc)
-  // strncpy (s40, state->str50c, 9);
-  // strncpy (d40, state->str50b, 9);
-  // s40[10] = '\0';
-  // d40[10] = '\0';
-
   //if special values, then assign them
   if (strcmp (d40, "BROADCAST") == 0)
     dst = 0xFFFFFFFFFFFF;
   if (strcmp (d40, "ALL") == 0)
     dst = 0xFFFFFFFFFFFF;
-
-  //debug
-  // fprintf (stderr, " SRC: %s; DST: %s; SRC_D: %llX; DST_D: %llX; SLEN %d; DLEN: %d;", s40, d40, src, dst, strlen(s40), strlen(d40) );
 
   //end CLI Configuration
 
@@ -2808,9 +2684,6 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     }
   }
   //end CSD conversion
-
-  //debug
-  // fprintf (stderr, "\n SRC: %s; DST: %s; SRC_D: %llX; DST_D: %llX", s40, d40, src, dst);
 
   //load dst and src values into the LSF
   for (i = 0; i < 48; i++) m17_lsf[i] = (dst >> 47ULL-(unsigned long long int)i) & 1;
@@ -3004,7 +2877,6 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
       //convert bit array into symbols and RF/Audio
       memset (nil, 0, sizeof(nil));
       encodeM17RF (opts, state, nil, 11); //Preamble
-      // for (i = 0; i < 6; i++) //test sending multiple LSF OTA
       encodeM17RF (opts, state, m17_lsfs, 1); //LSF
 
       //flag off after sending
@@ -3071,14 +2943,6 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     for (i = 0; i < 368; i++)
       m17_p4s[i] = (m17_p4i[i] ^ m17_scramble[i]) & 1;
 
-    //debug insert 3 random bit flip in the finished PKT frame
-    // int rnd1 = rand()%368;
-    // int rnd2 = rand()%368;
-    // int rnd3 = rand()%368;
-    // m17_b4s[rnd1] ^= 1;
-    // m17_b4s[rnd2] ^= 1;
-    // m17_b4s[rnd3] ^= 1;
-
     //-----------------------------------------
 
 
@@ -3116,7 +2980,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
 
 void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
 {
-  //WIP: Decode the completed packet
+  //Decode the completed packet
   UNUSED(opts); UNUSED(state);
   int i;
 
@@ -3521,15 +3385,5 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       memset (ip_frame, 0, sizeof(ip_frame));
     }
 
-    //debug
-    // else if (opts->payload == 1)
-    // {
-    //   fprintf (stderr, "\n DUMP:");
-    //   for (i = 0; i < 54; i++)
-    //   {
-    //     if ( (i%14) == 0 ) fprintf (stderr, "\n    ");
-    //     fprintf (stderr, "[%02X]", ip_frame[i]);
-    //   }
-    // }
   }
 }
