@@ -1561,6 +1561,11 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   int udp_return = 0; UNUSED(udp_return);
   uint8_t sid[2];   memset (sid, 0, sizeof(sid));
 
+  //IP Frame
+  uint8_t m17_ip_frame[432]; memset (m17_ip_frame, 0, sizeof(m17_ip_frame));
+  uint8_t m17_ip_packed[54]; memset (m17_ip_packed, 0, sizeof(m17_ip_packed));
+  uint16_t ip_crc = 0;
+
   //NONCE
   time_t ts = time(NULL); //timestamp since epoch / "Unix Time"
   srand(ts); //randomizer seed based on timestamp
@@ -2241,12 +2246,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       encodeM17RF (opts, state, m17_t4s, 2);
       
       //Contruct an IP frame using previously created arrays
-      uint8_t m17_ip_frame[432]; memset (m17_ip_frame, 0, sizeof(m17_ip_frame));
-      uint8_t m17_ip_packed[54]; memset (m17_ip_packed, 0, sizeof(m17_ip_packed));
-      uint16_t ip_crc = 0;
-
-      //NOTE: The Manual doesn't say much about this area, so assuming 
-      //the elements are arranged as per the table
+      memset (m17_ip_frame, 0, sizeof(m17_ip_frame));
+      memset (m17_ip_packed, 0, sizeof(m17_ip_packed));
 
       //add MAGIC
       k = 0;
@@ -2329,6 +2330,59 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
     else //if not tx, reset values, drop carrier and sync
     {
+
+      //Send last IP Frame with EOT, pack this before resetting
+      memset (m17_ip_frame, 0, sizeof(m17_ip_frame));
+      memset (m17_ip_packed, 0, sizeof(m17_ip_packed));
+
+      //add MAGIC
+      k = 0;
+      for (j = 0; j < 4; j++)
+      {
+        for (i = 0; i < 8; i++)
+          m17_ip_frame[k++] = (magic[j] >> 7-i) &1;
+      }
+
+      //add StreamID
+      for (j = 0; j < 2; j++)
+      {
+        for (i = 0; i < 8; i++)
+          m17_ip_frame[k++] = (sid[j] >> 7-i) &1;
+      }
+
+      //add the current LSF, sans CRC
+      for (i = 0; i < 224; i++)
+        m17_ip_frame[k++] = m17_lsf[i];
+
+      //add eot bit flag
+      m17_ip_frame[k++] = eot&1;
+
+      //add current fsn value
+      for (i = 0; i < 15; i++)
+        m17_ip_frame[k++] = (fsn >> 14-i)&1;
+
+      //voice and/or data payload
+      for (i = 0; i < 64; i++)
+        m17_ip_frame[k++] = v1_bits[i];
+
+      //voice and/or data payload
+      for (i = 0; i < 64; i++)
+        m17_ip_frame[k++] = v2_bits[i];
+
+      //pack current bit array into a byte array for a CRC check
+      for (i = 0; i < 52; i++)
+        m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_ip_frame[i*8], 8);
+      ip_crc = crc16m17(m17_ip_packed, 52);
+
+      //add CRC value to the ip frame
+      for (i = 0; i < 16; i++)
+        m17_ip_frame[k++] = (ip_crc >> 15-i)&1;
+
+      //pack CRC into the byte array as well
+      for (i = 52; i < 54; i++)
+        m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_ip_frame[i*8], 8);
+
+      //reset 
       lich_cnt = 0;
       fsn = 0;
       state->carrier = 0;
@@ -2450,6 +2504,18 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         //send dead air with type 99
         for (i = 0; i < 25; i++)
           encodeM17RF (opts, state, nil, 99);
+
+        //send IP Frame with EOT bit
+        if (use_ip == 1)
+          udp_return = m17_socket_blaster (opts, state, 54, m17_ip_packed);
+
+        //debug print packed byte output for IP frame
+        // fprintf (stderr, "\n IP: ");
+        // for (i = 0; i < 54; i++)
+        // {
+        //   if ( (i%12)==0) fprintf (stderr, "\n");
+        //   fprintf (stderr, " %02X", m17_ip_packed[i]);
+        // }
 
         //reset indicators
         eot = 0;
@@ -3313,6 +3379,8 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
   //encode with: dsd-fme -fZ -M M17:1:lwvmobile:all:48000:0:1 -N 2> /dev/null -o null
   //decode with: socat stdio udp-listen:17000 | dsd-fme -fU
 
+  //TODO: Handle UDP Internally (test reading from socket, but may need threaded application for it)
+
   int i, j, k;
 
   //Standard IP Framing
@@ -3354,7 +3422,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
           ip_bits[k++] = (ip_frame[i] >> (7-j)) & 1;
       }
 
-      //copy stream ID
+      //copy Stream ID
       uint16_t sid = (uint16_t)ConvertBitIntoBytes(&ip_bits[32], 16);
 
       //copy LSF
@@ -3362,10 +3430,14 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
         state->m17_lsf[i] = ip_bits[i+48];
 
       //get FN and EOT bit
-      uint16_t fn = (uint16_t)ConvertBitIntoBytes(&ip_bits[272], 16);
-      uint8_t eot = ip_bits[272]; 
+      uint16_t fn = (uint16_t)ConvertBitIntoBytes(&ip_bits[273], 15);
+      uint8_t eot = ip_bits[272];
 
-      fprintf (stderr, "\n M17 IP SID: %04X; FN: %05d; EOT: %d", sid, fn, eot);
+      //update IV CTR from FN
+      state->m17_meta[14] = (uint16_t)ConvertBitIntoBytes(&ip_bits[273], 7);
+      state->m17_meta[15] = (uint16_t)ConvertBitIntoBytes(&ip_bits[280], 8);
+
+      fprintf (stderr, "\n M17 IP Stream: %04X; FN: %05d; EOT: %d", sid, fn, eot);
 
       //copy payload
       uint8_t payload[128]; memset(payload, 0, sizeof(payload));
@@ -3379,8 +3451,6 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       uint16_t crc_cmp = crc16m17(ip_frame, 52);
 
       if (crc_ext == crc_cmp)
-        M17decodeLSF(state);
-      else if (opts->aggressive_framesync == 0)
         M17decodeLSF(state);
 
       if (state->m17_str_dt == 2)
@@ -3410,42 +3480,42 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     //other headers from UDP IP
     else if (memcmp(headr, ackn, 4) == 0)
     {
-      fprintf (stderr, "\n M17 IP: ACNK; ");
+      fprintf (stderr, "\n M17 IP   ACNK ");
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
     }
     else if (memcmp(headr, nack, 4) == 0)
     {
-      fprintf (stderr, "\n M17 IP: NACK; ");
+      fprintf (stderr, "\n M17 IP   NACK ");
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
     }
     else if (memcmp(headr, conn, 4) == 0)
     {
-      fprintf (stderr, "\n M17 IP: CONN; ");
+      fprintf (stderr, "\n M17 IP   CONN ");
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
     }
     else if (memcmp(headr, disc, 4) == 0)
     {
-      fprintf (stderr, "\n M17 IP: DISC; ");
+      fprintf (stderr, "\n M17 IP   DISC ");
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
     }
     else if (memcmp(headr, ping, 4) == 0)
     {
-      fprintf (stderr, "\n M17 IP: PING; ");
+      fprintf (stderr, "\n M17 IP   PING ");
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
     }
     else if (memcmp(headr, pong, 4) == 0)
     {
-      fprintf (stderr, "\n M17 IP: PONG; ");
+      fprintf (stderr, "\n M17 IP   PONG ");
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
