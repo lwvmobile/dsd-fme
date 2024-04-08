@@ -3250,7 +3250,6 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
   //Standard IP Framing
   uint8_t byte = 0;
   uint8_t ip_frame[54]; memset (ip_frame, 0, sizeof(ip_frame));
-  uint8_t headr[4]; memset (headr, 0, sizeof(headr));
   uint8_t magic[4] = {0x4D, 0x31, 0x37, 0x20};
   uint8_t ackn[4]  = {0x41, 0x43, 0x4B, 0x4E};
   uint8_t nack[4]  = {0x4E, 0x41, 0x43, 0x4B};
@@ -3270,11 +3269,8 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       ip_frame[i]=ip_frame[i+1];
     ip_frame[53]=byte;
 
-    //copy top of ip_frame to headr
-    memcpy (headr, ip_frame, 4);
-
-    //compare headr to magic and decode IP voice frame w/ M17 magic header
-    if (memcmp(headr, magic, 4) == 0)
+    //compare header to magic and decode IP voice frame w/ M17 magic header
+    if (memcmp(ip_frame, magic, 4) == 0)
     {
 
       //convert bytes to bits
@@ -3342,47 +3338,33 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     }
 
     //other headers from UDP IP
-    else if (memcmp(headr, ackn, 4) == 0)
+    else if (memcmp(ip_frame+49, ackn, 4) == 0)
     {
-      fprintf (stderr, "\n M17 IP   ACNK ");
-
-      //clear frame
-      memset (ip_frame, 0, sizeof(ip_frame));
+      fprintf (stderr, "\n M17 IP   ACNK: ");
     }
-    else if (memcmp(headr, nack, 4) == 0)
+    else if (memcmp(ip_frame+49, nack, 4) == 0)
     {
-      fprintf (stderr, "\n M17 IP   NACK ");
-
-      //clear frame
-      memset (ip_frame, 0, sizeof(ip_frame));
+      fprintf (stderr, "\n M17 IP   NACK: ");
     }
-    else if (memcmp(headr, conn, 4) == 0)
+    else if (memcmp(ip_frame+43, conn, 4) == 0)
     {
-      fprintf (stderr, "\n M17 IP   CONN ");
-
-      //clear frame
-      memset (ip_frame, 0, sizeof(ip_frame));
+      fprintf (stderr, "\n M17 IP   CONN: ");
+      for (i = 43; i < 54; i++)
+        fprintf (stderr, "%02X ", ip_frame[i]);
     }
-    else if (memcmp(headr, disc, 4) == 0)
+    else if (memcmp(ip_frame+44, disc, 4) == 0)
     {
-      fprintf (stderr, "\n M17 IP   DISC ");
-
-      //clear frame
-      memset (ip_frame, 0, sizeof(ip_frame));
+      fprintf (stderr, "\n M17 IP   DISC: ");
+      for (i = 44; i < 54; i++)
+        fprintf (stderr, "%02X ", ip_frame[i]);
     }
-    else if (memcmp(headr, ping, 4) == 0)
+    else if (memcmp(ip_frame+49, ping, 4) == 0)
     {
-      fprintf (stderr, "\n M17 IP   PING ");
-
-      //clear frame
-      memset (ip_frame, 0, sizeof(ip_frame));
+      fprintf (stderr, "\n M17 IP   PING: ");
     }
-    else if (memcmp(headr, pong, 4) == 0)
+    else if (memcmp(ip_frame+49, pong, 4) == 0)
     {
-      fprintf (stderr, "\n M17 IP   PONG ");
-
-      //clear frame
-      memset (ip_frame, 0, sizeof(ip_frame));
+      fprintf (stderr, "\n M17 IP   PONG: ");
     }
 
   }
