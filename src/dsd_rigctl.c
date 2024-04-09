@@ -478,7 +478,7 @@ int udp_socket_connectM17(dsd_opts * opts, dsd_state * state)
         return (err);
     }
 
-    addressM17.sin_port = htons(opts->m17_portno); //plus 2 to current port assignment for the analog port value
+    addressM17.sin_port = htons(opts->m17_portno);
     if (err < 0)
     {
         fprintf (stderr, " UDP htons Error %ld\n", err);

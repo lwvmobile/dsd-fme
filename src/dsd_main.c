@@ -1264,6 +1264,8 @@ usage ()
   printf ("                rtl:dev:freq:gain:ppm:bw:sq:vol for rtl dongle (see below)\n");
   printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
   printf ("                tcp:192.168.7.5:7355 for custom address and port \n");
+  printf ("                m17 for M17 UDP/IP socket bind input (default host 127.0.0.1; default port 17000)\n");
+  printf ("                m17:192.168.7.8:17001 for M17 UDP/IP bind input (Binding Address and Port\n");
   printf ("                filename.bin for OP25/FME capture bin files\n");
   printf ("                filename.wav for 48K/1 wav files (SDR++, GQRX)\n");
   printf ("                filename.wav -s 96000 for 96K/1 wav files (DSDPlus)\n");
@@ -1284,6 +1286,8 @@ usage ()
   printf ("                null for no audio output\n");
   printf ("                udp for UDP socket blaster output (default host 127.0.0.1; default port 23456)\n");
   printf ("                udp:192.168.7.8:23470 for UDP socket blaster output (Target Address and Port\n");
+  printf ("                m17 for M17 UDP/IP socket blaster output (default host 127.0.0.1; default port 17000)\n");
+  printf ("                m17:192.168.7.8:17001 for M17 UDP/IP blaster output (Target Address and Port\n");
   printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <float>    Audio Digital Output Gain  (Default: 0 = Auto;        )\n");
@@ -1343,10 +1347,11 @@ usage ()
   printf ("  -fB           M17 BERT Encoder\n");
   printf (" Example: dsd-fme -fB -M M17:9:DSD-FME:LWVMOBILE -6 m17bert.wav\n");
   printf ("\n");
-  printf ("  -M            M17 Encoding User Configuration String: M17:CAN:SRC:DST:INPUT_RATE (see examples above).\n");
+  printf ("  -M            M17 Encoding User Configuration String: M17:CAN:SRC:DST:INPUT_RATE:VOX (see examples above).\n");
   printf ("                  CAN 1-15; SRC and DST have to be no more than 9 UPPER base40 characters.\n");
   printf ("                  BASE40: '  ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.'\n");
   printf ("                  Input Rate Default is 48000; Use Multiples of 8000 up to 48000.\n");
+  printf ("                  VOX Enabled on 1; (Default = 0)\n");
   printf ("                  Values not entered into the M17: string are set to default values.\n");
   printf ("  -S            M17 Packet Encoder SMS String: No more than 772 chars, use single quotations (see example above).\n");
   printf ("  -S            M17 Stream Encoder SMS String: No more than  48 chars, activates 1600 voice  (best if broken into six 8 char chunks).\n");
@@ -1361,7 +1366,7 @@ usage ()
   printf ("  -fx           Decode only X2-TDMA\n");
   printf ("  -fy           Decode only YSF\n");
   printf ("  -fz             Decode only M17*\n");
-  printf ("  -fU             Decode only M17 UDP/IP Frames From 127.0.0.1:17000\n");
+  printf ("  -fU             Decode only M17 UDP/IP Frame***\n");
   printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
   printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
   printf ("  -fp             Decode only ProVoice*\n");
@@ -1381,6 +1386,7 @@ usage ()
   printf ("\n");
   printf ("  * denotes frame types that cannot be auto-detected.\n");
   printf ("  ** Phase 2 Single Frequency may require user to manually set WACN/SYSID/CC parameters if MAC_SIGNAL not present.\n");
+  printf ("  *** configure UDP Input with -i m17:127.0.0.1:17000 \n");
   printf ("\n");
   printf ("Advanced Decoder options:\n");
   printf ("  -X <hex>      Manually Set P2 Parameters (WACN, SYSID, CC/NAC)\n");
@@ -2898,6 +2904,48 @@ main (int argc, char **argv)
       openSerial (&opts, &state);
     }
 
+    if((strncmp(opts.audio_in_dev, "m17", 3) == 0)) //M17 UDP Socket Input
+    {
+      fprintf (stderr, "M17 UDP IP Frame Input: ");
+      char * curr; 
+
+      curr = strtok(opts.audio_in_dev, ":"); //should be 'm17'
+      if (curr != NULL) ; //continue
+      else goto M17ENDIN; //end early with preset values
+
+      curr = strtok(NULL, ":"); //host address
+      if (curr != NULL) strncpy (opts.m17_hostname, curr, 1023);
+
+      curr = strtok(NULL, ":"); //host port
+      if (curr != NULL) opts.m17_portno = atoi (curr);
+
+      M17ENDIN:
+      fprintf (stderr, "%s:", opts.m17_hostname);
+      fprintf (stderr, "%d \n", opts.m17_portno);
+    }
+
+    if((strncmp(opts.audio_out_dev, "m17", 3) == 0)) //M17 UDP Socket Output
+    {
+      fprintf (stderr, "M17 UDP IP Frame Output: ");
+      char * curr; 
+
+      curr = strtok(opts.audio_out_dev, ":"); //should be 'm17'
+      if (curr != NULL) ; //continue
+      else goto M17ENDOUT; //end early with preset values
+
+      curr = strtok(NULL, ":"); //host address
+      if (curr != NULL) strncpy (opts.m17_hostname, curr, 1023);
+
+      curr = strtok(NULL, ":"); //host port
+      if (curr != NULL) opts.m17_portno = atoi (curr);
+
+      M17ENDOUT:
+      fprintf (stderr, "%s:", opts.m17_hostname);
+      fprintf (stderr, "%d \n", opts.m17_portno);
+      opts.m17_use_ip = 1; //tell the encoder to open the socket
+      opts.audio_out_type = 9; //set to null device
+    }
+
     if((strncmp(opts.audio_in_dev, "tcp", 3) == 0)) //tcp socket input from SDR++ and others
     {
       fprintf (stderr, "TCP Direct Link: ");
@@ -3334,9 +3382,9 @@ main (int argc, char **argv)
       if (curr != NULL)
         state.m17_vox = atoi(curr);
 
-      curr = strtok(NULL, ":"); //m17 UDP/IP Frame enable
-      if (curr != NULL)
-        opts.m17_use_ip = atoi(curr);
+      // curr = strtok(NULL, ":"); //moved to in and out methods
+      // if (curr != NULL)
+      //   opts.m17_use_ip = atoi(curr);
 
       M17END: ; //do nothing
 
@@ -3348,15 +3396,12 @@ main (int argc, char **argv)
       if (state.m17_vox > 1)
         state.m17_vox = 1;
 
-      //if use_ip is greater than 1, assume user meant 'yes' and set to one
-      if (opts.m17_use_ip > 1)
-        opts.m17_use_ip = 1;
-
       //debug print m17dat string
       // fprintf (stderr, " %s;", state.m17dat);
 
-      //debug print
-      fprintf (stderr, " M17:%d:%s:%s:%d:%d:%d; \n ", state.m17_can_en, state.str50c, state.str50b, state.m17_rate, state.m17_vox, opts.m17_use_ip);
+      fprintf (stderr, " M17:%d:%s:%s:%d;", state.m17_can_en, state.str50c, state.str50b, state.m17_rate);
+      if (state.m17_vox == 1) fprintf (stderr, "VOX;");
+      fprintf (stderr, "\n");
     }
 
     if (opts.playfiles == 1)

@@ -1457,8 +1457,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
   //User Defined Variables
   int use_ip = 0; //1 to enable IP Frame Broadcast over UDP
-  int udpport = 17000; //port number for M17 IP Frmae (default is 17000)
-  sprintf (opts->m17_hostname, "%s", "127.0.0.1"); //enter IP address or hostname here
+  int udpport = opts->m17_portno; //port number for M17 IP Frame (default is 17000)
+  //set at startup now via CLI, or use default if no user value specified
   uint8_t reflector_module = 0x41; //'A', single letter reflector module A-Z, 0x41 is A
   uint8_t can = 7; //channel access number
   //numerical representation of dst and src after b40 encoding, or special/reserved value
@@ -1501,7 +1501,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   int sock_err;
   if (opts->m17_use_ip == 1)
   {
-    opts->m17_portno = udpport;
+    //
     sock_err = udp_socket_connectM17(opts, state);
     if (sock_err < 0)
     {
@@ -2436,6 +2436,10 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     
   }
 
+  //SEND EOTX to reflector
+  if (use_ip == 1)
+    udp_return = m17_socket_blaster (opts, state, 10, eotx);
+
   //SEND DISC to reflector
   if (use_ip == 1)
     udp_return = m17_socket_blaster (opts, state, 10, disc);
@@ -3261,8 +3265,8 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
   //NOTE: This Internal Handling is non-blocking and keeps the connection alive
   //in the event of the other end opening and closing often (exit and restart)
 
-  //encode with: dsd-fme -fZ -M M17:1:lwvmobile:all:48000:0:1 -N 2> /dev/null -o null
-  //decode with: dsd-fme -fU (UDP is bound to settings below, make user configurable later)
+  //encode with: dsd-fme -fZ -M M17:1:N0CALL:ALL:48000:1 -o m17:127.0.0.1:17000 -N 2> m17out.ans
+  //decode with: dsd-fme -fU -i m17:127.0.0.1:17000 -N 2> m17ip.ans
 
   //Bind UDP Socket
   int err = 1; UNUSED(err);

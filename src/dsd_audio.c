@@ -712,6 +712,11 @@ openAudioInDevice (dsd_opts * opts)
     }
 	}
 
+  else if (strncmp(opts->audio_in_dev, "m17", 3) == 0)
+  {
+    opts->audio_in_type = 9; //NULL audio device
+  }
+
   else if (strncmp(opts->audio_in_dev, "tcp", 3) == 0)
   {
     opts->audio_in_type = 8;

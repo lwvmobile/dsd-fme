@@ -2485,7 +2485,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   if (opts->m17_use_ip == 1)
-    printw ("| M17 UDP IP Frame Input: %s:%d \n", opts->m17_hostname, opts->m17_portno);
+    printw ("| M17 UDP IP Frame Output: %s:%d \n", opts->m17_hostname, opts->m17_portno);
 
   if (opts->mbe_out_dir[0] != 0 && opts->dmr_stereo == 0)
   {
