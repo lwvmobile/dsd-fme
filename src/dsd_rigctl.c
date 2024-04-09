@@ -260,6 +260,12 @@ int UDPBind (char *hostname, int portno)
 		perror("ERROR on binding UDP Port");
 	}
 
+    //set these for non blocking when no samples to read
+    struct timeval read_timeout;
+    read_timeout.tv_sec = 0;
+    read_timeout.tv_usec = 10;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
+
     return sockfd;
 }
 
@@ -316,6 +322,18 @@ int udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * d
     err = sendto(opts->udp_sockfd, data, nsam, 0, (const struct sockaddr * ) & address, sizeof(struct sockaddr_in));
     if (err < 0) fprintf (stderr, "\n UDP SENDTO ERR %ld", err); //return value here is size_t number of characters sent, or -1 for failure
     if (err < nsam) fprintf (stderr, "\n UDP Underflow %ld", err); //I'm not even sure if this is possible
+}
+
+int m17_socket_receiver(dsd_opts * opts, void * data)
+{
+    size_t err = 0;
+    struct sockaddr_in cliaddr; 
+    socklen_t len = sizeof(cliaddr); 
+
+    //receive data from socket
+    err = recvfrom(opts->udp_sockfd, data, MSG_WAITALL, 0, (struct sockaddr * ) & address, &len);
+
+    return err;
 }
 
 //Analog UDP port on +2 of normal open socket

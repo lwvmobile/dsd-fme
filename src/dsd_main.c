@@ -1371,7 +1371,7 @@ usage ()
   printf ("  -fe             Decode only EDACS EA/ProVoice*\n");
   printf ("  -fE             Decode only EDACS EA/ProVoice with ESK 0xA0*\n");
   printf ("  -fm             Decode only dPMR*\n");
-  printf ("  -fU             Decode only M17 UDP/IP Frames From STDIN***(Testing)\n");
+  printf ("  -fU             Decode only M17 UDP/IP Frames From 127.0.0.1:17000\n");
   printf ("  -l            Disable DMR, dPMR, NXDN, M17 input filtering\n");
   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
   printf ("  -xx           Expect non-inverted X2-TDMA signal\n");

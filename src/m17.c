@@ -3245,15 +3245,22 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
 //Process Received IP Frames
 void processM17IPF(dsd_opts * opts, dsd_state * state)
 {
-  //encode with: dsd-fme -fZ -M M17:1:lwvmobile:all:48000:0:1 -N 2> /dev/null -o null
-  //decode with: socat stdio udp-listen:17000 | dsd-fme -fU
 
-  //TODO: Handle UDP Internally (test reading from socket, but may need threaded application for it)
+  //NOTE: This Internal Handling is non-blocking and keeps the connection alive
+  //in the event of the other end opening and closing often (exit and restart)
+
+  //encode with: dsd-fme -fZ -M M17:1:lwvmobile:all:48000:0:1 -N 2> /dev/null -o null
+  //decode with: dsd-fme -fU (UDP is bound to settings below, make user configurable later)
+
+  //Handle UDP Internally
+  int err = 1; UNUSED(err);
+  opts->udp_portno = 17000; //default port for M17 IP Frame
+  sprintf (opts->udp_hostname, "%s", "127.0.0.1");
+  opts->udp_sockfd = UDPBind(opts->udp_hostname, opts->udp_portno);
 
   int i, j, k;
 
   //Standard IP Framing
-  uint8_t byte = 0;
   uint8_t ip_frame[54]; memset (ip_frame, 0, sizeof(ip_frame));
   uint8_t magic[4] = {0x4D, 0x31, 0x37, 0x20};
   uint8_t ackn[4]  = {0x41, 0x43, 0x4B, 0x4E};
@@ -3266,13 +3273,20 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
   while (!exitflag)
   {
 
-    //read in one byte from stdin
-    fread(&byte, 1, 1, stdin)<1;
+    //if reading from socket receiver
+    if (opts->udp_sockfd)
+    {
+      //NOTE: blocking issue resolved with setsockopt in UDPBind
 
-    //push new byte
-    for(i = 0; i < 54; i++)
-      ip_frame[i]=ip_frame[i+1];
-    ip_frame[53]=byte;
+      //NOTE: Using recvfrom seems to load MSB of array first, 
+      //compared to having to push samples through it like with STDIN.
+      
+      err = m17_socket_receiver(opts, &ip_frame);
+
+      //debug
+      // fprintf (stderr, "ERR: %X; ", err);
+    }
+    else exitflag = 1;
 
     //compare header to magic and decode IP voice frame w/ M17 magic header
     if (memcmp(ip_frame, magic, 4) == 0)
@@ -3343,34 +3357,61 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     }
 
     //other headers from UDP IP
-    else if (memcmp(ip_frame+49, ackn, 4) == 0)
+    else if (memcmp(ip_frame, ackn, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   ACNK: ");
+
+      //clear frame
+      memset (ip_frame, 0, sizeof(ip_frame));
+
     }
-    else if (memcmp(ip_frame+49, nack, 4) == 0)
+    else if (memcmp(ip_frame, nack, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   NACK: ");
     }
-    else if (memcmp(ip_frame+43, conn, 4) == 0)
+    else if (memcmp(ip_frame, conn, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   CONN: ");
-      for (i = 43; i < 54; i++)
+      for (i = 0; i < 11; i++)
         fprintf (stderr, "%02X ", ip_frame[i]);
+
+      //clear frame
+      memset (ip_frame, 0, sizeof(ip_frame));
     }
-    else if (memcmp(ip_frame+44, disc, 4) == 0)
+    else if (memcmp(ip_frame, disc, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   DISC: ");
-      for (i = 44; i < 54; i++)
+      for (i = 0; i < 10; i++)
         fprintf (stderr, "%02X ", ip_frame[i]);
+
+      //clear frame
+      memset (ip_frame, 0, sizeof(ip_frame));
     }
-    else if (memcmp(ip_frame+49, ping, 4) == 0)
+    else if (memcmp(ip_frame, ping, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   PING: ");
+
+      //clear frame
+      memset (ip_frame, 0, sizeof(ip_frame));
     }
-    else if (memcmp(ip_frame+49, pong, 4) == 0)
+    else if (memcmp(ip_frame, pong, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   PONG: ");
+
+      //clear frame
+      memset (ip_frame, 0, sizeof(ip_frame));
     }
+
+    //debug
+    // else if (opts->payload == 1)
+    // {
+    //   fprintf (stderr, "\n UDP:");
+    //   for (i = 0; i < 54; i++)
+    //   {
+    //     if ( (i%14) == 0 ) fprintf (stderr, "\n    ");
+    //     fprintf (stderr, "[%02X]", ip_frame[i]);
+    //   }
+    // }
 
   }
 }
