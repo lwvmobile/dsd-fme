@@ -2600,6 +2600,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (state->ea_mode == 0)
       printw (" AFS: %d:%d:%d;", state->edacs_a_bits, state->edacs_f_bits, state->edacs_s_bits);
 
+    //TG Hold on EDACS, if specified by user
+    if (state->tg_hold != 0)
+    {
+      // Compute AFS for display purposes only
+      int a = (state->tg_hold >> state->edacs_a_shift) & state->edacs_a_mask;
+      int f = (state->tg_hold >> state->edacs_f_shift) & state->edacs_f_mask;
+      int s = state->tg_hold & state->edacs_s_mask;
+      if (state->ea_mode == 1) printw ("\n|  \\TG HOLD: %d; ", state->tg_hold);
+      else printw ("\n|  \\TG HOLD: %d [%02d-%02d%01d]; ", state->tg_hold, a, f, s);
+    }
+
     attron(COLOR_PAIR(4));
     printw ("\n");
   }
@@ -2629,6 +2640,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     if (state->ea_mode == 0)
       printw (" AFS: %d:%d:%d;", state->edacs_a_bits, state->edacs_f_bits, state->edacs_s_bits);
+
+    //TG Hold on EDACS, if specified by user
+    if (state->tg_hold != 0)
+    {
+      // Compute AFS for display purposes only
+      int a = (state->tg_hold >> state->edacs_a_shift) & state->edacs_a_mask;
+      int f = (state->tg_hold >> state->edacs_f_shift) & state->edacs_f_mask;
+      int s = state->tg_hold & state->edacs_s_mask;
+      if (state->ea_mode == 1) printw ("\n|  \\TG HOLD: %d; ", state->tg_hold);
+      else printw ("\n|  \\TG HOLD: %d [%02d-%02d%01d]; ", state->tg_hold, a, f, s);
+    }
 
     printw ("\n");
   }
@@ -2684,16 +2706,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //debug -- troubleshoot voice tuning after grant on DMR CC, subsequent grant may not tune because tuner isn't available
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1) printw ("Tuner Locked    ");
   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 0) printw ("Tuner Available ");
-  //TG Hold on EDACS, if specified by user
-  if ( (opts->frame_provoice == 1) && (state->tg_hold != 0) )
-  {
-    // Compute AFS for display purposes only
-    int a = (state->tg_hold >> state->edacs_a_shift) & state->edacs_a_mask;
-    int f = (state->tg_hold >> state->edacs_f_shift) & state->edacs_f_mask;
-    int s = state->tg_hold & state->edacs_s_mask;
-    if (state->ea_mode == 1) printw ("TG HOLD: %d; ", state->tg_hold);
-    else printw ("TG HOLD: %d [%02d-%02d%01d]; ", state->tg_hold, a, f, s);
-  }
   printw ("\n");
   printw ("| In Level:    [%02d%%] \n", level);
 

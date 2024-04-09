@@ -878,6 +878,20 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //if we are using allow/whitelist mode, then write 'B' to mode for block - no allow/whitelist support for i-calls
         if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
 
+        //Get target mode for calls that are in the allow/whitelist
+        for (int i = 0; i < state->group_tally; i++)
+        {
+          if (state->group_array[i].groupNumber == target)
+          {
+            strcpy (mode, state->group_array[i].groupMode);
+            break;
+          }
+        }
+
+        //TG hold on EDACS EA I-CALL -- block non-matching target
+        if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
+        if (state->tg_hold != 0 && state->tg_hold == target) sprintf (mode, "%s", "A");
+
         //this is working now with the new import setup
         if (opts->trunk_tune_private_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
         {
@@ -978,6 +992,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
         //if we are using allow/whitelist mode, then write 'A' to mode for allow - always allow all-calls by default
         if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "A");
+
+        //TG hold on EDACS ALL-CALL -- block ALL CALL in favor of hold?
+        // if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
+        // if (state->tg_hold != 0 && state->tg_hold == target) sprintf (mode, "%s", "A");
 
         //this is working now with the new import setup
         if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
@@ -1375,10 +1393,14 @@ void edacs(dsd_opts * opts, dsd_state * state)
                 break;
               }
             }
-            //TG hold on EDACS Standard/Net -- block non-matching target, allow matching group
-            if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
-            if (state->tg_hold != 0 && state->tg_hold == target) sprintf (mode, "%s", "A");
+            //moved to below, we want the TG HOLD to override either group or individual calls
+            //
+            //
           }
+
+          //TG hold on EDACS STD/NET -- block non-matching abstract target (moved here to fix tuning that occurs on I-CALL during TG HOLD)
+          if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
+          if (state->tg_hold != 0 && state->tg_hold == target) sprintf (mode, "%s", "A");
 
           //NOTE: Restructured below so that analog and digital are handled the same, just that when
           //its analog, it will now start edacs_analog which will while loop analog samples until
