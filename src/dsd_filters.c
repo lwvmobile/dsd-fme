@@ -1,3 +1,5 @@
+#include "dsd.h"
+
 //M17 Filter -- RRC Alpha = 0.5 S/s 48000 with 81 taps
 #define M17ZEROS 80 
 float m17gain = 3.16227766f; //sqrt of 10.0f
@@ -254,4 +256,13 @@ dsd_input_filter(short sample, int mode)
     sum += (coeffs[i] * v[i]);
 
   return (short)(sum / gain); // filtered sample out
+}
+
+void init_rrc_filter_memory()
+{
+  memset (m17xv, 0, 81*sizeof(float));
+  memset (xv, 0, 61*sizeof(float));
+  memset (dxv, 0, 61*sizeof(float));
+  memset (nxv, 0, 135*sizeof(float));
+  memset (dpmrxv, 0, 135*sizeof(float));
 }

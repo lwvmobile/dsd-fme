@@ -1360,6 +1360,9 @@ void eot_cc(dsd_opts * opts, dsd_state * state); //end of TX return to CC
 //Generic Tuning Functions
 void return_to_cc (dsd_opts * opts, dsd_state * state);
 
+//initialize static float filter memory
+void init_rrc_filter_memory();
+
 //misc audio filtering for analog
 long int raw_rms(short *samples, int len, int step);
 void init_audio_filters(dsd_state * state);

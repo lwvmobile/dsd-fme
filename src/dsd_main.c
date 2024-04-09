@@ -1264,8 +1264,8 @@ usage ()
   printf ("                rtl:dev:freq:gain:ppm:bw:sq:vol for rtl dongle (see below)\n");
   printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
   printf ("                tcp:192.168.7.5:7355 for custom address and port \n");
-  printf ("                m17 for M17 UDP/IP socket bind input (default host 127.0.0.1; default port 17000)\n");
-  printf ("                m17:192.168.7.8:17001 for M17 UDP/IP bind input (Binding Address and Port\n");
+  printf ("                m17udp for M17 UDP/IP socket bind input (default host 127.0.0.1; default port 17000)\n");
+  printf ("                m17udp:192.168.7.8:17001 for M17 UDP/IP bind input (Binding Address and Port\n");
   printf ("                filename.bin for OP25/FME capture bin files\n");
   printf ("                filename.wav for 48K/1 wav files (SDR++, GQRX)\n");
   printf ("                filename.wav -s 96000 for 96K/1 wav files (DSDPlus)\n");
@@ -1286,8 +1286,8 @@ usage ()
   printf ("                null for no audio output\n");
   printf ("                udp for UDP socket blaster output (default host 127.0.0.1; default port 23456)\n");
   printf ("                udp:192.168.7.8:23470 for UDP socket blaster output (Target Address and Port\n");
-  printf ("                m17 for M17 UDP/IP socket blaster output (default host 127.0.0.1; default port 17000)\n");
-  printf ("                m17:192.168.7.8:17001 for M17 UDP/IP blaster output (Target Address and Port\n");
+  printf ("                m17udp for M17 UDP/IP socket blaster output (default host 127.0.0.1; default port 17000)\n");
+  printf ("                m17udp:192.168.7.8:17001 for M17 UDP/IP blaster output (Target Address and Port\n");
   printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <float>    Audio Digital Output Gain  (Default: 0 = Auto;        )\n");
@@ -1683,6 +1683,7 @@ main (int argc, char **argv)
   initOpts (&opts);
   initState (&state);
   init_audio_filters(&state); //audio filters
+  init_rrc_filter_memory(); //initialize input filtering
   InitAllFecFunction();
   CNXDNConvolution_init();
 
@@ -2904,7 +2905,7 @@ main (int argc, char **argv)
       openSerial (&opts, &state);
     }
 
-    if((strncmp(opts.audio_in_dev, "m17", 3) == 0)) //M17 UDP Socket Input
+    if((strncmp(opts.audio_in_dev, "m17udp", 6) == 0)) //M17 UDP Socket Input
     {
       fprintf (stderr, "M17 UDP IP Frame Input: ");
       char * curr; 
@@ -2924,7 +2925,7 @@ main (int argc, char **argv)
       fprintf (stderr, "%d \n", opts.m17_portno);
     }
 
-    if((strncmp(opts.audio_out_dev, "m17", 3) == 0)) //M17 UDP Socket Output
+    if((strncmp(opts.audio_out_dev, "m17udp", 6) == 0)) //M17 UDP Socket Output
     {
       fprintf (stderr, "M17 UDP IP Frame Output: ");
       char * curr; 

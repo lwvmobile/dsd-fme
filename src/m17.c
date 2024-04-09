@@ -1229,6 +1229,8 @@ float m17_rrc[81] =
 	-0.001940667871554463f, -0.002930279157647190f, -0.003195702904062073f
 };
 
+static float mem[81];
+
 //convert bit array into symbols and RF/Audio
 void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
 {
@@ -1344,7 +1346,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
   //version w/ filtering lifted from M17_Implementations / libM17
   else if (opts->use_cosine_filter == 1)
   {
-    float mem[81]; memset (mem, 0.0f, 81*sizeof(float));
+    
     float mac = 0.0f;
     x = 0;
     for (i = 0; i < 192; i++)
@@ -1434,6 +1436,9 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
 //encode and create audio of a Project M17 Stream signal
 void encodeM17STR(dsd_opts * opts, dsd_state * state)
 {
+
+  //initialize RRC memory buffer
+  memset (mem, 0, 81*sizeof(float));
 
   //set stream type value here so we can change 3200 or 1600 accordingly
   uint8_t st = 2; //stream type: 0 = res; 1 = data; 2 = voice(3200); 3 = voice(1600) + data;
@@ -2454,6 +2459,9 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 void encodeM17BRT(dsd_opts * opts, dsd_state * state)
 {
 
+  //initialize RRC memory buffer
+  memset (mem, 0, 81*sizeof(float));
+
   //NOTE: BERT will not use the nucrses terminal,
   //just strictly for making a BERT test signal
   
@@ -2581,6 +2589,9 @@ void encodeM17BRT(dsd_opts * opts, dsd_state * state)
 //encode and create audio of a Project M17 PKT signal
 void encodeM17PKT(dsd_opts * opts, dsd_state * state)
 {
+
+  //initialize RRC memory buffer
+  memset (mem, 0, 81*sizeof(float));
 
   uint8_t nil[368]; //empty array
   memset (nil, 0, sizeof(nil));

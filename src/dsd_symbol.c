@@ -377,7 +377,8 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             sample = dmr_filter(sample);
           }
 
-          else if (state->lastsynctype == 8 || state->lastsynctype == 9 ||state->lastsynctype == 16 || state->lastsynctype == 17)
+          else if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17 || 
+                   state->lastsynctype == 86 || state->lastsynctype == 87 || state->lastsynctype == 98 || state->lastsynctype == 99)
           {
             sample = m17_filter(sample);
           }
