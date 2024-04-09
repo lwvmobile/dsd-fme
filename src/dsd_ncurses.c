@@ -2484,6 +2484,22 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
   }
 
+  if (opts->m17encoder == 1)
+  {
+    printw ("| M17 Encoder:");
+    if (state->m17encoder_tx == 1 && state->m17_vox == 0) printw (" Toggle TX (\\) ON ;");
+    if (state->m17encoder_tx == 0 && state->m17_vox == 0) printw (" Toggle TX (\\) OFF;");
+    if (state->m17_vox == 1) printw (" Vox Mode;");
+    printw (" Input Gain (/|*): %02.0f%% ", opts->audio_gainA);
+
+    if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
+    if (opts->use_hpf == 1) printw ("HP|");     else printw ("  |");
+    if (opts->use_pbf == 1) printw ("PB|");     else printw ("  |");
+    if (opts->audio_in_type != 3 && state->m17_vox == 1) printw ( " SQL: %04d : %04d;", opts->rtl_rms, opts->rtl_squelch_level);
+    printw ("\n");
+
+  }
+
   if (opts->m17_use_ip == 1)
     printw ("| M17 UDP IP Frame Output: %s:%d \n", opts->m17_hostname, opts->m17_portno);
 
@@ -2662,18 +2678,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->mod_c4fm == 1) printw ("[C4FM]");
   if (opts->mod_gfsk == 1) printw ("[GFSK]");
   printw ( "[%d] \n", (48000*opts->wav_interpolator)/state->samplesPerSymbol);
-  if (opts->m17encoder == 1) printw ("| Encoding:    [%s] ", opts->output_name);
-  if (opts->m17encoder == 1 && state->m17encoder_tx == 1 && state->m17_vox == 0) printw (" TX (\\) ON ;");
-  if (opts->m17encoder == 1 && state->m17encoder_tx == 0 && state->m17_vox == 0) printw (" TX (\\) OFF;");
-  if (opts->m17encoder == 1 && state->m17_vox == 1) printw (" Vox Mode;");
-  if (opts->m17encoder == 1) printw (" Input Gain (/|*): %02.0f%% ", opts->audio_gainA);
-  if (opts->m17encoder == 1)
-  {
-    if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
-    if (opts->use_hpf == 1) printw ("HP|");     else printw ("  |");
-    if (opts->use_pbf == 1) printw ("PB|");     else printw ("  |");
-    printw ("\n");
-  }
+  if (opts->m17encoder == 1) printw ("| Encoding:    [%s] \n", opts->output_name);
   printw ("| Decoding:    [%s] ", opts->output_name);
   if (opts->aggressive_framesync == 0) printw ("CRC/(RAS) ");
   //debug -- troubleshoot voice tuning after grant on DMR CC, subsequent grant may not tune because tuner isn't available
