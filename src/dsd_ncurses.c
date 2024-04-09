@@ -2375,6 +2375,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| Symbol Bin Input: %s \n", opts->audio_in_dev);
   }
 
+  if (opts->m17decoderip == 1 && opts->udp_sockfd)
+    printw ("| M17 UDP IP Frame Input: %s:%d \n", opts->m17_hostname, opts->m17_portno);
+
   if (opts->audio_in_type == 8)
   {
     printw ("| TCP Signal Input: %s:%d; %d kHz; 1 Ch; ", opts->tcp_hostname, opts->tcp_portno, opts->wav_sample_rate/1000);
@@ -2482,7 +2485,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   if (opts->m17_use_ip == 1)
-    printw ("| M17 UDP IP Frame Output: 127.0.0.1:17000\n");
+    printw ("| M17 UDP IP Frame Input: %s:%d \n", opts->m17_hostname, opts->m17_portno);
 
   if (opts->mbe_out_dir[0] != 0 && opts->dmr_stereo == 0)
   {

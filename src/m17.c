@@ -1520,7 +1520,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   uint8_t disc[10]; memset (disc, 0, sizeof(disc));
   uint8_t ping[10]; memset (ping, 0, sizeof(ping));
   uint8_t pong[10]; memset (pong, 0, sizeof(pong));
-  uint8_t retn[10]; memset (retn, 0, sizeof(retn));
+  uint8_t eotx[10]; memset (eotx, 0, sizeof(eotx));
   int udp_return = 0; UNUSED(udp_return);
   uint8_t sid[2];   memset (sid, 0, sizeof(sid));
   uint8_t m17_ip_frame[432]; memset (m17_ip_frame, 0, sizeof(m17_ip_frame));
@@ -1630,11 +1630,12 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   }
   //end CSD conversion
 
-  //Setup conn, disc, ping, pong values
+  //Setup conn, disc, eotx, ping, pong values
   conn[0] = 0x43; conn[1] = 0x4F; conn[2] = 0x4E; conn[3] = 0x4E; conn[10] = reflector_module;
   disc[0] = 0x44; disc[1] = 0x49; disc[2] = 0x53; disc[3] = 0x43;
   ping[0] = 0x50; ping[1] = 0x49; ping[2] = 0x4E; ping[3] = 0x47;
   pong[0] = 0x50; pong[1] = 0x4F; pong[2] = 0x4E; pong[3] = 0x47;
+  eotx[0] = 0x45; eotx[1] = 0x4F; eotx[2] = 0x54; eotx[3] = 0x58; //EOTX is not Standard, but going to send / receive anyways
 
   for (i = 0; i < 6; i++)
   {
@@ -1642,6 +1643,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     disc[i+4] = (src >> 48-(8*i)) & 0xFF;
     ping[i+4] = (src >> 48-(8*i)) & 0xFF;
     pong[i+4] = (src >> 48-(8*i)) & 0xFF;
+    eotx[i+4] = (src >> 48-(8*i)) & 0xFF;
   }
 
   //SEND CONN to reflector
@@ -2406,6 +2408,10 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         //send IP Frame with EOT bit
         if (use_ip == 1)
           udp_return = m17_socket_blaster (opts, state, 54, m17_ip_packed);
+
+        //SEND EOTX to reflector
+        if (use_ip == 1)
+          udp_return = m17_socket_blaster (opts, state, 10, eotx);
 
         //reset indicators
         eot = 0;
@@ -3246,17 +3252,21 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
 void processM17IPF(dsd_opts * opts, dsd_state * state)
 {
 
+  //Tweaks and Enable Ncurses Terminal
+  opts->dmr_stereo = 0;
+  opts->audio_in_type = 9; //NULL
+  if (opts->use_ncurses_terminal == 1)
+    ncursesOpen(opts, state);
+
   //NOTE: This Internal Handling is non-blocking and keeps the connection alive
   //in the event of the other end opening and closing often (exit and restart)
 
   //encode with: dsd-fme -fZ -M M17:1:lwvmobile:all:48000:0:1 -N 2> /dev/null -o null
   //decode with: dsd-fme -fU (UDP is bound to settings below, make user configurable later)
 
-  //Handle UDP Internally
+  //Bind UDP Socket
   int err = 1; UNUSED(err);
-  opts->udp_portno = 17000; //default port for M17 IP Frame
-  sprintf (opts->udp_hostname, "%s", "127.0.0.1");
-  opts->udp_sockfd = UDPBind(opts->udp_hostname, opts->udp_portno);
+  opts->udp_sockfd = UDPBind(opts->m17_hostname, opts->m17_portno);
 
   int i, j, k;
 
@@ -3269,6 +3279,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
   uint8_t disc[4]  = {0x44, 0x49, 0x53, 0x43};
   uint8_t ping[4]  = {0x50, 0x49, 0x4E, 0x47};
   uint8_t pong[4]  = {0x50, 0x4F, 0x4E, 0x47};
+  uint8_t eotx[4]  = {0x45, 0x4F, 0x54, 0x58}; //EOTX is not Standard, but going to send / receive anyways
 
   while (!exitflag)
   {
@@ -3280,7 +3291,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
 
       //NOTE: Using recvfrom seems to load MSB of array first, 
       //compared to having to push samples through it like with STDIN.
-      
+
       err = m17_socket_receiver(opts, &ip_frame);
 
       //debug
@@ -3291,6 +3302,10 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     //compare header to magic and decode IP voice frame w/ M17 magic header
     if (memcmp(ip_frame, magic, 4) == 0)
     {
+
+      //Enable Carrier, synctype, etc
+      state->carrier = 1;
+      state->synctype = 8;
 
       //convert bytes to bits
       k = 0;
@@ -3386,6 +3401,21 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
+
+      state->carrier = 0;
+      state->synctype = -1;
+    }
+    else if (memcmp(ip_frame, eotx, 4) == 0)
+    {
+      fprintf (stderr, "\n M17 IP   EOTX: ");
+      for (i = 0; i < 10; i++)
+        fprintf (stderr, "%02X ", ip_frame[i]);
+
+      //clear frame
+      memset (ip_frame, 0, sizeof(ip_frame));
+
+      state->carrier = 0;
+      state->synctype = -1;
     }
     else if (memcmp(ip_frame, ping, 4) == 0)
     {
@@ -3412,6 +3442,10 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     //     fprintf (stderr, "[%02X]", ip_frame[i]);
     //   }
     // }
+
+    //refresh ncurses printer, if enabled
+    if (opts->use_ncurses_terminal == 1)
+      ncursesPrinter(opts, state);
 
   }
 }
