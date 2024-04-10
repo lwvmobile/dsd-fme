@@ -2495,7 +2495,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
     if (opts->use_hpf == 1) printw ("HP|");     else printw ("  |");
     if (opts->use_pbf == 1) printw ("PB|");     else printw ("  |");
-    if (opts->audio_in_type != 3 && state->m17_vox == 1) printw ( " SQL: %04d : %04d;", opts->rtl_rms, opts->rtl_squelch_level);
+    if (opts->audio_in_type != 3 && state->m17_vox == 1) printw ( " SQL: %04ld : %04d;", opts->rtl_rms, opts->rtl_squelch_level);
     printw ("\n");
 
   }

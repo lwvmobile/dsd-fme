@@ -1677,7 +1677,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         sprintf(state->dmr_branding_sub, "Con+ ");
 
         //add active channel string for display
-        sprintf (state->active_channel[tslot], "Active VCh: %d TG: %d; ", lcn, grpAddr);
+        if (opt == 2)
+          sprintf (state->active_channel[tslot], "Active Group Ch: %d TG: %d; ", lcn, grpAddr);
+        else if (opt == 3)
+          sprintf (state->active_channel[tslot], "Active Private Ch: %d TG: %d; ", lcn, grpAddr);
+        else //generic channel of unknown type
+          sprintf (state->active_channel[tslot], "Active OPT %02X Ch: %d TG: %d; ", opt, lcn, grpAddr);
+
         state->last_active_time = time(NULL);
 
         //Skip tuning group calls if group calls are disabled
@@ -1796,7 +1802,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         if (opts->trunk_tune_data_calls == 0) goto SKIPCOND;
 
         //add active channel string for display
-        sprintf (state->active_channel[tslot], "Active DCh: %d TG: %d; ", lcn, dtarget);
+        sprintf (state->active_channel[tslot], "Active Data Ch: %d TG: %d; ", lcn, dtarget);
         state->last_active_time = time(NULL);
 
         //NOTE: Only set CC Frequency from SLC since it will tell us
