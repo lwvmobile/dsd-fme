@@ -637,6 +637,20 @@ void edacs(dsd_opts * opts, dsd_state * state)
           else               fprintf (stderr, " Message Acknowledgement :: Status [%03d] Source [%08d]", status, source);
           fprintf (stderr, "%s", KNRM);
         }
+        //Unit Enable/Disable
+        else if (mt2 == 0x7)
+        {
+          int qualifier = (msg_2 & 0xC000000) >> 26;
+          int target    = (msg_2 & 0xFFFFF);
+          fprintf (stderr, "%s", KBLU);
+          fprintf (stderr, " Unit Enable/Disable ::");
+          if (qualifier == 0x0)      fprintf (stderr, " [Temporary Disable]");
+          else if (qualifier == 0x1) fprintf (stderr, " [Corrupt Personality]");
+          else if (qualifier == 0x2) fprintf (stderr, " [Revoke Logical ID]");
+          else                       fprintf (stderr, " [Re-enable Unit]");
+          fprintf (stderr, " Target [%05d]", target);
+          fprintf (stderr, "%s", KNRM);
+        }
         //Control Channel LCN
         else if (mt2 == 0x8)
         {
