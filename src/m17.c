@@ -70,7 +70,7 @@ uint16_t crc16m17(const uint8_t *in, const uint16_t len)
 
 void M17decodeCSD(dsd_state * state, unsigned long long int dst, unsigned long long int src)
 {
-  //evaluate dst and src, and determine if they need to be converted to calsign
+  //evaluate dst and src, and determine if they need to be converted to callsign
   int i;
   char c;
 
@@ -1642,13 +1642,13 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   pong[0] = 0x50; pong[1] = 0x4F; pong[2] = 0x4E; pong[3] = 0x47;
   eotx[0] = 0x45; eotx[1] = 0x4F; eotx[2] = 0x54; eotx[3] = 0x58; //EOTX is not Standard, but going to send / receive anyways
 
+  //these values were not loaded correctly before, so just manually handle one and copy to others
+  conn[4] = (src >> 40UL) & 0xFF; conn[5] = (src >> 32UL) & 0xFF; conn[6] = (src >> 24UL) & 0xFF;
+  conn[7] = (src >> 16UL) & 0xFF; conn[8] = (src >> 8UL)  & 0xFF; conn[9] = (src >> 0UL)  & 0xFF;
   for (i = 0; i < 6; i++)
   {
-    conn[i+4] = (src >> 48-(8*i)) & 0xFF;
-    disc[i+4] = (src >> 48-(8*i)) & 0xFF;
-    ping[i+4] = (src >> 48-(8*i)) & 0xFF;
-    pong[i+4] = (src >> 48-(8*i)) & 0xFF;
-    eotx[i+4] = (src >> 48-(8*i)) & 0xFF;
+    disc[i+4] = conn[i+4]; ping[i+4] = conn[i+4];
+    pong[i+4] = conn[i+4]; eotx[i+4] = conn[i+4];
   }
 
   //SEND CONN to reflector
@@ -2442,8 +2442,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   }
 
   //SEND EOTX to reflector
-  if (use_ip == 1)
-    udp_return = m17_socket_blaster (opts, state, 10, eotx);
+  // if (use_ip == 1)
+  //   udp_return = m17_socket_blaster (opts, state, 10, eotx);
 
   //SEND DISC to reflector
   if (use_ip == 1)
@@ -2933,13 +2933,13 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   pong[0] = 0x50; pong[1] = 0x4F; pong[2] = 0x4E; pong[3] = 0x47;
   eotx[0] = 0x45; eotx[1] = 0x4F; eotx[2] = 0x54; eotx[3] = 0x58;
 
+  //these values were not loaded correctly before, so just manually handle one and copy to others
+  conn[4] = (src >> 40UL) & 0xFF; conn[5] = (src >> 32UL) & 0xFF; conn[6] = (src >> 24UL) & 0xFF;
+  conn[7] = (src >> 16UL) & 0xFF; conn[8] = (src >> 8UL)  & 0xFF; conn[9] = (src >> 0UL)  & 0xFF;
   for (i = 0; i < 6; i++)
   {
-    conn[i+4] = (src >> 48-(8*i)) & 0xFF;
-    disc[i+4] = (src >> 48-(8*i)) & 0xFF;
-    ping[i+4] = (src >> 48-(8*i)) & 0xFF;
-    pong[i+4] = (src >> 48-(8*i)) & 0xFF;
-    eotx[i+4] = (src >> 48-(8*i)) & 0xFF;
+    disc[i+4] = conn[i+4]; ping[i+4] = conn[i+4];
+    pong[i+4] = conn[i+4]; eotx[i+4] = conn[i+4];
   }
 
   //SEND CONN to reflector
@@ -3420,6 +3420,9 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
   uint8_t eotx[4]  = {0x45, 0x4F, 0x54, 0x58}; //EOTX is not Standard, but going to send / receive anyways
   uint8_t mpkt[4]  = {0x4D, 0x50, 0x4B, 0x54}; //MPKT is not Standard, but I think sending PKT payloads would be viable over UDP (no reason not to)
 
+  unsigned long long int src = 0; //source derived from CONN, DISC, EOTX, and Other Headers
+  char c;
+
   while (!exitflag)
   {
 
@@ -3437,6 +3440,9 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       // fprintf (stderr, "ERR: %X; ", err);
     }
     else exitflag = 1;
+
+    src = ((unsigned long long int)ip_frame[4] << 40ULL) + ((unsigned long long int)ip_frame[5] << 32ULL) + ((unsigned long long int)ip_frame[6] << 24ULL) +
+          ((unsigned long long int)ip_frame[7] << 16ULL) + ((unsigned long long int)ip_frame[8] <<  8ULL) + ((unsigned long long int)ip_frame[9] <<  0ULL);
 
     //compare header to magic and decode IP voice frame w/ M17 magic header
     if (memcmp(ip_frame, magic, 4) == 0)
@@ -3527,8 +3533,33 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     else if (memcmp(ip_frame, conn, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   CONN: ");
+
+      //debug
+      // fprintf (stderr, "%X", src);
+
+      if (src == 0xFFFFFFFFFFFF) 
+        fprintf (stderr, "SRC:  UNKNOWN FFFFFFFFFFFF");
+      else if (src == 0)
+        fprintf (stderr, "SRC: RESERVED %012llx", src);
+      else if (src >= 0xEE6B28000000)
+        fprintf (stderr, "SRC: RESERVED %012llx", src);
+      else
+      {
+        fprintf (stderr, "SRC: ");
+        for (i = 0; i < 9; i++)
+        {
+          c = b40[src % 40];
+          // state->m17_src_csd[i] = c;
+          fprintf (stderr, "%c", c);
+          src = src / 40;
+        }
+      }
+
+      // if (opts->payload == 1)
+      {
       for (i = 0; i < 11; i++)
         fprintf (stderr, "%02X ", ip_frame[i]);
+      }
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
@@ -3537,8 +3568,33 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     else if (memcmp(ip_frame, disc, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   DISC: ");
-      for (i = 0; i < 10; i++)
+      
+      //debug
+      // fprintf (stderr, "%X", src);
+
+      if (src == 0xFFFFFFFFFFFF) 
+        fprintf (stderr, "SRC:  UNKNOWN FFFFFFFFFFFF");
+      else if (src == 0)
+        fprintf (stderr, "SRC: RESERVED %012llx", src);
+      else if (src >= 0xEE6B28000000)
+        fprintf (stderr, "SRC: RESERVED %012llx", src);
+      else
+      {
+        fprintf (stderr, "SRC: ");
+        for (i = 0; i < 9; i++)
+        {
+          c = b40[src % 40];
+          // state->m17_src_csd[i] = c;
+          fprintf (stderr, "%c", c);
+          src = src / 40;
+        }
+      }
+
+      // if (opts->payload == 1)
+      {
+      for (i = 0; i < 11; i++)
         fprintf (stderr, "%02X ", ip_frame[i]);
+      }
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
@@ -3550,8 +3606,33 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     else if (memcmp(ip_frame, eotx, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   EOTX: ");
-      for (i = 0; i < 10; i++)
+      
+      //debug
+      // fprintf (stderr, "%X", src);
+
+      if (src == 0xFFFFFFFFFFFF) 
+        fprintf (stderr, "SRC:  UNKNOWN FFFFFFFFFFFF");
+      else if (src == 0)
+        fprintf (stderr, "SRC: RESERVED %012llx", src);
+      else if (src >= 0xEE6B28000000)
+        fprintf (stderr, "SRC: RESERVED %012llx", src);
+      else
+      {
+        fprintf (stderr, "SRC: ");
+        for (i = 0; i < 9; i++)
+        {
+          c = b40[src % 40];
+          // state->m17_src_csd[i] = c;
+          fprintf (stderr, "%c", c);
+          src = src / 40;
+        }
+      }
+
+      // if (opts->payload == 1)
+      {
+      for (i = 0; i < 11; i++)
         fprintf (stderr, "%02X ", ip_frame[i]);
+      }
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
@@ -3564,16 +3645,65 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "\n M17 IP   PING: ");
 
-      //clear frame
-      memset (ip_frame, 0, sizeof(ip_frame));
+      //debug
+      // fprintf (stderr, "%X", src);
+
+      if (src == 0xFFFFFFFFFFFF) 
+        fprintf (stderr, "SRC:  UNKNOWN FFFFFFFFFFFF");
+      else if (src == 0)
+        fprintf (stderr, "SRC: RESERVED %012llx", src);
+      else if (src >= 0xEE6B28000000)
+        fprintf (stderr, "SRC: RESERVED %012llx", src);
+      else
+      {
+        fprintf (stderr, "SRC: ");
+        for (i = 0; i < 9; i++)
+        {
+          c = b40[src % 40];
+          // state->m17_src_csd[i] = c;
+          fprintf (stderr, "%c", c);
+          src = src / 40;
+        }
+      }
+
+      // if (opts->payload == 1)
+      {
+      for (i = 0; i < 11; i++)
+        fprintf (stderr, "%02X ", ip_frame[i]);
+      }
+
     }
 
     else if (memcmp(ip_frame, pong, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   PONG: ");
 
-      //clear frame
-      memset (ip_frame, 0, sizeof(ip_frame));
+      //debug
+      // fprintf (stderr, "%X", src);
+
+      if (src == 0xFFFFFFFFFFFF) 
+        fprintf (stderr, "SRC:  UNKNOWN FFFFFFFFFFFF");
+      else if (src == 0)
+        fprintf (stderr, "SRC: RESERVED %012llx", src);
+      else if (src >= 0xEE6B28000000)
+        fprintf (stderr, "SRC: RESERVED %012llx", src);
+      else
+      {
+        fprintf (stderr, "SRC: ");
+        for (i = 0; i < 9; i++)
+        {
+          c = b40[src % 40];
+          // state->m17_src_csd[i] = c;
+          fprintf (stderr, "%c", c);
+          src = src / 40;
+        }
+      }
+
+      // if (opts->payload == 1)
+      {
+      for (i = 0; i < 11; i++)
+        fprintf (stderr, "%02X ", ip_frame[i]);
+      }
     }
 
     else if (memcmp(ip_frame, mpkt, 4) == 0)
