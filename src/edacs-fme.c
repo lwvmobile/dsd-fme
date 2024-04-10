@@ -530,49 +530,22 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
   }
 
-  //Old logic - take copy 1 of the first and second messages, then verify BCH on them.
-  // 
-  //TODO 2024-04-10: Keep this logic around for a bit to compare against new voting implementation.
-  fr_1 = fr_1 & 0xFFFFFFFFFF;
-  fr_4 = fr_4 & 0xFFFFFFFFFF;
-
-  fr_1m = (fr_1 & 0xFFFFFFF000) >> 12;
-  fr_4m = (fr_4 & 0xFFFFFFF000) >> 12;
-
-  //take our message and create a new crc for it, if it matches the old crc, then we have a good frame
-  fr_1t = edacs_bch (fr_1m);
-  fr_4t = edacs_bch (fr_4m);
-
-  fr_1t = fr_1t & 0xFFFFFFFFFF;
-  fr_4t = fr_4t & 0xFFFFFFFFFF;
-
-  int old_bch_pass = (fr_1 == fr_1t) && (fr_4 == fr_4t);
-
-  //New logic - take our 3 copies of the first and second message and vote them to extract the "error-corrected" first
-  //and second message, then verify BCH on that.
+  //Take our 3 copies of the first and second message and vote them to extract the "error-corrected" first and second
+  //message, then verify BCH on that
   unsigned long long int msg_1_ec = edacs_vote_fr(fr_1, fr_2, fr_3);
   unsigned long long int msg_2_ec = edacs_vote_fr(fr_4, fr_5, fr_6);
 
+  //Get just the message portion
   unsigned long long int msg_1_ec_m = msg_1_ec >> 12;
   unsigned long long int msg_2_ec_m = msg_2_ec >> 12;
 
-  //take our message and create a new crc for it, if it matches the old crc, then we have a good frame
+  //Take the message and create a new crc for it - if it matches the old crc, then we have a good frame
   unsigned long long int msg_1_ec_t = edacs_bch(msg_1_ec_m) & 0xFFFFFFFFFF;
   unsigned long long int msg_2_ec_t = edacs_bch(msg_2_ec_m) & 0xFFFFFFFFFF;
 
-  int bch_pass = (msg_1_ec == msg_1_ec_t) && (msg_2_ec == msg_2_ec_t);
-
-  if (!bch_pass && !old_bch_pass)
+  if (msg_1_ec != msg_1_ec_t || msg_2_ec != msg_2_ec_t)
   {
     fprintf (stderr, " BCH FAIL ");
-  }
-  else if (bch_pass && !old_bch_pass)
-  {
-    fprintf (stderr, " BCH FAIL (old logic only) ");
-  }
-  else if (!bch_pass && old_bch_pass)
-  {
-    fprintf (stderr, " BCH FAIL (new logic only)");
   }
   else //BCH Pass, continue from here.
   {
