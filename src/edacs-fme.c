@@ -687,16 +687,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "%s", KNRM);
           state->edacs_site_id = site_id;
         }
-        //disabling kick command, data looks like its just FFFF, no actual values, can't verify accuracy
-        // else if (mt2 == 0xB) //KICK LISTING for EA?? Unverified, but probably observed in Unitrunker way back when.
-        // {
-        //   int kicked = (msg_2_ec & 0xFFFFF000) >> 12;
-        //   fprintf (stderr, " FR_1 [%010llX]", msg_1_ec);
-        //   fprintf (stderr, " FR_3 [%010llX]", fr_3);
-        //   fprintf (stderr, " FR_4 [%010llX]", msg_2_ec);
-        //   fprintf (stderr, " FR_6 [%010llX]", fr_6);
-        //   fprintf (stderr, " %08d REG/DEREG/AUTH?", kicked);
-        // }
         //Patch Groups
         else if (mt2 == 0xC)
         {
