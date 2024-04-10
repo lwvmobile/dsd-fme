@@ -701,6 +701,84 @@ void edacs(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "%s", KNRM);
           state->edacs_site_id = site_id;
         }
+        //System Dynamic Regroup Plan Bitmap
+        else if (mt2 == 0xB)
+        {
+          int bank_1     = (msg_1 & 0x10000) >> 16;
+          int resident_1 = (msg_1 & 0xFF00) >> 8;
+          int active_1   = (msg_1 & 0xFF);
+          int bank_2     = (msg_2 & 0x10000) >> 16;
+          int resident_2 = (msg_2 & 0xFF00) >> 8;
+          int active_2   = (msg_2 & 0xFF);
+
+          fprintf (stderr, "%s", KYEL);
+          fprintf (stderr, " System Dynamic Regroup Plan Bitmap");
+
+          // Deduplicate some code with a for (foreach would have been great here)
+          for (int i = 0; i < 2; i++)
+          {
+            int bank;
+            int resident;
+            int active;
+
+            switch (i) {
+              case 0:
+                bank     = bank_1;
+                resident = resident_1;
+                active   = active_1;
+                break;
+              case 1:
+                bank     = bank_2;
+                resident = resident_2;
+                active   = active_2;
+                break;
+            }
+
+            fprintf (stderr, " :: Plan Bank [%1d] Resident [", bank);
+
+            int plan = bank * 8;
+            int first = 1;
+            while (resident != 0) {
+              if (resident & 0x1 == 1) {
+                if (first == 1)
+                {
+                  first = 0;
+                  fprintf (stderr, "%d", plan);
+                }
+                else
+                {
+                  fprintf (stderr, ", %d", plan);
+                }
+              }
+              resident >>= 1;
+              plan++;
+            }
+
+            fprintf (stderr, "] Active [");
+
+            plan = bank * 8;
+            first = 1;
+            while (active != 0) {
+              if (active & 0x1 == 1) {
+                if (first == 1)
+                {
+                  first = 0;
+                  fprintf (stderr, "%d", plan);
+                }
+                else
+                {
+                  fprintf (stderr, ", %d", plan);
+                }
+              }
+              active >>= 1;
+              plan++;
+            }
+
+            fprintf (stderr, "]");
+          }
+
+          fprintf (stderr, "%s", KNRM);
+        }
         //Patch Groups
         else if (mt2 == 0xC)
         {
