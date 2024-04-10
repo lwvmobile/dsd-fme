@@ -331,7 +331,7 @@ int m17_socket_receiver(dsd_opts * opts, void * data)
     socklen_t len = sizeof(cliaddr); 
 
     //receive data from socket
-    err = recvfrom(opts->udp_sockfd, data, MSG_WAITALL, 0, (struct sockaddr * ) & address, &len);
+    err = recvfrom(opts->udp_sockfd, data, 1000, 0, (struct sockaddr * ) & address, &len); //was MSG_WAITALL, but that seems to be = 256
 
     return err;
 }

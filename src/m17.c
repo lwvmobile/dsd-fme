@@ -2906,6 +2906,11 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     else use_ip = 1;
   }
 
+  //NOTE: IP Framing is not standard on M17 for PKT mode, but
+  //I don't see any reason why we can't send them anyways, just
+  //need to use a new magic for it: MPKT. The receiver here is capable
+  //of decoding them
+
   //Standard IP Framing
   uint8_t mpkt[4]  = {0x4D, 0x50, 0x4B, 0x54};
   uint8_t ackn[4]  = {0x41, 0x43, 0x4B, 0x4E}; UNUSED(ackn);
@@ -2964,32 +2969,33 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   for (i = 0; i < 34; i++)
     m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_ip_frame[i*8], 8);
 
-  //pack the entire PKT payload (plus Terminator, sans CRC)
+  //pack the entire PKT payload (plus terminator, sans CRC)
   for (i = 0; i < x+1; i++)
     m17_ip_packed[i+34] = (uint8_t)ConvertBitIntoBytes(&m17_p1_full[i*8], 8);
 
-  //Calculate CRC over everthing packed
+  //Calculate CRC over everthing packed (including the terminator)
   ip_crc = crc16m17(m17_ip_packed, 34+1+x);
 
   //add CRC value to the ip frame
   uint8_t crc_bits[16]; memset (crc_bits, 0, sizeof(crc_bits));
   for (i = 0; i < 16; i++)
-    crc_bits[i++] = (ip_crc >> 15-i)&1;
+    crc_bits[i] = (ip_crc >> 15-i)&1;
 
   //pack CRC into the byte array as well
   for (i = x+34+1, j = 0; i < (x+34+3); i++, j++) //double check this
     m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&crc_bits[j*8], 8);
 
 
-  //NOTE: There seems to be a limitation of receiving only 256 octets on
-  //the receiving end, will need to investigate that. Appears to be UDP Buffer Limitation?
+  //NOTE: Fixed recvfrom limitation, MSG_WAITALL seems to be 256
+  //manually inserted 1000 into recvfrom instead, max MPKT size should be 809.
 
   //Send MPKT to reflector
   if (use_ip == 1)
     udp_return = m17_socket_blaster (opts, state, x+34+3, m17_ip_packed);
 
   //debug
-  fprintf (stderr, " UDP RETURN: %d: X: %d; SENT: %d; \n", udp_return, x, x+34+3);
+  if (use_ip == 1)
+    fprintf (stderr, " UDP IP Frame CRC: %04X; UDP RETURN: %d: X: %d; SENT: %d;", ip_crc, udp_return, x, x+34+3);
 
   //SEND EOTX to reflector
   if (use_ip == 1)
@@ -3567,6 +3573,13 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
 
     else if (memcmp(ip_frame, mpkt, 4) == 0)
     {
+
+      //copy received CRC
+      uint16_t crc_ext = (ip_frame[err-2] << 8) + ip_frame[err-1];
+
+      //calculate CRC on received packet
+      uint16_t crc_cmp = crc16m17(ip_frame, err-2);
+
       fprintf (stderr, "\n M17 IP   MPKT: ");
       if (opts->payload == 1)
       {
@@ -3576,11 +3589,13 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
             fprintf (stderr, "\n                ");
           fprintf (stderr, "%02X ", ip_frame[i]);
         }
-        fprintf (stderr, "\n M17 IP   MPKT: %d", err);
+        fprintf (stderr, " E-%04X; C-%04X (CRC CHK)", crc_ext, crc_cmp);
+        fprintf (stderr, "\n M17 IP   RECD: %d", err);
       }
 
-      //TODO: CRC Check, figure out why return is only 256 on long PKT
+      // if (crc_ext == crc_cmp) //just run it anyways, should always be good
       decodeM17PKT (opts, state, ip_frame+34, err-34-3);
+      if (crc_ext != crc_cmp) fprintf (stderr, " IP CRC ERR");
 
     }
 
