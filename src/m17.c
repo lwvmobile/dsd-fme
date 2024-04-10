@@ -1502,7 +1502,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   for (i = 0; i < 25; i++)
     encodeM17RF (opts, state, nil, 99);
 
-  //Open UDP port to 17000 and see if any other config info is necessary for running standard IP frames, etc,
+  //Open UDP port to default or user defined values, if enabled
   int sock_err;
   if (opts->m17_use_ip == 1)
   {
@@ -2214,7 +2214,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       for (i = 52; i < 54; i++)
         m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_ip_frame[i*8], 8);
 
-      //Send packed IP frame to UDP port 17000 if opened successfully
+      //Send packed IP frame to UDP port if enabled
       if (use_ip == 1)
         udp_return = m17_socket_blaster (opts, state, 54, m17_ip_packed);
 
@@ -2887,6 +2887,118 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   }
   fprintf (stderr, "\n");
 
+  //just lump all the UDP IP Frame stuff together and one-shot it
+  int use_ip = 0; //1 to enable IP Frame Broadcast over UDP
+  uint8_t reflector_module = 0x41; //'A', single letter reflector module A-Z, 0x41 is A
+
+  //Open UDP port to default or user defined values, if enabled
+  int sock_err;
+  if (opts->m17_use_ip == 1)
+  {
+    //
+    sock_err = udp_socket_connectM17(opts, state);
+    if (sock_err < 0)
+    {
+      fprintf (stderr, "Error Configuring UDP Socket for M17 IP Frame :( \n");
+      use_ip = 0;
+      opts->m17_use_ip = 0;
+    }
+    else use_ip = 1;
+  }
+
+  //Standard IP Framing
+  uint8_t mpkt[4]  = {0x4D, 0x50, 0x4B, 0x54};
+  uint8_t ackn[4]  = {0x41, 0x43, 0x4B, 0x4E}; UNUSED(ackn);
+  uint8_t nack[4]  = {0x4E, 0x41, 0x43, 0x4B}; UNUSED(nack);
+  uint8_t conn[11]; memset (conn, 0, sizeof(conn));
+  uint8_t disc[10]; memset (disc, 0, sizeof(disc));
+  uint8_t ping[10]; memset (ping, 0, sizeof(ping));
+  uint8_t pong[10]; memset (pong, 0, sizeof(pong));
+  uint8_t eotx[10]; memset (eotx, 0, sizeof(eotx));
+  int udp_return = 0; UNUSED(udp_return);
+  uint8_t sid[2];   memset (sid, 0, sizeof(sid));
+  uint8_t  m17_ip_frame[8000]; memset (m17_ip_frame, 0, sizeof(m17_ip_frame));
+  uint8_t m17_ip_packed[25*40]; memset (m17_ip_packed, 0, sizeof(m17_ip_packed));
+  uint16_t ip_crc = 0;
+
+  //Setup conn, disc, eotx, ping, pong values
+  conn[0] = 0x43; conn[1] = 0x4F; conn[2] = 0x4E; conn[3] = 0x4E; conn[10] = reflector_module;
+  disc[0] = 0x44; disc[1] = 0x49; disc[2] = 0x53; disc[3] = 0x43;
+  ping[0] = 0x50; ping[1] = 0x49; ping[2] = 0x4E; ping[3] = 0x47;
+  pong[0] = 0x50; pong[1] = 0x4F; pong[2] = 0x4E; pong[3] = 0x47;
+  eotx[0] = 0x45; eotx[1] = 0x4F; eotx[2] = 0x54; eotx[3] = 0x58;
+
+  for (i = 0; i < 6; i++)
+  {
+    conn[i+4] = (src >> 48-(8*i)) & 0xFF;
+    disc[i+4] = (src >> 48-(8*i)) & 0xFF;
+    ping[i+4] = (src >> 48-(8*i)) & 0xFF;
+    pong[i+4] = (src >> 48-(8*i)) & 0xFF;
+    eotx[i+4] = (src >> 48-(8*i)) & 0xFF;
+  }
+
+  //SEND CONN to reflector
+  if (use_ip == 1)
+    udp_return = m17_socket_blaster (opts, state, 11, conn);
+
+  //add MPKT header
+  k = 0;
+  for (j = 0; j < 4; j++)
+  {
+    for (i = 0; i < 8; i++)
+      m17_ip_frame[k++] = (mpkt[j] >> 7-i) &1;
+  }
+
+  //add StreamID
+  for (j = 0; j < 2; j++)
+  {
+    for (i = 0; i < 8; i++)
+      m17_ip_frame[k++] = (sid[j] >> 7-i) &1;
+  }
+
+  //add the current LSF, sans CRC
+  for (i = 0; i < 224; i++) //28 bytes
+    m17_ip_frame[k++] = m17_lsf[i];
+
+  //pack current bit array to current
+  for (i = 0; i < 34; i++)
+    m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_ip_frame[i*8], 8);
+
+  //pack the entire PKT payload (plus Terminator, sans CRC)
+  for (i = 0; i < x+1; i++)
+    m17_ip_packed[i+34] = (uint8_t)ConvertBitIntoBytes(&m17_p1_full[i*8], 8);
+
+  //Calculate CRC over everthing packed
+  ip_crc = crc16m17(m17_ip_packed, 34+1+x);
+
+  //add CRC value to the ip frame
+  uint8_t crc_bits[16]; memset (crc_bits, 0, sizeof(crc_bits));
+  for (i = 0; i < 16; i++)
+    crc_bits[i++] = (ip_crc >> 15-i)&1;
+
+  //pack CRC into the byte array as well
+  for (i = x+34+1, j = 0; i < (x+34+3); i++, j++) //double check this
+    m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&crc_bits[j*8], 8);
+
+
+  //NOTE: There seems to be a limitation of receiving only 256 octets on
+  //the receiving end, will need to investigate that. Appears to be UDP Buffer Limitation?
+
+  //Send MPKT to reflector
+  if (use_ip == 1)
+    udp_return = m17_socket_blaster (opts, state, x+34+3, m17_ip_packed);
+
+  //debug
+  fprintf (stderr, " UDP RETURN: %d: X: %d; SENT: %d; \n", udp_return, x, x+34+3);
+
+  //SEND EOTX to reflector
+  if (use_ip == 1)
+    udp_return = m17_socket_blaster (opts, state, 10, eotx);
+
+  //SEND DISC to reflector
+  if (use_ip == 1)
+    udp_return = m17_socket_blaster (opts, state, 10, disc);
+
   //flag to determine if we send a new LSF frame for new encode
   //only send once at the appropriate time when encoder is toggled on
   int new_lsf = 1;
@@ -3280,13 +3392,13 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
   //decode with: dsd-fme -fU -i m17:127.0.0.1:17000 -N 2> m17ip.ans
 
   //Bind UDP Socket
-  int err = 1; UNUSED(err);
+  int err = 1; //NOTE: err will tell us how many bytes were received, if successful
   opts->udp_sockfd = UDPBind(opts->m17_hostname, opts->m17_portno);
 
   int i, j, k;
 
   //Standard IP Framing
-  uint8_t ip_frame[54]; memset (ip_frame, 0, sizeof(ip_frame));
+  uint8_t ip_frame[1000]; memset (ip_frame, 0, sizeof(ip_frame));
   uint8_t magic[4] = {0x4D, 0x31, 0x37, 0x20};
   uint8_t ackn[4]  = {0x41, 0x43, 0x4B, 0x4E};
   uint8_t nack[4]  = {0x4E, 0x41, 0x43, 0x4B};
@@ -3295,6 +3407,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
   uint8_t ping[4]  = {0x50, 0x49, 0x4E, 0x47};
   uint8_t pong[4]  = {0x50, 0x4F, 0x4E, 0x47};
   uint8_t eotx[4]  = {0x45, 0x4F, 0x54, 0x58}; //EOTX is not Standard, but going to send / receive anyways
+  uint8_t mpkt[4]  = {0x4D, 0x50, 0x4B, 0x54}; //MPKT is not Standard, but I think sending PKT payloads would be viable over UDP (no reason not to)
 
   while (!exitflag)
   {
@@ -3393,12 +3506,13 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
-
     }
+
     else if (memcmp(ip_frame, nack, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   NACK: ");
     }
+
     else if (memcmp(ip_frame, conn, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   CONN: ");
@@ -3408,6 +3522,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
     }
+
     else if (memcmp(ip_frame, disc, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   DISC: ");
@@ -3420,6 +3535,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       state->carrier = 0;
       state->synctype = -1;
     }
+
     else if (memcmp(ip_frame, eotx, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   EOTX: ");
@@ -3432,6 +3548,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       state->carrier = 0;
       state->synctype = -1;
     }
+
     else if (memcmp(ip_frame, ping, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   PING: ");
@@ -3439,12 +3556,32 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
     }
+
     else if (memcmp(ip_frame, pong, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   PONG: ");
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
+    }
+
+    else if (memcmp(ip_frame, mpkt, 4) == 0)
+    {
+      fprintf (stderr, "\n M17 IP   MPKT: ");
+      if (opts->payload == 1)
+      {
+        for (i = 0; i < err; i++)
+        {
+          if ( (i != 0) && (i%25)==0)
+            fprintf (stderr, "\n                ");
+          fprintf (stderr, "%02X ", ip_frame[i]);
+        }
+        fprintf (stderr, "\n M17 IP   MPKT: %d", err);
+      }
+
+      //TODO: CRC Check, figure out why return is only 256 on long PKT
+      decodeM17PKT (opts, state, ip_frame+34, err-34-3);
+
     }
 
     //debug
