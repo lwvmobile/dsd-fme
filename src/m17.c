@@ -2954,7 +2954,12 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
       m17_ip_frame[k++] = (mpkt[j] >> 7-i) &1;
   }
 
-  //add StreamID
+  //randomize ID
+  srand(time(NULL));
+  sid[0] = rand() & 0xFF;
+  sid[1] = rand() & 0xFF;
+
+  //add StreamID / PKT ID
   for (j = 0; j < 2; j++)
   {
     for (i = 0; i < 8; i++)
@@ -3574,18 +3579,37 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     else if (memcmp(ip_frame, mpkt, 4) == 0)
     {
 
+      //convert bytes to bits
+      k = 0;
+      uint8_t ip_bits[462]; memset(ip_bits, 0, sizeof(ip_bits));
+      for (i = 0; i < 54; i++)
+      {
+        for (j = 0; j < 8; j++)
+          ip_bits[k++] = (ip_frame[i] >> (7-j)) & 1;
+      }
+
+      //copy Stream ID (PKT ID)
+      uint16_t sid = (uint16_t)ConvertBitIntoBytes(&ip_bits[32], 16);
+
+      //copy LSF
+      for (i = 0; i < 224; i++)
+        state->m17_lsf[i] = ip_bits[i+48];
       //copy received CRC
       uint16_t crc_ext = (ip_frame[err-2] << 8) + ip_frame[err-1];
 
       //calculate CRC on received packet
       uint16_t crc_cmp = crc16m17(ip_frame, err-2);
 
-      fprintf (stderr, "\n M17 IP   MPKT: ");
+      fprintf (stderr, "\n M17 IP   MPKT: %04X;", sid);
+
+      if (crc_ext == crc_cmp)
+        M17decodeLSF(state);
+
       if (opts->payload == 1)
       {
         for (i = 0; i < err; i++)
         {
-          if ( (i != 0) && (i%25)==0)
+          if ( (i%25)==0)
             fprintf (stderr, "\n                ");
           fprintf (stderr, "%02X ", ip_frame[i]);
         }
