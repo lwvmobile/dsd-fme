@@ -115,7 +115,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
   short analog1[960];
   short analog2[960];
   short analog3[960];
-  short sample = 0; 
+  short sample = 0;
 
   // #define DEBUG_ANALOG //enable to digitize analog if 'data' bursts heard
 
