@@ -617,13 +617,14 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //Adjacent Sites
         else if (mt2 == 0x1)
         {
+          int adj_lcn  = (msg_1 & 0x1F000) >> 12;
+          int adj_site = (msg_1 & 0xFF);
+
           fprintf (stderr, "%s", KYEL);
           fprintf (stderr, " Adjacent Site");
-          if ( (msg_1 & 0xFF) > 0 )
+          if (adj_site > 0)
           {
-            int adj_l = (msg_1 & 0x1F000) >> 12;
-            int adj   = (msg_1 & 0xFF);
-            fprintf (stderr, " :: Site ID [%02X][%03d] on CC LCN [%02d]%s", adj, adj, adj_l, get_lcn_status_string(lcn));
+            fprintf (stderr, " :: Site ID [%02X][%03d] on CC LCN [%02d]%s", adj_site, adj_site, adj_lcn, get_lcn_status_string(lcn));
           }
           fprintf (stderr, "%s", KNRM);
         }
@@ -698,6 +699,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         else if (mt2 == 0xA)
         {
           site_id = (msg_1 & 0x1F) | ((msg_1 & 0x1F000) >> 7);
+
           fprintf (stderr, "%s", KYEL);
           fprintf (stderr, " Extended Addressing :: Site ID [%02llX][%03lld]", site_id, site_id);
           fprintf (stderr, "%s", KNRM);
@@ -787,6 +789,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int sourcep    = (msg_1 & 0xFFFF);
           int patch_site = (msg_2 & 0xFF00000) >> 20; //is site info valid, 0 for all sites? else patch only good on site listed?
           int targetp    = (msg_2 & 0xFFFF);
+
           fprintf (stderr, "%s", KYEL);
           fprintf (stderr, " Patch :: Site [%d] Source [%d] Target [%d] ", patch_site, sourcep, targetp);
           fprintf (stderr, "%s", KNRM);
@@ -819,6 +822,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         lcn        = (msg_1 & 0x3E0000) >> 17;
         int group  = (msg_1 & 0xFFFF);
         int source = (msg_2 & 0xFFFFF);
+
         fprintf (stderr, "%s", KGRN);
         fprintf (stderr, " TDMA Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
@@ -829,6 +833,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         lcn        = (msg_1 & 0x3E0000) >> 17;
         int group  = (msg_1 & 0xFFFF);
         int source = (msg_2 & 0xFFFFF);
+
         fprintf (stderr, "%s", KBLU);
         fprintf (stderr, " Data Group Call :: Group [%05d] Source [%08d] LCN [%02d]%s", group, source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
@@ -1043,6 +1048,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
       {
         lcn        = (msg_2 & 0x1F00000) >> 20;
         int source = (msg_2 & 0xFFFFF);
+
         fprintf (stderr, "%s", KBLU);
         fprintf (stderr, " Channel Assignment (Unknown Data) :: Source [%08d] LCN [%02d]%s", source, lcn, get_lcn_status_string(lcn));
         fprintf (stderr, "%s", KNRM);
