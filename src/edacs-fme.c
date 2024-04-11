@@ -791,7 +791,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int targetp    = (msg_2 & 0xFFFF);
 
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Patch :: Site [%02X][%03d] Source [%d] Target [%d] ", patch_site, patch_site, sourcep, targetp);
+          fprintf (stderr, " Patch :: Site [%02X][%03d] Source [%05d] Target [%05d]", patch_site, patch_site, sourcep, targetp);
           fprintf (stderr, "%s", KNRM);
         }
         //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
