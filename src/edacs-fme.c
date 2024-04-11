@@ -657,9 +657,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //Control Channel LCN
         else if (mt2 == 0x8)
         {
+          int system = msg_1 & 0xFFFF;
+          int lcn    = msg_2 & 0x1F;
+
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Control Channel");
-          int lcn = msg_2 & 0x1F;
+          fprintf (stderr, " System Information");
           if (lcn != 0)
           {
             state->edacs_cc_lcn = lcn;
@@ -667,7 +669,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             {
               state->edacs_lcn_count = state->edacs_cc_lcn;
             }
-            fprintf (stderr, " :: LCN [%d]%s", state->edacs_cc_lcn, get_lcn_status_string(lcn));
+            fprintf (stderr, " :: System ID [%04X] Control Channel LCN [%d]%s", system, state->edacs_cc_lcn, get_lcn_status_string(lcn));
 
             //check for control channel lcn frequency if not provided in channel map or in the lcn list
             if (state->trunk_lcn_freq[state->edacs_cc_lcn-1] == 0)
@@ -698,10 +700,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //Site ID
         else if (mt2 == 0xA)
         {
-          site_id = (msg_1 & 0x1F) | ((msg_1 & 0x1F000) >> 7);
+          site_id  = ((msg_1 & 0x7000) >> 7) | (msg_1 & 0x1F);
+          int area = (msg_1 & 0xFE0) >> 5;
 
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Extended Addressing :: Site ID [%02llX][%03lld]", site_id, site_id);
+          fprintf (stderr, " Extended Addressing :: Site ID [%02llX][%03lld] Area [%02X][%03d]", site_id, site_id, area, area);
           fprintf (stderr, "%s", KNRM);
           state->edacs_site_id = site_id;
         }
