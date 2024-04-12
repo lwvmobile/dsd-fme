@@ -618,14 +618,19 @@ void edacs(dsd_opts * opts, dsd_state * state)
         else if (mt2 == 0x1)
         {
           int adj_lcn  = (msg_1 & 0x1F000) >> 12;
+          int adj_idx  = (msg_1 & 0xF00) >> 8; //site 177 has 8 adj_sites, so this appears to be a 4-bit value
           int adj_site = (msg_1 & 0xFF);
-
+          
           fprintf (stderr, "%s", KYEL);
           fprintf (stderr, " Adjacent Site");
           if (adj_site > 0)
-          {
-            fprintf (stderr, " :: Site ID [%02X][%03d] on CC LCN [%02d]%s", adj_site, adj_site, adj_lcn, get_lcn_status_string(lcn));
-          }
+            fprintf (stderr, " :: Site ID [%02X][%03d] Index [%d] on CC LCN [%02d]%s", adj_site, adj_site, adj_idx, adj_lcn, get_lcn_status_string(lcn));
+          else fprintf (stderr, " :: Total Indexed [%d]", adj_idx); //if site value is 0, then this tells us the total number of adjacent sites
+
+          if (adj_site == 0 && adj_idx == 0)      fprintf (stderr, " [Adjacency Table Reset]");
+          else if (adj_site != 0 && adj_idx == 0) fprintf (stderr, " [Priority System Definition]");
+          else if (adj_site == 0 && adj_idx != 0) fprintf (stderr, " [Adjacencies Table Length Definition]");
+          else                                    fprintf (stderr, " [Adjacent System Definition]");
           fprintf (stderr, "%s", KNRM);
         }
         //Status/Message
