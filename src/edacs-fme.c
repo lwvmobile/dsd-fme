@@ -721,68 +721,72 @@ void edacs(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "%s", KYEL);
           fprintf (stderr, " System Dynamic Regroup Plan Bitmap");
 
-          // Deduplicate some code with a for (foreach would have been great here)
-          for (int i = 0; i < 2; i++)
+          //this message gets EXTREMELY LONG, so lets hide it behind the payload verbosity
+          if (opts->payload == 1)
           {
-            int bank;
-            int resident;
-            int active;
+            // Deduplicate some code with a for (foreach would have been great here)
+            for (int i = 0; i < 2; i++)
+            {
+              int bank;
+              int resident;
+              int active;
 
-            switch (i) {
-              case 0:
-                bank     = bank_1;
-                resident = resident_1;
-                active   = active_1;
-                break;
-              case 1:
-                bank     = bank_2;
-                resident = resident_2;
-                active   = active_2;
-                break;
-            }
-
-            fprintf (stderr, " :: Plan Bank [%1d] Resident [", bank);
-
-            int plan = bank * 8;
-            int first = 1;
-            while (resident != 0) {
-              if (resident & 0x1 == 1) {
-                if (first == 1)
-                {
-                  first = 0;
-                  fprintf (stderr, "%d", plan);
-                }
-                else
-                {
-                  fprintf (stderr, ", %d", plan);
-                }
+              switch (i) {
+                case 0:
+                  bank     = bank_1;
+                  resident = resident_1;
+                  active   = active_1;
+                  break;
+                case 1:
+                  bank     = bank_2;
+                  resident = resident_2;
+                  active   = active_2;
+                  break;
               }
-              resident >>= 1;
-              plan++;
-            }
 
-            fprintf (stderr, "] Active [");
+              fprintf (stderr, " :: Plan Bank [%1d] Resident [", bank);
 
-            plan = bank * 8;
-            first = 1;
-            while (active != 0) {
-              if (active & 0x1 == 1) {
-                if (first == 1)
-                {
-                  first = 0;
-                  fprintf (stderr, "%d", plan);
+              int plan = bank * 8;
+              int first = 1;
+              while (resident != 0) {
+                if (resident & 0x1 == 1) {
+                  if (first == 1)
+                  {
+                    first = 0;
+                    fprintf (stderr, "%d", plan);
+                  }
+                  else
+                  {
+                    fprintf (stderr, ", %d", plan);
+                  }
                 }
-                else
-                {
-                  fprintf (stderr, ", %d", plan);
-                }
+                resident >>= 1;
+                plan++;
               }
-              active >>= 1;
-              plan++;
-            }
 
-            fprintf (stderr, "]");
-          }
+              fprintf (stderr, "] Active [");
+
+              plan = bank * 8;
+              first = 1;
+              while (active != 0) {
+                if (active & 0x1 == 1) {
+                  if (first == 1)
+                  {
+                    first = 0;
+                    fprintf (stderr, "%d", plan);
+                  }
+                  else
+                  {
+                    fprintf (stderr, ", %d", plan);
+                  }
+                }
+                active >>= 1;
+                plan++;
+              }
+
+              fprintf (stderr, "]");
+            }
+          } //end payload
 
           fprintf (stderr, "%s", KNRM);
         }
@@ -799,8 +803,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
           fprintf (stderr, "%s", KMAG); //just make it stick out for now
           fprintf (stderr, " Patch :: SSN: %03d; SGID: %05d; Target: %07d;", ssn, sgid, target);
-          fprintf (stderr, " UNK1: %X;", unk1); //this value seems to always be zero
-          fprintf (stderr, " UNK2: %X;", unk2); //this value seems to always be zero
+          if (unk1) fprintf (stderr, " UNK1: %X;", unk1); //this value seems to always be zero
+          if (unk2) fprintf (stderr, " UNK2: %X;", unk2); //this value seems to always be zero
           fprintf (stderr, "%s", KNRM);
         }
         //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
@@ -1723,47 +1727,53 @@ void edacs(dsd_opts * opts, dsd_state * state)
             int active   = (msg_1 & 0xFF);
 
             fprintf (stderr, "%s", KYEL);
-            fprintf (stderr, " System Dynamic Regroup Plan Bitmap :: Plan Bank [%1d] Resident [", bank);
+            fprintf (stderr, " System Dynamic Regroup Plan Bitmap");
 
-            int plan = bank * 8;
-            int first = 1;
-            while (resident != 0) {
-              if (resident & 0x1 == 1) {
-                if (first == 1)
-                {
-                  first = 0;
-                  fprintf (stderr, "%d", plan);
+            //this message gets EXTREMELY LONG, so lets hide it behind the payload verbosity
+            if (opts->payload == 1)
+            {
+              fprintf (stderr, " :: Plan Bank [%1d] Resident [", bank);
+              int plan = bank * 8;
+              int first = 1;
+              while (resident != 0) {
+                if (resident & 0x1 == 1) {
+                  if (first == 1)
+                  {
+                    first = 0;
+                    fprintf (stderr, "%d", plan);
+                  }
+                  else
+                  {
+                    fprintf (stderr, ", %d", plan);
+                  }
                 }
-                else
-                {
-                  fprintf (stderr, ", %d", plan);
-                }
+                resident >>= 1;
+                plan++;
               }
-              resident >>= 1;
-              plan++;
-            }
 
-            fprintf (stderr, "] Active [");
+              fprintf (stderr, "] Active [");
 
-            plan = bank * 8;
-            first = 1;
-            while (active != 0) {
-              if (active & 0x1 == 1) {
-                if (first == 1)
-                {
-                  first = 0;
-                  fprintf (stderr, "%d", plan);
+              plan = bank * 8;
+              first = 1;
+              while (active != 0) {
+                if (active & 0x1 == 1) {
+                  if (first == 1)
+                  {
+                    first = 0;
+                    fprintf (stderr, "%d", plan);
+                  }
+                  else
+                  {
+                    fprintf (stderr, ", %d", plan);
+                  }
                 }
-                else
-                {
-                  fprintf (stderr, ", %d", plan);
-                }
+                active >>= 1;
+                plan++;
               }
-              active >>= 1;
-              plan++;
-            }
 
-            fprintf (stderr, "]");
+              fprintf (stderr, "]");
+            } //end payload
+
             fprintf (stderr, "%s", KNRM);
           }
           //Assignment to Auxiliary Control Channel (6.2.4.15)
