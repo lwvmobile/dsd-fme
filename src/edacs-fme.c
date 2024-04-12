@@ -786,15 +786,21 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
           fprintf (stderr, "%s", KNRM);
         }
-        //Patch Groups
+        //Patch Groups -- Reverse Engineer WIP from observations and guesswork
         else if (mt2 == 0xC)
         {
-          int sourcep    = (msg_1 & 0xFFFF);
-          int patch_site = (msg_2 & 0xFF00000) >> 20; //is site info valid, 0 for all sites? else patch only good on site listed?
-          int targetp    = (msg_2 & 0xFFFF);
+          //Note: First 9 bits of msg_1 are the mt1 and mt2 bits
+          int unk1    = (msg_1 & 0x70000) >> 20;   //unknown 3 bit value preceeding the SGID
+          int sgid    = (msg_1 & 0xFFFF);          //patched supergroup ID
 
-          fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Patch :: Site [%02X][%03d] Source [%05d] Target [%05d]", patch_site, patch_site, sourcep, targetp);
+          int ssn     = (msg_2 & 0xFF00000) >> 20; //this value seems to incrememnt based on SGID, so assigning 8-bit as the SSN
+          int unk2    = (msg_2 & 0xF0000) >> 16;   //unknown 4 bit value preceeding 20-bit target value of patch
+          int target  = (msg_2 & 0xFFFFF);         //target group or individual ID (20-bit) to include in supergroup
+
+          fprintf (stderr, "%s", KMAG); //just make it stick out for now
+          fprintf (stderr, " Patch :: SSN: %03d; SGID: %05d; Target: %07d;", ssn, sgid, target);
+          fprintf (stderr, " UNK1: %X;", unk1); //this value seems to always be zero
+          fprintf (stderr, " UNK2: %X;", unk2); //this value seems to always be zero
           fprintf (stderr, "%s", KNRM);
         }
         //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
