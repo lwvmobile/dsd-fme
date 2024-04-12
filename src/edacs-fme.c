@@ -790,19 +790,22 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
           fprintf (stderr, "%s", KNRM);
         }
-        //Patch Groups -- Reverse Engineer WIP from observations and guesswork
+        //Patch Groups / Dynamic Regroup -- Reverse Engineer WIP from observations and guesswork
         else if (mt2 == 0xC)
         {
           //Note: First 9 bits of msg_1 are the mt1 and mt2 bits
           int unk1    = (msg_1 & 0x70000) >> 20;   //unknown 3 bit value preceeding the SGID
           int sgid    = (msg_1 & 0xFFFF);          //patched supergroup ID
 
+          //Note: SSN is the supergroup sequence number in P25 Harris lingo, but you would think this would be kind of redundant
+          //since the SGID is itself a unique number as well (waste of bits), but guess that's how their systems work
+          //that being said, the SSN is always the same for each SGID, so those values seem to go together here as well
           int ssn     = (msg_2 & 0xFF00000) >> 20; //this value seems to incrememnt based on SGID, so assigning 8-bit as the SSN
           int unk2    = (msg_2 & 0xF0000) >> 16;   //unknown 4 bit value preceeding 20-bit target value of patch
           int target  = (msg_2 & 0xFFFFF);         //target group or individual ID (20-bit) to include in supergroup
 
           fprintf (stderr, "%s", KMAG); //just make it stick out for now
-          fprintf (stderr, " Patch :: SSN: %03d; SGID: %05d; Target: %07d;", ssn, sgid, target);
+          fprintf (stderr, " System Dynamic Regroup :: SSN: %03d; SGID: %05d; Target: %07d;", ssn, sgid, target);
           if (unk1) fprintf (stderr, " UNK1: %X;", unk1); //this value seems to always be zero
           if (unk2) fprintf (stderr, " UNK2: %X;", unk2); //this value seems to always be zero
           fprintf (stderr, "%s", KNRM);
