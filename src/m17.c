@@ -301,12 +301,10 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t * lich_bits)
         if (i == 15) fprintf (stderr, "\n      ");
         fprintf (stderr, "[%02X]", lsf_packed[i]);
       }
+      fprintf (stderr, " (CRC CHK) E: %04X; C: %04X;", crc_ext, crc_cmp);
     }
 
     memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
-
-    //debug
-    // fprintf (stderr, " E-%04X; C-%04X (CRC CHK)", crc_ext, crc_cmp);
 
     if (crc_err == 1) fprintf (stderr, " EMB LSF CRC ERR");
   }
@@ -873,7 +871,7 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
       if (i == 15) fprintf (stderr, "\n      ");
       fprintf (stderr, "[%02X]", lsf_packed[i]);
     }
-    fprintf (stderr, " (CRC CHK) E-%04X; C-%04X;", crc_ext, crc_cmp);
+    fprintf (stderr, " (CRC CHK) E: %04X; C: %04X;", crc_ext, crc_cmp);
   }
   
   if (crc_err == 1) fprintf (stderr, " CRC ERR");
@@ -1009,7 +1007,7 @@ void processM17LSF_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_b
       if (i == 15) fprintf (stderr, "\n      ");
       fprintf (stderr, "[%02X]", lsf_packed[i]);
     }
-    fprintf (stderr, " (CRC CHK) E-%04X; C-%04X;", crc_ext, crc_cmp);
+    fprintf (stderr, " (CRC CHK) E: %04X; C: %04X;", crc_ext, crc_cmp);
   }
 
   if (crc_err == 1) fprintf (stderr, " CRC ERR");
@@ -1113,11 +1111,9 @@ void processM17LSF_debug2(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_
       if (i == 15) fprintf (stderr, "\n      ");
       fprintf (stderr, "[%02X]", lsf_packed[i]);
     }
+    fprintf (stderr, " (CRC CHK) E: %04X; C: %04X;", crc_ext, crc_cmp);
     // fprintf (stderr, " V Err: %d", v_err);
   }
-
-  //debug
-  // fprintf (stderr, " E-%04X; C-%04X (CRC CHK)", crc_ext, crc_cmp);
 
   if (crc_err == 1) fprintf (stderr, " CRC ERR");
 
@@ -3476,7 +3472,8 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       state->m17_meta[14] = (uint16_t)ConvertBitIntoBytes(&ip_bits[273], 7);
       state->m17_meta[15] = (uint16_t)ConvertBitIntoBytes(&ip_bits[280], 8);
 
-      fprintf (stderr, "\n M17 IP Stream: %04X; FN: %05d; EOT: %d", sid, fn, eot);
+      fprintf (stderr, "\n M17 IP Stream: %04X; FN: %05d;", sid, fn);
+      if (eot) fprintf (stderr, " EOT;");
 
       //copy payload
       uint8_t payload[128]; memset(payload, 0, sizeof(payload));
@@ -3506,7 +3503,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
           if ( (i%14) == 0 ) fprintf (stderr, "\n    ");
           fprintf (stderr, "[%02X]", ip_frame[i]);
         }
-        fprintf (stderr, " E-%04X; C-%04X (CRC CHK)", crc_ext, crc_cmp);
+        fprintf (stderr, " (CRC CHK) E: %04X; C: %04X;", crc_ext, crc_cmp);
       }
 
       if (crc_ext != crc_cmp) fprintf (stderr, " IP CRC ERR");
@@ -3538,14 +3535,14 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       // fprintf (stderr, "%X", src);
 
       if (src == 0xFFFFFFFFFFFF) 
-        fprintf (stderr, "SRC:  UNKNOWN FFFFFFFFFFFF");
+        fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
       else if (src == 0)
-        fprintf (stderr, "SRC: RESERVED %012llx", src);
+        fprintf (stderr, "RESERVED %012llx", src);
       else if (src >= 0xEE6B28000000)
-        fprintf (stderr, "SRC: RESERVED %012llx", src);
+        fprintf (stderr, "RESERVED %012llx", src);
       else
       {
-        fprintf (stderr, "SRC: ");
+        // fprintf (stderr, "SRC: ");
         for (i = 0; i < 9; i++)
         {
           c = b40[src % 40];
@@ -3573,14 +3570,14 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       // fprintf (stderr, "%X", src);
 
       if (src == 0xFFFFFFFFFFFF) 
-        fprintf (stderr, "SRC:  UNKNOWN FFFFFFFFFFFF");
+        fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
       else if (src == 0)
-        fprintf (stderr, "SRC: RESERVED %012llx", src);
+        fprintf (stderr, "RESERVED %012llx", src);
       else if (src >= 0xEE6B28000000)
-        fprintf (stderr, "SRC: RESERVED %012llx", src);
+        fprintf (stderr, "RESERVED %012llx", src);
       else
       {
-        fprintf (stderr, "SRC: ");
+        // fprintf (stderr, "SRC: ");
         for (i = 0; i < 9; i++)
         {
           c = b40[src % 40];
@@ -3611,14 +3608,14 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       // fprintf (stderr, "%X", src);
 
       if (src == 0xFFFFFFFFFFFF) 
-        fprintf (stderr, "SRC:  UNKNOWN FFFFFFFFFFFF");
+        fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
       else if (src == 0)
-        fprintf (stderr, "SRC: RESERVED %012llx", src);
+        fprintf (stderr, "RESERVED %012llx", src);
       else if (src >= 0xEE6B28000000)
-        fprintf (stderr, "SRC: RESERVED %012llx", src);
+        fprintf (stderr, "RESERVED %012llx", src);
       else
       {
-        fprintf (stderr, "SRC: ");
+        // fprintf (stderr, "SRC: ");
         for (i = 0; i < 9; i++)
         {
           c = b40[src % 40];
@@ -3649,14 +3646,14 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       // fprintf (stderr, "%X", src);
 
       if (src == 0xFFFFFFFFFFFF) 
-        fprintf (stderr, "SRC:  UNKNOWN FFFFFFFFFFFF");
+        fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
       else if (src == 0)
-        fprintf (stderr, "SRC: RESERVED %012llx", src);
+        fprintf (stderr, "RESERVED %012llx", src);
       else if (src >= 0xEE6B28000000)
-        fprintf (stderr, "SRC: RESERVED %012llx", src);
+        fprintf (stderr, "RESERVED %012llx", src);
       else
       {
-        fprintf (stderr, "SRC: ");
+        // fprintf (stderr, "SRC: ");
         for (i = 0; i < 9; i++)
         {
           c = b40[src % 40];
@@ -3682,14 +3679,14 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       // fprintf (stderr, "%X", src);
 
       if (src == 0xFFFFFFFFFFFF) 
-        fprintf (stderr, "SRC:  UNKNOWN FFFFFFFFFFFF");
+        fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
       else if (src == 0)
-        fprintf (stderr, "SRC: RESERVED %012llx", src);
+        fprintf (stderr, "RESERVED %012llx", src);
       else if (src >= 0xEE6B28000000)
-        fprintf (stderr, "SRC: RESERVED %012llx", src);
+        fprintf (stderr, "RESERVED %012llx", src);
       else
       {
-        fprintf (stderr, "SRC: ");
+        // fprintf (stderr, "SRC: ");
         for (i = 0; i < 9; i++)
         {
           c = b40[src % 40];
@@ -3743,11 +3740,11 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
             fprintf (stderr, "\n                ");
           fprintf (stderr, "%02X ", ip_frame[i]);
         }
-        fprintf (stderr, " E-%04X; C-%04X (CRC CHK)", crc_ext, crc_cmp);
+        fprintf (stderr, " (CRC CHK) E: %04X; C: %04X;", crc_ext, crc_cmp);
         fprintf (stderr, "\n M17 IP   RECD: %d", err);
       }
 
-      // if (crc_ext == crc_cmp) //just run it anyways, should always be good
+      if (crc_ext == crc_cmp)
       decodeM17PKT (opts, state, ip_frame+34, err-34-3);
       if (crc_ext != crc_cmp) fprintf (stderr, " IP CRC ERR");
 
