@@ -1632,12 +1632,27 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int target      = (msg_1 & 0x3FFF);
           int source      = (msg_2 & 0x3FFF);
 
-          fprintf (stderr, "%s", KCYN);
-          fprintf (stderr, " Individual Call Channel Assignment ::");
-          if (is_digital == 0) fprintf (stderr, " Analog");
-          else                 fprintf (stderr, " Digital");
-          fprintf (stderr, " Callee [%05d] Caller [%05d] LCN [%02d]%s", target, source, lcn, get_lcn_status_string(lcn));
-          if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
+          if (target == 0 && source == 0)
+          {
+            fprintf (stderr, "%s", KYEL);
+            fprintf (stderr, " Test Call Channel Assignment ::");
+            fprintf (stderr, " LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
+
+            state->edacs_vc_lcn = lcn;
+            //assign bogus values so that this will show up in ncurses terminal and overwrite current values in the matrix
+            state->lasttg  = 999999999;
+            state->lastsrc = 999999999;
+            state->edacs_vc_call_type = EDACS_IS_TEST_CALL | EDACS_IS_VOICE; //manually set to trigger voice call in ncurses, but no other flags
+            lcn = 0; //set to zero here, because this is not an actual call, so don't tune to it
+          }
+          else {
+            fprintf (stderr, "%s", KCYN);
+            fprintf (stderr, " Voice Individual Channel Assignment ::");
+            if (is_digital == 0) fprintf (stderr, " Analog");
+            else                 fprintf (stderr, " Digital");
+            fprintf (stderr, " Callee [%05d] Caller [%05d] LCN [%02d]%s", target, source, lcn, get_lcn_status_string(lcn));
+            if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
+          }
           fprintf (stderr, "%s", KNRM);
 
           //LCNs >= 26 are reserved to indicate status (queued, busy, denied, etc)
