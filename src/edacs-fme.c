@@ -69,15 +69,15 @@ char* get_lcn_status_string(int lcn)
     return "";
 }
 
-int is_agency_call_group(int afs)
+int is_agency_call_group(int afs, dsd_state * state)
 {
   int fs_mask = state->edacs_s_mask | (state->edacs_f_mask << state->edacs_f_shift);
-  return (afs & fs_mask) == 0
+  return (afs & fs_mask) == 0;
 }
 
-int is_fleet_call_group(int afs)
+int is_fleet_call_group(int afs, dsd_state * state)
 {
-  return (afs & state->edacs_s_mask) == 0
+  return (afs & state->edacs_s_mask) == 0;
 }
 
 //Bitwise vote-compare the three copies of a message received. Note that fr_2 and fr_5 are transmitted inverted.
@@ -1316,11 +1316,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
                       state->lastsrc = lid;
 
         //Call type for state
-                                         state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_GROUP;
-        if (is_digital == 1)             state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
-        if (is_emergency == 1)           state->edacs_vc_call_type |= EDACS_IS_EMERGENCY;
-        if (is_agency_call_group(group)) state->edacs_vc_call_type |= EDACS_IS_AGENCY_CALL;
-        if (is_fleet_call_group(group))  state->edacs_vc_call_type |= EDACS_IS_FLEET_CALL;
+                                                state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_GROUP;
+        if (is_digital == 1)                    state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
+        if (is_emergency == 1)                  state->edacs_vc_call_type |= EDACS_IS_EMERGENCY;
+        if (is_agency_call_group(group, state)) state->edacs_vc_call_type |= EDACS_IS_AGENCY_CALL;
+        if (is_fleet_call_group(group, state))  state->edacs_vc_call_type |= EDACS_IS_FLEET_CALL;
 
         char mode[8]; //allow, block, digital enc
         sprintf (mode, "%s", "");
