@@ -607,17 +607,15 @@ void edacs(dsd_opts * opts, dsd_state * state)
       if (mt1 == 0x1F)
       {
 
-        //Test Call (not seen in the wild, see US patent US7546135B2, Figure 2b)
-        //Finally Captured in the wild, along with the "I-Call" with zero target and zero source
+        //Initiate Test Call (finally captured in the wild, along with the "I-Call" with zero target and zero source)
         if (mt2 == 0x0)
         {
-
           // MSG_1             [F802180] MSG_2 [0000000] (MT1: 1F; MT2: 0)  Initiate Test Call
           int cc_lcn = (msg_1 & 0x3E000) >> 13; //shifted to allow this example to be CC LCN 1, as was reported at the time of capture
           int wc_lcn =   (msg_1 & 0xF80) >> 7;
 
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Initiate Test Call :: CC LCN: %02d; WC LCN: %02d;", cc_lcn, wc_lcn);
+          fprintf (stderr, " Initiate Test Call :: CC LCN [%02d] WC LCN [%02d]", cc_lcn, wc_lcn);
           fprintf (stderr, "%s", KNRM);
 
           state->edacs_vc_lcn = wc_lcn;
@@ -633,7 +631,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int adj_lcn  = (msg_1 & 0x1F000) >> 12;
           int adj_idx  = (msg_1 & 0xF00) >> 8; //site 177 has 8 adj_sites, so this appears to be a 4-bit value
           int adj_site = (msg_1 & 0xFF);
-          
+
           fprintf (stderr, "%s", KYEL);
           fprintf (stderr, " Adjacent Site");
           if (adj_site > 0)
