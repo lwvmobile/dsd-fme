@@ -2092,7 +2092,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
     //let users know they need to select an operational mode with the switches below
     else
     {
-      fprintf (stderr, " Detected: Use -fh, -fH, -fe, or -fE for std, esk, ea, or ea-esk;");
+      fprintf (stderr, " Detected EDACS: Use -fh, -fH, -fe, or -fE for std, esk, ea, or ea-esk to specify the type");
       fprintf (stderr, "\n");
       fprintf (stderr, " MSG_1 [%07llX]", msg_1);
       fprintf (stderr, " MSG_2 [%07llX]", msg_2);
