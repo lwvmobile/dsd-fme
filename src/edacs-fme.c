@@ -981,7 +981,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
         }
       }
-      //I-Call Grant Update
+      //I-Call/Test Call Assignment/Update
       else if (mt1 == 0x10)
       {
         lcn = (msg_2 & 0x1F00000) >> 20;
@@ -1006,15 +1006,14 @@ void edacs(dsd_opts * opts, dsd_state * state)
                              state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_INDIVIDUAL;
         if (is_digital == 1) state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
 
+        //Test calls are just I-Calls with source and target of 0
         if (target == 0 && source == 0)
         {
           fprintf (stderr, "%s", KMAG);
-          //this seems to be the continuation of the Initiate Test Call Command
-          //normally, this appears as an "Analog I-Call", but with 0 tg and src,
-          //its possible that those values could still be present, and that all
-          //"Analog I-Call" is meant to be the assignment and update of the initiation
-          if (is_update) fprintf (stderr, " Test Call Update     :: LCN: %02d;", lcn);
-          else           fprintf (stderr, " Test Call Assignment :: LCN: %02d;", lcn);
+          fprintf (stderr, " Test Call");
+          if (is_update == 0) fprintf (stderr, " Assignment");
+          else                fprintf (stderr, " Update");
+          fprintf (stderr, " :: LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
           state->edacs_vc_lcn = lcn;
           //assign bogus values so that this will show up in ncurses terminal
           //and overwrite current values in the matrix
