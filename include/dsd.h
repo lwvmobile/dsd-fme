@@ -770,7 +770,7 @@ typedef struct
   #define EDACS_IS_INDIVIDUAL   0x10
   #define EDACS_IS_ALL_CALL     0x20
   #define EDACS_IS_INTERCONNECT 0x40
-  #define EDACS_IS_TESTCALL     0x100
+  #define EDACS_IS_TEST_CALL    0x80
 
   //trunking group and lcn freq list
   long int trunk_lcn_freq[26]; //max number on an EDACS system, should be enough on DMR too hopefully

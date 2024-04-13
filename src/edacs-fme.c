@@ -625,7 +625,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           //and overwrite current values in the matrix
           state->lasttg  = 999999999;
           state->lastsrc = 999999999;
-          state->edacs_vc_call_type = 0x101; //manually set to 0x101 to trigger voice call in ncurses, but no other flags
+          state->edacs_vc_call_type = EDACS_IS_TEST_CALL | EDACS_IS_VOICE; //manually set to trigger voice call in ncurses, but no other flags
         }
         //Adjacent Sites
         else if (mt2 == 0x1)
@@ -1022,7 +1022,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           //and overwrite current values in the matrix
           state->lasttg  = 999999999;
           state->lastsrc = 999999999;
-          state->edacs_vc_call_type = 0x101; //manually set to 0x101 to trigger voice call in ncurses, but no other flags
+          state->edacs_vc_call_type = EDACS_IS_TEST_CALL | EDACS_IS_VOICE; //manually set to trigger voice call in ncurses, but no other flags
           lcn = 0; //set to zero here, because this is not an actual call, so don't tune to it
         }
         else
