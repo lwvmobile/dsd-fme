@@ -608,11 +608,24 @@ void edacs(dsd_opts * opts, dsd_state * state)
       {
 
         //Test Call (not seen in the wild, see US patent US7546135B2, Figure 2b)
+        //Finally Captured in the wild, along with the "I-Call" with zero target and zero source
         if (mt2 == 0x0)
         {
+
+          // MSG_1             [F802180] MSG_2 [0000000] (MT1: 1F; MT2: 0)  Initiate Test Call
+          int cc_lcn = (msg_1 & 0x3E000) >> 13; //shifted to allow this example to be CC LCN 1, as was reported at the time of capture
+          int wc_lcn =   (msg_1 & 0xF80) >> 7;
+
           fprintf (stderr, "%s", KYEL);
-          fprintf (stderr, " Initiate Test Call");
+          fprintf (stderr, " Initiate Test Call :: CC LCN: %02d; WC LCN: %02d;", cc_lcn, wc_lcn);
           fprintf (stderr, "%s", KNRM);
+
+          state->edacs_vc_lcn = wc_lcn;
+          //assign bogus values so that this will show up in ncurses terminal
+          //and overwrite current values in the matrix
+          state->lasttg  = 999999999;
+          state->lastsrc = 999999999;
+          state->edacs_vc_call_type = 0x101; //manually set to 0x101 to trigger voice call in ncurses, but no other flags
         }
         //Adjacent Sites
         else if (mt2 == 0x1)
@@ -996,12 +1009,31 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (is_digital == 1) state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
 
         fprintf (stderr, "%s", KCYN);
-        if (is_digital == 0) fprintf (stderr, " Analog I-Call");
-        else                 fprintf (stderr, " Digital I-Call");
-        if (is_update == 0) fprintf (stderr, " Assignment");
-        else                fprintf (stderr, " Update");
+        if (target == 0 && source == 0)
+        {
+          //this seems to be the continuation of the Initiate Test Call Command
+          //normally, this appears as an "Analog I-Call", but with 0 tg and src,
+          //its possible that those values could still be present, and that all
+          //"Analog I-Call" is meant to be the test call update?
+          fprintf (stderr, " Test Call Update :: LCN: %02d;", lcn);
+          state->edacs_vc_lcn = lcn;
+          //assign bogus values so that this will show up in ncurses terminal
+          //and overwrite current values in the matrix
+          state->lasttg  = 999999999;
+          state->lastsrc = 999999999;
+          state->edacs_vc_call_type = 0x101; //manually set to 0x101 to trigger voice call in ncurses, but no other flags
+          lcn = 0; //set to zero here, because this is not an actual call, so don't tune to it
+        }
+        else
+        {
+          if (is_digital == 0) fprintf (stderr, " Analog I-Call");
+          else                 fprintf (stderr, " Digital I-Call");
+          if (is_update == 0) fprintf (stderr, " Assignment");
+          else                fprintf (stderr, " Update");
 
-        fprintf (stderr, " :: Target [%08d] Source [%08d] LCN [%02d]%s", target, source, lcn, get_lcn_status_string(lcn));
+          fprintf (stderr, " :: Target [%08d] Source [%08d] LCN [%02d]%s", target, source, lcn, get_lcn_status_string(lcn));
+        }
+
         fprintf (stderr, "%s", KNRM);
 
         char mode[8]; //allow, block, digital enc
