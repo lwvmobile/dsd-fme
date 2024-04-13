@@ -951,7 +951,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
           }
 
-          
+
 
           TCP_END: ; //do nothing
 
