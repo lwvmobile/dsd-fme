@@ -571,7 +571,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
     // - KCYN - voice individual calls
     // - KMAG - voice other calls (interconnect, all-call, test call, etc)
     // - KBLU - subscriber data
-    // - KWHT - unknown/reserved
+    // - KWHT - unknown/reserved/special
 
     //Account for ESK, if any
     unsigned long long int fr_esk_mask = ((unsigned long long int)state->esk_mask) << 20;
@@ -820,7 +820,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int unk2    = (msg_2 & 0xF0000) >> 16;   //unknown 4 bit value preceeding 20-bit target value of patch
           int target  = (msg_2 & 0xFFFFF);         //target group or individual ID (20-bit) to include in supergroup
 
-          fprintf (stderr, "%s", KMAG); //just make it stick out for now
+          fprintf (stderr, "%s", KWHT); //just make it stick out for now
           fprintf (stderr, " System Dynamic Regroup :: SSN: %03d; SGID: %05d; Target: %07d;", ssn, sgid, target);
           if (unk1) fprintf (stderr, " UNK1: %X;", unk1); //this value seems to always be zero
           if (unk2) fprintf (stderr, " UNK2: %X;", unk2); //this value seems to always be zero
