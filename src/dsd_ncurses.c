@@ -3854,7 +3854,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
                 printw ("Target [    SYSTEM    ] Source [%5lld] Interconnect", call_matrix[j][3]);
               // Test call
               else if ((call_matrix[j][4] & EDACS_IS_TEST_CALL) != 0)
-                printw ("Target [    SYSTEM    ] Source [ SYS ] Test Call", call_matrix[j][3]);
+                printw ("Target [    SYSTEM    ] Source [ SYS ] Test Call");
               // Unknown call
               else
                 printw ("Unknown call type");
