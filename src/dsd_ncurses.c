@@ -3853,14 +3853,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
               else if ((call_matrix[j][4] & EDACS_IS_INTERCONNECT) != 0)
                 printw ("Target [    SYSTEM    ] Source [%5lld] Interconnect", call_matrix[j][3]);
               // Test call
-              else if ((call_matrix[i][4] & EDACS_IS_TEST_CALL) != 0)
+              else if ((call_matrix[j][4] & EDACS_IS_TEST_CALL) != 0)
                 printw (" TEST CALL");
               // Unknown call
               else
                 printw ("Unknown call type");
 
               // Call flags
-              if ((call_matrix[i][4] & EDACS_IS_TEST_CALL) != 0) {}
+              if ((call_matrix[j][4] & EDACS_IS_TEST_CALL) != 0) {}
               else if ((call_matrix[j][4] & EDACS_IS_DIGITAL) == 0)   printw (" [Ana]");
               else                                                    printw (" [Dig]");
               if ((call_matrix[j][4] & EDACS_IS_EMERGENCY) != 0)      printw ("[EM]");
