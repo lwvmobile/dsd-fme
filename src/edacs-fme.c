@@ -685,7 +685,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             {
               state->edacs_lcn_count = state->edacs_cc_lcn;
             }
-            fprintf (stderr, " :: System ID [%04X] Control Channel LCN [%02d]%s", system, state->edacs_cc_lcn, get_lcn_status_string(lcn));
+            fprintf (stderr, " :: System ID [%04X] CC LCN [%02d]%s", system, state->edacs_cc_lcn, get_lcn_status_string(lcn));
 
             //check for control channel lcn frequency if not provided in channel map or in the lcn list
             if (state->trunk_lcn_freq[state->edacs_cc_lcn-1] == 0)
