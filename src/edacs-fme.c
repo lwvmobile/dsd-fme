@@ -1014,8 +1014,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
           //this seems to be the continuation of the Initiate Test Call Command
           //normally, this appears as an "Analog I-Call", but with 0 tg and src,
           //its possible that those values could still be present, and that all
-          //"Analog I-Call" is meant to be the test call update?
-          fprintf (stderr, " Test Call Update :: LCN: %02d;", lcn);
+          //"Analog I-Call" is meant to be the assignment and update of the initiation
+          if (is_update) fprintf (stderr, " Test Call Update     :: LCN: %02d;", lcn);
+          else           fprintf (stderr, " Test Call Assignment :: LCN: %02d;", lcn);
           state->edacs_vc_lcn = lcn;
           //assign bogus values so that this will show up in ncurses terminal
           //and overwrite current values in the matrix
