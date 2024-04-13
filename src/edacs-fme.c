@@ -1479,6 +1479,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
         //Channel Updates (6.2.4.7)
         //Source/caller being present in individual call channel updates reverse engineered from Montreal STM system
+        //Test calls reverse engineered from HartLink system
         else if (mt_b == 0x3)
         {
           int mt_c          = (msg_1 & 0x300000) >> 20;
@@ -1492,6 +1493,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
           //Abstract away to a target, and be sure to check whether it's an individual call later
           int target = (is_individual == 0) ? group : lid;
 
+          //Test calls are just individual calls with source and target of 0
+          int is_test_call = (target == 0 && source == 0);
+
           //Technically only MT-C 0x1 and 0x3 are defined in TSB 69.3 - using and extrapolating on legacy code
           int is_tx_trunk = (mt_c == 2 || mt_c == 3) ? 1 : 0;
           int is_digital = (mt_c == 1 || mt_c == 3) ? 1 : 0;
@@ -1501,15 +1505,20 @@ void edacs(dsd_opts * opts, dsd_state * state)
             fprintf (stderr, "%s", KGRN);
             fprintf (stderr, " Voice Group Channel Update ::");
           }
-          else
+          else if (is_test_call == 0)
           {
             fprintf (stderr, "%s", KCYN);
             fprintf (stderr, " Voice Individual Channel Update ::");
           }
+          else
+          {
+            fprintf (stderr, "%s", KYEL);
+            fprintf (stderr, " Voice Test Channel Update ::");
+          }
           if (is_digital == 0) fprintf (stderr, " Analog");
           else                 fprintf (stderr, " Digital");
-          if (is_individual == 0) fprintf (stderr, " Group [%04d]", target);
-          else                    fprintf (stderr, " Callee [%05d] Caller [%05d]", target, source);
+          if (is_individual == 0)     fprintf (stderr, " Group [%04d]", target);
+          else if (is_test_call == 0) fprintf (stderr, " Callee [%05d] Caller [%05d]", target, source);
           fprintf (stderr, " LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
           if (is_tx_trunk == 0) fprintf (stderr, " [Message Trunking]");
           if (is_emergency == 1)
@@ -1624,6 +1633,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
         //Individual Call Channel Assignment (6.2.4.9)
         //Analog and digital flag reverse engineered from Montreal STM system
+        //Test calls reverse engineered from HartLink system
         else if (mt_b == 0x5)
         {
           int is_tx_trunk = (msg_1 & 0x200000) >> 21;
