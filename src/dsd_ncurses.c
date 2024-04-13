@@ -3622,7 +3622,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
               printw (" TGT [ SYSTEM ] SRC [%8lld] Interconnect", call_matrix[i][3] );
             // Test call
             else if ((call_matrix[i][4] & EDACS_IS_TEST_CALL) != 0)
-              printw (" TEST CALL");
+              printw (" TGT [ SYSTEM ] SRC [ SYSTEM ] Test Call");
             // Unknown call
             else
               printw (" Unknown call type" );
@@ -3656,7 +3656,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
               printw (" TGT [    SYSTEM    ] SRC [%5lld] Interconnect", call_matrix[i][3] );
             // Test call
             else if ((call_matrix[i][4] & EDACS_IS_TEST_CALL) != 0)
-              printw (" TEST CALL");
+              printw (" TGT [    SYSTEM    ] SRC [ SYS ] Test Call");
             // Unknown call
             else
               printw (" Unknown call type" );
@@ -3815,7 +3815,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
                 printw ("Target [ SYSTEM ] Source [%8lld] Interconnect", call_matrix[j][3]);
               // Test call
               else if ((call_matrix[j][4] & EDACS_IS_TEST_CALL) != 0)
-                printw ("TEST CALL");
+                printw ("Target [ SYSTEM ] Source [ SYSTEM ] Test Call");
               // Unknown call
               else
                 printw ("Unknown call type");
@@ -3854,7 +3854,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
                 printw ("Target [    SYSTEM    ] Source [%5lld] Interconnect", call_matrix[j][3]);
               // Test call
               else if ((call_matrix[j][4] & EDACS_IS_TEST_CALL) != 0)
-                printw (" TEST CALL");
+                printw ("Target [    SYSTEM    ] Source [ SYS ] Test Call", call_matrix[j][3]);
               // Unknown call
               else
                 printw ("Unknown call type");
