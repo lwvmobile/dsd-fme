@@ -464,15 +464,15 @@ void edacs(dsd_opts * opts, dsd_state * state)
   if (state->edacs_a_bits == 8)  state->edacs_a_mask = 0xFF;
   if (state->edacs_a_bits == 9)  state->edacs_a_mask = 0x1FF;
 
-  if (state->edacs_f_bits == 1)  state->edacs_s_mask = 0x1;
-  if (state->edacs_f_bits == 2)  state->edacs_s_mask = 0x3;
-  if (state->edacs_f_bits == 3)  state->edacs_s_mask = 0x7;
-  if (state->edacs_f_bits == 4)  state->edacs_s_mask = 0xF;
-  if (state->edacs_f_bits == 5)  state->edacs_s_mask = 0x1F;
-  if (state->edacs_f_bits == 6)  state->edacs_s_mask = 0x3F;
-  if (state->edacs_f_bits == 7)  state->edacs_s_mask = 0x7F;
-  if (state->edacs_f_bits == 8)  state->edacs_s_mask = 0xFF;
-  if (state->edacs_f_bits == 9)  state->edacs_s_mask = 0x1FF;
+  if (state->edacs_f_bits == 1)  state->edacs_f_mask = 0x1;
+  if (state->edacs_f_bits == 2)  state->edacs_f_mask = 0x3;
+  if (state->edacs_f_bits == 3)  state->edacs_f_mask = 0x7;
+  if (state->edacs_f_bits == 4)  state->edacs_f_mask = 0xF;
+  if (state->edacs_f_bits == 5)  state->edacs_f_mask = 0x1F;
+  if (state->edacs_f_bits == 6)  state->edacs_f_mask = 0x3F;
+  if (state->edacs_f_bits == 7)  state->edacs_f_mask = 0x7F;
+  if (state->edacs_f_bits == 8)  state->edacs_f_mask = 0xFF;
+  if (state->edacs_f_bits == 9)  state->edacs_f_mask = 0x1FF;
 
   if (state->edacs_s_bits == 1)  state->edacs_s_mask = 0x1;
   if (state->edacs_s_bits == 2)  state->edacs_s_mask = 0x3;
