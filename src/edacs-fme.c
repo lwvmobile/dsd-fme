@@ -607,7 +607,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
       if (mt1 == 0x1F)
       {
 
-        //Initiate Test Call (finally captured in the wild, along with the "I-Call" with zero target and zero source)
+        //Initiate Test Call (finally captured in the wild on SLERS EA, along with the "I-Call" with target and source of 0)
         if (mt2 == 0x0)
         {
           // MSG_1             [F802180] MSG_2 [0000000] (MT1: 1F; MT2: 0)  Initiate Test Call
