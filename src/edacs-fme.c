@@ -813,17 +813,16 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int unk1    = (msg_1 & 0x70000) >> 20;   //unknown 3 bit value preceeding the SGID
           int sgid    = (msg_1 & 0xFFFF);          //patched supergroup ID
 
-          //Note: SSN is the supergroup sequence number in P25 Harris lingo, but you would think this would be kind of redundant
-          //since the SGID is itself a unique number as well (waste of bits), but guess that's how their systems work
-          //that being said, the SSN is always the same for each SGID, so those values seem to go together here as well
-          int ssn     = (msg_2 & 0xFF00000) >> 20; //this value seems to incrememnt based on SGID, so assigning 8-bit as the SSN
-          int unk2    = (msg_2 & 0xF0000) >> 16;   //unknown 4 bit value preceeding 20-bit target value of patch
-          int target  = (msg_2 & 0xFFFFF);         //target group or individual ID (20-bit) to include in supergroup
+          //Updated Observation: The 'SSN' value may not be unique in this instance, so may be an entirely different value
+          //altogether. Its function is still unknown, but for the sake of displaying patches, is not required.
 
-          fprintf (stderr, "%s", KWHT); //just make it stick out for now
-          fprintf (stderr, " System Dynamic Regroup :: SSN [%03d] SGID [%05d] Target [%07d]", ssn, sgid, target);
-          if (unk1) fprintf (stderr, " UNK1: [%X]", unk1); //this value seems to always be zero
-          if (unk2) fprintf (stderr, " UNK2: [%X]", unk2); //this value seems to always be zero
+          int ssn     = (msg_2 & 0xFF00000) >> 20; //this value seems to incrememnt based on SGID, so assigning 8-bit as the SSN
+          int target  = (msg_2 &   0xFFFFF);      //target group or individual ID (20-bit) to include in supergroup
+          
+          fprintf (stderr, "%s", KWHT);
+          fprintf (stderr, " System Dynamic Regroup :: SGID [%05d] Target [%07d]", sgid, target);
+          if (unk1) fprintf (stderr, " UNK1: [%01X]", unk1); //this value seems to always be zero
+          if (ssn)  fprintf (stderr, " UNK2: [%02X]", ssn); //this may or may not be a unique value to each SGID
           fprintf (stderr, "%s", KNRM);
         }
         //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
