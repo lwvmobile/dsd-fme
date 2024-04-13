@@ -3525,14 +3525,14 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     else if (memcmp(ip_frame, nack, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   NACK: ");
+
+      //clear frame
+      memset (ip_frame, 0, sizeof(ip_frame));
     }
 
     else if (memcmp(ip_frame, conn, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   CONN: ");
-
-      //debug
-      // fprintf (stderr, "%X", src);
 
       if (src == 0xFFFFFFFFFFFF) 
         fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
@@ -3542,20 +3542,21 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "RESERVED %012llx", src);
       else
       {
-        // fprintf (stderr, "SRC: ");
         for (i = 0; i < 9; i++)
         {
           c = b40[src % 40];
-          // state->m17_src_csd[i] = c;
           fprintf (stderr, "%c", c);
           src = src / 40;
         }
       }
 
-      // if (opts->payload == 1)
+      //reflector module user is connecting to
+      fprintf (stderr, "Module: %c; ", ip_frame[10]);
+
+      if (opts->payload == 1)
       {
-      for (i = 0; i < 11; i++)
-        fprintf (stderr, "%02X ", ip_frame[i]);
+        for (i = 0; i < 11; i++)
+          fprintf (stderr, "%02X ", ip_frame[i]);
       }
 
       //clear frame
@@ -3565,9 +3566,6 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     else if (memcmp(ip_frame, disc, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   DISC: ");
-      
-      //debug
-      // fprintf (stderr, "%X", src);
 
       if (src == 0xFFFFFFFFFFFF) 
         fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
@@ -3577,20 +3575,18 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "RESERVED %012llx", src);
       else
       {
-        // fprintf (stderr, "SRC: ");
         for (i = 0; i < 9; i++)
         {
           c = b40[src % 40];
-          // state->m17_src_csd[i] = c;
           fprintf (stderr, "%c", c);
           src = src / 40;
         }
       }
 
-      // if (opts->payload == 1)
+      if (opts->payload == 1)
       {
-      for (i = 0; i < 11; i++)
-        fprintf (stderr, "%02X ", ip_frame[i]);
+        for (i = 0; i < 10; i++)
+          fprintf (stderr, "%02X ", ip_frame[i]);
       }
 
       //clear frame
@@ -3603,9 +3599,6 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     else if (memcmp(ip_frame, eotx, 4) == 0)
     {
       fprintf (stderr, "\n M17 IP   EOTX: ");
-      
-      //debug
-      // fprintf (stderr, "%X", src);
 
       if (src == 0xFFFFFFFFFFFF) 
         fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
@@ -3615,25 +3608,24 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "RESERVED %012llx", src);
       else
       {
-        // fprintf (stderr, "SRC: ");
         for (i = 0; i < 9; i++)
         {
           c = b40[src % 40];
-          // state->m17_src_csd[i] = c;
           fprintf (stderr, "%c", c);
           src = src / 40;
         }
       }
 
-      // if (opts->payload == 1)
+      if (opts->payload == 1)
       {
-      for (i = 0; i < 11; i++)
-        fprintf (stderr, "%02X ", ip_frame[i]);
+        for (i = 0; i < 10; i++)
+          fprintf (stderr, "%02X ", ip_frame[i]);
       }
 
       //clear frame
       memset (ip_frame, 0, sizeof(ip_frame));
 
+      //drop carrier and sync
       state->carrier = 0;
       state->synctype = -1;
     }
@@ -3642,9 +3634,6 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "\n M17 IP   PING: ");
 
-      //debug
-      // fprintf (stderr, "%X", src);
-
       if (src == 0xFFFFFFFFFFFF) 
         fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
       else if (src == 0)
@@ -3653,20 +3642,18 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "RESERVED %012llx", src);
       else
       {
-        // fprintf (stderr, "SRC: ");
         for (i = 0; i < 9; i++)
         {
           c = b40[src % 40];
-          // state->m17_src_csd[i] = c;
           fprintf (stderr, "%c", c);
           src = src / 40;
         }
       }
 
-      // if (opts->payload == 1)
+      if (opts->payload == 1)
       {
-      for (i = 0; i < 11; i++)
-        fprintf (stderr, "%02X ", ip_frame[i]);
+        for (i = 0; i < 10; i++)
+          fprintf (stderr, "%02X ", ip_frame[i]);
       }
 
     }
@@ -3675,9 +3662,6 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "\n M17 IP   PONG: ");
 
-      //debug
-      // fprintf (stderr, "%X", src);
-
       if (src == 0xFFFFFFFFFFFF) 
         fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
       else if (src == 0)
@@ -3686,20 +3670,18 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "RESERVED %012llx", src);
       else
       {
-        // fprintf (stderr, "SRC: ");
         for (i = 0; i < 9; i++)
         {
           c = b40[src % 40];
-          // state->m17_src_csd[i] = c;
           fprintf (stderr, "%c", c);
           src = src / 40;
         }
       }
 
-      // if (opts->payload == 1)
+      if (opts->payload == 1)
       {
-      for (i = 0; i < 11; i++)
-        fprintf (stderr, "%02X ", ip_frame[i]);
+        for (i = 0; i < 10; i++)
+          fprintf (stderr, "%02X ", ip_frame[i]);
       }
     }
 
@@ -3745,7 +3727,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
       }
 
       if (crc_ext == crc_cmp)
-      decodeM17PKT (opts, state, ip_frame+34, err-34-3);
+        decodeM17PKT (opts, state, ip_frame+34, err-34-3);
       if (crc_ext != crc_cmp) fprintf (stderr, " IP CRC ERR");
 
     }
