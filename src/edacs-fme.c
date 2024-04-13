@@ -821,9 +821,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int target  = (msg_2 & 0xFFFFF);         //target group or individual ID (20-bit) to include in supergroup
 
           fprintf (stderr, "%s", KWHT); //just make it stick out for now
-          fprintf (stderr, " System Dynamic Regroup :: SSN: %03d; SGID: %05d; Target: %07d;", ssn, sgid, target);
-          if (unk1) fprintf (stderr, " UNK1: %X;", unk1); //this value seems to always be zero
-          if (unk2) fprintf (stderr, " UNK2: %X;", unk2); //this value seems to always be zero
+          fprintf (stderr, " System Dynamic Regroup :: SSN [%03d] SGID[%05d] Target [%07d]", ssn, sgid, target);
+          if (unk1) fprintf (stderr, " UNK1: [%X]", unk1); //this value seems to always be zero
+          if (unk2) fprintf (stderr, " UNK2: [%X]", unk2); //this value seems to always be zero
           fprintf (stderr, "%s", KNRM);
         }
         //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
