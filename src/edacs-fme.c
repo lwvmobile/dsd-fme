@@ -832,8 +832,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
           
           fprintf (stderr, "%s", KWHT);
           fprintf (stderr, " System Dynamic Regroup :: SGID [%05d] Target [%07d]", sgid, target);
-          if (unk1) fprintf (stderr, " UNK1: [%01X]", unk1); //this value seems to always be zero
-          if (ssn)  fprintf (stderr, " UNK2: [%02X]", ssn); //this may or may not be a unique value to each SGID
+          if (unk1) fprintf (stderr, " UNK1 [%01X]", unk1); //this value seems to always be zero
+          if (ssn)  fprintf (stderr, " UNK2 [%02X]", ssn); //this may or may not be a unique value to each SGID
           fprintf (stderr, "%s", KNRM);
         }
         //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
