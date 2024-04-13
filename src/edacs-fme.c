@@ -467,36 +467,10 @@ void edacs(dsd_opts * opts, dsd_state * state)
   state->edacs_a_shift = state->edacs_f_bits + state->edacs_s_bits;
   state->edacs_f_shift = state->edacs_s_bits;
 
-  //calculate masks via overkill copy and paste
-  if (state->edacs_a_bits == 1)  state->edacs_a_mask = 0x1;
-  if (state->edacs_a_bits == 2)  state->edacs_a_mask = 0x3;
-  if (state->edacs_a_bits == 3)  state->edacs_a_mask = 0x7;
-  if (state->edacs_a_bits == 4)  state->edacs_a_mask = 0xF;
-  if (state->edacs_a_bits == 5)  state->edacs_a_mask = 0x1F;
-  if (state->edacs_a_bits == 6)  state->edacs_a_mask = 0x3F;
-  if (state->edacs_a_bits == 7)  state->edacs_a_mask = 0x7F;
-  if (state->edacs_a_bits == 8)  state->edacs_a_mask = 0xFF;
-  if (state->edacs_a_bits == 9)  state->edacs_a_mask = 0x1FF;
-
-  if (state->edacs_f_bits == 1)  state->edacs_f_mask = 0x1;
-  if (state->edacs_f_bits == 2)  state->edacs_f_mask = 0x3;
-  if (state->edacs_f_bits == 3)  state->edacs_f_mask = 0x7;
-  if (state->edacs_f_bits == 4)  state->edacs_f_mask = 0xF;
-  if (state->edacs_f_bits == 5)  state->edacs_f_mask = 0x1F;
-  if (state->edacs_f_bits == 6)  state->edacs_f_mask = 0x3F;
-  if (state->edacs_f_bits == 7)  state->edacs_f_mask = 0x7F;
-  if (state->edacs_f_bits == 8)  state->edacs_f_mask = 0xFF;
-  if (state->edacs_f_bits == 9)  state->edacs_f_mask = 0x1FF;
-
-  if (state->edacs_s_bits == 1)  state->edacs_s_mask = 0x1;
-  if (state->edacs_s_bits == 2)  state->edacs_s_mask = 0x3;
-  if (state->edacs_s_bits == 3)  state->edacs_s_mask = 0x7;
-  if (state->edacs_s_bits == 4)  state->edacs_s_mask = 0xF;
-  if (state->edacs_s_bits == 5)  state->edacs_s_mask = 0x1F;
-  if (state->edacs_s_bits == 6)  state->edacs_s_mask = 0x3F;
-  if (state->edacs_s_bits == 7)  state->edacs_s_mask = 0x7F;
-  if (state->edacs_s_bits == 8)  state->edacs_s_mask = 0xFF;
-  if (state->edacs_s_bits == 9)  state->edacs_s_mask = 0x1FF;
+  //calculate masks using bitwise math
+  state->edacs_a_mask = (1 << state->edacs_a_bits) - 1;
+  state->edacs_f_mask = (1 << state->edacs_f_bits) - 1;
+  state->edacs_s_mask = (1 << state->edacs_s_bits) - 1;
 
   char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
   timestr = getTimeE();
