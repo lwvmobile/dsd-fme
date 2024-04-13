@@ -569,7 +569,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
     // - KYEL - system data
     // - KGRN - voice group calls
     // - KCYN - voice individual calls
-    // - KMAG - voice other calls (interconnect, all-call, etc)
+    // - KMAG - voice other calls (interconnect, all-call, test call, etc)
     // - KBLU - subscriber data
     // - KWHT - unknown/reserved
 
@@ -1006,9 +1006,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
                              state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_INDIVIDUAL;
         if (is_digital == 1) state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
 
-        fprintf (stderr, "%s", KCYN);
         if (target == 0 && source == 0)
         {
+          fprintf (stderr, "%s", KMAG);
           //this seems to be the continuation of the Initiate Test Call Command
           //normally, this appears as an "Analog I-Call", but with 0 tg and src,
           //its possible that those values could still be present, and that all
@@ -1025,6 +1025,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
         else
         {
+          fprintf (stderr, "%s", KCYN);
           if (is_digital == 0) fprintf (stderr, " Analog I-Call");
           else                 fprintf (stderr, " Digital I-Call");
           if (is_update == 0) fprintf (stderr, " Assignment");
@@ -1644,7 +1645,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
           if (target == 0 && source == 0)
           {
-            fprintf (stderr, "%s", KYEL);
+            fprintf (stderr, "%s", KMAG);
             fprintf (stderr, " Test Call Channel Assignment ::");
             fprintf (stderr, " LCN [%02d]%s", lcn, get_lcn_status_string(lcn));
 
