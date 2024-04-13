@@ -77,6 +77,9 @@ int is_agency_call_group(int afs, dsd_state * state)
 
 int is_fleet_call_group(int afs, dsd_state * state)
 {
+  if (is_agency_call_group(afs, state))
+    return 0;
+
   return (afs & state->edacs_s_mask) == 0;
 }
 
@@ -1316,11 +1319,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
                       state->lastsrc = lid;
 
         //Call type for state
-                                                state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_GROUP;
-        if (is_digital == 1)                    state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
-        if (is_emergency == 1)                  state->edacs_vc_call_type |= EDACS_IS_EMERGENCY;
-        if (is_agency_call_group(group, state)) state->edacs_vc_call_type |= EDACS_IS_AGENCY_CALL;
-        if (is_fleet_call_group(group, state))  state->edacs_vc_call_type |= EDACS_IS_FLEET_CALL;
+                                                    state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_GROUP;
+        if (is_digital == 1)                        state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
+        if (is_emergency == 1)                      state->edacs_vc_call_type |= EDACS_IS_EMERGENCY;
+        if (is_agency_call_group(group, state))     state->edacs_vc_call_type |= EDACS_IS_AGENCY_CALL;
+        else if (is_fleet_call_group(group, state)) state->edacs_vc_call_type |= EDACS_IS_FLEET_CALL;
 
         char mode[8]; //allow, block, digital enc
         sprintf (mode, "%s", "");
