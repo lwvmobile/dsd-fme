@@ -315,6 +315,107 @@ char * getTimeC(time_t t) //get pretty hh:mm:ss timestamp
   return curr;
 }
 
+int isCustomAfsString(dsd_state * state) {
+  return state->edacs_a_bits != 4 || state->edacs_f_bits != 4 || state->edacs_s_bits != 3;
+}
+
+//Get the string length we need for an AFS string, math-style
+int getAfsStringLength(dsd_state * state) {
+  if (!isCustomAfsString(state))
+    return 6;
+
+  int length = 0;
+  length += (state->edacs_a_bits + 2) / 3;
+  length += (state->edacs_f_bits + 2) / 3;
+  length += (state->edacs_s_bits + 2) / 3;
+  length += 2; //colon separators
+
+  // This will be either 6 or 7
+  return length;
+}
+
+//Format the AFS string, Florida-style
+int getAfsString(dsd_state * state, char * buffer, int a, int f, int s) {
+  if (!isCustomAfsString(state))
+  {
+    sprintf(buffer, "%02d-%02d%01d", a, f, s);
+    return 6;
+  }
+
+  int printed_chars = 0;
+  switch (state->edacs_a_bits)
+  {
+    case 1:
+    case 2:
+    case 3:
+      sprintf(buffer, "%01d:", a);
+      printed_chars += 1;
+      break;
+    case 4:
+    case 5:
+    case 6:
+      sprintf(buffer, "%02d:", a);
+      printed_chars += 2;
+      break;
+    case 7:
+    case 8:
+    case 9:
+      sprintf(buffer, "%03d:", a);
+      printed_chars += 3;
+      break;
+  }
+
+  sprintf(buffer + printed_chars, ":");
+  printed_chars++;
+
+  switch (state->edacs_f_bits) {
+    case 1:
+    case 2:
+    case 3:
+      sprintf(buffer + printed_chars, "%01d", f);
+      printed_chars += 1;
+      break;
+    case 4:
+    case 5:
+    case 6:
+      sprintf(buffer + printed_chars, "%02d", f);
+      printed_chars += 2;
+      break;
+    case 7:
+    case 8:
+    case 9:
+      sprintf(buffer + printed_chars, "%03d", f);
+      printed_chars += 3;
+      break;
+  }
+
+  sprintf(buffer + printed_chars, ":");
+  printed_chars++;
+
+  switch (state->edacs_s_bits) {
+    case 1:
+    case 2:
+    case 3:
+      sprintf(buffer + printed_chars, "%01d", s);
+      printed_chars += 1;
+      break;
+    case 4:
+    case 5:
+    case 6:
+      sprintf(buffer + printed_chars, "%02d", s);
+      printed_chars += 2;
+      break;
+    case 7:
+    case 8:
+    case 9:
+      sprintf(buffer + printed_chars, "%03d", s);
+      printed_chars += 3;
+      break;
+  }
+
+  return printed_chars;
+}
+
 //testing a few things, going to put this into ncursesMenu
 #define WIDTH 36
 #define HEIGHT 25
@@ -2608,7 +2709,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       int f = (state->tg_hold >> state->edacs_f_shift) & state->edacs_f_mask;
       int s = state->tg_hold & state->edacs_s_mask;
       if (state->ea_mode == 1) printw ("\n|  \\TG HOLD: %d; ", state->tg_hold);
-      else printw ("\n|  \\TG HOLD: %d [%02d-%02d%01d]; ", state->tg_hold, a, f, s);
+      else
+      {
+        char afs_str[8];
+        getAfsString(state, afs_str, a, f, s);
+        printw ("\n|  \\TG HOLD: %d [%s]; ", state->tg_hold, afs_str);
+      }
     }
 
     attron(COLOR_PAIR(4));
@@ -2649,7 +2755,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       int f = (state->tg_hold >> state->edacs_f_shift) & state->edacs_f_mask;
       int s = state->tg_hold & state->edacs_s_mask;
       if (state->ea_mode == 1) printw ("\n|  \\TG HOLD: %d; ", state->tg_hold);
-      else printw ("\n|  \\TG HOLD: %d [%02d-%02d%01d]; ", state->tg_hold, a, f, s);
+      else
+      {
+        char afs_str[8];
+        getAfsString(state, afs_str, a, f, s);
+        printw ("\n|  \\TG HOLD: %d [%s]; ", state->tg_hold, afs_str);
+      }
     }
 
     printw ("\n");
@@ -3644,19 +3755,35 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           {
             // Group call
             if ((call_matrix[i][4] & EDACS_IS_GROUP) != 0)
-              printw (" TGT [%6lld][%02d-%02d%01d] SRC [%5lld]", call_matrix[i][2], a, f, s, call_matrix[i][3] );
+            {
+              char afs_str[8];
+              getAfsString(state, afs_str, a, f, s);
+              printw (" TGT [%6lld][%s] SRC [%5lld]", call_matrix[i][2], afs_str, call_matrix[i][3] );
+            }
             // I-Call
             else if ((call_matrix[i][4] & EDACS_IS_INDIVIDUAL) != 0)
-              printw (" TGT [%6lld][ UNIT ] SRC [%5lld] I-Call", call_matrix[i][2], call_matrix[i][3] );
+              if (getAfsStringLength(state) == 6)
+                printw (" TGT [%6lld][ UNIT ] SRC [%5lld] I-Call", call_matrix[i][2], call_matrix[i][3] );
+              else
+                printw (" TGT [%6lld][  UNIT ] SRC [%5lld] I-Call", call_matrix[i][2], call_matrix[i][3] );
             // System all-call
             else if ((call_matrix[i][4] & EDACS_IS_ALL_CALL) != 0)
-              printw (" TGT [    SYSTEM    ] SRC [%5lld] All-Call", call_matrix[i][3] );
+              if (getAfsStringLength(state) == 6)
+                printw (" TGT [    SYSTEM    ] SRC [%5lld] All-Call", call_matrix[i][3] );
+              else
+                printw (" TGT [     SYSTEM    ] SRC [%5lld] All-Call", call_matrix[i][3] );
             // Interconnect call
             else if ((call_matrix[i][4] & EDACS_IS_INTERCONNECT) != 0)
-              printw (" TGT [    SYSTEM    ] SRC [%5lld] Interconnect", call_matrix[i][3] );
+              if (getAfsStringLength(state) == 6)
+                printw (" TGT [    SYSTEM    ] SRC [%5lld] Interconnect", call_matrix[i][3] );
+              else
+                printw (" TGT [     SYSTEM    ] SRC [%5lld] Interconnect", call_matrix[i][3] );
             // Test call
             else if ((call_matrix[i][4] & EDACS_IS_TEST_CALL) != 0)
-              printw (" TGT [    SYSTEM    ] SRC [ SYS ] Test Call");
+              if (getAfsStringLength(state) == 6)
+                printw (" TGT [    SYSTEM    ] SRC [ SYS ] Test Call");
+              else
+                printw (" TGT [     SYSTEM    ] SRC [ SYS ] Test Call");
             // Unknown call
             else
               printw (" Unknown call type" );
@@ -3669,9 +3796,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
             if ((call_matrix[i][4] & EDACS_IS_FLEET_CALL) != 0)     printw ("[F]");
             if ((call_matrix[i][4] & EDACS_IS_EMERGENCY) != 0)      printw ("[EM]");
           }
+          // Data call
           else
-            // Data call
-            printw (" TGT [     DATA     ] SRC [%5lld] Data", call_matrix[i][3] );
+            if (getAfsStringLength(state) == 6)
+              printw (" TGT [     DATA     ] SRC [%5lld] Data", call_matrix[i][3] );
+            else
+              printw (" TGT [      DATA     ] SRC [%5lld] Data", call_matrix[i][3] );
         }
         for (int k = 0; k < state->group_tally; k++)
         {
@@ -3843,20 +3973,35 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
               int s = call_matrix[j][2] & state->edacs_s_mask;
 
               // Group call
-              if ((call_matrix[j][4] & EDACS_IS_GROUP) != 0)
-                printw ("Target [%6lld][%02d-%02d%01d] Source [%5lld]", call_matrix[j][2], a, f, s, call_matrix[j][3]);
+              if ((call_matrix[j][4] & EDACS_IS_GROUP) != 0) {
+                char afs_str[8];
+                getAfsString(state, afs_str, a, f, s);
+                printw ("Target [%6lld][%s] Source [%5lld]", call_matrix[j][2], afs_str, call_matrix[j][3]);
+              }
               // I-Call
               else if ((call_matrix[j][4] & EDACS_IS_INDIVIDUAL) != 0)
-                printw ("Target [%6lld][ UNIT ] Source [%5lld] I-Call", call_matrix[j][2], call_matrix[j][3]);
+                if (getAfsStringLength(state) == 6)
+                  printw ("Target [%6lld][ UNIT ] Source [%5lld] I-Call", call_matrix[j][2], call_matrix[j][3]);
+                else
+                  printw ("Target [%6lld][  UNIT ] Source [%5lld] I-Call", call_matrix[j][2], call_matrix[j][3]);
               // System all-call
               else if ((call_matrix[j][4] & EDACS_IS_ALL_CALL) != 0)
-                printw ("Target [    SYSTEM    ] Source [%5lld] All-Call", call_matrix[j][3]);
+                if (getAfsStringLength(state) == 6)
+                  printw ("Target [    SYSTEM    ] Source [%5lld] All-Call", call_matrix[j][3]);
+                else
+                  printw ("Target [     SYSTEM    ] Source [%5lld] All-Call", call_matrix[j][3]);
               // Interconnect
               else if ((call_matrix[j][4] & EDACS_IS_INTERCONNECT) != 0)
-                printw ("Target [    SYSTEM    ] Source [%5lld] Interconnect", call_matrix[j][3]);
+                if (getAfsStringLength(state) == 6)
+                  printw ("Target [    SYSTEM    ] Source [%5lld] Interconnect", call_matrix[j][3]);
+                else
+                  printw ("Target [     SYSTEM    ] Source [%5lld] Interconnect", call_matrix[j][3]);
               // Test call
               else if ((call_matrix[j][4] & EDACS_IS_TEST_CALL) != 0)
-                printw ("Target [    SYSTEM    ] Source [ SYS ] Test Call");
+                if (getAfsStringLength(state) == 6)
+                  printw ("Target [    SYSTEM    ] Source [ SYS ] Test Call");
+                else
+                  printw ("Target [     SYSTEM    ] Source [ SYS ] Test Call");
               // Unknown call
               else
                 printw ("Unknown call type");
@@ -3869,9 +4014,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
               if ((call_matrix[j][4] & EDACS_IS_FLEET_CALL) != 0)     printw ("[F]");
               if ((call_matrix[j][4] & EDACS_IS_EMERGENCY) != 0)      printw ("[EM]");
             }
+            // Data call
             else
-              // Data call
-              printw ("Target [     DATA     ] Source [%5lld] Data", call_matrix[j][3]);
+              if (getAfsStringLength(state) == 6)
+                printw ("Target [     DATA     ] Source [%5lld] Data", call_matrix[j][3]);
+              else
+                printw ("Target [      DATA     ] Source [%5lld] Data", call_matrix[j][3]);
           }
           //test
           for (int k = 0; k < state->group_tally; k++)
