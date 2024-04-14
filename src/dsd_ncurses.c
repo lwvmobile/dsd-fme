@@ -3608,7 +3608,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           // Voice call
           if ((call_matrix[i][4] & EDACS_IS_VOICE) != 0)
           {
-            // System all-call
+            // Group call
             if ((call_matrix[i][4] & EDACS_IS_GROUP) != 0)
               printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
             // I-Call
