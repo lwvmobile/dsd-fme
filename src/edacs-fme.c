@@ -1530,11 +1530,13 @@ void edacs(dsd_opts * opts, dsd_state * state)
                         state->lastsrc = 0;
 
           //Call type for state
-                                  state->edacs_vc_call_type  = EDACS_IS_VOICE;
-          if (is_individual == 0) state->edacs_vc_call_type |= EDACS_IS_GROUP;
-          else                    state->edacs_vc_call_type |= EDACS_IS_INDIVIDUAL;
-          if (is_digital == 1)    state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
-          if (is_emergency == 1)  state->edacs_vc_call_type |= EDACS_IS_EMERGENCY;
+                                                      state->edacs_vc_call_type  = EDACS_IS_VOICE;
+          if (is_individual == 0)                     state->edacs_vc_call_type |= EDACS_IS_GROUP;
+          else                                        state->edacs_vc_call_type |= EDACS_IS_INDIVIDUAL;
+          if (is_digital == 1)                        state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
+          if (is_emergency == 1)                      state->edacs_vc_call_type |= EDACS_IS_EMERGENCY;
+          if (is_agency_call_group(group, state))     state->edacs_vc_call_type |= EDACS_IS_AGENCY_CALL;
+          else if (is_fleet_call_group(group, state)) state->edacs_vc_call_type |= EDACS_IS_FLEET_CALL;
 
           char mode[8]; //allow, block, digital enc
           sprintf (mode, "%s", "");
