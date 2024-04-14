@@ -611,7 +611,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           //and overwrite current values in the matrix
           state->lasttg  = 999999999;
           state->lastsrc = 999999999;
-          state->edacs_vc_call_type = EDACS_IS_TEST_CALL | EDACS_IS_VOICE; //manually set to trigger voice call in ncurses, but no other flags
+          state->edacs_vc_call_type = EDACS_IS_VOICE | EDACS_IS_TEST_CALL;
         }
         //Adjacent Sites
         else if (mt2 == 0x1)
@@ -990,7 +990,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
         if (source != 0) state->lastsrc = source;
 
         //Call type for state
-                             state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_INDIVIDUAL;
+        if (target == 0 && source == 0) state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_TEST_CALL;
+        else                            state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_INDIVIDUAL;
         if (is_digital == 1) state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
 
         //Test calls are just I-Calls with source and target of 0
@@ -1006,7 +1007,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
           //and overwrite current values in the matrix
           state->lasttg  = 999999999;
           state->lastsrc = 999999999;
-          state->edacs_vc_call_type = EDACS_IS_TEST_CALL | EDACS_IS_VOICE; //manually set to trigger voice call in ncurses, but no other flags
           lcn = 0; //set to zero here, because this is not an actual call, so don't tune to it
         }
         else
@@ -1643,7 +1643,6 @@ void edacs(dsd_opts * opts, dsd_state * state)
             //assign bogus values so that this will show up in ncurses terminal and overwrite current values in the matrix
             state->lasttg  = 999999999;
             state->lastsrc = 999999999;
-            state->edacs_vc_call_type = EDACS_IS_TEST_CALL | EDACS_IS_VOICE; //manually set to trigger voice call in ncurses, but no other flags
             lcn = 0; //set to zero here, because this is not an actual call, so don't tune to it
           }
           else {
@@ -1668,8 +1667,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
                         state->lastsrc = source;
 
           //Call type for state
-                               state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_INDIVIDUAL;
-          if (is_digital == 1) state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
+          if (target == 0 && source == 0) state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_TEST_CALL;
+          else                            state->edacs_vc_call_type  = EDACS_IS_VOICE | EDACS_IS_INDIVIDUAL;
+          if (is_digital == 1)            state->edacs_vc_call_type |= EDACS_IS_DIGITAL;
 
           char mode[8]; //allow, block, digital enc
           sprintf (mode, "%s", "");
