@@ -798,7 +798,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         else if (mt2 == 0xC)
         {
           //Note: First 9 bits of msg_1 are the mt1 and mt2 bits
-          int unk1    = (msg_1 & 0x70000) >> 20;   //unknown 3 bit value preceeding the SGID
+          int unk1    = (msg_1 & 0x70000) >> 16;   //unknown 3 bit value preceeding the SGID
           int sgid    = (msg_1 & 0xFFFF);          //patched supergroup ID
 
           //Updated Observation: The 'SSN' value may not be unique in this instance, so may be an entirely different value
@@ -806,11 +806,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
           int ssn     = (msg_2 & 0xFF00000) >> 20; //this value seems to incrememnt based on SGID, so assigning 8-bit as the SSN
           int target  = (msg_2 &   0xFFFFF);      //target group or individual ID (20-bit) to include in supergroup
-          
+
           fprintf (stderr, "%s", KWHT);
           fprintf (stderr, " System Dynamic Regroup :: SGID [%05d] Target [%07d]", sgid, target);
-          if (unk1) fprintf (stderr, " UNK1 [%01X]", unk1); //this value seems to always be zero
-          if (ssn)  fprintf (stderr, " UNK2 [%02X]", ssn); //this may or may not be a unique value to each SGID
+          if (unk1) fprintf (stderr, " UNK1 [%01X]", unk1); //this value seems to always be 7 for an active patch, 0 for a termination of a patch
+          if (ssn)  fprintf (stderr, " UNK2 [%02X]", ssn); //this may or may not be a unique value to each SGID, is FE for termination of a patch
           fprintf (stderr, "%s", KNRM);
         }
         //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
