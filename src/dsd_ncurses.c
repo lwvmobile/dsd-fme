@@ -3671,7 +3671,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           }
           else
             // Data call
-            printw (" TGT [     DATA     ] SRC [%8lld] Data", call_matrix[i][3] );
+            printw (" TGT [     DATA     ] SRC [%5lld] Data", call_matrix[i][3] );
         }
         for (int k = 0; k < state->group_tally; k++)
         {
