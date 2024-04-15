@@ -836,8 +836,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
           //look at the 'zero' fields when on 'delete'
           //              MSG_1  [FE00045] MSG_2 [FE00045]
           //                      FF80000 (visualization aide)
-          int unk3     = (msg_1 & 0x7FF00) >> 12;
-          int unk4     = (msg_2 & 0x7FF00) >> 12;;
+          int unk3     = (msg_1 & 0x7FF00) >> 8;
+          int unk4     = (msg_2 & 0x7FF00) >> 8;
 
           //Ilya, please don't nit fix my logging format for these, it breaks grep when parsing a bunch of these all at once
           fprintf (stderr, "%s", KWHT);
@@ -846,15 +846,17 @@ void edacs(dsd_opts * opts, dsd_state * state)
           if (sgid != target)
           {
             //decode potential TGA values (assumming same as Harris P25)
-            if (tga & 4) fprintf (stderr, " One-Way"); //Simulselect
-            else         fprintf (stderr, " Two-Way"); //Patch
-            if (tga & 2) fprintf (stderr, " Group");
-            else         fprintf (stderr, " Radio"); //Individual
-                        fprintf (stderr, " Patch");
+            //decided to disable the info presented below since I cannot confirm this
+            // if (tga & 4) fprintf (stderr, " One-Way"); //Simulselect
+            // else         fprintf (stderr, " Two-Way"); //Patch
+            // if (tga & 2) fprintf (stderr, " Group");
+            // else         fprintf (stderr, " Radio"); //Individual
+                         fprintf (stderr, " Patch");
             if (tga & 1) fprintf (stderr, " Active;");
             else         fprintf (stderr, " Delete;");
 
-            fprintf (stderr, " TGA: %01X;", tga); //this value seems to always be 7 for an active patch, 0 for a termination of a patch (6 if assigned the unk2 value)
+            //switched from using the TGA nomenclature to a more generic OPTion since I think this value is still a form of option
+            fprintf (stderr, " OPT: %01X;", tga); //this value seems to always be 7 for an active patch, 0 for a termination of a patch (6 if assigned the unk2 value)
             if (unk1)
               fprintf (stderr, " UNK1: %01X;", unk1);
             if (unk2)
