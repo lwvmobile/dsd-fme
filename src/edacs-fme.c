@@ -833,26 +833,27 @@ void edacs(dsd_opts * opts, dsd_state * state)
           int unk2    = (msg_2 &  0x700000) >> 20; //unknown 3-bit value, possibly linked to TGA when patch is deleted
           int target  = (msg_2 &   0xFFFFF);      //target group or individual ID (20-bit) to include in supergroup
 
+          //look at the 'zero' fields when on 'delete'
+          //              MSG_1  [FE00045] MSG_2 [FE00045]
+          //                      FF80000 (visualization aide)
+          int unk3     = (msg_1 & 0x7FF00) >> 12;
+          int unk4     = (msg_2 & 0x7FF00) >> 12;;
+
           //Ilya, please don't nit fix my logging format for these, it breaks grep when parsing a bunch of these all at once
           fprintf (stderr, "%s", KWHT);
           fprintf (stderr, " System Dynamic Regroup :: SP-WGID: %03d; Target: %07d;", sgid, target);
-
-          //just a guess, but when target == sgid, then the unk2 value is 6 (as opposed to 7)
-          //so is this signalling the same TGA value, but the bit for activate is deactivated?
-          if (sgid == target) //or SSN == 0x1F
-            tga = unk2;
-
-          //decode potential TGA values (assumming same as Harris P25)
-          if (tga & 4) fprintf (stderr, " One-Way"); //Simulselect
-          else         fprintf (stderr, " Two-Way"); //Patch
-          if (tga & 2) fprintf (stderr, " Group");
-          else         fprintf (stderr, " Radio"); //Individual
-                       fprintf (stderr, " Patch");
-          if (tga & 1) fprintf (stderr, " Update");
-          else         fprintf (stderr, " Delete");
           
           if (sgid != target)
           {
+            //decode potential TGA values (assumming same as Harris P25)
+            if (tga & 4) fprintf (stderr, " One-Way"); //Simulselect
+            else         fprintf (stderr, " Two-Way"); //Patch
+            if (tga & 2) fprintf (stderr, " Group");
+            else         fprintf (stderr, " Radio"); //Individual
+                        fprintf (stderr, " Patch");
+            if (tga & 1) fprintf (stderr, " Active;");
+            else         fprintf (stderr, " Delete;");
+
             fprintf (stderr, " TGA: %01X;", tga); //this value seems to always be 7 for an active patch, 0 for a termination of a patch (6 if assigned the unk2 value)
             if (unk1)
               fprintf (stderr, " UNK1: %01X;", unk1);
@@ -860,11 +861,17 @@ void edacs(dsd_opts * opts, dsd_state * state)
               fprintf (stderr, " UNK2: %02X;", unk2);
             fprintf (stderr, " SSN: %02X;", ssn); //this may or may not be a unique value to each SGID, is 1F for termination of a patch
           }
+          
+          //07:25:17 Sync: +EDACS  MSG_1 [FE00045] MSG_2 [FE00045] (MT1: 1F; MT2: C)  System Dynamic Regroup :: SP-WGID: 069; Target: 0000069; One-Way Group Patch Delete TGA: 6;
+          //Upon Reflection, thinking the same MT1 and MT2 values are in both messages, so appears to just be the SP-WGID here and a bunch of zeroes leading into it, and not a TGA value
+
           else
           {
-            fprintf (stderr, " TGA: %01X;", tga); //this value seems to always be 7 for an active patch, 0 for a termination of a patch (6 if assigned the unk2 value)
-            if (unk1)
-              fprintf (stderr, " UNK1: %02X;", unk1);
+            fprintf (stderr, " Patch Delete;");
+            if (unk3)
+              fprintf (stderr, " UNK3: %01X;", unk3);
+            if (unk3)
+              fprintf (stderr, " UNK4: %02X;", unk4);
           }
 
           fprintf (stderr, "%s", KNRM);
