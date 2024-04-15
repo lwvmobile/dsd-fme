@@ -872,7 +872,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             fprintf (stderr, " Patch Delete;");
             if (unk3)
               fprintf (stderr, " UNK3: %01X;", unk3);
-            if (unk3)
+            if (unk4)
               fprintf (stderr, " UNK4: %02X;", unk4);
           }
 
