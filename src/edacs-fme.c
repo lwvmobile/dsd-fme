@@ -794,23 +794,79 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
           fprintf (stderr, "%s", KNRM);
         }
-        //Patch Groups / Dynamic Regroup -- Reverse Engineer WIP from observations and guesswork
+        //Patch Groups / Dynamic Regroup -- Current Code
+        // else if (mt2 == 0xC)
+        // {
+        //   //Note: First 9 bits of msg_1 are the mt1 and mt2 bits
+        //   int unk1    = (msg_1 & 0x70000) >> 16;   //unknown 3 bit value preceeding the SGID
+        //   int sgid    = (msg_1 & 0xFFFF);          //patched supergroup ID
+
+        //   //Updated Observation: The 'SSN' value may not be unique in this instance, so may be an entirely different value
+        //   //altogether. Its function is still unknown, but for the sake of displaying patches, is not required.
+
+        //   int ssn     = (msg_2 & 0xFF00000) >> 20; //this value seems to incrememnt based on SGID, so assigning 8-bit as the SSN
+        //   int target  = (msg_2 &   0xFFFFF);      //target group or individual ID (20-bit) to include in supergroup
+
+        //   fprintf (stderr, "%s", KWHT);
+        //   fprintf (stderr, " System Dynamic Regroup :: SGID [%05d] Target [%07d]", sgid, target);
+        //   if (unk1) fprintf (stderr, " UNK1 [%01X]", unk1); //this value seems to always be 7 for an active patch, 0 for a termination of a patch
+        //   if (ssn)  fprintf (stderr, " UNK2 [%02X]", ssn); //this may or may not be a unique value to each SGID, is FE for termination of a patch
+        //   fprintf (stderr, "%s", KNRM);
+        // }
+
+        //Patch Groups / Dynamic Regroup -- Reverse Engineer WIP from observations, guesswork, and documented P25 MFID A4 regroup operations
         else if (mt2 == 0xC)
         {
+
+          //Note: Due to the method used to reverse engineer this patch using conventions from a newer documented P25 source (MFID A4 L3Harris),
+          //its possible that the conventions, terminology, and bits signalled in this message are not entirely accurate, but are just speculation
+
           //Note: First 9 bits of msg_1 are the mt1 and mt2 bits
-          int unk1    = (msg_1 & 0x70000) >> 16;   //unknown 3 bit value preceeding the SGID
-          int sgid    = (msg_1 & 0xFFFF);          //patched supergroup ID
+          //                     FF80000 (visualization aide)
+          int tga     = (msg_1 & 0x70000) >> 16;  //unknown 3 bit value preceeding the SGID (TGA?)
+          int unk1    = (msg_1 &  0xFF00) >> 8;  //unknown 8 bit value preceeding the TGA/Options
+          int sgid    = (msg_1 &    0xFF);       //patched supergroup ID expressed as an 8 bit value
 
-          //Updated Observation: The 'SSN' value may not be unique in this instance, so may be an entirely different value
-          //altogether. Its function is still unknown, but for the sake of displaying patches, is not required.
-
-          int ssn     = (msg_2 & 0xFF00000) >> 20; //this value seems to incrememnt based on SGID, so assigning 8-bit as the SSN
+          //Observation: The SSN value appears to be unique, but also different between sites, as in, each site
+          //has its own SSN for the same SGID patching, possibly a first come first serve pool value?
+          int ssn     = (msg_2 & 0xF800000) >> 23; //this value seems to incrememnt based on SGID, 5-bit value
+          int unk2    = (msg_2 &  0x700000) >> 20; //unknown 3-bit value, possibly linked to TGA when patch is deleted
           int target  = (msg_2 &   0xFFFFF);      //target group or individual ID (20-bit) to include in supergroup
 
+          //Ilya, please don't nit fix my logging format for these, it breaks grep when parsing a bunch of these all at once
           fprintf (stderr, "%s", KWHT);
-          fprintf (stderr, " System Dynamic Regroup :: SGID [%05d] Target [%07d]", sgid, target);
-          if (unk1) fprintf (stderr, " UNK1 [%01X]", unk1); //this value seems to always be 7 for an active patch, 0 for a termination of a patch
-          if (ssn)  fprintf (stderr, " UNK2 [%02X]", ssn); //this may or may not be a unique value to each SGID, is FE for termination of a patch
+          fprintf (stderr, " System Dynamic Regroup :: SP-WGID: %03d; Target: %07d;", sgid, target);
+
+          //just a guess, but when target == sgid, then the unk2 value is 6 (as opposed to 7)
+          //so is this signalling the same TGA value, but the bit for activate is deactivated?
+          if (sgid == target) //or SSN == 0x1F
+            tga = unk2;
+
+          //decode potential TGA values (assumming same as Harris P25)
+          if (tga & 4) fprintf (stderr, " One-Way"); //Simulselect
+          else         fprintf (stderr, " Two-Way"); //Patch
+          if (tga & 2) fprintf (stderr, " Group");
+          else         fprintf (stderr, " Radio"); //Individual
+                       fprintf (stderr, " Patch");
+          if (tga & 1) fprintf (stderr, " Update");
+          else         fprintf (stderr, " Delete");
+          
+          if (sgid != target)
+          {
+            fprintf (stderr, " TGA: %01X;", tga); //this value seems to always be 7 for an active patch, 0 for a termination of a patch (6 if assigned the unk2 value)
+            if (unk1)
+              fprintf (stderr, " UNK1: %01X;", unk1);
+            if (unk2)
+              fprintf (stderr, " UNK2: %02X;", unk2);
+            fprintf (stderr, " SSN: %02X;", ssn); //this may or may not be a unique value to each SGID, is 1F for termination of a patch
+          }
+          else
+          {
+            fprintf (stderr, " TGA: %01X;", tga); //this value seems to always be 7 for an active patch, 0 for a termination of a patch (6 if assigned the unk2 value)
+            if (unk1)
+              fprintf (stderr, " UNK1: %02X;", unk1);
+          }
+
           fprintf (stderr, "%s", KNRM);
         }
         //Serial Number Request (not seen in the wild, see US patent 20030190923, Figure 2b)
