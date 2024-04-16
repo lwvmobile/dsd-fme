@@ -763,14 +763,16 @@ typedef struct
   int edacs_s_mask;  //Calculated Mask for S Bits
 
   //flags for EDACS call type
-  #define EDACS_IS_VOICE        0x01
-  #define EDACS_IS_DIGITAL      0x02
-  #define EDACS_IS_EMERGENCY    0x04
-  #define EDACS_IS_GROUP        0x08
-  #define EDACS_IS_INDIVIDUAL   0x10
-  #define EDACS_IS_ALL_CALL     0x20
-  #define EDACS_IS_INTERCONNECT 0x40
-  #define EDACS_IS_TESTCALL     0x100
+  #define EDACS_IS_VOICE         0x01
+  #define EDACS_IS_DIGITAL       0x02
+  #define EDACS_IS_EMERGENCY     0x04
+  #define EDACS_IS_GROUP         0x08
+  #define EDACS_IS_INDIVIDUAL    0x10
+  #define EDACS_IS_ALL_CALL      0x20
+  #define EDACS_IS_INTERCONNECT  0x40
+  #define EDACS_IS_TEST_CALL     0x80
+  #define EDACS_IS_AGENCY_CALL  0x100
+  #define EDACS_IS_FLEET_CALL   0x200
 
   //trunking group and lcn freq list
   long int trunk_lcn_freq[26]; //max number on an EDACS system, should be enough on DMR too hopefully
