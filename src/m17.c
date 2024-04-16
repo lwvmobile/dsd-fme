@@ -1897,13 +1897,13 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
           voice2[i] = sample;
         }
       }
-
+      opts->rtl_rms = rtl_return_rms();
       #endif
     }
 
     //read in RMS value for vox function; NOTE: will not work correctly SOCAT STDIO TCP due to blocking when no samples to read
-    if (opts->audio_in_type == 3) opts->rtl_rms = rtl_return_rms();
-    else opts->rtl_rms = raw_rms(voice1, nsam, 1) / 2; //dividing by two so mic isn't so sensitive on vox
+    if (opts->audio_in_type != 3)
+      opts->rtl_rms = raw_rms(voice1, nsam, 1) / 2; //dividing by two so mic isn't so sensitive on vox
 
     //low pass filter
     if (opts->use_lpf == 1)
