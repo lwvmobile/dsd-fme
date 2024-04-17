@@ -1,0 +1,257 @@
+diff --git a/include/dsd.h b/include/dsd.h
+index 4a75702..355837f 100644
+--- a/include/dsd.h
++++ b/include/dsd.h
+@@ -357,6 +357,8 @@ typedef struct
+   int frame_m17;
+   int inverted_m17;
+ 
++  int frame_typeii;
++
+   FILE *symbolfile;
+   int call_alert;
+ 
+@@ -989,6 +991,10 @@ typedef struct
+ #define INV_DPMR_FRAME_SYNC_3 "311313111133"
+ #define INV_DPMR_FRAME_SYNC_4 "111333331133131131111313"
+ 
++//Motorola Type II Sync Pattern 0xAC binary 1010 1100
++#define TYPE_II_SYNC "13131133" //baesd on what getDibit returns
++#define TYPE_II_SINV "31313311" //baesd on what getDibit returns
++
+ /*
+  * function prototypes
+  */
+@@ -1357,6 +1363,9 @@ void edacs(dsd_opts * opts, dsd_state * state);
+ unsigned long long int edacs_bch (unsigned long long int message);
+ void eot_cc(dsd_opts * opts, dsd_state * state); //end of TX return to CC
+ 
++//Type II
++void type_ii(dsd_opts * opts, dsd_state * state);
++
+ //Generic Tuning Functions
+ void return_to_cc (dsd_opts * opts, dsd_state * state);
+ 
+diff --git a/src/dsd_dibit.c b/src/dsd_dibit.c
+index 5424f7a..9b403cf 100644
+--- a/src/dsd_dibit.c
++++ b/src/dsd_dibit.c
+@@ -222,13 +222,14 @@ invert_dibit(int dibit)
+ int digitize (dsd_opts* opts, dsd_state* state, int symbol)
+ {
+   // determine dibit state
+-  if ((state->synctype == 6) || (state->synctype == 14)|| (state->synctype == 18) || (state->synctype == 37))
++  if ((state->synctype == 6) || (state->synctype == 14)|| (state->synctype == 18) || (state->synctype == 37) || (state->synctype == 40))
+ 
+     {
+       //  6 +D-STAR
+       // 14 +ProVoice
+       // 18 +D-STAR_HD
+       // 37 +EDACS
++      // 41 +TypeII
+ 
+       if (symbol > state->center)
+         {
+@@ -243,12 +244,13 @@ int digitize (dsd_opts* opts, dsd_state* state, int symbol)
+           return (1);               // +3
+         }
+     }
+-  else if ((state->synctype == 7) || (state->synctype == 15)|| (state->synctype == 19) || (state->synctype == 38))
++  else if ((state->synctype == 7) || (state->synctype == 15)|| (state->synctype == 19) || (state->synctype == 38) || (state->synctype == 41))
+     {
+       //  7 -D-STAR
+       // 15 -ProVoice
+       // 19 -D-STAR_HD
+       // 38 -EDACS
++      // 41 -TypeII
+ 
+       if (symbol > state->center)
+         {
+diff --git a/src/dsd_frame.c b/src/dsd_frame.c
+index 577169c..58fa07c 100644
+--- a/src/dsd_frame.c
++++ b/src/dsd_frame.c
+@@ -269,6 +269,12 @@ processFrame (dsd_opts * opts, dsd_state * state)
+       processYSF(opts, state);
+       return;
+     }
++    //TypeII
++    else if (state->synctype == 40 || state->synctype == 41)
++    {
++      type_ii(opts, state);
++      return;
++    }
+     //M17
+     else if ((state->synctype == 16) || (state->synctype == 9)  || (state->synctype == 17) || (state->synctype == 8)  || 
+              (state->synctype == 76) || (state->synctype == 77) || (state->synctype == 86) || (state->synctype == 87) ||
+diff --git a/src/dsd_frame_sync.c b/src/dsd_frame_sync.c
+index e10f3cc..7f5fbf5 100644
+--- a/src/dsd_frame_sync.c
++++ b/src/dsd_frame_sync.c
+@@ -117,6 +117,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
+    * 36 = -P25 P2
+    * 37 = +EDACS
+    * 38 = -EDACS
++   * 40 = +Type2
++   * 41 = -Type2
+    */
+ 
+ 
+@@ -205,7 +207,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
+   {
+     t_max = 12; //based on Frame_Sync_2 pattern
+   }
+-  else if (opts->frame_m17 == 1)
++  else if (opts->frame_m17 == 1 || opts->frame_typeii == 1)
+   {
+     t_max = 8;
+   }
+@@ -581,6 +583,40 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
+           }
+           //end YSF sync
+ 
++          //Motorola Type II
++          strncpy(synctest8, (synctest_p - 7), 8);
++          if (opts->frame_typeii == 1)
++          {
++            if (strcmp(synctest8, TYPE_II_SYNC) == 0)
++            {
++              if (state->lastsynctype == 40)
++              {
++                printFrameSync (opts, state, "+Type II", synctest_pos + 1, modulation);
++                state->carrier = 1;
++                state->offset = synctest_pos;
++                state->max = ((state->max) + lmax) / 2;
++                state->min = ((state->min) + lmin) / 2;
++                state->lastsynctype = 40;
++                return (40);
++              }
++              else state->lastsynctype = 40;
++            }
++            else if (strcmp(synctest8, TYPE_II_SINV) == 0)
++            {
++              if (state->lastsynctype == 41)
++              {
++                printFrameSync (opts, state, "-Type II", synctest_pos + 1, modulation);
++                state->carrier = 1;
++                state->offset = synctest_pos;
++                state->max = ((state->max) + lmax) / 2;
++                state->min = ((state->min) + lmin) / 2;
++                state->lastsynctype = 41;
++                return (41);
++              }
++              else state->lastsynctype = 41;
++            }
++          }
++
+           //M17 Sync -- Just STR and LSF for now
+           strncpy(synctest16, (synctest_p - 15), 16);
+           strncpy(synctest8, (synctest_p - 7), 8);
+diff --git a/src/dsd_main.c b/src/dsd_main.c
+index ca878e9..c5a3e95 100644
+--- a/src/dsd_main.c
++++ b/src/dsd_main.c
+@@ -622,6 +622,7 @@ initOpts (dsd_opts * opts)
+   opts->frame_provoice = 0;
+   opts->frame_ysf = 1;
+   opts->frame_m17 = 0;
++  opts->frame_typeii = 0;
+   opts->mod_c4fm = 1;
+   opts->mod_qpsk = 0;
+   opts->mod_gfsk = 0;
+@@ -1377,6 +1378,7 @@ usage ()
+   printf ("  -fe             Decode only EDACS EA/ProVoice*\n");
+   printf ("  -fE             Decode only EDACS EA/ProVoice with ESK 0xA0*\n");
+   printf ("  -fm             Decode only dPMR*\n");
++  printf ("  -fT             Decode only Type II (Smartnet/Smartzone)*\n");
+   printf ("  -l            Disable DMR, dPMR, NXDN, M17 input filtering\n");
+   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
+   printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
+@@ -2431,6 +2433,39 @@ main (int argc, char **argv)
+             opts.rtl_bandwidth = 24;
+             // opts.rtl_gain_value = 36;
+           }
++          else if (optarg[0] == 'T') //Motorola Type II
++          {
++            opts.frame_dstar = 0;
++            opts.frame_x2tdma = 0;
++            opts.frame_p25p1 = 0;
++            opts.frame_p25p2 = 0;
++            opts.frame_nxdn48 = 0;
++            opts.frame_nxdn96 = 0;
++            opts.frame_dmr = 0;
++            opts.frame_dpmr = 0;
++            opts.frame_provoice = 0;
++            opts.frame_ysf = 0;
++            opts.frame_m17 = 0;
++            opts.frame_typeii = 1;
++            ////to maintain 10/4 sample per symbol rate, we need to run at 36000 
++            //to hit TypeII's 3600 bps rating. BW values in rtl_fm are also modified
++            //similarly, but testing will need to be done, this MAY NOT be viable in DSD-FME.
++            opts.pulse_digi_rate_in = 36000;
++            opts.wav_sample_rate = 36000;
++            opts.mod_c4fm = 1;
++            opts.mod_qpsk = 0;
++            opts.mod_gfsk = 0; //might still be better as gfsk
++            state.rf_mod = 2;
++            opts.pulse_digi_rate_out = 8000;
++            opts.pulse_digi_out_channels = 1;
++            opts.dmr_stereo = 0;
++            opts.dmr_mono = 0;
++            state.dmr_stereo = 0;
++            // opts.setmod_bw = 12500;
++            sprintf (opts.output_name, "Type II");
++            // fprintf (stderr,"Setting symbol rate to 4800 / second\n");
++            fprintf (stderr,"Decoding Motorola Type II frames.\n");
++          }
+           else if (optarg[0] == '1')
+           {
+             opts.frame_dstar = 0;
+diff --git a/src/rtl_sdr_fm.cpp b/src/rtl_sdr_fm.cpp
+index ad04667..954c6dc 100644
+--- a/src/rtl_sdr_fm.cpp
++++ b/src/rtl_sdr_fm.cpp
+@@ -1025,6 +1025,7 @@ void rtlsdr_sighandler()
+ void open_rtlsdr_stream(dsd_opts *opts)
+ {
+   int r;
++	if (opts->frame_typeii == 1) bandwidth_divisor = 36000;
+ 	rtl_bandwidth =  opts->rtl_bandwidth * 1000; //reverted back to straight value
+ 	bandwidth_multiplier = (bandwidth_divisor / rtl_bandwidth);
+ 	volume_multiplier = 1; //moved to external handling to be more dynamic
+diff --git a/src/typeII.c b/src/typeII.c
+new file mode 100644
+index 0000000..eb0cd56
+--- /dev/null
++++ b/src/typeII.c
+@@ -0,0 +1,29 @@
++/*-------------------------------------------------------------------------------
++ * typeII.c
++ * Motorola Type II Decoder (WIP)
++ * 
++ * 
++ * 
++ *
++ * LWVMOBILE
++ * 2024-03 DSD-FME Florida Man Edition
++ *-----------------------------------------------------------------------------*/
++
++#include "dsd.h"
++
++//Type II
++void type_ii(dsd_opts * opts, dsd_state * state)
++{
++  int i;
++  uint8_t t2[80]; memset(t2, 0, sizeof(t2));
++
++  for (i = 0; i < 76; i++)
++    t2[i] = getDibit(opts, state);
++
++  //debug dump collected bits
++  fprintf (stderr, "Frame:");
++  for (i = 0; i < 10; i++)
++    fprintf (stderr, " %02X", (uint8_t)ConvertBitIntoBytes(&t2[i*8], 8));
++
++  fprintf (stderr, "\n");
++}
+\ No newline at end of file
