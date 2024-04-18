@@ -307,16 +307,16 @@ int udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * d
     //listen with:
 
     //short 8k/2
-    //socat stdio udp-listen:23456 | play --buffer 320*2 -q -b 16 -r 8000 -c2 -t s16 -
+    //socat stdio udp-listen:23456 | play --buffer 640 -q -b 16 -r 8000 -c2 -t s16 -
 
     //short 8k/1
-    //socat stdio udp-listen:23456 | play --buffer 160*2 -q -b 16 -r 48000 -c2 -t s16 -
+    //socat stdio udp-listen:23456 | play --buffer 320 -q -b 16 -r 8000 -c1 -t s16 -
 
     //float 8k/2
-    //socat stdio udp-listen:23456 | play --buffer 320*4 -q -e float -b 32 -r 8000 -c2 -t f32 -
+    //socat stdio udp-listen:23456 | play --buffer 1280 -q -e float -b 32 -r 8000 -c2 -t f32 -
 
     //float 8k/1
-    //socat stdio udp-listen:23456 | play --buffer 160*4 -q -e float -b 32 -r 8000 -c1 -t f32 -
+    //socat stdio udp-listen:23456 | play --buffer 640 -q -e float -b 32 -r 8000 -c1 -t f32 -
 
     //send audio or data to socket
     err = sendto(opts->udp_sockfd, data, nsam, 0, (const struct sockaddr * ) & address, sizeof(struct sockaddr_in));
@@ -345,7 +345,7 @@ int udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void * 
     //listen with:
 
     //short 48k/1
-    //socat stdio udp-listen:23456 | play --buffer 960*2 -q -b 16 -r 48000 -c1 -t s16 -
+    //socat stdio udp-listen:23456 | play --buffer 1920 -q -b 16 -r 48000 -c1 -t s16 -
 
     //send audio or data to socket
     err = sendto(opts->udp_sockfdA, data, nsam, 0, (const struct sockaddr * ) & addressA, sizeof(struct sockaddr_in));
@@ -358,10 +358,7 @@ int m17_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * d
     UNUSED(state);
     unsigned long long int err = 0;
 
-    //listen with:
-
-    //XX packed bytes
-    //socat stdio udp-listen:17000 | (decoder)
+    //See notes in m17.c on line ~3395 regarding usage
 
     //send audio or data to socket
     err = sendto(opts->m17_udp_sock, data, nsam, 0, (const struct sockaddr * ) & addressM17, sizeof(struct sockaddr_in));

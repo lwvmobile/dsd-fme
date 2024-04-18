@@ -2156,6 +2156,13 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, " SQL HIT: %d;", sql_hit);
       }
 
+      //debug show pulse input latency
+      // if (opts->audio_in_type == 0)
+      // {
+      //   unsigned long long int latency = pa_simple_get_latency (opts->pulse_digi_dev_in, NULL);
+      //   fprintf (stderr, " Latency: %05lld;", latency);
+      // }
+
       //convert bit array into symbols and RF/Audio
       encodeM17RF (opts, state, m17_t4s, 2);
       
@@ -3397,6 +3404,9 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
 
   //encode with: dsd-fme -fZ -M M17:1:N0CALL:ALL:48000:1 -o m17:127.0.0.1:17000 -N 2> m17out.ans
   //decode with: dsd-fme -fU -i m17:127.0.0.1:17000 -N 2> m17ip.ans
+
+  //NOTE: Currently, IP Frame decoding cannot be used with -o udp audio output
+  //its a rare use case, but should be noted, I think udpbind does something to block that functionality
 
   //Bind UDP Socket
   int err = 1; //NOTE: err will tell us how many bytes were received, if successful

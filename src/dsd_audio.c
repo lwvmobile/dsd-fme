@@ -23,6 +23,9 @@ pa_sample_spec zz;
 pa_sample_spec cc;
 pa_sample_spec ff; //float
 
+//pulse audio buffer attributes (input latency)
+pa_buffer_attr lt;
+
 void closePulseOutput (dsd_opts * opts)
 {
   pa_simple_free (opts->pulse_digi_dev_out);
@@ -72,7 +75,34 @@ void openPulseInput(dsd_opts * opts)
   cc.channels = opts->pulse_digi_in_channels;
   cc.rate = opts->pulse_digi_rate_in; //48000
 
-  opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_RECORD, NULL, opts->output_name, &cc, NULL, NULL, NULL);
+  //adjust input latency settings (defaults are all -1 to let server set these automatically, but without pavucontrol open, this is approx 2s)
+  //setting fragsize to 960 for 48000 input seems to do the trick to allow a much faster latency without underrun, may need adjusting if
+  //modifying the input rate (will only apply IF using pulse audio input, and not any other input method)
+
+  //TODO: set fragsize vs expected input rate if required in the future
+  //NOTE: If users report any underrun conditions, then either change 960 back to -1, or pass NULL instead of &lt
+
+  //https://freedesktop.org/software/pulseaudio/doxygen/structpa__buffer__attr.html
+
+  //for now, only going to modify the fragsize if using the encoder, else, let the pa server set it automatically
+  // if (opts->m17encoder == 1)
+  //   lt.fragsize = 960*5;
+  // else lt.fragsize = -1;
+
+  //test doing it universally, fall back to above if needed
+  lt.fragsize = 960*5;
+  lt.maxlength = -1;
+  lt.prebuf = -1;
+  lt.tlength = -1;
+
+  opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_RECORD, NULL, opts->output_name, &cc, NULL, &lt, NULL);
+
+  //debug
+  // if (opts->m17encoder == 1)
+  // {
+  //   unsigned long long int latency = pa_simple_get_latency (opts->pulse_digi_dev_in, NULL);
+  //   fprintf (stderr, "Pulse Audio Input Latency: %05lld;", latency);
+  // }
 
 }
 
