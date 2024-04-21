@@ -1572,7 +1572,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
           else
           {
-            fprintf (stderr, "%s", KYEL);
+            fprintf (stderr, "%s", KMAG);
             fprintf (stderr, " Voice Test Channel Update ::");
           }
           if (is_digital == 0) fprintf (stderr, " Analog");
