@@ -392,8 +392,9 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     } 
     if (opts->inverted_dmr == 0) sprintf (polarity, "%s", "+");
     else sprintf (polarity, "%s", "-");
-
-    fprintf (stderr,"Sync: %sDMR %s| Color Code=%02d | VC%d ", polarity, light, state->dmr_color_code, vc);
+    if (state->dmr_color_code != 16)
+      fprintf (stderr,"Sync: %sDMR %s| Color Code=%02d | VC%d ", polarity, light, state->dmr_color_code, vc);
+    else fprintf (stderr,"Sync: %sDMR %s| Color Code=XX | VC%d ", polarity, light, vc);
  
     if (internalslot == 0 && vc1 == 6) 
     {
@@ -818,8 +819,9 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   } 
   if (opts->inverted_dmr == 0) sprintf (polarity, "%s", "+");
   else sprintf (polarity, "%s", "-");
-
-  fprintf (stderr,"Sync: %sDMR %s| Color Code=%02d | VC1*", polarity, light, state->dmr_color_code);
+  if (state->dmr_color_code != 16)
+    fprintf (stderr,"Sync: %sDMR %s| Color Code=%02d | VC1*", polarity, light, state->dmr_color_code);
+  else fprintf (stderr,"Sync: %sDMR %s| Color Code=XX | VC1*", polarity, light);
 
   dmr_alg_reset (opts, state);
 

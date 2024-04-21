@@ -2044,7 +2044,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
 
   //DMR CC
-  if (state->color_code_ok && state->dmr_color_code != -1 && (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32 || lls == 33) )
+  if (state->color_code_ok && state->dmr_color_code != 16 && (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32 || lls == 33) )
   {
     dcc = state->dmr_color_code;
   }

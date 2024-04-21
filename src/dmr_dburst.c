@@ -207,7 +207,12 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
   if (databurst != 0xEB)
   {
-    if (state->dmr_ms_mode == 0) fprintf(stderr, "| Color Code=%02d ", state->dmr_color_code);
+    if (state->dmr_ms_mode == 0)
+    { 
+      if (state->dmr_color_code != 16)
+        fprintf(stderr, "| Color Code=%02d ", state->dmr_color_code);
+      else fprintf(stderr, "| Color Code=XX ");
+    }
     fprintf(stderr, "|%s", state->fsubtype);
 
     //'DSP' output to file

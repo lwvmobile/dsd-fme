@@ -571,7 +571,9 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
     fprintf (stderr,"Sync: +DMR MS/DM MODE/MONO ");
   }
   else fprintf (stderr,"Sync: -DMR MS/DM MODE/MONO ");
-
+  if (state->dmr_color_code != 16)
+    fprintf (stderr, "| Color Code=%02d ", state->dmr_color_code);
+  else fprintf (stderr, "| Color Code=XX ");
   fprintf (stderr, "| VC* ");
   fprintf (stderr, "\n");
 
@@ -694,7 +696,9 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
     fprintf (stderr,"Sync: +DMR MS/DM MODE/MONO ");
   }
   else fprintf (stderr,"Sync: -DMR MS/DM MODE/MONO ");
-
+  if (state->dmr_color_code != 16)
+    fprintf (stderr, "| Color Code=%02d ", state->dmr_color_code);
+  else fprintf (stderr, "| Color Code=XX ");
 
   sprintf(state->slot1light, "%s", "");
   sprintf(state->slot2light, "%s", "");
