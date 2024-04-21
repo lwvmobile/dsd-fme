@@ -1475,10 +1475,11 @@ void QR_16_7_6_encode(unsigned char *origBits, unsigned char *encodedBits)
 
 bool QR_16_7_6_decode(unsigned char *rxBits)
 {
+    //2 bit errors or less
     unsigned int syndromeI = 0; // syndrome index
     int is = 0;
     int i = 0;
-
+    int corrections = 0;
     for (is = 0; is < 9; is++)
     {
         syndromeI += (((rxBits[0]  * QR_16_7_6_m_H[16*is + 0])
@@ -1512,10 +1513,15 @@ bool QR_16_7_6_decode(unsigned char *rxBits)
             else
             {
                 rxBits[QR_16_7_6_m_corr[syndromeI][i]] ^= 1; // flip bit
+                corrections++;
             }
         }
 
         if (i == 0)
+        {
+            return false;
+        }
+        if (corrections > 1) //no more than 1-bit error, else consider failure
         {
             return false;
         }

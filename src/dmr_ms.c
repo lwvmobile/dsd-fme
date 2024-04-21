@@ -203,7 +203,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   if(QR_16_7_6_decode(EmbeddedSignalling))
   {
     EmbeddedSignallingOk = 1;
-    cc = ((EmbeddedSignalling[0] << 3) + (EmbeddedSignalling[1] << 2) + (EmbeddedSignalling[2] << 1) + EmbeddedSignalling[3]);
+    state->dmr_color_code = cc = ((EmbeddedSignalling[0] << 3) + (EmbeddedSignalling[1] << 2) + (EmbeddedSignalling[2] << 1) + EmbeddedSignalling[3]);
     power = EmbeddedSignalling[4];
     lcss = ((EmbeddedSignalling[5] << 1) + EmbeddedSignalling[6]);
 
