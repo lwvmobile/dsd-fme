@@ -17,38 +17,6 @@
 
 #include "dsd.h"
 
-//fix from YorgosTheodorakis fork -- https://github.com/YorgosTheodorakis/dsd-fme/commit/7884ee555521a887d388152b3b1f11f20433a94b
-char * getTimeF(void) //get pretty hhmmss timestamp
-{
-  char * curr = (char *) malloc(9);
-  time_t t = time(NULL);
-  struct tm * ptm = localtime(& t);
-  sprintf(
-    curr,
-    "%02d%02d%02d",
-    ptm->tm_hour,
-    ptm->tm_min,
-    ptm->tm_sec
-  );
-  return curr;
-}
-
-char * getDateF(void) {
-  #ifdef AERO_BUILD
-  char datename[80];
-  #else
-  char datename[99];
-  #endif
-  char * curr2;
-  struct tm * to;
-  time_t t;
-  t = time(NULL);
-  to = localtime( & t);
-  strftime(datename, sizeof(datename), "%Y%m%d", to);
-  curr2 = strtok(datename, " ");
-  return curr2;
-}
-
 void saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
 {
   int i, j, k;
@@ -397,7 +365,10 @@ void openMbeOutFile (dsd_opts * opts, dsd_state * state)
   int i, j;
   char ext[5];
   char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
-  timestr = getTimeF();
+  char * datestr;
+
+  timestr = getTime();
+  datestr = getDate();
 
   //phase 1 and provoice
   if ( (state->synctype == 0) || (state->synctype == 1) || (state->synctype == 14) || (state->synctype == 15) )
@@ -423,7 +394,7 @@ void openMbeOutFile (dsd_opts * opts, dsd_state * state)
 
   state->tgcount = 0;
 
-  sprintf (opts->mbe_out_file, "%s %s S1%s", getDateF(), timestr, ext);
+  sprintf (opts->mbe_out_file, "%s %s S1%s", datestr, timestr, ext);
 
   sprintf (opts->mbe_out_path, "%s%s", opts->mbe_out_dir, opts->mbe_out_file);
 
@@ -439,6 +410,7 @@ void openMbeOutFile (dsd_opts * opts, dsd_state * state)
 
   fflush (opts->mbe_out_f);
   free (timestr); //free allocated memory to prevent memory leak
+  free (datestr);
 }
 
 void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
@@ -447,7 +419,10 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
   int i, j;
   char ext[5];
   char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
-  timestr = getTimeF();
+  char * datestr;
+
+  timestr = getTime();
+  datestr = getDate();
 
   //phase 1 and provoice
   if ( (state->synctype == 0) || (state->synctype == 1) || (state->synctype == 14) || (state->synctype == 15) )
@@ -473,7 +448,7 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
 
   state->tgcount = 0;
 
-  sprintf (opts->mbe_out_fileR, "%s %s S2%s", getDateF(), timestr, ext);
+  sprintf (opts->mbe_out_fileR, "%s %s S2%s", datestr, timestr, ext);
 
   sprintf (opts->mbe_out_path, "%s%s", opts->mbe_out_dir, opts->mbe_out_fileR);
 
@@ -489,6 +464,7 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
 
   fflush (opts->mbe_out_fR);
   free (timestr); //free allocated memory to prevent memory leak
+  free (datestr);
 }
 
 void openWavOutFile (dsd_opts * opts, dsd_state * state)

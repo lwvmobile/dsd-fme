@@ -18,45 +18,14 @@
 #include "dsd.h"
 #include <locale.h>
 
-char * getTime(void) //get pretty hh:mm:ss timestamp
-{
-  time_t t = time(NULL);
-
-  char * curr;
-  char * stamp = asctime(localtime( & t));
-
-  curr = strtok(stamp, " ");
-  curr = strtok(NULL, " ");
-  curr = strtok(NULL, " ");
-  curr = strtok(NULL, " ");
-
-  return curr;
-}
-
-char * getDate(void) {
-  #ifdef AERO_BUILD
-  char datename[80];
-  #else
-  char datename[99];
-  #endif
-  char * curr2;
-  struct tm * to;
-  time_t t;
-  t = time(NULL);
-  to = localtime( & t);
-  strftime(datename, sizeof(datename), "%Y-%m-%d", to);
-  curr2 = strtok(datename, " ");
-  return curr2;
-}
-
 void
 printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset, char *modulation)
 {
   UNUSED3(state, offset, modulation);
-
+  char * timestr = getTimeC();
   if (opts->verbose > 0)
     {
-      fprintf (stderr,"%s ", getTime());
+      fprintf (stderr,"%s ", timestr);
       fprintf (stderr,"Sync: %s ", frametype);
     }
   if (opts->verbose > 2)
@@ -71,6 +40,8 @@ printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset,
     {
       //fprintf (stderr,"g: %f ", state->aout_gain);
     }
+
+  free (timestr);
 
 }
 

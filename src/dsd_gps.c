@@ -119,10 +119,14 @@ void lip_protocol_decoder (dsd_opts * opts, dsd_state * state, uint8_t * input)
     FILE * pFile; //file pointer
     if (opts->lrrp_file_output == 1)
     {
+
+      char * datestr = getDate();
+      char * timestr = getTime();
+
       //open file by name that is supplied in the ncurses terminal, or cli
       pFile = fopen (opts->lrrp_out_file, "a");
-      fprintf (pFile, "%s\t", getDateL() );
-      fprintf (pFile, "%s\t", getTimeL() );
+      fprintf (pFile, "%s\t", datestr );
+      fprintf (pFile, "%s\t", timestr );
       fprintf (pFile, "%08d\t", add_hash);
       fprintf (pFile, "%.5lf\t", latitude);
       fprintf (pFile, "%.5lf\t", longitude);
@@ -130,6 +134,9 @@ void lip_protocol_decoder (dsd_opts * opts, dsd_state * state, uint8_t * input)
       fprintf (pFile, "%d\t", dt); //direction of travel
       fprintf (pFile, "\n");
       fclose (pFile);
+
+      free (datestr);
+      free (timestr);
 
     }
 
@@ -219,14 +226,18 @@ void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint
   FILE * pFile; //file pointer
   if (opts->lrrp_file_output == 1)
   {
+
+    char * datestr = getDate();
+    char * timestr = getTime();
+
     int s = (int)fkph; //rounded interger format for the log report
     int a = 0;
     if (type == 2)
       a = nmea_cog; //long format only
     //open file by name that is supplied in the ncurses terminal, or cli
     pFile = fopen (opts->lrrp_out_file, "a");
-    fprintf (pFile, "%s\t", getDateL() );
-    fprintf (pFile, "%s\t", getTimeL() ); //could switch to UTC time if desired, but would require local user offset
+    fprintf (pFile, "%s\t", datestr );
+    fprintf (pFile, "%s\t", timestr ); //could switch to UTC time if desired, but would require local user offset
     fprintf (pFile, "%08d\t", src);
     fprintf (pFile, "%.6lf\t", latitude);
     fprintf (pFile, "%.6lf\t", longitude);
@@ -234,6 +245,9 @@ void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint
     fprintf (pFile, "%d\t ", a);
     fprintf (pFile, "\n");
     fclose (pFile);
+
+    free (datestr);
+    free (timestr);
 
   }
 
@@ -337,14 +351,18 @@ void nmea_harris (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t 
   FILE * pFile; //file pointer
   if (opts->lrrp_file_output == 1)
   {
+
+    char * datestr = getDate();
+    char * timestr = getTime();
+
     //rounded interger formats for the log report
     int s = (int)fkph;
     int a = nmea_cog;
 
     //open file by name that is supplied in the ncurses terminal, or cli
     pFile = fopen (opts->lrrp_out_file, "a");
-    fprintf (pFile, "%s\t", getDateL() );
-    fprintf (pFile, "%s\t", getTimeL() ); //could switch to UTC time on PDU if desired
+    fprintf (pFile, "%s\t", datestr );
+    fprintf (pFile, "%s\t", timestr ); //could switch to UTC time on PDU if desired
     fprintf (pFile, "%08d\t", src);
     fprintf (pFile, "%.6lf\t", latitude);
     fprintf (pFile, "%.6lf\t", longitude);
@@ -352,6 +370,9 @@ void nmea_harris (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t 
     fprintf (pFile, "%d\t ", a);
     fprintf (pFile, "\n");
     fclose (pFile);
+
+    free (datestr);
+    free (timestr);
 
   }
 
@@ -464,10 +485,14 @@ void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
   FILE * pFile; //file pointer
   if (opts->lrrp_file_output == 1)
   {
+
+    char * datestr = getDate();
+    char * timestr = getTime();
+
     //open file by name that is supplied in the ncurses terminal, or cli
     pFile = fopen (opts->lrrp_out_file, "a");
-    fprintf (pFile, "%s\t", getDateL() );
-    fprintf (pFile, "%s\t", getTimeL() );
+    fprintf (pFile, "%s\t", datestr );
+    fprintf (pFile, "%s\t", timestr );
     fprintf (pFile, "%08d\t", src);
     fprintf (pFile, "%.6lf\t", lat_dec);
     fprintf (pFile, "%.6lf\t", lon_dec);
@@ -475,6 +500,9 @@ void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
     fprintf (pFile, "%d\t ", a);
     fprintf (pFile, "\n");
     fclose (pFile);
+
+    free (datestr);
+    free (timestr);
 
   }
 
@@ -561,14 +589,18 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
       FILE * pFile; //file pointer
       if (opts->lrrp_file_output == 1)
       {
+
+        char * datestr = getDate();
+        char * timestr = getTime();
+
         int src = 0;
         if (slot == 0) src = state->lasttg;
         if (slot == 1) src = state->lasttgR;
 
         //open file by name that is supplied in the ncurses terminal, or cli
         pFile = fopen (opts->lrrp_out_file, "a");
-        fprintf (pFile, "%s\t", getDateL() );
-        fprintf (pFile, "%s\t", getTimeL() );
+        fprintf (pFile, "%s\t", datestr );
+        fprintf (pFile, "%s\t", timestr );
         fprintf (pFile, "%08d\t", src);
         fprintf (pFile, "%.5lf\t", latitude);
         fprintf (pFile, "%.5lf\t", longitude);
@@ -667,10 +699,13 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
         if (slot == 0) src = state->lastsrc;
         if (slot == 1) src = state->lastsrcR;
 
+        char * datestr = getDate();
+        char * timestr = getTime();
+
         //open file by name that is supplied in the ncurses terminal, or cli
         pFile = fopen (opts->lrrp_out_file, "a");
-        fprintf (pFile, "%s\t", getDateL() );
-        fprintf (pFile, "%s\t", getTimeL() );
+        fprintf (pFile, "%s\t", datestr );
+        fprintf (pFile, "%s\t", timestr );
         fprintf (pFile, "%08d\t", src);
         fprintf (pFile, "%.5lf\t", latitude);
         fprintf (pFile, "%.5lf\t", longitude);
@@ -678,6 +713,9 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
         fprintf (pFile, "0\t " ); //zero for azimuth
         fprintf (pFile, "\n");
         fclose (pFile);
+
+        free (datestr);
+        free (timestr);
 
       }
 

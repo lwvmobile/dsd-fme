@@ -8,33 +8,6 @@
 
 #include "dsd.h"
 
-char * getTimeL(void) //get pretty hh:mm:ss timestamp
-{
-  time_t t = time(NULL);
-
-  char * curr;
-  char * stamp = asctime(localtime( & t));
-
-  curr = strtok(stamp, " ");
-  curr = strtok(NULL, " ");
-  curr = strtok(NULL, " ");
-  curr = strtok(NULL, " ");
-
-  return curr;
-}
-
-char * getDateL(void) {
-  char datename[120]; 
-  char * curr2;
-  struct tm * to;
-  time_t t;
-  t = time(NULL);
-  to = localtime( & t);
-  strftime(datename, sizeof(datename), "%Y/%m/%d", to);
-  curr2 = strtok(datename, " ");
-  return curr2;
-}
-
 void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[])
 {
 
@@ -274,16 +247,21 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
       FILE * pFile; //file pointer
       if (opts->lrrp_file_output == 1)
       {
+        char * timestr  = getTime();
+        char * datestr  = getDate();
+
         //open file by name that is supplied in the ncurses terminal, or cli
         pFile = fopen (opts->lrrp_out_file, "a");
         //write current date/time if not present in LRRP data
-        if (!year) fprintf (pFile, "%s\t", getDateL() ); //current date, only add this IF no included timestamp in LRRP data?
-        if (!year) fprintf (pFile, "%s\t", getTimeL() ); //current timestamp, only add this IF no included timestamp in LRRP data?
+        if (!year) fprintf (pFile, "%s\t", datestr ); //current date, only add this IF no included timestamp in LRRP data?
+        if (!year) fprintf (pFile, "%s\t", timestr ); //current timestamp, only add this IF no included timestamp in LRRP data?
         if (year) fprintf (pFile, "%04d/%02d/%02d\t%02d:%02d:%02d\t", year, month, day, hour, minute, second); //add timestamp from decoded audio if available
         //write data header source if not available in lrrp data
         if (!source) fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
         if (source) fprintf (pFile, "%08d\t", source); //add source form decoded audio if available, else its from the header
-
+        
+        free (timestr);
+        free (datestr);
       }
 
       if (pot_report)

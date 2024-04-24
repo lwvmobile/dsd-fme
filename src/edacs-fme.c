@@ -21,38 +21,6 @@
  *-----------------------------------------------------------------------------*/
 #include "dsd.h"
 
-char * getDateE(void) {
-  #ifdef AERO_BUILD
-  char datename[80];
-  #else
-  char datename[99];
-  #endif
-  char * curr2;
-  struct tm * to;
-  time_t t;
-  t = time(NULL);
-  to = localtime( & t);
-  strftime(datename, sizeof(datename), "%Y%m%d", to);
-  curr2 = strtok(datename, " ");
-  return curr2;
-}
-
-//fix from YorgosTheodorakis fork -- https://github.com/YorgosTheodorakis/dsd-fme/commit/7884ee555521a887d388152b3b1f11f20433a94b
-char * getTimeE(void) //get pretty hhmmss timestamp
-{
-  char * curr = (char *) malloc(9);
-  time_t t = time(NULL);
-  struct tm * ptm = localtime(& t);
-  sprintf(
-    curr,
-    "%02d%02d%02d",
-    ptm->tm_hour,
-    ptm->tm_min,
-    ptm->tm_sec
-  );
-  return curr;
-}
-
 char * getLcnStatusString(int lcn)
 {
   if (lcn == 26 || lcn == 27)
@@ -473,7 +441,9 @@ void edacs(dsd_opts * opts, dsd_state * state)
   state->edacs_s_mask = (1 << state->edacs_s_bits) - 1;
 
   char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
-  timestr = getTimeE();
+  char * datestr;
+  timestr = getTime();
+  datestr = getDate();
 
   state->edacs_vc_lcn = -1; //init on negative for ncurses and tuning
 
@@ -1000,7 +970,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             //openwav file and do per call right here, should probably check as well to make sure we have a valid trunking method active (rigctl, rtl)
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
-              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %d SRC %d.wav", getDateE(), timestr, state->edacs_site_id, group, source);
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %d SRC %d.wav", datestr, timestr, state->edacs_site_id, group, source);
               if (is_digital == 1)
                 openWavOutFile (opts, state);
               else
@@ -1115,7 +1085,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             //openwav file and do per call right here, should probably check as well to make sure we have a valid trunking method active (rigctl, rtl)
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
-              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %d SRC %d I-Call.wav", getDateE(), timestr, state->edacs_site_id, target, source);
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %d SRC %d I-Call.wav", datestr, timestr, state->edacs_site_id, target, source);
               if (is_digital == 1)
                 openWavOutFile (opts, state);
               else
@@ -1221,7 +1191,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             //openwav file and do per call right here, should probably check as well to make sure we have a valid trunking method active (rigctl, rtl)
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
-              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld SRC %d All-Call.wav", getDateE(), timestr, state->edacs_site_id, source);
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld SRC %d All-Call.wav", datestr, timestr, state->edacs_site_id, source);
               if (is_digital == 1)
                 openWavOutFile (opts, state);
               else
@@ -1400,7 +1370,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             //openwav file and do per call right here
             if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
             {
-              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %04d SRC %05d.wav", getDateE(), timestr, state->edacs_site_id, group, lid);
+              sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %04d SRC %05d.wav", datestr, timestr, state->edacs_site_id, group, lid);
               if (is_digital == 0) openWavOutFile48k (opts, state); //analog at 48k
               else                 openWavOutFile (opts, state); //digital
             }
@@ -1652,8 +1622,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
               //openwav file and do per call right here
               if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
               {
-                if (is_individual == 0) sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %04d SRC %05d.wav", getDateE(), timestr, state->edacs_site_id, target, state->lastsrc);
-                else                    sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %05d SRC %05d I-Call.wav", getDateE(), timestr, state->edacs_site_id, target, state->lastsrc);
+                if (is_individual == 0) sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TG %04d SRC %05d.wav", datestr, timestr, state->edacs_site_id, target, state->lastsrc);
+                else                    sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %05d SRC %05d I-Call.wav", datestr, timestr, state->edacs_site_id, target, state->lastsrc);
                 if (is_digital == 0) openWavOutFile48k (opts, state); //analog at 48k
                 else                 openWavOutFile (opts, state); //digital
               }
@@ -1763,7 +1733,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               //openwav file and do per call right here
               if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
               {
-                sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %05d SRC %05d I-Call.wav", getDateE(), timestr, state->edacs_site_id, target, state->lastsrc);
+                sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld TGT %05d SRC %05d I-Call.wav", datestr, timestr, state->edacs_site_id, target, state->lastsrc);
                 if (is_digital == 0) openWavOutFile48k (opts, state); //analog at 48k
                 else                 openWavOutFile (opts, state); //digital
               }
@@ -2056,7 +2026,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
                 //openwav file and do per call right here
                 if (opts->dmr_stereo_wav == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3))
                 {
-                  sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld SRC %05d All-Call.wav", getDateE(), timestr, state->edacs_site_id, state->lastsrc);
+                  sprintf (opts->wav_out_file, "./WAV/%s %s EDACS Site %lld SRC %05d All-Call.wav", datestr, timestr, state->edacs_site_id, state->lastsrc);
                   if (is_digital == 0) openWavOutFile48k (opts, state); //analog at 48k
                   else                 openWavOutFile (opts, state); //digital
                 }
@@ -2166,6 +2136,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
 
   free (timestr); //free allocated memory to prevent memory leak
+  free (datestr);
   fprintf (stderr, "\n");
 
 }

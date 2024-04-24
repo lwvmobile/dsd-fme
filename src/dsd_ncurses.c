@@ -31,6 +31,9 @@ struct stat st_wav = {0};
 static char alias_ch[10][50];
 int reset = 0;
 char * timestr;
+char * datestr;
+char * timestrC;
+char * datestrH;
 int tg;
 int tgR;
 int tgn;
@@ -256,64 +259,7 @@ void beeper (dsd_opts * opts, dsd_state * state, int lr)
 
 }
 
-char * getDateN(void) {
-  #ifdef AERO_BUILD
-  char datename[80];
-  #else
-  char datename[99];
-  #endif
-  char * curr2;
-  struct tm * to;
-  time_t t;
-  t = time(NULL);
-  to = localtime( & t);
-  strftime(datename, sizeof(datename), "%Y%m%d", to);
-  curr2 = strtok(datename, " ");
-  return curr2;
-}
-
 time_t nowN;
-
-//fix from YorgosTheodorakis fork -- https://github.com/YorgosTheodorakis/dsd-fme/commit/7884ee555521a887d388152b3b1f11f20433a94b
-char * getTimeN(void) //get pretty hhmmss timestamp
-{
-  char * curr = (char *) malloc(9);
-  time_t t = time(NULL);
-  struct tm * ptm = localtime(& t);
-  sprintf(
-    curr,
-    "%02d%02d%02d",
-    ptm->tm_hour,
-    ptm->tm_min,
-    ptm->tm_sec
-  );
-  return curr;
-}
-
-//this version is broken now in Cygwin with the 80 value, reverted back
-char * getDateC(time_t t) {
-  char datename[99];
-  char * curr2;
-  struct tm * to;
-
-  to = localtime( & t);
-  strftime(datename, sizeof(datename), "%Y-%m-%d", to);
-  curr2 = strtok(datename, " ");
-  return curr2;
-}
-
-char * getTimeC(time_t t) //get pretty hh:mm:ss timestamp
-{
-  char * curr;
-  char * stamp = asctime(localtime( & t));
-
-  curr = strtok(stamp, " ");
-  curr = strtok(NULL, " ");
-  curr = strtok(NULL, " ");
-  curr = strtok(NULL, " ");
-
-  return curr;
-}
 
 int isCustomAfsString(dsd_state * state) {
   return state->edacs_a_bits != 4 || state->edacs_f_bits != 4 || state->edacs_s_bits != 3;
@@ -710,7 +656,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         print_menuc(test_win, highlightc);
         if (choicec == 2)
         {
-          sprintf (opts->wav_out_file, "%s %s DSD-FME-DECODED.wav", getDateN(), timestr);
+          sprintf (opts->wav_out_file, "%s %s DSD-FME-DECODED.wav", datestr, timestr);
           openWavOutFile (opts, state);
         }
         if (choicec == 3)
@@ -2004,7 +1950,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   uint8_t idas = 0;
   int level = 0;
   int c = 0;
-  timestr = getTimeN();
+
+  //for filenames (no colons, etc)
+  timestr  = getTime();
+  datestr  = getDate();
+
+  //for display
+  timestrC = getTimeC();
+  datestrH = getDateH();
 
   if (opts->audio_in_type != 1) //can't run getch/menu when using STDIN -
   {
@@ -2187,7 +2140,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "./%s/%s %s NXDN - RAN %d - TGT %d - SRC %d.wav", opts->wav_out_dir, getDateN(), timestr, rn, tgn, src);
+      sprintf (opts->wav_out_file, "./%s/%s %s NXDN - RAN %d - TGT %d - SRC %d.wav", opts->wav_out_dir, datestr, timestr, rn, tgn, src);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2232,7 +2185,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "./%s/%s %s MS - CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), timestr, dcc, tg, rd);
+      sprintf (opts->wav_out_file, "./%s/%s %s MS - CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, tg, rd);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2275,7 +2228,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
 
-      sprintf (opts->wav_out_file, "./%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), timestr, dcc, tg, rd);
+      sprintf (opts->wav_out_file, "./%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, tg, rd);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2317,7 +2270,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileR (opts, state);
-      sprintf (opts->wav_out_fileR, "./%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, getDateN(), timestr, dcc, tgR, rdR);
+      sprintf (opts->wav_out_fileR, "./%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, tgR, rdR);
       openWavOutFileR (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2358,7 +2311,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "./%s/%s %s P1 - NAC %X - TGT %d - SRC %d.wav", opts->wav_out_dir, getDateN(), timestr, nc, tg, rd);
+      sprintf (opts->wav_out_file, "./%s/%s %s P1 - NAC %X - TGT %d - SRC %d.wav", opts->wav_out_dir, datestr, timestr, nc, tg, rd);
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -3850,11 +3803,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //only print if a valid time was assigned to the matrix, and not EDACS/PV, and source is not zero
       if ( ((time(NULL) - call_matrix[9-j][5]) < 999999) && call_matrix[9-j][0] != 14 && call_matrix[9-j][0] != 15 && call_matrix[9-j][0] != 37 && call_matrix[9-j][0] != 38 && call_matrix[9-j][2] != 0) //
       {
-        // printw ("| %s ", SyncTypes[call_matrix[9-j][0]]); //sync type
+        char * timeCH = getTimeN(call_matrix[9-j][5]);
+        char * dateCH = getDateN(call_matrix[9-j][5]);
 
         printw ("| ");
-        printw ("%s ", getDateC(call_matrix[9-j][5]) );
-        printw ("%s ", getTimeC(call_matrix[9-j][5]) );
+        printw ("%s ", dateCH);
+        printw ("%s ", timeCH);
+
+        free (dateCH);
+        free (timeCH);
 
         if (lls == 28 || lls == 29)
         {
@@ -3925,8 +3882,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         if (call_matrix[j][2] != 0)
         {
           printw ("| ");
-          printw ("%s ", getDateC(call_matrix[j][5]) );
-          printw ("%s ", getTimeC(call_matrix[j][5]) );
+          char * timeCHE = getTimeN(call_matrix[j][5]);
+          char * dateCHE = getDateN(call_matrix[j][5]);
+
+          printw ("| ");
+          printw ("%s ", dateCHE);
+          printw ("%s ", timeCHE);
+
+          free (dateCHE);
+          free (timeCHE);
+
           printw ("LCN [%2lld] ", call_matrix[j][1]);
           if (state->ea_mode == 1)
           {
@@ -4309,7 +4274,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (c == 82) //'R', save symbol capture bin with date/time string as name
   {
-    sprintf (opts->symbol_out_file, "%s %s.bin", getDateN(), timestr);
+    sprintf (opts->symbol_out_file, "%s %s.bin", datestr, timestr);
     openSymbolOutFile (opts, state);
   }
 
@@ -4881,6 +4846,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //TODO: Redo this in edacs and file, making a seperate char * timestr instead of calling GetTime
   //directly from the sprintf command
   free (timestr);
+  free (datestr);
+  free (timestrC);
+  free (datestrH);
 
 } //end ncursesPrinter
 
