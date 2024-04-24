@@ -30,8 +30,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   
   const int *w, *x, *y, *z;
   char sync[25];
-  char syncdata[48];
-  unsigned char EmbeddedSignalling[16];
+  uint8_t syncdata[48];
+  memset (syncdata, 0, sizeof(syncdata));
+
+  uint8_t emb_pdu[16];
+  memset (emb_pdu, 0, sizeof(emb_pdu));
 
   uint8_t emb_ok = 0;
   uint8_t tact_okay = 0;
@@ -114,6 +117,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   memset (ambe_fr, 0, sizeof(ambe_fr));
   memset (ambe_fr2, 0, sizeof(ambe_fr2));
   memset (ambe_fr3, 0, sizeof(ambe_fr3));
+  memset (emb_pdu, 0, sizeof(emb_pdu));
+  memset (syncdata, 0, sizeof(syncdata));
 
   internalslot = -1; //reset here so we know if this value is being set properly
   for(i = 0; i < 12; i++)
@@ -202,7 +207,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   {
     dibit = getDibit(opts, state);
     state->dmr_stereo_payload[i+66] = dibit;
-    sync[i] = (dibit | 1) + 48; //how does this work again?
+    sync[i] = (dibit | 1) + 48; //Sync Burst String as ones and threes
 
     syncdata[(2*i)]   = (1 & (dibit >> 1));  // bit 1
     syncdata[(2*i)+1] = (1 & dibit);         // bit 0
@@ -223,8 +228,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   }
   sync[24] = 0;
 
-  for(i = 0; i < 8; i++) EmbeddedSignalling[i] = syncdata[i];
-  for(i = 0; i < 8; i++) EmbeddedSignalling[i + 8] = syncdata[i + 40];
+  for(i = 0; i < 8; i++) emb_pdu[i + 0] = syncdata[i];
+  for(i = 0; i < 8; i++) emb_pdu[i + 8] = syncdata[i + 40];
 
   //Continue Second AMBE Frame, 18 after Sync or EmbeddedSignalling
   for(i = 0; i < 18; i++)
@@ -354,16 +359,17 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   {
 
     //check the embedded signalling, if bad at this point, we probably aren't quite in sync 
-    if(QR_16_7_6_decode(EmbeddedSignalling)) emb_ok = 1;
+    if(QR_16_7_6_decode(emb_pdu)) emb_ok = 1;
     else emb_ok = 0;
 
     //disable the goto END; if this causes more problems than fixing on late entry dual voices i.e., lots of forced resyncs
     if ( (strcmp (sync, DMR_BS_VOICE_SYNC) != 0) && emb_ok == 0) goto END; //fprintf (stderr, "EMB BAD? ");
     else if (emb_ok == 1)
     {
-      cc = ((EmbeddedSignalling[0] << 3) + (EmbeddedSignalling[1] << 2) + (EmbeddedSignalling[2] << 1) + EmbeddedSignalling[3]);
-      power = EmbeddedSignalling[4];
-      lcss = ((EmbeddedSignalling[5] << 1) + EmbeddedSignalling[6]);
+      cc = ((emb_pdu[0] << 3) + (emb_pdu[1] << 2) + (emb_pdu[2] << 1) + emb_pdu[3]);
+      power = emb_pdu[4];
+      lcss = ((emb_pdu[5] << 1) + emb_pdu[6]);
+      state->dmr_color_code = state->color_code = cc;
     }
 
 

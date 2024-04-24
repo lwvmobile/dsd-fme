@@ -26,8 +26,11 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   const int *w, *x, *y, *z;
   char sync[25];
-  char syncdata[48];
-  uint8_t EmbeddedSignalling[16];
+  uint8_t syncdata[48];
+  memset (syncdata, 0, sizeof(syncdata));
+
+  uint8_t emb_pdu[16];
+  memset (emb_pdu, 0, sizeof(emb_pdu));
 
   //cach
   char cachdata[25]; 
@@ -36,8 +39,8 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   uint8_t tact_bits[7];
 
   uint8_t tact_okay = 0;
-  uint8_t EmbeddedSignallingOk = 0;
-  UNUSED(EmbeddedSignallingOk);
+  uint8_t emb_ok = 0;
+  UNUSED(emb_ok);
 
   uint8_t internalslot;
   uint8_t vc;
@@ -196,17 +199,17 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   }
 
-  for(i = 0; i < 8; i++) EmbeddedSignalling[i] = syncdata[i];
-  for(i = 0; i < 8; i++) EmbeddedSignalling[i + 8] = syncdata[i + 40];
+  for(i = 0; i < 8; i++) emb_pdu[i + 0] = syncdata[i];
+  for(i = 0; i < 8; i++) emb_pdu[i + 8] = syncdata[i + 40];
   
-  EmbeddedSignallingOk = -1;
-  if(QR_16_7_6_decode(EmbeddedSignalling))
+  emb_ok = -1;
+  if(QR_16_7_6_decode(emb_pdu))
   {
-    EmbeddedSignallingOk = 1;
-    state->dmr_color_code = cc = ((EmbeddedSignalling[0] << 3) + (EmbeddedSignalling[1] << 2) + (EmbeddedSignalling[2] << 1) + EmbeddedSignalling[3]);
-    power = EmbeddedSignalling[4];
-    lcss = ((EmbeddedSignalling[5] << 1) + EmbeddedSignalling[6]);
-
+    emb_ok = 1;
+    cc = ((emb_pdu[0] << 3) + (emb_pdu[1] << 2) + (emb_pdu[2] << 1) + emb_pdu[3]);
+    power = emb_pdu[4];
+    lcss = ((emb_pdu[5] << 1) + emb_pdu[6]);
+    state->dmr_color_code = state->color_code = cc;
   }
 
   //Continue Second AMBE Frame, 18 after Sync or EmbeddedSignalling

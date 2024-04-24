@@ -1521,11 +1521,14 @@ bool QR_16_7_6_decode(unsigned char *rxBits)
         {
             return false;
         }
-        if (corrections > 1) //no more than 1-bit error, else consider failure
-        {
-            return false;
-        }
+
     }
+
+    //disabling again for now
+    // if (corrections > 1) //no more than 1-bit error, else consider failure?
+    // {
+    //     return false;
+    // }
 
     return true;
 }
