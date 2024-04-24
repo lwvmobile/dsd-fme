@@ -244,6 +244,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   //dmr buffer
   state->dmr_payload_p = state->dibit_buf + 200;
   memset (state->dmr_payload_buf, 0, sizeof (int) * 200);
+  memset (state->dmr_stereo_payload, 1, sizeof(int) * 144);
   //dmr buffer end
   
   //close MBE out files
@@ -803,6 +804,7 @@ initState (dsd_state * state)
   state->dmr_payload_buf = malloc (sizeof (int) * 1000000);
   state->dmr_payload_p = state->dmr_payload_buf + 200;
   memset (state->dmr_payload_buf, 0, sizeof (int) * 200);
+  memset (state->dmr_stereo_payload, 1, sizeof(int) * 144);
   //dmr buffer end
   state->repeat = 0;
 

@@ -682,7 +682,6 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
     dibit_p++;
     if(opts->inverted_dmr == 1) dibit = (dibit ^ 2) & 3;
     state->dmr_stereo_payload[i] = dibit;
-
   }
 
   for (i = 0; i < 54; i++)
@@ -690,7 +689,6 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
     dibit = getDibit(opts, state);
     if(opts->inverted_dmr == 1) dibit = (dibit ^ 2) & 3;
     state->dmr_stereo_payload[i+90] = dibit;
-
   }
 
   fprintf (stderr, "%s ", getTime());
@@ -717,16 +715,17 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   state->directmode = 0; //flag off
 
   //should just be loaded in the dmr_payload_buffer instead now
+  //but we want to run getDibit so the buffer has actual good values in it
   for (i = 0; i < 144; i++) //66
   {
     dibit = getDibit(opts, state);
-    state->dmr_stereo_payload[i] = dibit;
+    state->dmr_stereo_payload[i] = 1; //set to one so first frame will fail intentionally instead of zero fill
   }
   //CACH + First Half Payload = 12 + 54
   for (i = 0; i < 66; i++) //66
   {
     dibit = getDibit(opts, state);
-    state->dmr_stereo_payload[i] = dibit;
+    state->dmr_stereo_payload[i+66] = 1; ////set to one so first frame will fail intentionally instead of zero fill
   }
 
 }
