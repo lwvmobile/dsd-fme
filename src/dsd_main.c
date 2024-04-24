@@ -279,6 +279,9 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     //only reset cap+ rest channel if not trunking
     state->dmr_rest_channel = -1;
 
+    //DMR Color Code
+    state->dmr_color_code = 16;
+
     //zero out nxdn site/srv/cch info if not trunking
     state->nxdn_location_site_code = 0;
     state->nxdn_location_sys_code = 0;
