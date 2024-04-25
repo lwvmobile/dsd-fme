@@ -13,7 +13,7 @@
 //processing voice and/or data on both BS slots (channels) simultaneously
 void dmrBS (dsd_opts * opts, dsd_state * state)
 {
-  char * timestr;
+  char * timestr = NULL;
   
   int i, dibit;
   char ambe_fr[4][24];
@@ -549,14 +549,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     ncursesPrinter(opts, state);
   }
 
-  //both here and at bottom SHOULD be okay with the NULL check, if not, disable this one
+  //
   if (timestr != NULL)
   {
-    //debug
-    // fprintf (stderr, " FREE: 1; ");
     free (timestr);
+    timestr = NULL;
   }
-  // else fprintf (stderr, " NO FREE: 1; ");
 
  } // while loop
 
@@ -604,14 +602,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
    
  }
 
- //second free
+ //
  if (timestr != NULL)
- {
-  //debug
-  // fprintf (stderr, " FREE: 2; ");
-  free (timestr);
- }
-//  else fprintf (stderr, " NO FREE: 2; ");
+  {
+    free (timestr);
+    timestr = NULL;
+  }
 
 }
 
@@ -923,6 +919,10 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     dmr_reset_blocks (opts, state); 
   }
 
-  if (timestr != NULL) free (timestr);
+  if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
+  }
 
 }

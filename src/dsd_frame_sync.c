@@ -36,7 +36,11 @@ printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset,
   if (opts->verbose > 2)
     //fprintf (stderr,"g: %f ", state->aout_gain);
 
-  if (timestr != NULL) free (timestr);
+  if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
+  }
 
 }
 

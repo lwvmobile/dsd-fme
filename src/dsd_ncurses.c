@@ -654,11 +654,19 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         print_menuc(test_win, highlightc);
         if (choicec == 2)
         {
-          char * timestr  = getTime();
-          char * datestr  = getDate();
+          char * timestr = getTime();
+          char * datestr = getDate();
           sprintf (opts->wav_out_file, "%s %s DSD-FME-DECODED.wav", datestr, timestr);
-          if (timestr != NULL) free (timestr);
-          if (datestr != NULL) free (datestr);
+          if (timestr != NULL)
+          {
+            free (timestr);
+            timestr = NULL;
+          }
+          if (datestr != NULL)
+          {
+            free (datestr);
+            datestr = NULL;
+          }
           openWavOutFile (opts, state);
         }
         if (choicec == 3)
@@ -1954,8 +1962,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   int c = 0;
 
   //for filenames (no colons, etc)
-  char * timestr  = getTime();
-  char * datestr  = getDate();
+  char * timestr = getTime();
+  char * datestr = getDate();
 
   //NOTE: Any times associates with call history are stored
   //in the array and need to be set by passing those values into
@@ -3813,8 +3821,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw ("%s ", datestrCH);
         printw ("%s ", timestrCH);
 
-        if (datestrCH != NULL) free (datestrCH);
-        if (timestrCH != NULL) free (timestrCH);
+        if (datestrCH != NULL)
+        {
+          free (datestrCH);
+          datestrCH = NULL;
+        }
+        if (timestrCH != NULL)
+        {
+          free (timestrCH);
+          timestrCH = NULL;
+        }
 
         if (lls == 28 || lls == 29)
         {
@@ -3891,8 +3907,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           printw ("%s ", datestrCHE);
           printw ("%s ", timestrCHE);
 
-          if (datestrCHE != NULL) free (datestrCHE);
-          if (timestrCHE != NULL) free (timestrCHE);
+          if (datestrCHE != NULL)
+          {
+            free (datestrCHE);
+            datestrCHE = NULL;
+          }
+          if (timestrCHE != NULL)
+          {
+            free (timestrCHE);
+            timestrCHE = NULL;
+          }
 
           printw ("LCN [%2lld] ", call_matrix[j][1]);
           if (state->ea_mode == 1)
@@ -4847,8 +4871,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
 
   //allocated memory pointer needs to be free'd
-  if (timestr != NULL) free (timestr);
-  if (datestr != NULL) free (datestr);
+  if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
+  }
+  if (datestr != NULL)
+  {
+    free (datestr);
+    datestr = NULL;
+  }
 
 } //end ncursesPrinter
 

@@ -135,8 +135,16 @@ void lip_protocol_decoder (dsd_opts * opts, dsd_state * state, uint8_t * input)
       fprintf (pFile, "\n");
       fclose (pFile);
 
-      if (datestr != NULL) free (datestr);
-      if (timestr != NULL) free (timestr);
+      if (timestr != NULL)
+      {
+        free (timestr);
+        timestr = NULL;
+      }
+      if (datestr != NULL)
+      {
+        free (datestr);
+        datestr = NULL;
+      }
 
     }
 
@@ -246,8 +254,16 @@ void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint
     fprintf (pFile, "\n");
     fclose (pFile);
 
-    if (datestr != NULL) free (datestr);
-    if (timestr != NULL) free (timestr);
+    if (timestr != NULL)
+    {
+      free (timestr);
+      timestr = NULL;
+    }
+    if (datestr != NULL)
+    {
+      free (datestr);
+      datestr = NULL;
+    }
 
   }
 
@@ -371,8 +387,16 @@ void nmea_harris (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t 
     fprintf (pFile, "\n");
     fclose (pFile);
 
-    if (datestr != NULL) free (datestr);
-    if (timestr != NULL) free (timestr);
+    if (timestr != NULL)
+    {
+      free (timestr);
+      timestr = NULL;
+    }
+    if (datestr != NULL)
+    {
+      free (datestr);
+      datestr = NULL;
+    }
 
   }
 
@@ -501,8 +525,16 @@ void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
     fprintf (pFile, "\n");
     fclose (pFile);
 
-    if (datestr != NULL) free (datestr);
-    if (timestr != NULL) free (timestr);
+    if (timestr != NULL)
+    {
+      free (timestr);
+      timestr = NULL;
+    }
+    if (datestr != NULL)
+    {
+      free (datestr);
+      datestr = NULL;
+    }
 
   }
 
@@ -714,8 +746,16 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
         fprintf (pFile, "\n");
         fclose (pFile);
 
-        if (datestr != NULL) free (datestr);
-        if (timestr != NULL) free (timestr);
+        if (timestr != NULL)
+        {
+          free (timestr);
+          timestr = NULL;
+        }
+        if (datestr != NULL)
+        {
+          free (datestr);
+          datestr = NULL;
+        }
 
       }
 

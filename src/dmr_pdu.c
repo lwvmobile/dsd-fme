@@ -260,8 +260,16 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
         if (!source) fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
         if (source) fprintf (pFile, "%08d\t", source); //add source form decoded audio if available, else its from the header
         
-        if (timestr != NULL) free (timestr);
-        if (datestr != NULL) free (datestr);
+        if (timestr != NULL)
+        {
+          free (timestr);
+          timestr = NULL;
+        }
+        if (datestr != NULL)
+        {
+          free (datestr);
+          datestr = NULL;
+        }
       }
 
       if (pot_report)

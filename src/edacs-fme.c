@@ -440,8 +440,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
   state->edacs_f_mask = (1 << state->edacs_f_bits) - 1;
   state->edacs_s_mask = (1 << state->edacs_s_bits) - 1;
 
-  char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
-  char * datestr;
+  char * timestr = NULL;
+  char * datestr = NULL;
   timestr = getTime();
   datestr = getDate();
 
@@ -2135,8 +2135,17 @@ void edacs(dsd_opts * opts, dsd_state * state)
   }
 
 
-  if (timestr != NULL) free (timestr);
-  if (datestr != NULL) free (datestr);
+  if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
+  }
+  if (datestr != NULL)
+  {
+    free (datestr);
+    datestr = NULL;
+  }
+  
   fprintf (stderr, "\n");
 
 }
