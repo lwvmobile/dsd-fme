@@ -30,8 +30,8 @@ uint32_t temp_freq = -1;
 struct stat st_wav = {0};
 static char alias_ch[10][50];
 int reset = 0;
-char * timestr;
-char * datestr;
+
+
 int tg;
 int tgR;
 int tgn;
@@ -654,7 +654,11 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         print_menuc(test_win, highlightc);
         if (choicec == 2)
         {
+          char * timestr  = getTime();
+          char * datestr  = getDate();
           sprintf (opts->wav_out_file, "%s %s DSD-FME-DECODED.wav", datestr, timestr);
+          if (timestr != NULL) free (timestr);
+          if (datestr != NULL) free (datestr);
           openWavOutFile (opts, state);
         }
         if (choicec == 3)
@@ -1950,8 +1954,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   int c = 0;
 
   //for filenames (no colons, etc)
-  timestr  = getTime();
-  datestr  = getDate();
+  char * timestr  = getTime();
+  char * datestr  = getDate();
 
   //NOTE: Any times associates with call history are stored
   //in the array and need to be set by passing those values into
