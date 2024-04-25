@@ -3803,15 +3803,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //only print if a valid time was assigned to the matrix, and not EDACS/PV, and source is not zero
       if ( ((time(NULL) - call_matrix[9-j][5]) < 999999) && call_matrix[9-j][0] != 14 && call_matrix[9-j][0] != 15 && call_matrix[9-j][0] != 37 && call_matrix[9-j][0] != 38 && call_matrix[9-j][2] != 0) //
       {
-        char * timeCH = getTimeN(call_matrix[9-j][5]);
-        char * dateCH = getDateN(call_matrix[9-j][5]);
+        char * timestrCH = getTimeN(call_matrix[9-j][5]);
+        char * datestrCH = getDateN(call_matrix[9-j][5]);
 
         printw ("| ");
-        printw ("%s ", dateCH);
-        printw ("%s ", timeCH);
+        printw ("%s ", datestrCH);
+        printw ("%s ", timestrCH);
 
-        free (dateCH);
-        free (timeCH);
+        if (datestrCH != NULL) free (datestrCH);
+        if (timestrCH != NULL) free (timestrCH);
 
         if (lls == 28 || lls == 29)
         {
@@ -3882,14 +3882,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         if (call_matrix[j][2] != 0)
         {
           printw ("| ");
-          char * timeCHE = getTimeN(call_matrix[j][5]);
-          char * dateCHE = getDateN(call_matrix[j][5]);
+          char * timestrCHE = getTimeN(call_matrix[j][5]);
+          char * datestrCHE = getDateN(call_matrix[j][5]);
 
-          printw ("%s ", dateCHE);
-          printw ("%s ", timeCHE);
+          printw ("%s ", datestrCHE);
+          printw ("%s ", timestrCHE);
 
-          free (dateCHE);
-          free (timeCHE);
+          if (datestrCHE != NULL) free (datestrCHE);
+          if (timestrCHE != NULL) free (timestrCHE);
 
           printw ("LCN [%2lld] ", call_matrix[j][1]);
           if (state->ea_mode == 1)
@@ -4840,14 +4840,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //so probably just write a function to handle c input, and when c = certain values
   //needing an entry box, then stop all of those
 
-  //allocated memory pointer needs to be free'd each time
-  //if issues arise, just delete this line.
-  //TODO: Redo this in edacs and file, making a seperate char * timestr instead of calling GetTime
-  //directly from the sprintf command
-  free (timestr);
-  free (datestr);
-  free (timestrC);
-  free (datestrH);
+  
+
+
+  //allocated memory pointer needs to be free'd
+  if (timestr != NULL) free (timestr);
+  if (datestr != NULL) free (datestr);
+  if (timestrC != NULL) free (timestrC);
+  if (datestrH != NULL) free (datestrH);
 
 } //end ncursesPrinter
 

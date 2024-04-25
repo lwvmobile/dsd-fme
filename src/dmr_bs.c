@@ -549,6 +549,15 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     ncursesPrinter(opts, state);
   }
 
+  //both here and at bottom SHOULD be okay with the NULL check, if not, disable this one
+  if (timestr != NULL)
+  {
+    //debug
+    // fprintf (stderr, " FREE: 1; ");
+    free (timestr);
+  }
+  // else fprintf (stderr, " NO FREE: 1; ");
+
  } // while loop
 
  END:
@@ -595,7 +604,14 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
    
  }
 
- free (timestr);
+ //second free
+ if (timestr != NULL)
+ {
+  //debug
+  // fprintf (stderr, " FREE: 2; ");
+  free (timestr);
+ }
+//  else fprintf (stderr, " NO FREE: 2; ");
 
 }
 
@@ -907,6 +923,6 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     dmr_reset_blocks (opts, state); 
   }
 
-  free (timestr);
+  if (timestr != NULL) free (timestr);
 
 }

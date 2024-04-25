@@ -374,7 +374,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
  state->dmr_ms_rc = 0;
  state->directmode = 0; //flag off
 
- free(timestr);
+ if (timestr != NULL) free (timestr);
 
 }
 
@@ -618,7 +618,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 
   //errors due to skipping other slot
   // cach_err = dmr_cach (opts, state, cachdata);
-  free (timestr);
+  if (timestr != NULL) free (timestr);
 
   skipDibit (opts, state, 144); //skip to next TDMA slot
   dmrMS (opts, state); //bootstrap into full TDMA frame
@@ -689,6 +689,6 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
     state->dmr_stereo_payload[i+66] = 1; ////set to one so first frame will fail intentionally instead of zero fill
   }
 
-  free (timestr);
+  if (timestr != NULL) free (timestr);
 
 }

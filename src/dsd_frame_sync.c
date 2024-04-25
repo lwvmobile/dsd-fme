@@ -22,26 +22,21 @@ void
 printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset, char *modulation)
 {
   UNUSED3(state, offset, modulation);
+
   char * timestr = getTimeC();
   if (opts->verbose > 0)
-    {
-      fprintf (stderr,"%s ", timestr);
-      fprintf (stderr,"Sync: %s ", frametype);
-    }
+  {
+    fprintf (stderr,"%s ", timestr);
+    fprintf (stderr,"Sync: %s ", frametype);
+  }
   if (opts->verbose > 2)
-    {
-      //fprintf (stderr,"o: %4i ", offset);
-    }
+    //fprintf (stderr,"o: %4i ", offset);
   if (opts->verbose > 1)
-    {
-      //fprintf (stderr,"mod: %s ", modulation); 
-    }
+    //fprintf (stderr,"mod: %s ", modulation); 
   if (opts->verbose > 2)
-    {
-      //fprintf (stderr,"g: %f ", state->aout_gain);
-    }
+    //fprintf (stderr,"g: %f ", state->aout_gain);
 
-  free (timestr);
+  if (timestr != NULL) free (timestr);
 
 }
 

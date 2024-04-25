@@ -409,8 +409,8 @@ void openMbeOutFile (dsd_opts * opts, dsd_state * state)
   fprintf (opts->mbe_out_f, "%s", ext);
 
   fflush (opts->mbe_out_f);
-  free (timestr); //free allocated memory to prevent memory leak
-  free (datestr);
+  if (timestr != NULL) free (timestr);
+  if (datestr != NULL) free (datestr);
 }
 
 void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
@@ -463,8 +463,8 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
   fprintf (opts->mbe_out_fR, "%s", ext);
 
   fflush (opts->mbe_out_fR);
-  free (timestr); //free allocated memory to prevent memory leak
-  free (datestr);
+  if (timestr != NULL) free (timestr);
+  if (datestr != NULL) free (datestr);
 }
 
 void openWavOutFile (dsd_opts * opts, dsd_state * state)

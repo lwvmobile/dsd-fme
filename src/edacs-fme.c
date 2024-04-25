@@ -2135,8 +2135,8 @@ void edacs(dsd_opts * opts, dsd_state * state)
   }
 
 
-  free (timestr); //free allocated memory to prevent memory leak
-  free (datestr);
+  if (timestr != NULL) free (timestr);
+  if (datestr != NULL) free (datestr);
   fprintf (stderr, "\n");
 
 }

@@ -874,7 +874,7 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		fprintf (stderr,"%s ", timestr);
 		fprintf (stderr, "       P25p2 ");
 		
-		free(timestr);
+		if (timestr != NULL) free (timestr);
 
 		if (state->currentslot == 0 && duid_decoded != 3 && duid_decoded != 12 && duid_decoded != 13 && duid_decoded != 4)
 		{
