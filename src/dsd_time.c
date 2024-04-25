@@ -6,22 +6,22 @@
  * 2024-04 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
-//TODO: Make sure everything still works as intended, no random crashes on free (timestr)
+//TODO: Make sure everything still works as intended, every free(timestr) has a NULL check first,
 //make sure no other loose or random time functions embedded in other files or functions, etc
 
 #include "dsd.h"
 
-//get hhmmss timestamp no colon (file operations)
+//get HHmmss timestamp no colon (file operations)
 char * getTime()
 {
-  char * curr = (char *) malloc(9);
+  char * curr = (char *) malloc(7);
   time_t t = time(NULL);
   struct tm * ptm = localtime(& t);
   sprintf(curr,"%02d%02d%02d", ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
   return curr;
 }
 
-//get hh:mm:ss timestamp with colon (Ncurses Display)
+//get HH:mm:ss timestamp with colon (Sync/Console Display)
 char * getTimeC()
 {
   char * curr = (char *) malloc(9);
@@ -31,7 +31,7 @@ char * getTimeC()
   return curr;
 }
 
-//get hh:mm:ss timestamp with colon (Ncurses Display)
+//get HH:mm:ss timestamp with colon (Ncurses Call History)
 char * getTimeN(time_t t)
 {
   char * curr = (char *) malloc(9);
@@ -50,7 +50,7 @@ char * getDate()
   return curr;
 }
 
-//get YYYY-MM-DD with hyphen (Ncurses Display)
+//get YYYY-MM-DD with hyphen (Sync/Console Display)
 char * getDateH()
 {
   char * curr = (char *) malloc(27);

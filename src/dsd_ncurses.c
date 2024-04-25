@@ -32,8 +32,6 @@ static char alias_ch[10][50];
 int reset = 0;
 char * timestr;
 char * datestr;
-char * timestrC;
-char * datestrH;
 int tg;
 int tgR;
 int tgn;
@@ -1955,9 +1953,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   timestr  = getTime();
   datestr  = getDate();
 
-  //for display
-  timestrC = getTimeC();
-  datestrH = getDateH();
+  //NOTE: Any times associates with call history are stored
+  //in the array and need to be set by passing those values into
+  //getTimeN and getDateN
 
   if (opts->audio_in_type != 1) //can't run getch/menu when using STDIN -
   {
@@ -4846,8 +4844,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //allocated memory pointer needs to be free'd
   if (timestr != NULL) free (timestr);
   if (datestr != NULL) free (datestr);
-  if (timestrC != NULL) free (timestrC);
-  if (datestrH != NULL) free (datestrH);
 
 } //end ncursesPrinter
 
