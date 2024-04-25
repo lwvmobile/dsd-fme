@@ -3885,7 +3885,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           char * timeCHE = getTimeN(call_matrix[j][5]);
           char * dateCHE = getDateN(call_matrix[j][5]);
 
-          printw ("| ");
           printw ("%s ", dateCHE);
           printw ("%s ", timeCHE);
 
