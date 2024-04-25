@@ -948,6 +948,7 @@ initState (dsd_state * state)
   state->debug_audio_errorsR = 0;
   state->debug_header_errors = 0;
   state->debug_header_critical_errors = 0;
+  state->debug_mode = 0;
 
   state->nxdn_last_ran = -1;
   state->nxdn_last_rid = 0;
@@ -1694,7 +1695,7 @@ main (int argc, char **argv)
 
   exitflag = 0;
 
-  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:")) != -1)
+  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:J")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1708,14 +1709,20 @@ main (int argc, char **argv)
           opts.call_alert = 1;
           break;
 
-        //Free'd up switches include: I, J, j, n, O, v, y
-        //all numerals have reclaimed, except for 4 and 0,1 (rc4 enforcement and single key)
+        //Free'd up switches include: j, O,
+        //
 
         //make sure to put a colon : after each if they need an argument
         //or remove colon if no argument required
 
         //NOTE: The 'K' option for single BP key has been swapped to 'b'
         //'K' is now used for hexidecimal key.csv imports
+
+        //this is a debug option hidden from users, but use it to replay .bin files on loop
+        case 'J':
+          state.debug_mode = 1;
+          fprintf (stderr, "Debug Mode Enabled; \n");
+          break;
 
         //Specify M17 encoder User Data (CAN, DST, SRC values)
         //NOTE: Disabled QPSK settings by borrowing these switches (nobody probalby used them anyways)

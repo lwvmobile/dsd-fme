@@ -2382,6 +2382,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw("%s", FM_bannerN[i]);
       if (i == 1) printw (" ESC to Menu");
       if (i == 2) printw (" 'q' to Quit ");
+      if (i == 3 && state->debug_mode == 1) printw (" DEBUG MODE!");
       if (i == 4 && opts->frame_m17 == 0) printw (" MBElib %s", versionstr);
       #ifdef USE_CODEC2
       if (i == 4 && opts->frame_m17 == 1) printw (" CODEC2");

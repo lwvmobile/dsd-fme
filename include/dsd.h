@@ -588,6 +588,7 @@ typedef struct
   unsigned int debug_audio_errorsR;
   unsigned int debug_header_errors;
   unsigned int debug_header_critical_errors;
+  int debug_mode; //debug misc things
 
   // Last dibit read
   int last_dibit;
