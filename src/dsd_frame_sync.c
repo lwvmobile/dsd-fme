@@ -29,11 +29,15 @@ printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset,
     fprintf (stderr,"%s ", timestr);
     fprintf (stderr,"Sync: %s ", frametype);
   }
-  if (opts->verbose > 2)
+
+  //oops, that made a nested if-if-if-if statement,
+  //causing a memory leak
+  
+  // if (opts->verbose > 2)
     //fprintf (stderr,"o: %4i ", offset);
-  if (opts->verbose > 1)
+  // if (opts->verbose > 1)
     //fprintf (stderr,"mod: %s ", modulation); 
-  if (opts->verbose > 2)
+  // if (opts->verbose > 2)
     //fprintf (stderr,"g: %f ", state->aout_gain);
 
   if (timestr != NULL)

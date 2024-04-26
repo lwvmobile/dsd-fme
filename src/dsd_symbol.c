@@ -661,6 +661,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       //in debug mode, re-run .bin files over and over (look for memory leaks, etc)
       if (state->debug_mode == 1)
       {
+        opts->symbolfile = NULL;
         opts->symbolfile = fopen(opts->audio_in_dev, "r");
         opts->audio_in_type = 4; //symbol capture bin files
       }
