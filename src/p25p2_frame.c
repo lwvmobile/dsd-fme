@@ -846,22 +846,6 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 	vc_counter = 0;
 	int err_counter = 0;
 
-	//add time to mirror printFrameSync
-  	char * getTime(void) //get pretty hh:mm:ss timestamp
-  	{
-    	time_t t = time(NULL);
-
-    char * curr;
-    char * stamp = asctime(localtime( & t));
-
-    curr = strtok(stamp, " ");
-    curr = strtok(NULL, " ");
-    curr = strtok(NULL, " ");
-    curr = strtok(NULL, " ");
-
-    return curr;
-  	}
-
   for (ts_counter = 0; ts_counter < 4; ts_counter++) //12
   {
 		duid_decoded = -2;
@@ -884,9 +868,18 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		}
 		duid_decoded = duid_lookup[p2_duid_complete];
 
+		char * timestr = getTimeC();
+
 		fprintf (stderr, "\n");
-		fprintf (stderr,"%s ", getTime());
+		fprintf (stderr,"%s ", timestr);
 		fprintf (stderr, "       P25p2 ");
+		
+		if (timestr != NULL)
+		{
+			free (timestr);
+			timestr = NULL;
+		}
+
 
 		if (state->currentslot == 0 && duid_decoded != 3 && duid_decoded != 12 && duid_decoded != 13 && duid_decoded != 4)
 		{

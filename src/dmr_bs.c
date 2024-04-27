@@ -13,8 +13,9 @@
 //processing voice and/or data on both BS slots (channels) simultaneously
 void dmrBS (dsd_opts * opts, dsd_state * state)
 {
-  int i, dibit;
+  char * timestr = NULL;
   
+  int i, dibit;
   char ambe_fr[4][24];
   char ambe_fr2[4][24];
   char ambe_fr3[4][24];
@@ -55,22 +56,6 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   uint8_t dummy_bits[196]; 
   memset (dummy_bits, 0, sizeof(dummy_bits));
   
-  //add time to mirror printFrameSync
-  char * getTime(void) //get pretty hh:mm:ss timestamp
-  {
-    time_t t = time(NULL);
-
-    char * curr;
-    char * stamp = asctime(localtime( & t));
-
-    curr = strtok(stamp, " ");
-    curr = strtok(NULL, " ");
-    curr = strtok(NULL, " ");
-    curr = strtok(NULL, " ");
-
-    return curr;
-  }
-
   //Init slot lights
   sprintf (state->slot1light, " slot1 ");
   sprintf (state->slot2light, " slot2 ");
@@ -113,6 +98,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   {
     cleanupAndExit (opts, state);
   }
+
+  timestr = getTimeC();
 
   memset (ambe_fr, 0, sizeof(ambe_fr));
   memset (ambe_fr2, 0, sizeof(ambe_fr2));
@@ -279,7 +266,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   if ( strcmp (sync, DMR_BS_DATA_SYNC) == 0 )
   {
     
-    fprintf (stderr,"%s ", getTime());
+    fprintf (stderr,"%s ", timestr);
     if (internalslot == 0)
     {
       if (opts->inverted_dmr == 0)
@@ -315,7 +302,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //check to see if we are expecting a VC at this point vc > 7
   if (strcmp (sync, DMR_BS_DATA_SYNC) != 0 && internalslot == 0 && vc1 > 6)
   {
-    fprintf (stderr,"%s ", getTime());
+    fprintf (stderr,"%s ", timestr);
 
     //simplifying things
     // char polarity[3];
@@ -336,7 +323,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //check to see if we are expecting a VC at this point vc > 7
   if (strcmp (sync, DMR_BS_DATA_SYNC) != 0 && internalslot == 1 && vc2 > 6)
   {
-    fprintf (stderr,"%s ", getTime());
+    fprintf (stderr,"%s ", timestr);
 
     //simplifying things
     // char polarity[3];
@@ -374,7 +361,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
 
     skipcount = 0; //reset skip count if processing voice frames
-    fprintf (stderr,"%s ", getTime());
+    fprintf (stderr,"%s ", timestr);
 
     //simplifying things
     char polarity[3];
@@ -562,6 +549,13 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     ncursesPrinter(opts, state);
   }
 
+  //
+  if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
+  }
+
  } // while loop
 
  END:
@@ -585,7 +579,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
  if (tact_okay != 1 || emb_ok != 1)
  {
 
-  fprintf (stderr,"%s ", getTime());
+  fprintf (stderr,"%s ", timestr);
   fprintf (stderr,"Sync:  DMR                  ");
   fprintf (stderr, "%s", KRED);
   fprintf (stderr, "| VOICE CACH/EMB ERR");
@@ -607,6 +601,13 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   dmr_reset_blocks (opts, state); 
    
  }
+
+ //
+ if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
+  }
 
 }
 
@@ -643,22 +644,9 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   11, 12, 2, 13, 14,
   15, 3, 16, 4, 17, 18,
   19, 5, 20, 21, 22, 6, 23
-  }; 
-  //add time to mirror printFrameSync
-  char * getTime(void) //get pretty hh:mm:ss timestamp
-  {
-    time_t t = time(NULL);
+  };
 
-    char * curr;
-    char * stamp = asctime(localtime( & t));
-
-    curr = strtok(stamp, " ");
-    curr = strtok(NULL, " ");
-    curr = strtok(NULL, " ");
-    curr = strtok(NULL, " ");
-
-    return curr;
-  }
+  char * timestr = getTimeC();
 
   //payload buffer
   //CACH + First Half Payload + Sync = 12 + 54 + 24
@@ -807,7 +795,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     fclose (pFile);
   }
 
-  fprintf (stderr,"%s ", getTime());
+  fprintf (stderr,"%s ", timestr);
   char polarity[3];
   char light[18];
 
@@ -909,7 +897,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   //if we have a tact err, then produce sync pattern/err message
   if (tact_okay != 1 || sync_okay != 1)
   {
-    fprintf (stderr,"%s ", getTime());
+    fprintf (stderr,"%s ", timestr);
     fprintf (stderr,"Sync:  DMR                  ");
     fprintf (stderr, "%s", KRED);
     fprintf (stderr, "| VOICE CACH/SYNC ERR");
@@ -931,5 +919,10 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     dmr_reset_blocks (opts, state); 
   }
 
+  if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
+  }
 
 }

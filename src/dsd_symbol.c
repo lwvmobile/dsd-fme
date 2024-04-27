@@ -658,8 +658,15 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       // opts->audio_in_type = 0; //switch to pulse after playback, ncurses terminal can initiate replay if wanted
       fclose(opts->symbolfile);
       fprintf (stderr, "\nEnd of %s\n", opts->audio_in_dev);
+      //in debug mode, re-run .bin files over and over (look for memory leaks, etc)
+      if (state->debug_mode == 1)
+      {
+        opts->symbolfile = NULL;
+        opts->symbolfile = fopen(opts->audio_in_dev, "r");
+        opts->audio_in_type = 4; //symbol capture bin files
+      }
       //open pulse input if we are pulse output AND using ncurses terminal
-      if (opts->audio_out_type == 0 && opts->use_ncurses_terminal == 1)
+      else if (opts->audio_out_type == 0 && opts->use_ncurses_terminal == 1)
       {
         opts->audio_in_type = 0; //set input type
         openPulseInput(opts); //open pulse input

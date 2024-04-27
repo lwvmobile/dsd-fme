@@ -13,6 +13,8 @@
 void dmrMS (dsd_opts * opts, dsd_state * state)
 {
 
+  char * timestr = getTimeC();
+
   int i, j, dibit;
   char ambe_fr[4][24];
   char ambe_fr2[4][24];
@@ -54,22 +56,6 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   //dummy bits to pass to dburst for link control
   uint8_t dummy_bits[196];
   memset (dummy_bits, 0, sizeof (dummy_bits));
-
-  //add time to mirror printFrameSync
-  char * getTime(void) //get pretty hh:mm:ss timestamp
-  {
-    time_t t = time(NULL);
-
-    char * curr;
-    char * stamp = asctime(localtime( & t));
-
-    curr = strtok(stamp, " ");
-    curr = strtok(NULL, " ");
-    curr = strtok(NULL, " ");
-    curr = strtok(NULL, " ");
-
-    return curr;
-  }
 
   vc = 2;
 
@@ -187,7 +173,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   if ( strcmp (sync, DMR_RC_DATA_SYNC) == 0)
   {
     state->dmr_ms_rc = 1;
-    fprintf (stderr, "%s ", getTime());
+    fprintf (stderr, "%s ", timestr);
     if (opts->inverted_dmr == 0)
     {
       fprintf (stderr,"Sync: +DMR MS/DM MODE/MONO ");
@@ -387,13 +373,21 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
  state->dmr_ms_mode = 0;
  state->dmr_ms_rc = 0;
  state->directmode = 0; //flag off
-  
+
+ if (timestr != NULL)
+ {
+  free (timestr);
+  timestr = NULL;
+ }
 
 }
 
 //collect buffered 1st half and get 2nd half voice payload and then jump to full MS Voice decoding.
 void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 {
+
+  char * timestr = getTimeC();
+
   int i, dibit;
   int *dibit_p;
 
@@ -416,22 +410,6 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   //cach
   char cachdata[25]; 
   UNUSED(cachdata);
-
-  //add time to mirror sync
-  char * getTime(void) //get pretty hh:mm:ss timestamp
-  {
-    time_t t = time(NULL);
-
-    char * curr;
-    char * stamp = asctime(localtime( & t));
-
-    curr = strtok(stamp, " ");
-    curr = strtok(NULL, " ");
-    curr = strtok(NULL, " ");
-    curr = strtok(NULL, " ");
-
-    return curr;
-  }
 
   state->dmrburstL = 16; 
   state->currentslot = 0; //force to slot 0
@@ -568,7 +546,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
     fclose (pFile);
   }
 
-  fprintf (stderr, "%s ", getTime());
+  fprintf (stderr, "%s ", timestr);
   if (opts->inverted_dmr == 0)
   {
     fprintf (stderr,"Sync: +DMR MS/DM MODE/MONO ");
@@ -644,6 +622,11 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 
   //errors due to skipping other slot
   // cach_err = dmr_cach (opts, state, cachdata);
+  if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
+  }
 
   skipDibit (opts, state, 144); //skip to next TDMA slot
   dmrMS (opts, state); //bootstrap into full TDMA frame
@@ -653,26 +636,12 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 //simplied to a simple data collector, and then passed on to dmr_data_sync for the usual processing
 void dmrMSData (dsd_opts * opts, dsd_state * state)
 {
+
+  char * timestr = getTimeC();
+
   int i;
   int dibit;
   int *dibit_p;
-
-  //add time to mirror sync
-  char * getTime(void) //get pretty hh:mm:ss timestamp
-  {
-    time_t t = time(NULL);
-
-    char * curr;
-    char * stamp = asctime(localtime( & t));
-
-    curr = strtok(stamp, " ");
-    curr = strtok(NULL, " ");
-    curr = strtok(NULL, " ");
-    curr = strtok(NULL, " ");
-
-    return curr;
-  }
-
 
   //CACH + First Half Payload + Sync = 12 + 54 + 24
   dibit_p = state->dmr_payload_p - 90;
@@ -691,7 +660,7 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
     state->dmr_stereo_payload[i+90] = dibit;
   }
 
-  fprintf (stderr, "%s ", getTime());
+  fprintf (stderr, "%s ", timestr);
   if (opts->inverted_dmr == 0)
   {
     fprintf (stderr,"Sync: +DMR MS/DM MODE/MONO ");
@@ -726,6 +695,12 @@ void dmrMSData (dsd_opts * opts, dsd_state * state)
   {
     dibit = getDibit(opts, state);
     state->dmr_stereo_payload[i+66] = 1; ////set to one so first frame will fail intentionally instead of zero fill
+  }
+
+  if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
   }
 
 }
