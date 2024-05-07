@@ -63,6 +63,7 @@
 
 #include <pulse/simple.h>     //PULSE AUDIO
 #include <pulse/error.h>      //PULSE AUDIO
+#include <pulse/introspect.h> //PULSE AUDIO
 
 #define SAMPLE_RATE_IN 48000 //48000
 #define SAMPLE_RATE_OUT 8000 //8000

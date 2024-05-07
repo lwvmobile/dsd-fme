@@ -41,6 +41,8 @@ void closePulseInput (dsd_opts * opts)
 void openPulseOutput(dsd_opts * opts)
 {
 
+  int err;
+
   ss.format = PA_SAMPLE_S16NE;
   ss.channels = opts->pulse_raw_out_channels;
   ss.rate = opts->pulse_raw_rate_out;
@@ -57,19 +59,40 @@ void openPulseOutput(dsd_opts * opts)
   if (opts->frame_provoice == 1 || opts->monitor_input_audio == 1)
     opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME3", PA_STREAM_PLAYBACK, NULL, "Analog", &ss, 0, NULL, NULL);
 
+  if (err < 0)
+  {
+    fprintf (stderr, "%s", pa_strerror(err));
+    exit(0);
+  }
+
   pa_channel_map* fl = 0; //NULL and 0 are same in this context
   pa_channel_map* ss = 0; //NULL and 0 are same in this context
 
   if (opts->floating_point == 0)
     opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &tt, ss, NULL, NULL);
 
+  if (err < 0)
+  {
+    fprintf (stderr, "%s", pa_strerror(err));
+    exit(0);
+  }
+
   if (opts->floating_point == 1)
+  {
     opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &ff, fl, NULL, NULL);
+    if (err < 0)
+    {
+      fprintf (stderr, "%s", pa_strerror(err));
+      exit(0);
+    }
+  }  
 
 }
 
 void openPulseInput(dsd_opts * opts)
 {
+
+  int err;
 
   cc.format = PA_SAMPLE_S16NE;
   cc.channels = opts->pulse_digi_in_channels;
@@ -94,8 +117,15 @@ void openPulseInput(dsd_opts * opts)
   lt.maxlength = -1;
   lt.prebuf = -1;
   lt.tlength = -1;
+  if (opts->m17encoder == 1)
+    opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME4", PA_STREAM_RECORD, NULL, "M17 Voice Input", &cc, NULL, &lt, &err);
+  else opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_RECORD, NULL, opts->output_name, &cc, NULL, &lt, &err);
 
-  opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_RECORD, NULL, opts->output_name, &cc, NULL, &lt, NULL);
+  if (err < 0)
+  {
+    fprintf (stderr, "%s", pa_strerror(err));
+    exit(0);
+  }
 
   //debug
   // if (opts->m17encoder == 1)
