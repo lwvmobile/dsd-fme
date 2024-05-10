@@ -145,9 +145,22 @@ process_IMBE (dsd_opts* opts, dsd_state* state, int* status_count)
               }
           }
 
+          /* //this is what is observed on the sigid wiki example (matches above pattern)
+            IMBE 000F920291AD6F06540980 err = [3] [A] 
+            IMBE 000F920294816F06540980 err = [3] [A] 
+            IMBE 000E1C0294816F06540980 err = [3] [B]
+
+            //this is what is observed on the 'hole' examples (not a match, TODO: Examine imbe_fr add this?)
+            IMBE FC00000000000000000300 err = [2] [B] 
+            IMBE FC00000000000000000300 err = [2] [B] 
+            IMBE FC00000000000000000300 err = [2] [B]
+
+          */
+
           if (match) {
               // Skip this particular value. If we let it pass it will be signaled as an erroneus IMBE
-              fprintf (stderr, "(Non-standard IMBE c0 detected, skipped)");
+              if (opts->payload == 1)
+                fprintf (stderr, "\n IMBE Non-standard c0 detected, skipped;");
           } else {
               processMbeFrame (opts, state, imbe_fr, NULL, NULL);
           }
