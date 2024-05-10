@@ -41,7 +41,7 @@ void closePulseInput (dsd_opts * opts)
 void openPulseOutput(dsd_opts * opts)
 {
 
-  int err;
+  int err = 0;
 
   ss.format = PA_SAMPLE_S16NE;
   ss.channels = opts->pulse_raw_out_channels;
@@ -59,9 +59,12 @@ void openPulseOutput(dsd_opts * opts)
   if (opts->frame_provoice == 1 || opts->monitor_input_audio == 1)
     opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME3", PA_STREAM_PLAYBACK, NULL, "Analog", &ss, 0, NULL, &err);
 
-  if (err < 0)
+  if (err != 0)
   {
-    fprintf (stderr, "%s", pa_strerror(err));
+    fprintf (stderr, "Err: %d; %s; ", err, pa_strerror(err));
+    #ifdef __CYGWIN__
+    fprintf (stderr, "Please make sure the Pulse Audio Server Backend is running first.");
+    #endif
     exit(0);
   }
 
@@ -69,30 +72,39 @@ void openPulseOutput(dsd_opts * opts)
   pa_channel_map* ss = 0; //NULL and 0 are same in this context
 
   if (opts->floating_point == 0)
+  {
     opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &tt, ss, NULL, &err);
 
-  if (err < 0)
-  {
-    fprintf (stderr, "%s", pa_strerror(err));
-    exit(0);
+    if (err != 0)
+    {
+      fprintf (stderr, "Err: %d; %s; ", err, pa_strerror(err));
+      #ifdef __CYGWIN__
+      fprintf (stderr, "Please make sure the Pulse Audio Server Backend is running first.");
+      #endif
+      exit(0);
+    }
   }
 
   if (opts->floating_point == 1)
   {
     opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &ff, fl, NULL, &err);
-    if (err < 0)
+
+    if (err != 0)
     {
-      fprintf (stderr, "%s", pa_strerror(err));
+      fprintf (stderr, "Err: %d; %s; ", err, pa_strerror(err));
+      #ifdef __CYGWIN__
+      fprintf (stderr, "Please make sure the Pulse Audio Server Backend is running first.");
+      #endif
       exit(0);
     }
-  }  
+  }
 
 }
 
 void openPulseInput(dsd_opts * opts)
 {
 
-  int err;
+  int err = 0;
 
   cc.format = PA_SAMPLE_S16NE;
   cc.channels = opts->pulse_digi_in_channels;
@@ -121,9 +133,12 @@ void openPulseInput(dsd_opts * opts)
     opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME4", PA_STREAM_RECORD, NULL, "M17 Voice Input", &cc, NULL, &lt, &err);
   else opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_RECORD, NULL, opts->output_name, &cc, NULL, &lt, &err);
 
-  if (err < 0)
+  if (err != 0)
   {
-    fprintf (stderr, "%s", pa_strerror(err));
+    fprintf (stderr, "Err: %d; %s; ", err, pa_strerror(err));
+    #ifdef __CYGWIN__
+    fprintf (stderr, "Please make sure the Pulse Audio Server Backend is running first.");
+    #endif
     exit(0);
   }
 
