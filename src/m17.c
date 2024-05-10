@@ -2025,7 +2025,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       if (sql_hit > 10 && lich_cnt == 0) //licn_cnt 0 to prevent new LSF popping out
       {
         state->m17encoder_tx = 0;
-        eot = 1;
+        // eot = 1; //same issue as observed in M17-FME
       }
       else
       {
@@ -2131,7 +2131,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         //convert bit array into symbols and RF/Audio
         memset (nil, 0, sizeof(nil));
         encodeM17RF (opts, state, nil, 11); //Preamble
-        encodeM17RF (opts, state, m17_lsfs, 1); //LSF
+        for (i = 0; i < 2; i++)
+          encodeM17RF (opts, state, m17_lsfs, 1); //LSF
 
         //flag off after sending
         new_lsf = 0;
@@ -2657,7 +2658,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     encodeM17RF (opts, state, nil, 99);
 
   //send preamble_a for the LSF frame
-  encodeM17RF (opts, state, nil, 33);
+  // encodeM17RF (opts, state, nil, 11); //don't need to send twice, had wrong type anyways
 
   //NOTE: PKT mode does not seem to have an IP format specified by M17 standard,
   //so I will assume that you do not send PKT data over IP to a reflector
@@ -2810,7 +2811,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   // fprintf (stderr, " STRLEN: %d; ", tlen);
 
   //Convert a string text message into UTF-8 octets and load into full if using SMS (we are)
-  fprintf (stderr, "\n SMS:\n      ");
+  fprintf (stderr, "\n SMS: ");
   for (i = 0; i < tlen; i++)
   {
     cbyte = (uint8_t)text[ptr];
@@ -2848,7 +2849,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   // if (block > 31) block = 31;
   
   //debug position values
-  fprintf (stderr, " BLOCK: %02d; PAD: %02d; LST: %d; K: %04d; PTR: %04d;", block, pad, lst, k, ptr);
+  // fprintf (stderr, "\nBLOCK: %02d; PAD: %02d; LST: %d; K: %04d; PTR: %04d;\n", block, pad, lst, k, ptr);
 
   //Calculate the CRC and attach it here
   x = 0;
@@ -2872,7 +2873,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   crc_cmp = crc16m17(m17_p1_packed, x+1); //either x, or x+1?
 
   //debug dump CRC (when pad is literally zero)
-  fprintf (stderr, " X: %d; LAST: %02X; TERM: %02X; CRC: %04X", x, m17_p1_packed[x-1], m17_p1_packed[x], crc_cmp);
+  // fprintf (stderr, "X: %d; LAST: %02X; TERM: %02X; CRC: %04X; \n", x, m17_p1_packed[x-1], m17_p1_packed[x], crc_cmp);
 
   ptr = (block*25*8) - 16;
 
@@ -3029,7 +3030,8 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
       //convert bit array into symbols and RF/Audio
       memset (nil, 0, sizeof(nil));
       encodeM17RF (opts, state, nil, 11); //Preamble
-      encodeM17RF (opts, state, m17_lsfs, 1); //LSF
+      for (i = 0; i < 2; i++)
+        encodeM17RF (opts, state, m17_lsfs, 1); //LSF
 
       //flag off after sending
       new_lsf = 0;
@@ -3154,7 +3156,7 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
   //simple UTF-8 SMS Decoder
   if (protocol == 5)
   {
-    fprintf (stderr, "\n SMS:\n      ");
+    fprintf (stderr, "\n SMS: ");
     for (i = 1; i < len; i++)
     {
       fprintf (stderr, "%c", input[i]);
@@ -3210,7 +3212,7 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
     else                fprintf (stderr, "E;");
     if (indicators & 4) fprintf (stderr, "Altitude: %d;", altitude + 1500);
     if (indicators & 8) fprintf (stderr, "Speed: %d MPH;", speed);
-    if (indicators & 0x10) fprintf (stderr, "Bearing: %d Degrees;", bearing);
+    if (indicators & 8) fprintf (stderr, "Bearing: %d Degrees;", bearing);
 
     if      (data_source == 0) fprintf (stderr, " M17 Client;");
     else if (data_source == 1) fprintf (stderr, " OpenRTX;");
@@ -3740,6 +3742,9 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
         decodeM17PKT (opts, state, ip_frame+34, err-34-3);
       if (crc_ext != crc_cmp) fprintf (stderr, " IP CRC ERR");
 
+      //clear frame
+      memset (ip_frame, 0, sizeof(ip_frame));
+
     }
 
     //debug
@@ -3756,6 +3761,9 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     //refresh ncurses printer, if enabled
     if (opts->use_ncurses_terminal == 1)
       ncursesPrinter(opts, state);
+
+    //clear frame
+    memset (ip_frame, 0, sizeof(ip_frame));
 
   }
 }
