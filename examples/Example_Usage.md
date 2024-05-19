@@ -1,6 +1,6 @@
 ### Example Usage and Notes!
 
-`dsd-fme` is all you need to run for pulse input, pulse output, and auto detect for DMR BS/MS, and P25. To use other decoding methods which cannot be auto detected, please use the following command line switches. Make sure to route audio into and out of DSD-FME using pavucontrol and virtual sinks as needed.
+`dsd-fme` is all you need to run for pulse input, pulse output, and auto detect for DMR BS/MS, and P25. To use other decoding methods which cannot be auto detected, please use the following command line switches.
 
 ```
 -ft XDMA decoder class (P25p1 and p2, YSF, and DMR Stereo)
@@ -49,7 +49,9 @@ and in a second terminal tab, same folder, run
 
 `tail -n 40 -f voice.log`
 
-Then you can open up your pavucontrol "Pulse Audio Volume Control" or "Volume Control" application and route input into DSD-FME from any application and DSD-FME output to the left and right speakers respectively. (unlock the channel in the application stream and adjust left and right independently)
+### Audio Plumbing
+
+Please see [Audio Plumbing](https://github.com/lwvmobile/dsd-fme/blob/aw_dev/examples/Audio_Plumbing.md "Audio Plumbing") for general help with audio plumbing (routing from A to B).
 
 ### Input ###
 
