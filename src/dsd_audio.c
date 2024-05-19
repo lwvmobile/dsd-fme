@@ -41,6 +41,10 @@ void closePulseInput (dsd_opts * opts)
 void openPulseOutput(dsd_opts * opts)
 {
 
+  char * dev = NULL;
+  if (opts->pa_output_idx[0] != 0)
+    dev = opts->pa_output_idx;
+
   int err = 0;
 
   ss.format = PA_SAMPLE_S16NE;
@@ -57,7 +61,7 @@ void openPulseOutput(dsd_opts * opts)
 
   //reconfigured to open when using edacs or raw analog monitor so we can have a analog audio out that runs at 48k1 and not 8k1 float/short
   if (opts->frame_provoice == 1 || opts->monitor_input_audio == 1)
-    opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME3", PA_STREAM_PLAYBACK, NULL, "Analog", &ss, 0, NULL, &err);
+    opts->pulse_raw_dev_out  = pa_simple_new(NULL, "DSD-FME3", PA_STREAM_PLAYBACK, dev, "Analog", &ss, 0, NULL, &err);
 
   if (err != 0)
   {
@@ -73,7 +77,7 @@ void openPulseOutput(dsd_opts * opts)
 
   if (opts->floating_point == 0)
   {
-    opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &tt, ss, NULL, &err);
+    opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, dev, opts->output_name, &tt, ss, NULL, &err);
 
     if (err != 0)
     {
@@ -87,7 +91,7 @@ void openPulseOutput(dsd_opts * opts)
 
   if (opts->floating_point == 1)
   {
-    opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, NULL, opts->output_name, &ff, fl, NULL, &err);
+    opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, dev, opts->output_name, &ff, fl, NULL, &err);
 
     if (err != 0)
     {
@@ -103,6 +107,10 @@ void openPulseOutput(dsd_opts * opts)
 
 void openPulseInput(dsd_opts * opts)
 {
+
+  char * dev = NULL;
+  if (opts->pa_input_idx[0] != 0)
+    dev = opts->pa_input_idx;
 
   int err = 0;
 
@@ -130,8 +138,8 @@ void openPulseInput(dsd_opts * opts)
   lt.prebuf = -1;
   lt.tlength = -1;
   if (opts->m17encoder == 1)
-    opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME4", PA_STREAM_RECORD, NULL, "M17 Voice Input", &cc, NULL, &lt, &err);
-  else opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_RECORD, NULL, opts->output_name, &cc, NULL, &lt, &err);
+    opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME4", PA_STREAM_RECORD, dev, "M17 Voice Input", &cc, NULL, &lt, &err);
+  else opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_RECORD, dev, opts->output_name, &cc, NULL, &lt, &err);
 
   if (err != 0)
   {
@@ -149,6 +157,34 @@ void openPulseInput(dsd_opts * opts)
   //   fprintf (stderr, "Pulse Audio Input Latency: %05lld;", latency);
   // }
 
+}
+
+void parse_pulse_input_string  (dsd_opts * opts, char * input)
+{
+  char * curr;
+  curr = strtok(input, ":");
+  if (curr != NULL)
+  {
+    strncpy (opts->pa_input_idx, curr, 99);
+    opts->pa_input_idx[99] = 0;
+    fprintf (stderr, "\n");
+    fprintf (stderr, "Pulse Input Device: %s; ", opts->pa_input_idx);
+    fprintf (stderr, "\n");
+  }
+}
+
+void parse_pulse_output_string (dsd_opts * opts, char * input)
+{
+  char * curr;
+  curr = strtok(input, ":");
+  if (curr != NULL)
+  {
+    strncpy (opts->pa_output_idx, curr, 99);
+    opts->pa_output_idx[99] = 0;
+    fprintf (stderr, "\n");
+    fprintf (stderr, "Pulse Output Device: %s; ", opts->pa_output_idx);
+    fprintf (stderr, "\n");
+  }
 }
 
 void openOSSOutput (dsd_opts * opts)

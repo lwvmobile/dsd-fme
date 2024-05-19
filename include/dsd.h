@@ -342,6 +342,8 @@ typedef struct
   pa_simple *pulse_digi_dev_in;
   pa_simple *pulse_digi_dev_out;
   pa_simple *pulse_digi_dev_outR;
+  char pa_input_idx[100];
+  char pa_output_idx[100];
   int use_ncurses_terminal;
   int ncurses_compact;
   int ncurses_history;
@@ -1041,10 +1043,12 @@ void openAudioOutDevice (dsd_opts * opts, int speed);
 void openAudioInDevice (dsd_opts * opts);
 
 //pulse sources and sinks
-void pa_state_cb(pa_context *c, void *userdata);
-void pa_sinklist_cb(pa_context *c, const pa_sink_info *l, int eol, void *userdata);
-void pa_sourcelist_cb(pa_context *c, const pa_source_info *l, int eol, void *userdata);
-int pa_get_devicelist(pa_devicelist_t *input, pa_devicelist_t *output);
+void parse_pulse_input_string  (dsd_opts * opts, char * input);
+void parse_pulse_output_string (dsd_opts * opts, char * input);
+void pa_state_cb (pa_context *c, void *userdata);
+void pa_sinklist_cb (pa_context *c, const pa_sink_info *l, int eol, void *userdata);
+void pa_sourcelist_cb (pa_context *c, const pa_source_info *l, int eol, void *userdata);
+int pa_get_devicelist (pa_devicelist_t *input, pa_devicelist_t *output);
 int pulse_list();
 
 int getDibit (dsd_opts * opts, dsd_state * state);

@@ -664,6 +664,8 @@ initOpts (dsd_opts * opts)
   opts->pulse_raw_out_channels  = 1;
   opts->pulse_digi_in_channels  = 1; //2
   opts->pulse_digi_out_channels = 2; //new default for AUTO
+  memset (opts->pa_input_idx, 0, 100*sizeof(char));
+  memset (opts->pa_output_idx, 0, 100*sizeof(char));
 
   opts->wav_sample_rate = 48000; //default value (DSDPlus uses 96000 on raw signal wav files)
   opts->wav_interpolator = 1; //default factor of 1 on 48000; 2 on 96000; sample rate / decimator
@@ -1269,6 +1271,8 @@ usage ()
   printf ("  -i <device>   Audio input device (default is pulse)\n");
   printf ("                /dev/dsp for OSS audio (Depreciated: Will require padsp wrapper in Linux) \n");
   #endif
+  printf ("                pulse for pulse audio signal input \n");
+  printf ("                pulse:6 or pulse:virtual_sink2.monitor for pulse audio signal input on virtual_sink2 (see -O) \n");
   printf ("                rtl for rtl dongle (Default Values -- see below)\n");
   printf ("                rtl:dev:freq:gain:ppm:bw:sq:vol for rtl dongle (see below)\n");
   printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
@@ -1292,6 +1296,8 @@ usage ()
   printf ("  -o <device>   Audio output device (default is pulse)\n");
   printf ("                /dev/dsp for OSS audio (Depreciated: Will require padsp wrapper in Linux) \n");
   #endif
+  printf ("                pulse for pulse audio decoded voice or analog output\n");
+  printf ("                pulse:1 or pulse:alsa_output.pci-0000_0d_00.3.analog-stereo for pulse audio decoded voice or analog output on device (see -O) \n");
   printf ("                null for no audio output\n");
   printf ("                udp for UDP socket blaster output (default host 127.0.0.1; default port 23456)\n");
   printf ("                udp:192.168.7.8:23470 for UDP socket blaster output (Target Address and Port\n");
@@ -3156,6 +3162,9 @@ main (int argc, char **argv)
     if((strncmp(opts.audio_in_dev, "pulse", 5) == 0))
     {
       opts.audio_in_type = 0;
+
+      //string yeet
+      parse_pulse_input_string(&opts, opts.audio_in_dev+5);
     }
 
     //UDP Socket Blaster Audio Output Setup
@@ -3226,6 +3235,9 @@ main (int argc, char **argv)
     if((strncmp(opts.audio_out_dev, "pulse", 5) == 0))
     {
       opts.audio_out_type = 0;
+
+      //string yeet
+      parse_pulse_output_string(&opts, opts.audio_out_dev+5);
     }
 
     if((strncmp(opts.audio_out_dev, "null", 4) == 0))
