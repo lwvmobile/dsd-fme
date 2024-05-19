@@ -2491,7 +2491,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->use_hpf_d == 1)  printw (" HPF");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     if (opts->pa_output_idx[0] != 0)
-      printw ("D: %s;", opts->pa_output_idx);
+      printw (" D: %s;", opts->pa_output_idx);
 
     printw (" \n");
   }
