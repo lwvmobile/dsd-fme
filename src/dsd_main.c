@@ -580,7 +580,7 @@ initOpts (dsd_opts * opts)
   opts->split = 0;
   opts->playoffset = 0;
   opts->playoffsetR = 0;
-  sprintf (opts->wav_out_dir, "%s", "WAV");
+  sprintf (opts->wav_out_dir, "%s", "./WAV");
   opts->mbe_out_dir[0] = 0;
   opts->mbe_out_file[0] = 0;
   opts->mbe_out_fileR[0] = 0; //second slot on a TDMA system
@@ -2064,8 +2064,8 @@ main (int argc, char **argv)
             mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
           }
           fprintf (stderr,"AUTO and NXDN Per Call Wav File Saving Enabled. (NCurses Terminal Only)\n");
-          sprintf (opts.wav_out_file, "./%s/DSD-FME-X1.wav", opts.wav_out_dir); 
-          sprintf (opts.wav_out_fileR, "./%s/DSD-FME-X2.wav", opts.wav_out_dir);
+          sprintf (opts.wav_out_file, "%s/DSD-FME-X1.wav", opts.wav_out_dir); 
+          sprintf (opts.wav_out_fileR, "%s/DSD-FME-X2.wav", opts.wav_out_dir);
           opts.dmr_stereo_wav = 1;
           openWavOutFileL (&opts, &state); 
           openWavOutFileR (&opts, &state); 
