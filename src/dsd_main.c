@@ -1258,6 +1258,9 @@ usage ()
   printf ("                 dsd-fme -N 2> log.ans \n");
   printf ("  -Z            Log MBE/PDU Payloads to console\n");
   printf ("\n");
+  printf ("Device Options:\n");
+  printf ("  -O            List All Pulse Audio Input Sources and Output Sinks (devices).\n");
+  printf ("\n");
   printf ("Input/Output options:\n");
   #ifdef AERO_BUILD
   printf ("  -i <device>   Audio input device (default is /dev/dsp)\n");
@@ -1695,7 +1698,7 @@ main (int argc, char **argv)
 
   exitflag = 0;
 
-  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:J")) != -1)
+  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:JO")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1722,6 +1725,12 @@ main (int argc, char **argv)
         case 'J':
           state.debug_mode = 1;
           fprintf (stderr, "Debug Mode Enabled; \n");
+          break;
+
+        //List Pulse Audio Input and Output
+        case 'O':
+          pulse_list();
+          exit(0);
           break;
 
         //Specify M17 encoder User Data (CAN, DST, SRC values)

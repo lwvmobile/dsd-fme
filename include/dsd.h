@@ -61,6 +61,7 @@
 //OSS support
 #include <sys/soundcard.h>
 
+#include <pulse/pulseaudio.h> //PULSE AUDIO
 #include <pulse/simple.h>     //PULSE AUDIO
 #include <pulse/error.h>      //PULSE AUDIO
 #include <pulse/introspect.h> //PULSE AUDIO
@@ -115,6 +116,15 @@ typedef struct {
 
 }NOTCHFilter;
 //end new filters
+
+// Field list is here: http://0pointer.de/lennart/projects/pulseaudio/doxygen/structpa__sink__info.html
+typedef struct pa_devicelist
+{
+  uint8_t initialized;
+  char name[512];
+  uint32_t index;
+  char description[256];
+} pa_devicelist_t;
 
 //group csv import struct
 typedef struct
@@ -1029,6 +1039,13 @@ void upsampleS (short invalue, short prev, short outbuf[6]); //upsample 8k to 48
 //
 void openAudioOutDevice (dsd_opts * opts, int speed);
 void openAudioInDevice (dsd_opts * opts);
+
+//pulse sources and sinks
+void pa_state_cb(pa_context *c, void *userdata);
+void pa_sinklist_cb(pa_context *c, const pa_sink_info *l, int eol, void *userdata);
+void pa_sourcelist_cb(pa_context *c, const pa_source_info *l, int eol, void *userdata);
+int pa_get_devicelist(pa_devicelist_t *input, pa_devicelist_t *output);
+int pulse_list();
 
 int getDibit (dsd_opts * opts, dsd_state * state);
 int get_dibit_and_analog_signal (dsd_opts * opts, dsd_state * state, int * out_analog_signal);
