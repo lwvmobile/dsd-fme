@@ -1311,7 +1311,9 @@ usage ()
   printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n");
   printf ("  -6 <file>     Output raw audio .wav file (48K/1). (WARNING! Large File Sizes 1 Hour ~= 360 MB)\n");
   printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
-  printf ("                 (Single Nested Directory Only! Use Before the -P option!)\n");
+  printf ("                 (Use ./folder for Nested Directory!)\n");
+  printf ("                 (Use /path/to/folder for hard coded directory!)\n");
+  printf ("                 (Use Before the -P option!)\n");
   printf ("  -8            Enable Experimental Source Audio Monitor (Pulse Audio Output Only!)\n");
   printf ("                 (Its recommended to use Squelch in SDR++ or GQRX, etc, if monitoring mixed analog/digital)\n");
   printf ("  -P            Enable Per Call WAV file saving in AUTO and NXDN decoding classes\n");
