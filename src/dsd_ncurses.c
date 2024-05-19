@@ -2422,6 +2422,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->audio_in_type == 0)
   {
     printw ("| Pulse Signal Input:  %i kHz; %i Ch; ", opts->pulse_digi_rate_in/1000, opts->pulse_digi_in_channels);
+    if (opts->pa_input_idx[0] != 0)
+      printw (" D: %s;", opts->pa_input_idx);
     if (opts->use_rigctl == 1)
       printw ("RIG: %s:%d; ", opts->tcp_hostname, opts->rigctlportno);
     printw ("\n");
@@ -2488,6 +2490,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->audio_gain > 0)  printw (" (+|-) Manual");
     if (opts->use_hpf_d == 1)  printw (" HPF");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
+    if (opts->pa_output_idx[0] != 0)
+      printw ("D: %s;", opts->pa_output_idx);
 
     printw (" \n");
   }
@@ -2501,6 +2505,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
     if (opts->use_hpf == 1) printw ("HP|");     else printw ("  |");
     if (opts->use_pbf == 1) printw ("PB|");     else printw ("  |");
+    if (opts->pa_output_idx[0] != 0)
+      printw (" D: %s;", opts->pa_output_idx);
     printw (" \n");
   }
 
