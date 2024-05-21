@@ -647,6 +647,10 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
         state->nxdn_last_tg = DestinationID;
         sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType));
 
+        //Call String for Per Call WAV File
+        sprintf (state->call_string[0], "%s", NXDN_Call_Type_To_Str(CallType));
+        if (CCOption & 0x80) strcat (state->call_string[0], " Emergency");
+
         //check the rkey array for a scrambler key value
         //TGT ID and Key ID could clash though if csv or system has both with different keys
         if (state->rkey_array[DestinationID] != 0)
@@ -680,6 +684,10 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
           state->nxdn_last_rid = SourceUnitID;  
         state->nxdn_last_tg = DestinationID;
         sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType));
+
+        //Call String for Per Call WAV File
+        sprintf (state->call_string[0], "%s", NXDN_Call_Type_To_Str(CallType));
+        if (CCOption & 0x80) strcat (state->call_string[0], " Emergency");
 
         //check the rkey array for a scrambler key value
         //TGT ID and Key ID could clash though if csv or system has both with different keys
@@ -1214,6 +1222,11 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   if(CCOption & 0x80) fprintf(stderr, "Emergency ");
   if(CCOption & 0x40) fprintf(stderr, "Visitor ");
   if(CCOption & 0x20) fprintf(stderr, "Priority Paging ");
+
+  //Call String for Per Call WAV File
+  sprintf (state->call_string[0], "%s", NXDN_Call_Type_To_Str(CallType));
+  if (CCOption & 0x80) strcat (state->call_string[0], " Emergency");
+  if (CipherType) strcat (state->call_string[0], " Enc");
 
   if((CipherType == 2) || (CipherType == 3))
   {

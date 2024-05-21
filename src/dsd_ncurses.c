@@ -2148,9 +2148,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //open wav file if enabled and both rd and tg are not 0
     if (opts->dmr_stereo_wav == 1 && src != 0 ) //&& tgn != 0, some TG can be 0 on NXDN
     {
+      //setup a call string for the per call (group/private and/or emergency)
+      //No Space Skips / Truncates Needed on NXDN string variant
+      char cs[200]; memcpy (cs, state->call_string[0], 200*sizeof(char));
+
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "%s/%s %s NXDN - RAN %d - TGT %d - SRC %d.wav", opts->wav_out_dir, datestr, timestr, rn, tgn, src);
+
+      // sprintf (opts->wav_out_file, "%s/%s %s NXDN - RAN %d - DST %d - SRC %d.wav", opts->wav_out_dir, datestr, timestr, rn, tgn, src); //original
+      sprintf (opts->wav_out_file, "%s/%s %s NXDN - RAN %d - %s - DST %d - SRC %d.wav", opts->wav_out_dir, datestr, timestr, rn, cs, tgn, src); //with call string
+
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
