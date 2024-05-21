@@ -2193,9 +2193,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //open wav file if enabled and both rd and tg are not 0
     if (opts->dmr_stereo_wav == 1 && rd != 0 && tg != 0)
     {
+      //setup a call string for the per call (group/private and/or emergency)
+      char cs[200]; memset (cs, 0, 200*sizeof(char));
+      int x = 0;
+      for (int i = 0; i < 200; i++)
+      {
+        //copy over non space and non termination values from call string
+        if (i != 0 && state->call_string[0][i] != ' ' && state->call_string[0][i] != 0)
+          cs[x++] = state->call_string[0][i];
+      }
+      cs[x] = 0; //terminate
+
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "%s/%s %s MS - CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, tg, rd);
+
+      // sprintf (opts->wav_out_file, "%s/%s %s MS - CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, tg, rd); //original
+      sprintf (opts->wav_out_file, "%s/%s %s MS - CC %d - %s - DST %d - SRC %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, cs, tg, rd); //with cs call string
+
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2235,10 +2249,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //open wav file if enabled and both rd and tg are not 0
     if (opts->dmr_stereo_wav == 1 && rd != 0 && tg != 0)
     {
+      //setup a call string for the per call (group/private and/or emergency)
+      char cs[200]; memset (cs, 0, 200*sizeof(char));
+      int x = 0;
+      for (int i = 0; i < 200; i++)
+      {
+        //copy over non space and non termination values from call string
+        if (i != 0 && state->call_string[0][i] != ' ' && state->call_string[0][i] != 0)
+          cs[x++] = state->call_string[0][i];
+      }
+      cs[x] = 0; //terminate
+
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
 
-      sprintf (opts->wav_out_file, "%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, tg, rd);
+      // sprintf (opts->wav_out_file, "%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, tg, rd); //original
+      sprintf (opts->wav_out_file, "%s/%s %s CC %d - %s - DST %d - SRC %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, cs, tg, rd); //with call string
+
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2278,9 +2305,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //open wav file if enabled and both rdR and tgR are not 0
     if (opts->dmr_stereo_wav == 1 && rdR != 0 && tgR != 0)
     {
+      //setup a call string for the per call (group/private and/or emergency)
+      char cs[200]; memset (cs, 0, 200*sizeof(char));
+      int x = 0;
+      for (int i = 0; i < 200; i++)
+      {
+        //copy over non space and non termination values from call string
+        if (i != 0 && state->call_string[1][i] != ' ' && state->call_string[1][i] != 0)
+          cs[x++] = state->call_string[1][i];
+      }
+      cs[x] = 0; //terminate
+
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileR (opts, state);
-      sprintf (opts->wav_out_fileR, "%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, tgR, rdR);
+
+      // sprintf (opts->wav_out_fileR, "%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, tgR, rdR); //original
+      sprintf (opts->wav_out_fileR, "%s/%s %s CC %d - %s - DST %d - SRC %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, cs, tgR, rdR); //with call string
+
       openWavOutFileR (opts, state); //testing for now, will want to move to per call later
     }
 
@@ -2319,9 +2360,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //open wav file if enabled and both rd and tg are not 0
     if (opts->dmr_stereo_wav == 1 && rd != 0 && tg != 0)
     {
+      //setup a call string for the per call (group/private and/or emergency)
+      char cs[200]; memset (cs, 0, 200*sizeof(char));
+      int x = 0;
+      for (int i = 0; i < 200; i++)
+      {
+        //copy over non space and non termination values from call string
+        if (i != 0 && state->call_string[0][i] != ' ' && state->call_string[0][i] != 0)
+          cs[x++] = state->call_string[0][i];
+      }
+      cs[x] = 0; //terminate
+
       //close old first, assign name based on time and radio, open wav file
       closeWavOutFileL (opts, state);
-      sprintf (opts->wav_out_file, "%s/%s %s P1 - NAC %X - TGT %d - SRC %d.wav", opts->wav_out_dir, datestr, timestr, nc, tg, rd);
+
+      // sprintf (opts->wav_out_file, "%s/%s %s P1 - NAC %X - TGT %d - SRC %d.wav", opts->wav_out_dir, datestr, timestr, nc, tg, rd); //original
+      sprintf (opts->wav_out_file, "%s/%s %s P1 - NAC %X - %s - DST %d - SRC %d.wav", opts->wav_out_dir, datestr, timestr, nc, cs, tg, rd); //with call string
+
       openWavOutFileL (opts, state); //testing for now, will want to move to per call later
     }
 
