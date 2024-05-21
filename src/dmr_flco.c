@@ -387,16 +387,19 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
     else if (flco == 0x4 || flco == 0x5 || flco == 0x7 || flco == 0x23) //Cap+ Things
     {
-      sprintf (state->call_string[slot], " Cap+");
+      // sprintf (state->call_string[slot], " Cap+");
+      sprintf (state->call_string[slot], "%s","");
       fprintf (stderr, "Cap+ ");
       if (flco == 0x4)
       {
-        strcat (state->call_string[slot], " Grp");
+        // strcat (state->call_string[slot], " Grp");
+        sprintf (state->call_string[slot], "   Group ");
         fprintf (stderr, "Group ");
       }
       else
       {
-        strcat (state->call_string[slot], " Pri");
+        // strcat (state->call_string[slot], " Pri");
+        sprintf (state->call_string[slot], " Private ");
         fprintf (stderr, "Private ");
       } 
     }
