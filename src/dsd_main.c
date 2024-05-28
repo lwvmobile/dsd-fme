@@ -786,6 +786,11 @@ initOpts (dsd_opts * opts)
   opts->use_pbf = 1;
   opts->use_hpf_d = 1;
 
+  //this is a quick bugfix for issues with OSS and TDMA slot 1/2 audio level mismatch
+  #ifdef AERO_BUILD
+  opts->use_hpf_d = 0;
+  #endif
+
   //dsp structured file
   opts->dsp_out_file[0] = 0;
   opts->use_dsp_output = 0;
