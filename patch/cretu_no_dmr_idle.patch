@@ -1,0 +1,277 @@
+diff --git a/include/dsd.h b/include/dsd.h
+index 9ebf3f1..c5ac68a 100644
+--- a/include/dsd.h
++++ b/include/dsd.h
+@@ -18,16 +18,16 @@
+  */
+ 
+ //defined by CMakeLists.txt -- Disable by using cmake -DCOLORS=OFF ..
+-#ifdef PRETTY_COLORS
+-#define KNRM  "\x1B[0m"
+-#define KRED  "\x1B[31m"
+-#define KGRN  "\x1B[32m"
+-#define KYEL  "\x1B[33m"
+-#define KBLU  "\x1B[34m"
+-#define KMAG  "\x1B[35m"
+-#define KCYN  "\x1B[36m"
+-#define KWHT  "\x1B[37m"
+-#else
++// #ifdef PRETTY_COLORS
++// #define KNRM  "\x1B[0m"
++// #define KRED  "\x1B[31m"
++// #define KGRN  "\x1B[32m"
++// #define KYEL  "\x1B[33m"
++// #define KBLU  "\x1B[34m"
++// #define KMAG  "\x1B[35m"
++// #define KCYN  "\x1B[36m"
++// #define KWHT  "\x1B[37m"
++// #else
+ #define KNRM  ""
+ #define KRED  ""
+ #define KGRN  ""
+@@ -36,7 +36,7 @@
+ #define KMAG  ""
+ #define KCYN  ""
+ #define KWHT  ""
+-#endif
++// #endif
+ 
+ #include "config.h"
+ #include <stdio.h>
+diff --git a/src/dmr_bs.c b/src/dmr_bs.c
+index bdab262..17a9e70 100644
+--- a/src/dmr_bs.c
++++ b/src/dmr_bs.c
+@@ -266,14 +266,14 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
+   if ( strcmp (sync, DMR_BS_DATA_SYNC) == 0 )
+   {
+     
+-    fprintf (stderr,"%s ", timestr);
++    // fprintf (stderr,"%s ", timestr);
+     if (internalslot == 0)
+     {
+       if (opts->inverted_dmr == 0)
+       {
+-        fprintf (stderr,"Sync: +DMR  ");
++        // fprintf (stderr,"Sync: +DMR  ");
+       }
+-      else fprintf (stderr,"Sync: -DMR  ");
++      else {}//fprintf (stderr,"Sync: -DMR  ");
+       
+       vc1 = 7; //set to 7 so we can see that we should not be on a VC unless a framesync comes in for it first
+ 
+@@ -284,9 +284,9 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
+     {
+       if (opts->inverted_dmr == 0)
+       {
+-        fprintf (stderr,"Sync: +DMR  ");
++        // fprintf (stderr,"Sync: +DMR  ");
+       }
+-      else fprintf (stderr,"Sync: -DMR  ");
++      else {}//fprintf (stderr,"Sync: -DMR  ");
+ 
+       vc2 = 7; //set to 7 so we can see that we should not be on a VC unless a framesync comes in for it first
+ 
+diff --git a/src/dmr_data.c b/src/dmr_data.c
+index 87f4dfd..57e5647 100644
+--- a/src/dmr_data.c
++++ b/src/dmr_data.c
+@@ -232,10 +232,10 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
+     sprintf(state->slot2light, "[sLoT2]");
+   }
+ 
+-  if (state->dmr_ms_mode == 0)
+-  {
+-    fprintf(stderr, "%s %s ", state->slot1light, state->slot2light);
+-  }
++  // if (state->dmr_ms_mode == 0)
++  // {
++  //   fprintf(stderr, "%s %s ", state->slot1light, state->slot2light);
++  // }
+ 
+   // Slot type - Second part - Parity bit
+   for (i = 0; i < 5; i++)
+@@ -292,6 +292,13 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
+     info[(2*i) + 98] = (1 & (dibit >> 1));  // bit 1
+     info[(2*i) + 99] = (1 & dibit);         // bit 0
+   }
++
++  // if (state->dmr_ms_mode == 0 && burst != 0x09)
++  if (burst != 0x09)
++  {
++    printFrameSync (opts, state, "+DMR ", 90, NULL); //don't think the values matter
++    fprintf(stderr, "%s %s ", state->slot1light, state->slot2light);
++  }
+   
+   //don't run on MS Reverse Channel Data
+   if (state->dmr_ms_rc == 0) dmr_data_burst_handler(opts, state, (uint8_t *)info, burst);
+@@ -303,15 +310,16 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
+   } 
+ 
+   //ending line break
+-  fprintf(stderr, "\n");
++  if (burst != 0x09)
++    fprintf(stderr, "\n");
+ 
+   END:
+   if (SlotTypeOk == 0 || cach_okay != 1)
+   {
+-    fprintf (stderr, "%s", KRED);
+-    fprintf (stderr, "| CACH/Burst FEC ERR");
+-    fprintf (stderr, "%s", KNRM);
+-    fprintf (stderr, "\n");
++    // fprintf (stderr, "%s", KRED);
++    // fprintf (stderr, "| CACH/Burst FEC ERR");
++    // fprintf (stderr, "%s", KNRM);
++    // fprintf (stderr, "\n");
+     dmr_reset_blocks (opts, state); //failsafe to reset all data header and blocks when bad tact or slottype
+   }
+ 
+diff --git a/src/dmr_dburst.c b/src/dmr_dburst.c
+index fe81158..078524d 100644
+--- a/src/dmr_dburst.c
++++ b/src/dmr_dburst.c
+@@ -205,7 +205,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
+   //flag off prop head when not looking at data blocks
+   if (databurst != 0x6 && databurst != 0x7 && databurst != 0x8 && databurst != 0xA && databurst != 0xB) state->data_p_head[slot] = 0;
+ 
+-  if (databurst != 0xEB)
++  if (databurst != 0xEB && databurst != 0x09)
+   {
+     if (state->dmr_ms_mode == 0)
+     { 
+diff --git a/src/dmr_flco.c b/src/dmr_flco.c
+index 839b085..e43b568 100644
+--- a/src/dmr_flco.c
++++ b/src/dmr_flco.c
+@@ -790,21 +790,23 @@ uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25])
+     crc = crc8_ok(slco_bits, 36);
+ 
+     //only run SLCO on good everything
+-    if (h1 && h2 && h3 && crc) dmr_slco (opts, state, slco_bits);
+-    else
+-    {
+-      //this line break issue is wracking on my OCD for clean line breaks
+-      if (opts->payload == 1 && state->dmrburstL == 16 && state->currentslot == 0) ; //no line break if current slot is voice with payload enabled
+-      else if (opts->payload == 1 && state->dmrburstR == 16 && state->currentslot == 1) ; //no line break if current slot is voice with payload enabled
+-      else fprintf (stderr, "\n");
+-      fprintf (stderr, "%s", KRED);
+-      fprintf (stderr, " SLCO CRC ERR");
+-      fprintf (stderr, "%s", KNRM);
+-      if (opts->payload == 1 && state->dmrburstL == 16 && state->currentslot == 0) //if current slot is voice with payload enabled
+-        fprintf (stderr, "\n");
+-      else if (opts->payload == 1 && state->dmrburstR == 16 && state->currentslot == 1) //if current slot is voice with payload enabled
+-        fprintf (stderr, "\n");
+-    } 
++    if (h1 && h2 && h3 && crc) {} //dmr_slco (opts, state, slco_bits);
++    // else
++    // {
++    //   //this line break issue is wracking on my OCD for clean line breaks
++    //   if (opts->payload == 1 && state->dmrburstL == 16 && state->currentslot == 0) {} //no line break if current slot is voice with payload enabled
++    //   else if (opts->payload == 1 && state->dmrburstR == 16 && state->currentslot == 1) {} //no line break if current slot is voice with payload enabled
++    //   else {} //fprintf (stderr, "\n");
++    //   // fprintf (stderr, "%s", KRED);
++    //   // fprintf (stderr, " SLCO CRC ERR");
++    //   // fprintf (stderr, "%s", KNRM);
++    //   if (opts->payload == 1 && state->dmrburstL == 16 && state->currentslot == 0) //if current slot is voice with payload enabled
++    //     fprintf (stderr, "\n");
++    //   else if (opts->payload == 1 && state->dmrburstR == 16 && state->currentslot == 1) //if current slot is voice with payload enabled
++    //     fprintf (stderr, "\n");
++    // } 
++
++    UNUSED(opts);
+     
+   }
+   return (err); //return err value based on success or failure, even if we aren't checking it
+@@ -935,8 +937,11 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
+   uint8_t xpt_hash = (uint8_t)ConvertBitIntoBytes(&slco_bits[20], 8); //priority TG hash
+ 
+   //initial line break
+-  fprintf (stderr, "\n");
+-  fprintf (stderr, "%s", KYEL);
++  if (slco != 0)
++  {
++    fprintf (stderr, "\n");
++    fprintf (stderr, "%s", KYEL);
++  }
+ 
+   if (slco == 0x2) //C_SYS_Parms
+   {
+@@ -973,7 +978,8 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
+     else sprintf (state->dmr_site_parms, "TIII %s:%d-%d;%04X; ", model_str, net, site, syscode);
+   }
+   else if (slco == 0x0) //null
+-    fprintf (stderr, " SLCO NULL ");
++    // fprintf (stderr, " SLCO NULL ");
++    {}
+   else if (slco == 0x1)
+   {
+     fprintf (stderr, " Activity Update"); //102 361-2 7.1.3.2
+diff --git a/src/dsd_frame_sync.c b/src/dsd_frame_sync.c
+index 062bb20..f47a447 100644
+--- a/src/dsd_frame_sync.c
++++ b/src/dsd_frame_sync.c
+@@ -940,7 +940,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
+                 sprintf(state->ftype, "DMR ");
+                 if (opts->errorbars == 1)
+                 {
+-                  printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
++                  // printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
+                 }
+                 state->lastsynctype = 10;
+                 state->last_cc_sync_time = time(NULL); 
+@@ -1068,7 +1068,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
+                 sprintf(state->ftype, "DMR ");
+                 if (opts->errorbars == 1) //&& opts->dmr_stereo == 0
+                 {
+-                  printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
++                  // printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
+                 }
+                 state->lastsynctype = 13;
+                 state->last_cc_sync_time = time(NULL); 
+@@ -1443,7 +1443,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
+             {
+               if ((opts->errorbars == 1) && (opts->verbose > 1) && (state->carrier == 1))
+                 {
+-                  fprintf (stderr,"Sync: no sync\n");
++                  // fprintf (stderr,"Sync: no sync\n");
+                   // fprintf (stderr,"Press CTRL + C to close.\n"); 
+ 
+                 }
+diff --git a/src/dsd_main.c b/src/dsd_main.c
+index 98f2ead..b09cb81 100644
+--- a/src/dsd_main.c
++++ b/src/dsd_main.c
+@@ -1687,7 +1687,7 @@ main (int argc, char **argv)
+   }
+ 
+   #ifdef AERO_BUILD
+-  fprintf (stderr, "Build Version: AW (20231015) \n");
++  fprintf (stderr, "Build Version: AW (20240523) \n");
+   #else
+   fprintf (stderr, "Build Version: AW %s \n", GIT_TAG);
+   #endif
+diff --git a/src/dsd_ncurses.c b/src/dsd_ncurses.c
+index a5442af..514b9ae 100644
+--- a/src/dsd_ncurses.c
++++ b/src/dsd_ncurses.c
+@@ -2423,7 +2423,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+   if (opts->ncurses_compact == 1)
+   {
+     printw ("------------------------------------------------------------------------------\n");
+-    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "AW (20231015)");
++    printw ("| Digital Speech Decoder: Florida Man Edition - Aero %s \n", "AW (20240523)");
+     printw ("------------------------------------------------------------------------------\n");
+   }
+ #elif LIMAZULUTWEAKS
+@@ -2462,8 +2462,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
+       if (i == 4 && opts->frame_m17 == 1) printw (" CODEC2");
+       #endif
+       #ifdef AERO_BUILD
+-      if (i == 5) printw (" %s ", "Aero Build");
+-      if (i == 6) printw (" AW (20231015) \n");
++      if (i == 5) printw (" %s ", "Cretu Build");
++      if (i == 6) printw (" AW (20240523) \n");
+       #elif ZDEV_BUILD
+       if (i == 5) printw (" %s ", "AW ");
+       if (i == 6) printw (" %s \n", GIT_TAG);
