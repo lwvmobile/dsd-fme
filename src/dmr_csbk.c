@@ -283,11 +283,40 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   {
                     state->lasttg = target;
                     state->lastsrc = source;
+
+                    //fix call string for per call, etc
+                    sprintf (state->call_string[0], " Trunked "); //catch all
+                    if (csbk_o == 49 || csbk_o == 50)
+                      sprintf (state->call_string[0], "   Group ");
+                    else if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54 || csbk_o == 55 || csbk_o == 56) {} //do nothing
+                    else sprintf (state->call_string[0], " Private ");
+                    if (st2)
+                    {
+                      if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54 || csbk_o == 55 || csbk_o == 56) {} //do nothing
+                      else strcat (state->call_string[0], " Emergency  ");
+                    }
+                    else strcat (state->call_string[0], "            ");
+
                   }
+
                   if (lcn == 1 && data_call == 0)
                   {
                     state->lasttgR = target;
                     state->lastsrcR = source;
+
+                    //fix call string for per call, etc
+                    sprintf (state->call_string[1], " Trunked "); //catch all
+                    if (csbk_o == 49 || csbk_o == 50)
+                      sprintf (state->call_string[1], "   Group ");
+                    else if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54 || csbk_o == 55 || csbk_o == 56) {} //do nothing
+                    else sprintf (state->call_string[1], " Private ");
+                    if (st2)
+                    {
+                      if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54 || csbk_o == 55 || csbk_o == 56) {} //do nothing
+                      else strcat (state->call_string[1], " Emergency  ");
+                    }
+                    else strcat (state->call_string[1], "            ");
+
                   }
                   //Guess I forgot to add this condition here
                   if (GetCurrentFreq(opts->rigctl_sockfd) != freq)
@@ -312,11 +341,39 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   {
                     state->lasttg = target;
                     state->lastsrc = source;
+
+                    //fix call string for per call, etc
+                    sprintf (state->call_string[0], " Trunked "); //catch all
+                    if (csbk_o == 49 || csbk_o == 50)
+                      sprintf (state->call_string[0], "   Group ");
+                    else if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54 || csbk_o == 55 || csbk_o == 56) {} //do nothing
+                    else sprintf (state->call_string[0], " Private ");
+                    if (st2)
+                    {
+                      if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54 || csbk_o == 55 || csbk_o == 56) {} //do nothing
+                      else strcat (state->call_string[0], " Emergency  ");
+                    }
+                    else strcat (state->call_string[0], "            ");
+
                   }
                   if (lcn == 1 && data_call == 0)
                   {
                     state->lasttgR = target;
                     state->lastsrcR = source;
+
+                    //fix call string for per call, etc
+                    sprintf (state->call_string[1], " Trunked "); //catch all
+                    if (csbk_o == 49 || csbk_o == 50)
+                      sprintf (state->call_string[1], "   Group ");
+                    else if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54 || csbk_o == 55 || csbk_o == 56) {} //do nothing
+                    else sprintf (state->call_string[1], " Private ");
+                    if (st2)
+                    {
+                      if (csbk_o == 51 || csbk_o == 52 || csbk_o == 54 || csbk_o == 55 || csbk_o == 56) {} //do nothing
+                      else strcat (state->call_string[1], " Emergency  ");
+                    }
+                    else strcat (state->call_string[1], "            ");
+
                   }
                   //Guess I forgot to add this condition here
                   uint32_t tempf = (uint32_t)freq;
