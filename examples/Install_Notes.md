@@ -1,6 +1,6 @@
 ## How to clone and build this branch
 
-### Ubuntu 22.04/20.04/LM20/Debian Bullseye or Newer:
+### Ubuntu 22.04/20.04/LM20/Debian Bullseye:
 
 Using the included download-and-install.sh should make for a simple and painless clone, build, and install on newer Debian/Ubuntu/Mint/Pi systems. Simply acquire or copy the script, and run it. Update: Ubuntu 23.04 and RPi Bullseye 64-bit has been tested working with the installer script and functions appropriately.
 
@@ -8,16 +8,21 @@ If you need all dependencies build and installed first (only on Debian/Ubuntu/Mi
 
 ```
 wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/audio_work/download-and-install.sh
-chmod +x download-and-install.sh
-./download-and-install.sh
+sh download-and-install.sh
+```
+
+### Ubuntu 24.04 LTS (Updated Ncurses Dependencies)
+
+```
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/aw_dev/download-and-install-ubuntu2404lts.sh
+sh download-and-install-ubuntu2404lts.sh
 ```
 
 ### Arch Based Distros:
 
 ```
 wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/audio_work/download-and-install-Arch.sh
-chmod +x download-and-install-Arch.sh
-./download-and-install-Arch.sh
+sh download-and-install-Arch.sh
 ```
 
 ### Other:
@@ -26,8 +31,7 @@ If you have dependencies already installed, please run this instead:
 
 ```
 wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/audio_work/download-and-install-nodeps.sh
-chmod +x download-and-install-nodeps.sh
-./download-and-install-nodeps.sh
+sh download-and-install-nodeps.sh
 ```
 
 ## Manual Install
@@ -38,7 +42,11 @@ Debian/Mint/Ubuntu/Pi
 
 ```
 sudo apt update
-sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev libcodec2-dev
+#Ubuntu 22.04 lts and lesser
+sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev
+#Ubuntu 24.04 lts
+#sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncurses-dev libncurses6 libcodec2-dev
+libncursesw5-dev libcodec2-dev
 ```
 
 Fedora 36/37 -- from https://github.com/lwvmobile/dsd-fme/issues/99
