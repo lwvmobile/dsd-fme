@@ -43,10 +43,9 @@ Debian/Mint/Ubuntu/Pi
 ```
 sudo apt update
 #Ubuntu 22.04 lts and lesser
-sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev
+sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libcodec2-dev
 #Ubuntu 24.04 lts
 #sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncurses-dev libncurses6 libcodec2-dev
-libncursesw5-dev libcodec2-dev
 ```
 
 Fedora 36/37 -- from https://github.com/lwvmobile/dsd-fme/issues/99
