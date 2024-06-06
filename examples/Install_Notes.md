@@ -14,7 +14,7 @@ sh download-and-install.sh
 ### Ubuntu 24.04 LTS (Updated Ncurses Dependencies)
 
 ```
-wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/aw_dev/download-and-install-ubuntu2404lts.sh
+wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/audio_work/download-and-install-ubuntu2404lts.sh
 sh download-and-install-ubuntu2404lts.sh
 ```
 
