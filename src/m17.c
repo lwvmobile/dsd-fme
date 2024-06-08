@@ -3210,13 +3210,14 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
     fprintf (stderr, " Longitude: %03d.%05d ", lon_deg_int, lon_deg_dec * 65535);
     if (indicators & 2) fprintf (stderr, "W;");
     else                fprintf (stderr, "E;");
-    if (indicators & 4) fprintf (stderr, "Altitude: %d;", altitude + 1500);
-    if (indicators & 8) fprintf (stderr, "Speed: %d MPH;", speed);
-    if (indicators & 8) fprintf (stderr, "Bearing: %d Degrees;", bearing);
+    if (indicators & 4) fprintf (stderr, " Altitude: %d;", altitude + 1500);
+    if (indicators & 8) fprintf (stderr, " Speed: %d MPH;", speed);
+    if (indicators & 8) fprintf (stderr, " Bearing: %d Degrees;", bearing);
 
     if      (data_source == 0) fprintf (stderr, " M17 Client;");
     else if (data_source == 1) fprintf (stderr, " OpenRTX;");
-    else if (data_source == 0xFF) fprintf (stderr, " Other;");
+    else if (data_source == 0x69) fprintf (stderr, " FME Data Source;");
+    else if (data_source == 0xFF) fprintf (stderr, " Other Data Source;");
     else fprintf (stderr, " Reserved Data Source: %02X;", data_source);
 
     if      (station_type == 0) fprintf (stderr, " Fixed Station;");
