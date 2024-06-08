@@ -191,7 +191,7 @@ void M17decodeLSF(dsd_state * state)
   if (lsf_et == 0 && state->m17_meta[0] != 0) //not sure if this applies universally, or just to text data byte 0 for null data
   {
     uint8_t meta[15]; meta[0] = lsf_es + 90; //add identifier for pkt decoder
-    for (i = 0; i < 14; i++) meta[i+1] = state->m17_lsf[i];
+    for (i = 0; i < 14; i++) meta[i+1] = state->m17_meta[i];
     fprintf (stderr, "\n ");
     //Note: We don't have opts here, so in the future, if we need it, we will need to pass it here
     decodeM17PKT (NULL, state, meta, 15); //decode META
@@ -3225,8 +3225,8 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
     else fprintf (stderr, " Reserved Station Type: %02X;", station_type);
 
   }
-  //Any Other Text Based
-  else if (protocol >= 90)
+  //1600 Arbitrary Data, or META Text Message
+  else if (protocol == 90 || protocol == 99)
   {
     fprintf (stderr, " ");
     for (i = 1; i < len; i++)
