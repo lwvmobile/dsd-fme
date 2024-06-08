@@ -11,7 +11,7 @@ wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/audio_work/download-and
 sh download-and-install.sh
 ```
 
-### Ubuntu 24.04 LTS (Updated Ncurses Dependencies)
+### Debian 12 (SID) / Ubuntu 24.04 LTS (Updated Ncurses Dependencies)
 
 ```
 wget https://raw.githubusercontent.com/lwvmobile/dsd-fme/audio_work/download-and-install-ubuntu2404lts.sh
@@ -42,9 +42,9 @@ Debian/Mint/Ubuntu/Pi
 
 ```
 sudo apt update
-#Ubuntu 22.04 lts and lesser
+#Ubuntu 22.04 lts / Debian 11 and lower
 sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libcodec2-dev
-#Ubuntu 24.04 lts
+#Ubuntu 24.04 lts / Debian 12
 #sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncurses-dev libncurses6 libcodec2-dev
 ```
 
