@@ -187,8 +187,13 @@ void M17decodeLSF(dsd_state * state)
   for (i = 0; i < 14; i++)
     state->m17_meta[i] = (uint8_t)ConvertBitIntoBytes(&state->m17_lsf[(i*8)+112], 8);
 
-  //Decode Meta Data
-  if (lsf_et == 0 && state->m17_meta[0] != 0) //not sure if this applies universally, or just to text data byte 0 for null data
+  //using meta_sum in case some byte fields, particularly meta[0], are zero
+  uint32_t meta_sum = 0;
+  for (i = 0; i < 14; i++)
+    meta_sum += state->m17_meta[i];
+
+  //Decode Meta Data when not ENC (if meta field is populated with something)
+  if (lsf_et == 0 && meta_sum != 0)
   {
     uint8_t meta[15]; meta[0] = lsf_es + 90; //add identifier for pkt decoder
     for (i = 0; i < 14; i++) meta[i+1] = state->m17_meta[i];
@@ -196,6 +201,10 @@ void M17decodeLSF(dsd_state * state)
     //Note: We don't have opts here, so in the future, if we need it, we will need to pass it here
     decodeM17PKT (NULL, state, meta, 15); //decode META
   }
+
+  //if no Meta (debug)
+  // if (lsf_et == 0 && meta_sum == 0)
+  //   fprintf (stderr, " Meta Null; ");
   
   if (lsf_et == 2)
   {
