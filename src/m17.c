@@ -2852,7 +2852,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     block++;
     pad = (block * 25) - ptr - 4;
   }
-  lst = 23-pad; //pbc value for last block out
+  lst = 23-pad+2; //pbc value for last block out
 
   //sanity check block value
   // if (block > 31) block = 31;
@@ -3339,7 +3339,7 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   // else if (eot && state->m17_pbc_ct != 0) state->m17_pbc_ct++; //increment if eot and counter not zero
 
   int ptr = state->m17_pbc_ct*25;
-  int total = ptr + counter - 1;
+  int total = ptr + counter - 3; //-3 if changes to M17_Implementations are made
   int end = ptr + 25;
 
   //debug counter and eot value
