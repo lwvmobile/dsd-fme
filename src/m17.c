@@ -195,7 +195,7 @@ void M17decodeLSF(dsd_state * state)
   //Decode Meta Data when not ENC (if meta field is populated with something)
   if (lsf_et == 0 && meta_sum != 0)
   {
-    uint8_t meta[15]; meta[0] = lsf_es + 90; //add identifier for pkt decoder
+    uint8_t meta[15]; meta[0] = lsf_es + 0x80; //add identifier for pkt decoder
     for (i = 0; i < 14; i++) meta[i+1] = state->m17_meta[i];
     fprintf (stderr, "\n ");
     //Note: We don't have opts here, so in the future, if we need it, we will need to pass it here
@@ -310,7 +310,7 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t * lich_bits)
         if (i == 15) fprintf (stderr, "\n      ");
         fprintf (stderr, "[%02X]", lsf_packed[i]);
       }
-      fprintf (stderr, " (CRC CHK) E: %04X; C: %04X;", crc_ext, crc_cmp);
+      fprintf (stderr, "\n      (CRC CHK) E: %04X; C: %04X;", crc_ext, crc_cmp);
     }
 
     memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
@@ -427,7 +427,7 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t * payload
   #endif
 
   //handle arbitrary data
-  uint8_t adata[9]; adata[0] = 99; //set so pkt decoder will rip these out as just utf-8 chars
+  uint8_t adata[9]; adata[0] = 0x89; //set so pkt decoder will rip these out as just utf-8 chars
   for (i = 0; i < 8; i++)
     adata[i+1] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+64], 8);
   
@@ -3149,21 +3149,21 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
 
   uint8_t protocol = input[0];
   fprintf (stderr, " Protocol:");
-  if (protocol == 0) fprintf (stderr, " Raw;");
-  else if (protocol == 1) fprintf (stderr, " AX.25;");
-  else if (protocol == 2) fprintf (stderr, " APRS;");
-  else if (protocol == 3) fprintf (stderr, " 6LoWPAN;");
-  else if (protocol == 4) fprintf (stderr, " IPv4;");
-  else if (protocol == 5) fprintf (stderr, " SMS;");
-  else if (protocol == 6) fprintf (stderr, " Winlink;");
-  else if (protocol == 90)fprintf (stderr, " Meta Text Data;"); //internal format only from meta
-  else if (protocol == 91)fprintf (stderr, " Meta GNSS Position Data;"); //internal format only from meta
-  else if (protocol == 92)fprintf (stderr, " Meta Extended CSD;"); //internal format only from meta
-  else if (protocol == 99)fprintf (stderr, " 1600 Arbitrary Data;"); //internal format only from 1600
-  else fprintf (stderr, " Res: %02X;", protocol);
+  if      (protocol == 0x00) fprintf (stderr, " Raw;");
+  else if (protocol == 0x01) fprintf (stderr, " AX.25;");
+  else if (protocol == 0x02) fprintf (stderr, " APRS;");
+  else if (protocol == 0x03) fprintf (stderr, " 6LoWPAN;");
+  else if (protocol == 0x04) fprintf (stderr, " IPv4;");
+  else if (protocol == 0x05) fprintf (stderr, " SMS;");
+  else if (protocol == 0x06) fprintf (stderr, " Winlink;");
+  else if (protocol == 0x80) fprintf (stderr, " Meta Text Data;"); //internal format only from meta
+  else if (protocol == 0x81) fprintf (stderr, " Meta GNSS Position Data;"); //internal format only from meta
+  else if (protocol == 0x82) fprintf (stderr, " Meta Extended CSD;"); //internal format only from meta
+  else if (protocol == 0x89) fprintf (stderr, " 1600 Arbitrary Data;"); //internal format only from 1600
+  else                       fprintf (stderr, " Res/Unk: %02X;", protocol);
 
   //simple UTF-8 SMS Decoder
-  if (protocol == 5)
+  if (protocol == 0x05)
   {
     fprintf (stderr, "\n SMS: ");
     for (i = 1; i < len; i++)
@@ -3176,7 +3176,7 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
     }
   }
   //Extended Call Sign Data
-  else if (protocol == 92)
+  else if (protocol == 0x82)
   {
     //NOTE: If doing a shift addition like this, make sure ALL values have (unsigned long long int) in front of it, not just the ones that 'needed' it
     unsigned long long int src  = ((unsigned long long int)input[1] << 40ULL) + ((unsigned long long int)input[2] << 32ULL) + ((unsigned long long int)input[3] << 24ULL) + ((unsigned long long int)input[4]  << 16ULL) + ((unsigned long long int)input[5]  << 8ULL) + ((unsigned long long int)input[6]  << 0ULL);
@@ -3200,7 +3200,7 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
     }
   }
   //GNSS Positioning
-  else if (protocol == 91)
+  else if (protocol == 0x81)
   {
     //Decode GNSS Elements
     uint8_t  data_source  = input[1];
@@ -3236,12 +3236,25 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
     else fprintf (stderr, " Reserved Station Type: %02X;", station_type);
 
   }
-  //1600 Arbitrary Data, or META Text Message
-  else if (protocol == 90 || protocol == 99)
+  //META Text Message, or 1600 Arbitrary Data
+  //TODO: Seperate these two so we can assemble a completed Meta Text Message properly
+  else if (protocol == 0x80 || protocol == 0x89)
   {
     fprintf (stderr, " ");
-    for (i = 1; i < len; i++)
-      fprintf (stderr, "%c", input[i]);
+
+    if (protocol == 0x80) //Meta
+    { 
+      //show Control Byte Len and Segment Values on Meta Text
+      fprintf (stderr, "%d/%d; ", (input[1] >> 4), input[1] & 0xF);
+      for (i = 2; i < len; i++)
+        fprintf (stderr, "%c", input[i]);
+    }
+    else
+    {
+      for (i = 1; i < len; i++)
+        fprintf (stderr, "%c", input[i]);
+    }
+
   }
   //Any Other Raw Data as Hex
   else
