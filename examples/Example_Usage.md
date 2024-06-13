@@ -330,9 +330,9 @@ Decode (Lower z):
 
 NOTE: When using tcp input for M17 decoding, DSD-FME will keep the TCP connection alive with constant retries, so no need to restart the decoding session on connection failure.
 
-SMS Packet Encoder:
+SMS Packet Encoder (Text Only):
 
-`dsd-fme -fP -S "This is a sample message sent over M17 Packet Data using DSD-FME to encode it."`
+`dsd-fme -fP -8 -S "This is a sample message sent over M17 Packet Data using DSD-FME to encode it."`
 
 SMS Packet Encoder (over SOCAT TCP):
 

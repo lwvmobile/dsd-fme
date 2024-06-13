@@ -166,7 +166,7 @@ void M17decodeLSF(dsd_state * state)
   if (lsf_dt == 3) fprintf (stderr, " Voice (1600bps)");
 
   if (lsf_rs != 0) fprintf (stderr, " RS: %02X", lsf_rs);
-
+  fprintf (stderr, "\n");
   if (lsf_et != 0) fprintf (stderr, " ENC:");
   if (lsf_et == 2) fprintf (stderr, " AES-CTR");
   if (lsf_et == 1) fprintf (stderr, " Scrambler - %d", lsf_es);
@@ -174,8 +174,20 @@ void M17decodeLSF(dsd_state * state)
   state->m17_enc = lsf_et;
   state->m17_enc_st = lsf_es;
 
+  if (lsf_rs != 0)
+  { 
+    if (lsf_rs == 0x10)
+      fprintf (stderr, " OTAKD Data Packet;");
+    else if (lsf_rs == 0x11)
+    {
+      fprintf (stderr, " OTAKD Embedded LSF;\n");
+      goto LSF_END;
+    }
+  }
+
   //compare incoming META/IV value on AES, if timestamp 32-bits are not within a time 5 minute window, then throw a warning
-  uint32_t tsn = (time(NULL) & 0xFFFFFFFF); //current LSB 32-bit value
+  long long int epoch = 1577836800LL;                                     //Jan 1, 2020, 00:00:00 UTC
+  uint32_t tsn = ( (time(NULL)-epoch) & 0xFFFFFFFF); //current LSB 32-bit value
   uint32_t tsi = (uint32_t)ConvertBitIntoBytes(&state->m17_lsf[112], 32); //OTA LSB 32-bit value
   uint32_t dif = abs(tsn-tsi);
   if (lsf_et == 2 && dif > 3600) fprintf (stderr, " \n Warning! Time Difference > %d secs; Potential NONCE/IV Replay!\n", dif);
@@ -212,6 +224,8 @@ void M17decodeLSF(dsd_state * state)
     for (i = 0; i < 16; i++)
       fprintf (stderr, "%02X", state->m17_meta[i]);
   }
+
+  LSF_END: ; //do nothing
   
 }
 
@@ -1475,7 +1489,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   unsigned long long int dst = 0;
   unsigned long long int src = 0;
   //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
-  char d40[50] = "DSD-FME  "; //DST
+  char d40[50] = "BROADCAST"; //DST
   char s40[50] = "DSD-FME  "; //SRC
   //end User Defined Variables
 
@@ -2140,7 +2154,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         //convert bit array into symbols and RF/Audio
         memset (nil, 0, sizeof(nil));
         encodeM17RF (opts, state, nil, 11); //Preamble
-        for (i = 0; i < 2; i++)
+        // for (i = 0; i < 2; i++)
           encodeM17RF (opts, state, m17_lsfs, 1); //LSF
 
         //flag off after sending
@@ -2617,7 +2631,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   unsigned long long int dst = 0;
   unsigned long long int src = 0;
   //DST and SRC Callsign Data (pick up to 9 characters from the b40 char array)
-  char d40[50] = "DSD-FME  "; //DST
+  char d40[50] = "BROADCAST"; //DST
   char s40[50] = "DSD-FME  "; //SRC
 
   //Default
@@ -3039,7 +3053,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
       //convert bit array into symbols and RF/Audio
       memset (nil, 0, sizeof(nil));
       encodeM17RF (opts, state, nil, 11); //Preamble
-      for (i = 0; i < 2; i++)
+      // for (i = 0; i < 2; i++)
         encodeM17RF (opts, state, m17_lsfs, 1); //LSF
 
       //flag off after sending
