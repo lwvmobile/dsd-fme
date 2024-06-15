@@ -3375,12 +3375,26 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   // else if (eot && state->m17_pbc_ct != 0) state->m17_pbc_ct++; //increment if eot and counter not zero
 
   int ptr = state->m17_pbc_ct*25;
+
+  //sanity check to we don't go out of bounds on memcpy and total (core dump)
+  if (ptr > 825) ptr = 825;
+  if (ptr < 0)   ptr = 0;
+  if (ptr == 0 && eot == 1) ptr = 3; //this is from a bad decode, and caused a core dump on total being a negative value
+
   int total = ptr + counter - 3; //-3 if changes to M17_Implementations are made
   int end = ptr + 25;
+
+  //TODO: Fix this
+  /*
+    00:23:28 Sync: +M17 PREAMBLE 
+    00:23:28 Sync: +M17 PKT
+    00:23:28 Sync: +M17 PKT  CNT: 00; LST: 01; EOT: 1;Segmentation fault (core dumped) <--negative total value calculated on this
+  */
 
   //debug counter and eot value
   if (!eot) fprintf (stderr, " CNT: %02d; PBC: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
   else fprintf (stderr, " CNT: %02d; LST: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
+  fprintf (stderr, " PTR: %d; Total: %d; ", ptr, total);
 
   //put packet into storage
   memcpy (state->m17_pkt+ptr, pkt_packed, 25);
