@@ -186,11 +186,11 @@ void M17decodeLSF(dsd_state * state)
   }
 
   //compare incoming META/IV value on AES, if timestamp 32-bits are not within a time 5 minute window, then throw a warning
-  long long int epoch = 1577836800LL;                                     //Jan 1, 2020, 00:00:00 UTC
-  uint32_t tsn = ( (time(NULL)-epoch) & 0xFFFFFFFF); //current LSB 32-bit value
-  uint32_t tsi = (uint32_t)ConvertBitIntoBytes(&state->m17_lsf[112], 32); //OTA LSB 32-bit value
-  uint32_t dif = abs(tsn-tsi);
-  if (lsf_et == 2 && dif > 3600) fprintf (stderr, " \n Warning! Time Difference > %d secs; Potential NONCE/IV Replay!\n", dif);
+  // long long int epoch = 1577836800LL;                                     //Jan 1, 2020, 00:00:00 UTC
+  // uint32_t tsn = ( (time(NULL)-epoch) & 0xFFFFFFFF); //current LSB 32-bit value
+  // uint32_t tsi = (uint32_t)ConvertBitIntoBytes(&state->m17_lsf[112], 32); //OTA LSB 32-bit value
+  // uint32_t dif = abs(tsn-tsi);
+  // if (lsf_et == 2 && dif > 3600) fprintf (stderr, " \n Warning! Time Difference > %d secs; Potential NONCE/IV Replay!\n", dif);
 
   //debug
   // fprintf (stderr, "TSN: %ld; TSI: %ld; DIF: %ld;", tsn, tsi, dif);
@@ -3176,6 +3176,13 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
   else if (protocol == 0x89) fprintf (stderr, " 1600 Arbitrary Data;"); //internal format only from 1600
   else                       fprintf (stderr, " Res/Unk: %02X;", protocol);
 
+  //check for encryption, if encrypted, skip decode and report as encrypted
+  if (state->m17_enc != 0)
+  {
+    fprintf (stderr, " *Encrypted*");
+    goto PKT_END;
+  }
+
   //simple UTF-8 SMS Decoder
   if (protocol == 0x05)
   {
@@ -3277,6 +3284,8 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
     for (i = 1; i < len; i++)
       fprintf (stderr, "%02X", input[i]);
   }
+
+  PKT_END: ; //do nothing
 
 }
 
