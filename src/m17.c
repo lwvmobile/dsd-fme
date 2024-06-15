@@ -3394,7 +3394,7 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   //debug counter and eot value
   if (!eot) fprintf (stderr, " CNT: %02d; PBC: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
   else fprintf (stderr, " CNT: %02d; LST: %02d; EOT: %d;", state->m17_pbc_ct, counter, eot);
-  fprintf (stderr, " PTR: %d; Total: %d; ", ptr, total);
+  // fprintf (stderr, " PTR: %d; Total: %d; ", ptr, total);
 
   //put packet into storage
   memcpy (state->m17_pkt+ptr, pkt_packed, 25);
