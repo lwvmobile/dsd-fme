@@ -3379,9 +3379,12 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
   //sanity check to we don't go out of bounds on memcpy and total (core dump)
   if (ptr > 825) ptr = 825;
   if (ptr < 0)   ptr = 0;
-  if (ptr == 0 && eot == 1) ptr = 3; //this is from a bad decode, and caused a core dump on total being a negative value
 
   int total = ptr + counter - 3; //-3 if changes to M17_Implementations are made
+
+  //sanity check on total
+  if (total < 0 && eot == 1) total = 0; //this is from a bad decode, and caused a core dump on total being a negative value
+  
   int end = ptr + 25;
 
   //TODO: Fix this
