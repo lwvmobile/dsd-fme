@@ -96,86 +96,42 @@ void saveAmbe2450DataR (dsd_opts * opts, dsd_state * state, char *ambe_d)
 
 void PrintIMBEData (dsd_opts * opts, dsd_state * state, char *imbe_d) //for P25P1 and ProVoice
 {
-  int i, j, k;
-  unsigned char b;
-  unsigned char err;
-  UNUSED(err);
-
-  err = (unsigned char) state->errs2;
-  k = 0;
-  if (opts->payload == 1) //print IMBE info
+  fprintf(stderr, "\n IMBE ");
+  uint8_t imbe[88];
+  for (int i = 0; i < 11; i++)
   {
-    fprintf(stderr, "\n IMBE ");
+    imbe[i] =  convert_bits_into_output((uint8_t *)imbe_d+(i*8), 8);
+    fprintf(stderr, "%02X", imbe[i]);
   }
-  for (i = 0; i < 11; i++)
-  {
-    b = 0;
-    for (j = 0; j < 8; j++)
-    {
-      b = b << 1;
-      b = b + imbe_d[k];
-      k++;
-    }
-    if (opts->payload == 1)
-    {
-      fprintf (stderr, "%02X", b);
-    }
-  }
+    
 
-  if (opts->payload == 1)
-  {
-    fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
-  }
-
-  //fprintf (stderr, "\n");
+  fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
+  UNUSED(opts);
 }
 
 void PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) 
 {
-  int i, j, k;
-  unsigned char b;
-  unsigned char err;
-  UNUSED(err);
 
-  err = (unsigned char) state->errs2;
-  k = 0;
+  //cast as unsigned long long int and not uint64_t 
+  //to avoid the %lx vs %llx warning on 32 or 64 bit
+  unsigned long long int ambe = 0;
+
+  //preceeding line break, if required
   if (opts->dmr_stereo == 0 && opts->dmr_mono == 0)
-  {
     fprintf (stderr, "\n");
-  }
-  if (opts->payload == 1) //print AMBE info from DMR Stereo method
-  {
-    fprintf(stderr, " AMBE ");
-  }
 
-  for (i = 0; i < 7; i++) 
-    {
-      b = 0;
-      for (j = 0; j < 8; j++)
-        {
-          b = b << 1;
-          b = b + ambe_d[k];
-          k++;
-        }
-        if (opts->payload == 1 && i < 6) 
-        {
-          fprintf (stderr, "%02X", b);
-        }
-        if (opts->payload == 1 && i == 6) 
-        {
-          fprintf (stderr, "%02X", b & 0x80); 
-        }
-    }
-    if (state->currentslot == 0)
-    {
-      fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
-    }
-    else fprintf(stderr, " err = [%X] [%X] ", state->errsR, state->errs2R);
-  b = ambe_d[48];
-  if (opts->dmr_stereo == 1 || opts->dmr_mono == 1) //need to fix the printouts again
-  {
+  ambe = convert_bits_into_output ((uint8_t *)ambe_d, 49);
+  ambe = ambe << 7; //shift to final position
+
+  fprintf(stderr, " AMBE %014llX", ambe);
+
+  if (state->currentslot == 0)
+    fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
+  else fprintf(stderr, " err = [%X] [%X] ", state->errsR, state->errs2R);
+
+  //trailing line break, if required
+  if (opts->dmr_stereo == 1 || opts->dmr_mono == 1)
     fprintf (stderr, "\n");
-  }
 
 }
 
@@ -592,5 +548,56 @@ void closeSymbolOutFile (dsd_opts * opts, dsd_state * state)
   {
     fclose(opts->symbol_out_f);
     opts->symbol_out_f = NULL;
+  }
+}
+
+//input bit array, return output as up to a 64-bit value
+uint64_t convert_bits_into_output(uint8_t * input, int len)
+{
+  int i;
+  uint64_t output = 0;
+  for(i = 0; i < len; i++)
+  {
+    output <<= 1;
+    output |= (uint64_t)(input[i] & 1);
+  }
+  return output;
+}
+
+void pack_bit_array_into_byte_array (uint8_t * input, uint8_t * output, int len)
+{
+  int i;
+  for (i = 0; i < len; i++)
+    output[i] = (uint8_t)convert_bits_into_output(&input[i*8], 8);
+}
+
+//take len amount of bits and pack into x amount of bytes (asymmetrical)
+void pack_bit_array_into_byte_array_asym (uint8_t * input, uint8_t * output, int len)
+{
+  int i = 0; int k = len % 8;
+  for (i = 0; i < len; i++)
+  {
+    output[i/8] <<= 1;
+    output[i/8] |= input[i];
+  }
+  //if any leftover bits that don't flush the last byte fully packed, shift them over left
+  if (k)
+    output[i/8] <<= 8-k;
+}
+
+//take len amount of bytes and unpack back into a bit array
+void unpack_byte_array_into_bit_array (uint8_t * input, uint8_t * output, int len)
+{
+  int i = 0, k = 0;
+  for (i = 0; i < len; i++)
+  {
+    output[k++] = (input[i] >> 7) & 1;
+    output[k++] = (input[i] >> 6) & 1;
+    output[k++] = (input[i] >> 5) & 1;
+    output[k++] = (input[i] >> 4) & 1;
+    output[k++] = (input[i] >> 3) & 1;
+    output[k++] = (input[i] >> 2) & 1;
+    output[k++] = (input[i] >> 1) & 1;
+    output[k++] = (input[i] >> 0) & 1;
   }
 }
