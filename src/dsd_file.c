@@ -601,3 +601,35 @@ void unpack_byte_array_into_bit_array (uint8_t * input, uint8_t * output, int le
     output[k++] = (input[i] >> 0) & 1;
   }
 }
+
+//take len amount of bits and pack into x amount of bytes (asymmetrical)
+void pack_ambe (char * input, uint8_t * output, int len)
+{
+  int i = 0; int k = len % 8;
+  for (i = 0; i < len; i++)
+  {
+    output[i/8] <<= 1;
+    output[i/8] |= (uint8_t)input[i];
+  }
+  //if any leftover bits that don't flush the last byte fully packed, shift them over left
+  if (k)
+    output[i/8] <<= 8-k;
+}
+
+//unpack byte array with ambe data into a 49-bit bitwise array
+void unpack_ambe (uint8_t * input, char * ambe)
+{
+  int i = 0, k = 0;
+  for (i = 0; i < 7; i++)
+  {
+    ambe[k++] = (input[i] >> 7) & 1;
+    ambe[k++] = (input[i] >> 6) & 1;
+    ambe[k++] = (input[i] >> 5) & 1;
+    ambe[k++] = (input[i] >> 4) & 1;
+    ambe[k++] = (input[i] >> 3) & 1;
+    ambe[k++] = (input[i] >> 2) & 1;
+    ambe[k++] = (input[i] >> 1) & 1;
+    ambe[k++] = (input[i] >> 0) & 1;
+  }
+  ambe[48] = input[6] >> 7;
+}

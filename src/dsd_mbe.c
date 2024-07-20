@@ -554,35 +554,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         rckey[7] = ((state->payload_mi & 0xFF00) >> 8);
         rckey[8] = ((state->payload_mi & 0xFF) >> 0);
 
-        // if (opts->payload == 1)
-        // {
-        // 	fprintf (stderr, "%s", KYEL);
-        // 	fprintf (stderr, " RC4K ");
-        // 	for (short o = 0; o < 9; o++)
-        // 	{
-        // 		fprintf (stderr, "%02X", rckey[o]);
-        // 	}
-        // 	fprintf (stderr, "%s", KNRM);
-        // 	fprintf (stderr, "\n");
-        // }
-
-        short k = 0;
-        for (short o = 0; o < 7; o++)
-        {
-          short b = 0;
-          for (short p = 0; p < 8; p++)
-          {
-            b = b << 1;
-            b = b + ambe_d[k];
-            k++;
-            if (k == 49)
-            {
-              cipher[6] = ((b << 3) & 0x80); //set 7th octet/bit 49 accordingly
-              break;
-            }
-          }
-          cipher[o] = b;
-        }
+        //pack cipher byte array from ambe_d bit array
+        pack_ambe(ambe_d, cipher, 49);
 
         //only run keystream application if errs < 3 -- this is a fix to the pop sound
         //that may occur on some systems that preempt VC6 voice for a RC opportuninity (TXI)
@@ -594,23 +567,10 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
         state->dropL += 7;
 
-        short z = 0;
-        for (short p = 0; p <= 6; p++)
-        {
-          //convert bytes back to bits and load into ambe_d array.
-          short b = 0; //reset b to use again
-          for (short o = 0; o < 8; o++)
-          {
-            b = (( (plain[p] << o) & 0x80) >> 7);
-            ambe_d[z] = b;
-            z++;
-            if (z == 49)
-            {
-              ambe_d[48] = ( (plain[p] << o) & 0x80);
-              break;
-            }
-          }
-        }
+        //unpack deciphered plain array back into ambe_d bit array
+        memset (ambe_d, 0, 49*sizeof(char));
+        unpack_ambe(plain, ambe_d);
+
       }
 
       //P25p2 RC4 Handling, VCH 0
@@ -639,56 +599,16 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         rckey[11] = ((state->payload_miP & 0xFF00) >> 8);
         rckey[12] = ((state->payload_miP & 0xFF) >> 0);
 
-        // if (opts->payload == 1)
-        // {
-        // 	fprintf (stderr, "%s", KYEL);
-        // 	fprintf (stderr, " RC4K ");
-        // 	for (short o = 0; o < 13; o++)
-        // 	{
-        // 		fprintf (stderr, "%02X", rckey[o]);
-        // 	}
-        // 	fprintf (stderr, "%s", KNRM);
-        // 	fprintf (stderr, "\n");
-        // }
-
-        short k = 0;
-        for (short o = 0; o < 7; o++)
-        {
-          short b = 0;
-          for (short p = 0; p < 8; p++)
-          {
-            b = b << 1;
-            b = b + ambe_d[k];
-            k++;
-            if (k == 49)
-            {
-              cipher[6] = ((b << 3) & 0x80); //set 7th octet/bit 49 accordingly
-              break;
-            }
-          }
-          cipher[o] = b;
-        }
+        //pack cipher byte array from ambe_d bit array
+        pack_ambe(ambe_d, cipher, 49);
 
         RC4(state->dropL, 13, 7, rckey, cipher, plain);
         state->dropL += 7;
 
-        short z = 0;
-        for (short p = 0; p <= 6; p++)
-        {
-          //convert bytes back to bits and load into ambe_d array.
-          short b = 0; //reset b to use again
-          for (short o = 0; o < 8; o++)
-          {
-            b = (( (plain[p] << o) & 0x80) >> 7);
-            ambe_d[z] = b;
-            z++;
-            if (z == 49)
-            {
-              ambe_d[48] = ( (plain[p] << o) & 0x80);
-              break;
-            }
-          }
-        }
+        //unpack deciphered plain array back into ambe_d bit array
+        memset (ambe_d, 0, 49*sizeof(char));
+        unpack_ambe(plain, ambe_d);
+
       }
 
       mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, 
@@ -840,35 +760,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         rckey[7] = ((state->payload_miR & 0xFF00) >> 8);
         rckey[8] = ((state->payload_miR & 0xFF) >> 0);
 
-        // if (opts->payload == 1)
-        // {
-        // 	fprintf (stderr, "%s", KYEL);
-        // 	fprintf (stderr, " RC4K ");
-        // 	for (short o = 0; o < 9; o++)
-        // 	{
-        // 		fprintf (stderr, "%02X", rckey[o]);
-        // 	}
-        // 	fprintf (stderr, "%s", KNRM);
-        // 	fprintf (stderr, "\n");
-        // }
-
-        short k = 0;
-        for (short o = 0; o < 7; o++)
-        {
-          short b = 0;
-          for (short p = 0; p < 8; p++)
-          {
-            b = b << 1;
-            b = b + ambe_d[k];
-            k++;
-            if (k == 49)
-            {
-              cipher[6] = ((b << 3) & 0x80); //set 7th octet/bit 49 accordingly
-              break;
-            }
-          }
-          cipher[o] = b;
-        }
+        //pack cipher byte array from ambe_d bit array
+        pack_ambe(ambe_d, cipher, 49);
 
         //only run keystream application if errs < 3 -- this is a fix to the pop sound
         //that may occur on some systems that preempt VC6 voice for a RC opportuninity (TXI)
@@ -879,23 +772,10 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         else memcpy (plain, cipher, sizeof(plain));
         state->dropR += 7;
 
-        short z = 0;
-        for (short p = 0; p <= 6; p++)
-        {
-          //convert bytes back to bits and load into ambe_d array.
-          short b = 0; //reset b to use again
-          for (short o = 0; o < 8; o++)
-          {
-            b = (( (plain[p] << o) & 0x80) >> 7);
-            ambe_d[z] = b;
-            z++;
-            if (z == 49)
-            {
-              ambe_d[48] = ( (plain[p] << o) & 0x80);
-              break;
-            }
-          }
-        }
+        //unpack deciphered plain array back into ambe_d bit array
+        memset (ambe_d, 0, 49*sizeof(char));
+        unpack_ambe(plain, ambe_d);
+
       }
 
       //P25p2 RC4 Handling, VCH 1
@@ -924,56 +804,16 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         rckey[11] = ((state->payload_miN & 0xFF00) >> 8);
         rckey[12] = ((state->payload_miN & 0xFF) >> 0);
 
-        // if (opts->payload == 1)
-        // {
-        // 	fprintf (stderr, "%s", KYEL);
-        // 	fprintf (stderr, " RC4K ");
-        // 	for (short o = 0; o < 13; o++)
-        // 	{
-        // 		fprintf (stderr, "%02X", rckey[o]);
-        // 	}
-        // 	fprintf (stderr, "%s", KNRM);
-        // 	fprintf (stderr, "\n");
-        // }
-
-        short k = 0;
-        for (short o = 0; o < 7; o++)
-        {
-          short b = 0;
-          for (short p = 0; p < 8; p++)
-          {
-            b = b << 1;
-            b = b + ambe_d[k];
-            k++;
-            if (k == 49)
-            {
-              cipher[6] = ((b << 3) & 0x80); //set 7th octet/bit 49 accordingly
-              break;
-            }
-          }
-          cipher[o] = b;
-        }
+        //pack cipher byte array from ambe_d bit array
+        pack_ambe(ambe_d, cipher, 49);
 
         RC4(state->dropR, 13, 7, rckey, cipher, plain);
         state->dropR += 7;
 
-        short z = 0;
-        for (short p = 0; p <= 6; p++)
-        {
-          //convert bytes back to bits and load into ambe_d array.
-          short b = 0; //reset b to use again
-          for (short o = 0; o < 8; o++)
-          {
-            b = (( (plain[p] << o) & 0x80) >> 7);
-            ambe_d[z] = b;
-            z++;
-            if (z == 49)
-            {
-              ambe_d[48] = ( (plain[p] << o) & 0x80);
-              break;
-            }
-          }
-        }
+        //unpack deciphered plain array back into ambe_d bit array
+        memset (ambe_d, 0, 49*sizeof(char));
+        unpack_ambe(plain, ambe_d);
+
       }
 
       mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR, 

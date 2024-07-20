@@ -1145,6 +1145,10 @@ void pack_bit_array_into_byte_array (uint8_t * input, uint8_t * output, int len)
 void pack_bit_array_into_byte_array_asym (uint8_t * input, uint8_t * output, int len);
 void unpack_byte_array_into_bit_array (uint8_t * input, uint8_t * output, int len);
 
+//ambe pack and unpack functions
+void pack_ambe (char * input, uint8_t * output, int len);
+void unpack_ambe (uint8_t * input, char * ambe);
+
 void ncursesOpen (dsd_opts * opts, dsd_state * state);
 void ncursesPrinter (dsd_opts * opts, dsd_state * state);
 void ncursesClose ();
