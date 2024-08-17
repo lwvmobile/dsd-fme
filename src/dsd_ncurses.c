@@ -3411,7 +3411,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       for (int k = 0; k < state->group_tally; k++)
       {
-        if (state->group_array[k].groupNumber == state->lasttg)
+        if (state->group_array[k].groupNumber == state->lastsrc)
         {
           attron(COLOR_PAIR(4));
           printw (" [%s]", state->group_array[k].groupName);
@@ -3605,7 +3605,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         for (int k = 0; k < state->group_tally; k++)
         {
-          if (state->group_array[k].groupNumber == state->lasttgR)
+          if (state->group_array[k].groupNumber == state->lastsrcR)
           {
             attron(COLOR_PAIR(4));
             printw (" [%s]", state->group_array[k].groupName);
