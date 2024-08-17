@@ -626,8 +626,8 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
         char * timestr = getTime();
 
         int src = 0;
-        if (slot == 0) src = state->lasttg;
-        if (slot == 1) src = state->lasttgR;
+        if (slot == 0) src = state->lastsrc;
+        if (slot == 1) src = state->lastsrcR;
 
         //open file by name that is supplied in the ncurses terminal, or cli
         pFile = fopen (opts->lrrp_out_file, "a");
