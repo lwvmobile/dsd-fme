@@ -90,7 +90,9 @@ ADD_EXECUTABLE(dsd-fme ${SRCS} ${HEADERS})
 TARGET_LINK_LIBRARIES(dsd-fme ${LIBS})
 
 target_compile_options(dsd-fme PRIVATE -Wunused-but-set-variable -Wunused-variable -Wunused-parameter
-                       -Wempty-body -Wunused-label $<$<COMPILE_LANGUAGE:C>:-Wpointer-sign>)
+                       -Wempty-body -Wunused-label $<$<COMPILE_LANGUAGE:C>:-Wpointer-sign>
+                       -Wmisleading-indentation -Wparentheses -Wunused-value -Wreturn-type
+                       -Wtautological-compare)
 
 include(GNUInstallDirs)
 install(TARGETS dsd-fme DESTINATION ${CMAKE_INSTALL_BINDIR})

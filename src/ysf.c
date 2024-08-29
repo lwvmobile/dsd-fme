@@ -697,7 +697,7 @@ void ysf_ehr (dsd_opts * opts, dsd_state * state, uint8_t dbuf[180], int start, 
   state->synctype = 28;
 
   uint8_t b1, b2;
-  for (start; start < stop; start++)
+  for (; start < stop; start++)
   {
     w = YnW;
     x = YnX;
@@ -1083,7 +1083,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
       vstop = 5;
     }
 
-    for (dstart; dstart < dstop; dstart++)
+    for (; dstart < dstop; dstart++)
     {
       //get dibits for CSD3 Sub Header DCH -- still need samples to test this with
       for (j = 0; j < 36; j++) //dbufFR[2][190]
@@ -1094,7 +1094,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
       } 
     }
 
-    for (vstart; vstart < vstop; vstart++)
+    for (; vstart < vstop; vstart++)
     {
       
       //init a bunch of stuff

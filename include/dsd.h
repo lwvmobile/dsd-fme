@@ -1433,8 +1433,8 @@ int csvKeyImportHex(dsd_opts * opts, dsd_state * state);
 //UDP Socket Connect and UDP Socket Blaster (audio output)
 int udp_socket_connect(dsd_opts * opts, dsd_state * state);
 int udp_socket_connectA(dsd_opts * opts, dsd_state * state);
-int udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
-int udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
+void udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
+void udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
 int m17_socket_receiver(dsd_opts * opts, void * data);
 int udp_socket_connectM17(dsd_opts * opts, dsd_state * state);
 int m17_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);

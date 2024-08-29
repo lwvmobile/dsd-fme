@@ -2533,12 +2533,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw (" G: AGC;");
     else
       printw (" G: %idB;", opts->rtl_gain_value);
-      printw (" V: %iX;", opts->rtl_volume_multiplier);
-      printw (" PPM: %i;", opts->rtlsdr_ppm_error);
-      printw (" SQ: %i;", opts->rtl_squelch_level);
-      printw (" RMS: %04li;", opts->rtl_rms);
-      printw (" BW: %i;", opts->rtl_bandwidth);
-      printw (" FRQ: %i;", opts->rtlsdr_center_freq);
+    printw (" V: %iX;", opts->rtl_volume_multiplier);
+    printw (" PPM: %i;", opts->rtlsdr_ppm_error);
+    printw (" SQ: %i;", opts->rtl_squelch_level);
+    printw (" RMS: %04li;", opts->rtl_rms);
+    printw (" BW: %i;", opts->rtl_bandwidth);
+    printw (" FRQ: %i;", opts->rtlsdr_center_freq);
     if (opts->rtl_udp_port != 0) printw ("\n| External RTL Tuning on UDP Port: %i", opts->rtl_udp_port);
     printw ("\n");
   }
@@ -2864,11 +2864,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| Voice Error: [%X][%X] Slot 1 (1)", state->errs&0xF, state->errs2&0xF);
     if (opts->slot1_on == 0) printw (" OFF");
-    if (opts->slot1_on == 1) printw (" ON"); if (opts->slot_preference == 0) printw (" *Preferred");
+    if (opts->slot1_on == 1) printw (" ON");
+    if (opts->slot_preference == 0) printw (" *Preferred");
     printw ("\n");
     printw ("| Voice Error: [%X][%X] Slot 2 (2)", state->errsR&0xF, state->errs2R&0xF);
     if (opts->slot2_on == 0) printw (" OFF");
-    if (opts->slot2_on == 1) printw (" ON"); if (opts->slot_preference == 1) printw (" *Preferred");
+    if (opts->slot2_on == 1) printw (" ON");
+    if (opts->slot_preference == 1) printw (" *Preferred");
     printw ("\n");
   }
   printw ("------------------------------------------------------------------------------\n");

@@ -723,7 +723,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               int plan = bank * 8;
               int first = 1;
               while (resident != 0) {
-                if (resident & 0x1 == 1) {
+                if ((resident & 0x1) == 1) {
                   if (first == 1)
                   {
                     first = 0;
@@ -743,7 +743,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               plan = bank * 8;
               first = 1;
               while (active != 0) {
-                if (active & 0x1 == 1) {
+                if ((active & 0x1) == 1) {
                   if (first == 1)
                   {
                     first = 0;
@@ -914,7 +914,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int source         = (msg_2 & 0xFFFFF);
 
         //Call info for state
-        if (lcn != 0)    state->edacs_vc_lcn = lcn;
+        if (lcn != 0)  { state->edacs_vc_lcn = lcn; }
                          state->lasttg = group; // 0 is a valid TG, it's the all-call for agency 0
         if (source != 0) state->lastsrc = source;
 
@@ -1156,7 +1156,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         int source     = (msg_2 & 0xFFFFF);
 
         //Call info for state
-        if (lcn != 0)    state->edacs_vc_lcn = lcn;
+        if (lcn != 0)  { state->edacs_vc_lcn = lcn; }
                          state->lasttg = 0;
         if (source != 0) state->lastsrc = source;
 
@@ -1327,7 +1327,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
 
         //Call info for state
-        if (lcn != 0) state->edacs_vc_lcn = lcn;
+        if (lcn != 0){state->edacs_vc_lcn = lcn;}
                       state->lasttg = group;
                       state->lastsrc = lid;
 
@@ -1434,7 +1434,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         }
 
         //Call info for state
-        if (lcn != 0) state->edacs_vc_lcn = lcn;
+        if (lcn != 0){state->edacs_vc_lcn = lcn;}
                       state->lasttg = target;
                       state->lastsrc = 0;
 
@@ -1497,7 +1497,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
 
           //Call info for state
-          if (lcn != 0) state->edacs_vc_lcn = lcn;
+          if (lcn != 0){state->edacs_vc_lcn = lcn;}
                         state->lasttg = 0;
                         state->lastsrc = target;
 
@@ -1567,7 +1567,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
 
           //Call info for state
-          if (lcn != 0) state->edacs_vc_lcn = lcn;
+          if (lcn != 0){state->edacs_vc_lcn = lcn;}
                         state->lasttg = target;
                         //Alas, EDACS standard does not provide a source LID on channel updates - try to work around this on the display end instead
                         state->lastsrc = 0;
@@ -1706,7 +1706,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           }
 
           //Call info for state
-          if (lcn != 0) state->edacs_vc_lcn = lcn;
+          if (lcn != 0){state->edacs_vc_lcn = lcn;}
                         state->lasttg = target;
                         state->lastsrc = source;
 
@@ -1835,7 +1835,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               int plan = bank * 8;
               int first = 1;
               while (resident != 0) {
-                if (resident & 0x1 == 1) {
+                if ((resident & 0x1) == 1) {
                   if (first == 1)
                   {
                     first = 0;
@@ -1855,7 +1855,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               plan = bank * 8;
               first = 1;
               while (active != 0) {
-                if (active & 0x1 == 1) {
+                if ((active & 0x1) == 1) {
                   if (first == 1)
                   {
                     first = 0;
@@ -2001,7 +2001,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             }
 
             //Call info for state
-            if (lcn != 0) state->edacs_vc_lcn = lcn;
+            if (lcn != 0){state->edacs_vc_lcn = lcn;}
                           state->lasttg = 0;
                           state->lastsrc = lid;
 

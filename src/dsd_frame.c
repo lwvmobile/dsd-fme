@@ -113,7 +113,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
     return;
   }
     //Start DMR Types
-    else if ((state->synctype >= 10) && (state->synctype <= 13) || (state->synctype == 32) || (state->synctype == 33) || (state->synctype == 34) ) //32-34 DMR MS and RC
+    else if ((state->synctype >= 10 && state->synctype <= 13) || (state->synctype == 32) || (state->synctype == 33) || (state->synctype == 34) ) //32-34 DMR MS and RC
     {
 
       //print manufacturer strings to branding, disabled 0x10 moto other systems can use that fid set
