@@ -94,8 +94,8 @@ long int nxdn_channel_to_frequency(dsd_opts * opts, dsd_state * state, uint16_t 
 		else base = 0; //just set to zero, will be system definable most likely and won't be able to calc
 
 		//determine the step value in Hz
-		if (state->nxdn_step = 2)				step = 1250; //1.25 kHz
-		else if (state->nxdn_step = 3)	step = 3125; //3.125 kHz
+		if (state->nxdn_step == 2)				step = 1250; //1.25 kHz
+		else if (state->nxdn_step == 3)	step = 3125; //3.125 kHz
 		else step = 0; //just set to zero, will be system definable most likely and won't be able to calc
 
 		//if we have a valid base and step, then calc frequency

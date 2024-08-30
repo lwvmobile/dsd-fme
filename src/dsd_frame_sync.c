@@ -876,7 +876,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->min = ((state->min) + lmin) / 2;
               //state->directmode = 0;
               //fprintf (stderr, "DMR RC DATA\n");
-              state->dmr_ms_rc == 1; //set flag for RC data, then process accordingly and reset back to 0 afterwards
+              state->dmr_ms_rc = 1; //set flag for RC data, then process accordingly and reset back to 0 afterwards
               if (0 == 0) //opts->inverted_dmr
               {
                 // voice frame

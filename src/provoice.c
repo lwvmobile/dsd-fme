@@ -298,11 +298,11 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   // spacer bits
   dibit = getDibit (opts, state);
-  spacer_bit[4];
+  spacer_bit[4] = dibit;
   raw_bits[614+2] = dibit;
 
   dibit = getDibit (opts, state);
-  spacer_bit[5];
+  spacer_bit[5] = dibit;
   raw_bits[615+2] = dibit;
 
   // imbe frames 3,4 second half

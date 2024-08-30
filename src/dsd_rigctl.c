@@ -299,7 +299,7 @@ void rtl_udp_tune(dsd_opts * opts, dsd_state * state, long int frequency)
     close (handle); //close socket after sending.
 }
 
-int udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data)
+void udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data)
 {
     UNUSED(state);
     size_t err = 0;
@@ -337,7 +337,7 @@ int m17_socket_receiver(dsd_opts * opts, void * data)
 }
 
 //Analog UDP port on +2 of normal open socket
-int udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void * data)
+void udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void * data)
 {
     UNUSED(state);
     size_t err = 0;
@@ -404,6 +404,7 @@ int udp_socket_connect(dsd_opts * opts, dsd_state * state)
         return (err);
     }
 
+    return 0;
 }
 
 int udp_socket_connectA(dsd_opts * opts, dsd_state * state)
@@ -443,6 +444,7 @@ int udp_socket_connectA(dsd_opts * opts, dsd_state * state)
         return (err);
     }
 
+    return 0;
 }
 
 int udp_socket_connectM17(dsd_opts * opts, dsd_state * state)
@@ -482,6 +484,7 @@ int udp_socket_connectM17(dsd_opts * opts, dsd_state * state)
         return (err);
     }
 
+    return 0;
 }
 
 void return_to_cc (dsd_opts * opts, dsd_state * state)

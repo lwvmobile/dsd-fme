@@ -436,10 +436,10 @@ decode_bch()
 			    d[u + 1] = alpha_to[s[u + 1]];
 			  else
 			    d[u + 1] = 0;
-			    for (i = 1; i <= l[u + 1]; i++)
-			      if ((s[u + 1 - i] != -1) && (elp[u + 1][i] != 0))
-			        d[u + 1] ^= alpha_to[(s[u + 1 - i] 
-			                      + index_of[elp[u + 1][i]]) % n];
+			  for (i = 1; i <= l[u + 1]; i++)
+			    if ((s[u + 1 - i] != -1) && (elp[u + 1][i] != 0))
+			      d[u + 1] ^= alpha_to[(s[u + 1 - i]
+			                    + index_of[elp[u + 1][i]]) % n];
 			  /* put d[u+1] into index form */
 			  d[u + 1] = index_of[d[u + 1]];	
 			}

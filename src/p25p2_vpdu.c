@@ -871,7 +871,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if ( (svc1 & 0x40) && (svc2 & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
 
 			int loop = 1;
-			if (channelt2 == channelt2) loop = 1;
+			if (channelt1 == channelt2) loop = 1;
 			else loop = 2;
 			//assigned inside loop
 			long int tunable_freq = 0;

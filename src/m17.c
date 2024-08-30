@@ -1112,7 +1112,7 @@ void processM17LSF_debug2(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_
   for (j = 0; j < 30; j++)
   {
     for (i = 0; i < 8; i++)
-      state->m17_lsf[k++] = (lsf_packed[j] >> 7-i) & 1;
+      state->m17_lsf[k++] = (lsf_packed[j] >> (7-i)) & 1;
   }
 
   uint16_t crc_cmp = crc16m17(lsf_packed, 28);
@@ -1618,7 +1618,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //compose the 16-bit frame information from the above sub elements
   uint16_t lsf_fi = 0;
   lsf_fi = (lsf_ps & 1) + (lsf_dt << 1) + (lsf_et << 3) + (lsf_es << 5) + (lsf_cn << 7) + (lsf_rs << 11);
-  for (i = 0; i < 16; i++) m17_lsf[96+i] = (lsf_fi >> 15-i) & 1;
+  for (i = 0; i < 16; i++) m17_lsf[96+i] = (lsf_fi >> (15-i)) & 1;
 
   //Convert base40 CSD to numerical values (lifted from libM17)
 
@@ -1677,8 +1677,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //TODO: Read UDP ACKN/NACK value, disable use_ip if NULL or nack return
   
   //load dst and src values into the LSF
-  for (i = 0; i < 48; i++) m17_lsf[i] = (dst >> 47ULL-(unsigned long long int)i) & 1;
-  for (i = 0; i < 48; i++) m17_lsf[i+48] = (src >> 47ULL-(unsigned long long int)i) & 1;
+  for (i = 0; i < 48; i++) m17_lsf[i] = (dst >> (47ULL-(unsigned long long int)i)) & 1;
+  for (i = 0; i < 48; i++) m17_lsf[i+48] = (src >> (47ULL-(unsigned long long int)i)) & 1;
 
   //load the nonce from packed bytes to a bitwise iv array
   uint8_t iv[112]; memset(iv, 0, sizeof(iv));
@@ -1686,7 +1686,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   for (j = 0; j < 14; j++)
   {
     for (i = 0; i < 8; i++)
-      iv[k++] = (nonce[j] >> 7-i)&1;
+      iv[k++] = (nonce[j] >> (7-i))&1;
   }
 
   //if AES enc employed, insert the iv into LSF
@@ -1705,7 +1705,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   crc_cmp = crc16m17(lsf_packed, 28);
 
   //attach the crc16 bits to the end of the LSF data
-  for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> 15-i) & 1;
+  for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> (15-i)) & 1;
 
   //pack the CRC
   for (i = 28; i < 30; i++)
@@ -1776,8 +1776,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         {
           state->m17_meta[14] <<= 1;
           state->m17_meta[15] <<= 1;
-          state->m17_meta[14] += ((fsn >> 7) >> 7-i) & 1;
-          state->m17_meta[15] += ((fsn >> 0) >> 7-i) & 1;
+          state->m17_meta[14] += ((fsn >> 7) >> (7-i)) & 1;
+          state->m17_meta[15] += ((fsn >> 0) >> (7-i)) & 1;
         }
       }
     }
@@ -2027,8 +2027,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     {
       for (i = 0; i < 8; i++)
       {
-        v1_bits[k++] = (vc1_bytes[j] >> 7-i) & 1;
-        v2_bits[x++] = (vc2_bytes[j] >> 7-i) & 1;
+        v1_bits[k++] = (vc1_bytes[j] >> (7-i)) & 1;
+        v2_bits[x++] = (vc2_bytes[j] >> (7-i)) & 1;
       }
     }
 
@@ -2064,7 +2064,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
     //set current frame number as bits 1-15 of the v1 stream
     for (i = 0; i < 15; i++)
-      m17_v1[i+1] = ( (uint8_t)(fsn >> 14-i) ) &1;
+      m17_v1[i+1] = ( (uint8_t)(fsn >> (14-i)) ) &1;
 
     //Use the convolutional encoder to encode the voice / data stream
     simple_conv_encoder (m17_v1, m17_v1c, 148); //was 144, not 144+4
@@ -2199,14 +2199,14 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       for (j = 0; j < 4; j++)
       {
         for (i = 0; i < 8; i++)
-          m17_ip_frame[k++] = (magic[j] >> 7-i) &1;
+          m17_ip_frame[k++] = (magic[j] >> (7-i)) &1;
       }
 
       //add StreamID
       for (j = 0; j < 2; j++)
       {
         for (i = 0; i < 8; i++)
-          m17_ip_frame[k++] = (sid[j] >> 7-i) &1;
+          m17_ip_frame[k++] = (sid[j] >> (7-i)) &1;
       }
 
       //add the current LSF, sans CRC
@@ -2218,7 +2218,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       //add current fsn value
       for (i = 0; i < 15; i++)
-        m17_ip_frame[k++] = (fsn >> 14-i)&1;
+        m17_ip_frame[k++] = (fsn >> (14-i))&1;
 
       //voice and/or data payload
       for (i = 0; i < 64; i++)
@@ -2235,7 +2235,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       //add CRC value to the ip frame
       for (i = 0; i < 16; i++)
-        m17_ip_frame[k++] = (ip_crc >> 15-i)&1;
+        m17_ip_frame[k++] = (ip_crc >> (15-i))&1;
       
       //pack CRC into the byte array as well
       for (i = 52; i < 54; i++)
@@ -2277,14 +2277,14 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       for (j = 0; j < 4; j++)
       {
         for (i = 0; i < 8; i++)
-          m17_ip_frame[k++] = (magic[j] >> 7-i) &1;
+          m17_ip_frame[k++] = (magic[j] >> (7-i)) &1;
       }
 
       //add StreamID
       for (j = 0; j < 2; j++)
       {
         for (i = 0; i < 8; i++)
-          m17_ip_frame[k++] = (sid[j] >> 7-i) &1;
+          m17_ip_frame[k++] = (sid[j] >> (7-i)) &1;
       }
 
       //add the current LSF, sans CRC
@@ -2296,7 +2296,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       //add current fsn value
       for (i = 0; i < 15; i++)
-        m17_ip_frame[k++] = (fsn >> 14-i)&1;
+        m17_ip_frame[k++] = (fsn >> (14-i))&1;
 
       //voice and/or data payload
       for (i = 0; i < 64; i++)
@@ -2313,7 +2313,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       //add CRC value to the ip frame
       for (i = 0; i < 16; i++)
-        m17_ip_frame[k++] = (ip_crc >> 15-i)&1;
+        m17_ip_frame[k++] = (ip_crc >> (15-i))&1;
 
       //pack CRC into the byte array as well
       for (i = 52; i < 54; i++)
@@ -2357,7 +2357,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       for (j = 0; j < 14; j++)
       {
         for (i = 0; i < 8; i++)
-          iv[k++] = (nonce[j] >> 7-i)&1;
+          iv[k++] = (nonce[j] >> (7-i))&1;
       }
 
       //if AES enc employed, insert the iv into LSF
@@ -2373,7 +2373,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       crc_cmp = crc16m17(lsf_packed, 28);
 
       //attach the crc16 bits to the end of the LSF data
-      for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> 15-i) & 1;
+      for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> (15-i)) & 1;
 
       //repack the CRC
       for (i = 28; i < 30; i++)
@@ -2702,7 +2702,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //compose the 16-bit frame information from the above sub elements
   uint16_t lsf_fi = 0;
   lsf_fi = (lsf_ps & 1) + (lsf_dt << 1) + (lsf_et << 3) + (lsf_es << 5) + (lsf_cn << 7) + (lsf_rs << 11);
-  for (i = 0; i < 16; i++) m17_lsf[96+i] = (lsf_fi >> 15-i) & 1;
+  for (i = 0; i < 16; i++) m17_lsf[96+i] = (lsf_fi >> (15-i)) & 1;
 
   //Convert base40 CSD to numerical values (lifted from libM17)
 
@@ -2739,8 +2739,8 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //end CSD conversion
 
   //load dst and src values into the LSF
-  for (i = 0; i < 48; i++) m17_lsf[i] = (dst >> 47ULL-(unsigned long long int)i) & 1;
-  for (i = 0; i < 48; i++) m17_lsf[i+48] = (src >> 47ULL-(unsigned long long int)i) & 1;
+  for (i = 0; i < 48; i++) m17_lsf[i] = (dst >> (47ULL-(unsigned long long int)i)) & 1;
+  for (i = 0; i < 48; i++) m17_lsf[i+48] = (src >> (47ULL-(unsigned long long int)i)) & 1;
 
   //TODO: Any extra meta fills (extended callsign, etc?)
 
@@ -2753,7 +2753,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   crc_cmp = crc16m17(lsf_packed, 28);
 
   //attach the crc16 bits to the end of the LSF data
-  for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> 15-i) & 1;
+  for (i = 0; i < 16; i++) m17_lsf[224+i] = (crc_cmp >> (15-i)) & 1;
 
   //pack the CRC
   for (i = 28; i < 30; i++)
@@ -2802,7 +2802,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //load protocol value into first 8 bits
   k = 0;
   for (i = 0; i < 8; i++)
-    m17_p1_full[k++] = (protocol >> 7-i) & 1; 
+    m17_p1_full[k++] = (protocol >> (7-i)) & 1; 
 
   //byte representation of a single string char
   uint8_t cbyte;
@@ -2841,7 +2841,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "%c", cbyte);
 
     for (j = 0; j < 8; j++)
-      m17_p1_full[k++] = (cbyte >> 7-j) & 1;
+      m17_p1_full[k++] = (cbyte >> (7-j)) & 1;
 
     if (cbyte == 0) break; //if terminator reached
 
@@ -2903,7 +2903,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //attach the crc16 bits to the end of the PKT data
   // for (i = 0; i < 16; i++) m17_p1_full[ptr+i] = (crc_cmp >> 15-i) & 1; //this one puts it as the last 16-bits of the full payload
 
-  for (i = 0; i < 16; i++) m17_p1_full[k++] = (crc_cmp >> 15-i) & 1; //this one puts it immediately after the terminating byte
+  for (i = 0; i < 16; i++) m17_p1_full[k++] = (crc_cmp >> (15-i)) & 1; //this one puts it immediately after the terminating byte
 
   //debug the full payload
   fprintf (stderr, "\n M17 Packet      FULL: ");
@@ -2978,7 +2978,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   for (j = 0; j < 4; j++)
   {
     for (i = 0; i < 8; i++)
-      m17_ip_frame[k++] = (mpkt[j] >> 7-i) &1;
+      m17_ip_frame[k++] = (mpkt[j] >> (7-i)) &1;
   }
 
   //randomize ID
@@ -2990,7 +2990,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   for (j = 0; j < 2; j++)
   {
     for (i = 0; i < 8; i++)
-      m17_ip_frame[k++] = (sid[j] >> 7-i) &1;
+      m17_ip_frame[k++] = (sid[j] >> (7-i)) &1;
   }
 
   //add the current LSF, sans CRC
@@ -3011,7 +3011,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //add CRC value to the ip frame
   uint8_t crc_bits[16]; memset (crc_bits, 0, sizeof(crc_bits));
   for (i = 0; i < 16; i++)
-    crc_bits[i] = (ip_crc >> 15-i)&1;
+    crc_bits[i] = (ip_crc >> (15-i))&1;
 
   //pack CRC into the byte array as well
   for (i = x+34+1, j = 0; i < (x+34+3); i++, j++) //double check this
@@ -3092,7 +3092,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
 
     //set pbc counter to last 5 bits
     for (i = 0; i < 5; i++)
-      m17_p1[201+i] = (pbc >> 4-i) & 1;
+      m17_p1[201+i] = (pbc >> (4-i)) & 1;
 
     //Use the convolutional encoder to encode the packet data
     simple_conv_encoder (m17_p1, m17_p2c, 210); //206 + 4 trailing bits

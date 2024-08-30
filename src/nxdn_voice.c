@@ -68,7 +68,7 @@ void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182
   if (voice == 2) start = 2;
   if (voice == 2 || voice == 3) stop = 4;
 
-  for (start; start < stop; start++)
+  for (; start < stop; start++)
   {
     w = nW;
     x = nX;
