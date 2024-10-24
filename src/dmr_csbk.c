@@ -484,6 +484,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           else if (!clear && csbk_fid == 254) fprintf (stderr, " Cap+ Rest LSN Change: %d; Slot %d Free; Slot %d Busy; Remain on LSN;", state->dmr_rest_channel, pslot, oslot); //disabled
           else if (clear && csbk_fid == 253)  fprintf (stderr, " Cap+ Rest LSN Change: %d; No CSBK Channel Activity; Go To Rest LSN;", state->dmr_rest_channel);
           else if (!clear && csbk_fid == 253) fprintf (stderr, " Cap+ Rest LSN Change: %d; CSBK Channel Activity; Remain on LSN;", state->dmr_rest_channel); //this should never happen in code
+          else if (!clear && csbk_fid == 12)  fprintf (stderr, " Con+ Slot %d Termination: Slot %d Busy Voice or Data Call;", pslot, oslot); //Con+ test clears based on the Call Termination CSBK
+          else if (clear && csbk_fid == 12)   fprintf (stderr, " Con+ Slot %d Termination: Slot %d Clear or Control CSBK;", pslot, oslot); //Con+ test clears based on the Call Termination CSBK
           else if (!clear)                    fprintf (stderr, " Slot %d Clear; Slot %d Busy; Remain on VC;", pslot, oslot);
           else if (clear == 1)                fprintf (stderr, " Slot %d Clear; Slot %d Idle; Return to CC;", pslot, oslot);
           else if (clear == 2 || clear == 3)  fprintf (stderr, " Slot %d Clear; Slot %d Free; Return to CC;", pslot, oslot);
@@ -1941,25 +1943,21 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
       }
 
-      //Con+ Channel or Call Termination
+      //Con+ Slot Termination
       if (csbk_o == 0x0C)
       {
-        //could just be a data call terminator (like TD_LC)
-        //only observed this after a data header or response ack packet
-        //so, its only for data? or the data header and response is a call termination signal?
-        //to be studied some more, will test using the p_clear logic to see 
-        //if trunking is faster, or if it breaks
 
         //initial line break
         fprintf (stderr, "\n");
         uint32_t ttarget = ( (cs_pdu[2] << 16) + (cs_pdu[3] << 8) + cs_pdu[4] ); 
         fprintf (stderr, "%s", KYEL);
-        // fprintf (stderr, " Connect Plus Channel Termination;");
-        fprintf (stderr, " Connect Plus Data Call Termination;");
+        fprintf (stderr, " Connect Plus Slot Termination;");
         fprintf (stderr, " Target: %d;", ttarget);
-        //NOTE: Octet 6 seems to have a value (0x0B), but the rest are all zeroes, doesn't line up with an LCN or TS value
-        //test other Con+ systems, see if those have any values in those octets to figure out, also saw
-        //another octet 9? with an 01 in it a few times, could have been a timeslot bit
+
+        //Run p_clear to decide whether or not to return to the control channel
+        uint8_t dummy[12]; uint8_t* dbits; memset (dummy, 0, sizeof(dummy)); dummy[0] = 46; dummy[1] = 12;
+        dmr_cspdu (opts, state, dbits, dummy, 1, 0);
+
         state->dmr_mfid = 0x06; 
         sprintf (state->dmr_branding, "%s", "Motorola");
         sprintf(state->dmr_branding_sub, "Con+ ");
