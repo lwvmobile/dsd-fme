@@ -1,7 +1,7 @@
 #include "dsd.h"
 #include "provoice_const.h"
 
-#define PVDEBUG
+// #define PVDEBUG
 
 void processProVoice (dsd_opts * opts, dsd_state * state)
 {
