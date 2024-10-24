@@ -22,8 +22,6 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
   uint16_t lid = 0;     //lid value 16-bit
   unsigned long long int secondary = 0; //secondary 64-bits after lid, before voice
 
-  uint8_t spacer_bit[8]; //check this value to see if its a status thing (like P25 P1)
-  memset (spacer_bit, 0, sizeof (spacer_bit));
   uint16_t bf = 0; //the 16-bit value in-between imbe 2 and imbe 3 that is usually 2175
 
   fprintf (stderr," VOICE");
@@ -117,11 +115,9 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   // spacer bits
   dibit = getDibit (opts, state);
-  spacer_bit[0] = dibit;
   raw_bits[k++] = dibit;
 
   dibit = getDibit (opts, state);
-  spacer_bit[1] = dibit;
   raw_bits[k++] = dibit;
 
   // imbe frames 1,2 second half
@@ -233,15 +229,10 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   // spacer bits
   dibit = getDibit (opts, state);
-  spacer_bit[2] = dibit;
   raw_bits[k++] = dibit;
 
   dibit = getDibit (opts, state);
-  spacer_bit[3] = dibit; 
   raw_bits[k++] = dibit;
-
-  //resume raw_bits at +6 current value to round out payload bytes
-  //easier to visualize patterns
 
   for (i = 0; i < 16; i++)
     raw_bits[k++] = getDibit (opts, state); 
@@ -299,11 +290,9 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   // spacer bits
   dibit = getDibit (opts, state);
-  spacer_bit[4];
   raw_bits[k++] = dibit;
 
   dibit = getDibit (opts, state);
-  spacer_bit[5];
   raw_bits[k++] = dibit;
 
   // imbe frames 3,4 second half
@@ -411,21 +400,16 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   // spacer bits
   dibit = getDibit (opts, state);
-  spacer_bit[6] = dibit;
   raw_bits[k++] = dibit;
 
   dibit = getDibit (opts, state);
-  spacer_bit[7] = dibit;
   raw_bits[k++] = dibit;
-
-  //debug, how many k
-  // fprintf (stderr, "\n K: %03d; ", k);
 
 #ifdef PVDEBUG
 
-  //payload on all raw bytes for analysis...its a lot of 'em
-  if (opts->payload == 1) //find better thingy later or change this
-  // if (opcode != 0x3333)
+  //payload on all raw bytes for analysis
+  if (opts->payload == 1)
+  // if (opcode != 0x3333) //EA Voice
   {
 
     fprintf (stderr, "\n pV Payload Dump: \n  ");
