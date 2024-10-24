@@ -918,11 +918,11 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
   for (i = 0; i < 160; i++)
   {
     if (!encL)
-      stereo_samp1[i*2+0] = state->s_l[i] / 2;
+      stereo_samp1[i*2+0] = state->s_l[i] / 1;
 
     //testing double left and right channel
     if (!encL)
-      stereo_samp1[i*2+1] = state->s_l[i] / 2;
+      stereo_samp1[i*2+1] = state->s_l[i] / 1;
 
   }
 
