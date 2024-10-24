@@ -1,11 +1,12 @@
 #include "dsd.h"
 #include "provoice_const.h"
 
-// #define PVDEBUG
+#define PVDEBUG
 
 void processProVoice (dsd_opts * opts, dsd_state * state)
 {
   int i, j, dibit;
+  uint16_t k = 0;
   char imbe7100_fr1[7][24];
   char imbe7100_fr2[7][24];
   const int *w, *x;
@@ -53,7 +54,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   //load all initial bits before voice into raw_bits array for analysis/handling
   for (i = 0; i < 64+16+64; i++)
-    raw_bits[i] = getDibit (opts, state);
+    raw_bits[k++] = getDibit (opts, state);
 
   //Note: the initial 144-bits seem to be provisioned differently depending on system type
   initial = (unsigned long long int)ConvertBitIntoBytes(&raw_bits[0], 64);
@@ -78,7 +79,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
       imbe7100_fr1[*w][*x] = dibit;
       w++;
       x++;
-      raw_bits[144+j+(i*12)] = dibit;
+      raw_bits[k++] = dibit;
     }
 
     w -= 6;
@@ -89,7 +90,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
       imbe7100_fr2[*w][*x] = dibit;
       w++;
       x++;
-      raw_bits[150+j+(i*12)] = dibit;
+      raw_bits[k++] = dibit;
     }
 
   }
@@ -100,7 +101,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr1[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+282] = dibit;
+    raw_bits[k++] = dibit;
   }
 
   w -= 6;
@@ -111,17 +112,17 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr2[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+288] = dibit;
+    raw_bits[k++] = dibit;
   }
 
   // spacer bits
   dibit = getDibit (opts, state);
   spacer_bit[0] = dibit;
-  raw_bits[292] = dibit;
+  raw_bits[k++] = dibit;
 
   dibit = getDibit (opts, state);
   spacer_bit[1] = dibit;
-  raw_bits[293] = dibit;
+  raw_bits[k++] = dibit;
 
   // imbe frames 1,2 second half
   for (j = 0; j < 2; j++)
@@ -130,7 +131,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr2[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+294] = dibit;
+    raw_bits[k++] = dibit;
   }
 
   for (i = 0; i < 3; i++)
@@ -141,7 +142,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
       imbe7100_fr1[*w][*x] = dibit;
       w++;
       x++;
-      raw_bits[296+j+(i*12)] = dibit;
+      raw_bits[k++] = dibit;
     }
     w -= 6;
     x -= 6;
@@ -151,7 +152,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
       imbe7100_fr2[*w][*x] = dibit;
       w++;
       x++;
-      raw_bits[302+j+(i*12)] = dibit;
+      raw_bits[k++] = dibit;
     }
   }
 
@@ -161,7 +162,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr1[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+338] = dibit;
+    raw_bits[k++] = dibit;
   }
 
   w -= 5;
@@ -172,7 +173,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr2[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+343] = dibit;
+    raw_bits[k++] = dibit;
   }
 
   for (i = 0; i < 7; i++)
@@ -183,7 +184,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
       imbe7100_fr1[*w][*x] = dibit;
       w++;
       x++;
-      raw_bits[348+j+(i*12)] = dibit;
+      raw_bits[k++] = dibit;
     }
 
     w -= 6;
@@ -194,7 +195,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
       imbe7100_fr2[*w][*x] = dibit;
       w++;
       x++;
-      raw_bits[354+j+(i*12)] = dibit;
+      raw_bits[k++] = dibit;
     }
 
   }
@@ -205,7 +206,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr1[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+438] = dibit;
+    raw_bits[k++] = dibit;
   }
   w -= 5;
   x -= 5;
@@ -216,7 +217,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr2[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+443] = dibit;
+    raw_bits[k++] = dibit;
   }
 
   processMbeFrame (opts, state, NULL, NULL, imbe7100_fr1);
@@ -233,19 +234,19 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
   // spacer bits
   dibit = getDibit (opts, state);
   spacer_bit[2] = dibit;
-  raw_bits[448] = dibit;
+  raw_bits[k++] = dibit;
 
   dibit = getDibit (opts, state);
   spacer_bit[3] = dibit; 
-  raw_bits[449] = dibit;
+  raw_bits[k++] = dibit;
 
   //resume raw_bits at +6 current value to round out payload bytes
   //easier to visualize patterns
 
   for (i = 0; i < 16; i++)
-    raw_bits[i+450+6] = getDibit (opts, state); 
+    raw_bits[k++] = getDibit (opts, state); 
 
-  bf = (uint16_t)ConvertBitIntoBytes(&raw_bits[456], 16);
+  bf = (uint16_t)ConvertBitIntoBytes(&raw_bits[54*8], 16);
 
   if (opts->payload == 1)
     fprintf (stderr, "\n BF: %04X ", bf);
@@ -261,7 +262,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
       imbe7100_fr1[*w][*x] = dibit;
       w++;
       x++;
-      raw_bits[6+466+j+(i*12)] = dibit;
+      raw_bits[k++] = dibit;
     }
 
     w -= 6;
@@ -272,7 +273,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
       imbe7100_fr2[*w][*x] = dibit;
       w++;
       x++;
-      raw_bits[6+472+j+(i*12)] = dibit;
+      raw_bits[k++] = dibit;
     }
   }
 
@@ -282,7 +283,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr1[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+604+6] = dibit;
+    raw_bits[k++] = dibit;
   }
 
   w -= 6;
@@ -293,17 +294,17 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr2[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[i+610+6] = dibit; 
+    raw_bits[k++] = dibit; 
   }
 
   // spacer bits
   dibit = getDibit (opts, state);
-  spacer_bit[4] = dibit;
-  raw_bits[614+2] = dibit;
+  spacer_bit[4];
+  raw_bits[k++] = dibit;
 
   dibit = getDibit (opts, state);
-  spacer_bit[5] = dibit;
-  raw_bits[615+2] = dibit;
+  spacer_bit[5];
+  raw_bits[k++] = dibit;
 
   // imbe frames 3,4 second half
   for (j = 0; j < 2; j++)
@@ -312,7 +313,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr2[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+616+6] = dibit;
+    raw_bits[k++] = dibit;
   }
   for (i = 0; i < 3; i++)
   {
@@ -322,7 +323,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
       imbe7100_fr1[*w][*x] = dibit;
       w++;
       x++;
-      raw_bits[6+618+j+(i*12)] = dibit;
+      raw_bits[k++] = dibit;
     }
     w -= 6;
     x -= 6;
@@ -332,7 +333,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
       imbe7100_fr2[*w][*x] = dibit;
       w++;
       x++;
-      raw_bits[6+624+j+(i*12)] = dibit;
+      raw_bits[k++] = dibit;
     }
   }
 
@@ -342,7 +343,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr1[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+660+6] = dibit;
+    raw_bits[k++] = dibit;
   }
   w -= 5;
   x -= 5;
@@ -352,7 +353,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr2[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+665+6] = dibit;
+    raw_bits[k++] = dibit;
   }
 
   for (i = 0; i < 7; i++)
@@ -363,7 +364,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
       imbe7100_fr1[*w][*x] = dibit;
       w++;
       x++;
-      raw_bits[6+670+j+(i*12)] = dibit;
+      raw_bits[k++] = dibit;
     }
     w -= 6;
     x -= 6;
@@ -373,7 +374,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
       imbe7100_fr2[*w][*x] = dibit;
       w++;
       x++;
-      raw_bits[6+676+j+(i*12)] = dibit;
+      raw_bits[k++] = dibit;
     }
   }
 
@@ -383,7 +384,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr1[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+760+6] = dibit;
+    raw_bits[k++] = dibit;
   }
 
   w -= 5;
@@ -394,7 +395,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr2[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[j+765+6] = dibit;
+    raw_bits[k++] = dibit;
   }
 
   processMbeFrame (opts, state, NULL, NULL, imbe7100_fr1);
@@ -411,39 +412,36 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
   // spacer bits
   dibit = getDibit (opts, state);
   spacer_bit[6] = dibit;
-  raw_bits[782] = dibit;
+  raw_bits[k++] = dibit;
 
   dibit = getDibit (opts, state);
   spacer_bit[7] = dibit;
-  raw_bits[783] = dibit;
+  raw_bits[k++] = dibit;
+
+  //debug, how many k
+  // fprintf (stderr, "\n K: %03d; ", k);
 
 #ifdef PVDEBUG
-
-  spacer = (uint8_t)ConvertBitIntoBytes(&spacer_bit[0], 8);
-  if (opts->payload == 1)
-    fprintf (stderr, "\n SP: %X", spacer);
-
-  //convert raw bits into raw bytes for payload analysis
-  for (j = 0; j < 98; j++)
-  {
-    raw_bytes[j] = (uint8_t)ConvertBitIntoBytes(&raw_bits[(j*8)], 8);
-  }
 
   //payload on all raw bytes for analysis...its a lot of 'em
   if (opts->payload == 1) //find better thingy later or change this
   // if (opcode != 0x3333)
   {
-    fprintf (stderr, "%s", KCYN);
+
     fprintf (stderr, "\n pV Payload Dump: \n  ");
-    for (j = 0; j < 98; j++)
+    for (i = 0; i < k/8; i++)
     {
-      fprintf (stderr, "[%02X]", raw_bytes[j]);
-      if (j == 17 || j == 35 || j == 53 || j == 71 || j == 89)
-      {
+      
+      // if ( (i != 0) && ((i%26) == 0) )
+      //   fprintf (stderr, "\n  ");
+
+      uint16_t top = (uint16_t)ConvertBitIntoBytes(raw_bits+(i*8), 16);
+      if (top == 0x0EBF && i != 0)
         fprintf (stderr, "\n  ");
-      }
+
+      raw_bytes[i] = (uint8_t)ConvertBitIntoBytes(raw_bits+(i*8), 8);
+      fprintf (stderr, "%02X", raw_bytes[i]);
     }
-    fprintf (stderr, "%s", KNRM);
   }
 
 #endif
