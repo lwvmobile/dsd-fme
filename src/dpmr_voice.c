@@ -472,6 +472,10 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
       
       //flag back off if key is provided
       if (state->R != 0) state->dmr_encL = 0;
+
+      //print Current Frame Number if payload verbosity enabled
+      if (opts->payload == 1)
+        fprintf (stderr, "\n FN %d/4", state->dPMRVoiceFS2Frame.FrameNumbering[o]+1);
       
       //There are 4 AMBE voice frames per TCH
       for(i = start; i < end; i++)
