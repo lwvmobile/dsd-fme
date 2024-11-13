@@ -620,7 +620,7 @@ void pack_ambe (char * input, uint8_t * output, int len)
 void unpack_ambe (uint8_t * input, char * ambe)
 {
   int i = 0, k = 0;
-  for (i = 0; i < 7; i++)
+  for (i = 0; i < 6; i++)
   {
     ambe[k++] = (input[i] >> 7) & 1;
     ambe[k++] = (input[i] >> 6) & 1;
