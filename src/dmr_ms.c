@@ -27,7 +27,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   uint8_t m3[4][24];
 
   const int *w, *x, *y, *z;
-  char sync[25];
+
   uint8_t syncdata[48];
   memset (syncdata, 0, sizeof(syncdata));
 
@@ -156,32 +156,12 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     syncdata[(2*i)]   = (1 & (dibit >> 1));  // bit 1
     syncdata[(2*i)+1] = (1 & dibit);         // bit 0
 
-    sync[i] = (dibit | 1) + 48;
-
     // load the superframe to do embedded signal processing
     if(vc > 1) //grab on vc1 values 2-5 B C D and E
     {
       state->dmr_embedded_signalling[internalslot][vc-1][i*2]   = (1 & (dibit >> 1)); // bit 1
       state->dmr_embedded_signalling[internalslot][vc-1][i*2+1] = (1 & dibit); // bit 0
     }
-
-  }
-
-  sync[24] = 0;
-
-  //test for RC sync pattern in MS sourced audio
-  if ( strcmp (sync, DMR_RC_DATA_SYNC) == 0)
-  {
-    state->dmr_ms_rc = 1;
-    fprintf (stderr, "%s ", timestr);
-    if (opts->inverted_dmr == 0)
-    {
-      fprintf (stderr,"Sync: +DMR MS/DM MODE/MONO ");
-    }
-    else fprintf (stderr,"Sync: -DMR MS/DM MODE/MONO ");
-
-    fprintf (stderr, "| RC ");
-    fprintf (stderr, "\n");
 
   }
 
@@ -264,38 +244,35 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   memcpy (m2, ambe_fr2, sizeof(m2));
   memcpy (m3, ambe_fr3, sizeof(m3));
 
-  if (state->dmr_ms_rc == 0)
+  if (state->directmode == 0)
   {
-    if (state->directmode == 0)
-    {
-      processMbeFrame (opts, state, NULL, ambe_fr, NULL);
-        memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
-        memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
-        memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
-      processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
-        memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
-        memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
-        memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
-      processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
-        memcpy(state->f_l4[2], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
-        memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
-        memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
-    }
-    else
-    {
-      processMbeFrame (opts, state, NULL, ambe_fr4, NULL); //play duplicate of 2 here to smooth audio on tdma direct
-        memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
-        memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
-        memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
-      processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
-        memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
-        memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
-        memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
-      processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
-        memcpy(state->f_l4[2], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
-        memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
-        memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
-    }
+    processMbeFrame (opts, state, NULL, ambe_fr, NULL);
+      memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
+    processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+      memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
+    processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+      memcpy(state->f_l4[2], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
+  }
+  else
+  {
+    processMbeFrame (opts, state, NULL, ambe_fr4, NULL); //play duplicate of 2 here to smooth audio on tdma direct
+      memcpy(state->f_l4[0], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
+    processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
+      memcpy(state->f_l4[1], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
+    processMbeFrame (opts, state, NULL, ambe_fr3, NULL);
+      memcpy(state->f_l4[2], state->audio_out_temp_buf, sizeof(state->audio_out_temp_buf));
+      memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
+      memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
   }
 
   //TODO: Consider copying f_l to f_r for left and right channel saturation on MS mode
@@ -343,7 +320,6 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   if (vc > 6) goto END; 
 
   skipDibit (opts, state, 144); //skip to next tdma channel
-  state->dmr_ms_rc = 0;
 
   //since we are in a loop, run ncursesPrinter here
   if (opts->use_ncurses_terminal == 1)
@@ -371,7 +347,6 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
  state->dmr_stereo = 0;
  state->dmr_ms_mode = 0;
- state->dmr_ms_rc = 0;
  state->directmode = 0; //flag off
 
  if (timestr != NULL)

@@ -867,32 +867,6 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 return (32);
               }
             }
-            //not sure if this should be here, RC data should only be present in vc6?
-            if(strcmp (synctest, DMR_RC_DATA_SYNC) == 0)
-            {
-              state->carrier = 1;
-              state->offset = synctest_pos;
-              state->max = ((state->max) + lmax) / 2;
-              state->min = ((state->min) + lmin) / 2;
-              //state->directmode = 0;
-              //fprintf (stderr, "DMR RC DATA\n");
-              state->dmr_ms_rc = 1; //set flag for RC data, then process accordingly and reset back to 0 afterwards
-              if (0 == 0) //opts->inverted_dmr
-              {
-                // voice frame
-                sprintf(state->ftype, "DMR RC");
-                if (opts->errorbars == 1)
-                {
-                  //printFrameSync (opts, state, "+DMR RC Data", synctest_pos + 1, modulation);
-                }
-                if (state->lastsynctype != 34)
-                {
-                  //state->firstframe = 1;
-                }
-                state->lastsynctype = 34;
-                return (34);
-              }
-            }
 
             if(strcmp (synctest, DMR_MS_VOICE_SYNC) == 0)
             {

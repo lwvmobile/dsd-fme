@@ -699,7 +699,6 @@ typedef struct
   int dpmr_color_code;
 
   short int dmr_stereo; //need state variable for upsample function
-  short int dmr_ms_rc;
   short int dmr_ms_mode;
   unsigned int dmrburstL;
   unsigned int dmrburstR;
@@ -956,7 +955,7 @@ typedef struct
 #define NXDN_PANDFSW      "3131133313131331131" //19 symbols
 #define INV_NXDN_PANDFSW  "1313311131313113313" //19 symbols
 
-#define DMR_RC_DATA_SYNC  "131331111133133133311313"
+#define DMR_RESERVED_SYNC  "131331111133133133311313"
 
 #define DMR_DIRECT_MODE_TS1_DATA_SYNC  "331333313111313133311111"
 #define DMR_DIRECT_MODE_TS1_VOICE_SYNC "113111131333131311133333"
