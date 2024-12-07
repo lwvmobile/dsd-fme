@@ -3,7 +3,7 @@
  * P25p1 Multi Block PDU and Multi Block Trunking
  *
  * LWVMOBILE
- * 2023-12 DSD-FME Florida Man Edition
+ * 2024-12 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
@@ -38,6 +38,8 @@ void processSAP(uint8_t SAP, char * sap_string)
   else if (SAP == 4)  sprintf (sap_string, " Packet Data;");
   else if (SAP == 5)  sprintf (sap_string, " Address Resolution Protocol;");
   else if (SAP == 6)  sprintf (sap_string, " SNDCP Packet Data Control;");
+  else if (SAP == 15) sprintf (sap_string, " Packet Data Scan Preamble;");
+  else if (SAP == 29) sprintf (sap_string, " Packet Data Encryption Support;");
   else if (SAP == 31) sprintf (sap_string, " Extended Address;");
   else if (SAP == 32) sprintf (sap_string, " Registration and Authorization;");
   else if (SAP == 33) sprintf (sap_string, " Channel Reassignment;");
@@ -49,6 +51,7 @@ void processSAP(uint8_t SAP, char * sap_string)
   else if (SAP == 39) sprintf (sap_string, " Mobile Radio Configuration;");
   else if (SAP == 40) sprintf (sap_string, " Unencrypted Key Management;");
   else if (SAP == 41) sprintf (sap_string, " Encrypted Key Management;");
+  else if (SAP == 48) sprintf (sap_string, " Location Service;");
   else if (SAP == 61) sprintf (sap_string, " Trunking Control;");
   else if (SAP == 63) sprintf (sap_string, " Encrypted Trunking Control;");
  
@@ -147,7 +150,6 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   uint8_t opcode = 0;
 
   uint32_t address = 0; //source, or destination address depending on the io bit (outbound is target)
-  // uint32_t target2 = 0; //enhanced addressing source value found in a second 1/2 rate header
   uint8_t fmf = 0;
   uint8_t pad = 0;
   uint8_t ns = 0;
@@ -201,9 +203,6 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         // if (dibit == 2) fprintf (stderr, " Unknown - Use for Inbound or Outbound;");
         // if (dibit == 3) fprintf (stderr, " Inbound Channel Idle;");
 
-        //this is used to skip gathering one dibit as well since we only will end up skipping 2 status dibits (getting 99 instead of 98, throwing alignment off)
-        // if (i > 92) start = 1; //testing values (i > 101-(36*3)-101)? may need longer 3/4 rata messages for comparison/correction (fall back to this if issues arise)
-        // else start = 0;
       }
       
       skipdibit++; //increment
@@ -339,8 +338,6 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "%s",KRED);
     fprintf (stderr, " P25 Data Header CRC Error");
     fprintf (stderr, "%s",KNRM);
-    //Don't add to the data call string, can occur when tuning from control channel with MBT blocks
-    // sprintf (state->dmr_lrrp_gps[0], "Data Call: Header Error; Unknown Format/SAP;");
     end = 1; //go ahead and end after this loop
   }
 
@@ -511,16 +508,6 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
           //reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
           if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
           {
-            //testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
-            // if (opts->mod_qpsk == 1)
-            // {
-            // 	int spacing = state->p25_chan_spac[channelt >> 12];
-            // 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
-            // 	{
-            // 		state->samplesPerSymbol = 8;
-            // 		state->symbolCenter = 3;
-            // 	}	
-            // }
 
             //changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
             if (1 == 1)
@@ -599,7 +586,6 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, " Priority %d", svc & 0x7); //call priority
         }
         fprintf (stderr, " Unit to Unit Voice Channel Grant Update - Extended");
-        // fprintf (stderr, "\n  SVC [%02X] CHAN-T [%04X] CHAN-R [%04X] Source [%ld][%04lX] Target [%ld][%04lX]", svc, channelt, channelr, source, source, target, target);
         fprintf (stderr, "\n  SVC: %02X; CHAN-T: %04X; CHAN-R: %04X; SRC: %ld; TGT: %ld; FULL SRC: %08lX-%08ld; FULL TGT: %08lX-%08ld;", svc, channelt, channelr, source, target, src_nid, src_sid, tgt_nid, tgt_sid);
         freq1 = process_channel_to_freq (opts, state, channelt);
         freq2 = process_channel_to_freq (opts, state, channelr); //optional!
@@ -633,17 +619,6 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
           //reworked to set freq once on any call to process_channel_to_freq, and tune on that, independent of slot
           if (state->p25_cc_freq != 0 && opts->p25_is_tuned == 0 && freq1 != 0) //if we aren't already on a VC and have a valid frequency
           {
-
-            //testing switch to P2 channel symbol rate with qpsk enabled, we need to know if we are going to a TDMA channel or an FDMA channel
-            // if (opts->mod_qpsk == 1)
-            // {
-            // 	int spacing = state->p25_chan_spac[channelt >> 12];
-            // 	if (spacing == 0x64) //tdma should always be 0x64, and fdma should always be 0x32
-            // 	{
-            // 		state->samplesPerSymbol = 8;
-            // 		state->symbolCenter = 3;
-            // 	}	
-            // }
 
             //changed to allow symbol rate change on C4FM Phase 2 systems as well as QPSK
             if (1 == 1)
@@ -740,13 +715,8 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
           }
         }
 
-        //TG hold on UU_V -- will want to disable UU_V grants while TG Hold enabled -- same for Telephone?
+        //TG hold on UU_V -- will want to disable UU_V grants while TG Hold enabled
         if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
-        // if (state->tg_hold != 0 && state->tg_hold == target)
-        // {
-        // 	sprintf (mode, "%s", "A");
-        // 	opts->p25_is_tuned = 0; //unlock tuner
-        // }
 
         //tune if tuning available
         if (opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0))
@@ -935,17 +905,11 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 
       else
       {
-        //convert mpdu_byte to vPDU format and get indication of what the message was
-        PDU[0] = 0x0C; //P25p1 MB Duid 0x0C
-        PDU[1] = opcode;
-        PDU[2] = MFID;
-        PDU[1] = PDU[1] ^ 0xC0; //flip bits to make it compatible with MAC_PDUs explicit format
-
-        //without any extra bytes filled in, we can atleast see what the MBT is supposed to be
-        //Hopefully, no 0 value things will cause issues -- call grants, iden_up, etc!
-        // fprintf (stderr, "%s",KYEL);
-        // process_MAC_VPDU(opts, state, 0, PDU);
-        // fprintf (stderr, "%s",KNRM);
+        fprintf (stderr, "%s",KCYN);
+        fprintf (stderr, "\n MFID %02X (Unknown); Opcode: %02X; ", MFID, mpdu_byte[0] & 0x3F);
+        for (i = 0; i < (12*(blks+1)%37); i++)
+          fprintf (stderr, "%02X", mpdu_byte[i]);
+        fprintf (stderr, " %s",KNRM);
       }
     }
 
@@ -955,15 +919,17 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "%s",KCYN);
       fprintf (stderr, "\n P25 MBT Payload \n  ");
-      for (i = 0; i < 36; i++)
+      for (i = 0; i < ((blks+1)*12); i++)
       {
+        if ( (i != 0) && ((i % 12) == 0))
+          fprintf (stderr, "\n  ");
         fprintf (stderr, "[%02X]", mpdu_byte[i]);
-        if (i == 11 || i == 23) fprintf (stderr, "\n  ");
 
       }
+
+      fprintf (stderr, "\n "); 
       fprintf (stderr, " CRC EXT %08X CMP %08X", CRCExtracted, CRCComputed);
       fprintf (stderr, "%s ", KNRM);
-      fprintf (stderr, "\n "); 
 
       //Header 
       if (err[0] != 0) 
@@ -990,12 +956,33 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   else if (r34 == 1 && err[0] == 0) //start 34 rate dump if good header crc
   {
 
+    //ES Auxiliary Header
+    if (sap == 1)
+    {
+      fprintf (stderr, "%s",KYEL);
+      unsigned long long int mi = (unsigned long long int)ConvertBitIntoBytes(&mpdu_crc_bits[0], 64);
+      uint8_t  mi_res = (uint8_t)ConvertBitIntoBytes(&mpdu_crc_bits[64], 8);
+      uint8_t  alg_id = (uint8_t)ConvertBitIntoBytes(&mpdu_crc_bits[72], 8);
+      uint16_t key_id = (uint16_t)ConvertBitIntoBytes(&mpdu_crc_bits[80], 16);
+      fprintf (stderr, "\n ALG: %02X; KEY ID: %04X; MI: %016llX; ", alg_id, key_id, mi);
+      if (mi_res != 0)
+        fprintf (stderr, "RES: %02X;", mi_res);
+
+      //The Auxiliary Header signals the actual SAP value of the encrypted message (this byte is not encrypted)
+      uint8_t aux_res = (uint8_t)ConvertBitIntoBytes(&mpdu_crc_bits[96], 2); //these two bits should always be signalled as 1's, so 0b11, and if combined with the 2ndary SAP, 0xC0 if SAP == 0x00
+      uint8_t aux_sap = (uint8_t)ConvertBitIntoBytes(&mpdu_crc_bits[98], 6); //the SAP of the message that is encrypted immediately after
+      char aux_sap_string[99];
+      processSAP (aux_sap, aux_sap_string);
+      fprintf (stderr, "%s",KNRM);
+      UNUSED(aux_res);
+    }
+
     // if (opts->payload == 1) //always dump these for now since users are actively choosing to tune to these grants
     {
       fprintf (stderr, "%s",KCYN);
       fprintf (stderr, "\n P25 MPDU 34 Rate Payload \n  ");
       for (i = 0; i < 12; i++) //header
-        fprintf (stderr, "[%02X]", mpdu_byte[i]);
+        fprintf (stderr, "%02X", mpdu_byte[i]);
       fprintf (stderr, " Header \n  ");
 
       memset (mpdu_byte, 0, sizeof(mpdu_byte));
@@ -1010,7 +997,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       //variable len printing
       for (i = 2; i <= 18*blks; i++) //<= only because we want that final DBSN/CRC9 printed out
       {
-        if (i == 18 || i == 36 || i == 54 || i == 72 || i == 90)
+        if ( (i != 0) && ((i % 18) == 0))
         {
           uint8_t dbsn = r34bytes[i-18] >> 1; //get the previous DBSN at this point
           uint16_t crc9_ext = ((r34bytes[i-18] & 1) << 8) | r34bytes[i-17];
@@ -1028,7 +1015,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
           if (i != 18*blks) i += 2; //skip the next DBSN/CRC9
           if (i != 18*blks) fprintf (stderr, "\n  ");
         }
-        if (i != 18*blks) fprintf (stderr, "[%02X]", r34bytes[i]);
+        if (i != 18*blks) fprintf (stderr, "%02X", r34bytes[i]);
       }
 
       if (err[1] != 0) 
@@ -1038,8 +1025,8 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s",KCYN);
         fprintf (stderr, " CRC EXT %08X CMP %08X", CRCExtracted, CRCComputed);
       }
-      else //testing for grins
-        dmr_pdu (opts, state, blks*16, mpdu_byte);
+      // else
+      //   TODO: decode PDU function
 
       // if (sap == 0) //user data
       {
@@ -1076,9 +1063,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       for (i = 0; i < 12*(blks+1); i++) //header and payload combined
       {
         if (i == 12) fprintf (stderr, " Header");
-        if (i == 12 || i == 24 || i == 36 || i == 48 || i == 60 || i == 72 || i == 84 || i == 90)
+        if ( (i != 0) && ((i % 12) == 0))
           fprintf (stderr, "\n  ");
-        fprintf (stderr, "[%02X]", mpdu_byte[i]);
+        fprintf (stderr, "%02X", mpdu_byte[i]);
       }
     }
 
@@ -1089,8 +1076,8 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%s",KCYN);
       fprintf (stderr, " CRC EXT %08X CMP %08X", CRCExtracted, CRCComputed);
     }
-    else if (blks != 0) //testing for grins
-        dmr_pdu (opts, state, blks*16, mpdu_byte);
+    // else if (blks != 0)
+    //     TODO: decode PDU function
 
     fprintf (stderr, "%s",KNRM);
     fprintf (stderr, "\n");
