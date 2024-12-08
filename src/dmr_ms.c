@@ -157,7 +157,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     syncdata[(2*i)+1] = (1 & dibit);         // bit 0
 
     // load the superframe to do embedded signal processing
-    if(vc > 1) //grab on vc1 values 2-5 B C D and E
+    if(vc > 1) //grab on vc2 values 2-5 B C D E, and F
     {
       state->dmr_embedded_signalling[internalslot][vc-1][i*2]   = (1 & (dibit >> 1)); // bit 1
       state->dmr_embedded_signalling[internalslot][vc-1][i*2+1] = (1 & dibit); // bit 0

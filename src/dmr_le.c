@@ -344,6 +344,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
         else if (sbrc_hex == 5) fprintf (stderr, " RC: Cease Transmission Request;");
         else                    fprintf (stderr, " RC: Reserved %02X;", sbrc_hex);
         fprintf (stderr, "%s", KNRM);
+        if (opts->payload == 1) fprintf (stderr, "\n");
       }
 
       //if the call is interruptable (TXI) and the crc3 is okay and TXI Opcode
@@ -427,21 +428,20 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
 
   SBRC_END:
 
-  //'DSP' output to file -- only RC, or RC and SB?
-  if (power == 1 && opts->use_dsp_output == 1 && sbrc_hex != 0) //if not NULL
+  //'DSP' output to file -- SB and RC
+  if (opts->use_dsp_output == 1)
   {
     FILE * pFile; //file pointer
     pFile = fopen (opts->dsp_out_file, "a");
-    fprintf (pFile, "\n%d 99 ", slot+1); //'99' is RC designation value
-    int k = 0;
-    for (i = 0; i < 24; i++) //12 bytes, SB or RC
+    fprintf (pFile, "\n%d 99 ", slot+1); //'99' is SB and RC designation value
+    for (i = 0; i < 12; i++) //48 bits (includes CC, PPI, LCSS, and QR)
+    // for (i = 2; i < 10; i++) //32 bits (only SB/RC Data and its PC/H)
     {
-      //check to see if k++ starts at zero, or at 1
-      int sbrc_nib = (state->dmr_embedded_signalling[slot][5][k++] << 3) | (state->dmr_embedded_signalling[slot][5][k++] << 2) | (state->dmr_embedded_signalling[slot][5][k++] << 1) | (state->dmr_embedded_signalling[slot][5][k++] << 0);
+      uint8_t sbrc_nib = (state->dmr_embedded_signalling[slot][5][(i*4)+0] << 3) | (state->dmr_embedded_signalling[slot][5][(i*4)+1] << 2) | (state->dmr_embedded_signalling[slot][5][(i*4)+2] << 1) | (state->dmr_embedded_signalling[slot][5][(i*4)+3] << 0);
       fprintf (pFile, "%X", sbrc_nib);
     }
     fclose (pFile);
-  } 
+  }
 
 }
 

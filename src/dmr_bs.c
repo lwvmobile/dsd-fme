@@ -200,13 +200,13 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     syncdata[(2*i)+1] = (1 & dibit);         // bit 0
 
     //embedded link control
-    if(internalslot == 0 && vc1 > 1 && vc1 < 7) //grab on vc1 values 2-5 B C D and E
+    if(internalslot == 0 && vc1 > 1 && vc1 < 7) //grab on vc1 values 2-5 B C D E, and F
     {
       state->dmr_embedded_signalling[internalslot][vc1-1][i*2]   = (1 & (dibit >> 1)); // bit 1
       state->dmr_embedded_signalling[internalslot][vc1-1][i*2+1] = (1 & dibit); // bit 0
     }
 
-    if(internalslot == 1 && vc2 > 1 && vc2 < 7) //grab on vc2 values 2-5 B C D and E
+    if(internalslot == 1 && vc2 > 1 && vc2 < 7) //grab on vc2 values 2-5 B C D E, and F
     {
       state->dmr_embedded_signalling[internalslot][vc2-1][i*2]   = (1 & (dibit >> 1)); // bit 1
       state->dmr_embedded_signalling[internalslot][vc2-1][i*2+1] = (1 & dibit); // bit 0
@@ -298,6 +298,40 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     skipcount++;
     goto SKIP;
   }
+
+  //ETSI TS 102 361-1 V2.6.1 Table E.2 and E.4
+  //check for a rc burst with bptc or 34 rate data in it (testing only)
+  // #define RC_TESTING //disable if not in use
+  #ifdef RC_TESTING
+  if ( (strcmp (sync, DMR_BS_DATA_SYNC) != 0) && (strcmp (sync, DMR_BS_VOICE_SYNC) != 0) && 
+       ( (internalslot == 0 && vc1 == 6) ||  (internalslot == 1 && vc2 == 6) )              )
+  {
+
+    //if the QR FEC is good, and the P/PI bit is on for RC
+    if (QR_16_7_6_decode(emb_pdu) && emb_pdu[4])
+    {
+      fprintf (stderr,"%s ", timestr);
+
+      if (opts->inverted_dmr == 0)
+        fprintf (stderr,"Sync: +RC   ");
+      else fprintf (stderr,"Sync: -RC   ");
+
+      dmr_data_sync (opts, state);
+
+      dmr_data_burst_handler(opts, state, (uint8_t *)dummy_bits, 0xEB);
+
+      dmr_sbrc (opts, state, emb_pdu[4]);
+
+      if (internalslot == 0)
+        vc1 = 7;
+      else vc2 = 7;
+
+      goto SKIP;
+
+    }
+
+  }
+  #endif //RC_TESTING
 
   //check to see if we are expecting a VC at this point vc > 7
   if (strcmp (sync, DMR_BS_DATA_SYNC) != 0 && internalslot == 0 && vc1 > 6)
@@ -463,7 +497,27 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       memcpy(state->s_r4[2], state->s_r, sizeof(state->s_r));
       memcpy(state->s_r4u[2], state->s_ru, sizeof(state->s_ru));
     }
-      
+
+
+    //'DSP' output to file -- run before sbrc
+    if (opts->use_dsp_output == 1)
+    {
+      FILE * pFile; //file pointer
+      pFile = fopen (opts->dsp_out_file, "a");
+      fprintf (pFile, "\n%d 98 ", internalslot+1); //'98' is CACH designation value
+      for (i = 0; i < 6; i++) //3 byte CACH
+      {
+        int cach_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
+        fprintf (pFile, "%X", cach_byte);
+      }
+      fprintf (pFile, "\n%d 10 ", internalslot+1); //0x10 for voice burst
+      for (i = 6; i < 72; i++) //33 bytes, no CACH
+      {
+        int dsp_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
+        fprintf (pFile, "%X", dsp_byte);
+      }
+      fclose (pFile);
+    }
 
     //run sbrc here to look for the late entry key and alg after we observe potential errors in VC6
     if (internalslot == 0 && vc1 == 6) dmr_sbrc (opts, state, power);
@@ -488,26 +542,6 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       state->last_vc_sync_time = time(NULL);
       state->last_cc_sync_time = time(NULL);
     }
-
-    //'DSP' output to file
-    if (opts->use_dsp_output == 1)
-    {
-      FILE * pFile; //file pointer
-      pFile = fopen (opts->dsp_out_file, "a");
-      fprintf (pFile, "\n%d 98 ", internalslot+1); //'98' is CACH designation value
-      for (i = 0; i < 6; i++) //3 byte CACH
-      {
-        int cach_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
-        fprintf (pFile, "%X", cach_byte);
-      }
-      fprintf (pFile, "\n%d 10 ", internalslot+1); //0x10 for voice burst
-      for (i = 6; i < 72; i++) //33 bytes, no CACH
-      {
-        int dsp_byte = (state->dmr_stereo_payload[i*2] << 2) | state->dmr_stereo_payload[i*2 + 1];
-        fprintf (pFile, "%X", dsp_byte);
-      }
-      fclose (pFile);
-    } 
 
     //reset err checks
     cach_err = 1;
