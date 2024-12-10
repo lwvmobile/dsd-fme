@@ -213,20 +213,22 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         fprintf (stderr, " System Service Broadcast");
       }
 
-      else if (lc_format == 0x61) 
-      {
-        fprintf (stderr, " Secondary Control Channel Broadcast");
-      }
+      //this PDU does not have an associated MFID, often seen on kiwi and matches its TSBK counterpart
+      //its possible some of the other ones here don't as well, need to re-check all of them
+      // else if (lc_format == 0x61) 
+      // {
+      //   fprintf (stderr, " Secondary Control Channel Broadcast");
+      // }
 
       else if (lc_format == 0x62) 
       {
         fprintf (stderr, " Adjacent Site Status Broadcast");
       }
 
-      else if (lc_format == 0x63) 
-      {
-        fprintf (stderr, " RFSS Status Broadcast");
-      }
+      // else if (lc_format == 0x63) 
+      // {
+      //   fprintf (stderr, " RFSS Status Broadcast");
+      // }
 
       else if (lc_format == 0x64) 
       {
@@ -397,6 +399,10 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       uint32_t base = (uint32_t)ConvertBitIntoBytes(&LCW_bits[40], 32);
       fprintf (stderr, " Channel Identifier Update VU; Iden: %X; Base: %d;", iden, base*5);
     }
+
+    //This lc_format doesn't use the MFID field
+    else if (lc_format == 0x61) 
+      fprintf (stderr, " Secondary Control Channel Broadcast");
     
     //This lc_format doesn't use the MFID field
     else if (lc_format == 0x63) 
