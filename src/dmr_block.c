@@ -798,25 +798,54 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         //debug print
         // fprintf (stderr, " CRC - EXT %X CMP %X", CRCExtracted, CRCComputed);
 
-        if (state->data_header_format[slot] == 13 || state->data_header_format[slot] == 14 || state->data_header_sap[slot] == 10)
-        {
-          fprintf (stderr, "%s", KCYN);
-          fprintf (stderr, "\n Short Data: ASCII \n"  );
-          for (i = 0; i < ((blocks+1)*block_len); i++)
-          {
-            if (state->dmr_pdu_sf[slot][i] <= 0x7E && state->dmr_pdu_sf[slot][i] >=0x20)
-            {
-              fprintf (stderr, "%c", state->dmr_pdu_sf[slot][i]);
-            }
-            else fprintf (stderr, " ");
-
-            if (i == 47 || i == 95) fprintf (stderr, "\n  ");
-          }
-            
-        }
-
         fprintf (stderr, "%s ", KNRM);
       }
+
+      // #define DMR_ASCII_TEST
+      #ifdef DMR_ASCII_TEST
+      // if (state->data_header_format[slot] == 13 || state->data_header_format[slot] == 14 || state->data_header_sap[slot] == 10)
+      {
+        fprintf (stderr, "%s", KCYN);
+        fprintf (stderr, "\n DMR PDU ASCII: \n"  );
+        for (i = 0; i < ((blocks+1)*block_len); i++)
+        {
+          if (state->dmr_pdu_sf[slot][i] <= 0x7E && state->dmr_pdu_sf[slot][i] >=0x20)
+          {
+            fprintf (stderr, "%c", state->dmr_pdu_sf[slot][i]);
+          }
+          else fprintf (stderr, " ");
+
+          if (i == 47 || i == 95) fprintf (stderr, "\n  ");
+        }
+          
+      }
+      #endif
+
+      // #define DMR_UTF16_TEST
+      #ifdef DMR_UTF16_TEST
+      //utf-16 text messaging (debug)
+      // if (utf-16)
+      {
+        fprintf (stderr, "%s", KCYN);
+        fprintf (stderr, "\n DMR PDU UTF16: ");
+        uint16_t ch16 = 0;
+        for (i = 25; i < ((blocks+1)*block_len)-4;) //at least one system seems to put out utf-16 at the offset of 25 from testing
+        {
+          ch16 = (uint16_t)state->dmr_pdu_sf[slot][i+0];
+          ch16 <<= 8;
+          ch16 |= (uint16_t)state->dmr_pdu_sf[slot][i+1];
+          // fprintf (stderr, " %04X; ", ch16); //debug for raw values to check grouping for offset
+
+          if (ch16 >= 0x20) //if not a linebreak or terminal commmands
+            fprintf (stderr, "%lc", ch16);
+          else if (ch16 == 0) //if padding
+            fprintf (stderr, "");
+          else fprintf (stderr, " ");
+
+          i += 2;
+        }
+      }
+      #endif
 
       //reset data header format storage
       state->data_header_format[slot] = 7;

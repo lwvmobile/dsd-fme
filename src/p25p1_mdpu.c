@@ -1028,17 +1028,46 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       // else
       //   TODO: decode PDU function
 
+      #define P25_ASCII_TEST34
+      #ifdef P25_ASCII_TEST34
       // if (sap == 0) //user data
       {
         fprintf (stderr, "%s",KCYN);
         fprintf (stderr, "\n P25 MPDU ASCII: ");
-        for (i = 0; i < (16*blks)-4; i++)
+        for (i = 24; i < (16*blks)-4-pad; i++)
         {
           if (mpdu_byte[i] <= 0x7E && mpdu_byte[i] >=0x20)
             fprintf (stderr, "%c", mpdu_byte[i]);
           else fprintf (stderr, " ");
         }
       }
+      #endif
+
+      // #define P25_UTF16_TEST
+      #ifdef P25_UTF16_TEST
+      //utf-16 text messaging (debug)
+      // if (utf-16)
+      {
+        fprintf (stderr, "%s", KCYN);
+        fprintf (stderr, "\n P25 MPDU UTF16: ");
+        uint16_t ch16 = 0;
+        for (i = 24; i < (16*blks)-4-pad;)
+        {
+          ch16 = (uint16_t)mpdu_byte[i+0];
+          ch16 <<= 8;
+          ch16 |= (uint16_t)mpdu_byte[i+1];
+          // fprintf (stderr, " %04X; ", ch16); //debug for raw values to check grouping for offset
+
+          if (ch16 >= 0x20) //if not a linebreak or terminal commmands
+            fprintf (stderr, "%lc", ch16);
+          else if (ch16 == 0) //if padding
+            fprintf (stderr, "");
+          else fprintf (stderr, " ");
+
+          i += 2;
+        }
+      }
+      #endif
 
       fprintf (stderr, "%s ", KNRM);
       fprintf (stderr, "\n");      
@@ -1078,6 +1107,47 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     }
     // else if (blks != 0)
     //     TODO: decode PDU function
+
+    #define P25_ASCII_TEST12
+    #ifdef P25_ASCII_TEST12
+    // if (opts->payload == 1)
+    {
+      fprintf (stderr, "%s",KCYN);
+      fprintf (stderr, "\n P25 MPDU ASCII: ");
+      for (i = 24; i < 12*(blks+1)-4-pad; i++)
+      {
+        if (mpdu_byte[i] <= 0x7E && mpdu_byte[i] >=0x20)
+          fprintf (stderr, "%c", mpdu_byte[i]);
+        else fprintf (stderr, " ");
+      }
+    }
+    #endif
+
+    // #define P25_UTF16_TEST12
+    #ifdef P25_UTF16_TEST12
+    //utf-16 text messaging (debug)
+    // if (utf-16)
+    {
+      fprintf (stderr, "%s", KCYN);
+      fprintf (stderr, "\n P25 MPDU UTF16: ");
+      uint16_t ch16 = 0;
+      for (i = 12; i < (12*blks)-4-pad;)
+      {
+        ch16 = (uint16_t)mpdu_byte[i+0];
+        ch16 <<= 8;
+        ch16 |= (uint16_t)mpdu_byte[i+1];
+        // fprintf (stderr, " %04X; ", ch16); //debug for raw values to check grouping for offset
+
+        if (ch16 >= 0x20) //if not a linebreak or terminal commmands
+          fprintf (stderr, "%lc", ch16);
+        else if (ch16 == 0) //if padding
+          fprintf (stderr, "");
+        else fprintf (stderr, " ");
+
+        i += 2;
+      }
+    }
+    #endif
 
     fprintf (stderr, "%s",KNRM);
     fprintf (stderr, "\n");
