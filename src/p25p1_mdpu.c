@@ -986,13 +986,16 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, " Header \n  ");
 
       memset (mpdu_byte, 0, sizeof(mpdu_byte));
-      for (i = 0; i < 16*10; i++) //16*(blks+1)
+      for (i = 0; i < 16*(blks+1); i++) //16*10
         mpdu_byte[i] = (uint8_t)ConvertBitIntoBytes(&mpdu_crc_bits[i*8], 8);
 
       CRCExtracted = (uint32_t)ConvertBitIntoBytes(&mpdu_crc_bits[(128*blks)-32], 32);
       CRCComputed  = crc32mbf(mpdu_byte, (128*blks)-32);
       if (CRCComputed == CRCExtracted) err[1] = 0;
 
+      //reset mpdu_byte to load only the data, and not the dbsn and crc into
+      memset (mpdu_byte, 0, sizeof(mpdu_byte));
+      int mpdu_idx = 0;
       int next = 0;
       //variable len printing
       for (i = 2; i <= 18*blks; i++) //<= only because we want that final DBSN/CRC9 printed out
@@ -1016,6 +1019,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
           if (i != 18*blks) fprintf (stderr, "\n  ");
         }
         if (i != 18*blks) fprintf (stderr, "%02X", r34bytes[i]);
+        mpdu_byte[mpdu_idx++] = r34bytes[i];
       }
 
       if (err[1] != 0) 
@@ -1034,7 +1038,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       {
         fprintf (stderr, "%s",KCYN);
         fprintf (stderr, "\n P25 MPDU ASCII: ");
-        for (i = 24; i < (16*blks)-4-pad; i++)
+        for (i = 0; i < mpdu_idx-pad-4; i++)
         {
           if (mpdu_byte[i] <= 0x7E && mpdu_byte[i] >=0x20)
             fprintf (stderr, "%c", mpdu_byte[i]);
@@ -1051,7 +1055,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s", KCYN);
         fprintf (stderr, "\n P25 MPDU UTF16: ");
         uint16_t ch16 = 0;
-        for (i = 24; i < (16*blks)-4-pad;)
+        start = 0; //offset for any sort of aux headers
+        if (sap == 1) start = 13;
+        for (i = start; i < mpdu_idx-pad-4;)
         {
           ch16 = (uint16_t)mpdu_byte[i+0];
           ch16 <<= 8;
@@ -1114,7 +1120,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "%s",KCYN);
       fprintf (stderr, "\n P25 MPDU ASCII: ");
-      for (i = 24; i < 12*(blks+1)-4-pad; i++)
+      for (i = 24; i < (12*(blks+1))-4-pad; i++)
       {
         if (mpdu_byte[i] <= 0x7E && mpdu_byte[i] >=0x20)
           fprintf (stderr, "%c", mpdu_byte[i]);
