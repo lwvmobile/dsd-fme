@@ -1038,7 +1038,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       {
         fprintf (stderr, "%s",KCYN);
         fprintf (stderr, "\n P25 MPDU ASCII: ");
-        for (i = 0; i < mpdu_idx-pad-4; i++)
+        start = 0; //offset for any sort of aux headers
+        if (sap == 1) start = 13;
+        for (i = start; i < mpdu_idx-pad-4; i++)
         {
           if (mpdu_byte[i] <= 0x7E && mpdu_byte[i] >=0x20)
             fprintf (stderr, "%c", mpdu_byte[i]);
@@ -1120,7 +1122,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "%s",KCYN);
       fprintf (stderr, "\n P25 MPDU ASCII: ");
-      for (i = 24; i < (12*(blks+1))-4-pad; i++)
+      start = 0; //offset for any sort of aux headers
+      if (sap == 1) start = 13;
+      for (i = start; i < (12*(blks+1))-4-pad; i++)
       {
         if (mpdu_byte[i] <= 0x7E && mpdu_byte[i] >=0x20)
           fprintf (stderr, "%c", mpdu_byte[i]);
@@ -1137,7 +1141,9 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%s", KCYN);
       fprintf (stderr, "\n P25 MPDU UTF16: ");
       uint16_t ch16 = 0;
-      for (i = 12; i < (12*blks)-4-pad;)
+      start = 0; //offset for any sort of aux headers
+      if (sap == 1) start = 13;
+      for (i = start; i < (12*blks)-4-pad;)
       {
         ch16 = (uint16_t)mpdu_byte[i+0];
         ch16 <<= 8;
