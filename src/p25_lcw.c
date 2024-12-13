@@ -220,10 +220,10 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       //   fprintf (stderr, " Secondary Control Channel Broadcast");
       // }
 
-      else if (lc_format == 0x62) 
-      {
-        fprintf (stderr, " Adjacent Site Status Broadcast");
-      }
+      // else if (lc_format == 0x62) 
+      // {
+      //   fprintf (stderr, " Adjacent Site Status Broadcast");
+      // }
 
       // else if (lc_format == 0x63) 
       // {
@@ -403,6 +403,10 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
     //This lc_format doesn't use the MFID field
     else if (lc_format == 0x61) 
       fprintf (stderr, " Secondary Control Channel Broadcast");
+
+    //This lc_format doesn't use the MFID field
+    else if (lc_format == 0x62) 
+      fprintf (stderr, " Adjacent Site Status Broadcast");
     
     //This lc_format doesn't use the MFID field
     else if (lc_format == 0x63) 
