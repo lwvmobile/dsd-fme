@@ -839,7 +839,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           if (ch16 >= 0x20) //if not a linebreak or terminal commmands
             fprintf (stderr, "%lc", ch16);
           else if (ch16 == 0) //if padding
-            fprintf (stderr, "");
+            fprintf (stderr, "_");
           else fprintf (stderr, " ");
 
           i += 2;

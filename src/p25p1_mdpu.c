@@ -1069,7 +1069,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
           if (ch16 >= 0x20) //if not a linebreak or terminal commmands
             fprintf (stderr, "%lc", ch16);
           else if (ch16 == 0) //if padding
-            fprintf (stderr, "");
+            fprintf (stderr, "_");
           else fprintf (stderr, " ");
 
           i += 2;
@@ -1092,6 +1092,28 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       if (CRCComputed == CRCExtracted) err[1] = 0;
     }
     else err[1] = 0; //No CRC32 on a lonely header
+
+    //ES Auxiliary Header (need to find samples to confirm presence and correctness on 1/2 rate data)
+    if (sap == 1 && blks != 0) //may not need blocks check, since if this is present, multiple blocks will be required
+    {
+      fprintf (stderr, "%s",KYEL);
+      unsigned long long int mi = ((unsigned long long int)mpdu_byte[12] << 56ULL) | ((unsigned long long int)mpdu_byte[13] << 48ULL) | ((unsigned long long int)mpdu_byte[14] << 40ULL) | ((unsigned long long int)mpdu_byte[15] << 32ULL) |
+                                  ((unsigned long long int)mpdu_byte[16] << 24ULL) | ((unsigned long long int)mpdu_byte[17] << 16ULL) | ((unsigned long long int)mpdu_byte[18] << 8ULL)  | ((unsigned long long int)mpdu_byte[19] << 0ULL);
+      uint8_t  mi_res = mpdu_byte[20];
+      uint8_t  alg_id = mpdu_byte[21];
+      uint16_t key_id = (mpdu_byte[22] << 8) | mpdu_byte[23];
+      fprintf (stderr, "\n ALG: %02X; KEY ID: %04X; MI: %016llX; ", alg_id, key_id, mi);
+      if (mi_res != 0)
+        fprintf (stderr, "RES: %02X;", mi_res);
+
+      //The Auxiliary Header signals the actual SAP value of the encrypted message (this byte is not encrypted)
+      uint8_t aux_res = mpdu_byte[24] >> 6; //these two bits should always be signalled as 1's, so 0b11, and if combined with the 2ndary SAP, 0xC0 if SAP == 0x00
+      uint8_t aux_sap = mpdu_byte[24] & 0x3F; //the SAP of the message that is encrypted immediately after
+      char aux_sap_string[99];
+      processSAP (aux_sap, aux_sap_string);
+      fprintf (stderr, "%s",KNRM);
+      UNUSED(aux_res);
+    }
 
     // if (opts->payload == 1)
     {
@@ -1153,7 +1175,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         if (ch16 >= 0x20) //if not a linebreak or terminal commmands
           fprintf (stderr, "%lc", ch16);
         else if (ch16 == 0) //if padding
-          fprintf (stderr, "");
+          fprintf (stderr, "_");
         else fprintf (stderr, " ");
 
         i += 2;
