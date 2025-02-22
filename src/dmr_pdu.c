@@ -23,6 +23,255 @@ void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR
   
 }
 
+void utf16_to_text (uint16_t len, uint8_t * input)
+{
+  len -= 36; //offset for starting point + 1
+  fprintf (stderr, "\n UTF16 Text: ");
+  uint16_t ch16 = 0;
+  for (uint16_t i = 0; i < len; i += 2)
+  {
+    ch16 = (uint16_t)input[i+0];
+    ch16 <<= 8;
+    ch16 |= (uint16_t)input[i+1];
+    // fprintf (stderr, " %04X; ", ch16); //debug for raw values to check grouping for offset
+
+    if (ch16 >= 0x20) //if not a linebreak or terminal commmands
+      fprintf (stderr, "%lc", ch16);
+    else if (ch16 == 0) //if padding (0 could also indicate end of text terminator?)
+      fprintf (stderr, "_");
+    else fprintf (stderr, "-");
+  }
+}
+
+void utf8_to_text (uint16_t len, uint8_t * input)
+{
+  len -= 24;
+  fprintf (stderr, "\n UTF8 Text: ");
+  for (uint16_t i = 0; i < len; i++)
+  {
+    if (input[i] >= 0x20 && input[i] < 0x80) //if not a linebreak or terminal commmands
+      fprintf (stderr, "%c", input[i]);
+    else if (input[i] == 0) //if padding (0 could also indicate end of text terminator?)
+      fprintf (stderr, "_");
+    else if (input[i] == 0x03) //ASCII end of text (observed on the NMEA LOCN ones anyways)
+      break;
+    else fprintf (stderr, "-");
+  }
+}
+
+void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
+{
+
+  // if (DMR_PDU[0] == 0x01) //may not be needed now, unknown
+  {
+    utf8_to_text(len, DMR_PDU+23);
+    dmr_locn(opts, state, len, DMR_PDU); //may need to figure out the actual len of each block?
+  }
+    
+}
+
+//reading ETSI, seems like these aren't compressed, just that they are preset indexed values on the radio
+void dmr_udp_comp_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
+{
+  UNUSED(opts); UNUSED(state);
+  uint16_t ipid = (DMR_PDU[0] << 8) | DMR_PDU[1];
+  uint16_t said = (DMR_PDU[2] >> 4) & 0xF;
+  uint16_t daid = (DMR_PDU[2] >> 0) & 0xF;
+
+  //the manual shows this is the lsb and msb of the header compression 'opcode', but only zero is defined
+  uint8_t  op1  = (DMR_PDU[3] >> 7) & 1;
+  uint8_t  op2  = (DMR_PDU[4] >> 7) & 1;
+  uint8_t opcode = (op1 << 1) | op2;
+
+  uint8_t  spid  = (DMR_PDU[3] >> 0) & 0x7F;
+  uint8_t  dpid  = (DMR_PDU[4] >> 0) & 0x7F;
+
+  //configure SAID / DAID string
+  char addrstring[2][35]; memset(addrstring, 0, sizeof(addrstring));
+
+  //said
+  if (said == 0)
+    sprintf (addrstring[0], "%s", "Radio Network");
+  else if (said == 1)
+    sprintf (addrstring[0], "%s", "Ethernet");
+  else if (said > 1 && said < 11)
+    sprintf (addrstring[0], "%s", "Reserved");
+  else
+    sprintf (addrstring[0], "%s", "Manufacturer Specific");
+
+  //daid
+  if (daid == 0)
+    sprintf (addrstring[1], "%s", "Radio Network");
+  else if (daid == 1)
+    sprintf (addrstring[1], "%s", "Ethernet");
+  else if (daid == 1)
+    sprintf (addrstring[1], "%s", "Group Network");
+  else if (daid > 2 && daid < 11)
+    sprintf (addrstring[1], "%s", "Reserved");
+  else
+    sprintf (addrstring[1], "%s", "Manufacturer Specific");
+
+  //according to ETSI, if spid and/or dpid is zero, their respective port is defined in this header, otherwise, they are preset indexed values
+  
+  //look for and set optional port values and the ptr value to start of data
+  uint16_t ptr = 5;
+
+  if (spid == 0 && dpid == 0)
+  {
+    spid = (DMR_PDU[5] << 8) | DMR_PDU[6];
+    dpid = (DMR_PDU[7] << 8) | DMR_PDU[8];
+    ptr = 9;
+  }
+  else if (spid == 0)
+  {
+    spid = (DMR_PDU[5] << 8) | DMR_PDU[6];
+    ptr = 7;
+  }
+  else if (dpid == 0)
+  {
+    dpid = (DMR_PDU[5] << 8) | DMR_PDU[6];
+    ptr = 7;
+  }
+  else ptr = 5;
+
+  char portstring[2][35]; memset(portstring, 0, sizeof(portstring));
+
+  //spid
+  if (spid == 1)
+  {
+    // spid = 5016;
+    sprintf (portstring[0], "%s", "UTF-16BE Text Message");
+  }
+  else if (spid == 2)
+  {
+    // spid = 5017;
+    sprintf (portstring[0], "%s", "Location Interface Protocol");
+  }
+  else if (spid > 2 && spid < 191)
+  {
+    // spid = spid;
+    sprintf (portstring[0], "%s", "Reserved");
+  }
+  else
+  {
+    // spid = spid;
+    sprintf (portstring[0], "%s", "Manufacturer Specific");
+  }
+
+  //dpid
+  if (dpid == 1)
+  {
+    // dpid = 5016;
+    sprintf (portstring[1], "%s", "UTF-16BE Text Message");
+  }
+  else if (dpid == 2)
+  {
+    // dpid = 5017;
+    sprintf (portstring[1], "%s", "Location Interface Protocol");
+  }
+  else if (dpid > 2 && dpid < 191)
+  {
+    // dpid = dpid;
+    sprintf (portstring[1], "%s", "Reserved");
+  }
+  else
+  {
+    // dpid = dpid;
+    sprintf (portstring[1], "%s", "Manufacturer Specific");
+  }
+
+  fprintf (stderr, "\n Compressed IP Idx: %d; Opcode: %d; Src Idx: %d (%s); Dst Idx: %d (%s); ", ipid, opcode, said, addrstring[0], daid, addrstring[1]);
+  fprintf (stderr, "\n Src Port Idx: %d (%s); Dst Port Idx: %d (%s); ", spid, portstring[0], dpid, portstring[1]);
+
+  //decode known types
+  if (spid == 1 || dpid == 1)
+    utf16_to_text(len, DMR_PDU+ptr); //assumming text starts right at the ptr value
+  else if (spid == 2 || dpid == 2)
+  {
+    //untested
+    uint8_t DMR_PDU_bits[127*8]; memset(DMR_PDU_bits, 0, sizeof(DMR_PDU_bits));
+    unpack_byte_array_into_bit_array(DMR_PDU+ptr, DMR_PDU_bits, (len-4-ptr)*sizeof(uint8_t));
+    lip_protocol_decoder(opts, state, DMR_PDU_bits);
+  }
+  else fprintf (stderr, "Unknown Decode Format;");
+
+}
+
+void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
+{
+
+  UNUSED(opts); UNUSED(state);
+  // uint8_t slot = state->currentslot;
+
+  //may need to look at sap value and determine the len of these addressing headers, etc
+  //and make a ptr to the start of actual PDU content data
+  // if (state->data_header_sap[slot] == 4)
+  // {
+    //adjust ptr, addressing type, etc
+  // }
+
+  //take a look at the src, dst, and port indicated (assuming both ports will match)
+  uint32_t add1 = (DMR_PDU[13] << 16) | (DMR_PDU[14] << 8) | DMR_PDU[15]; //The 0C or 0D indicator will usually tell if this is src or dst
+  uint32_t add2 = (DMR_PDU[17] << 16) | (DMR_PDU[18] << 8) | DMR_PDU[19];
+  uint16_t port1 = (DMR_PDU[20] << 8) | DMR_PDU[21];
+  uint16_t port2 = (DMR_PDU[22] << 8) | DMR_PDU[23];
+  fprintf (stderr, "\n %02X ADD1: %d; Port: %d; %02X ADD2: %d; Port: %d; Len: %d; ", DMR_PDU[12], add1, port1, DMR_PDU[16], add2, port2, len);
+
+  //Are DMR PDU types only dictated by Port Number? Or is this just the defaults when programmed?
+  if (port1 == 231 && port2 == 231)
+  {
+    fprintf (stderr, "Cellocator;");
+  }
+  else if (port1 == 4001 && port2 == 4001)
+  {
+    fprintf (stderr, "LRRP;");
+    dmr_lrrp (opts, state, len, DMR_PDU); //will len just work here? (make adjustments if needed)
+  }
+  else if (port1 == 4004 && port2 == 4004)
+  {
+    fprintf (stderr, "XCMP;"); //may choose to use || instead of &&, saw a mismatch port but one was for XCMP
+  }
+  else if (port1 == 4005 && port2 == 4005)
+  {
+    fprintf (stderr, "ARS;");
+  }
+  else if (port1 == 4007 && port2 == 4007)
+  {
+    fprintf (stderr, "TMS;");
+    utf16_to_text(len, DMR_PDU+35);
+  }
+  else if (port1 == 4008 && port2 == 4008)
+  {
+    fprintf (stderr, "Telemetry;");
+  }
+  else if (port1 == 4009 && port2 == 4009)
+  {
+    fprintf (stderr, "OTAP;");
+  }
+  else if (port1 == 4012 && port2 == 4012)
+  {
+    fprintf (stderr, "Battery Management;");
+  }
+  else if (port1 == 4013 && port2 == 4013)
+  {
+    fprintf (stderr, "Job Ticket Server;");
+  }
+  //ETSI specific
+  else if (port1 == 5016 && port2 == 5016)
+  {
+    fprintf (stderr, "TMS;");
+    utf16_to_text(len, DMR_PDU+35);
+  }
+  else if (port1 == 5017 && port2 == 5017)
+  {
+    uint8_t DMR_PDU_bits[127*8]; memset(DMR_PDU_bits, 0, sizeof(DMR_PDU_bits));
+    unpack_byte_array_into_bit_array(DMR_PDU+35, DMR_PDU_bits, (len-4-35)*sizeof(uint8_t));
+    lip_protocol_decoder(opts, state, DMR_PDU_bits);
+  }
+  else fprintf (stderr, "Unknown PDU Contents;");
+  
+}
+
 //The contents of this function are mostly my reversed engineered efforts by observing DSDPlus output and matching data bytes
 //combined with a few external sources such as OK-DMR for some token values and extra data values (rad and alt)
 //this is by no means an extensive LRRP list and is prone to error (unless somebody has the manual or something)

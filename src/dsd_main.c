@@ -365,6 +365,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->data_block_counter[1] = 1;
   state->data_p_head[0] = 0;
   state->data_p_head[1] = 0;
+  state->data_block_poc[0] = 0;
+  state->data_block_poc[1] = 0;
 
   state->dmr_encL = 0;
   state->dmr_encR = 0;
@@ -1034,6 +1036,8 @@ initState (dsd_state * state)
   state->data_block_counter[1] = 1;
   state->data_p_head[0] = 0;
   state->data_p_head[1] = 0;
+  state->data_block_poc[0] = 0;
+  state->data_block_poc[1] = 0;
 
   state->menuopen = 0; //is the ncurses menu open, if so, don't process frame sync
 

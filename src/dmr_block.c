@@ -11,8 +11,7 @@
 //hopefully a more simplified (or logical) version...once you get past all the variables
 void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t dheader_bits[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors)
 {
-  
-  int i;
+
   uint8_t slot = state->currentslot;
 
   //clear out unified pdu 'superframe' slot
@@ -67,6 +66,9 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
 
     //store source for dmr pdu packet handling (lrrp) when not available in completed message
     if (dpf != 15) state->dmr_lrrp_source[slot] = source;
+
+    //store number of padding octets in a header to be used
+    if (dpf != 15) state->data_block_poc[slot] = poc;
 
     //set dpf to storage for later use (UDT, SD, etc)
     state->data_header_format[slot] = dpf; 
@@ -132,8 +134,6 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     //p_head
     uint8_t p_sap  = (uint8_t)ConvertBitIntoBytes(&dheader_bits[0], 4);
     uint8_t p_mfid = (uint8_t)ConvertBitIntoBytes(&dheader_bits[8], 8);
-    uint8_t p_pot  = (uint8_t)ConvertBitIntoBytes(&dheader_bits[3], 5); //looking for LRRP pot_report
-    UNUSED(p_pot);
 
     fprintf (stderr, "%s ", KGRN);
     fprintf (stderr, "\n");
@@ -148,7 +148,8 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     else if (dpf == 3)  fprintf (stderr, "Confirmed Delivery ");
     else if (dpf == 13) fprintf (stderr, "Short Data: Defined ");
     else if (dpf == 14) fprintf (stderr, "Short Data: Raw or S/P ");
-    else if (dpf == 15) fprintf (stderr, "Proprietary Packet Data");
+    // else if (dpf == 15) fprintf (stderr, "Proprietary Packet Data");
+    else if (dpf == 15) fprintf (stderr, "Extended"); //
     else fprintf (stderr, "Reserved/Unknown DPF %X ", dpf);
 
     if (a == 1 && dpf != 15) fprintf(stderr, "- Response Requested ");
@@ -165,14 +166,14 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     else if (sap == 3)  sprintf (sap_string, "%s", "UDP Comp"); //UDP/IP header compression
     else if (sap == 4)  sprintf (sap_string, "%s", "IP Based"); //IP based Packet Data
     else if (sap == 5)  sprintf (sap_string, "%s", "ARP Prot"); //Address Resoution Protocol (ARP)
-    else if (sap == 9)  sprintf (sap_string, "%s", "Prop PDU"); //Proprietary Packet Data
+    else if (sap == 9)  sprintf (sap_string, "%s", "EXTD HDR"); //Extended Header (Proprietary)
     else if (sap == 10) sprintf (sap_string, "%s", "Short DT"); //Short Data
     else                sprintf (sap_string, "%s", "Reserved"); //reserved, or err/unk
 
     //mfid string handling
     if (dpf == 15)
     {
-      if      (p_mfid == 0x10) sprintf (mfid_string, "%s", "Motorola");
+      if      (p_mfid == 0x10) sprintf (mfid_string, "%s", "Moto"); //could just also be a generic catch all for DMRA
       else if (p_mfid == 0x58) sprintf (mfid_string, "%s", "Tait");
       else if (p_mfid == 0x68) sprintf (mfid_string, "%s", "Hytera");
       else if (p_mfid == 0x08) sprintf (mfid_string, "%s", "Hytera");
@@ -313,44 +314,85 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     //Proprietary Data Header
     if (dpf == 15) 
     {
-      fprintf (stderr, " - P_SAP %02d [%s] - MFID %02X [%s]", p_sap, sap_string, p_mfid, mfid_string);
+      //The SAP found here is the actual SAP of the message (like a P25 ndary SAP, and can chain together according to ETSI)
+      fprintf (stderr, " - SAP %02d [%s] - MFID %02X [%s]", p_sap, sap_string, p_mfid, mfid_string);
 
-      //p_sap 1 on mfid 10 (moto) is a pain, and doesn't assemble correctly for some reason
-      //two extra duplicate blocks are transmitted at the end for some reason -- system unique error?
-      if (p_sap != 1)
+      //p_sap 1 on mfid 10 (moto) is unknown, and the messages don't pass the CRC32
+      //two extra duplicate blocks observed only happens on one sample, could have been radio or repeater errors?
+      // if (p_sap != 1)
       {
         //sanity check to prevent segfault (this happened when the regular header was not received beforehand)
         if (state->data_header_blocks[slot] > 1)
           state->data_header_blocks[slot]--;
       }
-      else
+      // else
+      // {
+      //   //this method will just include the prop_pdu header as a data block and assemble the data blocks as a message, excluding duplicates
+      //   int blocks = state->data_header_blocks[slot]-1;
+      //   if (blocks > 127) blocks = 127;
+      //   if (blocks < 1) blocks = 4;
+      //   for(i = 0; i < 12; i++)
+      //     state->dmr_pdu_sf[slot][i+(blocks*12)] = dheader[i];
+      //   state->data_block_counter[slot]++;
+      // }
+
+      //Start Setting DMR Data Packet Encryption Variables
+      if (p_sap != 1 && p_mfid == 0x10) //p_sap 1 is reserved and doesn't seem to contain ENC header (may be extended address, or other signalling)
       {
-        //this method will assemble with the duplicate blocks and include the header as well
-        // state->data_header_blocks[slot]++;
-        // state->data_header_blocks[slot]++;
-        // int blocks = state->data_header_blocks[slot]-1;
-        // if (blocks > 127) blocks = 127;
-        // if (blocks < 1) blocks = 4; //safety value
-        // for(i = 0; i < 12; i++)
-        //   state->dmr_pdu_sf[slot][i+(blocks*12)] = dheader[i];
-        // state->data_block_counter[slot]++;
+        //check ENC bit, assuming this is an ENC bit, or SVC OPT like thing
+        if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[20], 4) == 1)
+        {
+          //set to 0x100 so it won't trigger any weird flags, but still has a non-zero value to be checked later
+          if (state->currentslot == 0) state->dmr_so = 0x100;
+          else state->dmr_soR = 0x100;
+        }
 
-        //this method will just include the prop_pdu header as a data block and assemble the data blocks as a message, excluding duplicates
-        int blocks = state->data_header_blocks[slot]-1;
-        if (blocks > 127) blocks = 127;
-        if (blocks < 1) blocks = 4;
-        for(i = 0; i < 12; i++)
-          state->dmr_pdu_sf[slot][i+(blocks*12)] = dheader[i];
-        state->data_block_counter[slot]++;
+        fprintf (stderr, "\n PDU ENC Header:");
+        fprintf (stderr, " MFID: %02X;", (uint8_t)ConvertBitIntoBytes(&dheader_bits[8], 8));
+        fprintf (stderr, " ENC: %X;", (uint8_t)ConvertBitIntoBytes(&dheader_bits[20], 4));
 
-        //this method will NOT include the prop_pdu header as a data block and assemble the data blocks as a message, excluding duplicates
-        // state->data_header_blocks[slot]--; UNUSED(i);
+        if (state->currentslot == 0)
+          state->payload_keyid = (uint8_t)ConvertBitIntoBytes(&dheader_bits[24], 8);
+        else state->payload_keyidR = (uint8_t)ConvertBitIntoBytes(&dheader_bits[24], 8);
+        fprintf (stderr, " Key ID: %02X;", (uint8_t)ConvertBitIntoBytes(&dheader_bits[24], 8));
 
-        //no matter how you assemble this, with or without the p_head block(s) or extra blocks, there is ALWAYS a CRC32 Failure
-        //even when it continues to pass on other SAP values, SAP 1 must have a different checksum?
-        //Users trying to get this will want to enable -F to bypass the CRC32 failure
+        //this uses the same 3 bit method found in the 'late entry' alg
+        if (state->currentslot == 0) //could be 17,3
+          state->payload_algid = (uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3);
+        else state->payload_algidR = (uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3);
+        fprintf (stderr, " ALG: %02X;", (uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3));
+        if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 0) fprintf (stderr, " BP;");
+        if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 1) fprintf (stderr, " RC4;");
+        if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 2) fprintf (stderr, " DES56;");
+        if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 3) fprintf (stderr, " AES128;");
+        if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 4) fprintf (stderr, " AES256;");
+
+        if (state->currentslot == 0)
+          state->payload_mi = (uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 32);
+        else state->payload_miR = (uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 32);
+
+        //print MI only if this is not Moto BP (no MI on those)
+        if ((uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 32) != 0)
+          fprintf (stderr, " MI(32): %08X", (uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 32));
+
       }
-
+      else //if (p_mfid == 0x10)
+      {
+        //I wonder if this is like the extended addressing header used on P25p1
+        //(either way, the CRC32 will still fail, maybe its RAS or a MAC?)
+        /*Unknown Extended Header: 1F1002011127E70D20232018
+        Slot 2 - Multi Block PDU Message CRC32 ERR
+        Slot 2 - Multi Block PDU Message
+          1F1002011127E70D20232018 <--fails CRC32 with or without this attached
+          41341F9AAECDE6554616A43C
+          0E2A6335040C872A0009006C
+          007356B370000000458AB84D <--very clearly 32 bits (4 bytes) after padding
+        */ //End Example
+        fprintf (stderr, "\n Unknown Extended Header: ");
+        for (uint8_t i = 2; i < 10; i++)
+          fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(&dheader_bits[0+(i*8)], 8));
+      }
+      //End Setting DMR Data Packet Encryption Variables
     }
 
     //block storage sanity
@@ -361,23 +403,11 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     //set data header validity unless its a p_head (should be set prior, if received)
     if (dpf != 15) state->data_header_valid[slot] = 1;
 
-    //REMUS! Uncomment these lines if desired
-    if (dpf != 15 && dpf != 1)
+    // if (dpf != 15 && dpf != 1)
     {
       sprintf (state->dmr_lrrp_gps[slot], "Data Call - %s TGT: %d SRC: %d ", sap_string, target, source);
       if (a == 1) strcat (state->dmr_lrrp_gps[slot], "- RSP REQ ");
     }
-
-    //REMUS! Uncomment these lines if desired -- if the data request data header is missing, though, this may keep accumulating
-    // if (dpf == 1)
-    // {
-    //   strcat (state->dmr_lrrp_gps[slot], "- RSP ");
-    //   if (r_class == 0) strcat (state->dmr_lrrp_gps[slot], "ACK - RX OK");
-    //   if (r_class == 1) strcat (state->dmr_lrrp_gps[slot], "NACK - RX ERR");
-    //   if (r_class == 2) strcat (state->dmr_lrrp_gps[slot], "SACK - RETRY");
-    
-    // }
-    //End REMUS Data string
 
     //store SAP value
     state->data_header_sap[slot] = sap;
@@ -767,9 +797,46 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
       //individual CRC9s are correct on confirmed data blocks (but we can confirm now that they are all good)
       if (CRCComputed == CRCExtracted) CRCCorrect = 1;
 
-      //only run on good CRC or CRC/RAS bypass (aggressive_framesync == 0)
-      if (CRCCorrect || opts->aggressive_framesync == 0) 
-        dmr_pdu (opts, state, block_len, state->dmr_pdu_sf[slot]);
+      //check for encryption on PDU
+      uint8_t enc_check = 0;
+      uint8_t decrypted_pdu = 1;
+      if (slot == 0 && state->dmr_so == 0x100)
+      {
+        enc_check = 1;
+        decrypted_pdu = 0;
+      }
+      else if (slot == 1 && state->dmr_soR == 0x100)
+      {
+        enc_check = 1;
+        decrypted_pdu = 0;
+      }
+
+      //decode PDU
+      if (enc_check == 1 && decrypted_pdu == 0) //check for encryption and if it was decrypted first or not
+      {
+        fprintf (stderr, "%s", KRED);
+        fprintf (stderr, "\n Slot %d - Encrypted Data Packet;", slot+1);
+        fprintf (stderr, "%s", KNRM);
+      }
+      else if (CRCCorrect || opts->aggressive_framesync == 0)
+      {
+        //may need to make adjustments for various compressed headers for starting point, etc?
+        if (state->data_header_sap[slot] == 4) //IP based
+        {
+          uint16_t len = ((blocks+1)*block_len)-4; //total number of bytes in PDU minus 4 CRC32 bytes
+          dmr_ip_pdu (opts, state, len, state->dmr_pdu_sf[slot]);
+        }
+        else if (state->data_header_sap[slot] == 10) //short data, may also need to check for SD:D [DD_HEAD]
+        {
+          uint16_t len = ((blocks+1)*block_len)-4; //total number of bytes in PDU minus 4 CRC32 bytes
+          dmr_sd_pdu (opts, state, len, state->dmr_pdu_sf[slot]);
+        }
+        else if (state->data_header_sap[slot] == 2 || state->data_header_sap[slot] == 3) //TCP and UDP Compression (may only be 3 UDP compression, unknown)
+        {
+          uint16_t len = ((blocks+1)*block_len)-4; //total number of bytes in PDU minus 4 CRC32 bytes
+          dmr_udp_comp_pdu (opts, state, len, state->dmr_pdu_sf[slot]);
+        }
+      }
 
       if (CRCCorrect) ; //print nothing
       else
@@ -792,7 +859,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         for (i = 0; i < ((blocks+1)*block_len); i++) 
         {
           if ( (i != 0) && (i % 12 == 0) ) fprintf (stderr, "\n  "); 
-          fprintf (stderr, "[%02X]", state->dmr_pdu_sf[slot][i]);
+          fprintf (stderr, "%02X", state->dmr_pdu_sf[slot][i]);
         }
 
         //debug print
@@ -973,7 +1040,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         fprintf (stderr, "\n Slot %d - Multi Block Control Message\n  ", slot+1);
         for (i = 0; i < ((blocks+1)*block_len); i++) 
         {
-          fprintf (stderr, "[%02X]", state->dmr_pdu_sf[slot][i]);
+          fprintf (stderr, "%02X", state->dmr_pdu_sf[slot][i]);
           if (i == 11 || i == 23 || i == 35 || i == 47 || i == 59 || i == 71 || i == 83 || i == 95) 
           {
             fprintf (stderr, "\n  "); 
@@ -1054,6 +1121,7 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
   memset (state->data_conf_data, 0, sizeof(state->data_conf_data));
   memset (state->dmr_pdu_sf, 0, sizeof(state->dmr_pdu_sf));
   memset (state->data_block_counter, 1, sizeof(state->data_block_counter));
+  memset (state->data_block_poc, 0, sizeof(state->data_block_poc));
   memset (state->data_header_blocks, 1, sizeof(state->data_header_blocks));
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
   memset (state->dmr_lrrp_source, 0, sizeof(state->dmr_lrrp_source));

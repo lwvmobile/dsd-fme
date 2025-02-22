@@ -661,6 +661,7 @@ typedef struct
 
   //new stuff below here
   uint8_t data_conf_data[2];            //flag for confirmed data blocks per slot
+  uint8_t data_block_poc[2];            //padding octets in the header (needed for Data PDU Decryption)
   uint8_t dmr_pdu_sf[2][24*128];        //unified pdu 'superframe' //[slot][byte] -- increased capacity to 127(+1) full rate blocks
   uint8_t cap_plus_csbk_bits[2][12*8*8]; //CSBK Cap+ FL initial and appended block bit storage, by slot
   uint8_t cap_plus_block_num[2];         //received block number storage -- per timeslot
@@ -1285,7 +1286,12 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state);
 //dmr data header and multi block types (header, 1/2, 3/4, 1, Unified)
 void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t dheader_bits[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors);
 void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_bytes[], uint8_t block_len, uint8_t databurst, uint8_t type);
+
+//dmr pdu handling
 void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[]);
+void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU);
+void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU);
+void dmr_udp_comp_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU);
 void dmr_reset_blocks (dsd_opts * opts, dsd_state * state);
 void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[]);
 void dmr_locn (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[]);
