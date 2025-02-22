@@ -168,6 +168,8 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     else if (sap == 5)  sprintf (sap_string, "%s", "ARP Prot"); //Address Resoution Protocol (ARP)
     else if (sap == 9)  sprintf (sap_string, "%s", "EXTD HDR"); //Extended Header (Proprietary)
     else if (sap == 10) sprintf (sap_string, "%s", "Short DT"); //Short Data
+    else if (sap == 1 && p_mfid == 0x10)
+                        sprintf (sap_string, "%s", "Moto EXT"); //motorola extended format
     else                sprintf (sap_string, "%s", "Reserved"); //reserved, or err/unk
 
     //mfid string handling
@@ -317,29 +319,32 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
       //The SAP found here is the actual SAP of the message (like a P25 ndary SAP, and can chain together according to ETSI)
       fprintf (stderr, " - SAP %02d [%s] - MFID %02X [%s]", p_sap, sap_string, p_mfid, mfid_string);
 
-      //p_sap 1 on mfid 10 (moto) is unknown, and the messages don't pass the CRC32
-      //two extra duplicate blocks observed only happens on one sample, could have been radio or repeater errors?
-      // if (p_sap != 1)
+      //p_sap 1 on mfid 10 (moto) has been observed as the first block of LRRP data on a Moto system but doesnt' pass the CRC for some reason (included or not included)
+      if (p_mfid == 0x10 && p_sap == 1)
+      {
+        //this method will include this extended header since its observed to be MOTO LRRP first block
+        //NOTE: This is broken on R34 data (expects only R12U data)
+        //TODO: Redo block assembly at some point (or store this seperately?)
+        int blocks = state->data_header_blocks[slot]-1;
+        if (blocks > 127) blocks = 127;
+        if (blocks < 1) blocks = 4; //fix this at some point
+        for(uint16_t i = 0; i < 12; i++)
+          state->dmr_pdu_sf[slot][i+(blocks*12)] = dheader[i];
+        state->data_block_counter[slot]++;
+      }
+
+      else //if (p_sap != 1) //anything else
       {
         //sanity check to prevent segfault (this happened when the regular header was not received beforehand)
         if (state->data_header_blocks[slot] > 1)
           state->data_header_blocks[slot]--;
       }
-      // else
-      // {
-      //   //this method will just include the prop_pdu header as a data block and assemble the data blocks as a message, excluding duplicates
-      //   int blocks = state->data_header_blocks[slot]-1;
-      //   if (blocks > 127) blocks = 127;
-      //   if (blocks < 1) blocks = 4;
-      //   for(i = 0; i < 12; i++)
-      //     state->dmr_pdu_sf[slot][i+(blocks*12)] = dheader[i];
-      //   state->data_block_counter[slot]++;
-      // }
 
       //Start Setting DMR Data Packet Encryption Variables
-      if (p_sap != 1 && p_mfid == 0x10) //p_sap 1 is reserved and doesn't seem to contain ENC header (may be extended address, or other signalling)
+      if (p_sap != 1 && p_mfid == 0x10)
       {
-        //check ENC bit, assuming this is an ENC bit, or SVC OPT like thing
+
+        //check ENC bit, assuming this is an ENC bit, or SVC OPT like thing (or could be an opcode for the rest of the extended header)
         if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[20], 4) == 1)
         {
           //set to 0x100 so it won't trigger any weird flags, but still has a non-zero value to be checked later
@@ -376,18 +381,13 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
           fprintf (stderr, " MI(32): %08X", (uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 32));
 
       }
+      else if (p_sap == 1 && p_mfid == 0x10)
+      {
+        //This can be an LRRP packet first block (but slightly different configuration)
+        fprintf (stderr, "\n Motorola Alternate Function Header; ");
+      }
       else //if (p_mfid == 0x10)
       {
-        //I wonder if this is like the extended addressing header used on P25p1
-        //(either way, the CRC32 will still fail, maybe its RAS or a MAC?)
-        /*Unknown Extended Header: 1F1002011127E70D20232018
-        Slot 2 - Multi Block PDU Message CRC32 ERR
-        Slot 2 - Multi Block PDU Message
-          1F1002011127E70D20232018 <--fails CRC32 with or without this attached
-          41341F9AAECDE6554616A43C
-          0E2A6335040C872A0009006C
-          007356B370000000458AB84D <--very clearly 32 bits (4 bytes) after padding
-        */ //End Example
         fprintf (stderr, "\n Unknown Extended Header: ");
         for (uint8_t i = 2; i < 10; i++)
           fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(&dheader_bits[0+(i*8)], 8));
@@ -835,6 +835,29 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         {
           uint16_t len = ((blocks+1)*block_len)-4; //total number of bytes in PDU minus 4 CRC32 bytes
           dmr_udp_comp_pdu (opts, state, len, state->dmr_pdu_sf[slot]);
+        }
+        else if (state->data_header_sap[slot] == 1 && state->dmr_pdu_sf[slot][1] == 0x10) //test SAP 1 MFID 10 (with -F) as a potential LRRP message (header inclusive)
+        {
+          uint16_t len = ((blocks+1)*block_len)-4;
+
+          //sanity check
+          if (len > 150)
+            len = 150;
+
+          uint8_t PDU[150]; memset (PDU, 0, sizeof(PDU)); //arbitrary size (should be okay)
+
+          //manipulate to match expected format alignment
+          PDU[0] = 0; PDU[1] = state->dmr_pdu_sf[slot][0];
+
+          //speculation: the other 4 bytes are hashed values for dst and src, or something similar
+
+          uint16_t mprt = 0xFFFF;
+          uint32_t msrc = state->dmr_lrrp_source[slot];
+          uint32_t mdst = 0xFFFFFF; //TODO: Get the real DST or TG indicated in the header
+
+          //copy rest, starting at offset 5 of the reserved extended header, to offset 2 to match expected formatting
+          memcpy(PDU+2, state->dmr_pdu_sf[slot]+5, (sizeof(PDU)-5));
+          dmr_lrrp (opts, state, len-4, msrc, mdst, mprt, mprt, PDU);
         }
       }
 

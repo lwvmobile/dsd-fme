@@ -8,21 +8,6 @@
 
 #include "dsd.h"
 
-void dmr_pdu (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[])
-{
-
-  uint8_t slot = state->currentslot;
-
-  //check for more available flag info, etc on these prior to running
-  if (DMR_PDU[0] == 0x01) dmr_locn (opts, state, block_len, DMR_PDU);
-  else dmr_lrrp (opts, state, block_len, DMR_PDU);
-
-  //maybe one day we will have more things to do here
-  state->data_conf_data[slot] = 0; //flag off confirmed data after processing it 
-  state->data_p_head[slot] = 0; //flag off prop_head data after processing it
-  
-}
-
 void utf16_to_text (uint16_t len, uint8_t * input)
 {
   len -= 36; //offset for starting point + 1
@@ -225,7 +210,7 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   else if (port1 == 4001 && port2 == 4001)
   {
     fprintf (stderr, "LRRP;");
-    dmr_lrrp (opts, state, len, DMR_PDU); //will len just work here? (make adjustments if needed)
+    dmr_lrrp (opts, state, len-24-4, add1, add2, port1, port2, DMR_PDU+24);
   }
   else if (port1 == 4004 && port2 == 4004)
   {
@@ -272,23 +257,17 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   
 }
 
-//The contents of this function are mostly my reversed engineered efforts by observing DSDPlus output and matching data bytes
-//combined with a few external sources such as OK-DMR for some token values and extra data values (rad and alt)
-//this is by no means an extensive LRRP list and is prone to error (unless somebody has the manual or something)
-void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[])
+//The contents of this function are mostly trial and error
+void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source, uint32_t dest, uint16_t port_s, uint16_t port_d, uint8_t * DMR_PDU)
 {
-  int i;
+
   uint16_t message_len = 0;
   uint8_t slot = state->currentslot;
-  uint8_t blocks = state->data_header_blocks[slot];
-  uint8_t padding = state->data_header_padding[slot];
   uint8_t lrrp_confidence = 0; //variable to increment based on number of tokens found, the more, the higher the confidence level
 
-  //source/dest and ports
-  uint32_t source = 0;
-  uint32_t dest = 0;
-  uint16_t port_s = 0;
-  uint16_t port_d = 0;
+  //source/dest and ports (this is grabbed in the IP decoding phase)
+  if (source != 0) lrrp_confidence++;
+  if (dest   != 0) lrrp_confidence++;
 
   //time
   uint16_t year = 0;
@@ -310,7 +289,6 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
   int lat_sign = 1; //positive 1, or negative 1
   int lon_sign = 1; //positive 1, or negative 1
 
-  //speed -- NOTE: Velocity is Speed + Direction
   uint16_t vel = 0;
   double velocity = 0;
   uint8_t vel_set = 0;
@@ -322,74 +300,36 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
 
   char deg_glyph[4];
   sprintf (deg_glyph, "%s", "°");
-  // sprintf (deg_glyph, "%s", "d"); 
 
   //triggered information report
-  uint8_t report = 0;
-  uint8_t pot_report = 0; //potential report by finding 0x0D and backtracking a few bytes
+  uint8_t report = DMR_PDU[1];
+  uint16_t unk = (DMR_PDU[2] << 8) | DMR_PDU[3]; //not sure what the following after the report value indicates exactly
 
+  //TODO: Needs more fixing, finding some things like report 0x12 with only partial updates on it
 
-  //start looking for tokens (using my best understanding of the ok-dmr library xml and python files)
-  for (i = 0; i < ( (blocks*block_len) - (padding+4) ); i++) 
+  //debug passed LRRP message
+  fprintf (stderr, "\n LRRP (DEBUG): ");
+  for (uint16_t i = 0; i < len; i++)
+    fprintf (stderr, "%02X ", DMR_PDU[i]);
+
+  //start looking for tokens
+  for (uint16_t i = 4; i < len; i++) //starting at 4 offsets the octets before 0D (seen 0D tossed into the other values folliowing report value)
   {
 
     switch(DMR_PDU[i]){
-      case 0x0C: //LRRP_TriggeredLocationReport
-        if (source == 0)
-        {
-          source = (DMR_PDU[i+1] << 16 ) + (DMR_PDU[i+2] << 8) + DMR_PDU[i+3];
-          dest = (DMR_PDU[i+5] << 16 ) + (DMR_PDU[i+6] << 8) + DMR_PDU[i+7];
-          port_s = (DMR_PDU[i+8] << 8) + DMR_PDU[i+9];
-          port_d = (DMR_PDU[i+10] << 8) + DMR_PDU[i+11];
-          i += 11;
-          lrrp_confidence++;
-        }
-        break;
-      //may need more 'report' types to trigger various scenarios
-      //disable all but 0x1F if issues or falsing happens often
-      //case 0x1D: //ARRP_TriggeredInformationAnswer_NCDT
-      //case 0x1E: //ARRP_TriggeredInformationReport = FALSE?
-      //case 0x25: //ARRP_UnsolicitedInformationReport_NCDT = (0x25, True, "")
-      //case 0x26: //ARRP_UnsolicitedInformationReport_NCDT
-      //case 0x13: //LRRP_UnsolicitedLocationReport_NCDT
-      //case 0x15: //LRRP_LocationProtocolReport_NCDT
-      //case 0x21: //ARRP_TriggeredInformationStopRequest_NCDT
-      case 0x1F: //ARRP_TriggeredInformationReport_NCDT
-        if (report == 0)
-        {
-          report = DMR_PDU[i];
-          i += 1; 
-          lrrp_confidence++;
-        }
-        break;
-      //0x0D always seems to follow 0x1F or other 'report' types two/three bytes later
-      case 0x0D: //message len indicator //LRRP_TriggeredLocationReport_NCDT
-        if (report > 0 && message_len == 0)
+      case 0x0D: //message len indicator
+        if (i == 4 && message_len == 0) //see if this is the first octet, otherwise, can't verify this is going to work //i == 4 && 
         {
           message_len = DMR_PDU[i+1]; 
           i += 1;
           lrrp_confidence++;
         }
-        else if (message_len == 0)
-        {
-          if (i > 3)
-          {
-            if (DMR_PDU[i-3] > 0) pot_report = DMR_PDU[i-3];
-            if (pot_report < 0x27)
-            {
-              report = pot_report;
-              message_len = DMR_PDU[i+1]; 
-              i += 1;
-              //no lrrp_confidence on speculative reporting, but will print it as such.
-            }
-          } 
-          
-        }
         break;
       //RESULT TOKEN or Request ID!
       case 0x22: //same comment as below, observed followed the message len
-      case 0x23: //this value has been seen after the 0x0D message len, appears to be a 2-byte value, was tripping a false on time stamp 
-        i += 2;
+      case 0x23: //this value has been seen after the 0x0D message len, appears to be a 2-byte value
+        //see if we can figure out how to intepret this
+        i += 1; //should this be 2, or 1?
         break; 
       //answer and report tokens
       case 0x51: //circle-2d
@@ -397,8 +337,6 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
       case 0x55: //circle-3d 
         if (message_len > 0 && lat == 0)
         {
-          // lat = ( ( ((DMR_PDU[i+1] & 0x7F ) <<  24 ) + (DMR_PDU[i+2] << 16) + (DMR_PDU[i+3] << 8) + DMR_PDU[i+4]) * 1 );
-          // lon = ( ( ((DMR_PDU[i+5] & 0x7F ) <<  24 ) + (DMR_PDU[i+6] << 16) + (DMR_PDU[i+7] << 8) + DMR_PDU[i+8]) * 1 );
           lat = ( ( (DMR_PDU[i+1]           <<  24 ) + (DMR_PDU[i+2] << 16) + (DMR_PDU[i+3] << 8) + DMR_PDU[i+4]) * 1 );
           lon = ( ( (DMR_PDU[i+5]           <<  24 ) + (DMR_PDU[i+6] << 16) + (DMR_PDU[i+7] << 8) + DMR_PDU[i+8]) * 1 );
           rad = (DMR_PDU[i+9] << 8) + DMR_PDU[i+10];
@@ -420,7 +358,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
           second = (DMR_PDU[i+5] & 0x3F);
           i += 5; 
           //sanity check
-          if (year > 2000 && year <= 2025) lrrp_confidence++;
+          if (year > 2000 && year <= 2026) lrrp_confidence++;
           if (year > 2025 || year < 2000) year = 0; //needs future proofing
         }
         break;
@@ -428,11 +366,9 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
       case 0x66: //point-2d 
         if (message_len > 0 && lat == 0)
         {
-          // lat = ( ( ((DMR_PDU[i+1] & 0x7F ) <<  24 ) + (DMR_PDU[i+2] << 16) + (DMR_PDU[i+3] << 8) + DMR_PDU[i+4]) * 1 );
-          // lon = ( ( ((DMR_PDU[i+5] & 0x7F ) <<  24 ) + (DMR_PDU[i+6] << 16) + (DMR_PDU[i+7] << 8) + DMR_PDU[i+8]) * 1 );
           lat = ( ( (DMR_PDU[i+1]           <<  24 ) + (DMR_PDU[i+2] << 16) + (DMR_PDU[i+3] << 8) + DMR_PDU[i+4]) * 1 );
           lon = ( ( (DMR_PDU[i+5]           <<  24 ) + (DMR_PDU[i+6] << 16) + (DMR_PDU[i+7] << 8) + DMR_PDU[i+8]) * 1 );
-          i += 8; 
+          i += 8; //+= 9? including current ptr?
           lrrp_confidence++;
         }
         break;
@@ -440,8 +376,6 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
       case 0x6A: //point-3d
         if (message_len > 0 && lat == 0)
         {
-          // lat = ( ( ((DMR_PDU[i+1] & 0x7F ) <<  24 ) + (DMR_PDU[i+2] << 16) + (DMR_PDU[i+3] << 8) + DMR_PDU[i+4]) * 1 );
-          // lon = ( ( ((DMR_PDU[i+5] & 0x7F ) <<  24 ) + (DMR_PDU[i+6] << 16) + (DMR_PDU[i+7] << 8) + DMR_PDU[i+8]) * 1 );
           lat = ( ( (DMR_PDU[i+1]           <<  24 ) + (DMR_PDU[i+2] << 16) + (DMR_PDU[i+3] << 8) + DMR_PDU[i+4]) * 1 );
           lon = ( ( (DMR_PDU[i+5]           <<  24 ) + (DMR_PDU[i+6] << 16) + (DMR_PDU[i+7] << 8) + DMR_PDU[i+8]) * 1 );
           alt =  DMR_PDU[i+9];
@@ -475,12 +409,8 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
           lrrp_confidence++;
         }
         break;
-      //below all unknown  
-      case 0x37: //result
-      case 0x38: //result
-      case 0x39: //result 'operations error'? attributes 0x22?
-      case 0x6B: //unknown-uint8
-      case 0x65: //lev-conf
+      
+      //unknown tokens 
       default:
         //do nothing
         break;
@@ -489,7 +419,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
   if (report && message_len > 0)
   {
     fprintf (stderr, "%s", KYEL);
-    fprintf (stderr, "\n LRRP Confidence: %d - Message Len: %d Octets", lrrp_confidence, message_len);
+    fprintf (stderr, "\n LRRP  Report: %02X; Unk: %04X; Message Len: %d;", report, unk, message_len);
     if (lrrp_confidence >= 3) //find the sweet magical number
     {
       //now we can open our lrrp file and write to it as well
@@ -521,25 +451,6 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
         }
       }
 
-      if (pot_report)
-      {
-        fprintf (stderr, "\n");
-        fprintf (stderr, "  Potential ARRP/LRRP Report (Debug): 0x%02X", report);
-      }
-      if (report)
-      {
-        fprintf (stderr, "\n");
-        fprintf (stderr, "  Report: 0x%02X", report);
-        if (report == 0x1F) fprintf (stderr, " ARRP_TriggeredInformationReport_NCDT "); //customize later when more is learned 
-        if (report == 0x21) fprintf (stderr, " ARRP_TriggeredInformationStopRequest_NCDT ");
-        if (report == 0x22) fprintf (stderr, " ARRP_TriggeredInformationStopAnswer ");
-        if (report == 0x25) fprintf (stderr, " ARRP_UnsolicitedInformationReport_NCDT ");
-        if (report == 0x26) fprintf (stderr, " ARRP_UnsolicitedInformationReport_NCDT ");
-        if (report == 0x27) fprintf (stderr, " ARRP_InformationProtocolRequest_NCDT ");
-        if (report == 0x13) fprintf (stderr, " LRRP_UnsolicitedLocationReport_NCDT ");
-        if (report == 0x15) fprintf (stderr, " LRRP_UnsolicitedLocationReport_NCDT ");
-
-      }
       if (source)
       {
         fprintf (stderr, "\n");
@@ -580,12 +491,6 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
         fprintf (stderr, "  LRRP - Lat: %.5lf", lat_fin);
         fprintf (stderr, "  Lon: %.5lf", lon_fin);
         fprintf (stderr, " (%.5lf, %.5lf)", lat_fin , lon_fin);
-
-        // if (opts->lrrp_file_output == 1)
-        // {
-        //   fprintf (pFile, "%.5lf\t", lat_fin);
-        //   fprintf (pFile, "%.5lf\t", lon_fin);
-        // }
 
       }
        //always print into the lrrp file, even if zeroes, keep alignment correct
@@ -646,25 +551,16 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
     }
     
   }
-  
-  else if (pot_report)
-  {
-    fprintf (stderr, "\n");
-    fprintf (stderr, "  Potential ARRP/LRRP Report (Debug): 0x%02X", report);
-  }
 
   fprintf (stderr, "%s", KNRM);
   
 }
 
-void dmr_locn (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DMR_PDU[])
+void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
 {
   UNUSED(opts);
 
-  int i;
   uint8_t slot = state->currentslot;
-  uint8_t blocks = state->data_header_blocks[slot];
-  uint8_t padding = state->data_header_padding[slot];
   uint8_t source = state->dmr_lrrp_source[slot];
 
   //flags if certain data type is present
@@ -714,7 +610,7 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint8_t block_len, uint8_t DM
   UNUSED2(lat_sign, lon_sign);
 
   //start looking for specific bytes corresponding to 'letters' A (time), NSEW (ordinal directions), etc
-  for (i = 0; i < ( (blocks*block_len) - (padding+4) ); i++)
+  for (uint16_t i = 0; i < len; i++)
   {
     switch(DMR_PDU[i]){
       case 0x41: //A -- time and date
