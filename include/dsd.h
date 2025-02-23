@@ -1456,6 +1456,11 @@ int m17_socket_receiver(dsd_opts * opts, void * data);
 int udp_socket_connectM17(dsd_opts * opts, dsd_state * state);
 int m17_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
 
+//RC4 function prototypes
+void RC4(int drop, uint8_t keylength, uint8_t messagelength, uint8_t key[], uint8_t cipher[], uint8_t plain[]);
+void rc4_block_output (int drop, int keylen, int meslen, uint8_t * key, uint8_t * output_blocks);
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
