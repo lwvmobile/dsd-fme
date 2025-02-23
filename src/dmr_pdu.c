@@ -50,7 +50,7 @@ void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   // if (DMR_PDU[0] == 0x01) //may not be needed now, unknown
   {
     utf8_to_text(len, DMR_PDU+23);
-    dmr_locn(opts, state, len, DMR_PDU); //may need to figure out the actual len of each block?
+    dmr_locn(opts, state, len, DMR_PDU);
   }
     
 }
@@ -308,7 +308,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
   //TODO: Needs more fixing, finding some things like report 0x12 with only partial updates on it
 
   //debug passed LRRP message
-  fprintf (stderr, "\n LRRP (DEBUG): ");
+  fprintf (stderr, "\n LRRP (Debug): ");
   for (uint16_t i = 0; i < len; i++)
     fprintf (stderr, "%02X ", DMR_PDU[i]);
 

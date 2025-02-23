@@ -316,21 +316,20 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     //Proprietary Data Header
     if (dpf == 15) 
     {
+
       //The SAP found here is the actual SAP of the message (like a P25 ndary SAP, and can chain together according to ETSI)
       fprintf (stderr, " - SAP %02d [%s] - MFID %02X [%s]", p_sap, sap_string, p_mfid, mfid_string);
 
-      //p_sap 1 on mfid 10 (moto) has been observed as the first block of LRRP data on a Moto system but doesnt' pass the CRC for some reason (included or not included)
+      //p_sap 1 on mfid 10 (moto) has been observed as the first block of LRRP data on a Moto system but doesn't pass the CRC for some reason (included or not included)
       if (p_mfid == 0x10 && p_sap == 1)
       {
-        //this method will include this extended header since its observed to be MOTO LRRP first block
-        //NOTE: This is broken on R34 data (expects only R12U data)
-        //TODO: Redo block assembly at some point (or store this seperately?)
-        int blocks = state->data_header_blocks[slot]-1;
-        if (blocks > 127) blocks = 127;
-        if (blocks < 1) blocks = 4; //fix this at some point
-        for(uint16_t i = 0; i < 12; i++)
-          state->dmr_pdu_sf[slot][i+(blocks*12)] = dheader[i];
+        //add the header to the first 12 bytes of the storage
+        for (uint8_t i = 0; i < 12; i++)
+          state->dmr_pdu_sf[slot][i] = dheader[i];
         state->data_block_counter[slot]++;
+        state->data_byte_ctr[slot] += 12; //set current byte ptr to 12
+
+        state->data_p_head[slot] = 1;
       }
 
       else //if (p_sap != 1) //anything else
@@ -394,12 +393,30 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
       }
       //End Setting DMR Data Packet Encryption Variables
     }
+    else //if (dpf != 15) //normal data header, we want to reset the enc states in case of any record needle drop playback occurrences
+    {
+      //reset alg/keyid/mi
+      if (state->currentslot == 0)
+      {
+        state->payload_mi = 0;
+        state->payload_algid = 0;
+        state->payload_keyid = 0;
+        state->dmr_so = 0;
+      }
+      else
+      {
+        state->payload_miR = 0;
+        state->payload_algidR = 0;
+        state->payload_keyidR = 0;
+        state->dmr_soR = 0;
+      }
+    }
 
     //block storage sanity
     if (state->data_header_blocks[slot] > 127) state->data_header_blocks[slot] = 127;
     //assuming we didn't receive the initial data header block on a p_head and then decremented it
     //3 or 4 seems to be the average safe value
-    if (state->data_header_blocks[slot] < 1) state->data_header_blocks[slot] = 4; 
+    if (state->data_header_blocks[slot] < 1) state->data_header_blocks[slot] = 1; //
     //set data header validity unless its a p_head (should be set prior, if received)
     if (dpf != 15) state->data_header_valid[slot] = 1;
 
@@ -720,25 +737,20 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
   if (type == 1)
   {
-    //type 1 data block, shuffle method
-    for (j = 0; j < blocks; j++) 
-    {
-      for (i = 0; i < block_len; i++) 
-      {
-        state->dmr_pdu_sf[slot][i+block_len*j] = state->dmr_pdu_sf[slot][i+block_len*(j+1)];
-      }
-    }
 
-    for (i = 0; i < block_len; i++) 
-    {
-      state->dmr_pdu_sf[slot][i+(blocks*block_len)] = block_bytes[i]; 
-    }
+    //type 1 data block, append current block_bytes to end of ctr location
+    uint16_t ctr = state->data_byte_ctr[slot];
+    for (i = 0; i < block_len; i++)
+      state->dmr_pdu_sf[slot][ctr++] = block_bytes[i];
+
+    //add block_len to current byte counter 
+    state->data_byte_ctr[slot] += block_len;
 
     //time to send the completed 'superframe' to the DMR PDU message handler
     if (state->data_block_counter[slot] == state->data_header_blocks[slot] && state->data_header_valid[slot] == 1)
     {
       //CRC32 on completed messages
-      for(i = 0, j = 0; i < (block_num * block_len); i++, j+=8)
+      for(i = 0, j = 0; i < ctr; i++, j+=8)
       {
         dmr_pdu_sf_bits[j + 0] = (state->dmr_pdu_sf[slot][i] >> 7) & 0x01;
         dmr_pdu_sf_bits[j + 1] = (state->dmr_pdu_sf[slot][i] >> 6) & 0x01;
@@ -754,16 +766,15 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
       //sanity check to prevent a negative or zero block_num or sending a negative value into the bit array
       if (block_num < 1 || block_num == 0) block_num = 1;
 
-      CRCExtracted = 0;
-      //extract crc from last block, apply to completed 'superframe' minus header
-      for(i = 0; i < 32; i++) 
-      {
-        CRCExtracted = CRCExtracted << 1;
-        CRCExtracted = CRCExtracted | (uint32_t)(dmr_pdu_sf_bits[i + (block_len * 8) * block_num - 32] & 1); //96
-      }
+      CRCExtracted = (state->dmr_pdu_sf[slot][ctr-4] << 24) | (state->dmr_pdu_sf[slot][ctr-3] << 16) | 
+                     (state->dmr_pdu_sf[slot][ctr-2] << 8)  | (state->dmr_pdu_sf[slot][ctr-1] << 0);
+
+      int offset = 0;
+      if (state->data_p_head[slot] == 1)
+        offset = 12;
 
       //rearrage for ridiculously stupid CRC32 LSO/MSO ordering
-      for(i = 0, j = 0; i < (block_num * block_len); i+=2, j+=16) 
+      for(i = 0, j = 0; i < ctr; i+=2, j+=16) 
       {
         dmr_pdu_sf_bits[j + 0] = (state->dmr_pdu_sf[slot][i+1] >> 7) & 0x01;
         dmr_pdu_sf_bits[j + 1] = (state->dmr_pdu_sf[slot][i+1] >> 6) & 0x01;
@@ -784,10 +795,12 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         dmr_pdu_sf_bits[j + 15] = (state->dmr_pdu_sf[slot][i] >> 0) & 0x01;
 
         //increment extra 2 bytes on each nth byte (depends on data type 1/2, 3/4, 1) if conf data
-        if ( i == (block_len - 1) )
+        if ( i == (block_len - 1 + offset) )
         {
-          if (state->data_conf_data[slot] == 0) i+=2;
+          
+          if (state->data_conf_data[slot] == 1) i+=2; //should this be 0, or 1?
         }
+
       }
 
       //confirmed working now!
@@ -861,14 +874,14 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         }
       }
 
+      //debug
+      fprintf (stderr, " CRC32: %08X / %08X", CRCExtracted, CRCComputed);
+
       if (CRCCorrect) ; //print nothing
       else
       {
         fprintf (stderr, "%s", KRED);
         fprintf (stderr, "\n Slot %d - Multi Block PDU Message CRC32 ERR", slot+1);
-
-        //debug print
-        // fprintf (stderr, " %X - %X", CRCExtracted, CRCComputed);
 
         fprintf (stderr, "%s", KNRM);
 
@@ -885,64 +898,19 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           fprintf (stderr, "%02X", state->dmr_pdu_sf[slot][i]);
         }
 
-        //debug print
-        // fprintf (stderr, " CRC - EXT %X CMP %X", CRCExtracted, CRCComputed);
-
         fprintf (stderr, "%s ", KNRM);
       }
-
-      // #define DMR_ASCII_TEST
-      #ifdef DMR_ASCII_TEST
-      // if (state->data_header_format[slot] == 13 || state->data_header_format[slot] == 14 || state->data_header_sap[slot] == 10)
-      {
-        fprintf (stderr, "%s", KCYN);
-        fprintf (stderr, "\n DMR PDU ASCII: \n"  );
-        for (i = 0; i < ((blocks+1)*block_len); i++)
-        {
-          if (state->dmr_pdu_sf[slot][i] <= 0x7E && state->dmr_pdu_sf[slot][i] >=0x20)
-          {
-            fprintf (stderr, "%c", state->dmr_pdu_sf[slot][i]);
-          }
-          else fprintf (stderr, " ");
-
-          if (i == 47 || i == 95) fprintf (stderr, "\n  ");
-        }
-          
-      }
-      #endif
-
-      // #define DMR_UTF16_TEST
-      #ifdef DMR_UTF16_TEST
-      //utf-16 text messaging (debug)
-      // if (utf-16)
-      {
-        fprintf (stderr, "%s", KCYN);
-        fprintf (stderr, "\n DMR PDU UTF16: ");
-        uint16_t ch16 = 0;
-        for (i = 25; i < ((blocks+1)*block_len)-4;) //at least one system seems to put out utf-16 at the offset of 25 from testing
-        {
-          ch16 = (uint16_t)state->dmr_pdu_sf[slot][i+0];
-          ch16 <<= 8;
-          ch16 |= (uint16_t)state->dmr_pdu_sf[slot][i+1];
-          // fprintf (stderr, " %04X; ", ch16); //debug for raw values to check grouping for offset
-
-          if (ch16 >= 0x20) //if not a linebreak or terminal commmands
-            fprintf (stderr, "%lc", ch16);
-          else if (ch16 == 0) //if padding
-            fprintf (stderr, "_");
-          else fprintf (stderr, " ");
-
-          i += 2;
-        }
-      }
-      #endif
 
       //reset data header format storage
       state->data_header_format[slot] = 7;
       //flag off data header validity 
       state->data_header_valid[slot] = 0; 
       //flag off conf data flag
-      state->data_conf_data[slot] = 0;     
+      state->data_conf_data[slot] = 0;
+      //reset padding
+      state->data_block_poc[slot] = 0;
+      //reset byte counter
+      state->data_byte_ctr[slot] = 0;
 
     } //end completed sf
 
@@ -1102,8 +1070,11 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
     //flag off data header validity 
     state->data_header_valid[slot] = 0; 
     //flag off conf data flag
-    state->data_conf_data[slot] = 0; 
-
+    state->data_conf_data[slot] = 0;
+    //reset padding
+    state->data_block_poc[slot] = 0;
+    //reset byte counter
+    state->data_byte_ctr[slot] = 0;
   }
 
   //else if the end of MBC Header and Blocks
@@ -1125,7 +1096,9 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
     //flag off data header validity 
     state->data_header_valid[slot] = 0; 
     //flag off conf data flag
-    state->data_conf_data[slot] = 0; 
+    state->data_conf_data[slot] = 0;
+    //flag off p_head
+    state->data_p_head[slot] = 0;
 
   }
 
@@ -1145,6 +1118,7 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
   memset (state->dmr_pdu_sf, 0, sizeof(state->dmr_pdu_sf));
   memset (state->data_block_counter, 1, sizeof(state->data_block_counter));
   memset (state->data_block_poc, 0, sizeof(state->data_block_poc));
+  memset (state->data_byte_ctr, 0, sizeof(state->data_byte_ctr));
   memset (state->data_header_blocks, 1, sizeof(state->data_header_blocks));
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
   memset (state->dmr_lrrp_source, 0, sizeof(state->dmr_lrrp_source));

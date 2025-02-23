@@ -662,6 +662,7 @@ typedef struct
   //new stuff below here
   uint8_t data_conf_data[2];            //flag for confirmed data blocks per slot
   uint8_t data_block_poc[2];            //padding octets in the header (needed for Data PDU Decryption)
+  uint16_t data_byte_ctr[2];            //number of bytes acculumated
   uint8_t dmr_pdu_sf[2][24*128];        //unified pdu 'superframe' //[slot][byte] -- increased capacity to 127(+1) full rate blocks
   uint8_t cap_plus_csbk_bits[2][12*8*8]; //CSBK Cap+ FL initial and appended block bit storage, by slot
   uint8_t cap_plus_block_num[2];         //received block number storage -- per timeslot
