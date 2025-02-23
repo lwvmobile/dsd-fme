@@ -376,6 +376,9 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
         //sanity check to prevent segfault (this happened when the regular header was not received beforehand)
         if (state->data_header_blocks[slot] > 1)
           state->data_header_blocks[slot]--;
+
+        //reset the ctr
+        state->data_byte_ctr[slot] = 0;
       }
 
       //Start Setting DMR Data Packet Encryption Variables
@@ -449,6 +452,9 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
         state->payload_keyidR = 0;
         state->dmr_soR = 0;
       }
+
+      //reset the ctr
+      state->data_byte_ctr[slot] = 0; 
     }
 
     //block storage sanity
@@ -743,7 +749,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
   uint8_t slot = state->currentslot; 
   int blocks; 
   uint8_t blockcounter = state->data_block_counter[slot];
-  uint8_t block_num = state->data_header_blocks[slot];
+  int block_num = state->data_header_blocks[slot];
 
   uint32_t CRCCorrect = 0;
   uint32_t CRCComputed = 0;
@@ -781,6 +787,9 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
     uint16_t ctr = state->data_byte_ctr[slot];
     for (i = 0; i < block_len; i++)
       state->dmr_pdu_sf[slot][ctr++] = block_bytes[i];
+
+    //debug
+    // fprintf (stderr, " CTR: %02d; ", ctr);
 
     //add block_len to current byte counter 
     state->data_byte_ctr[slot] += block_len;
@@ -920,13 +929,11 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         if (alg == 4) fprintf (stderr, " AES256;");
         if (R && alg != 0) fprintf (stderr, " Key: %010llX;", R);
 
-        
         if (alg == 1 && R != 0) //RC4
         {
-          rc4_block_output (256, 9, 3096, kiv, ob); //not sure if doing all 3096 is a good idea, lag?
+          rc4_block_output (256, 9, (int)state->data_byte_ctr[slot], kiv, ob);
           decrypted_pdu = 1;
         }
-
 
         //NOTE: Observed that keystream should not be applied to pad bytes or CRC
         //apply keystream here, only if alg is 1 or 4 AND key is available!
