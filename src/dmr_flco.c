@@ -155,6 +155,10 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       state->data_header_valid[slot] = 0; 
       //flag off conf data flag
       state->data_conf_data[slot] = 0;
+      //reset padding
+      state->data_block_poc[slot] = 0;
+      //reset byte counter
+      state->data_byte_ctr[slot] = 0;
       
       goto END_FLCO;
     }
