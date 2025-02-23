@@ -1,5 +1,5 @@
 @REM Set the console / terminal to 90 columns, 50 lines
-mode con: cols=90 lines=50
+@REM mode con: cols=90 lines=50
 
 @REM only run this command while running DSD-FME with pulse output in a stereo 2 channel configuration
 @REM and only IF you have a stereo volume panning issue (this resolves a possibility that a user may have

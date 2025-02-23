@@ -1,5 +1,5 @@
 @REM Set the console / terminal to 90 columns, 50 lines
-mode con: cols=90 lines=50
+@REM mode con: cols=90 lines=50
 
 @REM change directory into the dsd-fme folder
 cd dsd-fme
