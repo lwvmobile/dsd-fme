@@ -30,7 +30,6 @@ void utf16_to_text (uint16_t len, uint8_t * input)
 
 void utf8_to_text (uint16_t len, uint8_t * input)
 {
-  len -= 24;
   fprintf (stderr, "\n UTF8 Text: ");
   for (uint16_t i = 0; i < len; i++)
   {
@@ -49,11 +48,14 @@ void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
 
   if (DMR_PDU[0] == 0x01) //found some on another system that is 00 here, and not a Loction
   {
-    utf8_to_text(len, DMR_PDU+23);
+    uint16_t offset = 0; //sanity check of sorts, prevent extra long line print outs in the console
+    if (len >= 22) offset = 22;
+    utf8_to_text(len-offset, DMR_PDU+offset+1);
     dmr_locn(opts, state, len, DMR_PDU);
   }
   else
   {
+    if (len >= (127*18)) len = 127*18; //sanity check of sorts, prevent extra long line print outs in the console
     utf8_to_text(len, DMR_PDU); //generic catch-all to see if anything relevant is there
     // utf16_to_text(len, DMR_PDU); //generic catch-all to see if anything relevant is there
   } 
