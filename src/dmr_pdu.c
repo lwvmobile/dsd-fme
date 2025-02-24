@@ -47,11 +47,16 @@ void utf8_to_text (uint16_t len, uint8_t * input)
 void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
 {
 
-  // if (DMR_PDU[0] == 0x01) //may not be needed now, unknown
+  if (DMR_PDU[0] == 0x01) //found some on another system that is 00 here, and not a Loction
   {
     utf8_to_text(len, DMR_PDU+23);
     dmr_locn(opts, state, len, DMR_PDU);
   }
+  else
+  {
+    utf8_to_text(len, DMR_PDU); //generic catch-all to see if anything relevant is there
+    // utf16_to_text(len, DMR_PDU); //generic catch-all to see if anything relevant is there
+  } 
     
 }
 
