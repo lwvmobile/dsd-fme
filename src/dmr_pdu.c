@@ -38,8 +38,8 @@ void utf8_to_text (uint16_t len, uint8_t * input)
       fprintf (stderr, "%c", input[i]);
     else if (input[i] == 0) //if padding (0 could also indicate end of text terminator?)
       fprintf (stderr, "_");
-    else if (input[i] == 0x03) //ASCII end of text (observed on the NMEA LOCN ones anyways)
-      break;
+    // else if (input[i] == 0x03) //ASCII end of text (observed on the NMEA LOCN ones anyways)
+    //   break;
     else fprintf (stderr, "-");
   }
 }
