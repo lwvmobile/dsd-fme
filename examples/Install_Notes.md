@@ -152,7 +152,7 @@ You can also update your versions by using the cyg_rebuild.sh script `sh cyg_reb
 
 ### Virtual Sinks
 
-You may wish to direct sound into DSD-FME via Virtual Sinks. You may set up a Virtual Sink or two on your machine for routing audio in and out of applications to other applications using the following command, and opening up pavucontrol "PulseAudio Volume Control" in the menu (or `pulsemixer` in headless mode) to change line out of application to virtual sink, and line in of DSD-FME to monitor of virtual sink. This command will not persist past a reboot, so you will need to invoke them each time you reboot, or search for how to add this to your conf files for persistency if desired. Note: This setup is completely optional if using TCP Network Sink Audio and/or RTL Input.
+You may wish to direct sound into DSD-FME via Virtual Sinks. You may set up a Virtual Sink or two on your machine for routing audio in and out of applications to other applications using the following command, and opening up pavucontrol "PulseAudio Volume Control" in the menu (or `pulsemixer` in headless mode) to change line out of application to virtual sink, and line in of DSD-FME to monitor of virtual sink. This command will not persist past a reboot, so you will need to invoke them each time you reboot, or search for how to add this to your conf files for persistency if desired. Note: This setup is completely optional if using TCP Network Sink Audio and/or RTL Input. You may need to manually install either of these programs manually, if desired, or find suitable alternatives for pipewire-pulse such as pwvucontrol, or similar.
 
 ```
 pactl load-module module-null-sink sink_name=virtual_sink  sink_properties=device.description=Virtual_Sink

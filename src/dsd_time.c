@@ -60,7 +60,7 @@ char * getDateH()
   return curr;
 }
 
-//get YYYY-MM-DD with forward slash (LRRP files)
+//get YYYY/MM/DD with forward slash (LRRP files)
 char * getDateS()
 {
   char * curr = calloc(27, sizeof(char));
