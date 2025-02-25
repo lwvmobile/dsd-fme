@@ -60,6 +60,16 @@ char * getDateH()
   return curr;
 }
 
+//get YYYY-MM-DD with forward slash (LRRP files)
+char * getDateS()
+{
+  char * curr = calloc(27, sizeof(char));
+  time_t t = time(NULL);
+  struct tm * ptm = localtime(& t);
+  sprintf(curr, "%04d/%02d/%02d", ptm->tm_year+1900, ptm->tm_mon+1, ptm->tm_mday);
+  return curr;
+}
+
 //get YYYY-MM-DD with hyphen (Ncurses Call History)
 char * getDateN(time_t t)
 {

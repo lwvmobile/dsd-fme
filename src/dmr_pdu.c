@@ -433,8 +433,8 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
       FILE * pFile; //file pointer
       if (opts->lrrp_file_output == 1)
       {
-        char * timestr  = getTime();
-        char * datestr  = getDate();
+        char * timestr  = getTimeC();
+        char * datestr  = getDateS();
 
         //open file by name that is supplied in the ncurses terminal, or cli
         pFile = fopen (opts->lrrp_out_file, "a");

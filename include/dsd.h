@@ -1302,6 +1302,7 @@ char * getTimeC();
 char * getTimeN(time_t t);
 char * getDate();
 char * getDateH();
+char * getDateS();
 char * getDateN(time_t t);
 
 //dmr alg stuff
