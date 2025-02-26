@@ -8,6 +8,17 @@
 
 #include "dsd.h"
 
+//convert a value that is stored as a string decimal into a decimal uint16_t
+uint16_t convert_hex_to_dec(uint16_t input)
+{
+  char num_str[10];
+  memset (num_str, 0, sizeof(num_str));
+  sprintf (num_str, "%X", input);
+  input = 0;
+  sscanf (num_str, "%hd", &input);
+  return input;
+}
+
 void utf16_to_text (uint16_t len, uint8_t * input)
 {
   len -= 36; //offset for starting point + 1
@@ -50,7 +61,7 @@ void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   {
     uint16_t offset = 0; //sanity check of sorts, prevent extra long line print outs in the console
     if (len >= 22) offset = 22;
-    utf8_to_text(len-offset, DMR_PDU+offset+1);
+    utf8_to_text(len-offset-4, DMR_PDU+offset+1);
     dmr_locn(opts, state, len, DMR_PDU);
   }
   else
@@ -511,7 +522,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
         if (!year) fprintf (pFile, "%s\t", datestr ); //current date, only add this IF no included timestamp in LRRP data?
         if (!year) fprintf (pFile, "%s\t", timestr ); //current timestamp, only add this IF no included timestamp in LRRP data?
         if (year) fprintf (pFile, "%04d/%02d/%02d\t%02d:%02d:%02d\t", year, month, day, hour, minute, second); //add timestamp from decoded audio if available
-        
+
         //write data header source if not available in lrrp data
         if (!source) fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
         if (source) fprintf (pFile, "%08d\t", source); //add source form decoded audio if available, else its from the header
@@ -560,7 +571,6 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
 
 void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
 {
-  UNUSED(opts);
 
   uint8_t slot = state->currentslot;
   uint8_t source = state->dmr_lrrp_source[slot];
@@ -578,38 +588,28 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_P
   uint8_t month = 0;
   uint8_t day = 0;
 
-  //need to experiment best way to do this portion
-  uint8_t  lat_deg = 0;
-  uint8_t  lat_min = 0;
+  //lat and lon variables
+  uint16_t lat_deg = 0;
+  uint16_t lat_min = 0;
   uint16_t lat_sec = 0;
 
-  uint8_t  lon_deg = 0;
-  uint8_t  lon_min = 0;
+  uint16_t lon_deg = 0;
+  uint16_t lon_min = 0;
   uint16_t lon_sec = 0;
-
-  char lat_ord[2];
-  char lon_ord[2];
-  sprintf (lat_ord, "%s", "N");
-  sprintf (lon_ord, "%s", "E");
 
   char deg_glyph[4];
   sprintf (deg_glyph, "%s", "°");
-  // sprintf (deg_glyph, "%s", "d");
 
   //more strings...
   char locnstr[50];
   char latstr[75];
   char lonstr[75];
-  sprintf (locnstr, "%s", "     ");
-  sprintf (latstr, "%s", "     ");
-  sprintf (lonstr, "%s", "     ");
+  sprintf (locnstr, "%s", "");
+  sprintf (latstr,  "%s", "");
+  sprintf (lonstr,  "%s", "");
 
-  //TODO: conversion to decimal format
-  //DD = d + (min/60) + (sec/3600)
-  //N is positive, E is positive?? Assuming its like a 2D plane
   int lat_sign = 1; //positive 1 or negative 1
   int lon_sign = 1; //positive 1 or negative 1
-  UNUSED2(lat_sign, lon_sign);
 
   //start looking for specific bytes corresponding to 'letters' A (time), NSEW (ordinal directions), etc
   for (uint16_t i = 0; i < len; i++)
@@ -628,7 +628,6 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_P
         break;
       
       case 0x53: //S -- South
-        sprintf (lat_ord, "%s", "S");
         lat_sign = -1;
       case 0x4E: //N -- North
         lat     = 1;
@@ -639,7 +638,6 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_P
         break;
       
       case 0x57: //W -- West
-        sprintf (lon_ord, "%s", "W");
         lon_sign = -1;
       case 0x45: //E -- East
         lon     = 1; 
@@ -659,16 +657,74 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_P
 
   if (lat && lon)
   {
+    //convert dd.MMmmmm to decimal format
+    double latitude  = 0.0f;
+    double longitude = 0.0f;
+    double velocity  = 0.0f;
+    uint16_t degrees  = 0;
+
+    //convert hex string chars representing decimal values to integers
+    lat_deg = convert_hex_to_dec (lat_deg);
+    lat_min = convert_hex_to_dec (lat_min);
+    lat_sec = convert_hex_to_dec (lat_sec);
+
+    lon_deg = convert_hex_to_dec (lon_deg);
+    lon_min = convert_hex_to_dec (lon_min);
+    lon_sec = convert_hex_to_dec (lon_sec);
+
+    //dd.MMmmmm to decimal formatting
+    latitude  = (double)lat_sign * ( (double)lat_deg + ((double)lat_min / (double)60.0f) + ((double)lat_sec / (double)600000.0f));
+    longitude = (double)lon_sign * ( (double)lon_deg + ((double)lon_min / (double)60.0f) + ((double)lon_sec / (double)600000.0f));
+
     fprintf (stderr, "%s", KYEL);
-    fprintf (stderr, "\n LOCN Report - Source: [%d]\n", source);
-    if (time) fprintf (stderr, "  20%02X/%02X/%02X %02X:%02X:%02X ", year, month, day, hour, minute, second);
-    fprintf (stderr, "Lat: %s %02X%s%02X\"%04X' Lon: %s %02X%s%02X\"%04X' ", lat_ord, lat_deg, deg_glyph, lat_min, lat_sec, lon_ord, lon_deg, deg_glyph, lon_min, lon_sec);
+    fprintf (stderr, "\n NMEA / LOCN; Source: %d;", source);
+    if (time) fprintf (stderr, " 20%02X/%02X/%02X %02X:%02X:%02X", year, month, day, hour, minute, second);
+    fprintf (stderr, " (%.5lf%s, %.5lf%s);", latitude, deg_glyph, longitude, deg_glyph);
 
     //string manip for ncurses terminal display
-    sprintf (locnstr, "LOCN %d ", source);
-    sprintf (latstr, "%s %02X%s%02X\"%04X' ", lat_ord, lat_deg, deg_glyph, lat_min, lat_sec);
-    sprintf (lonstr, "%s %02X%s%02X\"%04X' ", lon_ord, lon_deg, deg_glyph, lon_min, lon_sec);
+    sprintf (locnstr, "NMEA / LOCN; Source: %d ", source);
+    sprintf (latstr, "(%.5lf%s, ", latitude, deg_glyph);
+    sprintf (lonstr, "%.5lf%s)", longitude, deg_glyph);
     sprintf (state->dmr_lrrp_gps[slot], "%s%s%s", locnstr, latstr, lonstr);
+
+    //write to LRRP file
+    if (opts->lrrp_file_output == 1)
+    {
+      char * timestr  = getTimeC();
+      char * datestr  = getDateS();
+
+      //open file by name that is supplied in the ncurses terminal, or cli
+      FILE * pFile; //file pointer
+      pFile = fopen (opts->lrrp_out_file, "a");
+
+      //write current date/time if not present in LOCN data
+      if (!time) fprintf (pFile, "%s\t", datestr );
+      if (!time) fprintf (pFile, "%s\t", timestr );
+      if (time)  fprintf (pFile, "20%02X/%02X/%02X\t%02X:%02X:%02X\t", year, month, day, hour, minute, second);
+      
+      //write data header source from data header
+      fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]);
+      
+      if (timestr != NULL)
+      {
+        free (timestr);
+        timestr = NULL;
+      }
+
+      if (datestr != NULL)
+      {
+        free (datestr);
+        datestr = NULL;
+      }
+
+      fprintf (pFile, "%.5lf\t", latitude);
+      fprintf (pFile, "%.5lf\t", longitude);
+      fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
+      fprintf (pFile, "%d\t",degrees);
+
+      fprintf (pFile, "\n");
+      fclose (pFile);
+    }
 
   } 
 
