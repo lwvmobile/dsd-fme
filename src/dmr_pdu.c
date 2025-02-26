@@ -429,34 +429,6 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
     fprintf (stderr, "\n LRRP  Report: %02X; Unk: %04X; Message Len: %d;", report, unk, message_len);
     if (lrrp_confidence >= 3) //find the sweet magical number
     {
-      //now we can open our lrrp file and write to it as well
-      FILE * pFile; //file pointer
-      if (opts->lrrp_file_output == 1)
-      {
-        char * timestr  = getTimeC();
-        char * datestr  = getDateS();
-
-        //open file by name that is supplied in the ncurses terminal, or cli
-        pFile = fopen (opts->lrrp_out_file, "a");
-        //write current date/time if not present in LRRP data
-        if (!year) fprintf (pFile, "%s\t", datestr ); //current date, only add this IF no included timestamp in LRRP data?
-        if (!year) fprintf (pFile, "%s\t", timestr ); //current timestamp, only add this IF no included timestamp in LRRP data?
-        if (year) fprintf (pFile, "%04d/%02d/%02d\t%02d:%02d:%02d\t", year, month, day, hour, minute, second); //add timestamp from decoded audio if available
-        //write data header source if not available in lrrp data
-        if (!source) fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
-        if (source) fprintf (pFile, "%08d\t", source); //add source form decoded audio if available, else its from the header
-        
-        if (timestr != NULL)
-        {
-          free (timestr);
-          timestr = NULL;
-        }
-        if (datestr != NULL)
-        {
-          free (datestr);
-          datestr = NULL;
-        }
-      }
 
       if (source)
       {
@@ -466,6 +438,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
         fprintf (stderr, "  Destination: %08d - %04d", dest, port_d);
 
       }
+
       if (year)
       {
         fprintf (stderr, "\n");
@@ -473,6 +446,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
         fprintf (stderr, " %04d.%02d.%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
 
       }
+
       if (lat)
       {
         fprintf (stderr, "\n");
@@ -500,14 +474,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
         fprintf (stderr, " (%.5lf, %.5lf)", lat_fin , lon_fin);
 
       }
-       //always print into the lrrp file, even if zeroes, keep alignment correct
-      if (opts->lrrp_file_output == 1)
-      {
-        fprintf (pFile, "%.5lf\t", lat_fin);
-        fprintf (pFile, "%.5lf\t", lon_fin);
-        //
-        //
-      }
+
       if (rad)
       {
         fprintf (stderr, "\n");
@@ -522,22 +489,50 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
       {
         fprintf (stderr, "\n");
         fprintf (stderr, "  LRRP - Speed: %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity));
-        // if (opts->lrrp_file_output == 1) fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
       }
-      //always print into the lrrp file, even if zeroes, keep alignment correct
-      if (opts->lrrp_file_output == 1) fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
+
       if (deg_set)
       {
         fprintf (stderr, "\n");
         fprintf (stderr, "  LRRP - Track: %d%s", degrees, deg_glyph);
-        // if (opts->lrrp_file_output == 1) fprintf (pFile, "%d\t",degrees);
       }
-      //always print into the lrrp file, even if zeroes, keep alignment correct
-      if (opts->lrrp_file_output == 1) fprintf (pFile, "%d\t",degrees);
 
-      //close open file
-      if (opts->lrrp_file_output == 1)
+      //write to LRRP file, if a lat/lon is present
+      if (opts->lrrp_file_output == 1 && lat_fin != 0.0f && lon_fin != 0.0f)
       {
+        char * timestr  = getTimeC();
+        char * datestr  = getDateS();
+
+        //open file by name that is supplied in the ncurses terminal, or cli
+        FILE * pFile; //file pointer
+        pFile = fopen (opts->lrrp_out_file, "a");
+
+        //write current date/time if not present in LRRP data
+        if (!year) fprintf (pFile, "%s\t", datestr ); //current date, only add this IF no included timestamp in LRRP data?
+        if (!year) fprintf (pFile, "%s\t", timestr ); //current timestamp, only add this IF no included timestamp in LRRP data?
+        if (year) fprintf (pFile, "%04d/%02d/%02d\t%02d:%02d:%02d\t", year, month, day, hour, minute, second); //add timestamp from decoded audio if available
+        
+        //write data header source if not available in lrrp data
+        if (!source) fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
+        if (source) fprintf (pFile, "%08d\t", source); //add source form decoded audio if available, else its from the header
+        
+        if (timestr != NULL)
+        {
+          free (timestr);
+          timestr = NULL;
+        }
+
+        if (datestr != NULL)
+        {
+          free (datestr);
+          datestr = NULL;
+        }
+
+        fprintf (pFile, "%.5lf\t", lat_fin);
+        fprintf (pFile, "%.5lf\t", lon_fin);
+        fprintf (pFile, "%.3lf\t ", (velocity * 3.6) );
+        fprintf (pFile, "%d\t",degrees);
+
         fprintf (pFile, "\n");
         fclose (pFile);
       }
