@@ -103,8 +103,12 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
       source = (uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 16);
     }
 
-    //store source for dmr pdu packet handling (lrrp) when not available in completed message
-    if (dpf != 15) state->dmr_lrrp_source[slot] = source;
+    //store source and target for dmr pdu packet handling (lrrp) when not available in completed message
+    if (dpf != 15)
+    {
+      state->dmr_lrrp_source[slot] = source;
+      state->dmr_lrrp_target[slot] = target;
+    }
 
     //store number of padding octets in a header to be used
     if (dpf != 15) state->data_block_poc[slot] = poc;
@@ -425,7 +429,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
       else if (p_sap == 1 && p_mfid == 0x10)
       {
         //This can be an LRRP packet first block (but slightly different configuration)
-        fprintf (stderr, "\n Motorola Alternate Function Header; ");
+        fprintf (stderr, "\n Motorola Extended Header; ");
       }
       else //if (p_mfid == 0x10)
       {
@@ -1018,26 +1022,27 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         }
         else if (state->data_header_sap[slot] == 1 && state->dmr_pdu_sf[slot][1] == 0x10) //test SAP 1 MFID 10 (with -F) as a potential LRRP message (header inclusive)
         {
-          uint16_t len = ((blocks+1)*block_len)-4;
+          //new len calc
+          uint16_t ctr = state->data_byte_ctr[slot];
+          uint8_t  poc = state->data_block_poc[slot];
+          uint16_t len = len = ctr-poc-4-7;
+
+          //old calc
+          // uint16_t len = ((blocks+1)*block_len)-4-7;
 
           //sanity check
           if (len > 150)
             len = 150;
 
-          uint8_t PDU[150]; memset (PDU, 0, sizeof(PDU)); //arbitrary size (should be okay)
-
-          //manipulate to match expected format alignment
-          PDU[0] = 0; PDU[1] = state->dmr_pdu_sf[slot][0];
-
-          //speculation: the other 4 bytes are hashed values for dst and src, or something similar
-
-          uint16_t mprt = 0xFFFF;
+          //this may be some form of compressed header, but contents are thus unknown (aside from sap/dpf and mfid)
           uint32_t msrc = state->dmr_lrrp_source[slot];
-          uint32_t mdst = 0xFFFFFF; //TODO: Get the real DST or TG indicated in the header
+          uint32_t mdst = state->dmr_lrrp_target[slot];
 
-          //copy rest, starting at offset 5 of the reserved extended header, to offset 2 to match expected formatting
-          memcpy(PDU+2, state->dmr_pdu_sf[slot]+5, (sizeof(PDU)-5));
-          dmr_lrrp (opts, state, len-4, msrc, mdst, mprt, mprt, PDU);
+          fprintf (stderr, "\n SRC(Header): %08d; ", msrc);
+          fprintf (stderr, "\n DST(Header): %08d; ", mdst);
+
+          //+7 offset
+          dmr_lrrp (opts, state, len, msrc, mdst, 0xFFFF, 0xFFFF, state->dmr_pdu_sf[slot]+7);
         }
       }
 
@@ -1289,6 +1294,7 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
   memset (state->data_header_blocks, 1, sizeof(state->data_header_blocks));
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
   memset (state->dmr_lrrp_source, 0, sizeof(state->dmr_lrrp_source));
+  memset (state->dmr_lrrp_target, 0, sizeof(state->dmr_lrrp_target));
   memset (state->dmr_cach_fragment, 1, sizeof (state->dmr_cach_fragment));
   memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
   memset (state->cap_plus_block_num, 0, sizeof(state->cap_plus_block_num));

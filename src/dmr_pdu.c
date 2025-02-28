@@ -203,24 +203,38 @@ void dmr_udp_comp_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t
 void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
 {
 
-  UNUSED(opts); UNUSED(state);
-  // uint8_t slot = state->currentslot;
+  UNUSED(state);
+  
+  //the IPv4 Header
+  uint8_t version = DMR_PDU[0] >> 4; //may need to read ahead and get this value before coming here
+  uint8_t ihl = DMR_PDU[0] & 0xF; //decompressed value is 0x05 (may need to check this before preceeding)
+  uint8_t tos = DMR_PDU[1]; //0
+  uint16_t tlen = (DMR_PDU[2] << 8) | DMR_PDU[3]; //IPv4 header length (20 bytes) + UDP length (in bytes)
+  uint16_t iden = (DMR_PDU[4] << 8) | DMR_PDU[5];
+  uint8_t ipf = DMR_PDU[6] >> 5; //0
+  uint16_t offset = ((DMR_PDU[6] & 0x1F) << 8) | DMR_PDU[7]; //0
+  uint8_t ttl = DMR_PDU[8]; //should be 0x40 (64)
+  uint8_t prot = DMR_PDU[9];
+  uint16_t hsum = (DMR_PDU[10] << 8) | DMR_PDU[11];
 
-  //may need to look at sap value and determine the len of these addressing headers, etc
-  //and make a ptr to the start of actual PDU content data
-  // if (state->data_header_sap[slot] == 4)
-  // {
-    //adjust ptr, addressing type, etc
-  // }
+  if (opts->payload == 1)
+    fprintf (stderr, "\n IPv%d; Header Len: %d; Type of Service: %d; Total Len: %d; ID: %02X; Flags: %X;\n Fragment Offset: %d; TTL: %d; Protocol: %02X; Checksum: %04X; PDU Len: %d;", version, ihl, tos, tlen, iden, ipf, offset, ttl, prot, hsum, len);
 
   //take a look at the src, dst, and port indicated (assuming both ports will match)
-  uint32_t add1 = (DMR_PDU[13] << 16) | (DMR_PDU[14] << 8) | DMR_PDU[15]; //The 0C or 0D indicator will usually tell if this is src or dst
-  uint32_t add2 = (DMR_PDU[17] << 16) | (DMR_PDU[18] << 8) | DMR_PDU[19];
+  uint32_t src24 = (DMR_PDU[13] << 16) | (DMR_PDU[14] << 8) | DMR_PDU[15]; //The 0C or 0D indicator will usually tell if this is src or dst
+  uint32_t dst24 = (DMR_PDU[17] << 16) | (DMR_PDU[18] << 8) | DMR_PDU[19];
   uint16_t port1 = (DMR_PDU[20] << 8) | DMR_PDU[21];
   uint16_t port2 = (DMR_PDU[22] << 8) | DMR_PDU[23];
-  fprintf (stderr, "\n %02X ADD1: %d; Port: %d; %02X ADD2: %d; Port: %d; Len: %d; ", DMR_PDU[12], add1, port1, DMR_PDU[16], add2, port2, len);
+  fprintf (stderr, "\n SRC(24): %08d; IP: %03d.%03d.%03d.%03d; Port: %04d; ", src24, DMR_PDU[12], DMR_PDU[13], DMR_PDU[14], DMR_PDU[15], port1);
+  fprintf (stderr, "\n DST(24): %08d; IP: %03d.%03d.%03d.%03d; Port: %04d; ", dst24, DMR_PDU[16], DMR_PDU[17], DMR_PDU[18], DMR_PDU[19], port2);
 
-  //Are DMR PDU types only dictated by Port Number? Or is this just the defaults when programmed?
+  //if this is correct, the starting point and Report value on LRRP is wrong, but might explain the UNK value in there after 0x1F, etc
+  uint16_t udp_len = (DMR_PDU[24] << 8) | DMR_PDU[25]; //This UDP Length information element is the length in bytes of this user datagram including this header and the application data
+  uint16_t udp_chk = (DMR_PDU[26] << 8) | DMR_PDU[27];
+  if (opts->payload == 1)
+    fprintf (stderr, "\n UDP Header Len: %d(%02X); UDP Checksum: %04X; ", udp_len, udp_len, udp_chk);
+
+  //Are IP DMR PDU types only dictated by Port Number? Or is this just the defaults when programmed?
   if (port1 == 231 && port2 == 231)
   {
     fprintf (stderr, "Cellocator;");
@@ -228,7 +242,7 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   else if (port1 == 4001 && port2 == 4001)
   {
     fprintf (stderr, "LRRP;");
-    dmr_lrrp (opts, state, len-24-4, add1, add2, port1, port2, DMR_PDU+24);
+    dmr_lrrp (opts, state, len-28-4-1, src24, dst24, port1, port2, DMR_PDU+28); //len is offset with IP and UDP header lens, 4 CRC, and 1 for the 0D token
   }
   else if (port1 == 4004 && port2 == 4004)
   {
@@ -279,6 +293,7 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
 void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source, uint32_t dest, uint16_t port_s, uint16_t port_d, uint8_t * DMR_PDU)
 {
 
+  UNUSED(port_s); UNUSED(port_d); //moved to header decode
   uint16_t message_len = 0;
   uint8_t slot = state->currentslot;
   uint8_t lrrp_confidence = 0; //variable to increment based on number of tokens found, the more, the higher the confidence level
@@ -319,24 +334,18 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
   char deg_glyph[4];
   sprintf (deg_glyph, "%s", "°");
 
-  //triggered information report
-  uint8_t report = DMR_PDU[1];
-  uint16_t unk = (DMR_PDU[2] << 8) | DMR_PDU[3]; //not sure what the following after the report value indicates exactly
-
-  //TODO: Needs more fixing, finding some things like report 0x12 with only partial updates on it
-
   //debug passed LRRP message
   fprintf (stderr, "\n LRRP (Debug): ");
   for (uint16_t i = 0; i < len; i++)
     fprintf (stderr, "%02X ", DMR_PDU[i]);
 
   //start looking for tokens
-  for (uint16_t i = 4; i < len; i++) //starting at 4 offsets the octets before 0D (seen 0D tossed into the other values folliowing report value)
+  for (uint16_t i = 0; i < len; i++)
   {
 
     switch(DMR_PDU[i]){
       case 0x0D: //message len indicator
-        if (i == 4 && message_len == 0) //see if this is the first octet, otherwise, can't verify this is going to work //i == 4 && 
+        if (i == 0 && message_len == 0) //see if this is the first octet, otherwise, can't verify this is going to work
         {
           message_len = DMR_PDU[i+1]; 
           i += 1;
@@ -434,26 +443,18 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
         break;
     }
   }
-  if (report && message_len > 0)
+
+  if (message_len > 0)
   {
     fprintf (stderr, "%s", KYEL);
-    fprintf (stderr, "\n LRRP  Report: %02X; Unk: %04X; Message Len: %d;", report, unk, message_len);
-    if (lrrp_confidence >= 3) //find the sweet magical number
+    
+    if (lrrp_confidence >= 3) //minimal of src, dst, and message len indicator
     {
-
-      if (source)
-      {
-        fprintf (stderr, "\n");
-        fprintf (stderr, "       Source: %08d - %04d", source, port_s);
-        fprintf (stderr, "\n");
-        fprintf (stderr, "  Destination: %08d - %04d", dest, port_d);
-
-      }
 
       if (year)
       {
         fprintf (stderr, "\n");
-        fprintf (stderr, "  LRRP - Time: ");
+        fprintf (stderr, " Time:");
         fprintf (stderr, " %04d.%02d.%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
 
       }
@@ -480,8 +481,8 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
         lat_fin = (double)lat * lat_unit * lat_sign;
         lon_fin = (double)lon * lon_unit * lon_sign;
 
-        fprintf (stderr, "  LRRP - Lat: %.5lf", lat_fin);
-        fprintf (stderr, "  Lon: %.5lf", lon_fin);
+        fprintf (stderr, " Lat: %.5lf", lat_fin);
+        fprintf (stderr, " Lon: %.5lf", lon_fin);
         fprintf (stderr, " (%.5lf, %.5lf)", lat_fin , lon_fin);
 
       }
@@ -489,23 +490,23 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
       if (rad)
       {
         fprintf (stderr, "\n");
-        fprintf (stderr, "  LRRP - Radius: %dm", rad); //unsure of 'units' or calculation for radius (meters?)
+        fprintf (stderr, " Radius: %dm", rad); //unsure of 'units' or calculation for radius (meters?)
       }
       if (alt)
       {
         fprintf (stderr, "\n");
-        fprintf (stderr, "  LRRP - Altitude: %dm", alt); //unsure of 'units' or calculation for alt (meters?)
+        fprintf (stderr, " Altitude: %dm", alt); //unsure of 'units' or calculation for alt (meters?)
       }
       if (vel_set)
       {
         fprintf (stderr, "\n");
-        fprintf (stderr, "  LRRP - Speed: %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity));
+        fprintf (stderr, " Speed: %.4lf m/s %.4lf km/h %.4lf mph", velocity, (3.6 * velocity), (2.2369 * velocity));
       }
 
       if (deg_set)
       {
         fprintf (stderr, "\n");
-        fprintf (stderr, "  LRRP - Track: %d%s", degrees, deg_glyph);
+        fprintf (stderr, " Track: %d%s", degrees, deg_glyph);
       }
 
       //write to LRRP file, if a lat/lon is present
@@ -556,7 +557,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
       sprintf (lrrpstr, "%s", "");
       sprintf (velstr, "%s", "");
       sprintf (degstr, "%s", "");
-      if (lat) sprintf (lrrpstr, "LRRP %0d (%lf, %lf)", source, lat_fin, lon_fin);
+      if (lat) sprintf (lrrpstr, "LRRP SRC: %0d; (%lf, %lf)", source, lat_fin, lon_fin);
       if (vel_set) sprintf (velstr, " %.4lf km/h", velocity * 3.6);
       if (deg_set) sprintf (degstr, " %d%s  ", degrees, deg_glyph);
       sprintf (state->dmr_lrrp_gps[slot], "%s%s%s", lrrpstr, velstr, degstr);

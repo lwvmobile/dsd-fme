@@ -350,6 +350,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   //initialize dmr data header source
   state->dmr_lrrp_source[0] = 0;
   state->dmr_lrrp_source[1] = 0;
+  state->dmr_lrrp_target[0] = 0;
+  state->dmr_lrrp_target[1] = 0;
 
 
   //initialize data header bits
@@ -1023,6 +1025,8 @@ initState (dsd_state * state)
   //initialize dmr data header source
   state->dmr_lrrp_source[0] = 0;
   state->dmr_lrrp_source[1] = 0;
+  state->dmr_lrrp_target[0] = 0;
+  state->dmr_lrrp_target[1] = 0;
 
 
   //initialize data header bits

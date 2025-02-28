@@ -625,6 +625,7 @@ typedef struct
   char nxdn_call_type[1024];
 
   unsigned long long int dmr_lrrp_source[2];
+  unsigned long long int dmr_lrrp_target[2];
 
   NxdnElementsContent_t NxdnElementsContent;
 
