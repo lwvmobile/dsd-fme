@@ -232,7 +232,7 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   uint16_t udp_len = (DMR_PDU[24] << 8) | DMR_PDU[25]; //This UDP Length information element is the length in bytes of this user datagram including this header and the application data
   uint16_t udp_chk = (DMR_PDU[26] << 8) | DMR_PDU[27];
   if (opts->payload == 1)
-    fprintf (stderr, "\n UDP Header Len: %d(%02X); UDP Checksum: %04X; ", udp_len, udp_len, udp_chk);
+    fprintf (stderr, "\n UDP Datagram Len: %d(%02X); UDP Checksum: %04X; ", udp_len, udp_len, udp_chk);
 
   //Are IP DMR PDU types only dictated by Port Number? Or is this just the defaults when programmed?
   if (port1 == 231 && port2 == 231)
@@ -335,46 +335,44 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
   sprintf (deg_glyph, "%s", "°");
 
   //debug passed LRRP message
-  fprintf (stderr, "\n LRRP (Debug): ");
-  for (uint16_t i = 0; i < len; i++)
-    fprintf (stderr, "%02X ", DMR_PDU[i]);
+  // fprintf (stderr, "\n LRRP (Debug): ");
+  // for (uint16_t i = 0; i < len; i++)
+  //   fprintf (stderr, "%02X ", DMR_PDU[i]);
 
   //start looking for tokens
   for (uint16_t i = 0; i < len; i++)
   {
-
-    switch(DMR_PDU[i]){
+    uint8_t token = DMR_PDU[i];
+    switch(token){
       case 0x0D: //message len indicator
-        if (i == 0 && message_len == 0) //see if this is the first octet, otherwise, can't verify this is going to work
+        if (i == 0) //see if this is the first octet, otherwise, can't verify this is going to work
         {
           message_len = DMR_PDU[i+1]; 
-          i += 1;
+          i += 3; //next byte is len, then next two are usually 0x22 0xXX or 0x23 0xXX
           lrrp_confidence++;
         }
         break;
-      //RESULT TOKEN or Request ID!
-      case 0x22: //same comment as below, observed followed the message len
-      case 0x23: //this value has been seen after the 0x0D message len, appears to be a 2-byte value
-        //see if we can figure out how to intepret this
-        i += 1; //should this be 2, or 1?
-        break; 
-      //answer and report tokens
+
+      //tokens
       case 0x51: //circle-2d
       case 0x54: //circle-3d
       case 0x55: //circle-3d 
         if (message_len > 0 && lat == 0)
         {
+          //debug
+          // fprintf (stderr, "\n I: %d; Token: %02X; ", i, token); //must be a bad sample
+
           lat = ( ( (DMR_PDU[i+1]           <<  24 ) + (DMR_PDU[i+2] << 16) + (DMR_PDU[i+3] << 8) + DMR_PDU[i+4]) * 1 );
           lon = ( ( (DMR_PDU[i+5]           <<  24 ) + (DMR_PDU[i+6] << 16) + (DMR_PDU[i+7] << 8) + DMR_PDU[i+8]) * 1 );
           rad = (DMR_PDU[i+9] << 8) + DMR_PDU[i+10];
           i += 10; 
-          if (lat > 0 && lon > 0) lrrp_confidence++; //would be better to set by absolute boundary (180 and 90?)
+          if (lat > 0 && lon > 0) lrrp_confidence++;
           else lat = 0;
         }
         break;
       
-      case 0x34: //Time Interval Periodic Trigger (timestamp)
-      case 0x35: //Time Interval Periodic Trigger (timestamp)
+      case 0x34: //Time
+      case 0x35: //Time
         if (message_len > 0 && year == 0)
         {
           year = (DMR_PDU[i+1] << 6) + (DMR_PDU[i+2] >> 2);

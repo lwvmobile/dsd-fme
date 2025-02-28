@@ -363,15 +363,15 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
       //The SAP found here is the actual SAP of the message (like a P25 ndary SAP, and can chain together according to ETSI)
       fprintf (stderr, " - SAP %02d [%s] - MFID %02X [%s]", p_sap, sap_string, p_mfid, mfid_string);
 
-      //p_sap 1 on mfid 10 (moto) has been observed as the first block of LRRP data on a Moto system but doesn't pass the CRC for some reason (included or not included)
+      //p_sap 1 on mfid 10 (moto) has been observed as the first block of LRRP data (unique fixed format?)
       if (p_mfid == 0x10 && p_sap == 1)
       {
-        //add the header to the first 12 bytes of the storage
-        for (uint8_t i = 0; i < 12; i++)
-          state->dmr_pdu_sf[slot][i] = dheader[i];
+        //add the header to the first 10 bytes of the storage (sans this header's CRC)
+        int8_t start = 0;
+        int8_t len = 10-start;
+        memcpy(state->dmr_pdu_sf[slot], dheader+start, len*sizeof(uint8_t));
         state->data_block_counter[slot]++;
-        state->data_byte_ctr[slot] += 12; //set current byte ptr to 12
-
+        state->data_byte_ctr[slot] = len;
         state->data_p_head[slot] = 1;
       }
 
@@ -856,7 +856,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
       }
 
       //confirmed working now!
-      CRCComputed = (uint32_t)ComputeCrc32Bit(dmr_pdu_sf_bits, ( block_num * block_len * 8) - 32);
+      CRCComputed = (uint32_t)ComputeCrc32Bit(dmr_pdu_sf_bits, (ctr * 8) - 32);
 
       //if the CRC32 is correct, I think its fair to assume we don't need to worry about if the 
       //individual CRC9s are correct on confirmed data blocks (but we can confirm now that they are all good)
@@ -1022,13 +1022,10 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         }
         else if (state->data_header_sap[slot] == 1 && state->dmr_pdu_sf[slot][1] == 0x10) //test SAP 1 MFID 10 (with -F) as a potential LRRP message (header inclusive)
         {
-          //new len calc
+          //len calc
           uint16_t ctr = state->data_byte_ctr[slot];
           uint8_t  poc = state->data_block_poc[slot];
-          uint16_t len = len = ctr-poc-4-7;
-
-          //old calc
-          // uint16_t len = ((blocks+1)*block_len)-4-7;
+          uint16_t len = len = ctr-poc-4-7-3;
 
           //sanity check
           if (len > 150)
