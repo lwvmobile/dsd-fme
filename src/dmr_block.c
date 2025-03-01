@@ -937,7 +937,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
         //print alg/key and value if loaded
         fprintf (stderr, "\n PDU ALG: %02X; Key ID: %02X;", alg, kid);
-        if (alg != 0) fprintf (stderr, " MI(32): %08X;", mi);
+        if (alg != 0) fprintf (stderr, " MI(32): %08lX;", mi);
         if (alg == 0) fprintf (stderr, " Moto BP;");
         if (alg == 1) fprintf (stderr, " RC4;");
         if (alg == 2) fprintf (stderr, " DES1;");
