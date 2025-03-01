@@ -280,7 +280,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     {
       //UDT packet info -- samples needed for testing
       //NOTE: This format's completed message has a CRC16 - like MBC - but has number of blocks (appended blocks) like R 1/2, etc.
-      fprintf (stderr, "\n  SAP %02X [%s] - FMT %d [%s] - PDn %d - BLOCKS %d SF %d - PF %d OP %02X", sap, sap_string, udt_format, udtf_string, udt_padnib, udt_uab, udt_sf, udt_pf, udt_op);
+      fprintf (stderr, "\n  SAP %02d [%s] - FMT %d [%s] - PDn %d - BLOCKS %d SF %d - PF %d OP %02X", sap, sap_string, udt_format, udtf_string, udt_padnib, udt_uab, udt_sf, udt_pf, udt_op);
 
       //set number of blocks to follow (appended blocks) for block assembler
       state->data_header_blocks[slot] = udt_uab;
@@ -299,7 +299,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     if (dpf == 1) //response data packet header
     {
       //mostly fleshed out response packet info
-      fprintf (stderr, "\n  SAP %02X [%s] - Class %d - Type %0d - ", sap, sap_string, r_class, r_type);
+      fprintf (stderr, "\n  SAP %02d [%s] - Class %d - Type %0d - ", sap, sap_string, r_class, r_type);
       if (r_class == 0 && r_type == 1) fprintf (stderr, "ACK - Success");
       if (r_class == 1)
       {
@@ -321,8 +321,8 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     //Confirmed or Unconfirmed Data Packets Header
     if (dpf == 2 || dpf == 3) 
     {
-      if (dpf == 2) fprintf (stderr, "\n  SAP %02X [%s] - FMF %d - BLOCKS %02d - PAD %02d - FSN %d", sap, sap_string, f, bf, poc, fsn);
-      if (dpf == 3) fprintf (stderr, "\n  SAP %02X [%s] - FMF %d - BLOCKS %02d - PAD %02d - S %d - NS %d - FSN %d", sap, sap_string, f, bf, poc, s, ns, fsn);
+      if (dpf == 2) fprintf (stderr, "\n  SAP %02d [%s] - FMF %d - BLOCKS %02d - PAD %02d - FSN %d", sap, sap_string, f, bf, poc, fsn);
+      if (dpf == 3) fprintf (stderr, "\n  SAP %02d [%s] - FMF %d - BLOCKS %02d - PAD %02d - S %d - NS %d - FSN %d", sap, sap_string, f, bf, poc, s, ns, fsn);
       state->data_header_blocks[slot] = bf;
       if (dpf == 3) state->data_conf_data[slot] = 1; //set confirmed data delivery flag for additional CRC checks, block assembly, etc.
 
@@ -926,6 +926,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
         //print alg/key and value if loaded
         fprintf (stderr, "\n PDU ALG: %02X; Key ID: %02X;", alg, kid);
+        if (alg != 0) fprintf (stderr, " MI(32): %08X;", mi);
         if (alg == 0) fprintf (stderr, " Moto BP;");
         if (alg == 1) fprintf (stderr, " RC4;");
         if (alg == 2) fprintf (stderr, " DES1;");
@@ -1039,7 +1040,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           fprintf (stderr, "\n DST(Header): %08d; ", mdst);
 
           //+7 offset
-          dmr_lrrp (opts, state, len, msrc, mdst, 0xFFFF, 0xFFFF, state->dmr_pdu_sf[slot]+7);
+          dmr_lrrp (opts, state, len, msrc, mdst, state->dmr_pdu_sf[slot]+7);
         }
       }
 

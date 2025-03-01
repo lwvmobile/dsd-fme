@@ -57,7 +57,8 @@ void utf8_to_text (uint16_t len, uint8_t * input)
 void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
 {
 
-  if (DMR_PDU[0] == 0x01) //found some on another system that is 00 here, and not a Loction
+  // if (DMR_PDU[0] == 0x01) //found some on another system that is 00 here, and not a Loction
+  if (state->data_header_format[state->currentslot] == 13) //only short data: defined format (testing)
   {
     uint16_t offset = 0; //sanity check of sorts, prevent extra long line print outs in the console
     if (len >= 22) offset = 22;
@@ -232,7 +233,7 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   uint16_t udp_len = (DMR_PDU[24] << 8) | DMR_PDU[25]; //This UDP Length information element is the length in bytes of this user datagram including this header and the application data
   uint16_t udp_chk = (DMR_PDU[26] << 8) | DMR_PDU[27];
   if (opts->payload == 1)
-    fprintf (stderr, "\n UDP Datagram Len: %d(%02X); UDP Checksum: %04X; ", udp_len, udp_len, udp_chk);
+    fprintf (stderr, "\n UDP Datagram Len: %d; UDP Checksum: %04X; ", udp_len, udp_chk);
 
   //Are IP DMR PDU types only dictated by Port Number? Or is this just the defaults when programmed?
   if (port1 == 231 && port2 == 231)
@@ -242,7 +243,7 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   else if (port1 == 4001 && port2 == 4001)
   {
     fprintf (stderr, "LRRP;");
-    dmr_lrrp (opts, state, len-28-4-1, src24, dst24, port1, port2, DMR_PDU+28); //len is offset with IP and UDP header lens, 4 CRC, and 1 for the 0D token
+    dmr_lrrp (opts, state, len-28-4-1, src24, dst24, DMR_PDU+28); //len is offset with IP and UDP header lens, 4 CRC, and 1 for the 0D token
   }
   else if (port1 == 4004 && port2 == 4004)
   {
@@ -254,7 +255,10 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   }
   else if (port1 == 4007 && port2 == 4007)
   {
-    fprintf (stderr, "TMS;");
+    uint16_t tms_len = (DMR_PDU[28] << 8) | DMR_PDU[29]; //this as len makes sense, its always 10 less than the UDP Datagram len value
+    unsigned long long int tms_unk = ((unsigned long long int)DMR_PDU[30] << 32UL) | (DMR_PDU[31] << 24) | (DMR_PDU[32] << 16) | (DMR_PDU[33] << 8) | DMR_PDU[34];
+    fprintf (stderr, "TMS; ");
+    fprintf (stderr, "Len: %d; ???: %010llX;", tms_len, tms_unk);
     utf16_to_text(len, DMR_PDU+35);
   }
   else if (port1 == 4008 && port2 == 4008)
@@ -290,10 +294,9 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
 }
 
 //The contents of this function are mostly trial and error
-void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source, uint32_t dest, uint16_t port_s, uint16_t port_d, uint8_t * DMR_PDU)
+void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source, uint32_t dest, uint8_t * DMR_PDU)
 {
 
-  UNUSED(port_s); UNUSED(port_d); //moved to header decode
   uint16_t message_len = 0;
   uint8_t slot = state->currentslot;
   uint8_t lrrp_confidence = 0; //variable to increment based on number of tokens found, the more, the higher the confidence level
