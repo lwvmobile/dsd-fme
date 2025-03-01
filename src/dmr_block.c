@@ -373,6 +373,13 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
         state->data_block_counter[slot]++;
         state->data_byte_ctr[slot] = len;
         state->data_p_head[slot] = 1;
+
+        //my observation on chained p_head is that the enc header will come first, and then
+        //a second extended header, and the keystream on that starts after the sap/dpf and mfid value
+        //this is the only time starting the keystream at an offset value will be required
+
+        //set ks start value to 3 (testing based on only example I have, need more samples)
+        state->data_ks_start[slot] = 3;
       }
 
       else //if (p_sap != 1) //anything else
@@ -424,6 +431,9 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
         //print MI only if this is not Moto BP (no MI on those)
         if ((uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 32) != 0)
           fprintf (stderr, " MI(32): %08X", (uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 32));
+
+        //reset ks start value
+        state->data_ks_start[slot] = 0;
 
       }
       else if (p_sap == 1 && p_mfid == 0x10)
@@ -883,6 +893,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         // decrypted_pdu = 0; //hasn't been decrypted yet
         int poc = (int)state->data_block_poc[slot]; //say that three times real fast
         int end = ((blocks+1)*block_len)-4-poc;
+        int start = (int)state->data_ks_start[slot];
         //sanity check on end, has to be a positive value
         if (end < 0) end = 3096; //its a signed interger, so should reflect negative values here and not rollover
         int alg = 0;
@@ -895,7 +906,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           kid = state->payload_keyid;
         else kid = state->payload_keyidR;
 
-        //test implementing RC4 decryption on Prop_PDU messages (quick and dirty)
+        //start keystream creation
         uint8_t ob[129*24]; //may need more blocks (enough for 127 * 24)
         uint8_t kiv[9]; UNUSED(kiv);
         long int mi = 0;
@@ -946,7 +957,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         //will want to rework output_blocks to be a pointer instead of a fixed size (done)
         if (alg == 1 && R != 0)
         {
-          for (i = 0; i < end; i++) 
+          for (i = start; i < end; i++)
             state->dmr_pdu_sf[slot][i] ^= ob[i%3096];
         }
         //BP key application
@@ -969,7 +980,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
           if (bp_key != 0)
           {
-            for (i = 0; i < end; i++) 
+            for (i = start; i < end; i++) 
               state->dmr_pdu_sf[slot][i] ^= ob[i%2]; //modulus 2 here, just rinse and repeat
 
             decrypted_pdu = 1;
@@ -1081,6 +1092,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
       state->data_block_poc[slot] = 0;
       //reset byte counter
       state->data_byte_ctr[slot] = 0;
+      //reset ks start value
+      state->data_ks_start[slot] = 0;
 
     } //end completed sf
 
@@ -1241,10 +1254,14 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
     state->data_header_valid[slot] = 0; 
     //flag off conf data flag
     state->data_conf_data[slot] = 0;
+    //flag off p_head
+    state->data_p_head[slot] = 0;
     //reset padding
     state->data_block_poc[slot] = 0;
     //reset byte counter
     state->data_byte_ctr[slot] = 0;
+    //reset ks start value
+    state->data_ks_start[slot] = 0;
   }
 
   //else if the end of MBC Header and Blocks
@@ -1289,6 +1306,7 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
   memset (state->data_block_counter, 1, sizeof(state->data_block_counter));
   memset (state->data_block_poc, 0, sizeof(state->data_block_poc));
   memset (state->data_byte_ctr, 0, sizeof(state->data_byte_ctr));
+  memset (state->data_ks_start, 0, sizeof(state->data_ks_start));
   memset (state->data_header_blocks, 1, sizeof(state->data_header_blocks));
   memset (state->data_block_crc_valid, 0, sizeof(state->data_block_crc_valid));
   memset (state->dmr_lrrp_source, 0, sizeof(state->dmr_lrrp_source));

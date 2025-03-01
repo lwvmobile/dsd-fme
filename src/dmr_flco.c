@@ -159,6 +159,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       state->data_block_poc[slot] = 0;
       //reset byte counter
       state->data_byte_ctr[slot] = 0;
+      //reset ks start value
+      state->data_ks_start[slot] = 0;
       
       goto END_FLCO;
     }
