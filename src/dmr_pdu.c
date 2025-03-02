@@ -210,7 +210,7 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   uint8_t version = DMR_PDU[0] >> 4; //may need to read ahead and get this value before coming here
   uint8_t ihl = DMR_PDU[0] & 0xF; //decompressed value is 0x05 (may need to check this before preceeding)
   uint8_t tos = DMR_PDU[1]; //0
-  uint16_t tlen = (DMR_PDU[2] << 8) | DMR_PDU[3]; //IPv4 header length (20 bytes) + UDP length (in bytes)
+  uint16_t tlen = (DMR_PDU[2] << 8) | DMR_PDU[3]; //IPv4 header length (20 bytes) + UDP header length (5 bytes) + Packet Data
   uint16_t iden = (DMR_PDU[4] << 8) | DMR_PDU[5];
   uint8_t ipf = DMR_PDU[6] >> 5; //0
   uint16_t offset = ((DMR_PDU[6] & 0x1F) << 8) | DMR_PDU[7]; //0
@@ -219,18 +219,17 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   uint16_t hsum = (DMR_PDU[10] << 8) | DMR_PDU[11];
 
   if (opts->payload == 1)
-    fprintf (stderr, "\n IPv%d; Header Len: %d; Type of Service: %d; Total Len: %d; ID: %02X; Flags: %X;\n Fragment Offset: %d; TTL: %d; Protocol: %02X; Checksum: %04X; PDU Len: %d;", version, ihl, tos, tlen, iden, ipf, offset, ttl, prot, hsum, len);
+    fprintf (stderr, "\n IPv%d; Header Len: %d; Type of Service: %d; Total Len: %d; IP ID: %02X; Flags: %X;\n Fragment Offset: %d; TTL: %d; Protocol: %02X; Checksum: %04X; PDU Len: %d;", version, ihl, tos, tlen, iden, ipf, offset, ttl, prot, hsum, len);
 
   //take a look at the src, dst, and port indicated (assuming both ports will match)
-  uint32_t src24 = (DMR_PDU[13] << 16) | (DMR_PDU[14] << 8) | DMR_PDU[15]; //The 0C or 0D indicator will usually tell if this is src or dst
+  uint32_t src24 = (DMR_PDU[13] << 16) | (DMR_PDU[14] << 8) | DMR_PDU[15];
   uint32_t dst24 = (DMR_PDU[17] << 16) | (DMR_PDU[18] << 8) | DMR_PDU[19];
   uint16_t port1 = (DMR_PDU[20] << 8) | DMR_PDU[21];
   uint16_t port2 = (DMR_PDU[22] << 8) | DMR_PDU[23];
   fprintf (stderr, "\n SRC(24): %08d; IP: %03d.%03d.%03d.%03d; Port: %04d; ", src24, DMR_PDU[12], DMR_PDU[13], DMR_PDU[14], DMR_PDU[15], port1);
   fprintf (stderr, "\n DST(24): %08d; IP: %03d.%03d.%03d.%03d; Port: %04d; ", dst24, DMR_PDU[16], DMR_PDU[17], DMR_PDU[18], DMR_PDU[19], port2);
 
-  //if this is correct, the starting point and Report value on LRRP is wrong, but might explain the UNK value in there after 0x1F, etc
-  uint16_t udp_len = (DMR_PDU[24] << 8) | DMR_PDU[25]; //This UDP Length information element is the length in bytes of this user datagram including this header and the application data
+  uint16_t udp_len = (DMR_PDU[24] << 8) | DMR_PDU[25]; //This UDP Length information element is the length in bytes of this user datagram including this header and the application data (no IP header)
   uint16_t udp_chk = (DMR_PDU[26] << 8) | DMR_PDU[27];
   if (opts->payload == 1)
     fprintf (stderr, "\n UDP Datagram Len: %d; UDP Checksum: %04X; ", udp_len, udp_chk);
@@ -247,7 +246,7 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   }
   else if (port1 == 4004 && port2 == 4004)
   {
-    fprintf (stderr, "XCMP;"); //may choose to use || instead of &&, saw a mismatch port but one was for XCMP
+    fprintf (stderr, "XCMP;");
   }
   else if (port1 == 4005 && port2 == 4005)
   {
