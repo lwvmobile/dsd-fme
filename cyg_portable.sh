@@ -70,7 +70,9 @@ if [ "$RELEASE" = "y" ]; then
   cp .profile dsd-fme-portable/dsd-fme/
 
   #move (cut) the bat files to the portable folder root and delete the other ones so users won't get confused
-  mv dsd-fme-portable/dsd-fme/examples/cygwin_bat/*.bat dsd-fme-portable/
+  mv dsd-fme-portable/dsd-fme/examples/cygwin_bat/start-dsd-fme.bat dsd-fme-portable/
+  mv dsd-fme-portable/dsd-fme/examples/cygwin_bat/example_options.txt dsd-fme-portable/
+  mv dsd-fme-portable/dsd-fme/examples/cygwin_bat/complete_usage_options.txt dsd-fme-portable/
   rm -rf dsd-fme-portable/dsd-fme/examples/cygwin_bat
 
   #change .bat files permissions to be read/write/executable by all users (for some reason, this is not preserved)

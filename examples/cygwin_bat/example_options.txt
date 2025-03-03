@@ -1,0 +1,97 @@
+This example options contains numerous options put into the start-dsd-fme.bat file in the option string
+feel free to experiment and mix and match example options for your bat files option string.
+
+Trunking Option Examples:
+
+  P25 (Phase 1 Control) Trunking with SDR++ Network Sink input, RIGCTL, /dev/dsp output,
+  per call wav files, ncurses terminal
+  -ft -i tcp:127.0.0.1:7355 -U 4532 -T -P -N
+
+  P25 (Phase 2 Control) Trunking with SDR++ Network Sink input, RIGCTL, /dev/dsp output,
+  per call wav files, ncurses terminal
+  -f2 -i tcp:127.0.0.1:7355 -U 4532 -T -P -N
+
+  DMR Trunking with RTL input, /dev/dsp output, channel map import,
+  per call wav files, ncurses terminal, payload dump to console
+  -fs -i rtl:0:450M:0:-2:12 -T -C examples\dmr_t3_chan.csv -P -N -Z
+
+  DMR Trunking with SDR++ input, RIGCTL, /dev/dsp output, RAS enabled CSBK (-F),
+  channel map import, per call wav files, ncurses terminal, payload dump to console
+  -fs -F -i tcp -U 4532 -T -C examples\capacity_plus_chan.csv -P -N -Z
+
+  NXDN48 v2.0 DFA (Direct Frequency Assignment) Trunking with SDR++ input, RIGCTL, /dev/dsp output,
+  scrambler key import (decimal), per call wav files, ncurses terminal, payload dump to console
+  -fi -i tcp -U 4532 -T -P -N -Z -k examples\nxdn_sc_key.csv
+
+  NXDN96 Trunking with SDR++ input, RIGCTL, /dev/dsp output,
+  channel map import, per call wav files, ncurses terminal, payload dump to console
+  -fn -i tcp -U 4532 -T -C examples\nxdn_chan_map.csv -P -N -Z
+
+  EDACS Standard Network Analog and Digital
+  -fh -i tcp -U 4532 -T -C edacs_channel_map.csv -G group.csv -N
+  -fh -i rtl:0:850M:44:-2:24 -T -C edacs_channel_map.csv -G group.csv -N
+
+  EDACS Extended Address Analog and Digital (with ESK)
+  -fE -i tcp:192.168.7.5:7355 -U 4532 -T -C edacs_channel_map.csv -G group.csv -N
+  -fE -i rtl:0:850M:44:-2:24 -T -C edacs_channel_map.csv -G group.csv -N
+
+Scanning Option Examples:
+
+  Scanning will not perform quickly like a real scanner, but can be used with any
+  supported decoding type and analog as well, and will require a channel_map to scan frequencies
+  channel numbers do not matter, but use unique ones for each frequeny
+  -t 0 will scan as fast as possible, but may miss frame sync, -t 1 is stable, but needs 1 second between tuning
+
+  P25/DMR/Analog Scanning with RTL input, /dev/dsp output, channel map import,
+  per call wav files, ncurses terminal, payload dump to console, raw audio signal monitoring
+  -ft -i rtl:0:450M:0:-2:12 -Y -t 1 -C examples\dmr_t3_chan.csv -P -8 -N -Z
+
+  P25/DMR/Analog Scanning with SDR++ input (use squelch), RIGCTL, /dev/dsp output, channel map import,
+  per call wav files, ncurses terminal, payload dump to console, raw audio signal monitoring
+  -ft -i tcp:127.0.0.1:7355 -U 4532 -Y -t 1 -C examples\dmr_t3_chan.csv -P -8 -N -Z
+
+  NXDN48/Analog Scanning with SDR++ input (use squelch), RIGCTL, /dev/dsp output, channel map import,
+  per call wav files, ncurses terminal, payload dump to console, raw audio signal monitoring
+  -fi -i tcp:127.0.0.1:7355 -U 4532 -Y -t 1-C examples\nxdn_chan_map.csv -P -8 -N -Z
+
+  Analog Scanning with SDR++ input (use squelch), RIGCTL, /dev/dsp output, channel map import
+  -fA -i tcp:127.0.0.1:7355 -U 4532 -Y -t 0 -C examples\nxdn_chan_map.csv -8
+
+Encryption Option Examples:
+
+  DMR with default /dev/dsp input and output, use basic privacy key 70
+  -fs -b 70
+
+  DMR with default /dev/dsp input and output, load .csv file with decimal basic privacy keys loaded by TG value,
+  -fs -k examples\multi_key.csv
+
+  DMR with default /dev/dsp input and output, use Hytera basic privacy key (10, 32, and 64 hex char versions)
+  -fs -H 1111111111
+  -fs -H '2222222222222222 3333333333333333'
+  -fs -H '2222222222222222 3333333333333333 4444444444444444 5555555555555555'
+
+  DMR with default /dev/dsp input and output, use RC4 key 0x7777777777
+  -fs -1 7777777777
+
+  DMR with default /dev/dsp input and output, use RC4 key 0x7777777777, 
+  Force RC4 Key over Missing PI header/LE Encryption Identifiers (-0)
+  Disable Late Entry Encryption Signalling Identifiers (-3)
+  -fs -0 -3 -1 7777777777
+
+  DMR with default /dev/dsp input and output, load RC4 and 10-char HBP keys from .csv file (hexidecimal format)
+  -fs -K dsd-fme\examples\multi_key_hex.csv
+
+  P25 with default /dev/dsp input and output, use RC4 key 0x7777777777
+  -ft -1 7777777777
+
+  NXDN48 with default /dev/dsp input and output, use Scrambler key 32767
+  -fi -R 32767
+
+  NXDN96 with default /dev/dsp input and output, use Scrambler key 15000
+  -fn -R 15000
+
+  dPMR with default /dev/dsp input and output, use Scrambler key 32767
+  -fm -R 32767
+
+  NXDN48 with default /dev/dsp input and output, load scrambler keys from .csv file (decimal format)
+  -fi -k dsd-fme\examples\nxdn_sc_key.csv

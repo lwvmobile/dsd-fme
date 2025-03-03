@@ -1,1 +1,1 @@
-These files are ONLY for use on the portable cygwin builds, do not use these in any other build environments!
+These .bat files are ONLY for use on the portable cygwin builds, do not use these in any other build environments!

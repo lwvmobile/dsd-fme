@@ -9,8 +9,8 @@
 @REM This software is designed to be used with an SDR receiver (like SDR++ or SDR#) with TCP input,
 @REM RTL Input, media file playback over virtual cables or null-sinks, or a Discriminator Tap input
 @REM
-@REM The complete options list can be seen by entering the following command:
-@REM dsd-fme.exe -h
+@REM The complete options list can be seen by viewing complete_usage_options.txt
+@REM Many examples can be found in example_options.txt
 @REM
 @REM Enjoy!
 
@@ -20,7 +20,7 @@
 @REM Correct: set "options=-fs -N -Z"
 
 @REM set options to pass to dsd-fme
-set "options= -fs -N -Z "
+set "options= -N -Z "
 
 @REM Set Date Time for log (sourced from: https://stackoverflow.com/questions/1192476/format-date-and-time-in-a-windows-batch-script)
 @echo off
