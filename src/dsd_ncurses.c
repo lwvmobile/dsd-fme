@@ -2474,7 +2474,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_in_type == 4)
   {
-    printw ("| Symbol Bin Input: %s \n", opts->audio_in_dev);
+    printw ("| Dibit Bin Input: %s \n", opts->audio_in_dev);
+  }
+
+  if (opts->audio_in_type == 44)
+  {
+    printw ("| Symbol Float Input: %s \n", opts->audio_in_dev);
   }
 
   if (opts->m17decoderip == 1 && opts->udp_sockfd)

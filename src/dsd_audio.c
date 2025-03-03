@@ -901,7 +901,7 @@ openAudioInDevice (dsd_opts * opts)
   }
 
   //test .rrc files with hardset wav file settings
-  else if (strncmp(extension, ".rrc", 3) == 0)
+  else if (strncmp(extension, ".rrc", 4) == 0)
 	{
     //debug
     fprintf (stderr, "Opening M17 .rrc headless wav file\n");
@@ -921,19 +921,19 @@ openAudioInDevice (dsd_opts * opts)
     }
 	}
 
-  //TODO: test .sym files as symbol capture .bin files
-  else if (strncmp(extension, ".sym", 3) == 0)
+  //Open .raw files as a float input type
+  else if (strncmp(extension, ".raw", 4) == 0)
 	{
     struct stat stat_buf;
     if (stat(opts->audio_in_dev, &stat_buf) != 0)
     {
-      fprintf (stderr,"Error, couldn't open bin file %s\n", opts->audio_in_dev);
+      fprintf (stderr,"Error, couldn't open raw (float) file %s\n", opts->audio_in_dev);
       exit(1);
     }
     if (S_ISREG(stat_buf.st_mode))
     {
       opts->symbolfile = fopen(opts->audio_in_dev, "r");
-      opts->audio_in_type = 4; //symbol capture bin files
+      opts->audio_in_type = 44; //float symbol input
     }
     else
     {
@@ -941,7 +941,27 @@ openAudioInDevice (dsd_opts * opts)
     }
   }
 
-  else if (strncmp(extension, ".bin", 3) == 0)
+  //Open .raw files as a float input type
+  else if (strncmp(extension, ".sym", 4) == 0)
+	{
+    struct stat stat_buf;
+    if (stat(opts->audio_in_dev, &stat_buf) != 0)
+    {
+      fprintf (stderr,"Error, couldn't open sym (float) file %s\n", opts->audio_in_dev);
+      exit(1);
+    }
+    if (S_ISREG(stat_buf.st_mode))
+    {
+      opts->symbolfile = fopen(opts->audio_in_dev, "r");
+      opts->audio_in_type = 44; //float symbol input
+    }
+    else
+    {
+      opts->audio_in_type = 0;
+    }
+  }
+
+  else if (strncmp(extension, ".bin", 4) == 0)
 	{
     struct stat stat_buf;
     if (stat(opts->audio_in_dev, &stat_buf) != 0)

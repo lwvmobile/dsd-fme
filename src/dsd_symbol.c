@@ -627,13 +627,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
   }
 #endif
 
-  //test throttle on wav input files
-	if (opts->audio_in_type == 2)
-	{
-		if (state->use_throttle == 1) usleep(.003); //very environment specific, tuning to cygwin
-	}
-
-  //read op25/fme symbol bin files
+  //read dibit capture bin files
   if (opts->audio_in_type == 4)
   {
     //use fopen and read in a symbol, check op25 for clues
@@ -711,6 +705,16 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       }
     }
 
+  }
+
+  //.raw or .sym float symbol files
+  if (opts->audio_in_type == 44)
+  {
+    float float_symbol = 0.0f;
+    fread (&float_symbol, sizeof(float), 1, opts->symbolfile); //sizeof(float) is 4 (usually)
+    if ( feof(opts->symbolfile) ) exitflag = 1; //end of file, exit
+    // float_symbol = -float_symbol; //inversion
+    symbol = (int)float_symbol * (int)10000;
   }
 
   state->symbolcnt++;
