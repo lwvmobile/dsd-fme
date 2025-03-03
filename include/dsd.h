@@ -17,8 +17,8 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-//defined by CMakeLists.txt -- Disable by using cmake -DCOLORS=OFF ..
-#ifdef PRETTY_COLORS
+//ANSII Color Characters in Terminal -- Disable by using cmake -DCOLORSLOGS=OFF ..
+#ifdef PRETTY_COLORS_LOGS
 #define KNRM  "\x1B[0m"
 #define KRED  "\x1B[31m"
 #define KGRN  "\x1B[32m"

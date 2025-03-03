@@ -22,6 +22,8 @@ if [ "$RELEASE" = "y" ]; then
   mkdir shm
   cd ..
   mkdir dsd-fme
+  mkdir logs
+  mkdir WAV
   mkdir etc
   mkdir home
   mkdir lib
@@ -236,6 +238,7 @@ if [ "$RELEASE" = "y" ]; then
   cp /bin/parec dsd-fme-portable/dsd-fme/
   cp /bin/pulseaudio.exe dsd-fme-portable/dsd-fme/
   cp /bin/tail.exe dsd-fme-portable/dsd-fme/
+  cp /bin/touch.exe dsd-fme-portable/dsd-fme/
   cp /bin/tty.exe dsd-fme-portable/dsd-fme/
 
   zip -r dsd-fme-x86-64-cygwin-portable.zip dsd-fme-portable
