@@ -378,7 +378,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
         //a second extended header, and the keystream on that starts after the sap/dpf and mfid value
         //this is the only time starting the keystream at an offset value will be required
 
-        //set ks start value to 3 (testing based on only example I have, need more samples)
+        //set ks start value to 3 (confirmed on several samples of various enc ciphers)
         state->data_ks_start[slot] = 3;
       }
 
@@ -892,8 +892,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
       {
         // decrypted_pdu = 0; //hasn't been decrypted yet
         int poc = (int)state->data_block_poc[slot]; //say that three times real fast
-        int end = ((blocks+1)*block_len)-4-poc;
         int start = (int)state->data_ks_start[slot];
+        int end = ((blocks+1)*block_len)-4-poc-start;
         //sanity check on end, has to be a positive value
         if (end < 0) end = 3096; //its a signed interger, so should reflect negative values here and not rollover
         int alg = 0;
@@ -957,8 +957,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         //will want to rework output_blocks to be a pointer instead of a fixed size (done)
         if (alg == 1 && R != 0)
         {
-          for (i = start; i < end; i++)
-            state->dmr_pdu_sf[slot][i] ^= ob[i%3096];
+          for (i = 0; i < end; i++)
+            state->dmr_pdu_sf[slot][i+start] ^= ob[i%3096];
         }
         //BP key application
         else if (alg == 0) //&& state->K != 0
@@ -980,7 +980,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
           if (bp_key != 0)
           {
-            for (i = start; i < end; i++) 
+            for (i = start; i < (end-start); i++) 
               state->dmr_pdu_sf[slot][i] ^= ob[i%2]; //modulus 2 here, just rinse and repeat
 
             decrypted_pdu = 1;
