@@ -890,12 +890,12 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
       #ifdef DMR_PDU_DECRYPTION
       if (enc_check)
       {
-        // decrypted_pdu = 0; //hasn't been decrypted yet
-        int poc = (int)state->data_block_poc[slot]; //say that three times real fast
+        
+        int poc = (int)state->data_block_poc[slot];
         int start = (int)state->data_ks_start[slot];
         int end = ((blocks+1)*block_len)-4-poc-start;
         //sanity check on end, has to be a positive value
-        if (end < 0) end = 3096; //its a signed interger, so should reflect negative values here and not rollover
+        if (end < 0) end = 3096;
         int alg = 0;
         int kid = 0;
         if (state->currentslot == 0)
@@ -907,20 +907,19 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         else kid = state->payload_keyidR;
 
         //start keystream creation
-        uint8_t ob[129*24]; //may need more blocks (enough for 127 * 24)
-        uint8_t kiv[9]; UNUSED(kiv);
+        uint8_t ob[129*24];
+        uint8_t kiv[9];
         uint32_t mi = 0;
         unsigned long long int R = 0;
         if (state->currentslot == 0)
           mi = (uint32_t)state->payload_mi;
         else mi = (uint32_t)state->payload_miR;
 
-        //mini key loader for RC4/DES
+        //key loader
         if (state->currentslot == 0)
           R = state->rkey_array[state->payload_keyid]; 
         else
           R = state->rkey_array[state->payload_keyidR];
-
 
         if (R == 0 && state->R != 0) R = state->R;
 
@@ -953,18 +952,15 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
         //NOTE: Observed that keystream should not be applied to pad bytes or CRC
         //apply keystream here, only if alg is 1 or 4 AND key is available!
-        //using modulus 3096 to prevent sefgault (increased storage and changed ofb modes to a ptr)
-        //will want to rework output_blocks to be a pointer instead of a fixed size (done)
         if (alg == 1 && R != 0)
         {
           for (i = 0; i < end; i++)
             state->dmr_pdu_sf[slot][i+start] ^= ob[i%3096];
         }
-        //BP key application
-        else if (alg == 0) //&& state->K != 0
-        {
 
-          //NOTE: using dmr_sr and dmr_soR now for a enc check on all encrypted PDUs
+        //BP key application
+        else if (alg == 0)
+        {
           uint16_t bp_key = 0;
           if (state->K != 0) //state->M == 1 && 
           {
@@ -972,22 +968,19 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
             bp_key = BPK[state->K];
             ob[0] = (bp_key >> 8) & 0xFF;
             ob[1] = (bp_key >> 0) & 0xFF;
-
-            //
-            fprintf (stderr, " Key: %lld:%04X;", state->K, bp_key);
-            // fprintf (stderr, "ob1: %02X; ob2: %02X", ob[0], ob[1]);
+            fprintf (stderr, " Key: %lld : %04X;", state->K, bp_key);
           }
 
           if (bp_key != 0)
           {
             for (i = start; i < (end-start); i++) 
-              state->dmr_pdu_sf[slot][i] ^= ob[i%2]; //modulus 2 here, just rinse and repeat
+              state->dmr_pdu_sf[slot][i] ^= ob[i%2];
 
             decrypted_pdu = 1;
           }
         }
 
-        //reset alg/keyid/mi after running?
+        //reset alg/keyid/mi
         if (state->currentslot == 0)
         {
           state->payload_mi = 0;
