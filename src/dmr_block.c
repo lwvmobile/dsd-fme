@@ -909,11 +909,11 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         //start keystream creation
         uint8_t ob[129*24]; //may need more blocks (enough for 127 * 24)
         uint8_t kiv[9]; UNUSED(kiv);
-        long int mi = 0;
+        uint32_t mi = 0;
         unsigned long long int R = 0;
         if (state->currentslot == 0)
-          mi = state->payload_mi;
-        else mi = state->payload_miR;
+          mi = (uint32_t)state->payload_mi;
+        else mi = (uint32_t)state->payload_miR;
 
         //mini key loader for RC4/DES
         if (state->currentslot == 0)
