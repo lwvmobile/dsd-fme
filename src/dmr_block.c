@@ -479,7 +479,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     //set data header validity unless its a p_head (should be set prior, if received)
     if (dpf != 15) state->data_header_valid[slot] = 1;
 
-    if (dpf != 1)
+    if (dpf != 1 && dpf != 15)
     {
       sprintf (state->dmr_lrrp_gps[slot], "Data Call - %s TGT: %d SRC: %d ", sap_string, target, source);
       if (a == 1) strcat (state->dmr_lrrp_gps[slot], "- RSP REQ ");
