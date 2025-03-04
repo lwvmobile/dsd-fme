@@ -219,76 +219,100 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   uint16_t hsum = (DMR_PDU[10] << 8) | DMR_PDU[11];
 
   if (opts->payload == 1)
-    fprintf (stderr, "\n IPv%d; Header Len: %d; Type of Service: %d; Total Len: %d; IP ID: %02X; Flags: %X;\n Fragment Offset: %d; TTL: %d; Protocol: %02X; Checksum: %04X; PDU Len: %d;", version, ihl, tos, tlen, iden, ipf, offset, ttl, prot, hsum, len);
+    fprintf (stderr, "\n IPv%d; IHL: %d; Type of Service: %d; Total Len: %d; IP ID: %04X; Flags: %X;\n Fragment Offset: %d; TTL: %d; Protocol: 0x%02X; Checksum: %04X; PDU Len: %d;", version, ihl, tos, tlen, iden, ipf, offset, ttl, prot, hsum, len);
 
   //take a look at the src, dst, and port indicated (assuming both ports will match)
   uint32_t src24 = (DMR_PDU[13] << 16) | (DMR_PDU[14] << 8) | DMR_PDU[15];
   uint32_t dst24 = (DMR_PDU[17] << 16) | (DMR_PDU[18] << 8) | DMR_PDU[19];
   uint16_t port1 = (DMR_PDU[20] << 8) | DMR_PDU[21];
   uint16_t port2 = (DMR_PDU[22] << 8) | DMR_PDU[23];
-  fprintf (stderr, "\n SRC(24): %08d; IP: %03d.%03d.%03d.%03d; Port: %04d; ", src24, DMR_PDU[12], DMR_PDU[13], DMR_PDU[14], DMR_PDU[15], port1);
-  fprintf (stderr, "\n DST(24): %08d; IP: %03d.%03d.%03d.%03d; Port: %04d; ", dst24, DMR_PDU[16], DMR_PDU[17], DMR_PDU[18], DMR_PDU[19], port2);
+  fprintf (stderr, "\n SRC(24): %08d; IP: %03d.%03d.%03d.%03d; ", src24, DMR_PDU[12], DMR_PDU[13], DMR_PDU[14], DMR_PDU[15]);
+  if (prot == 0x11) fprintf (stderr, "Port: %04d; ", port1);
+  fprintf (stderr, "\n DST(24): %08d; IP: %03d.%03d.%03d.%03d; ", dst24, DMR_PDU[16], DMR_PDU[17], DMR_PDU[18], DMR_PDU[19]);
+  if (prot == 0x11) fprintf (stderr, "Port: %04d; ", port2);
 
-  uint16_t udp_len = (DMR_PDU[24] << 8) | DMR_PDU[25]; //This UDP Length information element is the length in bytes of this user datagram including this header and the application data (no IP header)
-  uint16_t udp_chk = (DMR_PDU[26] << 8) | DMR_PDU[27];
-  if (opts->payload == 1)
-    fprintf (stderr, "\n UDP Datagram Len: %d; UDP Checksum: %04X; ", udp_len, udp_chk);
+  //IP Protocol List: https://en.wikipedia.org/wiki/List_of_IP_protocol_numbers
+  if (prot == 0x01) //ICMP
+  {
+    uint8_t icmp_type = DMR_PDU[20];
+    uint8_t icmp_code = DMR_PDU[21];
+    uint16_t icmp_chk = port2;
+    fprintf (stderr, "\n ICMP Protocol; Type: %02X; Code: %02X; Checksum: %02X;", icmp_type, icmp_code, icmp_chk);
+    //see: https://en.wikipedia.org/wiki/Internet_Control_Message_Protocol
+    //look at attached message, if present
+    if (DMR_PDU[28] == 0x45) //if another chained IPv4 header and/or message
+    {
+      fprintf (stderr, "\n ------------Attached Message-------------");
+      dmr_ip_pdu(opts, state, len-28, DMR_PDU+28);
+    }
+    
+  }
 
-  //Are IP DMR PDU types only dictated by Port Number? Or is this just the defaults when programmed?
-  if (port1 == 231 && port2 == 231)
+  else if (prot == 0x11) //UDP
   {
-    fprintf (stderr, "Cellocator;");
+    uint16_t udp_len = (DMR_PDU[24] << 8) | DMR_PDU[25]; //This UDP Length information element is the length in bytes of this user datagram including this header and the application data (no IP header)
+    uint16_t udp_chk = (DMR_PDU[26] << 8) | DMR_PDU[27];
+    fprintf (stderr, "\n UDP Protocol; Datagram Len: %d; UDP Checksum: %04X; ", udp_len, udp_chk);
+
+    //Are IP DMR PDU types only dictated by Port Number? Or is this just the defaults when programmed?
+    if (port1 == 231 && port2 == 231)
+    {
+      fprintf (stderr, "Cellocator;");
+    }
+    else if (port1 == 4001 && port2 == 4001)
+    {
+      fprintf (stderr, "LRRP;");
+      dmr_lrrp (opts, state, len-28-4-1, src24, dst24, DMR_PDU+28); //len is offset with IP and UDP header lens, 4 CRC, and 1 for the 0D token
+    }
+    else if (port1 == 4004 && port2 == 4004)
+    {
+      fprintf (stderr, "XCMP;");
+    }
+    else if (port1 == 4005 && port2 == 4005)
+    {
+      fprintf (stderr, "ARS;");
+    }
+    else if (port1 == 4007 && port2 == 4007)
+    {
+      uint16_t tms_len = (DMR_PDU[28] << 8) | DMR_PDU[29]; //this as len makes sense, its always 10 less than the UDP Datagram len value
+      unsigned long long int tms_unk = ((unsigned long long int)DMR_PDU[30] << 32UL) | (DMR_PDU[31] << 24) | (DMR_PDU[32] << 16) | (DMR_PDU[33] << 8) | DMR_PDU[34];
+      fprintf (stderr, "TMS; ");
+      fprintf (stderr, "Len: %d; ???: %010llX;", tms_len, tms_unk);
+      utf16_to_text(len, DMR_PDU+35);
+    }
+    else if (port1 == 4008 && port2 == 4008)
+    {
+      fprintf (stderr, "Telemetry;");
+    }
+    else if (port1 == 4009 && port2 == 4009)
+    {
+      fprintf (stderr, "OTAP;");
+    }
+    else if (port1 == 4012 && port2 == 4012)
+    {
+      fprintf (stderr, "Battery Management;");
+    }
+    else if (port1 == 4013 && port2 == 4013)
+    {
+      fprintf (stderr, "Job Ticket Server;");
+    }
+    //ETSI specific
+    else if (port1 == 5016 && port2 == 5016)
+    {
+      fprintf (stderr, "TMS;");
+      utf16_to_text(len, DMR_PDU+35);
+    }
+    else if (port1 == 5017 && port2 == 5017)
+    {
+      uint8_t DMR_PDU_bits[127*8]; memset(DMR_PDU_bits, 0, sizeof(DMR_PDU_bits));
+      unpack_byte_array_into_bit_array(DMR_PDU+35, DMR_PDU_bits, (len-4-35)*sizeof(uint8_t));
+      lip_protocol_decoder(opts, state, DMR_PDU_bits);
+    }
+    else fprintf (stderr, "Unknown UDP Contents;");
+
   }
-  else if (port1 == 4001 && port2 == 4001)
-  {
-    fprintf (stderr, "LRRP;");
-    dmr_lrrp (opts, state, len-28-4-1, src24, dst24, DMR_PDU+28); //len is offset with IP and UDP header lens, 4 CRC, and 1 for the 0D token
-  }
-  else if (port1 == 4004 && port2 == 4004)
-  {
-    fprintf (stderr, "XCMP;");
-  }
-  else if (port1 == 4005 && port2 == 4005)
-  {
-    fprintf (stderr, "ARS;");
-  }
-  else if (port1 == 4007 && port2 == 4007)
-  {
-    uint16_t tms_len = (DMR_PDU[28] << 8) | DMR_PDU[29]; //this as len makes sense, its always 10 less than the UDP Datagram len value
-    unsigned long long int tms_unk = ((unsigned long long int)DMR_PDU[30] << 32UL) | (DMR_PDU[31] << 24) | (DMR_PDU[32] << 16) | (DMR_PDU[33] << 8) | DMR_PDU[34];
-    fprintf (stderr, "TMS; ");
-    fprintf (stderr, "Len: %d; ???: %010llX;", tms_len, tms_unk);
-    utf16_to_text(len, DMR_PDU+35);
-  }
-  else if (port1 == 4008 && port2 == 4008)
-  {
-    fprintf (stderr, "Telemetry;");
-  }
-  else if (port1 == 4009 && port2 == 4009)
-  {
-    fprintf (stderr, "OTAP;");
-  }
-  else if (port1 == 4012 && port2 == 4012)
-  {
-    fprintf (stderr, "Battery Management;");
-  }
-  else if (port1 == 4013 && port2 == 4013)
-  {
-    fprintf (stderr, "Job Ticket Server;");
-  }
-  //ETSI specific
-  else if (port1 == 5016 && port2 == 5016)
-  {
-    fprintf (stderr, "TMS;");
-    utf16_to_text(len, DMR_PDU+35);
-  }
-  else if (port1 == 5017 && port2 == 5017)
-  {
-    uint8_t DMR_PDU_bits[127*8]; memset(DMR_PDU_bits, 0, sizeof(DMR_PDU_bits));
-    unpack_byte_array_into_bit_array(DMR_PDU+35, DMR_PDU_bits, (len-4-35)*sizeof(uint8_t));
-    lip_protocol_decoder(opts, state, DMR_PDU_bits);
-  }
-  else fprintf (stderr, "Unknown PDU Contents;");
+
+  else fprintf (stderr, "Unknown Protocol: %02X;", prot);
   
 }
 
