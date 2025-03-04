@@ -973,8 +973,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
           if (bp_key != 0)
           {
-            for (i = start; i < (end-start); i++) 
-              state->dmr_pdu_sf[slot][i] ^= ob[i%2];
+            for (i = 0; i < end; i++) 
+              state->dmr_pdu_sf[slot][i+start] ^= ob[i%2];
 
             decrypted_pdu = 1;
           }
