@@ -880,7 +880,12 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
       //if the CRC32 is correct, I think its fair to assume we don't need to worry about if the 
       //individual CRC9s are correct on confirmed data blocks (but we can confirm now that they are all good)
-      if (CRCComputed == CRCExtracted) CRCCorrect = 1;
+      if (CRCComputed == CRCExtracted)
+        CRCCorrect = 1;
+
+      //If MNIS data with bad checksum, proceed anyways (not elegant, but other headers most likely RAS enabled anyways)
+      else if (state->data_header_format[slot] == 0xF && state->data_header_sap[slot] == 1)
+        CRCCorrect = 1;
 
       //check for encryption on PDU
       uint8_t enc_check = 0;
@@ -1100,6 +1105,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
       //reset data header format storage
       state->data_header_format[slot] = 7;
+      //reset data header sap storage
+      state->data_header_sap[slot] = 0;
       //flag off data header validity 
       state->data_header_valid[slot] = 0; 
       //flag off conf data flag
@@ -1266,6 +1273,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
     state->data_block_counter[slot] = 1; 
     //reset data header format storage
     state->data_header_format[slot] = 7;
+    //reset data header sap storage
+    state->data_header_sap[slot] = 0;
     //flag off data header validity 
     state->data_header_valid[slot] = 0; 
     //flag off conf data flag
@@ -1296,6 +1305,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
     state->data_block_counter[slot] = 1; 
     //reset data header format storage
     state->data_header_format[slot] = 7;
+    //reset data header sap storage
+    state->data_header_sap[slot] = 0;
     //flag off data header validity 
     state->data_header_valid[slot] = 0; 
     //flag off conf data flag
@@ -1332,6 +1343,7 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
   memset (state->cap_plus_block_num, 0, sizeof(state->cap_plus_block_num));
   memset (state->data_header_valid, 0, sizeof(state->data_header_valid));
   memset (state->data_header_format, 7, sizeof(state->data_header_format));
+  memset (state->data_header_sap, 0, sizeof(state->data_header_sap));
   //reset some strings -- resetting call string here causes random blink on ncurses terminal (cap+)
   // sprintf (state->call_string[0], "%s", "                     "); //21 spaces
   // sprintf (state->call_string[1], "%s", "                     "); //21 spaces

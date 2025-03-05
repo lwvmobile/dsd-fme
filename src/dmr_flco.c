@@ -151,6 +151,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
       //reset data header format storage
       state->data_header_format[slot] = 7;
+      //reset data header sap storage
+      state->data_header_sap[slot] = 0;
       //flag off data header validity 
       state->data_header_valid[slot] = 0; 
       //flag off conf data flag
