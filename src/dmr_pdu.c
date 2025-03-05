@@ -19,9 +19,9 @@ uint16_t convert_hex_to_dec(uint16_t input)
   return input;
 }
 
-void utf16_to_text (uint16_t len, uint8_t * input)
+void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input)
 {
-  len -= 36; //offset for starting point + 1
+  uint8_t slot = state->currentslot;
   fprintf (stderr, "\n UTF16 Text: ");
   uint16_t ch16 = 0;
   for (uint16_t i = 0; i < len; i += 2)
@@ -36,40 +36,66 @@ void utf16_to_text (uint16_t len, uint8_t * input)
     else if (ch16 == 0) //if padding (0 could also indicate end of text terminator?)
       fprintf (stderr, "_");
     else fprintf (stderr, "-");
+
+    //TODO: Add TMS String to ncurses string w/ wide char support?
+    //for now, just rip the first 40 or so chars lower byte value 
+    //in the ASCII Range (should be alright for a quick visual)
+    char c = input[i+1];
+    if (wr == 1 && i < 76 && c < 0x7F && c >= 0x20)
+      strcat (state->dmr_lrrp_gps[slot], &c);
+
   }
+
+  //add elipses to indicate this is possibly truncated
+  if (wr == 1)
+    strcat (state->dmr_lrrp_gps[slot], "...");
 }
 
-void utf8_to_text (uint16_t len, uint8_t * input)
+void utf8_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input)
 {
+  uint8_t slot = state->currentslot;
   fprintf (stderr, "\n UTF8 Text: ");
   for (uint16_t i = 0; i < len; i++)
   {
-    if (input[i] >= 0x20 && input[i] < 0x80) //if not a linebreak or terminal commmands
+    if (input[i] >= 0x20 && input[i] < 0x7F) //if not a linebreak or terminal commmands
       fprintf (stderr, "%c", input[i]);
     else if (input[i] == 0) //if padding (0 could also indicate end of text terminator?)
       fprintf (stderr, "_");
     // else if (input[i] == 0x03) //ASCII end of text (observed on the NMEA LOCN ones anyways)
     //   break;
     else fprintf (stderr, "-");
+
+    //for now, just rip the first 40 or so chars lower byte value 
+    //in the ASCII Range (should be alright for a quick visual)
+    char c = input[i];
+    if (wr == 1 && i < 38 && c < 0x7F && c >= 0x20)
+      strcat (state->dmr_lrrp_gps[slot], &c);
   }
+
+  //add elipses to indicate this is possibly truncated
+  if (wr == 1)
+    strcat (state->dmr_lrrp_gps[slot], "...");
+
 }
 
 void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
 {
 
+  uint16_t offset = 0; //sanity check of sorts, prevent extra long line print outs in the console
+  if (len > 23)
+    offset = 23;
+
   // if (DMR_PDU[0] == 0x01) //found some on another system that is 00 here, and not a Loction
   if (state->data_header_format[state->currentslot] == 13) //only short data: defined format (testing)
   {
-    uint16_t offset = 0; //sanity check of sorts, prevent extra long line print outs in the console
-    if (len >= 22) offset = 22;
-    utf8_to_text(len-offset-4, DMR_PDU+offset+1);
+    utf8_to_text(state, 0, len-offset, DMR_PDU+offset);
     dmr_locn(opts, state, len, DMR_PDU);
   }
   else
   {
     if (len >= (127*18)) len = 127*18; //sanity check of sorts, prevent extra long line print outs in the console
-    utf8_to_text(len, DMR_PDU); //generic catch-all to see if anything relevant is there
-    // utf16_to_text(len, DMR_PDU); //generic catch-all to see if anything relevant is there
+    utf8_to_text(state, 0, len, DMR_PDU); //generic catch-all to see if anything relevant is there
+    // utf16_to_text(state, 0, len, DMR_PDU); //generic catch-all to see if anything relevant is there
   } 
     
 }
@@ -187,14 +213,18 @@ void dmr_udp_comp_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t
   fprintf (stderr, "\n Compressed IP Idx: %d; Opcode: %d; Src Idx: %d (%s); Dst Idx: %d (%s); ", ipid, opcode, said, addrstring[0], daid, addrstring[1]);
   fprintf (stderr, "\n Src Port Idx: %d (%s); Dst Port Idx: %d (%s); ", spid, portstring[0], dpid, portstring[1]);
 
+  //sanity check
+  if (len > ptr)
+    len -= ptr;
+
   //decode known types
   if (spid == 1 || dpid == 1)
-    utf16_to_text(len, DMR_PDU+ptr); //assumming text starts right at the ptr value
+    utf16_to_text(state, 1, len, DMR_PDU+ptr); //assumming text starts right at the ptr value
   else if (spid == 2 || dpid == 2)
   {
     //untested
     uint8_t DMR_PDU_bits[127*8]; memset(DMR_PDU_bits, 0, sizeof(DMR_PDU_bits));
-    unpack_byte_array_into_bit_array(DMR_PDU+ptr, DMR_PDU_bits, (len-4-ptr)*sizeof(uint8_t));
+    unpack_byte_array_into_bit_array(DMR_PDU+ptr, DMR_PDU_bits, len*sizeof(uint8_t));
     lip_protocol_decoder(opts, state, DMR_PDU_bits);
   }
   else fprintf (stderr, "Unknown Decode Format;");
@@ -204,7 +234,7 @@ void dmr_udp_comp_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t
 void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
 {
 
-  UNUSED(state);
+  uint8_t slot = state->currentslot;
   
   //the IPv4 Header
   uint8_t version = DMR_PDU[0] >> 4; //may need to read ahead and get this value before coming here
@@ -258,54 +288,81 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
     if (port1 == 231 && port2 == 231)
     {
       fprintf (stderr, "Cellocator;");
+      sprintf (state->dmr_lrrp_gps[slot], "Cellocator SRC: %d; DST: %d;", src24, dst24);
     }
     else if (port1 == 4001 && port2 == 4001)
     {
+      //sanity check
+      if (len > 33)
+        len -= 33;
+
       fprintf (stderr, "LRRP;");
-      dmr_lrrp (opts, state, len-28-4-1, src24, dst24, DMR_PDU+28); //len is offset with IP and UDP header lens, 4 CRC, and 1 for the 0D token
+      dmr_lrrp (opts, state, len, src24, dst24, DMR_PDU+28); //len is offset with IP and UDP header lens, 4 CRC, and 1 for the 0D token
     }
     else if (port1 == 4004 && port2 == 4004)
     {
       fprintf (stderr, "XCMP;");
+      sprintf (state->dmr_lrrp_gps[slot], "XCMP SRC: %d; DST: %d;", src24, dst24);
     }
     else if (port1 == 4005 && port2 == 4005)
     {
       fprintf (stderr, "ARS;");
+      //TODO: ARS Decoder
+      sprintf (state->dmr_lrrp_gps[slot], "ARS SRC: %d; DST: %d; ", src24, dst24);
+      utf8_to_text(state, 0, 10, DMR_PDU+28); //seen some ARS radio IDs in ASCII/ISO7/UTF8 format here
     }
     else if (port1 == 4007 && port2 == 4007)
     {
+      //sanity check
+      if (len > 36)
+        len -= 36;
+
       uint16_t tms_len = (DMR_PDU[28] << 8) | DMR_PDU[29]; //this as len makes sense, its always 10 less than the UDP Datagram len value
       unsigned long long int tms_unk = ((unsigned long long int)DMR_PDU[30] << 32UL) | (DMR_PDU[31] << 24) | (DMR_PDU[32] << 16) | (DMR_PDU[33] << 8) | DMR_PDU[34];
       fprintf (stderr, "TMS; ");
       fprintf (stderr, "Len: %d; ???: %010llX;", tms_len, tms_unk);
-      utf16_to_text(len, DMR_PDU+35);
+      sprintf (state->dmr_lrrp_gps[slot], "TMS SRC: %d; DST: %d; ", src24, dst24);
+      utf16_to_text(state, 1, len, DMR_PDU+35);
     }
     else if (port1 == 4008 && port2 == 4008)
     {
       fprintf (stderr, "Telemetry;");
+      sprintf (state->dmr_lrrp_gps[slot], "Telemetry SRC: %d; DST: %d;", src24, dst24);
     }
     else if (port1 == 4009 && port2 == 4009)
     {
       fprintf (stderr, "OTAP;");
+      sprintf (state->dmr_lrrp_gps[slot], "OTAP SRC: %d; DST: %d;", src24, dst24);
     }
     else if (port1 == 4012 && port2 == 4012)
     {
       fprintf (stderr, "Battery Management;");
+      sprintf (state->dmr_lrrp_gps[slot], "Batt. Man. SRC: %d; DST: %d;", src24, dst24);
     }
     else if (port1 == 4013 && port2 == 4013)
     {
       fprintf (stderr, "Job Ticket Server;");
+      sprintf (state->dmr_lrrp_gps[slot], "JTS SRC: %d; DST: %d;", src24, dst24);
     }
     //ETSI specific -- unknown entry value, assuming +28
     else if (port1 == 5016 && port2 == 5016)
     {
+      //sanity check
+      if (len > 29)
+        len -= 29;
+
       fprintf (stderr, "TMS;");
-      utf16_to_text(len, DMR_PDU+28);
+      sprintf (state->dmr_lrrp_gps[slot], "TMS SRC: %d; DST: %d; ", src24, dst24);
+      utf16_to_text(state, 1, len, DMR_PDU+28);
     }
     else if (port1 == 5017 && port2 == 5017)
     {
+      //sanity check
+      if (len > 32)
+        len -= 32;
+
       uint8_t DMR_PDU_bits[127*12*8]; memset(DMR_PDU_bits, 0, sizeof(DMR_PDU_bits));
-      unpack_byte_array_into_bit_array(DMR_PDU+28, DMR_PDU_bits, (len-4-28)*sizeof(uint8_t));
+      unpack_byte_array_into_bit_array(DMR_PDU+28, DMR_PDU_bits, len*sizeof(uint8_t));
       lip_protocol_decoder(opts, state, DMR_PDU_bits);
     }
     else fprintf (stderr, "Unknown UDP Contents;");

@@ -1069,9 +1069,13 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           //unknown value after type field and before start of data field (at least on LRRP)
           uint16_t mnis_unk = (state->dmr_pdu_sf[slot][5] << 8) | state->dmr_pdu_sf[slot][6];
           fprintf (stderr, " ???: %04X", mnis_unk);
+
+          sprintf (state->dmr_lrrp_gps[slot], "MNIS SRC: %d; DST: %d; ", msrc, mdst);
           
           if (mnis_type == 0x11) //+7 offset
             dmr_lrrp (opts, state, len, msrc, mdst, state->dmr_pdu_sf[slot]+7);
+          else if (mnis_type == 0x33) //check any potential texts in this message
+            utf8_to_text(state, 0, 15, state->dmr_pdu_sf[slot]+7); //seen some ARS radio IDs in ASCII/ISO7/UTF8 format here
           
         }
       }
