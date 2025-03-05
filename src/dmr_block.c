@@ -212,7 +212,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     else if (sap == 9)  sprintf (sap_string, "%s", "EXTD HDR"); //Extended Header (Proprietary)
     else if (sap == 10) sprintf (sap_string, "%s", "Short DT"); //Short Data
     else if (sap == 1 && p_mfid == 0x10)
-                        sprintf (sap_string, "%s", "Moto EXT"); //motorola extended format
+                        sprintf (sap_string, "%s", "Moto NET"); //motorola network interface service
     else                sprintf (sap_string, "%s", "Reserved"); //reserved, or err/unk
 
     //mfid string handling
@@ -375,10 +375,10 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
         state->data_p_head[slot] = 1;
 
         //my observation on chained p_head is that the enc header will come first, and then
-        //a second extended header, and the keystream on that starts after the sap/dpf and mfid value
-        //this is the only time starting the keystream at an offset value will be required
+        //a second extended header, and the keystream on that starts after the sap/dpf, mfid, and 3rd octet (opcode?)
+        //this is the only time starting the keystream at an offset value will be required (after 0x1F1002)
 
-        //set ks start value to 3 (confirmed on several samples of various enc ciphers)
+        //set ks start value to 3 (confirmed on several samples rc4 and bp)
         state->data_ks_start[slot] = 3;
       }
 
@@ -438,8 +438,18 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
       }
       else if (p_sap == 1 && p_mfid == 0x10)
       {
-        //This can be an LRRP packet first block (but slightly different configuration)
-        fprintf (stderr, "\n Motorola Extended Header; ");
+        //This can contain various things also found in IP (UDP) protocol data
+        //LRRP and ARS observed in the Remus samples when sent in this format, and then
+        //returned in the uncompressed IPv4 / UDP Format attached to an ICMP PDU
+
+        fprintf (stderr, "\n Motorola Network Interface Service Header (MNIS); ");
+
+        //see: https://cwh050.blogspot.com/2019/08/what-does-mnis-do.html
+        //see: https://github.com/DSheirer/sdrtrunk/blob/8718d04ef534553e6165b158ebd4d10efc1178cd/src/main/java/io/github/dsheirer/module/decode/dmr/message/type/ApplicationType.java
+
+        //one issue is that this portion of the header is encrypted, if encryption is used
+        //so that can only be checked after the completed PDU assembly if decryptd properly
+
       }
       else //if (p_mfid == 0x10)
       {
@@ -1025,7 +1035,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           uint16_t len = ((blocks+1)*block_len)-4; //total number of bytes in PDU minus 4 CRC32 bytes
           dmr_udp_comp_pdu (opts, state, len, state->dmr_pdu_sf[slot]);
         }
-        else if (state->data_header_sap[slot] == 1 && state->dmr_pdu_sf[slot][1] == 0x10) //test SAP 1 MFID 10 (with -F) as a potential LRRP message (header inclusive)
+        else if (state->data_header_sap[slot] == 1 && state->dmr_pdu_sf[slot][1] == 0x10) //MNIS Proprietary Header
         {
           //len calc
           uint16_t ctr = state->data_byte_ctr[slot];
@@ -1036,15 +1046,28 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           if (len > 150)
             len = 150;
 
-          //this may be some form of compressed header, but contents are thus unknown (aside from sap/dpf and mfid)
+          //set src and dst from the original data header
           uint32_t msrc = state->dmr_lrrp_source[slot];
           uint32_t mdst = state->dmr_lrrp_target[slot];
 
-          fprintf (stderr, "\n SRC(Header): %08d; ", msrc);
-          fprintf (stderr, "\n DST(Header): %08d; ", mdst);
+          fprintf (stderr, "\n SRC(MNIS): %08d; ", msrc);
+          fprintf (stderr, "\n DST(MNIS): %08d; ", mdst);
 
-          //+7 offset
-          dmr_lrrp (opts, state, len, msrc, mdst, state->dmr_pdu_sf[slot]+7);
+          //TODO: Look for samples with various types in them
+          uint8_t  mnis_type  = state->dmr_pdu_sf[slot][4];
+          if      (mnis_type == 0x01) fprintf (stderr, "MNIS LOCN; ");
+          else if (mnis_type == 0x11) fprintf (stderr, "MNIS LRRP; ");
+          else if (mnis_type == 0x33) fprintf (stderr, "MNIS ARS;  ");
+          else if (mnis_type == 0x88) fprintf (stderr, "MNIS XCMP; ");
+          else fprintf (stderr, "Unknown MNIS Type: %02X; ", mnis_type);
+
+          //unknown value after type field and before start of data field (at least on LRRP)
+          uint16_t mnis_unk = (state->dmr_pdu_sf[slot][5] << 8) | state->dmr_pdu_sf[slot][6];
+          fprintf (stderr, " ???: %04X", mnis_unk);
+          
+          if (mnis_type == 0x11) //+7 offset
+            dmr_lrrp (opts, state, len, msrc, mdst, state->dmr_pdu_sf[slot]+7);
+          
         }
       }
 

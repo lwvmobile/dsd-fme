@@ -296,16 +296,16 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
     {
       fprintf (stderr, "Job Ticket Server;");
     }
-    //ETSI specific
+    //ETSI specific -- unknown entry value, assuming +28
     else if (port1 == 5016 && port2 == 5016)
     {
       fprintf (stderr, "TMS;");
-      utf16_to_text(len, DMR_PDU+35);
+      utf16_to_text(len, DMR_PDU+28);
     }
     else if (port1 == 5017 && port2 == 5017)
     {
-      uint8_t DMR_PDU_bits[127*8]; memset(DMR_PDU_bits, 0, sizeof(DMR_PDU_bits));
-      unpack_byte_array_into_bit_array(DMR_PDU+35, DMR_PDU_bits, (len-4-35)*sizeof(uint8_t));
+      uint8_t DMR_PDU_bits[127*12*8]; memset(DMR_PDU_bits, 0, sizeof(DMR_PDU_bits));
+      unpack_byte_array_into_bit_array(DMR_PDU+28, DMR_PDU_bits, (len-4-28)*sizeof(uint8_t));
       lip_protocol_decoder(opts, state, DMR_PDU_bits);
     }
     else fprintf (stderr, "Unknown UDP Contents;");
