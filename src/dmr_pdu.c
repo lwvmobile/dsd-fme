@@ -365,11 +365,19 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
       unpack_byte_array_into_bit_array(DMR_PDU+28, DMR_PDU_bits, len*sizeof(uint8_t));
       lip_protocol_decoder(opts, state, DMR_PDU_bits);
     }
-    else fprintf (stderr, "Unknown UDP Contents;");
+    else
+    {
+      sprintf (state->dmr_lrrp_gps[slot], " IP Call SRC: %d; Port; %d; DST: %d; Port: %d;", src24, port1, dst24, port2);
+      fprintf (stderr, "Unknown UDP Port;");
+    }
 
   }
 
-  else fprintf (stderr, "Unknown Protocol: %02X;", prot);
+  else 
+  {
+    sprintf (state->dmr_lrrp_gps[slot], " IP Call SRC: %d; DST: %d; Protocol: %d;", src24, dst24, prot);
+    fprintf(stderr, "Unknown IP Protocol: %02X;", prot);
+  }
   
 }
 
