@@ -11,8 +11,8 @@
 
 //TODO: Test USBD LIP Decoder with Real World Samples (if/when available)
 //TODO: Test UDT NMEA and LIP Decoders with Real World Samples (if/when available)
-//WIP:  Move all extra decoders for location, etc, to a new file and add prototypes to dsd.h  
-//TODO: Test CRC9/CRC32 on Rate 1 Data with Real World Samples (if/when available)
+//WIP:  Move all extra decoders for location, etc, to a new file and add prototypes to dsd.h 
+//DONE: Test CRC9/CRC32 on Rate 1 Data with Real World Samples (if/when available)
 //TODO: Address areas that require reading of ISO7, ISO8, and UTF-16 string formats
 
 #include "dsd.h"
@@ -167,14 +167,14 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       crclen = 9; //confirmed data only
       crcmask = 0x10F; 
       is_full = 1;
-      pdu_len = 25; //196 bits - 24.5 bytes
+      pdu_len = 24; //192 bits 24 bytes + 4 pad bits
       sprintf(state->fsubtype, " R_1U ");
       if (state->data_conf_data[slot] == 1)
       {
-        pdu_len = 23; 
+        pdu_len = 22; //start at plus two when assembling
         pdu_start = 2; //start at plus two when assembling
         sprintf(state->fsubtype, " R_1C ");
-      }  
+      }
       break;
     case 0x0B: //Unified Single Block Data USBD
       is_bptc = 1;
@@ -504,16 +504,20 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
   if (is_full) //Rate 1 Data
   {
+    //assembly (w/ confirmed data) on a working Tier III Tait System
+
     CRCExtracted = 0;
     CRCComputed = 0;
     IrrecoverableErrors = 0; //implicit, since there is no encoding
 
-    for (i = 0; i < 12; i++)
-      DMR_PDU[i] = (uint8_t)ConvertBitIntoBytes(&info[i*8], 8);
-
-    //Skip Padding Bits (96,97,98,99)
-    for (i = 0; i < 12; i++)
-      DMR_PDU[i+12] = (uint8_t)ConvertBitIntoBytes(&info[(i*8)+100], 8);
+    //pack rate 1 data for a total of up to 24 bytes, (22 if Confirmed Data)
+    //skipping the 4 padding bits located at 96,97,98,99 using the ptr values
+    //as offsets for confirmed data, len, and continue points for packing
+    int bit_ptr  = pdu_start * 8;
+    int byte_ptr = 0;
+    pack_bit_array_into_byte_array (info+bit_ptr, DMR_PDU+byte_ptr, 12-pdu_start);
+    bit_ptr = 100; byte_ptr = 12-pdu_start;
+    pack_bit_array_into_byte_array (info+bit_ptr, DMR_PDU+byte_ptr, 12);
 
     //set CRC to correct on unconfirmed 1 rate data blocks (for reporting due to no CRC available on these)
     if (state->data_conf_data[slot] == 0) CRCCorrect = 1;
@@ -527,17 +531,21 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       CRCExtracted = CRCExtracted ^ crcmask;
 
       //reorganize the info bit array into confdatabits, just for CRC9 check
-      //unconfirmed, haven't seen any samples with rate 1 data
-      for(i = 0; i < 176; i++) confdatabits[i] = info[i + 16];
-      for(i = 0; i < 7; i++) confdatabits[i + 176] = info[i];
+      int k = 0;
+      for (i = 16; i < 96; i++)   confdatabits[k++] = info[i]; //first half
+      for (i = 100; i < 196; i++) confdatabits[k++] = info[i]; //second half
+      for (i = 0; i < 7; i++)     confdatabits[k++] = info[i]; //DBSN
+      CRCComputed = ComputeCrc9Bit(confdatabits, k);
 
-      CRCComputed = ComputeCrc9Bit(confdatabits, 183); 
       if (CRCExtracted == CRCComputed)
       {
         CRCCorrect = 1;
         state->data_block_crc_valid[slot][blockcounter] = 1;
       } 
       else state->data_block_crc_valid[slot][blockcounter] = 0;
+
+      //debug confirmed data values (working now)
+      // fprintf (stderr, " K: %d; DSBN: %d; CRC: %03X / %03X;", k, dbsn, CRCComputed, CRCExtracted);
 
     }
 
