@@ -268,6 +268,19 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
     uint8_t icmp_code = DMR_PDU[21];
     uint16_t icmp_chk = port2;
     fprintf (stderr, "\n ICMP Protocol; Type: %02X; Code: %02X; Checksum: %02X;", icmp_type, icmp_code, icmp_chk);
+    if (icmp_type == 3)
+    {
+      fprintf (stderr, " Destination");
+      if (icmp_code == 0)
+        fprintf (stderr, " Network");
+      else if (icmp_code == 1)
+        fprintf (stderr, " Host");
+      else if (icmp_code == 2)
+        fprintf (stderr, " Protocol");
+      else if (icmp_code == 3)
+        fprintf (stderr, " Port");
+      fprintf (stderr, " Unreachable;");
+    }
     //see: https://en.wikipedia.org/wiki/Internet_Control_Message_Protocol
     //look at attached message, if present
     if (DMR_PDU[28] == 0x45) //if another chained IPv4 header and/or message

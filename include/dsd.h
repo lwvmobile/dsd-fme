@@ -1300,6 +1300,17 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state);
 void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source, uint32_t dest, uint8_t * DMR_PDU);
 void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU);
 
+//p25 pdu handling
+uint8_t p25_decrypt_pdu(dsd_opts * opts, dsd_state * state, uint8_t * input, uint8_t alg_id, uint16_t key_id, unsigned long long int mi, int len);
+uint8_t p25_decode_es_header(dsd_opts * opts, dsd_state * state, uint8_t * input, uint8_t * sap, int * ptr, int len);
+uint8_t p25_decode_es_header_2(dsd_opts * opts, dsd_state * state, uint8_t * input, uint8_t * sap, int * ptr, int len);
+void p25_decode_extended_address(dsd_opts * opts, dsd_state * state, uint8_t * input, uint8_t * sap, int * ptr);
+void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_byte);
+void p25_decode_pdu_header(dsd_opts * opts, dsd_state * state, uint8_t * input);
+void p25_decode_pdu_data(dsd_opts * opts, dsd_state * state, uint8_t * input, int len);
+void p25_decode_rsp(uint8_t C, uint8_t T, uint8_t S, char * rsp_string);
+void p25_decode_sap(uint8_t SAP, char * sap_string);
+
 //Time and Date Functions
 char * getTime();
 char * getTimeC();
