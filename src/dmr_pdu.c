@@ -40,15 +40,19 @@ void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input
     //TODO: Add TMS String to ncurses string w/ wide char support?
     //for now, just rip the first 40 or so chars lower byte value 
     //in the ASCII Range (should be alright for a quick visual)
-    char c = input[i+1];
-    if (wr == 1 && i < 76 && c < 0x7F && c >= 0x20)
-      strcat (state->dmr_lrrp_gps[slot], &c);
+    char c[2]; c[0] = (char)input[i+1]; c[2] = 0;
+    if (wr == 1&& i < 76 && input[i+1] < 0x7F && input[i+1] >= 0x20)
+      strcat (state->dmr_lrrp_gps[slot], c);
 
   }
 
   //add elipses to indicate this is possibly truncated
   if (wr == 1)
     strcat (state->dmr_lrrp_gps[slot], "...");
+
+  //debug
+  // if (wr == 1)
+  //   fprintf (stderr, "%s", state->dmr_lrrp_gps[slot]);
 }
 
 void utf8_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input)
@@ -223,49 +227,50 @@ void dmr_udp_comp_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t
   else if (spid == 2 || dpid == 2)
   {
     //untested
-    uint8_t DMR_PDU_bits[127*8]; memset(DMR_PDU_bits, 0, sizeof(DMR_PDU_bits));
-    unpack_byte_array_into_bit_array(DMR_PDU+ptr, DMR_PDU_bits, len*sizeof(uint8_t));
-    lip_protocol_decoder(opts, state, DMR_PDU_bits);
+    uint8_t bits[127*8]; memset(bits, 0, sizeof(bits));
+    unpack_byte_array_into_bit_array(DMR_PDU+ptr, bits, len*sizeof(uint8_t));
+    lip_protocol_decoder(opts, state, bits);
   }
   else fprintf (stderr, "Unknown Decode Format;");
 
 }
 
-void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
+//IP PDU header decode and port forward to appropriate decoder
+void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * input)
 {
 
   uint8_t slot = state->currentslot;
   
   //the IPv4 Header
-  uint8_t version = DMR_PDU[0] >> 4; //may need to read ahead and get this value before coming here
-  uint8_t ihl = DMR_PDU[0] & 0xF; //decompressed value is 0x05 (may need to check this before preceeding)
-  uint8_t tos = DMR_PDU[1]; //0
-  uint16_t tlen = (DMR_PDU[2] << 8) | DMR_PDU[3]; //IPv4 header length (20 bytes) + UDP header length (5 bytes) + Packet Data
-  uint16_t iden = (DMR_PDU[4] << 8) | DMR_PDU[5];
-  uint8_t ipf = DMR_PDU[6] >> 5; //0
-  uint16_t offset = ((DMR_PDU[6] & 0x1F) << 8) | DMR_PDU[7]; //0
-  uint8_t ttl = DMR_PDU[8]; //should be 0x40 (64)
-  uint8_t prot = DMR_PDU[9];
-  uint16_t hsum = (DMR_PDU[10] << 8) | DMR_PDU[11];
+  uint8_t version = input[0] >> 4; //may need to read ahead and get this value before coming here
+  uint8_t ihl = input[0] & 0xF; //decompressed value is 0x05 (may need to check this before preceeding)
+  uint8_t tos = input[1]; //0
+  uint16_t tlen = (input[2] << 8) | input[3]; //IPv4 header length (20 bytes) + UDP header length (5 bytes) + Packet Data
+  uint16_t iden = (input[4] << 8) | input[5];
+  uint8_t ipf = input[6] >> 5; //0
+  uint16_t offset = ((input[6] & 0x1F) << 8) | input[7]; //0
+  uint8_t ttl = input[8]; //should be 0x40 (64)
+  uint8_t prot = input[9];
+  uint16_t hsum = (input[10] << 8) | input[11];
 
   if (opts->payload == 1)
     fprintf (stderr, "\n IPv%d; IHL: %d; Type of Service: %d; Total Len: %d; IP ID: %04X; Flags: %X;\n Fragment Offset: %d; TTL: %d; Protocol: 0x%02X; Checksum: %04X; PDU Len: %d;", version, ihl, tos, tlen, iden, ipf, offset, ttl, prot, hsum, len);
 
   //take a look at the src, dst, and port indicated (assuming both ports will match)
-  uint32_t src24 = (DMR_PDU[13] << 16) | (DMR_PDU[14] << 8) | DMR_PDU[15];
-  uint32_t dst24 = (DMR_PDU[17] << 16) | (DMR_PDU[18] << 8) | DMR_PDU[19];
-  uint16_t port1 = (DMR_PDU[20] << 8) | DMR_PDU[21];
-  uint16_t port2 = (DMR_PDU[22] << 8) | DMR_PDU[23];
-  fprintf (stderr, "\n SRC(24): %08d; IP: %03d.%03d.%03d.%03d; ", src24, DMR_PDU[12], DMR_PDU[13], DMR_PDU[14], DMR_PDU[15]);
+  uint32_t src24 = (input[13] << 16) | (input[14] << 8) | input[15];
+  uint32_t dst24 = (input[17] << 16) | (input[18] << 8) | input[19];
+  uint16_t port1 = (input[20] << 8) | input[21];
+  uint16_t port2 = (input[22] << 8) | input[23];
+  fprintf (stderr, "\n SRC(24): %08d; IP: %03d.%03d.%03d.%03d; ", src24, input[12], input[13], input[14], input[15]);
   if (prot == 0x11) fprintf (stderr, "Port: %04d; ", port1);
-  fprintf (stderr, "\n DST(24): %08d; IP: %03d.%03d.%03d.%03d; ", dst24, DMR_PDU[16], DMR_PDU[17], DMR_PDU[18], DMR_PDU[19]);
+  fprintf (stderr, "\n DST(24): %08d; IP: %03d.%03d.%03d.%03d; ", dst24, input[16], input[17], input[18], input[19]);
   if (prot == 0x11) fprintf (stderr, "Port: %04d; ", port2);
 
   //IP Protocol List: https://en.wikipedia.org/wiki/List_of_IP_protocol_numbers
   if (prot == 0x01) //ICMP
   {
-    uint8_t icmp_type = DMR_PDU[20];
-    uint8_t icmp_code = DMR_PDU[21];
+    uint8_t icmp_type = input[20];
+    uint8_t icmp_code = input[21];
     uint16_t icmp_chk = port2;
     fprintf (stderr, "\n ICMP Protocol; Type: %02X; Code: %02X; Checksum: %02X;", icmp_type, icmp_code, icmp_chk);
     if (icmp_type == 3)
@@ -283,25 +288,26 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
     }
     //see: https://en.wikipedia.org/wiki/Internet_Control_Message_Protocol
     //look at attached message, if present
-    if (DMR_PDU[28] == 0x45) //if another chained IPv4 header and/or message
+    if (input[28] == 0x45) //if another chained IPv4 header and/or message
     {
       fprintf (stderr, "\n ------------Attached Message-------------");
-      dmr_ip_pdu(opts, state, len-28, DMR_PDU+28);
+      decode_ip_pdu(opts, state, len-28, input+28);
     }
     
   }
 
   else if (prot == 0x11) //UDP
   {
-    uint16_t udp_len = (DMR_PDU[24] << 8) | DMR_PDU[25]; //This UDP Length information element is the length in bytes of this user datagram including this header and the application data (no IP header)
-    uint16_t udp_chk = (DMR_PDU[26] << 8) | DMR_PDU[27];
+    uint16_t udp_len = (input[24] << 8) | input[25]; //This UDP Length information element is the length in bytes of this user datagram including this header and the application data (no IP header)
+    uint16_t udp_chk = (input[26] << 8) | input[27];
     fprintf (stderr, "\n UDP Protocol; Datagram Len: %d; UDP Checksum: %04X; ", udp_len, udp_chk);
 
-    //Are IP DMR PDU types only dictated by Port Number? Or is this just the defaults when programmed?
     if (port1 == 231 && port2 == 231)
     {
       fprintf (stderr, "Cellocator;");
       sprintf (state->dmr_lrrp_gps[slot], "Cellocator SRC: %d; DST: %d;", src24, dst24);
+      if (len > 28)
+        decode_cellocator(opts, state, input+28, len-28);
     }
     else if (port1 == 4001 && port2 == 4001)
     {
@@ -310,7 +316,7 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
         len -= 33;
 
       fprintf (stderr, "LRRP;");
-      dmr_lrrp (opts, state, len, src24, dst24, DMR_PDU+28); //len is offset with IP and UDP header lens, 4 CRC, and 1 for the 0D token
+      dmr_lrrp (opts, state, len, src24, dst24, input+28); //len is offset with IP and UDP header lens, 4 CRC, and 1 for the 0D token
     }
     else if (port1 == 4004 && port2 == 4004)
     {
@@ -322,20 +328,17 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
       fprintf (stderr, "ARS;");
       //TODO: ARS Decoder
       sprintf (state->dmr_lrrp_gps[slot], "ARS SRC: %d; DST: %d; ", src24, dst24);
-      utf8_to_text(state, 0, 10, DMR_PDU+28); //seen some ARS radio IDs in ASCII/ISO7/UTF8 format here
+      utf8_to_text(state, 0, 10, input+28); //seen some ARS radio IDs in ASCII/ISO7/UTF8 format here
     }
     else if (port1 == 4007 && port2 == 4007)
     {
-      //sanity check
-      if (len > 36)
-        len -= 36;
-
-      uint16_t tms_len = (DMR_PDU[28] << 8) | DMR_PDU[29]; //this as len makes sense, its always 10 less than the UDP Datagram len value
-      unsigned long long int tms_unk = ((unsigned long long int)DMR_PDU[30] << 32UL) | (DMR_PDU[31] << 24) | (DMR_PDU[32] << 16) | (DMR_PDU[33] << 8) | DMR_PDU[34];
+      int tms_len = (input[28] << 8) | input[29];
+      if (tms_len > 4) tms_len -= 4; //remove CRC
+      unsigned long long int tms_unk = ((unsigned long long int)input[30] << 32UL) | (input[31] << 24) | (input[32] << 16) | (input[33] << 8) | input[34];
       fprintf (stderr, "TMS; ");
       fprintf (stderr, "Len: %d; ???: %010llX;", tms_len, tms_unk);
       sprintf (state->dmr_lrrp_gps[slot], "TMS SRC: %d; DST: %d; ", src24, dst24);
-      utf16_to_text(state, 1, len, DMR_PDU+35);
+      utf16_to_text(state, 1, tms_len, input+35); //observed +33 on another system (could just be coincidence that the two bytes were '9')
     }
     else if (port1 == 4008 && port2 == 4008)
     {
@@ -366,7 +369,7 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
 
       fprintf (stderr, "TMS;");
       sprintf (state->dmr_lrrp_gps[slot], "TMS SRC: %d; DST: %d; ", src24, dst24);
-      utf16_to_text(state, 1, len, DMR_PDU+28);
+      utf16_to_text(state, 1, len, input+28);
     }
     else if (port1 == 5017 && port2 == 5017)
     {
@@ -374,9 +377,17 @@ void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
       if (len > 32)
         len -= 32;
 
-      uint8_t DMR_PDU_bits[127*12*8]; memset(DMR_PDU_bits, 0, sizeof(DMR_PDU_bits));
-      unpack_byte_array_into_bit_array(DMR_PDU+28, DMR_PDU_bits, len*sizeof(uint8_t));
-      lip_protocol_decoder(opts, state, DMR_PDU_bits);
+      uint8_t bits[127*12*8]; memset(bits, 0, sizeof(bits));
+      unpack_byte_array_into_bit_array(input+28, bits, len*sizeof(uint8_t));
+      lip_protocol_decoder(opts, state, bits);
+    }
+    //known P25 Ports
+    else if (port1 == 49198 && port2 == 49198)
+    {
+      sprintf (state->dmr_lrrp_gps[slot], "P25 Tier 2 LOCN SRC(IP): %d.%d.%d.%d; DST(IP): %d.%d.%d.%d; ", 
+               input[12], input[13], input[14], input[15], input[16], input[17], input[18], input[19]);
+      fprintf (stderr, "P25 Tier 2 Location Service;"); //LRRP
+      dmr_lrrp (opts, state, len, src24, dst24, input+28); //same offsets as DMR variety (unknown)
     }
     else
     {

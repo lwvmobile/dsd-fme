@@ -1028,7 +1028,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         if (state->data_header_sap[slot] == 4) //IP based
         {
           uint16_t len = ((blocks+1)*block_len)-4; //total number of bytes in PDU minus 4 CRC32 bytes
-          dmr_ip_pdu (opts, state, len, state->dmr_pdu_sf[slot]);
+          decode_ip_pdu (opts, state, len, state->dmr_pdu_sf[slot]);
         }
         else if (state->data_header_sap[slot] == 10) //short data, may also need to check for SD:D [DD_HEAD]
         {

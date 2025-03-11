@@ -1293,7 +1293,6 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
 void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_bytes[], uint8_t block_len, uint8_t databurst, uint8_t type);
 
 //dmr pdu handling
-void dmr_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU);
 void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU);
 void dmr_udp_comp_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU);
 void dmr_reset_blocks (dsd_opts * opts, dsd_state * state);
@@ -1310,6 +1309,11 @@ void p25_decode_pdu_header(dsd_opts * opts, dsd_state * state, uint8_t * input);
 void p25_decode_pdu_data(dsd_opts * opts, dsd_state * state, uint8_t * input, int len);
 void p25_decode_rsp(uint8_t C, uint8_t T, uint8_t S, char * rsp_string);
 void p25_decode_sap(uint8_t SAP, char * sap_string);
+
+//misc pdu
+void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * input);
+void decode_cellocator(dsd_opts * opts, dsd_state * state, uint8_t * input, int len);
+void decode_ars(dsd_opts * opts, dsd_state * state, uint8_t * input, int len);
 
 //Time and Date Functions
 char * getTime();

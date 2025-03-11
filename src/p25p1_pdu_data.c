@@ -259,7 +259,7 @@ void p25_decode_pdu_data(dsd_opts * opts, dsd_state * state, uint8_t * input, in
     
     //now start checking for the actual message
     if (sap == 0 || sap == 4) //User Data or Packet Data (both are UDP typically, same format dmr UDP/IP data)
-      dmr_ip_pdu (opts, state, len, input+ptr); //need to work on gettting that offset value to this point +2 on the 64414
+      decode_ip_pdu (opts, state, len, input+ptr);
 
     if (sap == 48) //Tier 1 Location Service (or does it depend on the io bit?)
       utf8_to_text(state, 0, len-ptr, input+ptr); //TODO, read initial string, i.e., $GPRMC and properly decode

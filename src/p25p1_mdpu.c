@@ -335,7 +335,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     {
       block_ptr = 0;
       fprintf (stderr, "%s",KCYN);
-      fprintf (stderr, "\n P25 MPDU 34 Rate Payload \n ");
+      fprintf (stderr, "\n P25 MPDU Rate 34 Payload \n ");
       for (i = 0; i < 12; i++) //header
         fprintf (stderr, "%02X", mpdu_byte[i]);
       fprintf (stderr, "         Header \n ");
@@ -351,7 +351,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
             fprintf (stderr, "%s",KRED);
             fprintf (stderr, " CRC ERR;");
             fprintf (stderr, "%s",KCYN);
-            fprintf (stderr, " EXT: %03X; CMP: %03X", crc9_ext[block_ptr], crc9_cmp[block_ptr]);
+            // fprintf (stderr, " EXT: %03X; CMP: %03X", crc9_ext[block_ptr], crc9_cmp[block_ptr]);
           }
           if (i != (mpdu_idx-1))
             fprintf (stderr, "\n ");
@@ -395,7 +395,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     if (opts->payload == 1)
     {
       fprintf (stderr, "%s",KCYN);
-      fprintf (stderr, "\n P25 MPDU 12 Rate Payload: \n  ");
+      fprintf (stderr, "\n P25 MPDU Rate 12 Payload: \n  ");
       for (i = 0; i < len; i++) //header and payload combined
       {
         if (i == 12) fprintf (stderr, " Header");

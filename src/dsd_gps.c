@@ -772,3 +772,43 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 
   fprintf (stderr, "%s", KNRM);
 }
+
+void decode_cellocator(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
+{
+  //TODO: This
+  UNUSED(opts);
+  UNUSED(state);
+  UNUSED(input);
+  UNUSED(len);
+
+  //UTF8 Text: MCGP (0x4D434750) followed by data values 
+  //(0417D1050000F45FD1DD00010000000097BDD56C81000009AAAABF12864C)
+  utf8_to_text(state, 0, 4, input);
+
+  fprintf (stderr, " Cellocator:");
+
+  uint8_t type = input[4];
+  if      (type == 1)  fprintf (stderr, " Platform Manifest Data;");
+  else if (type == 2)  fprintf (stderr, " CAN Data;");
+  else if (type == 3)  fprintf (stderr, " CAN Trigger Data;");
+  else if (type == 4)  fprintf (stderr, " Time and Location Data;");
+  else if (type == 5)  fprintf (stderr, " Accelerometer Data;");
+  else if (type == 6)  fprintf (stderr, " PSP Alarm System Data;");
+  else if (type == 7)  fprintf (stderr, " Usage Counter Data;");
+  else if (type == 8)  fprintf (stderr, " Command Authentication Table Data;");
+  else if (type == 9)  fprintf (stderr, " GSM Neighbor List Data;");
+  else if (type == 10) fprintf (stderr, " Maintenance Server Platform Manifest Data;");
+  else fprintf (stderr, " Unknown Data;");
+
+  //Data afterwards appears to be an arbitrary len so has variable reporting data
+  //will need to establish a len value for data and contents
+
+}
+void decode_ars(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
+{
+  //TODO: This
+  UNUSED(opts);
+  UNUSED(state);
+  UNUSED(input);
+  UNUSED(len);
+}
