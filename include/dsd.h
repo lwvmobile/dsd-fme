@@ -1302,7 +1302,7 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_P
 //p25 pdu handling
 uint8_t p25_decrypt_pdu(dsd_opts * opts, dsd_state * state, uint8_t * input, uint8_t alg_id, uint16_t key_id, unsigned long long int mi, int len);
 uint8_t p25_decode_es_header(dsd_opts * opts, dsd_state * state, uint8_t * input, uint8_t * sap, int * ptr, int len);
-uint8_t p25_decode_es_header_2(dsd_opts * opts, dsd_state * state, uint8_t * input, uint8_t * sap, int * ptr, int len);
+uint8_t p25_decode_es_header_2(dsd_opts * opts, dsd_state * state, uint8_t * input, int * ptr, int len);
 void p25_decode_extended_address(dsd_opts * opts, dsd_state * state, uint8_t * input, uint8_t * sap, int * ptr);
 void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_byte);
 void p25_decode_pdu_header(dsd_opts * opts, dsd_state * state, uint8_t * input);

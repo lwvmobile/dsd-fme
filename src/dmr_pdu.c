@@ -302,6 +302,9 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
     uint16_t udp_chk = (input[26] << 8) | input[27];
     fprintf (stderr, "\n UDP Protocol; Datagram Len: %d; UDP Checksum: %04X; ", udp_len, udp_chk);
 
+    //if dst port and src prt don't match, then make it so
+    if (port2 != port1) port1 = port2;
+
     if (port1 == 231 && port2 == 231)
     {
       fprintf (stderr, "Cellocator;");

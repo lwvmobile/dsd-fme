@@ -117,40 +117,30 @@ uint8_t p25_decode_es_header(dsd_opts * opts, dsd_state * state, uint8_t * input
 
 }
 
-//alternate configuration for this
-uint8_t p25_decode_es_header_2(dsd_opts * opts, dsd_state * state, uint8_t * input, uint8_t * sap, int * ptr, int len)
+//alternate configuration for this (no Aux SAP)
+uint8_t p25_decode_es_header_2(dsd_opts * opts, dsd_state * state, uint8_t * input, int * ptr, int len)
 {
 
   uint8_t encrypted = 0;
 
-  uint8_t bits[13*8]; memset (bits, 0, sizeof(bits));
-  unpack_byte_array_into_bit_array(input, bits, 13);
+  uint8_t bits[12*8]; memset (bits, 0, sizeof(bits));
+  unpack_byte_array_into_bit_array(input, bits, 12);
 
   fprintf (stderr, "%s",KYEL);
+  uint8_t  alg_id = (uint8_t)ConvertBitIntoBytes(bits+0, 8);
+  uint16_t key_id = (uint16_t)ConvertBitIntoBytes(bits+8, 16);
   unsigned long long int mi = (unsigned long long int)ConvertBitIntoBytes(bits+24, 64);
-  uint8_t  mi_res = (uint8_t)ConvertBitIntoBytes(bits+64+24, 8);
-  uint8_t  alg_id = (uint8_t)ConvertBitIntoBytes(bits+16, 8);
-  uint16_t key_id = (uint16_t)ConvertBitIntoBytes(bits, 16);
-  fprintf (stderr, "\n ES Aux Encryption Header 2; ALG: %02X; KEY ID: %04X; MI: %016llX; ", alg_id, key_id, mi);
+  uint8_t  mi_res = (uint8_t)ConvertBitIntoBytes(bits+88, 8);
+  fprintf (stderr, "\n ES Aux Encryption Header 2; ALG: %02X; KEY ID: %04X; MI: %016llX;", alg_id, key_id, mi);
   if (mi_res != 0)
     fprintf (stderr, " RES: %02X;", mi_res);
-
-  //The Auxiliary Header signals the actual SAP value of the encrypted message (this byte is not encrypted)
-  uint8_t aux_res = (uint8_t)ConvertBitIntoBytes(&bits[96], 2); //these two bits should always be signalled as 1's, so 0b11, and if combined with the 2ndary SAP, 0xC0 if SAP == 0x00
-  uint8_t aux_sap = (uint8_t)ConvertBitIntoBytes(&bits[98], 6); //the SAP of the message that is encrypted immediately after
-  char aux_sap_string[99];
-  p25_decode_sap (aux_sap, aux_sap_string);
   fprintf (stderr, "%s",KNRM);
-  UNUSED(aux_res);
-
-  if (alg_id != 0x80)
-    encrypted = 1;
 
   //Decrypt PDU
-  encrypted = p25_decrypt_pdu(opts, state, input+13, alg_id, key_id, mi, len-13);
+  if (alg_id != 0x80)
+    encrypted = p25_decrypt_pdu(opts, state, input+12, alg_id, key_id, mi, len-12);
 
-  *sap = aux_sap;
-  *ptr += 13;
+  *ptr += 12;
 
   return encrypted;
 
@@ -266,7 +256,7 @@ void p25_decode_pdu_data(dsd_opts * opts, dsd_state * state, uint8_t * input, in
   }
   else
   {
-    fprintf (stderr, "Encrypted PDU;");
+    fprintf (stderr, " Encrypted PDU;");
   }
 
 }
