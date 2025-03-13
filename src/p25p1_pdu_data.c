@@ -251,8 +251,10 @@ void p25_decode_pdu_data(dsd_opts * opts, dsd_state * state, uint8_t * input, in
     if (sap == 0 || sap == 4) //User Data or Packet Data (both are UDP typically, same format dmr UDP/IP data)
       decode_ip_pdu (opts, state, len, input+ptr);
 
-    if (sap == 48) //Tier 1 Location Service (or does it depend on the io bit?)
+    else if (sap == 48) //Tier 1 Location Service (or does it depend on the io bit?)
       utf8_to_text(state, 0, len-ptr, input+ptr); //TODO, read initial string, i.e., $GPRMC and properly decode
+
+    else utf8_to_text(state, 0, len-ptr, input+ptr); //default catch all
   }
   else
   {

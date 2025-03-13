@@ -461,6 +461,7 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
     {
       sprintf (state->dmr_lrrp_gps[slot], " IP Call SRC: %d; Port; %d; DST: %d; Port: %d;", src24, port1, dst24, port2);
       fprintf (stderr, "Unknown UDP Port;");
+      utf8_to_text(state, 0, len-28, input+28);
     }
 
   }
@@ -469,6 +470,7 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
   {
     sprintf (state->dmr_lrrp_gps[slot], " IP Call SRC: %d; DST: %d; Protocol: %d;", src24, dst24, prot);
     fprintf(stderr, "Unknown IP Protocol: %02X;", prot);
+    utf8_to_text(state, 0, len-28, input+28);
   }
   
 }
