@@ -254,7 +254,12 @@ void p25_decode_pdu_data(dsd_opts * opts, dsd_state * state, uint8_t * input, in
     else if (sap == 48) //Tier 1 Location Service (or does it depend on the io bit?)
       utf8_to_text(state, 0, len-ptr, input+ptr); //TODO, read initial string, i.e., $GPRMC and properly decode
 
-    else utf8_to_text(state, 0, len-ptr, input+ptr); //default catch all
+    else //default catch all
+    { 
+      if (len > ptr)
+        utf8_to_text(state, 0, len-ptr, input+ptr);
+      else utf8_to_text(state, 0, len, input+ptr);
+    }
   }
   else
   {
