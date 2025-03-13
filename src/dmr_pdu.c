@@ -22,7 +22,7 @@ uint16_t convert_hex_to_dec(uint16_t input)
 void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input)
 {
   uint8_t slot = state->currentslot;
-  fprintf (stderr, "\n UTF16 Text: ");
+  // fprintf (stderr, "\n UTF16 Text: ");
   uint16_t ch16 = 0;
   for (uint16_t i = 0; i < len; i += 2)
   {
@@ -31,10 +31,12 @@ void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input
     ch16 |= (uint16_t)input[i+1];
     // fprintf (stderr, " %04X; ", ch16); //debug for raw values to check grouping for offset
 
-    if (ch16 >= 0x20) //if not a linebreak or terminal commmands
+    if (ch16 >= 0x20 && ch16 != 0x040D) //if not a linebreak or terminal commmands
       fprintf (stderr, "%lc", ch16);
     else if (ch16 == 0) //if padding (0 could also indicate end of text terminator?)
       fprintf (stderr, "_");
+    else if (ch16 == 0x040D) //Ѝ or 0x040D may be ETLF
+      fprintf (stderr, " / ");
     else fprintf (stderr, "-");
 
     //TODO: Add TMS String to ncurses string w/ wide char support?
@@ -336,12 +338,75 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
     else if (port1 == 4007 && port2 == 4007)
     {
       int tms_len = (input[28] << 8) | input[29];
-      if (tms_len > 4) tms_len -= 4; //remove CRC
-      unsigned long long int tms_unk = ((unsigned long long int)input[30] << 32UL) | (input[31] << 24) | (input[32] << 16) | (input[33] << 8) | input[34];
-      fprintf (stderr, "TMS; ");
-      fprintf (stderr, "Len: %d; ???: %010llX;", tms_len, tms_unk);
+      fprintf (stderr, " TMS ");
+      fprintf (stderr, "Len: %d; ", tms_len);
+
+      //loosely based on information found here: https://github.com/OK-DMR/ok-dmrlib/blob/master/okdmr/dmrlib/motorola/text_messaging_service.py
+      //look at header and any optional values (simplified version)
+      int tms_ptr = 30;
+      uint8_t tms_hdr = input[tms_ptr++]; //first header
+      uint8_t tms_ack = (tms_hdr >> 0) & 0xF;
+      if (opts->payload == 1)
+        fprintf (stderr, "HDR: %02X; ", tms_hdr);
+      
+      //optional address len and address value
+      uint8_t tms_adl = input[tms_ptr++];
+      if (tms_adl != 0)
+      { 
+        //the encoding seems to start at the adl (len) byte, but does not include it
+        //so, to get the decoder to work, we well go back one byte and zero it out
+        tms_ptr--; //back up one position
+        input[tms_ptr] = 0;
+        fprintf (stderr, "Address Len: %d; Address: ", tms_adl);
+        utf16_to_text(state, 1, tms_adl-4, input+tms_ptr); //addresses seem to have an extra .4 value on end (4 octets)
+        input[tms_ptr] = tms_adl; //restore this byte
+        tms_ptr += tms_adl; //the len value seems to include the len byte
+        tms_ptr += 1; //advance the ptr back to negate the negation
+        fprintf (stderr, "; ");
+      }
+
+      //any additional headers (don't care)
+      uint8_t tms_more = input[tms_ptr] >> 7;
+      while(tms_more)
+      {
+        uint8_t tms_b1 = input[tms_ptr++];
+        uint8_t tms_b2 = input[tms_ptr];
+        if (opts->payload == 1)
+          fprintf (stderr, "B1: %02X; B2: %02X; ", tms_b1, tms_b2);
+        tms_more = tms_b1 >> 7;
+        if (tms_more) tms_ptr++;
+      }
+
       sprintf (state->dmr_lrrp_gps[slot], "TMS SRC: %d; DST: %d; ", src24, dst24);
-      utf16_to_text(state, 1, tms_len, input+35); //observed +33 on another system (could just be coincidence that the two bytes were '9')
+      if (tms_ack == 0)
+      {
+        //sanity check, see if the ptr is odd (start always seems to be an odd value)
+        if (!tms_ptr%1) tms_ptr++;
+
+        //sanity check on tms_len at this point (fix offset for below)
+        if (tms_len > 31)
+          tms_len -= (tms_ptr - 31);
+
+        //the first utf16 char seems to be encoded as XXYY where XX is not part of the
+        //encoding for the character, so zero that byte out and restore it later
+        tms_ptr -= 2; //back up two positions
+        uint8_t temp = input[tms_ptr];
+        input[tms_ptr] = 0;
+
+        //debug
+        if (opts->payload == 1)
+          fprintf (stderr, "Ptr: %d; Len: %d;", tms_ptr, tms_len);
+        fprintf (stderr, "\n Text: ");
+        utf16_to_text(state, 1, tms_len, input+tms_ptr);
+
+        input[tms_ptr] = temp; //restore byte
+        tms_ptr += 2;
+      }
+      else
+      {
+        strcat (state->dmr_lrrp_gps[slot], "ACK;");
+        fprintf (stderr, "Acknowledgment;");
+      }
     }
     else if (port1 == 4008 && port2 == 4008)
     {
