@@ -620,6 +620,26 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       fprintf (stderr, "Key %010llX ", state->RR);
       fprintf (stderr, "%s ", KNRM);
     }
+
+    if (slot == 0 && (state->payload_algid == 0x25 || state->payload_algid == 0x24) && state->aes_key_loaded[0] == 1)
+    {
+      fprintf (stderr, "\n ");
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, "Key: %016llX %016llX ", state->A1[0], state->A2[0]);
+      if (state->payload_algid == 0x25)
+        fprintf (stderr, "%016llX %016llX", state->A3[0], state->A4[0]);
+      fprintf (stderr, "%s ", KNRM);
+    }
+
+    if (slot == 1 && (state->payload_algidR == 0x25 || state->payload_algidR == 0x24) && state->aes_key_loaded[1] == 1)
+    {
+      fprintf (stderr, "\n ");
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, "Key: %016llX %016llX ", state->A1[1], state->A2[1]);
+      if (state->payload_algidR == 0x25)
+        fprintf (stderr, "%016llX %016llX", state->A3[1], state->A4[1]);
+      fprintf (stderr, "%s ", KNRM);
+    }
     
   }
 

@@ -1192,24 +1192,26 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       refresh();
     }
 
-    //Privacy Key Entry
+    //Key Entry
     if (choice == 14)
     {
       state->payload_keyid = 0;
       state->payload_keyidR = 0;
       short int option = 0;
-      entry_win = newwin(14, WIDTH+6, starty+10, startx+10);
+      entry_win = newwin(16, WIDTH+6, starty+10, startx+10);
       box (entry_win, 0, 0);
       mvwprintw(entry_win, 2, 2, "Key Type Selection");
       mvwprintw(entry_win, 3, 2, " ");
       mvwprintw(entry_win, 4, 2, "1 -  Basic Privacy ");
-      mvwprintw(entry_win, 5, 2, "2 - **tera Privacy ");
+      mvwprintw(entry_win, 5, 2, "2 - Hytera Privacy ");
       mvwprintw(entry_win, 6, 2, "3 - NXDN/dPMR Scrambler ");
       mvwprintw(entry_win, 7, 2, "4 - Force BP/Scr Key Priority ");
       mvwprintw(entry_win, 8, 3, "-------------------------------- ");
-      mvwprintw(entry_win, 9, 2, "5 - RC4 Key ");
-      mvwprintw(entry_win, 10, 2, "6 - Force DMR RC4 Priority/LE ");
-      mvwprintw(entry_win, 11, 3, " ");
+      mvwprintw(entry_win, 9, 2, "5 - RC4 or DES Key ");
+      // mvwprintw(entry_win, 10, 2, "6 - Force DMR RC4 Priority/LE ");
+      mvwprintw(entry_win, 10, 2, "6 - AES-128 or AES-256 Key ");
+      mvwprintw(entry_win, 11, 3, "-------------------------------- ");
+      mvwprintw(entry_win, 14, 3, " ");
       echo();
       refresh();
       wscanw(entry_win, "%hd", &option); //%d
@@ -1312,28 +1314,106 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         state->R = 0;
         entry_win = newwin(6, WIDTH+6, starty+10, startx+10);
         box (entry_win, 0, 0);
-        mvwprintw(entry_win, 2, 2, "RC4 Key Value (HEX):");
+        mvwprintw(entry_win, 2, 2, "RC4/DES Key Value (HEX):");
         mvwprintw(entry_win, 3, 3, " ");
         echo();
         refresh();
         wscanw(entry_win, "%llX", &state->R);
         noecho();
-        if (state->R > 0xFFFFFFFFFF)
-        {
-          state->R = 0xFFFFFFFFFF;
-        }
+        //disable size check for DES keys
+        // if (state->R > 0xFFFFFFFFFF)
+        // {
+        //   state->R = 0xFFFFFFFFFF;
+        // }
         state->RR = state->R; //assign for both slots
         state->keyloader = 0; //turn off keyloader
       }
 
       //toggle enforcement of rc4 key over missing pi header/le on DMR
+      // if (option == 6)
+      // {
+      //   if (state->M == 1 || state->M == 0x21)
+      //   {
+      //     state->M = 0;
+      //   }
+      //   else state->M = 0x21;
+      // }
+
+      //load AES keys
       if (option == 6)
       {
-        if (state->M == 1 || state->M == 0x21)
-        {
-          state->M = 0;
-        }
-        else state->M = 0x21;
+        state->K1 = 0;
+        state->K2 = 0;
+        state->K3 = 0;
+        state->K4 = 0;
+        state->H = 0;
+
+        memset (state->A1, 0, sizeof(state->A1));
+        memset (state->A2, 0, sizeof(state->A2));
+        memset (state->A3, 0, sizeof(state->A3));
+        memset (state->A4, 0, sizeof(state->A4));
+
+        entry_win = newwin(7, WIDTH+8, starty+10, startx+10);
+        box (entry_win, 0, 0);
+        mvwprintw(entry_win, 2, 2, " Enter AES128/256 Key Value (HEX) ");
+        mvwprintw(entry_win, 3, 2, " First 16 Chars or Zero");
+        mvwprintw(entry_win, 4, 3, " ");
+        echo();
+        refresh();
+        wscanw(entry_win, "%llX", &state->K1);
+        noecho();
+
+        entry_win = newwin(7, WIDTH+8, starty+10, startx+10);
+        box (entry_win, 0, 0);
+        // mvwprintw(entry_win, 2, 2, " Enter **tera Privacy Key Value 2 (HEX) ");
+        mvwprintw(entry_win, 3, 2, " Second 16 Chars or Zero");
+        mvwprintw(entry_win, 4, 3, " ");
+        echo();
+        refresh();
+        wscanw(entry_win, "%llX", &state->K2);
+        noecho();
+
+        entry_win = newwin(7, WIDTH+8, starty+10, startx+10);
+        box (entry_win, 0, 0);
+        // mvwprintw(entry_win, 2, 2, " Enter **tera Privacy Key Value 3 (HEX) ");
+        mvwprintw(entry_win, 3, 2, " Third 16 Chars or Zero");
+        mvwprintw(entry_win, 4, 3, " ");
+        echo();
+        refresh();
+        wscanw(entry_win, "%llX", &state->K3);
+        noecho();
+
+        entry_win = newwin(7, WIDTH+8, starty+10, startx+10);
+        box (entry_win, 0, 0);
+        // mvwprintw(entry_win, 2, 2, " Enter **tera Privacy Key Value 4 (HEX) ");
+        mvwprintw(entry_win, 3, 2, " Fourth 16 Chars or Zero");
+        mvwprintw(entry_win, 4, 3, " ");
+        echo();
+        refresh();
+        wscanw(entry_win, "%llX", &state->K4);
+        noecho();
+
+        //load the AES keys into a seperate handler
+        state->A1[0] = state->A1[1] = state->K1;
+        state->A2[0] = state->A2[1] = state->K2;
+        state->A3[0] = state->A3[1] = state->K3;
+        state->A4[0] = state->A4[1] = state->K4;
+
+        //zero out the K1-K4
+        state->K1 = 0;
+        state->K2 = 0;
+        state->K3 = 0;
+        state->K4 = 0;
+
+        state->keyloader = 0; //turn off keyloader
+
+        //check to see if there is a value loaded or not
+        if (state->A1[0] == 0 && state->A2[0] == 0 && state->A3[0] == 0 && state->A4[0] == 0)
+          state->aes_key_loaded[0] = 0;
+        else state->aes_key_loaded[0] = 1;
+
+        //mirror
+        state->aes_key_loaded[1] = state->aes_key_loaded[0];
       }
 
       if (state->K == 0 && state->K1 == 0 && state->K2 == 0 && state->K3 == 0 && state->K4 == 0)
@@ -2781,13 +2861,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     if (state->R != 0)  printw ("| Forcing Key Priority -- NXDN Sc Key: %05lld \n", state->R);
     if (state->K != 0)  printw ("| Forcing Key Priority -- Moto BP Key: %03lld \n", state->K);
-    if (state->K1 != 0) printw ("| Forcing Key Priority -- tera BP Key: %016llX \n", state->K1);
+    if (state->K1 != 0) printw ("| Forcing Key Priority -- Hytera BP Key: %016llX \n", state->K1);
     if (state->K != 0 && state->K1 != 0) printw ("| Warning! Multiple DMR Key Types Loaded! \n"); //warning may not be required
   }
   if (state->M == 0x21)
   {
     if (state->R != 0)  printw ("| Forcing Key Priority -- RC4 Key: %010llX \n", state->R);
   }
+  if (state->M == 0x16) printw ("| Forcing Key Priority -- TYT 16-bit Key: %04llX \n", state->H);
 
   if (opts->scanner_mode == 1)
   {
@@ -2923,9 +3004,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     if (state->m17_enc == 2)
     {
-      printw (" AES-CTR - IV: ");
+      attron(COLOR_PAIR(1));
+      printw ("AES-CTR - IV: ");
       //display packed meta as IV
-      for (i = 0; i < 14; i++)
+      for (i = 0; i < 16; i++)
         printw ("%02X", state->m17_meta[i]);
     }
 
@@ -3085,7 +3167,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("\n|");
     if (state->nxdn_cipher_type > 0)
     {
-      printw (" ALG: [0x%02X] KEY: [0x%02X] ", state->nxdn_cipher_type, state->nxdn_key);
+      // printw (" ALG: %d Key ID: %02X ", state->nxdn_cipher_type, state->nxdn_key);
+      printw (" ALG: %d Key ID: %02d ", state->nxdn_cipher_type, state->nxdn_key);
     }
     if (state->nxdn_cipher_type == 0x1 && state->carrier == 1)
     {
@@ -3096,26 +3179,28 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (state->R != 0)
       {
         attron(COLOR_PAIR(1));
-        printw ("KEY VALUE: [%05lld] ", state->R );
-        printw ("SEED: [%04llX]", state->payload_miN);
+        printw ("Seed: %04llX ", state->payload_miN);
+        printw ("Key: %05lld ", state->R );
         attron(COLOR_PAIR(3));
       }
     }
     if (state->nxdn_cipher_type == 0x2 && state->carrier == 1)
     {
       attron(COLOR_PAIR(1));
-      printw ("IV: [%016llX] ", state->payload_miN);
+      printw ("IV: %016llX ", state->payload_miN);
       attron(COLOR_PAIR(2));
       printw ("DES1 ");
+      if (state->R != 0) printw ("Key: %016llX ", state->R);
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
     }
     if (state->nxdn_cipher_type == 0x3 && state->carrier == 1)
     {
       attron(COLOR_PAIR(1));
-      printw ("IV: [%016llX] ", state->payload_miN);
+      printw ("IV: %016llX ", state->payload_miN);
       attron(COLOR_PAIR(2));
       printw ("AES-256 ");
+      if (state->aes_key_loaded[0] == 1) printw ("KS: %016llX", state->A4[0]);
       attroff(COLOR_PAIR(2));
       attron(COLOR_PAIR(3));
     }
@@ -3268,32 +3353,32 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     printw ("| V XTRA | "); //10 spaces
 
-    if(state->dmrburstL == 16 && state->payload_algid == 0 && (state->dmr_so & 0xCF) == 0x40) //4F or CF mask? & 0xCF currently
+    if(state->dmrburstL == 16 && state->payload_algid == 0 && state->dmr_so & 0x40) //4F or CF mask? & 0xCF currently //&& (state->dmr_so & 0xCF) == 0x40
     {
       attron(COLOR_PAIR(5));
-      printw (" **Pr** ");
+      printw (" **BP** ");
       attroff(COLOR_PAIR(5));
       attron(COLOR_PAIR(3));
     }
 
-    if(state->dmrburstL == 16 && state->payload_algid == 0 && state->K > 0 && state->dmr_fid == 0x10 && (state->dmr_so & 0xCF) == 0x40)
+    if(state->dmrburstL == 16 && state->payload_algid == 0 && state->K > 0 && state->dmr_fid == 0x10 && state->dmr_so & 0x40)
     {
       attron(COLOR_PAIR(1));
-      printw ("Pr Key [%3lld] ", state->K);
+      printw ("BP Key: %3lld ", state->K);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
 
-    if(state->dmrburstL == 16 && state->payload_algid == 0 && state->H > 0 && state->dmr_fid == 0x68 && ((state->dmr_so & 0xCF) == 0x40) )
+    if(state->dmrburstL == 16 && state->payload_algid == 0 && state->H > 0 && state->dmr_fid == 0x68 && state->dmr_so & 0x40)
     {
       attron(COLOR_PAIR(1));
-      printw ("**tera Pr Key [%010llX] ", state->H);
+      printw ("Hytera BP Key: %010llX ", state->H);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
 
     //ALG, KeyID, MI                            //was key_id
-    if(state->dmrburstL == 16 && state->payload_algid > 0 && (state->dmr_so & 0xCF) == 0x40)
+    if(state->dmrburstL == 16 && state->payload_algid > 0 && state->dmr_so & 0x40)
     {
       attron(COLOR_PAIR(1));
       printw ("ALG: 0x%02X KEY: 0x%02X MI: 0x%08X ", state->payload_algid, state->payload_keyid, state->payload_mi);
@@ -3322,6 +3407,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       attron(COLOR_PAIR(1));
       printw("DES1 ");
+      if (state->R != 0) { printw("Key: %010llX ", state->R); }
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algid == 0x9F)
+    {
+      attron(COLOR_PAIR(1));
+      printw("DES-XL ");
+      if (state->R != 0) { printw("Key: %010llX ", state->R); }
       attron(COLOR_PAIR(3));
     }
     if (state->payload_algid == 0x82)
@@ -3336,16 +3429,18 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw("DES3 ");
       attron(COLOR_PAIR(3));
     }
-    if (state->payload_algid == 0x85 || state->payload_algid == 0x24)
+    if (state->payload_algid == 0x89 || state->payload_algid == 0x24)
     {
       attron(COLOR_PAIR(1));
-      printw("AES-128");
+      printw("AES-128 ");
+      if (state->aes_key_loaded[0] != 0) { printw("KS: %016llX ", state->A2[0]); }
       attron(COLOR_PAIR(3));
     }
     if (state->payload_algid == 0x84 || state->payload_algid == 0x25 || state->payload_algid == 0x05)
     {
       attron(COLOR_PAIR(1));
-      printw("AES-256");
+      printw("AES-256 ");
+      if (state->aes_key_loaded[0] != 0) { printw("KS: %016llX ", state->A4[0]); }
       attron(COLOR_PAIR(3));
     }
     if (state->payload_algid == 0x02)
@@ -3468,30 +3563,30 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
       printw ("| V XTRA | "); //10 spaces
 
-      if(state->dmrburstR == 16 && state->payload_algidR == 0 && (state->dmr_soR & 0xCF) == 0x40) //4F or CF mask?
+      if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->dmr_soR & 0x40) //4F or CF mask?
       {
         attron(COLOR_PAIR(5));
-        printw (" **Pr** ");
+        printw (" **BP** ");
         attroff(COLOR_PAIR(5));
         attron(COLOR_PAIR(3));
       }
 
-      if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->K > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x10)
+      if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->K > 0 && state->dmr_soR & 0x40 && state->dmr_fidR == 0x10)
       {
         attron(COLOR_PAIR(1));
-        printw ("Pr Key [%3lld] ", state->K);
+        printw ("BP Key: %3lld ", state->K);
         attroff(COLOR_PAIR(1));
         attron(COLOR_PAIR(3));
       }
-      if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->H > 0 && ((state->dmr_soR & 0xCF) == 0x40) && state->dmr_fidR == 0x68)
+      if(state->dmrburstR == 16 && state->payload_algidR == 0 && state->H > 0 && state->dmr_soR & 0x40 && state->dmr_fidR == 0x68)
       {
         attron(COLOR_PAIR(1));
-        printw ("**tera Pr Key [%010llX] ", state->H);
+        printw ("Hytera BP Key: %010llX ", state->H);
         attroff(COLOR_PAIR(1));
         attron(COLOR_PAIR(3));
       }
       //ALG, KeyID, MI 2                          //was keyidR
-      if(state->dmrburstR == 16 && state->payload_algidR > 0 && (state->dmr_soR & 0xCF) == 0x40)
+      if(state->dmrburstR == 16 && state->payload_algidR > 0 && state->dmr_soR & 0x40)
       {
         attron(COLOR_PAIR(1));
         printw ("ALG: 0x%02X KEY: 0x%02X MI: 0x%08X ", state->payload_algidR, state->payload_keyidR, state->payload_miR);
@@ -3519,6 +3614,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         attron(COLOR_PAIR(1));
         printw("DES1 ");
+        if (state->RR != 0) { printw("Key: %010llX ", state->RR); }
+        attron(COLOR_PAIR(3));
+      }
+      if (state->payload_algidR == 0x9F)
+      {
+        attron(COLOR_PAIR(1));
+        printw("DES-XL ");
+        if (state->RR != 0) { printw("Key: %010llX ", state->RR); }
         attron(COLOR_PAIR(3));
       }
       if (state->payload_algidR == 0x82)
@@ -3533,16 +3636,18 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw("DES3 ");
         attron(COLOR_PAIR(3));
       }
-      if (state->payload_algidR == 0x85 || state->payload_algidR == 0x24)
+      if (state->payload_algidR == 0x89 || state->payload_algidR == 0x24)
       {
         attron(COLOR_PAIR(1));
-        printw("AES-128");
+        printw("AES-128 ");
+        if (state->aes_key_loaded[1] != 0) { printw("KS: %016llX ", state->A2[1]); }
         attron(COLOR_PAIR(3));
       }
       if (state->payload_algidR == 0x84 || state->payload_algidR == 0x25 || state->payload_algidR == 0x05)
       {
         attron(COLOR_PAIR(1));
-        printw("AES-256");
+        printw("AES-256 ");
+        if (state->aes_key_loaded[1] != 0) { printw("KS: %016llX ", state->A4[1]); }
         attron(COLOR_PAIR(3));
       }
       if (state->payload_algidR == 0x02)
@@ -3710,11 +3815,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       if (opts->p25_is_tuned == 0)
       {
-        printw ("| Monitoring Control Channel\n");
+        printw ("| Monitoring CC - LCN [%02d]\n", state->edacs_cc_lcn);
       }
       else
       {
-        printw ("| Monitoring Voice Channel - LCN [%02d]\n", state->edacs_tuned_lcn);
+        printw ("| Monitoring VC - LCN [%02d]", state->edacs_tuned_lcn);
         //since we are tuned, keep updating the time so it doesn't disappear during call
         call_matrix[state->edacs_tuned_lcn][5] = time(NULL);
       }

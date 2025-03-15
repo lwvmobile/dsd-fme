@@ -62,20 +62,192 @@ void p25_decode_sap(uint8_t SAP, char * sap_string)
 
 }
 
+void lfsr_64_to_128(uint8_t * iv)
+{
+  uint64_t lfsr = 0, bit = 0;
+
+  lfsr = ((uint64_t)iv[0] << 56ULL) + ((uint64_t)iv[1] << 48ULL) + ((uint64_t)iv[2] << 40ULL) + ((uint64_t)iv[3] << 32ULL) + 
+         ((uint64_t)iv[4] << 24ULL) + ((uint64_t)iv[5] << 16ULL) + ((uint64_t)iv[6] << 8ULL)  + ((uint64_t)iv[7] << 0ULL);
+
+  uint8_t cnt = 0, x = 64;
+
+  for(cnt = 0;cnt < 64; cnt++) 
+  {
+    //63,61,45,37,27,14
+    // Polynomial is C(x) = x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1
+    bit = ((lfsr >> 63) ^ (lfsr >> 61) ^ (lfsr >> 45) ^ (lfsr >> 37) ^ (lfsr >> 26) ^ (lfsr >> 14)) & 0x1;
+    lfsr = (lfsr << 1) | bit;
+
+    //continue packing iv
+    iv[x/8] = (iv[x/8] << 1) + bit;
+
+    x++;
+  }
+
+}
+
 
 uint8_t p25_decrypt_pdu(dsd_opts * opts, dsd_state * state, uint8_t * input, uint8_t alg_id, uint16_t key_id, unsigned long long int mi, int len)
 {
 
+  UNUSED(opts);
   uint8_t encrypted = 1;
 
-  UNUSED(opts);
-  UNUSED(state);
-  UNUSED(input);
-  UNUSED(mi);
-  UNUSED(key_id);
-  UNUSED(alg_id);
-  UNUSED(len);
+  int i = 0;
+  int ks_idx = 0;
+  uint8_t ks_bytes[3096]; memset (ks_bytes, 0, sizeof(ks_bytes));
 
+  //create keystream
+  if (alg_id == 0x84 || alg_id == 0x89) //AES -- dsd-fme -f1 -i '/SSD_STORAGE/2024_DEV/otar shit/OTAR/SUGARLOAF DATA OUTPUT/CC-DSDPlus-Raw-Input_2024-08-27@134540.wav' -s 96000 -K testaeskeys.csv
+  {
+    //aes specific arrays and things
+    uint8_t aes_iv[16];  memset (aes_iv, 0, sizeof(aes_iv));
+    uint8_t aes_key[32]; memset (aes_key, 0, sizeof(aes_key));
+    uint8_t empt[64];    memset (empt, 0, sizeof(empt));
+
+    uint8_t akl = 0; //aes key loaded into array flag
+    unsigned long long int a1 = state->rkey_array[key_id+0x000];
+    unsigned long long int a2 = state->rkey_array[key_id+0x101];
+    unsigned long long int a3 = state->rkey_array[key_id+0x201];
+    unsigned long long int a4 = state->rkey_array[key_id+0x301];
+
+    //checkdown to see if anything in a1-a4
+    if ( (a1 == 0) && (a2 == 0) && (a3 == 0) && (a4 == 0) )
+    {
+      //try loading from state->H instead (could clash if keys loaded that trigger any a1-a4 above)
+      a1 = state->K1;
+      a2 = state->K2;
+      a3 = state->K3;
+      a4 = state->K4;
+    }
+
+    //loader for aes keys
+    for (uint64_t i = 0; i < 8; i++)
+    {
+      aes_key[i+0]   = (a1 >> (56ULL-(i*8))) & 0xFF;
+      aes_key[i+8]   = (a2 >> (56ULL-(i*8))) & 0xFF;
+      aes_key[i+16]  = (a3 >> (56ULL-(i*8))) & 0xFF;
+      aes_key[i+24]  = (a4 >> (56ULL-(i*8))) & 0xFF;
+    }
+
+    //check to see if a key is loaded into any part of the array
+    if (memcmp(aes_key, empt, sizeof(aes_key)) != 0) akl = 1;
+    else akl = 0;
+
+    //convert mi to aes_iv and expand it
+    aes_iv[0] = ((mi & 0xFF00000000000000) >> 56);
+    aes_iv[1] = ((mi & 0xFF000000000000) >> 48);
+    aes_iv[2] = ((mi & 0xFF0000000000) >> 40);
+    aes_iv[3] = ((mi & 0xFF00000000) >> 32);
+    aes_iv[4] = ((mi & 0xFF000000) >> 24);
+    aes_iv[5] = ((mi & 0xFF0000) >> 16);
+    aes_iv[6] = ((mi & 0xFF00) >> 8);
+    aes_iv[7] = ((mi & 0xFF) >> 0); 
+
+    lfsr_64_to_128(aes_iv);
+
+    ks_idx = 16; //offset for OFB discard round
+
+    if (akl == 1)
+    {
+      int nblocks = (len / 16) + 1;
+      if (alg_id == 0x84) //AES256
+        aes_ofb_keystream_output (aes_iv, aes_key, ks_bytes, 2, nblocks);
+      else aes_ofb_keystream_output (aes_iv, aes_key, ks_bytes, 0, nblocks);
+
+      fprintf (stderr, "\n Key: ");
+      for (i = 0; i < 32; i++)
+      {
+        if ( (i != 0) && ((i%8) == 0) )
+          fprintf (stderr, " ");
+        fprintf (stderr, "%02X", aes_key[i]);
+      }
+
+      encrypted = 0;
+    }
+
+    fprintf (stderr, "\n IV(128): ");
+    for (i = 0; i < 16; i++)
+      fprintf (stderr, "%02X", aes_iv[i]);
+
+  }
+
+  if (alg_id == 0x81) //DES56
+  {
+
+    int nblocks = (len / 8) + 1;
+    unsigned long long int des_key = 0;
+
+    des_key = state->rkey_array[key_id];
+
+    //if no key loaded from loader, check state->R for key
+    if (des_key == 0) des_key = state->R;
+    
+    ks_idx = 8;   //offset for OFB discard round
+
+    if (des_key)
+      des_multi_keystream_output (mi, des_key, ks_bytes, 1, nblocks);
+
+    encrypted = 0;
+
+    //debug, print key, iv, and keystream stuff
+    fprintf (stderr, "\n Key: %16llX", des_key);
+
+  }
+
+  if (alg_id == 0xAA) //RC4, or 'ADP'
+  {
+
+    unsigned long long int rc4_key = 0;
+
+    rc4_key = state->rkey_array[key_id];
+
+    //if no key loaded from loader, check state->R for key
+    if (rc4_key == 0) rc4_key = state->R;
+    
+    ks_idx = 0;   //offset
+
+    uint8_t rc4_kiv[13]; memset (rc4_kiv, 0, sizeof(rc4_key));
+
+    rc4_kiv[0] = ((rc4_key & 0xFF00000000) >> 32);
+    rc4_kiv[1] = ((rc4_key & 0xFF000000) >> 24);
+    rc4_kiv[2] = ((rc4_key & 0xFF0000) >> 16);
+    rc4_kiv[3] = ((rc4_key & 0xFF00) >> 8);
+    rc4_kiv[4] = ((rc4_key & 0xFF) >> 0);
+    
+    rc4_kiv[5]  = ((mi & 0xFF00000000000000) >> 56);
+    rc4_kiv[6]  = ((mi & 0xFF000000000000) >> 48);
+    rc4_kiv[7]  = ((mi & 0xFF0000000000) >> 40);
+    rc4_kiv[8]  = ((mi & 0xFF00000000) >> 32);
+    rc4_kiv[9]  = ((mi & 0xFF000000) >> 24);
+    rc4_kiv[10] = ((mi & 0xFF0000) >> 16);
+    rc4_kiv[11] = ((mi & 0xFF00) >> 8);
+    rc4_kiv[12] = ((mi & 0xFF) >> 0);
+
+    if (rc4_key)
+      rc4_block_output (256, 13, len, rc4_kiv, ks_bytes);
+
+    encrypted = 0;
+
+    //debug, print key, iv, and keystream stuff
+    fprintf (stderr, "\n Key: %16llX", rc4_key);
+
+  }
+
+  //debug input offset
+  // fprintf (stderr, "\n INPUT: ");
+  // for (i = 0; i < 16; i++)
+  //   fprintf (stderr, "%02X", input[i]);
+
+  // fprintf (stderr, "\n    KS: ");
+  // for (i = 0; i < 16; i++)
+  //   fprintf (stderr, "%02X", ks_bytes[i]);
+
+  //apply keystream
+  for (i = 0; i < len; i++) //need to subtract pad bytes and crc bytes from keystream application
+    input[i] ^= ks_bytes[i+ks_idx];
+
+  if (alg_id == 0x80) encrypted = 0;
 
   return encrypted;
 }

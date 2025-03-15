@@ -432,6 +432,10 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 			}
 		}
 
+		//correct the bit counter if NXDN96 Data Frames (or double FACCH1 steal)
+		if (state->nxdn_cipher_type == 0x2 || state->nxdn_cipher_type == 0x3)
+			state->bit_counterL += (49*4);
+
 	}
 
 	if (voice && facch == 1) //facch steal 1 -- before voice
@@ -453,6 +457,10 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 				LFSRN(ambe_temp, ambe_d, state);
 			}
 		}  
+
+		//correct the bit counter if FACCH1 steal)
+		if (state->nxdn_cipher_type == 0x2 || state->nxdn_cipher_type == 0x3)
+			state->bit_counterL += 49*2;  
 	}
 
 	if (lich == 0x20 || lich == 0x21 || lich == 0x61 || lich == 0x40 || lich == 0x41) state->nxdn_sacch_non_superframe = TRUE;
@@ -525,6 +533,10 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 				LFSRN(ambe_temp, ambe_d, state);
 			}
 		}  
+
+		//correct the bit counter if FACCH1 steal)
+		if (state->nxdn_cipher_type == 0x2 || state->nxdn_cipher_type == 0x3)
+			state->bit_counterL += 49*2;  
 	}
 	
 	if (opts->payload == 1 && !voice) fprintf (stderr, "\n");

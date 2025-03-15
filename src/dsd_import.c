@@ -214,7 +214,7 @@ int csvKeyImportDec(dsd_opts * opts, dsd_state * state) //multi-key support
 }
 
 //Hex Variant of Key Import
-int csvKeyImportHex(dsd_opts * opts, dsd_state * state) //key import for rc4 keys
+int csvKeyImportHex(dsd_opts * opts, dsd_state * state) //key import for hex keys
 {
   char filename[1024] = "filename.csv";
   sprintf (filename, "%s", opts->key_in_file);
@@ -247,10 +247,31 @@ int csvKeyImportHex(dsd_opts * opts, dsd_state * state) //key import for rc4 key
         sscanf (field, "%llX", &state->rkey_array[keynumber]);
       }
       
+      //this could also theoretically nuke other keys that are at the same offset
+      if (field_count == 2)
+      {
+        sscanf (field, "%llX", &state->rkey_array[keynumber+0x101]);
+      }
+
+      if (field_count == 3)
+      {
+        sscanf (field, "%llX", &state->rkey_array[keynumber+0x201]);
+      }
+
+      if (field_count == 4)
+      {
+        sscanf (field, "%llX", &state->rkey_array[keynumber+0x301]);
+      }
+      
       field = strtok(NULL, ",");
       field_count++;
     }
+
     fprintf (stderr, "Key [%04llX] [%016llX]", keynumber, state->rkey_array[keynumber]);
+    
+    //if longer key is loaded (or clash with the 0x101, 0x201, 0x301 offset, then print the full key listing)
+    if ( (state->rkey_array[keynumber+0x101] != 0) || (state->rkey_array[keynumber+0x201] != 0) || (state->rkey_array[keynumber+0x301] != 0) )
+      fprintf (stderr, " [%016llX] [%016llX] [%016llX]", state->rkey_array[keynumber+0x101], state->rkey_array[keynumber+0x201], state->rkey_array[keynumber+0x301]);
     fprintf (stderr, "\n");
     
   }

@@ -29,41 +29,33 @@ void keyring(dsd_opts * opts, dsd_state * state)
 
   if (state->currentslot == 1)
     state->RR = state->rkey_array[state->payload_keyidR];
-}
 
-void RC4(int drop, uint8_t keylength, uint8_t messagelength, uint8_t key[], uint8_t cipher[], uint8_t plain[])
-{
-  int i, j, count;
-  uint8_t t, b;
-
-  //init Sbox
-  uint8_t S[256];
-  for(int i = 0; i < 256; i++) S[i] = i;
-
-  //Key Scheduling
-  j = 0;
-  for(i = 0; i < 256; i++)
+  //load any large keys (AES)
+  if (state->currentslot == 0)
   {
-    j = (j + S[i] + key[i % keylength]) % 256;
-    t = S[i];
-    S[i] = S[j];
-    S[j] = t;
+    state->A1[0] = state->rkey_array[state->payload_keyid+0x000];
+    state->A2[0] = state->rkey_array[state->payload_keyid+0x101];
+    state->A3[0] = state->rkey_array[state->payload_keyid+0x201];
+    state->A4[0] = state->rkey_array[state->payload_keyid+0x301];
+
+    //check to see if there is a value loaded or not
+    if (state->A1[0] == 0 && state->A2[0] == 0 && state->A3[0] == 0 && state->A4[0] == 0)
+      state->aes_key_loaded[0] = 0;
+    else state->aes_key_loaded[0] = 1;
+
   }
 
-  //Drop Bytes and Cipher Byte XOR
-  i = j = 0;
-  for(count = 0; count < (messagelength + drop); count++)
+  if (state->currentslot == 1)
   {
-    i = (i + 1) % 256;
-    j = (j + S[i]) % 256;
-    t = S[i];
-    S[i] = S[j];
-    S[j] = t;
-    b = S[(S[i] + S[j]) % 256];
+    state->A1[1] = state->rkey_array[state->payload_keyidR+0x000];
+    state->A2[1] = state->rkey_array[state->payload_keyidR+0x101];
+    state->A3[1] = state->rkey_array[state->payload_keyidR+0x201];
+    state->A4[1] = state->rkey_array[state->payload_keyidR+0x301];
 
-    //return mbe payload byte here
-    if (count >= drop)
-      plain[count - drop] = b^cipher[count - drop];
+    //check to see if there is a value loaded or not
+    if (state->A1[1] == 0 && state->A2[1] == 0 && state->A3[1] == 0 && state->A4[1] == 0)
+      state->aes_key_loaded[1] = 0;
+    else state->aes_key_loaded[1] = 1;
 
   }
 
@@ -261,6 +253,90 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     mbe_demodulateImbe7200x4400Data (imbe_fr);
     state->errs2 += mbe_eccImbe7200x4400Data (imbe_fr, imbe_d);
 
+    //P25p1 Multi Crypt Handler (DES1, DES3, DES-XL and AES)
+    if ( (state->payload_algid == 0x81 && state->R != 0) || //DES-56
+         (state->payload_algid == 0x9F && state->R != 0) || //DES-XL
+         (state->payload_algid == 0x84 && state->aes_key_loaded[0] == 1) ||
+         (state->payload_algid == 0x89 && state->aes_key_loaded[0] == 1) ||
+         (state->payload_algid == 0x83 && state->aes_key_loaded[0] == 1) ) //3DES
+    {
+      uint8_t cipher[11];
+      uint8_t plain[11];
+      memset (cipher, 0, sizeof(cipher));
+      memset (plain, 0, sizeof(plain));
+
+      uint8_t aes_key[32];
+      memset (aes_key, 0, sizeof(aes_key));
+
+      //Load key from A1 - A4
+      for (i = 0; i < 8; i++)
+      {
+        aes_key[i+0]  = (state->A1[0] >> (56-(i*8))) & 0xFF;
+        aes_key[i+8]  = (state->A2[0] >> (56-(i*8))) & 0xFF;
+        aes_key[i+16] = (state->A3[0] >> (56-(i*8))) & 0xFF;
+        aes_key[i+24] = (state->A4[0] >> (56-(i*8))) & 0xFF;
+      }
+
+      if (state->p25vc == 0)
+      {
+        if (state->payload_algid == 0x81 || state->payload_algid == 0x83) //DES1 and DES3
+          state->octet_counter = 11+8; //start on 19 for DES-OFB (8 discard + 8 LC + 3 reserved)
+        else if (state->payload_algid == 0x9F)
+          state->octet_counter = 11; //11 with info from LFSR run values (no discard)
+        else 
+          state->octet_counter = 11+16; //start on 27 for AES (16 discard + 8 LC + 3 reserved)
+        memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
+
+        //debug
+        // fprintf (stderr, "\n KO: %d; ", state->octet_counter);
+
+        if (state->payload_algid == 0x81) //DES-56
+          des_multi_keystream_output (state->payload_miP, state->R, state->ks_octetL, 1, 28);
+        if (state->payload_algid == 0x83) //3DES, or TDEA
+          tdea_multi_keystream_output (state->payload_miP, aes_key, state->ks_octetL, 1, 28);
+        if (state->payload_algid == 0x9F) //DES-XL 
+          des_multi_keystream_output (state->payload_miP, state->R, state->ks_octetL, 2, state->xl_is_hdu); //hard coded bit count value, xl_is_hdu determines lfsr run values
+        if (state->payload_algid == 0x84) //AES256
+          aes_ofb_keystream_output (state->aes_iv, aes_key, state->ks_octetL, 2, 14); //14 + 1 discard round
+        if (state->payload_algid == 0x89) //AES128
+          aes_ofb_keystream_output (state->aes_iv, aes_key, state->ks_octetL, 0, 14); //14 + 1 discard round
+
+      }
+
+      int z = 0; int j = 0;
+      for (i = 0; i < 11; i++)
+      {
+        for (j = 0; j < 8; j++)
+        {
+          cipher[i] = cipher[i] << 1;
+          cipher[i] = cipher[i] + imbe_d[z];
+          imbe_d[z] = 0;
+          z++;
+        }
+      }
+
+      //debug output blocks
+      // fprintf (stderr, "\n OB:");
+      for (i = 0; i < 11; i++)
+      {
+        // fprintf (stderr, " %02X", state->ks_octetL[state->octet_counter]);
+        plain[i] = cipher[i] ^ state->ks_octetL[state->octet_counter++];
+      }
+
+      z = 0;
+      for (i = 0; i < 11; i++)
+      {
+        for (j = 0; j < 8; j++)
+        {
+          imbe_d[z] = (plain[i] & 0x80) >> 7;
+          plain[i] = plain[i] << 1;
+          z++;
+        }
+
+      }
+      
+    }
+
     //P25p1 RC4 Handling
     if (state->payload_algid == 0xAA && state->R != 0)
     {
@@ -313,7 +389,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         }
       }
 
-      RC4(state->dropL, 13, 11, rckey, cipher, plain);
+      rc4_voice_decrypt(state->dropL, 13, 11, rckey, cipher, plain);
       state->dropL += 11;
 
       z = 0;
@@ -357,6 +433,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     if (opts->payload == 1)
     {
       PrintIMBEData (opts, state, imbe_d);
+      fprintf (stderr, " 7100");
     }
 
     mbe_convertImbe7100to7200(imbe_d);
@@ -388,7 +465,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     mbe_demodulateAmbe3600x2450Data (ambe_fr);
     state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
-    if ( (state->nxdn_cipher_type == 0x01 && state->R > 0) ||
+    if ( (state->nxdn_cipher_type == 0x01 && state->R != 0) ||
           (state->M == 1 && state->R > 0) )
     {
 
@@ -404,6 +481,68 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         ambe_d[i] = 0;
       }
       LFSRN(ambe_temp, ambe_d, state);
+
+    }
+
+    //NXDN Generic Cipher 2 and Cipher 3 Keystream Application (to be tested)
+    else if ( (state->nxdn_cipher_type == 0x02 && state->R != 0) || 
+              (state->nxdn_cipher_type == 0x03 && state->aes_key_loaded[0] == 1) )
+    {
+
+      if (state->nxdn_cipher_type == 0x02 && state->nxdn_new_iv == 1 && state->nxdn_part_of_frame == 0)
+			{
+
+        //more debug
+        // fprintf (stderr, " IV: %016llX; Key: %016llX", state->payload_miN, state->R);
+
+        memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
+        memset (state->ks_bitstreamL, 0, sizeof(state->ks_bitstreamL));
+
+				des_multi_keystream_output (state->payload_miN, state->R, state->ks_octetL, 1, 26); //32 4V at 49 bits = 1568/64 = 24.5 + 1 discard block
+
+				//reset bit_counter
+				state->bit_counterL = 0;
+
+				//unpack the octets into a bit-wise keystream
+				unpack_byte_array_into_bit_array(state->ks_octetL+8, state->ks_bitstreamL, 26*8);
+
+				//reset flag to 0
+				state->nxdn_new_iv = 0;
+				
+			}
+
+      //untested, but same setup as DES, so it 'SHOULD' work...maybe
+      if (state->nxdn_cipher_type == 0x03 && state->nxdn_new_iv == 1 && state->nxdn_part_of_frame == 0)
+			{
+
+        //more debug
+        fprintf (stderr, " IV: %016llX; Key: %016llX", state->payload_miN, state->R);
+
+        memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
+        memset (state->ks_bitstreamL, 0, sizeof(state->ks_bitstreamL));
+
+				aes_ofb_keystream_output (state->aes_ivR, state->aes_key, state->ks_octetL, 2, 15); //14 + 1 discard round
+
+				//reset bit_counter
+				state->bit_counterL = 0;
+
+				//unpack the octets into a bit-wise keystream
+				unpack_byte_array_into_bit_array(state->ks_octetL+8, state->ks_bitstreamL, 15*8);
+
+				//reset flag to 0
+				state->nxdn_new_iv = 0;
+				
+			}
+
+      //sanity check, don't exceed bit application counter
+      if (state->bit_counterL > (1568-49))
+        state->bit_counterL = (1568-49);
+
+      //Keystream creation is currently inside of the NXDN_decode_VCALL_IV function
+      for (i = 0; i < 49; i++)
+        ambe_d[i] ^= state->ks_bitstreamL[state->bit_counterL++];
+
+      // fprintf (stderr, " bc: %04d;", state->bit_counterL); //debug to see what the counter value is up to currently (seems nominal)
 
     }
 
@@ -431,6 +570,53 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       state->errs2 = state->errs;
       mbe_demodulateAmbe3600x2450Data (ambe_fr);
       state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+
+      //TYT (Tytera) 16-bit Key (Shuffle/Shift/Inversion Method)
+      if (state->M == 0x16)
+      {
+        //insert an expansion function here
+        unsigned long long int k = 0;
+        uint8_t pNT[56]; memset (pNT, 0, sizeof(pNT));
+
+        //I believe I have this one figured out now
+        //its just a shuffle, shift, invert, shift, invert, shift pattern
+        //could be an lfsr attached, but couldn't figure out the taps
+
+        //below is the pattern found for the 16-bit keys listed on the right
+        // k = 0xFFFF00FFFF00; // 0xFFFF
+        // k = 0x3412CB1234ED; // 0x1234
+
+        //shuffle, invert, shift...and organize into proper key value
+        k = ((state->H & 0xFF) << 8) + ((state->H & 0xFF00) >> 8);
+        k = k << 8 | ((~(state->H & 0xFF) >> 0) & 0xFF);
+        k = k << 16 | state->H;
+        k = k << 8 | ((~(state->H & 0xFF00) >> 8) & 0xFF);
+
+        //debug -- print 48-bit expanded key value
+        // fprintf (stderr, "K: %012llX", k);
+
+        for (int j = 0; j < 48; j++) 
+        {
+          x = ( ((k << j) & 0x800000000000) >> 47 ) & 1;
+          ambe_d[j] ^= x;
+        }
+
+      }
+
+      //Forced 48-bit Keystream Application "Quick and Dirty" XOR
+      if (state->M == 0x48)
+      {
+        // k = 0xD991633EC82E; //F811A5B94C2D ⊻ 2180C6878403 (1234 EP Key)
+        // k = 0x7F5363362BBE; //F811A5B94C2D ⊻ 8742C68F6793 (AAAA EP Key)
+        // k = 0x409231C77C08; (FFFF EP Key)
+        k = state->H;
+        for (int j = 0; j < 48; j++) //49
+        {
+          x = ( ((k << j) & 0x800000000000) >> 47 );
+          ambe_d[j] ^= x;
+        }
+      }
+
 
       //EXPERIMENTAL!!
       //load basic privacy key number from array by the tg value (if not forced)
@@ -535,6 +721,125 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       state->DMRvcL++;
       }
 
+      //DMR and P25p2 DES-OFB 56 Handling, Slot 1, VCH 0 -- consider moving into the AES handler
+      if ( (state->currentslot == 0 && state->payload_algid == 0x22 && state->R != 0) ||
+           (state->currentslot == 0 && state->payload_algid == 0x81 && state->R != 0)   )
+      {
+
+        //sanity check in case of error
+        if (state->DMRvcL > 17) state->DMRvcL = 17;
+
+        int j; int z = 0; int n = 8; uint8_t b = 0;
+        if (state->DMRvcL == 0)
+        {
+          memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
+          memset (state->ks_bitstreamL, 0, sizeof(state->ks_bitstreamL));
+          state->bit_counterL = 0;
+
+          //check all these comments I'm making for accuracy
+          des_multi_keystream_output (state->payload_miP, state->R, state->ks_octetL, 1, 19); //18 + 1
+
+          //Load Keystream Octet Bytes directly into a bit array, that way we don't have
+          //to keep track of the byte positions and masks for the 49th bit
+          for (i = 0; i < 18 * 8; i++) //19 blocks minus 1 discard block at 8 bits each
+          {
+            for (j = 0; j < 8; j++)
+            {
+              b = (( (state->ks_octetL[n] << j) & 0x80) >> 7);
+              state->ks_bitstreamL[z++] = b;
+            }
+            n++;
+          }
+        }
+
+        //now we do the bit by bit xor depending on the frame and position of the state bit counter
+        //run 6 instead of 7 so we can just do bit 49 outside of loop to keep extra bits overloading the array
+        z = 0;
+        for (i = 0; i < 6; i++)
+        {
+          for (j = 0; j < 8; j++)
+            ambe_d[z++] ^= state->ks_bitstreamL[state->bit_counterL++];
+        }
+
+        //last bit
+        ambe_d[48] ^= state->ks_bitstreamL[state->bit_counterL++];
+
+        //skip the next 7 bits of the array
+        state->bit_counterL += 7;
+
+        //increment vc counter by one
+        state->DMRvcL++;
+
+      }
+
+      //DMR and P25p2 AES 256, Slot 1, VCH 0 -- need a way to make sure we have a key when zero fill on some parts of it //&& state->aes_key_loaded[0] == 1
+      if (  (state->currentslot == 0 && state->payload_algid == 0x24 && state->aes_key_loaded[0] == 1 ) || //DMR AES128
+            (state->currentslot == 0 && state->payload_algid == 0x25 && state->aes_key_loaded[0] == 1 ) || //DMR AES256
+            (state->currentslot == 0 && state->payload_algid == 0x89 && state->aes_key_loaded[0] == 1 ) || //P25 AES128
+            (state->currentslot == 0 && state->payload_algid == 0x84 && state->aes_key_loaded[0] == 1)   ) //P25 AES256
+      {
+
+        int j; int z = 0; int n = 16; uint8_t b = 0; //n=16 for AES-OFB discard round
+        uint8_t aes_key[32];
+        memset (aes_key, 0, sizeof(aes_key));
+
+        //Load key from A1 - A4
+        for (i = 0; i < 8; i++)
+        {
+          aes_key[i+0]  = (state->A1[0] >> (56-(i*8))) & 0xFF;
+          aes_key[i+8]  = (state->A2[0] >> (56-(i*8))) & 0xFF;
+          aes_key[i+16] = (state->A3[0] >> (56-(i*8))) & 0xFF;
+          aes_key[i+24] = (state->A4[0] >> (56-(i*8))) & 0xFF;
+        }
+
+        //sanity check in case of error
+        if (state->DMRvcL > 17) state->DMRvcL = 17;
+
+        if (state->DMRvcL == 0)
+        {
+          memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
+          memset (state->ks_bitstreamL, 0, sizeof(state->ks_bitstreamL));
+          state->bit_counterL = 0;
+
+          if(state->payload_algid == 0x24 || state->payload_algid == 0x89) //AES128
+            aes_ofb_keystream_output (state->aes_iv, aes_key, state->ks_octetL, 0, 10); //9 + 1 discard round
+          if(state->payload_algid == 0x25 || state->payload_algid == 0x84) //AES256
+            aes_ofb_keystream_output (state->aes_iv, aes_key, state->ks_octetL, 2, 10); //9 + 1 discard round
+
+          //Load Keystream Octet Bytes directly into keystream array
+          for (i = 0; i < 9 * 16; i++) //9 rounds at 16 octets
+          {
+            for (j = 0; j < 8; j++)
+            {
+              b = (( (state->ks_octetL[n] << j) & 0x80) >> 7);
+              state->ks_bitstreamL[z++] = b;
+            }
+            n++;
+          }
+        }
+
+        //now we do the bit by bit xor depending on the frame and position of the state bit counter
+        //run 6 instead of 7 so we can just do bit 49 outside of loop to keep extra bits overloading the array
+        z = 0;
+        for (i = 0; i < 6; i++)
+        {
+          for (j = 0; j < 8; j++)
+            ambe_d[z++] ^= state->ks_bitstreamL[state->bit_counterL++];
+        }
+
+        //last bit
+        ambe_d[48] ^= state->ks_bitstreamL[state->bit_counterL++];
+
+        //skip the next 7 bits of the array
+        state->bit_counterL += 7;
+
+        //increment vc counter by one
+        state->DMRvcL++;
+
+        opts->dmr_mute_encL = 0; //shim to unmute
+
+      }
+
       //DMR RC4, Slot 1
       if (state->currentslot == 0 && state->payload_algid == 0x21 && state->R != 0)
       {
@@ -562,7 +867,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         //this occurs because we are supposed to either have a a 'repeat' frame, or 'silent' frame play
         //due to the error, but the keystream application makes it random 'pfft pop' sound instead
         if (state->errs < 3)
-          RC4(state->dropL, 9, 7, rckey, cipher, plain);
+          rc4_voice_decrypt(state->dropL, 9, 7, rckey, cipher, plain);
         else memcpy (plain, cipher, sizeof(plain));
 
         state->dropL += 7;
@@ -602,7 +907,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         //pack cipher byte array from ambe_d bit array
         pack_ambe(ambe_d, cipher, 49);
 
-        RC4(state->dropL, 13, 7, rckey, cipher, plain);
+        rc4_voice_decrypt(state->dropL, 13, 7, rckey, cipher, plain);
         state->dropL += 7;
 
         //unpack deciphered plain array back into ambe_d bit array
@@ -637,6 +942,52 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       state->errs2R = state->errsR;
       mbe_demodulateAmbe3600x2450Data (ambe_fr);
       state->errs2R += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+
+      //TYT (Tytera) 16-bit Key (Shuffle/Shift/Inversion Method)
+      if (state->M == 0x16)
+      {
+        //insert an expansion function here
+        unsigned long long int k = 0;
+        uint8_t pNT[56]; memset (pNT, 0, sizeof(pNT));
+
+        //I believe I have this one figured out now
+        //its just a shuffle, shift, invert, shift, invert, shift pattern
+        //could be an lfsr attached, but couldn't figure out the taps
+
+        //below is the pattern found for the 16-bit keys listed on the right
+        // k = 0xFFFF00FFFF00; // 0xFFFF
+        // k = 0x3412CB1234ED; // 0x1234
+
+        //shuffle, invert, shift...and organize into proper key value
+        k = ((state->H & 0xFF) << 8) + ((state->H & 0xFF00) >> 8);
+        k = k << 8 | ((~(state->H & 0xFF) >> 0) & 0xFF);
+        k = k << 16 | state->H;
+        k = k << 8 | ((~(state->H & 0xFF00) >> 8) & 0xFF);
+
+        //debug -- print 48-bit expanded key value
+        fprintf (stderr, "K: %012llX", k);
+
+        for (int j = 0; j < 48; j++) 
+        {
+          x = ( ((k << j) & 0x800000000000) >> 47 ) & 1;
+          ambe_d[j] ^= x;
+        }
+
+      }
+
+      //Forced 48-bit Keystream Application "Quick and Dirty" XOR
+      if (state->M == 0x48)
+      {
+        // k = 0xD991633EC82E; //F811A5B94C2D ⊻ 2180C6878403 (1234 EP Key)
+        // k = 0x7F5363362BBE; //F811A5B94C2D ⊻ 8742C68F6793 (AAAA EP Key)
+        // k = 0x409231C77C08; (FFFF EP Key)
+        k = state->H;
+        for (int j = 0; j < 48; j++) //49
+        {
+          x = ( ((k << j) & 0x800000000000) >> 47 );
+          ambe_d[j] ^= x;
+        }
+      }
 
       //EXPERIMENTAL!!
       //load basic privacy key number from array by the tg value (if not forced)
@@ -741,6 +1092,125 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->DMRvcR++;
       }
 
+      //DMR and P25p2 DES-OFB 56 Handling, Slot 2, VCH 1 -- Consider moving into AES handler
+      if ( (state->currentslot == 1 && state->payload_algidR == 0x22 && state->RR != 0) ||
+           (state->currentslot == 1 && state->payload_algidR == 0x81 && state->RR != 0)   )
+      {
+
+        //sanity check in case of error
+        if (state->DMRvcR > 17) state->DMRvcR = 17;
+
+        int j; int z = 0; int n = 8; uint8_t b = 0;
+        if (state->DMRvcR == 0)
+        {
+          memset (state->ks_octetR, 0, sizeof(state->ks_octetR));
+          memset (state->ks_bitstreamR, 0, sizeof(state->ks_bitstreamR));
+          state->bit_counterR = 0;
+
+          //check all these comments I'm making for accuracy
+          des_multi_keystream_output (state->payload_miN, state->RR, state->ks_octetR, 1, 19); //18 + 1
+
+          //Load Keystream Octet Bytes directly into a bit array, that way we don't have
+          //to keep track of the byte positions and masks for the 49th bit
+          for (i = 0; i < 18 * 8; i++) //19 blocks minus 1 discard block at 8 bits each
+          {
+            for (j = 0; j < 8; j++)
+            {
+              b = (( (state->ks_octetR[n] << j) & 0x80) >> 7);
+              state->ks_bitstreamR[z++] = b;
+            }
+            n++;
+          }
+        }
+
+        //now we do the bit by bit xor depending on the frame and position of the state bit counter
+        //run 6 instead of 7 so we can just do bit 49 outside of loop to keep extra bits overloading the array
+        z = 0;
+        for (i = 0; i < 6; i++)
+        {
+          for (j = 0; j < 8; j++)
+            ambe_d[z++] ^= state->ks_bitstreamR[state->bit_counterR++];
+        }
+
+        //last bit
+        ambe_d[48] ^= state->ks_bitstreamR[state->bit_counterR++];
+
+        //skip the next 7 bits of the array
+        state->bit_counterR += 7;
+
+        //increment vc counter by one
+        state->DMRvcR++;
+
+      }
+
+      //DMR and P25p2 AES, Slot 2, VCH 1
+      if (  (state->currentslot == 1 && state->payload_algidR == 0x24 && state->aes_key_loaded[1] == 1 ) || //DMR AES128
+            (state->currentslot == 1 && state->payload_algidR == 0x25 && state->aes_key_loaded[1] == 1 ) || //DMR AES256
+            (state->currentslot == 1 && state->payload_algidR == 0x89 && state->aes_key_loaded[1] == 1 ) || //P25 AES128
+            (state->currentslot == 1 && state->payload_algidR == 0x84 && state->aes_key_loaded[1] == 1)   ) //P25 AES256
+      {
+
+        int j; int z = 0; int n = 16; uint8_t b = 0; //n=16 for AES-OFB discard round
+        uint8_t aes_key[32];
+        memset (aes_key, 0, sizeof(aes_key));
+
+        //Load key from A1 - A4
+        for (i = 0; i < 8; i++)
+        {
+          aes_key[i+0]  = (state->A1[1] >> (56-(i*8))) & 0xFF;
+          aes_key[i+8]  = (state->A2[1] >> (56-(i*8))) & 0xFF;
+          aes_key[i+16] = (state->A3[1] >> (56-(i*8))) & 0xFF;
+          aes_key[i+24] = (state->A4[1] >> (56-(i*8))) & 0xFF;
+        }
+
+        //sanity check in case of error
+        if (state->DMRvcR > 17) state->DMRvcR = 17;
+
+        if (state->DMRvcR == 0)
+        {
+          memset (state->ks_octetR, 0, sizeof(state->ks_octetR));
+          memset (state->ks_bitstreamR, 0, sizeof(state->ks_bitstreamR));
+          state->bit_counterR = 0;
+
+          if (state->payload_algidR == 0x24 || state->payload_algidR == 0x89)
+            aes_ofb_keystream_output (state->aes_ivR, aes_key, state->ks_octetR, 0, 10); //9 + 1 discard round
+          if (state->payload_algidR == 0x25 || state->payload_algidR == 0x84)
+            aes_ofb_keystream_output (state->aes_ivR, aes_key, state->ks_octetR, 2, 10); //9 + 1 discard round
+
+          //Load Keystream Octet Bytes directly into keystream array
+          for (i = 0; i < 9 * 16; i++) //9 rounds at 16 octets
+          {
+            for (j = 0; j < 8; j++)
+            {
+              b = (( (state->ks_octetR[n] << j) & 0x80) >> 7);
+              state->ks_bitstreamR[z++] = b;
+            }
+            n++;
+          }
+        }
+
+        //now we do the bit by bit xor depending on the frame and position of the state bit counter
+        //run 6 instead of 7 so we can just do bit 49 outside of loop to keep extra bits overloading the array
+        z = 0;
+        for (i = 0; i < 6; i++)
+        {
+          for (j = 0; j < 8; j++)
+            ambe_d[z++] ^= state->ks_bitstreamR[state->bit_counterR++];
+        }
+
+        //last bit
+        ambe_d[48] ^= state->ks_bitstreamR[state->bit_counterR++];
+
+        //skip the next 7 bits of the array
+        state->bit_counterR += 7;
+
+        //increment vc counter by one
+        state->DMRvcR++;
+
+        opts->dmr_mute_encR = 0; //shim to unmute
+
+      }
+
       //DMR RC4, Slot 2
       if (state->currentslot == 1 && state->payload_algidR == 0x21 && state->RR != 0)
       {
@@ -768,7 +1238,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         //this occurs because we are supposed to either have a a 'repeat' frame, or 'silent' frame play
         //due to the error, but the keystream application makes it random 'pfft pop' sound instead
         if (state->errsR < 3)
-          RC4(state->dropR, 9, 7, rckey, cipher, plain);
+          rc4_voice_decrypt(state->dropR, 9, 7, rckey, cipher, plain);
         else memcpy (plain, cipher, sizeof(plain));
         state->dropR += 7;
 
@@ -807,7 +1277,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         //pack cipher byte array from ambe_d bit array
         pack_ambe(ambe_d, cipher, 49);
 
-        RC4(state->dropR, 13, 7, rckey, cipher, plain);
+        rc4_voice_decrypt(state->dropR, 13, 7, rckey, cipher, plain);
         state->dropR += 7;
 
         //unpack deciphered plain array back into ambe_d bit array

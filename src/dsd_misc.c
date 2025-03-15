@@ -1,9 +1,9 @@
 /*-------------------------------------------------------------------------------
- * 3.c
- * Placeholder File 3 -- This file is for temporary code storage
+ * dsd_misc.c
+ * Misc Code that needs to be reorganized and sorted out
  *
- * Multiple 1/2 Rate Convolutional Decoders for NXDN/M17/YSF
- * Used as a secondary decoder in case convolutional decoder fails (second opinion)
+ * 
+ * 
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"

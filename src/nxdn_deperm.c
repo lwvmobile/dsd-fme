@@ -266,6 +266,9 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		if (state->nxdn_last_ran != -1) fprintf (stderr, " RAN %02d ", state->nxdn_last_ran);
 		else fprintf (stderr, "        ");
 
+		//needed for DES and AES
+		state->nxdn_part_of_frame = 0;
+
 		uint8_t nsf_sacch[26];
 		memset (nsf_sacch, 0, sizeof(nsf_sacch));
 		for (int i = 0; i < 26; i++)
@@ -326,6 +329,9 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		else if (sf == 1) part_of_frame = 2;
 		else if (sf == 0) part_of_frame = 3;
 		else part_of_frame = 0; 
+
+		//needed for DES and AES
+		state->nxdn_part_of_frame = part_of_frame;
 
 		fprintf (stderr, "%s", KCYN);
 		if (state->nxdn_last_ran != -1) fprintf (stderr, " RAN %02d ", state->nxdn_last_ran);

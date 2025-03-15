@@ -347,6 +347,21 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->p25vc = 0;
   state->payload_miP = 0;
 
+  //ks array storage and counters
+  memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
+  memset (state->ks_octetR, 0, sizeof(state->ks_octetR));
+  memset (state->ks_bitstreamL, 0, sizeof(state->ks_bitstreamL));
+  memset (state->ks_bitstreamR, 0, sizeof(state->ks_bitstreamR));
+  state->octet_counter = 0;
+  state->bit_counterL = 0;
+  state->bit_counterR = 0;
+
+  //xl specific, we need to know if the ESS is from HDU, or from LDU2
+  state->xl_is_hdu = 0;
+
+  //NXDN, when a new IV has arrived
+  state->nxdn_new_iv = 0;
+
   //initialize dmr data header source
   state->dmr_lrrp_source[0] = 0;
   state->dmr_lrrp_source[1] = 0;
@@ -412,7 +427,15 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     state->R = 0; //NXDN, or RC4 (slot 1)
     state->RR = 0; //RC4 (slot 2)
     state->K = 0; //BP
-    state->K1 = 0; //tera 10 char BP
+    state->K1 = 0; //tera 10/32/64 char BP
+    state->K2 = 0;
+    state->K3 = 0;
+    state->K4 = 0;
+    memset (state->A1, 0, sizeof(state->A1));
+    memset (state->A2, 0, sizeof(state->A2));
+    memset (state->A3, 0, sizeof(state->A3));
+    memset (state->A4, 0, sizeof(state->A4));
+    memset (state->aes_key_loaded, 0, sizeof (state->aes_key_loaded));
     state->H = 0; //shim for above
   }
 
@@ -1020,9 +1043,34 @@ initState (dsd_state * state)
   state->dropL = 256; 
   state->dropR = 256;
 
-  state->p25vc = 0;
+  //ks array storage and counters
+  memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
+  memset (state->ks_octetR, 0, sizeof(state->ks_octetR));
+  memset (state->ks_bitstreamL, 0, sizeof(state->ks_bitstreamL));
+  memset (state->ks_bitstreamR, 0, sizeof(state->ks_bitstreamR));
+  state->octet_counter = 0;
+  state->bit_counterL = 0;
+  state->bit_counterR = 0;
 
+  //AES Specific Variables
+  memset (state->aes_key, 0, sizeof(state->aes_key));
+  memset (state->aes_iv, 0, sizeof(state->aes_iv));
+  memset (state->aes_ivR, 0, sizeof(state->aes_ivR));
+  memset (state->A1, 0, sizeof(state->A1));
+  memset (state->A2, 0, sizeof(state->A2));
+  memset (state->A3, 0, sizeof(state->A3));
+  memset (state->A4, 0, sizeof(state->A4));
+  memset (state->aes_key_loaded, 0, sizeof (state->aes_key_loaded));
+
+  //xl specific, we need to know if the ESS is from HDU, or from LDU2
+  state->xl_is_hdu = 0;
+
+  //NXDN, when a new IV has arrived
+  state->nxdn_new_iv = 0;
+
+  state->p25vc = 0;
   state->payload_miP = 0;
+  state->payload_miN = 0;
 
   //initialize dmr data header source
   state->dmr_lrrp_source[0] = 0;
@@ -1453,24 +1501,33 @@ usage ()
   printf ("  -b <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)\n");
   printf ("                 (NOTE: This used to be the 'K' option! \n");
   printf ("\n");
-  printf ("  -H <hex>      Manually Enter **tera 10/32/64 Char Basic Privacy Hex Key (see example below)\n");
+  printf ("  -H <hex>      Manually Enter Hytera 10/32/64 Char Basic Privacy Hex Key (see example below)\n");
   printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
   printf ("                 -H 0B57935150 \n");
+  printf ("                 -H '736B9A9C5645288B 243AD5CB8701EF8A' \n");
+  printf ("                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' \n");
+  printf ("\n");           //may move to using the rkey_array with an offset for additional key values
+  printf ("  -H <hex>      Manually Enter AES-128 or AES-256 Hex Key (see example below)\n");
+  printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
   printf ("                 -H '736B9A9C5645288B 243AD5CB8701EF8A' \n");
   printf ("                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' \n");
   printf ("\n");
   printf ("  -R <dec>      Manually Enter dPMR or NXDN EHR Scrambler Key Value (Decimal Value)\n");
   printf ("                 \n");
-  printf ("  -1 <hex>      Manually Enter RC4 Key Value (DMR, P25) (Hex Value) \n");
+  printf ("  -1 <hex>      Manually Enter RC4 or DES Key Value (DMR, P25, NXDN) (Hex Value) \n");
+  printf ("                 \n");
+  printf ("  -2 <hex>      Manually Enter TYT and Enforce 16-bit BP Key Value (DMR) (Hex Value) \n");
+  printf ("                 \n");
+  printf ("  -5 <hex>      Manually Enter 48-bit BP Key Value (DMR) (Hex Value) \n");
   printf ("                 \n");
   printf ("  -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.\n");
   printf ("                  Only supports NXDN, DMR Basic Privacy (decimal value). \n");
-  printf ("                  (dPMR and **tera 32/64 char not supported, DMR uses TG value as key id -- EXPERIMENTAL!!). \n");
+  printf ("                  (dPMR and Hytera 32/64 char not supported, DMR uses TG value as key id -- EXPERIMENTAL!!). \n");
   printf ("                 \n");
   printf ("  -K <file>     Import Key List from csv file (Hexidecimal Format) -- Capital 'K'.\n");
-  printf ("                  Use for Hex Value **tera 10-char BP keys and RC4 10-Char Hex Keys. \n");
+  printf ("                  Use for Hex Value Hytera 10-char BP keys, RC4 10-char, DES 16-char Hex Keys, and AES128/256 32/64-char keys. \n");
   printf ("                 \n");
-  printf ("  -4            Force Privacy Key over Encryption Identifiers (DMR BP and NXDN Scrambler) \n");
+  printf ("  -4            Force Privacy Key over Encryption Identifiers (DMR MBP/HBP and NXDN Scrambler) \n");
   printf ("                 \n");
   printf ("  -0            Force RC4 Key over Missing PI header/LE Encryption Identifiers (DMR) \n");
   printf ("                 \n");
@@ -1497,7 +1554,6 @@ usage ()
   printf ("                 P25 - 12000; NXDN48 - 7000; NXDN96: 12000; DMR - 7000-12000; EDACS/PV - 12000-24000;\n"); //redo this, or check work, or whatever
   printf ("                 May vary based on system stregnth, etc.\n");
   printf ("  -t <secs>     Set Trunking or Scan Speed VC/sync loss hangtime in seconds. (default = 1 second)\n");
-  // printf ("  -9            Force Enable EDACS Standard or Networked Mode if Auto Detection Fails \n");
   printf ("\n");
   printf (" Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans\n");
   printf (" Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans\n");
@@ -1699,11 +1755,6 @@ main (int argc, char **argv)
   char versionstr[25];
   mbe_printVersion (versionstr);
 
-  #ifdef LIMAZULUTWEAKS
-  fprintf (stderr,"            Digital Speech Decoder: LimaZulu Edition VI\n");
-  #else
-  fprintf (stderr,"            Digital Speech Decoder: Florida Man Edition\n");
-  #endif
   for (short int i = 1; i < 7; i++) {
     fprintf (stderr,"%s\n", FM_banner[i]);
   }
@@ -1801,13 +1852,29 @@ main (int argc, char **argv)
           fprintf (stderr,"Force RC4 Key over Missing PI header/LE Encryption Identifiers (DMR)\n");
           break;
 
-        //load single rc4 key
+        //load single rc4/des key
         case '1':
           sscanf (optarg, "%llX", &state.R);
           state.RR = state.R; //put key on both sides
-          fprintf (stderr, "RC4 Encryption Key Value set to 0x%llX \n", state.R);
+          fprintf (stderr, "RC4/DES Encryption Key Value set to 0x%llX \n", state.R);
           opts.unmute_encrypted_p25 = 0; 
           state.keyloader = 0; //turn off keyloader
+          break;
+
+        //get user TYT BP Key and Force Its application
+        case '2':
+          state.M = 0x16; //16-bit TYT 'BP' Keys
+          sscanf (optarg, "%llX", &state.H);
+          state.H = state.H & 0xFFFF; //truncate to 16-bits
+          fprintf (stderr,"DMR TYT 16-bit Key %llX with Forced Application\n", state.H);
+          break;
+
+        //Enter and Force Applicaiton of a a 48-bit AMBE Keystream (hex) for 'CCR' radios and weird 'BP'
+        case '5':
+          state.M = 0x48; //48-bit AMBE Keystream for any generic keystream application
+          sscanf (optarg, "%llX", &state.H);
+          state.H = state.H & 0xFFFFFFFFFFFF; //truncate to 48-bits
+          fprintf (stderr,"AMBE+2 48-bit Key %llX with Forced Application\n", state.H);
           break;
 
         case '3':
@@ -2018,7 +2085,7 @@ main (int argc, char **argv)
           state.K2 = strtoull (pEnd, &pEnd, 16);
           state.K3 = strtoull (pEnd, &pEnd, 16);
           state.K4 = strtoull (pEnd, &pEnd, 16); 
-          fprintf (stderr, "**tera Key = %016llX %016llX %016llX %016llX\n", state.K1, state.K2, state.K3, state.K4);
+          fprintf (stderr, "Hytera40/128/256 BP or AES128/256 Key = %016llX %016llX %016llX %016llX\n", state.K1, state.K2, state.K3, state.K4);
           opts.dmr_mute_encL = 0;
           opts.dmr_mute_encR = 0;
           if (state.K1 == 0 && state.K2 == 0 && state.K3 == 0 && state.K4 == 0)
@@ -2027,6 +2094,15 @@ main (int argc, char **argv)
             opts.dmr_mute_encR = 1;
           }
           state.H = state.K1; //shim still required?
+          //load the AES keys into a seperate handler
+          state.A1[0] = state.A1[1] = state.K1;
+          state.A2[0] = state.A2[1] = state.K2;
+          state.A3[0] = state.A3[1] = state.K3;
+          state.A4[0] = state.A4[1] = state.K4;
+          //disable keyloader function
+          state.keyloader = 0;
+          //signal an aes key is loaded into each slot -- if no value presented, then this won't matter anyways
+          state.aes_key_loaded[0] = state.aes_key_loaded[1] = 1;
           break;
 
         case '4':
@@ -2618,7 +2694,7 @@ main (int argc, char **argv)
             opts.pulse_digi_out_channels = 2;
             sprintf (opts.output_name, "DMR");
             
-            fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
+            fprintf (stderr,"Decoding DMR BS/MS Simplex\n");
           }
           //change ft to only do P25 and DMR (TDMA trunking modes)
           else if (optarg[0] == 't')
@@ -2699,9 +2775,9 @@ main (int argc, char **argv)
             opts.dmr_stereo = 1;
             state.dmr_stereo = 0; //0
             // opts.setmod_bw = 7000;
-            sprintf (opts.output_name, "DMR Stereo");
+            sprintf (opts.output_name, "DMR");
             fprintf (stderr,"-fr / DMR Mono switch has been deprecated.\n");
-            fprintf (stderr,"Decoding DMR Stereo BS/MS Simplex\n");
+            fprintf (stderr,"Decoding DMR BS/MS Simplex\n");
 
           }
           else if (optarg[0] == 'm')

@@ -93,9 +93,17 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
         encL = 0;
       }
     }
-    else if (state->payload_algid == 0x21)
+    else if (state->payload_algid == 0x21 || state->payload_algid == 0x22)
     {
       if (state->R != 0)
+      {
+        encL = 0;
+      }
+    }
+    else if (state->payload_algid == 0x24 || state->payload_algid == 0x25)
+    {
+      //going to need a better check for this later on, or seperated keys or something
+      if (state->aes_key_loaded[0] == 1)
       {
         encL = 0;
       }
@@ -111,14 +119,26 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
         encR = 0;
       }
     }
-    else if (state->payload_algidR == 0x21)
+    else if (state->payload_algidR == 0x21 || state->payload_algidR == 0x22)
     {
       if (state->RR != 0)
       {
         encR = 0;
       }
     }
+    else if (state->payload_algidR == 0x24 || state->payload_algidR == 0x25)
+    {
+      //going to need a better check for this later on, or seperated keys or something
+      if (state->aes_key_loaded[1] == 1)
+      {
+        encR = 0;
+      }
+    }
   }
+
+  //debug disable enc check for AES testing
+  // encL = 0;
+  // encR = 0;
 
   //TODO: add option to bypass enc with a toggle as well
 
@@ -312,6 +332,20 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
         encL = 0;
       }
     }
+    else if (state->payload_algid == 0x81)
+    {
+      if (state->R != 0)
+      {
+        encL = 0;
+      }
+    }
+    else if (state->payload_algid == 0x84 || state->payload_algid == 0x89)
+    {
+      if (state->aes_key_loaded[0] == 1)
+      {
+        encL = 0;
+      }
+    }
   }
 
   if (encR)
@@ -319,6 +353,20 @@ void playSynthesizedVoiceFS4 (dsd_opts * opts, dsd_state * state)
     if (state->payload_algidR == 0xAA)
     {
       if (state->RR != 0)
+      {
+        encR = 0;
+      }
+    }
+    else if (state->payload_algidR == 0x81)
+    {
+      if (state->R != 0)
+      {
+        encR = 0;
+      }
+    }
+    else if (state->payload_algidR == 0x84 || state->payload_algidR == 0x89)
+    {
+      if (state->aes_key_loaded[1] == 1)
       {
         encR = 0;
       }
@@ -520,9 +568,16 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
   //checkdown to see if we can lift the 'mute' if a key is available
   if (encL)
   {
-    if (state->payload_algid == 0xAA)
+    if (state->payload_algid == 0xAA || state->payload_algid == 0x81 || state->payload_algid == 0x9F)
     {
       if (state->R != 0)
+      {
+        encL = 0;
+      }
+    }
+    else if (state->payload_algid == 0x84 || state->payload_algid == 0x89 || state->payload_algid == 0x83)
+    {
+      if (state->aes_key_loaded[0] == 1)
       {
         encL = 0;
       }
@@ -654,9 +709,16 @@ void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
   //checkdown to see if we can lift the 'mute' if a key is available
   if (encL)
   {
-    if (state->payload_algid == 0xAA || state->nxdn_cipher_type == 0x1)
+    if (state->payload_algid == 0xAA || state->payload_algid == 0x81 || state->payload_algid == 0x83 || state->payload_algid == 0x9F || state->nxdn_cipher_type == 0x1 || state->nxdn_cipher_type == 0x2)
     {
       if (state->R != 0)
+      {
+        encL = 0;
+      }
+    }
+    else if (state->payload_algid == 0x84 || state->payload_algid == 0x89 || state->nxdn_cipher_type == 0x3)
+    {
+      if (state->aes_key_loaded[0] == 1)
       {
         encL = 0;
       }
@@ -870,9 +932,16 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
   //checkdown to see if we can lift the 'mute' if a key is available
   if (encL)
   {
-    if (state->payload_algid == 0xAA)
+    if (state->payload_algid == 0xAA || state->payload_algid == 0x81 || state->payload_algid == 0x9F || state->payload_algid == 0x83)
     {
       if (state->R != 0)
+      {
+        encL = 0;
+      }
+    }
+    else if (state->payload_algid == 0x84 || state->payload_algid == 0x89)
+    {
+      if (state->aes_key_loaded[0] == 1)
       {
         encL = 0;
       }
@@ -993,7 +1062,7 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
   encL = (state->dmr_so  >> 6) & 0x1;
   encR = (state->dmr_soR >> 6) & 0x1;
 
-  //checkdown to see if we can lift the 'mute' if a key is available
+ //checkdown to see if we can lift the 'mute' if a key is available
   if (encL)
   {
     if (state->payload_algid == 0)
@@ -1003,9 +1072,17 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
         encL = 0;
       }
     }
-    else if (state->payload_algid == 0x21)
+    else if (state->payload_algid == 0x21 || state->payload_algid == 0x22)
     {
       if (state->R != 0)
+      {
+        encL = 0;
+      }
+    }
+    else if (state->payload_algid == 0x24 || state->payload_algid == 0x25)
+    {
+      //going to need a better check for this later on, or seperated keys or something
+      if (state->aes_key_loaded[0] == 1)
       {
         encL = 0;
       }
@@ -1021,14 +1098,25 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
         encR = 0;
       }
     }
-    else if (state->payload_algidR == 0x21)
+    else if (state->payload_algidR == 0x21 || state->payload_algidR == 0x22)
     {
       if (state->RR != 0)
       {
         encR = 0;
       }
     }
+    else if (state->payload_algidR == 0x24 || state->payload_algidR == 0x25)
+    {
+      //going to need a better check for this later on, or seperated keys or something
+      if (state->aes_key_loaded[1] == 1)
+      {
+        encR = 0;
+      }
+    }
   }
+
+  //debug for AES
+  // encL = encR = 0;
 
   //TODO: add option to bypass enc with a toggle as well
 
@@ -1342,6 +1430,20 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
         encL = 0;
       }
     }
+    else if (state->payload_algid == 0x81)
+    {
+      if (state->R != 0)
+      {
+        encL = 0;
+      }
+    }
+    else if (state->payload_algid == 0x84 || state->payload_algid == 0x89)
+    {
+      if (state->aes_key_loaded[0] == 1)
+      {
+        encL = 0;
+      }
+    }
   }
 
   if (encR)
@@ -1349,6 +1451,20 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
     if (state->payload_algidR == 0xAA)
     {
       if (state->RR != 0)
+      {
+        encR = 0;
+      }
+    }
+    else if (state->payload_algidR == 0x81)
+    {
+      if (state->R != 0)
+      {
+        encR = 0;
+      }
+    }
+    else if (state->payload_algidR == 0x84 || state->payload_algidR == 0x89)
+    {
+      if (state->aes_key_loaded[1] == 1)
       {
         encR = 0;
       }
@@ -1552,25 +1668,51 @@ void playSynthesizedVoiceSS18 (dsd_opts * opts, dsd_state * state)
   //checkdown to see if we can lift the 'mute' if a key is available
   if (encL)
   {
-    if (state->payload_algid == 0xAA)
+    //RC4 or DES
+    if (state->payload_algid == 0xAA || state->payload_algid == 0x81)
     {
       if (state->R != 0)
       {
         encL = 0;
       }
     }
+
+    //AES
+    if (state->payload_algid == 0x84 || state->payload_algid == 0x89)
+    {
+      if (state->aes_key_loaded[0] == 1)
+      {
+        encL = 0;
+      }
+    }
+
   }
 
   if (encR)
   {
-    if (state->payload_algidR == 0xAA)
+    //RC4 or DES
+    if (state->payload_algidR == 0xAA || state->payload_algidR == 0x81)
     {
       if (state->RR != 0)
       {
         encR = 0;
       }
     }
+
+    //AES
+    if (state->payload_algidR == 0x84 || state->payload_algidR == 0x89)
+    {
+      if (state->aes_key_loaded[1] == 1)
+      {
+        encR = 0;
+      }
+    }
+
   }
+
+  //debug, unmute both slots
+  // encL = 0;
+  // encR = 0;
 
   //WIP: Mute if on B list (or not W list)
   char modeL[8];

@@ -473,9 +473,30 @@ processHDU(dsd_opts* opts, dsd_state* state)
     fprintf (stderr, " HDU  ALG ID: 0x%02X KEY ID: 0x%04X MI: 0x%08llX%08llX", algidhex, kidhex, mihex1, mihex2);
     state->payload_algid = algidhex;
     state->payload_keyid = kidhex;
+    if (mihex3) fprintf (stderr, "-%02llX", mihex3);
     if (state->R != 0 && state->payload_algid == 0xAA)
     {
       fprintf (stderr, " Key: %010llX", state->R);
+      opts->unmute_encrypted_p25 = 1;
+    }
+    else if (state->R != 0 && state->payload_algid == 0x81)
+    {
+      fprintf (stderr, " Key: %010llX", state->R);
+      opts->unmute_encrypted_p25 = 1;
+    }
+    else if (state->R != 0 && state->payload_algid == 0x9F)
+    {
+      fprintf (stderr, " Key: %010llX", state->R);
+      opts->unmute_encrypted_p25 = 1;
+    }
+    else if ( (state->payload_algid == 0x84 || state->payload_algid == 0x89) && state->aes_key_loaded[0] == 1)
+    {
+      fprintf (stderr, "\n ");
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, "Key: %016llX %016llX ", state->A1[0], state->A2[0]);
+      if (state->payload_algid == 0x84)
+        fprintf (stderr, "%016llX %016llX", state->A3[0], state->A4[0]);
+      fprintf (stderr, "%s ", KNRM);
       opts->unmute_encrypted_p25 = 1;
     }
     else if (state->payload_algid != 0 && state->payload_algid != 0x80)
@@ -495,6 +516,17 @@ processHDU(dsd_opts* opts, dsd_state* state)
     }
 
     fprintf (stderr, "\n");
+
+    //expand 64-bit MI to 128-bit for AES
+    if (state->payload_algid == 0x84 || state->payload_algid == 0x89)
+    {
+      LFSR128(state);
+      fprintf (stderr, "\n");
+    }
+
+    //xl, we need to know if the ESS is from HDU, or LDU2
+    state->xl_is_hdu = 1;
+
   }
   else
   {

@@ -115,12 +115,23 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "\n");
         fprintf (stderr, "%s", KNRM);
       }
-      //run afterwards, or le verification won't match up properly
-      if (state->payload_algid != 0x21)
+
+      //run expansions afterwards, or le verification won't match up properly
+
+      //DES1
+      if (state->payload_algid == 0x22)
       {
         LFSR64 (state);
         fprintf (stderr, "\n");
-      } 
+      }
+
+      //AES-128 or AES-256
+      if (state->payload_algid == 0x24 || state->payload_algid == 0x25)
+      {
+        LFSR128d (state);
+        fprintf (stderr, "\n");
+      }
+
     }
     if (slot == 1 && state->payload_algidR != 0)
     {
@@ -134,15 +145,61 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "\n");
         fprintf (stderr, "%s", KNRM);
       }
-      //run afterwards, or le verification won't match up properly
-      if (state->payload_algidR != 0x21)
+
+      //run expansions afterwards, or le verification won't match up properly
+
+      //DES1
+      if (state->payload_algidR == 0x22)
       {
         LFSR64 (state);
         fprintf (stderr, "\n");
-      } 
+      }
+
+      //AES-128 or AES-256
+      if (state->payload_algidR == 0x24 || state->payload_algidR == 0x25)
+      {
+        LFSR128d (state);
+        fprintf (stderr, "\n");
+      }
+
     }
 
   }
+
+  //run LFSR even if golay fails
+  else if (slot == 0 && state->payload_algid != 0)
+  {
+    //DES1
+    if (state->payload_algid == 0x22)
+    {
+      LFSR64 (state);
+      fprintf (stderr, "\n");
+    }
+
+    //AES-128 or AES-256
+    if (state->payload_algid == 0x24 || state->payload_algid == 0x25)
+    {
+      LFSR128d (state);
+      fprintf (stderr, "\n");
+    }
+  }
+  else if (slot == 1 && state->payload_algidR != 0)
+  {
+    //DES1
+    if (state->payload_algidR == 0x22)
+    {
+      LFSR64 (state);
+      fprintf (stderr, "\n");
+    }
+
+    //AES-128 or AES-256
+    if (state->payload_algidR == 0x24 || state->payload_algidR == 0x25)
+    {
+      LFSR128d (state);
+      fprintf (stderr, "\n");
+    }
+  }
+  
 
 }
 
@@ -195,8 +252,8 @@ void dmr_alg_reset (dsd_opts * opts, dsd_state * state)
   state->dropR = 256;
   state->DMRvcL = 0;
   state->DMRvcR = 0; 
-  state->payload_miP = 0;
-  state->payload_miN = 0; 
+  // state->payload_miP = 0; //running these clears out before we can create a new keystream
+  // state->payload_miN = 0; //running these clears out before we can create a new keystream
 }
 
 //handle Single Burst (Voice Burst F) or Reverse Channel Signalling 

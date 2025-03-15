@@ -256,6 +256,9 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     // TODO: do something useful with the LSD bytes... <--THIS!
 
     state->dropL += 2; //need to skip 2 here for the LSD bytes
+    //same for octet counter
+    state->octet_counter += 2;
+
   }
 
   // IMBE 9
@@ -277,6 +280,8 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 
   //reset dropbytes -- skip first 11 for next LCW
   state->dropL = 267;
+  //reset octet counter
+  state->octet_counter = 0; 
 
   if (opts->errorbars == 1)
     {
@@ -476,9 +481,36 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, " LDU2 ALG ID: 0x%02X KEY ID: 0x%04X MI: 0x%08llX%08llX", algidhex, kidhex, mihex1, mihex2);
     state->payload_algid = algidhex;
     state->payload_keyid = kidhex;
+    if (mihex3) fprintf (stderr, "-%02llX", mihex3);
     if (state->R != 0 && state->payload_algid == 0xAA)
     {
       fprintf (stderr, " Key: %010llX", state->R);
+      opts->unmute_encrypted_p25 = 1;
+    }
+    else if (state->R != 0 && state->payload_algid == 0x81)
+    {
+      fprintf (stderr, " Key: %010llX", state->R);
+      opts->unmute_encrypted_p25 = 1;
+    }
+    else if (state->R != 0 && state->payload_algid == 0x9F)
+    {
+      fprintf (stderr, " Key: %010llX", state->R);
+      opts->unmute_encrypted_p25 = 1;
+    }
+    /* //going to want to update this for OFB, CBC, and ECB
+      { 0x84, "AES-256-OFB" },
+      { 0x85, "AES-128-ECB"},
+      { 0x88, "AES-CBC"},
+      { 0x89, "AES-128-OFB"},
+    */
+    else if ( (state->payload_algid == 0x84 || state->payload_algid == 0x89) && state->aes_key_loaded[0] == 1)
+    {
+      fprintf (stderr, "\n ");
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, "Key: %016llX %016llX ", state->A1[0], state->A2[0]);
+      if (state->payload_algid == 0x84)
+        fprintf (stderr, "%016llX %016llX", state->A3[0], state->A4[0]);
+      fprintf (stderr, "%s ", KNRM);
       opts->unmute_encrypted_p25 = 1;
     }
     else if (state->payload_algid != 0 && state->payload_algid != 0x80)
@@ -627,6 +659,15 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "\n");
   }
 
+  //expand 64-bit MI to 128-bit for AES
+  if (state->payload_algid == 0x84 || state->payload_algid == 0x89)
+  {
+    LFSR128(state);
+    fprintf (stderr, "\n");
+  }
+
+  //xl, we need to know if the ESS is from HDU, or LDU2
+  state->xl_is_hdu = 0;
 
   #define P25p1_ENC_LO //disable if this behavior is detremental
   #ifdef P25p1_ENC_LO
@@ -702,4 +743,87 @@ void LFSRP(dsd_state * state)
   if (state->currentslot == 1)
     fprintf (stderr, "\n LDU2/ESS_B FEC ERR - ALG: 0x%02X KEY ID: 0x%04X LFSR MI: 0x%016llX", state->payload_algidR, state->payload_keyidR, state->payload_miN);
   fprintf (stderr, "%s", KNRM);
+}
+
+void LFSR128(dsd_state * state)
+{
+  //generate a 128-bit IV from a 64-bit IV for AES blocks
+  unsigned long long int lfsr = 0;
+
+  int slot = state->currentslot;
+
+  if (state->currentslot == 0)
+    lfsr = state->payload_miP; 
+  else lfsr = state->payload_miN;
+
+  //start packing aes_iv
+  if (slot == 0)
+  {
+    state->aes_iv[0] = (lfsr >> 56) & 0xFF;
+    state->aes_iv[1] = (lfsr >> 48) & 0xFF;
+    state->aes_iv[2] = (lfsr >> 40) & 0xFF;
+    state->aes_iv[3] = (lfsr >> 32) & 0xFF;
+    state->aes_iv[4] = (lfsr >> 24) & 0xFF;
+    state->aes_iv[5] = (lfsr >> 16) & 0xFF;
+    state->aes_iv[6] = (lfsr >> 8 ) & 0xFF;
+    state->aes_iv[7] = (lfsr >> 0 ) & 0xFF;
+  }
+  if (slot == 1)
+  {
+    state->aes_ivR[0] = (lfsr >> 56) & 0xFF;
+    state->aes_ivR[1] = (lfsr >> 48) & 0xFF;
+    state->aes_ivR[2] = (lfsr >> 40) & 0xFF;
+    state->aes_ivR[3] = (lfsr >> 32) & 0xFF;
+    state->aes_ivR[4] = (lfsr >> 24) & 0xFF;
+    state->aes_ivR[5] = (lfsr >> 16) & 0xFF;
+    state->aes_ivR[6] = (lfsr >> 8 ) & 0xFF;
+    state->aes_ivR[7] = (lfsr >> 0 ) & 0xFF;
+  }
+
+  int cnt = 0; int x = 64;
+  unsigned long long int bit;
+  //polynomial P(x) = 1 + X15 + X27 + X38 + X46 + X62 + X64
+  for(cnt=0;cnt<64;cnt++) 
+  {
+    //63,61,45,37,27,14
+    // Polynomial is C(x) = x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1
+    bit = ((lfsr >> 63) ^ (lfsr >> 61) ^ (lfsr >> 45) ^ (lfsr >> 37) ^ (lfsr >> 26) ^ (lfsr >> 14)) & 0x1;
+    lfsr = (lfsr << 1) | bit;
+
+    //continue packing aes_iv
+    if (slot == 0)
+      state->aes_iv[x/8] = (state->aes_iv[x/8] << 1) + bit;
+    if (slot == 1)
+      state->aes_ivR[x/8] = (state->aes_ivR[x/8] << 1) + bit;
+    x++;
+  }
+
+  if (state->currentslot == 0)
+  {
+    fprintf (stderr, "%s", KYEL);
+    if (state->dmrburstL != 27) //if not LDU2
+      fprintf (stderr, "\n");
+    fprintf (stderr, "     ");
+    fprintf (stderr, " ALG ID: 0x%02X KEY ID: 0x%04X MI(128): 0x", state->payload_algid, state->payload_keyid);
+    for (x = 0; x < 16; x++)
+      fprintf (stderr, "%02X", state->aes_iv[x]);
+    fprintf (stderr, "%s", KNRM);
+    // fprintf (stderr, "\n");
+
+  }
+
+  if (state->currentslot == 1)
+  {
+    fprintf (stderr, "%s", KYEL);
+    if (state->dmrburstL != 27) //if not LDU2, shouldn't matter on P25p2 for the second slot
+      fprintf (stderr, "\n");
+    fprintf (stderr, "     ");
+    fprintf (stderr, " ALG ID: 0x%02X KEY ID: 0x%04X MI(128): 0x", state->payload_algidR, state->payload_keyidR);
+    for (x = 0; x < 16; x++)
+      fprintf (stderr, "%02X", state->aes_ivR[x]);
+    fprintf (stderr, "%s", KNRM);
+    // fprintf (stderr, "\n");
+
+  }
+
 }

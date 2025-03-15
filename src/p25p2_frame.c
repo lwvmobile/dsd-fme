@@ -597,7 +597,7 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 
 	if (opts->payload == 1)
 	{
-		fprintf (stderr, "\n");
+		// fprintf (stderr, "\n");
 		fprintf (stderr, " VCH %d - ESS_B %08llX%016llX ERR = %02d", state->currentslot, essb_hex1, essb_hex2, ec);
 	}
 
@@ -610,12 +610,30 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 			state->payload_miP =  ((essb_hex1 & 0xFF) << 56) | ((essb_hex2 & 0xFFFFFFFFFFFFFF00) >> 8);
 			if (state->payload_algid != 0x80 && state->payload_algid != 0x0)
 			{
-				fprintf (stderr, "\n VCH 0 -");
-				fprintf (stderr, " ALG ID 0x%02X", state->payload_algid);
-				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyid);
-				fprintf (stderr, " MI 0x%016llX", state->payload_miP);
-				if (state->R != 0 && state->payload_algid == 0xAA) fprintf (stderr, " Key 0x%010llX", state->R);
+				fprintf (stderr, "\n");
+				fprintf (stderr, " VCH 0 -");
+				fprintf (stderr, " ALG ID: 0x%02X", state->payload_algid);
+				fprintf (stderr, " KEY ID: 0x%04X", state->payload_keyid);
+				fprintf (stderr, " MI: 0x%016llX", state->payload_miP);
 				fprintf (stderr, " ESSB");
+
+				if (state->R != 0 && state->payload_algid == 0xAA) fprintf (stderr, " Key 0x%010llX", state->R);
+				if (state->R != 0 && state->payload_algid == 0x81) fprintf (stderr, " Key 0x%016llX", state->R);
+				if ( (state->payload_algid == 0x84 || state->payload_algid == 0x89) && state->aes_key_loaded[0] == 1)
+				{
+					fprintf (stderr, "\n ");
+					fprintf (stderr, "Key: %016llX %016llX ", state->A1[0], state->A2[0]);
+					if (state->payload_algid == 0x84)
+						fprintf (stderr, "%016llX %016llX", state->A3[0], state->A4[0]);
+					// opts->unmute_encrypted_p25 = 1; //needed?
+				}
+
+				//expand 64-bit MI to 128-bit for AES
+				if (state->payload_algid == 0x84 || state->payload_algid == 0x89)
+				{
+					LFSR128(state);
+					// fprintf (stderr, "\n");
+				}
 			}
 
 		}
@@ -626,12 +644,31 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 			state->payload_miN =  ((essb_hex1 & 0xFF) << 56) | ((essb_hex2 & 0xFFFFFFFFFFFFFF00) >> 8);
 			if (state->payload_algidR != 0x80 && state->payload_algidR != 0x0)
 			{
-				fprintf (stderr, "\n VCH 1 -");
-				fprintf (stderr, " ALG ID 0x%02X", state->payload_algidR);
-				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyidR);
-				fprintf (stderr, " MI 0x%016llX", state->payload_miN);
-				if (state->RR != 0 && state->payload_algidR == 0xAA) fprintf (stderr, " Key 0x%010llX", state->RR);
+				fprintf (stderr, "\n");
+				fprintf (stderr, " VCH 1 -");
+				fprintf (stderr, " ALG ID: 0x%02X", state->payload_algidR);
+				fprintf (stderr, " KEY ID: 0x%04X", state->payload_keyidR);
+				fprintf (stderr, " MI: 0x%016llX", state->payload_miN);
 				fprintf (stderr, " ESSB");
+
+				if (state->RR != 0 && state->payload_algidR == 0xAA) fprintf (stderr, " Key 0x%010llX", state->RR);
+				if (state->RR != 0 && state->payload_algidR == 0x81) fprintf (stderr, " Key 0x%016llX", state->RR);
+				if ( (state->payload_algidR == 0x84 || state->payload_algidR == 0x89) && state->aes_key_loaded[1] == 1)
+				{
+					fprintf (stderr, "\n ");
+					fprintf (stderr, "Key: %016llX %016llX ", state->A1[1], state->A2[1]);
+					if (state->payload_algidR == 0x84)
+						fprintf (stderr, "%016llX %016llX", state->A3[1], state->A4[1]);
+					// opts->unmute_encrypted_p25 = 1; //needed?
+				}
+
+				//expand 64-bit MI to 128-bit for AES
+				if (state->payload_algidR == 0x84 || state->payload_algidR == 0x89)
+				{
+					LFSR128(state);
+					// fprintf (stderr, "\n");
+				}
+
 			}
 
 		}
@@ -702,11 +739,28 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 	}
 	if (ec == -1 || ec >= 15)
 	{
+		//below needs a line break before LFSRP runs (when payload == 0)
 		//ESS R-S Failure -- run LFSR on current MI if applicable
 		if (state->currentslot == 0 && state->payload_algid != 0x80 && state->payload_keyid != 0 && state->payload_miP != 0)
 			LFSRP(state);
 		if (state->currentslot == 1 && state->payload_algidR != 0x80 && state->payload_keyidR != 0 && state->payload_miN != 0)
 			LFSRP(state);
+
+		//expand 64-bit MI to 128-bit for AES, vch 0
+		// if (state->currentslot == 0 && state->payload_algid == 0x84 || state->payload_algid == 0x89) //old version
+		if (state->currentslot == 0 && (state->payload_algid == 0x84 || state->payload_algid == 0x89))
+		{
+			LFSR128(state);
+			// fprintf (stderr, "\n");
+		}
+
+		//expand 64-bit MI to 128-bit for AES, vch 1
+		// if (state->currentslot == 1 && state->payload_algidR == 0x84 || state->payload_algidR == 0x89) //old version if break
+		if (state->currentslot == 1 && (state->payload_algidR == 0x84 || state->payload_algidR == 0x89)) //new version with parenthesis
+		{
+			LFSR128(state);
+			// fprintf (stderr, "\n");
+		}
 	}
 	fprintf (stderr, "%s", KNRM);
 
@@ -816,6 +870,27 @@ void process_2V (dsd_opts * opts, dsd_state * state)
 
 	if (state->currentslot == 1 && state->payload_algidR == 0xAA)
 		state->dropR = 256;
+
+	//reset voice counter after 2V (DES)
+	if (state->currentslot == 0 && state->payload_algid == 0x81)
+		state->DMRvcL = 0;
+
+	if (state->currentslot == 1 && state->payload_algidR == 0x81)
+		state->DMRvcR = 0;
+
+	//reset voice counter after 2V (AES 256)
+	if (state->currentslot == 0 && state->payload_algid == 0x84)
+		state->DMRvcL = 0;
+
+	if (state->currentslot == 1 && state->payload_algidR == 0x84)
+		state->DMRvcR = 0;
+
+	//reset voice counter after 2V (AES 128)
+	if (state->currentslot == 0 && state->payload_algid == 0x89)
+		state->DMRvcL = 0;
+
+	if (state->currentslot == 1 && state->payload_algidR == 0x89)
+		state->DMRvcR = 0;
 
 }
 

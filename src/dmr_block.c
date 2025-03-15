@@ -913,6 +913,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         if (end < 0) end = 3096;
         int alg = 0;
         int kid = 0;
+        int akl = 0;
         if (state->currentslot == 0)
           alg = state->payload_algid;
         else alg = state->payload_algidR;
@@ -935,6 +936,21 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           R = state->rkey_array[state->payload_keyid]; 
         else
           R = state->rkey_array[state->payload_keyidR];
+
+        //loader for aes keys
+        uint8_t kaes[32];
+        uint8_t empt[32];
+        uint8_t maes[16];
+        for (i = 0; i < 8; i++)
+        {
+          kaes[i+0]   = ((state->rkey_array[kid+0x000]) >> (56-(i*8))) & 0xFF;
+          kaes[i+8]   = ((state->rkey_array[kid+0x101]) >> (56-(i*8))) & 0xFF;
+          kaes[i+16]  = ((state->rkey_array[kid+0x201]) >> (56-(i*8))) & 0xFF;
+          kaes[i+24]  = ((state->rkey_array[kid+0x301]) >> (56-(i*8))) & 0xFF;
+
+          //if kaes is loaded with a key, then flag on the key loaded variable
+          if (memcmp(kaes, empt, sizeof(kaes)) != 0) akl = 1;
+        }
 
         if (R == 0 && state->R != 0) R = state->R;
 
@@ -959,15 +975,66 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         if (alg == 4) fprintf (stderr, " AES256;");
         if (R && alg != 0) fprintf (stderr, " Key: %010llX;", R);
 
+        //generate 128-bit IV from 32-bit MI
+        //expand 32-bit MI to 128-bit IV for AES mode data decryption
+        //we only want to do this at the moment of keystream generation
+        if (alg == 5)
+        {
+          fprintf (stderr, "\n");
+          LFSR128d(state);
+          if (state->currentslot == 0)
+            memcpy (maes, state->aes_iv, sizeof(maes));
+          if (state->currentslot == 1)
+            memcpy (maes, state->aes_ivR, sizeof(maes));
+        }
+
         if (alg == 1 && R != 0) //RC4
         {
           rc4_block_output (256, 9, (int)state->data_byte_ctr[slot], kiv, ob);
           decrypted_pdu = 1;
         }
 
+        if (alg == 5 && akl == 1) //AES-256
+        {
+          int nblocks = (state->data_byte_ctr[slot] / 16) + 1;
+          aes_ofb_keystream_output (maes, kaes, ob, 2, nblocks);
+          decrypted_pdu = 1;
+        }
+
+        //other algs available, not sure if others will be used in any DMRA offerings
+        if (alg == 2 && R != 0) //Tait DES
+        {
+          int nblocks = (state->data_byte_ctr[slot] / 8) + 1;
+          des_multi_keystream_output (mi, R, ob, 1, nblocks);
+          decrypted_pdu = 1;
+        }
+
+        if (alg == 4 && akl == 1) //AES-128
+        {
+          int nblocks = (state->data_byte_ctr[slot] / 16) + 1;
+          aes_ofb_keystream_output (maes, kaes, ob, 0, nblocks);
+          decrypted_pdu = 1;
+        }
+
         //NOTE: Observed that keystream should not be applied to pad bytes or CRC
         //apply keystream here, only if alg is 1 or 4 AND key is available!
         if (alg == 1 && R != 0)
+        {
+          for (i = 0; i < end; i++)
+            state->dmr_pdu_sf[slot][i+start] ^= ob[i%3096];
+        }
+        
+        else if (alg == 2 && R != 0)
+        {
+          for (i = 0; i < end; i++)
+            state->dmr_pdu_sf[slot][i+start] ^= ob[i%3096];
+        }
+        else if (alg == 4 && akl != 0)
+        {
+          for (i = 0; i < end; i++)
+            state->dmr_pdu_sf[slot][i+start] ^= ob[i%3096];
+        }
+        else if (alg == 5 && akl != 0)
         {
           for (i = 0; i < end; i++)
             state->dmr_pdu_sf[slot][i+start] ^= ob[i%3096];

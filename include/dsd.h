@@ -596,6 +596,16 @@ typedef struct
   unsigned long long int K4;
   int M;
   int menuopen;
+  
+  //AES Key Segments
+  unsigned long long int A1[2];
+  unsigned long long int A2[2];
+  unsigned long long int A3[3];
+  unsigned long long int A4[4];
+  int aes_key_loaded[2];
+
+  //xl specific, we need to know if the ESS is from HDU, or from LDU2
+  int xl_is_hdu;
 
   unsigned int debug_audio_errors;
   unsigned int debug_audio_errorsR;
@@ -718,6 +728,23 @@ typedef struct
   int DMRvcL;
   int DMRvcR;
 
+  //keystream octet and bit arrays
+  uint8_t ks_octetL[129*18]; //arbitary size, but large enough for the largest packed PDUs
+  uint8_t ks_octetR[129*18]; //arbitary size, but large enough for the largest packed PDUs
+  uint8_t ks_bitstreamL[128*18*8]; //arbitary size, but large enough for the largest PDUs
+  uint8_t ks_bitstreamR[129*18*8]; //arbitary size, but large enough for the largest PDUs
+  int octet_counter;
+  long int bit_counterL;
+  long int bit_counterR;
+
+  //AES Specific Variables
+  uint8_t aes_key[32]; //was 64 for some reason
+  uint8_t aes_iv[16];
+  uint8_t aes_ivR[16];
+
+  //NXDN DES and AES, signal new VCALL_IV and new IV
+  uint8_t nxdn_new_iv; //1 when a new IV comes in, else 0
+  
   short int dmr_encL;
   short int dmr_encR;
 
@@ -828,7 +855,7 @@ typedef struct
   uint8_t nxdn_bw;
 
   //multi-key array
-  unsigned long long int rkey_array[0xFFFF];
+  unsigned long long int rkey_array[0x1FFFF];
   int keyloader; //let us know the keyloader is active
 
   //dmr late entry mi
@@ -1477,8 +1504,24 @@ int udp_socket_connectM17(dsd_opts * opts, dsd_state * state);
 int m17_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
 
 //RC4 function prototypes
-void RC4(int drop, uint8_t keylength, uint8_t messagelength, uint8_t key[], uint8_t cipher[], uint8_t plain[]);
+void rc4_voice_decrypt (int drop, uint8_t keylength, uint8_t messagelength, uint8_t key[], uint8_t cipher[], uint8_t plain[]);
 void rc4_block_output (int drop, int keylen, int meslen, uint8_t * key, uint8_t * output_blocks);
+
+//DES function prototypes
+void des_multi_keystream_output (unsigned long long int mi, unsigned long long int key_ulli, uint8_t * output, int type, int len);
+void tdea_multi_keystream_output (unsigned long long int mi, uint8_t * key, uint8_t * output, int type, int len);
+
+//AES function prototypes
+void aes_ofb_keystream_output (uint8_t * iv, uint8_t * key, uint8_t * output, int type, int nblocks);
+void aes_ecb_bytewise_payload_crypt (uint8_t * input, uint8_t * key, uint8_t * output, int type, int de);
+void aes_cbc_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * in, uint8_t * out, int type, int nblocks, int de);
+void aes_cfb_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * in, uint8_t * out, int type, int nblocks, int de);
+void aes_ctr_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payload, int type);
+void aes_ctr_bitwise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payload, int type);
+
+//LFSR to expand either a DMR 32-bit or P25 64-bit MI into a 128-bit IV for AES
+void LFSR128(dsd_state * state);
+void LFSR128d(dsd_state * state);
 
 
 #ifdef __cplusplus

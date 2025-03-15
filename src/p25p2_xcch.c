@@ -153,11 +153,28 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			if (state->payload_algid != 0x80 && state->payload_algid != 0x0)
 			{
 				fprintf (stderr, "%s", KYEL);
-				fprintf (stderr, "\n         ALG ID 0x%02X", state->payload_algid);
-				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyid);
-				fprintf (stderr, " MI 0x%016llX", state->payload_miP);
-				if (state->R != 0 && state->payload_algid == 0xAA) fprintf (stderr, " Key 0x%010llX", state->R);
+				fprintf (stderr, "\n         ALG ID: 0x%02X", state->payload_algid);
+				fprintf (stderr, " KEY ID: 0x%04X", state->payload_keyid);
+				fprintf (stderr, " MI: 0x%016llX", state->payload_miP);
 				fprintf(stderr, " MPTT");
+				if (state->R != 0 && state->payload_algid == 0xAA) fprintf (stderr, " Key 0x%010llX", state->R);
+				if (state->R != 0 && state->payload_algid == 0x81) fprintf (stderr, " Key 0x%016llX", state->R);
+
+				if ( (state->payload_algid == 0x84 || state->payload_algid == 0x89) && state->aes_key_loaded[0] == 1)
+				{
+					fprintf (stderr, "\n ");
+					fprintf (stderr, "Key: %016llX %016llX ", state->A1[0], state->A2[0]);
+					if (state->payload_algid == 0x84)
+						fprintf (stderr, "%016llX %016llX", state->A3[0], state->A4[0]);
+					// opts->unmute_encrypted_p25 = 1; //needed?
+				}
+
+				//expand 64-bit MI to 128-bit for AES
+				if (state->payload_algid == 0x84 || state->payload_algid == 0x89)
+				{
+					LFSR128(state);
+					// fprintf (stderr, "\n");
+				}
 				// fprintf (stderr, " %s", KRED);
 				// fprintf (stderr, "ENC");
 			}
@@ -195,11 +212,28 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			if (state->payload_algidR != 0x80 && state->payload_algidR != 0x0)
 			{
 				fprintf (stderr, "%s", KYEL);
-				fprintf (stderr, "\n         ALG ID 0x%02X", state->payload_algidR);
-				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyidR);
-				fprintf (stderr, " MI 0x%016llX", state->payload_miN);
-				if (state->RR != 0 && state->payload_algidR == 0xAA) fprintf (stderr, " Key 0x%010llX", state->RR);
+				fprintf (stderr, "\n         ALG ID: 0x%02X", state->payload_algidR);
+				fprintf (stderr, " KEY ID: 0x%04X", state->payload_keyidR);
+				fprintf (stderr, " MI: 0x%016llX", state->payload_miN);
 				fprintf(stderr, " MPTT");
+
+				if (state->RR != 0 && state->payload_algidR == 0xAA) fprintf (stderr, " Key 0x%010llX", state->RR);
+				if (state->RR != 0 && state->payload_algidR == 0x81) fprintf (stderr, " Key 0x%016llX", state->RR);
+				if ( (state->payload_algidR == 0x84 || state->payload_algidR == 0x89) && state->aes_key_loaded[1] == 1)
+				{
+					fprintf (stderr, "\n ");
+					fprintf (stderr, "Key: %016llX %016llX ", state->A1[1], state->A2[1]);
+					if (state->payload_algidR == 0x84)
+						fprintf (stderr, "%016llX %016llX", state->A3[1], state->A4[1]);
+					// opts->unmute_encrypted_p25 = 1; //needed?
+				}
+
+				//expand 64-bit MI to 128-bit for AES
+				if (state->payload_algidR == 0x84 || state->payload_algidR == 0x89)
+				{
+					LFSR128(state);
+					// fprintf (stderr, "\n");
+				}
 				// fprintf (stderr, " %s", KRED);
 				// fprintf (stderr, "ENC");
 			}
@@ -219,6 +253,27 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 				fprintf (stderr, "[%02llX]", SMAC[i]);
 			}
 		}
+
+		//reset voice counter at MAC_PTT (inverted, triple check please)
+		if (state->currentslot == 1 && state->payload_algidR == 0x81)
+			state->DMRvcL = 0;
+
+		if (state->currentslot == 0 && state->payload_algid == 0x81)
+			state->DMRvcR = 0;
+
+		//reset voice counter after 2V (AES 256)
+		if (state->currentslot == 1 && state->payload_algidR == 0x84)
+			state->DMRvcL = 0;
+
+		if (state->currentslot == 0 && state->payload_algid == 0x84)
+			state->DMRvcR = 0;
+
+		//reset voice counter after 2V (AES 128)
+		if (state->currentslot == 1 && state->payload_algidR == 0x89)
+			state->DMRvcL = 0;
+
+		if (state->currentslot == 0 && state->payload_algid == 0x89)
+			state->DMRvcR = 0;
 
 		fprintf (stderr, "%s", KNRM);
 	}
@@ -538,11 +593,28 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			if (state->payload_algid != 0x80 && state->payload_algid != 0x0)
 			{
 				fprintf (stderr, "%s", KYEL);
-				fprintf (stderr, "\n         ALG ID 0x%02X", state->payload_algid);
-				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyid);
-				fprintf (stderr, " MI 0x%016llX", state->payload_miP);
-				if (state->R != 0 && state->payload_algid == 0xAA) fprintf (stderr, " Key 0x%010llX", state->R);
+				fprintf (stderr, "\n         ALG ID: 0x%02X", state->payload_algid);
+				fprintf (stderr, " KEY ID: 0x%04X", state->payload_keyid);
+				fprintf (stderr, " MI: 0x%016llX", state->payload_miP);
 				fprintf(stderr, " MPTT");
+				if (state->R != 0 && state->payload_algid == 0xAA) fprintf (stderr, " Key 0x%010llX", state->R);
+				if (state->R != 0 && state->payload_algid == 0x81) fprintf (stderr, " Key 0x%016llX", state->R);
+
+				if ( (state->payload_algid == 0x84 || state->payload_algid == 0x89) && state->aes_key_loaded[0] == 1)
+				{
+					fprintf (stderr, "\n ");
+					fprintf (stderr, "Key: %016llX %016llX ", state->A1[0], state->A2[0]);
+					if (state->payload_algid == 0x84)
+						fprintf (stderr, "%016llX %016llX", state->A3[0], state->A4[0]);
+					// opts->unmute_encrypted_p25 = 1; //needed?
+				}
+
+				//expand 64-bit MI to 128-bit for AES
+				if (state->payload_algid == 0x84 || state->payload_algid == 0x89)
+				{
+					LFSR128(state);
+					// fprintf (stderr, "\n");
+				}
 				// fprintf (stderr, " %s", KRED);
 				// fprintf (stderr, "ENC");
 			}
@@ -579,11 +651,28 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			if (state->payload_algidR != 0x80 && state->payload_algidR != 0x0)
 			{
 				fprintf (stderr, "%s", KYEL);
-				fprintf (stderr, "\n         ALG ID 0x%02X", state->payload_algidR);
-				fprintf (stderr, " KEY ID 0x%04X", state->payload_keyidR);
-				fprintf (stderr, " MI 0x%016llX", state->payload_miN);
-				if (state->RR != 0 && state->payload_algidR == 0xAA) fprintf (stderr, " Key 0x%010llX", state->RR);
+				fprintf (stderr, "\n         ALG ID: 0x%02X", state->payload_algidR);
+				fprintf (stderr, " KEY ID: 0x%04X", state->payload_keyidR);
+				fprintf (stderr, " MI: 0x%016llX", state->payload_miN);
 				fprintf(stderr, " MPTT");
+
+				if (state->RR != 0 && state->payload_algidR == 0xAA) fprintf (stderr, " Key 0x%010llX", state->RR);
+				if (state->RR != 0 && state->payload_algidR == 0x81) fprintf (stderr, " Key 0x%016llX", state->RR);
+				if ( (state->payload_algidR == 0x84 || state->payload_algidR == 0x89) && state->aes_key_loaded[1] == 1)
+				{
+					fprintf (stderr, "\n ");
+					fprintf (stderr, "Key: %016llX %016llX ", state->A1[1], state->A2[1]);
+					if (state->payload_algidR == 0x84)
+						fprintf (stderr, "%016llX %016llX", state->A3[1], state->A4[1]);
+					// opts->unmute_encrypted_p25 = 1; //needed?
+				}
+
+				//expand 64-bit MI to 128-bit for AES
+				if (state->payload_algidR == 0x84 || state->payload_algidR == 0x89)
+				{
+					LFSR128(state);
+					// fprintf (stderr, "\n");
+				}
 				// fprintf (stderr, " %s", KRED);
 				// fprintf (stderr, "ENC");
 			}
@@ -604,6 +693,27 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			}
 		}
 		fprintf (stderr, "%s", KNRM);
+
+		//reset voice counter at MAC_PTT
+		if (state->currentslot == 0 && state->payload_algid == 0x81)
+			state->DMRvcL = 0;
+
+		if (state->currentslot == 1 && state->payload_algidR == 0x81)
+			state->DMRvcR = 0;
+
+		//reset voice counter after 2V (AES 256)
+		if (state->currentslot == 0 && state->payload_algid == 0x84)
+			state->DMRvcL = 0;
+
+		if (state->currentslot == 1 && state->payload_algidR == 0x84)
+			state->DMRvcR = 0;
+
+		//reset voice counter after 2V (AES 128)
+		if (state->currentslot == 0 && state->payload_algid == 0x89)
+			state->DMRvcL = 0;
+
+		if (state->currentslot == 1 && state->payload_algidR == 0x89)
+			state->DMRvcR = 0;
 
 	}
 	if (opcode == 0x2 && err == 0)

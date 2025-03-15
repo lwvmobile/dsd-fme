@@ -49,6 +49,9 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
   // so we start counter at 36-14-1 = 21
   status_count = 21;
 
+  //set vc counter to 0 -- just playing it safe, shouldn't matter since rotating MIs are only in the LDU2 frame
+  state->p25vc = 0;
+
   if (opts->errorbars == 1)
     {
       //fprintf (stderr, "e:");
@@ -253,6 +256,8 @@ processLDU1 (dsd_opts* opts, dsd_state* state)
     // TODO: do something useful with the LSD bytes... <--THIS!
 
     state->dropL += 2; //need to skip 2 here for the LSD bytes
+    //same for octet counter
+    state->octet_counter += 2;
   }
 
   // IMBE 9

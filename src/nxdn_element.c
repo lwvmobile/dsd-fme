@@ -1264,8 +1264,11 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
   else if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
 
-  //Don't zero key if no keyloader
-  if (CipherType != 0x1 && state->keyloader == 1) state->R = 0;
+  //Don't zero key if no keyloader, if we need this, do it when its nots NXDN96, causes issue when 96 VCALL comes in on all data frames
+  // if (CipherType != 0x1 && state->keyloader == 1) state->R = 0; //what did this do again? for mont system or something?
+
+  //safe alternative?
+  if (CipherType == 0 && state->keyloader == 1) state->R = 0;
 
   /* Print the "Cipher Type" */
   if(CipherType != 0 && MessageType == 0x1)
@@ -1286,6 +1289,20 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   {
     fprintf (stderr, "%s", KYEL);
     fprintf(stderr, "Value: %05lld", state->R);
+    fprintf (stderr, "%s", KNRM);
+  }
+
+  if (CipherType == 0x02 && state->R > 0) //DES key value
+  {
+    fprintf (stderr, "%s", KYEL);
+    fprintf(stderr, "Value: %016llX", state->R);
+    fprintf (stderr, "%s", KNRM);
+  }
+
+  if (CipherType == 0x03 && state->R > 0) //AES key stub
+  {
+    fprintf (stderr, "%s", KYEL);
+    fprintf(stderr, "KS: %016llX", state->R);
     fprintf (stderr, "%s", KNRM);
   }
 
@@ -1373,10 +1390,59 @@ void NXDN_decode_VCALL_IV(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   //At this point, I would assume an LFSR function is needed to expand the 22-bit IV collected here into a 64-bit IV, or 128-bit IV
 
   state->payload_miN = IV;
-  state->NxdnElementsContent.PartOfCurrentEncryptedFrame = 2;
-  state->NxdnElementsContent.PartOfNextEncryptedFrame    = 1;
-
   fprintf (stderr, "\n  VCALL_IV: %016llX", state->payload_miN);
+
+
+  if ( ((state->nxdn_cipher_type == 0x02) || (state->nxdn_cipher_type == 0x03)) )
+  {
+
+    if (state->nxdn_cipher_type == 0x03 && state->keyloader == 1)
+    {
+      state->A1[0] = state->rkey_array[state->nxdn_key+0x000];
+      state->A2[0] = state->rkey_array[state->nxdn_key+0x101];
+      state->A3[0] = state->rkey_array[state->nxdn_key+0x201];
+      state->A4[0] = state->rkey_array[state->nxdn_key+0x301];
+
+      //check to see if there is a value loaded or not
+      if (state->A1[0] == 0 && state->A2[0] == 0 && state->A3[0] == 0 && state->A4[0] == 0)
+        state->aes_key_loaded[0] = 0;
+      else state->aes_key_loaded[0] = 1;
+
+      for (int i = 0; i < 8; i++)
+      {
+        state->aes_key[i+0]  = (state->A1[0] >> (56-(i*8))) & 0xFF;
+        state->aes_key[i+8]  = (state->A2[0] >> (56-(i*8))) & 0xFF;
+        state->aes_key[i+16] = (state->A3[0] >> (56-(i*8))) & 0xFF;
+        state->aes_key[i+24] = (state->A4[0] >> (56-(i*8))) & 0xFF;
+      }
+
+      state->R = state->A1[0]; //display KS stub
+
+    }
+
+    //use the P25 Slot 1 LFSR128 to generate a 128-bit IV (state->payload_miN is on slot1)
+    if (state->nxdn_cipher_type == 0x03)
+    {
+      state->currentslot = 1; //quickly change to slot 1
+      fprintf (stderr, "\n NXDN -- ");
+      LFSR128(state); //TODO: Make a different function so we don't see the LDU2/ESS-B info and null key values, or something
+      state->currentslot = 0; //change back to slot 0
+    }
+
+    if (state->nxdn_cipher_type == 0x02 && state->keyloader == 1)
+    {
+      if (state->rkey_array[state->nxdn_key] != 0)
+        state->R = state->rkey_array[state->nxdn_key];
+    }
+
+    //signal a new IV is available, but only when the other checks pass
+    if (state->nxdn_cipher_type == 0x02 && state->R != 0)
+      state->nxdn_new_iv = 1;
+
+    if (state->nxdn_cipher_type == 0x03 && state->aes_key_loaded[0] == 1)
+      state->nxdn_new_iv = 1;
+
+  }
 
 } /* End NXDN_decode_VCALL_IV() */
 

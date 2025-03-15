@@ -633,3 +633,48 @@ void unpack_ambe (uint8_t * input, char * ambe)
   }
   ambe[48] = input[6] >> 7;
 }
+
+//convert a user string into a uint8_t array
+uint16_t parse_raw_user_string (char * input, uint8_t * output)
+{
+  //since we want this as octets, get strlen value, then divide by two
+  uint16_t len = strlen((const char*)input);
+
+  uint8_t shift = 0;
+  
+  //if zero is returned, just do two
+  // if (len == 0) len = 2;
+
+  //if zero, return as 0 len string
+  if (len == 0) return 0;
+
+  //if odd number, then user didn't pass complete octets,
+  //add one to len value and set the shift flag to left shift
+  if (len&1)
+  {
+    shift = 1;
+    len++;
+  } 
+
+  //divide by two to get octet len
+  len /= 2;
+
+  char octet_char[3];
+  octet_char[2] = 0;
+  uint16_t k = 0;
+  uint16_t i = 0;
+
+  for (i = 0; i < len; i++)
+  {
+    strncpy (octet_char, input+k, 2);
+    octet_char[2] = 0;
+    sscanf (octet_char, "%hhX", &output[i]);
+
+    k += 2;
+  }
+
+  //if we had an odd input value, then left shift the last octet 4 to make it flush
+  if (shift) output[len-1] <<= 4;
+
+  return len;
+}
