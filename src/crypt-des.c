@@ -778,54 +778,54 @@ void des56_ca_keystream_output (uint8_t * main_key, uint8_t * iv, uint8_t * ks_b
 //transitional function mainly to load key and iv into an array
 void des_multi_keystream_output (unsigned long long int mi, unsigned long long int key_ulli, uint8_t * output, int type, int len)
 {
-	int i = 0;
-	uint8_t iv[8]; memset (iv, 0, sizeof(iv));
-	uint8_t key[8]; memset(key, 0, sizeof(key));
+  int i = 0;
+  uint8_t iv[8]; memset (iv, 0, sizeof(iv));
+  uint8_t key[8]; memset(key, 0, sizeof(key));
 
-	//convert unsinged long long int values into array values
-	for (i = 7; i >= 0; i--)
-		iv[7-i] = (mi >> (8*i)) & 0xFF;
+  //convert unsinged long long int values into array values
+  for (i = 7; i >= 0; i--)
+    iv[7-i] = (mi >> (8*i)) & 0xFF;
 
-	for (i = 7; i >= 0; i--)
-		key[7-i] = (key_ulli >> (8*i)) & 0xFF;
+  for (i = 7; i >= 0; i--)
+    key[7-i] = (key_ulli >> (8*i)) & 0xFF;
 
-	//debug
-	// fprintf (stderr, "\n  IV: ");
+  //debug
+  // fprintf (stderr, "\n  IV: ");
   // for (i = 0; i < 8; i++)
   //   fprintf (stderr, "%02X", iv[i]);
-	// fprintf (stderr, "\n Key: ");
+  // fprintf (stderr, "\n Key: ");
   // for (i = 0; i < 8; i++)
   //   fprintf (stderr, "%02X", key[i]);
 
-	//types: 1 = DES56 OFB; 2 = DES56 CA (XL)
-	if (type == 2)
-	{
-		if (len == 0)
-			des56_ca_keystream_output(key, iv, output, 1, 110+696, 1704);
-		else des56_ca_keystream_output(key, iv, output, 1, 110+000, 1704);
-	}
-	else des56_ofb_keystream_output(key, iv, output, 1, len);
+  //types: 1 = DES56 OFB; 2 = DES56 CA (XL)
+  if (type == 2)
+  {
+    if (len == 0)
+      des56_ca_keystream_output(key, iv, output, 1, 110+696, 1704);
+    else des56_ca_keystream_output(key, iv, output, 1, 110+000, 1704);
+  }
+  else des56_ofb_keystream_output(key, iv, output, 1, len);
 
 }
 
 //transitional function mainly to load iv into an array
 void tdea_multi_keystream_output (unsigned long long int mi, uint8_t * key, uint8_t * output, int type, int len)
 {
-	int i = 0;
-	uint8_t iv[8]; memset (iv, 0, sizeof(iv));
+  int i = 0;
+  uint8_t iv[8]; memset (iv, 0, sizeof(iv));
 
-	//convert unsinged long long int values into array values
-	for (i = 7; i >= 0; i--)
-		iv[7-i] = (mi >> (8*i)) & 0xFF;
+  //convert unsinged long long int values into array values
+  for (i = 7; i >= 0; i--)
+    iv[7-i] = (mi >> (8*i)) & 0xFF;
 
-	//debug
-	// fprintf (stderr, "\n  IV: ");
+  //debug
+  // fprintf (stderr, "\n  IV: ");
   // for (i = 0; i < 8; i++)
   //   fprintf (stderr, "%02X", iv[i]);
-	
-	//type 1 = TDEA TOFB //TODO: Add more types like 2DES?
-	if (type == 1)
-		tdea_tofb_keystream_output(key, key+8, key+16, iv, output, 1, len);
-	else tdea_tofb_keystream_output(key, key+8, key+16, iv, output, 1, len);
+
+  //type 1 = TDEA TOFB //TODO: Add more types like 2DES?
+  if (type == 1)
+    tdea_tofb_keystream_output(key, key+8, key+16, iv, output, 1, len);
+  else tdea_tofb_keystream_output(key, key+8, key+16, iv, output, 1, len);
 
 }

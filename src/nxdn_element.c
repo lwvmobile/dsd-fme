@@ -1420,14 +1420,9 @@ void NXDN_decode_VCALL_IV(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 
     }
 
-    //use the P25 Slot 1 LFSR128 to generate a 128-bit IV (state->payload_miN is on slot1)
+    //expand the IV into 128-bit
     if (state->nxdn_cipher_type == 0x03)
-    {
-      state->currentslot = 1; //quickly change to slot 1
-      fprintf (stderr, "\n NXDN -- ");
-      LFSR128(state); //TODO: Make a different function so we don't see the LDU2/ESS-B info and null key values, or something
-      state->currentslot = 0; //change back to slot 0
-    }
+      LFSR128n(state);
 
     if (state->nxdn_cipher_type == 0x02 && state->keyloader == 1)
     {

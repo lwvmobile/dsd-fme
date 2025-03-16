@@ -186,48 +186,48 @@ void LFSR(dsd_state * state)
 //Expand a 32-bit MI into a 64-bit IV for DES
 void LFSR64(dsd_state * state)
 {
-	{
+  {
     unsigned long long int lfsr = 0;
 
-		if (state->currentslot == 0)
-		{
-			lfsr = (uint64_t) state->payload_mi; 
-		}
+    if (state->currentslot == 0)
+    {
+      lfsr = (uint64_t) state->payload_mi; 
+    }
     else lfsr = (uint64_t) state->payload_miR; 
 
     uint8_t cnt = 0;
 
     for(cnt=0;cnt<32;cnt++) 
     {
-			unsigned long long int bit = ( (lfsr >> 31) ^ (lfsr >> 21) ^ (lfsr >> 1) ^ (lfsr >> 0) ) & 0x1;
+      unsigned long long int bit = ( (lfsr >> 31) ^ (lfsr >> 21) ^ (lfsr >> 1) ^ (lfsr >> 0) ) & 0x1;
       lfsr = (lfsr << 1) | bit;
     }
 
-		if (state->currentslot == 0)
-		{
+    if (state->currentslot == 0)
+    {
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot 1");
       fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
       fprintf (stderr, " MI(64): 0x%016llX", lfsr);
       fprintf (stderr, "%s", KNRM);
-			state->payload_mi = lfsr & 0xFFFFFFFF; //truncate for next repitition and le verification
+      state->payload_mi = lfsr & 0xFFFFFFFF; //truncate for next repitition and le verification
       state->payload_miP = lfsr;
       state->DMRvcL = 0;
-		}
+    }
 
-		if (state->currentslot == 1)
-		{
+    if (state->currentslot == 1)
+    {
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot 2");
       fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algidR, state->payload_keyidR);
       fprintf (stderr, " MI(64): 0x%016llX", lfsr);
       fprintf (stderr, "%s", KNRM);
-			state->payload_miR = lfsr & 0xFFFFFFFF; //truncate for next repitition and le verification
+      state->payload_miR = lfsr & 0xFFFFFFFF; //truncate for next repitition and le verification
       state->payload_miN = lfsr;
       state->DMRvcR = 0;
-		}
+    }
 
-	}
+  }
 }
 
 

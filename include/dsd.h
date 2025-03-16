@@ -1519,8 +1519,9 @@ void aes_cfb_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * in, 
 void aes_ctr_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payload, int type);
 void aes_ctr_bitwise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payload, int type);
 
-//LFSR to expand either a DMR 32-bit or P25 64-bit MI into a 128-bit IV for AES
+//LFSR to expand either a DMR 32-bit or P25/NXDN 64-bit MI into a 128-bit IV for AES
 void LFSR128(dsd_state * state);
+void LFSR128n(dsd_state * state);
 void LFSR128d(dsd_state * state);
 
 

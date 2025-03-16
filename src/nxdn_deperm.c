@@ -1336,3 +1336,43 @@ uint8_t crc7_scch(uint8_t bits[], int len)
 	}
 	return load_i(s, 7);
 }
+
+void LFSR128n(dsd_state * state)
+{
+  //generate a 128-bit IV from a 64-bit IV for AES blocks
+  unsigned long long int lfsr = state->payload_miN;
+
+  //start packing aes_iv
+	state->aes_iv[0] = (lfsr >> 56) & 0xFF;
+	state->aes_iv[1] = (lfsr >> 48) & 0xFF;
+	state->aes_iv[2] = (lfsr >> 40) & 0xFF;
+	state->aes_iv[3] = (lfsr >> 32) & 0xFF;
+	state->aes_iv[4] = (lfsr >> 24) & 0xFF;
+	state->aes_iv[5] = (lfsr >> 16) & 0xFF;
+	state->aes_iv[6] = (lfsr >> 8 ) & 0xFF;
+	state->aes_iv[7] = (lfsr >> 0 ) & 0xFF;
+
+
+  int cnt = 0; int x = 64;
+  unsigned long long int bit;
+  //polynomial P(x) = 1 + X15 + X27 + X38 + X46 + X62 + X64
+  for(cnt=0;cnt<64;cnt++) 
+  {
+    //63,61,45,37,27,14
+    // Polynomial is C(x) = x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1
+    bit = ((lfsr >> 63) ^ (lfsr >> 61) ^ (lfsr >> 45) ^ (lfsr >> 37) ^ (lfsr >> 26) ^ (lfsr >> 14)) & 0x1;
+    lfsr = (lfsr << 1) | bit;
+
+    //continue packing aes_iv
+		state->aes_iv[x/8] = (state->aes_iv[x/8] << 1) + bit;
+    x++;
+  }
+
+	fprintf (stderr, "%s", KYEL);
+		fprintf (stderr, "\n");
+	fprintf (stderr, " IV(128): 0x");
+	for (x = 0; x < 16; x++)
+		fprintf (stderr, "%02X", state->aes_iv[x]);
+	fprintf (stderr, "%s", KNRM);
+
+}

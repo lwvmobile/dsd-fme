@@ -516,12 +516,12 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 			{
 
         //more debug
-        fprintf (stderr, " IV: %016llX; Key: %016llX", state->payload_miN, state->R);
+        // fprintf (stderr, " IV: %016llX; Key: %016llX", state->payload_miN, state->R);
 
         memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
         memset (state->ks_bitstreamL, 0, sizeof(state->ks_bitstreamL));
 
-				aes_ofb_keystream_output (state->aes_ivR, state->aes_key, state->ks_octetL, 2, 15); //14 + 1 discard round
+				aes_ofb_keystream_output (state->aes_iv, state->aes_key, state->ks_octetL, 2, 15); //14 + 1 discard round
 
 				//reset bit_counter
 				state->bit_counterL = 0;
