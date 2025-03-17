@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include "dsd.h"
 
 //NOTE: The SLUT boxes are S boxes with additional calculations so we don't have
 //to manually sort out row and column values and can cut down on operations

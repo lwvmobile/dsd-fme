@@ -1083,6 +1083,9 @@ void pa_sourcelist_cb (pa_context *c, const pa_source_info *l, int eol, void *us
 int pa_get_devicelist (pa_devicelist_t *input, pa_devicelist_t *output);
 int pulse_list();
 
+//parse a user string into a uint8_t array
+uint16_t parse_raw_user_string (char * input, uint8_t * output);
+
 int getDibit (dsd_opts * opts, dsd_state * state);
 int get_dibit_and_analog_signal (dsd_opts * opts, dsd_state * state, int * out_analog_signal);
 int digitize (dsd_opts* opts, dsd_state* state, int symbol);

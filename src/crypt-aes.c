@@ -38,7 +38,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stddef.h>
-// #include "aes.h"
+#include "dsd.h"
 
 #define AES_BLOCKLEN 16
 unsigned Nb = 4;
@@ -917,5 +917,171 @@ void aes_ctr_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payl
 
   //pass to internal CTR handler for payload
   AES_CTR_xcrypt_buffer(&ctx, payload, 16);
+
+}
+
+//where all the magic happens
+uint8_t aes_key_unwrap_execute (uint8_t * key, uint8_t * payload, uint8_t * output_bytes)
+{
+  //counters
+  int16_t i = 0, j = 0, k = 0;
+
+  //start / stop values for iterators (based on AES 256 for P25 OTAR)
+  int16_t istart = 4, jstart = 5;
+
+  //integrety check value
+  uint8_t icv1[8]; //Default to 0xA6A6A6A6A6A6A6A6
+  memset (icv1, 0xA6, 8*sizeof(uint8_t));
+
+  //Semi Block Cipher Code Words
+  uint8_t C[10][8];
+  memset(C, 0, sizeof(C));
+
+  //copy input_bytes to cipher code words
+  for (i = 0; i < 6; i++) 
+    memcpy(C[i], payload+(i*8), sizeof(C[0]));
+
+  //A = C0 first 8 octets only
+  uint8_t A[8];
+  memset (A, 0, sizeof(A));
+  memcpy (A, C[0], sizeof(A));
+
+  //B = ECB-1K ((A XOR ((x*j) + i)) | Ri)
+  uint8_t B[16];
+  memset(B, 0, sizeof(B));
+
+  uint8_t X[8]; // ((x*j) + i)
+  memset(X, 0, sizeof(X));
+  uint16_t t_idx = (istart * jstart) + istart; //iterator increment 't' index
+  uint16_t XX = 0;
+
+  uint8_t T[16];
+  memset(T, 0, sizeof(T));
+
+  //debug output
+  fprintf (stderr, "\n   Wrap: ");
+  for (i = 0; i < 40; i++)
+    fprintf (stderr, "%02X", payload[i]);
+
+  //key unwrap
+  for (j = jstart; j >= 0; j--) //5,4,3,2,1,0
+  {
+
+    for (i = istart; i >= 1; i--) //x, x-1, ... 1
+    {
+      //calculate the inner XOR variable
+      // XX = (xlen * j) + i;
+      XX = t_idx--;
+      X[6] = (XX >> 8) & 0xFF;
+      X[7] = (XX >> 0) & 0xFF;
+
+      //setup input T array based on semi-blocks
+      memset(T, 0, sizeof(T));
+      for (k = 0; k < 8; k++)
+      {
+        T[k+0] = A[k] ^ X[k]; // (A XOR ((x*j) + i))
+        T[k+8] = C[i][k];     // | Ri (assign to LSB)
+      }
+
+      //Execute AES Cipher in ECB Mode
+      aes_ecb_bytewise_payload_crypt(T, key, B, 2, 0);
+
+      //copy ciphered output B so that,
+
+      //A = MSBn/2(B)
+      memcpy(A, B+0, sizeof(A));
+
+      //Copy A to Code Word 0
+      memcpy(C[0], A, sizeof(A));
+
+      //C[j] = Ri, and Ri = LSBn/2(B)
+      memcpy(C[i], B+8, sizeof(A));
+
+      //debug intermediate values
+      // fprintf (stderr, "   --J: %d; I: %d; XX: %02d--", j, i, XX);
+      // fprintf (stderr, "\n   ICV1: ");
+      // for (int16_t y = 0; y < 8; y++)
+      //   fprintf (stderr, "%02X", A[y]);
+      // for (int16_t z = 1; z < 6; z++)
+      // {
+      //   fprintf (stderr, "\n   C[%d]: ", z);
+      //   for (int16_t y = 0; y < 8; y++)
+      //     fprintf (stderr, "%02X", C[z][y]);
+      // }
+      // fprintf (stderr, "\n");
+
+    }
+  }
+
+  //copy final to output_bytes
+  for (i = 0; i < 6; i++) //was 6
+    memcpy (output_bytes+(i*8), C[i], sizeof(C[0]));
+
+  //debug output
+  fprintf (stderr, "\n Unwrap: ");
+  for (i = 0; i < 40; i++)
+    fprintf (stderr, "%02X", output_bytes[i]);
+
+  //success check
+  if (memcmp(A, icv1, sizeof(A)) != 0)
+  {
+    fprintf (stderr, "\n Unwrap Failure! ICV1 != 0xA6A6A6A6A6A6A6A6!");
+    return 0;
+  }
+  else 
+  {
+    fprintf (stderr, "\n Unwrap Success!");
+    return 1;
+  }
+
+}
+
+uint8_t aes_key_unwrap_setup (dsd_state * state, uint16_t key_id, uint8_t * payload, uint8_t * output_bytes)
+{
+
+  uint8_t success = 0;
+
+  uint8_t aes_key[32]; memset (aes_key, 0, sizeof(aes_key));
+  uint8_t empt[64];    memset (empt, 0, sizeof(empt));
+
+  uint8_t akl = 0; //aes key loaded into array flag
+  unsigned long long int a1 = state->rkey_array[key_id+0x000];
+  unsigned long long int a2 = state->rkey_array[key_id+0x101];
+  unsigned long long int a3 = state->rkey_array[key_id+0x201];
+  unsigned long long int a4 = state->rkey_array[key_id+0x301];
+
+  //checkdown to see if anything in a1-a4
+  if ( (a1 == 0) && (a2 == 0) && (a3 == 0) && (a4 == 0) )
+  {
+    //try loading from state->H instead (could clash if keys loaded that trigger any a1-a4 above)
+    a1 = state->K1;
+    a2 = state->K2;
+    a3 = state->K3;
+    a4 = state->K4;
+  }
+
+  //loader for aes keys
+  for (uint64_t i = 0; i < 8; i++)
+  {
+    aes_key[i+0]   = (a1 >> (56ULL-(i*8))) & 0xFF;
+    aes_key[i+8]   = (a2 >> (56ULL-(i*8))) & 0xFF;
+    aes_key[i+16]  = (a3 >> (56ULL-(i*8))) & 0xFF;
+    aes_key[i+24]  = (a4 >> (56ULL-(i*8))) & 0xFF;
+  }
+
+  //debug
+  fprintf (stderr, "\n    KEK: %04X", key_id);
+  fprintf (stderr, "\n    KEY: ");
+  for (uint8_t i = 0; i < 32; i++)
+    fprintf (stderr, "%02X", aes_key[i]);
+
+  //check to see if a key is loaded into any part of the array
+  if (memcmp(aes_key, empt, sizeof(aes_key)) != 0) akl = 1;
+  else akl = 0;
+
+  if (akl)
+    success = aes_key_unwrap_execute (aes_key, payload, output_bytes);
+
+  return success;
 
 }
