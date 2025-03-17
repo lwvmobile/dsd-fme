@@ -3,7 +3,7 @@
 
 #include <sys/time.h>
 
-// 
+//
 // ezpwd::timeofday 	-- Return current time.
 // ezpwd::epoch    	-- The UNIX epoch.
 // ezpwd::seconds	-- convert timeval to a real-valued seconds

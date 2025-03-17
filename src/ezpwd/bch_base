@@ -1,6 +1,6 @@
 /*
  * Ezpwd Reed-Solomon -- Reed-Solomon encoder / decoder library
- * 
+ *
  * Copyright (c) 2017, Hard Consulting Corporation.
  *
  * Ezpwd Reed-Solomon is free software: you can redistribute it and/or modify it under the terms of
@@ -9,7 +9,7 @@
  * source tree.  Ezpwd Reed-Solomon is also available under Commercial license.  The Djelic BCH code
  * under djelic/ and the c++/ezpwd/bch_base wrapper is redistributed under the terms of the GPLv2+,
  * regardless of the overall licensing terms.
- * 
+ *
  * Ezpwd Reed-Solomon is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
  * the GNU General Public License for more details.
@@ -21,11 +21,11 @@
 #include <iomanip>
 #include <vector>
 
-// 
+//
 // Presently, we simply import the Linux Kernel's "C" BCH API directly into the ezpwd:: namespace In
 // order to compile, you must (at least) run "make djelic" in the base directory of the
 // https://github.com/pjkundert/bch.git repo.
-// 
+//
 namespace ezpwd {
     /**
      * struct bch_control - BCH control structure
@@ -152,21 +152,21 @@ namespace ezpwd {
 	#include "../../djelic_bch.h"
     }
 
-    // 
+    //
     // correct_bch -- corrects data (but not parity!), as suggested by decode_bch, above
-    // 
+    //
     //     A convenience interface that defaults all of the not strictly required parameters, and
     // automatically corrects bit-errors in data *and* the supplied parity.  Does not attempt to
     // correct bit errors found in the parity data.  If not supplied, 'errloc' is allocated
     // internally; otherwise, it is assumed to be of at least size bch->t (the minimum error
     // correction capacity of the BCH codec).
-    // 
+    //
     //     However, beware -- at larger values of T, the actual correction capacity of the BCH codec
     // could be greater than the requested T.  Therefore, it is recommended that you always supply a
     // larger than required errloc array; recommend T*2?
-    // 
+    //
     inline
-    int				correct_bch( 
+    int				correct_bch(
 				    struct bch_control *bch,
 				    uint8_t            *data,
 				    unsigned int	len,
@@ -198,9 +198,9 @@ namespace ezpwd {
 	return err;
     }
 
-    // 
+    //
     // <ostream> << <ezpwd::bch_control> -- output codec in standard BCH( N, N-ECC, T ) form
-    // 
+    //
     inline
     std::ostream	       &operator<<(
 				    std::ostream       &lhs,

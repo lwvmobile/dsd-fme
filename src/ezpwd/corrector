@@ -1,6 +1,6 @@
 /*
  * Ezpwd Reed-Solomon -- Reed-Solomon encoder / decoder library
- * 
+ *
  * Copyright (c) 2014, Hard Consulting Corporation.
  *
  * Ezpwd Reed-Solomon is free software: you can redistribute it and/or modify it under the terms of
@@ -8,7 +8,7 @@
  * the License, or (at your option) any later version.  See the LICENSE file at the top of the
  * source tree.  Ezpwd Reed-Solomon is also available under Commercial license.  c++/ezpwd/rs_base
  * is redistributed under the terms of the LGPL, regardless of the overall licensing terms.
- * 
+ *
  * Ezpwd Reed-Solomon is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
  * the GNU General Public License for more details.
@@ -21,7 +21,7 @@
 
 namespace ezpwd {
 
-    // 
+    //
     // best_avg -- collect <password>,<confidence> guesses, and return the unambiguous best one
     //
     typedef std::map<std::string, std::pair<int, int>> // (<password>, (<count>, <avgsum>))
@@ -38,9 +38,9 @@ namespace ezpwd {
         using best_avg_base_t::const_iterator;
         using best_avg_base_t::value_type;
         using best_avg_base_t::mapped_type;
-        // 
+        //
         // add -- add the given pct to the current average for <string> str
-        // 
+        //
         iterator		add(
 	    			    const std::string  &str,
 	    			    int			pct )
@@ -53,9 +53,9 @@ namespace ezpwd {
 	    return i;
         }
 
-        // 
+        //
         // best -- return the unambiguously best value (average is >, or == but longer), or end()
-        // 
+        //
         const_iterator		best()
 	    const
         {
@@ -76,11 +76,11 @@ namespace ezpwd {
 	    return uni ? top : end();
         }
 
-        // 
+        //
         // evaluation -- process a (<password>,(<count>,<avgsum>)) into (<average>,<password>)
         // sort -- return a multimap indexed by <average> --> <string>
         // output -- output the <string>: <average>, sorted by average
-        // 
+        //
         static std::pair<const int,const std::string &>
 				evaluation( const value_type &val )
         {
@@ -116,14 +116,14 @@ std::ostream		       &operator<<(
 }
 
 namespace ezpwd {
-    // 
+    //
     // ezpwd::corrector -- Apply statistical corrections to a string, returning the confidence
-    // 
+    //
     //     All methods are static; no instance is required, as this is primarily used to create
     // external language APIs.
-    // 
+    //
     template <
-	size_t			PARITY, 
+	size_t			PARITY,
 	size_t			N	= 64,
 	typename		SERIAL	= serialize::base< N, serialize::ezpwd< N >>>
     class corrector {
@@ -135,10 +135,10 @@ namespace ezpwd {
 	    lhs << "corrector<PARITY=" << PARITY << ",N=" << N << ",SERIAL=" << SERIAL() << ">";
 	    return lhs;
 	}
-				    
-	// 
+
+	//
 	// parity(<string>) -- Returns 'PARITY' base-N symbols of R-S parity to the supplied password
-	// 
+	//
 	static std::string	parity(
 				    const std::string  &password )
 	{
@@ -148,13 +148,13 @@ namespace ezpwd {
 	    return parity;
 	}
 
-	// 
+	//
 	// encode(<string>) -- append PARITY base-N parity symbols to password
-	// 
+	//
 	//     The supplied password buffer size must be sufficient to contain PARITY additional
 	// symbols, plus the terminating NUL.  Returns the resultant encoded password size
 	// (excluding the NUL).
-	// 
+	//
 	static size_t		encode(
 				    std::string        &password )
 	{
@@ -178,23 +178,23 @@ namespace ezpwd {
 	    return len;
 	}
 
-	// 
+	//
 	// decode(<string>[,...]) -- Applies R-S error correction on the encoded string, removing parity
-	// 
+	//
 	//     Up to 'PARITY' Reed-Solomon parity symbols are examined, to determine if the supplied
 	// string is a valid R-S codeword and hence very likely to be correct.  Optionally supply a
 	// vector of erasure positions.
-	// 
+	//
 	//     An optional 'minimum' final password length may be provided; no R-S parity is assumed
 	// to exist in the first 'minimum' password characters (default: PARITY).  This prevents
 	// accidentally finding valid R-S codewords in passwords of known minimum length; validation
 	// codes, for example.  Likewise, the optional 'maximum' allows us to limit the number of
 	// parity symbols that may be assumed to be missing from the end of the codeword.
-	// 
+	//
 	//     Returns a confidence strength rating, which is the ratio:
-	// 
+	//
 	//         100 - ( errors * 2 + erasures ) * 100 / parity
-	// 
+	//
 	// if an R-S codeword was solved, and 0 otherwise.  If a codeword is solved, but the number
 	// of errors and erasures corrected indicates that all parity was consumed, the caller may
 	// opt to not use the corrected string, because there is a chance that our R-S polynomial
@@ -204,26 +204,26 @@ namespace ezpwd {
 	// were used in error/erasure recover, with none left to confirm that the result is actually
 	// correct.  If only zero-strength results are achieved, the longest will be returned (the
 	// full, original string).
-	// 
+	//
 	//     Supports the following forms of error/erasure:
-	// 
+	//
 	// 0) Full parity.  All data and parity supplied, and an R-S codeword is solved.
-	// 
+	//
 	// 1) Partial parity.  All data and some parity supplied; remainder are deemed erasures.
-	// 
+	//
 	//     If PARITY > 2, then up to PARITY/2-1 trailing parity terms are marked as erasures.
 	// If the R-S codeword is solved and a safe number of errors are found, then we can have
 	// reasonable confidence that the string is correct.
-	// 
+	//
 	//   1a) Erase errors.  Permute the combinations of up to PARITY-1 erasures.
-	// 
+	//
 	// o) Raw password.  No parity terms supplied; not an R-S codeword
-	// 
+	//
 	//     If none of the error/erasure forms succeed, the password is returned unmodified.
-	// 
+	//
 	//     If a non-zero 'minimum' or 'maximum' are provided, they constrain the possible
 	// resultant password sizes that will be attempted.
-	// 
+	//
 	static
 	int			decode(
 				    std::string	       &password,
@@ -239,16 +239,16 @@ namespace ezpwd {
 	    // capability while maintaining at least one excess parity symbol for verification.
 	    // This can potentially result in longer password being returned, if the R-S decoder
 	    // accidentally solves a codeword.
-	    // 
+	    //
 	    // For example, if PARITY=3 (or 4) then (PARITY+1)/2 == 2, and we would only attempt up
 	    // to 1 parity erasure.  This would leave 1 parity symbol to replace the 1 erasure, and
 	    // 1 remaining to validate the integrity of the password.
-	    // 
+	    //
 	    // The password must be long enough to contain at least 1 non-parity symbol, and the
 	    // designated number of non-erased parity symbols!  However, by convention we'll demand
 	    // that the password contain at least PARITY symbols -- any less, and we can
 	    // accidentally correct the few remaining password symbols.
-	    // 
+	    //
 	    // Also, if any parity symbols won't decode (eg. were entered in error), we must deem
 	    // them to be erasures, too, and if the number of erasures exceeds the capacity of the
 	    // R-S codec, it'll fail (throw an exception, or at best solve with 0 confidence).
@@ -331,7 +331,7 @@ namespace ezpwd {
 			<< " parity erasures "		<< std::setw( 3 ) << confidence
 			<< "% confidence: \"" 		<< password
 			<< "\" ==> \""			<< fixed
-			<< "\" (corrects: "		<< corrects 
+			<< "\" (corrects: "		<< corrects
 			<< ", erasures at "		<< all_era
 			<< ", fixed at "		<< position << "): "
 			<< std::endl
@@ -354,7 +354,7 @@ namespace ezpwd {
 	    // w/ 3 parity: sock1tkeB
 	    // password ----^^^^^^
 	    //                    ^^^--- parity
-	    // 
+	    //
 	    for ( size_t era = (PARITY+1)/2 // how many parity symbols are not present
 		      ; era < PARITY
 		      ; ++era ) {
@@ -446,15 +446,15 @@ namespace ezpwd {
 	    return decode( password, std::vector<int>(), minimum, maximum );
 	}
 
-	// 
+	//
 	// decode(<char*>,<size_t>,<size_t>,<size_t>) -- C interface to decode(<string>)
-	// 
+	//
 	//     Traditional C interface.  The provided NUL-terminated password+parity is decoded
 	// (parity removed), and the confidence % is returned.
-	// 
+	//
 	//     If any failure occurs, a -'ve value will be returned, and the supplied password
 	// buffer will be used to contain an error description.
-	// 
+	//
 	static int		decode(
 				    char	       *password,	// NUL terminated
 				    size_t		siz,		// available size
@@ -477,13 +477,13 @@ namespace ezpwd {
 	    return confidence;
 	}
 
-	// 
+	//
 	// rscodec -- A ?-bit RS(N-1,N-1-PARITY) Reed-Solomon codec
-	// 
+	//
 	//     Encodes and decodes R-S symbols over the lower 6 bits of the supplied data.  Requires
 	// that the last N (parity) symbols of the data are in the range [0,63].  The excess bits on
 	// the data symbols are masked and restored during decoding.
-	// 
+	//
 	static const ezpwd::RS<N-1,N-1-PARITY>
 				rscodec;
     };

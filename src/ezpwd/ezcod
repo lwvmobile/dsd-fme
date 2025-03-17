@@ -1,6 +1,6 @@
 /*
  * Ezpwd Reed-Solomon -- Reed-Solomon encoder / decoder library
- * 
+ *
  * Copyright (c) 2014, Hard Consulting Corporation.
  *
  * Ezpwd Reed-Solomon is free software: you can redistribute it and/or modify it under the terms of
@@ -8,7 +8,7 @@
  * the License, or (at your option) any later version.  See the LICENSE file at the top of the
  * source tree.  Ezpwd Reed-Solomon is also available under Commercial license.  c++/ezpwd/rs_base
  * is redistributed under the terms of the LGPL, regardless of the overall licensing terms.
- * 
+ *
  * Ezpwd Reed-Solomon is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
  * the GNU General Public License for more details.
@@ -25,9 +25,9 @@
 #include <ezpwd/output>
 #include <ezpwd/serialize>
 
-// 
+//
 // EZCOD 3:10 location code w/ Reed-Solomon Error Correction, and average 3m accuracy
-// 
+//
 // - each successive symbol provides greater precision
 //   - codes nearby each-other are identical in leading characters
 // - average 3m precision achieved in 9 symbols
@@ -37,87 +37,87 @@
 //   - 2 parity symbols provides correction of 1 lost symbol (no errors)
 //   - 3 parity symbols provides correction of any 1 error, with verification,
 //     or recovery of up to any 3 lost symbols (with no other errors)
-// 
+//
 
-// 
+//
 //     To achieve at least 4 decimal digits of precision after the decimal point, we must have
 // defined lat to within 1 part in 1,800,000, and lon to within 1 part in 3,600,000.  As each symbol
 // supplies bits, we'll refine the computed lat/lon further, reducing the outstanding fraction of
 // "parts" yet to be defined.
-// 
-//             bits      
+//
+//             bits
 //    symbols   latitude             longitude
 //              bits mul   parts      bits mul   parts
 //       1      2    4         4      3    8         8
 //       2      2    4        16      3    8        64
 //       3      3    8       128      2    4       256 // not quite integer lat/lon accuracy
-// 
+//
 //       4      2    4       512      3    8     2,048
 //       5      3    8     4,096      2    4     8,192
-//       6      2    4    16,384      3    8    65,536 
+//       6      2    4    16,384      3    8    65,536
 //
 //       7      3    8   131,072      2    4   262,144
 //       8      2    4   524,288      3    8 2,097,152
 //       9      3    8 4,194,304      2    4 8,388,608 parts resolution in  3:10 code
 //                over [-90, 90]       over [-180,180] yields ~3m resolution
-// 
+//
 //                 vs. 1,800,000             3,600,000 parts resolution in 10:10 code
 //                over [-90, 90]       over [-180,180] yields ~10m resolution
-// 
+//
 //     Therefore, within 9 symbols we define lat and lon with better than double the precision of
 // 10:10 code's 4 decimal digits after the decimal point.  This yields an approximate lineal
 // precision of 40,075,000m / 8,388,608 == ~5m in both dimensions at the equator, vs. 40,075,000m /
 // 3,600,000 == ~11m for 10:10 codes.
-// 
+//
 //     The 10:10 code provides a single check character, which provides about P(1-1/32) certainty
-// that the provided code is correct.  With EZCOD 3:10/11/12 codes, we provide varying levels of 
+// that the provided code is correct.  With EZCOD 3:10/11/12 codes, we provide varying levels of
 // detection/correction strength.
-// 
+//
 //   - 1 parity symbol: act as a check character (like 10:10 codes), or provide 1 symbol of erasure
 //     (lost symbol) recovery with no excess parity for validation.
-// 
+//
 //    - 2 parity symbols: provide 1 symbol of erasure correction (w/ no other errors) with 1 excess parity
 //      symbol for validation, or 1 symbol of error detection with no excess parity for validation.
-//             
+//
 //    - 3 parity symbols: correct 1 error anywhere w/ 1 excess parity symbol for validation, or up
 //      to 3 erasures with no excess parity for validation.
-// 
+//
 //     Therefore, we'll provide Reed-Solomon RS(31,28-30) error correction (5 bit symbols,
 // indicating 31 symbols in the field, and from 1 to 3 roots, therefore up to 28 data symbols in the
 // field) over the 9 lat/lon data symbols.
-// 
-// 
+//
+//
 // MINIMIZING ERROR
-// 
+//
 //     Each input lat/lon coordinate will be effectively truncated by the encoding procedure to the
 // level of precision (parts) encoded by each symbol.  Subsequent symbols then add their (smaller)
 // parts to increase precision.
-// 
+//
 //     After the last symbol, we know that the actual input coordinates where somewhere
 // within the rectangle:
-// 
+//
 //         [0,0] -> [0,lon_precision] -> [lat_precision,lon_precision] -> [lat_precision,0]
-// 
+//
 //     At first glance, the best way is to perform rounding instead of truncation on ecoding, by
 // simply adding 1/2 of the precision.  Then, the unmodified output lat/lon decoded represents the
 // point nearest actual input coordinate.  However, this is NOT ideal.  Remember -- the decoding may
 // not have access to all the symbols!  We want to minimize the error even if only some of the
 // symbols are available.  Thus, we must apply a correction on decoding.
-// 
+//
 //    One way gain rounding instead of truncation on decoding is, after adding the last symbol's
 // precision, to add 50% of the value represented by the first bit of the next (missing) symbol's
 // precision parts.  This would be analogous to receiving the first 2 digits of a 3 digit number:
-// 
+//
 //         original:  123
 //         received:  12_
 //         range:     [120,130)
 //         guessed:   125 (add 1/2 of the parts represented by the missing digit)
-// 
+//
 //     If this is done, then the resulting coordinate would be in the middle of the rectangle of
 // possible input lat/lon values that could have resulted in the encoded value.  This also works if
 // we don't receive and decode all of the symbols; We'll end up with a lat/lon in the middle of the
 // (large) rectangle of possible input coordinates.
-// 
+//
 
 
 namespace ezpwd {
@@ -179,9 +179,9 @@ inline std::ostream	       &operator<<(
 
 namespace ezpwd {
 
-    // 
+    //
     // ezcod<P,L> -- defaults to 1 PARITY and 9 location symbols (3m) of PRECISION
-    // 
+    //
     template < unsigned P=1, unsigned L=9 >
     class ezcod
 	: public ezcod_base {
@@ -221,9 +221,9 @@ namespace ezpwd {
 	char			separator;		// Separator between location and parity symbols
 	char			space;			// Fill space between location symbol chunks
 
-	// 
+	//
 	// ezcod<P,L>() -- supply non-defaults for location precision, chunk size, etc.
-	// 
+	//
 	explicit		ezcod(
 				    double		_lat	= 0,
 				    double		_lon	= 0,
@@ -261,7 +261,7 @@ namespace ezpwd {
 
 	//
 	// symbols	-- return working parity and location precision
-	// 
+	//
 	virtual ezcod_base::symbols_t
 				symbols()
 	    const
@@ -302,9 +302,9 @@ namespace ezpwd {
 	    return lhs;
 	}
 
-	// 
+	//
 	// encode() -- encode the lat/lon to 'precision' symbols EZCOD representation
-	// 
+	//
 	virtual std::string	encode(
 				    unsigned		_preci	= 0 )	// override precision
 	    const
@@ -400,50 +400,50 @@ namespace ezpwd {
 	    return res;
 	}
 
-	// 
+	//
 	// deserialize	-- Extract base-32, skip whitespace, mark invalid symbols as erasures
 	// validate	-- Remove base-32 encoding, validate and remove parity, returning confidence
 	// decode	-- Attempt to decode a lat/lon, returning the confidence percentage
-	// 
+	//
 	//     If data but no parity symbols are supplied, no error checking is performed, and the
 	// confidence returned will be 0%.  No erasures within the supplied data are allowed (as
 	// there is no capacity to correct them), and an exception will be thrown.
-	// 
+	//
 	//     If parity is supplied, then erasures are allowed.  So long as the total number of
 	// erasures is <= the supplied parity symbols, then the decode will proceed (using the
 	// parity symbols to fill in the erasures), and the returned confidence will reflect the
 	// amount of unused parity capacity.  Each erasure consumes one parity symbol to repair.
-	// 
+	//
 	//     We'll allow question-mark or any of the slash characters: "_/\?" to indicate an
 	// erasure.  Either of the "!."  symbol may be used to indicates the split between location
 	// symbols and parity symbols, and must be in a position that corresponds to the indicated
 	// number of location (this->precision) and parity 'P' symbols.  Whitespace symbols and dash
 	// are ignored: " -".
-	// 
+	//
 	//     Thus, an EZCOD like "R3U 1JU QUY!0" may only be decoded by an ezcod<P=1>.  Without
 	// the "!" or ".", it could be an ezcod<P=2> w/precision == 8 -- there's no way to know for
 	// sure.  If no explicit position-parity separator is given, then we assume the default:
 	// this->precision location symbols, then up to P parity symbols.  If additional parity
 	// symbols are supplied after the separator, then However, an ezcod...<P=3>
-	// 
+	//
 	//     If an explicit "!" or "." separator IS provided, then we will attempt to decode the
 	// position with the given number of position symbols, and up to P parity symbols.
-	// 
+	//
 	// NOTE
-	// 
+	//
 	//     Due to a perhaps unexpected feature of R-S codewords, a codeword with MORE parity
 	// can be successfully decoded by an R-S codec specifying LESS parity symbols.  It so
 	// happens that the data plus (excess) parity + (remaining) parity is STILL a valid codeword
 	// (so long as the R-S Galois parameters are identical).
-	// 
+	//
 	//     Therefore, EZCODs with more parity are accepted by EZCOD parsers configured for less
 	// parity.  Of course, they will have less error/erasure correction strength -- using the
 	// correctly configured EZCOD codec expecting more R-S parity will maximize the value of all
 	// the supplied parity.
-	// 
+	//
 	//    The full amount of parity (ie. everything after the location/parity separator) is
 	// discarded in all cases, before the EZCOD location is decoded.
-	// 
+	//
     private:
 
 	unsigned		deserialize(
@@ -627,20 +627,20 @@ namespace ezpwd {
 	    // Compute the resolution error (in m.) of the decoded lat/lon and compute the minimum
 	    // accuracy -- the radius of the circle around the computed latitude/longitude, inside
 	    // which the original latitude/longitude must have been.
-	    // 
+	    //
 	    //            original   latitude error bar
 	    //                 \     /
-	    //                  o  - 
+	    //                  o  -
 	    //                     |   longitude error bar
 	    //                     |   /
-	    //                  |--x--| 
+	    //                  |--x--|
 	    //                    /|
 	    //                   / |
 	    //           computed  -
-	    // 
+	    //
 	    // The maximum distance is the length of the diagonal of the error rectangle defined by
 	    // 1/2 the latitude/longitude error bars.
-	    // 
+	    //
 	    double		lon_circ= 1 * M_PI * 6371000;
 	    double		lat_circ= 2 * M_PI * 6371000 * std::cos( latitude * M_PI / 180 );
 	    latitude_error		= lat_err * lon_circ;
@@ -653,13 +653,13 @@ namespace ezpwd {
     }; // class ezcod
 
 
-    // 
+    //
     // ezcod::rscodec	-- Reed-Solomon parity codec
     // ezcod::bits	-- distribution of lat/lon precision in each code symbol
-    // 
+    //
     //     Quickly establishes an extra bit of precision for Longitude, and then evenly distributes
     // future precision between lat/lon, always maintaining extra precision for Longitude.
-    // 
+    //
     template < unsigned P, unsigned L >
     const ezpwd::RS<31,31-P>	ezcod<P,L>::rscodec;
 

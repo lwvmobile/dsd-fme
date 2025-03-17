@@ -1,6 +1,6 @@
 /*
  * Ezpwd Reed-Solomon -- Reed-Solomon encoder / decoder library
- * 
+ *
  * Copyright (c) 2017, Hard Consulting Corporation.
  *
  * Ezpwd Reed-Solomon is free software: you can redistribute it and/or modify it under the terms of
@@ -9,7 +9,7 @@
  * source tree.  Ezpwd Reed-Solomon is also available under Commercial license.  The Djelic BCH code
  * under djelic/ and the c++/ezpwd/bch_base wrapper is redistributed under the terms of the GPLv2+,
  * regardless of the overall licensing terms.
- * 
+ *
  * Ezpwd Reed-Solomon is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
  * the GNU General Public License for more details.
@@ -22,7 +22,7 @@
 #include "bch_base"
 
 namespace ezpwd {
-    // 
+    //
     // ezpwd::bch_base -- Interface to underlying Djelic Linux Kernel API
     // ezpwd::bch<SYMBOLS, CORRECTION> -- General BCH codec types; min. CORRECTION capacity, undefined PAYLOAD
     //
@@ -31,7 +31,7 @@ namespace ezpwd {
     // target bit-error correction capacity T.  They may correct more than T errors, and the number
     // of parity ECC bits will be selected by the algorithm.  You need to compute the maximum
     // non-parity payload by computing _bch->n - _bch->ecc_bits.
-    // 
+    //
     //     The data and parity bits must always be on separate blocks of int8_t/uint8_t-sized data
     // in the container.  This is required because the underlying API must break the data and parity
     // out as separate arrays for processing.  So, if the computed ecc_bits is not evenly divisible
@@ -39,12 +39,12 @@ namespace ezpwd {
     // the end of the supplied container.  Alternatively, it can be kept in a separate container.
     // This is probably safest, as the bch_base/bch/BCH classes will never attempt to resize the
     // data/parity containers when supplied separately.
-    // 
+    //
     //     Like the Reed-Solomon APIs, the bch_base/bch/BCH APIs will alter the size of a variable
     // container in encode(...), to add the BCH ECC "parity" data (eg. std::vector, std::string).
     // Fixed containers (eg. std::array) are never resized, and it is assumed that ecc_bytes of
     // parity data exist at the end of the container.
-    // 
+    //
     class bch_base {
     public:
 	ezpwd::bch_control     *_bch;
@@ -92,12 +92,12 @@ namespace ezpwd {
 	    return lhs << *this->_bch;
 	}
 
-	// 
+	//
 	// encode -- container interfaces
-	// 
+	//
 	//     Returns number of ECC *bits* initialized (to be consistent w/ decode, which returns
 	// number of bit errors corrected).
-	// 
+	//
 	int			encode(
 				    std::string	       &data )
 	    const
@@ -123,7 +123,7 @@ namespace ezpwd {
 	    return encode( cuTpair( (const uT *)&data.front(), (const uT *)&data.front() + data.size() ),
 			   uTpair( (uT *)&parity.front(), (uT *)&parity.front() + parity.size() ));
 	}
-	
+
 	template < typename T >
 	int			encode(
 				    std::vector<T>     &data )
@@ -167,11 +167,11 @@ namespace ezpwd {
 	    return encode( uTpair( (uT *)&data.front() + pad, (uT *)&data.front() + data.size() ));
 	}
 
-	
-	// 
+
+	//
 	// encode -- denote data+parity or data, parity using pairs of uint8_t iterators
 	// encode -- base implementation, in terms of uint8_t pointers
-	// 
+	//
 	virtual int		encode(
 				    const std::pair<uint8_t *, uint8_t *>
 						       &data )
@@ -206,9 +206,9 @@ namespace ezpwd {
 
 	//
 	// decode -- container interface, w/ optional corrected bit-error positions reported
-	// 
+	//
 	//     Does not correct errors in parity!
-	// 
+	//
 	int			decode(
 				    std::string	       &data,
 				    std::vector<int>   *position= 0 )
@@ -280,15 +280,15 @@ namespace ezpwd {
 			   position );
 	}
 
-	// 
+	//
 	// decode -- denote data+parity or data, parity using pairs of uint8_t iterators
 	// decode -- decode and correct BCH codeword, returning number of corrections, or -1 if failed
-	// 
+	//
 	//    Corrects data in-place (unlike the basic Djelic Linux Kernel API, which only returns
 	// error positions.  For consistency with ezpwd::rs..., we report all error positions as
 	// std::vector<int>, even though the underlying Djelic API reports them as arrays of
 	// unsigned int.
-	// 
+	//
 	virtual int		decode(
 				    const std::pair<uint8_t *, uint8_t *>
 						       &data,
@@ -329,18 +329,18 @@ namespace ezpwd {
 		position->resize( corrects );
 	    return corrects;
 	}
-	
+
 	//
 	// {en,de}coded -- returns an encoded/corrected copy of the provided container
 	//
 	// NOTE:
-	// 
+	//
 	//     Must return exceptions on failure; If exceptions inhibited, returns a
 	// default-constructed instance of the supplied data container.  This may be sufficient to
 	// reliably deduce failure; if not, this interface should not be used.
-	// 
+	//
 	//     Overloads decoded to also allow recovery of corrected error positions and count.
-	// 
+	//
 	template <typename C>
 	C			encoded(
 				    C			data )
@@ -391,11 +391,11 @@ namespace ezpwd {
 	}
     }; // class bch
 
-    // 
+    //
     // std::ostream << ezpwd::bch_base
-    // 
+    //
     //     Output a BCH codec description in standard form eg. BCH( 255, 239,   2 )
-    // 
+    //
     inline
     std::ostream	       &operator<<(
 				    std::ostream       &lhs,
@@ -405,9 +405,9 @@ namespace ezpwd {
 	return rhs.output( lhs );
     }
 
-    // 
+    //
     // ezpwd::BCH<SYMBOLS, PAYLOAD, CAPACITY> -- Standard BCH codec types
-    // 
+    //
     //     Specify and create a standard BCH codec with exactly the specified capacities.  We create
     // the undering BCH codec using SYMBOLS and CORRECTION capacity; the actual correction capacity
     // T, the number of PARITY bits and hence PAYLOAD (CAPACITY - PARITY) is selected automatically
@@ -415,11 +415,11 @@ namespace ezpwd {
     // caller *knows* all of these values at compile time, however, mostly for future optimization
     // purposes.  We validate them, and fail the constructor if they don't match.  See bch_test for
     // an enumeration of all possible BCH codecs.
-    // 
+    //
     //     In the future, this API may be re-implemented to not use the generic BCH API, but a more
     // optimized locally-defined implementation that leverages the fixed SYMBOLS, PAYLOAD and
     // CORRECTION capacities to produce more optimal code.
-    // 
+    //
     template < size_t SYMBOLS, size_t PAYLOAD, size_t CORRECTION >
     class BCH
 	: public bch<SYMBOLS, CORRECTION>
@@ -463,13 +463,13 @@ namespace ezpwd {
     }; // class BCH
 
 
-    // 
+    //
     // std::ostream << ezpwd::BCH<...>
-    // 
+    //
     //     Output a BCH codec description in standard form eg. BCH( 255, 239,   2 )
-    // 
+    //
     // NOTE: clang/gcc disagree on the scoping of operator<< template/non-template functions...
-    // 
+    //
     template <size_t SYMBOLS, size_t PAYLOAD, size_t CORRECTION>
     inline
     std::ostream	       &operator<<(

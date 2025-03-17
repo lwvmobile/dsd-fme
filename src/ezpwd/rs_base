@@ -1,6 +1,6 @@
 /*
  * Ezpwd Reed-Solomon -- Reed-Solomon encoder / decoder library
- * 
+ *
  * Copyright (c) 2014, Hard Consulting Corporation.
  *
  * Ezpwd Reed-Solomon is free software: you can redistribute it and/or modify it under the terms of
@@ -9,43 +9,43 @@
  * source tree.  Ezpwd Reed-Solomon is also available under Commercial license.  The
  * c++/ezpwd/rs_base file is redistributed under the terms of the LGPL, regardless of the overall
  * licensing terms.
- * 
+ *
  * Ezpwd Reed-Solomon is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
  * the GNU General Public License for more details.
- * 
+ *
  * The core Reed-Solomon codec implementation in c++/ezpwd/rs_base is by Phil Karn, converted to C++
  * by Perry Kundert (perry@hardconsulting.com), and may be used under the terms of the LGPL.  Here
  * is the terms from Phil's README file (see phil-karn/fec-3.0.1/README):
- * 
+ *
  *     COPYRIGHT
- * 
+ *
  *     This package is copyright 2006 by Phil Karn, KA9Q. It may be used
  *     under the terms of the GNU Lesser General Public License (LGPL). See
  *     the file "lesser.txt" in this package for license details.
- * 
+ *
  * The c++/ezpwd/rs_base file is, therefore, redistributed under the terms of the LGPL, while the
  * rest of Ezpwd Reed-Solomon is distributed under either the GPL or Commercial licenses.
  * Therefore, even if you have obtained Ezpwd Reed-Solomon under a Commercial license, you must make
  * available the source code of the c++/ezpwd/rs_base file with your product.  One simple way to
  * accomplish this is to include the following URL in your code or documentation:
- * 
+ *
  *     https://github.com/pjkundert/ezpwd-reed-solomon/blob/master/c++/ezpwd/rs_base
- * 
- * 
+ *
+ *
  * The Linux 3.15.1 version of lib/reed_solomon was also consulted as a cross-reference, which (in
  * turn) is basically verbatim copied from Phil Karn's LGPL implementation, to ensure that no new
  * defects had been found and fixed; there were no meaningful changes made to Phil's implementation.
  * I've personally been using Phil's implementation for years in a heavy industrial use, and it is
  * rock-solid.
- * 
+ *
  * However, both Phil's and the Linux kernel's (copy of Phil's) implementation will return a
  * "corrected" decoding with impossible error positions, in some cases where the error load
  * completely overwhelms the R-S encoding.  These cases, when detected, are rejected in this
  * implementation.  This could be considered a defect in Phil's (and hence the Linux kernel's)
  * implementations, which results in them accepting clearly incorrect R-S decoded values as valid
  * (corrected) R-S codewords.  We chose the report failure on these attempts.
- * 
+ *
  */
 #ifndef _EZPWD_RS_BASE
 #define _EZPWD_RS_BASE
@@ -58,14 +58,14 @@
 #include <type_traits>
 #include <vector>
 
-// 
+//
 // Preprocessor defines available:
-// 
+//
 // EZPWD_NO_EXCEPTS -- define to use no exceptions; return -1, or abort on catastrophic failures
 // EZPWD_NO_MOD_TAB -- define to force no "modnn" Galois modulo table acceleration
 // EZPWD_ARRAY_SAFE -- define to force usage of bounds-checked arrays for most tabular data
 // EZPWD_ARRAY_TEST -- define to force erroneous sizing of some arrays for non-production testing
-// 
+//
 
 #if defined( DEBUG ) && DEBUG >= 2
 #  include "output"	// ezpwd::hex... std::ostream shims for outputting containers of uint8_t data
@@ -117,35 +117,35 @@ namespace ezpwd {
 	    return lhs << "RS(" << this->size() << "," << this->load() << ")";
 	}
 
-	// 
+	//
 	// {en,de}code -- Compute/Correct errors/erasures in a Reed-Solomon encoded container
-	// 
+	//
 	///     The encoded parity symbols may be included in 'data' (len includes nroots() parity
 	/// symbols), or may (optionally) supplied separately in (at least nroots()-sized)
-	/// 'parity'.  
-	/// 
+	/// 'parity'.
+	///
 	///     For decode, optionally specify some known erasure positions (up to nroots()).  If
 	/// non-empty 'erasures' is provided, it contains the positions of each erasure.  If a
 	/// non-zero pointer to a 'position' vector is provided, its capacity will be increased to
 	/// be capable of storing up to 'nroots()' ints; the actual deduced error locations will be
 	/// returned.
-	///  
+	///
 	/// RETURN VALUE
-	/// 
+	///
 	///     Return -1 on error.  The encode returns the number of parity symbols produced;
 	/// decode returns the number of symbols corrected.  Both errors and erasures are included,
 	/// so long as they are actually different than the deduced value.  In other words, if a
 	/// symbol is marked as an erasure but it actually turns out to be correct, it's index will
 	/// NOT be included in the returned count, nor the modified erasure vector!
-	/// 
+	///
 
-	// 
+	//
 	// encode(<string>) -- extend string to contain parity, or place in supplied parity string
 	// encode(<vector>) -- extend vector to contain parity, or place in supplied parity vector
 	// encode(<array>)  -- ignore 'pad' elements of array, puts nroots() parity symbols at end
 	// encode(pair<iter,iter>) -- encode all except the last nroots() of the data, put parity at end
 	// encode(pair<iter,iter>, pair<iter,iter>) -- encode data between first <iter> pair, put parity in second pair
-	// 
+	//
 	int			encode(
 				    std::string	       &data )
 	    const
@@ -388,11 +388,11 @@ namespace ezpwd {
 	= 0;
     }; // class reed_solomon_base
 
-    // 
+    //
     // std::ostream << ezpwd::reed_solomon<...>
-    // 
+    //
     //     Output a R-S codec description in standard form eg. RS(255,253)
-    // 
+    //
     inline
     std::ostream	       &operator<<(
 				    std::ostream       &lhs,
@@ -421,10 +421,10 @@ namespace ezpwd {
 	    return sr;
 	}
     };
-    
-    // 
+
+    //
     // class reed_solomon_tabs -- R-S tables common to all RS(NN,*) with same SYM, PRM and PLY
-    // 
+    //
     template < typename TYP, int SYM, int PRM, class PLY >
     class reed_solomon_tabs
 	: public reed_solomon_base {
@@ -501,7 +501,7 @@ namespace ezpwd {
 	    iprim			= iptmp / PRM;
 	}
 
-	// 
+	//
 	// modnn -- modulo replacement for galois field arithmetics, optionally w/ table acceleration
 	//
 	//  @x:		the value to reduce (will never be -'ve)
@@ -555,7 +555,7 @@ namespace ezpwd {
     //     All reed_solomon<T, ...> instances with the same template type parameters share a common
     // (static) set of alpha_to, index_of and genpoly tables.  The first instance to be constructed
     // initializes the tables.
-    // 
+    //
     //     Each specialized type of reed_solomon implements a specific encode/decode method
     // appropriate to its datum 'TYP'.  When accessed via a generic reed_solomon_base pointer, only
     // access via "safe" (size specifying) containers or iterators is available.
@@ -722,7 +722,7 @@ namespace ezpwd {
 	    }
 	    return NROOTS;
 	}
-	    
+
 	using reed_solomon_base::decode;
 	virtual int		decode(
 				    const std::pair<uint8_t *, uint8_t *>
@@ -811,14 +811,14 @@ namespace ezpwd {
 				erasure, position );
 	}
 
-	// 
+	//
 	// decode_mask	-- mask INP data into valid SYMBOL data
-	// 
+	//
 	///     Incoming data may be in a variety of sizes, and may contain information beyond the
 	/// R-S symbol capacity.  For example, we might use a 6-bit R-S symbol to correct the lower
 	/// 6 bits of an 8-bit data character.  This would allow us to correct common substitution
 	/// errors (such as '2' for '3', 'R' for 'T', 'n' for 'm').
-	/// 
+	///
 	template < typename INP >
 	int			decode_mask(
 				    INP		       *data,
@@ -1078,7 +1078,7 @@ namespace ezpwd {
 #if DEBUG >= 1
 	    // Test code that verifies the erasure locator polynomial just constructed
 	    // Needed only for decoder debugging.
-    
+
 	    // find roots of the erasure location polynomial
 	    for( int i = 1; i<= no_eras; i++ )
 		reg[i]			= index_of[lambda[i]];
@@ -1100,7 +1100,7 @@ namespace ezpwd {
 		count++;
 	    }
 	    if ( count != no_eras ) {
-		std::cout << "ERROR: count = " << count << ", no_eras = " << no_eras 
+		std::cout << "ERROR: count = " << count << ", no_eras = " << no_eras
 			  << "lambda(x) is WRONG"
 			  << std::endl;
 		count			= -1;
@@ -1309,12 +1309,12 @@ namespace ezpwd {
 	}
     }; // class reed_solomon
 
-    // 
+    //
     // Define the static reed_solomon...<...> members; allowed in header for template types.
-    // 
+    //
     //     The reed_solomon_tags<...>::iprim < 0 is used to indicate to the first instance that the
     // static tables require initialization.
-    // 
+    //
     template < typename TYP, int SYM, int PRM, class PLY >
         int				reed_solomon_tabs< TYP, SYM, PRM, PLY >::iprim = -1;
 
@@ -1340,5 +1340,5 @@ namespace ezpwd {
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY >::genpoly;
 
 } // namespace ezpwd
-    
+
 #endif // _EZPWD_RS_BASE

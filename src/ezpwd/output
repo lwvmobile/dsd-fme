@@ -11,18 +11,18 @@
 #include <map>
 #include <vector>
 
-// 
+//
 // ezpwd::hexchr	-- escape/hexify char c, output using func/meth f, in width w >= 2
 // ezpwd::hexify	-- hexify something that can be converted to an unsigned char
 // ezpwd::hexout	-- hexify each element in the range (beg,end], limited by stream's width
-// 
+//
 // std::ostream << ezpwd::hexify( c )		// output any char escaped/hex
 // std::ostream << ezpwd::hexout( beg, end )	// output any char iterator to ostream
 // std::ostream << std::vector<unsigend char>
 // std::ostream << std::array<unsigend char, N>
 // ezpwd::hexchr( c, [](unsigned char c){...;} )// output escaped/hex char via functor
 // ezpwd::hexout( beg, end, FILE* )		// output any char iterator to FILE*
-// 
+//
 //     Output unprintable unsigned char data in hex, escape printable/whitespace data.
 //
 namespace ezpwd {
@@ -152,19 +152,19 @@ namespace std {
         return ezpwd::hexout( lhs, rhs.begin(), rhs.end() );
     }
 
-    // 
+    //
     //    <ostream&> << pair<T,U>
     //    <ostream&> << set<T>		-- sorted by T
     //    <ostream&> << map<T,U>		-- sorted by T (key)
     //    <ostream&> << vector<T>
-    // 
+    //
     //     Handle output of various container types.
-    // 
+    //
     //     Output pairs and sets of pairs, respecting specified widths (as appropriate).  For example
     // a set of pairs of integeters 's', if output as "... << std::setw( 13 ) << s;", would yield:
-    // 
+    //
     //	   (	1,    2) (    3,   4) ...
-    // 
+    //
 
     template <class T, class U>
     std::ostream	       &operator<<(
@@ -174,8 +174,8 @@ namespace std {
         std::streamsize		w	= std::max( std::streamsize( 0 ),
 						    std::streamsize( lhs.width() - 3 ));
 	lhs << std::setw( 0 )
-	    << '('	<< std::setw(	  w / 2 ) << rhs.first 
-	    << ','	<< std::setw( w - w / 2 ) << rhs.second 
+	    << '('	<< std::setw(	  w / 2 ) << rhs.first
+	    << ','	<< std::setw( w - w / 2 ) << rhs.second
 	    << ')';
 	return lhs;
     }
@@ -190,7 +190,7 @@ namespace std {
 				si	= rhs.begin()
 		; si		       != rhs.end()
 		; ++si ) {
-	    if ( si != rhs.begin()) 
+	    if ( si != rhs.begin())
 	        lhs << ' ';
 	    lhs << std::setw( w ) << *si;
 	}
@@ -215,7 +215,7 @@ std::ostream		       &operator<<(
 				ki	= key.begin()
 	      ; ki		       != key.end()
 	      ; ++ki ) {
-	if ( ki != key.begin()) 
+	if ( ki != key.begin())
 	    lhs << ' ';
 	lhs << std::setw( w ) << *rhs.find( *ki );
     }
@@ -225,7 +225,7 @@ std::ostream		       &operator<<(
 
 template <class T>
 std::ostream		       &operator<<(
-				    std::ostream	   &lhs, 
+				    std::ostream	   &lhs,
 				    const std::vector<T>   &rhs )
 {
     for( size_t i = 0; i < rhs.size(); ++i ) {
@@ -238,20 +238,20 @@ std::ostream		       &operator<<(
 }
 } // namespace std
 
-// 
+//
 // ezpwd::buf_t		-- describe a C string buffer, to allow C++ output operations
 // ezpwd::streambuf_to_buf_t -- output charcters, always NUL terminated
-// 
+//
 // <buf_t> << ... -- Copy the <string> into the C <char*,size_t> buffer, always NUL terminating
-// 
+//
 //     Copies <string> contents into buffer, and always NUL-terminates.  Returns advanced buf_t (NOT
 // including the terminating NUL, suitable for repeating ... << <string> operations.
-// 
+//
 // std::ostream( &<streambuf_to_buf_t> ) << ...
-// 
+//
 //     Use standard ostream operations to send output to a C buffer, always NUL
 // terminating, and never exceeding capacity.
-// 
+//
 namespace ezpwd {
 
     typedef std::pair<char *,size_t>
@@ -266,7 +266,7 @@ namespace ezpwd {
 	//
 	//  streambuf_to_buf_t -- remember buf_t details
 	// ~streambuf_to_buf_t -- no virtual destructor required; nothing to clean up
-	// 
+	//
     			streambuf_to_buffer(
 			    char	       *buf,
 			    size_t		siz )
@@ -282,10 +282,10 @@ namespace ezpwd {
 	{
 	    ;
 	}
-			      
-	// 
+
+	//
 	// overflow -- Append c, always NUL terminating
-	// 
+	//
 	virtual int	overflow(
 			    int			c )
 	{
@@ -322,12 +322,12 @@ namespace std {
     }
 
 
-    // 
+    //
     // <std::string> << ...
-    // 
+    //
     //     Useful (but inefficient) standard output formatting directly to a std::string.  Use only for
     // testing code, for efficiency reasons...
-    // 
+    //
     template < typename T >
     inline
     std::string		operator<<(
