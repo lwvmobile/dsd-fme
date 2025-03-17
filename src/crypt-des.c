@@ -173,16 +173,16 @@ uint8_t pc2_key_permutation[48] = {
 
 uint8_t key_shift_sizes[17] = {
 1,
-1, 1, 2, 2, 
-2, 2, 2, 2, 
-1, 2, 2, 2, 
+1, 1, 2, 2,
+2, 2, 2, 2,
+1, 2, 2, 2,
 2, 2, 2, 1};
 
 uint8_t key_shift_bytes[17] = {
 0x80,
-0x80, 0x80, 0xC0, 0xC0, 
-0xC0, 0xC0, 0xC0, 0xC0, 
-0x80, 0xC0, 0xC0, 0xC0, 
+0x80, 0x80, 0xC0, 0xC0,
+0xC0, 0xC0, 0xC0, 0xC0,
+0x80, 0xC0, 0xC0, 0xC0,
 0xC0, 0xC0, 0xC0, 0x80};
 
 uint8_t key_shift_x[4] = {8,8,8,4};
@@ -230,7 +230,7 @@ void rotate_sub_keys(uint8_t * Kc, uint8_t * Kd, uint8_t shift_size, uint8_t shi
 
     Kc[i] |= (sb1[y] >> (x - shift_size));
     Kd[i] |= (sb2[y] >> (x - shift_size));
-    
+
   }
 }
 
@@ -320,7 +320,7 @@ void des_cipher (uint8_t * main_key, uint8_t * input_register, uint8_t * output_
     uint8_t e6 = ((exp[3] & 0x3) << 4) | (exp[4] >> 4);
     uint8_t e7 = ((exp[4] & 0xF) << 2) | (exp[5] >> 6);
     uint8_t e8 =   exp[5] & 0x3F;
-    
+
     //select 32-bits of each 48-bit expansion via modified S Box Look Up Tables
     //swap the 6 bits for 4 bits via SLUT tables and OR them together into a selection array
     sel[0] = SLUT1[e1] | SLUT2[e2];
@@ -396,7 +396,7 @@ void tdea_ecb_payload_crypt (uint8_t * K1, uint8_t * K2, uint8_t * K3, uint8_t *
 
   //NOTE: If running ECB mode in decryption, make sure to send the keys in reverse order
   //so that its K3, K2, and K1 for decryption, and K1, K2, K3 for encryption
-  
+
   //K1
   des_cipher(K1, input_register, output_register, de);
   memcpy(input_register, output_register, sizeof(output_register)); //recycle output_register back into input_register
@@ -433,7 +433,7 @@ void tdea_cbc_payload_crypt (uint8_t * K1, uint8_t * K2, uint8_t * K3, uint8_t *
   if (de)
     memcpy (input_register, iv, sizeof(input_register)); //load the IV as first input_register if encrypting
   else memcpy (input_register, in, sizeof(input_register)); //load first cipher text as input_register is decrypting
-  
+
   //run payload for number of payload nblocks required
   for (i = 0; i < nblocks; i++)
   {
@@ -468,7 +468,7 @@ void tdea_cbc_payload_crypt (uint8_t * K1, uint8_t * K2, uint8_t * K3, uint8_t *
     }
     else
     {
-      
+
       //K3
       des_cipher(K3, input_register, output_register, de);
       memcpy(input_register, output_register, sizeof(output_register)); //recycle output_register back into input_register
@@ -523,7 +523,7 @@ void tdea_cbc_mac_generator (uint8_t * K1, uint8_t * K2, uint8_t * K3, uint8_t *
   //cipher input and output
   uint8_t input_register[8];  memset(input_register, 0, sizeof(input_register));
   uint8_t output_register[8]; memset(output_register, 0, sizeof(output_register));
-  
+
   //run payload for number of payload nblocks required
   for (i = 0; i < nblocks; i++)
   {
@@ -576,7 +576,7 @@ void tdea_cfb_payload_crypt (uint8_t * K1, uint8_t * K2, uint8_t * K3, uint8_t *
   //execute the des_cipher in output feedback mode 3 times using each key and transferring output to input each time
   for (i = 0; i < nblocks; i++)
   {
-    
+
     //the cipher is always run in the foward, or encryption mode (1,0,1)
 
     //K1
@@ -664,7 +664,7 @@ void tdea_ctr_payload_crypt (uint8_t * K1, uint8_t * K2, uint8_t * K3, uint8_t *
 
     //feed the new IV into the input register
     memcpy (input_register, iv, sizeof(input_register));
-    
+
   }
 
 }
@@ -713,7 +713,7 @@ uint64_t lfsr_64_to_len_ca(uint8_t * iv, int16_t len)
 
   uint64_t lfsr = 0, bit = 0;
 
-  lfsr = ((uint64_t)iv[0] << 56ULL) + ((uint64_t)iv[1] << 48ULL) + ((uint64_t)iv[2] << 40ULL) + ((uint64_t)iv[3] << 32ULL) + 
+  lfsr = ((uint64_t)iv[0] << 56ULL) + ((uint64_t)iv[1] << 48ULL) + ((uint64_t)iv[2] << 40ULL) + ((uint64_t)iv[3] << 32ULL) +
          ((uint64_t)iv[4] << 24ULL) + ((uint64_t)iv[5] << 16ULL) + ((uint64_t)iv[6] << 8ULL)  + ((uint64_t)iv[7] << 0ULL);
 
   memset (iv, 0, 8*sizeof(uint8_t));
@@ -757,7 +757,7 @@ void des56_ca_keystream_output (uint8_t * main_key, uint8_t * iv, uint8_t * ks_b
     //de should be 1 here for encryption mode
     des_cipher(main_key, input_register, output_register, de);
 
-    //keystream accumulation, shift current byte and append 
+    //keystream accumulation, shift current byte and append
     //single bit from current output register's most significant bit
     ks_bytes[i/8] <<= 1;
     ks_bytes[i/8] |= ((output_register[0] >> 7) & 1);

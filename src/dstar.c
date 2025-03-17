@@ -70,7 +70,7 @@ void processDSTAR_HD(dsd_opts * opts, dsd_state * state)
 }
 
 //first 24-bits of the larger scramble table
-uint8_t sd_d[48] = 
+uint8_t sd_d[48] =
 {0,0,0,0, //0
  1,1,1,0, //E
  1,1,1,1, //F
@@ -275,7 +275,7 @@ void processDSTAR_SD(dsd_opts * opts, dsd_state * state, uint8_t * sd)
         if (start == -1)
           goto SKIP;
 
-        //debug 
+        //debug
         // fprintf (stderr, "S: %d; ", start); //38, or 39
 
         //LAT
@@ -377,7 +377,7 @@ void processDSTAR_SD(dsd_opts * opts, dsd_state * state, uint8_t * sd)
       fprintf (stderr, " _UNK:");
       fprintf (stderr, " %s", strf);
       // memcpy (state->dstar_txt, strf, sizeof(strf)); //don't copy the unknown garbo strings
-    } 
+    }
 
   }
 

@@ -30,12 +30,12 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
 
   uint8_t burst;
   char info[196];
-  unsigned char SlotType[20]; 
+  unsigned char SlotType[20];
   unsigned int SlotTypeOk;
   uint8_t cach_err = 0;
   UNUSED(cach_err);
 
-  int cachInterleave[24] = 
+  int cachInterleave[24] =
   {0, 7, 8, 9, 1, 10,
    11, 12, 2, 13, 14,
    15, 3, 16, 4, 17, 18,
@@ -43,7 +43,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   };
 
   dibit_p = state->dmr_payload_p - 90;
-  
+
   //collect cach and de-interleave
   for (i = 0; i < 12; i++)
   {
@@ -116,7 +116,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   }
   if (state->dmr_stereo == 1)
   {
-    dibit = (int)state->dmr_stereo_payload[61]; 
+    dibit = (int)state->dmr_stereo_payload[61];
   }
   else state->dmr_stereo_payload[61] = dibit;
 
@@ -146,7 +146,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   }
   if (state->dmr_stereo == 1) //state
   {
-    dibit = (int)state->dmr_stereo_payload[63]; 
+    dibit = (int)state->dmr_stereo_payload[63];
   }
   else state->dmr_stereo_payload[63] = dibit;
 
@@ -161,7 +161,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   }
   if (state->dmr_stereo == 1) //state
   {
-    dibit = (int)state->dmr_stereo_payload[64]; 
+    dibit = (int)state->dmr_stereo_payload[64];
   }
   else state->dmr_stereo_payload[64] = dibit;
 
@@ -194,7 +194,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
     }
     if (state->dmr_stereo == 1)
     {
-      dibit = (int)state->dmr_stereo_payload[i+66]; 
+      dibit = (int)state->dmr_stereo_payload[i+66];
     }
     else state->dmr_stereo_payload[i+66] = dibit;
 
@@ -202,7 +202,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
     syncdata[(2*i)+1] = (1 & dibit);         // bit 0
     sync[i] = (dibit | 1) + 48;
   }
-  sync[24] = 0; 
+  sync[24] = 0;
 
   if((strcmp (sync, DMR_BS_DATA_SYNC) == 0) )
   {
@@ -240,21 +240,21 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   // Slot type - Second part - Parity bit
   for (i = 0; i < 5; i++)
   {
-    if (state->dmr_stereo == 0) 
+    if (state->dmr_stereo == 0)
     {
       dibit = getDibit(opts, state);
       state->dmr_stereo_payload[i+90] = dibit;
     }
     if (state->dmr_stereo == 1)
     {
-      dibit = (int)state->dmr_stereo_payload[i+90]; 
+      dibit = (int)state->dmr_stereo_payload[i+90];
     }
     SlotType[(i*2) + 10] = (1 & (dibit >> 1)); // bit 1
     SlotType[(i*2) + 11] = (1 & dibit);        // bit 0
   }
 
   /* Check and correct the SlotType (apply Golay(20,8) FEC check) */
-  
+
   // golay (20,8) hamming-weight of 6 reliably corrects at most 2 bit-errors
   if( Golay_20_8_decode(SlotType) ) SlotTypeOk = 1;
   else
@@ -278,7 +278,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   // Current slot - Second Half - Data Payload - 2nd part
   for (i = 0; i < 49; i++)
   {
-    if (state->dmr_stereo == 0) 
+    if (state->dmr_stereo == 0)
     {
       dibit = getDibit(opts, state);
       state->dmr_stereo_payload[i+95] = dibit;
@@ -286,13 +286,13 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
 
     if (state->dmr_stereo == 1)
     {
-      dibit = (int)state->dmr_stereo_payload[i+95]; 
+      dibit = (int)state->dmr_stereo_payload[i+95];
     }
 
     info[(2*i) + 98] = (1 & (dibit >> 1));  // bit 1
     info[(2*i) + 99] = (1 & dibit);         // bit 0
   }
-  
+
   //
   dmr_data_burst_handler(opts, state, (uint8_t *)info, burst);
 
@@ -300,7 +300,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   if (state->dmr_ms_mode == 0 && opts->dmr_mono == 0)
   {
     cach_err = dmr_cach (opts, state, cachdata);
-  } 
+  }
 
   //ending line break
   fprintf(stderr, "\n");
@@ -316,7 +316,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
   }
 
   // Skip cach (24 bit = 12 dibit) and next slot 1st half (98 + 10 bit = 49 + 5 dibit)
-  if (state->dmr_stereo == 0) 
+  if (state->dmr_stereo == 0)
   {
     skipDibit (opts, state, 12 + 49 + 5);
   }
@@ -325,7 +325,7 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
 
   #ifdef CON_TUNEAWAY
   //simplified, if IDLE condition, drop cc and vc sync time so when RF channel tears down, we go back much quicker
-  //NOTE: This was adopted, because going back to the CC early and then to be sent back to the channel grant, 
+  //NOTE: This was adopted, because going back to the CC early and then to be sent back to the channel grant,
   //only for it to tear down and being sent back to the CC again isn't very efficient for trunk tracking
   //NOTE: This will still leave the tuner in the 'locked' state when tuning a voice channel grant on the CC,
   //and will remain locked until a new voice channel grant is received, but its just asthetic, trying to fix it
@@ -342,4 +342,4 @@ dmr_data_sync (dsd_opts * opts, dsd_state * state)
     }
   }
   #endif
-} 
+}

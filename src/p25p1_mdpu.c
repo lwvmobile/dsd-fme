@@ -9,7 +9,7 @@
 #include "dsd.h"
 
 uint32_t crc32mbf(uint8_t * buf, int len)
-{	
+{
   uint32_t g = 0x04c11db7;
   uint64_t crc = 0;
   for (int i = 0; i < len; i++)
@@ -67,10 +67,10 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   uint8_t mpdu_decoded_bits[18*129*8];
   memset (mpdu_decoded_bits, 0, sizeof(mpdu_decoded_bits));
 
-  uint8_t mpdu_crc_bits[18*129*8]; 
+  uint8_t mpdu_crc_bits[18*129*8];
   memset (mpdu_crc_bits, 0, sizeof(mpdu_crc_bits));
 
-  uint8_t mpdu_crc9_bits[18*129*8]; 
+  uint8_t mpdu_crc9_bits[18*129*8];
   memset (mpdu_crc9_bits, 0, sizeof(mpdu_crc9_bits));
 
   uint8_t mpdu_crc_bytes[18*129];
@@ -86,10 +86,10 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   memset (mpdu_byte, 0, sizeof(mpdu_byte));
 
   uint8_t an = 0;
-  uint8_t io = 0; 
-  uint8_t fmt = 0;  
-  uint8_t sap = 0; 
-  uint8_t blks = 0; 
+  uint8_t io = 0;
+  uint8_t fmt = 0;
+  uint8_t sap = 0;
+  uint8_t blks = 0;
   int end = 3; //ending value for data gathering repetitions (default at 3)
 
   //CRC32
@@ -123,7 +123,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         skipdibit = 0;
         status_count++;
       }
-      
+
       skipdibit++; //increment
 
       //this is used to skip gathering one dibit as well since we only will end up skipping 2 status dibits (getting 99 instead of 98, throwing alignment off)
@@ -216,7 +216,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       if (end > 128) end = 128;  //Storage for up to 127 blocks plus 1 header
 
     }
-    
+
   }
 
   if (err[0] == 0)
@@ -236,8 +236,8 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
   //trunking blocks
   if ((sap == 0x3D) && ((fmt == 0x17) || (fmt == 0x15)))
   {
-    
-    //CRC32 is now working! 
+
+    //CRC32 is now working!
     CRCExtracted = (mpdu_byte[(12*(blks+1))-4] << 24) | (mpdu_byte[(12*(blks+1))-3] << 16) | (mpdu_byte[(12*(blks+1))-2] << 8) | (mpdu_byte[(12*(blks+1))-1] << 0);
     CRCComputed  = crc32mbf(mpdu_byte+12, (96*blks)-32);
     if (CRCComputed == CRCExtracted) err[1] = 0;
@@ -260,20 +260,20 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
 
       }
 
-      fprintf (stderr, "\n "); 
+      fprintf (stderr, "\n ");
       fprintf (stderr, " CRC EXT %08X CMP %08X", CRCExtracted, CRCComputed);
       fprintf (stderr, "%s ", KNRM);
 
-      //Header 
-      if (err[0] != 0) 
+      //Header
+      if (err[0] != 0)
       {
         fprintf (stderr, "%s",KRED);
         fprintf (stderr, " (HDR CRC16 ERR)");
         fprintf (stderr, "%s",KCYN);
       }
 
-      //Completed MBF 
-      if (err[1] != 0) 
+      //Completed MBF
+      if (err[1] != 0)
       {
         fprintf (stderr, "%s",KRED);
         fprintf (stderr, " (MBT CRC32 ERR)");
@@ -323,7 +323,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
         if (i != 18*blks) i += 2; //skip the next DBSN/CRC9
       }
       mpdu_byte[mpdu_idx++] = r34bytes[i];
-    }  
+    }
 
     //minus 1 to offset the last rounds mpdu_idx++
     if (err[1] == 0 && blks != 0)
@@ -361,7 +361,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "%02X", mpdu_byte[i]);
       }
 
-      if (err[1] != 0) 
+      if (err[1] != 0)
       {
         fprintf (stderr, "%s",KRED);
         fprintf (stderr, "\n (MPDU CRC32 ERR)");
@@ -405,7 +405,7 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
       }
     }
 
-    if (err[1] != 0) 
+    if (err[1] != 0)
     {
       fprintf (stderr, "%s",KRED);
       fprintf (stderr, "\n (MPDU CRC32 ERR)");
@@ -422,5 +422,5 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "%s",KNRM);
     fprintf (stderr, "\n");
   }
-  
+
 }

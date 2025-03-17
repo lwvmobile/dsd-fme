@@ -2,8 +2,8 @@
  * dsd_misc.c
  * Misc Code that needs to be reorganized and sorted out
  *
- * 
- * 
+ *
+ *
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
@@ -57,7 +57,7 @@ void trellis_decode(uint8_t result[], const uint8_t source[], int result_len)
 		reg = (reg << 1) | min_bt;
 		dstats[(min_d > 3) ? 3 : min_d] += 1;
 	}
-	
+
 	//debug output
 	// fprintf (stderr, "\n stats\t%d %d %d %d\n", dstats[0], dstats[1], dstats[2], dstats[3]);
 }
@@ -65,21 +65,21 @@ void trellis_decode(uint8_t result[], const uint8_t source[], int result_len)
 //Original Copyright/License
 
 /* -*- c++ -*- */
-/* 
+/*
  * NXDN Encoder/Decoder (C) Copyright 2019 Max H. Parke KA1RBI
- * 
+ *
  * This file is part of OP25
- * 
+ *
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
- * 
+ *
  * This software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this software; see the file COPYING.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street,
@@ -385,7 +385,7 @@ void HPFilter_Init(HPFilter *filter, float cutoffFreqHz, float sampleTimeS)
 
 float HPFilter_Update(HPFilter *filter, float v_in)
 {
-    
+
 	filter->v_in[1]=filter->v_in[0];
 	filter->v_in[0]=v_in;
 
@@ -493,7 +493,7 @@ void init_audio_filters (dsd_state * state)
 	//passband filter working (seems to be), notch filter unsure which values to use, doesn't have any appreciable affect when used as is
 	PBFilter_Init(&state->PBF, 8000, 12000, (float)1/(float)1536000); //RTL Sampling at 1536000 S/s.
 	NOTCHFilter_Init(&state->NF, 1000, 4000, (float)1/(float)1536000);
-	
+
 }
 
 //FUNCTIONS for handing use of above filters
@@ -572,7 +572,7 @@ void pbf(dsd_state * state, short * input, int len)
 //Generic RMS function derived from RTL_FM (RTL_SDR) RMS code (doesnt' really work correctly outside of RTL)
 long int raw_rms(int16_t *samples, int len, int step) //use samplespersymbol as len
 {
-  
+
   int i;
   long int rms;
   long p, t, s;

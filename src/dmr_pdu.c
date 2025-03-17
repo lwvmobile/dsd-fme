@@ -40,7 +40,7 @@ void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input
     else fprintf (stderr, "-");
 
     //TODO: Add TMS String to ncurses string w/ wide char support?
-    //for now, just rip the first 40 or so chars lower byte value 
+    //for now, just rip the first 40 or so chars lower byte value
     //in the ASCII Range (should be alright for a quick visual)
     char c[2]; c[0] = (char)input[i+1]; c[2] = 0;
     if (wr == 1&& i < 76 && input[i+1] < 0x7F && input[i+1] >= 0x20)
@@ -71,7 +71,7 @@ void utf8_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input)
     //   break;
     else fprintf (stderr, "-");
 
-    //for now, just rip the first 40 or so chars lower byte value 
+    //for now, just rip the first 40 or so chars lower byte value
     //in the ASCII Range (should be alright for a quick visual)
     char c = input[i];
     if (wr == 1 && i < 38 && c < 0x7F && c >= 0x20)
@@ -102,8 +102,8 @@ void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
     if (len >= (127*18)) len = 127*18; //sanity check of sorts, prevent extra long line print outs in the console
     utf8_to_text(state, 0, len, DMR_PDU); //generic catch-all to see if anything relevant is there
     // utf16_to_text(state, 0, len, DMR_PDU); //generic catch-all to see if anything relevant is there
-  } 
-    
+  }
+
 }
 
 //reading ETSI, seems like these aren't compressed, just that they are preset indexed values on the radio
@@ -148,7 +148,7 @@ void dmr_udp_comp_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t
     sprintf (addrstring[1], "%s", "Manufacturer Specific");
 
   //according to ETSI, if spid and/or dpid is zero, their respective port is defined in this header, otherwise, they are preset indexed values
-  
+
   //look for and set optional port values and the ptr value to start of data
   uint16_t ptr = 5;
 
@@ -242,7 +242,7 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
 {
 
   uint8_t slot = state->currentslot;
-  
+
   //the IPv4 Header
   uint8_t version = input[0] >> 4; //may need to read ahead and get this value before coming here
   uint8_t ihl = input[0] & 0xF; //decompressed value is 0x05 (may need to check this before preceeding)
@@ -295,7 +295,7 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
       fprintf (stderr, "\n ------------Attached Message-------------");
       decode_ip_pdu(opts, state, len-28, input+28);
     }
-    
+
   }
 
   else if (prot == 0x11) //UDP
@@ -348,11 +348,11 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
       uint8_t tms_ack = (tms_hdr >> 0) & 0xF;
       if (opts->payload == 1)
         fprintf (stderr, "HDR: %02X; ", tms_hdr);
-      
+
       //optional address len and address value
       uint8_t tms_adl = input[tms_ptr++];
       if (tms_adl != 0)
-      { 
+      {
         //the encoding seems to start at the adl (len) byte, but does not include it
         //so, to get the decoder to work, we well go back one byte and zero it out
         tms_ptr--; //back up one position
@@ -452,7 +452,7 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
     //known P25 Ports
     else if (port1 == 49198 && port2 == 49198)
     {
-      sprintf (state->dmr_lrrp_gps[slot], "P25 Tier 2 LOCN SRC(IP): %d.%d.%d.%d; DST(IP): %d.%d.%d.%d; ", 
+      sprintf (state->dmr_lrrp_gps[slot], "P25 Tier 2 LOCN SRC(IP): %d.%d.%d.%d; DST(IP): %d.%d.%d.%d; ",
                input[12], input[13], input[14], input[15], input[16], input[17], input[18], input[19]);
       fprintf (stderr, "P25 Tier 2 Location Service;"); //LRRP
       dmr_lrrp (opts, state, len, src24, dst24, input+28); //same offsets as DMR variety (unknown)
@@ -468,7 +468,7 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
 
   }
 
-  else 
+  else
   {
     sprintf (state->dmr_lrrp_gps[slot], " IP Call SRC: %d; DST: %d; Protocol: %d;", src24, dst24, prot);
     fprintf(stderr, "Unknown IP Protocol: %02X;", prot);
@@ -476,7 +476,7 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
     //   utf8_to_text(state, 0, len-28, input+28);
     // else utf8_to_text(state, 0, len, input+28);
   }
-  
+
 }
 
 //The contents of this function are mostly trial and error
@@ -536,7 +536,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
       case 0x0D: //message len indicator
         if (i == 0) //see if this is the first octet, otherwise, can't verify this is going to work
         {
-          message_len = DMR_PDU[i+1]; 
+          message_len = DMR_PDU[i+1];
           i += 3; //next byte is len, then next two are usually 0x22 0xXX or 0x23 0xXX
           lrrp_confidence++;
         }
@@ -545,7 +545,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
       //tokens
       case 0x51: //circle-2d
       case 0x54: //circle-3d
-      case 0x55: //circle-3d 
+      case 0x55: //circle-3d
         if (message_len > 0 && lat == 0)
         {
           //debug
@@ -554,12 +554,12 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
           lat = ( ( (DMR_PDU[i+1]           <<  24 ) + (DMR_PDU[i+2] << 16) + (DMR_PDU[i+3] << 8) + DMR_PDU[i+4]) * 1 );
           lon = ( ( (DMR_PDU[i+5]           <<  24 ) + (DMR_PDU[i+6] << 16) + (DMR_PDU[i+7] << 8) + DMR_PDU[i+8]) * 1 );
           rad = (DMR_PDU[i+9] << 8) + DMR_PDU[i+10];
-          i += 10; 
+          i += 10;
           if (lat > 0 && lon > 0) lrrp_confidence++;
           else lat = 0;
         }
         break;
-      
+
       case 0x34: //Time
       case 0x35: //Time
         if (message_len > 0 && year == 0)
@@ -570,14 +570,14 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
           hour = ((DMR_PDU[i+3] & 0x01) << 4) + ((DMR_PDU[i+4] & 0xF0) >> 4);
           minute = ((DMR_PDU[i+4] & 0x0F) << 2) + ((DMR_PDU[i+5] & 0xC0) >> 6);
           second = (DMR_PDU[i+5] & 0x3F);
-          i += 5; 
+          i += 5;
           //sanity check
           if (year > 2000 && year <= 2026) lrrp_confidence++;
           if (year > 2025 || year < 2000) year = 0; //needs future proofing
         }
         break;
-      
-      case 0x66: //point-2d 
+
+      case 0x66: //point-2d
         if (message_len > 0 && lat == 0)
         {
           lat = ( ( (DMR_PDU[i+1]           <<  24 ) + (DMR_PDU[i+2] << 16) + (DMR_PDU[i+3] << 8) + DMR_PDU[i+4]) * 1 );
@@ -593,8 +593,8 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
           lat = ( ( (DMR_PDU[i+1]           <<  24 ) + (DMR_PDU[i+2] << 16) + (DMR_PDU[i+3] << 8) + DMR_PDU[i+4]) * 1 );
           lon = ( ( (DMR_PDU[i+5]           <<  24 ) + (DMR_PDU[i+6] << 16) + (DMR_PDU[i+7] << 8) + DMR_PDU[i+8]) * 1 );
           alt =  DMR_PDU[i+9];
-          i += 9; 
-          if (lat > 0 && lon > 0) lrrp_confidence++; 
+          i += 9;
+          if (lat > 0 && lon > 0) lrrp_confidence++;
           else lat = 0;
         }
         break;
@@ -623,8 +623,8 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
           lrrp_confidence++;
         }
         break;
-      
-      //unknown tokens 
+
+      //unknown tokens
       default:
         //do nothing
         break;
@@ -634,7 +634,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
   if (message_len > 0)
   {
     fprintf (stderr, "%s", KYEL);
-    
+
     if (lrrp_confidence >= 3) //minimal of src, dst, and message len indicator
     {
 
@@ -656,14 +656,14 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
         {
           lat = lat & 0x7FFFFFFF;
           lat_sign = -1;
-          // lat = 0x80000000 - lat; //not sure why this doesn't work here like it does on lon, extra bit? 
-        } 
+          // lat = 0x80000000 - lat; //not sure why this doesn't work here like it does on lon, extra bit?
+        }
         if (lon & 0x80000000)
         {
           lon = lon & 0x7FFFFFFF;
           lon_sign = -1;
           lon = 0x80000000 - lon;
-        } 
+        }
 
         lat_fin = (double)lat * lat_unit * lat_sign;
         lon_fin = (double)lon * lon_unit * lon_sign;
@@ -714,7 +714,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
         //write data header source if not available in lrrp data
         if (!source) fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]); //source address from data header
         if (source) fprintf (pFile, "%08d\t", source); //add source form decoded audio if available, else its from the header
-        
+
         if (timestr != NULL)
         {
           free (timestr);
@@ -748,13 +748,13 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
       if (vel_set) sprintf (velstr, " %.4lf km/h", velocity * 3.6);
       if (deg_set) sprintf (degstr, " %d%s  ", degrees, deg_glyph);
       sprintf (state->dmr_lrrp_gps[slot], "%s%s%s", lrrpstr, velstr, degstr);
-      
+
     }
-    
+
   }
 
   fprintf (stderr, "%s", KNRM);
-  
+
 }
 
 void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
@@ -812,9 +812,9 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_P
         day   = ((DMR_PDU[i+7] -  0x30) << 4) | (DMR_PDU[i+8] - 0x30);
         month = ((DMR_PDU[i+9] -  0x30) << 4) | (DMR_PDU[i+10] - 0x30);
         year  = ((DMR_PDU[i+11] - 0x30) << 4) | (DMR_PDU[i+12] - 0x30);
-        i += 12; 
+        i += 12;
         break;
-      
+
       case 0x53: //S -- South
         lat_sign = -1;
       case 0x4E: //N -- North
@@ -824,11 +824,11 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_P
         lat_sec = ((DMR_PDU[i+6] - 0x30) << 12) | ((DMR_PDU[i+7] - 0x30) << 8) | ((DMR_PDU[i+8] - 0x30) << 4) | ((DMR_PDU[i+9] - 0x30) << 0);
         i += 8;
         break;
-      
+
       case 0x57: //W -- West
         lon_sign = -1;
       case 0x45: //E -- East
-        lon     = 1; 
+        lon     = 1;
         lon_deg = ((DMR_PDU[i+1] - 0x30) << 8) | ((DMR_PDU[i+2] - 0x30) << 4) | ((DMR_PDU[i+3] - 0x30) << 0);
         lon_min = ((DMR_PDU[i+4] - 0x30) << 4) | (DMR_PDU[i+5] - 0x30);
         lon_sec = ((DMR_PDU[i+7] - 0x30) << 12) | ((DMR_PDU[i+8] - 0x30) << 8) | ((DMR_PDU[i+9] - 0x30) << 4) | ((DMR_PDU[i+10] - 0x30) << 0);
@@ -841,7 +841,7 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_P
 
     } //end switch
 
-  } //for i 
+  } //for i
 
   if (lat && lon)
   {
@@ -889,10 +889,10 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_P
       if (!time) fprintf (pFile, "%s\t", datestr );
       if (!time) fprintf (pFile, "%s\t", timestr );
       if (time)  fprintf (pFile, "20%02X/%02X/%02X\t%02X:%02X:%02X\t", year, month, day, hour, minute, second);
-      
+
       //write data header source from data header
       fprintf (pFile, "%08lld\t", state->dmr_lrrp_source[state->currentslot]);
-      
+
       if (timestr != NULL)
       {
         free (timestr);
@@ -914,6 +914,6 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_P
       fclose (pFile);
     }
 
-  } 
+  }
 
 }

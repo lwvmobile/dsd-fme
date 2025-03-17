@@ -7,14 +7,14 @@
  * LWVMOBILE
  * 2022-12 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
- 
+
 #include "dsd.h"
 
 void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors)
 {
   UNUSED2(opts, CRCCorrect);
 
-  if((IrrecoverableErrors == 0)) 
+  if((IrrecoverableErrors == 0))
   {
 
     //update cc amd vc sync time for trunking purposes (particularly Con+)
@@ -22,14 +22,14 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
     {
       state->last_vc_sync_time = time(NULL);
       state->last_cc_sync_time = time(NULL);
-    } 
+    }
 
     if (state->currentslot == 0)
     {
       state->payload_algid = PI_BYTE[0];
       state->payload_keyid = PI_BYTE[2];
       state->payload_mi    = ( ((PI_BYTE[3]) << 24) + ((PI_BYTE[4]) << 16) + ((PI_BYTE[5]) << 8) + (PI_BYTE[6]) );
-      if (state->payload_algid < 0x26) 
+      if (state->payload_algid < 0x26)
       {
         fprintf (stderr, "%s ", KYEL);
         fprintf (stderr, "\n Slot 1");
@@ -70,7 +70,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
         {
           fprintf (stderr, "\n");
           LFSR128d (state);
-        } 
+        }
       }
 
       if (state->payload_algid >= 0x26)
@@ -87,7 +87,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
       state->payload_algidR = PI_BYTE[0];
       state->payload_keyidR = PI_BYTE[2];
       state->payload_miR    = ( ((PI_BYTE[3]) << 24) + ((PI_BYTE[4]) << 16) + ((PI_BYTE[5]) << 8) + (PI_BYTE[6]) );
-      if (state->payload_algidR < 0x26) 
+      if (state->payload_algidR < 0x26)
       {
         fprintf (stderr, "%s ", KYEL);
         fprintf (stderr, "\n Slot 2");
@@ -128,7 +128,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
         {
           fprintf (stderr, "\n");
           LFSR128d (state);
-        } 
+        }
       }
 
       if (state->payload_algidR >= 0x26)
@@ -171,7 +171,7 @@ void LFSR(dsd_state * state)
     state->payload_mi = lfsr;
   }
 
-  if (state->currentslot == 1) 
+  if (state->currentslot == 1)
   {
 
     fprintf (stderr, "%s", KYEL);
@@ -191,13 +191,13 @@ void LFSR64(dsd_state * state)
 
     if (state->currentslot == 0)
     {
-      lfsr = (uint64_t) state->payload_mi; 
+      lfsr = (uint64_t) state->payload_mi;
     }
-    else lfsr = (uint64_t) state->payload_miR; 
+    else lfsr = (uint64_t) state->payload_miR;
 
     uint8_t cnt = 0;
 
-    for(cnt=0;cnt<32;cnt++) 
+    for(cnt=0;cnt<32;cnt++)
     {
       unsigned long long int bit = ( (lfsr >> 31) ^ (lfsr >> 21) ^ (lfsr >> 1) ^ (lfsr >> 0) ) & 0x1;
       lfsr = (lfsr << 1) | bit;
@@ -237,7 +237,7 @@ void LFSR128d(dsd_state * state)
   unsigned long long int lfsr = 0;
 
   if (state->currentslot == 0)
-    lfsr = state->payload_mi; 
+    lfsr = state->payload_mi;
   else lfsr = state->payload_miR;
 
   unsigned long long int next_mi;
@@ -260,7 +260,7 @@ void LFSR128d(dsd_state * state)
 
   int cnt = 0; int x = 32;
   unsigned long long int bit;
-  for(cnt=0;cnt<96;cnt++) 
+  for(cnt=0;cnt<96;cnt++)
   {
     //32,22,2,1
     bit = ( (lfsr >> 31) ^ (lfsr >> 21) ^ (lfsr >> 1) ^ (lfsr >> 0) ) & 0x1;

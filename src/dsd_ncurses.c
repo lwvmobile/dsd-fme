@@ -3282,7 +3282,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           break;
         }
       }
-      
+
     }
     else if (lls == 35 || lls == 36) //P2
     {
@@ -5058,7 +5058,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //so probably just write a function to handle c input, and when c = certain values
   //needing an entry box, then stop all of those
 
-  
+
 
 
   //allocated memory pointer needs to be free'd

@@ -92,7 +92,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 					//if (state->currentslot == 0) state->dmrburstL = 14;
 					//else state->dmrburstR = 14;
 					goto END_SMAC;
-				}				
+				}
 			}
 		}
 	}
@@ -140,7 +140,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 
 			The outbound SACCH for the talker radio containing the talker ID information is required at the
 			talker radio site and optional at other sites. (So, if its from an external site, then it can be zero?)
-			
+
 			*/
 
 			// if (state->lastsrc == 0) fprintf (stderr, "External ");
@@ -285,13 +285,13 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		//remember, slots are inverted here, so set the opposite ones
 		if (state->currentslot == 1)
 		{
-			
+
 			state->fourv_counter[0] = 0;
 			state->voice_counter[0] = 0;
 			state->dropL = 256;
 			state->dmrburstL = 23;
-			state->payload_algid = 0; 
-			state->payload_keyid = 0; 
+			state->payload_algid = 0;
+			state->payload_keyid = 0;
 
 			fprintf (stderr, "\n VCH 0 - ");
 			fprintf (stderr, "TG %d ", state->lasttg);
@@ -314,7 +314,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		}
 		if (state->currentslot == 0)
 		{
-			
+
 			state->fourv_counter[1] = 0;
 			state->voice_counter[1] = 0;
 			state->dropR = 256;
@@ -377,9 +377,9 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 					state->lastsrc = 0;
 					state->lasttgR = 0;
 					state->lastsrcR = 0;
-					state->payload_algid = 0; 
+					state->payload_algid = 0;
 					state->payload_keyid = 0;
-					state->payload_algidR = 0; 
+					state->payload_algidR = 0;
 					state->payload_keyidR = 0;
 					// state->payload_miP = 0;
 					//reset some strings
@@ -390,7 +390,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 					opts->p25_is_tuned = 0;
 					state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
 					if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-					SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
+					SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
 				}
 				//rtl
 				else if (opts->audio_in_type == 3)
@@ -400,9 +400,9 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 					state->lastsrc = 0;
 					state->lasttgR = 0;
 					state->lastsrcR = 0;
-					state->payload_algid = 0; 
+					state->payload_algid = 0;
 					state->payload_keyid = 0;
-					state->payload_algidR = 0; 
+					state->payload_algidR = 0;
 					state->payload_keyidR = 0;
 					// state->payload_miP = 0;
 					//reset some strings
@@ -460,7 +460,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 		if (state->currentslot == 1) state->dmrburstL = 21;
 		else state->dmrburstR = 21;
 		#endif
-		
+
 		fprintf (stderr, " MAC_ACTIVE ");
 		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 1, SMAC);
@@ -473,7 +473,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			state->dmrburstL = 22;
 			//close any open MBEout files
  			if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
-		} 
+		}
 		else
 		{
 			state->dmrburstR = 22;
@@ -722,7 +722,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		fprintf (stderr, "%s", KRED);
 		if (state->currentslot == 0)
 		{
-			
+
 			state->fourv_counter[0] = 0;
 			state->voice_counter[0] = 0;
 			state->dropL = 256;
@@ -741,17 +741,17 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			//close any open MBEout files
  			if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
 
-			//blank the call string here 
+			//blank the call string here
 			sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
 
 			//reset gain
 			if (opts->floating_point == 1)
 				state->aout_gain = opts->audio_gain; //reset
-			
+
 		}
 		if (state->currentslot == 1)
 		{
-			
+
 			state->fourv_counter[1] = 0;
 			state->voice_counter[1] = 0;
 			state->dropR = 256;
@@ -784,7 +784,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		{
 			if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1)
 			{
-				
+
 				//if P25p2 VCH and going back to P25p1 CC, flip symbolrate
 				if (state->p25_cc_is_tdma == 0)
 				{
@@ -802,9 +802,9 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 					state->lastsrc = 0;
 					state->lasttgR = 0;
 					state->lastsrcR = 0;
-					state->payload_algid = 0; 
+					state->payload_algid = 0;
 					state->payload_keyid = 0;
-					state->payload_algidR = 0; 
+					state->payload_algidR = 0;
 					state->payload_keyidR = 0;
 					// state->payload_miP = 0;
 					//reset some strings
@@ -815,7 +815,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 					opts->p25_is_tuned = 0;
 					state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
 					if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-					SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
+					SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
 				}
 				//rtl
 				else if (opts->audio_in_type == 3)
@@ -825,9 +825,9 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 					state->lastsrc = 0;
 					state->lasttgR = 0;
 					state->lastsrcR = 0;
-					state->payload_algid = 0; 
+					state->payload_algid = 0;
 					state->payload_keyid = 0;
-					state->payload_algidR = 0; 
+					state->payload_algidR = 0;
 					state->payload_keyidR = 0;
 					// state->payload_miP = 0;
 					//reset some strings
@@ -890,9 +890,9 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		// 	}
 		// }
 
-		//blank the call string here 
+		//blank the call string here
 		sprintf (state->call_string[slot], "%s", "                     "); //21 spaces
-			
+
 	}
 	if (opcode == 0x4 && err == 0)
 	{
@@ -907,7 +907,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 		if (state->currentslot == 0) state->dmrburstL = 21;
 		else state->dmrburstR = 21;
 		#endif
-		
+
 		fprintf (stderr, " MAC_ACTIVE ");
 		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 0, FMAC);
@@ -920,13 +920,13 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			state->dmrburstL = 22;
 			//close any open MBEout files
  			if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
-		} 
+		}
 		else
 		{
 			state->dmrburstR = 22;
 			//close any open MBEout files
  			if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
-		} 
+		}
 		fprintf (stderr, " MAC_HANGTIME ");
 		fprintf (stderr, "%s", KYEL);
 		process_MAC_VPDU(opts, state, 0, FMAC);

@@ -13,7 +13,7 @@ void resetState (dsd_state * state)
 
   //Dibit Buffer -- Memset/Init/Allocate Memory
   // state->dibit_buf = malloc (sizeof (int) * 1000000);
-  
+
   state->dibit_buf_p = state->dibit_buf + 200;
   memset (state->dibit_buf, 0, sizeof (int) * 200);
   state->repeat = 0; //repeat frame?
@@ -32,7 +32,7 @@ void resetState (dsd_state * state)
 
   memset (state->audio_out_buf, 0, 100 * sizeof (short));
   state->audio_out_buf_p = state->audio_out_buf + 100;
-  
+
   memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
   state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
 
@@ -46,7 +46,7 @@ void resetState (dsd_state * state)
 
   memset (state->audio_out_bufR, 0, 100 * sizeof (short));
   state->audio_out_buf_pR = state->audio_out_bufR + 100;
-  
+
   memset (state->audio_out_float_bufR, 0, 100 * sizeof (float));
   state->audio_out_float_buf_pR = state->audio_out_float_bufR + 100;
 
@@ -100,12 +100,12 @@ void resetState (dsd_state * state)
   state->numtdulc = 0;
   state->firstframe = 0;
 
-  //unsure if these are still used or ever were used, 
+  //unsure if these are still used or ever were used,
   // memset (state->aout_max_buf, 0, sizeof (float) * 200);
   // state->aout_max_buf_p = state->aout_max_buf;
   // state->aout_max_buf_idx = 0;
 
-  // //MBE Specific 
+  // //MBE Specific
   // //free the memory before allocating it again -- may not use this
   // free (state->cur_mp);
   // free (state->prev_mp);

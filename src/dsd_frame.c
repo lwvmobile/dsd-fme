@@ -91,7 +91,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
   if ((state->synctype == 28) || (state->synctype == 29))
   {
     //MBEout restored, is not handled internally by nxdn_frame.c
-    nxdn_frame (opts, state); 
+    nxdn_frame (opts, state);
     return;
   }
 
@@ -121,7 +121,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
       if (state->dmr_mfid == 0x10) ; //sprintf (state->dmr_branding, "%s",  "Motorola");
       else if (state->dmr_mfid == 0x68) sprintf (state->dmr_branding, "%s", "  Hytera");
       else if (state->dmr_mfid == 0x58) sprintf (state->dmr_branding, "%s", "    Tait");
-      
+
       //disabling these due to random data decodes setting an odd mfid, could be legit, but only for that one packet?
       //or, its just a decode error somewhere
       // else if (state->dmr_mfid == 0x20) sprintf (state->dmr_branding, "%s", "JVC Kenwood");
@@ -159,14 +159,14 @@ processFrame (dsd_opts * opts, dsd_state * state)
           sprintf (state->slot1light, " slot1 ");
           sprintf (state->slot2light, " slot2 ");
           //we can safely open MBE on any MS or mono handling
-          if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state); 
-          if (opts->p25_trunk == 0) dmrMSBootstrap (opts, state); 
+          if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
+          if (opts->p25_trunk == 0) dmrMSBootstrap (opts, state);
         }
         if (opts->dmr_mono == 1 && state->synctype == 32)
         {
           //we can safely open MBE on any MS or mono handling
           if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
-          if (opts->p25_trunk == 0) dmrMSBootstrap (opts, state); 
+          if (opts->p25_trunk == 0) dmrMSBootstrap (opts, state);
         }
         if (opts->dmr_stereo == 1) //opts->dmr_stereo == 1
         {
@@ -258,7 +258,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
     //edacs
     else if ((state->synctype == 37) || (state->synctype == 38))
     {
-      if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state); 
+      if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
       edacs (opts, state);
       return;
     }
@@ -270,7 +270,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
       return;
     }
     //M17
-    else if ((state->synctype == 16) || (state->synctype == 9)  || (state->synctype == 17) || (state->synctype == 8)  || 
+    else if ((state->synctype == 16) || (state->synctype == 9)  || (state->synctype == 17) || (state->synctype == 8)  ||
              (state->synctype == 76) || (state->synctype == 77) || (state->synctype == 86) || (state->synctype == 87) ||
              (state->synctype == 99) || (state->synctype == 98) )
     {
@@ -282,7 +282,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
       //   processM17BRT(opts, state); //Not available yet
       else if (state->synctype == 86 || state->synctype == 87)
         processM17PKT(opts, state);
-      else 
+      else
         processM17LSF(opts, state);
       return;
     }
@@ -443,7 +443,7 @@ processFrame (dsd_opts * opts, dsd_state * state)
       }
       if (opts->mbe_out_dir[0] != 0)
       {
-        if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state); 
+        if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
         if (opts->mbe_out_f == NULL) openMbeOutFile (opts, state);
       }
       mbe_initMbeParms (state->cur_mp, state->prev_mp, state->prev_mp_enhanced);

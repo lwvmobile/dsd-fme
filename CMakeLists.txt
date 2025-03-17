@@ -14,21 +14,21 @@ set(CURSES_NEED_WIDE TRUE)
 option(COLORS
     "Build with Colors Enabled" ON)
 if (COLORS)
-    add_definitions(-DPRETTY_COLORS) 
+    add_definitions(-DPRETTY_COLORS)
 endif ()
 
 #use cmake option -DCOLORSLOGS=OFF to disable color output (terminal/logs)
 option(COLORSLOGS
     "Build with Colors Enabled" ON)
 if (COLORSLOGS)
-    add_definitions(-DPRETTY_COLORS_LOGS) 
+    add_definitions(-DPRETTY_COLORS_LOGS)
 endif ()
 
 #use cmake option -DPVC=ON to enable Provoice Conventional Frame Sync
 option(PVC
     "Build with Provoice Conventional Frame Sync Enabled" OFF)
 if (PVC)
-    add_definitions(-DPVCONVENTIONAL) 
+    add_definitions(-DPVCONVENTIONAL)
 endif ()
 
 
@@ -36,14 +36,14 @@ endif ()
 option(LZ
     "Build with new LimaZulu Requested NXDN Tweaks Enabled" OFF)
 if (LZ)
-    add_definitions(-DLIMAZULUTWEAKS) 
+    add_definitions(-DLIMAZULUTWEAKS)
 endif ()
 
 #use cmake option -DSID=ON to enable P25p1 Soft ID decoding -- Experimental
 option(SID
     "Build with P25p1 LSD/Soft ID Enabled" OFF)
 if (SID)
-    add_definitions(-DSOFTID) 
+    add_definitions(-DSOFTID)
 endif ()
 
 
@@ -54,7 +54,7 @@ find_package(LibSndFile REQUIRED)
 find_package(MBE REQUIRED)
 find_package(ITPP REQUIRED)
 find_package(RTLSDR)
-find_package(Curses REQUIRED) 
+find_package(Curses REQUIRED)
 find_package(PulseAudio REQUIRED)
 find_package(CODEC2)
 

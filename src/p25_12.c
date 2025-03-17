@@ -20,8 +20,8 @@ uint8_t p25_constellation_map[16] = {
 };
 
 //digitized dibit to OTA symbol conversion for reference
-//0 = +1; 1 = +3; 
-//2 = -1; 3 = -3; 
+//0 = +1; 1 = +3;
+//2 = -1; 3 = -3;
 
 //finite state machine values
 uint8_t p25_fsm[16] = {
@@ -97,12 +97,12 @@ int p25_12(uint8_t * input, uint8_t treturn[12])
   uint8_t point[49];
   memset (point, 0xFF, sizeof(point));
 
-  for (i = 0; i < 49; i++) 
+  for (i = 0; i < 49; i++)
     point[i] = p25_constellation_map[nibs[i]];
 
   //debug view points
   // fprintf (stderr, "\n P =");
-  // for (i = 0; i < 49; i++) 
+  // for (i = 0; i < 49; i++)
   //   fprintf (stderr, " %02d", point[i]);
 
   //convert constellation points into tdibit values using the FSM
@@ -149,7 +149,7 @@ int p25_12(uint8_t * input, uint8_t treturn[12])
 
   //debug view tdibits/states
   // fprintf (stderr, "\n T =");
-  // for (i = 0; i < 49; i++) 
+  // for (i = 0; i < 49; i++)
   //   fprintf (stderr, " %02d", tdibits[i]);
 
   //pack tdibits into return payload bytes

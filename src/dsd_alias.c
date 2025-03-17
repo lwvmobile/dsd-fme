@@ -9,7 +9,7 @@
 #include "dsd.h"
 
 //Motorola P25 OTA Alias Decoding ripped/demystified from Ilya Smirnov's SDRTrunk Voodoo Code
-uint8_t moto_alias_lut[256] = { 
+uint8_t moto_alias_lut[256] = {
   0xD2, 0xF6, 0xD4, 0x2B, 0x63, 0x49, 0x94, 0x5E, 0xA7, 0x5C, 0x70, 0x69, 0xF7, 0x08, 0xB1, 0x7D,
   0x38, 0xCF, 0xCC, 0xD8, 0x51, 0x8F, 0xD5, 0x93, 0x6A, 0xF3, 0xEF, 0x7E, 0xFB, 0x64, 0xF4, 0x35,
   0x27, 0x07, 0x31, 0x14, 0x87, 0x98, 0x76, 0x34, 0xCA, 0x92, 0x33, 0x1B, 0x4F, 0x8C, 0x09, 0x40,
@@ -185,7 +185,7 @@ void apx_embedded_alias_blocks_phase1 (dsd_opts * opts, dsd_state * state, uint8
 
       //pass to alias decoder
       apx_embedded_alias_decode (opts, state, slot, num_bits, state->dmr_pdu_sf[slot]);
-      
+
       //clear out now stale storage
       memset (state->dmr_pdu_sf[slot], 0, sizeof(state->dmr_pdu_sf[slot]));
 
@@ -195,7 +195,7 @@ void apx_embedded_alias_blocks_phase1 (dsd_opts * opts, dsd_state * state, uint8
 
 void apx_embedded_alias_header_phase2 (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t * lc_bits)
 {
-  
+
   UNUSED(opts);
   uint8_t ta_len = (uint8_t)ConvertBitIntoBytes(&lc_bits[40], 8);
   uint8_t sn = (uint8_t)ConvertBitIntoBytes(&lc_bits[64], 4);
@@ -224,7 +224,7 @@ void apx_embedded_alias_header_phase2 (dsd_opts * opts, dsd_state * state, uint8
 
 void apx_embedded_alias_blocks_phase2 (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t * lc_bits)
 {
-  
+
   UNUSED(opts);
   int16_t rel_bits = 100;  //number of relevant bits in each block
   int16_t rel_st   = 36;   //start of relevant bits in this block
@@ -292,7 +292,7 @@ void apx_embedded_alias_blocks_phase2 (dsd_opts * opts, dsd_state * state, uint8
 
       //pass to alias decoder
       apx_embedded_alias_decode (opts, state, slot, num_bits, state->dmr_pdu_sf[slot]);
-      
+
       //clear out now stale storage
       memset (state->dmr_pdu_sf[slot], 0, sizeof (state->dmr_pdu_sf[slot]));
 
@@ -367,7 +367,7 @@ void apx_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_t slot
       uint8_t mult2 = 1;
       uint8_t shortstop = accum_mult | 0x1;
       uint8_t increment = shortstop << 1;
-      
+
       while(mult2 != -1 && shortstop != 1)
       {
         shortstop += increment;
@@ -560,7 +560,7 @@ void l3h_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_t slot
 
 void tait_iso7_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_t slot, int16_t len, uint8_t * input)
 {
-  
+
   UNUSED(slot);
   uint8_t alias[24]; memset(alias, 0, sizeof(alias));
   for (uint8_t i = 0; i < len; i++)

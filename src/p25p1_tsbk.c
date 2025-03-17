@@ -17,7 +17,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
   memset (state->s_l4, 0, sizeof(state->s_l4));
   memset (state->s_r4, 0, sizeof(state->s_r4));
   opts->slot_preference = 2;
-  
+
 
   //reset some strings when returning from a call in case they didn't get zipped already
   sprintf (state->call_string[0], "%s", "                     "); //21 spaces
@@ -135,7 +135,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     PDU[8] = tsbk_byte[8];
     PDU[9] = tsbk_byte[9];
     //remove CRC to prevent false positive when vPDU goes to look for additional message in block
-    PDU[10] = 0; //tsbk_byte[10]; 
+    PDU[10] = 0; //tsbk_byte[10];
     PDU[11] = 0; //tsbk_byte[11];
     PDU[1] = PDU[1] ^ 0x40; //flip bit to make it compatible with MAC_PDUs, i.e. 3D to 7D
 
@@ -205,13 +205,13 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "[%02X]", tsbk_byte[i]);
         }
         fprintf (stderr, "\n MFID %02X Protected: %d Last Block: %d", MFID, protectbit, lb);
-        
-        if (ec != 0) 
+
+        if (ec != 0)
         {
           fprintf (stderr, "%s",KRED);
           fprintf (stderr, " ERR = %d", ec);
         }
-        if (err != 0) 
+        if (err != 0)
         {
           fprintf (stderr, "%s",KRED);
           fprintf (stderr, " (CRC ERR)");
@@ -239,8 +239,8 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
         fprintf (stderr, "%s\n ",KYEL);
 
         //unsure if this follows for GRG
-        // if (svc & 0x80) fprintf (stderr, " Emergency"); 
-        
+        // if (svc & 0x80) fprintf (stderr, " Emergency");
+
         if (svc & 0x40) fprintf (stderr, " Encrypted"); //P-bit
 
         //unsure if this follows for GRG
@@ -319,7 +319,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
               if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
               SetFreq(opts->rigctl_sockfd, freq1);
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
-              opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+              opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
               state->last_vc_sync_time = time(NULL);
             }
             //rtl
@@ -332,7 +332,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
               state->last_vc_sync_time = time(NULL);
               #endif
             }
-          }    
+          }
         }
       }
 
@@ -418,7 +418,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
                 if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
                 SetFreq(opts->rigctl_sockfd, tempf);
                 state->p25_vc_freq[0] = state->p25_vc_freq[1] = tempf;
-                opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+                opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
                 state->last_vc_sync_time = time(NULL);
               }
               //rtl
@@ -431,7 +431,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
                 state->last_vc_sync_time = time(NULL);
                 #endif
               }
-            }    
+            }
           }
         }
 
@@ -492,7 +492,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       }
 
 
-      //Some of these Opcodes that aren't found in any TIA manual come from SDRTrunk (or other sources), 
+      //Some of these Opcodes that aren't found in any TIA manual come from SDRTrunk (or other sources),
       //but can't verify the accuracy of their meaning/context
       // else if ( (tsbk_byte[0] & 0x3F) == 0x05 )
       // {
@@ -568,13 +568,13 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "[%02X]", tsbk_byte[i]);
         }
         fprintf (stderr, "\n MFID %02X Protected: %d Last Block: %d", MFID, protectbit, lb);
-        
-        if (ec != 0) 
+
+        if (ec != 0)
         {
           fprintf (stderr, "%s",KRED);
           fprintf (stderr, " ERR = %d", ec);
         }
-        if (err != 0) 
+        if (err != 0)
         {
           fprintf (stderr, "%s",KRED);
           fprintf (stderr, " (CRC ERR)");
@@ -587,7 +587,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     }
 
     //set our WACN and SYSID here now that we have valid ec and crc/checksum
-    else if (protectbit == 0 && err == 0 && (tsbk_byte[0] & 0x3F) == 0x3B) 
+    else if (protectbit == 0 && err == 0 && (tsbk_byte[0] & 0x3F) == 0x3B)
     {
       long int wacn = (tsbk_byte[3] << 12) | (tsbk_byte[4] << 4) | (tsbk_byte[5] >> 4);
       int sysid = ((tsbk_byte[5] & 0xF) << 8) | tsbk_byte[6];
@@ -598,20 +598,20 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       state->p25_cc_freq = process_channel_to_freq(opts, state, channel);
       state->p25_cc_is_tdma = 0; //flag off for CC tuning purposes when system is qpsk
 
-      //place the cc freq into the list at index 0 if 0 is empty, or not the same, 
+      //place the cc freq into the list at index 0 if 0 is empty, or not the same,
       //so we can hunt for rotating CCs without user LCN list
       if (state->trunk_lcn_freq[0] == 0 || state->trunk_lcn_freq[0] != state->p25_cc_freq)
       {
-        state->trunk_lcn_freq[0] = state->p25_cc_freq; 
-      } 
+        state->trunk_lcn_freq[0] = state->p25_cc_freq;
+      }
 
       //only set IF these values aren't already hard set by the user
       if (state->p2_hardset == 0)
       {
         state->p2_wacn = wacn;
         state->p2_sysid = sysid;
-      }  
-        
+      }
+
       if (opts->payload == 1)
       {
         fprintf (stderr, "%s",KCYN);
@@ -637,20 +637,20 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
           fprintf (stderr, "[%02X]", tsbk_byte[i]);
         }
         fprintf (stderr, "\n MFID %02X Protected: %d Last Block: %d", MFID, protectbit, lb);
-        
-        if (ec != 0) 
+
+        if (ec != 0)
         {
           fprintf (stderr, "%s",KRED);
           fprintf (stderr, " ERR = %d", ec);
         }
-        if (err != 0) 
+        if (err != 0)
         {
           fprintf (stderr, "%s",KRED);
           fprintf (stderr, " (CRC ERR)");
         }
         fprintf (stderr, "%s ", KNRM);
       }
-    } 
+    }
 
     //reset for next rep
     ec = -2;
@@ -663,5 +663,5 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
   }
 
   fprintf (stderr, "%s ", KNRM);
-  fprintf (stderr, "\n"); 
+  fprintf (stderr, "\n");
 }

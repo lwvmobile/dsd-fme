@@ -1,14 +1,14 @@
 /*-------------------------------------------------------------------------------
- * 
- * 
+ *
+ *
  *
  * TODO: Fill me in'
- * 
+ *
  *
  * LWVMOBILE
  * 2023-07 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
- 
+
 //new and simplified/organized ambe and imbe handling
 //moving all audio handling and decryption to seperate files for simplicity (eventually)
 
@@ -54,7 +54,7 @@ void soft_demod_ambe2_ehr(dsd_state * state, char ambe2_ehr[4][24], char ambe_d[
 //AMBE One Shot (DSTAR)
 void soft_demod_ambe_dstar(dsd_opts * opts, dsd_state * state, char ambe_fr[4][24], char ambe_d[49])
 {
-  mbe_processAmbe3600x2400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, 
+  mbe_processAmbe3600x2400Framef (state->audio_out_temp_buf, &state->errs, &state->errs2,
     state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
   if (opts->floating_point == 1)
     memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
@@ -64,7 +64,7 @@ void soft_demod_ambe_dstar(dsd_opts * opts, dsd_state * state, char ambe_fr[4][2
 //AMBE+2 One Shot (X2-TDMA)
 void soft_demod_ambe_x2(dsd_opts * opts, dsd_state * state, char ambe_fr[4][24], char ambe_d[49])
 {
-  mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, 
+  mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2,
     state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
   if (opts->floating_point == 1)
     memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
@@ -73,7 +73,7 @@ void soft_demod_ambe_x2(dsd_opts * opts, dsd_state * state, char ambe_fr[4][24],
 
 void soft_mbe (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char ambe_fr[4][24], char imbe7100_fr[7][24])
 {
-  int i; 
+  int i;
   char ambe_d[49];
   char imbe_d[88];
   int slot = state->currentslot;
@@ -92,7 +92,7 @@ void soft_mbe (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char amb
       imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
     //send to playback here
   }
-    
+
   //ProVoice
   else if (state->synctype == 14 || state->synctype == 15)
   {
@@ -106,7 +106,7 @@ void soft_mbe (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char amb
     //send to playback here
 
   }
-    
+
   //D-STAR AMBE
   else if (state->synctype == 6 || state->synctype == 7)
   {
@@ -163,15 +163,15 @@ void soft_mbe (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char amb
     //make left or right channel decision
     if (slot == 0)
     {
-      mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, 
+      mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
         ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
     }
     if (slot == 1)
     {
-      mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR, 
+      mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
         ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);
     }
-    
+
   }
 }
 

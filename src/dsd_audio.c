@@ -189,7 +189,7 @@ void parse_pulse_output_string (dsd_opts * opts, char * input)
 
 void openOSSOutput (dsd_opts * opts)
 {
-  int fmt; 
+  int fmt;
   int speed = 48000;
   if (opts->audio_in_type == 5) //if((strncmp(opts->audio_in_dev, "/dev/dsp", 8) == 0)) or 'split' == 0
   {
@@ -229,7 +229,7 @@ void openOSSOutput (dsd_opts * opts)
         fprintf (stderr, "ioctl setfmt error \n");
       }
 
-      opts->audio_out_type = 5; //5 for 1 channel - 48k OSS 16-bit short output (matching with input) 
+      opts->audio_out_type = 5; //5 for 1 channel - 48k OSS 16-bit short output (matching with input)
       opts->pulse_digi_rate_out = 48000; //this is used to force to upsample and also allow source audio monitor conditional check
       opts->pulse_digi_out_channels = 1; //this is used to allow source audio monitor conditional check
       opts->audio_gain = 0;
@@ -250,7 +250,7 @@ void openOSSOutput (dsd_opts * opts)
         exit(1);
       }
 
-      //Setup the device. Note that it's important to set the sample format, number of channels and sample rate exactly in this order. Some devices depend on the order. 
+      //Setup the device. Note that it's important to set the sample format, number of channels and sample rate exactly in this order. Some devices depend on the order.
 
       fmt = 0;
       if (ioctl (opts->audio_out_fd, SNDCTL_DSP_RESET) < 0)
@@ -282,7 +282,7 @@ void openOSSOutput (dsd_opts * opts)
       }
       if (opts->pulse_digi_out_channels == 2)
         fmt = 1;
-      else fmt = 0; 
+      else fmt = 0;
 
       if (ioctl (opts->audio_out_fd, SNDCTL_DSP_STEREO, &fmt) < 0)
       {
@@ -296,7 +296,7 @@ void openOSSOutput (dsd_opts * opts)
         opts->audio_out_type = 2;
       else opts->audio_out_type = 5;
 
-      //debug 
+      //debug
       fprintf (stderr, "Using OSS Output with %dk/%d channel configuration.\n", opts->pulse_digi_rate_out, opts->pulse_digi_out_channels);
     }
   }
@@ -682,7 +682,7 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
     state->audio_out_idx2 = 0;
     state->audio_out_idx = 0;
     goto end_psv;
-  } 
+  }
 
   if (state->audio_out_idx > opts->delay)
   {
@@ -694,7 +694,7 @@ playSynthesizedVoice (dsd_opts * opts, dsd_state * state)
     }
 		else if (opts->audio_out_type == 0)
     {
-      pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL); 
+      pa_simple_write(opts->pulse_digi_dev_out, (state->audio_out_buf_p - state->audio_out_idx), (state->audio_out_idx * 2), NULL);
       state->audio_out_idx = 0;
     }
     else if (opts->audio_out_type == 8) //UDP Audio Out -- Forgot some things still use this for now
@@ -737,7 +737,7 @@ playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
     }
 		else if (opts->audio_out_type == 0)
     {
-      pa_simple_write(opts->pulse_digi_dev_outR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL); 
+      pa_simple_write(opts->pulse_digi_dev_outR, (state->audio_out_buf_pR - state->audio_out_idxR), (state->audio_out_idxR * 2), NULL);
       state->audio_out_idxR = 0;
     }
     else if (opts->audio_out_type == 8) //UDP Audio Out -- Not sure how this would handle, but R never gets called anymore, so just here for symmetry
@@ -905,7 +905,7 @@ openAudioInDevice (dsd_opts * opts)
 	{
     //debug
     fprintf (stderr, "Opening M17 .rrc headless wav file\n");
-    
+
     opts->audio_in_type = 2;
     opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
     opts->audio_in_file_info->samplerate = 48000;
@@ -992,8 +992,8 @@ openAudioInDevice (dsd_opts * opts)
     {
       opts->audio_in_type = 2; //two now, seperating STDIN and wav files
       opts->audio_in_file_info = calloc(1, sizeof(SF_INFO));
-      opts->audio_in_file_info->samplerate=opts->wav_sample_rate; 
-      opts->audio_in_file_info->channels=1; 
+      opts->audio_in_file_info->samplerate=opts->wav_sample_rate;
+      opts->audio_in_file_info->channels=1;
       opts->audio_in_file_info->channels = 1;
       opts->audio_in_file_info->seekable=0;
       opts->audio_in_file_info->format=SF_FORMAT_RAW|SF_FORMAT_PCM_16|SF_ENDIAN_LITTLE;

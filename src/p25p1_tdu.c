@@ -34,7 +34,7 @@ processTDU (dsd_opts* opts, dsd_state* state)
         // TODO: do something useful with the status bits...
         UNUSED(status);
     }
-    
+
     //reset some strings -- since its a tdu, blank out any call strings, only want during actual call
     sprintf (state->call_string[0], "%s", "                     "); //21 spaces
     sprintf (state->call_string[1], "%s", "                     "); //21 spaces
@@ -47,5 +47,5 @@ processTDU (dsd_opts* opts, dsd_state* state)
     state->payload_miP = 0;
     state->payload_algid = 0;
     state->payload_keyid = 0;
-    
+
 }

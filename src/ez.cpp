@@ -84,7 +84,7 @@ int ez_rs28_facch (int payload[156], int parity[114])
   int ec = -2;
   int i, j, k, b;
 
-  //init HB 
+  //init HB
   for (i = 0; i < 64; i++)
   {
 	HB[i] = 0;
@@ -338,7 +338,7 @@ int isch_lookup (uint64_t isch)
 	}
 	else  // No errors, so simply return the matching value
 		decoded = isch_map[isch];
-		
+
 	return decoded;
 
 }

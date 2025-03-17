@@ -20,8 +20,8 @@ uint8_t constellation_map[16] = {
 };
 
 //digitized dibit to OTA symbol conversion for reference
-//0 = +1; 1 = +3; 
-//2 = -1; 3 = -3; 
+//0 = +1; 1 = +3;
+//2 = -1; 3 = -3;
 
 //finite state machine values
 uint8_t fsm[64] = {
@@ -81,7 +81,7 @@ uint8_t fix_34(uint8_t * p, uint8_t state, int position)
             counter++;
             break;
           }
-          
+
         }
 
         if (counter > best_p)
@@ -139,12 +139,12 @@ uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
   uint8_t point[49];
   memset (point, 0xFF, sizeof(point));
 
-  for (i = 0; i < 49; i++) 
+  for (i = 0; i < 49; i++)
     point[i] = constellation_map[nibs[i]];
 
   //debug view points
   // fprintf (stderr, "\n P =");
-  // for (i = 0; i < 49; i++) 
+  // for (i = 0; i < 49; i++)
   //   fprintf (stderr, " %02d", point[i]);
 
   //convert constellation points into tribit values using the FSM
@@ -181,14 +181,14 @@ uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
 
       //decrement one and resume decoding
       i--;
-     
+
     }
 
   }
 
   //debug view tribits/states
   // fprintf (stderr, "\n T =");
-  // for (i = 0; i < 49; i++) 
+  // for (i = 0; i < 49; i++)
   //   fprintf (stderr, " %02d", tribits[i]);
 
   //convert tribits into a return payload
@@ -197,7 +197,7 @@ uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
   //break into chunks of 24 bit values and shuffle into 8-bit (byte) treturn values
   for (i = 0; i < 6; i++)
   {
-    temp = (tribits[(i*8)+0] << 21) + (tribits[(i*8)+1] << 18) + (tribits[(i*8)+2] << 15) + (tribits[(i*8)+3] << 12) + 
+    temp = (tribits[(i*8)+0] << 21) + (tribits[(i*8)+1] << 18) + (tribits[(i*8)+2] << 15) + (tribits[(i*8)+3] << 12) +
             (tribits[(i*8)+4] << 9) + (tribits[(i*8)+5] << 6)  + (tribits[(i*8)+6] << 3)  + (tribits[(i*8)+7] << 0);
 
     treturn[(i*3)+0] = (temp >> 16) & 0xFF;

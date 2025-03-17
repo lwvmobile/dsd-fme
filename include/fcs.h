@@ -1,6 +1,6 @@
 /* fcs.h */
 
-// Viterbi decoder using Traceback method. 
+// Viterbi decoder using Traceback method.
 
 // Original Source was written by Sho Tamaoki and Tom Wada
 // See http://www.lsi.ie.u-ryukyu.ac.jp/~sho/midterm/
@@ -86,4 +86,4 @@ m_crc = (m_crc << 8) | (tmp >> 8 & 0xFF);
 
 // done
 return(m_crc);
-}; // end function 
+}; // end function

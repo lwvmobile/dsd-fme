@@ -141,7 +141,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
       state->lcn_freq_roll = 0; //reset to zero
     }
     //check that we have a non zero value first, then tune next frequency
-    if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0) 
+    if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0)
     {
       //rigctl
       if (opts->use_rigctl == 1)
@@ -163,10 +163,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   }
   //end experimental conventional frequency scanner mode
 
-  //tune back to last known CC when using trunking after x second hangtime 
-  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && ( (time(NULL) - state->last_cc_sync_time) > opts->trunk_hangtime) ) 
+  //tune back to last known CC when using trunking after x second hangtime
+  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && ( (time(NULL) - state->last_cc_sync_time) > opts->trunk_hangtime) )
   {
-    if (state->p25_cc_freq != 0) 
+    if (state->p25_cc_freq != 0)
     {
 
       //cap+ rest channel - redundant?
@@ -176,11 +176,11 @@ noCarrier (dsd_opts * opts, dsd_state * state)
         {
           state->p25_cc_freq = state->trunk_chan_map[state->dmr_rest_channel];
         }
-      } 
+      }
 
       if (opts->use_rigctl == 1) //rigctl tuning
       {
-        if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw); 
+        if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
         SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
         state->dmr_rest_channel = -1; //maybe?
       }
@@ -193,7 +193,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
         #endif
       }
 
-      opts->p25_is_tuned = 0; 
+      opts->p25_is_tuned = 0;
       state->edacs_tuned_lcn = -1;
 
       //only for EDACS/PV
@@ -240,7 +240,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset (state->dmr_payload_buf, 0, sizeof (int) * 200);
   memset (state->dmr_stereo_payload, 1, sizeof(int) * 144);
   //dmr buffer end
-  
+
   //close MBE out files
   if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
   if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
@@ -250,7 +250,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->carrier = 0;
   state->max = 15000;
   state->min = -15000;
-  state->center = 0; 
+  state->center = 0;
   state->err_str[0] = 0;
   state->err_strR[0] = 0;
   sprintf (state->fsubtype, "              ");
@@ -290,12 +290,12 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     //dmr mfid branding and site parms
     sprintf(state->dmr_branding_sub, "%s", "");
     sprintf(state->dmr_branding, "%s", "");
-    sprintf (state->dmr_site_parms, "%s", ""); 
+    sprintf (state->dmr_site_parms, "%s", "");
   }
 
   //zero out after x second hangtime when trunking to prevent premature zeroing on these variables
   //mainly bugfix for ncurses and per call wavs (edacs) and also signal fade, etc
-  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && time(NULL) - state->last_cc_sync_time > opts->trunk_hangtime) 
+  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && time(NULL) - state->last_cc_sync_time > opts->trunk_hangtime)
   {
     state->lasttg = 0;
     state->lastsrc = 0;
@@ -303,7 +303,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     state->lastsrcR = 0;
 
   }
-    
+
   state->lastp25type = 0;
   state->repeat = 0;
   state->nac = 0;
@@ -340,8 +340,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->HYTR = 0;
   state->DMRvcL = 0;
   state->DMRvcR = 0;
-  state->dropL = 256; 
-  state->dropR = 256; 
+  state->dropL = 256;
+  state->dropR = 256;
 
   state->payload_miN = 0;
   state->p25vc = 0;
@@ -415,7 +415,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   state->nxdn_ran = 0;
   state->nxdn_sf = 0;
   memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc)); //init on 1, bad CRC all
-  state->nxdn_sacch_non_superframe = TRUE; 
+  state->nxdn_sacch_non_superframe = TRUE;
   memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
   state->nxdn_alias_block_number = 0;
   memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
@@ -442,7 +442,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   //forcing key application will re-enable this at the time of voice tx
   state->nxdn_cipher_type = 0;
 
-  //dmr overaching manufacturer in use for a particular system or radio  
+  //dmr overaching manufacturer in use for a particular system or radio
   // state->dmr_mfid = -1;
 
   //dmr slco stuff
@@ -454,7 +454,7 @@ noCarrier (dsd_opts * opts, dsd_state * state)
   memset (state->data_header_valid, 0, sizeof(state->data_header_valid));
 
   //initialize cap+ bits and block num storage
-  memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));  
+  memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
   memset (state->cap_plus_block_num, 0, sizeof(state->cap_plus_block_num));
 
   //init confirmed data individual block crc as invalid
@@ -487,10 +487,10 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     state->dmr_rest_channel = -1;
     state->p25_vc_freq[0] = 0;
     state->p25_vc_freq[1] = 0;
-    state->dmr_mfid = -1; 
+    state->dmr_mfid = -1;
     sprintf(state->dmr_branding_sub, "%s", "");
     sprintf(state->dmr_branding, "%s", "");
-    sprintf (state->dmr_site_parms, "%s", ""); 
+    sprintf (state->dmr_site_parms, "%s", "");
     opts->p25_is_tuned = 0;
     memset(state->active_channel, 0, sizeof(state->active_channel));
   }
@@ -711,7 +711,7 @@ initOpts (dsd_opts * opts)
   opts->inverted_dpmr = 0;
   opts->dmr_mono = 0;
   opts->dmr_stereo = 1;
-  opts->aggressive_framesync = 1; 
+  opts->aggressive_framesync = 1;
 
   //this may not matter so much, since its already checked later on
   //but better safe than sorry I guess
@@ -719,7 +719,7 @@ initOpts (dsd_opts * opts)
   opts->audio_in_type = 9;  //only assign when configured
   opts->audio_out_type = 9; //only assign when configured
   #else
-  opts->audio_in_type = 0;  
+  opts->audio_in_type = 0;
   opts->audio_out_type = 0;
   #endif
 
@@ -765,7 +765,7 @@ initOpts (dsd_opts * opts)
 
   opts->scanner_mode = 0; //0 disabled, 1 is enabled
 
-  //reverse mute 
+  //reverse mute
   opts->reverse_mute = 0;
 
   //setmod bandwidth
@@ -1040,7 +1040,7 @@ initState (dsd_state * state)
   state->HYTR = 0;
   state->DMRvcL = 0;
   state->DMRvcR = 0;
-  state->dropL = 256; 
+  state->dropL = 256;
   state->dropR = 256;
 
   //ks array storage and counters
@@ -1166,7 +1166,7 @@ initState (dsd_state * state)
   state->last_t3_tune_time = time(NULL);
   state->is_con_plus = 0;
 
-  //dmr trunking/ncurses stuff 
+  //dmr trunking/ncurses stuff
   state->dmr_rest_channel = -1; //init on -1
   state->dmr_mfid = -1; //
   state->dmr_cc_lpcn = 0;
@@ -1177,7 +1177,7 @@ initState (dsd_state * state)
   state->nxdn_ran = 0;
   state->nxdn_sf = 0;
   memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc)); //init on 1, bad CRC all
-  state->nxdn_sacch_non_superframe = TRUE; 
+  state->nxdn_sacch_non_superframe = TRUE;
   memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
   state->nxdn_alias_block_number = 0;
   memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
@@ -1195,7 +1195,7 @@ initState (dsd_state * state)
 
   //multi-key array
   memset (state->rkey_array, 0, sizeof(state->rkey_array));
-  state->keyloader = 0; //keyloader off  
+  state->keyloader = 0; //keyloader off
 
   //Remus DMR End Call Alert Beep
   state->dmr_end_alert[0] = 0;
@@ -1208,9 +1208,9 @@ initState (dsd_state * state)
   //initialize unified dmr pdu 'superframe'
   memset (state->dmr_pdu_sf, 0, sizeof (state->dmr_pdu_sf));
   memset (state->data_header_valid, 0, sizeof(state->data_header_valid));
-  
+
   //initialize cap+ bits and block num storage
-  memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));  
+  memset (state->cap_plus_csbk_bits, 0, sizeof(state->cap_plus_csbk_bits));
   memset (state->cap_plus_block_num, 0, sizeof(state->cap_plus_block_num));
 
   //init confirmed data individual block crc as invalid
@@ -1240,7 +1240,7 @@ initState (dsd_state * state)
 
   //late entry mi fragments
   memset (state->late_entry_mi_fragment, 0, sizeof (state->late_entry_mi_fragment));
- 
+
   initialize_p25_heuristics(&state->p25_heuristics);
   initialize_p25_heuristics(&state->inv_p25_heuristics);
 
@@ -1305,7 +1305,7 @@ initState (dsd_state * state)
   state->m17encoder_eot = 0;
   memset(state->m17_meta, 0, sizeof(state->m17_meta));
 
-  
+
   #ifdef USE_CODEC2
   state->codec2_3200 = codec2_create(CODEC2_MODE_3200);
   state->codec2_1600 = codec2_create(CODEC2_MODE_1600);
@@ -1567,7 +1567,7 @@ liveScanner (dsd_opts * opts, dsd_state * state)
 
   if (opts->floating_point == 1)
   {
-    
+
     if (opts->audio_gain > 50.0f) opts->audio_gain = 50.0f;
     if (opts->audio_gain < 0.0f) opts->audio_gain = 0.0f;
   }
@@ -1659,7 +1659,7 @@ cleanupAndExit (dsd_opts * opts, dsd_state * state)
 {
   // Signal that everything should shutdown.
   exitflag = 1;
-  
+
   #ifdef USE_CODEC2
   codec2_destroy(state->codec2_1600);
   codec2_destroy(state->codec2_3200);
@@ -1781,14 +1781,14 @@ main (int argc, char **argv)
 
   while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:JO")) != -1)
     {
-      
+
       switch (c)
         {
         case 'h':
           usage ();
           exit (0);
           break; //probably isn't required, but just making sure it doesn't do anything bizarre
-          
+
         case 'a':
           opts.call_alert = 1;
           break;
@@ -1827,14 +1827,14 @@ main (int argc, char **argv)
           state.m17sms[772] = '\0';
           state.m17_str_dt = 3; //flip this so that STR encoder knows to use 1600 voice + data
           break;
-        
+
         //specify TG Hold value
         case 'I':
           sscanf (optarg, "%d", &state.tg_hold);
           fprintf (stderr, "TG Hold set to %d \n", state.tg_hold);
           break;
 
-        case '9': //Leaving Enabled to maintain backwards compatability 
+        case '9': //Leaving Enabled to maintain backwards compatability
           state.ea_mode = 0;
           state.esk_mask = 0;
           fprintf (stderr,"Force Enabling EDACS Standard/Networked Mode Mode without ESK.\n");
@@ -1857,7 +1857,7 @@ main (int argc, char **argv)
           sscanf (optarg, "%llX", &state.R);
           state.RR = state.R; //put key on both sides
           fprintf (stderr, "RC4/DES Encryption Key Value set to 0x%llX \n", state.R);
-          opts.unmute_encrypted_p25 = 0; 
+          opts.unmute_encrypted_p25 = 0;
           state.keyloader = 0; //turn off keyloader
           break;
 
@@ -1907,7 +1907,7 @@ main (int argc, char **argv)
           break;
 
         case 'Q': //'DSP' Structured Output file for OKDMRlib
-        sprintf (wav_file_directory, "./DSP"); 
+        sprintf (wav_file_directory, "./DSP");
         wav_file_directory[1023] = '\0';
         if (stat(wav_file_directory, &st) == -1)
         {
@@ -1929,8 +1929,8 @@ main (int argc, char **argv)
           if (opts.slot_preference > 1) opts.slot_preference = 1;
           fprintf (stderr, "TDMA (DMR and P2) Slot Voice Preference is Slot %d. \n", opts.slot_preference+1);
           break;
-        
-        case 'n': //manually set analog audio output gain 
+
+        case 'n': //manually set analog audio output gain
           sscanf (optarg, "%f", &opts.audio_gainA);
           if (opts.audio_gainA > 100.0f) opts.audio_gainA = 100.0f;
           else if (opts.audio_gainA < 0.0f) opts.audio_gainA = 0.0f;
@@ -2004,7 +2004,7 @@ main (int argc, char **argv)
 
         case 'U': //New letter assignment for RIGCTL TCP port, flow down to allow temp numbers
           sscanf (optarg, "%d", &opts.rigctlportno);
-          if (opts.rigctlportno != 0) opts.use_rigctl = 1; 
+          if (opts.rigctlportno != 0) opts.use_rigctl = 1;
           break;
 
         //NOTE: I changed trunk_hangtime to a float, BUT! time(NULL) returns in second whole numbers
@@ -2015,12 +2015,12 @@ main (int argc, char **argv)
           sscanf (optarg, "%f", &opts.trunk_hangtime); //updated for float/decimal values
           fprintf (stderr, "Trunking or Scanner Speed/Hang Time set to: %.02f sec\n", opts.trunk_hangtime);
           break;
-        
+
         case 'q': //New letter assignment for Reverse Mute, flow down to allow temp numbers
           opts.reverse_mute = 1;
           fprintf (stderr, "Reverse Mute\n");
           break;
-        
+
         case 'B': //New letter assignment for RIGCTL SetMod BW, flow down to allow temp numbers
           sscanf (optarg, "%d", &opts.setmod_bw);
           if (opts.setmod_bw > 25000) opts.setmod_bw = 25000; //not too high
@@ -2078,13 +2078,13 @@ main (int argc, char **argv)
 
         case 'H':
           //new handling for 10/32/64 Char Key
-          
+
           strncpy(opts.szNumbers, optarg, 1023);
           opts.szNumbers[1023] = '\0';
           state.K1 = strtoull (opts.szNumbers, &pEnd, 16);
           state.K2 = strtoull (pEnd, &pEnd, 16);
           state.K3 = strtoull (pEnd, &pEnd, 16);
-          state.K4 = strtoull (pEnd, &pEnd, 16); 
+          state.K4 = strtoull (pEnd, &pEnd, 16);
           fprintf (stderr, "Hytera40/128/256 BP or AES128/256 Key = %016llX %016llX %016llX %016llX\n", state.K1, state.K2, state.K3, state.K4);
           opts.dmr_mute_encL = 0;
           opts.dmr_mute_encR = 0;
@@ -2155,7 +2155,7 @@ main (int argc, char **argv)
           break;
 
         case 'P': //TDMA/NXDN Per Call - was T, now is P
-          sprintf (wav_file_directory, "%s", opts.wav_out_dir); 
+          sprintf (wav_file_directory, "%s", opts.wav_out_dir);
           wav_file_directory[1023] = '\0';
           if (stat(wav_file_directory, &st) == -1)
           {
@@ -2164,11 +2164,11 @@ main (int argc, char **argv)
             mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
           }
           fprintf (stderr,"AUTO and NXDN Per Call Wav File Saving Enabled. (NCurses Terminal Only)\n");
-          sprintf (opts.wav_out_file, "%s/DSD-FME-X1.wav", opts.wav_out_dir); 
+          sprintf (opts.wav_out_file, "%s/DSD-FME-X1.wav", opts.wav_out_dir);
           sprintf (opts.wav_out_fileR, "%s/DSD-FME-X2.wav", opts.wav_out_dir);
           opts.dmr_stereo_wav = 1;
-          openWavOutFileL (&opts, &state); 
-          openWavOutFileR (&opts, &state); 
+          openWavOutFileL (&opts, &state);
+          openWavOutFileR (&opts, &state);
           break;
 
         case 'F':
@@ -2204,7 +2204,7 @@ main (int argc, char **argv)
           else fprintf (stderr,"Writing mbe data files to directory %s\n", opts.mbe_out_dir);
           break;
 
-        case 'c': 
+        case 'c':
           strncpy(opts.symbol_out_file, optarg, 1023);
           opts.symbol_out_file[1023] = '\0';
           fprintf (stderr,"Writing symbol capture to file %s\n", opts.symbol_out_file);
@@ -2213,7 +2213,7 @@ main (int argc, char **argv)
 
         case 'g':
           sscanf (optarg, "%f", &opts.audio_gain);
-          
+
           if (opts.audio_gain < (float) 0 )
           {
             fprintf (stderr,"Disabling audio out gain setting\n");
@@ -2656,7 +2656,7 @@ main (int argc, char **argv)
             opts.frame_provoice = 0;
             opts.frame_ysf = 0;
             opts.frame_m17 = 0;
-            state.samplesPerSymbol = 8; 
+            state.samplesPerSymbol = 8;
             state.symbolCenter = 3;
             opts.mod_c4fm = 1;
             opts.mod_qpsk = 0;
@@ -2675,7 +2675,7 @@ main (int argc, char **argv)
             opts.frame_x2tdma = 0;
             opts.frame_p25p1 = 0;
             opts.frame_p25p2 = 0;
-            opts.inverted_p2 = 0; 
+            opts.inverted_p2 = 0;
             opts.frame_nxdn48 = 0;
             opts.frame_nxdn96 = 0;
             opts.frame_dmr = 1;
@@ -2693,7 +2693,7 @@ main (int argc, char **argv)
             opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 2;
             sprintf (opts.output_name, "DMR");
-            
+
             fprintf (stderr,"Decoding DMR BS/MS Simplex\n");
           }
           //change ft to only do P25 and DMR (TDMA trunking modes)
@@ -2722,7 +2722,7 @@ main (int argc, char **argv)
             // opts.setmod_bw = 12000; //safe default on both DMR and P25
             opts.pulse_digi_rate_out = 8000;
             opts.pulse_digi_out_channels = 2;
-            // opts.use_heuristics = 1; //Causes issues with Voice Wide 
+            // opts.use_heuristics = 1; //Causes issues with Voice Wide
             sprintf (opts.output_name, "TDMA");
             fprintf (stderr,"Decoding P25 and DMR\n");
           }
@@ -2913,8 +2913,8 @@ main (int argc, char **argv)
               opts.mod_qpsk = 1;
               opts.mod_gfsk = 0;
               state.rf_mod = 1;
-              state.samplesPerSymbol = 8; 
-              state.symbolCenter = 3; 
+              state.samplesPerSymbol = 8;
+              state.symbolCenter = 3;
               // opts.setmod_bw = 12000;
               fprintf (stderr,"Enabling 6000 sps P25p2 QPSK.\n");
             }
@@ -2925,8 +2925,8 @@ main (int argc, char **argv)
               opts.mod_qpsk = 0;
               opts.mod_gfsk = 0;
               state.rf_mod = 0;
-              state.samplesPerSymbol = 10; 
-              state.symbolCenter = 4; 
+              state.samplesPerSymbol = 10;
+              state.symbolCenter = 4;
               // opts.setmod_bw = 12000;
               fprintf (stderr,"Enabling 6000 sps P25p2 C4FM.\n");
             }
@@ -2936,8 +2936,8 @@ main (int argc, char **argv)
             opts.mod_qpsk = 1;
             opts.mod_gfsk = 1;
             state.rf_mod = 0;
-            state.samplesPerSymbol = 8; 
-            state.symbolCenter = 3; 
+            state.samplesPerSymbol = 8;
+            state.symbolCenter = 3;
             // opts.setmod_bw = 12000;
             fprintf (stderr,"Enabling 6000 sps P25p2 all optimizations.\n");
           }
@@ -2980,7 +2980,7 @@ main (int argc, char **argv)
           sscanf (optarg, "%i", &opts.mod_threshold);
           fprintf (stderr,"Setting C4FM/QPSK auto detection threshold to %i\n", opts.mod_threshold);
           break; //this was missing a break
-        
+
         //Disabled and switches reassigned to M17 User Data Argumeents
         // case 'S': //disabled, using for M17 encoder user SMS message
         //   sscanf (optarg, "%i", &opts.ssize);
@@ -3035,7 +3035,7 @@ main (int argc, char **argv)
     if((strncmp(opts.audio_in_dev, "m17udp", 6) == 0)) //M17 UDP Socket Input
     {
       fprintf (stderr, "M17 UDP IP Frame Input: ");
-      char * curr; 
+      char * curr;
 
       curr = strtok(opts.audio_in_dev, ":"); //should be 'm17'
       if (curr != NULL) ; //continue
@@ -3055,7 +3055,7 @@ main (int argc, char **argv)
     if((strncmp(opts.audio_out_dev, "m17udp", 6) == 0)) //M17 UDP Socket Output
     {
       fprintf (stderr, "M17 UDP IP Frame Output: ");
-      char * curr; 
+      char * curr;
 
       curr = strtok(opts.audio_out_dev, ":"); //should be 'm17'
       if (curr != NULL) ; //continue
@@ -3077,7 +3077,7 @@ main (int argc, char **argv)
     if((strncmp(opts.audio_in_dev, "tcp", 3) == 0)) //tcp socket input from SDR++ and others
     {
       fprintf (stderr, "TCP Direct Link: ");
-      char * curr; 
+      char * curr;
 
       curr = strtok(opts.audio_in_dev, ":"); //should be 'tcp'
       if (curr != NULL) ; //continue
@@ -3090,7 +3090,7 @@ main (int argc, char **argv)
         //shim to tie the hostname of the tcp input to the rigctl hostname (probably covers a vast majority of use cases)
         //in the future, I will rework part of this so that users can enter a hostname and port similar to how tcp and rtl strings work
         memcpy (opts.rigctlhostname, opts.tcp_hostname, sizeof (opts.rigctlhostname) );
-      } 
+      }
 
       curr = strtok(NULL, ":"); //host port
       if (curr != NULL) opts.tcp_portno = atoi (curr);
@@ -3103,11 +3103,11 @@ main (int argc, char **argv)
       if (opts.tcp_sockfd != 0)
       {
         opts.audio_in_type = 8;
-        
+
         fprintf (stderr, "TCP Connection Success!\n");
         // openAudioInDevice(&opts); //do this to see if it makes it work correctly
       }
-      else 
+      else
       {
         #ifdef __CYGWIN__
         sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
@@ -3123,7 +3123,7 @@ main (int argc, char **argv)
         opts.audio_in_type = 0;
         #endif
       }
-      
+
     }
 
     if (opts.use_rigctl == 1)
@@ -3134,7 +3134,7 @@ main (int argc, char **argv)
       {
         fprintf (stderr, "RIGCTL Connection Failure - RIGCTL Features Disabled\n");
         opts.use_rigctl = 0;
-      } 
+      }
     }
 
     if((strncmp(opts.audio_in_dev, "rtl", 3) == 0)) //rtl dongle input
@@ -3143,10 +3143,10 @@ main (int argc, char **argv)
       //use to list out all detected RTL dongles
       char vendor[256], product[256], serial[256], userdev[256];
       int device_count = 0;
-      
+
       #ifdef USE_RTLSDR
       fprintf (stderr, "RTL Input: ");
-      char * curr; 
+      char * curr;
 
       curr = strtok(opts.audio_in_dev, ":"); //should be 'rtl'
       if (curr != NULL) ; //continue
@@ -3178,10 +3178,10 @@ main (int argc, char **argv)
         {
           opts.rtl_bandwidth = bw;
         }
-        else 
+        else
           opts.rtl_bandwidth = 12; //safe default -- provides best performance on most systems
       }
-      else goto RTLEND; 
+      else goto RTLEND;
 
       curr = strtok(NULL, ":"); //rtl squelch level "-L"
       if (curr != NULL) opts.rtl_squelch_level = atoi (curr);
@@ -3221,7 +3221,7 @@ main (int argc, char **argv)
           fprintf (stderr, "Selected Device #%d with Serial Number: %s \n", i, serial);
           opts.rtl_dev_index = i;
         }
-        
+
       }
 
       if (opts.rtl_volume_multiplier > 3 || opts.rtl_volume_multiplier < 0)
@@ -3236,7 +3236,7 @@ main (int argc, char **argv)
       // fprintf (stderr, "UDP %d \n", opts.rtl_udp_port);
       fprintf (stderr, "VOL %d \n", opts.rtl_volume_multiplier);
       opts.audio_in_type = 3;
-      
+
       rtl_ok = 1;
       #endif
 
@@ -3270,7 +3270,7 @@ main (int argc, char **argv)
     //UDP Socket Blaster Audio Output Setup
     if((strncmp(opts.audio_out_dev, "udp", 3) == 0))
     {
-      
+
       //read in values
       fprintf (stderr, "UDP Blaster Output: ");
       char * curr;
@@ -3282,7 +3282,7 @@ main (int argc, char **argv)
       curr = strtok(NULL, ":"); //udp blaster hostname
       if (curr != NULL)
         strncpy (opts.udp_hostname, curr, 1023); //set address to blast to
-      
+
       curr = strtok(NULL, ":"); //udp blaster port
       if (curr != NULL)
         opts.udp_portno = atoi (curr);
@@ -3353,7 +3353,7 @@ main (int argc, char **argv)
       fprintf(stderr, "Audio Out Device: -\n");
     }
 
-    int fmt; 
+    int fmt;
     int speed;
 
     //The long of the short is that PADSP can open multiple virtual /dev/dsp devices each with different sampling rates and channel configurations
@@ -3383,7 +3383,7 @@ main (int argc, char **argv)
       {
         fprintf (stderr, "Error, couldn't open %s\n", opts.audio_in_dev);
       }
-      
+
       fmt = 0;
       if (ioctl (opts.audio_in_fd, SNDCTL_DSP_RESET) < 0)
       {
@@ -3482,10 +3482,10 @@ main (int argc, char **argv)
 
       fprintf (stderr, "M17 User Data: ");
       char * curr;
-      
+
       // if((strncmp(state.m17dat, "M17", 3) == 0))
       // goto M17END;
-      
+
       curr = strtok(state.m17dat, ":"); //should be 'M17'
       if (curr != NULL) ; //continue
       else goto M17END; //end early with preset values
@@ -3500,7 +3500,7 @@ main (int argc, char **argv)
         strncpy (state.str50c, curr, 9); //only read first 9
         state.str50c[9] = '\0';
       }
-      
+
       curr = strtok(NULL, ":"); //m17 dst address
       if (curr != NULL)
       {
@@ -3550,7 +3550,7 @@ main (int argc, char **argv)
       opts.use_cosine_filter = 0;
 
       opts.pulse_digi_rate_out = 8000;
-      
+
       //open any inputs, if not alread opened, OSS input and output already handled
       if (opts.audio_in_type == 0) openPulseInput(&opts);
 
@@ -3573,7 +3573,7 @@ main (int argc, char **argv)
       opts.pulse_digi_rate_out = 8000;
       //open any outputs, if not already opened
       if (opts.audio_out_type == 0) openPulseOutput(&opts);
-      encodeM17BRT(&opts, &state); 
+      encodeM17BRT(&opts, &state);
     }
 
     else if (opts.m17encoderpkt == 1)

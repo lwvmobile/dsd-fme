@@ -5,8 +5,8 @@
 
 int csvGroupImport(dsd_opts * opts, dsd_state * state)
 {
-  char filename[1024] = "filename.csv"; 
-  sprintf (filename, "%s", opts->group_in_file); 
+  char filename[1024] = "filename.csv";
+  sprintf (filename, "%s", opts->group_in_file);
   //filename[1023] = '\0'; //necessary?
   char buffer[BSIZE];
   FILE * fp;
@@ -27,7 +27,7 @@ int csvGroupImport(dsd_opts * opts, dsd_state * state)
       continue; //don't want labels
     char * field = strtok(buffer, ","); //seperate by comma
     while (field) {
-      
+
       if (field_count == 0)
       {
         //group_number = atol(field);
@@ -44,23 +44,23 @@ int csvGroupImport(dsd_opts * opts, dsd_state * state)
         strcpy(state->group_array[i].groupName, field);
         fprintf (stderr, "%s ", state->group_array[i].groupName);
       }
- 
+
       field = strtok(NULL, ",");
       field_count++;
     }
     fprintf (stderr, "\n");
     i++;
-    state->group_tally++; 
+    state->group_tally++;
   }
   fclose(fp);
   return 0;
 }
 
 //LCN import for EDACS, migrated to channel map (channel map does both)
-int csvLCNImport(dsd_opts * opts, dsd_state * state) 
+int csvLCNImport(dsd_opts * opts, dsd_state * state)
 {
-  char filename[1024] = "filename.csv"; 
-  sprintf (filename, "%s", opts->lcn_in_file); 
+  char filename[1024] = "filename.csv";
+  sprintf (filename, "%s", opts->lcn_in_file);
   //filename[1023] = '\0'; //necessary?
   char buffer[BSIZE];
   FILE * fp;
@@ -86,12 +86,12 @@ int csvLCNImport(dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "LCN [%d] [%ld]", field_count+1, state->trunk_lcn_freq[field_count]);
       fprintf (stderr, "\n");
 
-      
+
       field = strtok(NULL, ",");
       field_count++;
     }
     fprintf (stderr, "LCN Count %d\n", state->lcn_freq_count);
-    
+
   }
   fclose(fp);
   return 0;
@@ -99,7 +99,7 @@ int csvLCNImport(dsd_opts * opts, dsd_state * state)
 
 int csvChanImport(dsd_opts * opts, dsd_state * state) //channel map import
 {
-  char filename[1024] = "filename.csv"; 
+  char filename[1024] = "filename.csv";
   sprintf (filename, "%s", opts->chan_in_file);
 
   char buffer[BSIZE];
@@ -135,13 +135,13 @@ int csvChanImport(dsd_opts * opts, dsd_state * state) //channel map import
         sscanf (field, "%ld", &state->trunk_lcn_freq[state->lcn_freq_count]);
         state->lcn_freq_count++; //keep tally of number of Frequencies imported
       }
-      
+
       field = strtok(NULL, ",");
       field_count++;
     }
     fprintf (stderr, "Channel [%05ld] [%09ld]", chan_number, state->trunk_chan_map[chan_number]);
     fprintf (stderr, "\n");
-    
+
   }
   fclose(fp);
   return 0;
@@ -150,7 +150,7 @@ int csvChanImport(dsd_opts * opts, dsd_state * state) //channel map import
 //Decimal Variant of Key Import
 int csvKeyImportDec(dsd_opts * opts, dsd_state * state) //multi-key support
 {
-  char filename[1024] = "filename.csv"; 
+  char filename[1024] = "filename.csv";
   sprintf (filename, "%s", opts->key_in_file);
 
   char buffer[BSIZE];
@@ -162,7 +162,7 @@ int csvKeyImportDec(dsd_opts * opts, dsd_state * state) //multi-key support
   }
   int row_count = 0;
   int field_count = 0;
-  
+
   unsigned long long int keynumber = 0;
   unsigned long long int keyvalue = 0;
 
@@ -186,13 +186,13 @@ int csvKeyImportDec(dsd_opts * opts, dsd_state * state) //multi-key support
           keynumber = keynumber & 0xFFFFFF; //truncate to 24-bits (max allowed)
           for (int i = 0; i < 24; i++)
           {
-            hash_bits[i] = ((keynumber << i) & 0x800000) >> 23; //load into array for CRC16 
+            hash_bits[i] = ((keynumber << i) & 0x800000) >> 23; //load into array for CRC16
           }
           hash = ComputeCrcCCITT16d (hash_bits, 24);
           keynumber = hash & 0xFFFF; //make sure its no larger than 16-bits
           fprintf (stderr, "Hashed ");
         }
-        
+
       }
 
       if (field_count == 1)
@@ -200,14 +200,14 @@ int csvKeyImportDec(dsd_opts * opts, dsd_state * state) //multi-key support
         sscanf (field, "%lld", &keyvalue);
         state->rkey_array[keynumber] = keyvalue & 0xFFFFFFFFFF; //doesn't exceed 40-bit value
       }
-      
+
       field = strtok(NULL, ",");
       field_count++;
     }
     fprintf (stderr, "Key [%03lld] [%05lld]", keynumber, state->rkey_array[keynumber]);
     fprintf (stderr, "\n");
     hash = 0;
-    
+
   }
   fclose(fp);
   return 0;
@@ -246,7 +246,7 @@ int csvKeyImportHex(dsd_opts * opts, dsd_state * state) //key import for hex key
       {
         sscanf (field, "%llX", &state->rkey_array[keynumber]);
       }
-      
+
       //this could also theoretically nuke other keys that are at the same offset
       if (field_count == 2)
       {
@@ -262,18 +262,18 @@ int csvKeyImportHex(dsd_opts * opts, dsd_state * state) //key import for hex key
       {
         sscanf (field, "%llX", &state->rkey_array[keynumber+0x301]);
       }
-      
+
       field = strtok(NULL, ",");
       field_count++;
     }
 
     fprintf (stderr, "Key [%04llX] [%016llX]", keynumber, state->rkey_array[keynumber]);
-    
+
     //if longer key is loaded (or clash with the 0x101, 0x201, 0x301 offset, then print the full key listing)
     if ( (state->rkey_array[keynumber+0x101] != 0) || (state->rkey_array[keynumber+0x201] != 0) || (state->rkey_array[keynumber+0x301] != 0) )
       fprintf (stderr, " [%016llX] [%016llX] [%016llX]", state->rkey_array[keynumber+0x101], state->rkey_array[keynumber+0x201], state->rkey_array[keynumber+0x301]);
     fprintf (stderr, "\n");
-    
+
   }
   fclose(fp);
   return 0;

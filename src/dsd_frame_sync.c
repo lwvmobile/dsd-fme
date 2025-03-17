@@ -32,11 +32,11 @@ printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset,
 
   //oops, that made a nested if-if-if-if statement,
   //causing a memory leak
-  
+
   // if (opts->verbose > 2)
     //fprintf (stderr,"o: %4i ", offset);
   // if (opts->verbose > 1)
-    //fprintf (stderr,"mod: %s ", modulation); 
+    //fprintf (stderr,"mod: %s ", modulation);
   // if (opts->verbose > 2)
     //fprintf (stderr,"g: %f ", state->aout_gain);
 
@@ -123,14 +123,14 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
       {
         state->lcn_freq_roll++;
         //check roll again if greater than expected, then go back to zero
-        if (state->lcn_freq_roll >= state->lcn_freq_count) 
+        if (state->lcn_freq_roll >= state->lcn_freq_count)
         {
           state->lcn_freq_roll = 0; //reset to zero
-        } 
+        }
       }
     }
     //check that we have a non zero value first, then tune next frequency
-    if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0) 
+    if (state->trunk_lcn_freq[state->lcn_freq_roll] != 0)
     {
       //rigctl
       if (opts->use_rigctl == 1)
@@ -145,8 +145,8 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
         rtl_dev_tune (opts, state->trunk_lcn_freq[state->lcn_freq_roll]);
         #endif
       }
-      
-      fprintf (stderr, "Tuning to Frequency: %.06lf MHz\n", 
+
+      fprintf (stderr, "Tuning to Frequency: %.06lf MHz\n",
                 (double)state->trunk_lcn_freq[state->lcn_freq_roll]/1000000);
 
     }
@@ -206,7 +206,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
   // detect frame sync
   t = 0;
-  synctest10[10] = 0; 
+  synctest10[10] = 0;
   synctest[24] = 0;
   synctest8[8] = 0;   //M17, wasn't initialized or terminated (source of much pain and frustration in Cygwin)
   synctest12[12] = 0;
@@ -358,20 +358,20 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           }
         }
       }
-      
+
       state->dmr_payload_p++;
       // end digitize and dmr buffer testing
 
-      *synctest_p = dibit; 
+      *synctest_p = dibit;
       if (t >= t_max) //works excelent now with short sync patterns, and no issues with large ones!
         {
           for (i = 0; i < t_max; i++) //24
             {
               lbuf2[i] = lbuf[i];
             }
-          qsort (lbuf2, t_max, sizeof (int), comp); 
+          qsort (lbuf2, t_max, sizeof (int), comp);
           lmin = (lbuf2[1] + lbuf2[2] + lbuf2[3]) / 3;
-          lmax = (lbuf2[t_max - 3] + lbuf2[t_max - 2] + lbuf2[t_max - 1]) / 3; 
+          lmax = (lbuf2[t_max - 3] + lbuf2[t_max - 2] + lbuf2[t_max - 1]) / 3;
 
           if (state->rf_mod == 1)
             {
@@ -528,7 +528,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             }
           //YSF sync
           strncpy(synctest20, (synctest_p - 19), 20);
-          if(opts->frame_ysf == 1) 
+          if(opts->frame_ysf == 1)
           {
             if (strcmp(synctest20, FUSION_SYNC) == 0)
             {
@@ -558,9 +558,9 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           //M17 Sync -- Just STR and LSF for now
           strncpy(synctest16, (synctest_p - 15), 16);
           strncpy(synctest8, (synctest_p - 7), 8);
-          if(opts->frame_m17 == 1) 
+          if(opts->frame_m17 == 1)
           {
-            //preambles will skip dibits in an attempt to prime the 
+            //preambles will skip dibits in an attempt to prime the
             //demodulator but not attempt any decoding
             if (strcmp(synctest8, M17_PRE) == 0)
             {
@@ -690,7 +690,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               }
             }
           }
-          //end M17 
+          //end M17
 
           //P25 P2 sync S-ISCH VCH
           strncpy(synctest20, (synctest_p - 19), 20);
@@ -917,7 +917,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   printFrameSync (opts, state, "+DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 10;
-                state->last_cc_sync_time = time(NULL); 
+                state->last_cc_sync_time = time(NULL);
                 return (10);
               }
               else
@@ -933,7 +933,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->firstframe = 1;
                 }
                 state->lastsynctype = 11;
-                state->last_cc_sync_time = time(NULL); 
+                state->last_cc_sync_time = time(NULL);
                 return (11); //11
               }
             }
@@ -1032,7 +1032,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   state->firstframe = 1;
                 }
                 state->lastsynctype = 12;
-                state->last_cc_sync_time = time(NULL); 
+                state->last_cc_sync_time = time(NULL);
                 return (12);
               }
 
@@ -1045,7 +1045,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   printFrameSync (opts, state, "-DMR ", synctest_pos + 1, modulation);
                 }
                 state->lastsynctype = 13;
-                state->last_cc_sync_time = time(NULL); 
+                state->last_cc_sync_time = time(NULL);
                 return (13);
               }
             }
@@ -1164,7 +1164,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
               printFrameSync (opts, state, "-EDACS", synctest_pos + 1, modulation);
-              state->lastsynctype = 38; 
+              state->lastsynctype = 38;
               return (38);
             }
             else if ( strcmp (synctest48, INV_EDACS_SYNC) == 0)
@@ -1175,7 +1175,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
               printFrameSync (opts, state, "+EDACS", synctest_pos + 1, modulation);
-              state->lastsynctype = 37; 
+              state->lastsynctype = 37;
               return (37);
             }
             else if ((strcmp (synctest48, DOTTING_SEQUENCE_A) == 0) || (strcmp (synctest48, DOTTING_SEQUENCE_B) == 0))
@@ -1189,7 +1189,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             }
 
           }
-         
+
           else if (opts->frame_dstar == 1)
             {
               if (strcmp (synctest, DSTAR_SYNC) == 0)
@@ -1261,14 +1261,14 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 || (strcmp (synctest10, "3131331111") == 0 )
                 || (strcmp (synctest10, "3331331111") == 0 )
                 || (strcmp (synctest10, "3131311131") == 0 ) //First few FSW on NXDN48 Type-C seems to hit this for some reason
-                      
+
                 )
             {
 
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
-              if (state->lastsynctype == 28) 
+              if (state->lastsynctype == 28)
               {
                 state->last_cc_sync_time = time(NULL);
                 return (28);
@@ -1276,21 +1276,21 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               state->lastsynctype = 28;
             }
 
-            else if ( 
-                      
+            else if (
+
                        (strcmp (synctest10, "1313113313") == 0 )
                     || (strcmp (synctest10, "1113113313") == 0 )
                     || (strcmp (synctest10, "1313113333") == 0 )
                     || (strcmp (synctest10, "1113113333") == 0 )
                     || (strcmp (synctest10, "1313133313") == 0 )
-                      
+
                     )
             {
 
               state->offset = synctest_pos;
               state->max = ((state->max) + lmax) / 2;
               state->min = ((state->min) + lmin) / 2;
-              if (state->lastsynctype == 29) 
+              if (state->lastsynctype == 29)
               {
                 state->last_cc_sync_time = time(NULL);
                 return (29);
@@ -1303,7 +1303,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           #ifdef PVCONVENTIONAL
           if (opts->frame_provoice == 1)
           {
-            memset (synctest32, 0, sizeof(synctest32)); 
+            memset (synctest32, 0, sizeof(synctest32));
             strncpy (synctest32, (synctest_p - 31), 16); //short sync grab here on 32
             char pvc_txs[9]; //string (symbol) value of TX Address
             char pvc_rxs[9]; //string (symbol) value of RX Address
@@ -1418,18 +1418,18 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
               if ((opts->errorbars == 1) && (opts->verbose > 1) && (state->carrier == 1))
                 {
                   fprintf (stderr,"Sync: no sync\n");
-                  // fprintf (stderr,"Press CTRL + C to close.\n"); 
+                  // fprintf (stderr,"Press CTRL + C to close.\n");
 
                 }
               noCarrier (opts, state);
 
               return (-1);
             }
-        }        
+        }
 
     }
 
   return (-1);
-  
+
 }
 

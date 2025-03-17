@@ -11,7 +11,7 @@
 //gather ambe_fr mi fragments for processing
 void dmr_late_entry_mi_fragment (dsd_opts * opts, dsd_state * state, uint8_t vc, uint8_t ambe_fr[4][24], uint8_t ambe_fr2[4][24], uint8_t ambe_fr3[4][24])
 {
-  
+
   uint8_t slot = state->currentslot;
 
   //enforce RC4 due to missing PI header, but with valid SVC Opts
@@ -30,7 +30,7 @@ void dmr_late_entry_mi_fragment (dsd_opts * opts, dsd_state * state, uint8_t vc,
       state->payload_keyidR = 0xFF;
     }
   }
-  
+
   //collect our fragments and place them into storage
   state->late_entry_mi_fragment[slot][vc][0] = (uint64_t)ConvertBitIntoBytes(&ambe_fr[3][0], 4);
   state->late_entry_mi_fragment[slot][vc][1] = (uint64_t)ConvertBitIntoBytes(&ambe_fr2[3][0], 4);
@@ -46,8 +46,8 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
 
   uint8_t slot = state->currentslot;
   int i, j;
-  int g[3]; 
-  unsigned char mi_go_bits[24]; 
+  int g[3];
+  unsigned char mi_go_bits[24];
 
   uint64_t mi_test = 0;
   uint64_t go_test = 0;
@@ -59,7 +59,7 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
   uint8_t mi_crc_cmp = 0;
   uint8_t mi_crc_ext = 1;
   uint8_t mi_crc_ok = 0;
-  
+
   mi_test = (state->late_entry_mi_fragment[slot][1][0] << 32L) | (state->late_entry_mi_fragment[slot][2][0] << 28) | (state->late_entry_mi_fragment[slot][3][0] << 24) |
             (state->late_entry_mi_fragment[slot][1][1] << 20) | (state->late_entry_mi_fragment[slot][2][1] << 16) | (state->late_entry_mi_fragment[slot][3][1] << 12) |
             (state->late_entry_mi_fragment[slot][1][2] << 8)  | (state->late_entry_mi_fragment[slot][2][2] << 4)  | (state->late_entry_mi_fragment[slot][3][2] << 0);
@@ -72,8 +72,8 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
   {
     for (i = 0; i < 12; i++)
     {
-      mi_go_bits[i] = (( mi_test << (i+j*12) ) & 0x800000000) >> 35; 
-      mi_go_bits[i+12] = (( go_test << (i+j*12) ) & 0x800000000) >> 35; 
+      mi_go_bits[i] = (( mi_test << (i+j*12) ) & 0x800000000) >> 35;
+      mi_go_bits[i+12] = (( go_test << (i+j*12) ) & 0x800000000) >> 35;
     }
     //execute golay decode and assign pass or fail to g
     if ( Golay_24_12_decode(mi_go_bits) ) g[j] = 1;
@@ -90,7 +90,7 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
     }
   }
 
-  int mi_final = 0; 
+  int mi_final = 0;
   mi_final = (mi_corrected >> 4) & 0xFFFFFFFF;
 
   mi_crc_ext = (uint8_t)ConvertBitIntoBytes(&mi_bits[32], 4);
@@ -105,7 +105,7 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
   {
     if (slot == 0 && state->payload_algid != 0)
     {
-      if (state->payload_mi != mi_final) 
+      if (state->payload_mi != mi_final)
       {
         fprintf (stderr, "%s", KCYN);
         fprintf (stderr, " Slot 1 PI/LFSR and Late Entry MI Mismatch - %08X : %08X ", state->payload_mi, mi_final);
@@ -199,7 +199,7 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "\n");
     }
   }
-  
+
 
 }
 
@@ -211,7 +211,7 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
   {
     state->dropL = 256;
 
-    if (state->K1 != 0) 
+    if (state->K1 != 0)
     {
       state->DMRvcL = 0;
     }
@@ -228,7 +228,7 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
   {
     state->dropR = 256;
 
-    if (state->K1 != 0) 
+    if (state->K1 != 0)
     {
       state->DMRvcR = 0;
     }
@@ -251,12 +251,12 @@ void dmr_alg_reset (dsd_opts * opts, dsd_state * state)
   state->dropL = 256;
   state->dropR = 256;
   state->DMRvcL = 0;
-  state->DMRvcR = 0; 
+  state->DMRvcR = 0;
   // state->payload_miP = 0; //running these clears out before we can create a new keystream
   // state->payload_miN = 0; //running these clears out before we can create a new keystream
 }
 
-//handle Single Burst (Voice Burst F) or Reverse Channel Signalling 
+//handle Single Burst (Voice Burst F) or Reverse Channel Signalling
 void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
 {
   int i;
@@ -275,7 +275,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   uint8_t crc3_okay = 0; //TXI
   uint8_t txi = 0; //SEE: https://patents.google.com/patent/US8271009B2
   UNUSED(txi);
-  
+
   //NOTE: Any previous mentions to Cap+ in this area may have been in error,
   //The signalling observed here was actually TXI information, not Cap+ Specifically
 
@@ -298,7 +298,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   //arrange the return for proper order for the crc3 check
   for (i = 0; i < 8; i++) sbrc_retcrc[i] = sbrc_return[i+3];
 
-  //RC Channel CRC 7 Mask = 0x7A; CRC bits are used as privacy indicators on 
+  //RC Channel CRC 7 Mask = 0x7A; CRC bits are used as privacy indicators on
   //Single Voice Burst F (see below), other moto values seem to exist there as well -- See TXI patent
   if (power == 1) //RC
   {
@@ -320,7 +320,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
       crc_extracted = crc_extracted << 1;
       crc_extracted = crc_extracted | sbrc_return[i]; //first 3 most significant bits
     }
-    crc_computed = crc3((uint8_t *) sbrc_retcrc, 8); //working now seems consistent as well 
+    crc_computed = crc3((uint8_t *) sbrc_retcrc, 8); //working now seems consistent as well
     if (crc_extracted == crc_computed) crc3_okay = 1;
     // fprintf (stderr, " CRC EXT %02X, CRC CMP %02X", crc_extracted, crc_computed);
   }
@@ -341,7 +341,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
       fprintf (stderr, "%d", sbrc_return[i]);
     fprintf (stderr, " - %03X; ", sbrc_hex);
     fprintf (stderr, "%s", KNRM);
-    
+
     // if (crc_okay == 0) //forego this since the crc can vary or not be used at all
     // {
     //   fprintf (stderr, "%s", KRED);
@@ -352,7 +352,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
 
     fprintf (stderr, "\n");
   }
-  
+
   uint8_t sbrc_opcode = sbrc_hex & 0x7; //opcode and alg the same bits, but the alg is present when CRC is bad (I know they are limited on bits, but I hate that idea)
   uint8_t alg = sbrc_hex & 0x7; //SEE: https://patents.google.com/patent/EP2347540B1/en
   uint8_t key = (sbrc_hex >> 3) & 0xFF;
@@ -412,7 +412,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
         fprintf (stderr, "%s", KCYN);
         fprintf (stderr, " TXI Op: %X -", sbrc_opcode);
         if      (sbrc_opcode == 0) fprintf (stderr, " Null; ");
-        else if (sbrc_opcode == 3) 
+        else if (sbrc_opcode == 3)
         {
           if (txi_delay != 0)
             fprintf (stderr, " BR Delay: %d - %d ms;", txi_delay, txi_delay * 30); //could also indicate number of superframes until next VC6 pre-emption
@@ -506,7 +506,7 @@ uint8_t crc3(uint8_t bits[], unsigned int len)
 {
   uint8_t crc=0;
   unsigned int K = 3;
-  //x^3+x+1 
+  //x^3+x+1
   uint8_t poly[4] = {1,1,0,1};
   uint8_t buf[256];
   if (len+K > sizeof(buf)) {
@@ -530,7 +530,7 @@ uint8_t crc4(uint8_t bits[], unsigned int len)
 {
   uint8_t crc=0;
   unsigned int K = 4;
-  //x^4+x+1 
+  //x^4+x+1
   uint8_t poly[5] = {1,0,0,1,1};
   uint8_t buf[256];
   if (len+K > sizeof(buf)) {

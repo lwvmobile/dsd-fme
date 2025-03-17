@@ -109,7 +109,7 @@ static void KeyExpansion(uint8_t* RoundKey, const uint8_t* Key)
 {
   unsigned i, j, k;
   uint8_t tempa[4]; // Used for the column/row operations
-  
+
   // The first round key is the key itself.
   for (i = 0; i < Nk; ++i)
   {
@@ -145,7 +145,7 @@ static void KeyExpansion(uint8_t* RoundKey, const uint8_t* Key)
         tempa[3] = u8tmp;
       }
 
-      // SubWord() is a function that takes a four-byte input word and 
+      // SubWord() is a function that takes a four-byte input word and
       // applies the S-box to each of the four bytes to produce an output word.
 
       // Function Subword()
@@ -261,14 +261,14 @@ static void ShiftRows(state_t* state)
 {
   uint8_t temp;
 
-  // Rotate first row 1 columns to left  
+  // Rotate first row 1 columns to left
   temp           = (*state)[0][1];
   (*state)[0][1] = (*state)[1][1];
   (*state)[1][1] = (*state)[2][1];
   (*state)[2][1] = (*state)[3][1];
   (*state)[3][1] = temp;
 
-  // Rotate second row 2 columns to left  
+  // Rotate second row 2 columns to left
   temp           = (*state)[0][2];
   (*state)[0][2] = (*state)[2][2];
   (*state)[2][2] = temp;
@@ -295,7 +295,7 @@ static void MixColumns(state_t* state)
   uint8_t i;
   uint8_t Tmp, Tm, t;
   for (i = 0; i < 4; ++i)
-  {  
+  {
     t   = (*state)[i][0];
     Tmp = (*state)[i][0] ^ (*state)[i][1] ^ (*state)[i][2] ^ (*state)[i][3] ;
     Tm  = (*state)[i][0] ^ (*state)[i][1] ; Tm = xtime(Tm);  (*state)[i][0] ^= Tm ^ Tmp ;
@@ -320,7 +320,7 @@ static void InvMixColumns(state_t* state)
   int i;
   uint8_t a, b, c, d;
   for (i = 0; i < 4; ++i)
-  { 
+  {
     a = (*state)[i][0];
     b = (*state)[i][1];
     c = (*state)[i][2];
@@ -349,14 +349,14 @@ static void InvShiftRows(state_t* state)
 {
   uint8_t temp;
 
-  // Rotate first row 1 columns to right  
+  // Rotate first row 1 columns to right
   temp = (*state)[3][1];
   (*state)[3][1] = (*state)[2][1];
   (*state)[2][1] = (*state)[1][1];
   (*state)[1][1] = (*state)[0][1];
   (*state)[0][1] = temp;
 
-  // Rotate second row 2 columns to right 
+  // Rotate second row 2 columns to right
   temp = (*state)[0][2];
   (*state)[0][2] = (*state)[2][2];
   (*state)[2][2] = temp;
@@ -373,7 +373,7 @@ static void InvShiftRows(state_t* state)
   (*state)[3][3] = temp;
 }
 
-// Cipher is the main function that encrypts the PlainText, 
+// Cipher is the main function that encrypts the PlainText,
 // or produces a keystream, depending on application.
 static void Cipher(state_t* state, const uint8_t* RoundKey)
 {
@@ -479,14 +479,14 @@ void AES_CBC_decrypt_buffer(struct AES_ctx* ctx, uint8_t* buf, size_t length)
 void AES_CTR_xcrypt_buffer(struct AES_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t buffer[AES_BLOCKLEN];
-  
+
   size_t i;
   int bi;
   for (i = 0, bi = AES_BLOCKLEN; i < length; ++i, ++bi)
   {
     if (bi == AES_BLOCKLEN) /* we need to regen xor compliment in buffer */
     {
-      
+
       memcpy(buffer, ctx->Iv, AES_BLOCKLEN);
       Cipher((state_t*)buffer,ctx->RoundKey);
 
@@ -498,9 +498,9 @@ void AES_CTR_xcrypt_buffer(struct AES_ctx* ctx, uint8_t* buf, size_t length)
 	      {
           ctx->Iv[bi] = 0;
           continue;
-        } 
+        }
         ctx->Iv[bi] += 1;
-        break;   
+        break;
       }
       bi = 0;
     }
@@ -558,7 +558,7 @@ void aes_ofb_keystream_output (uint8_t * iv, uint8_t * key, uint8_t * output, in
     Cipher((state_t*)input_register, ctx.RoundKey); //input_register is returned as output, and is put back in as object feedback
     memcpy (output+(i*16), input_register, 16*sizeof(uint8_t) ); //copy ciphered input_register to output
   }
-        
+
 }
 
 //byte-wise AES CFB (Cipher Feedback) Payload operating in 128-bit block mode
@@ -624,7 +624,7 @@ void aes_cfb_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * in, 
       memcpy(input_register, in+(i*16), 16*sizeof(uint8_t));
 
   }
-        
+
 }
 
 //byte-wise AES CBC (Cipher Block Chaining) //Yeah, I know this already exists, but wanted a custom convenience wrapper version
@@ -691,7 +691,7 @@ void aes_cbc_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * in, 
       memcpy (out+(i*16), input_register, 16*sizeof(uint8_t) );
 
     }
-      
+
     else   //decrypt
     {
 
@@ -719,12 +719,12 @@ void aes_cbc_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * in, 
     }
 
   }
-        
+
 }
 
-//byte-wise AES CBC_MAC (Cipher Block Chaining Message Authentication) //This is slightly different than above, no IV is present, 
+//byte-wise AES CBC_MAC (Cipher Block Chaining Message Authentication) //This is slightly different than above, no IV is present,
 //but if iv is desireable, it will need to be pre-XOR'd with the first plaintext input block by the calling function
-//input in is a uint8_t bytewise array, is the input to be ciphered. 
+//input in is a uint8_t bytewise array, is the input to be ciphered.
 //input key is up to 32-byte uint8_t array of key value
 //input type is the type/key len of AES required (0-128, 1-192, 2-256)
 //input nblocks is the number of rounds of 16-byte payload blocks requried (last block will need padding if not flush)
@@ -781,7 +781,7 @@ void aes_cbc_mac_generator (uint8_t * key, uint8_t * in, uint8_t * out, int type
 
   //copy final ciphered input_register to output 'out', user will determine how many bytes of output they want for MAC
   memcpy (out, input_register, 16*sizeof(uint8_t) );
-        
+
 }
 
 //byte-wise output of AES ECB Ciphering/Deciphering
@@ -789,7 +789,7 @@ void aes_cbc_mac_generator (uint8_t * key, uint8_t * in, uint8_t * out, int type
 //input key is up to 32-byte uint8_t array of key value
 //input type is the type/len of AES required (0-128, 1-192, 2-256)
 //output is a uint8_t bytewise array of ciphered or deciphered input
-//de is a bit-flag signalling to run Cipher (encrypt) on 1, or InvCipher (decrypt) on 0 
+//de is a bit-flag signalling to run Cipher (encrypt) on 1, or InvCipher (decrypt) on 0
 void aes_ecb_bytewise_payload_crypt (uint8_t * input, uint8_t * key, uint8_t * output, int type, int de)
 {
 
@@ -833,7 +833,7 @@ void aes_ecb_bytewise_payload_crypt (uint8_t * input, uint8_t * key, uint8_t * o
 
   //copy ciphered/deciphered input_register to output
   memcpy (output, input_register, 16*sizeof(uint8_t) );
-        
+
 }
 
 //symmetrical ctr mode payload encryption and decryption
@@ -859,7 +859,7 @@ void aes_ctr_bitwise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * paylo
     Nk = 8;
     Nr = 14;
   }
-  
+
   struct AES_ctx ctx;
 
   //init and set the iv and key variables
@@ -905,7 +905,7 @@ void aes_ctr_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payl
     Nk = 8;
     Nr = 14;
   }
-  
+
   struct AES_ctx ctx;
 
   //init and set the iv and key variables
@@ -938,7 +938,7 @@ uint8_t aes_key_unwrap_execute (uint8_t * key, uint8_t * payload, uint8_t * outp
   memset(C, 0, sizeof(C));
 
   //copy input_bytes to cipher code words
-  for (i = 0; i < 6; i++) 
+  for (i = 0; i < 6; i++)
     memcpy(C[i], payload+(i*8), sizeof(C[0]));
 
   //A = C0 first 8 octets only
@@ -1028,7 +1028,7 @@ uint8_t aes_key_unwrap_execute (uint8_t * key, uint8_t * payload, uint8_t * outp
     fprintf (stderr, "\n Unwrap Failure! ICV1 != 0xA6A6A6A6A6A6A6A6!");
     return 0;
   }
-  else 
+  else
   {
     fprintf (stderr, "\n Unwrap Success!");
     return 1;

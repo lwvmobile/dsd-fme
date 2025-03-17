@@ -36,20 +36,20 @@ const int c0[25] = {
 	17,16,15,14,13,12,11,10,9,8,7,6
 };
 
-const int c1[24] = { 
+const int c1[24] = {
 	10,9,8,7,6,5,22,4,21,3,20,2,
 	19,1,18,0,17,16,15,14,13,12,11
 };
 
-const int c2[12] = { 
+const int c2[12] = {
 	3,2,1,0,10,9,8,7,6,5,4
 };
 
-const int c3[15] = { 
+const int c3[15] = {
 	13,12,11,10,9,8,7,6,5,4,3,2,1,0
 };
 
-const int csubset[73] = { 
+const int csubset[73] = {
 	0,0,1,2,0,0,1,2,0,0,1,2,0,0,1,2,
 	0,0,1,3,0,0,1,3,0,1,1,3,0,1,1,3,
 	0,1,1,3,0,1,1,3,0,1,1,3,0,1,2,3,
@@ -392,21 +392,21 @@ void process_ISCH (dsd_opts * opts, dsd_state * state)
 			// //find TS1 if TS0 isn't found
 			// else if (chan_num == 1 && isch_loc == 0)
 			// {
-			// 	state->p2_scramble_offset = 12 - framing_counter; 
+			// 	state->p2_scramble_offset = 12 - framing_counter;
 			// }
 
 			//new rules for relative position to the only chan 1 we should see
 			if (chan_num == 1 && isch_loc == 0)
 			{
-				state->p2_scramble_offset = 12 - framing_counter; 
+				state->p2_scramble_offset = 12 - framing_counter;
 			}
 			else if (chan_num == 1 && isch_loc == 1)
 			{
-				state->p2_scramble_offset = 4 - framing_counter; 
+				state->p2_scramble_offset = 4 - framing_counter;
 			}
 			else if (chan_num == 1 && isch_loc == 2)
 			{
-				state->p2_scramble_offset = 8 - framing_counter; 
+				state->p2_scramble_offset = 8 - framing_counter;
 			}
 
 		}
@@ -416,7 +416,7 @@ void process_ISCH (dsd_opts * opts, dsd_state * state)
 		}
 
 	}
-	
+
 	isch_decoded = -1; //reset to bad value after running
 
 }
@@ -487,7 +487,7 @@ void process_4V (dsd_opts * opts, dsd_state * state)
 
 	if (state->voice_counter[1] >= 18)
 		state->voice_counter[1] = 0;
-	
+
 	processMbeFrame (opts, state, NULL, ambe_fr1, NULL);
 	if(state->currentslot == 0)
 	{
@@ -571,8 +571,8 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 		parity[i] = ess_a[state->currentslot][i];
 	}
 
-	int ec = 69; 
-	ec = ez_rs28_ess(payload, parity); 
+	int ec = 69;
+	ec = ez_rs28_ess(payload, parity);
 
 	int algid = 0;
 	for (short i = 0; i < 8; i++)
@@ -764,7 +764,7 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 	}
 	fprintf (stderr, "%s", KNRM);
 
-	state->fourv_counter[state->currentslot] = 0; 
+	state->fourv_counter[state->currentslot] = 0;
 
 }
 
@@ -928,7 +928,7 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		fprintf (stderr, "\n");
 		fprintf (stderr,"%s ", timestr);
 		fprintf (stderr, "       P25p2 ");
-		
+
 		if (timestr != NULL)
 		{
 			free (timestr);
@@ -1149,7 +1149,7 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 
 void processP2 (dsd_opts * opts, dsd_state * state)
 {
-	state->dmr_stereo = 1; 
+	state->dmr_stereo = 1;
 	p2_dibit_buffer (opts, state);
 	voice = 0;
 
@@ -1157,15 +1157,15 @@ void processP2 (dsd_opts * opts, dsd_state * state)
 	for (framing_counter = 0; framing_counter < 4; framing_counter++)
 	{
 		//run ISCH in here so we know when to start descramble offset
-		process_ISCH (opts, state); 
+		process_ISCH (opts, state);
 	}
 
 	//set initial current slot depending on offset value
 	if (state->p2_scramble_offset % 2)
 	{
-		state->currentslot = 1; 
+		state->currentslot = 1;
 	}
-	else state->currentslot = 0; 
+	else state->currentslot = 0;
 
 	//frame_scramble runs lfsr and creates an array of unscrambled bits to pull from
   process_Frame_Scramble (opts, state);
@@ -1173,8 +1173,8 @@ void processP2 (dsd_opts * opts, dsd_state * state)
 	//process DUID will run through all collected frames and handle them appropriately
   process_P2_DUID (opts, state);
 
-	state->dmr_stereo = 0; 
+	state->dmr_stereo = 0;
 	state->p2_is_lcch = 0;
 
-  fprintf (stderr, "\n"); 
+  fprintf (stderr, "\n");
 }

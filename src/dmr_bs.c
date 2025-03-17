@@ -14,7 +14,7 @@
 void dmrBS (dsd_opts * opts, dsd_state * state)
 {
   char * timestr = NULL;
-  
+
   int i, dibit;
   char ambe_fr[4][24];
   char ambe_fr2[4][24];
@@ -28,7 +28,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   uint8_t m1[4][24];
   uint8_t m2[4][24];
   uint8_t m3[4][24];
-  
+
   const int *w, *x, *y, *z;
   char sync[25];
   uint8_t syncdata[48];
@@ -51,11 +51,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   uint8_t power = 9; //power and pre-emption indicator
   uint8_t lcss = 9;
   UNUSED2(cc, lcss);
-  
+
   //would be ideal to grab all dibits and break them into bits to pass to new data handler?
-  uint8_t dummy_bits[196]; 
+  uint8_t dummy_bits[196];
   memset (dummy_bits, 0, sizeof(dummy_bits));
-  
+
   //Init slot lights
   sprintf (state->slot1light, " slot1 ");
   sprintf (state->slot2light, " slot2 ");
@@ -86,7 +86,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
    11, 12, 2, 13, 14,
    15, 3, 16, 4, 17, 18,
    19, 5, 20, 21, 22, 6, 23
-  }; 
+  };
 
   //cach tact bits
   uint8_t tact_bits[7];
@@ -265,7 +265,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //check for sync pattern here after collected the rest of the payload, decide what to do with it
   if ( strcmp (sync, DMR_BS_DATA_SYNC) == 0 )
   {
-    
+
     fprintf (stderr,"%s ", timestr);
     if (internalslot == 0)
     {
@@ -274,11 +274,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
         fprintf (stderr,"Sync: +DMR  ");
       }
       else fprintf (stderr,"Sync: -DMR  ");
-      
+
       vc1 = 7; //set to 7 so we can see that we should not be on a VC unless a framesync comes in for it first
 
       //close MBEout file - slot 1
-      if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state); 
+      if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
     }
     if (internalslot == 1)
     {
@@ -303,7 +303,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //check for a rc burst with bptc or 34 rate data in it (testing only)
   // #define RC_TESTING //disable if not in use
   #ifdef RC_TESTING
-  if ( (strcmp (sync, DMR_BS_DATA_SYNC) != 0) && (strcmp (sync, DMR_BS_VOICE_SYNC) != 0) && 
+  if ( (strcmp (sync, DMR_BS_DATA_SYNC) != 0) && (strcmp (sync, DMR_BS_VOICE_SYNC) != 0) &&
        ( (internalslot == 0 && vc1 == 6) ||  (internalslot == 1 && vc2 == 6) )              )
   {
 
@@ -376,10 +376,10 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   }
 
   //only play voice on no data sync, and VC values are within expected values 1-6
-  if (strcmp (sync, DMR_BS_DATA_SYNC) != 0) //we already have a tact ecc check, so we won't get here without that, see if there is any other eccs we can run just to make sure 
+  if (strcmp (sync, DMR_BS_DATA_SYNC) != 0) //we already have a tact ecc check, so we won't get here without that, see if there is any other eccs we can run just to make sure
   {
 
-    //check the embedded signalling, if bad at this point, we probably aren't quite in sync 
+    //check the embedded signalling, if bad at this point, we probably aren't quite in sync
     if(QR_16_7_6_decode(emb_pdu)) emb_ok = 1;
     else emb_ok = 0;
 
@@ -408,7 +408,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       sprintf (light, "%s", " [SLOT1]  slot2  ");
       //open MBEout file - slot 1
       if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
-    } 
+    }
     else
     {
       state->dmrburstR = 16;
@@ -416,14 +416,14 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       sprintf (light, "%s", "  slot1  [SLOT2] ");
       //open MBEout file - slot 2
       if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_fR == NULL)) openMbeOutFileR (opts, state);
-    } 
+    }
     if (opts->inverted_dmr == 0) sprintf (polarity, "%s", "+");
     else sprintf (polarity, "%s", "-");
     if (state->dmr_color_code != 16)
       fprintf (stderr,"Sync: %sDMR %s| Color Code=%02d | VC%d ", polarity, light, state->dmr_color_code, vc);
     else fprintf (stderr,"Sync: %sDMR %s| Color Code=XX | VC%d ", polarity, light, vc);
- 
-    if (internalslot == 0 && vc1 == 6) 
+
+    if (internalslot == 0 && vc1 == 6)
     {
       //process embedded link control
       fprintf (stderr, "\n");
@@ -433,7 +433,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
     }
 
-    if (internalslot == 1 && vc2 == 6) 
+    if (internalslot == 1 && vc2 == 6)
     {
       //process embedded link control
       fprintf (stderr, "\n");
@@ -445,8 +445,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
     if (opts->payload == 1) fprintf (stderr, "\n"); //extra line break necessary here
 
-    //copy ambe_fr frames first, running process mbe will correct them, 
-    //but this also leads to issues extracting good le mi values when 
+    //copy ambe_fr frames first, running process mbe will correct them,
+    //but this also leads to issues extracting good le mi values when
     //we go to do correction on them there too
     memcpy (m1, ambe_fr, sizeof(m1));
     memcpy (m2, ambe_fr2, sizeof(m2));
@@ -459,15 +459,15 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
       memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
     }
-      
+
     else
     {
       memcpy(state->f_r4[0], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
       memcpy(state->s_r4[0], state->s_r, sizeof(state->s_r));
       memcpy(state->s_r4u[0], state->s_ru, sizeof(state->s_ru));
     }
-      
-    
+
+
     processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
     if(internalslot == 0)
     {
@@ -475,7 +475,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
       memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
     }
-      
+
     else
     {
       memcpy(state->f_r4[1], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
@@ -490,7 +490,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
       memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
     }
-      
+
     else
     {
       memcpy(state->f_r4[2], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
@@ -523,7 +523,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0 && vc1 == 6) dmr_sbrc (opts, state, power);
     if (internalslot == 1 && vc2 == 6) dmr_sbrc (opts, state, power);
 
-    cach_err = dmr_cach (opts, state, cachdata); 
+    cach_err = dmr_cach (opts, state, cachdata);
     if (opts->payload == 0) fprintf (stderr, "\n");
 
     // run alg refresh after vc6 ambe processing
@@ -547,7 +547,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     cach_err = 1;
     tact_okay = 0;
     emb_ok = 0;
-    
+
     //reset emb components
     cc = 25;
     power = 9;
@@ -570,7 +570,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
   if (skipcount > 3) //after 3 onsecutive data frames, drop back to getFrameSync and process with dmr_data_sync (need one more in order to push last voice on slot 2 only voice)
   {
-    //set tests to all good so we don't get a bogus/redundant voice error 
+    //set tests to all good so we don't get a bogus/redundant voice error
     cach_err = 0;
     tact_okay = 1;
     emb_ok = 1;
@@ -625,15 +625,15 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     state->currentslot = 0;
     dmr_alg_refresh (opts, state);
   }
-  if (state->payload_algidR >= 0x21) 
+  if (state->payload_algidR >= 0x21)
   {
     state->currentslot = 1;
     dmr_alg_refresh (opts, state);
   }
-    
+
   //failsafe to reset all data header and blocks when bad tact or emb
-  dmr_reset_blocks (opts, state); 
-   
+  dmr_reset_blocks (opts, state);
+
  }
 
  //
@@ -838,13 +838,13 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     sprintf (light, "%s", " [SLOT1]  slot2  ");
     //open MBEout file - slot 1
     if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL)) openMbeOutFile (opts, state);
-  } 
+  }
   else
   {
     sprintf (light, "%s", "  slot1  [SLOT2] ");
     //open MBEout file - slot 2
     if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_fR == NULL)) openMbeOutFileR (opts, state);
-  } 
+  }
   if (opts->inverted_dmr == 0) sprintf (polarity, "%s", "+");
   else sprintf (polarity, "%s", "-");
   if (state->dmr_color_code != 16)
@@ -853,8 +853,8 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 
   dmr_alg_reset (opts, state);
 
-  //copy ambe_fr frames first, running process mbe will correct them, 
-  //but this also leads to issues extracting good le mi values when 
+  //copy ambe_fr frames first, running process mbe will correct them,
+  //but this also leads to issues extracting good le mi values when
   //we go to do correction on them there too
   memcpy (m1, ambe_fr, sizeof(m1));
   memcpy (m2, ambe_fr2, sizeof(m2));
@@ -872,14 +872,14 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     memcpy(state->s_l4[0], state->s_l, sizeof(state->s_l));
     memcpy(state->s_l4u[0], state->s_lu, sizeof(state->s_lu));
   }
-    
+
   else
   {
     memcpy(state->f_r4[0], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
     memcpy(state->s_r4[0], state->s_r, sizeof(state->s_r));
     memcpy(state->s_r4u[0], state->s_ru, sizeof(state->s_ru));
   }
-    
+
 
   processMbeFrame (opts, state, NULL, ambe_fr2, NULL);
   if(internalslot == 0)
@@ -888,7 +888,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     memcpy(state->s_l4[1], state->s_l, sizeof(state->s_l));
     memcpy(state->s_l4u[1], state->s_lu, sizeof(state->s_lu));
   }
-    
+
   else
   {
     memcpy(state->f_r4[1], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
@@ -903,7 +903,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     memcpy(state->s_l4[2], state->s_l, sizeof(state->s_l));
     memcpy(state->s_l4u[2], state->s_lu, sizeof(state->s_lu));
   }
-    
+
   else
   {
     memcpy(state->f_r4[2], state->audio_out_temp_bufR, sizeof(state->audio_out_temp_bufR));
@@ -943,14 +943,14 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
       state->currentslot = 0;
       dmr_alg_refresh (opts, state);
     }
-    if (state->payload_algidR >= 0x21) 
+    if (state->payload_algidR >= 0x21)
     {
       state->currentslot = 1;
       dmr_alg_refresh (opts, state);
     }
-    
+
     //failsafe to reset all data header and blocks when bad tact or emb
-    dmr_reset_blocks (opts, state); 
+    dmr_reset_blocks (opts, state);
   }
 
   if (timestr != NULL)

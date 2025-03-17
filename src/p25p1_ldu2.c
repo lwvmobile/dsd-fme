@@ -281,7 +281,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   //reset dropbytes -- skip first 11 for next LCW
   state->dropL = 267;
   //reset octet counter
-  state->octet_counter = 0; 
+  state->octet_counter = 0;
 
   if (opts->errorbars == 1)
     {
@@ -538,7 +538,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
 
   #ifdef SOFTID
   if (opts->payload == 1)
-  {     
+  {
     //view Low Speed Data
     fprintf (stderr, "%s",KCYN);
     fprintf (stderr, "    LSD: %02X %02X ", lsd_hex1, lsd_hex2);
@@ -634,7 +634,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
          sprintf (state->group_array[state->group_tally].groupMode, "%s", "D");
         sprintf (state->group_array[z].groupName, "%s", str);
       }
-      
+
     }
 
     fprintf (stderr, "%s",KNRM);
@@ -653,7 +653,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   #endif //SOFTID
 
   //run LFSR on the MI if we have irrecoverable errors here
-  if (irrecoverable_errors && state->payload_algid != 0x80 && state->payload_keyid != 0 && state->payload_miP != 0) 
+  if (irrecoverable_errors && state->payload_algid != 0x80 && state->payload_keyid != 0 && state->payload_miP != 0)
   {
     LFSRP(state);
     fprintf (stderr, "\n");
@@ -753,7 +753,7 @@ void LFSR128(dsd_state * state)
   int slot = state->currentslot;
 
   if (state->currentslot == 0)
-    lfsr = state->payload_miP; 
+    lfsr = state->payload_miP;
   else lfsr = state->payload_miN;
 
   //start packing aes_iv
@@ -783,7 +783,7 @@ void LFSR128(dsd_state * state)
   int cnt = 0; int x = 64;
   unsigned long long int bit;
   //polynomial P(x) = 1 + X15 + X27 + X38 + X46 + X62 + X64
-  for(cnt=0;cnt<64;cnt++) 
+  for(cnt=0;cnt<64;cnt++)
   {
     //63,61,45,37,27,14
     // Polynomial is C(x) = x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1

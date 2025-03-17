@@ -267,7 +267,7 @@ int digitize (dsd_opts* opts, dsd_state* state, int symbol)
   else if ((state->synctype == 1) || (state->synctype == 3)  || (state->synctype == 5)  ||
           (state->synctype == 9)  || (state->synctype == 11) || (state->synctype == 13) ||
           (state->synctype == 17) || (state->synctype == 29) || (state->synctype == 31) ||
-          (state->synctype == 77) || (state->synctype == 87) ||(state->synctype == 36) || 
+          (state->synctype == 77) || (state->synctype == 87) ||(state->synctype == 36) ||
           (state->synctype == 99)                              )
 
     {
@@ -279,8 +279,8 @@ int digitize (dsd_opts* opts, dsd_state* state, int symbol)
       // 13 -DMR (inverted signal data frame)
       // 17 -M17 STR
       // 29 -NXDN (inverted FSW)
-      // 31 -YSF 
-      // 36 -P25p2 
+      // 31 -YSF
+      // 36 -P25p2
       // 77 -M17 BRT
       // 87 -M17 PKT
       // 99 -M17 Preamble
@@ -334,7 +334,7 @@ int digitize (dsd_opts* opts, dsd_state* state, int symbol)
       state->dibit_buf_p++;
 
       //dmr buffer
-      *state->dmr_payload_p = invert_dibit(dibit); 
+      *state->dmr_payload_p = invert_dibit(dibit);
       state->dmr_payload_p++;
       //dmr buffer end
 
@@ -449,13 +449,13 @@ get_dibit_and_analog_signal (dsd_opts* opts, dsd_state* state, int* out_analog_s
 
   dibit = digitize (opts, state, symbol);
 
-  if (opts->audio_in_type == 4) 
+  if (opts->audio_in_type == 4)
   {
     //assign dibit from last symbol/dibit read from capture bin
     dibit = state->symbolc;
     if (state->use_throttle == 1)
 		{
-			usleep(0); 
+			usleep(0);
 		}
   }
 

@@ -51,14 +51,14 @@ int Connect (char *hostname, int portno)
       fprintf(stderr,"ERROR opening socket\n");
       error("ERROR opening socket");
     }
-        
+
 
     /* gethostbyname: get the server's DNS entry */
     server = gethostbyname(hostname);
     if (server == NULL) {
         fprintf(stderr,"ERROR, no such host as %s\n", hostname);
         //exit(0);
-        return (0); //return 0, check on other end and configure pulse input 
+        return (0); //return 0, check on other end and configure pulse input
     }
 
     /* build the server's Internet address */
@@ -73,7 +73,7 @@ int Connect (char *hostname, int portno)
     {
         fprintf(stderr,"ERROR opening socket\n");
         return (0);
-    }      
+    }
 
     return sockfd;
 }
@@ -108,7 +108,7 @@ bool Recv(int sockfd, char *buf)
 //
 // GQRX Protocol
 //
-long int GetCurrentFreq(int sockfd) 
+long int GetCurrentFreq(int sockfd)
 {
     long int freq = 0;
     char buf[BUFSIZE];
@@ -116,13 +116,13 @@ long int GetCurrentFreq(int sockfd)
     char * token;
 
     Send(sockfd, "f\n");
-    Recv(sockfd, buf); 
+    Recv(sockfd, buf);
 
-    if (strcmp(buf, "RPRT 1") == 0 ) 
+    if (strcmp(buf, "RPRT 1") == 0 )
         return freq;
 
-    token = strtok (buf, "\n"); 
-    freq = strtol (token, &ptr, 10); 
+    token = strtok (buf, "\n");
+    freq = strtol (token, &ptr, 10);
     // fprintf (stderr, "\nRIGCTL VFO Freq: [%ld]\n", freq);
     return freq;
 }
@@ -131,7 +131,7 @@ bool SetFreq(int sockfd, long int freq)
 {
     char buf[BUFSIZE];
 
-    sprintf (buf, "F %ld\n", freq); 
+    sprintf (buf, "F %ld\n", freq);
     Send(sockfd, buf);
     Recv(sockfd, buf);
 
@@ -141,7 +141,7 @@ bool SetFreq(int sockfd, long int freq)
     return true;
 }
 
-bool SetModulation(int sockfd, int bandwidth) 
+bool SetModulation(int sockfd, int bandwidth)
 {
     char buf[BUFSIZE];
     //the bandwidth is now a user/system based configurable variable
@@ -256,7 +256,7 @@ int UDPBind (char *hostname, int portno)
     serveraddr.sin_port = htons(portno);
 
     //Bind socket to listening
-    if (bind(sockfd, (struct sockaddr *) &serveraddr,  sizeof(serveraddr)) < 0) { 
+    if (bind(sockfd, (struct sockaddr *) &serveraddr,  sizeof(serveraddr)) < 0) {
 		perror("ERROR on binding UDP Port");
 	}
 
@@ -270,12 +270,12 @@ int UDPBind (char *hostname, int portno)
 }
 
 //going to leave this function available, even if completely switched over to rtl_dev_tune now, may be useful in the future
-void rtl_udp_tune(dsd_opts * opts, dsd_state * state, long int frequency) 
+void rtl_udp_tune(dsd_opts * opts, dsd_state * state, long int frequency)
 {
     UNUSED(state);
 
-    int handle; 
-    unsigned short udp_port = opts->rtl_udp_port; 
+    int handle;
+    unsigned short udp_port = opts->rtl_udp_port;
     char data[5] = {0}; //data buffer size is 5 for UDP frequency tuning
     struct sockaddr_in address;
 
@@ -327,8 +327,8 @@ void udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * 
 int m17_socket_receiver(dsd_opts * opts, void * data)
 {
     size_t err = 0;
-    struct sockaddr_in cliaddr; 
-    socklen_t len = sizeof(cliaddr); 
+    struct sockaddr_in cliaddr;
+    socklen_t len = sizeof(cliaddr);
 
     //receive data from socket
     err = recvfrom(opts->udp_sockfd, data, 1000, 0, (struct sockaddr * ) & address, &len); //was MSG_WAITALL, but that seems to be = 256

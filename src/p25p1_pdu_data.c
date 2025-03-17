@@ -23,7 +23,7 @@ void p25_decode_rsp(uint8_t C, uint8_t T, uint8_t S, char * rsp_string)
     else if (T == 5) sprintf (rsp_string, " NACK (NS/VR Sequence Error);"); //depreciated
     else if (T == 6) sprintf (rsp_string, " NACK (Invalid User on System);");
   }
-  
+
   fprintf (stderr, " Response Packet:%s C: %X; T: %X; S: %X; ", rsp_string, C, T, S);
 
 }
@@ -54,7 +54,7 @@ void p25_decode_sap(uint8_t SAP, char * sap_string)
   else if (SAP == 48) sprintf (sap_string, " Location Service;");
   else if (SAP == 61) sprintf (sap_string, " Trunking Control;");
   else if (SAP == 63) sprintf (sap_string, " Encrypted Trunking Control;");
- 
+
   //catch all for everything else
   else                sprintf (sap_string, " Unknown SAP;");
 
@@ -66,12 +66,12 @@ void lfsr_64_to_128(uint8_t * iv)
 {
   uint64_t lfsr = 0, bit = 0;
 
-  lfsr = ((uint64_t)iv[0] << 56ULL) + ((uint64_t)iv[1] << 48ULL) + ((uint64_t)iv[2] << 40ULL) + ((uint64_t)iv[3] << 32ULL) + 
+  lfsr = ((uint64_t)iv[0] << 56ULL) + ((uint64_t)iv[1] << 48ULL) + ((uint64_t)iv[2] << 40ULL) + ((uint64_t)iv[3] << 32ULL) +
          ((uint64_t)iv[4] << 24ULL) + ((uint64_t)iv[5] << 16ULL) + ((uint64_t)iv[6] << 8ULL)  + ((uint64_t)iv[7] << 0ULL);
 
   uint8_t cnt = 0, x = 64;
 
-  for(cnt = 0;cnt < 64; cnt++) 
+  for(cnt = 0;cnt < 64; cnt++)
   {
     //63,61,45,37,27,14
     // Polynomial is C(x) = x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1
@@ -142,7 +142,7 @@ uint8_t p25_decrypt_pdu(dsd_opts * opts, dsd_state * state, uint8_t * input, uin
     aes_iv[4] = ((mi & 0xFF000000) >> 24);
     aes_iv[5] = ((mi & 0xFF0000) >> 16);
     aes_iv[6] = ((mi & 0xFF00) >> 8);
-    aes_iv[7] = ((mi & 0xFF) >> 0); 
+    aes_iv[7] = ((mi & 0xFF) >> 0);
 
     lfsr_64_to_128(aes_iv);
 
@@ -182,7 +182,7 @@ uint8_t p25_decrypt_pdu(dsd_opts * opts, dsd_state * state, uint8_t * input, uin
 
     //if no key loaded from loader, check state->R for key
     if (des_key == 0) des_key = state->R;
-    
+
     ks_idx = 8;   //offset for OFB discard round
 
     if (des_key)
@@ -204,7 +204,7 @@ uint8_t p25_decrypt_pdu(dsd_opts * opts, dsd_state * state, uint8_t * input, uin
 
     //if no key loaded from loader, check state->R for key
     if (rc4_key == 0) rc4_key = state->R;
-    
+
     ks_idx = 0;   //offset
 
     uint8_t rc4_kiv[13]; memset (rc4_kiv, 0, sizeof(rc4_key));
@@ -214,7 +214,7 @@ uint8_t p25_decrypt_pdu(dsd_opts * opts, dsd_state * state, uint8_t * input, uin
     rc4_kiv[2] = ((rc4_key & 0xFF0000) >> 16);
     rc4_kiv[3] = ((rc4_key & 0xFF00) >> 8);
     rc4_kiv[4] = ((rc4_key & 0xFF) >> 0);
-    
+
     rc4_kiv[5]  = ((mi & 0xFF00000000000000) >> 56);
     rc4_kiv[6]  = ((mi & 0xFF000000000000) >> 48);
     rc4_kiv[7]  = ((mi & 0xFF0000000000) >> 40);
@@ -418,7 +418,7 @@ void p25_decode_pdu_data(dsd_opts * opts, dsd_state * state, uint8_t * input, in
     //test if an offset value set, then take the difference between it and the ptr and and add that to the ptr
     //or perhaps, just assign the ptr to that value + 12?
     if (offset) ptr = 12 + offset;
-    
+
     //now start checking for the actual message
     if (sap == 0 || sap == 4) //User Data or Packet Data (both are UDP typically, same format dmr UDP/IP data)
       decode_ip_pdu (opts, state, len, input+ptr);
@@ -427,7 +427,7 @@ void p25_decode_pdu_data(dsd_opts * opts, dsd_state * state, uint8_t * input, in
       utf8_to_text(state, 0, len-ptr, input+ptr); //TODO, read initial string, i.e., $GPRMC and properly decode
 
     // else //default catch all (debug only)
-    // { 
+    // {
     //   if (len > ptr)
     //     utf8_to_text(state, 0, len-ptr, input+ptr);
     //   else utf8_to_text(state, 0, len, input+ptr);

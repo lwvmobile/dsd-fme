@@ -54,7 +54,7 @@ void lip_protocol_decoder (dsd_opts * opts, dsd_state * state, uint8_t * input)
     lat = 0x800001 - lat;
     sprintf (latstr, "%s", "S");
     lat_sf = -1.0f;
-  } 
+  }
   latitude = ((double)lat * lat_unit);
 
   if (lon_sign)
@@ -62,13 +62,13 @@ void lip_protocol_decoder (dsd_opts * opts, dsd_state * state, uint8_t * input)
     lon = 0x1000001 - lon;
     sprintf (lonstr, "%s", "W");
     lon_sf = -1.0f;
-  } 
+  }
   longitude = ((double)lon * lon_unit);
 
   //6.3.63 Position Error
   //6.3.17 Horizontal velocity
   /*
-    Horizontal velocity shall be encoded for speeds 0 km/h to 28 km/h in 1 km/h steps and 
+    Horizontal velocity shall be encoded for speeds 0 km/h to 28 km/h in 1 km/h steps and
     from 28 km/h onwards using equation: v = C × (1 + x)^(K-A) + B where:
   */
   float v = 0.0f;
@@ -94,7 +94,7 @@ void lip_protocol_decoder (dsd_opts * opts, dsd_state * state, uint8_t * input)
     fprintf (stderr, "Src(Hash); %03d;  Lat: %.5lf%s%s Lon: %.5lf%s%s (%.5lf, %.5lf); Spd: %d km/h; Dir: %d%s",add_hash, latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, lat_sf * latitude, lon_sf * longitude, vt, dt, deg_glyph);
 
     //6.3.63 Position Error
-    uint16_t position_error = 2 * pow(10, pos_err); //2 * 10^pos_err 
+    uint16_t position_error = 2 * pow(10, pos_err); //2 * 10^pos_err
     if (pos_err == 0x7 ) fprintf (stderr, "\n  Position Error: Unknown or Invalid;");
     else fprintf (stderr, "\n  Position Error: Less than %dm;", position_error);
 
@@ -157,7 +157,7 @@ void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint
 {
   int slot = state->currentslot;
 
-  //NOTE: The Only difference between Short (type == 1) and Long Format (type == 2) 
+  //NOTE: The Only difference between Short (type == 1) and Long Format (type == 2)
   //is the utc_ss3 on short vs utc_ss6 and inclusion of COG value on long
 
   //NOTE: MFID Specific Formats are not handled here, unknown, could be added if worked out
@@ -339,7 +339,7 @@ void nmea_harris (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t 
   fprintf (stderr, "\n");
   if (header == 0x2AA4)
     fprintf (stderr, " SRC: %08d;", src);
-  else 
+  else
     fprintf (stderr, " VCH: %d - SRC: %08d;", slot, src);
   fprintf (stderr, " GPS: %f%s, %f%s;", latitude, deg_glyph, longitude, deg_glyph);
 
@@ -412,7 +412,7 @@ void nmea_harris (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t 
   //not including the CRC obviously, unsure of their meaning, could relate
   //to other GPS functions like precision, etc, unknown.
 
-  //NOTE2: All these values are just best effort based on observation and 
+  //NOTE2: All these values are just best effort based on observation and
   //making map points match using logic and distance over time for speed and course
   //without any documentation, any of these values may still be wrong
 
@@ -427,7 +427,7 @@ void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
   uint16_t lat_mmin = 0;
   uint16_t lon_mmin = 0;
 
-  //potentially in this PDU, but unverifiable without documentation or reasonable 
+  //potentially in this PDU, but unverifiable without documentation or reasonable
   //mathematical proof vs map points and direction of travel / distance over time (assuming the radio is facing that direction)
   uint16_t rspeed = (uint16_t)ConvertBitIntoBytes(&input[136], 8); //MSB //136
   rspeed = (rspeed << 8) + (uint16_t)ConvertBitIntoBytes(&input[128], 8); //LSB //128
@@ -463,7 +463,7 @@ void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
   char deg_glyph[4];
   sprintf (deg_glyph, "%s", "°");
 
-  //This appears to be similar to the NMEA GPGGA format (DDmm.mm) but 
+  //This appears to be similar to the NMEA GPGGA format (DDmm.mm) but
   //octets are ordered in least significant to most significant value
   lat_mmin = (uint16_t)ConvertBitIntoBytes(&input[40], 16); //? bits required, but grabbing two octets
   lat_min  = (uint8_t)ConvertBitIntoBytes(&input[58], 6);  //6 bits required to get 60
@@ -472,7 +472,7 @@ void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
 
   lon_mmin = (uint16_t)ConvertBitIntoBytes(&input[72], 16); //? bits required, but grabbing two octets
   lon_min  = (uint8_t)ConvertBitIntoBytes(&input[90], 6);  //6 bits required to get 60
-  lon_deg  = (uint8_t)ConvertBitIntoBytes(&input[96], 8); //8 bits required to get 180 
+  lon_deg  = (uint8_t)ConvertBitIntoBytes(&input[96], 8); //8 bits required to get 180
   lon_sign = input[88]; //88, unsure of a correct location, but on the sample with 0 minutes, this lonely bit was flagged on
 
   int src = 0;
@@ -486,7 +486,7 @@ void harris_gps(dsd_opts * opts, dsd_state * state, int slot, uint8_t * input)
   if (lat_sign)
     lat_dec *= -1.0f;
 
-  if (lon_sign) 
+  if (lon_sign)
     lon_dec *= -1.0f;
 
   //line break
@@ -568,10 +568,10 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   char deg_glyph[4];
   sprintf (deg_glyph, "%s", "°");
 
-  uint32_t lon_sign = lc_bits[23]; 
-  uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[24], 24); 
-  uint32_t lat_sign = lc_bits[48]; 
-  uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[49], 23); 
+  uint32_t lon_sign = lc_bits[23];
+  uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[24], 24);
+  uint32_t lat_sign = lc_bits[48];
+  uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[49], 23);
   double lon_sf = 1.0f; //float value we can multiple longitude with
   double lat_sf = 1.0f; //float value we can multiple latitude with
 
@@ -586,8 +586,8 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   //run calculations and print
   //7.2.16 and 7.2.17 (two's compliment)
 
-  double latitude = 0;  
-  double longitude = 0; 
+  double latitude = 0;
+  double longitude = 0;
 
   if (pf) fprintf (stderr, " Protected");
   else
@@ -597,7 +597,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
       lat = 0x800001 - lat;
       sprintf (latstr, "%s", "S");
       lat_sf = -1.0f;
-    } 
+    }
     latitude = ((double)lat * lat_unit);
 
     if (lon_sign)
@@ -605,7 +605,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
       lon = 0x1000001 - lon;
       sprintf (lonstr, "%s", "W");
       lon_sf = -1.0f;
-    } 
+    }
     longitude = ((double)lon * lon_unit);
 
     //sanity check
@@ -614,7 +614,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
       fprintf (stderr, " Lat: %.5lf%s%s Lon: %.5lf%s%s (%.5lf, %.5lf)", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, lat_sf * latitude, lon_sf * longitude);
 
       //7.2.15 Position Error
-      uint16_t position_error = 2 * pow(10, pos_err); //2 * 10^pos_err 
+      uint16_t position_error = 2 * pow(10, pos_err); //2 * 10^pos_err
       if (pos_err == 0x7 ) fprintf (stderr, "\n  Position Error: Unknown or Invalid");
       else fprintf (stderr, "\n  Position Error: Less than %dm", position_error);
 
@@ -656,7 +656,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   fprintf (stderr, "%s", KNRM);
 }
 
-//This Function needs testing, is tested working for NW and NE lat and 
+//This Function needs testing, is tested working for NW and NE lat and
 //long coordinates, but not for SE and SW coordinates
 void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 {
@@ -672,11 +672,11 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   char deg_glyph[4];
   sprintf (deg_glyph, "%s", "°");
 
-  uint32_t lon_sign = lc_bits[48]; 
-  uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[49], 23); 
+  uint32_t lon_sign = lc_bits[48];
+  uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[49], 23);
   uint32_t lat_sign = lc_bits[24];
-  uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[25], 23); 
-  
+  uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[25], 23);
+
   double lat_unit = 90.0f / 0x7FFFFF;
   double lon_unit = 180.0f / 0x7FFFFF;
 
@@ -687,8 +687,8 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   sprintf (lonstr, "%s", "E");
   sprintf (valid, "%s", "Current Fix");
 
-  double latitude = 0;  
-  double longitude = 0; 
+  double latitude = 0;
+  double longitude = 0;
 
   if (pf) fprintf (stderr, " Protected");
   else
@@ -700,7 +700,7 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
       latitude -= 90.0f;
       sprintf (latstr, "%s", "S");
     }
-    
+
     longitude = ((double)lon * lon_unit);
     if (lon_sign)
     {
@@ -780,7 +780,7 @@ void decode_cellocator(dsd_opts * opts, dsd_state * state, uint8_t * input, int 
   UNUSED(input);
   UNUSED(len);
 
-  //UTF8 Text: MCGP (0x4D434750) followed by data values 
+  //UTF8 Text: MCGP (0x4D434750) followed by data values
   //(0417D1050000F45FD1DD00010000000097BDD56C81000009AAAABF12864C)
   utf8_to_text(state, 0, 4, input);
 

@@ -149,7 +149,7 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
             ambe_d[j] ^= x;
           }
         }
-        
+
         //ambe+2
         if (state->mbe_file_type == 1) mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
         //dstar ambe
@@ -244,7 +244,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
   //end set playback mode for this frame
 
-  if ((state->synctype == 0) || (state->synctype == 1)) 
+  if ((state->synctype == 0) || (state->synctype == 1))
   {
     //  0 +P25p1
     //  1 -P25p1
@@ -283,7 +283,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           state->octet_counter = 11+8; //start on 19 for DES-OFB (8 discard + 8 LC + 3 reserved)
         else if (state->payload_algid == 0x9F)
           state->octet_counter = 11; //11 with info from LFSR run values (no discard)
-        else 
+        else
           state->octet_counter = 11+16; //start on 27 for AES (16 discard + 8 LC + 3 reserved)
         memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
 
@@ -294,7 +294,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           des_multi_keystream_output (state->payload_miP, state->R, state->ks_octetL, 1, 28);
         if (state->payload_algid == 0x83) //3DES, or TDEA
           tdea_multi_keystream_output (state->payload_miP, aes_key, state->ks_octetL, 1, 28);
-        if (state->payload_algid == 0x9F) //DES-XL 
+        if (state->payload_algid == 0x9F) //DES-XL
           des_multi_keystream_output (state->payload_miP, state->R, state->ks_octetL, 2, state->xl_is_hdu); //hard coded bit count value, xl_is_hdu determines lfsr run values
         if (state->payload_algid == 0x84) //AES256
           aes_ofb_keystream_output (state->aes_iv, aes_key, state->ks_octetL, 2, 14); //14 + 1 discard round
@@ -334,7 +334,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         }
 
       }
-      
+
     }
 
     //P25p1 RC4 Handling
@@ -485,7 +485,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     }
 
     //NXDN Generic Cipher 2 and Cipher 3 Keystream Application (to be tested)
-    else if ( (state->nxdn_cipher_type == 0x02 && state->R != 0) || 
+    else if ( (state->nxdn_cipher_type == 0x02 && state->R != 0) ||
               (state->nxdn_cipher_type == 0x03 && state->aes_key_loaded[0] == 1) )
     {
 
@@ -508,7 +508,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
 				//reset flag to 0
 				state->nxdn_new_iv = 0;
-				
+
 			}
 
       //untested, but same setup as DES, so it 'SHOULD' work...maybe
@@ -531,7 +531,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
 				//reset flag to 0
 				state->nxdn_new_iv = 0;
-				
+
 			}
 
       //sanity check, don't exceed bit application counter
@@ -595,7 +595,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         //debug -- print 48-bit expanded key value
         // fprintf (stderr, "K: %012llX", k);
 
-        for (int j = 0; j < 48; j++) 
+        for (int j = 0; j < 48; j++)
         {
           x = ( ((k << j) & 0x800000000000) >> 47 ) & 1;
           ambe_d[j] ^= x;
@@ -625,12 +625,12 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       {
         //see if we need to hash a value larger than 16-bits
         hash = state->lasttg & 0xFFFFFF;
-        // fprintf (stderr, "TG: %lld Hash: %ld ", state->lasttg, hash); 
+        // fprintf (stderr, "TG: %lld Hash: %ld ", state->lasttg, hash);
         if (hash > 0xFFFF) //if greater than 16-bits
         {
           for (int i = 0; i < 24; i++)
           {
-            hash_bits[i] = ((hash << i) & 0x800000) >> 23; //load into array for CRC16 
+            hash_bits[i] = ((hash << i) & 0x800000) >> 23; //load into array for CRC16
           }
           hash = ComputeCrcCCITT16d (hash_bits, 24);
           hash = hash & 0xFFFF; //make sure its no larger than 16-bits
@@ -916,7 +916,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
       }
 
-      mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, 
+      mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
         ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
 
@@ -967,7 +967,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         //debug -- print 48-bit expanded key value
         fprintf (stderr, "K: %012llX", k);
 
-        for (int j = 0; j < 48; j++) 
+        for (int j = 0; j < 48; j++)
         {
           x = ( ((k << j) & 0x800000000000) >> 47 ) & 1;
           ambe_d[j] ^= x;
@@ -995,13 +995,13 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       if (state->M == 0 && state->payload_algidR == 0)
       {
         //see if we need to hash a value larger than 16-bits
-        hash = state->lasttgR & 0xFFFFFF; 
+        hash = state->lasttgR & 0xFFFFFF;
         // fprintf (stderr, "TG: %lld Hash: %ld ", state->lasttgR, hash);
         if (hash > 0xFFFF) //if greater than 16-bits
         {
           for (int i = 0; i < 24; i++)
           {
-            hash_bits[i] = ((hash << i) & 0x800000) >> 23; //load into array for CRC16 
+            hash_bits[i] = ((hash << i) & 0x800000) >> 23; //load into array for CRC16
           }
           hash = ComputeCrcCCITT16d (hash_bits, 24);
           hash = hash & 0xFFFF; //make sure its no larger than 16-bits
@@ -1286,7 +1286,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
       }
 
-      mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR, 
+      mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
         ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);
 
       //old method for this step below
@@ -1360,25 +1360,25 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->dmr_encL = 1;
         opts->unmute_encrypted_p25 = 0;
         opts->dmr_mute_encL = 1;
-      } 
+      }
       else
       {
         state->dmr_encL = 0;
         opts->unmute_encrypted_p25 = 1;
         opts->dmr_mute_encL = 0;
-      } 
+      }
     }
     //end reverse mute test
 
     //OSS 48k/1 Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
-    if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && (state->dmrburstR == 16 || state->dmrburstR == 21) ) 
+    if (opts->slot_preference == 1 && opts->audio_out_type == 5 && opts->audio_out == 1 && (state->dmrburstR == 16 || state->dmrburstR == 21) )
     {
       opts->audio_out = 0;
       preempt = 1;
-      if (opts->payload == 0 && opts->slot1_on == 1) 
-        fprintf (stderr, " *MUTED*"); 
-      else if (opts->payload == 0 && opts->slot1_on == 0) 
-        fprintf (stderr, " *OFF*"); 
+      if (opts->payload == 0 && opts->slot1_on == 1)
+        fprintf (stderr, " *MUTED*");
+      else if (opts->payload == 0 && opts->slot1_on == 0)
+        fprintf (stderr, " *OFF*");
     }
 
     state->debug_audio_errors += state->errs2;
@@ -1394,15 +1394,15 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       }
       if (opts->audio_out == 1 && opts->floating_point == 0 && opts->audio_out_type == 5 && opts->slot1_on == 1) //for OSS 48k 1 channel configs -- relocate later if possible
       {
-        playSynthesizedVoiceMS (opts, state); //it may be more beneficial to move this to each individual decoding type to handle, but ultimately, let's just simpifly mbe handling instead 
+        playSynthesizedVoiceMS (opts, state); //it may be more beneficial to move this to each individual decoding type to handle, but ultimately, let's just simpifly mbe handling instead
       }
     }
 
-    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l)); //these are for mono or FDMA where we don't need to buffer and wait for a stereo mix 
+    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l)); //these are for mono or FDMA where we don't need to buffer and wait for a stereo mix
 
   }
 
-  if (opts->dmr_stereo == 1 && state->currentslot == 1) 
+  if (opts->dmr_stereo == 1 && state->currentslot == 1)
   {
     enc_bit = (state->dmr_soR >> 6) & 0x1;
     if (enc_bit == 0x1)
@@ -1437,24 +1437,24 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->dmr_encR = 1;
         opts->unmute_encrypted_p25 = 0;
         opts->dmr_mute_encR = 1;
-      } 
+      }
       else
       {
         state->dmr_encR = 0;
         opts->unmute_encrypted_p25 = 1;
         opts->dmr_mute_encR = 0;
-      } 
+      }
     }
     //end reverse mute test
 
     //OSS 48k/1 Specific Voice Preemption if dual voices on TDMA and one slot has preference over the other
-    if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && (state->dmrburstL == 16 || state->dmrburstL == 21) ) 
+    if (opts->slot_preference == 0 && opts->audio_out_type == 5 && opts->audio_out == 1 && (state->dmrburstL == 16 || state->dmrburstL == 21) )
     {
       opts->audio_out = 0;
       preempt = 1;
-      if (opts->payload == 0 && opts->slot2_on == 1) 
-        fprintf (stderr, " *MUTED*"); 
-      else if (opts->payload == 0 && opts->slot2_on == 0) 
+      if (opts->payload == 0 && opts->slot2_on == 1)
+        fprintf (stderr, " *MUTED*");
+      else if (opts->payload == 0 && opts->slot2_on == 0)
         fprintf (stderr, " *OFF*");
     }
 
@@ -1524,7 +1524,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   if (preempt == 1)
   {
     opts->audio_out = 1;
-    preempt = 0; 
+    preempt = 0;
   }
 
   //reset audio out flag for next repitition --disabled for now

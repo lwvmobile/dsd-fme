@@ -2,8 +2,8 @@
  * dsd_upsample.c
  * Simplified 8k to 48k Upsample Functions
  * Goodbye terrible ringing sound
- * 
- * 
+ *
+ *
  *
  * LWVMOBILE
  * 2024-03 DSD-FME Florida Man Edition

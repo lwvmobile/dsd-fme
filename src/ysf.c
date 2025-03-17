@@ -32,41 +32,41 @@ uint8_t fr_interleave[144] = {
 uint8_t pn95[512] =
 {
   1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1,
-  0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 
-  1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 
-  0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 
-  1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 
-  1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 
-  1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 
-  0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 
-  1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 
-  0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 
-  1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 
-  0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 
-  0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 
-  0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 
-  1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 
-  0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 
-  0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 
-  1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 
-  0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 
-  0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 
-  0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 
-  0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 
-  1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 
-  1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 
-  0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 
-  0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 
-  1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 
-  1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 
-  1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 
-  0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 
-  0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 
+  0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1,
+  1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1,
+  0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0,
+  1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1,
+  1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1,
+  0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0,
+  1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0,
+  0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0,
+  1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0,
+  0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0,
+  0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0,
+  0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1,
+  1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1,
+  0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1,
+  0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0,
+  1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0,
+  0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1,
+  0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1,
+  0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1,
+  0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0,
+  1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1,
+  1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0,
+  0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
+  0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1,
+  1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0,
+  1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0,
+  1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1,
+  0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1,
+  0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1,
   0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1
 };
 
 //half-rate (from NXDN)
-const int YnW[36] = 
+const int YnW[36] =
 { 0, 1, 0, 1, 0, 1,
   0, 1, 0, 1, 0, 1,
   0, 1, 0, 1, 0, 1,
@@ -75,7 +75,7 @@ const int YnW[36] =
   0, 2, 0, 2, 0, 2
 };
 
-const int YnX[36] = 
+const int YnX[36] =
 { 23, 10, 22, 9, 21, 8,
   20, 7, 19, 6, 18, 5,
   17, 4, 16, 3, 15, 2,
@@ -84,7 +84,7 @@ const int YnX[36] =
   8, 6, 7, 5, 6, 4
 };
 
-const int YnY[36] = 
+const int YnY[36] =
 { 0, 2, 0, 2, 0, 2,
   0, 2, 0, 3, 0, 3,
   1, 3, 1, 3, 1, 3,
@@ -93,7 +93,7 @@ const int YnY[36] =
   1, 3, 1, 3, 1, 3
 };
 
-const int YnZ[36] = 
+const int YnZ[36] =
 { 5, 3, 4, 2, 3, 1,
   2, 0, 1, 13, 0, 12,
   22, 11, 21, 10, 20, 9,
@@ -199,7 +199,7 @@ void ysf_dch_decode (dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint
       string2[10] = '\0';
       fprintf (stderr, "D/L: ");
       fprintf (stderr, "%s ", string2);
-      
+
       //Copy both to Ncurses Call String
       memcpy (state->ysf_upl, dch_bytes, 10);
       state->ysf_upl[10] = '\0';
@@ -221,8 +221,8 @@ void ysf_dch_decode (dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint
       //copy text to txt storage -- works now (had to expand storage space), but is cumbersome in ncurses (too long)
       // if (fn < 20)
       // {
-      //   //switch to checking each byte for a 'nice' ASCII character and 
-      //   //not a 'naughty' del/rem/break/garbled non ASCII/ALPHANUMERIC type character  
+      //   //switch to checking each byte for a 'nice' ASCII character and
+      //   //not a 'naughty' del/rem/break/garbled non ASCII/ALPHANUMERIC type character
       //   for (i = 0; i < 20; i++)
       //   {
       //     C = dch_bytes[i]; //skipping 0x20 space key
@@ -230,9 +230,9 @@ void ysf_dch_decode (dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint
       //     else state->ysf_txt[fn][i] = 0; //NULL
       //   }
       // }
-        
+
       break;
-      
+
     default:
       break;
 
@@ -280,7 +280,7 @@ void ysf_dch_decode2 (dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uin
 
       memcpy (state->ysf_tgt, dch_bytes, 10);
       state->ysf_tgt[10] = '\0';
-      
+
 
       break;
     case 1:
@@ -322,7 +322,7 @@ void ysf_dch_decode2 (dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uin
       rem1[5] = '\0';
       fprintf (stderr, "RM1: ");
       fprintf (stderr, "%s ", rem1);
-      
+
       memcpy (rem2, dch_bytes+5, 5);
       rem2[5] = '\0';
       fprintf (stderr, "RM2: ");
@@ -341,7 +341,7 @@ void ysf_dch_decode2 (dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uin
       rem1[5] = '\0';
       fprintf (stderr, "RM3: ");
       fprintf (stderr, "%s ", rem1);
-      
+
       memcpy (rem2, dch_bytes+5, 5);
       rem2[5] = '\0';
       fprintf (stderr, "RM4: ");
@@ -364,7 +364,7 @@ static inline uint16_t crc16ysf(const uint8_t buf[], int len)
 {
   uint32_t poly = (1<<12) + (1<<5) + (1<<0);
   uint32_t crc = 0;
-  for(int i=0; i<len; i++) 
+  for(int i=0; i<len; i++)
   {
     uint8_t bit = buf[i] & 1;
     crc = ((crc << 1) | bit) & 0x1ffff;
@@ -423,7 +423,7 @@ int ysf_conv_dch2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, u
   CNXDNConvolution_chainback(m_data, 96);
 
   //96/8 = 12, last 4 (96-100) are trailing zeroes
-  for(i = 0; i < 12; i++) 
+  for(i = 0; i < 12; i++)
   {
     trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
     trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
@@ -461,7 +461,7 @@ int ysf_conv_dch2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, u
     fprintf (stderr, "\n ");
     fprintf (stderr, "DCH2: ");
     for (i = 0; i < 12; i++)
-      fprintf (stderr, "[%02X]", m_data[i]); 
+      fprintf (stderr, "[%02X]", m_data[i]);
 
   }
 
@@ -487,7 +487,7 @@ int ysf_conv_dch (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, ui
   uint8_t buf[180];
   memset (buf, 0, sizeof(buf));
   for (i=0; i<20; i++) { //20*9 = 180
-    for (j=0; j<9; j++) { 
+    for (j=0; j<9; j++) {
       buf[j+(i*9)] = input[i+(j*20)];
     }
   }
@@ -516,7 +516,7 @@ int ysf_conv_dch (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, ui
   CNXDNConvolution_chainback(m_data, 176);
 
   //176/8 = 22, last 4 (176-180) are trailing zeroes
-  for(i = 0; i < 22; i++) 
+  for(i = 0; i < 22; i++)
   {
     trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
     trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
@@ -554,7 +554,7 @@ int ysf_conv_dch (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, ui
     fprintf (stderr, "\n ");
     fprintf (stderr, "DCH1: ");
     for (i = 0; i < 22; i++)
-      fprintf (stderr, "[%02X]", m_data[i]); 
+      fprintf (stderr, "[%02X]", m_data[i]);
 
   }
 
@@ -609,7 +609,7 @@ int ysf_conv_fich (uint8_t input[], uint8_t dest[32])
   CNXDNConvolution_chainback(m_data, 96);
 
   //96/8 = 12, last 4 (96-100) are trailing zeroes
-  for(i = 0; i < 12; i++) 
+  for(i = 0; i < 12; i++)
   {
     trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
     trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
@@ -661,7 +661,7 @@ int ysf_conv_fich (uint8_t input[], uint8_t dest[32])
 	return err;
 }
 
-//YSF pn95 scrambler/whitening bit generator with seed 111001001 
+//YSF pn95 scrambler/whitening bit generator with seed 111001001
 void pn95_lfsr() //test to see if this generates the correct bits now
 {
   int i;
@@ -719,7 +719,7 @@ void ysf_ehr (dsd_opts * opts, dsd_state * state, uint8_t dbuf[180], int start, 
       //should all be loaded back to back
       ambe_fr[*w][*x] = (char)b1;
       ambe_fr[*y][*z] = (char)b2;
-  
+
       w++;
       x++;
       y++;
@@ -747,7 +747,7 @@ void ysf_ehr (dsd_opts * opts, dsd_state * state, uint8_t dbuf[180], int start, 
     {
 
       memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
-      
+
       if (opts->pulse_digi_out_channels == 1)
         playSynthesizedVoiceFM(opts, state);
 
@@ -756,12 +756,12 @@ void ysf_ehr (dsd_opts * opts, dsd_state * state, uint8_t dbuf[180], int start, 
     }
 
   }
-  
+
   if (opts->payload == 1)
   {
     fprintf(stderr, "\n");
   }
-  
+
   state->synctype = st;
 }
 
@@ -857,7 +857,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
   if (vp == 0) fprintf (stderr, "-Simplex ");
   if (vp == 1) fprintf (stderr, "Repeater ");
 
-  //disabling below lines, seems mostly redundant, 
+  //disabling below lines, seems mostly redundant,
   //any Simplex is Direct Wave, and if its VoIP, then the Uplink is always busy (I think)
 
   // if (mr == 0) fprintf (stderr, "(Direct Wave) ");
@@ -892,7 +892,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
   {
     fprintf (stderr, " FICH: ");
     for (int i = 0; i < 4; i++)
-      fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&fich_decode[i*8], 8)); 
+      fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&fich_decode[i*8], 8));
   }
 
   // if (fi == 0) fprintf (stderr, "%s", KGRN); //HC Channel
@@ -948,7 +948,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
     ysf_conv_dch (opts, state, bn, bt, fn, ft, cm, dbuf);
 
   }
-  
+
 
   /*
     In the case of V/D mode type 2, error correction for the purpose of improving the connectivity
@@ -963,7 +963,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
     for (i = 0; i < 5; i++)
     {
       //DCH
-      for (j = 0; j < 20; j++) 
+      for (j = 0; j < 20; j++)
         dbuf[d++] = getDibit(opts, state);
 
       //VeCH
@@ -1006,9 +1006,9 @@ void processYSF(dsd_opts * opts, dsd_state * state)
 
       for (j = 0; j < 22; j++)
         temp[j+27] = vech_bits[j+81];
-      
+
       for (j = 0; j < 49; j++)
-        ambe_d[j] = temp[j]; //(char) 
+        ambe_d[j] = temp[j]; //(char)
 
       state->errs2 = vech_bits[103]; //should be zero, but if it isn't, then its an error
 
@@ -1032,7 +1032,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
         if(opts->pulse_digi_out_channels == 2)
           playSynthesizedVoiceSS(opts, state);
       }
-      
+
       if (opts->floating_point == 1)
       {
         memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
@@ -1050,7 +1050,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
     ysf_conv_dch2 (opts, state, bn, bt, fn, ft, cm, dbuf);
 
   }
-  
+
   //Full-Rate AMBE+2 EFR (Works with IMBE decoder)
   uint8_t imbe_vch[144];
   memset (imbe_vch, 0, sizeof(imbe_vch));
@@ -1091,12 +1091,12 @@ void processYSF(dsd_opts * opts, dsd_state * state)
         if (dstart != 5) //only want the first 5
           dbuf[(dstart*36)+j] = getDibit(opts, state);
         else skipDibit(opts, state, 1); //skip the reserved bank
-      } 
+      }
     }
 
     for (; vstart < vstop; vstart++)
     {
-      
+
       //init a bunch of stuff
       memset (imbe_raw, 0, sizeof(imbe_raw));
       memset (imbe_fr, 0, sizeof(imbe_fr));
@@ -1152,7 +1152,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
         if(opts->pulse_digi_out_channels == 2)
           playSynthesizedVoiceSS(opts, state);
       }
-      
+
       if (opts->floating_point == 1) //float audio is really quiet now (look into it)
       {
 
@@ -1197,7 +1197,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
       else ysf_conv_dch (opts, state, 2, bt, fn*2+i, ft, cm, dbufFR[i]);
 
     }
-    
+
   }
 
   //ending line break

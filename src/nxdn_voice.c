@@ -79,9 +79,9 @@ void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182
     {
 
       //skip 8 lich and 30 sacch dibits already in buffer plus 36 times start position
-      ambe_fr[*w][*x] = dbuf[i+38+start*36] >> 1; 
-      ambe_fr[*y][*z] = dbuf[i+38+start*36] & 1; 
-  
+      ambe_fr[*w][*x] = dbuf[i+38+start*36] >> 1;
+      ambe_fr[*y][*z] = dbuf[i+38+start*36] & 1;
+
       w++;
       x++;
       y++;
@@ -91,17 +91,17 @@ void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
 
     memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
-    
+
     if (opts->floating_point == 0 )
       playSynthesizedVoiceMS(opts, state);
     if (opts->floating_point == 1)
       playSynthesizedVoiceFM(opts, state);
   }
-  
+
   if (opts->payload == 1)
   {
     fprintf(stderr, "\n");
   }
-  
+
 
 }

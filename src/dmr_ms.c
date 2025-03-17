@@ -35,7 +35,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   memset (emb_pdu, 0, sizeof(emb_pdu));
 
   //cach
-  char cachdata[25]; 
+  char cachdata[25];
 
   //cach tact bits
   uint8_t tact_bits[7];
@@ -65,7 +65,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   //Note: Manual dibit inversion required here since I didn't seperate inverted return from normal return in framesync,
   //so getDibit doesn't know to invert it before it gets here
 
-  for (j = 0; j < 6; j++) { 
+  for (j = 0; j < 6; j++) {
   state->dmrburstL = 16;
 
   memset (ambe_fr, 0, sizeof(ambe_fr));
@@ -167,7 +167,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   for(i = 0; i < 8; i++) emb_pdu[i + 0] = syncdata[i];
   for(i = 0; i < 8; i++) emb_pdu[i + 8] = syncdata[i + 40];
-  
+
   emb_ok = -1;
   if(QR_16_7_6_decode(emb_pdu))
   {
@@ -237,8 +237,8 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   memcpy (ambe_fr4, ambe_fr2, sizeof(ambe_fr2));
 
-  //copy ambe_fr frames first, running process mbe will correct them, 
-  //but this also leads to issues extracting good le mi values when 
+  //copy ambe_fr frames first, running process mbe will correct them,
+  //but this also leads to issues extracting good le mi values when
   //we go to do correction on them there too
   memcpy (m1, ambe_fr, sizeof(m1));
   memcpy (m2, ambe_fr2, sizeof(m2));
@@ -265,7 +265,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
       playSynthesizedVoiceSS3(opts, state);
   }
 
-  if (opts->floating_point == 1) 
+  if (opts->floating_point == 1)
   {
     // memcpy (state->f_r4, state->f_l4, sizeof(state->f_l4));
     if(opts->pulse_digi_out_channels == 2)
@@ -277,7 +277,7 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
     dmr_data_burst_handler(opts, state, (uint8_t *)dummy_bits, 0xEB);
     //check the single burst/reverse channel opportunity
     dmr_sbrc (opts, state, power);
-    
+
     fprintf (stderr, "\n");
     dmr_alg_refresh (opts, state);
   }
@@ -292,14 +292,14 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   state->last_vc_sync_time = time(NULL);
 
   vc++;
-  
+
   //reset emb components
   cc = 25;
   power = 9; //power and pre-emption indicator
   lcss = 9;
 
   //this is necessary because we need to skip and collect dibits, not just skip them
-  if (vc > 6) goto END; 
+  if (vc > 6) goto END;
 
   skipDibit (opts, state, 144); //skip to next tdma channel
 
@@ -365,10 +365,10 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   const int *w, *x, *y, *z;
 
   //cach
-  char cachdata[25]; 
+  char cachdata[25];
   UNUSED(cachdata);
 
-  state->dmrburstL = 16; 
+  state->dmrburstL = 16;
   state->currentslot = 0; //force to slot 0
 
   dibit_p = state->dmr_payload_p - 90;
@@ -520,8 +520,8 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 
   memcpy (ambe_fr4, ambe_fr2, sizeof(ambe_fr2));
 
-  //copy ambe_fr frames first, running process mbe will correct them, 
-  //but this also leads to issues extracting good le mi values when 
+  //copy ambe_fr frames first, running process mbe will correct them,
+  //but this also leads to issues extracting good le mi values when
   //we go to do correction on them there too
   memcpy (m1, ambe_fr, sizeof(m1));
   memcpy (m2, ambe_fr2, sizeof(m2));
@@ -548,7 +548,7 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
       playSynthesizedVoiceSS3(opts, state);
   }
 
-  if (opts->floating_point == 1) 
+  if (opts->floating_point == 1)
   {
     // memcpy (state->f_r4, state->f_l4, sizeof(state->f_l4));
     if(opts->pulse_digi_out_channels == 2)

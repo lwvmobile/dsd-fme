@@ -596,7 +596,7 @@ typedef struct
   unsigned long long int K4;
   int M;
   int menuopen;
-  
+
   //AES Key Segments
   unsigned long long int A1[2];
   unsigned long long int A2[2];
@@ -744,7 +744,7 @@ typedef struct
 
   //NXDN DES and AES, signal new VCALL_IV and new IV
   uint8_t nxdn_new_iv; //1 when a new IV comes in, else 0
-  
+
   short int dmr_encL;
   short int dmr_encR;
 

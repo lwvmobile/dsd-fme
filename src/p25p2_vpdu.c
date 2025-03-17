@@ -13,7 +13,7 @@ static const uint8_t mac_msg_len[256] = {
 	 0,  7,  8,  7,  0, 16,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //0F
 	 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //1F
 	 0, 14, 15,  0,  0, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //2F
-	 5,  7,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //3F 
+	 5,  7,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //3F
 	 9,  7,  9,  0,  9,  8,  9,  0, 10, 10,  9,  0, 10,  0,  0,  0, //4F
 	 0,  0,  0,  0,  9,  7,  0,  0, 10,  0,  7,  0, 10,  8, 14,  7, //5F //reverted previous changes here
 	 9,  9,  0,  0,  9,  0,  0,  9, 10,  0,  7, 10, 10,  7,  0,  9, //6F
@@ -23,7 +23,7 @@ static const uint8_t mac_msg_len[256] = {
 	16,  0,  0, 11, 13, 11, 11, 11, 10,  0,  0,  0,  0,  0,  0,  0, //AF
 	17,  0,  0,  0,  0,  5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //BF, B0 was 0, set to 17 (Harris again), B5 Tait 0, set to 5
 	11,  0,  0,  8, 15, 12, 15, 32, 12, 12,  0, 27, 14, 29, 29, 32, //CF
-	 0,  0,  0,  0,  0,  0,  9,  0, 14, 29, 11, 27, 14,  0, 40, 11, //DF 
+	 0,  0,  0,  0,  0,  0,  9,  0, 14, 29, 11, 27, 14,  0, 40, 11, //DF
 	28,  0,  0, 14, 17, 14,  0,  0, 16,  8, 11,  0, 13, 19,  0,  0, //EF
 	 0,  0, 16, 14,  0,  0, 12,  0, 22,  0, 11, 13, 11,  0, 15,  0 }; //FF
 
@@ -42,8 +42,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 	//b values - 0 = Unique TDMA Message,  1 Phase 1 OSP/ISP abbreviated
 	// 2 = Manufacturer Message, 3 Phase 1 OSP/ISP extended/explicit
 
-	int len_a = 0; 
-	int len_b = mac_msg_len[MAC[1]]; 
+	int len_a = 0;
+	int len_b = mac_msg_len[MAC[1]];
 	int len_c = 0;
 
 	//sanity check
@@ -70,7 +70,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		//TEMP: assume LCH 0 is the SIGNAL slot, fix for blinking SIGNAL on Slot 2 during inverted slot
 		if (type == 0 && slot == 0) state->dmrburstL = 30;
 		if (type == 1 && slot == 0) state->dmrburstL = 30;
-		// if (type == 0 && slot == 1) state->dmrburstR = 30; 
+		// if (type == 0 && slot == 1) state->dmrburstR = 30;
 		// if (type == 1 && slot == 1) state->dmrburstR = 30;
 
 		//Temp Fix: Disable Slot Playback when MAC_SIGNAL present (good CRC),
@@ -84,7 +84,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 	}
 
 
-	if (len_b == 0 || len_b > 18) 
+	if (len_b == 0 || len_b > 18)
 	{
 		goto END_PDU;
 	}
@@ -97,7 +97,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 	//comparison below will look for an 'A' to write to mode if it is allowed
 	if (opts->trunk_use_allow_list == 1) sprintf (mode, "%s", "B");
 
-	for (int i = 0; i < 2; i++) 
+	for (int i = 0; i < 2; i++)
 	{
 
 		//MFID90 Voice Grants, A3, A4, and A5 <--I bet A4 here was triggering a phantom call when TSBK sent PDUs here
@@ -167,7 +167,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 						}
 					}
-					
+
 					//rigctl
 					if (opts->use_rigctl == 1)
 					{
@@ -187,7 +187,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						state->last_vc_sync_time = time(NULL);
 						#endif
 					}
-				}    
+				}
 			}
 			//if playing back files, and we still want to see what freqs are in use in the ncurses terminal
 			//might only want to do these on a grant update, and not a grant by itself?
@@ -197,7 +197,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
 				//P2 TDMA
 				else state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
-			}	
+			}
 		}
 
 		//MFID90 Group Regroup Channel Grant - Explicit
@@ -267,7 +267,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 						}
 					}
-					
+
 					if (opts->use_rigctl == 1)
 					{
 						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
@@ -286,7 +286,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						state->last_vc_sync_time = time(NULL);
 						#endif
 					}
-				}    
+				}
 			}
 			//if playing back files, and we still want to see what freqs are in use in the ncurses terminal
 			//might only want to do these on a grant update, and not a grant by itself?
@@ -337,7 +337,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			else loop = 2;
 			//assigned inside loop
 			long int tunable_freq = 0;
-			int tunable_chan = 0; 
+			int tunable_chan = 0;
 			int tunable_group = 0;
 
 			for (int j = 0; j < loop; j++)
@@ -349,7 +349,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					tunable_chan = channel1;
 					tunable_group = group1;
 				}
-				else 
+				else
 				{
 					tunable_freq = freq2;
 					tunable_chan = channel2;
@@ -414,7 +414,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
 							state->last_vc_sync_time = time(NULL);
 							j = 8; //break loop
-							
+
 						}
 						//rtl
 						else if (opts->audio_in_type == 3)
@@ -427,7 +427,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							j = 8; //break loop
 							#endif
 						}
-					}    
+					}
 				}
 				//if playing back files, and we still want to see what freqs are in use in the ncurses terminal
 				//might only want to do these on a grant update, and not a grant by itself?
@@ -535,7 +535,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
 						SetFreq(opts->rigctl_sockfd, freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
-						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
 						state->last_vc_sync_time = time(NULL);
 					}
 					//rtl
@@ -548,7 +548,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						state->last_vc_sync_time = time(NULL);
 						#endif
 					}
-				}    
+				}
 			}
 			//if playing back files, and we still want to see what freqs are in use in the ncurses terminal
 			//might only want to do these on a grant update, and not a grant by itself?
@@ -606,7 +606,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			state->last_active_time = time(NULL);
 
 			//Skip tuning private calls if private calls is disabled (are telephone int calls private, or talkgroup?)
-			if (opts->trunk_tune_private_calls == 0) goto SKIPCALL; 
+			if (opts->trunk_tune_private_calls == 0) goto SKIPCALL;
 
 			//Skip tuning encrypted calls if enc calls are disabled
 			if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
@@ -667,7 +667,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						SetFreq(opts->rigctl_sockfd, freq);
 						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
-						state->last_vc_sync_time = time(NULL); 
+						state->last_vc_sync_time = time(NULL);
 					}
 					//rtl
 					else if (opts->audio_in_type == 3)
@@ -679,7 +679,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						state->last_vc_sync_time = time(NULL);
 						#endif
 					}
-				}    
+				}
 			}
 			if (opts->p25_trunk == 0)
 			{
@@ -727,7 +727,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			state->last_active_time = time(NULL);
 
 			//Skip tuning private calls if private calls is disabled
-			if (opts->trunk_tune_private_calls == 0) goto SKIPCALL; 
+			if (opts->trunk_tune_private_calls == 0) goto SKIPCALL;
 
 			//Skip tuning encrypted calls if enc calls are disabled -- abb formats do not carry svc bits :(
 			// if (opts->trunk_tune_enc_calls == 0) goto SKIPCALL; //enable, or disable?
@@ -788,7 +788,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						SetFreq(opts->rigctl_sockfd, freq);
 						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
-						state->last_vc_sync_time = time(NULL); 
+						state->last_vc_sync_time = time(NULL);
 					}
 					//rtl
 					else if (opts->audio_in_type == 3)
@@ -800,7 +800,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						state->last_vc_sync_time = time(NULL);
 						#endif
 					}
-				}    
+				}
 			}
 			if (opts->p25_trunk == 0)
 			{
@@ -875,7 +875,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			else loop = 2;
 			//assigned inside loop
 			long int tunable_freq = 0;
-			int tunable_chan = 0; 
+			int tunable_chan = 0;
 			int tunable_group = 0;
 
 			for (int j = 0; j < loop; j++)
@@ -897,7 +897,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					tunable_chan = channelt1;
 					tunable_group = group1;
 				}
-				else 
+				else
 				{
 					tunable_freq = freq2t;
 					tunable_chan = channelt2;
@@ -950,7 +950,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 							}
 						}
-						
+
 						if (opts->use_rigctl == 1)
 						{
 							if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
@@ -971,7 +971,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							j = 8; //break loop
 							#endif
 						}
-					}    
+					}
 				}
 				if (opts->p25_trunk == 0)
 				{
@@ -1066,7 +1066,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int loop = 3;
 
 			long int tunable_freq = 0;
-			int tunable_chan = 0; 
+			int tunable_chan = 0;
 			int tunable_group = 0;
 
 			for (int j = 0; j < loop; j++)
@@ -1098,7 +1098,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					tunable_chan = channel2;
 					tunable_group = group2;
 				}
-				else 
+				else
 				{
 					tunable_freq = freq3;
 					tunable_chan = channel3;
@@ -1176,7 +1176,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							j = 8; //break loop
 							#endif
 						}
-					}    
+					}
 				}
 				if (opts->p25_trunk == 0)
 				{
@@ -1187,7 +1187,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						//P2 TDMA
 						else state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 					}
-				} 
+				}
 			}
 		}
 
@@ -1227,7 +1227,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			else loop = 2;
 			//assigned inside loop
 			long int tunable_freq = 0;
-			int tunable_chan = 0; 
+			int tunable_chan = 0;
 			int tunable_group = 0;
 
 			for (int j = 0; j < loop; j++)
@@ -1239,7 +1239,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					tunable_chan = channel1;
 					tunable_group = group1;
 				}
-				else 
+				else
 				{
 					tunable_freq = freq2;
 					tunable_chan = channel2;
@@ -1301,7 +1301,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							SetFreq(opts->rigctl_sockfd, tunable_freq);
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
-							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
 							state->last_vc_sync_time = time(NULL);
 							j = 8; //break loop
 						}
@@ -1317,7 +1317,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							j = 8; //break loop
 							#endif
 						}
-					}    
+					}
 				}
 				if (opts->p25_trunk == 0)
 				{
@@ -1419,7 +1419,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							// 	opts->slot1_on = 1;
 							// 	opts->slot2_on = 0;
 							// }
-							
+
 						}
 
 					}
@@ -1443,7 +1443,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						state->last_vc_sync_time = time(NULL);
 						#endif
 					}
-				}    
+				}
 			}
 			if (opts->p25_trunk == 0)
 			{
@@ -1555,7 +1555,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 							//enable voice on slot 1 (just in case they start talking too, but probably won't)
 							opts->slot1_on = 1;
-						} 
+						}
 
 					}
 
@@ -1566,7 +1566,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						SetFreq(opts->rigctl_sockfd, freq);
 						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
 						opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
-						state->last_vc_sync_time = time(NULL); 
+						state->last_vc_sync_time = time(NULL);
 					}
 					//rtl
 					else if (opts->audio_in_type == 3)
@@ -1578,7 +1578,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						state->last_vc_sync_time = time(NULL);
 						#endif
 					}
-				}    
+				}
 			}
 			if (opts->p25_trunk == 0)
 			{
@@ -1631,7 +1631,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		//MFID90 Group Regroup Add Command
 		if (MAC[1+len_a] == 0x81 && MAC[2+len_a] == 0x90) //needs MAC message len update, may work same as explicit enc regroup?
 		{
-			fprintf (stderr, "\n MFID90 Group Regroup Add Command ");	
+			fprintf (stderr, "\n MFID90 Group Regroup Add Command ");
 		}
 
 		//the len on these indicate they are always a single messages, foregoing the +len_a index pointer
@@ -1658,7 +1658,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
     }
 
 		//System Service Broadcast
-		if (MAC[1+len_a] == 0x78) 
+		if (MAC[1+len_a] == 0x78)
 		{
 			int TWV = MAC[2+len_a]; //TWUID Validity
 			int SSA = (MAC[3+len_a] << 16) | (MAC[4+len_a] << 8) | MAC[5+len_a];
@@ -1669,7 +1669,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		}
 
 		//RFSS Status Broadcast - Implicit
-		if (MAC[1+len_a] == 0x7A) 
+		if (MAC[1+len_a] == 0x7A)
 		{
 			int lra = MAC[2+len_a];
 			int lsysid = ((MAC[3+len_a] & 0xF) << 8) | MAC[4+len_a];
@@ -1680,13 +1680,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n RFSS Status Broadcast - Implicit \n");
 			fprintf (stderr, "  LRA [%02X] SYSID [%03X] RFSS ID [%03d] SITE ID [%03d] CHAN [%04X] SSC [%02X] ", lra, lsysid, rfssid, siteid, channel, sysclass);
 			process_channel_to_freq (opts, state, channel);
-			
+
 			state->p2_siteid = siteid;
 			state->p2_rfssid = rfssid;
 		}
 
 		//RFSS Status Broadcast - Explicit
-		if (MAC[1+len_a] == 0xFA) 
+		if (MAC[1+len_a] == 0xFA)
 		{
 			int lra = MAC[2+len_a];
 			int lsysid = ((MAC[3+len_a] & 0xF) << 8) | MAC[4+len_a];
@@ -1719,7 +1719,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		// 	else if (ans == 0x21) fprintf (stderr, " - Deny;");
 		// 	else if (ans == 0x22) fprintf (stderr, " - Wait;");
 		// 	else                  fprintf (stderr, " - Other;"); //unspecified
-			
+
 		// }
 
 		//TODO: Restructure this function to group standard Opcodes away from MFID 90 and MFID A4, and Unknown MFID
@@ -1730,7 +1730,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			// 6.2.36 Manufacturer Specific regarding octet 3 as len
 			int len = MAC[3+len_a] & 0x3F;
 			int res = MAC[3+len_a] >> 6;
-			
+
 			//sanity check that we don't exceed the max MAC array size
 			if (len > 24)
 				len = 24; //should never exceed this len, but just in case it does
@@ -1755,14 +1755,14 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 			else
 			{
-				fprintf (stderr, "\n MFID A4 (Harris); Res: %d; Len: %d; Opcode: %02llX; ", res, len, MAC[1+len_a] & 0x3F); //first two bits are the b0 and b1 
+				fprintf (stderr, "\n MFID A4 (Harris); Res: %d; Len: %d; Opcode: %02llX; ", res, len, MAC[1+len_a] & 0x3F); //first two bits are the b0 and b1
 				for (i = 4; i <= len; i++)
 					fprintf (stderr, "%02llX", MAC[i+len_a]);
 			}
-			
+
 		}
 
-		//This is now confirmed to have the Harris Talker GPS, but the structure is unusual compared to other MFID messages, 
+		//This is now confirmed to have the Harris Talker GPS, but the structure is unusual compared to other MFID messages,
 		//the A4 indicator is one octet more to the 'right' than is normative, so I cannot verify the len value (0x11, or 17).
 		//Its possible the 0x80 is the 'Manufacturer Message' Opcode, which in the manual shows the rest of the
 		//octets are not normative, and as such, can't say there is a len value (but should assume entire the SACCH/FACCH field)
@@ -1830,7 +1830,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, " Payload: ");
 			for (i = 4; i < len; i++)
 				fprintf (stderr, "%02llX", MAC[i+len_a]);
-			
+
 			len_b = len;
 		}
 
@@ -1880,13 +1880,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				offhour = -( (ltoff & 0b11111 ) / 2);
 			}
 			else offhour = ( (ltoff & 0b11111 ) / 2);
-			
+
 			int seconds = slots / 135; //very rough estimation, but may be close enough for grins
 			if (seconds > 59) seconds = 59; //sanity check for rounding error
 
 			if (year != 0) //if time is synced in this PDU
 			{
-				fprintf (stderr, "\n  Date: 20%02d.%02d.%02d Time: %02d:%02d:%02d UTC", 
+				fprintf (stderr, "\n  Date: 20%02d.%02d.%02d Time: %02d:%02d:%02d UTC",
 								year, month, day, hour, min, seconds);
 				if (offhour != 0) //&& vl == 1
 					fprintf (stderr, "\n  Local Time Offset: %.01f Hours;", offhour);
@@ -1895,8 +1895,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				fprintf (stderr, "\n US: %d; IST: %d; MM: %d; MC: %d; VL: %d; Sync Slots: %d; ", us, ist, mm, mc, vl, slots);
 		}
 
-		//identifier update VHF/UHF 
-		if (MAC[1+len_a] == 0x74) 
+		//identifier update VHF/UHF
+		if (MAC[1+len_a] == 0x74)
 		{
 			state->p25_chan_iden = MAC[2+len_a] >> 4;
 			int iden = state->p25_chan_iden;
@@ -1969,7 +1969,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			state->p25_trans_off[iden] = (MAC[4+len_a] << 6) | (MAC[5+len_a] >> 2);
 			state->p25_chan_spac[iden] = ((MAC[5+len_a] & 0x3) << 8) | MAC[6+len_a];
 			state->p25_base_freq[iden] = (MAC[7+len_a] << 24) | (MAC[8+len_a] << 16) | (MAC[9+len_a] << 8) | (MAC[10+len_a] << 0);
-			int lwacn  = (MAC[11+len_a] << 12) | (MAC[12+len_a] << 4) | ((MAC[13+len_a] & 0xF0) >> 4); 
+			int lwacn  = (MAC[11+len_a] << 12) | (MAC[12+len_a] << 4) | ((MAC[13+len_a] & 0xF0) >> 4);
 			int lsysid = ((MAC[13+len_a] & 0xF) << 8) | MAC[14+len_a];
 
 			fprintf (stderr, "\n Identifier Update for TDMA - Extended\n");
@@ -2026,13 +2026,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			//place the cc freq into the list at index 0 if 0 is empty so we can hunt for rotating CCs without user LCN list
 			if (state->trunk_lcn_freq[1] == 0)
 			{
-				state->trunk_lcn_freq[1] = freq1; 
+				state->trunk_lcn_freq[1] = freq1;
 				state->trunk_lcn_freq[2] = freq2;
 				state->lcn_freq_count = 3; //increment to three
 			}
 
 			state->p2_siteid = siteid;
-			state->p2_rfssid = rfssid; 
+			state->p2_rfssid = rfssid;
 
 		}
 
@@ -2097,7 +2097,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, " SSN: %02d;", ssn);
 
 			if ( (tga & 0x2) == 2) //group WGID to supergroup
-			{ 
+			{
 				int sg =  (MAC[5+len_a] << 8) | MAC[6+len_a];
 				int key = (MAC[7+len_a] << 8) | MAC[8+len_a];
 				int alg = MAC[9+len_a];
@@ -2147,7 +2147,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int res = (MAC[3+len_a] >> 2) & 0x3F;
 			int RV = (MAC[2+len_a] >> 0) & 0x3;
 			int src = (MAC[8+len_a] << 16) | (MAC[9+len_a] << 8) | MAC[10+len_a];
-			int uwacn = (MAC[4+len_a] << 12) | (MAC[5+len_a] << 4) | ((MAC[6+len_a] & 0xF0) >> 4); 
+			int uwacn = (MAC[4+len_a] << 12) | (MAC[5+len_a] << 4) | ((MAC[6+len_a] & 0xF0) >> 4);
 			int usys = ((MAC[6+len_a] & 0xF) << 8) | MAC[7+len_a];
 			fprintf (stderr, "\n Unit Registration Response - WACN: %05X; SYS: %03X; SRC: %d", uwacn, usys, src);
 			if (res) fprintf (stderr, " RES: %d;", res);
@@ -2197,7 +2197,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		if (MAC[1+len_a] == 0x6F)
 		{
 			int src = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
-			int uwacn = (MAC[3+len_a] << 12) | (MAC[4+len_a] << 4) | ((MAC[5+len_a] & 0xF0) >> 4); 
+			int uwacn = (MAC[3+len_a] << 12) | (MAC[4+len_a] << 4) | ((MAC[5+len_a] & 0xF0) >> 4);
 			int usys = ((MAC[5+len_a] & 0xF) << 8) | MAC[6+len_a];
 			fprintf (stderr, "\n Unit Deregistration Acknowlegement - WACN: %05X; SYS: %03X; SRC: %d", uwacn, usys, src);
 			if (MAC[1+len_a] == 0xEF) fprintf (stderr, " - Extended;");
@@ -2346,10 +2346,10 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			}
 		}
 
-		
+
 
 		//network status broadcast, abbreviated
-		if (MAC[1+len_a] == 0x7B) 
+		if (MAC[1+len_a] == 0x7B)
 		{
 			int lra = MAC[2+len_a];
 			int lwacn  = (MAC[3+len_a] << 12) | (MAC[4+len_a] << 4) | ((MAC[5+len_a] & 0xF0) >> 4);
@@ -2369,12 +2369,12 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				state->p2_cc = lcolorcode;
 			}
 
-			//place the cc freq into the list at index 0 if 0 is empty, or not the same, 
+			//place the cc freq into the list at index 0 if 0 is empty, or not the same,
 			//so we can hunt for rotating CCs without user LCN list
 			if (state->trunk_lcn_freq[0] == 0 || state->trunk_lcn_freq[0] != state->p25_cc_freq)
 			{
-				state->trunk_lcn_freq[0] = state->p25_cc_freq; 
-			} 
+				state->trunk_lcn_freq[0] = state->p25_cc_freq;
+			}
 
 		}
 		//network status broadcast, extended
@@ -2403,7 +2403,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		}
 
 		//Adjacent Status Broadcast, abbreviated
-		if (MAC[1+len_a] == 0x7C) 
+		if (MAC[1+len_a] == 0x7C)
 		{
 			int lra = MAC[2+len_a];
 			int cfva = MAC[3+len_a] >> 4;
@@ -2425,16 +2425,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		}
 
 		//Adjacent Status Broadcast, extended
-		if (MAC[1+len_a] == 0xFC) 
+		if (MAC[1+len_a] == 0xFC)
 		{
 			int lra = MAC[2+len_a];
-			int cfva = MAC[3+len_a] >> 4; 
+			int cfva = MAC[3+len_a] >> 4;
 			int lsysid = ((MAC[3+len_a] & 0xF) << 8) | MAC[4+len_a];
 			int rfssid = MAC[5+len_a];
 			int siteid = MAC[6+len_a];
 			int channelt = (MAC[7+len_a] << 8) | MAC[8+len_a];
 			int channelr = (MAC[9+len_a] << 8) | MAC[10+len_a];
-			int sysclass = MAC[11+len_a];  //need to re-check this 
+			int sysclass = MAC[11+len_a];  //need to re-check this
 			fprintf (stderr, "\n Adjacent Status Broadcast - Extended\n");
 			fprintf (stderr, "  LRA [%02X] RFSS[%03d] SITE [%03d] SYSID [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]\n  ", lra, rfssid, siteid, lsysid, channelt, channelr, sysclass);
 			if (cfva & 0x8) fprintf (stderr, " Conventional");
@@ -2450,7 +2450,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 		SKIPCALL: ; //do nothing
 
-		if ( (len_b + len_c) < 24 && len_c != 0) 
+		if ( (len_b + len_c) < 24 && len_c != 0)
 		{
 			len_a = len_b;
 		}
@@ -2462,7 +2462,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 	}
 
 	END_PDU:
-	state->p2_is_lcch = 0; 
+	state->p2_is_lcch = 0;
 	//debug printing
 	if (opts->payload == 1 && MAC[1] != 0) //print only if not a null type //&& MAC[1] != 0 //&& MAC[2] != 0
 	{

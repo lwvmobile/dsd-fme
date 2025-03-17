@@ -117,12 +117,12 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           {
             opts->audio_in_type = 0; //set input type
             openPulseInput(opts); //open pulse input
-          } 
+          }
           //else cleanup and exit
           else
           {
-            cleanupAndExit(opts, state);     
-          }        
+            cleanupAndExit(opts, state);
+          }
         }
       }
       else if (opts->audio_in_type == 3)
@@ -150,7 +150,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           sleep (3); //halt all processing and wait 3 seconds
 
           //attempt to reconnect to socket
-          opts->tcp_sockfd = 0;  
+          opts->tcp_sockfd = 0;
           opts->tcp_sockfd = Connect(opts->tcp_hostname, opts->tcp_portno);
           if (opts->tcp_sockfd != 0)
           {
@@ -168,7 +168,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             }
             else fprintf (stderr, "TCP Socket Reconnected Successfully.\n");
           }
-          else fprintf (stderr, "TCP Socket Connection Error.\n");          
+          else fprintf (stderr, "TCP Socket Connection Error.\n");
 
           //now retry reading sample
           result = sf_read_short(opts->tcp_file_in, &sample, 1);
@@ -185,17 +185,17 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
               fprintf (stderr, "Opening Pulse Audio Input.\n");
               opts->audio_in_type = 0; //set input type
               openPulseInput(opts); //open pulse input
-            } 
+            }
             //else cleanup and exit
-            else 
+            else
             {
               fprintf (stderr, "Connection to TCP Server Disconnected.\n");
               fprintf (stderr, "Closing DSD-FME.\n");
               cleanupAndExit(opts, state);
             }
-            
+
           }
-          
+
         }
         #else
         result = sf_read_short(opts->tcp_file_in, &sample, 1);
@@ -208,7 +208,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           sleep (3); //halt all processing and wait 3 seconds
 
           //attempt to reconnect to socket
-          opts->tcp_sockfd = 0;  
+          opts->tcp_sockfd = 0;
           opts->tcp_sockfd = Connect(opts->tcp_hostname, opts->tcp_portno);
           if (opts->tcp_sockfd != 0)
           {
@@ -242,14 +242,14 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
             sample = 0; //zero sample on bad result, keep the ball rolling
             fprintf (stderr, "Connection to TCP Server Disconnected.\n");
           }
-          
+
         }
         #endif
-        
+
       }
 
       //BUG REPORT: 1. DMR Simplex doesn't work with raw wav files. 2. Using the monitor w/ wav file saving may produce undecodable wav files.
-      //reworked a bit to allow raw audio wav file saving without the monitoring poriton active 
+      //reworked a bit to allow raw audio wav file saving without the monitoring poriton active
       if (have_sync == 0)
       {
 
@@ -264,7 +264,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         if (state->analog_sample_counter > 959)
           state->analog_sample_counter = 959;
 
-        state->analog_out[state->analog_sample_counter++] = sample;    
+        state->analog_out[state->analog_sample_counter++] = sample;
 
         if (state->analog_sample_counter == 960)
         {
@@ -351,7 +351,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         if (state->analog_sample_counter > 959)
           state->analog_sample_counter = 959;
 
-        state->analog_out[state->analog_sample_counter++] = sample; 
+        state->analog_out[state->analog_sample_counter++] = sample;
 
         if (state->analog_sample_counter == 960)
         {
@@ -371,19 +371,19 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
       if (opts->use_cosine_filter)
         {
-          if ( (state->lastsynctype >= 10 && state->lastsynctype <= 13) || state->lastsynctype == 32 || state->lastsynctype == 33 
+          if ( (state->lastsynctype >= 10 && state->lastsynctype <= 13) || state->lastsynctype == 32 || state->lastsynctype == 33
                 || state->lastsynctype == 34 || state->lastsynctype == 30 || state->lastsynctype == 31)
           {
             sample = dmr_filter(sample);
           }
 
-          else if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17 || 
+          else if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17 ||
                    state->lastsynctype == 86 || state->lastsynctype == 87 || state->lastsynctype == 98 || state->lastsynctype == 99)
           {
             sample = m17_filter(sample);
           }
 
-          else if ( 
+          else if (
                state->lastsynctype == 20 || state->lastsynctype == 21 ||
                state->lastsynctype == 22 || state->lastsynctype == 23 ||
                state->lastsynctype == 24 || state->lastsynctype == 25 ||
@@ -510,7 +510,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           if (state->rf_mod == 0)
             {
               // 0: C4FM modulation
- 
+
               //EXPERIMENTAL: manipulate the left edge depending on sync type
               //TODO: See if we can manipulate this a bit more based on AFC or similar type function
               int l_edge = 2;
@@ -572,7 +572,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
               //is my original consclusion back when I was working on it last, unsure
               //or the best course on that, could just be a rtl_fm flaw
               //P25 may also work better at 16 as well now, hard to tell the difference since both are good
-              //DMR may not be any different on 12 or 16 
+              //DMR may not be any different on 12 or 16
               //most likely though, this all will just depend on signal stregth more than anything
               //as to how much BW you should set
 
@@ -664,7 +664,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       {
         opts->audio_in_type = 0; //set input type
         openPulseInput(opts); //open pulse input
-      } 
+      }
       //else cleanup and exit
       else
       {
@@ -676,11 +676,11 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
     if (state->rf_mod == 2) //GFSK
     {
       symbol = state->symbolc;
-      if (state->symbolc == 0 ) 
+      if (state->symbolc == 0 )
       {
         symbol = -3; //-1
       }
-      if (state->symbolc == 1 ) 
+      if (state->symbolc == 1 )
       {
         symbol = -1; //-3
       }

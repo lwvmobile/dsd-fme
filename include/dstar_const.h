@@ -16,7 +16,7 @@
  */
 
 /*
- *  dstar interleave experiments 
+ *  dstar interleave experiments
  */
 
 #ifndef _MAIN

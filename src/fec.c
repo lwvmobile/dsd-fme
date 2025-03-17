@@ -965,7 +965,7 @@ bool Golay_20_8_decode(unsigned char *rxBits)
     int is = 0;
     int i = 0;
     //tally corrections made, exceeding 2 will return false
-    int correction = 0; 
+    int correction = 0;
 
     for (is = 0; is < 12; is++)
     {
@@ -1014,11 +1014,11 @@ bool Golay_20_8_decode(unsigned char *rxBits)
         }
 
         //return false due to exceeding the number of allowed corrected bits
-        //being stingy and only allowing 1 error, may wreck some good data decodes, 
+        //being stingy and only allowing 1 error, may wreck some good data decodes,
         //decided to play it safe with 2
         if (correction > 2)
         {
-            return false; 
+            return false;
         }
     }
 

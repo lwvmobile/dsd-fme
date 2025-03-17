@@ -31,14 +31,14 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
   if (lc_pf == 0) //not protected/encrypted lcw
   {
 
-    if (opts->payload == 1) fprintf (stderr, " LCW"); 
+    if (opts->payload == 1) fprintf (stderr, " LCW");
 
     //check to see if we need to run these as MFID 0 or 1 only (standard)
     if (lc_mfid == 0 || lc_mfid == 1) //lc_mfid == 0
     {
 
       //check the service options on applicable formats
-      if (lc_format == 0x4A || lc_format == 0x46 || lc_format == 0x45 
+      if (lc_format == 0x4A || lc_format == 0x46 || lc_format == 0x45
           || lc_format == 0x44 || lc_format == 0x03 || lc_format == 0x00)
       {
 
@@ -154,7 +154,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
 
       }
 
-      else if (lc_format == 0x4A) 
+      else if (lc_format == 0x4A)
       {
         fprintf (stderr, " Unit to Unit Voice Channel User – Extended");
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&LCW_bits[16], 24);
@@ -177,71 +177,71 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         fprintf (stderr, " Unit Authentication Command - OBSOLETE");
       }
 
-      else if (lc_format == 0x53) 
+      else if (lc_format == 0x53)
       {
         fprintf (stderr, " Status Query");
       }
 
-      else if (lc_format == 0x54) 
+      else if (lc_format == 0x54)
       {
         fprintf (stderr, " Status Update");
       }
 
-      else if (lc_format == 0x55) 
+      else if (lc_format == 0x55)
       {
         fprintf (stderr, " Status Update");
       }
 
-      else if (lc_format == 0x56) 
+      else if (lc_format == 0x56)
       {
         fprintf (stderr, " Call Alert");
       }
 
 
-      else if (lc_format == 0x5A) 
+      else if (lc_format == 0x5A)
       {
         fprintf (stderr, " Status Update – Source ID Extension Required");
       }
 
-      else if (lc_format == 0x5C) 
+      else if (lc_format == 0x5C)
       {
         fprintf (stderr, " Extended Function Command – Source ID Extension Required");
       }
 
-      else if (lc_format == 0x60) 
+      else if (lc_format == 0x60)
       {
         fprintf (stderr, " System Service Broadcast");
       }
 
       //this PDU does not have an associated MFID, often seen on kiwi and matches its TSBK counterpart
       //its possible some of the other ones here don't as well, need to re-check all of them
-      else if (lc_format == 0x61) 
+      else if (lc_format == 0x61)
       {
         fprintf (stderr, " Secondary Control Channel Broadcast");
       }
 
-      else if (lc_format == 0x62) 
+      else if (lc_format == 0x62)
       {
         fprintf (stderr, " Adjacent Site Status Broadcast");
       }
 
-      else if (lc_format == 0x63) 
+      else if (lc_format == 0x63)
       {
         fprintf (stderr, " RFSS Status Broadcast");
       }
 
-      else if (lc_format == 0x64) 
+      else if (lc_format == 0x64)
       {
         fprintf (stderr, " Network Status Broadcast");
       }
 
-      else if (lc_format == 0x65) 
+      else if (lc_format == 0x65)
       {
         fprintf (stderr, " Protection Parameter Broadcast - OBSOLETE");
       }
 
 
-      else if (lc_format == 0x66) 
+      else if (lc_format == 0x66)
       {
         fprintf (stderr, " Secondary Control Channel Broadcast – Explicit (LCSCBX)");
       }
@@ -267,40 +267,40 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         // else fprintf (stderr, " Last Known");
         if (cfva & 0x1) fprintf (stderr, " - Connection Active");
         // process_channel_to_freq (opts, state, channelt);
-        //end debug, way too much for a simple link control line 
+        //end debug, way too much for a simple link control line
 
 
       }
 
-      else if (lc_format == 0x68) 
+      else if (lc_format == 0x68)
       {
         fprintf (stderr, " RFSS Status Broadcast – Explicit (LCRSBX)");
       }
 
-      else if (lc_format == 0x69) 
+      else if (lc_format == 0x69)
       {
         fprintf (stderr, " Network Status Broadcast – Explicit (LCNSBX)");
       }
 
-      else if (lc_format == 0x6A) 
+      else if (lc_format == 0x6A)
       {
         fprintf (stderr, " Conventional Fallback");
       }
 
-      else if (lc_format == 0x6B) 
+      else if (lc_format == 0x6B)
       {
         fprintf (stderr, " Message Update – Source ID Extension Required");
       }
 
       //tune back to CC here - save about 1-2 seconds
-      else if (lc_format == 0x4F) //# Call Termination/Cancellation 
+      else if (lc_format == 0x4F) //# Call Termination/Cancellation
       {
         uint32_t tgt = (uint32_t)ConvertBitIntoBytes(&LCW_bits[48], 24); //can be individual, or all units (0xFFFFFF)
         fprintf (stderr, " Call Termination; TGT: %d;", tgt);
         memset (state->dmr_pdu_sf[0], 0, sizeof (state->dmr_pdu_sf[0])); //reset storage for any talker alias (or other items)
         if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
         {
-          
+
           //Will we need to check for a symbolrate change here, can a P25p2 TDMA-CC system
           //revert back to a phase 1 traffic channel or carry a phase 1 traffic channel?
           if (state->p25_cc_is_tdma == 1)
@@ -326,7 +326,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
           {
             state->lasttg = 0;
             state->lastsrc = 0;
-            state->payload_algid = 0; 
+            state->payload_algid = 0;
             state->payload_keyid = 0;
             // state->payload_miP = 0;
             //reset some strings
@@ -337,7 +337,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
             opts->p25_is_tuned = 0;
             state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
             if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
-            SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);        
+            SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
           }
           //rtl
           else if (opts->audio_in_type == 3)
@@ -378,7 +378,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
     //0xFFFFFF - All Units
 
     //This lc_format doesn't use the MFID field
-    else if (lc_format == 0x42) 
+    else if (lc_format == 0x42)
       fprintf (stderr, " Conventional Fallback Indication");
 
     //This lc_format doesn't use the MFID field
@@ -402,15 +402,15 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
     }
 
     //This lc_format doesn't use the MFID field
-    else if (lc_format == 0x61) 
+    else if (lc_format == 0x61)
       fprintf (stderr, " Secondary Control Channel Broadcast");
 
     //This lc_format doesn't use the MFID field
-    else if (lc_format == 0x62) 
+    else if (lc_format == 0x62)
       fprintf (stderr, " Adjacent Site Status Broadcast");
-    
+
     //This lc_format doesn't use the MFID field
-    else if (lc_format == 0x63) 
+    else if (lc_format == 0x63)
       fprintf (stderr, " RFSS Status Broadcast");
 
     //MFID 90 Embedded GPS
@@ -486,7 +486,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
 
     else if (lc_mfid == 0xA4 && lc_opcode == 0x2B)
     {
-      fprintf (stderr, " MFIDA4 (Harris) GPS Block 2");      
+      fprintf (stderr, " MFIDA4 (Harris) GPS Block 2");
       memcpy(state->dmr_pdu_sf[0]+40+56, LCW_bits+16, 56*sizeof(uint8_t)); //+40 +56 to offset first block
       uint16_t check = (uint16_t)ConvertBitIntoBytes(&state->dmr_pdu_sf[0][0], 16);
       if (check == 0x2AA4)

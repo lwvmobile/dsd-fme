@@ -11,7 +11,7 @@
 #include "dsd.h"
 
 //try to find a fancy lfsr or calculation for this and not an array if possible
-uint8_t m17_scramble[369] = { 
+uint8_t m17_scramble[369] = {
 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1,
 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0,
 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -34,7 +34,7 @@ uint8_t m17_scramble[369] = {
 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1,
 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0,
 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1,
-0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1 
+0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1
 };
 
 char b40[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.";
@@ -74,7 +74,7 @@ void M17decodeCSD(dsd_state * state, unsigned long long int dst, unsigned long l
   int i;
   char c;
 
-  if (dst == 0xFFFFFFFFFFFF) 
+  if (dst == 0xFFFFFFFFFFFF)
     fprintf (stderr, " DST: BROADCAST");
   else if (dst == 0)
     fprintf (stderr, " DST: RESERVED %012llx", dst);
@@ -91,15 +91,15 @@ void M17decodeCSD(dsd_state * state, unsigned long long int dst, unsigned long l
       dst = dst / 40;
     }
     //assign completed CSD to a more useful string instead
-    sprintf (state->m17_dst_str, "%c%c%c%c%c%c%c%c%c", 
-    state->m17_dst_csd[0], state->m17_dst_csd[1], state->m17_dst_csd[2], state->m17_dst_csd[3], 
+    sprintf (state->m17_dst_str, "%c%c%c%c%c%c%c%c%c",
+    state->m17_dst_csd[0], state->m17_dst_csd[1], state->m17_dst_csd[2], state->m17_dst_csd[3],
     state->m17_dst_csd[4], state->m17_dst_csd[5], state->m17_dst_csd[6], state->m17_dst_csd[7], state->m17_dst_csd[8]);
 
     //debug
     // fprintf (stderr, "DT: %s", state->m17_dst_str);
   }
 
-  if (src == 0xFFFFFFFFFFFF) 
+  if (src == 0xFFFFFFFFFFFF)
     fprintf (stderr, " SRC:  UNKNOWN FFFFFFFFFFFF");
   else if (src == 0)
     fprintf (stderr, " SRC: RESERVED %012llx", src);
@@ -116,8 +116,8 @@ void M17decodeCSD(dsd_state * state, unsigned long long int dst, unsigned long l
       src = src / 40;
     }
     //assign completed CSD to a more useful string instead
-    sprintf (state->m17_src_str, "%c%c%c%c%c%c%c%c%c", 
-    state->m17_src_csd[0], state->m17_src_csd[1], state->m17_src_csd[2], state->m17_src_csd[3], 
+    sprintf (state->m17_src_str, "%c%c%c%c%c%c%c%c%c",
+    state->m17_src_csd[0], state->m17_src_csd[1], state->m17_src_csd[2], state->m17_src_csd[3],
     state->m17_src_csd[4], state->m17_src_csd[5], state->m17_src_csd[6], state->m17_src_csd[7], state->m17_src_csd[8]);
 
     //debug
@@ -132,7 +132,7 @@ void M17decodeCSD(dsd_state * state, unsigned long long int dst, unsigned long l
 void M17decodeLSF(dsd_state * state)
 {
   int i;
-  
+
   unsigned long long int lsf_dst = (unsigned long long int)ConvertBitIntoBytes(&state->m17_lsf[0], 48);
   unsigned long long int lsf_src = (unsigned long long int)ConvertBitIntoBytes(&state->m17_lsf[48], 48);
   uint16_t lsf_type = (uint16_t)ConvertBitIntoBytes(&state->m17_lsf[96], 16);
@@ -159,7 +159,7 @@ void M17decodeLSF(dsd_state * state)
 
   fprintf (stderr, " CAN: %d", lsf_cn);
   M17decodeCSD(state, lsf_dst, lsf_src);
-  
+
   if (lsf_dt == 0) fprintf (stderr, " Reserved");
   if (lsf_dt == 1) fprintf (stderr, " Data");
   if (lsf_dt == 2) fprintf (stderr, " Voice (3200bps)");
@@ -175,7 +175,7 @@ void M17decodeLSF(dsd_state * state)
   state->m17_enc_st = lsf_es;
 
   if (lsf_rs != 0)
-  { 
+  {
     if (lsf_rs == 0x10)
       fprintf (stderr, " OTAKD Data Packet;");
     else if (lsf_rs == 0x11)
@@ -217,7 +217,7 @@ void M17decodeLSF(dsd_state * state)
   //if no Meta (debug)
   // if (lsf_et == 0 && meta_sum == 0)
   //   fprintf (stderr, " Meta Null; ");
-  
+
   if (lsf_et == 2)
   {
     fprintf (stderr, " IV: ");
@@ -226,7 +226,7 @@ void M17decodeLSF(dsd_state * state)
   }
 
   LSF_END: ; //do nothing
-  
+
 }
 
 int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t * lich_bits)
@@ -293,7 +293,7 @@ int M17processLICH(dsd_state * state, dsd_opts * opts, uint8_t * lich_bits)
   {
     fprintf (stderr, " LICH: ");
     for (i = 0; i < 6; i++)
-      fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&lich_decoded[i*8], 8)); 
+      fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&lich_decoded[i*8], 8));
   }
 
   uint8_t lsf_packed[30];
@@ -351,7 +351,7 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t * payload
   //TODO: Add some decryption methods
   if (state->m17_enc != 0)
   {
-    //process scrambler or AES-CTR decryption 
+    //process scrambler or AES-CTR decryption
     //(no AES-CTR right now, Scrambler should be easy enough)
   }
 
@@ -366,7 +366,7 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t * payload
     for (i = 0; i < 8; i++)
       fprintf (stderr, "%02X", voice2[i]);
   }
-  
+
   #ifdef USE_CODEC2
   size_t nsam;
   nsam = 320;
@@ -386,7 +386,7 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t * payload
 
   if (opts->slot1_on == 1) //playback if enabled
   {
-    
+
     if (opts->audio_out_type == 0 && state->m17_enc == 0) //Pulse Audio
     {
       pa_simple_write(opts->pulse_digi_dev_out, samp1, nsam*2, NULL);
@@ -396,7 +396,7 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t * payload
     {
       udp_socket_blaster (opts, state, nsam*2, samp1);
     }
-      
+
     if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS 48k/1
     {
       //upsample to 48k and then play
@@ -444,7 +444,7 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t * payload
   uint8_t adata[9]; adata[0] = 0x89; //set so pkt decoder will rip these out as just utf-8 chars
   for (i = 0; i < 8; i++)
     adata[i+1] = (unsigned char)ConvertBitIntoBytes(&payload[i*8+64], 8);
-  
+
   //look and see if the payload has stuff in it first, if not, then run this
   if (adata[1] != 0 || adata[2] != 0 || adata[3] != 0 || adata[4] != 0 || adata[5] != 0 || adata[6] != 0 || adata[7] != 0 || adata[8] != 0)
   {
@@ -469,7 +469,7 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t * payload
   //TODO: Add some decryption methods
   if (state->m17_enc != 0)
   {
-    //process scrambler or AES-CTR decryption 
+    //process scrambler or AES-CTR decryption
     //(no AES-CTR right now, Scrambler should be easy enough)
   }
 
@@ -485,7 +485,7 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t * payload
       fprintf (stderr, "%02X", voice2[i]);
     fprintf (stderr, " (3200)");
   }
-  
+
   #ifdef USE_CODEC2
   size_t nsam;
   nsam = 160;
@@ -522,7 +522,7 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t * payload
       udp_socket_blaster (opts, state, nsam*2, samp1);
       udp_socket_blaster (opts, state, nsam*2, samp2);
     }
-      
+
     if (opts->audio_out_type == 5 && state->m17_enc == 0) //OSS 48k/1
     {
       //upsample to 48k and then play
@@ -548,7 +548,7 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t * payload
       write (opts->audio_out_fd, samp2, nsam*2);
     }
 
-    if (opts->audio_out_type == 2 && state->m17_enc == 0) //OSS 8k/1 
+    if (opts->audio_out_type == 2 && state->m17_enc == 0) //OSS 8k/1
     {
       write (opts->audio_out_fd, samp1, nsam*2);
       write (opts->audio_out_fd, samp2, nsam*2);
@@ -581,7 +581,7 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t * payload
 void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t * m17_bits)
 {
 
-  int i, k, x; 
+  int i, k, x;
   uint8_t m17_punc[275]; //25 * 11 = 275
   memset (m17_punc, 0, sizeof(m17_punc));
   for (i = 0; i < 272; i++)
@@ -604,7 +604,7 @@ void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t * m17_bits)
     m17_depunc[k++] = m17_punc[x++];
     m17_depunc[k++] = m17_punc[x++];
     m17_depunc[k++] = m17_punc[x++];
-    m17_depunc[k++] = 0; 
+    m17_depunc[k++] = 0;
   }
 
   //setup the convolutional decoder
@@ -618,7 +618,7 @@ void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t * m17_bits)
   memset (m_data, 0, sizeof (m_data));
 
   for (i = 0; i < 296; i++)
-    temp[i] = m17_depunc[i] << 1; 
+    temp[i] = m17_depunc[i] << 1;
 
   CNXDNConvolution_start();
   for (i = 0; i < 148; i++)
@@ -677,7 +677,7 @@ void M17prepareStream(dsd_opts * opts, dsd_state * state, uint8_t * m17_bits)
   if (opts->payload == 1 && state->m17_str_dt < 2)
   {
     fprintf (stderr, "\n STREAM: ");
-    for (i = 0; i < 18; i++) 
+    for (i = 0; i < 18; i++)
       fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8));
   }
 
@@ -746,7 +746,7 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
 
   //NOTE: Works now with decisions based on previous bit, but still
   //not quite as good as it needs to be, need better decision making on the punctured bit
-  
+
   int i, j, k, x;
   uint8_t dbuf[184];           //384-bit frame - 16-bit (8 symbol) sync pattern (184 dibits)
   uint8_t m17_rnd_bits[368];  //368 bits that are still scrambled (randomized)
@@ -809,7 +809,7 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
       else m17_depunc[x++] = 0;
     }
 
-    
+
 
     if (k == 61) k = 0; //61 -- should reset 8 times againt the array
 
@@ -839,7 +839,7 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
   memset (m_data, 0, sizeof (m_data));
 
   for (i = 0; i < 488; i++)
-    temp[i] = m17_depunc[i] << 1; 
+    temp[i] = m17_depunc[i] << 1;
 
   CNXDNConvolution_start();
   for (i = 0; i < 244; i++)
@@ -896,7 +896,7 @@ void processM17LSF(dsd_opts * opts, dsd_state * state)
     }
     fprintf (stderr, " (CRC CHK) E: %04X; C: %04X;", crc_ext, crc_cmp);
   }
-  
+
   if (crc_err == 1) fprintf (stderr, " CRC ERR");
 
   //ending linebreak
@@ -958,7 +958,7 @@ void processM17LSF_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_b
       else m17_depunc[x++] = 0;
     }
 
-    
+
 
     if (k == 61) k = 0; //61 -- should reset 8 times againt the array
 
@@ -975,7 +975,7 @@ void processM17LSF_debug(dsd_opts * opts, dsd_state * state, uint8_t * m17_rnd_b
   memset (m_data, 0, sizeof (m_data));
 
   for (i = 0; i < 488; i++)
-    temp[i] = m17_depunc[i] << 1; 
+    temp[i] = m17_depunc[i] << 1;
 
   CNXDNConvolution_start();
   for (i = 0; i < 244; i++)
@@ -1361,11 +1361,11 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
     for (i = 0; i < 1920; i++)
       baseband[i] = output_up[i] * 7168.0f;
   }
-  
+
   //version w/ filtering lifted from M17_Implementations / libM17
   else if (opts->use_cosine_filter == 1)
   {
-    
+
     float mac = 0.0f;
     x = 0;
     for (i = 0; i < 192; i++)
@@ -1429,7 +1429,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
     //Pulse Audio
     if (opts->audio_out_type == 0)
       pa_simple_write(opts->pulse_raw_dev_out, baseband, 1920*2, NULL);
-    
+
     //UDP
     if (opts->audio_out_type == 8)
       udp_socket_blasterA (opts, state, 1920*2, baseband);
@@ -1439,7 +1439,7 @@ void encodeM17RF (dsd_opts * opts, dsd_state * state, uint8_t * input, int type)
       write (opts->audio_out_fd, baseband, 1920*2);
 
   }
-  
+
   //if we have a raw signal wav file, write to it now
   if (opts->wav_out_raw != NULL)
   {
@@ -1471,7 +1471,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //Enable frame, TX and Ncurses Printer
   opts->frame_m17 = 1;
   state->m17encoder_tx = 1;
-  
+
   if (opts->use_ncurses_terminal == 1)
     ncursesOpen(opts, state);
 
@@ -1509,7 +1509,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   if (strcmp (d40, "ALL") == 0)
     dst = 0xFFFFFFFFFFFF;
   //end
-  
+
   int i, j, k, x;    //basic utility counters
   short sample = 0;  //individual audio sample from source
   size_t nsam = 160; //number of samples to be read in (default is 160 samples for codec2 3200 bps)
@@ -1594,7 +1594,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
   short voice1[nsam]; //read in xxx ms of audio from input source
   short voice2[nsam]; //read in xxx ms of audio from input source
-  
+
   //frame sequence number and eot bit
   uint16_t fsn = 0;
   uint8_t eot = 0;
@@ -1675,7 +1675,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     udp_return = m17_socket_blaster (opts, state, 11, conn);
 
   //TODO: Read UDP ACKN/NACK value, disable use_ip if NULL or nack return
-  
+
   //load dst and src values into the LSF
   for (i = 0; i < 48; i++) m17_lsf[i] = (dst >> (47ULL-(unsigned long long int)i)) & 1;
   for (i = 0; i < 48; i++) m17_lsf[i+48] = (src >> (47ULL-(unsigned long long int)i)) & 1;
@@ -1943,7 +1943,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       if (st == 2)
         hpf (state, voice2, 160);
     }
-    
+
     //passband filter
     if (opts->use_pbf == 1)
     {
@@ -1991,7 +1991,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     //Fill vc2_bytes with arbitrary data, UTF-8 chars (up to 48)
     if (st == 3)
       memcpy (vc2_bytes, state->m17sms+(lich_cnt*8), 8);
-    
+
     //initialize and start assembling the completed frame
 
     //Data/Voice Portion of Stream Data Link Layer w/ FSN
@@ -2040,7 +2040,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
     //tally consecutive squelch hits based on RMS value, or reset
     if (opts->rtl_rms > opts->rtl_squelch_level) sql_hit = 0;
-    else sql_hit++; //may eventually roll over to 0 again 
+    else sql_hit++; //may eventually roll over to 0 again
 
     //if vox enabled, toggle tx/eot with sql_hit comparison
     if (state->m17_vox == 1)
@@ -2081,7 +2081,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       m17_v1p[k++] = m17_v1c[x++];
       m17_v1p[k++] = m17_v1c[x++];
       m17_v1p[k++] = m17_v1c[x++];
-      //quit early on last set of i when 272 k bits reached 
+      //quit early on last set of i when 272 k bits reached
       //index from 0 to 271,so 272 is breakpoint with k++
       if (k == 272) break;
       m17_v1p[k++] = m17_v1c[x++];
@@ -2189,7 +2189,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
 
       //convert bit array into symbols and RF/Audio
       encodeM17RF (opts, state, m17_t4s, 2);
-      
+
       //Contruct an IP frame using previously created arrays
       memset (m17_ip_frame, 0, sizeof(m17_ip_frame));
       memset (m17_ip_packed, 0, sizeof(m17_ip_packed));
@@ -2236,7 +2236,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       //add CRC value to the ip frame
       for (i = 0; i < 16; i++)
         m17_ip_frame[k++] = (ip_crc >> (15-i))&1;
-      
+
       //pack CRC into the byte array as well
       for (i = 52; i < 54; i++)
         m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_ip_frame[i*8], 8);
@@ -2319,7 +2319,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       for (i = 52; i < 54; i++)
         m17_ip_packed[i] = (uint8_t)ConvertBitIntoBytes(&m17_ip_frame[i*8], 8);
 
-      //reset 
+      //reset
       lich_cnt = 0;
       fsn = 0;
       state->carrier = 0;
@@ -2465,7 +2465,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     //refresh ncurses printer, if enabled
     if (opts->use_ncurses_terminal == 1)
       ncursesPrinter(opts, state);
-    
+
   }
 
   //SEND EOTX to reflector
@@ -2475,7 +2475,7 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
   //SEND DISC to reflector
   if (use_ip == 1)
     udp_return = m17_socket_blaster (opts, state, 10, disc);
-  
+
   //free allocated memory
   free(samp1);
   free(samp2);
@@ -2491,7 +2491,7 @@ void encodeM17BRT(dsd_opts * opts, dsd_state * state)
 
   //NOTE: BERT will not use the nucrses terminal,
   //just strictly for making a BERT test signal
-  
+
   uint8_t nil[368]; //empty array
   memset (nil, 0, sizeof(nil));
 
@@ -2548,7 +2548,7 @@ void encodeM17BRT(dsd_opts * opts, dsd_state * state)
       m17_b2p[k++] = m17_b1c[x++];
       m17_b2p[k++] = m17_b1c[x++];
       m17_b2p[k++] = m17_b1c[x++];
-      //quit early on last set of i when 368 k bits reached 
+      //quit early on last set of i when 368 k bits reached
       //index from 0 to 367,so 368 is breakpoint with k++
       if (k == 368) break;
       m17_b2p[k++] = m17_b1c[x++];
@@ -2590,7 +2590,7 @@ void encodeM17BRT(dsd_opts * opts, dsd_state * state)
     //reverse the sequence and shift so it appears correct on display
     for (i = 0; i < 197; i++)
       m17_b1r[i+3] = m17_b1[196-i];
-    
+
     //Dump Output of the BERT array (reversed and shifted sequence)
     for (i = 0; i < 25; i++)
       fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(&m17_b1r[i*8], 8));
@@ -2802,7 +2802,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
   //load protocol value into first 8 bits
   k = 0;
   for (i = 0; i < 8; i++)
-    m17_p1_full[k++] = (protocol >> (7-i)) & 1; 
+    m17_p1_full[k++] = (protocol >> (7-i)) & 1;
 
   //byte representation of a single string char
   uint8_t cbyte;
@@ -2846,7 +2846,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
     if (cbyte == 0) break; //if terminator reached
 
     ptr++; //increment pointer
-    
+
 
     //add line break to keep it under 80 columns
     if ( (i%71) == 0 && i != 0)
@@ -2870,7 +2870,7 @@ void encodeM17PKT(dsd_opts * opts, dsd_state * state)
 
   //sanity check block value
   // if (block > 31) block = 31;
-  
+
   //debug position values
   // fprintf (stderr, "\nBLOCK: %02d; PAD: %02d; LST: %d; K: %04d; PTR: %04d;\n", block, pad, lst, k, ptr);
 
@@ -3264,7 +3264,7 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
     fprintf (stderr, " ");
 
     if (protocol == 0x80) //Meta
-    { 
+    {
       //show Control Byte Len and Segment Values on Meta Text
       fprintf (stderr, "%d/%d; ", (input[1] >> 4), input[1] & 0xF);
       for (i = 2; i < len; i++)
@@ -3292,7 +3292,7 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
 //WIP PKT decoder
 void processM17PKT(dsd_opts * opts, dsd_state * state)
 {
- 
+
   int i, x;
   uint8_t dbuf[184]; //384-bit (192 symbol) frame - 16-bit (8 symbol) sync pattern (184 dibits)
   uint8_t m17_int_bits[368]; //368 bits that are still interleaved
@@ -3384,12 +3384,12 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
 
   //sanity check on total
   if (total < 0 && eot == 1) total = 0; //this is from a bad decode, and caused a core dump on total being a negative value
-  
+
   int end = ptr + 25;
 
   //TODO: Fix this
   /*
-    00:23:28 Sync: +M17 PREAMBLE 
+    00:23:28 Sync: +M17 PREAMBLE
     00:23:28 Sync: +M17 PKT
     00:23:28 Sync: +M17 PKT  CNT: 00; LST: 01; EOT: 1;Segmentation fault (core dumped) <--negative total value calculated on this
   */
@@ -3441,7 +3441,7 @@ void processM17PKT(dsd_opts * opts, dsd_state * state)
       }
       fprintf (stderr, "\n      CRC - C: %04X; E: %04X", crc_cmp, crc_ext);
     }
-    
+
     //reset after processing
     memset (state->m17_pkt, 0, sizeof(state->m17_pkt));
     state->m17_pbc_ct = 0;
@@ -3503,7 +3503,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     {
       //NOTE: blocking issue resolved with setsockopt in UDPBind
 
-      //NOTE: Using recvfrom seems to load MSB of array first, 
+      //NOTE: Using recvfrom seems to load MSB of array first,
       //compared to having to push samples through it like with STDIN.
 
       err = m17_socket_receiver(opts, &ip_frame);
@@ -3610,7 +3610,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "\n M17 IP   CONN: ");
 
-      if (src == 0xFFFFFFFFFFFF) 
+      if (src == 0xFFFFFFFFFFFF)
         fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
       else if (src == 0)
         fprintf (stderr, "RESERVED %012llx", src);
@@ -3643,7 +3643,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "\n M17 IP   DISC: ");
 
-      if (src == 0xFFFFFFFFFFFF) 
+      if (src == 0xFFFFFFFFFFFF)
         fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
       else if (src == 0)
         fprintf (stderr, "RESERVED %012llx", src);
@@ -3676,7 +3676,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "\n M17 IP   EOTX: ");
 
-      if (src == 0xFFFFFFFFFFFF) 
+      if (src == 0xFFFFFFFFFFFF)
         fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
       else if (src == 0)
         fprintf (stderr, "RESERVED %012llx", src);
@@ -3710,7 +3710,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "\n M17 IP   PING: ");
 
-      if (src == 0xFFFFFFFFFFFF) 
+      if (src == 0xFFFFFFFFFFFF)
         fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
       else if (src == 0)
         fprintf (stderr, "RESERVED %012llx", src);
@@ -3738,7 +3738,7 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     {
       fprintf (stderr, "\n M17 IP   PONG: ");
 
-      if (src == 0xFFFFFFFFFFFF) 
+      if (src == 0xFFFFFFFFFFFF)
         fprintf (stderr, "UNKNOWN FFFFFFFFFFFF");
       else if (src == 0)
         fprintf (stderr, "RESERVED %012llx", src);

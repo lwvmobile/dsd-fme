@@ -6,7 +6,7 @@
  * Mod:     December 14, 2021, for EDACS-FM BCH Polynomial Error Generation and Detection
  * Mod2:    October 2022, for DSD-FME port of EDACS-FM
  * Source:  www.eccpage.com
- * 
+ *
  * ===============  Encoder/Decoder for binary BCH codes in C =================
  *
  * Version 1:   Original program. The user provides the generator polynomial
@@ -30,7 +30,7 @@
  * previous version of the BCH encoder/decoder in C, 'bch2.c', was written by
  * Robert Morelos-Zaragoza (robert@spectra.eng.hawaii.edu) on 5/19/92.
  *
- * NOTE:    
+ * NOTE:
  *          The author is not responsible for any malfunctioning of
  *          this program, nor for any damage caused by it. Please include the
  *          original program along with these comments in any redistribution.
@@ -45,14 +45,14 @@
  *                    email: r.morelos-zaragoza@ieee.org
  *
  * COPYRIGHT NOTICE: This computer program is free for non-commercial purposes.
- * You may implement this program for any non-commercial application. You may 
+ * You may implement this program for any non-commercial application. You may
  * also implement this program for commercial purposes, provided that you
  * obtain my written permission. Any modification of this program is covered
  * by this copyright.
  *
  * == Copyright (c) 1994-7,  Robert Morelos-Zaragoza. All rights reserved.  ==
  *
- * m = order of the Galois field GF(2**m) 
+ * m = order of the Galois field GF(2**m)
  * n = 2**m - 1 = size of the multiplicative group of GF(2**m)
  * length = length of the BCH code
  * t = error correcting capability (max. no. of errors the code corrects)
@@ -60,14 +60,14 @@
  * k = n - deg(g(x)) = dimension (no. of information bits/codeword) of the code
  * p[] = coefficients of a primitive polynomial used to generate GF(2**m)
  * g[] = coefficients of the generator polynomial, g(x)
- * alpha_to [] = log table of GF(2**m) 
+ * alpha_to [] = log table of GF(2**m)
  * index_of[] = antilog table of GF(2**m)
  * ddata[] = information bits = coefficients of data polynomial, i(x)
  * bb[] = coefficients of redundancy polynomial x^(length-k) i(x) modulo g(x)
- * numerr = number of errors 
- * errpos[] = error positions 
- * recd[] = coefficients of the received polynomial 
- * decerror = number of decoding errors (in _message_ positions) 
+ * numerr = number of errors
+ * errpos[] = error positions
+ * recd[] = coefficients of the received polynomial
+ * decerror = number of decoding errors (in _message_ positions)
  *
  */
 
@@ -83,7 +83,7 @@ int             seed;
 int             numerr, errpos[1024], decerror = 0;
 
 
-void 
+void
 read_p()
 /*
  *	Read m, the degree of a primitive polynomial p(x) used to compute the
@@ -126,7 +126,7 @@ read_p()
         }
 	n = n / 2 - 1;
 	ninf = (n + 1) / 2 - 1;
-	
+
 	do  {
 
 		length = 40;
@@ -134,7 +134,7 @@ read_p()
 }
 
 
-void 
+void
 generate_gf()
 /*
  * Generate field GF(2**m) from the irreducible polynomial p(X) with
@@ -144,7 +144,7 @@ generate_gf()
  *   index->polynomial form: alpha_to[] contains j=alpha^i;
  *   polynomial form -> index form:	index_of[j=alpha^i] = i
  *
- * alpha=2 is the primitive element of GF(2**m) 
+ * alpha=2 is the primitive element of GF(2**m)
  */
 {
 	register int    i, mask;
@@ -171,7 +171,7 @@ generate_gf()
 }
 
 
-void 
+void
 gen_poly()
 /*
  * Compute the generator polynomial of a binary BCH code. Fist generate the
@@ -209,7 +209,7 @@ gen_poly()
 		do {
 			ll++;
 			test = 0;
-			for (ii = 1; ((ii <= jj) && (!test)); ii++)	
+			for (ii = 1; ((ii <= jj) && (!test)); ii++)
 			/* Examine previous cycle sets */
 			  for (kaux = 0; ((kaux < size[ii]) && (!test)); kaux++)
 			     if (ll == cycle[ii][kaux])
@@ -274,7 +274,7 @@ gen_poly()
 }
 
 
-void 
+void
 encode_bch()
 /*
  * Compute redundacy bb[], the coefficients of b(x). The redundancy
@@ -305,7 +305,7 @@ encode_bch()
 }
 
 
-void 
+void
 decode_bch()
 /*
  * Simon Rockliff's implementation of Berlekamp's algorithm.
@@ -361,7 +361,7 @@ decode_bch()
 		 * u='mu'+1 and 'mu' (the Greek letter!) is the step number
 		 * ranging from -1 to 2*t (see L&C),  l[u] is the degree of
 		 * the elp at that step, and u_l[u] is the difference between
-		 * the step number and the degree of the elp. 
+		 * the step number and the degree of the elp.
 		 */
 		/* initialise table entries */
 		d[0] = 0;			/* index form */
@@ -377,7 +377,7 @@ decode_bch()
 		u_lu[0] = -1;
 		u_lu[1] = 0;
 		u = 0;
- 
+
 		do {
 			u++;
 			if (d[u] == -1) {
@@ -389,7 +389,7 @@ decode_bch()
 			} else
 				/*
 				 * search for words with greatest u_lu[q] for
-				 * which d[q]!=0 
+				 * which d[q]!=0
 				 */
 			{
 				q = u - 1;
@@ -404,23 +404,23 @@ decode_bch()
 				      q = j;
 				  } while (j > 0);
 				}
- 
+
 				/*
 				 * have now found q such that d[u]!=0 and
-				 * u_lu[q] is maximum 
+				 * u_lu[q] is maximum
 				 */
 				/* store degree of new elp polynomial */
 				if (l[u] > l[q] + u - q)
 					l[u + 1] = l[u];
 				else
 					l[u + 1] = l[q] + u - q;
- 
+
 				/* form new elp(x) */
 				for (i = 0; i < t2; i++)
 					elp[u + 1][i] = 0;
 				for (i = 0; i <= l[q]; i++)
 					if (elp[q][i] != -1)
-						elp[u + 1][i + u - q] = 
+						elp[u + 1][i + u - q] =
                                    alpha_to[(d[u] + n - d[q] + elp[q][i]) % n];
 				for (i = 0; i <= l[u]; i++) {
 					elp[u + 1][i] ^= elp[u][i];
@@ -428,9 +428,9 @@ decode_bch()
 				}
 			}
 			u_lu[u + 1] = u - l[u + 1];
- 
+
 			/* form (u+1)th discrepancy */
-			if (u < t2) {	
+			if (u < t2) {
 			/* no discrepancy computed on last iteration */
 			  if (s[u + 1] != -1)
 			    d[u + 1] = alpha_to[s[u + 1]];
@@ -441,10 +441,10 @@ decode_bch()
 			      d[u + 1] ^= alpha_to[(s[u + 1 - i]
 			                    + index_of[elp[u + 1][i]]) % n];
 			  /* put d[u+1] into index form */
-			  d[u + 1] = index_of[d[u + 1]];	
+			  d[u + 1] = index_of[d[u + 1]];
 			}
 		} while ((u < t2) && (l[u + 1] <= t));
- 
+
 		u++;
 		if (l[u] <= t) {/* Can correct errors */
 			/* put elp into index form */
@@ -472,7 +472,7 @@ decode_bch()
 				}
 			}
 
-			if (count == l[u])	
+			if (count == l[u])
 			/* no. roots = degree of elp hence <= t errors */
 				for (i = 0; i < l[u]; i++)
 					recd[loc[i]] ^= 1;
@@ -496,8 +496,8 @@ unsigned long long int edacs_bch (unsigned long long int message)
 	  for (i = 0; i < k; i++){
 		  ddata[i] = ( (message >> i) & 0x1 ); //loaded up backwards? or just outputs backwards?
 	  }
-	  
-	
+
+
 	encode_bch();           /* encode data */
 
 	/*

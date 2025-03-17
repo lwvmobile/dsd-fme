@@ -17,7 +17,7 @@
  *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *	GNU General Public License for more details.
  */
- 
+
 // This code was originally written by JOnathan Naylor, G4KLX, as part
 // of the "pcrepeatercontroller" project
 // More info:
@@ -55,7 +55,7 @@ int traceBack (int * out, int * m_pathMemory0, int * m_pathMemory1, int * m_path
 				} // end else - if
 				out[loop]=0;
 				break;
-			
+
 			case S1: // if state S1
 				if (m_pathMemory1[loop]) {
 					state = S2; // lower path
@@ -64,7 +64,7 @@ int traceBack (int * out, int * m_pathMemory0, int * m_pathMemory1, int * m_path
 				} // end else - if
 				out[loop]=1;
 				break;
-			
+
 			case S2: // if state S2
 				if (m_pathMemory2[loop]) {
 					state = S3; // lower path
@@ -73,7 +73,7 @@ int traceBack (int * out, int * m_pathMemory0, int * m_pathMemory1, int * m_path
 				} // end else - if
 				out[loop]=0;
 				break;
-			
+
 			case S3: // if state S3
 				if (m_pathMemory3[loop]) {
 					state = S3; // lower path
@@ -82,7 +82,7 @@ int traceBack (int * out, int * m_pathMemory0, int * m_pathMemory1, int * m_path
 				} // end else - if
 				out[loop]=1;
 				break;
-			
+
 		} // end switch
 	} // end for
 
@@ -161,7 +161,7 @@ void viterbiDecode (int n, int *data, int *m_pathMemory0, int *m_pathMemory1, in
 }; // end function ViterbiDecode
 
 
-// function FECdecoder 
+// function FECdecoder
 // returns outlen
 int FECdecoder (int * in, int * out) {
 int outLen;

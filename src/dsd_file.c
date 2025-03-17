@@ -52,7 +52,7 @@ void saveAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   fputc (err, opts->mbe_out_f);
 
   k = 0;
-  for (i = 0; i < 6; i++) 
+  for (i = 0; i < 6; i++)
   {
     b = 0;
     for (j = 0; j < 8; j++)
@@ -78,7 +78,7 @@ void saveAmbe2450DataR (dsd_opts * opts, dsd_state * state, char *ambe_d)
   fputc (err, opts->mbe_out_fR);
 
   k = 0;
-  for (i = 0; i < 6; i++) 
+  for (i = 0; i < 6; i++)
   {
     b = 0;
     for (j = 0; j < 8; j++)
@@ -103,16 +103,16 @@ void PrintIMBEData (dsd_opts * opts, dsd_state * state, char *imbe_d) //for P25P
     imbe[i] =  convert_bits_into_output((uint8_t *)imbe_d+(i*8), 8);
     fprintf(stderr, "%02X", imbe[i]);
   }
-    
+
 
   fprintf(stderr, " err = [%X] [%X] ", state->errs, state->errs2);
   UNUSED(opts);
 }
 
-void PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d) 
+void PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d)
 {
 
-  //cast as unsigned long long int and not uint64_t 
+  //cast as unsigned long long int and not uint64_t
   //to avoid the %lx vs %llx warning on 32 or 64 bit
   unsigned long long int ambe = 0;
 
@@ -147,7 +147,7 @@ readImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
 
 
   k = 0;
-  if (opts->payload == 1) 
+  if (opts->payload == 1)
   {
     fprintf(stderr, "\n");
   }
@@ -169,12 +169,12 @@ readImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
           b = b & 255;
           k++;
         }
-        
-        if (opts->payload == 1) 
+
+        if (opts->payload == 1)
         {
           fprintf (stderr, "%02X", x);
         }
-        
+
     }
     if (opts->payload == 1)
     {
@@ -194,7 +194,7 @@ readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   state->errs = state->errs2;
 
   k = 0;
-  if (opts->payload == 1) 
+  if (opts->payload == 1)
   {
     fprintf(stderr, "\n");
   }
@@ -217,13 +217,13 @@ readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
           b = b & 255;
           k++;
         }
-        if (opts->payload == 1 && i < 6) 
+        if (opts->payload == 1 && i < 6)
         {
           fprintf (stderr, "%02X", x);
         }
-        if (opts->payload == 1 && i == 6) 
+        if (opts->payload == 1 && i == 6)
         {
-          fprintf (stderr, "%02X", x & 0x80); 
+          fprintf (stderr, "%02X", x & 0x80);
         }
     }
     if (opts->payload == 1)
@@ -337,7 +337,7 @@ void openMbeOutFile (dsd_opts * opts, dsd_state * state)
     sprintf (ext, ".dmb"); //new dstar file extension to make it read in and process properly
   }
   //dmr, nxdn, phase 2, x2-tdma
-  else sprintf (ext, ".amb"); 
+  else sprintf (ext, ".amb");
 
   //reset talkgroup id buffer
   for (i = 0; i < 12; i++)
@@ -399,7 +399,7 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
     sprintf (ext, ".dmb"); //new dstar file extension to make it read in and process properly
   }
   //dmr, nxdn, phase 2, x2-tdma
-  else sprintf (ext, ".amb"); 
+  else sprintf (ext, ".amb");
 
   //reset talkgroup id buffer
   for (i = 0; i < 12; i++)
@@ -461,7 +461,7 @@ void openWavOutFileL (dsd_opts * opts, dsd_state * state)
   UNUSED(state);
 
   SF_INFO info;
-  info.samplerate = 8000; 
+  info.samplerate = 8000;
   info.channels = 1;
   info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
   opts->wav_out_f = sf_open (opts->wav_out_file, SFM_RDWR, &info); //RDWR will append to file instead of overwrite file
@@ -641,7 +641,7 @@ uint16_t parse_raw_user_string (char * input, uint8_t * output)
   uint16_t len = strlen((const char*)input);
 
   uint8_t shift = 0;
-  
+
   //if zero is returned, just do two
   // if (len == 0) len = 2;
 
@@ -654,7 +654,7 @@ uint16_t parse_raw_user_string (char * input, uint8_t * output)
   {
     shift = 1;
     len++;
-  } 
+  }
 
   //divide by two to get octet len
   len /= 2;

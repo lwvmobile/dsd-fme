@@ -461,7 +461,7 @@ processHDU(dsd_opts* opts, dsd_state* state)
   mihex3 = (unsigned long long int)ConvertBitIntoBytes(&mi[64], 8);
 
   //reset dropbytes - skip first 11 for LCW
-  state->dropL = 267; 
+  state->dropL = 267;
 
   //set vc counter to 0
   state->p25vc = 0;
@@ -538,5 +538,5 @@ processHDU(dsd_opts* opts, dsd_state* state)
   //reset gain
   if (opts->floating_point == 1)
     state->aout_gain = opts->audio_gain;
-  
+
 }

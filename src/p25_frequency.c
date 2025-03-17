@@ -3,7 +3,7 @@
  * P25 Channel to Frequency Calculator
  *
  * NXDN Channel to Frequency Calculator
- * 
+ *
  * LWVMOBILE
  * 2022-11 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
@@ -32,7 +32,7 @@ long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channe
 	//Note: Base Frequency is calculated as (Base Frequency) x (0.000005 MHz) from the IDEN_UP message.
 
 	long int freq = -1;
-	int iden = channel >> 12; 
+	int iden = channel >> 12;
 	int type = state->p25_chan_type[iden];
 	int slots_per_carrier[16] = {1,1,1,2,4,2,2,2,2,2,2,2,2,2,2,2}; //from OP25
 	int step = (channel & 0xFFF) / slots_per_carrier[type];
@@ -45,7 +45,7 @@ long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channe
 		return (freq);
 	}
 
-	//if not found, attempt to find it via calculation 
+	//if not found, attempt to find it via calculation
 	else
 	{
 		if (state->p25_base_freq[iden] != 0)
@@ -54,13 +54,13 @@ long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channe
 					fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
 					return (freq);
 		}
-		else 
+		else
 		{
 				fprintf (stderr, "\n  Base Frequency Not Found - Iden [%d]", iden);
 				fprintf(stderr, "\n    or Channel not found in import file");
 				return (0);
 		}
-	}	
+	}
 
 }
 
@@ -106,18 +106,18 @@ long int nxdn_channel_to_frequency(dsd_opts * opts, dsd_state * state, uint16_t 
 			fprintf (stderr, "\n  DFA Frequency [%.6lf] MHz", (double)freq/1000000);
 			return (freq);
 		}
-		else 
+		else
 		{
 			fprintf(stderr, "\n    Custom DFA Settings -- Unknown Freq;");
 			return (0);
 		}
-		
+
 	}
 
 	else
 	{
 		fprintf(stderr, "\n    Channel not found in import file");
 		return (0);
-	} 
+	}
 
 }

@@ -157,7 +157,7 @@ int p25p1_lsd_fec(uint8_t * input)
   uint8_t lsd = (uint8_t)ConvertBitIntoBytes(&input[0], 8);
   uint8_t par = (uint8_t)ConvertBitIntoBytes(&input[8], 8);
   uint8_t chk = lsd_parity[lsd];
-  //NOTE: Simply checking the parity doesn't account for the parity bits being bad, but the 
+  //NOTE: Simply checking the parity doesn't account for the parity bits being bad, but the
   //low speed data bits being correct, but is better than nothing
   if (chk == par) return 1;
   else

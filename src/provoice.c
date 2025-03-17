@@ -13,7 +13,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
 
   //raw bits storage for analysis
   uint8_t raw_bits[800];
-  memset (raw_bits, 0, sizeof(raw_bits)); 
+  memset (raw_bits, 0, sizeof(raw_bits));
   //raw bytes storage for analysis
   uint8_t raw_bytes[100];
   memset (raw_bytes, 0, sizeof(raw_bytes));
@@ -32,11 +32,11 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "%s", KGRN);
     if (state->lasttg > 100000) {
       // I-Call
-      fprintf (stderr, " Site: %lld Target: %d Source: %d LCN: %d ", 
+      fprintf (stderr, " Site: %lld Target: %d Source: %d LCN: %d ",
                 state->edacs_site_id, state->lasttg - 100000, state->lastsrc, state->edacs_tuned_lcn);
     } else {
       // Group call
-      fprintf (stderr, " Site: %lld Group: %d Source: %d LCN: %d ", 
+      fprintf (stderr, " Site: %lld Group: %d Source: %d LCN: %d ",
                 state->edacs_site_id, state->lasttg, state->lastsrc, state->edacs_tuned_lcn);
     }
     fprintf (stderr, "%s", KNRM);
@@ -45,7 +45,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
   else if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && state->ea_mode == 0)
   {
     fprintf (stderr, "%s", KGRN);
-    fprintf (stderr, " Site: %lld AFS: %d-%d LCN: %d ", 
+    fprintf (stderr, " Site: %lld AFS: %d-%d LCN: %d ",
               state->edacs_site_id, (state->lastsrc >> 7) & 0xF, state->lastsrc & 0x7F, state->edacs_tuned_lcn);
     fprintf (stderr, "%s", KNRM);
   }
@@ -235,7 +235,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
   raw_bits[k++] = dibit;
 
   for (i = 0; i < 16; i++)
-    raw_bits[k++] = getDibit (opts, state); 
+    raw_bits[k++] = getDibit (opts, state);
 
   bf = (uint16_t)ConvertBitIntoBytes(&raw_bits[54*8], 16);
 
@@ -285,7 +285,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     imbe7100_fr2[*w][*x] = dibit;
     w++;
     x++;
-    raw_bits[k++] = dibit; 
+    raw_bits[k++] = dibit;
   }
 
   // spacer bits
@@ -415,7 +415,7 @@ void processProVoice (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "\n pV Payload Dump: \n  ");
     for (i = 0; i < k/8; i++)
     {
-      
+
       // if ( (i != 0) && ((i%26) == 0) )
       //   fprintf (stderr, "\n  ");
 

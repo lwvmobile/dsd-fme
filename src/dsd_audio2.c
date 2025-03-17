@@ -1,9 +1,9 @@
 /*-------------------------------------------------------------------------------
- * 
- * 
+ *
+ *
  *
  * TODO: Fill me in'
- * 
+ *
  *
  * LWVMOBILE
  * 2023-10 DSD-FME Florida Man Edition
@@ -15,7 +15,7 @@
 //NOTE: Tones produce ringing sound when put through the hpf_d, may want to look into tweaking it,
 //or looking for a way to store is_tone by glancing at ambe_d values and not running hpf_d on them
 
-//TODO: WAV File saving (works fine on shorts, but on float, writing short to wav is not auto-gained, 
+//TODO: WAV File saving (works fine on shorts, but on float, writing short to wav is not auto-gained,
 //so super quiet, either convert to float wav files, or run processAudio AFTER memcpy of the temp_buf)
 
 //simple method -- produces cleaner results, but can be muted (or very loud) at times
@@ -36,7 +36,7 @@
 
 //   if (opts->audio_gain != 0 && slot == 1)
 //     gain = state->aout_gainR / 25.0f;
-  
+
 //   //mono output handles slightly different, need to further decimate
 //   if (opts->pulse_digi_out_channels == 1)
 //     df *= 4.0f;
@@ -55,7 +55,7 @@
 
 //     //user gain factor
 //     samp[i] *= gain;
-    
+
 //   }
 
 // }
@@ -564,7 +564,7 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
       encL = 1;
     }
   }
-  
+
   //checkdown to see if we can lift the 'mute' if a key is available
   if (encL)
   {
@@ -682,7 +682,7 @@ void playSynthesizedVoiceFS (dsd_opts * opts, dsd_state * state)
 
 void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
 {
-  
+
   agf(opts, state, state->f_l,0);
 
   //mono may need an additional decimation
@@ -780,7 +780,7 @@ void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
     memset (state->audio_out_buf, 0, 100 * sizeof (short));
     state->audio_out_idx2 = 0;
   }
-  
+
   memset (state->f_l, 0.0f, sizeof(state->f_l));
   memset (state->audio_out_temp_buf, 0.0f, sizeof(state->audio_out_temp_buf));
 
@@ -1200,7 +1200,7 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
   // }
 
   //if TG Hold in place, mute anything but that TG #132
-  if (state->tg_hold != 0 && state->tg_hold != TGL) 
+  if (state->tg_hold != 0 && state->tg_hold != TGL)
     encL = 1;
   if (state->tg_hold != 0 && state->tg_hold != TGR)
     encR = 1;
@@ -1598,7 +1598,7 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
     if (memcmp(empty, stereo_samp4, sizeof(empty)) != 0)
       udp_socket_blaster (opts, state, 320*2, stereo_samp4);
   }
-  
+
 
   if (opts->audio_out_type == 1 || opts->audio_out_type == 2) //STDOUT or OSS 8k/2channel
   {
@@ -1789,7 +1789,7 @@ void playSynthesizedVoiceSS18 (dsd_opts * opts, dsd_state * state)
   // }
 
   //if TG Hold in place, mute anything but that TG #132
-  if (state->tg_hold != 0 && state->tg_hold != TGL) 
+  if (state->tg_hold != 0 && state->tg_hold != TGL)
     encL = 1;
   if (state->tg_hold != 0 && state->tg_hold != TGR)
     encR = 1;
@@ -1904,7 +1904,7 @@ void playSynthesizedVoiceSS18 (dsd_opts * opts, dsd_state * state)
         udp_socket_blaster (opts, state, 320*2, stereo_sf[j]);
     }
   }
-  
+
 
   if (opts->audio_out_type == 1 || opts->audio_out_type == 2) //STDOUT or OSS 8k/2channel
   {
@@ -2033,7 +2033,7 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
 
     aavg /= 20.0f; //average of the 20 samples
 
-    //debug 
+    //debug
     // fprintf (stderr, "\nS%d - DF = %f AAVG = %f", slot, df, aavg);
 
     if (slot == 0)
@@ -2051,7 +2051,7 @@ void agf (dsd_opts * opts, dsd_state * state, float samp[160], int slot)
     aavg = 0.0f; //reset
 
   } //j loop
-  
+
   AGF_END: ; //do nothing
 
 }
@@ -2088,7 +2088,7 @@ void agsm (dsd_opts * opts, dsd_state * state, short * input, int len)
     avg += (float)samp[i];
 
   avg /= (float)len;
-  
+
   coeff = fabsf (nom / max);
 
   //keep coefficient with tolerable range when silence to prevent crackle/buzz
@@ -2097,7 +2097,7 @@ void agsm (dsd_opts * opts, dsd_state * state, short * input, int len)
   //apply the coefficient to bring the max value to our desired maximum value
   for (i = 0; i < 20; i++)
     samp[i] *= coeff;
-    
+
   //debug
   // fprintf (stderr, "\n M: %f; C: %f; A: %f; ", max, coeff, avg);
 
@@ -2107,7 +2107,7 @@ void agsm (dsd_opts * opts, dsd_state * state, short * input, int len)
   //   fprintf (stderr, " in: %d", input[i]);
   //   fprintf (stderr, " out: %f", samp[i]);
   // }
-    
+
   //return new smaple values post agc
   for (i = 0; i < len; i++)
     input[i] = (short)samp[i];

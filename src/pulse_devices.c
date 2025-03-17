@@ -166,7 +166,7 @@ int pa_get_devicelist(pa_devicelist_t *input, pa_devicelist_t *output)
         // Now we wait for our operation to complete.  When it's
         // complete our pa_output_devicelist is filled out, and we move
         // along to the next state
-        if (pa_operation_get_state(pa_op) == PA_OPERATION_DONE) 
+        if (pa_operation_get_state(pa_op) == PA_OPERATION_DONE)
         {
           pa_operation_unref(pa_op);
 
@@ -199,7 +199,7 @@ int pa_get_devicelist(pa_devicelist_t *input, pa_devicelist_t *output)
     // or not the iteration should block until something is ready to be
     // done.  Set it to zero for non-blocking.
     pa_mainloop_iterate(pa_ml, 1, NULL);
-    
+
   }
 }
 

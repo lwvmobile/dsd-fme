@@ -50,26 +50,26 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
     long int ct_freq = process_channel_to_freq(opts, state, channelt);
     long int cr_freq = process_channel_to_freq(opts, state, channelr);
     UNUSED(cr_freq);
-    
+
     state->p25_cc_freq = ct_freq;
     state->p25_cc_is_tdma = 0; //flag off for CC tuning purposes when system is qpsk
 
-    //place the cc freq into the list at index 0 if 0 is empty, or not the same, 
+    //place the cc freq into the list at index 0 if 0 is empty, or not the same,
     //so we can hunt for rotating CCs without user LCN list
     if (state->trunk_lcn_freq[0] == 0 || state->trunk_lcn_freq[0] != state->p25_cc_freq)
     {
-      state->trunk_lcn_freq[0] = state->p25_cc_freq; 
-    } 
+      state->trunk_lcn_freq[0] = state->p25_cc_freq;
+    }
 
     //only set IF these values aren't already hard set by the user
     if (state->p2_hardset == 0)
     {
       state->p2_wacn = wacn;
       state->p2_sysid = sysid;
-    } 
+    }
   }
   //RFSS Status Broadcast - Extended 6.2.15.2
-  else if (opcode == 0x3A) 
+  else if (opcode == 0x3A)
   {
     int lra = mpdu_byte[3];
     int lsysid = ((mpdu_byte[4] & 0xF) << 8) | mpdu_byte[5];
@@ -89,7 +89,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
   }
 
   //Adjacent Status Broadcast (ADJ_STS_BCST) Extended 6.2.2.2
-  else if (opcode == 0x3C) 
+  else if (opcode == 0x3C)
   {
     int lra = mpdu_byte[3];
     int cfva = mpdu_byte[4] >> 4;
@@ -98,7 +98,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
     int siteid = mpdu_byte[9];
     int channelt = (mpdu_byte[12] << 8) | mpdu_byte[13];
     int channelr = (mpdu_byte[14] << 8) | mpdu_byte[15];
-    int sysclass = mpdu_byte[16];  
+    int sysclass = mpdu_byte[16];
     long int wacn = (mpdu_byte[17] << 12) | (mpdu_byte[18] << 4) | (mpdu_byte[19] >> 4);
     fprintf (stderr, "%s",KYEL);
     fprintf (stderr, "\n Adjacent Status Broadcast - Extended\n");
@@ -113,8 +113,8 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
 
   }
 
-  //Group Voice Channel Grant - Extended 
-  else if (opcode == 0x0) 
+  //Group Voice Channel Grant - Extended
+  else if (opcode == 0x0)
   {
     int svc = mpdu_byte[8];
     int channelt  = (mpdu_byte[14] << 8) | mpdu_byte[15];
@@ -158,7 +158,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
     //TG hold on P25p1 Ext -- block non-matching target, allow matching group
     if (state->tg_hold != 0 && state->tg_hold != group) sprintf (mode, "%s", "B");
     if (state->tg_hold != 0 && state->tg_hold == group) sprintf (mode, "%s", "A");
-    
+
     //Skip tuning group calls if group calls are disabled
     if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
@@ -201,7 +201,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
           if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
           SetFreq(opts->rigctl_sockfd, freq1);
           state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
-          opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+          opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
           state->last_vc_sync_time = time(NULL);
         }
         //rtl
@@ -214,12 +214,12 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
           state->last_vc_sync_time = time(NULL);
           #endif
         }
-      }    
+      }
     }
   }
 
   //Unit to Unit Voice Channel Grant - Extended
-  else if (opcode == 0x6) 
+  else if (opcode == 0x6)
   {
     //I'm not doing EVERY element of this, just enough for tuning!
     int svc = mpdu_byte[8];
@@ -269,7 +269,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
     //TG hold on P25p1 Ext UU -- will want to disable UU_V grants while TG Hold enabled
     if (state->tg_hold != 0 && state->tg_hold != target) sprintf (mode, "%s", "B");
     // if (state->tg_hold != 0 && state->tg_hold == target) sprintf (mode, "%s", "A");
-    
+
     //Skip tuning private calls if group calls are disabled
     if (opts->trunk_tune_private_calls == 0) goto SKIPCALL;
 
@@ -325,7 +325,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
           state->last_vc_sync_time = time(NULL);
           #endif
         }
-      }    
+      }
     }
   }
 
@@ -362,7 +362,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
     state->last_active_time = time(NULL);
 
     //Skip tuning private calls if private calls is disabled (are telephone int calls private, or talkgroup?)
-    if (opts->trunk_tune_private_calls == 0) goto SKIPCALL; 
+    if (opts->trunk_tune_private_calls == 0) goto SKIPCALL;
 
     //Skip tuning encrypted calls if enc calls are disabled
     if ( (svc & 0x40) && opts->trunk_tune_enc_calls == 0) goto SKIPCALL;
@@ -418,7 +418,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
           SetFreq(opts->rigctl_sockfd, freq);
           if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
           opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
-          state->last_vc_sync_time = time(NULL); 
+          state->last_vc_sync_time = time(NULL);
         }
         //rtl
         else if (opts->audio_in_type == 3)
@@ -430,7 +430,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
           state->last_vc_sync_time = time(NULL);
           #endif
         }
-      }    
+      }
     }
     if (opts->p25_trunk == 0)
     {
@@ -446,7 +446,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
   }
 
   //look at Harris Opcodes and payload portion of MPDU
-  else if (MFID == 0xA4) 
+  else if (MFID == 0xA4)
   {
     //TODO: Add Known Opcodes from Manual (all one of them)
     fprintf (stderr, "%s",KCYN);
@@ -496,7 +496,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
       //TG hold on MFID90 GRG -- block non-matching target, allow matching group
       if (state->tg_hold != 0 && state->tg_hold != group) sprintf (mode, "%s", "B");
       if (state->tg_hold != 0 && state->tg_hold == group) sprintf (mode, "%s", "A");
-      
+
       //Skip tuning group calls if group calls are disabled
       if (opts->trunk_tune_group_calls == 0) goto SKIPCALL;
 
@@ -539,7 +539,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
             if (opts->setmod_bw != 0 ) SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
             SetFreq(opts->rigctl_sockfd, freq1);
             state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
-            opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop 
+            opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
             state->last_vc_sync_time = time(NULL);
           }
           //rtl
@@ -552,7 +552,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
             state->last_vc_sync_time = time(NULL);
             #endif
           }
-        }    
+        }
       }
     }
 

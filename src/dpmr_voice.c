@@ -412,7 +412,7 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
   {
   fprintf (stderr, "%s", KRED);
   fprintf(stderr, " Src=(CRC ERR) Channel Code =(CRC ERR)");
-  fprintf (stderr, "%s", KNRM); 
+  fprintf (stderr, "%s", KNRM);
   }
 
   if (state->dPMRVoiceFS2Frame.Version[0] == 3)
@@ -439,7 +439,7 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
 
     //reset scrambler key seed on frame 0
     if (state->dPMRVoiceFS2Frame.FrameNumbering[o] == 0) state->payload_miN = 0;
-    
+
     //depending on first or second TCH, set start and end variables appropriately
     if (o == 1)
     {
@@ -448,14 +448,14 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
 
     }
 
-    //this is used so we can simply pass the voice here to the 
+    //this is used so we can simply pass the voice here to the
     //nxdn scrambler by telling mbe these are nxdn frames and to
     //apply the same descramble method to them if necessary
-    int realsynctype = state->synctype; 
+    int realsynctype = state->synctype;
 
     // fprintf (stderr, "\nCommunication Mode: %d\n", state->dPMRVoiceFS2Frame.CommunicationMode[o]);
     // fprintf (stderr, "Encryption Mode: %d\n", state->dPMRVoiceFS2Frame.Version[o]); //shows as 3 (manufacturer specific, 5.16) on the dPMR scrambler values received
-    // fprintf (stderr, "Superframe Number: %d", state->dPMRVoiceFS2Frame.FrameNumbering[o]); 
+    // fprintf (stderr, "Superframe Number: %d", state->dPMRVoiceFS2Frame.FrameNumbering[o]);
 
     if((state->dPMRVoiceFS2Frame.CommunicationMode[o] == 0) ||
        (state->dPMRVoiceFS2Frame.CommunicationMode[o] == 1) ||
@@ -469,14 +469,14 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
         state->nxdn_cipher_type = 0x01; //turn on nxdn scrambler cipher
         state->dmr_encL = 1; //flag on enc bit here so we can mute if no key provided
       }
-      
+
       //flag back off if key is provided
       if (state->R != 0) state->dmr_encL = 0;
 
       //print Current Frame Number if payload verbosity enabled
       if (opts->payload == 1)
         fprintf (stderr, "\n FN %d/4", state->dPMRVoiceFS2Frame.FrameNumbering[o]+1);
-      
+
       //There are 4 AMBE voice frames per TCH
       for(i = start; i < end; i++)
       {
@@ -485,14 +485,14 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
           playSynthesizedVoiceMS(opts, state);
         if (opts->floating_point == 1)
           playSynthesizedVoiceFM(opts, state);
-      } 
+      }
 
       //set the correct sync type again and flag off the cipher
       state->synctype = realsynctype;
       state->nxdn_cipher_type = 0;
 
-    } 
-  } 
+    }
+  }
 
   fprintf(stderr, "\n");
 

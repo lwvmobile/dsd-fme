@@ -812,7 +812,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           //Ilya, please don't nit fix my logging format for these, it breaks grep when parsing a bunch of these all at once
           fprintf (stderr, "%s", KWHT);
           fprintf (stderr, " System Dynamic Regroup :: SP-WGID: %03d; Target: %07d;", sgid, target);
-          
+
           if (sgid != target)
           {
             //decode potential TGA values (assumming same as Harris P25)
@@ -833,7 +833,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               fprintf (stderr, " UNK2: %02X;", unk2);
             fprintf (stderr, " SSN: %02X;", ssn); //this may or may not be a unique value to each SGID, is 1F for termination of a patch
           }
-          
+
           //07:25:17 Sync: +EDACS  MSG_1 [FE00045] MSG_2 [FE00045] (MT1: 1F; MT2: C)  System Dynamic Regroup :: SP-WGID: 069; Target: 0000069; One-Way Group Patch Delete TGA: 6;
           //Upon Reflection, thinking the same MT1 and MT2 values are in both messages, so appears to just be the SP-WGID here and a bunch of zeroes leading into it, and not a TGA value
 
@@ -2146,7 +2146,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
     free (datestr);
     datestr = NULL;
   }
-  
+
   fprintf (stderr, "\n");
 
 }

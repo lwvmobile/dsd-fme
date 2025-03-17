@@ -1058,7 +1058,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	if (opts->rtl_udp_port != 0) port = opts->rtl_udp_port; //set this here, only open socket thread if set
 	if (opts->rtl_gain_value > 0) {
 		dongle.gain = opts->rtl_gain_value * 10; //multiple by ten to make it consitent with the way rtl_fm works
-	}	
+	}
 
   /* quadruple sample_rate to limit to Δθ to ±π/2 */
 	demod.rate_in *= demod.post_downsample;
@@ -1182,7 +1182,7 @@ void rtl_dev_tune(dsd_opts * opts, long int frequency)
 
 	pthread_rwlock_wrlock(&output.rw); //prevent possible segfault when cleaning the queue
 	rtl_clean_queue();
-	pthread_rwlock_unlock(&output.rw); //resume 
+	pthread_rwlock_unlock(&output.rw); //resume
 
 }
 

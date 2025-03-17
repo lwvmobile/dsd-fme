@@ -2,20 +2,20 @@
 //Reworked portions from Osmocom OP25
 
 /* -*- c++ -*- */
-/* 
+/*
  * NXDN Encoder/Decoder (C) Copyright 2019 Max H. Parke KA1RBI
- * 
- * 
+ *
+ *
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
- * 
+ *
  * This software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this software; see the file COPYING.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street,
@@ -59,12 +59,12 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	memset (deperm, 0, sizeof(deperm));
 	memset (depunc, 0, sizeof(depunc));
 
-	for (int i=0; i<144; i++) 
-		deperm[PERM_16_9[i]] = bits[i]; 
+	for (int i=0; i<144; i++)
+		deperm[PERM_16_9[i]] = bits[i];
 	out = 0;
 	for (int i=0; i<144; i+=3) {
 		depunc[out++] = deperm[i+0];
-		depunc[out++] = 0; 
+		depunc[out++] = 0;
 		depunc[out++] = deperm[i+1];
 		depunc[out++] = deperm[i+2];
 	}
@@ -79,10 +79,10 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	memset (trellis_buf, 0, sizeof(trellis_buf));
 
 	for (int i = 0; i < 192; i++)
-		temp[i] = depunc[i] << 1; 
+		temp[i] = depunc[i] << 1;
 
 	CNXDNConvolution_start();
-  for (int i = 0; i < 96; i++) 
+  for (int i = 0; i < 96; i++)
   {
     s0 = temp[(2*i)];
     s1 = temp[(2*i)+1];
@@ -119,7 +119,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	if (crc != check)
 	{
 		//debug
-		// fprintf (stderr, " Pass 2 "); 
+		// fprintf (stderr, " Pass 2 ");
 		crc = 1; check = 0;
 		memset (trellis_buf, 0, sizeof(trellis_buf));
 		memset (m_data, 0, sizeof(m_data));
@@ -135,7 +135,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 		}
 	}
 
-	if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf); 
+	if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf);
 	// else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
 
 	if (opts->payload == 1)
@@ -144,7 +144,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 		fprintf (stderr, " FACCH1 Payload ");
 		for (int i = 0; i < 12; i++)
 		{
-			fprintf (stderr, "[%02X]", m_data[i]); 
+			fprintf (stderr, "[%02X]", m_data[i]);
 		}
 		if (crc != check && opts->payload == 1)
 		{
@@ -160,7 +160,7 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 {
 	//see about initializing these variables
-	uint8_t deperm[60]; //60 
+	uint8_t deperm[60]; //60
 	uint8_t depunc[72]; //72
 	uint8_t trellis_buf[32]; //32
 
@@ -175,7 +175,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	int ran = 0;
 	int part_of_frame = 0;
 
-	for (int i=0; i<60; i++) 
+	for (int i=0; i<60; i++)
 		deperm[PERM_12_5[i]] = bits[i];
 	for (int p=0; p<60; p+= 10) {
 		depunc[o++] = deperm[p+0];
@@ -203,7 +203,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	memset (trellis_buf, 0, sizeof(trellis_buf));
 
 	for (int i = 0; i < 72; i++)
-		temp[i] = depunc[i] << 1; 
+		temp[i] = depunc[i] << 1;
 
 	CNXDNConvolution_start();
   for (int i = 0; i < 36; i++)
@@ -244,7 +244,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	if (crc != check)
 	{
 		//debug
-		// fprintf (stderr, " Pass 2 "); 
+		// fprintf (stderr, " Pass 2 ");
 		crc = 1; check = 0;
 		memset (trellis_buf, 0, sizeof(trellis_buf));
 		memset (m_data, 0, sizeof(m_data));
@@ -280,21 +280,21 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		{
 			ran = (trellis_buf[2] << 5) | (trellis_buf[3] << 4) | (trellis_buf[4] << 3) | (trellis_buf[5] << 2) | (trellis_buf[6] << 1) | trellis_buf[7];
 			state->nxdn_last_ran = ran;
-		} 
+		}
 
 		fprintf (stderr, "PF 1/1");
 		if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
 		else if (state->M == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
 
-		if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, nsf_sacch); 
+		if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, nsf_sacch);
 		// else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, nsf_sacch);
 
-		//I'm placing this here, my observation is that SACCH NSF 
+		//I'm placing this here, my observation is that SACCH NSF
 		//is almost always, if not always, just IDLE
 		else fprintf (stderr, " IDLE");
 
 		if (opts->payload == 1)
-		{ 
+		{
 			fprintf (stderr, "\n SACCH NSF ");
 			for (int i = 0; i < 4; i++)
 			{
@@ -310,13 +310,13 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 			}
 
 		}
-		
+
 		//reset the sacch field -- Github Issue #118
 		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 
 	}
-	
+
 	//If part of superframe, collect the fragments and send to NXDN_SACCH_Full_decode instead
 	else if (state->nxdn_sacch_non_superframe == FALSE)
 	{
@@ -328,7 +328,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		else if (sf == 2) part_of_frame = 1;
 		else if (sf == 1) part_of_frame = 2;
 		else if (sf == 0) part_of_frame = 3;
-		else part_of_frame = 0; 
+		else part_of_frame = 0;
 
 		//needed for DES and AES
 		state->nxdn_part_of_frame = part_of_frame;
@@ -351,7 +351,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		// 	fprintf (stderr, " (CRC ERR)");
 		// 	fprintf (stderr, "%s", KNRM);
 		// }
-		
+
 		//reset scrambler seed to key value on new superframe
 		// if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1) state->payload_miN = 0;
 
@@ -396,7 +396,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		for (int i = 0; i < 18; i++)
 		{
 			sacch_segment = sacch_segment << 1;
-			sacch_segment = sacch_segment + trellis_buf[i+8]; 
+			sacch_segment = sacch_segment + trellis_buf[i+8];
 			state->nxdn_sacch_frame_segment[part_of_frame][i] = trellis_buf[i+8];
 		}
 
@@ -404,11 +404,11 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		if (part_of_frame == 3)
 		{
 			NXDN_SACCH_Full_decode (opts, state);
-		} 
+		}
 
 		if (opts->payload == 1)
-		{ 
-			fprintf (stderr, "\n"); 
+		{
+			fprintf (stderr, "\n");
 			fprintf (stderr, " SACCH SF Segment #%d ", part_of_frame+1);
 			for (int i = 0; i < 4; i++)
 			{
@@ -417,8 +417,8 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 			if (crc != check) fprintf (stderr, " CRC ERR - %02X %02X", crc, check);
 		}
 
-	}	
-	
+	}
+
 }
 
 void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[348], uint8_t type)
@@ -452,7 +452,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 		depunc[id++] = deperm[i*12+10];
 		depunc[id++] = deperm[i*12+11];
 	}
-	
+
 	//switch to the convolutional decoder
 	uint8_t temp[406];
 	uint8_t s0;
@@ -463,10 +463,10 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 	memset (m_data, 0, sizeof (m_data));
 
 	for (int i = 0; i < 406; i++)
-		temp[i] = depunc[i] << 1; 
+		temp[i] = depunc[i] << 1;
 
 	CNXDNConvolution_start();
-  for (int i = 0; i < 203; i++) 
+  for (int i = 0; i < 203; i++)
   {
     s0 = temp[(2*i)];
     s1 = temp[(2*i)+1];
@@ -475,7 +475,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
   }
 
 	//numerals seem okay now
-  CNXDNConvolution_chainback(m_data, 199); 
+  CNXDNConvolution_chainback(m_data, 199);
 
 	for(int i = 0; i < 26; i++)
   {
@@ -504,7 +504,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 	if (crc != check)
 	{
 		//debug
-		// fprintf (stderr, " Pass 2 "); 
+		// fprintf (stderr, " Pass 2 ");
 		crc = 1; check = 0;
 		memset (trellis_buf, 0, sizeof(trellis_buf));
 		memset (m_data, 0, sizeof(m_data));
@@ -530,21 +530,21 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 
 	//just going to leave this all here in case its needed, like in cac,
 	//don't have any samples with f2 or udch data in it
-	for (int i = 0; i < 199-8-15; i++) 
+	for (int i = 0; i < 199-8-15; i++)
 	{
-		f2u_message_buffer[i] = trellis_buf[i+8]; 
+		f2u_message_buffer[i] = trellis_buf[i+8];
 	}
-	
+
 	if (crc == check)
-	{ 
+	{
 		if (type == 1) NXDN_Elements_Content_decode(opts, state, 1, f2u_message_buffer);
 		if (type == 0) {} //need handling for user data (text messages and AVL)
-	} 
+	}
 	// else if (opts->aggressive_framesync == 0)
 	// {
 	// 	if (type == 1) NXDN_Elements_Content_decode(opts, state, 0, f2u_message_buffer);
 	// 	if (type == 0) {} //need handling for user data (text messages and AVL)
-	// } 
+	// }
 
 	if (type == 0 && crc == check)
 	{
@@ -580,9 +580,9 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 		for (int i = 0; i < 26; i++)
 		{
 			if (i == 13) fprintf (stderr, "\n  ");
-			fprintf (stderr, "[%02X]", m_data[i]); 
+			fprintf (stderr, "[%02X]", m_data[i]);
 		}
-		
+
 		if (crc != check)
 		{
 			fprintf (stderr, "%s", KRED);
@@ -604,7 +604,7 @@ void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[34
 		// 		else fprintf (stderr, " ");
 		// 	}
 		// }
-	}  
+	}
 
 }
 static int cac_fail = 0;
@@ -650,7 +650,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 	memset (m_data, 0, sizeof (m_data));
 
 	for (int i = 0; i < 350; i++)
-		temp[i] = depunc[i] << 1; 
+		temp[i] = depunc[i] << 1;
 
 	CNXDNConvolution_start();
   for (int i = 0; i < 175; i++) //179
@@ -675,7 +675,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
     trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
   }
 
-	crc = crc16cac(trellis_buf, 171); 
+	crc = crc16cac(trellis_buf, 171);
 
 	//debug
 	// if (crc == 0)
@@ -684,7 +684,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 	if (crc != 0)
 	{
 		//debug
-		// fprintf (stderr, " Pass 2 "); 
+		// fprintf (stderr, " Pass 2 ");
 		memset (trellis_buf, 0, sizeof(trellis_buf));
 		memset (m_data, 0, sizeof(m_data));
 		trellis_decode(trellis_buf, depunc, 171);
@@ -710,7 +710,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 	{
 		ran = (trellis_buf[2] << 5) | (trellis_buf[3] << 4) | (trellis_buf[4] << 3) | (trellis_buf[5] << 2) | (trellis_buf[6] << 1) | trellis_buf[7];
 		state->nxdn_last_ran = ran;
-	} 
+	}
 
 	fprintf (stderr, "%s", KYEL);
 	fprintf (stderr, " CAC");
@@ -723,7 +723,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 		fprintf (stderr, "%s", KNRM);
 	}
 
-	//check for accumulative cac failures and reset if multiple errors pile up 
+	//check for accumulative cac failures and reset if multiple errors pile up
 	//(LZ issue and also issue very occasssionally noticed on remote)
 	if (crc != 0) cac_fail++;
 	else cac_fail = 0;
@@ -767,7 +767,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 	}
 
 	if (crc == 0) NXDN_Elements_Content_decode(opts, state, 1, cac_message_buffer);
-	// else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, cac_message_buffer);  
+	// else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, cac_message_buffer);
 
 	if (opts->payload == 1)
 	{
@@ -775,23 +775,23 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 		fprintf (stderr, " CAC Payload\n  ");
 		for (int i = 0; i < 22; i++)
 		{
-			fprintf (stderr, "[%02X]", m_data[i]); 
+			fprintf (stderr, "[%02X]", m_data[i]);
 			if (i == 10) fprintf (stderr, "\n  ");
 		}
 		// if (crc != 0) fprintf (stderr, " CRC ERR ");
 
-	} 
+	}
 
 }
 
-//Type-D "IDAS" 
+//Type-D "IDAS"
 void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint8_t direction)
 {
 	fprintf (stderr, "%s", KYEL);
 	fprintf (stderr, " SCCH");
 
 	//see about initializing these variables
-	uint8_t deperm[60]; //60 
+	uint8_t deperm[60]; //60
 	uint8_t depunc[72]; //72
 	uint8_t trellis_buf[32]; //32
 
@@ -805,7 +805,7 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 	int sf = 0;
 	int part_of_frame = 0;
 
-	for (int i=0; i<60; i++) 
+	for (int i=0; i<60; i++)
 		deperm[PERM_12_5[i]] = bits[i];
 	for (int p=0; p<60; p+= 10) {
 		depunc[o++] = deperm[p+0];
@@ -833,10 +833,10 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 	memset (trellis_buf, 0, sizeof(trellis_buf));
 
 	for (int i = 0; i < 72; i++)
-		temp[i] = depunc[i] << 1; 
+		temp[i] = depunc[i] << 1;
 
 	CNXDNConvolution_start();
-  for (int i = 0; i < 36; i++) 
+  for (int i = 0; i < 36; i++)
   {
     s0 = temp[(2*i)];
     s1 = temp[(2*i)+1];
@@ -873,7 +873,7 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 	if (crc != check)
 	{
 		//debug
-		// fprintf (stderr, " Pass 2 "); 
+		// fprintf (stderr, " Pass 2 ");
 		crc = 1; check = 0;
 		memset (trellis_buf, 0, sizeof(trellis_buf));
 		memset (m_data, 0, sizeof(m_data));
@@ -895,7 +895,7 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 	else if (sf == 2) part_of_frame = 1;
 	else if (sf == 1) part_of_frame = 2;
 	else if (sf == 0) part_of_frame = 3;
-	else part_of_frame = 0; 
+	else part_of_frame = 0;
 
 	//reset scrambler seed to key value on new superframe
 	// if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1) state->payload_miN = 0;
@@ -920,8 +920,8 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 	//English Translation: Superframe when voice, Non Superframe when not voice
 
 	//What I've found is that by not using the superframe structure, and decoding each 'unit'
-	//individually instead, we can get more expedient decoding on elements without having to 
-	//sacrifice an entire superframe for one bad CRC, also each element cleanly divides into a 
+	//individually instead, we can get more expedient decoding on elements without having to
+	//sacrifice an entire superframe for one bad CRC, also each element cleanly divides into a
 	//single 'unit' except for enc parms IV, which can be stored seperately if needed
 
 	//NOTE: scch has its own message format, and thus, doesn't go to content element decoding
@@ -933,7 +933,7 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 	fprintf (stderr, "%s", KNRM);
 
 	if (opts->payload == 1)
-	{ 
+	{
 		fprintf (stderr, "\n SCCH Payload ");
 		for (int i = 0; i < 4; i++)
 		{
@@ -945,11 +945,11 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 			fprintf (stderr, "%s", KRED);
 			fprintf (stderr, " (CRC ERR)");
 			fprintf (stderr, "%s", KNRM);
-		} 
+		}
 	}
 
 	fprintf (stderr, "%s", KNRM);
-	
+
 }
 
 void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[288], uint8_t type)
@@ -980,21 +980,21 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 
 	for (int j=0; j<2; j++)
 	{
-		for (int i=0; i<144; i++) 
-			deperm[PERM_16_9[i]] = bits[i+(j*144)]; 
+		for (int i=0; i<144; i++)
+			deperm[PERM_16_9[i]] = bits[i+(j*144)];
 		out = 0;
 		for (int i=0; i<144; i+=3) {
 			depunc[out++] = deperm[i+0];
-			depunc[out++] = 0; 
+			depunc[out++] = 0;
 			depunc[out++] = deperm[i+1];
 			depunc[out++] = deperm[i+2];
 		}
 
 		for (int i = 0; i < 192; i++)
-			temp[i] = depunc[i] << 1; 
+			temp[i] = depunc[i] << 1;
 
 		CNXDNConvolution_start();
-		for (int i = 0; i < 96; i++) 
+		for (int i = 0; i < 96; i++)
 		{
 			s0 = temp[(2*i)];
 			s1 = temp[(2*i)+1];
@@ -1021,7 +1021,7 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 		{
 			check[j] = check[j] << 1;
 			check[j] = check[j] | trellis_buf[84+i]; //84
-		
+
 		}
 
 		//debug
@@ -1032,7 +1032,7 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 		if (crc[j] != check[j])
 		{
 			//debug
-			// fprintf (stderr, "P:%d Pass 2 ", j); 
+			// fprintf (stderr, "P:%d Pass 2 ", j);
 			crc[j] = 1; check[j] = 0;
 			memset (trellis_buf, 0, sizeof(trellis_buf));
 			memset (m_data, 0, sizeof(m_data));
@@ -1063,8 +1063,8 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 	{
 		if (type == 1) NXDN_Elements_Content_decode(opts, state, 1, trellis_buf);
 		if (type == 0) {} //need handling for user data (text messages and AVL)
-	}  
-	// else if (opts->aggressive_framesync == 0) 
+	}
+	// else if (opts->aggressive_framesync == 0)
 	// {
 	// 	if (type == 1) NXDN_Elements_Content_decode(opts, state, 0, trellis_buf);
 	// 	if (type == 0) {} //need handling for user data (text messages and AVL)
@@ -1111,7 +1111,7 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 		for (int i = 0; i < 24; i++)
 		{
 			if (i == 12) fprintf (stderr, "\n  ");
-			fprintf (stderr, "[%02X]", f3_udch2_bytes[i]); 
+			fprintf (stderr, "[%02X]", f3_udch2_bytes[i]);
 		}
 
 		if ( (crc[0] != check[0] || crc[1] != check[1]) && opts->payload == 1)
@@ -1138,7 +1138,7 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 		// 		else fprintf (stderr, " ");
 		// 	}
 		// }
-		
+
 	}
 
 }
@@ -1181,7 +1181,7 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 	else if (MessageType == 0x38) fprintf(stderr, " SDCALL_REQ_HEADER");
 	else if (MessageType == 0x39) fprintf(stderr, " SDCALL_REQ_USERDATA");
 	else if (MessageType == 0x3B) fprintf(stderr, " SDCALL_RESP");
-	else if (MessageType == 0x3F) fprintf(stderr, " ALIAS"); 
+	else if (MessageType == 0x3F) fprintf(stderr, " ALIAS");
 	else fprintf(stderr, " Unknown M-%02X", MessageType);
 	fprintf (stderr, "%s", KNRM);
 
@@ -1204,7 +1204,7 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 		if (opts->floating_point == 1)
 			state->aout_gain = opts->audio_gain;
 	}
-	 
+
 }
 
 //voice descrambler
@@ -1309,7 +1309,7 @@ uint16_t crc16cac(const uint8_t buf[], int len)
 {
 	uint32_t crc = 0xc3ee; //not sure why this though
 	uint32_t poly = (1<<12) + (1<<5) + 1; //poly is fine
-	for (int i=0;i<len;i++) 
+	for (int i=0;i<len;i++)
 	{
 		crc = ((crc << 1) | buf[i]) & 0x1ffff;
 		if(crc & 0x10000) crc = (crc & 0xffff) ^ poly;
@@ -1327,11 +1327,11 @@ uint8_t crc7_scch(uint8_t bits[], int len)
 	for (int i=0;i<len;i++) {
 		a = bits[i] ^ s[0];
 		s[0] = s[1];
-		s[1] = s[2]; 
-		s[2] = s[3]; 
+		s[1] = s[2];
+		s[2] = s[3];
 		s[3] = a ^ s[4];
 		s[4] = s[5];
-		s[5] = s[6]; 
+		s[5] = s[6];
 		s[6] = a;
 	}
 	return load_i(s, 7);
@@ -1356,7 +1356,7 @@ void LFSR128n(dsd_state * state)
   int cnt = 0; int x = 64;
   unsigned long long int bit;
   //polynomial P(x) = 1 + X15 + X27 + X38 + X46 + X62 + X64
-  for(cnt=0;cnt<64;cnt++) 
+  for(cnt=0;cnt<64;cnt++)
   {
     //63,61,45,37,27,14
     // Polynomial is C(x) = x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1

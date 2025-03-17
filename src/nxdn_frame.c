@@ -2,20 +2,20 @@
 //Reworked portions from Osmocom OP25 rx_sync.cc
 
 /* -*- c++ -*- */
-/* 
+/*
  * NXDN Encoder/Decoder (C) Copyright 2019 Max H. Parke KA1RBI
- * 
- * 
+ *
+ *
  * This is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
- * 
+ *
  * This software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this software; see the file COPYING.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street,
@@ -30,7 +30,7 @@
 void nxdn_frame (dsd_opts * opts, dsd_state * state)
 {
   // length is implicitly 192, with frame sync in first 10 dibits
-	uint8_t dbuf[182]; 
+	uint8_t dbuf[182];
 	uint8_t lich;
 	uint8_t answer[32];
 	uint8_t sacch_answer[32];
@@ -56,7 +56,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	uint8_t direction; //inbound or outbound direction
 	UNUSED2(lich_fc, lich_op);
 
-	uint8_t lich_dibits[8]; 
+	uint8_t lich_dibits[8];
 	uint8_t sacch_bits[60];
 	uint8_t facch_bits_a[144];
 	uint8_t facch_bits_b[144];
@@ -65,7 +65,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	uint8_t facch3_bits[288]; //facch3 or udch2, same amount of bits
 
 	//nxdn bit buffer, for easy assignment handling
-	int nxdn_bit_buffer[364]; 
+	int nxdn_bit_buffer[364];
 	int nxdn_dibit_buffer[182];
 
 	//init all arrays
@@ -86,20 +86,20 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	for (int i = 0; i < 8; i++) lich_dibits[i] = dbuf[i] = getDibit(opts, state);
 
 	nxdn_descramble (lich_dibits, 8);
-	
+
 	lich = 0;
 	for (int i=0; i<8; i++) lich |= (lich_dibits[i] >> 1) << (7-i);
-		
+
 	lich_parity_received = lich & 1;
 	lich_parity_computed = ((lich >> 7) + (lich >> 6) + (lich >> 5) + (lich >> 4)) & 1;
 	lich = lich >> 1;
 	if (lich_parity_received != lich_parity_computed)
 	{
 		if (opts->payload == 1) fprintf(stderr, "  Lich Parity Error %02X\n", lich);
-		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly 
+		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
 		goto END;
 	}
-  
+
 	voice = 0;
 	facch = 0;
 	facch2 = 0;
@@ -111,7 +111,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	if (lich % 2 == 0 && opts->p25_trunk == 1)
 	{
 		if (opts->payload == 1) fprintf(stderr, "  Simplex/Inbound NXDN lich on trunking system - type 0x%02X\n", lich);
-		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly 
+		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
 		goto END;
 	}
 
@@ -136,7 +136,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	case 0x33:
 	case 0x52:
 	case 0x53:
-		voice = 2;	
+		voice = 2;
 		facch = 1;
 		sacch = 1;
 		break;
@@ -144,19 +144,19 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	case 0x35:
 	case 0x54:
 	case 0x55: //disabled for testing, IDAS system randomly triggers this one, probably due to poor signal
-		voice = 1;	
+		voice = 1;
 		facch = 2;
 		sacch = 1;
 		break;
 	case 0x36:  //vch in both
 	case 0x37:
-	case 0x56: 
-	case 0x57: 
-		voice = 3;	
+	case 0x56:
+	case 0x57:
+		voice = 3;
 		facch = 0;
 		sacch = 1;
 		break;
-	case 0x20: //facch in both 
+	case 0x20: //facch in both
 	case 0x21:
 	case 0x30:
 	case 0x31:
@@ -165,7 +165,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	case 0x50:
 	case 0x51:
 		voice = 0;
-		facch = 3;	
+		facch = 3;
 		sacch = 1;
 		break;
 	case 0x38: //sacch only (NULL?)
@@ -175,7 +175,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 
 	//NXDN "Type-D" or "IDAS" Specific Lich Codes
 	case 0x76: //normal vch voice (in one and two)
-	case 0x77: 
+	case 0x77:
 		idas = 1;
 		scch = 1;
 		voice = 3;
@@ -230,7 +230,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		//reset the sacch field, we probably got a false sync and need to wipe or give a bad crc
 		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
-		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly 
+		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
 		voice = 0;
 		goto END;
 		break;
@@ -247,7 +247,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		{
 			printFrameSync (opts, state, "IDAS D ", 0, "-");
 		}
-		if (opts->payload == 1) 
+		if (opts->payload == 1)
 			fprintf (stderr, "L%02X - ", lich);
 	}
 	else if (voice || facch || sacch || facch2 || udch || cac)
@@ -282,12 +282,12 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	{
 		sacch_bits[i] = nxdn_bit_buffer[i+16];
 	}
-	
+
 	//facch
 	for (int i = 0; i < 144; i++)
 	{
 		facch_bits_a[i] = nxdn_bit_buffer[i+16+60];
-		facch_bits_b[i] = nxdn_bit_buffer[i+16+60+144]; 
+		facch_bits_b[i] = nxdn_bit_buffer[i+16+60+144];
 	}
 
 	//cac
@@ -357,7 +357,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		uint8_t hash_bits[24];
 		memset (hash_bits, 0, sizeof(hash_bits));
 		uint16_t limazulu = 0;
-			
+
 		//if not available, then poll rigctl if its available
 		if (opts->use_rigctl == 1)
 			freq = GetCurrentFreq (opts->rigctl_sockfd);
@@ -372,7 +372,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		//the hash has to be run the same way as the import, so at a 24-bit depth, which hopefully
 		//will not lead to any duplicate key loads due to multiple CRC16 collisions on a larger value?
 		for (int i = 0; i < 24; i++)
-			hash_bits[i] = ((freq << i) & 0x800000) >> 23; //load into array for CRC16 
+			hash_bits[i] = ((freq << i) & 0x800000) >> 23; //load into array for CRC16
 
 		if (freq) limazulu = ComputeCrcCCITT16d (hash_bits, 24);
 		limazulu = limazulu & 0xFFFF; //make sure no larger than 16-bits
@@ -382,7 +382,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		if (state->rkey_array[limazulu] != 0) fprintf (stderr, " - Key Loaded: %lld", state->rkey_array[limazulu]);
 		fprintf (stderr, "%s", KNRM);
 
-		if (state->rkey_array[limazulu] != 0) 
+		if (state->rkey_array[limazulu] != 0)
 			state->R = state->rkey_array[limazulu];
 
 		if (state->R != 0 && state->M == 1) state->nxdn_cipher_type = 0x1;
@@ -397,7 +397,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	if (opts->scanner_mode == 1)
 		state->last_cc_sync_time = time(NULL) + 2; //add a little extra hangtime between resuming scan
 
-	//Option/Steal Flags echoed in Voice, V+F, or Data 
+	//Option/Steal Flags echoed in Voice, V+F, or Data
 	if (voice && !facch) //voice only, no facch steal
 	{
 		fprintf (stderr, "%s", KGRN);
@@ -417,7 +417,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		fprintf (stderr, "%s", KNRM);
 
 		//roll the voice scrambler LFSR here if key available to advance seed (usually just needed on NXDN96)
-		if (state->nxdn_cipher_type == 0x1 && state->R != 0) 
+		if (state->nxdn_cipher_type == 0x1 && state->R != 0)
 		{
 			if (state->payload_miN == 0)
 			{
@@ -441,7 +441,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	if (voice && facch == 1) //facch steal 1 -- before voice
 	{
 		//force scrambler here, but with unspecified key (just use what's loaded)
-		if (state->M == 1 && state->R != 0) state->nxdn_cipher_type = 0x1; 
+		if (state->M == 1 && state->R != 0) state->nxdn_cipher_type = 0x1;
 		//roll the voice scrambler LFSR here if key available to advance seed -- half rotation on a facch steal
 		if (state->nxdn_cipher_type == 0x1 && state->R != 0)
 		{
@@ -456,11 +456,11 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 			{
 				LFSRN(ambe_temp, ambe_d, state);
 			}
-		}  
+		}
 
 		//correct the bit counter if FACCH1 steal)
 		if (state->nxdn_cipher_type == 0x2 || state->nxdn_cipher_type == 0x3)
-			state->bit_counterL += 49*2;  
+			state->bit_counterL += 49*2;
 	}
 
 	if (lich == 0x20 || lich == 0x21 || lich == 0x61 || lich == 0x40 || lich == 0x41) state->nxdn_sacch_non_superframe = TRUE;
@@ -475,7 +475,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	if (sacch)  nxdn_deperm_sacch(opts, state, sacch_bits);
 	if (cac)    nxdn_deperm_cac(opts, state, cac_bits);
 
-	//Seperated UDCH user data from facch2 data 
+	//Seperated UDCH user data from facch2 data
 	if (udch)   nxdn_deperm_facch2_udch(opts, state, facch2_bits, 0);
 	if (facch2) nxdn_deperm_facch2_udch(opts, state, facch2_bits, 1);
 
@@ -501,7 +501,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		//turn on scrambler if forced by user option
 		if (state->M == 1 && state->R != 0) state->nxdn_cipher_type = 0x1;
 		//process voice frame
-		nxdn_voice (opts, state, voice, dbuf); 
+		nxdn_voice (opts, state, voice, dbuf);
 	}
 
 	//close MBE file if no voice and its open
@@ -514,11 +514,11 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 				if ( (time(NULL) - state->last_vc_sync_time) > 1) //test for optimal time, 1 sec should be okay
 				{
 					closeMbeOutFile (opts, state);
-				} 
+				}
 			}
 			//may need to reconsider this, due to double FACCH1 steals on some Type-C (ASSGN_DUP, etc) and Conventional Systems (random IDLE FACCH1 steal for no reason)
 			if (opts->frame_nxdn48 == 1) closeMbeOutFile (opts, state); //okay to close right away if nxdn48, no data/voice frames mixing
-		} 
+		}
 	}
 
 	if (voice && facch == 2) //facch steal 2 -- after voice 1
@@ -532,13 +532,13 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 			{
 				LFSRN(ambe_temp, ambe_d, state);
 			}
-		}  
+		}
 
 		//correct the bit counter if FACCH1 steal)
 		if (state->nxdn_cipher_type == 0x2 || state->nxdn_cipher_type == 0x3)
-			state->bit_counterL += 49*2;  
+			state->bit_counterL += 49*2;
 	}
-	
+
 	if (opts->payload == 1 && !voice) fprintf (stderr, "\n");
 	else if (opts->payload == 0) fprintf (stderr, "\n");
 
