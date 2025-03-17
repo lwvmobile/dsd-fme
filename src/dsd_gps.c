@@ -656,8 +656,8 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   fprintf (stderr, "%s", KNRM);
 }
 
-//This Function has been redone and variables fixed to mirror SDRTrunk 
-//my earlier assumption that this was the same format as DMR Embedded GPS was incorrect
+//This Function needs testing, is tested working for NW and NE lat and 
+//long coordinates, but not for SE and SW coordinates
 void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
 {
 
@@ -676,18 +676,16 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   uint32_t lon = (uint32_t)ConvertBitIntoBytes(&lc_bits[49], 23); 
   uint32_t lat_sign = lc_bits[24];
   uint32_t lat = (uint32_t)ConvertBitIntoBytes(&lc_bits[25], 23); 
-  //todo: acquire more samples for additional validation
+  
   double lat_unit = 90.0f / 0x7FFFFF;
   double lon_unit = 180.0f / 0x7FFFFF;
-  double lon_sf = 1.0f; //float value we can multiple longitude with
-  double lat_sf = 1.0f; //float value we can multiple latitude with
 
   char latstr[3];
   char lonstr[3];
-  char valid[9];
+  char valid[12];
   sprintf (latstr, "%s", "N");
   sprintf (lonstr, "%s", "E");
-  sprintf (valid, "%s", "Current");
+  sprintf (valid, "%s", "Current Fix");
 
   double latitude = 0;  
   double longitude = 0; 
@@ -695,32 +693,33 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
   if (pf) fprintf (stderr, " Protected");
   else
   {
+
+    latitude = ((double)lat * lat_unit);
     if (lat_sign)
     {
+      latitude -= 90.0f;
       sprintf (latstr, "%s", "S");
-      lat_sf = -1.0f;
     }
-    latitude = ((double)lat * lat_unit);
-
+    
+    longitude = ((double)lon * lon_unit);
     if (lon_sign)
     {
+      longitude -= 180.0f;
       sprintf (lonstr, "%s", "W");
-      lon_sf = -1.0f;
     }
-    longitude = ((double)lon * lon_unit);
 
     //sanity check
-    if (abs (latitude) < 90 && abs(longitude) < 180)
+    if (fabs ((float)latitude) < 90 && fabs((float)longitude) < 180)
     {
-      fprintf (stderr, " Lat: %.5lf%s%s Lon: %.5lf%s%s (%.5lf, %.5lf) ", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, latitude * lat_sf, longitude * lon_sf);
+      fprintf (stderr, " Lat: %.5lf%s%s Lon: %.5lf%s%s (%.5lf, %.5lf) ", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, latitude, longitude);
 
       if (expired)
       {
-        fprintf (stderr, "Expired; ");
-        sprintf (valid, "%s", "Expired");
+        fprintf (stderr, "Last Fix; ");
+        sprintf (valid, "%s", "Last Fix");
       }
       else if (!expired)
-        fprintf (stderr, "Current; ");
+        fprintf (stderr, "Current Fix; ");
 
       if (res_a)
         fprintf (stderr, "RES_A: %d; ", res_a);
@@ -729,7 +728,7 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
         fprintf (stderr, "RES_B: %02X; ", res_b);
 
       //save to array for ncurses
-      sprintf (state->dmr_embedded_gps[slot], "GPS: %lf%s%s %lf%s%s %s", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, valid);
+      sprintf (state->dmr_embedded_gps[slot], "GPS: %lf%s%s %lf%s%s (%lf, %lf) %s", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, latitude, longitude, valid);
 
       //save to LRRP report for mapping/logging
       FILE * pFile; //file pointer
