@@ -600,8 +600,8 @@ typedef struct
   //AES Key Segments
   unsigned long long int A1[2];
   unsigned long long int A2[2];
-  unsigned long long int A3[3];
-  unsigned long long int A4[4];
+  unsigned long long int A3[2];
+  unsigned long long int A4[2];
   int aes_key_loaded[2];
 
   //xl specific, we need to know if the ESS is from HDU, or from LDU2
