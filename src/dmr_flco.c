@@ -12,7 +12,7 @@
 #include "dsd.h"
 
 //combined flco handler (vlc, tlc, emb), minus the superfluous structs and strings
-void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors, uint8_t type)
+void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t CRCCorrect, uint32_t * IrrecoverableErrors, uint8_t type)
 {
   UNUSED(CRCCorrect);
 
@@ -57,7 +57,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   source = (uint32_t)ConvertBitIntoBytes(&lc_bits[48], 24);
 
   //read ahead a little to get this for the xpt flag
-  if (IrrecoverableErrors == 0 && flco == 0x09 && fid == 0x68)
+  if (*IrrecoverableErrors == 0 && flco == 0x09 && fid == 0x68)
   {
     sprintf (state->dmr_branding, "%s", "  Hytera");
     sprintf (state->dmr_branding_sub, "XPT ");
@@ -81,7 +81,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     goto END_FLCO;
   }
 
-  if (IrrecoverableErrors == 0)
+  if (*IrrecoverableErrors == 0)
   {
 
     if (slot == 0) state->dmr_flco = flco;
@@ -297,9 +297,69 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     }
 
   }
+  else //Look for Hytera PI LC (this may fail the FEC, but have a secondary checksum value)
+  {
+    if (fid == 0x68 && flco == 0x02)
+    {
+      uint8_t checksum = 0;
+      uint8_t alg = (uint8_t)ConvertBitIntoBytes(&lc_bits[0], 8);
+      uint8_t key = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 8);
+      unsigned long long int mi = (unsigned long long int)ConvertBitIntoBytes(&lc_bits[24], 40);
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, " Slot %d Alg: %02X; KEY ID: %02X; MI(40): %010llX;", slot+1, alg, key, mi);
+      fprintf (stderr, " Hytera Enhanced");
+
+      for (int i = 0; i < 8; i++)
+      {
+        checksum += (uint8_t)ConvertBitIntoBytes(&lc_bits[i*8], 8);
+        checksum &= 0xFF;
+      }
+      checksum = ~checksum & 0xFF;
+      checksum++;
+
+      //debug
+      // fprintf (stderr, " CHKSUM: %02X / %02X", checksum, (uint8_t)ConvertBitIntoBytes(&lc_bits[64], 8));
+
+      if (checksum == (uint8_t)ConvertBitIntoBytes(&lc_bits[64], 8))
+      {
+        if (slot == 0)
+        {
+          state->payload_algid = alg;
+          state->payload_keyid = key;
+          state->payload_mi = mi;
+          // hytera_enhanced_enc_setup(opts, state, state->R, state->payload_mi); //need to redo part of this (no key loader yet)
+        }
+        else
+        {
+          state->payload_algidR = alg;
+          state->payload_keyidR = key;
+          state->payload_miR = mi;
+          // hytera_enhanced_enc_setup(opts, state, state->RR, state->payload_miR); //need to redo part of this (no key loader yet)
+        }
+
+        //disable late entry for DMRA (hopefully, there aren't any systems running both DMRA and Hytera Enhanced mixed together)
+        opts->dmr_le = 0;
+
+        *IrrecoverableErrors = 0; //only set if checksum passes
+      }
+
+      if (checksum == (uint8_t)ConvertBitIntoBytes(&lc_bits[64], 8))
+        // fprintf (stderr, " (Checksum Okay);");
+        {;}
+      else
+      {
+        fprintf (stderr, "%s", KRED);
+        fprintf (stderr, " (Checksum Err);");
+        fprintf (stderr, "\n");
+      }
+
+      fprintf (stderr, "%s ", KNRM);
+      goto END_FLCO;
+    }
+  }
 
   //will want to continue to observe for different flco and fid combinations to find out their meaning
-  if(IrrecoverableErrors == 0 && is_alias == 0 && is_gps == 0)
+  if(*IrrecoverableErrors == 0 && is_alias == 0 && is_gps == 0)
   {
     //set overarching manufacturer in use when non-standard feature id set is up
     if (fid != 0) state->dmr_mfid = fid;
@@ -654,7 +714,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     fprintf (stderr, "%s", KNRM);
   }
 
-  if(IrrecoverableErrors != 0)
+  if(*IrrecoverableErrors != 0)
   {
     if (type != 3) fprintf (stderr, "\n");
     fprintf (stderr, "%s", KRED);

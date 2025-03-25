@@ -625,7 +625,17 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     state->currentslot = 0;
     dmr_alg_refresh (opts, state);
   }
+  else if (state->payload_algid == 0x02)
+  {
+    state->currentslot = 0;
+    dmr_alg_refresh (opts, state);
+  }
   if (state->payload_algidR >= 0x21)
+  {
+    state->currentslot = 1;
+    dmr_alg_refresh (opts, state);
+  }
+  else if (state->payload_algidR == 0x02)
   {
     state->currentslot = 1;
     dmr_alg_refresh (opts, state);
@@ -943,7 +953,17 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
       state->currentslot = 0;
       dmr_alg_refresh (opts, state);
     }
+    else if (state->payload_algid == 0x02)
+    {
+      state->currentslot = 0;
+      dmr_alg_refresh (opts, state);
+    }
     if (state->payload_algidR >= 0x21)
+    {
+      state->currentslot = 1;
+      dmr_alg_refresh (opts, state);
+    }
+    else if (state->payload_algid == 0x02)
     {
       state->currentslot = 1;
       dmr_alg_refresh (opts, state);

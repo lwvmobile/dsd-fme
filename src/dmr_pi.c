@@ -14,6 +14,8 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
 {
   UNUSED2(opts, CRCCorrect);
 
+  uint8_t MFID = PI_BYTE[1];
+
   if((IrrecoverableErrors == 0))
   {
 
@@ -24,121 +26,205 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
       state->last_cc_sync_time = time(NULL);
     }
 
-    if (state->currentslot == 0)
+    if (MFID == 0x68) //Hytera Enhanced
     {
-      state->payload_algid = PI_BYTE[0];
-      state->payload_keyid = PI_BYTE[2];
-      state->payload_mi    = ( ((PI_BYTE[3]) << 24) + ((PI_BYTE[4]) << 16) + ((PI_BYTE[5]) << 8) + (PI_BYTE[6]) );
-      if (state->payload_algid < 0x26)
+      if (state->currentslot == 0)
       {
-        fprintf (stderr, "%s ", KYEL);
-        fprintf (stderr, "\n Slot 1");
-        fprintf (stderr, " DMR PI H- ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algid, state->payload_keyid, state->payload_mi);
-
-        //Anytone RC4 Shim
-        if (state->payload_algid == 0x01)
-        {
-          fprintf (stderr, " Anytone RC4 (0x01)");
-          state->payload_algid = 0x21;
-        }
-
-        //Anytone/Hytera AES-128 Shim
-        if (state->payload_algid == 0x04)
-        {
-          fprintf (stderr, " Anytone/Hytera AES-128 (0x04)");
-          state->payload_algid = 0x24;
-        }
-
-        //Anytone/Hytera AES-256 Shim
-        if (state->payload_algid == 0x05)
-        {
-          fprintf (stderr, " Anytone/Hytera AES-256 (0x05)");
-          state->payload_algid = 0x25;
-        }
-
-        fprintf (stderr, "%s ", KNRM);
-
-        //expand the 32-bit MI to a 64-bit DES1 IV
-        if (state->payload_algid == 0x22)
-        {
-          fprintf (stderr, "\n");
-          LFSR64 (state);
-        }
-
-        //expand the 32-bit MI to a 128-bit AES IV
-        if (state->payload_algid == 0x24 || state->payload_algid == 0x25)
-        {
-          fprintf (stderr, "\n");
-          LFSR128d (state);
-        }
+        state->payload_algid = PI_BYTE[0];
+        state->payload_keyid = PI_BYTE[2];
+        state->payload_mi = ((unsigned long long int)PI_BYTE[3] << 32ULL) | ((unsigned long long int)PI_BYTE[4] << 24) | 
+        ((unsigned long long int)PI_BYTE[5] << 16) | ((unsigned long long int)PI_BYTE[6] << 8) | ((unsigned long long int)PI_BYTE[7] << 0);
+        hytera_enhanced_enc_setup(opts, state, state->R, state->payload_mi); //need to redo part of this (no key loader yet)
+      }
+      else
+      {
+        state->payload_algidR = PI_BYTE[0];
+        state->payload_keyidR = PI_BYTE[2];
+        state->payload_miR = ((unsigned long long int)PI_BYTE[3] << 32ULL) | ((unsigned long long int)PI_BYTE[4] << 24) | 
+        ((unsigned long long int)PI_BYTE[5] << 16) | ((unsigned long long int)PI_BYTE[6] << 8) | ((unsigned long long int)PI_BYTE[7] << 0);
+        hytera_enhanced_enc_setup(opts, state, state->RR, state->payload_miR); //need to redo part of this (no key loader yet)
       }
 
-      if (state->payload_algid >= 0x26)
+      fprintf (stderr, "%s ", KYEL);
+      fprintf (stderr, "\n Slot %d", state->currentslot+1);
+      fprintf (stderr, " DMR PI H- ALG ID: %02X; KEY ID: %02X; MI(40): %02X%02X%02X%02X%02X;", 
+      PI_BYTE[0], PI_BYTE[2], PI_BYTE[3], PI_BYTE[4], PI_BYTE[5], PI_BYTE[6], PI_BYTE[7]);
+
+      //PI_BYTE[8] is a checksum of the other bytes combined and should be equal to zero
+      uint8_t checksum = 0;
+      for (int i = 0; i < 10; i++)
       {
-        state->payload_algid = 0;
-        state->payload_keyid = 0;
-        state->payload_mi = 0;
+        checksum += PI_BYTE[i];
+        checksum &= 0xFF;
       }
+      checksum = ~checksum & 0xFF;
+      checksum++;
+
+      //debug
+      // fprintf (stderr, " CHK: %02X / %02X;", checksum, PI_BYTE[8]);
+
+      if (checksum == PI_BYTE[8])
+      {
+        fprintf (stderr, " Hytera Enhanced");
+        if (PI_BYTE[2] == 0x02)
+          fprintf (stderr, " RC4;");
+        else if (PI_BYTE[2] == 0x05)
+          fprintf (stderr, " AES-256;");
+
+        //disable late entry for DMRA (hopefully, there aren't any systems running both DMRA and Hytera Enhanced mixed together)
+        opts->dmr_le = 0;
+
+        // fprintf (stderr, " (Checksum Okay);");
+      }
+      else
+      {
+        fprintf (stderr, "%s", KRED);
+        fprintf (stderr, " (Checksum Err);");
+      }
+
+      fprintf (stderr, "%s", KNRM);
+
     }
 
-    if (state->currentslot == 1)
+    else if (MFID == 0x10) //DMRA
     {
 
-      state->payload_algidR = PI_BYTE[0];
-      state->payload_keyidR = PI_BYTE[2];
-      state->payload_miR    = ( ((PI_BYTE[3]) << 24) + ((PI_BYTE[4]) << 16) + ((PI_BYTE[5]) << 8) + (PI_BYTE[6]) );
-      if (state->payload_algidR < 0x26)
+      if (state->currentslot == 0)
       {
-        fprintf (stderr, "%s ", KYEL);
-        fprintf (stderr, "\n Slot 2");
-        fprintf (stderr, " DMR PI H- ALG ID: 0x%02X KEY ID: 0x%02X MI: 0x%08X", state->payload_algidR, state->payload_keyidR, state->payload_miR);
-
-        //Anytone RC4 Shim
-        if (state->payload_algidR == 0x01)
+        state->payload_algid = PI_BYTE[0];
+        state->payload_keyid = PI_BYTE[2];
+        state->payload_mi    = ( ((PI_BYTE[3]) << 24) + ((PI_BYTE[4]) << 16) + ((PI_BYTE[5]) << 8) + (PI_BYTE[6]) );
+        if (state->payload_algid < 0x26)
         {
-          fprintf (stderr, " Anytone (0x01)");
-          state->payload_algidR = 0x21;
+          fprintf (stderr, "%s ", KYEL);
+          fprintf (stderr, "\n Slot 1");
+          fprintf (stderr, " DMR PI H- ALG ID: %02X; KEY ID: %02X; MI(32): %08X;", state->payload_algid, state->payload_keyid, state->payload_mi);
+
+          //check for any values that aren't 0x2X but just 0x0X
+          //going to be very generic here to avoid any particular vendors using 0x2X and not 0x0X
+          if (state->payload_algid & 0x20)
+            fprintf (stderr, " DMRA");
+          else fprintf (stderr, " DMRA Compatible");
+            
+          if ((state->payload_algid & 0x07) == 0x01)
+          {
+            fprintf (stderr, " RC4;");
+            state->payload_algid = 0x21;
+          }
+
+          else if ((state->payload_algid & 0x07) == 0x02)
+          {
+            fprintf (stderr, " DES;");
+            state->payload_algid = 0x21;
+          }
+
+          else if ((state->payload_algid & 0x07) == 0x04)
+          {
+            fprintf (stderr, " AES-128;");
+            state->payload_algid = 0x24;
+          }
+
+          else if ((state->payload_algid & 0x07) == 0x05)
+          {
+            fprintf (stderr, " AES-256;");
+            state->payload_algid = 0x25;
+          }
+
+          fprintf (stderr, "%s ", KNRM);
+
+          //expand the 32-bit MI to a 64-bit DES IV
+          if (state->payload_algid == 0x22)
+          {
+            fprintf (stderr, "\n");
+            LFSR64 (state);
+          }
+
+          //expand the 32-bit MI to a 128-bit AES IV
+          if (state->payload_algid == 0x24 || state->payload_algid == 0x25)
+          {
+            fprintf (stderr, "\n");
+            LFSR128d (state);
+          }
         }
 
-        //Anytone/Hytera AES-128 Shim
-        if (state->payload_algidR == 0x04)
+        if (state->payload_algid >= 0x26)
         {
-          fprintf (stderr, " Anytone/Hytera AES-128 (0x04)");
-          state->payload_algidR = 0x24;
-        }
-
-        //Anytone/Hytera AES-256 Shim
-        if (state->payload_algidR == 0x05)
-        {
-          fprintf (stderr, " Anytone/Hytera AES-256 (0x05)");
-          state->payload_algidR = 0x25;
-        }
-
-        fprintf (stderr, "%s ", KNRM);
-
-        //expand the 32-bit MI to a 64-bit DES1 IV
-        if (state->payload_algidR == 0x22)
-        {
-          fprintf (stderr, "\n");
-          LFSR64 (state);
-        }
-
-        //expand the 32-bit MI to a 128-bit AES IV
-        if (state->payload_algidR == 0x24 || state->payload_algidR == 0x25)
-        {
-          fprintf (stderr, "\n");
-          LFSR128d (state);
+          state->payload_algid = 0;
+          state->payload_keyid = 0;
+          state->payload_mi = 0;
         }
       }
 
-      if (state->payload_algidR >= 0x26)
+      if (state->currentslot == 1)
       {
-        state->payload_algidR = 0;
-        state->payload_keyidR = 0;
-        state->payload_miR = 0;
+
+        state->payload_algidR = PI_BYTE[0];
+        state->payload_keyidR = PI_BYTE[2];
+        state->payload_miR    = ( ((PI_BYTE[3]) << 24) + ((PI_BYTE[4]) << 16) + ((PI_BYTE[5]) << 8) + (PI_BYTE[6]) );
+        if (state->payload_algidR < 0x26)
+        {
+          fprintf (stderr, "%s ", KYEL);
+          fprintf (stderr, "\n Slot 2");
+          fprintf (stderr, " DMR PI H- ALG ID: %02X; KEY ID: %02X; MI(32): %08X", state->payload_algidR, state->payload_keyidR, state->payload_miR);
+
+          //check for any values that aren't 0x2X but just 0x0X
+          //going to be very generic here to avoid any particular vendors using 0x2X and not 0x0X
+          if (state->payload_algidR & 0x20)
+            fprintf (stderr, " DMRA");
+          else fprintf (stderr, " DMRA Compatible");
+            
+          if ((state->payload_algidR & 0x07) == 0x01)
+          {
+            fprintf (stderr, " RC4;");
+            state->payload_algidR = 0x21;
+          }
+
+          else if ((state->payload_algidR & 0x07) == 0x02)
+          {
+            fprintf (stderr, " DES;");
+            state->payload_algidR = 0x21;
+          }
+
+          else if ((state->payload_algidR & 0x07) == 0x04)
+          {
+            fprintf (stderr, " AES-128;");
+            state->payload_algidR = 0x24;
+          }
+
+          else if ((state->payload_algidR & 0x07) == 0x05)
+          {
+            fprintf (stderr, " AES-256;");
+            state->payload_algidR = 0x25;
+          }
+
+
+          fprintf (stderr, "%s ", KNRM);
+
+          //expand the 32-bit MI to a 64-bit DES IV
+          if (state->payload_algidR == 0x22)
+          {
+            fprintf (stderr, "\n");
+            LFSR64 (state);
+          }
+
+          //expand the 32-bit MI to a 128-bit AES IV
+          if (state->payload_algidR == 0x24 || state->payload_algidR == 0x25)
+          {
+            fprintf (stderr, "\n");
+            LFSR128d (state);
+          }
+        }
+
+        if (state->payload_algidR >= 0x26)
+        {
+          state->payload_algidR = 0;
+          state->payload_keyidR = 0;
+          state->payload_miR = 0;
+        }
+
       }
 
-    }
+    } //end DMRA
 
   }
 }
@@ -161,12 +247,15 @@ void LFSR(dsd_state * state)
     lfsr =  (lfsr << 1) | (bit);
   }
 
+  lfsr &= 0xFFFFFFFF;
+
   if (state->currentslot == 0)
   {
     fprintf (stderr, "%s", KYEL);
     fprintf (stderr, " Slot 1");
-    fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
-    fprintf(stderr, " MI(32): 0x%08X", lfsr);
+    fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", state->payload_algid, state->payload_keyid);
+    fprintf (stderr, " MI(32): %08X;", lfsr);
+    fprintf (stderr, " RC4;");
     fprintf (stderr, "%s", KNRM);
     state->payload_mi = lfsr;
   }
@@ -176,8 +265,9 @@ void LFSR(dsd_state * state)
 
     fprintf (stderr, "%s", KYEL);
     fprintf (stderr, " Slot 2");
-    fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algidR, state->payload_keyidR);
-    fprintf(stderr, " MI(32): 0x%08X", lfsr);
+    fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", state->payload_algidR, state->payload_keyidR);
+    fprintf(stderr, " MI(32): %08X;", lfsr);
+    fprintf (stderr, " RC4;");
     fprintf (stderr, "%s", KNRM);
     state->payload_miR = lfsr;
   }
@@ -207,8 +297,9 @@ void LFSR64(dsd_state * state)
     {
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot 1");
-      fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algid, state->payload_keyid);
-      fprintf (stderr, " MI(64): 0x%016llX", lfsr);
+      fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", state->payload_algid, state->payload_keyid);
+      fprintf (stderr, " MI(64): %016llX;", lfsr);
+      fprintf (stderr, " DES;");
       fprintf (stderr, "%s", KNRM);
       state->payload_mi = lfsr & 0xFFFFFFFF; //truncate for next repitition and le verification
       state->payload_miP = lfsr;
@@ -219,8 +310,9 @@ void LFSR64(dsd_state * state)
     {
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot 2");
-      fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X", state->payload_algidR, state->payload_keyidR);
-      fprintf (stderr, " MI(64): 0x%016llX", lfsr);
+      fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", state->payload_algidR, state->payload_keyidR);
+      fprintf (stderr, " MI(64): %016llX;", lfsr);
+      fprintf (stderr, " DES;");
       fprintf (stderr, "%s", KNRM);
       state->payload_miR = lfsr & 0xFFFFFFFF; //truncate for next repitition and le verification
       state->payload_miN = lfsr;
@@ -284,11 +376,15 @@ void LFSR128d(dsd_state * state)
   {
     fprintf (stderr, "%s", KYEL);
     fprintf (stderr, " Slot 1");
-    fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X MI(128): ", state->payload_algid, state->payload_keyid);
+    fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X; MI(128): ", state->payload_algid, state->payload_keyid);
     for (x = 0; x < 16; x++)
       fprintf (stderr, "%02X", state->aes_iv[x]);
     fprintf (stderr, "%s", KNRM);
-    // fprintf (stderr, "\n");
+    fprintf (stderr, ";");
+
+    if (state->payload_algid == 0x24)
+      fprintf (stderr, " AES-128;");
+    else fprintf (stderr, " AES-256;");
 
     state->payload_mi = next_mi;
     state->DMRvcL = 0;
@@ -299,15 +395,30 @@ void LFSR128d(dsd_state * state)
   {
     fprintf (stderr, "%s", KYEL);
     fprintf (stderr, " Slot 2");
-    fprintf (stderr, " DMR PI C- ALG ID: 0x%02X KEY ID: 0x%02X MI(128): ", state->payload_algidR, state->payload_keyidR);
+    fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X; MI(128): ", state->payload_algidR, state->payload_keyidR);
     for (x = 0; x < 16; x++)
       fprintf (stderr, "%02X", state->aes_ivR[x]);
     fprintf (stderr, "%s", KNRM);
-    // fprintf (stderr, "\n");
+    fprintf (stderr, ";");
+    
+    if (state->payload_algidR == 0x24)
+      fprintf (stderr, " AES-128;");
+    else fprintf (stderr, " AES-256;");
 
     state->payload_miR = next_mi;
     state->DMRvcR = 0;
 
   }
+
+}
+
+void hytera_enhanced_enc_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value)
+{
+
+  UNUSED(opts);
+  UNUSED(state);
+  UNUSED(key_value);
+  UNUSED(mi_value);
+
 
 }

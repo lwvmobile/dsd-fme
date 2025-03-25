@@ -559,9 +559,9 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   if (databurst == 0x00) dmr_pi (opts, state, DMR_PDU, CRCCorrect, IrrecoverableErrors);
 
   //full link control
-  if (databurst == 0x01) dmr_flco (opts, state, DMR_PDU_bits, CRCCorrect, IrrecoverableErrors, 1); //VLC
-  if (databurst == 0x02) dmr_flco (opts, state, DMR_PDU_bits, CRCCorrect, IrrecoverableErrors, 2); //TLC
-  if (databurst == 0xEB) dmr_flco (opts, state, DMR_PDU_bits, CRCCorrect, IrrecoverableErrors, 3); //EMB
+  if (databurst == 0x01) dmr_flco (opts, state, DMR_PDU_bits, CRCCorrect, &IrrecoverableErrors, 1); //VLC
+  if (databurst == 0x02) dmr_flco (opts, state, DMR_PDU_bits, CRCCorrect, &IrrecoverableErrors, 2); //TLC
+  if (databurst == 0xEB) dmr_flco (opts, state, DMR_PDU_bits, CRCCorrect, &IrrecoverableErrors, 3); //EMB
 
   //dmr data header and multi block types (header, 1/2, 3/4, 1, UDT) - type 1
   if (databurst == 0x06) dmr_dheader (opts, state, DMR_PDU, DMR_PDU_bits, CRCCorrect, IrrecoverableErrors);

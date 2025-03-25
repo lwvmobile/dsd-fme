@@ -3446,7 +3446,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (state->payload_algid == 0x02)
     {
       attron(COLOR_PAIR(1));
-      printw("Hytera Full Encrypt");
+      printw("Hytera Enhanced");
+      // if (state->R != 0)
+      //     printw(" Key: %010X", state->R);
       attron(COLOR_PAIR(3));
     }
 
@@ -3653,7 +3655,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (state->payload_algidR == 0x02)
       {
         attron(COLOR_PAIR(1));
-        printw("Hytera Full Encrypt");
+        printw("Hytera Enhanced");
+        // if (state->RR != 0)
+        //   printw(" Key: %010X", state->RR);
         attron(COLOR_PAIR(3));
       }
 
