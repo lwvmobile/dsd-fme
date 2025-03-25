@@ -385,8 +385,8 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
         if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 0) fprintf (stderr, " BP;");
         if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 1) fprintf (stderr, " RC4;");
         if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 2) fprintf (stderr, " DES56;");
-        if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 3) fprintf (stderr, " AES128;");
-        if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 4) fprintf (stderr, " AES256;");
+        if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 4) fprintf (stderr, " AES128;");
+        if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 5) fprintf (stderr, " AES256;");
 
         if (state->currentslot == 0)
           state->payload_mi = (uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 32);
@@ -935,8 +935,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         if (alg == 0) fprintf (stderr, " Moto BP;");
         if (alg == 1) fprintf (stderr, " RC4;");
         if (alg == 2) fprintf (stderr, " DES1;");
-        if (alg == 3) fprintf (stderr, " AES128;");
-        if (alg == 4) fprintf (stderr, " AES256;");
+        if (alg == 4) fprintf (stderr, " AES128;");
+        if (alg == 5) fprintf (stderr, " AES256;");
         if (R && alg != 0) fprintf (stderr, " Key: %010llX;", R);
 
         //generate 128-bit IV from 32-bit MI
