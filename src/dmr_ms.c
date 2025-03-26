@@ -283,7 +283,8 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   }
 
   //collect the mi fragment
-  dmr_late_entry_mi_fragment (opts, state, vc, m1, m2, m3);
+  if (opts->dmr_le != 2) //if not Hytera Enhanced
+    dmr_late_entry_mi_fragment (opts, state, vc, m1, m2, m3);
 
   //errors in ms/mono since we skip the other slot
   // cach_err = dmr_cach (opts, state, cachdata);
@@ -556,7 +557,8 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   }
 
   //collect the mi fragment
-  dmr_late_entry_mi_fragment (opts, state, 1, m1, m2, m3);
+  if (opts->dmr_le != 2) //if not Hytera Enhanced
+    dmr_late_entry_mi_fragment (opts, state, 1, m1, m2, m3);
 
   //errors due to skipping other slot
   // cach_err = dmr_cach (opts, state, cachdata);

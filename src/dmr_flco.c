@@ -327,18 +327,16 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
           state->payload_algid = alg;
           state->payload_keyid = key;
           state->payload_mi = mi;
-          // hytera_enhanced_enc_setup(opts, state, state->R, state->payload_mi); //need to redo part of this (no key loader yet)
         }
         else
         {
           state->payload_algidR = alg;
           state->payload_keyidR = key;
           state->payload_miR = mi;
-          // hytera_enhanced_enc_setup(opts, state, state->RR, state->payload_miR); //need to redo part of this (no key loader yet)
         }
 
         //disable late entry for DMRA (hopefully, there aren't any systems running both DMRA and Hytera Enhanced mixed together)
-        opts->dmr_le = 0;
+        opts->dmr_le = 2;
 
         *IrrecoverableErrors = 0; //only set if checksum passes
       }

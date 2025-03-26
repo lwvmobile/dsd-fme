@@ -221,7 +221,14 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
       LFSR (state);
       fprintf (stderr, "\n");
     }
-    //LFSR64 carried out after LE verification in order to keep it from constantly resetting the MI to the previous value
+
+    //LFSR64/128 carried out after LE verification in order to keep it from constantly resetting the MI to the previous value
+
+    if (state->payload_algid == 0x02)
+    {
+      state->DMRvcL = 0;
+      //LFSR MI propegation function
+    }
 
   }
   if (state->currentslot == 1)
@@ -238,7 +245,14 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
       LFSR (state);
       fprintf (stderr, "\n");
     }
-    //LFSR64 carried out after LE verification in order to keep it from constantly resetting the MI to the previous value
+
+    //LFSR64/128 carried out after LE verification in order to keep it from constantly resetting the MI to the previous value
+
+    if (state->payload_algidR == 0x02)
+    {
+      state->DMRvcR = 0;
+      //LFSR MI propegation function
+    } 
 
   }
 
@@ -444,7 +458,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
               fprintf (stderr, "\n");
               fprintf (stderr, "%s", KCYN);
               fprintf (stderr, " Slot 1");
-              fprintf (stderr, " DMR LE SB ALG ID: 0x%02X KEY ID: 0x%02X", alg + 0x20, key);
+              fprintf (stderr, " DMR LE SB ALG ID: %02X; KEY ID: %02X;", alg + 0x20, key);
               fprintf (stderr, "%s ", KNRM);
               if (opts->payload == 1) fprintf (stderr, "\n");
               if (state->payload_keyid != key)
@@ -466,7 +480,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
               fprintf (stderr, "\n");
               fprintf (stderr, "%s", KCYN);
               fprintf (stderr, " Slot 2");
-              fprintf (stderr, " DMR LE SB ALG ID: 0x%02X KEY ID: 0x%02X", alg + 0x20, key);
+              fprintf (stderr, " DMR LE SB ALG ID: %02X; KEY ID: %02X;", alg + 0x20, key);
               fprintf (stderr, "%s ", KNRM);
               if (opts->payload == 1) fprintf (stderr, "\n");
               if (state->payload_keyidR != key)

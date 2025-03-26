@@ -530,7 +530,8 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0 && vc1 == 6) dmr_alg_refresh (opts, state);
     if (internalslot == 1 && vc2 == 6) dmr_alg_refresh (opts, state);
 
-    dmr_late_entry_mi_fragment (opts, state, vc%7, m1, m2, m3);
+    if (opts->dmr_le != 2) //if not Hytera Enhanced
+      dmr_late_entry_mi_fragment (opts, state, vc%7, m1, m2, m3);
 
     //increment the vc counters
     if (internalslot == 0) vc1++;
@@ -922,7 +923,8 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   }
 
   //collect the mi fragment
-  dmr_late_entry_mi_fragment (opts, state, 1, m1, m2, m3);
+  if (opts->dmr_le != 2) //if not Hytera Enhanced
+    dmr_late_entry_mi_fragment (opts, state, 1, m1, m2, m3);
 
   cach_err = dmr_cach (opts, state, cachdata);
   if (opts->payload == 0) fprintf (stderr, "\n");
