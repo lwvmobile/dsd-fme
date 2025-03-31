@@ -405,15 +405,16 @@ void p25_decode_pdu_data(dsd_opts * opts, dsd_state * state, uint8_t * input, in
   //debug
   fprintf (stderr, " PDU Len: %d;", len);
 
-  //check for any additional headers first
+  //check for additional headers
+  if (sap == 31) //extended address header
+    p25_decode_extended_address(opts, state, input+ptr, &sap, &ptr);
+
+  //test shows this occurs after an extended address header
   if (sap == 1) //encryption sync header
     encrypted = p25_decode_es_header(opts, state, input+ptr, &sap, &ptr, len);
 
   if (!encrypted)
   {
-    //additional header (will be encrypted, so check above first)
-    if (sap == 31) //extended address header
-      p25_decode_extended_address(opts, state, input+ptr, &sap, &ptr);
 
     //test if an offset value set, then take the difference between it and the ptr and and add that to the ptr
     //or perhaps, just assign the ptr to that value + 12?
@@ -421,16 +422,16 @@ void p25_decode_pdu_data(dsd_opts * opts, dsd_state * state, uint8_t * input, in
 
     //now start checking for the actual message
     if (sap == 0 || sap == 4) //User Data or Packet Data (both are UDP typically, same format dmr UDP/IP data)
-      decode_ip_pdu (opts, state, len, input+ptr);
+      decode_ip_pdu (opts, state, len+1, input+ptr);
 
     else if (sap == 48) //Tier 1 Location Service (or does it depend on the io bit?)
-      utf8_to_text(state, 0, len-ptr, input+ptr); //TODO, read initial string, i.e., $GPRMC and properly decode
+      utf8_to_text(state, 0, len-ptr+1, input+ptr); //TODO, read initial string, i.e., $GPRMC and properly decode
 
     // else //default catch all (debug only)
     // {
     //   if (len > ptr)
-    //     utf8_to_text(state, 0, len-ptr, input+ptr);
-    //   else utf8_to_text(state, 0, len, input+ptr);
+    //     utf8_to_text(state, 0, len-ptr+1, input+ptr);
+    //   else utf8_to_text(state, 0, len+1, input+ptr);
     // }
   }
   else
