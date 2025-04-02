@@ -911,7 +911,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
   uint8_t model = (uint8_t)ConvertBitIntoBytes(&slco_bits[4], 2);
   uint16_t netsite = (uint16_t)ConvertBitIntoBytes(&slco_bits[6], 12);
   uint8_t reg = slco_bits[18]; //registration required/not required or normalchanneltype/composite cch
-  uint8_t csc = (uint16_t)ConvertBitIntoBytes(&slco_bits[19], 9); //common slot counter, 0-511
+  uint16_t csc = (uint16_t)ConvertBitIntoBytes(&slco_bits[19], 9); //common slot counter, 0-511
   UNUSED(netsite);
 
   uint16_t net = 0;
