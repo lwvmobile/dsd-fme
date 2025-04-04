@@ -63,6 +63,11 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     sprintf (state->dmr_branding_sub, "XPT ");
   }
 
+  //bug fix for Hytera Enhanced link control (go by the checksum in the message)
+  //a good checksum will set IrrecoverableErrors back to zero
+  if (fid == 0x68 && flco == 0x02 && *IrrecoverableErrors == 0)
+    *IrrecoverableErrors = 1;
+
   //look at the dmr_branding_sub for the XPT string
   //branding sub is set at CSBK(68-3A and 3B), SLCO 8, and here on 0x09
   if (strcmp (state->dmr_branding_sub, "XPT ") == 0) is_xpt = 1;
@@ -307,7 +312,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       unsigned long long int mi = (unsigned long long int)ConvertBitIntoBytes(&lc_bits[24], 40);
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot %d Alg: %02X; KEY ID: %02X; MI(40): %010llX;", slot+1, alg, key, mi);
-      fprintf (stderr, " Hytera Enhanced");
+      fprintf (stderr, " Hytera Enhanced;");
 
       for (int i = 0; i < 8; i++)
       {

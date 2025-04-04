@@ -48,9 +48,9 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
       fprintf (stderr, " DMR PI H- ALG ID: %02X; KEY ID: %02X; MI(40): %02X%02X%02X%02X%02X;", 
       PI_BYTE[0], PI_BYTE[2], PI_BYTE[3], PI_BYTE[4], PI_BYTE[5], PI_BYTE[6], PI_BYTE[7]);
 
-      //PI_BYTE[8] is a checksum of the other bytes combined and should be equal to zero
+      //PI_BYTE[9] is a checksum of the other bytes combined
       uint8_t checksum = 0;
-      for (int i = 0; i < 10; i++)
+      for (int i = 0; i < 9; i++)
       {
         checksum += PI_BYTE[i];
         checksum &= 0xFF;
@@ -59,15 +59,11 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
       checksum++;
 
       //debug
-      // fprintf (stderr, " CHK: %02X / %02X;", checksum, PI_BYTE[8]);
+      // fprintf (stderr, " CHK: %02X / %02X;", checksum, PI_BYTE[9]);
 
-      if (checksum == PI_BYTE[8])
+      if (checksum == PI_BYTE[9])
       {
-        fprintf (stderr, " Hytera Enhanced");
-        if (PI_BYTE[2] == 0x02)
-          fprintf (stderr, " RC4;");
-        else if (PI_BYTE[2] == 0x05)
-          fprintf (stderr, " AES-256;");
+        fprintf (stderr, " Hytera Enhanced;");
 
         //disable late entry for DMRA (hopefully, there aren't any systems running both DMRA and Hytera Enhanced mixed together)
         opts->dmr_le = 2;
@@ -113,7 +109,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
           else if ((state->payload_algid & 0x07) == 0x02)
           {
             fprintf (stderr, " DES;");
-            state->payload_algid = 0x21;
+            state->payload_algid = 0x22;
           }
 
           else if ((state->payload_algid & 0x07) == 0x04)
@@ -180,7 +176,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
           else if ((state->payload_algidR & 0x07) == 0x02)
           {
             fprintf (stderr, " DES;");
-            state->payload_algidR = 0x21;
+            state->payload_algidR = 0x22;
           }
 
           else if ((state->payload_algidR & 0x07) == 0x04)

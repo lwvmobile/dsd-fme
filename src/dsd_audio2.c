@@ -93,7 +93,7 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
         encL = 0;
       }
     }
-    else if (state->payload_algid == 0x21 || state->payload_algid == 0x22)
+    else if (state->payload_algid == 0x02 || state->payload_algid == 0x21 || state->payload_algid == 0x22)
     {
       if (state->R != 0)
       {
@@ -119,7 +119,7 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
         encR = 0;
       }
     }
-    else if (state->payload_algidR == 0x21 || state->payload_algidR == 0x22)
+    else if (state->payload_algidR == 0x02 ||state->payload_algidR == 0x21 || state->payload_algidR == 0x22)
     {
       if (state->RR != 0)
       {
@@ -1098,7 +1098,7 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
         encR = 0;
       }
     }
-    else if (state->payload_algid == 0x02 ||state->payload_algidR == 0x21 || state->payload_algidR == 0x22)
+    else if (state->payload_algidR == 0x02 ||state->payload_algidR == 0x21 || state->payload_algidR == 0x22)
     {
       if (state->RR != 0)
       {

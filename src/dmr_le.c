@@ -90,7 +90,7 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
     }
   }
 
-  int mi_final = 0;
+  unsigned long long int mi_final = 0;
   mi_final = (mi_corrected >> 4) & 0xFFFFFFFF;
 
   mi_crc_ext = (uint8_t)ConvertBitIntoBytes(&mi_bits[32], 4);
@@ -108,7 +108,7 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
       if (state->payload_mi != mi_final)
       {
         fprintf (stderr, "%s", KCYN);
-        fprintf (stderr, " Slot 1 PI/LFSR and Late Entry MI Mismatch - %08X : %08X ", state->payload_mi, mi_final);
+        fprintf (stderr, " Slot 1 PI/LFSR and Late Entry MI Mismatch - %08llX : %08llX ", state->payload_mi, mi_final);
         if (mi_crc_ok == 1) state->payload_mi = mi_final;
         if (mi_crc_ok == 1) fprintf (stderr, "(CRC OK)");
         else fprintf (stderr, "(CRC ERR)");
@@ -138,7 +138,7 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
       if (state->payload_miR != mi_final)
       {
         fprintf (stderr, "%s", KCYN);
-        fprintf (stderr, " Slot 2 PI/LFSR and Late Entry MI Mismatch - %08X : %08X ", state->payload_miR, mi_final);
+        fprintf (stderr, " Slot 2 PI/LFSR and Late Entry MI Mismatch - %08llX : %08llX ", state->payload_miR, mi_final);
         if (mi_crc_ok == 1) state->payload_miR = mi_final;
         if (mi_crc_ok == 1) fprintf (stderr, "(CRC OK)");
         else fprintf (stderr, "(CRC ERR)");

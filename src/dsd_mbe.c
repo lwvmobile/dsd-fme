@@ -742,7 +742,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       if (  (state->currentslot == 0 && state->payload_algid == 0x24 && state->aes_key_loaded[0] == 1 ) || //DMR AES128
             (state->currentslot == 0 && state->payload_algid == 0x25 && state->aes_key_loaded[0] == 1 ) || //DMR AES256
             (state->currentslot == 0 && state->payload_algid == 0x89 && state->aes_key_loaded[0] == 1 ) || //P25 AES128
-            (state->currentslot == 0 && state->payload_algid == 0x84 && state->aes_key_loaded[0] == 1)   ) //P25 AES256
+            (state->currentslot == 0 && state->payload_algid == 0x84 && state->aes_key_loaded[0] == 1 ) || //P25 AES256
+            (state->currentslot == 0 && state->payload_algid == 0x02 && state->R != 0 )                  ) //HYT ENHANCED
       {
 
         int j; int z = 0; int n = 16; uint8_t b = 0; //n=16 for AES-OFB discard round
@@ -771,8 +772,13 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             aes_ofb_keystream_output (state->aes_iv, aes_key, state->ks_octetL, 0, 10); //9 + 1 discard round
           if(state->payload_algid == 0x25 || state->payload_algid == 0x84) //AES256
             aes_ofb_keystream_output (state->aes_iv, aes_key, state->ks_octetL, 2, 10); //9 + 1 discard round
+          if(state->payload_algid == 0x02)
+          {
+            n = 0;
+            hytera_enhanced_enc_setup(opts, state, state->R, state->payload_mi);
+          }
 
-          //Load Keystream Octet Bytes directly into keystream array
+          //Load Keystream Octet Bytes directly into keystream array //TODO: Convert to unpack function
           for (i = 0; i < 9 * 16; i++) //9 rounds at 16 octets
           {
             for (j = 0; j < 8; j++)
@@ -1113,7 +1119,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       if (  (state->currentslot == 1 && state->payload_algidR == 0x24 && state->aes_key_loaded[1] == 1 ) || //DMR AES128
             (state->currentslot == 1 && state->payload_algidR == 0x25 && state->aes_key_loaded[1] == 1 ) || //DMR AES256
             (state->currentslot == 1 && state->payload_algidR == 0x89 && state->aes_key_loaded[1] == 1 ) || //P25 AES128
-            (state->currentslot == 1 && state->payload_algidR == 0x84 && state->aes_key_loaded[1] == 1)   ) //P25 AES256
+            (state->currentslot == 1 && state->payload_algidR == 0x84 && state->aes_key_loaded[1] == 1 ) || //P25 AES256
+            (state->currentslot == 1 && state->payload_algidR == 0x02 && state->RR != 0 )                 ) //HYT ENHANCED
       {
 
         int j; int z = 0; int n = 16; uint8_t b = 0; //n=16 for AES-OFB discard round
@@ -1142,9 +1149,14 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             aes_ofb_keystream_output (state->aes_ivR, aes_key, state->ks_octetR, 0, 10); //9 + 1 discard round
           if (state->payload_algidR == 0x25 || state->payload_algidR == 0x84)
             aes_ofb_keystream_output (state->aes_ivR, aes_key, state->ks_octetR, 2, 10); //9 + 1 discard round
+          if(state->payload_algidR == 0x02)
+          {
+            n = 0;
+            hytera_enhanced_enc_setup(opts, state, state->RR, state->payload_miR);
+          }
 
           //Load Keystream Octet Bytes directly into keystream array
-          for (i = 0; i < 9 * 16; i++) //9 rounds at 16 octets
+          for (i = 0; i < 9 * 16; i++) //9 rounds at 16 octets //TODO: Convert to unpack function
           {
             for (j = 0; j < 8; j++)
             {
