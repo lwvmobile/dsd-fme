@@ -329,12 +329,14 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       {
         if (slot == 0)
         {
+          state->dmr_so |= 0x40; //OR the enc bit onto the SO
           state->payload_algid = alg;
           state->payload_keyid = key;
           state->payload_mi = mi;
         }
         else
         {
+          state->dmr_soR |= 0x40; //OR the enc bit onto the SO
           state->payload_algidR = alg;
           state->payload_keyidR = key;
           state->payload_miR = mi;

@@ -30,6 +30,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
     {
       if (state->currentslot == 0)
       {
+        state->dmr_so |= 0x40; //OR the enc bit onto the SO
         state->payload_algid = PI_BYTE[0];
         state->payload_keyid = PI_BYTE[2];
         state->payload_mi = ((unsigned long long int)PI_BYTE[3] << 32ULL) | ((unsigned long long int)PI_BYTE[4] << 24) | 
@@ -37,6 +38,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
       }
       else
       {
+        state->dmr_soR |= 0x40; //OR the enc bit onto the SO
         state->payload_algidR = PI_BYTE[0];
         state->payload_keyidR = PI_BYTE[2];
         state->payload_miR = ((unsigned long long int)PI_BYTE[3] << 32ULL) | ((unsigned long long int)PI_BYTE[4] << 24) | 
