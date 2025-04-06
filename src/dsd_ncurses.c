@@ -3381,7 +3381,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if(state->dmrburstL == 16 && state->payload_algid > 0 && state->dmr_so & 0x40)
     {
       attron(COLOR_PAIR(1));
-      printw ("ALG: 0x%02X KEY: 0x%02X MI: 0x%08X ", state->payload_algid, state->payload_keyid, state->payload_mi);
+      printw ("ALG: 0x%02X KEY: 0x%02X MI: 0x%08llX ", state->payload_algid, state->payload_keyid, state->payload_mi);
       attroff(COLOR_PAIR(1));
       attron(COLOR_PAIR(3));
     }
@@ -3591,7 +3591,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if(state->dmrburstR == 16 && state->payload_algidR > 0 && state->dmr_soR & 0x40)
       {
         attron(COLOR_PAIR(1));
-        printw ("ALG: 0x%02X KEY: 0x%02X MI: 0x%08X ", state->payload_algidR, state->payload_keyidR, state->payload_miR);
+        printw ("ALG: 0x%02X KEY: 0x%02X MI: 0x%08llX ", state->payload_algidR, state->payload_keyidR, state->payload_miR);
         attroff(COLOR_PAIR(1));
         attron(COLOR_PAIR(3));
       }

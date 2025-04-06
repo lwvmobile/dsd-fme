@@ -94,7 +94,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
         {
           fprintf (stderr, "%s ", KYEL);
           fprintf (stderr, "\n Slot 1");
-          fprintf (stderr, " DMR PI H- ALG ID: %02X; KEY ID: %02X; MI(32): %08X;", state->payload_algid, state->payload_keyid, state->payload_mi);
+          fprintf (stderr, " DMR PI H- ALG ID: %02X; KEY ID: %02X; MI(32): %08llX;", state->payload_algid, state->payload_keyid, state->payload_mi);
 
           //check for any values that aren't 0x2X but just 0x0X
           //going to be very generic here to avoid any particular vendors using 0x2X and not 0x0X
@@ -161,7 +161,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
         {
           fprintf (stderr, "%s ", KYEL);
           fprintf (stderr, "\n Slot 2");
-          fprintf (stderr, " DMR PI H- ALG ID: %02X; KEY ID: %02X; MI(32): %08X", state->payload_algidR, state->payload_keyidR, state->payload_miR);
+          fprintf (stderr, " DMR PI H- ALG ID: %02X; KEY ID: %02X; MI(32): %08llX", state->payload_algidR, state->payload_keyidR, state->payload_miR);
 
           //check for any values that aren't 0x2X but just 0x0X
           //going to be very generic here to avoid any particular vendors using 0x2X and not 0x0X
