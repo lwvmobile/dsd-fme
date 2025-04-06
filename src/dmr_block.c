@@ -389,8 +389,8 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
         if ((uint8_t)ConvertBitIntoBytes(&dheader_bits[17], 3) == 5) fprintf (stderr, " AES256;");
 
         if (state->currentslot == 0)
-          state->payload_mi = (uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 32);
-        else state->payload_miR = (uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 32);
+          state->payload_mi = (unsigned long long int)ConvertBitIntoBytes(&dheader_bits[48], 32);
+        else state->payload_miR = (unsigned long long int)ConvertBitIntoBytes(&dheader_bits[48], 32);
 
         //print MI only if this is not Moto BP (no MI on those)
         if ((uint32_t)ConvertBitIntoBytes(&dheader_bits[48], 32) != 0)
@@ -889,11 +889,11 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         //start keystream creation
         uint8_t ob[129*24];
         uint8_t kiv[9];
-        uint32_t mi = 0;
+        unsigned long long int mi = 0;
         unsigned long long int R = 0;
         if (state->currentslot == 0)
-          mi = (uint32_t)state->payload_mi;
-        else mi = (uint32_t)state->payload_miR;
+          mi = (unsigned long long int)state->payload_mi;
+        else mi = (unsigned long long int)state->payload_miR;
 
         //key loader
         if (state->currentslot == 0)
@@ -931,7 +931,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
         //print alg/key and value if loaded
         fprintf (stderr, "\n PDU ALG: %02X; Key ID: %02X;", alg, kid);
-        if (alg != 0) fprintf (stderr, " MI(32): %08X;", mi);
+        if (alg != 0) fprintf (stderr, " MI(32): %08llX;", mi);
         if (alg == 0) fprintf (stderr, " Moto BP;");
         if (alg == 1) fprintf (stderr, " RC4;");
         if (alg == 2) fprintf (stderr, " DES1;");
