@@ -89,7 +89,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
       {
         state->payload_algid = PI_BYTE[0];
         state->payload_keyid = PI_BYTE[2];
-        state->payload_mi    = ( ((PI_BYTE[3]) << 24) + ((PI_BYTE[4]) << 16) + ((PI_BYTE[5]) << 8) + (PI_BYTE[6]) );
+        state->payload_mi    = ((unsigned long long int)PI_BYTE[3] << 24ULL) | ((unsigned long long int)PI_BYTE[4] << 16ULL) | ((unsigned long long int)PI_BYTE[5] << 8ULL) | ((unsigned long long int)PI_BYTE[6] << 0ULL);
         if (state->payload_algid < 0x26)
         {
           fprintf (stderr, "%s ", KYEL);
@@ -156,7 +156,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
 
         state->payload_algidR = PI_BYTE[0];
         state->payload_keyidR = PI_BYTE[2];
-        state->payload_miR    = ( ((PI_BYTE[3]) << 24) + ((PI_BYTE[4]) << 16) + ((PI_BYTE[5]) << 8) + (PI_BYTE[6]) );
+        state->payload_miR    = ((unsigned long long int)PI_BYTE[3] << 24ULL) | ((unsigned long long int)PI_BYTE[4] << 16ULL) | ((unsigned long long int)PI_BYTE[5] << 8ULL) | ((unsigned long long int)PI_BYTE[6] << 0ULL);
         if (state->payload_algidR < 0x26)
         {
           fprintf (stderr, "%s ", KYEL);
@@ -227,7 +227,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
 
 void LFSR(dsd_state * state)
 {
-  int lfsr = 0;
+  unsigned long long int lfsr = 0;
   if (state->currentslot == 0)
   {
     lfsr = state->payload_mi;
@@ -239,8 +239,8 @@ void LFSR(dsd_state * state)
   for(cnt=0;cnt<32;cnt++)
   {
 	  // Polynomial is C(x) = x^32 + x^4 + x^2 + 1
-    int bit  = ((lfsr >> 31) ^ (lfsr >> 3) ^ (lfsr >> 1)) & 0x1;
-    lfsr =  (lfsr << 1) | (bit);
+    unsigned long long int bit  = ((lfsr >> 31) ^ (lfsr >> 3) ^ (lfsr >> 1)) & 0x1;
+    lfsr =  (lfsr << 1) | bit;
   }
 
   lfsr &= 0xFFFFFFFF;
@@ -250,7 +250,7 @@ void LFSR(dsd_state * state)
     fprintf (stderr, "%s", KYEL);
     fprintf (stderr, " Slot 1");
     fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", state->payload_algid, state->payload_keyid);
-    fprintf (stderr, " MI(32): %08X;", lfsr);
+    fprintf (stderr, " MI(32): %08llX;", lfsr);
     fprintf (stderr, " RC4;");
     fprintf (stderr, "%s", KNRM);
     state->payload_mi = lfsr;
@@ -262,7 +262,7 @@ void LFSR(dsd_state * state)
     fprintf (stderr, "%s", KYEL);
     fprintf (stderr, " Slot 2");
     fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", state->payload_algidR, state->payload_keyidR);
-    fprintf(stderr, " MI(32): %08X;", lfsr);
+    fprintf(stderr, " MI(32): %08llX;", lfsr);
     fprintf (stderr, " RC4;");
     fprintf (stderr, "%s", KNRM);
     state->payload_miR = lfsr;
