@@ -364,9 +364,11 @@ void LFSR128d(dsd_state * state)
 
   //assign the next 32-bit short MI from 4,5,6,7 so it'll match up with OTA late entry
   if (state->currentslot == 0)
-    next_mi = (state->aes_iv[4] << 24) + (state->aes_iv[5] << 16) + (state->aes_iv[6] << 8) + (state->aes_iv[7] << 0);
+    next_mi = ((unsigned long long int)state->aes_iv[4] << 24) | ((unsigned long long int)state->aes_iv[5] << 16) | 
+              ((unsigned long long int)state->aes_iv[6] << 8)  | ((unsigned long long int)state->aes_iv[7] << 0);
   if (state->currentslot == 1)
-    next_mi = (state->aes_ivR[4] << 24) + (state->aes_ivR[5] << 16) + (state->aes_ivR[6] << 8) + (state->aes_ivR[7] << 0);
+    next_mi = ((unsigned long long int)state->aes_ivR[4] << 24) | ((unsigned long long int)state->aes_ivR[5] << 16) | 
+              ((unsigned long long int)state->aes_ivR[6] << 8)  | ((unsigned long long int)state->aes_ivR[7] << 0);
 
   if (state->currentslot == 0)
   {
