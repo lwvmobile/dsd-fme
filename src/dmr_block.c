@@ -934,7 +934,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         if (alg != 0) fprintf (stderr, " MI(32): %08llX;", mi);
         if (alg == 0) fprintf (stderr, " Moto BP;");
         if (alg == 1) fprintf (stderr, " RC4;");
-        if (alg == 2) fprintf (stderr, " DES1;");
+        if (alg == 2) fprintf (stderr, " DES;");
         if (alg == 4) fprintf (stderr, " AES128;");
         if (alg == 5) fprintf (stderr, " AES256;");
         if (R && alg != 0) fprintf (stderr, " Key: %010llX;", R);

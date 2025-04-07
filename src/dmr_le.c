@@ -459,6 +459,10 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
               fprintf (stderr, "%s", KCYN);
               fprintf (stderr, " Slot 1");
               fprintf (stderr, " DMR LE SB ALG ID: %02X; KEY ID: %02X;", alg + 0x20, key);
+              if (alg == 1) fprintf (stderr, " RC4;");
+              if (alg == 2) fprintf (stderr, " DES;");
+              if (alg == 4) fprintf (stderr, " AES128;");
+              if (alg == 5) fprintf (stderr, " AES256;");
               fprintf (stderr, "%s ", KNRM);
               if (opts->payload == 1) fprintf (stderr, "\n");
               if (state->payload_keyid != key)
