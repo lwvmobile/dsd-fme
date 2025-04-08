@@ -26,30 +26,23 @@ void
 printFrameInfo (dsd_opts * opts, dsd_state * state)
 {
 
-  int level;
+  UNUSED(opts);
 
-  level = (int) state->max / 164;
-  if (opts->verbose > 0)
-    {
-      // fprintf (stderr,"inlvl: %2i%% ", level);
-      UNUSED(level);
-    }
-  if (state->nac != 0)
-    {
-      fprintf (stderr, "%s", KCYN);
-      fprintf (stderr,"nac: [%4X] ", state->nac);
-      fprintf (stderr, "%s", KNRM);
-    }
+  fprintf (stderr, "%s", KCYN);
+  if (state->p2_wacn != 0)
+    fprintf (stderr, "WACN: %05llX; ", state->p2_wacn);
+  if (state->p2_sysid != 0)
+    fprintf (stderr, "SYS: %03llX; ", state->p2_sysid);
+  if (state->p2_cc != 0)
+    fprintf (stderr, "NAC/CC: %03llX; ", state->p2_cc);
+  else fprintf (stderr, "NAC: %03llX; ", state->nac);
 
-  if (opts->verbose > 1)
-    {
-      fprintf (stderr, "%s", KGRN);
-      fprintf (stderr,"src: [%8i] ", state->lastsrc);
-      fprintf (stderr, "%s", KNRM);
-    }
-  fprintf (stderr, "%s", KGRN);
-  fprintf (stderr,"tg: [%5i] ", state->lasttg);
+  if (state->p2_siteid != 0)
+    fprintf (stderr, "Site: %03lld; ", state->p2_siteid);
+  if (state->p2_rfssid != 0)
+    fprintf (stderr, "RFSS: %03lld; ", state->p2_rfssid);
   fprintf (stderr, "%s", KNRM);
+
 }
 
 void

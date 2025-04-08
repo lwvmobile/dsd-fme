@@ -432,7 +432,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                   sprintf (state->ftype, "P25 Phase 1");
                   if (opts->errorbars == 1)
                     {
-                      printFrameSync (opts, state, "+P25p1 ", synctest_pos + 1, modulation);
+                      printFrameSync (opts, state, "+P25p1", synctest_pos + 1, modulation);
                     }
                   state->lastsynctype = 0;
                   state->last_cc_sync_time = time(NULL);
@@ -708,13 +708,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 state->lastsynctype = 35; //35
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, "+P25p2 SISCH", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "+P25p2", synctest_pos + 1, modulation);
                 }
                 if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0)
             		{
-            			//fprintf (stderr, "%s", KCYN);
-            			fprintf (stderr, " WACN [%05llX] SYS [%03llX] NAC [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
-            			//fprintf (stderr, "%s", KNRM);
+            			printFrameInfo(opts, state);
             		}
             		else
             		{
@@ -741,13 +739,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                 opts->inverted_p2 = 1;
                 if (opts->errorbars == 1)
                 {
-                  printFrameSync (opts, state, "-P25p2 SISCH", synctest_pos + 1, modulation);
+                  printFrameSync (opts, state, "-P25p2", synctest_pos + 1, modulation);
                 }
                 if (state->p2_wacn != 0 && state->p2_cc != 0 && state->p2_sysid != 0)
             		{
-            			//fprintf (stderr, "%s", KCYN);
-            			fprintf (stderr, " WACN [%05llX] SYS [%03llX] NAC [%03llX] ", state->p2_wacn, state->p2_sysid, state->p2_cc);
-            			//fprintf (stderr, "%s", KNRM);
+            			printFrameInfo(opts, state);
             		}
             		else
             		{

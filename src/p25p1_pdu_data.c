@@ -98,7 +98,7 @@ uint8_t p25_decrypt_pdu(dsd_opts * opts, dsd_state * state, uint8_t * input, uin
   uint8_t ks_bytes[3096]; memset (ks_bytes, 0, sizeof(ks_bytes));
 
   //create keystream
-  if (alg_id == 0x84 || alg_id == 0x89) //AES -- dsd-fme -f1 -i '/SSD_STORAGE/2024_DEV/otar shit/OTAR/SUGARLOAF DATA OUTPUT/CC-DSDPlus-Raw-Input_2024-08-27@134540.wav' -s 96000 -K testaeskeys.csv
+  if (alg_id == 0x84 || alg_id == 0x89)
   {
     //aes specific arrays and things
     uint8_t aes_iv[16];  memset (aes_iv, 0, sizeof(aes_iv));
