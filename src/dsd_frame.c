@@ -35,7 +35,7 @@ printFrameInfo (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "SYS: %03llX; ", state->p2_sysid);
   if (state->p2_cc != 0)
     fprintf (stderr, "NAC/CC: %03llX; ", state->p2_cc);
-  else fprintf (stderr, "NAC: %03llX; ", state->nac);
+  else fprintf (stderr, "NAC: %03X; ", state->nac);
 
   if (state->p2_siteid != 0)
     fprintf (stderr, "Site: %03lld; ", state->p2_siteid);
