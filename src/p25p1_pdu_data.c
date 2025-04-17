@@ -24,6 +24,9 @@ void p25_decode_rsp(uint8_t C, uint8_t T, uint8_t S, char * rsp_string)
     else if (T == 6) sprintf (rsp_string, " NACK (Invalid User on System);");
   }
 
+  //catch all for everything else
+  else               sprintf (rsp_string, " Unknown RSP;");
+
   fprintf (stderr, " Response Packet:%s C: %X; T: %X; S: %X; ", rsp_string, C, T, S);
 
 }
@@ -373,8 +376,8 @@ void p25_decode_pdu_header(dsd_opts * opts, dsd_state * state, uint8_t * input)
 
   fprintf (stderr, "%s",KGRN);
   fprintf (stderr, " P25 Data - AN: %d; IO: %d; FMT: %02X; ", an, io, fmt);
-  char sap_string[40];
-  char rsp_string[40];
+  char sap_string[40]; sprintf (sap_string, "%s", " ");
+  char rsp_string[40]; sprintf (rsp_string, "%s", " ");
   if (fmt != 3) p25_decode_sap (sap, sap_string); //decode SAP to see what kind of data we are dealing with
   else          p25_decode_rsp (class, type, status, rsp_string); //decode the response type (ack, nack, sack)
   if (sap != 61 && sap != 63) //Not too interested in viewing these on trunking control, just data packets mostly
