@@ -230,6 +230,14 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
     ncursesPrinter(opts, state);
   }
 
+  //slot 1
+  watchdog_event_history(opts, state, 0);
+  watchdog_event_current(opts, state, 0);
+
+  //slot 2 for TDMA systems
+  watchdog_event_history(opts, state, 1);
+  watchdog_event_current(opts, state, 1);
+
   if ((opts->symboltiming == 1) && (state->carrier == 1))
     {
       //fprintf (stderr,"\nSymbol Timing:\n");

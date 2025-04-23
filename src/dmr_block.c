@@ -1050,8 +1050,12 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
       if (enc_check == 1 && decrypted_pdu == 0) //check for encryption and if it was decrypted first or not
       {
         fprintf (stderr, "%s", KRED);
-        fprintf (stderr, "\n Slot %d - Encrypted Data Packet;", slot+1);
+        fprintf (stderr, "\n Slot %d - Encrypted PDU;", slot+1);
         fprintf (stderr, "%s", KNRM);
+
+        char enc_str[200]; memset (enc_str, 200, sizeof(enc_str));
+        sprintf (enc_str, "DATA TGT: %d; SRC: %d; Encrypted PDU;", state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot]);
+        watchdog_event_datacall (opts, state, state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot], enc_str, slot);
       }
       else if (CRCCorrect || opts->aggressive_framesync == 0)
       {
@@ -1108,6 +1112,19 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           else if (mnis_type == 0x33) //check any potential texts in this message
             utf8_to_text(state, 0, 15, state->dmr_pdu_sf[slot]+7); //seen some ARS radio IDs in ASCII/ISO7/UTF8 format here
 
+          if (mnis_type != 0x11)
+          {
+            char mnis_str[200]; memset (mnis_str, 200, sizeof(mnis_str));
+            sprintf (mnis_str, "MNIS TGT: %d; SRC: %d;", state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot]);
+            watchdog_event_datacall (opts, state, state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot], mnis_str, slot);
+          }
+
+        }
+        else
+        {
+          char unk_str[200]; memset (unk_str, 200, sizeof(unk_str));
+          sprintf (unk_str, "DATA TGT: %d; SRC: %d; Unknown PDU Format;", state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot]);
+          watchdog_event_datacall (opts, state, state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot], unk_str, slot);
         }
       }
 

@@ -31,6 +31,8 @@ struct stat st_wav = {0};
 static char alias_ch[10][50];
 int reset = 0;
 
+uint8_t eh_slot = 0; //testing only, have a toggle slot for history
+uint8_t eh_off  = 0; //testing only, index offset for scrolling history
 
 int tg;
 int tgR;
@@ -59,24 +61,24 @@ char * FM_bannerN[9] = {
 };
 
 char * SyncTypes[44] = {
-  "P25P1",
-  "P25P1",
+  "P25p1",
+  "P25p1",
   "X2TDMA DATA",
   "X2TDMA DATA",
   "X2TDMA VOICE",
   "X2TDMA VOICE",
   "DSTAR", //voice
   "DSTAR", //voice
-  "NXDN VOICE",
-  "NXDN VOICE",
+  "M17",
+  "M17",
   "DMR", //10
   "DMR",
   "DMR",
   "DMR",
   "EDACS/PV",
   "EDACS/PV",
-  "NXDN VOICE", //DATA
-  "NXDN VOICE", //DATA
+  "M17 STR", //M17 Voice Stream
+  "M17 STR", //M17 Voice Stream
   "DSTAR", //header
   "DSTAR", //header
   "dPMR", //20
@@ -94,12 +96,12 @@ char * SyncTypes[44] = {
   "DMR",
   "DMR",
   "DMR",
-  "P25P2",
-  "P25P2",
+  "P25p2",
+  "P25p2",
   "EDACS/PV", //37
   "EDACS/PV", //38
-  "",
-  ""
+  "ANALOG", //39 Generic Sync Types
+  "DIGITAL" //40 Generic Sync Types
 };
 
 char * DMRBusrtTypes[32] = {
@@ -3823,7 +3825,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       }
       else
       {
-        printw ("| Monitoring VC - LCN [%02d]", state->edacs_tuned_lcn);
+        printw ("| Monitoring VC - LCN [%02d]\n", state->edacs_tuned_lcn);
         //since we are tuned, keep updating the time so it doesn't disappear during call
         call_matrix[state->edacs_tuned_lcn][5] = time(NULL);
       }
@@ -4003,233 +4005,23 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->ncurses_history == 1)
   {
     attron(COLOR_PAIR(4)); //cyan for history
-    printw ("--Call History----------------------------------------------------------------\n");
-    for (short int j = 0; j < 10; j++)
+    printw ("--Latest Event History ([|])---Slot %d (\\)-------------------------------------\n", eh_slot+1);
+    for (uint8_t i = (state->eh_index+1); i < (state->eh_index+11); i++)
     {
-      //only print if a valid time was assigned to the matrix, and not EDACS/PV, and source is not zero
-      if ( ((time(NULL) - call_matrix[9-j][5]) < 999999) && call_matrix[9-j][0] != 14 && call_matrix[9-j][0] != 15 && call_matrix[9-j][0] != 37 && call_matrix[9-j][0] != 38 && call_matrix[9-j][2] != 0) //
+      char text_string[2000];
+      sprintf (text_string, "%s", "BUMBLEBEETUNA");
+      uint8_t slot = eh_slot;
+
+      if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i].event_string, 13) != 0)
       {
-        char * timestrCH = getTimeN(call_matrix[9-j][5]);
-        char * datestrCH = getDateN(call_matrix[9-j][5]);
-
-        printw ("| ");
-        printw ("%s ", datestrCH);
-        printw ("%s ", timestrCH);
-
-        if (datestrCH != NULL)
-        {
-          free (datestrCH);
-          datestrCH = NULL;
-        }
-        if (timestrCH != NULL)
-        {
-          free (timestrCH);
-          timestrCH = NULL;
-        }
-
-        if (lls == 28 || lls == 29)
-        {
-          if (idas == 0) printw ("RAN [%02lld] ", call_matrix[9-j][4]);
-          if (idas == 1) printw ("Area [%02lld] ", call_matrix[9-j][4]);
-          printw ("TG [%5lld] ", call_matrix[9-j][1]);
-          printw ("RID [%5lld] ", call_matrix[9-j][2]);
-        }
-        //dPMR
-        if (lls == 20 || lls == 21 || lls == 22 || lls == 23 ||lls == 24 || lls == 25 || lls == 26 || lls == 27)
-        {
-          printw ("TGT [%8lld] ", call_matrix[9-j][1]);
-          printw ("SRC [%8lld] ", call_matrix[9-j][2]);
-          printw ("DCC [%2lld] ", call_matrix[9-j][4]);
-        }
-        //P25
-        if (call_matrix[9-j][0] == 0 || call_matrix[9-j][0] == 1 || call_matrix[9-j][0] == 35 || call_matrix[9-j][0] == 36)
-        {
-          printw ("TGT [%8lld] ", call_matrix[9-j][1]);
-          printw ("SRC [%8lld] ", call_matrix[9-j][2]);
-          printw ("NAC [0x%03llX] ", call_matrix[9-j][4]);
-        }
-        //DMR BS Types
-        if (call_matrix[9-j][0] == 12 || call_matrix[9-j][0] == 13 || call_matrix[9-j][0] == 10 || call_matrix[9-j][0] == 11 )
-        {
-          // printw ("S[%lld] ", call_matrix[9-j][3]); //%d
-          printw ("TGT [%8lld] ", call_matrix[9-j][1]);
-          printw ("SRC [%8lld] ", call_matrix[9-j][2]);
-          printw ("DCC [%02lld] ", call_matrix[9-j][4]);
-        }
-        //DMR MS Types
-        if (call_matrix[9-j][0] == 32 || call_matrix[9-j][0] == 33 || call_matrix[9-j][0] == 34 )
-        {
-          // printw ("S[%lld] ", call_matrix[9-j][3]);
-          printw ("TGT [%8lld] ", call_matrix[9-j][1]);
-          printw ("SRC [%8lld] ", call_matrix[9-j][2]);
-          printw ("DCC [%02lld] ", call_matrix[9-j][4]);
-        }
-
-        // #ifdef LIMAZULUTWEAKS
-        //Group Name Labels from CSV import
-        for (int k = 0; k < state->group_tally; k++)
-        {
-          if (state->group_array[k].groupNumber == call_matrix[9-j][1])
-          {
-            attron(COLOR_PAIR(4));
-            printw ("[%s]", state->group_array[k].groupName);
-            printw ("[%s] ", state->group_array[k].groupMode);
-          }
-          else if (state->group_array[k].groupNumber == call_matrix[9-j][2])
-          {
-            attron(COLOR_PAIR(4));
-            printw ("[%s]", state->group_array[k].groupName);
-            printw ("[%s] ", state->group_array[k].groupMode);
-          }
-        }
-
-        //alias values here
-        printw ("%s", alias_ch[9-j]);
-
-        // #endif
-        printw ("\n");
+        memcpy(text_string, state->event_history_s[slot].Event_History_Items[i].event_string, 71*sizeof(char));
+        text_string[71] = 0; //terminate string
+        printw ("| #%02d %s \n", i, text_string);
       }
-
-      //EDACS and ProVoice, outside of timestamp loop
-      if (call_matrix[j][0] == 14 || call_matrix[j][0] == 15 || call_matrix[j][0] == 37 || call_matrix[j][0] == 38 )
-      {
-        if (call_matrix[j][2] != 0)
-        {
-          printw ("| ");
-          char * timestrCHE = getTimeN(call_matrix[j][5]);
-          char * datestrCHE = getDateN(call_matrix[j][5]);
-
-          printw ("%s ", datestrCHE);
-          printw ("%s ", timestrCHE);
-
-          if (datestrCHE != NULL)
-          {
-            free (datestrCHE);
-            datestrCHE = NULL;
-          }
-          if (timestrCHE != NULL)
-          {
-            free (timestrCHE);
-            timestrCHE = NULL;
-          }
-
-          printw ("LCN [%2lld] ", call_matrix[j][1]);
-          if (state->ea_mode == 1)
-          {
-            // Voice call
-            if ((call_matrix[j][4] & EDACS_IS_VOICE) != 0)
-            {
-              // Group call
-              if ((call_matrix[j][4] & EDACS_IS_GROUP) != 0)
-                printw ("Target [%8lld] Source [%8lld]", call_matrix[j][2], call_matrix[j][3]);
-              // I-Call
-              else if ((call_matrix[j][4] & EDACS_IS_INDIVIDUAL) != 0)
-                printw ("Target [%8lld] Source [%8lld] I-Call", call_matrix[j][2], call_matrix[j][3]);
-              // System all-call
-              else if ((call_matrix[j][4] & EDACS_IS_ALL_CALL) != 0)
-                printw ("Target [ SYSTEM ] Source [%8lld] All-Call", call_matrix[j][3]);
-              // Interconnect
-              else if ((call_matrix[j][4] & EDACS_IS_INTERCONNECT) != 0)
-                printw ("Target [ SYSTEM ] Source [%8lld] Interconnect", call_matrix[j][3]);
-              // Test call
-              else if ((call_matrix[j][4] & EDACS_IS_TEST_CALL) != 0)
-                printw ("Target [ SYSTEM ] Source [ SYSTEM ] Test Call");
-              // Unknown call
-              else
-                printw ("Unknown call type");
-
-              // Call flags
-              if ((call_matrix[j][4] & EDACS_IS_TEST_CALL) != 0) {}
-              else if ((call_matrix[j][4] & EDACS_IS_DIGITAL) == 0)   printw (" [Ana]");
-              else                                                    printw (" [Dig]");
-              if ((call_matrix[j][4] & EDACS_IS_EMERGENCY) != 0)      printw ("[EM]");
-            }
-            else
-              // Data call
-              printw ("Target [  DATA  ] Source [%8lld] Data", call_matrix[j][3]);
-          }
-          else
-          {
-            // Voice call
-            if ((call_matrix[j][4] & EDACS_IS_VOICE) != 0)
-            {
-              // Compute AFS for display purposes only
-              int a = (call_matrix[j][2] >> state->edacs_a_shift) & state->edacs_a_mask;
-              int f = (call_matrix[j][2] >> state->edacs_f_shift) & state->edacs_f_mask;
-              int s = call_matrix[j][2] & state->edacs_s_mask;
-
-              // Group call
-              if ((call_matrix[j][4] & EDACS_IS_GROUP) != 0) {
-                char afs_str[8];
-                getAfsString(state, afs_str, a, f, s);
-                printw ("Target [%6lld][%s] Source [%5lld]", call_matrix[j][2], afs_str, call_matrix[j][3]);
-              }
-              // I-Call
-              else if ((call_matrix[j][4] & EDACS_IS_INDIVIDUAL) != 0)
-                if (getAfsStringLength(state) == 6)
-                  printw ("Target [%6lld][ UNIT ] Source [%5lld] I-Call", call_matrix[j][2], call_matrix[j][3]);
-                else
-                  printw ("Target [%6lld][  UNIT ] Source [%5lld] I-Call", call_matrix[j][2], call_matrix[j][3]);
-              // System all-call
-              else if ((call_matrix[j][4] & EDACS_IS_ALL_CALL) != 0)
-                if (getAfsStringLength(state) == 6)
-                  printw ("Target [    SYSTEM    ] Source [%5lld] All-Call", call_matrix[j][3]);
-                else
-                  printw ("Target [     SYSTEM    ] Source [%5lld] All-Call", call_matrix[j][3]);
-              // Interconnect
-              else if ((call_matrix[j][4] & EDACS_IS_INTERCONNECT) != 0)
-                if (getAfsStringLength(state) == 6)
-                  printw ("Target [    SYSTEM    ] Source [%5lld] Interconnect", call_matrix[j][3]);
-                else
-                  printw ("Target [     SYSTEM    ] Source [%5lld] Interconnect", call_matrix[j][3]);
-              // Test call
-              else if ((call_matrix[j][4] & EDACS_IS_TEST_CALL) != 0)
-                if (getAfsStringLength(state) == 6)
-                  printw ("Target [    SYSTEM    ] Source [ SYS ] Test Call");
-                else
-                  printw ("Target [     SYSTEM    ] Source [ SYS ] Test Call");
-              // Unknown call
-              else
-                printw ("Unknown call type");
-
-              // Call flags
-              if ((call_matrix[j][4] & EDACS_IS_TEST_CALL) != 0)      {}
-              else if ((call_matrix[j][4] & EDACS_IS_DIGITAL) == 0)   printw (" [Ana]");
-              else                                                    printw (" [Dig]");
-              if ((call_matrix[j][4] & EDACS_IS_AGENCY_CALL) != 0)    printw ("[A]");
-              if ((call_matrix[j][4] & EDACS_IS_FLEET_CALL) != 0)     printw ("[F]");
-              if ((call_matrix[j][4] & EDACS_IS_EMERGENCY) != 0)      printw ("[EM]");
-            }
-            // Data call
-            else
-              if (getAfsStringLength(state) == 6)
-                printw ("Target [     DATA     ] Source [%5lld] Data", call_matrix[j][3]);
-              else
-                printw ("Target [      DATA     ] Source [%5lld] Data", call_matrix[j][3]);
-          }
-          //test
-          for (int k = 0; k < state->group_tally; k++)
-          {
-            if (state->group_array[k].groupNumber == call_matrix[j][2] && call_matrix[j][2] != 0)
-            {
-              attron(COLOR_PAIR(4));
-              printw ("[%s] ", state->group_array[k].groupName);
-              break;
-            }
-            else if (state->group_array[k].groupNumber == call_matrix[j][3] && call_matrix[j][3] != 0)
-            {
-              attron(COLOR_PAIR(4));
-              printw ("[%s] ", state->group_array[k].groupName);
-              break;
-            }
-          }
-          //end test
-          printw ("\n");
-        }
-
-      }
-    } //end Call History
-    //fence bottom
+      sprintf (text_string, "%s", "BUMBLEBEETUNA");
+      if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i].text_message, 13) != 0)
+        printw ("|     %s \n", state->event_history_s[slot].Event_History_Items[i].text_message);
+    }
    printw ("------------------------------------------------------------------------------\n");
    attroff(COLOR_PAIR(4)); //cyan for history
   }
@@ -4798,6 +4590,28 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     noCarrier(opts, state);
   }
 
+  if (c == 93) //']' key - increment event history indexer
+  {
+    if (state->eh_index < 244)
+      state->eh_index++;
+    else state->eh_index = 0; //rollover just before we run out of items in the arrray
+  }
+
+  if (c == 91) //'[' key - decrement event history indexer
+  {
+    if (state->eh_index > 0)
+      state->eh_index--;
+  }
+
+  if (c == 92) //'\' key - toggle events for slot displayed, and reset eh_index
+  {
+    eh_slot ^= 1;
+    state->eh_index = 0;
+  }
+    
+
+
+
   //attempt retry to TCP Audio server
   if (c == 56) // '8' key, try audio in type 8 (TCP Audio Server connection) using defaults OR whatever the user last specified
   {
@@ -5062,9 +4876,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //so probably just write a function to handle c input, and when c = certain values
   //needing an entry box, then stop all of those
 
-
-
-
   //allocated memory pointer needs to be free'd
   if (timestr != NULL)
   {
@@ -5083,4 +4894,403 @@ void ncursesClose ()
 {
   endwin();
 
+}
+
+//init each event history struct passed into here
+void init_event_history (Event_History_I * event_struct, uint8_t start, uint8_t stop)
+{
+  for (uint8_t i = start; i < stop; i++)
+  {
+    event_struct->Event_History_Items[i].write = 0;
+    event_struct->Event_History_Items[i].systype = -1;
+    event_struct->Event_History_Items[i].subtype = -1;
+    event_struct->Event_History_Items[i].gi = 0;
+    event_struct->Event_History_Items[i].enc = 0;
+    event_struct->Event_History_Items[i].enc_alg = 0;
+    event_struct->Event_History_Items[i].enc_key = 0;
+    event_struct->Event_History_Items[i].mi = 0;
+    event_struct->Event_History_Items[i].svc = 0;
+    event_struct->Event_History_Items[i].source_id = 0;
+    event_struct->Event_History_Items[i].target_id = 0;
+    event_struct->Event_History_Items[i].channel = 0;
+    event_struct->Event_History_Items[i].event_time = 0;
+
+    memset  (event_struct->Event_History_Items[i].pdu, 0, sizeof(event_struct->Event_History_Items[0].pdu));
+    sprintf (event_struct->Event_History_Items[i].alias, "%s", "BUMBLEBEETUNA");
+    sprintf (event_struct->Event_History_Items[i].gps_s, "%s", "BUMBLEBEETUNA");
+    sprintf (event_struct->Event_History_Items[i].text_message, "%s", "BUMBLEBEETUNA");
+    sprintf (event_struct->Event_History_Items[i].event_string, "%s", "BUMBLEBEETUNA");
+  }
+}
+
+void push_event_history (Event_History_I * event_struct)
+{
+
+  //Fixed, had it going in the wrong direction first time
+  for (uint8_t i = 254; i >= 1; i--)
+  {
+    event_struct->Event_History_Items[i].write = event_struct->Event_History_Items[i-1].write;
+    event_struct->Event_History_Items[i].systype = event_struct->Event_History_Items[i-1].systype;
+    event_struct->Event_History_Items[i].subtype = event_struct->Event_History_Items[i-1].subtype;
+    event_struct->Event_History_Items[i].gi = event_struct->Event_History_Items[i-1].gi;
+    event_struct->Event_History_Items[i].enc = event_struct->Event_History_Items[i-1].enc;
+    event_struct->Event_History_Items[i].enc_alg = event_struct->Event_History_Items[i-1].enc_alg;
+    event_struct->Event_History_Items[i].enc_key = event_struct->Event_History_Items[i-1].enc_key;
+    event_struct->Event_History_Items[i].mi = event_struct->Event_History_Items[i-1].mi;
+    event_struct->Event_History_Items[i].svc = event_struct->Event_History_Items[i-1].svc;
+    event_struct->Event_History_Items[i].source_id = event_struct->Event_History_Items[i-1].source_id;
+    event_struct->Event_History_Items[i].target_id = event_struct->Event_History_Items[i-1].target_id;
+    event_struct->Event_History_Items[i].channel = event_struct->Event_History_Items[i-1].channel;
+    event_struct->Event_History_Items[i].event_time = event_struct->Event_History_Items[i+1].event_time;
+
+    memcpy  (event_struct->Event_History_Items[i].pdu, event_struct->Event_History_Items[i-1].pdu, sizeof(event_struct->Event_History_Items[0].pdu));
+    sprintf (event_struct->Event_History_Items[i].alias, "%s", event_struct->Event_History_Items[i-1].alias);
+    sprintf (event_struct->Event_History_Items[i].gps_s, "%s", event_struct->Event_History_Items[i-1].gps_s);
+    sprintf (event_struct->Event_History_Items[i].text_message, "%s", event_struct->Event_History_Items[i-1].text_message);
+    sprintf (event_struct->Event_History_Items[i].event_string, "%s", event_struct->Event_History_Items[i-1].event_string);
+  }
+}
+
+void write_event_to_log_file (dsd_opts * opts, dsd_state * state, char * event_string) //pass completed event string here that is in the struct
+{
+
+  //May reconfigure this to pull the struct directly, or pass supplimental strings for text messages, etc
+  UNUSED(state);
+
+  FILE * event_log_file;
+
+  event_log_file = fopen(opts->event_out_file, "a");
+
+  fprintf (event_log_file, "%s \n", event_string);
+  char text_string[2000]; sprintf (text_string, "%s", "BUMBLEBEETUNA");
+  uint8_t slot = state->currentslot;
+  if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[0].text_message, 13) != 0)
+    fprintf (event_log_file, "%s \n", state->event_history_s[slot].Event_History_Items[0].text_message);
+
+  fflush (event_log_file);
+  fclose (event_log_file);
+}
+
+// run once per loop to check for and push and update event history
+void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
+{
+
+  //create a pointer to the current slot event history
+  Event_History_I * event_struct = &state->event_history_s[slot];
+
+  //who is currently talking
+  uint32_t source_id = 0;
+
+  //last values pulled from the event history
+  uint32_t last_source_id = event_struct->Event_History_Items[0].source_id;
+
+  if (slot == 0)
+    source_id = state->lastsrc;
+  else
+    source_id = state->lastsrcR;
+
+  if (slot == 0) //BUGFIX: generic catch on FDMA systems so that we don't write duplicate data to slot 2 event history
+  {
+    //NXDN RID (TODO: Changeover to lastsrc later on)
+    if (state->lastsynctype == 28 || state->lastsynctype == 29)
+      source_id = state->nxdn_last_rid;
+
+    if (state->lastsynctype == 30 || state->lastsynctype == 30) //YSF Fusion
+    {
+      source_id = 0;
+      for (uint8_t i = 0; i < 11; i++)
+        source_id += state->ysf_src[i]; //convert to sum value to make a distinct enough src value
+    }
+
+    if (state->lastsynctype == 16 || state->lastsynctype == 17) //M17 STR
+    {
+      source_id = 0;
+      for (uint8_t i = 0; i < 9; i++)
+        source_id += state->m17_src_csd[i]; //convert to sum value to make a distinct enough src value
+    }
+
+    if (state->lastsynctype == 6 || state->lastsynctype == 7 || state->lastsynctype == 18 || state->lastsynctype == 19) //DSTAR
+    {
+      source_id = 0;
+      for (uint8_t i = 0; i < 12; i++)
+        source_id += state->dstar_src[i]; //convert to sum value to make a distinct enough src value
+
+      //need a strncmp here for 8 spaces in this field first so we don't blip a blank into the event history
+      if (strncmp(state->dstar_src, "        ", 8) == 0)
+        source_id = 0;
+    }
+
+    if (state->lastsynctype == 16 || state->lastsynctype == 17 || state->lastsynctype == 20 || state->lastsynctype == 24 || state->lastsynctype == 21 || state->lastsynctype == 25 || state->lastsynctype == 22 || state->lastsynctype == 26 || state->lastsynctype == 23 || state->lastsynctype == 27) //dPMR
+    {
+      source_id = 0;
+      for (uint8_t i = 0; i < 20; i++)
+        source_id += state->dpmr_caller_id[i]; //convert to sum value to make a distinct enough src value
+
+      //need a strncmp here for 8 spaces in this field first so we don't blip a blank into the event history
+      if (strncmp(state->dpmr_caller_id, "      ", 6) == 0)
+        source_id = 0;
+    }
+
+    if (state->lastsynctype == 14 || state->lastsynctype == 15 || state->lastsynctype == 37 || state->lastsynctype == 38) //EDACS Calls
+    {
+      source_id = 0;
+      if (opts->p25_is_tuned == 1)
+        source_id = state->lastsrc;
+    }
+
+  }
+  
+  if (source_id != last_source_id && last_source_id != 0) //test without != 0 if we want to constantly update the current event
+  {
+
+    if (opts->event_out_file[0] != 0)
+      write_event_to_log_file(opts, state, event_struct->Event_History_Items[0].event_string);
+
+    push_event_history (event_struct);
+    init_event_history (event_struct, 0, 1);
+  }
+
+}
+
+//similar to above, but constantly testing and checking the most recent event only
+//this will hopefully be more useful when dealing with an ongoing event with 
+//features that update over time with embedded signalling, etc
+void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
+{
+
+  //create a pointer to the current slot event history
+  Event_History_I * event_struct = &state->event_history_s[slot];
+
+  //TODO: Flesh out more later on.
+  uint32_t source_id = 0;
+  uint32_t target_id = 0;
+  uint16_t svc_opts = 0;
+  uint8_t  subtype = 0;
+
+  uint8_t  enc    = 0;
+  uint8_t  alg_id = 0;
+  uint16_t key_id = 0;
+  unsigned long long int mi;
+
+  if (slot == 0)
+  {
+    source_id = state->lastsrc;
+    target_id = state->lasttg;
+    
+    subtype = state->dmrburstL;
+    
+    svc_opts = state->dmr_so;
+    enc = (svc_opts >> 6) & 1;
+    alg_id = state->payload_algid;
+    key_id = (uint16_t)state->payload_keyid;
+
+    mi = state->payload_mi;
+  }
+  else
+  {
+    source_id = state->lastsrcR;
+    target_id = state->lasttgR;
+    subtype = state->dmrburstR;
+
+    svc_opts = state->dmr_soR;
+    enc = (svc_opts >> 6) & 1;
+
+    alg_id = state->payload_algidR;
+    key_id = (uint16_t)state->payload_keyidR;
+    mi = state->payload_miR;
+  }
+
+  if (slot == 0) //BUGFIX: generic catch on FDMA systems so that we don't write duplicate data to slot 2 event history
+  {
+    //NXDN RID (TODO: Changeover to lastsrc and lasttg later on)
+    if (state->lastsynctype == 28 || state->lastsynctype == 29)
+    {
+      source_id = state->nxdn_last_rid;
+      target_id = state->nxdn_last_tg;
+      if (state->nxdn_cipher_type != 0)
+        enc = 1;
+      alg_id = state->nxdn_cipher_type;
+    }
+
+    if (state->lastsynctype == 30 || state->lastsynctype == 30) //YSF Fusion
+    {
+      source_id = 0;
+      for (uint8_t i = 0; i < 11; i++)
+        source_id += state->ysf_src[i]; //convert to sum value to make a distinct enough src value
+
+      //TODO: Add src and dst as aliases?
+    }
+
+    if (state->lastsynctype == 16 || state->lastsynctype == 17) //M17 STR
+    {
+      source_id = 0;
+      for (uint8_t i = 0; i < 9; i++)
+        source_id += state->m17_src_csd[i]; //convert to sum value to make a distinct enough src value
+    }
+
+    if (state->lastsynctype == 6 || state->lastsynctype == 7 || state->lastsynctype == 18 || state->lastsynctype == 19) //DSTAR
+    {
+      source_id = 0;
+      for (uint8_t i = 0; i < 12; i++)
+        source_id += state->dstar_src[i]; //convert to sum value to make a distinct enough src value
+
+      //need a strncmp here for 8 spaces in this field first so we don't blip a blank into the event history
+      if (strncmp(state->dstar_src, "        ", 8) == 0)
+        source_id = 0;
+    }
+
+    if (state->lastsynctype == 16 || state->lastsynctype == 17 || state->lastsynctype == 20 || state->lastsynctype == 24 || state->lastsynctype == 21 || state->lastsynctype == 25 || state->lastsynctype == 22 || state->lastsynctype == 26 || state->lastsynctype == 23 || state->lastsynctype == 27) //dPMR
+    {
+      source_id = 0;
+      for (uint8_t i = 0; i < 20; i++)
+        source_id += state->dpmr_caller_id[i]; //convert to sum value to make a distinct enough src value
+
+      //need a strncmp here for 8 spaces in this field first so we don't blip a blank into the event history
+      if (strncmp(state->dpmr_caller_id, "      ", 6) == 0)
+        source_id = 0;
+    }
+
+    if (state->lastsynctype == 14 || state->lastsynctype == 15 || state->lastsynctype == 37 || state->lastsynctype == 38) //EDACS Calls
+    {
+      source_id = 0;
+      if (opts->p25_is_tuned == 1)
+        source_id = state->lastsrc;
+    }
+
+  }
+
+  //system type string (P25, DMR, etc)
+  char * sys_string = SyncTypes[state->lastsynctype];
+  
+  //date and time strings
+  char * timestr = getTimeN(time(NULL));
+  char * datestr = getDateN(time(NULL));
+
+  if (source_id != 0)
+  {
+    event_struct->Event_History_Items[0].write = 1; //TODO: Write a 1 here after written to a log
+    if (state->lastsynctype != -1)
+      event_struct->Event_History_Items[0].systype = state->lastsynctype;
+    else event_struct->Event_History_Items[0].systype = 39; //generic digital call
+    event_struct->Event_History_Items[0].subtype = subtype; //voice
+    event_struct->Event_History_Items[0].gi = state->gi[slot]; //need this add this to link control messages
+    event_struct->Event_History_Items[0].enc = enc;
+    event_struct->Event_History_Items[0].enc_alg = alg_id;
+    event_struct->Event_History_Items[0].enc_key = key_id;
+    event_struct->Event_History_Items[0].mi = mi;
+    event_struct->Event_History_Items[0].svc = svc_opts;
+    event_struct->Event_History_Items[0].source_id = source_id;
+    event_struct->Event_History_Items[0].target_id = target_id;
+    event_struct->Event_History_Items[0].channel = 0; //need to add this to trunking messages, if tuned from call grant
+    event_struct->Event_History_Items[0].event_time = time(NULL);
+  }
+
+  //Craft an event string for ncurses event history, and a more complex string for logging
+  char event_string[200]; memset(event_string, 0, sizeof(event_string));
+
+  //WIP: Seperate Voice Call Event Strings when SRC/TGT values are numerical,
+  //and a seperate one for when they are string values (M17, YSF, DSTAR, and dPMR, or use special formatting)
+  if (state->lastsynctype == 30 || state->lastsynctype == 30) //YSF Fusion (may need to use uplink instead of src, unsure for this)
+  {
+    //TODO: See if we can add some decoded data as well in the future to an event string
+    sprintf (event_string, "%s %s %s Voice TGT: %s SRC: %s ", datestr, timestr, sys_string, state->ysf_tgt, state->ysf_src);
+  }
+  else if (state->lastsynctype == 16 || state->lastsynctype == 17) //M17
+  {
+    //TODO: See if we can add some decoded data as well in the future to an event string
+    sprintf (event_string, "%s %s %s Voice TGT: %s SRC: %s ", datestr, timestr, sys_string, state->m17_dst_str, state->m17_src_str);
+  }
+  else if (state->lastsynctype == 6 || state->lastsynctype == 7 || state->lastsynctype == 18 || state->lastsynctype == 19) //DSTAR
+  {
+    //TODO: See if we can add some decoded data as well in the future to an event string
+    sprintf (event_string, "%s %s %s Voice TGT: %s SRC: %s ", datestr, timestr, sys_string, state->dstar_dst, state->dstar_src);
+  }
+  else if (state->lastsynctype == 16 || state->lastsynctype == 17 || state->lastsynctype == 20 || state->lastsynctype == 24 || state->lastsynctype == 21 || state->lastsynctype == 25 || state->lastsynctype == 22 || state->lastsynctype == 26 || state->lastsynctype == 23 || state->lastsynctype == 27) //dPMR
+  {
+    //TODO: See if we can add some decoded data as well in the future to an event string
+    sprintf (event_string, "%s %s %s Voice TGT: %s SRC: %s ", datestr, timestr, sys_string, state->dpmr_target_id, state->dpmr_caller_id);
+  }
+  //TODO: Find out why EDACS is also placing items into Slot 2 Event History with valid src, but invalid tg (not a problem, just odd)
+  else if (state->lastsynctype == 14 || state->lastsynctype == 15 || state->lastsynctype == 37 || state->lastsynctype == 38) //EDACS Calls
+  {
+    //is this AFS format, or EA format, also, need to re-add Ilya's other decoded call elements into this somehow
+    if (state->ea_mode == 1)
+    {
+      sprintf (event_string, "%s %s %s Voice TGT: %05d; SRC: %05d; ", datestr, timestr, sys_string, target_id, source_id);
+    }
+    else
+    {
+      //TODO: Have EDACS decoder write a nicer string for us to use in this instance
+      // Compute AFS for display purposes only
+      int a = (state->tg_hold >> state->edacs_a_shift) & state->edacs_a_mask;
+      int f = (state->tg_hold >> state->edacs_f_shift) & state->edacs_f_mask;
+      int s = state->tg_hold & state->edacs_s_mask;
+      char afs_str[8];
+      getAfsString(state, afs_str, a, f, s);
+      sprintf (event_string, "%s %s %s Voice AFS: %s ", datestr, timestr, sys_string, afs_str);
+    }
+  }
+  else //any numerical based src and tgt values
+  {
+    sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; ", datestr, timestr, sys_string, target_id, source_id);
+    if (enc)
+      strcat(event_string, "ENC; ");
+    if (alg_id != 0 && alg_id != 0x80)
+    {
+      char ess_str[30];
+      sprintf (ess_str, "ALG: %02X; KID: %04X;", alg_id, key_id); //KID overflow?
+      strcat(event_string, ess_str);
+    }
+  }
+
+  sprintf (event_struct->Event_History_Items[0].event_string, "%s", event_string);
+
+  if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
+  }
+  if (datestr != NULL)
+  {
+    free (datestr);
+    datestr = NULL;
+  }
+}
+
+void watchdog_event_datacall (dsd_opts * opts, dsd_state * state, uint32_t src, uint32_t dst, char * data_string, uint8_t slot)
+{
+  UNUSED(opts);
+  state->event_history_s[slot].Event_History_Items[0].write = 1; //TODO: Write a 1 here when written to a log
+  state->event_history_s[slot].Event_History_Items[0].systype = state->lastsynctype;
+  state->event_history_s[slot].Event_History_Items[0].subtype = 6; //data
+  state->event_history_s[slot].Event_History_Items[0].gi = state->gi[slot];
+  state->event_history_s[slot].Event_History_Items[0].enc = 0;
+  state->event_history_s[slot].Event_History_Items[0].enc_alg = 0;
+  state->event_history_s[slot].Event_History_Items[0].enc_key = 0;
+  state->event_history_s[slot].Event_History_Items[0].mi = 0;
+  state->event_history_s[slot].Event_History_Items[0].svc = 0;
+  state->event_history_s[slot].Event_History_Items[0].source_id = src;
+  state->event_history_s[slot].Event_History_Items[0].target_id = dst;
+  state->event_history_s[slot].Event_History_Items[0].channel = 0;
+  state->event_history_s[slot].Event_History_Items[0].event_time = time(NULL);
+
+  //date and time strings //getTimeN(time(NULL)); //getDateN(time(NULL));
+  char * timestr = getTimeN(time(NULL));
+  char * datestr = getDateN(time(NULL));
+
+  char event_string[2000]; memset (event_string, 0, sizeof(event_string));
+  sprintf (event_string, "%s %s ", datestr, timestr);
+  strcat (event_string, data_string); //may need to check for potential overflow of this
+  sprintf (state->event_history_s[slot].Event_History_Items[0].event_string, "%s", event_string); //could change this to a strncpy to prevent potential overflow
+
+  if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
+  }
+  if (datestr != NULL)
+  {
+    free (datestr);
+    datestr = NULL;
+  }
 }

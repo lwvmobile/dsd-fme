@@ -127,12 +127,15 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 
 			state->dmrburstL = 20;
 			fprintf (stderr, "\n VCH 0 - ");
-
-			state->lastsrc = (SMAC[13] << 16) | (SMAC[14] << 8) | SMAC[15];
+			//check that src is not zero first, some harris and other patch systems may do this,
+			//but that also causes an issue in the new event logger if the active channel has a src, but mac_ptt has 0
+			uint32_t src = (SMAC[13] << 16) | (SMAC[14] << 8) | SMAC[15];
+			if (src != 0)
+				state->lastsrc = (SMAC[13] << 16) | (SMAC[14] << 8) | SMAC[15];
 			state->lasttg  = (SMAC[16] << 8) | SMAC[17];
 
 			fprintf (stderr, "TG %d ", state->lasttg);
-			fprintf (stderr, "SRC %d ", state->lastsrc);
+			fprintf (stderr, "SRC %d ", src);
 
 			/*
 			When the talker radio is initiating an individual call (unit to unit or telephone interconnect), the reserved group ID of zero
@@ -195,12 +198,15 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 
 			state->dmrburstR = 20;
 			fprintf (stderr, "\n VCH 1 - ");
-
-			state->lastsrcR = (SMAC[13] << 16) | (SMAC[14] << 8) | SMAC[15];
+			//check that src is not zero first, some harris and other patch systems may do this,
+			//but that also causes an issue in the new event logger if the active channel has a src, but mac_ptt has 0
+			uint32_t src = (SMAC[13] << 16) | (SMAC[14] << 8) | SMAC[15];
+			if (src != 0)
+				state->lastsrcR = (SMAC[13] << 16) | (SMAC[14] << 8) | SMAC[15];
 			state->lasttgR  = (SMAC[16] << 8) | SMAC[17];
 
 			fprintf (stderr, "TG %d ", state->lasttgR);
-			fprintf (stderr, "SRC %d ", state->lastsrcR);
+			fprintf (stderr, "SRC %d ", src);
 
 			// if (state->lastsrcR == 0) fprintf (stderr, "External ");
 
@@ -576,12 +582,15 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 
 			state->dmrburstL = 20;
 			fprintf (stderr, "\n VCH 0 - ");
-
-			state->lastsrc = (FMAC[13] << 16) | (FMAC[14] << 8) | FMAC[15];
+			//check that src is not zero first, some harris and other patch systems may do this,
+			//but that also causes an issue in the new event logger if the active channel has a src, but mac_ptt has 0
+			uint32_t src = (FMAC[13] << 16) | (FMAC[14] << 8) | FMAC[15];
+			if (src != 0)
+				state->lastsrc = (FMAC[13] << 16) | (FMAC[14] << 8) | FMAC[15];
 			state->lasttg  = (FMAC[16] << 8) | FMAC[17];
 
 			fprintf (stderr, "TG %d ", state->lasttg);
-			fprintf (stderr, "SRC %d ", state->lastsrc);
+			fprintf (stderr, "SRC %d ", src);
 
 			// if (state->lastsrc == 0) fprintf (stderr, "External ");
 
@@ -634,12 +643,15 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 
 			state->dmrburstR = 20;
 			fprintf (stderr, "\n VCH 1 - ");
-
-			state->lastsrcR = (FMAC[13] << 16) | (FMAC[14] << 8) | FMAC[15];
+			//check that src is not zero first, some harris and other patch systems may do this,
+			//but that also causes an issue in the new event logger if the active channel has a src, but mac_ptt has 0
+			uint32_t src = (FMAC[13] << 16) | (FMAC[14] << 8) | FMAC[15];
+			if (src != 0)
+				state->lastsrcR = (FMAC[13] << 16) | (FMAC[14] << 8) | FMAC[15];
 			state->lasttgR  = (FMAC[16] << 8) | FMAC[17];
 
 			fprintf (stderr, "TG %d ", state->lasttgR);
-			fprintf (stderr, "SRC %d ", state->lastsrcR);
+			fprintf (stderr, "SRC %d ", src);
 
 			// if (state->lastsrcR == 0) fprintf (stderr, "External ");
 

@@ -1075,10 +1075,10 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 			state->payload_keyid = 0;
 			state->payload_algidR = 0;
 			state->payload_keyidR = 0;
-			state->lastsrc = 0;
-			state->lastsrcR = 0;
-			state->lasttg = 0;
-			state->lasttgR = 0;
+			// state->lastsrc = 0; //disable?
+			// state->lastsrcR = 0; //disable?
+			// state->lasttg = 0; //disable?
+			// state->lasttgR = 0; //disable?
 			state->p2_is_lcch = 0;
 			state->fourv_counter[0] = 0;
 			state->fourv_counter[1] = 0;
@@ -1092,6 +1092,15 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		{
 			ncursesPrinter(opts, state);
 		}
+
+		//slot 1
+		watchdog_event_history(opts, state, 0);
+		watchdog_event_current(opts, state, 0);
+
+		//slot 2 for TDMA systems
+		watchdog_event_history(opts, state, 1);
+		watchdog_event_current(opts, state, 1);
+
 		//add 360 bits to each counter
 		vc_counter = vc_counter + 360;
 

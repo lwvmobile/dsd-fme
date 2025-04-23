@@ -374,6 +374,10 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     if (opts->use_ncurses_terminal == 1)
       ncursesPrinter(opts, state);
 
+    //slot 1
+    watchdog_event_history(opts, state, 0);
+    watchdog_event_current(opts, state, 0);
+
     //write to wav file if opened
     if (opts->wav_out_f != NULL)
     {
@@ -454,6 +458,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
   {
     edacs_bit[i] = getDibit (opts, state); //getDibit returns binary 0 or 1 on GFSK signal (Edacs and PV)
   }
+
+  //if we have executed a tune to a channel, then we will forego decoding any more edacs until we return from the voice channel
+  //this is a simple quick and dirty solution to fix setting the lastsrc value to something that we don't want in event history
+  if (opts->p25_is_tuned == 1)
+    goto EDACS_END;
 
   //Each EDACS outbound frame consists of two 40-bit (28-bit data, 12-bit BCH) messages. Each message is sent three
   //times, with the middle message bitwise-inverted. We use unsigned long long int here to be safe in 32-bit cygwin (not
@@ -2135,6 +2144,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
   }
 
+  EDACS_END:
 
   if (timestr != NULL)
   {

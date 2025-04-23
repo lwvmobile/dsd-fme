@@ -88,6 +88,34 @@
 
 extern volatile uint8_t exitflag; //fix for issue #136
 
+//event history (each item)
+typedef struct {
+  uint8_t write;     //if this event needs to be written to a log file
+  int8_t systype;    //indentifier of which decoded system type this is from (P25, DMR, etc)
+  int8_t subtype;    //subtype of systpe (VLC, TLC, PDU data, System Event, etc)
+  uint8_t gi;        //group or individual
+  uint8_t enc;       //clear or encrypted
+  uint8_t enc_alg;   //alg if encrypted
+  uint16_t enc_key;  //enc key id value, if encrypted (not key value or key variable)
+  uint64_t mi;       //mi, or iv base value from OTA if provided
+  uint16_t svc;      //other relevant svc opts if applicable
+  uint32_t source_id;//source radio id or other source value
+  uint32_t target_id;//group or individual target, or destination value
+  uint32_t channel;  //if this occurs on a trunking channel, which channel
+  time_t event_time; //time event occurred
+
+  uint8_t pdu[128*24]; //relevant link control, or full PDU if data call (in bytes)
+  char alias[2000];     //if this event has a source radio talker alias or similar
+  char gps_s[2000];     //gps, if returned, expressed as a string
+  char text_message[2000]; //if this event is a decoded text message, then it goes here
+  char event_string[2000]; //user legible and printable string for the event that happened
+} Event_History;
+
+//event history for number of each items above
+typedef struct {
+  Event_History Event_History_Items[255];
+} Event_History_I;
+
 //new audio filter stuff from: https://github.com/NedSimao/FilteringLibrary
 typedef struct {
     float coef[2];
@@ -280,6 +308,7 @@ typedef struct
   char wav_out_file_raw[1024];
   char symbol_out_file[1024];
   char lrrp_out_file[1024];
+  char event_out_file[1024];
   char szNumbers[1024]; //**tera 10/32/64 char str
   short int mbe_out; //flag for mbe out, don't attempt fclose more than once
   short int mbe_outR; //flag for mbe out, don't attempt fclose more than once
@@ -546,6 +575,8 @@ typedef struct
   int lasttgR;
   int lastsrc;
   int lastsrcR;
+  uint8_t gi[2]; //group, or private call, per slot
+  uint8_t eh_index;
   int nac;
   int errs;
   int errs2;
@@ -688,8 +719,8 @@ typedef struct
   uint8_t dmr_alias_format[2]; //per slot
   uint8_t dmr_alias_len[2]; //per slot
   char dmr_alias_block_segment[2][4][7][16]; //2 slots, by 4 blocks, by up to 7 alias bytes that are up to 16-bit chars
-  char dmr_embedded_gps[2][200]; //2 slots by 99 char string for string embedded gps
-  char dmr_lrrp_gps[2][200]; //2 slots by 99 char string for string lrrp gps
+  char dmr_embedded_gps[2][600]; //2 slots by 99 char string for string embedded gps
+  char dmr_lrrp_gps[2][600]; //2 slots by 99 char string for string lrrp gps
   char dmr_site_parms[200]; //string for site/net info depending on type of DMR system (TIII or Con+)
   char call_string[2][200]; //string for call information
   char active_channel[31][200]; //string for storing and displaying active trunking channels
@@ -698,6 +729,9 @@ typedef struct
   char generic_talker_alias[2][100];
 
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
+
+  //event history itemized per slot
+  Event_History_I event_history_s[2];
 
   //new audio filter structs
   LPFilter RCFilter;
@@ -1353,6 +1387,14 @@ char * getDate();
 char * getDateH();
 char * getDateS();
 char * getDateN(time_t t);
+
+//event history functions
+void init_event_history (Event_History_I * event_struct, uint8_t start, uint8_t stop);
+void push_event_history (Event_History_I * event_struct);
+void write_event_to_log_file (dsd_opts * opts, dsd_state * state, char * event_string);
+void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot);
+void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot);
+void watchdog_event_datacall (dsd_opts * opts, dsd_state * state, uint32_t src, uint32_t dst, char * data_string, uint8_t slot);
 
 //dmr alg stuff
 void dmr_alg_reset (dsd_opts * opts, dsd_state * state);

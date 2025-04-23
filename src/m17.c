@@ -2466,6 +2466,10 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
     if (opts->use_ncurses_terminal == 1)
       ncursesPrinter(opts, state);
 
+    //slot 1
+    watchdog_event_history(opts, state, 0);
+    watchdog_event_current(opts, state, 0);
+
   }
 
   //SEND EOTX to reflector
@@ -3825,6 +3829,10 @@ void processM17IPF(dsd_opts * opts, dsd_state * state)
     //refresh ncurses printer, if enabled
     if (opts->use_ncurses_terminal == 1)
       ncursesPrinter(opts, state);
+
+    //slot 1
+    watchdog_event_history(opts, state, 0);
+    watchdog_event_current(opts, state, 0);
 
     //clear frame
     memset (ip_frame, 0, sizeof(ip_frame));

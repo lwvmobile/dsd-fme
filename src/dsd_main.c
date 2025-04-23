@@ -265,6 +265,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     state->lastsrc = 0;
     state->lasttgR = 0;
     state->lastsrcR = 0;
+    state->gi[0] = 0;
+    state->gi[1] = 0;
 
     //zero out vc frequencies?
     state->p25_vc_freq[0] = 0;
@@ -301,6 +303,8 @@ noCarrier (dsd_opts * opts, dsd_state * state)
     state->lastsrc = 0;
     state->lasttgR = 0;
     state->lastsrcR = 0;
+    state->gi[0] = 0;
+    state->gi[1] = 0;
 
   }
 
@@ -624,6 +628,7 @@ initOpts (dsd_opts * opts)
   opts->wav_out_file_raw[0] = 0;
   opts->symbol_out_file[0] = 0;
   opts->lrrp_out_file[0] = 0;
+  opts->event_out_file[0] = 0;
   //csv import filenames
   opts->group_in_file[0] = 0;
   opts->lcn_in_file[0] = 0;
@@ -942,6 +947,9 @@ initState (dsd_state * state)
   state->lastsrc = 0;
   state->lasttgR = 0;
   state->lastsrcR = 0;
+  state->gi[0] = 0;
+  state->gi[1] = 0;
+  state->eh_index = 0;
   state->nac = 0;
   state->errs = 0;
   state->errs2 = 0;
@@ -1312,6 +1320,10 @@ initState (dsd_state * state)
   #endif
 
   state->dmr_color_code = 16;
+
+  //initialize event history items (0 to 255)
+  for (uint8_t i = 0; i < 2; i++)
+    init_event_history(&state->event_history_s[i], 0, 255);
 
 } //init_state
 
@@ -1779,7 +1791,7 @@ main (int argc, char **argv)
 
   exitflag = 0;
 
-  while ((c = getopt (argc, argv, "yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:JO")) != -1)
+  while ((c = getopt (argc, argv, "~:yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:JO")) != -1)
     {
 
       switch (c)
@@ -2140,6 +2152,12 @@ main (int argc, char **argv)
           opts.lrrp_out_file[1023] = '\0';
           opts.lrrp_file_output = 1;
           fprintf (stderr,"Writing + Appending LRRP data to file %s\n", opts.lrrp_out_file);
+          break;
+
+        case '~': //Event output to file
+          strncpy(opts.event_out_file, optarg, 1023);
+          opts.event_out_file[1023] = '\0';
+          fprintf (stderr,"Writing + Appending Event History to file %s\n", opts.lrrp_out_file);
           break;
 
         case '7': //make a custom wav file directory in the current working directory -- use this before -P

@@ -49,6 +49,10 @@ void processDSTAR(dsd_opts * opts, dsd_state * state)
     if (opts->use_ncurses_terminal == 1)
       ncursesPrinter(opts, state);
 
+    //slot 1
+    watchdog_event_history(opts, state, 0);
+    watchdog_event_current(opts, state, 0);
+
   }
 
   fprintf (stderr, "\n");

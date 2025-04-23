@@ -402,8 +402,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       {
         state->dmr_fid = 0;
         state->dmr_so = 0;
-        // state->lasttg = 0;
-        // state->lastsrc = 0;
+        state->lasttg = 0;
+        state->lastsrc = 0;
         state->payload_algid = 0;
         state->payload_mi = 0;
         state->payload_keyid = 0;
@@ -415,8 +415,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       {
         state->dmr_fidR = 0;
         state->dmr_soR = 0;
-        // state->lasttgR = 0;
-        // state->lastsrcR = 0;
+        state->lasttgR = 0;
+        state->lastsrcR = 0;
         state->payload_algidR = 0;
         state->payload_miR = 0;
         state->payload_keyidR = 0;

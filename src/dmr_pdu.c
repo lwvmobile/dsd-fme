@@ -22,6 +22,7 @@ uint16_t convert_hex_to_dec(uint16_t input)
 void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input)
 {
   uint8_t slot = state->currentslot;
+  sprintf (state->event_history_s[slot].Event_History_Items[0].text_message, "%s", "Full Text: "); //full text string
   // fprintf (stderr, "\n UTF16 Text: ");
   uint16_t ch16 = 0;
   for (uint16_t i = 0; i < len; i += 2)
@@ -43,8 +44,13 @@ void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input
     //for now, just rip the first 40 or so chars lower byte value
     //in the ASCII Range (should be alright for a quick visual)
     char c[2]; c[0] = (char)input[i+1]; c[2] = 0;
-    if (wr == 1&& i < 76 && input[i+1] < 0x7F && input[i+1] >= 0x20)
+    if (wr == 1 && i < 76 && input[i+1] < 0x7F && input[i+1] >= 0x20)
       strcat (state->dmr_lrrp_gps[slot], c);
+
+    //this is the long version, complete message for logging purposes
+    if (wr == 1 && input[i+1] < 0x7F && input[i+1] >= 0x20)
+    // if (wr == 1)
+      strcat (state->event_history_s[slot].Event_History_Items[0].text_message, c);
 
   }
 
@@ -103,6 +109,11 @@ void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
     utf8_to_text(state, 0, len, DMR_PDU); //generic catch-all to see if anything relevant is there
     // utf16_to_text(state, 0, len, DMR_PDU); //generic catch-all to see if anything relevant is there
   }
+
+  //TODO: This
+  // char comp_string[500]; memset (comp_string, 0, sizeof(comp_string));
+  // sprintf (comp_string, "Src Port Idx: %d (%s); Dst Port Idx: %d (%s); ", spid, portstring[0], dpid, portstring[1]);
+  // watchdog_event_datacall (opts, state, said, daid, comp_string, slot);
 
 }
 
@@ -234,6 +245,14 @@ void dmr_udp_comp_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t
     lip_protocol_decoder(opts, state, bits);
   }
   else fprintf (stderr, "Unknown Decode Format;");
+
+  uint8_t slot = 0;
+  if (state->currentslot == 1)
+    slot = 1;
+
+  char comp_string[500]; memset (comp_string, 0, sizeof(comp_string));
+  sprintf (comp_string, "Src Port Idx: %d (%s); Dst Port Idx: %d (%s); ", spid, portstring[0], dpid, portstring[1]);
+  watchdog_event_datacall (opts, state, said, daid, comp_string, slot);
 
 }
 
@@ -459,7 +478,7 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
     }
     else
     {
-      sprintf (state->dmr_lrrp_gps[slot], " IP Call SRC: %d; Port; %d; DST: %d; Port: %d;", src24, port1, dst24, port2);
+      sprintf (state->dmr_lrrp_gps[slot], "IP SRC: %d.%d.%d.%d:%d; DST: %d.%d.%d.%d:%d;", input[12], input[13], input[14], input[15], port1, input[16], input[17], input[18], input[19], port2);
       fprintf (stderr, "Unknown UDP Port;");
       // if (len > 28) //default catch all (debug only)
       //   utf8_to_text(state, 0, len-28, input+28);
@@ -470,12 +489,14 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
 
   else
   {
-    sprintf (state->dmr_lrrp_gps[slot], " IP Call SRC: %d; DST: %d; Protocol: %d;", src24, dst24, prot);
+    sprintf (state->dmr_lrrp_gps[slot], "IP SRC: %d; DST: %d; Protocol: %d;", input[12], input[13], input[14], input[15], input[16], input[17], input[18], input[19], prot);
     fprintf(stderr, "Unknown IP Protocol: %02X;", prot);
     // if (len > 28) //default catch all (debug only)
     //   utf8_to_text(state, 0, len-28, input+28);
     // else utf8_to_text(state, 0, len, input+28);
   }
+
+  watchdog_event_datacall (opts, state, src24, dst24, state->dmr_lrrp_gps[slot], slot);
 
 }
 
@@ -745,6 +766,7 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
       sprintf (velstr, "%s", "");
       sprintf (degstr, "%s", "");
       if (lat) sprintf (lrrpstr, "LRRP SRC: %0d; (%lf, %lf)", source, lat_fin, lon_fin);
+      else sprintf (lrrpstr, "LRRP SRC: %0d; Unknown Format; ", source);
       if (vel_set) sprintf (velstr, " %.4lf km/h", velocity * 3.6);
       if (deg_set) sprintf (degstr, " %d%s  ", degrees, deg_glyph);
       sprintf (state->dmr_lrrp_gps[slot], "%s%s%s", lrrpstr, velstr, degstr);
