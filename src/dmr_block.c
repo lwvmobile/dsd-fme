@@ -1054,7 +1054,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         fprintf (stderr, "%s", KNRM);
 
         char enc_str[200]; memset (enc_str, 200, sizeof(enc_str));
-        sprintf (enc_str, "DATA TGT: %d; SRC: %d; Encrypted PDU;", state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot]);
+        sprintf (enc_str, "DATA TGT: %lld; SRC: %lld; Encrypted PDU;", state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot]);
         watchdog_event_datacall (opts, state, state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot], enc_str, slot);
       }
       else if (CRCCorrect || opts->aggressive_framesync == 0)
@@ -1115,7 +1115,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           if (mnis_type != 0x11)
           {
             char mnis_str[200]; memset (mnis_str, 200, sizeof(mnis_str));
-            sprintf (mnis_str, "MNIS TGT: %d; SRC: %d;", state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot]);
+            sprintf (mnis_str, "MNIS TGT: %lld; SRC: %lld;", state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot]);
             watchdog_event_datacall (opts, state, state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot], mnis_str, slot);
           }
 
@@ -1123,7 +1123,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         else
         {
           char unk_str[200]; memset (unk_str, 200, sizeof(unk_str));
-          sprintf (unk_str, "DATA TGT: %d; SRC: %d; Unknown PDU Format;", state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot]);
+          sprintf (unk_str, "DATA TGT: %lld; SRC: %lld; Unknown PDU Format;", state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot]);
           watchdog_event_datacall (opts, state, state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot], unk_str, slot);
         }
       }

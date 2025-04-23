@@ -489,7 +489,7 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
 
   else
   {
-    sprintf (state->dmr_lrrp_gps[slot], "IP SRC: %d; DST: %d; Protocol: %d;", input[12], input[13], input[14], input[15], input[16], input[17], input[18], input[19], prot);
+    sprintf (state->dmr_lrrp_gps[slot], "IP SRC: %d.%d.%d.%d:%d; DST: %d.%d.%d.%d:%d; Protocol: %d;", input[12], input[13], input[14], input[15], input[16], input[17], input[18], input[19], prot);
     fprintf(stderr, "Unknown IP Protocol: %02X;", prot);
     // if (len > 28) //default catch all (debug only)
     //   utf8_to_text(state, 0, len-28, input+28);
