@@ -40,16 +40,13 @@ void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input
       fprintf (stderr, " / ");
     else fprintf (stderr, "-");
 
-    //TODO: Add TMS String to ncurses string w/ wide char support?
-    //for now, just rip the first 40 or so chars lower byte value
-    //in the ASCII Range (should be alright for a quick visual)
-    char c[2]; c[0] = (char)input[i+1]; c[2] = 0;
-    if (wr == 1 && i < 76 && input[i+1] < 0x7F && input[i+1] >= 0x20)
+    //convert to ascii range (will break eastern langauge, but can't do much about that right now)
+    char c[2]; c[0] = (char)input[i+1]; c[1] = 0;
+    if (wr == 1 && i < 76 && input[i] == 0 && input[i+1] < 0x7F && input[i+1] >= 0x20)
       strcat (state->dmr_lrrp_gps[slot], c);
 
     //this is the long version, complete message for logging purposes
-    if (wr == 1 && input[i+1] < 0x7F && input[i+1] >= 0x20)
-    // if (wr == 1)
+    if (wr == 1 && input[i] == 0 && input[i+1] < 0x7F && input[i+1] >= 0x20)
       strcat (state->event_history_s[slot].Event_History_Items[0].text_message, c);
 
   }
