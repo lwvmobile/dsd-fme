@@ -731,7 +731,7 @@ typedef struct
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
 
   //event history itemized per slot
-  Event_History_I event_history_s[2];
+  Event_History_I * event_history_s;
 
   //new audio filter structs
   LPFilter RCFilter;
