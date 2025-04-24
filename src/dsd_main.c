@@ -1404,6 +1404,7 @@
    printf ("                 (Running in console will use static wav files)\n");
    printf ("  -a            Enable Call Alert Beep (NCurses Terminal Only)\n");
    printf ("                 (Warning! Might be annoying.)\n");
+   printf ("  -~ <file>     Specify Filename for Event Log Output.\n");
    printf ("  -L <file>     Specify Filename for LRRP Data Output.\n");
    printf ("  -Q <file>     Specify Filename for OK-DMRlib Structured File Output. (placed in DSP folder)\n");
    printf ("  -Q <file>     Specify Filename for M17 Float Stream Output. (placed in DSP folder)\n");

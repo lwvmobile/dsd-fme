@@ -4006,21 +4006,26 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     attron(COLOR_PAIR(4)); //cyan for history
     printw ("--Latest Event History ([|])---Slot %d (\\)-------------------------------------\n", eh_slot+1);
-    for (uint8_t i = (state->eh_index+1); i < (state->eh_index+11); i++)
+    for (uint16_t i = (state->eh_index+1); i < (state->eh_index+11); i++)
     {
+      // if ((i%255) == 0) continue; //0 is the event in progress before completion
+
       char text_string[2000];
       sprintf (text_string, "%s", "BUMBLEBEETUNA");
       uint8_t slot = eh_slot;
 
-      if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i].event_string, 13) != 0)
+      if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].event_string, 13) != 0)
       {
-        memcpy(text_string, state->event_history_s[slot].Event_History_Items[i].event_string, 71*sizeof(char));
+        memcpy(text_string, state->event_history_s[slot].Event_History_Items[i%255].event_string, 71*sizeof(char));
         text_string[71] = 0; //terminate string
-        printw ("| #%02d %s \n", i, text_string);
+        printw ("| #%03d %s \n", i%255, text_string);
       }
+      else printw ("| #%03d \n", i%255); //empty event, but since we can freely scroll now, keeps things uniform
+
       sprintf (text_string, "%s", "BUMBLEBEETUNA");
-      if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i].text_message, 13) != 0)
-        printw ("|     %s \n", state->event_history_s[slot].Event_History_Items[i].text_message);
+      if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].text_message, 13) != 0)
+        printw ("|     %s \n", state->event_history_s[slot].Event_History_Items[i%255].text_message);
+
     }
    printw ("------------------------------------------------------------------------------\n");
    attroff(COLOR_PAIR(4)); //cyan for history
@@ -4592,14 +4597,11 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (c == 93) //']' key - increment event history indexer
   {
-    if (state->eh_index < 244)
       state->eh_index++;
-    else state->eh_index = 0; //rollover just before we run out of items in the arrray
   }
 
   if (c == 91) //'[' key - decrement event history indexer
   {
-    if (state->eh_index > 0)
       state->eh_index--;
   }
 
