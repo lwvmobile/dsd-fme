@@ -371,7 +371,7 @@ int starty = 0;
 
 char *choicesc[] = {
   "Return",
-  "Save Decoded Audio WAV (Legacy Mode)",
+  "      ", //Save Decoded Audio WAV (Legacy Mode) //Disabled
   "Save Signal to Symbol Capture Bin",
   "Toggle Muting Encrypted Traffic    ",
   "Save Per Call Decoded WAV",
@@ -654,23 +654,23 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     				break;
     		}
         print_menuc(test_win, highlightc);
-        if (choicec == 2)
-        {
-          char * timestr = getTime();
-          char * datestr = getDate();
-          sprintf (opts->wav_out_file, "%s %s DSD-FME-DECODED.wav", datestr, timestr);
-          if (timestr != NULL)
-          {
-            free (timestr);
-            timestr = NULL;
-          }
-          if (datestr != NULL)
-          {
-            free (datestr);
-            datestr = NULL;
-          }
-          openWavOutFile (opts, state);
-        }
+        // if (choicec == 2) //Legacy Decode to single wav file is disabled
+        // {
+        //   char * timestr = getTime();
+        //   char * datestr = getDate();
+        //   sprintf (opts->wav_out_file, "%s %s DSD-FME-DECODED.wav", datestr, timestr);
+        //   if (timestr != NULL)
+        //   {
+        //     free (timestr);
+        //     timestr = NULL;
+        //   }
+        //   if (datestr != NULL)
+        //   {
+        //     free (datestr);
+        //     datestr = NULL;
+        //   }
+        //   openWavOutFile (opts, state);
+        // }
         if (choicec == 3)
         {
           //read in filename for symbol capture bin
@@ -718,12 +718,11 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
             fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
             mkdir(wav_file_directory, 0700);
           }
+          fprintf (stderr,"\n Per Call Wav File Enabled to Directory: %s;.\n", opts->wav_out_dir);
+          srand(time(NULL)); //seed random for filenames (so two filenames aren't the exact same datetime string on initailization)
+          opts->wav_out_f  = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 8000, 0);
+          opts->wav_out_fR = open_wav_file(opts->wav_out_dir, opts->wav_out_fileR, 8000, 0);
           opts->dmr_stereo_wav = 1;
-          //catch all in case of no file name set, won't crash or something
-          sprintf (opts->wav_out_file, "%s/DSD-FME-X1.wav", opts->wav_out_dir); //
-          sprintf (opts->wav_out_fileR, "%s/DSD-FME-X2.wav", opts->wav_out_dir); //
-          openWavOutFileL (opts, state);
-          openWavOutFileR (opts, state);
 
         }
 
@@ -1072,13 +1071,11 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
 
         if (choicec == 12)
         {
-          //flesh out all closewavs and sprint "" wav filenames
-          closeWavOutFile (opts, state);
-          closeWavOutFileL (opts, state);
-          closeWavOutFileR (opts, state);
-          //closeWavOutFileRaw (opts, state);
-          sprintf (opts->wav_out_file, "%s", "");
-          sprintf (opts->wav_out_fileR, "%s", "");
+          //TODO: Add Closing of RAW files as well?
+          opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+          opts->wav_out_fR = close_and_rename_wav_file(opts->wav_out_fR, opts->wav_out_fileR, opts->wav_out_dir, &state->event_history_s[1]);
+          opts->wav_out_file[0] = 0; //Bugfix for decoded wav file display after disabling
+          opts->wav_out_fileR[0] = 0;
           opts->dmr_stereo_wav = 0;
         }
 
@@ -2227,22 +2224,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     sprintf (alias_ch[9], "%s", "");
     sprintf (state->str50a, "%s", "");
 
-    //open wav file if enabled and both rd and tg are not 0
-    if (opts->dmr_stereo_wav == 1 && src != 0 ) //&& tgn != 0, some TG can be 0 on NXDN
-    {
-      //setup a call string for the per call (group/private and/or emergency)
-      //No Space Skips / Truncates Needed on NXDN string variant
-      char cs[200]; memcpy (cs, state->call_string[0], 200*sizeof(char));
-
-      //close old first, assign name based on time and radio, open wav file
-      closeWavOutFileL (opts, state);
-
-      // sprintf (opts->wav_out_file, "%s/%s %s NXDN - RAN %d - DST %d - SRC %d.wav", opts->wav_out_dir, datestr, timestr, rn, tgn, src); //original
-      sprintf (opts->wav_out_file, "%s/%s %s NXDN - RAN %d - %s - DST %d - SRC %d.wav", opts->wav_out_dir, datestr, timestr, rn, cs, tgn, src); //with call string
-
-      openWavOutFileL (opts, state); //testing for now, will want to move to per call later
-    }
-
     if (opts->call_alert == 1)
     {
       beeper (opts, state, 0);
@@ -2279,29 +2260,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][4] = dcc;
     call_matrix[9][5] = time(NULL);
 
-    //open wav file if enabled and both rd and tg are not 0
-    if (opts->dmr_stereo_wav == 1 && rd != 0 && tg != 0)
-    {
-      //setup a call string for the per call (group/private and/or emergency)
-      char cs[200]; memset (cs, 0, 200*sizeof(char));
-      int x = 0;
-      for (int i = 0; i < 200; i++)
-      {
-        //copy over non space and non termination values from call string
-        if (i != 0 && state->call_string[0][i] != ' ' && state->call_string[0][i] != 0)
-          cs[x++] = state->call_string[0][i];
-      }
-      cs[x] = 0; //terminate
-
-      //close old first, assign name based on time and radio, open wav file
-      closeWavOutFileL (opts, state);
-
-      // sprintf (opts->wav_out_file, "%s/%s %s MS - CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, tg, rd); //original
-      sprintf (opts->wav_out_file, "%s/%s %s MS - CC %d - %s - DST %d - SRC %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, cs, tg, rd); //with cs call string
-
-      openWavOutFileL (opts, state); //testing for now, will want to move to per call later
-    }
-
     if (opts->call_alert == 1 && rd != 0 && tg != 0)
     {
       //fprintf (stderr, "BEEP 0 MS LEFT\n");
@@ -2334,29 +2292,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[4][3] = 1; //hard set slot number
     call_matrix[4][4] = dcc;
     call_matrix[4][5] = time(NULL);
-
-    //open wav file if enabled and both rd and tg are not 0
-    if (opts->dmr_stereo_wav == 1 && rd != 0 && tg != 0)
-    {
-      //setup a call string for the per call (group/private and/or emergency)
-      char cs[200]; memset (cs, 0, 200*sizeof(char));
-      int x = 0;
-      for (int i = 0; i < 200; i++)
-      {
-        //copy over non space and non termination values from call string
-        if (i != 0 && state->call_string[0][i] != ' ' && state->call_string[0][i] != 0)
-          cs[x++] = state->call_string[0][i];
-      }
-      cs[x] = 0; //terminate
-
-      //close old first, assign name based on time and radio, open wav file
-      closeWavOutFileL (opts, state);
-
-      // sprintf (opts->wav_out_file, "%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, tg, rd); //original
-      sprintf (opts->wav_out_file, "%s/%s %s CC %d - %s - DST %d - SRC %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, cs, tg, rd); //with call string
-
-      openWavOutFileL (opts, state); //testing for now, will want to move to per call later
-    }
 
     if (opts->call_alert == 1 && rd != 0 && tg != 0)
     {
@@ -2391,29 +2326,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][4] = dcc;
     call_matrix[9][5] = time(NULL);
 
-    //open wav file if enabled and both rdR and tgR are not 0
-    if (opts->dmr_stereo_wav == 1 && rdR != 0 && tgR != 0)
-    {
-      //setup a call string for the per call (group/private and/or emergency)
-      char cs[200]; memset (cs, 0, 200*sizeof(char));
-      int x = 0;
-      for (int i = 0; i < 200; i++)
-      {
-        //copy over non space and non termination values from call string
-        if (i != 0 && state->call_string[1][i] != ' ' && state->call_string[1][i] != 0)
-          cs[x++] = state->call_string[1][i];
-      }
-      cs[x] = 0; //terminate
-
-      //close old first, assign name based on time and radio, open wav file
-      closeWavOutFileR (opts, state);
-
-      // sprintf (opts->wav_out_fileR, "%s/%s %s CC %d - TG %d - RD %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, tgR, rdR); //original
-      sprintf (opts->wav_out_fileR, "%s/%s %s CC %d - %s - DST %d - SRC %d.wav",  opts->wav_out_dir, datestr, timestr, dcc, cs, tgR, rdR); //with call string
-
-      openWavOutFileR (opts, state); //testing for now, will want to move to per call later
-    }
-
     if (opts->call_alert == 1 && rdR != 0 && tgR != 0)
     {
       //fprintf (stderr, "BEEP 1 BS RIGHT\n");
@@ -2445,29 +2357,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][3] = 0;
     call_matrix[9][4] = nc;
     call_matrix[9][5] = time(NULL);
-
-    //open wav file if enabled and both rd and tg are not 0
-    if (opts->dmr_stereo_wav == 1 && rd != 0 && tg != 0)
-    {
-      //setup a call string for the per call (group/private and/or emergency)
-      char cs[200]; memset (cs, 0, 200*sizeof(char));
-      int x = 0;
-      for (int i = 0; i < 200; i++)
-      {
-        //copy over non space and non termination values from call string
-        if (i != 0 && state->call_string[0][i] != ' ' && state->call_string[0][i] != 0)
-          cs[x++] = state->call_string[0][i];
-      }
-      cs[x] = 0; //terminate
-
-      //close old first, assign name based on time and radio, open wav file
-      closeWavOutFileL (opts, state);
-
-      // sprintf (opts->wav_out_file, "%s/%s %s P1 - NAC %X - TGT %d - SRC %d.wav", opts->wav_out_dir, datestr, timestr, nc, tg, rd); //original
-      sprintf (opts->wav_out_file, "%s/%s %s P1 - NAC %X - %s - DST %d - SRC %d.wav", opts->wav_out_dir, datestr, timestr, nc, cs, tg, rd); //with call string
-
-      openWavOutFileL (opts, state); //testing for now, will want to move to per call later
-    }
 
     if (opts->call_alert == 1)
     {
@@ -2716,11 +2605,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| Decoded WAV Output: %s\n", opts->wav_out_file);
   }
 
-  if (opts->dmr_stereo_wav == 1) //opts->wav_out_file[0] != 0 &&
-  {
-    printw ("| Per Call - %s\n", opts->wav_out_file);
-    if (opts->dmr_stereo == 1) printw ("| Per Call - %s\n", opts->wav_out_fileR);
-  }
+  //new Per Call setup would just be random names until closed, 
+  //so no need to show, and will be in the event history anyways
+  if (opts->dmr_stereo_wav == 1)
+    printw ("| Per Call Wav File Enabled to Directory: %s \n", opts->wav_out_dir);
 
   #ifdef PRETTY_COLORS
   if (opts->p25_trunk == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3) )
@@ -4325,36 +4213,31 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
  }
  #endif
 
-
-
- if (c == 80) //'P' key - start per call wav files
+ if (c == 80) //'P' key - start per call wav files //TODO: Fix
  {
   char wav_file_directory[1024];
   sprintf (wav_file_directory, "%s", opts->wav_out_dir);
   wav_file_directory[1023] = '\0';
   if (stat(wav_file_directory, &st_wav) == -1)
   {
-    fprintf (stderr, "-T %s wav file directory does not exist\n", wav_file_directory);
+    fprintf (stderr, "%s wav file directory does not exist\n", wav_file_directory);
     fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
     mkdir(wav_file_directory, 0700);
   }
+  fprintf (stderr,"\n Per Call Wav File Enabled to Directory: %s;.\n", opts->wav_out_dir);
+  srand(time(NULL)); //seed random for filenames (so two filenames aren't the exact same datetime string on initailization)
+  opts->wav_out_f  = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 8000, 0);
+  opts->wav_out_fR = open_wav_file(opts->wav_out_dir, opts->wav_out_fileR, 8000, 0);
   opts->dmr_stereo_wav = 1;
-  //catch all in case of no file name set, won't crash or something
-  sprintf (opts->wav_out_file, "%s/DSD-FME-T1.wav", opts->wav_out_dir);
-  sprintf (opts->wav_out_fileR, "%s/DSD-FME-T2.wav",  opts->wav_out_dir);
-  openWavOutFileL (opts, state);
-  openWavOutFileR (opts, state);
  }
 
-  //this one could cause issues, but seems okay
-  if (c == 112) //'p' key - stop all per call wav files
+  if (c == 112) //'p' key - stop all per call wav files //TODO: Fix
   {
-    //hope this one doesn't cause random crashing or garbage writing
-    closeWavOutFile (opts, state);
-    closeWavOutFileL (opts, state);
-    closeWavOutFileR (opts, state);
-    sprintf (opts->wav_out_file, "%s", "");
-    sprintf (opts->wav_out_fileR, "%s", "");
+    //TODO: Add Closing of RAW files as well?
+    opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+    opts->wav_out_fR = close_and_rename_wav_file(opts->wav_out_fR, opts->wav_out_fileR, opts->wav_out_dir, &state->event_history_s[1]);
+    opts->wav_out_file[0] = 0; //Bugfix for decoded wav file display after disabling
+    opts->wav_out_fileR[0] = 0;
     opts->dmr_stereo_wav = 0;
   }
 
@@ -4906,6 +4789,11 @@ void init_event_history (Event_History_I * event_struct, uint8_t start, uint8_t 
     event_struct->Event_History_Items[i].write = 0;
     event_struct->Event_History_Items[i].systype = -1;
     event_struct->Event_History_Items[i].subtype = -1;
+    event_struct->Event_History_Items[i].sys_id1 = 0;
+    event_struct->Event_History_Items[i].sys_id2 = 0;
+    event_struct->Event_History_Items[i].sys_id3 = 0;
+    event_struct->Event_History_Items[i].sys_id4 = 0;
+    event_struct->Event_History_Items[i].sys_id5 = 0;
     event_struct->Event_History_Items[i].gi = 0;
     event_struct->Event_History_Items[i].enc = 0;
     event_struct->Event_History_Items[i].enc_alg = 0;
@@ -4918,6 +4806,7 @@ void init_event_history (Event_History_I * event_struct, uint8_t start, uint8_t 
     event_struct->Event_History_Items[i].event_time = 0;
 
     memset  (event_struct->Event_History_Items[i].pdu, 0, sizeof(event_struct->Event_History_Items[0].pdu));
+    sprintf (event_struct->Event_History_Items[i].sysid_string, "%s", "");
     sprintf (event_struct->Event_History_Items[i].alias, "%s", "BUMBLEBEETUNA");
     sprintf (event_struct->Event_History_Items[i].gps_s, "%s", "BUMBLEBEETUNA");
     sprintf (event_struct->Event_History_Items[i].text_message, "%s", "BUMBLEBEETUNA");
@@ -4934,6 +4823,11 @@ void push_event_history (Event_History_I * event_struct)
     event_struct->Event_History_Items[i].write = event_struct->Event_History_Items[i-1].write;
     event_struct->Event_History_Items[i].systype = event_struct->Event_History_Items[i-1].systype;
     event_struct->Event_History_Items[i].subtype = event_struct->Event_History_Items[i-1].subtype;
+    event_struct->Event_History_Items[i].sys_id1 = event_struct->Event_History_Items[i-1].sys_id1;
+    event_struct->Event_History_Items[i].sys_id2 = event_struct->Event_History_Items[i-1].sys_id2;
+    event_struct->Event_History_Items[i].sys_id3 = event_struct->Event_History_Items[i-1].sys_id3;
+    event_struct->Event_History_Items[i].sys_id4 = event_struct->Event_History_Items[i-1].sys_id4;
+    event_struct->Event_History_Items[i].sys_id5 = event_struct->Event_History_Items[i-1].sys_id5;
     event_struct->Event_History_Items[i].gi = event_struct->Event_History_Items[i-1].gi;
     event_struct->Event_History_Items[i].enc = event_struct->Event_History_Items[i-1].enc;
     event_struct->Event_History_Items[i].enc_alg = event_struct->Event_History_Items[i-1].enc_alg;
@@ -4946,6 +4840,7 @@ void push_event_history (Event_History_I * event_struct)
     event_struct->Event_History_Items[i].event_time = event_struct->Event_History_Items[i+1].event_time;
 
     memcpy  (event_struct->Event_History_Items[i].pdu, event_struct->Event_History_Items[i-1].pdu, sizeof(event_struct->Event_History_Items[0].pdu));
+    sprintf (event_struct->Event_History_Items[i].sysid_string, "%s", event_struct->Event_History_Items[i-1].sysid_string);
     sprintf (event_struct->Event_History_Items[i].alias, "%s", event_struct->Event_History_Items[i-1].alias);
     sprintf (event_struct->Event_History_Items[i].gps_s, "%s", event_struct->Event_History_Items[i-1].gps_s);
     sprintf (event_struct->Event_History_Items[i].text_message, "%s", event_struct->Event_History_Items[i-1].text_message);
@@ -5004,11 +4899,9 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
         source_id += state->ysf_src[i]; //convert to sum value to make a distinct enough src value
     }
 
-    if (state->lastsynctype == 16 || state->lastsynctype == 17) //M17 STR
+    if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17) //M17 STR
     {
-      source_id = 0;
-      for (uint8_t i = 0; i < 9; i++)
-        source_id += state->m17_src_csd[i]; //convert to sum value to make a distinct enough src value
+      source_id = (uint32_t)state->m17_src;
     }
 
     if (state->lastsynctype == 6 || state->lastsynctype == 7 || state->lastsynctype == 18 || state->lastsynctype == 19) //DSTAR
@@ -5022,7 +4915,7 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
         source_id = 0;
     }
 
-    if (state->lastsynctype == 16 || state->lastsynctype == 17 || state->lastsynctype == 20 || state->lastsynctype == 24 || state->lastsynctype == 21 || state->lastsynctype == 25 || state->lastsynctype == 22 || state->lastsynctype == 26 || state->lastsynctype == 23 || state->lastsynctype == 27) //dPMR
+    if (state->lastsynctype == 20 || state->lastsynctype == 24 || state->lastsynctype == 21 || state->lastsynctype == 25 || state->lastsynctype == 22 || state->lastsynctype == 26 || state->lastsynctype == 23 || state->lastsynctype == 27) //dPMR
     {
       source_id = 0;
       for (uint8_t i = 0; i < 20; i++)
@@ -5042,14 +4935,31 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
   }
   
-  if (source_id != last_source_id && last_source_id != 0) //test without != 0 if we want to constantly update the current event
+  if (source_id != last_source_id && last_source_id != 0)
   {
 
     if (opts->event_out_file[0] != 0)
       write_event_to_log_file(opts, state, event_struct->Event_History_Items[0].event_string);
 
+    if (slot == 0 && opts->wav_out_f != NULL)
+    {
+      opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, event_struct);
+      opts->wav_out_f = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 8000, 0);
+    }
+      
+    else if (slot == 1 && opts->wav_out_fR != NULL)
+    {
+      opts->wav_out_fR = close_and_rename_wav_file(opts->wav_out_fR, opts->wav_out_fileR, opts->wav_out_dir, event_struct);
+      opts->wav_out_fR = open_wav_file(opts->wav_out_dir, opts->wav_out_fileR, 8000, 0);
+    }
+      
     push_event_history (event_struct);
     init_event_history (event_struct, 0, 1);
+
+    //clear out some strings and things
+    memset(state->ysf_txt, 0, sizeof(state->ysf_txt));
+    memset(state->dstar_gps, 0, sizeof(state->dstar_gps));
+    memset(state->dstar_txt, 0, sizeof(state->dstar_txt));
   }
 
 }
@@ -5069,10 +4979,21 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
   uint16_t svc_opts = 0;
   uint8_t  subtype = 0;
 
+  uint32_t sys_id1 = 0;
+  uint32_t sys_id2 = 0;
+  uint32_t sys_id3 = 0;
+  uint32_t sys_id4 = 0;
+  uint32_t sys_id5 = 0;
+
+  uint32_t channel = 0;
+
   uint8_t  enc    = 0;
   uint8_t  alg_id = 0;
   uint16_t key_id = 0;
   unsigned long long int mi;
+
+  char sysid_string[200]; memset(sysid_string, 0, sizeof(sysid_string));
+  sprintf (sysid_string, "%s", "");
 
   if (slot == 0)
   {
@@ -5102,6 +5023,30 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
     mi = state->payload_miR;
   }
 
+  //if P25 (if not P25, then these will all be zero anyways)
+  sys_id1 = state->p2_wacn;
+  sys_id2 = state->p2_sysid;
+  if (state->nac != 0)
+    sys_id3 = state->nac; //same as state->p2_cc, but zeroes out when no signal or error
+  else sys_id3 = state->p2_cc;
+  sys_id4 = state->p2_rfssid;
+  sys_id5 = state->p2_siteid;
+
+  if (sys_id1)
+    sprintf (sysid_string, "P25_%05X%03X%03X_%d_%d", sys_id1, sys_id2, sys_id3, sys_id4, sys_id5);
+  else sprintf (sysid_string, "P25_%03X", sys_id3);
+
+  if (state->lastsynctype == 10 || state->lastsynctype == 11 || state->lastsynctype == 12 || state->lastsynctype == 13 ||
+     state->lastsynctype == 32 || state->lastsynctype == 33 || state->lastsynctype == 34                                  )
+  {
+    sys_id1 = state->dmr_t3_syscode;
+    sys_id2 = state->dmr_color_code;
+
+    if (sys_id1)
+      sprintf (sysid_string, "DMR_%X_CC_%d", sys_id1, sys_id2);
+    else sprintf (sysid_string, "DMR_CC_%d", sys_id2);
+  }
+
   if (slot == 0) //BUGFIX: generic catch on FDMA systems so that we don't write duplicate data to slot 2 event history
   {
     //NXDN RID (TODO: Changeover to lastsrc and lasttg later on)
@@ -5112,6 +5057,14 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
       if (state->nxdn_cipher_type != 0)
         enc = 1;
       alg_id = state->nxdn_cipher_type;
+
+      sys_id1 = state->nxdn_location_site_code;
+      sys_id2 = state->nxdn_location_sys_code;
+      sys_id3 = state->nxdn_last_ran; //might be an issue on conventional systems that have a different RAN on the tx_rel or idle data bursts
+
+      if (sys_id1)
+        sprintf (sysid_string, "NXDN_%d_%d_RAN_%d", sys_id2, sys_id1, sys_id3);
+      else sprintf (sysid_string, "NXDN_RAN_%d", sys_id3);
     }
 
     if (state->lastsynctype == 30 || state->lastsynctype == 30) //YSF Fusion
@@ -5120,14 +5073,33 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
       for (uint8_t i = 0; i < 11; i++)
         source_id += state->ysf_src[i]; //convert to sum value to make a distinct enough src value
 
-      //TODO: Add src and dst as aliases?
+      //WIP: If Text, compile it here (still having issues with an empty txt string making a line break)
+      uint8_t k = 0; char ysf_emp[21][21]; memset(ysf_emp, 0, sizeof(ysf_emp));
+      if (memcmp(ysf_emp, state->ysf_txt, sizeof(state->ysf_txt)) != 0)
+      {
+        for (uint8_t i = 4; i < 8; i++)
+        {
+          for (uint8_t j = 0; j < 20; j++)
+          {
+            if (state->ysf_txt[i][j] != 0x2A)
+              event_struct->Event_History_Items[0].text_message[k++] = state->ysf_txt[i][j];
+            else event_struct->Event_History_Items[0].text_message[k++] = 0x20; //space
+
+          }
+          event_struct->Event_History_Items[0].text_message[k] = 0; //terminate
+        }
+      }
+      else sprintf (event_struct->Event_History_Items[0].text_message, "%s", "BUMBLEBEETUNA");
+
+      sprintf (sysid_string, "%s", "YSF");
     }
 
-    if (state->lastsynctype == 16 || state->lastsynctype == 17) //M17 STR
+    if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17) //M17 STR
     {
-      source_id = 0;
-      for (uint8_t i = 0; i < 9; i++)
-        source_id += state->m17_src_csd[i]; //convert to sum value to make a distinct enough src value
+      target_id = (uint32_t)state->m17_dst;
+      source_id = (uint32_t)state->m17_src;
+      sys_id1 = state->m17_can;
+      sprintf (sysid_string, "M17_CAN_%d", sys_id1);
     }
 
     if (state->lastsynctype == 6 || state->lastsynctype == 7 || state->lastsynctype == 18 || state->lastsynctype == 19) //DSTAR
@@ -5139,9 +5111,11 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
       //need a strncmp here for 8 spaces in this field first so we don't blip a blank into the event history
       if (strncmp(state->dstar_src, "        ", 8) == 0)
         source_id = 0;
+
+      sprintf (sysid_string, "%s", "DSTAR");
     }
 
-    if (state->lastsynctype == 16 || state->lastsynctype == 17 || state->lastsynctype == 20 || state->lastsynctype == 24 || state->lastsynctype == 21 || state->lastsynctype == 25 || state->lastsynctype == 22 || state->lastsynctype == 26 || state->lastsynctype == 23 || state->lastsynctype == 27) //dPMR
+    if (state->lastsynctype == 20 || state->lastsynctype == 24 || state->lastsynctype == 21 || state->lastsynctype == 25 || state->lastsynctype == 22 || state->lastsynctype == 26 || state->lastsynctype == 23 || state->lastsynctype == 27) //dPMR
     {
       source_id = 0;
       for (uint8_t i = 0; i < 20; i++)
@@ -5150,19 +5124,59 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
       //need a strncmp here for 8 spaces in this field first so we don't blip a blank into the event history
       if (strncmp(state->dpmr_caller_id, "      ", 6) == 0)
         source_id = 0;
+
+      sprintf (sysid_string, "DPMR_CC_%d", state->dpmr_color_code);
     }
 
     if (state->lastsynctype == 14 || state->lastsynctype == 15 || state->lastsynctype == 37 || state->lastsynctype == 38) //EDACS Calls
     {
       source_id = 0;
       if (opts->p25_is_tuned == 1)
+      {
         source_id = state->lastsrc;
+        channel = state->edacs_tuned_lcn;
+      }
+
+      sys_id1 = state->edacs_site_id;
+      sys_id2 = state->edacs_area_code;
+      sys_id3 = state->edacs_sys_id;
+      svc_opts = state->edacs_vc_call_type;
+      char sup_str[200]; memset (sup_str, 0, sizeof(sup_str));
+      sprintf (sup_str, "%s", "_");
+      if (svc_opts & 0x02)
+        strcat (sup_str, "Digital_");
+      else strcat (sup_str, "Analog_");
+      if (svc_opts & 0x04)
+        strcat (sup_str, "Emergency_");
+      if (svc_opts & 0x08)
+        strcat (sup_str, "Group_");
+      if (svc_opts & 0x10)
+        strcat (sup_str, "I_");
+      if (svc_opts & 0x20)
+        strcat (sup_str, "ALL_");
+      if (svc_opts & 0x40)
+        strcat (sup_str, "INTER_");
+      if (svc_opts & 0x80)
+        strcat (sup_str, "TEST_");
+      if (svc_opts & 0x100)
+        strcat (sup_str, "AGENCY_");
+      if (svc_opts & 0x200)
+        strcat (sup_str, "FLEET_");
+      if (svc_opts & 0x01)
+        strcat (sup_str, "Voice_");
+      strcat (sup_str, "Call");
+      
+      sprintf (sysid_string, "EDACS_SITE_%03d", sys_id1);
+      strcat (sysid_string, sup_str);
+      
     }
 
   }
 
   //system type string (P25, DMR, etc)
-  char * sys_string = SyncTypes[state->lastsynctype];
+  char * sys_string = "Digital";
+  if (state->lastsynctype != -1)
+    sys_string = SyncTypes[state->lastsynctype];
   
   //date and time strings
   char * timestr = getTimeN(time(NULL));
@@ -5176,6 +5190,11 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
     else event_struct->Event_History_Items[0].systype = 39; //generic digital call
     event_struct->Event_History_Items[0].subtype = subtype; //voice
     event_struct->Event_History_Items[0].gi = state->gi[slot]; //need this add this to link control messages
+    event_struct->Event_History_Items[0].sys_id1 = sys_id1;
+    event_struct->Event_History_Items[0].sys_id2 = sys_id2;
+    event_struct->Event_History_Items[0].sys_id3 = sys_id3;
+    event_struct->Event_History_Items[0].sys_id4 = sys_id4;
+    event_struct->Event_History_Items[0].sys_id5 = sys_id5;
     event_struct->Event_History_Items[0].enc = enc;
     event_struct->Event_History_Items[0].enc_alg = alg_id;
     event_struct->Event_History_Items[0].enc_key = key_id;
@@ -5183,8 +5202,9 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
     event_struct->Event_History_Items[0].svc = svc_opts;
     event_struct->Event_History_Items[0].source_id = source_id;
     event_struct->Event_History_Items[0].target_id = target_id;
-    event_struct->Event_History_Items[0].channel = 0; //need to add this to trunking messages, if tuned from call grant
+    event_struct->Event_History_Items[0].channel = channel; //need to add this to trunking messages, if tuned from call grant
     event_struct->Event_History_Items[0].event_time = time(NULL);
+    sprintf (event_struct->Event_History_Items[0].sysid_string, "%s", sysid_string);
   }
 
   //Craft an event string for ncurses event history, and a more complex string for logging
@@ -5192,25 +5212,28 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
   //WIP: Seperate Voice Call Event Strings when SRC/TGT values are numerical,
   //and a seperate one for when they are string values (M17, YSF, DSTAR, and dPMR, or use special formatting)
-  if (state->lastsynctype == 30 || state->lastsynctype == 30) //YSF Fusion (may need to use uplink instead of src, unsure for this)
+  if (state->lastsynctype == 30 || state->lastsynctype == 30) //YSF Fusion //TODO: Data calls dumping a lot of events as VOICE
   {
     //TODO: See if we can add some decoded data as well in the future to an event string
-    sprintf (event_string, "%s %s %s Voice TGT: %s SRC: %s ", datestr, timestr, sys_string, state->ysf_tgt, state->ysf_src);
+    sprintf (event_string, "%s %s %s TGT: %s SRC: %s ", datestr, timestr, sys_string, state->ysf_tgt, state->ysf_src);
   }
   else if (state->lastsynctype == 16 || state->lastsynctype == 17) //M17
   {
     //TODO: See if we can add some decoded data as well in the future to an event string
-    sprintf (event_string, "%s %s %s Voice TGT: %s SRC: %s ", datestr, timestr, sys_string, state->m17_dst_str, state->m17_src_str);
+    if (state->m17_dst == 0xFFFFFFFFFFFF)
+      sprintf (event_string, "%s %s %s TGT: %s SRC: %s CAN: %02d;", datestr, timestr, sys_string, "BROADCAST", state->m17_src_str, state->m17_can);
+    else
+      sprintf (event_string, "%s %s %s TGT: %s SRC: %s CAN: %02d;", datestr, timestr, sys_string, state->m17_dst_str, state->m17_src_str, state->m17_can);
   }
   else if (state->lastsynctype == 6 || state->lastsynctype == 7 || state->lastsynctype == 18 || state->lastsynctype == 19) //DSTAR
   {
     //TODO: See if we can add some decoded data as well in the future to an event string
-    sprintf (event_string, "%s %s %s Voice TGT: %s SRC: %s ", datestr, timestr, sys_string, state->dstar_dst, state->dstar_src);
+    sprintf (event_string, "%s %s %s TGT: %s SRC: %s ", datestr, timestr, sys_string, state->dstar_dst, state->dstar_src);
   }
-  else if (state->lastsynctype == 16 || state->lastsynctype == 17 || state->lastsynctype == 20 || state->lastsynctype == 24 || state->lastsynctype == 21 || state->lastsynctype == 25 || state->lastsynctype == 22 || state->lastsynctype == 26 || state->lastsynctype == 23 || state->lastsynctype == 27) //dPMR
+  else if (state->lastsynctype == 20 || state->lastsynctype == 24 || state->lastsynctype == 21 || state->lastsynctype == 25 || state->lastsynctype == 22 || state->lastsynctype == 26 || state->lastsynctype == 23 || state->lastsynctype == 27) //dPMR
   {
     //TODO: See if we can add some decoded data as well in the future to an event string
-    sprintf (event_string, "%s %s %s Voice TGT: %s SRC: %s ", datestr, timestr, sys_string, state->dpmr_target_id, state->dpmr_caller_id);
+    sprintf (event_string, "%s %s %s TGT: %s SRC: %s ", datestr, timestr, sys_string, state->dpmr_target_id, state->dpmr_caller_id);
   }
   //TODO: Find out why EDACS is also placing items into Slot 2 Event History with valid src, but invalid tg (not a problem, just odd)
   else if (state->lastsynctype == 14 || state->lastsynctype == 15 || state->lastsynctype == 37 || state->lastsynctype == 38) //EDACS Calls
@@ -5218,7 +5241,7 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
     //is this AFS format, or EA format, also, need to re-add Ilya's other decoded call elements into this somehow
     if (state->ea_mode == 1)
     {
-      sprintf (event_string, "%s %s %s Voice TGT: %05d; SRC: %05d; ", datestr, timestr, sys_string, target_id, source_id);
+      sprintf (event_string, "%s %s %s TGT: %07d; SRC: %07d; LCN: %02d; SITE: %d:%d.%04X; ", datestr, timestr, sys_string, target_id, source_id, channel, sys_id1, sys_id2, sys_id3);
     }
     else
     {
@@ -5232,15 +5255,48 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
       sprintf (event_string, "%s %s %s Voice AFS: %s ", datestr, timestr, sys_string, afs_str);
     }
   }
-  else //any numerical based src and tgt values
+  else if (state->lastsynctype == 10 || state->lastsynctype == 11 || state->lastsynctype == 12 || state->lastsynctype == 13 ||
+     state->lastsynctype == 32 || state->lastsynctype == 33 || state->lastsynctype == 34                                  ) //DMR
   {
-    sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; ", datestr, timestr, sys_string, target_id, source_id);
+    if (sys_id1)
+      sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; CC: %02d; SYS: %X; ", datestr, timestr, sys_string, target_id, source_id, sys_id2, sys_id1);
+    else
+      sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; CC: %02d; ", datestr, timestr, sys_string, target_id, source_id, sys_id2);
     if (enc)
       strcat(event_string, "ENC; ");
+    if (alg_id != 0)
+    {
+      char ess_str[30];
+      sprintf (ess_str, "ALG: %02X; KID: %02X;", alg_id, key_id);
+      strcat(event_string, ess_str);
+    }
+  }
+  else if (state->lastsynctype == 0 || state->lastsynctype == 1 || state->lastsynctype == 35 || state->lastsynctype == 36)
+  {
+    if (sys_id1)
+      sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; NAC: %03X; SYS: %05X:%03X:%d.%d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3, sys_id1, sys_id2, sys_id4, sys_id5);
+    else
+      sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; NAC: %03X; ", datestr, timestr, sys_string, target_id, source_id, sys_id3);
     if (alg_id != 0 && alg_id != 0x80)
     {
       char ess_str[30];
-      sprintf (ess_str, "ALG: %02X; KID: %04X;", alg_id, key_id); //KID overflow?
+      sprintf (ess_str, "ENC; ALG: %02X; KID: %04X;", alg_id, key_id);
+      strcat(event_string, ess_str);
+    }
+  }
+
+  else if (state->lastsynctype == 28 || state->lastsynctype == 29)
+  {
+    if (sys_id1)
+      sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; RAN: %02d; SYS: %d.%d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3, sys_id1, sys_id2);
+    else
+      sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; RAN: %02d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3);
+    if (enc)
+      strcat(event_string, "ENC; ");
+    if (alg_id != 0)
+    {
+      char ess_str[30];
+      sprintf (ess_str, "ALG: %d; KID: %02X;", alg_id, key_id);
       strcat(event_string, ess_str);
     }
   }

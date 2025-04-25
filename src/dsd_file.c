@@ -439,6 +439,115 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
   }
 }
 
+//temp filename should not have the .wav extension, will be renamed with one after event is closed
+SNDFILE * open_wav_file (char * dir, char * temp_filename, uint16_t sample_rate, uint8_t ext)
+{
+  uint16_t random_number = rand();
+  char * datestr = getDate();
+  char * timestr = getTime();
+
+  if (ext == 0)
+    sprintf (temp_filename, "%s/TEMP_%s_%s_%04X", dir, datestr, timestr, random_number);
+  else sprintf (temp_filename, "%s/TEMP_%s_%s_%04X.wav", dir, datestr, timestr, random_number);
+
+  if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
+  }
+  if (datestr != NULL)
+  {
+    free (datestr);
+    datestr = NULL;
+  }
+
+  SNDFILE * wav;
+  SF_INFO info;
+  info.samplerate = sample_rate;
+  info.channels = 1;
+  info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
+  wav = sf_open (temp_filename, SFM_RDWR, &info); //RDWR will append to file instead of overwrite file
+
+  if (wav == NULL)
+  {
+    fprintf (stderr,"Error - could not open wav output file %s\n", temp_filename);
+    return NULL;
+  }
+
+  return wav;
+}
+
+SNDFILE * close_wav_file(SNDFILE * wav_file)
+{
+  sf_close(wav_file);
+  wav_file = NULL;
+  return wav_file;
+}
+
+SNDFILE * close_and_rename_wav_file(SNDFILE * wav_file, char * wav_out_filename, char * dir, Event_History_I * event_struct)
+{
+  sf_close(wav_file);
+
+  char * datestr = getDate();
+  char * timestr = getTime();
+  uint16_t random_number = rand();
+
+  uint32_t source_id = event_struct->Event_History_Items[0].source_id;
+  uint32_t target_id = event_struct->Event_History_Items[0].target_id;
+
+  //give extension .wav after closing
+  char new_filename[2000];
+  memset (new_filename, 0, sizeof(new_filename));
+
+  sprintf (new_filename, "%s/%s_%s_%05d_%s_TGT_%d_SRC_%d.wav", dir, datestr, timestr, random_number, event_struct->Event_History_Items[0].sysid_string, target_id, source_id);
+
+  if (timestr != NULL)
+  {
+    free (timestr);
+    timestr = NULL;
+  }
+  if (datestr != NULL)
+  {
+    free (datestr);
+    datestr = NULL;
+  }
+
+  rename (wav_out_filename, new_filename);
+
+  //WIP: Open File, seek, and if 44 bytes, delete it (empty wav file)
+  //TODO: May need to move the deletion ahead of renaming, and do a NULL check,
+  //some software may attempt to injest an empty .wav file first, but this should
+  //occur so quickly, the watchdog on rdio or similar shouldn't even realize it
+  //may also consider checking for a larger size, something that's more than a blip
+  //sometimes if encrypted and no key provided, if signal is marginal, short garbled audio
+  //could be written to a wav file, so may look into a value >= xx kb in size minimum
+  FILE *file = fopen(new_filename, "r");
+  if (file != NULL)
+  {
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, 0, SEEK_SET); // Rewind to beginning
+    fclose(file);
+
+    //debug
+    // fprintf (stderr, " Closed Wav File %s; Size: %d; \n", new_filename, size);
+
+    if (size == 44)
+      remove (new_filename);
+  }
+
+  wav_file = NULL;
+  return wav_file;
+}
+
+SNDFILE * close_and_delete_wav_file(SNDFILE * wav_file, char * wav_out_filename)
+{
+  sf_close(wav_file);
+  wav_file = NULL;
+  remove (wav_out_filename);
+  return wav_file;
+}
+
 void openWavOutFile (dsd_opts * opts, dsd_state * state)
 {
   UNUSED(state);

@@ -90,23 +90,29 @@ extern volatile uint8_t exitflag; //fix for issue #136
 
 //event history (each item)
 typedef struct {
-  uint8_t write;     //if this event needs to be written to a log file
-  int8_t systype;    //indentifier of which decoded system type this is from (P25, DMR, etc)
-  int8_t subtype;    //subtype of systpe (VLC, TLC, PDU data, System Event, etc)
-  uint8_t gi;        //group or individual
-  uint8_t enc;       //clear or encrypted
-  uint8_t enc_alg;   //alg if encrypted
-  uint16_t enc_key;  //enc key id value, if encrypted (not key value or key variable)
-  uint64_t mi;       //mi, or iv base value from OTA if provided
-  uint16_t svc;      //other relevant svc opts if applicable
-  uint32_t source_id;//source radio id or other source value
-  uint32_t target_id;//group or individual target, or destination value
-  uint32_t channel;  //if this occurs on a trunking channel, which channel
-  time_t event_time; //time event occurred
+  uint8_t write;      //if this event needs to be written to a log file
+  int8_t systype;     //indentifier of which decoded system type this is from (P25, DMR, etc)
+  int8_t subtype;     //subtype of systpe (VLC, TLC, PDU data, System Event, etc)
+  uint32_t sys_id1;   //sys_id1 through 5 will be a hierarchy of system identifiers
+  uint32_t sys_id2;   //for example, trunked P25 has WACN:SYS:CC:SITE_ID:RFSS_ID
+  uint32_t sys_id3;   //conventional may only use NAC, RAN, or Color Codes
+  uint32_t sys_id4;   //
+  uint32_t sys_id5;   //
+  uint8_t gi;         //group or individual
+  uint8_t enc;        //clear or encrypted
+  uint8_t enc_alg;    //alg if encrypted
+  uint16_t enc_key;   //enc key id value, if encrypted (not key value or key variable)
+  uint64_t mi;        //mi, or iv base value from OTA if provided
+  uint16_t svc;       //other relevant svc opts if applicable
+  uint32_t source_id; //source radio id or other source value
+  uint32_t target_id; //group or individual target, or destination value
+  uint32_t channel;   //if this occurs on a trunking channel, which channel
+  time_t event_time;  //time event occurred
 
-  uint8_t pdu[128*24]; //relevant link control, or full PDU if data call (in bytes)
-  char alias[2000];     //if this event has a source radio talker alias or similar
-  char gps_s[2000];     //gps, if returned, expressed as a string
+  uint8_t pdu[128*24];     //relevant link control, or full PDU if data call (in bytes)
+  char sysid_string[200];  //string comprised of system unique identifiers
+  char alias[2000];        //if this event has a source radio talker alias or similar
+  char gps_s[2000];        //gps, if returned, expressed as a string
   char text_message[2000]; //if this event is a decoded text message, then it goes here
   char event_string[2000]; //user legible and printable string for the event that happened
 } Event_History;
@@ -658,6 +664,7 @@ typedef struct
   short pulse_raw_out_buffer; //HERE HERE
 
   unsigned int dmr_color_code;
+  unsigned int dmr_t3_syscode;
   unsigned int nxdn_last_ran;
   unsigned int nxdn_last_rid;
   unsigned int nxdn_last_tg;
@@ -828,6 +835,8 @@ typedef struct
 
   unsigned short esk_mask;
   unsigned long long int edacs_site_id;
+  uint32_t edacs_sys_id;
+  uint32_t edacs_area_code;
   int edacs_lcn_count; //running tally of lcn's observed on edacs system
   int edacs_cc_lcn; //current lcn for the edacs control channel
   int edacs_vc_lcn; //current lcn for any active vc (not the one we are tuned/tuning to)
@@ -1141,6 +1150,10 @@ void openWavOutFile (dsd_opts * opts, dsd_state * state);
 void openWavOutFileL (dsd_opts * opts, dsd_state * state);
 void openWavOutFileR (dsd_opts * opts, dsd_state * state);
 void openWavOutFileRaw (dsd_opts * opts, dsd_state * state);
+SNDFILE * open_wav_file (char * dir, char * temp_filename, uint16_t sample_rate, uint8_t ext);
+SNDFILE * close_wav_file(SNDFILE * wav_file);
+SNDFILE * close_and_rename_wav_file(SNDFILE * wav_file, char * wav_out_filename, char * dir, Event_History_I * event_struct);
+SNDFILE * close_and_delete_wav_file(SNDFILE * wav_file, char * wav_out_filename);
 void openSymbolOutFile (dsd_opts * opts, dsd_state * state);
 void closeSymbolOutFile (dsd_opts * opts, dsd_state * state);
 void writeRawSample (dsd_opts * opts, dsd_state * state, short sample);

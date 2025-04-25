@@ -143,7 +143,7 @@ void ysf_dch_decode (dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint
   char rem1[6];
   char rem2[6];
 
-  UNUSED3(bt, fn, ft);
+  UNUSED(bt);
 
   for (i = 0; i < 20; i++)
     dch_bytes[i] = (char)ConvertBitIntoBytes(&input[i*8], 8);
@@ -179,9 +179,11 @@ void ysf_dch_decode (dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint
       fprintf (stderr, "%s ", string2);
 
       //Copy both to Ncurses Call String
+      memset (state->ysf_tgt, 0, sizeof(state->ysf_tgt));
       memcpy (state->ysf_tgt, dch_bytes, 10);
       state->ysf_tgt[10] = '\0';
 
+      memset (state->ysf_src, 0, sizeof(state->ysf_src));
       memcpy (state->ysf_src, dch_bytes+10, 10);
       state->ysf_src[10] = '\0';
 
@@ -209,27 +211,24 @@ void ysf_dch_decode (dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint
 
       break;
     case 2:
-      for (i = 0; i < 20; i++)
-      {
-        if (dch_bytes[i] > 0x19 && dch_bytes[i] < 0x7F)
-          fprintf (stderr, "%c", dch_bytes[i]);
-        else fprintf (stderr, ".");
-      }
-      fprintf (stderr, " ");
 
-      // if (fn == 0) memset (state->ysf_txt, 0, sizeof(state->ysf_txt));
-      //copy text to txt storage -- works now (had to expand storage space), but is cumbersome in ncurses (too long)
-      // if (fn < 20)
-      // {
-      //   //switch to checking each byte for a 'nice' ASCII character and
-      //   //not a 'naughty' del/rem/break/garbled non ASCII/ALPHANUMERIC type character
-      //   for (i = 0; i < 20; i++)
-      //   {
-      //     C = dch_bytes[i]; //skipping 0x20 space key
-      //     if (C > 0x20 && C < 0x7F) state->ysf_txt[fn][i] = C;
-      //     else state->ysf_txt[fn][i] = 0; //NULL
-      //   }
-      // }
+      if (fn == 0)
+        memset (state->ysf_txt, 0, sizeof(state->ysf_txt));
+
+      if (fn < 20)
+      {
+        //load ascii set characters only
+        for (i = 0; i < 20; i++)
+        {
+          char C = dch_bytes[i];
+          if (C > 0x19 && C < 0x7F)
+            state->ysf_txt[fn][i] = C;
+          else state->ysf_txt[fn][i] = 0x20; //Space
+        }
+      }
+
+      if (fn == ft) //last frame
+        fprintf (stderr, " %s", state->event_history_s[0].Event_History_Items[0].text_message);
 
       break;
 
@@ -452,7 +451,7 @@ int ysf_conv_dch2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, u
   else
   {
     fprintf (stderr, "%s", KRED);
-    fprintf (stderr, "DCH (CRC ERR) ");
+    fprintf (stderr, "DCH2 (CRC ERR) ");
     fprintf (stderr, "%s", KNRM);
   }
 
@@ -874,8 +873,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
   if (st && sc != 69) fprintf (stderr, "CODE: %03d ", sc);
 
   //simplified version
-  if (err == 0 && opts->payload == 1)
-    fprintf (stderr, "FN:%d-%d ", fn, ft);
+  fprintf (stderr, "FN: %d/%d ", fn+1, ft+1);
 
   if (err != 0)
   {
@@ -914,7 +912,6 @@ void processYSF(dsd_opts * opts, dsd_state * state)
   memset (temp, 0, sizeof(temp));
 
   //bit buffers
-  // uint8_t dch_bits[6][72];
   uint8_t dch_bits[160];
   uint8_t vch_bits[6][72];
   uint8_t vech_bits[104];
@@ -1185,16 +1182,13 @@ void processYSF(dsd_opts * opts, dsd_state * state)
         dbufFR[i % 2][((i/2)*36)+j] = getDibit(opts, state);
     }
 
-    //clear old txt data
-    // if (fi == 0) memset (state->ysf_txt, 0, sizeof(state->ysf_txt));
-    fprintf (stderr, "\n ");
     for (i = 0; i < 2; i++)
     {
       //process completed DCH -- use i to for bn to switch CSD1 and CSD2 on HC and TC
       if (fi == 0 || fi == 2)
         ysf_conv_dch (opts, state, i, bt, fn, ft, cm, dbufFR[i]);
       //using bn == 2 for full rate data and fn*2+1 for easier frame storage
-      else ysf_conv_dch (opts, state, 2, bt, fn*2+i, ft, cm, dbufFR[i]);
+      else ysf_conv_dch (opts, state, 2, bt, fn*2+i, ft*2, cm, dbufFR[i]); //had to fix ft so that it would equal the same in storage
 
     }
 

@@ -2371,6 +2371,9 @@ void dmr_decode_syscode(dsd_opts * opts, dsd_state * state, uint8_t * cs_pdu_bit
   //raw syscode
   uint16_t syscode = (uint16_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 14);
 
+  if (type == 0)
+    state->dmr_t3_syscode = syscode;
+
   uint8_t model = (uint8_t)ConvertBitIntoBytes(&cs_pdu_bits[40], 2);
   uint16_t net = 0;
   uint16_t site = 0;

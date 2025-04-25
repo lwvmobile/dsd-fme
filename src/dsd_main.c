@@ -196,12 +196,6 @@
        opts->p25_is_tuned = 0;
        state->edacs_tuned_lcn = -1;
  
-       //only for EDACS/PV
-       if (opts->p25_trunk == 1 && opts->frame_provoice == 1 && opts->wav_out_file != NULL)
-       {
-         closeWavOutFile(opts, state);
-       }
- 
        state->last_cc_sync_time = time(NULL);
        //test to switch back to 10/4 P1 QPSK for P25 FDMA CC
  
@@ -1149,6 +1143,8 @@
    state->edacs_vc_call_type = 0;
    state->esk_mask = 0x0; //esk mask value
    state->edacs_site_id = 0;
+   state->edacs_sys_id = 0;
+   state->edacs_area_code = 0;
    state->edacs_lcn_count = 0;
    state->edacs_cc_lcn = 0;
    state->edacs_vc_lcn = 0;
@@ -1320,6 +1316,7 @@
    #endif
  
    state->dmr_color_code = 16;
+   state->dmr_t3_syscode = 0;
  
    state->event_history_s = calloc(1, 10000000000); //TODO: tweak this size later on
  
@@ -1340,7 +1337,7 @@
    printf ("\n");
    printf ("Display Options:\n");
    printf ("  -N            Use NCurses Terminal\n");
-   printf ("                 dsd-fme -N 2> log.ans \n");
+   printf ("                 dsd-fme -N 2> console_log.txt \n");
    printf ("  -Z            Log MBE/PDU Payloads to console\n");
    printf ("\n");
    printf ("Device Options:\n");
@@ -1391,7 +1388,7 @@
    printf ("  -g <float>    Audio Digital Output Gain  (Default: 0 = Auto;        )\n");
    printf ("                                           (Manual:  1 = 2%%; 50 = 100%%)\n");
    printf ("  -n <float>    Audio Analog  Output Gain  (Default: 0 = Auto; 0-100%%  )\n");
-   printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n");
+   //printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n"); //disabled
    printf ("  -6 <file>     Output raw audio .wav file (48K/1). (WARNING! Large File Sizes 1 Hour ~= 360 MB)\n");
    printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
    printf ("                 (Use ./folder for Nested Directory!)\n");
@@ -1681,19 +1678,15 @@
    #endif
  
    noCarrier (opts, state);
-   if (opts->wav_out_f != NULL)
-   {
-     closeWavOutFile (opts, state);
-   }
-   if (opts->wav_out_raw != NULL)
-   {
-     closeWavOutFileRaw (opts, state);
-   }
-   if (opts->dmr_stereo_wav == 1) //cause of crash on exit, need to check if NULL first, may need to set NULL when turning off in nterm
-   {
-     closeWavOutFileL (opts, state);
-     closeWavOutFileR (opts, state);
-   }
+
+  if (opts->wav_out_f != NULL)
+    opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+  if (opts->wav_out_fR != NULL)
+  opts->wav_out_fR = close_and_rename_wav_file(opts->wav_out_fR, opts->wav_out_fileR, opts->wav_out_dir, &state->event_history_s[1]);
+  if (opts->wav_out_raw != NULL)
+    opts->wav_out_raw = close_wav_file(opts->wav_out_raw);
+
+   //no if statement first?
    closeSymbolOutFile (opts, state);
  
    #ifdef USE_RTLSDR
@@ -2175,22 +2168,21 @@
            else fprintf (stderr,"Writing wav decoded audio files to directory %s\n", opts.wav_out_dir);
            break;
  
-         case 'P': //TDMA/NXDN Per Call - was T, now is P
-           sprintf (wav_file_directory, "%s", opts.wav_out_dir);
-           wav_file_directory[1023] = '\0';
-           if (stat(wav_file_directory, &st) == -1)
-           {
-             fprintf (stderr, "-P %s WAV file directory does not exist\n", wav_file_directory);
-             fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
-             mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
-           }
-           fprintf (stderr,"AUTO and NXDN Per Call Wav File Saving Enabled. (NCurses Terminal Only)\n");
-           sprintf (opts.wav_out_file, "%s/DSD-FME-X1.wav", opts.wav_out_dir);
-           sprintf (opts.wav_out_fileR, "%s/DSD-FME-X2.wav", opts.wav_out_dir);
-           opts.dmr_stereo_wav = 1;
-           openWavOutFileL (&opts, &state);
-           openWavOutFileR (&opts, &state);
-           break;
+         case 'P': //Per Call Wav Files
+            sprintf (wav_file_directory, "%s", opts.wav_out_dir);
+            wav_file_directory[1023] = '\0';
+            if (stat(wav_file_directory, &st) == -1)
+            {
+              fprintf (stderr, "-P %s WAV file directory does not exist\n", wav_file_directory);
+              fprintf (stderr, "Creating directory %s to save decoded wav files\n", wav_file_directory);
+              mkdir(wav_file_directory, 0700); //user read write execute, needs execute for some reason or segfault
+            }
+            fprintf (stderr,"Per Call Wav File Enabled.\n");
+            srand(time(NULL)); //seed random for filenames (so two filenames aren't the exact same datetime string on initailization)
+            opts.wav_out_f  = open_wav_file(opts.wav_out_dir, opts.wav_out_file, 8000, 0);
+            opts.wav_out_fR = open_wav_file(opts.wav_out_dir, opts.wav_out_fileR, 8000, 0);
+            opts.dmr_stereo_wav = 1;
+            break;
  
          case 'F':
            opts.aggressive_framesync = 0;
@@ -2255,13 +2247,13 @@
            }
            break;
  
-         case 'w':
-           strncpy(opts.wav_out_file, optarg, 1023);
-           opts.wav_out_file[1023] = '\0';
-           fprintf (stderr,"Writing + Appending decoded audio to file %s\n", opts.wav_out_file);
-           opts.dmr_stereo_wav = 0;
-           openWavOutFile (&opts, &state);
-           break;
+        //  case 'w': //disabled
+        //    strncpy(opts.wav_out_file, optarg, 1023);
+        //    opts.wav_out_file[1023] = '\0';
+        //    fprintf (stderr,"Writing + Appending decoded audio to file %s\n", opts.wav_out_file);
+        //    opts.dmr_stereo_wav = 0;
+        //    openWavOutFile (&opts, &state);
+        //    break;
  
          case '6':
            strncpy(opts.wav_out_file_raw, optarg, 1023);
