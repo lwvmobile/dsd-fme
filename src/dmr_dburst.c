@@ -11,9 +11,6 @@
 
 //TODO: Test USBD LIP Decoder with Real World Samples (if/when available)
 //TODO: Test UDT NMEA and LIP Decoders with Real World Samples (if/when available)
-//WIP:  Move all extra decoders for location, etc, to a new file and add prototypes to dsd.h
-//DONE: Test CRC9/CRC32 on Rate 1 Data with Real World Samples (if/when available)
-//TODO: Address areas that require reading of ISO7, ISO8, and UTF-16 string formats
 
 #include "dsd.h"
 

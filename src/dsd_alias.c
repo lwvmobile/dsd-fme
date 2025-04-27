@@ -398,16 +398,17 @@ void apx_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_t slot
     for (int16_t i = 0; i < num_bytes/2; i++)
       fprintf (stderr, "%lc", ((decoded[(i*2)+0])<<8) | ((decoded[(i*2)+1])<<0) );
 
-    apx_embedded_alias_dump (opts, state, num_bytes, input, decoded);
+    apx_embedded_alias_dump (opts, state, slot, num_bytes, input, decoded);
 
   }
 
 }
 
-void apx_embedded_alias_dump (dsd_opts * opts, dsd_state * state, uint16_t num_bytes, uint8_t * input, uint8_t * decoded)
+void apx_embedded_alias_dump (dsd_opts * opts, dsd_state * state, uint8_t slot, uint16_t num_bytes, uint8_t * input, uint8_t * decoded)
 {
 
   char str[50]; memset(str, 0, sizeof(str));
+  char fqs[50]; memset(fqs, 0, sizeof(fqs));
 
   //check num_bytes, if greter than 100, then set to 100
   if (num_bytes >= 98) num_bytes = 98;
@@ -428,6 +429,13 @@ void apx_embedded_alias_dump (dsd_opts * opts, dsd_state * state, uint16_t num_b
   uint32_t wacn = (uint32_t)ConvertBitIntoBytes(&input[72], 20);
   uint32_t sys  = (uint32_t)ConvertBitIntoBytes(&input[92], 12);
   uint32_t rid  = (uint32_t)ConvertBitIntoBytes(&input[104], 24);
+
+  sprintf (fqs, " FQ-SUID: %05X:%03X.%06X (%d);", wacn, sys, rid, rid);
+  if (rid != 0 && state->event_history_s[slot].Event_History_Items[0].source_id == rid)
+  {
+    sprintf (state->event_history_s[slot].Event_History_Items[0].alias, "%s; ", str);
+    strcat (state->event_history_s[slot].Event_History_Items[0].alias, fqs);
+  }
 
   for (int16_t i = 0; i < state->group_tally; i++)
   {
@@ -516,6 +524,9 @@ void l3h_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_t slot
   //assign completed talker to a more useful string instead
   snprintf (str, ptr+1, "%s", ttemp);
 
+  if (state->event_history_s[slot].Event_History_Items[0].source_id == tsrc)
+    sprintf (state->event_history_s[slot].Event_History_Items[0].alias, "%s", str);
+
   //The Duke Energy system may relay two src values, may be a good idea to pick one and stick with it
   if (tsrc != 0)
   {
@@ -578,6 +589,9 @@ void tait_iso7_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_
   uint32_t rid  = state->lastsrc;
   uint16_t nac = state->nac;
 
+  if (state->event_history_s[slot].Event_History_Items[0].source_id == rid)
+    sprintf (state->event_history_s[slot].Event_History_Items[0].alias, "%s", alias);
+
   if (rid != 0)
   {
     for (int16_t i = 0; i < state->group_tally; i++)
@@ -612,4 +626,185 @@ void tait_iso7_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_
     }
 
   }
+}
+
+void dmr_talker_alias_lc_header (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t * lc_bits)
+{
+  uint8_t format = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 2);
+  uint8_t block_len = (uint8_t)ConvertBitIntoBytes(&lc_bits[18], 5);
+  uint8_t char_size = 0;
+
+  if (format == 0) char_size = 7;
+  else if (format == 1 || format == 2) char_size = 8;
+  else char_size = 16;
+
+  state->dmr_alias_format[slot] = format;
+  state->dmr_alias_block_len[slot] = block_len; //data len, see below
+  state->dmr_alias_char_size[slot] = char_size;
+
+  //load into dmr_pdu_sf as bit wise values for this since iso7 has 49 bits in this header, otherwise, load with 48?
+  if (char_size == 7)
+    memcpy(state->dmr_pdu_sf[slot], lc_bits+23, 49*sizeof(uint8_t));
+  else if (char_size == 8) 
+    memcpy(state->dmr_pdu_sf[slot], lc_bits+24, 48*sizeof(uint8_t));
+  else if (char_size == 16)
+    memcpy(state->dmr_pdu_sf[slot], lc_bits+24, 48*sizeof(uint8_t));
+
+  //TEST: The Block Len (Data Lan) value is, according to my interpretation, the number of encoded 
+  //character units in the alias, test to verify, but fall back to the ptr index if necessary
+  //this is referenced in  5.4.3 ETSI TS 102 361-2 V2.5.1 (2023-05) 7.2.19 Talker Alias Data Length
+
+  fprintf (stderr, " Slot %d - Talker Alias LC Header; Format %d; Char Len: %d; Char Size: %d;", slot, format, block_len, char_size);
+
+  //Decode the header's alias portion
+  fprintf (stderr, "\n");
+  dmr_talker_alias_lc_decode(opts, state, slot, 0, char_size, block_len);
+}
+
+void dmr_talker_alias_lc_blocks (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t block_num, uint8_t * lc_bits)
+{
+  UNUSED(opts); //delete if we don't use this, but may want it if we dump alias to a file later on
+  uint8_t block_len = state->dmr_alias_block_len[slot];
+  uint8_t char_size = state->dmr_alias_char_size[slot];
+  uint16_t ptr = 0;
+  uint16_t end = block_len;
+
+  //Note: The Joann sample only carries block 5, and no header on block 4
+  //another radio on that ham setup also has a broken alias similar, but
+  //the other talkers have the 04 and the sample has a good decode otherwise
+  //debug broken aliasing on ham radio
+
+  // if (char_size == 0) //Enable this is you need to check alias even with missing header (set 7, 8, or 16)
+  //   char_size = 8;
+
+  /*
+    22:54:51 Sync: +DMR   slot1  [SLOT2] | Color Code=01 | VC6 
+    Slot 1 - Talker Alias Block Num: 1; Valid Block; Talker Alias:       Joann  
+    DMR PDU Payload [05][00][4A][6F][61][6E][6E][00][FF]
+  */
+
+  //set the pointer to the current index of the dmr_pdu_sf
+  if (char_size == 16)
+    ptr = 48 + (block_num * 48);
+  else if (char_size == 8)
+    ptr = 48 + (block_num * 48);
+  else if (char_size == 7)
+    ptr = 49 + (block_num * 56);
+
+  if (char_size == 0) //unset, no header received
+    fprintf (stderr, " Slot %d - Talker Alias Block Num: %d; Invalid Header;", slot, block_num+1);
+
+  else if (block_num > 3) //invalid block (data error)
+    fprintf (stderr, " Slot %d - Talker Alias Block Num: %d; Invalid Block;", slot, block_num+1);
+
+  else //valid header present, continue
+  {
+    if (char_size == 7)
+    {
+      memcpy(state->dmr_pdu_sf[slot]+ptr, lc_bits+16, 56*sizeof(uint8_t));
+      ptr += 56;
+      if (block_len == 0)
+        end = ptr / 7;
+      else end = block_len;
+    }
+    else if (char_size == 8)
+    {
+      memcpy(state->dmr_pdu_sf[slot]+ptr, lc_bits+16, 56*sizeof(uint8_t));
+      ptr += 56;
+      if (block_len == 0)
+        end = ptr / 8;
+      else end = block_len;
+    }
+    else if (char_size == 16)
+    {
+      memcpy(state->dmr_pdu_sf[slot]+ptr, lc_bits+16, 48*sizeof(uint8_t));
+      ptr += 48;
+      if (block_len == 0)
+        end = ptr / 16;
+      else end = block_len;
+    }
+
+    dmr_talker_alias_lc_decode (opts, state, slot, block_num, char_size, end);
+  }
+}
+
+//Deocde partial or comppleted alias
+void dmr_talker_alias_lc_decode (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t block_num, uint8_t char_size, uint16_t end)
+{
+  UNUSED(opts);
+  uint16_t i = 0;
+  fprintf (stderr, " Slot %d - Talker Alias Block Num: %d; Valid Block;", slot, block_num+1);
+  fprintf (stderr, " Talker Alias: ");
+
+  char alias_string[500]; memset (alias_string, 0, sizeof(alias_string));
+  sprintf (alias_string, "");
+
+  if (char_size == 7)
+  {
+    for (i = 0; i < end; i++)
+    {
+      uint8_t character = (uint8_t)ConvertBitIntoBytes(&state->dmr_pdu_sf[slot][(i*7)], 7);
+      char ch[2]; ch[0] = character; ch[1] = 0;
+      if (character >= 0x20 && character <= 0x7E) //Standard ASCII Set
+      {
+        fprintf (stderr, "%c", character);
+        strcat (alias_string, ch);
+      }
+      else
+      {
+        strcat (alias_string, " ");
+        fprintf (stderr, " ");
+      }
+    }
+  }
+  else if (char_size == 8)
+  {
+    for (i = 0; i < end; i++)
+    {
+      uint8_t character = (uint8_t)ConvertBitIntoBytes(&state->dmr_pdu_sf[slot][(i*8)], 8);
+      char ch[2]; ch[0] = character; ch[1] = 0;
+      if (character >= 0x20 && character <= 0x7E) //Standard ASCII Set
+      {
+        fprintf (stderr, "%c", character);
+        strcat (alias_string, ch);
+      }
+      else
+      {
+        strcat (alias_string, " ");
+        fprintf (stderr, " ");
+      }
+    }
+  }
+  else if (char_size == 16)
+  {
+    for (i = 0; i < end; i++)
+    {
+      uint16_t character = (uint16_t)ConvertBitIntoBytes(&state->dmr_pdu_sf[slot][(i*16)], 16);
+      char ch[2]; ch[0] = character & 0xFF; ch[1] = 0;
+      if (character >= 0x20 && character <= 0x7E) //Standard ASCII Set //may see what happens if this is disabled
+      {
+        fprintf (stderr, "%lc", character);
+        strcat (alias_string, ch);
+      }
+      else
+      {
+        strcat (alias_string, " ");
+        fprintf (stderr, " ");
+      }
+
+      //debug
+      // fprintf (stderr, " %04X, ", character);
+    }
+  }
+
+  //assign to string for event history and ncurses display
+  uint32_t source = 0;
+  if (slot == 0)
+    source = state->lastsrc;
+  else source = state->lastsrcR;
+
+  if (state->event_history_s[slot].Event_History_Items[0].source_id == source)
+    sprintf (state->event_history_s[slot].Event_History_Items[0].alias, "%s; ", alias_string);
+  sprintf (state->generic_talker_alias[slot], "Talker Alias: %s; ", alias_string);
+
 }

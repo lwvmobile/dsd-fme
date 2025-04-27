@@ -2044,6 +2044,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int src = (MAC[6+len_a] << 16) | (MAC[7+len_a] << 8) | MAC[8+len_a];
 			fprintf (stderr, "\n VCH %d - Super Group %d SRC %d ", slot, gr, src);
 			fprintf (stderr, "MFID90 Group Regroup Voice");
+			state->gi[slot] = 0;
 
 			if (slot == 0)
 			{
@@ -2064,6 +2065,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int src = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
 			fprintf (stderr, "\n VCH %d - Super Group %d SRC %d ", slot, gr, src);
 			fprintf (stderr, "MFID90 Group Regroup Voice");
+			state->gi[slot] = 0;
 
 			if (slot == 0)
 			{
@@ -2274,6 +2276,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			}
 
 			fprintf (stderr, " Group Voice");
+			state->gi[slot] = 0;
 
 			sprintf (state->call_string[slot], "   Group ");
 			if (svc & 0x80) strcat (state->call_string[slot], " Emergency  ");
@@ -2328,6 +2331,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			}
 
 			fprintf (stderr, " Unit to Unit Voice");
+			state->gi[slot] = 1;
 
 			sprintf (state->call_string[slot], " Private ");
 			if (svc & 0x80) strcat (state->call_string[slot], " Emergency  ");

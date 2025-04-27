@@ -503,8 +503,8 @@ void return_to_cc (dsd_opts * opts, dsd_state * state)
     state->lasttgR = 0;
     state->lastsrc = 0;
     state->lastsrcR = 0;
-    state->gi[0] = 0;
-    state->gi[1] = 0;
+    state->gi[0] = -1;
+    state->gi[1] = -1;
     state->payload_algid = 0;
     state->payload_algidR = 0;
     state->payload_keyid = 0;

@@ -259,8 +259,8 @@
      state->lastsrc = 0;
      state->lasttgR = 0;
      state->lastsrcR = 0;
-     state->gi[0] = 0;
-     state->gi[1] = 0;
+     state->gi[0] = -1;
+     state->gi[1] = -1;
  
      //zero out vc frequencies?
      state->p25_vc_freq[0] = 0;
@@ -297,8 +297,8 @@
      state->lastsrc = 0;
      state->lasttgR = 0;
      state->lastsrcR = 0;
-     state->gi[0] = 0;
-     state->gi[1] = 0;
+     state->gi[0] = -1;
+     state->gi[1] = -1;
  
    }
  
@@ -466,7 +466,8 @@
  
    //dmr talker alias new/fixed stuff
    memset(state->dmr_alias_format, 0, sizeof(state->dmr_alias_format));
-   memset(state->dmr_alias_len, 0, sizeof(state->dmr_alias_len));
+   memset(state->dmr_alias_block_len, 0, sizeof(state->dmr_alias_block_len));
+   memset(state->dmr_alias_char_size, 0, sizeof(state->dmr_alias_char_size));
    memset(state->dmr_alias_block_segment, 0, sizeof(state->dmr_alias_block_segment));
    memset(state->dmr_embedded_gps, 0, sizeof(state->dmr_embedded_gps));
    memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));
@@ -941,8 +942,8 @@
    state->lastsrc = 0;
    state->lasttgR = 0;
    state->lastsrcR = 0;
-   state->gi[0] = 0;
-   state->gi[1] = 0;
+   state->gi[0] = -1;
+   state->gi[1] = -1;
    state->eh_index = 0;
    state->nac = 0;
    state->errs = 0;
@@ -1229,7 +1230,8 @@
  
    //dmr talker alias new/fixed stuff
    memset(state->dmr_alias_format, 0, sizeof(state->dmr_alias_format));
-   memset(state->dmr_alias_len, 0, sizeof(state->dmr_alias_len));
+   memset(state->dmr_alias_block_len, 0, sizeof(state->dmr_alias_block_len));
+   memset(state->dmr_alias_char_size, 0, sizeof(state->dmr_alias_char_size));
    memset(state->dmr_alias_block_segment, 0, sizeof(state->dmr_alias_block_segment));
    memset(state->dmr_embedded_gps, 0, sizeof(state->dmr_embedded_gps));
    memset(state->dmr_lrrp_gps, 0, sizeof(state->dmr_lrrp_gps));

@@ -77,8 +77,8 @@ char * SyncTypes[44] = {
   "DMR",
   "EDACS/PV",
   "EDACS/PV",
-  "M17 STR", //M17 Voice Stream
-  "M17 STR", //M17 Voice Stream
+  "M17", //M17 Voice Stream
+  "M17", //M17 Voice Stream
   "DSTAR", //header
   "DSTAR", //header
   "dPMR", //20
@@ -3342,31 +3342,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       attron(COLOR_PAIR(3));
     }
 
-    //Not always correct, or correct at all, depends on context
-    //this is already in the call_string anyways
-
-    // if(state->dmrburstL == 16 && state->dmr_so == 0x40 && state->R == 0) //0100 0000
-    // {
-    //   attron(COLOR_PAIR(2));
-    //   printw (" **ENC** ");
-    //   attroff(COLOR_PAIR(2));
-    //   attron(COLOR_PAIR(3));
-    // }
-    // if(state->dmrburstL == 16 && state->dmr_so == 0x80)
-    // {
-    //   attron(COLOR_PAIR(2));
-    //   printw (" **Emergency** ");
-    //   attroff(COLOR_PAIR(2));
-    //   attron(COLOR_PAIR(3));
-    // }
-    // if(state->dmrburstL == 16 && state->dmr_so == 0x30) //0010 0000
-    // {
-    //   attron(COLOR_PAIR(2));
-    //   printw (" **Private Call** ");
-    //   attroff(COLOR_PAIR(2));
-    //   attron(COLOR_PAIR(3));
-    // }
-
     printw ("\n");
 
     //printw ("|        | "); //10 spaces
@@ -3382,16 +3357,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //Embedded GPS (not LRRP)
       printw  ("%s ", state->dmr_embedded_gps[0]);
 
-      //Embedded Talker Alias Blocks
-      for (int i = 0; i < 4; i++)
-      {
-        for (int j = 0; j < 7; j++)
-        {
-          printw ("%s", state->dmr_alias_block_segment[0][i][j]);
-        }
-      }
-
-      //Generic Talker Alias String
+      //Embedded Talker Alias String
       printw ("%s", state->generic_talker_alias[0]);
 
       attroff(COLOR_PAIR(5));
@@ -3551,31 +3517,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         attron(COLOR_PAIR(3));
       }
 
-      //Not always correct, or correct at all, depends on context
-      //this is already in the call_string anyways
-
-      // if(state->dmrburstR == 16 && state->dmr_soR == 0x40 && state->R == 0) //0100 0000
-      // {
-      //   attron(COLOR_PAIR(2));
-      //   printw (" **ENC** ");
-      //   attroff(COLOR_PAIR(2));
-      //   attron(COLOR_PAIR(3));
-      // }
-      // if(state->dmrburstR == 16 && state->dmr_soR == 0x80)
-      // {
-      //   attron(COLOR_PAIR(2));
-      //   printw (" **Emergency** ");
-      //   attroff(COLOR_PAIR(2));
-      //   attron(COLOR_PAIR(3));
-      // }
-      // if(state->dmrburstR == 16 && state->dmr_soR == 0x30) //0010 0000
-      // {
-      //   attron(COLOR_PAIR(2));
-      //   printw (" **Private Call** ");
-      //   attroff(COLOR_PAIR(2));
-      //   attron(COLOR_PAIR(3));
-      // }
-
       printw ("\n");
 
       //printw ("|        | ");
@@ -3590,16 +3531,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         attron(COLOR_PAIR(4));
         printw  ("%s ", state->dmr_embedded_gps[1]);
 
-        //Embedded Talker Alias Blocks
-        for (int i = 0; i < 4; i++)
-        {
-          for (int j = 0; j < 7; j++)
-          {
-            printw ("%s", state->dmr_alias_block_segment[1][i][j]);
-          }
-        }
-
-        //Generic Talker Alias String
+        //Embedded Talker Alias String
         printw ("%s", state->generic_talker_alias[1]);
 
         attroff(COLOR_PAIR(5));
@@ -3914,9 +3846,17 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].text_message, 13) != 0)
         printw ("|     %s \n", state->event_history_s[slot].Event_History_Items[i%255].text_message);
 
+      sprintf (text_string, "%s", "BUMBLEBEETUNA");
+      if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].alias, 13) != 0)
+        printw ("|      Alias: %s \n", state->event_history_s[slot].Event_History_Items[i%255].alias);
+
+      sprintf (text_string, "%s", "BUMBLEBEETUNA");
+      if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].gps_s, 13) != 0)
+        printw ("|      GPS: %s \n", state->event_history_s[slot].Event_History_Items[i%255].gps_s);
+
     }
-   printw ("------------------------------------------------------------------------------\n");
-   attroff(COLOR_PAIR(4)); //cyan for history
+    printw ("------------------------------------------------------------------------------\n");
+    attroff(COLOR_PAIR(4)); //cyan for history
   }
 
  refresh();
@@ -4851,11 +4791,8 @@ void push_event_history (Event_History_I * event_struct)
 void write_event_to_log_file (dsd_opts * opts, dsd_state * state, char * event_string) //pass completed event string here that is in the struct
 {
 
-  //May reconfigure this to pull the struct directly, or pass supplimental strings for text messages, etc
-  UNUSED(state);
-
+  //open log file
   FILE * event_log_file;
-
   event_log_file = fopen(opts->event_out_file, "a");
 
   fprintf (event_log_file, "%s \n", event_string);
@@ -4863,7 +4800,12 @@ void write_event_to_log_file (dsd_opts * opts, dsd_state * state, char * event_s
   uint8_t slot = state->currentslot;
   if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[0].text_message, 13) != 0)
     fprintf (event_log_file, "%s \n", state->event_history_s[slot].Event_History_Items[0].text_message);
+  if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[0].alias, 13) != 0)
+    fprintf (event_log_file, " Talker Alias: %s \n", state->event_history_s[slot].Event_History_Items[0].alias);
+  if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[0].gps_s, 13) != 0)
+    fprintf (event_log_file, " Embedded GPS: %s \n", state->event_history_s[slot].Event_History_Items[0].gps_s);
 
+  //flush and close log file
   fflush (event_log_file);
   fclose (event_log_file);
 }
@@ -4960,6 +4902,7 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
     memset(state->ysf_txt, 0, sizeof(state->ysf_txt));
     memset(state->dstar_gps, 0, sizeof(state->dstar_gps));
     memset(state->dstar_txt, 0, sizeof(state->dstar_txt));
+    state->gi[slot] = -1; //return to an unset value
   }
 
 }
@@ -4978,7 +4921,7 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
   uint32_t target_id = 0;
   uint16_t svc_opts = 0;
   uint8_t  subtype = 0;
-
+  uint8_t  mfid = 0;
   uint32_t sys_id1 = 0;
   uint32_t sys_id2 = 0;
   uint32_t sys_id3 = 0;
@@ -5001,6 +4944,7 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
     target_id = state->lasttg;
     
     subtype = state->dmrburstL;
+    mfid = state->dmr_fid;
     
     svc_opts = state->dmr_so;
     enc = (svc_opts >> 6) & 1;
@@ -5013,7 +4957,9 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
   {
     source_id = state->lastsrcR;
     target_id = state->lasttgR;
+
     subtype = state->dmrburstR;
+    mfid = state->dmr_fidR;
 
     svc_opts = state->dmr_soR;
     enc = (svc_opts >> 6) & 1;
@@ -5057,6 +5003,7 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
       if (state->nxdn_cipher_type != 0)
         enc = 1;
       alg_id = state->nxdn_cipher_type;
+      key_id = state->nxdn_key;
 
       sys_id1 = state->nxdn_location_site_code;
       sys_id2 = state->nxdn_location_sys_code;
@@ -5259,46 +5206,84 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
      state->lastsynctype == 32 || state->lastsynctype == 33 || state->lastsynctype == 34                                  ) //DMR
   {
     if (sys_id1)
-      sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; CC: %02d; SYS: %X; ", datestr, timestr, sys_string, target_id, source_id, sys_id2, sys_id1);
+      sprintf (event_string, "%s %s %s TGT: %08d; SRC: %08d; CC: %02d; SYS: %X; ", datestr, timestr, sys_string, target_id, source_id, sys_id2, sys_id1);
     else
-      sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; CC: %02d; ", datestr, timestr, sys_string, target_id, source_id, sys_id2);
+      sprintf (event_string, "%s %s %s TGT: %08d; SRC: %08d; CC: %02d; ", datestr, timestr, sys_string, target_id, source_id, sys_id2);
     if (enc)
       strcat(event_string, "ENC; ");
     if (alg_id != 0)
     {
       char ess_str[30];
-      sprintf (ess_str, "ALG: %02X; KID: %02X;", alg_id, key_id);
+      sprintf (ess_str, "ALG: %02X; KID: %02X; ", alg_id, key_id);
       strcat(event_string, ess_str);
     }
+
+    //monitor for misc link control that may set a SO without having SO inside of it,
+    //those could cause misc issues here, will need to observe and make adjustments
+    if (svc_opts & 0x80)
+        strcat (event_string, "Emergency; ");
+
+    if (svc_opts & 0x08)
+      strcat (event_string, "Broadcast; ");
+
+    if (svc_opts & 0x04)
+      strcat (event_string, "OVCM; ");
+
+    if (state->gi[slot] == 0)
+      strcat (event_string, "Group; ");
+    else if (state->gi[slot] == 1)
+      strcat (event_string, "Private; ");
+
+    if (mfid == 0x10)
+    {
+      if (svc_opts & 0x20)
+        strcat (event_string, "TXI; ");
+      else if (svc_opts & 0x10)
+        strcat (event_string, "TXI; "); //this is the svc opt bit that tells you when the next VC6 will be pre-empted, but not helpful here
+
+      if (svc_opts & 0x03)
+        strcat (event_string, "PRIORITY; "); //need to break this apart into each one, but need to double check the decoded value is accurate
+    }
+    
   }
   else if (state->lastsynctype == 0 || state->lastsynctype == 1 || state->lastsynctype == 35 || state->lastsynctype == 36)
   {
     if (sys_id1)
-      sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; NAC: %03X; SYS: %05X:%03X:%d.%d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3, sys_id1, sys_id2, sys_id4, sys_id5);
+      sprintf (event_string, "%s %s %s TGT: %08d; SRC: %08d; NAC: %03X; SYS: %05X:%03X:%d.%d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3, sys_id1, sys_id2, sys_id4, sys_id5);
     else
-      sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; NAC: %03X; ", datestr, timestr, sys_string, target_id, source_id, sys_id3);
+      sprintf (event_string, "%s %s %s TGT: %08d; SRC: %08d; NAC: %03X; ", datestr, timestr, sys_string, target_id, source_id, sys_id3);
     if (alg_id != 0 && alg_id != 0x80)
     {
       char ess_str[30];
-      sprintf (ess_str, "ENC; ALG: %02X; KID: %04X;", alg_id, key_id);
+      sprintf (ess_str, "ENC; ALG: %02X; KID: %04X; ", alg_id, key_id);
       strcat(event_string, ess_str);
     }
+    if (svc_opts & 0x80)
+      strcat (event_string, "Emergency; ");
+    if (state->gi[slot] == 0)
+      strcat (event_string, "Group; ");
+    else if (state->gi[slot] == 1)
+      strcat (event_string, "Private; ");
   }
 
   else if (state->lastsynctype == 28 || state->lastsynctype == 29)
   {
     if (sys_id1)
-      sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; RAN: %02d; SYS: %d.%d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3, sys_id1, sys_id2);
+      sprintf (event_string, "%s %s %s TGT: %08d; SRC: %08d; RAN: %02d; SYS: %d.%d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3, sys_id1, sys_id2);
     else
-      sprintf (event_string, "%s %s %s Voice TGT: %08d; SRC: %08d; RAN: %02d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3);
+      sprintf (event_string, "%s %s %s TGT: %08d; SRC: %08d; RAN: %02d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3);
     if (enc)
       strcat(event_string, "ENC; ");
     if (alg_id != 0)
     {
       char ess_str[30];
-      sprintf (ess_str, "ALG: %d; KID: %02X;", alg_id, key_id);
+      sprintf (ess_str, "ALG: %d; KID: %02X; ", alg_id, key_id);
       strcat(event_string, ess_str);
     }
+    if (state->gi[slot] == 0)
+      strcat (event_string, "Group; ");
+    else if (state->gi[slot] == 1)
+      strcat (event_string, "Private; ");
   }
 
   sprintf (event_struct->Event_History_Items[0].event_string, "%s", event_string);

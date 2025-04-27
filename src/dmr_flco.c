@@ -103,14 +103,15 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     //Embedded Talker Alias Header Only (format and len storage)
     if ( (fid == 0 || fid == 0x68) && type == 3 && flco == 0x04)
     {
-      dmr_embedded_alias_header(opts, state, lc_bits);
+      is_alias = 1;
+      dmr_talker_alias_lc_header(opts, state, slot, lc_bits);
     }
 
     //Embedded Talker Alias Header (continuation) and Blocks
-    if ( (fid == 0 || fid == 0x68) && type == 3 && flco > 0x03 && flco < 0x08)
+    if ( (fid == 0 || fid == 0x68) && type == 3 && flco > 0x04 && flco < 0x08)
     {
       is_alias = 1;
-      dmr_embedded_alias_blocks(opts, state, lc_bits);
+      dmr_talker_alias_lc_blocks(opts, state, slot, flco-5, lc_bits);
     }
 
     //Embedded GPS
@@ -127,6 +128,9 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       capsite = (uint8_t)ConvertBitIntoBytes(&lc_bits[48], 4); //don't believe so
       restchannel = (int)ConvertBitIntoBytes(&lc_bits[52], 4); //
       source = (uint32_t)ConvertBitIntoBytes(&lc_bits[56], 16);
+      if (flco == 0x07)
+        state->gi[slot] = 1;
+      else state->gi[slot] = 0;
     }
 
     //Unknown CapMax/Moto Things
@@ -410,6 +414,13 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         //reset gain
         if (opts->floating_point == 1)
           state->aout_gain = opts->audio_gain;
+
+        state->dmr_alias_block_len[0] = 0;
+        state->dmr_alias_char_size[0] = 0;
+        state->dmr_alias_format[0] = 0;
+        sprintf (state->generic_talker_alias[0], "%s", "");
+        // sprintf (state->event_history_s[0].Event_History_Items[0].alias, "%s", "BUMBLEBEETUNA");
+        memset (state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
       }
       if (state->currentslot == 1)
       {
@@ -423,6 +434,13 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         //reset gain
         if (opts->floating_point == 1)
           state->aout_gainR = opts->audio_gain;
+
+        state->dmr_alias_block_len[1] = 0;
+        state->dmr_alias_char_size[1] = 0;
+        state->dmr_alias_format[1] = 0;
+        sprintf (state->generic_talker_alias[1], "%s", "");
+        // sprintf (state->event_history_s[1].Event_History_Items[0].alias, "%s", "BUMBLEBEETUNA");
+        memset (state->dmr_pdu_sf[1], 0, sizeof(state->dmr_pdu_sf[1]));
       }
 
     }
@@ -468,23 +486,27 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         // strcat (state->call_string[slot], " Grp");
         sprintf (state->call_string[slot], "   Group ");
         fprintf (stderr, "Group ");
+        state->gi[slot] = 0;
       }
       else
       {
         // strcat (state->call_string[slot], " Pri");
         sprintf (state->call_string[slot], " Private ");
         fprintf (stderr, "Private ");
+        state->gi[slot] = 1;
       }
     }
     else if (flco == 0x3) //UU_V_Ch_Usr
     {
       sprintf (state->call_string[slot], " Private ");
       fprintf (stderr, "Private ");
+      state->gi[slot] = 1;
     }
     else //Grp_V_Ch_Usr -- still valid on hytera VLC
     {
       sprintf (state->call_string[slot], "   Group ");
       fprintf (stderr, "Group ");
+      state->gi[slot] = 0;
     }
 
     if(so & 0x80)
@@ -604,8 +626,16 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     //should rework this back into the upper portion
     if (fid == 0x68) fprintf (stderr, "Hytera ");
     if (is_xpt) fprintf (stderr, "XPT ");
-    if (fid == 0x68 && flco == 0x00) fprintf (stderr, "Group ");
-    if (fid == 0x68 && flco == 0x03) fprintf (stderr, "Private ");
+    if (fid == 0x68 && flco == 0x00)
+    {
+      fprintf (stderr, "Group ");
+      state->gi[slot] = 0;
+    }
+    if (fid == 0x68 && flco == 0x03)
+    {
+      fprintf (stderr, "Private ");
+      state->gi[slot] = 1;
+    }
 
     fprintf(stderr, "Call ");
 
@@ -1241,98 +1271,6 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
     fprintf (stderr, "\n"); //if its a voice frame, we need the line break
   }
 
-  fprintf (stderr, "%s", KNRM);
-
-}
-
-//externalize embedded alias to keep the flco function relatively clean
-void dmr_embedded_alias_header (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
-{
-  UNUSED(opts);
-
-  uint8_t slot = state->currentslot;
-  uint8_t format = (uint8_t)ConvertBitIntoBytes(&lc_bits[16], 2);
-  uint8_t len;
-
-  //this len seems to pertain to number of blocks? not bit len.
-  //len = (uint8_t)ConvertBitIntoBytes(&lc_bits[18], 5);
-
-  if (format == 0) len = 7;
-  else if (format == 1 || format == 2) len = 8;
-  else len = 16;
-
-  state->dmr_alias_format[slot] = format;
-  state->dmr_alias_len[slot] = len;
-
-  //fprintf (stderr, "F: %d L: %d - ", format, len);
-
-}
-
-void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
-{
-  UNUSED(opts);
-
-  fprintf (stderr, "%s", KYEL);
-  fprintf (stderr, " Embedded Alias: ");
-  uint8_t slot = state->currentslot;
-  uint8_t block = (uint8_t)ConvertBitIntoBytes(&lc_bits[2], 6); //FLCO equals block number
-  uint8_t format = state->dmr_alias_format[slot]; //0=7-bit; 1=ISO8; 2=UTF-8; 3=UTF16BE
-  uint8_t len =  state->dmr_alias_len[slot];
-  uint8_t start; //starting position depends on context of block and format
-  UNUSED(format);
-
-  //Cap Max Variation
-  uint8_t fid = (uint8_t)ConvertBitIntoBytes(&lc_bits[8], 8);
-  if (fid == 0x10) block = block - 0x10; //CapMax adds 0x10 to its FLCO (block num) in its Embedded Aliasing
-
-  //there is some issue with the next three lines of code that prevent proper assignments, not sure what.
-  //if (block > 4) start = 16;
-  //else if (block == 4 && format > 0) start = 23; //8-bit and 16-bit chars
-  //else start = 24;
-
-  //forcing start to 16 make it work on 8-bit alias, len seems okay when set off of format
-  start = 16;
-  len = 8;
-
-  // fprintf (stderr, "block: %d start: %d len: %d ", block, start, len);
-
-  //all may not be used depending on format, len, start.
-  uint16_t A0, A1, A2, A3, A4, A5, A6;
-
-  //sanity check
-  if (block > 7) block = 4; //prevent oob array (although we should never get here)
-
-  if (len > 6) //if not greater than zero, then the header hasn't arrived yet
-  {
-    A0 = 0; A1 = 0; A2 = 0; A3 = 0; A4 = 0; A5 = 0; A6 = 0; //NULL ASCII Characters
-    A0 = (uint16_t)ConvertBitIntoBytes(&lc_bits[start+len*0], len);
-    A1 = (uint16_t)ConvertBitIntoBytes(&lc_bits[start+len*1], len);
-    A2 = (uint16_t)ConvertBitIntoBytes(&lc_bits[start+len*2], len);
-    A3 = (uint16_t)ConvertBitIntoBytes(&lc_bits[start+len*3], len);
-    A4 = (uint16_t)ConvertBitIntoBytes(&lc_bits[start+len*4], len);
-    A5 = (uint16_t)ConvertBitIntoBytes(&lc_bits[start+len*5], len);
-    A6 = (uint16_t)ConvertBitIntoBytes(&lc_bits[start+len*6], len);
-
-    //just going to assign the usual ascii set here to prevent 'naughty' characters, sans diacriticals
-    if (A0 > 0x19 && A0 < 0x7F) sprintf (state->dmr_alias_block_segment[slot][block-4][0], "%c", A0);
-    if (A1 > 0x19 && A1 < 0x7F) sprintf (state->dmr_alias_block_segment[slot][block-4][1], "%c", A1);
-    if (A2 > 0x19 && A2 < 0x7F) sprintf (state->dmr_alias_block_segment[slot][block-4][2], "%c", A2);
-    if (A3 > 0x19 && A3 < 0x7F) sprintf (state->dmr_alias_block_segment[slot][block-4][3], "%c", A3);
-    if (A4 > 0x19 && A4 < 0x7F) sprintf (state->dmr_alias_block_segment[slot][block-4][4], "%c", A4);
-    if (A5 > 0x19 && A5 < 0x7F) sprintf (state->dmr_alias_block_segment[slot][block-4][5], "%c", A5);
-    if (A6 > 0x19 && A6 < 0x7F) sprintf (state->dmr_alias_block_segment[slot][block-4][6], "%c", A6);
-
-    for (int i = 0; i < 4; i++)
-    {
-      for (int j = 0; j < 7; j++)
-      {
-        fprintf (stderr, "%s", state->dmr_alias_block_segment[slot][i][j]);
-      }
-    }
-
-
-  }
-  else fprintf (stderr, "Missing Header Block Format and Len Data");
   fprintf (stderr, "%s", KNRM);
 
 }

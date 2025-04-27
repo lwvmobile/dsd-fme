@@ -553,6 +553,10 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   //LIP Debug Testing (need real world samples)
   // udt_format2 = 0x0B;
 
+  //WIP: Add this to event history //TODO: Double check len values on Text Messages
+  char udt_string[500]; memset (udt_string, 0, sizeof(udt_string));
+  sprintf (udt_string, "UDT SRC: %d; TGT: %d; ", udt_source, udt_target);
+
   //initial linebreak
   fprintf (stderr, "%s", KCYN);
   fprintf (stderr, "\n ");
@@ -561,10 +565,12 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   if (udt_format2 == 0x00)
   {
     fprintf (stderr, "Binary Data;");
+    strcat (udt_string, "Binary Data; ");
   }
   else if (udt_format2 == 0x01) //appended addresses
   {
     fprintf (stderr, "Appended Addressing;\n ");
+    strcat (udt_string, "Appended Addressing; ");
     if (udt_uab == 1) end = 3;
     if (udt_uab == 2) end = 7;
     if (udt_uab == 3) end = 11;
@@ -586,6 +592,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     end -= udt_padnib; //subtract padnib since its also 4 bits
 
     fprintf (stderr, "Dialer BCD: ");
+    strcat (udt_string, "Dialer Digits: ");
     for (i = 0; i < end; i++)
     {
       //dialer digits 7.2.9
@@ -595,6 +602,20 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       else if (digit == 11) fprintf (stderr, "#"); //pound/hash
       else if (digit == 15) fprintf (stderr, " "); //null character
       else fprintf (stderr, "R:%X", digit); //reserved values on 12,13, and 14
+
+      char dc[2]; dc[1] = 0;
+      if (digit < 10)
+        dc[0] = digit + 0x30;
+      else if (digit == 10)
+        dc[0] = 0x2A;
+      else if (digit == 11)
+        dc[0] = 0x23;
+      else if (digit == 15)
+        dc[0] = 0x20;
+      else //if 12, 13, 14, convert to its HEX letter representative C, D, or E
+        dc[0] = digit + 0x38;
+      
+      strcat (udt_string, dc);
     }
   }
   else if (udt_format2 == 0x03) //ISO7 format
@@ -605,17 +626,23 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 4) end = 52;
     end -= udt_padnib/7; //is this correct?
     fprintf (stderr, "ISO7 Text: "  );
+    strcat (udt_string, "ISO7 Text: ");
     for (i = 0; i < end; i++) //max 368/7 = 52 character max?
     {
       iso7c = (uint8_t)ConvertBitIntoBytes(&cs_bits[(i*7)+96], 7);
+      char i7c[2]; i7c[0] = iso7c; i7c[1] = 0;
       if (iso7c >= 0x20 && iso7c <= 0x7E) //Standard ASCII Set
+      {
         fprintf (stderr, "%c", iso7c);
+        strcat (udt_string, i7c);
+      }
       else fprintf (stderr, " ");
     }
   }
   else if (udt_format2 == 0x04) //ISO8 format
   {
     fprintf (stderr, "ISO8 Text: "  );
+    strcat (udt_string, "ISO8 Text: ");
     if (udt_uab == 1) end = 10;
     if (udt_uab == 2) end = 22;
     if (udt_uab == 3) end = 34;
@@ -624,8 +651,13 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     for (i = 0; i < end; i++)
     {
       iso8c = (uint8_t)ConvertBitIntoBytes(&cs_bits[(i*8)+96], 8);
+      char i8c[2]; i8c[0] = iso8c; i8c[1] = 0; 
       if (iso8c >= 0x20 && iso8c <= 0x7E) //Standard ASCII Set
+      {
         fprintf (stderr, "%c", iso8c);
+        strcat (udt_string, i8c);
+      }
+        
       // else if (iso8c >= 0x81 && iso8c <= 0xFE) //Extended ASCII Set
       //   fprintf (stderr, "%c", iso8c);
       else fprintf (stderr, " ");
@@ -639,11 +671,17 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 4) end = 23;
     end -= udt_padnib/4; //example, 4 blocks sets 23 - (20nibs/4bits) = 18 chars, may need to check this again
     fprintf (stderr, "UTF16 Text: "  );
+    strcat (udt_string, "UTF16 Text: ");
     for (i = 0; i < end; i++) //368/16 = 23 character max?
     {
       utf16c = (uint16_t)ConvertBitIntoBytes(&cs_bits[(i*16)+96], 16);
+      char u16[2]; u16[0] = utf16c & 0xFF; u16[1] = 0;
       if (utf16c >= 0x20 && utf16c != 0x7F) //avoid control chars
+      {
         fprintf (stderr, "%lc", utf16c); //will using lc work here? May depend on console locale settings?
+        strcat (udt_string, u16);
+      }
+        
       else fprintf (stderr, " ");
     }
   }
@@ -656,6 +694,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       fprintf (stderr, "%d.",(uint8_t)ConvertBitIntoBytes(&cs_bits[96+8], 8));
       fprintf (stderr, "%d.",(uint8_t)ConvertBitIntoBytes(&cs_bits[96+16], 8));
       fprintf (stderr, "%d", (uint8_t)ConvertBitIntoBytes(&cs_bits[96+24], 8));
+      strcat (udt_string, "IP4; ");
     }
     else //IP6
     {
@@ -668,6 +707,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+72], 16));
       fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+88], 16));
       fprintf (stderr, "%04X", (uint16_t)ConvertBitIntoBytes(&cs_bits[96+104], 16));
+      strcat (udt_string, "IP6; ");
     }
   }
   else if (udt_format2 == 0x0A) //Mixed Address/UTF-16BE
@@ -679,11 +719,17 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     end -= udt_padnib/4; //is this correct?
     fprintf (stderr, "Address: %d", (uint32_t)ConvertBitIntoBytes(&cs_bits[96+8], 24));
     fprintf (stderr, "Text: "  );
+    strcat (udt_string, "UTF16 Text: ");
     for (i = 0; i < end; i++) //368/16 = 21 character max
     {
       utf16c = (uint16_t)ConvertBitIntoBytes(&cs_bits[(i*16)+96], 16);
+      char u16[2]; u16[0] = utf16c & 0xFF; u16[1] = 0;
       if (utf16c >= 0x20 && utf16c != 0x7F) //avoid control chars
+      {
         fprintf (stderr, "%lc", utf16c);
+        strcat (udt_string, u16);
+      }
+        
       else fprintf (stderr, " ");
     }
   }
@@ -691,6 +737,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   {
     //Would be nice to be able to test these all out to make sure the conditions are okay, etc
     fprintf (stderr, "NMEA"  );
+    // strcat (udt_string, "NMEA; ");
     if (cs_bits[96] == 1) //check if its encrypted first
       fprintf (stderr, " Encrypted Format :("  ); //sad face
     else if (udt_uab == 1)
@@ -710,19 +757,24 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     //type bit to be read and then to decode accordingly, this assumes its the modified Short PDU that USBD uses
     fprintf (stderr, "\n");
     lip_protocol_decoder (opts, state, cs_bits+96); //start on first appended block, and not header
+    // strcat (udt_string, "LIP; ");
 
   }
   else if (udt_format2 == 0x08 || udt_format2 == 0x09)
   {
     fprintf (stderr, "MFID SPEC %02X: ", udt_format2);
     //use -Z to expose this
+    strcat (udt_string, "MFID Specific; ");
   }
   else
   {
     fprintf (stderr, "Reserved %02X: ", udt_format2);
+    strcat (udt_string, "Reserved; ");
     //use -Z to expose this
   }
   fprintf (stderr, "%s", KNRM);
+
+  watchdog_event_datacall (opts, state, udt_source, udt_target, udt_string, slot);
 }
 
 //assemble the blocks as they come in, shuffle them into the unified dmr_pdu_sf
@@ -1378,7 +1430,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
 {
   UNUSED(opts);
-
+  memset (state->gi, -1, sizeof(state->gi));
   memset (state->data_p_head, 0, sizeof(state->data_p_head));
   memset (state->data_conf_data, 0, sizeof(state->data_conf_data));
   memset (state->dmr_pdu_sf, 0, sizeof(state->dmr_pdu_sf));

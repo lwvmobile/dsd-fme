@@ -574,11 +574,11 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
   {
     state->dmr_alias_format[0] = 0x02;
     if (lsd_hex2 > 8) lsd_hex2 = 8; //sanity check
-    state->dmr_alias_len[0] = lsd_hex2;
+    state->dmr_alias_block_len[0] = lsd_hex2;
     state->data_block_counter[0] = 0;
   }
 
-  if ( (k >= state->dmr_alias_len[0]) && (state->dmr_alias_format[0] == 0x02) )
+  if ( (k >= state->dmr_alias_block_len[0]) && (state->dmr_alias_format[0] == 0x02) )
   {
     //storage for completed string
     char str[16]; int wr = 0; int tsrc = state->lastsrc; int z = 0; k = 0;
@@ -643,7 +643,7 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
     //reset values
     state->dmr_alias_format[0] = 0;
     state->data_block_counter[0] = 0;
-    state->dmr_alias_len[0] = 0;
+    state->dmr_alias_block_len[0] = 0;
     // memset (state->dmr_alias_block_segment, 0, sizeof(state->dmr_alias_block_segment));
   }
   #else

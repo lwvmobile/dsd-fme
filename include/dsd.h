@@ -98,7 +98,7 @@ typedef struct {
   uint32_t sys_id3;   //conventional may only use NAC, RAN, or Color Codes
   uint32_t sys_id4;   //
   uint32_t sys_id5;   //
-  uint8_t gi;         //group or individual
+  int8_t gi;          //group or individual
   uint8_t enc;        //clear or encrypted
   uint8_t enc_alg;    //alg if encrypted
   uint16_t enc_key;   //enc key id value, if encrypted (not key value or key variable)
@@ -581,7 +581,7 @@ typedef struct
   int lasttgR;
   int lastsrc;
   int lastsrcR;
-  uint8_t gi[2]; //group, or private call, per slot
+  int8_t gi[2]; //group, or private call, per slot
   uint8_t eh_index;
   int nac;
   int errs;
@@ -724,7 +724,8 @@ typedef struct
 
   //dmr talker alias new/fixed stuff
   uint8_t dmr_alias_format[2]; //per slot
-  uint8_t dmr_alias_len[2]; //per slot
+  uint8_t dmr_alias_block_len[2]; //per slot
+  uint8_t dmr_alias_char_size[2]; //per slot
   char dmr_alias_block_segment[2][4][7][16]; //2 slots, by 4 blocks, by up to 7 alias bytes that are up to 16-bit chars
   char dmr_embedded_gps[2][600]; //2 slots by 99 char string for string embedded gps
   char dmr_lrrp_gps[2][600]; //2 slots by 99 char string for string lrrp gps
@@ -1337,15 +1338,16 @@ void beeper (dsd_opts * opts, dsd_state * state, int lr); //the tone beeper func
 void dmr_gateway_identifier (uint32_t source, uint32_t target); //translate special addresses
 
 //Embedded Alias and GPS reports
-void dmr_embedded_alias_header (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
-void dmr_embedded_alias_blocks (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
+void dmr_talker_alias_lc_header (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t * lc_bits);
+void dmr_talker_alias_lc_blocks (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t block_num, uint8_t * lc_bits);
+void dmr_talker_alias_lc_decode (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t block_num, uint8_t char_size, uint16_t end);
 void apx_embedded_alias_test_phase1 (dsd_opts * opts, dsd_state * state);
 void apx_embedded_alias_header_phase1 (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t * lc_bits);
 void apx_embedded_alias_header_phase2 (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t * lc_bits);
 void apx_embedded_alias_blocks_phase1 (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t * lc_bits);
 void apx_embedded_alias_blocks_phase2 (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t * lc_bits);
 void apx_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_t slot, int16_t num_bits, uint8_t * input);
-void apx_embedded_alias_dump (dsd_opts * opts, dsd_state * state, uint16_t num_bytes, uint8_t * input, uint8_t * decoded);
+void apx_embedded_alias_dump (dsd_opts * opts, dsd_state * state, uint8_t slot, uint16_t num_bytes, uint8_t * input, uint8_t * decoded);
 void l3h_embedded_alias_blocks_phase1 (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t * lc_bits);
 void l3h_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_t slot, int16_t len, uint8_t * input);
 void tait_iso7_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_t slot, int16_t len, uint8_t * input);

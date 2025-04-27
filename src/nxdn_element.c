@@ -1310,16 +1310,22 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   if(MessageType == 0x1)
   {
     //only assign rid if not spare and not reserved (happens on private calls, unsure of its significance)
-    if ( (VoiceCallOption & 0xF) < 4) //ideally, only want 0, 2, or 3
+    if ( (VoiceCallOption & 0xF) < 4) //ideally, only want 0, 1, 2, 3, or 4 (or 6, 7 on telephone calls)
       state->nxdn_last_rid = SourceUnitID;
     state->nxdn_last_tg = DestinationID;
     state->nxdn_key = KeyID;
+    if (CallType == 0 || CallType == 1) //broadcast and group
+      state->gi[0] = 0;
+    else if (CallType == 4) //private
+      state->gi[0] = 1;
+    else state->gi[0] = -1; //unassigned on any other values
     state->nxdn_cipher_type = CipherType;
   }
   else
   {
     state->nxdn_last_rid = 0;
     state->nxdn_last_tg = 0;
+    state->gi[0] = -1;
     sprintf (state->str50a, "%s", "");
     memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
   }

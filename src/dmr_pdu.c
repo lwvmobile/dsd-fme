@@ -248,7 +248,7 @@ void dmr_udp_comp_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t
     slot = 1;
 
   char comp_string[500]; memset (comp_string, 0, sizeof(comp_string));
-  sprintf (comp_string, "Src Port Idx: %d (%s); Dst Port Idx: %d (%s); ", spid, portstring[0], dpid, portstring[1]);
+  sprintf (comp_string, "IPC: %d; OP: %d; SRC: %d:%d (%s):(%s); DST: %d:%d (%s):(%s); ", ipid, opcode, said, spid, addrstring[0], portstring[0], daid, dpid, addrstring[1], portstring[1]);
   watchdog_event_datacall (opts, state, said, daid, comp_string, slot);
 
 }
