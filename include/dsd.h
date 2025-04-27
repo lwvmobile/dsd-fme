@@ -734,7 +734,7 @@ typedef struct
   char active_channel[31][200]; //string for storing and displaying active trunking channels
 
   //Generic Talker Alias String
-  char generic_talker_alias[2][100];
+  char generic_talker_alias[2][500];
 
   dPMRVoiceFS2Frame_t dPMRVoiceFS2Frame;
 

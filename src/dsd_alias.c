@@ -737,7 +737,7 @@ void dmr_talker_alias_lc_decode (dsd_opts * opts, dsd_state * state, uint8_t slo
   fprintf (stderr, " Talker Alias: ");
 
   char alias_string[500]; memset (alias_string, 0, sizeof(alias_string));
-  sprintf (alias_string, "");
+  sprintf (alias_string, "%s", "");
 
   if (char_size == 7)
   {
