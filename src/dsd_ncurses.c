@@ -461,9 +461,6 @@ void print_menuc(WINDOW *menu_win, int highlight)
 
 void ncursesOpen (dsd_opts * opts, dsd_state * state)
 {
-  //this is primarily used to push a quick audio blip through OSS so it will show up in the mixer immediately
-  // if (opts->audio_out_type == 2 || opts->audio_out_type == 5)
-  //   beeper (opts, state, 0); //causes crash in Cygwin when mixed input/output
 
   //terminate all values
   for (int i = 0; i < 10; i++)
@@ -2223,11 +2220,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     sprintf (alias_ch[9], "%s", "");
     sprintf (state->str50a, "%s", "");
 
-    // if (opts->call_alert == 1)
-    // {
-    //   beeper (opts, state, 0);
-    // }
-
   }
 
   //TODO: Find better placement for these
@@ -2259,13 +2251,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][4] = dcc;
     call_matrix[9][5] = time(NULL);
 
-    // if (opts->call_alert == 1 && rd != 0 && tg != 0)
-    // {
-    //   //fprintf (stderr, "BEEP 0 MS LEFT\n");
-    //   beeper (opts, state, 0);
-    //   state->dmr_end_alert[0] = 0; //new voice frame, okay to beep at the end of it
-    // }
-
     memset(state->dmr_alias_block_segment[0], 0, sizeof(state->dmr_alias_block_segment[0]));
     sprintf (state->dmr_embedded_gps[0], "%s", "");
 
@@ -2291,13 +2276,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[4][3] = 1; //hard set slot number
     call_matrix[4][4] = dcc;
     call_matrix[4][5] = time(NULL);
-
-    // if (opts->call_alert == 1 && rd != 0 && tg != 0)
-    // {
-    //   //fprintf (stderr, "BEEP 0 BS LEFT\n");
-    //   beeper (opts, state, 0);
-    //   state->dmr_end_alert[0] = 0; //new voice frame, okay to beep at the end of it
-    // }
 
     memset(state->dmr_alias_block_segment[0], 0, sizeof(state->dmr_alias_block_segment[0]));
     sprintf (state->dmr_embedded_gps[0], "%s", "");
@@ -2325,13 +2303,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][4] = dcc;
     call_matrix[9][5] = time(NULL);
 
-    // if (opts->call_alert == 1 && rdR != 0 && tgR != 0)
-    // {
-    //   //fprintf (stderr, "BEEP 1 BS RIGHT\n");
-    //   beeper (opts, state, 1);
-    //   state->dmr_end_alert[1] = 0; //new voice frame, okay to beep at the end of it
-    // }
-
     memset(state->dmr_alias_block_segment[1], 0, sizeof(state->dmr_alias_block_segment[1]));
     sprintf (state->dmr_embedded_gps[1], "%s", "");
 
@@ -2357,35 +2328,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][4] = nc;
     call_matrix[9][5] = time(NULL);
 
-    // if (opts->call_alert == 1)
-    // {
-    //   beeper (opts, state, 0);
-    // }
-
   }
-
-  //Remus DMR End Call Alert Beep
-  // if (opts->call_alert == 1)
-  // {
-  //   if (state->dmrburstL == 2 && state->dmr_end_alert[0] == 0) //if TLC and flag not tripped
-  //   {
-  //     beeper (opts, state, 0);
-  //     state->dmr_end_alert[0] = 1; //don't play again until new voice frames
-  //     state->lasttg = 0;
-  //     state->lastsrc = 0;
-  //     rd = 0;
-  //     tg = 0;
-  //   }
-  //   if (state->dmrburstR == 2 && state->dmr_end_alert[1] == 0) //if TLC and flag not tripped
-  //   {
-  //     beeper (opts, state, 1);
-  //     state->dmr_end_alert[1] = 1; //don't play again until new voice frames
-  //     state->lasttgR = 0;
-  //     state->lastsrcR = 0;
-  //     rdR = 0;
-  //     tgR = 0;
-  //   }
-  // }
 
   //Start Printing Section
   erase();
@@ -4882,7 +4825,7 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
   //call alert beep when new call detected
   if (last_source_id == 0 && source_id != 0 && opts->call_alert == 1)
-    beeper (opts, state, slot, 45, 103, 3);
+    beeper (opts, state, slot, 45, 103, 6);
   
   if (source_id != last_source_id && last_source_id != 0)
   {
@@ -4913,7 +4856,7 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
     //end of voice call alert
     if (opts->call_alert == 1)
-      beeper (opts, state, slot, 35, 103, 3);
+      beeper (opts, state, slot, 35, 103, 6);
   }
 
 }
@@ -5420,5 +5363,5 @@ void watchdog_event_datacall (dsd_opts * opts, dsd_state * state, uint32_t src, 
 
   //call alert on data calls
   if (opts->call_alert)
-    beeper (opts, state, slot, 25, 103, 3); //TODO: Find good souding Tone ID and AD values
+    beeper (opts, state, slot, 25, 103, 6); //TODO: Find good souding Tone ID and AD values
 }
