@@ -376,7 +376,7 @@ void processdPMRvoice (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "%s", KNRM);
 
     //check other as well before assigning
-    if(state->dPMRVoiceFS2Frame.CallingIDOk) sprintf (state->dpmr_target_id, "%s", CalledID);
+    if(state->dPMRVoiceFS2Frame.CalledIDOk) sprintf (state->dpmr_target_id, "%s", CalledID);
 
   }
   else

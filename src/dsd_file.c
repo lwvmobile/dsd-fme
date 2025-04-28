@@ -515,7 +515,7 @@ SNDFILE * close_and_rename_wav_file(SNDFILE * wav_file, char * wav_out_filename,
 
   //check for String based TGT and SRC values (M17, YSF, DSTAR)
   if (is_string == 1)
-    sprintf (new_filename, "%s/%s_%s_%05d_%s_TGT_%s_SRC_%s.wav", dir, datestr, timestr, random_number, sys_str, src_str, tgt_str);
+    sprintf (new_filename, "%s/%s_%s_%05d_%s_TGT_%s_SRC_%s.wav", dir, datestr, timestr, random_number, sys_str, tgt_str, src_str);
   else //is a numerical value
     sprintf (new_filename, "%s/%s_%s_%05d_%s_TGT_%d_SRC_%d.wav", dir, datestr, timestr, random_number, sys_str, target_id, source_id);
 

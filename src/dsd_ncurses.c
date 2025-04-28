@@ -4924,7 +4924,9 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
   uint32_t source_id = 0;
   uint32_t target_id = 0;
   char src_str[200]; memset (src_str, 0, sizeof(src_str));
+  sprintf (src_str, "%s", "BUMBLEBEETUNA");
   char tgt_str[200]; memset (tgt_str, 0, sizeof(tgt_str));
+  sprintf (tgt_str, "%s", "BUMBLEBEETUNA");
   uint16_t svc_opts = 0;
   uint8_t  subtype = 0;
   uint8_t  mfid = 0;
@@ -5138,6 +5140,9 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
         source_id = 0;
 
       sprintf (sysid_string, "DPMR_CC_%d", state->dpmr_color_code);
+
+      sprintf (src_str, "%s", state->dpmr_caller_id);
+      sprintf (tgt_str, "%s", state->dpmr_target_id);
     }
 
     if (state->lastsynctype == 14 || state->lastsynctype == 15 || state->lastsynctype == 37 || state->lastsynctype == 38) //EDACS Calls
@@ -5247,7 +5252,9 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
   else if (state->lastsynctype == 20 || state->lastsynctype == 24 || state->lastsynctype == 21 || state->lastsynctype == 25 || state->lastsynctype == 22 || state->lastsynctype == 26 || state->lastsynctype == 23 || state->lastsynctype == 27) //dPMR
   {
     //TODO: See if we can add some decoded data as well in the future to an event string
-    sprintf (event_string, "%s %s %s TGT: %s SRC: %s ", datestr, timestr, sys_string, state->dpmr_target_id, state->dpmr_caller_id);
+    sprintf (event_string, "%s %s %s CC: %02d; TGT: %s; SRC: %s; ", datestr, timestr, sys_string, state->dpmr_color_code, state->dpmr_target_id, state->dpmr_caller_id);
+    if (state->dPMRVoiceFS2Frame.Version[0] == 3)
+      strcat (event_string, "Scrambler Enc; ");
   }
   //TODO: Find out why EDACS is also placing items into Slot 2 Event History with valid src, but invalid tg (not a problem, just odd)
   else if (state->lastsynctype == 14 || state->lastsynctype == 15 || state->lastsynctype == 37 || state->lastsynctype == 38) //EDACS Calls
@@ -5316,7 +5323,7 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
   else if (state->lastsynctype == 0 || state->lastsynctype == 1 || state->lastsynctype == 35 || state->lastsynctype == 36)
   {
     if (sys_id1)
-      sprintf (event_string, "%s %s %s TGT: %08d; SRC: %08d; NAC: %03X; SYS: %05X:%03X:%d.%d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3, sys_id1, sys_id2, sys_id4, sys_id5);
+      sprintf (event_string, "%s %s %s TGT: %08d; SRC: %08d; NAC: %03X; NET_STS: %05X:%03X:%d.%d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3, sys_id1, sys_id2, sys_id4, sys_id5);
     else
       sprintf (event_string, "%s %s %s TGT: %08d; SRC: %08d; NAC: %03X; ", datestr, timestr, sys_string, target_id, source_id, sys_id3);
     if (alg_id != 0 && alg_id != 0x80)
