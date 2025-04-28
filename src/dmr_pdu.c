@@ -22,7 +22,8 @@ uint16_t convert_hex_to_dec(uint16_t input)
 void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input)
 {
   uint8_t slot = state->currentslot;
-  sprintf (state->event_history_s[slot].Event_History_Items[0].text_message, "%s", "Full Text: "); //full text string
+  if (wr == 1)
+    sprintf (state->event_history_s[slot].Event_History_Items[0].text_message, "%s", ""); //full text string
   // fprintf (stderr, "\n UTF16 Text: ");
   uint16_t ch16 = 0;
   for (uint16_t i = 0; i < len; i += 2)
@@ -42,8 +43,10 @@ void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input
 
     //convert to ascii range (will break eastern langauge, but can't do much about that right now)
     char c[2]; c[0] = (char)input[i+1]; c[1] = 0;
-    if (wr == 1 && i < 76 && input[i] == 0 && input[i+1] < 0x7F && input[i+1] >= 0x20)
-      strcat (state->dmr_lrrp_gps[slot], c);
+
+    //short version (disabled)
+    // if (wr == 1 && i < 76 && input[i] == 0 && input[i+1] < 0x7F && input[i+1] >= 0x20)
+    //   strcat (state->dmr_lrrp_gps[slot], c);
 
     //this is the long version, complete message for logging purposes
     if (wr == 1 && input[i] == 0 && input[i+1] < 0x7F && input[i+1] >= 0x20)
@@ -52,8 +55,8 @@ void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input
   }
 
   //add elipses to indicate this is possibly truncated
-  if (wr == 1)
-    strcat (state->dmr_lrrp_gps[slot], "...");
+  // if (wr == 1)
+  //   strcat (state->dmr_lrrp_gps[slot], "...");
 
   //debug
   // if (wr == 1)
@@ -64,6 +67,10 @@ void utf8_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input)
 {
   uint8_t slot = state->currentslot;
   fprintf (stderr, "\n UTF8 Text: ");
+
+  if (wr == 1)
+    sprintf (state->event_history_s[slot].Event_History_Items[0].text_message, "%s", ""); //full text string
+
   for (uint16_t i = 0; i < len; i++)
   {
     if (input[i] >= 0x20 && input[i] < 0x7F) //if not a linebreak or terminal commmands
@@ -74,22 +81,30 @@ void utf8_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input)
     //   break;
     else fprintf (stderr, "-");
 
+    
+    char c = input[i];
+
     //for now, just rip the first 40 or so chars lower byte value
     //in the ASCII Range (should be alright for a quick visual)
-    char c = input[i];
-    if (wr == 1 && i < 38 && c < 0x7F && c >= 0x20)
-      strcat (state->dmr_lrrp_gps[slot], &c);
+    // if (wr == 1 && i < 38 && c < 0x7F && c >= 0x20)
+    //   strcat (state->dmr_lrrp_gps[slot], &c);
+
+    //this is the long version, complete message for logging purposes
+    if (wr == 1 && c < 0x7F && c >= 0x20)
+      strcat (state->event_history_s[slot].Event_History_Items[0].text_message, &c);
+
   }
 
   //add elipses to indicate this is possibly truncated
-  if (wr == 1)
-    strcat (state->dmr_lrrp_gps[slot], "...");
+  // if (wr == 1)
+  //   strcat (state->dmr_lrrp_gps[slot], "...");
 
 }
 
 void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_PDU)
 {
 
+  uint8_t slot = state->currentslot;
   uint16_t offset = 0; //sanity check of sorts, prevent extra long line print outs in the console
   if (len > 23)
     offset = 23;
@@ -99,18 +114,21 @@ void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   {
     utf8_to_text(state, 0, len-offset, DMR_PDU+offset);
     dmr_locn(opts, state, len, DMR_PDU);
+    sprintf (state->event_history_s[slot].Event_History_Items[0].gps_s, "%s", state->dmr_lrrp_gps[slot]);
   }
   else
   {
     if (len >= (127*18)) len = 127*18; //sanity check of sorts, prevent extra long line print outs in the console
-    utf8_to_text(state, 0, len, DMR_PDU); //generic catch-all to see if anything relevant is there
+    utf8_to_text(state, 1, len, DMR_PDU); //generic catch-all to see if anything relevant is there
     // utf16_to_text(state, 0, len, DMR_PDU); //generic catch-all to see if anything relevant is there
   }
 
-  //TODO: This
-  // char comp_string[500]; memset (comp_string, 0, sizeof(comp_string));
-  // sprintf (comp_string, "Src Port Idx: %d (%s); Dst Port Idx: %d (%s); ", spid, portstring[0], dpid, portstring[1]);
-  // watchdog_event_datacall (opts, state, said, daid, comp_string, slot);
+  //dump to event history
+  uint32_t source = state->dmr_lrrp_source[slot];
+  uint32_t target = state->dmr_lrrp_target[slot];
+  char comp_string[500]; memset (comp_string, 0, sizeof(comp_string));
+  sprintf (comp_string, "Short Data SRC: %d; TGT: %d; ", source, target);
+  watchdog_event_datacall (opts, state, source, target, comp_string, slot);
 
 }
 
@@ -420,7 +438,7 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
       }
       else
       {
-        strcat (state->dmr_lrrp_gps[slot], "ACK;");
+        strcat (state->dmr_lrrp_gps[slot], "Acknowledgment;");
         fprintf (stderr, "Acknowledgment;");
       }
     }
@@ -451,8 +469,8 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
       if (len > 29)
         len -= 29;
 
-      fprintf (stderr, "TMS;");
-      sprintf (state->dmr_lrrp_gps[slot], "TMS SRC: %d; DST: %d; ", src24, dst24);
+      fprintf (stderr, "ETSI TMS;");
+      sprintf (state->dmr_lrrp_gps[slot], "ETSI TMS SRC: %d; DST: %d; ", src24, dst24);
       utf16_to_text(state, 1, len, input+28);
     }
     else if (port1 == 5017 && port2 == 5017)

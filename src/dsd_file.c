@@ -495,11 +495,29 @@ SNDFILE * close_and_rename_wav_file(SNDFILE * wav_file, char * wav_out_filename,
   uint32_t source_id = event_struct->Event_History_Items[0].source_id;
   uint32_t target_id = event_struct->Event_History_Items[0].target_id;
 
-  //give extension .wav after closing
+  char sys_str[200]; memset (sys_str, 0, sizeof(sys_str));
+  char src_str[200]; memset (src_str, 0, sizeof(src_str));
+  char tgt_str[200]; memset (tgt_str, 0, sizeof(tgt_str));
+
+  sprintf (sys_str, "%s", event_struct->Event_History_Items[0].sysid_string);
+  sprintf (src_str, "%s", event_struct->Event_History_Items[0].src_str);
+  sprintf (tgt_str, "%s", event_struct->Event_History_Items[0].tgt_str);
+
+  uint8_t is_string = 0;
+  char emp_str[200]; memset (emp_str, 0, sizeof(emp_str));
+  sprintf (emp_str, "%s", "BUMBLEBEETUNA");
+  if (strncmp(emp_str, src_str, 13) != 0)
+    is_string = 1;
+
+  //rename and give extension .wav after closing
   char new_filename[2000];
   memset (new_filename, 0, sizeof(new_filename));
 
-  sprintf (new_filename, "%s/%s_%s_%05d_%s_TGT_%d_SRC_%d.wav", dir, datestr, timestr, random_number, event_struct->Event_History_Items[0].sysid_string, target_id, source_id);
+  //check for String based TGT and SRC values (M17, YSF, DSTAR)
+  if (is_string == 1)
+    sprintf (new_filename, "%s/%s_%s_%05d_%s_TGT_%s_SRC_%s.wav", dir, datestr, timestr, random_number, sys_str, src_str, tgt_str);
+  else //is a numerical value
+    sprintf (new_filename, "%s/%s_%s_%05d_%s_TGT_%d_SRC_%d.wav", dir, datestr, timestr, random_number, sys_str, target_id, source_id);
 
   if (timestr != NULL)
   {

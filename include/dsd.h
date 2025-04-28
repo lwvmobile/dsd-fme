@@ -106,6 +106,8 @@ typedef struct {
   uint16_t svc;       //other relevant svc opts if applicable
   uint32_t source_id; //source radio id or other source value
   uint32_t target_id; //group or individual target, or destination value
+  char src_str[200];  //source, expressed as a string for M17, YSF, DSTAR
+  char tgt_str[200];  //target, expressed as a string for M17, YSF, DSTAR
   uint32_t channel;   //if this occurs on a trunking channel, which channel
   time_t event_time;  //time event occurred
 

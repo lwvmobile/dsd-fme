@@ -3358,7 +3358,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       printw  ("%s ", state->dmr_embedded_gps[0]);
 
       //Embedded Talker Alias String
-      printw ("%s", state->generic_talker_alias[0]);
+      printw ("%s ", state->generic_talker_alias[0]);
 
       attroff(COLOR_PAIR(5));
       if (state->carrier == 1)
@@ -3532,7 +3532,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw  ("%s ", state->dmr_embedded_gps[1]);
 
         //Embedded Talker Alias String
-        printw ("%s", state->generic_talker_alias[1]);
+        printw ("%s ", state->generic_talker_alias[1]);
 
         attroff(COLOR_PAIR(5));
         if (state->carrier == 1)
@@ -4742,6 +4742,8 @@ void init_event_history (Event_History_I * event_struct, uint8_t start, uint8_t 
     event_struct->Event_History_Items[i].svc = 0;
     event_struct->Event_History_Items[i].source_id = 0;
     event_struct->Event_History_Items[i].target_id = 0;
+    sprintf (event_struct->Event_History_Items[i].src_str, "%s", "BUMBLEBEETUNA");
+    sprintf (event_struct->Event_History_Items[i].tgt_str, "%s", "BUMBLEBEETUNA");
     event_struct->Event_History_Items[i].channel = 0;
     event_struct->Event_History_Items[i].event_time = 0;
 
@@ -4776,6 +4778,8 @@ void push_event_history (Event_History_I * event_struct)
     event_struct->Event_History_Items[i].svc = event_struct->Event_History_Items[i-1].svc;
     event_struct->Event_History_Items[i].source_id = event_struct->Event_History_Items[i-1].source_id;
     event_struct->Event_History_Items[i].target_id = event_struct->Event_History_Items[i-1].target_id;
+    sprintf (event_struct->Event_History_Items[i].src_str, "%s", event_struct->Event_History_Items[i-1].src_str);
+    sprintf (event_struct->Event_History_Items[i].tgt_str, "%s", event_struct->Event_History_Items[i-1].tgt_str);
     event_struct->Event_History_Items[i].channel = event_struct->Event_History_Items[i-1].channel;
     event_struct->Event_History_Items[i].event_time = event_struct->Event_History_Items[i+1].event_time;
 
@@ -4803,7 +4807,7 @@ void write_event_to_log_file (dsd_opts * opts, dsd_state * state, char * event_s
   if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[0].alias, 13) != 0)
     fprintf (event_log_file, " Talker Alias: %s \n", state->event_history_s[slot].Event_History_Items[0].alias);
   if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[0].gps_s, 13) != 0)
-    fprintf (event_log_file, " Embedded GPS: %s \n", state->event_history_s[slot].Event_History_Items[0].gps_s);
+    fprintf (event_log_file, " GPS: %s \n", state->event_history_s[slot].Event_History_Items[0].gps_s);
 
   //flush and close log file
   fflush (event_log_file);
@@ -4919,6 +4923,8 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
   //TODO: Flesh out more later on.
   uint32_t source_id = 0;
   uint32_t target_id = 0;
+  char src_str[200]; memset (src_str, 0, sizeof(src_str));
+  char tgt_str[200]; memset (tgt_str, 0, sizeof(tgt_str));
   uint16_t svc_opts = 0;
   uint8_t  subtype = 0;
   uint8_t  mfid = 0;
@@ -5039,6 +5045,35 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
       else sprintf (event_struct->Event_History_Items[0].text_message, "%s", "BUMBLEBEETUNA");
 
       sprintf (sysid_string, "%s", "YSF");
+
+      char temp_str[20];
+      memset(temp_str, 0, sizeof(temp_str));
+
+      //set src string as a non-spaced non-garbo char string
+      for (uint8_t i = 0; i < 10; i++)
+      {
+        if (state->ysf_src[i] == 0x20) //spaces to underscore
+          temp_str[i] = 0x5F;
+        else if (state->ysf_src[i] > 0x20 && state->ysf_src[i] < 0x7F) //copy normal ascii range characters
+          temp_str[i] = state->ysf_src[i];
+        else if (state->ysf_src[i] == 0) break; //hit the terminator, so stop
+        else temp_str[i] = 0x5F; //unknown to underscore
+      }
+      sprintf (src_str, "%s", temp_str);
+
+      //same for tgt str
+      memset(temp_str, 0, sizeof(temp_str));
+      for (uint8_t i = 0; i < 10; i++)
+      {
+        if (state->ysf_tgt[i] == 0x20) //spaces to underscore
+          temp_str[i] = 0x5F;
+        else if (state->ysf_tgt[i] > 0x20 && state->ysf_tgt[i] < 0x7F) //copy normal ascii range characters
+          temp_str[i] = state->ysf_tgt[i];
+        else if (state->ysf_tgt[i] == 0) break; //hit the terminator, so stop
+        else temp_str[i] = 0x5F; //unknown to underscore
+      }
+      sprintf (tgt_str, "%s", temp_str);
+
     }
 
     if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17) //M17 STR
@@ -5047,6 +5082,8 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
       source_id = (uint32_t)state->m17_src;
       sys_id1 = state->m17_can;
       sprintf (sysid_string, "M17_CAN_%d", sys_id1);
+      sprintf (src_str, "%s", state->m17_src_csd);
+      sprintf (tgt_str, "%s", state->m17_dst_csd);
     }
 
     if (state->lastsynctype == 6 || state->lastsynctype == 7 || state->lastsynctype == 18 || state->lastsynctype == 19) //DSTAR
@@ -5060,6 +5097,34 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
         source_id = 0;
 
       sprintf (sysid_string, "%s", "DSTAR");
+
+      char temp_str[20];
+      memset(temp_str, 0, sizeof(temp_str));
+
+      //set src string as a non-spaced non-garbo char string
+      for (uint8_t i = 0; i < 12; i++)
+      {
+        if (state->dstar_src[i] == 0x20) //spaces to underscore
+          temp_str[i] = 0x5F;
+        else if (state->dstar_src[i] > 0x20 && state->dstar_src[i] < 0x7F) //copy normal ascii range characters
+          temp_str[i] = state->dstar_src[i];
+        else if (state->dstar_src[i] == 0) break; //hit the terminator, so stop
+        else temp_str[i] = 0x5F; //unknown to underscore
+      }
+      sprintf (src_str, "%s", temp_str);
+
+      //same for tgt str
+      memset(temp_str, 0, sizeof(temp_str));
+      for (uint8_t i = 0; i < 8; i++)
+      {
+        if (state->dstar_dst[i] == 0x20) //spaces to underscore
+          temp_str[i] = 0x5F;
+        else if (state->dstar_dst[i] > 0x20 && state->dstar_dst[i] < 0x7F) //copy normal ascii range characters
+          temp_str[i] = state->dstar_dst[i];
+        else if (state->dstar_dst[i] == 0) break; //hit the terminator, so stop
+        else temp_str[i] = 0x5F; //unknown to underscore
+      }
+      sprintf (tgt_str, "%s", temp_str);
     }
 
     if (state->lastsynctype == 20 || state->lastsynctype == 24 || state->lastsynctype == 21 || state->lastsynctype == 25 || state->lastsynctype == 22 || state->lastsynctype == 26 || state->lastsynctype == 23 || state->lastsynctype == 27) //dPMR
@@ -5152,6 +5217,8 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
     event_struct->Event_History_Items[0].channel = channel; //need to add this to trunking messages, if tuned from call grant
     event_struct->Event_History_Items[0].event_time = time(NULL);
     sprintf (event_struct->Event_History_Items[0].sysid_string, "%s", sysid_string);
+    sprintf (event_struct->Event_History_Items[0].src_str, "%s", src_str);
+    sprintf (event_struct->Event_History_Items[0].tgt_str, "%s", tgt_str);
   }
 
   //Craft an event string for ncurses event history, and a more complex string for logging

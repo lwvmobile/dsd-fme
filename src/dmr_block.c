@@ -1163,13 +1163,22 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
             dmr_lrrp (opts, state, len, msrc, mdst, state->dmr_pdu_sf[slot]+7);
           else if (mnis_type == 0x33) //check any potential texts in this message
             utf8_to_text(state, 0, 15, state->dmr_pdu_sf[slot]+7); //seen some ARS radio IDs in ASCII/ISO7/UTF8 format here
+          else if (mnis_type == 0x01) //nothing to test this with
+          {
+            utf8_to_text(state, 0, len-offset, state->dmr_pdu_sf[slot]+7);
+            dmr_locn(opts, state, len, state->dmr_pdu_sf[slot]+7);
+            sprintf (state->event_history_s[slot].Event_History_Items[0].gps_s, "%s", state->dmr_lrrp_gps[slot]);
+          }
 
-          if (mnis_type != 0x11)
+          //dump to event history
+          if (mnis_type != 0x11 && mnis_type != 0x01) //if not LRRP or LOCN
           {
             char mnis_str[200]; memset (mnis_str, 200, sizeof(mnis_str));
             sprintf (mnis_str, "MNIS TGT: %lld; SRC: %lld;", state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot]);
             watchdog_event_datacall (opts, state, state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot], mnis_str, slot);
           }
+          else if (mnis_type == 0x11 || mnis_type == 0x01) //LRRP or LOCN
+            watchdog_event_datacall (opts, state, state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot], state->dmr_lrrp_gps[slot], slot);
 
         }
         else
