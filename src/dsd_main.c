@@ -1320,8 +1320,17 @@
    state->dmr_color_code = 16;
    state->dmr_t3_syscode = 0;
  
-   state->event_history_s = calloc(1, 10000000000); //TODO: tweak this size later on
- 
+   //TODO: Test this in different environments before pushing it out
+   state->event_history_s = calloc(600, sizeof(Event_History)); //600 items at the size of the Event_History struct
+
+   //debug
+  //  fprintf (stderr, "allocated size of event history struct: %ld bytes; \n", 600 * sizeof(Event_History));
+
+   if (state->event_history_s == NULL)
+   {
+     fprintf (stderr, "memory allocation failure! \n");
+   }
+
    //initialize event history items (0 to 255)
    for (uint8_t i = 0; i < 2; i++)
      init_event_history(&state->event_history_s[i], 0, 255);

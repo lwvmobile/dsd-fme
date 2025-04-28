@@ -140,8 +140,7 @@ char * DMRBusrtTypes[32] = {
 
 };
 
-//Sorry Remus :(
-void beeper (dsd_opts * opts, dsd_state * state, int lr)
+void beeper (dsd_opts * opts, dsd_state * state, int lr, int id, int ad, int len)
 {
   UNUSED(state);
   int i, j, n;
@@ -156,14 +155,14 @@ void beeper (dsd_opts * opts, dsd_state * state, int lr)
   n = 0; //rolling sine wave 'degree'
 
   //each j increment is 20 ms at 160 samples / 8 kHz
-  for (j = 0; j < 3; j++)
+  for (j = 0; j < len; j++)
   {
     //'zero' out stereo mix samples
     memset (samp_fs, 0.1f, sizeof(samp_fs));
     memset (samp_ss, 0, sizeof(samp_ss));
 
     //generate a tone (ID=45, AD=103, rolling n value)
-    soft_tonef(samp_f, n, 45, 103);
+    soft_tonef(samp_f, n, id, ad);
 
     //convert float to short if required
     if (opts->floating_point == 0)
@@ -2224,10 +2223,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     sprintf (alias_ch[9], "%s", "");
     sprintf (state->str50a, "%s", "");
 
-    if (opts->call_alert == 1)
-    {
-      beeper (opts, state, 0);
-    }
+    // if (opts->call_alert == 1)
+    // {
+    //   beeper (opts, state, 0);
+    // }
 
   }
 
@@ -2260,12 +2259,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][4] = dcc;
     call_matrix[9][5] = time(NULL);
 
-    if (opts->call_alert == 1 && rd != 0 && tg != 0)
-    {
-      //fprintf (stderr, "BEEP 0 MS LEFT\n");
-      beeper (opts, state, 0);
-      state->dmr_end_alert[0] = 0; //new voice frame, okay to beep at the end of it
-    }
+    // if (opts->call_alert == 1 && rd != 0 && tg != 0)
+    // {
+    //   //fprintf (stderr, "BEEP 0 MS LEFT\n");
+    //   beeper (opts, state, 0);
+    //   state->dmr_end_alert[0] = 0; //new voice frame, okay to beep at the end of it
+    // }
 
     memset(state->dmr_alias_block_segment[0], 0, sizeof(state->dmr_alias_block_segment[0]));
     sprintf (state->dmr_embedded_gps[0], "%s", "");
@@ -2293,12 +2292,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[4][4] = dcc;
     call_matrix[4][5] = time(NULL);
 
-    if (opts->call_alert == 1 && rd != 0 && tg != 0)
-    {
-      //fprintf (stderr, "BEEP 0 BS LEFT\n");
-      beeper (opts, state, 0);
-      state->dmr_end_alert[0] = 0; //new voice frame, okay to beep at the end of it
-    }
+    // if (opts->call_alert == 1 && rd != 0 && tg != 0)
+    // {
+    //   //fprintf (stderr, "BEEP 0 BS LEFT\n");
+    //   beeper (opts, state, 0);
+    //   state->dmr_end_alert[0] = 0; //new voice frame, okay to beep at the end of it
+    // }
 
     memset(state->dmr_alias_block_segment[0], 0, sizeof(state->dmr_alias_block_segment[0]));
     sprintf (state->dmr_embedded_gps[0], "%s", "");
@@ -2326,12 +2325,12 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][4] = dcc;
     call_matrix[9][5] = time(NULL);
 
-    if (opts->call_alert == 1 && rdR != 0 && tgR != 0)
-    {
-      //fprintf (stderr, "BEEP 1 BS RIGHT\n");
-      beeper (opts, state, 1);
-      state->dmr_end_alert[1] = 0; //new voice frame, okay to beep at the end of it
-    }
+    // if (opts->call_alert == 1 && rdR != 0 && tgR != 0)
+    // {
+    //   //fprintf (stderr, "BEEP 1 BS RIGHT\n");
+    //   beeper (opts, state, 1);
+    //   state->dmr_end_alert[1] = 0; //new voice frame, okay to beep at the end of it
+    // }
 
     memset(state->dmr_alias_block_segment[1], 0, sizeof(state->dmr_alias_block_segment[1]));
     sprintf (state->dmr_embedded_gps[1], "%s", "");
@@ -2358,10 +2357,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     call_matrix[9][4] = nc;
     call_matrix[9][5] = time(NULL);
 
-    if (opts->call_alert == 1)
-    {
-      beeper (opts, state, 0);
-    }
+    // if (opts->call_alert == 1)
+    // {
+    //   beeper (opts, state, 0);
+    // }
 
   }
 
@@ -4880,6 +4879,10 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
     }
 
   }
+
+  //call alert beep when new call detected
+  if (last_source_id == 0 && source_id != 0 && opts->call_alert == 1)
+    beeper (opts, state, slot, 45, 103, 3);
   
   if (source_id != last_source_id && last_source_id != 0)
   {
@@ -4907,6 +4910,10 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
     memset(state->dstar_gps, 0, sizeof(state->dstar_gps));
     memset(state->dstar_txt, 0, sizeof(state->dstar_txt));
     state->gi[slot] = -1; //return to an unset value
+
+    //end of voice call alert
+    if (opts->call_alert == 1)
+      beeper (opts, state, slot, 35, 103, 3);
   }
 
 }
@@ -5410,4 +5417,8 @@ void watchdog_event_datacall (dsd_opts * opts, dsd_state * state, uint32_t src, 
     free (datestr);
     datestr = NULL;
   }
+
+  //call alert on data calls
+  if (opts->call_alert)
+    beeper (opts, state, slot, 25, 103, 3); //TODO: Find good souding Tone ID and AD values
 }
