@@ -1619,6 +1619,38 @@
  {
    openPulseOutput(opts);
  }
+
+  //push a DSD-FME started event so users can see what this section does, and also gives users an idea of when context started
+  watchdog_event_datacall (opts, state, 0, 0, "Any decoded voice calls or data calls display here;", 0);
+  push_event_history (&state->event_history_s[0]);
+  init_event_history (&state->event_history_s[0], 0, 1);
+  watchdog_event_datacall (opts, state, 0, 0, "DSD-FME Started and Event History Initialized;", 0);
+  push_event_history (&state->event_history_s[0]);
+  init_event_history (&state->event_history_s[0], 0, 1);
+
+  if (opts->event_out_file[0] != 0)
+  {
+    char * timestr = getTimeN(time(NULL));
+    char * datestr = getDateN(time(NULL));
+    char event_string[2000];
+    memset (event_string, 0, sizeof(event_string));
+    sprintf (event_string, "%s %s DSD-FME Started and Event History Initialized;", datestr, timestr);
+    write_event_to_log_file (opts, state, event_string);
+    memset (event_string, 0, sizeof(event_string));
+    sprintf (event_string, "%s %s Any decoded voice calls or data calls display here;", datestr, timestr);
+    write_event_to_log_file (opts, state, event_string);
+
+    if (timestr != NULL)
+    {
+      free (timestr);
+      timestr = NULL;
+    }
+    if (datestr != NULL)
+    {
+      free (datestr);
+      datestr = NULL;
+    }
+  }
  
  //test P25 moto alias by loading in test vectors captured from a system and dumped on forum (see dsd_gps.c)
  // apx_embedded_alias_test_phase1(opts, state); //enable this to run test

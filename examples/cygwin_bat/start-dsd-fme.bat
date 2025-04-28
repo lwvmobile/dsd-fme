@@ -48,21 +48,24 @@ set datetimestr=%d%_%t%
 set rnd=%RANDOM%
 
 @REM set log file relative filepath
-set "log=.\logs\log_%datetimestr%_%rnd%.txt"
+set "clog=.\logs\console_log_%datetimestr%_%rnd%.txt"
+set "elog=.\logs\event_log_%datetimestr%_%rnd%.txt"
 
 @REM create the log file now with touch
-.\dsd-fme\touch.exe %log%
+.\dsd-fme\touch.exe %clog%
+.\dsd-fme\touch.exe %elog%
 
-@REM Launch Tail to display the log in a seperate console window
-start .\dsd-fme\tail.exe -n 40 -f %log%
+@REM Launch Tail to display the console log and event log in a seperate console windows
+start .\dsd-fme\tail.exe -n 40 -f %clog%
+start .\dsd-fme\tail.exe -n 40 -f %elog%
 
 @REM start dsd-fme with options and log 
-.\dsd-fme\dsd-fme.exe %options% 2> %log%
+.\dsd-fme\dsd-fme.exe %options% -~ %elog% 2> %clog%
 
 echo ----------------------------------------------------------------------------------
 echo ----------------------------------------------------------------------------------
-echo For any errors, see: %log% 
-echo Forward %log% and Options: "%options%" 
+echo For any errors, see: %clog% 
+echo Forward %clog% and Options: "%options%" 
 echo to developer on Github or Radio Reference for troubleshooting.
 echo ----------------------------------------------------------------------------------
 echo ----------------------------------------------------------------------------------
