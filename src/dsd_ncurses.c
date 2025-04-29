@@ -28,25 +28,15 @@ uint32_t temp_freq = -1;
 
 //struct for checking existence of directory to write to
 struct stat st_wav = {0};
-static char alias_ch[10][50];
 int reset = 0;
 
 uint8_t eh_slot = 0; //testing only, have a toggle slot for history
 uint8_t eh_off  = 0; //testing only, index offset for scrolling history
 
-int tg;
-int tgR;
-int tgn;
-int rd;
-int rdR;
-int rn;
-int nc;
-int src;
 int lls = -1;
-int dcc = -1;
 int i = 0;
 char versionstr[25];
-unsigned long long int call_matrix[33][6];
+unsigned long long int edacs_channel_tree[33][6];
 
 char * FM_bannerN[9] = {
   "                                                         ",
@@ -154,6 +144,12 @@ void beeper (dsd_opts * opts, dsd_state * state, int lr, int id, int ad, int len
 
   n = 0; //rolling sine wave 'degree'
 
+  //double len if not using Pulse Audio,
+  //anything over UDP or using OSS may 
+  //not clear the buffer at the shorter len
+  if (opts->audio_out_type != 0)
+    len *= 2;
+
   //each j increment is 20 ms at 160 samples / 8 kHz
   for (j = 0; j < len; j++)
   {
@@ -161,7 +157,7 @@ void beeper (dsd_opts * opts, dsd_state * state, int lr, int id, int ad, int len
     memset (samp_fs, 0.1f, sizeof(samp_fs));
     memset (samp_ss, 0, sizeof(samp_ss));
 
-    //generate a tone (ID=45, AD=103, rolling n value)
+    //generate a tone with supplied tone ID and AD value
     soft_tonef(samp_f, n, id, ad);
 
     //convert float to short if required
@@ -404,7 +400,7 @@ char *choices[] = {
   "Decode YSF",
   "Toggle Signal Inversion",
   "Key Entry",
-  "Reset Call History",
+  "Reset Event History",
   "Toggle Payloads to Console",
   "Manually Set p2 Parameters", //16
   "Input & Output Options",
@@ -461,10 +457,6 @@ void print_menuc(WINDOW *menu_win, int highlight)
 
 void ncursesOpen (dsd_opts * opts, dsd_state * state)
 {
-
-  //terminate all values
-  for (int i = 0; i < 10; i++)
-    sprintf (alias_ch[i], "%s", "");
 
   UNUSED(opts); UNUSED(state);
 
@@ -535,7 +527,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
   state->payload_keyid = 0;
   state->payload_keyidR = 0;
 
-  //zero out to fix call history 'scrolling' bug when changing decoding types
+  //zero out
   state->nxdn_last_tg = 0;
   state->nxdn_last_ran = -1; //0
   state->nxdn_last_rid = 0; //0
@@ -1803,35 +1795,11 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       }
 
     }
-    if (choice == 15) //reset call history (usually if janky output when switching modes)
+    if (choice == 15) //reset event history
     {
-      for (short int k = 0; k < 10; k++)
-      {
-        call_matrix[k][0] = 0;
-        call_matrix[k][1] = 0;
-        call_matrix[k][2] = 0;
-        call_matrix[k][3] = 0;
-        call_matrix[k][4] = 0;
-        call_matrix[k][5] = 0;
-        sprintf (alias_ch[k], "%s", "");
-      }
-      src = 0;
-      rn = 0;
-      tgn = 0;
-      dcc = -1;
-      tg = 0;
-      tgR = 0;
-      rd = 0;
-      rdR = 0;
-      state->lastsrc = 0;
-      state->lastsrcR = 0;
-      state->lasttg = 0;
-      state->lasttgR = 0;
-      state->nxdn_last_ran = -1;
-      state->nxdn_last_rid = 0;
-      state->nxdn_last_tg = 0;
-      sprintf (state->str50a, "%s", "");
-      memset  (state->str50b, 0, 50*sizeof(char));
+      //initialize event history items (0 to 255)
+      for (uint8_t i = 0; i < 2; i++)
+        init_event_history(&state->event_history_s[i], 0, 255);
     }
 
     if (choice == 16) //toggle payload printing
@@ -2040,10 +2008,6 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   char * timestr = getTime();
   char * datestr = getDate();
 
-  //NOTE: Any times associates with call history are stored
-  //in the array and need to be set by passing those values into
-  //getTimeN and getDateN
-
   if (opts->audio_in_type != 1) //can't run getch/menu when using STDIN -
   {
     timeout(0);  //
@@ -2062,271 +2026,29 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   //Variable reset/set section
 
   //set lls sync types
-  if (state->synctype >= 0 && state->synctype < 39)
-  {
+  if (state->synctype >= 0)
     lls = state->synctype;
-  }
 
-  //NXDN -- I really need to fix this better, but this is good enough for today
-  if (state->nxdn_last_rid != src)
-  {
-    src = state->nxdn_last_rid;
-  }
-  if (state->nxdn_last_ran != -1 )
-  {
-    rn = state->nxdn_last_ran;
-  }
-  if (state->nxdn_last_tg != tgn)
-  {
-    tgn = state->nxdn_last_tg;
-  }
-
-  //DMR CC
-  if (state->color_code_ok && state->dmr_color_code != 16 && (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32 || lls == 33) )
-  {
-    dcc = state->dmr_color_code;
-  }
-
-  //DMR SRC
-  if ( (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32) )
-  //if ( (lls == 12 || lls == 11 || lls == 32) )
-  {
-    //if (state->dmrburstL == 16 && state->lastsrc > 0) //state->currentslot == 0 &&
-    if (state->lastsrc > 0)
-    {
-      rd = state->lastsrc;
-    }
-
-    //if (state->dmrburstR == 16 && state->lastsrcR > 0) //state->currentslot == 1 &&
-    if (state->lastsrcR > 0)
-    {
-      rdR = state->lastsrcR;
-    }
-
-  }
-
-  //DMR TG
-  if ( (lls == 12 || lls == 13 || lls == 10 || lls == 11 || lls == 32) )
-  //if ( (lls == 12 || lls == 11 || lls == 32) )
-  {
-    //if (state->dmrburstL == 16 && state->lasttg > 0) //state->currentslot == 0 &&
-    if (state->lasttg > 0)
-    {
-      tg = state->lasttg;
-    }
-
-    //if (state->dmrburstR == 16 && state->lasttgR > 0) //state->currentslot == 1 &&
-    if (state->lasttgR > 0)
-    {
-      tgR = state->lasttgR;
-
-    }
-
-  }
-
-  //P25 P1 and VCH0
-  if (state->p2_cc > 0)
-  {
-    nc = state->p2_cc;
-  }
-  if ( state->lasttg > 0 && (lls == 0 || lls == 1 || lls == 35 || lls == 36) )
-  {
-    tg = state->lasttg;
-  }
-  if ( state->lastsrc > 0 && (lls == 0 || lls == 1 || lls == 35 || lls == 36) )
-  {
-    rd = state->lastsrc;
-  }
-  //P25 P2 VCH2
-  if (state->lasttgR > 0 && (lls == 35 || lls == 36) )
-  {
-    tgR = state->lasttgR;
-  }
-  if (state->lastsrcR > 0 && (lls == 35 || lls == 36) )
-  {
-    rdR = state->lastsrcR;
-  }
-  //P25 P2 NAC to dcc for matrix shim
-  if (state->p2_cc > 0 && (lls == 35 || lls == 36) )
-  {
-    dcc = state->p2_cc;
-  }
-
-  //Call History Matrix Shuffling
-  //Edacs - ProVoice
+  //EDACS Channel Tree
   if ( (lls == 14 || lls == 15 || lls == 37 || lls == 38) && state->carrier == 1)
   {
 
     if (state->edacs_vc_lcn != -1)
     {
-      call_matrix[state->edacs_vc_lcn][0] = lls;
-      call_matrix[state->edacs_vc_lcn][1] = state->edacs_vc_lcn;
-      call_matrix[state->edacs_vc_lcn][2] = state->lasttg;
+      edacs_channel_tree[state->edacs_vc_lcn][0] = lls;
+      edacs_channel_tree[state->edacs_vc_lcn][1] = state->edacs_vc_lcn;
+      edacs_channel_tree[state->edacs_vc_lcn][2] = state->lasttg;
       //EDACS standard does not provide source LIDs on channel update messages; instead, for the sake of display, let's
       //assume the prior source for a given LCN is still accurate, unless we have an updated one provided (or the call
       //type has changed under us).
       //
       //If you MUST have perfectly-accurate source LIDs, look at the logged CC messages yourself - incorrect source LIDs
       //may be displayed if we miss an initial call channel assignment.
-      if (state->ea_mode == 1 || (state->lastsrc != 0 || call_matrix[state->edacs_vc_lcn][4] != state->edacs_vc_call_type))
-        call_matrix[state->edacs_vc_lcn][3] = state->lastsrc;
-      call_matrix[state->edacs_vc_lcn][4] = state->edacs_vc_call_type;
-      call_matrix[state->edacs_vc_lcn][5] = time(NULL);
+      if (state->ea_mode == 1 || (state->lastsrc != 0 || edacs_channel_tree[state->edacs_vc_lcn][4] != state->edacs_vc_call_type))
+        edacs_channel_tree[state->edacs_vc_lcn][3] = state->lastsrc;
+      edacs_channel_tree[state->edacs_vc_lcn][4] = state->edacs_vc_call_type;
+      edacs_channel_tree[state->edacs_vc_lcn][5] = time(NULL);
     }
-
-  }
-
-  //DSTAR
-  // if ( (lls == 6 || lls == 7 || lls == 18 || lls == 19) && (time(NULL) - call_matrix[9][5] > 5) && state->carrier == 1)
-  // {
-  //   for (short int k = 0; k < 9; k++)
-  //   {
-  //     call_matrix[k][0] = call_matrix[k+1][0];
-  //     call_matrix[k][1] = call_matrix[k+1][1];
-  //     call_matrix[k][2] = call_matrix[k+1][2];
-  //     call_matrix[k][3] = call_matrix[k+1][3];
-  //     call_matrix[k][4] = call_matrix[k+1][4];
-  //     call_matrix[k][5] = call_matrix[k+1][5];
-  //   }
-
-  //   call_matrix[9][0] = lls;
-  //   call_matrix[9][1] = 1;
-  //   call_matrix[9][2] = 1;
-  //   call_matrix[9][3] = 1;
-  //   call_matrix[9][4] = 1;
-  //   call_matrix[9][5] = time(NULL);
-
-  // }
-
-  //NXDN -- I really need to fix this better, but this is good enough for today
-  if ( call_matrix[9][2] != src && src != 0 && rn != -1 )
-  {
-    for (short int k = 0; k < 9; k++)
-    {
-      call_matrix[k][0] = call_matrix[k+1][0];
-      call_matrix[k][1] = call_matrix[k+1][1];
-      call_matrix[k][2] = call_matrix[k+1][2];
-      call_matrix[k][3] = call_matrix[k+1][3];
-      call_matrix[k][4] = call_matrix[k+1][4];
-      call_matrix[k][5] = call_matrix[k+1][5];
-      sprintf (alias_ch[k], "%s", alias_ch[k+1]);
-    }
-    call_matrix[9][0] = lls;
-    call_matrix[9][1] = tgn; //was rn, switch to tgn so it'll show tg in call history
-    call_matrix[9][2] = src;
-    call_matrix[9][3] = 0;
-    call_matrix[9][4] = rn; //was tgn, switched with rn
-    call_matrix[9][5] = time(NULL);
-    sprintf (alias_ch[9], "%s", "");
-    sprintf (state->str50a, "%s", "");
-
-  }
-
-  //TODO: Find better placement for these
-  if ( strcmp(state->str50a, "") != 0 )
-    sprintf (alias_ch[9], "%s", state->str50a);
-
-  //tdma only
-  // if ( strcmp(state->str50b, "") != 0 )
-  //   sprintf (alias_ch[5], "%s", state->str50a);
-
-  //DMR MS
-  if ( call_matrix[9][2] != rd && lls == 32)
-  {
-
-    for (short int k = 0; k < 10; k++)
-    {
-      call_matrix[k][0] = call_matrix[k+1][0];
-      call_matrix[k][1] = call_matrix[k+1][1];
-      call_matrix[k][2] = call_matrix[k+1][2];
-      call_matrix[k][3] = call_matrix[k+1][3];
-      call_matrix[k][4] = call_matrix[k+1][4];
-      call_matrix[k][5] = call_matrix[k+1][5];
-    }
-
-    call_matrix[9][0] = lls;
-    call_matrix[9][1] = tg;
-    call_matrix[9][2] = rd;
-    call_matrix[9][3] = 1; //hard set slot number
-    call_matrix[9][4] = dcc;
-    call_matrix[9][5] = time(NULL);
-
-    memset(state->dmr_alias_block_segment[0], 0, sizeof(state->dmr_alias_block_segment[0]));
-    sprintf (state->dmr_embedded_gps[0], "%s", "");
-
-  }
-
-  //DMR BS Slot 1 - matrix 0-4
-  if ( call_matrix[4][2] != rd && (lls == 11 || lls == 12 || lls == 10 || lls == 13 || lls == 35 || lls == 36) )
-  {
-
-    for (short int k = 0; k < 4; k++)
-    {
-      call_matrix[k][0] = call_matrix[k+1][0];
-      call_matrix[k][1] = call_matrix[k+1][1];
-      call_matrix[k][2] = call_matrix[k+1][2];
-      call_matrix[k][3] = call_matrix[k+1][3];
-      call_matrix[k][4] = call_matrix[k+1][4];
-      call_matrix[k][5] = call_matrix[k+1][5];
-    }
-
-    call_matrix[4][0] = lls;
-    call_matrix[4][1] = tg;
-    call_matrix[4][2] = rd;
-    call_matrix[4][3] = 1; //hard set slot number
-    call_matrix[4][4] = dcc;
-    call_matrix[4][5] = time(NULL);
-
-    memset(state->dmr_alias_block_segment[0], 0, sizeof(state->dmr_alias_block_segment[0]));
-    sprintf (state->dmr_embedded_gps[0], "%s", "");
-
-  }
-
-  //DMR BS Slot 2 - matrix 5-9
-  if ( call_matrix[9][2] != rdR && (lls == 11 || lls == 12 || lls == 10 || lls == 13 || lls == 35 || lls == 36) )
-  {
-
-    for (short int k = 5; k < 9; k++)
-    {
-      call_matrix[k][0] = call_matrix[k+1][0];
-      call_matrix[k][1] = call_matrix[k+1][1];
-      call_matrix[k][2] = call_matrix[k+1][2];
-      call_matrix[k][3] = call_matrix[k+1][3];
-      call_matrix[k][4] = call_matrix[k+1][4];
-      call_matrix[k][5] = call_matrix[k+1][5];
-    }
-
-    call_matrix[9][0] = lls;
-    call_matrix[9][1] = tgR;
-    call_matrix[9][2] = rdR;
-    call_matrix[9][3] = 2; //hard set slot number
-    call_matrix[9][4] = dcc;
-    call_matrix[9][5] = time(NULL);
-
-    memset(state->dmr_alias_block_segment[1], 0, sizeof(state->dmr_alias_block_segment[1]));
-    sprintf (state->dmr_embedded_gps[1], "%s", "");
-
-  }
-
-  //P25 P1
-  if ( (lls == 0 || lls == 1) && call_matrix[9][2] != rd && nc > 0 && tg > 0 && state->dmrburstL == 26)
-  {
-    for (short int k = 0; k < 9; k++)
-    {
-      call_matrix[k][0] = call_matrix[k+1][0];
-      call_matrix[k][1] = call_matrix[k+1][1];
-      call_matrix[k][2] = call_matrix[k+1][2];
-      call_matrix[k][3] = call_matrix[k+1][3];
-      call_matrix[k][4] = call_matrix[k+1][4];
-      call_matrix[k][5] = call_matrix[k+1][5];
-    }
-
-    call_matrix[9][0] = lls;
-    call_matrix[9][1] = tg;
-    call_matrix[9][2] = rd;
-    call_matrix[9][3] = 0;
-    call_matrix[9][4] = nc;
-    call_matrix[9][5] = time(NULL);
 
   }
 
@@ -2966,22 +2688,21 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     printw ("\n");
     printw ("| ");
-    printw ("TGT: [%5d] ", tgn);
-    printw ("SRC: [%5d] ", src);
-    // if (state->nxdn_alias_block_segment[0][0] > 0) //consider disabling this
-      printw ("Alias: [%s]", alias_ch[9]);
+    printw ("TGT: [%5d] ", state->nxdn_last_tg);
+    printw ("SRC: [%5d] ", state->nxdn_last_rid);
+    printw ("Alias: [%s]", state->generic_talker_alias[0]);
 
     //Group Name Labels from CSV import
     for (int k = 0; k < state->group_tally; k++)
     {
-      if (state->group_array[k].groupNumber == tgn)
+      if (state->group_array[k].groupNumber == state->nxdn_last_tg)
       {
         printw ("TG: ");
         attron(COLOR_PAIR(4));
         printw (" [%s]", state->group_array[k].groupName);
         printw ("[%s] ", state->group_array[k].groupMode);
       }
-      else if (state->group_array[k].groupNumber == src)
+      else if (state->group_array[k].groupNumber == state->nxdn_last_rid)
       {
         attron(COLOR_PAIR(4));
         printw (" [%s]", state->group_array[k].groupName);
@@ -3074,7 +2795,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| ");
     if (lls > 1 && lls < 30)
     {
-      printw ("DMR BS - DCC: %02i; ", dcc);
+      printw ("DMR BS - DCC: %02i; ", state->dmr_color_code);
       // printw ("%s %s", state->dmr_branding, state->dmr_branding_sub);
       printw ("%s ", state->dmr_branding);
       printw ("%s", state->dmr_branding_sub);
@@ -3095,7 +2816,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     }
     else if (lls == 32 || lls == 33 || lls == 34)
     {
-      printw ("DMR MS - DCC: %02i; ", dcc);
+      printw ("DMR MS - DCC: %02i; ", state->dmr_color_code);
     }
     else if (lls == 0 || lls == 1) //P1
     {
@@ -3108,7 +2829,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //load talker aliases here (Moto, Tait, Harris)
       for (int16_t i = 0; i < state->group_tally; i++)
       {
-        if (state->group_array[i].groupNumber == rd) //or state->lastsrc
+        if (state->group_array[i].groupNumber == state->lastsrc) //or state->lastsrc
         {
           sprintf (state->generic_talker_alias[0], "%s", state->group_array[i].groupName);
           break;
@@ -3142,7 +2863,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //load talker aliases here (Moto, Tait, Harris)
       for (int16_t i = 0; i < state->group_tally; i++)
       {
-        if (state->group_array[i].groupNumber == rd) //or state->lastsrc
+        if (state->group_array[i].groupNumber == state->lastsrc)
         {
           sprintf (state->generic_talker_alias[0], "%s", state->group_array[i].groupName);
           break;
@@ -3152,7 +2873,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //load talker aliases here (Moto, Tait, Harris)
       for (int16_t i = 0; i < state->group_tally; i++)
       {
-        if (state->group_array[i].groupNumber == rdR) //or state->lastsrc
+        if (state->group_array[i].groupNumber == state->lastsrcR)
         {
           sprintf (state->generic_talker_alias[1], "%s", state->group_array[i].groupName);
           break;
@@ -3589,7 +3310,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         printw ("| Monitoring VC - LCN [%02d]\n", state->edacs_tuned_lcn);
         //since we are tuned, keep updating the time so it doesn't disappear during call
-        call_matrix[state->edacs_tuned_lcn][5] = time(NULL);
+        edacs_channel_tree[state->edacs_tuned_lcn][5] = time(NULL);
       }
       printw ("| SITE [%03lld][%02llX]", state->edacs_site_id, state->edacs_site_id);
 
@@ -3608,9 +3329,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     for (i = 1; i <= state->edacs_lcn_count; i++)
     {
       // Compute AFS for display purposes only
-      int a = (call_matrix[i][2] >> state->edacs_a_shift) & state->edacs_a_mask;
-      int f = (call_matrix[i][2] >> state->edacs_f_shift) & state->edacs_f_mask;
-      int s = call_matrix[i][2] & state->edacs_s_mask;
+      int a = (edacs_channel_tree[i][2] >> state->edacs_a_shift) & state->edacs_a_mask;
+      int f = (edacs_channel_tree[i][2] >> state->edacs_f_shift) & state->edacs_f_mask;
+      int s = edacs_channel_tree[i][2] & state->edacs_s_mask;
       printw ("| - LCN [%02d][%010.06lf] MHz", i, (double)state->trunk_lcn_freq[i-1]/1000000);
 
       //print Control Channel on LCN line with the current Control Channel
@@ -3623,13 +3344,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
       int print_call = 0;
       //print active calls on corresponding LCN line
-      if ((i != state->edacs_cc_lcn) && time(NULL) - call_matrix[i][5] < 2)
+      if ((i != state->edacs_cc_lcn) && time(NULL) - edacs_channel_tree[i][5] < 2)
       {
         print_call = 3;
         attron (COLOR_PAIR(3));
       }
       //print dying or dead calls in red for x seconds longer
-      else if ( (i != state->edacs_cc_lcn) && (time(NULL) - call_matrix[i][5] >= 2) && (time(NULL) - call_matrix[i][5] < 5) )
+      else if ( (i != state->edacs_cc_lcn) && (time(NULL) - edacs_channel_tree[i][5] >= 2) && (time(NULL) - edacs_channel_tree[i][5] < 5) )
       {
         print_call = 2;
         attron (COLOR_PAIR(2));
@@ -3640,69 +3361,69 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         if (state->ea_mode == 1)
         {
           // Voice call
-          if ((call_matrix[i][4] & EDACS_IS_VOICE) != 0)
+          if ((edacs_channel_tree[i][4] & EDACS_IS_VOICE) != 0)
           {
             // Group call
-            if ((call_matrix[i][4] & EDACS_IS_GROUP) != 0)
-              printw (" TGT [%8lld] SRC [%8lld]", call_matrix[i][2], call_matrix[i][3] );
+            if ((edacs_channel_tree[i][4] & EDACS_IS_GROUP) != 0)
+              printw (" TGT [%8lld] SRC [%8lld]", edacs_channel_tree[i][2], edacs_channel_tree[i][3] );
             // I-Call
-            else if ((call_matrix[i][4] & EDACS_IS_INDIVIDUAL) != 0)
-              printw (" TGT [%8lld] SRC [%8lld] I-Call", call_matrix[i][2], call_matrix[i][3] );
+            else if ((edacs_channel_tree[i][4] & EDACS_IS_INDIVIDUAL) != 0)
+              printw (" TGT [%8lld] SRC [%8lld] I-Call", edacs_channel_tree[i][2], edacs_channel_tree[i][3] );
             // System all-call
-            else if ((call_matrix[i][4] & EDACS_IS_ALL_CALL) != 0)
-              printw (" TGT [ SYSTEM ] SRC [%8lld] All-Call", call_matrix[i][3] );
+            else if ((edacs_channel_tree[i][4] & EDACS_IS_ALL_CALL) != 0)
+              printw (" TGT [ SYSTEM ] SRC [%8lld] All-Call", edacs_channel_tree[i][3] );
             // Interconnect call
-            else if ((call_matrix[i][4] & EDACS_IS_INTERCONNECT) != 0)
-              printw (" TGT [ SYSTEM ] SRC [%8lld] Interconnect", call_matrix[i][3] );
+            else if ((edacs_channel_tree[i][4] & EDACS_IS_INTERCONNECT) != 0)
+              printw (" TGT [ SYSTEM ] SRC [%8lld] Interconnect", edacs_channel_tree[i][3] );
             // Test call
-            else if ((call_matrix[i][4] & EDACS_IS_TEST_CALL) != 0)
+            else if ((edacs_channel_tree[i][4] & EDACS_IS_TEST_CALL) != 0)
               printw (" TGT [ SYSTEM ] SRC [ SYSTEM ] Test Call");
             // Unknown call
             else
               printw (" Unknown call type" );
 
             // Call flags
-            if ((call_matrix[i][4] & EDACS_IS_TEST_CALL) != 0) {}
-            else if ((call_matrix[i][4] & EDACS_IS_DIGITAL) == 0)   printw (" [Ana]");
+            if ((edacs_channel_tree[i][4] & EDACS_IS_TEST_CALL) != 0) {}
+            else if ((edacs_channel_tree[i][4] & EDACS_IS_DIGITAL) == 0)   printw (" [Ana]");
             else                                                    printw (" [Dig]");
-            if ((call_matrix[i][4] & EDACS_IS_EMERGENCY) != 0)      printw ("[EM]");
+            if ((edacs_channel_tree[i][4] & EDACS_IS_EMERGENCY) != 0)      printw ("[EM]");
           }
           else
             // Data call
-            printw (" TGT [  DATA  ] SRC [%8lld] Data", call_matrix[i][3] );
+            printw (" TGT [  DATA  ] SRC [%8lld] Data", edacs_channel_tree[i][3] );
         }
         else
         {
           // Voice call
-          if ((call_matrix[i][4] & EDACS_IS_VOICE) != 0)
+          if ((edacs_channel_tree[i][4] & EDACS_IS_VOICE) != 0)
           {
             // Group call
-            if ((call_matrix[i][4] & EDACS_IS_GROUP) != 0)
+            if ((edacs_channel_tree[i][4] & EDACS_IS_GROUP) != 0)
             {
               char afs_str[8];
               getAfsString(state, afs_str, a, f, s);
-              printw (" TGT [%6lld][%s] SRC [%5lld]", call_matrix[i][2], afs_str, call_matrix[i][3] );
+              printw (" TGT [%6lld][%s] SRC [%5lld]", edacs_channel_tree[i][2], afs_str, edacs_channel_tree[i][3] );
             }
             // I-Call
-            else if ((call_matrix[i][4] & EDACS_IS_INDIVIDUAL) != 0)
+            else if ((edacs_channel_tree[i][4] & EDACS_IS_INDIVIDUAL) != 0)
               if (getAfsStringLength(state) == 6)
-                printw (" TGT [%6lld][ UNIT ] SRC [%5lld] I-Call", call_matrix[i][2], call_matrix[i][3] );
+                printw (" TGT [%6lld][ UNIT ] SRC [%5lld] I-Call", edacs_channel_tree[i][2], edacs_channel_tree[i][3] );
               else
-                printw (" TGT [%6lld][  UNIT ] SRC [%5lld] I-Call", call_matrix[i][2], call_matrix[i][3] );
+                printw (" TGT [%6lld][  UNIT ] SRC [%5lld] I-Call", edacs_channel_tree[i][2], edacs_channel_tree[i][3] );
             // System all-call
-            else if ((call_matrix[i][4] & EDACS_IS_ALL_CALL) != 0)
+            else if ((edacs_channel_tree[i][4] & EDACS_IS_ALL_CALL) != 0)
               if (getAfsStringLength(state) == 6)
-                printw (" TGT [    SYSTEM    ] SRC [%5lld] All-Call", call_matrix[i][3] );
+                printw (" TGT [    SYSTEM    ] SRC [%5lld] All-Call", edacs_channel_tree[i][3] );
               else
-                printw (" TGT [     SYSTEM    ] SRC [%5lld] All-Call", call_matrix[i][3] );
+                printw (" TGT [     SYSTEM    ] SRC [%5lld] All-Call", edacs_channel_tree[i][3] );
             // Interconnect call
-            else if ((call_matrix[i][4] & EDACS_IS_INTERCONNECT) != 0)
+            else if ((edacs_channel_tree[i][4] & EDACS_IS_INTERCONNECT) != 0)
               if (getAfsStringLength(state) == 6)
-                printw (" TGT [    SYSTEM    ] SRC [%5lld] Interconnect", call_matrix[i][3] );
+                printw (" TGT [    SYSTEM    ] SRC [%5lld] Interconnect", edacs_channel_tree[i][3] );
               else
-                printw (" TGT [     SYSTEM    ] SRC [%5lld] Interconnect", call_matrix[i][3] );
+                printw (" TGT [     SYSTEM    ] SRC [%5lld] Interconnect", edacs_channel_tree[i][3] );
             // Test call
-            else if ((call_matrix[i][4] & EDACS_IS_TEST_CALL) != 0)
+            else if ((edacs_channel_tree[i][4] & EDACS_IS_TEST_CALL) != 0)
               if (getAfsStringLength(state) == 6)
                 printw (" TGT [    SYSTEM    ] SRC [ SYS ] Test Call");
               else
@@ -3712,29 +3433,29 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
               printw (" Unknown call type" );
 
             // Call flags
-            if ((call_matrix[i][4] & EDACS_IS_TEST_CALL) != 0) {}
-            else if ((call_matrix[i][4] & EDACS_IS_DIGITAL) == 0)   printw (" [Ana]");
+            if ((edacs_channel_tree[i][4] & EDACS_IS_TEST_CALL) != 0) {}
+            else if ((edacs_channel_tree[i][4] & EDACS_IS_DIGITAL) == 0)   printw (" [Ana]");
             else                                                    printw (" [Dig]");
-            if ((call_matrix[i][4] & EDACS_IS_AGENCY_CALL) != 0)    printw ("[A]");
-            if ((call_matrix[i][4] & EDACS_IS_FLEET_CALL) != 0)     printw ("[F]");
-            if ((call_matrix[i][4] & EDACS_IS_EMERGENCY) != 0)      printw ("[EM]");
+            if ((edacs_channel_tree[i][4] & EDACS_IS_AGENCY_CALL) != 0)    printw ("[A]");
+            if ((edacs_channel_tree[i][4] & EDACS_IS_FLEET_CALL) != 0)     printw ("[F]");
+            if ((edacs_channel_tree[i][4] & EDACS_IS_EMERGENCY) != 0)      printw ("[EM]");
           }
           // Data call
           else
             if (getAfsStringLength(state) == 6)
-              printw (" TGT [     DATA     ] SRC [%5lld] Data", call_matrix[i][3] );
+              printw (" TGT [     DATA     ] SRC [%5lld] Data", edacs_channel_tree[i][3] );
             else
-              printw (" TGT [      DATA     ] SRC [%5lld] Data", call_matrix[i][3] );
+              printw (" TGT [      DATA     ] SRC [%5lld] Data", edacs_channel_tree[i][3] );
         }
         for (int k = 0; k < state->group_tally; k++)
         {
-          if (state->group_array[k].groupNumber == call_matrix[i][2] && call_matrix[i][2] != 0)
+          if (state->group_array[k].groupNumber == edacs_channel_tree[i][2] && edacs_channel_tree[i][2] != 0)
           {
             printw (" [%s]", state->group_array[k].groupName);
             printw ("[%s]", state->group_array[k].groupMode);
             break;
           }
-          else if (state->group_array[k].groupNumber == call_matrix[i][3] && call_matrix[i][3] != 0)
+          else if (state->group_array[k].groupNumber == edacs_channel_tree[i][3] && edacs_channel_tree[i][3] != 0)
           {
             printw (" [%s]", state->group_array[k].groupName);
             printw ("[%s]", state->group_array[k].groupMode);
@@ -3763,7 +3484,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (state->carrier == 1){ //same as above
     attroff(COLOR_PAIR(3));
   }
-  //only print call history if enabled
+  //only print event history if enabled
   if (opts->ncurses_history == 1)
   {
     attron(COLOR_PAIR(4)); //cyan for history
@@ -4833,7 +4554,7 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
   //call alert beep when new call detected
   if (last_source_id == 0 && source_id != 0 && opts->call_alert == 1)
-    beeper (opts, state, slot, 45, 103, 6);
+    beeper (opts, state, slot, 40, 86, 3);
   
   if (source_id != last_source_id && last_source_id != 0)
   {
@@ -4864,7 +4585,7 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
     //end of voice call alert
     if (opts->call_alert == 1)
-      beeper (opts, state, slot, 35, 103, 6);
+      beeper (opts, state, slot, 40, 86, 3);
   }
 
 }
@@ -5433,5 +5154,5 @@ void watchdog_event_datacall (dsd_opts * opts, dsd_state * state, uint32_t src, 
 
   //call alert on data calls
   if (opts->call_alert)
-    beeper (opts, state, slot, 25, 103, 6); //TODO: Find good souding Tone ID and AD values
+    beeper (opts, state, slot, 80, 20, 3);
 }

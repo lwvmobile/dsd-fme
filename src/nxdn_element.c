@@ -779,12 +779,8 @@ void NXDN_decode_Alias(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     //juggle strings here so we don't get compiler warnings on assignment size
     memcpy (str_b, str_a, 48); str_b[49] = '\0';
 
-    //one noteable issue is that on conventional, its possible to decode an alias before decong the src id
-    //just depends on reception and if VCALL is decoded before Alias, this will lead to alias being assigned
-    //to incorrect src values or placement in the ncurses terminal's call history section
-
-    if (state->nxdn_last_rid != 0)
-      sprintf (state->str50a, "%s", str_b);
+    sprintf (state->generic_talker_alias[0], "%s", str_b);
+    sprintf (state->event_history_s[0].Event_History_Items[0].alias, "%s; ", str_b);
 
   }
 
@@ -1326,7 +1322,7 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     state->nxdn_last_rid = 0;
     state->nxdn_last_tg = 0;
     state->gi[0] = -1;
-    sprintf (state->str50a, "%s", "");
+    sprintf (state->generic_talker_alias[0], "%s", "");
     memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
   }
 

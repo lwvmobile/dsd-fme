@@ -546,7 +546,7 @@
    memset(state->m17_meta, 0, sizeof(state->m17_meta));
  
    //misc str storage
-   sprintf (state->str50a, "%s", "");
+  //  sprintf (state->str50a, "%s", "");
    // memset (state->str50b, 0, 50*sizeof(char));
    // memset (state->str50c, 0, 50*sizeof(char));
    // memset (state->m17sms, 0, 800*sizeof(char));
@@ -1288,7 +1288,7 @@
    state->m17_str_dt = 9;
  
    //misc str storage
-   sprintf (state->str50a, "%s", "");
+  //  sprintf (state->str50a, "%s", "");
    memset (state->str50b, 0, 50*sizeof(char));
    memset (state->str50c, 0, 50*sizeof(char));
    memset (state->m17sms, 0, 800*sizeof(char));
