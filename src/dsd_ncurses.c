@@ -4686,6 +4686,10 @@ void init_event_history (Event_History_I * event_struct, uint8_t start, uint8_t 
     event_struct->Event_History_Items[i].target_id = 0;
     sprintf (event_struct->Event_History_Items[i].src_str, "%s", "BUMBLEBEETUNA");
     sprintf (event_struct->Event_History_Items[i].tgt_str, "%s", "BUMBLEBEETUNA");
+    sprintf (event_struct->Event_History_Items[i].t_name,  "%s", "BUMBLEBEETUNA");
+    sprintf (event_struct->Event_History_Items[i].s_name,  "%s", "BUMBLEBEETUNA");
+    sprintf (event_struct->Event_History_Items[i].t_mode,  "%s", "BUMBLEBEETUNA");
+    sprintf (event_struct->Event_History_Items[i].s_mode,  "%s", "BUMBLEBEETUNA");
     event_struct->Event_History_Items[i].channel = 0;
     event_struct->Event_History_Items[i].event_time = 0;
 
@@ -4722,6 +4726,10 @@ void push_event_history (Event_History_I * event_struct)
     event_struct->Event_History_Items[i].target_id = event_struct->Event_History_Items[i-1].target_id;
     sprintf (event_struct->Event_History_Items[i].src_str, "%s", event_struct->Event_History_Items[i-1].src_str);
     sprintf (event_struct->Event_History_Items[i].tgt_str, "%s", event_struct->Event_History_Items[i-1].tgt_str);
+    sprintf (event_struct->Event_History_Items[i].t_name, "%s", event_struct->Event_History_Items[i-1].t_name);
+    sprintf (event_struct->Event_History_Items[i].s_name, "%s", event_struct->Event_History_Items[i-1].s_name);
+    sprintf (event_struct->Event_History_Items[i].t_mode, "%s", event_struct->Event_History_Items[i-1].t_mode);
+    sprintf (event_struct->Event_History_Items[i].s_mode, "%s", event_struct->Event_History_Items[i-1].s_mode);
     event_struct->Event_History_Items[i].channel = event_struct->Event_History_Items[i-1].channel;
     event_struct->Event_History_Items[i].event_time = event_struct->Event_History_Items[i+1].event_time;
 
@@ -4877,6 +4885,17 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
   sprintf (src_str, "%s", "BUMBLEBEETUNA");
   char tgt_str[200]; memset (tgt_str, 0, sizeof(tgt_str));
   sprintf (tgt_str, "%s", "BUMBLEBEETUNA");
+
+  //group import items
+  char t_name[200]; memset (t_name, 0, sizeof(t_name));
+  sprintf (t_name, "%s", "BUMBLEBEETUNA");
+  char s_name[200]; memset (s_name, 0, sizeof(s_name));
+  sprintf (s_name, "%s", "BUMBLEBEETUNA");
+  char t_mode[200]; memset (t_mode, 0, sizeof(t_mode));
+  sprintf (t_mode, "%s", "BUMBLEBEETUNA");
+  char s_mode[200]; memset (s_mode, 0, sizeof(s_mode));
+  sprintf (s_mode, "%s", "BUMBLEBEETUNA");
+
   uint16_t svc_opts = 0;
   uint8_t  subtype = 0;
   uint8_t  mfid = 0;
@@ -5140,6 +5159,38 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
   }
 
+  //if we have a group_array import, search and load it here
+  //will search and load both target values, and src values if available
+  uint8_t t_name_loaded = 0;
+  uint8_t s_name_loaded = 0;
+  if (target_id != 0)
+  {
+    for (int i = 0; i < state->group_tally; i++)
+    {
+      if (state->group_array[i].groupNumber == target_id)
+      {
+        sprintf (t_name, "%s", state->group_array[i].groupName);
+        sprintf (t_mode, "%s", state->group_array[i].groupMode);
+        t_name_loaded = 1;
+        break;
+      }
+    }
+  }
+
+  if (source_id != 0) //&& state->gi[slot] == 1
+  {
+    for (int i = 0; i < state->group_tally; i++)
+    {
+      if (state->group_array[i].groupNumber == source_id)
+      {
+        sprintf (s_name, "%s", state->group_array[i].groupName);
+        sprintf (s_mode, "%s", state->group_array[i].groupMode);
+        s_name_loaded = 1;
+        break;
+      }
+    }
+  }
+
   //system type string (P25, DMR, etc)
   char * sys_string = "Digital";
   if (state->lastsynctype != -1)
@@ -5174,6 +5225,12 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
     sprintf (event_struct->Event_History_Items[0].sysid_string, "%s", sysid_string);
     sprintf (event_struct->Event_History_Items[0].src_str, "%s", src_str);
     sprintf (event_struct->Event_History_Items[0].tgt_str, "%s", tgt_str);
+
+    sprintf (event_struct->Event_History_Items[0].t_name, "%s", t_name);
+    sprintf (event_struct->Event_History_Items[0].s_name, "%s", s_name);
+    sprintf (event_struct->Event_History_Items[0].t_mode, "%s", t_mode);
+    sprintf (event_struct->Event_History_Items[0].s_mode, "%s", s_mode);
+    
   }
 
   //Craft an event string for ncurses event history, and a more complex string for logging
@@ -5308,6 +5365,19 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
       strcat (event_string, "Group; ");
     else if (state->gi[slot] == 1)
       strcat (event_string, "Private; ");
+  }
+
+  if (t_name_loaded)
+  {
+    char group[400];
+    sprintf (group, "T Name: %s; Mode: %s; ", t_name, t_mode);
+    strcat (event_string, group);
+  }
+  if (s_name_loaded)
+  {
+    char private[400];
+    sprintf (private, "S Name: %s; Mode: %s; ", s_name, s_mode);
+    strcat (event_string, private);
   }
 
   sprintf (event_struct->Event_History_Items[0].event_string, "%s", event_string);
