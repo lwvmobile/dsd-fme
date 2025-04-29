@@ -5090,14 +5090,14 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
   if (t_name_loaded)
   {
-    char group[400];
-    sprintf (group, "T Name: %s; Mode: %s; ", t_name, t_mode);
+    char group[420];
+    sprintf (group, "TName: %s; Mode: %s; ", t_name, t_mode);
     strcat (event_string, group);
   }
   if (s_name_loaded)
   {
-    char private[400];
-    sprintf (private, "S Name: %s; Mode: %s; ", s_name, s_mode);
+    char private[420];
+    sprintf (private, "SName: %s; Mode: %s; ", s_name, s_mode);
     strcat (event_string, private);
   }
 

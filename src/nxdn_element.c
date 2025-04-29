@@ -745,9 +745,11 @@ void NXDN_decode_Alias(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 
   char str_a[120]; char str_b[50];
 
+  //TODO: Revisit the debug here and see if anythign comes out of it,
+  //maybe go on the assumptiont his works very similar to DMR talker alias
   //debug/test
-  // fprintf (stderr, " U1: %02X U2: %02X;", unk1, unk2);
-  // fprintf (stderr, " A:%d/%d; ", blocknumber, total);
+  // fprintf (stderr, " U1: %02X U2: %02X;", unk1, unk2); //these always appear to be the same two byte values, even across different systems and languages
+  // fprintf (stderr, " A:%d/%d; ", blocknumber, total); //this is accurate info here
 
   //sanity check to prevent OOB array assignment
   if (blocknumber > 0 && blocknumber < 4) //last 'block' may have been assigning garbage name values -- I'm honestly not sure block'4' contains Alias data, but other data or something
