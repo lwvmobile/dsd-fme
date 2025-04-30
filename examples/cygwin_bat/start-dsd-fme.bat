@@ -59,8 +59,8 @@ set "elog=.\logs\event_log_%datetimestr%_%rnd%.txt"
 start .\dsd-fme\tail.exe -n 40 -f %clog%
 start .\dsd-fme\tail.exe -n 40 -f %elog%
 
-@REM start dsd-fme with options and log 
-.\dsd-fme\dsd-fme.exe %options% -~ %elog% 2> %clog%
+@REM start dsd-fme with options and logs 
+.\dsd-fme\dsd-fme.exe %options% -J %elog% 2> %clog%
 
 echo ----------------------------------------------------------------------------------
 echo ----------------------------------------------------------------------------------

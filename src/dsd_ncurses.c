@@ -4463,16 +4463,19 @@ void push_event_history (Event_History_I * event_struct)
   }
 }
 
-void write_event_to_log_file (dsd_opts * opts, dsd_state * state, char * event_string) //pass completed event string here that is in the struct
+void write_event_to_log_file (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t swrite, char * event_string) //pass completed event string here that is in the struct
 {
 
   //open log file
   FILE * event_log_file;
   event_log_file = fopen(opts->event_out_file, "a");
 
-  fprintf (event_log_file, "%s \n", event_string);
+  fprintf (event_log_file, "%s ", event_string);
+  if (swrite == 1)
+    fprintf (event_log_file, "Slot %d; ", slot+1);
+  fprintf (event_log_file,"\n");
+
   char text_string[2000]; sprintf (text_string, "%s", "BUMBLEBEETUNA");
-  uint8_t slot = state->currentslot;
   if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[0].text_message, 13) != 0)
     fprintf (event_log_file, "%s \n", state->event_history_s[slot].Event_History_Items[0].text_message);
   if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[0].alias, 13) != 0)
@@ -4492,6 +4495,9 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
   //create a pointer to the current slot event history
   Event_History_I * event_struct = &state->event_history_s[slot];
 
+  //is this a TDMA slot (append Slot value to end of written event history)
+  uint8_t swrite = 0;
+
   //who is currently talking
   uint32_t source_id = 0;
 
@@ -4502,6 +4508,13 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
     source_id = state->lastsrc;
   else
     source_id = state->lastsrcR;
+
+  //if DMR BS or P25P2, then flag the swrite, so write can append slot value to event history log //|| state->lastsynctype == 32 || state->lastsynctype == 33 || state->lastsynctype == 34　MS
+  if (state->lastsynctype == 10 || state->lastsynctype == 11 || state->lastsynctype == 12 || state->lastsynctype == 13)
+    swrite = 1;
+  
+  else if (state->lastsynctype == 35 || state->lastsynctype == 36)
+    swrite = 1;
 
   if (slot == 0) //BUGFIX: generic catch on FDMA systems so that we don't write duplicate data to slot 2 event history
   {
@@ -4560,7 +4573,9 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
   {
 
     if (opts->event_out_file[0] != 0)
-      write_event_to_log_file(opts, state, event_struct->Event_History_Items[0].event_string);
+      write_event_to_log_file(opts, state, slot, swrite, event_struct->Event_History_Items[0].event_string);
+
+    event_struct->Event_History_Items[0].write = 1; //written, or pushed at this point
 
     if (slot == 0 && opts->wav_out_f != NULL)
     {
@@ -4923,7 +4938,7 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
   if (source_id != 0)
   {
-    event_struct->Event_History_Items[0].write = 1; //TODO: Write a 1 here after written to a log
+    event_struct->Event_History_Items[0].write = 0;
     if (state->lastsynctype != -1)
       event_struct->Event_History_Items[0].systype = state->lastsynctype;
     else event_struct->Event_History_Items[0].systype = 39; //generic digital call
@@ -5118,7 +5133,7 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
 void watchdog_event_datacall (dsd_opts * opts, dsd_state * state, uint32_t src, uint32_t dst, char * data_string, uint8_t slot)
 {
   UNUSED(opts);
-  state->event_history_s[slot].Event_History_Items[0].write = 1; //TODO: Write a 1 here when written to a log
+  state->event_history_s[slot].Event_History_Items[0].write = 0;
   state->event_history_s[slot].Event_History_Items[0].systype = state->lastsynctype;
   state->event_history_s[slot].Event_History_Items[0].subtype = 6; //data
   state->event_history_s[slot].Event_History_Items[0].gi = state->gi[slot];

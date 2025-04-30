@@ -37,10 +37,10 @@ printFrameInfo (dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "NAC/CC: %03llX; ", state->p2_cc);
   else fprintf (stderr, "NAC: %03X; ", state->nac);
 
-  if (state->p2_siteid != 0)
-    fprintf (stderr, "Site: %03lld; ", state->p2_siteid);
   if (state->p2_rfssid != 0)
     fprintf (stderr, "RFSS: %03lld; ", state->p2_rfssid);
+  if (state->p2_siteid != 0)
+    fprintf (stderr, "Site: %03lld; ", state->p2_siteid);
   fprintf (stderr, "%s", KNRM);
 
 }

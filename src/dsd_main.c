@@ -1412,7 +1412,7 @@
    printf ("                 (Running in console will use static wav files)\n");
    printf ("  -a            Enable Call Alert Beep (NCurses Terminal Only)\n");
    printf ("                 (Warning! Might be annoying.)\n");
-   printf ("  -~ <file>     Specify Filename for Event Log Output.\n");
+   printf ("  -J <file>     Specify Filename for Event Log Output.\n");
    printf ("  -L <file>     Specify Filename for LRRP Data Output.\n");
    printf ("  -Q <file>     Specify Filename for OK-DMRlib Structured File Output. (placed in DSP folder)\n");
    printf ("  -Q <file>     Specify Filename for M17 Float Stream Output. (placed in DSP folder)\n");
@@ -1644,10 +1644,10 @@
     char event_string[2000];
     memset (event_string, 0, sizeof(event_string));
     sprintf (event_string, "%s %s DSD-FME Started and Event History Initialized;", datestr, timestr);
-    write_event_to_log_file (opts, state, event_string);
+    write_event_to_log_file (opts, state, 0, 0, event_string);
     memset (event_string, 0, sizeof(event_string));
     sprintf (event_string, "%s %s Any decoded voice calls or data calls display here;", datestr, timestr);
-    write_event_to_log_file (opts, state, event_string);
+    write_event_to_log_file (opts, state, 0, 0, event_string);
 
     if (timestr != NULL)
     {
@@ -1830,7 +1830,7 @@
  
    exitflag = 0;
  
-   while ((c = getopt (argc, argv, "~:yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:JO")) != -1)
+   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:J:O")) != -1)
      {
  
        switch (c)
@@ -1854,7 +1854,7 @@
          //'K' is now used for hexidecimal key.csv imports
  
          //this is a debug option hidden from users, but use it to replay .bin files on loop
-         case 'J':
+         case '~':
            state.debug_mode = 1;
            fprintf (stderr, "Debug Mode Enabled; \n");
            break;
@@ -2193,7 +2193,7 @@
            fprintf (stderr,"Writing + Appending LRRP data to file %s\n", opts.lrrp_out_file);
            break;
  
-         case '~': //Event output to file
+         case 'J': //Event output to file (J for Journal)
            strncpy(opts.event_out_file, optarg, 1023);
            opts.event_out_file[1023] = '\0';
            fprintf (stderr,"Writing + Appending Event History to file %s\n", opts.lrrp_out_file);
