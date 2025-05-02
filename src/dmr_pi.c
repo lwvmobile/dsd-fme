@@ -16,7 +16,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
 
   uint8_t MFID = PI_BYTE[1];
 
-  if((IrrecoverableErrors == 0))
+  if(IrrecoverableErrors == 0)
   {
 
     //update cc amd vc sync time for trunking purposes (particularly Con+)

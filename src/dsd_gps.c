@@ -95,7 +95,7 @@ void lip_protocol_decoder (dsd_opts * opts, dsd_state * state, uint8_t * input)
   int dt = (int)dir;
 
   //sanity check
-  if (abs (latitude) < 90 && abs(longitude) < 180)
+  if (fabs (latitude) < 90 && fabs(longitude) < 180)
   {
     fprintf (stderr, "Src(Hash); %03d;  Lat: %.5lf%s%s Lon: %.5lf%s%s (%.5lf, %.5lf); Spd: %d km/h; Dir: %d%s",add_hash, latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, lat_sf * latitude, lon_sf * longitude, vt, dt, deg_glyph);
 
@@ -627,7 +627,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
     longitude = ((double)lon * lon_unit);
 
     //sanity check
-    if (abs (latitude) < 90 && abs(longitude) < 180)
+    if (fabs(latitude) < 90 && fabs(longitude) < 180)
     {
       fprintf (stderr, " Lat: %.5lf%s%s Lon: %.5lf%s%s (%.5lf, %.5lf)", latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, lat_sf * latitude, lon_sf * longitude);
 

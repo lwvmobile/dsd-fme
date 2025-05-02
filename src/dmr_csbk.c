@@ -700,8 +700,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           uint8_t ann_res = (uint8_t)ConvertBitIntoBytes(&bpbits1[0], 4);
           uint8_t cc_ch1 = (uint8_t)ConvertBitIntoBytes(&bpbits1[4], 4);
           uint8_t cc_ch2 = (uint8_t)ConvertBitIntoBytes(&bpbits1[8], 4);
-          uint8_t ch1_flag = bpbits1[13];
-          uint8_t ch2_flag = bpbits1[14];
+          uint8_t ch1_flag = bpbits1[12];
+          uint8_t ch2_flag = bpbits1[13];
 
           uint16_t bcast_ch1 = (uint16_t)ConvertBitIntoBytes(&bpbits2[0], 12);
           uint16_t bcast_ch2 = (uint16_t)ConvertBitIntoBytes(&bpbits2[12], 12);

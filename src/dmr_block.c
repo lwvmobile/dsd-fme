@@ -132,7 +132,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     udt_uab += 1; //add 1 internally, up to 4 appended blocks are carried, min is 1
 
     //NMEA Specific Fix for unspecified MFID format w/ 2 appended blocks (UAB 2) p291
-    if (udt_uab == 0x5 && udt_uab == 3)
+    if (udt_format == 0x5 && udt_uab == 3)
       udt_uab = 2; //set to two if long unspecified format
 
     //Note: NMEA Reserved value UAB 3 is not referenced in ETSI, so unknown number of

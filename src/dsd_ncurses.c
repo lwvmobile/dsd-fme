@@ -154,7 +154,7 @@ void beeper (dsd_opts * opts, dsd_state * state, int lr, int id, int ad, int len
   for (j = 0; j < len; j++)
   {
     //'zero' out stereo mix samples
-    memset (samp_fs, 0.1f, sizeof(samp_fs));
+    memset (samp_fs, 0, sizeof(samp_fs));
     memset (samp_ss, 0, sizeof(samp_ss));
 
     //generate a tone with supplied tone ID and AD value

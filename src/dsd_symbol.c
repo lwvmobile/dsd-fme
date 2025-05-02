@@ -639,13 +639,6 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
     state->symbolc = fgetc(opts->symbolfile);
 
-    //experimental throttle
-    if (state->use_throttle == 1)
-    {
-      // useconds_t stime = state->symbol_throttle;
-      // usleep(stime);
-      usleep(.003); //very environment specific, tuning to cygwin
-    }
     //fprintf(stderr, "%d", state->symbolc);
     if( feof(opts->symbolfile) )
     {

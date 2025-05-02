@@ -368,7 +368,9 @@ void apx_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_t slot
       uint8_t shortstop = accum_mult | 0x1;
       uint8_t increment = shortstop << 1;
 
-      while(mult2 != -1 && shortstop != 1)
+      //clang warning -- warning: result of comparison of constant -1 with expression of type 'uint8_t' (aka 'unsigned char') is always true [-Wtautological-constant-out-of-range-compare]
+      // while(mult2 != -1 && shortstop != 1) //clang warning can't be -1 if uint8_t (set to 255 instead?)
+      while(shortstop != 1) //this one tests out okay, so may use it instead
       {
         shortstop += increment;
         mult2 += 2;
