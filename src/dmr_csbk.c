@@ -613,7 +613,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         if (p_kind == 0) fprintf (stderr, " Disable Target PTT (DIS_PTT)");
         if (p_kind == 1) fprintf (stderr, " Enable Target PTT (EN_PTT)");
-        if (p_kind == 2) fprintf (stderr, " Call (ILLEGALLY_PARKED)");
+        if (p_kind == 2) fprintf (stderr, " Call Hangtime (ILLEGALLY_PARKED)");
         if (p_kind == 3) fprintf (stderr, " Enable Target MS PTT (EN_PTT_ONE_MS)");
 
         fprintf (stderr, "\n");
@@ -629,11 +629,13 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           {
             if (state->currentslot == 0) state->dmrburstL = 1;
             else state->dmrburstR = 1;
+            state->gi[state->currentslot] = 0;
           }
           if (!gi && opts->trunk_tune_private_calls == 1)
           {
             if (state->currentslot == 0) state->dmrburstL = 1;
             else state->dmrburstR = 1;
+            state->gi[state->currentslot] = 1;
           }
         }
 

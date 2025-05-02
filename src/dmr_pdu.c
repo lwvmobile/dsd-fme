@@ -119,7 +119,7 @@ void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
   else
   {
     if (len >= (127*18)) len = 127*18; //sanity check of sorts, prevent extra long line print outs in the console
-    utf8_to_text(state, 1, len, DMR_PDU); //generic catch-all to see if anything relevant is there
+    utf8_to_text(state, 0, len, DMR_PDU); //generic catch-all to see if anything relevant is there
     // utf16_to_text(state, 0, len, DMR_PDU); //generic catch-all to see if anything relevant is there
   }
 
@@ -493,7 +493,7 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
     }
     else
     {
-      sprintf (state->dmr_lrrp_gps[slot], "IP SRC: %d.%d.%d.%d:%d; DST: %d.%d.%d.%d:%d;", input[12], input[13], input[14], input[15], port1, input[16], input[17], input[18], input[19], port2);
+      sprintf (state->dmr_lrrp_gps[slot], "IP SRC: %d.%d.%d.%d:%d; DST: %d.%d.%d.%d:%d; Unknown UDP Port;", input[12], input[13], input[14], input[15], port1, input[16], input[17], input[18], input[19], port2);
       fprintf (stderr, "Unknown UDP Port;");
       // if (len > 28) //default catch all (debug only)
       //   utf8_to_text(state, 0, len-28, input+28);
@@ -504,7 +504,7 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
 
   else
   {
-    sprintf (state->dmr_lrrp_gps[slot], "IP SRC: %d.%d.%d.%d; DST: %d.%d.%d.%d; Protocol: %d;", input[12], input[13], input[14], input[15], input[16], input[17], input[18], input[19], prot);
+    sprintf (state->dmr_lrrp_gps[slot], "IP SRC: %d.%d.%d.%d; DST: %d.%d.%d.%d; Unknown IP Protocol: %d; ", input[12], input[13], input[14], input[15], input[16], input[17], input[18], input[19], prot);
     fprintf(stderr, "Unknown IP Protocol: %02X;", prot);
     // if (len > 28) //default catch all (debug only)
     //   utf8_to_text(state, 0, len-28, input+28);
