@@ -410,13 +410,58 @@ void LFSR128d(dsd_state * state)
 
 }
 
-void hytera_enhanced_enc_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value)
+unsigned long long int hytera_lfsr(uint8_t * mi, uint8_t * taps, uint8_t len)
 {
 
-  UNUSED(opts);
-  UNUSED(state);
-  UNUSED(key_value);
-  UNUSED(mi_value);
+  for (uint8_t i = 0; i < len; i++)
+  {
+    uint8_t bit = (mi[i] >> 7) & 1;
+    mi[i] <<= 1;
+    if (bit) mi[i] ^= taps[i%5];
+    mi[i] |= bit;
+    
+  }
 
+  unsigned long long int mi_value = 0;
+  for (uint8_t i = 0; i < 5; i++)
+  {
+    mi_value <<= 8;
+    mi_value |= mi[i];
+  }
 
+  //debug
+  // fprintf (stderr, " Next MI: %010llX \n", mi_value);
+
+  return mi_value;
+}
+
+void hytera_enhanced_alg_refresh(dsd_state * state)
+{
+  uint8_t mi[5]; memset (mi, 0, sizeof(mi));
+  unsigned long long int mi_value = 0;
+  if (state->currentslot == 0)
+    mi_value = state->payload_mi;
+  else mi_value = state->payload_miR;
+
+  //load mi_value into mi array
+  mi[0] = ((mi_value & 0xFF00000000) >> 32UL);
+  mi[1] = ((mi_value & 0xFF000000) >> 24);
+  mi[2] = ((mi_value & 0xFF0000) >> 16);
+  mi[3] = ((mi_value & 0xFF00) >> 8);
+  mi[4] = ((mi_value & 0xFF) >> 0);
+
+  //calculate the next MI value
+  uint8_t taps[5]; memset(taps, 0, sizeof(taps));
+
+  //the tap values
+  taps[0] = 0x12;
+  taps[1] = 0x24;
+  taps[2] = 0x48;
+  taps[3] = 0x22;
+  taps[4] = 0x14;  
+  mi_value = hytera_lfsr(mi, taps, 5);
+
+  if (state->currentslot == 0)
+    state->payload_mi = mi_value;
+  else state->payload_miR = mi_value;
 }

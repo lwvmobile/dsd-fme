@@ -227,7 +227,13 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
     if (state->payload_algid == 0x02)
     {
       state->DMRvcL = 0;
-      //LFSR MI propegation function
+      //LFSR already calculated, just dump it now
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, " Slot 1");
+      fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", state->payload_algid, state->payload_keyid);
+      fprintf (stderr, " MI(40): %010llX;", state->payload_mi);
+      fprintf (stderr, " Hytera Enhanced;");
+      fprintf (stderr, "%s\n", KNRM);
     }
 
   }
@@ -251,7 +257,13 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
     if (state->payload_algidR == 0x02)
     {
       state->DMRvcR = 0;
-      //LFSR MI propegation function
+      //LFSR already calculated, just dump it now
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, " Slot 2");
+      fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", state->payload_algidR, state->payload_keyidR);
+      fprintf (stderr, " MI(40): %010llX;", state->payload_miR);
+      fprintf (stderr, " Hytera Enhanced;");
+      fprintf (stderr, "%s\n", KNRM);
     } 
 
   }

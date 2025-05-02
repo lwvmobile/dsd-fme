@@ -685,9 +685,9 @@ void dmr_talker_alias_lc_blocks (dsd_opts * opts, dsd_state * state, uint8_t slo
 
   //set the pointer to the current index of the dmr_pdu_sf
   if (char_size == 16)
-    ptr = 48 + (block_num * 48);
+    ptr = 48 + (block_num * 56);
   else if (char_size == 8)
-    ptr = 48 + (block_num * 48);
+    ptr = 48 + (block_num * 56);
   else if (char_size == 7)
     ptr = 49 + (block_num * 56);
 
@@ -717,14 +717,14 @@ void dmr_talker_alias_lc_blocks (dsd_opts * opts, dsd_state * state, uint8_t slo
     }
     else if (char_size == 16)
     {
-      memcpy(state->dmr_pdu_sf[slot]+ptr, lc_bits+16, 48*sizeof(uint8_t));
-      ptr += 48;
+      memcpy(state->dmr_pdu_sf[slot]+ptr, lc_bits+16, 56*sizeof(uint8_t));
+      ptr += 56;
       if (block_len == 0)
         end = ptr / 16;
       else end = block_len;
     }
 
-    dmr_talker_alias_lc_decode (opts, state, slot, block_num, char_size, end);
+    dmr_talker_alias_lc_decode (opts, state, slot, block_num+1, char_size, end);
   }
 }
 
@@ -733,7 +733,7 @@ void dmr_talker_alias_lc_decode (dsd_opts * opts, dsd_state * state, uint8_t slo
 {
   UNUSED(opts);
   uint16_t i = 0;
-  fprintf (stderr, " Slot %d - Talker Alias Block Num: %d; Valid Block;", slot, block_num+1);
+  fprintf (stderr, " Slot %d - Talker Alias Block Num: %d; Valid Block;", slot, block_num);
   fprintf (stderr, " Talker Alias: ");
 
   char alias_string[500]; memset (alias_string, 0, sizeof(alias_string));

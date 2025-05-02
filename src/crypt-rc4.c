@@ -87,3 +87,59 @@ void rc4_block_output (int drop, int keylen, int meslen, uint8_t * key, uint8_t 
   }
 
 }
+
+//NOTE: This has not been verified to work properly
+//NOTE: This is for Hytera Enhanced RC4, if AES, this will not work
+void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value)
+{
+
+  UNUSED(opts);
+  uint8_t key[5];  memset (key, 0, sizeof(key));
+  uint8_t kiv[5];  memset (kiv, 0, sizeof(kiv));
+  uint8_t mi[5];   memset (mi, 0, sizeof(mi));
+  uint8_t ks[135]; memset (ks, 0, sizeof(ks));
+
+  //load key_value into key array
+  key[0] = ((key_value & 0xFF00000000) >> 32UL);
+  key[1] = ((key_value & 0xFF000000) >> 24);
+  key[2] = ((key_value & 0xFF0000) >> 16);
+  key[3] = ((key_value & 0xFF00) >> 8);
+  key[4] = ((key_value & 0xFF) >> 0);
+
+  //load mi_value into mi array
+  mi[0] = ((mi_value & 0xFF00000000) >> 32UL);
+  mi[1] = ((mi_value & 0xFF000000) >> 24);
+  mi[2] = ((mi_value & 0xFF0000) >> 16);
+  mi[3] = ((mi_value & 0xFF00) >> 8);
+  mi[4] = ((mi_value & 0xFF) >> 0);
+
+  //pointer to the ks_octet storage
+  uint8_t * ks_octets;
+  if (state->currentslot == 0)
+    ks_octets = state->ks_octetL;
+  else ks_octets = state->ks_octetR;
+
+  rc4_block_output(256, 5, 135, key, ks);
+
+  for (int i = 0; i < 5; i++)
+    kiv[i] = key[i] ^ mi[i];
+
+  for (int i = 0; i < 135; i++)
+    ks_octets[i] = kiv[i%5] ^ ks[i];
+
+  //debug
+  // fprintf (stderr, " KS: ");
+  // for (int i = 0; i < 135; i++)
+  // {
+  //   if ((i != 0) && ((i%7) == 0))
+  //     fprintf (stderr, " ");
+  //   fprintf (stderr, "%02X", ks[i]); //ks_octets
+  // }
+
+  //NULL pointer to ks_octets
+  ks_octets = NULL;
+
+  //end line break
+  // fprintf (stderr, "\n");
+
+}

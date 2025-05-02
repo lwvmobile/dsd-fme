@@ -425,6 +425,9 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
     if (internalslot == 0 && vc1 == 6)
     {
+      //this needs to run prior to embedded link control
+      if (state->payload_algid == 0x02)
+        hytera_enhanced_alg_refresh(state);
       //process embedded link control
       fprintf (stderr, "\n");
       dmr_data_burst_handler(opts, state, (uint8_t *)dummy_bits, 0xEB);
@@ -435,6 +438,9 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
     if (internalslot == 1 && vc2 == 6)
     {
+      //this needs to run prior to embedded link control
+      if (state->payload_algidR == 0x02)
+        hytera_enhanced_alg_refresh(state);
       //process embedded link control
       fprintf (stderr, "\n");
       dmr_data_burst_handler(opts, state, (uint8_t *)dummy_bits, 0xEB);

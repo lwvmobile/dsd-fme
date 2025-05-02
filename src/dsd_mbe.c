@@ -775,7 +775,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           if(state->payload_algid == 0x02)
           {
             n = 0;
-            hytera_enhanced_enc_setup(opts, state, state->R, state->payload_mi);
+            hytera_enhanced_rc4_setup(opts, state, state->R, state->payload_mi);
           }
 
           //Load Keystream Octet Bytes directly into keystream array //TODO: Convert to unpack function
@@ -1152,7 +1152,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           if(state->payload_algidR == 0x02)
           {
             n = 0;
-            hytera_enhanced_enc_setup(opts, state, state->RR, state->payload_miR);
+            hytera_enhanced_rc4_setup(opts, state, state->RR, state->payload_miR);
           }
 
           //Load Keystream Octet Bytes directly into keystream array

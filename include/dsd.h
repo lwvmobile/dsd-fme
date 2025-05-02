@@ -1586,7 +1586,9 @@ void aes_ctr_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payl
 void aes_ctr_bitwise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payload, int type);
 
 //Hytera Enhanced
-void hytera_enhanced_enc_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value);
+void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value);
+unsigned long long int hytera_lfsr(uint8_t * mi, uint8_t * taps, uint8_t len);
+void hytera_enhanced_alg_refresh(dsd_state * state);
 
 //LFSR to expand either a DMR 32-bit or P25/NXDN 64-bit MI into a 128-bit IV for AES
 void LFSR128(dsd_state * state);
