@@ -522,6 +522,9 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
   uint16_t message_len = 0;
   uint8_t slot = state->currentslot;
   uint8_t lrrp_confidence = 0; //variable to increment based on number of tokens found, the more, the higher the confidence level
+  uint8_t lrrp_type = DMR_PDU[0];
+  uint8_t is_request = 0;
+  uint8_t is_response = 0;
 
   //source/dest and ports (this is grabbed in the IP decoding phase)
   if (source != 0) lrrp_confidence++;
@@ -569,12 +572,29 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
   {
     uint8_t token = DMR_PDU[i];
     switch(token){
-      case 0x0D: //message len indicator
+      case 0x0F: //Triggered Location Stop Request
+      case 0x05: //Immediate Location Request
+      case 0x09: //Triggered Location Start Request
+      case 0x14: //Protocol Version Request
+        if (i == 0) //see if this is the first octet, otherwise, can't verify this is going to work
+        {
+          message_len = DMR_PDU[i+1];
+          i = len; //go to end
+          lrrp_confidence++;
+          is_request = 1;
+        }
+        break;
+      case 0x07: //Immediate Location Response
+      case 0x0B: //Triggered Location Start Response
+      case 0x0D: //Triggered Location
+      case 0x11: //Triggered Location Stop Response
+      case 0x15: //Protocol Version Response
         if (i == 0) //see if this is the first octet, otherwise, can't verify this is going to work
         {
           message_len = DMR_PDU[i+1];
           i += 3; //next byte is len, then next two are usually 0x22 0xXX or 0x23 0xXX
           lrrp_confidence++;
+          is_response = 1;
         }
         break;
 
@@ -781,13 +801,36 @@ void dmr_lrrp (dsd_opts * opts, dsd_state * state, uint16_t len, uint32_t source
       sprintf (velstr, "%s", "");
       sprintf (degstr, "%s", "");
       if (lat) sprintf (lrrpstr, "LRRP SRC: %0d; (%lf, %lf)", source, lat_fin, lon_fin);
-      else sprintf (lrrpstr, "LRRP SRC: %0d; Unknown Format; ", source);
+      else if (is_request) sprintf (lrrpstr, "LRRP SRC: %0d; Request from TGT: %d;", source, dest);
+      else if (is_response) sprintf (lrrpstr, "LRRP SRC: %0d; Response to TGT: %d;", source, dest);
+      else sprintf (lrrpstr, "LRRP SRC: %0d; Unknown Format %02X; TGT: %d;; ", lrrp_type, source, dest);
       if (vel_set) sprintf (velstr, " %.4lf km/h", velocity * 3.6);
       if (deg_set) sprintf (degstr, " %d%s  ", degrees, deg_glyph);
       sprintf (state->dmr_lrrp_gps[slot], "%s%s%s", lrrpstr, velstr, degstr);
 
+      if (!lat)
+        fprintf (stderr, "\n %s", state->dmr_lrrp_gps[slot]);
+
+
+    }
+    else
+    {
+      char lrrpstr[100];
+      sprintf (lrrpstr, "%s", "");
+      sprintf (lrrpstr, "LRRP SRC: %0d; Unknown Format %02X; TGT: %d;", lrrp_type, source, dest);
+      sprintf (state->dmr_lrrp_gps[slot], "%s", lrrpstr);
+      fprintf (stderr, "\n %s", state->dmr_lrrp_gps[slot]);
     }
 
+  }
+
+  else
+  {
+    char lrrpstr[100];
+    sprintf (lrrpstr, "%s", "");
+    sprintf (lrrpstr, "LRRP SRC: %0d; Unknown Format %02X; TGT: %d;", lrrp_type, source, dest);
+    sprintf (state->dmr_lrrp_gps[slot], "%s", lrrpstr);
+    fprintf (stderr, "\n %s", state->dmr_lrrp_gps[slot]);
   }
 
   fprintf (stderr, "%s", KNRM);

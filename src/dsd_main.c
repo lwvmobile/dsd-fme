@@ -270,7 +270,7 @@
      state->dmr_rest_channel = -1;
  
      //DMR Color Code
-     state->dmr_color_code = 16;
+    //  state->dmr_color_code = 16; //disabled
  
      //zero out nxdn site/srv/cch info if not trunking
      state->nxdn_location_site_code = 0;

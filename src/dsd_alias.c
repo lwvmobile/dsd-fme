@@ -765,7 +765,8 @@ void dmr_talker_alias_lc_decode (dsd_opts * opts, dsd_state * state, uint8_t slo
     {
       uint8_t character = (uint8_t)ConvertBitIntoBytes(&state->dmr_pdu_sf[slot][(i*8)], 8);
       char ch[2]; ch[0] = character; ch[1] = 0;
-      if (character >= 0x20 && character <= 0x7E) //Standard ASCII Set
+      // if (character >= 0x20 && character <= 0x7E) //Standard ASCII Set
+      if (character >= 0x20 && character != 0x7F) //allow some extended UTF discritical characters as well
       {
         fprintf (stderr, "%c", character);
         strcat (alias_string, ch);
@@ -783,7 +784,8 @@ void dmr_talker_alias_lc_decode (dsd_opts * opts, dsd_state * state, uint8_t slo
     {
       uint16_t character = (uint16_t)ConvertBitIntoBytes(&state->dmr_pdu_sf[slot][(i*16)], 16);
       char ch[2]; ch[0] = character & 0xFF; ch[1] = 0;
-      if (character >= 0x20 && character <= 0x7E) //Standard ASCII Set //may see what happens if this is disabled
+      // if (character >= 0x20 && character <= 0x7E) //Standard ASCII Set //may see what happens if this is disabled
+      if (character >= 0x20 && character != 0x7F) //will want to next, but should be okay (unless RAS or CRC Bypass)
       {
         fprintf (stderr, "%lc", character);
         strcat (alias_string, ch);

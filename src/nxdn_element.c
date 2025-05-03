@@ -139,9 +139,10 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
       break;
 
     //VCALL, TX_REL_EXT and TX_REL
-    case 0x01:
-    case 0x07:
-    case 0x08:
+    case 0x07: //TX_REL_EXT
+    case 0x08: //TX_REL
+      sprintf (state->call_string[0], "%s", "");
+    case 0x01: //VCALL
       NXDN_decode_VCALL(opts, state, ElementsContent);
       break;
 
@@ -149,6 +150,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
     case 0x11:
       NXDN_decode_VCALL(opts, state, ElementsContent);
       memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
+      sprintf (state->call_string[0], "%s", "");
 
       // #ifdef LIMAZULUTWEAKS
       // ; //do nothing -- testing errors on CAC messages when returning quickly from RTCH
@@ -647,6 +649,16 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
         state->nxdn_last_tg = DestinationID;
         sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType));
 
+        if (CallType == 3)
+        {
+          state->gi[0] = 1; //Private Call
+          //unassign these, sometimes, when trunking, these may be reversed by the time listened,
+          //and this will plant an extra private call in the event_history
+          state->nxdn_last_rid = 0;
+          state->nxdn_last_tg = 0;
+        }
+        else state->gi[0] = 0; //Group Call
+
         //Call String for Per Call WAV File
         sprintf (state->call_string[0], "%s", NXDN_Call_Type_To_Str(CallType));
         if (CCOption & 0x80) strcat (state->call_string[0], " Emergency");
@@ -684,6 +696,16 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
           state->nxdn_last_rid = SourceUnitID;
         state->nxdn_last_tg = DestinationID;
         sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType));
+
+        if (CallType == 3)
+        {
+          state->gi[0] = 1; //Private Call
+          //unassign these, sometimes, when trunking, these may be reversed by the time listened,
+          //and this will plant an extra private call in the event_history
+          state->nxdn_last_rid = 0;
+          state->nxdn_last_tg = 0;
+        }
+        else state->gi[0] = 0; //Group Call
 
         //Call String for Per Call WAV File
         sprintf (state->call_string[0], "%s", NXDN_Call_Type_To_Str(CallType));

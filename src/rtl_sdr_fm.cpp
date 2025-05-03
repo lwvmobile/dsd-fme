@@ -712,8 +712,8 @@ int verbose_gain_set(rtlsdr_dev_t *dev, int gain)
 int verbose_ppm_set(rtlsdr_dev_t *dev, int ppm_error)
 {
 	int r;
-	if (ppm_error == 0) {
-		return 0;}
+	// if (ppm_error == 0) {
+	// 	return 0;}
 	r = rtlsdr_set_freq_correction(dev, ppm_error);
 	if (r < 0) {
 		fprintf (stderr, "WARNING: Failed to set ppm error.\n");
@@ -1142,7 +1142,14 @@ void cleanup_rtlsdr_stream()
 //find way to modify this function to allow hopping (tuning) while squelched and send 0 sample?
 int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 {
-	UNUSED2(opts, state);
+	UNUSED(state);
+
+	//if PPM Error is Manually Changed, Change it here now
+	if (opts->rtlsdr_ppm_error != dongle.ppm_error)
+	{
+		dongle.ppm_error = opts->rtlsdr_ppm_error;
+		verbose_ppm_set(dongle.dev, dongle.ppm_error);
+	}
 
 	while (output.queue.empty())
 	{

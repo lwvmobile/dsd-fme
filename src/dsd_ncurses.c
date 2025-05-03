@@ -2147,7 +2147,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     else
       printw (" G: %idB;", opts->rtl_gain_value);
     printw (" V: %iX;", opts->rtl_volume_multiplier);
-    printw (" PPM: %i;", opts->rtlsdr_ppm_error);
+    printw (" PPM: %i;", opts->rtlsdr_ppm_error); //Adjust manually now with { and }
     printw (" SQ: %i;", opts->rtl_squelch_level);
     printw (" RMS: %04li;", opts->rtl_rms);
     printw (" BW: %i;", opts->rtl_bandwidth);
@@ -3783,7 +3783,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (c == 82) //'R', save symbol capture bin with date/time string as name
   {
-    sprintf (opts->symbol_out_file, "%s %s.bin", datestr, timestr);
+    sprintf (opts->symbol_out_file, "%s_%s_dibit_capture.bin", datestr, timestr);
     openSymbolOutFile (opts, state);
   }
 
@@ -4359,6 +4359,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     state->lastsrc = 0;
 
   }
+
+  //RTL PPM Manual Adjustment
+  if (c == 125)
+    opts->rtlsdr_ppm_error++;
+
+  if (c == 123)
+    opts->rtlsdr_ppm_error--;
 
   //anything with an entry box will need the inputs and outputs stopped first
   //so probably just write a function to handle c input, and when c = certain values

@@ -1078,21 +1078,21 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           }
         }
 
-        //reset alg/keyid/mi
-        if (state->currentslot == 0)
-        {
-          state->payload_mi = 0;
-          state->payload_algid = 0;
-          state->payload_keyid = 0;
-          state->dmr_so = 0;
-        }
-        else
-        {
-          state->payload_miR = 0;
-          state->payload_algidR = 0;
-          state->payload_keyidR = 0;
-          state->dmr_soR = 0;
-        }
+        //reset alg/keyid/mi //TD_LC should "SHOULD" catch this
+        // if (state->currentslot == 0)
+        // {
+        //   state->payload_mi = 0;
+        //   state->payload_algid = 0;
+        //   state->payload_keyid = 0;
+        //   state->dmr_so = 0;
+        // }
+        // else
+        // {
+        //   state->payload_miR = 0;
+        //   state->payload_algidR = 0;
+        //   state->payload_keyidR = 0;
+        //   state->dmr_soR = 0;
+        // }
 
       } //end enc check
       #endif
@@ -1105,8 +1105,19 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         fprintf (stderr, "\n Slot %d - Encrypted PDU;", slot+1);
         fprintf (stderr, "%s", KNRM);
 
+        uint8_t alg = 0;
+        uint8_t kid = 0;
+        if (slot == 0)
+          alg = state->payload_algid;
+        else alg = state->payload_algidR;
+
+        if (slot == 0)
+          kid = state->payload_keyid;
+        else kid = state->payload_keyidR;
+
         char enc_str[200]; memset (enc_str, 200, sizeof(enc_str));
-        sprintf (enc_str, "DATA TGT: %lld; SRC: %lld; Encrypted PDU;", state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot]);
+        sprintf (enc_str, "DATA TGT: %lld; SRC: %lld; ENC PDU; ALG: %02X; KID: %02X;", state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot], alg, kid);
+        sprintf (state->dmr_lrrp_gps[slot], "%s", enc_str);
         watchdog_event_datacall (opts, state, state->dmr_lrrp_source[slot], state->dmr_lrrp_target[slot], enc_str, slot);
       }
       else if (CRCCorrect || opts->aggressive_framesync == 0)
