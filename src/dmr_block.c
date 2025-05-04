@@ -260,25 +260,33 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
 
     }
 
-    if (dpf == 1) //response data packet header
+    if (dpf == 1) //response data packet header //TODO: Convert to something more similar to P25 variant
     {
       //mostly fleshed out response packet info
-      fprintf (stderr, "\n  SAP %02d [%s] - Class %d - Type %0d - ", sap, sap_string, r_class, r_type);
-      if (r_class == 0 && r_type == 1) fprintf (stderr, "ACK - Success");
+      char rsp_string[200]; memset(rsp_string, 0, sizeof(rsp_string));
+      sprintf (rsp_string, "DATA RESP TGT: %d; SRC: %d; ", target, source);
+      if (r_class == 0 && r_type == 1) strcat (rsp_string, "ACK - Success");
       if (r_class == 1)
       {
-        fprintf (stderr, "NACK - ");
-        if (r_type == 0) fprintf (stderr, "Illegal Format");
-        if (r_type == 1) fprintf (stderr, "Illegal Format");
-        if (r_type == 2) fprintf (stderr, "Packet CRC ERR");
-        if (r_type == 3) fprintf (stderr, "Memory Full");
-        if (r_type == 4) fprintf (stderr, "FSN Out of Seq");
-        if (r_type == 5) fprintf (stderr, "Undeliverable");
-        if (r_type == 6) fprintf (stderr, "PKT Out of Seq");
-        if (r_type == 7) fprintf (stderr, "Invalid User");
+        strcat (rsp_string, "NACK - ");
+        if (r_type == 0) strcat (rsp_string, "Illegal Format");
+        if (r_type == 1) strcat (rsp_string, "Illegal Format");
+        if (r_type == 2) strcat (rsp_string, "Packet CRC ERR");
+        if (r_type == 3) strcat (rsp_string, "Memory Full");
+        if (r_type == 4) strcat (rsp_string, "FSN Out of Seq");
+        if (r_type == 5) strcat (rsp_string, "Undeliverable");
+        if (r_type == 6) strcat (rsp_string, "PKT Out of Seq");
+        if (r_type == 7) strcat (rsp_string, "Invalid User");
       }
-      if (r_class == 2) fprintf (stderr, "SACK - Retry");
-      if (r_status) fprintf (stderr, " - %d", r_status); //the object/value of the ack/nack/sack
+      if (r_class == 2) strcat (rsp_string, "SACK - Retry");
+      // if (r_status) strcat (rsp_string, " - %d", r_status);
+      UNUSED(r_status);
+
+      fprintf (stderr, "\n %s", rsp_string);
+
+      //REMUS, enable (or disable) next two lines is you want to
+      sprintf (state->dmr_lrrp_gps[slot], "%s; ", rsp_string);
+      watchdog_event_datacall (opts, state, source, target, state->dmr_lrrp_gps[slot], slot);
 
     }
 

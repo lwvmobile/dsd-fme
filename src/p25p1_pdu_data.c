@@ -288,6 +288,14 @@ uint8_t p25_decode_es_header(dsd_opts * opts, dsd_state * state, uint8_t * input
   *sap = aux_sap;
   *ptr += 13;
 
+  //append enc at this point
+  if (encrypted)
+  {
+    char ess_str[200]; memset(ess_str, 0, sizeof(ess_str));
+    sprintf (ess_str, "ALG: %02X; KID: %04X; SAP:%02X;%s", alg_id, key_id, aux_sap, aux_sap_string);
+    strcat (state->dmr_lrrp_gps[0], ess_str);
+  }
+
   return encrypted;
 
 }
@@ -342,7 +350,10 @@ void p25_decode_extended_address(dsd_opts * opts, dsd_state * state, uint8_t * i
   UNUSED(ea_sap_string);
 
   //Print to Data Call String for Ncurses Terminal
-  sprintf (state->dmr_lrrp_gps[0], "Data Call:%s SAP:%02X; LLID: %d; ", ea_sap_string, ea_sap, ea_llid);
+  state->lastsrc = ea_llid;
+  char ea_str[200]; memset(ea_str, 0, sizeof(ea_str));
+  sprintf (ea_str, "EXT ADD SRC: %d; SAP:%02X;%s", ea_llid, ea_sap, ea_sap_string);
+  strcat (state->dmr_lrrp_gps[0], ea_str);
 
   *sap = ea_sap;
   *ptr += 12;
@@ -389,6 +400,20 @@ void p25_decode_pdu_header(dsd_opts * opts, dsd_state * state, uint8_t * input)
   //Print to Data Call String for Ncurses Terminal
   if (sap != 61 && sap != 63 && fmt != 3)
     sprintf (state->dmr_lrrp_gps[0], "Data Call:%s SAP:%02X; LLID: %d; ", sap_string, sap, address);
+  else if (sap != 61 && sap != 63 && fmt == 3)
+  {
+      //watchdog the data call and make it push to event history
+      sprintf (state->dmr_lrrp_gps[0], "Data Call Response:%s LLID: %d; ", rsp_string, address);
+      state->lastsrc = 0xFFFFFF;
+      watchdog_event_datacall (opts, state, state->lastsrc, state->lasttg, state->dmr_lrrp_gps[0], 0);
+      state->lastsrc = 0;
+      state->lasttg = 0;
+      watchdog_event_history(opts, state, 0);
+      watchdog_event_current(opts, state, 0);
+  }
+
+  state->lasttg = address;
+  state->lastsrc = 0xFFFFFF; //none given, unless extended, so put any here for now
 }
 
 //user or other data delivered via PDU format
@@ -441,5 +466,12 @@ void p25_decode_pdu_data(dsd_opts * opts, dsd_state * state, uint8_t * input, in
   {
     fprintf (stderr, " Encrypted PDU;");
   }
+
+  //watchdog the data call and make it push to event history
+  watchdog_event_datacall (opts, state, state->lastsrc, state->lasttg, state->dmr_lrrp_gps[0], 0);
+  state->lastsrc = 0;
+  state->lasttg = 0;
+  watchdog_event_history(opts, state, 0);
+  watchdog_event_current(opts, state, 0);
 
 }

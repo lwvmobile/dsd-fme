@@ -2196,7 +2196,7 @@
          case 'J': //Event output to file (J for Journal)
            strncpy(opts.event_out_file, optarg, 1023);
            opts.event_out_file[1023] = '\0';
-           fprintf (stderr,"Writing + Appending Event History to file %s\n", opts.lrrp_out_file);
+           fprintf (stderr,"Writing + Appending Event History to file %s\n", opts.event_out_file);
            break;
  
          case '7': //make a custom wav file directory in the current working directory -- use this before -P

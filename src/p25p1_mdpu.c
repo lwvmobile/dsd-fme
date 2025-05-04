@@ -374,6 +374,11 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "%s ", KNRM);
     fprintf (stderr, "\n");
 
+    //clear these, regardless of if PDU was deocded, or attempted,
+    //so we don't create phantom voice calls in the event history
+    state->lasttg = 0;
+    state->lastsrc = 0;
+
   } //end r34
 
   else if (r34 == 0) //12 rate unconfirmed data //err[0] == 0
@@ -416,7 +421,12 @@ void processMPDU(dsd_opts * opts, dsd_state * state)
     fprintf (stderr, "%s",KNRM);
     fprintf (stderr, "\n");
 
-  }
+    //clear these, regardless of if PDU was deocded, or attempted,
+    //so we don't create phantom voice calls in the event history
+    state->lasttg = 0;
+    state->lastsrc = 0;
+
+  } //end r12
   else //crc header failure or other
   {
     fprintf (stderr, "%s",KNRM);

@@ -462,6 +462,12 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
       fprintf (stderr, "Job Ticket Server;");
       sprintf (state->dmr_lrrp_gps[slot], "JTS SRC: %d; DST: %d;", src24, dst24);
     }
+    else if (port1 == 4069 && port2 == 4069)
+    {
+      //https://trbonet.com/kb/how-to-configure-dt500-and-mobile-radio-to-work-with-scada-sensors/
+      fprintf (stderr, "TRBOnet SCADA;");
+      sprintf (state->dmr_lrrp_gps[slot], "SCADA SRC: %d; DST: %d;", src24, dst24);
+    }
     //ETSI specific -- unknown entry value, assuming +28
     else if (port1 == 5016 && port2 == 5016)
     {

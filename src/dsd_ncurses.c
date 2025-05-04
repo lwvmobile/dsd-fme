@@ -5093,7 +5093,7 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
   else if (state->lastsynctype == 28 || state->lastsynctype == 29)
   {
     if (sys_id1)
-      sprintf (event_string, "%s %s %s TGT: %08d; SRC: %08d; RAN: %02d; SYS: %d.%d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3, sys_id1, sys_id2);
+      sprintf (event_string, "%s %s %s TGT: %08d; SRC: %08d; RAN: %02d; SYS: %d.%d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3, sys_id2, sys_id1);
     else
       sprintf (event_string, "%s %s %s TGT: %08d; SRC: %08d; RAN: %02d; ", datestr, timestr, sys_string, target_id, source_id, sys_id3);
     if (enc)

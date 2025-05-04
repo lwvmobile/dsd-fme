@@ -142,6 +142,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
     case 0x07: //TX_REL_EXT
     case 0x08: //TX_REL
       sprintf (state->call_string[0], "%s", "");
+      sprintf (state->nxdn_call_type, "%s", "");
     case 0x01: //VCALL
       NXDN_decode_VCALL(opts, state, ElementsContent);
       break;
@@ -151,6 +152,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
       NXDN_decode_VCALL(opts, state, ElementsContent);
       memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
       sprintf (state->call_string[0], "%s", "");
+      sprintf (state->nxdn_call_type, "%s", "");
 
       // #ifdef LIMAZULUTWEAKS
       // ; //do nothing -- testing errors on CAC messages when returning quickly from RTCH
