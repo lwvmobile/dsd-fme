@@ -632,9 +632,11 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 2) end = 25;
     if (udt_uab == 3) end = 38;
     if (udt_uab == 4) end = 52;
-    end -= udt_padnib/7; //is this correct?
+    end -= udt_padnib/2;
     fprintf (stderr, "ISO7 Text: "  );
-    strcat (udt_string, "ISO7 Text: ");
+    strcat (udt_string, "ISO7 Text; ");
+    // fprintf (stderr, " pad: %d; end: %d;", udt_padnib, end); //debug
+    sprintf (state->event_history_s[slot].Event_History_Items[0].text_message, "%s", " ");
     for (i = 0; i < end; i++) //max 368/7 = 52 character max?
     {
       iso7c = (uint8_t)ConvertBitIntoBytes(&cs_bits[(i*7)+96], 7);
@@ -642,7 +644,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       if (iso7c >= 0x20 && iso7c <= 0x7E) //Standard ASCII Set
       {
         fprintf (stderr, "%c", iso7c);
-        strcat (udt_string, i7c);
+        strcat (state->event_history_s[slot].Event_History_Items[0].text_message, i7c);
       }
       else fprintf (stderr, " ");
     }
@@ -650,12 +652,14 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   else if (udt_format2 == 0x04) //ISO8 format
   {
     fprintf (stderr, "ISO8 Text: "  );
-    strcat (udt_string, "ISO8 Text: ");
+    strcat (udt_string, "ISO8 Text; ");
+    sprintf (state->event_history_s[slot].Event_History_Items[0].text_message, "%s", " ");
     if (udt_uab == 1) end = 10;
     if (udt_uab == 2) end = 22;
     if (udt_uab == 3) end = 34;
     if (udt_uab == 4) end = 46;
-    end -= udt_padnib/8; //is this correct?
+    end -= udt_padnib/2;
+    // fprintf (stderr, " pad: %d; end: %d;", udt_padnib, end); //debug
     for (i = 0; i < end; i++)
     {
       iso8c = (uint8_t)ConvertBitIntoBytes(&cs_bits[(i*8)+96], 8);
@@ -663,7 +667,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       if (iso8c >= 0x20 && iso8c <= 0x7E) //Standard ASCII Set
       {
         fprintf (stderr, "%c", iso8c);
-        strcat (udt_string, i8c);
+        strcat (state->event_history_s[slot].Event_History_Items[0].text_message, i8c);
       }
         
       // else if (iso8c >= 0x81 && iso8c <= 0xFE) //Extended ASCII Set
@@ -677,9 +681,11 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 2) end = 11;
     if (udt_uab == 3) end = 17;
     if (udt_uab == 4) end = 23;
-    end -= udt_padnib/4; //example, 4 blocks sets 23 - (20nibs/4bits) = 18 chars, may need to check this again
+    end -= udt_padnib/2;
     fprintf (stderr, "UTF16 Text: "  );
-    strcat (udt_string, "UTF16 Text: ");
+    // fprintf (stderr, " pad: %d; end: %d;", udt_padnib, end); //debug
+    strcat (udt_string, "UTF16 Text; ");
+    sprintf (state->event_history_s[slot].Event_History_Items[0].text_message, "%s", " ");
     for (i = 0; i < end; i++) //368/16 = 23 character max?
     {
       utf16c = (uint16_t)ConvertBitIntoBytes(&cs_bits[(i*16)+96], 16);
@@ -687,7 +693,9 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       if (utf16c >= 0x20 && utf16c != 0x7F) //avoid control chars
       {
         fprintf (stderr, "%lc", utf16c); //will using lc work here? May depend on console locale settings?
-        strcat (udt_string, u16);
+        // strcat (udt_string, u16);
+        if (utf16c >= 0x20 && utf16c < 0x7F)
+          strcat (state->event_history_s[slot].Event_History_Items[0].text_message, u16);
       }
         
       else fprintf (stderr, " ");
@@ -711,10 +719,10 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+16], 16));
       fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+32], 16));
       fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+48], 16));
-      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+56], 16));
-      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+72], 16));
-      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+88], 16));
-      fprintf (stderr, "%04X", (uint16_t)ConvertBitIntoBytes(&cs_bits[96+104], 16));
+      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+64], 16));
+      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+80], 16));
+      fprintf (stderr, "%04X:",(uint16_t)ConvertBitIntoBytes(&cs_bits[96+96], 16));
+      fprintf (stderr, "%04X", (uint16_t)ConvertBitIntoBytes(&cs_bits[96+112], 16));
       strcat (udt_string, "IP6; ");
     }
   }
@@ -724,10 +732,11 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 2) end = 9;
     if (udt_uab == 3) end = 15;
     if (udt_uab == 4) end = 21;
-    end -= udt_padnib/4; //is this correct?
-    fprintf (stderr, "Address: %d", (uint32_t)ConvertBitIntoBytes(&cs_bits[96+8], 24));
-    fprintf (stderr, "Text: "  );
-    strcat (udt_string, "UTF16 Text: ");
+    end -= udt_padnib/2;
+    fprintf (stderr, "Address: %d; ", (uint32_t)ConvertBitIntoBytes(&cs_bits[96+8], 24));
+    fprintf (stderr, "UTF16 Text: "  );
+    strcat (udt_string, "UTF16 Text; ");
+    sprintf (state->event_history_s[slot].Event_History_Items[0].text_message, "%s", " ");
     for (i = 0; i < end; i++) //368/16 = 21 character max
     {
       utf16c = (uint16_t)ConvertBitIntoBytes(&cs_bits[(i*16)+96], 16);
@@ -735,7 +744,9 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       if (utf16c >= 0x20 && utf16c != 0x7F) //avoid control chars
       {
         fprintf (stderr, "%lc", utf16c);
-        strcat (udt_string, u16);
+        // strcat (udt_string, u16);
+        if (utf16c >= 0x20 && utf16c < 0x7F)
+          strcat (state->event_history_s[slot].Event_History_Items[0].text_message, u16);
       }
         
       else fprintf (stderr, " ");
@@ -782,7 +793,29 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   }
   fprintf (stderr, "%s", KNRM);
 
+  if (slot == 0)
+  {
+    state->lastsrc = udt_source;
+    state->lasttg = udt_target;
+  }
+  else
+  {
+    state->lastsrcR = udt_source;
+    state->lasttgR = udt_target;
+  }
   watchdog_event_datacall (opts, state, udt_source, udt_target, udt_string, slot);
+  if (slot == 0)
+  {
+    state->lastsrc = 0;
+    state->lasttg = 0;
+  }
+  else
+  {
+    state->lastsrcR = 0;
+    state->lasttgR = 0;
+  }
+  watchdog_event_history(opts, state, slot);
+  watchdog_event_current(opts, state, slot);
 }
 
 //assemble the blocks as they come in, shuffle them into the unified dmr_pdu_sf

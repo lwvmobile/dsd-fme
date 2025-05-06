@@ -194,9 +194,9 @@ void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint
   uint8_t nmea_utc_hh  = (uint8_t)ConvertBitIntoBytes(&input[66], 5);
   uint8_t nmea_utc_mm  = (uint8_t)ConvertBitIntoBytes(&input[71], 6);
   //seconds and the addition of COG is the difference between short and long formats
-  uint8_t nmea_utc_ss3 = (uint8_t)ConvertBitIntoBytes(&input[77], 3); //seconds in 10s
-  uint8_t nmea_utc_ss6 = (uint8_t)ConvertBitIntoBytes(&input[77], 6); //seconds in 1s
-  uint16_t nmea_cog = (uint16_t)ConvertBitIntoBytes(&input[103], 9); //course over ground in degrees
+  uint8_t nmea_utc_ss3 = (uint8_t)ConvertBitIntoBytes(&input[77], 3) * 10; //seconds in 10s
+  uint8_t nmea_utc_ss6 = (uint8_t)ConvertBitIntoBytes(&input[77], 6);     //seconds in 1s
+  uint16_t nmea_cog = (uint16_t)ConvertBitIntoBytes(&input[103], 9);     //course over ground in degrees
 
   //lat and lon conversion
   char deg_glyph[4];

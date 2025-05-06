@@ -977,8 +977,16 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         UNUSED(svc_flag);
         UNUSED(als_flag);
 
+        char ahoy_str[200]; memset(ahoy_str, 0, sizeof(ahoy_str));
+        sprintf (ahoy_str, "AHOY TGT: %d; SRC: %d; ", ahoy_target, ahoy_source);
+
         if (ahoy_gi == 0) fprintf (stderr, "Private ");
         else fprintf (stderr, "Group ");
+
+        if (ahoy_gi == 0)
+          strcat (ahoy_str, "Private; ");
+        else strcat (ahoy_str, "Group; ");
+        state->gi[state->currentslot] = ahoy_gi ^ 1;
 
         //need to put SVC OPT decoding in here, maybe just copy and paste from FLC?
 
@@ -999,8 +1007,46 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         fprintf (stderr, "Target: %d; Source: %d; ", ahoy_target, ahoy_source);
 
+        if (svc_kind == 0 || svc_kind == 1) strcat (ahoy_str, "Voice Call; ");
+        else if (svc_kind == 2 || svc_kind == 3) strcat (ahoy_str, "Packet Data Call; ");
+        else if (svc_kind == 4 || svc_kind == 5) strcat (ahoy_str, "UDT Short Data Call; ");
+        else if (svc_kind == 6) strcat (ahoy_str, "UDT Short Data Polling Service; ");
+        else if (svc_kind == 7) strcat (ahoy_str, "Status Transport Service; ");
+        else if (svc_kind == 8) strcat (ahoy_str, "Call Diversion Service; ");
+        else if (svc_kind == 9) strcat (ahoy_str, "Call Answer Service; ");
+        else if (svc_kind == 10) strcat (ahoy_str, "Full Duplex Voice Call; ");
+        else if (svc_kind == 11) strcat (ahoy_str, "Full Duplex Packet Data Call; ");
+        else if (svc_kind == 12) strcat (ahoy_str, "Reserved; ");
+        else if (svc_kind == 13) strcat (ahoy_str, "Supplimentary Service (Stun/Revive/Kill/Auth); ");
+        else if (svc_kind == 14) strcat (ahoy_str, "Registration/Authentication; ");
+        else if (svc_kind == 15) strcat (ahoy_str, "Cancel Call Service; ");
+
         //check the source and/or target for special gateway identifiers
         dmr_gateway_identifier (ahoy_source, ahoy_target);
+
+        if (state->currentslot == 0)
+        {
+          state->lastsrc = ahoy_source;
+          state->lasttg = ahoy_target;
+        }
+        else
+        {
+          state->lastsrcR = ahoy_source;
+          state->lasttgR = ahoy_target;
+        }
+        watchdog_event_datacall (opts, state, ahoy_source, ahoy_target, ahoy_str, state->currentslot);
+        if (state->currentslot == 0)
+        {
+          state->lastsrc = 0;
+          state->lasttg = 0;
+        }
+        else
+        {
+          state->lastsrcR = 0;
+          state->lasttgR = 0;
+        }
+        watchdog_event_history(opts, state, 0);
+        watchdog_event_current(opts, state, 0);
 
       }
 

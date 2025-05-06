@@ -48,4 +48,8 @@ processTDU (dsd_opts* opts, dsd_state* state)
     state->payload_algid = 0;
     state->payload_keyid = 0;
 
+    state->lasttg = 0;
+    state->lastsrc = 0;
+    state->gi[0] = -1;
+
 }

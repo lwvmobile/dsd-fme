@@ -68,8 +68,10 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         state->dmr_so = lc_svcopt; //test to make sure no random issues
 
         //don't set this when zero, annoying blink occurs in ncurses
-        if (group != 0) state->lasttg = group;
-        if (source != 0) state->lastsrc = source;
+        if (group != 0)
+          state->lasttg = group;
+        // if (source != 0) //disable now with new event history, if same src next ptt, then it will capture all of them as individual event items
+          state->lastsrc = source;
 
         sprintf (state->call_string[0], "   Group ");
         if (lc_svcopt & 0x80) strcat (state->call_string[0], " Emergency  ");
@@ -85,9 +87,11 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         fprintf (stderr, " - Target %d Source %d", target, source);
 
         //don't set this when zero, annoying blink occurs in ncurses
-        if (target != 0) state->lasttg = target;
-        if (source != 0) state->lastsrc = source;
-        state->gi[0] = 0;
+        if (target != 0)
+          state->lasttg = target;
+        // if (source != 0) //disable now with new event history, if same src next ptt, then it will capture all of them as individual event items
+          state->lastsrc = source;
+        state->gi[0] = 1;
         state->dmr_so = lc_svcopt;
 
         sprintf (state->call_string[0], " Private ");
@@ -331,6 +335,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
           {
             state->lasttg = 0;
             state->lastsrc = 0;
+            state->gi[0] = -1;
             state->payload_algid = 0;
             state->payload_keyid = 0;
             // state->payload_miP = 0;
@@ -350,6 +355,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
             #ifdef USE_RTLSDR
             state->lasttg = 0;
             state->lastsrc = 0;
+            state->gi[0] = -1;
             state->payload_algid = 0;
             state->payload_keyid = 0;
             // state->payload_miP = 0;
