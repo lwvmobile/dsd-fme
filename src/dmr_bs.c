@@ -642,6 +642,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   }
   else if (state->payload_algid == 0x02)
   {
+    hytera_enhanced_alg_refresh(state);
     state->currentslot = 0;
     dmr_alg_refresh (opts, state);
   }
@@ -652,6 +653,7 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   }
   else if (state->payload_algidR == 0x02)
   {
+    hytera_enhanced_alg_refresh(state);
     state->currentslot = 1;
     dmr_alg_refresh (opts, state);
   }
@@ -972,6 +974,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     else if (state->payload_algid == 0x02)
     {
       state->currentslot = 0;
+      hytera_enhanced_alg_refresh(state);
       dmr_alg_refresh (opts, state);
     }
     if (state->payload_algidR >= 0x21)
@@ -981,6 +984,7 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     }
     else if (state->payload_algid == 0x02)
     {
+      hytera_enhanced_alg_refresh(state);
       state->currentslot = 1;
       dmr_alg_refresh (opts, state);
     }
