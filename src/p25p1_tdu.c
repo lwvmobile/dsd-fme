@@ -44,12 +44,12 @@ processTDU (dsd_opts* opts, dsd_state* state)
         state->aout_gain = opts->audio_gain;
 
     //zero out MI, key, alg
-    state->payload_miP = 0;
-    state->payload_algid = 0;
-    state->payload_keyid = 0;
+    // state->payload_miP = 0;
+    // state->payload_algid = 0;
+    // state->payload_keyid = 0;
 
-    state->lasttg = 0;
-    state->lastsrc = 0;
-    state->gi[0] = -1;
+    // state->lasttg = 0;
+    // state->lastsrc = 0;
+    // state->gi[0] = -1;
 
 }

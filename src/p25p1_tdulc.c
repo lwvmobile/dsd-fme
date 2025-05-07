@@ -452,8 +452,8 @@ processTDULC (dsd_opts* opts, dsd_state* state)
     state->aout_gain = opts->audio_gain;
 
   //zero out MI, key, alg
-  state->payload_miP = 0;
-  state->payload_algid = 0;
-  state->payload_keyid = 0;
+  // state->payload_miP = 0;
+  // state->payload_algid = 0;
+  // state->payload_keyid = 0;
 
 }
