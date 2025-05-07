@@ -316,7 +316,13 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       unsigned long long int mi = (unsigned long long int)ConvertBitIntoBytes(&lc_bits[24], 40);
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot %d Alg: %02X; KEY ID: %02X; MI(40): %010llX;", slot+1, alg, key, mi);
-      fprintf (stderr, " Hytera Enhanced;");
+      fprintf (stderr, " Hytera Enhanced; ");
+
+      if (slot == 0 && state->R != 0)
+        fprintf (stderr, "Key: %010llX; ", state->R);
+
+      if (slot == 1 && state->RR != 0)
+        fprintf (stderr, "Key: %010llX; ", state->RR);
 
       for (int i = 0; i < 8; i++)
       {
@@ -555,6 +561,13 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
           state->group_tally++;
         }
 
+        //run a watchdog here so we can update this with the crypto variables and ENC LO
+        if (target != 0 && lo == 0)
+        {
+          sprintf (state->event_history_s[slot].Event_History_Items[0].internal_str, "Target: %d; has been locked out; Encryption Lock Out Enabled.", target);
+          watchdog_event_current(opts, state, slot);
+        }
+
         //Craft a fake CSBK pdu send it to run as a p_clear to return to CC if available
         uint8_t dummy[12]; uint8_t* dbits; memset (dummy, 0, sizeof(dummy)); dummy[0] = 46; dummy[1] = 255;
         if ( (strcmp(gm, "B") == 0) && (strcmp(gn, "ENC LO") == 0)  ) //&& (opts->trunk_tune_data_calls == 0)
@@ -713,6 +726,20 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     {
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, "Key %010llX ", state->RR);
+      fprintf (stderr, "%s ", KNRM);
+    }
+
+    if (slot == 0 && state->payload_algid == 0x02 && state->R != 0)
+    {
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, "Key: %010llX ", state->R);
+      fprintf (stderr, "%s ", KNRM);
+    }
+
+    if (slot == 1 && state->payload_algidR == 0x02 && state->RR != 0)
+    {
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, "Key: %010llX ", state->RR);
       fprintf (stderr, "%s ", KNRM);
     }
 

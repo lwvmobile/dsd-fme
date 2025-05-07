@@ -65,7 +65,13 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
 
       if (checksum == PI_BYTE[9])
       {
-        fprintf (stderr, " Hytera Enhanced;");
+        fprintf (stderr, " Hytera Enhanced; ");
+
+        if (state->currentslot == 0 && state->R != 0)
+          fprintf (stderr, "Key: %010llX; ", state->R);
+
+        if (state->currentslot == 1 && state->RR != 0)
+          fprintf (stderr, "Key: %010llX; ", state->RR);
 
         //disable late entry for DMRA (hopefully, there aren't any systems running both DMRA and Hytera Enhanced mixed together)
         opts->dmr_le = 2;

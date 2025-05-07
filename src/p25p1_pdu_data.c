@@ -412,8 +412,13 @@ void p25_decode_pdu_header(dsd_opts * opts, dsd_state * state, uint8_t * input)
       watchdog_event_current(opts, state, 0);
   }
 
-  state->lasttg = address;
-  state->lastsrc = 0xFFFFFF; //none given, unless extended, so put any here for now
+  //following is for a continued PDU and not a response nor a trunking message
+  if (sap != 61 && sap != 63) //trunking blocks, don't set address (LID)
+  {
+    state->lasttg = address;
+    state->lastsrc = 0xFFFFFF; //none given, unless extended, so put any here for now
+  }
+  
 }
 
 //user or other data delivered via PDU format

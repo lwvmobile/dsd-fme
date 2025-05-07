@@ -1393,6 +1393,13 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
       state->group_tally++;
     }
 
+    //run a watchdog here so we can update this with the crypto variables and ENC LO
+    if (DestinationID != 0 && lo == 0)
+    {
+      sprintf (state->event_history_s[0].Event_History_Items[0].internal_str, "Target: %d; has been locked out; Encryption Lock Out Enabled.", DestinationID);
+      watchdog_event_current(opts, state, 0);
+    }
+
     //Craft a fake DISC Message send it to return to CC
     uint8_t dbits[96]; memset (dbits, 0, sizeof(dbits)); dbits[3] = 1; dbits[7] = 1; //DISC = 0x11;
     if ( (strcmp(gm, "DE") == 0) && (strcmp(gn, "ENC LO") == 0)  )

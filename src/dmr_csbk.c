@@ -502,6 +502,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
             if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
             {
 
+              //run a watchdog here so we can update this with the most recent info
+              watchdog_event_current(opts, state, 0);
+              watchdog_event_current(opts, state, 1);
+
               //display/le/buzzer bug fix when p_clear activated (unsure why this was disabled)
               //clear only the current slot initially, then clear both if tuning to a different freq
               if (state->currentslot == 0 && csbk_fid != 253) //don't reset on Cap+ since we aren't testing based on the current TS
@@ -529,11 +533,15 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 //clear both if tuning away to another frequency
                 if (GetCurrentFreq(opts->rigctl_sockfd) != state->p25_cc_freq)
                 {
+                  state->lastsrc = 0;
+                  state->lasttg = 0;
                   state->payload_mi = 0;
                   state->payload_algid = 0;
                   state->payload_keyid = 0;
                   state->dmr_so = 0;
 
+                  state->lastsrcR = 0;
+                  state->lasttgR = 0;
                   state->payload_miR = 0;
                   state->payload_algidR = 0;
                   state->payload_keyidR = 0;
@@ -564,11 +572,15 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 //clear both if tuning away to another frequency
                 if (opts->rtlsdr_center_freq != tempf)
                 {
+                  state->lastsrc = 0;
+                  state->lasttg = 0;
                   state->payload_mi = 0;
                   state->payload_algid = 0;
                   state->payload_keyid = 0;
                   state->dmr_so = 0;
 
+                  state->lastsrcR = 0;
+                  state->lasttgR = 0;
                   state->payload_miR = 0;
                   state->payload_algidR = 0;
                   state->payload_keyidR = 0;
@@ -1024,29 +1036,31 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //check the source and/or target for special gateway identifiers
         dmr_gateway_identifier (ahoy_source, ahoy_target);
 
-        if (state->currentslot == 0)
-        {
-          state->lastsrc = ahoy_source;
-          state->lasttg = ahoy_target;
-        }
-        else
-        {
-          state->lastsrcR = ahoy_source;
-          state->lasttgR = ahoy_target;
-        }
-        watchdog_event_datacall (opts, state, ahoy_source, ahoy_target, ahoy_str, state->currentslot);
-        if (state->currentslot == 0)
-        {
-          state->lastsrc = 0;
-          state->lasttg = 0;
-        }
-        else
-        {
-          state->lastsrcR = 0;
-          state->lasttgR = 0;
-        }
-        watchdog_event_history(opts, state, 0);
-        watchdog_event_current(opts, state, 0);
+        //log ahoy as a data call event //re-enable this if you want, but it can clog up the event history
+        // if (state->currentslot == 0)
+        // {
+        //   state->lastsrc = ahoy_source;
+        //   state->lasttg = ahoy_target;
+        // }
+        // else
+        // {
+        //   state->lastsrcR = ahoy_source;
+        //   state->lasttgR = ahoy_target;
+        // }
+        // watchdog_event_datacall (opts, state, ahoy_source, ahoy_target, ahoy_str, state->currentslot);
+        // if (state->currentslot == 0)
+        // {
+        //   state->lastsrc = 0;
+        //   state->lasttg = 0;
+        // }
+        // else
+        // {
+        //   state->lastsrcR = 0;
+        //   state->lasttgR = 0;
+        // }
+        // watchdog_event_history(opts, state, 0);
+        // watchdog_event_current(opts, state, 0);
+        //end ahoy logging
 
       }
 

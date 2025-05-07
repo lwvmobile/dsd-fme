@@ -121,6 +121,7 @@ typedef struct {
   char gps_s[2000];        //gps, if returned, expressed as a string
   char text_message[2000]; //if this event is a decoded text message, then it goes here
   char event_string[2000]; //user legible and printable string for the event that happened
+  char internal_str[2000]; //string that relates to a DSD-FME generated event (ENC LO, error notices, etc)
 } Event_History;
 
 //event history for number of each items above

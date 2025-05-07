@@ -3000,8 +3000,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     {
       attron(COLOR_PAIR(1));
       printw("Hytera Enhanced");
-      // if (state->R != 0)
-      //     printw(" Key: %010X", state->R);
+      if (state->R != 0)
+          printw(" Key: %010llX", state->R);
       attron(COLOR_PAIR(3));
     }
 
@@ -3175,8 +3175,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       {
         attron(COLOR_PAIR(1));
         printw("Hytera Enhanced");
-        // if (state->RR != 0)
-        //   printw(" Key: %010X", state->RR);
+        if (state->RR != 0)
+          printw(" Key: %010llX", state->RR);
         attron(COLOR_PAIR(3));
       }
 
@@ -3516,6 +3516,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       sprintf (text_string, "%s", "BUMBLEBEETUNA");
       if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].gps_s, 13) != 0)
         printw ("|      GPS: %s \n", state->event_history_s[slot].Event_History_Items[i%255].gps_s);
+
+      sprintf (text_string, "%s", "BUMBLEBEETUNA");
+      if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].internal_str, 13) != 0)
+        printw ("|      DSD-FME: %s \n", state->event_history_s[slot].Event_History_Items[i%255].internal_str);
 
     }
     printw ("------------------------------------------------------------------------------\n");
@@ -4427,6 +4431,7 @@ void init_event_history (Event_History_I * event_struct, uint8_t start, uint8_t 
     sprintf (event_struct->Event_History_Items[i].gps_s, "%s", "BUMBLEBEETUNA");
     sprintf (event_struct->Event_History_Items[i].text_message, "%s", "BUMBLEBEETUNA");
     sprintf (event_struct->Event_History_Items[i].event_string, "%s", "BUMBLEBEETUNA");
+    sprintf (event_struct->Event_History_Items[i].internal_str, "%s", "BUMBLEBEETUNA");
   }
 }
 
@@ -4467,6 +4472,7 @@ void push_event_history (Event_History_I * event_struct)
     sprintf (event_struct->Event_History_Items[i].gps_s, "%s", event_struct->Event_History_Items[i-1].gps_s);
     sprintf (event_struct->Event_History_Items[i].text_message, "%s", event_struct->Event_History_Items[i-1].text_message);
     sprintf (event_struct->Event_History_Items[i].event_string, "%s", event_struct->Event_History_Items[i-1].event_string);
+    sprintf (event_struct->Event_History_Items[i].internal_str, "%s", event_struct->Event_History_Items[i-1].internal_str);
   }
 }
 
@@ -4489,6 +4495,8 @@ void write_event_to_log_file (dsd_opts * opts, dsd_state * state, uint8_t slot, 
     fprintf (event_log_file, " Talker Alias: %s \n", state->event_history_s[slot].Event_History_Items[0].alias);
   if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[0].gps_s, 13) != 0)
     fprintf (event_log_file, " GPS: %s \n", state->event_history_s[slot].Event_History_Items[0].gps_s);
+  if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[0].internal_str, 13) != 0)
+    fprintf (event_log_file, " DSD-FME: %s \n", state->event_history_s[slot].Event_History_Items[0].internal_str);
 
   //flush and close log file
   fflush (event_log_file);

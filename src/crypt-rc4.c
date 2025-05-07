@@ -88,8 +88,8 @@ void rc4_block_output (int drop, int keylen, int meslen, uint8_t * key, uint8_t 
 
 }
 
-//NOTE: This has not been verified to work properly
-//NOTE: This is for Hytera Enhanced RC4, if AES, this will not work
+//This is now verified to work after changing the drop byte value from 256 to 0.
+//also, had to change the application to not skip the additional 7 bits like DMRA or P25 does.
 void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value)
 {
 
@@ -119,7 +119,8 @@ void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long
     ks_octets = state->ks_octetL;
   else ks_octets = state->ks_octetR;
 
-  rc4_block_output(256, 5, 135, key, ks);
+  //NOTE: Drop Byte value is 0
+  rc4_block_output(0, 5, 135, key, ks);
 
   for (int i = 0; i < 5; i++)
     kiv[i] = key[i] ^ mi[i];

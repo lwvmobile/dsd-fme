@@ -702,6 +702,13 @@ processLDU2 (dsd_opts * opts, dsd_state * state)
         state->group_tally++;
       }
 
+      //run a watchdog here so we can update this with the crypto variables and ENC LO
+      if (ttg != 0 && enc_wr == 0) //
+      {
+        sprintf (state->event_history_s[0].Event_History_Items[0].internal_str, "Target: %d; has been locked out; Encryption Lock Out Enabled.", ttg);
+        watchdog_event_current(opts, state, 0);
+      }
+
       //return to the control channel
       fprintf (stderr, " No Enc Following on P25p1 Trunking; Return to CC; \n");
       return_to_cc (opts, state);

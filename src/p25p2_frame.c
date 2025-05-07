@@ -729,6 +729,15 @@ void process_ESS (dsd_opts * opts, dsd_state * state)
 					state->group_tally++;
 				}
 
+				//run a watchdog here so we can update this with the crypto variables and ENC LO
+				//may need to disable this for same reason as below
+        if (ttg != 0 && enc_wr == 0)
+        {
+					uint8_t slot = state->currentslot; //need to make sure we can verify the slot accuracy on SACCH slots (inverted)
+          sprintf (state->event_history_s[slot].Event_History_Items[0].internal_str, "Target: %d; has been locked out; Encryption Lock Out Enabled.", ttg);
+          watchdog_event_current(opts, state, slot);
+        }
+
 				//return to the control channel -- NOTE: Disabled, just mark as lockout for now, return would require complex check of the other slot activity
 				// fprintf (stderr, " No Enc Following on P25p2 Trunking; Return to CC; \n");
 				// return_to_cc (opts, state);

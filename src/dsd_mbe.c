@@ -802,8 +802,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         //last bit
         ambe_d[48] ^= state->ks_bitstreamL[state->bit_counterL++];
 
-        //skip the next 7 bits of the array
-        state->bit_counterL += 7;
+        //skip the next 7 bits of the array (if not Hytera Enhanced)
+        if(state->payload_algid != 0x02)
+          state->bit_counterL += 7;
 
         //increment vc counter by one
         state->DMRvcL++;
@@ -1179,8 +1180,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         //last bit
         ambe_d[48] ^= state->ks_bitstreamR[state->bit_counterR++];
 
-        //skip the next 7 bits of the array
-        state->bit_counterR += 7;
+        //skip the next 7 bits of the array (if not Hytera Enhanced)
+        if(state->payload_algidR != 0x02)
+          state->bit_counterR += 7;
 
         //increment vc counter by one
         state->DMRvcR++;

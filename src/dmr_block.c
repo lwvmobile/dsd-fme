@@ -284,9 +284,9 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
 
       fprintf (stderr, "\n %s", rsp_string);
 
-      //REMUS, enable (or disable) next two lines is you want to
-      sprintf (state->dmr_lrrp_gps[slot], "%s; ", rsp_string);
-      watchdog_event_datacall (opts, state, source, target, state->dmr_lrrp_gps[slot], slot);
+      //REMUS, enable (or disable) next two lines is you want to //
+      // sprintf (state->dmr_lrrp_gps[slot], "%s; ", rsp_string);
+      // watchdog_event_datacall (opts, state, source, target, state->dmr_lrrp_gps[slot], slot);
 
     }
 
