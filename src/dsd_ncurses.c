@@ -3885,6 +3885,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     sprintf (state->group_array[state->group_tally].groupName, "%s", "LOCKOUT");
     state->group_tally++;
 
+    sprintf (state->event_history_s[0].Event_History_Items[0].internal_str, "Target: %d; has been locked out; User Lock Out.", state->lasttg);
+    watchdog_event_current(opts, state, 0);
+    sprintf (state->call_string[0], "%s", "                     "); //21 spaces
+
     //if we have an opened group file, let's write a group lock out into it to make it permanent
     if (opts->group_in_file[0] != 0) //file is available
     {
@@ -3924,13 +3928,20 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //RIGCTL
     if (opts->p25_trunk == 1 && opts->use_rigctl == 1)
     {
+      //drop all items (failsafe)
+      noCarrier(opts, state);
       if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
       SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
     }
 
     //rtl
     #ifdef USE_RTLSDR
-    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_dev_tune (opts, state->p25_cc_freq);
+    if (opts->p25_trunk == 1 && opts->audio_in_type == 3)
+    {
+      //drop all items (failsafe)
+      noCarrier(opts, state);
+      rtl_dev_tune (opts, state->p25_cc_freq);
+    }
     #endif
 
     state->last_cc_sync_time = time(NULL);
@@ -3950,6 +3961,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     sprintf (state->group_array[state->group_tally].groupMode, "%s", "B");
     sprintf (state->group_array[state->group_tally].groupName, "%s", "LOCKOUT");
     state->group_tally++;
+
+    sprintf (state->event_history_s[1].Event_History_Items[0].internal_str, "Target: %d; has been locked out; User Lock Out.", state->lasttgR);
+    watchdog_event_current(opts, state, 1);
+    sprintf (state->call_string[1], "%s", "                     "); //21 spaces
 
     //if we have an opened group file, let's write a group lock out into it to make it permanent
     if (opts->group_in_file[0] != 0) //file is available
@@ -3990,13 +4005,20 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     //RIGCTL
     if (opts->p25_trunk == 1 && opts->use_rigctl == 1)
     {
+      //drop all items (failsafe)
+      noCarrier(opts, state);
       if (opts->setmod_bw != 0 )  SetModulation(opts->rigctl_sockfd, opts->setmod_bw);
       SetFreq(opts->rigctl_sockfd, state->p25_cc_freq);
     }
 
     //rtl
     #ifdef USE_RTLSDR
-    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_dev_tune (opts, state->p25_cc_freq);
+    if (opts->p25_trunk == 1 && opts->audio_in_type == 3)
+    {
+      //drop all items (failsafe)
+      noCarrier(opts, state);
+      rtl_dev_tune (opts, state->p25_cc_freq);
+    }
     #endif
 
     state->last_cc_sync_time = time(NULL);

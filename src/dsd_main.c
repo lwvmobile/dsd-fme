@@ -132,7 +132,7 @@
    {
  
      //always do these -- makes sense during scanning
-     state->nxdn_last_ran = -1;
+     state->nxdn_last_ran = -1; //
      state->nxdn_last_rid = 0;
      state->nxdn_last_tg = 0;
  
@@ -289,9 +289,10 @@
      sprintf (state->dmr_site_parms, "%s", "");
    }
  
-   //zero out after x second hangtime when trunking to prevent premature zeroing on these variables
-   //mainly bugfix for ncurses and per call wavs (edacs) and also signal fade, etc
-   if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && time(NULL) - state->last_cc_sync_time > opts->trunk_hangtime)
+   //The new event history should not require this, but revert if other random issues suddenly come up
+   //this was mainly for preventling numbers blipping out on signal fade, but also leaves stale values
+   //on occassion when carrier drops and return to control channel, doesn't close wav files in that instance
+  //  if (opts->p25_trunk == 1 && opts->p25_is_tuned == 1 && time(NULL) - state->last_cc_sync_time > opts->trunk_hangtime)
    {
      state->lasttg = 0;
      state->lastsrc = 0;
@@ -299,6 +300,9 @@
      state->lastsrcR = 0;
      state->gi[0] = -1;
      state->gi[1] = -1;
+    //  state->nxdn_last_ran = -1; //
+     state->nxdn_last_rid = 0;
+     state->nxdn_last_tg = 0;
  
    }
  
