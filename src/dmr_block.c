@@ -502,7 +502,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   UNUSED(cs_bits);
 
   //bytes to bits
-  for(i = 0, j = 0; i < 36; i++, j+=8)
+  for(i = 0, j = 0; i < 60; i++, j+=8)
   {
     cs_bits[j + 0] = (block_bytes[i] >> 7) & 0x01;
     cs_bits[j + 1] = (block_bytes[i] >> 6) & 0x01;
@@ -632,7 +632,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 2) end = 25;
     if (udt_uab == 3) end = 38;
     if (udt_uab == 4) end = 52;
-    end -= udt_padnib/2;
+    end -= udt_padnib/2; //this may be more complex since its 7, so /7 and then if %7, add +1?
     fprintf (stderr, "ISO7 Text: "  );
     strcat (udt_string, "ISO7 Text; ");
     // fprintf (stderr, " pad: %d; end: %d;", udt_padnib, end); //debug
@@ -658,7 +658,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 2) end = 22;
     if (udt_uab == 3) end = 34;
     if (udt_uab == 4) end = 46;
-    end -= udt_padnib/2;
+    end -= udt_padnib/2; //just going with /2 so that its 2*nib = byte format (might cut off last, not sure?)
     // fprintf (stderr, " pad: %d; end: %d;", udt_padnib, end); //debug
     for (i = 0; i < end; i++)
     {
@@ -681,7 +681,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 2) end = 11;
     if (udt_uab == 3) end = 17;
     if (udt_uab == 4) end = 23;
-    end -= udt_padnib/2;
+    end -= udt_padnib/4;
     fprintf (stderr, "UTF16 Text: "  );
     // fprintf (stderr, " pad: %d; end: %d;", udt_padnib, end); //debug
     strcat (udt_string, "UTF16 Text; ");
@@ -732,14 +732,14 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     if (udt_uab == 2) end = 9;
     if (udt_uab == 3) end = 15;
     if (udt_uab == 4) end = 21;
-    end -= udt_padnib/2;
+    end -= udt_padnib/4;
     fprintf (stderr, "Address: %d; ", (uint32_t)ConvertBitIntoBytes(&cs_bits[96+8], 24));
     fprintf (stderr, "UTF16 Text: "  );
     strcat (udt_string, "UTF16 Text; ");
     sprintf (state->event_history_s[slot].Event_History_Items[0].text_message, "%s", " ");
     for (i = 0; i < end; i++) //368/16 = 21 character max
     {
-      utf16c = (uint16_t)ConvertBitIntoBytes(&cs_bits[(i*16)+96], 16);
+      utf16c = (uint16_t)ConvertBitIntoBytes(&cs_bits[(i*16)+96+32], 16);
       char u16[2]; u16[0] = utf16c & 0xFF; u16[1] = 0;
       if (utf16c >= 0x20 && utf16c != 0x7F) //avoid control chars
       {
