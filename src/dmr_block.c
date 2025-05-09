@@ -736,7 +736,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     fprintf (stderr, "Address: %d; ", (uint32_t)ConvertBitIntoBytes(&cs_bits[96+8], 24));
     fprintf (stderr, "UTF16 Text: "  );
     strcat (udt_string, "Mixed Add/Text; ");
-    sprintf (state->event_history_s[slot].Event_History_Items[0].text_message, "%s", " Address: %d; ", (uint32_t)ConvertBitIntoBytes(&cs_bits[96+8], 24));
+    sprintf (state->event_history_s[slot].Event_History_Items[0].text_message, "Address: %d;", (uint32_t)ConvertBitIntoBytes(&cs_bits[96+8], 24));
     for (i = 0; i < end; i++) //368/16 = 21 character max
     {
       utf16c = (uint16_t)ConvertBitIntoBytes(&cs_bits[(i*16)+96+32], 16);
