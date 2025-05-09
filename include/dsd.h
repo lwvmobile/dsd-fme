@@ -590,6 +590,7 @@ typedef struct
   int lastsrcR;
   int8_t gi[2]; //group, or private call, per slot
   uint8_t eh_index;
+  uint8_t eh_slot;
   int nac;
   int errs;
   int errs2;
@@ -1241,6 +1242,8 @@ void unpack_ambe (uint8_t * input, char * ambe);
 
 void ncursesOpen (dsd_opts * opts, dsd_state * state);
 void ncursesPrinter (dsd_opts * opts, dsd_state * state);
+void ncursesMenu (dsd_opts * opts, dsd_state * state);
+uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c);
 void ncursesClose ();
 
 //new NXDN Functions start here!
