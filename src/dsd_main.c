@@ -1723,8 +1723,20 @@
    codec2_destroy(state->codec2_1600);
    codec2_destroy(state->codec2_3200);
    #endif
+
+   //watchdog event at this point
+    watchdog_event_history(opts, state, 0);
+    watchdog_event_current(opts, state, 0);
+    watchdog_event_history(opts, state, 1);
+    watchdog_event_current(opts, state, 1);
  
    noCarrier (opts, state);
+
+   //watchdog event at this point
+    watchdog_event_history(opts, state, 0);
+    watchdog_event_current(opts, state, 0);
+    watchdog_event_history(opts, state, 1);
+    watchdog_event_current(opts, state, 1);
 
   if (opts->wav_out_f != NULL)
     opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);

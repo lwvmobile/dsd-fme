@@ -73,22 +73,6 @@ unsigned long long int edacsVoteFr(unsigned long long int fr_1_4, unsigned long 
   return msg_result & 0xFFFFFFFFFF;
 }
 
-void openWavOutFile48k (dsd_opts * opts, dsd_state * state)
-{
-  UNUSED(state);
-  SF_INFO info;
-  info.samplerate = 48000; //48k for analog output (has to match input)
-  info.channels = 1;
-  info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16 | SF_ENDIAN_LITTLE;
-  opts->wav_out_f = sf_open (opts->wav_out_file, SFM_RDWR, &info);
-
-  if (opts->wav_out_f == NULL)
-  {
-    fprintf (stderr,"Error - could not open wav output file %s\n", opts->wav_out_file);
-    return;
-  }
-}
-
 //listening to and playing back analog audio
 void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn)
 {
@@ -1455,7 +1439,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
         //Call info for state
         if (lcn != 0){state->edacs_vc_lcn = lcn;}
                       state->lasttg = target;
-                      state->lastsrc = 0;
+                      state->lastsrc = 0x800;
 
         //Call type for state
         if (is_individual_call == 0) state->edacs_vc_call_type = EDACS_IS_GROUP;
@@ -1589,7 +1573,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
           if (lcn != 0){state->edacs_vc_lcn = lcn;}
                         state->lasttg = target;
                         //Alas, EDACS standard does not provide a source LID on channel updates - try to work around this on the display end instead
-                        state->lastsrc = 0;
+                        state->lastsrc = 0x800;
 
           //Call type for state
                                       state->edacs_vc_call_type  = EDACS_IS_VOICE;
@@ -2183,6 +2167,19 @@ void eot_cc(dsd_opts * opts, dsd_state * state)
 {
 
   fprintf (stderr, "EOT; \n");
+
+  //watchdog event at this point
+  state->lastsynctype = 38; 
+  watchdog_event_history(opts, state, 0);
+  watchdog_event_current(opts, state, 0);
+
+  //close and rename wav file here, then open a new one
+  if (opts->dmr_stereo_wav == 1)
+  {
+    if (opts->wav_out_f != NULL)
+      opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+    opts->wav_out_f  = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 8000, 0);
+  }
 
   //set here so that when returning to the CC, it doesn't go into an immediate hunt if not immediately acquired
   state->last_cc_sync_time = time(NULL);

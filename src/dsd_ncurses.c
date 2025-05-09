@@ -2046,6 +2046,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       //may be displayed if we miss an initial call channel assignment.
       if (state->ea_mode == 1 || (state->lastsrc != 0 || edacs_channel_tree[state->edacs_vc_lcn][4] != state->edacs_vc_call_type))
         edacs_channel_tree[state->edacs_vc_lcn][3] = state->lastsrc;
+      if (state->ea_mode == 0 && state->lastsrc == 0x800) //this was from a grant update, so set this to 0
+        edacs_channel_tree[state->edacs_vc_lcn][3] = 0;
       edacs_channel_tree[state->edacs_vc_lcn][4] = state->edacs_vc_call_type;
       edacs_channel_tree[state->edacs_vc_lcn][5] = time(NULL);
     }
@@ -4927,6 +4929,19 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
       
       sprintf (sysid_string, "EDACS_SITE_%03d", sys_id1);
       strcat (sysid_string, sup_str);
+
+      if (state->ea_mode == 0)
+      {
+        int afs = state->lasttg;
+        sprintf(src_str, "%s", ""); sprintf(tgt_str, "%s", "");
+        int a = (afs >> state->edacs_a_shift) & state->edacs_a_mask;
+        int f = (afs >> state->edacs_f_shift) & state->edacs_f_mask;
+        int s = afs & state->edacs_s_mask;
+        sprintf (tgt_str, "%03d_AFS_%02d_%02d%01d", afs, a, f, s);
+        if (state->lastsrc != 0x800 && state->lastsrc != 0)
+          sprintf (src_str, "LID_%d", state->lastsrc);
+        else sprintf (src_str, "LID_UNK");
+      }
       
     }
 
@@ -5007,7 +5022,7 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
   }
 
   //Craft an event string for ncurses event history, and a more complex string for logging
-  char event_string[200]; memset(event_string, 0, sizeof(event_string));
+  char event_string[2000]; memset(event_string, 0, sizeof(event_string));
 
   //WIP: Seperate Voice Call Event Strings when SRC/TGT values are numerical,
   //and a seperate one for when they are string values (M17, YSF, DSTAR, and dPMR, or use special formatting)
@@ -5036,24 +5051,53 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
     if (state->dPMRVoiceFS2Frame.Version[0] == 3)
       strcat (event_string, "Scrambler Enc; ");
   }
-  //TODO: Find out why EDACS is also placing items into Slot 2 Event History with valid src, but invalid tg (not a problem, just odd)
   else if (state->lastsynctype == 14 || state->lastsynctype == 15 || state->lastsynctype == 37 || state->lastsynctype == 38) //EDACS Calls
   {
-    //is this AFS format, or EA format, also, need to re-add Ilya's other decoded call elements into this somehow
+    svc_opts = state->edacs_vc_call_type;
+    char sup_str[200]; memset (sup_str, 0, sizeof(sup_str));
+    sprintf (sup_str, "%s", "");
+    if (svc_opts & 0x02)
+      strcat (sup_str, "Digital ");
+    else strcat (sup_str, "Analog ");
+    if (svc_opts & 0x04)
+      strcat (sup_str, "Emergency ");
+    if (svc_opts & 0x08)
+      strcat (sup_str, "Group ");
+    if (svc_opts & 0x10)
+      strcat (sup_str, "I ");
+    if (svc_opts & 0x20)
+      strcat (sup_str, "ALL ");
+    if (svc_opts & 0x40)
+      strcat (sup_str, "INTER ");
+    if (svc_opts & 0x80)
+      strcat (sup_str, "TEST ");
+    if (svc_opts & 0x100)
+      strcat (sup_str, "AGENCY ");
+    if (svc_opts & 0x200)
+      strcat (sup_str, "FLEET ");
+    if (svc_opts & 0x01)
+      strcat (sup_str, "Voice ");
+    strcat (sup_str, "Call");
+
     if (state->ea_mode == 1)
     {
-      sprintf (event_string, "%s %s %s TGT: %07d; SRC: %07d; LCN: %02d; SITE: %d:%d.%04X; ", datestr, timestr, sys_string, target_id, source_id, channel, sys_id1, sys_id2, sys_id3);
+      sprintf (event_string, "%s %s %s TGT: %07d; SRC: %07d; LCN: %02d; SITE: %d:%d.%04X; %s;", datestr, timestr, sys_string, target_id, source_id, channel, sys_id1, sys_id2, sys_id3, sup_str);
     }
     else
     {
-      //TODO: Have EDACS decoder write a nicer string for us to use in this instance
-      // Compute AFS for display purposes only
-      int a = (state->tg_hold >> state->edacs_a_shift) & state->edacs_a_mask;
-      int f = (state->tg_hold >> state->edacs_f_shift) & state->edacs_f_mask;
-      int s = state->tg_hold & state->edacs_s_mask;
+      int afs = state->lasttg;
+      int a = (afs >> state->edacs_a_shift) & state->edacs_a_mask;
+      int f = (afs >> state->edacs_f_shift) & state->edacs_f_mask;
+      int s = afs & state->edacs_s_mask;
       char afs_str[8];
       getAfsString(state, afs_str, a, f, s);
-      sprintf (event_string, "%s %s %s Voice AFS: %s ", datestr, timestr, sys_string, afs_str);
+      char lid_str[20]; memset(lid_str, 0, sizeof(lid_str));
+      sprintf(lid_str, "%s", "");
+      if (state->lastsrc != 0 && state->lastsrc != 0x800)
+        sprintf (lid_str, "LID: %05d;", state->lastsrc);
+      else sprintf (lid_str, "LID: __UNK;");
+
+      sprintf (event_string, "%s %s %s AFS: %s (%04d); %s LCN: %02d; Site: %d; %s; ", datestr, timestr, sys_string, afs_str, afs, lid_str, channel, sys_id1, sup_str);
     }
   }
   else if (state->lastsynctype == 10 || state->lastsynctype == 11 || state->lastsynctype == 12 || state->lastsynctype == 13 ||
