@@ -2128,3 +2128,127 @@ void analog_gain (dsd_opts * opts, dsd_state * state, short * input, int len)
   for (i = 0; i < len; i++)
     input[i] *= gain;
 }
+
+void beeper (dsd_opts * opts, dsd_state * state, int lr, int id, int ad, int len)
+{
+  UNUSED(state);
+  int i, j, n;
+  //use lr as left or right channel designation in stereo config
+  float samp_f[160];  //mono float sample
+  float samp_fs[320]; //stereo float sample
+  short samp_s[160];  //mono short sample
+  short samp_ss[320]; //stereo short sample
+  short samp_su[960]; //mono short upsample
+  short outbuf[6];    //temp storage for upsample
+
+  n = 0; //rolling sine wave 'degree'
+
+  //double len if not using Pulse Audio,
+  //anything over UDP or using OSS may 
+  //not clear the buffer at the shorter len
+  if (opts->audio_out_type != 0)
+    len *= 2;
+
+  //each j increment is 20 ms at 160 samples / 8 kHz
+  for (j = 0; j < len; j++)
+  {
+    //'zero' out stereo mix samples
+    memset (samp_fs, 0, sizeof(samp_fs));
+    memset (samp_ss, 0, sizeof(samp_ss));
+
+    //generate a tone with supplied tone ID and AD value
+    soft_tonef(samp_f, n, id, ad);
+
+    //convert float to short if required
+    if (opts->floating_point == 0)
+    {
+      mbe_floattoshort(samp_f, samp_s);
+      for (i = 0; i < 160; i++)
+      {
+        samp_s[i] *= 4000; //apply gain
+        samp_ss[(i*2)+lr] = samp_s[i];
+      }
+    }
+
+    //load returned tone sample into appropriate channel -- left = +0; right = +1;
+    for (i = 0; i < 160; i++)
+      samp_fs[(i*2)+lr] = samp_f[i];
+
+    //play sample 3 times (20ms x 3 = 60ms)
+    if (opts->audio_out_type == 0) //Pulse Audio
+    {
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 1)
+        pa_simple_write(opts->pulse_digi_dev_out, samp_fs, 320*4, NULL);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 1)
+        pa_simple_write(opts->pulse_digi_dev_out, samp_f,  160*4, NULL);
+
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 0)
+        pa_simple_write(opts->pulse_digi_dev_out, samp_ss, 320*2, NULL);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 0)
+        pa_simple_write(opts->pulse_digi_dev_out, samp_s,  160*2, NULL);
+
+    }
+
+    else if (opts->audio_out_type == 8) //UDP Audio
+    {
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 1)
+        udp_socket_blaster (opts, state, 320*4, samp_fs);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 1)
+        udp_socket_blaster (opts, state, 160*4, samp_f);
+
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 0)
+        udp_socket_blaster (opts, state, 320*2, samp_ss);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 0)
+        udp_socket_blaster (opts, state, 160*2, samp_s);
+
+    }
+
+    else if (opts->audio_out_type == 1) //STDOUT
+    {
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 1)
+        write(opts->audio_out_fd, samp_fs, 320*4);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 1)
+        write(opts->audio_out_fd, samp_f,  160*4);
+
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 0)
+        write(opts->audio_out_fd, samp_ss, 320*2);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 0)
+        write(opts->audio_out_fd, samp_s,  160*2);
+    }
+
+    else if (opts->audio_out_type == 2) //OSS Variable Output (no float)
+    {
+
+      if (opts->pulse_digi_out_channels == 2 && opts->floating_point == 0)
+        write(opts->audio_out_fd, samp_ss, 320*2);
+
+      if (opts->pulse_digi_out_channels == 1 && opts->floating_point == 0)
+        write(opts->audio_out_fd, samp_s,  160*2);
+    }
+
+    else if (opts->audio_out_type == 5) //OSS 48k/1 configuration with upsample
+    {
+      short prev = 0;
+      for (i = 0; i < 160; i++)
+      {
+        upsampleS (samp_s[i], prev, outbuf);
+        samp_su[(i*6)+0] = outbuf[0];
+        samp_su[(i*6)+1] = outbuf[1];
+        samp_su[(i*6)+2] = outbuf[2];
+        samp_su[(i*6)+3] = outbuf[3];
+        samp_su[(i*6)+4] = outbuf[4];
+        samp_su[(i*6)+5] = outbuf[5];
+      }
+
+      write (opts->audio_out_fd, samp_su, 960*2);
+    }
+
+  }
+
+}

@@ -21,6 +21,108 @@
  *-----------------------------------------------------------------------------*/
 #include "dsd.h"
 
+
+int isCustomAfsString(dsd_state * state) {
+  return state->edacs_a_bits != 4 || state->edacs_f_bits != 4 || state->edacs_s_bits != 3;
+}
+
+//Get the string length we need for an AFS string, math-style
+int getAfsStringLength(dsd_state * state) {
+  if (!isCustomAfsString(state))
+    return 6;
+
+  int length = 0;
+  length += (state->edacs_a_bits + 2) / 3;
+  length += (state->edacs_f_bits + 2) / 3;
+  length += (state->edacs_s_bits + 2) / 3;
+  length += 2; //colon separators
+
+  // This will be either 6 or 7
+  return length;
+}
+
+//Format the AFS string, Florida-style
+int getAfsString(dsd_state * state, char * buffer, int a, int f, int s) {
+  if (!isCustomAfsString(state))
+  {
+    sprintf(buffer, "%02d-%02d%01d", a, f, s);
+    return 6;
+  }
+
+  int printed_chars = 0;
+  switch (state->edacs_a_bits)
+  {
+    case 1:
+    case 2:
+    case 3:
+      sprintf(buffer, "%01d:", a);
+      printed_chars += 1;
+      break;
+    case 4:
+    case 5:
+    case 6:
+      sprintf(buffer, "%02d:", a);
+      printed_chars += 2;
+      break;
+    case 7:
+    case 8:
+    case 9:
+      sprintf(buffer, "%03d:", a);
+      printed_chars += 3;
+      break;
+  }
+
+  sprintf(buffer + printed_chars, ":");
+  printed_chars++;
+
+  switch (state->edacs_f_bits) {
+    case 1:
+    case 2:
+    case 3:
+      sprintf(buffer + printed_chars, "%01d", f);
+      printed_chars += 1;
+      break;
+    case 4:
+    case 5:
+    case 6:
+      sprintf(buffer + printed_chars, "%02d", f);
+      printed_chars += 2;
+      break;
+    case 7:
+    case 8:
+    case 9:
+      sprintf(buffer + printed_chars, "%03d", f);
+      printed_chars += 3;
+      break;
+  }
+
+  sprintf(buffer + printed_chars, ":");
+  printed_chars++;
+
+  switch (state->edacs_s_bits) {
+    case 1:
+    case 2:
+    case 3:
+      sprintf(buffer + printed_chars, "%01d", s);
+      printed_chars += 1;
+      break;
+    case 4:
+    case 5:
+    case 6:
+      sprintf(buffer + printed_chars, "%02d", s);
+      printed_chars += 2;
+      break;
+    case 7:
+    case 8:
+    case 9:
+      sprintf(buffer + printed_chars, "%03d", s);
+      printed_chars += 3;
+      break;
+  }
+
+  return printed_chars;
+}
+
 char * getLcnStatusString(int lcn)
 {
   if (lcn == 26 || lcn == 27)

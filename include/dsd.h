@@ -1418,6 +1418,11 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot);
 void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot);
 void watchdog_event_datacall (dsd_opts * opts, dsd_state * state, uint32_t src, uint32_t dst, char * data_string, uint8_t slot);
 
+//edacs AFS things
+int isCustomAfsString(dsd_state * state);
+int getAfsStringLength(dsd_state * state);
+int getAfsString(dsd_state * state, char * buffer, int a, int f, int s);
+
 //dmr alg stuff
 void dmr_alg_reset (dsd_opts * opts, dsd_state * state);
 void dmr_alg_refresh (dsd_opts * opts, dsd_state * state);
