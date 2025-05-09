@@ -224,11 +224,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   lastt = 0;
   state->numflips = 0;
 
-  //move ncursesPrinter outside of the sync loop, causes weird lag inside the loop
-  if (opts->use_ncurses_terminal == 1)
-  {
-    ncursesPrinter(opts, state);
-  }
+  //moved back inside the loop to run on t mod basis to speed up responsiveness during quiet times
+  // if (opts->use_ncurses_terminal == 1)
+  // {
+  //   ncursesPrinter(opts, state);
+  // }
 
   //slot 1
   watchdog_event_history(opts, state, 0);
@@ -247,6 +247,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
     {
 
       t++;
+
+      //run ncurses printer more frequently when no sync to speed up responsiveness of it during no sync period
+      if ( opts->use_ncurses_terminal == 1 && ((t % 360) == 0)) //t maxes out at 1800 (5 times each getFrameSync)
+        ncursesPrinter(opts, state);
 
       symbol = getSymbol (opts, state, 0);
 
