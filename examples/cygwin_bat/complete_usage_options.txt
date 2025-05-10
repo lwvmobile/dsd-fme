@@ -1,10 +1,14 @@
+Build Version: AW 2025-131-g680b792 
+MBElib Version: 1.3.4
+CODEC2 Support Enabled
+
 Usage: dsd-fme [options]            Decoder/Trunking Mode
   or:  dsd-fme [options] -r <files> Read/Play saved mbe data from file(s)
   or:  dsd-fme -h                   Show help
 
 Display Options:
   -N            Use NCurses Terminal
-                 dsd-fme -N 2> log.ans 
+                 dsd-fme -N 2> console_log.txt 
   -Z            Log MBE/PDU Payloads to console
 
 Device Options:
@@ -40,7 +44,6 @@ Input/Output options:
   -g <float>    Audio Digital Output Gain  (Default: 0 = Auto;        )
                                            (Manual:  1 = 2%; 50 = 100%)
   -n <float>    Audio Analog  Output Gain  (Default: 0 = Auto; 0-100%  )
-  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.
   -6 <file>     Output raw audio .wav file (48K/1). (WARNING! Large File Sizes 1 Hour ~= 360 MB)
   -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.
                  (Use ./folder for Nested Directory!)
@@ -53,13 +56,15 @@ Input/Output options:
                  (Running in console will use static wav files)
   -a            Enable Call Alert Beep (NCurses Terminal Only)
                  (Warning! Might be annoying.)
+  -J <file>     Specify Filename for Event Log Output.
   -L <file>     Specify Filename for LRRP Data Output.
   -Q <file>     Specify Filename for OK-DMRlib Structured File Output. (placed in DSP folder)
   -Q <file>     Specify Filename for M17 Float Stream Output. (placed in DSP folder)
   -c <file>     Output symbol capture to .bin file
   -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice
   -V <num>      Enable TDMA Voice Synthesis on Slot 1 (1), Slot 2 (2), or Both (3); Default is 3; 
-                If using /dev/dsp input and output at 48k1, launch two instances of DSD-FME w -V 1 and -V 2 if needed  -z            Set TDMA Voice Slot Preference when using /dev/dsp audio output (prevent lag and stuttering)
+                If using /dev/dsp input and output at 48k1, launch two instances of DSD-FME w -V 1 and -V 2 if needed
+  -z            Set TDMA Voice Slot Preference when using /dev/dsp audio output (prevent lag and stuttering)
   -y            Enable Experimental Pulse Audio Float Audio Output
   -v <hex>      Set Filtering Bitmap Options (Advanced Option)
                 1 1 1 1 (0xF): PBF/LPF/HPF/HPFD on
@@ -79,10 +84,10 @@ RTL-SDR options:
 
 Encoder options:
   -fZ           M17 Stream Voice Encoder
- Example: dsd-fme -fZ -M M17:9:DSD-FME:LWVMOBILE -i pulse -6 m17signal.wav -8 -N 2> m17encoderlog.ans
+ Example: dsd-fme -fZ -M M17:9:DSD-FME:LWVMOBILE -i pulse -6 m17signal.wav -8 -N 2> m17encoderlog.txt
    Run M17 Encoding, listening to pulse audio server, with internal decode/playback and output to 48k/1 wav file
 
- Example: dsd-fme -fZ -M M17:9:DSD-FME:LWVMOBILE -i tcp -o pulse -8 -N 2> m17encoderlog.ans
+ Example: dsd-fme -fZ -M M17:9:DSD-FME:LWVMOBILE -i tcp -o pulse -8 -N 2> m17encoderlog.txt
    Run M17 Encoding, listening to default tcp input, without internal decode/playback and output to 48k/1 analog output device
 
   -fP           M17 Packet Encoder
@@ -153,24 +158,33 @@ Advanced Decoder options:
   -b <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)
                  (NOTE: This used to be the 'K' option! 
 
-  -H <hex>      Manually Enter **tera 10/32/64 Char Basic Privacy Hex Key (see example below)
+  -H <hex>      Manually Enter Hytera 10/32/64 Char Basic Privacy Hex Key (see example below)
                  Encapulate in Single Quotation Marks; Space every 16 chars.
                  -H 0B57935150 
                  -H '736B9A9C5645288B 243AD5CB8701EF8A' 
                  -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' 
 
+  -H <hex>      Manually Enter AES-128 or AES-256 Hex Key (see example below)
+                 Encapulate in Single Quotation Marks; Space every 16 chars.
+                 -H '736B9A9C5645288B 243AD5CB8701EF8A' 
+                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' 
+
   -R <dec>      Manually Enter dPMR or NXDN EHR Scrambler Key Value (Decimal Value)
                  
-  -1 <hex>      Manually Enter RC4 Key Value (DMR, P25) (Hex Value) 
+  -1 <hex>      Manually Enter RC4 or DES Key Value (DMR, P25, NXDN) (Hex Value) 
+                 
+  -2 <hex>      Manually Enter TYT and Enforce 16-bit BP Key Value (DMR) (Hex Value) 
+                 
+  -5 <hex>      Manually Enter 48-bit BP Key Value (DMR) (Hex Value) 
                  
   -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.
                   Only supports NXDN, DMR Basic Privacy (decimal value). 
-                  (dPMR and **tera 32/64 char not supported, DMR uses TG value as key id -- EXPERIMENTAL!!). 
+                  (dPMR and Hytera 32/64 char not supported, DMR uses TG value as key id -- EXPERIMENTAL!!). 
                  
   -K <file>     Import Key List from csv file (Hexidecimal Format) -- Capital 'K'.
-                  Use for Hex Value **tera 10-char BP keys and RC4 10-Char Hex Keys. 
+                  Use for Hex Value Hytera 10-char BP keys, RC4 10-char, DES 16-char Hex Keys, and AES128/256 32/64-char keys. 
                  
-  -4            Force Privacy Key over Encryption Identifiers (DMR BP and NXDN Scrambler) 
+  -4            Force Privacy Key over Encryption Identifiers (DMR MBP/HBP and NXDN Scrambler) 
                  
   -0            Force RC4 Key over Missing PI header/LE Encryption Identifiers (DMR) 
                  
@@ -198,5 +212,5 @@ Advanced Decoder options:
                  May vary based on system stregnth, etc.
   -t <secs>     Set Trunking or Scan Speed VC/sync loss hangtime in seconds. (default = 1 second)
 
- Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.ans
- Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.ans
+ Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.txt
+ Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.txt

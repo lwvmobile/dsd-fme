@@ -171,7 +171,7 @@ Some Keyboard Shortcuts have been implemented for testing to see how users like 
 esc or arrow keys - ncurses menu
 q - quit
 c - toggle compact mode
-h - toggle call history
+h - toggle event history
 z - toggle console payloads
 a - toggle call alert beep
 4 - force privacy/scrambler key assertion over enc identifiers (dmr and nxdn)
@@ -215,6 +215,10 @@ H - Toggle High Pass Filter on Digital Sythesized Voice
 V - Toggle Low  Pass Filter on Analog Voice or Raw Signal Monitoring
 B - Toggle High Pass Filter on Analog Voice or Raw Signal Monitoring
 N - Toggle Passband  Filter on Analog Voice or Raw Signal Monitoring
+
+[ - Scroll backwards through Event History
+] - Scroll forwards  through Event History
+\ - Switch between Slot 1 and Slot 2 Event History
 
 v - Cycle RTL Input Volume Multiplier 1X, 2X, 3X (lower v)
 
