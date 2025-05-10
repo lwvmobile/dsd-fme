@@ -103,14 +103,14 @@ void ncursesOpen (dsd_opts * opts, dsd_state * state)
 
 }
 
+static int lls = -1;
+
 void
 ncursesPrinter (dsd_opts * opts, dsd_state * state)
 {
   uint8_t idas = 0;
   int level = 0;
   int c = 0;
-
-  int lls = -1;
   int i = 0;
 
   if (opts->audio_in_type != 1) //can't run getch/menu when using STDIN -

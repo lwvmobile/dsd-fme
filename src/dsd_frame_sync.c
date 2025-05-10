@@ -248,7 +248,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
 
       //run ncurses printer more frequently when no sync to speed up responsiveness of it during no sync period
       //NOTE: Need to monitor and test this, if responsiveness issues arise, then disable this
-      if ( opts->use_ncurses_terminal == 1 && ((t % 600) == 0)) //t maxes out at 1800 (3 times each getFrameSync)
+      if ( opts->use_ncurses_terminal == 1 && ((t % 300) == 0)) //t maxes out at 1800 (6 times each getFrameSync)
         ncursesPrinter(opts, state);
 
       symbol = getSymbol (opts, state, 0);
