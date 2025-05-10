@@ -693,7 +693,6 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       if (utf16c >= 0x20 && utf16c != 0x7F) //avoid control chars
       {
         fprintf (stderr, "%lc", utf16c); //will using lc work here? May depend on console locale settings?
-        // strcat (udt_string, u16);
         if (utf16c >= 0x20 && utf16c < 0x7F)
           strcat (state->event_history_s[slot].Event_History_Items[0].text_message, u16);
       }
@@ -744,7 +743,6 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
       if (utf16c >= 0x20 && utf16c != 0x7F) //avoid control chars
       {
         fprintf (stderr, "%lc", utf16c);
-        // strcat (udt_string, u16);
         if (utf16c >= 0x20 && utf16c < 0x7F)
           strcat (state->event_history_s[slot].Event_History_Items[0].text_message, u16);
       }
@@ -756,7 +754,7 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
   {
     //Would be nice to be able to test these all out to make sure the conditions are okay, etc
     fprintf (stderr, "NMEA"  );
-    // strcat (udt_string, "NMEA; ");
+    strcat (udt_string, "NMEA; ");
     if (cs_bits[96] == 1) //check if its encrypted first
       fprintf (stderr, " Encrypted Format :("  ); //sad face
     else if (udt_uab == 1)
@@ -774,9 +772,9 @@ void dmr_udt_decoder (dsd_opts * opts, dsd_state * state, uint8_t * block_bytes,
     //unsure of how this is structured for UDT Blocks, would assume one appended block of same format
     //but could also be full blown LIP protocol that is also found in tetra that would require the PDU
     //type bit to be read and then to decode accordingly, this assumes its the modified Short PDU that USBD uses
+    strcat (udt_string, "LIP; ");
     fprintf (stderr, "\n");
     lip_protocol_decoder (opts, state, cs_bits+96); //start on first appended block, and not header
-    // strcat (udt_string, "LIP; ");
 
   }
   else if (udt_format2 == 0x08 || udt_format2 == 0x09)
@@ -1364,7 +1362,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           mbc_block_bits[i] = dmr_pdu_sf_bits[i+96]; //skip udt header
         }
       }
-
+      //there was a bug built into ComputeCrcCCITT16d where len was uint8_t, so len could never exceed 255
       CRCComputed = ComputeCrcCCITT16d (mbc_block_bits, ((blocks+0)*96)-16 );
 
       if (CRCComputed == CRCExtracted) mbc_crc_good[1] = 1;
@@ -1385,7 +1383,7 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
         //debug print
         fprintf (stderr, " %X - %X", CRCExtracted, CRCComputed);
-
+        // fprintf (stderr, " Len: %d", ((blocks+0)*96)-16);
         fprintf (stderr, "%s", KNRM);
       }
 

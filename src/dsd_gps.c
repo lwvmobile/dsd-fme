@@ -16,10 +16,10 @@ void lip_protocol_decoder (dsd_opts * opts, dsd_state * state, uint8_t * input)
   int slot = state->currentslot;
 
   //May need to set this in the UDT header, or pass it into this function to be sure
-  uint32_t src = 0;
-  if (slot == 0)
-    src = state->lastsrc;
-  else src = state->lastsrcR;
+  // uint32_t src = 0;
+  // if (slot == 0)
+  //   src = state->lastsrc;
+  // else src = state->lastsrcR;
 
   //NOTE: This format is pretty much the same as DMR EMB GPS, but has a few extra elements,
   //so I got lazy and just lifted most of the code from there, also assuming same lat/lon calcs
@@ -122,8 +122,7 @@ void lip_protocol_decoder (dsd_opts * opts, dsd_state * state, uint8_t * input)
     else sprintf (state->dmr_embedded_gps[slot], "%03d; LIP: %.5lf%s%s %.5lf%s%s Unknown Pos Err; Spd: %d km/h; Dir %d%s", add_hash, latitude, deg_glyph, latstr, longitude, deg_glyph, lonstr, vt, dt, deg_glyph);
 
     //save to event history string
-    if (state->event_history_s[slot].Event_History_Items[0].source_id == src)
-      sprintf (state->event_history_s[slot].Event_History_Items[0].gps_s, "%s", state->dmr_embedded_gps[slot]);
+    sprintf (state->event_history_s[slot].Event_History_Items[0].gps_s, "%s", state->dmr_embedded_gps[slot]);
 
     //save to LRRP report for mapping/logging
     FILE * pFile; //file pointer
@@ -241,8 +240,7 @@ void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint
   sprintf (state->dmr_embedded_gps[slot], "GPS: (%f%s, %f%s)", latitude, deg_glyph, longitude, deg_glyph);
 
   //save to event history string
-  if (state->event_history_s[slot].Event_History_Items[0].source_id == src)
-    sprintf (state->event_history_s[slot].Event_History_Items[0].gps_s, "%s", state->dmr_embedded_gps[slot]);
+  sprintf (state->event_history_s[slot].Event_History_Items[0].gps_s, "(%f%s, %f%s)", latitude, deg_glyph, longitude, deg_glyph);
 
   //save to LRRP report for mapping/logging
   FILE * pFile; //file pointer

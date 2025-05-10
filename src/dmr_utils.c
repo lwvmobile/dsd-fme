@@ -10,7 +10,7 @@
 #include "dsd.h"
 
 //modified to accept variable payload size and len
-uint16_t ComputeCrcCCITT16d(const uint8_t buf[], uint8_t len)
+uint16_t ComputeCrcCCITT16d(const uint8_t * buf, uint32_t len)
 {
   uint32_t i;
   uint16_t CRC = 0x0000; /* Initialization value = 0x0000 */

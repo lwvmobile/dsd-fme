@@ -140,7 +140,9 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       if (state->data_header_format[slot] == 0) //UDT 1/2 Encoded Blocks
       {
         is_udt = 1;
-        sprintf(state->fsubtype, " UDTC ");
+        if (state->data_conf_data[slot] == 1)
+          sprintf(state->fsubtype, " UDTC "); //confirmed data
+        else sprintf(state->fsubtype, " UDTU "); //unconfirmed data
       }
       break;
     case 0x08: //3/4 Rate Data
