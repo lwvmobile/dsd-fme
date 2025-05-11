@@ -506,7 +506,9 @@ void l3h_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_t slot
   if (slot == 1 && state->lasttgR != 0) ttg = state->lasttgR;
 
   int8_t ptr = 0;
-  fprintf (stderr, " TG: %d; SRC: %d; Talker Alias: ", ttg, tsrc);
+  if (tsrc != 0)
+    fprintf (stderr, " TG: %d; SRC: %d; Talker Alias: ", ttg, tsrc);
+  else fprintf (stderr, " TG: UNK; SRC: UNK; Talker Alias: ");
   for (int8_t i = 4; i <= len; i++)
   {
     if ( (input[i] > 0x19) && (input[i] < 0x7F) )
@@ -526,7 +528,7 @@ void l3h_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_t slot
   //assign completed talker to a more useful string instead
   snprintf (str, ptr+1, "%s", ttemp);
 
-  if (state->event_history_s[slot].Event_History_Items[0].source_id == tsrc)
+  if (state->event_history_s[slot].Event_History_Items[0].source_id == tsrc && tsrc != 0)
     sprintf (state->event_history_s[slot].Event_History_Items[0].alias, "%s", str);
 
   //The Duke Energy system may relay two src values, may be a good idea to pick one and stick with it

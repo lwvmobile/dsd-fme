@@ -1760,6 +1760,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					fprintf (stderr, "%02llX", MAC[i+len_a]);
 			}
 
+			//assign here so we don't read an extra opcode value, like MAC Release on FL-DCC-1 (0x31 opcode)
+			len_b = len;
+
 		}
 
 		//This is now confirmed to have the Harris Talker GPS, but the structure is unusual compared to other MFID messages,
@@ -2066,6 +2069,12 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n VCH %d - Super Group %d SRC %d ", slot, gr, src);
 			fprintf (stderr, "MFID90 Group Regroup Voice");
 			state->gi[slot] = 0;
+
+
+			uint32_t mfid90_wacn = (MAC[10+len_a] << 16) | (MAC[11+len_a] << 8) | (MAC[12+len_a] & 0xF0);
+			mfid90_wacn >>= 4;
+			uint16_t mfid90_sys = ((MAC[12+len_a] << 16) & 0x0F00)| (MAC[12+len_a] << 8);
+			fprintf (stderr, " EXT - FQSUID: %05X:%03X.%d", mfid90_wacn, mfid90_sys, src);
 
 			if (slot == 0)
 			{
