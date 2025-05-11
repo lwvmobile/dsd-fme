@@ -80,12 +80,16 @@ void ncursesOpen (dsd_opts * opts, dsd_state * state)
   start_color();
 
   #ifdef PRETTY_COLORS
-  init_pair(1, COLOR_YELLOW, COLOR_BLACK);      //Yellow/Amber for frame sync/control channel, NV style
-  init_pair(2, COLOR_RED, COLOR_BLACK);        //Red for Terminated Calls
-  init_pair(3, COLOR_GREEN, COLOR_BLACK);     //Green for Active Calls
-  init_pair(4, COLOR_CYAN, COLOR_BLACK);     //Cyan for Site Extra and Patches
-  init_pair(5, COLOR_MAGENTA, COLOR_BLACK); //Magenta for no frame sync/signal
-  init_pair(6, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
+  init_pair(1, COLOR_YELLOW, COLOR_BLACK);  //Yellow/Amber for frame sync/control channel, NV style
+  init_pair(2, COLOR_RED, COLOR_BLACK);     //Red for Terminated Calls
+  init_pair(3, COLOR_GREEN, COLOR_BLACK);   //Green for Active Calls
+  init_pair(4, COLOR_CYAN, COLOR_BLACK);    //Cyan for Site Extra and Patches
+  init_pair(5, COLOR_MAGENTA, COLOR_BLACK);  //Magenta for no frame sync/signal
+  init_pair(6, COLOR_WHITE, COLOR_BLACK);   //White Card Color Scheme
+  init_pair(7, COLOR_BLUE, COLOR_BLACK);     //Blue on Black
+  init_pair(8, COLOR_BLACK, COLOR_WHITE);   //Black on White
+  init_pair(9, COLOR_RED, COLOR_WHITE);     //Red on White
+  init_pair(10, COLOR_BLUE, COLOR_WHITE);    //Blue on White
   #else
   init_pair(1, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
   init_pair(2, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
@@ -93,6 +97,10 @@ void ncursesOpen (dsd_opts * opts, dsd_state * state)
   init_pair(4, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
   init_pair(5, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
   init_pair(6, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
+  init_pair(7, COLOR_WHITE, COLOR_BLACK);  //White Card Color Scheme
+  init_pair(8, COLOR_BLACK, COLOR_WHITE);  //White Card Color Scheme
+  init_pair(9, COLOR_BLACK, COLOR_WHITE);  //White Card Color Scheme
+  init_pair(10, COLOR_BLACK, COLOR_WHITE);  //White Card Color Scheme
   #endif
 
   noecho();
@@ -1588,35 +1596,56 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("--Latest Event History ([|])---Slot %d (\\)-------------------------------------\n", state->eh_slot+1);
     for (uint16_t i = (state->eh_index+1); i < (state->eh_index+11); i++)
     {
-      // if ((i%255) == 0) continue; //0 is the event in progress before completion
 
-      char text_string[2000];
-      sprintf (text_string, "%s", "BUMBLEBEETUNA");
       uint8_t slot = state->eh_slot;
+      uint8_t color_pair = state->event_history_s[slot].Event_History_Items[i%255].color_pair; //this is the color pair assignment for this line
+      attron(COLOR_PAIR(4));
 
+      char text_string[2000]; memset (text_string, 0, sizeof(text_string));
+      sprintf (text_string, "%s", "BUMBLEBEETUNA");
       if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].event_string, 13) != 0)
       {
         memcpy(text_string, state->event_history_s[slot].Event_History_Items[i%255].event_string, 71*sizeof(char));
         text_string[71] = 0; //terminate string
-        printw ("| #%03d %s \n", i%255, text_string);
+        printw ("| #%03d ", i%255);
+        attron(COLOR_PAIR(color_pair)); //this is where the custom color switch occurs for the event_string
+        printw ("%s\n", text_string);
+        attron(COLOR_PAIR(4));
       }
       else printw ("| #%03d \n", i%255); //empty event, but since we can freely scroll now, keeps things uniform
 
       sprintf (text_string, "%s", "BUMBLEBEETUNA");
       if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].text_message, 13) != 0)
-        printw ("|     %s \n", state->event_history_s[slot].Event_History_Items[i%255].text_message);
+      {
+        printw ("|");
+        attron(COLOR_PAIR(4)); //feel free to change this to any value you want
+        printw ("      %s\n", state->event_history_s[slot].Event_History_Items[i%255].text_message);
+        attron(COLOR_PAIR(4));
+      }
 
-      sprintf (text_string, "%s", "BUMBLEBEETUNA");
       if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].alias, 13) != 0)
-        printw ("|      Alias: %s \n", state->event_history_s[slot].Event_History_Items[i%255].alias);
+      {
+        printw ("|");
+        attron(COLOR_PAIR(4)); //feel free to change this to any value you want
+        printw ("      Alias: %s \n", state->event_history_s[slot].Event_History_Items[i%255].alias);
+        attron(COLOR_PAIR(4));
+      }
 
-      sprintf (text_string, "%s", "BUMBLEBEETUNA");
       if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].gps_s, 13) != 0)
-        printw ("|      GPS: %s \n", state->event_history_s[slot].Event_History_Items[i%255].gps_s);
+      {
+        printw ("|");
+        attron(COLOR_PAIR(4)); //feel free to change this to any value you want
+        printw ("      GPS: %s \n", state->event_history_s[slot].Event_History_Items[i%255].gps_s);
+        attron(COLOR_PAIR(4));
+      }
 
-      sprintf (text_string, "%s", "BUMBLEBEETUNA");
       if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].internal_str, 13) != 0)
-        printw ("|      DSD-FME: %s \n", state->event_history_s[slot].Event_History_Items[i%255].internal_str);
+      {
+        printw ("|");
+        attron(COLOR_PAIR(4)); //feel free to change this to any value you want
+        printw ("      DSD-FME: %s \n", state->event_history_s[slot].Event_History_Items[i%255].internal_str);
+        attron(COLOR_PAIR(4));
+      }
 
     }
     printw ("------------------------------------------------------------------------------\n");

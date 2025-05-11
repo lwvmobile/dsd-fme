@@ -91,6 +91,7 @@ extern volatile uint8_t exitflag; //fix for issue #136
 //event history (each item)
 typedef struct {
   uint8_t write;      //if this event needs to be written to a log file
+  uint8_t color_pair; //this value corresponds to which color pair the line should be in ncurses
   int8_t systype;     //indentifier of which decoded system type this is from (P25, DMR, etc)
   int8_t subtype;     //subtype of systpe (VLC, TLC, PDU data, System Event, etc)
   uint32_t sys_id1;   //sys_id1 through 5 will be a hierarchy of system identifiers

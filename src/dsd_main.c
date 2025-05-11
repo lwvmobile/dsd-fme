@@ -1634,9 +1634,11 @@
  }
 
   //push a DSD-FME started event so users can see what this section does, and also gives users an idea of when context started
+  state->event_history_s[0].Event_History_Items[0].color_pair = 6;
   watchdog_event_datacall (opts, state, 0, 0, "Any decoded voice calls or data calls display here;", 0);
   push_event_history (&state->event_history_s[0]);
   init_event_history (&state->event_history_s[0], 0, 1);
+  state->event_history_s[0].Event_History_Items[0].color_pair = 6;
   watchdog_event_datacall (opts, state, 0, 0, "DSD-FME Started and Event History Initialized;", 0);
   push_event_history (&state->event_history_s[0]);
   init_event_history (&state->event_history_s[0], 0, 1);

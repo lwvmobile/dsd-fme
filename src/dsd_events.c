@@ -17,6 +17,7 @@ void init_event_history (Event_History_I * event_struct, uint8_t start, uint8_t 
   for (uint8_t i = start; i < stop; i++)
   {
     event_struct->Event_History_Items[i].write = 0;
+    event_struct->Event_History_Items[i].color_pair = 4;
     event_struct->Event_History_Items[i].systype = -1;
     event_struct->Event_History_Items[i].subtype = -1;
     event_struct->Event_History_Items[i].sys_id1 = 0;
@@ -58,6 +59,7 @@ void push_event_history (Event_History_I * event_struct)
   for (uint8_t i = 254; i >= 1; i--)
   {
     event_struct->Event_History_Items[i].write = event_struct->Event_History_Items[i-1].write;
+    event_struct->Event_History_Items[i].color_pair = event_struct->Event_History_Items[i-1].color_pair;
     event_struct->Event_History_Items[i].systype = event_struct->Event_History_Items[i-1].systype;
     event_struct->Event_History_Items[i].subtype = event_struct->Event_History_Items[i-1].subtype;
     event_struct->Event_History_Items[i].sys_id1 = event_struct->Event_History_Items[i-1].sys_id1;
@@ -244,6 +246,13 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
   //create a pointer to the current slot event history
   Event_History_I * event_struct = &state->event_history_s[slot];
+
+  //ncurses color pairs
+  uint8_t color_pair = 4; //default voice color (unknown gi)
+  if (state->gi[slot] == 1)
+    color_pair = 4; //default private voice color
+  else if (state->gi[slot] == 0)
+    color_pair = 4; //default group voice color
 
   //TODO: Flesh out more later on.
   uint32_t source_id = 0;
@@ -583,6 +592,7 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
   if (source_id != 0)
   {
     event_struct->Event_History_Items[0].write = 0;
+    state->event_history_s[slot].Event_History_Items[0].color_pair = color_pair;
     if (state->lastsynctype != -1)
       event_struct->Event_History_Items[0].systype = state->lastsynctype;
     else event_struct->Event_History_Items[0].systype = 39; //generic digital call
@@ -807,6 +817,8 @@ void watchdog_event_datacall (dsd_opts * opts, dsd_state * state, uint32_t src, 
 {
   UNUSED(opts);
   state->event_history_s[slot].Event_History_Items[0].write = 0;
+  if (state->event_history_s[slot].Event_History_Items[0].color_pair == 4) //if not set previously by specific decoder //don't touch this one
+    state->event_history_s[slot].Event_History_Items[0].color_pair = 4; //default data color //you can change this one
   state->event_history_s[slot].Event_History_Items[0].systype = state->lastsynctype;
   state->event_history_s[slot].Event_History_Items[0].subtype = 6; //data
   state->event_history_s[slot].Event_History_Items[0].gi = state->gi[slot];

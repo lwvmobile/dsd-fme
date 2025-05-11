@@ -115,6 +115,7 @@ void dmr_sd_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR
     utf8_to_text(state, 0, len-offset, DMR_PDU+offset);
     dmr_locn(opts, state, len, DMR_PDU);
     sprintf (state->event_history_s[slot].Event_History_Items[0].gps_s, "%s", state->dmr_lrrp_gps[slot]);
+    state->event_history_s[slot].Event_History_Items[0].color_pair = 4; //Remus, add this line to a decode to change its line color
   }
   else
   {
@@ -356,11 +357,13 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
 
       fprintf (stderr, "LRRP;");
       dmr_lrrp (opts, state, len, src24, dst24, input+28); //len is offset with IP and UDP header lens, 4 CRC, and 1 for the 0D token
+      state->event_history_s[slot].Event_History_Items[0].color_pair = 4; //Remus, add this line to a decode to change its line color
     }
     else if (port1 == 4004 && port2 == 4004)
     {
       fprintf (stderr, "XCMP;");
       sprintf (state->dmr_lrrp_gps[slot], "XCMP SRC: %d; DST: %d;", src24, dst24);
+      state->event_history_s[slot].Event_History_Items[0].color_pair = 4; //Remus, add this line to a decode to change its line color
     }
     else if (port1 == 4005 && port2 == 4005)
     {
