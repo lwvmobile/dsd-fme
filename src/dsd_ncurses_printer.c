@@ -1590,13 +1590,15 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     attroff(COLOR_PAIR(3));
   }
   //only print event history if enabled
-  if (opts->ncurses_history == 1)
+  attron(COLOR_PAIR(4)); //cyan for history
+  printw ("--Latest Event History ([|])---Slot %d (\\)---Cycle (h)-Short/Long/Off----------\n", state->eh_slot+1);
+  if (opts->ncurses_history != 0)
   {
-    attron(COLOR_PAIR(4)); //cyan for history
-    printw ("--Latest Event History ([|])---Slot %d (\\)-------------------------------------\n", state->eh_slot+1);
     for (uint16_t i = (state->eh_index+1); i < (state->eh_index+11); i++)
     {
-
+      uint16_t string_size = 71; //short uniform size that doesn't exceed the fence
+      if (opts->ncurses_history == 2)
+        string_size = 1999; //full string size
       uint8_t slot = state->eh_slot;
       uint8_t color_pair = state->event_history_s[slot].Event_History_Items[i%255].color_pair; //this is the color pair assignment for this line
       attron(COLOR_PAIR(4));
@@ -1605,8 +1607,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       sprintf (text_string, "%s", "BUMBLEBEETUNA");
       if (strncmp(text_string, state->event_history_s[slot].Event_History_Items[i%255].event_string, 13) != 0)
       {
-        memcpy(text_string, state->event_history_s[slot].Event_History_Items[i%255].event_string, 71*sizeof(char));
-        text_string[71] = 0; //terminate string
+        memcpy(text_string, state->event_history_s[slot].Event_History_Items[i%255].event_string, string_size*sizeof(char));
+        text_string[string_size] = 0; //terminate string
         printw ("| #%03d ", i%255);
         attron(COLOR_PAIR(color_pair)); //this is where the custom color switch occurs for the event_string
         printw ("%s\n", text_string);
@@ -1648,9 +1650,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       }
 
     }
-    printw ("------------------------------------------------------------------------------\n");
-    attroff(COLOR_PAIR(4)); //cyan for history
   }
+
+  printw ("------------------------------------------------------------------------------\n");
+  attroff(COLOR_PAIR(4)); //cyan for history
 
  refresh();
 

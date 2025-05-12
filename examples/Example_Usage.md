@@ -171,7 +171,7 @@ Some Keyboard Shortcuts have been implemented for testing to see how users like 
 esc or arrow keys - ncurses menu
 q - quit
 c - toggle compact mode
-h - toggle event history
+h - cycle event history short, long, or off
 z - toggle console payloads
 a - toggle call alert beep
 4 - force privacy/scrambler key assertion over enc identifiers (dmr and nxdn)

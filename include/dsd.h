@@ -387,9 +387,9 @@ typedef struct
   pa_simple *pulse_digi_dev_outR;
   char pa_input_idx[100];
   char pa_output_idx[100];
-  int use_ncurses_terminal;
-  int ncurses_compact;
-  int ncurses_history;
+  uint8_t use_ncurses_terminal;
+  uint8_t ncurses_compact;
+  uint8_t ncurses_history;
   int reset_state;
   int payload;
   char output_name[1024];

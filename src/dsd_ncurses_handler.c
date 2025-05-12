@@ -201,10 +201,10 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
     else opts->call_alert = 1;
   }
 
-  if (c == 104) //'h' key, toggle history
+  if (c == 104) //'h' key, cycle history off, short, long
   {
-    if (opts->ncurses_history == 1) opts->ncurses_history = 0;
-    else opts->ncurses_history = 1;
+    opts->ncurses_history++;
+    opts->ncurses_history %= 3;
   }
 
   if (c == 113) //'q' key, quit
