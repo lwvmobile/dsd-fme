@@ -215,6 +215,11 @@ correct_golay_dibits_6(char* corrected_hex_data, int hex_count, AnalogSignal* an
 void
 processHDU(dsd_opts* opts, dsd_state* state)
 {
+
+  //push current slot to 0, just in case swapping p2 to p1
+  //or stale slot value from p2 and then decoding a pdu
+  state->currentslot = 0;
+  
   uint8_t mi[73];
   char mfid[9], algid[9], kid[17], tgid[17];
   int i, j;

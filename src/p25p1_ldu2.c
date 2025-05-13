@@ -26,6 +26,11 @@
 void
 processLDU2 (dsd_opts * opts, dsd_state * state)
 {
+
+  //push current slot to 0, just in case swapping p2 to p1
+  //or stale slot value from p2 and then decoding a pdu
+  state->currentslot = 0;
+  
   // extracts IMBE frames from LDU frame
   int i;
   uint8_t mi[73];
