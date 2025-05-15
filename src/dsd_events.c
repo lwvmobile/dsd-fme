@@ -155,11 +155,14 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
     if (state->lastsynctype == 28 || state->lastsynctype == 29)
       source_id = state->nxdn_last_rid;
 
-    if (state->lastsynctype == 30 || state->lastsynctype == 30) //YSF Fusion
+    if (state->lastsynctype == 30 || state->lastsynctype == 31) //YSF Fusion
     {
       source_id = 0;
-      for (uint8_t i = 0; i < 11; i++)
-        source_id += state->ysf_src[i]; //convert to sum value to make a distinct enough src value
+      if (strncmp(state->ysf_src, "          ", 10) != 0) //if this field does not have ten spaces in it
+      {
+        for (uint8_t i = 0; i < 11; i++)
+          source_id += state->ysf_src[i]; //convert to sum value to make a distinct enough src value
+      }
     }
 
     if (state->lastsynctype == 8 || state->lastsynctype == 9 || state->lastsynctype == 16 || state->lastsynctype == 17) //M17 STR
@@ -367,11 +370,14 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
       else sprintf (sysid_string, "NXDN_RAN_%d", sys_id3);
     }
 
-    if (state->lastsynctype == 30 || state->lastsynctype == 30) //YSF Fusion
+    if (state->lastsynctype == 30 || state->lastsynctype == 31) //YSF Fusion
     {
       source_id = 0;
-      for (uint8_t i = 0; i < 11; i++)
-        source_id += state->ysf_src[i]; //convert to sum value to make a distinct enough src value
+      if (strncmp(state->ysf_src, "          ", 10) != 0) //if this field does not have ten spaces in it
+      {
+        for (uint8_t i = 0; i < 11; i++)
+          source_id += state->ysf_src[i]; //convert to sum value to make a distinct enough src value
+      }
 
       //WIP: If Text, compile it here (still having issues with an empty txt string making a line break)
       uint8_t k = 0; char ysf_emp[21][21]; memset(ysf_emp, 0, sizeof(ysf_emp));
@@ -628,7 +634,7 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
   //WIP: Seperate Voice Call Event Strings when SRC/TGT values are numerical,
   //and a seperate one for when they are string values (M17, YSF, DSTAR, and dPMR, or use special formatting)
-  if (state->lastsynctype == 30 || state->lastsynctype == 30) //YSF Fusion //TODO: Data calls dumping a lot of events as VOICE
+  if (state->lastsynctype == 30 || state->lastsynctype == 31) //YSF Fusion //TODO: Data calls dumping a lot of events as VOICE
   {
     //TODO: See if we can add some decoded data as well in the future to an event string
     sprintf (event_string, "%s %s %s TGT: %s SRC: %s ", datestr, timestr, sys_string, state->ysf_tgt, state->ysf_src);
