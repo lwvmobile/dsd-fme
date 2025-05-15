@@ -1155,6 +1155,10 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
       if (ccfreq != 0) state->p25_cc_freq = ccfreq;
     }
 
+    //if on Con+ control channel and no activity in this window
+    if ( (time(NULL) - state->last_vc_sync_time) > 2 ) //may use last_cc_sync_time instead
+      rotate_symbol_out_file(opts, state);
+
   }
 
   else if (slco == 0xF)

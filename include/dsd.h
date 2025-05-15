@@ -311,6 +311,8 @@ typedef struct
   FILE *mbe_out_f;
   FILE *mbe_out_fR; //second slot on a TDMA system
   FILE *symbol_out_f;
+  time_t symbol_out_file_creation_time; //time the symbol out file was created
+  uint8_t symbol_out_file_is_auto; //if the user hit the R key
   float audio_gain;
   float audio_gainR;
   float audio_gainA;
@@ -1166,6 +1168,7 @@ SNDFILE * close_and_rename_wav_file(SNDFILE * wav_file, char * wav_out_filename,
 SNDFILE * close_and_delete_wav_file(SNDFILE * wav_file, char * wav_out_filename);
 void openSymbolOutFile (dsd_opts * opts, dsd_state * state);
 void closeSymbolOutFile (dsd_opts * opts, dsd_state * state);
+void rotate_symbol_out_file (dsd_opts * opts, dsd_state * state);
 void writeRawSample (dsd_opts * opts, dsd_state * state, short sample);
 void closeWavOutFile (dsd_opts * opts, dsd_state * state);
 void closeWavOutFileL (dsd_opts * opts, dsd_state * state);

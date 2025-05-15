@@ -970,6 +970,10 @@ void process_P2_DUID (dsd_opts * opts, dsd_state * state)
 		{
 			// sacch = 1; //only an 'inverted' slot when its TS index 10 or 11
 			fprintf (stderr, "LCCH  ");
+
+			//when on a CC, rotate the symbol out file every hour, if enabled
+			if (opts->p25_is_tuned == 0)
+  			rotate_symbol_out_file(opts, state);
 		}
 		else if (duid_decoded == 4) //Scrambled LCCH (TDMA_CC only...look in the manual again)
 		{

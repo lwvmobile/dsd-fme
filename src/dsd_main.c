@@ -106,6 +106,10 @@
  void
  noCarrier (dsd_opts * opts, dsd_state * state)
  {
+
+
+    //when no carrier sync, rotate the symbol out file every hour, if enabled
+    rotate_symbol_out_file(opts, state); //this should handle any conventional system where no sync conditions occur when no activity
  
    if (opts->floating_point == 1)
    {
@@ -636,6 +640,8 @@
    //end import filenames
    opts->szNumbers[0] = 0;
    opts->symbol_out_f = NULL;
+   opts->symbol_out_file_creation_time = time(NULL);
+   opts->symbol_out_file_is_auto = 0;
    opts->mbe_out = 0;
    opts->mbe_outR = 0; //second slot on a TDMA system
    opts->wav_out_f = NULL;

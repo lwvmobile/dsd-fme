@@ -667,4 +667,8 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
 
   fprintf (stderr, "%s ", KNRM);
   fprintf (stderr, "\n");
+
+  //when on a CC, rotate the symbol out file every hour, if enabled
+  rotate_symbol_out_file(opts, state);
+
 }

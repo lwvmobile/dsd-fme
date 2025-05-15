@@ -782,6 +782,9 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 
 	}
 
+	//when on a CC, rotate the symbol out file every hour, if enabled
+  rotate_symbol_out_file(opts, state);
+
 }
 
 //Type-D "IDAS"

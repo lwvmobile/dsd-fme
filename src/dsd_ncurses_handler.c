@@ -296,6 +296,16 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
     char * datestr = getDate();
     sprintf (opts->symbol_out_file, "%s_%s_dibit_capture.bin", datestr, timestr);
     openSymbolOutFile (opts, state);
+
+    //add a system event to echo in the event history
+    state->event_history_s[0].Event_History_Items[0].color_pair = 4;
+    char event_str[200]; memset (event_str, 0, sizeof(event_str));
+    sprintf (event_str, "DSD-FME Dibit Capture File Started: %s;", opts->symbol_out_file);
+    watchdog_event_datacall (opts, state, 0xFFFFFF, 0xFFFFFF, event_str, 0);
+    state->lastsrc = 0; //this could wipe a call src if they hit 'R' while call in slot 1 in progress
+    watchdog_event_history(opts, state, 0);
+    watchdog_event_current(opts, state, 0);
+
     //allocated memory pointer needs to be free'd
     if (timestr != NULL)
     {
@@ -307,6 +317,8 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
       free (datestr);
       datestr = NULL;
     }
+    opts->symbol_out_file_creation_time = time(NULL);
+    opts->symbol_out_file_is_auto = 1;
   }
 
   if (c == 114) //'r' key, stop capturing symbol capture bin file
@@ -315,7 +327,18 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
     {
       closeSymbolOutFile (opts, state);
       sprintf (opts->audio_in_dev, "%s", opts->symbol_out_file);
+
+      //add a system event to echo in the event history
+      state->event_history_s[0].Event_History_Items[0].color_pair = 4;
+      char event_str[200]; memset (event_str, 0, sizeof(event_str));
+      sprintf (event_str, "DSD-FME Dibit Capture File  Closed: %s;", opts->symbol_out_file);
+      watchdog_event_datacall (opts, state, 0xFFFFFF, 0xFFFFFF, event_str, 0);
+      state->lastsrc = 0; //this could wipe a call src if they hit 'R' while call in slot 1 in progress
+      watchdog_event_history(opts, state, 0);
+      watchdog_event_current(opts, state, 0);
+
     }
+    opts->symbol_out_file_is_auto = 0;
   }
 
  #ifdef __CYGWIN__

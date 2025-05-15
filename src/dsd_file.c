@@ -684,6 +684,45 @@ void closeSymbolOutFile (dsd_opts * opts, dsd_state * state)
   }
 }
 
+void rotate_symbol_out_file (dsd_opts * opts, dsd_state * state)
+{
+  if (opts->symbol_out_f && opts->symbol_out_file_is_auto == 1)
+  {
+    if ( (time(NULL) - opts->symbol_out_file_creation_time) >= 3600 ) //3600 is one hour in seconds
+    {
+      //basically just lift the close and open from ncurses handler for 'r' and then 'R'
+      // closeSymbolOutFile (opts, state); //open also does this, so don't need to do it twice
+      char * timestr = getTime();
+      char * datestr = getDate();
+      sprintf (opts->symbol_out_file, "%s_%s_dibit_capture.bin", datestr, timestr);
+      openSymbolOutFile (opts, state);
+
+      //add a system event to echo in the event history
+      state->event_history_s[0].Event_History_Items[0].color_pair = 4;
+      char event_str[200]; memset (event_str, 0, sizeof(event_str));
+      sprintf (event_str, "DSD-FME Dibit Capture File Rotated: %s;", opts->symbol_out_file);
+      watchdog_event_datacall (opts, state, 0xFFFFFF, 0xFFFFFF, event_str, 0);
+      state->lastsrc = 0; //this could wipe a call, but usually on TDMA cc's, slot 1 is the control channel, so may never be set when this is run
+      watchdog_event_history(opts, state, 0);
+      watchdog_event_current(opts, state, 0);
+
+      //allocated memory pointer needs to be free'd
+      if (timestr != NULL)
+      {
+        free (timestr);
+        timestr = NULL;
+      }
+      if (datestr != NULL)
+      {
+        free (datestr);
+        datestr = NULL;
+      }
+      opts->symbol_out_file_creation_time = time(NULL);
+      // opts->symbol_out_file_is_auto = 1;
+    }
+  }
+}
+
 //input bit array, return output as up to a 64-bit value
 uint64_t convert_bits_into_output(uint8_t * input, int len)
 {

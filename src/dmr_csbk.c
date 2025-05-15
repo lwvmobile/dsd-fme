@@ -430,6 +430,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           if (ccfreq != 0) state->p25_cc_freq = ccfreq;
         }
 
+        //when on a CC, rotate the symbol out file every hour, if enabled
+        if (opts->p25_is_tuned == 0) //if not currently tuned on Tier 3 system
+          rotate_symbol_out_file(opts, state); //may need a second check to make sure other slot on T3 standard isn't busy as well
+
       }
 
       //P_CLEAR
@@ -1579,6 +1583,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           //Test allowing a tg hold to pre-empt a call in progress and tune to the hold TG
           if (state->tg_hold != 0) state->last_vc_sync_time = 0;
 
+          //if no activity in this window
+          if ( (time(NULL) - state->last_vc_sync_time) > 2 ) //may use last_cc_sync_time instead
+            rotate_symbol_out_file(opts, state);
+
           //TODO: Consider a method to allow moving the frequency to the rest channel
           //when a TG hold is specified but nether slot carries the TG on Hold;
           //CODED: using slow link control for that
@@ -2162,6 +2170,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
 
         //Test allowing a tg hold to pre-empt a call in progress and tune to the hold TG
         if (state->tg_hold != 0) state->last_vc_sync_time = 0;
+
+        //if no activity in this window
+        if ( (time(NULL) - state->last_vc_sync_time) > 2 ) //may use last_cc_sync_time instead
+          rotate_symbol_out_file(opts, state);
 
         //TODO: Consider a method to allow moving the frequency to the free repeater channel
         //when a TG hold is specified but nether slot carries the TG on Hold;
