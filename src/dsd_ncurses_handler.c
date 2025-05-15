@@ -299,7 +299,7 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
 
     //add a system event to echo in the event history
     state->event_history_s[0].Event_History_Items[0].color_pair = 4;
-    char event_str[200]; memset (event_str, 0, sizeof(event_str));
+    char event_str[2000]; memset (event_str, 0, sizeof(event_str));
     sprintf (event_str, "DSD-FME Dibit Capture File Started: %s;", opts->symbol_out_file);
     watchdog_event_datacall (opts, state, 0xFFFFFF, 0xFFFFFF, event_str, 0);
     state->lastsrc = 0; //this could wipe a call src if they hit 'R' while call in slot 1 in progress
@@ -330,7 +330,7 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
 
       //add a system event to echo in the event history
       state->event_history_s[0].Event_History_Items[0].color_pair = 4;
-      char event_str[200]; memset (event_str, 0, sizeof(event_str));
+      char event_str[2000]; memset (event_str, 0, sizeof(event_str));
       sprintf (event_str, "DSD-FME Dibit Capture File  Closed: %s;", opts->symbol_out_file);
       watchdog_event_datacall (opts, state, 0xFFFFFF, 0xFFFFFF, event_str, 0);
       state->lastsrc = 0; //this could wipe a call src if they hit 'R' while call in slot 1 in progress
