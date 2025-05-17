@@ -134,12 +134,13 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     }
 
     //Unknown CapMax/Moto Things
-    if (fid == 0x10 && (flco == 0x08 || flco == 0x28))
+    if (fid == 0x10 && (flco == 0x08 || flco == 0x28 || flco == 0x29))
     {
       //NOTE: fid 0x10 and flco 0x08 (emb) produces a lot of 'zero' bytes
       //this has been observed to happen often on CapMax systems, so I believe it could be some CapMax 'thing'
       //Unknown Link Control - FLCO=0x08 FID=0x10 SVC=0xC1 or FLCO=0x08 FID=0x10 SVC=0xC0 <- probably no SVC bits in the lc
       //flco 0x28 has also been observed lately but the tg and src values don't match
+      //flco 0x29 just observed, similar pattern to 0x08 listed above
       //another flco 0x10 does seem to match, so is probably capmax group call flco
       if (type == 1) fprintf (stderr, "%s \n", KCYN);
       if (type == 2) fprintf (stderr, "%s \n", KCYN);
