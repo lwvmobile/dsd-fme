@@ -75,7 +75,7 @@ void openPulseOutput(dsd_opts * opts)
   pa_channel_map* fl = 0; //NULL and 0 are same in this context
   pa_channel_map* ss = 0; //NULL and 0 are same in this context
 
-  if (opts->floating_point == 0)
+  if (opts->floating_point == 0 && opts->analog_only == 0)
   {
     opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, dev, opts->output_name, &tt, ss, NULL, &err);
 
@@ -89,7 +89,7 @@ void openPulseOutput(dsd_opts * opts)
     }
   }
 
-  if (opts->floating_point == 1)
+  if (opts->floating_point == 1 && opts->analog_only == 0)
   {
     opts->pulse_digi_dev_out = pa_simple_new(NULL, "DSD-FME", PA_STREAM_PLAYBACK, dev, opts->output_name, &ff, fl, NULL, &err);
 
