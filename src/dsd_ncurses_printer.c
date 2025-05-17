@@ -262,7 +262,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("\n");
   }
 
-  if (opts->audio_out_type == 0)
+  if (opts->audio_out_type == 0 && opts->analog_only == 0)
   {
     printw ("| Pulse Digital Output: %i kHz; %i Ch; G: %02.0f%%", opts->pulse_digi_rate_out/1000, opts->pulse_digi_out_channels, state->aout_gain*2);
     if (opts->pulse_digi_out_channels == 2) printw (" G: %02.0f%%", state->aout_gainR*2);
