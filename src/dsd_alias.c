@@ -754,6 +754,12 @@ void dmr_talker_alias_lc_decode (dsd_opts * opts, dsd_state * state, uint8_t slo
         fprintf (stderr, "%c", character);
         strcat (alias_string, ch);
       }
+      else if (character == 0)
+      {
+        // strcat (alias_string, " ");
+        // fprintf (stderr, " ");
+        // break;
+      }
       else
       {
         strcat (alias_string, " ");
@@ -773,6 +779,12 @@ void dmr_talker_alias_lc_decode (dsd_opts * opts, dsd_state * state, uint8_t slo
         fprintf (stderr, "%c", character);
         strcat (alias_string, ch);
       }
+      else if (character == 0)
+      {
+        // strcat (alias_string, " ");
+        // fprintf (stderr, " ");
+        // break;
+      }
       else
       {
         strcat (alias_string, " ");
@@ -791,6 +803,12 @@ void dmr_talker_alias_lc_decode (dsd_opts * opts, dsd_state * state, uint8_t slo
       {
         fprintf (stderr, "%lc", character);
         strcat (alias_string, ch);
+      }
+      else if (character == 0)
+      {
+        // strcat (alias_string, " ");
+        // fprintf (stderr, " ");
+        // break;
       }
       else
       {
