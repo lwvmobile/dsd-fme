@@ -1765,7 +1765,7 @@
  
    if (opts->use_ncurses_terminal == 1)
    {
-     ncursesClose(opts);
+     ncursesClose();
    }
  
    if (opts->udp_sockfd)
