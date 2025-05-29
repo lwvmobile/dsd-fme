@@ -214,7 +214,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			freq = process_channel_to_freq (opts, state, channel);
 
 			//add active channel to string for ncurses display
-			sprintf (state->active_channel[0], "MFID90 Active Ch: %04X SG: %d ", channel, sgroup);
+			sprintf (state->active_channel[0], "MFID90 Active Ch: %04X SG: %d; ", channel, sgroup);
 			state->last_active_time = time(NULL);
 
 			for (int i = 0; i < state->group_tally; i++)

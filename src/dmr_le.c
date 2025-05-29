@@ -427,7 +427,8 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
         else if (sbrc_hex == 5) fprintf (stderr, " RC: Cease Transmission Request;");
         else                    fprintf (stderr, " RC: Reserved %02X;", sbrc_hex);
         fprintf (stderr, "%s", KNRM);
-        if (opts->payload == 1) fprintf (stderr, "\n");
+        // if (opts->payload == 1)
+          fprintf (stderr, "\n");
       }
 
       //if the call is interruptable (TXI) and the crc3 is okay and TXI Opcode

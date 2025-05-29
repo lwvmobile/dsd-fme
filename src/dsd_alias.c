@@ -732,12 +732,12 @@ void dmr_talker_alias_lc_blocks (dsd_opts * opts, dsd_state * state, uint8_t slo
   }
 }
 
-//Deocde partial or comppleted alias
+//Decode partial or completed alias
 void dmr_talker_alias_lc_decode (dsd_opts * opts, dsd_state * state, uint8_t slot, uint8_t block_num, uint8_t char_size, uint16_t end)
 {
   UNUSED(opts);
   uint16_t i = 0;
-  fprintf (stderr, " Slot %d - Talker Alias Block Num: %d; Valid Block;", slot, block_num);
+  fprintf (stderr, " Slot %d - Talker Alias Block Num: %d; Valid Block;", slot, block_num+1);
   fprintf (stderr, " Talker Alias: ");
 
   char alias_string[500]; memset (alias_string, 0, sizeof(alias_string));
@@ -774,7 +774,7 @@ void dmr_talker_alias_lc_decode (dsd_opts * opts, dsd_state * state, uint8_t slo
       uint8_t character = (uint8_t)ConvertBitIntoBytes(&state->dmr_pdu_sf[slot][(i*8)], 8);
       char ch[2]; ch[0] = character; ch[1] = 0;
       // if (character >= 0x20 && character <= 0x7E) //Standard ASCII Set
-      if (character >= 0x20 && character != 0x7F) //allow some extended UTF discritical characters as well
+      if (character >= 0x20 && character != 0x7F) //allow some extended UTF diacritical characters as well
       {
         fprintf (stderr, "%c", character);
         strcat (alias_string, ch);

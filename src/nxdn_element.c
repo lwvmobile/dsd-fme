@@ -1280,17 +1280,64 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 
   fprintf (stderr, "%s", KNRM);
 
-  //check the rkey array for a scrambler key value
-  //check by keyid first, then by tgt id
-  //TGT ID and Key ID could clash though if csv or system has both with different keys
-  if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
-  else if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
+  //if using the keyloader, then check for a key value first by the key id,
+  //and then if not available, check by the destination (TG) id value
+  //also, for DES and AES, set the nxdn_key varialbe to the DestID for IV and KS gen
+  if (state->keyloader == 1)
+  {
+    //if Scrambler Key (and not running NXDN96 since that has VCALL in the non-voice frames)
+    //NOTE: The scrambler seed carries on the state->R variable so that will reset incorrectly on NXDN96
+    //NOTE: Observed on system with scrambler and AES keys on same TG, disabling loading DES and AES key by DestID
+    if (CipherType == 1 && opts->frame_nxdn48 == 1 && opts->frame_nxdn96 == 0)
+    {
+      if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
+      else if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
+    }
 
-  //Don't zero key if no keyloader, if we need this, do it when its nots NXDN96, causes issue when 96 VCALL comes in on all data frames
-  // if (CipherType != 0x1 && state->keyloader == 1) state->R = 0; //what did this do again? for mont system or something?
+    //if DES Key
+    else if (CipherType == 2)
+    {
+      if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
+      // else if (state->rkey_array[DestinationID] != 0)
+      // {
+      //   state->R = state->rkey_array[DestinationID];
+      //   state->nxdn_key = DestinationID;
+      // }
+    }
 
-  //safe alternative?
-  if (CipherType == 0 && state->keyloader == 1) state->R = 0;
+    //if AES Key
+    else if (CipherType == 3)
+    {
+      uint32_t kidx = 0;
+      if (state->rkey_array[KeyID] != 0) kidx = KeyID;
+      // else if (state->rkey_array[DestinationID] != 0) 
+      // {
+      //   kidx = DestinationID;
+      //   state->nxdn_key = DestinationID;
+      // }
+
+      state->A1[0] = state->rkey_array[kidx+0x000];
+      state->A2[0] = state->rkey_array[kidx+0x101];
+      state->A3[0] = state->rkey_array[kidx+0x201];
+      state->A4[0] = state->rkey_array[kidx+0x301];
+
+      //check to see if there is a value loaded or not
+      if (state->A1[0] == 0 && state->A2[0] == 0 && state->A3[0] == 0 && state->A4[0] == 0)
+        state->aes_key_loaded[0] = 0;
+      else state->aes_key_loaded[0] = 1;
+
+      for (int i = 0; i < 8; i++)
+      {
+        state->aes_key[i+0]  = (state->A1[0] >> (56-(i*8))) & 0xFF;
+        state->aes_key[i+8]  = (state->A2[0] >> (56-(i*8))) & 0xFF;
+        state->aes_key[i+16] = (state->A3[0] >> (56-(i*8))) & 0xFF;
+        state->aes_key[i+24] = (state->A4[0] >> (56-(i*8))) & 0xFF;
+      }
+
+      state->R = state->A1[0]; //display KS stub
+    }
+
+  } //end state->keyloader == 1
 
   /* Print the "Cipher Type" */
   if(CipherType != 0 && MessageType == 0x1)

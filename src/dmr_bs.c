@@ -303,8 +303,14 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   //check for a rc burst with bptc or 34 rate data in it (testing only)
   // #define RC_TESTING //disable if not in use
   #ifdef RC_TESTING
-  if ( (strcmp (sync, DMR_BS_DATA_SYNC) != 0) && (strcmp (sync, DMR_BS_VOICE_SYNC) != 0) &&
-       ( (internalslot == 0 && vc1 == 6) ||  (internalslot == 1 && vc2 == 6) )              )
+
+  //check only if or when not daya sync, but also out of sync on vc counter
+  // if ( (strcmp (sync, DMR_BS_DATA_SYNC) != 0) && (strcmp (sync, DMR_BS_VOICE_SYNC) != 0) &&
+  //      ( (internalslot == 0 && vc1 >= 7) ||  (internalslot == 1 && vc2 >= 7) )              )
+  // {
+
+  //skip the vc counter, just look at the QR and P/Pi if not voice or data sync pattern
+  if ( (strcmp (sync, DMR_BS_DATA_SYNC) != 0) && (strcmp (sync, DMR_BS_VOICE_SYNC) != 0) )
   {
 
     //if the QR FEC is good, and the P/PI bit is on for RC
@@ -318,7 +324,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
       dmr_data_sync (opts, state);
 
-      dmr_data_burst_handler(opts, state, (uint8_t *)dummy_bits, 0xEB);
+      //disabled, shouldn't occur here I don't think, voice only
+      // dmr_data_burst_handler(opts, state, (uint8_t *)dummy_bits, 0xEB);
+
+      for (i = 0; i < 48; i++)
+        state->dmr_embedded_signalling[internalslot][5][i] = syncdata[i];
 
       dmr_sbrc (opts, state, emb_pdu[4]);
 

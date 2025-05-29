@@ -3,7 +3,7 @@
  * DMR Control Signal Data PDU (CSBK, MBC) Handler and Related Functions
  *
  * Portions of Connect+ code reworked from Boatbod OP25
- * Source: https://github.com/LouisErigHerve/dsd/blob/master/src/dmr_sync.c
+ * Source: https://github.com/boatbod/op25/blob/master/op25/gr-op25_repeater/lib/dmr_slot.cc
  *
  * Portions of Capacity+ code reworked from Eric Cottrell
  * Source: https://github.com/LinuxSheeple-E/dsd/blob/Feature/DMRECC/dmr_csbk.c
@@ -742,8 +742,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           uint16_t t_emerg_timer = (uint16_t)ConvertBitIntoBytes(&bpbits1[0], 9);
           uint8_t t_packet_timer = (uint8_t)ConvertBitIntoBytes(&bpbits1[9], 5);
 
-          uint16_t t_msms_timer = (uint16_t)ConvertBitIntoBytes(&bpbits1[0], 9);
-          uint16_t t_msline_timer = (uint16_t)ConvertBitIntoBytes(&bpbits1[0], 9);
+          uint16_t t_msms_timer = (uint16_t)ConvertBitIntoBytes(&bpbits2[0], 9);
+          uint16_t t_msline_timer = (uint16_t)ConvertBitIntoBytes(&bpbits2[0], 9);
 
           //just doing the raw values here, and not the decoded values, see clause A.1, Tables A.2, A.3, A.4, A.5
           fprintf (stderr, "\n");
@@ -928,10 +928,10 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           uint8_t nin = (uint8_t)ConvertBitIntoBytes(&bpbits2[16], 8); //see clause 7.2.41
 
           //the second bit of the CSI, the rest are reserved (wasteful)
-          uint8_t hibernate_flag = bpbits1[1];
+          uint8_t hibernate_flag = bpbits2[1];
 
           //the first bit of the nin, the rest are reserved (yet again)
-          uint8_t reg_tg_sub = bpbits2[0]; //if the MS has to send TG during Registration Process (Zzzzzz)
+          uint8_t reg_tg_sub = bpbits2[16]; //if the MS has to send TG during Registration Process (Zzzzzz)
 
           fprintf (stderr, "\n");
           fprintf (stderr, " Hibernate Flag: %d; Reg Flag: %d; RES1: %d; RES2: %X; RES3: %X; BPARMS1: %X", hibernate_flag, reg_tg_sub, bpbits1[0], csi & 0x3F, nin & 0x7F, bparms1);

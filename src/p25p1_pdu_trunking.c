@@ -142,7 +142,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
     freq2 = process_channel_to_freq (opts, state, channelr);
 
     //add active channel to string for ncurses display
-    sprintf (state->active_channel[0], "Active Ch: %04X TG: %d ", channelt, group);
+    sprintf (state->active_channel[0], "Active Ch: %04X TG: %d; ", channelt, group);
     state->last_active_time = time(NULL);
 
     for (int i = 0; i < state->group_tally; i++)
