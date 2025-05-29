@@ -742,8 +742,8 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
           uint16_t t_emerg_timer = (uint16_t)ConvertBitIntoBytes(&bpbits1[0], 9);
           uint8_t t_packet_timer = (uint8_t)ConvertBitIntoBytes(&bpbits1[9], 5);
 
-          uint16_t t_msms_timer = (uint16_t)ConvertBitIntoBytes(&bpbits2[0], 9);
-          uint16_t t_msline_timer = (uint16_t)ConvertBitIntoBytes(&bpbits2[0], 9);
+          uint16_t t_msms_timer = (uint16_t)ConvertBitIntoBytes(&bpbits2[0], 12);
+          uint16_t t_msline_timer = (uint16_t)ConvertBitIntoBytes(&bpbits2[12], 12);
 
           //just doing the raw values here, and not the decoded values, see clause A.1, Tables A.2, A.3, A.4, A.5
           fprintf (stderr, "\n");
