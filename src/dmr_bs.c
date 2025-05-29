@@ -304,17 +304,30 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   // #define RC_TESTING //disable if not in use
   #ifdef RC_TESTING
 
-  //check only if or when not daya sync, but also out of sync on vc counter
-  // if ( (strcmp (sync, DMR_BS_DATA_SYNC) != 0) && (strcmp (sync, DMR_BS_VOICE_SYNC) != 0) &&
-  //      ( (internalslot == 0 && vc1 >= 7) ||  (internalslot == 1 && vc2 >= 7) )              )
-  // {
-
   //skip the vc counter, just look at the QR and P/Pi if not voice or data sync pattern
   if ( (strcmp (sync, DMR_BS_DATA_SYNC) != 0) && (strcmp (sync, DMR_BS_VOICE_SYNC) != 0) )
   {
 
-    //if the QR FEC is good, and the P/PI bit is on for RC
-    if (QR_16_7_6_decode(emb_pdu) && emb_pdu[4])
+    //Golay_20_8_decode FEC for the burst type (SlotType)
+    unsigned char SlotType[20];
+    memset (SlotType, 0, sizeof(SlotType));
+    uint8_t k = 61;
+    for (uint8_t i = 0; i < 5; i++)
+    {
+      SlotType[(i*2)+0] = (state->dmr_stereo_payload[k+0] >> 1) & 1;
+      SlotType[(i*2)+1] = (state->dmr_stereo_payload[k++] >> 0) & 1;
+    }
+    k = 90;
+    for (uint8_t i = 0; i < 5; i++)
+    {
+      SlotType[(i*2)+10] = (state->dmr_stereo_payload[k+0] >> 1) & 1;
+      SlotType[(i*2)+11] = (state->dmr_stereo_payload[k++] >> 0) & 1;
+    }
+
+    //if the QR FEC is good, tact/cach FEC is good, and slot type burst FEC is good, and the P/PI bit is on for RC
+    //NOTE: This can still trigger on bad signal when it should be a data sync pattern but signal drops out or
+    //occassionally on p_clear with trunking tuner logic active and partial stale dibits in the buffer
+    if (QR_16_7_6_decode(emb_pdu) && Golay_20_8_decode(SlotType) && emb_pdu[4] && tact_okay == 1)
     {
       fprintf (stderr,"%s ", timestr);
 
@@ -324,17 +337,24 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
       dmr_data_sync (opts, state);
 
-      //disabled, shouldn't occur here I don't think, voice only
-      // dmr_data_burst_handler(opts, state, (uint8_t *)dummy_bits, 0xEB);
-
       for (i = 0; i < 48; i++)
         state->dmr_embedded_signalling[internalslot][5][i] = syncdata[i];
 
       dmr_sbrc (opts, state, emb_pdu[4]);
 
-      if (internalslot == 0)
-        vc1 = 7;
-      else vc2 = 7;
+      emb_ok = 1;
+
+      //give an audio cue when this happens (low, high)
+      beeper (opts, state, internalslot, 40, 86, 3);
+      beeper (opts, state, internalslot, 80, 86, 3);
+
+      //put into Event History
+      state->event_history_s[0].Event_History_Items[internalslot].color_pair = 4;
+      watchdog_event_datacall (opts, state, 0, 0, "DMR Reverse Channel P/PI Indicator On (FEC Okay);", internalslot);
+      push_event_history (&state->event_history_s[internalslot]);
+      init_event_history (&state->event_history_s[internalslot], 0, 1);
+
+      skipcount++;
 
       goto SKIP;
 
