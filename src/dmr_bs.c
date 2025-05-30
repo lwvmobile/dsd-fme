@@ -329,10 +329,10 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     //occassionally on p_clear with trunking tuner logic active and partial stale dibits in the buffer
     if (QR_16_7_6_decode(emb_pdu) && emb_pdu[4] && tact_okay == 1) //during voice test
     {
-      fprintf (stderr,"%s ", timestr);
 
       if (Golay_20_8_decode(SlotType))
       {
+        fprintf (stderr,"%s ", timestr);
         if (opts->inverted_dmr == 0)
           fprintf (stderr,"Sync: +RC   ");
         else fprintf (stderr,"Sync: -RC   ");
