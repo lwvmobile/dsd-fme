@@ -327,15 +327,18 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     //if the QR FEC is good, tact/cach FEC is good, and slot type burst FEC is good, and the P/PI bit is on for RC
     //NOTE: This can still trigger on bad signal when it should be a data sync pattern but signal drops out or
     //occassionally on p_clear with trunking tuner logic active and partial stale dibits in the buffer
-    if (QR_16_7_6_decode(emb_pdu) && Golay_20_8_decode(SlotType) && emb_pdu[4] && tact_okay == 1)
+    if (QR_16_7_6_decode(emb_pdu) && emb_pdu[4] && tact_okay == 1) //during voice test
     {
       fprintf (stderr,"%s ", timestr);
 
-      if (opts->inverted_dmr == 0)
-        fprintf (stderr,"Sync: +RC   ");
-      else fprintf (stderr,"Sync: -RC   ");
+      if (Golay_20_8_decode(SlotType))
+      {
+        if (opts->inverted_dmr == 0)
+          fprintf (stderr,"Sync: +RC   ");
+        else fprintf (stderr,"Sync: -RC   ");
 
-      dmr_data_sync (opts, state);
+        dmr_data_sync (opts, state);
+      }
 
       for (i = 0; i < 48; i++)
         state->dmr_embedded_signalling[internalslot][5][i] = syncdata[i];
@@ -354,9 +357,11 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       push_event_history (&state->event_history_s[internalslot]);
       init_event_history (&state->event_history_s[internalslot], 0, 1);
 
-      skipcount++;
-
-      goto SKIP;
+      if (Golay_20_8_decode(SlotType))
+      {
+        skipcount++;
+        goto SKIP;
+      }
 
     }
 
