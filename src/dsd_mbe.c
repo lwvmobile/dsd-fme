@@ -383,7 +383,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     //increment vc counter by one.
     state->p25vc++;
 
-    if (opts->mbe_out_f != NULL && state->dmr_encL == 0) //only save if this bit not set
+    // if (opts->mbe_out_f != NULL && state->dmr_encL == 0) //only save if this bit not set
+    if (opts->mbe_out_f != NULL) // && state->dmr_encL == 0) //only save if this bit not set //TODO: Fix this checkdown
     {
       saveImbe4400Data (opts, state, imbe_d);
     }
