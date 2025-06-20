@@ -3503,9 +3503,10 @@
  
      //this will only open OSS output if its listed as a type
      //changed to this so I could call it freely inside of ncurses terminal
-     openOSSOutput(&opts);
+     if (opts.playfiles == 0)
+      openOSSOutput(&opts);
  
-     if (opts.playfiles == 1) //redo?
+     if (opts.playfiles == 1)
      {
        opts.split = 1;
        opts.playoffset = 0;
@@ -3513,7 +3514,10 @@
        opts.delay = 0;
        opts.pulse_digi_rate_out = 8000;
        opts.pulse_digi_out_channels = 1;
-       if (opts.audio_out_type == 0) openPulseOutput(&opts);
+       if (opts.audio_out_type == 0)
+        openPulseOutput(&opts);
+       else if((strncmp(opts.audio_out_dev, "/dev/dsp", 8) == 0))
+        openOSSOutput(&opts); //open after split == 1 so it will open and playback at the proper speed
      }
  
      //this particular if-elseif-else could be rewritten to be a lot neater and simpler

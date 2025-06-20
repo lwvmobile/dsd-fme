@@ -236,7 +236,7 @@ void openOSSOutput (dsd_opts * opts)
     }
   }
 
-  if (opts->audio_in_type != 5) //split == 1
+  if (opts->audio_in_type != 5 || opts->split == 1) //split == 1
   {
 
     if((strncmp(opts->audio_out_dev, "/dev/dsp", 8) == 0))
