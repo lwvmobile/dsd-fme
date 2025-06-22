@@ -79,3 +79,20 @@ char * getDateN(time_t t)
   return curr;
 }
 
+//get HHmmss timestamp no colon (file operations)
+char * getTimeF(time_t t)
+{
+  char * curr = calloc(7, sizeof(char));
+  struct tm * ptm = localtime(& t);
+  sprintf(curr,"%02d%02d%02d", ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+  return curr;
+}
+
+//get YYYYMMDD without hyphen (file operations)
+char * getDateF(time_t t)
+{
+  char * curr = calloc(25, sizeof(char));
+  struct tm * ptm = localtime(& t);
+  sprintf(curr,"%04d%02d%02d", ptm->tm_year+1900, ptm->tm_mon+1, ptm->tm_mday);
+  return curr;
+}

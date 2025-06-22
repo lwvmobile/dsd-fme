@@ -68,6 +68,7 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
   int i;
   char imbe_d[88];
   char ambe_d[49];
+  srand(time(NULL)); //random seed for some file names using random numbers in file name
 
   for (i = state->optind; i < argc; i++)
   {
@@ -99,6 +100,10 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
           memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
           playSynthesizedVoiceFM (opts, state);
         }
+      }
+      else if (state->mbe_file_type == 3)
+      {
+        read_sdrtrunk_json_format (opts, state);
       }
       else if (state->mbe_file_type > 0) //ambe files
       {

@@ -1153,6 +1153,8 @@ void PrintAMBEData (dsd_opts * opts, dsd_state * state, char *ambe_d);
 void PrintIMBEData (dsd_opts * opts, dsd_state * state, char *imbe_d);
 int readImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d);
 int readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d);
+void keyring(dsd_opts * opts, dsd_state * state);
+void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state);
 void openMbeInFile (dsd_opts * opts, dsd_state * state);
 void closeMbeOutFile (dsd_opts * opts, dsd_state * state);
 void closeMbeOutFileR (dsd_opts * opts, dsd_state * state); //tdma slot 2
@@ -1412,10 +1414,12 @@ void decode_ars(dsd_opts * opts, dsd_state * state, uint8_t * input, int len);
 char * getTime();
 char * getTimeC();
 char * getTimeN(time_t t);
+char * getTimeF(time_t t);
 char * getDate();
 char * getDateH();
 char * getDateS();
 char * getDateN(time_t t);
+char * getDateF(time_t t);
 
 //event history functions
 void init_event_history (Event_History_I * event_struct, uint8_t start, uint8_t stop);

@@ -16,6 +16,8 @@
  */
 
 #include "dsd.h"
+#include "p25p1_const.h" //for imbe fr (7200)
+#include "dmr_const.h" //for ambe+2 fr
 
 void saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
 {
@@ -244,9 +246,17 @@ openMbeInFile (dsd_opts * opts, dsd_state * state)
 
   opts->mbe_in_f = fopen (opts->mbe_in_file, "ro");
   if (opts->mbe_in_f == NULL)
-    {
-      fprintf (stderr,"Error: could not open %s\n", opts->mbe_in_file);
-    }
+    fprintf (stderr,"Error: could not open %s\n", opts->mbe_in_file);
+
+  //this will check the last 4 characters of the opts->mbe_in_file string
+  char ext[5]; memset(ext, 0, sizeof(ext));
+  uint16_t str_len = strlen((const char*)opts->mbe_in_file);
+  uint16_t ext_ptr = str_len - 4;
+  strncpy (ext, opts->mbe_in_file+ext_ptr, 4);
+
+  //debug
+  // fprintf (stderr, "EXT: %s;", ext);
+
 
   // read cookie
   cookie[0] = fgetc (opts->mbe_in_f);
@@ -254,26 +264,27 @@ openMbeInFile (dsd_opts * opts, dsd_state * state)
   cookie[2] = fgetc (opts->mbe_in_f);
   cookie[3] = fgetc (opts->mbe_in_f);
   cookie[4] = 0;
+
   //ambe+2
   if (strstr (cookie, ".amb") != NULL)
-  {
     state->mbe_file_type = 1;
-  }
   //p1 and pv
   else if (strstr (cookie, ".imb") != NULL)
-  {
     state->mbe_file_type = 0;
-  }
   //d-star ambe
   else if (strstr (cookie, ".dmb") != NULL)
-  {
     state->mbe_file_type = 2;
-  }
+  //sdrtrunk formated mbe json file
+  else if (strncmp (".mbe", ext, 4) == 0)
+    state->mbe_file_type = 3;
   else
-    {
-      state->mbe_file_type = -1;
-      fprintf (stderr,"Error - unrecognized file type\n");
-    }
+  {
+    state->mbe_file_type = -1;
+    fprintf (stderr,"Error - unrecognized file type\n");
+
+    //try SDRTrunk JSON format as last resort
+    state->mbe_file_type = 3;
+  }
 
 }
 
@@ -323,6 +334,9 @@ void openMbeOutFile (dsd_opts * opts, dsd_state * state)
   char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
   char * datestr;
 
+  //random element of filename, so two files won't overwrite one another
+  uint16_t random_number = rand() & 0xFFFF;
+
   timestr = getTime();
   datestr = getDate();
 
@@ -350,7 +364,7 @@ void openMbeOutFile (dsd_opts * opts, dsd_state * state)
 
   state->tgcount = 0;
 
-  sprintf (opts->mbe_out_file, "%s %s S1%s", datestr, timestr, ext);
+  sprintf (opts->mbe_out_file, "%s_%s_%04X_S1%s", datestr, timestr, random_number, ext);
 
   sprintf (opts->mbe_out_path, "%s%s", opts->mbe_out_dir, opts->mbe_out_file);
 
@@ -385,6 +399,9 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
   char * timestr; //add timestr here, so we can assign it and also free it to prevent memory leak
   char * datestr;
 
+  //random element of filename, so two files won't overwrite one another
+  uint16_t random_number = rand() & 0xFFFF;
+
   timestr = getTime();
   datestr = getDate();
 
@@ -412,7 +429,7 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state)
 
   state->tgcount = 0;
 
-  sprintf (opts->mbe_out_fileR, "%s %s S2%s", datestr, timestr, ext);
+  sprintf (opts->mbe_out_fileR, "%s_%s_%04X_S2%s", datestr, timestr, random_number, ext);
 
   sprintf (opts->mbe_out_path, "%s%s", opts->mbe_out_dir, opts->mbe_out_fileR);
 
@@ -488,8 +505,9 @@ SNDFILE * close_and_rename_wav_file(SNDFILE * wav_file, char * wav_out_filename,
 {
   sf_close(wav_file);
 
-  char * datestr = getDate();
-  char * timestr = getTime();
+  time_t event_time = event_struct->Event_History_Items[0].event_time;
+  char * datestr = getDateF(event_time);
+  char * timestr = getTimeF(event_time);
   uint16_t random_number = rand();
 
   uint32_t source_id = event_struct->Event_History_Items[0].source_id;
@@ -849,4 +867,574 @@ uint16_t parse_raw_user_string (char * input, uint8_t * output)
   if (shift) output[len-1] <<= 4;
 
   return len;
+}
+
+uint16_t ambe2_str_to_decode(dsd_opts * opts, dsd_state * state, char * ambe_str, uint8_t * ks, uint16_t ks_idx, uint8_t dmra)
+{
+  UNUSED(opts);
+
+  char ambe_fr[4][24]; memset (ambe_fr, 0, sizeof(ambe_fr));
+  uint8_t dibit_pair = 0;
+  uint8_t dibit1 = 0, dibit2 = 0;
+  const int *w, *x, *y, *z;
+  w = rW;
+  x = rX;
+  y = rY;
+  z = rZ;
+  for (size_t i = 0; i < 18; i++)
+  {
+
+    char octet_char[2];
+    octet_char[1] = 0;
+
+    strncpy (octet_char, ambe_str+i, 1);
+    sscanf (octet_char, "%hhX", &dibit_pair);
+
+    dibit1 = (dibit_pair >> 2) & 0x3;
+    dibit2 = (dibit_pair >> 0) & 0x3;
+
+    //debug
+    // fprintf (stderr, "\n dibit_pair: %X = %d, %d;", dibit_pair, dibit1, dibit2);
+
+    //load into ambe_fr
+    ambe_fr[*w][*x] = (1 & (dibit1 >> 1)); // bit 1
+    ambe_fr[*y][*z] = (1 & (dibit1 >> 0)); // bit 0
+
+    w++;
+    x++;
+    y++;
+    z++;
+
+    ambe_fr[*w][*x] = (1 & (dibit2 >> 1)); // bit 1
+    ambe_fr[*y][*z] = (1 & (dibit2 >> 0)); // bit 0
+
+    w++;
+    x++;
+    y++;
+    z++;
+
+    //working now!
+
+  }
+
+  char ambe_d[49]; memset(ambe_d, 0, sizeof(ambe_d));
+  state->errs = mbe_eccAmbe3600x2450C0 (ambe_fr);
+  state->errs2 = state->errs;
+  mbe_demodulateAmbe3600x2450Data (ambe_fr);
+  state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
+  state->debug_audio_errors += state->errs2;
+
+  //keystream application
+  for (uint8_t i = 0; i < 49; i++)
+    ambe_d[i] ^= ks[(ks_idx++)%3000];
+
+  //DMRA or P25 KS, skip the left over 7 bits from a byte
+  if (dmra == 1)
+    ks_idx += 7;
+
+  mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
+    ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+  PrintAMBEData (opts, state, ambe_d);
+
+  //convert and save to .amb file if desired
+  if (opts->mbe_out_f != NULL)
+    saveAmbe2450Data (opts, state, ambe_d);
+
+  //audio out stack
+  if (opts->floating_point == 0)
+    processAudio(opts, state);
+
+  if (opts->wav_out_f != NULL)
+    writeSynthesizedVoice (opts, state);
+
+  if (opts->audio_out == 1 && opts->floating_point == 0)
+    playSynthesizedVoiceMS (opts, state);
+
+  if (opts->floating_point == 1)
+  {
+    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+    playSynthesizedVoiceFM (opts, state);
+  }
+  //else if not floating point audio or audio out, then purge the audio buffers before they overflow and segfault
+  else if (opts->audio_out == 0)
+  {
+    if (state->audio_out_idx2 >= 800000)
+    {
+      state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
+      state->audio_out_buf_p = state->audio_out_buf + 100;
+      memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
+      memset (state->audio_out_buf, 0, 100 * sizeof (short));
+      state->audio_out_idx2 = 0;
+    }
+  }
+
+  return ks_idx; //return current ks_idx
+
+}
+
+uint16_t imbe_str_to_decode(dsd_opts * opts, dsd_state * state, char * imbe_str, uint8_t * ks, uint16_t ks_idx)
+{
+  UNUSED(opts);
+
+  char imbe_fr[8][23]; memset (imbe_fr, 0, sizeof(imbe_fr));
+  uint8_t dibit_pair = 0;
+  uint8_t dibit1 = 0, dibit2 = 0;
+  const int *w, *x, *y, *z;
+  w = iW;
+  x = iX;
+  y = iY;
+  z = iZ;
+  for (size_t i = 0; i < 36; i++)
+  {
+
+    char octet_char[2];
+    octet_char[1] = 0;
+
+    strncpy (octet_char, imbe_str+i, 1);
+    sscanf (octet_char, "%hhX", &dibit_pair);
+
+    dibit1 = (dibit_pair >> 2) & 0x3;
+    dibit2 = (dibit_pair >> 0) & 0x3;
+
+    //debug
+    // fprintf (stderr, "\n dibit_pair: %X = %d, %d;", dibit_pair, dibit1, dibit2);
+
+    //load into imbe_fr
+    imbe_fr[*w][*x] = (1 & (dibit1 >> 1)); // bit 1
+    imbe_fr[*y][*z] = (1 & (dibit1 >> 0)); // bit 0
+
+    w++;
+    x++;
+    y++;
+    z++;
+
+    imbe_fr[*w][*x] = (1 & (dibit2 >> 1)); // bit 1
+    imbe_fr[*y][*z] = (1 & (dibit2 >> 0)); // bit 0
+
+    w++;
+    x++;
+    y++;
+    z++;
+
+    //working now!
+
+  }
+
+  char imbe_d[88]; memset(imbe_d, 0, sizeof(imbe_d));
+  state->errs = mbe_eccImbe7200x4400C0 (imbe_fr);
+  state->errs2 = state->errs;
+  mbe_demodulateImbe7200x4400Data (imbe_fr);
+  state->errs2 += mbe_eccImbe7200x4400Data (imbe_fr, imbe_d);
+  state->debug_audio_errors += state->errs2;
+
+  //keystream application
+  for (uint8_t i = 0; i < 88; i++)
+    imbe_d[i] ^= ks[(ks_idx++)%3000];
+
+  mbe_processImbe4400Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
+    imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
+
+  PrintIMBEData (opts, state, imbe_d);
+
+  //convert and save to .imb file if desired
+  if (opts->mbe_out_f != NULL)
+    saveImbe4400Data (opts, state, imbe_d);
+
+  //audio out stack
+  if (opts->floating_point == 0)
+    processAudio(opts, state);
+
+  if (opts->wav_out_f != NULL)
+    writeSynthesizedVoice (opts, state);
+
+  if (opts->audio_out == 1 && opts->floating_point == 0)
+    playSynthesizedVoiceMS (opts, state);
+
+  if (opts->floating_point == 1)
+  {
+    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+    playSynthesizedVoiceFM (opts, state);
+  }
+  //else if not floating point audio or audio out, then purge the audio buffers before they overflow and segfault
+  else if (opts->audio_out == 0)
+  {
+    if (state->audio_out_idx2 >= 800000)
+    {
+      state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
+      state->audio_out_buf_p = state->audio_out_buf + 100;
+      memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
+      memset (state->audio_out_buf, 0, 100 * sizeof (short));
+      state->audio_out_idx2 = 0;
+    }
+  }
+
+  return ks_idx; //return current ks_idx
+
+}
+
+void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
+{
+
+  char * source_str = calloc(0x100000, sizeof(char));
+  size_t source_size;
+
+  int8_t protocol = -1;
+  uint32_t source = 0; UNUSED(source);
+  uint32_t target = 0; UNUSED(target);
+  int8_t gi = -1; UNUSED(gi);
+  uint8_t is_enc = 0; UNUSED(is_enc);
+  uint8_t is_dmra = 1; //Denny, we need an MFID in the JSON file plz
+
+  uint8_t alg_id = 0;
+  uint16_t key_id = 0;
+  unsigned long long int iv_hex = 0;
+  int rc4_db = 256;
+  int rc4_mod = 13;
+
+  time_t event_time = time(NULL); UNUSED(event_time);
+
+  //for event history items
+  state->dmr_color_code = 0;
+  state->lastsrc = 0;
+  state->lasttg = 0;
+  state->gi[0] = -1;
+  state->synctype = -1;
+  state->lastsynctype = -1;
+
+  //watchdog for event history
+  watchdog_event_history(opts, state, 0);
+  watchdog_event_current(opts, state, 0);
+
+  uint8_t ks[3000]; memset (ks, 0, sizeof(ks));
+  uint16_t ks_idx = 0; //keystream index value
+
+  source_size = fread (source_str, 1, 0x100000, opts->mbe_in_f);
+
+  //debug
+  // fprintf (stderr, " Source Size: %d.\n", source_size);
+  // fprintf (stderr, "\n");
+
+  char * str_buffer = calloc(source_size, sizeof(char));
+
+  str_buffer = strtok(source_str, "{ \""); //value after initial { open bracket
+
+  //debug print current str_buffer
+  // fprintf (stderr, "%s", str_buffer);
+
+  for (size_t i = 0; i < source_size; i++)
+  {
+
+    //debug print current str_buffer
+    // fprintf (stderr, "%s", str_buffer);
+
+    //compare and set items accordingly
+    if (strncmp ("protocol", str_buffer, 8) == 0)
+    {
+      str_buffer = strtok(NULL, " : \""); //next value after any : "" string
+
+      //debug print current str_buffer
+      fprintf (stderr, "\n Protocol: %s", str_buffer);
+
+      //compare protocol and set to proper codec etc
+      if (strncmp ("APCO25-PHASE1", str_buffer, 13) == 0)
+      {
+        //set IMBE protocol here
+        protocol = 1;
+
+        //rc4 dropbyte and key len mod
+        rc4_db = 267;
+        rc4_mod = 13;
+
+        state->synctype = 0;
+        state->lastsynctype = 0;
+      }
+
+      if (strncmp ("APCO25-PHASE2", str_buffer, 13) == 0)
+      {
+        //set AMBE+2 protocol here
+        protocol = 2;
+
+        //rc4 dropbyte and key len mod
+        rc4_db = 256;
+        rc4_mod = 13;
+
+        state->synctype = 35;
+        state->lastsynctype = 35;
+      }
+
+      if (strncmp ("DMR", str_buffer, 3) == 0)
+      {
+        //set AMBE+2 protocol here
+        protocol = 2;
+
+        //rc4 dropbyte and key len mod
+        rc4_db = 256;
+        rc4_mod = 9;
+
+        state->synctype = 10;
+        state->lastsynctype = 10;
+      }
+
+      //open .imb or .amb file, if desired, but only after setting a synctype
+      if (state->synctype != -1)
+      {
+        //if converting to .amb or .imb, open that file format as well
+        if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
+          openMbeOutFile (opts, state);
+      }
+
+    }
+
+    if (strncmp ("call_type", str_buffer, 9) == 0)
+    {
+      str_buffer = strtok(NULL, " : \""); //next value after any : "" string
+
+      //set gi value based on this
+      if (strncmp ("GROUP", str_buffer, 5) == 0)
+        gi = 0;
+      else gi = 1;
+
+      state->gi[0] = gi;
+
+      //debug set value
+      // fprintf (stderr, " GI: %d;", gi);
+
+      //debug print current str_buffer
+      fprintf (stderr, "\n Call Type: %s", str_buffer);
+
+    }
+
+    if (strncmp ("encrypted", str_buffer, 9) == 0)
+    {
+      str_buffer = strtok(NULL, " : \""); //next value after any : "" string
+
+      //set enc value based on this
+      if (strncmp ("true", str_buffer, 4) == 0)
+        is_enc = 1;
+      else is_enc = 0;
+
+      //reset other enc variables (filled in later on if available)
+      alg_id = 0;
+      key_id = 0;
+      iv_hex = 0;
+
+      //debug set value
+      // fprintf (stderr, " ENC: %d;", is_enc);
+
+      //debug print current str_buffer
+      fprintf (stderr, "\n Encryption: %s", str_buffer);
+
+    }
+
+    if (strncmp ("to", str_buffer, 2) == 0)
+    {
+      str_buffer = strtok(NULL, " : \""); //next value after any : "" string
+
+      target = strtol (str_buffer, NULL, 10);
+
+      state->lasttg = target;
+
+      //debug set value
+      // fprintf (stderr, " Target: %d;", target);
+
+      //debug print current str_buffer
+      fprintf (stderr, "\n To: %s", str_buffer);
+
+    }
+
+    if (strncmp ("from", str_buffer, 4) == 0)
+    {
+      str_buffer = strtok(NULL, " : \""); //next value after any : "" string
+
+      source = strtol (str_buffer, NULL, 10);
+
+      state->lastsrc = source;
+
+      //debug set value
+      // fprintf (stderr, " Source: %d;", source);
+
+      //debug print current str_buffer
+      fprintf (stderr, "\n From: %s", str_buffer);
+
+    }
+
+    if (strncmp ("encryption_algorithm", str_buffer, 20) == 0)
+    {
+      str_buffer = strtok(NULL, " : \""); //next value after any : "" string
+
+      alg_id = strtol (str_buffer, NULL, 10);
+
+      //debug set value
+      fprintf (stderr, "\n Alg ID: %02X;", alg_id);
+
+      //debug print current str_buffer
+      // fprintf (stderr, "\n Encryption Alg: %s", str_buffer);
+
+    }
+
+    if (strncmp ("encryption_key_id", str_buffer, 17) == 0)
+    {
+      str_buffer = strtok(NULL, " : \""); //next value after any : "" string
+
+      key_id = strtol (str_buffer, NULL, 10);
+
+      //debug set value
+      fprintf (stderr, "\n Key ID: %04X;", key_id);
+
+      //debug print current str_buffer
+      // fprintf (stderr, "\n Encryption KID: %s", str_buffer);
+
+    }
+
+    if (strncmp ("encryption_mi", str_buffer, 13) == 0)
+    {
+      str_buffer = strtok(NULL, " : \""); //next value after any : "" string
+
+      uint16_t iv_len = strlen((const char*)str_buffer);
+      char iv_str[20]; memset(iv_str, 0, sizeof(iv_str));
+
+      //debug this str_buffer len
+      // fprintf (stderr, " IV STR LEN: %d;", iv_len);
+
+      if (iv_len == 18) //P25 MI has an extra zero byte (two zeroes) appended to MI, remove those
+        iv_len = 16;
+      strncpy(iv_str, str_buffer, iv_len); //copy out final IV value from the MI
+
+      iv_hex = strtoull (iv_str, NULL, 16); //Note: The 16 here is for base 16 (hex), not 16 chars
+
+      //debug set value
+      fprintf (stderr, "\n IV: %016llX;", iv_hex); //not really needed if loaded into array
+
+      //debug print current str_buffer
+      // fprintf (stderr, "\n Encryption MI/IV: %s", str_buffer);
+
+      //WIP: This is the last field of enc, so we create a new keystream here, if needed
+      state->currentslot = 0;
+      state->payload_algid = alg_id;
+      state->payload_mi = iv_hex;
+      state->payload_keyid = key_id;
+      if (state->keyloader == 1)
+        keyring(opts, state);
+
+      //TODO: Handle multi keystream creation with a new function
+      uint8_t ks_bytes[375]; memset(ks_bytes, 0, sizeof(ks_bytes));
+      uint8_t kiv[15]; memset(kiv, 0, sizeof(kiv));
+
+      //Test: Setup a simple RC4 for now (working)
+      if ( (alg_id == 0xAA || alg_id == 0x21) && state->R != 0 )
+      {
+
+        //load key into key portion of kiv
+        kiv[0] = ((state->R & 0xFF00000000) >> 32);
+        kiv[1] = ((state->R & 0xFF000000) >> 24);
+        kiv[2] = ((state->R & 0xFF0000) >> 16);
+        kiv[3] = ((state->R & 0xFF00) >> 8);
+        kiv[4] = ((state->R & 0xFF) >> 0); 
+
+        //load the str_buffer into the IV portion of kiv
+        parse_raw_user_string(str_buffer, kiv+5);
+
+        rc4_block_output (rc4_db, rc4_mod, 375, kiv, ks_bytes);
+
+        unpack_byte_array_into_bit_array(ks_bytes, ks, 375);
+
+      } //end test
+
+      //reset ks_idx to 0
+      ks_idx = 0;
+
+    }
+
+    if (strncmp ("hex", str_buffer, 3) == 0)
+    {
+      str_buffer = strtok(NULL, " : \""); //next value after any : "" string
+
+      if (protocol == 1) //P25p1 IMBE
+      {
+        //debug print current str_buffer
+        // fprintf (stderr, "\n IMBE HEX: %s", str_buffer);
+
+        //36 hex characters on 'hex' which is the IMBE interleaved C codewords
+        ks_idx = imbe_str_to_decode(opts, state, str_buffer, ks, ks_idx);
+      }
+      else if (protocol == 2) //P25p2 AMBE
+      {
+        //debug print current str_buffer
+        // fprintf (stderr, "\n AMBE HEX: %s", str_buffer);
+
+        //18 hex characters on 'hex' which is the AMBE interleaved C codewords
+        ks_idx = ambe2_str_to_decode(opts, state, str_buffer, ks, ks_idx, is_dmra);
+      }
+    }
+
+    if (strncmp ("time", str_buffer, 4) == 0)
+    {
+      str_buffer = strtok(NULL, " : \""); //next value after any : "" string
+
+      char time_str[20]; memset(time_str, 0, sizeof(time_str));
+      strncpy(time_str, str_buffer, 10); //full string is 13, but not copying milliseconds to match time(NULL)
+
+      event_time = strtol (time_str, NULL, 10);
+
+      //working now with tweak
+      state->event_history_s[0].Event_History_Items[0].event_time = event_time;
+
+      //debug set value
+      // fprintf (stderr, " Time: %ld;", event_time);
+
+      //what is actual time_t for time(NULL);
+      // fprintf (stderr, " Time(NULL): %ld;", time(NULL));
+
+      //convert to legible time and date format
+      char * timestr = getTimeN(event_time); UNUSED(timestr);
+      char * datestr = getDateN(event_time); UNUSED(datestr);
+
+      //user legible time
+      fprintf (stderr, " Date: %s Time: %s;", datestr, timestr);
+
+      if (timestr != NULL)
+      {
+        free (timestr);
+        timestr = NULL;
+      }
+      if (datestr != NULL)
+      {
+        free (datestr);
+        datestr = NULL;
+      }
+
+      //debug print current str_buffer
+      // fprintf (stderr, "\n Time: %s", str_buffer);
+
+    }
+
+    str_buffer = strtok(NULL, " : \""); //next value after any : "" string
+
+    if (str_buffer == NULL)
+      break;
+
+    //exit loop if signal
+    if (exitflag == 1)
+      break;
+  }
+
+  //free allocated memory from the source string
+  if (source_str != NULL)
+  {
+    free (source_str);
+    source_str = NULL;
+  }
+
+  //watchdog for event history
+  watchdog_event_history(opts, state, 0);
+  watchdog_event_current(opts, state, 0);
+
+  //if .imb or .amb file open, close it now
+  if (opts->mbe_out_f != NULL)
+    closeMbeOutFile (opts, state);
+
+  //end line break
+  fprintf (stderr, "\n");
+
 }

@@ -617,7 +617,8 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
     event_struct->Event_History_Items[0].source_id = source_id;
     event_struct->Event_History_Items[0].target_id = target_id;
     event_struct->Event_History_Items[0].channel = channel; //need to add this to trunking messages, if tuned from call grant
-    event_struct->Event_History_Items[0].event_time = time(NULL);
+    if (opts->playfiles == 0) //if playing back .mbe files with a time in it, don't set this
+      event_struct->Event_History_Items[0].event_time = time(NULL);
     sprintf (event_struct->Event_History_Items[0].sysid_string, "%s", sysid_string);
     sprintf (event_struct->Event_History_Items[0].src_str, "%s", src_str);
     sprintf (event_struct->Event_History_Items[0].tgt_str, "%s", tgt_str);
