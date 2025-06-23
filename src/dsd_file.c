@@ -824,6 +824,45 @@ void unpack_ambe (uint8_t * input, char * ambe)
   ambe[48] = input[6] >> 7;
 }
 
+//recover previous IV for SDRTrunk .mbe files when P25p1
+uint64_t reverse_lfsr_64_to_len(uint8_t * iv, int16_t len)
+{
+
+  uint64_t lfsr = 0, bit1 = 0, bit2 = 0;
+
+  lfsr = ((uint64_t)iv[0] << 56ULL) + ((uint64_t)iv[1] << 48ULL) + ((uint64_t)iv[2] << 40ULL) + ((uint64_t)iv[3] << 32ULL) + 
+         ((uint64_t)iv[4] << 24ULL) + ((uint64_t)iv[5] << 16ULL) + ((uint64_t)iv[6] << 8ULL)  + ((uint64_t)iv[7] << 0ULL);
+
+  memset (iv, 0, 8*sizeof(uint8_t));
+
+  for(int16_t cnt = 0; cnt < len; cnt++)
+  {
+    //63,61,45,37,27,14
+    // Polynomial is C(x) = x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1
+
+    //basically, just get the taps at the +1 position on all but MSB, then check the LSB and configure bit as required
+    bit1 = ((lfsr >> 62) ^ (lfsr >> 46) ^ (lfsr >> 38) ^ (lfsr >> 27) ^ (lfsr >> 15)) & 0x1;
+    bit2 = lfsr & 1;
+    if (bit1 == bit2)
+      bit2 = 0;
+    else bit2 = 1;
+
+    //just run this in reverse of normal LFSR
+    lfsr = (lfsr >> 1) | (bit2 << 63);
+  }
+
+  for (int16_t i = 0; i < 8; i++)
+    iv[i] = (lfsr >> (56-(i*8))) & 0xFF;
+
+  fprintf (stderr, " RV LFSR(%02d): ", len);
+  for (int16_t i = 0; i < 8; i++)
+    fprintf (stderr, "%02X", iv[i]);
+  fprintf (stderr, ";");
+
+  return bit2;
+
+}
+
 //convert a user string into a uint8_t array
 uint16_t parse_raw_user_string (char * input, uint8_t * output)
 {
@@ -1080,10 +1119,10 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
   size_t source_size;
 
   int8_t protocol = -1;
-  uint32_t source = 0; UNUSED(source);
-  uint32_t target = 0; UNUSED(target);
-  int8_t gi = -1; UNUSED(gi);
-  uint8_t is_enc = 0; UNUSED(is_enc);
+  uint32_t source = 0;
+  uint32_t target = 0;
+  int8_t gi = -1;
+  uint8_t is_enc = 0;
   uint8_t is_dmra = 1; //Denny, we need an MFID in the JSON file plz
 
   uint8_t alg_id = 0;
@@ -1092,7 +1131,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
   int rc4_db = 256;
   int rc4_mod = 13;
 
-  time_t event_time = time(NULL); UNUSED(event_time);
+  time_t event_time = time(NULL);
 
   //for event history items
   state->dmr_color_code = 0;
@@ -1108,6 +1147,11 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
   uint8_t ks[3000]; memset (ks, 0, sizeof(ks));
   uint16_t ks_idx = 0; //keystream index value
+
+  //P25p1 IMBE / IV out of order execution on .mbe files (luckily, AMBE is not affected)
+  uint8_t ks_i[3000]; memset (ks_i, 0, sizeof(ks_i));
+  uint16_t ks_idx_i = 808; //keystream index value IMBE (start at 808 for out of order ESS)
+  int imbe_counter = 0; //count IMBE frames for when to skip 2 bytes of ks and juggle keystreams
 
   source_size = fread (source_str, 1, 0x100000, opts->mbe_in_f);
 
@@ -1339,10 +1383,32 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
         unpack_byte_array_into_bit_array(ks_bytes, ks, 375);
 
+        //reverse lfsr on IV and create keystream with that as well
+        //due to out of order execution on P25p1 ESS sync.
+        reverse_lfsr_64_to_len (kiv+5, 64);
+
+        memset(ks_bytes, 0, sizeof(ks_bytes));
+
+        rc4_block_output (rc4_db, rc4_mod, 375, kiv, ks_bytes);
+
+        unpack_byte_array_into_bit_array(ks_bytes, ks_i, 375);
+
+
       } //end test
+
+      //NOTE: Regarding SDRTrunk .mbe format, the ESS Encryption Sync
+      //is in the correct location on P25p2, but for P25p1, the ESS
+      //information preceeds LDU2, but should be AFTER the LDU2 IMBE frames,
+      //so, for now, we utilize a reverse lfsr function (Crypthings coming in handy)
+      //and recover the previous LFSR and make two keystreams in order
+      //to properly decrypt the initial frame, and then juggle the 
+      //keystreams in code to provide a smooth decryption session of P25p1.
 
       //reset ks_idx to 0
       ks_idx = 0;
+
+      //reset frame counter
+      imbe_counter = 0;
 
     }
 
@@ -1355,8 +1421,28 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         //debug print current str_buffer
         // fprintf (stderr, "\n IMBE HEX: %s", str_buffer);
 
+        imbe_counter++;
+
         //36 hex characters on 'hex' which is the IMBE interleaved C codewords
-        ks_idx = imbe_str_to_decode(opts, state, str_buffer, ks, ks_idx);
+        ks_idx_i = imbe_str_to_decode(opts, state, str_buffer, ks_i, ks_idx_i);
+
+        //skip LSD bits in-between these two IMBE voice frames
+        if (imbe_counter == 8 || imbe_counter == 17)
+          ks_idx_i += 16;
+
+        //juggle keystreams and reset the I counter
+        if (imbe_counter == 9)
+        {
+          memcpy (ks_i, ks, sizeof(ks_i));
+          ks_idx_i = 0;
+
+          //debug
+          // fprintf (stderr, " LDU2;");
+        }
+          
+        //debug
+        // fprintf (stderr, " # %02d; KS_IDX_I: %04d;", imbe_counter, ks_idx_i);
+
       }
       else if (protocol == 2) //P25p2 AMBE
       {
@@ -1408,6 +1494,10 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       // fprintf (stderr, "\n Time: %s", str_buffer);
 
     }
+
+    //reset ks_idx if this isn't encrypted (ambe only)
+    if (is_enc == 0)
+      ks_idx = 0;
 
     str_buffer = strtok(NULL, " : \""); //next value after any : "" string
 
