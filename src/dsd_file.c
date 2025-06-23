@@ -1379,19 +1379,22 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         //load the str_buffer into the IV portion of kiv
         parse_raw_user_string(str_buffer, kiv+5);
 
-        rc4_block_output (rc4_db, rc4_mod, 375, kiv, ks_bytes);
+        rc4_block_output (rc4_db, rc4_mod, 200, kiv, ks_bytes);
 
-        unpack_byte_array_into_bit_array(ks_bytes, ks, 375);
+        unpack_byte_array_into_bit_array(ks_bytes, ks, 200);
 
         //reverse lfsr on IV and create keystream with that as well
         //due to out of order execution on P25p1 ESS sync.
-        reverse_lfsr_64_to_len (kiv+5, 64);
+        if (protocol == 1)
+        {
+          reverse_lfsr_64_to_len (kiv+5, 64);
 
-        memset(ks_bytes, 0, sizeof(ks_bytes));
+          memset(ks_bytes, 0, sizeof(ks_bytes));
 
-        rc4_block_output (rc4_db, rc4_mod, 375, kiv, ks_bytes);
+          rc4_block_output (rc4_db, rc4_mod, 200, kiv, ks_bytes);
 
-        unpack_byte_array_into_bit_array(ks_bytes, ks_i, 375);
+          unpack_byte_array_into_bit_array(ks_bytes, ks_i, 200);
+        }
 
 
       } //end test
