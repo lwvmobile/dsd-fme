@@ -75,7 +75,7 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
     sprintf (opts->mbe_in_file, "%s", argv[i]);
     openMbeInFile (opts, state);
     mbe_initMbeParms (state->cur_mp, state->prev_mp, state->prev_mp_enhanced);
-    fprintf (stderr, "playing %s\n", opts->mbe_in_file);
+    fprintf (stderr, "\n playing %s\n", opts->mbe_in_file);
     while (feof (opts->mbe_in_f) == 0)
     {
       if (state->mbe_file_type == 0)
@@ -150,6 +150,7 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
         cleanupAndExit (opts, state);
       }
     }
+    fclose(opts->mbe_in_f); //close file after playing it
   }
 }
 

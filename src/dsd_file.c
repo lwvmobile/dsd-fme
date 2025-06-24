@@ -825,7 +825,7 @@ void unpack_ambe (uint8_t * input, char * ambe)
 }
 
 //recover previous IV for SDRTrunk .mbe files when P25p1
-uint64_t reverse_lfsr_64_to_len(uint8_t * iv, int16_t len)
+uint64_t reverse_lfsr_64_to_len(dsd_opts * opts, uint8_t * iv, int16_t len)
 {
 
   uint64_t lfsr = 0, bit1 = 0, bit2 = 0;
@@ -854,10 +854,13 @@ uint64_t reverse_lfsr_64_to_len(uint8_t * iv, int16_t len)
   for (int16_t i = 0; i < 8; i++)
     iv[i] = (lfsr >> (56-(i*8))) & 0xFF;
 
-  fprintf (stderr, " RV LFSR(%02d): ", len);
-  for (int16_t i = 0; i < 8; i++)
-    fprintf (stderr, "%02X", iv[i]);
-  fprintf (stderr, ";");
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, " RV LFSR(%02d): ", len);
+    for (int16_t i = 0; i < 8; i++)
+      fprintf (stderr, "%02X", iv[i]);
+    fprintf (stderr, ";");
+  }
 
   return bit2;
 
@@ -908,7 +911,7 @@ uint16_t parse_raw_user_string (char * input, uint8_t * output)
   return len;
 }
 
-uint16_t ambe2_str_to_decode(dsd_opts * opts, dsd_state * state, char * ambe_str, uint8_t * ks, uint16_t ks_idx, uint8_t dmra)
+uint16_t ambe2_str_to_decode(dsd_opts * opts, dsd_state * state, char * ambe_str, uint8_t * ks, uint16_t ks_idx, uint8_t dmra, uint8_t is_enc, uint8_t ks_available)
 {
   UNUSED(opts);
 
@@ -974,45 +977,51 @@ uint16_t ambe2_str_to_decode(dsd_opts * opts, dsd_state * state, char * ambe_str
   mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
     ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
-  PrintAMBEData (opts, state, ambe_d);
+  if (opts->payload == 1)
+    PrintAMBEData (opts, state, ambe_d);
 
-  //convert and save to .amb file if desired
-  if (opts->mbe_out_f != NULL)
-    saveAmbe2450Data (opts, state, ambe_d);
-
-  //audio out stack
-  if (opts->floating_point == 0)
-    processAudio(opts, state);
-
-  if (opts->wav_out_f != NULL)
-    writeSynthesizedVoice (opts, state);
-
-  if (opts->audio_out == 1 && opts->floating_point == 0)
-    playSynthesizedVoiceMS (opts, state);
-
-  if (opts->floating_point == 1)
+  if (is_enc == 0 || ks_available == 1)
   {
-    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
-    playSynthesizedVoiceFM (opts, state);
-  }
-  //else if not floating point audio or audio out, then purge the audio buffers before they overflow and segfault
-  else if (opts->audio_out == 0)
-  {
-    if (state->audio_out_idx2 >= 800000)
+
+    //convert and save to .amb file if desired
+    if (opts->mbe_out_f != NULL)
+      saveAmbe2450Data (opts, state, ambe_d);
+
+    //audio out stack
+    if (opts->floating_point == 0)
+      processAudio(opts, state);
+
+    if (opts->wav_out_f != NULL)
+      writeSynthesizedVoice (opts, state);
+
+    if (opts->audio_out == 1 && opts->floating_point == 0)
+      playSynthesizedVoiceMS (opts, state);
+
+    if (opts->floating_point == 1)
     {
-      state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
-      state->audio_out_buf_p = state->audio_out_buf + 100;
-      memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
-      memset (state->audio_out_buf, 0, 100 * sizeof (short));
-      state->audio_out_idx2 = 0;
+      memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+      playSynthesizedVoiceFM (opts, state);
     }
+    //else if not floating point audio or audio out, then purge the audio buffers before they overflow and segfault
+    else if (opts->audio_out == 0)
+    {
+      if (state->audio_out_idx2 >= 800000)
+      {
+        state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
+        state->audio_out_buf_p = state->audio_out_buf + 100;
+        memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
+        memset (state->audio_out_buf, 0, 100 * sizeof (short));
+        state->audio_out_idx2 = 0;
+      }
+    }
+
   }
 
   return ks_idx; //return current ks_idx
 
 }
 
-uint16_t imbe_str_to_decode(dsd_opts * opts, dsd_state * state, char * imbe_str, uint8_t * ks, uint16_t ks_idx)
+uint16_t imbe_str_to_decode(dsd_opts * opts, dsd_state * state, char * imbe_str, uint8_t * ks, uint16_t ks_idx, uint8_t is_enc, uint8_t ks_available)
 {
   UNUSED(opts);
 
@@ -1074,38 +1083,44 @@ uint16_t imbe_str_to_decode(dsd_opts * opts, dsd_state * state, char * imbe_str,
   mbe_processImbe4400Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
     imbe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
-  PrintIMBEData (opts, state, imbe_d);
+  if (opts->payload == 1)
+    PrintIMBEData (opts, state, imbe_d);
 
-  //convert and save to .imb file if desired
-  if (opts->mbe_out_f != NULL)
-    saveImbe4400Data (opts, state, imbe_d);
-
-  //audio out stack
-  if (opts->floating_point == 0)
-    processAudio(opts, state);
-
-  if (opts->wav_out_f != NULL)
-    writeSynthesizedVoice (opts, state);
-
-  if (opts->audio_out == 1 && opts->floating_point == 0)
-    playSynthesizedVoiceMS (opts, state);
-
-  if (opts->floating_point == 1)
+  if (is_enc == 0 || ks_available == 1)
   {
-    memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
-    playSynthesizedVoiceFM (opts, state);
-  }
-  //else if not floating point audio or audio out, then purge the audio buffers before they overflow and segfault
-  else if (opts->audio_out == 0)
-  {
-    if (state->audio_out_idx2 >= 800000)
+
+    //convert and save to .imb file if desired
+    if (opts->mbe_out_f != NULL)
+      saveImbe4400Data (opts, state, imbe_d);
+
+    //audio out stack
+    if (opts->floating_point == 0)
+      processAudio(opts, state);
+
+    if (opts->wav_out_f != NULL)
+      writeSynthesizedVoice (opts, state);
+
+    if (opts->audio_out == 1 && opts->floating_point == 0)
+      playSynthesizedVoiceMS (opts, state);
+
+    if (opts->floating_point == 1)
     {
-      state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
-      state->audio_out_buf_p = state->audio_out_buf + 100;
-      memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
-      memset (state->audio_out_buf, 0, 100 * sizeof (short));
-      state->audio_out_idx2 = 0;
+      memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
+      playSynthesizedVoiceFM (opts, state);
     }
+    //else if not floating point audio or audio out, then purge the audio buffers before they overflow and segfault
+    else if (opts->audio_out == 0)
+    {
+      if (state->audio_out_idx2 >= 800000)
+      {
+        state->audio_out_float_buf_p = state->audio_out_float_buf + 100;
+        state->audio_out_buf_p = state->audio_out_buf + 100;
+        memset (state->audio_out_float_buf, 0, 100 * sizeof (float));
+        memset (state->audio_out_buf, 0, 100 * sizeof (short));
+        state->audio_out_idx2 = 0;
+      }
+    }
+
   }
 
   return ks_idx; //return current ks_idx
@@ -1123,8 +1138,9 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
   uint32_t target = 0;
   int8_t gi = -1;
   uint8_t is_enc = 0;
+  uint8_t ks_available = 0; //if encrypted, this signals if a keystream was created for enc muting / unmuting
   uint8_t is_dmra = 1; //Denny, we need an MFID in the JSON file plz
-
+  uint8_t show_time = 1; //if this has already ran once, don't keep showing the time
   uint8_t alg_id = 0;
   uint16_t key_id = 0;
   unsigned long long int iv_hex = 0;
@@ -1310,7 +1326,11 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       alg_id = strtol (str_buffer, NULL, 10);
 
       //debug set value
-      fprintf (stderr, "\n Alg ID: %02X;", alg_id);
+      if (opts->payload == 1)
+        fprintf (stderr, "\n Alg ID: %02X;", alg_id);
+
+      //set just in case needed
+      is_enc = 1;
 
       //debug print current str_buffer
       // fprintf (stderr, "\n Encryption Alg: %s", str_buffer);
@@ -1324,7 +1344,11 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       key_id = strtol (str_buffer, NULL, 10);
 
       //debug set value
-      fprintf (stderr, "\n Key ID: %04X;", key_id);
+      if (opts->payload == 1)
+        fprintf (stderr, "\n Key ID: %04X;", key_id);
+
+      //set just in case needed
+      is_enc = 1;
 
       //debug print current str_buffer
       // fprintf (stderr, "\n Encryption KID: %s", str_buffer);
@@ -1348,7 +1372,8 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       iv_hex = strtoull (iv_str, NULL, 16); //Note: The 16 here is for base 16 (hex), not 16 chars
 
       //debug set value
-      fprintf (stderr, "\n IV: %016llX;", iv_hex); //not really needed if loaded into array
+      if (opts->payload == 1)
+        fprintf (stderr, "\n IV: %016llX;", iv_hex); //not really needed if loaded into array
 
       //debug print current str_buffer
       // fprintf (stderr, "\n Encryption MI/IV: %s", str_buffer);
@@ -1387,7 +1412,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         //due to out of order execution on P25p1 ESS sync.
         if (protocol == 1)
         {
-          reverse_lfsr_64_to_len (kiv+5, 64);
+          reverse_lfsr_64_to_len (opts, kiv+5, 64);
 
           memset(ks_bytes, 0, sizeof(ks_bytes));
 
@@ -1395,6 +1420,8 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
           unpack_byte_array_into_bit_array(ks_bytes, ks_i, 200);
         }
+
+        ks_available = 1;
 
 
       } //end test
@@ -1413,6 +1440,9 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       //reset frame counter
       imbe_counter = 0;
 
+      //set just in case needed
+      is_enc = 1;
+
     }
 
     if (strncmp ("hex", str_buffer, 3) == 0)
@@ -1427,7 +1457,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         imbe_counter++;
 
         //36 hex characters on 'hex' which is the IMBE interleaved C codewords
-        ks_idx_i = imbe_str_to_decode(opts, state, str_buffer, ks_i, ks_idx_i);
+        ks_idx_i = imbe_str_to_decode(opts, state, str_buffer, ks_i, ks_idx_i, is_enc, ks_available);
 
         //skip LSD bits in-between these two IMBE voice frames
         if (imbe_counter == 8 || imbe_counter == 17)
@@ -1446,6 +1476,12 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         //debug
         // fprintf (stderr, " # %02d; KS_IDX_I: %04d;", imbe_counter, ks_idx_i);
 
+        //debug
+        // if (is_enc == 1 && ks_available == 0)
+        //   fprintf (stderr, " Enc Mute;");
+        // else if (is_enc == 1 && ks_available == 1)
+        //   fprintf (stderr, " Enc Play;");
+
       }
       else if (protocol == 2) //P25p2 AMBE
       {
@@ -1453,7 +1489,14 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         // fprintf (stderr, "\n AMBE HEX: %s", str_buffer);
 
         //18 hex characters on 'hex' which is the AMBE interleaved C codewords
-        ks_idx = ambe2_str_to_decode(opts, state, str_buffer, ks, ks_idx, is_dmra);
+        ks_idx = ambe2_str_to_decode(opts, state, str_buffer, ks, ks_idx, is_dmra, is_enc, ks_available);
+
+        //debug
+        // if (is_enc == 1 && ks_available == 0)
+        //   fprintf (stderr, " Enc Mute;");
+        // else if (is_enc == 1 && ks_available == 1)
+        //   fprintf (stderr, " Enc Play;");
+
       }
     }
 
@@ -1476,11 +1519,12 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       // fprintf (stderr, " Time(NULL): %ld;", time(NULL));
 
       //convert to legible time and date format
-      char * timestr = getTimeN(event_time); UNUSED(timestr);
-      char * datestr = getDateN(event_time); UNUSED(datestr);
+      char * timestr = getTimeN(event_time);
+      char * datestr = getDateN(event_time);
 
       //user legible time
-      fprintf (stderr, " Date: %s Time: %s;", datestr, timestr);
+      if (show_time == 1)
+        fprintf (stderr, " Date: %s Time: %s", datestr, timestr);
 
       if (timestr != NULL)
       {
@@ -1492,6 +1536,8 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         free (datestr);
         datestr = NULL;
       }
+
+      show_time = 0;
 
       //debug print current str_buffer
       // fprintf (stderr, "\n Time: %s", str_buffer);
