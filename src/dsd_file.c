@@ -151,7 +151,7 @@ readImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
   k = 0;
   if (opts->payload == 1)
   {
-    fprintf(stderr, "\n");
+    fprintf(stderr, "\n IMBE ");
   }
   for (i = 0; i < 11; i++)
     {
@@ -198,7 +198,7 @@ readAmbe2450Data (dsd_opts * opts, dsd_state * state, char *ambe_d)
   k = 0;
   if (opts->payload == 1)
   {
-    fprintf(stderr, "\n");
+    fprintf(stderr, "\n AMBE ");
   }
 
   for (i = 0; i < 6; i++) //breaks backwards compatablilty with 6 files

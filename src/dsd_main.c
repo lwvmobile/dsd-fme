@@ -1412,7 +1412,7 @@
    printf ("  -n <float>    Audio Analog  Output Gain  (Default: 0 = Auto; 0-100%%  )\n");
    //printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n"); //disabled
    printf ("  -6 <file>     Output raw audio .wav file (48K/1). (WARNING! Large File Sizes 1 Hour ~= 360 MB)\n");
-  //  printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n"); //disabled
+   printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
    printf ("                 (Use ./folder for Nested Directory!)\n");
    printf ("                 (Use /path/to/folder for hard coded directory!)\n");
    printf ("                 (Use Before the -P option!)\n");
@@ -2223,17 +2223,17 @@
            fprintf (stderr,"Writing + Appending Event History to file %s\n", opts.event_out_file);
            break;
  
-        //  case '7': //make a custom wav file directory in the current working directory -- use this before -P
-        //    strncpy(opts.wav_out_dir, optarg, 511);
-        //    opts.wav_out_dir[511] = '\0';
-        //    if (stat(opts.wav_out_dir, &st) == -1)
-        //    {
-        //      fprintf (stderr, "%s directory does not exist\n", opts.wav_out_dir);
-        //      fprintf (stderr, "Creating directory %s to save wav files\n", opts.wav_out_dir);
-        //      mkdir(opts.wav_out_dir, 0700);
-        //    }
-        //    else fprintf (stderr,"Writing wav decoded audio files to directory %s\n", opts.wav_out_dir);
-        //    break;
+         case '7': //make a custom wav file directory in the current working directory -- use this before -P
+           strncpy(opts.wav_out_dir, optarg, 511);
+           opts.wav_out_dir[511] = '\0';
+           if (stat(opts.wav_out_dir, &st) == -1)
+           {
+             fprintf (stderr, "%s directory does not exist\n", opts.wav_out_dir);
+             fprintf (stderr, "Creating directory %s to save wav files\n", opts.wav_out_dir);
+             mkdir(opts.wav_out_dir, 0700);
+           }
+           else fprintf (stderr,"Writing wav decoded audio files to directory %s\n", opts.wav_out_dir);
+           break;
  
          case 'P': //Per Call Wav Files
             sprintf (wav_file_directory, "%s", opts.wav_out_dir);
