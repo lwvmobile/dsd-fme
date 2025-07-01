@@ -1258,6 +1258,7 @@ void nxdn_descramble (uint8_t dibits[], int len);
 //nxdn deinterleaving/depuncturing functions
 void nxdn_deperm_facch (dsd_opts * opts, dsd_state * state, uint8_t bits[144]);
 void nxdn_deperm_sacch (dsd_opts * opts, dsd_state * state, uint8_t bits[60]);
+void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60]);
 void nxdn_deperm_cac (dsd_opts * opts, dsd_state * state, uint8_t bits[300]);
 void nxdn_deperm_facch2_udch (dsd_opts * opts, dsd_state * state, uint8_t bits[348], uint8_t type);
 //type-d 'idas' deinterleaving/depuncturing functions

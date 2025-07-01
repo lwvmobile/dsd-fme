@@ -421,6 +421,176 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 
 }
 
+//sacch2 (Icom DCR)
+void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
+{
+	//see about initializing these variables
+	uint8_t deperm[60]; //60
+	uint8_t depunc[72]; //72
+	uint8_t trellis_buf[32]; //32
+
+	memset (deperm, 0, sizeof(deperm));
+	memset (depunc, 0, sizeof(depunc));
+	memset (trellis_buf, 0, sizeof(trellis_buf));
+
+	int o = 0;
+	uint8_t crc = 1; //value computed by crc6 on payload
+	uint8_t check = 0; //value pulled from last 6 bits
+
+	for (int i=0; i<60; i++)
+		deperm[PERM_12_5[i]] = bits[i];
+	for (int p=0; p<60; p+= 10) {
+		depunc[o++] = deperm[p+0];
+		depunc[o++] = deperm[p+1];
+		depunc[o++] = deperm[p+2];
+		depunc[o++] = deperm[p+3];
+		depunc[o++] = deperm[p+4];
+		depunc[o++] = 0;
+		depunc[o++] = deperm[p+5];
+		depunc[o++] = deperm[p+6];
+		depunc[o++] = deperm[p+7];
+		depunc[o++] = deperm[p+8];
+		depunc[o++] = deperm[p+9];
+		depunc[o++] = 0;
+	}
+
+	//switch to the convolutional decoder
+	uint8_t temp[80];
+	uint8_t s0;
+  uint8_t s1;
+	uint8_t m_data[5]; //5
+
+	memset (temp, 0, sizeof (temp));
+	memset (m_data, 0, sizeof (m_data));
+	memset (trellis_buf, 0, sizeof(trellis_buf));
+
+	for (int i = 0; i < 72; i++)
+		temp[i] = depunc[i] << 1;
+
+	CNXDNConvolution_start();
+  for (int i = 0; i < 36; i++)
+  {
+    s0 = temp[(2*i)];
+    s1 = temp[(2*i)+1];
+
+    CNXDNConvolution_decode(s0, s1);
+  }
+
+	//stored as 4 bytes, will need to convert to trellis_buf after running
+  CNXDNConvolution_chainback(m_data, 32);
+
+	for(int i = 0; i < 4; i++)
+  {
+    trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
+    trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
+    trellis_buf[(i*8)+2] = (m_data[i] >> 5) & 1;
+    trellis_buf[(i*8)+3] = (m_data[i] >> 4) & 1;
+    trellis_buf[(i*8)+4] = (m_data[i] >> 3) & 1;
+    trellis_buf[(i*8)+5] = (m_data[i] >> 2) & 1;
+    trellis_buf[(i*8)+6] = (m_data[i] >> 1) & 1;
+    trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
+  }
+
+	crc = crc6(trellis_buf, 26);
+	for (int i = 0; i < 6; i++)
+	{
+		check = check << 1;
+		check = check | trellis_buf[i+26];
+	}
+
+	//debug
+	// if (crc == check)
+	// 	fprintf (stderr, " Pass 1 ");
+
+	//if the crc fails, attempt again with the other trellis decoder
+	if (crc != check)
+	{
+		//debug
+		// fprintf (stderr, " Pass 2 ");
+		crc = 1; check = 0;
+		memset (trellis_buf, 0, sizeof(trellis_buf));
+		memset (m_data, 0, sizeof(m_data));
+		trellis_decode(trellis_buf, depunc, 32);
+		//fill m_data bytes with trellis_buf
+		for(int i = 0; i < 4; i++)
+			m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
+		crc = crc6(trellis_buf, 26); //32
+		for (int i = 0; i < 6; i++)
+		{
+			check = check << 1;
+			check = check | trellis_buf[i+26];
+		}
+	}
+
+	uint8_t nsf_sacch[26];
+	memset (nsf_sacch, 0, sizeof(nsf_sacch));
+	for (int i = 0; i < 26; i++)
+		nsf_sacch[i] = trellis_buf[i+6];
+
+	//SF configuration is a bit different for this
+	uint8_t sf_fb = trellis_buf[0]; UNUSED(sf_fb);
+	uint8_t sf_num = (uint8_t) convert_bits_into_output(trellis_buf+1, 2);
+	uint8_t ran = (uint8_t) convert_bits_into_output(trellis_buf+3, 3); UNUSED(ran); //unclear if this is a RAN like value or not, but its consistent
+
+	//debug
+	// if (crc == check)
+	// 	fprintf (stderr, " SF: %X; LB: %d;", sf_num, sf_fb);
+
+	sf_num = 3-sf_num;
+
+	if (crc == check)
+		fprintf (stderr, " PF: %d/4; RAN: %d;", sf_num+1, ran);
+
+	memcpy(state->nxdn_sacch_frame_segment[sf_num], nsf_sacch, 18*sizeof(uint8_t));
+	if (crc == check)
+		state->nxdn_sacch_frame_segcrc[sf_num] = 0;
+	else state->nxdn_sacch_frame_segcrc[sf_num] = 1;
+
+	if (sf_num == 3) //just showing as MT: 0 (was CALL_RESP)
+		NXDN_SACCH_Full_decode(opts, state);
+
+	//instead, just use static values so event log will log something, and do wav files, etc
+	//disable this is random false positive for this lich code triggers this often enough
+	if (crc == check)
+	{
+		state->gi[0] = 0;
+		state->nxdn_last_ran = 7;
+		state->nxdn_last_tg = 777;
+		state->nxdn_last_rid = 777;
+		sprintf (state->generic_talker_alias[0], "%s", "ICOM DCR");
+		sprintf (state->event_history_s[0].Event_History_Items[0].alias, "%s; ", "ICOM DCR");
+	}
+
+	if (opts->payload == 1)
+	{
+		fprintf (stderr, "\n ICOM DCR SACCH ");
+		for (int i = 0; i < 4; i++)
+			fprintf (stderr, "[%02X]", m_data[i]);
+
+		if (crc != check)
+		{
+
+			fprintf (stderr, "%s", KRED);
+			fprintf (stderr, " (CRC ERR)");
+			fprintf (stderr, "%s", KNRM);
+		}
+
+	}
+
+	//clear out if run, or crc error
+	if (sf_num == 3)
+	{
+		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+	}
+	else if (crc != check)
+	{
+		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+	}
+
+}
+
 void nxdn_deperm_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t bits[348], uint8_t type)
 {
 	uint8_t deperm[348]; //348
@@ -1154,7 +1324,7 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 	//RTCH Outbound will take precedent when differences may occur (except CALL_ASSGN)
 	fprintf (stderr, "%s", KYEL);
 	if      (MessageType == 0x10) fprintf(stderr, " IDLE");
-	else if (MessageType == 0x00) fprintf(stderr, " CALL_RESP");
+	// else if (MessageType == 0x00) fprintf(stderr, " CALL_RESP");
 	else if (MessageType == 0x01) fprintf(stderr, " VCALL");
 	else if (MessageType == 0x02) fprintf(stderr, " VCALL_REC_REQ");
 	else if (MessageType == 0x03) fprintf(stderr, " VCALL_IV");
@@ -1185,7 +1355,7 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 	else if (MessageType == 0x39) fprintf(stderr, " SDCALL_REQ_USERDATA");
 	else if (MessageType == 0x3B) fprintf(stderr, " SDCALL_RESP");
 	else if (MessageType == 0x3F) fprintf(stderr, " ALIAS");
-	else fprintf(stderr, " Unknown M-%02X", MessageType);
+	else fprintf(stderr, " Unknown Message Type: %02X;", MessageType);
 	fprintf (stderr, "%s", KNRM);
 
 	//Zero out stale values on DISC or TX_REL only (IDLE messaages occur often on NXDN96 VCH, and randomly on Type-C FACCH1 steals for some reason)

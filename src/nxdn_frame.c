@@ -49,6 +49,9 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	int facch3 = 0;
 	int udch2 = 0;
 
+	//Icom DCR Mode Specific Things
+	int sacch2 = 0; //sacch, but without SF or RAN value (for data dump currently)
+
 	//new breakdown of lich codes
 	uint8_t lich_rf = 0; //RF Channel Type
 	uint8_t lich_fc = 0; //Functional Channel Type
@@ -173,6 +176,12 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		sacch = 1;
 		break;
 
+	//Icom DCR Mode
+	case 0x46:
+		voice = 3;
+		sacch2 = 1;
+		break;
+
 	//NXDN "Type-D" or "IDAS" Specific Lich Codes
 	case 0x76: //normal vch voice (in one and two)
 	case 0x77:
@@ -246,6 +255,15 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		if (opts->frame_nxdn48 == 1)
 		{
 			printFrameSync (opts, state, "IDAS D ", 0, "-");
+		}
+		if (opts->payload == 1)
+			fprintf (stderr, "L%02X - ", lich);
+	}
+	else if (sacch2)
+	{
+		if (opts->frame_nxdn48 == 1)
+		{
+			printFrameSync (opts, state, "ICOM DCR ", 0, "-");
 		}
 		if (opts->payload == 1)
 			fprintf (stderr, "L%02X - ", lich);
@@ -473,6 +491,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	if (facch3) nxdn_deperm_facch3_udch2(opts, state, facch3_bits, 1);
 
 	if (sacch)  nxdn_deperm_sacch(opts, state, sacch_bits);
+	if (sacch2) nxdn_deperm_sacch2(opts, state, sacch_bits);
 	if (cac)    nxdn_deperm_cac(opts, state, cac_bits);
 
 	//Seperated UDCH user data from facch2 data
