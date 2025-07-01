@@ -492,11 +492,7 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
   }
 
 	crc = crc6(trellis_buf, 26);
-	for (int i = 0; i < 6; i++)
-	{
-		check = check << 1;
-		check = check | trellis_buf[i+26];
-	}
+	check = (uint8_t) convert_bits_into_output(trellis_buf+26, 6);
 
 	//debug
 	// if (crc == check)
@@ -515,41 +511,46 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		for(int i = 0; i < 4; i++)
 			m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
 		crc = crc6(trellis_buf, 26); //32
-		for (int i = 0; i < 6; i++)
-		{
-			check = check << 1;
-			check = check | trellis_buf[i+26];
-		}
+		check = (uint8_t) convert_bits_into_output(trellis_buf+26, 6);
 	}
-
-	uint8_t nsf_sacch[26];
-	memset (nsf_sacch, 0, sizeof(nsf_sacch));
-	for (int i = 0; i < 26; i++)
-		nsf_sacch[i] = trellis_buf[i+6];
 
 	//SF configuration is a bit different for this
 	uint8_t sf_fb = trellis_buf[0]; UNUSED(sf_fb);
 	uint8_t sf_num = (uint8_t) convert_bits_into_output(trellis_buf+1, 2);
-	uint8_t ran = (uint8_t) convert_bits_into_output(trellis_buf+3, 3); UNUSED(ran); //unclear if this is a RAN like value or not, but its consistent
+	uint8_t ran = (uint8_t) convert_bits_into_output(trellis_buf+3, 7);
 
-	//debug
-	// if (crc == check)
-	// 	fprintf (stderr, " SF: %X; LB: %d;", sf_num, sf_fb);
-
-	sf_num = 3-sf_num;
+	sf_num = 3 - sf_num;
 
 	if (crc == check)
-		fprintf (stderr, " PF: %d/4; RAN: %d;", sf_num+1, ran);
+		fprintf (stderr, "RAN: %02d; PF: %d/4;", ran, sf_num+1);
+	else if (crc != check)
+	{
+		fprintf (stderr, "%s", KRED);
+		fprintf (stderr, "(CRC ERR)");
+		fprintf (stderr, "%s", KNRM);
+	}
 
-	memcpy(state->nxdn_sacch_frame_segment[sf_num], nsf_sacch, 18*sizeof(uint8_t));
 	if (crc == check)
 		state->nxdn_sacch_frame_segcrc[sf_num] = 0;
 	else state->nxdn_sacch_frame_segcrc[sf_num] = 1;
 
-	if (sf_num == 3) //just showing as MT: 0 (was CALL_RESP)
-		NXDN_SACCH_Full_decode(opts, state);
+	//test values for storage and which parts to store
+	int sf_full = 26; //full size of a sacch frame, minus CRC6
+	int sf_size = 17; //size of superframe portion
+	int sf_end  = 3; //end of sf
+	int sf_idx = sf_size*sf_num; //index position for this frame compared to super frame
+	int bf_idx = sf_full-sf_size; //index position for buffer to superframe
+	int sf_bytes = ((sf_size*4)/8);
+	if ( ((sf_size*4)%8) != 0)
+		sf_bytes++;
+	memcpy(state->dmr_pdu_sf[0]+sf_idx, trellis_buf+bf_idx, sf_size*sizeof(uint8_t));
 
-	//instead, just use static values so event log will log something, and do wav files, etc
+	//all segments okay
+	if (sf_num == sf_end && state->nxdn_sacch_frame_segcrc[0] == 0 && state->nxdn_sacch_frame_segcrc[1] == 0 && 
+											state->nxdn_sacch_frame_segcrc[2] == 0 && state->nxdn_sacch_frame_segcrc[3] == 0)
+		NXDN_Elements_Content_decode(opts, state, 1, state->dmr_pdu_sf[0]);
+
+	//currently using static values so event log will log something, and do wav files, etc
 	//disable this is random false positive for this lich code triggers this often enough
 	if (crc == check)
 	{
@@ -567,24 +568,25 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		for (int i = 0; i < 4; i++)
 			fprintf (stderr, "[%02X]", m_data[i]);
 
-		if (crc != check)
+		if (sf_num == sf_end)
 		{
-
-			fprintf (stderr, "%s", KRED);
-			fprintf (stderr, " (CRC ERR)");
-			fprintf (stderr, "%s", KNRM);
+			fprintf (stderr, "\n ICOM DCR SFULL ");
+			for (int i = 0; i < sf_bytes; i++)
+				fprintf (stderr, "[%02X]", convert_bits_into_output(state->dmr_pdu_sf[0]+(i*8), 8));
 		}
 
 	}
 
 	//clear out if run, or crc error
-	if (sf_num == 3)
+	if (sf_num == sf_end)
 	{
+		memset (state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
 		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 	}
 	else if (crc != check)
 	{
+		memset (state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
 		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 	}
