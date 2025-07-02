@@ -517,7 +517,7 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	//SF configuration is a bit different for this
 	uint8_t sf_fb = trellis_buf[0]; UNUSED(sf_fb);
 	uint8_t sf_num = (uint8_t) convert_bits_into_output(trellis_buf+1, 2);
-	uint8_t ran = (uint8_t) convert_bits_into_output(trellis_buf+3, 7);
+	uint8_t ran = (uint8_t) convert_bits_into_output(trellis_buf+3, 6);
 
 	sf_num = 3 - sf_num;
 
@@ -547,7 +547,7 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 
 	//all segments okay
 	if (sf_num == sf_end && state->nxdn_sacch_frame_segcrc[0] == 0 && state->nxdn_sacch_frame_segcrc[1] == 0 && 
-											state->nxdn_sacch_frame_segcrc[2] == 0 && state->nxdn_sacch_frame_segcrc[3] == 0)
+                          state->nxdn_sacch_frame_segcrc[2] == 0 && state->nxdn_sacch_frame_segcrc[3] == 0    )
 		NXDN_Elements_Content_decode(opts, state, 1, state->dmr_pdu_sf[0]);
 
 	//currently using static values so event log will log something, and do wav files, etc
