@@ -517,12 +517,11 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	//SF configuration is a bit different for this
 	uint8_t sf_fb = trellis_buf[0]; UNUSED(sf_fb);
 	uint8_t sf_num = (uint8_t) convert_bits_into_output(trellis_buf+1, 2);
-	uint8_t ran = (uint8_t) convert_bits_into_output(trellis_buf+3, 6);
 
 	sf_num = 3 - sf_num;
 
 	if (crc == check)
-		fprintf (stderr, "RAN: %02d; PF: %d/4;", ran, sf_num+1);
+		fprintf (stderr, "PF: %d/4;", sf_num+1);
 	else if (crc != check)
 	{
 		fprintf (stderr, "%s", KRED);
@@ -536,7 +535,7 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 
 	//test values for storage and which parts to store
 	int sf_full = 26; //full size of a sacch frame, minus CRC6
-	int sf_size = 17; //size of superframe portion
+	int sf_size = 23; //size of superframe portion
 	int sf_end  = 3; //end of sf
 	int sf_idx = sf_size*sf_num; //index position for this frame compared to super frame
 	int bf_idx = sf_full-sf_size; //index position for buffer to superframe
@@ -546,9 +545,9 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	memcpy(state->dmr_pdu_sf[0]+sf_idx, trellis_buf+bf_idx, sf_size*sizeof(uint8_t));
 
 	//all segments okay
-	if (sf_num == sf_end && state->nxdn_sacch_frame_segcrc[0] == 0 && state->nxdn_sacch_frame_segcrc[1] == 0 && 
-                          state->nxdn_sacch_frame_segcrc[2] == 0 && state->nxdn_sacch_frame_segcrc[3] == 0    )
-		NXDN_Elements_Content_decode(opts, state, 1, state->dmr_pdu_sf[0]);
+	// if (sf_num == sf_end && state->nxdn_sacch_frame_segcrc[0] == 0 && state->nxdn_sacch_frame_segcrc[1] == 0 && 
+  //                         state->nxdn_sacch_frame_segcrc[2] == 0 && state->nxdn_sacch_frame_segcrc[3] == 0    )
+	// 	NXDN_Elements_Content_decode(opts, state, 1, state->dmr_pdu_sf[0]);
 
 	//currently using static values so event log will log something, and do wav files, etc
 	//disable this is random false positive for this lich code triggers this often enough
