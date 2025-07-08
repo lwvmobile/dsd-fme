@@ -49,8 +49,8 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	int facch3 = 0;
 	int udch2 = 0;
 
-	//Icom DCR Mode Specific Things
-	int sacch2 = 0; //sacch, but without SF or RAN value (for data dump currently)
+	//DCR Mode Specific Things
+	int sacch2 = 0;
 
 	//new breakdown of lich codes
 	uint8_t lich_rf = 0; //RF Channel Type
@@ -96,7 +96,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	lich_parity_received = lich & 1;
 	lich_parity_computed = ((lich >> 7) + (lich >> 6) + (lich >> 5) + (lich >> 4)) & 1;
 	lich = lich >> 1;
-	if (lich_parity_received != lich_parity_computed)
+	if (lich_parity_received != lich_parity_computed && lich != 0x4A) //may disable this if it causes issues
 	{
 		if (opts->payload == 1) fprintf(stderr, "  Lich Parity Error %02X\n", lich);
 		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
@@ -176,9 +176,14 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		sacch = 1;
 		break;
 
-	//Icom DCR Mode
+	//DCR Mode
 	case 0x46:
 		voice = 3;
+		sacch2 = 1;
+		break;
+
+	//DCR Data or End Frame (bad parity)
+	case 0x4A:
 		sacch2 = 1;
 		break;
 
@@ -257,16 +262,16 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 			printFrameSync (opts, state, "IDAS D ", 0, "-");
 		}
 		if (opts->payload == 1)
-			fprintf (stderr, "L%02X - ", lich);
+			fprintf (stderr, "L: %02X; ", lich);
 	}
 	else if (sacch2)
 	{
 		if (opts->frame_nxdn48 == 1)
 		{
-			printFrameSync (opts, state, "ICOM DCR ", 0, "-");
+			printFrameSync (opts, state, "JPN DCR", 0, "-");
 		}
 		if (opts->payload == 1)
-			fprintf (stderr, "L%02X - ", lich);
+			fprintf (stderr, "L: %02X; ", lich);
 	}
 	else if (voice || facch || sacch || facch2 || udch || cac)
 	{
@@ -276,7 +281,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		}
 		else printFrameSync (opts, state, "NXDN96 ", 0, "-");
 		if (opts->payload == 1)
-			fprintf (stderr, "L%02X - ", lich);
+			fprintf (stderr, "L: %02X; ", lich);;
 	}
 
 	//now that we have a good LICH, we can collect all of our dibits
@@ -337,13 +342,18 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	else direction = 1;
 
 	// RF Channel Type
-	if (lich_rf == 0) fprintf (stderr, "RCCH ");
-	else if (lich_rf == 1) fprintf (stderr, "RTCH ");
-	else if (lich_rf == 2) fprintf (stderr, "RDCH ");
-	else
+	if (lich != 0x46 && lich != 0x4A)
 	{
-		if (lich < 0x60) fprintf (stderr, "RTCH_C ");
-		else fprintf (stderr, "RTCH2 ");
+
+		if (lich_rf == 0) fprintf (stderr, "RCCH ");
+		else if (lich_rf == 1) fprintf (stderr, "RTCH ");
+		else if (lich_rf == 2) fprintf (stderr, "RDCH ");
+		else
+		{
+			if (lich < 0x60) fprintf (stderr, "RTCH_C ");
+			else fprintf (stderr, "RTCH2 ");
+		}
+
 	}
 
 	// Functional Channel Type -- things start to get really convoluted here
@@ -419,19 +429,19 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	if (voice && !facch) //voice only, no facch steal
 	{
 		fprintf (stderr, "%s", KGRN);
-		fprintf (stderr, " Voice ");
+		fprintf (stderr, "Voice ");
 		fprintf (stderr, "%s", KNRM);
 	}
 	else if (voice && facch) //voice with facch1 steal
 	{
 		fprintf (stderr, "%s", KGRN);
-		fprintf (stderr, " V%d+F%d ", 3 - facch, facch); //print which position on each
+		fprintf (stderr, "V%d+F%d ", 3 - facch, facch); //print which position on each
 		fprintf (stderr, "%s", KNRM);
 	}
 	else //Covers FACCH1 in both, FACCH2, UDCH, UDCH2, CAC
 	{
 		fprintf (stderr, "%s", KCYN);
-		fprintf (stderr, " Data  ");
+		fprintf (stderr, "Data  ");
 		fprintf (stderr, "%s", KNRM);
 
 		//roll the voice scrambler LFSR here if key available to advance seed (usually just needed on NXDN96)

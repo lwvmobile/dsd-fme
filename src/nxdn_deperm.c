@@ -421,7 +421,8 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 
 }
 
-//sacch2 (Icom DCR)
+//sacch2 (JPN DCR)
+//SEE: https://web.archive.org/web/20150417175725/http://arib.or.jp/english/html/overview/doc/1-STD-T98v1_4.pdf
 void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 {
 	//see about initializing these variables
@@ -514,14 +515,28 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		check = (uint8_t) convert_bits_into_output(trellis_buf+26, 6);
 	}
 
-	//SF configuration is a bit different for this
-	uint8_t sf_fb = trellis_buf[0]; UNUSED(sf_fb);
+	//Configuration of Single Message or Multi Part Message
+	uint8_t sf_fb = trellis_buf[0];
 	uint8_t sf_num = (uint8_t) convert_bits_into_output(trellis_buf+1, 2);
-
-	sf_num = 3 - sf_num;
+	uint8_t sf_mes = (uint8_t) convert_bits_into_output(trellis_buf+3, 5);
+	uint8_t sf_pof = 3-sf_num;
 
 	if (crc == check)
-		fprintf (stderr, "PF: %d/4;", sf_num+1);
+	{
+		if (sf_fb && sf_pof) //single message, single unit
+			fprintf (stderr, "PF: %d/1; ", sf_num+1);
+		else //multiple unit message
+			fprintf (stderr, "PF: %d/4; ", sf_pof+1);
+
+		if (sf_mes == 0x01)
+			fprintf (stderr, "Call; ");
+		else if (sf_mes == 0x1E)
+			fprintf (stderr, "End;  ");
+		else if (sf_mes == 0x00)
+			fprintf (stderr, "Idle; ");
+		else fprintf (stderr, "Res: %02X; ", sf_mes);
+
+	}
 	else if (crc != check)
 	{
 		fprintf (stderr, "%s", KRED);
@@ -533,21 +548,29 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		state->nxdn_sacch_frame_segcrc[sf_num] = 0;
 	else state->nxdn_sacch_frame_segcrc[sf_num] = 1;
 
-	//test values for storage and which parts to store
+	//entire superframe has good crc
+	uint8_t crc_sf_check = 0;
+	for (int i = 0; i < 4; i++)
+		crc_sf_check += state->nxdn_sacch_frame_segcrc[i];
+
+	//values for storage and which parts to store
 	int sf_full = 26; //full size of a sacch frame, minus CRC6
-	int sf_size = 23; //size of superframe portion
-	int sf_end  = 3; //end of sf
-	int sf_idx = sf_size*sf_num; //index position for this frame compared to super frame
+	int sf_size = 18; //size of superframe portion (18 bits)
+	int sf_end  = 0;  //end of sf
+	int sf_idx = sf_size*sf_pof;  //index position for this frame compared to super frame
 	int bf_idx = sf_full-sf_size; //index position for buffer to superframe
 	int sf_bytes = ((sf_size*4)/8);
 	if ( ((sf_size*4)%8) != 0)
 		sf_bytes++;
-	memcpy(state->dmr_pdu_sf[0]+sf_idx, trellis_buf+bf_idx, sf_size*sizeof(uint8_t));
 
-	//all segments okay
-	// if (sf_num == sf_end && state->nxdn_sacch_frame_segcrc[0] == 0 && state->nxdn_sacch_frame_segcrc[1] == 0 && 
-  //                         state->nxdn_sacch_frame_segcrc[2] == 0 && state->nxdn_sacch_frame_segcrc[3] == 0    )
-	// 	NXDN_Elements_Content_decode(opts, state, 1, state->dmr_pdu_sf[0]);
+	if (sf_fb && sf_pof) //single unit message
+		memcpy(state->dmr_pdu_sf[0]+0, trellis_buf+bf_idx, sf_size*sizeof(uint8_t));
+	else //multiple unit message
+		memcpy(state->dmr_pdu_sf[0]+sf_idx, trellis_buf+bf_idx, sf_size*sizeof(uint8_t));
+
+	//if force application of scrambler key, then let's reset, regardless of CRC check
+	if (sf_fb && state->M == 1)
+		state->payload_miN = 0;
 
 	//currently using static values so event log will log something, and do wav files, etc
 	//disable this is random false positive for this lich code triggers this often enough
@@ -557,19 +580,64 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		state->nxdn_last_ran = 7;
 		state->nxdn_last_tg = 777;
 		state->nxdn_last_rid = 777;
-		sprintf (state->generic_talker_alias[0], "%s", "ICOM DCR");
-		sprintf (state->event_history_s[0].Event_History_Items[0].alias, "%s; ", "ICOM DCR");
+		sprintf (state->generic_talker_alias[0], "%s", "JPN DCR");
+		sprintf (state->event_history_s[0].Event_History_Items[0].alias, "%s; ", "JPN DCR");
+
+		//sf_fb is the head message in a multi part, or the only message in a single part message
+		if (sf_fb)
+			state->payload_miN = 0;
+	}
+
+	//check for valid crc on single, or on all received
+	if ( (sf_fb && sf_pof && crc == check) || //single frame
+	     (sf_num == sf_end && crc_sf_check == 0)         ) //multi part frame
+	{
+		uint8_t cipher = (uint16_t) convert_bits_into_output(state->dmr_pdu_sf[0]+0, 2);
+		uint16_t user_code = (uint16_t) convert_bits_into_output(state->dmr_pdu_sf[0]+2, 9);
+		fprintf (stderr, "UC: %03d; ", user_code);
+		if (cipher == 0x01)
+		{
+			fprintf (stderr, "Scrambler; ");
+			state->nxdn_cipher_type = 1;
+			if (state->R != 0)
+				fprintf (stderr, "Key: %d; ", state->R);
+		}
+		else if (cipher != 0x00)
+		{
+			fprintf (stderr, "Reserved Comms: %d; ", cipher);
+		}
+
+		//set enc bit here so we can tell playSynthesizedVoice whether or not to play enc traffic
+		if (state->nxdn_cipher_type != 0)
+			state->dmr_encL = 1;
+		if (state->nxdn_cipher_type == 0 || state->R != 0)
+			state->dmr_encL = 0;
+
+		//this always appears to be 0, but could be other values
+		uint8_t mfid = (uint16_t) convert_bits_into_output(state->dmr_pdu_sf[0]+11, 7);
+		if (mfid != 0)
+			fprintf (stderr, "MFID: %02X; ", mfid);
+
+		//multi-part message, continue decoding
+		if (sf_fb == 0 && sf_num == 0)
+		{
+			//can't find definitions for these elements, even when MT == 1 and MFID == 0
+			fprintf (stderr, "Cont(54): ");
+			for (int i = 0; i < 7; i++)
+				fprintf (stderr, "%02X", convert_bits_into_output(state->dmr_pdu_sf[0]+(i*8)+18, 8));
+
+		}
 	}
 
 	if (opts->payload == 1)
 	{
-		fprintf (stderr, "\n ICOM DCR SACCH ");
+		fprintf (stderr, "\n DCR SACCH ");
 		for (int i = 0; i < 4; i++)
 			fprintf (stderr, "[%02X]", m_data[i]);
 
 		if (sf_num == sf_end)
 		{
-			fprintf (stderr, "\n ICOM DCR SFULL ");
+			fprintf (stderr, "\n DCR SFULL ");
 			for (int i = 0; i < sf_bytes; i++)
 				fprintf (stderr, "[%02X]", convert_bits_into_output(state->dmr_pdu_sf[0]+(i*8), 8));
 		}
@@ -583,12 +651,12 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 	}
-	else if (crc != check)
-	{
-		memset (state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
-		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
-		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
-	}
+	// else if (crc != check)
+	// {
+	// 	memset (state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
+	// 	memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+	// 	memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+	// }
 
 }
 
