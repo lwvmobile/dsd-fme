@@ -25,7 +25,8 @@
 #include "dsd.h"
 #include "nxdn_const.h"
 
-#include <assert.h>
+// #define NXDN_DEBUG_LICH   //print LICH debug info on err on payload == 1
+#define NXDN_LICH_OFFBITS //use the offbits to help determine sync status (disable if bad signal / bad sample)
 
 void nxdn_frame (dsd_opts * opts, dsd_state * state)
 {
@@ -94,13 +95,49 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	lich = 0;
 	for (int i=0; i<8; i++) lich |= (lich_dibits[i] >> 1) << (7-i);
 
-	lich_parity_received = lich & 1;
-	lich_parity_computed = ((lich >> 7) + (lich >> 6) + (lich >> 5) + (lich >> 4)) & 1;
-	lich = lich >> 1;
-	if (lich_parity_received != lich_parity_computed && lich != 0x4A) //may disable this if it causes issues
+	//debug lich as a 16-bit value (with encoding "dividing")
+	uint8_t lich_bits[16]; memset(lich_bits, 0, sizeof(lich_bits));
+	for (int i=0; i<8; i++)
 	{
-		if (opts->payload == 1) fprintf(stderr, "  Lich Parity Error %02X\n", lich);
-		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
+		lich_bits[(i*2)+0] = (lich_dibits[i] >> 1) & 1;
+		lich_bits[(i*2)+1] = (lich_dibits[i] >> 0) & 1;
+	}
+	uint16_t lich_bits_hex = (uint16_t)ConvertBitIntoBytes(lich_bits, 16);
+	UNUSED(lich_bits_hex);
+
+	//debug look at the "off bits" of the encoded lich, should be all 1's (8)
+	//disble this code if sync issues arise, this may not be ideal of marginal signal
+	uint8_t lich_off_hex = 0;
+	for (int i=0; i<8; i++)
+		lich_off_hex += lich_bits[(i*2)+1];
+	#ifdef NXDN_LICH_OFFBITS
+	if (lich_off_hex < 7) //allow up to 1 bit error
+	{
+		#ifdef NXDN_DEBUG_LICH
+		if (opts->payload == 1)
+			fprintf(stderr, "  Lich Off Bit Fill Error: %d / 8; \n", lich_off_hex);
+		#endif
+		// state->lastsynctype = -1;  //set to -1 so we don't jump back here too quickly
+		goto END;
+	}
+	#endif
+
+	uint8_t lich_full = lich;
+	lich_parity_received = lich & 1;
+	lich_parity_computed = ((lich_full >> 7) + (lich_full >> 6) + (lich_full >> 5) + (lich_full >> 4)) & 1;
+	lich = lich_full >> 1;
+
+	//special cases on DCR where parity is computed over 7 bits, and not 4 bits
+	if (lich == 0x4A || lich == 0x48 || lich == 0x46)
+		lich_parity_computed = ((lich_full >> 7) + (lich_full >> 6) + (lich_full >> 5) + (lich_full >> 4) + (lich_full >> 3) + (lich_full >> 2) + (lich_full >> 1)) & 1;
+
+	if (lich_parity_received != lich_parity_computed)
+	{
+		#ifdef NXDN_DEBUG_LICH
+		if (opts->payload == 1)
+			fprintf(stderr, "  Lich Parity Error %02X / %04X\n", lich_full, lich_bits_hex);
+		#endif
+		// state->lastsynctype = -1;
 		goto END;
 	}
 
@@ -114,8 +151,11 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	//all inbound lich are even value (lsb is set to 0 for inbound direction)
 	if (lich % 2 == 0 && opts->p25_trunk == 1)
 	{
-		if (opts->payload == 1) fprintf(stderr, "  Simplex/Inbound NXDN lich on trunking system - type 0x%02X\n", lich);
-		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
+		#ifdef NXDN_DEBUG_LICH
+		if (opts->payload == 1)
+			fprintf(stderr, "  Simplex/Inbound NXDN lich on trunking system - type 0x%02X\n", lich);
+		#endif
+		// state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
 		goto END;
 	}
 
@@ -243,11 +283,14 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		break;
 
 	default:
-    if (opts->payload == 1) fprintf(stderr, "  false sync or unsupported NXDN lich type 0x%02X\n", lich);
+		#ifdef NXDN_DEBUG_LICH
+    if (opts->payload == 1)
+			fprintf(stderr, "  false sync or unsupported NXDN lich type L: %02X / LH: %04X\n", lich, lich_bits_hex);
+		#endif
 		//reset the sacch field, we probably got a false sync and need to wipe or give a bad crc
 		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
-		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
+		// state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
 		voice = 0;
 		goto END;
 		break;
@@ -264,8 +307,10 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		{
 			printFrameSync (opts, state, "IDAS D ", 0, "-");
 		}
+		#ifdef NXDN_DEBUG_LICH
 		if (opts->payload == 1)
-			fprintf (stderr, "L: %02X; ", lich);
+			fprintf (stderr, "L: %02X / LH: %04X; ", lich, lich_bits_hex);
+		#endif
 	}
 	else if (sacch2)
 	{
@@ -273,8 +318,10 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		{
 			printFrameSync (opts, state, "JPN DCR", 0, "-");
 		}
+		#ifdef NXDN_DEBUG_LICH
 		if (opts->payload == 1)
-			fprintf (stderr, "L: %02X; ", lich);
+			fprintf (stderr, "L: %02X / LH: %04X; ", lich, lich_bits_hex);
+		#endif
 	}
 	else if (voice || facch || sacch || facch2 || udch || cac)
 	{
@@ -283,8 +330,10 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 			printFrameSync (opts, state, "NXDN48 ", 0, "-");
 		}
 		else printFrameSync (opts, state, "NXDN96 ", 0, "-");
+		#ifdef NXDN_DEBUG_LICH
 		if (opts->payload == 1)
-			fprintf (stderr, "L: %02X; ", lich);;
+			fprintf (stderr, "L: %02X / LH: %04X; ", lich, lich_bits_hex);
+		#endif
 	}
 
 	//now that we have a good LICH, we can collect all of our dibits
