@@ -51,6 +51,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 
 	//DCR Mode Specific Things
 	int sacch2 = 0;
+	int pich_tch = 0;
 
 	//new breakdown of lich codes
 	uint8_t lich_rf = 0; //RF Channel Type
@@ -125,7 +126,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		break;
 	case 0x28:  //facch2 types
 	case 0x29:
-	case 0x48:
+	// case 0x48: //removing from here, moving to DCR as pich_tch
 	case 0x49:
 		facch2 = 1;
 		break;
@@ -176,13 +177,15 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		sacch = 1;
 		break;
 
-	//DCR Mode
+	//DCR Voice
 	case 0x46:
 		voice = 3;
 		sacch2 = 1;
 		break;
 
-	//DCR Data or End Frame (bad parity)
+	//DCR Data or End Frame
+	case 0x48:
+		pich_tch = 3;
 	case 0x4A:
 		sacch2 = 1;
 		break;
@@ -194,8 +197,8 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		scch = 1;
 		voice = 3;
 		break;
-	case 0x74: //vch in 1, facch1 in 2 (facch 2 steal)
-	case 0x75:
+	// case 0x74: //False Positive on DCR, keep disabled, or revert this line
+	case 0x75: //vch in 1, facch1 in 2 (facch 2 steal)
 		idas = 1;
 		scch = 1;
 		voice = 1;
@@ -342,7 +345,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	else direction = 1;
 
 	// RF Channel Type
-	if (lich != 0x46 && lich != 0x4A)
+	if (sacch2 == 0)
 	{
 
 		if (lich_rf == 0) fprintf (stderr, "RCCH ");
@@ -501,16 +504,16 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	if (facch3) nxdn_deperm_facch3_udch2(opts, state, facch3_bits, 1);
 
 	if (sacch)  nxdn_deperm_sacch(opts, state, sacch_bits);
-	if (sacch2) nxdn_deperm_sacch2(opts, state, sacch_bits);
 	if (cac)    nxdn_deperm_cac(opts, state, cac_bits);
 
 	//Seperated UDCH user data from facch2 data
 	if (udch)   nxdn_deperm_facch2_udch(opts, state, facch2_bits, 0);
 	if (facch2) nxdn_deperm_facch2_udch(opts, state, facch2_bits, 1);
 
-	//SHOULD be okay to run facch1's again on steal frames, will need testing
-	// if (facch & 1) nxdn_deperm_facch(opts, state, facch_bits_a);
-	// if (facch & 2) nxdn_deperm_facch(opts, state, facch_bits_b);
+	//DCR
+	if (sacch2)       nxdn_deperm_sacch2(opts, state, sacch_bits);
+	if (pich_tch & 1) nxdn_deperm_pich_tch(opts, state, facch_bits_a);
+	if (pich_tch & 2) nxdn_deperm_pich_tch(opts, state, facch_bits_b);
 
 	//only run facch in second slot if its not equal to the first one
 	//ideally, this would work better AFTER decoding/FEC

@@ -1258,13 +1258,15 @@ void nxdn_descramble (uint8_t dibits[], int len);
 //nxdn deinterleaving/depuncturing functions
 void nxdn_deperm_facch (dsd_opts * opts, dsd_state * state, uint8_t bits[144]);
 void nxdn_deperm_sacch (dsd_opts * opts, dsd_state * state, uint8_t bits[60]);
-void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60]);
 void nxdn_deperm_cac (dsd_opts * opts, dsd_state * state, uint8_t bits[300]);
 void nxdn_deperm_facch2_udch (dsd_opts * opts, dsd_state * state, uint8_t bits[348], uint8_t type);
 //type-d 'idas' deinterleaving/depuncturing functions
 void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint8_t direction);
 void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[288], uint8_t type);
-//end
+//DCR Mode
+void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60]);
+void nxdn_deperm_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t bits[144]);
+//MT and Voice
 void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType);
 void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182]);
 //Osmocom OP25 12 Rate Trellis Decoder (for NXDN, M17, YSF, etc)

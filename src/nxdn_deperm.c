@@ -516,7 +516,7 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	}
 
 	//Configuration of Single Message or Multi Part Message
-	uint8_t sf_fb = trellis_buf[0];
+	uint8_t sf_fb  = trellis_buf[0];
 	uint8_t sf_num = (uint8_t) convert_bits_into_output(trellis_buf+1, 2);
 	uint8_t sf_mes = (uint8_t) convert_bits_into_output(trellis_buf+3, 5);
 	uint8_t sf_pof = 3-sf_num;
@@ -530,6 +530,8 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 
 		if (sf_mes == 0x01)
 			fprintf (stderr, "Call; ");
+		else if (sf_mes == 0x02)
+			fprintf (stderr, "PDU;  ");
 		else if (sf_mes == 0x1E)
 			fprintf (stderr, "End;  ");
 		else if (sf_mes == 0x00)
@@ -559,9 +561,6 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	int sf_end  = 0;  //end of sf
 	int sf_idx = sf_size*sf_pof;  //index position for this frame compared to super frame
 	int bf_idx = sf_full-sf_size; //index position for buffer to superframe
-	int sf_bytes = ((sf_size*4)/8);
-	if ( ((sf_size*4)%8) != 0)
-		sf_bytes++;
 
 	if (sf_fb && sf_pof) //single unit message
 		memcpy(state->dmr_pdu_sf[0]+0, trellis_buf+bf_idx, sf_size*sizeof(uint8_t));
@@ -621,10 +620,12 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		//multi-part message, continue decoding
 		if (sf_fb == 0 && sf_num == 0)
 		{
+
+			fprintf (stderr, "\n");
+
 			//can't find definitions for these elements, even when MT == 1 and MFID == 0
-			fprintf (stderr, "Cont(54): ");
-			for (int i = 0; i < 7; i++)
-				fprintf (stderr, "%02X", convert_bits_into_output(state->dmr_pdu_sf[0]+(i*8)+18, 8));
+			unsigned long long int mes_hex = (unsigned long long int ) convert_bits_into_output(state->dmr_pdu_sf[0]+18, 54);
+			fprintf (stderr, " Message: %014llX; ", mes_hex << 0);
 
 		}
 	}
@@ -638,7 +639,7 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		if (sf_num == sf_end)
 		{
 			fprintf (stderr, "\n DCR SFULL ");
-			for (int i = 0; i < sf_bytes; i++)
+			for (int i = 0; i < 9; i++)
 				fprintf (stderr, "[%02X]", convert_bits_into_output(state->dmr_pdu_sf[0]+(i*8), 8));
 		}
 
@@ -651,12 +652,144 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 	}
-	// else if (crc != check)
+
+}
+
+//PICH or TCH 144 bit (JPN DCR)
+//SEE: https://web.archive.org/web/20150417175725/http://arib.or.jp/english/html/overview/doc/1-STD-T98v1_4.pdf
+void nxdn_deperm_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
+{
+	uint8_t deperm[144]; //144
+	uint8_t depunc[192]; //192
+	uint8_t trellis_buf[96]; //96
+	uint16_t crc = 1; //crc calculated by function
+	uint16_t check = 0; //crc from payload for comparison
+	int out;
+
+	memset (deperm, 0, sizeof(deperm));
+	memset (depunc, 0, sizeof(depunc));
+
+	for (int i=0; i<144; i++)
+		deperm[PERM_16_9[i]] = bits[i];
+	out = 0;
+	for (int i=0; i<144; i+=3) {
+		depunc[out++] = deperm[i+0];
+		depunc[out++] = 0;
+		depunc[out++] = deperm[i+1];
+		depunc[out++] = deperm[i+2];
+	}
+
+	//switch to the convolutional decoder
+	uint8_t temp[200];
+	uint8_t s0;
+  uint8_t s1;
+	uint8_t m_data[20]; //13
+	memset (temp, 0, sizeof(temp));
+	memset (m_data, 0, sizeof(m_data));
+	memset (trellis_buf, 0, sizeof(trellis_buf));
+
+	for (int i = 0; i < 192; i++)
+		temp[i] = depunc[i] << 1;
+
+	CNXDNConvolution_start();
+  for (int i = 0; i < 96; i++)
+  {
+    s0 = temp[(2*i)];
+    s1 = temp[(2*i)+1];
+
+    CNXDNConvolution_decode(s0, s1);
+  }
+
+  CNXDNConvolution_chainback(m_data, 92);
+
+	for(int i = 0; i < 12; i++)
+  {
+    trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
+    trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
+    trellis_buf[(i*8)+2] = (m_data[i] >> 5) & 1;
+    trellis_buf[(i*8)+3] = (m_data[i] >> 4) & 1;
+    trellis_buf[(i*8)+4] = (m_data[i] >> 3) & 1;
+    trellis_buf[(i*8)+5] = (m_data[i] >> 2) & 1;
+    trellis_buf[(i*8)+6] = (m_data[i] >> 1) & 1;
+    trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
+  }
+
+	crc = crc12f (trellis_buf, 84); //80
+	for (int i = 0; i < 12; i++)
+	{
+		check = check << 1;
+		check = check | trellis_buf[84+i]; //80
+	}
+
+	//debug
+	// if (crc == check)
+		// fprintf (stderr, " Pass 1 ");
+
+	//if the crc fails, attempt again with the other trellis decoder
+	if (crc != check)
+	{
+		//debug
+		// fprintf (stderr, " Pass 2 ");
+		crc = 1; check = 0;
+		memset (trellis_buf, 0, sizeof(trellis_buf));
+		memset (m_data, 0, sizeof(m_data));
+		trellis_decode(trellis_buf, depunc, 92);
+		//fill m_data bytes with trellis_buf
+		for(int i = 0; i < 12; i++)
+			m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
+		crc = crc12f (trellis_buf, 84);
+		for (int i = 0; i < 12; i++)
+		{
+			check = check << 1;
+			check = check | trellis_buf[i+84];
+		}
+	}
+
+	//need more data points, but thinking this is probably similar to facch3 
+	//or udch2 where we need to put two tch (facch1) messages together
+	// if (crc == check)
 	// {
-	// 	memset (state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
-	// 	memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
-	// 	memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+	// 	uint8_t  opcode = (uint8_t)ConvertBitIntoBytes(&trellis_buf[0], 8);
+	// 	uint8_t  gi     = trellis_buf[16];
+	// 	uint16_t source = (uint16_t)ConvertBitIntoBytes(&trellis_buf[24], 16);
+	// 	uint16_t target = (uint16_t)ConvertBitIntoBytes(&trellis_buf[40], 16);
+
+	// 	if (opcode != 0)
+	// 	{
+	// 		fprintf (stderr, "\n ");
+	// 		fprintf (stderr, "OP: %02X; ", opcode);
+	// 		fprintf (stderr, "Source: %d; Target: %d; ", source, target);
+	// 		if (gi)
+	// 			fprintf (stderr, "Private; ");
+	// 		else fprintf (stderr, "Group; ");
+	// 	}
+			
 	// }
+	// else
+	// {
+	// 	fprintf (stderr, "\n ");
+	// 	fprintf (stderr, "%s", KRED);
+	// 	fprintf (stderr, " (CRC ERR)");
+	// 	fprintf (stderr, "%s", KNRM);
+	// }
+
+	if (opts->payload == 1)
+	{
+		fprintf (stderr, "\n");
+		fprintf (stderr, " TCH Payload ");
+		for (int i = 0; i < 12; i++)
+		{
+			fprintf (stderr, "[%02X]", m_data[i]);
+		}
+		if (crc != check && opts->payload == 1)
+		{
+			fprintf (stderr, "%s", KRED);
+			fprintf (stderr, " (CRC ERR)");
+			fprintf (stderr, "%s", KNRM);
+		}
+	}
+
+	UNUSED(state);
 
 }
 
