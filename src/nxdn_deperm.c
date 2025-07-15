@@ -542,7 +542,7 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	else if (crc != check)
 	{
 		fprintf (stderr, "%s", KRED);
-		fprintf (stderr, "(CRC ERR)");
+		fprintf (stderr, "SACCH (CRC ERR)");
 		fprintf (stderr, "%s", KNRM);
 	}
 
@@ -745,33 +745,58 @@ void nxdn_deperm_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 		}
 	}
 
-	//need more data points, but thinking this is probably similar to facch3 
-	//or udch2 where we need to put two tch (facch1) messages together
-	// if (crc == check)
-	// {
-	// 	uint8_t  opcode = (uint8_t)ConvertBitIntoBytes(&trellis_buf[0], 8);
-	// 	uint8_t  gi     = trellis_buf[16];
-	// 	uint16_t source = (uint16_t)ConvertBitIntoBytes(&trellis_buf[24], 16);
-	// 	uint16_t target = (uint16_t)ConvertBitIntoBytes(&trellis_buf[40], 16);
+	//STD-T98 DCR suggests TCH1 has data, and TCH2 will be zero fill
+	//could vary by PDU, but limited data points suggests the same
+	if (crc == check)
+	{
+		uint8_t  opcode = (uint8_t)ConvertBitIntoBytes(&trellis_buf[0], 8);
+		uint8_t  gi     = trellis_buf[16];
+		uint16_t source = (uint16_t)ConvertBitIntoBytes(&trellis_buf[24], 16);
+		uint16_t target = (uint16_t)ConvertBitIntoBytes(&trellis_buf[40], 16);
 
-	// 	if (opcode != 0)
-	// 	{
-	// 		fprintf (stderr, "\n ");
-	// 		fprintf (stderr, "OP: %02X; ", opcode);
-	// 		fprintf (stderr, "Source: %d; Target: %d; ", source, target);
-	// 		if (gi)
-	// 			fprintf (stderr, "Private; ");
-	// 		else fprintf (stderr, "Group; ");
-	// 	}
+		//may only be relevant on MFID 0x30 "F.R.C." Radios
+		if (opcode == 0x0F)
+		{
+			fprintf (stderr, "\n ");
+			fprintf (stderr, "Source: %d; Target: %d; ", source, target);
+			if (gi)
+				fprintf (stderr, "Private; ");
+			else fprintf (stderr, "Group; ");
 			
-	// }
-	// else
-	// {
-	// 	fprintf (stderr, "\n ");
-	// 	fprintf (stderr, "%s", KRED);
-	// 	fprintf (stderr, " (CRC ERR)");
-	// 	fprintf (stderr, "%s", KNRM);
-	// }
+			fprintf (stderr, "Data Preamble; ");
+			uint8_t countdown = (uint8_t)ConvertBitIntoBytes(&trellis_buf[64], 8);
+			fprintf (stderr, "Countdown: %d; ", countdown);
+
+		}
+
+		//may only be relevant on MFID 0x30 "F.R.C." Radios
+		if (opcode == 0x32)
+		{
+			fprintf (stderr, "\n ");
+			fprintf (stderr, "Source: %d; Target: %d; ", source, target);
+			if (gi)
+				fprintf (stderr, "Private; ");
+			else fprintf (stderr, "Group; ");
+			
+			fprintf (stderr, "Precoded Message; ");
+			uint8_t idx = (uint8_t)ConvertBitIntoBytes(&trellis_buf[64], 8);
+			fprintf (stderr, "Index#: %d;", idx);
+
+		}
+
+		// if (opcode == 0x00)
+		// {
+		// 	fprintf (stderr, "\n NULL TCH; ");
+		// }
+			
+	}
+	else if (opts->payload == 0)
+	{
+		fprintf (stderr, "\n ");
+		fprintf (stderr, "%s", KRED);
+		fprintf (stderr, "TCH (CRC ERR)");
+		fprintf (stderr, "%s", KNRM);
+	}
 
 	if (opts->payload == 1)
 	{

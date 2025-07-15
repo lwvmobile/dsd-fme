@@ -117,7 +117,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		if (opts->payload == 1)
 			fprintf(stderr, "  Lich Off Bit Fill Error: %d / 8; \n", lich_off_hex);
 		#endif
-		// state->lastsynctype = -1;  //set to -1 so we don't jump back here too quickly
+		state->lastsynctype = -1;  //set to -1 so we don't jump back here too quickly
 		goto END;
 	}
 	#endif
@@ -137,7 +137,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		if (opts->payload == 1)
 			fprintf(stderr, "  Lich Parity Error %02X / %04X\n", lich_full, lich_bits_hex);
 		#endif
-		// state->lastsynctype = -1;
+		state->lastsynctype = -1;
 		goto END;
 	}
 
@@ -155,7 +155,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		if (opts->payload == 1)
 			fprintf(stderr, "  Simplex/Inbound NXDN lich on trunking system - type 0x%02X\n", lich);
 		#endif
-		// state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
+		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
 		goto END;
 	}
 
@@ -290,7 +290,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		//reset the sacch field, we probably got a false sync and need to wipe or give a bad crc
 		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
-		// state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
+		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
 		voice = 0;
 		goto END;
 		break;
@@ -623,5 +623,12 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	if (opts->payload == 1 && !voice) fprintf (stderr, "\n");
 	else if (opts->payload == 0) fprintf (stderr, "\n");
 
-	END: ; //do nothing
+	END:
+
+	//if rejected sync, reset carrier and synctype as well
+	if (state->lastsynctype == -1)
+	{
+		state->carrier = 0;
+		state->synctype = -1;
+	}
 }
