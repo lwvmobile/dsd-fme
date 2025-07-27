@@ -640,7 +640,7 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		{
 			fprintf (stderr, "\n DCR SFULL ");
 			for (int i = 0; i < 9; i++)
-				fprintf (stderr, "[%02llX]", convert_bits_into_output(state->dmr_pdu_sf[0]+(i*8), 8));
+				fprintf (stderr, "[%02X]", (uint8_t)convert_bits_into_output(state->dmr_pdu_sf[0]+(i*8), 8));
 		}
 
 	}
