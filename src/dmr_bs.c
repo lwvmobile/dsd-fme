@@ -9,6 +9,8 @@
 #include "dsd.h"
 #include "dmr_const.h"
 
+// #define PRINT_AMBE72 //enable to view 72-bit AMBE codewords
+
 //A subroutine for processing each TDMA frame individually to allow for
 //processing voice and/or data on both BS slots (channels) simultaneously
 void dmrBS (dsd_opts * opts, dsd_state * state)
@@ -19,6 +21,10 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   char ambe_fr[4][24];
   char ambe_fr2[4][24];
   char ambe_fr3[4][24];
+
+  int ks_idx[2];
+  ks_idx[0] = 0;
+  ks_idx[1] = 0;
 
   //redundancy check (carrier signal loss event)
   char redundancyA[36];
@@ -493,6 +499,20 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     memcpy (m2, ambe_fr2, sizeof(m2));
     memcpy (m3, ambe_fr3, sizeof(m3));
 
+    if (state->tyt_bp == 1)
+    {
+      ks_idx[internalslot] = tyt16_ambe2_codeword_keystream(state, ambe_fr, ks_idx[internalslot], 0);
+      ks_idx[internalslot] = tyt16_ambe2_codeword_keystream(state, ambe_fr2, ks_idx[internalslot], 1);
+      ks_idx[internalslot] = tyt16_ambe2_codeword_keystream(state, ambe_fr3, ks_idx[internalslot], 0);
+      // ks_idx[internalslot] = 0; //move, or needed elsewhere?
+    }
+
+    #ifdef PRINT_AMBE72
+    ambe2_codeword_print_b(opts, ambe_fr);
+    ambe2_codeword_print_b(opts, ambe_fr2);
+    ambe2_codeword_print_b(opts, ambe_fr3);
+    #endif
+
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
     if(internalslot == 0)
     {
@@ -716,6 +736,10 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   char ambe_fr2[4][24];
   char ambe_fr3[4][24];
 
+  int ks_idx[2];
+  ks_idx[0] = 0;
+  ks_idx[1] = 0;
+
   memset (ambe_fr, 0, sizeof(ambe_fr));
   memset (ambe_fr2, 0, sizeof(ambe_fr2));
   memset (ambe_fr3, 0, sizeof(ambe_fr3));
@@ -921,6 +945,20 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   memcpy (m1, ambe_fr, sizeof(m1));
   memcpy (m2, ambe_fr2, sizeof(m2));
   memcpy (m3, ambe_fr3, sizeof(m3));
+
+  if (state->tyt_bp == 1)
+  {
+    ks_idx[internalslot] = tyt16_ambe2_codeword_keystream(state, ambe_fr, ks_idx[internalslot], 0);
+    ks_idx[internalslot] = tyt16_ambe2_codeword_keystream(state, ambe_fr2, ks_idx[internalslot], 1);
+    ks_idx[internalslot] = tyt16_ambe2_codeword_keystream(state, ambe_fr3, ks_idx[internalslot], 0);
+    ks_idx[internalslot] = 0; //doesn't matter in this location
+  }
+
+  #ifdef PRINT_AMBE72
+  ambe2_codeword_print_b(opts, ambe_fr);
+  ambe2_codeword_print_b(opts, ambe_fr2);
+  ambe2_codeword_print_b(opts, ambe_fr3);
+  #endif
 
   if (opts->payload == 1) fprintf (stderr, "\n"); //extra line break necessary here
   // processMbeFrame (opts, state, NULL, ambe_fr, NULL);

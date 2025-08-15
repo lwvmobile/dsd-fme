@@ -58,6 +58,7 @@
   ctx.rounds = nbround;
     
  }
+
  void handler(int sgnl)
  {
    UNUSED(sgnl);
@@ -1080,6 +1081,10 @@
    state->DMRvcR = 0;
    state->dropL = 256;
    state->dropR = 256;
+
+   state->tyt_ap = 0;
+   state->tyt_bp = 0;
+   state->tyt_ep = 0;
  
    //ks array storage and counters
    memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
@@ -1575,12 +1580,13 @@
    printf ("                 \n");
    printf ("  -2 <hex>      Manually Enter TYT and Enforce 16-bit BP Key Value (DMR) (Hex Value) \n");
    printf ("                 \n");
-   printf ("  -! <hex>      Manually Enter TYT Advanced Privacy AP Hex Key (see example below)\n");
+   printf ("  -! <hex>      Manually Enter TYT and Enforce Advanced Privacy AP Hex Key (see example below)\n");
    printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
-   printf ("                 -H '736B9A9C5645288B 243AD5CB8701EF8A' \n");
+   printf ("                 -! '736B9A9C5645288B 243AD5CB8701EF8A' \n");
    printf ("                 \n");
-   printf ("  -5 <hex>      Manually Enter 48-bit BP Key Value (DMR) (Hex Value) \n");
-   printf ("                 \n");
+   printf ("  -5 <hex>      Manually Enter TYT and Enforce Enhanced Privacy EP Hex Key (see example below)\n");
+   printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
+   printf ("                 -! '736B9A9C5645288B 243AD5CB8701EF8A' \n");
    printf ("  -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.\n");
    printf ("                  Only supports NXDN, DMR Basic Privacy (decimal value). \n");
    printf ("                  (dPMR and Hytera 32/64 char not supported, DMR uses TG value as key id -- EXPERIMENTAL!!). \n");
@@ -1966,30 +1972,29 @@
  
          //get user TYT BP Key and Force Its application
          case '2':
-           state.M = 0x16; //16-bit TYT 'BP' Keys
+           state.tyt_bp = 1;
            sscanf (optarg, "%llX", &state.H);
            state.H = state.H & 0xFFFF; //truncate to 16-bits
-           fprintf (stderr,"DMR TYT 16-bit Key %llX with Forced Application\n", state.H);
+           fprintf (stderr,"DMR TYT 16-bit Key 0x%llX with Forced Application\n", state.H);
            break;
 
          //get user TYT AP Key and Force Its application
          case '!':
            tyt_ap_init();
            state.tyt_ap = 1;
-           fprintf (stderr,"DMR AP 128-bit Key %llX with Forced Application\n", state.H);
+           fprintf (stderr,"DMR TYT AP 128-bit Key with Forced Application\n");
            break;
  
-         //Enter and Force Applicaiton of a a 48-bit AMBE Keystream (hex) for 'CCR' radios and weird 'BP'
+         //get user TYT EP Key and Force Its application
          case '5':
-           state.M = 0x48; //48-bit AMBE Keystream for any generic keystream application
-           sscanf (optarg, "%llX", &state.H);
-           state.H = state.H & 0xFFFFFFFFFFFF; //truncate to 48-bits
-           fprintf (stderr,"AMBE+2 48-bit Key %llX with Forced Application\n", state.H);
+           //TODO: This, or combine with above with -! AP:KEY or EP:KEY (or similar)
+           state.tyt_ep = 1;
+           fprintf (stderr,"DMR TYT EP Key with Forced Application\n");
            break;
  
          case '3':
            opts.dmr_le = 0;
-           fprintf (stderr,"DMR Late Entry Encryption Identifiers Disabled (VC6 Single Burst)\n");
+           fprintf (stderr,"DMRA Late Entry Encryption Identifiers Disabled\n");
            break;
  
          case 'y': //use experimental 'float' audio output

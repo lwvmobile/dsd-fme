@@ -545,53 +545,6 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       mbe_demodulateAmbe3600x2450Data (ambe_fr);
       state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
-      //TYT (Tytera) 16-bit Key (Shuffle/Shift/Inversion Method)
-      if (state->M == 0x16)
-      {
-        //insert an expansion function here
-        unsigned long long int k = 0;
-        uint8_t pNT[56]; memset (pNT, 0, sizeof(pNT));
-
-        //I believe I have this one figured out now
-        //its just a shuffle, shift, invert, shift, invert, shift pattern
-        //could be an lfsr attached, but couldn't figure out the taps
-
-        //below is the pattern found for the 16-bit keys listed on the right
-        // k = 0xFFFF00FFFF00; // 0xFFFF
-        // k = 0x3412CB1234ED; // 0x1234
-
-        //shuffle, invert, shift...and organize into proper key value
-        k = ((state->H & 0xFF) << 8) + ((state->H & 0xFF00) >> 8);
-        k = k << 8 | ((~(state->H & 0xFF) >> 0) & 0xFF);
-        k = k << 16 | state->H;
-        k = k << 8 | ((~(state->H & 0xFF00) >> 8) & 0xFF);
-
-        //debug -- print 48-bit expanded key value
-        // fprintf (stderr, "K: %012llX", k);
-
-        for (int j = 0; j < 48; j++)
-        {
-          x = ( ((k << j) & 0x800000000000) >> 47 ) & 1;
-          ambe_d[j] ^= x;
-        }
-
-      }
-
-      //Forced 48-bit Keystream Application "Quick and Dirty" XOR
-      if (state->M == 0x48)
-      {
-        // k = 0xD991633EC82E; //F811A5B94C2D ⊻ 2180C6878403 (1234 EP Key)
-        // k = 0x7F5363362BBE; //F811A5B94C2D ⊻ 8742C68F6793 (AAAA EP Key)
-        // k = 0x409231C77C08; (FFFF EP Key)
-        k = state->H;
-        for (int j = 0; j < 48; j++) //49
-        {
-          x = ( ((k << j) & 0x800000000000) >> 47 );
-          ambe_d[j] ^= x;
-        }
-      }
-
-
       //EXPERIMENTAL!!
       //load basic privacy key number from array by the tg value (if not forced)
       //currently only Moto BP and Hytera 10 Char BP
@@ -950,52 +903,6 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       state->errs2R = state->errsR;
       mbe_demodulateAmbe3600x2450Data (ambe_fr);
       state->errs2R += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
-
-      //TYT (Tytera) 16-bit Key (Shuffle/Shift/Inversion Method)
-      if (state->M == 0x16)
-      {
-        //insert an expansion function here
-        unsigned long long int k = 0;
-        uint8_t pNT[56]; memset (pNT, 0, sizeof(pNT));
-
-        //I believe I have this one figured out now
-        //its just a shuffle, shift, invert, shift, invert, shift pattern
-        //could be an lfsr attached, but couldn't figure out the taps
-
-        //below is the pattern found for the 16-bit keys listed on the right
-        // k = 0xFFFF00FFFF00; // 0xFFFF
-        // k = 0x3412CB1234ED; // 0x1234
-
-        //shuffle, invert, shift...and organize into proper key value
-        k = ((state->H & 0xFF) << 8) + ((state->H & 0xFF00) >> 8);
-        k = k << 8 | ((~(state->H & 0xFF) >> 0) & 0xFF);
-        k = k << 16 | state->H;
-        k = k << 8 | ((~(state->H & 0xFF00) >> 8) & 0xFF);
-
-        //debug -- print 48-bit expanded key value
-        fprintf (stderr, "K: %012llX", k);
-
-        for (int j = 0; j < 48; j++)
-        {
-          x = ( ((k << j) & 0x800000000000) >> 47 ) & 1;
-          ambe_d[j] ^= x;
-        }
-
-      }
-
-      //Forced 48-bit Keystream Application "Quick and Dirty" XOR
-      if (state->M == 0x48)
-      {
-        // k = 0xD991633EC82E; //F811A5B94C2D ⊻ 2180C6878403 (1234 EP Key)
-        // k = 0x7F5363362BBE; //F811A5B94C2D ⊻ 8742C68F6793 (AAAA EP Key)
-        // k = 0x409231C77C08; (FFFF EP Key)
-        k = state->H;
-        for (int j = 0; j < 48; j++) //49
-        {
-          x = ( ((k << j) & 0x800000000000) >> 47 );
-          ambe_d[j] ^= x;
-        }
-      }
 
       //EXPERIMENTAL!!
       //load basic privacy key number from array by the tg value (if not forced)
