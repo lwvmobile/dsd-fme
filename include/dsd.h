@@ -986,6 +986,8 @@ typedef struct
   struct CODEC2 *codec2_1600; //M17 halfrate
   #endif
 
+  //tyt_ap=1 active  
+  int tyt_ap;
 } dsd_state;
 
 /*

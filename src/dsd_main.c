@@ -25,6 +25,7 @@
  #include "dmr_const.h"
  #include "provoice_const.h"
  #include "git_ver.h"
+ #include "pc4.h"
  
  #include <signal.h>
  
@@ -34,6 +35,29 @@
  
  volatile uint8_t exitflag; //fix for issue #136
  
+ void tyt_ap_init()
+ {
+  unsigned char key1[16] = {0};
+  unsigned char key2[16] = {0};
+
+  char buf[1024];
+  strncpy(buf, optarg, sizeof(buf) - 1);
+  buf[sizeof(buf) - 1] = '\0';
+
+  char *pEnd;
+  uint64_t K1 = strtoull(buf, &pEnd, 16);
+  uint64_t K2 = strtoull(pEnd, &pEnd, 16);
+
+  u64_to_bytes_be(K1, &key1[0]);
+  u64_to_bytes_be(K2, &key1[8]);
+  
+  for (int i=0;i<16;i++) key2[i] = key1[15-i];
+
+ /* Create key schedule */
+  create_keys(&ctx, key2, sizeof(key2));
+  ctx.rounds = nbround;
+    
+ }
  void handler(int sgnl)
  {
    UNUSED(sgnl);
@@ -1551,6 +1575,10 @@
    printf ("                 \n");
    printf ("  -2 <hex>      Manually Enter TYT and Enforce 16-bit BP Key Value (DMR) (Hex Value) \n");
    printf ("                 \n");
+   printf ("  -! <hex>      Manually Enter TYT Advanced Privacy AP Hex Key (see example below)\n");
+   printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
+   printf ("                 -H '736B9A9C5645288B 243AD5CB8701EF8A' \n");
+   printf ("                 \n");
    printf ("  -5 <hex>      Manually Enter 48-bit BP Key Value (DMR) (Hex Value) \n");
    printf ("                 \n");
    printf ("  -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.\n");
@@ -1854,7 +1882,7 @@
  
    exitflag = 0;
  
-   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89Ek:I:J:O")) != -1)
+   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF:!:01:2:345:6:7:89Ek:I:J:O")) != -1)
      {
  
        switch (c)
@@ -1942,6 +1970,13 @@
            sscanf (optarg, "%llX", &state.H);
            state.H = state.H & 0xFFFF; //truncate to 16-bits
            fprintf (stderr,"DMR TYT 16-bit Key %llX with Forced Application\n", state.H);
+           break;
+
+         //get user TYT AP Key and Force Its application
+         case '!':
+           tyt_ap_init();
+           state.tyt_ap = 1;
+           fprintf (stderr,"DMR AP 128-bit Key %llX with Forced Application\n", state.H);
            break;
  
          //Enter and Force Applicaiton of a a 48-bit AMBE Keystream (hex) for 'CCR' radios and weird 'BP'
