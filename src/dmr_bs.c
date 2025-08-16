@@ -22,10 +22,6 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
   char ambe_fr2[4][24];
   char ambe_fr3[4][24];
 
-  int ks_idx[2];
-  ks_idx[0] = 0;
-  ks_idx[1] = 0;
-
   //redundancy check (carrier signal loss event)
   char redundancyA[36];
   char redundancyB[36];
@@ -501,16 +497,15 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
     if (state->tyt_bp == 1)
     {
-      ks_idx[internalslot] = tyt16_ambe2_codeword_keystream(state, ambe_fr, ks_idx[internalslot], 0);
-      ks_idx[internalslot] = tyt16_ambe2_codeword_keystream(state, ambe_fr2, ks_idx[internalslot], 1);
-      ks_idx[internalslot] = tyt16_ambe2_codeword_keystream(state, ambe_fr3, ks_idx[internalslot], 0);
-      // ks_idx[internalslot] = 0; //move, or needed elsewhere?
+      tyt16_ambe2_codeword_keystream(state, ambe_fr, 0);
+      tyt16_ambe2_codeword_keystream(state, ambe_fr2, 1);
+      tyt16_ambe2_codeword_keystream(state, ambe_fr3, 0);
     }
 
     #ifdef PRINT_AMBE72
-    ambe2_codeword_print_b(opts, ambe_fr);
-    ambe2_codeword_print_b(opts, ambe_fr2);
-    ambe2_codeword_print_b(opts, ambe_fr3);
+    ambe2_codeword_print_i(opts, ambe_fr);
+    ambe2_codeword_print_i(opts, ambe_fr2);
+    ambe2_codeword_print_i(opts, ambe_fr3);
     #endif
 
     processMbeFrame (opts, state, NULL, ambe_fr, NULL);
@@ -736,10 +731,6 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   char ambe_fr2[4][24];
   char ambe_fr3[4][24];
 
-  int ks_idx[2];
-  ks_idx[0] = 0;
-  ks_idx[1] = 0;
-
   memset (ambe_fr, 0, sizeof(ambe_fr));
   memset (ambe_fr2, 0, sizeof(ambe_fr2));
   memset (ambe_fr3, 0, sizeof(ambe_fr3));
@@ -948,16 +939,15 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
 
   if (state->tyt_bp == 1)
   {
-    ks_idx[internalslot] = tyt16_ambe2_codeword_keystream(state, ambe_fr, ks_idx[internalslot], 0);
-    ks_idx[internalslot] = tyt16_ambe2_codeword_keystream(state, ambe_fr2, ks_idx[internalslot], 1);
-    ks_idx[internalslot] = tyt16_ambe2_codeword_keystream(state, ambe_fr3, ks_idx[internalslot], 0);
-    ks_idx[internalslot] = 0; //doesn't matter in this location
+    tyt16_ambe2_codeword_keystream(state, ambe_fr, 0);
+    tyt16_ambe2_codeword_keystream(state, ambe_fr2, 1);
+    tyt16_ambe2_codeword_keystream(state, ambe_fr3, 0);
   }
 
   #ifdef PRINT_AMBE72
-  ambe2_codeword_print_b(opts, ambe_fr);
-  ambe2_codeword_print_b(opts, ambe_fr2);
-  ambe2_codeword_print_b(opts, ambe_fr3);
+  ambe2_codeword_print_i(opts, ambe_fr);
+  ambe2_codeword_print_i(opts, ambe_fr2);
+  ambe2_codeword_print_i(opts, ambe_fr3);
   #endif
 
   if (opts->payload == 1) fprintf (stderr, "\n"); //extra line break necessary here

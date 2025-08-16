@@ -1162,6 +1162,7 @@ void keyring(dsd_opts * opts, dsd_state * state);
 void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state);
 void ambe2_codeword_print_f (dsd_opts * opts, char ambe_fr[4][24]);
 void ambe2_codeword_print_b (dsd_opts * opts, char ambe_fr[4][24]);
+void ambe2_codeword_print_i (dsd_opts * opts, char ambe_fr[4][24]);
 void openMbeInFile (dsd_opts * opts, dsd_state * state);
 void closeMbeOutFile (dsd_opts * opts, dsd_state * state);
 void closeMbeOutFileR (dsd_opts * opts, dsd_state * state); //tdma slot 2
@@ -1613,7 +1614,7 @@ void aes_ctr_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payl
 void aes_ctr_bitwise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payload, int type);
 
 //Tytera Encryption Modes
-int tyt16_ambe2_codeword_keystream(dsd_state * state, char ambe_fr[4][24], int idx, int fnum);
+void tyt16_ambe2_codeword_keystream(dsd_state * state, char ambe_fr[4][24], int fnum);
 
 //Hytera Enhanced
 void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value);

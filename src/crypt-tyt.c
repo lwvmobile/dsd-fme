@@ -1,4 +1,41 @@
 #include "dsd.h"
+#include "dmr_const.h"
+
+//interleaved code words for AMBE+2
+void ambe2_codeword_print_i (dsd_opts * opts, char ambe_fr[4][24])
+{
+  uint8_t interleaved[72];
+  memset (interleaved, 0, sizeof(interleaved));
+
+  //reinterleave the frame
+  const int *w, *x, *y, *z;
+  w = rW; x = rX; y = rY; z = rZ;
+
+  for (int8_t i = 0; i < 36; i++)
+  {
+    interleaved[(i*2)+0] = (uint8_t)ambe_fr[*w][*x];
+    interleaved[(i*2)+1] = (uint8_t)ambe_fr[*y][*z];
+
+    w++;
+    x++;
+    y++;
+    z++;
+  }
+
+  uint8_t bytes[9]; memset(bytes, 0, sizeof(bytes));
+
+  //pack
+  pack_bit_array_into_byte_array(interleaved, bytes, 9);
+
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, " AMBE HEX(72) INT: ");
+    for (int8_t i = 0; i < 9; i++)
+      fprintf (stderr, "%02X", bytes[i]);
+    fprintf (stderr, "\n");
+  }
+    
+}
 
 //de-interleaved code words for AMBE+2
 void ambe2_codeword_print_b (dsd_opts * opts, char ambe_fr[4][24])
@@ -57,86 +94,64 @@ void ambe2_codeword_print_f (dsd_opts * opts, char ambe_fr[4][24])
 
 }
 
-//test application of keystream to codewords instead of ambe_d (tytera / retevis, etc)
-int tyt16_ambe2_codeword_keystream(dsd_state * state, char ambe_fr[4][24], int idx, int fnum)
+//tested working perfectly fine on some Tytera BP samples, but not on others
+//is there two or more different Tytera (or CCR) BP modes depending on FW?
+void tyt16_ambe2_codeword_keystream(dsd_state * state, char ambe_fr[4][24], int fnum)
 {
-  uint8_t ks_bytes[28]; memset(ks_bytes, 0, sizeof(ks_bytes));
-  uint8_t ks[224]; memset(ks, 0, sizeof(ks));
 
-  UNUSED(fnum);
+  char interleaved[72];
+  memset (interleaved, 0, sizeof(interleaved));
+
+  //interleave the frame
+  const int *w, *x, *y, *z;
+  w = rW; x = rX; y = rY; z = rZ;
+
+  for (int8_t i = 0; i < 36; i++)
+  {
+    interleaved[(i*2)+0] = ambe_fr[*w][*x];
+    interleaved[(i*2)+1] = ambe_fr[*y][*z];
+
+    w++;
+    x++;
+    y++;
+    z++;
+  }
+
+  uint8_t ks_bytes[10]; memset(ks_bytes, 0, sizeof(ks_bytes));
+  uint8_t ks[80]; memset(ks, 0, sizeof(ks));
 
   ks_bytes[0] = (state->H >> 8) & 0xFF;
   ks_bytes[1] = (state->H >> 0) & 0xFF;
 
   //copy same bytes into rest of byte array
-  for (int16_t i = 2; i < 28; i++)
+  for (int16_t i = 2; i < 10; i++)
     ks_bytes[i] = ks_bytes[i%2];
 
-  //debug ks_bytes
-  // fprintf (stderr, " KB: ");
-  // for (int16_t i = 0; i < 28; i++)
-  //   fprintf (stderr, "%02X ", ks_bytes[i]);
-  // fprintf (stderr, "\n");
-
   //convert byte array into a bit array
-  unpack_byte_array_into_bit_array(ks_bytes, ks, 28);
+  unpack_byte_array_into_bit_array(ks_bytes, ks, 10);
 
-  //debug ks
-  // fprintf (stderr, " KS: ");
-  // for (int16_t i = 0; i < 28; i++)
-  //   fprintf (stderr, "%02X ", (uint8_t)convert_bits_into_output(ks+(i*8), 8));
-  // fprintf (stderr, "\n");
-
-  //debug to test application to ambe_fr result
-  // memset(ambe_fr, 0, 4*24*sizeof(char));
-
+  //set ks idx position (-1)
+  int idx = 0;
   if (fnum == 0)
-    idx = 0;
-  else idx = 8;
+    idx = 79;
+  else idx = 71;
 
-  //straight?
-  for (int16_t i = 0; i < 24; i++)
-    ambe_fr[0][i] ^= ks[((idx++)%216)] ^ 1; //%216
+  //apply keystream to interleave
+  for (int8_t i = 0; i < 72; i++)
+    interleaved[i] ^= ks[idx--];
 
-  for (int16_t i = 0; i < 23; i++)
-    ambe_fr[1][i] ^= ks[((idx++)%216)] ^ 1; //%216
+  //deinterleave back into ambe_fr frame
+  w = rW; x = rX; y = rY; z = rZ;
+  int k = 0;
+  for (int8_t i = 0; i < 36; i++)
+  {
+    ambe_fr[*w][*x] = interleaved[k++];
+    ambe_fr[*y][*z] = interleaved[k++];
 
-  for (int16_t i = 0; i < 11; i++)
-    ambe_fr[2][i] ^= ks[((idx++)%216)] ^ 1; //%216
-
-  for (int16_t i = 0; i < 14; i++)
-    ambe_fr[3][i] ^= ks[((idx++)%216)] ^ 1; //%216
-
-  //backwards?
-  // for (int16_t i = 13; i >= 0; i--)
-  //   ambe_fr[3][i] ^= ks[((idx++)%216)] ^ 1; //%216
-
-  // for (int16_t i = 10; i >= 0; i--)
-  //   ambe_fr[2][i] ^= ks[((idx++)%216)] ^ 1; //%216
-
-  // for (int16_t i = 22; i >= 0; i--)
-  //   ambe_fr[1][i] ^= ks[((idx++)%216)] ^ 1; //%216
-
-  // for (int16_t i = 23; i >= 0; i--)
-  //   ambe_fr[0][i] ^= ks[((idx++)%216)] ^ 1; //%216
-
-  //forwards?
-  // for (int16_t i = 23; i >= 0; i--)
-  //   ambe_fr[0][i] ^= ks[((idx++)%216)] ^ 1; //%216
-
-  // for (int16_t i = 22; i >= 0; i--)
-  //   ambe_fr[1][i] ^= ks[((idx++)%216)] ^ 1; //%216
-
-  // for (int16_t i = 10; i >= 0; i--)
-  //   ambe_fr[2][i] ^= ks[((idx++)%216)] ^ 1; //%216
-
-  // for (int16_t i = 13; i >= 0; i--)
-  //   ambe_fr[3][i] ^= ks[((idx++)%216)] ^ 1; //%216
-
-  //debug idx value
-  fprintf (stderr, " KS IDX: %04d; \n", idx);
-
-  return idx;
-
+    w++;
+    x++;
+    y++;
+    z++;
+  }
 
 }

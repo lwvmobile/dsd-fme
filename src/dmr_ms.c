@@ -23,8 +23,6 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   char ambe_fr3[4][24];
   char ambe_fr4[4][24];
 
-  int ks_idx = 0;
-
   //memcpy of ambe_fr for late entry
   uint8_t m1[4][24];
   uint8_t m2[4][24];
@@ -250,16 +248,15 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   if (state->tyt_bp == 1)
   {
-    ks_idx = tyt16_ambe2_codeword_keystream(state, ambe_fr, ks_idx, 0);
-    ks_idx = tyt16_ambe2_codeword_keystream(state, ambe_fr2, ks_idx, 1);
-    ks_idx = tyt16_ambe2_codeword_keystream(state, ambe_fr3, ks_idx, 0);
-    // ks_idx = 0; //needed?
+    tyt16_ambe2_codeword_keystream(state, ambe_fr, 0);
+    tyt16_ambe2_codeword_keystream(state, ambe_fr2, 1);
+    tyt16_ambe2_codeword_keystream(state, ambe_fr3, 0);
   }
 
   #ifdef PRINT_AMBE72
-  ambe2_codeword_print_b(opts, ambe_fr);
-  ambe2_codeword_print_b(opts, ambe_fr2);
-  ambe2_codeword_print_b(opts, ambe_fr3);
+  ambe2_codeword_print_i(opts, ambe_fr);
+  ambe2_codeword_print_i(opts, ambe_fr2);
+  ambe2_codeword_print_i(opts, ambe_fr3);
   #endif
 
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
@@ -383,8 +380,6 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
   memset (ambe_fr, 0, sizeof(ambe_fr));
   memset (ambe_fr2, 0, sizeof(ambe_fr2));
   memset (ambe_fr3, 0, sizeof(ambe_fr3));
-
-  int ks_idx = 0;
 
   //memcpy of ambe_fr for late entry
   uint8_t m1[4][24];
@@ -558,16 +553,15 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 
   if (state->tyt_bp == 1)
   {
-    ks_idx = tyt16_ambe2_codeword_keystream(state, ambe_fr, ks_idx, 0);
-    ks_idx = tyt16_ambe2_codeword_keystream(state, ambe_fr2, ks_idx, 1);
-    ks_idx = tyt16_ambe2_codeword_keystream(state, ambe_fr3, ks_idx, 0);
-    // ks_idx = 0; //needed?
+    tyt16_ambe2_codeword_keystream(state, ambe_fr, 0);
+    tyt16_ambe2_codeword_keystream(state, ambe_fr2, 1);
+    tyt16_ambe2_codeword_keystream(state, ambe_fr3, 0);
   }
 
   #ifdef PRINT_AMBE72
-  ambe2_codeword_print_b(opts, ambe_fr);
-  ambe2_codeword_print_b(opts, ambe_fr2);
-  ambe2_codeword_print_b(opts, ambe_fr3);
+  ambe2_codeword_print_i(opts, ambe_fr);
+  ambe2_codeword_print_i(opts, ambe_fr2);
+  ambe2_codeword_print_i(opts, ambe_fr3);
   #endif
 
   processMbeFrame (opts, state, NULL, ambe_fr, NULL);
