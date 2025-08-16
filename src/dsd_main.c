@@ -1580,13 +1580,14 @@
    printf ("                 \n");
    printf ("  -2 <hex>      Manually Enter TYT and Enforce 16-bit BP Key Value (DMR) (Hex Value) \n");
    printf ("                 \n");
-   printf ("  -! <hex>      Manually Enter TYT and Enforce Advanced Privacy AP Hex Key (see example below)\n");
+   printf ("  -! <hex>      Manually Enter TYT and Enforce Advanced Privacy (PC4) AP Hex Key (see example below)\n");
    printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
    printf ("                 -! '736B9A9C5645288B 243AD5CB8701EF8A' \n");
    printf ("                 \n");
-   printf ("  -5 <hex>      Manually Enter TYT and Enforce Enhanced Privacy EP Hex Key (see example below)\n");
+   printf ("  -5 <hex>      Manually Enter TYT and Enforce Enhanced Privacy (AES-128) EP Hex Key (see example below)\n");
    printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
-   printf ("                 -! '736B9A9C5645288B 243AD5CB8701EF8A' \n");
+   printf ("                 -5 '736B9A9C5645288B 243AD5CB8701EF8A' \n");
+   printf ("                 \n");
    printf ("  -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.\n");
    printf ("                  Only supports NXDN, DMR Basic Privacy (decimal value). \n");
    printf ("                  (dPMR and Hytera 32/64 char not supported, DMR uses TG value as key id -- EXPERIMENTAL!!). \n");
@@ -1975,21 +1976,57 @@
            state.tyt_bp = 1;
            sscanf (optarg, "%llX", &state.H);
            state.H = state.H & 0xFFFF; //truncate to 16-bits
-           fprintf (stderr,"DMR TYT 16-bit Key 0x%llX with Forced Application\n", state.H);
+           fprintf (stderr,"DMR TYT Basic 16-bit Key 0x%llX with Forced Application\n", state.H);
            break;
 
          //get user TYT AP Key and Force Its application
          case '!':
            tyt_ap_init();
            state.tyt_ap = 1;
-           fprintf (stderr,"DMR TYT AP 128-bit Key with Forced Application\n");
+           fprintf (stderr,"DMR TYT AP (PC4) 128-bit Key with Forced Application\n");
            break;
  
          //get user TYT EP Key and Force Its application
          case '5':
            //TODO: This, or combine with above with -! AP:KEY or EP:KEY (or similar)
+           strncpy(opts.szNumbers, optarg, 1023);
+           opts.szNumbers[1023] = '\0';
+           unsigned long long int K1 = strtoull (opts.szNumbers, &pEnd, 16);
+           unsigned long long int K2 = strtoull (pEnd, &pEnd, 16);
+           uint8_t key[32];
+           memset(key, 0, sizeof(key));
+
+           //static key value
+           key[0]=0x6e;  key[1]=0x02;  key[2]=0x8d;  key[3]=0x8a;
+           key[4]=0xca;  key[5]=0xeb;  key[6]=0x9b;  key[7]=0xbe;
+           key[8]=0x42;  key[9]=0x72;  key[10]=0xfb; key[11]=0x82;
+           key[12]=0x64; key[13]=0x56; key[14]=0x31; key[15]=0xfa;
+
+           //iv or input register is the key value provided by user
+           uint8_t iv[16];
+           memset(iv, 0, sizeof(iv));
+
+           //Load user key into iv / input register
+           for (int i = 0; i < 8; i++)
+           {
+             iv[i+0]  = (K1 >> (56-(i*8))) & 0xFF;
+             iv[i+8]  = (K2 >> (56-(i*8))) & 0xFF;
+           }
+
+           uint8_t ks_bytes[16];
+           memset(ks_bytes, 0, sizeof(ks_bytes));
+
+           //create keystream
+           aes_ofb_keystream_output(iv, key, ks_bytes, 0, 1);
+           uint8_t ks_bits[128];
+           memset(ks_bits, 0, sizeof(ks_bits));
+           unpack_byte_array_into_bit_array(ks_bytes, ks_bits, 16);
+
+           //load static keystream into ctx.bits since that isn't ever zeroed out
+           for (int i = 0; i < 49; i++)
+             ctx.bits[i] = ks_bits[i];
+           fprintf (stderr,"DMR TYT EP (AES-128) Key %016llX %016llX with Forced Application\n", K1, K2);
            state.tyt_ep = 1;
-           fprintf (stderr,"DMR TYT EP Key with Forced Application\n");
            break;
  
          case '3':

@@ -812,8 +812,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
       }
       
-      //DMR TYT AP, Slot 1
-      if (state->currentslot == 0 && state->tyt_ap == 1)
+      //DMR TYT AP, Either Slot (static single key'd enforced KS)
+      if (state->tyt_ap == 1)
       {
         
         short frame1_cipher[49];
@@ -825,19 +825,12 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
       }
 
-      //DMR TYT AP, Slot 2
-      if (state->currentslot == 1 && state->tyt_ap == 1)
+      //DMR TYT EP, Either Slot (static single key'd enforced KS)
+      if (state->tyt_ep == 1)
       {
-        
-        short frame1_cipher[49];
-        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
-        decrypt_frame_49(frame1_cipher);
- 
-        memset (ambe_d, 0, 49*sizeof(char));
-        for (int i = 0; i < 49; i++) ambe_d[i] = ctx.bits[i];
-
+        for (int i = 0; i < 49; i++)
+          ambe_d[i] ^= (uint8_t)(ctx.bits[i] & 1);
       }
-      
 
       //P25p2 RC4 Handling, VCH 0
       if (state->currentslot == 0 && state->payload_algid == 0xAA && state->R != 0 && ((state->synctype == 35) || (state->synctype == 36)))
