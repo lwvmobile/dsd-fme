@@ -828,6 +828,31 @@ void playSynthesizedVoiceMS (dsd_opts * opts, dsd_state * state)
   if (opts->audio_out_type == 1 || opts->audio_out_type == 2 || opts->audio_out_type == 5) //STDOUT or OSS
     write (opts->audio_out_fd, mono_samp, len*2);
 
+  //this one needs testing w/ 48000 OSS output when audio is not split
+  if (opts->wav_out_f != NULL && opts->static_wav_file == 1)
+  {
+    //convert to stereo for new static wav file setup
+    short ss[320];
+    memset (ss, 0, sizeof(ss));
+    if (len == 160)
+    {
+      for (i = 0; i < 160; i++)
+      {
+        ss[(i*2)+0] = mono_samp[i];
+        ss[(i*2)+1] = mono_samp[i];
+      }
+    }
+    else if (len == 960)
+    {
+      for (i = 0; i < 160; i++)
+      {
+        ss[(i*2)+0] = mono_samp[i*6]; //grab every 6th sample to downsample
+        ss[(i*2)+1] = mono_samp[i*6]; //grab every 6th sample to downsample
+      }
+    }
+    sf_write_short(opts->wav_out_f, ss, 320);
+  }
+
   MS_END:
 
   //run cleanup since we pulled stuff from processAudio
@@ -888,6 +913,31 @@ void playSynthesizedVoiceMSR (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_out_type == 1 || opts->audio_out_type == 2 || opts->audio_out_type == 5) //STDOUT or OSS
     write (opts->audio_out_fd, mono_samp, len*2);
+
+  //this one needs testing w/ 48000 OSS output when audio is not split
+  if (opts->wav_out_f != NULL && opts->static_wav_file == 1)
+  {
+    //convert to stereo for new static wav file setup
+    short ss[320];
+    memset (ss, 0, sizeof(ss));
+    if (len == 160)
+    {
+      for (i = 0; i < 160; i++)
+      {
+        ss[(i*2)+0] = mono_samp[i];
+        ss[(i*2)+1] = mono_samp[i];
+      }
+    }
+    else if (len == 960)
+    {
+      for (i = 0; i < 160; i++)
+      {
+        ss[(i*2)+0] = mono_samp[i*6]; //grab every 6th sample to downsample
+        ss[(i*2)+1] = mono_samp[i*6]; //grab every 6th sample to downsample
+      }
+    }
+    sf_write_short(opts->wav_out_f, ss, 320);
+  }
 
   MS_ENDR:
 
@@ -1008,6 +1058,8 @@ void playSynthesizedVoiceSS (dsd_opts * opts, dsd_state * state)
   if (opts->audio_out_type == 1 || opts->audio_out_type == 2) //STDOUT or OSS 8k/2
     write (opts->audio_out_fd, stereo_samp1, 320*2);
 
+  if (opts->wav_out_f != NULL && opts->static_wav_file == 1)
+    sf_write_short(opts->wav_out_f, stereo_samp1, 320);
 
   SSM_END:
 
@@ -1358,6 +1410,13 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
     write (opts->audio_out_fd, stereo_samp3, 320*2);
   }
 
+  if (opts->wav_out_f != NULL && opts->static_wav_file == 1)
+  {
+    sf_write_short(opts->wav_out_f, stereo_samp1, 320);
+    sf_write_short(opts->wav_out_f, stereo_samp2, 320);
+    sf_write_short(opts->wav_out_f, stereo_samp3, 320);
+  }
+
   SS3_END:
 
   //run cleanup since we pulled stuff from processAudio
@@ -1609,6 +1668,18 @@ void playSynthesizedVoiceSS4 (dsd_opts * opts, dsd_state * state)
       write (opts->audio_out_fd, stereo_samp3, 320*2);
     if (memcmp(empty, stereo_samp4, sizeof(empty)) != 0)
       write (opts->audio_out_fd, stereo_samp4, 320*2);
+  }
+
+  if (opts->wav_out_f != NULL && opts->static_wav_file == 1)
+  {
+    sf_write_short(opts->wav_out_f, stereo_samp1, 320);
+    sf_write_short(opts->wav_out_f, stereo_samp2, 320);
+
+    //only write these two if not a single 2v or double 2v
+    if (memcmp(empty, stereo_samp3, sizeof(empty)) != 0)
+      sf_write_short(opts->wav_out_f, stereo_samp3, 320);
+    if (memcmp(empty, stereo_samp4, sizeof(empty)) != 0)
+      sf_write_short(opts->wav_out_f, stereo_samp4, 320);
   }
 
   SS4_END:
@@ -1912,6 +1983,15 @@ void playSynthesizedVoiceSS18 (dsd_opts * opts, dsd_state * state)
     {
       if (memcmp(empty, stereo_sf[j], sizeof(empty)) != 0) //may not work as intended because its stereo and one will have something in it most likely
         write (opts->audio_out_fd, stereo_sf[j], 320*2);
+    }
+  }
+
+  if (opts->wav_out_f != NULL && opts->static_wav_file == 1)
+  {
+    for (j = 0; j < 18; j++)
+    {
+      if (memcmp(empty, stereo_sf[j], sizeof(empty)) != 0)
+        sf_write_short(opts->wav_out_f, stereo_sf[j], 320);
     }
   }
 

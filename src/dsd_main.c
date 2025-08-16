@@ -674,6 +674,7 @@
    opts->wav_out_raw = NULL;
  
    opts->dmr_stereo_wav = 0; //flag for per call dmr stereo wav recordings
+   opts->static_wav_file = 0; //single static wav file for decoding duration
    //opts->wav_out_fd = -1;
    opts->serial_baud = 115200;
    sprintf (opts->serial_dev, "/dev/ttyUSB0");
@@ -1439,7 +1440,7 @@
    printf ("  -g <float>    Audio Digital Output Gain  (Default: 0 = Auto;        )\n");
    printf ("                                           (Manual:  1 = 2%%; 50 = 100%%)\n");
    printf ("  -n <float>    Audio Analog  Output Gain  (Default: 0 = Auto; 0-100%%  )\n");
-   //printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n"); //disabled
+   printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n");
    printf ("  -6 <file>     Output raw audio .wav file (48K/1). (WARNING! Large File Sizes 1 Hour ~= 360 MB)\n");
    printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
    printf ("                 (Use ./folder for Nested Directory!)\n");
@@ -1781,10 +1782,27 @@
     watchdog_event_history(opts, state, 1);
     watchdog_event_current(opts, state, 1);
 
-  if (opts->wav_out_f != NULL)
-    opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
-  if (opts->wav_out_fR != NULL)
-  opts->wav_out_fR = close_and_rename_wav_file(opts->wav_out_fR, opts->wav_out_fileR, opts->wav_out_dir, &state->event_history_s[1]);
+  if (opts->static_wav_file == 0)
+  {
+    if (opts->wav_out_f != NULL)
+      opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+
+    if (opts->wav_out_fR != NULL)
+      opts->wav_out_fR = close_and_rename_wav_file(opts->wav_out_fR, opts->wav_out_fileR, opts->wav_out_dir, &state->event_history_s[1]);
+  }
+
+  else if (opts->static_wav_file == 1)
+  {
+
+    if (opts->wav_out_f != NULL)
+      opts->wav_out_f = close_wav_file(opts->wav_out_f);
+
+    //this one needed?
+    if (opts->wav_out_fR != NULL)
+      opts->wav_out_fR = close_wav_file(opts->wav_out_fR);
+    
+  }
+
   if (opts->wav_out_raw != NULL)
     opts->wav_out_raw = close_wav_file(opts->wav_out_raw);
 
@@ -2391,13 +2409,14 @@
            }
            break;
  
-        //  case 'w': //disabled
-        //    strncpy(opts.wav_out_file, optarg, 1023);
-        //    opts.wav_out_file[1023] = '\0';
-        //    fprintf (stderr,"Writing + Appending decoded audio to file %s\n", opts.wav_out_file);
-        //    opts.dmr_stereo_wav = 0;
-        //    openWavOutFile (&opts, &state);
-        //    break;
+         case 'w': //experimental re-enabling (needs thorough testing)
+           strncpy(opts.wav_out_file, optarg, 1023);
+           opts.wav_out_file[1023] = '\0';
+           fprintf (stderr,"Writing + Appending decoded audio to file %s\n", opts.wav_out_file);
+           opts.dmr_stereo_wav = 0;
+           opts.static_wav_file = 1;
+           openWavOutFileLR (&opts, &state);
+           break;
  
          case '6':
            strncpy(opts.wav_out_file_raw, optarg, 1023);

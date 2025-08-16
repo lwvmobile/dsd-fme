@@ -317,7 +317,8 @@ typedef struct
   float audio_gainR;
   float audio_gainA;
   int audio_out;
-  int dmr_stereo_wav;
+  int dmr_stereo_wav;  //per-call wav file use (rename later)
+  int static_wav_file; //single static wav file for decoding duration
   char wav_out_dir[512];
   char wav_out_file[1024];
   char wav_out_fileR[1024];
@@ -1171,6 +1172,7 @@ void openMbeOutFileR (dsd_opts * opts, dsd_state * state); //tdma slot 2
 void openWavOutFile (dsd_opts * opts, dsd_state * state);
 void openWavOutFileL (dsd_opts * opts, dsd_state * state);
 void openWavOutFileR (dsd_opts * opts, dsd_state * state);
+void openWavOutFileLR (dsd_opts * opts, dsd_state * state); //stereo wav file for tdma decoded speech
 void openWavOutFileRaw (dsd_opts * opts, dsd_state * state);
 SNDFILE * open_wav_file (char * dir, char * temp_filename, uint16_t sample_rate, uint8_t ext);
 SNDFILE * close_wav_file(SNDFILE * wav_file);
