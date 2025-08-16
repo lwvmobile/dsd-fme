@@ -1,4 +1,4 @@
-Build Version: AW 2025-131-g680b792 
+Build Version: AW 2025-173-g21c02ac 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -44,6 +44,7 @@ Input/Output options:
   -g <float>    Audio Digital Output Gain  (Default: 0 = Auto;        )
                                            (Manual:  1 = 2%; 50 = 100%)
   -n <float>    Audio Analog  Output Gain  (Default: 0 = Auto; 0-100%  )
+  -w <file>     Output synthesized speech to a single static .wav file.
   -6 <file>     Output raw audio .wav file (48K/1). (WARNING! Large File Sizes 1 Hour ~= 360 MB)
   -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.
                  (Use ./folder for Nested Directory!)
@@ -63,7 +64,6 @@ Input/Output options:
   -c <file>     Output symbol capture to .bin file
   -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice
   -V <num>      Enable TDMA Voice Synthesis on Slot 1 (1), Slot 2 (2), or Both (3); Default is 3; 
-                If using /dev/dsp input and output at 48k1, launch two instances of DSD-FME w -V 1 and -V 2 if needed
   -z            Set TDMA Voice Slot Preference when using /dev/dsp audio output (prevent lag and stuttering)
   -y            Enable Experimental Pulse Audio Float Audio Output
   -v <hex>      Set Filtering Bitmap Options (Advanced Option)
@@ -175,7 +175,13 @@ Advanced Decoder options:
                  
   -2 <hex>      Manually Enter TYT and Enforce 16-bit BP Key Value (DMR) (Hex Value) 
                  
-  -5 <hex>      Manually Enter 48-bit BP Key Value (DMR) (Hex Value) 
+  -! <hex>      Manually Enter TYT and Enforce Advanced Privacy (PC4) AP Hex Key (see example below)
+                 Encapulate in Single Quotation Marks; Space every 16 chars.
+                 -! '736B9A9C5645288B 243AD5CB8701EF8A' 
+                 
+  -5 <hex>      Manually Enter TYT and Enforce Enhanced Privacy (AES-128) EP Hex Key (see example below)
+                 Encapulate in Single Quotation Marks; Space every 16 chars.
+                 -5 '736B9A9C5645288B 243AD5CB8701EF8A' 
                  
   -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.
                   Only supports NXDN, DMR Basic Privacy (decimal value). 

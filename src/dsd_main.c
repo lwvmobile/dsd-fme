@@ -1440,7 +1440,7 @@
    printf ("  -g <float>    Audio Digital Output Gain  (Default: 0 = Auto;        )\n");
    printf ("                                           (Manual:  1 = 2%%; 50 = 100%%)\n");
    printf ("  -n <float>    Audio Analog  Output Gain  (Default: 0 = Auto; 0-100%%  )\n");
-   printf ("  -w <file>     Output synthesized speech to a .wav file, FDMA modes only.\n");
+   printf ("  -w <file>     Output synthesized speech to a single static .wav file.\n");
    printf ("  -6 <file>     Output raw audio .wav file (48K/1). (WARNING! Large File Sizes 1 Hour ~= 360 MB)\n");
    printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
    printf ("                 (Use ./folder for Nested Directory!)\n");
