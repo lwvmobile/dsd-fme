@@ -2011,31 +2011,42 @@
            opts.szNumbers[1023] = '\0';
            unsigned long long int K1 = strtoull (opts.szNumbers, &pEnd, 16);
            unsigned long long int K2 = strtoull (pEnd, &pEnd, 16);
-           uint8_t key[32];
-           memset(key, 0, sizeof(key));
+           uint8_t static_key[32];
+           memset(static_key, 0, sizeof(static_key));
 
            //static key value
-           key[0]=0x6e;  key[1]=0x02;  key[2]=0x8d;  key[3]=0x8a;
-           key[4]=0xca;  key[5]=0xeb;  key[6]=0x9b;  key[7]=0xbe;
-           key[8]=0x42;  key[9]=0x72;  key[10]=0xfb; key[11]=0x82;
-           key[12]=0x64; key[13]=0x56; key[14]=0x31; key[15]=0xfa;
+           static_key[0]=0x6e;  static_key[1]=0x02;  static_key[2]=0x8d;  static_key[3]=0x8a;
+           static_key[4]=0xca;  static_key[5]=0xeb;  static_key[6]=0x9b;  static_key[7]=0xbe;
+           static_key[8]=0x42;  static_key[9]=0x72;  static_key[10]=0xfb; static_key[11]=0x82;
+           static_key[12]=0x64; static_key[13]=0x56; static_key[14]=0x31; static_key[15]=0xfa;
 
-           //iv or input register is the key value provided by user
-           uint8_t iv[16];
-           memset(iv, 0, sizeof(iv));
+           //the key value provided by user
+           uint8_t user_key[16];
+           memset(user_key, 0, sizeof(user_key));
 
-           //Load user key into iv / input register
+           //Load user key into array to manipulate
            for (int i = 0; i < 8; i++)
            {
-             iv[i+0]  = (K1 >> (56-(i*8))) & 0xFF;
-             iv[i+8]  = (K2 >> (56-(i*8))) & 0xFF;
+             user_key[i+0]  = (K1 >> (56-(i*8))) & 0xFF;
+             user_key[i+8]  = (K2 >> (56-(i*8))) & 0xFF;
            }
+
+           uint8_t input_register[16];
+           memset(input_register, 0, sizeof(input_register));
+
+           //manipulate user provided key by loading bytes in reverse order into the input_register
+           for (int i = 0; i < 16; i++)
+            input_register[15-i] = user_key[i];
 
            uint8_t ks_bytes[16];
            memset(ks_bytes, 0, sizeof(ks_bytes));
 
+           //NOTE: To clarify, TYT EP uses ECB mode with the user key as input_register and the static key in the
+           //forward (encryption) direction, but we are calling OFB mode because the first round is the
+           //same concept and we only need the first round output, OFB is easier to use anyways.
+
            //create keystream
-           aes_ofb_keystream_output(iv, key, ks_bytes, 0, 1);
+           aes_ofb_keystream_output(input_register, static_key, ks_bytes, 0, 1);
            uint8_t ks_bits[128];
            memset(ks_bits, 0, sizeof(ks_bits));
            unpack_byte_array_into_bit_array(ks_bytes, ks_bits, 16);
