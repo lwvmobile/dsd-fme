@@ -992,6 +992,11 @@ typedef struct
   int tyt_bp;
   int tyt_ep;
 
+  //kenwood scrambler on DMR with forced application
+  int ken_sc;
+  uint8_t static_ks_bits[2][882];
+  int static_ks_counter[2];
+
 } dsd_state;
 
 /*

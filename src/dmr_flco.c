@@ -56,6 +56,19 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   target = (uint32_t)ConvertBitIntoBytes(&lc_bits[24], 24); //Target or Talk Group
   source = (uint32_t)ConvertBitIntoBytes(&lc_bits[48], 24);
 
+  //Kenwood w/ Scrambler Application on DMR (disable this if clash with other link control, its obscure)
+  uint8_t is_kenwood_sc = 1;
+  if (*IrrecoverableErrors == 0 && CRCCorrect == 1 && pf == 1 && fid == 0x20 && (so & 0x40) == 0x40)
+  {
+    pf = 0; //turn off PF flag
+    fid = 0; //unclear if this signals FID (or is cipher type for scrambler)
+
+    //reset bit counter on static key bit counter (should do this after VC6 instead of relying on this, but meh, obscure cipher type)
+    state->static_ks_counter[state->currentslot] = 0;
+
+    is_kenwood_sc = 1;
+  }
+
   //read ahead a little to get this for the xpt flag
   if (*IrrecoverableErrors == 0 && flco == 0x09 && fid == 0x68)
   {
@@ -295,7 +308,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
     //unknown other manufacturer or OTA ENC, etc.
     //removed tait from the list, added hytera 0x08
-    if (fid != 0 && fid != 0x68 && fid != 0x10 && fid != 0x08)
+    if (fid != 0 && fid != 0x68 && fid != 0x10 && fid != 0x08 && is_kenwood_sc == 0)
     {
       if (type == 1) fprintf (stderr, "%s \n", KYEL);
       if (type == 2) fprintf (stderr, "%s \n", KYEL);
@@ -650,6 +663,9 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       fprintf (stderr, "Private ");
       state->gi[slot] = 1;
     }
+
+    if (is_kenwood_sc)
+      fprintf(stderr, "Kenwood Scrambler ");
 
     fprintf(stderr, "Call ");
 

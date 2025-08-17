@@ -832,6 +832,13 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           ambe_d[i] ^= (uint8_t)(ctx.bits[i] & 1);
       }
 
+      //DMR Kenwood Scrambler, Either Slot (static single key'd enforced KS) //should probably break this up, but this is a test for now
+      if (state->ken_sc == 1)
+      {
+        for (int i = 0; i < 49; i++)
+          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%882] & 1); //Yikes!
+      }
+
       //P25p2 RC4 Handling, VCH 0
       if (state->currentslot == 0 && state->payload_algid == 0xAA && state->R != 0 && ((state->synctype == 35) || (state->synctype == 36)))
       {
@@ -1267,6 +1274,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       }
     }
 
+    if (state->ken_sc == 1)
+      state->dmr_encL = 0;
+
     //reverse mute testing, only mute unencrypted traffic (slave piggyback dsd+ method)
     if (opts->reverse_mute == 1)
     {
@@ -1343,6 +1353,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         state->dmr_encR = 1;
       }
     }
+
+    if (state->ken_sc == 1)
+      state->dmr_encR = 0;
 
     //reverse mute testing, only mute unencrypted traffic (slave piggyback dsd+ method)
     if (opts->reverse_mute == 1)

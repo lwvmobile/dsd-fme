@@ -607,6 +607,9 @@
    memset (state->s_ru, 0, sizeof(state->s_ru));
    memset (state->s_l4u, 0, sizeof(state->s_l4u));
    memset (state->s_r4u, 0, sizeof(state->s_r4u));
+
+   //we do reset the counter, but not the static_ks_bits
+   memset (state->static_ks_counter, 0, sizeof(state->static_ks_counter));
  
  } //nocarrier
  
@@ -1086,6 +1089,8 @@
    state->tyt_ap = 0;
    state->tyt_bp = 0;
    state->tyt_ep = 0;
+
+   state->ken_sc = 0;
  
    //ks array storage and counters
    memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
@@ -1095,6 +1100,9 @@
    state->octet_counter = 0;
    state->bit_counterL = 0;
    state->bit_counterR = 0;
+
+   memset (state->static_ks_bits, 0, sizeof(state->static_ks_bits));
+   memset (state->static_ks_counter, 0, sizeof(state->static_ks_counter));
  
    //AES Specific Variables
    memset (state->aes_key, 0, sizeof(state->aes_key));
@@ -1579,15 +1587,17 @@
    printf ("                 \n");
    printf ("  -1 <hex>      Manually Enter RC4 or DES Key Value (DMR, P25, NXDN) (Hex Value) \n");
    printf ("                 \n");
-   printf ("  -2 <hex>      Manually Enter TYT and Enforce 16-bit BP Key Value (DMR) (Hex Value) \n");
+   printf ("  -2 <hex>      Manually Enter and TYT Enforce 16-bit BP Key Value (DMR) (Hex Value) \n");
    printf ("                 \n");
-   printf ("  -! <hex>      Manually Enter TYT and Enforce Advanced Privacy (PC4) AP Hex Key (see example below)\n");
+   printf ("  -! <hex>      Manually Enter and Enforce TYT Advanced Privacy (PC4) AP Hex Key (see example below)\n");
    printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
    printf ("                 -! '736B9A9C5645288B 243AD5CB8701EF8A' \n");
    printf ("                 \n");
-   printf ("  -5 <hex>      Manually Enter TYT and Enforce Enhanced Privacy (AES-128) EP Hex Key (see example below)\n");
+   printf ("  -5 <hex>      Manually Enter and Enforce TYT Enhanced Privacy (AES-128) EP Hex Key (see example below)\n");
    printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
    printf ("                 -5 '736B9A9C5645288B 243AD5CB8701EF8A' \n");
+   printf ("                 \n");
+   printf ("  -9 <dec>      Manually Enter and Enforce Kenwood 15-bit Scrambler Key Value (DMR) (Dec Value) \n");
    printf ("                 \n");
    printf ("  -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.\n");
    printf ("                  Only supports NXDN, DMR Basic Privacy (decimal value). \n");
@@ -1907,7 +1917,7 @@
  
    exitflag = 0;
  
-   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF:!:01:2:345:6:7:89Ek:I:J:O")) != -1)
+   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF:!:01:2:345:6:7:89:Ek:I:J:O")) != -1)
      {
  
        switch (c)
@@ -1960,12 +1970,6 @@
          case 'I':
            sscanf (optarg, "%d", &state.tg_hold);
            fprintf (stderr, "TG Hold set to %d \n", state.tg_hold);
-           break;
- 
-         case '9': //Leaving Enabled to maintain backwards compatability
-           state.ea_mode = 0;
-           state.esk_mask = 0;
-           fprintf (stderr,"Force Enabling EDACS Standard/Networked Mode Mode without ESK.\n");
            break;
  
          //experimental audio monitoring
@@ -2054,8 +2058,34 @@
            //load static keystream into ctx.bits since that isn't ever zeroed out
            for (int i = 0; i < 49; i++)
              ctx.bits[i] = ks_bits[i];
-           fprintf (stderr,"DMR TYT EP (AES-128) Key %016llX %016llX with Forced Application\n", K1, K2);
+           fprintf (stderr,"DMR TYT EP (AES-128) Key %016llX%016llX with Forced Application\n", K1, K2);
            state.tyt_ep = 1;
+           break;
+
+         case '9':
+           /*
+            SLOT 1 Protected LC  FLCO=0x00 FID=0x20 <--this link appears to indicate scrambler usage from Kenwood on DMR
+            DMR PDU Payload [80][20][40][00][00][01][00][00][01] SB: 00000000000 - 000;
+
+            SLOT 1 TGT=1 SRC=1 FLCO=0x00 FID=0x00 SVC=0x00 Group Call <--same call, but no scrambler on same Kenwood Radio
+            DMR PDU Payload [00][00][00][00][00][01][00][00][01]
+
+            For This, we could possible transition this to not be enforced
+            since we may have a positive indicator in link control, 
+            but needs further samples and validation
+           */
+           int lfsr = 0, bit = 0;
+           sscanf (optarg, "%ld", &lfsr);
+           fprintf (stderr,"DMR Kenwood 15-bit Scrambler Key %05d with Forced Application\n", lfsr); 
+           for (int i = 0; i < 882; i++)
+           {
+             state.static_ks_bits[0][i] = lfsr & 0x1;
+             state.static_ks_bits[1][i] = lfsr & 0x1;
+             bit = ( (lfsr >> 1) ^ (lfsr >> 0) ) & 1;
+             lfsr =  ( (lfsr >> 1 ) | (bit << 14) );
+           }
+           
+           state.ken_sc = 1;
            break;
  
          case '3':
