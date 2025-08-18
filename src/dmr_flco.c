@@ -57,7 +57,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   source = (uint32_t)ConvertBitIntoBytes(&lc_bits[48], 24);
 
   //Kenwood w/ Scrambler Application on DMR (disable this if clash with other link control, its obscure)
-  uint8_t is_kenwood_sc = 1;
+  uint8_t is_kenwood_sc = 0;
   if (*IrrecoverableErrors == 0 && CRCCorrect == 1 && pf == 1 && fid == 0x20 && (so & 0x40) == 0x40)
   {
     pf = 0; //turn off PF flag
