@@ -67,6 +67,10 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     state->static_ks_counter[state->currentslot] = 0;
 
     is_kenwood_sc = 1;
+
+    //if forcing a keystream, remove the service options for this to unmute (workaround for now, need to fix in audio)
+    if (state->ken_sc == 1)
+      so = 0;
   }
 
   //read ahead a little to get this for the xpt flag
