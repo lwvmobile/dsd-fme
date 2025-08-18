@@ -2075,7 +2075,7 @@
             but needs further samples and validation
            */
            int lfsr = 0, bit = 0;
-           sscanf (optarg, "%ld", &lfsr);
+           sscanf (optarg, "%d", &lfsr);
            fprintf (stderr,"DMR Kenwood 15-bit Scrambler Key %05d with Forced Application\n", lfsr); 
            for (int i = 0; i < 882; i++)
            {
