@@ -1622,6 +1622,11 @@ void aes_ctr_bitwise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * paylo
 
 //Tytera Encryption Modes
 void tyt16_ambe2_codeword_keystream(dsd_state * state, char ambe_fr[4][24], int fnum);
+void tyt_ep_aes_keystream_creation(dsd_state * state, char * input);
+void tyt_ap_pc4_keystream_creation(dsd_state * state, char * input);
+
+//Misc Other Encryption Modes
+void ken_dmr_scrambler_keystream_creation(dsd_state * state, char * input);
 
 //Hytera Enhanced
 void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value);

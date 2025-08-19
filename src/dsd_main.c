@@ -25,7 +25,6 @@
  #include "dmr_const.h"
  #include "provoice_const.h"
  #include "git_ver.h"
- #include "pc4.h"
  
  #include <signal.h>
  
@@ -34,30 +33,6 @@
  #endif
  
  volatile uint8_t exitflag; //fix for issue #136
- 
- void tyt_ap_init()
- {
-  unsigned char key1[16] = {0};
-  unsigned char key2[16] = {0};
-
-  char buf[1024];
-  strncpy(buf, optarg, sizeof(buf) - 1);
-  buf[sizeof(buf) - 1] = '\0';
-
-  char *pEnd;
-  uint64_t K1 = strtoull(buf, &pEnd, 16);
-  uint64_t K2 = strtoull(pEnd, &pEnd, 16);
-
-  u64_to_bytes_be(K1, &key1[0]);
-  u64_to_bytes_be(K2, &key1[8]);
-  
-  for (int i=0;i<16;i++) key2[i] = key1[15-i];
-
- /* Create key schedule */
-  create_keys(&ctx, key2, sizeof(key2));
-  ctx.rounds = nbround;
-    
- }
 
  void handler(int sgnl)
  {
@@ -2003,89 +1978,17 @@
 
          //get user TYT AP Key and Force Its application
          case '!':
-           tyt_ap_init();
-           state.tyt_ap = 1;
-           fprintf (stderr,"DMR TYT AP (PC4) 128-bit Key with Forced Application\n");
+           tyt_ap_pc4_keystream_creation(&state, optarg);
            break;
  
          //get user TYT EP Key and Force Its application
          case '5':
-           //TODO: This, or combine with above with -! AP:KEY or EP:KEY (or similar)
-           strncpy(opts.szNumbers, optarg, 1023);
-           opts.szNumbers[1023] = '\0';
-           unsigned long long int K1 = strtoull (opts.szNumbers, &pEnd, 16);
-           unsigned long long int K2 = strtoull (pEnd, &pEnd, 16);
-           uint8_t static_key[32];
-           memset(static_key, 0, sizeof(static_key));
-
-           //static key value
-           static_key[0]=0x6e;  static_key[1]=0x02;  static_key[2]=0x8d;  static_key[3]=0x8a;
-           static_key[4]=0xca;  static_key[5]=0xeb;  static_key[6]=0x9b;  static_key[7]=0xbe;
-           static_key[8]=0x42;  static_key[9]=0x72;  static_key[10]=0xfb; static_key[11]=0x82;
-           static_key[12]=0x64; static_key[13]=0x56; static_key[14]=0x31; static_key[15]=0xfa;
-
-           //the key value provided by user
-           uint8_t user_key[16];
-           memset(user_key, 0, sizeof(user_key));
-
-           //Load user key into array to manipulate
-           for (int i = 0; i < 8; i++)
-           {
-             user_key[i+0]  = (K1 >> (56-(i*8))) & 0xFF;
-             user_key[i+8]  = (K2 >> (56-(i*8))) & 0xFF;
-           }
-
-           uint8_t input_register[16];
-           memset(input_register, 0, sizeof(input_register));
-
-           //manipulate user provided key by loading bytes in reverse order into the input_register
-           for (int i = 0; i < 16; i++)
-            input_register[15-i] = user_key[i];
-
-           uint8_t ks_bytes[16];
-           memset(ks_bytes, 0, sizeof(ks_bytes));
-
-           //NOTE: To clarify, TYT EP uses ECB mode with the user key as input_register and the static key in the
-           //forward (encryption) direction, but we are calling OFB mode because the first round is the
-           //same concept and we only need the first round output, OFB is easier to use anyways.
-
-           //create keystream
-           aes_ofb_keystream_output(input_register, static_key, ks_bytes, 0, 1);
-           uint8_t ks_bits[128];
-           memset(ks_bits, 0, sizeof(ks_bits));
-           unpack_byte_array_into_bit_array(ks_bytes, ks_bits, 16);
-
-           //load static keystream into ctx.bits since that isn't ever zeroed out
-           for (int i = 0; i < 49; i++)
-             ctx.bits[i] = ks_bits[i];
-           fprintf (stderr,"DMR TYT EP (AES-128) Key %016llX%016llX with Forced Application\n", K1, K2);
-           state.tyt_ep = 1;
+           tyt_ep_aes_keystream_creation(&state, optarg);
            break;
 
+         //get user Kenwood DMR Scrambler Key
          case '9':
-           /*
-            SLOT 1 Protected LC  FLCO=0x00 FID=0x20 <--this link appears to indicate scrambler usage from Kenwood on DMR
-            DMR PDU Payload [80][20][40][00][00][01][00][00][01] SB: 00000000000 - 000;
-
-            SLOT 1 TGT=1 SRC=1 FLCO=0x00 FID=0x00 SVC=0x00 Group Call <--same call, but no scrambler on same Kenwood Radio
-            DMR PDU Payload [00][00][00][00][00][01][00][00][01]
-
-            For This, we could possible transition this to not be enforced
-            since we may have a positive indicator in link control, 
-            but needs further samples and validation
-           */
-           int lfsr = 0, bit = 0;
-           sscanf (optarg, "%d", &lfsr);
-           fprintf (stderr,"DMR Kenwood 15-bit Scrambler Key %05d with Forced Application\n", lfsr); 
-           for (int i = 0; i < 882; i++)
-           {
-             state.static_ks_bits[0][i] = lfsr & 0x1;
-             state.static_ks_bits[1][i] = lfsr & 0x1;
-             bit = ( (lfsr >> 1) ^ (lfsr >> 0) ) & 1;
-             lfsr =  ( (lfsr >> 1 ) | (bit << 14) );
-           }
-           
-           state.ken_sc = 1;
+           ken_dmr_scrambler_keystream_creation(&state, optarg);
            break;
  
          case '3':
@@ -3193,36 +3096,6 @@
              fprintf (stderr, "Expecting inverted M17 signals.\n");
            }
            break;
-         case 'A':
-           sscanf (optarg, "%i", &opts.mod_threshold);
-           fprintf (stderr,"Setting C4FM/QPSK auto detection threshold to %i\n", opts.mod_threshold);
-           break; //this was missing a break
- 
-         //Disabled and switches reassigned to M17 User Data Argumeents
-         // case 'S': //disabled, using for M17 encoder user SMS message
-         //   sscanf (optarg, "%i", &opts.ssize);
-         //   if (opts.ssize > 128)
-         //     {
-         //       opts.ssize = 128;
-         //     }
-         //   else if (opts.ssize < 1)
-         //     {
-         //       opts.ssize = 1;
-         //     }
-         //   fprintf (stderr,"Setting QPSK symbol buffer to %i\n", opts.ssize);
-         //   break;
-         // case 'M': //disabled, using for M17 user data
-         //   sscanf (optarg, "%i", &opts.msize);
-         //   if (opts.msize > 1024)
-         //     {
-         //       opts.msize = 1024;
-         //     }
-         //   else if (opts.msize < 1)
-         //     {
-         //       opts.msize = 1;
-         //     }
-         //   fprintf (stderr,"Setting QPSK Min/Max buffer to %i\n", opts.msize);
-         //   break;
  
          case 'r':
            opts.playfiles = 1;
