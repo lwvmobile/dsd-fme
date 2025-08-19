@@ -1423,20 +1423,15 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l)); //P25p1 FDMA 8k/1 channel -f1 switch
   }
 
-  //static wav file saving, if using old method (fallback if issues arise, but disable all in dsd_audio2.c)
-  // if (opts->static_wav_file == 1 && opts->wav_out_f != NULL)
-  // {
-  //   if (state->currentslot == 0)
-  //   {
-  //     if (state->dmr_encL == 0 || opts->dmr_mute_encL == 0)
-  //       writeSynthesizedVoice (opts, state);
-  //   }
-  //   else if (state->currentslot == 1)
-  //   {
-  //     if (state->dmr_encR == 0 || opts->dmr_mute_encR == 0)
-  //       writeSynthesizedVoiceR (opts, state);
-  //   }
-  // }
+  //still need this for any switch that opens a 1 channel output config
+  if (opts->static_wav_file == 0)
+  {
+    //if using anything but DMR Stereo, borrowing state->dmr_encL to signal enc or clear for other types
+    if (opts->wav_out_f != NULL && opts->dmr_stereo == 0 && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0))
+    {
+      writeSynthesizedVoice (opts, state);
+    }
+  }
 
   //per call wav file writing for slot 1
   if (opts->dmr_stereo_wav == 1 && opts->dmr_stereo == 1 && state->currentslot == 0)

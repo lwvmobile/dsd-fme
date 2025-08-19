@@ -425,10 +425,24 @@ void M17processCodec2_1600(dsd_opts * opts, dsd_state * state, uint8_t * payload
 
   }
 
-  //WIP: Wav file saving -- still need a way to open/close/label wav files similar to call history
-  if(opts->wav_out_f != NULL && state->m17_enc == 0) //WAV
+  //Wav file saving
+  if(opts->wav_out_f != NULL && state->m17_enc == 0 && opts->dmr_stereo_wav == 1) //Per Call
   {
     sf_write_short(opts->wav_out_f, samp1, nsam);
+  }
+  else if (opts->wav_out_f != NULL && state->m17_enc == 0 && opts->static_wav_file == 1) //Static Wav File
+  {
+    //convert to stereo for new static wav file setup
+    short ss[nsam*2];
+    memset (ss, 0, sizeof(ss));
+
+    for (i = 0; i < nsam; i++)
+    {
+      ss[(i*2)+0] = samp1[i];
+      ss[(i*2)+1] = samp1[i];
+    }
+
+    sf_write_short(opts->wav_out_f, ss, nsam*2);
   }
 
   //TODO: Codec2 Raw file saving
@@ -559,11 +573,36 @@ void M17processCodec2_3200(dsd_opts * opts, dsd_state * state, uint8_t * payload
 
   }
 
-  //WIP: Wav file saving -- still need a way to open/close/label wav files similar to call history
-  if(opts->wav_out_f != NULL && state->m17_enc == 0) //WAV
+  //Wav file saving
+  if(opts->wav_out_f != NULL && state->m17_enc == 0 && opts->dmr_stereo_wav == 1) //WAV
   {
     sf_write_short(opts->wav_out_f, samp1, nsam);
     sf_write_short(opts->wav_out_f, samp2, nsam);
+  }
+  else if (opts->wav_out_f != NULL && state->m17_enc == 0 && opts->static_wav_file == 1) //Static Wav File
+  {
+    //convert to stereo for new static wav file setup
+    short ss[nsam*2];
+    memset (ss, 0, sizeof(ss));
+
+    for (i = 0; i < nsam; i++)
+    {
+      ss[(i*2)+0] = samp1[i];
+      ss[(i*2)+1] = samp1[i];
+    }
+
+    sf_write_short(opts->wav_out_f, ss, nsam*2);
+
+    memset (ss, 0, sizeof(ss));
+
+    for (i = 0; i < nsam; i++)
+    {
+      ss[(i*2)+0] = samp2[i];
+      ss[(i*2)+1] = samp2[i];
+    }
+
+    sf_write_short(opts->wav_out_f, ss, nsam*2);
+
   }
 
   //TODO: Codec2 Raw file saving

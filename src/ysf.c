@@ -732,7 +732,7 @@ void ysf_ehr (dsd_opts * opts, dsd_state * state, uint8_t dbuf[180], int start, 
     {
       // processAudio(opts, state); //needed here? -- nothign to test it with
 
-      if (opts->wav_out_f != NULL)
+      if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1)
         writeSynthesizedVoice (opts, state);
 
       if (opts->pulse_digi_out_channels == 1)
@@ -1021,8 +1021,9 @@ void processYSF(dsd_opts * opts, dsd_state * state)
       {
         processAudio(opts, state);
 
-        if (opts->wav_out_f != NULL)
+        if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1)
           writeSynthesizedVoice (opts, state);
+
         if (opts->pulse_digi_out_channels == 1)
           playSynthesizedVoiceMS(opts, state);
 
@@ -1140,7 +1141,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
       {
         // processAudio(opts, state); //needed here? -- seems to be running from within mbelib
 
-        if (opts->wav_out_f != NULL)
+        if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1)
           writeSynthesizedVoice (opts, state);
 
         if (opts->pulse_digi_out_channels == 1)

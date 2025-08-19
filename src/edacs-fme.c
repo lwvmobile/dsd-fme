@@ -461,11 +461,37 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       ncursesPrinter(opts, state);
 
     //write to wav file if opened
-    if (opts->wav_out_f != NULL)
+    if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1) //Per Call
     {
       sf_write_short(opts->wav_out_f, analog1, 960);
       sf_write_short(opts->wav_out_f, analog2, 960);
       sf_write_short(opts->wav_out_f, analog3, 960);
+    }
+    else if (opts->wav_out_f != NULL && opts->static_wav_file == 1) //Static Wav File
+    {
+      //downsample and stereo out (960 / 6 = 160; 160*2 = 320;)
+      short ss[320];
+      memset(ss, 0, sizeof(ss));
+      for (i = 0; i < 160; i++)
+      {
+        ss[(i*2)+0] = analog1[i*6]; //grab every 6th sample to downsample
+        ss[(i*2)+1] = analog1[i*6]; //grab every 6th sample to downsample
+      }
+      sf_write_short(opts->wav_out_f, ss, 320);
+      memset(ss, 0, sizeof(ss));
+      for (i = 0; i < 160; i++)
+      {
+        ss[(i*2)+0] = analog2[i*6]; //grab every 6th sample to downsample
+        ss[(i*2)+1] = analog2[i*6]; //grab every 6th sample to downsample
+      }
+      sf_write_short(opts->wav_out_f, ss, 320);
+      memset(ss, 0, sizeof(ss));
+      for (i = 0; i < 160; i++)
+      {
+        ss[(i*2)+0] = analog3[i*6]; //grab every 6th sample to downsample
+        ss[(i*2)+1] = analog3[i*6]; //grab every 6th sample to downsample
+      }
+      sf_write_short(opts->wav_out_f, ss, 320);
     }
 
     //debug
