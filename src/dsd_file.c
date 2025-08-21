@@ -1008,8 +1008,13 @@ uint16_t ambe2_str_to_decode(dsd_opts * opts, dsd_state * state, char * ambe_str
     if (opts->floating_point == 0)
       processAudio(opts, state);
 
-    if (opts->wav_out_f != NULL)
+    //per call wav files
+    if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1)
       writeSynthesizedVoice (opts, state);
+
+    //NOTE: Static Wav file is handled inside of playSynthesizedVoiceMS,
+    //but if using -o null to mute audio, then the static file will not contain audio
+    //TODO: Fix above to allow audio in wav even if not put out to speakers?
 
     if (opts->audio_out == 1 && opts->floating_point == 0)
       playSynthesizedVoiceMS (opts, state);
@@ -1114,8 +1119,13 @@ uint16_t imbe_str_to_decode(dsd_opts * opts, dsd_state * state, char * imbe_str,
     if (opts->floating_point == 0)
       processAudio(opts, state);
 
-    if (opts->wav_out_f != NULL)
+    //per call wav files
+    if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1)
       writeSynthesizedVoice (opts, state);
+
+    //NOTE: Static Wav file is handled inside of playSynthesizedVoiceMS,
+    //but if using -o null to mute audio, then the static file will not contain audio
+    //TODO: Fix above to allow audio in wav even if not put out to speakers?
 
     if (opts->audio_out == 1 && opts->floating_point == 0)
       playSynthesizedVoiceMS (opts, state);

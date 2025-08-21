@@ -87,7 +87,11 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
         {
           processAudio(opts, state);
         }
-        if (opts->wav_out_f != NULL)
+
+        //static wav file only, handled by playSynthesizedVoiceMS
+        //NOTE: if using -o null, playSynthesizedVoiceMS will not write to static wav file
+        //Per call will work, but will end up with a single file with no meta info
+        if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1)
         {
           writeSynthesizedVoice (opts, state);
         }
@@ -131,7 +135,11 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
         {
           processAudio(opts, state);
         }
-        if (opts->wav_out_f != NULL)
+
+        //static wav file only, handled by playSynthesizedVoiceMS
+        //NOTE: if using -o null, playSynthesizedVoiceMS will not write to static wav file
+        //Per call will work, but will end up with a single file with no meta info
+        if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1)
         {
           writeSynthesizedVoice (opts, state);
         }
@@ -811,33 +819,6 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         unpack_ambe(plain, ambe_d);
 
       }
-      
-      //DMR TYT AP, Either Slot (static single key'd enforced KS)
-      if (state->tyt_ap == 1)
-      {
-        
-        short frame1_cipher[49];
-        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
-        decrypt_frame_49(frame1_cipher);
- 
-        memset (ambe_d, 0, 49*sizeof(char));
-        for (int i = 0; i < 49; i++) ambe_d[i] = ctx.bits[i];
-
-      }
-
-      //DMR TYT EP, Either Slot (static single key'd enforced KS)
-      if (state->tyt_ep == 1)
-      {
-        for (int i = 0; i < 49; i++)
-          ambe_d[i] ^= (uint8_t)(ctx.bits[i] & 1);
-      }
-
-      //DMR Kenwood Scrambler, Either Slot (static single key'd enforced KS) //should probably break this up, but this is a test for now
-      if (state->ken_sc == 1)
-      {
-        for (int i = 0; i < 49; i++)
-          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%882] & 1); //Yikes!
-      }
 
       //P25p2 RC4 Handling, VCH 0
       if (state->currentslot == 0 && state->payload_algid == 0xAA && state->R != 0 && ((state->synctype == 35) || (state->synctype == 36)))
@@ -875,6 +856,40 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         memset (ambe_d, 0, 49*sizeof(char));
         unpack_ambe(plain, ambe_d);
 
+      }
+
+      //DMR TYT AP, Either Slot (static single key'd enforced KS)
+      if (state->tyt_ap == 1)
+      {
+        
+        short frame1_cipher[49];
+        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
+        decrypt_frame_49(frame1_cipher);
+ 
+        memset (ambe_d, 0, 49*sizeof(char));
+        for (int i = 0; i < 49; i++) ambe_d[i] = ctx.bits[i];
+
+      }
+
+      //DMR TYT EP, Either Slot (static single key'd enforced KS)
+      if (state->tyt_ep == 1)
+      {
+        for (int i = 0; i < 49; i++)
+          ambe_d[i] ^= (uint8_t)(ctx.bits[i] & 1);
+      }
+
+      //DMR Kenwood Scrambler, Either Slot (static single key'd enforced KS) //should probably break this up, but this is a test for now
+      if (state->ken_sc == 1)
+      {
+        for (int i = 0; i < 49; i++)
+          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%882] & 1); //Yikes!
+      }
+
+      //DMR Anytone BP, Either Slot (static single key'd enforced KS)
+      if (state->any_bp == 1)
+      {
+        for (int i = 0; i < 49; i++)
+          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%16] & 1); //Yikes!
       }
 
       mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
@@ -1208,6 +1223,40 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
       }
 
+      //DMR TYT AP, Either Slot (static single key'd enforced KS)
+      if (state->tyt_ap == 1)
+      {
+        
+        short frame1_cipher[49];
+        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
+        decrypt_frame_49(frame1_cipher);
+ 
+        memset (ambe_d, 0, 49*sizeof(char));
+        for (int i = 0; i < 49; i++) ambe_d[i] = ctx.bits[i];
+
+      }
+
+      //DMR TYT EP, Either Slot (static single key'd enforced KS)
+      if (state->tyt_ep == 1)
+      {
+        for (int i = 0; i < 49; i++)
+          ambe_d[i] ^= (uint8_t)(ctx.bits[i] & 1);
+      }
+
+      //DMR Kenwood Scrambler, Either Slot (static single key'd enforced KS) //should probably break this up, but this is a test for now
+      if (state->ken_sc == 1)
+      {
+        for (int i = 0; i < 49; i++)
+          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%882] & 1); //Yikes!
+      }
+
+      //DMR Anytone BP, Either Slot (static single key'd enforced KS)
+      if (state->any_bp == 1)
+      {
+        for (int i = 0; i < 49; i++)
+          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%16] & 1); //Yikes!
+      }
+
       mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
         ambe_d, state->cur_mp2, state->prev_mp2, state->prev_mp_enhanced2, opts->uvquality);
 
@@ -1224,22 +1273,6 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         saveAmbe2450DataR (opts, state, ambe_d);
       }
     }
-
-    //X2-TDMA? Not sure what still makes it this far to run under Framef
-    // if (opts->dmr_stereo == 0)
-    // {
-    //   mbe_processAmbe3600x2450Framef (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str, ambe_fr, ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
-    //   if (opts->payload == 1)
-    //   {
-    //     PrintAMBEData (opts, state, ambe_d);
-    //   }
-    //   //only save MBE files if not enc or unmuted, THIS does not seem to work for some reason
-    //   if (opts->mbe_out_f != NULL && (opts->unmute_encrypted_p25 == 1 || state->dmr_encL == 0) )
-    //   {
-    //     saveAmbe2450Data (opts, state, ambe_d);
-    //   }
-    // }
-
 
   }
 

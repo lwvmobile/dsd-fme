@@ -63,14 +63,13 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     pf = 0; //turn off PF flag
     fid = 0; //unclear if this signals FID (or is cipher type for scrambler)
 
-    //reset bit counter on static key bit counter (should do this after VC6 instead of relying on this, but meh, obscure cipher type)
-    state->static_ks_counter[state->currentslot] = 0;
+    //NOTE: bit counter reset is handled after vc6 voice now
 
     is_kenwood_sc = 1;
 
-    //if forcing a keystream, remove the service options for this to unmute (workaround for now, need to fix in audio)
+    //if forcing a keystream, flip the encryption bit for this to unmute
     if (state->ken_sc == 1)
-      so = 0;
+      so ^= 0x40;
   }
 
   //read ahead a little to get this for the xpt flag

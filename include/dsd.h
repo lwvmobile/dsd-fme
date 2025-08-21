@@ -994,6 +994,10 @@ typedef struct
 
   //kenwood scrambler on DMR with forced application
   int ken_sc;
+
+  //anytone bp
+  int any_bp;
+
   uint8_t static_ks_bits[2][882];
   int static_ks_counter[2];
 
@@ -1627,6 +1631,7 @@ void tyt_ap_pc4_keystream_creation(dsd_state * state, char * input);
 
 //Misc Other Encryption Modes
 void ken_dmr_scrambler_keystream_creation(dsd_state * state, char * input);
+void anytone_bp_keystream_creation(dsd_state * state, char * input);
 
 //Hytera Enhanced
 void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value);

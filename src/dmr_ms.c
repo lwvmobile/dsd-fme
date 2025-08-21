@@ -361,6 +361,9 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
   timestr = NULL;
  }
 
+ //reset static ks counter
+ state->static_ks_counter[0] = 0;
+
 }
 
 //collect buffered 1st half and get 2nd half voice payload and then jump to full MS Voice decoding.
@@ -368,6 +371,9 @@ void dmrMSBootstrap (dsd_opts * opts, dsd_state * state)
 {
 
   char * timestr = getTimeC();
+
+  //reset static ks counter
+  state->static_ks_counter[0] = 0;
 
   int i, dibit;
   int *dibit_p;

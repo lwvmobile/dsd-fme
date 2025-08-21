@@ -1,4 +1,4 @@
-Build Version: AW 2025-175-ga5b9984 
+Build Version: AW 2025-181-g6f17162 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -44,18 +44,17 @@ Input/Output options:
   -g <float>    Audio Digital Output Gain  (Default: 0 = Auto;        )
                                            (Manual:  1 = 2%; 50 = 100%)
   -n <float>    Audio Analog  Output Gain  (Default: 0 = Auto; 0-100%  )
-  -w <file>     Output synthesized speech to a single static .wav file.
   -6 <file>     Output raw audio .wav file (48K/1). (WARNING! Large File Sizes 1 Hour ~= 360 MB)
   -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.
                  (Use ./folder for Nested Directory!)
                  (Use /path/to/folder for hard coded directory!)
                  (Use Before the -P option!)
-  -8            Enable Experimental Source Audio Monitor (Pulse Audio Output Only!)
-                 (Its recommended to use Squelch in SDR++ or GQRX, etc, if monitoring mixed analog/digital)
-  -P            Enable Per Call WAV file saving in AUTO and NXDN decoding classes
-                 (Per Call can only be used in Ncurses Terminal!)
-                 (Running in console will use static wav files)
-  -a            Enable Call Alert Beep (NCurses Terminal Only)
+  -8            Enable Source Audio Monitor
+                 (Set Squelch in RTL, SDR++ or GQRX, etc, if monitoring mixed analog/digital)
+  -w <file>     Output synthesized speech to a single static .wav file. (Do not use with -P Per Call Switch)
+  -P            Enable Per Call WAV file saving. (Do not use with -w filename.wav single wav file switch)
+                 (Per Call works with everything now and doesn't require ncurses terminal!)
+  -a            Enable Call Alert Beep
                  (Warning! Might be annoying.)
   -J <file>     Specify Filename for Event Log Output.
   -L <file>     Specify Filename for LRRP Data Output.
@@ -173,7 +172,7 @@ Advanced Decoder options:
                  
   -1 <hex>      Manually Enter RC4 or DES Key Value (DMR, P25, NXDN) (Hex Value) 
                  
-  -2 <hex>      Manually Enter and TYT Enforce 16-bit BP Key Value (DMR) (Hex Value) 
+  -2 <hex>      Manually Enter and Enforce TYT 16-bit BP Key Value (DMR) (Hex Value) 
                  
   -! <hex>      Manually Enter and Enforce TYT Advanced Privacy (PC4) AP Hex Key (see example below)
                  Encapulate in Single Quotation Marks; Space every 16 chars.
@@ -184,6 +183,8 @@ Advanced Decoder options:
                  -5 '736B9A9C5645288B 243AD5CB8701EF8A' 
                  
   -9 <dec>      Manually Enter and Enforce Kenwood 15-bit Scrambler Key Value (DMR) (Dec Value) 
+                 
+  -A <hex>      Manually Enter and Enforce Anytone 16-bit BP Key Value (DMR) (Hex Value) 
                  
   -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.
                   Only supports NXDN, DMR Basic Privacy (decimal value). 

@@ -586,6 +586,9 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
     if (internalslot == 0 && vc1 == 6) dmr_alg_refresh (opts, state);
     if (internalslot == 1 && vc2 == 6) dmr_alg_refresh (opts, state);
 
+    if (internalslot == 0 && vc1 == 6) state->static_ks_counter[0] = 0;
+    if (internalslot == 1 && vc2 == 6) state->static_ks_counter[1] = 0;
+
     if (opts->dmr_le != 2) //if not Hytera Enhanced
       dmr_late_entry_mi_fragment (opts, state, vc%7, m1, m2, m3);
 
@@ -714,11 +717,15 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
  }
 
  //
- if (timestr != NULL)
+  if (timestr != NULL)
   {
     free (timestr);
     timestr = NULL;
   }
+
+  //reset static ks counter
+  state->static_ks_counter[0] = 0;
+  state->static_ks_counter[1] = 0;
 
 }
 
@@ -789,6 +796,9 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
   if (tact_okay != 1) goto END;
 
   internalslot = state->currentslot = tact_bits[1];
+
+  //reset static ks counter
+  state->static_ks_counter[internalslot] = 0;
 
   //Setup for first AMBE Frame
 

@@ -1066,6 +1066,7 @@
    state->tyt_ep = 0;
 
    state->ken_sc = 0;
+   state->any_bp = 0;
  
    //ks array storage and counters
    memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
@@ -1423,25 +1424,24 @@
    printf ("  -g <float>    Audio Digital Output Gain  (Default: 0 = Auto;        )\n");
    printf ("                                           (Manual:  1 = 2%%; 50 = 100%%)\n");
    printf ("  -n <float>    Audio Analog  Output Gain  (Default: 0 = Auto; 0-100%%  )\n");
-   printf ("  -w <file>     Output synthesized speech to a single static .wav file.\n");
    printf ("  -6 <file>     Output raw audio .wav file (48K/1). (WARNING! Large File Sizes 1 Hour ~= 360 MB)\n");
    printf ("  -7 <dir>      Create/Use Custom directory for Per Call decoded .wav file saving.\n");
    printf ("                 (Use ./folder for Nested Directory!)\n");
    printf ("                 (Use /path/to/folder for hard coded directory!)\n");
    printf ("                 (Use Before the -P option!)\n");
-   printf ("  -8            Enable Experimental Source Audio Monitor (Pulse Audio Output Only!)\n");
-   printf ("                 (Its recommended to use Squelch in SDR++ or GQRX, etc, if monitoring mixed analog/digital)\n");
-   printf ("  -P            Enable Per Call WAV file saving in AUTO and NXDN decoding classes\n");
-   printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
-   printf ("                 (Running in console will use static wav files)\n");
-   printf ("  -a            Enable Call Alert Beep (NCurses Terminal Only)\n");
+   printf ("  -8            Enable Source Audio Monitor\n");
+   printf ("                 (Set Squelch in RTL, SDR++ or GQRX, etc, if monitoring mixed analog/digital)\n");
+   printf ("  -w <file>     Output synthesized speech to a single static .wav file. (Do not use with -P Per Call Switch)\n");
+   printf ("  -P            Enable Per Call WAV file saving. (Do not use with -w filename.wav single wav file switch)\n");
+   printf ("                 (Per Call works with everything now and doesn't require ncurses terminal!)\n");
+   printf ("  -a            Enable Call Alert Beep\n");
    printf ("                 (Warning! Might be annoying.)\n");
    printf ("  -J <file>     Specify Filename for Event Log Output.\n");
    printf ("  -L <file>     Specify Filename for LRRP Data Output.\n");
    printf ("  -Q <file>     Specify Filename for OK-DMRlib Structured File Output. (placed in DSP folder)\n");
    printf ("  -Q <file>     Specify Filename for M17 Float Stream Output. (placed in DSP folder)\n");
    printf ("  -c <file>     Output symbol capture to .bin file\n");
-   printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n");
+   printf ("  -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice\n"); //does this still work correctly?
    printf ("  -V <num>      Enable TDMA Voice Synthesis on Slot 1 (1), Slot 2 (2), or Both (3); Default is 3; \n");
    #ifdef __CYGWIN__
    printf ("                If using /dev/dsp input and output at 48k1, launch two instances of DSD-FME w -V 1 and -V 2 if needed\n");
@@ -1527,11 +1527,6 @@
    printf ("                 (Value defaults to max n bit value for site model size)\n");
    printf ("                 (Setting 0 will show full Site ID, no area/subarea)\n");
    printf ("\n");
-   // printf ("  -A <num>      QPSK modulation auto detection threshold (default=26)\n");
-   // printf ("  -S <num>      Symbol buffer size for QPSK decision point tracking\n");
-   // printf ("                 (default=36)\n");
-   // printf ("  -M <num>      Min/Max buffer size for QPSK decision point tracking\n");
-   // printf ("                 (default=15)\n");
    printf ("  -ma           Auto-select modulation optimizations\n");
    printf ("  -mc           Use only C4FM modulation optimizations (default)\n");
    printf ("  -mg           Use only GFSK modulation optimizations\n");
@@ -1562,7 +1557,7 @@
    printf ("                 \n");
    printf ("  -1 <hex>      Manually Enter RC4 or DES Key Value (DMR, P25, NXDN) (Hex Value) \n");
    printf ("                 \n");
-   printf ("  -2 <hex>      Manually Enter and TYT Enforce 16-bit BP Key Value (DMR) (Hex Value) \n");
+   printf ("  -2 <hex>      Manually Enter and Enforce TYT 16-bit BP Key Value (DMR) (Hex Value) \n");
    printf ("                 \n");
    printf ("  -! <hex>      Manually Enter and Enforce TYT Advanced Privacy (PC4) AP Hex Key (see example below)\n");
    printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
@@ -1573,6 +1568,8 @@
    printf ("                 -5 '736B9A9C5645288B 243AD5CB8701EF8A' \n");
    printf ("                 \n");
    printf ("  -9 <dec>      Manually Enter and Enforce Kenwood 15-bit Scrambler Key Value (DMR) (Dec Value) \n");
+   printf ("                 \n");
+   printf ("  -A <hex>      Manually Enter and Enforce Anytone 16-bit BP Key Value (DMR) (Hex Value) \n");
    printf ("                 \n");
    printf ("  -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.\n");
    printf ("                  Only supports NXDN, DMR Basic Privacy (decimal value). \n");
@@ -1986,9 +1983,14 @@
            tyt_ep_aes_keystream_creation(&state, optarg);
            break;
 
-         //get user Kenwood DMR Scrambler Key
+         //get user Kenwood DMR Scrambler Key and Force Its application
          case '9':
            ken_dmr_scrambler_keystream_creation(&state, optarg);
+           break;
+
+         //get user Anytone BP Key and Force Its application
+         case 'A':
+           anytone_bp_keystream_creation(&state, optarg);
            break;
  
          case '3':
