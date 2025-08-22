@@ -71,3 +71,56 @@ void anytone_bp_keystream_creation(dsd_state * state, char * input)
   state->any_bp = 1;
 
 }
+
+void straight_mod_xor_keystream_creation(dsd_state * state, char * input)
+{
+  uint16_t len = 0;
+  char * curr;
+  curr = strtok(input, ":"); //should be len (mod) of key (decimal)
+  if (curr != NULL)
+    sscanf (curr, "%hd", &len);
+  else goto END_KS;
+
+  //len sanity check, can't be greater than 882
+  if (len > 882)
+    len = 882;
+
+  curr = strtok(NULL, ":"); //should be key in hex
+  if (curr != NULL)
+  {
+    //continue
+  }
+  else goto END_KS;
+
+  uint8_t ks_bytes[112];
+  memset (ks_bytes, 0, sizeof(ks_bytes));
+  parse_raw_user_string(curr, ks_bytes);
+
+  uint8_t ks_bits[896];
+  memset(ks_bits, 0, sizeof(ks_bits));
+
+  uint16_t unpack_len = len / 8;
+  if (len % 8)
+    unpack_len++;
+  unpack_byte_array_into_bit_array(ks_bytes, ks_bits, unpack_len);
+
+  for (uint16_t i = 0; i < len; i++)
+  {
+    state->static_ks_bits[0][i] = ks_bits[i];
+    state->static_ks_bits[1][i] = ks_bits[i];
+  }
+
+  fprintf (stderr,"AMBE Straight XOR %d-bit Keystream: ", len);
+  for (uint16_t i = 0; i < unpack_len; i++)
+    fprintf (stderr, "%02X", ks_bytes[i]);
+  fprintf (stderr, " with Forced Application \n");
+
+  state->straight_ks = 1;
+  state->straight_mod = (int)len;
+
+  END_KS:
+
+  if (curr == NULL)
+    fprintf (stderr, "Straight KS String Malformed! No KS Created!\n");
+
+}

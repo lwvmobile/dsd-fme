@@ -1067,6 +1067,8 @@
 
    state->ken_sc = 0;
    state->any_bp = 0;
+   state->straight_ks = 0;
+   state->straight_mod = 0;
  
    //ks array storage and counters
    memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
@@ -1485,8 +1487,8 @@
    printf ("                  Input Rate Default is 48000; Use Multiples of 8000 up to 48000.\n");
    printf ("                  VOX Enabled on 1; (Default = 0)\n");
    printf ("                  Values not entered into the M17: string are set to default values.\n");
-   printf ("  -S            M17 Packet Encoder SMS String: No more than 772 chars, use single quotations (see example above).\n");
-   printf ("  -S            M17 Stream Encoder SMS String: No more than  48 chars, activates 1600 voice  (best if broken into six 8 char chunks).\n");
+  //  printf ("  -S            M17 Packet Encoder SMS String: No more than 772 chars, use single quotations (see example above).\n");
+  //  printf ("  -S            M17 Stream Encoder SMS String: No more than  48 chars, activates 1600 voice  (best if broken into six 8 char chunks).\n");
    printf ("Decoder options:\n");
    printf ("  -fa           Auto Detection\n");
    printf ("  -fA           Passive Analog Audio Monitor\n");
@@ -1570,6 +1572,14 @@
    printf ("  -9 <dec>      Manually Enter and Enforce Kenwood 15-bit Scrambler Key Value (DMR) (Dec Value) \n");
    printf ("                 \n");
    printf ("  -A <hex>      Manually Enter and Enforce Anytone 16-bit BP Key Value (DMR) (Hex Value) \n");
+   printf ("                 \n");
+   printf ("  -S <str>      Manually Enter and Enforce Generic Static Keystream -> Length and BYTE PACKED / ALIGNED String for AMBE (up to 882 bits)\n");
+   printf ("                  For Example, enter 16-bit Keystream 0909 as:\n");
+   printf ("                    -S 16:0909\n");
+   printf ("                  For Example, enter 49-bit Keystream as:\n");
+   printf ("                    -S 49:123456789ABC80\n");
+   printf ("                  For Example, enter 49-bit Keystream (MBP 70) as:\n");
+   printf ("                    -S 49:ED0AED4AED4AED4A\n");
    printf ("                 \n");
    printf ("  -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.\n");
    printf ("                  Only supports NXDN, DMR Basic Privacy (decimal value). \n");
@@ -1931,12 +1941,12 @@
            state.m17dat[49] = '\0';
            break;
  
-         //Specify M17 encoder SMS Message (truncates at 772)
-         case 'S':
-           strncpy(state.m17sms, optarg, 772);
-           state.m17sms[772] = '\0';
-           state.m17_str_dt = 3; //flip this so that STR encoder knows to use 1600 voice + data
-           break;
+        //  //Specify M17 encoder SMS Message (truncates at 772)
+        //  case 'S':
+        //    strncpy(state.m17sms, optarg, 772);
+        //    state.m17sms[772] = '\0';
+        //    state.m17_str_dt = 3; //flip this so that STR encoder knows to use 1600 voice + data
+        //    break;
  
          //specify TG Hold value
          case 'I':
@@ -1991,6 +2001,11 @@
          //get user Anytone BP Key and Force Its application
          case 'A':
            anytone_bp_keystream_creation(&state, optarg);
+           break;
+
+         //Straight KS Generation
+         case 'S':
+           straight_mod_xor_keystream_creation(&state, optarg);
            break;
  
          case '3':

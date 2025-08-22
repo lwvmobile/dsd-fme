@@ -892,6 +892,16 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%16] & 1); //Yikes!
       }
 
+      //Generic Straight Static Keystream
+      if (state->straight_ks == 1)
+      {
+        //disable enc identifiers, if present
+        state->dmr_so = 0;
+        state->payload_algid = 0;
+        for (int i = 0; i < 49; i++)
+          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%state->straight_mod] & 1); //Yikes!
+      }
+
       mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
         ambe_d, state->cur_mp, state->prev_mp, state->prev_mp_enhanced, opts->uvquality);
 
@@ -1255,6 +1265,16 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       {
         for (int i = 0; i < 49; i++)
           ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%16] & 1); //Yikes!
+      }
+
+      //Generic Straight Static Keystream
+      if (state->straight_ks == 1)
+      {
+        //disable enc identifiers, if present
+        state->dmr_soR = 0;
+        state->payload_algidR = 0;
+        for (int i = 0; i < 49; i++)
+          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%state->straight_mod] & 1); //Yikes!
       }
 
       mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
