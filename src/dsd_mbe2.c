@@ -123,8 +123,10 @@ void soft_mbe (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char amb
     if (opts->floating_point == 1 && opts->pulse_digi_out_channels == 2)
       playSynthesizedVoiceFS(opts, state);
 
-    if (opts->wav_out_f != NULL)
+    if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1)
       writeSynthesizedVoice (opts, state);
+
+    //single wav file handled by playSynthesizedVoiceMS
 
     if (opts->mbe_out_f != NULL)
       saveAmbe2450Data (opts, state, ambe_d);

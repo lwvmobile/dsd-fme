@@ -650,6 +650,42 @@ void writeSynthesizedVoiceR (dsd_opts * opts, dsd_state * state)
 
 }
 
+//short Mono to Stereo version for new static .wav files in stereo format for TDMA
+void writeSynthesizedVoiceMS (dsd_opts * opts, dsd_state * state)
+{
+  int n;
+  short aout_buf[160];
+  short *aout_buf_p;
+
+  aout_buf_p = aout_buf;
+  state->audio_out_temp_buf_p = state->audio_out_temp_buf;
+
+  for (n = 0; n < 160; n++)
+  {
+    if (*state->audio_out_temp_buf_p > (float) 32767)
+      {
+        *state->audio_out_temp_buf_p = (float) 32767;
+      }
+    else if (*state->audio_out_temp_buf_p < (float) -32768)
+      {
+        *state->audio_out_temp_buf_p = (float) -32768;
+      }
+      *aout_buf_p = (short) *state->audio_out_temp_buf_p;
+      aout_buf_p++;
+      state->audio_out_temp_buf_p++;
+  }
+
+  short ss[320];
+  for (n = 0; n < 160; n++)
+  {
+    ss[(n*2)+0] = aout_buf[n];
+    ss[(n*2)+1] = aout_buf[n];
+  }
+
+  sf_write_short(opts->wav_out_f, ss, 320);
+
+}
+
 void writeRawSample (dsd_opts * opts, dsd_state * state, short sample)
 {
   UNUSED(state);

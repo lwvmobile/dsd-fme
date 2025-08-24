@@ -1126,6 +1126,7 @@ void closePulseInput (dsd_opts * opts);
 void closePulseOutput (dsd_opts * opts);
 void writeSynthesizedVoice (dsd_opts * opts, dsd_state * state);
 void writeSynthesizedVoiceR (dsd_opts * opts, dsd_state * state);
+void writeSynthesizedVoiceMS (dsd_opts * opts, dsd_state * state); //short mono to stereo wav file
 void playSynthesizedVoice (dsd_opts * opts, dsd_state * state);   //short mono output slot 1
 void playSynthesizedVoiceR (dsd_opts * opts, dsd_state * state);  //short mono output slot 2
 //new float stuff

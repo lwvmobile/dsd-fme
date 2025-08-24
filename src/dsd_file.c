@@ -1012,14 +1012,21 @@ uint16_t ambe2_str_to_decode(dsd_opts * opts, dsd_state * state, char * ambe_str
     if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1)
       writeSynthesizedVoice (opts, state);
 
-    //NOTE: Static Wav file is handled inside of playSynthesizedVoiceMS,
-    //but if using -o null to mute audio, then the static file will not contain audio
-    //TODO: Fix above to allow audio in wav even if not put out to speakers?
+    //static wav file
+    if (opts->wav_out_f != NULL && opts->static_wav_file == 1)
+      writeSynthesizedVoiceMS (opts, state);
 
+    //to make the static wav file work, I had to write a work around
+    //to either play audio from left only when writing wav files,
+    //or to play from both speakers if not doing either per-call or static wav
     if (opts->audio_out == 1 && opts->floating_point == 0)
-      playSynthesizedVoiceMS (opts, state);
+    {
+      if (opts->static_wav_file == 1 || opts->dmr_stereo_wav == 1)
+        playSynthesizedVoice (opts, state);
+      else playSynthesizedVoiceMS (opts, state);
+    }
 
-    if (opts->floating_point == 1)
+    if (opts->audio_out == 1 && opts->floating_point == 1)
     {
       memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
       playSynthesizedVoiceFM (opts, state);
@@ -1123,14 +1130,21 @@ uint16_t imbe_str_to_decode(dsd_opts * opts, dsd_state * state, char * imbe_str,
     if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1)
       writeSynthesizedVoice (opts, state);
 
-    //NOTE: Static Wav file is handled inside of playSynthesizedVoiceMS,
-    //but if using -o null to mute audio, then the static file will not contain audio
-    //TODO: Fix above to allow audio in wav even if not put out to speakers?
+    //static wav file
+    if (opts->wav_out_f != NULL && opts->static_wav_file == 1)
+      writeSynthesizedVoiceMS (opts, state);
 
+    //to make the static wav file work, I had to write a work around
+    //to either play audio from left only when writing wav files,
+    //or to play from both speakers if not doing either per-call or static wav
     if (opts->audio_out == 1 && opts->floating_point == 0)
-      playSynthesizedVoiceMS (opts, state);
+    {
+      if (opts->static_wav_file == 1 || opts->dmr_stereo_wav == 1)
+        playSynthesizedVoice (opts, state);
+      else playSynthesizedVoiceMS (opts, state);
+    }
 
-    if (opts->floating_point == 1)
+    if (opts->audio_out == 1 && opts->floating_point == 1)
     {
       memcpy (state->f_l, state->audio_out_temp_buf, sizeof(state->f_l));
       playSynthesizedVoiceFM (opts, state);
@@ -1161,6 +1175,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
   size_t source_size;
 
   int8_t protocol = -1;
+  uint16_t version = 1; //any .mbe file that does not have a version field should be considered version 1
   uint32_t source = 0;
   uint32_t target = 0;
   int8_t gi = -1;
@@ -1191,7 +1206,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
   uint8_t ks[3000]; memset (ks, 0, sizeof(ks));
   uint16_t ks_idx = 0; //keystream index value
 
-  //P25p1 IMBE / IV out of order execution on .mbe files (luckily, AMBE is not affected)
+  //P25p1 IMBE / IV out of order execution on .mbe files (fixed in version 2 of .mbe file)
   uint8_t ks_i[3000]; memset (ks_i, 0, sizeof(ks_i));
   uint16_t ks_idx_i = 808; //keystream index value IMBE (start at 808 for out of order ESS)
   int imbe_counter = 0; //count IMBE frames for when to skip 2 bytes of ks and juggle keystreams
@@ -1214,6 +1229,21 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
     //debug print current str_buffer
     // fprintf (stderr, "%s", str_buffer);
+
+    if (strncmp ("version", str_buffer, 7) == 0)
+    {
+      str_buffer = strtok(NULL, " : \""); //next value after any : "" string
+
+      version = strtol (str_buffer, NULL, 10);
+
+      //debug set value
+      if (opts->payload == 1)
+        fprintf (stderr, "\n Version: %d;", version);
+
+      //debug print current str_buffer
+      // fprintf (stderr, "\n Version: %s", str_buffer);
+
+    }
 
     //compare and set items accordingly
     if (strncmp ("protocol", str_buffer, 8) == 0)
@@ -1437,7 +1467,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
         //reverse lfsr on IV and create keystream with that as well
         //due to out of order execution on P25p1 ESS sync.
-        if (protocol == 1)
+        if (protocol == 1 && version == 1)
         {
           reverse_lfsr_64_to_len (opts, kiv+5, 64);
 
@@ -1460,6 +1490,9 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       //and recover the previous LFSR and make two keystreams in order
       //to properly decrypt the initial frame, and then juggle the 
       //keystreams in code to provide a smooth decryption session of P25p1.
+
+      //Update: There is a pull request available now, and using a version value,
+      //we will be able to do either format (ESS out of order vs ESS in correct order)
 
       //reset ks_idx to 0
       ks_idx = 0;
@@ -1484,17 +1517,27 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         imbe_counter++;
 
         //36 hex characters on 'hex' which is the IMBE interleaved C codewords
-        ks_idx_i = imbe_str_to_decode(opts, state, str_buffer, ks_i, ks_idx_i, is_enc, ks_available);
+        if (version == 1)
+          ks_idx_i = imbe_str_to_decode(opts, state, str_buffer, ks_i, ks_idx_i, is_enc, ks_available);
+        else ks_idx = imbe_str_to_decode(opts, state, str_buffer, ks, ks_idx, is_enc, ks_available);
 
         //skip LSD bits in-between these two IMBE voice frames
         if (imbe_counter == 8 || imbe_counter == 17)
           ks_idx_i += 16;
 
-        //juggle keystreams and reset the I counter
-        if (imbe_counter == 9)
+        //juggle keystreams and reset the I counter (if version 1)
+        if (imbe_counter == 9 && version == 1)
         {
           memcpy (ks_i, ks, sizeof(ks_i));
           ks_idx_i = 0;
+
+          //debug
+          // fprintf (stderr, " LDU2;");
+        }
+        //reset keystream idx after frame 18
+        else if (imbe_counter == 18 && version == 2)
+        {
+          ks_idx = 0;
 
           //debug
           // fprintf (stderr, " LDU2;");
