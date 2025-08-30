@@ -1899,7 +1899,7 @@
  
    exitflag = 0;
  
-   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF:!:01:2:345:6:7:89:Ek:I:J:O")) != -1)
+   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF!:01:2:345:6:7:89:Ek:I:J:O")) != -1)
      {
  
        switch (c)
