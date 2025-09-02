@@ -1038,7 +1038,7 @@ void nxdn_deperm_cac(dsd_opts * opts, dsd_state * state, uint8_t bits[300])
 	}
 
 	//switch to the convolutional decoder
-	uint8_t temp[179];
+	uint8_t temp[350];
 	uint8_t s0;
   uint8_t s1;
 	uint8_t m_data[22]; //26
