@@ -85,7 +85,7 @@ int ez_rs28_facch (int payload[156], int parity[114])
   int i, j, k, b;
 
   //init HB
-  for (i = 0; i < 64; i++)
+  for (i = 0; i < (int)HB.size(); i++)
   {
 	HB[i] = 0;
   }
@@ -136,7 +136,7 @@ int ez_rs28_sacch (int payload[180], int parity[132])
   int i, j, k, b;
 
   //init HBS
-  for (i = 0; i < 64; i++)
+  for (i = 0; i < (int)HBS.size(); i++)
   {
 	HBS[i] = 0;
   }
