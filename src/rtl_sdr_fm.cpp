@@ -83,6 +83,109 @@ static inline int16_t sat16(int32_t x)
     return (int16_t)x;
 }
 
+/* =====================
+   Half-band FIR decimator (2:1) - Q15 taps
+   ===================== */
+
+/* Runtime flag (default enabled). Set DSD_FME_HB_DECIM=0 to use legacy decimator */
+static int use_halfband_decimator = 1;
+
+/* 15-tap half-band low-pass coefficients, Q15 scaled.
+   Odd-indexed taps are zero; center tap is 0.5 (16384). The remaining even taps
+   sum to 0.5 to yield unity DC gain. Coefficients are symmetric. */
+#define HB_TAPS 15
+#define HB_HALF ((HB_TAPS - 1) / 2)
+static const int16_t hb_q15_taps[HB_TAPS] = {
+	-108,    0,  1800,    0,  -500,    0,  7000, 16384,
+	 7000,   0,  -500,    0,  1800,    0,   -108
+};
+
+/* Decimate one real channel by 2 using half-band FIR with persistent left history.
+   - in:       pointer to real samples
+   - in_len:   number of real samples
+   - out:      pointer to output buffer (size >= in_len/2)
+   - hist:     persistent history of length HB_TAPS-1 (left wing)
+   Returns number of output samples written (in_len/2). */
+static inline int hb_decim2_real(const int16_t *in, int in_len, int16_t *out, int16_t *hist)
+{
+	const int hist_len = HB_TAPS - 1;
+	/* Pad right side by repeating last sample to avoid needing future context */
+	int16_t last = (in_len > 0) ? in[in_len - 1] : 0;
+	/* For simplicity, operate via a small ringless window into a temp view using hist + in + right pad (virtually). */
+	int out_len = in_len >> 1; /* floor */
+	for (int n = 0; n < out_len; n++) {
+		int center_idx = hist_len + (n << 1); /* position in the concatenated [hist | in] domain */
+		int64_t acc = 0;
+		/* Convolution around center: taps indexed 0..HB_TAPS-1 */
+		for (int t = 0; t < HB_TAPS; t++) {
+			int src_idx = center_idx - HB_HALF + t;
+			int16_t x;
+			if (src_idx < hist_len) {
+				x = hist[src_idx];
+			} else {
+				int rel = src_idx - hist_len;
+				x = (rel < in_len) ? in[rel] : last;
+			}
+			acc += (int32_t)hb_q15_taps[t] * (int32_t)x;
+		}
+		/* Q15 -> Q0 with rounding */
+		acc += (1 << 14);
+		int32_t y = (int32_t)(acc >> 15);
+		out[n] = sat16(y);
+	}
+	/* Update history with the last (HB_TAPS-1) input samples for next call */
+	if (in_len >= hist_len) {
+		memcpy(hist, in + (in_len - hist_len), (size_t)hist_len * sizeof(int16_t));
+	} else {
+		/* Not enough samples: keep tail of previous hist and append current */
+		int need = hist_len - in_len;
+		if (need > 0) {
+			/* shift left existing hist */
+			memmove(hist, hist + in_len, (size_t)need * sizeof(int16_t));
+		}
+		memcpy(hist + need, in, (size_t)in_len * sizeof(int16_t));
+	}
+	return out_len;
+}
+
+/* One 2:1 decimation stage on interleaved I/Q, using per-stage histories. */
+static inline int hb_decim2_complex_stage(const int16_t *in_iq, int in_iq_len,
+	int16_t *out_iq, int16_t *hist_i, int16_t *hist_q)
+{
+	/* in_iq_len is count of interleaved samples (I,Q,I,Q,...) */
+	int ch_len = in_iq_len >> 1; /* samples per channel */
+	if (ch_len <= 0) {
+		return 0;
+	}
+	/* Deinterleave into contiguous I and Q working buffers */
+	std::vector<int16_t> i_buf;
+	std::vector<int16_t> q_buf;
+	i_buf.resize((size_t)ch_len);
+	q_buf.resize((size_t)ch_len);
+	for (int k = 0, j = 0; j < in_iq_len; j += 2, k++) {
+		i_buf[(size_t)k] = in_iq[(size_t)j];
+		q_buf[(size_t)k] = in_iq[(size_t)j + 1];
+	}
+	/* Output per channel */
+	int out_ch_len;
+	{
+		/* Reuse i_buf as input; produce into temporary then interleave */
+		std::vector<int16_t> i_out;
+		std::vector<int16_t> q_out;
+		i_out.resize((size_t)(ch_len >> 1));
+		q_out.resize((size_t)(ch_len >> 1));
+		int ilen = hb_decim2_real(i_buf.data(), ch_len, i_out.data(), hist_i);
+		int qlen = hb_decim2_real(q_buf.data(), ch_len, q_out.data(), hist_q);
+		out_ch_len = (ilen < qlen) ? ilen : qlen;
+		/* Interleave back */
+		for (int n = 0; n < out_ch_len; n++) {
+			out_iq[(size_t)(2*n)]     = i_out[(size_t)n];
+			out_iq[(size_t)(2*n + 1)] = q_out[(size_t)n];
+		}
+	}
+	return out_ch_len << 1; /* interleaved sample count */
+}
+
 static void atan_lut_once_init(void)
 {
 	int i;
@@ -164,6 +267,10 @@ struct demod_state
 	int      now_lpr;
 	int      prev_lpr_index;
 	int      dc_block, dc_avg;
+	/* Half-band decimator state */
+	int16_t  hb_workbuf[MAXIMUM_BUF_LENGTH];
+	int16_t  hb_hist_i[10][HB_TAPS-1];
+	int16_t  hb_hist_q[10][HB_TAPS-1];
 	int      (*discriminator)(int, int, int, int);
 	void     (*mode_demod)(struct demod_state*);
 	pthread_cond_t ready;
@@ -835,17 +942,39 @@ void full_demod(struct demod_state *d)
 	int i, ds_p;
 	ds_p = d->downsample_passes;
 	if (ds_p) {
-		for (i=0; i < ds_p; i++) {
-			fifth_order(d->lowpassed,   (d->lp_len >> i), d->lp_i_hist[i]);
-			fifth_order(d->lowpassed+1, (d->lp_len >> i) - 1, d->lp_q_hist[i]);
-		}
-		d->lp_len = d->lp_len >> ds_p;
-		/* droop compensation */
-		if (d->comp_fir_size == 9 && ds_p <= CIC_TABLE_MAX) {
-			generic_fir(d->lowpassed, d->lp_len,
-				cic_9_tables[ds_p], d->droop_i_hist);
-			generic_fir(d->lowpassed+1, d->lp_len-1,
-				cic_9_tables[ds_p], d->droop_q_hist);
+		/* Choose decimator: half-band cascade (default) or legacy path */
+		if (use_halfband_decimator) {
+			/* Apply ds_p stages of 2:1 half-band decimation on interleaved lowpassed */
+			int in_len = d->lp_len;
+			int16_t *src = d->lowpassed;
+			int16_t *dst = d->hb_workbuf;
+			for (i = 0; i < ds_p; i++) {
+				int out_len = hb_decim2_complex_stage(src, in_len, dst, d->hb_hist_i[i], d->hb_hist_q[i]);
+				/* Next stage uses previous output as input */
+				src = dst;
+				in_len = out_len;
+				/* swap buffers for next stage to avoid overwrite if needed */
+				dst = (src == d->hb_workbuf) ? d->lowpassed : d->hb_workbuf;
+			}
+			/* Final output resides in 'src' with length in_len */
+			if (d->lowpassed != src) {
+				memcpy(d->lowpassed, src, (size_t)in_len * sizeof(int16_t));
+			}
+			d->lp_len = in_len;
+			/* No droop compensation for half-band cascade */
+		} else {
+			for (i=0; i < ds_p; i++) {
+				fifth_order(d->lowpassed,   (d->lp_len >> i), d->lp_i_hist[i]);
+				fifth_order(d->lowpassed+1, (d->lp_len >> i) - 1, d->lp_q_hist[i]);
+			}
+			d->lp_len = d->lp_len >> ds_p;
+			/* droop compensation */
+			if (d->comp_fir_size == 9 && ds_p <= CIC_TABLE_MAX) {
+				generic_fir(d->lowpassed, d->lp_len,
+					cic_9_tables[ds_p], d->droop_i_hist);
+				generic_fir(d->lowpassed+1, d->lp_len-1,
+					cic_9_tables[ds_p], d->droop_q_hist);
+			}
 		}
 	} else {
 		low_pass(d);
@@ -1257,6 +1386,11 @@ void demod_init_analog(struct demod_state *s)
 	s->squelch_decim_stride = 16; /* evaluate 1/16th samples for low CPU */
 	s->squelch_decim_phase = 0;
 	s->squelch_window = 2048; /* EMA window ~2048 samples */
+	/* HB decimator histories */
+	for (int st = 0; st < 10; st++) {
+		memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
+		memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
+	}
 	/* Double-buffer init */
 	s->write_buf_index.store(0);
 	s->ready_buf_index.store(1);
@@ -1301,6 +1435,11 @@ void demod_init_ro2(struct demod_state *s)
 	s->squelch_decim_stride = 16;
 	s->squelch_decim_phase = 0;
 	s->squelch_window = 2048;
+	/* HB decimator histories */
+	for (int st = 0; st < 10; st++) {
+		memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
+		memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
+	}
 	/* Double-buffer init */
 	s->write_buf_index.store(0);
 	s->ready_buf_index.store(1);
@@ -1345,6 +1484,11 @@ void demod_init(struct demod_state *s)
 	s->squelch_decim_stride = 16;
 	s->squelch_decim_phase = 0;
 	s->squelch_window = 2048;
+	/* HB decimator histories */
+	for (int st = 0; st < 10; st++) {
+		memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
+		memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
+	}
 	/* Double-buffer init */
 	s->write_buf_index.store(0);
 	s->ready_buf_index.store(1);
@@ -1517,6 +1661,15 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	else demod_init(&demod);
   output_init(&output);
   controller_init(&controller);
+
+	/* Read optional environment flag for half-band decimator */
+	{
+		const char *hb = getenv("DSD_FME_HB_DECIM");
+		if (hb && hb[0] != '\0') {
+			int v = atoi(hb);
+			use_halfband_decimator = (v != 0);
+		}
+	}
 
 	if (opts->rtlsdr_center_freq > 0) {
 		controller.freqs[controller.freq_len] = opts->rtlsdr_center_freq;
