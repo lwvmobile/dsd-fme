@@ -45,6 +45,27 @@ static int ACTUAL_BUF_LENGTH;
 
 static const double kPi = 3.14159265358979323846;
 
+/* =====================
+   Vectorization helpers and alignment
+   ===================== */
+#if defined(__GNUC__) || defined(__clang__)
+#define DSD_FME_PRAGMA(x) _Pragma(#x)
+#define DSD_FME_IVDEP DSD_FME_PRAGMA(GCC ivdep)
+template <typename T>
+static inline T* assume_aligned_ptr(T* p, size_t /*align_unused*/) {
+    return (T*)__builtin_assume_aligned(p, 64);
+}
+#else
+#define DSD_FME_IVDEP
+template <typename T>
+static inline T* assume_aligned_ptr(T* p, size_t /*align_unused*/) {
+    return p;
+}
+#endif
+#ifndef DSD_FME_ALIGN
+#define DSD_FME_ALIGN 64
+#endif
+
 static int *atan_lut = NULL;
 static int atan_lut_size = 131072; /* 512 KB */
 static int atan_lut_coef = 8;
@@ -98,14 +119,14 @@ struct demod_state
 	pthread_t thread;
 	int16_t  *lowpassed;
 	/* Double-buffered input for callback→demod handoff */
-	int16_t  input_buffers[2][MAXIMUM_BUF_LENGTH];
+	alignas(DSD_FME_ALIGN) int16_t  input_buffers[2][MAXIMUM_BUF_LENGTH];
 	std::atomic<int> write_buf_index;
 	std::atomic<int> ready_buf_index;
 	std::atomic<uint32_t> input_len[2];
 	int      lp_len;
 	int16_t  lp_i_hist[10][6];
 	int16_t  lp_q_hist[10][6];
-	int16_t  result[MAXIMUM_BUF_LENGTH];
+	alignas(DSD_FME_ALIGN) int16_t  result[MAXIMUM_BUF_LENGTH];
 	int16_t  droop_i_hist[9];
 	int16_t  droop_q_hist[9];
 	int      result_len;
@@ -456,6 +477,7 @@ void low_pass_real(struct demod_state *s)
 // add support for upsampling?
 {
 	int i=0, i2=0;
+	int16_t *r = assume_aligned_ptr(s->result, DSD_FME_ALIGN);
 	int fast = (int)s->rate_out;
 	int slow = s->rate_out2;
 	/* Precompute fixed-point reciprocal of decimation factor to avoid per-sample division */
@@ -463,8 +485,9 @@ void low_pass_real(struct demod_state *s)
 	if (decim < 1) decim = 1;
 	const int kShiftLPR = 15; /* Q15 reciprocal */
 	int recip_decim_q = (1 << kShiftLPR) / decim;
+	DSD_FME_IVDEP
 	while (i < s->result_len) {
-		s->now_lpr += s->result[i];
+		s->now_lpr += r[i];
 		i++;
 		s->prev_lpr_index += slow;
 		if (s->prev_lpr_index < fast) {
@@ -472,7 +495,7 @@ void low_pass_real(struct demod_state *s)
 		}
 		/* Multiply by reciprocal and shift instead of dividing by (fast/slow) */
 		int64_t scaled = ((int64_t)s->now_lpr * recip_decim_q);
-		s->result[i2] = (int16_t)(scaled >> kShiftLPR);
+		r[i2] = (int16_t)(scaled >> kShiftLPR);
 		s->prev_lpr_index -= fast;
 		s->now_lpr = 0;
 		i2 += 1;
@@ -701,13 +724,15 @@ int polar_disc_lut(int ar, int aj, int br, int bj)
 void fm_demod(struct demod_state *fm)
 {
 	int i, pcm;
-	int16_t *lp = fm->lowpassed;
+	int16_t *lp = assume_aligned_ptr(fm->lowpassed, DSD_FME_ALIGN);
+	int16_t *res = assume_aligned_ptr(fm->result, DSD_FME_ALIGN);
 	/* Use selected discriminator from the very first sample */
 	pcm = fm->discriminator(lp[0], lp[1], fm->pre_r, fm->pre_j);
-	fm->result[0] = (int16_t)pcm;
+	res[0] = (int16_t)pcm;
+	DSD_FME_IVDEP
 	for (i = 2; i < (fm->lp_len-1); i += 2) {
 		pcm = fm->discriminator(lp[i], lp[i+1], lp[i-2], lp[i-1]);
-		fm->result[i/2] = (int16_t)pcm;
+		res[i/2] = (int16_t)pcm;
 	}
 	fm->pre_r = lp[fm->lp_len - 2];
 	fm->pre_j = lp[fm->lp_len - 1];
@@ -727,6 +752,7 @@ void deemph_filter(struct demod_state *fm)
 {
 	static int avg;  // cheating...
 	int i, d;
+	int16_t *res = assume_aligned_ptr(fm->result, DSD_FME_ALIGN);
 	/* Precompute fixed-point reciprocal of deemphasis constant to avoid per-sample division */
 	const int kShiftDeemph = 15; /* Q15 */
 	int a = fm->deemph_a;
@@ -734,8 +760,9 @@ void deemph_filter(struct demod_state *fm)
 	int recip_q = (1 << kShiftDeemph) / a;
 	// de-emph IIR
 	// avg = avg * (1 - alpha) + sample * alpha;
+	DSD_FME_IVDEP
 	for (i = 0; i < fm->result_len; i++) {
-		d = fm->result[i] - avg;
+		d = res[i] - avg;
 		/* Use multiply+shift with sign-aware rounding to mirror original behavior */
 		int64_t delta = (int64_t)d * recip_q;
 		if (d > 0) {
@@ -744,7 +771,7 @@ void deemph_filter(struct demod_state *fm)
 			delta -= (1LL << (kShiftDeemph - 1));
 		}
 		avg += (int)(delta >> kShiftDeemph);
-		fm->result[i] = (int16_t)avg;
+		res[i] = (int16_t)avg;
 	}
 }
 
@@ -1307,7 +1334,18 @@ void output_init(struct output_state *s)
 	pthread_mutex_init(&s->ready_m, NULL);
 	/* Allocate SPSC ring buffer */
 	s->capacity = (size_t)(MAXIMUM_BUF_LENGTH * 8);
-	s->buffer = static_cast<int16_t*>(malloc(s->capacity * sizeof(int16_t)));
+	/* Try aligned allocation for better vectorized copies; fall back if unavailable */
+	{
+		void *mem_ptr = NULL;
+#if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
+		if (posix_memalign(&mem_ptr, DSD_FME_ALIGN, s->capacity * sizeof(int16_t)) != 0) {
+			mem_ptr = malloc(s->capacity * sizeof(int16_t));
+		}
+#else
+		mem_ptr = malloc(s->capacity * sizeof(int16_t));
+#endif
+		s->buffer = static_cast<int16_t*>(mem_ptr);
+	}
 	s->head.store(0);
 	s->tail.store(0);
 }
