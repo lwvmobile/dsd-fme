@@ -118,6 +118,11 @@ struct demod_state
 	int      post_downsample;
 	int      output_scale;
 	int      squelch_level, conseq_squelch, squelch_hits, terminate_on_squelch;
+	/* Incremental, decimated RMS squelch estimator (power-domain, sqrt-free) */
+	int64_t  squelch_running_power;
+	int      squelch_decim_stride;
+	int      squelch_decim_phase;
+	int      squelch_window;
 	int      downsample_passes;
 	int      comp_fir_size;
 	int      custom_atan;
@@ -689,23 +694,38 @@ void full_demod(struct demod_state *d)
 	}
 	/* power squelch (sqrt-free): compare mean power to squared threshold */
 	if (d->squelch_level) {
-		long int pwr = 0;
-		{
-			int j;
-			long p = 0L, t = 0L, s;
-			double dc, err;
-			for (j = 0; j < d->lp_len; j += 1) {
-				s = (long)d->lowpassed[j];
-				t += s;
-				p += s * s;
-			}
-			dc = (double)t; /* step is 1 */
-			err = t * 2 * dc - dc * dc * d->lp_len;
-			pwr = (long int)((p - err) / (d->lp_len ? d->lp_len : 1));
-			if (pwr < 0) pwr = 0;
+		/* Decimated block power estimate (no DC correction; EMA smooths) */
+		int stride = (d->squelch_decim_stride > 0) ? d->squelch_decim_stride : 16;
+		int phase = d->squelch_decim_phase;
+		int64_t p = 0;
+		int count = 0;
+		for (int j = phase; j < d->lp_len; j += stride) {
+			int64_t s2 = (int64_t)d->lowpassed[j];
+			p += s2 * s2;
+			count++;
 		}
-		long int thr2 = (long int)d->squelch_level * (long int)d->squelch_level;
-		if (pwr < thr2) {
+		/* Advance phase to sample different positions next block */
+		if (stride > 0) {
+			int adv = d->lp_len % stride;
+			d->squelch_decim_phase = (phase + adv) % stride;
+		}
+		if (count > 0) {
+			int64_t block_mean = p / count;
+			if (d->squelch_running_power == 0) {
+				/* Initialize on first measurement to avoid long ramp */
+				d->squelch_running_power = block_mean;
+			} else {
+				/* EMA: running += (block_mean - running) / window */
+				int w = (d->squelch_window > 0) ? d->squelch_window : 2048;
+				int shift = 0;
+				/* approximate log2(window), prefer power-of-two windows */
+				while ((1 << shift) < w && shift < 30) { shift++; }
+				int64_t delta = (block_mean - d->squelch_running_power);
+				d->squelch_running_power += (delta >> shift);
+			}
+		}
+		int64_t thr2 = (int64_t)d->squelch_level * (int64_t)d->squelch_level;
+		if (d->squelch_running_power < thr2) {
 			d->squelch_hits++;
 			for (i=0; i<d->lp_len; i++) {
 				d->lowpassed[i] = 0;
@@ -1041,6 +1061,11 @@ void demod_init_analog(struct demod_state *s)
 	s->now_lpr = 0;
 	s->dc_block = 1; //
 	s->dc_avg = 0;
+	/* Squelch estimator init */
+	s->squelch_running_power = 0;
+	s->squelch_decim_stride = 16; /* evaluate 1/16th samples for low CPU */
+	s->squelch_decim_phase = 0;
+	s->squelch_window = 2048; /* EMA window ~2048 samples */
 	/* Double-buffer init */
 	s->write_buf_index.store(0);
 	s->ready_buf_index.store(1);
@@ -1079,6 +1104,11 @@ void demod_init_ro2(struct demod_state *s)
 	s->now_lpr = 0;
 	s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
 	s->dc_avg = 0;
+	/* Squelch estimator init */
+	s->squelch_running_power = 0;
+	s->squelch_decim_stride = 16;
+	s->squelch_decim_phase = 0;
+	s->squelch_window = 2048;
 	/* Double-buffer init */
 	s->write_buf_index.store(0);
 	s->ready_buf_index.store(1);
@@ -1117,6 +1147,11 @@ void demod_init(struct demod_state *s)
 	s->now_lpr = 0;
 	s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
 	s->dc_avg = 0;
+	/* Squelch estimator init */
+	s->squelch_running_power = 0;
+	s->squelch_decim_stride = 16;
+	s->squelch_decim_phase = 0;
+	s->squelch_window = 2048;
 	/* Double-buffer init */
 	s->write_buf_index.store(0);
 	s->ready_buf_index.store(1);
