@@ -279,6 +279,43 @@ static int ring_read_one(struct output_state *o, int16_t *out)
     return 0;
 }
 
+/* Read up to max_count samples into out. Blocks until at least one sample is available or exit. Returns
+   number of samples read (>=1) or -1 on exit. Signals producer space once after the batch. */
+static int ring_read_batch(struct output_state *o, int16_t *out, size_t max_count)
+{
+    if (max_count == 0) return 0;
+    while (ring_is_empty(o)) {
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_nsec += 10L * 1000000L; /* 10ms */
+        if (ts.tv_nsec >= 1000000000L) {
+            ts.tv_sec += ts.tv_nsec / 1000000000L;
+            ts.tv_nsec = ts.tv_nsec % 1000000000L;
+        }
+        pthread_mutex_lock(&o->ready_m);
+        pthread_cond_timedwait(&o->ready, &o->ready_m, &ts);
+        pthread_mutex_unlock(&o->ready_m);
+        if (exitflag) return -1;
+    }
+
+    size_t available = ring_used(o);
+    size_t read_now = (max_count < available) ? max_count : available;
+    size_t t = o->tail.load();
+    size_t first = o->capacity - t;
+    if (first > read_now) first = read_now;
+    memcpy(out, o->buffer + t, first * sizeof(int16_t));
+    t += first;
+    if (t == o->capacity) t = 0;
+    if (read_now > first) {
+        memcpy(out + first, o->buffer, (read_now - first) * sizeof(int16_t));
+        t = read_now - first;
+    }
+    o->tail.store(t);
+    /* Signal space available once for the whole batch */
+    safe_cond_signal(&o->space, &o->ready_m);
+    return (int)read_now;
+}
+
 /* {length, coef, coef, coef}  and scaled by 2^15
    for now, only length 9, optimal way to get +85% bandwidth */
 #define CIC_TABLE_MAX 10
@@ -1409,6 +1446,31 @@ void cleanup_rtlsdr_stream()
   rtlsdr_close(dongle.dev);
 }
 
+/* Batched consumer API: read up to count samples with fewer wakeups/locks.
+   Returns number of samples read (>=1) or -1 on exit. Applies volume scaling. */
+int get_rtlsdr_samples(int16_t *out, size_t count, dsd_opts * opts, dsd_state * state)
+{
+	UNUSED(state);
+	if (count == 0) return 0;
+
+	/* If PPM Error is Manually Changed, change it here once per batch */
+	if (opts->rtlsdr_ppm_error != dongle.ppm_error)
+	{
+		dongle.ppm_error = opts->rtlsdr_ppm_error;
+		verbose_ppm_set(dongle.dev, dongle.ppm_error);
+	}
+
+	int got = ring_read_batch(&output, out, count);
+	if (got <= 0) {
+		return -1;
+	}
+	/* Apply volume scaling */
+	for (int i = 0; i < got; i++) {
+		out[i] = out[i] * volume_multiplier;
+	}
+	return got;
+}
+
 //original for safe keeping
 // void get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 // {
@@ -1425,20 +1487,9 @@ void cleanup_rtlsdr_stream()
 //find way to modify this function to allow hopping (tuning) while squelched and send 0 sample?
 int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 {
-	UNUSED(state);
-
-	//if PPM Error is Manually Changed, Change it here now
-	if (opts->rtlsdr_ppm_error != dongle.ppm_error)
-	{
-		dongle.ppm_error = opts->rtlsdr_ppm_error;
-		verbose_ppm_set(dongle.dev, dongle.ppm_error);
-	}
-
-	int16_t tmp;
-	if (ring_read_one(&output, &tmp) < 0) {
-		return -1;
-	}
-	*sample = tmp * volume_multiplier;
+	/* Delegate to batched API for a single sample */
+	int ret = get_rtlsdr_samples(sample, 1, opts, state);
+	if (ret < 0) return -1;
 	return 0;
 }
 
