@@ -1297,6 +1297,8 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	if (controller.freq_len > 1) demod.terminate_on_squelch = 0;
 
   ACTUAL_BUF_LENGTH = lcm_post[demod.post_downsample] * DEFAULT_BUF_LENGTH;
+  /* Ensure async read uses a valid, explicit buffer length */
+  dongle.buf_len = (uint32_t)ACTUAL_BUF_LENGTH;
 
   r = rtlsdr_open(&dongle.dev, (uint32_t)dongle.dev_index);
   if (r < 0)
