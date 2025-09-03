@@ -26,7 +26,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <queue>
+#include <atomic>
 #include <rtl-sdr.h>
 #include "dsd.h"
 
@@ -132,9 +132,13 @@ struct demod_state
 struct output_state
 {
 	int      rate;
-	std::queue<int16_t> queue;
+	int16_t  *buffer;
+	size_t   capacity;
+	std::atomic<size_t> head;
+	std::atomic<size_t> tail;
 	pthread_rwlock_t rw;
 	pthread_cond_t ready;
+	pthread_cond_t space;
 	pthread_mutex_t ready_m;
 };
 
@@ -158,6 +162,111 @@ struct controller_state controller;
 
 #define safe_cond_signal(n, m) pthread_mutex_lock(m); pthread_cond_signal(n); pthread_mutex_unlock(m)
 #define safe_cond_wait(n, m) pthread_mutex_lock(m); pthread_cond_wait(n, m); pthread_mutex_unlock(m)
+
+/* =====================
+   SPSC Ring Buffer (output path)
+   ===================== */
+
+static inline size_t ring_used(const struct output_state *o)
+{
+    size_t h = o->head.load();
+    size_t t = o->tail.load();
+    if (h >= t) return h - t;
+    return o->capacity - (t - h);
+}
+
+static inline size_t ring_free(const struct output_state *o)
+{
+    return (o->capacity - 1) - ring_used(o);
+}
+
+static inline int ring_is_empty(const struct output_state *o)
+{
+    return o->head.load() == o->tail.load();
+}
+
+static inline void ring_clear(struct output_state *o)
+{
+    o->tail.store(0);
+    o->head.store(0);
+}
+
+/* Write up to count samples, blocking until space is available. Signals data availability after writes. */
+static void ring_write(struct output_state *o, const int16_t *data, size_t count)
+{
+    while (count > 0 && !exitflag) {
+        size_t free_sp = ring_free(o);
+        if (free_sp == 0) {
+            /* Wait for space */
+            safe_cond_wait(&o->space, &o->ready_m);
+            continue;
+        }
+        size_t write_now = (count < free_sp) ? count : free_sp;
+        size_t h = o->head.load();
+        size_t first = o->capacity - h;
+        if (first > write_now) first = write_now;
+        memcpy(o->buffer + h, data, first * sizeof(int16_t));
+        if (write_now > first) {
+            memcpy(o->buffer, data + first, (write_now - first) * sizeof(int16_t));
+            h = write_now - first;
+        } else {
+            h += first;
+            if (h == o->capacity) h = 0;
+        }
+        o->head.store(h);
+        data += write_now;
+        count -= write_now;
+    }
+}
+
+/* Same as ring_write but does not signal; caller decides when to signal */
+static void ring_write_no_signal(struct output_state *o, const int16_t *data, size_t count)
+{
+    while (count > 0 && !exitflag) {
+        size_t free_sp = ring_free(o);
+        if (free_sp == 0) {
+            safe_cond_wait(&o->space, &o->ready_m);
+            continue;
+        }
+        size_t write_now = (count < free_sp) ? count : free_sp;
+        size_t h = o->head.load();
+        size_t first = o->capacity - h;
+        if (first > write_now) first = write_now;
+        memcpy(o->buffer + h, data, first * sizeof(int16_t));
+        if (write_now > first) {
+            memcpy(o->buffer, data + first, (write_now - first) * sizeof(int16_t));
+            h = write_now - first;
+        } else {
+            h += first;
+            if (h == o->capacity) h = 0;
+        }
+        o->head.store(h);
+        data += write_now;
+        count -= write_now;
+    }
+}
+
+/* Read one sample, returns 0 on success, -1 on exit */
+static int ring_read_one(struct output_state *o, int16_t *out)
+{
+    while (ring_is_empty(o)) {
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_nsec += 10e6; /* 10ms */
+        pthread_mutex_lock(&o->ready_m);
+        pthread_cond_timedwait(&o->ready, &o->ready_m, &ts);
+        pthread_mutex_unlock(&o->ready_m);
+        if (exitflag) return -1;
+    }
+    size_t t = o->tail.load();
+    *out = o->buffer[t];
+    t += 1;
+    if (t == o->capacity) t = 0;
+    o->tail.store(t);
+    /* Signal space available for producer */
+    safe_cond_signal(&o->space, &o->ready_m);
+    return 0;
+}
 
 /* {length, coef, coef, coef}  and scaled by 2^15
    for now, only length 9, optimal way to get +85% bandwidth */
@@ -656,13 +765,17 @@ static void *demod_thread_fn(void *arg)
 			safe_cond_signal(&controller.hop, &controller.hop_m);
 			continue;
 		}
-		pthread_rwlock_wrlock(&o->rw);
-		for (int i = 0; i < d->result_len; i++)
-		{
-			for (int j=0; j < bandwidth_multiplier; j++){
-				o->queue.push(d->result[i]);}
+		/* Write demod block to SPSC ring, duplicating per bandwidth_multiplier as before.
+		   Wake consumer once per produced block. */
+		if (bandwidth_multiplier <= 1) {
+			ring_write_no_signal(o, d->result, (size_t)d->result_len);
+		} else {
+			for (int i = 0; i < d->result_len; i++) {
+				for (int j = 0; j < bandwidth_multiplier; j++) {
+					ring_write_no_signal(o, &d->result[i], 1);
+				}
+			}
 		}
-		pthread_rwlock_unlock(&o->rw);
 		safe_cond_signal(&o->ready, &o->ready_m);
 	}
 	return 0;
@@ -991,14 +1104,22 @@ void output_init(struct output_state *s)
 	s->rate = rtl_bandwidth;
 	pthread_rwlock_init(&s->rw, NULL);
 	pthread_cond_init(&s->ready, NULL);
+	pthread_cond_init(&s->space, NULL);
 	pthread_mutex_init(&s->ready_m, NULL);
+	/* Allocate SPSC ring buffer */
+	s->capacity = (size_t)(MAXIMUM_BUF_LENGTH * 8);
+	s->buffer = static_cast<int16_t*>(malloc(s->capacity * sizeof(int16_t)));
+	s->head.store(0);
+	s->tail.store(0);
 }
 
 void output_cleanup(struct output_state *s)
 {
 	pthread_rwlock_destroy(&s->rw);
 	pthread_cond_destroy(&s->ready);
+	pthread_cond_destroy(&s->space);
 	pthread_mutex_destroy(&s->ready_m);
+	if (s->buffer) { free(s->buffer); s->buffer = NULL; }
 }
 
 void controller_init(struct controller_state *s)
@@ -1234,25 +1355,11 @@ int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 		verbose_ppm_set(dongle.dev, dongle.ppm_error);
 	}
 
-	while (output.queue.empty())
-	{
-		struct timespec ts;
-		clock_gettime(CLOCK_REALTIME, &ts);
-		ts.tv_nsec += 10e6;
-
-		pthread_mutex_lock(&output.ready_m);
-		pthread_cond_timedwait(&output.ready, &output.ready_m, &ts);
-		pthread_mutex_unlock(&output.ready_m);
-
-		if (exitflag)
-		{
-			return -1;
-		}
+	int16_t tmp;
+	if (ring_read_one(&output, &tmp) < 0) {
+		return -1;
 	}
-	pthread_rwlock_wrlock(&output.rw);
-	*sample = output.queue.front() * volume_multiplier;
-	output.queue.pop();
-	pthread_rwlock_unlock(&output.rw);
+	*sample = tmp * volume_multiplier;
 	return 0;
 }
 
@@ -1295,7 +1402,8 @@ long int rtl_return_rms()
 //simple function to clear the rtl sample queue when tuning and during other events (ncurses menu open/close)
 void rtl_clean_queue()
 {
-	//insert method to clear the entire queue to prevent sample 'lag'
-	std::queue<int16_t> empty; //create an empty queue
-	std::swap( output.queue, empty ); //swap in empty queue to effectively zero out current queue
+	/* Clear the entire ring to prevent sample 'lag' */
+	ring_clear(&output);
+	/* Wake producer waiting for space */
+	safe_cond_signal(&output.space, &output.ready_m);
 }
