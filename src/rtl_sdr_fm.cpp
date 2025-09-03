@@ -26,6 +26,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <sched.h>
 #include <atomic>
 #include <rtl-sdr.h>
 #include "dsd.h"
@@ -169,6 +170,64 @@ struct controller_state controller;
 
 #define safe_cond_signal(n, m) pthread_mutex_lock(m); pthread_cond_signal(n); pthread_mutex_unlock(m)
 #define safe_cond_wait(n, m) pthread_mutex_lock(m); pthread_cond_wait(n, m); pthread_mutex_unlock(m)
+
+/* =====================
+   Thread Scheduling Helpers (optional realtime/affinity)
+   ===================== */
+
+static void maybe_set_thread_realtime_and_affinity(const char *role)
+{
+    const char *enable = getenv("DSD_FME_RT_SCHED");
+    if (!enable || enable[0] != '1') {
+        return;
+    }
+
+    /* Optional: role-specific priority (1..99) for SCHED_FIFO */
+    int policy = SCHED_FIFO;
+    struct sched_param sp;
+    int pmax = sched_get_priority_max(policy);
+    int pmin = sched_get_priority_min(policy);
+    int def = (pmax > 10) ? (pmax - 10) : pmax; /* default near top, but safe */
+    char envname[64];
+
+    sp.sched_priority = def;
+    if (role) {
+        /* e.g., DSD_FME_RT_PRIO_DEMOD, DSD_FME_RT_PRIO_DONGLE */
+        snprintf(envname, sizeof(envname), "DSD_FME_RT_PRIO_%s", role);
+        const char *prio_str = getenv(envname);
+        if (prio_str && prio_str[0] != '\0') {
+            int pr = atoi(prio_str);
+            if (pr < pmin) pr = pmin;
+            if (pr > pmax) pr = pmax;
+            sp.sched_priority = pr;
+        }
+    }
+
+    if (pthread_setschedparam(pthread_self(), policy, &sp) != 0) {
+        fprintf(stderr, "WARNING: Failed to set %s thread to SCHED_FIFO (needs CAP_SYS_NICE).\n", role ? role : "RT");
+    } else {
+        fprintf(stderr, "%s thread SCHED_FIFO priority set to %d.\n", role ? role : "RT", sp.sched_priority);
+    }
+
+    /* Optional: role-specific CPU affinity: DSD_FME_CPU_DEMOD / DSD_FME_CPU_DONGLE */
+    if (role) {
+        snprintf(envname, sizeof(envname), "DSD_FME_CPU_%s", role);
+        const char *cpu_str = getenv(envname);
+        if (cpu_str && cpu_str[0] != '\0') {
+            int cpu = atoi(cpu_str);
+            if (cpu >= 0) {
+                cpu_set_t cpuset;
+                CPU_ZERO(&cpuset);
+                CPU_SET((unsigned)cpu, &cpuset);
+                if (pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset) != 0) {
+                    fprintf(stderr, "WARNING: Failed to set CPU affinity for %s thread to CPU %d.\n", role, cpu);
+                } else {
+                    fprintf(stderr, "%s thread pinned to CPU %d.\n", role, cpu);
+                }
+            }
+        }
+    }
+}
 
 /* =====================
    SPSC Ring Buffer (output path)
@@ -798,6 +857,14 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 	int i;
 	struct dongle_state *s = static_cast<dongle_state*>(ctx);
 	struct demod_state *d = s->demod_target;
+	/* One-time: ensure the USB callback thread gets RT scheduling/affinity if enabled */
+	{
+		static std::atomic<int> usb_sched_applied{0};
+		int expected = 0;
+		if (usb_sched_applied.compare_exchange_strong(expected, 1)) {
+			maybe_set_thread_realtime_and_affinity("USB");
+		}
+	}
 
 	if (exitflag) {
 		return;}
@@ -826,6 +893,7 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 static void *dongle_thread_fn(void *arg)
 {
 	struct dongle_state *s = static_cast<dongle_state*>(arg);
+	maybe_set_thread_realtime_and_affinity("DONGLE");
 	rtlsdr_read_async(s->dev, rtlsdr_callback, s, 16, s->buf_len);
 	return 0;
 }
@@ -834,6 +902,7 @@ static void *demod_thread_fn(void *arg)
 {
 	struct demod_state *d = static_cast<demod_state*>(arg);
 	struct output_state *o = d->output_target;
+	maybe_set_thread_realtime_and_affinity("DEMOD");
 	while (!exitflag) {
 		safe_cond_wait(&d->ready, &d->ready_m);
 		/* Consume from last fully-written input buffer */
