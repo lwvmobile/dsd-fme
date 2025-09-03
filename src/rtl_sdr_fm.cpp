@@ -72,6 +72,16 @@ static int atan_lut_coef = 8;
 static pthread_once_t atan_lut_once = PTHREAD_ONCE_INIT;
 static pthread_mutex_t atan_lut_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+/* =====================
+   Saturating helpers
+   ===================== */
+static inline int16_t sat16(int32_t x)
+{
+    if (x > 32767) return 32767;
+    if (x < -32768) return -32768;
+    return (int16_t)x;
+}
+
 static void atan_lut_once_init(void)
 {
 	int i;
@@ -447,8 +457,9 @@ void low_pass(struct demod_state *d)
 		if (d->prev_index < d->downsample) {
 			continue;
 		}
-		d->lowpassed[i2]   = d->now_r; // * d->output_scale;
-		d->lowpassed[i2+1] = d->now_j; // * d->output_scale;
+		/* Saturate accumulated sums when writing back to int16 */
+		d->lowpassed[i2]   = sat16(d->now_r);
+		d->lowpassed[i2+1] = sat16(d->now_j);
 		d->prev_index = 0;
 		d->now_r = 0;
 		d->now_j = 0;
@@ -467,7 +478,8 @@ int low_pass_simple(int16_t *signal2, int len, int step)
 			sum += (int)signal2[i + i2];
 		}
 		//signal2[i/step] = (int16_t)(sum / step);
-		signal2[i/step] = (int16_t)(sum);
+		/* Saturate accumulated sum on write */
+		signal2[i/step] = sat16(sum);
 	}
 	signal2[i/step + 1] = signal2[i/step];
 	return len / step;
@@ -1590,9 +1602,10 @@ int get_rtlsdr_samples(int16_t *out, size_t count, dsd_opts * opts, dsd_state * 
 	if (got <= 0) {
 		return -1;
 	}
-	/* Apply volume scaling */
+	/* Apply volume scaling with saturation */
 	for (int i = 0; i < got; i++) {
-		out[i] = out[i] * volume_multiplier;
+		int32_t y = (int32_t)out[i] * (int32_t)volume_multiplier;
+		out[i] = sat16(y);
 	}
 	return got;
 }
