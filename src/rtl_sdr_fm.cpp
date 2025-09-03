@@ -259,7 +259,11 @@ static int ring_read_one(struct output_state *o, int16_t *out)
     while (ring_is_empty(o)) {
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_nsec += 10e6; /* 10ms */
+        ts.tv_nsec += 10L * 1000000L; /* 10ms */
+        if (ts.tv_nsec >= 1000000000L) {
+            ts.tv_sec += ts.tv_nsec / 1000000000L;
+            ts.tv_nsec = ts.tv_nsec % 1000000000L;
+        }
         pthread_mutex_lock(&o->ready_m);
         pthread_cond_timedwait(&o->ready, &o->ready_m, &ts);
         pthread_mutex_unlock(&o->ready_m);
