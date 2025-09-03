@@ -790,17 +790,19 @@ void deemph_filter(struct demod_state *fm)
 
 void dc_block_filter(struct demod_state *fm)
 {
-	int i, avg;
-	int64_t sum = 0;
-	for (i=0; i < fm->result_len; i++) {
-		sum += fm->result[i];
+	int i;
+	/* Leaky integrator high-pass: dc += (x - dc) >> k; y = x - dc */
+	int dc = fm->dc_avg;
+	const int k = 11; /* cutoff ~ Fs / 2^k (k in 10..12) */
+	int16_t *res = assume_aligned_ptr(fm->result, DSD_FME_ALIGN);
+	DSD_FME_IVDEP
+	for (i = 0; i < fm->result_len; i++) {
+		int x = (int)res[i];
+		dc += (x - dc) >> k;
+		int y = x - dc;
+		res[i] = sat16(y);
 	}
-	avg = sum / fm->result_len;
-	avg = (avg + fm->dc_avg * 9) / 10;
-	for (i=0; i < fm->result_len; i++) {
-		fm->result[i] -= avg;
-	}
-	fm->dc_avg = avg;
+	fm->dc_avg = dc;
 }
 
 long int rms(int16_t *samples, int len, int step)
