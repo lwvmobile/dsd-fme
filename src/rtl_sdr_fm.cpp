@@ -83,7 +83,6 @@ struct dongle_state
 	uint32_t freq;
 	uint32_t rate;
 	int      gain;
-	uint16_t buf16[MAXIMUM_BUF_LENGTH];
 	uint32_t buf_len;
 	int      ppm_error;
 	int      offset_tuning;
@@ -96,7 +95,12 @@ struct demod_state
 {
 	int      exit_flag;
 	pthread_t thread;
-	int16_t  lowpassed[MAXIMUM_BUF_LENGTH];
+	int16_t  *lowpassed;
+	/* Double-buffered input for callback→demod handoff */
+	int16_t  input_buffers[2][MAXIMUM_BUF_LENGTH];
+	std::atomic<int> write_buf_index;
+	std::atomic<int> ready_buf_index;
+	std::atomic<uint32_t> input_len[2];
 	int      lp_len;
 	int16_t  lp_i_hist[10][6];
 	int16_t  lp_q_hist[10][6];
@@ -123,7 +127,6 @@ struct demod_state
 	int      dc_block, dc_avg;
 	int      (*discriminator)(int, int, int, int);
 	void     (*mode_demod)(struct demod_state*);
-	pthread_rwlock_t rw;
 	pthread_cond_t ready;
 	pthread_mutex_t ready_m;
 	struct output_state *output_target;
@@ -732,12 +735,16 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 	}
 	if (!s->offset_tuning) {
 		rotate_90(buf, len);}
+	/* Write directly into the current write buffer */
+	int wb = d->write_buf_index.load();
+	int16_t *dst = d->input_buffers[wb];
 	for (i=0; i<(int)len; i++) {
-		s->buf16[i] = (int16_t)buf[i] - 127;}
-	pthread_rwlock_wrlock(&d->rw);
-	memcpy(d->lowpassed, s->buf16, 2*len);
-	d->lp_len = len;
-	pthread_rwlock_unlock(&d->rw);
+		dst[i] = (int16_t)buf[i] - 127;
+	}
+	d->input_len[wb].store(len);
+	/* Flip buffers atomically: the buffer we just wrote becomes ready */
+	d->ready_buf_index.store(wb);
+	d->write_buf_index.store(wb ^ 1);
 	safe_cond_signal(&d->ready, &d->ready_m);
 }
 
@@ -754,9 +761,11 @@ static void *demod_thread_fn(void *arg)
 	struct output_state *o = d->output_target;
 	while (!exitflag) {
 		safe_cond_wait(&d->ready, &d->ready_m);
-		pthread_rwlock_wrlock(&d->rw);
+		/* Consume from last fully-written input buffer */
+		int rb = d->ready_buf_index.load();
+		d->lowpassed = d->input_buffers[rb];
+		d->lp_len = (int)d->input_len[rb].load();
 		full_demod(d);
-		pthread_rwlock_unlock(&d->rw);
 		if (d->exit_flag) {
 			exitflag = 1;
 		}
@@ -1018,7 +1027,13 @@ void demod_init_analog(struct demod_state *s)
 	s->now_lpr = 0;
 	s->dc_block = 1; //
 	s->dc_avg = 0;
-	pthread_rwlock_init(&s->rw, NULL);
+	/* Double-buffer init */
+	s->write_buf_index.store(0);
+	s->ready_buf_index.store(1);
+	s->input_len[0].store(0);
+	s->input_len[1].store(0);
+	s->lowpassed = s->input_buffers[s->ready_buf_index.load()];
+	s->lp_len = 0;
 	pthread_cond_init(&s->ready, NULL);
 	pthread_mutex_init(&s->ready_m, NULL);
 	s->output_target = &output;
@@ -1050,7 +1065,13 @@ void demod_init_ro2(struct demod_state *s)
 	s->now_lpr = 0;
 	s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
 	s->dc_avg = 0;
-	pthread_rwlock_init(&s->rw, NULL);
+	/* Double-buffer init */
+	s->write_buf_index.store(0);
+	s->ready_buf_index.store(1);
+	s->input_len[0].store(0);
+	s->input_len[1].store(0);
+	s->lowpassed = s->input_buffers[s->ready_buf_index.load()];
+	s->lp_len = 0;
 	pthread_cond_init(&s->ready, NULL);
 	pthread_mutex_init(&s->ready_m, NULL);
 	s->output_target = &output;
@@ -1082,7 +1103,13 @@ void demod_init(struct demod_state *s)
 	s->now_lpr = 0;
 	s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
 	s->dc_avg = 0;
-	pthread_rwlock_init(&s->rw, NULL);
+	/* Double-buffer init */
+	s->write_buf_index.store(0);
+	s->ready_buf_index.store(1);
+	s->input_len[0].store(0);
+	s->input_len[1].store(0);
+	s->lowpassed = s->input_buffers[s->ready_buf_index.load()];
+	s->lp_len = 0;
 	pthread_cond_init(&s->ready, NULL);
 	pthread_mutex_init(&s->ready_m, NULL);
 	s->output_target = &output;
@@ -1094,7 +1121,6 @@ void demod_init(struct demod_state *s)
 
 void demod_cleanup(struct demod_state *s)
 {
-	pthread_rwlock_destroy(&s->rw);
 	pthread_cond_destroy(&s->ready);
 	pthread_mutex_destroy(&s->ready_m);
 }
