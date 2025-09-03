@@ -149,6 +149,7 @@ struct demod_state
 	int      comp_fir_size;
 	int      custom_atan;
 	int      deemph, deemph_a;
+	int      deemph_avg;
 	int      now_lpr;
 	int      prev_lpr_index;
 	int      dc_block, dc_avg;
@@ -750,7 +751,7 @@ void raw_demod(struct demod_state *fm)
 
 void deemph_filter(struct demod_state *fm)
 {
-	static int avg;  // cheating...
+	int avg = fm->deemph_avg; /* per-instance state */
 	int i, d;
 	int16_t *res = assume_aligned_ptr(fm->result, DSD_FME_ALIGN);
 	/* Precompute fixed-point reciprocal of deemphasis constant to avoid per-sample division */
@@ -758,13 +759,12 @@ void deemph_filter(struct demod_state *fm)
 	int a = fm->deemph_a;
 	if (a <= 0) a = 1;
 	int recip_q = (1 << kShiftDeemph) / a;
-	// de-emph IIR
-	// avg = avg * (1 - alpha) + sample * alpha;
+	/* Single-pole IIR: avg += (x - avg) * (1 - a) with fixed-point scaling */
 	DSD_FME_IVDEP
 	for (i = 0; i < fm->result_len; i++) {
 		d = res[i] - avg;
-		/* Use multiply+shift with sign-aware rounding to mirror original behavior */
 		int64_t delta = (int64_t)d * recip_q;
+		/* symmetric rounding */
 		if (d > 0) {
 			delta += (1LL << (kShiftDeemph - 1));
 		} else if (d < 0) {
@@ -773,6 +773,7 @@ void deemph_filter(struct demod_state *fm)
 		avg += (int)(delta >> kShiftDeemph);
 		res[i] = (int16_t)avg;
 	}
+	fm->deemph_avg = avg; /* write back state */
 }
 
 void dc_block_filter(struct demod_state *fm)
@@ -1210,6 +1211,7 @@ void demod_init_analog(struct demod_state *s)
 	s->pre_j = s->pre_r = s->now_r = s->now_j = 0;
 	s->prev_lpr_index = 0;
 	s->deemph_a = 0; //
+	s->deemph_avg = 0;
 	s->now_lpr = 0;
 	s->dc_block = 1; //
 	s->dc_avg = 0;
@@ -1253,6 +1255,7 @@ void demod_init_ro2(struct demod_state *s)
 	s->pre_j = s->pre_r = s->now_r = s->now_j = 0;
 	s->prev_lpr_index = 0;
 	s->deemph_a = 0;
+	s->deemph_avg = 0;
 	s->now_lpr = 0;
 	s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
 	s->dc_avg = 0;
@@ -1296,6 +1299,7 @@ void demod_init(struct demod_state *s)
 	s->pre_j = s->pre_r = s->now_r = s->now_j = 0;
 	s->prev_lpr_index = 0;
 	s->deemph_a = 0;
+	s->deemph_avg = 0;
 	s->now_lpr = 0;
 	s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
 	s->dc_avg = 0;
