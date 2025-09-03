@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <strings.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <sched.h>
@@ -874,16 +875,16 @@ void deemph_filter(struct demod_state *fm)
 	int avg = fm->deemph_avg; /* per-instance state */
 	int i, d;
 	int16_t *res = assume_aligned_ptr(fm->result, DSD_FME_ALIGN);
-	/* Precompute fixed-point reciprocal of deemphasis constant to avoid per-sample division */
+	/* Q15 alpha = (1 - a), where a = exp(-1/(Fs*tau)) */
 	const int kShiftDeemph = 15; /* Q15 */
-	int a = fm->deemph_a;
-	if (a <= 0) a = 1;
-	int recip_q = (1 << kShiftDeemph) / a;
-	/* Single-pole IIR: avg += (x - avg) * (1 - a) with fixed-point scaling */
+	int alpha_q15 = fm->deemph_a;
+	if (alpha_q15 < 0) alpha_q15 = 0;
+	if (alpha_q15 > (1 << kShiftDeemph)) alpha_q15 = (1 << kShiftDeemph);
+	/* Single-pole IIR: avg += (x - avg) * alpha */
 	DSD_FME_IVDEP
 	for (i = 0; i < fm->result_len; i++) {
 		d = res[i] - avg;
-		int64_t delta = (int64_t)d * recip_q;
+		int64_t delta = (int64_t)d * (int64_t)alpha_q15;
 		/* symmetric rounding */
 		if (d > 0) {
 			delta += (1LL << (kShiftDeemph - 1));
@@ -1714,7 +1715,32 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	}
 
   if (demod.deemph) {
-		demod.deemph_a = (int)round(1.0/((1.0-exp(-1.0/(demod.rate_out * 75e-6)))));
+		/* Configure deemphasis time constant via env DSD_FME_DEEMPH: 75 (default), 50, nfm, off */
+		double tau_s = 75e-6; /* default 75 microseconds */
+		const char *deemph_env = getenv("DSD_FME_DEEMPH");
+		if (deemph_env && deemph_env[0] != '\0') {
+			if (strcasecmp(deemph_env, "off") == 0) {
+				demod.deemph = 0;
+			} else if (strcmp(deemph_env, "50") == 0) {
+				tau_s = 50e-6;
+			} else if (strcasecmp(deemph_env, "nfm") == 0) {
+				/* Common NFM value */
+				tau_s = 750e-6;
+			} else if (strcmp(deemph_env, "75") == 0) {
+				tau_s = 75e-6;
+			}
+		}
+		if (demod.deemph) {
+			/* a = exp(-1/(Fs*tau)); store alpha=(1-a) in Q15 */
+			double Fs = (double)demod.rate_out;
+			if (Fs < 1.0) Fs = 1.0;
+			double a = exp(-1.0 / (Fs * tau_s));
+			double alpha = 1.0 - a;
+			int coef_q15 = (int)lrint(alpha * (double)(1 << 15));
+			if (coef_q15 < 1) coef_q15 = 1; /* ensure non-zero to move toward steady-state */
+			if (coef_q15 > (1 << 15)) coef_q15 = (1 << 15);
+			demod.deemph_a = coef_q15;
+		}
 	}
 
   /* Set the tuner gain */
