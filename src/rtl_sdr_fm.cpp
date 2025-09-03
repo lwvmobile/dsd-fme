@@ -766,7 +766,7 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 static void *dongle_thread_fn(void *arg)
 {
 	struct dongle_state *s = static_cast<dongle_state*>(arg);
-	rtlsdr_read_async(s->dev, rtlsdr_callback, s, 0, s->buf_len);
+	rtlsdr_read_async(s->dev, rtlsdr_callback, s, 16, s->buf_len);
 	return 0;
 }
 
