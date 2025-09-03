@@ -671,7 +671,6 @@ long int rms(int16_t *samples, int len, int step)
 void full_demod(struct demod_state *d)
 {
 	int i, ds_p;
-	int sr = 0;
 	ds_p = d->downsample_passes;
 	if (ds_p) {
 		for (i=0; i < ds_p; i++) {
@@ -689,16 +688,32 @@ void full_demod(struct demod_state *d)
 	} else {
 		low_pass(d);
 	}
-	/* power squelch */
+	/* power squelch (sqrt-free): compare mean power to squared threshold */
 	if (d->squelch_level) {
-		sr = rms(d->lowpassed, d->lp_len, 1);
-		if (sr < d->squelch_level) {
+		long int pwr = 0;
+		{
+			int j;
+			long p = 0L, t = 0L, s;
+			double dc, err;
+			for (j = 0; j < d->lp_len; j += 1) {
+				s = (long)d->lowpassed[j];
+				t += s;
+				p += s * s;
+			}
+			dc = (double)t; /* step is 1 */
+			err = t * 2 * dc - dc * dc * d->lp_len;
+			pwr = (long int)((p - err) / (d->lp_len ? d->lp_len : 1));
+			if (pwr < 0) pwr = 0;
+		}
+		long int thr2 = (long int)d->squelch_level * (long int)d->squelch_level;
+		if (pwr < thr2) {
 			d->squelch_hits++;
 			for (i=0; i<d->lp_len; i++) {
 				d->lowpassed[i] = 0;
 			}
 		} else {
-			d->squelch_hits = 0;}
+			d->squelch_hits = 0;
+		}
 	}
 	d->mode_demod(d);  /* lowpassed -> result */
 	if (d->mode_demod == &raw_demod) {
