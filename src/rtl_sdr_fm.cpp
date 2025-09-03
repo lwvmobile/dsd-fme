@@ -265,6 +265,10 @@ struct demod_state
 	int      custom_atan;
 	int      deemph, deemph_a;
 	int      deemph_avg;
+	/* Optional post-demod audio low-pass filter (one-pole) */
+	int      audio_lpf_enable;
+	int      audio_lpf_alpha;   /* Q15 alpha for one-pole LPF */
+	int      audio_lpf_state;   /* state/output y[n-1] in Q0 */
 	int      now_lpr;
 	int      prev_lpr_index;
 	int      dc_block, dc_avg;
@@ -914,6 +918,31 @@ void dc_block_filter(struct demod_state *fm)
 	fm->dc_avg = dc;
 }
 
+/* Optional light post-demod audio low-pass filter (one-pole IIR)
+   y[n] = y[n-1] + alpha * (x[n] - y[n-1])
+   alpha is Q15 in fm->audio_lpf_alpha. */
+static inline void audio_lpf_filter(struct demod_state *fm)
+{
+    if (!fm->audio_lpf_enable) return;
+    int i;
+    int16_t *res = assume_aligned_ptr(fm->result, DSD_FME_ALIGN);
+    int y = fm->audio_lpf_state; /* Q0 */
+    const int alpha_q15 = fm->audio_lpf_alpha; /* Q15 */
+    const int kShift = 15;
+    DSD_FME_IVDEP
+    for (i = 0; i < fm->result_len; i++) {
+        int x = (int)res[i];
+        int d = x - y;
+        int64_t delta = (int64_t)d * (int64_t)alpha_q15;
+        /* symmetric rounding */
+        if (d >= 0) delta += (1LL << (kShift - 1));
+        else        delta -= (1LL << (kShift - 1));
+        y += (int)(delta >> kShift);
+        res[i] = (int16_t)y;
+    }
+    fm->audio_lpf_state = y;
+}
+
 long int rms(int16_t *samples, int len, int step)
 /* largely lifted from rtl_power */
 {
@@ -1031,7 +1060,9 @@ void full_demod(struct demod_state *d)
 	if (d->post_downsample > 1) {
 		d->result_len = low_pass_simple(d->result, d->result_len, d->post_downsample);}
 	if (d->deemph) {
-		deemph_filter(d);}
+		deemph_filter(d);} 
+	/* Optional post-demod audio LPF */
+	audio_lpf_filter(d);
 	if (d->dc_block) {
 		dc_block_filter(d);}
 	if (d->rate_out2 > 0) {
@@ -1379,6 +1410,10 @@ void demod_init_analog(struct demod_state *s)
 	s->prev_lpr_index = 0;
 	s->deemph_a = 0; //
 	s->deemph_avg = 0;
+	/* Audio LPF defaults */
+	s->audio_lpf_enable = 0;
+	s->audio_lpf_alpha = 0;
+	s->audio_lpf_state = 0;
 	s->now_lpr = 0;
 	s->dc_block = 1; //
 	s->dc_avg = 0;
@@ -1428,6 +1463,10 @@ void demod_init_ro2(struct demod_state *s)
 	s->prev_lpr_index = 0;
 	s->deemph_a = 0;
 	s->deemph_avg = 0;
+	/* Audio LPF defaults */
+	s->audio_lpf_enable = 0;
+	s->audio_lpf_alpha = 0;
+	s->audio_lpf_state = 0;
 	s->now_lpr = 0;
 	s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
 	s->dc_avg = 0;
@@ -1477,6 +1516,10 @@ void demod_init(struct demod_state *s)
 	s->prev_lpr_index = 0;
 	s->deemph_a = 0;
 	s->deemph_avg = 0;
+	/* Audio LPF defaults */
+	s->audio_lpf_enable = 0;
+	s->audio_lpf_alpha = 0;
+	s->audio_lpf_state = 0;
 	s->now_lpr = 0;
 	s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
 	s->dc_avg = 0;
@@ -1740,6 +1783,38 @@ void open_rtlsdr_stream(dsd_opts *opts)
 			if (coef_q15 < 1) coef_q15 = 1; /* ensure non-zero to move toward steady-state */
 			if (coef_q15 > (1 << 15)) coef_q15 = (1 << 15);
 			demod.deemph_a = coef_q15;
+		}
+	}
+
+	/* Configure optional post-demod audio LPF via env DSD_FME_AUDIO_LPF.
+	   Values:
+	   - off or 0: disabled (default)
+	   - NNNN: cutoff in Hz (approximate), e.g., 3000 or 5000. Uses one-pole IIR.
+	 */
+	{
+		const char *alpf = getenv("DSD_FME_AUDIO_LPF");
+		demod.audio_lpf_enable = 0;
+		demod.audio_lpf_alpha = 0;
+		demod.audio_lpf_state = 0;
+		if (alpf && alpf[0] != '\0') {
+			if (strcasecmp(alpf, "off") == 0 || strcmp(alpf, "0") == 0) {
+				/* disabled */
+			} else {
+				int cutoff_hz = atoi(alpf);
+				if (cutoff_hz < 100) cutoff_hz = 100; /* guard */
+				/* One-pole mapping: choose alpha from cutoff and Fs using approx alpha = 1 - exp(-2*pi*fc/Fs) */
+				double Fs = (double)demod.rate_out;
+				if (Fs < 1.0) Fs = 1.0;
+				double a = 1.0 - exp(-2.0 * kPi * (double)cutoff_hz / Fs);
+				if (a < 0.0) a = 0.0;
+				if (a > 1.0) a = 1.0;
+				int alpha_q15 = (int)lrint(a * (double)(1 << 15));
+				if (alpha_q15 < 1) alpha_q15 = 1;
+				if (alpha_q15 > (1 << 15)) alpha_q15 = (1 << 15);
+				demod.audio_lpf_alpha = alpha_q15;
+				demod.audio_lpf_enable = 1;
+				fprintf(stderr, "Audio LPF enabled: fc≈%d Hz, alpha_q15=%d\n", cutoff_hz, demod.audio_lpf_alpha);
+			}
 		}
 	}
 
