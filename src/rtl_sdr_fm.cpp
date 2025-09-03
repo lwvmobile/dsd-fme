@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <sched.h>
 #include <atomic>
+#include <vector>
 #include <rtl-sdr.h>
 #include "dsd.h"
 
@@ -975,15 +976,37 @@ static void *demod_thread_fn(void *arg)
 			safe_cond_signal(&controller.hop, &controller.hop_m);
 			continue;
 		}
-		/* Write demod block to SPSC ring, duplicating per bandwidth_multiplier as before.
-		   Wake consumer once per produced block. */
+		/* Write demod block to SPSC ring. If upsampling (bandwidth_multiplier > 1),
+		   linearly interpolate between adjacent samples instead of duplicating. */
 		if (bandwidth_multiplier <= 1) {
 			ring_write_no_signal(o, d->result, (size_t)d->result_len);
 		} else {
-			for (int i = 0; i < d->result_len; i++) {
-				for (int j = 0; j < bandwidth_multiplier; j++) {
-					ring_write_no_signal(o, &d->result[i], 1);
+			const int M = bandwidth_multiplier;
+			const int N = d->result_len;
+			if (N <= 0) {
+				/* nothing to write */
+			} else if (N == 1) {
+				/* Degenerate case: only one sample, replicate M times */
+				std::vector<int16_t> tmp(M);
+				for (int m = 0; m < M; m++) tmp[m] = d->result[0];
+				ring_write_no_signal(o, tmp.data(), (size_t)M);
+			} else {
+				/* N >= 2: perform linear interpolation between successive samples */
+				const size_t up_len = (size_t)N * (size_t)M;
+				std::vector<int16_t> upsampled;
+				upsampled.resize(up_len);
+				for (int n = 0; n < N - 1; n++) {
+					int16_t x0 = d->result[n];
+					int16_t x1 = d->result[n + 1];
+					int32_t dx = (int32_t)x1 - (int32_t)x0;
+					for (int m = 0; m < M; m++) {
+						int32_t interp = (int32_t)x0 + (dx * m) / M;
+						upsampled[(size_t)n * (size_t)M + (size_t)m] = (int16_t)interp;
+					}
 				}
+				/* Last original sample maps to the last position */
+				upsampled[(size_t)(N - 1) * (size_t)M] = d->result[N - 1];
+				ring_write_no_signal(o, upsampled.data(), up_len);
 			}
 		}
 		safe_cond_signal(&o->ready, &o->ready_m);
