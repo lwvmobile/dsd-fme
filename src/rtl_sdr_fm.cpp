@@ -139,7 +139,6 @@ struct output_state
 	size_t   capacity;
 	std::atomic<size_t> head;
 	std::atomic<size_t> tail;
-	pthread_rwlock_t rw;
 	pthread_cond_t ready;
 	pthread_cond_t space;
 	pthread_mutex_t ready_m;
@@ -1143,7 +1142,6 @@ void demod_cleanup(struct demod_state *s)
 void output_init(struct output_state *s)
 {
 	s->rate = rtl_bandwidth;
-	pthread_rwlock_init(&s->rw, NULL);
 	pthread_cond_init(&s->ready, NULL);
 	pthread_cond_init(&s->space, NULL);
 	pthread_mutex_init(&s->ready_m, NULL);
@@ -1156,7 +1154,6 @@ void output_init(struct output_state *s)
 
 void output_cleanup(struct output_state *s)
 {
-	pthread_rwlock_destroy(&s->rw);
 	pthread_cond_destroy(&s->ready);
 	pthread_cond_destroy(&s->space);
 	pthread_mutex_destroy(&s->ready_m);
@@ -1420,9 +1417,7 @@ void rtl_dev_tune(dsd_opts * opts, long int frequency)
 	if (r < 0)
 		fprintf (stderr, " (WARNING: Failed to set Center Frequency %u). \n", dongle.freq);
 
-	pthread_rwlock_wrlock(&output.rw); //prevent possible segfault when cleaning the queue
 	rtl_clean_queue();
-	pthread_rwlock_unlock(&output.rw); //resume
 
 }
 
