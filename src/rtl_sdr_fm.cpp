@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include <signal.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <queue>
@@ -43,9 +42,25 @@
 static int lcm_post[17] = {1,1,1,3,1,5,3,7,1,9,5,11,3,13,7,15,1};
 static int ACTUAL_BUF_LENGTH;
 
+static const double kPi = 3.14159265358979323846;
+
 static int *atan_lut = NULL;
 static int atan_lut_size = 131072; /* 512 KB */
 static int atan_lut_coef = 8;
+static pthread_once_t atan_lut_once = PTHREAD_ONCE_INIT;
+static pthread_mutex_t atan_lut_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static void atan_lut_once_init(void)
+{
+	int i;
+	atan_lut = static_cast<int*>(malloc(atan_lut_size * sizeof(int)));
+	if (atan_lut == NULL) {
+		return;
+	}
+	for (i = 0; i < atan_lut_size; i++) {
+		atan_lut[i] = (int) (atan((double) i / (1<<atan_lut_coef)) / kPi * (1<<14));
+	}
+}
 
 //UDP -- keep for compatibility reasons
 #include <netinet/in.h>
@@ -106,6 +121,7 @@ struct demod_state
 	int      now_lpr;
 	int      prev_lpr_index;
 	int      dc_block, dc_avg;
+	int      (*discriminator)(int, int, int, int);
 	void     (*mode_demod)(struct demod_state*);
 	pthread_rwlock_t rw;
 	pthread_cond_t ready;
@@ -304,13 +320,20 @@ void multiply(int ar, int aj, int br, int bj, int *cr, int *cj)
 	*cj = aj*br + ar*bj;
 }
 
+/* 64-bit safe complex multiply to prevent overflow in discriminator math */
+static inline void multiply64(int ar, int aj, int br, int bj, int64_t *cr, int64_t *cj)
+{
+	*cr = (int64_t)ar * (int64_t)br - (int64_t)aj * (int64_t)bj;
+	*cj = (int64_t)aj * (int64_t)br + (int64_t)ar * (int64_t)bj;
+}
+
 int polar_discriminant(int ar, int aj, int br, int bj)
 {
-	int cr, cj;
+	int64_t cr, cj;
 	double angle;
-	multiply(ar, aj, br, -bj, &cr, &cj);
+	multiply64(ar, aj, br, -bj, &cr, &cj);
 	angle = atan2((double)cj, (double)cr);
-	return (int)(angle / 3.14159 * (1<<14));
+	return (int)(angle / kPi * (1<<14));
 }
 
 int fast_atan2(int y, int x)
@@ -336,31 +359,79 @@ int fast_atan2(int y, int x)
 	return angle;
 }
 
+/* 64-bit safe version of fast atan2 to avoid overflow in intermediate math */
+int fast_atan2_64(int64_t y, int64_t x)
+/* pre scaled for int16, returns angle scaled so that pi == 1<<14 */
+{
+	int angle;
+	int pi4=(1<<12), pi34=3*(1<<12);  /* note: pi = 1<<14 */
+	int64_t yabs;
+	if (x == 0 && y == 0) {
+		return 0;
+	}
+	yabs = y;
+	if (yabs < 0) {
+		yabs = -yabs;
+	}
+	if (x >= 0) {
+		/* denominator (x + yabs) cannot be zero here unless x==y==0 handled above */
+		angle = (int)(pi4  - ( (int64_t)pi4 * (x - yabs) ) / (x + yabs));
+	} else {
+		/* denominator (yabs - x) > 0 */
+		angle = (int)(pi34 - ( (int64_t)pi4 * (x + yabs) ) / (yabs - x));
+	}
+	if (y < 0) {
+		return -angle;
+	}
+	return angle;
+}
+
 int polar_disc_fast(int ar, int aj, int br, int bj)
 {
-	int cr, cj;
-	multiply(ar, aj, br, -bj, &cr, &cj);
-	return fast_atan2(cj, cr);
+	int64_t cr, cj;
+	multiply64(ar, aj, br, -bj, &cr, &cj);
+	return fast_atan2_64(cj, cr);
 }
 
 int atan_lut_init(void)
 {
-	int i = 0;
-
-	atan_lut = static_cast<int*>(malloc(atan_lut_size * sizeof(int)));
-
-	for (i = 0; i < atan_lut_size; i++) {
-		atan_lut[i] = (int) (atan((double) i / (1<<atan_lut_coef)) / 3.14159 * (1<<14));
+	/* Thread-safe, idempotent initialization */
+	pthread_once(&atan_lut_once, atan_lut_once_init);
+	if (atan_lut != NULL) {
+		return 0;
 	}
+	/* If LUT was freed after once, allow re-init guarded by mutex */
+	pthread_mutex_lock(&atan_lut_mutex);
+	if (atan_lut == NULL) {
+		atan_lut_once_init();
+	}
+	pthread_mutex_unlock(&atan_lut_mutex);
+	return (atan_lut != NULL) ? 0 : -1;
+}
 
-	return 0;
+void atan_lut_free(void)
+{
+	pthread_mutex_lock(&atan_lut_mutex);
+	if (atan_lut != NULL) {
+		free(atan_lut);
+		atan_lut = NULL;
+	}
+	pthread_mutex_unlock(&atan_lut_mutex);
 }
 
 int polar_disc_lut(int ar, int aj, int br, int bj)
 {
-	int cr, cj, x, x_abs;
+	int64_t cr, cj;
+	int64_t x, x_abs;
 
-	multiply(ar, aj, br, -bj, &cr, &cj);
+	/* Ensure LUT is available; fall back if allocation failed */
+	atan_lut_init();
+	if (atan_lut == NULL) {
+		multiply64(ar, aj, br, -bj, &cr, &cj);
+		return fast_atan2_64(cj, cr);
+	}
+
+	multiply64(ar, aj, br, -bj, &cr, &cj);
 
 	/* special cases */
 	if (cr == 0 || cj == 0) {
@@ -373,22 +444,32 @@ int polar_disc_lut(int ar, int aj, int br, int bj)
 		if (cj == 0 && cr > 0)
 			{return 0;}
 		if (cj == 0 && cr < 0)
-			{return 1 << 14;}
+			{return (1 << 14) - 1;}
 	}
 
 	/* real range -32768 - 32768 use 64x range -> absolute maximum: 2097152 */
-	x = (cj << atan_lut_coef) / cr;
-	x_abs = abs(x);
+	x = ((int64_t)cj << atan_lut_coef) / cr;
+	x_abs = (x < 0) ? -x : x;
 
-	if (x_abs >= atan_lut_size) {
-		/* we can use linear range, but it is not necessary */
-		return (cj > 0) ? 1<<13 : -(1<<13);
+	if (x_abs >= (int64_t)atan_lut_size) {
+		/* Preserve quadrant using both cr and cj signs */
+		if (cr < 0) {
+			return (cj >= 0) ? ((1 << 14) - 1) : (-(1 << 14) + 1);
+		} else {
+			return (cj >= 0) ? (1 << 13) : -(1 << 13);
+		}
 	}
 
 	if (x > 0) {
-		return (cj > 0) ? atan_lut[x] : atan_lut[x] - (1<<14);
+		int val = (cj > 0) ? atan_lut[(int)x] : (atan_lut[(int)x] - (1<<14));
+		if (val == (1 << 14)) { val = (1 << 14) - 1; }
+		if (val == -(1 << 14)) { val = -(1 << 14) + 1; }
+		return val;
 	} else {
-		return (cj > 0) ? (1<<14) - atan_lut[-x] : -atan_lut[-x];
+		int val = (cj > 0) ? ((1<<14) - atan_lut[(int)(-x)]) : (-atan_lut[(int)(-x)]);
+		if (val == (1 << 14)) { val = (1 << 14) - 1; }
+		if (val == -(1 << 14)) { val = -(1 << 14) + 1; }
+		return val;
 	}
 
 	return 0;
@@ -398,24 +479,11 @@ void fm_demod(struct demod_state *fm)
 {
 	int i, pcm;
 	int16_t *lp = fm->lowpassed;
-	pcm = polar_discriminant(lp[0], lp[1],
-		fm->pre_r, fm->pre_j);
+	/* Use selected discriminator from the very first sample */
+	pcm = fm->discriminator(lp[0], lp[1], fm->pre_r, fm->pre_j);
 	fm->result[0] = (int16_t)pcm;
 	for (i = 2; i < (fm->lp_len-1); i += 2) {
-		switch (fm->custom_atan) {
-		case 0:
-			pcm = polar_discriminant(lp[i], lp[i+1],
-				lp[i-2], lp[i-1]);
-			break;
-		case 1:
-			pcm = polar_disc_fast(lp[i], lp[i+1],
-				lp[i-2], lp[i-1]);
-			break;
-		case 2:
-			pcm = polar_disc_lut(lp[i], lp[i+1],
-				lp[i-2], lp[i-1]);
-			break;
-		}
+		pcm = fm->discriminator(lp[i], lp[i+1], lp[i-2], lp[i-1]);
 		fm->result[i/2] = (int16_t)pcm;
 	}
 	fm->pre_r = lp[fm->lp_len - 2];
@@ -827,7 +895,7 @@ void demod_init_analog(struct demod_state *s)
 	s->comp_fir_size = 0;
 	s->prev_index = 0;
 	s->post_downsample = 1;  //1 -- once this works, default = 4 -- doesn't work on the official rtl-sdr source code either
-	s->custom_atan = 0;
+	s->custom_atan = 2;
 	s->deemph = 1; //
 	s->rate_out2 = rtl_bandwidth;  // -1 flag for disabled -- this enables low_pass_real, seems to work okay
 	s->mode_demod = &fm_demod;
@@ -841,6 +909,10 @@ void demod_init_analog(struct demod_state *s)
 	pthread_cond_init(&s->ready, NULL);
 	pthread_mutex_init(&s->ready_m, NULL);
 	s->output_target = &output;
+	if (s->custom_atan == 2 && atan_lut == NULL) { atan_lut_init(); }
+	/* set discriminator function pointer */
+	s->discriminator = (s->custom_atan == 0) ? &polar_discriminant :
+		(s->custom_atan == 1) ? &polar_disc_fast : &polar_disc_lut;
 }
 
 void demod_init_ro2(struct demod_state *s)
@@ -855,7 +927,7 @@ void demod_init_ro2(struct demod_state *s)
 	s->comp_fir_size = 0;
 	s->prev_index = 0;
 	s->post_downsample = 1;  //1 -- once this works, default = 4 -- doesn't work on the official rtl-sdr source code either
-	s->custom_atan = 0;
+	s->custom_atan = 2;
 	s->deemph = 0;
 	s->rate_out2 = rtl_bandwidth;  // -1 flag for disabled -- this enables low_pass_real, seems to work okay
 	s->mode_demod = &fm_demod;
@@ -869,6 +941,10 @@ void demod_init_ro2(struct demod_state *s)
 	pthread_cond_init(&s->ready, NULL);
 	pthread_mutex_init(&s->ready_m, NULL);
 	s->output_target = &output;
+	if (s->custom_atan == 2 && atan_lut == NULL) { atan_lut_init(); }
+	/* set discriminator function pointer */
+	s->discriminator = (s->custom_atan == 0) ? &polar_discriminant :
+		(s->custom_atan == 1) ? &polar_disc_fast : &polar_disc_lut;
 }
 
 void demod_init(struct demod_state *s)
@@ -883,7 +959,7 @@ void demod_init(struct demod_state *s)
 	s->comp_fir_size = 0;
 	s->prev_index = 0;
 	s->post_downsample = 1;  //1 -- once this works, default = 4 -- doesn't work on the official rtl-sdr source code either
-	s->custom_atan = 0;
+	s->custom_atan = 2;
 	s->deemph = 0;
 	s->rate_out2 = -1;  // -1 flag for disabled -- this enables low_pass_real, seems to work okay
 	s->mode_demod = &fm_demod;
@@ -897,6 +973,10 @@ void demod_init(struct demod_state *s)
 	pthread_cond_init(&s->ready, NULL);
 	pthread_mutex_init(&s->ready_m, NULL);
 	s->output_target = &output;
+	if (s->custom_atan == 2 && atan_lut == NULL) { atan_lut_init(); }
+	/* set discriminator function pointer */
+	s->discriminator = (s->custom_atan == 0) ? &polar_discriminant :
+		(s->custom_atan == 1) ? &polar_disc_fast : &polar_disc_lut;
 }
 
 void demod_cleanup(struct demod_state *s)
@@ -1122,6 +1202,9 @@ void cleanup_rtlsdr_stream()
   demod_cleanup(&demod);
   output_cleanup(&output);
   controller_cleanup(&controller);
+
+	/* free LUT memory if allocated */
+	atan_lut_free();
 
   rtlsdr_close(dongle.dev);
 }
