@@ -458,6 +458,11 @@ void low_pass_real(struct demod_state *s)
 	int i=0, i2=0;
 	int fast = (int)s->rate_out;
 	int slow = s->rate_out2;
+	/* Precompute fixed-point reciprocal of decimation factor to avoid per-sample division */
+	int decim = (slow != 0) ? (fast / slow) : 1;
+	if (decim < 1) decim = 1;
+	const int kShiftLPR = 15; /* Q15 reciprocal */
+	int recip_decim_q = (1 << kShiftLPR) / decim;
 	while (i < s->result_len) {
 		s->now_lpr += s->result[i];
 		i++;
@@ -465,7 +470,9 @@ void low_pass_real(struct demod_state *s)
 		if (s->prev_lpr_index < fast) {
 			continue;
 		}
-		s->result[i2] = (int16_t)(s->now_lpr / (fast/slow));
+		/* Multiply by reciprocal and shift instead of dividing by (fast/slow) */
+		int64_t scaled = ((int64_t)s->now_lpr * recip_decim_q);
+		s->result[i2] = (int16_t)(scaled >> kShiftLPR);
 		s->prev_lpr_index -= fast;
 		s->now_lpr = 0;
 		i2 += 1;
@@ -720,15 +727,23 @@ void deemph_filter(struct demod_state *fm)
 {
 	static int avg;  // cheating...
 	int i, d;
+	/* Precompute fixed-point reciprocal of deemphasis constant to avoid per-sample division */
+	const int kShiftDeemph = 15; /* Q15 */
+	int a = fm->deemph_a;
+	if (a <= 0) a = 1;
+	int recip_q = (1 << kShiftDeemph) / a;
 	// de-emph IIR
 	// avg = avg * (1 - alpha) + sample * alpha;
 	for (i = 0; i < fm->result_len; i++) {
 		d = fm->result[i] - avg;
+		/* Use multiply+shift with sign-aware rounding to mirror original behavior */
+		int64_t delta = (int64_t)d * recip_q;
 		if (d > 0) {
-			avg += (d + fm->deemph_a/2) / fm->deemph_a;
-		} else {
-			avg += (d - fm->deemph_a/2) / fm->deemph_a;
+			delta += (1LL << (kShiftDeemph - 1));
+		} else if (d < 0) {
+			delta -= (1LL << (kShiftDeemph - 1));
 		}
+		avg += (int)(delta >> kShiftDeemph);
 		fm->result[i] = (int16_t)avg;
 	}
 }
