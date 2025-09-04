@@ -430,6 +430,9 @@ static void maybe_set_thread_realtime_and_affinity(const char *role)
 
 static inline size_t ring_used(const struct output_state *o)
 {
+    /* Atomics policy: head/tail are atomics. We use default sequential
+       consistency for simplicity. In an SPSC ring, this could be relaxed
+       to acquire/release without changing behavior. */
     size_t h = o->head.load();
     size_t t = o->tail.load();
     if (h >= t) return h - t;
@@ -443,11 +446,13 @@ static inline size_t ring_free(const struct output_state *o)
 
 static inline int ring_is_empty(const struct output_state *o)
 {
+    /* See atomics note in ring_used() for ordering considerations. */
     return o->head.load() == o->tail.load();
 }
 
 static inline void ring_clear(struct output_state *o)
 {
+    /* Clearing indices; with relaxed ordering this would be a release store. */
     o->tail.store(0);
     o->head.store(0);
 }
@@ -455,6 +460,7 @@ static inline void ring_clear(struct output_state *o)
 /* Write up to count samples, blocking until space is available. Signals data availability after writes. */
 static void ring_write(struct output_state *o, const int16_t *data, size_t count)
 {
+    int need_signal = ring_is_empty(o);
     while (count > 0 && !exitflag) {
         size_t free_sp = ring_free(o);
         if (free_sp == 0) {
@@ -477,6 +483,9 @@ static void ring_write(struct output_state *o, const int16_t *data, size_t count
         o->head.store(h);
         data += write_now;
         count -= write_now;
+    }
+    if (need_signal) {
+        safe_cond_signal(&o->ready, &o->ready_m);
     }
 }
 
@@ -504,6 +513,17 @@ static void ring_write_no_signal(struct output_state *o, const int16_t *data, si
         o->head.store(h);
         data += write_now;
         count -= write_now;
+    }
+}
+
+/* Write and signal consumer only if the ring transitions from empty to
+   non-empty. This reduces unnecessary wakeups while ensuring timely reads. */
+static void ring_write_signal_on_empty_transition(struct output_state *o, const int16_t *data, size_t count)
+{
+    int need_signal = ring_is_empty(o);
+    ring_write_no_signal(o, data, count);
+    if (need_signal) {
+        safe_cond_signal(&o->ready, &o->ready_m);
     }
 }
 
@@ -1188,7 +1208,7 @@ static void *demod_thread_fn(void *arg)
 		/* Write demod block to SPSC ring. If upsampling (bandwidth_multiplier > 1),
 		   linearly interpolate between adjacent samples instead of duplicating. */
 		if (bandwidth_multiplier <= 1) {
-			ring_write_no_signal(o, d->result, (size_t)d->result_len);
+			ring_write_signal_on_empty_transition(o, d->result, (size_t)d->result_len);
 		} else {
 			const int M = bandwidth_multiplier;
 			const int N = d->result_len;
@@ -1198,7 +1218,7 @@ static void *demod_thread_fn(void *arg)
 				/* Degenerate case: only one sample, replicate M times */
 				std::vector<int16_t> tmp(M);
 				for (int m = 0; m < M; m++) tmp[m] = d->result[0];
-				ring_write_no_signal(o, tmp.data(), (size_t)M);
+				ring_write_signal_on_empty_transition(o, tmp.data(), (size_t)M);
 			} else {
 				/* N >= 2: perform linear interpolation between successive samples */
 				const size_t up_len = (size_t)N * (size_t)M;
@@ -1215,10 +1235,10 @@ static void *demod_thread_fn(void *arg)
 				}
 				/* Last original sample maps to the last position */
 				upsampled[(size_t)(N - 1) * (size_t)M] = d->result[N - 1];
-				ring_write_no_signal(o, upsampled.data(), up_len);
+				ring_write_signal_on_empty_transition(o, upsampled.data(), up_len);
 			}
 		}
-		safe_cond_signal(&o->ready, &o->ready_m);
+		/* Signaling occurs only when the ring transitions from empty to non-empty. */
 	}
 	return 0;
 }
