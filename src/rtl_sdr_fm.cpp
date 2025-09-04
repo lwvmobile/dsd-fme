@@ -367,6 +367,18 @@ struct demod_state
 	alignas(DSD_FME_ALIGN) int16_t  hb_q_out[MAXIMUM_BUF_LENGTH/2];
 	/* Preallocated buffer for linear upsampler (bandwidth_multiplier) */
 	alignas(DSD_FME_ALIGN) int16_t  upsample_buf[MAXIMUM_BUF_LENGTH * MAX_BANDWIDTH_MULTIPLIER];
+	/* Polyphase rational resampler (L/M) state and output buffer */
+	int      resamp_enabled;
+	int      resamp_target_hz;     /* desired output sample rate */
+	int      resamp_L;             /* upsample factor */
+	int      resamp_M;             /* downsample factor */
+	int      resamp_phase;         /* 0..L-1 accumulator */
+	int      resamp_taps_len;      /* prototype taps length (padded to K*L) */
+	int      resamp_taps_per_phase;/* K = ceil(taps_len/L) */
+	int16_t *resamp_taps;          /* Q15 taps, length = K*L */
+	int16_t *resamp_hist;          /* most-recent-first history, length = K */
+	/* Output buffer for resampler (worst-case 4x expansion) */
+	alignas(DSD_FME_ALIGN) int16_t  resamp_outbuf[MAXIMUM_BUF_LENGTH * 4];
 	/* Minimal 2-thread worker pool for intra-block parallelism */
 	int      mt_enabled;
 	int      mt_ready;
@@ -1173,6 +1185,133 @@ static inline void audio_lpf_filter(struct demod_state *fm)
     fm->audio_lpf_state = y;
 }
 
+/* =====================
+   Polyphase Rational Resampler (L/M)
+   ===================== */
+
+static inline int gcd_int(int a, int b)
+{
+    if (a < 0) a = -a;
+    if (b < 0) b = -b;
+    while (b != 0) {
+        int t = a % b;
+        a = b;
+        b = t;
+    }
+    return (a == 0) ? 1 : a;
+}
+
+static inline double dsd_fme_sinc(double x)
+{
+    if (x == 0.0) return 1.0;
+    return sin(kPi * x) / (kPi * x);
+}
+
+/* Design windowed-sinc low-pass prototype for upfirdn (runs at L*Fs_in).
+   - cutoff normalized to 0..0.5 (relative to L*Fs_in), use conservative margin. */
+static void resamp_design(struct demod_state *s, int L, int M)
+{
+    /* Per-phase taps K; total taps = K*L. Keep small for CPU, but adequate stopband. */
+    int taps_per_phase = 16; /* K */
+    int total_taps = taps_per_phase * L;
+    if (total_taps < L) total_taps = L;
+    if (taps_per_phase < 8) taps_per_phase = 8;
+
+    /* Normalized cutoff: conservative 0.45 * min(1/L, 1/M) of Nyquist at L*Fs. */
+    double fc = 0.45 / (double)((L > M) ? L : M); /* 0..0.5 at L*Fs */
+    int N = total_taps;
+    int mid = (N - 1) / 2;
+
+    /* Allocate taps if needed */
+    if (s->resamp_taps) { free(s->resamp_taps); s->resamp_taps = NULL; }
+    if (s->resamp_hist) { free(s->resamp_hist); s->resamp_hist = NULL; }
+    s->resamp_taps = static_cast<int16_t*>(malloc((size_t)N * sizeof(int16_t)));
+    s->resamp_hist = static_cast<int16_t*>(malloc((size_t)taps_per_phase * sizeof(int16_t)));
+    if (!s->resamp_taps || !s->resamp_hist) {
+        if (s->resamp_taps) { free(s->resamp_taps); s->resamp_taps = NULL; }
+        if (s->resamp_hist) { free(s->resamp_hist); s->resamp_hist = NULL; }
+        s->resamp_enabled = 0;
+        fprintf(stderr, "Rational resampler: allocation failed, disabling.\n");
+        return;
+    }
+    memset(s->resamp_hist, 0, (size_t)taps_per_phase * sizeof(int16_t));
+
+    /* Windowed-sinc (Hamming) */
+    double gain = 0.0;
+    for (int n = 0; n < N; n++) {
+        int m = n - mid;
+        double w = 0.54 - 0.46 * cos(2.0 * kPi * (double)n / (double)(N - 1));
+        double h = 2.0 * fc * dsd_fme_sinc(2.0 * fc * (double)m);
+        double t = h * w;
+        gain += t;
+    }
+    /* Normalize to unity DC gain */
+    if (gain == 0.0) gain = 1.0;
+    /* Compensate for polyphase upsampling: scale taps by L so that each phase
+       has approximately unity DC gain (preserves amplitude through upfirdn). */
+    const double phase_gain_comp = (double)L;
+    for (int n = 0; n < N; n++) {
+        int m = n - mid;
+        double w = 0.54 - 0.46 * cos(2.0 * kPi * (double)n / (double)(N - 1));
+        double h = 2.0 * fc * dsd_fme_sinc(2.0 * fc * (double)m);
+        double t = (h * w / gain) * phase_gain_comp;
+        int v = (int)lrint(t * (double)(1 << 15));
+        if (v >  32767) v =  32767;
+        if (v < -32768) v = -32768;
+        s->resamp_taps[n] = (int16_t)v;
+    }
+
+    s->resamp_L = L;
+    s->resamp_M = M;
+    s->resamp_phase = 0;
+    s->resamp_taps_len = N;
+    s->resamp_taps_per_phase = taps_per_phase;
+}
+
+/* Process one block using polyphase upfirdn with history.
+   Returns number of output samples written. */
+static int resamp_process_block(struct demod_state *s, const int16_t *in, int in_len, int16_t *out)
+{
+    if (!s->resamp_enabled || !s->resamp_taps || !s->resamp_hist) {
+        /* passthrough */
+        memcpy(out, in, (size_t)in_len * sizeof(int16_t));
+        return in_len;
+    }
+    const int L = s->resamp_L;
+    const int M = s->resamp_M;
+    const int K = s->resamp_taps_per_phase; /* taps per phase */
+    const int16_t *taps = s->resamp_taps;   /* length K*L, phase-major stride L */
+    int phase = s->resamp_phase;            /* 0..L-1 */
+    int out_len = 0;
+
+    for (int n = 0; n < in_len; n++) {
+        /* Push new sample into history (most-recent-first) */
+        memmove(s->resamp_hist + 1, s->resamp_hist, (size_t)(K - 1) * sizeof(int16_t));
+        s->resamp_hist[0] = in[n];
+
+        /* While we owe outputs with current input available */
+        int local_phase = phase;
+        while (local_phase < L) {
+            /* Dot: y = sum_{k=0..K-1} hist[k] * taps[k*L + local_phase] */
+            int64_t acc = 0;
+            const int16_t *tk = taps + local_phase;
+            for (int k = 0; k < K; k++) {
+                acc += (int32_t)s->resamp_hist[k] * (int32_t)tk[0];
+                tk += L;
+            }
+            /* Q15 -> Q0 with rounding and saturation */
+            acc += (1 << 14);
+            int32_t y = (int32_t)(acc >> 15);
+            out[out_len++] = sat16(y);
+            local_phase += M;
+        }
+        phase = local_phase - L;
+    }
+
+    s->resamp_phase = phase;
+    return out_len;
+}
+
 long int mean_power(int16_t *samples, int len, int step)
 /* DC-corrected mean power (sqrt-free). Returns squared RMS units. */
 {
@@ -1397,71 +1536,69 @@ static void *demod_thread_fn(void *arg)
 			safe_cond_signal(&controller.hop, &controller.hop_m);
 			continue;
 		}
-		/* Write demod block to SPSC ring. If upsampling (bandwidth_multiplier > 1),
-		   linearly interpolate between adjacent samples instead of duplicating. */
-		if (bandwidth_multiplier <= 1) {
-			ring_write_signal_on_empty_transition(o, d->result, (size_t)d->result_len);
+		/* Preferred path: rational resampler when enabled; otherwise legacy upsampler */
+		if (d->resamp_enabled) {
+			int out_n = resamp_process_block(d, d->result, d->result_len, d->resamp_outbuf);
+			if (out_n > 0) ring_write_signal_on_empty_transition(o, d->resamp_outbuf, (size_t)out_n);
 		} else {
-			const int M = bandwidth_multiplier;
-			const int N = d->result_len;
-			if (N <= 0) {
-				/* nothing to write */
-			} else if (N == 1) {
-				/* Degenerate case: only one sample, replicate M times */
-				for (int m = 0; m < M; m++) d->upsample_buf[m] = d->result[0];
-				ring_write_signal_on_empty_transition(o, d->upsample_buf, (size_t)M);
+			/* Legacy path: optional simple upsampler */
+			if (bandwidth_multiplier <= 1) {
+				ring_write_signal_on_empty_transition(o, d->result, (size_t)d->result_len);
 			} else {
-				/* N >= 2: perform linear interpolation between successive samples */
-				const size_t up_len = (size_t)N * (size_t)M;
-				/* Define range task */
-				struct UpArg { int start; int end; int M; const int16_t *src; int16_t *dst; };
-				auto up_task = [](void *arg){
-					UpArg *a = (UpArg*)arg;
-					const int Mloc = a->M;
-					for (int n = a->start; n < a->end; n++) {
-						int32_t x0 = a->src[n];
-						int32_t x1 = a->src[n + 1];
-						int16_t *row = a->dst + (size_t)n * (size_t)Mloc;
-						if (upsample_fixedpoint_enabled) {
-							int32_t dx = x1 - x0;
-							/* Q15 step to avoid per-sample division */
-							int64_t step_q15_64 = ((int64_t)dx << 15) / (int64_t)Mloc;
-							int32_t step_q15 = (int32_t)step_q15_64;
-							int32_t acc_q15 = 0;
-							for (int m = 0; m < Mloc; m++) {
-								int32_t frac = (acc_q15 >= 0) ? ((acc_q15 + (1 << 14)) >> 15) : -(((-acc_q15) + (1 << 14)) >> 15);
-								int32_t interp = x0 + frac;
-								row[m] = (int16_t)interp;
-								acc_q15 += step_q15;
-							}
-						} else {
-							int32_t dx = x1 - x0;
-							for (int m = 0; m < Mloc; m++) {
-								int32_t interp = x0 + (dx * m) / Mloc;
-								row[m] = (int16_t)interp;
+				const int M = bandwidth_multiplier;
+				const int N = d->result_len;
+				if (N <= 0) {
+					/* nothing to write */
+				} else if (N == 1) {
+					for (int m = 0; m < M; m++) d->upsample_buf[m] = d->result[0];
+					ring_write_signal_on_empty_transition(o, d->upsample_buf, (size_t)M);
+				} else {
+					const size_t up_len = (size_t)N * (size_t)M;
+					struct UpArg { int start; int end; int M; const int16_t *src; int16_t *dst; };
+					auto up_task = [](void *arg){
+						UpArg *a = (UpArg*)arg;
+						const int Mloc = a->M;
+						for (int n = a->start; n < a->end; n++) {
+							int32_t x0 = a->src[n];
+							int32_t x1 = a->src[n + 1];
+							int16_t *row = a->dst + (size_t)n * (size_t)Mloc;
+							if (upsample_fixedpoint_enabled) {
+								int32_t dx = x1 - x0;
+								int64_t step_q15_64 = ((int64_t)dx << 15) / (int64_t)Mloc;
+								int32_t step_q15 = (int32_t)step_q15_64;
+								int32_t acc_q15 = 0;
+								for (int m = 0; m < Mloc; m++) {
+									int32_t frac = (acc_q15 >= 0) ? ((acc_q15 + (1 << 14)) >> 15) : -(((-acc_q15) + (1 << 14)) >> 15);
+									int32_t interp = x0 + frac;
+									row[m] = (int16_t)interp;
+									acc_q15 += step_q15;
+								}
+							} else {
+								int32_t dx = x1 - x0;
+								for (int m = 0; m < Mloc; m++) {
+									int32_t interp = x0 + (dx * m) / Mloc;
+									row[m] = (int16_t)interp;
+								}
 							}
 						}
+					};
+					int mid = (N - 1) / 2;
+					UpArg a0 = {0, mid, M, d->result, d->upsample_buf};
+					UpArg a1 = {mid, N - 1, M, d->result, d->upsample_buf};
+					if (d->mt_enabled) {
+						demod_mt_run_two(d, up_task, (void*)&a0, up_task, (void*)&a1);
+					} else {
+						up_task((void*)&a0);
+						up_task((void*)&a1);
 					}
-				};
-				/* Split [0, N-1) into two ranges */
-				int mid = (N - 1) / 2;
-				UpArg a0 = {0, mid, M, d->result, d->upsample_buf};
-				UpArg a1 = {mid, N - 1, M, d->result, d->upsample_buf};
-				if (d->mt_enabled) {
-					/* Post two tasks to the worker pool and wait */
-					demod_mt_run_two(d, up_task, (void*)&a0, up_task, (void*)&a1);
-				} else {
-					up_task((void*)&a0);
-					up_task((void*)&a1);
-				}
-				/* Last original sample maps to the last position; fill trailing with last value */
-				d->upsample_buf[(size_t)(N - 1) * (size_t)M] = d->result[N - 1];
-				if (upsample_fixedpoint_enabled) {
-					for (int t = 1; t < M; t++) {
-						d->upsample_buf[(size_t)(N - 1) * (size_t)M + (size_t)t] = d->result[N - 1];
+					d->upsample_buf[(size_t)(N - 1) * (size_t)M] = d->result[N - 1];
+					if (upsample_fixedpoint_enabled) {
+						for (int t = 1; t < M; t++) {
+							d->upsample_buf[(size_t)(N - 1) * (size_t)M + (size_t)t] = d->result[N - 1];
+						}
 					}
+					ring_write_signal_on_empty_transition(o, d->upsample_buf, up_len);
 				}
-				ring_write_signal_on_empty_transition(o, d->upsample_buf, up_len);
 			}
 		}
 		/* Signaling occurs only when the ring transitions from empty to non-empty. */
@@ -1711,6 +1848,16 @@ void demod_init_analog(struct demod_state *s)
 	s->now_lpr = 0;
 	s->dc_block = 1; //
 	s->dc_avg = 0;
+	/* Resampler defaults */
+	s->resamp_enabled = 0;
+	s->resamp_target_hz = 0;
+	s->resamp_L = 1;
+	s->resamp_M = 1;
+	s->resamp_phase = 0;
+	s->resamp_taps_len = 0;
+	s->resamp_taps_per_phase = 0;
+	s->resamp_taps = NULL;
+	s->resamp_hist = NULL;
 	/* Squelch estimator init */
 	s->squelch_running_power = 0;
 	s->squelch_decim_stride = 16; /* evaluate 1/16th samples for low CPU */
@@ -1766,6 +1913,16 @@ void demod_init_ro2(struct demod_state *s)
 	s->now_lpr = 0;
 	s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
 	s->dc_avg = 0;
+	/* Resampler defaults */
+	s->resamp_enabled = 0;
+	s->resamp_target_hz = 0;
+	s->resamp_L = 1;
+	s->resamp_M = 1;
+	s->resamp_phase = 0;
+	s->resamp_taps_len = 0;
+	s->resamp_taps_per_phase = 0;
+	s->resamp_taps = NULL;
+	s->resamp_hist = NULL;
 	/* Squelch estimator init */
 	s->squelch_running_power = 0;
 	s->squelch_decim_stride = 16;
@@ -1821,6 +1978,16 @@ void demod_init(struct demod_state *s)
 	s->now_lpr = 0;
 	s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
 	s->dc_avg = 0;
+	/* Resampler defaults */
+	s->resamp_enabled = 0;
+	s->resamp_target_hz = 0;
+	s->resamp_L = 1;
+	s->resamp_M = 1;
+	s->resamp_phase = 0;
+	s->resamp_taps_len = 0;
+	s->resamp_taps_per_phase = 0;
+	s->resamp_taps = NULL;
+	s->resamp_hist = NULL;
 	/* Squelch estimator init */
 	s->squelch_running_power = 0;
 	s->squelch_decim_stride = 16;
@@ -1855,6 +2022,9 @@ void demod_cleanup(struct demod_state *s)
 	pthread_mutex_destroy(&s->ready_m);
 	/* Destroy worker pool if enabled */
 	demod_mt_destroy(s);
+	/* Free resampler resources */
+	if (s->resamp_taps) { free(s->resamp_taps); s->resamp_taps = NULL; }
+	if (s->resamp_hist) { free(s->resamp_hist); s->resamp_hist = NULL; }
 }
 
 void output_init(struct output_state *s)
@@ -2038,6 +2208,42 @@ void open_rtlsdr_stream(dsd_opts *opts)
 		if (ufp && ufp[0] != '\0') {
 			upsample_fixedpoint_enabled = (atoi(ufp) != 0);
 		}
+		/* Configure rational resampler target rate via DSD_FME_RESAMP (Hz).
+		   Defaults: enabled at 48000 Hz unless set to "off" or "0". */
+		const char *rs = getenv("DSD_FME_RESAMP");
+		int enable_resamp = 1;
+		int target = 48000;
+		if (rs && rs[0] != '\0') {
+			if (strcasecmp(rs, "off") == 0 || strcmp(rs, "0") == 0) {
+				enable_resamp = 0;
+			} else {
+				int v = atoi(rs);
+				if (v > 0) target = v; else target = 48000;
+			}
+		}
+		if (enable_resamp) {
+			demod.resamp_target_hz = target;
+			int inRate = (demod.rate_out > 0) ? demod.rate_out : rtl_bandwidth;
+			int g = gcd_int(inRate, target);
+			int L = target / g;
+			int M = inRate / g;
+			if (L < 1) L = 1;
+			if (M < 1) M = 1;
+			/* Guard output buffer growth (limited to ~4x expansion) */
+			int scale_num = L;
+			int scale_den = M;
+			int scale = (scale_den > 0) ? ( (scale_num + scale_den - 1) / scale_den ) : 1;
+			if (scale > 4) {
+				fprintf(stderr, "Resampler ratio too large (L=%d,M=%d). Clamping not supported; disabling resampler.\n", L, M);
+				demod.resamp_enabled = 0;
+			} else {
+				demod.resamp_enabled = 1;
+				resamp_design(&demod, L, M);
+				fprintf(stderr, "Rational resampler enabled: %d -> %d Hz (L=%d,M=%d).\n", inRate, target, L, M);
+			}
+		} else {
+			demod.resamp_enabled = 0;
+		}
 	}
 
 	if (opts->rtlsdr_center_freq > 0) {
@@ -2164,6 +2370,14 @@ void open_rtlsdr_stream(dsd_opts *opts)
   pthread_create(&dongle.thread, NULL, dongle_thread_fn, (void*)(&dongle));
 	//only create socket thread IF user specified (for legacy uses), else don't use it
 	if (port != 0) pthread_create(&socket_freq, NULL, socket_thread_fn, (void *)(&controller));
+
+	/* If resampler is enabled, update output.rate for downstream consumers */
+	if (demod.resamp_enabled && demod.resamp_target_hz > 0) {
+		output.rate = demod.resamp_target_hz;
+		fprintf(stderr, "Output rate set to %d Hz via resampler.\n", output.rate);
+	} else {
+		output.rate = demod.rate_out;
+	}
 }
 
 void cleanup_rtlsdr_stream()
