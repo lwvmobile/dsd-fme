@@ -5,6 +5,7 @@
  * Copyright (C) 2012 by Kyle Keen <keenerd@gmail.com>
  * Copyright (C) 2013 by Elias Oenal <EliasOenal@gmail.com>
  * Copyright (C) 2014 by Kyle Keen <keenerd@gmail.com>
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,6 +54,79 @@
 #endif
 #endif
 
+/*
+ * Environment variables (runtime configuration)
+ * Set in your shell before launching dsd-fme, e.g.:
+ *   $ export DSD_FME_RESAMP=48000
+ *   $ export DSD_FME_FLL=1 DSD_FME_FLL_ALPHA=150 DSD_FME_FLL_BETA=15
+ *   $ export DSD_FME_TED=1 DSD_FME_TED_SPS=10 DSD_FME_TED_GAIN=96
+ *   $ export DSD_FME_AUDIO_LPF=3000
+ *   $ ./build/dsd-fme ...
+ *
+ * Realtime scheduling and CPU affinity
+ * - DSD_FME_RT_SCHED
+ *     Enable best-effort realtime scheduling (SCHED_FIFO). Requires CAP_SYS_NICE or root.
+ *     Values: "1" to enable, unset/other to disable. Default: disabled.
+ * - DSD_FME_RT_PRIO_USB | DSD_FME_RT_PRIO_DONGLE | DSD_FME_RT_PRIO_DEMOD
+ *     Optional per-thread priorities (1..99, clamped to system limits). Used only if RT_SCHED=1.
+ *     Example: export DSD_FME_RT_PRIO_DEMOD=85
+ * - DSD_FME_CPU_USB | DSD_FME_CPU_DONGLE | DSD_FME_CPU_DEMOD
+ *     Optional CPU core pinning for each thread. Integer CPU id (>=0). Example: export DSD_FME_CPU_DEMOD=2
+ *
+ * Frontend/decimation/upsampling
+ * - DSD_FME_HB_DECIM
+ *     Use half-band FIR decimator cascade (fast, good response) instead of legacy CIC-like path.
+ *     Values: 1 enable, 0 disable. Default: 1 (enabled).
+ * - DSD_FME_COMBINE_ROT
+ *     Combine 90° IQ rotation with USB byte→int16 widening in one pass when offset tuning is off.
+ *     Values: 1 enable, 0 disable. Default: 1 (enabled).
+ * - DSD_FME_UPSAMPLE_FP
+ *     Use fixed-point arithmetic in legacy linear upsampler for lower CPU/divisions.
+ *     Values: 1 enable, 0 disable. Default: 1 (enabled).
+ *
+ * Rational resampler (polyphase upfirdn L/M)
+ * - DSD_FME_RESAMP
+ *     Target output sample rate in Hz. Enables L/M resampler when set.
+ *     Values: "off" or "0" to disable; integer Hz (e.g., 48000) to enable. Default: 48000 (enabled).
+ *
+ * Residual CFO frequency-locked loop (FLL)
+ * - DSD_FME_FLL
+ *     Enable residual carrier frequency correction.
+ *     Values: "1" or unset to enable; other values disable. Default: enabled.
+ * - DSD_FME_FLL_LUT
+ *     Use higher-quality quarter-wave sine LUT mixer for FLL rotation.
+ *     Values: 1 enable, 0/empty disable. Default: 0 (disabled; fast piecewise approx).
+ * - DSD_FME_FLL_ALPHA, DSD_FME_FLL_BETA
+ *     Proportional and integral gains (Q15 fixed-point, ~value/32768). Typical small values.
+ *     Defaults: ALPHA=100 (~0.003), BETA=10 (~0.0003). May be adjusted for digital modes if not set.
+ *
+ * Gardner timing error detector (TED)
+ * - DSD_FME_TED
+ *     Enable lightweight fractional-delay timing correction. Generally off for analog FM.
+ *     Values: 1 enable, else disabled. Default: 0 (disabled). For certain digital modes, defaults are adjusted
+ *     only if envs are not provided (still off unless forced via DSD_FME_TED=1).
+ * - DSD_FME_TED_SPS
+ *     Nominal samples-per-symbol (integer). If unset and a digital mode is active, it is derived from output rate.
+ *     Default: 10.
+ * - DSD_FME_TED_GAIN
+ *     Small loop gain (Q20). Default: 64; for common digital modes may default to 96 when not provided.
+ * - DSD_FME_TED_FORCE
+ *     Force TED to run for FM/C4FM paths where it is normally skipped. Values: 1 enable, else disabled. Default: 0.
+ *
+ * Audio processing
+ * - DSD_FME_DEEMPH
+ *     Post-demod deemphasis time constant. Applies only when the active demod preset enables deemphasis.
+ *     Values: "75" (75µs, default), "50" (50µs), "nfm" (~750µs), "off" (disable).
+ * - DSD_FME_AUDIO_LPF
+ *     Optional one-pole low-pass filter after demod. Approximate cutoff in Hz.
+ *     Values: "off" or "0" to disable; integer (e.g., 3000, 5000) to enable. Default: off.
+ *
+ * Intra-block multithreading
+ * - DSD_FME_MT
+ *     Enable a minimal 2-thread worker pool for certain CPU-heavy inner loops.
+ *     Values: 1 enable, else disabled. Default: 0 (disabled).
+ */
+
 #define DEFAULT_SAMPLE_RATE		48000
 #define DEFAULT_BUF_LENGTH		(1 * 16384)
 #define MAXIMUM_OVERSAMPLE		16
@@ -70,18 +144,36 @@ static int ACTUAL_BUF_LENGTH;
 
 static const double kPi = 3.14159265358979323846;
 
-/* =====================
-   Vectorization helpers and alignment
-   ===================== */
 #if defined(__GNUC__) || defined(__clang__)
 #define DSD_FME_PRAGMA(x) _Pragma(#x)
 #define DSD_FME_IVDEP DSD_FME_PRAGMA(GCC ivdep)
+/**
+ * Hint that a pointer is aligned to a compile-time boundary for vectorization.
+ *
+ * This is a lightweight wrapper over compiler intrinsics to improve
+ * auto-vectorization by promising the compiler that the pointer meets the
+ * specified alignment. Use with care and only when the alignment guarantee
+ * is actually met.
+ *
+ * @tparam T Element type of the pointer.
+ * @param p  Pointer to memory that is at least `align_unused` aligned.
+ * @param align_unused Alignment in bytes (ignored at runtime; for readability).
+ * @return Pointer `p` with alignment assumption applied.
+ */
 template <typename T>
 static inline T* assume_aligned_ptr(T* p, size_t /*align_unused*/) {
     return (T*)__builtin_assume_aligned(p, 64);
 }
 #else
 #define DSD_FME_IVDEP
+/**
+ * See aligned variant: noop fallback when compiler does not support alignment
+ * assumptions.
+ * @tparam T Element type of the pointer.
+ * @param p  Pointer to return as-is.
+ * @param align_unused Unused parameter for signature compatibility.
+ * @return Pointer `p` unchanged.
+ */
 template <typename T>
 static inline T* assume_aligned_ptr(T* p, size_t /*align_unused*/) {
     return p;
@@ -116,15 +208,19 @@ static void dsd_fme_init_runtime_dispatch(void);
 static void dsd_fme_init_runtime_dispatch_once(void);
 static pthread_once_t dsd_fme_dispatch_once_control = PTHREAD_ONCE_INIT;
 
-/* =====================
-   USB widening helper dispatch setup
-   ===================== */
 typedef void (*dsd_fme_widen_fn)(const unsigned char*, int16_t*, uint32_t);
 typedef void (*dsd_fme_widen_rot_fn)(const unsigned char*, int16_t*, uint32_t);
 static dsd_fme_widen_fn     g_widen_impl = NULL;
 static dsd_fme_widen_rot_fn g_widen_rot_impl = NULL;
 
-/* Public wrappers that lazy-init the runtime dispatch and call the chosen impl */
+/**
+ * Public wrapper that lazy-initializes runtime dispatch and widens u8 to s16
+ * centered at 127.
+ *
+ * @param src Source buffer of unsigned bytes (I/Q interleaved).
+ * @param dst Destination int16 buffer.
+ * @param len Number of bytes in src to process.
+ */
 static inline void widen_u8_to_s16_bias127(const unsigned char * DSD_FME_RESTRICT src,
     int16_t * DSD_FME_RESTRICT dst, uint32_t len)
 {
@@ -132,6 +228,14 @@ static inline void widen_u8_to_s16_bias127(const unsigned char * DSD_FME_RESTRIC
     g_widen_impl(src, dst, len);
 }
 
+/**
+ * Public wrapper that lazy-initializes runtime dispatch and performs 90° IQ
+ * rotation combined with widen u8→s16 centered at 127.
+ *
+ * @param src Source buffer of unsigned bytes (I/Q interleaved).
+ * @param dst Destination int16 buffer.
+ * @param len Number of bytes in src to process.
+ */
 static inline void widen_rotate90_u8_to_s16_bias127(const unsigned char * DSD_FME_RESTRICT src,
     int16_t * DSD_FME_RESTRICT dst, uint32_t len)
 {
@@ -139,7 +243,13 @@ static inline void widen_rotate90_u8_to_s16_bias127(const unsigned char * DSD_FM
     g_widen_rot_impl(src, dst, len);
 }
 
-/* Scalar fallbacks (always available) */
+/**
+ * Scalar fallback: widen u8 to s16 centered at 127.
+ *
+ * @param src Source buffer of unsigned bytes.
+ * @param dst Destination int16 buffer.
+ * @param len Number of bytes to process.
+ */
 static inline void widen_u8_to_s16_bias127_scalar(const unsigned char * DSD_FME_RESTRICT src,
     int16_t * DSD_FME_RESTRICT dst, uint32_t len)
 {
@@ -150,9 +260,15 @@ static inline void widen_u8_to_s16_bias127_scalar(const unsigned char * DSD_FME_
     }
 }
 
-/* Scalar widening that subtracts 128 instead of 127.
-   Used to pair with legacy byte-wise rotate_90(u8) which performs 255 - x negation,
-   so that the overall effect equals correct centered negation (127 - x). */
+/**
+ * Scalar widening that subtracts 128 instead of 127.
+ * Intended to pair with legacy byte-wise rotate_90(u8) which performs 255-x
+ * negation so that overall effect equals correct centered negation (127-x).
+ *
+ * @param src Source buffer of unsigned bytes.
+ * @param dst Destination int16 buffer.
+ * @param len Number of bytes to process.
+ */
 static inline void widen_u8_to_s16_bias128_scalar(const unsigned char * DSD_FME_RESTRICT src,
     int16_t * DSD_FME_RESTRICT dst, uint32_t len)
 {
@@ -162,10 +278,14 @@ static inline void widen_u8_to_s16_bias128_scalar(const unsigned char * DSD_FME_
     }
 }
 
-/* =====================
-   Combined rotate_90 (1, j, -1, -j) + widen (u8->s16 centered at 127)
-   Processes 4 IQ samples per iteration to avoid branches.
-   ===================== */
+/**
+ * Combined 90° rotation (1, j, -1, -j) + widen (u8→s16 centered at 127).
+ * Processes 4 IQ samples per iteration to avoid branches.
+ *
+ * @param src Source buffer of unsigned bytes (I/Q interleaved).
+ * @param dst Destination int16 buffer.
+ * @param len Number of bytes in src to process.
+ */
 static inline void widen_rotate90_u8_to_s16_bias127_scalar(const unsigned char * DSD_FME_RESTRICT src,
     int16_t * DSD_FME_RESTRICT dst, uint32_t len)
 {
@@ -216,9 +336,6 @@ static inline void widen_rotate90_u8_to_s16_bias127_scalar(const unsigned char *
     }
 }
 
-/* =====================
-   Runtime CPU feature dispatch (AVX2/SSE2/NEON)
-   ===================== */
 #if defined(__GNUC__) || defined(__clang__)
 #define DSD_FME_TARGET_ATTR(x) __attribute__((target(x)))
 #else
@@ -227,6 +344,12 @@ static inline void widen_rotate90_u8_to_s16_bias127_scalar(const unsigned char *
 
 #if defined(__x86_64__) || defined(__i386__)
 /* AVX2 specializations */
+/**
+ * AVX2: widen unsigned bytes to signed 16-bit centered at 127.
+ * @param src Source u8 buffer.
+ * @param dst Destination s16 buffer.
+ * @param len Number of bytes to process.
+ */
 static void DSD_FME_TARGET_ATTR("avx2") widen_u8_to_s16_bias127_avx2(const unsigned char *src, int16_t *dst, uint32_t len)
 {
     uint32_t i = 0;
@@ -244,6 +367,13 @@ static void DSD_FME_TARGET_ATTR("avx2") widen_u8_to_s16_bias127_avx2(const unsig
     for (; i < len; i++) dst[i] = (int16_t)src[i] - 127;
 }
 
+/**
+ * AVX2: rotate (1,j,-1,-j) interleaved IQ and widen u8→s16 centered at 127.
+ * Tail elements are handled by a scalar helper to preserve the rotation pattern.
+ * @param src Source u8 buffer (I/Q interleaved).
+ * @param dst Destination s16 buffer.
+ * @param len Number of bytes to process.
+ */
 static void DSD_FME_TARGET_ATTR("avx2") widen_rotate90_u8_to_s16_bias127_avx2(const unsigned char *src, int16_t *dst, uint32_t len)
 {
     const __m256i shuffle = _mm256_setr_epi8(
@@ -276,7 +406,10 @@ static void DSD_FME_TARGET_ATTR("avx2") widen_rotate90_u8_to_s16_bias127_avx2(co
     }
 }
 
-/* SSE2 specializations (safe on x86_64; guarded by runtime dispatch) */
+
+/**
+ * SSE2: widen unsigned bytes to signed 16-bit centered at 127.
+ */
 static void DSD_FME_TARGET_ATTR("sse2") widen_u8_to_s16_bias127_sse2(const unsigned char *src, int16_t *dst, uint32_t len)
 {
     uint32_t i = 0;
@@ -294,6 +427,9 @@ static void DSD_FME_TARGET_ATTR("sse2") widen_u8_to_s16_bias127_sse2(const unsig
     for (; i < len; i++) dst[i] = (int16_t)src[i] - 127;
 }
 
+/**
+ * SSE2: fallback rotate+widen via scalar since SSE2 lacks byte-wise shuffle.
+ */
 static void DSD_FME_TARGET_ATTR("sse2") widen_rotate90_u8_to_s16_bias127_sse2(const unsigned char *src, int16_t *dst, uint32_t len)
 {
     /* Keep scalar logic for correctness without SSSE3 pshufb (SSE2 lacks byte shuffle). */
@@ -302,7 +438,10 @@ static void DSD_FME_TARGET_ATTR("sse2") widen_rotate90_u8_to_s16_bias127_sse2(co
 #endif /* x86 */
 
 #if defined(__x86_64__) || defined(__i386__)
-/* SSSE3 specialization (rotate+widen) */
+/**
+ * SSSE3: rotate (1,j,-1,-j) interleaved IQ and widen u8→s16 centered at 127.
+ * Tail elements are handled by a scalar helper to preserve the rotation pattern.
+ */
 static void DSD_FME_TARGET_ATTR("ssse3") widen_rotate90_u8_to_s16_bias127_ssse3(const unsigned char *src, int16_t *dst, uint32_t len)
 {
     uint32_t i = 0;
@@ -332,8 +471,10 @@ static void DSD_FME_TARGET_ATTR("ssse3") widen_rotate90_u8_to_s16_bias127_ssse3(
 }
 #endif /* x86 */
 
-/* NEON specializations */
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
+/**
+ * NEON: widen unsigned bytes to signed 16-bit centered at 127.
+ */
 static void widen_u8_to_s16_bias127_neon(const unsigned char *src, int16_t *dst, uint32_t len)
 {
     uint32_t i = 0;
@@ -350,6 +491,10 @@ static void widen_u8_to_s16_bias127_neon(const unsigned char *src, int16_t *dst,
     for (; i < len; i++) dst[i] = (int16_t)src[i] - 127;
 }
 
+/**
+ * NEON: rotate (1,j,-1,-j) interleaved IQ and widen u8→s16 centered at 127.
+ * Uses table lookup on aarch64; on ARMv7 (no vqtbl1q_u8) falls back to scalar.
+ */
 static void widen_rotate90_u8_to_s16_bias127_neon(const unsigned char *src, int16_t *dst, uint32_t len)
 {
 #if defined(__aarch64__)
@@ -385,7 +530,13 @@ static void widen_rotate90_u8_to_s16_bias127_neon(const unsigned char *src, int1
 }
 #endif
 
-/* Non-privileged CPU feature checks (CPUID/XGETBV on x86, getauxval on Linux/ARM) */
+/**
+ * Runtime CPU feature detection and dispatch binding for widening/rotation.
+ *
+ * Detects available SIMD features (AVX2/SSSE3/SSE2/NEON) and binds the
+ * function pointers `g_widen_impl` and `g_widen_rot_impl` accordingly.
+ * Safe to call concurrently; guarded by pthread_once in the public wrapper.
+ */
 static void dsd_fme_init_runtime_dispatch_once(void)
 {
 
@@ -459,25 +610,27 @@ static void dsd_fme_init_runtime_dispatch_once(void)
 #endif
 }
 
+/**
+ * Ensure SIMD dispatch is initialized (thread-safe, idempotent).
+ */
 static void dsd_fme_init_runtime_dispatch(void)
 {
 	/* Thread-safe, idempotent initialization */
 	pthread_once(&dsd_fme_dispatch_once_control, dsd_fme_init_runtime_dispatch_once);
 }
 
-/* =====================
-   Saturating helpers
-   ===================== */
+/**
+ * Saturate 32-bit integer to 16-bit range.
+ *
+ * @param x Input 32-bit value.
+ * @return Clamped 16-bit value in [-32768, 32767].
+ */
 static inline int16_t sat16(int32_t x)
 {
     if (x > 32767) return 32767;
     if (x < -32768) return -32768;
     return (int16_t)x;
 }
-
-/* =====================
-   Half-band FIR decimator (2:1) - Q15 taps
-   ===================== */
 
 /* Runtime flag (default enabled). Set DSD_FME_HB_DECIM=0 to use legacy decimator */
 static int use_halfband_decimator = 1;
@@ -492,12 +645,15 @@ static const int16_t hb_q15_taps[HB_TAPS] = {
 	 7000,   0,  -500,    0,  1800,    0,   -108
 };
 
-/* Decimate one real channel by 2 using half-band FIR with persistent left history.
-   - in:       pointer to real samples
-   - in_len:   number of real samples
-   - out:      pointer to output buffer (size >= in_len/2)
-   - hist:     persistent history of length HB_TAPS-1 (left wing)
-   Returns number of output samples written (in_len/2). */
+/**
+ * Decimate one real channel by 2 using a half-band FIR with persistent left history.
+ *
+ * @param in   Pointer to real input samples.
+ * @param in_len Number of real input samples.
+ * @param out  Pointer to output buffer (size >= in_len/2).
+ * @param hist Persistent history of length HB_TAPS-1 (left wing).
+ * @return Number of output samples written (in_len/2).
+ */
 static inline int hb_decim2_real(const int16_t *in, int in_len, int16_t *out, int16_t *hist)
 {
 	const int hist_len = HB_TAPS - 1;
@@ -556,11 +712,18 @@ static inline int hb_decim2_real(const int16_t *in, int in_len, int16_t *out, in
 	return out_len;
 }
 
-/* One 2:1 decimation stage on interleaved I/Q, using per-stage histories. */
-/* Removed hb_decim2_complex_stage in favor of inlined staged processing in full_demod() */
-
-/* Fused interleaved complex half-band decimator: decimate I and Q in one pass without deinterleave/reinterleave.
-   in_len is number of interleaved int16_t (I,Q,I,Q,...). Returns interleaved output length (in_len/2). */
+/**
+ * Fused interleaved complex half-band decimator. Decimates I and Q in one pass
+ * without deinterleaving. Exploits the half-band property (zero odd taps) and
+ * symmetry; Q15 taps with rounding preserve unity DC gain.
+ *
+ * @param in      Pointer to interleaved input samples (I,Q,I,Q,...).
+ * @param in_len  Number of interleaved int16_t values in input.
+ * @param out     Pointer to interleaved output buffer (size >= in_len/2).
+ * @param hist_i  Persistent I-channel history of length HB_TAPS-1.
+ * @param hist_q  Persistent Q-channel history of length HB_TAPS-1.
+ * @return Interleaved output length (in_len/2).
+ */
 static inline int hb_decim2_complex_interleaved(const int16_t *in, int in_len, int16_t *out,
     int16_t *hist_i, int16_t *hist_q)
 {
@@ -650,7 +813,6 @@ static inline int hb_decim2_complex_interleaved(const int16_t *in, int in_len, i
     return out_ch_len << 1; /* interleaved length */
 }
 
-
 static void atan_lut_once_init(void)
 {
 	int i;
@@ -675,7 +837,15 @@ static void fll_lut_once_init(void)
 }
 }
 
-/* Return cos/sin for phase in Q15 using quarter-wave LUT with linear interpolation. */
+/**
+ * Compute sin/cos in Q15 from phase using a quarter-wave sine LUT.
+ * The choice to use the LUT vs. a fast piecewise approximation is
+ * made by the caller (see fll_mix_and_update).
+ *
+ * @param phase_q15 Phase accumulator (Q15, wrap at 2*pi -> 1<<15 scale).
+ * @param c_out     [out] Cosine Q15.
+ * @param s_out     [out] Sine Q15.
+ */
 static inline void fll_sin_cos_q15_from_phase_lut(int phase_q15, int16_t *c_out, int16_t *s_out)
 {
 	/* phase_q15 wraps at 1<<15 mapping to 2*pi */
@@ -739,7 +909,6 @@ int bandwidth_divisor = 48000; //divide bandwidth by this to get multiplier for 
 
 short int volume_multiplier;
 short int port;
-
 struct dongle_state
 {
 	int      exit_flag;
@@ -762,8 +931,8 @@ struct demod_state
 	int      exit_flag;
 	pthread_t thread;
 	int16_t  *lowpassed;
-	/* SPSC input ring buffer for callback→demod handoff */
-	/* Scratch buffer used by callback to widen+rotate before enqueue */
+	/* Scratch buffer for demod thread to read blocks from the input ring */
+	/* Not a ring; callback writes directly into the global input ring. */
 	alignas(DSD_FME_ALIGN) int16_t  input_cb_buf[MAXIMUM_BUF_LENGTH];
 	int      lp_len;
 	int16_t  lp_i_hist[10][6];
@@ -803,7 +972,7 @@ struct demod_state
 	int16_t  hb_workbuf[MAXIMUM_BUF_LENGTH];
 	int16_t  hb_hist_i[10][HB_TAPS-1];
 	int16_t  hb_hist_q[10][HB_TAPS-1];
-	/* Preallocated deinterleave/output buffers for HB decimator */
+	/* Reserved buffers for potential deinterleave path (currently unused) */
 	alignas(DSD_FME_ALIGN) int16_t  hb_i_buf[MAXIMUM_BUF_LENGTH/2];
 	alignas(DSD_FME_ALIGN) int16_t  hb_q_buf[MAXIMUM_BUF_LENGTH/2];
 	alignas(DSD_FME_ALIGN) int16_t  hb_i_out[MAXIMUM_BUF_LENGTH/2];
@@ -855,7 +1024,7 @@ struct demod_state
 	struct { struct demod_state *s; int id; } mt_args[2];
 	int      (*discriminator)(int, int, int, int);
 	void     (*mode_demod)(struct demod_state*);
-	/* Input SPSC ring (embedded below) replaces ready/condvar handoff */
+	/* Ready/condvar kept for cleanup compatibility; input ring is a global SPSC ring */
 	pthread_cond_t ready; /* kept for cleanup compatibility; unused now */
 	pthread_mutex_t ready_m;
 	struct output_state *output_target;
@@ -866,12 +1035,16 @@ static void demod_mt_init(struct demod_state *s);
 static void demod_mt_destroy(struct demod_state *s);
 static void demod_mt_run_two(struct demod_state *s, void (*f0)(void*), void *a0, void (*f1)(void*), void *a1);
 
-/* =====================
-   Minimal 2-thread worker pool for DEMOD intra-block tasks
-   ===================== */
 
 struct demod_mt_worker_arg { struct demod_state *s; int id; };
 
+/**
+ * Worker thread procedure for the minimal 2-thread DEMOD pool.
+ * Waits for posted tasks, executes them, and signals completion.
+ *
+ * @param arg Pointer to `demod_mt_worker_arg` with owning state and worker id.
+ * @return NULL when the worker exits.
+ */
 static void *demod_mt_worker(void *arg)
 {
 	struct demod_mt_worker_arg *wa = (struct demod_mt_worker_arg*)arg;
@@ -908,6 +1081,12 @@ static void *demod_mt_worker(void *arg)
 	return NULL;
 }
 
+/**
+ * Initialize the minimal 2-thread worker pool for intra-block tasks.
+ * Enabled when `DSD_FME_MT=1` in the environment.
+ *
+ * @param s Demodulator state to initialize with worker threads.
+ */
 static void demod_mt_init(struct demod_state *s)
 {
 	const char *mt = getenv("DSD_FME_MT");
@@ -931,6 +1110,11 @@ static void demod_mt_init(struct demod_state *s)
 	fprintf(stderr, "Intra-block multithreading enabled (DSD_FME_MT=1), workers: 2.\n");
 }
 
+/**
+ * Tear down the minimal worker pool created by demod_mt_init.
+ *
+ * @param s Demodulator state whose worker pool will be destroyed.
+ */
 static void demod_mt_destroy(struct demod_state *s)
 {
 	if (!s->mt_enabled) return;
@@ -946,6 +1130,16 @@ static void demod_mt_destroy(struct demod_state *s)
 	pthread_mutex_destroy(&s->mt_lock);
 }
 
+/**
+ * Post up to two tasks to the worker pool and wait for their completion.
+ * If the pool is disabled, runs tasks synchronously on the caller thread.
+ *
+ * @param s  Demodulator state with worker pool.
+ * @param f0 Task 0 function pointer (may be NULL).
+ * @param a0 Task 0 argument.
+ * @param f1 Task 1 function pointer (may be NULL).
+ * @param a1 Task 1 argument.
+ */
 static void demod_mt_run_two(struct demod_state *s, void (*f0)(void*), void *a0, void (*f1)(void*), void *a1)
 {
 	if (!s->mt_enabled) {
@@ -989,6 +1183,9 @@ struct input_ring_state
 	pthread_mutex_t ready_m;
 };
 
+/**
+ * Number of samples currently in the input ring.
+ */
 static inline size_t input_ring_used(const struct input_ring_state *r)
 {
 	size_t h = r->head.load();
@@ -997,24 +1194,45 @@ static inline size_t input_ring_used(const struct input_ring_state *r)
 	return r->capacity - (t - h);
 }
 
+/**
+ * Number of free slots available for writing in the input ring.
+ */
 static inline size_t input_ring_free(const struct input_ring_state *r)
 {
 	return (r->capacity - 1) - input_ring_used(r);
 }
 
+/**
+ * Check if the input ring is empty.
+ */
 static inline int input_ring_is_empty(const struct input_ring_state *r)
 {
 	return r->head.load() == r->tail.load();
 }
 
+/**
+ * Clear the input ring head/tail indices.
+ */
 static inline void input_ring_clear(struct input_ring_state *r)
 {
 	r->tail.store(0);
 	r->head.store(0);
 }
 
-/* Reserve up to two contiguous writable regions totaling at least min_needed (or less if near full).
-   Returns available regions via p1/n1 and p2/n2. May drop oldest half when full to avoid blocking. */
+/**
+ * Reserve up to two contiguous writable regions totaling at least min_needed
+ * (or less if near full).
+ *
+ * May drop oldest half when full to avoid blocking.
+ *
+ * @param r          Input ring buffer state.
+ * @param min_needed Minimum samples requested for writing.
+ * @param p1         [out] First writable region pointer or NULL.
+ * @param n1         [out] First writable region length.
+ * @param p2         [out] Second writable region pointer or NULL.
+ * @param n2         [out] Second writable region length.
+ * @return Total writable samples granted across regions.
+ */
 static int input_ring_reserve(struct input_ring_state *r, size_t min_needed,
                        int16_t **p1, size_t *n1, int16_t **p2, size_t *n2)
 {
@@ -1043,7 +1261,12 @@ static int input_ring_reserve(struct input_ring_state *r, size_t min_needed,
 	return (int)(*n1 + *n2);
 }
 
-/* Commit produced samples and signal consumer on empty->non-empty transition */
+/**
+ * Commit produced samples and signal consumer on empty→non-empty transition.
+ *
+ * @param r         Input ring buffer state.
+ * @param produced  Number of samples produced to commit.
+ */
 static void input_ring_commit(struct input_ring_state *r, size_t produced)
 {
 	if (produced == 0) return;
@@ -1059,6 +1282,14 @@ static void input_ring_commit(struct input_ring_state *r, size_t produced)
 	}
 }
 
+/**
+ * Write up to count samples into the input ring buffer, dropping oldest half
+ * when necessary to avoid blocking.
+ *
+ * @param r     Input ring buffer state.
+ * @param data  Source samples to write.
+ * @param count Number of samples to write.
+ */
 static void input_ring_write(struct input_ring_state *r, const int16_t *data, size_t count)
 {
 	int need_signal = input_ring_is_empty(r);
@@ -1095,6 +1326,15 @@ static void input_ring_write(struct input_ring_state *r, const int16_t *data, si
 	}
 }
 
+/**
+ * Read up to max_count samples from input ring buffer, blocking with timeout
+ * until data is available or exit is requested.
+ *
+ * @param r         Input ring buffer state.
+ * @param out       Destination buffer for samples.
+ * @param max_count Maximum number of samples to read.
+ * @return Number of samples read (>=1), 0 if max_count is 0, or -1 on exit.
+ */
 static int input_ring_read_block(struct input_ring_state *r, int16_t *out, size_t max_count)
 {
 	if (max_count == 0) return 0;
@@ -1148,10 +1388,18 @@ static struct input_ring_state input_ring;
 #define safe_cond_signal(n, m) pthread_mutex_lock(m); pthread_cond_signal(n); pthread_mutex_unlock(m)
 #define safe_cond_wait(n, m) pthread_mutex_lock(m); pthread_cond_wait(n, m); pthread_mutex_unlock(m)
 
-/* =====================
-   Thread Scheduling Helpers (optional realtime/affinity)
-   ===================== */
-
+/**
+ * Optionally enable realtime scheduling and set CPU affinity for the current
+ * thread based on environment variables.
+ *
+ * When `DSD_FME_RT_SCHED=1`, attempts to switch the calling thread to
+ * SCHED_FIFO with a priority derived from `DSD_FME_RT_PRIO_<ROLE>` if present.
+ * If `DSD_FME_CPU_<ROLE>` is set to a valid CPU index, pins the thread to that
+ * CPU.
+ *
+ * @param role Optional role label (e.g. "DEMOD", "DONGLE") used to look up
+ *             per-role environment variables.
+ */
 static void maybe_set_thread_realtime_and_affinity(const char *role)
 {
     const char *enable = getenv("DSD_FME_RT_SCHED");
@@ -1206,10 +1454,12 @@ static void maybe_set_thread_realtime_and_affinity(const char *role)
     }
 }
 
-/* =====================
-   SPSC Ring Buffer (output path)
-   ===================== */
-
+/**
+ * Number of samples currently in the output ring.
+ *
+ * @param o Output ring state.
+ * @return Number of queued samples.
+ */
 static inline size_t ring_used(const struct output_state *o)
 {
     /* Atomics policy: head/tail are atomics. We use default sequential
@@ -1221,17 +1471,34 @@ static inline size_t ring_used(const struct output_state *o)
     return o->capacity - (t - h);
 }
 
+/**
+ * Number of free slots available in the output ring.
+ *
+ * @param o Output ring state.
+ * @return Number of writable samples before the ring becomes full.
+ */
 static inline size_t ring_free(const struct output_state *o)
 {
     return (o->capacity - 1) - ring_used(o);
 }
 
+/**
+ * Check if the output ring is empty.
+ *
+ * @param o Output ring state.
+ * @return Non-zero if empty, zero otherwise.
+ */
 static inline int ring_is_empty(const struct output_state *o)
 {
     /* See atomics note in ring_used() for ordering considerations. */
     return o->head.load() == o->tail.load();
 }
 
+/**
+ * Clear the output ring head/tail indices.
+ *
+ * @param o Output ring state to clear.
+ */
 static inline void ring_clear(struct output_state *o)
 {
     /* Clearing indices; with relaxed ordering this would be a release store. */
@@ -1298,8 +1565,14 @@ static void ring_write_no_signal(struct output_state *o, const int16_t *data, si
     }
 }
 
-/* Write and signal consumer only if the ring transitions from empty to
-   non-empty. This reduces unnecessary wakeups while ensuring timely reads. */
+/**
+ * Write and signal consumer only if the ring transitions from empty to
+ * non-empty. Reduces unnecessary wakeups while ensuring timely reads.
+ *
+ * @param o     Output ring buffer state.
+ * @param data  Source samples to write.
+ * @param count Number of samples to write.
+ */
 static void ring_write_signal_on_empty_transition(struct output_state *o, const int16_t *data, size_t count)
 {
     int need_signal = ring_is_empty(o);
@@ -1309,7 +1582,14 @@ static void ring_write_signal_on_empty_transition(struct output_state *o, const 
     }
 }
 
-/* Read one sample, returns 0 on success, -1 on exit */
+/**
+ * Read one sample from the output ring, blocking with timeout until available
+ * or exit requested.
+ *
+ * @param o    Output ring buffer state.
+ * @param out  Destination for one sample.
+ * @return 0 on success, -1 on exit.
+ */
 static int ring_read_one(struct output_state *o, int16_t *out)
 {
     while (ring_is_empty(o)) {
@@ -1335,8 +1615,15 @@ static int ring_read_one(struct output_state *o, int16_t *out)
     return 0;
 }
 
-/* Read up to max_count samples into out. Blocks until at least one sample is available or exit. Returns
-   number of samples read (>=1) or -1 on exit. Signals producer space once after the batch. */
+/**
+ * Read up to max_count samples into out. Blocks until at least one sample is available or exit.
+ * Signals producer space once after the batch.
+ *
+ * @param o         Output ring buffer state.
+ * @param out       Destination buffer for samples.
+ * @param max_count Maximum number of samples to read.
+ * @return Number of samples read (>=1) or -1 on exit.
+ */
 static int ring_read_batch(struct output_state *o, int16_t *out, size_t max_count)
 {
     if (max_count == 0) return 0;
@@ -1389,9 +1676,18 @@ int cic_9_tables[][10] = {
 	{9, -199, -362, 5303, -25505, 77489, -25505, 5303, -362, -199},
 };
 
+/**
+ * Rotate interleaved IQ bytes by 90 degrees in-place.
+ *
+ * 90° rotation sequence: 1+0j, 0+1j, -1+0j, 0-1j. Operates on u8
+ * interleaved I/Q in-place. Negation is performed as (255 - x) to
+ * approximate centered negation for subsequent widening by subtracting 128.
+ * Assumes `len` is a multiple of 8 (four I/Q pairs per loop).
+ *
+ * @param buf Interleaved IQ byte buffer.
+ * @param len Buffer length in bytes (processed in blocks of 8).
+ */
 void rotate_90(unsigned char *buf, uint32_t len)
-/* 90 rotation is 1+0j, 0+1j, -1+0j, 0-1j
-   or [0, 1, -3, 2, -4, -5, 7, -6] */
 {
 	uint32_t i;
 	unsigned char tmp;
@@ -1410,8 +1706,15 @@ void rotate_90(unsigned char *buf, uint32_t len)
 	}
 }
 
+/**
+ * Simple boxcar low-pass accumulator with decimation on interleaved I/Q.
+ * Accumulates I and Q independently over `downsample` input samples and
+ * writes a single output (I,Q) pair per window. Scaling/normalization is
+ * deferred; this function sums and decimates with saturation on writeback.
+ *
+ * @param d Demodulator state (uses lowpassed buffer and decimation state).
+ */
 void low_pass(struct demod_state *d)
-/* simple square window FIR */
 {
 	int i=0, i2=0;
 	while (i < d->lp_len) {
@@ -1433,8 +1736,16 @@ void low_pass(struct demod_state *d)
 	d->lp_len = i2;
 }
 
+/**
+ * Boxcar low-pass and decimate by step (no wraparound).
+ * Length must be a multiple of step.
+ *
+ * @param signal2 In/out buffer of samples.
+ * @param len     Length of input buffer.
+ * @param step    Decimation factor.
+ * @return New length after decimation.
+ */
 int low_pass_simple(int16_t *signal2, int len, int step)
-// no wrap around, length must be multiple of step
 {
 	int i, i2, sum;
 	for(i=0; i < len; i+=step) {
@@ -1442,17 +1753,22 @@ int low_pass_simple(int16_t *signal2, int len, int step)
 		for(i2=0; i2<step; i2++) {
 			sum += (int)signal2[i + i2];
 		}
-		// normalize by step with rounding
+		// Normalize by step with rounding. Writes output at i/step index.
 		int val = (sum >= 0) ? (sum + step/2) / step : -(((-sum) + step/2) / step);
 		signal2[i/step] = (int16_t)val;
 	}
+	/* Duplicate the final sample to provide one-sample lookahead for callers
+	   that expect at least one extra element. */
 	signal2[i/step + 1] = signal2[i/step];
 	return len / step;
 }
 
+/**
+ * Simple square window FIR on real samples with decimation to rate_out2.
+ *
+ * @param s Demodulator state (uses result buffer and decimation state).
+ */
 void low_pass_real(struct demod_state *s)
-/* simple square window FIR */
-// add support for upsampling?
 {
 	int i=0, i2=0;
 	int16_t *r = assume_aligned_ptr(s->result, DSD_FME_ALIGN);
@@ -1481,8 +1797,16 @@ void low_pass_real(struct demod_state *s)
 	s->result_len = i2;
 }
 
+/**
+ * Fifth-order half-band-like decimator operating on a single real sequence.
+ * Caller applies this separately to I and Q streams. Uses 6-tap state in
+ * `hist` and writes decimated output in-place.
+ *
+ * @param data   In/out real data buffer (single channel).
+ * @param length Input length (elements), processed in-place.
+ * @param hist   Persistent history buffer of length >= 6.
+ */
 void fifth_order(int16_t *data, int length, int16_t *hist)
-/* for half of interleaved data */
 {
 	int i;
 	int16_t a, b, c, d, e, f;
@@ -1512,8 +1836,15 @@ void fifth_order(int16_t *data, int length, int16_t *hist)
 	hist[5] = f;
 }
 
+/**
+ * FIR filter with symmetric 9-tap coefficients (phase-saving implementation).
+ *
+ * @param data   In/out data buffer (interleaved step of 2 assumed).
+ * @param length Number of input samples.
+ * @param fir    Coefficient array (expects layout for length 9).
+ * @param hist   History buffer used across calls.
+ */
 void generic_fir(int16_t *data, int length, int *fir, int16_t *hist)
-/* Okay, not at all generic.  Assumes length 9, fix that eventually. */
 {
 	int d, temp, sum;
 	for (d=0; d<length; d+=2) {
@@ -1537,14 +1868,33 @@ void generic_fir(int16_t *data, int length, int *fir, int16_t *hist)
 	}
 }
 
-// define our own complex math ops because ARMv5 has no hardware float
+/**
+ * Complex multiply using 32-bit intermediates (suitable for small magnitudes).
+ * Defined for platforms lacking hardware float.
+ *
+ * @param ar Real part of a.
+ * @param aj Imag part of a.
+ * @param br Real part of b.
+ * @param bj Imag part of b.
+ * @param cr [out] Real part of result.
+ * @param cj [out] Imag part of result.
+ */
 void multiply(int ar, int aj, int br, int bj, int *cr, int *cj)
 {
 	*cr = ar*br - aj*bj;
 	*cj = aj*br + ar*bj;
 }
 
-/* 64-bit safe complex multiply to prevent overflow in discriminator math */
+/**
+ * Complex multiply using 64-bit intermediates to prevent overflow.
+ *
+ * @param ar Real part of a.
+ * @param aj Imag part of a.
+ * @param br Real part of b.
+ * @param bj Imag part of b.
+ * @param cr [out] Real part of result (int64).
+ * @param cj [out] Imag part of result (int64).
+ */
 static inline void multiply64(int ar, int aj, int br, int bj, int64_t *cr, int64_t *cj)
 {
 	*cr = (int64_t)ar * (int64_t)br - (int64_t)aj * (int64_t)bj;
@@ -1560,8 +1910,14 @@ int polar_discriminant(int ar, int aj, int br, int bj)
 	return (int)(angle / kPi * (1<<14));
 }
 
+/**
+ * Fast integer atan2 approximation pre-scaled for int16.
+ *
+ * @param y Imaginary component.
+ * @param x Real component.
+ * @return Angle where pi == 1<<14 (Q14 scaling).
+ */
 int fast_atan2(int y, int x)
-/* pre scaled for int16 */
 {
 	int yabs, angle;
 	int pi4=(1<<12), pi34=3*(1<<12);  // note pi = 1<<14
@@ -1583,9 +1939,14 @@ int fast_atan2(int y, int x)
 	return angle;
 }
 
-/* 64-bit safe version of fast atan2 to avoid overflow in intermediate math */
+/**
+ * 64-bit safe fast atan2 approximation to avoid overflow.
+ *
+ * @param y Imaginary component (int64).
+ * @param x Real component (int64).
+ * @return Angle where pi == 1<<14 (Q14 scaling).
+ */
 int fast_atan2_64(int64_t y, int64_t x)
-/* pre scaled for int16, returns angle scaled so that pi == 1<<14 */
 {
 	int angle;
 	int pi4=(1<<12), pi34=3*(1<<12);  /* note: pi = 1<<14 */
@@ -1617,6 +1978,12 @@ int polar_disc_fast(int ar, int aj, int br, int bj)
 	return fast_atan2_64(cj, cr);
 }
 
+/**
+ * Initialize the fast arctangent lookup table used by the LUT discriminator.
+ * Thread-safe and idempotent; subsequent calls are inexpensive.
+ *
+ * @return 0 on success, -1 on allocation failure.
+ */
 int atan_lut_init(void)
 {
 	/* Thread-safe, idempotent initialization */
@@ -1633,6 +2000,10 @@ int atan_lut_init(void)
 	return (atan_lut != NULL) ? 0 : -1;
 }
 
+/**
+ * Free memory associated with the fast arctangent lookup table.
+ * Safe to call multiple times.
+ */
 void atan_lut_free(void)
 {
 	pthread_mutex_lock(&atan_lut_mutex);
@@ -1643,6 +2014,18 @@ void atan_lut_free(void)
 	pthread_mutex_unlock(&atan_lut_mutex);
 }
 
+/**
+ * Polar discriminator using a lookup table for atan2 approximation.
+ *
+ * Multiplies sample b by the conjugate of sample a and estimates the phase
+ * change via a LUT-backed atan2 approximation, returning a Q14-scaled angle.
+ *
+ * @param ar Real part of previous complex sample.
+ * @param aj Imag part of previous complex sample.
+ * @param br Real part of current complex sample.
+ * @param bj Imag part of current complex sample.
+ * @return Phase difference in Q14 where (pi == 1<<14).
+ */
 int polar_disc_lut(int ar, int aj, int br, int bj)
 {
 	int64_t cr, cj;
@@ -1699,6 +2082,12 @@ int polar_disc_lut(int ar, int aj, int br, int bj)
 	return 0;
 }
 
+/**
+ * Perform FM discriminator on interleaved low-passed I/Q to produce audio PCM.
+ * Uses the active discriminator configured in fm->discriminator.
+ *
+ * @param fm Demodulator state (uses lowpassed as input, writes to result).
+ */
 void fm_demod(struct demod_state *fm)
 {
 	int i, pcm;
@@ -1717,6 +2106,11 @@ void fm_demod(struct demod_state *fm)
 	fm->result_len = fm->lp_len/2;
 }
 
+/**
+ * Pass-through demodulator: copies low-passed samples to output unchanged.
+ *
+ * @param fm Demodulator state (copies lowpassed to result).
+ */
 void raw_demod(struct demod_state *fm)
 {
 	int i;
@@ -1726,6 +2120,11 @@ void raw_demod(struct demod_state *fm)
 	fm->result_len = fm->lp_len;
 }
 
+/**
+ * Apply post-demod deemphasis IIR filter with Q15 coefficient.
+ *
+ * @param fm Demodulator state (reads/writes result, updates deemph_avg).
+ */
 void deemph_filter(struct demod_state *fm)
 {
 	int avg = fm->deemph_avg; /* per-instance state */
@@ -1753,6 +2152,11 @@ void deemph_filter(struct demod_state *fm)
 	fm->deemph_avg = avg; /* write back state */
 }
 
+/**
+ * Apply a simple DC blocking (leaky integrator high-pass) filter to audio.
+ *
+ * @param fm Demodulator state (reads/writes result, updates dc_avg).
+ */
 void dc_block_filter(struct demod_state *fm)
 {
 	int i;
@@ -1770,9 +2174,13 @@ void dc_block_filter(struct demod_state *fm)
 	fm->dc_avg = dc;
 }
 
-/* Optional light post-demod audio low-pass filter (one-pole IIR)
-   y[n] = y[n-1] + alpha * (x[n] - y[n-1])
-   alpha is Q15 in fm->audio_lpf_alpha. */
+/**
+ * Optional light post-demod audio low-pass filter (one-pole IIR).
+ * Implements: y[n] = y[n-1] + alpha * (x[n] - y[n-1]), where alpha is Q15 in
+ * `fm->audio_lpf_alpha`.
+ *
+ * @param fm Demodulator state (reads/writes `result`, updates `audio_lpf_state`).
+ */
 static inline void audio_lpf_filter(struct demod_state *fm)
 {
     if (!fm->audio_lpf_enable) return;
@@ -1795,11 +2203,12 @@ static inline void audio_lpf_filter(struct demod_state *fm)
     fm->audio_lpf_state = y;
 }
 
-/* =====================
-   Residual CFO loop (FLL) and Gardner timing correction
-   ===================== */
-
-/* Mix lowpassed I/Q by NCO e^{j*phi}, update phi by fll_freq_q15 (Q15 0..2pi maps to 0..1<<15). */
+/**
+ * Mix lowpassed I/Q by NCO e^{j*phi}, update phase by `fll_freq_q15` per sample.
+ * Phase and frequency are Q15 where a full turn (2*pi) maps to 1<<15.
+ *
+ * @param d Demodulator state (reads/writes `lowpassed`, updates `fll_phase_q15`).
+ */
 static inline void fll_mix_and_update(struct demod_state *d)
 {
     if (!d->fll_enabled) return;
@@ -1847,7 +2256,13 @@ static inline void fll_mix_and_update(struct demod_state *d)
     d->fll_phase_q15 = phase & 0x7FFF;
 }
 
-/* Estimate frequency error using a simple phase-difference discriminator and update FLL integrator. */
+/**
+ * Estimate frequency error using a simple phase-difference discriminator and
+ * update the FLL control in Q15. The proportional term is applied directly
+ * and the integral action is realized by accumulating into `fll_freq_q15`.
+ *
+ * @param d Demodulator state (updates `fll_freq_q15` and `fll_phase_q15`).
+ */
 static inline void fll_update_error(struct demod_state *d)
 {
     if (!d->fll_enabled) return;
@@ -1879,7 +2294,14 @@ static inline void fll_update_error(struct demod_state *d)
     d->fll_freq_q15 += (int)df; /* Q15 */
 }
 
-/* Lightweight Gardner timing correction: nearest-neighbor fractional selection around nominal sps. */
+/**
+ * Lightweight Gardner timing correction.
+ * Uses linear interpolation between adjacent complex samples around the
+ * nominal samples-per-symbol to reduce timing error; intended for digital
+ * modes when enabled.
+ *
+ * @param d Demodulator state (may adjust `result` in-place).
+ */
 static inline void gardner_timing_adjust(struct demod_state *d)
 {
     if (!d->ted_enabled || d->ted_sps <= 1) return;
@@ -1934,10 +2356,9 @@ static inline void gardner_timing_adjust(struct demod_state *d)
     d->ted_mu_q20 = mu;
 }
 
-/* =====================
-   Polyphase Rational Resampler (L/M)
-   ===================== */
-
+/**
+ * Greatest common divisor via Euclidean algorithm.
+ */
 static inline int gcd_int(int a, int b)
 {
     if (a < 0) a = -a;
@@ -1950,14 +2371,26 @@ static inline int gcd_int(int a, int b)
     return (a == 0) ? 1 : a;
 }
 
+/**
+ * Normalized sinc function: sin(pi*x)/(pi*x), with sinc(0)=1.
+ */
 static inline double dsd_fme_sinc(double x)
 {
     if (x == 0.0) return 1.0;
     return sin(kPi * x) / (kPi * x);
 }
 
-/* Design windowed-sinc low-pass prototype for upfirdn (runs at L*Fs_in).
-   - cutoff normalized to 0..0.5 (relative to L*Fs_in), use conservative margin. */
+/**
+ * Design windowed-sinc low-pass prototype for polyphase upfirdn (runs at L*Fs_in).
+ * Uses a Hamming window and conservative cutoff to balance CPU vs. stopband.
+ * Taps are stored phase-major with stride L (k*L + phase) so each phase sees
+ * a contiguous sub-filter. Taps are normalized to give ~unity DC per phase,
+ * then scaled by L to compensate polyphase upsampling (maintains amplitude).
+ *
+ * @param s Demodulator state to receive resampler taps/history.
+ * @param L Upsampling factor.
+ * @param M Downsampling factor.
+ */
 static void resamp_design(struct demod_state *s, int L, int M)
 {
     /* Per-phase taps K; total taps = K*L. Keep small for CPU, but adequate stopband. */
@@ -2018,8 +2451,15 @@ static void resamp_design(struct demod_state *s, int L, int M)
     s->resamp_taps_per_phase = taps_per_phase;
 }
 
-/* Process one block using polyphase upfirdn with history.
-   Returns number of output samples written. */
+/**
+ * Process one block using polyphase upfirdn with history.
+ *
+ * @param s      Demodulator state containing resampler state.
+ * @param in     Pointer to input samples.
+ * @param in_len Number of input samples.
+ * @param out    Pointer to output buffer (sized to hold produced samples).
+ * @return Number of output samples written.
+ */
 static int resamp_process_block(struct demod_state *s, const int16_t *in, int in_len, int16_t *out)
 {
     if (!s->resamp_enabled || !s->resamp_taps || !s->resamp_hist) {
@@ -2068,8 +2508,15 @@ static int resamp_process_block(struct demod_state *s, const int16_t *in, int in
     return out_len;
 }
 
+/**
+ * DC-corrected mean power (sqrt-free). Integer-only implementation.
+ *
+ * @param samples Input sample buffer.
+ * @param len     Number of samples to process.
+ * @param step    Step between processed samples (subsampling).
+ * @return Mean power (squared RMS) with DC bias removed.
+ */
 long int mean_power(int16_t *samples, int len, int step)
-/* DC-corrected mean power (sqrt-free). Integer-only implementation. */
 {
 	int64_t p = 0;
 	int64_t t = 0;
@@ -2089,6 +2536,13 @@ long int mean_power(int16_t *samples, int len, int step)
 	return (long int)(energy / (len > 0 ? len : 1));
 }
 
+/**
+ * Full demodulation pipeline for one block.
+ * Applies decimation (HB cascade or legacy), optional FLL and timing
+ * correction, followed by the configured discriminator and post-processing.
+ *
+ * @param d Demodulator state (consumes lowpassed, produces result).
+ */
 void full_demod(struct demod_state *d)
 {
 	int i, ds_p;
@@ -2135,7 +2589,9 @@ void full_demod(struct demod_state *d)
 	if (d->ted_enabled && (d->mode_demod != &fm_demod || d->ted_force)) {
 		gardner_timing_adjust(d);
 	}
-	/* power squelch (sqrt-free): compare mean power to squared threshold */
+	/* Power squelch (sqrt-free): compare mean power estimate against squared threshold.
+	   Samples are decimated by `squelch_decim_stride`; an EMA smooths block power.
+	   The sampling phase advances by lp_len % stride per block to cover all offsets. */
 	if (d->squelch_level) {
 		/* Decimated block power estimate (no DC correction; EMA smooths) */
 		int stride = (d->squelch_decim_stride > 0) ? d->squelch_decim_stride : 16;
@@ -2158,7 +2614,7 @@ void full_demod(struct demod_state *d)
 				/* Initialize on first measurement to avoid long ramp */
 				d->squelch_running_power = block_mean;
 			} else {
-				/* EMA: running += (block_mean - running) / window */
+				/* EMA: running += (block_mean - running) / window, window ~ 2^shift */
 				int w = (d->squelch_window > 0) ? d->squelch_window : 2048;
 				int shift = 0;
 				/* approximate log2(window), prefer power-of-two windows */
@@ -2197,6 +2653,18 @@ void full_demod(struct demod_state *d)
 	}
 }
 
+/**
+ * RTL-SDR asynchronous USB callback.
+ * Converts incoming u8 I/Q to s16 and enqueues into the input ring. If
+ * `offset_tuning` is off and `DSD_FME_COMBINE_ROT` is enabled (default), a
+ * combined rotate+widen implementation is used. Otherwise it falls back to
+ * legacy two-pass (rotate_90 u8, then widen subtracting 128) or a simple
+ * widen subtracting 127. On overflow, drops oldest ring data to avoid stalls.
+ *
+ * @param buf USB I/Q byte buffer.
+ * @param len Buffer length in bytes (I/Q interleaved).
+ * @param ctx Opaque pointer to `dongle_state`.
+ */
 static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 {
 	int i;
@@ -2258,6 +2726,13 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 	}
 }
 
+/**
+ * RTL-SDR USB thread entry: reads samples asynchronously into the input ring.
+ * Applies optional realtime scheduling/affinity if configured.
+ *
+ * @param arg Pointer to `dongle_state`.
+ * @return NULL on exit.
+ */
 static void *dongle_thread_fn(void *arg)
 {
 	struct dongle_state *s = static_cast<dongle_state*>(arg);
@@ -2266,6 +2741,13 @@ static void *dongle_thread_fn(void *arg)
 	return 0;
 }
 
+/**
+ * Demodulation thread entry: reads from input ring, runs the demod pipeline,
+ * and writes audio samples to the output ring.
+ *
+ * @param arg Pointer to `demod_state`.
+ * @return NULL on exit.
+ */
 static void *demod_thread_fn(void *arg)
 {
 	struct demod_state *d = static_cast<demod_state*>(arg);
@@ -2356,6 +2838,13 @@ static void *demod_thread_fn(void *arg)
 	return 0;
 }
 
+/**
+ * Find the nearest supported tuner gain to the requested value.
+ *
+ * @param dev          RTL-SDR device handle.
+ * @param target_gain  Desired gain in tenths of dB.
+ * @return Nearest supported gain in tenths of dB, or a negative error code.
+ */
 int nearest_gain(rtlsdr_dev_t *dev, int target_gain)
 {
 	int i, r, err1, err2, count, nearest;
@@ -2383,6 +2872,13 @@ int nearest_gain(rtlsdr_dev_t *dev, int target_gain)
 	return nearest;
 }
 
+/**
+ * Set RTL-SDR center frequency with a brief status message.
+ *
+ * @param dev       RTL-SDR device handle.
+ * @param frequency Center frequency in Hz.
+ * @return 0 on success or a negative error code.
+ */
 int verbose_set_frequency(rtlsdr_dev_t *dev, uint32_t frequency)
 {
 	int r;
@@ -2395,6 +2891,13 @@ int verbose_set_frequency(rtlsdr_dev_t *dev, uint32_t frequency)
 	return r;
 }
 
+/**
+ * Set RTL-SDR sampling rate with a brief status message.
+ *
+ * @param dev       RTL-SDR device handle.
+ * @param samp_rate Sampling rate in Hz.
+ * @return 0 on success or a negative error code.
+ */
 int verbose_set_sample_rate(rtlsdr_dev_t *dev, uint32_t samp_rate)
 {
 	int r;
@@ -2407,6 +2910,13 @@ int verbose_set_sample_rate(rtlsdr_dev_t *dev, uint32_t samp_rate)
 	return r;
 }
 
+/**
+ * Enable or disable direct sampling mode.
+ *
+ * @param dev RTL-SDR device handle.
+ * @param on  Non-zero to enable, zero to disable.
+ * @return 0 on success or a negative error code.
+ */
 int verbose_direct_sampling(rtlsdr_dev_t *dev, int on)
 {
 	int r;
@@ -2424,6 +2934,12 @@ int verbose_direct_sampling(rtlsdr_dev_t *dev, int on)
 	return r;
 }
 
+/**
+ * Enable offset tuning on the tuner if supported.
+ *
+ * @param dev RTL-SDR device handle.
+ * @return 0 on success or a negative error code.
+ */
 int verbose_offset_tuning(rtlsdr_dev_t *dev)
 {
 	int r;
@@ -2436,6 +2952,12 @@ int verbose_offset_tuning(rtlsdr_dev_t *dev)
 	return r;
 }
 
+/**
+ * Enable tuner automatic gain control.
+ *
+ * @param dev RTL-SDR device handle.
+ * @return 0 on success or a negative error code.
+ */
 int verbose_auto_gain(rtlsdr_dev_t *dev)
 {
 	int r;
@@ -2448,6 +2970,13 @@ int verbose_auto_gain(rtlsdr_dev_t *dev)
 	return r;
 }
 
+/**
+ * Set a fixed tuner gain with a message indicating the result.
+ *
+ * @param dev  RTL-SDR device handle.
+ * @param gain Desired gain in tenths of dB.
+ * @return 0 on success or a negative error code.
+ */
 int verbose_gain_set(rtlsdr_dev_t *dev, int gain)
 {
 	int r;
@@ -2465,6 +2994,13 @@ int verbose_gain_set(rtlsdr_dev_t *dev, int gain)
 	return r;
 }
 
+/**
+ * Set tuner PPM frequency error correction.
+ *
+ * @param dev        RTL-SDR device handle.
+ * @param ppm_error  Error in parts-per-million.
+ * @return 0 on success or a negative error code.
+ */
 int verbose_ppm_set(rtlsdr_dev_t *dev, int ppm_error)
 {
 	int r;
@@ -2479,6 +3015,12 @@ int verbose_ppm_set(rtlsdr_dev_t *dev, int ppm_error)
 	return r;
 }
 
+/**
+ * Reset RTL-SDR USB buffers.
+ *
+ * @param dev RTL-SDR device handle.
+ * @return 0 on success or a negative error code.
+ */
 int verbose_reset_buffer(rtlsdr_dev_t *dev)
 {
 	int r;
@@ -2488,6 +3030,14 @@ int verbose_reset_buffer(rtlsdr_dev_t *dev)
 	return r;
 }
 
+/**
+ * Compute and stage tuner/demodulator capture settings based on the
+ * requested center frequency and current demod configuration. The actual
+ * device programming occurs elsewhere after these fields are updated.
+ *
+ * @param freq Desired RF center frequency in Hz.
+ * @param rate Current input sample rate (unused).
+ */
 static void optimal_settings(int freq, int rate)
 {
 	UNUSED(rate);
@@ -2518,6 +3068,12 @@ static void optimal_settings(int freq, int rate)
 	// fprintf (stderr, "Capture Frequency: %i Rate: %i \n", capture_freq, capture_rate);
 }
 
+/**
+ * Controller thread: handles basic scanning/hopping between channels.
+ *
+ * @param arg Pointer to `controller_state`.
+ * @return NULL on exit.
+ */
 static void *controller_thread_fn(void *arg)
 {
 	// thoughts for multiple dongles
@@ -2561,6 +3117,11 @@ static void *controller_thread_fn(void *arg)
 	return 0;
 }
 
+/**
+ * Initialize dongle (RTL-SDR source) state with default parameters.
+ *
+ * @param s Dongle state to initialize.
+ */
 void dongle_init(struct dongle_state *s)
 {
 	s->rate = rtl_bandwidth;
@@ -2571,6 +3132,11 @@ void dongle_init(struct dongle_state *s)
 	s->demod_target = &demod;
 }
 
+/**
+ * Initialize demodulator state for analog FM path.
+ *
+ * @param s Demodulator state to initialize.
+ */
 void demod_init_analog(struct demod_state *s)
 {
 	s->rate_in = rtl_bandwidth;
@@ -2638,12 +3204,22 @@ void demod_init_analog(struct demod_state *s)
 	s->output_target = &output;
 	if (s->custom_atan == 2 && atan_lut == NULL) { atan_lut_init(); }
 	/* set discriminator function pointer */
+	/* custom_atan mapping:
+	   0 -> polar_discriminant (double atan2; slow, highest accuracy)
+	   1 -> polar_disc_fast    (int64 fast_atan2 approximation)
+	   2 -> polar_disc_lut     (LUT-based atan2 approximation)
+	*/
 	s->discriminator = (s->custom_atan == 0) ? &polar_discriminant :
 		(s->custom_atan == 1) ? &polar_disc_fast : &polar_disc_lut;
 	/* Init minimal worker pool (env-gated) */
 	demod_mt_init(s);
 }
 
+/**
+ * Initialize demodulator state for RO2 path (no CIC, LUT atan by default).
+ *
+ * @param s Demodulator state to initialize.
+ */
 void demod_init_ro2(struct demod_state *s)
 {
 	s->rate_in = rtl_bandwidth;
@@ -2717,6 +3293,11 @@ void demod_init_ro2(struct demod_state *s)
 	demod_mt_init(s);
 }
 
+/**
+ * Initialize demodulator state for default digital path.
+ *
+ * @param s Demodulator state to initialize.
+ */
 void demod_init(struct demod_state *s)
 {
 	s->rate_in = rtl_bandwidth;
@@ -2790,6 +3371,11 @@ void demod_init(struct demod_state *s)
 	demod_mt_init(s);
 }
 
+/**
+ * Release resources owned by the demodulator state.
+ *
+ * @param s Demodulator state to clean up.
+ */
 void demod_cleanup(struct demod_state *s)
 {
 	pthread_cond_destroy(&s->ready);
@@ -2801,6 +3387,11 @@ void demod_cleanup(struct demod_state *s)
 	if (s->resamp_hist) { free(s->resamp_hist); s->resamp_hist = NULL; }
 }
 
+/**
+ * Initialize output ring buffer and synchronization primitives.
+ *
+ * @param s Output state to initialize.
+ */
 void output_init(struct output_state *s)
 {
 	s->rate = rtl_bandwidth;
@@ -2825,6 +3416,11 @@ void output_init(struct output_state *s)
 	s->tail.store(0);
 }
 
+/**
+ * Destroy output ring buffer and synchronization primitives.
+ *
+ * @param s Output state to clean up.
+ */
 void output_cleanup(struct output_state *s)
 {
 	pthread_cond_destroy(&s->ready);
@@ -2833,6 +3429,11 @@ void output_cleanup(struct output_state *s)
 	if (s->buffer) { free(s->buffer); s->buffer = NULL; }
 }
 
+/**
+ * Initialize controller state (frequency list and hop control).
+ *
+ * @param s Controller state to initialize.
+ */
 void controller_init(struct controller_state *s)
 {
 	s->freqs[0] = 446000000;
@@ -2843,12 +3444,21 @@ void controller_init(struct controller_state *s)
 	pthread_mutex_init(&s->hop_m, NULL);
 }
 
+/**
+ * Destroy controller synchronization primitives.
+ *
+ * @param s Controller state to clean up.
+ */
 void controller_cleanup(struct controller_state *s)
 {
 	pthread_cond_destroy(&s->hop);
 	pthread_mutex_destroy(&s->hop_m);
 }
 
+/**
+ * Validate runtime options and controller state prior to starting streams.
+ * Exits the process with an error message if constraints are violated.
+ */
 void sanity_checks(void)
 {
 	if (controller.freq_len == 0) {
@@ -2868,7 +3478,14 @@ void sanity_checks(void)
 
 }
 
-//UDP remote stuff
+/**
+ * Convert a 5-byte UDP control message into an integer.
+ * Expects the first byte to be a command and the next four bytes to represent
+ * a little-endian 32-bit value.
+ *
+ * @param buf Pointer to 5-byte buffer.
+ * @return Decoded 32-bit little-endian integer from bytes 1..4.
+ */
 static unsigned int chars_to_int(unsigned char* buf) {
 
 	int i;
@@ -2881,6 +3498,15 @@ static unsigned int chars_to_int(unsigned char* buf) {
 	return val;
 }
 
+/**
+ * UDP control thread: listens for frequency tuning commands and applies them.
+ *
+ * Message format: 5 bytes, where buf[0]==0 indicates a set-frequency command
+ * and buf[1..4] is a little-endian 32-bit frequency in Hz.
+ *
+ * @param arg Unused.
+ * @return NULL on exit.
+ */
 static void *socket_thread_fn(void *arg) {
   UNUSED(arg);
 
@@ -2926,14 +3552,21 @@ static void *socket_thread_fn(void *arg) {
 	close(sockfd);
 	return 0;
 }
-//UDP stuff end
 
-void rtlsdr_sighandler()
+/**
+ * Signal handler to request RTL-SDR async cancel and exit.
+ */
+void rtlsdr_sighandler(void)
 {
 	fprintf (stderr, "Signal caught, exiting!\n");
 	rtlsdr_cancel_async(dongle.dev);
 }
 
+/**
+ * Initialize and open the RTL-SDR streaming pipeline, threads, and buffers.
+ *
+ * @param opts Decoder options used to configure the pipeline.
+ */
 void open_rtlsdr_stream(dsd_opts *opts)
 {
   int r;
@@ -3136,7 +3769,8 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	}
 
   if (demod.deemph) {
-		/* Configure deemphasis time constant via env DSD_FME_DEEMPH: 75 (default), 50, nfm, off */
+		/* Configure deemphasis via env DSD_FME_DEEMPH: 75 (default), 50, nfm, off.
+		   Computes a one-pole IIR with alpha = 1 - exp(-1/(Fs*tau)) stored in Q15. */
 		double tau_s = 75e-6; /* default 75 microseconds */
 		const char *deemph_env = getenv("DSD_FME_DEEMPH");
 		if (deemph_env && deemph_env[0] != '\0') {
@@ -3167,8 +3801,9 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	/* Configure optional post-demod audio LPF via env DSD_FME_AUDIO_LPF.
 	   Values:
 	   - off or 0: disabled (default)
-	   - NNNN: cutoff in Hz (approximate), e.g., 3000 or 5000. Uses one-pole IIR.
-	 */
+	   - NNNN: cutoff in Hz (approximate), e.g., 3000 or 5000.
+	   One-pole: y[n] = y[n-1] + alpha * (x[n] - y[n-1]),
+	   alpha ≈ 1 - exp(-2*pi*fc/Fs) in Q15. */
 	{
 		const char *alpf = getenv("DSD_FME_AUDIO_LPF");
 		demod.audio_lpf_enable = 0;
@@ -3227,7 +3862,10 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	}
 }
 
-void cleanup_rtlsdr_stream()
+/**
+ * Stop threads, cleanup buffers/objects, and close the RTL-SDR stream.
+ */
+void cleanup_rtlsdr_stream(void)
 {
 	fprintf (stderr, "cleaning up...\n");
   rtlsdr_cancel_async(dongle.dev);
@@ -3252,8 +3890,16 @@ void cleanup_rtlsdr_stream()
   rtlsdr_close(dongle.dev);
 }
 
-/* Batched consumer API: read up to count samples with fewer wakeups/locks.
-   Returns number of samples read (>=1) or -1 on exit. Applies volume scaling. */
+/**
+ * Batched consumer API: read up to count samples with fewer wakeups/locks.
+ * Applies volume scaling.
+ *
+ * @param out   Destination buffer for audio samples.
+ * @param count Maximum number of samples to read.
+ * @param opts  Decoder options (used for runtime PPM changes).
+ * @param state Decoder state (unused).
+ * @return Number of samples read (>=1) or -1 on exit.
+ */
 int get_rtlsdr_samples(int16_t *out, size_t count, dsd_opts * opts, dsd_state * state)
 {
 	UNUSED(state);
@@ -3278,20 +3924,14 @@ int get_rtlsdr_samples(int16_t *out, size_t count, dsd_opts * opts, dsd_state * 
 	return got;
 }
 
-//original for safe keeping
-// void get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
-// {
-// 	if (output.queue.empty())
-// 	{
-// 		safe_cond_wait(&output.ready, &output.ready_m);
-// 	}
-// 	pthread_rwlock_wrlock(&output.rw);
-// 	*sample = output.queue.front() * volume_multiplier;
-// 	output.queue.pop();
-// 	pthread_rwlock_unlock(&output.rw);
-// }
-
-//find way to modify this function to allow hopping (tuning) while squelched and send 0 sample?
+/**
+ * Convenience wrapper to read a single sample via the batched API.
+ *
+ * @param sample Destination for one sample.
+ * @param opts   Decoder options.
+ * @param state  Decoder state (unused).
+ * @return 0 on success, -1 on exit.
+ */
 int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 {
 	/* Delegate to batched API for a single sample */
@@ -3300,7 +3940,12 @@ int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 	return 0;
 }
 
-//function may lag since it isn't running as its own thread
+/**
+ * Tune RTL-SDR to a new center frequency, updating optimal settings.
+ *
+ * @param opts      Decoder options.
+ * @param frequency Target center frequency in Hz.
+ */
 void rtl_dev_tune(dsd_opts * opts, long int frequency)
 {
 	int r;
@@ -3318,8 +3963,13 @@ void rtl_dev_tune(dsd_opts * opts, long int frequency)
 
 }
 
-//return RMS value (root means square) power level -- used as soft squelch inside of framesync
-long int rtl_return_rms()
+/**
+ * Return mean power approximation for soft squelch decisions.
+ * Uses a small fixed sample window for efficiency.
+ *
+ * @return Mean power value.
+ */
+long int rtl_return_rms(void)
 {
 	long int sr = 0;
 	// #ifdef __arm__
@@ -3335,8 +3985,10 @@ long int rtl_return_rms()
 	return (sr);
 }
 
-//simple function to clear the rtl sample queue when tuning and during other events (ncurses menu open/close)
-void rtl_clean_queue()
+/**
+ * Clear the output ring buffer and wake any waiting producer.
+ */
+void rtl_clean_queue(void)
 {
 	/* Clear the entire ring to prevent sample 'lag' */
 	ring_clear(&output);
