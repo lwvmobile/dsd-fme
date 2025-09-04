@@ -1693,10 +1693,10 @@ void demod_init_analog(struct demod_state *s)
 	s->terminate_on_squelch = 0;
 	s->squelch_hits = 11;
 	s->downsample_passes = 1; //
-	s->comp_fir_size = 0;
+	s->comp_fir_size = 9;
 	s->prev_index = 0;
 	s->post_downsample = 1;  //1 -- once this works, default = 4 -- doesn't work on the official rtl-sdr source code either
-	s->custom_atan = 2;
+	s->custom_atan = 1;
 	s->deemph = 1; //
 	s->rate_out2 = rtl_bandwidth;  // -1 flag for disabled -- this enables low_pass_real, seems to work okay
 	s->mode_demod = &fm_demod;
