@@ -323,6 +323,72 @@ static inline int hb_decim2_real(const int16_t *in, int in_len, int16_t *out, in
 /* One 2:1 decimation stage on interleaved I/Q, using per-stage histories. */
 /* Removed hb_decim2_complex_stage in favor of inlined staged processing in full_demod() */
 
+/* Fused interleaved complex half-band decimator: decimate I and Q in one pass without deinterleave/reinterleave.
+   in_len is number of interleaved int16_t (I,Q,I,Q,...). Returns interleaved output length (in_len/2). */
+static inline int hb_decim2_complex_interleaved(const int16_t *in, int in_len, int16_t *out,
+    int16_t *hist_i, int16_t *hist_q)
+{
+    const int hist_len = HB_TAPS - 1;
+    int ch_len = in_len >> 1; /* per-channel samples */
+    int out_ch_len = ch_len >> 1; /* decimated per-channel */
+    if (out_ch_len <= 0) {
+        return 0;
+    }
+    int16_t lastI = (ch_len > 0) ? in[in_len - 2] : 0;
+    int16_t lastQ = (ch_len > 0) ? in[in_len - 1] : 0;
+    for (int n = 0; n < out_ch_len; n++) {
+        int center_idx = hist_len + (n << 1); /* per-channel index */
+        int64_t accI = 0;
+        int64_t accQ = 0;
+        for (int t = 0; t < HB_TAPS; t++) {
+            int src_idx = center_idx - HB_HALF + t;
+            int16_t xi, xq;
+            if (src_idx < hist_len) {
+                xi = hist_i[src_idx];
+                xq = hist_q[src_idx];
+            } else {
+                int rel = src_idx - hist_len;
+                if (rel < ch_len) {
+                    xi = in[(size_t)(rel << 1)];
+                    xq = in[(size_t)(rel << 1) + 1];
+                } else {
+                    xi = lastI;
+                    xq = lastQ;
+                }
+            }
+            int16_t c = hb_q15_taps[t];
+            accI += (int32_t)c * (int32_t)xi;
+            accQ += (int32_t)c * (int32_t)xq;
+        }
+        accI += (1 << 14);
+        accQ += (1 << 14);
+        int32_t yI = (int32_t)(accI >> 15);
+        int32_t yQ = (int32_t)(accQ >> 15);
+        out[(size_t)(n << 1)]     = sat16(yI);
+        out[(size_t)(n << 1) + 1] = sat16(yQ);
+    }
+    /* Update histories with last HB_TAPS-1 per-channel input samples */
+    if (ch_len >= hist_len) {
+        int start = ch_len - hist_len;
+        for (int k = 0; k < hist_len; k++) {
+            int rel = start + k;
+            hist_i[k] = in[(size_t)(rel << 1)];
+            hist_q[k] = in[(size_t)(rel << 1) + 1];
+        }
+    } else {
+        int need = hist_len - ch_len;
+        if (need > 0) {
+            memmove(hist_i, hist_i + ch_len, (size_t)need * sizeof(int16_t));
+            memmove(hist_q, hist_q + ch_len, (size_t)need * sizeof(int16_t));
+        }
+        for (int k = 0; k < ch_len; k++) {
+            hist_i[need + k] = in[(size_t)(k << 1)];
+            hist_q[need + k] = in[(size_t)(k << 1) + 1];
+        }
+    }
+    return out_ch_len << 1; /* interleaved length */
+}
+
 
 static void atan_lut_once_init(void)
 {
@@ -1535,35 +1601,11 @@ void full_demod(struct demod_state *d)
 			int16_t *src = d->lowpassed;
 			int16_t *dst = d->hb_workbuf;
 			for (i = 0; i < ds_p; i++) {
-				/* Deinterleave src -> hb_i_buf/hb_q_buf */
-				int ch_len = in_len >> 1;
-				for (int k = 0, j = 0; j < in_len; j += 2, k++) {
-					d->hb_i_buf[(size_t)k] = src[(size_t)j];
-					d->hb_q_buf[(size_t)k] = src[(size_t)j + 1];
-				}
-				/* Define per-channel decimation task */
-				struct HBArg { const int16_t *in; int in_len; int16_t *out; int16_t *hist; int out_len; } aI, aQ;
-				aI.in = d->hb_i_buf; aI.in_len = ch_len; aI.out = d->hb_i_out; aI.hist = d->hb_hist_i[i]; aI.out_len = 0;
-				aQ.in = d->hb_q_buf; aQ.in_len = ch_len; aQ.out = d->hb_q_out; aQ.hist = d->hb_hist_q[i]; aQ.out_len = 0;
-				auto hb_task = [](void *arg){
-					struct HBArg *a = (struct HBArg*)arg;
-					a->out_len = hb_decim2_real(a->in, a->in_len, a->out, a->hist);
-				};
-				if (d->mt_enabled) {
-					demod_mt_run_two(d, hb_task, (void*)&aI, hb_task, (void*)&aQ);
-				} else {
-					hb_task((void*)&aI);
-					hb_task((void*)&aQ);
-				}
-				int out_ch_len = (aI.out_len < aQ.out_len) ? aI.out_len : aQ.out_len;
-				/* Interleave back to dst */
-				for (int n = 0; n < out_ch_len; n++) {
-					dst[(size_t)(2*n)]     = d->hb_i_out[(size_t)n];
-					dst[(size_t)(2*n + 1)] = d->hb_q_out[(size_t)n];
-				}
+				/* Fused complex HB decimation on interleaved I/Q */
+				int out_len_interleaved = hb_decim2_complex_interleaved(src, in_len, dst, d->hb_hist_i[i], d->hb_hist_q[i]);
 				/* Next stage */
 				src = dst;
-				in_len = out_ch_len << 1;
+				in_len = out_len_interleaved;
 				dst = (src == d->hb_workbuf) ? d->lowpassed : d->hb_workbuf;
 			}
 			/* Final output resides in 'src' with length in_len */
