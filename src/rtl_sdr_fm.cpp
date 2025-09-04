@@ -50,6 +50,9 @@
 
 #define FREQUENCIES_LIMIT		  1000
 
+/* Clamp for bandwidth upsampling multiplier to avoid extreme expansion */
+#define MAX_BANDWIDTH_MULTIPLIER 8
+
 static int lcm_post[17] = {1,1,1,3,1,5,3,7,1,9,5,11,3,13,7,15,1};
 static int ACTUAL_BUF_LENGTH;
 
@@ -1738,6 +1741,21 @@ void open_rtlsdr_stream(dsd_opts *opts)
   int r;
 	rtl_bandwidth =  opts->rtl_bandwidth * 1000; //reverted back to straight value
 	bandwidth_multiplier = (bandwidth_divisor / rtl_bandwidth);
+	/* Guard multiplier to a safe range [1, MAX_BANDWIDTH_MULTIPLIER] */
+	{
+		int orig_mult = bandwidth_multiplier;
+		if (bandwidth_multiplier < 1) {
+			fprintf(stderr,
+				"WARNING: bandwidth_multiplier computed as %d (divisor=%d, bandwidth=%d Hz). Clamping to 1.\n",
+				orig_mult, bandwidth_divisor, rtl_bandwidth);
+			bandwidth_multiplier = 1;
+		} else if (bandwidth_multiplier > MAX_BANDWIDTH_MULTIPLIER) {
+			fprintf(stderr,
+				"WARNING: bandwidth_multiplier computed as %d exceeds max %d (divisor=%d, bandwidth=%d Hz). Clamping to %d.\n",
+				orig_mult, MAX_BANDWIDTH_MULTIPLIER, bandwidth_divisor, rtl_bandwidth, MAX_BANDWIDTH_MULTIPLIER);
+			bandwidth_multiplier = MAX_BANDWIDTH_MULTIPLIER;
+		}
+	}
 	volume_multiplier = 1; //moved to external handling to be more dynamic
 
 	//this needs to be initted first, then we set the parameters
