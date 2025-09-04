@@ -1373,9 +1373,9 @@ int low_pass_simple(int16_t *signal2, int len, int step)
 		for(i2=0; i2<step; i2++) {
 			sum += (int)signal2[i + i2];
 		}
-		//signal2[i/step] = (int16_t)(sum / step);
-		/* Saturate accumulated sum on write */
-		signal2[i/step] = sat16(sum);
+		// normalize by step with rounding
+		int val = (sum >= 0) ? (sum + step/2) / step : -(((-sum) + step/2) / step);
+		signal2[i/step] = (int16_t)val;
 	}
 	signal2[i/step + 1] = signal2[i/step];
 	return len / step;
