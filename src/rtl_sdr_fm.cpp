@@ -103,6 +103,10 @@ static int atan_lut_size = 131072; /* 512 KB */
 static int atan_lut_coef = 8;
 static pthread_once_t atan_lut_once = PTHREAD_ONCE_INIT;
 static pthread_mutex_t atan_lut_mutex = PTHREAD_MUTEX_INITIALIZER;
+/* Optional quarter-wave sine LUT for FLL rotator (Q15). */
+static int16_t fll_qsine_q15_lut[1025]; /* 0..pi/2 in 1024 steps, +1 guard for exact pi/2 */
+static pthread_once_t fll_lut_once = PTHREAD_ONCE_INIT;
+static int fll_lut_enabled = 0; /* DSD_FME_FLL_LUT (0 default: use fast approx) */
 /* Debug/compat toggles via env */
 static int combine_rotate_enabled = 1;     /* DSD_FME_COMBINE_ROT (1 default) */
 static int upsample_fixedpoint_enabled = 1;/* DSD_FME_UPSAMPLE_FP (1 default) */
@@ -657,6 +661,71 @@ static void atan_lut_once_init(void)
 	for (i = 0; i < atan_lut_size; i++) {
 		atan_lut[i] = (int) (atan((double) i / (1<<atan_lut_coef)) / kPi * (1<<14));
 	}
+}
+
+/* Build quarter-wave sine LUT in Q15: sin(theta) where theta in [0, pi/2] */
+static void fll_lut_once_init(void)
+{
+	for (int i = 0; i <= 1024; i++) {
+		double theta = (kPi * 0.5) * ((double)i / 1024.0);
+		int v = (int)lrint(sin(theta) * 32767.0);
+		if (v >  32767) v =  32767;
+		if (v < -32767) v = -32767;
+		fll_qsine_q15_lut[i] = (int16_t)v;
+}
+}
+
+/* Return cos/sin for phase in Q15 using quarter-wave LUT with linear interpolation. */
+static inline void fll_sin_cos_q15_from_phase_lut(int phase_q15, int16_t *c_out, int16_t *s_out)
+{
+	/* phase_q15 wraps at 1<<15 mapping to 2*pi */
+	int p = phase_q15 & 0x7FFF; /* 0..32767 */
+	int quad = p >> 13;         /* 0..3 */
+	int r = p & 0x1FFF;         /* position within quadrant: 0..8191 */
+
+	/* Helper to sample quarter-wave S(r) with r in [0..8192] using 1024-segment linear interp */
+	auto sample_quarter = [](int r8192) -> int16_t {
+        if (r8192 < 0) r8192 = 0;
+        if (r8192 > 8192) r8192 = 8192;
+        int idx = r8192 >> 3;          /* 0..1024 */
+        int frac = r8192 & 7;          /* 0..7 */
+        int16_t s0 = fll_qsine_q15_lut[idx];
+        int16_t s1 = fll_qsine_q15_lut[(idx < 1024) ? (idx + 1) : 1024];
+        int diff = (int)s1 - (int)s0;
+        int interp = (int)s0 + ((diff * frac + 4) >> 3); /* rounded */
+        if (interp >  32767) interp =  32767;
+        if (interp < -32767) interp = -32767;
+        return (int16_t)interp;
+    };
+
+	int16_t s_pos, c_pos;
+	/* Cosine within quadrant uses complementary angle in the quarter-wave */
+    switch (quad) {
+    case 0: /* [0, pi/2) */
+        s_pos = sample_quarter(r);
+        c_pos = sample_quarter(8192 - r);
+        *s_out = s_pos;
+        *c_out = c_pos;
+        break;
+    case 1: /* [pi/2, pi) */
+        s_pos = sample_quarter(8192 - r);
+        c_pos = sample_quarter(r);
+        *s_out = s_pos;
+        *c_out = (int16_t)(-c_pos);
+        break;
+    case 2: /* [pi, 3pi/2) */
+        s_pos = sample_quarter(r);
+        c_pos = sample_quarter(8192 - r);
+        *s_out = (int16_t)(-s_pos);
+        *c_out = (int16_t)(-c_pos);
+        break;
+    default: /* 3: [3pi/2, 2pi) */
+        s_pos = sample_quarter(8192 - r);
+        c_pos = sample_quarter(r);
+        *s_out = (int16_t)(-s_pos);
+        *c_out = c_pos;
+        break;
+    }
 }
 
 //UDP -- keep for compatibility reasons
@@ -1738,25 +1807,42 @@ static inline void fll_mix_and_update(struct demod_state *d)
     const int N = d->lp_len;
     int phase = d->fll_phase_q15;   /* Q15 wraps at 1<<15 ~ 2*pi */
     const int freq = d->fll_freq_q15; /* Q15 increment per sample */
-    /* Use small LUT-free rotator: sin/cos approximation via angle wrapping into quadrants. */
-    for (int i = 0; i + 1 < N; i += 2) {
-        int p = phase & 0x7FFF; /* 0..32767 */
-        int q = p >> 13; /* quadrant 0..3 */
-        int16_t c = 32767, s = 0;
-        int16_t r = (int16_t)(p & 0x1FFF); /* 0..8191 */
-        switch (q) {
-            case 0: c = 32767; s = (int16_t)((r * 4)); break;
-            case 1: c = (int16_t)(32767 - (r * 4)); s = 32767; break;
-            case 2: c = -32767; s = (int16_t)(32767 - (r * 4)); break;
-            default: c = (int16_t)(-32767 + (r * 4)); s = -32767; break;
-        }
-        int xr = x[i];
-        int xj = x[i+1];
-        int32_t yr = ((int32_t)xr * c + (int32_t)xj * s) >> 15;
-        int32_t yj = ((int32_t)xj * c - (int32_t)xr * s) >> 15;
-        x[i]   = (int16_t)yr;
-        x[i+1] = (int16_t)yj;
-        phase += freq;
+    /* Optional: higher-quality quarter-wave LUT rotator (linear interp), enabled via DSD_FME_FLL_LUT=1. */
+    if (fll_lut_enabled) {
+    	/* Ensure LUT is initialized once before use */
+    	pthread_once(&fll_lut_once, fll_lut_once_init);
+    	for (int i = 0; i + 1 < N; i += 2) {
+    		int16_t c, s;
+    		fll_sin_cos_q15_from_phase_lut(phase, &c, &s);
+    		int xr = x[i];
+    		int xj = x[i+1];
+    		int32_t yr = ((int32_t)xr * c + (int32_t)xj * s) >> 15;
+    		int32_t yj = ((int32_t)xj * c - (int32_t)xr * s) >> 15;
+    		x[i]   = (int16_t)yr;
+    		x[i+1] = (int16_t)yj;
+    		phase += freq;
+    	}
+    } else {
+    	/* Fast LUT-free rotator: piecewise-linear sin/cos within quadrants. */
+    	for (int i = 0; i + 1 < N; i += 2) {
+    		int p = phase & 0x7FFF; /* 0..32767 */
+    		int q = p >> 13; /* quadrant 0..3 */
+    		int16_t c = 32767, s = 0;
+    		int16_t r = (int16_t)(p & 0x1FFF); /* 0..8191 */
+    		switch (q) {
+    			case 0: c = 32767; s = (int16_t)((r * 4)); break;
+    			case 1: c = (int16_t)(32767 - (r * 4)); s = 32767; break;
+    			case 2: c = -32767; s = (int16_t)(32767 - (r * 4)); break;
+    			default: c = (int16_t)(-32767 + (r * 4)); s = -32767; break;
+    		}
+    		int xr = x[i];
+    		int xj = x[i+1];
+    		int32_t yr = ((int32_t)xr * c + (int32_t)xj * s) >> 15;
+    		int32_t yj = ((int32_t)xj * c - (int32_t)xr * s) >> 15;
+    		x[i]   = (int16_t)yr;
+    		x[i+1] = (int16_t)yj;
+    		phase += freq;
+    	}
     }
     d->fll_phase_q15 = phase & 0x7FFF;
 }
@@ -2953,6 +3039,11 @@ void open_rtlsdr_stream(dsd_opts *opts)
 		/* Configure FLL/TED via envs. Defaults: FLL on with small gains; TED off by default. */
 		const char *fll = getenv("DSD_FME_FLL");
 		demod.fll_enabled = (!fll || fll[0] == '\0' || fll[0] == '1') ? 1 : 0;
+		/* Optional: enable LUT-based FLL rotator via DSD_FME_FLL_LUT=1 */
+		{
+			const char *flut = getenv("DSD_FME_FLL_LUT");
+			fll_lut_enabled = (flut && flut[0] == '1') ? 1 : 0;
+		}
 		/* Gains in Q15; very conservative defaults */
 		const char *fa = getenv("DSD_FME_FLL_ALPHA");
 		const char *fb = getenv("DSD_FME_FLL_BETA");
