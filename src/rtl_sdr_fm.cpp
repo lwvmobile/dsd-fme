@@ -1797,7 +1797,10 @@ static inline void fll_update_error(struct demod_state *d)
 static inline void gardner_timing_adjust(struct demod_state *d)
 {
     if (!d->ted_enabled || d->ted_sps <= 1) return;
+    /* Guard: run TED only when we're near symbol rate to keep CPU low.
+       Skip when samples-per-symbol is very high unless explicitly forced. */
     int sps = d->ted_sps;
+    if (sps > 12 && !d->ted_force) return;
     int mu  = d->ted_mu_q20;    /* Q20 */
     int gain = d->ted_gain_q20; /* Q20 */
     int16_t *x = d->lowpassed;
