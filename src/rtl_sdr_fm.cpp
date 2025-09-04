@@ -158,34 +158,87 @@ static inline void widen_u8_to_s16_bias127(const unsigned char * DSD_FME_RESTRIC
 static inline void widen_rotate90_u8_to_s16_bias127(const unsigned char * DSD_FME_RESTRICT src,
     int16_t * DSD_FME_RESTRICT dst, uint32_t len)
 {
-    /* len is expected to be even (I/Q interleaved). Process in 8-byte blocks (4 IQ pairs). */
+#if defined(__AVX2__)
+    /* AVX2 path: process 32 bytes per loop, applying rotation+wide.
+       Pattern per 8-byte group: [0,1,3,2,4,5,7,6] with select mask for 128-x on lanes {2,4,5,7}. */
+    const __m256i shuffle = _mm256_setr_epi8(
+        0, 1, 3, 2, 4, 5, 7, 6,  8, 9,11,10,12,13,15,14,
+        0, 1, 3, 2, 4, 5, 7, 6,  8, 9,11,10,12,13,15,14);
+    const __m256i mask_sel = _mm256_setr_epi16(
+        0x0000,0x0000,0xFFFF,0x0000,0xFFFF,0xFFFF,0x0000,0xFFFF,
+        0x0000,0x0000,0xFFFF,0x0000,0xFFFF,0xFFFF,0x0000,0xFFFF);
+    const __m256i c127 = _mm256_set1_epi16(127);
+    const __m256i c128 = _mm256_set1_epi16(128);
     uint32_t i = 0;
+    for (; i + 32 <= len; i += 32) {
+        __m256i v8 = _mm256_loadu_si256((const __m256i*)(src + i));
+        __m256i sh = _mm256_shuffle_epi8(v8, shuffle);
+        __m128i sh_lo = _mm256_castsi256_si128(sh);
+        __m128i sh_hi = _mm256_extracti128_si256(sh, 1);
+        __m256i v16_lo = _mm256_cvtepu8_epi16(sh_lo);
+        __m256i v16_hi = _mm256_cvtepu8_epi16(sh_hi);
+        __m256i bs_lo = _mm256_sub_epi16(v16_lo, c127);
+        __m256i bm_lo = _mm256_sub_epi16(c128,  v16_lo);
+        __m256i bs_hi = _mm256_sub_epi16(v16_hi, c127);
+        __m256i bm_hi = _mm256_sub_epi16(c128,  v16_hi);
+        __m256i out_lo = _mm256_blendv_epi8(bs_lo, bm_lo, mask_sel);
+        __m256i out_hi = _mm256_blendv_epi8(bs_hi, bm_hi, mask_sel);
+        _mm256_storeu_si256((__m256i*)(dst + i), out_lo);
+        _mm256_storeu_si256((__m256i*)(dst + i + 16), out_hi);
+    }
+#elif defined(__ARM_NEON) || defined(__ARM_NEON__)
+    /* NEON path: process 16 bytes per loop */
+    const uint8x16_t tbl_idx = {0,1,3,2,4,5,7,6, 8,9,11,10,12,13,15,14};
+    const int16x8_t c127 = vdupq_n_s16(127);
+    const int16x8_t c128 = vdupq_n_s16(128);
+    /* mask lanes to select 128-x for lanes {2,4,5,7} in each 8-lane group */
+    const uint16_t mpat[8] = {0x0000,0x0000,0xFFFF,0x0000,0xFFFF,0xFFFF,0x0000,0xFFFF};
+    const uint16x8_t msel = vld1q_u16(mpat);
+    uint32_t i = 0;
+    for (; i + 16 <= len; i += 16) {
+        uint8x16_t v = vld1q_u8(src + i);
+        /* lane-wise shuffle */
+        uint8x16_t sh = vqtbl1q_u8(v, tbl_idx);
+        /* widen low */
+        uint8x8_t sh_lo8 = vget_low_u8(sh);
+        uint8x8_t sh_hi8 = vget_high_u8(sh);
+        int16x8_t v16_lo = vreinterpretq_s16_u16(vmovl_u8(sh_lo8));
+        int16x8_t v16_hi = vreinterpretq_s16_u16(vmovl_u8(sh_hi8));
+        int16x8_t bs_lo = vsubq_s16(v16_lo, c127);
+        int16x8_t bm_lo = vsubq_s16(c128,   v16_lo);
+        int16x8_t bs_hi = vsubq_s16(v16_hi, c127);
+        int16x8_t bm_hi = vsubq_s16(c128,   v16_hi);
+        /* blend: out = (msel ? bm : bs), msel repeated for both halves */
+        int16x8_t out_lo = vbslq_s16(msel, bm_lo, bs_lo);
+        int16x8_t out_hi = vbslq_s16(msel, bm_hi, bs_hi);
+        vst1q_s16(dst + i, out_lo);
+        vst1q_s16(dst + i + 8, out_hi);
+    }
+#else
+    uint32_t i = 0;
+#endif
+    /* Scalar tail or generic path */
     for (; i + 8 <= len; i += 8) {
-        /* sample 0: multiply by 1 */
         int16_t i0 = (int16_t)src[i + 0] - 127;
         int16_t q0 = (int16_t)src[i + 1] - 127;
         dst[i + 0] = i0;
         dst[i + 1] = q0;
 
-        /* sample 1: multiply by j -> (1 - Q, I) to match unsigned 255-x behavior */
         int16_t i1 = (int16_t)src[i + 2] - 127;
         int16_t q1 = (int16_t)src[i + 3] - 127;
         dst[i + 2] = (int16_t)(1 - q1);
         dst[i + 3] = i1;
 
-        /* sample 2: multiply by -1 -> (1 - I, 1 - Q) */
         int16_t i2 = (int16_t)src[i + 4] - 127;
         int16_t q2 = (int16_t)src[i + 5] - 127;
         dst[i + 4] = (int16_t)(1 - i2);
         dst[i + 5] = (int16_t)(1 - q2);
 
-        /* sample 3: multiply by -j -> (Q, 1 - I) */
         int16_t i3 = (int16_t)src[i + 6] - 127;
         int16_t q3 = (int16_t)src[i + 7] - 127;
         dst[i + 6] = q3;
         dst[i + 7] = (int16_t)(1 - i3);
     }
-    /* Tail (up to 3 IQ pairs). Match original semantics: no rotation applied, widen only. */
     for (; i + 1 < len; i += 2) {
         dst[i + 0] = (int16_t)src[i + 0] - 127;
         dst[i + 1] = (int16_t)src[i + 1] - 127;
