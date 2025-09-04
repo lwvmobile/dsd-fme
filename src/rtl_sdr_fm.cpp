@@ -709,7 +709,8 @@ struct demod_state
 	int      resamp_taps_len;      /* prototype taps length (padded to K*L) */
 	int      resamp_taps_per_phase;/* K = ceil(taps_len/L) */
 	int16_t *resamp_taps;          /* Q15 taps, length = K*L */
-	int16_t *resamp_hist;          /* most-recent-first history, length = K */
+	int16_t *resamp_hist;          /* circular history, length = K */
+	int      resamp_hist_head;     /* head index into circular history [0..K-1] */
 	/* Output buffer for resampler (worst-case 4x expansion) */
 	alignas(DSD_FME_ALIGN) int16_t  resamp_outbuf[MAXIMUM_BUF_LENGTH * 4];
 	/* Residual CFO loop (FLL) state */
@@ -1807,6 +1808,7 @@ static void resamp_design(struct demod_state *s, int L, int M)
         return;
     }
     memset(s->resamp_hist, 0, (size_t)taps_per_phase * sizeof(int16_t));
+    s->resamp_hist_head = 0;
 
     /* Windowed-sinc (Hamming) */
     double gain = 0.0;
@@ -1854,22 +1856,27 @@ static int resamp_process_block(struct demod_state *s, const int16_t *in, int in
     const int K = s->resamp_taps_per_phase; /* taps per phase */
     const int16_t *taps = s->resamp_taps;   /* length K*L, phase-major stride L */
     int phase = s->resamp_phase;            /* 0..L-1 */
+    int head = s->resamp_hist_head;         /* circular head index */
     int out_len = 0;
 
     for (int n = 0; n < in_len; n++) {
-        /* Push new sample into history (most-recent-first) */
-        memmove(s->resamp_hist + 1, s->resamp_hist, (size_t)(K - 1) * sizeof(int16_t));
-        s->resamp_hist[0] = in[n];
+        /* Push new sample into circular history at head */
+        s->resamp_hist[head] = in[n];
+        head++;
+        if (head == K) head = 0;
 
         /* While we owe outputs with current input available */
         int local_phase = phase;
         while (local_phase < L) {
-            /* Dot: y = sum_{k=0..K-1} hist[k] * taps[k*L + local_phase] */
+            /* Dot: y = sum_{k=0..K-1} hist[idx] * taps[k*L + local_phase]
+               Access history most-recent-first starting from head-1. */
             int64_t acc = 0;
             const int16_t *tk = taps + local_phase;
+            int idx = head - 1; if (idx < 0) idx += K;
             for (int k = 0; k < K; k++) {
-                acc += (int32_t)s->resamp_hist[k] * (int32_t)tk[0];
+                acc += (int32_t)s->resamp_hist[idx] * (int32_t)tk[0];
                 tk += L;
+                idx--; if (idx < 0) idx += K;
             }
             /* Q15 -> Q0 with rounding and saturation */
             acc += (1 << 14);
@@ -1881,6 +1888,7 @@ static int resamp_process_block(struct demod_state *s, const int16_t *in, int in
     }
 
     s->resamp_phase = phase;
+    s->resamp_hist_head = head;
     return out_len;
 }
 
