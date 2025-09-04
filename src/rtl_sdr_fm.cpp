@@ -108,6 +108,8 @@ static int upsample_fixedpoint_enabled = 1;/* DSD_FME_UPSAMPLE_FP (1 default) */
 
 /* Forward declaration for runtime SIMD dispatch initializer */
 static void dsd_fme_init_runtime_dispatch(void);
+static void dsd_fme_init_runtime_dispatch_once(void);
+static pthread_once_t dsd_fme_dispatch_once_control = PTHREAD_ONCE_INIT;
 
 /* =====================
    USB widening helper dispatch setup
@@ -191,7 +193,6 @@ static inline void widen_rotate90_u8_to_s16_bias127_scalar(const unsigned char *
 /* AVX2 specializations */
 static void DSD_FME_TARGET_ATTR("avx2") widen_u8_to_s16_bias127_avx2(const unsigned char *src, int16_t *dst, uint32_t len)
 {
-#if defined(__AVX2__)
     uint32_t i = 0;
     const __m256i bias256 = _mm256_set1_epi16(127);
     for (; i + 32 <= len; i += 32) {
@@ -205,14 +206,10 @@ static void DSD_FME_TARGET_ATTR("avx2") widen_u8_to_s16_bias127_avx2(const unsig
         _mm256_storeu_si256((__m256i*)(dst + i + 16), hi);
     }
     for (; i < len; i++) dst[i] = (int16_t)src[i] - 127;
-#else
-    widen_u8_to_s16_bias127_scalar(src, dst, len);
-#endif
 }
 
 static void DSD_FME_TARGET_ATTR("avx2") widen_rotate90_u8_to_s16_bias127_avx2(const unsigned char *src, int16_t *dst, uint32_t len)
 {
-#if defined(__AVX2__)
     const __m256i shuffle = _mm256_setr_epi8(
         0, 1, 3, 2, 4, 5, 7, 6,  8, 9,11,10,12,13,15,14,
         0, 1, 3, 2, 4, 5, 7, 6,  8, 9,11,10,12,13,15,14);
@@ -242,15 +239,11 @@ static void DSD_FME_TARGET_ATTR("avx2") widen_rotate90_u8_to_s16_bias127_avx2(co
         dst[i + 0] = (int16_t)src[i + 0] - 127;
         dst[i + 1] = (int16_t)src[i + 1] - 127;
     }
-#else
-    widen_rotate90_u8_to_s16_bias127_scalar(src, dst, len);
-#endif
 }
 
 /* SSE2 specializations (safe on x86_64; guarded by runtime dispatch) */
 static void DSD_FME_TARGET_ATTR("sse2") widen_u8_to_s16_bias127_sse2(const unsigned char *src, int16_t *dst, uint32_t len)
 {
-#if defined(__SSE2__)
     uint32_t i = 0;
     const __m128i bias = _mm_set1_epi16(127);
     const __m128i zero = _mm_setzero_si128();
@@ -264,9 +257,6 @@ static void DSD_FME_TARGET_ATTR("sse2") widen_u8_to_s16_bias127_sse2(const unsig
         _mm_storeu_si128((__m128i*)(dst + i + 8), hi);
     }
     for (; i < len; i++) dst[i] = (int16_t)src[i] - 127;
-#else
-    widen_u8_to_s16_bias127_scalar(src, dst, len);
-#endif
 }
 
 static void DSD_FME_TARGET_ATTR("sse2") widen_rotate90_u8_to_s16_bias127_sse2(const unsigned char *src, int16_t *dst, uint32_t len)
@@ -296,6 +286,7 @@ static void widen_u8_to_s16_bias127_neon(const unsigned char *src, int16_t *dst,
 
 static void widen_rotate90_u8_to_s16_bias127_neon(const unsigned char *src, int16_t *dst, uint32_t len)
 {
+#if defined(__aarch64__)
     const uint8x16_t tbl_idx = {0,1,3,2,4,5,7,6, 8,9,11,10,12,13,15,14};
     const int16x8_t c127 = vdupq_n_s16(127);
     const int16x8_t c128 = vdupq_n_s16(128);
@@ -322,15 +313,16 @@ static void widen_rotate90_u8_to_s16_bias127_neon(const unsigned char *src, int1
         dst[i + 0] = (int16_t)src[i + 0] - 127;
         dst[i + 1] = (int16_t)src[i + 1] - 127;
     }
+#else
+    /* ARMv7 NEON lacks vqtbl1q_u8; use scalar fallback for rotate+widen */
+    widen_rotate90_u8_to_s16_bias127_scalar(src, dst, len);
+#endif
 }
 #endif
 
 /* Non-privileged CPU feature checks (CPUID/XGETBV on x86, getauxval on Linux/ARM) */
-static void dsd_fme_init_runtime_dispatch(void)
+static void dsd_fme_init_runtime_dispatch_once(void)
 {
-    static int done = 0;
-    if (done) return;
-    done = 1;
 
     int use_avx2 = 0;
     int use_sse2 = 0;
@@ -397,6 +389,12 @@ static void dsd_fme_init_runtime_dispatch(void)
         return;
     }
 #endif
+}
+
+static void dsd_fme_init_runtime_dispatch(void)
+{
+	/* Thread-safe, idempotent initialization */
+	pthread_once(&dsd_fme_dispatch_once_control, dsd_fme_init_runtime_dispatch_once);
 }
 
 /* =====================
