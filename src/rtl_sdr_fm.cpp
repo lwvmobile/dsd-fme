@@ -379,6 +379,22 @@ struct demod_state
 	int16_t *resamp_hist;          /* most-recent-first history, length = K */
 	/* Output buffer for resampler (worst-case 4x expansion) */
 	alignas(DSD_FME_ALIGN) int16_t  resamp_outbuf[MAXIMUM_BUF_LENGTH * 4];
+	/* Residual CFO loop (FLL) state */
+	int      fll_enabled;
+	int      fll_alpha_q15;   /* proportional gain (Q15) */
+	int      fll_beta_q15;    /* integral gain (Q15) */
+	int      fll_freq_q15;    /* NCO frequency increment (Q15 radians/sample scaled) */
+	int      fll_phase_q15;   /* NCO phase accumulator (wrap at 2*pi -> 1<<15 scale) */
+	int      fll_prev_r;
+	int      fll_prev_j;
+	/* Timing error detector (Gardner) fractional-delay state */
+	int      ted_enabled;
+	int      ted_force;       /* allow forcing TED even for FM/C4FM paths */
+	int      ted_gain_q20;    /* small gain (Q20) for stability */
+	int      ted_sps;         /* nominal samples per symbol (e.g., 10 for 4800 sym/s at 48k) */
+	int      ted_mu_q20;      /* fractional phase [0,1) in Q20 */
+	/* Work buffer for timing-adjusted I/Q */
+	alignas(DSD_FME_ALIGN) int16_t  timing_buf[MAXIMUM_BUF_LENGTH];
 	/* Minimal 2-thread worker pool for intra-block parallelism */
 	int      mt_enabled;
 	int      mt_ready;
@@ -1186,6 +1202,125 @@ static inline void audio_lpf_filter(struct demod_state *fm)
 }
 
 /* =====================
+   Residual CFO loop (FLL) and Gardner timing correction
+   ===================== */
+
+/* Mix lowpassed I/Q by NCO e^{j*phi}, update phi by fll_freq_q15 (Q15 0..2pi maps to 0..1<<15). */
+static inline void fll_mix_and_update(struct demod_state *d)
+{
+    if (!d->fll_enabled) return;
+    int16_t *x = d->lowpassed;
+    const int N = d->lp_len;
+    int phase = d->fll_phase_q15;   /* Q15 wraps at 1<<15 ~ 2*pi */
+    const int freq = d->fll_freq_q15; /* Q15 increment per sample */
+    /* Use small LUT-free rotator: sin/cos approximation via angle wrapping into quadrants. */
+    for (int i = 0; i + 1 < N; i += 2) {
+        int p = phase & 0x7FFF; /* 0..32767 */
+        int q = p >> 13; /* quadrant 0..3 */
+        int16_t c = 32767, s = 0;
+        int16_t r = (int16_t)(p & 0x1FFF); /* 0..8191 */
+        switch (q) {
+            case 0: c = 32767; s = (int16_t)((r * 4)); break;
+            case 1: c = (int16_t)(32767 - (r * 4)); s = 32767; break;
+            case 2: c = -32767; s = (int16_t)(32767 - (r * 4)); break;
+            default: c = (int16_t)(-32767 + (r * 4)); s = -32767; break;
+        }
+        int xr = x[i];
+        int xj = x[i+1];
+        int32_t yr = ((int32_t)xr * c + (int32_t)xj * s) >> 15;
+        int32_t yj = ((int32_t)xj * c - (int32_t)xr * s) >> 15;
+        x[i]   = (int16_t)yr;
+        x[i+1] = (int16_t)yj;
+        phase += freq;
+    }
+    d->fll_phase_q15 = phase & 0x7FFF;
+}
+
+/* Estimate frequency error using a simple phase-difference discriminator and update FLL integrator. */
+static inline void fll_update_error(struct demod_state *d)
+{
+    if (!d->fll_enabled) return;
+    int16_t *x = d->lowpassed;
+    const int N = d->lp_len;
+    int alpha = d->fll_alpha_q15; /* Q15 */
+    int beta  = d->fll_beta_q15;  /* Q15 */
+    int prev_r = d->fll_prev_r;
+    int prev_j = d->fll_prev_j;
+    int32_t err_acc = 0;
+    int count = 0;
+    for (int i = 0; i + 1 < N; i += 2) {
+        int r = x[i];
+        int j = x[i+1];
+        if (i > 0 || (prev_r != 0 || prev_j != 0)) {
+            int e = polar_disc_fast(r, j, prev_r, prev_j); /* Q14 */
+            err_acc += e;
+            count++;
+        }
+        prev_r = r; prev_j = j;
+    }
+    d->fll_prev_r = prev_r;
+    d->fll_prev_j = prev_j;
+    if (count == 0) return;
+    int32_t err = err_acc / count; /* Q14 */
+    int32_t p = ( (int64_t)alpha * err ) >> 14; /* Q14 */
+    int32_t iacc = ( (int64_t)beta  * err ) >> 14;
+    int32_t df = p + iacc;
+    d->fll_freq_q15 += (int)df; /* Q15 */
+}
+
+/* Lightweight Gardner timing correction: nearest-neighbor fractional selection around nominal sps. */
+static inline void gardner_timing_adjust(struct demod_state *d)
+{
+    if (!d->ted_enabled || d->ted_sps <= 1) return;
+    int sps = d->ted_sps;
+    int mu  = d->ted_mu_q20;    /* Q20 */
+    int gain = d->ted_gain_q20; /* Q20 */
+    int16_t *x = d->lowpassed;
+    int16_t *y = d->timing_buf;
+    const int N = d->lp_len;
+    int out_n = 0;
+    const int one = (1<<20);
+    int mu_nom = one / (sps > 0 ? sps : 1); /* Q20 increment per complex sample */
+    for (int n = 0; n + 3 < N; n += 2) {
+        int a = n;       /* base complex sample index */
+        int b = n + 2;   /* next complex sample index */
+        if (b + 1 >= N) break;
+        int frac = mu & (one - 1); /* 0..one-1 */
+        int inv  = one - frac;
+        /* Linear interpolation between x[a] and x[b] (complex) */
+        int32_t ar = x[a];   int32_t aj = x[a+1];
+        int32_t br = x[b];   int32_t bj = x[b+1];
+        int32_t ir = (int32_t)(( (int64_t)inv * ar + (int64_t)frac * br ) >> 20);
+        int32_t ij = (int32_t)(( (int64_t)inv * aj + (int64_t)frac * bj ) >> 20);
+        y[out_n++] = (int16_t)ir;
+        y[out_n++] = (int16_t)ij;
+
+        /* Gardner error using previous and next symbol-spaced samples */
+        int km1 = a - 2; if (km1 < 0) km1 = 0;
+        int kp1 = b + 2; if (kp1 + 1 >= N) { kp1 = b; }
+        int16_t xr1 = x[kp1];
+        int16_t xj1 = x[kp1+1];
+        int16_t xrm = x[km1];
+        int16_t xjm = x[km1+1];
+        int16_t dr = xr1 - xrm;
+        int16_t dj = xj1 - xjm;
+        int32_t e = (int32_t)dr * (int32_t)ir + (int32_t)dj * (int32_t)ij; /* Q0 */
+
+        /* Update fractional phase: nominal advance + small correction */
+        int64_t corr = ((int64_t)gain * (int64_t)e) >> 15; /* scale */
+        mu += mu_nom + (int)corr;
+        /* Wrap mu to [0, one) */
+        if (mu >= one) mu -= one;
+        if (mu < 0) mu += one;
+    }
+    if (out_n >= 2) {
+        memcpy(d->lowpassed, y, (size_t)out_n * sizeof(int16_t));
+        d->lp_len = out_n;
+    }
+    d->ted_mu_q20 = mu;
+}
+
+/* =====================
    Polyphase Rational Resampler (L/M)
    ===================== */
 
@@ -1400,6 +1535,12 @@ void full_demod(struct demod_state *d)
 		}
 	} else {
 		low_pass(d);
+	}
+	/* Residual CFO correction before discriminator */
+	fll_mix_and_update(d);
+	/* Lightweight timing error correction (optional, avoid for analog FM demod) */
+	if (d->ted_enabled && (d->mode_demod != &fm_demod || d->ted_force)) {
+		gardner_timing_adjust(d);
 	}
 	/* power squelch (sqrt-free): compare mean power to squared threshold */
 	if (d->squelch_level) {
@@ -1858,6 +1999,18 @@ void demod_init_analog(struct demod_state *s)
 	s->resamp_taps_per_phase = 0;
 	s->resamp_taps = NULL;
 	s->resamp_hist = NULL;
+	/* FLL/TED defaults */
+	s->fll_enabled = 0;
+	s->fll_alpha_q15 = 0;
+	s->fll_beta_q15 = 0;
+	s->fll_freq_q15 = 0;
+	s->fll_phase_q15 = 0;
+	s->fll_prev_r = 0;
+	s->fll_prev_j = 0;
+	s->ted_enabled = 0;
+	s->ted_gain_q20 = 0;
+	s->ted_sps = 0;
+	s->ted_mu_q20 = 0;
 	/* Squelch estimator init */
 	s->squelch_running_power = 0;
 	s->squelch_decim_stride = 16; /* evaluate 1/16th samples for low CPU */
@@ -1923,6 +2076,18 @@ void demod_init_ro2(struct demod_state *s)
 	s->resamp_taps_per_phase = 0;
 	s->resamp_taps = NULL;
 	s->resamp_hist = NULL;
+	/* FLL/TED defaults */
+	s->fll_enabled = 0;
+	s->fll_alpha_q15 = 0;
+	s->fll_beta_q15 = 0;
+	s->fll_freq_q15 = 0;
+	s->fll_phase_q15 = 0;
+	s->fll_prev_r = 0;
+	s->fll_prev_j = 0;
+	s->ted_enabled = 0;
+	s->ted_gain_q20 = 0;
+	s->ted_sps = 0;
+	s->ted_mu_q20 = 0;
 	/* Squelch estimator init */
 	s->squelch_running_power = 0;
 	s->squelch_decim_stride = 16;
@@ -1988,6 +2153,18 @@ void demod_init(struct demod_state *s)
 	s->resamp_taps_per_phase = 0;
 	s->resamp_taps = NULL;
 	s->resamp_hist = NULL;
+	/* FLL/TED defaults */
+	s->fll_enabled = 0;
+	s->fll_alpha_q15 = 0;
+	s->fll_beta_q15 = 0;
+	s->fll_freq_q15 = 0;
+	s->fll_phase_q15 = 0;
+	s->fll_prev_r = 0;
+	s->fll_prev_j = 0;
+	s->ted_enabled = 0;
+	s->ted_gain_q20 = 0;
+	s->ted_sps = 0;
+	s->ted_mu_q20 = 0;
 	/* Squelch estimator init */
 	s->squelch_running_power = 0;
 	s->squelch_decim_stride = 16;
@@ -2243,6 +2420,57 @@ void open_rtlsdr_stream(dsd_opts *opts)
 			}
 		} else {
 			demod.resamp_enabled = 0;
+		}
+
+		/* Configure FLL/TED via envs. Defaults: FLL on with small gains; TED off by default. */
+		const char *fll = getenv("DSD_FME_FLL");
+		demod.fll_enabled = (!fll || fll[0] == '\0' || fll[0] == '1') ? 1 : 0;
+		/* Gains in Q15; very conservative defaults */
+		const char *fa = getenv("DSD_FME_FLL_ALPHA");
+		const char *fb = getenv("DSD_FME_FLL_BETA");
+		demod.fll_alpha_q15 = fa ? atoi(fa) : 100;  /* ~0.003 */
+		demod.fll_beta_q15  = fb ? atoi(fb) : 10;   /* ~0.0003 */
+		demod.fll_freq_q15  = 0;
+		demod.fll_phase_q15 = 0;
+		demod.fll_prev_r = demod.fll_prev_j = 0;
+
+		const char *ted = getenv("DSD_FME_TED");
+		demod.ted_enabled = (ted && ted[0] == '1') ? 1 : 0;
+		const char *tg = getenv("DSD_FME_TED_GAIN");
+		const char *ts = getenv("DSD_FME_TED_SPS");
+		const char *tf = getenv("DSD_FME_TED_FORCE");
+		demod.ted_gain_q20 = tg ? atoi(tg) : 64; /* tiny default */
+		demod.ted_sps = ts ? atoi(ts) : 10;      /* e.g., 4800 sym/s @ 48k */
+		demod.ted_mu_q20 = 0;
+		demod.ted_force = (tf && tf[0] == '1') ? 1 : 0;
+
+		/* Mode-aware defaults (only if envs not provided) */
+		int env_ted_set = (ted && ted[0] != '\0');
+		int env_fll_alpha_set = (fa && fa[0] != '\0');
+		int env_fll_beta_set  = (fb && fb[0] != '\0');
+		int env_ted_sps_set   = (ts && ts[0] != '\0');
+		int env_ted_gain_set  = (tg && tg[0] != '\0');
+		int digital_mode = (opts->frame_p25p1 == 1 || opts->frame_p25p2 == 1 || opts->frame_provoice == 1);
+		/* Default: for common digital modes compute reasonable defaults, but keep TED disabled unless user opts in. */
+		if (digital_mode) {
+			if (!env_ted_set) demod.ted_enabled = 0;
+			if (!env_ted_sps_set) {
+				int Fs = (int)output.rate;
+				int sps = (Fs + 2400) / 4800; /* round(Fs/4800) */
+				if (sps < 2) sps = 2;
+				demod.ted_sps = sps;
+			}
+			if (!env_ted_gain_set) {
+				/* Slightly higher but safe default gain for digital */
+				demod.ted_gain_q20 = 96;
+			}
+			if (!env_fll_alpha_set) demod.fll_alpha_q15 = 150; /* ~0.0046 */
+			if (!env_fll_beta_set)  demod.fll_beta_q15  = 15;  /* ~0.00046 */
+		} else {
+			/* Analog defaults: keep TED off; gentle FLL */
+			if (!env_ted_set) demod.ted_enabled = 0;
+			if (!env_fll_alpha_set) demod.fll_alpha_q15 = 50; /* ~0.0015 */
+			if (!env_fll_beta_set)  demod.fll_beta_q15  = 5;  /* ~0.00015 */
 		}
 	}
 
