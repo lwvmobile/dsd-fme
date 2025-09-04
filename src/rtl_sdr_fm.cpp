@@ -146,6 +146,18 @@ static inline void widen_u8_to_s16_bias127_scalar(const unsigned char * DSD_FME_
     }
 }
 
+/* Scalar widening that subtracts 128 instead of 127.
+   Used to pair with legacy byte-wise rotate_90(u8) which performs 255 - x negation,
+   so that the overall effect equals correct centered negation (127 - x). */
+static inline void widen_u8_to_s16_bias128_scalar(const unsigned char * DSD_FME_RESTRICT src,
+    int16_t * DSD_FME_RESTRICT dst, uint32_t len)
+{
+    uint32_t i = 0;
+    for (; i < len; i++) {
+        dst[i] = (int16_t)src[i] - 128;
+    }
+}
+
 /* =====================
    Combined rotate_90 (1, j, -1, -j) + widen (u8->s16 centered at 127)
    Processes 4 IQ samples per iteration to avoid branches.
@@ -162,18 +174,18 @@ static inline void widen_rotate90_u8_to_s16_bias127_scalar(const unsigned char *
 
         int16_t i1 = (int16_t)src[i + 2] - 127;
         int16_t q1 = (int16_t)src[i + 3] - 127;
-        dst[i + 2] = (int16_t)(1 - q1);
+        dst[i + 2] = (int16_t)(-q1);
         dst[i + 3] = i1;
 
         int16_t i2 = (int16_t)src[i + 4] - 127;
         int16_t q2 = (int16_t)src[i + 5] - 127;
-        dst[i + 4] = (int16_t)(1 - i2);
-        dst[i + 5] = (int16_t)(1 - q2);
+        dst[i + 4] = (int16_t)(-i2);
+        dst[i + 5] = (int16_t)(-q2);
 
         int16_t i3 = (int16_t)src[i + 6] - 127;
         int16_t q3 = (int16_t)src[i + 7] - 127;
         dst[i + 6] = q3;
-        dst[i + 7] = (int16_t)(1 - i3);
+        dst[i + 7] = (int16_t)(-i3);
     }
     /* Tail: apply rotation pattern for remaining up to 6 samples */
     if (i < len) {
@@ -188,14 +200,14 @@ static inline void widen_rotate90_u8_to_s16_bias127_scalar(const unsigned char *
         if (rem >= 4) {
             int16_t i1 = (int16_t)src[base + 2] - 127;
             int16_t q1 = (int16_t)src[base + 3] - 127;
-            dst[base + 2] = (int16_t)(1 - q1);
+            dst[base + 2] = (int16_t)(-q1);
             dst[base + 3] = i1;
         }
         if (rem >= 6) {
             int16_t i2 = (int16_t)src[base + 4] - 127;
             int16_t q2 = (int16_t)src[base + 5] - 127;
-            dst[base + 4] = (int16_t)(1 - i2);
-            dst[base + 5] = (int16_t)(1 - q2);
+            dst[base + 4] = (int16_t)(-i2);
+            dst[base + 5] = (int16_t)(-q2);
         }
     }
 }
@@ -237,7 +249,6 @@ static void DSD_FME_TARGET_ATTR("avx2") widen_rotate90_u8_to_s16_bias127_avx2(co
         0x0000,0x0000,0xFFFF,0x0000,0xFFFF,0xFFFF,0x0000,0xFFFF,
         0x0000,0x0000,0xFFFF,0x0000,0xFFFF,0xFFFF,0x0000,0xFFFF);
     const __m256i c127 = _mm256_set1_epi16(127);
-    const __m256i c128 = _mm256_set1_epi16(128);
     uint32_t i = 0;
     for (; i + 32 <= len; i += 32) {
         __m256i v8 = _mm256_loadu_si256((const __m256i*)(src + i));
@@ -247,9 +258,9 @@ static void DSD_FME_TARGET_ATTR("avx2") widen_rotate90_u8_to_s16_bias127_avx2(co
         __m256i v16_lo = _mm256_cvtepu8_epi16(sh_lo);
         __m256i v16_hi = _mm256_cvtepu8_epi16(sh_hi);
         __m256i bs_lo = _mm256_sub_epi16(v16_lo, c127);
-        __m256i bm_lo = _mm256_sub_epi16(c128,  v16_lo);
+        __m256i bm_lo = _mm256_sub_epi16(c127,  v16_lo);
         __m256i bs_hi = _mm256_sub_epi16(v16_hi, c127);
-        __m256i bm_hi = _mm256_sub_epi16(c128,  v16_hi);
+        __m256i bm_hi = _mm256_sub_epi16(c127,  v16_hi);
         __m256i out_lo = _mm256_blendv_epi8(bs_lo, bm_lo, mask_sel);
         __m256i out_hi = _mm256_blendv_epi8(bs_hi, bm_hi, mask_sel);
         _mm256_storeu_si256((__m256i*)(dst + i), out_lo);
@@ -296,7 +307,6 @@ static void DSD_FME_TARGET_ATTR("ssse3") widen_rotate90_u8_to_s16_bias127_ssse3(
     const __m128i mask_sel = _mm_setr_epi16(
         0x0000,0x0000,0xFFFF,0x0000,0xFFFF,0xFFFF,0x0000,0xFFFF);
     const __m128i c127 = _mm_set1_epi16(127);
-    const __m128i c128 = _mm_set1_epi16(128);
     const __m128i zero = _mm_setzero_si128();
     for (; i + 16 <= len; i += 16) {
         __m128i v8 = _mm_loadu_si128((const __m128i*)(src + i));
@@ -304,9 +314,9 @@ static void DSD_FME_TARGET_ATTR("ssse3") widen_rotate90_u8_to_s16_bias127_ssse3(
         __m128i v16_lo = _mm_unpacklo_epi8(sh, zero);
         __m128i v16_hi = _mm_unpackhi_epi8(sh, zero);
         __m128i bs_lo = _mm_sub_epi16(v16_lo, c127);
-        __m128i bm_lo = _mm_sub_epi16(c128,  v16_lo);
+        __m128i bm_lo = _mm_sub_epi16(c127,  v16_lo);
         __m128i bs_hi = _mm_sub_epi16(v16_hi, c127);
-        __m128i bm_hi = _mm_sub_epi16(c128,  v16_hi);
+        __m128i bm_hi = _mm_sub_epi16(c127,  v16_hi);
         __m128i out_lo = _mm_or_si128(_mm_and_si128(bm_lo, mask_sel), _mm_andnot_si128(mask_sel, bs_lo));
         __m128i out_hi = _mm_or_si128(_mm_and_si128(bm_hi, mask_sel), _mm_andnot_si128(mask_sel, bs_hi));
         _mm_storeu_si128((__m128i*)(dst + i), out_lo);
@@ -341,7 +351,6 @@ static void widen_rotate90_u8_to_s16_bias127_neon(const unsigned char *src, int1
 #if defined(__aarch64__)
     const uint8x16_t tbl_idx = {0,1,3,2,4,5,7,6, 8,9,11,10,12,13,15,14};
     const int16x8_t c127 = vdupq_n_s16(127);
-    const int16x8_t c128 = vdupq_n_s16(128);
     const uint16_t mpat[8] = {0x0000,0x0000,0xFFFF,0x0000,0xFFFF,0xFFFF,0x0000,0xFFFF};
     const uint16x8_t msel = vld1q_u16(mpat);
     uint32_t i = 0;
@@ -353,9 +362,9 @@ static void widen_rotate90_u8_to_s16_bias127_neon(const unsigned char *src, int1
         int16x8_t v16_lo = vreinterpretq_s16_u16(vmovl_u8(sh_lo8));
         int16x8_t v16_hi = vreinterpretq_s16_u16(vmovl_u8(sh_hi8));
         int16x8_t bs_lo = vsubq_s16(v16_lo, c127);
-        int16x8_t bm_lo = vsubq_s16(c128,   v16_lo);
+        int16x8_t bm_lo = vsubq_s16(c127,   v16_lo);
         int16x8_t bs_hi = vsubq_s16(v16_hi, c127);
-        int16x8_t bm_hi = vsubq_s16(c128,   v16_hi);
+        int16x8_t bm_hi = vsubq_s16(c127,   v16_hi);
         int16x8_t out_lo = vbslq_s16(msel, bm_lo, bs_lo);
         int16x8_t out_hi = vbslq_s16(msel, bm_hi, bs_hi);
         vst1q_s16(dst + i, out_lo);
@@ -2037,7 +2046,8 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 		widen_rotate90_u8_to_s16_bias127(buf, dst, len);
 	} else if (!s->offset_tuning && !combine_rotate_enabled) {
 		rotate_90(buf, len);
-		widen_u8_to_s16_bias127(buf, dst, len);
+		/* Use 128 subtraction to avoid +1 bias after byte-wise negation */
+		widen_u8_to_s16_bias128_scalar(buf, dst, len);
 	} else {
 		widen_u8_to_s16_bias127(buf, dst, len);
 	}
