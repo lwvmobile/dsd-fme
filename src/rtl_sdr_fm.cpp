@@ -33,6 +33,14 @@
 #include <rtl-sdr.h>
 #include "dsd.h"
 
+/* Optional SIMD intrinsics for USB byte->int16 widening */
+#if defined(__SSE2__)
+#include <emmintrin.h>
+#endif
+#if defined(__ARM_NEON) || defined(__ARM_NEON__)
+#include <arm_neon.h>
+#endif
+
 #define DEFAULT_SAMPLE_RATE		48000
 #define DEFAULT_BUF_LENGTH		(1 * 16384)
 #define MAXIMUM_OVERSAMPLE		16
@@ -73,6 +81,45 @@ static int atan_lut_size = 131072; /* 512 KB */
 static int atan_lut_coef = 8;
 static pthread_once_t atan_lut_once = PTHREAD_ONCE_INIT;
 static pthread_mutex_t atan_lut_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* =====================
+   USB widening helper (u8 -> s16 centered at 127) with SIMD and scalar fallback
+   ===================== */
+static inline void widen_u8_to_s16_bias127(const unsigned char *src, int16_t *dst, uint32_t len)
+{
+    uint32_t i = 0;
+#if defined(__SSE2__)
+    /* Process 16 bytes per iteration */
+    const __m128i bias = _mm_set1_epi16(127);
+    const __m128i zero = _mm_setzero_si128();
+    for (; i + 16 <= len; i += 16) {
+        __m128i b = _mm_loadu_si128((const __m128i*)(src + i));
+        __m128i lo = _mm_unpacklo_epi8(b, zero); /* widen to 16-bit unsigned */
+        __m128i hi = _mm_unpackhi_epi8(b, zero);
+        lo = _mm_sub_epi16(lo, bias);            /* center at 127 */
+        hi = _mm_sub_epi16(hi, bias);
+        _mm_storeu_si128((__m128i*)(dst + i), lo);
+        _mm_storeu_si128((__m128i*)(dst + i + 8), hi);
+    }
+#elif defined(__ARM_NEON) || defined(__ARM_NEON__)
+    /* Process 16 bytes per iteration */
+    const uint8x8_t bias8 = vdup_n_u8(127);
+    for (; i + 16 <= len; i += 16) {
+        uint8x16_t v = vld1q_u8(src + i);
+        uint8x8_t v_lo = vget_low_u8(v);
+        uint8x8_t v_hi = vget_high_u8(v);
+        /* signed widen subtract: (uint8 - 127) -> int16 */
+        int16x8_t lo = vsubl_u8(v_lo, bias8);
+        int16x8_t hi = vsubl_u8(v_hi, bias8);
+        vst1q_s16(dst + i, lo);
+        vst1q_s16(dst + i + 8, hi);
+    }
+#endif
+    /* Scalar tail or whole buffer on non-SIMD builds */
+    for (; i < len; i++) {
+        dst[i] = (int16_t)src[i] - 127;
+    }
+}
 
 /* =====================
    Saturating helpers
@@ -1098,9 +1145,8 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 	/* Write directly into the current write buffer */
 	int wb = d->write_buf_index.load();
 	int16_t *dst = d->input_buffers[wb];
-	for (i=0; i<(int)len; i++) {
-		dst[i] = (int16_t)buf[i] - 127;
-	}
+	/* SIMD-accelerated widening (u8 -> s16 centered at 127) with scalar fallback */
+	widen_u8_to_s16_bias127(buf, dst, len);
 	d->input_len[wb].store(len);
 	/* Flip buffers atomically: the buffer we just wrote becomes ready */
 	d->ready_buf_index.store(wb);
