@@ -36,6 +36,9 @@
 #if defined(__SSE2__)
 #include <emmintrin.h>
 #endif
+#if defined(__AVX2__)
+#include <immintrin.h>
+#endif
 #if defined(__ARM_NEON) || defined(__ARM_NEON__)
 #include <arm_neon.h>
 #endif
@@ -78,18 +81,43 @@ static inline T* assume_aligned_ptr(T* p, size_t /*align_unused*/) {
 #define DSD_FME_ALIGN 64
 #endif
 
+/* Compiler-friendly restrict qualifier */
+#if defined(__GNUC__) || defined(__clang__)
+#define DSD_FME_RESTRICT __restrict__
+#else
+#define DSD_FME_RESTRICT
+#endif
+
 static int *atan_lut = NULL;
 static int atan_lut_size = 131072; /* 512 KB */
 static int atan_lut_coef = 8;
 static pthread_once_t atan_lut_once = PTHREAD_ONCE_INIT;
 static pthread_mutex_t atan_lut_mutex = PTHREAD_MUTEX_INITIALIZER;
+/* Debug/compat toggles via env */
+static int combine_rotate_enabled = 1;     /* DSD_FME_COMBINE_ROT (1 default) */
+static int upsample_fixedpoint_enabled = 1;/* DSD_FME_UPSAMPLE_FP (1 default) */
 
 /* =====================
    USB widening helper (u8 -> s16 centered at 127) with SIMD and scalar fallback
    ===================== */
-static inline void widen_u8_to_s16_bias127(const unsigned char *src, int16_t *dst, uint32_t len)
+static inline void widen_u8_to_s16_bias127(const unsigned char * DSD_FME_RESTRICT src,
+    int16_t * DSD_FME_RESTRICT dst, uint32_t len)
 {
     uint32_t i = 0;
+#if defined(__AVX2__)
+    /* Process 32 bytes per iteration */
+    const __m256i bias256 = _mm256_set1_epi16(127);
+    for (; i + 32 <= len; i += 32) {
+        __m128i b0 = _mm_loadu_si128((const __m128i*)(src + i));
+        __m128i b1 = _mm_loadu_si128((const __m128i*)(src + i + 16));
+        __m256i lo = _mm256_cvtepu8_epi16(b0);
+        __m256i hi = _mm256_cvtepu8_epi16(b1);
+        lo = _mm256_sub_epi16(lo, bias256);
+        hi = _mm256_sub_epi16(hi, bias256);
+        _mm256_storeu_si256((__m256i*)(dst + i), lo);
+        _mm256_storeu_si256((__m256i*)(dst + i + 16), hi);
+    }
+#endif
 #if defined(__SSE2__)
     /* Process 16 bytes per iteration */
     const __m128i bias = _mm_set1_epi16(127);
@@ -120,6 +148,47 @@ static inline void widen_u8_to_s16_bias127(const unsigned char *src, int16_t *ds
     /* Scalar tail or whole buffer on non-SIMD builds */
     for (; i < len; i++) {
         dst[i] = (int16_t)src[i] - 127;
+    }
+}
+
+/* =====================
+   Combined rotate_90 (1, j, -1, -j) + widen (u8->s16 centered at 127)
+   Processes 4 IQ samples per iteration to avoid branches.
+   ===================== */
+static inline void widen_rotate90_u8_to_s16_bias127(const unsigned char * DSD_FME_RESTRICT src,
+    int16_t * DSD_FME_RESTRICT dst, uint32_t len)
+{
+    /* len is expected to be even (I/Q interleaved). Process in 8-byte blocks (4 IQ pairs). */
+    uint32_t i = 0;
+    for (; i + 8 <= len; i += 8) {
+        /* sample 0: multiply by 1 */
+        int16_t i0 = (int16_t)src[i + 0] - 127;
+        int16_t q0 = (int16_t)src[i + 1] - 127;
+        dst[i + 0] = i0;
+        dst[i + 1] = q0;
+
+        /* sample 1: multiply by j -> (1 - Q, I) to match unsigned 255-x behavior */
+        int16_t i1 = (int16_t)src[i + 2] - 127;
+        int16_t q1 = (int16_t)src[i + 3] - 127;
+        dst[i + 2] = (int16_t)(1 - q1);
+        dst[i + 3] = i1;
+
+        /* sample 2: multiply by -1 -> (1 - I, 1 - Q) */
+        int16_t i2 = (int16_t)src[i + 4] - 127;
+        int16_t q2 = (int16_t)src[i + 5] - 127;
+        dst[i + 4] = (int16_t)(1 - i2);
+        dst[i + 5] = (int16_t)(1 - q2);
+
+        /* sample 3: multiply by -j -> (Q, 1 - I) */
+        int16_t i3 = (int16_t)src[i + 6] - 127;
+        int16_t q3 = (int16_t)src[i + 7] - 127;
+        dst[i + 6] = q3;
+        dst[i + 7] = (int16_t)(1 - i3);
+    }
+    /* Tail (up to 3 IQ pairs). Match original semantics: no rotation applied, widen only. */
+    for (; i + 1 < len; i += 2) {
+        dst[i + 0] = (int16_t)src[i + 0] - 127;
+        dst[i + 1] = (int16_t)src[i + 1] - 127;
     }
 }
 
@@ -1278,13 +1347,21 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 			buf[i] = 127;}
 		s->mute = 0;
 	}
-	if (!s->offset_tuning) {
-		rotate_90(buf, len);}
 	/* Write directly into the current write buffer */
 	int wb = d->write_buf_index.load();
 	int16_t *dst = d->input_buffers[wb];
-	/* SIMD-accelerated widening (u8 -> s16 centered at 127) with scalar fallback */
-	widen_u8_to_s16_bias127(buf, dst, len);
+	/* If offset tuning disabled, combine 90° rotation with widening in one pass
+	   unless DSD_FME_COMBINE_ROT=0. */
+	if (!s->offset_tuning && combine_rotate_enabled) {
+		widen_rotate90_u8_to_s16_bias127(buf, dst, len);
+	} else if (!s->offset_tuning && !combine_rotate_enabled) {
+		/* Legacy order: rotate u8 in-place, then widen */
+		rotate_90(buf, len);
+		widen_u8_to_s16_bias127(buf, dst, len);
+	} else {
+		/* Offset tuning active: no rotation, just widen */
+		widen_u8_to_s16_bias127(buf, dst, len);
+	}
 	d->input_len[wb].store(len);
 	/* Flip buffers atomically: the buffer we just wrote becomes ready */
 	d->ready_buf_index.store(wb);
@@ -1340,14 +1417,29 @@ static void *demod_thread_fn(void *arg)
 				struct UpArg { int start; int end; int M; const int16_t *src; int16_t *dst; };
 				auto up_task = [](void *arg){
 					UpArg *a = (UpArg*)arg;
+					const int Mloc = a->M;
 					for (int n = a->start; n < a->end; n++) {
-						int16_t x0 = a->src[n];
-						int16_t x1 = a->src[n + 1];
-						int32_t dx = (int32_t)x1 - (int32_t)x0;
-						int16_t *row = a->dst + (size_t)n * (size_t)a->M;
-						for (int m = 0; m < a->M; m++) {
-							int32_t interp = (int32_t)x0 + (dx * m) / a->M;
-							row[m] = (int16_t)interp;
+						int32_t x0 = a->src[n];
+						int32_t x1 = a->src[n + 1];
+						int16_t *row = a->dst + (size_t)n * (size_t)Mloc;
+						if (upsample_fixedpoint_enabled) {
+							int32_t dx = x1 - x0;
+							/* Q15 step to avoid per-sample division */
+							int64_t step_q15_64 = ((int64_t)dx << 15) / (int64_t)Mloc;
+							int32_t step_q15 = (int32_t)step_q15_64;
+							int32_t acc_q15 = 0;
+							for (int m = 0; m < Mloc; m++) {
+								int32_t frac = (acc_q15 >= 0) ? ((acc_q15 + (1 << 14)) >> 15) : -(((-acc_q15) + (1 << 14)) >> 15);
+								int32_t interp = x0 + frac;
+								row[m] = (int16_t)interp;
+								acc_q15 += step_q15;
+							}
+						} else {
+							int32_t dx = x1 - x0;
+							for (int m = 0; m < Mloc; m++) {
+								int32_t interp = x0 + (dx * m) / Mloc;
+								row[m] = (int16_t)interp;
+							}
 						}
 					}
 				};
@@ -1362,8 +1454,13 @@ static void *demod_thread_fn(void *arg)
 					up_task((void*)&a0);
 					up_task((void*)&a1);
 				}
-				/* Last original sample maps to the last position */
+				/* Last original sample maps to the last position; fill trailing with last value */
 				d->upsample_buf[(size_t)(N - 1) * (size_t)M] = d->result[N - 1];
+				if (upsample_fixedpoint_enabled) {
+					for (int t = 1; t < M; t++) {
+						d->upsample_buf[(size_t)(N - 1) * (size_t)M + (size_t)t] = d->result[N - 1];
+					}
+				}
 				ring_write_signal_on_empty_transition(o, d->upsample_buf, up_len);
 			}
 		}
@@ -1926,12 +2023,20 @@ void open_rtlsdr_stream(dsd_opts *opts)
   output_init(&output);
   controller_init(&controller);
 
-	/* Read optional environment flag for half-band decimator */
+	/* Read optional environment flags */
 	{
 		const char *hb = getenv("DSD_FME_HB_DECIM");
 		if (hb && hb[0] != '\0') {
 			int v = atoi(hb);
 			use_halfband_decimator = (v != 0);
+		}
+		const char *cr = getenv("DSD_FME_COMBINE_ROT");
+		if (cr && cr[0] != '\0') {
+			combine_rotate_enabled = (atoi(cr) != 0);
+		}
+		const char *ufp = getenv("DSD_FME_UPSAMPLE_FP");
+		if (ufp && ufp[0] != '\0') {
+			upsample_fixedpoint_enabled = (atoi(ufp) != 0);
 		}
 	}
 
