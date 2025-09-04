@@ -406,7 +406,6 @@ static void DSD_FME_TARGET_ATTR("avx2") widen_rotate90_u8_to_s16_bias127_avx2(co
     }
 }
 
-
 /**
  * SSE2: widen unsigned bytes to signed 16-bit centered at 127.
  */
@@ -1691,7 +1690,9 @@ void rotate_90(unsigned char *buf, uint32_t len)
 {
 	uint32_t i;
 	unsigned char tmp;
-	for (i=0; i<len; i+=8) {
+	/* Process only full 8-byte blocks (4 IQ pairs) to avoid overrun */
+	uint32_t full = len - (len % 8);
+	for (i=0; i<full; i+=8) {
 		/* uint8_t negation = 255 - x */
 		tmp = 255 - buf[i+3];
 		buf[i+3] = buf[i+2];
@@ -1748,7 +1749,8 @@ void low_pass(struct demod_state *d)
 int low_pass_simple(int16_t *signal2, int len, int step)
 {
 	int i, i2, sum;
-	for(i=0; i < len; i+=step) {
+	if (step <= 0) return len;
+	for(i=0; i + (step-1) < len; i+=step) {
 		sum = 0;
 		for(i2=0; i2<step; i2++) {
 			sum += (int)signal2[i + i2];
@@ -1759,8 +1761,11 @@ int low_pass_simple(int16_t *signal2, int len, int step)
 	}
 	/* Duplicate the final sample to provide one-sample lookahead for callers
 	   that expect at least one extra element. */
-	signal2[i/step + 1] = signal2[i/step];
-	return len / step;
+	int out_len = len / step;
+	if (out_len > 0) {
+		signal2[out_len] = signal2[out_len - 1];
+	}
+	return out_len;
 }
 
 /**
@@ -2667,7 +2672,7 @@ void full_demod(struct demod_state *d)
  */
 static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 {
-	int i;
+	
 	struct dongle_state *s = static_cast<dongle_state*>(ctx);
 	/* One-time: ensure the USB callback thread gets RT scheduling/affinity if enabled */
 	{
@@ -2683,9 +2688,11 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 	if (!ctx) {
 		return;}
 	if (s->mute) {
-		for (i=0; i<s->mute; i++) {
-			buf[i] = 127;}
-		s->mute = 0;
+		/* Clamp mute length to buffer size to avoid overwrite; carry remainder */
+		uint32_t m = (uint32_t)s->mute;
+		if (m > len) m = len;
+		memset(buf, 127, m);
+		s->mute -= (int)m;
 	}
 	/* Convert incoming u8 I/Q and write directly into input ring without extra copy */
 	size_t need = len;
@@ -3538,7 +3545,7 @@ static void *socket_thread_fn(void *arg) {
 	int new_freq;
 
 	while((n = read(sockfd,buffer,5)) != 0) {
-		if(buffer[0] == 0) {
+		if (n == 5 && buffer[0] == 0) {
 			new_freq = chars_to_int(buffer);
 			dongle.freq = new_freq;
 			optimal_settings(new_freq, demod.rate_in);
@@ -3980,7 +3987,10 @@ long int rtl_return_rms(void)
 	//I've found that just using a sample size of 160 will give us a good approximation without killing the CPU
 	// Return mean power (squared RMS) for soft squelch decisions (sqrt-free)
 	// sr = mean_power(demod.lowpassed, demod.lp_len, 1);
-	sr = mean_power(demod.lowpassed, 160, 1);
+	int n = demod.lp_len;
+	if (n > 160) n = 160;
+	if (n < 0) n = 0;
+	sr = mean_power(demod.lowpassed, n, 1);
 	// #endif
 	return (sr);
 }
