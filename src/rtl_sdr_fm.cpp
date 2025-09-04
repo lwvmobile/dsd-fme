@@ -1608,10 +1608,8 @@ void full_demod(struct demod_state *d)
 				in_len = out_len_interleaved;
 				dst = (src == d->hb_workbuf) ? d->lowpassed : d->hb_workbuf;
 			}
-			/* Final output resides in 'src' with length in_len */
-			if (d->lowpassed != src) {
-				memcpy(d->lowpassed, src, (size_t)in_len * sizeof(int16_t));
-			}
+			/* Final output resides in 'src' with length in_len; consume in-place (no copy) */
+			d->lowpassed = src;
 			d->lp_len = in_len;
 			/* No droop compensation for half-band cascade */
 		} else {
