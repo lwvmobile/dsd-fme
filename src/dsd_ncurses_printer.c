@@ -255,7 +255,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw (" V: %iX;", opts->rtl_volume_multiplier);
     printw (" PPM: %i;", opts->rtlsdr_ppm_error); //Adjust manually now with { and }
     printw (" SQ: %i;", opts->rtl_squelch_level);
-    printw (" RMS: %04li;", opts->rtl_rms);
+    printw (" PWR: %04li;", opts->rtl_pwr);
     printw (" BW: %i;", opts->rtl_bandwidth);
     printw (" FRQ: %i;", opts->rtlsdr_center_freq);
     if (opts->rtl_udp_port != 0) printw ("\n| External RTL Tuning on UDP Port: %i", opts->rtl_udp_port);
@@ -282,7 +282,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     printw ("| Pulse Analog Output: %i kHz; %i Ch; G: %02.0f%% (/|*) ", opts->pulse_raw_rate_out/1000, opts->pulse_raw_out_channels, opts->audio_gainA);
     if (opts->audio_gainA == 0.0f) printw ("Auto   ");
     else printw ("Manual ");
-    if (opts->audio_in_type != 3) printw ("RMS: %04ld; ", opts->rtl_rms);
+    if (opts->audio_in_type != 3) printw ("PWR: %04ld; ", opts->rtl_pwr);
     if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
     if (opts->use_hpf == 1) printw ("HP|");     else printw ("  |");
     if (opts->use_pbf == 1) printw ("PB|");     else printw ("  |");
@@ -302,7 +302,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
     if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) &&  (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
     {
-      printw ("\n| Analog Monitor RMS: %04ld; G: %02.0f%% (/|*) ", opts->rtl_rms, opts->audio_gainA);
+      printw ("\n| Analog Monitor PWR: %04ld; G: %02.0f%% (/|*) ", opts->rtl_pwr, opts->audio_gainA);
       if (opts->audio_gainA == 0.0f) printw ("Auto   ");
       else printw ("Manual ");
       if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
@@ -321,14 +321,14 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->use_hpf_d == 1)  printw (" HPF");
     if (opts->call_alert == 1) printw (" *CA!"); //Call Alert
     if ( (opts->audio_out_type == 5 && opts->pulse_digi_rate_out == 48000 && opts->pulse_digi_out_channels == 1) &&  (opts->frame_provoice == 1 || opts->monitor_input_audio == 1) )
-      printw (" - Monitor RMS: %04ld ", opts->rtl_rms);
+      printw (" - Monitor PWR: %04ld ", opts->rtl_pwr);
     printw (" \n");
     if (opts->udp_sockfdA != 0) //Analog Output on udp port +2
     {
       printw ("| UDP Analog Output: %s:%d; 48 kHz 1 Ch; G: %02.0f%% (/|*) ", opts->udp_hostname, opts->udp_portno+2, opts->audio_gainA);
       if (opts->audio_gainA == 0.0f) printw ("A ");
       else printw ("M ");
-      if (opts->audio_in_type != 3) printw ("RMS: %04ld; ", opts->rtl_rms);
+      if (opts->audio_in_type != 3) printw ("PWR: %04ld; ", opts->rtl_pwr);
       if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
       if (opts->use_hpf == 1) printw ("HP|");     else printw ("  |");
       if (opts->use_pbf == 1) printw ("PB|");     else printw ("  |");
@@ -347,7 +347,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
     if (opts->use_lpf == 1) printw ("F: |LP|"); else printw ("F: |  |");
     if (opts->use_hpf == 1) printw ("HP|");     else printw ("  |");
     if (opts->use_pbf == 1) printw ("PB|");     else printw ("  |");
-    if (opts->audio_in_type != 3 && state->m17_vox == 1) printw ( " SQL: %04ld : %04d;", opts->rtl_rms, opts->rtl_squelch_level);
+    if (opts->audio_in_type != 3 && state->m17_vox == 1) printw ( " SQL: %04ld : %04d;", opts->rtl_pwr, opts->rtl_squelch_level);
     printw ("\n");
 
   }

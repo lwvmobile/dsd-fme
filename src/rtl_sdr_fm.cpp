@@ -3744,10 +3744,10 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	}
 
 	dongle.dev_index = opts->rtl_dev_index;
-	// demod.squelch_level = opts->rtl_squelch_level; //no longer used here, used in framesync vc rms value under select conditions
+	// demod.squelch_level = opts->rtl_squelch_level; //no longer used here, used in framesync vc pwr value under select conditions
 	fprintf (stderr, "Setting RTL Bandwidth to %d Hz\n", rtl_bandwidth);
 	// fprintf (stderr, "Setting RTL Sample Multiplier to %d\n", bandwidth_multiplier);
-	fprintf (stderr, "Setting RTL RMS Squelch Level to %d\n", opts->rtl_squelch_level);
+	fprintf (stderr, "Setting RTL Power Squelch Level to %d\n", opts->rtl_squelch_level);
 	if (opts->rtl_udp_port != 0) port = opts->rtl_udp_port; //set this here, only open socket thread if set
 	if (opts->rtl_gain_value > 0) {
 		dongle.gain = opts->rtl_gain_value * 10; //multiple by ten to make it consitent with the way rtl_fm works
@@ -3971,28 +3971,19 @@ void rtl_dev_tune(dsd_opts * opts, long int frequency)
 }
 
 /**
- * Return mean power approximation for soft squelch decisions.
+ * Return mean power approximation (RMS^2 proxy) for soft squelch decisions.
  * Uses a small fixed sample window for efficiency.
  *
- * @return Mean power value.
+ * @return Mean power value (approximate RMS squared).
  */
-long int rtl_return_rms(void)
+long int rtl_return_pwr(void)
 {
-	long int sr = 0;
-	// #ifdef __arm__
-	// sr = 100;
-	// #else
-	//debug -- on main machine, lp_len is around 6420, so this probably contributes to very high CPU usage
-	// fprintf (stderr, "LP_LEN: %d \n", demod.lp_len);
-	//I've found that just using a sample size of 160 will give us a good approximation without killing the CPU
-	// Return mean power (squared RMS) for soft squelch decisions (sqrt-free)
-	// sr = mean_power(demod.lowpassed, demod.lp_len, 1);
+	long int pwr = 0;
 	int n = demod.lp_len;
 	if (n > 160) n = 160;
 	if (n < 0) n = 0;
-	sr = mean_power(demod.lowpassed, n, 1);
-	// #endif
-	return (sr);
+	pwr = mean_power(demod.lowpassed, n, 1);
+	return (pwr);
 }
 
 /**

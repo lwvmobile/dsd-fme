@@ -592,3 +592,27 @@ long int raw_rms(int16_t *samples, int len, int step) //use samplespersymbol as 
   if (rms < 0) rms = 150;
   return rms;
 }
+
+/*
+ * Mean power (RMS^2 proxy) without sqrt, modeled after mean_power() in rtl_sdr_fm.cpp.
+ * Computes a DC-corrected average of squares to avoid costly sqrt operations.
+ */
+long int raw_pwr(int16_t *samples, int len, int step)
+{
+  int64_t p = 0;
+  int64_t t = 0;
+  for (int i = 0; i < len; i += step) {
+    int64_t s = (int64_t)samples[i];
+    t += s;
+    p += s * s;
+  }
+  /* DC-corrected energy ≈ p - (t^2)/len with rounded division */
+  int64_t dc_corr = 0;
+  if (len > 0) {
+    int64_t tt = t * t;
+    dc_corr = (tt + (len / 2)) / len;
+  }
+  int64_t energy = p - dc_corr;
+  if (energy < 0) energy = 0;
+  return (long int)(energy / (len > 0 ? len : 1));
+}
