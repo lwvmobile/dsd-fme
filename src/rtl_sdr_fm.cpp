@@ -436,11 +436,9 @@ struct demod_state
 	int      exit_flag;
 	pthread_t thread;
 	int16_t  *lowpassed;
-	/* Double-buffered input for callback→demod handoff */
-	alignas(DSD_FME_ALIGN) int16_t  input_buffers[2][MAXIMUM_BUF_LENGTH];
-	std::atomic<int> write_buf_index;
-	std::atomic<int> ready_buf_index;
-	std::atomic<uint32_t> input_len[2];
+	/* SPSC input ring buffer for callback→demod handoff */
+	/* Scratch buffer used by callback to widen+rotate before enqueue */
+	alignas(DSD_FME_ALIGN) int16_t  input_cb_buf[MAXIMUM_BUF_LENGTH];
 	int      lp_len;
 	int16_t  lp_i_hist[10][6];
 	int16_t  lp_q_hist[10][6];
@@ -530,7 +528,8 @@ struct demod_state
 	struct { struct demod_state *s; int id; } mt_args[2];
 	int      (*discriminator)(int, int, int, int);
 	void     (*mode_demod)(struct demod_state*);
-	pthread_cond_t ready;
+	/* Input SPSC ring (embedded below) replaces ready/condvar handoff */
+	pthread_cond_t ready; /* kept for cleanup compatibility; unused now */
 	pthread_mutex_t ready_m;
 	struct output_state *output_target;
 };
@@ -652,6 +651,108 @@ struct output_state
 	pthread_mutex_t ready_m;
 };
 
+/* Simple SPSC ring for interleaved I/Q int16_t samples (input path) */
+struct input_ring_state
+{
+	int16_t  *buffer;
+	size_t   capacity;   /* in int16_t elements */
+	std::atomic<size_t> head;
+	std::atomic<size_t> tail;
+	pthread_cond_t ready;
+	pthread_mutex_t ready_m;
+};
+
+static inline size_t input_ring_used(const struct input_ring_state *r)
+{
+	size_t h = r->head.load();
+	size_t t = r->tail.load();
+	if (h >= t) return h - t;
+	return r->capacity - (t - h);
+}
+
+static inline size_t input_ring_free(const struct input_ring_state *r)
+{
+	return (r->capacity - 1) - input_ring_used(r);
+}
+
+static inline int input_ring_is_empty(const struct input_ring_state *r)
+{
+	return r->head.load() == r->tail.load();
+}
+
+static inline void input_ring_clear(struct input_ring_state *r)
+{
+	r->tail.store(0);
+	r->head.store(0);
+}
+
+static void input_ring_write(struct input_ring_state *r, const int16_t *data, size_t count)
+{
+	int need_signal = input_ring_is_empty(r);
+	while (count > 0 && !exitflag) {
+		size_t free_sp = input_ring_free(r);
+		if (free_sp == 0) {
+			/* drop oldest half to avoid blocking USB callback */
+			size_t t = r->tail.load();
+			size_t drop = r->capacity / 2;
+			t = (t + drop) % r->capacity;
+			r->tail.store(t);
+			free_sp = input_ring_free(r);
+		}
+		size_t write_now = (count < free_sp) ? count : free_sp;
+		size_t h = r->head.load();
+		size_t first = r->capacity - h;
+		if (first > write_now) first = write_now;
+		memcpy(r->buffer + h, data, first * sizeof(int16_t));
+		if (write_now > first) {
+			memcpy(r->buffer, data + first, (write_now - first) * sizeof(int16_t));
+			h = write_now - first;
+		} else {
+			h += first;
+			if (h == r->capacity) h = 0;
+		}
+		r->head.store(h);
+		data += write_now;
+		count -= write_now;
+	}
+	if (need_signal) {
+		pthread_mutex_lock(&r->ready_m);
+		pthread_cond_signal(&r->ready);
+		pthread_mutex_unlock(&r->ready_m);
+	}
+}
+
+static int input_ring_read_block(struct input_ring_state *r, int16_t *out, size_t max_count)
+{
+	if (max_count == 0) return 0;
+	while (input_ring_is_empty(r)) {
+		struct timespec ts;
+		clock_gettime(CLOCK_REALTIME, &ts);
+		ts.tv_nsec += 10L * 1000000L; /* 10ms */
+		if (ts.tv_nsec >= 1000000000L) {
+			ts.tv_sec += ts.tv_nsec / 1000000000L;
+			ts.tv_nsec = ts.tv_nsec % 1000000000L;
+		}
+		pthread_mutex_lock(&r->ready_m);
+		pthread_cond_timedwait(&r->ready, &r->ready_m, &ts);
+		pthread_mutex_unlock(&r->ready_m);
+		if (exitflag) return -1;
+	}
+	size_t available = input_ring_used(r);
+	size_t read_now = (max_count < available) ? max_count : available;
+	size_t t = r->tail.load();
+	size_t first = r->capacity - t;
+	if (first > read_now) first = read_now;
+	memcpy(out, r->buffer + t, first * sizeof(int16_t));
+	t += first;
+	if (t == r->capacity) t = 0;
+	if (read_now > first) {
+		memcpy(out + first, r->buffer, (read_now - first) * sizeof(int16_t));
+		t = read_now - first;
+	}
+	r->tail.store(t);
+	return (int)read_now;
+}
 struct controller_state
 {
 	int      exit_flag;
@@ -669,6 +770,7 @@ struct dongle_state dongle;
 struct demod_state demod;
 struct output_state output;
 struct controller_state controller;
+static struct input_ring_state input_ring;
 
 #define safe_cond_signal(n, m) pthread_mutex_lock(m); pthread_cond_signal(n); pthread_mutex_unlock(m)
 #define safe_cond_wait(n, m) pthread_mutex_lock(m); pthread_cond_wait(n, m); pthread_mutex_unlock(m)
@@ -1720,26 +1822,20 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 			buf[i] = 127;}
 		s->mute = 0;
 	}
-	/* Write directly into the current write buffer */
-	int wb = d->write_buf_index.load();
-	int16_t *dst = d->input_buffers[wb];
+	/* Convert incoming u8 I/Q into temp int16 buffer and enqueue to SPSC input ring */
+	int16_t *dst = d->input_cb_buf;
 	/* If offset tuning disabled, combine 90° rotation with widening in one pass
 	   unless DSD_FME_COMBINE_ROT=0. */
 	if (!s->offset_tuning && combine_rotate_enabled) {
 		widen_rotate90_u8_to_s16_bias127(buf, dst, len);
 	} else if (!s->offset_tuning && !combine_rotate_enabled) {
-		/* Legacy order: rotate u8 in-place, then widen */
 		rotate_90(buf, len);
 		widen_u8_to_s16_bias127(buf, dst, len);
 	} else {
-		/* Offset tuning active: no rotation, just widen */
 		widen_u8_to_s16_bias127(buf, dst, len);
 	}
-	d->input_len[wb].store(len);
-	/* Flip buffers atomically: the buffer we just wrote becomes ready */
-	d->ready_buf_index.store(wb);
-	d->write_buf_index.store(wb ^ 1);
-	safe_cond_signal(&d->ready, &d->ready_m);
+	/* Enqueue widened samples */
+	input_ring_write(&input_ring, dst, (size_t)len);
 }
 
 static void *dongle_thread_fn(void *arg)
@@ -1756,11 +1852,11 @@ static void *demod_thread_fn(void *arg)
 	struct output_state *o = d->output_target;
 	maybe_set_thread_realtime_and_affinity("DEMOD");
 	while (!exitflag) {
-		safe_cond_wait(&d->ready, &d->ready_m);
-		/* Consume from last fully-written input buffer */
-		int rb = d->ready_buf_index.load();
-		d->lowpassed = d->input_buffers[rb];
-		d->lp_len = (int)d->input_len[rb].load();
+		/* Read a block from input ring */
+		int got = input_ring_read_block(&input_ring, d->input_cb_buf, MAXIMUM_BUF_LENGTH);
+		if (got <= 0) continue;
+		d->lowpassed = d->input_cb_buf;
+		d->lp_len = got;
 		full_demod(d);
 		if (d->exit_flag) {
 			exitflag = 1;
@@ -2114,12 +2210,8 @@ void demod_init_analog(struct demod_state *s)
 		memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
 		memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
 	}
-	/* Double-buffer init */
-	s->write_buf_index.store(0);
-	s->ready_buf_index.store(1);
-	s->input_len[0].store(0);
-	s->input_len[1].store(0);
-	s->lowpassed = s->input_buffers[s->ready_buf_index.load()];
+	/* Input ring does not require double-buffer init */
+	s->lowpassed = s->input_cb_buf;
 	s->lp_len = 0;
 	pthread_cond_init(&s->ready, NULL);
 	pthread_mutex_init(&s->ready_m, NULL);
@@ -2191,12 +2283,8 @@ void demod_init_ro2(struct demod_state *s)
 		memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
 		memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
 	}
-	/* Double-buffer init */
-	s->write_buf_index.store(0);
-	s->ready_buf_index.store(1);
-	s->input_len[0].store(0);
-	s->input_len[1].store(0);
-	s->lowpassed = s->input_buffers[s->ready_buf_index.load()];
+	/* Input ring does not require double-buffer init */
+	s->lowpassed = s->input_cb_buf;
 	s->lp_len = 0;
 	pthread_cond_init(&s->ready, NULL);
 	pthread_mutex_init(&s->ready_m, NULL);
@@ -2268,12 +2356,8 @@ void demod_init(struct demod_state *s)
 		memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
 		memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
 	}
-	/* Double-buffer init */
-	s->write_buf_index.store(0);
-	s->ready_buf_index.store(1);
-	s->input_len[0].store(0);
-	s->input_len[1].store(0);
-	s->lowpassed = s->input_buffers[s->ready_buf_index.load()];
+	/* Input ring does not require double-buffer init */
+	s->lowpassed = s->input_cb_buf;
 	s->lp_len = 0;
 	pthread_cond_init(&s->ready, NULL);
 	pthread_mutex_init(&s->ready_m, NULL);
@@ -2461,6 +2545,23 @@ void open_rtlsdr_stream(dsd_opts *opts)
 		demod_init_analog(&demod);
 	else demod_init(&demod);
   output_init(&output);
+  /* Init input ring */
+  {
+    void *mem_ptr = NULL;
+#if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
+    if (posix_memalign(&mem_ptr, DSD_FME_ALIGN, (size_t)(MAXIMUM_BUF_LENGTH * 8) * sizeof(int16_t)) != 0) {
+      mem_ptr = malloc((size_t)(MAXIMUM_BUF_LENGTH * 8) * sizeof(int16_t));
+    }
+#else
+    mem_ptr = malloc((size_t)(MAXIMUM_BUF_LENGTH * 8) * sizeof(int16_t));
+#endif
+    input_ring.buffer = static_cast<int16_t*>(mem_ptr);
+    input_ring.capacity = (size_t)(MAXIMUM_BUF_LENGTH * 8);
+    input_ring.head.store(0);
+    input_ring.tail.store(0);
+    pthread_cond_init(&input_ring.ready, NULL);
+    pthread_mutex_init(&input_ring.ready_m, NULL);
+  }
   controller_init(&controller);
 
 	/* Read optional environment flags */
@@ -2716,6 +2817,9 @@ void cleanup_rtlsdr_stream()
   demod_cleanup(&demod);
   output_cleanup(&output);
   controller_cleanup(&controller);
+
+	/* free input ring */
+	if (input_ring.buffer) { free(input_ring.buffer); input_ring.buffer = NULL; }
 
 	/* free LUT memory if allocated */
 	atan_lut_free();
