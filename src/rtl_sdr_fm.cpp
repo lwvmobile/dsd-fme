@@ -921,7 +921,7 @@ struct dongle_state
 	int      ppm_error;
 	int      offset_tuning;
 	int      direct_sampling;
-	int      mute;
+	std::atomic<int> mute;
 	struct demod_state *demod_target;
 };
 
@@ -1236,14 +1236,7 @@ static int input_ring_reserve(struct input_ring_state *r, size_t min_needed,
                        int16_t **p1, size_t *n1, int16_t **p2, size_t *n2)
 {
 	size_t free_sp = input_ring_free(r);
-	if (free_sp == 0) {
-		/* match write() behavior: drop oldest half to free space */
-		size_t t = r->tail.load();
-		size_t drop = r->capacity / 2;
-		t = (t + drop) % r->capacity;
-		r->tail.store(t);
-		free_sp = input_ring_free(r);
-	}
+	/* Producer must never advance consumer tail; if full, grant nothing */
 	/* Provide up to min(free_sp, min_needed) across at most two regions */
 	size_t grant = (min_needed < free_sp) ? min_needed : free_sp;
 	size_t h = r->head.load();
@@ -1295,12 +1288,8 @@ static void input_ring_write(struct input_ring_state *r, const int16_t *data, si
 	while (count > 0 && !exitflag) {
 		size_t free_sp = input_ring_free(r);
 		if (free_sp == 0) {
-			/* drop oldest half to avoid blocking USB callback */
-			size_t t = r->tail.load();
-			size_t drop = r->capacity / 2;
-			t = (t + drop) % r->capacity;
-			r->tail.store(t);
-			free_sp = input_ring_free(r);
+			/* Ring full: to avoid racing the consumer, drop remainder */
+			break;
 		}
 		size_t write_now = (count < free_sp) ? count : free_sp;
 		size_t h = r->head.load();
@@ -1512,8 +1501,18 @@ static void ring_write(struct output_state *o, const int16_t *data, size_t count
     while (count > 0 && !exitflag) {
         size_t free_sp = ring_free(o);
         if (free_sp == 0) {
-            /* Wait for space */
-            safe_cond_wait(&o->space, &o->ready_m);
+            /* Wait for space with timeout to avoid indefinite blocking */
+            struct timespec ts;
+            clock_gettime(CLOCK_REALTIME, &ts);
+            ts.tv_nsec += 50L * 1000000L; /* 50ms */
+            if (ts.tv_nsec >= 1000000000L) {
+                ts.tv_sec += ts.tv_nsec / 1000000000L;
+                ts.tv_nsec = ts.tv_nsec % 1000000000L;
+            }
+            pthread_mutex_lock(&o->ready_m);
+            pthread_cond_timedwait(&o->space, &o->ready_m, &ts);
+            pthread_mutex_unlock(&o->ready_m);
+            if (exitflag) break;
             continue;
         }
         size_t write_now = (count < free_sp) ? count : free_sp;
@@ -1543,7 +1542,18 @@ static void ring_write_no_signal(struct output_state *o, const int16_t *data, si
     while (count > 0 && !exitflag) {
         size_t free_sp = ring_free(o);
         if (free_sp == 0) {
-            safe_cond_wait(&o->space, &o->ready_m);
+            /* Wait for space with timeout to avoid indefinite blocking */
+            struct timespec ts;
+            clock_gettime(CLOCK_REALTIME, &ts);
+            ts.tv_nsec += 50L * 1000000L; /* 50ms */
+            if (ts.tv_nsec >= 1000000000L) {
+                ts.tv_sec += ts.tv_nsec / 1000000000L;
+                ts.tv_nsec = ts.tv_nsec % 1000000000L;
+            }
+            pthread_mutex_lock(&o->ready_m);
+            pthread_cond_timedwait(&o->space, &o->ready_m, &ts);
+            pthread_mutex_unlock(&o->ready_m);
+            if (exitflag) break;
             continue;
         }
         size_t write_now = (count < free_sp) ? count : free_sp;
@@ -2689,10 +2699,13 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 		return;}
 	if (s->mute) {
 		/* Clamp mute length to buffer size to avoid overwrite; carry remainder */
-		uint32_t m = (uint32_t)s->mute;
-		if (m > len) m = len;
-		memset(buf, 127, m);
-		s->mute -= (int)m;
+		int old = s->mute.load(std::memory_order_relaxed);
+		if (old > 0) {
+			uint32_t m = (uint32_t)old;
+			if (m > len) m = len;
+			memset(buf, 127, m);
+			s->mute.fetch_sub((int)m, std::memory_order_relaxed);
+		}
 	}
 	/* Convert incoming u8 I/Q and write directly into input ring without extra copy */
 	size_t need = len;
@@ -3203,6 +3216,11 @@ void demod_init_analog(struct demod_state *s)
 		memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
 		memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
 	}
+	/* Legacy CIC histories used by fifth_order path */
+	for (int st = 0; st < 10; st++) {
+		memset(s->lp_i_hist[st], 0, sizeof(s->lp_i_hist[st]));
+		memset(s->lp_q_hist[st], 0, sizeof(s->lp_q_hist[st]));
+	}
 	/* Input ring does not require double-buffer init */
 	s->lowpassed = s->input_cb_buf;
 	s->lp_len = 0;
@@ -3286,6 +3304,11 @@ void demod_init_ro2(struct demod_state *s)
 		memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
 		memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
 	}
+	/* Legacy CIC histories used by fifth_order path */
+	for (int st = 0; st < 10; st++) {
+		memset(s->lp_i_hist[st], 0, sizeof(s->lp_i_hist[st]));
+		memset(s->lp_q_hist[st], 0, sizeof(s->lp_q_hist[st]));
+	}
 	/* Input ring does not require double-buffer init */
 	s->lowpassed = s->input_cb_buf;
 	s->lp_len = 0;
@@ -3363,6 +3386,11 @@ void demod_init(struct demod_state *s)
 	for (int st = 0; st < 10; st++) {
 		memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
 		memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
+	}
+	/* Legacy CIC histories used by fifth_order path */
+	for (int st = 0; st < 10; st++) {
+		memset(s->lp_i_hist[st], 0, sizeof(s->lp_i_hist[st]));
+		memset(s->lp_q_hist[st], 0, sizeof(s->lp_q_hist[st]));
 	}
 	/* Input ring does not require double-buffer init */
 	s->lowpassed = s->input_cb_buf;
@@ -3544,7 +3572,7 @@ static void *socket_thread_fn(void *arg) {
 
 	int new_freq;
 
-	while((n = read(sockfd,buffer,5)) != 0) {
+	while ((n = read(sockfd, buffer, 5)) > 0) {
 		if (n == 5 && buffer[0] == 0) {
 			new_freq = chars_to_int(buffer);
 			dongle.freq = new_freq;
@@ -3552,8 +3580,9 @@ static void *socket_thread_fn(void *arg) {
 			rtlsdr_set_center_freq(dongle.dev, dongle.freq);
 			fprintf (stderr, "\nTuning to: %d [Hz] \n", new_freq);
 		}
-
-
+	}
+	if (n < 0) {
+		perror("ERROR on read");
 	}
 
 	close(sockfd);
