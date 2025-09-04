@@ -29,7 +29,6 @@
 #include <unistd.h>
 #include <sched.h>
 #include <atomic>
-#include <vector>
 #include <rtl-sdr.h>
 #include "dsd.h"
 
@@ -200,42 +199,8 @@ static inline int hb_decim2_real(const int16_t *in, int in_len, int16_t *out, in
 }
 
 /* One 2:1 decimation stage on interleaved I/Q, using per-stage histories. */
-static inline int hb_decim2_complex_stage(const int16_t *in_iq, int in_iq_len,
-	int16_t *out_iq, int16_t *hist_i, int16_t *hist_q)
-{
-	/* in_iq_len is count of interleaved samples (I,Q,I,Q,...) */
-	int ch_len = in_iq_len >> 1; /* samples per channel */
-	if (ch_len <= 0) {
-		return 0;
-	}
-	/* Deinterleave into contiguous I and Q working buffers */
-	std::vector<int16_t> i_buf;
-	std::vector<int16_t> q_buf;
-	i_buf.resize((size_t)ch_len);
-	q_buf.resize((size_t)ch_len);
-	for (int k = 0, j = 0; j < in_iq_len; j += 2, k++) {
-		i_buf[(size_t)k] = in_iq[(size_t)j];
-		q_buf[(size_t)k] = in_iq[(size_t)j + 1];
-	}
-	/* Output per channel */
-	int out_ch_len;
-	{
-		/* Reuse i_buf as input; produce into temporary then interleave */
-		std::vector<int16_t> i_out;
-		std::vector<int16_t> q_out;
-		i_out.resize((size_t)(ch_len >> 1));
-		q_out.resize((size_t)(ch_len >> 1));
-		int ilen = hb_decim2_real(i_buf.data(), ch_len, i_out.data(), hist_i);
-		int qlen = hb_decim2_real(q_buf.data(), ch_len, q_out.data(), hist_q);
-		out_ch_len = (ilen < qlen) ? ilen : qlen;
-		/* Interleave back */
-		for (int n = 0; n < out_ch_len; n++) {
-			out_iq[(size_t)(2*n)]     = i_out[(size_t)n];
-			out_iq[(size_t)(2*n + 1)] = q_out[(size_t)n];
-		}
-	}
-	return out_ch_len << 1; /* interleaved sample count */
-}
+/* Removed hb_decim2_complex_stage in favor of inlined staged processing in full_demod() */
+
 
 static void atan_lut_once_init(void)
 {
@@ -326,12 +291,138 @@ struct demod_state
 	int16_t  hb_workbuf[MAXIMUM_BUF_LENGTH];
 	int16_t  hb_hist_i[10][HB_TAPS-1];
 	int16_t  hb_hist_q[10][HB_TAPS-1];
+	/* Preallocated deinterleave/output buffers for HB decimator */
+	alignas(DSD_FME_ALIGN) int16_t  hb_i_buf[MAXIMUM_BUF_LENGTH/2];
+	alignas(DSD_FME_ALIGN) int16_t  hb_q_buf[MAXIMUM_BUF_LENGTH/2];
+	alignas(DSD_FME_ALIGN) int16_t  hb_i_out[MAXIMUM_BUF_LENGTH/2];
+	alignas(DSD_FME_ALIGN) int16_t  hb_q_out[MAXIMUM_BUF_LENGTH/2];
+	/* Preallocated buffer for linear upsampler (bandwidth_multiplier) */
+	alignas(DSD_FME_ALIGN) int16_t  upsample_buf[MAXIMUM_BUF_LENGTH * MAX_BANDWIDTH_MULTIPLIER];
+	/* Minimal 2-thread worker pool for intra-block parallelism */
+	int      mt_enabled;
+	int      mt_ready;
+	pthread_t mt_threads[2];
+	pthread_mutex_t mt_lock;
+	pthread_cond_t  mt_cv;
+	pthread_cond_t  mt_done_cv;
+	int      mt_should_exit;
+	int      mt_epoch;
+	int      mt_completed_in_epoch;
+	int      mt_posted_count;
+	struct { void (*run)(void*); void *arg; } mt_tasks[2];
+	int      mt_worker_id[2];
+	struct { struct demod_state *s; int id; } mt_args[2];
 	int      (*discriminator)(int, int, int, int);
 	void     (*mode_demod)(struct demod_state*);
 	pthread_cond_t ready;
 	pthread_mutex_t ready_m;
 	struct output_state *output_target;
 };
+
+/* Forward declarations for minimal worker pool helpers */
+static void demod_mt_init(struct demod_state *s);
+static void demod_mt_destroy(struct demod_state *s);
+static void demod_mt_run_two(struct demod_state *s, void (*f0)(void*), void *a0, void (*f1)(void*), void *a1);
+
+/* =====================
+   Minimal 2-thread worker pool for DEMOD intra-block tasks
+   ===================== */
+
+struct demod_mt_worker_arg { struct demod_state *s; int id; };
+
+static void *demod_mt_worker(void *arg)
+{
+	struct demod_mt_worker_arg *wa = (struct demod_mt_worker_arg*)arg;
+	struct demod_state *s = wa->s;
+	const int id = wa->id;
+	int local_epoch = 0;
+	for (;;) {
+		pthread_mutex_lock(&s->mt_lock);
+		while (!s->mt_should_exit && s->mt_epoch == local_epoch) {
+			pthread_cond_wait(&s->mt_cv, &s->mt_lock);
+		}
+		if (s->mt_should_exit) {
+			pthread_mutex_unlock(&s->mt_lock);
+			break;
+		}
+		local_epoch = s->mt_epoch;
+		void (*fn)(void*) = NULL;
+		void *fn_arg = NULL;
+		if (id < s->mt_posted_count) {
+			fn = s->mt_tasks[id].run;
+			fn_arg = s->mt_tasks[id].arg;
+		}
+		pthread_mutex_unlock(&s->mt_lock);
+		if (fn) {
+			fn(fn_arg);
+		}
+		pthread_mutex_lock(&s->mt_lock);
+		s->mt_completed_in_epoch++;
+		if (s->mt_completed_in_epoch >= s->mt_posted_count) {
+			pthread_cond_signal(&s->mt_done_cv);
+		}
+		pthread_mutex_unlock(&s->mt_lock);
+	}
+	return NULL;
+}
+
+static void demod_mt_init(struct demod_state *s)
+{
+	const char *mt = getenv("DSD_FME_MT");
+	s->mt_enabled = (mt && mt[0] == '1') ? 1 : 0;
+	s->mt_should_exit = 0;
+	s->mt_epoch = 0;
+	s->mt_completed_in_epoch = 0;
+	s->mt_posted_count = 0;
+	if (!s->mt_enabled) {
+		return;
+	}
+	pthread_mutex_init(&s->mt_lock, NULL);
+	pthread_cond_init(&s->mt_cv, NULL);
+	pthread_cond_init(&s->mt_done_cv, NULL);
+	/* Start two workers */
+	for (int i = 0; i < 2; i++) {
+		s->mt_args[i].s = s;
+		s->mt_args[i].id = i;
+		pthread_create(&s->mt_threads[i], NULL, demod_mt_worker, (void*)&s->mt_args[i]);
+	}
+	fprintf(stderr, "Intra-block multithreading enabled (DSD_FME_MT=1), workers: 2.\n");
+}
+
+static void demod_mt_destroy(struct demod_state *s)
+{
+	if (!s->mt_enabled) return;
+	pthread_mutex_lock(&s->mt_lock);
+	s->mt_should_exit = 1;
+	pthread_cond_broadcast(&s->mt_cv);
+	pthread_mutex_unlock(&s->mt_lock);
+	for (int i = 0; i < 2; i++) {
+		pthread_join(s->mt_threads[i], NULL);
+	}
+	pthread_cond_destroy(&s->mt_done_cv);
+	pthread_cond_destroy(&s->mt_cv);
+	pthread_mutex_destroy(&s->mt_lock);
+}
+
+static void demod_mt_run_two(struct demod_state *s, void (*f0)(void*), void *a0, void (*f1)(void*), void *a1)
+{
+	if (!s->mt_enabled) {
+		if (f0) f0(a0);
+		if (f1) f1(a1);
+		return;
+	}
+	pthread_mutex_lock(&s->mt_lock);
+	s->mt_tasks[0].run = f0; s->mt_tasks[0].arg = a0;
+	s->mt_tasks[1].run = f1; s->mt_tasks[1].arg = a1;
+	s->mt_posted_count = (f1 != NULL) ? 2 : 1;
+	s->mt_completed_in_epoch = 0;
+	s->mt_epoch++;
+	pthread_cond_broadcast(&s->mt_cv);
+	while (s->mt_completed_in_epoch < s->mt_posted_count) {
+		pthread_cond_wait(&s->mt_done_cv, &s->mt_lock);
+	}
+	pthread_mutex_unlock(&s->mt_lock);
+}
 
 struct output_state
 {
@@ -1048,11 +1139,35 @@ void full_demod(struct demod_state *d)
 			int16_t *src = d->lowpassed;
 			int16_t *dst = d->hb_workbuf;
 			for (i = 0; i < ds_p; i++) {
-				int out_len = hb_decim2_complex_stage(src, in_len, dst, d->hb_hist_i[i], d->hb_hist_q[i]);
-				/* Next stage uses previous output as input */
+				/* Deinterleave src -> hb_i_buf/hb_q_buf */
+				int ch_len = in_len >> 1;
+				for (int k = 0, j = 0; j < in_len; j += 2, k++) {
+					d->hb_i_buf[(size_t)k] = src[(size_t)j];
+					d->hb_q_buf[(size_t)k] = src[(size_t)j + 1];
+				}
+				/* Define per-channel decimation task */
+				struct HBArg { const int16_t *in; int in_len; int16_t *out; int16_t *hist; int out_len; } aI, aQ;
+				aI.in = d->hb_i_buf; aI.in_len = ch_len; aI.out = d->hb_i_out; aI.hist = d->hb_hist_i[i]; aI.out_len = 0;
+				aQ.in = d->hb_q_buf; aQ.in_len = ch_len; aQ.out = d->hb_q_out; aQ.hist = d->hb_hist_q[i]; aQ.out_len = 0;
+				auto hb_task = [](void *arg){
+					struct HBArg *a = (struct HBArg*)arg;
+					a->out_len = hb_decim2_real(a->in, a->in_len, a->out, a->hist);
+				};
+				if (d->mt_enabled) {
+					demod_mt_run_two(d, hb_task, (void*)&aI, hb_task, (void*)&aQ);
+				} else {
+					hb_task((void*)&aI);
+					hb_task((void*)&aQ);
+				}
+				int out_ch_len = (aI.out_len < aQ.out_len) ? aI.out_len : aQ.out_len;
+				/* Interleave back to dst */
+				for (int n = 0; n < out_ch_len; n++) {
+					dst[(size_t)(2*n)]     = d->hb_i_out[(size_t)n];
+					dst[(size_t)(2*n + 1)] = d->hb_q_out[(size_t)n];
+				}
+				/* Next stage */
 				src = dst;
-				in_len = out_len;
-				/* swap buffers for next stage to avoid overwrite if needed */
+				in_len = out_ch_len << 1;
 				dst = (src == d->hb_workbuf) ? d->lowpassed : d->hb_workbuf;
 			}
 			/* Final output resides in 'src' with length in_len */
@@ -1216,26 +1331,40 @@ static void *demod_thread_fn(void *arg)
 				/* nothing to write */
 			} else if (N == 1) {
 				/* Degenerate case: only one sample, replicate M times */
-				std::vector<int16_t> tmp(M);
-				for (int m = 0; m < M; m++) tmp[m] = d->result[0];
-				ring_write_signal_on_empty_transition(o, tmp.data(), (size_t)M);
+				for (int m = 0; m < M; m++) d->upsample_buf[m] = d->result[0];
+				ring_write_signal_on_empty_transition(o, d->upsample_buf, (size_t)M);
 			} else {
 				/* N >= 2: perform linear interpolation between successive samples */
 				const size_t up_len = (size_t)N * (size_t)M;
-				std::vector<int16_t> upsampled;
-				upsampled.resize(up_len);
-				for (int n = 0; n < N - 1; n++) {
-					int16_t x0 = d->result[n];
-					int16_t x1 = d->result[n + 1];
-					int32_t dx = (int32_t)x1 - (int32_t)x0;
-					for (int m = 0; m < M; m++) {
-						int32_t interp = (int32_t)x0 + (dx * m) / M;
-						upsampled[(size_t)n * (size_t)M + (size_t)m] = (int16_t)interp;
+				/* Define range task */
+				struct UpArg { int start; int end; int M; const int16_t *src; int16_t *dst; };
+				auto up_task = [](void *arg){
+					UpArg *a = (UpArg*)arg;
+					for (int n = a->start; n < a->end; n++) {
+						int16_t x0 = a->src[n];
+						int16_t x1 = a->src[n + 1];
+						int32_t dx = (int32_t)x1 - (int32_t)x0;
+						int16_t *row = a->dst + (size_t)n * (size_t)a->M;
+						for (int m = 0; m < a->M; m++) {
+							int32_t interp = (int32_t)x0 + (dx * m) / a->M;
+							row[m] = (int16_t)interp;
+						}
 					}
+				};
+				/* Split [0, N-1) into two ranges */
+				int mid = (N - 1) / 2;
+				UpArg a0 = {0, mid, M, d->result, d->upsample_buf};
+				UpArg a1 = {mid, N - 1, M, d->result, d->upsample_buf};
+				if (d->mt_enabled) {
+					/* Post two tasks to the worker pool and wait */
+					demod_mt_run_two(d, up_task, (void*)&a0, up_task, (void*)&a1);
+				} else {
+					up_task((void*)&a0);
+					up_task((void*)&a1);
 				}
 				/* Last original sample maps to the last position */
-				upsampled[(size_t)(N - 1) * (size_t)M] = d->result[N - 1];
-				ring_write_signal_on_empty_transition(o, upsampled.data(), up_len);
+				d->upsample_buf[(size_t)(N - 1) * (size_t)M] = d->result[N - 1];
+				ring_write_signal_on_empty_transition(o, d->upsample_buf, up_len);
 			}
 		}
 		/* Signaling occurs only when the ring transitions from empty to non-empty. */
@@ -1509,6 +1638,8 @@ void demod_init_analog(struct demod_state *s)
 	/* set discriminator function pointer */
 	s->discriminator = (s->custom_atan == 0) ? &polar_discriminant :
 		(s->custom_atan == 1) ? &polar_disc_fast : &polar_disc_lut;
+	/* Init minimal worker pool (env-gated) */
+	demod_mt_init(s);
 }
 
 void demod_init_ro2(struct demod_state *s)
@@ -1562,6 +1693,8 @@ void demod_init_ro2(struct demod_state *s)
 	/* set discriminator function pointer */
 	s->discriminator = (s->custom_atan == 0) ? &polar_discriminant :
 		(s->custom_atan == 1) ? &polar_disc_fast : &polar_disc_lut;
+	/* Init minimal worker pool (env-gated) */
+	demod_mt_init(s);
 }
 
 void demod_init(struct demod_state *s)
@@ -1615,12 +1748,16 @@ void demod_init(struct demod_state *s)
 	/* set discriminator function pointer */
 	s->discriminator = (s->custom_atan == 0) ? &polar_discriminant :
 		(s->custom_atan == 1) ? &polar_disc_fast : &polar_disc_lut;
+	/* Init minimal worker pool (env-gated) */
+	demod_mt_init(s);
 }
 
 void demod_cleanup(struct demod_state *s)
 {
 	pthread_cond_destroy(&s->ready);
 	pthread_mutex_destroy(&s->ready_m);
+	/* Destroy worker pool if enabled */
+	demod_mt_destroy(s);
 }
 
 void output_init(struct output_state *s)
