@@ -903,6 +903,52 @@ static inline void input_ring_clear(struct input_ring_state *r)
 	r->head.store(0);
 }
 
+/* Reserve up to two contiguous writable regions totaling at least min_needed (or less if near full).
+   Returns available regions via p1/n1 and p2/n2. May drop oldest half when full to avoid blocking. */
+static int input_ring_reserve(struct input_ring_state *r, size_t min_needed,
+                       int16_t **p1, size_t *n1, int16_t **p2, size_t *n2)
+{
+	size_t free_sp = input_ring_free(r);
+	if (free_sp == 0) {
+		/* match write() behavior: drop oldest half to free space */
+		size_t t = r->tail.load();
+		size_t drop = r->capacity / 2;
+		t = (t + drop) % r->capacity;
+		r->tail.store(t);
+		free_sp = input_ring_free(r);
+	}
+	/* Provide up to min(free_sp, min_needed) across at most two regions */
+	size_t grant = (min_needed < free_sp) ? min_needed : free_sp;
+	size_t h = r->head.load();
+	size_t first = r->capacity - h;
+	if (first > grant) first = grant;
+	*p1 = (first > 0) ? (r->buffer + h) : NULL;
+	*n1 = first;
+	*p2 = NULL;
+	*n2 = 0;
+	if (grant > first) {
+		*p2 = r->buffer;
+		*n2 = grant - first;
+	}
+	return (int)(*n1 + *n2);
+}
+
+/* Commit produced samples and signal consumer on empty->non-empty transition */
+static void input_ring_commit(struct input_ring_state *r, size_t produced)
+{
+	if (produced == 0) return;
+	int need_signal = input_ring_is_empty(r);
+	size_t h = r->head.load();
+	h += produced;
+	if (h >= r->capacity) h %= r->capacity;
+	r->head.store(h);
+	if (need_signal) {
+		pthread_mutex_lock(&r->ready_m);
+		pthread_cond_signal(&r->ready);
+		pthread_mutex_unlock(&r->ready_m);
+	}
+}
+
 static void input_ring_write(struct input_ring_state *r, const int16_t *data, size_t count)
 {
 	int need_signal = input_ring_is_empty(r);
@@ -2027,7 +2073,6 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 {
 	int i;
 	struct dongle_state *s = static_cast<dongle_state*>(ctx);
-	struct demod_state *d = s->demod_target;
 	/* One-time: ensure the USB callback thread gets RT scheduling/affinity if enabled */
 	{
 		static std::atomic<int> usb_sched_applied{0};
@@ -2046,21 +2091,43 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 			buf[i] = 127;}
 		s->mute = 0;
 	}
-	/* Convert incoming u8 I/Q into temp int16 buffer and enqueue to SPSC input ring */
-	int16_t *dst = d->input_cb_buf;
-	/* If offset tuning disabled, combine 90° rotation with widening in one pass
-	   unless DSD_FME_COMBINE_ROT=0. */
-	if (!s->offset_tuning && combine_rotate_enabled) {
-		widen_rotate90_u8_to_s16_bias127(buf, dst, len);
-	} else if (!s->offset_tuning && !combine_rotate_enabled) {
+	/* Convert incoming u8 I/Q and write directly into input ring without extra copy */
+	size_t need = len;
+	size_t done = 0;
+	/* For legacy two-pass path, rotate the incoming byte buffer once up front */
+	int use_two_pass = (!s->offset_tuning && !combine_rotate_enabled);
+	if (use_two_pass) {
 		rotate_90(buf, len);
-		/* Use 128 subtraction to avoid +1 bias after byte-wise negation */
-		widen_u8_to_s16_bias128_scalar(buf, dst, len);
-	} else {
-		widen_u8_to_s16_bias127(buf, dst, len);
 	}
-	/* Enqueue widened samples */
-	input_ring_write(&input_ring, dst, (size_t)len);
+	while (need > 0) {
+		int16_t *p1 = NULL, *p2 = NULL; size_t n1 = 0, n2 = 0;
+		input_ring_reserve(&input_ring, need, &p1, &n1, &p2, &n2);
+		if (n1 == 0 && n2 == 0) {
+			/* Ring still full after drop attempt; give up this callback to avoid stall */
+			break;
+		}
+		/* Ensure even counts to keep I/Q pairs aligned */
+		if (n1 & 1) n1--;
+		size_t w1 = (n1 < need) ? n1 : need;
+		size_t rem_after_w1 = need - w1;
+		if (n2 & 1) n2--;
+		size_t w2 = (n2 < rem_after_w1) ? n2 : rem_after_w1;
+
+		if (!s->offset_tuning && combine_rotate_enabled) {
+			if (w1) widen_rotate90_u8_to_s16_bias127(buf + done, p1, (uint32_t)w1);
+			if (w2) widen_rotate90_u8_to_s16_bias127(buf + done + w1, p2, (uint32_t)w2);
+		} else if (use_two_pass) {
+			/* bytes already rotated in-place; widen with 128 subtraction to avoid bias */
+			if (w1) widen_u8_to_s16_bias128_scalar(buf + done, p1, (uint32_t)w1);
+			if (w2) widen_u8_to_s16_bias128_scalar(buf + done + w1, p2, (uint32_t)w2);
+		} else {
+			if (w1) widen_u8_to_s16_bias127(buf + done, p1, (uint32_t)w1);
+			if (w2) widen_u8_to_s16_bias127(buf + done + w1, p2, (uint32_t)w2);
+		}
+		input_ring_commit(&input_ring, w1 + w2);
+		done += w1 + w2;
+		need -= w1 + w2;
+	}
 }
 
 static void *dongle_thread_fn(void *arg)
