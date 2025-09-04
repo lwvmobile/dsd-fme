@@ -36,6 +36,7 @@
 #if defined(__x86_64__) || defined(__i386__)
 #include <immintrin.h>
 #include <emmintrin.h>
+#include <tmmintrin.h>
 #endif
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
 #include <arm_neon.h>
@@ -174,9 +175,28 @@ static inline void widen_rotate90_u8_to_s16_bias127_scalar(const unsigned char *
         dst[i + 6] = q3;
         dst[i + 7] = (int16_t)(1 - i3);
     }
-    for (; i + 1 < len; i += 2) {
-        dst[i + 0] = (int16_t)src[i + 0] - 127;
-        dst[i + 1] = (int16_t)src[i + 1] - 127;
+    /* Tail: apply rotation pattern for remaining up to 6 samples */
+    if (i < len) {
+        uint32_t base = i;
+        uint32_t rem = len - base;
+        if (rem >= 2) {
+            int16_t i0 = (int16_t)src[base + 0] - 127;
+            int16_t q0 = (int16_t)src[base + 1] - 127;
+            dst[base + 0] = i0;
+            dst[base + 1] = q0;
+        }
+        if (rem >= 4) {
+            int16_t i1 = (int16_t)src[base + 2] - 127;
+            int16_t q1 = (int16_t)src[base + 3] - 127;
+            dst[base + 2] = (int16_t)(1 - q1);
+            dst[base + 3] = i1;
+        }
+        if (rem >= 6) {
+            int16_t i2 = (int16_t)src[base + 4] - 127;
+            int16_t q2 = (int16_t)src[base + 5] - 127;
+            dst[base + 4] = (int16_t)(1 - i2);
+            dst[base + 5] = (int16_t)(1 - q2);
+        }
     }
 }
 
@@ -235,9 +255,9 @@ static void DSD_FME_TARGET_ATTR("avx2") widen_rotate90_u8_to_s16_bias127_avx2(co
         _mm256_storeu_si256((__m256i*)(dst + i), out_lo);
         _mm256_storeu_si256((__m256i*)(dst + i + 16), out_hi);
     }
-    for (; i + 1 < len; i += 2) {
-        dst[i + 0] = (int16_t)src[i + 0] - 127;
-        dst[i + 1] = (int16_t)src[i + 1] - 127;
+    /* Tail: preserve rotation via scalar helper */
+    if (i < len) {
+        widen_rotate90_u8_to_s16_bias127_scalar(src + i, dst + i, len - i);
     }
 }
 
@@ -261,8 +281,40 @@ static void DSD_FME_TARGET_ATTR("sse2") widen_u8_to_s16_bias127_sse2(const unsig
 
 static void DSD_FME_TARGET_ATTR("sse2") widen_rotate90_u8_to_s16_bias127_sse2(const unsigned char *src, int16_t *dst, uint32_t len)
 {
-    /* Keep scalar logic for correctness without SSSE3 pshufb */
+    /* Keep scalar logic for correctness without SSSE3 pshufb (SSE2 lacks byte shuffle). */
     widen_rotate90_u8_to_s16_bias127_scalar(src, dst, len);
+}
+#endif /* x86 */
+
+#if defined(__x86_64__) || defined(__i386__)
+/* SSSE3 specialization (rotate+widen) */
+static void DSD_FME_TARGET_ATTR("ssse3") widen_rotate90_u8_to_s16_bias127_ssse3(const unsigned char *src, int16_t *dst, uint32_t len)
+{
+    uint32_t i = 0;
+    const __m128i shuffle = _mm_setr_epi8(
+        0, 1, 3, 2, 4, 5, 7, 6,  8, 9,11,10,12,13,15,14);
+    const __m128i mask_sel = _mm_setr_epi16(
+        0x0000,0x0000,0xFFFF,0x0000,0xFFFF,0xFFFF,0x0000,0xFFFF);
+    const __m128i c127 = _mm_set1_epi16(127);
+    const __m128i c128 = _mm_set1_epi16(128);
+    const __m128i zero = _mm_setzero_si128();
+    for (; i + 16 <= len; i += 16) {
+        __m128i v8 = _mm_loadu_si128((const __m128i*)(src + i));
+        __m128i sh = _mm_shuffle_epi8(v8, shuffle);
+        __m128i v16_lo = _mm_unpacklo_epi8(sh, zero);
+        __m128i v16_hi = _mm_unpackhi_epi8(sh, zero);
+        __m128i bs_lo = _mm_sub_epi16(v16_lo, c127);
+        __m128i bm_lo = _mm_sub_epi16(c128,  v16_lo);
+        __m128i bs_hi = _mm_sub_epi16(v16_hi, c127);
+        __m128i bm_hi = _mm_sub_epi16(c128,  v16_hi);
+        __m128i out_lo = _mm_or_si128(_mm_and_si128(bm_lo, mask_sel), _mm_andnot_si128(mask_sel, bs_lo));
+        __m128i out_hi = _mm_or_si128(_mm_and_si128(bm_hi, mask_sel), _mm_andnot_si128(mask_sel, bs_hi));
+        _mm_storeu_si128((__m128i*)(dst + i), out_lo);
+        _mm_storeu_si128((__m128i*)(dst + i + 8), out_hi);
+    }
+    if (i < len) {
+        widen_rotate90_u8_to_s16_bias127_scalar(src + i, dst + i, len - i);
+    }
 }
 #endif /* x86 */
 
@@ -309,9 +361,9 @@ static void widen_rotate90_u8_to_s16_bias127_neon(const unsigned char *src, int1
         vst1q_s16(dst + i, out_lo);
         vst1q_s16(dst + i + 8, out_hi);
     }
-    for (; i + 1 < len; i += 2) {
-        dst[i + 0] = (int16_t)src[i + 0] - 127;
-        dst[i + 1] = (int16_t)src[i + 1] - 127;
+    /* Tail: preserve rotation via scalar helper */
+    if (i < len) {
+        widen_rotate90_u8_to_s16_bias127_scalar(src + i, dst + i, len - i);
     }
 #else
     /* ARMv7 NEON lacks vqtbl1q_u8; use scalar fallback for rotate+widen */
@@ -326,11 +378,13 @@ static void dsd_fme_init_runtime_dispatch_once(void)
 
     int use_avx2 = 0;
     int use_sse2 = 0;
+    int use_ssse3 = 0;
 
 #if defined(__x86_64__) || defined(__i386__)
     unsigned int eax=0, ebx=0, ecx=0, edx=0;
     if (__get_cpuid(1, &eax, &ebx, &ecx, &edx)) {
         use_sse2 = (edx & bit_SSE2) ? 1 : 0;
+        use_ssse3 = (ecx & bit_SSSE3) ? 1 : 0;
         int osxsave = (ecx & bit_OSXSAVE) ? 1 : 0;
         int avx = (ecx & bit_AVX) ? 1 : 0;
         if (osxsave && avx) {
@@ -383,9 +437,10 @@ static void dsd_fme_init_runtime_dispatch_once(void)
         g_widen_rot_impl = &widen_rotate90_u8_to_s16_bias127_avx2;
         return;
     }
-    if (use_sse2) {
-        g_widen_impl = &widen_u8_to_s16_bias127_sse2;
-        g_widen_rot_impl = &widen_rotate90_u8_to_s16_bias127_sse2;
+    if (use_ssse3 || use_sse2) {
+        if (use_sse2) g_widen_impl = &widen_u8_to_s16_bias127_sse2;
+        if (use_ssse3) g_widen_rot_impl = &widen_rotate90_u8_to_s16_bias127_ssse3;
+        else           g_widen_rot_impl = &widen_rotate90_u8_to_s16_bias127_sse2;
         return;
     }
 #endif
