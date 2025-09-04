@@ -1983,26 +1983,24 @@ static int resamp_process_block(struct demod_state *s, const int16_t *in, int in
 }
 
 long int mean_power(int16_t *samples, int len, int step)
-/* DC-corrected mean power (sqrt-free). Returns squared RMS units. */
+/* DC-corrected mean power (sqrt-free). Integer-only implementation. */
 {
-	int i;
 	int64_t p = 0;
 	int64_t t = 0;
-	int64_t s;
-	double dc, err;
-
-	for (i = 0; i < len; i += step) {
-		s = (int64_t)samples[i];
+	for (int i = 0; i < len; i += step) {
+		int64_t s = (int64_t)samples[i];
 		t += s;
 		p += s * s;
 	}
-	/* correct for dc offset in squares */
-	dc = (double)(t * step) / (double)len;
-	err = (double)t * 2.0 * dc - dc * dc * (double)len;
-
-	double power = ((double)p - err) / (double)len;
-	if (power < 0.0) power = 0.0;
-	return (long int)power;
+	/* DC-corrected energy ≈ p - (t^2)/len with rounded division */
+	int64_t dc_corr = 0;
+	if (len > 0) {
+		int64_t tt = t * t;
+		dc_corr = (tt + (len / 2)) / len;
+	}
+	int64_t energy = p - dc_corr;
+	if (energy < 0) energy = 0;
+	return (long int)(energy / (len > 0 ? len : 1));
 }
 
 void full_demod(struct demod_state *d)
