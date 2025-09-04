@@ -503,19 +503,35 @@ static inline int hb_decim2_real(const int16_t *in, int in_len, int16_t *out, in
 	int out_len = in_len >> 1; /* floor */
 	for (int n = 0; n < out_len; n++) {
 		int center_idx = hist_len + (n << 1); /* position in the concatenated [hist | in] domain */
-		int64_t acc = 0;
-		/* Convolution around center: taps indexed 0..HB_TAPS-1 */
-		for (int t = 0; t < HB_TAPS; t++) {
-			int src_idx = center_idx - HB_HALF + t;
-			int16_t x;
+		/* Half-band optimization: only even taps and the center tap contribute (symmetric). */
+		const int16_t c0 = hb_q15_taps[0];
+		const int16_t c2 = hb_q15_taps[2];
+		const int16_t c4 = hb_q15_taps[4];
+		const int16_t c6 = hb_q15_taps[6];
+		const int16_t c7 = hb_q15_taps[7]; /* center */
+		auto get_sample = [&](int src_idx) -> int16_t {
 			if (src_idx < hist_len) {
-				x = hist[src_idx];
+				return hist[src_idx];
 			} else {
 				int rel = src_idx - hist_len;
-				x = (rel < in_len) ? in[rel] : last;
+				return (rel < in_len) ? in[rel] : last;
 			}
-			acc += (int32_t)hb_q15_taps[t] * (int32_t)x;
-		}
+		};
+		int16_t xc  = get_sample(center_idx);
+		int16_t xm1 = get_sample(center_idx - 1);
+		int16_t xp1 = get_sample(center_idx + 1);
+		int16_t xm3 = get_sample(center_idx - 3);
+		int16_t xp3 = get_sample(center_idx + 3);
+		int16_t xm5 = get_sample(center_idx - 5);
+		int16_t xp5 = get_sample(center_idx + 5);
+		int16_t xm7 = get_sample(center_idx - 7);
+		int16_t xp7 = get_sample(center_idx + 7);
+		int64_t acc = 0;
+		acc += (int32_t)c7 * (int32_t)xc;
+		acc += (int32_t)c6 * (int32_t)(xm1 + xp1);
+		acc += (int32_t)c4 * (int32_t)(xm3 + xp3);
+		acc += (int32_t)c2 * (int32_t)(xm5 + xp5);
+		acc += (int32_t)c0 * (int32_t)(xm7 + xp7);
 		/* Q15 -> Q0 with rounding */
 		acc += (1 << 14);
 		int32_t y = (int32_t)(acc >> 15);
@@ -554,11 +570,13 @@ static inline int hb_decim2_complex_interleaved(const int16_t *in, int in_len, i
     int16_t lastQ = (ch_len > 0) ? in[in_len - 1] : 0;
     for (int n = 0; n < out_ch_len; n++) {
         int center_idx = hist_len + (n << 1); /* per-channel index */
-        int64_t accI = 0;
-        int64_t accQ = 0;
-        for (int t = 0; t < HB_TAPS; t++) {
-            int src_idx = center_idx - HB_HALF + t;
-            int16_t xi, xq;
+        /* Half-band optimization: only even taps and the center tap contribute (symmetric). */
+        const int16_t c0 = hb_q15_taps[0];
+        const int16_t c2 = hb_q15_taps[2];
+        const int16_t c4 = hb_q15_taps[4];
+        const int16_t c6 = hb_q15_taps[6];
+        const int16_t c7 = hb_q15_taps[7]; /* center */
+        auto get_iq = [&](int src_idx, int16_t &xi, int16_t &xq) {
             if (src_idx < hist_len) {
                 xi = hist_i[src_idx];
                 xq = hist_q[src_idx];
@@ -572,10 +590,33 @@ static inline int hb_decim2_complex_interleaved(const int16_t *in, int in_len, i
                     xq = lastQ;
                 }
             }
-            int16_t c = hb_q15_taps[t];
-            accI += (int32_t)c * (int32_t)xi;
-            accQ += (int32_t)c * (int32_t)xq;
-        }
+        };
+        int16_t ci, cq;
+        int16_t im1, qm1, ip1, qp1;
+        int16_t im3, qm3, ip3, qp3;
+        int16_t im5, qm5, ip5, qp5;
+        int16_t im7, qm7, ip7, qp7;
+        get_iq(center_idx, ci, cq);
+        get_iq(center_idx - 1, im1, qm1);
+        get_iq(center_idx + 1, ip1, qp1);
+        get_iq(center_idx - 3, im3, qm3);
+        get_iq(center_idx + 3, ip3, qp3);
+        get_iq(center_idx - 5, im5, qm5);
+        get_iq(center_idx + 5, ip5, qp5);
+        get_iq(center_idx - 7, im7, qm7);
+        get_iq(center_idx + 7, ip7, qp7);
+        int64_t accI = 0;
+        int64_t accQ = 0;
+        accI += (int32_t)c7 * (int32_t)ci;
+        accQ += (int32_t)c7 * (int32_t)cq;
+        accI += (int32_t)c6 * (int32_t)(im1 + ip1);
+        accQ += (int32_t)c6 * (int32_t)(qm1 + qp1);
+        accI += (int32_t)c4 * (int32_t)(im3 + ip3);
+        accQ += (int32_t)c4 * (int32_t)(qm3 + qp3);
+        accI += (int32_t)c2 * (int32_t)(im5 + ip5);
+        accQ += (int32_t)c2 * (int32_t)(qm5 + qp5);
+        accI += (int32_t)c0 * (int32_t)(im7 + ip7);
+        accQ += (int32_t)c0 * (int32_t)(qm7 + qp7);
         accI += (1 << 14);
         accQ += (1 << 14);
         int32_t yI = (int32_t)(accI >> 15);
