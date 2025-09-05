@@ -179,7 +179,7 @@ unsigned long long int edacsVoteFr(unsigned long long int fr_1_4, unsigned long 
 void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn)
 {
   int i, result;
-  int count = 5; //RMS has a 5 count (5 * 180ms) now before cutting off;
+  int count = 5; //PWR has a 5 count (5 * 180ms) now before cutting off;
   short analog1[960];
   short analog2[960];
   short analog3[960];
@@ -202,7 +202,7 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
   memset (d2, 0, sizeof(d2));
   memset (d3, 0, sizeof(d3));
 
-  long int rms = opts->rtl_squelch_level + 1; //one more for the initial loop phase
+  long int pwr = opts->rtl_squelch_level + 1; //one more for the initial loop phase
   long int sql = opts->rtl_squelch_level;
 
   fprintf (stderr, "\n");
@@ -229,8 +229,8 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
         pa_simple_read(opts->pulse_digi_dev_in, &sample, 2, NULL );
         analog3[i] = sample;
       }
-      //this rms will only work properly (for now) with squelch enabled in SDR++ or other
-      rms = raw_rms(analog3, 960, 1);
+      //this pwr will only work properly (for now) with squelch enabled in SDR++ or other
+      pwr = raw_pwr(analog3, 960, 1);
     }
 
     //NOTE: The core dumps observed previously were due to SDR++ Remote Server connection dropping due to Internet/Other issues
@@ -287,8 +287,8 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
         analog3[i] = sample;
       }
 
-      //this rms will only work properly (for now) with squelch enabled in SDR++
-      rms = raw_rms(analog3, 960, 1);
+      //this pwr will only work properly (for now) with squelch enabled in SDR++
+      pwr = raw_pwr(analog3, 960, 1);
     }
 
     //RTL Input
@@ -315,8 +315,8 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
         sample *= opts->rtl_volume_multiplier;
         analog3[i] = sample;
       }
-      //the rtl rms value works properly without needing a 'hard' squelch value
-      rms = rtl_return_rms();
+      //the rtl pwr value works properly without needing a 'hard' squelch value
+      pwr = rtl_return_pwr();
     }
     #endif
 
@@ -387,12 +387,12 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       agsm (opts, state, analog3, 960);
     }
 
-    //NOTE: Ideally, we would run raw_rms for TCP/VS here, but the analog spike on EDACS (STM)
+    //NOTE: Ideally, we would run raw_pwr for TCP/VS here, but the analog spike on EDACS (STM)
     //system gets filtered out, and when they hold the radio open and don't talk,
     //it counts against the squelch hit as no audio, so we will just have to use
     //the squelch checkbox in SDR++ and similar when using those input methods
     // if (opts->audio_in_type != 3)
-    //   rms = raw_rms(analog3, 960, 1);
+    //   pwr = raw_pwr(analog3, 960, 1);
 
     //reconfigured to use seperate audio out stream that is always 48k short
     if (opts->audio_out_type == 0 && opts->slot1_on == 1)
@@ -425,18 +425,18 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
       write (opts->audio_out_fd, analog3, 960*2);
     }
 
-    opts->rtl_rms = rms;
+    opts->rtl_pwr = pwr;
 
 
     printFrameSync (opts, state, " EDACS", 0, "A");
 
-    if (rms < sql) count--;
+    if (pwr < sql) count--;
     else count = 5;
 
-    if (rms > sql) fprintf(stderr, "%s", KGRN);
+    if (pwr > sql) fprintf(stderr, "%s", KGRN);
     else fprintf(stderr, "%s", KRED);
 
-    fprintf (stderr, " Analog RMS: %04ld SQL: %ld", rms, sql);
+    fprintf (stderr, " Analog PWR: %04ld SQL: %ld", pwr, sql);
     if (state->ea_mode == 0)
     {
       int a = (afs >> state->edacs_a_shift) & state->edacs_a_mask;
@@ -1488,7 +1488,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
         //NOTE: Restructured below so that analog and digital are handled the same, just that when
         //its analog, it will now start edacs_analog which will while loop analog samples until
-        //signal level drops (RMS, or a dotting sequence is detected)
+        //signal level drops (PWR, or a dotting sequence is detected)
 
         //this is working now with the new import setup
         if (opts->trunk_tune_group_calls == 1 && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
@@ -1743,7 +1743,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
           //NOTE: Restructured below so that analog and digital are handled the same, just that when
           //its analog, it will now start edacs_analog which will while loop analog samples until
-          //signal level drops (RMS, or a dotting sequence is detected)
+          //signal level drops (PWR, or a dotting sequence is detected)
 
           //this is working now with the new import setup
           if (((is_individual == 0 && opts->trunk_tune_group_calls == 1) || (is_individual == 1 && opts->trunk_tune_private_calls == 1)) &&
@@ -1857,7 +1857,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
           //NOTE: Restructured below so that analog and digital are handled the same, just that when
           //its analog, it will now start edacs_analog which will while loop analog samples until
-          //signal level drops (RMS, or a dotting sequence is detected)
+          //signal level drops (PWR, or a dotting sequence is detected)
 
           //this is working now with the new import setup
           if ((opts->trunk_tune_private_calls == 1) && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block
@@ -2153,7 +2153,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
 
             //NOTE: Restructured below so that analog and digital are handled the same, just that when
             //its analog, it will now start edacs_analog which will while loop analog samples until
-            //signal level drops (RMS, or a dotting sequence is detected)
+            //signal level drops (PWR, or a dotting sequence is detected)
 
             //this is working now with the new import setup
             if ((opts->trunk_tune_group_calls == 1) && opts->p25_trunk == 1 && (strcmp(mode, "DE") != 0) && (strcmp(mode, "B") != 0) ) //DE is digital encrypted, B is block

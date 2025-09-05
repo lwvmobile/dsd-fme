@@ -10,3 +10,4 @@ examples
 *.patch
 *.zip
 result
+.cache

@@ -371,7 +371,7 @@ typedef struct
   int rtl_udp_port;
   int rtl_bandwidth;
   int rtl_started;
-  long int rtl_rms;
+  long int rtl_pwr;
   int monitor_input_audio;
   int analog_only;
   int pulse_raw_rate_in;
@@ -960,7 +960,7 @@ typedef struct
   uint8_t m17_can; //can value that was decoded from signal
   int m17_can_en; //can value supplied to the encoding side
   int m17_rate;  //sampling rate for audio input
-  int m17_vox;  //vox enabled via RMS value
+  int m17_vox;  //vox enabled via PWR value
 
   char m17_dst_csd[20];
   char m17_src_csd[20];
@@ -1580,6 +1580,7 @@ void init_rrc_filter_memory();
 
 //misc audio filtering for analog
 long int raw_rms(short *samples, int len, int step);
+long int raw_pwr(short *samples, int len, int step);
 void init_audio_filters(dsd_state * state);
 void lpf(dsd_state * state, short * input, int len);
 void hpf(dsd_state * state, short * input, int len);
@@ -1660,7 +1661,7 @@ void cleanup_rtlsdr_stream();
 int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state);
 void rtlsdr_sighandler();
 void rtl_dev_tune(dsd_opts * opts, long int frequency);
-long int rtl_return_rms();
+long int rtl_return_pwr();
 void rtl_clean_queue();
 #endif
 

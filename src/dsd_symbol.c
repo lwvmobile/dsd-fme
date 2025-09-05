@@ -132,7 +132,7 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
         if (get_rtlsdr_sample(&sample, opts, state) < 0)
           cleanupAndExit(opts, state);
         //update root means square power level
-        opts->rtl_rms = rtl_return_rms();
+        opts->rtl_pwr = rtl_return_pwr();
         sample *= opts->rtl_volume_multiplier;
 
 #endif
@@ -268,9 +268,9 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
 
         if (state->analog_sample_counter == 960)
         {
-          //get an rms value if not using the rtl built in version
+          //get an pwr value if not using the rtl built in version
           if (opts->audio_in_type != 3  && opts->monitor_input_audio == 1)
-            opts->rtl_rms = raw_rms(state->analog_out, 960, 1);
+            opts->rtl_pwr = raw_pwr(state->analog_out, 960, 1);
 
           //raw wav file saving -- only write when not NXDN, dPMR, or M17 due to noise that can cause tons of false positives when no sync
           if (opts->wav_out_raw != NULL && opts->frame_nxdn48 == 0 && opts->frame_nxdn96 == 0 && opts->frame_dpmr == 0 && opts->frame_m17 == 0)
@@ -299,13 +299,13 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
           else
             agsm(opts, state, state->analog_out, 960);
 
-          //Running RMS after filtering does remove the analog spike from the RMS value
+          //Running PWR after filtering does remove the analog spike from the PWR value
           //but noise floor noise will still produce higher values
           // if (opts->audio_in_type != 3  && opts->monitor_input_audio == 1)
-          //   opts->rtl_rms = raw_rms(state->analog_out, 960, 1);
+          //   opts->rtl_pwr = raw_pwr(state->analog_out, 960, 1);
 
-          //seems to be working now, but RMS values are lower on actual analog signal than on no signal but noise
-          if ( (opts->rtl_rms > opts->rtl_squelch_level) && opts->monitor_input_audio == 1 && state->carrier == 0 ) //added carrier check here in lieu of disabling it above
+          //seems to be working now, but PWR values are lower on actual analog signal than on no signal but noise
+          if ( (opts->rtl_pwr > opts->rtl_squelch_level) && opts->monitor_input_audio == 1 && state->carrier == 0 ) //added carrier check here in lieu of disabling it above
           {
             if (opts->audio_out_type == 0)
               pa_simple_write(opts->pulse_raw_dev_out, state->analog_out, 960*2, NULL);

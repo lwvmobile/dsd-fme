@@ -1962,13 +1962,13 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
           voice2[i] = sample;
         }
       }
-      opts->rtl_rms = rtl_return_rms();
+      opts->rtl_pwr = rtl_return_pwr();
       #endif
     }
 
-    //read in RMS value for vox function; NOTE: will not work correctly SOCAT STDIO TCP due to blocking when no samples to read
+    //read in power value for vox function; use mean power (RMS^2 proxy) for consistency with rtl_pwr
     if (opts->audio_in_type != 3)
-      opts->rtl_rms = raw_rms(voice1, nsam, 1) / 2; //dividing by two so mic isn't so sensitive on vox
+      opts->rtl_pwr = raw_pwr(voice1, nsam, 1);
 
     //low pass filter
     if (opts->use_lpf == 1)
@@ -2010,11 +2010,11 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         agsm (opts, state, voice2, 160);
     }
 
-    //NOTE: Similar to EDACS analog, if calculating raw rms here after filtering,
+    //NOTE: Similar to EDACS analog, if calculating raw pwr here after filtering,
     //anytime the walkie-talkie is held open but no voice, the center spike is removed,
     //and counts against the squelch hits making vox mode inconsistent
     // if (opts->audio_in_type != 3)
-    //   opts->rtl_rms = raw_rms(voice1, 160, 1);
+    //   opts->rtl_pwr = raw_pwr(voice1, 160, 1);
 
     //convert out audio input into CODEC2 (3200bps) 8 byte data stream
     uint8_t vc1_bytes[8]; memset (vc1_bytes, 0, sizeof(vc1_bytes));
@@ -2080,8 +2080,8 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       m17_v1[i+16+64] = v2_bits[i];
     }
 
-    //tally consecutive squelch hits based on RMS value, or reset
-    if (opts->rtl_rms > opts->rtl_squelch_level) sql_hit = 0;
+    //tally consecutive squelch hits based on PWR value, or reset
+    if (opts->rtl_pwr > opts->rtl_squelch_level) sql_hit = 0;
     else sql_hit++; //may eventually roll over to 0 again
 
     //if vox enabled, toggle tx/eot with sql_hit comparison
@@ -2215,10 +2215,10 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       if (use_ip == 1 && lich_cnt != 5)
         fprintf (stderr, " UDP: %s:%d", opts->m17_hostname, udpport);
 
-      //debug RMS Value
+      //debug power value
       if (state->m17_vox == 1)
       {
-        fprintf (stderr, " RMS: %04ld", opts->rtl_rms);
+        fprintf (stderr, " PWR: %04ld", opts->rtl_pwr);
         fprintf (stderr, " SQL HIT: %d;", sql_hit);
       }
 
@@ -2463,10 +2463,10 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         if (use_ip == 1 && lich_cnt != 5)
           fprintf (stderr, " UDP: %s:%d", opts->m17_hostname, udpport);
 
-        //debug RMS Value
+        //debug power value
         if (state->m17_vox == 1)
         {
-          fprintf (stderr, " RMS: %04ld", opts->rtl_rms);
+          fprintf (stderr, " PWR: %04ld", opts->rtl_pwr);
           fprintf (stderr, " SQL HIT: %d;", sql_hit);
         }
 
