@@ -477,13 +477,14 @@ static void DSD_FME_TARGET_ATTR("ssse3") widen_rotate90_u8_to_s16_bias127_ssse3(
 static void widen_u8_to_s16_bias127_neon(const unsigned char *src, int16_t *dst, uint32_t len)
 {
     uint32_t i = 0;
-    const uint8x8_t bias8 = vdup_n_u8(127);
     for (; i + 16 <= len; i += 16) {
         uint8x16_t v = vld1q_u8(src + i);
         uint8x8_t v_lo = vget_low_u8(v);
         uint8x8_t v_hi = vget_high_u8(v);
-        int16x8_t lo = vsubl_u8(v_lo, bias8);
-        int16x8_t hi = vsubl_u8(v_hi, bias8);
+        int16x8_t v16_lo = vreinterpretq_s16_u16(vmovl_u8(v_lo));
+        int16x8_t v16_hi = vreinterpretq_s16_u16(vmovl_u8(v_hi));
+        int16x8_t lo = vsubq_s16(v16_lo, vdupq_n_s16(127));
+        int16x8_t hi = vsubq_s16(v16_hi, vdupq_n_s16(127));
         vst1q_s16(dst + i, lo);
         vst1q_s16(dst + i + 8, hi);
     }
@@ -539,11 +540,10 @@ static void widen_rotate90_u8_to_s16_bias127_neon(const unsigned char *src, int1
 static void dsd_fme_init_runtime_dispatch_once(void)
 {
 
+#if defined(__x86_64__) || defined(__i386__)
     int use_avx2 = 0;
     int use_sse2 = 0;
     int use_ssse3 = 0;
-
-#if defined(__x86_64__) || defined(__i386__)
     unsigned int eax=0, ebx=0, ecx=0, edx=0;
     if (__get_cpuid(1, &eax, &ebx, &ecx, &edx)) {
         use_sse2 = (edx & bit_SSE2) ? 1 : 0;
