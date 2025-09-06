@@ -580,6 +580,9 @@ static void dsd_fme_init_runtime_dispatch_once(void)
 #endif
     use_neon = (hw & HWCAP_NEON) ? 1 : 0;
 #endif
+#if !defined(__ARM_NEON) && !defined(__ARM_NEON__)
+    (void)use_neon;
+#endif
 #endif
 
     /* Fallbacks */
