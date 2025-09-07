@@ -1432,6 +1432,7 @@ static void maybe_set_thread_realtime_and_affinity(const char *role)
         if (cpu_str && cpu_str[0] != '\0') {
             int cpu = atoi(cpu_str);
             if (cpu >= 0) {
+#if defined(__linux__) && !defined(__CYGWIN__)
                 cpu_set_t cpuset;
                 CPU_ZERO(&cpuset);
                 CPU_SET((unsigned)cpu, &cpuset);
@@ -1440,6 +1441,10 @@ static void maybe_set_thread_realtime_and_affinity(const char *role)
                 } else {
                     fprintf(stderr, "%s thread pinned to CPU %d.\n", role, cpu);
                 }
+#else
+                (void)cpu;
+                fprintf(stderr, "NOTICE: CPU affinity not supported on this platform.\n");
+#endif
             }
         }
     }
