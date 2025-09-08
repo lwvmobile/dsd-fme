@@ -29,6 +29,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sched.h>
+#include <errno.h>
 #include <atomic>
 #include <rtl-sdr.h>
 #include "dsd.h"
@@ -99,6 +100,12 @@
  * - DSD_FME_FLL_ALPHA, DSD_FME_FLL_BETA
  *     Proportional and integral gains (Q15 fixed-point, ~value/32768). Typical small values.
  *     Defaults: ALPHA=100 (~0.003), BETA=10 (~0.0003). May be adjusted for digital modes if not set.
+ * - DSD_FME_FLL_DEADBAND
+ *     Ignore small phase errors in the FLL loop to avoid audible low-frequency sweeps in analog FM.
+ *     Values: Q14 integer threshold (pi == 1<<14). Example: 60 (~0.36 degrees). Default: 45.
+ * - DSD_FME_FLL_SLEW
+ *     Limit per-update NCO frequency change (slew-rate) to prevent rapid ramps.
+ *     Values: Q15 integer (2*pi == 1<<15). Example: 32..128. Default: 64.
  *
  * Gardner timing error detector (TED)
  * - DSD_FME_TED
@@ -164,6 +171,10 @@ template <typename T>
 static inline T* assume_aligned_ptr(T* p, size_t /*align_unused*/) {
     return (T*)__builtin_assume_aligned(p, 64);
 }
+template <typename T>
+static inline const T* assume_aligned_ptr(const T* p, size_t /*align_unused*/) {
+    return (const T*)__builtin_assume_aligned(p, 64);
+}
 #else
 #define DSD_FME_IVDEP
 /**
@@ -176,6 +187,10 @@ static inline T* assume_aligned_ptr(T* p, size_t /*align_unused*/) {
  */
 template <typename T>
 static inline T* assume_aligned_ptr(T* p, size_t /*align_unused*/) {
+    return p;
+}
+template <typename T>
+static inline const T* assume_aligned_ptr(const T* p, size_t /*align_unused*/) {
     return p;
 }
 #endif
@@ -663,14 +678,15 @@ static inline int hb_decim2_real(const int16_t *in, int in_len, int16_t *out, in
 	int16_t last = (in_len > 0) ? in[in_len - 1] : 0;
 	/* For simplicity, operate via a small ringless window into a temp view using hist + in + right pad (virtually). */
 	int out_len = in_len >> 1; /* floor */
+	/* Hoist half-band coefficients out of the loop */
+	const int16_t c0 = hb_q15_taps[0];
+	const int16_t c2 = hb_q15_taps[2];
+	const int16_t c4 = hb_q15_taps[4];
+	const int16_t c6 = hb_q15_taps[6];
+	const int16_t c7 = hb_q15_taps[7];
 	for (int n = 0; n < out_len; n++) {
 		int center_idx = hist_len + (n << 1); /* position in the concatenated [hist | in] domain */
 		/* Half-band optimization: only even taps and the center tap contribute (symmetric). */
-		const int16_t c0 = hb_q15_taps[0];
-		const int16_t c2 = hb_q15_taps[2];
-		const int16_t c4 = hb_q15_taps[4];
-		const int16_t c6 = hb_q15_taps[6];
-		const int16_t c7 = hb_q15_taps[7]; /* center */
 		auto get_sample = [&](int src_idx) -> int16_t {
 			if (src_idx < hist_len) {
 				return hist[src_idx];
@@ -726,8 +742,8 @@ static inline int hb_decim2_real(const int16_t *in, int in_len, int16_t *out, in
  * @param hist_q  Persistent Q-channel history of length HB_TAPS-1.
  * @return Interleaved output length (in_len/2).
  */
-static inline int hb_decim2_complex_interleaved(const int16_t *in, int in_len, int16_t *out,
-    int16_t *hist_i, int16_t *hist_q)
+static inline int hb_decim2_complex_interleaved(const int16_t * DSD_FME_RESTRICT in, int in_len, int16_t * DSD_FME_RESTRICT out,
+    int16_t * DSD_FME_RESTRICT hist_i, int16_t * DSD_FME_RESTRICT hist_q)
 {
     const int hist_len = HB_TAPS - 1;
     int ch_len = in_len >> 1; /* per-channel samples */
@@ -735,25 +751,30 @@ static inline int hb_decim2_complex_interleaved(const int16_t *in, int in_len, i
     if (out_ch_len <= 0) {
         return 0;
     }
-    int16_t lastI = (ch_len > 0) ? in[in_len - 2] : 0;
-    int16_t lastQ = (ch_len > 0) ? in[in_len - 1] : 0;
+    const int16_t * DSD_FME_RESTRICT in_al = assume_aligned_ptr(in, DSD_FME_ALIGN);
+    int16_t * DSD_FME_RESTRICT out_al = assume_aligned_ptr(out, DSD_FME_ALIGN);
+    int16_t * DSD_FME_RESTRICT hi = assume_aligned_ptr(hist_i, DSD_FME_ALIGN);
+    int16_t * DSD_FME_RESTRICT hq = assume_aligned_ptr(hist_q, DSD_FME_ALIGN);
+    int16_t lastI = (ch_len > 0) ? in_al[in_len - 2] : 0;
+    int16_t lastQ = (ch_len > 0) ? in_al[in_len - 1] : 0;
+    /* Hoist half-band coefficients out of the loop */
+    const int16_t c0 = hb_q15_taps[0];
+    const int16_t c2 = hb_q15_taps[2];
+    const int16_t c4 = hb_q15_taps[4];
+    const int16_t c6 = hb_q15_taps[6];
+    const int16_t c7 = hb_q15_taps[7];
     for (int n = 0; n < out_ch_len; n++) {
         int center_idx = hist_len + (n << 1); /* per-channel index */
         /* Half-band optimization: only even taps and the center tap contribute (symmetric). */
-        const int16_t c0 = hb_q15_taps[0];
-        const int16_t c2 = hb_q15_taps[2];
-        const int16_t c4 = hb_q15_taps[4];
-        const int16_t c6 = hb_q15_taps[6];
-        const int16_t c7 = hb_q15_taps[7]; /* center */
         auto get_iq = [&](int src_idx, int16_t &xi, int16_t &xq) {
             if (src_idx < hist_len) {
-                xi = hist_i[src_idx];
-                xq = hist_q[src_idx];
+                xi = hi[src_idx];
+                xq = hq[src_idx];
             } else {
                 int rel = src_idx - hist_len;
                 if (rel < ch_len) {
-                    xi = in[(size_t)(rel << 1)];
-                    xq = in[(size_t)(rel << 1) + 1];
+                    xi = in_al[(size_t)(rel << 1)];
+                    xq = in_al[(size_t)(rel << 1) + 1];
                 } else {
                     xi = lastI;
                     xq = lastQ;
@@ -790,26 +811,26 @@ static inline int hb_decim2_complex_interleaved(const int16_t *in, int in_len, i
         accQ += (1 << 14);
         int32_t yI = (int32_t)(accI >> 15);
         int32_t yQ = (int32_t)(accQ >> 15);
-        out[(size_t)(n << 1)]     = sat16(yI);
-        out[(size_t)(n << 1) + 1] = sat16(yQ);
+        out_al[(size_t)(n << 1)]     = sat16(yI);
+        out_al[(size_t)(n << 1) + 1] = sat16(yQ);
     }
     /* Update histories with last HB_TAPS-1 per-channel input samples */
     if (ch_len >= hist_len) {
         int start = ch_len - hist_len;
         for (int k = 0; k < hist_len; k++) {
             int rel = start + k;
-            hist_i[k] = in[(size_t)(rel << 1)];
-            hist_q[k] = in[(size_t)(rel << 1) + 1];
+            hi[k] = in_al[(size_t)(rel << 1)];
+            hq[k] = in_al[(size_t)(rel << 1) + 1];
         }
     } else {
         int need = hist_len - ch_len;
         if (need > 0) {
-            memmove(hist_i, hist_i + ch_len, (size_t)need * sizeof(int16_t));
-            memmove(hist_q, hist_q + ch_len, (size_t)need * sizeof(int16_t));
+            memmove(hi, hi + ch_len, (size_t)need * sizeof(int16_t));
+            memmove(hq, hq + ch_len, (size_t)need * sizeof(int16_t));
         }
         for (int k = 0; k < ch_len; k++) {
-            hist_i[need + k] = in[(size_t)(k << 1)];
-            hist_q[need + k] = in[(size_t)(k << 1) + 1];
+            hi[need + k] = in_al[(size_t)(k << 1)];
+            hq[need + k] = in_al[(size_t)(k << 1) + 1];
         }
     }
     return out_ch_len << 1; /* interleaved length */
@@ -1000,6 +1021,8 @@ struct demod_state
 	int      fll_beta_q15;    /* integral gain (Q15) */
 	int      fll_freq_q15;    /* NCO frequency increment (Q15 radians/sample scaled) */
 	int      fll_phase_q15;   /* NCO phase accumulator (wrap at 2*pi -> 1<<15 scale) */
+	int      fll_deadband_q14;/* ignore small phase errors |err| <= deadband (Q14) */
+	int      fll_slew_max_q15;/* max |delta freq| per update (Q15) */
 	int      fll_prev_r;
 	int      fll_prev_j;
 	/* Timing error detector (Gardner) fractional-delay state */
@@ -1103,7 +1126,7 @@ static void demod_mt_init(struct demod_state *s)
 	pthread_mutex_init(&s->mt_lock, NULL);
 	pthread_cond_init(&s->mt_cv, NULL);
 	pthread_cond_init(&s->mt_done_cv, NULL);
-	/* Start two workers */
+	/* Start two workers (default). Keep structure extensible for future growth. */
 	for (int i = 0; i < 2; i++) {
 		s->mt_args[i].s = s;
 		s->mt_args[i].id = i;
@@ -1223,9 +1246,9 @@ static inline void input_ring_clear(struct input_ring_state *r)
 
 /**
  * Reserve up to two contiguous writable regions totaling at least min_needed
- * (or less if near full).
- *
- * May drop oldest half when full to avoid blocking.
+ * (or less if near full). When the ring is full, this function grants zero
+ * space to avoid advancing the consumer. The producer may choose to drop or
+ * skip the current block.
  *
  * @param r          Input ring buffer state.
  * @param min_needed Minimum samples requested for writing.
@@ -1420,7 +1443,8 @@ static void maybe_set_thread_realtime_and_affinity(const char *role)
     }
 
     if (pthread_setschedparam(pthread_self(), policy, &sp) != 0) {
-        fprintf(stderr, "WARNING: Failed to set %s thread to SCHED_FIFO (needs CAP_SYS_NICE).\n", role ? role : "RT");
+        int err = errno;
+        fprintf(stderr, "WARNING: Failed to set %s thread to SCHED_FIFO (needs CAP_SYS_NICE). errno=%d (%s)\n", role ? role : "RT", err, strerror(err));
     } else {
         fprintf(stderr, "%s thread SCHED_FIFO priority set to %d.\n", role ? role : "RT", sp.sched_priority);
     }
@@ -1437,7 +1461,8 @@ static void maybe_set_thread_realtime_and_affinity(const char *role)
                 CPU_ZERO(&cpuset);
                 CPU_SET((unsigned)cpu, &cpuset);
                 if (pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset) != 0) {
-                    fprintf(stderr, "WARNING: Failed to set CPU affinity for %s thread to CPU %d.\n", role, cpu);
+                    int err = errno;
+                    fprintf(stderr, "WARNING: Failed to set CPU affinity for %s thread to CPU %d. errno=%d (%s)\n", role, cpu, err, strerror(err));
                 } else {
                     fprintf(stderr, "%s thread pinned to CPU %d.\n", role, cpu);
                 }
@@ -1723,6 +1748,21 @@ void rotate_90(unsigned char *buf, uint32_t len)
 		buf[i+6] = buf[i+7];
 		buf[i+7] = tmp;
 	}
+	/* Tail: apply rotation pattern for remaining up to three IQ pairs */
+	uint32_t rem = len - full;
+	uint32_t base = full;
+	/* Pair 0 (0 deg): no change needed if rem >= 2 */
+	if (rem >= 4) {
+		/* Pair 1 (+90 deg): (-Q1, I1) */
+		unsigned char t = 255 - buf[base + 3];
+		buf[base + 3] = buf[base + 2];
+		buf[base + 2] = t;
+	}
+	if (rem >= 6) {
+		/* Pair 2 (180 deg): (-I2, -Q2) */
+		buf[base + 4] = 255 - buf[base + 4];
+		buf[base + 5] = 255 - buf[base + 5];
+	}
 }
 
 /**
@@ -1736,17 +1776,18 @@ void rotate_90(unsigned char *buf, uint32_t len)
 void low_pass(struct demod_state *d)
 {
 	int i=0, i2=0;
+	int16_t * DSD_FME_RESTRICT lp = assume_aligned_ptr(d->lowpassed, DSD_FME_ALIGN);
 	while (i < d->lp_len) {
-		d->now_r += d->lowpassed[i];
-		d->now_j += d->lowpassed[i+1];
+		d->now_r += lp[i];
+		d->now_j += lp[i+1];
 		i += 2;
 		d->prev_index++;
 		if (d->prev_index < d->downsample) {
 			continue;
 		}
 		/* Saturate accumulated sums when writing back to int16 */
-		d->lowpassed[i2]   = sat16(d->now_r);
-		d->lowpassed[i2+1] = sat16(d->now_j);
+		lp[i2]   = sat16(d->now_r);
+		lp[i2+1] = sat16(d->now_j);
 		d->prev_index = 0;
 		d->now_r = 0;
 		d->now_j = 0;
@@ -1778,9 +1819,10 @@ int low_pass_simple(int16_t *signal2, int len, int step)
 		signal2[i/step] = (int16_t)val;
 	}
 	/* Duplicate the final sample to provide one-sample lookahead for callers
-	   that expect at least one extra element. */
+	   that expect at least one extra element. Only do this when there is
+	   capacity (i.e., out_len < len) to avoid writing past the end. */
 	int out_len = len / step;
-	if (out_len > 0) {
+	if (out_len > 0 && out_len < len) {
 		signal2[out_len] = signal2[out_len - 1];
 	}
 	return out_len;
@@ -2118,10 +2160,18 @@ void fm_demod(struct demod_state *fm)
 	int16_t *res = assume_aligned_ptr(fm->result, DSD_FME_ALIGN);
 	/* Use selected discriminator from the very first sample */
 	pcm = fm->discriminator(lp[0], lp[1], fm->pre_r, fm->pre_j);
+	/* Remove known NCO injection from FLL rotation (demod sees -dphi per sample).
+	   Scale Q15 (2*pi==1<<15) to Q14 (pi==1<<14) by >>1. */
+	if (fm->fll_enabled) {
+		pcm += (fm->fll_freq_q15 >> 1);
+	}
 	res[0] = (int16_t)pcm;
 	DSD_FME_IVDEP
 	for (i = 2; i < (fm->lp_len-1); i += 2) {
 		pcm = fm->discriminator(lp[i], lp[i+1], lp[i-2], lp[i-1]);
+		if (fm->fll_enabled) {
+			pcm += (fm->fll_freq_q15 >> 1);
+		}
 		res[i/2] = (int16_t)pcm;
 	}
 	fm->pre_r = lp[fm->lp_len - 2];
@@ -2255,17 +2305,22 @@ static inline void fll_mix_and_update(struct demod_state *d)
     		phase += freq;
     	}
     } else {
-    	/* Fast LUT-free rotator: piecewise-linear sin/cos within quadrants. */
+    	/* Fast LUT-free rotator: piecewise-linear sin/cos within quadrants.
+         * Fix amplitude symmetry to better match Q15 sin/cos.
+         */
     	for (int i = 0; i + 1 < N; i += 2) {
     		int p = phase & 0x7FFF; /* 0..32767 */
     		int q = p >> 13; /* quadrant 0..3 */
-    		int16_t c = 32767, s = 0;
-    		int16_t r = (int16_t)(p & 0x1FFF); /* 0..8191 */
+    		int r = p & 0x1FFF; /* 0..8191 */
+    		/* Linearized quarter-wave; ensure consistent endpoints */
+    		int16_t s_pos = (int16_t)(r << 2);            /* 0..32764 */
+    		int16_t c_pos = (int16_t)(32767 - s_pos);     /* 32767..3 */
+    		int16_t s, c;
     		switch (q) {
-    			case 0: c = 32767; s = (int16_t)((r * 4)); break;
-    			case 1: c = (int16_t)(32767 - (r * 4)); s = 32767; break;
-    			case 2: c = -32767; s = (int16_t)(32767 - (r * 4)); break;
-    			default: c = (int16_t)(-32767 + (r * 4)); s = -32767; break;
+    			case 0: s = s_pos;            c = c_pos;            break;
+    			case 1: s = c_pos;            c = (int16_t)(-s_pos); break;
+    			case 2: s = (int16_t)(-s_pos); c = (int16_t)(-c_pos); break;
+    			default:s = (int16_t)(-c_pos); c = s_pos;             break;
     		}
     		int xr = x[i];
     		int xj = x[i+1];
@@ -2311,10 +2366,25 @@ static inline void fll_update_error(struct demod_state *d)
     d->fll_prev_j = prev_j;
     if (count == 0) return;
     int32_t err = err_acc / count; /* Q14 */
-    int32_t p = ( (int64_t)alpha * err ) >> 14; /* Q14 */
-    int32_t iacc = ( (int64_t)beta  * err ) >> 14;
-    int32_t df = p + iacc;
-    d->fll_freq_q15 += (int)df; /* Q15 */
+    /* Deadband: ignore tiny phase errors to avoid audible low-frequency ramps */
+    if (err < d->fll_deadband_q14 && err > -d->fll_deadband_q14) {
+        return;
+    }
+    /* Standard PI loop: adjust frequency only (no direct phase steps). */
+    int32_t p = ( (int64_t)alpha * err ) >> 14; /* -> Q15 */
+    int32_t iacc = ( (int64_t)beta  * err ) >> 14; /* -> Q15 */
+    int32_t df = p + iacc; /* Q15 */
+    /* Negative feedback */
+    /* Slew-rate limit */
+    if (df >  d->fll_slew_max_q15) df =  d->fll_slew_max_q15;
+    if (df < -d->fll_slew_max_q15) df = -d->fll_slew_max_q15;
+    d->fll_freq_q15 += (int)df;
+    /* Clamp NCO frequency to safe range */
+    {
+        const int32_t F_CLAMP = 2048; /* allow up to ~±3 kHz @48k */
+        if (d->fll_freq_q15 >  F_CLAMP) d->fll_freq_q15 =  F_CLAMP;
+        if (d->fll_freq_q15 < -F_CLAMP) d->fll_freq_q15 = -F_CLAMP;
+    }
 }
 
 /**
@@ -2427,11 +2497,31 @@ static void resamp_design(struct demod_state *s, int L, int M)
     int N = total_taps;
     int mid = (N - 1) / 2;
 
-    /* Allocate taps if needed */
+    /* Allocate taps if needed (aligned when possible for better SIMD/cache) */
     if (s->resamp_taps) { free(s->resamp_taps); s->resamp_taps = NULL; }
     if (s->resamp_hist) { free(s->resamp_hist); s->resamp_hist = NULL; }
-    s->resamp_taps = static_cast<int16_t*>(malloc((size_t)N * sizeof(int16_t)));
-    s->resamp_hist = static_cast<int16_t*>(malloc((size_t)taps_per_phase * sizeof(int16_t)));
+    {
+        void *mem_ptr = NULL;
+#if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
+        if (posix_memalign(&mem_ptr, DSD_FME_ALIGN, (size_t)N * sizeof(int16_t)) != 0) {
+            mem_ptr = malloc((size_t)N * sizeof(int16_t));
+        }
+#else
+        mem_ptr = malloc((size_t)N * sizeof(int16_t));
+#endif
+        s->resamp_taps = static_cast<int16_t*>(mem_ptr);
+    }
+    {
+        void *mem_ptr = NULL;
+#if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
+        if (posix_memalign(&mem_ptr, DSD_FME_ALIGN, (size_t)taps_per_phase * sizeof(int16_t)) != 0) {
+            mem_ptr = malloc((size_t)taps_per_phase * sizeof(int16_t));
+        }
+#else
+        mem_ptr = malloc((size_t)taps_per_phase * sizeof(int16_t));
+#endif
+        s->resamp_hist = static_cast<int16_t*>(mem_ptr);
+    }
     if (!s->resamp_taps || !s->resamp_hist) {
         if (s->resamp_taps) { free(s->resamp_taps); s->resamp_taps = NULL; }
         if (s->resamp_hist) { free(s->resamp_hist); s->resamp_hist = NULL; }
@@ -2474,6 +2564,60 @@ static void resamp_design(struct demod_state *s, int L, int M)
     s->resamp_taps_per_phase = taps_per_phase;
 }
 
+/* Helpers for K=16 dot product (int16 x int16 -> int64 accumulator). */
+static inline int64_t dsd_fme_dot16_scalar(const int16_t *a, const int16_t *b)
+{
+    int64_t acc = 0;
+    for (int i = 0; i < 16; i++) acc += (int32_t)a[i] * (int32_t)b[i];
+    return acc;
+}
+
+#if defined(__x86_64__) || defined(__i386__)
+#if defined(__SSE2__)
+#include <emmintrin.h>
+static inline int64_t dsd_fme_dot16_sse2(const int16_t *a, const int16_t *b)
+{
+    __m128i va0 = _mm_loadu_si128((const __m128i*)a);
+    __m128i vb0 = _mm_loadu_si128((const __m128i*)b);
+    __m128i va1 = _mm_loadu_si128((const __m128i*)(a + 8));
+    __m128i vb1 = _mm_loadu_si128((const __m128i*)(b + 8));
+    __m128i p0 = _mm_madd_epi16(va0, vb0); /* 4x int32 */
+    __m128i p1 = _mm_madd_epi16(va1, vb1);
+    int32_t t0[4], t1[4];
+    _mm_storeu_si128((__m128i*)t0, p0);
+    _mm_storeu_si128((__m128i*)t1, p1);
+    int64_t acc = 0;
+    acc += (int64_t)t0[0] + t0[1] + t0[2] + t0[3];
+    acc += (int64_t)t1[0] + t1[1] + t1[2] + t1[3];
+    return acc;
+}
+#endif
+#endif
+
+#if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
+#include <arm_neon.h>
+static inline int64_t dsd_fme_dot16_neon(const int16_t *a, const int16_t *b)
+{
+    int16x8_t a0 = vld1q_s16(a);
+    int16x8_t b0 = vld1q_s16(b);
+    int16x8_t a1 = vld1q_s16(a + 8);
+    int16x8_t b1 = vld1q_s16(b + 8);
+    int32x4_t p0l = vmull_s16(vget_low_s16(a0), vget_low_s16(b0));
+    int32x4_t p0h = vmull_s16(vget_high_s16(a0), vget_high_s16(b0));
+    int32x4_t p1l = vmull_s16(vget_low_s16(a1), vget_low_s16(b1));
+    int32x4_t p1h = vmull_s16(vget_high_s16(a1), vget_high_s16(b1));
+    int32_t t0[4], t1[4], t2[4], t3[4];
+    vst1q_s32(t0, p0l); vst1q_s32(t1, p0h);
+    vst1q_s32(t2, p1l); vst1q_s32(t3, p1h);
+    int64_t acc = 0;
+    acc += (int64_t)t0[0] + t0[1] + t0[2] + t0[3];
+    acc += (int64_t)t1[0] + t1[1] + t1[2] + t1[3];
+    acc += (int64_t)t2[0] + t2[1] + t2[2] + t2[3];
+    acc += (int64_t)t3[0] + t3[1] + t3[2] + t3[3];
+    return acc;
+}
+#endif
+
 /**
  * Process one block using polyphase upfirdn with history.
  *
@@ -2483,7 +2627,10 @@ static void resamp_design(struct demod_state *s, int L, int M)
  * @param out    Pointer to output buffer (sized to hold produced samples).
  * @return Number of output samples written.
  */
-static int resamp_process_block(struct demod_state *s, const int16_t *in, int in_len, int16_t *out)
+static int resamp_process_block(struct demod_state *s,
+    const int16_t * DSD_FME_RESTRICT in,
+    int in_len,
+    int16_t * DSD_FME_RESTRICT out)
 {
     if (!s->resamp_enabled || !s->resamp_taps || !s->resamp_hist) {
         /* passthrough */
@@ -2493,14 +2640,20 @@ static int resamp_process_block(struct demod_state *s, const int16_t *in, int in
     const int L = s->resamp_L;
     const int M = s->resamp_M;
     const int K = s->resamp_taps_per_phase; /* taps per phase */
-    const int16_t *taps = s->resamp_taps;   /* length K*L, phase-major stride L */
+    const int16_t * DSD_FME_RESTRICT taps_al = assume_aligned_ptr(s->resamp_taps, DSD_FME_ALIGN);   /* length K*L, phase-major stride L */
     int phase = s->resamp_phase;            /* 0..L-1 */
     int head = s->resamp_hist_head;         /* circular head index */
     int out_len = 0;
+    const int16_t * DSD_FME_RESTRICT in_al = assume_aligned_ptr(in, DSD_FME_ALIGN);
+    int16_t * DSD_FME_RESTRICT out_al = assume_aligned_ptr(out, DSD_FME_ALIGN);
+    int16_t * DSD_FME_RESTRICT hist = assume_aligned_ptr(s->resamp_hist, DSD_FME_ALIGN);
+    const int stride = L;
+    const int use_mask = (K & (K - 1)) == 0; /* power-of-two K allows cheap wrap */
+    const int mask = K - 1;
 
     for (int n = 0; n < in_len; n++) {
         /* Push new sample into circular history at head */
-        s->resamp_hist[head] = in[n];
+        hist[head] = in_al[n];
         head++;
         if (head == K) head = 0;
 
@@ -2510,17 +2663,81 @@ static int resamp_process_block(struct demod_state *s, const int16_t *in, int in
             /* Dot: y = sum_{k=0..K-1} hist[idx] * taps[k*L + local_phase]
                Access history most-recent-first starting from head-1. */
             int64_t acc = 0;
-            const int16_t *tk = taps + local_phase;
-            int idx = head - 1; if (idx < 0) idx += K;
-            for (int k = 0; k < K; k++) {
-                acc += (int32_t)s->resamp_hist[idx] * (int32_t)tk[0];
-                tk += L;
-                idx--; if (idx < 0) idx += K;
+            const int16_t * DSD_FME_RESTRICT tk = taps_al + local_phase;
+            if (K == 16) {
+                /* Gather 16 samples into contiguous stacks for SIMD-friendly dot */
+                int16_t hblk[16];
+                int16_t tblk[16];
+                if (use_mask) {
+                    int idx = (head - 1) & mask;
+                    for (int k = 0; k < 16; k++) {
+                        hblk[k] = hist[idx];
+                        tblk[k] = tk[0];
+                        tk += stride;
+                        idx = (idx - 1) & mask;
+                    }
+                } else {
+                    int idx = head - 1; if (idx < 0) idx += K;
+                    for (int k = 0; k < 16; k++) {
+                        hblk[k] = hist[idx];
+                        tblk[k] = tk[0];
+                        tk += stride;
+                        idx--; if (idx < 0) idx += K;
+                    }
+                }
+#if defined(__x86_64__)
+#if defined(__SSE2__)
+                acc = dsd_fme_dot16_sse2(hblk, tblk);
+#else
+                acc = dsd_fme_dot16_scalar(hblk, tblk);
+#endif
+#elif defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
+                acc = dsd_fme_dot16_neon(hblk, tblk);
+#else
+                acc = dsd_fme_dot16_scalar(hblk, tblk);
+#endif
+            } else {
+                if (use_mask) {
+                    int idx = (head - 1) & mask;
+                    int k = 0;
+                    /* light unroll by 4 to reduce loop overhead */
+                    for (; k + 3 < K; k += 4) {
+                        acc += (int32_t)hist[idx] * (int32_t)tk[0];
+                        tk += stride; idx = (idx - 1) & mask;
+                        acc += (int32_t)hist[idx] * (int32_t)tk[0];
+                        tk += stride; idx = (idx - 1) & mask;
+                        acc += (int32_t)hist[idx] * (int32_t)tk[0];
+                        tk += stride; idx = (idx - 1) & mask;
+                        acc += (int32_t)hist[idx] * (int32_t)tk[0];
+                        tk += stride; idx = (idx - 1) & mask;
+                    }
+                    for (; k < K; k++) {
+                        acc += (int32_t)hist[idx] * (int32_t)tk[0];
+                        tk += stride; idx = (idx - 1) & mask;
+                    }
+                } else {
+                    int idx = head - 1; if (idx < 0) idx += K;
+                    int k = 0;
+                    for (; k + 3 < K; k += 4) {
+                        acc += (int32_t)hist[idx] * (int32_t)tk[0];
+                        tk += stride; idx--; if (idx < 0) idx += K;
+                        acc += (int32_t)hist[idx] * (int32_t)tk[0];
+                        tk += stride; idx--; if (idx < 0) idx += K;
+                        acc += (int32_t)hist[idx] * (int32_t)tk[0];
+                        tk += stride; idx--; if (idx < 0) idx += K;
+                        acc += (int32_t)hist[idx] * (int32_t)tk[0];
+                        tk += stride; idx--; if (idx < 0) idx += K;
+                    }
+                    for (; k < K; k++) {
+                        acc += (int32_t)hist[idx] * (int32_t)tk[0];
+                        tk += stride; idx--; if (idx < 0) idx += K;
+                    }
+                }
             }
             /* Q15 -> Q0 with rounding and saturation */
             acc += (1 << 14);
             int32_t y = (int32_t)(acc >> 15);
-            out[out_len++] = sat16(y);
+            out_al[out_len++] = sat16(y);
             local_phase += M;
         }
         phase = local_phase - L;
@@ -2606,7 +2823,8 @@ void full_demod(struct demod_state *d)
 	} else {
 		low_pass(d);
 	}
-	/* Residual CFO correction before discriminator */
+	/* Residual CFO loop: estimate error then rotate */
+	fll_update_error(d);
 	fll_mix_and_update(d);
 	/* Lightweight timing error correction (optional, avoid for analog FM demod) */
 	if (d->ted_enabled && (d->mode_demod != &fm_demod || d->ted_force)) {
@@ -2621,14 +2839,20 @@ void full_demod(struct demod_state *d)
 		int phase = d->squelch_decim_phase;
 		int64_t p = 0;
 		int count = 0;
-		for (int j = phase; j < d->lp_len; j += stride) {
-			int64_t s2 = (int64_t)d->lowpassed[j];
-			p += s2 * s2;
+		/* Ensure even I/Q alignment and accumulate pair power I^2+Q^2 */
+		int start = phase & ~1;
+		for (int j = start; j + 1 < d->lp_len; j += stride) {
+			int64_t ir = (int64_t)d->lowpassed[j];
+			int64_t jq = (int64_t)d->lowpassed[j+1];
+			p += ir * ir + jq * jq;
 			count++;
 		}
 		/* Advance phase to sample different positions next block */
 		if (stride > 0) {
 			int adv = d->lp_len % stride;
+			/* keep even alignment for I/Q pairing */
+			if (adv & 1) adv++;
+			if (adv >= stride) adv %= stride;
 			d->squelch_decim_phase = (phase + adv) % stride;
 		}
 		if (count > 0) {
@@ -3078,8 +3302,21 @@ static void optimal_settings(int freq, int rate)
 	struct controller_state *cs = &controller;
 	dm->downsample = (1000000 / dm->rate_in) + 1; //dm->rate_in is the rtl_bandwidth value
 	if (dm->downsample_passes) {
-		dm->downsample_passes = (int)log2(dm->downsample) + 1;
-		dm->downsample = 1 << dm->downsample_passes;
+		int ds = dm->downsample;
+		if (ds <= 1) {
+			dm->downsample_passes = 0;
+			dm->downsample = 1;
+		} else {
+#if defined(__GNUC__) || defined(__clang__)
+			int floor_log2 = 31 - __builtin_clz(ds);
+#else
+			int floor_log2 = 0; { int t = ds; while (t >>= 1) floor_log2++; }
+#endif
+			int is_pow2 = (ds & (ds - 1)) == 0;
+			int passes = is_pow2 ? floor_log2 : (floor_log2 + 1);
+			dm->downsample_passes = passes;
+			dm->downsample = 1 << passes;
+		}
 	}
 	capture_freq = freq;
 	capture_rate = dm->downsample * dm->rate_in; //
@@ -3713,19 +3950,26 @@ void open_rtlsdr_stream(dsd_opts *opts)
 			demod.resamp_enabled = 0;
 		}
 
-		/* Configure FLL/TED via envs. Defaults: FLL on with small gains; TED off by default. */
+		/* Configure FLL/TED via envs. Defaults: FLL off for analog FM; TED off by default. */
 		const char *fll = getenv("DSD_FME_FLL");
-		demod.fll_enabled = (!fll || fll[0] == '\0' || fll[0] == '1') ? 1 : 0;
+		/* Default disabled unless env overrides; modes below may flip this if needed */
+		demod.fll_enabled = (fll && fll[0] == '1') ? 1 : 0;
 		/* Optional: enable LUT-based FLL rotator via DSD_FME_FLL_LUT=1 */
 		{
 			const char *flut = getenv("DSD_FME_FLL_LUT");
 			fll_lut_enabled = (flut && flut[0] == '1') ? 1 : 0;
 		}
-		/* Gains in Q15; very conservative defaults */
+		/* Gains in Q15; conservative defaults */
 		const char *fa = getenv("DSD_FME_FLL_ALPHA");
 		const char *fb = getenv("DSD_FME_FLL_BETA");
-		demod.fll_alpha_q15 = fa ? atoi(fa) : 100;  /* ~0.003 */
-		demod.fll_beta_q15  = fb ? atoi(fb) : 10;   /* ~0.0003 */
+		const char *fdb = getenv("DSD_FME_FLL_DEADBAND");
+		const char *fsl = getenv("DSD_FME_FLL_SLEW");
+		demod.fll_alpha_q15 = fa ? atoi(fa) : 50;   /* ~0.0015 */
+		demod.fll_beta_q15  = fb ? atoi(fb) : 5;    /* ~0.00015 */
+		/* Deadband in Q14: default ~0.5 degrees ≈ 0.5/180*pi ≈ 0.0087 rad => Q14≈(0.0087/pi)*16384≈45 */
+		demod.fll_deadband_q14 = fdb ? atoi(fdb) : 45;
+		/* Slew limit in Q15 per update; default small to avoid sweep (≈ 64) */
+		demod.fll_slew_max_q15 = fsl ? atoi(fsl) : 64;
 		demod.fll_freq_q15  = 0;
 		demod.fll_phase_q15 = 0;
 		demod.fll_prev_r = demod.fll_prev_j = 0;
@@ -3751,8 +3995,15 @@ void open_rtlsdr_stream(dsd_opts *opts)
 		if (digital_mode) {
 			if (!env_ted_set) demod.ted_enabled = 0;
 			if (!env_ted_sps_set) {
-				int Fs = (int)output.rate;
-				int sps = (Fs + 2400) / 4800; /* round(Fs/4800) */
+				/* Use complex-stage sample rate that TED operates at: rate_in scaled by
+				   post_downsample and reduced by decimation passes. Fallback to output.rate if needed. */
+				int ds_passes = demod.downsample_passes;
+				if (ds_passes < 0) ds_passes = 0;
+				int denom = 1 << ds_passes; /* decimation factor from HB cascade */
+				long long Fs_cx_ll = (long long)demod.rate_in * (long long)demod.post_downsample;
+				int Fs_cx = (int)(Fs_cx_ll / (denom ? denom : 1));
+				if (Fs_cx <= 0) Fs_cx = (int)output.rate; /* conservative fallback */
+				int sps = (Fs_cx + 2400) / 4800; /* round(Fs/4800) */
 				if (sps < 2) sps = 2;
 				demod.ted_sps = sps;
 			}
@@ -3762,11 +4013,13 @@ void open_rtlsdr_stream(dsd_opts *opts)
 			}
 			if (!env_fll_alpha_set) demod.fll_alpha_q15 = 150; /* ~0.0046 */
 			if (!env_fll_beta_set)  demod.fll_beta_q15  = 15;  /* ~0.00046 */
+			if (!demod.fll_enabled && (!fll || fll[0] == '\0')) demod.fll_enabled = 1; /* enable by default for digital */
 		} else {
 			/* Analog defaults: keep TED off; gentle FLL */
 			if (!env_ted_set) demod.ted_enabled = 0;
 			if (!env_fll_alpha_set) demod.fll_alpha_q15 = 50; /* ~0.0015 */
 			if (!env_fll_beta_set)  demod.fll_beta_q15  = 5;  /* ~0.00015 */
+			/* Keep FLL disabled by default for analog unless DSD_FME_FLL=1 */
 		}
 	}
 
