@@ -40,6 +40,7 @@
 #include "dsp/resampler.h"
 #include "runtime/input_ring.h"
 #include "runtime/ring.h"
+#include "runtime/worker_pool.h"
 #include "io/rtl_device.h"
 
 /*
@@ -477,10 +478,7 @@ struct demod_state {
     struct output_state* output_target;
 };
 
-/* Forward declarations for minimal worker pool helpers */
-static void demod_mt_init(struct demod_state* s);
-static void demod_mt_destroy(struct demod_state* s);
-static void demod_mt_run_two(struct demod_state* s, void (*f0)(void*), void* a0, void (*f1)(void*), void* a1);
+/* Worker pool helpers moved to runtime/worker_pool.* */
 
 struct demod_mt_worker_arg {
     struct demod_state* s;
@@ -494,41 +492,7 @@ struct demod_mt_worker_arg {
  * @param arg Pointer to `demod_mt_worker_arg` with owning state and worker id.
  * @return NULL when the worker exits.
  */
-static void*
-demod_mt_worker(void* arg) {
-    struct demod_mt_worker_arg* wa = (struct demod_mt_worker_arg*)arg;
-    struct demod_state* s = wa->s;
-    const int id = wa->id;
-    int local_epoch = 0;
-    for (;;) {
-        pthread_mutex_lock(&s->mt_lock);
-        while (!s->mt_should_exit && s->mt_epoch == local_epoch) {
-            pthread_cond_wait(&s->mt_cv, &s->mt_lock);
-        }
-        if (s->mt_should_exit) {
-            pthread_mutex_unlock(&s->mt_lock);
-            break;
-        }
-        local_epoch = s->mt_epoch;
-        void (*fn)(void*) = NULL;
-        void* fn_arg = NULL;
-        if (id < s->mt_posted_count) {
-            fn = s->mt_tasks[id].run;
-            fn_arg = s->mt_tasks[id].arg;
-        }
-        pthread_mutex_unlock(&s->mt_lock);
-        if (fn) {
-            fn(fn_arg);
-        }
-        pthread_mutex_lock(&s->mt_lock);
-        s->mt_completed_in_epoch++;
-        if (s->mt_completed_in_epoch >= s->mt_posted_count) {
-            pthread_cond_signal(&s->mt_done_cv);
-        }
-        pthread_mutex_unlock(&s->mt_lock);
-    }
-    return NULL;
-}
+/* demod_mt_worker moved to runtime/worker_pool.cpp */
 
 /**
  * Initialize the minimal 2-thread worker pool for intra-block tasks.
@@ -536,50 +500,14 @@ demod_mt_worker(void* arg) {
  *
  * @param s Demodulator state to initialize with worker threads.
  */
-static void
-demod_mt_init(struct demod_state* s) {
-    const char* mt = getenv("DSD_FME_MT");
-    s->mt_enabled = (mt && mt[0] == '1') ? 1 : 0;
-    s->mt_should_exit = 0;
-    s->mt_epoch = 0;
-    s->mt_completed_in_epoch = 0;
-    s->mt_posted_count = 0;
-    if (!s->mt_enabled) {
-        return;
-    }
-    pthread_mutex_init(&s->mt_lock, NULL);
-    pthread_cond_init(&s->mt_cv, NULL);
-    pthread_cond_init(&s->mt_done_cv, NULL);
-    /* Start two workers (default). Keep structure extensible for future growth. */
-    for (int i = 0; i < 2; i++) {
-        s->mt_args[i].s = s;
-        s->mt_args[i].id = i;
-        pthread_create(&s->mt_threads[i], NULL, demod_mt_worker, (void*)&s->mt_args[i]);
-    }
-    fprintf(stderr, "Intra-block multithreading enabled (DSD_FME_MT=1), workers: 2.\n");
-}
+/* demod_mt_init moved to runtime/worker_pool.cpp */
 
 /**
  * Tear down the minimal worker pool created by demod_mt_init.
  *
  * @param s Demodulator state whose worker pool will be destroyed.
  */
-static void
-demod_mt_destroy(struct demod_state* s) {
-    if (!s->mt_enabled) {
-        return;
-    }
-    pthread_mutex_lock(&s->mt_lock);
-    s->mt_should_exit = 1;
-    pthread_cond_broadcast(&s->mt_cv);
-    pthread_mutex_unlock(&s->mt_lock);
-    for (int i = 0; i < 2; i++) {
-        pthread_join(s->mt_threads[i], NULL);
-    }
-    pthread_cond_destroy(&s->mt_done_cv);
-    pthread_cond_destroy(&s->mt_cv);
-    pthread_mutex_destroy(&s->mt_lock);
-}
+/* demod_mt_destroy moved to runtime/worker_pool.cpp */
 
 /**
  * Post up to two tasks to the worker pool and wait for their completion.
@@ -591,31 +519,7 @@ demod_mt_destroy(struct demod_state* s) {
  * @param f1 Task 1 function pointer (may be NULL).
  * @param a1 Task 1 argument.
  */
-static void
-demod_mt_run_two(struct demod_state* s, void (*f0)(void*), void* a0, void (*f1)(void*), void* a1) {
-    if (!s->mt_enabled) {
-        if (f0) {
-            f0(a0);
-        }
-        if (f1) {
-            f1(a1);
-        }
-        return;
-    }
-    pthread_mutex_lock(&s->mt_lock);
-    s->mt_tasks[0].run = f0;
-    s->mt_tasks[0].arg = a0;
-    s->mt_tasks[1].run = f1;
-    s->mt_tasks[1].arg = a1;
-    s->mt_posted_count = (f1 != NULL) ? 2 : 1;
-    s->mt_completed_in_epoch = 0;
-    s->mt_epoch++;
-    pthread_cond_broadcast(&s->mt_cv);
-    while (s->mt_completed_in_epoch < s->mt_posted_count) {
-        pthread_cond_wait(&s->mt_done_cv, &s->mt_lock);
-    }
-    pthread_mutex_unlock(&s->mt_lock);
-}
+/* demod_mt_run_two moved to runtime/worker_pool.cpp */
 
 
 
