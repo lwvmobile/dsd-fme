@@ -511,8 +511,12 @@ rtl_device_destroy(struct rtl_device* dev) {
     }
 
     if (dev->thread_started) {
-        // The thread will exit when rtlsdr_read_async returns
+        /* Ensure async read is cancelled before joining to avoid blocking */
+        if (dev->dev) {
+            rtlsdr_cancel_async(dev->dev);
+        }
         pthread_join(dev->thread, NULL);
+        dev->thread_started = 0;
     }
 
     if (dev->dev) {
@@ -615,8 +619,10 @@ rtl_device_stop_async(struct rtl_device* dev) {
         return -1;
     }
 
-    // rtlsdr_read_async will exit when the device is closed
-    // We just need to join the thread
+    /* Signal the asynchronous reader to stop, then join the thread */
+    if (dev->dev) {
+        rtlsdr_cancel_async(dev->dev);
+    }
     pthread_join(dev->thread, NULL);
     dev->thread_started = 0;
 
