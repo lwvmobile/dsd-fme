@@ -462,6 +462,23 @@ struct output_state output;
 struct controller_state controller;
 static struct input_ring_state input_ring;
 
+/*
+ * Phase 12: Internal stream context to reduce implicit global coupling.
+ * Private to this TU; external C API remains unchanged.
+ */
+struct RtlSdrStream {
+    struct rtl_device* device;
+    struct dongle_state* dongle;
+    struct demod_state* demod;
+    struct output_state* output;
+    struct controller_state* controller;
+    struct input_ring_state* input_ring;
+    struct udp_control** udp_ctrl_ptr;
+    const DsdFmeRuntimeConfig* cfg;
+};
+
+static struct RtlSdrStream* g_stream = NULL;
+
 /**
  * Optionally enable realtime scheduling and set CPU affinity for the current
  * thread based on environment variables.
@@ -2030,6 +2047,23 @@ open_rtlsdr_stream(dsd_opts* opts) {
     } else {
         output.rate = demod.rate_out;
     }
+
+    /* Phase 12: initialize private stream context after successful startup */
+    if (g_stream) {
+        free(g_stream);
+        g_stream = NULL;
+    }
+    g_stream = (struct RtlSdrStream*)calloc(1, sizeof(struct RtlSdrStream));
+    if (g_stream) {
+        g_stream->device = rtl_device_handle;
+        g_stream->dongle = &dongle;
+        g_stream->demod = &demod;
+        g_stream->output = &output;
+        g_stream->controller = &controller;
+        g_stream->input_ring = &input_ring;
+        g_stream->udp_ctrl_ptr = &g_udp_ctrl;
+        g_stream->cfg = dsd_fme_get_config();
+    }
 }
 
 /**
@@ -2065,6 +2099,11 @@ cleanup_rtlsdr_stream(void) {
 
     rtl_device_destroy(rtl_device_handle);
     rtl_device_handle = NULL;
+
+    if (g_stream) {
+        free(g_stream);
+        g_stream = NULL;
+    }
 }
 
 /**
@@ -2137,7 +2176,13 @@ rtl_dev_tune(dsd_opts* opts, long int frequency) {
     if (opts->payload == 1) {
         LOG_INFO(" (Center Frequency: %u Hz.) \n", dongle.freq);
     }
-    r = rtl_device_set_frequency(rtl_device_handle, dongle.freq);
+    {
+        struct rtl_device* dev = rtl_device_handle;
+        if (g_stream && g_stream->device) {
+            dev = g_stream->device;
+        }
+        r = rtl_device_set_frequency(dev, dongle.freq);
+    }
     if (r < 0) {
         LOG_WARNING(" (Failed to set Center Frequency %u). \n", dongle.freq);
     }
@@ -2171,7 +2216,19 @@ rtl_return_pwr(void) {
 void
 rtl_clean_queue(void) {
     /* Clear the entire ring to prevent sample 'lag' */
-    ring_clear(&output);
+    {
+        struct output_state* outp = &output;
+        if (g_stream && g_stream->output) {
+            outp = g_stream->output;
+        }
+        ring_clear(outp);
+    }
     /* Wake producer waiting for space */
-    safe_cond_signal(&output.space, &output.ready_m);
+    {
+        struct output_state* outp = &output;
+        if (g_stream && g_stream->output) {
+            outp = g_stream->output;
+        }
+        safe_cond_signal(&outp->space, &outp->ready_m);
+    }
 }
