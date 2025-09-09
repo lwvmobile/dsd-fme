@@ -16,21 +16,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <rtl-sdr.h>
-#include <errno.h>
+#include <atomic>
 #include <math.h>
 #include <pthread.h>
+#include <rtl-sdr.h>
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
-#include <atomic>
-#include "io/rtl_device.h"
+#include "dsd.h" // for exitflag
 #include "dsp/simd_widen.h"
+#include "io/rtl_device.h"
 #include "runtime/input_ring.h"
-#include "dsd.h"  // for exitflag
+#include "runtime/rt_sched.h"
 
 // Forward declarations from main file
 extern volatile uint8_t exitflag;
@@ -75,65 +75,7 @@ struct rtl_device {
  * @param role Optional role label (e.g. "DEMOD", "DONGLE") used to look up
  *             per-role environment variables.
  */
-static void
-maybe_set_thread_realtime_and_affinity(const char* role) {
-    const char* enable = getenv("DSD_FME_RT_SCHED");
-    if (!enable || enable[0] != '1') {
-        return;
-    }
-
-    /* Optional: role-specific priority (1..99) for SCHED_FIFO */
-    int policy = SCHED_FIFO;
-    struct sched_param sp;
-    int pmax = sched_get_priority_max(policy);
-    int pmin = sched_get_priority_min(policy);
-    int def = (pmax > 10) ? (pmax - 10) : pmax; /* default near top, but safe */
-    char envname[64];
-
-    sp.sched_priority = def;
-    if (role) {
-        /* e.g., DSD_FME_RT_PRIO_DEMOD, DSD_FME_RT_PRIO_DONGLE */
-        snprintf(envname, sizeof(envname), "DSD_FME_RT_PRIO_%s", role);
-        const char* prio_str = getenv(envname);
-        if (prio_str && prio_str[0] != '\0') {
-            int pr = atoi(prio_str);
-            if (pr >= pmin && pr <= pmax) {
-                sp.sched_priority = pr;
-            } else {
-                fprintf(stderr,
-                        "WARNING: Invalid RT priority %d for role %s; using default %d\n",
-                        pr, role, def);
-            }
-        }
-    }
-
-    int r = pthread_setschedparam(pthread_self(), policy, &sp);
-    if (r != 0) {
-        fprintf(stderr,
-                "WARNING: Failed to set RT scheduling for %s: %s\n",
-                role ? role : "thread", strerror(r));
-    }
-
-    /* Optional: CPU affinity */
-    if (role) {
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        snprintf(envname, sizeof(envname), "DSD_FME_CPU_%s", role);
-        const char* cpu_str = getenv(envname);
-        if (cpu_str && cpu_str[0] != '\0') {
-            int cpu = atoi(cpu_str);
-            if (cpu >= 0) {
-                CPU_SET(cpu, &cpuset);
-                r = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-                if (r != 0) {
-                    fprintf(stderr,
-                            "WARNING: Failed to set CPU affinity to %d for %s: %s\n",
-                            cpu, role, strerror(r));
-                }
-            }
-        }
-    }
-}
+/* moved to runtime/rt_sched.cpp */
 
 /**
  * Rotate IQ data by 90 degrees in-place.
