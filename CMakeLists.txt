@@ -90,6 +90,7 @@ if(RTLSDR_FOUND)
     list(APPEND SRCS src/runtime/config.cpp)
     list(APPEND SRCS src/runtime/log.cpp)
     list(APPEND SRCS src/io/rtl_device.cpp)
+    list(APPEND SRCS src/io/udp_control.cpp)
 endif()
 
 if(NOT RTLSDR_FOUND)

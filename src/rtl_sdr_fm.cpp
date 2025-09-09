@@ -39,6 +39,7 @@
 #include "dsp/simd_widen.h"
 #include "dsp/ted.h"
 #include "io/rtl_device.h"
+#include "io/udp_control.h"
 #include "runtime/config.h"
 #include "runtime/input_ring.h"
 #include "runtime/log.h"
@@ -256,10 +257,8 @@ atan_lut_once_init(void) {
     }
 }
 
-//UDP -- keep for compatibility reasons
-#include <arpa/inet.h>
-#include <netinet/in.h>
-static pthread_t socket_freq;
+// UDP control handle
+static struct udp_control* g_udp_ctrl = NULL;
 
 int rtl_bandwidth;
 int bandwidth_multiplier;
@@ -1747,18 +1746,7 @@ sanity_checks(void) {
  * @param buf Pointer to 5-byte buffer.
  * @return Decoded 32-bit little-endian integer from bytes 1..4.
  */
-static unsigned int
-chars_to_int(unsigned char* buf) {
-
-    int i;
-    unsigned int val = 0;
-
-    for (i = 1; i < 5; i++) {
-        val = val | ((buf[i]) << ((i - 1) * 8));
-    }
-
-    return val;
-}
+/* moved to io/udp_control.cpp */
 
 /**
  * UDP control thread: listens for frequency tuning commands and applies them.
@@ -1769,53 +1757,7 @@ chars_to_int(unsigned char* buf) {
  * @param arg Unused.
  * @return NULL on exit.
  */
-static void*
-socket_thread_fn(void* arg) {
-    UNUSED(arg);
-
-    int n;
-    int sockfd;
-    unsigned char buffer[5];
-    struct sockaddr_in serv_addr;
-
-    sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
-    if (sockfd < 0) {
-        perror("ERROR opening socket");
-    }
-
-    bzero((char*)&serv_addr, sizeof(serv_addr));
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(port);
-
-    if (bind(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-        perror("ERROR on binding");
-    }
-
-    bzero(buffer, 5);
-
-    LOG_INFO("Main socket started! :-) Tuning enabled on UDP/%d \n", port);
-
-    int new_freq;
-
-    while ((n = read(sockfd, buffer, 5)) > 0) {
-        if (n == 5 && buffer[0] == 0) {
-            new_freq = chars_to_int(buffer);
-            dongle.freq = new_freq;
-            optimal_settings(new_freq, demod.rate_in);
-            rtl_device_set_frequency(rtl_device_handle, dongle.freq);
-            LOG_INFO("\nTuning to: %d [Hz] \n", new_freq);
-        }
-    }
-    if (n < 0) {
-        perror("ERROR on read");
-    }
-
-    close(sockfd);
-    return 0;
-}
+/* moved to io/udp_control.cpp */
 
 /**
  * Signal handler to request RTL-SDR async cancel and exit.
@@ -2134,9 +2076,17 @@ open_rtlsdr_stream(dsd_opts* opts) {
     pthread_create(&controller.thread, NULL, controller_thread_fn, (void*)(&controller));
     usleep(100000);
     pthread_create(&demod.thread, NULL, demod_thread_fn, (void*)(&demod));
-    //only create socket thread IF user specified (for legacy uses), else don't use it
+    //only start UDP control IF user specified port (for legacy uses)
     if (port != 0) {
-        pthread_create(&socket_freq, NULL, socket_thread_fn, (void*)(&controller));
+        g_udp_ctrl = udp_control_start(
+            port,
+            /* callback */
+            [](uint32_t new_freq_hz, void* /*user_data*/) {
+                dongle.freq = (uint32_t)new_freq_hz;
+                optimal_settings((int)new_freq_hz, demod.rate_in);
+                rtl_device_set_frequency(rtl_device_handle, dongle.freq);
+            },
+            /* user_data */ NULL);
     }
 
     /* If resampler is enabled, update output.rate for downstream consumers */
@@ -2154,6 +2104,10 @@ open_rtlsdr_stream(dsd_opts* opts) {
 void
 cleanup_rtlsdr_stream(void) {
     LOG_INFO("cleaning up...\n");
+    if (g_udp_ctrl) {
+        udp_control_stop(g_udp_ctrl);
+        g_udp_ctrl = NULL;
+    }
     rtl_device_stop_async(rtl_device_handle);
     safe_cond_signal(&demod.ready, &demod.ready_m);
     pthread_join(demod.thread, NULL);
