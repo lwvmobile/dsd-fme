@@ -77,6 +77,11 @@ endif(CODEC2_FOUND)
 FILE(GLOB SRCS src/*.c src/*.cpp)
 FILE(GLOB HEADERS include/*.h include/*.hpp)
 
+# Add DSP module sources explicitly (not caught by the glob above)
+if(RTLSDR_FOUND)
+    list(APPEND SRCS src/dsp/simd_widen.cpp)
+endif()
+
 if(NOT RTLSDR_FOUND)
     list(REMOVE_ITEM SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/rtl_sdr_fm.cpp)
 endif(NOT RTLSDR_FOUND)
