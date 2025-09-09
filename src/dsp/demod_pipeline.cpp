@@ -7,6 +7,8 @@
 #include "dsd.h"
 #include "dsp/demod_pipeline.h"
 #include "dsp/simd_widen.h"
+#include "dsp/fll.h"
+#include "dsp/ted.h"
 
 /* Local definition of demod_state structure for this module */
 struct demod_state {
@@ -92,6 +94,9 @@ struct demod_state {
     int ted_mu_q20;   /* fractional phase [0,1) in Q20 */
     /* Work buffer for timing-adjusted I/Q */
     alignas(64) int16_t timing_buf[262144];
+    /* FLL and TED module states (must match rtl_sdr_fm.cpp layout) */
+    fll_state_t fll_state;
+    ted_state_t ted_state;
     /* Minimal 2-thread worker pool for intra-block parallelism */
     int mt_enabled;
     int mt_ready;

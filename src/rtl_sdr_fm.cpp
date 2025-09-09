@@ -35,6 +35,8 @@
 #include "dsd.h"
 #include "dsp/simd_widen.h"
 #include "dsp/demod_pipeline.h"
+#include "dsp/fll.h"
+#include "dsp/ted.h"
 #include "runtime/input_ring.h"
 #include "runtime/ring.h"
 #include "io/rtl_device.h"
@@ -202,9 +204,6 @@ static int atan_lut_size = 131072; /* 512 KB */
 static int atan_lut_coef = 8;
 static pthread_once_t atan_lut_once = PTHREAD_ONCE_INIT;
 static pthread_mutex_t atan_lut_mutex = PTHREAD_MUTEX_INITIALIZER;
-/* Optional quarter-wave sine LUT for FLL rotator (Q15). */
-static int16_t fll_qsine_q15_lut[1025]; /* 0..pi/2 in 1024 steps, +1 guard for exact pi/2 */
-static pthread_once_t fll_lut_once = PTHREAD_ONCE_INIT;
 static int fll_lut_enabled = 0; /* DSD_FME_FLL_LUT (0 default: use fast approx) */
 /* Debug/compat toggles via env */
 static int combine_rotate_enabled = 1;      /* DSD_FME_COMBINE_ROT (1 default) */
@@ -330,90 +329,6 @@ atan_lut_once_init(void) {
     }
 }
 
-/* Build quarter-wave sine LUT in Q15: sin(theta) where theta in [0, pi/2] */
-static void
-fll_lut_once_init(void) {
-    for (int i = 0; i <= 1024; i++) {
-        double theta = (kPi * 0.5) * ((double)i / 1024.0);
-        int v = (int)lrint(sin(theta) * 32767.0);
-        if (v > 32767) {
-            v = 32767;
-        }
-        if (v < -32767) {
-            v = -32767;
-        }
-        fll_qsine_q15_lut[i] = (int16_t)v;
-    }
-}
-
-/**
- * Compute sin/cos in Q15 from phase using a quarter-wave sine LUT.
- * The choice to use the LUT vs. a fast piecewise approximation is
- * made by the caller (see fll_mix_and_update).
- *
- * @param phase_q15 Phase accumulator (Q15, wrap at 2*pi -> 1<<15 scale).
- * @param c_out     [out] Cosine Q15.
- * @param s_out     [out] Sine Q15.
- */
-static inline void
-fll_sin_cos_q15_from_phase_lut(int phase_q15, int16_t* c_out, int16_t* s_out) {
-    /* phase_q15 wraps at 1<<15 mapping to 2*pi */
-    int p = phase_q15 & 0x7FFF; /* 0..32767 */
-    int quad = p >> 13;         /* 0..3 */
-    int r = p & 0x1FFF;         /* position within quadrant: 0..8191 */
-
-    /* Helper to sample quarter-wave S(r) with r in [0..8192] using 1024-segment linear interp */
-    auto sample_quarter = [](int r8192) -> int16_t {
-        if (r8192 < 0) {
-            r8192 = 0;
-        }
-        if (r8192 > 8192) {
-            r8192 = 8192;
-        }
-        int idx = r8192 >> 3; /* 0..1024 */
-        int frac = r8192 & 7; /* 0..7 */
-        int16_t s0 = fll_qsine_q15_lut[idx];
-        int16_t s1 = fll_qsine_q15_lut[(idx < 1024) ? (idx + 1) : 1024];
-        int diff = (int)s1 - (int)s0;
-        int interp = (int)s0 + ((diff * frac + 4) >> 3); /* rounded */
-        if (interp > 32767) {
-            interp = 32767;
-        }
-        if (interp < -32767) {
-            interp = -32767;
-        }
-        return (int16_t)interp;
-    };
-
-    int16_t s_pos, c_pos;
-    /* Cosine within quadrant uses complementary angle in the quarter-wave */
-    switch (quad) {
-        case 0: /* [0, pi/2) */
-            s_pos = sample_quarter(r);
-            c_pos = sample_quarter(8192 - r);
-            *s_out = s_pos;
-            *c_out = c_pos;
-            break;
-        case 1: /* [pi/2, pi) */
-            s_pos = sample_quarter(8192 - r);
-            c_pos = sample_quarter(r);
-            *s_out = s_pos;
-            *c_out = (int16_t)(-c_pos);
-            break;
-        case 2: /* [pi, 3pi/2) */
-            s_pos = sample_quarter(r);
-            c_pos = sample_quarter(8192 - r);
-            *s_out = (int16_t)(-s_pos);
-            *c_out = (int16_t)(-c_pos);
-            break;
-        default: /* 3: [3pi/2, 2pi) */
-            s_pos = sample_quarter(8192 - r);
-            c_pos = sample_quarter(r);
-            *s_out = (int16_t)(-s_pos);
-            *c_out = c_pos;
-            break;
-    }
-}
 
 //UDP -- keep for compatibility reasons
 #include <arpa/inet.h>
@@ -526,6 +441,9 @@ struct demod_state {
     int ted_mu_q20;   /* fractional phase [0,1) in Q20 */
     /* Work buffer for timing-adjusted I/Q */
     alignas(DSD_FME_ALIGN) int16_t timing_buf[MAXIMUM_BUF_LENGTH];
+    /* FLL and TED module states */
+    fll_state_t fll_state;
+    ted_state_t ted_state;
     /* Minimal 2-thread worker pool for intra-block parallelism */
     int mt_enabled;
     int mt_ready;
@@ -1135,65 +1053,29 @@ fll_mix_and_update(struct demod_state* d) {
     if (!d->fll_enabled) {
         return;
     }
-    int16_t* x = d->lowpassed;
-    const int N = d->lp_len;
-    int phase = d->fll_phase_q15;     /* Q15 wraps at 1<<15 ~ 2*pi */
-    const int freq = d->fll_freq_q15; /* Q15 increment per sample */
-    /* Optional: higher-quality quarter-wave LUT rotator (linear interp), enabled via DSD_FME_FLL_LUT=1. */
-    if (fll_lut_enabled) {
-        /* Ensure LUT is initialized once before use */
-        pthread_once(&fll_lut_once, fll_lut_once_init);
-        for (int i = 0; i + 1 < N; i += 2) {
-            int16_t c, s;
-            fll_sin_cos_q15_from_phase_lut(phase, &c, &s);
-            int xr = x[i];
-            int xj = x[i + 1];
-            int32_t yr = ((int32_t)xr * c + (int32_t)xj * s) >> 15;
-            int32_t yj = ((int32_t)xj * c - (int32_t)xr * s) >> 15;
-            x[i] = (int16_t)yr;
-            x[i + 1] = (int16_t)yj;
-            phase += freq;
-        }
-    } else {
-        /* Fast LUT-free rotator: piecewise-linear sin/cos within quadrants.
-         * Fix amplitude symmetry to better match Q15 sin/cos.
-         */
-        for (int i = 0; i + 1 < N; i += 2) {
-            int p = phase & 0x7FFF; /* 0..32767 */
-            int q = p >> 13;        /* quadrant 0..3 */
-            int r = p & 0x1FFF;     /* 0..8191 */
-            /* Linearized quarter-wave; ensure consistent endpoints */
-            int16_t s_pos = (int16_t)(r << 2);        /* 0..32764 */
-            int16_t c_pos = (int16_t)(32767 - s_pos); /* 32767..3 */
-            int16_t s, c;
-            switch (q) {
-                case 0:
-                    s = s_pos;
-                    c = c_pos;
-                    break;
-                case 1:
-                    s = c_pos;
-                    c = (int16_t)(-s_pos);
-                    break;
-                case 2:
-                    s = (int16_t)(-s_pos);
-                    c = (int16_t)(-c_pos);
-                    break;
-                default:
-                    s = (int16_t)(-c_pos);
-                    c = s_pos;
-                    break;
-            }
-            int xr = x[i];
-            int xj = x[i + 1];
-            int32_t yr = ((int32_t)xr * c + (int32_t)xj * s) >> 15;
-            int32_t yj = ((int32_t)xj * c - (int32_t)xr * s) >> 15;
-            x[i] = (int16_t)yr;
-            x[i + 1] = (int16_t)yj;
-            phase += freq;
-        }
-    }
-    d->fll_phase_q15 = phase & 0x7FFF;
+
+    /* Sync from demod_state to module state */
+    d->fll_state.freq_q15 = d->fll_freq_q15;
+    d->fll_state.phase_q15 = d->fll_phase_q15;
+    d->fll_state.prev_r = d->fll_prev_r;
+    d->fll_state.prev_j = d->fll_prev_j;
+
+    fll_config_t cfg = {
+        .enabled = d->fll_enabled,
+        .alpha_q15 = d->fll_alpha_q15,
+        .beta_q15 = d->fll_beta_q15,
+        .deadband_q14 = d->fll_deadband_q14,
+        .slew_max_q15 = d->fll_slew_max_q15,
+        .use_lut = fll_lut_enabled
+    };
+
+    fll_mix_and_update(&cfg, &d->fll_state, d->lowpassed, d->lp_len);
+
+    /* Sync back to demod_state */
+    d->fll_freq_q15 = d->fll_state.freq_q15;
+    d->fll_phase_q15 = d->fll_state.phase_q15;
+    d->fll_prev_r = d->fll_state.prev_r;
+    d->fll_prev_j = d->fll_state.prev_j;
 }
 
 /**
@@ -1208,58 +1090,29 @@ fll_update_error(struct demod_state* d) {
     if (!d->fll_enabled) {
         return;
     }
-    int16_t* x = d->lowpassed;
-    const int N = d->lp_len;
-    int alpha = d->fll_alpha_q15; /* Q15 */
-    int beta = d->fll_beta_q15;   /* Q15 */
-    int prev_r = d->fll_prev_r;
-    int prev_j = d->fll_prev_j;
-    int32_t err_acc = 0;
-    int count = 0;
-    for (int i = 0; i + 1 < N; i += 2) {
-        int r = x[i];
-        int j = x[i + 1];
-        if (i > 0 || (prev_r != 0 || prev_j != 0)) {
-            int e = polar_disc_fast(r, j, prev_r, prev_j); /* Q14 */
-            err_acc += e;
-            count++;
-        }
-        prev_r = r;
-        prev_j = j;
-    }
-    d->fll_prev_r = prev_r;
-    d->fll_prev_j = prev_j;
-    if (count == 0) {
-        return;
-    }
-    int32_t err = err_acc / count; /* Q14 */
-    /* Deadband: ignore tiny phase errors to avoid audible low-frequency ramps */
-    if (err < d->fll_deadband_q14 && err > -d->fll_deadband_q14) {
-        return;
-    }
-    /* Standard PI loop: adjust frequency only (no direct phase steps). */
-    int32_t p = ((int64_t)alpha * err) >> 14;   /* -> Q15 */
-    int32_t iacc = ((int64_t)beta * err) >> 14; /* -> Q15 */
-    int32_t df = p + iacc;                      /* Q15 */
-    /* Negative feedback */
-    /* Slew-rate limit */
-    if (df > d->fll_slew_max_q15) {
-        df = d->fll_slew_max_q15;
-    }
-    if (df < -d->fll_slew_max_q15) {
-        df = -d->fll_slew_max_q15;
-    }
-    d->fll_freq_q15 += (int)df;
-    /* Clamp NCO frequency to safe range */
-    {
-        const int32_t F_CLAMP = 2048; /* allow up to ~±3 kHz @48k */
-        if (d->fll_freq_q15 > F_CLAMP) {
-            d->fll_freq_q15 = F_CLAMP;
-        }
-        if (d->fll_freq_q15 < -F_CLAMP) {
-            d->fll_freq_q15 = -F_CLAMP;
-        }
-    }
+
+    /* Sync from demod_state to module state */
+    d->fll_state.freq_q15 = d->fll_freq_q15;
+    d->fll_state.phase_q15 = d->fll_phase_q15;
+    d->fll_state.prev_r = d->fll_prev_r;
+    d->fll_state.prev_j = d->fll_prev_j;
+
+    fll_config_t cfg = {
+        .enabled = d->fll_enabled,
+        .alpha_q15 = d->fll_alpha_q15,
+        .beta_q15 = d->fll_beta_q15,
+        .deadband_q14 = d->fll_deadband_q14,
+        .slew_max_q15 = d->fll_slew_max_q15,
+        .use_lut = fll_lut_enabled
+    };
+
+    fll_update_error(&cfg, &d->fll_state, d->lowpassed, d->lp_len);
+
+    /* Sync back to demod_state */
+    d->fll_freq_q15 = d->fll_state.freq_q15;
+    d->fll_phase_q15 = d->fll_state.phase_q15;
+    d->fll_prev_r = d->fll_state.prev_r;
+    d->fll_prev_j = d->fll_state.prev_j;
 }
 
 /**
@@ -1275,72 +1128,23 @@ gardner_timing_adjust(struct demod_state* d) {
     if (!d->ted_enabled || d->ted_sps <= 1) {
         return;
     }
-    /* Guard: run TED only when we're near symbol rate to keep CPU low.
-       Skip when samples-per-symbol is very high unless explicitly forced. */
-    int sps = d->ted_sps;
-    if (sps > 12 && !d->ted_force) {
-        return;
-    }
-    int mu = d->ted_mu_q20;     /* Q20 */
-    int gain = d->ted_gain_q20; /* Q20 */
-    int16_t* x = d->lowpassed;
-    int16_t* y = d->timing_buf;
-    const int N = d->lp_len;
-    int out_n = 0;
-    const int one = (1 << 20);
-    int mu_nom = one / (sps > 0 ? sps : 1); /* Q20 increment per complex sample */
-    for (int n = 0; n + 3 < N; n += 2) {
-        int a = n;     /* base complex sample index */
-        int b = n + 2; /* next complex sample index */
-        if (b + 1 >= N) {
-            break;
-        }
-        int frac = mu & (one - 1); /* 0..one-1 */
-        int inv = one - frac;
-        /* Linear interpolation between x[a] and x[b] (complex) */
-        int32_t ar = x[a];
-        int32_t aj = x[a + 1];
-        int32_t br = x[b];
-        int32_t bj = x[b + 1];
-        int32_t ir = (int32_t)(((int64_t)inv * ar + (int64_t)frac * br) >> 20);
-        int32_t ij = (int32_t)(((int64_t)inv * aj + (int64_t)frac * bj) >> 20);
-        y[out_n++] = (int16_t)ir;
-        y[out_n++] = (int16_t)ij;
 
-        /* Gardner error using previous and next symbol-spaced samples */
-        int km1 = a - 2;
-        if (km1 < 0) {
-            km1 = 0;
-        }
-        int kp1 = b + 2;
-        if (kp1 + 1 >= N) {
-            kp1 = b;
-        }
-        int16_t xr1 = x[kp1];
-        int16_t xj1 = x[kp1 + 1];
-        int16_t xrm = x[km1];
-        int16_t xjm = x[km1 + 1];
-        int16_t dr = xr1 - xrm;
-        int16_t dj = xj1 - xjm;
-        int32_t e = (int32_t)dr * (int32_t)ir + (int32_t)dj * (int32_t)ij; /* Q0 */
+    /* Sync from demod_state to module state */
+    d->ted_state.mu_q20 = d->ted_mu_q20;
 
-        /* Update fractional phase: nominal advance + small correction */
-        int64_t corr = ((int64_t)gain * (int64_t)e) >> 15; /* scale */
-        mu += mu_nom + (int)corr;
-        /* Wrap mu to [0, one) */
-        if (mu >= one) {
-            mu -= one;
-        }
-        if (mu < 0) {
-            mu += one;
-        }
-    }
-    if (out_n >= 2) {
-        memcpy(d->lowpassed, y, (size_t)out_n * sizeof(int16_t));
-        d->lp_len = out_n;
-    }
-    d->ted_mu_q20 = mu;
+    ted_config_t cfg = {
+        .enabled = d->ted_enabled,
+        .force = d->ted_force,
+        .gain_q20 = d->ted_gain_q20,
+        .sps = d->ted_sps
+    };
+
+    gardner_timing_adjust(&cfg, &d->ted_state, d->lowpassed, &d->lp_len, d->timing_buf);
+
+    /* Sync back to demod_state */
+    d->ted_mu_q20 = d->ted_state.mu_q20;
 }
+
 
 /**
  * Greatest common divisor via Euclidean algorithm.
@@ -2111,6 +1915,9 @@ demod_init_analog(struct demod_state* s) {
     s->ted_gain_q20 = 0;
     s->ted_sps = 0;
     s->ted_mu_q20 = 0;
+    /* Initialize FLL and TED module states */
+    fll_init_state(&s->fll_state);
+    ted_init_state(&s->ted_state);
     /* Squelch estimator init */
     s->squelch_running_power = 0;
     s->squelch_decim_stride = 16; /* evaluate 1/16th samples for low CPU */
@@ -2203,6 +2010,9 @@ demod_init_ro2(struct demod_state* s) {
     s->ted_gain_q20 = 0;
     s->ted_sps = 0;
     s->ted_mu_q20 = 0;
+    /* Initialize FLL and TED module states */
+    fll_init_state(&s->fll_state);
+    ted_init_state(&s->ted_state);
     /* Squelch estimator init */
     s->squelch_running_power = 0;
     s->squelch_decim_stride = 16;
@@ -2290,6 +2100,9 @@ demod_init(struct demod_state* s) {
     s->ted_gain_q20 = 0;
     s->ted_sps = 0;
     s->ted_mu_q20 = 0;
+    /* Initialize FLL and TED module states */
+    fll_init_state(&s->fll_state);
+    ted_init_state(&s->ted_state);
     /* Squelch estimator init */
     s->squelch_running_power = 0;
     s->squelch_decim_stride = 16;
