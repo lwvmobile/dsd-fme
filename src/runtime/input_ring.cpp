@@ -1,5 +1,6 @@
 /*
  * Input ring buffer for RTL-SDR USB data
+ *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <time.h>
 #include <cstring>
+#include <time.h>
 #include "runtime/input_ring.h"
 
 extern int exitflag; // defined in rtl_sdr_fm.cpp

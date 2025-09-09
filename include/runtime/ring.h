@@ -1,5 +1,6 @@
 /*
  * Output ring buffer for demodulated audio samples
+ *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,8 +19,8 @@
 
 #pragma once
 
-#include <pthread.h>
 #include <atomic>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -100,14 +101,12 @@ ring_clear(struct output_state* o) {
 /**
  * Write up to count samples, blocking until space is available. Signals data availability after writes.
  */
-void
-ring_write(struct output_state* o, const int16_t* data, size_t count);
+void ring_write(struct output_state* o, const int16_t* data, size_t count);
 
 /**
  * Same as ring_write but does not signal; caller decides when to signal
  */
-void
-ring_write_no_signal(struct output_state* o, const int16_t* data, size_t count);
+void ring_write_no_signal(struct output_state* o, const int16_t* data, size_t count);
 
 /**
  * Write samples with signal on empty-to-non-empty transition.
@@ -116,8 +115,7 @@ ring_write_no_signal(struct output_state* o, const int16_t* data, size_t count);
  * @param data  Source samples to write.
  * @param count Number of samples to write.
  */
-void
-ring_write_signal_on_empty_transition(struct output_state* o, const int16_t* data, size_t count);
+void ring_write_signal_on_empty_transition(struct output_state* o, const int16_t* data, size_t count);
 
 /**
  * Read one sample from the output ring, blocking with timeout until available
@@ -126,8 +124,7 @@ ring_write_signal_on_empty_transition(struct output_state* o, const int16_t* dat
  * @param out  Destination for one sample.
  * @return 0 on success, -1 on exit.
  */
-int
-ring_read_one(struct output_state* o, int16_t* out);
+int ring_read_one(struct output_state* o, int16_t* out);
 
 /**
  * Read up to max_count samples into out. Blocks until at least one sample is available or exit.
@@ -137,5 +134,4 @@ ring_read_one(struct output_state* o, int16_t* out);
  * @param max_count Maximum number of samples to read.
  * @return Number of samples read (>=1) or -1 on exit.
  */
-int
-ring_read_batch(struct output_state* o, int16_t* out, size_t max_count);
+int ring_read_batch(struct output_state* o, int16_t* out, size_t max_count);

@@ -1,5 +1,6 @@
 /*
  * rtl-sdr, turns your Realtek RTL2832 based DVB dongle into a SDR receiver
+ *
  * Copyright (C) 2012 by Steve Markgraf <steve@steve-m.de>
  * Copyright (C) 2012 by Hoernchen <la@tfc-server.de>
  * Copyright (C) 2012 by Kyle Keen <keenerd@gmail.com>
@@ -45,8 +46,6 @@
 #include "runtime/ring.h"
 #include "runtime/rt_sched.h"
 #include "runtime/worker_pool.h"
-
-/* Runtime configuration documentation has moved to runtime/config.h. */
 
 #define DEFAULT_SAMPLE_RATE      48000
 #define DEFAULT_BUF_LENGTH       (1 * 16384)
@@ -328,7 +327,6 @@ struct demod_state {
     int16_t hb_workbuf[MAXIMUM_BUF_LENGTH];
     int16_t hb_hist_i[10][HB_TAPS - 1];
     int16_t hb_hist_q[10][HB_TAPS - 1];
-    /* Reserved buffers for potential deinterleave path (currently unused) */
     alignas(DSD_FME_ALIGN) int16_t hb_i_buf[MAXIMUM_BUF_LENGTH / 2];
     alignas(DSD_FME_ALIGN) int16_t hb_q_buf[MAXIMUM_BUF_LENGTH / 2];
     alignas(DSD_FME_ALIGN) int16_t hb_i_out[MAXIMUM_BUF_LENGTH / 2];
@@ -395,54 +393,15 @@ struct demod_state {
 
     int (*discriminator)(int, int, int, int);
     void (*mode_demod)(struct demod_state*);
-    /* Ready/condvar kept for cleanup compatibility; input ring is a global SPSC ring */
-    pthread_cond_t ready; /* kept for cleanup compatibility; unused now */
+    pthread_cond_t ready;
     pthread_mutex_t ready_m;
     struct output_state* output_target;
 };
-
-/* Worker pool helpers moved to runtime/worker_pool.* */
 
 struct demod_mt_worker_arg {
     struct demod_state* s;
     int id;
 };
-
-/**
- * Worker thread procedure for the minimal 2-thread DEMOD pool.
- * Waits for posted tasks, executes them, and signals completion.
- *
- * @param arg Pointer to `demod_mt_worker_arg` with owning state and worker id.
- * @return NULL when the worker exits.
- */
-/* demod_mt_worker moved to runtime/worker_pool.cpp */
-
-/**
- * Initialize the minimal 2-thread worker pool for intra-block tasks.
- * Enabled when `DSD_FME_MT=1` in the environment.
- *
- * @param s Demodulator state to initialize with worker threads.
- */
-/* demod_mt_init moved to runtime/worker_pool.cpp */
-
-/**
- * Tear down the minimal worker pool created by demod_mt_init.
- *
- * @param s Demodulator state whose worker pool will be destroyed.
- */
-/* demod_mt_destroy moved to runtime/worker_pool.cpp */
-
-/**
- * Post up to two tasks to the worker pool and wait for their completion.
- * If the pool is disabled, runs tasks synchronously on the caller thread.
- *
- * @param s  Demodulator state with worker pool.
- * @param f0 Task 0 function pointer (may be NULL).
- * @param a0 Task 0 argument.
- * @param f1 Task 1 function pointer (may be NULL).
- * @param a1 Task 1 argument.
- */
-/* demod_mt_run_two moved to runtime/worker_pool.cpp */
 
 struct controller_state {
     int exit_flag;
@@ -463,10 +422,6 @@ struct output_state output;
 struct controller_state controller;
 static struct input_ring_state input_ring;
 
-/*
- * Phase 12: Internal stream context to reduce implicit global coupling.
- * Private to this TU; external C API remains unchanged.
- */
 struct RtlSdrStream {
     struct rtl_device* device;
     struct dongle_state* dongle;
@@ -480,68 +435,8 @@ struct RtlSdrStream {
 
 static struct RtlSdrStream* g_stream = NULL;
 
-/**
- * Optionally enable realtime scheduling and set CPU affinity for the current
- * thread based on environment variables.
- *
- * When `DSD_FME_RT_SCHED=1`, attempts to switch the calling thread to
- * SCHED_FIFO with a priority derived from `DSD_FME_RT_PRIO_<ROLE>` if present.
- * If `DSD_FME_CPU_<ROLE>` is set to a valid CPU index, pins the thread to that
- * CPU.
- *
- * @param role Optional role label (e.g. "DEMOD", "DONGLE") used to look up
- *             per-role environment variables.
- */
-/* moved to runtime/rt_sched.cpp */
-
 /* {length, coef, coef, coef}  and scaled by 2^15
    for now, only length 9, optimal way to get +85% bandwidth */
-
-/**
- * Rotate interleaved IQ bytes by 90 degrees in-place.
- *
- * 90° rotation sequence: 1+0j, 0+1j, -1+0j, 0-1j. Operates on u8
- * interleaved I/Q in-place. Negation is performed as (255 - x) to
- * approximate centered negation for subsequent widening by subtracting 128.
- * Assumes `len` is a multiple of 8 (four I/Q pairs per loop).
- *
- * @param buf Interleaved IQ byte buffer.
- * @param len Buffer length in bytes (processed in blocks of 8).
- */
-
-/**
- * Simple boxcar low-pass accumulator with decimation on interleaved I/Q.
- * Accumulates I and Q independently over `downsample` input samples and
- * writes a single output (I,Q) pair per window. Scaling/normalization is
- * deferred; this function sums and decimates with saturation on writeback.
- *
- * @param d Demodulator state (uses lowpassed buffer and decimation state).
- */
-
-/**
- * Simple square window FIR on real samples with decimation to rate_out2.
- *
- * @param s Demodulator state (uses result buffer and decimation state).
- */
-
-/**
- * Fifth-order half-band-like decimator operating on a single real sequence.
- * Caller applies this separately to I and Q streams. Uses 6-tap state in
- * `hist` and writes decimated output in-place.
- *
- * @param data   In/out real data buffer (single channel).
- * @param length Input length (elements), processed in-place.
- * @param hist   Persistent history buffer of length >= 6.
- */
-
-/**
- * FIR filter with symmetric 9-tap coefficients (phase-saving implementation).
- *
- * @param data   In/out data buffer (interleaved step of 2 assumed).
- * @param length Number of input samples.
- * @param fir    Coefficient array (expects layout for length 9).
- * @param hist   History buffer used across calls.
- */
 
 /**
  * Complex multiply using 32-bit intermediates (suitable for small magnitudes).
@@ -771,38 +666,6 @@ polar_disc_lut(int ar, int aj, int br, int bj) {
 }
 
 /**
- * Perform FM discriminator on interleaved low-passed I/Q to produce audio PCM.
- * Uses the active discriminator configured in fm->discriminator.
- *
- * @param fm Demodulator state (uses lowpassed as input, writes to result).
- */
-
-/**
- * Pass-through demodulator: copies low-passed samples to output unchanged.
- *
- * @param fm Demodulator state (copies lowpassed to result).
- */
-
-/**
- * Apply post-demod deemphasis IIR filter with Q15 coefficient.
- *
- * @param fm Demodulator state (reads/writes result, updates deemph_avg).
- */
-
-/**
- * Apply a simple DC blocking (leaky integrator high-pass) filter to audio.
- *
- * @param fm Demodulator state (reads/writes result, updates dc_avg).
- */
-
-/**
- * Optional light post-demod audio low-pass filter (one-pole IIR).
- * Implements: y[n] = y[n-1] + alpha * (x[n] - y[n-1]), where alpha is Q15 in
- * `fm->audio_lpf_alpha`.
- *
- * @param fm Demodulator state (reads/writes `result`, updates `audio_lpf_state`).
- */
-/**
  * Mix lowpassed I/Q by NCO e^{j*phi}, update phase by `fll_freq_q15` per sample.
  * Phase and frequency are Q15 where a full turn (2*pi) maps to 1<<15.
  *
@@ -928,71 +791,6 @@ dsd_fme_sinc(double x) {
 }
 
 /**
- * Design windowed-sinc low-pass prototype for polyphase upfirdn (runs at L*Fs_in).
- * Uses a Hamming window and conservative cutoff to balance CPU vs. stopband.
- * Taps are stored phase-major with stride L (k*L + phase) so each phase sees
- * a contiguous sub-filter. Taps are normalized to give ~unity DC per phase,
- * then scaled by L to compensate polyphase upsampling (maintains amplitude).
- *
- * @param s Demodulator state to receive resampler taps/history.
- * @param L Upsampling factor.
- * @param M Downsampling factor.
- */
-/* resamp_design moved to dsp/resampler.cpp */
-
-/* Helpers for K=16 dot product (int16 x int16 -> int64 accumulator). */
-/* dot-product helpers moved to dsp/resampler.cpp */
-
-/**
- * Process one block using polyphase upfirdn with history.
- *
- * @param s      Demodulator state containing resampler state.
- * @param in     Pointer to input samples.
- * @param in_len Number of input samples.
- * @param out    Pointer to output buffer (sized to hold produced samples).
- * @return Number of output samples written.
- */
-/* resamp_process_block moved to dsp/resampler.cpp */
-
-/**
- * DC-corrected mean power (sqrt-free). Integer-only implementation.
- *
- * @param samples Input sample buffer.
- * @param len     Number of samples to process.
- * @param step    Step between processed samples (subsampling).
- * @return Mean power (squared RMS) with DC bias removed.
- */
-
-/**
- * Full demodulation pipeline for one block.
- * Applies decimation (HB cascade or legacy), optional FLL and timing
- * correction, followed by the configured discriminator and post-processing.
- *
- * @param d Demodulator state (consumes lowpassed, produces result).
- */
-
-/**
- * RTL-SDR asynchronous USB callback.
- * Converts incoming u8 I/Q to s16 and enqueues into the input ring. If
- * `offset_tuning` is off and `DSD_FME_COMBINE_ROT` is enabled (default), a
- * combined rotate+widen implementation is used. Otherwise it falls back to
- * legacy two-pass (rotate_90 u8, then widen subtracting 128) or a simple
- * widen subtracting 127. On overflow, drops oldest ring data to avoid stalls.
- *
- * @param buf USB I/Q byte buffer.
- * @param len Buffer length in bytes (I/Q interleaved).
- * @param ctx Opaque pointer to `dongle_state`.
- */
-
-/**
- * RTL-SDR USB thread entry: reads samples asynchronously into the input ring.
- * Applies optional realtime scheduling/affinity if configured.
- *
- * @param arg Pointer to `dongle_state`.
- * @return NULL on exit.
- */
-
-/**
  * Demodulation thread entry: reads from input ring, runs the demod pipeline,
  * and writes audio samples to the output ring.
  *
@@ -1105,75 +903,6 @@ demod_thread_fn(void* arg) {
 }
 
 /**
- * Find the nearest supported tuner gain to the requested value.
- *
- * @param dev          RTL-SDR device handle.
- * @param target_gain  Desired gain in tenths of dB.
- * @return Nearest supported gain in tenths of dB, or a negative error code.
- */
-
-/**
- * Set RTL-SDR center frequency with a brief status message.
- *
- * @param dev       RTL-SDR device handle.
- * @param frequency Center frequency in Hz.
- * @return 0 on success or a negative error code.
- */
-
-/**
- * Set RTL-SDR sampling rate with a brief status message.
- *
- * @param dev       RTL-SDR device handle.
- * @param samp_rate Sampling rate in Hz.
- * @return 0 on success or a negative error code.
- */
-
-/**
- * Enable or disable direct sampling mode.
- *
- * @param dev RTL-SDR device handle.
- * @param on  Non-zero to enable, zero to disable.
- * @return 0 on success or a negative error code.
- */
-
-/**
- * Enable offset tuning on the tuner if supported.
- *
- * @param dev RTL-SDR device handle.
- * @return 0 on success or a negative error code.
- */
-
-/**
- * Enable tuner automatic gain control.
- *
- * @param dev RTL-SDR device handle.
- * @return 0 on success or a negative error code.
- */
-
-/**
- * Set a fixed tuner gain with a message indicating the result.
- *
- * @param dev  RTL-SDR device handle.
- * @param gain Desired gain in tenths of dB.
- * @return 0 on success or a negative error code.
- */
-
-/**
- * Set tuner PPM frequency error correction.
- *
- * @param dev        RTL-SDR device handle.
- * @param ppm_error  Error in parts-per-million.
- * @return 0 on success or a negative error code.
- */
-
-/**
- * Reset RTL-SDR USB buffers.
- *
- * @param dev RTL-SDR device handle.
- * @return 0 on success or a negative error code.
- */
-
-/**
  * Compute and stage tuner/demodulator capture settings based on the
  * requested center frequency and current demod configuration. The actual
  * device programming occurs elsewhere after these fields are updated.
@@ -1185,13 +914,11 @@ static void
 optimal_settings(int freq, int rate) {
     UNUSED(rate);
 
-    // giant ball of hacks
-    // seems unable to do a single pass, 2:1
     int capture_freq, capture_rate;
     struct dongle_state* d = &dongle;
     struct demod_state* dm = &demod;
     struct controller_state* cs = &controller;
-    dm->downsample = (1000000 / dm->rate_in) + 1; //dm->rate_in is the rtl_bandwidth value
+    dm->downsample = (1000000 / dm->rate_in) + 1;
     if (dm->downsample_passes) {
         int ds = dm->downsample;
         if (ds <= 1) {
@@ -1230,7 +957,6 @@ optimal_settings(int freq, int rate) {
     }
     d->freq = (uint32_t)capture_freq;
     d->rate = (uint32_t)capture_rate;
-    // fprintf (stderr, "Capture Frequency: %i Rate: %i \n", capture_freq, capture_rate);
 }
 
 /**
@@ -1241,8 +967,6 @@ optimal_settings(int freq, int rate) {
  */
 static void*
 controller_thread_fn(void* arg) {
-    // thoughts for multiple dongles
-    // might be no good using a controller thread if retune/rate blocks
     int i;
     struct controller_state* s = static_cast<controller_state*>(arg);
 
@@ -1276,7 +1000,6 @@ controller_thread_fn(void* arg) {
         if (s->freq_len <= 1) {
             continue;
         }
-        /* hacky hopping */
         s->freq_now = (s->freq_now + 1) % s->freq_len;
         optimal_settings(s->freqs[s->freq_now], demod.rate_in);
         rtl_device_set_frequency(rtl_device_handle, dongle.freq);
@@ -1684,27 +1407,6 @@ sanity_checks(void) {
 }
 
 /**
- * Convert a 5-byte UDP control message into an integer.
- * Expects the first byte to be a command and the next four bytes to represent
- * a little-endian 32-bit value.
- *
- * @param buf Pointer to 5-byte buffer.
- * @return Decoded 32-bit little-endian integer from bytes 1..4.
- */
-/* moved to io/udp_control.cpp */
-
-/**
- * UDP control thread: listens for frequency tuning commands and applies them.
- *
- * Message format: 5 bytes, where buf[0]==0 indicates a set-frequency command
- * and buf[1..4] is a little-endian 32-bit frequency in Hz.
- *
- * @param arg Unused.
- * @return NULL on exit.
- */
-/* moved to io/udp_control.cpp */
-
-/**
  * Signal handler to request RTL-SDR async cancel and exit.
  */
 void
@@ -1737,11 +1439,9 @@ open_rtlsdr_stream(dsd_opts* opts) {
             bandwidth_multiplier = MAX_BANDWIDTH_MULTIPLIER;
         }
     }
-    volume_multiplier = 1; //moved to external handling to be more dynamic
+    volume_multiplier = 1;
 
-    //this needs to be initted first, then we set the parameters
     dongle_init(&dongle);
-    //init with low pass if decoding P25 or EDACS/Provoice
     if (opts->frame_p25p1 == 1 || opts->frame_p25p2 == 1 || opts->frame_provoice == 1) {
         demod_init_ro2(&demod);
     } else if (opts->analog_only == 1 || opts->m17encoder == 1) {
@@ -1891,15 +1591,13 @@ open_rtlsdr_stream(dsd_opts* opts) {
     }
 
     dongle.dev_index = opts->rtl_dev_index;
-    // demod.squelch_level = opts->rtl_squelch_level; //no longer used here, used in framesync vc pwr value under select conditions
     LOG_INFO("Setting RTL Bandwidth to %d Hz\n", rtl_bandwidth);
-    // fprintf (stderr, "Setting RTL Sample Multiplier to %d\n", bandwidth_multiplier);
     LOG_INFO("Setting RTL Power Squelch Level to %d\n", opts->rtl_squelch_level);
     if (opts->rtl_udp_port != 0) {
-        port = opts->rtl_udp_port; //set this here, only open socket thread if set
+        port = opts->rtl_udp_port;
     }
     if (opts->rtl_gain_value > 0) {
-        dongle.gain = opts->rtl_gain_value * 10; //multiple by ten to make it consitent with the way rtl_fm works
+        dongle.gain = opts->rtl_gain_value * 10; //multiply by ten to make it consistent with the way rtl_fm works
     }
 
     /* quadruple sample_rate to limit to Δθ to ±π/2 */
@@ -2014,7 +1712,7 @@ open_rtlsdr_stream(dsd_opts* opts) {
     pthread_create(&controller.thread, NULL, controller_thread_fn, (void*)(&controller));
     usleep(100000);
     pthread_create(&demod.thread, NULL, demod_thread_fn, (void*)(&demod));
-    //only start UDP control IF user specified port (for legacy uses)
+    //only start UDP control if user specified port
     if (port != 0) {
         g_udp_ctrl = udp_control_start(
             port,
@@ -2035,7 +1733,6 @@ open_rtlsdr_stream(dsd_opts* opts) {
         output.rate = demod.rate_out;
     }
 
-    /* Phase 12: initialize private stream context after successful startup */
     if (g_stream) {
         free(g_stream);
         g_stream = NULL;
@@ -2070,7 +1767,6 @@ cleanup_rtlsdr_stream(void) {
     safe_cond_signal(&controller.hop, &controller.hop_m);
     pthread_join(controller.thread, NULL);
 
-    //dongle_cleanup(&dongle);
     demod_cleanup(&demod);
     output_cleanup(&output);
     controller_cleanup(&controller);

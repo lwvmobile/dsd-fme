@@ -1,6 +1,11 @@
 /*
- * UDP Control Interface
- * Copyright (C) 2025
+ * UDP Control Interface Header
+ *
+ * This header defines the interface for UDP-based remote control of
+ * DSD-FME parameters. It provides network socket communication for
+ * runtime configuration changes and monitoring of demodulation status.
+ *
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

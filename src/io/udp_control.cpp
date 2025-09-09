@@ -1,8 +1,25 @@
 /*
- * UDP Control Implementation
+ * UDP Control Interface Implementation
  *
- * Extracted from src/rtl_sdr_fm.cpp (socket_thread_fn, chars_to_int)
- * to provide a minimal module for Phase 10 of the refactor plan.
+ * This file implements the UDP-based remote control interface for DSD-FME,
+ * providing network socket communication for runtime parameter configuration
+ * and demodulation status monitoring. It enables external control and
+ * monitoring of the demodulation process.
+ *
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "io/udp_control.h"
@@ -27,6 +44,14 @@ struct udp_control {
     volatile int stop_flag;
 };
 
+/**
+ * Convert 4-byte little-endian payload (following a leading command byte) to
+ * a 32-bit unsigned integer.
+ *
+ * @param buf Pointer to 5-byte buffer where buf[0] is a command and buf[1..4]
+ *            encode the value as little-endian.
+ * @return Parsed 32-bit value.
+ */
 static unsigned int
 udp_chars_to_int(unsigned char* buf) {
     int i;
@@ -37,6 +62,14 @@ udp_chars_to_int(unsigned char* buf) {
     return val;
 }
 
+/**
+ * UDP control thread entry. Binds to INADDR_ANY:udp_port and listens for
+ * 5-byte messages. When a valid tune command is received, invokes the
+ * registered callback with the new frequency.
+ *
+ * @param arg Pointer to udp_control.
+ * @return NULL on exit.
+ */
 static void*
 udp_thread_fn(void* arg) {
     udp_control* ctrl = (udp_control*)arg;
@@ -85,6 +118,10 @@ udp_thread_fn(void* arg) {
     return NULL;
 }
 
+/**
+ * Start UDP control thread listening on udp_port. On valid messages, invokes cb.
+ * Returns opaque handle or NULL on failure.
+ */
 extern "C" udp_control*
 udp_control_start(int udp_port, udp_control_retune_cb cb, void* user_data) {
     if (udp_port == 0) {
@@ -107,6 +144,9 @@ udp_control_start(int udp_port, udp_control_retune_cb cb, void* user_data) {
     return ctrl;
 }
 
+/**
+ * Stop UDP control thread, close socket, and free resources. Safe to call with NULL.
+ */
 extern "C" void
 udp_control_stop(udp_control* ctrl) {
     if (!ctrl) {

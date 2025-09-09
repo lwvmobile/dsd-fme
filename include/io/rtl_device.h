@@ -1,5 +1,6 @@
 /*
  * RTL-SDR Device I/O Layer
+ *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,10 +19,9 @@
 
 #pragma once
 
+#include <pthread.h>
 #include <rtl-sdr.h>
 #include <stdint.h>
-#include <pthread.h>
-#include <atomic>
 #include "runtime/input_ring.h"
 
 #ifdef __cplusplus

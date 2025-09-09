@@ -1,5 +1,6 @@
 /*
  * Input ring buffer for RTL-SDR USB data
+ *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,8 +19,8 @@
 
 #pragma once
 
-#include <pthread.h>
 #include <atomic>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -91,8 +92,8 @@ input_ring_clear(struct input_ring_state* r) {
  * @param n2         [out] Second writable region length.
  * @return Total writable samples granted across regions.
  */
-int
-input_ring_reserve(struct input_ring_state* r, size_t min_needed, int16_t** p1, size_t* n1, int16_t** p2, size_t* n2);
+int input_ring_reserve(struct input_ring_state* r, size_t min_needed, int16_t** p1, size_t* n1, int16_t** p2,
+                       size_t* n2);
 
 /**
  * Commit previously reserved writable regions to the input ring.
@@ -100,8 +101,7 @@ input_ring_reserve(struct input_ring_state* r, size_t min_needed, int16_t** p1, 
  * @param r         Input ring buffer state.
  * @param produced  Number of samples produced to commit.
  */
-void
-input_ring_commit(struct input_ring_state* r, size_t produced);
+void input_ring_commit(struct input_ring_state* r, size_t produced);
 
 /**
  * Write samples to the input ring, blocking if necessary.
@@ -110,8 +110,7 @@ input_ring_commit(struct input_ring_state* r, size_t produced);
  * @param data  Source samples to write.
  * @param count Number of samples to write.
  */
-void
-input_ring_write(struct input_ring_state* r, const int16_t* data, size_t count);
+void input_ring_write(struct input_ring_state* r, const int16_t* data, size_t count);
 
 /**
  * Read up to max_count samples from the input ring, blocking until available.
@@ -121,5 +120,4 @@ input_ring_write(struct input_ring_state* r, const int16_t* data, size_t count);
  * @param max_count Maximum number of samples to read.
  * @return Number of samples read (>=1), 0 if max_count is 0, or -1 on exit.
  */
-int
-input_ring_read_block(struct input_ring_state* r, int16_t* out, size_t max_count);
+int input_ring_read_block(struct input_ring_state* r, int16_t* out, size_t max_count);

@@ -1,10 +1,15 @@
 /*
- * Realtime scheduling and CPU affinity helpers
- * Copyright 2025 DSD-FME Authors
+ * Realtime Scheduling Header
  *
- * This program is free software; you can redistribute it and/or modify
+ * This header provides utilities for realtime scheduling and CPU affinity
+ * management. It enables SCHED_FIFO priority scheduling and core pinning
+ * for critical demodulation threads to ensure low-latency audio processing.
+ *
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
+ * the Free Software Foundation, either version 2 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -13,7 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef DSD_FME_RT_SCHED_H

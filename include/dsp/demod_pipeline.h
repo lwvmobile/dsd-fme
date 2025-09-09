@@ -1,8 +1,32 @@
+/*
+ * DSP Demodulation Pipeline Header
+ *
+ * This header defines the interface for the FM demodulation pipeline,
+ * including low-pass filtering, FM discrimination, deemphasis, DC blocking,
+ * and audio filtering functions. It provides the core signal processing
+ * functions used in the RTL-SDR FM demodulation process.
+ *
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef DSP_DEMOD_PIPELINE_H
 #define DSP_DEMOD_PIPELINE_H
 
-#include <stdint.h>
 #include <pthread.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,24 +44,21 @@ struct demod_state;
  * @param step    Decimation factor.
  * @return New length after decimation.
  */
-int
-low_pass_simple(int16_t* signal2, int len, int step);
+int low_pass_simple(int16_t* signal2, int len, int step);
 
 /**
  * Simple square window FIR on real samples with decimation to rate_out2.
  *
  * @param s Demodulator state (uses result buffer and decimation state).
  */
-void
-low_pass_real(struct demod_state* s);
+void low_pass_real(struct demod_state* s);
 
 /**
  * Deferred low-pass: sums and decimates with saturation on writeback.
  *
  * @param d Demodulator state (uses lowpassed buffer and decimation state).
  */
-void
-low_pass(struct demod_state* d);
+void low_pass(struct demod_state* d);
 
 /**
  * Fifth-order half-band-like decimator operating on a single real sequence.
@@ -48,8 +69,7 @@ low_pass(struct demod_state* d);
  * @param length Input length (elements), processed in-place.
  * @param hist   Persistent history buffer of length >= 6.
  */
-void
-fifth_order(int16_t* data, int length, int16_t* hist);
+void fifth_order(int16_t* data, int length, int16_t* hist);
 
 /**
  * FIR filter with symmetric 9-tap coefficients (phase-saving implementation).
@@ -59,8 +79,7 @@ fifth_order(int16_t* data, int length, int16_t* hist);
  * @param fir    Coefficient array (expects layout for length 9).
  * @param hist   History buffer used across calls.
  */
-void
-generic_fir(int16_t* data, int length, int* fir, int16_t* hist);
+void generic_fir(int16_t* data, int length, int* fir, int16_t* hist);
 
 /**
  * Perform FM discriminator on interleaved low-passed I/Q to produce audio PCM.
@@ -68,40 +87,35 @@ generic_fir(int16_t* data, int length, int* fir, int16_t* hist);
  *
  * @param fm Demodulator state (uses lowpassed as input, writes to result).
  */
-void
-fm_demod(struct demod_state* fm);
+void fm_demod(struct demod_state* fm);
 
 /**
  * Pass-through demodulator: copies low-passed samples to output unchanged.
  *
  * @param fm Demodulator state (copies lowpassed to result).
  */
-void
-raw_demod(struct demod_state* fm);
+void raw_demod(struct demod_state* fm);
 
 /**
  * Apply post-demod deemphasis IIR filter with Q15 coefficient.
  *
  * @param fm Demodulator state (reads/writes result, updates deemph_avg).
  */
-void
-deemph_filter(struct demod_state* fm);
+void deemph_filter(struct demod_state* fm);
 
 /**
  * Apply a simple DC blocking (leaky integrator high-pass) filter to audio.
  *
  * @param fm Demodulator state (reads/writes result, updates dc_avg).
  */
-void
-dc_block_filter(struct demod_state* fm);
+void dc_block_filter(struct demod_state* fm);
 
 /**
  * Apply a simple one-pole low-pass filter to audio.
  *
  * @param fm Demodulator state (reads/writes result, updates audio_lpf_state).
  */
-void
-audio_lpf_filter(struct demod_state* fm);
+void audio_lpf_filter(struct demod_state* fm);
 
 /**
  * Calculate mean power (squared RMS) with DC bias removed.
@@ -111,8 +125,7 @@ audio_lpf_filter(struct demod_state* fm);
  * @param step    Step size for sampling.
  * @return Mean power (squared RMS) with DC bias removed.
  */
-long int
-mean_power(int16_t* samples, int len, int step);
+long int mean_power(int16_t* samples, int len, int step);
 
 /**
  * Full demodulation pipeline for one block.
@@ -121,8 +134,7 @@ mean_power(int16_t* samples, int len, int step);
  *
  * @param d Demodulator state (consumes lowpassed, produces result).
  */
-void
-full_demod(struct demod_state* d);
+void full_demod(struct demod_state* d);
 
 #ifdef __cplusplus
 }

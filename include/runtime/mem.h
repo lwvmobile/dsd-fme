@@ -1,10 +1,24 @@
 /*
- * Minimal aligned memory helpers for DSD-FME runtime
+ * Runtime Memory Management Header
  *
- * Copyright (C) 2025
+ * This header provides aligned memory allocation utilities for DSP operations,
+ * ensuring proper memory alignment for SIMD operations and cache efficiency.
+ * It centralizes memory management to maintain ownership tracking and safe cleanup.
  *
- * This module centralizes aligned allocations to a single place to make
- * ownership explicit and rollback safe.
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once

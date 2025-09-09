@@ -1,13 +1,25 @@
 /*
- * SIMD Widening/Rotation Module
+ * SIMD Widening and Rotation Header
  *
- * This module provides efficient SIMD-accelerated widening of unsigned bytes
- * to signed 16-bit integers, with optional 90° IQ rotation. It uses runtime
- * CPU feature detection to select the optimal implementation (AVX2, SSE2/SSSE3,
- * NEON, or scalar fallback).
+ * This header defines the interface for SIMD-accelerated conversion of
+ * RTL-SDR USB data from unsigned 8-bit bytes to signed 16-bit integers,
+ * with optional 90-degree IQ rotation. It uses runtime CPU feature detection
+ * to select optimal implementations (AVX2, SSE2/SSSE3, NEON, or scalar fallback).
  *
- * This code was extracted from src/rtl_sdr_fm.cpp as part of the RTL-SDR FM
- * refactoring plan (Phase 1).
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef DSD_FME_SIMD_WIDEN_H

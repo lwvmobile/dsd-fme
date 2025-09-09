@@ -1,12 +1,34 @@
+/*
+ * DSP Demodulation Pipeline Implementation
+ *
+ * This file implements the complete FM demodulation pipeline, including
+ * low-pass filtering, FM discrimination, deemphasis, DC blocking, and
+ * audio filtering. It orchestrates the signal processing chain from
+ * baseband IQ samples to final audio output.
+ *
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <math.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
-#include "dsd.h"
 #include "dsp/demod_pipeline.h"
-#include "dsp/simd_widen.h"
 #include "dsp/fll.h"
 #include "dsp/ted.h"
 
@@ -54,7 +76,7 @@ struct demod_state {
     int dc_block, dc_avg;
     /* Half-band decimator state */
     int16_t hb_workbuf[262144];
-    int16_t hb_hist_i[10][14];  /* HB_TAPS-1 = 15-1 = 14 */
+    int16_t hb_hist_i[10][14]; /* HB_TAPS-1 = 15-1 = 14 */
     int16_t hb_hist_q[10][14];
     /* Reserved buffers for potential deinterleave path (currently unused) */
     alignas(64) int16_t hb_i_buf[131072];
@@ -130,9 +152,9 @@ struct demod_state {
 };
 
 /* Macros and constants from the original file */
-#define MAXIMUM_OVERSAMPLE 16
-#define DEFAULT_BUF_LENGTH 16384
-#define MAXIMUM_BUF_LENGTH (MAXIMUM_OVERSAMPLE * DEFAULT_BUF_LENGTH)
+#define MAXIMUM_OVERSAMPLE       16
+#define DEFAULT_BUF_LENGTH       16384
+#define MAXIMUM_BUF_LENGTH       (MAXIMUM_OVERSAMPLE * DEFAULT_BUF_LENGTH)
 #define MAX_BANDWIDTH_MULTIPLIER 8
 
 #ifndef DSD_FME_ALIGN
@@ -148,20 +170,27 @@ struct demod_state {
 #endif
 
 /* Platform-specific aligned pointer assumption */
-template<typename T>
-static inline T* assume_aligned_ptr(T* p, size_t /*align_unused*/) {
+template <typename T>
+static inline T*
+assume_aligned_ptr(T* p, size_t /*align_unused*/) {
     return p;
 }
 
-template<typename T>
-static inline const T* assume_aligned_ptr(const T* p, size_t /*align_unused*/) {
+template <typename T>
+static inline const T*
+assume_aligned_ptr(const T* p, size_t /*align_unused*/) {
     return p;
 }
 
 /* Saturation helper for int16 */
-static inline int16_t sat16(int32_t x) {
-    if (x > 32767) return 32767;
-    if (x < -32768) return -32768;
+static inline int16_t
+sat16(int32_t x) {
+    if (x > 32767) {
+        return 32767;
+    }
+    if (x < -32768) {
+        return -32768;
+    }
     return (int16_t)x;
 }
 
@@ -194,8 +223,7 @@ static const int cic_9_tables[][10] = {
     /* ds_p=9: nine stages */
     {0, 910, 910, 910, 910, 910, 910, 910, 910, 910},
     /* ds_p=10: ten stages */
-    {0, 819, 819, 819, 819, 819, 819, 819, 819, 819}
-};
+    {0, 819, 819, 819, 819, 819, 819, 819, 819, 819}};
 
 /* Global flag for half-band decimator (should be configurable) */
 static int use_halfband_decimator = 1;
@@ -308,7 +336,15 @@ hb_decim2_complex_interleaved(const int16_t* DSD_FME_RESTRICT in, int in_len, in
     return out_ch_len << 1; /* Return total elements (2 * complex samples) */
 }
 
-/* Include the function implementations from rtl_sdr_fm.cpp */
+/**
+ * Boxcar low-pass and decimate by step (no wraparound).
+ * Length must be a multiple of step.
+ *
+ * @param signal2 In/out buffer of samples.
+ * @param len     Length of input buffer.
+ * @param step    Decimation factor.
+ * @return New length after decimation.
+ */
 int
 low_pass_simple(int16_t* signal2, int len, int step) {
     int i, i2, sum;
@@ -334,6 +370,11 @@ low_pass_simple(int16_t* signal2, int len, int step) {
     return out_len;
 }
 
+/**
+ * Simple square window FIR on real samples with decimation to rate_out2.
+ *
+ * @param s Demodulator state (uses result buffer and decimation state).
+ */
 void
 low_pass_real(struct demod_state* s) {
     int i = 0, i2 = 0;
@@ -365,6 +406,11 @@ low_pass_real(struct demod_state* s) {
     s->result_len = i2;
 }
 
+/**
+ * Deferred low-pass: sums and decimates with saturation on writeback.
+ *
+ * @param d Demodulator state (uses lowpassed buffer and decimation state).
+ */
 void
 low_pass(struct demod_state* d) {
     int i = 0, i2 = 0;
@@ -388,6 +434,15 @@ low_pass(struct demod_state* d) {
     d->lp_len = i2;
 }
 
+/**
+ * Fifth-order half-band-like decimator operating on a single real sequence.
+ * Caller applies this separately to I and Q streams. Uses 6-tap state in
+ * `hist` and writes decimated output in-place.
+ *
+ * @param data   In/out real data buffer (single channel).
+ * @param length Input length (elements), processed in-place.
+ * @param hist   Persistent history buffer of length >= 6.
+ */
 void
 fifth_order(int16_t* data, int length, int16_t* hist) {
     int i;
@@ -418,6 +473,14 @@ fifth_order(int16_t* data, int length, int16_t* hist) {
     hist[5] = f;
 }
 
+/**
+ * FIR filter with symmetric 9-tap coefficients (phase-saving implementation).
+ *
+ * @param data   In/out data buffer (interleaved step of 2 assumed).
+ * @param length Number of input samples.
+ * @param fir    Coefficient array (expects layout for length 9).
+ * @param hist   History buffer used across calls.
+ */
 void
 generic_fir(int16_t* data, int length, int* fir, int16_t* hist) {
     int d, temp, sum;
@@ -443,6 +506,12 @@ generic_fir(int16_t* data, int length, int* fir, int16_t* hist) {
     }
 }
 
+/**
+ * Perform FM discriminator on interleaved low-passed I/Q to produce audio PCM.
+ * Uses the active discriminator configured in fm->discriminator.
+ *
+ * @param fm Demodulator state (uses lowpassed as input, writes to result).
+ */
 void
 fm_demod(struct demod_state* fm) {
     int i, pcm;
@@ -469,6 +538,11 @@ fm_demod(struct demod_state* fm) {
     fm->result_len = fm->lp_len / 2;
 }
 
+/**
+ * Pass-through demodulator: copies low-passed samples to output unchanged.
+ *
+ * @param fm Demodulator state (copies lowpassed to result).
+ */
 void
 raw_demod(struct demod_state* fm) {
     int i;
@@ -478,6 +552,11 @@ raw_demod(struct demod_state* fm) {
     fm->result_len = fm->lp_len;
 }
 
+/**
+ * Apply post-demod deemphasis IIR filter with Q15 coefficient.
+ *
+ * @param fm Demodulator state (reads/writes result, updates deemph_avg).
+ */
 void
 deemph_filter(struct demod_state* fm) {
     int avg = fm->deemph_avg; /* per-instance state */
@@ -509,6 +588,11 @@ deemph_filter(struct demod_state* fm) {
     fm->deemph_avg = avg; /* write back state */
 }
 
+/**
+ * Apply a simple DC blocking (leaky integrator high-pass) filter to audio.
+ *
+ * @param fm Demodulator state (reads/writes result, updates dc_avg).
+ */
 void
 dc_block_filter(struct demod_state* fm) {
     int i;
@@ -526,6 +610,11 @@ dc_block_filter(struct demod_state* fm) {
     fm->dc_avg = dc;
 }
 
+/**
+ * Apply a simple one-pole low-pass filter to audio.
+ *
+ * @param fm Demodulator state (reads/writes result, updates audio_lpf_state).
+ */
 void
 audio_lpf_filter(struct demod_state* fm) {
     if (!fm->audio_lpf_enable) {
@@ -553,6 +642,14 @@ audio_lpf_filter(struct demod_state* fm) {
     fm->audio_lpf_state = y;
 }
 
+/**
+ * Calculate mean power (squared RMS) with DC bias removed.
+ *
+ * @param samples Input samples buffer.
+ * @param len     Number of samples.
+ * @param step    Step size for sampling.
+ * @return Mean power (squared RMS) with DC bias removed.
+ */
 long int
 mean_power(int16_t* samples, int len, int step) {
     int64_t p = 0;
@@ -577,21 +674,31 @@ mean_power(int16_t* samples, int len, int step) {
 
 /* Stub implementations for functions that will be moved in Phase 5 */
 /* These will be replaced with actual implementations when Phase 5 is completed */
-static void fll_update_error(struct demod_state* d) {
+static void
+fll_update_error(struct demod_state* d) {
     /* TODO: Implement FLL error estimation */
     (void)d; /* Suppress unused parameter warning */
 }
 
-static void fll_mix_and_update(struct demod_state* d) {
+static void
+fll_mix_and_update(struct demod_state* d) {
     /* TODO: Implement FLL mixing and updating */
     (void)d; /* Suppress unused parameter warning */
 }
 
-static void gardner_timing_adjust(struct demod_state* d) {
+static void
+gardner_timing_adjust(struct demod_state* d) {
     /* TODO: Implement Gardner timing adjustment */
     (void)d; /* Suppress unused parameter warning */
 }
 
+/**
+ * Full demodulation pipeline for one block.
+ * Applies decimation (HB cascade or legacy), optional FLL and timing
+ * correction, followed by the configured discriminator and post-processing.
+ *
+ * @param d Demodulator state (consumes lowpassed, produces result).
+ */
 void
 full_demod(struct demod_state* d) {
     int i, ds_p;

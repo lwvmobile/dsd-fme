@@ -1,5 +1,6 @@
 /*
  * RTL-SDR Device I/O Layer Implementation
+ *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -419,6 +420,14 @@ verbose_reset_buffer(rtlsdr_dev_t* dev) {
 
 // Public API Implementation
 
+/**
+ * Create and initialize an RTL-SDR device.
+ *
+ * @param dev_index Device index to open.
+ * @param input_ring Pointer to input ring for USB data.
+ * @param combine_rotate_enabled_param Whether to use combined rotate+widen for offset tuning.
+ * @return Pointer to rtl_device handle, or NULL on failure.
+ */
 struct rtl_device*
 rtl_device_create(int dev_index, struct input_ring_state* input_ring, int combine_rotate_enabled_param) {
     if (!input_ring) {
@@ -446,6 +455,11 @@ rtl_device_create(int dev_index, struct input_ring_state* input_ring, int combin
     return dev;
 }
 
+/**
+ * Destroy an RTL-SDR device and free resources.
+ *
+ * @param dev Pointer to rtl_device handle.
+ */
 void
 rtl_device_destroy(struct rtl_device* dev) {
     if (!dev) {
@@ -468,6 +482,13 @@ rtl_device_destroy(struct rtl_device* dev) {
     free(dev);
 }
 
+/**
+ * Set device center frequency.
+ *
+ * @param dev RTL-SDR device handle.
+ * @param frequency Frequency in Hz.
+ * @return 0 on success, negative on failure.
+ */
 int
 rtl_device_set_frequency(struct rtl_device* dev, uint32_t frequency) {
     if (!dev || !dev->dev) {
@@ -477,6 +498,13 @@ rtl_device_set_frequency(struct rtl_device* dev, uint32_t frequency) {
     return verbose_set_frequency(dev->dev, frequency);
 }
 
+/**
+ * Set device sample rate.
+ *
+ * @param dev RTL-SDR device handle.
+ * @param samp_rate Sample rate in Hz.
+ * @return 0 on success, negative on failure.
+ */
 int
 rtl_device_set_sample_rate(struct rtl_device* dev, uint32_t samp_rate) {
     if (!dev || !dev->dev) {
@@ -486,6 +514,13 @@ rtl_device_set_sample_rate(struct rtl_device* dev, uint32_t samp_rate) {
     return verbose_set_sample_rate(dev->dev, samp_rate);
 }
 
+/**
+ * Set tuner gain mode and value.
+ *
+ * @param dev RTL-SDR device handle.
+ * @param gain Gain in tenths of dB, or AUTO_GAIN for automatic.
+ * @return 0 on success, negative on failure.
+ */
 int
 rtl_device_set_gain(struct rtl_device* dev, int gain) {
     if (!dev || !dev->dev) {
@@ -502,6 +537,13 @@ rtl_device_set_gain(struct rtl_device* dev, int gain) {
     }
 }
 
+/**
+ * Set frequency correction (PPM error).
+ *
+ * @param dev RTL-SDR device handle.
+ * @param ppm_error PPM correction value.
+ * @return 0 on success, negative on failure.
+ */
 int
 rtl_device_set_ppm(struct rtl_device* dev, int ppm_error) {
     if (!dev || !dev->dev) {
@@ -511,6 +553,13 @@ rtl_device_set_ppm(struct rtl_device* dev, int ppm_error) {
     return verbose_ppm_set(dev->dev, ppm_error);
 }
 
+/**
+ * Set direct sampling mode.
+ *
+ * @param dev RTL-SDR device handle.
+ * @param on 1 to enable, 0 to disable.
+ * @return 0 on success, negative on failure.
+ */
 int
 rtl_device_set_direct_sampling(struct rtl_device* dev, int on) {
     if (!dev || !dev->dev) {
@@ -520,6 +569,12 @@ rtl_device_set_direct_sampling(struct rtl_device* dev, int on) {
     return verbose_direct_sampling(dev->dev, on);
 }
 
+/**
+ * Enable offset tuning mode.
+ *
+ * @param dev RTL-SDR device handle.
+ * @return 0 on success, negative on failure.
+ */
 int
 rtl_device_set_offset_tuning(struct rtl_device* dev) {
     if (!dev || !dev->dev) {
@@ -529,6 +584,12 @@ rtl_device_set_offset_tuning(struct rtl_device* dev) {
     return verbose_offset_tuning(dev->dev);
 }
 
+/**
+ * Reset device buffer.
+ *
+ * @param dev RTL-SDR device handle.
+ * @return 0 on success, negative on failure.
+ */
 int
 rtl_device_reset_buffer(struct rtl_device* dev) {
     if (!dev || !dev->dev) {
@@ -537,6 +598,13 @@ rtl_device_reset_buffer(struct rtl_device* dev) {
     return verbose_reset_buffer(dev->dev);
 }
 
+/**
+ * Start asynchronous reading from the device.
+ *
+ * @param dev RTL-SDR device handle.
+ * @param buf_len Buffer length for async read.
+ * @return 0 on success, negative on failure.
+ */
 int
 rtl_device_start_async(struct rtl_device* dev, uint32_t buf_len) {
     if (!dev || !dev->dev || dev->thread_started) {
@@ -555,6 +623,12 @@ rtl_device_start_async(struct rtl_device* dev, uint32_t buf_len) {
     return 0;
 }
 
+/**
+ * Stop asynchronous reading and join the device thread.
+ *
+ * @param dev RTL-SDR device handle.
+ * @return 0 on success, negative on failure.
+ */
 int
 rtl_device_stop_async(struct rtl_device* dev) {
     if (!dev || !dev->thread_started) {
@@ -571,6 +645,12 @@ rtl_device_stop_async(struct rtl_device* dev) {
     return 0;
 }
 
+/**
+ * Mute the device for a specified number of samples.
+ *
+ * @param dev RTL-SDR device handle.
+ * @param samples Number of samples to mute.
+ */
 void
 rtl_device_mute(struct rtl_device* dev, int samples) {
     if (!dev) {

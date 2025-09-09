@@ -1,10 +1,33 @@
+/*
+ * Worker Pool Implementation
+ *
+ * This file implements a minimal 2-thread worker pool for CPU-intensive
+ * inner loops in the demodulation pipeline. It provides thread-safe task
+ * distribution and parallel processing capabilities when enabled via
+ * runtime configuration, improving performance on multi-core systems.
+ *
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <mutex>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unordered_map>
-#include <mutex>
-#include "dsd.h"
 #include "runtime/worker_pool.h"
 
 /* Opaque handle keyed off demod_state* to avoid depending on its layout here */
@@ -18,7 +41,11 @@ struct WorkerCtx {
     int epoch;
     int completed_in_epoch;
     int posted_count;
-    struct { void (*run)(void*); void* arg; } tasks[2];
+
+    struct {
+        void (*run)(void*);
+        void* arg;
+    } tasks[2];
 };
 
 struct WorkerArg {
@@ -29,18 +56,25 @@ struct WorkerArg {
 static std::unordered_map<const void*, WorkerCtx*> g_ctx_map;
 static std::mutex g_ctx_mu;
 
-static WorkerCtx* get_ctx(const void* key) {
+static WorkerCtx*
+get_ctx(const void* key) {
     std::lock_guard<std::mutex> lg(g_ctx_mu);
     auto it = g_ctx_map.find(key);
     return (it == g_ctx_map.end()) ? nullptr : it->second;
 }
 
-static void set_ctx(const void* key, WorkerCtx* ctx) {
+static void
+set_ctx(const void* key, WorkerCtx* ctx) {
     std::lock_guard<std::mutex> lg(g_ctx_mu);
-    if (ctx) g_ctx_map[key] = ctx; else g_ctx_map.erase(key);
+    if (ctx) {
+        g_ctx_map[key] = ctx;
+    } else {
+        g_ctx_map.erase(key);
+    }
 }
 
-static void* demod_mt_worker(void* arg) {
+static void*
+demod_mt_worker(void* arg) {
     WorkerArg* wa = (WorkerArg*)arg;
     WorkerCtx* ctx = wa->ctx;
     const int id = wa->id;
@@ -75,7 +109,13 @@ static void* demod_mt_worker(void* arg) {
     return NULL;
 }
 
-void demod_mt_init(struct demod_state* s) {
+/**
+ * Initialize the minimal worker pool if DSD_FME_MT=1. Safe to call multiple times per instance.
+ *
+ * @param s Demodulator state used as a key for the worker context.
+ */
+void
+demod_mt_init(struct demod_state* s) {
     const char* mt = getenv("DSD_FME_MT");
     bool enable = (mt && mt[0] == '1');
     if (!enable) {
@@ -110,7 +150,13 @@ void demod_mt_init(struct demod_state* s) {
     fprintf(stderr, "Intra-block multithreading enabled (DSD_FME_MT=1), workers: 2.\n");
 }
 
-void demod_mt_destroy(struct demod_state* s) {
+/**
+ * Tear down the worker threads if they were created by demod_mt_init.
+ *
+ * @param s Demodulator state used as a key for the worker context.
+ */
+void
+demod_mt_destroy(struct demod_state* s) {
     WorkerCtx* ctx = get_ctx((const void*)s);
     if (!ctx || !ctx->enabled) {
         set_ctx((const void*)s, nullptr);
@@ -132,11 +178,25 @@ void demod_mt_destroy(struct demod_state* s) {
     set_ctx((const void*)s, nullptr);
 }
 
-void demod_mt_run_two(struct demod_state* s, void (*f0)(void*), void* a0, void (*f1)(void*), void* a1) {
+/**
+ * Post up to two tasks and wait for completion. Runs synchronously if pool disabled.
+ *
+ * @param s  Demodulator state key for the worker context.
+ * @param f0 Function pointer for first task (may be NULL).
+ * @param a0 Argument for first task.
+ * @param f1 Function pointer for second task (may be NULL).
+ * @param a1 Argument for second task.
+ */
+void
+demod_mt_run_two(struct demod_state* s, void (*f0)(void*), void* a0, void (*f1)(void*), void* a1) {
     WorkerCtx* ctx = get_ctx((const void*)s);
     if (!ctx || !ctx->enabled) {
-        if (f0) f0(a0);
-        if (f1) f1(a1);
+        if (f0) {
+            f0(a0);
+        }
+        if (f1) {
+            f1(a1);
+        }
         return;
     }
     pthread_mutex_lock(&ctx->lock);
@@ -153,5 +213,3 @@ void demod_mt_run_two(struct demod_state* s, void (*f0)(void*), void* a0, void (
     }
     pthread_mutex_unlock(&ctx->lock);
 }
-
-

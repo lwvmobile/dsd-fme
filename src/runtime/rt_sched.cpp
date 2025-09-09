@@ -1,10 +1,16 @@
 /*
- * Realtime scheduling and CPU affinity helpers
- * Copyright 2025 DSD-FME Authors
+ * Realtime Scheduling Implementation
  *
- * This program is free software; you can redistribute it and/or modify
+ * This file implements realtime scheduling and CPU affinity management
+ * utilities. It provides SCHED_FIFO priority scheduling and core pinning
+ * functionality for critical demodulation threads to ensure low-latency
+ * audio processing and deterministic timing.
+ *
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
+ * the Free Software Foundation, either version 2 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -13,7 +19,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "runtime/rt_sched.h"
@@ -26,6 +32,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * Optionally enable realtime scheduling and set CPU affinity for the current
+ * thread based on environment variables.
+ *
+ * When `DSD_FME_RT_SCHED=1`, attempts to switch the calling thread to
+ * SCHED_FIFO with a priority derived from `DSD_FME_RT_PRIO_<ROLE>` if present.
+ * If `DSD_FME_CPU_<ROLE>` is set to a valid CPU index, pins the thread to that
+ * CPU.
+ *
+ * @param role Optional role label (e.g. "DEMOD", "DONGLE", "USB").
+ */
 void
 maybe_set_thread_realtime_and_affinity(const char* role) {
     const char* enable = getenv("DSD_FME_RT_SCHED");

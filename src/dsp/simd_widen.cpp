@@ -1,8 +1,25 @@
 /*
- * SIMD Widening/Rotation Module Implementation
+ * SIMD Widening and Rotation Implementation
  *
- * This file contains the SIMD-accelerated widening and rotation implementations
- * extracted from src/rtl_sdr_fm.cpp as part of the RTL-SDR FM refactoring plan.
+ * This file implements SIMD-accelerated conversion of RTL-SDR USB data
+ * from unsigned 8-bit bytes to signed 16-bit integers, with optional
+ * 90-degree IQ rotation. It includes multiple CPU architecture-specific
+ * implementations for optimal performance across different platforms.
+ *
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "dsp/simd_widen.h"
@@ -44,12 +61,24 @@
 #define DSD_FME_TARGET_ATTR(x)
 #endif
 
-/* CPUID bits for feature detection */
-#define bit_SSE2    (1 << 26)
-#define bit_SSSE3   (1 << 9)
-#define bit_AVX     (1 << 28)
-#define bit_AVX2    (1 << 5)
-#define bit_OSXSAVE (1 << 27)
+/* CPUID bits for feature detection (avoid redefining if provided by <cpuid.h>) */
+#if defined(__x86_64__) || defined(__i386__)
+#ifndef bit_SSE2
+#define bit_SSE2 (1u << 26)
+#endif
+#ifndef bit_SSSE3
+#define bit_SSSE3 (1u << 9)
+#endif
+#ifndef bit_AVX
+#define bit_AVX (1u << 28)
+#endif
+#ifndef bit_AVX2
+#define bit_AVX2 (1u << 5)
+#endif
+#ifndef bit_OSXSAVE
+#define bit_OSXSAVE (1u << 27)
+#endif
+#endif
 
 /* Forward declarations for runtime dispatch */
 static void dsd_fme_init_runtime_dispatch_once(void);

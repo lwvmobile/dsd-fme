@@ -1,3 +1,27 @@
+/*
+ * Runtime Configuration Header
+ *
+ * This header defines the runtime configuration system for DSD-FME,
+ * including environment variable parsing and typed configuration structures.
+ * It handles settings for DSP pipeline options, FLL parameters, TED settings,
+ * audio processing, and multithreading controls.
+ *
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef DSD_FME_RUNTIME_CONFIG_H
 #define DSD_FME_RUNTIME_CONFIG_H
 
@@ -5,7 +29,8 @@
 extern "C" {
 #endif
 
-/* dsd_opts is typedef'd in dsd.h - no forward declaration needed */
+/* Ensure dsd_opts type is visible to prototypes below */
+#include "dsd.h"
 
 /*
  * Runtime configuration (environment variables)

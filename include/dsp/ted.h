@@ -1,3 +1,27 @@
+/*
+ * Timing Error Detector (TED) Header
+ *
+ * This header defines the interface for the Gardner timing error detector
+ * and fractional delay timing correction system. It provides functions for
+ * symbol timing synchronization in digital demodulation modes to correct
+ * for sampling clock offsets and timing errors.
+ *
+ * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef DSP_TED_H
 #define DSP_TED_H
 
@@ -10,14 +34,14 @@ extern "C" {
 /* TED Configuration structure */
 typedef struct {
     int enabled;
-    int force;        /* allow forcing TED even for FM/C4FM paths */
-    int gain_q20;     /* small gain (Q20) for stability */
-    int sps;          /* nominal samples per symbol (e.g., 10 for 4800 sym/s at 48k) */
+    int force;    /* allow forcing TED even for FM/C4FM paths */
+    int gain_q20; /* small gain (Q20) for stability */
+    int sps;      /* nominal samples per symbol (e.g., 10 for 4800 sym/s at 48k) */
 } ted_config_t;
 
 /* TED State structure - minimal fields needed for TED operations */
 typedef struct {
-    int mu_q20;       /* fractional phase [0,1) in Q20 */
+    int mu_q20; /* fractional phase [0,1) in Q20 */
 } ted_state_t;
 
 /**
@@ -37,8 +61,7 @@ void ted_init_state(ted_state_t* state);
  * @param N      Length of buffer (must be even, updated if timing adjustment applied)
  * @param y      Work buffer for timing-adjusted I/Q (must be at least size N)
  */
-void gardner_timing_adjust(const ted_config_t* config, ted_state_t* state,
-                          int16_t* x, int* N, int16_t* y);
+void gardner_timing_adjust(const ted_config_t* config, ted_state_t* state, int16_t* x, int* N, int16_t* y);
 
 #ifdef __cplusplus
 }
