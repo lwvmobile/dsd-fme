@@ -15,7 +15,7 @@ static int env_as_int(const char* v, int fallback) {
     return env_is_set(v) ? atoi(v) : fallback;
 }
 
-void dsd_fme_config_init(const struct dsd_opts* opts) {
+void dsd_fme_config_init(const dsd_opts* opts) {
     (void)opts; /* precedence hook reserved for future CLI/opts overrides */
 
     DsdFmeRuntimeConfig c;

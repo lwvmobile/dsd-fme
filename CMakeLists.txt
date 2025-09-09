@@ -75,7 +75,7 @@ if(CODEC2_FOUND)
 endif(CODEC2_FOUND)
 
 FILE(GLOB SRCS src/*.c src/*.cpp)
-FILE(GLOB HEADERS include/*.h include/*.hpp)
+FILE(GLOB HEADERS include/*.h include/*.hpp include/**/*.h include/**/*.hpp)
 
 # Add DSP module sources explicitly (not caught by the glob above)
 if(RTLSDR_FOUND)
@@ -88,6 +88,7 @@ if(RTLSDR_FOUND)
     list(APPEND SRCS src/runtime/ring.cpp)
     list(APPEND SRCS src/runtime/worker_pool.cpp)
     list(APPEND SRCS src/runtime/config.cpp)
+    list(APPEND SRCS src/runtime/log.cpp)
     list(APPEND SRCS src/io/rtl_device.cpp)
 endif()
 

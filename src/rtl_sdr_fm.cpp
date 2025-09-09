@@ -33,16 +33,17 @@
 #include <strings.h>
 #include <unistd.h>
 #include "dsd.h"
-#include "dsp/simd_widen.h"
 #include "dsp/demod_pipeline.h"
 #include "dsp/fll.h"
-#include "dsp/ted.h"
 #include "dsp/resampler.h"
+#include "dsp/simd_widen.h"
+#include "dsp/ted.h"
+#include "io/rtl_device.h"
+#include "runtime/config.h"
 #include "runtime/input_ring.h"
+#include "runtime/log.h"
 #include "runtime/ring.h"
 #include "runtime/worker_pool.h"
-#include "runtime/config.h"
-#include "io/rtl_device.h"
 
 /* Runtime configuration documentation has moved to runtime/config.h. */
 
@@ -255,7 +256,6 @@ atan_lut_once_init(void) {
     }
 }
 
-
 //UDP -- keep for compatibility reasons
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -445,15 +445,6 @@ struct demod_mt_worker_arg {
  */
 /* demod_mt_run_two moved to runtime/worker_pool.cpp */
 
-
-
-
-
-
-
-
-
-
 struct controller_state {
     int exit_flag;
     pthread_t thread;
@@ -472,7 +463,6 @@ struct demod_state demod;
 struct output_state output;
 struct controller_state controller;
 static struct input_ring_state input_ring;
-
 
 /**
  * Optionally enable realtime scheduling and set CPU affinity for the current
@@ -520,10 +510,10 @@ maybe_set_thread_realtime_and_affinity(const char* role) {
 
     if (pthread_setschedparam(pthread_self(), policy, &sp) != 0) {
         int err = errno;
-        fprintf(stderr, "WARNING: Failed to set %s thread to SCHED_FIFO (needs CAP_SYS_NICE). errno=%d (%s)\n",
-                role ? role : "RT", err, strerror(err));
+        LOG_WARNING("Failed to set %s thread to SCHED_FIFO (needs CAP_SYS_NICE). errno=%d (%s)\n", role ? role : "RT",
+                    err, strerror(err));
     } else {
-        fprintf(stderr, "%s thread SCHED_FIFO priority set to %d.\n", role ? role : "RT", sp.sched_priority);
+        LOG_INFO("%s thread SCHED_FIFO priority set to %d.\n", role ? role : "RT", sp.sched_priority);
     }
 
     /* Optional: role-specific CPU affinity: DSD_FME_CPU_DEMOD / DSD_FME_CPU_DONGLE */
@@ -539,28 +529,19 @@ maybe_set_thread_realtime_and_affinity(const char* role) {
                 CPU_SET((unsigned)cpu, &cpuset);
                 if (pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset) != 0) {
                     int err = errno;
-                    fprintf(stderr, "WARNING: Failed to set CPU affinity for %s thread to CPU %d. errno=%d (%s)\n",
-                            role, cpu, err, strerror(err));
+                    LOG_WARNING("Failed to set CPU affinity for %s thread to CPU %d. errno=%d (%s)\n", role, cpu, err,
+                                strerror(err));
                 } else {
-                    fprintf(stderr, "%s thread pinned to CPU %d.\n", role, cpu);
+                    LOG_INFO("%s thread pinned to CPU %d.\n", role, cpu);
                 }
 #else
                 (void)cpu;
-                fprintf(stderr, "NOTICE: CPU affinity not supported on this platform.\n");
+                LOG_NOTICE("CPU affinity not supported on this platform.\n");
 #endif
             }
         }
     }
 }
-
-
-
-
-
-
-
-
-
 
 /* {length, coef, coef, coef}  and scaled by 2^15
    for now, only length 9, optimal way to get +85% bandwidth */
@@ -585,7 +566,6 @@ maybe_set_thread_realtime_and_affinity(const char* role) {
  *
  * @param d Demodulator state (uses lowpassed buffer and decimation state).
  */
-
 
 /**
  * Simple square window FIR on real samples with decimation to rate_out2.
@@ -889,14 +869,12 @@ fll_mix_and_update(struct demod_state* d) {
     d->fll_state.prev_r = d->fll_prev_r;
     d->fll_state.prev_j = d->fll_prev_j;
 
-    fll_config_t cfg = {
-        .enabled = d->fll_enabled,
-        .alpha_q15 = d->fll_alpha_q15,
-        .beta_q15 = d->fll_beta_q15,
-        .deadband_q14 = d->fll_deadband_q14,
-        .slew_max_q15 = d->fll_slew_max_q15,
-        .use_lut = fll_lut_enabled
-    };
+    fll_config_t cfg = {.enabled = d->fll_enabled,
+                        .alpha_q15 = d->fll_alpha_q15,
+                        .beta_q15 = d->fll_beta_q15,
+                        .deadband_q14 = d->fll_deadband_q14,
+                        .slew_max_q15 = d->fll_slew_max_q15,
+                        .use_lut = fll_lut_enabled};
 
     fll_mix_and_update(&cfg, &d->fll_state, d->lowpassed, d->lp_len);
 
@@ -926,14 +904,12 @@ fll_update_error(struct demod_state* d) {
     d->fll_state.prev_r = d->fll_prev_r;
     d->fll_state.prev_j = d->fll_prev_j;
 
-    fll_config_t cfg = {
-        .enabled = d->fll_enabled,
-        .alpha_q15 = d->fll_alpha_q15,
-        .beta_q15 = d->fll_beta_q15,
-        .deadband_q14 = d->fll_deadband_q14,
-        .slew_max_q15 = d->fll_slew_max_q15,
-        .use_lut = fll_lut_enabled
-    };
+    fll_config_t cfg = {.enabled = d->fll_enabled,
+                        .alpha_q15 = d->fll_alpha_q15,
+                        .beta_q15 = d->fll_beta_q15,
+                        .deadband_q14 = d->fll_deadband_q14,
+                        .slew_max_q15 = d->fll_slew_max_q15,
+                        .use_lut = fll_lut_enabled};
 
     fll_update_error(&cfg, &d->fll_state, d->lowpassed, d->lp_len);
 
@@ -962,18 +938,13 @@ gardner_timing_adjust(struct demod_state* d) {
     d->ted_state.mu_q20 = d->ted_mu_q20;
 
     ted_config_t cfg = {
-        .enabled = d->ted_enabled,
-        .force = d->ted_force,
-        .gain_q20 = d->ted_gain_q20,
-        .sps = d->ted_sps
-    };
+        .enabled = d->ted_enabled, .force = d->ted_force, .gain_q20 = d->ted_gain_q20, .sps = d->ted_sps};
 
     gardner_timing_adjust(&cfg, &d->ted_state, d->lowpassed, &d->lp_len, d->timing_buf);
 
     /* Sync back to demod_state */
     d->ted_mu_q20 = d->ted_state.mu_q20;
 }
-
 
 /**
  * Greatest common divisor via Euclidean algorithm.
@@ -1341,13 +1312,13 @@ controller_thread_fn(void* arg) {
 
     /* Set the frequency */
     rtl_device_set_frequency(rtl_device_handle, dongle.freq);
-    fprintf(stderr, "Oversampling input by: %ix.\n", demod.downsample);
-    fprintf(stderr, "Oversampling output by: %ix.\n", demod.post_downsample);
-    fprintf(stderr, "Buffer size: %0.2fms\n", 1000 * 0.5 * (float)ACTUAL_BUF_LENGTH / (float)dongle.rate);
+    LOG_INFO("Oversampling input by: %ix.\n", demod.downsample);
+    LOG_INFO("Oversampling output by: %ix.\n", demod.post_downsample);
+    LOG_INFO("Buffer size: %0.2fms\n", 1000 * 0.5 * (float)ACTUAL_BUF_LENGTH / (float)dongle.rate);
 
     /* Set the sample rate */
     rtl_device_set_sample_rate(rtl_device_handle, dongle.rate);
-    fprintf(stderr, "Output at %u Hz.\n", demod.rate_in / demod.post_downsample);
+    LOG_INFO("Output at %u Hz.\n", demod.rate_in / demod.post_downsample);
 
     while (!exitflag) {
         safe_cond_wait(&s->hop, &s->hop_m);
@@ -1753,17 +1724,17 @@ controller_cleanup(struct controller_state* s) {
 void
 sanity_checks(void) {
     if (controller.freq_len == 0) {
-        fprintf(stderr, "Please specify a frequency.\n");
+        LOG_ERROR("Please specify a frequency.\n");
         exit(1);
     }
 
     if (controller.freq_len >= FREQUENCIES_LIMIT) {
-        fprintf(stderr, "Too many channels, maximum %i.\n", FREQUENCIES_LIMIT);
+        LOG_ERROR("Too many channels, maximum %i.\n", FREQUENCIES_LIMIT);
         exit(1);
     }
 
     if (controller.freq_len > 1 && demod.squelch_level == 0) {
-        fprintf(stderr, "Please specify a squelch level.  Required for scanning multiple frequencies.\n");
+        LOG_ERROR("Please specify a squelch level.  Required for scanning multiple frequencies.\n");
         exit(1);
     }
 }
@@ -1825,7 +1796,7 @@ socket_thread_fn(void* arg) {
 
     bzero(buffer, 5);
 
-    fprintf(stderr, "Main socket started! :-) Tuning enabled on UDP/%d \n", port);
+    LOG_INFO("Main socket started! :-) Tuning enabled on UDP/%d \n", port);
 
     int new_freq;
 
@@ -1835,7 +1806,7 @@ socket_thread_fn(void* arg) {
             dongle.freq = new_freq;
             optimal_settings(new_freq, demod.rate_in);
             rtl_device_set_frequency(rtl_device_handle, dongle.freq);
-            fprintf(stderr, "\nTuning to: %d [Hz] \n", new_freq);
+            LOG_INFO("\nTuning to: %d [Hz] \n", new_freq);
         }
     }
     if (n < 0) {
@@ -1851,7 +1822,7 @@ socket_thread_fn(void* arg) {
  */
 void
 rtlsdr_sighandler(void) {
-    fprintf(stderr, "Signal caught, exiting!\n");
+    LOG_ERROR("Signal caught, exiting!\n");
     rtl_device_stop_async(rtl_device_handle);
 }
 
@@ -1868,15 +1839,14 @@ open_rtlsdr_stream(dsd_opts* opts) {
     {
         int orig_mult = bandwidth_multiplier;
         if (bandwidth_multiplier < 1) {
-            fprintf(stderr,
-                    "WARNING: bandwidth_multiplier computed as %d (divisor=%d, bandwidth=%d Hz). Clamping to 1.\n",
-                    orig_mult, bandwidth_divisor, rtl_bandwidth);
+            LOG_WARNING("bandwidth_multiplier computed as %d (divisor=%d, bandwidth=%d Hz). Clamping to 1.\n",
+                        orig_mult, bandwidth_divisor, rtl_bandwidth);
             bandwidth_multiplier = 1;
         } else if (bandwidth_multiplier > MAX_BANDWIDTH_MULTIPLIER) {
-            fprintf(stderr,
-                    "WARNING: bandwidth_multiplier computed as %d exceeds max %d (divisor=%d, bandwidth=%d Hz). "
-                    "Clamping to %d.\n",
-                    orig_mult, MAX_BANDWIDTH_MULTIPLIER, bandwidth_divisor, rtl_bandwidth, MAX_BANDWIDTH_MULTIPLIER);
+            LOG_WARNING("bandwidth_multiplier computed as %d exceeds max %d (divisor=%d, bandwidth=%d Hz). "
+                        "Clamping to %d.\n",
+                        orig_mult, MAX_BANDWIDTH_MULTIPLIER, bandwidth_divisor, rtl_bandwidth,
+                        MAX_BANDWIDTH_MULTIPLIER);
             bandwidth_multiplier = MAX_BANDWIDTH_MULTIPLIER;
         }
     }
@@ -1917,9 +1887,15 @@ open_rtlsdr_stream(dsd_opts* opts) {
         dsd_fme_config_init(opts);
         const DsdFmeRuntimeConfig* cfg = dsd_fme_get_config();
         if (cfg) {
-            if (cfg->hb_decim_is_set) use_halfband_decimator = (cfg->hb_decim != 0);
-            if (cfg->combine_rot_is_set) combine_rotate_enabled = (cfg->combine_rot != 0);
-            if (cfg->upsample_fp_is_set) upsample_fixedpoint_enabled = (cfg->upsample_fp != 0);
+            if (cfg->hb_decim_is_set) {
+                use_halfband_decimator = (cfg->hb_decim != 0);
+            }
+            if (cfg->combine_rot_is_set) {
+                combine_rotate_enabled = (cfg->combine_rot != 0);
+            }
+            if (cfg->upsample_fp_is_set) {
+                upsample_fixedpoint_enabled = (cfg->upsample_fp != 0);
+            }
 
             int enable_resamp = 1;
             int target = 48000;
@@ -1933,18 +1909,23 @@ open_rtlsdr_stream(dsd_opts* opts) {
                 int g = gcd_int(inRate, target);
                 int L = target / g;
                 int M = inRate / g;
-                if (L < 1) L = 1;
-                if (M < 1) M = 1;
+                if (L < 1) {
+                    L = 1;
+                }
+                if (M < 1) {
+                    M = 1;
+                }
                 int scale_num = L;
                 int scale_den = M;
                 int scale = (scale_den > 0) ? ((scale_num + scale_den - 1) / scale_den) : 1;
                 if (scale > 4) {
-                    fprintf(stderr, "Resampler ratio too large (L=%d,M=%d). Clamping not supported; disabling resampler.\n", L, M);
+                    LOG_WARNING("Resampler ratio too large (L=%d,M=%d). Clamping not supported; disabling resampler.\n",
+                                L, M);
                     demod.resamp_enabled = 0;
                 } else {
                     demod.resamp_enabled = 1;
                     resamp_design(&demod, L, M);
-                    fprintf(stderr, "Rational resampler enabled: %d -> %d Hz (L=%d,M=%d).\n", inRate, target, L, M);
+                    LOG_INFO("Rational resampler enabled: %d -> %d Hz (L=%d,M=%d).\n", inRate, target, L, M);
                 }
             } else {
                 demod.resamp_enabled = 0;
@@ -1973,26 +1954,48 @@ open_rtlsdr_stream(dsd_opts* opts) {
             int env_ted_gain_set = cfg->ted_gain_is_set;
             int digital_mode = (opts->frame_p25p1 == 1 || opts->frame_p25p2 == 1 || opts->frame_provoice == 1);
             if (digital_mode) {
-                if (!env_ted_set) demod.ted_enabled = 0;
+                if (!env_ted_set) {
+                    demod.ted_enabled = 0;
+                }
                 if (!env_ted_sps_set) {
                     int ds_passes = demod.downsample_passes;
-                    if (ds_passes < 0) ds_passes = 0;
+                    if (ds_passes < 0) {
+                        ds_passes = 0;
+                    }
                     int denom = 1 << ds_passes;
                     long long Fs_cx_ll = (long long)demod.rate_in * (long long)demod.post_downsample;
                     int Fs_cx = (int)(Fs_cx_ll / (denom ? denom : 1));
-                    if (Fs_cx <= 0) Fs_cx = (int)output.rate;
+                    if (Fs_cx <= 0) {
+                        Fs_cx = (int)output.rate;
+                    }
                     int sps = (Fs_cx + 2400) / 4800; /* round(Fs/4800) */
-                    if (sps < 2) sps = 2;
+                    if (sps < 2) {
+                        sps = 2;
+                    }
                     demod.ted_sps = sps;
                 }
-                if (!env_ted_gain_set) demod.ted_gain_q20 = 96;
-                if (!env_fll_alpha_set) demod.fll_alpha_q15 = 150;
-                if (!env_fll_beta_set) demod.fll_beta_q15 = 15;
-                if (!demod.fll_enabled && !cfg->fll_is_set) demod.fll_enabled = 1;
+                if (!env_ted_gain_set) {
+                    demod.ted_gain_q20 = 96;
+                }
+                if (!env_fll_alpha_set) {
+                    demod.fll_alpha_q15 = 150;
+                }
+                if (!env_fll_beta_set) {
+                    demod.fll_beta_q15 = 15;
+                }
+                if (!demod.fll_enabled && !cfg->fll_is_set) {
+                    demod.fll_enabled = 1;
+                }
             } else {
-                if (!env_ted_set) demod.ted_enabled = 0;
-                if (!env_fll_alpha_set) demod.fll_alpha_q15 = 50;
-                if (!env_fll_beta_set) demod.fll_beta_q15 = 5;
+                if (!env_ted_set) {
+                    demod.ted_enabled = 0;
+                }
+                if (!env_fll_alpha_set) {
+                    demod.fll_alpha_q15 = 50;
+                }
+                if (!env_fll_beta_set) {
+                    demod.fll_beta_q15 = 5;
+                }
             }
         }
     }
@@ -2004,14 +2007,14 @@ open_rtlsdr_stream(dsd_opts* opts) {
 
     if (opts->rtlsdr_ppm_error != 0) {
         dongle.ppm_error = opts->rtlsdr_ppm_error;
-        fprintf(stderr, "Setting RTL PPM Error Set to %d\n", opts->rtlsdr_ppm_error);
+        LOG_INFO("Setting RTL PPM Error Set to %d\n", opts->rtlsdr_ppm_error);
     }
 
     dongle.dev_index = opts->rtl_dev_index;
     // demod.squelch_level = opts->rtl_squelch_level; //no longer used here, used in framesync vc pwr value under select conditions
-    fprintf(stderr, "Setting RTL Bandwidth to %d Hz\n", rtl_bandwidth);
+    LOG_INFO("Setting RTL Bandwidth to %d Hz\n", rtl_bandwidth);
     // fprintf (stderr, "Setting RTL Sample Multiplier to %d\n", bandwidth_multiplier);
-    fprintf(stderr, "Setting RTL Power Squelch Level to %d\n", opts->rtl_squelch_level);
+    LOG_INFO("Setting RTL Power Squelch Level to %d\n", opts->rtl_squelch_level);
     if (opts->rtl_udp_port != 0) {
         port = opts->rtl_udp_port; //set this here, only open socket thread if set
     }
@@ -2038,10 +2041,10 @@ open_rtlsdr_stream(dsd_opts* opts) {
 
     rtl_device_handle = rtl_device_create(dongle.dev_index, &input_ring, combine_rotate_enabled);
     if (!rtl_device_handle) {
-        fprintf(stderr, "Failed to open rtlsdr device %d.\n", dongle.dev_index);
+        LOG_ERROR("Failed to open rtlsdr device %d.\n", dongle.dev_index);
         exit(1);
     } else {
-        fprintf(stderr, "Using RTLSDR Device Index: %d. \n", dongle.dev_index);
+        LOG_INFO("Using RTLSDR Device Index: %d. \n", dongle.dev_index);
     }
 
     if (demod.deemph) {
@@ -2060,12 +2063,18 @@ open_rtlsdr_stream(dsd_opts* opts) {
         }
         if (demod.deemph) {
             double Fs = (double)demod.rate_out;
-            if (Fs < 1.0) Fs = 1.0;
+            if (Fs < 1.0) {
+                Fs = 1.0;
+            }
             double a = exp(-1.0 / (Fs * tau_s));
             double alpha = 1.0 - a;
             int coef_q15 = (int)lrint(alpha * (double)(1 << 15));
-            if (coef_q15 < 1) coef_q15 = 1;
-            if (coef_q15 > (1 << 15)) coef_q15 = (1 << 15);
+            if (coef_q15 < 1) {
+                coef_q15 = 1;
+            }
+            if (coef_q15 > (1 << 15)) {
+                coef_q15 = (1 << 15);
+            }
             demod.deemph_a = coef_q15;
         }
     }
@@ -2106,14 +2115,14 @@ open_rtlsdr_stream(dsd_opts* opts) {
             }
             demod.audio_lpf_alpha = alpha_q15;
             demod.audio_lpf_enable = 1;
-            fprintf(stderr, "Audio LPF enabled: fc≈%d Hz, alpha_q15=%d\n", cutoff_hz, demod.audio_lpf_alpha);
+            LOG_INFO("Audio LPF enabled: fc≈%d Hz, alpha_q15=%d\n", cutoff_hz, demod.audio_lpf_alpha);
         }
     }
 
     /* Set the tuner gain */
     rtl_device_set_gain(rtl_device_handle, dongle.gain);
     if (dongle.gain == AUTO_GAIN) {
-        fprintf(stderr, "Setting RTL Autogain. \n");
+        LOG_INFO("Setting RTL Autogain. \n");
     }
 
     rtl_device_set_ppm(rtl_device_handle, dongle.ppm_error);
@@ -2133,7 +2142,7 @@ open_rtlsdr_stream(dsd_opts* opts) {
     /* If resampler is enabled, update output.rate for downstream consumers */
     if (demod.resamp_enabled && demod.resamp_target_hz > 0) {
         output.rate = demod.resamp_target_hz;
-        fprintf(stderr, "Output rate set to %d Hz via resampler.\n", output.rate);
+        LOG_INFO("Output rate set to %d Hz via resampler.\n", output.rate);
     } else {
         output.rate = demod.rate_out;
     }
@@ -2144,7 +2153,7 @@ open_rtlsdr_stream(dsd_opts* opts) {
  */
 void
 cleanup_rtlsdr_stream(void) {
-    fprintf(stderr, "cleaning up...\n");
+    LOG_INFO("cleaning up...\n");
     rtl_device_stop_async(rtl_device_handle);
     safe_cond_signal(&demod.ready, &demod.ready_m);
     pthread_join(demod.thread, NULL);
@@ -2233,16 +2242,16 @@ void
 rtl_dev_tune(dsd_opts* opts, long int frequency) {
     int r;
     if (opts->payload == 1) {
-        fprintf(stderr, "\nTuning to %lu Hz.", frequency);
+        LOG_INFO("\nTuning to %lu Hz.", frequency);
     }
     dongle.freq = opts->rtlsdr_center_freq = frequency;
     optimal_settings(dongle.freq, demod.rate_in);
     if (opts->payload == 1) {
-        fprintf(stderr, " (Center Frequency: %u Hz.) \n", dongle.freq);
+        LOG_INFO(" (Center Frequency: %u Hz.) \n", dongle.freq);
     }
     r = rtl_device_set_frequency(rtl_device_handle, dongle.freq);
     if (r < 0) {
-        fprintf(stderr, " (WARNING: Failed to set Center Frequency %u). \n", dongle.freq);
+        LOG_WARNING(" (Failed to set Center Frequency %u). \n", dongle.freq);
     }
 
     rtl_clean_queue();

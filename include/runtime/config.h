@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-struct dsd_opts; /* forward declaration to avoid heavy includes */
+/* dsd_opts is typedef'd in dsd.h - no forward declaration needed */
 
 /*
  * Runtime configuration (environment variables)
@@ -105,9 +105,9 @@ typedef struct DsdFmeRuntimeConfig {
     int upsample_fp;
 
     /* Rational resampler target */
-    int resamp_is_set;        /* env seen */
-    int resamp_disable;       /* env explicitly disables */
-    int resamp_target_hz;     /* >0 when enabled */
+    int resamp_is_set;    /* env seen */
+    int resamp_disable;   /* env explicitly disables */
+    int resamp_target_hz; /* >0 when enabled */
 
     /* Residual CFO FLL */
     int fll_is_set;
@@ -148,7 +148,7 @@ typedef struct DsdFmeRuntimeConfig {
 } DsdFmeRuntimeConfig;
 
 /* Parse environment once. Safe to call multiple times; last call wins. */
-void dsd_fme_config_init(const struct dsd_opts* opts);
+void dsd_fme_config_init(const dsd_opts* opts);
 
 /* Get immutable pointer to current runtime config. */
 const DsdFmeRuntimeConfig* dsd_fme_get_config(void);
@@ -158,5 +158,3 @@ const DsdFmeRuntimeConfig* dsd_fme_get_config(void);
 #endif
 
 #endif /* DSD_FME_RUNTIME_CONFIG_H */
-
-
