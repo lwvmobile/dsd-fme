@@ -41,6 +41,7 @@
 #include "runtime/config.h"
 #include "runtime/input_ring.h"
 #include "runtime/log.h"
+#include "runtime/mem.h"
 #include "runtime/ring.h"
 #include "runtime/rt_sched.h"
 #include "runtime/worker_pool.h"
@@ -1587,11 +1588,11 @@ demod_cleanup(struct demod_state* s) {
     demod_mt_destroy(s);
     /* Free resampler resources */
     if (s->resamp_taps) {
-        free(s->resamp_taps);
+        dsd_fme_aligned_free(s->resamp_taps);
         s->resamp_taps = NULL;
     }
     if (s->resamp_hist) {
-        free(s->resamp_hist);
+        dsd_fme_aligned_free(s->resamp_hist);
         s->resamp_hist = NULL;
     }
 }
@@ -1611,14 +1612,7 @@ output_init(struct output_state* s) {
     s->capacity = (size_t)(MAXIMUM_BUF_LENGTH * 8);
     /* Try aligned allocation for better vectorized copies; fall back if unavailable */
     {
-        void* mem_ptr = NULL;
-#if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
-        if (posix_memalign(&mem_ptr, DSD_FME_ALIGN, s->capacity * sizeof(int16_t)) != 0) {
-            mem_ptr = malloc(s->capacity * sizeof(int16_t));
-        }
-#else
-        mem_ptr = malloc(s->capacity * sizeof(int16_t));
-#endif
+        void* mem_ptr = dsd_fme_aligned_malloc(s->capacity * sizeof(int16_t));
         s->buffer = static_cast<int16_t*>(mem_ptr);
     }
     s->head.store(0);
@@ -1636,7 +1630,7 @@ output_cleanup(struct output_state* s) {
     pthread_cond_destroy(&s->space);
     pthread_mutex_destroy(&s->ready_m);
     if (s->buffer) {
-        free(s->buffer);
+        dsd_fme_aligned_free(s->buffer);
         s->buffer = NULL;
     }
 }
@@ -1758,14 +1752,7 @@ open_rtlsdr_stream(dsd_opts* opts) {
     output_init(&output);
     /* Init input ring */
     {
-        void* mem_ptr = NULL;
-#if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
-        if (posix_memalign(&mem_ptr, DSD_FME_ALIGN, (size_t)(MAXIMUM_BUF_LENGTH * 8) * sizeof(int16_t)) != 0) {
-            mem_ptr = malloc((size_t)(MAXIMUM_BUF_LENGTH * 8) * sizeof(int16_t));
-        }
-#else
-        mem_ptr = malloc((size_t)(MAXIMUM_BUF_LENGTH * 8) * sizeof(int16_t));
-#endif
+        void* mem_ptr = dsd_fme_aligned_malloc((size_t)(MAXIMUM_BUF_LENGTH * 8) * sizeof(int16_t));
         input_ring.buffer = static_cast<int16_t*>(mem_ptr);
         input_ring.capacity = (size_t)(MAXIMUM_BUF_LENGTH * 8);
         input_ring.head.store(0);
@@ -2090,7 +2077,7 @@ cleanup_rtlsdr_stream(void) {
 
     /* free input ring */
     if (input_ring.buffer) {
-        free(input_ring.buffer);
+        dsd_fme_aligned_free(input_ring.buffer);
         input_ring.buffer = NULL;
     }
 

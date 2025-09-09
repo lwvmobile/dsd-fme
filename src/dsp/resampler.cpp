@@ -10,13 +10,13 @@
  */
 
 #include <math.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
 #include <pthread.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "dsp/resampler.h"
 #include "dsp/fll.h"
+#include "dsp/resampler.h"
 #include "dsp/ted.h"
 
 /* We include the demod state definition from the compilation unit that
@@ -34,6 +34,7 @@
 #ifndef DSD_FME_ALIGN
 #define DSD_FME_ALIGN 64
 #endif
+#include "runtime/mem.h"
 
 #if defined(__GNUC__) || defined(__clang__)
 #define DSD_FME_RESTRICT __restrict__
@@ -71,9 +72,9 @@ assume_aligned_ptr(const T* p, size_t /*align_unused*/) {
  * src/dsp/demod_pipeline.cpp to ensure offset compatibility.
  */
 
-#define MAXIMUM_OVERSAMPLE 16
-#define DEFAULT_BUF_LENGTH 16384
-#define MAXIMUM_BUF_LENGTH (MAXIMUM_OVERSAMPLE * DEFAULT_BUF_LENGTH)
+#define MAXIMUM_OVERSAMPLE       16
+#define DEFAULT_BUF_LENGTH       16384
+#define MAXIMUM_BUF_LENGTH       (MAXIMUM_OVERSAMPLE * DEFAULT_BUF_LENGTH)
 #define MAX_BANDWIDTH_MULTIPLIER 8
 
 struct output_state; /* forward */
@@ -163,9 +164,19 @@ struct demod_state {
     int mt_epoch;
     int mt_completed_in_epoch;
     int mt_posted_count;
-    struct { void (*run)(void*); void* arg; } mt_tasks[2];
+
+    struct {
+        void (*run)(void*);
+        void* arg;
+    } mt_tasks[2];
+
     int mt_worker_id[2];
-    struct { struct demod_state* s; int id; } mt_args[2];
+
+    struct {
+        struct demod_state* s;
+        int id;
+    } mt_args[2];
+
     int (*discriminator)(int, int, int, int);
     void (*mode_demod)(struct demod_state*);
     pthread_cond_t ready;
@@ -183,8 +194,12 @@ dsd_fme_sinc(double x) {
 
 static inline int16_t
 sat16_local(int32_t x) {
-    if (x > 32767) return 32767;
-    if (x < -32768) return -32768;
+    if (x > 32767) {
+        return 32767;
+    }
+    if (x < -32768) {
+        return -32768;
+    }
     return (int16_t)x;
 }
 
@@ -204,33 +219,19 @@ resamp_design(struct demod_state* s, int L, int M) {
     int mid = (N - 1) / 2;
 
     if (s->resamp_taps) {
-        free(s->resamp_taps);
+        dsd_fme_aligned_free(s->resamp_taps);
         s->resamp_taps = NULL;
     }
     if (s->resamp_hist) {
-        free(s->resamp_hist);
+        dsd_fme_aligned_free(s->resamp_hist);
         s->resamp_hist = NULL;
     }
     {
-        void* mem_ptr = NULL;
-#if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
-        if (posix_memalign(&mem_ptr, DSD_FME_ALIGN, (size_t)N * sizeof(int16_t)) != 0) {
-            mem_ptr = malloc((size_t)N * sizeof(int16_t));
-        }
-#else
-        mem_ptr = malloc((size_t)N * sizeof(int16_t));
-#endif
+        void* mem_ptr = dsd_fme_aligned_malloc((size_t)N * sizeof(int16_t));
         s->resamp_taps = (int16_t*)mem_ptr;
     }
     {
-        void* mem_ptr = NULL;
-#if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
-        if (posix_memalign(&mem_ptr, DSD_FME_ALIGN, (size_t)taps_per_phase * sizeof(int16_t)) != 0) {
-            mem_ptr = malloc((size_t)taps_per_phase * sizeof(int16_t));
-        }
-#else
-        mem_ptr = malloc((size_t)taps_per_phase * sizeof(int16_t));
-#endif
+        void* mem_ptr = dsd_fme_aligned_malloc((size_t)taps_per_phase * sizeof(int16_t));
         s->resamp_hist = (int16_t*)mem_ptr;
     }
     if (!s->resamp_taps || !s->resamp_hist) {
@@ -266,8 +267,12 @@ resamp_design(struct demod_state* s, int L, int M) {
         double h = 2.0 * fc * dsd_fme_sinc(2.0 * fc * (double)m);
         double t = (h * w / gain) * phase_gain_comp;
         int v = (int)lrint(t * (double)(1 << 15));
-        if (v > 32767) v = 32767;
-        if (v < -32768) v = -32768;
+        if (v > 32767) {
+            v = 32767;
+        }
+        if (v < -32768) {
+            v = -32768;
+        }
         s->resamp_taps[n] = (int16_t)v;
     }
 
@@ -290,6 +295,7 @@ dsd_fme_dot16_scalar(const int16_t* a, const int16_t* b) {
 #if defined(__x86_64__) || defined(__i386__)
 #if defined(__SSE2__)
 #include <emmintrin.h>
+
 static inline int64_t
 dsd_fme_dot16_sse2(const int16_t* a, const int16_t* b) {
     __m128i va0 = _mm_loadu_si128((const __m128i*)a);
@@ -311,6 +317,7 @@ dsd_fme_dot16_sse2(const int16_t* a, const int16_t* b) {
 
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
 #include <arm_neon.h>
+
 static inline int64_t
 dsd_fme_dot16_neon(const int16_t* a, const int16_t* b) {
     int16x8_t a0 = vld1q_s16(a);
@@ -379,13 +386,17 @@ resamp_process_block(struct demod_state* s, const int16_t* DSD_FME_RESTRICT in, 
                     }
                 } else {
                     int idx = head - 1;
-                    if (idx < 0) idx += K;
+                    if (idx < 0) {
+                        idx += K;
+                    }
                     for (int k = 0; k < 16; k++) {
                         hblk[k] = hist[idx];
                         tblk[k] = tk[0];
                         tk += stride;
                         idx--;
-                        if (idx < 0) idx += K;
+                        if (idx < 0) {
+                            idx += K;
+                        }
                     }
                 }
 #if defined(__x86_64__)
@@ -424,31 +435,43 @@ resamp_process_block(struct demod_state* s, const int16_t* DSD_FME_RESTRICT in, 
                     }
                 } else {
                     int idx = head - 1;
-                    if (idx < 0) idx += K;
+                    if (idx < 0) {
+                        idx += K;
+                    }
                     int k = 0;
                     for (; k + 3 < K; k += 4) {
                         acc += (int32_t)hist[idx] * (int32_t)tk[0];
                         tk += stride;
                         idx--;
-                        if (idx < 0) idx += K;
+                        if (idx < 0) {
+                            idx += K;
+                        }
                         acc += (int32_t)hist[idx] * (int32_t)tk[0];
                         tk += stride;
                         idx--;
-                        if (idx < 0) idx += K;
+                        if (idx < 0) {
+                            idx += K;
+                        }
                         acc += (int32_t)hist[idx] * (int32_t)tk[0];
                         tk += stride;
                         idx--;
-                        if (idx < 0) idx += K;
+                        if (idx < 0) {
+                            idx += K;
+                        }
                         acc += (int32_t)hist[idx] * (int32_t)tk[0];
                         tk += stride;
                         idx--;
-                        if (idx < 0) idx += K;
+                        if (idx < 0) {
+                            idx += K;
+                        }
                     }
                     for (; k < K; k++) {
                         acc += (int32_t)hist[idx] * (int32_t)tk[0];
                         tk += stride;
                         idx--;
-                        if (idx < 0) idx += K;
+                        if (idx < 0) {
+                            idx += K;
+                        }
                     }
                 }
             }
@@ -464,5 +487,3 @@ resamp_process_block(struct demod_state* s, const int16_t* DSD_FME_RESTRICT in, 
     s->resamp_hist_head = head;
     return out_len;
 }
-
-
