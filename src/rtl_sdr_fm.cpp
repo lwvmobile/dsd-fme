@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include "dsd.h"
 #include "dsp/simd_widen.h"
+#include "dsp/demod_pipeline.h"
 #include "runtime/input_ring.h"
 #include "runtime/ring.h"
 #include "io/rtl_device.h"
@@ -316,99 +317,6 @@ hb_decim2_real(const int16_t* in, int in_len, int16_t* out, int16_t* hist) {
  * @param hist_q  Persistent Q-channel history of length HB_TAPS-1.
  * @return Interleaved output length (in_len/2).
  */
-static inline int
-hb_decim2_complex_interleaved(const int16_t* DSD_FME_RESTRICT in, int in_len, int16_t* DSD_FME_RESTRICT out,
-                              int16_t* DSD_FME_RESTRICT hist_i, int16_t* DSD_FME_RESTRICT hist_q) {
-    const int hist_len = HB_TAPS - 1;
-    int ch_len = in_len >> 1;     /* per-channel samples */
-    int out_ch_len = ch_len >> 1; /* decimated per-channel */
-    if (out_ch_len <= 0) {
-        return 0;
-    }
-    const int16_t* DSD_FME_RESTRICT in_al = assume_aligned_ptr(in, DSD_FME_ALIGN);
-    int16_t* DSD_FME_RESTRICT out_al = assume_aligned_ptr(out, DSD_FME_ALIGN);
-    int16_t* DSD_FME_RESTRICT hi = assume_aligned_ptr(hist_i, DSD_FME_ALIGN);
-    int16_t* DSD_FME_RESTRICT hq = assume_aligned_ptr(hist_q, DSD_FME_ALIGN);
-    int16_t lastI = (ch_len > 0) ? in_al[in_len - 2] : 0;
-    int16_t lastQ = (ch_len > 0) ? in_al[in_len - 1] : 0;
-    /* Hoist half-band coefficients out of the loop */
-    const int16_t c0 = hb_q15_taps[0];
-    const int16_t c2 = hb_q15_taps[2];
-    const int16_t c4 = hb_q15_taps[4];
-    const int16_t c6 = hb_q15_taps[6];
-    const int16_t c7 = hb_q15_taps[7];
-    for (int n = 0; n < out_ch_len; n++) {
-        int center_idx = hist_len + (n << 1); /* per-channel index */
-        /* Half-band optimization: only even taps and the center tap contribute (symmetric). */
-        auto get_iq = [&](int src_idx, int16_t& xi, int16_t& xq) {
-            if (src_idx < hist_len) {
-                xi = hi[src_idx];
-                xq = hq[src_idx];
-            } else {
-                int rel = src_idx - hist_len;
-                if (rel < ch_len) {
-                    xi = in_al[(size_t)(rel << 1)];
-                    xq = in_al[(size_t)(rel << 1) + 1];
-                } else {
-                    xi = lastI;
-                    xq = lastQ;
-                }
-            }
-        };
-        int16_t ci, cq;
-        int16_t im1, qm1, ip1, qp1;
-        int16_t im3, qm3, ip3, qp3;
-        int16_t im5, qm5, ip5, qp5;
-        int16_t im7, qm7, ip7, qp7;
-        get_iq(center_idx, ci, cq);
-        get_iq(center_idx - 1, im1, qm1);
-        get_iq(center_idx + 1, ip1, qp1);
-        get_iq(center_idx - 3, im3, qm3);
-        get_iq(center_idx + 3, ip3, qp3);
-        get_iq(center_idx - 5, im5, qm5);
-        get_iq(center_idx + 5, ip5, qp5);
-        get_iq(center_idx - 7, im7, qm7);
-        get_iq(center_idx + 7, ip7, qp7);
-        int64_t accI = 0;
-        int64_t accQ = 0;
-        accI += (int32_t)c7 * (int32_t)ci;
-        accQ += (int32_t)c7 * (int32_t)cq;
-        accI += (int32_t)c6 * (int32_t)(im1 + ip1);
-        accQ += (int32_t)c6 * (int32_t)(qm1 + qp1);
-        accI += (int32_t)c4 * (int32_t)(im3 + ip3);
-        accQ += (int32_t)c4 * (int32_t)(qm3 + qp3);
-        accI += (int32_t)c2 * (int32_t)(im5 + ip5);
-        accQ += (int32_t)c2 * (int32_t)(qm5 + qp5);
-        accI += (int32_t)c0 * (int32_t)(im7 + ip7);
-        accQ += (int32_t)c0 * (int32_t)(qm7 + qp7);
-        accI += (1 << 14);
-        accQ += (1 << 14);
-        int32_t yI = (int32_t)(accI >> 15);
-        int32_t yQ = (int32_t)(accQ >> 15);
-        out_al[(size_t)(n << 1)] = sat16(yI);
-        out_al[(size_t)(n << 1) + 1] = sat16(yQ);
-    }
-    /* Update histories with last HB_TAPS-1 per-channel input samples */
-    if (ch_len >= hist_len) {
-        int start = ch_len - hist_len;
-        for (int k = 0; k < hist_len; k++) {
-            int rel = start + k;
-            hi[k] = in_al[(size_t)(rel << 1)];
-            hq[k] = in_al[(size_t)(rel << 1) + 1];
-        }
-    } else {
-        int need = hist_len - ch_len;
-        if (need > 0) {
-            memmove(hi, hi + ch_len, (size_t)need * sizeof(int16_t));
-            memmove(hq, hq + ch_len, (size_t)need * sizeof(int16_t));
-        }
-        for (int k = 0; k < ch_len; k++) {
-            hi[need + k] = in_al[(size_t)(k << 1)];
-            hq[need + k] = in_al[(size_t)(k << 1) + 1];
-        }
-    }
-    return out_ch_len << 1; /* interleaved length */
-}
 
 static void
 atan_lut_once_init(void) {
@@ -909,22 +817,6 @@ maybe_set_thread_realtime_and_affinity(const char* role) {
 
 /* {length, coef, coef, coef}  and scaled by 2^15
    for now, only length 9, optimal way to get +85% bandwidth */
-#define CIC_TABLE_MAX 10
-int cic_9_tables[][10] = {
-    {
-        0,
-    },
-    {9, -156, -97, 2798, -15489, 61019, -15489, 2798, -97, -156},
-    {9, -128, -568, 5593, -24125, 74126, -24125, 5593, -568, -128},
-    {9, -129, -639, 6187, -26281, 77511, -26281, 6187, -639, -129},
-    {9, -122, -612, 6082, -26353, 77818, -26353, 6082, -612, -122},
-    {9, -120, -602, 6015, -26269, 77757, -26269, 6015, -602, -120},
-    {9, -120, -582, 5951, -26128, 77542, -26128, 5951, -582, -120},
-    {9, -119, -580, 5931, -26094, 77505, -26094, 5931, -580, -119},
-    {9, -119, -578, 5921, -26077, 77484, -26077, 5921, -578, -119},
-    {9, -119, -577, 5917, -26067, 77473, -26067, 5917, -577, -119},
-    {9, -199, -362, 5303, -25505, 77489, -25505, 5303, -362, -199},
-};
 
 /**
  * Rotate interleaved IQ bytes by 90 degrees in-place.
@@ -946,98 +838,13 @@ int cic_9_tables[][10] = {
  *
  * @param d Demodulator state (uses lowpassed buffer and decimation state).
  */
-void
-low_pass(struct demod_state* d) {
-    int i = 0, i2 = 0;
-    int16_t* DSD_FME_RESTRICT lp = assume_aligned_ptr(d->lowpassed, DSD_FME_ALIGN);
-    while (i < d->lp_len) {
-        d->now_r += lp[i];
-        d->now_j += lp[i + 1];
-        i += 2;
-        d->prev_index++;
-        if (d->prev_index < d->downsample) {
-            continue;
-        }
-        /* Saturate accumulated sums when writing back to int16 */
-        lp[i2] = sat16(d->now_r);
-        lp[i2 + 1] = sat16(d->now_j);
-        d->prev_index = 0;
-        d->now_r = 0;
-        d->now_j = 0;
-        i2 += 2;
-    }
-    d->lp_len = i2;
-}
 
-/**
- * Boxcar low-pass and decimate by step (no wraparound).
- * Length must be a multiple of step.
- *
- * @param signal2 In/out buffer of samples.
- * @param len     Length of input buffer.
- * @param step    Decimation factor.
- * @return New length after decimation.
- */
-int
-low_pass_simple(int16_t* signal2, int len, int step) {
-    int i, i2, sum;
-    if (step <= 0) {
-        return len;
-    }
-    for (i = 0; i + (step - 1) < len; i += step) {
-        sum = 0;
-        for (i2 = 0; i2 < step; i2++) {
-            sum += (int)signal2[i + i2];
-        }
-        // Normalize by step with rounding. Writes output at i/step index.
-        int val = (sum >= 0) ? (sum + step / 2) / step : -(((-sum) + step / 2) / step);
-        signal2[i / step] = (int16_t)val;
-    }
-    /* Duplicate the final sample to provide one-sample lookahead for callers
-	   that expect at least one extra element. Only do this when there is
-	   capacity (i.e., out_len < len) to avoid writing past the end. */
-    int out_len = len / step;
-    if (out_len > 0 && out_len < len) {
-        signal2[out_len] = signal2[out_len - 1];
-    }
-    return out_len;
-}
 
 /**
  * Simple square window FIR on real samples with decimation to rate_out2.
  *
  * @param s Demodulator state (uses result buffer and decimation state).
  */
-void
-low_pass_real(struct demod_state* s) {
-    int i = 0, i2 = 0;
-    int16_t* r = assume_aligned_ptr(s->result, DSD_FME_ALIGN);
-    int fast = (int)s->rate_out;
-    int slow = s->rate_out2;
-    /* Precompute fixed-point reciprocal of decimation factor to avoid per-sample division */
-    int decim = (slow != 0) ? (fast / slow) : 1;
-    if (decim < 1) {
-        decim = 1;
-    }
-    const int kShiftLPR = 15; /* Q15 reciprocal */
-    int recip_decim_q = (1 << kShiftLPR) / decim;
-    DSD_FME_IVDEP
-    while (i < s->result_len) {
-        s->now_lpr += r[i];
-        i++;
-        s->prev_lpr_index += slow;
-        if (s->prev_lpr_index < fast) {
-            continue;
-        }
-        /* Multiply by reciprocal and shift instead of dividing by (fast/slow) */
-        int64_t scaled = ((int64_t)s->now_lpr * recip_decim_q);
-        r[i2] = (int16_t)(scaled >> kShiftLPR);
-        s->prev_lpr_index -= fast;
-        s->now_lpr = 0;
-        i2 += 1;
-    }
-    s->result_len = i2;
-}
 
 /**
  * Fifth-order half-band-like decimator operating on a single real sequence.
@@ -1048,35 +855,6 @@ low_pass_real(struct demod_state* s) {
  * @param length Input length (elements), processed in-place.
  * @param hist   Persistent history buffer of length >= 6.
  */
-void
-fifth_order(int16_t* data, int length, int16_t* hist) {
-    int i;
-    int16_t a, b, c, d, e, f;
-    a = hist[1];
-    b = hist[2];
-    c = hist[3];
-    d = hist[4];
-    e = hist[5];
-    f = data[0];
-    /* a downsample should improve resolution, so don't fully shift */
-    data[0] = (a + (b + e) * 5 + (c + d) * 10 + f) >> 4;
-    for (i = 4; i < length; i += 4) {
-        a = c;
-        b = d;
-        c = e;
-        d = f;
-        e = data[i - 2];
-        f = data[i];
-        data[i / 2] = (a + (b + e) * 5 + (c + d) * 10 + f) >> 4;
-    }
-    /* archive */
-    hist[0] = a;
-    hist[1] = b;
-    hist[2] = c;
-    hist[3] = d;
-    hist[4] = e;
-    hist[5] = f;
-}
 
 /**
  * FIR filter with symmetric 9-tap coefficients (phase-saving implementation).
@@ -1086,29 +864,6 @@ fifth_order(int16_t* data, int length, int16_t* hist) {
  * @param fir    Coefficient array (expects layout for length 9).
  * @param hist   History buffer used across calls.
  */
-void
-generic_fir(int16_t* data, int length, int* fir, int16_t* hist) {
-    int d, temp, sum;
-    for (d = 0; d < length; d += 2) {
-        temp = data[d];
-        sum = 0;
-        sum += (hist[0] + hist[8]) * fir[1];
-        sum += (hist[1] + hist[7]) * fir[2];
-        sum += (hist[2] + hist[6]) * fir[3];
-        sum += (hist[3] + hist[5]) * fir[4];
-        sum += hist[4] * fir[5];
-        data[d] = sum >> 15;
-        hist[0] = hist[1];
-        hist[1] = hist[2];
-        hist[2] = hist[3];
-        hist[3] = hist[4];
-        hist[4] = hist[5];
-        hist[5] = hist[6];
-        hist[6] = hist[7];
-        hist[7] = hist[8];
-        hist[8] = temp;
-    }
-}
 
 /**
  * Complex multiply using 32-bit intermediates (suitable for small magnitudes).
@@ -1343,103 +1098,24 @@ polar_disc_lut(int ar, int aj, int br, int bj) {
  *
  * @param fm Demodulator state (uses lowpassed as input, writes to result).
  */
-void
-fm_demod(struct demod_state* fm) {
-    int i, pcm;
-    int16_t* lp = assume_aligned_ptr(fm->lowpassed, DSD_FME_ALIGN);
-    int16_t* res = assume_aligned_ptr(fm->result, DSD_FME_ALIGN);
-    /* Use selected discriminator from the very first sample */
-    pcm = fm->discriminator(lp[0], lp[1], fm->pre_r, fm->pre_j);
-    /* Remove known NCO injection from FLL rotation (demod sees -dphi per sample).
-	   Scale Q15 (2*pi==1<<15) to Q14 (pi==1<<14) by >>1. */
-    if (fm->fll_enabled) {
-        pcm += (fm->fll_freq_q15 >> 1);
-    }
-    res[0] = (int16_t)pcm;
-    DSD_FME_IVDEP
-    for (i = 2; i < (fm->lp_len - 1); i += 2) {
-        pcm = fm->discriminator(lp[i], lp[i + 1], lp[i - 2], lp[i - 1]);
-        if (fm->fll_enabled) {
-            pcm += (fm->fll_freq_q15 >> 1);
-        }
-        res[i / 2] = (int16_t)pcm;
-    }
-    fm->pre_r = lp[fm->lp_len - 2];
-    fm->pre_j = lp[fm->lp_len - 1];
-    fm->result_len = fm->lp_len / 2;
-}
 
 /**
  * Pass-through demodulator: copies low-passed samples to output unchanged.
  *
  * @param fm Demodulator state (copies lowpassed to result).
  */
-void
-raw_demod(struct demod_state* fm) {
-    int i;
-    for (i = 0; i < fm->lp_len; i++) {
-        fm->result[i] = (int16_t)fm->lowpassed[i];
-    }
-    fm->result_len = fm->lp_len;
-}
 
 /**
  * Apply post-demod deemphasis IIR filter with Q15 coefficient.
  *
  * @param fm Demodulator state (reads/writes result, updates deemph_avg).
  */
-void
-deemph_filter(struct demod_state* fm) {
-    int avg = fm->deemph_avg; /* per-instance state */
-    int i, d;
-    int16_t* res = assume_aligned_ptr(fm->result, DSD_FME_ALIGN);
-    /* Q15 alpha = (1 - a), where a = exp(-1/(Fs*tau)) */
-    const int kShiftDeemph = 15; /* Q15 */
-    int alpha_q15 = fm->deemph_a;
-    if (alpha_q15 < 0) {
-        alpha_q15 = 0;
-    }
-    if (alpha_q15 > (1 << kShiftDeemph)) {
-        alpha_q15 = (1 << kShiftDeemph);
-    }
-    /* Single-pole IIR: avg += (x - avg) * alpha */
-    DSD_FME_IVDEP
-    for (i = 0; i < fm->result_len; i++) {
-        d = res[i] - avg;
-        int64_t delta = (int64_t)d * (int64_t)alpha_q15;
-        /* symmetric rounding */
-        if (d > 0) {
-            delta += (1LL << (kShiftDeemph - 1));
-        } else if (d < 0) {
-            delta -= (1LL << (kShiftDeemph - 1));
-        }
-        avg += (int)(delta >> kShiftDeemph);
-        res[i] = (int16_t)avg;
-    }
-    fm->deemph_avg = avg; /* write back state */
-}
 
 /**
  * Apply a simple DC blocking (leaky integrator high-pass) filter to audio.
  *
  * @param fm Demodulator state (reads/writes result, updates dc_avg).
  */
-void
-dc_block_filter(struct demod_state* fm) {
-    int i;
-    /* Leaky integrator high-pass: dc += (x - dc) >> k; y = x - dc */
-    int dc = fm->dc_avg;
-    const int k = 11; /* cutoff ~ Fs / 2^k (k in 10..12) */
-    int16_t* res = assume_aligned_ptr(fm->result, DSD_FME_ALIGN);
-    DSD_FME_IVDEP
-    for (i = 0; i < fm->result_len; i++) {
-        int x = (int)res[i];
-        dc += (x - dc) >> k;
-        int y = x - dc;
-        res[i] = sat16(y);
-    }
-    fm->dc_avg = dc;
-}
 
 /**
  * Optional light post-demod audio low-pass filter (one-pole IIR).
@@ -1448,33 +1124,6 @@ dc_block_filter(struct demod_state* fm) {
  *
  * @param fm Demodulator state (reads/writes `result`, updates `audio_lpf_state`).
  */
-static inline void
-audio_lpf_filter(struct demod_state* fm) {
-    if (!fm->audio_lpf_enable) {
-        return;
-    }
-    int i;
-    int16_t* res = assume_aligned_ptr(fm->result, DSD_FME_ALIGN);
-    int y = fm->audio_lpf_state;               /* Q0 */
-    const int alpha_q15 = fm->audio_lpf_alpha; /* Q15 */
-    const int kShift = 15;
-    DSD_FME_IVDEP
-    for (i = 0; i < fm->result_len; i++) {
-        int x = (int)res[i];
-        int d = x - y;
-        int64_t delta = (int64_t)d * (int64_t)alpha_q15;
-        /* symmetric rounding */
-        if (d >= 0) {
-            delta += (1LL << (kShift - 1));
-        } else {
-            delta -= (1LL << (kShift - 1));
-        }
-        y += (int)(delta >> kShift);
-        res[i] = (int16_t)y;
-    }
-    fm->audio_lpf_state = y;
-}
-
 /**
  * Mix lowpassed I/Q by NCO e^{j*phi}, update phase by `fll_freq_q15` per sample.
  * Phase and frequency are Q15 where a full turn (2*pi) maps to 1<<15.
@@ -2069,27 +1718,6 @@ resamp_process_block(struct demod_state* s, const int16_t* DSD_FME_RESTRICT in, 
  * @param step    Step between processed samples (subsampling).
  * @return Mean power (squared RMS) with DC bias removed.
  */
-long int
-mean_power(int16_t* samples, int len, int step) {
-    int64_t p = 0;
-    int64_t t = 0;
-    for (int i = 0; i < len; i += step) {
-        int64_t s = (int64_t)samples[i];
-        t += s;
-        p += s * s;
-    }
-    /* DC-corrected energy ≈ p - (t^2)/len with rounded division */
-    int64_t dc_corr = 0;
-    if (len > 0) {
-        int64_t tt = t * t;
-        dc_corr = (tt + (len / 2)) / len;
-    }
-    int64_t energy = p - dc_corr;
-    if (energy < 0) {
-        energy = 0;
-    }
-    return (long int)(energy / (len > 0 ? len : 1));
-}
 
 /**
  * Full demodulation pipeline for one block.
@@ -2098,130 +1726,6 @@ mean_power(int16_t* samples, int len, int step) {
  *
  * @param d Demodulator state (consumes lowpassed, produces result).
  */
-void
-full_demod(struct demod_state* d) {
-    int i, ds_p;
-    ds_p = d->downsample_passes;
-    if (ds_p) {
-        /* Choose decimator: half-band cascade (default) or legacy path */
-        if (use_halfband_decimator) {
-            /* Apply ds_p stages of 2:1 half-band decimation on interleaved lowpassed */
-            int in_len = d->lp_len;
-            int16_t* src = d->lowpassed;
-            int16_t* dst = d->hb_workbuf;
-            for (i = 0; i < ds_p; i++) {
-                /* Fused complex HB decimation on interleaved I/Q */
-                int out_len_interleaved =
-                    hb_decim2_complex_interleaved(src, in_len, dst, d->hb_hist_i[i], d->hb_hist_q[i]);
-                /* Next stage */
-                src = dst;
-                in_len = out_len_interleaved;
-                dst = (src == d->hb_workbuf) ? d->lowpassed : d->hb_workbuf;
-            }
-            /* Final output resides in 'src' with length in_len; consume in-place (no copy) */
-            d->lowpassed = src;
-            d->lp_len = in_len;
-            /* No droop compensation for half-band cascade */
-        } else {
-            for (i = 0; i < ds_p; i++) {
-                fifth_order(d->lowpassed, (d->lp_len >> i), d->lp_i_hist[i]);
-                fifth_order(d->lowpassed + 1, (d->lp_len >> i) - 1, d->lp_q_hist[i]);
-            }
-            d->lp_len = d->lp_len >> ds_p;
-            /* droop compensation */
-            if (d->comp_fir_size == 9 && ds_p <= CIC_TABLE_MAX) {
-                generic_fir(d->lowpassed, d->lp_len, cic_9_tables[ds_p], d->droop_i_hist);
-                generic_fir(d->lowpassed + 1, d->lp_len - 1, cic_9_tables[ds_p], d->droop_q_hist);
-            }
-        }
-    } else {
-        low_pass(d);
-    }
-    /* Residual CFO loop: estimate error then rotate */
-    fll_update_error(d);
-    fll_mix_and_update(d);
-    /* Lightweight timing error correction (optional, avoid for analog FM demod) */
-    if (d->ted_enabled && (d->mode_demod != &fm_demod || d->ted_force)) {
-        gardner_timing_adjust(d);
-    }
-    /* Power squelch (sqrt-free): compare mean power estimate against squared threshold.
-	   Samples are decimated by `squelch_decim_stride`; an EMA smooths block power.
-	   The sampling phase advances by lp_len % stride per block to cover all offsets. */
-    if (d->squelch_level) {
-        /* Decimated block power estimate (no DC correction; EMA smooths) */
-        int stride = (d->squelch_decim_stride > 0) ? d->squelch_decim_stride : 16;
-        int phase = d->squelch_decim_phase;
-        int64_t p = 0;
-        int count = 0;
-        /* Ensure even I/Q alignment and accumulate pair power I^2+Q^2 */
-        int start = phase & ~1;
-        for (int j = start; j + 1 < d->lp_len; j += stride) {
-            int64_t ir = (int64_t)d->lowpassed[j];
-            int64_t jq = (int64_t)d->lowpassed[j + 1];
-            p += ir * ir + jq * jq;
-            count++;
-        }
-        /* Advance phase to sample different positions next block */
-        if (stride > 0) {
-            int adv = d->lp_len % stride;
-            /* keep even alignment for I/Q pairing */
-            if (adv & 1) {
-                adv++;
-            }
-            if (adv >= stride) {
-                adv %= stride;
-            }
-            d->squelch_decim_phase = (phase + adv) % stride;
-        }
-        if (count > 0) {
-            int64_t block_mean = p / count;
-            if (d->squelch_running_power == 0) {
-                /* Initialize on first measurement to avoid long ramp */
-                d->squelch_running_power = block_mean;
-            } else {
-                /* EMA: running += (block_mean - running) / window, window ~ 2^shift */
-                int w = (d->squelch_window > 0) ? d->squelch_window : 2048;
-                int shift = 0;
-                /* approximate log2(window), prefer power-of-two windows */
-                while ((1 << shift) < w && shift < 30) {
-                    shift++;
-                }
-                int64_t delta = (block_mean - d->squelch_running_power);
-                d->squelch_running_power += (delta >> shift);
-            }
-        }
-        int64_t thr2 = (int64_t)d->squelch_level * (int64_t)d->squelch_level;
-        if (d->squelch_running_power < thr2) {
-            d->squelch_hits++;
-            for (i = 0; i < d->lp_len; i++) {
-                d->lowpassed[i] = 0;
-            }
-        } else {
-            d->squelch_hits = 0;
-        }
-    }
-    d->mode_demod(d); /* lowpassed -> result */
-    if (d->mode_demod == &raw_demod) {
-        return;
-    }
-    /* todo, fm noise squelch */
-    // use nicer filter here too?
-    if (d->post_downsample > 1) {
-        d->result_len = low_pass_simple(d->result, d->result_len, d->post_downsample);
-    }
-    if (d->deemph) {
-        deemph_filter(d);
-    }
-    /* Optional post-demod audio LPF */
-    audio_lpf_filter(d);
-    if (d->dc_block) {
-        dc_block_filter(d);
-    }
-    if (d->rate_out2 > 0) {
-        low_pass_real(d);
-        //arbitrary_resample(d->result, d->result, d->result_len, d->result_len * d->rate_out2 / d->rate_out);
-    }
-}
 
 /**
  * RTL-SDR asynchronous USB callback.
