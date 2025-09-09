@@ -36,6 +36,7 @@
 #include "dsp/simd_widen.h"
 #include "runtime/input_ring.h"
 #include "runtime/ring.h"
+#include "io/rtl_device.h"
 
 /*
  * Environment variables (runtime configuration)
@@ -810,6 +811,7 @@ struct controller_state {
     pthread_mutex_t hop_m;
 };
 
+struct rtl_device* rtl_device_handle = NULL;
 struct dongle_state dongle;
 struct demod_state demod;
 struct output_state output;
@@ -935,41 +937,6 @@ int cic_9_tables[][10] = {
  * @param buf Interleaved IQ byte buffer.
  * @param len Buffer length in bytes (processed in blocks of 8).
  */
-void
-rotate_90(unsigned char* buf, uint32_t len) {
-    uint32_t i;
-    unsigned char tmp;
-    /* Process only full 8-byte blocks (4 IQ pairs) to avoid overrun */
-    uint32_t full = len - (len % 8);
-    for (i = 0; i < full; i += 8) {
-        /* uint8_t negation = 255 - x */
-        tmp = 255 - buf[i + 3];
-        buf[i + 3] = buf[i + 2];
-        buf[i + 2] = tmp;
-
-        buf[i + 4] = 255 - buf[i + 4];
-        buf[i + 5] = 255 - buf[i + 5];
-
-        tmp = 255 - buf[i + 6];
-        buf[i + 6] = buf[i + 7];
-        buf[i + 7] = tmp;
-    }
-    /* Tail: apply rotation pattern for remaining up to three IQ pairs */
-    uint32_t rem = len - full;
-    uint32_t base = full;
-    /* Pair 0 (0 deg): no change needed if rem >= 2 */
-    if (rem >= 4) {
-        /* Pair 1 (+90 deg): (-Q1, I1) */
-        unsigned char t = 255 - buf[base + 3];
-        buf[base + 3] = buf[base + 2];
-        buf[base + 2] = t;
-    }
-    if (rem >= 6) {
-        /* Pair 2 (180 deg): (-I2, -Q2) */
-        buf[base + 4] = 255 - buf[base + 4];
-        buf[base + 5] = 255 - buf[base + 5];
-    }
-}
 
 /**
  * Simple boxcar low-pass accumulator with decimation on interleaved I/Q.
@@ -2268,92 +2235,6 @@ full_demod(struct demod_state* d) {
  * @param len Buffer length in bytes (I/Q interleaved).
  * @param ctx Opaque pointer to `dongle_state`.
  */
-static void
-rtlsdr_callback(unsigned char* buf, uint32_t len, void* ctx) {
-
-    struct dongle_state* s = static_cast<dongle_state*>(ctx);
-    /* One-time: ensure the USB callback thread gets RT scheduling/affinity if enabled */
-    {
-        static std::atomic<int> usb_sched_applied{0};
-        int expected = 0;
-        if (usb_sched_applied.compare_exchange_strong(expected, 1)) {
-            maybe_set_thread_realtime_and_affinity("USB");
-        }
-    }
-
-    if (exitflag) {
-        return;
-    }
-    if (!ctx) {
-        return;
-    }
-    if (s->mute) {
-        /* Clamp mute length to buffer size to avoid overwrite; carry remainder */
-        int old = s->mute.load(std::memory_order_relaxed);
-        if (old > 0) {
-            uint32_t m = (uint32_t)old;
-            if (m > len) {
-                m = len;
-            }
-            memset(buf, 127, m);
-            s->mute.fetch_sub((int)m, std::memory_order_relaxed);
-        }
-    }
-    /* Convert incoming u8 I/Q and write directly into input ring without extra copy */
-    size_t need = len;
-    size_t done = 0;
-    /* For legacy two-pass path, rotate the incoming byte buffer once up front */
-    int use_two_pass = (!s->offset_tuning && !combine_rotate_enabled);
-    if (use_two_pass) {
-        rotate_90(buf, len);
-    }
-    while (need > 0) {
-        int16_t *p1 = NULL, *p2 = NULL;
-        size_t n1 = 0, n2 = 0;
-        input_ring_reserve(&input_ring, need, &p1, &n1, &p2, &n2);
-        if (n1 == 0 && n2 == 0) {
-            /* Ring still full after drop attempt; give up this callback to avoid stall */
-            break;
-        }
-        /* Ensure even counts to keep I/Q pairs aligned */
-        if (n1 & 1) {
-            n1--;
-        }
-        size_t w1 = (n1 < need) ? n1 : need;
-        size_t rem_after_w1 = need - w1;
-        if (n2 & 1) {
-            n2--;
-        }
-        size_t w2 = (n2 < rem_after_w1) ? n2 : rem_after_w1;
-
-        if (!s->offset_tuning && combine_rotate_enabled) {
-            if (w1) {
-                widen_rotate90_u8_to_s16_bias127(buf + done, p1, (uint32_t)w1);
-            }
-            if (w2) {
-                widen_rotate90_u8_to_s16_bias127(buf + done + w1, p2, (uint32_t)w2);
-            }
-        } else if (use_two_pass) {
-            /* bytes already rotated in-place; widen with 128 subtraction to avoid bias */
-            if (w1) {
-                widen_u8_to_s16_bias128_scalar(buf + done, p1, (uint32_t)w1);
-            }
-            if (w2) {
-                widen_u8_to_s16_bias128_scalar(buf + done + w1, p2, (uint32_t)w2);
-            }
-        } else {
-            if (w1) {
-                widen_u8_to_s16_bias127(buf + done, p1, (uint32_t)w1);
-            }
-            if (w2) {
-                widen_u8_to_s16_bias127(buf + done + w1, p2, (uint32_t)w2);
-            }
-        }
-        input_ring_commit(&input_ring, w1 + w2);
-        done += w1 + w2;
-        need -= w1 + w2;
-    }
-}
 
 /**
  * RTL-SDR USB thread entry: reads samples asynchronously into the input ring.
@@ -2362,13 +2243,6 @@ rtlsdr_callback(unsigned char* buf, uint32_t len, void* ctx) {
  * @param arg Pointer to `dongle_state`.
  * @return NULL on exit.
  */
-static void*
-dongle_thread_fn(void* arg) {
-    struct dongle_state* s = static_cast<dongle_state*>(arg);
-    maybe_set_thread_realtime_and_affinity("DONGLE");
-    rtlsdr_read_async(s->dev, rtlsdr_callback, s, 16, s->buf_len);
-    return 0;
-}
 
 /**
  * Demodulation thread entry: reads from input ring, runs the demod pipeline,
@@ -2489,32 +2363,6 @@ demod_thread_fn(void* arg) {
  * @param target_gain  Desired gain in tenths of dB.
  * @return Nearest supported gain in tenths of dB, or a negative error code.
  */
-int
-nearest_gain(rtlsdr_dev_t* dev, int target_gain) {
-    int i, r, err1, err2, count, nearest;
-    int* gains;
-    r = rtlsdr_set_tuner_gain_mode(dev, 1);
-    if (r < 0) {
-        fprintf(stderr, "WARNING: Failed to enable manual gain.\n");
-        return r;
-    }
-    count = rtlsdr_get_tuner_gains(dev, NULL);
-    if (count <= 0) {
-        return 0;
-    }
-    gains = static_cast<int*>(malloc(sizeof(int) * count));
-    count = rtlsdr_get_tuner_gains(dev, gains);
-    nearest = gains[0];
-    for (i = 0; i < count; i++) {
-        err1 = abs(target_gain - nearest);
-        err2 = abs(target_gain - gains[i]);
-        if (err2 < err1) {
-            nearest = gains[i];
-        }
-    }
-    free(gains);
-    return nearest;
-}
 
 /**
  * Set RTL-SDR center frequency with a brief status message.
@@ -2523,17 +2371,6 @@ nearest_gain(rtlsdr_dev_t* dev, int target_gain) {
  * @param frequency Center frequency in Hz.
  * @return 0 on success or a negative error code.
  */
-int
-verbose_set_frequency(rtlsdr_dev_t* dev, uint32_t frequency) {
-    int r;
-    r = rtlsdr_set_center_freq(dev, frequency);
-    if (r < 0) {
-        fprintf(stderr, " (WARNING: Failed to set Center Frequency). \n");
-    } else {
-        fprintf(stderr, " (Center Frequency: %u Hz.) \n", frequency);
-    }
-    return r;
-}
 
 /**
  * Set RTL-SDR sampling rate with a brief status message.
@@ -2542,17 +2379,6 @@ verbose_set_frequency(rtlsdr_dev_t* dev, uint32_t frequency) {
  * @param samp_rate Sampling rate in Hz.
  * @return 0 on success or a negative error code.
  */
-int
-verbose_set_sample_rate(rtlsdr_dev_t* dev, uint32_t samp_rate) {
-    int r;
-    r = rtlsdr_set_sample_rate(dev, samp_rate);
-    if (r < 0) {
-        fprintf(stderr, "WARNING: Failed to set sample rate.\n");
-    } else {
-        fprintf(stderr, "Sampling at %u S/s.\n", samp_rate);
-    }
-    return r;
-}
 
 /**
  * Enable or disable direct sampling mode.
@@ -2561,25 +2387,6 @@ verbose_set_sample_rate(rtlsdr_dev_t* dev, uint32_t samp_rate) {
  * @param on  Non-zero to enable, zero to disable.
  * @return 0 on success or a negative error code.
  */
-int
-verbose_direct_sampling(rtlsdr_dev_t* dev, int on) {
-    int r;
-    r = rtlsdr_set_direct_sampling(dev, on);
-    if (r != 0) {
-        fprintf(stderr, "WARNING: Failed to set direct sampling mode.\n");
-        return r;
-    }
-    if (on == 0) {
-        fprintf(stderr, "Direct sampling mode disabled.\n");
-    }
-    if (on == 1) {
-        fprintf(stderr, "Enabled direct sampling mode, input 1/I.\n");
-    }
-    if (on == 2) {
-        fprintf(stderr, "Enabled direct sampling mode, input 2/Q.\n");
-    }
-    return r;
-}
 
 /**
  * Enable offset tuning on the tuner if supported.
@@ -2587,17 +2394,6 @@ verbose_direct_sampling(rtlsdr_dev_t* dev, int on) {
  * @param dev RTL-SDR device handle.
  * @return 0 on success or a negative error code.
  */
-int
-verbose_offset_tuning(rtlsdr_dev_t* dev) {
-    int r;
-    r = rtlsdr_set_offset_tuning(dev, 1);
-    if (r != 0) {
-        fprintf(stderr, "WARNING: Failed to set offset tuning.\n");
-    } else {
-        fprintf(stderr, "Offset tuning mode enabled.\n");
-    }
-    return r;
-}
 
 /**
  * Enable tuner automatic gain control.
@@ -2605,17 +2401,6 @@ verbose_offset_tuning(rtlsdr_dev_t* dev) {
  * @param dev RTL-SDR device handle.
  * @return 0 on success or a negative error code.
  */
-int
-verbose_auto_gain(rtlsdr_dev_t* dev) {
-    int r;
-    r = rtlsdr_set_tuner_gain_mode(dev, 0);
-    if (r != 0) {
-        fprintf(stderr, "WARNING: Failed to set tuner gain.\n");
-    } else {
-        fprintf(stderr, "Tuner gain set to automatic.\n");
-    }
-    return r;
-}
 
 /**
  * Set a fixed tuner gain with a message indicating the result.
@@ -2624,22 +2409,6 @@ verbose_auto_gain(rtlsdr_dev_t* dev) {
  * @param gain Desired gain in tenths of dB.
  * @return 0 on success or a negative error code.
  */
-int
-verbose_gain_set(rtlsdr_dev_t* dev, int gain) {
-    int r;
-    r = rtlsdr_set_tuner_gain_mode(dev, 1);
-    if (r < 0) {
-        fprintf(stderr, "WARNING: Failed to enable manual gain.\n");
-        return r;
-    }
-    r = rtlsdr_set_tuner_gain(dev, gain);
-    if (r != 0) {
-        fprintf(stderr, "WARNING: Failed to set tuner gain.\n");
-    } else {
-        fprintf(stderr, "Tuner gain set to %0.2f dB.\n", gain / 10.0);
-    }
-    return r;
-}
 
 /**
  * Set tuner PPM frequency error correction.
@@ -2648,19 +2417,6 @@ verbose_gain_set(rtlsdr_dev_t* dev, int gain) {
  * @param ppm_error  Error in parts-per-million.
  * @return 0 on success or a negative error code.
  */
-int
-verbose_ppm_set(rtlsdr_dev_t* dev, int ppm_error) {
-    int r;
-    // if (ppm_error == 0) {
-    // 	return 0;}
-    r = rtlsdr_set_freq_correction(dev, ppm_error);
-    if (r < 0) {
-        fprintf(stderr, "WARNING: Failed to set ppm error.\n");
-    } else {
-        fprintf(stderr, "Tuner error set to %i ppm.\n", ppm_error);
-    }
-    return r;
-}
 
 /**
  * Reset RTL-SDR USB buffers.
@@ -2668,15 +2424,6 @@ verbose_ppm_set(rtlsdr_dev_t* dev, int ppm_error) {
  * @param dev RTL-SDR device handle.
  * @return 0 on success or a negative error code.
  */
-int
-verbose_reset_buffer(rtlsdr_dev_t* dev) {
-    int r;
-    r = rtlsdr_reset_buffer(dev);
-    if (r < 0) {
-        fprintf(stderr, "WARNING: Failed to reset buffers.\n");
-    }
-    return r;
-}
 
 /**
  * Compute and stage tuner/demodulator capture settings based on the
@@ -2760,20 +2507,20 @@ controller_thread_fn(void* arg) {
     /* set up primary channel */
     optimal_settings(s->freqs[0], demod.rate_in);
     if (dongle.direct_sampling) {
-        verbose_direct_sampling(dongle.dev, 1);
+        rtl_device_set_direct_sampling(rtl_device_handle, 1);
     }
     if (dongle.offset_tuning) {
-        verbose_offset_tuning(dongle.dev);
+        rtl_device_set_offset_tuning(rtl_device_handle);
     }
 
     /* Set the frequency */
-    verbose_set_frequency(dongle.dev, dongle.freq);
+    rtl_device_set_frequency(rtl_device_handle, dongle.freq);
     fprintf(stderr, "Oversampling input by: %ix.\n", demod.downsample);
     fprintf(stderr, "Oversampling output by: %ix.\n", demod.post_downsample);
     fprintf(stderr, "Buffer size: %0.2fms\n", 1000 * 0.5 * (float)ACTUAL_BUF_LENGTH / (float)dongle.rate);
 
     /* Set the sample rate */
-    verbose_set_sample_rate(dongle.dev, dongle.rate);
+    rtl_device_set_sample_rate(rtl_device_handle, dongle.rate);
     fprintf(stderr, "Output at %u Hz.\n", demod.rate_in / demod.post_downsample);
 
     while (!exitflag) {
@@ -2784,8 +2531,8 @@ controller_thread_fn(void* arg) {
         /* hacky hopping */
         s->freq_now = (s->freq_now + 1) % s->freq_len;
         optimal_settings(s->freqs[s->freq_now], demod.rate_in);
-        rtlsdr_set_center_freq(dongle.dev, dongle.freq);
-        dongle.mute = BUFFER_DUMP;
+        rtl_device_set_frequency(rtl_device_handle, dongle.freq);
+        rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
     }
     return 0;
 }
@@ -3252,7 +2999,7 @@ socket_thread_fn(void* arg) {
             new_freq = chars_to_int(buffer);
             dongle.freq = new_freq;
             optimal_settings(new_freq, demod.rate_in);
-            rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+            rtl_device_set_frequency(rtl_device_handle, dongle.freq);
             fprintf(stderr, "\nTuning to: %d [Hz] \n", new_freq);
         }
     }
@@ -3270,7 +3017,7 @@ socket_thread_fn(void* arg) {
 void
 rtlsdr_sighandler(void) {
     fprintf(stderr, "Signal caught, exiting!\n");
-    rtlsdr_cancel_async(dongle.dev);
+    rtl_device_stop_async(rtl_device_handle);
 }
 
 /**
@@ -3280,7 +3027,6 @@ rtlsdr_sighandler(void) {
  */
 void
 open_rtlsdr_stream(dsd_opts* opts) {
-    int r;
     rtl_bandwidth = opts->rtl_bandwidth * 1000; //reverted back to straight value
     bandwidth_multiplier = (bandwidth_divisor / rtl_bandwidth);
     /* Guard multiplier to a safe range [1, MAX_BANDWIDTH_MULTIPLIER] */
@@ -3524,8 +3270,8 @@ open_rtlsdr_stream(dsd_opts* opts) {
     /* Ensure async read uses a valid, explicit buffer length */
     dongle.buf_len = (uint32_t)ACTUAL_BUF_LENGTH;
 
-    r = rtlsdr_open(&dongle.dev, (uint32_t)dongle.dev_index);
-    if (r < 0) {
+    rtl_device_handle = rtl_device_create(dongle.dev_index, &input_ring, combine_rotate_enabled);
+    if (!rtl_device_handle) {
         fprintf(stderr, "Failed to open rtlsdr device %d.\n", dongle.dev_index);
         exit(1);
     } else {
@@ -3614,24 +3360,20 @@ open_rtlsdr_stream(dsd_opts* opts) {
     }
 
     /* Set the tuner gain */
+    rtl_device_set_gain(rtl_device_handle, dongle.gain);
     if (dongle.gain == AUTO_GAIN) {
-        verbose_auto_gain(dongle.dev);
         fprintf(stderr, "Setting RTL Autogain. \n");
-    } else {
-        dongle.gain = nearest_gain(dongle.dev, dongle.gain);
-        verbose_gain_set(dongle.dev, dongle.gain);
-        // fprintf (stderr, "Setting RTL Nearest Gain to %d. \n", dongle.gain); //seems to be working now
     }
 
-    verbose_ppm_set(dongle.dev, dongle.ppm_error);
+    rtl_device_set_ppm(rtl_device_handle, dongle.ppm_error);
 
     /* Reset endpoint before we start reading from it (mandatory) */
-    verbose_reset_buffer(dongle.dev);
+    rtl_device_reset_buffer(rtl_device_handle);
 
+    rtl_device_start_async(rtl_device_handle, (uint32_t)ACTUAL_BUF_LENGTH);
     pthread_create(&controller.thread, NULL, controller_thread_fn, (void*)(&controller));
     usleep(100000);
     pthread_create(&demod.thread, NULL, demod_thread_fn, (void*)(&demod));
-    pthread_create(&dongle.thread, NULL, dongle_thread_fn, (void*)(&dongle));
     //only create socket thread IF user specified (for legacy uses), else don't use it
     if (port != 0) {
         pthread_create(&socket_freq, NULL, socket_thread_fn, (void*)(&controller));
@@ -3652,8 +3394,7 @@ open_rtlsdr_stream(dsd_opts* opts) {
 void
 cleanup_rtlsdr_stream(void) {
     fprintf(stderr, "cleaning up...\n");
-    rtlsdr_cancel_async(dongle.dev);
-    pthread_join(dongle.thread, NULL);
+    rtl_device_stop_async(rtl_device_handle);
     safe_cond_signal(&demod.ready, &demod.ready_m);
     pthread_join(demod.thread, NULL);
     safe_cond_signal(&output.ready, &output.ready_m);
@@ -3674,7 +3415,8 @@ cleanup_rtlsdr_stream(void) {
     /* free LUT memory if allocated */
     atan_lut_free();
 
-    rtlsdr_close(dongle.dev);
+    rtl_device_destroy(rtl_device_handle);
+    rtl_device_handle = NULL;
 }
 
 /**
@@ -3697,7 +3439,7 @@ get_rtlsdr_samples(int16_t* out, size_t count, dsd_opts* opts, dsd_state* state)
     /* If PPM Error is Manually Changed, change it here once per batch */
     if (opts->rtlsdr_ppm_error != dongle.ppm_error) {
         dongle.ppm_error = opts->rtlsdr_ppm_error;
-        verbose_ppm_set(dongle.dev, dongle.ppm_error);
+        rtl_device_set_ppm(rtl_device_handle, dongle.ppm_error);
     }
 
     int got = ring_read_batch(&output, out, count);
@@ -3747,7 +3489,7 @@ rtl_dev_tune(dsd_opts* opts, long int frequency) {
     if (opts->payload == 1) {
         fprintf(stderr, " (Center Frequency: %u Hz.) \n", dongle.freq);
     }
-    r = rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+    r = rtl_device_set_frequency(rtl_device_handle, dongle.freq);
     if (r < 0) {
         fprintf(stderr, " (WARNING: Failed to set Center Frequency %u). \n", dongle.freq);
     }

@@ -82,6 +82,7 @@ if(RTLSDR_FOUND)
     list(APPEND SRCS src/dsp/simd_widen.cpp)
     list(APPEND SRCS src/runtime/input_ring.cpp)
     list(APPEND SRCS src/runtime/ring.cpp)
+    list(APPEND SRCS src/io/rtl_device.cpp)
 endif()
 
 if(NOT RTLSDR_FOUND)
