@@ -80,6 +80,8 @@ FILE(GLOB HEADERS include/*.h include/*.hpp)
 # Add DSP module sources explicitly (not caught by the glob above)
 if(RTLSDR_FOUND)
     list(APPEND SRCS src/dsp/simd_widen.cpp)
+    list(APPEND SRCS src/runtime/input_ring.cpp)
+    list(APPEND SRCS src/runtime/ring.cpp)
 endif()
 
 if(NOT RTLSDR_FOUND)
