@@ -29,133 +29,25 @@
 #include <stdlib.h>
 #include <string.h>
 #include "dsp/demod_pipeline.h"
+#include "dsp/demod_state.h"
 #include "dsp/fll.h"
 #include "dsp/ted.h"
 
-/* Local definition of demod_state structure for this module */
-struct demod_state {
-    int exit_flag;
-    pthread_t thread;
-    int16_t* lowpassed;
-    /* Scratch buffer for demod thread to read blocks from the input ring */
-    /* Not a ring; callback writes directly into the global input ring. */
-    alignas(64) int16_t input_cb_buf[262144];
-    int lp_len;
-    int16_t lp_i_hist[10][6];
-    int16_t lp_q_hist[10][6];
-    alignas(64) int16_t result[262144];
-    int16_t droop_i_hist[9];
-    int16_t droop_q_hist[9];
-    int result_len;
-    int rate_in;
-    int rate_out;
-    int rate_out2;
-    int now_r, now_j;
-    int pre_r, pre_j;
-    int prev_index;
-    int downsample; /* min 1, max 256 */
-    int post_downsample;
-    int output_scale;
-    int squelch_level, conseq_squelch, squelch_hits, terminate_on_squelch;
-    /* Incremental, decimated RMS squelch estimator (power-domain, sqrt-free) */
-    int64_t squelch_running_power;
-    int squelch_decim_stride;
-    int squelch_decim_phase;
-    int squelch_window;
-    int downsample_passes;
-    int comp_fir_size;
-    int custom_atan;
-    int deemph, deemph_a;
-    int deemph_avg;
-    /* Optional post-demod audio low-pass filter (one-pole) */
-    int audio_lpf_enable;
-    int audio_lpf_alpha; /* Q15 alpha for one-pole LPF */
-    int audio_lpf_state; /* state/output y[n-1] in Q0 */
-    int now_lpr;
-    int prev_lpr_index;
-    int dc_block, dc_avg;
-    /* Half-band decimator state */
-    int16_t hb_workbuf[262144];
-    int16_t hb_hist_i[10][14]; /* HB_TAPS-1 = 15-1 = 14 */
-    int16_t hb_hist_q[10][14];
-    /* Reserved buffers for potential deinterleave path (currently unused) */
-    alignas(64) int16_t hb_i_buf[131072];
-    alignas(64) int16_t hb_q_buf[131072];
-    alignas(64) int16_t hb_i_out[131072];
-    alignas(64) int16_t hb_q_out[131072];
-    /* Preallocated buffer for linear upsampler (bandwidth_multiplier) */
-    alignas(64) int16_t upsample_buf[262144 * 8];
-    /* Polyphase rational resampler (L/M) state and output buffer */
-    int resamp_enabled;
-    int resamp_target_hz;      /* desired output sample rate */
-    int resamp_L;              /* upsample factor */
-    int resamp_M;              /* downsample factor */
-    int resamp_phase;          /* 0..L-1 accumulator */
-    int resamp_taps_len;       /* prototype taps length (padded to K*L) */
-    int resamp_taps_per_phase; /* K = ceil(taps_len/L) */
-    int16_t* resamp_taps;      /* Q15 taps, length = K*L */
-    int16_t* resamp_hist;      /* circular history, length = K */
-    int resamp_hist_head;      /* head index into circular history [0..K-1] */
-    /* Output buffer for resampler (worst-case 4x expansion) */
-    alignas(64) int16_t resamp_outbuf[262144 * 4];
-    /* Residual CFO loop (FLL) state */
-    int fll_enabled;
-    int fll_alpha_q15;    /* proportional gain (Q15) */
-    int fll_beta_q15;     /* integral gain (Q15) */
-    int fll_freq_q15;     /* NCO frequency increment (Q15 radians/sample scaled) */
-    int fll_phase_q15;    /* NCO phase accumulator (wrap at 2*pi -> 1<<15 scale) */
-    int fll_deadband_q14; /* ignore small phase errors |err| <= deadband (Q14) */
-    int fll_slew_max_q15; /* max |delta freq| per update (Q15) */
-    int fll_prev_r;
-    int fll_prev_j;
-    /* Timing error detector (Gardner) fractional-delay state */
-    int ted_enabled;
-    int ted_force;    /* allow forcing TED even for FM/C4FM paths */
-    int ted_gain_q20; /* small gain (Q20) for stability */
-    int ted_sps;      /* nominal samples per symbol (e.g., 10 for 4800 sym/s at 48k) */
-    int ted_mu_q20;   /* fractional phase [0,1) in Q20 */
-    /* Work buffer for timing-adjusted I/Q */
-    alignas(64) int16_t timing_buf[262144];
-    /* FLL and TED module states (must match rtl_sdr_fm.cpp layout) */
-    fll_state_t fll_state;
-    ted_state_t ted_state;
-    /* Minimal 2-thread worker pool for intra-block parallelism */
-    int mt_enabled;
-    int mt_ready;
-    pthread_t mt_threads[2];
-    pthread_mutex_t mt_lock;
-    pthread_cond_t mt_cv;
-    pthread_cond_t mt_done_cv;
-    int mt_should_exit;
-    int mt_epoch;
-    int mt_completed_in_epoch;
-    int mt_posted_count;
-
-    struct {
-        void (*run)(void*);
-        void* arg;
-    } mt_tasks[2];
-
-    int mt_worker_id[2];
-
-    struct {
-        struct demod_state* s;
-        int id;
-    } mt_args[2];
-
-    int (*discriminator)(int, int, int, int);
-    void (*mode_demod)(struct demod_state*);
-    /* Ready/condvar kept for cleanup compatibility; input ring is a global SPSC ring */
-    pthread_cond_t ready; /* kept for cleanup compatibility; unused now */
-    pthread_mutex_t ready_m;
-    struct output_state* output_target;
-};
+/* demod_state now provided by include/dsp/demod_state.h */
 
 /* Macros and constants from the original file */
-#define MAXIMUM_OVERSAMPLE       16
-#define DEFAULT_BUF_LENGTH       16384
-#define MAXIMUM_BUF_LENGTH       (MAXIMUM_OVERSAMPLE * DEFAULT_BUF_LENGTH)
+#ifndef MAXIMUM_OVERSAMPLE
+#define MAXIMUM_OVERSAMPLE 16
+#endif
+#ifndef DEFAULT_BUF_LENGTH
+#define DEFAULT_BUF_LENGTH 16384
+#endif
+#ifndef MAXIMUM_BUF_LENGTH
+#define MAXIMUM_BUF_LENGTH (MAXIMUM_OVERSAMPLE * DEFAULT_BUF_LENGTH)
+#endif
+#ifndef MAX_BANDWIDTH_MULTIPLIER
 #define MAX_BANDWIDTH_MULTIPLIER 8
+#endif
 
 #ifndef DSD_FME_ALIGN
 #define DSD_FME_ALIGN 64
@@ -195,7 +87,9 @@ sat16(int32_t x) {
 }
 
 /* Half-band decimator constants and tables */
+#ifndef HB_TAPS
 #define HB_TAPS 15
+#endif
 #define HB_HALF ((HB_TAPS - 1) / 2)
 static const int16_t hb_q15_taps[HB_TAPS] = {-108, 0, 1800, 0, -500, 0, 7000, 16384, 7000, 0, -500, 0, 1800, 0, -108};
 
@@ -227,6 +121,68 @@ static const int cic_9_tables[][10] = {
 
 /* Global flag for half-band decimator (should be configurable) */
 static int use_halfband_decimator = 1;
+/* FLL LUT toggle (local, default off) */
+static int fll_lut_enabled = 0;
+
+/**
+ * Decimate one real channel by 2 using a half-band FIR with persistent left history.
+ *
+ * @param in   Pointer to real input samples.
+ * @param in_len Number of real input samples.
+ * @param out  Pointer to output buffer (size >= in_len/2).
+ * @param hist Persistent history of length HB_TAPS-1 (left wing).
+ * @return Number of output samples written (in_len/2).
+ */
+static inline int
+hb_decim2_real(const int16_t* in, int in_len, int16_t* out, int16_t* hist) {
+    const int hist_len = HB_TAPS - 1;
+    int16_t last = (in_len > 0) ? in[in_len - 1] : 0;
+    int out_len = in_len >> 1;
+    const int16_t c0 = hb_q15_taps[0];
+    const int16_t c2 = hb_q15_taps[2];
+    const int16_t c4 = hb_q15_taps[4];
+    const int16_t c6 = hb_q15_taps[6];
+    const int16_t c7 = hb_q15_taps[7];
+    for (int n = 0; n < out_len; n++) {
+        int center_idx = hist_len + (n << 1);
+        auto get_sample = [&](int src_idx) -> int16_t {
+            if (src_idx < hist_len) {
+                return hist[src_idx];
+            } else {
+                int rel = src_idx - hist_len;
+                return (rel < in_len) ? in[rel] : last;
+            }
+        };
+        int16_t xc = get_sample(center_idx);
+        int16_t xm1 = get_sample(center_idx - 1);
+        int16_t xp1 = get_sample(center_idx + 1);
+        int16_t xm3 = get_sample(center_idx - 3);
+        int16_t xp3 = get_sample(center_idx + 3);
+        int16_t xm5 = get_sample(center_idx - 5);
+        int16_t xp5 = get_sample(center_idx + 5);
+        int16_t xm7 = get_sample(center_idx - 7);
+        int16_t xp7 = get_sample(center_idx + 7);
+        int64_t acc = 0;
+        acc += (int32_t)c7 * (int32_t)xc;
+        acc += (int32_t)c6 * (int32_t)(xm1 + xp1);
+        acc += (int32_t)c4 * (int32_t)(xm3 + xp3);
+        acc += (int32_t)c2 * (int32_t)(xm5 + xp5);
+        acc += (int32_t)c0 * (int32_t)(xm7 + xp7);
+        acc += (1 << 14);
+        int32_t y = (int32_t)(acc >> 15);
+        out[n] = sat16(y);
+    }
+    if (in_len >= hist_len) {
+        memcpy(hist, in + (in_len - hist_len), (size_t)hist_len * sizeof(int16_t));
+    } else {
+        int need = hist_len - in_len;
+        if (need > 0) {
+            memmove(hist, hist + in_len, (size_t)need * sizeof(int16_t));
+        }
+        memcpy(hist + need, in, (size_t)in_len * sizeof(int16_t));
+    }
+    return out_len;
+}
 
 /**
  * Half-band decimator for complex interleaved I/Q data.
@@ -672,24 +628,98 @@ mean_power(int16_t* samples, int len, int step) {
     return (long int)(energy / (len > 0 ? len : 1));
 }
 
-/* Stub implementations for functions that will be moved in Phase 5 */
-/* These will be replaced with actual implementations when Phase 5 is completed */
+/**
+ * Estimate frequency error using the configured discriminator and update the
+ * FLL loop control variables in Q15. Mirrors the modular FLL path used by the
+ * RTL front-end.
+ *
+ * @param d Demodulator state (syncs to/from `fll_state`, updates loop vars).
+ */
 static void
 fll_update_error(struct demod_state* d) {
-    /* TODO: Implement FLL error estimation */
-    (void)d; /* Suppress unused parameter warning */
+    if (!d->fll_enabled) {
+        return;
+    }
+    /* Sync from demod_state to module state */
+    d->fll_state.freq_q15 = d->fll_freq_q15;
+    d->fll_state.phase_q15 = d->fll_phase_q15;
+    d->fll_state.prev_r = d->fll_prev_r;
+    d->fll_state.prev_j = d->fll_prev_j;
+
+    fll_config_t cfg = {.enabled = d->fll_enabled,
+                        .alpha_q15 = d->fll_alpha_q15,
+                        .beta_q15 = d->fll_beta_q15,
+                        .deadband_q14 = d->fll_deadband_q14,
+                        .slew_max_q15 = d->fll_slew_max_q15,
+                        .use_lut = fll_lut_enabled};
+
+    fll_update_error(&cfg, &d->fll_state, d->lowpassed, d->lp_len);
+
+    /* Sync back to demod_state */
+    d->fll_freq_q15 = d->fll_state.freq_q15;
+    d->fll_phase_q15 = d->fll_state.phase_q15;
+    d->fll_prev_r = d->fll_state.prev_r;
+    d->fll_prev_j = d->fll_state.prev_j;
 }
 
+/**
+ * Mix low-passed I/Q by the FLL NCO and advance the loop accumulators. This
+ * rotates the complex baseband to reduce residual CFO and synchronizes the
+ * demod state with the modular FLL implementation.
+ *
+ * @param d Demodulator state (reads/writes `lowpassed`, updates `fll_state`).
+ */
 static void
 fll_mix_and_update(struct demod_state* d) {
-    /* TODO: Implement FLL mixing and updating */
-    (void)d; /* Suppress unused parameter warning */
+    if (!d->fll_enabled) {
+        return;
+    }
+
+    /* Sync from demod_state to module state */
+    d->fll_state.freq_q15 = d->fll_freq_q15;
+    d->fll_state.phase_q15 = d->fll_phase_q15;
+    d->fll_state.prev_r = d->fll_prev_r;
+    d->fll_state.prev_j = d->fll_prev_j;
+
+    fll_config_t cfg = {.enabled = d->fll_enabled,
+                        .alpha_q15 = d->fll_alpha_q15,
+                        .beta_q15 = d->fll_beta_q15,
+                        .deadband_q14 = d->fll_deadband_q14,
+                        .slew_max_q15 = d->fll_slew_max_q15,
+                        .use_lut = fll_lut_enabled};
+
+    fll_mix_and_update(&cfg, &d->fll_state, d->lowpassed, d->lp_len);
+
+    /* Sync back to demod_state */
+    d->fll_freq_q15 = d->fll_state.freq_q15;
+    d->fll_phase_q15 = d->fll_state.phase_q15;
+    d->fll_prev_r = d->fll_state.prev_r;
+    d->fll_prev_j = d->fll_state.prev_j;
 }
 
+/**
+ * Apply a lightweight Gardner timing correction to complex baseband. When
+ * enabled, this may adjust `lowpassed` and `lp_len` via the modular TED API.
+ * Intended primarily for digital modes; typically disabled for analog FM.
+ *
+ * @param d Demodulator state (syncs `ted_state`, may modify samples/length).
+ */
 static void
 gardner_timing_adjust(struct demod_state* d) {
-    /* TODO: Implement Gardner timing adjustment */
-    (void)d; /* Suppress unused parameter warning */
+    if (!d->ted_enabled || d->ted_sps <= 1) {
+        return;
+    }
+
+    /* Sync from demod_state to module state */
+    d->ted_state.mu_q20 = d->ted_mu_q20;
+
+    ted_config_t cfg = {
+        .enabled = d->ted_enabled, .force = d->ted_force, .gain_q20 = d->ted_gain_q20, .sps = d->ted_sps};
+
+    gardner_timing_adjust(&cfg, &d->ted_state, d->lowpassed, &d->lp_len, d->timing_buf);
+
+    /* Sync back to demod_state */
+    d->ted_mu_q20 = d->ted_state.mu_q20;
 }
 
 /**

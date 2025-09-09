@@ -27,9 +27,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "dsp/fll.h"
+#include "dsp/demod_state.h"
 #include "dsp/resampler.h"
-#include "dsp/ted.h"
 
 /* We include the demod state definition from the compilation unit that
  * declares it. Here we forward-declare only; fields are accessed via s->.
@@ -77,124 +76,7 @@ assume_aligned_ptr(const T* p, size_t /*align_unused*/) {
 #endif
 }
 
-/*
- * Local definition of demod_state structure for this module.
- * MUST MATCH the layout in src/rtl_sdr_fm.cpp at least up through the fields
- * accessed here (including all preceding fields). Keep in sync with
- * src/dsp/demod_pipeline.cpp to ensure offset compatibility.
- */
-
-#define MAXIMUM_OVERSAMPLE       16
-#define DEFAULT_BUF_LENGTH       16384
-#define MAXIMUM_BUF_LENGTH       (MAXIMUM_OVERSAMPLE * DEFAULT_BUF_LENGTH)
-#define MAX_BANDWIDTH_MULTIPLIER 8
-
-struct output_state; /* forward */
-
-struct demod_state {
-    int exit_flag;
-    pthread_t thread;
-    int16_t* lowpassed;
-    alignas(64) int16_t input_cb_buf[MAXIMUM_BUF_LENGTH];
-    int lp_len;
-    int16_t lp_i_hist[10][6];
-    int16_t lp_q_hist[10][6];
-    alignas(64) int16_t result[MAXIMUM_BUF_LENGTH];
-    int16_t droop_i_hist[9];
-    int16_t droop_q_hist[9];
-    int result_len;
-    int rate_in;
-    int rate_out;
-    int rate_out2;
-    int now_r, now_j;
-    int pre_r, pre_j;
-    int prev_index;
-    int downsample; /* min 1, max 256 */
-    int post_downsample;
-    int output_scale;
-    int squelch_level, conseq_squelch, squelch_hits, terminate_on_squelch;
-    int64_t squelch_running_power;
-    int squelch_decim_stride;
-    int squelch_decim_phase;
-    int squelch_window;
-    int downsample_passes;
-    int comp_fir_size;
-    int custom_atan;
-    int deemph, deemph_a;
-    int deemph_avg;
-    int audio_lpf_enable;
-    int audio_lpf_alpha;
-    int audio_lpf_state;
-    int now_lpr;
-    int prev_lpr_index;
-    int dc_block, dc_avg;
-    int16_t hb_workbuf[MAXIMUM_BUF_LENGTH];
-    int16_t hb_hist_i[10][14];
-    int16_t hb_hist_q[10][14];
-    alignas(64) int16_t hb_i_buf[MAXIMUM_BUF_LENGTH / 2];
-    alignas(64) int16_t hb_q_buf[MAXIMUM_BUF_LENGTH / 2];
-    alignas(64) int16_t hb_i_out[MAXIMUM_BUF_LENGTH / 2];
-    alignas(64) int16_t hb_q_out[MAXIMUM_BUF_LENGTH / 2];
-    alignas(64) int16_t upsample_buf[MAXIMUM_BUF_LENGTH * MAX_BANDWIDTH_MULTIPLIER];
-    /* Polyphase rational resampler (L/M) state and output buffer */
-    int resamp_enabled;
-    int resamp_target_hz;      /* desired output sample rate */
-    int resamp_L;              /* upsample factor */
-    int resamp_M;              /* downsample factor */
-    int resamp_phase;          /* 0..L-1 accumulator */
-    int resamp_taps_len;       /* prototype taps length (padded to K*L) */
-    int resamp_taps_per_phase; /* K = ceil(taps_len/L) */
-    int16_t* resamp_taps;      /* Q15 taps, length = K*L */
-    int16_t* resamp_hist;      /* circular history, length = K */
-    int resamp_hist_head;      /* head index into circular history [0..K-1] */
-    alignas(64) int16_t resamp_outbuf[MAXIMUM_BUF_LENGTH * 4];
-    /* FLL/TED state (not used here, kept for layout compatibility) */
-    int fll_enabled;
-    int fll_alpha_q15;
-    int fll_beta_q15;
-    int fll_freq_q15;
-    int fll_phase_q15;
-    int fll_deadband_q14;
-    int fll_slew_max_q15;
-    int fll_prev_r;
-    int fll_prev_j;
-    int ted_enabled;
-    int ted_force;
-    int ted_gain_q20;
-    int ted_sps;
-    int ted_mu_q20;
-    alignas(64) int16_t timing_buf[MAXIMUM_BUF_LENGTH];
-    fll_state_t fll_state;
-    ted_state_t ted_state;
-    int mt_enabled;
-    int mt_ready;
-    pthread_t mt_threads[2];
-    pthread_mutex_t mt_lock;
-    pthread_cond_t mt_cv;
-    pthread_cond_t mt_done_cv;
-    int mt_should_exit;
-    int mt_epoch;
-    int mt_completed_in_epoch;
-    int mt_posted_count;
-
-    struct {
-        void (*run)(void*);
-        void* arg;
-    } mt_tasks[2];
-
-    int mt_worker_id[2];
-
-    struct {
-        struct demod_state* s;
-        int id;
-    } mt_args[2];
-
-    int (*discriminator)(int, int, int, int);
-    void (*mode_demod)(struct demod_state*);
-    pthread_cond_t ready;
-    pthread_mutex_t ready_m;
-    struct output_state* output_target;
-};
+/* demod_state now provided by include/dsp/demod_state.h */
 
 static inline double
 dsd_fme_sinc(double x) {
