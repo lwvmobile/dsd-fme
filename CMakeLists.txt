@@ -87,6 +87,7 @@ if(RTLSDR_FOUND)
     list(APPEND SRCS src/runtime/input_ring.cpp)
     list(APPEND SRCS src/runtime/ring.cpp)
     list(APPEND SRCS src/runtime/worker_pool.cpp)
+    list(APPEND SRCS src/runtime/config.cpp)
     list(APPEND SRCS src/io/rtl_device.cpp)
 endif()
 

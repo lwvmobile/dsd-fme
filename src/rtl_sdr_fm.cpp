@@ -41,86 +41,10 @@
 #include "runtime/input_ring.h"
 #include "runtime/ring.h"
 #include "runtime/worker_pool.h"
+#include "runtime/config.h"
 #include "io/rtl_device.h"
 
-/*
- * Environment variables (runtime configuration)
- * Set in your shell before launching dsd-fme, e.g.:
- *   $ export DSD_FME_RESAMP=48000
- *   $ export DSD_FME_FLL=1 DSD_FME_FLL_ALPHA=150 DSD_FME_FLL_BETA=15
- *   $ export DSD_FME_TED=1 DSD_FME_TED_SPS=10 DSD_FME_TED_GAIN=96
- *   $ export DSD_FME_AUDIO_LPF=3000
- *   $ ./build/dsd-fme ...
- *
- * Realtime scheduling and CPU affinity
- * - DSD_FME_RT_SCHED
- *     Enable best-effort realtime scheduling (SCHED_FIFO). Requires CAP_SYS_NICE or root.
- *     Values: "1" to enable, unset/other to disable. Default: disabled.
- * - DSD_FME_RT_PRIO_USB | DSD_FME_RT_PRIO_DONGLE | DSD_FME_RT_PRIO_DEMOD
- *     Optional per-thread priorities (1..99, clamped to system limits). Used only if RT_SCHED=1.
- *     Example: export DSD_FME_RT_PRIO_DEMOD=85
- * - DSD_FME_CPU_USB | DSD_FME_CPU_DONGLE | DSD_FME_CPU_DEMOD
- *     Optional CPU core pinning for each thread. Integer CPU id (>=0). Example: export DSD_FME_CPU_DEMOD=2
- *
- * Frontend/decimation/upsampling
- * - DSD_FME_HB_DECIM
- *     Use half-band FIR decimator cascade (fast, good response) instead of legacy CIC-like path.
- *     Values: 1 enable, 0 disable. Default: 1 (enabled).
- * - DSD_FME_COMBINE_ROT
- *     Combine 90° IQ rotation with USB byte→int16 widening in one pass when offset tuning is off.
- *     Values: 1 enable, 0 disable. Default: 1 (enabled).
- * - DSD_FME_UPSAMPLE_FP
- *     Use fixed-point arithmetic in legacy linear upsampler for lower CPU/divisions.
- *     Values: 1 enable, 0 disable. Default: 1 (enabled).
- *
- * Rational resampler (polyphase upfirdn L/M)
- * - DSD_FME_RESAMP
- *     Target output sample rate in Hz. Enables L/M resampler when set.
- *     Values: "off" or "0" to disable; integer Hz (e.g., 48000) to enable. Default: 48000 (enabled).
- *
- * Residual CFO frequency-locked loop (FLL)
- * - DSD_FME_FLL
- *     Enable residual carrier frequency correction.
- *     Values: "1" or unset to enable; other values disable. Default: enabled.
- * - DSD_FME_FLL_LUT
- *     Use higher-quality quarter-wave sine LUT mixer for FLL rotation.
- *     Values: 1 enable, 0/empty disable. Default: 0 (disabled; fast piecewise approx).
- * - DSD_FME_FLL_ALPHA, DSD_FME_FLL_BETA
- *     Proportional and integral gains (Q15 fixed-point, ~value/32768). Typical small values.
- *     Defaults: ALPHA=100 (~0.003), BETA=10 (~0.0003). May be adjusted for digital modes if not set.
- * - DSD_FME_FLL_DEADBAND
- *     Ignore small phase errors in the FLL loop to avoid audible low-frequency sweeps in analog FM.
- *     Values: Q14 integer threshold (pi == 1<<14). Example: 60 (~0.36 degrees). Default: 45.
- * - DSD_FME_FLL_SLEW
- *     Limit per-update NCO frequency change (slew-rate) to prevent rapid ramps.
- *     Values: Q15 integer (2*pi == 1<<15). Example: 32..128. Default: 64.
- *
- * Gardner timing error detector (TED)
- * - DSD_FME_TED
- *     Enable lightweight fractional-delay timing correction. Generally off for analog FM.
- *     Values: 1 enable, else disabled. Default: 0 (disabled). For certain digital modes, defaults are adjusted
- *     only if envs are not provided (still off unless forced via DSD_FME_TED=1).
- * - DSD_FME_TED_SPS
- *     Nominal samples-per-symbol (integer). If unset and a digital mode is active, it is derived from output rate.
- *     Default: 10.
- * - DSD_FME_TED_GAIN
- *     Small loop gain (Q20). Default: 64; for common digital modes may default to 96 when not provided.
- * - DSD_FME_TED_FORCE
- *     Force TED to run for FM/C4FM paths where it is normally skipped. Values: 1 enable, else disabled. Default: 0.
- *
- * Audio processing
- * - DSD_FME_DEEMPH
- *     Post-demod deemphasis time constant. Applies only when the active demod preset enables deemphasis.
- *     Values: "75" (75µs, default), "50" (50µs), "nfm" (~750µs), "off" (disable).
- * - DSD_FME_AUDIO_LPF
- *     Optional one-pole low-pass filter after demod. Approximate cutoff in Hz.
- *     Values: "off" or "0" to disable; integer (e.g., 3000, 5000) to enable. Default: off.
- *
- * Intra-block multithreading
- * - DSD_FME_MT
- *     Enable a minimal 2-thread worker pool for certain CPU-heavy inner loops.
- *     Values: 1 enable, else disabled. Default: 0 (disabled).
- */
+/* Runtime configuration documentation has moved to runtime/config.h. */
 
 #define DEFAULT_SAMPLE_RATE      48000
 #define DEFAULT_BUF_LENGTH       (1 * 16384)
@@ -1988,157 +1912,88 @@ open_rtlsdr_stream(dsd_opts* opts) {
     }
     controller_init(&controller);
 
-    /* Read optional environment flags */
+    /* Read optional environment flags (centralized) */
     {
-        const char* hb = getenv("DSD_FME_HB_DECIM");
-        if (hb && hb[0] != '\0') {
-            int v = atoi(hb);
-            use_halfband_decimator = (v != 0);
-        }
-        const char* cr = getenv("DSD_FME_COMBINE_ROT");
-        if (cr && cr[0] != '\0') {
-            combine_rotate_enabled = (atoi(cr) != 0);
-        }
-        const char* ufp = getenv("DSD_FME_UPSAMPLE_FP");
-        if (ufp && ufp[0] != '\0') {
-            upsample_fixedpoint_enabled = (atoi(ufp) != 0);
-        }
-        /* Configure rational resampler target rate via DSD_FME_RESAMP (Hz).
-		   Defaults: enabled at 48000 Hz unless set to "off" or "0". */
-        const char* rs = getenv("DSD_FME_RESAMP");
-        int enable_resamp = 1;
-        int target = 48000;
-        if (rs && rs[0] != '\0') {
-            if (strcasecmp(rs, "off") == 0 || strcmp(rs, "0") == 0) {
-                enable_resamp = 0;
-            } else {
-                int v = atoi(rs);
-                if (v > 0) {
-                    target = v;
+        dsd_fme_config_init(opts);
+        const DsdFmeRuntimeConfig* cfg = dsd_fme_get_config();
+        if (cfg) {
+            if (cfg->hb_decim_is_set) use_halfband_decimator = (cfg->hb_decim != 0);
+            if (cfg->combine_rot_is_set) combine_rotate_enabled = (cfg->combine_rot != 0);
+            if (cfg->upsample_fp_is_set) upsample_fixedpoint_enabled = (cfg->upsample_fp != 0);
+
+            int enable_resamp = 1;
+            int target = 48000;
+            if (cfg->resamp_is_set) {
+                enable_resamp = cfg->resamp_disable ? 0 : 1;
+                target = cfg->resamp_target_hz > 0 ? cfg->resamp_target_hz : 48000;
+            }
+            if (enable_resamp) {
+                demod.resamp_target_hz = target;
+                int inRate = (demod.rate_out > 0) ? demod.rate_out : rtl_bandwidth;
+                int g = gcd_int(inRate, target);
+                int L = target / g;
+                int M = inRate / g;
+                if (L < 1) L = 1;
+                if (M < 1) M = 1;
+                int scale_num = L;
+                int scale_den = M;
+                int scale = (scale_den > 0) ? ((scale_num + scale_den - 1) / scale_den) : 1;
+                if (scale > 4) {
+                    fprintf(stderr, "Resampler ratio too large (L=%d,M=%d). Clamping not supported; disabling resampler.\n", L, M);
+                    demod.resamp_enabled = 0;
                 } else {
-                    target = 48000;
+                    demod.resamp_enabled = 1;
+                    resamp_design(&demod, L, M);
+                    fprintf(stderr, "Rational resampler enabled: %d -> %d Hz (L=%d,M=%d).\n", inRate, target, L, M);
                 }
-            }
-        }
-        if (enable_resamp) {
-            demod.resamp_target_hz = target;
-            int inRate = (demod.rate_out > 0) ? demod.rate_out : rtl_bandwidth;
-            int g = gcd_int(inRate, target);
-            int L = target / g;
-            int M = inRate / g;
-            if (L < 1) {
-                L = 1;
-            }
-            if (M < 1) {
-                M = 1;
-            }
-            /* Guard output buffer growth (limited to ~4x expansion) */
-            int scale_num = L;
-            int scale_den = M;
-            int scale = (scale_den > 0) ? ((scale_num + scale_den - 1) / scale_den) : 1;
-            if (scale > 4) {
-                fprintf(stderr, "Resampler ratio too large (L=%d,M=%d). Clamping not supported; disabling resampler.\n",
-                        L, M);
-                demod.resamp_enabled = 0;
             } else {
-                demod.resamp_enabled = 1;
-                resamp_design(&demod, L, M);
-                fprintf(stderr, "Rational resampler enabled: %d -> %d Hz (L=%d,M=%d).\n", inRate, target, L, M);
+                demod.resamp_enabled = 0;
             }
-        } else {
-            demod.resamp_enabled = 0;
-        }
 
-        /* Configure FLL/TED via envs. Defaults: FLL off for analog FM; TED off by default. */
-        const char* fll = getenv("DSD_FME_FLL");
-        /* Default disabled unless env overrides; modes below may flip this if needed */
-        demod.fll_enabled = (fll && fll[0] == '1') ? 1 : 0;
-        /* Optional: enable LUT-based FLL rotator via DSD_FME_FLL_LUT=1 */
-        {
-            const char* flut = getenv("DSD_FME_FLL_LUT");
-            fll_lut_enabled = (flut && flut[0] == '1') ? 1 : 0;
-        }
-        /* Gains in Q15; conservative defaults */
-        const char* fa = getenv("DSD_FME_FLL_ALPHA");
-        const char* fb = getenv("DSD_FME_FLL_BETA");
-        const char* fdb = getenv("DSD_FME_FLL_DEADBAND");
-        const char* fsl = getenv("DSD_FME_FLL_SLEW");
-        demod.fll_alpha_q15 = fa ? atoi(fa) : 50; /* ~0.0015 */
-        demod.fll_beta_q15 = fb ? atoi(fb) : 5;   /* ~0.00015 */
-        /* Deadband in Q14: default ~0.5 degrees ≈ 0.5/180*pi ≈ 0.0087 rad => Q14≈(0.0087/pi)*16384≈45 */
-        demod.fll_deadband_q14 = fdb ? atoi(fdb) : 45;
-        /* Slew limit in Q15 per update; default small to avoid sweep (≈ 64) */
-        demod.fll_slew_max_q15 = fsl ? atoi(fsl) : 64;
-        demod.fll_freq_q15 = 0;
-        demod.fll_phase_q15 = 0;
-        demod.fll_prev_r = demod.fll_prev_j = 0;
+            demod.fll_enabled = cfg->fll_is_set ? (cfg->fll_enable != 0) : 0;
+            fll_lut_enabled = cfg->fll_lut_is_set ? (cfg->fll_lut_enable != 0) : fll_lut_enabled;
+            demod.fll_alpha_q15 = cfg->fll_alpha_is_set ? cfg->fll_alpha_q15 : 50;
+            demod.fll_beta_q15 = cfg->fll_beta_is_set ? cfg->fll_beta_q15 : 5;
+            demod.fll_deadband_q14 = cfg->fll_deadband_is_set ? cfg->fll_deadband_q14 : 45;
+            demod.fll_slew_max_q15 = cfg->fll_slew_is_set ? cfg->fll_slew_max_q15 : 64;
+            demod.fll_freq_q15 = 0;
+            demod.fll_phase_q15 = 0;
+            demod.fll_prev_r = demod.fll_prev_j = 0;
 
-        const char* ted = getenv("DSD_FME_TED");
-        demod.ted_enabled = (ted && ted[0] == '1') ? 1 : 0;
-        const char* tg = getenv("DSD_FME_TED_GAIN");
-        const char* ts = getenv("DSD_FME_TED_SPS");
-        const char* tf = getenv("DSD_FME_TED_FORCE");
-        demod.ted_gain_q20 = tg ? atoi(tg) : 64; /* tiny default */
-        demod.ted_sps = ts ? atoi(ts) : 10;      /* e.g., 4800 sym/s @ 48k */
-        demod.ted_mu_q20 = 0;
-        demod.ted_force = (tf && tf[0] == '1') ? 1 : 0;
+            demod.ted_enabled = cfg->ted_is_set ? (cfg->ted_enable != 0) : 0;
+            demod.ted_gain_q20 = cfg->ted_gain_is_set ? cfg->ted_gain_q20 : 64;
+            demod.ted_sps = cfg->ted_sps_is_set ? cfg->ted_sps : 10;
+            demod.ted_mu_q20 = 0;
+            demod.ted_force = cfg->ted_force_is_set ? (cfg->ted_force != 0) : 0;
 
-        /* Mode-aware defaults (only if envs not provided) */
-        int env_ted_set = (ted && ted[0] != '\0');
-        int env_fll_alpha_set = (fa && fa[0] != '\0');
-        int env_fll_beta_set = (fb && fb[0] != '\0');
-        int env_ted_sps_set = (ts && ts[0] != '\0');
-        int env_ted_gain_set = (tg && tg[0] != '\0');
-        int digital_mode = (opts->frame_p25p1 == 1 || opts->frame_p25p2 == 1 || opts->frame_provoice == 1);
-        /* Default: for common digital modes compute reasonable defaults, but keep TED disabled unless user opts in. */
-        if (digital_mode) {
-            if (!env_ted_set) {
-                demod.ted_enabled = 0;
-            }
-            if (!env_ted_sps_set) {
-                /* Use complex-stage sample rate that TED operates at: rate_in scaled by
-				   post_downsample and reduced by decimation passes. Fallback to output.rate if needed. */
-                int ds_passes = demod.downsample_passes;
-                if (ds_passes < 0) {
-                    ds_passes = 0;
+            int env_ted_set = cfg->ted_is_set;
+            int env_fll_alpha_set = cfg->fll_alpha_is_set;
+            int env_fll_beta_set = cfg->fll_beta_is_set;
+            int env_ted_sps_set = cfg->ted_sps_is_set;
+            int env_ted_gain_set = cfg->ted_gain_is_set;
+            int digital_mode = (opts->frame_p25p1 == 1 || opts->frame_p25p2 == 1 || opts->frame_provoice == 1);
+            if (digital_mode) {
+                if (!env_ted_set) demod.ted_enabled = 0;
+                if (!env_ted_sps_set) {
+                    int ds_passes = demod.downsample_passes;
+                    if (ds_passes < 0) ds_passes = 0;
+                    int denom = 1 << ds_passes;
+                    long long Fs_cx_ll = (long long)demod.rate_in * (long long)demod.post_downsample;
+                    int Fs_cx = (int)(Fs_cx_ll / (denom ? denom : 1));
+                    if (Fs_cx <= 0) Fs_cx = (int)output.rate;
+                    int sps = (Fs_cx + 2400) / 4800; /* round(Fs/4800) */
+                    if (sps < 2) sps = 2;
+                    demod.ted_sps = sps;
                 }
-                int denom = 1 << ds_passes; /* decimation factor from HB cascade */
-                long long Fs_cx_ll = (long long)demod.rate_in * (long long)demod.post_downsample;
-                int Fs_cx = (int)(Fs_cx_ll / (denom ? denom : 1));
-                if (Fs_cx <= 0) {
-                    Fs_cx = (int)output.rate; /* conservative fallback */
-                }
-                int sps = (Fs_cx + 2400) / 4800; /* round(Fs/4800) */
-                if (sps < 2) {
-                    sps = 2;
-                }
-                demod.ted_sps = sps;
+                if (!env_ted_gain_set) demod.ted_gain_q20 = 96;
+                if (!env_fll_alpha_set) demod.fll_alpha_q15 = 150;
+                if (!env_fll_beta_set) demod.fll_beta_q15 = 15;
+                if (!demod.fll_enabled && !cfg->fll_is_set) demod.fll_enabled = 1;
+            } else {
+                if (!env_ted_set) demod.ted_enabled = 0;
+                if (!env_fll_alpha_set) demod.fll_alpha_q15 = 50;
+                if (!env_fll_beta_set) demod.fll_beta_q15 = 5;
             }
-            if (!env_ted_gain_set) {
-                /* Slightly higher but safe default gain for digital */
-                demod.ted_gain_q20 = 96;
-            }
-            if (!env_fll_alpha_set) {
-                demod.fll_alpha_q15 = 150; /* ~0.0046 */
-            }
-            if (!env_fll_beta_set) {
-                demod.fll_beta_q15 = 15; /* ~0.00046 */
-            }
-            if (!demod.fll_enabled && (!fll || fll[0] == '\0')) {
-                demod.fll_enabled = 1; /* enable by default for digital */
-            }
-        } else {
-            /* Analog defaults: keep TED off; gentle FLL */
-            if (!env_ted_set) {
-                demod.ted_enabled = 0;
-            }
-            if (!env_fll_alpha_set) {
-                demod.fll_alpha_q15 = 50; /* ~0.0015 */
-            }
-            if (!env_fll_beta_set) {
-                demod.fll_beta_q15 = 5; /* ~0.00015 */
-            }
-            /* Keep FLL disabled by default for analog unless DSD_FME_FLL=1 */
         }
     }
 
@@ -2190,83 +2045,68 @@ open_rtlsdr_stream(dsd_opts* opts) {
     }
 
     if (demod.deemph) {
-        /* Configure deemphasis via env DSD_FME_DEEMPH: 75 (default), 50, nfm, off.
-		   Computes a one-pole IIR with alpha = 1 - exp(-1/(Fs*tau)) stored in Q15. */
+        const DsdFmeRuntimeConfig* cfg = dsd_fme_get_config();
         double tau_s = 75e-6; /* default 75 microseconds */
-        const char* deemph_env = getenv("DSD_FME_DEEMPH");
-        if (deemph_env && deemph_env[0] != '\0') {
-            if (strcasecmp(deemph_env, "off") == 0) {
+        if (cfg && cfg->deemph_is_set) {
+            if (cfg->deemph_mode == DSD_FME_DEEMPH_OFF) {
                 demod.deemph = 0;
-            } else if (strcmp(deemph_env, "50") == 0) {
+            } else if (cfg->deemph_mode == DSD_FME_DEEMPH_50) {
                 tau_s = 50e-6;
-            } else if (strcasecmp(deemph_env, "nfm") == 0) {
-                /* Common NFM value */
+            } else if (cfg->deemph_mode == DSD_FME_DEEMPH_NFM) {
                 tau_s = 750e-6;
-            } else if (strcmp(deemph_env, "75") == 0) {
+            } else if (cfg->deemph_mode == DSD_FME_DEEMPH_75) {
                 tau_s = 75e-6;
             }
         }
         if (demod.deemph) {
-            /* a = exp(-1/(Fs*tau)); store alpha=(1-a) in Q15 */
             double Fs = (double)demod.rate_out;
-            if (Fs < 1.0) {
-                Fs = 1.0;
-            }
+            if (Fs < 1.0) Fs = 1.0;
             double a = exp(-1.0 / (Fs * tau_s));
             double alpha = 1.0 - a;
             int coef_q15 = (int)lrint(alpha * (double)(1 << 15));
-            if (coef_q15 < 1) {
-                coef_q15 = 1; /* ensure non-zero to move toward steady-state */
-            }
-            if (coef_q15 > (1 << 15)) {
-                coef_q15 = (1 << 15);
-            }
+            if (coef_q15 < 1) coef_q15 = 1;
+            if (coef_q15 > (1 << 15)) coef_q15 = (1 << 15);
             demod.deemph_a = coef_q15;
         }
     }
 
     /* Configure optional post-demod audio LPF via env DSD_FME_AUDIO_LPF.
-	   Values:
-	   - off or 0: disabled (default)
-	   - NNNN: cutoff in Hz (approximate), e.g., 3000 or 5000.
-	   One-pole: y[n] = y[n-1] + alpha * (x[n] - y[n-1]),
-	   alpha ≈ 1 - exp(-2*pi*fc/Fs) in Q15. */
+       Values:
+       - off or 0: disabled (default)
+       - NNNN: cutoff in Hz (approximate), e.g., 3000 or 5000.
+       One-pole: y[n] = y[n-1] + alpha * (x[n] - y[n-1]),
+       alpha ≈ 1 - exp(-2*pi*fc/Fs) in Q15. */
     {
-        const char* alpf = getenv("DSD_FME_AUDIO_LPF");
+        const DsdFmeRuntimeConfig* cfg = dsd_fme_get_config();
         demod.audio_lpf_enable = 0;
         demod.audio_lpf_alpha = 0;
         demod.audio_lpf_state = 0;
-        if (alpf && alpf[0] != '\0') {
-            if (strcasecmp(alpf, "off") == 0 || strcmp(alpf, "0") == 0) {
-                /* disabled */
-            } else {
-                int cutoff_hz = atoi(alpf);
-                if (cutoff_hz < 100) {
-                    cutoff_hz = 100; /* guard */
-                }
-                /* One-pole mapping: choose alpha from cutoff and Fs using approx alpha = 1 - exp(-2*pi*fc/Fs) */
-                double Fs = (double)demod.rate_out;
-                if (Fs < 1.0) {
-                    Fs = 1.0;
-                }
-                double a = 1.0 - exp(-2.0 * kPi * (double)cutoff_hz / Fs);
-                if (a < 0.0) {
-                    a = 0.0;
-                }
-                if (a > 1.0) {
-                    a = 1.0;
-                }
-                int alpha_q15 = (int)lrint(a * (double)(1 << 15));
-                if (alpha_q15 < 1) {
-                    alpha_q15 = 1;
-                }
-                if (alpha_q15 > (1 << 15)) {
-                    alpha_q15 = (1 << 15);
-                }
-                demod.audio_lpf_alpha = alpha_q15;
-                demod.audio_lpf_enable = 1;
-                fprintf(stderr, "Audio LPF enabled: fc≈%d Hz, alpha_q15=%d\n", cutoff_hz, demod.audio_lpf_alpha);
+        if (cfg && cfg->audio_lpf_is_set && !cfg->audio_lpf_disable && cfg->audio_lpf_cutoff_hz > 0) {
+            int cutoff_hz = cfg->audio_lpf_cutoff_hz;
+            if (cutoff_hz < 100) {
+                cutoff_hz = 100; /* guard */
             }
+            double Fs = (double)demod.rate_out;
+            if (Fs < 1.0) {
+                Fs = 1.0;
+            }
+            double a = 1.0 - exp(-2.0 * kPi * (double)cutoff_hz / Fs);
+            if (a < 0.0) {
+                a = 0.0;
+            }
+            if (a > 1.0) {
+                a = 1.0;
+            }
+            int alpha_q15 = (int)lrint(a * (double)(1 << 15));
+            if (alpha_q15 < 1) {
+                alpha_q15 = 1;
+            }
+            if (alpha_q15 > (1 << 15)) {
+                alpha_q15 = (1 << 15);
+            }
+            demod.audio_lpf_alpha = alpha_q15;
+            demod.audio_lpf_enable = 1;
+            fprintf(stderr, "Audio LPF enabled: fc≈%d Hz, alpha_q15=%d\n", cutoff_hz, demod.audio_lpf_alpha);
         }
     }
 
