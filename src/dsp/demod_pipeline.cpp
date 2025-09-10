@@ -31,6 +31,8 @@
 #include "dsp/demod_pipeline.h"
 #include "dsp/demod_state.h"
 #include "dsp/fll.h"
+#include "dsp/halfband.h"
+#include "dsp/math_utils.h"
 #include "dsp/ted.h"
 
 /* demod_state now provided by include/dsp/demod_state.h */
@@ -74,24 +76,7 @@ assume_aligned_ptr(const T* p, size_t /*align_unused*/) {
     return p;
 }
 
-/* Saturation helper for int16 */
-static inline int16_t
-sat16(int32_t x) {
-    if (x > 32767) {
-        return 32767;
-    }
-    if (x < -32768) {
-        return -32768;
-    }
-    return (int16_t)x;
-}
-
-/* Half-band decimator constants and tables */
-#ifndef HB_TAPS
-#define HB_TAPS 15
-#endif
-#define HB_HALF ((HB_TAPS - 1) / 2)
-static const int16_t hb_q15_taps[HB_TAPS] = {-108, 0, 1800, 0, -500, 0, 7000, 16384, 7000, 0, -500, 0, 1800, 0, -108};
+/* HB_TAPS and hb_q15_taps provided by dsp/halfband.h */
 
 /* CIC compensation filter tables */
 #define CIC_TABLE_MAX 10
@@ -119,10 +104,9 @@ static const int cic_9_tables[][10] = {
     /* ds_p=10: ten stages */
     {0, 819, 819, 819, 819, 819, 819, 819, 819, 819}};
 
-/* Global flag for half-band decimator (should be configurable) */
-static int use_halfband_decimator = 1;
-/* FLL LUT toggle (local, default off) */
-static int fll_lut_enabled = 0;
+/* Global flags provided by rtl front-end */
+extern int use_halfband_decimator;
+extern int fll_lut_enabled;
 
 /**
  * Decimate one real channel by 2 using a half-band FIR with persistent left history.
@@ -133,56 +117,7 @@ static int fll_lut_enabled = 0;
  * @param hist Persistent history of length HB_TAPS-1 (left wing).
  * @return Number of output samples written (in_len/2).
  */
-static inline int
-hb_decim2_real(const int16_t* in, int in_len, int16_t* out, int16_t* hist) {
-    const int hist_len = HB_TAPS - 1;
-    int16_t last = (in_len > 0) ? in[in_len - 1] : 0;
-    int out_len = in_len >> 1;
-    const int16_t c0 = hb_q15_taps[0];
-    const int16_t c2 = hb_q15_taps[2];
-    const int16_t c4 = hb_q15_taps[4];
-    const int16_t c6 = hb_q15_taps[6];
-    const int16_t c7 = hb_q15_taps[7];
-    for (int n = 0; n < out_len; n++) {
-        int center_idx = hist_len + (n << 1);
-        auto get_sample = [&](int src_idx) -> int16_t {
-            if (src_idx < hist_len) {
-                return hist[src_idx];
-            } else {
-                int rel = src_idx - hist_len;
-                return (rel < in_len) ? in[rel] : last;
-            }
-        };
-        int16_t xc = get_sample(center_idx);
-        int16_t xm1 = get_sample(center_idx - 1);
-        int16_t xp1 = get_sample(center_idx + 1);
-        int16_t xm3 = get_sample(center_idx - 3);
-        int16_t xp3 = get_sample(center_idx + 3);
-        int16_t xm5 = get_sample(center_idx - 5);
-        int16_t xp5 = get_sample(center_idx + 5);
-        int16_t xm7 = get_sample(center_idx - 7);
-        int16_t xp7 = get_sample(center_idx + 7);
-        int64_t acc = 0;
-        acc += (int32_t)c7 * (int32_t)xc;
-        acc += (int32_t)c6 * (int32_t)(xm1 + xp1);
-        acc += (int32_t)c4 * (int32_t)(xm3 + xp3);
-        acc += (int32_t)c2 * (int32_t)(xm5 + xp5);
-        acc += (int32_t)c0 * (int32_t)(xm7 + xp7);
-        acc += (1 << 14);
-        int32_t y = (int32_t)(acc >> 15);
-        out[n] = sat16(y);
-    }
-    if (in_len >= hist_len) {
-        memcpy(hist, in + (in_len - hist_len), (size_t)hist_len * sizeof(int16_t));
-    } else {
-        int need = hist_len - in_len;
-        if (need > 0) {
-            memmove(hist, hist + in_len, (size_t)need * sizeof(int16_t));
-        }
-        memcpy(hist + need, in, (size_t)in_len * sizeof(int16_t));
-    }
-    return out_len;
-}
+/* hb_decim2_real provided by dsp/halfband.h */
 
 /**
  * Half-band decimator for complex interleaved I/Q data.

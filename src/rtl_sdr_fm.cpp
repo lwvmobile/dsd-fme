@@ -37,6 +37,8 @@
 #include "dsp/demod_pipeline.h"
 #include "dsp/demod_state.h"
 #include "dsp/fll.h"
+#include "dsp/math_utils.h"
+#include "dsp/polar_disc.h"
 #include "dsp/resampler.h"
 #include "dsp/ted.h"
 #include "io/rtl_device.h"
@@ -128,42 +130,17 @@ assume_aligned_ptr(const T* p, size_t /*align_unused*/) {
 #define DSD_FME_RESTRICT
 #endif
 
-static int* atan_lut = NULL;
-static int atan_lut_size = 131072; /* 512 KB */
-static int atan_lut_coef = 8;
-static pthread_once_t atan_lut_once = PTHREAD_ONCE_INIT;
-static pthread_mutex_t atan_lut_mutex = PTHREAD_MUTEX_INITIALIZER;
-static int fll_lut_enabled = 0; /* DSD_FME_FLL_LUT (0 default: use fast approx) */
+int fll_lut_enabled = 0; /* DSD_FME_FLL_LUT (0 default: use fast approx) */
 /* Debug/compat toggles via env */
 static int combine_rotate_enabled = 1;      /* DSD_FME_COMBINE_ROT (1 default) */
 static int upsample_fixedpoint_enabled = 1; /* DSD_FME_UPSAMPLE_FP (1 default) */
 
-/**
- * Saturate 32-bit integer to 16-bit range.
- *
- * @param x Input 32-bit value.
- * @return Clamped 16-bit value in [-32768, 32767].
- */
-static inline int16_t
-sat16(int32_t x) {
-    if (x > 32767) {
-        return 32767;
-    }
-    if (x < -32768) {
-        return -32768;
-    }
-    return (int16_t)x;
-}
+/* sat16 provided by dsp/math_utils.h */
 
 /* Runtime flag (default enabled). Set DSD_FME_HB_DECIM=0 to use legacy decimator */
-static int use_halfband_decimator = 1;
+int use_halfband_decimator = 1;
 
-/* 15-tap half-band low-pass coefficients, Q15 scaled.
-   Odd-indexed taps are zero; center tap is 0.5 (16384). The remaining even taps
-   sum to 0.5 to yield unity DC gain. Coefficients are symmetric. */
-#define HB_TAPS 15
-#define HB_HALF ((HB_TAPS - 1) / 2)
-static const int16_t hb_q15_taps[HB_TAPS] = {-108, 0, 1800, 0, -500, 0, 7000, 16384, 7000, 0, -500, 0, 1800, 0, -108};
+/* Half-band taps provided by dsp/halfband.h */
 
 /**
  * Decimate one real channel by 2 using a half-band FIR with persistent left history.
@@ -174,64 +151,7 @@ static const int16_t hb_q15_taps[HB_TAPS] = {-108, 0, 1800, 0, -500, 0, 7000, 16
  * @param hist Persistent history of length HB_TAPS-1 (left wing).
  * @return Number of output samples written (in_len/2).
  */
-static inline int
-hb_decim2_real(const int16_t* in, int in_len, int16_t* out, int16_t* hist) {
-    const int hist_len = HB_TAPS - 1;
-    /* Pad right side by repeating last sample to avoid needing future context */
-    int16_t last = (in_len > 0) ? in[in_len - 1] : 0;
-    /* For simplicity, operate via a small ringless window into a temp view using hist + in + right pad (virtually). */
-    int out_len = in_len >> 1; /* floor */
-    /* Hoist half-band coefficients out of the loop */
-    const int16_t c0 = hb_q15_taps[0];
-    const int16_t c2 = hb_q15_taps[2];
-    const int16_t c4 = hb_q15_taps[4];
-    const int16_t c6 = hb_q15_taps[6];
-    const int16_t c7 = hb_q15_taps[7];
-    for (int n = 0; n < out_len; n++) {
-        int center_idx = hist_len + (n << 1); /* position in the concatenated [hist | in] domain */
-        /* Half-band optimization: only even taps and the center tap contribute (symmetric). */
-        auto get_sample = [&](int src_idx) -> int16_t {
-            if (src_idx < hist_len) {
-                return hist[src_idx];
-            } else {
-                int rel = src_idx - hist_len;
-                return (rel < in_len) ? in[rel] : last;
-            }
-        };
-        int16_t xc = get_sample(center_idx);
-        int16_t xm1 = get_sample(center_idx - 1);
-        int16_t xp1 = get_sample(center_idx + 1);
-        int16_t xm3 = get_sample(center_idx - 3);
-        int16_t xp3 = get_sample(center_idx + 3);
-        int16_t xm5 = get_sample(center_idx - 5);
-        int16_t xp5 = get_sample(center_idx + 5);
-        int16_t xm7 = get_sample(center_idx - 7);
-        int16_t xp7 = get_sample(center_idx + 7);
-        int64_t acc = 0;
-        acc += (int32_t)c7 * (int32_t)xc;
-        acc += (int32_t)c6 * (int32_t)(xm1 + xp1);
-        acc += (int32_t)c4 * (int32_t)(xm3 + xp3);
-        acc += (int32_t)c2 * (int32_t)(xm5 + xp5);
-        acc += (int32_t)c0 * (int32_t)(xm7 + xp7);
-        /* Q15 -> Q0 with rounding */
-        acc += (1 << 14);
-        int32_t y = (int32_t)(acc >> 15);
-        out[n] = sat16(y);
-    }
-    /* Update history with the last (HB_TAPS-1) input samples for next call */
-    if (in_len >= hist_len) {
-        memcpy(hist, in + (in_len - hist_len), (size_t)hist_len * sizeof(int16_t));
-    } else {
-        /* Not enough samples: keep tail of previous hist and append current */
-        int need = hist_len - in_len;
-        if (need > 0) {
-            /* shift left existing hist */
-            memmove(hist, hist + in_len, (size_t)need * sizeof(int16_t));
-        }
-        memcpy(hist + need, in, (size_t)in_len * sizeof(int16_t));
-    }
-    return out_len;
-}
+/* hb_decim2_real provided by dsp/halfband.h */
 
 /**
  * One-time initializer for the arctangent lookup table.
@@ -239,17 +159,7 @@ hb_decim2_real(const int16_t* in, int in_len, int16_t* out, int16_t* hist) {
  * Allocates and fills a Q14-scaled atan table used by the LUT
  * polar discriminator. Intended to be invoked via pthread_once.
  */
-static void
-atan_lut_once_init(void) {
-    int i;
-    atan_lut = static_cast<int*>(malloc(atan_lut_size * sizeof(int)));
-    if (atan_lut == NULL) {
-        return;
-    }
-    for (i = 0; i < atan_lut_size; i++) {
-        atan_lut[i] = (int)(atan((double)i / (1 << atan_lut_coef)) / kPi * (1 << 14));
-    }
-}
+/* LUT init moved to dsp/polar_disc.cpp */
 
 // UDP control handle
 static struct udp_control* g_udp_ctrl = NULL;
@@ -351,26 +261,7 @@ multiply64(int ar, int aj, int br, int bj, int64_t* cr, int64_t* cj) {
     *cj = (int64_t)aj * (int64_t)br + (int64_t)ar * (int64_t)bj;
 }
 
-/**
- * Polar discriminator using double-precision atan2 for maximum accuracy.
- *
- * Computes b * conj(a) and returns the phase delta scaled to Q14 where
- * (pi == 1<<14).
- *
- * @param ar Real part of previous complex sample.
- * @param aj Imag part of previous complex sample.
- * @param br Real part of current complex sample.
- * @param bj Imag part of current complex sample.
- * @return Phase difference in Q14 where (pi == 1<<14).
- */
-int
-polar_discriminant(int ar, int aj, int br, int bj) {
-    int64_t cr, cj;
-    double angle;
-    multiply64(ar, aj, br, -bj, &cr, &cj);
-    angle = atan2((double)cj, (double)cr);
-    return (int)(angle / kPi * (1 << 14));
-}
+/* polar_discriminant provided by dsp/polar_disc.h */
 
 /**
  * Fast integer atan2 approximation pre-scaled for int16.
@@ -379,27 +270,7 @@ polar_discriminant(int ar, int aj, int br, int bj) {
  * @param x Real component.
  * @return Angle where pi == 1<<14 (Q14 scaling).
  */
-int
-fast_atan2(int y, int x) {
-    int yabs, angle;
-    int pi4 = (1 << 12), pi34 = 3 * (1 << 12); // note pi = 1<<14
-    if (x == 0 && y == 0) {
-        return 0;
-    }
-    yabs = y;
-    if (yabs < 0) {
-        yabs = -yabs;
-    }
-    if (x >= 0) {
-        angle = pi4 - pi4 * (x - yabs) / (x + yabs);
-    } else {
-        angle = pi34 - pi4 * (x + yabs) / (yabs - x);
-    }
-    if (y < 0) {
-        return -angle;
-    }
-    return angle;
-}
+/* fast_atan2 moved to dsp/polar_disc.cpp */
 
 /**
  * 64-bit safe fast atan2 approximation to avoid overflow.
@@ -408,30 +279,7 @@ fast_atan2(int y, int x) {
  * @param x Real component (int64).
  * @return Angle where pi == 1<<14 (Q14 scaling).
  */
-int
-fast_atan2_64(int64_t y, int64_t x) {
-    int angle;
-    int pi4 = (1 << 12), pi34 = 3 * (1 << 12); /* note: pi = 1<<14 */
-    int64_t yabs;
-    if (x == 0 && y == 0) {
-        return 0;
-    }
-    yabs = y;
-    if (yabs < 0) {
-        yabs = -yabs;
-    }
-    if (x >= 0) {
-        /* denominator (x + yabs) cannot be zero here unless x==y==0 handled above */
-        angle = (int)(pi4 - ((int64_t)pi4 * (x - yabs)) / (x + yabs));
-    } else {
-        /* denominator (yabs - x) > 0 */
-        angle = (int)(pi34 - ((int64_t)pi4 * (x + yabs)) / (yabs - x));
-    }
-    if (y < 0) {
-        return -angle;
-    }
-    return angle;
-}
+/* fast_atan2_64 moved to dsp/polar_disc.cpp */
 
 /**
  * Polar discriminator using a fast integer atan2 approximation (64-bit safe).
@@ -445,12 +293,7 @@ fast_atan2_64(int64_t y, int64_t x) {
  * @param bj Imag part of current complex sample.
  * @return Phase difference in Q14 where (pi == 1<<14).
  */
-int
-polar_disc_fast(int ar, int aj, int br, int bj) {
-    int64_t cr, cj;
-    multiply64(ar, aj, br, -bj, &cr, &cj);
-    return fast_atan2_64(cj, cr);
-}
+/* polar_disc_fast provided by dsp/polar_disc.h */
 
 /**
  * Initialize the fast arctangent lookup table used by the LUT discriminator.
@@ -458,35 +301,13 @@ polar_disc_fast(int ar, int aj, int br, int bj) {
  *
  * @return 0 on success, -1 on allocation failure.
  */
-int
-atan_lut_init(void) {
-    /* Thread-safe, idempotent initialization */
-    pthread_once(&atan_lut_once, atan_lut_once_init);
-    if (atan_lut != NULL) {
-        return 0;
-    }
-    /* If LUT was freed after once, allow re-init guarded by mutex */
-    pthread_mutex_lock(&atan_lut_mutex);
-    if (atan_lut == NULL) {
-        atan_lut_once_init();
-    }
-    pthread_mutex_unlock(&atan_lut_mutex);
-    return (atan_lut != NULL) ? 0 : -1;
-}
+/* atan_lut_init provided by dsp/polar_disc.h */
 
 /**
  * Free memory associated with the fast arctangent lookup table.
  * Safe to call multiple times.
  */
-void
-atan_lut_free(void) {
-    pthread_mutex_lock(&atan_lut_mutex);
-    if (atan_lut != NULL) {
-        free(atan_lut);
-        atan_lut = NULL;
-    }
-    pthread_mutex_unlock(&atan_lut_mutex);
-}
+/* atan_lut_free provided by dsp/polar_disc.h */
 
 /**
  * Polar discriminator using a lookup table for atan2 approximation.
@@ -500,108 +321,24 @@ atan_lut_free(void) {
  * @param bj Imag part of current complex sample.
  * @return Phase difference in Q14 where (pi == 1<<14).
  */
-int
-polar_disc_lut(int ar, int aj, int br, int bj) {
-    int64_t cr, cj;
-    int64_t x, x_abs;
-
-    /* Ensure LUT is available; fall back if allocation failed */
-    atan_lut_init();
-    if (atan_lut == NULL) {
-        multiply64(ar, aj, br, -bj, &cr, &cj);
-        return fast_atan2_64(cj, cr);
-    }
-
-    multiply64(ar, aj, br, -bj, &cr, &cj);
-
-    /* special cases */
-    if (cr == 0 || cj == 0) {
-        if (cr == 0 && cj == 0) {
-            return 0;
-        }
-        if (cr == 0 && cj > 0) {
-            return 1 << 13;
-        }
-        if (cr == 0 && cj < 0) {
-            return -(1 << 13);
-        }
-        if (cj == 0 && cr > 0) {
-            return 0;
-        }
-        if (cj == 0 && cr < 0) {
-            return (1 << 14) - 1;
-        }
-    }
-
-    /* real range -32768 - 32768 use 64x range -> absolute maximum: 2097152 */
-    x = ((int64_t)cj << atan_lut_coef) / cr;
-    x_abs = (x < 0) ? -x : x;
-
-    if (x_abs >= (int64_t)atan_lut_size) {
-        /* Preserve quadrant using both cr and cj signs */
-        if (cr < 0) {
-            return (cj >= 0) ? ((1 << 14) - 1) : (-(1 << 14) + 1);
-        } else {
-            return (cj >= 0) ? (1 << 13) : -(1 << 13);
-        }
-    }
-
-    if (x > 0) {
-        int val = (cj > 0) ? atan_lut[(int)x] : (atan_lut[(int)x] - (1 << 14));
-        if (val == (1 << 14)) {
-            val = (1 << 14) - 1;
-        }
-        if (val == -(1 << 14)) {
-            val = -(1 << 14) + 1;
-        }
-        return val;
-    } else {
-        int val = (cj > 0) ? ((1 << 14) - atan_lut[(int)(-x)]) : (-atan_lut[(int)(-x)]);
-        if (val == (1 << 14)) {
-            val = (1 << 14) - 1;
-        }
-        if (val == -(1 << 14)) {
-            val = -(1 << 14) + 1;
-        }
-        return val;
-    }
-
-    return 0;
-}
+/* polar_disc_lut provided by dsp/polar_disc.h */
 
 /**
  * Greatest common divisor via Euclidean algorithm.
  */
-static inline int
-gcd_int(int a, int b) {
-    if (a < 0) {
-        a = -a;
-    }
-    if (b < 0) {
-        b = -b;
-    }
-    while (b != 0) {
-        int t = a % b;
-        a = b;
-        b = t;
-    }
-    return (a == 0) ? 1 : a;
-}
+/* gcd_int provided by dsp/math_utils.h */
 
 /**
  * Normalized sinc function: sin(pi*x)/(pi*x), with sinc(0)=1.
  */
-static inline double
-dsd_fme_sinc(double x) {
-    if (x == 0.0) {
-        return 1.0;
-    }
-    return sin(kPi * x) / (kPi * x);
-}
+/* dsd_fme_sinc provided by dsp/math_utils.h */
 
 /**
- * Demodulation thread entry: reads from input ring, runs the demod pipeline,
- * and writes audio samples to the output ring.
+ * Demodulation worker: consume input ring, run pipeline, and produce audio.
+ *
+ * Reads baseband I/Q blocks from the input ring, invokes the full demodulation
+ * pipeline, and writes audio samples to the output ring with optional
+ * resampling or legacy upsampling. Runs until global exit flag is set.
  *
  * @param arg Pointer to `demod_state`.
  * @return NULL on exit.
@@ -769,7 +506,10 @@ optimal_settings(int freq, int rate) {
 }
 
 /**
- * Controller thread: handles basic scanning/hopping between channels.
+ * Controller worker: scans/hops through configured center frequencies.
+ *
+ * Programs tuner frequency/sample rate according to current optimal settings
+ * and hops when signaled by the demod path (e.g., squelch-triggered).
  *
  * @param arg Pointer to `controller_state`.
  * @return NULL on exit.
@@ -912,7 +652,7 @@ demod_init_analog(struct demod_state* s) {
     pthread_cond_init(&s->ready, NULL);
     pthread_mutex_init(&s->ready_m, NULL);
     s->output_target = &output;
-    if (s->custom_atan == 2 && atan_lut == NULL) {
+    if (s->custom_atan == 2) {
         atan_lut_init();
     }
     /* set discriminator function pointer */
@@ -1007,7 +747,7 @@ demod_init_ro2(struct demod_state* s) {
     pthread_cond_init(&s->ready, NULL);
     pthread_mutex_init(&s->ready_m, NULL);
     s->output_target = &output;
-    if (s->custom_atan == 2 && atan_lut == NULL) {
+    if (s->custom_atan == 2) {
         atan_lut_init();
     }
     /* set discriminator function pointer */
@@ -1097,7 +837,7 @@ demod_init(struct demod_state* s) {
     pthread_cond_init(&s->ready, NULL);
     pthread_mutex_init(&s->ready_m, NULL);
     s->output_target = &output;
-    if (s->custom_atan == 2 && atan_lut == NULL) {
+    if (s->custom_atan == 2) {
         atan_lut_init();
     }
     /* set discriminator function pointer */
@@ -1230,6 +970,195 @@ rtlsdr_sighandler(void) {
 }
 
 /**
+ * Apply runtime configuration flags and set up optional resampler/FLL/TED.
+ *
+ * Reads environment-backed runtime configuration and options, enables
+ * or disables modules, and designs the rational resampler when requested.
+ *
+ * @param opts Decoder options.
+ */
+static void
+configure_from_env_and_opts(dsd_opts* opts) {
+    dsd_fme_config_init(opts);
+    const DsdFmeRuntimeConfig* cfg = dsd_fme_get_config();
+    if (!cfg) {
+        return;
+    }
+    if (cfg->hb_decim_is_set) {
+        use_halfband_decimator = (cfg->hb_decim != 0);
+    }
+    if (cfg->combine_rot_is_set) {
+        combine_rotate_enabled = (cfg->combine_rot != 0);
+    }
+    if (cfg->upsample_fp_is_set) {
+        upsample_fixedpoint_enabled = (cfg->upsample_fp != 0);
+    }
+
+    int enable_resamp = 1;
+    int target = 48000;
+    if (cfg->resamp_is_set) {
+        enable_resamp = cfg->resamp_disable ? 0 : 1;
+        target = cfg->resamp_target_hz > 0 ? cfg->resamp_target_hz : 48000;
+    }
+    if (enable_resamp) {
+        demod.resamp_target_hz = target;
+        int inRate = (demod.rate_out > 0) ? demod.rate_out : rtl_bandwidth;
+        int g = gcd_int(inRate, target);
+        int L = target / g;
+        int M = inRate / g;
+        if (L < 1) {
+            L = 1;
+        }
+        if (M < 1) {
+            M = 1;
+        }
+        int scale_num = L;
+        int scale_den = M;
+        int scale = (scale_den > 0) ? ((scale_num + scale_den - 1) / scale_den) : 1;
+        if (scale > 4) {
+            LOG_WARNING("Resampler ratio too large (L=%d,M=%d). Clamping not supported; disabling resampler.\n", L, M);
+            demod.resamp_enabled = 0;
+        } else {
+            demod.resamp_enabled = 1;
+            resamp_design(&demod, L, M);
+            LOG_INFO("Rational resampler enabled: %d -> %d Hz (L=%d,M=%d).\n", inRate, target, L, M);
+        }
+    } else {
+        demod.resamp_enabled = 0;
+    }
+
+    demod.fll_enabled = cfg->fll_is_set ? (cfg->fll_enable != 0) : 0;
+    fll_lut_enabled = cfg->fll_lut_is_set ? (cfg->fll_lut_enable != 0) : fll_lut_enabled;
+    demod.fll_alpha_q15 = cfg->fll_alpha_is_set ? cfg->fll_alpha_q15 : 50;
+    demod.fll_beta_q15 = cfg->fll_beta_is_set ? cfg->fll_beta_q15 : 5;
+    demod.fll_deadband_q14 = cfg->fll_deadband_is_set ? cfg->fll_deadband_q14 : 45;
+    demod.fll_slew_max_q15 = cfg->fll_slew_is_set ? cfg->fll_slew_max_q15 : 64;
+    demod.fll_freq_q15 = 0;
+    demod.fll_phase_q15 = 0;
+    demod.fll_prev_r = demod.fll_prev_j = 0;
+
+    demod.ted_enabled = cfg->ted_is_set ? (cfg->ted_enable != 0) : 0;
+    demod.ted_gain_q20 = cfg->ted_gain_is_set ? cfg->ted_gain_q20 : 64;
+    demod.ted_sps = cfg->ted_sps_is_set ? cfg->ted_sps : 10;
+    demod.ted_mu_q20 = 0;
+    demod.ted_force = cfg->ted_force_is_set ? (cfg->ted_force != 0) : 0;
+}
+
+/**
+ * Apply sensible defaults for digital vs analog modes when env not set.
+ *
+ * @param opts Decoder options.
+ */
+static void
+select_defaults_for_mode(dsd_opts* opts) {
+    int env_ted_set = dsd_fme_get_config()->ted_is_set;
+    int env_fll_alpha_set = dsd_fme_get_config()->fll_alpha_is_set;
+    int env_fll_beta_set = dsd_fme_get_config()->fll_beta_is_set;
+    int env_ted_sps_set = dsd_fme_get_config()->ted_sps_is_set;
+    int env_ted_gain_set = dsd_fme_get_config()->ted_gain_is_set;
+    int digital_mode = (opts->frame_p25p1 == 1 || opts->frame_p25p2 == 1 || opts->frame_provoice == 1);
+    if (digital_mode) {
+        if (!env_ted_set) {
+            demod.ted_enabled = 0;
+        }
+        if (!env_ted_sps_set) {
+            int ds_passes = demod.downsample_passes;
+            if (ds_passes < 0) {
+                ds_passes = 0;
+            }
+            int denom = 1 << ds_passes;
+            long long Fs_cx_ll = (long long)demod.rate_in * (long long)demod.post_downsample;
+            int Fs_cx = (int)(Fs_cx_ll / (denom ? denom : 1));
+            if (Fs_cx <= 0) {
+                Fs_cx = (int)output.rate;
+            }
+            int sps = (Fs_cx + 2400) / 4800; /* round(Fs/4800) */
+            if (sps < 2) {
+                sps = 2;
+            }
+            demod.ted_sps = sps;
+        }
+        if (!env_ted_gain_set) {
+            demod.ted_gain_q20 = 96;
+        }
+        if (!env_fll_alpha_set) {
+            demod.fll_alpha_q15 = 150;
+        }
+        if (!env_fll_beta_set) {
+            demod.fll_beta_q15 = 15;
+        }
+        if (!demod.fll_enabled && !dsd_fme_get_config()->fll_is_set) {
+            demod.fll_enabled = 1;
+        }
+    } else {
+        if (!env_ted_set) {
+            demod.ted_enabled = 0;
+        }
+        if (!env_fll_alpha_set) {
+            demod.fll_alpha_q15 = 50;
+        }
+        if (!env_fll_beta_set) {
+            demod.fll_beta_q15 = 5;
+        }
+    }
+}
+
+/**
+ * Seed initial device index, center frequency, gain and UDP port.
+ *
+ * @param opts Decoder options.
+ */
+static void
+setup_initial_freq_and_rate(dsd_opts* opts) {
+    if (opts->rtlsdr_center_freq > 0) {
+        controller.freqs[controller.freq_len] = opts->rtlsdr_center_freq;
+        controller.freq_len++;
+    }
+    if (opts->rtlsdr_ppm_error != 0) {
+        dongle.ppm_error = opts->rtlsdr_ppm_error;
+        LOG_INFO("Setting RTL PPM Error Set to %d\n", opts->rtlsdr_ppm_error);
+    }
+    dongle.dev_index = opts->rtl_dev_index;
+    LOG_INFO("Setting RTL Bandwidth to %d Hz\n", rtl_bandwidth);
+    LOG_INFO("Setting RTL Power Squelch Level to %d\n", opts->rtl_squelch_level);
+    if (opts->rtl_udp_port != 0) {
+        int p = opts->rtl_udp_port;
+        if (p < 0) {
+            p = 0;
+        }
+        if (p > 65535) {
+            p = 65535;
+        }
+        port = (uint16_t)p;
+    }
+    if (opts->rtl_gain_value > 0) {
+        dongle.gain = opts->rtl_gain_value * 10;
+    }
+}
+
+/**
+ * Launch controller/demod threads and start async device capture.
+ */
+static void
+start_threads_and_async(void) {
+    pthread_create(&controller.thread, NULL, controller_thread_fn, (void*)(&controller));
+    pthread_create(&demod.thread, NULL, demod_thread_fn, (void*)(&demod));
+    rtl_device_start_async(rtl_device_handle, (uint32_t)ACTUAL_BUF_LENGTH);
+    if (port != 0) {
+        g_udp_ctrl = udp_control_start(
+            port,
+            [](uint32_t new_freq_hz, void* /*user_data*/) {
+                dongle.freq = (uint32_t)new_freq_hz;
+                optimal_settings((int)new_freq_hz, demod.rate_in);
+                rtl_device_set_frequency(rtl_device_handle, dongle.freq);
+                rtl_device_set_sample_rate(rtl_device_handle, dongle.rate);
+                rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
+            },
+            NULL);
+    }
+}
+
+/**
  * Initialize and open the RTL-SDR streaming pipeline, threads, and buffers.
  *
  * @param opts Decoder options used to configure the pipeline.
@@ -1281,149 +1210,10 @@ open_rtlsdr_stream(dsd_opts* opts) {
     controller_init(&controller);
 
     /* Read optional environment flags (centralized) */
-    {
-        dsd_fme_config_init(opts);
-        const DsdFmeRuntimeConfig* cfg = dsd_fme_get_config();
-        if (cfg) {
-            if (cfg->hb_decim_is_set) {
-                use_halfband_decimator = (cfg->hb_decim != 0);
-            }
-            if (cfg->combine_rot_is_set) {
-                combine_rotate_enabled = (cfg->combine_rot != 0);
-            }
-            if (cfg->upsample_fp_is_set) {
-                upsample_fixedpoint_enabled = (cfg->upsample_fp != 0);
-            }
+    configure_from_env_and_opts(opts);
+    select_defaults_for_mode(opts);
 
-            int enable_resamp = 1;
-            int target = 48000;
-            if (cfg->resamp_is_set) {
-                enable_resamp = cfg->resamp_disable ? 0 : 1;
-                target = cfg->resamp_target_hz > 0 ? cfg->resamp_target_hz : 48000;
-            }
-            if (enable_resamp) {
-                demod.resamp_target_hz = target;
-                int inRate = (demod.rate_out > 0) ? demod.rate_out : rtl_bandwidth;
-                int g = gcd_int(inRate, target);
-                int L = target / g;
-                int M = inRate / g;
-                if (L < 1) {
-                    L = 1;
-                }
-                if (M < 1) {
-                    M = 1;
-                }
-                int scale_num = L;
-                int scale_den = M;
-                int scale = (scale_den > 0) ? ((scale_num + scale_den - 1) / scale_den) : 1;
-                if (scale > 4) {
-                    LOG_WARNING("Resampler ratio too large (L=%d,M=%d). Clamping not supported; disabling resampler.\n",
-                                L, M);
-                    demod.resamp_enabled = 0;
-                } else {
-                    demod.resamp_enabled = 1;
-                    resamp_design(&demod, L, M);
-                    LOG_INFO("Rational resampler enabled: %d -> %d Hz (L=%d,M=%d).\n", inRate, target, L, M);
-                }
-            } else {
-                demod.resamp_enabled = 0;
-            }
-
-            demod.fll_enabled = cfg->fll_is_set ? (cfg->fll_enable != 0) : 0;
-            fll_lut_enabled = cfg->fll_lut_is_set ? (cfg->fll_lut_enable != 0) : fll_lut_enabled;
-            demod.fll_alpha_q15 = cfg->fll_alpha_is_set ? cfg->fll_alpha_q15 : 50;
-            demod.fll_beta_q15 = cfg->fll_beta_is_set ? cfg->fll_beta_q15 : 5;
-            demod.fll_deadband_q14 = cfg->fll_deadband_is_set ? cfg->fll_deadband_q14 : 45;
-            demod.fll_slew_max_q15 = cfg->fll_slew_is_set ? cfg->fll_slew_max_q15 : 64;
-            demod.fll_freq_q15 = 0;
-            demod.fll_phase_q15 = 0;
-            demod.fll_prev_r = demod.fll_prev_j = 0;
-
-            demod.ted_enabled = cfg->ted_is_set ? (cfg->ted_enable != 0) : 0;
-            demod.ted_gain_q20 = cfg->ted_gain_is_set ? cfg->ted_gain_q20 : 64;
-            demod.ted_sps = cfg->ted_sps_is_set ? cfg->ted_sps : 10;
-            demod.ted_mu_q20 = 0;
-            demod.ted_force = cfg->ted_force_is_set ? (cfg->ted_force != 0) : 0;
-
-            int env_ted_set = cfg->ted_is_set;
-            int env_fll_alpha_set = cfg->fll_alpha_is_set;
-            int env_fll_beta_set = cfg->fll_beta_is_set;
-            int env_ted_sps_set = cfg->ted_sps_is_set;
-            int env_ted_gain_set = cfg->ted_gain_is_set;
-            int digital_mode = (opts->frame_p25p1 == 1 || opts->frame_p25p2 == 1 || opts->frame_provoice == 1);
-            if (digital_mode) {
-                if (!env_ted_set) {
-                    demod.ted_enabled = 0;
-                }
-                if (!env_ted_sps_set) {
-                    int ds_passes = demod.downsample_passes;
-                    if (ds_passes < 0) {
-                        ds_passes = 0;
-                    }
-                    int denom = 1 << ds_passes;
-                    long long Fs_cx_ll = (long long)demod.rate_in * (long long)demod.post_downsample;
-                    int Fs_cx = (int)(Fs_cx_ll / (denom ? denom : 1));
-                    if (Fs_cx <= 0) {
-                        Fs_cx = (int)output.rate;
-                    }
-                    int sps = (Fs_cx + 2400) / 4800; /* round(Fs/4800) */
-                    if (sps < 2) {
-                        sps = 2;
-                    }
-                    demod.ted_sps = sps;
-                }
-                if (!env_ted_gain_set) {
-                    demod.ted_gain_q20 = 96;
-                }
-                if (!env_fll_alpha_set) {
-                    demod.fll_alpha_q15 = 150;
-                }
-                if (!env_fll_beta_set) {
-                    demod.fll_beta_q15 = 15;
-                }
-                if (!demod.fll_enabled && !cfg->fll_is_set) {
-                    demod.fll_enabled = 1;
-                }
-            } else {
-                if (!env_ted_set) {
-                    demod.ted_enabled = 0;
-                }
-                if (!env_fll_alpha_set) {
-                    demod.fll_alpha_q15 = 50;
-                }
-                if (!env_fll_beta_set) {
-                    demod.fll_beta_q15 = 5;
-                }
-            }
-        }
-    }
-
-    if (opts->rtlsdr_center_freq > 0) {
-        controller.freqs[controller.freq_len] = opts->rtlsdr_center_freq;
-        controller.freq_len++;
-    }
-
-    if (opts->rtlsdr_ppm_error != 0) {
-        dongle.ppm_error = opts->rtlsdr_ppm_error;
-        LOG_INFO("Setting RTL PPM Error Set to %d\n", opts->rtlsdr_ppm_error);
-    }
-
-    dongle.dev_index = opts->rtl_dev_index;
-    LOG_INFO("Setting RTL Bandwidth to %d Hz\n", rtl_bandwidth);
-    LOG_INFO("Setting RTL Power Squelch Level to %d\n", opts->rtl_squelch_level);
-    if (opts->rtl_udp_port != 0) {
-        int p = opts->rtl_udp_port;
-        if (p < 0) {
-            p = 0;
-        }
-        if (p > 65535) {
-            p = 65535;
-        }
-        port = (uint16_t)p;
-    }
-    if (opts->rtl_gain_value > 0) {
-        dongle.gain = opts->rtl_gain_value * 10; //multiply by ten to make it consistent with the way rtl_fm works
-    }
+    setup_initial_freq_and_rate(opts);
 
     /* quadruple sample_rate to limit to Δθ to ±π/2 */
     demod.rate_in *= demod.post_downsample;
@@ -1552,25 +1342,8 @@ open_rtlsdr_stream(dsd_opts* opts) {
     /* Reset endpoint before we start reading from it (mandatory) */
     rtl_device_reset_buffer(rtl_device_handle);
 
-    /* Start controller and demod threads before async so they are ready */
-    pthread_create(&controller.thread, NULL, controller_thread_fn, (void*)(&controller));
-    pthread_create(&demod.thread, NULL, demod_thread_fn, (void*)(&demod));
-    /* Start async capture */
-    rtl_device_start_async(rtl_device_handle, (uint32_t)ACTUAL_BUF_LENGTH);
-    //only start UDP control if user specified port
-    if (port != 0) {
-        g_udp_ctrl = udp_control_start(
-            port,
-            /* callback */
-            [](uint32_t new_freq_hz, void* /*user_data*/) {
-                dongle.freq = (uint32_t)new_freq_hz;
-                optimal_settings((int)new_freq_hz, demod.rate_in);
-                rtl_device_set_frequency(rtl_device_handle, dongle.freq);
-                rtl_device_set_sample_rate(rtl_device_handle, dongle.rate);
-                rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
-            },
-            /* user_data */ NULL);
-    }
+    /* Start controller/demod threads and async */
+    start_threads_and_async();
 
     /* If resampler is enabled, update output.rate for downstream consumers */
     if (demod.resamp_enabled && demod.resamp_target_hz > 0) {
