@@ -759,7 +759,17 @@ select_defaults_for_mode(dsd_opts* opts) {
     int env_fll_beta_set = dsd_fme_get_config()->fll_beta_is_set;
     int env_ted_sps_set = dsd_fme_get_config()->ted_sps_is_set;
     int env_ted_gain_set = dsd_fme_get_config()->ted_gain_is_set;
-    int digital_mode = (opts->frame_p25p1 == 1 || opts->frame_p25p2 == 1 || opts->frame_provoice == 1);
+    /* Treat all digital voice modes as digital for FLL/TED defaults */
+    int digital_mode = (
+        opts->frame_p25p1 == 1 ||
+        opts->frame_p25p2 == 1 ||
+        opts->frame_provoice == 1 ||
+        opts->frame_dmr == 1 ||
+        opts->frame_nxdn48 == 1 ||
+        opts->frame_nxdn96 == 1 ||
+        opts->frame_dstar == 1 ||
+        opts->frame_dpmr == 1 ||
+        opts->frame_m17 == 1);
     if (digital_mode) {
         if (!env_ted_set) {
             demod.ted_enabled = 0;
