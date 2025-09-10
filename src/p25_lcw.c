@@ -7,6 +7,9 @@
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 
 //new p25_lcw function here -- TIA-102.AABF-D LCW Format Messages (if anybody wants to fill the rest out)
 void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t irrecoverable_errors)
@@ -366,7 +369,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
             sprintf (state->active_channel[1], "%s", "");
             opts->p25_is_tuned = 0;
             state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
-            rtl_dev_tune (opts, state->p25_cc_freq);
+            if (g_rtl_ctx) rtl_stream_tune(g_rtl_ctx, (uint32_t)state->p25_cc_freq);
             #endif
           }
         }

@@ -51,6 +51,17 @@
 #include "runtime/rt_sched.h"
 #include "runtime/worker_pool.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+/* Forward declarations for internal helpers used by shims */
+void dsd_rtl_stream_clear_output(void);
+long int dsd_rtl_stream_return_pwr(void);
+unsigned int dsd_rtl_stream_output_rate(void);
+#ifdef __cplusplus
+}
+#endif
+
 #define DEFAULT_SAMPLE_RATE      48000
 #define DEFAULT_BUF_LENGTH       (1 * 16384)
 #define MAXIMUM_OVERSAMPLE       16
@@ -189,7 +200,7 @@ struct output_state output;
 struct controller_state controller;
 static struct input_ring_state input_ring;
 
-struct RtlSdrStream {
+struct RtlSdrInternals {
     struct rtl_device* device;
     struct dongle_state* dongle;
     struct demod_state* demod;
@@ -200,8 +211,7 @@ struct RtlSdrStream {
     const DsdFmeRuntimeConfig* cfg;
 };
 
-static struct RtlSdrStream* g_stream = NULL;
-typedef struct RtlSdrStream RtlSdrContext;
+static struct RtlSdrInternals* g_stream = NULL;
 
 /**
  * Complex multiply using 32-bit intermediates (suitable for small magnitudes).
@@ -1006,7 +1016,7 @@ sanity_checks(void) {
 /**
  * Signal handler to request RTL-SDR async cancel and exit.
  */
-void
+extern "C" void
 rtlsdr_sighandler(void) {
     LOG_ERROR("Signal caught, exiting!\n");
     rtl_device_stop_async(rtl_device_handle);
@@ -1209,8 +1219,8 @@ start_threads_and_async(void) {
  * @param opts Decoder options used to configure the pipeline.
  * @return 0 on success, negative on error.
  */
-int
-open_rtlsdr_stream(dsd_opts* opts) {
+extern "C" int
+dsd_rtl_stream_open(dsd_opts* opts) {
     rtl_bandwidth = opts->rtl_bandwidth * 1000; //reverted back to straight value
     bandwidth_multiplier = (bandwidth_divisor / rtl_bandwidth);
     /* Guard multiplier to a safe range [1, MAX_BANDWIDTH_MULTIPLIER] */
@@ -1424,7 +1434,7 @@ open_rtlsdr_stream(dsd_opts* opts) {
         free(g_stream);
         g_stream = NULL;
     }
-    g_stream = (struct RtlSdrStream*)calloc(1, sizeof(struct RtlSdrStream));
+    g_stream = (struct RtlSdrInternals*)calloc(1, sizeof(struct RtlSdrInternals));
     if (g_stream) {
         g_stream->device = rtl_device_handle;
         g_stream->dongle = &dongle;
@@ -1441,8 +1451,8 @@ open_rtlsdr_stream(dsd_opts* opts) {
 /**
  * Stop threads, cleanup buffers/objects, and close the RTL-SDR stream.
  */
-void
-cleanup_rtlsdr_stream(void) {
+extern "C" void
+dsd_rtl_stream_close(void) {
     LOG_INFO("cleaning up...\n");
     if (g_udp_ctrl) {
         udp_control_stop(g_udp_ctrl);
@@ -1490,8 +1500,8 @@ cleanup_rtlsdr_stream(void) {
  * @param state Decoder state (unused).
  * @return Number of samples read (>=1) or -1 on exit.
  */
-int
-get_rtlsdr_samples(int16_t* out, size_t count, dsd_opts* opts, dsd_state* state) {
+extern "C" int
+dsd_rtl_stream_read(int16_t* out, size_t count, dsd_opts* opts, dsd_state* state) {
     UNUSED(state);
     if (count == 0) {
         return 0;
@@ -1523,14 +1533,16 @@ get_rtlsdr_samples(int16_t* out, size_t count, dsd_opts* opts, dsd_state* state)
  * @param state  Decoder state (unused).
  * @return 0 on success, -1 on exit.
  */
-int
-get_rtlsdr_sample(int16_t* sample, dsd_opts* opts, dsd_state* state) {
-    /* Delegate to batched API for a single sample */
-    int ret = get_rtlsdr_samples(sample, 1, opts, state);
-    if (ret < 0) {
-        return -1;
-    }
-    return 0;
+/* single-sample helper removed */
+
+/**
+ * Return the current output audio sample rate in Hz.
+ *
+ * @return Output sample rate in Hz.
+ */
+extern "C" unsigned int
+dsd_rtl_stream_output_rate(void) {
+    return (unsigned int)output.rate;
 }
 
 /**
@@ -1539,8 +1551,8 @@ get_rtlsdr_sample(int16_t* sample, dsd_opts* opts, dsd_state* state) {
  * @param opts      Decoder options.
  * @param frequency Target center frequency in Hz.
  */
-void
-rtl_dev_tune(dsd_opts* opts, long int frequency) {
+extern "C" int
+dsd_rtl_stream_tune(dsd_opts* opts, long int frequency) {
     int r;
     if (opts->payload == 1) {
         LOG_INFO("\nTuning to %ld Hz.", frequency);
@@ -1560,9 +1572,11 @@ rtl_dev_tune(dsd_opts* opts, long int frequency) {
     }
     if (r < 0) {
         LOG_WARNING(" (Failed to set Center Frequency %u). \n", dongle.freq);
+        return r;
     }
 
-    rtl_clean_queue();
+    dsd_rtl_stream_clear_output();
+    return 0;
 }
 
 /**
@@ -1571,8 +1585,8 @@ rtl_dev_tune(dsd_opts* opts, long int frequency) {
  *
  * @return Mean power value (approximate RMS squared).
  */
-long int
-rtl_return_pwr(void) {
+extern "C" long int
+dsd_rtl_stream_return_pwr(void) {
     long int pwr = 0;
     int n = demod.lp_len;
     if (n > 160) {
@@ -1588,8 +1602,8 @@ rtl_return_pwr(void) {
 /**
  * Clear the output ring buffer and wake any waiting producer.
  */
-void
-rtl_clean_queue(void) {
+extern "C" void
+dsd_rtl_stream_clear_output(void) {
     /* Clear the entire ring to prevent sample 'lag' */
     {
         struct output_state* outp = &output;

@@ -10,6 +10,7 @@
 
 #ifdef USE_RTLSDR
 #include <rtl-sdr.h>
+#include "io/rtl_stream_c.h"
 //use to list out all detected RTL dongles
 char vendor[256], product[256], serial[256], userdev[256];
 int device_count = 0;
@@ -144,7 +145,7 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
   if (opts->audio_in_type == 3)
   {
     #ifdef USE_RTLSDR
-    rtl_clean_queue();
+    if (g_rtl_ctx) rtl_stream_clear_output(g_rtl_ctx);
     #endif
   }
 
@@ -503,8 +504,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
           noecho();
 
           //retune dongle if frequency is not zero
-          if (opts->rtlsdr_center_freq != 0)
-            rtl_dev_tune (opts, opts->rtlsdr_center_freq);
+          if (opts->rtlsdr_center_freq != 0 && g_rtl_ctx)
+            rtl_stream_tune (g_rtl_ctx, (uint32_t)opts->rtlsdr_center_freq);
           #endif
           choicec = 18;
         }
@@ -1605,11 +1606,16 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (opts->rtl_started == 0)
     {
       opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
-      if (open_rtlsdr_stream(opts) < 0) {
+      if (g_rtl_ctx == NULL) {
+        if (rtl_stream_create(opts, &g_rtl_ctx) < 0) {
+          fprintf(stderr, "Failed to create RTL stream.\n");
+        }
+      }
+      if (g_rtl_ctx && rtl_stream_start(g_rtl_ctx) < 0) {
         fprintf(stderr, "Failed to open RTL-SDR stream.\n");
       }
     }
-    rtl_clean_queue();
+    if (g_rtl_ctx) rtl_stream_clear_output(g_rtl_ctx);
     reset_dibit_buffer(state); //test and observe for any random issues, disable if needed
     #elif AERO_BUILD
     opts->audio_out_type = 5; //hopefully the audio stream is still/already open //shouldn't this be 5? Was set to 3

@@ -7,6 +7,9 @@
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 
 //MAC message lengths
 static const uint8_t mac_msg_len[256] = {
@@ -181,7 +184,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					else if (opts->audio_in_type == 3)
 					{
 						#ifdef USE_RTLSDR
-						rtl_dev_tune (opts, freq);
+						if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1;
 						state->last_vc_sync_time = time(NULL);
@@ -280,7 +283,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					else if (opts->audio_in_type == 3)
 					{
 						#ifdef USE_RTLSDR
-						rtl_dev_tune (opts, freq);
+						if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1;
 						state->last_vc_sync_time = time(NULL);
@@ -420,7 +423,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						else if (opts->audio_in_type == 3)
 						{
 							#ifdef USE_RTLSDR
-							rtl_dev_tune (opts, tunable_freq);
+							if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)tunable_freq);
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1;
 							state->last_vc_sync_time = time(NULL);
@@ -542,7 +545,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					else if (opts->audio_in_type == 3)
 					{
 						#ifdef USE_RTLSDR
-						rtl_dev_tune (opts, freq);
+						if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1;
 						state->last_vc_sync_time = time(NULL);
@@ -673,7 +676,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					else if (opts->audio_in_type == 3)
 					{
 						#ifdef USE_RTLSDR
-						rtl_dev_tune (opts, freq);
+						if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq);
 						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
 						opts->p25_is_tuned = 1;
 						state->last_vc_sync_time = time(NULL);
@@ -794,8 +797,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					else if (opts->audio_in_type == 3)
 					{
 						#ifdef USE_RTLSDR
-						rtl_dev_tune (opts, freq);
-						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
+						if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq);
+						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
 						opts->p25_is_tuned = 1;
 						state->last_vc_sync_time = time(NULL);
 						#endif
@@ -958,13 +961,12 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
 							state->last_vc_sync_time = time(NULL);
-							j = 8; //break loop
 						}
 						//rtl
 						else if (opts->audio_in_type == 3)
 						{
 							#ifdef USE_RTLSDR
-							rtl_dev_tune (opts, tunable_freq);
+							if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)tunable_freq);
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1;
 							state->last_vc_sync_time = time(NULL);
@@ -1168,7 +1170,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						else if (opts->audio_in_type == 3)
 						{
 							#ifdef USE_RTLSDR
-							rtl_dev_tune (opts, tunable_freq);
+							if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)tunable_freq);
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1;
@@ -1309,7 +1311,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 						else if (opts->audio_in_type == 3)
 						{
 							#ifdef USE_RTLSDR
-							rtl_dev_tune (opts, tunable_freq);
+							if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)tunable_freq);
 							//probably best to only set these when really tuning
 							state->p25_vc_freq[0] = state->p25_vc_freq[1] = tunable_freq;
 							opts->p25_is_tuned = 1;
@@ -1437,7 +1439,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					else if (opts->audio_in_type == 3)
 					{
 						#ifdef USE_RTLSDR
-						rtl_dev_tune (opts, freq1);
+						if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq1);
 						state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
 						opts->p25_is_tuned = 1;
 						state->last_vc_sync_time = time(NULL);
@@ -1572,7 +1574,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 					else if (opts->audio_in_type == 3)
 					{
 						#ifdef USE_RTLSDR
-						rtl_dev_tune (opts, freq);
+						if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq);
 						if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
 						opts->p25_is_tuned = 1;
 						state->last_vc_sync_time = time(NULL);

@@ -1656,13 +1656,9 @@ extern "C" {
 #endif
 
 #ifdef USE_RTLSDR
-int open_rtlsdr_stream(dsd_opts *opts);
-void cleanup_rtlsdr_stream();
-int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state);
-void rtlsdr_sighandler();
-void rtl_dev_tune(dsd_opts * opts, long int frequency);
-long int rtl_return_pwr();
-void rtl_clean_queue();
+/* Orchestrator C shim context pointer (set in main when using rtl_stream_* API) */
+struct RtlSdrContext; /* forward declaration to avoid extra includes here */
+extern struct RtlSdrContext* g_rtl_ctx;
 #endif
 
 

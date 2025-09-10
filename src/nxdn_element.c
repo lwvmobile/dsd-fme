@@ -11,6 +11,9 @@
  */
 
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 
 void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state)
 {
@@ -188,7 +191,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
           memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
           memset(state->active_channel, 0, sizeof(state->active_channel));
           opts->p25_is_tuned = 0;
-          rtl_dev_tune (opts, state->p25_cc_freq);
+          if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->p25_cc_freq);
 
           state->nxdn_last_rid = 0;
           state->nxdn_last_tg = 0;
@@ -688,7 +691,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
         state->last_vc_sync_time = time(NULL);
         //
 
-        rtl_dev_tune (opts, freq);
+        if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq);
         state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
         opts->p25_is_tuned = 1;
 
@@ -1758,7 +1761,7 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
               state->last_cc_sync_time = time(NULL);
               state->last_vc_sync_time = time(NULL); //should we use this here, or not?
               //
-              rtl_dev_tune (opts, freq);
+              if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq);
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
               opts->p25_is_tuned = 1;
               //check the rkey array for a scrambler key value

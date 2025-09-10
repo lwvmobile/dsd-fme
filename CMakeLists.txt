@@ -94,6 +94,8 @@ if(RTLSDR_FOUND)
     list(APPEND SRCS src/runtime/rt_sched.cpp)
     list(APPEND SRCS src/runtime/mem.cpp)
     list(APPEND SRCS src/io/rtl_device.cpp)
+    list(APPEND SRCS src/io/rtl_stream.cpp)
+    list(APPEND SRCS src/io/rtl_stream_c.cpp)
     list(APPEND SRCS src/io/udp_control.cpp)
 endif()
 

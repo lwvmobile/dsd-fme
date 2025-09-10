@@ -13,6 +13,9 @@
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 #define PCLEAR_TUNE_AWAY //disable if slower return is preferred
 //function for handling Control Signalling PDUs (CSBK, MBC) messages
 void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8_t cs_pdu[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors)
@@ -380,7 +383,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   if (opts->rtlsdr_center_freq != tempf)
                     dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
                   if (opts->rtlsdr_center_freq != tempf)
-                    rtl_dev_tune (opts, freq);
+                    if (g_rtl_ctx) rtl_stream_tune(g_rtl_ctx, (uint32_t)freq);
                   state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
                   opts->p25_is_tuned = 1;
                   state->last_vc_sync_time = time(NULL);
@@ -599,7 +602,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 opts->p25_is_tuned = 0;
                 state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
                 if (opts->rtlsdr_center_freq != tempf)
-                  rtl_dev_tune (opts, state->p25_cc_freq);
+                  if (g_rtl_ctx) rtl_stream_tune(g_rtl_ctx, (uint32_t)state->p25_cc_freq);
                 #endif
               }
 
@@ -1680,7 +1683,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                     if (opts->rtlsdr_center_freq != temp)
                     {
                       dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
-                      rtl_dev_tune (opts, state->trunk_chan_map[j+1]); //unlike rigctl, using this actually interrupts signal decodes (rtl_clean_queue)
+                      if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->trunk_chan_map[j+1]); //unlike rigctl, using this actually interrupts signal decodes (rtl_clean_queue)
                       //debug print for tuning verification
                       // fprintf (stderr, "\n RTL LSN/TG to tune to: %d - %d", j+1, t_tg[j]);
                     }
@@ -1894,7 +1897,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               else if (opts->audio_in_type == 3)
               {
                 #ifdef USE_RTLSDR
-                rtl_dev_tune (opts, state->trunk_chan_map[lcn]);
+                if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->trunk_chan_map[lcn]);
                 state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
                 opts->p25_is_tuned = 1;
                 state->is_con_plus = 1; //flag on
@@ -1996,7 +1999,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               else if (opts->audio_in_type == 3)
               {
                 #ifdef USE_RTLSDR
-                rtl_dev_tune (opts, state->trunk_chan_map[lcn]);
+                if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->trunk_chan_map[lcn]);
                 state->p25_vc_freq[0] = state->p25_vc_freq[1] = state->trunk_chan_map[lcn];
                 opts->p25_is_tuned = 1;
                 state->is_con_plus = 1; //flag on
@@ -2275,7 +2278,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                   if (opts->rtlsdr_center_freq != temp)
                   {
                     dmr_reset_blocks (opts, state); //reset all block gathering since we are tuning away from current frequency
-                    rtl_dev_tune (opts, state->trunk_chan_map[j+xpt_bank+1]); //unlike rigctl, using this actually interrupts signal decodes (rtl_clean_queue)
+                    if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->trunk_chan_map[j+xpt_bank+1]); //unlike rigctl, using this actually interrupts signal decodes (rtl_clean_queue)
                     //debug print for tuning verification
                     fprintf (stderr, " - Tune to Freq: %ld", state->trunk_chan_map[j+xpt_bank+1]);
                   }

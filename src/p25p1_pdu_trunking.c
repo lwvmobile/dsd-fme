@@ -7,6 +7,9 @@
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 
 //trunking data delivered via PDU format
 void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_byte)
@@ -208,7 +211,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
         else if (opts->audio_in_type == 3)
         {
           #ifdef USE_RTLSDR
-          rtl_dev_tune (opts, freq1);
+          if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq1);
           state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
           opts->p25_is_tuned = 1;
           state->last_vc_sync_time = time(NULL);
@@ -319,7 +322,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
         else if (opts->audio_in_type == 3)
         {
           #ifdef USE_RTLSDR
-          rtl_dev_tune (opts, freq1);
+          if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq1);
           state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
           opts->p25_is_tuned = 1;
           state->last_vc_sync_time = time(NULL);
@@ -424,7 +427,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
         else if (opts->audio_in_type == 3)
         {
           #ifdef USE_RTLSDR
-          rtl_dev_tune (opts, freq);
+          if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq);
           if (state->synctype == 0 || state->synctype == 1) state->p25_vc_freq[0] = freq;
           opts->p25_is_tuned = 1;
           state->last_vc_sync_time = time(NULL);
@@ -546,7 +549,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
           else if (opts->audio_in_type == 3)
           {
             #ifdef USE_RTLSDR
-            rtl_dev_tune (opts, freq1);
+            if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq1);
             state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
             opts->p25_is_tuned = 1;
             state->last_vc_sync_time = time(NULL);

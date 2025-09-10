@@ -7,6 +7,9 @@
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 
 void processTSBK(dsd_opts * opts, dsd_state * state)
 {
@@ -329,7 +332,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
             else if (opts->audio_in_type == 3)
             {
               #ifdef USE_RTLSDR
-              rtl_dev_tune (opts, freq1);
+              if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)freq1);
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq1;
               opts->p25_is_tuned = 1;
               state->last_vc_sync_time = time(NULL);
@@ -428,7 +431,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
               else if (opts->audio_in_type == 3)
               {
                 #ifdef USE_RTLSDR
-                rtl_dev_tune (opts, tempf);
+                if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)tempf);
                 state->p25_vc_freq[0] = state->p25_vc_freq[1] = tempf;
                 opts->p25_is_tuned = 1;
                 state->last_vc_sync_time = time(NULL);

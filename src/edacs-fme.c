@@ -20,6 +20,9 @@
  * 2024-03 rewrite EDACS standard parsing to spec, add reverse-engineered EA messages
  *-----------------------------------------------------------------------------*/
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 
 
 int isCustomAfsString(dsd_state * state) {
@@ -297,26 +300,41 @@ void edacs_analog(dsd_opts * opts, dsd_state * state, int afs, unsigned char lcn
     {
       for (i = 0; i < 960; i++)
       {
-        get_rtlsdr_sample(&sample, opts, state);
+        #ifdef USE_RTLSDR
+        if (!g_rtl_ctx) cleanupAndExit(opts, state);
+        { int got = 0; if (rtl_stream_read(g_rtl_ctx, &sample, 1, &got) < 0 || got != 1) cleanupAndExit(opts, state); }
+        #else
+        cleanupAndExit(opts, state);
+        #endif
         sample *= opts->rtl_volume_multiplier;
         analog1[i] = sample;
       }
 
       for (i = 0; i < 960; i++)
       {
-        get_rtlsdr_sample(&sample, opts, state);
+        #ifdef USE_RTLSDR
+        if (!g_rtl_ctx) cleanupAndExit(opts, state);
+        { int got = 0; if (rtl_stream_read(g_rtl_ctx, &sample, 1, &got) < 0 || got != 1) cleanupAndExit(opts, state); }
+        #else
+        cleanupAndExit(opts, state);
+        #endif
         sample *= opts->rtl_volume_multiplier;
         analog2[i] = sample;
       }
 
       for (i = 0; i < 960; i++)
       {
-        get_rtlsdr_sample(&sample, opts, state);
+        #ifdef USE_RTLSDR
+        if (!g_rtl_ctx) cleanupAndExit(opts, state);
+        { int got = 0; if (rtl_stream_read(g_rtl_ctx, &sample, 1, &got) < 0 || got != 1) cleanupAndExit(opts, state); }
+        #else
+        cleanupAndExit(opts, state);
+        #endif
         sample *= opts->rtl_volume_multiplier;
         analog3[i] = sample;
       }
       //the rtl pwr value works properly without needing a 'hard' squelch value
-      pwr = rtl_return_pwr();
+      pwr = g_rtl_ctx ? rtl_stream_return_pwr(g_rtl_ctx) : 0;
     }
     #endif
 
@@ -1117,7 +1135,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (opts->audio_in_type == 3) //rtl dongle
             {
               #ifdef USE_RTLSDR
-              rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+              if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->trunk_lcn_freq[lcn-1]);
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
               if (is_digital == 0)
@@ -1233,7 +1251,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (opts->audio_in_type == 3) //rtl dongle
             {
               #ifdef USE_RTLSDR
-              rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+              if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->trunk_lcn_freq[lcn-1]);
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
               if (is_digital == 0)
@@ -1340,7 +1358,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (opts->audio_in_type == 3) //rtl dongle
             {
               #ifdef USE_RTLSDR
-              rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+              if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->trunk_lcn_freq[lcn-1]);
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
               if (is_digital == 0)
@@ -1524,10 +1542,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
             if (opts->audio_in_type == 3) //rtl dongle
             {
               #ifdef USE_RTLSDR
-              rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+              if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->trunk_lcn_freq[lcn-1]);
               state->edacs_tuned_lcn = lcn;
               opts->p25_is_tuned = 1;
-              if (is_digital == 0) edacs_analog(opts, state, group, lcn);
+              if (is_digital == 0)
+                edacs_analog(opts, state, group, lcn);
               #endif
             }
           }
@@ -1780,10 +1799,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
               if (opts->audio_in_type == 3) //rtl dongle
               {
                 #ifdef USE_RTLSDR
-                rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+                if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->trunk_lcn_freq[lcn-1]);
                 state->edacs_tuned_lcn = lcn;
                 opts->p25_is_tuned = 1;
-                if (is_digital == 0) edacs_analog(opts, state, target, lcn);
+                if (is_digital == 0)
+                  edacs_analog(opts, state, target, lcn);
                 #endif
               }
             }
@@ -1893,10 +1913,11 @@ void edacs(dsd_opts * opts, dsd_state * state)
               if (opts->audio_in_type == 3) //rtl dongle
               {
                 #ifdef USE_RTLSDR
-                rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+                if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->trunk_lcn_freq[lcn-1]);
                 state->edacs_tuned_lcn = lcn;
                 opts->p25_is_tuned = 1;
-                if (is_digital == 0) edacs_analog(opts, state, target, lcn);
+                if (is_digital == 0)
+                  edacs_analog(opts, state, target, lcn);
                 #endif
               }
             }
@@ -2189,7 +2210,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
                 if (opts->audio_in_type == 3) //rtl dongle
                 {
                   #ifdef USE_RTLSDR
-                  rtl_dev_tune (opts, state->trunk_lcn_freq[lcn-1]);
+                  if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->trunk_lcn_freq[lcn-1]);
                   state->edacs_tuned_lcn = lcn;
                   opts->p25_is_tuned = 1;
                   if (is_digital == 0) edacs_analog(opts, state, 0, lcn);
@@ -2355,7 +2376,7 @@ void eot_cc(dsd_opts * opts, dsd_state * state)
       sprintf (state->active_channel[1], "%s", "");
       opts->p25_is_tuned = 0;
       state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
-      rtl_dev_tune (opts, state->p25_cc_freq);
+      if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->p25_cc_freq);
       #endif
     }
 

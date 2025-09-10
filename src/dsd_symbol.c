@@ -16,6 +16,9 @@
  */
 
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 
 int
 getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
@@ -129,10 +132,12 @@ getSymbol (dsd_opts * opts, dsd_state * state, int have_sync)
       {
 #ifdef USE_RTLSDR
         // Read demodulated stream here
-        if (get_rtlsdr_sample(&sample, opts, state) < 0)
+        if (!g_rtl_ctx) cleanupAndExit(opts, state);
+        int got = 0;
+        if (rtl_stream_read(g_rtl_ctx, &sample, 1, &got) < 0 || got != 1)
           cleanupAndExit(opts, state);
         //update root means square power level
-        opts->rtl_pwr = rtl_return_pwr();
+        opts->rtl_pwr = rtl_stream_return_pwr(g_rtl_ctx);
         sample *= opts->rtl_volume_multiplier;
 
 #endif

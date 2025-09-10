@@ -7,6 +7,9 @@
 *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 
 uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
 {
@@ -481,7 +484,7 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
     {
       //drop all items (failsafe)
       noCarrier(opts, state);
-      rtl_dev_tune (opts, state->p25_cc_freq);
+      if (g_rtl_ctx) rtl_stream_tune(g_rtl_ctx, (uint32_t)state->p25_cc_freq);
     }
     #endif
 
@@ -558,7 +561,7 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
     {
       //drop all items (failsafe)
       noCarrier(opts, state);
-      rtl_dev_tune (opts, state->p25_cc_freq);
+      if (g_rtl_ctx) rtl_stream_tune(g_rtl_ctx, (uint32_t)state->p25_cc_freq);
     }
     #endif
 
@@ -742,7 +745,7 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
 
     //rtl
     #ifdef USE_RTLSDR
-    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_dev_tune (opts, state->p25_cc_freq);
+    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) { if (g_rtl_ctx) rtl_stream_tune(g_rtl_ctx, (uint32_t)state->p25_cc_freq); }
     #endif
 
     state->last_cc_sync_time = time(NULL);
@@ -827,7 +830,7 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
       if (opts->audio_in_type == 3)
       {
         #ifdef USE_RTLSDR
-        rtl_dev_tune (opts, state->trunk_lcn_freq[state->lcn_freq_roll]);
+        if (g_rtl_ctx) rtl_stream_tune(g_rtl_ctx, (uint32_t)state->trunk_lcn_freq[state->lcn_freq_roll]);
         #endif
       }
 

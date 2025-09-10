@@ -7,6 +7,9 @@
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 
 void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180])
 {
@@ -418,7 +421,7 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 					sprintf (state->active_channel[1], "%s", "");
 					opts->p25_is_tuned = 0;
 					state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
-					rtl_dev_tune (opts, state->p25_cc_freq);
+					if (g_rtl_ctx) rtl_stream_tune(g_rtl_ctx, (uint32_t)state->p25_cc_freq);
 					#endif
 				}
 			}
@@ -849,7 +852,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 					sprintf (state->active_channel[1], "%s", "");
 					opts->p25_is_tuned = 0;
 					state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
-					rtl_dev_tune (opts, state->p25_cc_freq);
+					if (g_rtl_ctx) rtl_stream_tune(g_rtl_ctx, (uint32_t)state->p25_cc_freq);
 					#endif
 				}
 			}

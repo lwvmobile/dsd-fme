@@ -10,6 +10,9 @@
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 
 //combined flco handler (vlc, tlc, emb), minus the superfluous structs and strings
 void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t CRCCorrect, uint32_t * IrrecoverableErrors, uint8_t type)
@@ -1231,7 +1234,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
             else if (opts->audio_in_type == 3)
             {
               #ifdef USE_RTLSDR
-              rtl_dev_tune (opts, state->p25_cc_freq);
+              if (g_rtl_ctx) rtl_stream_tune(g_rtl_ctx, (uint32_t)state->p25_cc_freq);
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
               opts->p25_is_tuned = 0;
               state->last_cc_sync_time = time(NULL);
@@ -1297,7 +1300,7 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
             else if (opts->audio_in_type == 3)
             {
               #ifdef USE_RTLSDR
-              rtl_dev_tune (opts, state->p25_cc_freq);
+              if (g_rtl_ctx) rtl_stream_tune(g_rtl_ctx, (uint32_t)state->p25_cc_freq);
               state->p25_vc_freq[0] = state->p25_vc_freq[1] = 0;
               opts->p25_is_tuned = 0;
               state->last_cc_sync_time = time(NULL);

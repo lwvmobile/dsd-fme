@@ -9,6 +9,7 @@
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
+#include "io/rtl_stream_c.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -526,7 +527,9 @@ void return_to_cc (dsd_opts * opts, dsd_state * state)
 
     //rtl
     #ifdef USE_RTLSDR
-    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) rtl_dev_tune (opts, state->p25_cc_freq);
+    if (opts->p25_trunk == 1 && opts->audio_in_type == 3) {
+      if (g_rtl_ctx) rtl_stream_tune(g_rtl_ctx, (uint32_t)state->p25_cc_freq);
+    }
     #endif
 
     state->last_cc_sync_time = time(NULL);

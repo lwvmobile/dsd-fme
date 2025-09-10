@@ -16,6 +16,9 @@
  */
 
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 #include <locale.h>
 
 void
@@ -142,7 +145,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
       if (opts->audio_in_type == 3)
       {
         #ifdef USE_RTLSDR
-        rtl_dev_tune (opts, state->trunk_lcn_freq[state->lcn_freq_roll]);
+        if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->trunk_lcn_freq[state->lcn_freq_roll]);
         #endif
       }
 

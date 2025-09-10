@@ -9,6 +9,9 @@
  * 2024-03 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 #include "dsd.h"
+#ifdef USE_RTLSDR
+#include "io/rtl_stream_c.h"
+#endif
 
 //try to find a fancy lfsr or calculation for this and not an array if possible
 uint8_t m17_scramble[369] = {
@@ -1945,8 +1948,18 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
       for (i = 0; i < nsam; i++)
       {
         for (j = 0; j < dec; j++)
-          if (get_rtlsdr_sample(&sample, opts, state) < 0)
-            cleanupAndExit(opts, state);
+        {
+          int need_break = 0;
+          if (!g_rtl_ctx) { cleanupAndExit(opts, state); need_break = 1; }
+          else {
+            int got = 0;
+            if (rtl_stream_read(g_rtl_ctx, &sample, 1, &got) < 0 || got != 1) {
+              cleanupAndExit(opts, state);
+              need_break = 1;
+            }
+          }
+          if (need_break) break;
+        }
         sample *= opts->rtl_volume_multiplier;
         voice1[i] = sample;
       }
@@ -1956,13 +1969,23 @@ void encodeM17STR(dsd_opts * opts, dsd_state * state)
         for (i = 0; i < nsam; i++)
         {
           for (j = 0; j < dec; j++)
-            if (get_rtlsdr_sample(&sample, opts, state) < 0)
-              cleanupAndExit(opts, state);
+          {
+            int need_break2 = 0;
+            if (!g_rtl_ctx) { cleanupAndExit(opts, state); need_break2 = 1; }
+            else {
+              int got = 0;
+              if (rtl_stream_read(g_rtl_ctx, &sample, 1, &got) < 0 || got != 1) {
+                cleanupAndExit(opts, state);
+                need_break2 = 1;
+              }
+            }
+            if (need_break2) break;
+          }
           sample *= opts->rtl_volume_multiplier;
           voice2[i] = sample;
         }
       }
-      opts->rtl_pwr = rtl_return_pwr();
+      opts->rtl_pwr = g_rtl_ctx ? rtl_stream_return_pwr(g_rtl_ctx) : 0;
       #endif
     }
 

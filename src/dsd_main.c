@@ -30,9 +30,13 @@
  
  #ifdef USE_RTLSDR
  #include <rtl-sdr.h>
+ #include "io/rtl_stream_c.h"
  #endif
  
  volatile uint8_t exitflag; //fix for issue #136
+#ifdef USE_RTLSDR
+struct RtlSdrContext* g_rtl_ctx = NULL; /* global orchestrator context */
+#endif
 
  void handler(int sgnl)
  {
@@ -157,7 +161,9 @@
        if (opts->audio_in_type == 3)
        {
          #ifdef USE_RTLSDR
-         rtl_dev_tune(opts, state->trunk_lcn_freq[state->lcn_freq_roll]);
+         if (g_rtl_ctx) {
+           rtl_stream_tune(g_rtl_ctx, (uint32_t)state->trunk_lcn_freq[state->lcn_freq_roll]);
+         }
          #endif
        }
  
@@ -192,7 +198,7 @@
        else if (opts->audio_in_type == 3)
        {
          #ifdef USE_RTLSDR
-         rtl_dev_tune (opts, state->p25_cc_freq);
+         if (g_rtl_ctx) rtl_stream_tune (g_rtl_ctx, (uint32_t)state->p25_cc_freq);
          state->dmr_rest_channel = -1;
          #endif
        }
@@ -1641,16 +1647,15 @@
  #ifdef USE_RTLSDR
    if(opts->audio_in_type == 3)
    {
-     if (open_rtlsdr_stream(opts) < 0) {
-         fprintf(stderr, "Failed to open RTL-SDR stream.\n");
+     if (g_rtl_ctx == NULL) {
+       if (rtl_stream_create(opts, &g_rtl_ctx) < 0) {
+         fprintf(stderr, "Failed to create RTL stream.\n");
+       }
      }
-     opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
-     // #ifdef __arm__
-     // fprintf (stderr, "WARNING: PWR Function is Disabled on ARM Devices (Raspberry Pi) due to High CPU use. \n");
-     // fprintf (stderr, "PWR/Squelch Functionality for NXDN, dPMR, EDACS Analog, M17 and Raw Audio Monitor are unavailable and these modes will not function properly. \n");
-     // if (opts->monitor_input_audio == 1) opts->monitor_input_audio = 0;
-     // opts->rtl_squelch_level = 0;
-     // #endif
+     if (g_rtl_ctx && rtl_stream_start(g_rtl_ctx) < 0) {
+       fprintf(stderr, "Failed to open RTL-SDR stream.\n");
+     }
+     opts->rtl_started = 1;
    }
  #endif
  
@@ -1806,7 +1811,11 @@
    #ifdef USE_RTLSDR
    if (opts->rtl_started == 1)
    {
-     cleanup_rtlsdr_stream();
+     if (g_rtl_ctx) {
+       rtl_stream_stop(g_rtl_ctx);
+       rtl_stream_destroy(g_rtl_ctx);
+       g_rtl_ctx = NULL;
+     }
    }
    #endif
  
@@ -3670,10 +3679,15 @@
        #ifdef USE_RTLSDR
        else if(opts.audio_in_type == 3)
        {
-         if (open_rtlsdr_stream(&opts) < 0) {
-             fprintf(stderr, "Failed to open RTL-SDR stream.\n");
-         }
-         opts.rtl_started = 1;
+         if (g_rtl_ctx == NULL) {
+            if (rtl_stream_create(&opts, &g_rtl_ctx) < 0) {
+                fprintf(stderr, "Failed to create RTL stream.\n");
+            }
+        }
+        if (g_rtl_ctx && rtl_stream_start(g_rtl_ctx) < 0) {
+            fprintf(stderr, "Failed to open RTL-SDR stream.\n");
+        }
+        opts.rtl_started = 1;
        }
        #endif
  
