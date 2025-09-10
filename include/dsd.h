@@ -1656,7 +1656,7 @@ extern "C" {
 #endif
 
 #ifdef USE_RTLSDR
-void open_rtlsdr_stream(dsd_opts *opts);
+int open_rtlsdr_stream(dsd_opts *opts);
 void cleanup_rtlsdr_stream();
 int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state);
 void rtlsdr_sighandler();

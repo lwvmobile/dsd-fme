@@ -1641,7 +1641,9 @@
  #ifdef USE_RTLSDR
    if(opts->audio_in_type == 3)
    {
-     open_rtlsdr_stream(opts);
+     if (open_rtlsdr_stream(opts) < 0) {
+         fprintf(stderr, "Failed to open RTL-SDR stream.\n");
+     }
      opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
      // #ifdef __arm__
      // fprintf (stderr, "WARNING: PWR Function is Disabled on ARM Devices (Raspberry Pi) due to High CPU use. \n");
@@ -3668,7 +3670,9 @@
        #ifdef USE_RTLSDR
        else if(opts.audio_in_type == 3)
        {
-         open_rtlsdr_stream(&opts);
+         if (open_rtlsdr_stream(&opts) < 0) {
+             fprintf(stderr, "Failed to open RTL-SDR stream.\n");
+         }
          opts.rtl_started = 1;
        }
        #endif

@@ -1605,7 +1605,9 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (opts->rtl_started == 0)
     {
       opts->rtl_started = 1; //set here so ncurses terminal doesn't attempt to open it again
-      open_rtlsdr_stream(opts);
+      if (open_rtlsdr_stream(opts) < 0) {
+        fprintf(stderr, "Failed to open RTL-SDR stream.\n");
+      }
     }
     rtl_clean_queue();
     reset_dibit_buffer(state); //test and observe for any random issues, disable if needed
