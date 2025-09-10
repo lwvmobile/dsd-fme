@@ -1,5 +1,5 @@
 /*
- * rtl-sdr, turns your Realtek RTL2832 based DVB dongle into a SDR receiver
+ * Orchestrates RTL-SDR stream: device setup, threads, demod pipeline, rings, tuning.
  *
  * Copyright (C) 2012 by Steve Markgraf <steve@steve-m.de>
  * Copyright (C) 2012 by Hoernchen <la@tfc-server.de>
@@ -212,39 +212,6 @@ struct RtlSdrInternals {
 };
 
 static struct RtlSdrInternals* g_stream = NULL;
-
-/**
- * Complex multiply using 32-bit intermediates (suitable for small magnitudes).
- * Defined for platforms lacking hardware float.
- *
- * @param ar Real part of a.
- * @param aj Imag part of a.
- * @param br Real part of b.
- * @param bj Imag part of b.
- * @param cr [out] Real part of result.
- * @param cj [out] Imag part of result.
- */
-void
-multiply(int ar, int aj, int br, int bj, int* cr, int* cj) {
-    *cr = ar * br - aj * bj;
-    *cj = aj * br + ar * bj;
-}
-
-/**
- * Complex multiply using 64-bit intermediates to prevent overflow.
- *
- * @param ar Real part of a.
- * @param aj Imag part of a.
- * @param br Real part of b.
- * @param bj Imag part of b.
- * @param cr [out] Real part of result (int64).
- * @param cj [out] Imag part of result (int64).
- */
-static inline void
-multiply64(int ar, int aj, int br, int bj, int64_t* cr, int64_t* cj) {
-    *cr = (int64_t)ar * (int64_t)br - (int64_t)aj * (int64_t)bj;
-    *cj = (int64_t)aj * (int64_t)br + (int64_t)ar * (int64_t)bj;
-}
 
 /**
  * Demodulation worker: consume input ring, run pipeline, and produce audio.
@@ -565,92 +532,9 @@ demod_init_mode(struct demod_state* s, DemodMode mode, const DemodInitParams* p)
  */
 void
 demod_init_analog(struct demod_state* s) {
-    s->rate_in = rtl_bandwidth;
-    s->rate_out = rtl_bandwidth;
-    s->squelch_level = 0;
-    s->conseq_squelch = 10;
-    s->terminate_on_squelch = 0;
-    s->squelch_hits = 11;
-    s->downsample_passes = 1; //
-    s->comp_fir_size = 9;
-    s->prev_index = 0;
-    s->post_downsample =
-        1; //1 -- once this works, default = 4 -- doesn't work on the official rtl-sdr source code either
-    s->custom_atan = 1;
-    s->deemph = 1;                //
-    s->rate_out2 = rtl_bandwidth; // -1 flag for disabled -- this enables low_pass_real, seems to work okay
-    s->mode_demod = &fm_demod;
-    s->pre_j = s->pre_r = s->now_r = s->now_j = 0;
-    s->prev_lpr_index = 0;
-    s->deemph_a = 0; //
-    s->deemph_avg = 0;
-    /* Audio LPF defaults */
-    s->audio_lpf_enable = 0;
-    s->audio_lpf_alpha = 0;
-    s->audio_lpf_state = 0;
-    s->now_lpr = 0;
-    s->dc_block = 1; //
-    s->dc_avg = 0;
-    /* Resampler defaults */
-    s->resamp_enabled = 0;
-    s->resamp_target_hz = 0;
-    s->resamp_L = 1;
-    s->resamp_M = 1;
-    s->resamp_phase = 0;
-    s->resamp_taps_len = 0;
-    s->resamp_taps_per_phase = 0;
-    s->resamp_taps = NULL;
-    s->resamp_hist = NULL;
-    /* FLL/TED defaults */
-    s->fll_enabled = 0;
-    s->fll_alpha_q15 = 0;
-    s->fll_beta_q15 = 0;
-    s->fll_freq_q15 = 0;
-    s->fll_phase_q15 = 0;
-    s->fll_prev_r = 0;
-    s->fll_prev_j = 0;
-    s->ted_enabled = 0;
-    s->ted_gain_q20 = 0;
-    s->ted_sps = 0;
-    s->ted_mu_q20 = 0;
-    /* Initialize FLL and TED module states */
-    fll_init_state(&s->fll_state);
-    ted_init_state(&s->ted_state);
-    /* Squelch estimator init */
-    s->squelch_running_power = 0;
-    s->squelch_decim_stride = 16; /* evaluate 1/16th samples for low CPU */
-    s->squelch_decim_phase = 0;
-    s->squelch_window = 2048; /* EMA window ~2048 samples */
-    /* HB decimator histories */
-    for (int st = 0; st < 10; st++) {
-        memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
-        memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
-    }
-    /* Legacy CIC histories used by fifth_order path */
-    for (int st = 0; st < 10; st++) {
-        memset(s->lp_i_hist[st], 0, sizeof(s->lp_i_hist[st]));
-        memset(s->lp_q_hist[st], 0, sizeof(s->lp_q_hist[st]));
-    }
-    /* Input ring does not require double-buffer init */
-    s->lowpassed = s->input_cb_buf;
-    s->lp_len = 0;
-    pthread_cond_init(&s->ready, NULL);
-    pthread_mutex_init(&s->ready_m, NULL);
-    s->output_target = &output;
-    if (s->custom_atan == 2) {
-        atan_lut_init();
-    }
-    /* set discriminator function pointer */
-    /* custom_atan mapping:
-	   0 -> polar_discriminant (double atan2; slow, highest accuracy)
-	   1 -> polar_disc_fast    (int64 fast_atan2 approximation)
-	   2 -> polar_disc_lut     (LUT-based atan2 approximation)
-	*/
-    s->discriminator = (s->custom_atan == 0)   ? &polar_discriminant
-                       : (s->custom_atan == 1) ? &polar_disc_fast
-                                               : &polar_disc_lut;
-    /* Init minimal worker pool (env-gated) */
-    demod_mt_init(s);
+    DemodInitParams params = {0};
+    params.deemph_default = 1;
+    demod_init_mode(s, DEMOD_ANALOG, &params);
 }
 
 /**
@@ -660,87 +544,8 @@ demod_init_analog(struct demod_state* s) {
  */
 void
 demod_init_ro2(struct demod_state* s) {
-    s->rate_in = rtl_bandwidth;
-    s->rate_out = rtl_bandwidth;
-    s->squelch_level = 0;
-    s->conseq_squelch = 10;
-    s->terminate_on_squelch = 0;
-    s->squelch_hits = 11;
-    s->downsample_passes = 0;
-    s->comp_fir_size = 0;
-    s->prev_index = 0;
-    s->post_downsample =
-        1; //1 -- once this works, default = 4 -- doesn't work on the official rtl-sdr source code either
-    s->custom_atan = 2;
-    s->deemph = 0;
-    s->rate_out2 = rtl_bandwidth; // -1 flag for disabled -- this enables low_pass_real, seems to work okay
-    s->mode_demod = &fm_demod;
-    s->pre_j = s->pre_r = s->now_r = s->now_j = 0;
-    s->prev_lpr_index = 0;
-    s->deemph_a = 0;
-    s->deemph_avg = 0;
-    /* Audio LPF defaults */
-    s->audio_lpf_enable = 0;
-    s->audio_lpf_alpha = 0;
-    s->audio_lpf_state = 0;
-    s->now_lpr = 0;
-    s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
-    s->dc_avg = 0;
-    /* Resampler defaults */
-    s->resamp_enabled = 0;
-    s->resamp_target_hz = 0;
-    s->resamp_L = 1;
-    s->resamp_M = 1;
-    s->resamp_phase = 0;
-    s->resamp_taps_len = 0;
-    s->resamp_taps_per_phase = 0;
-    s->resamp_taps = NULL;
-    s->resamp_hist = NULL;
-    /* FLL/TED defaults */
-    s->fll_enabled = 0;
-    s->fll_alpha_q15 = 0;
-    s->fll_beta_q15 = 0;
-    s->fll_freq_q15 = 0;
-    s->fll_phase_q15 = 0;
-    s->fll_prev_r = 0;
-    s->fll_prev_j = 0;
-    s->ted_enabled = 0;
-    s->ted_gain_q20 = 0;
-    s->ted_sps = 0;
-    s->ted_mu_q20 = 0;
-    /* Initialize FLL and TED module states */
-    fll_init_state(&s->fll_state);
-    ted_init_state(&s->ted_state);
-    /* Squelch estimator init */
-    s->squelch_running_power = 0;
-    s->squelch_decim_stride = 16;
-    s->squelch_decim_phase = 0;
-    s->squelch_window = 2048;
-    /* HB decimator histories */
-    for (int st = 0; st < 10; st++) {
-        memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
-        memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
-    }
-    /* Legacy CIC histories used by fifth_order path */
-    for (int st = 0; st < 10; st++) {
-        memset(s->lp_i_hist[st], 0, sizeof(s->lp_i_hist[st]));
-        memset(s->lp_q_hist[st], 0, sizeof(s->lp_q_hist[st]));
-    }
-    /* Input ring does not require double-buffer init */
-    s->lowpassed = s->input_cb_buf;
-    s->lp_len = 0;
-    pthread_cond_init(&s->ready, NULL);
-    pthread_mutex_init(&s->ready_m, NULL);
-    s->output_target = &output;
-    if (s->custom_atan == 2) {
-        atan_lut_init();
-    }
-    /* set discriminator function pointer */
-    s->discriminator = (s->custom_atan == 0)   ? &polar_discriminant
-                       : (s->custom_atan == 1) ? &polar_disc_fast
-                                               : &polar_disc_lut;
-    /* Init minimal worker pool (env-gated) */
-    demod_mt_init(s);
+    DemodInitParams params = {0};
+    demod_init_mode(s, DEMOD_RO2, &params);
 }
 
 /**
@@ -750,87 +555,8 @@ demod_init_ro2(struct demod_state* s) {
  */
 void
 demod_init(struct demod_state* s) {
-    s->rate_in = rtl_bandwidth;
-    s->rate_out = rtl_bandwidth;
-    s->squelch_level = 0;
-    s->conseq_squelch = 10;
-    s->terminate_on_squelch = 0;
-    s->squelch_hits = 11;
-    s->downsample_passes = 0;
-    s->comp_fir_size = 0;
-    s->prev_index = 0;
-    s->post_downsample =
-        1; //1 -- once this works, default = 4 -- doesn't work on the official rtl-sdr source code either
-    s->custom_atan = 2;
-    s->deemph = 0;
-    s->rate_out2 = -1; // -1 flag for disabled -- this enables low_pass_real, seems to work okay
-    s->mode_demod = &fm_demod;
-    s->pre_j = s->pre_r = s->now_r = s->now_j = 0;
-    s->prev_lpr_index = 0;
-    s->deemph_a = 0;
-    s->deemph_avg = 0;
-    /* Audio LPF defaults */
-    s->audio_lpf_enable = 0;
-    s->audio_lpf_alpha = 0;
-    s->audio_lpf_state = 0;
-    s->now_lpr = 0;
-    s->dc_block = 1; //enabling by default, but offset tuning is also enabled, so center spike shouldn't be an issue
-    s->dc_avg = 0;
-    /* Resampler defaults */
-    s->resamp_enabled = 0;
-    s->resamp_target_hz = 0;
-    s->resamp_L = 1;
-    s->resamp_M = 1;
-    s->resamp_phase = 0;
-    s->resamp_taps_len = 0;
-    s->resamp_taps_per_phase = 0;
-    s->resamp_taps = NULL;
-    s->resamp_hist = NULL;
-    /* FLL/TED defaults */
-    s->fll_enabled = 0;
-    s->fll_alpha_q15 = 0;
-    s->fll_beta_q15 = 0;
-    s->fll_freq_q15 = 0;
-    s->fll_phase_q15 = 0;
-    s->fll_prev_r = 0;
-    s->fll_prev_j = 0;
-    s->ted_enabled = 0;
-    s->ted_gain_q20 = 0;
-    s->ted_sps = 0;
-    s->ted_mu_q20 = 0;
-    /* Initialize FLL and TED module states */
-    fll_init_state(&s->fll_state);
-    ted_init_state(&s->ted_state);
-    /* Squelch estimator init */
-    s->squelch_running_power = 0;
-    s->squelch_decim_stride = 16;
-    s->squelch_decim_phase = 0;
-    s->squelch_window = 2048;
-    /* HB decimator histories */
-    for (int st = 0; st < 10; st++) {
-        memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
-        memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
-    }
-    /* Legacy CIC histories used by fifth_order path */
-    for (int st = 0; st < 10; st++) {
-        memset(s->lp_i_hist[st], 0, sizeof(s->lp_i_hist[st]));
-        memset(s->lp_q_hist[st], 0, sizeof(s->lp_q_hist[st]));
-    }
-    /* Input ring does not require double-buffer init */
-    s->lowpassed = s->input_cb_buf;
-    s->lp_len = 0;
-    pthread_cond_init(&s->ready, NULL);
-    pthread_mutex_init(&s->ready_m, NULL);
-    s->output_target = &output;
-    if (s->custom_atan == 2) {
-        atan_lut_init();
-    }
-    /* set discriminator function pointer */
-    s->discriminator = (s->custom_atan == 0)   ? &polar_discriminant
-                       : (s->custom_atan == 1) ? &polar_disc_fast
-                                               : &polar_disc_lut;
-    /* Init minimal worker pool (env-gated) */
-    demod_mt_init(s);
+    DemodInitParams params = {0};
+    demod_init_mode(s, DEMOD_DIGITAL, &params);
 }
 
 /**
@@ -925,28 +651,6 @@ void
 controller_cleanup(struct controller_state* s) {
     pthread_cond_destroy(&s->hop);
     pthread_mutex_destroy(&s->hop_m);
-}
-
-/**
- * Validate runtime options and controller state prior to starting streams.
- * Exits the process with an error message if constraints are violated.
- */
-void
-sanity_checks(void) {
-    if (controller.freq_len == 0) {
-        LOG_ERROR("Please specify a frequency.\n");
-        exit(1);
-    }
-
-    if (controller.freq_len >= FREQUENCIES_LIMIT) {
-        LOG_ERROR("Too many channels, maximum %i.\n", FREQUENCIES_LIMIT);
-        exit(1);
-    }
-
-    if (controller.freq_len > 1 && demod.squelch_level == 0) {
-        LOG_ERROR("Please specify a squelch level.  Required for scanning multiple frequencies.\n");
-        exit(1);
-    }
 }
 
 /**
@@ -1470,16 +1174,6 @@ dsd_rtl_stream_read(int16_t* out, size_t count, dsd_opts* opts, dsd_state* state
 }
 
 /**
- * Convenience wrapper to read a single sample via the batched API.
- *
- * @param sample Destination for one sample.
- * @param opts   Decoder options.
- * @param state  Decoder state (unused).
- * @return 0 on success, -1 on exit.
- */
-/* single-sample helper removed */
-
-/**
  * Return the current output audio sample rate in Hz.
  *
  * @return Output sample rate in Hz.
@@ -1497,7 +1191,6 @@ dsd_rtl_stream_output_rate(void) {
  */
 extern "C" int
 dsd_rtl_stream_tune(dsd_opts* opts, long int frequency) {
-    int r;
     if (opts->payload == 1) {
         LOG_INFO("\nTuning to %ld Hz.", frequency);
     }
@@ -1505,18 +1198,6 @@ dsd_rtl_stream_tune(dsd_opts* opts, long int frequency) {
     apply_capture_settings((uint32_t)dongle.freq);
     if (opts->payload == 1) {
         LOG_INFO(" (Center Frequency: %u Hz.) \n", dongle.freq);
-    }
-    {
-        struct rtl_device* dev = rtl_device_handle;
-        if (g_stream && g_stream->device) {
-            dev = g_stream->device;
-        }
-        r = rtl_device_set_frequency(dev, dongle.freq);
-        rtl_device_set_sample_rate(dev, dongle.rate);
-    }
-    if (r < 0) {
-        LOG_WARNING(" (Failed to set Center Frequency %u). \n", dongle.freq);
-        return r;
     }
 
     dsd_rtl_stream_clear_output();
@@ -1548,20 +1229,12 @@ dsd_rtl_stream_return_pwr(void) {
  */
 extern "C" void
 dsd_rtl_stream_clear_output(void) {
+    struct output_state* outp = &output;
+    if (g_stream && g_stream->output) {
+        outp = g_stream->output;
+    }
     /* Clear the entire ring to prevent sample 'lag' */
-    {
-        struct output_state* outp = &output;
-        if (g_stream && g_stream->output) {
-            outp = g_stream->output;
-        }
-        ring_clear(outp);
-    }
+    ring_clear(outp);
     /* Wake producer waiting for space */
-    {
-        struct output_state* outp = &output;
-        if (g_stream && g_stream->output) {
-            outp = g_stream->output;
-        }
-        safe_cond_signal(&outp->space, &outp->ready_m);
-    }
+    safe_cond_signal(&outp->space, &outp->ready_m);
 }
