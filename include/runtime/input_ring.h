@@ -41,6 +41,9 @@ struct input_ring_state {
     std::atomic<size_t> tail;
     pthread_cond_t ready;
     pthread_mutex_t ready_m;
+    /* Metrics (Phase 3): track producer drops and consumer waits */
+    std::atomic<uint64_t> producer_drops; /* bytes dropped when full */
+    std::atomic<uint64_t> read_timeouts;  /* waits for data */
 };
 
 /**

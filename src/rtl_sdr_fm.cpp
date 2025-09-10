@@ -278,82 +278,15 @@ demod_thread_fn(void* arg) {
             safe_cond_signal(&controller.hop, &controller.hop_m);
             continue;
         }
-        /* Preferred path: rational resampler when enabled; otherwise legacy upsampler */
         if (d->resamp_enabled) {
             int out_n = resamp_process_block(d, d->result, d->result_len, d->resamp_outbuf);
             if (out_n > 0) {
                 ring_write_signal_on_empty_transition(o, d->resamp_outbuf, (size_t)out_n);
             }
         } else {
-            /* Legacy path: optional simple upsampler */
-            if (bandwidth_multiplier <= 1) {
+            /* When resampler is disabled, pass-through. */
+            if (d->result_len > 0) {
                 ring_write_signal_on_empty_transition(o, d->result, (size_t)d->result_len);
-            } else {
-                const int M = bandwidth_multiplier;
-                const int N = d->result_len;
-                if (N <= 0) {
-                    /* nothing to write */
-                } else if (N == 1) {
-                    for (int m = 0; m < M; m++) {
-                        d->upsample_buf[m] = d->result[0];
-                    }
-                    ring_write_signal_on_empty_transition(o, d->upsample_buf, (size_t)M);
-                } else {
-                    const size_t up_len = (size_t)N * (size_t)M;
-
-                    struct UpArg {
-                        int start;
-                        int end;
-                        int M;
-                        const int16_t* src;
-                        int16_t* dst;
-                    };
-
-                    auto up_task = [](void* arg) {
-                        UpArg* a = (UpArg*)arg;
-                        const int Mloc = a->M;
-                        for (int n = a->start; n < a->end; n++) {
-                            int32_t x0 = a->src[n];
-                            int32_t x1 = a->src[n + 1];
-                            int16_t* row = a->dst + (size_t)n * (size_t)Mloc;
-                            if (upsample_fixedpoint_enabled) {
-                                int32_t dx = x1 - x0;
-                                int64_t step_q15_64 = ((int64_t)dx << 15) / (int64_t)Mloc;
-                                int32_t step_q15 = (int32_t)step_q15_64;
-                                int32_t acc_q15 = 0;
-                                for (int m = 0; m < Mloc; m++) {
-                                    int32_t frac = (acc_q15 >= 0) ? ((acc_q15 + (1 << 14)) >> 15)
-                                                                  : -(((-acc_q15) + (1 << 14)) >> 15);
-                                    int32_t interp = x0 + frac;
-                                    row[m] = (int16_t)interp;
-                                    acc_q15 += step_q15;
-                                }
-                            } else {
-                                int32_t dx = x1 - x0;
-                                for (int m = 0; m < Mloc; m++) {
-                                    int32_t interp = x0 + (dx * m) / Mloc;
-                                    row[m] = (int16_t)interp;
-                                }
-                            }
-                        }
-                    };
-                    int mid = (N - 1) / 2;
-                    UpArg a0 = {0, mid, M, d->result, d->upsample_buf};
-                    UpArg a1 = {mid, N - 1, M, d->result, d->upsample_buf};
-                    if (d->mt_enabled) {
-                        demod_mt_run_two(d, up_task, (void*)&a0, up_task, (void*)&a1);
-                    } else {
-                        up_task((void*)&a0);
-                        up_task((void*)&a1);
-                    }
-                    d->upsample_buf[(size_t)(N - 1) * (size_t)M] = d->result[N - 1];
-                    if (upsample_fixedpoint_enabled) {
-                        for (int t = 1; t < M; t++) {
-                            d->upsample_buf[(size_t)(N - 1) * (size_t)M + (size_t)t] = d->result[N - 1];
-                        }
-                    }
-                    ring_write_signal_on_empty_transition(o, d->upsample_buf, up_len);
-                }
             }
         }
         /* Signaling occurs only when the ring transitions from empty to non-empty. */
@@ -947,6 +880,9 @@ output_init(struct output_state* s) {
     }
     s->head.store(0);
     s->tail.store(0);
+    /* Metrics */
+    s->write_timeouts.store(0);
+    s->read_timeouts.store(0);
 }
 
 /**
@@ -1270,6 +1206,9 @@ dsd_rtl_stream_open(dsd_opts* opts) {
         input_ring.tail.store(0);
         pthread_cond_init(&input_ring.ready, NULL);
         pthread_mutex_init(&input_ring.ready_m, NULL);
+        /* Metrics */
+        input_ring.producer_drops.store(0);
+        input_ring.read_timeouts.store(0);
     }
     controller_init(&controller);
 
@@ -1454,6 +1393,11 @@ dsd_rtl_stream_open(dsd_opts* opts) {
 extern "C" void
 dsd_rtl_stream_close(void) {
     LOG_INFO("cleaning up...\n");
+    /* Log Phase 3 metrics before teardown */
+    LOG_INFO("Output ring: write_timeouts=%llu read_timeouts=%llu\n", (unsigned long long)output.write_timeouts.load(),
+             (unsigned long long)output.read_timeouts.load());
+    LOG_INFO("Input ring: producer_drops=%llu read_timeouts=%llu\n",
+             (unsigned long long)input_ring.producer_drops.load(), (unsigned long long)input_ring.read_timeouts.load());
     if (g_udp_ctrl) {
         udp_control_stop(g_udp_ctrl);
         g_udp_ctrl = NULL;

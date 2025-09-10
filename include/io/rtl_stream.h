@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include "dsd.h"
 
 /**
@@ -32,12 +32,12 @@
  * This maintains current behavior while enabling a cleaner API surface.
  */
 class RtlSdrOrchestrator {
-public:
+  public:
     /**
      * @brief Construct a stream with an option snapshot.
      * @param opts @ref dsd_opts used to configure the stream. Copied internally.
      */
-    explicit RtlSdrOrchestrator(const dsd_opts &opts);
+    explicit RtlSdrOrchestrator(const dsd_opts& opts);
 
     /**
      * @brief Destructor. Ensures stop() is called.
@@ -70,7 +70,7 @@ public:
      * @param out_got [out] Number of samples read.
      * @return 0 on success, <0 on error (e.g., shutdown).
      */
-    int read(int16_t *out, size_t count, int &out_got);
+    int read(int16_t* out, size_t count, int& out_got);
 
     /**
      * @brief Current output sample rate in Hz.
@@ -80,22 +80,26 @@ public:
     /**
      * @brief Whether the last operation succeeded.
      */
-    bool ok() const { return last_error_code_ == 0; }
+    bool
+    ok() const {
+        return last_error_code_ == 0;
+    }
 
     /**
      * @brief Error code from the last failing operation (if any).
      */
-    int last_error_code() const { return last_error_code_; }
+    int
+    last_error_code() const {
+        return last_error_code_;
+    }
 
-private:
+  private:
     // Non-copyable to avoid accidental shared lifecycle
     RtlSdrOrchestrator(const RtlSdrOrchestrator&) = delete;
     RtlSdrOrchestrator& operator=(const RtlSdrOrchestrator&) = delete;
 
     // Mutable snapshot of options passed into C API
-    dsd_opts *opts_;
+    dsd_opts* opts_;
     bool started_;
     int last_error_code_;
 };
-
-

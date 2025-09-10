@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,5 +51,3 @@ long rtl_stream_return_pwr(const RtlSdrContext* ctx);
 #ifdef __cplusplus
 }
 #endif
-
-

@@ -47,6 +47,8 @@ ring_write(struct output_state* o, const int16_t* data, size_t count) {
                 if (exitflag) {
                     return;
                 }
+                /* Metrics: producer timed out waiting for space */
+                o->write_timeouts.fetch_add(1);
                 continue;
             }
         }
@@ -113,6 +115,8 @@ ring_write_no_signal(struct output_state* o, const int16_t* data, size_t count) 
                 if (exitflag) {
                     return;
                 }
+                /* Metrics: producer timed out waiting for space */
+                o->write_timeouts.fetch_add(1);
                 continue;
             }
         }
@@ -193,6 +197,8 @@ ring_read_one(struct output_state* o, int16_t* out) {
             if (exitflag) {
                 return -1;
             }
+            /* Metrics: consumer timed out waiting for data */
+            o->read_timeouts.fetch_add(1);
             /* Timeout: check again */
             continue;
         }
@@ -240,6 +246,8 @@ ring_read_batch(struct output_state* o, int16_t* out, size_t max_count) {
             if (exitflag) {
                 return -1;
             }
+            /* Metrics: consumer timed out waiting for data */
+            o->read_timeouts.fetch_add(1);
             /* Timeout: check again */
             continue;
         }

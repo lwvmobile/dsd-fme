@@ -42,6 +42,9 @@ struct output_state {
     pthread_cond_t ready;
     pthread_mutex_t ready_m;
     pthread_cond_t space;
+    /* Metrics (Phase 3): track consumer/producer behavior */
+    std::atomic<uint64_t> write_timeouts; /* producer waited for space */
+    std::atomic<uint64_t> read_timeouts;  /* consumer waited for data */
 };
 
 /**

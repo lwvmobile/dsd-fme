@@ -108,6 +108,7 @@ input_ring_write(struct input_ring_state* r, const int16_t* data, size_t count) 
         size_t free_sp = input_ring_free(r);
         if (free_sp == 0) {
             /* Ring full: to avoid racing the consumer, drop remainder */
+            r->producer_drops.fetch_add(count);
             break;
         }
         size_t write_now = (count < free_sp) ? count : free_sp;
@@ -174,6 +175,8 @@ input_ring_read_block(struct input_ring_state* r, int16_t* out, size_t max_count
             if (exitflag) {
                 return -1;
             }
+            /* Metrics: consumer timed out waiting for input */
+            r->read_timeouts.fetch_add(1);
             /* Timeout: check again */
             continue;
         }
