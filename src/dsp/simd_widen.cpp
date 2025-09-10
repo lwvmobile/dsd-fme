@@ -385,7 +385,7 @@ widen_rotate90_u8_to_s16_bias127_neon(const unsigned char* src, int16_t* dst, ui
         uint8x8_t sh_lo8 = vget_low_u8(sh);
         uint8x8_t sh_hi8 = vget_high_u8(sh);
         int16x8_t v16_lo = vreinterpretq_s16_u16(vmovl_u8(sh_lo8));
-        int16x8_t v16_hi = vreinterpretq_s16_u16(vmovl_u8(v_hi8));
+        int16x8_t v16_hi = vreinterpretq_s16_u16(vmovl_u8(sh_hi8));
         int16x8_t bs_lo = vsubq_s16(v16_lo, c127);
         int16x8_t bm_lo = vsubq_s16(c127, v16_lo);
         int16x8_t bs_hi = vsubq_s16(v16_hi, c127);
