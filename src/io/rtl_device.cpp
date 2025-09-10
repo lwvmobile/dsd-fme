@@ -1,6 +1,4 @@
 /*
- * RTL-SDR Device I/O Layer Implementation
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,6 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * @brief RTL-SDR device I/O implementation and USB ingestion pipeline.
+ *
+ * Implements the opaque `rtl_device` handle, device configuration helpers,
+ * realtime threading hooks, and the asynchronous USB callback that widens
+ * u8 I/Q samples into s16 and feeds the `input_ring_state`.
+ */
+ 
 #include <atomic>
 #include <math.h>
 #include <pthread.h>
@@ -65,7 +72,7 @@ struct rtl_device {
 #define DSD_FME_RESTRICT __restrict__
 
 /**
- * Optionally enable realtime scheduling and set CPU affinity for the current
+ * @brief Optionally enable realtime scheduling and set CPU affinity for the current
  * thread based on environment variables.
  *
  * When `DSD_FME_RT_SCHED=1`, attempts to switch the calling thread to
@@ -79,7 +86,7 @@ struct rtl_device {
 /* moved to runtime/rt_sched.cpp */
 
 /**
- * Rotate IQ data by 90 degrees in-place.
+ * @brief Rotate IQ data by 90 degrees in-place.
  *
  * @param buf Interleaved IQ byte buffer.
  * @param len Buffer length in bytes (processed in blocks of 8).
@@ -111,7 +118,7 @@ rotate_90(unsigned char* buf, uint32_t len) {
 }
 
 /**
- * RTL-SDR asynchronous USB callback.
+ * @brief RTL-SDR asynchronous USB callback.
  * Converts incoming u8 I/Q to s16 and enqueues into the input ring. If
  * `offset_tuning` is off and `DSD_FME_COMBINE_ROT` is enabled (default), a
  * combined rotate+widen implementation is used. Otherwise it falls back to
@@ -210,7 +217,7 @@ rtlsdr_callback(unsigned char* buf, uint32_t len, void* ctx) {
 }
 
 /**
- * RTL-SDR USB thread entry: reads samples asynchronously into the input ring.
+ * @brief RTL-SDR USB thread entry: reads samples asynchronously into the input ring.
  * Applies optional realtime scheduling/affinity if configured.
  *
  * @param arg Pointer to `rtl_device`.
@@ -225,7 +232,7 @@ dongle_thread_fn(void* arg) {
 }
 
 /**
- * Find the nearest supported gain to the target gain.
+ * @brief Find the nearest supported gain to the target gain.
  *
  * @param dev RTL-SDR device handle.
  * @param target_gain Target gain in tenths of dB.
@@ -259,7 +266,7 @@ nearest_gain(rtlsdr_dev_t* dev, int target_gain) {
 }
 
 /**
- * Set RTL-SDR center frequency with a brief status message.
+ * @brief Set RTL-SDR center frequency with a brief status message.
  *
  * @param dev RTL-SDR device handle.
  * @param frequency Center frequency in Hz.
@@ -278,7 +285,7 @@ verbose_set_frequency(rtlsdr_dev_t* dev, uint32_t frequency) {
 }
 
 /**
- * Set RTL-SDR sampling rate with a brief status message.
+ * @brief Set RTL-SDR sampling rate with a brief status message.
  *
  * @param dev RTL-SDR device handle.
  * @param samp_rate Sampling rate in Hz.
@@ -297,7 +304,7 @@ verbose_set_sample_rate(rtlsdr_dev_t* dev, uint32_t samp_rate) {
 }
 
 /**
- * Enable or disable direct sampling mode.
+ * @brief Enable or disable direct sampling mode.
  *
  * @param dev RTL-SDR device handle.
  * @param on Non-zero to enable, zero to disable.
@@ -324,7 +331,7 @@ verbose_direct_sampling(rtlsdr_dev_t* dev, int on) {
 }
 
 /**
- * Enable offset tuning on the tuner if supported.
+ * @brief Enable offset tuning on the tuner if supported.
  *
  * @param dev RTL-SDR device handle.
  * @return 0 on success or a negative error code.
@@ -342,7 +349,7 @@ verbose_offset_tuning(rtlsdr_dev_t* dev) {
 }
 
 /**
- * Enable tuner automatic gain control.
+ * @brief Enable tuner automatic gain control.
  *
  * @param dev RTL-SDR device handle.
  * @return 0 on success or a negative error code.
@@ -360,7 +367,7 @@ verbose_auto_gain(rtlsdr_dev_t* dev) {
 }
 
 /**
- * Set a fixed tuner gain with a message indicating the result.
+ * @brief Set a fixed tuner gain with a message indicating the result.
  *
  * @param dev RTL-SDR device handle.
  * @param gain Desired gain in tenths of dB.
@@ -384,7 +391,7 @@ verbose_gain_set(rtlsdr_dev_t* dev, int gain) {
 }
 
 /**
- * Set tuner PPM frequency error correction.
+ * @brief Set tuner PPM frequency error correction.
  *
  * @param dev RTL-SDR device handle.
  * @param ppm_error Error in parts-per-million.
@@ -403,7 +410,7 @@ verbose_ppm_set(rtlsdr_dev_t* dev, int ppm_error) {
 }
 
 /**
- * Reset RTL-SDR USB buffers.
+ * @brief Reset RTL-SDR USB buffers.
  *
  * @param dev RTL-SDR device handle.
  * @return 0 on success or a negative error code.
@@ -421,11 +428,11 @@ verbose_reset_buffer(rtlsdr_dev_t* dev) {
 // Public API Implementation
 
 /**
- * Create and initialize an RTL-SDR device.
+ * @brief Create and initialize an RTL-SDR device.
  *
  * @param dev_index Device index to open.
  * @param input_ring Pointer to input ring for USB data.
- * @param combine_rotate_enabled_param Whether to use combined rotate+widen for offset tuning.
+ * @param combine_rotate_enabled_param Whether to use combined rotate+widen when offset tuning is disabled.
  * @return Pointer to rtl_device handle, or NULL on failure.
  */
 struct rtl_device*
@@ -456,7 +463,7 @@ rtl_device_create(int dev_index, struct input_ring_state* input_ring, int combin
 }
 
 /**
- * Destroy an RTL-SDR device and free resources.
+ * @brief Destroy an RTL-SDR device and free resources.
  *
  * @param dev Pointer to rtl_device handle.
  */
@@ -483,7 +490,7 @@ rtl_device_destroy(struct rtl_device* dev) {
 }
 
 /**
- * Set device center frequency.
+ * @brief Set device center frequency.
  *
  * @param dev RTL-SDR device handle.
  * @param frequency Frequency in Hz.
@@ -499,7 +506,7 @@ rtl_device_set_frequency(struct rtl_device* dev, uint32_t frequency) {
 }
 
 /**
- * Set device sample rate.
+ * @brief Set device sample rate.
  *
  * @param dev RTL-SDR device handle.
  * @param samp_rate Sample rate in Hz.
@@ -515,7 +522,7 @@ rtl_device_set_sample_rate(struct rtl_device* dev, uint32_t samp_rate) {
 }
 
 /**
- * Set tuner gain mode and value.
+ * @brief Set tuner gain mode and value.
  *
  * @param dev RTL-SDR device handle.
  * @param gain Gain in tenths of dB, or AUTO_GAIN for automatic.
@@ -538,7 +545,7 @@ rtl_device_set_gain(struct rtl_device* dev, int gain) {
 }
 
 /**
- * Set frequency correction (PPM error).
+ * @brief Set frequency correction (PPM error).
  *
  * @param dev RTL-SDR device handle.
  * @param ppm_error PPM correction value.
@@ -554,7 +561,7 @@ rtl_device_set_ppm(struct rtl_device* dev, int ppm_error) {
 }
 
 /**
- * Set direct sampling mode.
+ * @brief Set direct sampling mode.
  *
  * @param dev RTL-SDR device handle.
  * @param on 1 to enable, 0 to disable.
@@ -570,7 +577,7 @@ rtl_device_set_direct_sampling(struct rtl_device* dev, int on) {
 }
 
 /**
- * Enable offset tuning mode.
+ * @brief Enable offset tuning mode.
  *
  * @param dev RTL-SDR device handle.
  * @return 0 on success, negative on failure.
@@ -585,7 +592,7 @@ rtl_device_set_offset_tuning(struct rtl_device* dev) {
 }
 
 /**
- * Reset device buffer.
+ * @brief Reset device buffer.
  *
  * @param dev RTL-SDR device handle.
  * @return 0 on success, negative on failure.
@@ -599,7 +606,7 @@ rtl_device_reset_buffer(struct rtl_device* dev) {
 }
 
 /**
- * Start asynchronous reading from the device.
+ * @brief Start asynchronous reading from the device.
  *
  * @param dev RTL-SDR device handle.
  * @param buf_len Buffer length for async read.
@@ -624,7 +631,7 @@ rtl_device_start_async(struct rtl_device* dev, uint32_t buf_len) {
 }
 
 /**
- * Stop asynchronous reading and join the device thread.
+ * @brief Stop asynchronous reading and join the device thread.
  *
  * @param dev RTL-SDR device handle.
  * @return 0 on success, negative on failure.
@@ -646,7 +653,7 @@ rtl_device_stop_async(struct rtl_device* dev) {
 }
 
 /**
- * Mute the device for a specified number of samples.
+ * @brief Mute the device for a specified number of samples.
  *
  * @param dev RTL-SDR device handle.
  * @param samples Number of samples to mute.

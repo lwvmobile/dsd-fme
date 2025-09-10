@@ -1,11 +1,4 @@
 /*
- * DSP Demodulation Pipeline Header
- *
- * This header defines the interface for the FM demodulation pipeline,
- * including low-pass filtering, FM discrimination, deemphasis, DC blocking,
- * and audio filtering functions. It provides the core signal processing
- * functions used in the RTL-SDR FM demodulation process.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +13,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ * @brief DSP demodulation pipeline public API.
+ *
+ * Declares decimation, discrimination, deemphasis, DC block, audio filtering,
+ * and the full pipeline entrypoint implemented in `src/dsp/demod_pipeline.cpp`.
  */
 
 #ifndef DSP_DEMOD_PIPELINE_H

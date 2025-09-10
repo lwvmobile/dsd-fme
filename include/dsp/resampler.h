@@ -1,11 +1,4 @@
 /*
- * Rational Resampler Header
- *
- * This header defines the interface for the polyphase rational resampler
- * that performs sample rate conversion using L/M filtering. It provides
- * high-quality audio resampling capabilities for adjusting the output
- * sample rate to match desired audio formats.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,6 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * @brief Polyphase rational resampler public API.
+ */
+
 #ifndef DSP_RESAMPLER_H
 #define DSP_RESAMPLER_H
 
@@ -35,7 +33,8 @@ extern "C" {
 struct demod_state;
 
 /**
- * Design windowed-sinc low-pass prototype for polyphase upfirdn (runs at L*Fs_in).
+ * @brief Design windowed-sinc low-pass prototype for polyphase upfirdn (runs at L*Fs_in).
+ *
  * Taps are stored phase-major with stride L (k*L + phase). The function allocates
  * aligned storage for taps and history inside the provided demod_state and
  * initializes the resampler bookkeeping fields.
@@ -47,7 +46,7 @@ struct demod_state;
 void resamp_design(struct demod_state* s, int L, int M);
 
 /**
- * Process one block using polyphase upfirdn with history.
+ * @brief Process one block using polyphase upfirdn with history.
  *
  * @param s      Demodulator state containing resampler state.
  * @param in     Pointer to input samples.

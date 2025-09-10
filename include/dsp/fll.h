@@ -1,11 +1,4 @@
 /*
- * Frequency-Locked Loop (FLL) Header
- *
- * This header defines the interface for the residual carrier frequency
- * correction system using a frequency-locked loop. It provides functions
- * for automatic frequency correction in FM demodulation to compensate for
- * frequency offsets and drifts.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +13,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ * @brief Public API for Frequency-Locked Loop (FLL) utilities.
+ *
+ * Provides state and configuration structures and routines to perform
+ * NCO-based mixing and frequency-error control suitable for FM demodulation.
  */
 
 #ifndef DSP_FLL_H
@@ -50,30 +51,35 @@ typedef struct {
 } fll_state_t;
 
 /**
- * Initialize FLL state with default values
+ * @brief Initialize FLL state with default values.
+ *
+ * @param state FLL state to initialize.
  */
 void fll_init_state(fll_state_t* state);
 
 /**
- * Mix lowpassed I/Q by NCO e^{j*phi}, update phase by freq_q15 per sample.
- * Phase and frequency are Q15 where a full turn (2*pi) maps to 1<<15.
+ * @brief Mix I/Q by an NCO and advance phase by freq_q15 per sample.
  *
- * @param config FLL configuration
- * @param state  FLL state (updates phase_q15)
- * @param x      Input/output I/Q buffer (modified in-place)
- * @param N      Length of buffer (must be even)
+ * Phase and frequency are Q15 where a full turn (2*pi) maps to 1<<15.
+ * When enabled, applies either LUT-based or fast sin/cos rotator.
+ *
+ * @param config FLL configuration.
+ * @param state  FLL state (updates phase_q15).
+ * @param x      Input/output interleaved I/Q buffer (modified in-place).
+ * @param N      Length of buffer in samples (must be even).
  */
 void fll_mix_and_update(const fll_config_t* config, fll_state_t* state, int16_t* x, int N);
 
 /**
- * Estimate frequency error using a simple phase-difference discriminator and
- * update the FLL control in Q15. The proportional term is applied directly
- * and the integral action is realized by accumulating into freq_q15.
+ * @brief Estimate frequency error and update FLL control (PI in Q15).
  *
- * @param config FLL configuration
- * @param state  FLL state (updates freq_q15 and phase_q15)
- * @param x      Input I/Q buffer
- * @param N      Length of buffer (must be even)
+ * Uses a phase-difference discriminator to compute average error.
+ * Applies proportional and integral actions to adjust the NCO frequency.
+ *
+ * @param config FLL configuration.
+ * @param state  FLL state (updates freq_q15 and may advance phase_q15).
+ * @param x      Input interleaved I/Q buffer.
+ * @param N      Length of buffer in samples (must be even).
  */
 void fll_update_error(const fll_config_t* config, fll_state_t* state, const int16_t* x, int N);
 

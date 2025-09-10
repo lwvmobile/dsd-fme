@@ -1,11 +1,4 @@
 /*
- * Timing Error Detector Implementation
- *
- * This file implements the Gardner timing error detector and fractional
- * delay timing correction system for symbol timing synchronization in
- * digital demodulation modes. It provides automatic timing recovery
- * to correct for sampling clock phase errors.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,10 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * @brief Timing Error Detector (TED) implementation: Gardner TED and fractional
+ * delay timing correction for symbol synchronization in digital demodulation modes.
+ */
+
 #include "dsp/ted.h"
 
 /**
- * Initialize TED state with default values
+ * @brief Initialize TED state with default values.
+ *
+ * @param state TED state to initialize.
  */
 void
 ted_init_state(ted_state_t* state) {
@@ -33,16 +34,18 @@ ted_init_state(ted_state_t* state) {
 }
 
 /**
- * Lightweight Gardner timing correction.
+ * @brief Lightweight Gardner timing correction.
+ *
  * Uses linear interpolation between adjacent complex samples around the
  * nominal samples-per-symbol to reduce timing error; intended for digital
  * modes when enabled.
  *
- * @param config TED configuration
- * @param state  TED state (updates mu_q20)
- * @param x      Input/output I/Q buffer (modified in-place if timing adjustment applied)
- * @param N      Length of buffer (must be even, updated if timing adjustment applied)
- * @param y      Work buffer for timing-adjusted I/Q (must be at least size N)
+ * @param config TED configuration.
+ * @param state  TED state (updates mu_q20).
+ * @param x      Input/output I/Q buffer (modified in-place if timing adjustment applied).
+ * @param N      Length of buffer (must be even; updated if timing adjustment applied).
+ * @param y      Work buffer for timing-adjusted I/Q (must be at least size N).
+ * @note Skips processing when samples-per-symbol is large unless forced.
  */
 void
 gardner_timing_adjust(const ted_config_t* config, ted_state_t* state, int16_t* x, int* N, int16_t* y) {

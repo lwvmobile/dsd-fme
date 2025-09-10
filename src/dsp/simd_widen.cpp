@@ -1,11 +1,4 @@
 /*
- * SIMD Widening and Rotation Implementation
- *
- * This file implements SIMD-accelerated conversion of RTL-SDR USB data
- * from unsigned 8-bit bytes to signed 16-bit integers, with optional
- * 90-degree IQ rotation. It includes multiple CPU architecture-specific
- * implementations for optimal performance across different platforms.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +13,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ * @brief SIMD widening and optional 90° IQ rotation with runtime CPU dispatch.
+ *
+ * Converts RTL-SDR unsigned 8-bit I/Q samples to signed 16-bit integers with
+ * optional 90° rotation. Provides scalar and SIMD specializations (AVX2,
+ * SSSE3/SSE2, NEON) selected at runtime via feature detection.
  */
 
 #include "dsp/simd_widen.h"
@@ -90,6 +92,8 @@ static dsd_fme_widen_fn g_widen_impl = NULL;
 static dsd_fme_widen_rot_fn g_widen_rot_impl = NULL;
 
 /**
+ * @brief Widen u8 to s16 centered at 127 via runtime-dispatched implementation.
+ *
  * Public wrapper that lazy-initializes runtime dispatch and widens u8 to s16
  * centered at 127.
  *
@@ -106,6 +110,8 @@ widen_u8_to_s16_bias127(const unsigned char* DSD_FME_RESTRICT src, int16_t* DSD_
 }
 
 /**
+ * @brief Rotate 90° (IQ) and widen u8→s16 centered at 127 via runtime dispatch.
+ *
  * Public wrapper that lazy-initializes runtime dispatch and performs 90° IQ
  * rotation combined with widen u8→s16 centered at 127.
  *
@@ -123,6 +129,8 @@ widen_rotate90_u8_to_s16_bias127(const unsigned char* DSD_FME_RESTRICT src, int1
 }
 
 /**
+ * @brief Widen u8 to s16 centered at 128 (for legacy pre-rotation negation).
+ *
  * Scalar widening that subtracts 128 instead of 127.
  * Intended to pair with legacy byte-wise rotate_90(u8) which performs 255-x
  * negation so that overall effect equals correct centered negation (127-x).
@@ -140,7 +148,7 @@ widen_u8_to_s16_bias128_scalar(const unsigned char* DSD_FME_RESTRICT src, int16_
 }
 
 /**
- * Scalar fallback: widen u8 to s16 centered at 127.
+ * @brief Scalar fallback: widen u8 to s16 centered at 127.
  *
  * @param src Source buffer of unsigned bytes.
  * @param dst Destination int16 buffer.
@@ -156,7 +164,8 @@ widen_u8_to_s16_bias127_scalar(const unsigned char* DSD_FME_RESTRICT src, int16_
 }
 
 /**
- * Combined 90° rotation (1, j, -1, -j) + widen (u8→s16 centered at 127).
+ * @brief Combined 90° rotation (1, j, -1, -j) + widen (u8→s16 centered at 127).
+ *
  * Processes 4 IQ samples per iteration to avoid branches.
  *
  * @param src Source buffer of unsigned bytes (I/Q interleaved).
@@ -216,7 +225,8 @@ widen_rotate90_u8_to_s16_bias127_scalar(const unsigned char* DSD_FME_RESTRICT sr
 #if defined(__x86_64__) || defined(__i386__)
 /* AVX2 specializations */
 /**
- * AVX2: widen unsigned bytes to signed 16-bit centered at 127.
+ * @brief AVX2: widen unsigned bytes to signed 16-bit centered at 127.
+ *
  * @param src Source u8 buffer.
  * @param dst Destination s16 buffer.
  * @param len Number of bytes to process.
@@ -241,7 +251,8 @@ DSD_FME_TARGET_ATTR("avx2") widen_u8_to_s16_bias127_avx2(const unsigned char* sr
 }
 
 /**
- * AVX2: rotate (1,j,-1,-j) interleaved IQ and widen u8→s16 centered at 127.
+ * @brief AVX2: rotate (1,j,-1,-j) and widen u8→s16 centered at 127.
+ *
  * Tail elements are handled by a scalar helper to preserve the rotation pattern.
  * @param src Source u8 buffer (I/Q interleaved).
  * @param dst Destination s16 buffer.
@@ -279,7 +290,7 @@ DSD_FME_TARGET_ATTR("avx2")
 }
 
 /**
- * SSE2: widen unsigned bytes to signed 16-bit centered at 127.
+ * @brief SSE2: widen unsigned bytes to signed 16-bit centered at 127.
  */
 static void
 DSD_FME_TARGET_ATTR("sse2") widen_u8_to_s16_bias127_sse2(const unsigned char* src, int16_t* dst, uint32_t len) {
@@ -301,7 +312,7 @@ DSD_FME_TARGET_ATTR("sse2") widen_u8_to_s16_bias127_sse2(const unsigned char* sr
 }
 
 /**
- * SSE2: fallback rotate+widen via scalar since SSE2 lacks byte-wise shuffle.
+ * @brief SSE2: fallback rotate+widen via scalar since SSE2 lacks byte shuffle.
  */
 static void
 DSD_FME_TARGET_ATTR("sse2")
@@ -313,7 +324,8 @@ DSD_FME_TARGET_ATTR("sse2")
 
 #if defined(__x86_64__) || defined(__i386__)
 /**
- * SSSE3: rotate (1,j,-1,-j) interleaved IQ and widen u8→s16 centered at 127.
+ * @brief SSSE3: rotate (1,j,-1,-j) and widen u8→s16 centered at 127.
+ *
  * Tail elements are handled by a scalar helper to preserve the rotation pattern.
  */
 static void
@@ -346,7 +358,7 @@ DSD_FME_TARGET_ATTR("ssse3")
 
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
 /**
- * NEON: widen unsigned bytes to signed 16-bit centered at 127.
+ * @brief NEON: widen unsigned bytes to signed 16-bit centered at 127.
  */
 static void
 widen_u8_to_s16_bias127_neon(const unsigned char* src, int16_t* dst, uint32_t len) {
@@ -368,7 +380,8 @@ widen_u8_to_s16_bias127_neon(const unsigned char* src, int16_t* dst, uint32_t le
 }
 
 /**
- * NEON: rotate (1,j,-1,-j) interleaved IQ and widen u8→s16 centered at 127.
+ * @brief NEON: rotate (1,j,-1,-j) and widen u8→s16 centered at 127.
+ *
  * Uses table lookup on aarch64; on ARMv7 (no vqtbl1q_u8) falls back to scalar.
  */
 static void
@@ -407,7 +420,7 @@ widen_rotate90_u8_to_s16_bias127_neon(const unsigned char* src, int16_t* dst, ui
 #endif
 
 /**
- * Runtime CPU feature detection and dispatch binding for widening/rotation.
+ * @brief Runtime CPU feature detection and dispatch binding for widening/rotation.
  *
  * Detects available SIMD features (AVX2/SSSE3/SSE2/NEON) and binds the
  * function pointers `g_widen_impl` and `g_widen_rot_impl` accordingly.
@@ -496,7 +509,7 @@ dsd_fme_init_runtime_dispatch_once(void) {
 }
 
 /**
- * Ensure SIMD dispatch is initialized (thread-safe, idempotent).
+ * @brief Ensure SIMD dispatch is initialized (thread-safe, idempotent).
  */
 static void
 dsd_fme_init_runtime_dispatch(void) {

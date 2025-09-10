@@ -1,6 +1,4 @@
 /*
- * Half-band decimation filters (Q15 coefficients)
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,6 +14,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+/**
+ * @file
+ * @brief Half-band decimation filter definitions (Q15).
+ *
+ * Declares FIR coefficients and the decimate-by-2 function with persistent
+ * history for real-valued sequences.
+ */
+
 #pragma once
 
 #include <stdint.h>

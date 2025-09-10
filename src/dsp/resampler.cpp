@@ -1,10 +1,4 @@
 /*
- * Rational Resampler Implementation
- *
- * This file implements the polyphase rational resampler for sample rate
- * conversion using L/M filtering. It provides high-quality audio resampling
- * with efficient polyphase filter implementation for real-time operation.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,6 +13,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ * @brief Polyphase rational resampler implementation (L/M) with SIMD optimizations.
+ *
+ * Implements design and block processing for a windowed-sinc upfirdn resampler
+ * used by the FM audio path. Includes portable scalar code and optional SSE2/NEON
+ * vectorized inner products for the common 16-tap-per-phase configuration.
  */
 
 #include <math.h>
@@ -98,9 +101,10 @@ sat16_local(int32_t x) {
 }
 
 /**
- * Design windowed-sinc low-pass prototype for polyphase upfirdn (runs at L*Fs_in).
+ * @brief Design windowed-sinc low-pass prototype for polyphase upfirdn (runs at L*Fs_in).
+ *
  * Taps are stored phase-major with stride L (k*L + phase). The function allocates
- * aligned storage for taps and history inside the provided demod_state and
+ * aligned storage for taps and history inside the provided `demod_state` and
  * initializes the resampler bookkeeping fields.
  *
  * @param s Demodulator state to receive resampler taps/history.
@@ -247,7 +251,7 @@ dsd_fme_dot16_neon(const int16_t* a, const int16_t* b) {
 #endif
 
 /**
- * Process one block using polyphase upfirdn with history.
+ * @brief Process one block using polyphase upfirdn with history.
  *
  * @param s      Demodulator state containing resampler state.
  * @param in     Pointer to input samples.

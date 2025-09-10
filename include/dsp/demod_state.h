@@ -1,10 +1,4 @@
 /*
- * Demodulator State Definition
- *
- * Centralized definition of struct demod_state used across the DSP modules
- * and the RTL-SDR front-end. This mirrors the layout previously defined in
- * src/rtl_sdr_fm.cpp and must remain ABI-stable during the refactor.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,6 +13,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ * @brief Demodulator state shared across DSP modules and RTL-SDR front-end.
+ *
+ * Centralized definition of `struct demod_state`. Mirrors the legacy layout in
+ * `src/rtl_sdr_fm.cpp` and is intended to remain ABI-stable during ongoing
+ * refactoring.
  */
 
 #pragma once
@@ -53,8 +56,14 @@
 /* Forward declaration to avoid heavy dependencies here */
 struct output_state;
 
-/*
- * NOTE: Keep this struct in sync with usages in:
+/**
+ * @brief Aggregate state container for the demodulator processing chain.
+ *
+ * Holds working buffers, configuration, and module states used by the DSP
+ * pipeline (filters, resamplers, FLL/TED, etc.) and by the RTL-SDR front-end
+ * thread.
+ *
+ * @note Keep this definition synchronized with usages in:
  *  - src/rtl_sdr_fm.cpp
  *  - src/dsp/demod_pipeline.cpp
  *  - src/dsp/resampler.cpp

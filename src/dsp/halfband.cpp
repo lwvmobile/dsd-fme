@@ -1,6 +1,4 @@
 /*
- * Half-band decimator implementation.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,6 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+/**
+ * @file
+ * @brief Half-band FIR decimator implementation for real sequences.
+ *
+ * Implements Q15 half-band decimation by 2 with persistent history.
+ */
+
 #include <stdint.h>
 #include <string.h>
 
@@ -26,8 +32,17 @@
 const int16_t hb_q15_taps[HB_TAPS] = {-108, 0, 1800, 0, -500, 0, 7000, 16384, 7000, 0, -500, 0, 1800, 0, -108};
 
 /**
- * Decimate one real channel by 2 using a half-band FIR with persistent history.
- * See detailed documentation in the header.
+ * @brief Decimate one real-valued channel by 2 using a half-band FIR.
+ *
+ * Applies a 15-tap half-band low-pass to input samples and writes every second
+ * filtered sample to the output. Maintains a left-wing history across calls to
+ * preserve continuity at block boundaries.
+ *
+ * @param in Pointer to real input samples (length in_len).
+ * @param in_len Number of input samples.
+ * @param out Output buffer, size must be at least in_len/2.
+ * @param hist Persistent history of length HB_TAPS-1 (left wing).
+ * @return Number of output samples written (in_len/2).
  */
 int
 hb_decim2_real(const int16_t* in, int in_len, int16_t* out, int16_t* hist) {

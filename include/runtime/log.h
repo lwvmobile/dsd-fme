@@ -1,10 +1,4 @@
 /*
- * Runtime Logging Header
- *
- * This header defines the logging interface for DSD-FME runtime components,
- * providing structured logging capabilities with different log levels for
- * debugging and monitoring the demodulation pipeline and I/O operations.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -24,7 +18,17 @@
 #ifndef DSD_FME_LOG_H
 #define DSD_FME_LOG_H
 
-/* Log levels */
+/**
+ * @file
+ * @brief Runtime logging interface used across DSD-FME components.
+ *
+ * Declares log severity levels, the core logging write routine, and convenience
+ * macros. The implementation currently forwards messages to `stderr`.
+ */
+
+/**
+ * @brief Log severity levels for runtime logging.
+ */
 typedef enum { LOG_LEVEL_ERROR = 0, LOG_LEVEL_WARN = 1, LOG_LEVEL_INFO = 2, LOG_LEVEL_DEBUG = 3 } dsd_fme_log_level_t;
 
 /* Compile-time log level control (default to INFO) */
@@ -32,7 +36,16 @@ typedef enum { LOG_LEVEL_ERROR = 0, LOG_LEVEL_WARN = 1, LOG_LEVEL_INFO = 2, LOG_
 #define DSD_FME_LOG_LEVEL LOG_LEVEL_INFO
 #endif
 
-/* Internal logging function - thread-safe and allocation-free */
+/**
+ * @brief Write a formatted log message to the logging sink.
+ *
+ * Currently forwards to `stderr`. The `level` parameter is reserved for future
+ * runtime gating and may be used to filter messages at runtime.
+ *
+ * @param level  Log severity level (currently not used for filtering).
+ * @param format printf-style format string.
+ * @param ...    Variadic arguments corresponding to `format`.
+ */
 void dsd_fme_log_write(dsd_fme_log_level_t level, const char* format, ...);
 
 /* Logging macros that map directly to fprintf for initial compatibility */

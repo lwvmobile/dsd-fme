@@ -1,6 +1,4 @@
 /*
- * RAII orchestrator for RTL-SDR stream lifecycle and control
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -15,6 +13,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ * @brief RAII orchestrator for RTL-SDR stream lifecycle and control.
+ *
+ * Declares the C++ wrapper class that manages start/stop lifecycle, tuning,
+ * and buffered reads over the legacy C RTL-SDR streaming control.
  */
 
 #pragma once
@@ -74,11 +80,13 @@ class RtlSdrOrchestrator {
 
     /**
      * @brief Current output sample rate in Hz.
+     * @return Output sample rate in Hz.
      */
     unsigned int output_rate() const;
 
     /**
      * @brief Whether the last operation succeeded.
+     * @return true if the last operation returned success; otherwise false.
      */
     bool
     ok() const {
@@ -87,6 +95,7 @@ class RtlSdrOrchestrator {
 
     /**
      * @brief Error code from the last failing operation (if any).
+     * @return 0 when the last operation succeeded; otherwise negative error code.
      */
     int
     last_error_code() const {

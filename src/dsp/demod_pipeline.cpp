@@ -1,11 +1,4 @@
 /*
- * DSP Demodulation Pipeline Implementation
- *
- * This file implements the complete FM demodulation pipeline, including
- * low-pass filtering, FM discrimination, deemphasis, DC blocking, and
- * audio filtering. It orchestrates the signal processing chain from
- * baseband IQ samples to final audio output.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +13,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ * @brief DSP demodulation pipeline (FM/complex baseband) implementation.
+ *
+ * Provides decimation, optional FLL/TED, discrimination, deemphasis, DC block,
+ * and audio filtering. Public APIs are declared in `dsp/demod_pipeline.h`.
  */
 
 #include <math.h>
@@ -120,7 +121,8 @@ extern int fll_lut_enabled;
 /* hb_decim2_real provided by dsp/halfband.h */
 
 /**
- * Half-band decimator for complex interleaved I/Q data.
+ * @brief Half-band decimator for complex interleaved I/Q data.
+ *
  * Decimates by 2:1 using symmetric FIR filter.
  *
  * @param in      Input complex samples (interleaved I/Q).
@@ -228,7 +230,8 @@ hb_decim2_complex_interleaved(const int16_t* DSD_FME_RESTRICT in, int in_len, in
 }
 
 /**
- * Boxcar low-pass and decimate by step (no wraparound).
+ * @brief Boxcar low-pass and decimate by step (no wraparound).
+ *
  * Length must be a multiple of step.
  *
  * @param signal2 In/out buffer of samples.
@@ -262,7 +265,7 @@ low_pass_simple(int16_t* signal2, int len, int step) {
 }
 
 /**
- * Simple square window FIR on real samples with decimation to rate_out2.
+ * @brief Simple square window FIR on real samples with decimation to rate_out2.
  *
  * @param s Demodulator state (uses result buffer and decimation state).
  */
@@ -298,7 +301,7 @@ low_pass_real(struct demod_state* s) {
 }
 
 /**
- * Deferred low-pass: sums and decimates with saturation on writeback.
+ * @brief Deferred low-pass: sums and decimates with saturation on writeback.
  *
  * @param d Demodulator state (uses lowpassed buffer and decimation state).
  */
@@ -326,7 +329,8 @@ low_pass(struct demod_state* d) {
 }
 
 /**
- * Fifth-order half-band-like decimator operating on a single real sequence.
+ * @brief Fifth-order half-band-like decimator operating on a single real sequence.
+ *
  * Caller applies this separately to I and Q streams. Uses 6-tap state in
  * `hist` and writes decimated output in-place.
  *
@@ -365,7 +369,7 @@ fifth_order(int16_t* data, int length, int16_t* hist) {
 }
 
 /**
- * FIR filter with symmetric 9-tap coefficients (phase-saving implementation).
+ * @brief FIR filter with symmetric 9-tap coefficients (phase-saving implementation).
  *
  * @param data   In/out data buffer (interleaved step of 2 assumed).
  * @param length Number of input samples.
@@ -398,7 +402,8 @@ generic_fir(int16_t* data, int length, int* fir, int16_t* hist) {
 }
 
 /**
- * Perform FM discriminator on interleaved low-passed I/Q to produce audio PCM.
+ * @brief Perform FM discriminator on interleaved low-passed I/Q to produce audio PCM.
+ *
  * Uses the active discriminator configured in fm->discriminator.
  *
  * @param fm Demodulator state (uses lowpassed as input, writes to result).
@@ -430,7 +435,7 @@ fm_demod(struct demod_state* fm) {
 }
 
 /**
- * Pass-through demodulator: copies low-passed samples to output unchanged.
+ * @brief Pass-through demodulator: copies low-passed samples to output unchanged.
  *
  * @param fm Demodulator state (copies lowpassed to result).
  */
@@ -444,7 +449,7 @@ raw_demod(struct demod_state* fm) {
 }
 
 /**
- * Apply post-demod deemphasis IIR filter with Q15 coefficient.
+ * @brief Apply post-demod deemphasis IIR filter with Q15 coefficient.
  *
  * @param fm Demodulator state (reads/writes result, updates deemph_avg).
  */
@@ -480,7 +485,7 @@ deemph_filter(struct demod_state* fm) {
 }
 
 /**
- * Apply a simple DC blocking (leaky integrator high-pass) filter to audio.
+ * @brief Apply a simple DC blocking (leaky integrator high-pass) filter to audio.
  *
  * @param fm Demodulator state (reads/writes result, updates dc_avg).
  */
@@ -502,7 +507,7 @@ dc_block_filter(struct demod_state* fm) {
 }
 
 /**
- * Apply a simple one-pole low-pass filter to audio.
+ * @brief Apply a simple one-pole low-pass filter to audio.
  *
  * @param fm Demodulator state (reads/writes result, updates audio_lpf_state).
  */
@@ -534,7 +539,7 @@ audio_lpf_filter(struct demod_state* fm) {
 }
 
 /**
- * Calculate mean power (squared RMS) with DC bias removed.
+ * @brief Calculate mean power (squared RMS) with DC bias removed.
  *
  * @param samples Input samples buffer.
  * @param len     Number of samples.
@@ -564,9 +569,10 @@ mean_power(int16_t* samples, int len, int step) {
 }
 
 /**
- * Estimate frequency error using the configured discriminator and update the
- * FLL loop control variables in Q15. Mirrors the modular FLL path used by the
- * RTL front-end.
+ * @brief Estimate frequency error using the configured discriminator and update the
+ * FLL loop control variables in Q15.
+ *
+ * Mirrors the modular FLL path used by the RTL front-end.
  *
  * @param d Demodulator state (syncs to/from `fll_state`, updates loop vars).
  */
@@ -598,8 +604,9 @@ fll_update_error(struct demod_state* d) {
 }
 
 /**
- * Mix low-passed I/Q by the FLL NCO and advance the loop accumulators. This
- * rotates the complex baseband to reduce residual CFO and synchronizes the
+ * @brief Mix low-passed I/Q by the FLL NCO and advance the loop accumulators.
+ *
+ * Rotates the complex baseband to reduce residual CFO and synchronizes the
  * demod state with the modular FLL implementation.
  *
  * @param d Demodulator state (reads/writes `lowpassed`, updates `fll_state`).
@@ -633,8 +640,9 @@ fll_mix_and_update(struct demod_state* d) {
 }
 
 /**
- * Apply a lightweight Gardner timing correction to complex baseband. When
- * enabled, this may adjust `lowpassed` and `lp_len` via the modular TED API.
+ * @brief Apply a lightweight Gardner timing correction to complex baseband.
+ *
+ * When enabled, this may adjust `lowpassed` and `lp_len` via the modular TED API.
  * Intended primarily for digital modes; typically disabled for analog FM.
  *
  * @param d Demodulator state (syncs `ted_state`, may modify samples/length).
@@ -658,7 +666,8 @@ gardner_timing_adjust(struct demod_state* d) {
 }
 
 /**
- * Full demodulation pipeline for one block.
+ * @brief Full demodulation pipeline for one block.
+ *
  * Applies decimation (HB cascade or legacy), optional FLL and timing
  * correction, followed by the configured discriminator and post-processing.
  *

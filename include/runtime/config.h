@@ -1,11 +1,4 @@
 /*
- * Runtime Configuration Header
- *
- * This header defines the runtime configuration system for DSD-FME,
- * including environment variable parsing and typed configuration structures.
- * It handles settings for DSP pipeline options, FLL parameters, TED settings,
- * audio processing, and multithreading controls.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +13,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ * @brief Runtime configuration API and environment documentation.
+ *
+ * Exposes typed configuration parsed from environment variables and accessors
+ * to initialize and retrieve the immutable configuration.
  */
 
 #ifndef DSD_FME_RUNTIME_CONFIG_H
@@ -173,9 +174,22 @@ typedef struct DsdFmeRuntimeConfig {
 } DsdFmeRuntimeConfig;
 
 /* Parse environment once. Safe to call multiple times; last call wins. */
+/**
+ * @brief Parse environment variables and initialize the runtime configuration.
+ *
+ * Safe to call multiple times; the most recent call wins.
+ *
+ * @param opts Decoder options for potential precedence overrides.
+ */
 void dsd_fme_config_init(const dsd_opts* opts);
 
 /* Get immutable pointer to current runtime config. */
+/**
+ * @brief Get immutable pointer to the current runtime configuration, or NULL if
+ * initialization has not been performed.
+ *
+ * @return Pointer to config or NULL.
+ */
 const DsdFmeRuntimeConfig* dsd_fme_get_config(void);
 
 #ifdef __cplusplus

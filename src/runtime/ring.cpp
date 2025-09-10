@@ -1,6 +1,4 @@
 /*
- * Output ring buffer for demodulated audio samples
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,6 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * @brief Output ring buffer for demodulated audio samples.
+ *
+ * Implements blocking producer/consumer operations with timed waits and
+ * optional signaling semantics.
+ */
+
 #include <cstring>
 #include <time.h>
 #include "runtime/ring.h"
@@ -24,7 +30,13 @@
 extern int exitflag; // defined in rtl_sdr_fm.cpp
 
 /**
- * Write up to count samples, blocking until space is available. Signals data availability after writes.
+ * @brief Write up to count samples, blocking until space is available.
+ *
+ * Signals data availability only on an empty-to-non-empty transition.
+ *
+ * @param o     Output ring buffer state.
+ * @param data  Source samples to write.
+ * @param count Number of samples to write.
  */
 void
 ring_write(struct output_state* o, const int16_t* data, size_t count) {
@@ -93,7 +105,13 @@ ring_write(struct output_state* o, const int16_t* data, size_t count) {
 }
 
 /**
- * Same as ring_write but does not signal; caller decides when to signal
+ * @brief Write up to count samples, blocking until space is available.
+ *
+ * Does not signal; caller should decide when to signal.
+ *
+ * @param o     Output ring buffer state.
+ * @param data  Source samples to write.
+ * @param count Number of samples to write.
  */
 void
 ring_write_no_signal(struct output_state* o, const int16_t* data, size_t count) {
@@ -156,7 +174,7 @@ ring_write_no_signal(struct output_state* o, const int16_t* data, size_t count) 
 }
 
 /**
- * Write samples with signal on empty-to-non-empty transition.
+ * @brief Write samples with signal on empty-to-non-empty transition.
  *
  * @param o     Output ring buffer state.
  * @param data  Source samples to write.
@@ -174,7 +192,7 @@ ring_write_signal_on_empty_transition(struct output_state* o, const int16_t* dat
 }
 
 /**
- * Read one sample from the output ring, blocking with timeout until available
+ * @brief Read one sample from the output ring, blocking with timeout until available.
  *
  * @param o    Output ring buffer state.
  * @param out  Destination for one sample.
@@ -219,7 +237,9 @@ ring_read_one(struct output_state* o, int16_t* out) {
 }
 
 /**
- * Read up to max_count samples into out. Blocks until at least one sample is available or exit.
+ * @brief Read up to max_count samples into out.
+ *
+ * Blocks until at least one sample is available or exit.
  *
  * @param o         Output ring buffer state.
  * @param out       Destination buffer for samples.

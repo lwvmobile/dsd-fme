@@ -1,6 +1,4 @@
 /*
- * Input ring buffer for RTL-SDR USB data
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,6 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * @brief Input ring buffer implementation for interleaved I/Q int16_t samples.
+ *
+ * Provides producer/consumer primitives to reserve, commit, write, and
+ * blockingly read samples with wrap-around handling and wakeup signaling.
+ */
 #include <cstring>
 #include <time.h>
 #include "runtime/input_ring.h"
@@ -24,7 +29,7 @@
 extern int exitflag; // defined in rtl_sdr_fm.cpp
 
 /**
- * Reserve writable regions in the input ring buffer.
+ * @brief Reserve writable regions in the input ring buffer.
  *
  * @param r          Input ring buffer state.
  * @param min_needed Minimum number of samples needed.
@@ -70,7 +75,7 @@ input_ring_reserve(struct input_ring_state* r, size_t min_needed, int16_t** p1, 
 }
 
 /**
- * Commit previously reserved writable regions to the input ring.
+ * @brief Commit previously reserved writable regions to the input ring.
  *
  * @param r         Input ring buffer state.
  * @param produced  Number of samples produced to commit.
@@ -95,7 +100,9 @@ input_ring_commit(struct input_ring_state* r, size_t produced) {
 }
 
 /**
- * Write samples to the input ring, blocking if necessary.
+ * @brief Write samples to the input ring, blocking if necessary.
+ *
+ * Drops remaining samples if the ring is full to avoid racing the consumer.
  *
  * @param r     Input ring buffer state.
  * @param data  Source samples to write.
@@ -148,7 +155,9 @@ input_ring_write(struct input_ring_state* r, const int16_t* data, size_t count) 
 }
 
 /**
- * Read up to max_count samples from the input ring, blocking until available.
+ * @brief Read up to max_count samples from the input ring, blocking until data is available.
+ *
+ * Returns -1 when an exit condition is observed while waiting for data.
  *
  * @param r         Input ring buffer state.
  * @param out       Destination buffer for samples.

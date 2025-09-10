@@ -1,11 +1,4 @@
 /*
- * Worker Pool Header
- *
- * This header defines the interface for a minimal 2-thread worker pool
- * used for CPU-intensive inner loops in the demodulation pipeline. It
- * provides thread-safe task distribution for parallel processing when
- * enabled via runtime configuration.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +13,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ * @brief Minimal 2-thread worker pool API for intra-block demodulation tasks.
+ *
+ * Exposes functions keyed by `demod_state*` to initialize/destroy a tiny
+ * env-gated pool and to run up to two tasks in parallel per processing block.
  */
 
 #ifndef RUNTIME_WORKER_POOL_H
@@ -40,13 +41,33 @@ struct demod_state;
  * These calls mirror the inlined versions that previously lived in rtl_sdr_fm.cpp
  */
 
-/* Initialize the minimal worker pool if DSD_FME_MT=1. Safe to call multiple times per instance. */
+/**
+ * @brief Initialize the minimal worker pool when `DSD_FME_MT=1`.
+ *
+ * Safe to call multiple times per demodulator instance.
+ * @param s Demodulator state used as a key for the worker context.
+ * @note No-op when multithreading is disabled via environment.
+ */
 void demod_mt_init(struct demod_state* s);
 
-/* Tear down the worker threads if they were created by demod_mt_init. */
+/**
+ * @brief Tear down worker threads created by `demod_mt_init`.
+ *
+ * @param s Demodulator state used as a key for the worker context.
+ * @note Safe no-op if the pool was never enabled/initialized.
+ */
 void demod_mt_destroy(struct demod_state* s);
 
-/* Post up to two tasks and wait for completion. Runs synchronously if pool disabled. */
+/**
+ * @brief Post up to two tasks and wait for completion.
+ *
+ * Runs synchronously in the caller thread when the pool is disabled.
+ * @param s Demodulator state key for the worker context.
+ * @param f0 Function pointer for the first task (may be NULL).
+ * @param a0 Argument for the first task.
+ * @param f1 Function pointer for the second task (may be NULL).
+ * @param a1 Argument for the second task.
+ */
 void demod_mt_run_two(struct demod_state* s, void (*f0)(void*), void* a0, void (*f1)(void*), void* a1);
 
 #ifdef __cplusplus

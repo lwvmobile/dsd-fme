@@ -1,6 +1,4 @@
 /*
- * RTL-SDR Device I/O Layer
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,6 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * @brief RTL-SDR device I/O public API.
+ *
+ * Declares the opaque `rtl_device` handle and functions for configuring and
+ * streaming samples from an RTL-SDR, including optional offset tuning, gain
+ * control, PPM correction, and asynchronous USB ingestion into an input ring.
+ */
+ 
 #pragma once
 
 #include <pthread.h>
@@ -32,24 +39,24 @@ extern "C" {
 struct rtl_device;
 
 /**
- * Create and initialize an RTL-SDR device.
+ * @brief Create and initialize an RTL-SDR device.
  *
  * @param dev_index Device index to open.
  * @param input_ring Pointer to input ring for USB data.
- * @param combine_rotate_enabled Whether to use combined rotate+widen for offset tuning.
+ * @param combine_rotate_enabled Whether to use combined rotate+widen when offset tuning is disabled.
  * @return Pointer to rtl_device handle, or NULL on failure.
  */
 struct rtl_device* rtl_device_create(int dev_index, struct input_ring_state* input_ring, int combine_rotate_enabled);
 
 /**
- * Destroy an RTL-SDR device and free resources.
+ * @brief Destroy an RTL-SDR device and free resources.
  *
  * @param dev Pointer to rtl_device handle.
  */
 void rtl_device_destroy(struct rtl_device* dev);
 
 /**
- * Set device center frequency.
+ * @brief Set device center frequency.
  *
  * @param dev RTL-SDR device handle.
  * @param frequency Frequency in Hz.
@@ -58,7 +65,7 @@ void rtl_device_destroy(struct rtl_device* dev);
 int rtl_device_set_frequency(struct rtl_device* dev, uint32_t frequency);
 
 /**
- * Set device sample rate.
+ * @brief Set device sample rate.
  *
  * @param dev RTL-SDR device handle.
  * @param samp_rate Sample rate in Hz.
@@ -67,7 +74,7 @@ int rtl_device_set_frequency(struct rtl_device* dev, uint32_t frequency);
 int rtl_device_set_sample_rate(struct rtl_device* dev, uint32_t samp_rate);
 
 /**
- * Set tuner gain mode and value.
+ * @brief Set tuner gain mode and value.
  *
  * @param dev RTL-SDR device handle.
  * @param gain Gain in tenths of dB, or AUTO_GAIN for automatic.
@@ -76,7 +83,7 @@ int rtl_device_set_sample_rate(struct rtl_device* dev, uint32_t samp_rate);
 int rtl_device_set_gain(struct rtl_device* dev, int gain);
 
 /**
- * Set frequency correction (PPM error).
+ * @brief Set frequency correction (PPM error).
  *
  * @param dev RTL-SDR device handle.
  * @param ppm_error PPM correction value.
@@ -85,7 +92,7 @@ int rtl_device_set_gain(struct rtl_device* dev, int gain);
 int rtl_device_set_ppm(struct rtl_device* dev, int ppm_error);
 
 /**
- * Set direct sampling mode.
+ * @brief Set direct sampling mode.
  *
  * @param dev RTL-SDR device handle.
  * @param on 1 to enable, 0 to disable.
@@ -94,7 +101,7 @@ int rtl_device_set_ppm(struct rtl_device* dev, int ppm_error);
 int rtl_device_set_direct_sampling(struct rtl_device* dev, int on);
 
 /**
- * Set offset tuning mode.
+ * @brief Set offset tuning mode.
  *
  * @param dev RTL-SDR device handle.
  * @return 0 on success, negative on failure.
@@ -102,7 +109,7 @@ int rtl_device_set_direct_sampling(struct rtl_device* dev, int on);
 int rtl_device_set_offset_tuning(struct rtl_device* dev);
 
 /**
- * Reset device buffer.
+ * @brief Reset device buffer.
  *
  * @param dev RTL-SDR device handle.
  * @return 0 on success, negative on failure.
@@ -110,7 +117,7 @@ int rtl_device_set_offset_tuning(struct rtl_device* dev);
 int rtl_device_reset_buffer(struct rtl_device* dev);
 
 /**
- * Start asynchronous reading from the device.
+ * @brief Start asynchronous reading from the device.
  *
  * @param dev RTL-SDR device handle.
  * @param buf_len Buffer length for async read.
@@ -119,7 +126,7 @@ int rtl_device_reset_buffer(struct rtl_device* dev);
 int rtl_device_start_async(struct rtl_device* dev, uint32_t buf_len);
 
 /**
- * Stop asynchronous reading and join the device thread.
+ * @brief Stop asynchronous reading and join the device thread.
  *
  * @param dev RTL-SDR device handle.
  * @return 0 on success, negative on failure.
@@ -127,7 +134,7 @@ int rtl_device_start_async(struct rtl_device* dev, uint32_t buf_len);
 int rtl_device_stop_async(struct rtl_device* dev);
 
 /**
- * Mute the device for a specified number of samples.
+ * @brief Mute the device for a specified number of samples.
  *
  * @param dev RTL-SDR device handle.
  * @param samples Number of samples to mute.

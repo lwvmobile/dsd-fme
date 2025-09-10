@@ -1,6 +1,4 @@
 /*
- * Orchestrates RTL-SDR stream: device setup, threads, demod pipeline, rings, tuning.
- *
  * Copyright (C) 2012 by Steve Markgraf <steve@steve-m.de>
  * Copyright (C) 2012 by Hoernchen <la@tfc-server.de>
  * Copyright (C) 2012 by Kyle Keen <keenerd@gmail.com>
@@ -20,6 +18,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ * @brief RTL-SDR stream orchestration and demodulation pipeline.
+ *
+ * Sets up the RTL-SDR device and worker threads, configures capture
+ * settings and the demodulation pipeline, manages rings and UDP control,
+ * and exposes a consumer API for audio samples and tuning.
  */
 
 #include <atomic>
@@ -84,7 +91,7 @@ static const double kPi = 3.14159265358979323846;
 #define DSD_FME_IVDEP     DSD_FME_PRAGMA(GCC ivdep)
 
 /**
- * Hint that a pointer is aligned to a compile-time boundary for vectorization.
+ * @brief Hint that a pointer is aligned to a compile-time boundary for vectorization.
  *
  * This is a lightweight wrapper over compiler intrinsics to improve
  * auto-vectorization by promising the compiler that the pointer meets the
@@ -111,7 +118,7 @@ assume_aligned_ptr(const T* p, size_t /*align_unused*/) {
 #define DSD_FME_IVDEP
 
 /**
- * See aligned variant: noop fallback when compiler does not support alignment
+ * @brief See aligned variant: noop fallback when compiler does not support alignment
  * assumptions.
  * @tparam T Element type of the pointer.
  * @param p  Pointer to return as-is.
@@ -214,7 +221,7 @@ struct RtlSdrInternals {
 static struct RtlSdrInternals* g_stream = NULL;
 
 /**
- * Demodulation worker: consume input ring, run pipeline, and produce audio.
+ * @brief Demodulation worker: consume input ring, run pipeline, and produce audio.
  *
  * Reads baseband I/Q blocks from the input ring, invokes the full demodulation
  * pipeline, and writes audio samples to the output ring with optional
@@ -262,7 +269,7 @@ demod_thread_fn(void* arg) {
 }
 
 /**
- * Compute and stage tuner/demodulator capture settings based on the
+ * @brief Compute and stage tuner/demodulator capture settings based on the
  * requested center frequency and current demod configuration. The actual
  * device programming occurs elsewhere after these fields are updated.
  *
@@ -320,7 +327,7 @@ optimal_settings(int freq, int rate) {
 }
 
 /**
- * Program device to new center frequency and sample rate using a
+ * @brief Program device to new center frequency and sample rate using a
  * single, consistent path. Applies fs/4 shift when offset_tuning is off.
  *
  * @param center_freq_hz Desired RF center frequency in Hz.
@@ -333,7 +340,7 @@ apply_capture_settings(uint32_t center_freq_hz) {
 }
 
 /**
- * Controller worker: scans/hops through configured center frequencies.
+ * @brief Controller worker: scans/hops through configured center frequencies.
  *
  * Programs tuner frequency/sample rate according to current optimal settings
  * and hops when signaled by the demod path (e.g., squelch-triggered).
@@ -384,7 +391,7 @@ controller_thread_fn(void* arg) {
 }
 
 /**
- * Initialize dongle (RTL-SDR source) state with default parameters.
+ * @brief Initialize dongle (RTL-SDR source) state with default parameters.
  *
  * @param s Dongle state to initialize.
  */
@@ -405,7 +412,7 @@ typedef struct {
 } DemodInitParams;
 
 /**
- * Initialize demodulator state using a unified entrypoint.
+ * @brief Initialize demodulator state using a unified entrypoint.
  *
  * Sets common defaults and applies mode-specific adjustments for digital,
  * analog, or RO2 operation. This centralizes prior duplicated init logic.
@@ -523,7 +530,7 @@ demod_init_mode(struct demod_state* s, DemodMode mode, const DemodInitParams* p)
 }
 
 /**
- * Initialize demodulator state for analog FM path.
+ * @brief Initialize demodulator state for analog FM path.
  *
  * Applies analog-specific defaults (e.g., deemphasis enabled, FIR size,
  * and downsample passes) on top of common initialization.
@@ -538,7 +545,7 @@ demod_init_analog(struct demod_state* s) {
 }
 
 /**
- * Initialize demodulator state for RO2 path (no CIC, LUT atan by default).
+ * @brief Initialize demodulator state for RO2 path (no CIC, LUT atan by default).
  *
  * @param s Demodulator state to initialize.
  */
@@ -549,7 +556,7 @@ demod_init_ro2(struct demod_state* s) {
 }
 
 /**
- * Initialize demodulator state for default digital path.
+ * @brief Initialize demodulator state for default digital path.
  *
  * @param s Demodulator state to initialize.
  */
@@ -560,7 +567,7 @@ demod_init(struct demod_state* s) {
 }
 
 /**
- * Release resources owned by the demodulator state.
+ * @brief Release resources owned by the demodulator state.
  *
  * @param s Demodulator state to clean up.
  */
@@ -582,7 +589,7 @@ demod_cleanup(struct demod_state* s) {
 }
 
 /**
- * Initialize output ring buffer and synchronization primitives.
+ * @brief Initialize output ring buffer and synchronization primitives.
  *
  * @param s Output state to initialize.
  */
@@ -612,7 +619,7 @@ output_init(struct output_state* s) {
 }
 
 /**
- * Destroy output ring buffer and synchronization primitives.
+ * @brief Destroy output ring buffer and synchronization primitives.
  *
  * @param s Output state to clean up.
  */
@@ -628,7 +635,7 @@ output_cleanup(struct output_state* s) {
 }
 
 /**
- * Initialize controller state (frequency list and hop control).
+ * @brief Initialize controller state (frequency list and hop control).
  *
  * @param s Controller state to initialize.
  */
@@ -643,7 +650,7 @@ controller_init(struct controller_state* s) {
 }
 
 /**
- * Destroy controller synchronization primitives.
+ * @brief Destroy controller synchronization primitives.
  *
  * @param s Controller state to clean up.
  */
@@ -654,7 +661,10 @@ controller_cleanup(struct controller_state* s) {
 }
 
 /**
- * Signal handler to request RTL-SDR async cancel and exit.
+ * @brief Handle termination signals by requesting RTL-SDR async cancel and exit.
+ *
+ * Logs the event and triggers a non-blocking stop of the async capture loop
+ * so worker threads can wind down cleanly.
  */
 extern "C" void
 rtlsdr_sighandler(void) {
@@ -663,7 +673,7 @@ rtlsdr_sighandler(void) {
 }
 
 /**
- * Apply runtime configuration flags and set up optional resampler/FLL/TED.
+ * @brief Apply runtime configuration flags and set up optional resampler/FLL/TED.
  *
  * Reads environment-backed runtime configuration and options, enables
  * or disables modules, and designs the rational resampler when requested.
@@ -738,7 +748,7 @@ configure_from_env_and_opts(dsd_opts* opts) {
 }
 
 /**
- * Apply sensible defaults for digital vs analog modes when env not set.
+ * @brief Apply sensible defaults for digital vs analog modes when env not set.
  *
  * @param opts Decoder options.
  */
@@ -797,7 +807,7 @@ select_defaults_for_mode(dsd_opts* opts) {
 }
 
 /**
- * Seed initial device index, center frequency, gain and UDP port.
+ * @brief Seed initial device index, center frequency, gain and UDP port.
  *
  * @param opts Decoder options.
  */
@@ -830,7 +840,11 @@ setup_initial_freq_and_rate(dsd_opts* opts) {
 }
 
 /**
- * Launch controller/demod threads and start async device capture.
+ * @brief Launch controller/demod threads and start async device capture.
+ *
+ * Spawns the controller and demodulation workers, begins RTL-SDR async
+ * streaming with the configured buffer size, and starts optional UDP
+ * control for on-the-fly tuning.
  */
 static void
 start_threads_and_async(void) {
@@ -850,7 +864,7 @@ start_threads_and_async(void) {
 }
 
 /**
- * Initialize and open the RTL-SDR streaming pipeline, threads, and buffers.
+ * @brief Initialize and open the RTL-SDR streaming pipeline, threads, and buffers.
  *
  * Configures device and demod state, validates options, allocates buffers,
  * programs initial capture settings (including fs/4 shift when appropriate),
@@ -1092,7 +1106,10 @@ dsd_rtl_stream_open(dsd_opts* opts) {
 }
 
 /**
- * Stop threads, cleanup buffers/objects, and close the RTL-SDR stream.
+ * @brief Stop threads, free resources, and close the RTL-SDR stream.
+ *
+ * Signals workers to exit, joins threads, destroys device objects and rings,
+ * releases LUTs and aligned buffers, and tears down UDP control if enabled.
  */
 extern "C" void
 dsd_rtl_stream_close(void) {
@@ -1139,14 +1156,14 @@ dsd_rtl_stream_close(void) {
 }
 
 /**
- * Batched consumer API: read up to count samples with fewer wakeups/locks.
+ * @brief Batched consumer API: read up to count samples with fewer wakeups/locks.
  * Applies volume scaling.
  *
  * @param out   Destination buffer for audio samples.
  * @param count Maximum number of samples to read.
  * @param opts  Decoder options (used for runtime PPM changes).
  * @param state Decoder state (unused).
- * @return Number of samples read (>=1) or -1 on exit.
+ * @return Number of samples read (>=1), 0 if count==0, or -1 on exit.
  */
 extern "C" int
 dsd_rtl_stream_read(int16_t* out, size_t count, dsd_opts* opts, dsd_state* state) {
@@ -1174,7 +1191,7 @@ dsd_rtl_stream_read(int16_t* out, size_t count, dsd_opts* opts, dsd_state* state
 }
 
 /**
- * Return the current output audio sample rate in Hz.
+ * @brief Return the current output audio sample rate in Hz.
  *
  * @return Output sample rate in Hz.
  */
@@ -1184,10 +1201,11 @@ dsd_rtl_stream_output_rate(void) {
 }
 
 /**
- * Tune RTL-SDR to a new center frequency, updating optimal settings.
+ * @brief Tune RTL-SDR to a new center frequency, updating optimal settings.
  *
  * @param opts      Decoder options.
  * @param frequency Target center frequency in Hz.
+ * @return 0 on success.
  */
 extern "C" int
 dsd_rtl_stream_tune(dsd_opts* opts, long int frequency) {
@@ -1205,7 +1223,7 @@ dsd_rtl_stream_tune(dsd_opts* opts, long int frequency) {
 }
 
 /**
- * Return mean power approximation (RMS^2 proxy) for soft squelch decisions.
+ * @brief Return mean power approximation (RMS^2 proxy) for soft squelch decisions.
  * Uses a small fixed sample window for efficiency.
  *
  * @return Mean power value (approximate RMS squared).
@@ -1225,7 +1243,7 @@ dsd_rtl_stream_return_pwr(void) {
 }
 
 /**
- * Clear the output ring buffer and wake any waiting producer.
+ * @brief Clear the output ring buffer and wake any waiting producer.
  */
 extern "C" void
 dsd_rtl_stream_clear_output(void) {

@@ -1,6 +1,4 @@
 /*
- * Polar discriminator implementations and LUT management.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,6 +14,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+/**
+ * @file
+ * @brief Polar discriminator implementations and atan LUT management.
+ *
+ * Provides double-precision, integer-approximate, and LUT-based FM phase
+ * discriminators that return Q14-scaled phase deltas where pi == 1<<14.
+ */
+
 #include <math.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -32,7 +39,7 @@ static pthread_once_t atan_lut_once = PTHREAD_ONCE_INIT;
 static pthread_mutex_t atan_lut_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**
- * Multiply two complex numbers using 64-bit intermediates to prevent overflow.
+ * @brief Multiply two complex numbers using 64-bit intermediates to prevent overflow.
  *
  * (ar + j*aj) * (br + j*bj) -> (cr + j*cj)
  *
@@ -50,7 +57,9 @@ multiply64(int ar, int aj, int br, int bj, int64_t* cr, int64_t* cj) {
 }
 
 /**
- * Initialize the atan LUT contents (invoked via pthread_once).
+ * @brief Initialize the atan LUT contents.
+ *
+ * @note Invoked via pthread_once.
  */
 static void
 atan_lut_once_init(void) {
@@ -65,7 +74,8 @@ atan_lut_once_init(void) {
 }
 
 /**
- * Initialize the atan lookup table used by the LUT-based discriminator.
+ * @brief Initialize the atan lookup table used by the LUT-based discriminator.
+ *
  * Thread-safe and idempotent; returns -1 if allocation fails.
  *
  * @return 0 on success, -1 on allocation failure.
@@ -85,7 +95,9 @@ atan_lut_init(void) {
 }
 
 /**
- * Free memory associated with the atan LUT. Safe to call multiple times.
+ * @brief Free memory associated with the atan LUT.
+ *
+ * Safe to call multiple times.
  */
 void
 atan_lut_free(void) {
@@ -98,7 +110,7 @@ atan_lut_free(void) {
 }
 
 /**
- * Fast integer atan2 approximation (Q14) with 64-bit safety.
+ * @brief Fast integer atan2 approximation (Q14) with 64-bit safety.
  *
  * @param y Imaginary component (int64).
  * @param x Real component (int64).
@@ -128,7 +140,7 @@ fast_atan2_64(int64_t y, int64_t x) {
 }
 
 /**
- * Accurate polar discriminator using double-precision atan2.
+ * @brief Accurate polar discriminator using double-precision atan2.
  *
  * Computes b * conj(a) and returns the phase delta in Q14 where pi == 1<<14.
  *
@@ -148,10 +160,16 @@ polar_discriminant(int ar, int aj, int br, int bj) {
 }
 
 /**
- * Fast polar discriminator using an integer atan2 approximation.
+ * @brief Fast polar discriminator using an integer atan2 approximation.
  *
  * Uses a low-cost integer approximation to atan2 with 64-bit safety.
  * Returns the phase delta in Q14 where pi == 1<<14.
+ *
+ * @param ar Real part of previous complex sample a.
+ * @param aj Imag part of previous complex sample a.
+ * @param br Real part of current complex sample b.
+ * @param bj Imag part of current complex sample b.
+ * @return Phase difference in Q14 units.
  */
 int
 polar_disc_fast(int ar, int aj, int br, int bj) {
@@ -161,12 +179,16 @@ polar_disc_fast(int ar, int aj, int br, int bj) {
 }
 
 /**
- * LUT-based polar discriminator.
+ * @brief LUT-based polar discriminator.
  *
  * Uses a precomputed atan LUT to approximate atan2 for b * conj(a).
  * Falls back to the fast integer approximation if the LUT is not
  * available. Returns the phase delta in Q14 where pi == 1<<14.
  *
+ * @param ar Real part of previous complex sample a.
+ * @param aj Imag part of previous complex sample a.
+ * @param br Real part of current complex sample b.
+ * @param bj Imag part of current complex sample b.
  * @return Phase difference in Q14 units.
  */
 int

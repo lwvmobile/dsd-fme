@@ -1,6 +1,4 @@
 /*
- * Input ring buffer for RTL-SDR USB data
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,6 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * @brief Input ring buffer API for interleaved I/Q int16_t samples.
+ *
+ * Declares the simple SPSC input ring and operations to reserve, commit,
+ * write, and blockingly read samples with wrap-around handling.
+ */
 #pragma once
 
 #include <atomic>
@@ -47,7 +52,7 @@ struct input_ring_state {
 };
 
 /**
- * Number of samples currently in the input ring.
+ * @brief Number of samples currently in the input ring.
  */
 static inline size_t
 input_ring_used(const struct input_ring_state* r) {
@@ -60,7 +65,7 @@ input_ring_used(const struct input_ring_state* r) {
 }
 
 /**
- * Number of free slots available for writing in the input ring.
+ * @brief Number of free slots available for writing in the input ring.
  */
 static inline size_t
 input_ring_free(const struct input_ring_state* r) {
@@ -68,7 +73,7 @@ input_ring_free(const struct input_ring_state* r) {
 }
 
 /**
- * Check if the input ring is empty.
+ * @brief Check if the input ring is empty.
  */
 static inline int
 input_ring_is_empty(const struct input_ring_state* r) {
@@ -76,7 +81,7 @@ input_ring_is_empty(const struct input_ring_state* r) {
 }
 
 /**
- * Clear the input ring head/tail indices.
+ * @brief Clear the input ring head/tail indices.
  */
 static inline void
 input_ring_clear(struct input_ring_state* r) {
@@ -85,7 +90,7 @@ input_ring_clear(struct input_ring_state* r) {
 }
 
 /**
- * Reserve writable regions in the input ring buffer.
+ * @brief Reserve writable regions in the input ring buffer.
  *
  * @param r          Input ring buffer state.
  * @param min_needed Minimum number of samples needed.
@@ -99,7 +104,7 @@ int input_ring_reserve(struct input_ring_state* r, size_t min_needed, int16_t** 
                        size_t* n2);
 
 /**
- * Commit previously reserved writable regions to the input ring.
+ * @brief Commit previously reserved writable regions to the input ring.
  *
  * @param r         Input ring buffer state.
  * @param produced  Number of samples produced to commit.
@@ -107,7 +112,7 @@ int input_ring_reserve(struct input_ring_state* r, size_t min_needed, int16_t** 
 void input_ring_commit(struct input_ring_state* r, size_t produced);
 
 /**
- * Write samples to the input ring, blocking if necessary.
+ * @brief Write samples to the input ring, blocking if necessary.
  *
  * @param r     Input ring buffer state.
  * @param data  Source samples to write.
@@ -116,7 +121,7 @@ void input_ring_commit(struct input_ring_state* r, size_t produced);
 void input_ring_write(struct input_ring_state* r, const int16_t* data, size_t count);
 
 /**
- * Read up to max_count samples from the input ring, blocking until available.
+ * @brief Read up to max_count samples from the input ring, blocking until available.
  *
  * @param r         Input ring buffer state.
  * @param out       Destination buffer for samples.

@@ -1,11 +1,4 @@
 /*
- * Runtime Configuration Implementation
- *
- * This file implements the runtime configuration system that parses
- * environment variables and provides typed configuration structures
- * for DSP pipeline options, FLL parameters, TED settings, audio processing,
- * and multithreading controls. It serves as the central configuration hub.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,6 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * @brief Runtime configuration parser for environment-derived settings.
+ *
+ * Parses environment variables into a typed `DsdFmeRuntimeConfig` and exposes
+ * an immutable accessor. Intended to be called early during application init.
+ */
+
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -31,23 +32,37 @@
 static DsdFmeRuntimeConfig g_config;
 static int g_config_inited = 0;
 
+/**
+ * @brief Check whether an environment string is set and non-empty.
+ *
+ * @param v Environment value string pointer (may be NULL).
+ * @return 1 if set and non-empty; otherwise 0.
+ */
 static int
 env_is_set(const char* v) {
     return v && v[0] != '\0';
 }
 
+/**
+ * @brief Convert environment string to integer with fallback.
+ *
+ * @param v Environment value string (may be NULL or empty).
+ * @param fallback Fallback integer when `v` is unset or empty.
+ * @return Parsed integer value or `fallback` when not set.
+ */
 static int
 env_as_int(const char* v, int fallback) {
     return env_is_set(v) ? atoi(v) : fallback;
 }
 
 /**
- * Parse environment variables and initialize the runtime configuration.
+ * @brief Parse environment variables and initialize the runtime configuration.
  *
  * Precedence note: future CLI/opts may override env values; currently opts
  * are not applied beyond presence for future extension.
  *
  * @param opts Decoder options for potential precedence overrides.
+ * @note Safe to call multiple times; the most recent call wins.
  */
 void
 dsd_fme_config_init(const dsd_opts* opts) {
@@ -165,7 +180,7 @@ dsd_fme_config_init(const dsd_opts* opts) {
 }
 
 /**
- * Get immutable pointer to the current runtime configuration, or NULL if
+ * @brief Get immutable pointer to the current runtime configuration, or NULL if
  * initialization has not been performed.
  *
  * @return Pointer to config or NULL.

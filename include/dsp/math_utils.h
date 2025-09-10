@@ -1,6 +1,4 @@
 /*
- * Common lightweight math utilities used across DSP modules.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -16,13 +14,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+/**
+ * @file
+ * @brief Common lightweight math utilities used across DSP modules.
+ */
+
 #pragma once
 
 #include <math.h>
 #include <stdint.h>
 
 /**
- * Saturate a 32-bit integer to the 16-bit signed range.
+ * @brief Saturate a 32-bit integer to the 16-bit signed range.
  *
  * Clamps the provided 32-bit value to the inclusive range [-32768, 32767]
  * and returns it as a 16-bit signed integer.
@@ -42,7 +46,7 @@ sat16(int32_t x) {
 }
 
 /**
- * Compute the greatest common divisor using the Euclidean algorithm.
+ * @brief Compute the greatest common divisor using the Euclidean algorithm.
  *
  * Handles negative inputs by using their absolute values. If both inputs are
  * zero, returns 1.
@@ -68,7 +72,7 @@ gcd_int(int a, int b) {
 }
 
 /**
- * Normalized sinc function.
+ * @brief Normalized sinc function.
  *
  * Computes sinc(x) = sin(pi*x)/(pi*x) with the special case sinc(0) = 1
  * implemented to avoid division by zero.

@@ -1,11 +1,4 @@
 /*
- * UDP Control Interface Implementation
- *
- * This file implements the UDP-based remote control interface for DSD-FME,
- * providing network socket communication for runtime parameter configuration
- * and demodulation status monitoring. It enables external control and
- * monitoring of the demodulation process.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +13,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ * @brief UDP-based remote control interface implementation.
+ *
+ * Provides a background UDP listener to accept retune commands and invokes a
+ * user-supplied callback with the requested frequency. Supports clean start/stop
+ * semantics and resource management.
  */
 
 #include "io/udp_control.h"
@@ -45,8 +47,8 @@ struct udp_control {
 };
 
 /**
- * Convert 4-byte little-endian payload (following a leading command byte) to
- * a 32-bit unsigned integer.
+ * @brief Convert 4-byte little-endian payload (following a leading command byte)
+ * to a 32-bit unsigned integer.
  *
  * @param buf Pointer to 5-byte buffer where buf[0] is a command and buf[1..4]
  *            encode the value as little-endian.
@@ -63,11 +65,13 @@ udp_chars_to_int(unsigned char* buf) {
 }
 
 /**
- * UDP control thread entry. Binds to INADDR_ANY:udp_port and listens for
- * 5-byte messages. When a valid tune command is received, invokes the
- * registered callback with the new frequency.
+ * @brief UDP control thread entry.
  *
- * @param arg Pointer to udp_control.
+ * Binds to INADDR_ANY:udp_port and listens for 5-byte messages. When a valid
+ * tune command is received, invokes the registered callback with the new
+ * frequency.
+ *
+ * @param arg Pointer to `udp_control`.
  * @return NULL on exit.
  */
 static void*
@@ -119,8 +123,15 @@ udp_thread_fn(void* arg) {
 }
 
 /**
- * Start UDP control thread listening on udp_port. On valid messages, invokes cb.
- * Returns opaque handle or NULL on failure.
+ * @brief Start UDP control thread.
+ *
+ * Starts a background UDP listener on the specified port. On valid messages,
+ * invokes the provided retune callback with the parsed frequency.
+ *
+ * @param udp_port UDP port to bind and listen on (0 disables/start no-op).
+ * @param cb Callback invoked upon receiving a valid retune command.
+ * @param user_data Opaque pointer passed to the callback.
+ * @return Opaque handle on success; NULL on failure.
  */
 extern "C" udp_control*
 udp_control_start(int udp_port, udp_control_retune_cb cb, void* user_data) {
@@ -145,7 +156,11 @@ udp_control_start(int udp_port, udp_control_retune_cb cb, void* user_data) {
 }
 
 /**
- * Stop UDP control thread, close socket, and free resources. Safe to call with NULL.
+ * @brief Stop UDP control thread and free resources.
+ *
+ * Closes the socket, joins the worker thread, and releases the handle.
+ *
+ * @param ctrl Opaque handle returned by `udp_control_start` (safe to pass NULL).
  */
 extern "C" void
 udp_control_stop(udp_control* ctrl) {

@@ -1,11 +1,4 @@
 /*
- * Frequency-Locked Loop Implementation
- *
- * This file implements the residual carrier frequency correction system
- * using a digital frequency-locked loop. It provides automatic frequency
- * offset compensation with configurable loop parameters and sine LUT
- * optimization for improved performance.
- *
  * Copyright (C) 2025 by arancormonk <180709949+arancormonk@users.noreply.github.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,6 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ * @brief Frequency-Locked Loop (FLL) helpers for residual carrier correction.
+ *
+ * Provides NCO-based mixing and loop update routines for FM demodulation.
+ * Supports an optional quarter-wave sine LUT rotator or a fast
+ * piecewise-linear approximation for sin/cos generation.
+ */
+
 #include "dsp/fll.h"
 #include <math.h>
 #include <pthread.h>
@@ -31,7 +33,13 @@
 static int16_t fll_qsine_q15_lut[1025]; /* 0..pi/2 in 1024 steps, +1 guard for exact pi/2 */
 static pthread_once_t fll_lut_once = PTHREAD_ONCE_INIT;
 
-/* Build quarter-wave sine LUT in Q15: sin(theta) where theta in [0, pi/2] */
+/**
+ * @brief Build quarter-wave sine LUT (Q15) for FLL rotator.
+ *
+ * Computes sin(theta) where theta \in [0, pi/2] into a 1025-entry table
+ * with an extra guard sample for the exact pi/2 endpoint. Thread-safe
+ * one-time initialization is ensured by the caller.
+ */
 static void
 fll_lut_once_init(void) {
     for (int i = 0; i <= 1024; i++) {
@@ -48,13 +56,14 @@ fll_lut_once_init(void) {
 }
 
 /**
- * Compute sin/cos in Q15 from phase using a quarter-wave sine LUT.
+ * @brief Compute sin/cos in Q15 from phase using a quarter-wave sine LUT.
+ *
  * The choice to use the LUT vs. a fast piecewise approximation is
  * made by the caller (see fll_mix_and_update).
  *
  * @param phase_q15 Phase accumulator (Q15, wrap at 2*pi -> 1<<15 scale).
- * @param c_out     [out] Cosine Q15.
- * @param s_out     [out] Sine Q15.
+ * @param c_out     [out] Cosine value in Q15.
+ * @param s_out     [out] Sine value in Q15.
  */
 static void
 fll_sin_cos_q15_from_phase_lut(int phase_q15, int16_t* c_out, int16_t* s_out) {
@@ -116,14 +125,31 @@ fll_sin_cos_q15_from_phase_lut(int phase_q15, int16_t* c_out, int16_t* s_out) {
     }
 }
 
-/* Fast complex multiply for polar discriminator */
+/**
+ * @brief 64-bit complex multiply (a * conj(b)) helper.
+ *
+ * @param ar Real part of a.
+ * @param aj Imaginary part of a.
+ * @param br Real part of b.
+ * @param bj Imaginary part of b.
+ * @param cr [out] Real part result accumulator (64-bit).
+ * @param cj [out] Imag part result accumulator (64-bit).
+ */
 static inline void
 multiply64(int ar, int aj, int br, int bj, int64_t* cr, int64_t* cj) {
     *cr = (int64_t)ar * (int64_t)br - (int64_t)aj * (int64_t)bj;
     *cj = (int64_t)aj * (int64_t)br + (int64_t)ar * (int64_t)bj;
 }
 
-/* Fast atan2 approximation for 64-bit inputs */
+/**
+ * @brief Fast atan2 approximation for 64-bit inputs.
+ *
+ * Uses a piecewise linear approximation stable across quadrants.
+ *
+ * @param y Imaginary component.
+ * @param x Real component.
+ * @return Approximate angle in Q14 where pi = 1<<14.
+ */
 static int
 fast_atan2_64(int64_t y, int64_t x) {
     int angle;
@@ -157,7 +183,17 @@ fast_atan2_64(int64_t y, int64_t x) {
     return angle;
 }
 
-/* Polar discriminator using fast atan2 approximation */
+/**
+ * @brief Polar discriminator using fast atan2 approximation.
+ *
+ * Computes the phase difference between two complex samples.
+ *
+ * @param ar Real of current sample.
+ * @param aj Imag of current sample.
+ * @param br Real of previous sample.
+ * @param bj Imag of previous sample.
+ * @return Phase error in Q14 (pi = 1<<14).
+ */
 static int
 polar_disc_fast(int ar, int aj, int br, int bj) {
     int64_t cr, cj;
@@ -166,7 +202,9 @@ polar_disc_fast(int ar, int aj, int br, int bj) {
 }
 
 /**
- * Initialize FLL state with default values
+ * @brief Initialize FLL state with default values.
+ *
+ * @param state FLL state to initialize.
  */
 void
 fll_init_state(fll_state_t* state) {
@@ -177,13 +215,15 @@ fll_init_state(fll_state_t* state) {
 }
 
 /**
- * Mix lowpassed I/Q by NCO e^{j*phi}, update phase by freq_q15 per sample.
- * Phase and frequency are Q15 where a full turn (2*pi) maps to 1<<15.
+ * @brief Mix I/Q by an NCO and advance phase by freq_q15 per sample.
  *
- * @param config FLL configuration
- * @param state  FLL state (updates phase_q15)
- * @param x      Input/output I/Q buffer (modified in-place)
- * @param N      Length of buffer (must be even)
+ * Phase and frequency are Q15 where a full turn (2*pi) maps to 1<<15.
+ * When enabled, applies either LUT-based or fast sin/cos rotator.
+ *
+ * @param config FLL configuration.
+ * @param state  FLL state (updates phase_q15).
+ * @param x      Input/output interleaved I/Q buffer (modified in-place).
+ * @param N      Length of buffer in samples (must be even).
  */
 void
 fll_mix_and_update(const fll_config_t* config, fll_state_t* state, int16_t* x, int N) {
@@ -252,14 +292,15 @@ fll_mix_and_update(const fll_config_t* config, fll_state_t* state, int16_t* x, i
 }
 
 /**
- * Estimate frequency error using a simple phase-difference discriminator and
- * update the FLL control in Q15. The proportional term is applied directly
- * and the integral action is realized by accumulating into freq_q15.
+ * @brief Estimate frequency error and update FLL control (PI in Q15).
  *
- * @param config FLL configuration
- * @param state  FLL state (updates freq_q15 and phase_q15)
- * @param x      Input I/Q buffer
- * @param N      Length of buffer (must be even)
+ * Uses a phase-difference discriminator to compute average error.
+ * Applies proportional and integral actions to adjust the NCO frequency.
+ *
+ * @param config FLL configuration.
+ * @param state  FLL state (updates freq_q15 and may advance phase_q15).
+ * @param x      Input interleaved I/Q buffer.
+ * @param N      Length of buffer in samples (must be even).
  */
 void
 fll_update_error(const fll_config_t* config, fll_state_t* state, const int16_t* x, int N) {
