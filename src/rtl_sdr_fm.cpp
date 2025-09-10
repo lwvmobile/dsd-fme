@@ -27,6 +27,7 @@
 #include <pthread.h>
 #include <rtl-sdr.h>
 #include <sched.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -233,18 +234,11 @@ hb_decim2_real(const int16_t* in, int in_len, int16_t* out, int16_t* hist) {
 }
 
 /**
- * Fused interleaved complex half-band decimator. Decimates I and Q in one pass
- * without deinterleaving. Exploits the half-band property (zero odd taps) and
- * symmetry; Q15 taps with rounding preserve unity DC gain.
+ * One-time initializer for the arctangent lookup table.
  *
- * @param in      Pointer to interleaved input samples (I,Q,I,Q,...).
- * @param in_len  Number of interleaved int16_t values in input.
- * @param out     Pointer to interleaved output buffer (size >= in_len/2).
- * @param hist_i  Persistent I-channel history of length HB_TAPS-1.
- * @param hist_q  Persistent Q-channel history of length HB_TAPS-1.
- * @return Interleaved output length (in_len/2).
+ * Allocates and fills a Q14-scaled atan table used by the LUT
+ * polar discriminator. Intended to be invoked via pthread_once.
  */
-
 static void
 atan_lut_once_init(void) {
     int i;
@@ -262,10 +256,11 @@ static struct udp_control* g_udp_ctrl = NULL;
 
 int rtl_bandwidth;
 int bandwidth_multiplier;
-int bandwidth_divisor = 48000; //divide bandwidth by this to get multiplier for the for j loop to queue.push
+int bandwidth_divisor =
+    48000; // multiplier = bandwidth_divisor / rtl_bandwidth; clamped to [1, MAX_BANDWIDTH_MULTIPLIER]
 
 short int volume_multiplier;
-short int port;
+uint16_t port;
 
 struct dongle_state {
     int exit_flag;
@@ -356,6 +351,18 @@ multiply64(int ar, int aj, int br, int bj, int64_t* cr, int64_t* cj) {
     *cj = (int64_t)aj * (int64_t)br + (int64_t)ar * (int64_t)bj;
 }
 
+/**
+ * Polar discriminator using double-precision atan2 for maximum accuracy.
+ *
+ * Computes b * conj(a) and returns the phase delta scaled to Q14 where
+ * (pi == 1<<14).
+ *
+ * @param ar Real part of previous complex sample.
+ * @param aj Imag part of previous complex sample.
+ * @param br Real part of current complex sample.
+ * @param bj Imag part of current complex sample.
+ * @return Phase difference in Q14 where (pi == 1<<14).
+ */
 int
 polar_discriminant(int ar, int aj, int br, int bj) {
     int64_t cr, cj;
@@ -426,6 +433,18 @@ fast_atan2_64(int64_t y, int64_t x) {
     return angle;
 }
 
+/**
+ * Polar discriminator using a fast integer atan2 approximation (64-bit safe).
+ *
+ * Computes b * conj(a) with 64-bit intermediates and estimates the phase
+ * delta via a low-cost atan2 approximation. Returns Q14-scaled angle.
+ *
+ * @param ar Real part of previous complex sample.
+ * @param aj Imag part of previous complex sample.
+ * @param br Real part of current complex sample.
+ * @param bj Imag part of current complex sample.
+ * @return Phase difference in Q14 where (pi == 1<<14).
+ */
 int
 polar_disc_fast(int ar, int aj, int br, int bj) {
     int64_t cr, cj;
@@ -793,6 +812,7 @@ controller_thread_fn(void* arg) {
         s->freq_now = (s->freq_now + 1) % s->freq_len;
         optimal_settings(s->freqs[s->freq_now], demod.rate_in);
         rtl_device_set_frequency(rtl_device_handle, dongle.freq);
+        rtl_device_set_sample_rate(rtl_device_handle, dongle.rate);
         rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
     }
     return 0;
@@ -1126,6 +1146,10 @@ output_init(struct output_state* s) {
     /* Try aligned allocation for better vectorized copies; fall back if unavailable */
     {
         void* mem_ptr = dsd_fme_aligned_malloc(s->capacity * sizeof(int16_t));
+        if (!mem_ptr) {
+            LOG_ERROR("Failed to allocate output ring buffer (%zu samples).\n", s->capacity);
+            exit(1);
+        }
         s->buffer = static_cast<int16_t*>(mem_ptr);
     }
     s->head.store(0);
@@ -1243,6 +1267,10 @@ open_rtlsdr_stream(dsd_opts* opts) {
     /* Init input ring */
     {
         void* mem_ptr = dsd_fme_aligned_malloc((size_t)(MAXIMUM_BUF_LENGTH * 8) * sizeof(int16_t));
+        if (!mem_ptr) {
+            LOG_ERROR("Failed to allocate input ring buffer.\n");
+            exit(1);
+        }
         input_ring.buffer = static_cast<int16_t*>(mem_ptr);
         input_ring.capacity = (size_t)(MAXIMUM_BUF_LENGTH * 8);
         input_ring.head.store(0);
@@ -1384,7 +1412,14 @@ open_rtlsdr_stream(dsd_opts* opts) {
     LOG_INFO("Setting RTL Bandwidth to %d Hz\n", rtl_bandwidth);
     LOG_INFO("Setting RTL Power Squelch Level to %d\n", opts->rtl_squelch_level);
     if (opts->rtl_udp_port != 0) {
-        port = opts->rtl_udp_port;
+        int p = opts->rtl_udp_port;
+        if (p < 0) {
+            p = 0;
+        }
+        if (p > 65535) {
+            p = 65535;
+        }
+        port = (uint16_t)p;
     }
     if (opts->rtl_gain_value > 0) {
         dongle.gain = opts->rtl_gain_value * 10; //multiply by ten to make it consistent with the way rtl_fm works
@@ -1440,8 +1475,8 @@ open_rtlsdr_stream(dsd_opts* opts) {
             if (coef_q15 < 1) {
                 coef_q15 = 1;
             }
-            if (coef_q15 > (1 << 15)) {
-                coef_q15 = (1 << 15);
+            if (coef_q15 > ((1 << 15) - 1)) {
+                coef_q15 = ((1 << 15) - 1);
             }
             demod.deemph_a = coef_q15;
         }
@@ -1478,8 +1513,8 @@ open_rtlsdr_stream(dsd_opts* opts) {
             if (alpha_q15 < 1) {
                 alpha_q15 = 1;
             }
-            if (alpha_q15 > (1 << 15)) {
-                alpha_q15 = (1 << 15);
+            if (alpha_q15 > ((1 << 15) - 1)) {
+                alpha_q15 = ((1 << 15) - 1);
             }
             demod.audio_lpf_alpha = alpha_q15;
             demod.audio_lpf_enable = 1;
@@ -1495,13 +1530,33 @@ open_rtlsdr_stream(dsd_opts* opts) {
 
     rtl_device_set_ppm(rtl_device_handle, dongle.ppm_error);
 
+    /* Program initial frequency and sample rate before starting async */
+    if (controller.freq_len == 0) {
+        controller.freqs[controller.freq_len] = 446000000;
+        controller.freq_len++;
+    }
+    optimal_settings(controller.freqs[0], demod.rate_in);
+    if (dongle.direct_sampling) {
+        rtl_device_set_direct_sampling(rtl_device_handle, 1);
+    }
+    if (dongle.offset_tuning) {
+        rtl_device_set_offset_tuning(rtl_device_handle);
+    }
+    rtl_device_set_frequency(rtl_device_handle, dongle.freq);
+    rtl_device_set_sample_rate(rtl_device_handle, dongle.rate);
+    LOG_INFO("Oversampling input by: %ix.\n", demod.downsample);
+    LOG_INFO("Oversampling output by: %ix.\n", demod.post_downsample);
+    LOG_INFO("Buffer size: %0.2fms\n", 1000 * 0.5 * (float)ACTUAL_BUF_LENGTH / (float)dongle.rate);
+    LOG_INFO("Output at %u Hz.\n", demod.rate_in / demod.post_downsample);
+
     /* Reset endpoint before we start reading from it (mandatory) */
     rtl_device_reset_buffer(rtl_device_handle);
 
-    rtl_device_start_async(rtl_device_handle, (uint32_t)ACTUAL_BUF_LENGTH);
+    /* Start controller and demod threads before async so they are ready */
     pthread_create(&controller.thread, NULL, controller_thread_fn, (void*)(&controller));
-    usleep(100000);
     pthread_create(&demod.thread, NULL, demod_thread_fn, (void*)(&demod));
+    /* Start async capture */
+    rtl_device_start_async(rtl_device_handle, (uint32_t)ACTUAL_BUF_LENGTH);
     //only start UDP control if user specified port
     if (port != 0) {
         g_udp_ctrl = udp_control_start(
@@ -1511,6 +1566,8 @@ open_rtlsdr_stream(dsd_opts* opts) {
                 dongle.freq = (uint32_t)new_freq_hz;
                 optimal_settings((int)new_freq_hz, demod.rate_in);
                 rtl_device_set_frequency(rtl_device_handle, dongle.freq);
+                rtl_device_set_sample_rate(rtl_device_handle, dongle.rate);
+                rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
             },
             /* user_data */ NULL);
     }
@@ -1550,11 +1607,14 @@ cleanup_rtlsdr_stream(void) {
         udp_control_stop(g_udp_ctrl);
         g_udp_ctrl = NULL;
     }
+    /* Request threads to exit and wake any waiters */
+    exitflag = 1;
+    safe_cond_signal(&input_ring.ready, &input_ring.ready_m);
+    safe_cond_signal(&controller.hop, &controller.hop_m);
     rtl_device_stop_async(rtl_device_handle);
     safe_cond_signal(&demod.ready, &demod.ready_m);
     pthread_join(demod.thread, NULL);
     safe_cond_signal(&output.ready, &output.ready_m);
-    safe_cond_signal(&controller.hop, &controller.hop_m);
     pthread_join(controller.thread, NULL);
 
     demod_cleanup(&demod);
@@ -1642,7 +1702,7 @@ void
 rtl_dev_tune(dsd_opts* opts, long int frequency) {
     int r;
     if (opts->payload == 1) {
-        LOG_INFO("\nTuning to %lu Hz.", frequency);
+        LOG_INFO("\nTuning to %ld Hz.", frequency);
     }
     dongle.freq = opts->rtlsdr_center_freq = frequency;
     optimal_settings(dongle.freq, demod.rate_in);
@@ -1655,6 +1715,7 @@ rtl_dev_tune(dsd_opts* opts, long int frequency) {
             dev = g_stream->device;
         }
         r = rtl_device_set_frequency(dev, dongle.freq);
+        rtl_device_set_sample_rate(dev, dongle.rate);
     }
     if (r < 0) {
         LOG_WARNING(" (Failed to set Center Frequency %u). \n", dongle.freq);
