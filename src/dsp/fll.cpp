@@ -134,17 +134,22 @@ fast_atan2_64(int64_t y, int64_t x) {
     }
     yabs = (y < 0) ? -y : y;
 
-    if (yabs == 0) {
-        angle = (x >= 0) ? 0 : (1 << 14);
-    } else if (x >= 0) {
-        /* denominator (yabs - x) > 0 */
-        angle = (int)(pi4 - ((int64_t)pi4 * (x + yabs)) / (yabs - x));
-    } else if (yabs >= -x) {
-        /* denominator (yabs + x) > 0 */
-        angle = (int)(pi34 - ((int64_t)pi4 * (x + yabs)) / (yabs + x));
+    if (x >= 0) {
+        /* Use stable form: pi/4 - pi/4 * (x - |y|) / (x + |y|) */
+        int64_t denom = x + yabs; /* only zero when x==0 && y==0 handled above */
+        if (denom == 0) {
+            angle = 0;
+        } else {
+            angle = (int)(pi4 - ((int64_t)pi4 * (x - yabs)) / denom);
+        }
     } else {
-        /* denominator (x + yabs) > 0 */
-        angle = (int)(pi34 + ((int64_t)pi4 * (x - yabs)) / (x + yabs));
+        /* Use stable form: 3pi/4 - pi/4 * (x + |y|) / (|y| - x) */
+        int64_t denom = yabs - x; /* strictly > 0 for x < 0 */
+        if (denom == 0) {
+            angle = pi34; /* rare tie case; pick quadrant boundary */
+        } else {
+            angle = (int)(pi34 - ((int64_t)pi4 * (x + yabs)) / denom);
+        }
     }
     if (y < 0) {
         return -angle;
