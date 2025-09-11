@@ -248,6 +248,9 @@ demod_reset_on_retune(struct demod_state* s) {
     s->prev_index = 0;
     s->prev_lpr_index = 0;
     s->now_lpr = 0;
+    /* Clear any staged block so power API does not see stale data */
+    s->lp_len = 0;
+    memset(s->input_cb_buf, 0, sizeof(s->input_cb_buf));
     /* FLL */
     fll_init_state(&s->fll_state);
     s->fll_freq_q15 = 0;
