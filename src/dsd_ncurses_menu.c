@@ -1570,7 +1570,11 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
     if (choice == 20)
     {
       exitflag = 1;
-      break;
+      // Exit immediately; skip device reopen logic since we're shutting down
+      clrtoeol();
+      refresh();
+      state->menuopen = 0;
+      return;
     }
 
 		if(choice != 0 && choice != 20)	/* User did a choice come out of the infinite loop */

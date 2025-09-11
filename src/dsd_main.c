@@ -1761,7 +1761,13 @@ struct RtlSdrContext* g_rtl_ctx = NULL; /* global orchestrator context */
  {
    // Signal that everything should shutdown.
    exitflag = 1;
- 
+
+   // Close ncurses early so subsequent logs (e.g., ring stats) print to TTY
+   if (opts->use_ncurses_terminal == 1)
+   {
+     ncursesClose();
+   }
+
    #ifdef USE_CODEC2
    codec2_destroy(state->codec2_1600);
    codec2_destroy(state->codec2_3200);
@@ -1773,76 +1779,71 @@ struct RtlSdrContext* g_rtl_ctx = NULL; /* global orchestrator context */
     watchdog_event_history(opts, state, 1);
     watchdog_event_current(opts, state, 1);
  
-   noCarrier (opts, state);
+  noCarrier (opts, state);
 
-   //watchdog event at this point
-    watchdog_event_history(opts, state, 0);
-    watchdog_event_current(opts, state, 0);
-    watchdog_event_history(opts, state, 1);
-    watchdog_event_current(opts, state, 1);
+  //watchdog event at this point
+   watchdog_event_history(opts, state, 0);
+   watchdog_event_current(opts, state, 0);
+   watchdog_event_history(opts, state, 1);
+   watchdog_event_current(opts, state, 1);
 
-  if (opts->static_wav_file == 0)
+ if (opts->static_wav_file == 0)
+ {
+   if (opts->wav_out_f != NULL)
+     opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+
+   if (opts->wav_out_fR != NULL)
+     opts->wav_out_fR = close_and_rename_wav_file(opts->wav_out_fR, opts->wav_out_fileR, opts->wav_out_dir, &state->event_history_s[1]);
+ }
+
+ else if (opts->static_wav_file == 1)
+ {
+
+   if (opts->wav_out_f != NULL)
+     opts->wav_out_f = close_wav_file(opts->wav_out_f);
+
+   //this one needed?
+   if (opts->wav_out_fR != NULL)
+     opts->wav_out_fR = close_wav_file(opts->wav_out_fR);
+   
+ }
+
+ if (opts->wav_out_raw != NULL)
+   opts->wav_out_raw = close_wav_file(opts->wav_out_raw);
+
+  //no if statement first?
+  closeSymbolOutFile (opts, state);
+ 
+  #ifdef USE_RTLSDR
+  if (opts->rtl_started == 1)
   {
-    if (opts->wav_out_f != NULL)
-      opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
-
-    if (opts->wav_out_fR != NULL)
-      opts->wav_out_fR = close_and_rename_wav_file(opts->wav_out_fR, opts->wav_out_fileR, opts->wav_out_dir, &state->event_history_s[1]);
+    if (g_rtl_ctx) {
+      rtl_stream_stop(g_rtl_ctx);
+      rtl_stream_destroy(g_rtl_ctx);
+      g_rtl_ctx = NULL;
+    }
   }
-
-  else if (opts->static_wav_file == 1)
-  {
-
-    if (opts->wav_out_f != NULL)
-      opts->wav_out_f = close_wav_file(opts->wav_out_f);
-
-    //this one needed?
-    if (opts->wav_out_fR != NULL)
-      opts->wav_out_fR = close_wav_file(opts->wav_out_fR);
-    
-  }
-
-  if (opts->wav_out_raw != NULL)
-    opts->wav_out_raw = close_wav_file(opts->wav_out_raw);
-
-   //no if statement first?
-   closeSymbolOutFile (opts, state);
+  #endif
  
-   #ifdef USE_RTLSDR
-   if (opts->rtl_started == 1)
-   {
-     if (g_rtl_ctx) {
-       rtl_stream_stop(g_rtl_ctx);
-       rtl_stream_destroy(g_rtl_ctx);
-       g_rtl_ctx = NULL;
-     }
-   }
-   #endif
+  if (opts->udp_sockfd)
+    close (opts->udp_sockfd);
  
-   if (opts->use_ncurses_terminal == 1)
-   {
-     ncursesClose();
-   }
+  if (opts->udp_sockfdA)
+    close (opts->udp_sockfdA);
  
-   if (opts->udp_sockfd)
-     close (opts->udp_sockfd);
+  if (opts->m17_udp_sock)
+    close (opts->m17_udp_sock);
  
-   if (opts->udp_sockfdA)
-     close (opts->udp_sockfdA);
+  //close MBE out files
+  if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
+  if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
  
-   if (opts->m17_udp_sock)
-     close (opts->m17_udp_sock);
- 
-   //close MBE out files
-   if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
-   if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
- 
-   fprintf (stderr,"\n");
-   fprintf (stderr,"Total audio errors: %i\n", state->debug_audio_errors);
-   fprintf (stderr,"Total header errors: %i\n", state->debug_header_errors);
-   fprintf (stderr,"Total irrecoverable header errors: %i\n", state->debug_header_critical_errors);
-   fprintf (stderr,"Exiting.\n");
-   exit (0);
+  fprintf (stderr,"\n");
+  fprintf (stderr,"Total audio errors: %i\n", state->debug_audio_errors);
+  fprintf (stderr,"Total header errors: %i\n", state->debug_header_errors);
+  fprintf (stderr,"Total irrecoverable header errors: %i\n", state->debug_header_critical_errors);
+  fprintf (stderr,"Exiting.\n");
+  exit (0);
  }
  
  double atofs(char *s)
