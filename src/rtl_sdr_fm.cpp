@@ -39,6 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <time.h>
 #include <unistd.h>
 #include "dsd.h"
 #include "dsp/demod_pipeline.h"
@@ -576,7 +577,12 @@ controller_thread_fn(void* arg) {
     LOG_INFO("Demod output at %u Hz.\n", (unsigned int)demod.rate_out);
 
     while (!exitflag && !(g_stream && g_stream->should_exit.load())) {
-        safe_cond_wait(&s->hop, &s->hop_m);
+        /* Wait for a hop signal or a pending retune, with proper predicate guard */
+        pthread_mutex_lock(&s->hop_m);
+        while (!s->manual_retune_pending.load() && !exitflag && !(g_stream && g_stream->should_exit.load())) {
+            pthread_cond_wait(&s->hop, &s->hop_m);
+        }
+        pthread_mutex_unlock(&s->hop_m);
         if (exitflag || (g_stream && g_stream->should_exit.load())) {
             break;
         }
@@ -1066,9 +1072,11 @@ start_threads_and_async(void) {
             port,
             [](uint32_t new_freq_hz, void* /*user_data*/) {
                 /* Marshal onto controller thread: single programming path */
+                pthread_mutex_lock(&controller.hop_m);
                 controller.manual_retune_freq = new_freq_hz;
                 controller.manual_retune_pending.store(1);
-                safe_cond_signal(&controller.hop, &controller.hop_m);
+                pthread_cond_signal(&controller.hop);
+                pthread_mutex_unlock(&controller.hop_m);
             },
             NULL);
     }
@@ -1486,9 +1494,11 @@ dsd_rtl_stream_tune(dsd_opts* opts, long int frequency) {
     }
     dongle.freq = opts->rtlsdr_center_freq = frequency;
     /* Marshal onto controller thread to ensure single-threaded device programming */
+    pthread_mutex_lock(&controller.hop_m);
     controller.manual_retune_freq = (uint32_t)dongle.freq;
     controller.manual_retune_pending.store(1);
-    safe_cond_signal(&controller.hop, &controller.hop_m);
+    pthread_cond_signal(&controller.hop);
+    pthread_mutex_unlock(&controller.hop_m);
     if (opts->payload == 1) {
         LOG_INFO(" (Center Frequency: %u Hz.) \n", dongle.freq);
     }
