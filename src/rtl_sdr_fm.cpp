@@ -235,6 +235,7 @@ demod_thread_fn(void* arg) {
     struct demod_state* d = static_cast<demod_state*>(arg);
     struct output_state* o = d->output_target;
     maybe_set_thread_realtime_and_affinity("DEMOD");
+    int logged_once = 0;
     while (!exitflag) {
         /* Read a block from input ring */
         int got = input_ring_read_block(&input_ring, d->input_cb_buf, MAXIMUM_BUF_LENGTH);
@@ -257,10 +258,18 @@ demod_thread_fn(void* arg) {
             if (out_n > 0) {
                 ring_write_signal_on_empty_transition(o, d->resamp_outbuf, (size_t)out_n);
             }
+            if (!logged_once) {
+                LOG_INFO("Demod first block: in=%d decim_len=%d resamp_out=%d\n", got, d->result_len, out_n);
+                logged_once = 1;
+            }
         } else {
             /* When resampler is disabled, pass-through. */
             if (d->result_len > 0) {
                 ring_write_signal_on_empty_transition(o, d->result, (size_t)d->result_len);
+            }
+            if (!logged_once) {
+                LOG_INFO("Demod first block: in=%d decim_len=%d (no resampler)\n", got, d->result_len);
+                logged_once = 1;
             }
         }
         /* Signaling occurs only when the ring transitions from empty to non-empty. */
@@ -322,6 +331,29 @@ optimal_settings(int freq, int rate) {
     if (dm->mode_demod == &fm_demod) {
         dm->output_scale = 1;
     }
+    /* Update the effective discriminator output sample rate based on current settings.
+       If no HB cascade is used (downsample_passes==0), the legacy low_pass() decimator
+       reduces by dm->downsample back toward the nominal bandwidth. Otherwise, HB/CIC
+       reduces by (1<<downsample_passes). Apply optional post_downsample on audio. */
+    {
+        int base_decim = 1;
+        if (dm->downsample_passes > 0) {
+            base_decim = (1 << dm->downsample_passes);
+        } else {
+            base_decim = (dm->downsample > 0) ? dm->downsample : 1;
+        }
+        if (base_decim < 1) {
+            base_decim = 1;
+        }
+        int out_rate = capture_rate / base_decim;
+        if (dm->post_downsample > 1) {
+            out_rate /= dm->post_downsample;
+            if (out_rate < 1) {
+                out_rate = 1;
+            }
+        }
+        dm->rate_out = out_rate;
+    }
     d->freq = (uint32_t)capture_freq;
     d->rate = (uint32_t)capture_rate;
 }
@@ -376,7 +408,7 @@ controller_thread_fn(void* arg) {
 
     /* Set the sample rate */
     rtl_device_set_sample_rate(rtl_device_handle, dongle.rate);
-    LOG_INFO("Output at %u Hz.\n", demod.rate_in / demod.post_downsample);
+    LOG_INFO("Demod output at %u Hz.\n", (unsigned int)demod.rate_out);
 
     while (!exitflag) {
         safe_cond_wait(&s->hop, &s->hop_m);
@@ -703,32 +735,9 @@ configure_from_env_and_opts(dsd_opts* opts) {
         enable_resamp = cfg->resamp_disable ? 0 : 1;
         target = cfg->resamp_target_hz > 0 ? cfg->resamp_target_hz : 48000;
     }
-    if (enable_resamp) {
-        demod.resamp_target_hz = target;
-        int inRate = (demod.rate_out > 0) ? demod.rate_out : rtl_bandwidth;
-        int g = gcd_int(inRate, target);
-        int L = target / g;
-        int M = inRate / g;
-        if (L < 1) {
-            L = 1;
-        }
-        if (M < 1) {
-            M = 1;
-        }
-        int scale_num = L;
-        int scale_den = M;
-        int scale = (scale_den > 0) ? ((scale_num + scale_den - 1) / scale_den) : 1;
-        if (scale > 4) {
-            LOG_WARNING("Resampler ratio too large (L=%d,M=%d). Clamping not supported; disabling resampler.\n", L, M);
-            demod.resamp_enabled = 0;
-        } else {
-            demod.resamp_enabled = 1;
-            resamp_design(&demod, L, M);
-            LOG_INFO("Rational resampler enabled: %d -> %d Hz (L=%d,M=%d).\n", inRate, target, L, M);
-        }
-    } else {
-        demod.resamp_enabled = 0;
-    }
+    /* Defer resampler design until after capture settings establish actual rates */
+    demod.resamp_target_hz = enable_resamp ? target : 0;
+    demod.resamp_enabled = 0;
 
     demod.fll_enabled = cfg->fll_is_set ? (cfg->fll_enable != 0) : 0;
     fll_lut_enabled = cfg->fll_lut_is_set ? (cfg->fll_lut_enable != 0) : fll_lut_enabled;
@@ -760,28 +769,16 @@ select_defaults_for_mode(dsd_opts* opts) {
     int env_ted_sps_set = dsd_fme_get_config()->ted_sps_is_set;
     int env_ted_gain_set = dsd_fme_get_config()->ted_gain_is_set;
     /* Treat all digital voice modes as digital for FLL/TED defaults */
-    int digital_mode = (
-        opts->frame_p25p1 == 1 ||
-        opts->frame_p25p2 == 1 ||
-        opts->frame_provoice == 1 ||
-        opts->frame_dmr == 1 ||
-        opts->frame_nxdn48 == 1 ||
-        opts->frame_nxdn96 == 1 ||
-        opts->frame_dstar == 1 ||
-        opts->frame_dpmr == 1 ||
-        opts->frame_m17 == 1);
+    int digital_mode = (opts->frame_p25p1 == 1 || opts->frame_p25p2 == 1 || opts->frame_provoice == 1
+                        || opts->frame_dmr == 1 || opts->frame_nxdn48 == 1 || opts->frame_nxdn96 == 1
+                        || opts->frame_dstar == 1 || opts->frame_dpmr == 1 || opts->frame_m17 == 1);
     if (digital_mode) {
         if (!env_ted_set) {
             demod.ted_enabled = 0;
         }
         if (!env_ted_sps_set) {
-            int ds_passes = demod.downsample_passes;
-            if (ds_passes < 0) {
-                ds_passes = 0;
-            }
-            int denom = 1 << ds_passes;
-            long long Fs_cx_ll = (long long)demod.rate_in * (long long)demod.post_downsample;
-            int Fs_cx = (int)(Fs_cx_ll / (denom ? denom : 1));
+            /* Use actual demod output rate to derive default SPS for 4800 sym/s */
+            int Fs_cx = (demod.resamp_enabled && demod.resamp_target_hz > 0) ? demod.resamp_target_hz : demod.rate_out;
             if (Fs_cx <= 0) {
                 Fs_cx = (int)output.rate;
             }
@@ -860,6 +857,7 @@ static void
 start_threads_and_async(void) {
     pthread_create(&controller.thread, NULL, controller_thread_fn, (void*)(&controller));
     pthread_create(&demod.thread, NULL, demod_thread_fn, (void*)(&demod));
+    LOG_INFO("Starting RTL async read...\n");
     rtl_device_start_async(rtl_device_handle, (uint32_t)ACTUAL_BUF_LENGTH);
     if (port != 0) {
         g_udp_ctrl = udp_control_start(
@@ -945,9 +943,6 @@ dsd_rtl_stream_open(dsd_opts* opts) {
     select_defaults_for_mode(opts);
 
     setup_initial_freq_and_rate(opts);
-
-    /* quadruple sample_rate to limit to Δθ to ±π/2 */
-    demod.rate_in *= demod.post_downsample;
 
     if (!output.rate) {
         output.rate = demod.rate_out;
@@ -1081,7 +1076,33 @@ dsd_rtl_stream_open(dsd_opts* opts) {
     LOG_INFO("Oversampling input by: %ix.\n", demod.downsample);
     LOG_INFO("Oversampling output by: %ix.\n", demod.post_downsample);
     LOG_INFO("Buffer size: %0.2fms\n", 1000 * 0.5 * (float)ACTUAL_BUF_LENGTH / (float)dongle.rate);
-    LOG_INFO("Output at %u Hz.\n", demod.rate_in / demod.post_downsample);
+    LOG_INFO("Demod output at %u Hz.\n", (unsigned int)demod.rate_out);
+
+    /* Recompute resampler with the actual demod output rate now known */
+    if (demod.resamp_target_hz > 0) {
+        int target = demod.resamp_target_hz;
+        int inRate = demod.rate_out > 0 ? demod.rate_out : rtl_bandwidth;
+        int g = gcd_int(inRate, target);
+        int L = target / g;
+        int M = inRate / g;
+        if (L < 1) {
+            L = 1;
+        }
+        if (M < 1) {
+            M = 1;
+        }
+        int scale = (M > 0) ? ((L + M - 1) / M) : 1;
+        if (scale > 4) {
+            LOG_WARNING("Resampler ratio too large (L=%d,M=%d). Disabling resampler.\n", L, M);
+            demod.resamp_enabled = 0;
+        } else {
+            demod.resamp_enabled = 1;
+            resamp_design(&demod, L, M);
+            LOG_INFO("Rational resampler configured: %d -> %d Hz (L=%d,M=%d).\n", inRate, target, L, M);
+        }
+    } else {
+        demod.resamp_enabled = 0;
+    }
 
     /* Reset endpoint before we start reading from it (mandatory) */
     rtl_device_reset_buffer(rtl_device_handle);
@@ -1095,6 +1116,38 @@ dsd_rtl_stream_open(dsd_opts* opts) {
         LOG_INFO("Output rate set to %d Hz via resampler.\n", output.rate);
     } else {
         output.rate = demod.rate_out;
+    }
+
+    /* One-time startup summary of the rate chain */
+    {
+        unsigned int capture_hz = dongle.rate;
+        int base_decim = (demod.downsample_passes > 0) ? (1 << demod.downsample_passes)
+                                                       : (demod.downsample > 0 ? demod.downsample : 1);
+        int post = (demod.post_downsample > 0) ? demod.post_downsample : 1;
+        int L = demod.resamp_enabled ? demod.resamp_L : 1;
+        int M = demod.resamp_enabled ? demod.resamp_M : 1;
+        unsigned int demod_hz = (unsigned int)demod.rate_out;
+        unsigned int out_hz =
+            demod.resamp_enabled && demod.resamp_target_hz > 0 ? (unsigned int)demod.resamp_target_hz : demod_hz;
+        LOG_INFO(
+            "Rate chain: capture=%u Hz, base_decim=%d, post=%d -> demod=%u Hz; resampler L/M=%d/%d -> output=%u Hz.\n",
+            capture_hz, base_decim, post, demod_hz, L, M, out_hz);
+
+        /* Derived SPS for common digital modes at current output rate */
+        if (out_hz > 0) {
+            int sps_p25p1 = (int)((out_hz + 2400) / 4800);  /* ~10 at 48k */
+            int sps_p25p2 = (int)((out_hz + 3000) / 6000);  /* ~8 at 48k */
+            int sps_nxdn48 = (int)((out_hz + 1200) / 2400); /* ~20 at 48k */
+            LOG_INFO("Derived SPS (@%u Hz): P25P1≈%d, P25P2≈%d, NXDN48≈%d.\n", out_hz, sps_p25p1, sps_p25p2,
+                     sps_nxdn48);
+            /* Warn if far from canonical 48k-based SPS expectations */
+            if ((sps_p25p1 < 8 || sps_p25p1 > 12) || (sps_p25p2 < 6 || sps_p25p2 > 10)
+                || (sps_nxdn48 < 16 || sps_nxdn48 > 24)) {
+                LOG_WARNING("Output rate %u Hz implies atypical SPS; digital decoders assume ~48k. Consider enabling "
+                            "resampler to 48000 Hz.\n",
+                            out_hz);
+            }
+        }
     }
 
     if (g_stream) {
@@ -1224,6 +1277,8 @@ dsd_rtl_stream_tune(dsd_opts* opts, long int frequency) {
     }
     dongle.freq = opts->rtlsdr_center_freq = frequency;
     apply_capture_settings((uint32_t)dongle.freq);
+    /* While streaming, flush/mute to avoid endpoint stalls on retune */
+    rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
     if (opts->payload == 1) {
         LOG_INFO(" (Center Frequency: %u Hz.) \n", dongle.freq);
     }
