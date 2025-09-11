@@ -175,6 +175,11 @@ dsd_fme_config_init(const dsd_opts* opts) {
     c.mt_is_set = env_is_set(mt);
     c.mt_enable = (c.mt_is_set && mt[0] == '1') ? 1 : 0;
 
+    /* Disable fs/4 capture shift */
+    const char* dfs4 = getenv("DSD_FME_DISABLE_FS4_SHIFT");
+    c.fs4_shift_disable_is_set = env_is_set(dfs4);
+    c.fs4_shift_disable = (c.fs4_shift_disable_is_set && dfs4[0] == '1') ? 1 : 0;
+
     g_config = c;
     g_config_inited = 1;
 }

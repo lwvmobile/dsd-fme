@@ -103,6 +103,11 @@ extern "C" {
  *     Optional one-pole low-pass filter after demod. Approximate cutoff in Hz.
  *     Values: "off" or "0" to disable; integer (e.g., 3000, 5000) to enable. Default: off.
  *
+ * Frontend tuning behavior
+ * - DSD_FME_DISABLE_FS4_SHIFT
+ *     Disable +fs/4 capture frequency shift when offset_tuning is off. Useful for trunking where exact
+ *     LO=center is desired by controller logic. Values: 1 to disable, else enabled. Default: 0 (enabled).
+ *
  * Intra-block multithreading
  * - DSD_FME_MT
  *     Enable a minimal 2-thread worker pool for certain CPU-heavy inner loops.
@@ -171,6 +176,10 @@ typedef struct DsdFmeRuntimeConfig {
     /* Intra-block multithreading (Phase 7 module currently reads env directly) */
     int mt_is_set;
     int mt_enable;
+
+    /* Frontend tuning behavior */
+    int fs4_shift_disable_is_set;
+    int fs4_shift_disable;
 } DsdFmeRuntimeConfig;
 
 /* Parse environment once. Safe to call multiple times; last call wins. */

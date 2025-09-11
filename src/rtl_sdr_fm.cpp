@@ -155,6 +155,8 @@ static int upsample_fixedpoint_enabled = 1; /* DSD_FME_UPSAMPLE_FP (1 default) *
 
 /* Runtime flag (default enabled). Set DSD_FME_HB_DECIM=0 to use legacy decimator */
 int use_halfband_decimator = 1;
+/* Allow disabling the fs/4 capture frequency shift via env for trunking/exact-center use cases */
+static int disable_fs4_shift = 0; /* Set by env DSD_FME_DISABLE_FS4_SHIFT=1 */
 
 // UDP control handle
 static struct udp_control* g_udp_ctrl = NULL;
@@ -224,6 +226,58 @@ struct RtlSdrInternals {
 };
 
 static struct RtlSdrInternals* g_stream = NULL;
+
+/**
+ * @brief Reset demodulator state on retune/hop to avoid stale "lock"/bias.
+ *
+ * Clears squelch accumulators, FLL/TED integrators, deemphasis/audio LPF/DC
+ * state, history buffers for HB/CIC paths, and resampler phase/history.
+ * This ensures each new frequency starts from a neutral state.
+ *
+ * @param s Demodulator state to reset.
+ */
+static void
+demod_reset_on_retune(struct demod_state* s) {
+    if (!s) {
+        return;
+    }
+    /* Squelch */
+    s->squelch_hits = 0;
+    s->squelch_running_power = 0;
+    s->squelch_decim_phase = 0;
+    s->prev_index = 0;
+    s->prev_lpr_index = 0;
+    s->now_lpr = 0;
+    /* FLL */
+    fll_init_state(&s->fll_state);
+    s->fll_freq_q15 = 0;
+    s->fll_phase_q15 = 0;
+    s->fll_prev_r = 0;
+    s->fll_prev_j = 0;
+    /* TED */
+    ted_init_state(&s->ted_state);
+    s->ted_mu_q20 = 0;
+    /* Deemphasis / audio LPF / DC */
+    s->deemph_avg = 0;
+    s->audio_lpf_state = 0;
+    s->dc_avg = 0;
+    /* HB histories */
+    for (int st = 0; st < 10; st++) {
+        memset(s->hb_hist_i[st], 0, sizeof(s->hb_hist_i[st]));
+        memset(s->hb_hist_q[st], 0, sizeof(s->hb_hist_q[st]));
+    }
+    /* Legacy CIC-like histories */
+    for (int st = 0; st < 10; st++) {
+        memset(s->lp_i_hist[st], 0, sizeof(s->lp_i_hist[st]));
+        memset(s->lp_q_hist[st], 0, sizeof(s->lp_q_hist[st]));
+    }
+    /* Resampler */
+    s->resamp_phase = 0;
+    s->resamp_hist_head = 0;
+    if (s->resamp_hist && s->resamp_taps_per_phase > 0) {
+        memset(s->resamp_hist, 0, (size_t)s->resamp_taps_per_phase * sizeof(int16_t));
+    }
+}
 
 /**
  * @brief Demodulation worker: consume input ring, run pipeline, and produce audio.
@@ -325,7 +379,7 @@ optimal_settings(int freq, int rate) {
     capture_freq = freq;
     capture_rate = dm->downsample * dm->rate_in; // input capture rate
     /* Apply fs/4 shift for zero-IF DC spur avoidance when offset_tuning is disabled. */
-    if (!d->offset_tuning) {
+    if (!d->offset_tuning && !disable_fs4_shift) {
         capture_freq = freq + capture_rate / 4;
     }
     capture_freq += cs->edge * dm->rate_in / 2;
@@ -488,6 +542,9 @@ controller_thread_fn(void* arg) {
             s->manual_retune_pending.store(0);
             apply_capture_settings((uint32_t)tgt);
             maybe_update_resampler_after_rate_change();
+            /* Reset demod/FLL/TED and clear any stale buffers on retune */
+            demod_reset_on_retune(&demod);
+            input_ring_clear(&input_ring);
             rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
             dsd_rtl_stream_clear_output();
             LOG_INFO("Manual retune applied: %u Hz.\n", tgt);
@@ -499,6 +556,9 @@ controller_thread_fn(void* arg) {
         s->freq_now = (s->freq_now + 1) % s->freq_len;
         apply_capture_settings((uint32_t)s->freqs[s->freq_now]);
         maybe_update_resampler_after_rate_change();
+        /* Reset demod/FLL/TED and clear any stale buffers on hop */
+        demod_reset_on_retune(&demod);
+        input_ring_clear(&input_ring);
         rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
     }
     return 0;
@@ -820,6 +880,10 @@ configure_from_env_and_opts(dsd_opts* opts) {
     }
     if (cfg->upsample_fp_is_set) {
         upsample_fixedpoint_enabled = (cfg->upsample_fp != 0);
+    }
+
+    if (cfg->fs4_shift_disable_is_set) {
+        disable_fs4_shift = (cfg->fs4_shift_disable != 0);
     }
 
     int enable_resamp = 1;
