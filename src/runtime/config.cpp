@@ -180,6 +180,14 @@ dsd_fme_config_init(const dsd_opts* opts) {
     c.fs4_shift_disable_is_set = env_is_set(dfs4);
     c.fs4_shift_disable = (c.fs4_shift_disable_is_set && dfs4[0] == '1') ? 1 : 0;
 
+    /* Output clear/drain on retune */
+    const char* clr = getenv("DSD_FME_OUTPUT_CLEAR_ON_RETUNE");
+    const char* dms = getenv("DSD_FME_RETUNE_DRAIN_MS");
+    c.output_clear_on_retune_is_set = env_is_set(clr);
+    c.output_clear_on_retune = c.output_clear_on_retune_is_set ? (atoi(clr) != 0) : 0;
+    c.retune_drain_ms_is_set = env_is_set(dms);
+    c.retune_drain_ms = c.retune_drain_ms_is_set ? atoi(dms) : 50;
+
     g_config = c;
     g_config_inited = 1;
 }

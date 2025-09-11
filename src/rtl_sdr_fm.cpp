@@ -228,6 +228,47 @@ struct RtlSdrInternals {
 static struct RtlSdrInternals* g_stream = NULL;
 
 /**
+ * @brief On retune/hop, drain audio output ring for a short time to avoid
+ * cutting off transmissions. If configured to clear, force-clear instead.
+ */
+static void
+drain_output_on_retune(void) {
+    struct output_state* outp = &output;
+    if (g_stream && g_stream->output) {
+        outp = g_stream->output;
+    }
+    const DsdFmeRuntimeConfig* cfg = dsd_fme_get_config();
+    int force_clear = 0;
+    int drain_ms = 50;
+    if (cfg) {
+        if (cfg->output_clear_on_retune_is_set) {
+            force_clear = (cfg->output_clear_on_retune != 0);
+        }
+        if (cfg->retune_drain_ms_is_set) {
+            drain_ms = cfg->retune_drain_ms;
+        }
+    }
+    if (drain_ms < 0) {
+        drain_ms = 0;
+    }
+    if (force_clear || drain_ms == 0) {
+        dsd_rtl_stream_clear_output();
+        return;
+    }
+    size_t before = ring_used(outp);
+    int waited_ms = 0;
+    while (!ring_is_empty(outp) && waited_ms < drain_ms) {
+        usleep(1000);
+        waited_ms++;
+    }
+    if (!ring_is_empty(outp)) {
+        /* Timed out; clear remainder to avoid stale backlog */
+        dsd_rtl_stream_clear_output();
+    }
+    (void)before; /* reserved for future diagnostics */
+}
+
+/**
  * @brief Reset demodulator state on retune/hop to avoid stale "lock"/bias.
  *
  * Clears squelch accumulators, FLL/TED integrators, deemphasis/audio LPF/DC
@@ -549,7 +590,7 @@ controller_thread_fn(void* arg) {
             demod_reset_on_retune(&demod);
             input_ring_clear(&input_ring);
             rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
-            dsd_rtl_stream_clear_output();
+            drain_output_on_retune();
             LOG_INFO("Retune applied: %u Hz.\n", tgt);
             continue;
         }
@@ -563,6 +604,7 @@ controller_thread_fn(void* arg) {
         demod_reset_on_retune(&demod);
         input_ring_clear(&input_ring);
         rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
+        drain_output_on_retune();
     }
     return 0;
 }
@@ -1451,7 +1493,8 @@ dsd_rtl_stream_tune(dsd_opts* opts, long int frequency) {
         LOG_INFO(" (Center Frequency: %u Hz.) \n", dongle.freq);
     }
 
-    dsd_rtl_stream_clear_output();
+    /* Honor drain/clear policy for API-triggered tunes as well */
+    drain_output_on_retune();
     return 0;
 }
 

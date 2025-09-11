@@ -107,6 +107,12 @@ extern "C" {
  * - DSD_FME_DISABLE_FS4_SHIFT
  *     Disable +fs/4 capture frequency shift when offset_tuning is off. Useful for trunking where exact
  *     LO=center is desired by controller logic. Values: 1 to disable, else enabled. Default: 0 (enabled).
+ * - DSD_FME_OUTPUT_CLEAR_ON_RETUNE
+ *     Force clearing the output audio ring on retune/hop. When disabled, audio drains naturally to avoid
+ *     cutting off transmissions. Values: 1 to clear, else drain. Default: 0 (drain).
+ * - DSD_FME_RETUNE_DRAIN_MS
+ *     Maximum time in milliseconds to wait for output ring to drain on retune/hop when not clearing.
+ *     Default: 50ms.
  *
  * Intra-block multithreading
  * - DSD_FME_MT
@@ -180,6 +186,10 @@ typedef struct DsdFmeRuntimeConfig {
     /* Frontend tuning behavior */
     int fs4_shift_disable_is_set;
     int fs4_shift_disable;
+    int output_clear_on_retune_is_set;
+    int output_clear_on_retune;
+    int retune_drain_ms_is_set;
+    int retune_drain_ms;
 } DsdFmeRuntimeConfig;
 
 /* Parse environment once. Safe to call multiple times; last call wins. */
