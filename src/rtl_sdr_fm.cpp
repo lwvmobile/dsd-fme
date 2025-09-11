@@ -550,7 +550,7 @@ controller_thread_fn(void* arg) {
             input_ring_clear(&input_ring);
             rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
             dsd_rtl_stream_clear_output();
-            LOG_INFO("Manual retune applied: %u Hz.\n", tgt);
+            LOG_INFO("Retune applied: %u Hz.\n", tgt);
             continue;
         }
         if (s->freq_len <= 1) {
