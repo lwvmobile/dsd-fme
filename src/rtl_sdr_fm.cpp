@@ -785,6 +785,15 @@ controller_cleanup(struct controller_state* s) {
 extern "C" void
 rtlsdr_sighandler(void) {
     LOG_ERROR("Signal caught, exiting!\n");
+    /* Cooperative shutdown and wake any waiters */
+    exitflag = 1;
+    if (g_stream) {
+        g_stream->should_exit.store(1);
+    }
+    safe_cond_signal(&input_ring.ready, &input_ring.ready_m);
+    safe_cond_signal(&controller.hop, &controller.hop_m);
+    safe_cond_signal(&demod.ready, &demod.ready_m);
+    safe_cond_signal(&output.ready, &output.ready_m);
     rtl_device_stop_async(rtl_device_handle);
 }
 
