@@ -499,7 +499,7 @@ maybe_update_resampler_after_rate_change(void) {
     }
     int scale = (M > 0) ? ((L + M - 1) / M) : 1;
 
-    if (scale > 4) {
+    if (scale > 8) {
         if (demod.resamp_enabled) {
             /* Disable and free on out-of-bounds ratio */
             if (demod.resamp_taps) {
@@ -1303,7 +1303,7 @@ dsd_rtl_stream_open(dsd_opts* opts) {
             M = 1;
         }
         int scale = (M > 0) ? ((L + M - 1) / M) : 1;
-        if (scale > 4) {
+        if (scale > 8) {
             LOG_WARNING("Resampler ratio too large (L=%d,M=%d). Disabling resampler.\n", L, M);
             demod.resamp_enabled = 0;
         } else {
