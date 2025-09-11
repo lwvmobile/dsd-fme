@@ -198,6 +198,9 @@ struct controller_state {
     int wb_mode;
     pthread_cond_t hop;
     pthread_mutex_t hop_m;
+    /* Marshalled retune request from external threads (UDP/API). */
+    std::atomic<int> manual_retune_pending;
+    uint32_t manual_retune_freq;
 };
 
 struct rtl_device* rtl_device_handle = NULL;
@@ -216,6 +219,8 @@ struct RtlSdrInternals {
     struct input_ring_state* input_ring;
     struct udp_control** udp_ctrl_ptr;
     const DsdFmeRuntimeConfig* cfg;
+    /* Cooperative shutdown flag for threads launched by this stream */
+    std::atomic<int> should_exit;
 };
 
 static struct RtlSdrInternals* g_stream = NULL;
@@ -236,7 +241,7 @@ demod_thread_fn(void* arg) {
     struct output_state* o = d->output_target;
     maybe_set_thread_realtime_and_affinity("DEMOD");
     int logged_once = 0;
-    while (!exitflag) {
+    while (!exitflag && !(g_stream && g_stream->should_exit.load())) {
         /* Read a block from input ring */
         int got = input_ring_read_block(&input_ring, d->input_cb_buf, MAXIMUM_BUF_LENGTH);
         if (got <= 0) {
@@ -372,6 +377,68 @@ apply_capture_settings(uint32_t center_freq_hz) {
 }
 
 /**
+ * @brief Recompute resampler configuration if demod output rate changed.
+ * Updates output rate accordingly. Runs on controller thread.
+ */
+static void
+maybe_update_resampler_after_rate_change(void) {
+    if (demod.resamp_target_hz <= 0) {
+        demod.resamp_enabled = 0;
+        output.rate = demod.rate_out;
+        return;
+    }
+    int target = demod.resamp_target_hz;
+    int inRate = demod.rate_out > 0 ? demod.rate_out : rtl_bandwidth;
+    int g = gcd_int(inRate, target);
+    int L = target / g;
+    int M = inRate / g;
+    if (L < 1) {
+        L = 1;
+    }
+    if (M < 1) {
+        M = 1;
+    }
+    int scale = (M > 0) ? ((L + M - 1) / M) : 1;
+
+    if (scale > 4) {
+        if (demod.resamp_enabled) {
+            /* Disable and free on out-of-bounds ratio */
+            if (demod.resamp_taps) {
+                dsd_fme_aligned_free(demod.resamp_taps);
+                demod.resamp_taps = NULL;
+            }
+            if (demod.resamp_hist) {
+                dsd_fme_aligned_free(demod.resamp_hist);
+                demod.resamp_hist = NULL;
+            }
+        }
+        demod.resamp_enabled = 0;
+        output.rate = demod.rate_out;
+        LOG_WARNING("Resampler ratio too large on retune (L=%d,M=%d). Disabled.\n", L, M);
+        return;
+    }
+
+    /* Re-design only if params changed or buffers not allocated */
+    if (!demod.resamp_enabled || demod.resamp_L != L || demod.resamp_M != M || demod.resamp_taps == NULL
+        || demod.resamp_hist == NULL) {
+        if (demod.resamp_taps) {
+            dsd_fme_aligned_free(demod.resamp_taps);
+            demod.resamp_taps = NULL;
+        }
+        if (demod.resamp_hist) {
+            dsd_fme_aligned_free(demod.resamp_hist);
+            demod.resamp_hist = NULL;
+        }
+        resamp_design(&demod, L, M);
+        demod.resamp_L = L;
+        demod.resamp_M = M;
+        demod.resamp_enabled = 1;
+        LOG_INFO("Resampler reconfigured: %d -> %d Hz (L=%d,M=%d).\n", inRate, target, L, M);
+    }
+    output.rate = target;
+}
+
+/**
  * @brief Controller worker: scans/hops through configured center frequencies.
  *
  * Programs tuner frequency/sample rate according to current optimal settings
@@ -410,13 +477,28 @@ controller_thread_fn(void* arg) {
     rtl_device_set_sample_rate(rtl_device_handle, dongle.rate);
     LOG_INFO("Demod output at %u Hz.\n", (unsigned int)demod.rate_out);
 
-    while (!exitflag) {
+    while (!exitflag && !(g_stream && g_stream->should_exit.load())) {
         safe_cond_wait(&s->hop, &s->hop_m);
+        if (exitflag || (g_stream && g_stream->should_exit.load())) {
+            break;
+        }
+        /* Process marshalled manual retunes first */
+        if (s->manual_retune_pending.load()) {
+            uint32_t tgt = s->manual_retune_freq;
+            s->manual_retune_pending.store(0);
+            apply_capture_settings((uint32_t)tgt);
+            maybe_update_resampler_after_rate_change();
+            rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
+            dsd_rtl_stream_clear_output();
+            LOG_INFO("Manual retune applied: %u Hz.\n", tgt);
+            continue;
+        }
         if (s->freq_len <= 1) {
             continue;
         }
         s->freq_now = (s->freq_now + 1) % s->freq_len;
         apply_capture_settings((uint32_t)s->freqs[s->freq_now]);
+        maybe_update_resampler_after_rate_change();
         rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
     }
     return 0;
@@ -679,6 +761,8 @@ controller_init(struct controller_state* s) {
     s->wb_mode = 0;
     pthread_cond_init(&s->hop, NULL);
     pthread_mutex_init(&s->hop_m, NULL);
+    s->manual_retune_pending.store(0);
+    s->manual_retune_freq = 0;
 }
 
 /**
@@ -863,9 +947,10 @@ start_threads_and_async(void) {
         g_udp_ctrl = udp_control_start(
             port,
             [](uint32_t new_freq_hz, void* /*user_data*/) {
-                /* Single programming path: recompute and program */
-                apply_capture_settings(new_freq_hz);
-                rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
+                /* Marshal onto controller thread: single programming path */
+                controller.manual_retune_freq = new_freq_hz;
+                controller.manual_retune_pending.store(1);
+                safe_cond_signal(&controller.hop, &controller.hop_m);
             },
             NULL);
     }
@@ -1107,6 +1192,24 @@ dsd_rtl_stream_open(dsd_opts* opts) {
     /* Reset endpoint before we start reading from it (mandatory) */
     rtl_device_reset_buffer(rtl_device_handle);
 
+    /* Create or refresh stream internals before launching threads */
+    if (g_stream) {
+        free(g_stream);
+        g_stream = NULL;
+    }
+    g_stream = (struct RtlSdrInternals*)calloc(1, sizeof(struct RtlSdrInternals));
+    if (g_stream) {
+        g_stream->device = rtl_device_handle;
+        g_stream->dongle = &dongle;
+        g_stream->demod = &demod;
+        g_stream->output = &output;
+        g_stream->controller = &controller;
+        g_stream->input_ring = &input_ring;
+        g_stream->udp_ctrl_ptr = &g_udp_ctrl;
+        g_stream->cfg = dsd_fme_get_config();
+        g_stream->should_exit.store(0);
+    }
+
     /* Start controller/demod threads and async */
     start_threads_and_async();
 
@@ -1150,21 +1253,6 @@ dsd_rtl_stream_open(dsd_opts* opts) {
         }
     }
 
-    if (g_stream) {
-        free(g_stream);
-        g_stream = NULL;
-    }
-    g_stream = (struct RtlSdrInternals*)calloc(1, sizeof(struct RtlSdrInternals));
-    if (g_stream) {
-        g_stream->device = rtl_device_handle;
-        g_stream->dongle = &dongle;
-        g_stream->demod = &demod;
-        g_stream->output = &output;
-        g_stream->controller = &controller;
-        g_stream->input_ring = &input_ring;
-        g_stream->udp_ctrl_ptr = &g_udp_ctrl;
-        g_stream->cfg = dsd_fme_get_config();
-    }
     return 0;
 }
 
@@ -1177,6 +1265,9 @@ dsd_rtl_stream_open(dsd_opts* opts) {
 extern "C" void
 dsd_rtl_stream_close(void) {
     LOG_INFO("cleaning up...\n");
+    if (g_stream) {
+        g_stream->should_exit.store(1);
+    }
     /* Log Phase 3 metrics before teardown */
     LOG_INFO("Output ring: write_timeouts=%llu read_timeouts=%llu\n", (unsigned long long)output.write_timeouts.load(),
              (unsigned long long)output.read_timeouts.load());
@@ -1276,9 +1367,10 @@ dsd_rtl_stream_tune(dsd_opts* opts, long int frequency) {
         LOG_INFO("\nTuning to %ld Hz.", frequency);
     }
     dongle.freq = opts->rtlsdr_center_freq = frequency;
-    apply_capture_settings((uint32_t)dongle.freq);
-    /* While streaming, flush/mute to avoid endpoint stalls on retune */
-    rtl_device_mute(rtl_device_handle, BUFFER_DUMP);
+    /* Marshal onto controller thread to ensure single-threaded device programming */
+    controller.manual_retune_freq = (uint32_t)dongle.freq;
+    controller.manual_retune_pending.store(1);
+    safe_cond_signal(&controller.hop, &controller.hop_m);
     if (opts->payload == 1) {
         LOG_INFO(" (Center Frequency: %u Hz.) \n", dongle.freq);
     }
