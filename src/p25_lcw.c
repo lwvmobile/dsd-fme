@@ -310,6 +310,18 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
         {
 
+          //clear stale keys if loaded
+          if (state->keyloader == 1)
+          {
+            state->R = 0;
+            state->A1[0] = 0;
+            state->A2[0] = 0;
+            state->A3[0] = 0;
+            state->A4[0] = 0;
+            state->aes_key_loaded[0] = 0;
+            // state->H = 0; //shim for above (this apply here?)
+          }
+
           //Will we need to check for a symbolrate change here, can a P25p2 TDMA-CC system
           //revert back to a phase 1 traffic channel or carry a phase 1 traffic channel?
           if (state->p25_cc_is_tdma == 1)

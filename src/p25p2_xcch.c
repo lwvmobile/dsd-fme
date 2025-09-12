@@ -317,6 +317,18 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			if (opts->floating_point == 1)
 				state->aout_gain = opts->audio_gain;
 
+			//clear stale keys if loaded
+			if (state->keyloader == 1)
+			{
+				state->R = 0;
+				state->A1[0] = 0;
+				state->A2[0] = 0;
+				state->A3[0] = 0;
+				state->A4[0] = 0;
+				state->aes_key_loaded[0] = 0;
+				// state->H = 0; //shim for above (this apply here?)
+			}
+
 		}
 		if (state->currentslot == 0)
 		{
@@ -345,6 +357,18 @@ void process_SACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[180]
 			//reset gain
 			if (opts->floating_point == 1)
 				state->aout_gainR = opts->audio_gain;
+
+			//clear stale keys if loaded
+			if (state->keyloader == 1)
+			{
+				state->RR = 0;
+				state->A1[1] = 0;
+				state->A2[1] = 0;
+				state->A3[1] = 0;
+				state->A4[1] = 0;
+				state->aes_key_loaded[1] = 0;
+				// state->H = 0; //shim for above (this apply here?)
+			}
 
 		}
 
@@ -760,6 +784,18 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			if (opts->floating_point == 1)
 				state->aout_gain = opts->audio_gain; //reset
 
+			//clear stale keys if loaded
+			if (state->keyloader == 1)
+			{
+				state->R = 0;
+				state->A1[0] = 0;
+				state->A2[0] = 0;
+				state->A3[0] = 0;
+				state->A4[0] = 0;
+				state->aes_key_loaded[0] = 0;
+				// state->H = 0; //shim for above (this apply here?)
+			}
+
 		}
 		if (state->currentslot == 1)
 		{
@@ -785,6 +821,19 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 			//reset gain
 			if (opts->floating_point == 1)
 				state->aout_gainR = opts->audio_gain;
+
+			//clear stale keys if loaded
+			if (state->keyloader == 1)
+			{
+				state->RR = 0;
+				state->A1[1] = 0;
+				state->A2[1] = 0;
+				state->A3[1] = 0;
+				state->A4[1] = 0;
+				state->aes_key_loaded[1] = 0;
+				// state->H = 0; //shim for above (this apply here?)
+			}
+			
 		}
 
 		//Return to CC on MAC_END_PTT if other slot is idle
