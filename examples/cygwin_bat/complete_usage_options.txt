@@ -175,6 +175,10 @@ Advanced Decoder options:
   -! <hex>      Manually Enter and Enforce TYT Advanced Privacy (PC4) AP Hex Key (see example below)
                  Encapulate in Single Quotation Marks; Space every 16 chars.
                  -! '736B9A9C5645288B 243AD5CB8701EF8A' 
+
+  -@ <hex>      Manually Enter and Enforce Retevis Advanced Privacy (RC2) AP Hex Key (see example below)
+                Encapulate in Single Quotation Marks; Space every 16 chars.
+                -@ '736B9A9C5645288B 243AD5CB8701EF8A'
                  
   -5 <hex>      Manually Enter and Enforce TYT Enhanced Privacy (AES-128) EP Hex Key (see example below)
                  Encapulate in Single Quotation Marks; Space every 16 chars.

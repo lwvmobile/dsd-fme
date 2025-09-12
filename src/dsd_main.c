@@ -1064,6 +1064,7 @@
    state->tyt_ap = 0;
    state->tyt_bp = 0;
    state->tyt_ep = 0;
+   state->retevis_ap = 0;
 
    state->ken_sc = 0;
    state->any_bp = 0;
@@ -1565,6 +1566,10 @@
    printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
    printf ("                 -! '736B9A9C5645288B 243AD5CB8701EF8A' \n");
    printf ("                 \n");
+   printf ("  -@ <hex>      Manually Enter and Enforce Retevis Advanced Privacy (RC2) AP Hex Key (see example below)\n");
+   printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
+   printf ("                 -@ '736B9A9C5645288B 243AD5CB8701EF8A' \n");
+   printf ("                 \n");
    printf ("  -5 <hex>      Manually Enter and Enforce TYT Enhanced Privacy (AES-128) EP Hex Key (see example below)\n");
    printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
    printf ("                 -5 '736B9A9C5645288B 243AD5CB8701EF8A' \n");
@@ -1899,7 +1904,7 @@
  
    exitflag = 0;
  
-   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF!:01:2:345:6:7:89:Ek:I:J:O")) != -1)
+   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF@:!:01:2:345:6:7:89:Ek:I:J:O")) != -1)
      {
  
        switch (c)
@@ -1986,6 +1991,11 @@
          //get user TYT AP Key and Force Its application
          case '!':
            tyt_ap_pc4_keystream_creation(&state, optarg);
+           break;
+           
+         //get user Retevis AP Key and Force Its application
+         case '@':
+           retevis_rc2_keystream_creation(&state, optarg);
            break;
  
          //get user TYT EP Key and Force Its application

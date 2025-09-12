@@ -991,6 +991,9 @@ typedef struct
   int tyt_ap;
   int tyt_bp;
   int tyt_ep;
+  // retrevis rc2
+  int retevis_ap;
+  void *rc2_context;
 
   //kenwood scrambler on DMR with forced application
   int ken_sc;
@@ -1629,12 +1632,11 @@ void aes_cfb_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * in, 
 void aes_ctr_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payload, int type);
 void aes_ctr_bitwise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payload, int type);
 
-//Tytera Encryption Modes
+//Tytera / Retevis / Anytone / Kenwood / Misc DMR Encryption Modes
 void tyt16_ambe2_codeword_keystream(dsd_state * state, char ambe_fr[4][24], int fnum);
 void tyt_ep_aes_keystream_creation(dsd_state * state, char * input);
 void tyt_ap_pc4_keystream_creation(dsd_state * state, char * input);
-
-//Misc Other Encryption Modes
+void retevis_rc2_keystream_creation(dsd_state *state, char *input);
 void ken_dmr_scrambler_keystream_creation(dsd_state * state, char * input);
 void anytone_bp_keystream_creation(dsd_state * state, char * input);
 void straight_mod_xor_keystream_creation(dsd_state * state, char * input);

@@ -18,6 +18,7 @@
 #include "dsd.h"
 #include "bp.h"
 #include "pc4.h"
+#include "rc2.h"
 
 //NOTE: This set of functions will be reorganized and simplified (hopefully) or at least
 //a more logical flow will be established to jive with the new audio handling
@@ -857,6 +858,21 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         unpack_ambe(plain, ambe_d);
 
       }
+      
+      //DMR Retevis AP, Either Slot (static single key'd enforced KS)
+      if (state->retevis_ap == 1)
+      {
+        
+        uint8_t frame1_cipher[49];
+   
+        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
+   
+        decrypt_rc2((CryptoContext *)state->rc2_context, frame1_cipher);
+        
+        memset (ambe_d, 0, 49*sizeof(char));
+        for (int i = 0; i < 49; i++) ambe_d[i] = frame1_cipher[i];
+         
+      }
 
       //DMR TYT AP, Either Slot (static single key'd enforced KS)
       if (state->tyt_ap == 1)
@@ -1231,6 +1247,21 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         memset (ambe_d, 0, 49*sizeof(char));
         unpack_ambe(plain, ambe_d);
 
+      }
+
+      //DMR Retevis AP, Either Slot (static single key'd enforced KS)
+      if (state->retevis_ap == 1)
+      {
+        
+        uint8_t frame1_cipher[49];
+   
+        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
+   
+        decrypt_rc2((CryptoContext *)state->rc2_context, frame1_cipher);
+        
+        memset (ambe_d, 0, 49*sizeof(char));
+        for (int i = 0; i < 49; i++) ambe_d[i] = frame1_cipher[i];
+         
       }
 
       //DMR TYT AP, Either Slot (static single key'd enforced KS)
