@@ -482,6 +482,34 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
       sprintf (state->dmr_lrrp_gps[slot], "ETSI TMS SRC: %d; DST: %d; ", src24, dst24);
       utf16_to_text(state, 1, len, input+28);
     }
+    //Vertex Standard TMS Port
+    else if (port1 == 5007 && port2 == 5007)
+    {
+
+      //get pad amount to see where to stop parsing UTF16 text
+      int pad = state->data_block_poc[slot];
+
+      //sanity check
+      if (len > (50+pad))
+        len = len - pad - 50;
+
+      fprintf (stderr, "VTX STD TMS; ");
+
+      //+28, get 9 bytes for unknown "header" information
+      //unknown elements 0E0002000000000000, could include a len value or type (utf-16, utf-8, is07?)
+      //the sample has a len of 8 utf-16 chars, only way to get that is on the 2 if not byte aligned (1000)
+      if (opts->payload == 1)
+      {
+        // fprintf (stderr, "Len: %03d; ", len);
+        fprintf (stderr, "??: ");
+        for (int i = 0; i < 9; i++)
+          fprintf (stderr, "%02X", input[i+28]);
+        fprintf (stderr, "; Text: ");
+      }
+
+      sprintf (state->dmr_lrrp_gps[slot], "VTX TMS SRC: %d; DST: %d; ", src24, dst24);
+      utf16_to_text(state, 1, len, input+49);
+    }
     else if (port1 == 5017 && port2 == 5017)
     {
       //sanity check
