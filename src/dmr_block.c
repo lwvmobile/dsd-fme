@@ -365,7 +365,42 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
       }
 
       //Start Setting DMR Data Packet Encryption Variables
-      if (p_sap != 1 && p_mfid == 0x10)
+      if (p_sap != 1 && p_mfid == 0x77)
+      {
+
+        fprintf (stderr, "\n Vertex Standard PDU ENC Header:");
+        fprintf (stderr, " MFID: %02X;", (uint8_t)ConvertBitIntoBytes(&dheader_bits[8], 8));
+
+        //Unsure of how similar this is to the DMRA Enc Header, but using
+        //guess work and best judgment from single sample of Vertex Enhanced
+
+        //main issue is, I don't know if the 0x01 signalled is a key id (which is known to be 0x01)
+        //or if it is an encryption alg id (alg may have to be inferred based on what is loaded in radio)
+
+        //set to 0x100 so it won't trigger any weird flags, but still has a non-zero value to be checked later
+        if (state->currentslot == 0) state->dmr_so = 0x100;
+        else state->dmr_soR = 0x100;
+
+        if (state->currentslot == 0)
+          state->payload_keyid = (uint8_t)ConvertBitIntoBytes(&dheader_bits[16], 8);
+        else state->payload_keyidR = (uint8_t)ConvertBitIntoBytes(&dheader_bits[16], 8);
+        fprintf (stderr, " Key ID: %02X;", (uint8_t)ConvertBitIntoBytes(&dheader_bits[16], 8));
+
+        //going to use algid of 0x7 to signal a vertex standard enc method
+        if (state->currentslot == 0)
+          state->payload_algid = 0x7;
+        else state->payload_algidR = 0x7;
+
+        //unknown if MI, or IV is present on this header (need the AES256 Vertex PDU to compare)
+        if (state->currentslot == 0)
+          state->payload_mi = (unsigned long long int)ConvertBitIntoBytes(&dheader_bits[48], 32);
+        else state->payload_miR = (unsigned long long int)ConvertBitIntoBytes(&dheader_bits[48], 32);
+
+        //reset ks start value
+        state->data_ks_start[slot] = 0;
+
+      }
+      else if (p_sap != 1 && p_mfid == 0x10)
       {
 
         //check ENC bit, assuming this is an ENC bit, or SVC OPT like thing (or could be an opcode for the rest of the extended header)
@@ -376,7 +411,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
           else state->dmr_soR = 0x100;
         }
 
-        fprintf (stderr, "\n PDU ENC Header:");
+        fprintf (stderr, "\n DMRA PDU ENC Header:");
         fprintf (stderr, " MFID: %02X;", (uint8_t)ConvertBitIntoBytes(&dheader_bits[8], 8));
         fprintf (stderr, " ENC: %X;", (uint8_t)ConvertBitIntoBytes(&dheader_bits[20], 4));
 
@@ -1037,12 +1072,13 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
         //print alg/key and value if loaded
         fprintf (stderr, "\n PDU ALG: %02X; Key ID: %02X;", alg, kid);
-        if (alg != 0) fprintf (stderr, " MI(32): %08llX;", mi);
+        if (alg != 0 && mi != 0) fprintf (stderr, " MI(32): %08llX;", mi);
         if (alg == 0) fprintf (stderr, " Moto BP;");
         if (alg == 1) fprintf (stderr, " RC4;");
         if (alg == 2) fprintf (stderr, " DES;");
         if (alg == 4) fprintf (stderr, " AES128;");
         if (alg == 5) fprintf (stderr, " AES256;");
+        if (alg == 7) fprintf (stderr, " VTX STD;");
         if (R && alg != 0) fprintf (stderr, " Key: %010llX;", R);
 
         //generate 128-bit IV from 32-bit MI
