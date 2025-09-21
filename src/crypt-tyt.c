@@ -159,28 +159,96 @@ void tyt16_ambe2_codeword_keystream(dsd_state * state, char ambe_fr[4][24], int 
 
 void tyt_ap_pc4_keystream_creation(dsd_state * state, char * input)
 {
-  unsigned char key1[16] = {0};
-  unsigned char key2[16] = {0};
-
+  unsigned char key1[64]; memset(key1, 0, sizeof(key1));
+  unsigned char key2[64]; memset(key2, 0, sizeof(key2));
+  
   char buf[1024];
   strncpy(buf, input, sizeof(buf) - 1);
   buf[sizeof(buf) - 1] = '\0';
-
+  
   char *pEnd;
   uint64_t K1 = strtoull(buf, &pEnd, 16);
   uint64_t K2 = strtoull(pEnd, &pEnd, 16);
+  uint64_t K3 = strtoull(pEnd, &pEnd, 16);
+  uint64_t K4 = strtoull(pEnd, &pEnd, 16);
+  
+  if (K3 != 0 || K4 != 0) //256-bit keys loaded as ASCII characters
+  {
+      //start loading K1, K2, K3, and K4 as ASCII to fill 64 bytes of key1
+      int k = 0; uint8_t x = 0;
 
-  u64_to_bytes_be(K1, &key1[0]);
-  u64_to_bytes_be(K2, &key1[8]);
+      for (int i = 0; i < 16; i++)
+      {
+          x = ((K1 >> (60-(i*4))) & 0xF);
+          if (x >= 0 && x <= 9) //numbers 0-9
+              x += 0x30;  //ASCII representation of numbers is 0x30, 0x31....0x39
+          else x += 0x37; //Upper ASCII A,B,C,D,E,F is 0x41, 0x42...0x46
+          key1[k++] = x;
+      }
 
-  for (int i=0;i<16;i++) key2[i] = key1[15-i];
+      for (int i = 0; i < 16; i++)
+      {
+          x = ((K2 >> (60-(i*4))) & 0xF);
+          if (x >= 0 && x <= 9) //numbers 0-9
+              x += 0x30;  //ASCII representation of numbers is 0x30, 0x31....0x39
+          else x += 0x37; //Upper ASCII A,B,C,D,E,F is 0x41, 0x42...0x46
+          key1[k++] = x;
+      }
 
-  /* Create key schedule */
-  create_keys(&ctx, key2, sizeof(key2));
-  ctx.rounds = nbround;
+      for (int i = 0; i < 16; i++)
+      {
+          x = ((K3 >> (60-(i*4))) & 0xF);
+          if (x >= 0 && x <= 9) //numbers 0-9
+              x += 0x30;  //ASCII representation of numbers is 0x30, 0x31....0x39
+          else x += 0x37; //Upper ASCII A,B,C,D,E,F is 0x41, 0x42...0x46
+          key1[k++] = x;
+      }
 
-  fprintf (stderr,"DMR TYT AP (PC4) 128-bit Key %016llX%016llX with Forced Application\n", (unsigned long long int)K1, (unsigned long long int)K2);
-  state->tyt_ap = 1;
+      for (int i = 0; i < 16; i++)
+      {
+          x = ((K4 >> (60-(i*4))) & 0xF);
+          if (x >= 0 && x <= 9) //numbers 0-9
+              x += 0x30;  //ASCII representation of numbers is 0x30, 0x31....0x39
+          else x += 0x37; //Upper ASCII A,B,C,D,E,F is 0x41, 0x42...0x46
+          key1[k++] = x;
+      }
+
+      //debug
+      // fprintf (stderr, "ASCII: ");
+      // for (int i = 0; i < 64; i++)
+      //     fprintf (stderr, " %02X", key1[i]);
+      // fprintf (stderr, "\n");
+
+      /* Create key schedule */
+      create_keys(&ctx, key1, 64);
+      ctx.rounds = nbround;
+
+      fprintf(stderr, "DMR TYT AP (PC4) 256-bit Key %016llX%016llX%016llX%016llX with Forced Application\n", 
+          (unsigned long long)K1, (unsigned long long)K2, (unsigned long long)K3, (unsigned long long)K4);
+
+      state->tyt_ap = 1;
+  }
+
+  else //128-bit loaded as reverse bytes
+  {
+
+      u64_to_bytes_be(K1, &key1[0]);
+      u64_to_bytes_be(K2, &key1[8]);
+
+      // reverse load the key bytes into key2
+      for (int i=0;i<16;i++)
+          key2[i] = key1[15-i];
+      
+      /* Create key schedule */
+      create_keys(&ctx, key2, 16);
+      ctx.rounds = nbround;
+      
+      fprintf (stderr,"DMR TYT AP (PC4) 128-bit Key %016llX%016llX with Forced Application\n", 
+        (unsigned long long int)K1, (unsigned long long int)K2);
+
+      state->tyt_ap = 1;
+  }
+  
   
 }
 
