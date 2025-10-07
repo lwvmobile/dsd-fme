@@ -25,26 +25,48 @@
 #include "dsd.h"
 #include "nxdn_const.h"
 
-//NOTE: Descrambling was having an issue without a value inside the brackets, but only when
-//the PARITY table was disabled, was this due to a memory issue or overflow?
-static const uint8_t scramble_t[182] = { //values are the position values we need to invert in the descramble
-	2, 5, 6, 7, 10, 12, 14, 16, 17, 22, 23, 25, 26, 27, 28, 30, 33, 34, 36, 37, 38, 41, 45, 47,
-	52, 54, 56, 57, 59, 62, 63, 64, 65, 66, 67, 69, 70, 73, 76, 79, 81, 82, 84, 85, 86, 87, 88,
-	89, 92, 95, 96, 98, 100, 103, 104, 107, 108, 116, 117, 121, 122, 125, 127, 131, 132, 134,
-	137, 139, 140, 141, 142, 143, 144, 145, 147, 151, 153, 154, 158, 159, 160, 162, 164, 165,
-	168, 170, 171, 174, 175, 176, 177, 181
-};
-
-
-//decoding functions here
-void nxdn_descramble(uint8_t dibits[], int len)
+void nxdn_pn95_dibit_scrambler(dsd_state * state, uint8_t * dibits, int len)
 {
-	for (int i=0; i<len; i++)
+
+	uint16_t lfsr = state->nxdn_pn95_seed; //default value is 228 / 0xE4
+
+	//debug hard set
+	// lfsr = 261;
+
+	uint16_t  bit = 0;
+	uint8_t pN95[182]; memset (pN95, 0, sizeof(pN95));
+
+	for (int i = 0; i < len; i++)
 	{
-		if (scramble_t[i] >= len)
-			break;
-		dibits[scramble_t[i]] ^= 0x2;	// invert sign of scrambled dibits
+		//before feedback, take the bit
+		pN95[i] = lfsr & 1;
+
+		//since this is right shift, the taps are 0 and 4, and not 8 and 4 (9,5)
+		bit = ((lfsr >> 4) ^ (lfsr >> 0)) & 1;
+		lfsr >>= 1;
+		lfsr |= (bit << 8);
+
 	}
+
+	//convert the pN sequence to a scramble table
+	uint8_t scramble_table[182]; memset(scramble_table, 0, sizeof(scramble_table));
+	int k = 0;
+	for (int i = 0; i < len; i++)
+	{
+		if (pN95[i] == 1)
+			scramble_table[k++] = i;
+	}
+
+	//the entries into the scramble_table are the dibits (symbols) that are inverted
+	for (int i = 0; i < k; i++)
+	{
+		dibits[scramble_table[i]] ^= 0x2;
+		dibits[scramble_table[i]] &= 0x3;
+	}
+
+	//debug, make sure we don't overflow dibits array
+	// fprintf (stderr, " PN95: K: %d; Len: %d; ", k, len);
+
 }
 
 void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])

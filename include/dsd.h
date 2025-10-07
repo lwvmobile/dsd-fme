@@ -898,6 +898,7 @@ typedef struct
   uint8_t nxdn_sacch_frame_segcrc[4];
   uint8_t nxdn_alias_block_number;
   char nxdn_alias_block_segment[4][4][8];
+  uint16_t nxdn_pn95_seed;
 
   //site/srv/cch info
   char nxdn_location_category[14];
@@ -1281,7 +1282,7 @@ void ncursesClose ();
 
 //new NXDN Functions start here!
 void nxdn_frame (dsd_opts * opts, dsd_state * state);
-void nxdn_descramble (uint8_t dibits[], int len);
+void nxdn_pn95_dibit_scrambler(dsd_state * state, uint8_t * dibits, int len);
 //nxdn deinterleaving/depuncturing functions
 void nxdn_deperm_facch (dsd_opts * opts, dsd_state * state, uint8_t bits[144]);
 void nxdn_deperm_sacch (dsd_opts * opts, dsd_state * state, uint8_t bits[60]);

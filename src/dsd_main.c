@@ -1214,6 +1214,7 @@
    memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
    state->nxdn_alias_block_number = 0;
    memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
+   state->nxdn_pn95_seed = 228; //default value
  
    //site/srv/cch info
    state->nxdn_location_site_code = 0;
@@ -1526,6 +1527,8 @@
    printf ("Advanced Decoder options:\n");
    printf ("  -X <hex>      Manually Set P2 Parameters (WACN, SYSID, CC/NAC)\n");
    printf ("                 (-X BEE00ABC123)\n");
+   printf ("  -* <dec>      Manually Set NXDN PN95 Dibit Scrambler Seed (1-511)\n");
+   printf ("                 (-* 261)\n");
    printf ("  -D <dec>      Manually Set TIII DMR Location Area n bit len (0-10)(10 max)\n");
    printf ("                 (Value defaults to max n bit value for site model size)\n");
    printf ("                 (Setting 0 will show full Site ID, no area/subarea)\n");
@@ -1906,7 +1909,7 @@
  
    exitflag = 0;
  
-   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF@:!:01:2:345:6:7:89:Ek:I:J:O")) != -1)
+   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF@:!:01:2:345:6:7:8*:9:Ek:I:J:O")) != -1)
      {
  
        switch (c)
@@ -2217,7 +2220,15 @@
            if (state.R > 0x7FFF) state.R = 0x7FFF;
            //disable keyloader in case user tries to use this and it at the same time
            state.keyloader = 0;
+           fprintf (stderr, "NXDN Scrambler Key set to: %05d;", state.R);
            break;
+
+         case '*':
+          sscanf (optarg, "%hu", &state.nxdn_pn95_seed);
+          if (state.nxdn_pn95_seed > 0x1FF) state.nxdn_pn95_seed = 0x1FF;
+          else if (state.nxdn_pn95_seed == 0) state.nxdn_pn95_seed = 228;
+          fprintf (stderr, "NXDN PN9 Seed Value set to: %03d;", state.nxdn_pn95_seed);
+          break;
  
          case 'H':
            //new handling for 10/32/64 Char Key

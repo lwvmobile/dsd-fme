@@ -90,7 +90,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	//collect lich bits first, if they are good, then we can collect the rest of them
 	for (int i = 0; i < 8; i++) lich_dibits[i] = dbuf[i] = getDibit(opts, state);
 
-	nxdn_descramble (lich_dibits, 8);
+	nxdn_pn95_dibit_scrambler (state, lich_dibits, 8);
 
 	lich = 0;
 	for (int i=0; i<8; i++) lich |= (lich_dibits[i] >> 1) << (7-i);
@@ -343,7 +343,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	 	dbuf[i+8] = getDibit(opts, state);
 	}
 
-	nxdn_descramble (dbuf, 182); //sizeof(dbuf)
+	nxdn_pn95_dibit_scrambler (state, dbuf, 182);
 
 	//seperate our dbuf (dibit_buffer) into individual bit array
 	for (int i = 0; i < 182; i++)
