@@ -2220,7 +2220,7 @@
            if (state.R > 0x7FFF) state.R = 0x7FFF;
            //disable keyloader in case user tries to use this and it at the same time
            state.keyloader = 0;
-           fprintf (stderr, "NXDN Scrambler Key set to: %05d;", state.R);
+           fprintf (stderr, "NXDN Scrambler Key set to: %05lld;", state.R);
            break;
 
          case '*':

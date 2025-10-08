@@ -30,9 +30,6 @@ void nxdn_pn95_dibit_scrambler(dsd_state * state, uint8_t * dibits, int len)
 
 	uint16_t lfsr = state->nxdn_pn95_seed; //default value is 228 / 0xE4
 
-	//debug hard set
-	// lfsr = 261;
-
 	uint16_t  bit = 0;
 	uint8_t pN95[182]; memset (pN95, 0, sizeof(pN95));
 
@@ -1604,6 +1601,10 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 	else if (MessageType == 0x39) fprintf(stderr, " SDCALL_REQ_USERDATA");
 	else if (MessageType == 0x3B) fprintf(stderr, " SDCALL_RESP");
 	else if (MessageType == 0x3F) fprintf(stderr, " ALIAS");
+	//observed from #318
+	else if (MessageType == 0x21) fprintf(stderr, " VCALL_ALINCO");  //needs better name
+	else if (MessageType == 0x28) fprintf(stderr, " TX_REL_ALINCO"); //needs better name
+	else if (MessageType == 0x27) fprintf(stderr, " MS_PDU_ALINCO"); //needs better name
 	else fprintf(stderr, " Unknown Message Type: %02X;", MessageType);
 	fprintf (stderr, "%s", KNRM);
 

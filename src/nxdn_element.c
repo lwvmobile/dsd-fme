@@ -97,6 +97,21 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
     */
     //Debug: Disable DUP messages if they cause random issues with Type-C trunking (i.e. changing SRC ang TGT IDs, hopping in the middle of calls, etc)
 
+    //observed new messages in #318, should also be noted that F1 and F2 are both set on these messages
+
+    //VCALL and TX_REL custom to certain radios, but they have different elements in them
+    case 0x21:
+    case 0x28:
+      NXDN_decode_Alinco_VCALL(opts, state, ElementsContent);
+      break;
+
+    //multi-block PDU with message in it
+    case 0x27:
+      NXDN_decode_Alinco_mpdu(opts, state, ElementsContent);
+      break;
+
+    //end observations from #318
+
     //VCALL_ASSGN_DUP
     case 0x05:
 
@@ -221,6 +236,81 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
   } /* End switch(MessageType) */
 
 } /* End NXDN_Elements_Content_decode() */
+
+void NXDN_decode_Alinco_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
+{
+
+  UNUSED(opts);
+
+  //The values here are just a hunch based on the target being FFFF, so I am assumming ALL
+  //in the Alinco manual terminology for this
+  uint16_t source = (uint16_t)ConvertBitIntoBytes(&Message[32], 16);
+  uint16_t target = (uint16_t)ConvertBitIntoBytes(&Message[48], 16);
+  uint8_t call_type = (uint8_t)ConvertBitIntoBytes(&Message[64], 3);
+  uint8_t call_opt  = (uint8_t)ConvertBitIntoBytes(&Message[67], 5);
+
+  fprintf (stderr, "\n %s - ", NXDN_Call_Type_To_Str(call_type));
+  uint8_t  DuplexMode[32] = {0};
+  uint8_t  TransmissionMode[32] = {0};
+  NXDN_Voice_Call_Option_To_Str(call_opt, DuplexMode, TransmissionMode);
+  fprintf(stderr, "%s %s (%02X) - ", DuplexMode, TransmissionMode, call_opt);
+  fprintf (stderr, "Source: %d; Target %d; ", source, target);
+
+  //seems okay so far, broadcast lines up with 0xFFFF, voice type is correct as well
+  uint8_t mtype = (uint8_t)ConvertBitIntoBytes(&Message[2], 6);
+
+  //If VCALL
+  if (mtype == 0x21)
+  {
+    state->nxdn_last_rid = source;
+    state->nxdn_last_tg = target;
+  }
+  else //TX_REL
+  {
+    state->nxdn_last_rid = 0;
+    state->nxdn_last_tg = 0;
+  }
+
+}
+
+void NXDN_decode_Alinco_mpdu(dsd_opts * opts, dsd_state * state, uint8_t * Message)
+{
+
+  UNUSED(opts);
+
+  uint8_t seg_num = (uint8_t)ConvertBitIntoBytes(&Message[16], 4);
+  uint8_t seg_len = (uint8_t)ConvertBitIntoBytes(&Message[20], 4);
+
+  fprintf (stderr, "\n Multi Segment PDU %d/%d; ", seg_num, seg_len);
+
+  uint8_t seg_bytes[12]; memset(seg_bytes, 0, sizeof(seg_bytes));
+
+  int seg_byte_num = 6;
+  for (int i = 0; i < seg_byte_num; i++)
+    seg_bytes[i] = (uint8_t)ConvertBitIntoBytes(&Message[(i*8)+24], 8);
+
+  for (int i = 0; i < seg_byte_num; i++)
+    fprintf (stderr, "%02X", seg_bytes[i]);
+
+  //copy to PDU superframe
+  memcpy(state->dmr_pdu_sf[0]+(seg_num-1)*seg_byte_num, seg_bytes, seg_byte_num*sizeof(uint8_t));
+
+  //dump if last one (no check to see if all arrived or not)
+  if (seg_num == seg_len)
+  {
+    fprintf (stderr, "\n Completed Message: ");
+    for (int i = 0; i < (seg_len*seg_byte_num); i++)
+      fprintf (stderr, "%02X", state->dmr_pdu_sf[0][i]);
+
+    //TODO: Decode this.
+    //After review, this is most likely SHIFT-JIS encoded,
+    //http://www.rikai.com/library/kanjitables/kanji_codes.sjis.shtml
+
+    //reset PDU superframe afterwards
+    memset(state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
+  }
+
+}
 
 //externalize multiple sub-element handlers
 void nxdn_location_id_handler (dsd_state * state, uint32_t location_id, uint8_t type)
