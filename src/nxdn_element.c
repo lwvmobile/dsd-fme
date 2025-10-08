@@ -102,12 +102,12 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
     //VCALL and TX_REL custom to certain radios, but they have different elements in them
     case 0x21:
     case 0x28:
-      NXDN_decode_Alinco_VCALL(opts, state, ElementsContent);
+      NXDN_decode_VCALL_ARIB(opts, state, ElementsContent);
       break;
 
-    //multi-block PDU with message in it
+    //Shift-JIS Talker Alias
     case 0x27:
-      NXDN_decode_Alinco_mpdu(opts, state, ElementsContent);
+      NXDN_decode_ALIAS_ARIB(opts, state, ElementsContent);
       break;
 
     //end observations from #318
@@ -236,81 +236,6 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
   } /* End switch(MessageType) */
 
 } /* End NXDN_Elements_Content_decode() */
-
-void NXDN_decode_Alinco_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
-{
-
-  UNUSED(opts);
-
-  //The values here are just a hunch based on the target being FFFF, so I am assumming ALL
-  //in the Alinco manual terminology for this
-  uint16_t source = (uint16_t)ConvertBitIntoBytes(&Message[32], 16);
-  uint16_t target = (uint16_t)ConvertBitIntoBytes(&Message[48], 16);
-  uint8_t call_type = (uint8_t)ConvertBitIntoBytes(&Message[64], 3);
-  uint8_t call_opt  = (uint8_t)ConvertBitIntoBytes(&Message[67], 5);
-
-  fprintf (stderr, "\n %s - ", NXDN_Call_Type_To_Str(call_type));
-  uint8_t  DuplexMode[32] = {0};
-  uint8_t  TransmissionMode[32] = {0};
-  NXDN_Voice_Call_Option_To_Str(call_opt, DuplexMode, TransmissionMode);
-  fprintf(stderr, "%s %s (%02X) - ", DuplexMode, TransmissionMode, call_opt);
-  fprintf (stderr, "Source: %d; Target %d; ", source, target);
-
-  //seems okay so far, broadcast lines up with 0xFFFF, voice type is correct as well
-  uint8_t mtype = (uint8_t)ConvertBitIntoBytes(&Message[2], 6);
-
-  //If VCALL
-  if (mtype == 0x21)
-  {
-    state->nxdn_last_rid = source;
-    state->nxdn_last_tg = target;
-  }
-  else //TX_REL
-  {
-    state->nxdn_last_rid = 0;
-    state->nxdn_last_tg = 0;
-  }
-
-}
-
-void NXDN_decode_Alinco_mpdu(dsd_opts * opts, dsd_state * state, uint8_t * Message)
-{
-
-  UNUSED(opts);
-
-  uint8_t seg_num = (uint8_t)ConvertBitIntoBytes(&Message[16], 4);
-  uint8_t seg_len = (uint8_t)ConvertBitIntoBytes(&Message[20], 4);
-
-  fprintf (stderr, "\n Multi Segment PDU %d/%d; ", seg_num, seg_len);
-
-  uint8_t seg_bytes[12]; memset(seg_bytes, 0, sizeof(seg_bytes));
-
-  int seg_byte_num = 6;
-  for (int i = 0; i < seg_byte_num; i++)
-    seg_bytes[i] = (uint8_t)ConvertBitIntoBytes(&Message[(i*8)+24], 8);
-
-  for (int i = 0; i < seg_byte_num; i++)
-    fprintf (stderr, "%02X", seg_bytes[i]);
-
-  //copy to PDU superframe
-  memcpy(state->dmr_pdu_sf[0]+(seg_num-1)*seg_byte_num, seg_bytes, seg_byte_num*sizeof(uint8_t));
-
-  //dump if last one (no check to see if all arrived or not)
-  if (seg_num == seg_len)
-  {
-    fprintf (stderr, "\n Completed Message: ");
-    for (int i = 0; i < (seg_len*seg_byte_num); i++)
-      fprintf (stderr, "%02X", state->dmr_pdu_sf[0][i]);
-
-    //TODO: Decode this.
-    //After review, this is most likely SHIFT-JIS encoded,
-    //http://www.rikai.com/library/kanjitables/kanji_codes.sjis.shtml
-
-    //reset PDU superframe afterwards
-    memset(state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
-  }
-
-}
 
 //externalize multiple sub-element handlers
 void nxdn_location_id_handler (dsd_state * state, uint32_t location_id, uint8_t type)
@@ -1949,6 +1874,335 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
 
 }
 
+//ARIB STD-B54 Messages
+
+//ARIB STD-B54 Page 22 - 選択呼出音声通信 and 選択呼出終話 (Selective Call Info and Call End)
+void NXDN_decode_VCALL_ARIB(dsd_opts * opts, dsd_state * state, uint8_t * Message)
+{
+
+  //MFID is the only difference, this is added, the rest are shifted 8 bits down
+  uint8_t  mfid = 0;
+  uint8_t  CCOption = 0;
+  uint8_t  CallType = 0;
+  uint8_t  VoiceCallOption = 0;
+  uint16_t SourceUnitID = 0;
+  uint16_t DestinationID = 0;
+  uint8_t  CipherType = 0;
+  uint8_t  KeyID = 0;
+  uint8_t  DuplexMode[32] = {0};
+  uint8_t  TransmissionMode[32] = {0};
+
+  uint8_t MessageType;
+  /* Get the "Message Type" field */
+  MessageType  = (Message[2] & 1) << 5;
+  MessageType |= (Message[3] & 1) << 4;
+  MessageType |= (Message[4] & 1) << 3;
+  MessageType |= (Message[5] & 1) << 2;
+  MessageType |= (Message[6] & 1) << 1;
+  MessageType |= (Message[7] & 1) << 0;
+
+  if (MessageType == 0x21) fprintf (stderr, "%s", KGRN); //VCALL
+  else if (MessageType == 0x28) fprintf (stderr, "%s", KYEL); //TX_REL
+
+  mfid = (uint8_t)ConvertBitIntoBytes(&Message[8], 8);
+
+  /* Decode "CC Option" */
+  CCOption = (uint8_t)ConvertBitIntoBytes(&Message[16], 8);
+  state->NxdnElementsContent.CCOption = CCOption;
+
+  /* Decode "Call Type" */
+  CallType = (uint8_t)ConvertBitIntoBytes(&Message[24], 3);
+  state->NxdnElementsContent.CallType = CallType;
+
+  /* Decode "Voice Call Option" */
+  VoiceCallOption = (uint8_t)ConvertBitIntoBytes(&Message[27], 5);
+  state->NxdnElementsContent.VoiceCallOption = VoiceCallOption;
+
+  /* Decode "Source Unit ID" */
+  SourceUnitID = (uint16_t)ConvertBitIntoBytes(&Message[32], 16);
+  state->NxdnElementsContent.SourceUnitID = SourceUnitID;
+
+  /* Decode "Destination ID" */
+  DestinationID = (uint16_t)ConvertBitIntoBytes(&Message[48], 16);
+  state->NxdnElementsContent.DestinationID = DestinationID;
+
+  /* Decode the "Cipher Type" */
+  CipherType = (uint8_t)ConvertBitIntoBytes(&Message[64], 2);
+  state->NxdnElementsContent.CipherType = CipherType;
+
+  /* Decode the "Key ID" */
+  KeyID = (uint8_t)ConvertBitIntoBytes(&Message[66], 6);
+  state->NxdnElementsContent.KeyID = KeyID;
+
+  fprintf (stderr, "\n MFID: %02X; ", mfid);
+
+  /* Print the "CC Option" */
+  if(CCOption & 0x80) fprintf(stderr, "Emergency ");
+  if(CCOption & 0x40) fprintf(stderr, "Visitor ");
+  if(CCOption & 0x20) fprintf(stderr, "Priority Paging ");
+
+  //Call String for Per Call WAV File
+  sprintf (state->call_string[0], "%s", NXDN_Call_Type_To_Str(CallType));
+  if (CCOption & 0x80) strcat (state->call_string[0], " Emergency");
+  if (CipherType) strcat (state->call_string[0], " Enc");
+
+  if((CipherType == 2) || (CipherType == 3))
+  {
+    state->NxdnElementsContent.PartOfCurrentEncryptedFrame = 1;
+    state->NxdnElementsContent.PartOfNextEncryptedFrame    = 2;
+  }
+  else
+  {
+    state->NxdnElementsContent.PartOfCurrentEncryptedFrame = 1;
+    state->NxdnElementsContent.PartOfNextEncryptedFrame    = 1;
+  }
+
+  /* Print the "Call Type" */
+  fprintf (stderr, "%s - ", NXDN_Call_Type_To_Str(CallType));
+  sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType));
+
+  /* Print the "Voice Call Option" */
+  if (MessageType == 0x21) NXDN_Voice_Call_Option_To_Str(VoiceCallOption, DuplexMode, TransmissionMode);
+  if (MessageType == 0x21) fprintf(stderr, "%s %s (%02X) - ", DuplexMode, TransmissionMode, VoiceCallOption);
+  else if (MessageType == 0x28) fprintf (stderr, "  Transmission Release  - "); //TX_REL
+
+  /* Print Source ID and Destination ID (Talk Group or Unit ID) */
+  fprintf(stderr, "Src=%u - Dst/TG=%u ", SourceUnitID & 0xFFFF, DestinationID & 0xFFFF);
+
+  fprintf (stderr, "%s", KNRM);
+
+  //if using the keyloader, then check for a key value first by the key id,
+  //and then if not available, check by the destination (TG) id value
+  //also, for DES and AES, set the nxdn_key varialbe to the DestID for IV and KS gen
+  if (state->keyloader == 1)
+  {
+    //if Scrambler Key (and not running NXDN96 since that has VCALL in the non-voice frames)
+    //NOTE: The scrambler seed carries on the state->R variable so that will reset incorrectly on NXDN96
+    //NOTE: Observed on system with scrambler and AES keys on same TG, disabling loading DES and AES key by DestID
+    if (CipherType == 1 && opts->frame_nxdn48 == 1 && opts->frame_nxdn96 == 0)
+    {
+      if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
+      else if (state->rkey_array[DestinationID] != 0) state->R = state->rkey_array[DestinationID];
+    }
+
+    //if DES Key
+    else if (CipherType == 2)
+    {
+      if (state->rkey_array[KeyID] != 0) state->R = state->rkey_array[KeyID];
+      // else if (state->rkey_array[DestinationID] != 0)
+      // {
+      //   state->R = state->rkey_array[DestinationID];
+      //   state->nxdn_key = DestinationID;
+      // }
+    }
+
+    //if AES Key
+    else if (CipherType == 3)
+    {
+      uint32_t kidx = 0;
+      if (state->rkey_array[KeyID] != 0) kidx = KeyID;
+      // else if (state->rkey_array[DestinationID] != 0) 
+      // {
+      //   kidx = DestinationID;
+      //   state->nxdn_key = DestinationID;
+      // }
+
+      state->A1[0] = state->rkey_array[kidx+0x000];
+      state->A2[0] = state->rkey_array[kidx+0x101];
+      state->A3[0] = state->rkey_array[kidx+0x201];
+      state->A4[0] = state->rkey_array[kidx+0x301];
+
+      //check to see if there is a value loaded or not
+      if (state->A1[0] == 0 && state->A2[0] == 0 && state->A3[0] == 0 && state->A4[0] == 0)
+        state->aes_key_loaded[0] = 0;
+      else state->aes_key_loaded[0] = 1;
+
+      for (int i = 0; i < 8; i++)
+      {
+        state->aes_key[i+0]  = (state->A1[0] >> (56-(i*8))) & 0xFF;
+        state->aes_key[i+8]  = (state->A2[0] >> (56-(i*8))) & 0xFF;
+        state->aes_key[i+16] = (state->A3[0] >> (56-(i*8))) & 0xFF;
+        state->aes_key[i+24] = (state->A4[0] >> (56-(i*8))) & 0xFF;
+      }
+
+      state->R = state->A1[0]; //display KS stub
+    }
+
+  } //end state->keyloader == 1
+
+  /* Print the "Cipher Type" */
+  if(CipherType != 0 && MessageType == 0x21)
+  {
+    fprintf (stderr, "\n  %s", KYEL);
+    fprintf(stderr, "%s - ", NXDN_Cipher_Type_To_Str(CipherType));
+  }
+
+  /* Print the Key ID */
+  if(CipherType != 0 && MessageType == 0x21)
+  {
+    fprintf(stderr, "Key ID %u - ", KeyID & 0xFF);
+    fprintf (stderr, "%s", KNRM);
+  }
+
+  if (CipherType == 0x01 && state->R > 0) //scrambler key value
+  {
+    fprintf (stderr, "%s", KYEL);
+    fprintf(stderr, "Value: %05lld", state->R);
+    fprintf (stderr, "%s", KNRM);
+  }
+
+  if (CipherType == 0x02 && state->R > 0) //DES key value
+  {
+    fprintf (stderr, "%s", KYEL);
+    fprintf(stderr, "Value: %016llX", state->R);
+    fprintf (stderr, "%s", KNRM);
+  }
+
+  if (CipherType == 0x03 && state->R > 0) //AES key stub
+  {
+    fprintf (stderr, "%s", KYEL);
+    fprintf(stderr, "KS: %016llX", state->R);
+    fprintf (stderr, "%s", KNRM);
+  }
+
+  //only grab if VCALL
+  if(MessageType == 0x21)
+  {
+    //only assign rid if not spare and not reserved (happens on private calls, unsure of its significance)
+    if ( (VoiceCallOption & 0xF) < 4) //ideally, only want 0, 1, 2, 3, or 4 (or 6, 7 on telephone calls)
+      state->nxdn_last_rid = SourceUnitID;
+    state->nxdn_last_tg = DestinationID;
+    state->nxdn_key = KeyID;
+    if (CallType == 0 || CallType == 1) //broadcast and group
+      state->gi[0] = 0;
+    else if (CallType == 4) //private
+      state->gi[0] = 1;
+    else state->gi[0] = -1; //unassigned on any other values
+    state->nxdn_cipher_type = CipherType;
+  }
+  else
+  {
+    state->nxdn_last_rid = 0;
+    state->nxdn_last_tg = 0;
+    state->gi[0] = -1;
+    sprintf (state->generic_talker_alias[0], "%s", "");
+    memset (state->nxdn_alias_block_segment, 0, sizeof(state->nxdn_alias_block_segment));
+  }
+
+  //set enc bit here so we can tell playSynthesizedVoice whether or not to play enc traffic
+  if (state->nxdn_cipher_type != 0)
+  {
+    state->dmr_encL = 1;
+  }
+  if (state->nxdn_cipher_type == 0 || state->R != 0)
+  {
+    state->dmr_encL = 0;
+  }
+
+} /* End NXDN_decode_VCALL_ARIB() */
+
+void NXDN_decode_ALIAS_ARIB(dsd_opts * opts, dsd_state * state, uint8_t * Message)
+{
+
+  uint8_t mfid = (uint8_t)ConvertBitIntoBytes(&Message[8], 8);
+
+  //ARIB STD-B54 (p171-172) describes this as always having 3 segments
+  //but this is also signalled, so perhaps it can be variable
+  uint8_t seg_num = (uint8_t)ConvertBitIntoBytes(&Message[16], 4);
+  uint8_t seg_len = (uint8_t)ConvertBitIntoBytes(&Message[20], 4);
+
+  uint8_t seg_bytes[12]; memset(seg_bytes, 0, sizeof(seg_bytes));
+
+  int seg_byte_num = 6;
+  for (int i = 0; i < seg_byte_num; i++)
+    seg_bytes[i] = (uint8_t)ConvertBitIntoBytes(&Message[(i*8)+24], 8);
+
+  if (opts->payload == 1)
+  {
+    fprintf (stderr, "\n Multi Segment Alias %d/%d; ", seg_num, seg_len);
+    for (int i = 0; i < seg_byte_num; i++)
+      fprintf (stderr, "%02X", seg_bytes[i]);
+  }
+  else fprintf (stderr, " %d/%d; ", seg_num, seg_len);
+
+  //copy to PDU superframe
+  memcpy(state->dmr_pdu_sf[0]+(seg_num-1)*seg_byte_num, seg_bytes, seg_byte_num*sizeof(uint8_t));
+
+  int len = seg_byte_num * seg_len;
+
+  //TODO: Do a CRC32 Check, currently relying on each SACCH frame CRC instead
+
+  //extract CRC32
+  uint32_t crc_ext = (state->dmr_pdu_sf[0][len-4] << 24) | (state->dmr_pdu_sf[0][len-3] << 16) | 
+                     (state->dmr_pdu_sf[0][len-2] <<  8) |  state->dmr_pdu_sf[0][len-1];
+
+  //remove CRC32 bytes
+  if (len > 4)
+    len -= 4;
+
+  if (seg_num == seg_len)
+  {
+    if (opts->payload == 1)
+    {
+      fprintf (stderr, "\n Completed Alias Encoded: ");
+      for (int i = 0; i < (seg_len*seg_byte_num); i++)
+        fprintf (stderr, "%02X", state->dmr_pdu_sf[0][i]);
+    }
+
+    //Alias String
+    char alias[500]; memset(alias, 0, sizeof(alias));
+    int ptr = 0;        //pointer to position in alias buffer
+    int k = 0;          //pointer to position in completed message
+    uint16_t sjis = 0;  //SHIFT-JIS character
+    uint8_t  utf8 = 0;  //UTF-8 Character
+    uint32_t c16 = 0;   //Unicode Character returned from sjis_char_to_unicode
+
+    //SHIFT-JIS to UNICODE Conversion
+    setlocale(LC_ALL, ""); //needed when encoded alias contains Japanese (or probably any non-roman charset that isn't default on users terminal)
+
+    if (opts->payload == 1)
+      fprintf (stderr, "\n MFID: %02X; Encoded Len: %d; CRC: %04X; Alias: ", mfid, len, crc_ext);
+    
+    for (int i = 0; i < len; i++)
+    {
+      
+      c16  = 0;
+      utf8 = state->dmr_pdu_sf[0][k];
+      sjis = (state->dmr_pdu_sf[0][k] << 8) | state->dmr_pdu_sf[0][k+1];
+
+      if (utf8 >= 0x20 && utf8 < 0x7F)
+      {
+        c16 = sjis_char_to_unicode(utf8);
+        fprintf (stderr, "%lc", c16);
+        k++;
+      }
+      else if (sjis != 0)
+      {
+        c16 = sjis_char_to_unicode(sjis);
+        fprintf (stderr, "%lc", c16);
+        k+=2;
+      }
+      else if (utf8 == 0 && sjis == 0)
+        break;
+
+      //Encode Unicode to UTF-8 if not a pass-through ASCII control character or 0
+      if (c16 >= 0x0020)
+        ptr += utf8_encode(c16, alias+ptr);
+
+    }
+
+    //terminate string failsafe
+    alias[ptr++] = 0x00;
+    alias[ptr++] = 0x00;
+
+    sprintf (state->generic_talker_alias[0], "%s", alias);
+    sprintf (state->event_history_s[0].Event_History_Items[0].alias, "%s; ", alias);
+
+    //reset PDU superframe afterwards
+    memset(state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
+  }
+
+} /* End NXDN_decode_ALIAS_ARIB() */
 
 char * NXDN_Call_Type_To_Str(uint8_t CallType)
 {

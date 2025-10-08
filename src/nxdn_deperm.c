@@ -1601,10 +1601,11 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 	else if (MessageType == 0x39) fprintf(stderr, " SDCALL_REQ_USERDATA");
 	else if (MessageType == 0x3B) fprintf(stderr, " SDCALL_RESP");
 	else if (MessageType == 0x3F) fprintf(stderr, " ALIAS");
-	//observed from #318
-	else if (MessageType == 0x21) fprintf(stderr, " VCALL_ALINCO");  //needs better name
-	else if (MessageType == 0x28) fprintf(stderr, " TX_REL_ALINCO"); //needs better name
-	else if (MessageType == 0x27) fprintf(stderr, " MS_PDU_ALINCO"); //needs better name
+	//observed from #318 and found in ARIB STD-B54
+	else if (MessageType == 0x21) fprintf(stderr, " VCALL_ARIB_STD_B54");
+	else if (MessageType == 0x28) fprintf(stderr, " TX_REL_ARIB_STD_B54");
+	else if (MessageType == 0x27) fprintf(stderr, " ALIAS_ARIB_STD_B54");
+	//TODO: Add rest of ARIB STD-B54 Message Types (Also, need to add a flag F1 and F2 check here, or earlier and make a seperate one for this)
 	else fprintf(stderr, " Unknown Message Type: %02X;", MessageType);
 	fprintf (stderr, "%s", KNRM);
 

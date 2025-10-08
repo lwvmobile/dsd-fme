@@ -1341,8 +1341,10 @@ void NXDN_decode_site_info(dsd_opts * opts, dsd_state * state, uint8_t * Message
 void NXDN_decode_adj_site(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 //Type-D SCCH Message Decoder
 void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uint8_t direction);
-void NXDN_decode_Alinco_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message);
-void NXDN_decode_Alinco_mpdu(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void NXDN_decode_VCALL_ARIB(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void NXDN_decode_ALIAS_ARIB(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+uint32_t sjis_char_to_unicode(uint16_t sjis);
+int utf8_encode(int c, char *buf);
 
 void dPMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);
 
