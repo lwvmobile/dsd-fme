@@ -167,6 +167,16 @@ void dmrMS (dsd_opts * opts, dsd_state * state)
 
   }
 
+  //Kirisun Check VC-F for Enc Identifiers -- has bad fec, unless its loaded differently
+  //SEE: https://patents.google.com/patent/CN102307075A/en?q=(kirisun)&q=(dmr)&oq=kirisun
+  // if (opts->dmr_le == 3 && vc == 6)
+  // {
+  //   bool kokay = 0;
+  //   // kokay = Golay_24_12_decode(syncdata);
+  //   unsigned long long int kirisun = (unsigned long long int)ConvertBitIntoBytes(&syncdata[0], 48);
+  //   fprintf (stderr, "Kiri: %012llX; Golay Okay: %d; \n", kirisun, kokay);
+  // }
+
   for(i = 0; i < 8; i++) emb_pdu[i + 0] = syncdata[i];
   for(i = 0; i < 8; i++) emb_pdu[i + 8] = syncdata[i + 40];
 

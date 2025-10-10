@@ -12,7 +12,6 @@
 
 void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors)
 {
-  UNUSED2(opts, CRCCorrect);
 
   uint8_t MFID = PI_BYTE[1];
 
@@ -24,6 +23,57 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
     {
       state->last_vc_sync_time = time(NULL);
       state->last_cc_sync_time = time(NULL);
+    }
+
+    if (MFID == 0x0A && CRCCorrect == 1) //Kirisun
+    {
+      uint8_t so  = PI_BYTE[2]; //in VLC and PI, this byte is 0x40, so thinking this could be SVC_OPT
+      uint8_t alg = PI_BYTE[0]; //observed 0x36 and 0x37 for Kirisun Advanced and Universal Privacy
+      // uint8_t kid = PI_BYTE[2]; //user info conveyed there is only 16 allotments for Key, and keys are channel specific, so no key id value
+      uint32_t target = ((unsigned long long int)PI_BYTE[7] << 16) | ((unsigned long long int)PI_BYTE[8] << 8)  | ((unsigned long long int)PI_BYTE[9] << 0);
+
+      //TODO: Use TGT value here to produce a key id via hashing it
+      uint8_t hash = target % 256; //more complex hash later
+
+      //MI only appears to be 32-bit
+      unsigned long long int mi = ((unsigned long long int)PI_BYTE[3] << 24) | ((unsigned long long int)PI_BYTE[4] << 16) | 
+                                  ((unsigned long long int)PI_BYTE[5] << 8)  | ((unsigned long long int)PI_BYTE[6] << 0);
+
+      if (state->currentslot == 0)
+      {
+        state->dmr_so = so;
+        state->payload_algid = alg; 
+        state->payload_keyid = hash;
+        state->payload_mi = mi;
+      }
+      else
+      {
+        state->dmr_soR = so;
+        state->payload_algidR = alg;
+        state->payload_keyidR = hash;
+        state->payload_miR = mi;
+      }
+
+      fprintf (stderr, "%s ", KYEL);
+      fprintf (stderr, "\n Slot %d", state->currentslot+1);
+      fprintf (stderr, " DMR PI H- ALG ID: %02X; KEY ID: %02X; MI(32): %08llX;", alg, hash, mi);
+
+      fprintf (stderr, " Kirisun ");
+      if (alg == 0x36)
+        fprintf (stderr, "Advanced;");
+      else if (alg == 0x37)
+        fprintf (stderr, "Universal;");
+      else fprintf (stderr, "Unknown;");
+      fprintf (stderr, "%s", KNRM);
+
+      //disable late entry for DMRA, Flag 3 for future check of VC-F 48-bit region with Golay 24,12 Encoding
+      //SEE: https://patents.google.com/patent/CN102307075A/en?q=(kirisun)&q=(dmr)&oq=kirisun
+      //tested patent above with information provided, VC-F had a SB, but the 48-bit
+      //full value yielded bad Golay results, and user submitted info contradicts this patent for samples provided
+      //Late Entry MI does appear to work, however, and reports a good CRC for that as well,
+      //but the LFSR or method to get to the next MI or len of it is unknown as of yet.
+      opts->dmr_le = 3;
+
     }
 
     if (MFID == 0x68) //Hytera Enhanced

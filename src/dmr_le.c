@@ -390,6 +390,28 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   //NOTE: on above, I belive that we need to check by opcode as well, as a CRC3 can have multiple collisions
   //so we need to exclude op/alg 0 and 3 from the check (does algID 0x03/0x23 even exist?)
 
+  if (opts->dmr_le == 3)
+  {
+    if (sbrc_hex != 0) //Kirisun Placeholder, first had 0x5F1, second batch had 0x5E1 instead
+    {
+      fprintf (stderr, "\n");
+      fprintf (stderr, "%s", KCYN);
+      fprintf (stderr, " Slot %d", state->currentslot+1);
+      fprintf (stderr, " DMR LE SB Kirisun Encryption;");
+      fprintf (stderr, "%s ", KNRM);
+      if (state->currentslot == 0)
+      {
+        if (state->payload_algid == 0)
+          state->payload_algid = 0x35;
+      }
+      else
+      {
+        if (state->payload_algidR == 0)
+          state->payload_algidR = 0x35;
+      }
+    }
+  }
+
   if (opts->dmr_le == 1)
   {
     if (irr_err != 0)

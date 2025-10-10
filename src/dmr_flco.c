@@ -72,6 +72,13 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       so ^= 0x40;
   }
 
+  //Kirisun
+  if (*IrrecoverableErrors == 0 && CRCCorrect == 1 && fid == 0x0A) //&& (so & 0x40) == 0x40
+  {
+      //disable late entry for DMRA, Flag 3 for future checks
+      opts->dmr_le = 3;
+  }
+
   //read ahead a little to get this for the xpt flag
   if (*IrrecoverableErrors == 0 && flco == 0x09 && fid == 0x68)
   {
@@ -310,8 +317,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     }
 
     //unknown other manufacturer or OTA ENC, etc.
-    //removed tait from the list, added hytera 0x08
-    if (fid != 0 && fid != 0x68 && fid != 0x10 && fid != 0x08 && is_kenwood_sc == 0)
+    //removed tait from the list, added hytera 0x08, added Kirisun and KW Scrambler LC
+    if (fid != 0 && fid != 0x68 && fid != 0x10 && fid != 0x08 && fid != 0x0A && is_kenwood_sc == 0)
     {
       if (type == 1) fprintf (stderr, "%s \n", KYEL);
       if (type == 2) fprintf (stderr, "%s \n", KYEL);
@@ -654,6 +661,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     }
 
     //should rework this back into the upper portion
+    if (fid == 0x0A) fprintf (stderr, "Kirisun ");
     if (fid == 0x68) fprintf (stderr, "Hytera ");
     if (is_xpt) fprintf (stderr, "XPT ");
     if (fid == 0x68 && flco == 0x00)

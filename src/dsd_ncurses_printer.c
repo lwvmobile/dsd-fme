@@ -1109,6 +1109,26 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
           printw(" Key: %010llX", state->R);
       attron(COLOR_PAIR(3));
     }
+    if (state->payload_algid == 0x36)
+    {
+      attron(COLOR_PAIR(1));
+      printw("Kirisun Advanced");
+      if (state->aes_key_loaded[0] != 0) { printw("KS: %016llX ", state->A4[0]); }
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algid == 0x37)
+    {
+      attron(COLOR_PAIR(1));
+      printw("Kirisun Universal");
+      if (state->aes_key_loaded[0] != 0) { printw("KS: %016llX ", state->A4[0]); }
+      attron(COLOR_PAIR(3));
+    }
+    if (state->payload_algid == 0x35)
+    {
+      attron(COLOR_PAIR(1));
+      printw("Kirisun Encryption"); //0x35 is a placeholder if gained through late-entry method and alg is not known
+      attron(COLOR_PAIR(3));
+    }
 
     printw ("\n");
 
@@ -1282,6 +1302,26 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw("Hytera Enhanced");
         if (state->RR != 0)
           printw(" Key: %010llX", state->RR);
+        attron(COLOR_PAIR(3));
+      }
+      if (state->payload_algidR == 0x36)
+      {
+        attron(COLOR_PAIR(1));
+        printw("Kirisun Advanced");
+        if (state->aes_key_loaded[1] != 0) { printw("KS: %016llX ", state->A4[1]); }
+        attron(COLOR_PAIR(3));
+      }
+      if (state->payload_algidR == 0x37)
+      {
+        attron(COLOR_PAIR(1));
+        printw("Kirisun Universal");
+        if (state->aes_key_loaded[1] != 0) { printw("KS: %016llX ", state->A4[1]); }
+        attron(COLOR_PAIR(3));
+      }
+      if (state->payload_algidR == 0x35)
+      {
+        attron(COLOR_PAIR(1));
+        printw("Kirisun Encryption"); //0x35 is a placeholder if gained through late-entry method and alg is not known
         attron(COLOR_PAIR(3));
       }
 
