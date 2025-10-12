@@ -1646,6 +1646,9 @@ void ken_dmr_scrambler_keystream_creation(dsd_state * state, char * input);
 void anytone_bp_keystream_creation(dsd_state * state, char * input);
 void straight_mod_xor_keystream_creation(dsd_state * state, char * input);
 
+//Kirisun
+uint32_t kirisun_lfsr(unsigned long long int mi);
+
 //Hytera Enhanced
 void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value);
 unsigned long long int hytera_lfsr(uint8_t * mi, uint8_t * taps, uint8_t len);

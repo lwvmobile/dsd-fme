@@ -75,8 +75,10 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   //Kirisun
   if (*IrrecoverableErrors == 0 && CRCCorrect == 1 && fid == 0x0A) //&& (so & 0x40) == 0x40
   {
-      //disable late entry for DMRA, Flag 3 for future checks
-      opts->dmr_le = 3;
+      //disable late entry for DMRA, Flag 3 if encrypted, 0 if not
+      if (so & 0x40)
+        opts->dmr_le = 3;
+      else opts->dmr_le = 0;
   }
 
   //read ahead a little to get this for the xpt flag

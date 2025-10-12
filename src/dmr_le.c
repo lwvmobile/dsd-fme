@@ -236,6 +236,23 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%s\n", KNRM);
     }
 
+    if (state->payload_algid == 0x35 || state->payload_algid == 0x36 || state->payload_algid == 0x37)
+    {
+      state->DMRvcL = 0;
+      state->payload_mi = kirisun_lfsr(state->payload_mi);
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, " Slot 1");
+      fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", state->payload_algid, state->payload_keyid);
+      fprintf (stderr, " MI(32): %08llX;", state->payload_mi);
+      fprintf (stderr, " Kirisun");
+      if (state->payload_algid == 0x36)
+        fprintf (stderr, " Advanced;");
+      else if (state->payload_algid == 0x37)
+        fprintf (stderr, " Universal;");
+      else fprintf (stderr, " Encryption;");
+      fprintf (stderr, "%s\n", KNRM);
+    }
+
   }
   if (state->currentslot == 1)
   {
@@ -265,6 +282,23 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
       fprintf (stderr, " Hytera Enhanced;");
       fprintf (stderr, "%s\n", KNRM);
     } 
+
+    if (state->payload_algidR == 0x35 || state->payload_algidR == 0x36 || state->payload_algidR == 0x37)
+    {
+      state->DMRvcR = 0;
+      state->payload_miR = kirisun_lfsr(state->payload_miR);
+      fprintf (stderr, "%s", KYEL);
+      fprintf (stderr, " Slot 2");
+      fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", state->payload_algidR, state->payload_keyidR);
+      fprintf (stderr, " MI(32): %08llX;", state->payload_miR);
+      fprintf (stderr, " Kirisun");
+      if (state->payload_algidR == 0x36)
+        fprintf (stderr, " Advanced;");
+      else if (state->payload_algidR == 0x37)
+        fprintf (stderr, " Universal;");
+      else fprintf (stderr, " Encryption;");
+      fprintf (stderr, "%s\n", KNRM);
+    }
 
   }
 
@@ -390,24 +424,37 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   //NOTE: on above, I belive that we need to check by opcode as well, as a CRC3 can have multiple collisions
   //so we need to exclude op/alg 0 and 3 from the check (does algID 0x03/0x23 even exist?)
 
+  //Kirisun Placeholder
   if (opts->dmr_le == 3)
   {
-    if (sbrc_hex != 0) //Kirisun Placeholder, first had 0x5F1, second batch had 0x5E1 instead
+    if (irr_err != 0)
+    {
+      uint32_t sbrcpl = 0;
+      for(i = 0; i < 32; i++)
+      {
+        sbrcpl = sbrcpl << 1;
+        sbrcpl |= sbrc_interleaved[i] & 1;
+      }
+      if (opts->payload == 0) fprintf (stderr, "\n");
+      fprintf (stderr, "%s SLOT %d SB/RC (FEC ERR) E:%d; I:%08X D:%03X; %s ", KRED, slot+1, irr_err, sbrcpl, sbrc_hex, KNRM);
+      if (opts->payload == 1) fprintf (stderr, "\n");
+    }
+    else if (irr_err == 0 && sbrc_hex != 0) //first batch had sbrc_hex 0x5F1, second batch had 0x5E1 instead, what changed?
     {
       fprintf (stderr, "\n");
       fprintf (stderr, "%s", KCYN);
       fprintf (stderr, " Slot %d", state->currentslot+1);
-      fprintf (stderr, " DMR LE SB Kirisun Encryption;");
+      fprintf (stderr, " DMR LE SB Kirisun Encryption Identifier;");
       fprintf (stderr, "%s ", KNRM);
       if (state->currentslot == 0)
       {
-        if (state->payload_algid == 0)
-          state->payload_algid = 0x35;
+        if (state->payload_algid == 0 && state->dmr_so & 0x40)
+          state->payload_algid = 0x35; //placeholder value
       }
       else
       {
-        if (state->payload_algidR == 0)
-          state->payload_algidR = 0x35;
+        if (state->payload_algidR == 0  && state->dmr_soR & 0x40)
+          state->payload_algidR = 0x35; //placeholder value
       }
     }
   }
