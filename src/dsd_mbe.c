@@ -19,6 +19,7 @@
 #include "bp.h"
 #include "pc4.h"
 #include "rc2.h"
+#include "pc5.h"
 
 //NOTE: This set of functions will be reorganized and simplified (hopefully) or at least
 //a more logical flow will be established to jive with the new audio handling
@@ -887,6 +888,20 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 
       }
 
+      //DMR BAOFENG AP, Either Slot (static single key'd enforced KS)
+      if (state->baofeng_ap == 1)
+      {
+        
+        short frame1_cipher[49];
+        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
+        
+        decrypt_frame_49_pc5(frame1_cipher);
+        
+        memset (ambe_d, 0, 49*sizeof(char));
+        for (int i = 0; i < 49; i++) ambe_d[i] = ctxpc5.bits[i];
+
+      }
+
       //DMR TYT EP, Either Slot (static single key'd enforced KS)
       if (state->tyt_ep == 1)
       {
@@ -1274,6 +1289,20 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
  
         memset (ambe_d, 0, 49*sizeof(char));
         for (int i = 0; i < 49; i++) ambe_d[i] = ctx.bits[i];
+
+      }
+
+      //DMR BAOFENG AP, Either Slot (static single key'd enforced KS)
+      if (state->baofeng_ap == 1)
+      {
+        
+        short frame1_cipher[49];
+        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
+        
+        decrypt_frame_49_pc5(frame1_cipher);
+        
+        memset (ambe_d, 0, 49*sizeof(char));
+        for (int i = 0; i < 49; i++) ambe_d[i] = ctxpc5.bits[i];
 
       }
 

@@ -1002,6 +1002,9 @@ typedef struct
   //anytone bp
   int any_bp;
 
+  //baofeng ap
+  int baofeng_ap;
+
   //generic ks
   int straight_ks;
   int straight_mod;
@@ -1644,6 +1647,7 @@ void tyt_ap_pc4_keystream_creation(dsd_state * state, char * input);
 void retevis_rc2_keystream_creation(dsd_state *state, char *input);
 void ken_dmr_scrambler_keystream_creation(dsd_state * state, char * input);
 void anytone_bp_keystream_creation(dsd_state * state, char * input);
+void baofeng_ap_pc5_keystream_creation(dsd_state *state, char *input);
 void straight_mod_xor_keystream_creation(dsd_state * state, char * input);
 
 //Kirisun

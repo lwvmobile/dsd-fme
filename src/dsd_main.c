@@ -1065,6 +1065,7 @@
    state->tyt_bp = 0;
    state->tyt_ep = 0;
    state->retevis_ap = 0;
+   state->baofeng_ap = 0;
 
    state->ken_sc = 0;
    state->any_bp = 0;
@@ -1579,6 +1580,11 @@
    printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
    printf ("                 -5 '736B9A9C5645288B 243AD5CB8701EF8A' \n");
    printf ("                 \n");
+   printf ("  -+ <hex>      Manually Enter and Enforce Baofeng Advanced Privacy (PC5-128 or PC5-256) AP Hex Key (see example below)\n");
+   printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
+   printf ("                 -+ 'ABCDABCDABCDABCD ABDCDABCDABCDABC' \n");
+   printf ("                 -+ 'ABCDABCDABCDABCD ABDCDABCDABCDABC EF01EF01EF01EF01 EF01EF01EF01EF01' \n");
+   printf ("                 \n");
    printf ("  -9 <dec>      Manually Enter and Enforce Kenwood 15-bit Scrambler Key Value (DMR) (Dec Value) \n");
    printf ("                 \n");
    printf ("  -A <hex>      Manually Enter and Enforce Anytone 16-bit BP Key Value (DMR) (Hex Value) \n");
@@ -1909,7 +1915,7 @@
  
    exitflag = 0;
  
-   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF@:!:01:2:345:6:7:8*:9:Ek:I:J:O")) != -1)
+   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF@:!:01:2:345:6:7:8*:9:Ek:I:J:O+:")) != -1)
      {
  
        switch (c)
@@ -2016,6 +2022,11 @@
          //get user Anytone BP Key and Force Its application
          case 'A':
            anytone_bp_keystream_creation(&state, optarg);
+           break;
+
+          //get user Baofeng AP Key and Force Its application
+         case '+':
+           baofeng_ap_pc5_keystream_creation(&state, optarg);
            break;
 
          //Straight KS Generation
