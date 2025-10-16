@@ -1066,6 +1066,7 @@
    state->tyt_ep = 0;
    state->retevis_ap = 0;
    state->baofeng_ap = 0;
+   state->csi_ee = 0;
 
    state->ken_sc = 0;
    state->any_bp = 0;
@@ -1585,6 +1586,9 @@
    printf ("                 -+ 'ABCDABCDABCDABCD ABDCDABCDABCDABC' \n");
    printf ("                 -+ 'ABCDABCDABCDABCD ABDCDABCDABCDABC EF01EF01EF01EF01 EF01EF01EF01EF01' \n");
    printf ("                 \n");
+   printf ("  -^ <hex>      Manually Enter and Enforce Connect Systems 72-bit (9-byte) Extended Encryption Hex Key (see example below)\n");
+   printf ("                 -^  3BBE782C0430008271\n");
+   printf ("                 \n");
    printf ("  -9 <dec>      Manually Enter and Enforce Kenwood 15-bit Scrambler Key Value (DMR) (Dec Value) \n");
    printf ("                 \n");
    printf ("  -A <hex>      Manually Enter and Enforce Anytone 16-bit BP Key Value (DMR) (Hex Value) \n");
@@ -1915,7 +1919,7 @@
  
    exitflag = 0;
  
-   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF@:!:01:2:345:6:7:8*:9:Ek:I:J:O+:")) != -1)
+   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF@:!:01:2:345:6:^:7:8*:9:Ek:I:J:O+:")) != -1)
      {
  
        switch (c)
@@ -2012,6 +2016,13 @@
          //get user TYT EP Key and Force Its application
          case '5':
            tyt_ep_aes_keystream_creation(&state, optarg);
+           break;
+
+         //get user CSI EE Key and Force Its application
+         case '^':
+           parse_raw_user_string(optarg, state.static_ks_bits[0]);
+           fprintf (stderr,"DMR CS Extended 72-bit Key with Forced Application\n");
+           state.csi_ee = 1;
            break;
 
          //get user Kenwood DMR Scrambler Key and Force Its application

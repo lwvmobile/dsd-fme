@@ -1,4 +1,4 @@
-Build Version: AW 2025-202-geb24239 
+Build Version: AW 2025-203-g8ea6415 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -192,6 +192,9 @@ Advanced Decoder options:
                  Encapulate in Single Quotation Marks; Space every 16 chars.
                  -+ 'ABCDABCDABCDABCD ABDCDABCDABCDABC' 
                  -+ 'ABCDABCDABCDABCD ABDCDABCDABCDABC EF01EF01EF01EF01 EF01EF01EF01EF01' 
+                 
+  -^ <hex>      Manually Enter and Enforce Connect Systems 72-bit (9-byte) Extended Encryption Hex Key (see example below)
+                 -^  3BBE782C0430008271
                  
   -9 <dec>      Manually Enter and Enforce Kenwood 15-bit Scrambler Key Value (DMR) (Dec Value) 
                  
