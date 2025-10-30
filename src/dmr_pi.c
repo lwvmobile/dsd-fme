@@ -32,8 +32,8 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
       // uint8_t kid = PI_BYTE[2]; //user info conveyed there is only 16 allotments for Key, and keys are channel specific, so no key id value
       uint32_t target = ((unsigned long long int)PI_BYTE[7] << 16) | ((unsigned long long int)PI_BYTE[8] << 8)  | ((unsigned long long int)PI_BYTE[9] << 0);
 
-      //TODO: Use TGT value here to produce a key id via hashing it
-      uint8_t hash = target % 256; //more complex hash later
+      //TODO: Use ALG and TGT value here to produce a key id via hashing it
+      uint8_t hash = alg * target % 256; //more complex hash later (honestly, probably not)
 
       //MI only appears to be 32-bit
       uint32_t mi = ((uint32_t)PI_BYTE[3] << 24) | ((uint32_t)PI_BYTE[4] << 16) | 
@@ -71,7 +71,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
       //tested patent above with information provided, VC-F had a SB, but the 48-bit
       //full value yielded bad Golay results, and user submitted info contradicts this patent for samples provided
       //Late Entry MI does appear to work, however, and reports a good CRC for that as well,
-      //but the LFSR or method to get to the next MI or len of it is unknown as of yet.
+      //reverse engineered LFSR for Kirisun lines up with the late entry for 32-bit MI values.
       opts->dmr_le = 3;
 
     }

@@ -1555,8 +1555,8 @@
    printf ("                 -H 0B57935150 \n");
    printf ("                 -H '736B9A9C5645288B 243AD5CB8701EF8A' \n");
    printf ("                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' \n");
-   printf ("\n");           //may move to using the rkey_array with an offset for additional key values
-   printf ("  -H <hex>      Manually Enter AES-128 or AES-256 Hex Key (see example below)\n");
+   printf ("\n");
+   printf ("  -H <hex>      Manually Enter AES-128, AES-256, or Kirisun-256 Hex Key (see example below)\n");
    printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
    printf ("                 -H '736B9A9C5645288B 243AD5CB8701EF8A' \n");
    printf ("                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' \n");
@@ -1600,6 +1600,8 @@
    printf ("                    -S 49:123456789ABC80\n");
    printf ("                  For Example, enter 49-bit Keystream (MBP 70) as:\n");
    printf ("                    -S 49:ED0AED4AED4AED4A\n");
+   printf ("                  For Example, Baofeng 49-bit Keystream for 56-bit Custom Encryption as:\n");
+   printf ("                    -S 49:11AA22BB33CC44\n");
    printf ("                 \n");
    printf ("  -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.\n");
    printf ("                  Only supports NXDN, DMR Basic Privacy (decimal value). \n");

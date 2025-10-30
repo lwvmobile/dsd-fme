@@ -1656,6 +1656,8 @@ void straight_mod_xor_keystream_creation(dsd_state * state, char * input);
 
 //Kirisun
 uint32_t kirisun_lfsr(unsigned long long int mi);
+void kirisun_adv_keystream_creation(dsd_state *state);
+void kirisun_uni_keystream_creation(dsd_state *state);
 
 //Hytera Enhanced
 void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value);

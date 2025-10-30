@@ -1,4 +1,4 @@
-Build Version: AW 2025-203-g8ea6415 
+Build Version: AW 2025-204-g0060378 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -163,7 +163,7 @@ Advanced Decoder options:
                  -H '736B9A9C5645288B 243AD5CB8701EF8A' 
                  -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' 
 
-  -H <hex>      Manually Enter AES-128 or AES-256 Hex Key (see example below)
+  -H <hex>      Manually Enter AES-128, AES-256, or Kirisun-256 Hex Key (see example below)
                  Encapulate in Single Quotation Marks; Space every 16 chars.
                  -H '736B9A9C5645288B 243AD5CB8701EF8A' 
                  -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' 
@@ -207,6 +207,8 @@ Advanced Decoder options:
                     -S 49:123456789ABC80
                   For Example, enter 49-bit Keystream (MBP 70) as:
                     -S 49:ED0AED4AED4AED4A
+                  For Example, Baofeng 49-bit Keystream for 56-bit Custom Encryption as:
+                    -S 49:11AA22BB33CC44
                  
   -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.
                   Only supports NXDN, DMR Basic Privacy (decimal value). 
@@ -245,3 +247,4 @@ Advanced Decoder options:
 
  Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.txt
  Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.txt
+

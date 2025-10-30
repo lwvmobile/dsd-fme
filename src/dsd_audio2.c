@@ -100,7 +100,7 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
         encL = 0;
       }
     }
-    else if (state->payload_algid == 0x24 || state->payload_algid == 0x25)
+    else if (state->payload_algid == 0x24 || state->payload_algid == 0x25 || state->payload_algid == 0x36 || state->payload_algid == 0x37)
     {
       //going to need a better check for this later on, or seperated keys or something
       if (state->aes_key_loaded[0] == 1)
@@ -126,7 +126,7 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
         encR = 0;
       }
     }
-    else if (state->payload_algidR == 0x24 || state->payload_algidR == 0x25)
+    else if (state->payload_algidR == 0x24 || state->payload_algidR == 0x25 || state->payload_algidR == 0x36 || state->payload_algidR == 0x37)
     {
       //going to need a better check for this later on, or seperated keys or something
       if (state->aes_key_loaded[1] == 1)
@@ -716,7 +716,7 @@ void playSynthesizedVoiceFM (dsd_opts * opts, dsd_state * state)
         encL = 0;
       }
     }
-    else if (state->payload_algid == 0x84 || state->payload_algid == 0x89 || state->nxdn_cipher_type == 0x3)
+    else if (state->payload_algid == 0x84 || state->payload_algid == 0x89 || state->nxdn_cipher_type == 0x3 || state->payload_algid == 0x36 || state->payload_algid == 0x37)
     {
       if (state->aes_key_loaded[0] == 1)
       {
@@ -1131,7 +1131,7 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
         encL = 0;
       }
     }
-    else if (state->payload_algid == 0x24 || state->payload_algid == 0x25)
+    else if (state->payload_algid == 0x24 || state->payload_algid == 0x25 || state->payload_algid == 0x36 || state->payload_algid == 0x37)
     {
       //going to need a better check for this later on, or seperated keys or something
       if (state->aes_key_loaded[0] == 1)
@@ -1157,7 +1157,7 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
         encR = 0;
       }
     }
-    else if (state->payload_algidR == 0x24 || state->payload_algidR == 0x25)
+    else if (state->payload_algidR == 0x24 || state->payload_algidR == 0x25 || state->payload_algidR == 0x36 || state->payload_algidR == 0x37)
     {
       //going to need a better check for this later on, or seperated keys or something
       if (state->aes_key_loaded[1] == 1)

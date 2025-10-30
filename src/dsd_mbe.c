@@ -714,6 +714,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             (state->currentslot == 0 && state->payload_algid == 0x25 && state->aes_key_loaded[0] == 1 ) || //DMR AES256
             (state->currentslot == 0 && state->payload_algid == 0x89 && state->aes_key_loaded[0] == 1 ) || //P25 AES128
             (state->currentslot == 0 && state->payload_algid == 0x84 && state->aes_key_loaded[0] == 1 ) || //P25 AES256
+            (state->currentslot == 0 && state->payload_algid == 0x36 && state->aes_key_loaded[0] == 1 ) || //KIRI ADV
+            (state->currentslot == 0 && state->payload_algid == 0x37 && state->aes_key_loaded[0] == 1 ) || //KIRI UNI
             (state->currentslot == 0 && state->payload_algid == 0x02 && state->R != 0 )                  ) //HYT ENHANCED
       {
 
@@ -747,6 +749,16 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           {
             n = 0;
             hytera_enhanced_rc4_setup(opts, state, state->R, state->payload_mi);
+          }
+          if (state->payload_algid == 0x36)
+          {
+            n = 0;
+            kirisun_adv_keystream_creation(state);
+          }
+          if (state->payload_algid == 0x37)
+          {
+            n = 0;
+            kirisun_uni_keystream_creation(state);
           }
 
           //Load Keystream Octet Bytes directly into keystream array //TODO: Convert to unpack function
@@ -1119,6 +1131,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             (state->currentslot == 1 && state->payload_algidR == 0x25 && state->aes_key_loaded[1] == 1 ) || //DMR AES256
             (state->currentslot == 1 && state->payload_algidR == 0x89 && state->aes_key_loaded[1] == 1 ) || //P25 AES128
             (state->currentslot == 1 && state->payload_algidR == 0x84 && state->aes_key_loaded[1] == 1 ) || //P25 AES256
+            (state->currentslot == 1 && state->payload_algidR == 0x36 && state->aes_key_loaded[1] == 1 ) || //KIRI ADV
+            (state->currentslot == 1 && state->payload_algidR == 0x37 && state->aes_key_loaded[1] == 1 ) || //KIRI UNI
             (state->currentslot == 1 && state->payload_algidR == 0x02 && state->RR != 0 )                 ) //HYT ENHANCED
       {
 
@@ -1152,6 +1166,16 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           {
             n = 0;
             hytera_enhanced_rc4_setup(opts, state, state->RR, state->payload_miR);
+          }
+          if (state->payload_algidR == 0x36)
+          {
+            n = 0;
+            kirisun_adv_keystream_creation(state);
+          }
+          if (state->payload_algidR == 0x37)
+          {
+            n = 0;
+            kirisun_uni_keystream_creation(state);
           }
 
           //Load Keystream Octet Bytes directly into keystream array
