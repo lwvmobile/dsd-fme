@@ -185,6 +185,20 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   char zeroes[49]; memset(zeroes, 0, sizeof(zeroes));
   size_t zeroes_threshold = 20;
 
+  if (state->forced_alg_id > 1 && state->forced_alg_id != 0x16) //1 and 0x16 is saved for BP stuff, so anything higher than that (Kirisun, requires svc opts set as well)
+  {
+    if (state->currentslot == 0 && state->dmr_so & 0x40)
+    {
+      state->payload_algid = state->forced_alg_id;
+      state->payload_keyid = 0xFF;
+    }
+    if (state->currentslot == 1 && state->dmr_soR & 0x40)
+    {
+      state->payload_algidR = state->forced_alg_id;
+      state->payload_keyidR = 0xFF;
+    }
+  }
+
   //these conditions should ensure no clashing with the BP/HBP/Scrambler key loading machanisms already coded in
   if (state->currentslot == 0 && state->payload_algid != 0 && state->payload_algid != 0x80 && state->keyloader == 1)
     keyring (opts, state);
@@ -460,7 +474,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
     state->errs2 += mbe_eccAmbe3600x2450Data (ambe_fr, ambe_d);
 
     if ( (state->nxdn_cipher_type == 0x01 && state->R != 0) ||
-          (state->M == 1 && state->R > 0) )
+          (state->forced_alg_id == 1 && state->R > 0) )
     {
 
       if (state->payload_miN == 0)
@@ -568,7 +582,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       //EXPERIMENTAL!!
       //load basic privacy key number from array by the tg value (if not forced)
       //currently only Moto BP and Hytera 10 Char BP
-      if (state->M == 0 && state->payload_algid == 0)
+      if (state->forced_alg_id == 0 && state->payload_algid == 0)
       {
         //see if we need to hash a value larger than 16-bits
         hash = state->lasttg & 0xFFFFFF;
@@ -594,7 +608,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       }
 
       if ( (state->K > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10) ||
-            (state->K > 0 && state->M == 1) )
+            (state->K > 0 && state->forced_alg_id == 1) )
       {
         k = BPK[state->K];
         k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
@@ -606,7 +620,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       }
 
       if ( (state->K1 > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68) ||
-            (state->K1 > 0 && state->M == 1) )
+            (state->K1 > 0 && state->forced_alg_id == 1) )
       {
 
       int pos = 0;
@@ -1030,7 +1044,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       //EXPERIMENTAL!!
       //load basic privacy key number from array by the tg value (if not forced)
       //currently only Moto BP and Hytera 10 Char BP
-      if (state->M == 0 && state->payload_algidR == 0)
+      if (state->forced_alg_id == 0 && state->payload_algidR == 0)
       {
         //see if we need to hash a value larger than 16-bits
         hash = state->lasttgR & 0xFFFFFF;
@@ -1056,7 +1070,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       }
 
       if ( (state->K > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10) ||
-            (state->K > 0 && state->M == 1) )
+            (state->K > 0 && state->forced_alg_id == 1) )
       {
         k = BPK[state->K];
         k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
@@ -1068,7 +1082,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       }
 
       if ( (state->K1 > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68) ||
-            (state->K1 > 0 && state->M == 1))
+            (state->K1 > 0 && state->forced_alg_id == 1))
       {
 
         int pos = 0;

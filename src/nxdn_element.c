@@ -189,7 +189,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
 
           state->nxdn_last_rid = 0;
           state->nxdn_last_tg = 0;
-          if (state->M == 0)
+          if (state->forced_alg_id == 0)
             state->nxdn_cipher_type = 0;
           sprintf (state->nxdn_call_type, "%s", "");
 
@@ -207,7 +207,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
 
           state->nxdn_last_rid = 0;
           state->nxdn_last_tg = 0;
-          if (state->M == 0)
+          if (state->forced_alg_id == 0)
             state->nxdn_cipher_type = 0;
           sprintf (state->nxdn_call_type, "%s", "");
           #endif
@@ -689,7 +689,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
           fprintf (stderr, " Key Loaded: %lld", state->rkey_array[DestinationID]);
           state->payload_miN = state->R; //should be okay to load here, will test
         }
-        if (state->M == 1) state->nxdn_cipher_type = 0x1;
+        if (state->forced_alg_id == 1) state->nxdn_cipher_type = 0x1;
       }
       //rtl
       else if (opts->audio_in_type == 3)
@@ -737,7 +737,7 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
           fprintf (stderr, " Key Loaded: %lld", state->rkey_array[DestinationID]);
           state->payload_miN = state->R; //should be okay to load here, will test
         }
-        if (state->M == 1) state->nxdn_cipher_type = 0x1;
+        if (state->forced_alg_id == 1) state->nxdn_cipher_type = 0x1;
         #endif
       }
 
@@ -1760,7 +1760,7 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
               //check the rkey array for a scrambler key value
               //TGT ID and Key ID could clash though if csv or system has both with different keys
               if (state->rkey_array[id] != 0) state->R = state->rkey_array[id];
-              if (state->M == 1) state->nxdn_cipher_type = 0x1;
+              if (state->forced_alg_id == 1) state->nxdn_cipher_type = 0x1;
             }
             //rtl
             else if (opts->audio_in_type == 3)
@@ -1779,7 +1779,7 @@ void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uin
               //check the rkey array for a scrambler key value
               //TGT ID and Key ID could clash though if csv or system has both with different keys
               if (state->rkey_array[id] != 0) state->R = state->rkey_array[id];
-              if (state->M == 1) state->nxdn_cipher_type = 0x1;
+              if (state->forced_alg_id == 1) state->nxdn_cipher_type = 0x1;
               #endif
             }
 

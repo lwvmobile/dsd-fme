@@ -921,11 +921,11 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       //toggle enforcement of basic privacy key over enc bit set on traffic
       if (option == 4)
       {
-        if (state->M == 1 || state->M == 0x21)
+        if (state->forced_alg_id == 1 || state->forced_alg_id == 0x21)
         {
-          state->M = 0;
+          state->forced_alg_id = 0;
         }
-        else state->M = 1;
+        else state->forced_alg_id = 1;
       }
 
       if (option == 5)
@@ -951,11 +951,11 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
       //toggle enforcement of rc4 key over missing pi header/le on DMR
       // if (option == 6)
       // {
-      //   if (state->M == 1 || state->M == 0x21)
+      //   if (state->forced_alg_id == 1 || state->forced_alg_id == 0x21)
       //   {
-      //     state->M = 0;
+      //     state->forced_alg_id = 0;
       //   }
-      //   else state->M = 0x21;
+      //   else state->forced_alg_id = 0x21;
       // }
 
       //load AES keys

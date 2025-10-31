@@ -465,7 +465,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		if (state->rkey_array[limazulu] != 0)
 			state->R = state->rkey_array[limazulu];
 
-		if (state->R != 0 && state->M == 1) state->nxdn_cipher_type = 0x1;
+		if (state->R != 0 && state->forced_alg_id == 1) state->nxdn_cipher_type = 0x1;
 
 		//add additional time to last_sync_time for LimaZulu to hold on current frequency
 		//a little longer without affecting normal scan time on trunk_hangtime variable
@@ -521,7 +521,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	if (voice && facch == 1) //facch steal 1 -- before voice
 	{
 		//force scrambler here, but with unspecified key (just use what's loaded)
-		if (state->M == 1 && state->R != 0) state->nxdn_cipher_type = 0x1;
+		if (state->forced_alg_id == 1 && state->R != 0) state->nxdn_cipher_type = 0x1;
 		//roll the voice scrambler LFSR here if key available to advance seed -- half rotation on a facch steal
 		if (state->nxdn_cipher_type == 0x1 && state->R != 0)
 		{
@@ -580,7 +580,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		//update last voice sync time
 		state->last_vc_sync_time = time(NULL);
 		//turn on scrambler if forced by user option
-		if (state->M == 1 && state->R != 0) state->nxdn_cipher_type = 0x1;
+		if (state->forced_alg_id == 1 && state->R != 0) state->nxdn_cipher_type = 0x1;
 		//process voice frame
 		nxdn_voice (opts, state, voice, dbuf);
 	}

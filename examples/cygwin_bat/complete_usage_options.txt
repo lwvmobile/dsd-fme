@@ -1,4 +1,4 @@
-Build Version: AW 2025-207-gf8521fd 
+Build Version: AW 2025-209-g14edf32 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -127,7 +127,7 @@ Advanced Decoder options:
                  Enabling on some systems could lead to bad channel assignments/site data decoding if bad or marginal signal
 
   -b <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)
-                 (NOTE: This used to be the 'K' option! 
+                 (NOTE: This used to be the 'K' option!) 
 
   -H <hex>      Manually Enter Hytera 10/32/64 Char Basic Privacy Hex Key (see example below)
                  Encapulate in Single Quotation Marks; Space every 16 chars.
@@ -192,6 +192,8 @@ Advanced Decoder options:
   -4            Force Privacy Key over Encryption Identifiers (DMR MBP/HBP and NXDN Scrambler) 
                  
   -0            Force RC4 Key over Missing PI header/LE Encryption Identifiers (DMR) 
+                 
+  -M <hex>      Force Entered Alg ID Value over Missing PI header/LE Encryption Identifiers (DMR) 
                  
   -3            Disable DMR Late Entry Encryption Identifiers (VC6 Single Burst) 
                   Note: Disable this if false positives on Voice ENC occur. 

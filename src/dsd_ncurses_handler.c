@@ -211,14 +211,14 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
 
   if (c == 52) // '4' key, toggle force privacy key over fid and svc (dmr)
   {
-    if (state->M == 1 || state->M == 0x21) state->M = 0;
-    else state->M = 1;
+    if (state->forced_alg_id == 1 || state->forced_alg_id == 0x21) state->forced_alg_id = 0;
+    else state->forced_alg_id = 1;
   }
 
   if (c == 54) // '6' key, toggle force rc4 key over missing pi header/late entry
   {
-    if (state->M == 1 || state->M == 0x21) state->M = 0;
-    else state->M = 0x21;
+    if (state->forced_alg_id == 1 || state->forced_alg_id == 0x21) state->forced_alg_id = 0;
+    else state->forced_alg_id = 0x21;
   }
 
   if (c == 105) //'i' key, toggle signal inversion on inverted types

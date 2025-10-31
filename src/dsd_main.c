@@ -1034,7 +1034,7 @@
    state->K2 = 0;
    state->K3 = 0;
    state->K4 = 0;
-   state->M = 0; //force key priority over settings from fid/so
+   state->forced_alg_id = 0; //force key priority over settings from fid/so
  
    state->dmr_stereo = 0; //1, or 0?
    state->dmrburstL = 17; //initialize at higher value than possible
@@ -1514,7 +1514,7 @@
    printf ("                 Enabling on some systems could lead to bad channel assignments/site data decoding if bad or marginal signal\n");
    printf ("\n");
    printf ("  -b <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)\n");
-   printf ("                 (NOTE: This used to be the 'K' option! \n");
+   printf ("                 (NOTE: This used to be the 'K' option!) \n");
    printf ("\n");
    printf ("  -H <hex>      Manually Enter Hytera 10/32/64 Char Basic Privacy Hex Key (see example below)\n");
    printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
@@ -1579,6 +1579,8 @@
    printf ("  -4            Force Privacy Key over Encryption Identifiers (DMR MBP/HBP and NXDN Scrambler) \n");
    printf ("                 \n");
    printf ("  -0            Force RC4 Key over Missing PI header/LE Encryption Identifiers (DMR) \n");
+   printf ("                 \n");
+   printf ("  -M <hex>      Force Entered Alg ID Value over Missing PI header/LE Encryption Identifiers (DMR) \n");
    printf ("                 \n");
    printf ("  -3            Disable DMR Late Entry Encryption Identifiers (VC6 Single Burst) \n");
    printf ("                  Note: Disable this if false positives on Voice ENC occur. \n");
@@ -1884,7 +1886,7 @@
  
    exitflag = 0;
  
-   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF@:!:01:2:345:6:^:7:8_:9:Ek:I:J:O+:")) != -1)
+   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:G:D:L:V:U:YK:b:H:X:M:NQ:WrlZTF@:!:01:2:345:6:^:7:8_:9:Ek:I:J:O+:")) != -1)
      {
  
        switch (c)
@@ -1934,9 +1936,14 @@
  
          //rc4 enforcement on DMR (due to missing the PI header)
          case '0':
-           state.M = 0x21;
+           state.forced_alg_id = 0x21;
            fprintf (stderr,"Force RC4 Key over Missing PI header/LE Encryption Identifiers (DMR)\n");
            break;
+
+         case 'M':
+          sscanf (optarg, "%hhX", &state.forced_alg_id);
+          fprintf (stderr,"Force DMR ALG ID 0x%02X over Missing PI header/LE Encryption Identifiers (DMR)\n", state.forced_alg_id);
+          break;
  
          //load single rc4/des key
          case '1':
@@ -2234,7 +2241,7 @@
            break;
  
          case '4':
-           state.M = 1;
+           state.forced_alg_id = 1;
            fprintf (stderr,"Force Privacy Key over Encryption Identifiers (DMR BP and NXDN Scrambler) \n");
            break;
  

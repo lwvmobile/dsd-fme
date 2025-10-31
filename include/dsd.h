@@ -632,7 +632,7 @@ typedef struct
   unsigned long long int K2;
   unsigned long long int K3;
   unsigned long long int K4;
-  int M;
+  uint8_t forced_alg_id;
   int menuopen;
 
   //AES Key Segments

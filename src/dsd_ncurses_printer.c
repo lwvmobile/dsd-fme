@@ -495,18 +495,18 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   }
   #endif
   // if (opts->aggressive_framesync == 0) printw ("| Selective CRC ERR Bypass Enabled (RAS) \n");
-  if (state->M == 1)
+  if (state->forced_alg_id == 1)
   {
     if (state->R != 0)  printw ("| Forcing Key Priority -- NXDN Sc Key: %05lld \n", state->R);
     if (state->K != 0)  printw ("| Forcing Key Priority -- Moto BP Key: %03lld \n", state->K);
     if (state->K1 != 0) printw ("| Forcing Key Priority -- Hytera BP Key: %016llX \n", state->K1);
     if (state->K != 0 && state->K1 != 0) printw ("| Warning! Multiple DMR Key Types Loaded! \n"); //warning may not be required
   }
-  if (state->M == 0x21)
+  if (state->forced_alg_id == 0x21)
   {
     if (state->R != 0)  printw ("| Forcing Key Priority -- RC4 Key: %010llX \n", state->R);
   }
-  if (state->M == 0x16) printw ("| Forcing Key Priority -- TYT 16-bit Key: %04llX \n", state->H);
+  if (state->forced_alg_id == 0x16) printw ("| Forcing Key Priority -- TYT 16-bit Key: %04llX \n", state->H);
 
   if (opts->scanner_mode == 1)
   {

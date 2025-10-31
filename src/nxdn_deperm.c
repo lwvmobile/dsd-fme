@@ -303,7 +303,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 
 		fprintf (stderr, "PF 1/1");
 		if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
-		else if (state->M == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
+		else if (state->forced_alg_id == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
 
 		if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, nsf_sacch);
 		// else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, nsf_sacch);
@@ -361,7 +361,7 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		if (part_of_frame == 0)
 		{
 			if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
-			else if (state->M == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
+			else if (state->forced_alg_id == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
 		}
 
 		// if (crc != check)
@@ -378,13 +378,13 @@ void nxdn_deperm_sacch(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1)
 		{
 			if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
-			else if (state->M == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
+			else if (state->forced_alg_id == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
 		}
 		//this seems to work much better now
 		else if (part_of_frame != 0 && state->nxdn_cipher_type == 0x1)
 		{
 			if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
-			else if (state->M == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
+			else if (state->forced_alg_id == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
 
 			//advance seed by required number of turns depending on the current pf value
 			int start = 0; int end = part_of_frame;
@@ -587,7 +587,7 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		memcpy(state->dmr_pdu_sf[0]+sf_idx, trellis_buf+bf_idx, sf_size*sizeof(uint8_t));
 
 	//if force application of scrambler key, then let's reset, regardless of CRC check
-	if (sf_fb && state->M == 1)
+	if (sf_fb && state->forced_alg_id == 1)
 		state->payload_miN = 0;
 
 	//currently using static values so event log will log something, and do wav files, etc
@@ -1323,7 +1323,7 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 	if (part_of_frame == 0 && state->nxdn_cipher_type == 0x1)
 	{
 		if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
-		else if (state->M == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
+		else if (state->forced_alg_id == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
 	}
 
 	/*
