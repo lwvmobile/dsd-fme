@@ -1,4 +1,4 @@
-Build Version: AW 2025-204-g0060378 
+Build Version: AW 2025-207-gf8521fd 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -23,8 +23,6 @@ Input/Output options:
                 rtl:dev:freq:gain:ppm:bw:sq:vol for rtl dongle (see below)
                 tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)
                 tcp:192.168.7.5:7355 for custom address and port 
-                m17udp for M17 UDP/IP socket bind input (default host 127.0.0.1; default port 17000)
-                m17udp:192.168.7.8:17001 for M17 UDP/IP bind input (Binding Address and Port
                 filename.bin for OP25/FME capture bin files
                 filename.wav for 48K/1 wav files (SDR++, GQRX)
                 filename.wav -s 96000 for 96K/1 wav files (DSDPlus)
@@ -37,8 +35,6 @@ Input/Output options:
                 null for no audio output
                 udp for UDP socket blaster output (default host 127.0.0.1; default port 23456)
                 udp:192.168.7.8:23470 for UDP socket blaster output (Target Address and Port
-                m17udp for M17 UDP/IP socket blaster output (default host 127.0.0.1; default port 17000)
-                m17udp:192.168.7.8:17001 for M17 UDP/IP blaster output (Target Address and Port
   -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)
   -r <files>    Read/Play saved mbe data from file(s)
   -g <float>    Audio Digital Output Gain  (Default: 0 = Auto;        )
@@ -81,26 +77,6 @@ RTL-SDR options:
  Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T
  Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:2
 
-Encoder options:
-  -fZ           M17 Stream Voice Encoder
- Example: dsd-fme -fZ -M M17:9:DSD-FME:LWVMOBILE -i pulse -6 m17signal.wav -8 -N 2> m17encoderlog.txt
-   Run M17 Encoding, listening to pulse audio server, with internal decode/playback and output to 48k/1 wav file
-
- Example: dsd-fme -fZ -M M17:9:DSD-FME:LWVMOBILE -i tcp -o pulse -8 -N 2> m17encoderlog.txt
-   Run M17 Encoding, listening to default tcp input, without internal decode/playback and output to 48k/1 analog output device
-
-  -fP           M17 Packet Encoder
- Example: dsd-fme -fP -M M17:9:DSD-FME:LWVMOBILE -6 m17pkt.wav -8 -S 'Hello World'
-
-  -fB           M17 BERT Encoder
- Example: dsd-fme -fB -M M17:9:DSD-FME:LWVMOBILE -6 m17bert.wav -8
-
-  -M            M17 Encoding User Configuration String: M17:CAN:SRC:DST:INPUT_RATE:VOX (see examples above).
-                  CAN 1-15; SRC and DST have to be no more than 9 UPPER base40 characters.
-                  BASE40: '  ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.'
-                  Input Rate Default is 48000; Use Multiples of 8000 up to 48000.
-                  VOX Enabled on 1; (Default = 0)
-                  Values not entered into the M17: string are set to default values.
 Decoder options:
   -fa           Auto Detection
   -fA           Passive Analog Audio Monitor
@@ -112,7 +88,6 @@ Decoder options:
   -fx           Decode only X2-TDMA
   -fy           Decode only YSF
   -fz             Decode only M17*
-  -fU             Decode only M17 UDP/IP Frame***
   -fi             Decode only NXDN48* (6.25 kHz) / IDAS*
   -fn             Decode only NXDN96* (12.5 kHz)
   -fp             Decode only ProVoice*
@@ -128,16 +103,14 @@ Decoder options:
   -xx           Expect non-inverted X2-TDMA signal
   -xr           Expect inverted DMR signal
   -xd           Expect inverted ICOM dPMR signal
-  -xz           Expect inverted M17 signal
 
   * denotes frame types that cannot be auto-detected.
   ** Phase 2 Single Frequency may require user to manually set WACN/SYSID/CC parameters if MAC_SIGNAL not present.
-  *** configure UDP Input with -i m17:127.0.0.1:17000 
 
 Advanced Decoder options:
   -X <hex>      Manually Set P2 Parameters (WACN, SYSID, CC/NAC)
                  (-X BEE00ABC123)
-  -* <dec>      Manually Set NXDN PN95 Dibit Scrambler Seed (1-511)
+  -_ <dec>      Manually Set NXDN PN95 Dibit Scrambler Seed (1-511)
                  (-* 261)
   -D <dec>      Manually Set TIII DMR Location Area n bit len (0-10)(10 max)
                  (Value defaults to max n bit value for site model size)
@@ -152,7 +125,6 @@ Advanced Decoder options:
                  Use this feature to allow MAC_SIGNAL even if CRC errors.
   -F            Relax DMR RAS/CRC CSBK/DATA Pass/Fail
                  Enabling on some systems could lead to bad channel assignments/site data decoding if bad or marginal signal
-  -F            Relax M17 LSF/PKT CRC Error Checking
 
   -b <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)
                  (NOTE: This used to be the 'K' option! 
