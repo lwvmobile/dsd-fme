@@ -180,8 +180,10 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   char ambe_silence[49];
   for (i = 0; i < 49; i++)
     ambe_silence[i] = (silence >> (55-i)) & 1;
+  //zeroed ambe_d can look like 00000000000580(w/ DMRA IV), 000D2C00000000, 
+  //or 00000000000000 look at +24 position for 20 bits (fits all these scenarios)
   char zeroes[49]; memset(zeroes, 0, sizeof(zeroes));
-  size_t zeroes_threshold = 24; //zeroed ambe_d after golay is 000D2C00000000, look at +24 position for 24 bits
+  size_t zeroes_threshold = 20;
 
   //these conditions should ensure no clashing with the BP/HBP/Scrambler key loading machanisms already coded in
   if (state->currentslot == 0 && state->payload_algid != 0 && state->payload_algid != 0x80 && state->keyloader == 1)
