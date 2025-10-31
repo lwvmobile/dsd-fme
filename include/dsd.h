@@ -357,10 +357,6 @@ typedef struct
   int ssize;
   int msize;
   int playfiles;
-  int m17encoder;
-  int m17encoderbrt;
-  int m17encoderpkt;
-  int m17decoderip;
   int delay;
   int use_cosine_filter;
   int unmute_encrypted_p25;
@@ -414,7 +410,6 @@ typedef struct
   short int aggressive_framesync;
 
   int frame_m17;
-  int inverted_m17;
 
   FILE *symbolfile;
   int call_alert;
@@ -430,12 +425,6 @@ typedef struct
   int udp_sockfdA; //analog 48k1
   int udp_portno;
   char udp_hostname[1024];
-
-  //M17 UDP for IP frame output
-  int m17_use_ip;     //if enabled, open UDP and broadcast IP frame
-  int m17_portno;    //default is 17000
-  int m17_udp_sock; //actual UDP socket for M17 to send to
-  char m17_hostname[1024];
 
   //tcp socket for SDR++, etc
   int tcp_sockfd;
@@ -953,15 +942,11 @@ typedef struct
   //M17 Storage
   uint8_t m17_lsf[360];
   uint8_t m17_pkt[850];
-  uint8_t m17_pbc_ct; //pbc packet counter
   uint8_t m17_str_dt; //stream contents
 
   unsigned long long int m17_dst;
   unsigned long long int m17_src;
   uint8_t m17_can; //can value that was decoded from signal
-  int m17_can_en; //can value supplied to the encoding side
-  int m17_rate;  //sampling rate for audio input
-  int m17_vox;  //vox enabled via RMS value
 
   char m17_dst_csd[20];
   char m17_src_csd[20];
@@ -969,18 +954,22 @@ typedef struct
   char m17_src_str[50];
   char m17_dst_str[50];
 
-  uint8_t m17_meta[16]; //packed meta
-  uint8_t m17_enc;      //enc type
-  uint8_t m17_enc_st;   //scrambler or data subtye
-  int m17encoder_tx;    //if TX (encode + decode) M17 Stream is enabled
-  int m17encoder_eot;   //signal if we need to send the EOT frame
+  uint8_t m17_meta[16];    //packed meta
+  uint8_t m17_aes_iv[16]; //aes iv
+  uint8_t m17_enc;        //enc type
+  uint8_t m17_enc_st;    //scrambler or data subtye
+
+  char m17_text_string[1024];
+  char m17_gnss_string[1024];
+  char m17_data_string[1024];
+  char m17_meta_string[1024];
+
+  float m17_viterbi_err;
 
   //misc str storage
   char str50a[50];
   char str50b[50];
   char str50c[50];
-  char m17dat[50];  //user supplied m17 data input string
-  char m17sms[800]; //user supplied sms text string
 
   //Codec2
   #ifdef USE_CODEC2
@@ -1024,13 +1013,6 @@ typedef struct
 //M17 Sync Patterns
 #define M17_LSF     "11113313"
 #define M17_STR     "33331131"
-//alternating with last symbol opposite of first symbol of LSF
-#define M17_PRE     "31313131"
-#define M17_PIV     "13131313"
-#define M17_PRE_LSF "3131313133331131" //Preamble + LSF
-#define M17_PIV_LSF "1313131311113313" //Preamble + LSF
-#define M17_BRT     "31331111"
-#define M17_PKT     "13113333"
 
 #define FUSION_SYNC     "31111311313113131131"
 #define INV_FUSION_SYNC "13333133131331313313"
@@ -1254,13 +1236,6 @@ void processDSTAR_HD (dsd_opts * opts, dsd_state * state); //DSTAR Header
 void processDSTAR_SD (dsd_opts * opts, dsd_state * state, uint8_t * sd); //DSTAR Slow Data
 void processYSF(dsd_opts * opts, dsd_state * state); //YSF
 void processM17STR(dsd_opts * opts, dsd_state * state); //M17 (STR)
-void processM17PKT(dsd_opts * opts, dsd_state * state); //M17 (PKT)
-void processM17LSF(dsd_opts * opts, dsd_state * state); //M17 (LSF)
-void processM17IPF(dsd_opts * opts, dsd_state * state); //M17 (IPF)
-void encodeM17STR(dsd_opts * opts, dsd_state * state); //M17 (STR) encoder
-void encodeM17BRT(dsd_opts * opts, dsd_state * state); //M17 (BRT) encoder
-void encodeM17PKT(dsd_opts * opts, dsd_state * state); //M17 (PKT) encoder
-void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len); //M17 (PKT) decoder
 void processP2(dsd_opts * opts, dsd_state * state); //P2
 void processTSBK(dsd_opts * opts, dsd_state * state); //P25 Trunking Single Block
 void processMPDU(dsd_opts * opts, dsd_state * state); //P25 Multi Block PDU (SAP 0x61 FMT 0x15 or 0x17 for Trunking Blocks)
@@ -1322,6 +1297,12 @@ void CNXDNConvolution_encode(const unsigned char* in, unsigned char* out, unsign
 void CNXDNConvolution_init();
 
 //libM17 viterbi decoder
+
+//libm17 magic soft decision based viterbi
+#define SYM_PER_PLD 184
+void slice_symbols(uint16_t out[2*SYM_PER_PLD], const float inp[SYM_PER_PLD]);
+void randomize_soft_bits(uint16_t inp[SYM_PER_PLD*2]);
+void reorder_soft_bits(uint16_t outp[SYM_PER_PLD*2], const uint16_t inp[SYM_PER_PLD*2]);
 uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, const uint16_t len);
 uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, const uint16_t in_len, const uint16_t p_len);
 void viterbi_decode_bit(uint16_t s0, uint16_t s1, const size_t pos);
@@ -1623,9 +1604,6 @@ int udp_socket_connect(dsd_opts * opts, dsd_state * state);
 int udp_socket_connectA(dsd_opts * opts, dsd_state * state);
 void udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
 void udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
-int m17_socket_receiver(dsd_opts * opts, void * data);
-int udp_socket_connectM17(dsd_opts * opts, dsd_state * state);
-int m17_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
 
 //RC4 function prototypes
 void rc4_voice_decrypt (int drop, uint8_t keylength, uint8_t messagelength, uint8_t key[], uint8_t cipher[], uint8_t plain[]);

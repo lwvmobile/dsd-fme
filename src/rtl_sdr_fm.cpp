@@ -1034,7 +1034,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
 	//init with low pass if decoding P25 or EDACS/Provoice
 	if (opts->frame_p25p1 == 1 || opts->frame_p25p2 == 1 || opts->frame_provoice == 1)
   	demod_init_ro2(&demod);
-	else if (opts->analog_only == 1 || opts->m17encoder == 1)
+	else if (opts->analog_only == 1)
 		demod_init_analog(&demod);
 	else demod_init(&demod);
   output_init(&output);

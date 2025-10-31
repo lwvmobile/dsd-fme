@@ -137,9 +137,11 @@ void openPulseInput(dsd_opts * opts)
   lt.maxlength = -1;
   lt.prebuf = -1;
   lt.tlength = -1;
-  if (opts->m17encoder == 1)
-    opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME4", PA_STREAM_RECORD, dev, "M17 Voice Input", &cc, NULL, &lt, &err);
-  else opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_RECORD, dev, opts->output_name, &cc, NULL, &lt, &err);
+  // if (opts->m17encoder == 1)
+  //   opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME4", PA_STREAM_RECORD, dev, "M17 Voice Input", &cc, NULL, &lt, &err);
+  // else opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_RECORD, dev, opts->output_name, &cc, NULL, &lt, &err);
+
+  opts->pulse_digi_dev_in  = pa_simple_new(NULL, "DSD-FME", PA_STREAM_RECORD, dev, opts->output_name, &cc, NULL, &lt, &err);
 
   if (err != 0)
   {

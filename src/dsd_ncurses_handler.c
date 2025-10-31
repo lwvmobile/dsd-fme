@@ -34,10 +34,7 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
 
   //keyboard shortcuts - codes same as ascii codes
   if (c == 10) //Return / Enter key, open menu
-  {
-    if (opts->m17encoder == 0) //don't allow menu if using M17 encoder
-      ncursesMenu (opts, state);
-  }
+    ncursesMenu (opts, state);
 
   //use k and l keys to test tg hold toggles on slots 1 and slots 2
   if (c == 107) //'k' key, hold tg on slot 1 for trunking purposes, or toggle clear
@@ -233,7 +230,6 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
       opts->inverted_dpmr = 1;
       opts->inverted_x2tdma = 1;
       opts->inverted_ysf = 1;
-      opts->inverted_m17 = 1;
     }
     else
     {
@@ -241,7 +237,6 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
       opts->inverted_dpmr = 0;
       opts->inverted_x2tdma = 0;
       opts->inverted_ysf = 0;
-      opts->inverted_m17 = 0;
     }
   }
 
@@ -886,16 +881,6 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
   {
     if (opts->use_hpf_d == 0) opts->use_hpf_d = 1;
     else opts->use_hpf_d = 0;
-  }
-
-  if (opts->m17encoder == 1 && c == 92) //'\' key - toggle M17 encoder Encode + TX
-  {
-    if (state->m17encoder_tx == 0) state->m17encoder_tx = 1;
-    else state->m17encoder_tx = 0;
-
-    //flag on the EOT marker to send last frame after toggling encoder to zero
-    if (state->m17encoder_tx == 0) state->m17encoder_eot = 1;
-
   }
 
   if(opts->frame_provoice == 1 && c == 65) //'A' Key, toggle ESK mask 0xA0

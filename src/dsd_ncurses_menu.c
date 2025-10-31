@@ -1415,7 +1415,6 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         opts->inverted_dpmr = 1;
         opts->inverted_x2tdma = 1;
         opts->inverted_ysf = 1;
-        opts->inverted_m17 = 1;
       }
       else
       {
@@ -1423,7 +1422,6 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         opts->inverted_dpmr = 0;
         opts->inverted_x2tdma = 0;
         opts->inverted_ysf = 0;
-        opts->inverted_m17 = 0;
       }
 
     }

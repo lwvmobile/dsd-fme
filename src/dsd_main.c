@@ -538,7 +538,6 @@
    //M17 Storage
    memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
    memset (state->m17_pkt, 0, sizeof(state->m17_pkt));
-   state->m17_pbc_ct = 0;
    state->m17_str_dt = 9;
  
    state->m17_dst = 0;
@@ -552,13 +551,18 @@
    state->m17_enc = 0;
    state->m17_enc_st = 0;
    memset(state->m17_meta, 0, sizeof(state->m17_meta));
- 
-   //misc str storage
-  //  sprintf (state->str50a, "%s", "");
-   // memset (state->str50b, 0, 50*sizeof(char));
-   // memset (state->str50c, 0, 50*sizeof(char));
-   // memset (state->m17sms, 0, 800*sizeof(char));
-   // sprintf (state->m17dat, "%s", "");
+   memset(state->m17_aes_iv, 0, sizeof(state->m17_aes_iv));
+
+   memset(state->m17_text_string, 0, sizeof(state->m17_text_string));
+   memset(state->m17_gnss_string, 0, sizeof(state->m17_gnss_string));
+   memset(state->m17_data_string, 0, sizeof(state->m17_data_string));
+   memset(state->m17_meta_string, 0, sizeof(state->m17_meta_string));
+   sprintf (state->m17_text_string, "%s", "");
+   sprintf (state->m17_gnss_string, "%s", "");
+   sprintf (state->m17_data_string, "%s", "");
+   sprintf (state->m17_meta_string, "%s", "");
+
+   state->m17_viterbi_err = 0.0f;
  
    //set float temp buffer to baseline
    memset (state->audio_out_temp_buf, 0.0f, sizeof(state->audio_out_temp_buf));
@@ -674,15 +678,10 @@
    opts->uvquality = 3;
    opts->inverted_x2tdma = 1;    // most transmitter + scanner + sound card combinations show inverted signals for this
    opts->inverted_dmr = 0;       // most transmitter + scanner + sound card combinations show non-inverted signals for this
-   opts->inverted_m17 = 0;       //samples from M17_Education seem to all be positive polarity (same from m17-tools programs)
    opts->mod_threshold = 26;
    opts->ssize = 128; //36 default, max is 128, much cleaner data decodes on Phase 2 cqpsk at max
    opts->msize = 1024; //15 default, max is 1024, much cleaner data decodes on Phase 2 cqpsk at max
    opts->playfiles = 0;
-   opts->m17encoder = 0;
-   opts->m17encoderbrt = 0;
-   opts->m17encoderpkt = 0;
-   opts->m17decoderip = 0;
    opts->delay = 0;
    opts->use_cosine_filter = 1;
    opts->unmute_encrypted_p25 = 0;
@@ -761,12 +760,6 @@
    opts->udp_sockfdA = 0;
    opts->udp_portno = 23456; //default port, same os OP25's sockaudio.py
    sprintf (opts->udp_hostname, "%s", "127.0.0.1");
- 
-   //M17 UDP Port and hostname
-   opts->m17_use_ip = 0;      //if enabled, open UDP and broadcast IP frame
-   opts->m17_portno = 17000; //default is 17000
-   opts->m17_udp_sock = 0;  //actual UDP socket for M17 to send to
-   sprintf (opts->m17_hostname, "%s", "127.0.0.1");
  
    //tcp input options
    opts->tcp_sockfd = 0;
@@ -1315,22 +1308,16 @@
    //M17 Storage
    memset (state->m17_lsf, 0, sizeof(state->m17_lsf));
    memset (state->m17_pkt, 0, sizeof(state->m17_pkt));
-   state->m17_pbc_ct = 0;
    state->m17_str_dt = 9;
  
    //misc str storage
   //  sprintf (state->str50a, "%s", "");
    memset (state->str50b, 0, 50*sizeof(char));
    memset (state->str50c, 0, 50*sizeof(char));
-   memset (state->m17sms, 0, 800*sizeof(char));
-   sprintf (state->m17dat, "%s", "");
  
    state->m17_dst = 0;
    state->m17_src = 0;
    state->m17_can = 0;     //can value that was decoded from signal
-   state->m17_can_en = -1; //can value supplied to the encoding side
-   state->m17_rate = 48000; //sampling rate for audio input
-   state->m17_vox = 0; //vox mode enabled on M17 encoder
    memset(state->m17_dst_csd, 0, sizeof(state->m17_dst_csd));
    memset(state->m17_src_csd, 0, sizeof(state->m17_src_csd));
    sprintf (state->m17_dst_str, "%s", "");
@@ -1338,10 +1325,19 @@
  
    state->m17_enc = 0;
    state->m17_enc_st = 0;
-   state->m17encoder_tx = 0;
-   state->m17encoder_eot = 0;
    memset(state->m17_meta, 0, sizeof(state->m17_meta));
- 
+   memset(state->m17_aes_iv, 0, sizeof(state->m17_aes_iv));
+
+   memset(state->m17_text_string, 0, sizeof(state->m17_text_string));
+   memset(state->m17_gnss_string, 0, sizeof(state->m17_gnss_string));
+   memset(state->m17_data_string, 0, sizeof(state->m17_data_string));
+   memset(state->m17_meta_string, 0, sizeof(state->m17_meta_string));
+   sprintf (state->m17_text_string, "%s", "");
+   sprintf (state->m17_gnss_string, "%s", "");
+   sprintf (state->m17_data_string, "%s", "");
+   sprintf (state->m17_meta_string, "%s", "");
+
+   state->m17_viterbi_err = 0.0f;
  
    #ifdef USE_CODEC2
    state->codec2_3200 = codec2_create(CODEC2_MODE_3200);
@@ -1399,8 +1395,6 @@
    printf ("                rtl:dev:freq:gain:ppm:bw:sq:vol for rtl dongle (see below)\n");
    printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
    printf ("                tcp:192.168.7.5:7355 for custom address and port \n");
-   printf ("                m17udp for M17 UDP/IP socket bind input (default host 127.0.0.1; default port 17000)\n");
-   printf ("                m17udp:192.168.7.8:17001 for M17 UDP/IP bind input (Binding Address and Port\n");
    printf ("                filename.bin for OP25/FME capture bin files\n");
    printf ("                filename.wav for 48K/1 wav files (SDR++, GQRX)\n");
    printf ("                filename.wav -s 96000 for 96K/1 wav files (DSDPlus)\n");
@@ -1423,8 +1417,6 @@
    printf ("                null for no audio output\n");
    printf ("                udp for UDP socket blaster output (default host 127.0.0.1; default port 23456)\n");
    printf ("                udp:192.168.7.8:23470 for UDP socket blaster output (Target Address and Port\n");
-   printf ("                m17udp for M17 UDP/IP socket blaster output (default host 127.0.0.1; default port 17000)\n");
-   printf ("                m17udp:192.168.7.8:17001 for M17 UDP/IP blaster output (Target Address and Port\n");
    printf ("  -d <dir>      Create mbe data files, use this directory (TDMA version is experimental)\n");
    printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
    printf ("  -g <float>    Audio Digital Output Gain  (Default: 0 = Auto;        )\n");
@@ -1471,28 +1463,6 @@
    printf (" Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T\n");
    printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:2\n");
    printf ("\n");
-   printf ("Encoder options:\n");
-   printf ("  -fZ           M17 Stream Voice Encoder\n");
-   printf (" Example: dsd-fme -fZ -M M17:9:DSD-FME:LWVMOBILE -i pulse -6 m17signal.wav -8 -N 2> m17encoderlog.txt\n");
-   printf ("   Run M17 Encoding, listening to pulse audio server, with internal decode/playback and output to 48k/1 wav file\n");
-   printf ("\n");
-   printf (" Example: dsd-fme -fZ -M M17:9:DSD-FME:LWVMOBILE -i tcp -o pulse -8 -N 2> m17encoderlog.txt\n");
-   printf ("   Run M17 Encoding, listening to default tcp input, without internal decode/playback and output to 48k/1 analog output device\n");
-   printf ("\n");
-   printf ("  -fP           M17 Packet Encoder\n");
-   printf (" Example: dsd-fme -fP -M M17:9:DSD-FME:LWVMOBILE -6 m17pkt.wav -8 -S 'Hello World'\n");
-   printf ("\n");
-   printf ("  -fB           M17 BERT Encoder\n");
-   printf (" Example: dsd-fme -fB -M M17:9:DSD-FME:LWVMOBILE -6 m17bert.wav -8\n");
-   printf ("\n");
-   printf ("  -M            M17 Encoding User Configuration String: M17:CAN:SRC:DST:INPUT_RATE:VOX (see examples above).\n");
-   printf ("                  CAN 1-15; SRC and DST have to be no more than 9 UPPER base40 characters.\n");
-   printf ("                  BASE40: '  ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.'\n");
-   printf ("                  Input Rate Default is 48000; Use Multiples of 8000 up to 48000.\n");
-   printf ("                  VOX Enabled on 1; (Default = 0)\n");
-   printf ("                  Values not entered into the M17: string are set to default values.\n");
-  //  printf ("  -S            M17 Packet Encoder SMS String: No more than 772 chars, use single quotations (see example above).\n");
-  //  printf ("  -S            M17 Stream Encoder SMS String: No more than  48 chars, activates 1600 voice  (best if broken into six 8 char chunks).\n");
    printf ("Decoder options:\n");
    printf ("  -fa           Auto Detection\n");
    printf ("  -fA           Passive Analog Audio Monitor\n");
@@ -1504,7 +1474,6 @@
    printf ("  -fx           Decode only X2-TDMA\n");
    printf ("  -fy           Decode only YSF\n");
    printf ("  -fz             Decode only M17*\n");
-   printf ("  -fU             Decode only M17 UDP/IP Frame***\n");
    printf ("  -fi             Decode only NXDN48* (6.25 kHz) / IDAS*\n");
    printf ("  -fn             Decode only NXDN96* (12.5 kHz)\n");
    printf ("  -fp             Decode only ProVoice*\n");
@@ -1520,11 +1489,9 @@
    printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
    printf ("  -xr           Expect inverted DMR signal\n");
    printf ("  -xd           Expect inverted ICOM dPMR signal\n");
-   printf ("  -xz           Expect inverted M17 signal\n");
    printf ("\n");
    printf ("  * denotes frame types that cannot be auto-detected.\n");
    printf ("  ** Phase 2 Single Frequency may require user to manually set WACN/SYSID/CC parameters if MAC_SIGNAL not present.\n");
-   printf ("  *** configure UDP Input with -i m17:127.0.0.1:17000 \n");
    printf ("\n");
    printf ("Advanced Decoder options:\n");
    printf ("  -X <hex>      Manually Set P2 Parameters (WACN, SYSID, CC/NAC)\n");
@@ -1545,7 +1512,6 @@
    printf ("                 Use this feature to allow MAC_SIGNAL even if CRC errors.\n");
    printf ("  -F            Relax DMR RAS/CRC CSBK/DATA Pass/Fail\n");
    printf ("                 Enabling on some systems could lead to bad channel assignments/site data decoding if bad or marginal signal\n");
-   printf ("  -F            Relax M17 LSF/PKT CRC Error Checking\n");
    printf ("\n");
    printf ("  -b <dec>      Manually Enter Basic Privacy Key (Decimal Value of Key Number)\n");
    printf ("                 (NOTE: This used to be the 'K' option! \n");
@@ -1841,9 +1807,6 @@
    if (opts->udp_sockfdA)
      close (opts->udp_sockfdA);
  
-   if (opts->m17_udp_sock)
-     close (opts->m17_udp_sock);
- 
    //close MBE out files
    if (opts->mbe_out_f != NULL) closeMbeOutFile (opts, state);
    if (opts->mbe_out_fR != NULL) closeMbeOutFileR (opts, state);
@@ -1921,7 +1884,7 @@
  
    exitflag = 0;
  
-   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:M:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF@:!:01:2:345:6:^:7:8*:9:Ek:I:J:O+:")) != -1)
+   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:G:D:L:V:U:YK:b:H:X:NQ:WrlZTF@:!:01:2:345:6:^:7:8*:9:Ek:I:J:O+:")) != -1)
      {
  
        switch (c)
@@ -1935,7 +1898,7 @@
            opts.call_alert = 1;
            break;
  
-         //Free'd up switches include: j, O,
+         //Free'd up switches include: j, M,
          //
  
          //make sure to put a colon : after each if they need an argument
@@ -1955,20 +1918,6 @@
            pulse_list();
            exit(0);
            break;
- 
-         //Specify M17 encoder User Data (CAN, DST, SRC values)
-         //NOTE: Disabled QPSK settings by borrowing these switches (nobody probalby used them anyways)
-         case 'M':
-           strncpy(state.m17dat, optarg, 49);
-           state.m17dat[49] = '\0';
-           break;
- 
-        //  //Specify M17 encoder SMS Message (truncates at 772)
-        //  case 'S':
-        //    strncpy(state.m17sms, optarg, 772);
-        //    state.m17sms[772] = '\0';
-        //    state.m17_str_dt = 3; //flip this so that STR encoder knows to use 1600 voice + data
-        //    break;
  
          //specify TG Hold value
          case 'I':
@@ -3021,40 +2970,6 @@
              //disable RRC filter for now
              opts.use_cosine_filter = 0;
            }
-           else if (optarg[0] == 'Z') //Captial Z to Run the M17 STR encoder
-           {
-             opts.m17encoder = 1;
-             opts.pulse_digi_rate_out = 48000;
-             opts.pulse_digi_out_channels = 1;
-             //filters disabled by default, use ncurses VBN switches
-             opts.use_lpf = 0;
-             opts.use_hpf = 0;
-             opts.use_pbf = 0;
-             opts.dmr_stereo = 0;
-             sprintf (opts.output_name, "M17 Encoder");
-           }
-           else if (optarg[0] == 'B') //Captial B to Run the M17 BRT encoder
-           {
-             opts.m17encoderbrt = 1;
-             opts.pulse_digi_rate_out = 48000;
-             opts.pulse_digi_out_channels = 1;
-             sprintf (opts.output_name, "M17 BERT");
-           }
-           else if (optarg[0] == 'P') //Captial P to Run the M17 PKT encoder
-           {
-             opts.m17encoderpkt = 1;
-             opts.pulse_digi_rate_out = 48000;
-             opts.pulse_digi_out_channels = 1;
-             sprintf (opts.output_name, "M17 Packet");
-           }
-           else if (optarg[0] == 'U') //Captial U to Run the M17 UDP IPF decoder
-           {
-             opts.m17decoderip = 1;
-             opts.pulse_digi_rate_out = 8000;
-             opts.pulse_digi_out_channels = 1;
-             sprintf (opts.output_name, "M17 IP Frame");
-             fprintf (stderr, "Decoding M17 UDP/IP Frames.\n");
-           }
            break;
          //don't mess with the modulations unless you really need to
          case 'm':
@@ -3154,11 +3069,6 @@
              opts.inverted_dpmr = 1;
              fprintf (stderr, "Expecting inverted ICOM dPMR signals.\n");
            }
-           else if (optarg[0] == 'z')
-           {
-             opts.inverted_m17 = 1;
-             fprintf (stderr, "Expecting inverted M17 signals.\n");
-           }
            break;
  
          case 'r':
@@ -3184,48 +3094,6 @@
      if (opts.resume > 0)
      {
        openSerial (&opts, &state);
-     }
- 
-     if((strncmp(opts.audio_in_dev, "m17udp", 6) == 0)) //M17 UDP Socket Input
-     {
-       fprintf (stderr, "M17 UDP IP Frame Input: ");
-       char * curr;
- 
-       curr = strtok(opts.audio_in_dev, ":"); //should be 'm17'
-       if (curr != NULL) ; //continue
-       else goto M17ENDIN; //end early with preset values
- 
-       curr = strtok(NULL, ":"); //host address
-       if (curr != NULL) strncpy (opts.m17_hostname, curr, 1023);
- 
-       curr = strtok(NULL, ":"); //host port
-       if (curr != NULL) opts.m17_portno = atoi (curr);
- 
-       M17ENDIN:
-       fprintf (stderr, "%s:", opts.m17_hostname);
-       fprintf (stderr, "%d \n", opts.m17_portno);
-     }
- 
-     if((strncmp(opts.audio_out_dev, "m17udp", 6) == 0)) //M17 UDP Socket Output
-     {
-       fprintf (stderr, "M17 UDP IP Frame Output: ");
-       char * curr;
- 
-       curr = strtok(opts.audio_out_dev, ":"); //should be 'm17'
-       if (curr != NULL) ; //continue
-       else goto M17ENDOUT; //end early with preset values
- 
-       curr = strtok(NULL, ":"); //host address
-       if (curr != NULL) strncpy (opts.m17_hostname, curr, 1023);
- 
-       curr = strtok(NULL, ":"); //host port
-       if (curr != NULL) opts.m17_portno = atoi (curr);
- 
-       M17ENDOUT:
-       fprintf (stderr, "%s:", opts.m17_hostname);
-       fprintf (stderr, "%d \n", opts.m17_portno);
-       opts.m17_use_ip = 1; //tell the encoder to open the socket
-       opts.audio_out_type = 9; //set to null device
      }
  
      if((strncmp(opts.audio_in_dev, "tcp", 3) == 0)) //tcp socket input from SDR++ and others
@@ -3625,132 +3493,10 @@
      signal(SIGINT, handler);
      signal(SIGTERM, handler);
  
-     //read in any user supplied M17 CAN and/or CSD data
-     if((strncmp(state.m17dat, "M17", 3) == 0))
-     {
-       //read in values
-       //string in format of M17:can:src_csd:dst_csd:input_rate
- 
-       //check and capatalize any letters in the CSD
-       for (int i = 0; state.m17dat[i]!='\0'; i++)
-       {
-         if(state.m17dat[i] >= 'a' && state.m17dat[i] <= 'z')
-           state.m17dat[i] = state.m17dat[i] -32;
-       }
- 
-       fprintf (stderr, "M17 User Data: ");
-       char * curr;
- 
-       // if((strncmp(state.m17dat, "M17", 3) == 0))
-       // goto M17END;
- 
-       curr = strtok(state.m17dat, ":"); //should be 'M17'
-       if (curr != NULL) ; //continue
-       else goto M17END; //end early with preset values
- 
-       curr = strtok(NULL, ":"); //m17 channel access number
-       if (curr != NULL)
-         state.m17_can_en = atoi(curr);
- 
-       curr = strtok(NULL, ":"); //m17 src address
-       if (curr != NULL)
-       {
-         strncpy (state.str50c, curr, 9); //only read first 9
-         state.str50c[9] = '\0';
-       }
- 
-       curr = strtok(NULL, ":"); //m17 dst address
-       if (curr != NULL)
-       {
-         strncpy (state.str50b, curr, 9); //only read first 9
-         state.str50b[9] = '\0';
-       }
- 
-       curr = strtok(NULL, ":"); //m17 input audio rate
-       if (curr != NULL)
-         state.m17_rate = atoi(curr);
- 
-       curr = strtok(NULL, ":"); //m17 vox enable
-       if (curr != NULL)
-         state.m17_vox = atoi(curr);
- 
-       // curr = strtok(NULL, ":"); //moved to in and out methods
-       // if (curr != NULL)
-       //   opts.m17_use_ip = atoi(curr);
- 
-       M17END: ; //do nothing
- 
-       //check to make sure can value is no greater than 15 (4 bit value)
-       if (state.m17_can_en > 15)
-         state.m17_can_en = 15;
- 
-       //if vox is greater than 1, assume user meant 'yes' and set to one
-       if (state.m17_vox > 1)
-         state.m17_vox = 1;
- 
-       //debug print m17dat string
-       // fprintf (stderr, " %s;", state.m17dat);
- 
-       fprintf (stderr, " M17:%d:%s:%s:%d;", state.m17_can_en, state.str50c, state.str50b, state.m17_rate);
-       if (state.m17_vox == 1) fprintf (stderr, "VOX;");
-       fprintf (stderr, "\n");
-     }
- 
      if (opts.playfiles == 1)
      {
  
        playMbeFiles (&opts, &state, argc, argv);
-     }
- 
-     else if (opts.m17encoder == 1)
-     {
-       //disable RRC filter for now
-       opts.use_cosine_filter = 0;
- 
-       opts.pulse_digi_rate_out = 8000;
- 
-       //open any inputs, if not alread opened, OSS input and output already handled
-       if (opts.audio_in_type == 0) openPulseInput(&opts);
- 
-       #ifdef USE_RTLSDR
-       else if(opts.audio_in_type == 3)
-       {
-         open_rtlsdr_stream(&opts);
-         opts.rtl_started = 1;
-       }
-       #endif
- 
-       //open any outputs, if not already opened
-       if (opts.audio_out_type == 0) openPulseOutput(&opts);
-       //All input and output now opened and handled correctly, so let's not break things by tweaking
-       encodeM17STR(&opts, &state);
-     }
- 
-     else if (opts.m17encoderbrt == 1)
-     {
-       opts.pulse_digi_rate_out = 8000;
-       //open any outputs, if not already opened
-       if (opts.audio_out_type == 0) openPulseOutput(&opts);
-       encodeM17BRT(&opts, &state);
-     }
- 
-     else if (opts.m17encoderpkt == 1)
-     {
-       //disable RRC filter for now
-       opts.use_cosine_filter = 0;
- 
-       opts.pulse_digi_rate_out = 8000;
-       //open any outputs, if not already opened
-       if (opts.audio_out_type == 0) openPulseOutput(&opts);
-       encodeM17PKT(&opts, &state);
-     }
- 
-     else if (opts.m17decoderip == 1)
-     {
-       opts.pulse_digi_rate_out = 8000;
-       //open any outputs, if not already opened
-       if (opts.audio_out_type == 0) openPulseOutput(&opts);
-       processM17IPF(&opts, &state);
      }
  
      else

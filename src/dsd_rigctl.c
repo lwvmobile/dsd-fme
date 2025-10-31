@@ -32,7 +32,6 @@ void error(char *msg) {
 
 struct sockaddr_in address;
 struct sockaddr_in addressA;
-struct sockaddr_in addressM17;
 
 //
 // Connect
@@ -324,18 +323,6 @@ void udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * 
     if (err < nsam) fprintf (stderr, "\n UDP Underflow %ld", err); //I'm not even sure if this is possible
 }
 
-int m17_socket_receiver(dsd_opts * opts, void * data)
-{
-    size_t err = 0;
-    struct sockaddr_in cliaddr;
-    socklen_t len = sizeof(cliaddr);
-
-    //receive data from socket
-    err = recvfrom(opts->udp_sockfd, data, 1000, 0, (struct sockaddr * ) & address, &len); //was MSG_WAITALL, but that seems to be = 256
-
-    return err;
-}
-
 //Analog UDP port on +2 of normal open socket
 void udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void * data)
 {
@@ -351,20 +338,6 @@ void udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void *
     err = sendto(opts->udp_sockfdA, data, nsam, 0, (const struct sockaddr * ) & addressA, sizeof(struct sockaddr_in));
     if (err < 0) fprintf (stderr, "\n UDP SENDTO ERR %ld", err); //return value here is size_t number of characters sent, or -1 for failure
     if (err < nsam) fprintf (stderr, "\n UDP Underflow %ld", err); //I'm not even sure if this is possible
-}
-
-int m17_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data)
-{
-    UNUSED(state);
-    unsigned long long int err = 0;
-
-    //See notes in m17.c on line ~3395 regarding usage
-
-    //send audio or data to socket
-    err = sendto(opts->m17_udp_sock, data, nsam, 0, (const struct sockaddr * ) & addressM17, sizeof(struct sockaddr_in));
-    //RETURN Value should be ACKN or NACK, or PING, or PONG
-
-    return (err);
 }
 
 int udp_socket_connect(dsd_opts * opts, dsd_state * state)
@@ -438,46 +411,6 @@ int udp_socket_connectA(dsd_opts * opts, dsd_state * state)
     }
 
     addressA.sin_port = htons(opts->udp_portno+2); //plus 2 to current port assignment for the analog port value
-    if (err < 0)
-    {
-        fprintf (stderr, " UDP htons Error %ld\n", err);
-        return (err);
-    }
-
-    return 0;
-}
-
-int udp_socket_connectM17(dsd_opts * opts, dsd_state * state)
-{
-    UNUSED(state);
-
-    long int err = 0;
-    err = opts->m17_udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (err < 0)
-    {
-        fprintf (stderr, " UDP Socket Error %ld\n", err);
-        return (err);
-    }
-
-    // Don't think this is needed, but doesn't seem to hurt to keep it here either
-    int broadcastEnable = 1;
-    err = setsockopt(opts->m17_udp_sock, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
-    if (err < 0)
-    {
-        fprintf (stderr, " UDP Broadcast Set Error %ld\n", err);
-        return (err);
-    }
-
-    memset((char * ) & addressM17, 0, sizeof(addressM17));
-    addressM17.sin_family = AF_INET;
-    err = addressM17.sin_addr.s_addr = inet_addr(opts->m17_hostname);
-    if (err < 0) //error in this context reports back 32-bit inet_addr reversed order byte pairs
-    {
-        fprintf (stderr, " UDP inet_addr Error %ld\n", err);
-        return (err);
-    }
-
-    addressM17.sin_port = htons(opts->m17_portno);
     if (err < 0)
     {
         fprintf (stderr, " UDP htons Error %ld\n", err);
