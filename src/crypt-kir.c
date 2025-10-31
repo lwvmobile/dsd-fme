@@ -74,14 +74,6 @@ void MD2II_end(unsigned char h4[n1])
     for (i = 0; i < n1global; i++) h4[i] = h1[i];
 }
 
-// /* Convert 64-bit integer to bytes (big-endian) */
-// static void u64_to_bytes_be(uint64_t val, unsigned char *out)
-// {
-//     for (int i = 0; i < 8; i++) {
-//         out[i] = (unsigned char)((val >> (56 - 8 * i)) & 0xFF);
-//     }
-// }
-
 void print_hex(const unsigned char *buf, int len)
 {
     for (int i = 0; i < len; i++)

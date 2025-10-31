@@ -175,6 +175,14 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
   unsigned long long int k;
   int x;
 
+  //keystream and silence conditional items
+  uint64_t silence = 0xF801A99F8CE080; //AMBE+2 default silence vector expressed as a 56-bit hex value.
+  char ambe_silence[49];
+  for (i = 0; i < 49; i++)
+    ambe_silence[i] = (silence >> (55-i)) & 1;
+  char zeroes[49]; memset(zeroes, 0, sizeof(zeroes));
+  size_t zeroes_threshold = 24; //zeroed ambe_d after golay is 000D2C00000000, look at +24 position for 24 bits
+
   //these conditions should ensure no clashing with the BP/HBP/Scrambler key loading machanisms already coded in
   if (state->currentslot == 0 && state->payload_algid != 0 && state->payload_algid != 0x80 && state->keyloader == 1)
     keyring (opts, state);
@@ -773,17 +781,16 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           }
         }
 
-        //now we do the bit by bit xor depending on the frame and position of the state bit counter
-        //run 6 instead of 7 so we can just do bit 49 outside of loop to keep extra bits overloading the array
-        z = 0;
-        for (i = 0; i < 6; i++)
+        //skip keystream if silence or zeroes (some CCR), else apply keystream directly and increment counter
+        if (memcmp(ambe_d, ambe_silence, 49) == 0)
+          state->bit_counterL += 49;
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0)
+          state->bit_counterL += 49;
+        else
         {
-          for (j = 0; j < 8; j++)
-            ambe_d[z++] ^= state->ks_bitstreamL[state->bit_counterL++];
+          for (i = 0; i < 49; i++)
+            ambe_d[i] ^= state->ks_bitstreamL[state->bit_counterL++];
         }
-
-        //last bit
-        ambe_d[48] ^= state->ks_bitstreamL[state->bit_counterL++];
 
         //skip the next 7 bits of the array (if not Hytera Enhanced)
         if(state->payload_algid != 0x02)
@@ -822,15 +829,24 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         //that may occur on some systems that preempt VC6 voice for a RC opportuninity (TXI)
         //this occurs because we are supposed to either have a a 'repeat' frame, or 'silent' frame play
         //due to the error, but the keystream application makes it random 'pfft pop' sound instead
-        if (state->errs < 3)
-          rc4_voice_decrypt(state->dropL, 9, 7, rckey, cipher, plain);
-        else memcpy (plain, cipher, sizeof(plain));
 
-        state->dropL += 7;
+        if (memcmp(ambe_d, ambe_silence, 49) == 0)
+          state->dropL += 7;
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0)
+          state->dropL += 7;
+        else
+        {
+          if (state->errs < 3)
+            rc4_voice_decrypt(state->dropL, 9, 7, rckey, cipher, plain);
+          else memcpy (plain, cipher, sizeof(plain));
 
-        //unpack deciphered plain array back into ambe_d bit array
-        memset (ambe_d, 0, 49*sizeof(char));
-        unpack_ambe(plain, ambe_d);
+          state->dropL += 7;
+
+          //unpack deciphered plain array back into ambe_d bit array
+          memset (ambe_d, 0, 49*sizeof(char));
+          unpack_ambe(plain, ambe_d);
+
+        }
 
       }
 
@@ -875,74 +891,111 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       //DMR Retevis AP, Either Slot (static single key'd enforced KS)
       if (state->retevis_ap == 1)
       {
-        
-        uint8_t frame1_cipher[49];
-   
-        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
-   
-        decrypt_rc2((CryptoContext *)state->rc2_context, frame1_cipher);
-        
-        memset (ambe_d, 0, 49*sizeof(char));
-        for (int i = 0; i < 49; i++) ambe_d[i] = frame1_cipher[i];
-         
+        if (memcmp(ambe_d, ambe_silence, 49) == 0) {}
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0) {}
+        else
+        {
+          uint8_t frame1_cipher[49];
+    
+          for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
+    
+          decrypt_rc2((CryptoContext *)state->rc2_context, frame1_cipher);
+          
+          memset (ambe_d, 0, 49*sizeof(char));
+          for (int i = 0; i < 49; i++) ambe_d[i] = frame1_cipher[i];
+        }
+
       }
 
       //DMR TYT AP, Either Slot (static single key'd enforced KS)
       if (state->tyt_ap == 1)
       {
-        
-        short frame1_cipher[49];
-        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
-        decrypt_frame_49(frame1_cipher);
- 
-        memset (ambe_d, 0, 49*sizeof(char));
-        for (int i = 0; i < 49; i++) ambe_d[i] = ctx.bits[i];
+        if (memcmp(ambe_d, ambe_silence, 49) == 0) {}
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0) {}
+        else
+        {
+          short frame1_cipher[49];
+          for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
+          decrypt_frame_49(frame1_cipher);
+  
+          memset (ambe_d, 0, 49*sizeof(char));
+          for (int i = 0; i < 49; i++) ambe_d[i] = ctx.bits[i];
+        }
 
       }
 
       //DMR BAOFENG AP, Either Slot (static single key'd enforced KS)
       if (state->baofeng_ap == 1)
       {
-        
-        short frame1_cipher[49];
-        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
-        
-        decrypt_frame_49_pc5(frame1_cipher);
-        
-        memset (ambe_d, 0, 49*sizeof(char));
-        for (int i = 0; i < 49; i++) ambe_d[i] = ctxpc5.bits[i];
-
+        if (memcmp(ambe_d, ambe_silence, 49) == 0) {}
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0) {}
+        else
+        {
+          short frame1_cipher[49];
+          for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
+          
+          decrypt_frame_49_pc5(frame1_cipher);
+          
+          memset (ambe_d, 0, 49*sizeof(char));
+          for (int i = 0; i < 49; i++) ambe_d[i] = ctxpc5.bits[i];
+        }
       }
 
       //DMR TYT EP, Either Slot (static single key'd enforced KS)
       if (state->tyt_ep == 1)
       {
-        for (int i = 0; i < 49; i++)
-          ambe_d[i] ^= (uint8_t)(ctx.bits[i] & 1);
+        if (memcmp(ambe_d, ambe_silence, 49) == 0) {}
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0) {}
+        else
+        {
+          for (int i = 0; i < 49; i++)
+            ambe_d[i] ^= (uint8_t)(ctx.bits[i] & 1);
+        }
       }
 
-      //DMR Kenwood Scrambler, Either Slot (static single key'd enforced KS) //should probably break this up, but this is a test for now
+      //DMR Kenwood Scrambler, Either Slot (static single key'd enforced KS)
       if (state->ken_sc == 1)
       {
-        for (int i = 0; i < 49; i++)
-          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%882] & 1); //Yikes!
+        if (memcmp(ambe_d, ambe_silence, 49) == 0)
+          state->static_ks_counter[state->currentslot] += 49;
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0)
+          state->static_ks_counter[state->currentslot] += 49;
+        else
+        {
+          for (int i = 0; i < 49; i++)
+            ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%882] & 1); //Yikes!
+        }
       }
 
       //DMR Anytone BP, Either Slot (static single key'd enforced KS)
       if (state->any_bp == 1)
       {
-        for (int i = 0; i < 49; i++)
-          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%16] & 1); //Yikes!
+        if (memcmp(ambe_d, ambe_silence, 49) == 0)
+          state->static_ks_counter[state->currentslot] += 49;
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0)
+          state->static_ks_counter[state->currentslot] += 49;
+        else
+        {
+          for (int i = 0; i < 49; i++)
+            ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%16] & 1); //Yikes!
+        }
       }
 
       //Generic Straight Static Keystream
       if (state->straight_ks == 1)
       {
-        //disable enc identifiers, if present
-        state->dmr_so = 0;
-        state->payload_algid = 0;
-        for (int i = 0; i < 49; i++)
-          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%state->straight_mod] & 1); //Yikes!
+        if (memcmp(ambe_d, ambe_silence, 49) == 0)
+          state->static_ks_counter[state->currentslot] += 49;
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0)
+          state->static_ks_counter[state->currentslot] += 49;
+        else
+        {
+          //disable enc identifiers, if present
+          state->dmr_so = 0;
+          state->payload_algid = 0;
+          for (int i = 0; i < 49; i++)
+            ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%state->straight_mod] & 1); //Yikes!
+        }
       }
 
       mbe_processAmbe2450Dataf (state->audio_out_temp_buf, &state->errs, &state->errs2, state->err_str,
@@ -1190,17 +1243,16 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           }
         }
 
-        //now we do the bit by bit xor depending on the frame and position of the state bit counter
-        //run 6 instead of 7 so we can just do bit 49 outside of loop to keep extra bits overloading the array
-        z = 0;
-        for (i = 0; i < 6; i++)
+        //skip keystream if silence or zeroes (some CCR), else apply keystream directly and increment counter
+        if (memcmp(ambe_d, ambe_silence, 49) == 0)
+          state->bit_counterR += 49;
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0)
+          state->bit_counterR += 49;
+        else
         {
-          for (j = 0; j < 8; j++)
-            ambe_d[z++] ^= state->ks_bitstreamR[state->bit_counterR++];
+          for (i = 0; i < 49; i++)
+            ambe_d[i] ^= state->ks_bitstreamR[state->bit_counterR++];
         }
-
-        //last bit
-        ambe_d[48] ^= state->ks_bitstreamR[state->bit_counterR++];
 
         //skip the next 7 bits of the array (if not Hytera Enhanced)
         if(state->payload_algidR != 0x02)
@@ -1239,14 +1291,22 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         //that may occur on some systems that preempt VC6 voice for a RC opportuninity (TXI)
         //this occurs because we are supposed to either have a a 'repeat' frame, or 'silent' frame play
         //due to the error, but the keystream application makes it random 'pfft pop' sound instead
-        if (state->errsR < 3)
-          rc4_voice_decrypt(state->dropR, 9, 7, rckey, cipher, plain);
-        else memcpy (plain, cipher, sizeof(plain));
-        state->dropR += 7;
+        if (memcmp(ambe_d, ambe_silence, 49) == 0)
+          state->dropR += 7;
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0)
+          state->dropR += 7;
+        else
+        {
+          if (state->errsR < 3)
+            rc4_voice_decrypt(state->dropR, 9, 7, rckey, cipher, plain);
+          else memcpy (plain, cipher, sizeof(plain));
+          state->dropR += 7;
 
-        //unpack deciphered plain array back into ambe_d bit array
-        memset (ambe_d, 0, 49*sizeof(char));
-        unpack_ambe(plain, ambe_d);
+          //unpack deciphered plain array back into ambe_d bit array
+          memset (ambe_d, 0, 49*sizeof(char));
+          unpack_ambe(plain, ambe_d);
+
+        }
 
       }
 
@@ -1291,74 +1351,112 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       //DMR Retevis AP, Either Slot (static single key'd enforced KS)
       if (state->retevis_ap == 1)
       {
-        
-        uint8_t frame1_cipher[49];
-   
-        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
-   
-        decrypt_rc2((CryptoContext *)state->rc2_context, frame1_cipher);
-        
-        memset (ambe_d, 0, 49*sizeof(char));
-        for (int i = 0; i < 49; i++) ambe_d[i] = frame1_cipher[i];
-         
+        if (memcmp(ambe_d, ambe_silence, 49) == 0) {}
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0) {}
+        else
+        {
+          uint8_t frame1_cipher[49];
+    
+          for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
+    
+          decrypt_rc2((CryptoContext *)state->rc2_context, frame1_cipher);
+          
+          memset (ambe_d, 0, 49*sizeof(char));
+          for (int i = 0; i < 49; i++) ambe_d[i] = frame1_cipher[i];
+        }
+
       }
 
       //DMR TYT AP, Either Slot (static single key'd enforced KS)
       if (state->tyt_ap == 1)
       {
-        
-        short frame1_cipher[49];
-        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
-        decrypt_frame_49(frame1_cipher);
- 
-        memset (ambe_d, 0, 49*sizeof(char));
-        for (int i = 0; i < 49; i++) ambe_d[i] = ctx.bits[i];
+        if (memcmp(ambe_d, ambe_silence, 49) == 0) {}
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0) {}
+        else
+        {
+          short frame1_cipher[49];
+          for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
+          decrypt_frame_49(frame1_cipher);
+  
+          memset (ambe_d, 0, 49*sizeof(char));
+          for (int i = 0; i < 49; i++) ambe_d[i] = ctx.bits[i];
+        }
 
       }
 
       //DMR BAOFENG AP, Either Slot (static single key'd enforced KS)
       if (state->baofeng_ap == 1)
       {
-        
-        short frame1_cipher[49];
-        for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
-        
-        decrypt_frame_49_pc5(frame1_cipher);
-        
-        memset (ambe_d, 0, 49*sizeof(char));
-        for (int i = 0; i < 49; i++) ambe_d[i] = ctxpc5.bits[i];
+        if (memcmp(ambe_d, ambe_silence, 49) == 0) {}
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0) {}
+        else
+        {
+          short frame1_cipher[49];
+          for (int i = 0; i < 49; i++) frame1_cipher[i] = ambe_d[i];
+          
+          decrypt_frame_49_pc5(frame1_cipher);
+          
+          memset (ambe_d, 0, 49*sizeof(char));
+          for (int i = 0; i < 49; i++) ambe_d[i] = ctxpc5.bits[i];
+        }
 
       }
 
       //DMR TYT EP, Either Slot (static single key'd enforced KS)
       if (state->tyt_ep == 1)
       {
-        for (int i = 0; i < 49; i++)
-          ambe_d[i] ^= (uint8_t)(ctx.bits[i] & 1);
+        if (memcmp(ambe_d, ambe_silence, 49) == 0) {}
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0) {}
+        else
+        {
+          for (int i = 0; i < 49; i++)
+            ambe_d[i] ^= (uint8_t)(ctx.bits[i] & 1);
+        }
       }
 
       //DMR Kenwood Scrambler, Either Slot (static single key'd enforced KS) //should probably break this up, but this is a test for now
       if (state->ken_sc == 1)
       {
-        for (int i = 0; i < 49; i++)
-          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%882] & 1); //Yikes!
+        if (memcmp(ambe_d, ambe_silence, 49) == 0)
+          state->static_ks_counter[state->currentslot] += 49;
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0)
+          state->static_ks_counter[state->currentslot] += 49;
+        else
+        {
+          for (int i = 0; i < 49; i++)
+            ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%882] & 1); //Yikes!
+        }
       }
 
       //DMR Anytone BP, Either Slot (static single key'd enforced KS)
       if (state->any_bp == 1)
       {
-        for (int i = 0; i < 49; i++)
-          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%16] & 1); //Yikes!
+        if (memcmp(ambe_d, ambe_silence, 49) == 0)
+          state->static_ks_counter[state->currentslot] += 49;
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0)
+          state->static_ks_counter[state->currentslot] += 49;
+        else
+        {
+          for (int i = 0; i < 49; i++)
+            ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%16] & 1); //Yikes!
+        }
       }
 
       //Generic Straight Static Keystream
       if (state->straight_ks == 1)
       {
-        //disable enc identifiers, if present
-        state->dmr_soR = 0;
-        state->payload_algidR = 0;
-        for (int i = 0; i < 49; i++)
-          ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%state->straight_mod] & 1); //Yikes!
+        if (memcmp(ambe_d, ambe_silence, 49) == 0)
+          state->static_ks_counter[state->currentslot] += 49;
+        else if (memcmp(ambe_d+24, zeroes+24, zeroes_threshold) == 0)
+          state->static_ks_counter[state->currentslot] += 49;
+        else
+        {
+          //disable enc identifiers, if present
+          state->dmr_soR = 0;
+          state->payload_algidR = 0;
+          for (int i = 0; i < 49; i++)
+            ambe_d[i] ^= (uint8_t)(state->static_ks_bits[state->currentslot][(state->static_ks_counter[state->currentslot]++)%state->straight_mod] & 1); //Yikes!
+        }
       }
 
       mbe_processAmbe2450Dataf (state->audio_out_temp_bufR, &state->errsR, &state->errs2R, state->err_strR,
