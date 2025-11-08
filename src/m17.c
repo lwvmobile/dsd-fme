@@ -154,9 +154,9 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
   else if (protocol == 0x09) fprintf (stderr, " OTA Key Delivery;"); //m17-fme non standard packet data
   else if (protocol == 0x80) fprintf (stderr, " Meta Text Data V2;"); //internal format only from meta
   else if (protocol == 0x81) fprintf (stderr, " Meta GNSS Position Data;"); //internal format only from meta
-  else if (protocol == 0x82) fprintf (stderr, " Meta Text Data V3;"); //internal format only from meta
+  else if (protocol == 0x82) fprintf (stderr, " Meta Extended CSD;"); //internal format only from meta
+  else if (protocol == 0x83) fprintf (stderr, " Meta Text Data V3;"); //internal format only from meta
   else if (protocol == 0x91) fprintf (stderr, " PDU GNSS Position Data;"); //PDU Version of GNSS
-  else if (protocol == 0x98) fprintf (stderr, " Meta Extended CSD;"); //internal format only from meta
   else if (protocol == 0x99) fprintf (stderr, " 1600 Arbitrary Data;"); //internal format only from 1600
   else                       fprintf (stderr, " Res/Unk: %02X;", protocol); //any received but unknown protocol type
 
@@ -183,8 +183,8 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
     }
   }
 
-  //Extended Call Sign Data (depreciated in Version 3.0, but leaving for older soft/samples, etc)
-  else if (protocol == 0x98)
+  //Extended Call Sign Data
+  else if (protocol == 0x82)
   {
     //NOTE: If doing a shift addition like this, make sure ALL values have (unsigned long long int) in front of it, not just the ones that 'needed' it
     unsigned long long int src  = ((unsigned long long int)input[1] << 40ULL) + ((unsigned long long int)input[2] << 32ULL) + ((unsigned long long int)input[3] << 24ULL) + ((unsigned long long int)input[4]  << 16ULL) + ((unsigned long long int)input[5]  << 8ULL) + ((unsigned long long int)input[6]  << 0ULL);
@@ -211,7 +211,11 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
       }
     }
 
-    sprintf (state->m17_data_string, "Extended CSD - CF1: %s; CF2: %s;", cf1, cf2);
+    //check for optional cf2
+    if (cf2[0] != 0)  
+      sprintf (state->m17_data_string, "Extended CSD - CF1: %s; CF2: %s;", cf1, cf2);
+    else sprintf (state->m17_data_string, "Extended CSD - CF1: %s; ", cf1);
+
   }
 
   //GNSS Positioning (version 2.0 spec)
@@ -368,7 +372,7 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
   }
 
   //Meta Text Messages Version 3.0 (15-segment sequential)
-  else if (protocol == 0x82)
+  else if (protocol == 0x83)
   {
 
     uint8_t segment_len = (input[1] >> 4) & 0xF;
@@ -401,17 +405,37 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
 
   }
 
-  //1600 Arbitrary Data as Text String
+  //1600 Arbitrary Data as ASCII Text String
   else if (protocol == 0x99)
   {
-    
+    uint8_t is_ascii = 1;
+    for (i = 1; i < len; i++)
+    {
+      if (input[i] != 0 && (input[i] < 0x20 || input[i] > 0x7F))
+      {
+        is_ascii = 0;
+        break;
+      }
+    }
+
     sprintf (state->m17_data_string, "%s", "");
 
-    fprintf (stderr, " ");
-    for (i = 1; i < len; i++)
-      fprintf (stderr, "%c", input[i]);
+    if (is_ascii == 1)
+    {
 
-    memcpy (state->m17_data_string, input+1, len);
+      fprintf (stderr, " ");
+      for (i = 1; i < len; i++)
+        fprintf (stderr, "%c", input[i]);
+
+      memcpy (state->m17_data_string, input+1, len);
+      state->m17_data_string[len] = '\0'; //terminate string
+
+    }
+    else
+    {
+      fprintf (stderr, " Unknown Format;");
+      sprintf (state->m17_data_string, "%s", "Unknown Arbitrary Data Format;");
+    } 
 
     //todo: this
     // event_log_writer (super, state->m17_data_string, protocol);
@@ -684,12 +708,6 @@ void decode_lsf_v2_contents(dsd_state * state)
   if (lsf_et == 0 && meta_sum != 0)
   {
     uint8_t meta[15]; meta[0] = lsf_es + 0x80; //add identifier for pkt decoder
-
-    //re-map older values to newer internal values
-    //Extended CSD currently removed from 3.0, so just map it to depreciated new value of 0x98
-    if (meta[0] == 0x82)
-      meta[0] = 0x98;
-
     for (int i = 0; i < 14; i++)
       meta[i+1] = state->m17_meta[i];
 
@@ -1180,15 +1198,27 @@ void prepare_str(dsd_opts * opts, dsd_state * state, float * sbuf)
   for (i = 0; i < 128; i++)
     payload[i] = stream_bits[i+16];
 
-  if (state->m17_str_dt == 2)
+  //don't play the garbled audio on signature frames
+  uint8_t is_sig = 0;
+  if (fn >= 0x7FFC)
+    is_sig = 1;
+
+  if (state->m17_str_dt == 2 && is_sig == 0)
     M17processCodec2_3200(opts, state, payload);
-  else if (state->m17_str_dt == 3)
+  else if (state->m17_str_dt == 3 && is_sig == 0)
     M17processCodec2_1600(opts, state, payload, fn%6);
 
   if (opts->payload == 1 && state->m17_str_dt != 2 && state->m17_str_dt != 3)
   {
     fprintf (stderr, "\n STREAM: ");
     for (i = 0; i < 18; i++)
+      fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&stream_bits[i*8], 8));
+  }
+
+  else if (is_sig == 1)
+  {
+    fprintf (stderr, "\n SIG: ");
+    for (i = 2; i < 18; i++)
       fprintf (stderr, "[%02X]", (uint8_t)ConvertBitIntoBytes(&stream_bits[i*8], 8));
   }
 
