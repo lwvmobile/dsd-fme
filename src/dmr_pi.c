@@ -544,7 +544,7 @@ uint32_t kirisun_lfsr(unsigned long long int mi)
         byte |= (1 << j);
         lfsr = temp ^ taps;
       }
-      else lfsr = temp ^ 1;
+      else lfsr = temp; //was previously temp ^ 1, but that isn't a primitive
     }
 
     new_mi <<=8;
