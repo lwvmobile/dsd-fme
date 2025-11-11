@@ -123,11 +123,11 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
     trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
   }
 
-	crc = crc12f (trellis_buf, 84); //80
+	crc = crc12f (trellis_buf, 80);
 	for (int i = 0; i < 12; i++)
 	{
 		check = check << 1;
-		check = check | trellis_buf[84+i]; //80
+		check = check | trellis_buf[80+i];
 	}
 
 	//debug
@@ -146,11 +146,11 @@ void nxdn_deperm_facch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 		//fill m_data bytes with trellis_buf
 		for(int i = 0; i < 12; i++)
 			m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
-		crc = crc12f (trellis_buf, 84);
+		crc = crc12f (trellis_buf, 80);
 		for (int i = 0; i < 12; i++)
 		{
 			check = check << 1;
-			check = check | trellis_buf[i+84];
+			check = check | trellis_buf[i+80];
 		}
 	}
 
@@ -582,7 +582,10 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 	int bf_idx = sf_full-sf_size; //index position for buffer to superframe
 
 	if (sf_fb && sf_pof) //single unit message
+	{
+		memset (state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
 		memcpy(state->dmr_pdu_sf[0]+0, trellis_buf+bf_idx, sf_size*sizeof(uint8_t));
+	}
 	else //multiple unit message
 		memcpy(state->dmr_pdu_sf[0]+sf_idx, trellis_buf+bf_idx, sf_size*sizeof(uint8_t));
 
@@ -598,8 +601,10 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		state->nxdn_last_ran = 7;
 		state->nxdn_last_tg = 777;
 		state->nxdn_last_rid = 777;
-		sprintf (state->generic_talker_alias[0], "%s", "JPN DCR");
-		sprintf (state->event_history_s[0].Event_History_Items[0].alias, "%s; ", "JPN DCR");
+
+		//disabled with CSM going into Alias Value
+		// sprintf (state->generic_talker_alias[0], "%s", "JPN DCR");
+		// sprintf (state->event_history_s[0].Event_History_Items[0].alias, "%s; ", "JPN DCR");
 
 		//sf_fb is the head message in a multi part, or the only message in a single part message
 		if (sf_fb)
@@ -671,12 +676,18 @@ void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60])
 		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
 		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
 	}
+	else if (sf_fb && sf_pof) //single
+	{
+		memset (state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
+		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+	}
 
 }
 
 //PICH or TCH 144 bit (JPN DCR)
 //SEE: https://web.archive.org/web/20150417175725/http://arib.or.jp/english/html/overview/doc/1-STD-T98v1_4.pdf
-void nxdn_deperm_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
+void nxdn_deperm_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t bits[144], uint8_t lich)
 {
 	uint8_t deperm[144]; //144
 	uint8_t depunc[192]; //192
@@ -733,11 +744,11 @@ void nxdn_deperm_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
     trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
   }
 
-	crc = crc12f (trellis_buf, 84); //80
+	crc = crc12f (trellis_buf, 80);
 	for (int i = 0; i < 12; i++)
 	{
 		check = check << 1;
-		check = check | trellis_buf[84+i]; //80
+		check = check | trellis_buf[80+i];
 	}
 
 	//debug
@@ -756,11 +767,11 @@ void nxdn_deperm_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 		//fill m_data bytes with trellis_buf
 		for(int i = 0; i < 12; i++)
 			m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
-		crc = crc12f (trellis_buf, 84);
+		crc = crc12f (trellis_buf, 80);
 		for (int i = 0; i < 12; i++)
 		{
 			check = check << 1;
-			check = check | trellis_buf[i+84];
+			check = check | trellis_buf[i+80];
 		}
 	}
 
@@ -773,33 +784,72 @@ void nxdn_deperm_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 		uint16_t source = (uint16_t)ConvertBitIntoBytes(&trellis_buf[24], 16);
 		uint16_t target = (uint16_t)ConvertBitIntoBytes(&trellis_buf[40], 16);
 
-		//may only be relevant on MFID 0x30 "F.R.C." Radios
-		if (opcode == 0x0F)
+		//SB0 with CSM
+		if (lich == 0x08)
 		{
-			fprintf (stderr, "\n ");
-			fprintf (stderr, "Source: %d; Target: %d; ", source, target);
-			if (gi)
-				fprintf (stderr, "Private; ");
-			else fprintf (stderr, "Group; ");
-			
-			fprintf (stderr, "Data Preamble; ");
-			uint8_t countdown = (uint8_t)ConvertBitIntoBytes(&trellis_buf[64], 8);
-			fprintf (stderr, "Countdown: %d; ", countdown);
+			unsigned long long int csm = 0;
+			for (int i = 0; i < 9; i++)
+			{
+				csm <<= 4;
+				uint8_t bcd = (uint8_t)ConvertBitIntoBytes(&trellis_buf[0+(i*4)], 4);
 
+				// if (bcd < 10)
+				// 	csm |= bcd;
+				// else csm |= 0;
+
+				csm |= bcd;
+			}
+
+			fprintf (stderr, "\n ");
+			fprintf (stderr, "Call Sign Memory: %09llX; ", csm);
+
+			//Assigning this to talker alias, see notes below on decimal value
+			sprintf (state->generic_talker_alias[0], "CSM %09llX", csm);
+			sprintf (state->event_history_s[0].Event_History_Items[0].alias, "CSM %09llX", csm);
+
+			//convert from hex to string to decimal w/ sscanf
+			// char csm_str[32]; memset(csm_str, 0, sizeof(csm_str));
+			// sprintf (csm_str, "%llX", csm);
+			// unsigned long long int csm_dec = 0;
+			// sscanf(csm_str, "%lld", &csm_dec);
+
+			//the issue is that this value will exceed the bit allotment for nxdn src value (needs long long at 36-bit)
+			//even values in range 100000000 - 200000000 are 33-bits minimum
+			// fprintf (stderr, "Call Sign Memory: %09lld; ", csm_dec);
 		}
-
-		//may only be relevant on MFID 0x30 "F.R.C." Radios
-		if (opcode == 0x32)
+		//anything else
+		else
 		{
-			fprintf (stderr, "\n ");
-			fprintf (stderr, "Source: %d; Target: %d; ", source, target);
-			if (gi)
-				fprintf (stderr, "Private; ");
-			else fprintf (stderr, "Group; ");
-			
-			fprintf (stderr, "Precoded Message; ");
-			uint8_t idx = (uint8_t)ConvertBitIntoBytes(&trellis_buf[64], 8);
-			fprintf (stderr, "Index#: %d;", idx);
+
+			//may only be relevant on MFID 0x30 "F.R.C." Radios
+			if (opcode == 0x0F)
+			{
+				fprintf (stderr, "\n ");
+				fprintf (stderr, "Source: %d; Target: %d; ", source, target);
+				if (gi)
+					fprintf (stderr, "Private; ");
+				else fprintf (stderr, "Group; ");
+				
+				fprintf (stderr, "Data Preamble; ");
+				uint8_t countdown = (uint8_t)ConvertBitIntoBytes(&trellis_buf[64], 8);
+				fprintf (stderr, "Countdown: %d; ", countdown);
+
+			}
+
+			//may only be relevant on MFID 0x30 "F.R.C." Radios
+			if (opcode == 0x32)
+			{
+				fprintf (stderr, "\n ");
+				fprintf (stderr, "Source: %d; Target: %d; ", source, target);
+				if (gi)
+					fprintf (stderr, "Private; ");
+				else fprintf (stderr, "Group; ");
+				
+				fprintf (stderr, "Precoded Message; ");
+				uint8_t idx = (uint8_t)ConvertBitIntoBytes(&trellis_buf[64], 8);
+				fprintf (stderr, "Index#: %d;", idx);
+
+			}
 
 		}
 
@@ -813,14 +863,18 @@ void nxdn_deperm_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t bits[144])
 	{
 		fprintf (stderr, "\n ");
 		fprintf (stderr, "%s", KRED);
-		fprintf (stderr, "TCH (CRC ERR)");
+		if (lich == 0x08)
+			fprintf (stderr, "PICH (CRC ERR)");
+		else fprintf (stderr, "TCH (CRC ERR)");
 		fprintf (stderr, "%s", KNRM);
 	}
 
 	if (opts->payload == 1)
 	{
 		fprintf (stderr, "\n");
-		fprintf (stderr, " TCH Payload ");
+		if (lich == 0x08)
+			fprintf (stderr, " PICH Payload ");
+		else fprintf (stderr, " TCH Payload ");
 		for (int i = 0; i < 12; i++)
 		{
 			fprintf (stderr, "[%02X]", m_data[i]);
@@ -1301,7 +1355,7 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 		for(int i = 0; i < 4; i++)
 			m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
 		crc = crc7_scch(trellis_buf, 25);
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < 7; i++)
 		{
 			check = check << 1;
 			check = check | trellis_buf[i+25];
@@ -1435,11 +1489,11 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 			trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
 		}
 
-		crc[j] = crc12f (trellis_buf, 84); //84
+		crc[j] = crc12f (trellis_buf, 80);
 		for (int i = 0; i < 12; i++)
 		{
 			check[j] = check[j] << 1;
-			check[j] = check[j] | trellis_buf[84+i]; //84
+			check[j] = check[j] | trellis_buf[80+i];
 
 		}
 
@@ -1459,11 +1513,11 @@ void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[2
 			//fill m_data bytes with trellis_buf
 			for(int i = 0; i < 12; i++)
 				m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
-			crc[j] = crc12f (trellis_buf, 84);
+			crc[j] = crc12f (trellis_buf, 80);
 			for (int i = 0; i < 12; i++)
 			{
 				check[j] = check[j] << 1;
-				check[j] = check[j] | trellis_buf[i+84];
+				check[j] = check[j] | trellis_buf[i+80];
 			}
 		}
 

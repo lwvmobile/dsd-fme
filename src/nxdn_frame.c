@@ -128,7 +128,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	lich = lich_full >> 1;
 
 	//special cases on DCR where parity is computed over 7 bits, and not 4 bits
-	if (lich == 0x4A || lich == 0x48 || lich == 0x46)
+	if (lich == 0x08 || lich == 0x4A || lich == 0x48 || lich == 0x46)
 		lich_parity_computed = ((lich_full >> 7) + (lich_full >> 6) + (lich_full >> 5) + (lich_full >> 4) + (lich_full >> 3) + (lich_full >> 2) + (lich_full >> 1)) & 1;
 
 	if (lich_parity_received != lich_parity_computed)
@@ -223,9 +223,13 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		sacch2 = 1;
 		break;
 
-	//DCR Data or End Frame
+	//DCR SB0, Data or End Frame
+	case 0x08: //SB0 w/ CSM 9 digit BCD found here
+		sacch2 = 1;
+		pich_tch = 1; //observed 2nd PICH is zero fill
+		break;
 	case 0x48:
-		pich_tch = 3;
+		pich_tch = 3; //may be 1, or 2 TCH (observed possibly both)
 	case 0x4A:
 		sacch2 = 1;
 		break;
@@ -561,8 +565,8 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 
 	//DCR
 	if (sacch2)       nxdn_deperm_sacch2(opts, state, sacch_bits);
-	if (pich_tch & 1) nxdn_deperm_pich_tch(opts, state, facch_bits_a);
-	if (pich_tch & 2) nxdn_deperm_pich_tch(opts, state, facch_bits_b);
+	if (pich_tch & 1) nxdn_deperm_pich_tch(opts, state, facch_bits_a, lich);
+	if (pich_tch & 2) nxdn_deperm_pich_tch(opts, state, facch_bits_b, lich);
 
 	//only run facch in second slot if its not equal to the first one
 	//ideally, this would work better AFTER decoding/FEC

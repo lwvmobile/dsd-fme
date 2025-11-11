@@ -1274,7 +1274,7 @@ void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint
 void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[288], uint8_t type);
 //DCR Mode
 void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60]);
-void nxdn_deperm_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t bits[144]);
+void nxdn_deperm_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t bits[144], uint8_t lich);
 //MT and Voice
 void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType);
 void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182]);
