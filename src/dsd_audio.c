@@ -208,6 +208,7 @@ void openOSSOutput (dsd_opts * opts)
       }
 
       fmt = 0;
+      #ifndef __APPLE__
       if (ioctl (opts->audio_out_fd, SNDCTL_DSP_RESET) < 0)
       {
         fprintf (stderr, "ioctl reset error \n");
@@ -230,6 +231,7 @@ void openOSSOutput (dsd_opts * opts)
       {
         fprintf (stderr, "ioctl setfmt error \n");
       }
+      #endif // __APPLE__
 
       opts->audio_out_type = 5; //5 for 1 channel - 48k OSS 16-bit short output (matching with input)
       opts->pulse_digi_rate_out = 48000; //this is used to force to upsample and also allow source audio monitor conditional check
@@ -255,6 +257,7 @@ void openOSSOutput (dsd_opts * opts)
       //Setup the device. Note that it's important to set the sample format, number of channels and sample rate exactly in this order. Some devices depend on the order.
 
       fmt = 0;
+      #ifndef __APPLE__
       if (ioctl (opts->audio_out_fd, SNDCTL_DSP_RESET) < 0)
       {
         fprintf (stderr, "ioctl reset error \n");
@@ -290,6 +293,7 @@ void openOSSOutput (dsd_opts * opts)
       {
         fprintf (stderr, "ioctl stereo error \n");
       }
+      #endif // __APPLE__
 
       //TODO: Multiple output returns based on 8k/1, 8k/2, or maybe 48k/1? (2,3,5)??
       if (opts->pulse_digi_out_channels == 2)

@@ -3415,6 +3415,7 @@
        }
  
        fmt = 0;
+       #ifndef __APPLE__
        if (ioctl (opts.audio_in_fd, SNDCTL_DSP_RESET) < 0)
        {
          fprintf (stderr, "ioctl reset error \n");
@@ -3429,11 +3430,13 @@
        {
          fprintf (stderr, "ioctl stereo error \n");
        }
+       
        fmt = AFMT_S16_LE;
        if (ioctl (opts.audio_in_fd, SNDCTL_DSP_SETFMT, &fmt) < 0)
        {
          fprintf (stderr, "ioctl setfmt error \n");
        }
+       #endif // __APPLE__
  
        opts.audio_in_type = 5; //5 will become OSS input type
      }

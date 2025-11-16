@@ -59,7 +59,9 @@
 #include "p25p1_heuristics.h"
 
 //OSS support
+#if defined(__linux__)
 #include <sys/soundcard.h>
+#endif
 
 #include <pulse/pulseaudio.h> //PULSE AUDIO
 #include <pulse/simple.h>     //PULSE AUDIO
