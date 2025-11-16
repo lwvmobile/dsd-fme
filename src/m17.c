@@ -151,7 +151,8 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
   else if (protocol == 0x04) fprintf (stderr, " IPv4;");
   else if (protocol == 0x05) fprintf (stderr, " SMS;");
   else if (protocol == 0x06) fprintf (stderr, " Winlink;");
-  else if (protocol == 0x09) fprintf (stderr, " OTA Key Delivery;"); //m17-fme non standard packet data
+  else if (protocol == 0x07) fprintf (stderr, " TLE;");
+  else if (protocol == 0x69) fprintf (stderr, " OTA Key Delivery;"); //m17-fme non standard packet data
   else if (protocol == 0x80) fprintf (stderr, " Meta Text Data V2;"); //internal format only from meta
   else if (protocol == 0x81) fprintf (stderr, " Meta GNSS Position Data;"); //internal format only from meta
   else if (protocol == 0x82) fprintf (stderr, " Meta Extended CSD;"); //internal format only from meta
@@ -161,7 +162,7 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
   else                       fprintf (stderr, " Res/Unk: %02X;", protocol); //any received but unknown protocol type
 
   //check for encryption, if encrypted, skip decode and report as encrypted
-  if (protocol == 0x09) {} //allow OTAKD passthrough (not encrypted ever)
+  if (protocol == 0x69) {} //allow OTAKD passthrough (not encrypted ever)
   else if (protocol >= 0x80 && protocol <= 0x83) {} //allow META passthrough (not encrypted ever)
   else if (state->m17_enc != 0)
   {
@@ -174,13 +175,15 @@ void decodeM17PKT(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
   {
     fprintf (stderr, "\n SMS: ");
     for (i = 1; i < len; i++)
-    {
       fprintf (stderr, "%c", input[i]);
+  }
 
-      //add line break to keep it under 80 columns
-      if ( (i%71) == 0 && i != 0)
-        fprintf (stderr, "\n      ");
-    }
+  //TLE UTF-8 Text Decoder
+  else if (protocol == 0x07)
+  {
+    fprintf (stderr, " TLE:\n");
+    for (i = 1; i < len; i++)
+      fprintf (stderr, "%c", input[i]);
   }
 
   //Extended Call Sign Data
