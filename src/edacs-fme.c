@@ -2299,6 +2299,10 @@ void eot_cc(dsd_opts * opts, dsd_state * state)
 
   fprintf (stderr, "EOT; \n");
 
+  //skip an arbitrary number of dibits so that the CC can cancel the grant after a dotting sequence
+  //prior to returning to the control channel and getting sent in a loopback to the call channel
+  skipDibit(opts, state, 240*8);
+
   //watchdog event at this point
   state->lastsynctype = 38; 
   watchdog_event_history(opts, state, 0);

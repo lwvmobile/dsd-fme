@@ -695,7 +695,7 @@ void watchdog_event_current (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
     if (state->ea_mode == 1)
     {
-      sprintf (event_string, "%s %s %s TGT: %07d; SRC: %07d; LCN: %02d; SITE: %d:%d.%04X; %s;", datestr, timestr, sys_string, target_id, source_id, channel, sys_id1, sys_id2, sys_id3, sup_str);
+      sprintf (event_string, "%s %s %s TGT: %07d; SRC: %07d; LCN: %02d; SITE: %d:%d.%04X; %s; ", datestr, timestr, sys_string, target_id, source_id, channel, sys_id1, sys_id2, sys_id3, sup_str);
     }
     else
     {

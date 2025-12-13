@@ -26,7 +26,7 @@ long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channe
 	*/
 
 	//return 0 if channel value is 0 or 0xFFFF
-	if (channel == 0) return 0;
+	// if (channel == 0) return 0; //this is a valid use-case on P25 (observed) this has been in code since Feb 2024, how was this issue not discovered before now
 	if (channel == 0xFFFF) return 0;
 
 	//Note: Base Frequency is calculated as (Base Frequency) x (0.000005 MHz) from the IDEN_UP message.
