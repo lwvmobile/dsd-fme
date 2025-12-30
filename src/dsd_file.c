@@ -1549,7 +1549,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
         if (alg_id == 0x89) //128, or 256
           aes_ofb_keystream_output(kiv+5, aes_key, ks_bytes, 0, 16); //16*16=256
-        else aes_ofb_keystream_output(kiv+5, aes_key, ks_bytes, 0, 16); //16*16=256
+        else aes_ofb_keystream_output(kiv+5, aes_key, ks_bytes, 2, 16); //16*16=256
 
         if (protocol == 1) //Phase 1 IMBE start on 27 for AES-OFB (16 discard + 9 LCW + 2 reserved)
           unpack_byte_array_into_bit_array(ks_bytes+27, ks, 256-19); //unpack starting after discard
@@ -1570,7 +1570,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
           if (alg_id == 0x89) //128, or 256
             aes_ofb_keystream_output(backup_iv, aes_key, ks_bytes, 0, 16); //16*16=256
-          else aes_ofb_keystream_output(backup_iv, aes_key, ks_bytes, 0, 16); //16*16=256
+          else aes_ofb_keystream_output(backup_iv, aes_key, ks_bytes, 2, 16); //16*16=256
 
           unpack_byte_array_into_bit_array(ks_bytes+27, ks_i, 256-19); //unpack starting after discard
         }
