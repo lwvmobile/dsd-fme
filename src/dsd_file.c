@@ -1445,9 +1445,9 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
       //TODO: Handle multi keystream creation with a new function
       uint8_t ks_bytes[375]; memset(ks_bytes, 0, sizeof(ks_bytes));
-      uint8_t kiv[15]; memset(kiv, 0, sizeof(kiv));
+      uint8_t kiv[32]; memset(kiv, 0, sizeof(kiv));
 
-      //Test: Setup a simple RC4 for now (working)
+      //RC4
       if ( (alg_id == 0xAA || alg_id == 0x21) && state->R != 0 )
       {
 
@@ -1480,19 +1480,107 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
         ks_available = 1;
 
+      }
 
-      } //end test
+      //P25 DES
+      else if (alg_id == 0x81 && state->R != 0)
+      {
 
-      //NOTE: Regarding SDRTrunk .mbe format, the ESS Encryption Sync
-      //is in the correct location on P25p2, but for P25p1, the ESS
-      //information preceeds LDU2, but should be AFTER the LDU2 IMBE frames,
-      //so, for now, we utilize a reverse lfsr function (Crypthings coming in handy)
-      //and recover the previous LFSR and make two keystreams in order
-      //to properly decrypt the initial frame, and then juggle the 
-      //keystreams in code to provide a smooth decryption session of P25p1.
+        des_multi_keystream_output(iv_hex, state->R, ks_bytes, 1, 32); //32*8=256
 
-      //Update: There is a pull request available now, and using a version value,
-      //we will be able to do either format (ESS out of order vs ESS in correct order)
+        if (protocol == 1) //Phase 1 IMBE start on 19 for DES-OFB (8 discard + 9 LCW + 2 reserved)
+          unpack_byte_array_into_bit_array(ks_bytes+19, ks, 256-19); //unpack starting after discard
+        else if (protocol == 2) //Phase 2 AMBE+2 start on 8 after discard round for DES-OFB
+          unpack_byte_array_into_bit_array(ks_bytes+8, ks, 256-8); //unpack starting after discard
+
+        //reverse lfsr on IV and create keystream with that as well
+        //due to out of order execution on P25p1 ESS sync.
+        if (protocol == 1 && version == 1)
+        {
+
+          //load the str_buffer into the IV portion of kiv (just borrowing for DES)
+          parse_raw_user_string(str_buffer, kiv+5);
+
+          reverse_lfsr_64_to_len (opts, kiv+5, 64);
+
+          //convert bytes back into value
+          iv_hex = 0;
+          for (int i = 0; i < 8; i++)
+          {
+            iv_hex <<= 8;
+            iv_hex |= kiv[i+5];
+          }
+
+          memset(ks_bytes, 0, sizeof(ks_bytes));
+
+          des_multi_keystream_output(iv_hex, state->R, ks_bytes, 1, 32); //32*8=256
+
+          unpack_byte_array_into_bit_array(ks_bytes+19, ks_i, 256-19); //unpack starting after discard
+        }
+
+        ks_available = 1;
+
+      }
+
+      //P25 AES (untested)
+      else if ( (alg_id == 0x84 || alg_id == 0x89) && state->aes_key_loaded[0] == 1 )
+      {
+
+        uint8_t aes_key[32];
+        memset(aes_key, 0, sizeof(aes_key));
+
+        //Load key from A1 - A4
+        for (i = 0; i < 8; i++)
+        {
+          aes_key[i+0]  = (state->A1[0] >> (56-(i*8))) & 0xFF;
+          aes_key[i+8]  = (state->A2[0] >> (56-(i*8))) & 0xFF;
+          aes_key[i+16] = (state->A3[0] >> (56-(i*8))) & 0xFF;
+          aes_key[i+24] = (state->A4[0] >> (56-(i*8))) & 0xFF;
+        }
+
+        //backup copy of current IV to reverse and expand, if needed
+        uint8_t backup_iv[16];
+        memset(backup_iv, 0, sizeof(backup_iv));
+        for (int i = 0; i < 8; i++)
+          backup_iv[i] = kiv[i+5];
+
+        //Resolve the longer IV from the shorter one
+        lfsr_64_to_128(kiv+5);
+
+        if (alg_id == 0x89) //128, or 256
+          aes_ofb_keystream_output(kiv+5, aes_key, ks_bytes, 0, 16); //16*16=256
+        else aes_ofb_keystream_output(kiv+5, aes_key, ks_bytes, 0, 16); //16*16=256
+
+        if (protocol == 1) //Phase 1 IMBE start on 27 for AES-OFB (16 discard + 9 LCW + 2 reserved)
+          unpack_byte_array_into_bit_array(ks_bytes+27, ks, 256-19); //unpack starting after discard
+        else if (protocol == 2) //Phase 2 AMBE+2 start on 16 after discard round for AES-OFB
+          unpack_byte_array_into_bit_array(ks_bytes+16, ks, 256-8); //unpack starting after discard
+
+        //reverse lfsr on IV and create keystream with that as well
+        //due to out of order execution on P25p1 ESS sync.
+        if (protocol == 1 && version == 1)
+        {
+
+          reverse_lfsr_64_to_len (opts, backup_iv, 64);
+
+          //Resolve the longer IV from the shorter one
+          lfsr_64_to_128(backup_iv);
+
+          memset(ks_bytes, 0, sizeof(ks_bytes));
+
+          if (alg_id == 0x89) //128, or 256
+            aes_ofb_keystream_output(backup_iv, aes_key, ks_bytes, 0, 16); //16*16=256
+          else aes_ofb_keystream_output(backup_iv, aes_key, ks_bytes, 0, 16); //16*16=256
+
+          unpack_byte_array_into_bit_array(ks_bytes+27, ks_i, 256-19); //unpack starting after discard
+        }
+
+        ks_available = 1;
+
+      }
+
+      //Pull request: https://github.com/DSheirer/sdrtrunk/pull/2273
+      //Merged into SDRTrunk nightly so should be able to handle this better now
 
       //reset ks_idx to 0
       ks_idx = 0;

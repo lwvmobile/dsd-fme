@@ -1643,6 +1643,7 @@ unsigned long long int hytera_lfsr(uint8_t * mi, uint8_t * taps, uint8_t len);
 void hytera_enhanced_alg_refresh(dsd_state * state);
 
 //LFSR to expand either a DMR 32-bit or P25/NXDN 64-bit MI into a 128-bit IV for AES
+void lfsr_64_to_128(uint8_t * iv);
 void LFSR128(dsd_state * state);
 void LFSR128n(dsd_state * state);
 void LFSR128d(dsd_state * state);
