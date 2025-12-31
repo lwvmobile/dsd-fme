@@ -189,6 +189,14 @@ void parse_pulse_output_string (dsd_opts * opts, char * input)
   }
 }
 
+#ifdef __APPLE__
+// macOS does not support OSS (/dev/dsp).
+// Provide a stub so callers can link while using Pulse/CoreAudio backends.
+void openOSSOutput(dsd_opts *opts)
+{
+  (void)opts;
+}
+#else
 void openOSSOutput (dsd_opts * opts)
 {
   int fmt;
@@ -207,6 +215,7 @@ void openOSSOutput (dsd_opts * opts)
         exit(1);
       }
 
+      
       fmt = 0;
       if (ioctl (opts->audio_out_fd, SNDCTL_DSP_RESET) < 0)
       {
@@ -303,6 +312,7 @@ void openOSSOutput (dsd_opts * opts)
     }
   }
 }
+#endif
 
 void
 processAudio (dsd_opts * opts, dsd_state * state)

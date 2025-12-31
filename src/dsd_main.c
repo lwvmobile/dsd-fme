@@ -3392,18 +3392,23 @@
      //to a variable config, it cannot be the input as well
  
  
+     #ifndef __APPLE__
      if((strncmp(opts.audio_in_dev, "/dev/audio", 10) == 0))
      {
        sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
        fprintf (stderr, "Switching to /dev/dsp.\n");
      }
- 
+     #endif
+
+     #ifndef __APPLE__ 
      if((strncmp(opts.audio_in_dev, "pa", 2) == 0))
      {
        sprintf (opts.audio_in_dev, "%s", "/dev/dsp");
        fprintf (stderr, "Switching to /dev/dsp.\n");
      }
- 
+     #endif
+
+     #ifndef __APPLE__
      speed = 48000; //hardset to 48000
      if((strncmp(opts.audio_in_dev, "/dev/dsp", 8) == 0))
      {
@@ -3437,24 +3442,31 @@
  
        opts.audio_in_type = 5; //5 will become OSS input type
      }
+     #endif
  
      //check for OSS output
+     #ifndef __APPLE__
      if((strncmp(opts.audio_out_dev, "/dev/audio", 10) == 0))
      {
        sprintf (opts.audio_out_dev, "%s", "/dev/dsp");
        fprintf (stderr, "Switching to /dev/dsp.\n");
      }
+     #endif
  
+     #ifndef __APPLE__
      if((strncmp(opts.audio_out_dev, "pa", 2) == 0))
      {
        sprintf (opts.audio_out_dev, "%s", "/dev/dsp");
        fprintf (stderr, "Switching to /dev/dsp.\n");
      }
+     #endif
  
      //this will only open OSS output if its listed as a type
      //changed to this so I could call it freely inside of ncurses terminal
+     #ifndef __APPLE__
      if (opts.playfiles == 0)
       openOSSOutput(&opts);
+     #endif
  
      if (opts.playfiles == 1)
      {
@@ -3466,8 +3478,10 @@
        opts.pulse_digi_out_channels = 1;
        if (opts.audio_out_type == 0)
         openPulseOutput(&opts);
+       #ifndef __APPLE__
        else if((strncmp(opts.audio_out_dev, "/dev/dsp", 8) == 0))
         openOSSOutput(&opts); //open after split == 1 so it will open and playback at the proper speed
+       #endif
      }
  
      //this particular if-elseif-else could be rewritten to be a lot neater and simpler
