@@ -59,7 +59,7 @@
 #include "p25p1_heuristics.h"
 
 //OSS support
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__CYGWIN__)
 #include <sys/soundcard.h>
 #endif
 #include <pulse/pulseaudio.h> //PULSE AUDIO
