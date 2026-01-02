@@ -1447,7 +1447,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       uint8_t ks_bytes[375]; memset(ks_bytes, 0, sizeof(ks_bytes));
       uint8_t kiv[32]; memset(kiv, 0, sizeof(kiv));
 
-      //RC4
+      //RC4 (v1 tested and working on P25, v2 should be okay now)
       if ( (alg_id == 0xAA || alg_id == 0x21) && state->R != 0 )
       {
 
@@ -1482,7 +1482,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
       }
 
-      //P25 DES
+      //P25 DES (v1 tested and working on P1, v2 should be okay now)
       else if (alg_id == 0x81 && state->R != 0)
       {
 
@@ -1522,7 +1522,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
       }
 
-      //P25 AES (untested)
+      //P25 AES (v1 and v2 tested working on P1)
       else if ( (alg_id == 0x84 || alg_id == 0x89) && state->aes_key_loaded[0] == 1 )
       {
 
@@ -1530,7 +1530,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         memset(aes_key, 0, sizeof(aes_key));
 
         //Load key from A1 - A4
-        for (i = 0; i < 8; i++)
+        for (int i = 0; i < 8; i++)
         {
           aes_key[i+0]  = (state->A1[0] >> (56-(i*8))) & 0xFF;
           aes_key[i+8]  = (state->A2[0] >> (56-(i*8))) & 0xFF;
@@ -1538,41 +1538,47 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
           aes_key[i+24] = (state->A4[0] >> (56-(i*8))) & 0xFF;
         }
 
+        uint8_t aes_iv[16];
+        memset(aes_iv, 0, sizeof(aes_iv));
+
+        //load the str_buffer into the IV portion of aes_iv
+        parse_raw_user_string(str_buffer, aes_iv);
+
         //backup copy of current IV to reverse and expand, if needed
-        uint8_t backup_iv[16];
-        memset(backup_iv, 0, sizeof(backup_iv));
+        uint8_t aes_last_iv[16];
+        memset(aes_last_iv, 0, sizeof(aes_last_iv));
         for (int i = 0; i < 8; i++)
-          backup_iv[i] = kiv[i+5];
+          aes_last_iv[i] = aes_iv[i];
 
         //Resolve the longer IV from the shorter one
-        lfsr_64_to_128(kiv+5);
+        lfsr_64_to_128(aes_iv);
 
         if (alg_id == 0x89) //128, or 256
-          aes_ofb_keystream_output(kiv+5, aes_key, ks_bytes, 0, 16); //16*16=256
-        else aes_ofb_keystream_output(kiv+5, aes_key, ks_bytes, 2, 16); //16*16=256
+          aes_ofb_keystream_output(aes_iv, aes_key, ks_bytes, 0, 16); //16*16=256
+        else aes_ofb_keystream_output(aes_iv, aes_key, ks_bytes, 2, 16); //16*16=256
 
         if (protocol == 1) //Phase 1 IMBE start on 27 for AES-OFB (16 discard + 9 LCW + 2 reserved)
-          unpack_byte_array_into_bit_array(ks_bytes+27, ks, 256-19); //unpack starting after discard
+          unpack_byte_array_into_bit_array(ks_bytes+27, ks, 256-27); //unpack starting after discard
         else if (protocol == 2) //Phase 2 AMBE+2 start on 16 after discard round for AES-OFB
-          unpack_byte_array_into_bit_array(ks_bytes+16, ks, 256-8); //unpack starting after discard
+          unpack_byte_array_into_bit_array(ks_bytes+16, ks, 256-16); //unpack starting after discard
 
         //reverse lfsr on IV and create keystream with that as well
         //due to out of order execution on P25p1 ESS sync.
         if (protocol == 1 && version == 1)
         {
 
-          reverse_lfsr_64_to_len (opts, backup_iv, 64);
+          reverse_lfsr_64_to_len (opts, aes_last_iv, 64);
 
           //Resolve the longer IV from the shorter one
-          lfsr_64_to_128(backup_iv);
+          lfsr_64_to_128(aes_last_iv);
 
           memset(ks_bytes, 0, sizeof(ks_bytes));
 
           if (alg_id == 0x89) //128, or 256
-            aes_ofb_keystream_output(backup_iv, aes_key, ks_bytes, 0, 16); //16*16=256
-          else aes_ofb_keystream_output(backup_iv, aes_key, ks_bytes, 2, 16); //16*16=256
+            aes_ofb_keystream_output(aes_last_iv, aes_key, ks_bytes, 0, 16); //16*16=256
+          else aes_ofb_keystream_output(aes_last_iv, aes_key, ks_bytes, 2, 16); //16*16=256
 
-          unpack_byte_array_into_bit_array(ks_bytes+27, ks_i, 256-19); //unpack starting after discard
+          unpack_byte_array_into_bit_array(ks_bytes+27, ks_i, 256-27); //unpack starting after discard
         }
 
         ks_available = 1;
@@ -1604,6 +1610,9 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
         imbe_counter++;
 
+        //debug
+        // fprintf (stderr, "\n IMBE# %02d; KS_IDX: %d; KS_IDX_I: %d; ", imbe_counter, ks_idx, ks_idx_i);
+
         //36 hex characters on 'hex' which is the IMBE interleaved C codewords
         if (version == 1)
           ks_idx_i = imbe_str_to_decode(opts, state, str_buffer, ks_i, ks_idx_i, is_enc, ks_available);
@@ -1611,7 +1620,10 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
         //skip LSD bits in-between these two IMBE voice frames
         if (imbe_counter == 8 || imbe_counter == 17)
+        {
           ks_idx_i += 16;
+          ks_idx   += 16;
+        }
 
         //juggle keystreams and reset the I counter (if version 1)
         if (imbe_counter == 9 && version == 1)
@@ -1632,7 +1644,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         }
           
         //debug
-        // fprintf (stderr, " # %02d; KS_IDX_I: %04d;", imbe_counter, ks_idx_i);
+        // fprintf (stderr, "\n IMBE# %02d; KS_IDX: %d; KS_IDX_I: %d; ", imbe_counter, ks_idx, ks_idx_i);
 
         //debug
         // if (is_enc == 1 && ks_available == 0)
