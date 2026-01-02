@@ -18,6 +18,7 @@
 #include "dsd.h"
 #include "p25p1_const.h" //for imbe fr (7200)
 #include "dmr_const.h" //for ambe+2 fr
+#include "bp.h" //for bp key table
 
 void saveImbe4400Data (dsd_opts * opts, dsd_state * state, char *imbe_d)
 {
@@ -928,9 +929,12 @@ uint16_t parse_raw_user_string (char * input, uint8_t * output)
   return len;
 }
 
+//DMRA late entry items
+static int ambe2_counter;
+static int dmra_le;
+
 uint16_t ambe2_str_to_decode(dsd_opts * opts, dsd_state * state, char * ambe_str, uint8_t * ks, uint16_t ks_idx, uint8_t dmra, uint8_t is_enc, uint8_t ks_available)
 {
-  UNUSED(opts);
 
   char ambe_fr[4][24]; memset (ambe_fr, 0, sizeof(ambe_fr));
   uint8_t dibit_pair = 0;
@@ -974,6 +978,39 @@ uint16_t ambe2_str_to_decode(dsd_opts * opts, dsd_state * state, char * ambe_str
 
     //working now!
 
+  }
+
+  //if using DMRA Late Entry IV mechanics, evaluate for IV
+  if (dmra_le)
+  {
+
+    //make a copy of ambe_fr codeword 3 (MI fragment)
+    uint8_t c3[24]; memset (c3, 0, sizeof(c3));
+    for (int i = 0; i < 24; i++)
+      c3[i] = ambe_fr[3][i];
+
+    //force slot to 0
+    state->currentslot = 0;
+
+    uint8_t c3_hex = (uint64_t)ConvertBitIntoBytes(c3, 4);
+
+    //debug
+    // fprintf (stderr, "\n AMBE#: %02d / %d / %d; F: %X;", ambe2_counter, ambe2_counter/3, ambe2_counter%3, c3_hex);
+
+    //use div and mod 3 to set current storage fragment
+    state->late_entry_mi_fragment[0][(ambe2_counter/3)+1][ambe2_counter%3] = c3_hex;
+
+    //run LFSR evaluate stored codewords for matching IV or replace if not match or not set
+    if (ambe2_counter == 17)
+    {
+      if (state->payload_mi != 0)
+      {
+        fprintf (stderr, "\n");
+        LFSR(state);
+      }
+      fprintf (stderr, "\n");
+      dmr_late_entry_mi (opts, state);
+    }
   }
 
   char ambe_d[49]; memset(ambe_d, 0, sizeof(ambe_d));
@@ -1052,7 +1089,6 @@ uint16_t ambe2_str_to_decode(dsd_opts * opts, dsd_state * state, char * ambe_str
 
 uint16_t imbe_str_to_decode(dsd_opts * opts, dsd_state * state, char * imbe_str, uint8_t * ks, uint16_t ks_idx, uint8_t is_enc, uint8_t ks_available)
 {
-  UNUSED(opts);
 
   char imbe_fr[8][23]; memset (imbe_fr, 0, sizeof(imbe_fr));
   uint8_t dibit_pair = 0;
@@ -1210,6 +1246,12 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
   uint8_t ks_i[3000]; memset (ks_i, 0, sizeof(ks_i));
   uint16_t ks_idx_i = 808; //keystream index value IMBE (start at 808 for out of order ESS)
   int imbe_counter = 0; //count IMBE frames for when to skip 2 bytes of ks and juggle keystreams
+  
+  //Used in conjunction with DMR's DMRA Late Entry IV
+  ambe2_counter = 0; //count AMBE+2 frames for DMRA late entry IV mechanics (static)
+  dmra_le = 0;       //whether or not to attempt looking for the DMRA Late Entry
+  if (state->forced_alg_id != 0)
+    state->payload_mi = 0;
 
   source_size = fread (source_str, 1, 0x100000, opts->mbe_in_f);
 
@@ -1342,6 +1384,72 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       //debug print current str_buffer
       fprintf (stderr, "\n Encryption: %s", str_buffer);
 
+    }
+
+    //if forcing a DMRA EP mode, turn on dmra_le and set alg here
+    if (state->forced_alg_id >= 0x21 &&  state->forced_alg_id <= 0x25)
+    {
+      is_dmra = 1;
+      dmra_le = 1;
+      is_enc = 1;
+      alg_id = state->forced_alg_id;
+      state->payload_algid = alg_id;
+      rc4_db = 256;
+      rc4_mod = 9;
+
+      if (alg_id == 0x21 && state->R != 0)
+      {
+
+        //test when we don't have an encryption_mi in the .mbe file for DMR
+        //TODO: Handle multi keystream creation with a new function
+        uint8_t ks_bytes[375]; memset(ks_bytes, 0, sizeof(ks_bytes));
+        uint8_t kiv[32]; memset(kiv, 0, sizeof(kiv));
+
+        //load key into key portion of kiv
+        kiv[0] = ((state->R & 0xFF00000000) >> 32);
+        kiv[1] = ((state->R & 0xFF000000) >> 24);
+        kiv[2] = ((state->R & 0xFF0000) >> 16);
+        kiv[3] = ((state->R & 0xFF00) >> 8);
+        kiv[4] = ((state->R & 0xFF) >> 0);
+
+        //load IV from late entry state->payload_mi
+        kiv[5] = ((state->payload_mi & 0xFF000000) >> 24);
+        kiv[6] = ((state->payload_mi & 0xFF0000) >> 16);
+        kiv[7] = ((state->payload_mi & 0xFF00) >> 8);
+        kiv[8] = ((state->payload_mi & 0xFF) >> 0);
+
+        rc4_block_output (rc4_db, rc4_mod, 200, kiv, ks_bytes);
+        unpack_byte_array_into_bit_array(ks_bytes, ks, 200);
+
+        ks_available = 1;
+
+      }
+
+    }
+    //TODO: This
+    else if (state->forced_alg_id == 1) //Basic Privacy
+    {
+      //This is where the key loaded comes into play for moto vs hytera vs scrambler
+      if (state->K != 0)
+      {
+        uint64_t k = 0;
+        k = BPK[state->K];
+        k = ( ((k & 0xFF0F) << 32 ) + (k << 16) + k );
+        k <<= 1;
+        k += (k >> 48) & 1;
+
+        //load that into ks
+        for (int i = 0; i < 18*49; i++)
+          ks[i] = (k >> (i%49)) & 1;
+      }
+      else if (state->H != 0)
+      {
+        //Hytera BP
+      }
+      else if (state->R != 0)
+      {
+        //NXDN Scrambler
+      }
     }
 
     if (strncmp ("to", str_buffer, 2) == 0)
@@ -1666,6 +1774,16 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         //   fprintf (stderr, " Enc Mute;");
         // else if (is_enc == 1 && ks_available == 1)
         //   fprintf (stderr, " Enc Play;");
+
+        //increment AMBE+2 counter
+        ambe2_counter++;
+
+        //reset if over for DMR 18 AMBE+2 frames
+        if (dmra_le && ambe2_counter == 18)
+        {
+          ambe2_counter = 0;
+          ks_idx = 0;
+        } 
 
       }
     }
