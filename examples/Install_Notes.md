@@ -43,9 +43,9 @@ Debian/Mint/Ubuntu/Pi
 ```
 sudo apt update
 #Ubuntu 22.04 lts / Debian 11 and lower
-sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libcodec2-dev
+sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libcodec2-dev
 #Ubuntu 24.04 lts / Debian 12
-#sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncurses-dev libncurses6 libcodec2-dev
+#sudo apt install libpulse-dev pavucontrol libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libncurses-dev libncurses6 libcodec2-dev
 ```
 
 Fedora 36/37 -- from https://github.com/lwvmobile/dsd-fme/issues/99
@@ -60,8 +60,6 @@ Arch -- https://github.com/lwvmobile/dsd-fme/issues/153 and https://github.com/l
 ```
 sudo pacman -Syu
 sudo pacman -S libpulse cmake ncurses lapack perl fftw rtl-sdr codec2 base-devel libsndfile git wget rtl-sdr
-wget https://mirror.archstrike.org/x86_64/archstrike/itpp-4.3.1-3-x86_64.pkg.tar.xz
-sudo pacman -U itpp-4.3.1-3-x86_64.pkg.tar.xz
 ```
 
 ## Headless Ubuntu Server/Pi
@@ -69,24 +67,7 @@ sudo pacman -U itpp-4.3.1-3-x86_64.pkg.tar.xz
 If running headless, swap out pavucontrol for pulsemixer, and also install pulseaudio as well. Attempting to install pavucontrol in a headless environment may attempt to install a minimal desktop environment. Note: Default behavior of pulseaudio in a headless environment may be to be muted, so check by opening pulsemixer and unmuting and routing audio appropriately.
 
 ```
-sudo apt install libpulse-dev libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncursesw5-dev pulsemixer pulseaudio libcodec2-dev
-```
-
-### Build and Install ITPP - ONLY IF NOT IN REPO!!
-
-```
-wget -O itpp-latest.tar.bz2 http://sourceforge.net/projects/itpp/files/latest/download?source=files
-tar xjf itpp*
-#if you can't cd into this folder, double check folder name first
-cd itpp-4.3.1
-mkdir build
-cd build
-cmake ..
-make -j `nproc`
-sudo make install
-sudo ldconfig
-cd ..
-cd ..
+sudo apt install libpulse-dev libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev libncurses5 libncurses5-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libncursesw5-dev pulsemixer pulseaudio libcodec2-dev
 ```
 
 MBELib is considered a requirement in this build. You must read this notice prior to continuing. [MBElib Patent Notice](https://github.com/lwvmobile/mbelib#readme "MBElib Patent Notice") 

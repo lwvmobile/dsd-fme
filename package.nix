@@ -6,7 +6,6 @@
 , ncurses
 , pulseaudio
 , rtl-sdr
-, itpp
 , codec2
 , portaudioSupport ? true
 , portaudio ? null
@@ -23,7 +22,6 @@ stdenv.mkDerivation {
   buildInputs = [
     mbelib
     libsndfile
-    itpp
     rtl-sdr
     ncurses.dev
     pulseaudio.dev
@@ -39,7 +37,7 @@ stdenv.mkDerivation {
       tap audio and synthesize the decoded speech. Speech synthesis requires
       mbelib, which is a separate package.
     '';
-    homepage = "https://github.com/szechyjs/dsd";
+    homepage = "https://github.com/lwvmobile/dsd-fme";
     license = licenses.mit;
     platforms = platforms.unix;
   };

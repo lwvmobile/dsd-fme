@@ -12,13 +12,7 @@ read -p "Have you viewed the patent notice? y/N " ANSWER
 ANSWER=$(printf "$ANSWER"|tr '[:upper:]' '[:lower:]')
 if [ "$ANSWER" = "y" ]; then
   sudo apt update
-  sudo apt install libpulse-dev libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libitpp-dev libncurses-dev libncurses6 libcodec2-dev
-  chkitpp=$(dpkg -l libitpp-dev 2>/dev/null | awk '/^ii/ {print 1} END {if (NR == 0) print 0}')
-  if [ "$chkitpp" -lt "1" ];then 
-    printf "\nFor some reason, ITPP did NOT install!\nYou may have to manually install it.\n\n"
-    read -p "Press Enter to exit..." x
-    exit 1
-  fi
+  sudo apt install libpulse-dev libsndfile1-dev libfftw3-dev liblapack-dev socat libusb-1.0-0-dev rtl-sdr librtlsdr-dev libusb-1.0-0-dev cmake git wget make build-essential libncurses-dev libncurses6 libcodec2-dev
   git clone https://github.com/lwvmobile/mbelib
   cd mbelib
   git checkout ambe_tones

@@ -98,7 +98,6 @@ if [ "$RELEASE" = "y" ]; then
 
   #compiled items into release dsd-fme folder
   cp codec2/build/src/cygcodec2* dsd-fme-portable/dsd-fme/
-  cp itpp-4.3.1/build/itpp/cygitpp* dsd-fme-portable/dsd-fme/
   cp rtl-sdr/build/src/cyg* dsd-fme-portable/dsd-fme/
   cp mbelib/build/cygmbe* dsd-fme-portable/dsd-fme/
 

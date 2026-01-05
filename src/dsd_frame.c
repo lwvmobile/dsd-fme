@@ -20,8 +20,6 @@
 #define NULL 0
 #endif
 
-#include "p25p1_check_nid.h"
-
 void
 printFrameInfo (dsd_opts * opts, dsd_state * state)
 {

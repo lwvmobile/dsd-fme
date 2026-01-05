@@ -19,22 +19,6 @@ if [ "$ANSWER" = "y" ]; then
   export LD_LIBRARY_PATH
   echo $LD_LIBRARY_PATH
 
-  #ITPP
-  cd $cdir
-  printf "Installing itpp 4.3.1 from source http://sourceforge.net/projects/itpp/files/latest/download?source=files\n Please wait!\n"
-  wget -O itpp-latest.tar.bz2 http://sourceforge.net/projects/itpp/files/latest/download?source=files
-  tar xjf itpp-latest.tar.bz2
-  cd itpp-4.3.1/
-  #newer Cygwin has Cmake 4.1.3 (or newer) so we need to replace the line with cmake_minimum_required to a newer version
-  #this doesn't seem to break anything, its just that cmake will refuse to run properly without a newer min version in it
-  #I'm just going to use the version that is used for most all my other cmake projects, seems to still be okay with new cmake
-  sed -i '/^cmake_minimum_required *( *VERSION *2\.8\.6 *)$/c\cmake_minimum_required(VERSION 3.10.2)' CMakeLists.txt
-  mkdir build
-  cd build
-  cmake ..
-  make -j $(nproc)
-  make install
-
   #MBELIB
   cd $cdir
   printf "Installing mbelib\n Please wait!\n"

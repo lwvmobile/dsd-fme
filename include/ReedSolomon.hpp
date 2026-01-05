@@ -5,9 +5,6 @@
 /**
  * Code taken and adapted from www.eccpage.com/rs.c
  * Credit goes to Mr Simon Rockliff.
- *
- * Tried before with the implementation from ITPP library but couldn't make it produce the same outputs
- * expected from the P25 transmissions that I have tested. This implementation does work.
  */
 
 /* This program is an encoder/decoder for Reed-Solomon codes. Encoding is in

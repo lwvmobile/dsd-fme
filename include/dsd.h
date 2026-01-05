@@ -1671,6 +1671,9 @@ int ez_rs28_facch (int payload[156], int parity[114]); //ezpwd bridge for FME
 int ez_rs28_sacch (int payload[180], int parity[132]); //ezpwd bridge for FME
 int isch_lookup (uint64_t isch); //isch map lookup
 
+//Phase 1 NID Check
+int check_NID(char* bch_code, int* new_nac, char* new_duid, unsigned char parity);
+
 #ifdef __cplusplus
 }
 #endif

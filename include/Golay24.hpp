@@ -7,8 +7,6 @@
  *
  * Code adapted from http://www.aqdi.com/golay.htm
  *
- * Tried before with the implementation from ITPP library but couldn't make it produce the same outputs
- * expected from the P25 transmissions that I have tested. This implementation does work.
  */
 
 #include <stdio.h>
