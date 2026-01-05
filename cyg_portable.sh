@@ -61,10 +61,6 @@ if [ "$RELEASE" = "y" ]; then
   #start copying things to the lib folder
   cp -r /lib/pulseaudio/ dsd-fme-portable/lib/
 
-  #support for LAPACK, BLAS, and FFTW3 (SIMD math libraries and dependencies)
-  cp /lib/lapack/* dsd-fme-portable/dsd-fme/
-  cp /bin/cyggfortran* dsd-fme-portable/dsd-fme/
-
   #start copying things into the dsd-fme folder
   cp dsd-fme/build/dsd-fme.exe dsd-fme-portable/dsd-fme/
   cp -r dsd-fme/examples dsd-fme-portable/dsd-fme/

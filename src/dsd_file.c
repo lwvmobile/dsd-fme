@@ -1235,6 +1235,16 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
   state->synctype = -1;
   state->lastsynctype = -1;
 
+  //reset encryption variables
+  state->payload_mi = 0;
+  state->payload_algid = 0;
+  state->payload_keyid = 0;
+  if (state->keyloader == 1)
+  {
+    state->R = 0;
+    state->aes_key_loaded[0] = 0;
+  }
+
   //watchdog for event history
   watchdog_event_history(opts, state, 0);
   watchdog_event_current(opts, state, 0);
@@ -1397,7 +1407,12 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       rc4_db = 256;
       rc4_mod = 9;
 
-      if (alg_id == 0x21 && state->R != 0)
+      //since we can't keyring on a forced alg, we can perhaps look it up
+      //via the TO field for the TG value, as long as it isn't greated than 0x1FFFF (upper bound of the array)
+      if (state->keyloader == 1 && state->lasttg != 0 && state->lasttg < 0x1FFFF && state->rkey_array[state->lasttg] != 0)
+        state->R = state->rkey_array[state->lasttg];
+
+      if (alg_id == 0x21 && state->R != 0 && state->payload_mi != 0)
       {
 
         //test when we don't have an encryption_mi in the .mbe file for DMR
