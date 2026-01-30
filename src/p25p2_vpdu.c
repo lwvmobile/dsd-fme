@@ -1649,9 +1649,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			// 	len = 4;
 			
 			fprintf (stderr, "%s",KCYN);
-      fprintf (stderr, "\n MFID 90 (Moto); Opcode: %02X; ", MAC[1+len_a] & 0x3F); //mask, or not?
+      fprintf (stderr, "\n MFID 90 (Moto); Opcode: %02llX; ", MAC[1+len_a] & 0x3F); //mask, or not?
       for (int i = 4; i < len+1; i++)
-        fprintf (stderr, "%02X", MAC[i+len_a]);
+        fprintf (stderr, "%02llX", MAC[i+len_a]);
       fprintf (stderr, " %s",KNRM);
 
 			len_b = len;
@@ -1670,9 +1670,9 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				len = 3;
 
 			fprintf (stderr, "%s",KCYN);
-      fprintf (stderr, "\n MFID 90 (Moto); Opcode: %02X; ", MAC[1+len_a] & 0x3F); //mask, or not?
+      fprintf (stderr, "\n MFID 90 (Moto); Opcode: %02llX; ", MAC[1+len_a] & 0x3F); //mask, or not?
       for (int i = 4; i < len+1; i++)
-        fprintf (stderr, "%02X", MAC[i+len_a]);
+        fprintf (stderr, "%02llX", MAC[i+len_a]);
       fprintf (stderr, " %s",KNRM);
 
 			len_b = len;
