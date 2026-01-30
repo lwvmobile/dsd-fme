@@ -1,4 +1,4 @@
-Build Version: AW 2025-209-g14edf32 
+Build Version: AW 2026-1-g99f4228 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -103,6 +103,7 @@ Decoder options:
   -xx           Expect non-inverted X2-TDMA signal
   -xr           Expect inverted DMR signal
   -xd           Expect inverted ICOM dPMR signal
+  -xn           Expect inverted NXDN/DCR/IDAS signal
 
   * denotes frame types that cannot be auto-detected.
   ** Phase 2 Single Frequency may require user to manually set WACN/SYSID/CC parameters if MAC_SIGNAL not present.

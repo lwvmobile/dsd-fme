@@ -16,7 +16,7 @@
 // Software Foundation, Inc., 51 Franklin Street, Boston, MA
 // 02110-1301, USA.
 
-static const uint8_t PERM_12_5[] = {
+static const uint16_t PERM_12_5[] = {
 	0,12,24,36,48,
 	1,13,25,37,49,
 	2,14,26,38,50,
@@ -31,7 +31,7 @@ static const uint8_t PERM_12_5[] = {
 	11,23,35,47,59
 };
 
-static const uint8_t PERM_16_9[] = {
+static const uint16_t PERM_16_9[] = {
 	0, 16, 32, 48, 64, 80, 96, 112, 128,
 	1, 17, 33, 49, 65, 81, 97, 113, 129,
 	2, 18, 34, 50, 66, 82, 98, 114, 130,

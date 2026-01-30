@@ -1629,9 +1629,53 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		}
 
 		//MFID90 Group Regroup Add Command
-		if (MAC[1+len_a] == 0x81 && MAC[2+len_a] == 0x90) //needs MAC message len update, may work same as explicit enc regroup?
+		if (MAC[1+len_a] == 0x81 && MAC[2+len_a] == 0x90)
 		{
 			fprintf (stderr, "\n MFID90 Group Regroup Add Command ");
+			uint8_t len = MAC[3+len_a];
+			len_b = len;
+		}
+
+		//MFID90 Unknown Message <--was causing an issue on ABQ system w/ false GPS, SCCB and RFSS_STS_BCST MAC messages
+		if (MAC[1+len_a] == 0x8F && MAC[2+len_a] == 0x90)
+		{
+
+			uint8_t len = MAC[3+len_a]; //observed len values are 0x04, 0x08, and 0x0B (12)
+
+			//constraints on message len
+			if (len > 12)
+				len = 12;
+			// else if (len < 4)
+			// 	len = 4;
+			
+			fprintf (stderr, "%s",KCYN);
+      fprintf (stderr, "\n MFID 90 (Moto); Opcode: %02X; ", MAC[1+len_a] & 0x3F); //mask, or not?
+      for (int i = 4; i < len+1; i++)
+        fprintf (stderr, "%02X", MAC[i+len_a]);
+      fprintf (stderr, " %s",KNRM);
+
+			len_b = len;
+		}
+
+		//MFID90 Unknown Message 2 (usually in second message, unknown, maybe just filler?)
+		if (MAC[1+len_a] == 0xBF && MAC[2+len_a] == 0x90)
+		{
+
+			uint8_t len = MAC[3+len_a]; //observed len values are 0x03
+
+			//constraints on message len
+			if (len > 3)
+				len = 3;
+			else if (len < 3)
+				len = 3;
+
+			fprintf (stderr, "%s",KCYN);
+      fprintf (stderr, "\n MFID 90 (Moto); Opcode: %02X; ", MAC[1+len_a] & 0x3F); //mask, or not?
+      for (int i = 4; i < len+1; i++)
+        fprintf (stderr, "%02X", MAC[i+len_a]);
+      fprintf (stderr, " %s",KNRM);
+
+			len_b = len;
 		}
 
 		//the len on these indicate they are always a single messages, foregoing the +len_a index pointer
@@ -1775,6 +1819,12 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int unk2 = MAC[len_a+2]; //This field is observed as 0xAA, unknown if this is an opcode, or other MFID
 			int mfid = MAC[len_a+3]; //This is where the 0xA4 (Harris) Identifier is found in this message, as opposed to +2
 			int len  = MAC[len_a+4] & 0x3F;; //0x11 or 17 dec sounds reasonable, but cannot verify
+
+			//bugfix observed on random errant second MAC message on Phase 2
+			//although can't 100% confirm, pretty sure these all have same len value
+			if (len != 0x11)
+				goto END_PDU;
+
 			fprintf (stderr, "\n MFID %02X (Harris); Len: %d; Opcode: %02X/%02X;", mfid, len, unk1, unk2);
 
 			//convert bytes to bits, may move this up top

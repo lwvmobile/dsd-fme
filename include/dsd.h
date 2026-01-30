@@ -354,6 +354,7 @@ typedef struct
   int uvquality;
   int inverted_x2tdma;
   int inverted_dmr;
+  int inverted_nxdn;
   int mod_threshold;
   int ssize;
   int msize;
@@ -1262,25 +1263,25 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state);
 uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c);
 void ncursesClose ();
 
-//new NXDN Functions start here!
+//NXDN Functions Start Here
 void nxdn_frame (dsd_opts * opts, dsd_state * state);
 void nxdn_pn95_dibit_scrambler(dsd_state * state, uint8_t * dibits, int len);
-//nxdn deinterleaving/depuncturing functions
-void nxdn_deperm_facch (dsd_opts * opts, dsd_state * state, uint8_t bits[144]);
-void nxdn_deperm_sacch (dsd_opts * opts, dsd_state * state, uint8_t bits[60]);
-void nxdn_deperm_cac (dsd_opts * opts, dsd_state * state, uint8_t bits[300]);
-void nxdn_deperm_facch2_udch (dsd_opts * opts, dsd_state * state, uint8_t bits[348], uint8_t type);
-//type-d 'idas' deinterleaving/depuncturing functions
-void nxdn_deperm_scch(dsd_opts * opts, dsd_state * state, uint8_t bits[60], uint8_t direction);
-void nxdn_deperm_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t bits[288], uint8_t type);
-//DCR Mode
-void nxdn_deperm_sacch2(dsd_opts * opts, dsd_state * state, uint8_t bits[60]);
-void nxdn_deperm_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t bits[144], uint8_t lich);
-//MT and Voice
 void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType);
-void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182]);
-//Osmocom OP25 12 Rate Trellis Decoder (for NXDN, M17, YSF, etc)
-void trellis_decode(uint8_t result[], const uint8_t source[], int result_len);
+void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t * dbuf);
+
+//All-in-One NXDN Soft Decision Viterbi Function based on libM17
+uint32_t nxdn_soft_decision_viterbi(uint8_t * bits, const uint16_t * interleave, uint8_t * puncture, int d_len, int p_len, int num_bytes, int offset, uint8_t * viterbi_bits, uint8_t * viterbi_bytes);
+//NXDN Conventional and Type-C
+void nxdn_facch1(dsd_opts * opts, dsd_state * state, uint8_t * bits);
+void nxdn_sacch(dsd_opts * opts, dsd_state * state, uint8_t * bits);
+void nxdn_cac(dsd_opts * opts, dsd_state * state, uint8_t * bits);
+void nxdn_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8_t type);
+//type-d 'idas'
+void idas_scch(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8_t direction);
+void idas_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8_t type);
+//Japanese DCR
+void dcr_sacch(dsd_opts * opts, dsd_state * state, uint8_t * bits);
+void dcr_pich_tch(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8_t lich);
 
 //OP25 NXDN CRC functions
 int load_i(const uint8_t val[], int len);
@@ -1290,12 +1291,8 @@ uint16_t crc15(const uint8_t buf[], int len);
 uint16_t crc16cac(const uint8_t buf[], int len);
 uint8_t crc7_scch(uint8_t bits[], int len); //converted from op25 crc6
 
-/* NXDN Convolution functions */
-void CNXDNConvolution_start(void);
-void CNXDNConvolution_decode(uint8_t s0, uint8_t s1);
-void CNXDNConvolution_chainback(unsigned char* out, unsigned int nBits);
-void CNXDNConvolution_encode(const unsigned char* in, unsigned char* out, unsigned int nBits);
-void CNXDNConvolution_init();
+//YSF Soft Decision Viterbi
+uint32_t ysf_soft_decision_viterbi(uint8_t * dbuf, int d_len, int num_bytes, int offset, uint8_t * viterbi_bits, uint8_t * viterbi_bytes);
 
 //libM17 viterbi decoder
 
@@ -1311,6 +1308,9 @@ uint32_t viterbi_chainback(uint8_t* out, size_t pos, uint16_t len);
 void viterbi_reset(void);
 uint16_t q_abs_diff(const uint16_t v1, const uint16_t v2);
 
+//libm17 based soft decision viterbi for variable len and new punctures
+void slice_symbols_to_len(uint16_t * out, const float * inp, int len);
+
 //keeping these
 void NXDN_SACCH_Full_decode(dsd_opts * opts, dsd_state * state);
 void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state,
@@ -1321,17 +1321,21 @@ char * NXDN_Call_Type_To_Str(uint8_t CallType);
 void NXDN_Voice_Call_Option_To_Str(uint8_t VoiceCallOption, uint8_t * Duplex, uint8_t * TransmissionMode);
 char * NXDN_Cipher_Type_To_Str(uint8_t CipherType);
 //added these
+void NXDN_decode_Prop(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_Alias(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void NXDN_decode_Alias16(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_cch_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_srv_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_site_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void nxdn_decode_dst_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_adj_site(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 //Type-D SCCH Message Decoder
 void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uint8_t direction);
 void NXDN_decode_VCALL_ARIB(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_ALIAS_ARIB(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 uint32_t sjis_char_to_unicode(uint16_t sjis);
+uint32_t big5_char_to_unicode(uint16_t big5);
 int utf8_encode(int c, char *buf);
 
 void dPMRVoiceFrameProcess(dsd_opts * opts, dsd_state * state);

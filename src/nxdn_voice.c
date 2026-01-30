@@ -53,7 +53,7 @@ const int nZ[36] = { 5, 3, 4, 2, 3, 1,
   13, 2, 12, 1, 11, 0
 };
 
-void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t dbuf[182])
+void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t * dbuf)
 {
   int i;
   int start, stop;

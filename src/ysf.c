@@ -228,7 +228,12 @@ void ysf_dch_decode (dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint
       }
 
       if (fn == ft) //last frame
-        fprintf (stderr, " %s", state->event_history_s[0].Event_History_Items[0].text_message);
+      {
+        char text_string[15]; memset (text_string, 0, sizeof(text_string));
+        sprintf (text_string, "%s", "BUMBLEBEETUNA");
+        if (strncmp(text_string, state->event_history_s[0].Event_History_Items[0].event_string, 13) != 0)
+          fprintf (stderr, " %s", state->event_history_s[0].Event_History_Items[0].text_message);
+      }
 
       break;
 
@@ -377,15 +382,14 @@ static inline uint16_t crc16ysf(const uint8_t buf[], int len)
 int ysf_conv_dch2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t cm, uint8_t input[])
 {
 
-  int i, j, k, err;
-  uint8_t s0, s1;
-  uint8_t trellis_buf[100];
+  int i, j, err;
+  uint8_t viterbi_bits[100];
   uint8_t temp[210];
-  uint8_t m_data[100];
+  uint8_t viterbi_bytes[100];
   uint8_t bits[210];
-  memset (trellis_buf, 0, sizeof(trellis_buf));
+  memset (viterbi_bits, 0, sizeof(viterbi_bits));
   memset (temp, 0, sizeof (temp));
-  memset (m_data, 0, sizeof (m_data));
+  memset (viterbi_bytes, 0, sizeof (viterbi_bytes));
   memset (bits, 0, sizeof(bits));
   err = 0;
 
@@ -398,56 +402,27 @@ int ysf_conv_dch2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, u
     }
   }
 
-  k = 0;
-  //convert dibits to bits
-  for (i = 0; i < 100; i++)
-  {
-    bits[k++] = (buf[i] >> 1) & 1;
-    bits[k++] = (buf[i] >> 0) & 1;
-  }
+  uint32_t v_error =
+    ysf_soft_decision_viterbi(buf, 200, 13, 8, viterbi_bits, viterbi_bytes);
 
-  //setup for the convolutional decoder
-  for (i = 0; i < 200; i++)
-    temp[i] = bits[i] << 1;
+  //debug
+  if (opts->payload == 1)
+    fprintf (stderr, " D2-Ve: %1.1f; ", (float)v_error/(float)0xFFFF);
 
-  CNXDNConvolution_start();
-  for (i = 0; i < 100; i++)
-  {
-    s0 = temp[(2*i)+0];
-    s1 = temp[(2*i)+1];
-
-    CNXDNConvolution_decode(s0, s1);
-  }
-
-  CNXDNConvolution_chainback(m_data, 96);
-
-  //96/8 = 12, last 4 (96-100) are trailing zeroes
-  for(i = 0; i < 12; i++)
-  {
-    trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
-    trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
-    trellis_buf[(i*8)+2] = (m_data[i] >> 5) & 1;
-    trellis_buf[(i*8)+3] = (m_data[i] >> 4) & 1;
-    trellis_buf[(i*8)+4] = (m_data[i] >> 3) & 1;
-    trellis_buf[(i*8)+5] = (m_data[i] >> 2) & 1;
-    trellis_buf[(i*8)+6] = (m_data[i] >> 1) & 1;
-    trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
-  }
-
-  uint16_t crc = crc16ysf(trellis_buf, 96);
+  uint16_t crc = crc16ysf(viterbi_bits, 96);
   if (crc != 0) err = -2;	// crc failure
 
   for (i = 0; i < 80; i++)
-    trellis_buf[i] = trellis_buf[i] ^ pn95[i];
+    viterbi_bits[i] = viterbi_bits[i] ^ pn95[i];
 
   //reload after de-whitening
-  memset (m_data, 0, sizeof (m_data));
+  memset (viterbi_bytes, 0, sizeof (viterbi_bytes));
   for (i = 0; i < 12; i++)
-    m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
+    viterbi_bytes[i] = (uint8_t)ConvertBitIntoBytes(&viterbi_bits[i*8], 8);
 
   //decode the callsign, etc, found in the DCH when no errors
   if (err == 0)
-    ysf_dch_decode2 (state, bn, bt, fn, ft, cm, trellis_buf);
+    ysf_dch_decode2 (state, bn, bt, fn, ft, cm, viterbi_bits);
   else
   {
     fprintf (stderr, "%s", KRED);
@@ -460,25 +435,24 @@ int ysf_conv_dch2 (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, u
     fprintf (stderr, "\n ");
     fprintf (stderr, "DCH2: ");
     for (i = 0; i < 12; i++)
-      fprintf (stderr, "[%02X]", m_data[i]);
+      fprintf (stderr, "[%02X]", viterbi_bytes[i]);
 
   }
 
 	return err;
 }
 
-//modified version of nxdn_deperm_facch1 -- this one for Full Rate, Type 1 CC, Headers and Terminators DCH (180 dibit version)
+//Soft Decision Full Rate, Type 1 CC, Headers and Terminators DCH (180 dibit version)
 int ysf_conv_dch (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, uint8_t fn, uint8_t ft, uint8_t cm, uint8_t input[])
 {
-  int i, j, k, err;
-  uint8_t s0, s1;
-  uint8_t trellis_buf[190];
+  int i, j, err;
+  uint8_t viterbi_bits[190];
   uint8_t temp[370];
-  uint8_t m_data[100];
+  uint8_t viterbi_bytes[100];
   uint8_t bits[370];
-  memset (trellis_buf, 0, sizeof(trellis_buf));
+  memset (viterbi_bits, 0, sizeof(viterbi_bits));
   memset (temp, 0, sizeof (temp));
-  memset (m_data, 0, sizeof (m_data));
+  memset (viterbi_bytes, 0, sizeof (viterbi_bytes));
   memset (bits, 0, sizeof(bits));
   err = 0;
 
@@ -491,56 +465,27 @@ int ysf_conv_dch (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, ui
     }
   }
 
-  k = 0;
-  //convert dibits to bits
-  for (i = 0; i < 180; i++)
-  {
-    bits[k++] = (buf[i] >> 1) & 1;
-    bits[k++] = (buf[i] >> 0) & 1;
-  }
+  uint32_t v_error =
+    ysf_soft_decision_viterbi(buf, 360, 23, 8, viterbi_bits, viterbi_bytes);
 
-  //setup for the convolutional decoder
-  for (i = 0; i < 360; i++)
-    temp[i] = bits[i] << 1;
+  //debug
+  if (opts->payload == 1)
+    fprintf (stderr, " D1-Ve: %1.1f; ", (float)v_error/(float)0xFFFF);
 
-  CNXDNConvolution_start();
-  for (i = 0; i < 180; i++)
-  {
-    s0 = temp[(2*i)+0];
-    s1 = temp[(2*i)+1];
-
-    CNXDNConvolution_decode(s0, s1);
-  }
-
-  CNXDNConvolution_chainback(m_data, 176);
-
-  //176/8 = 22, last 4 (176-180) are trailing zeroes
-  for(i = 0; i < 22; i++)
-  {
-    trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
-    trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
-    trellis_buf[(i*8)+2] = (m_data[i] >> 5) & 1;
-    trellis_buf[(i*8)+3] = (m_data[i] >> 4) & 1;
-    trellis_buf[(i*8)+4] = (m_data[i] >> 3) & 1;
-    trellis_buf[(i*8)+5] = (m_data[i] >> 2) & 1;
-    trellis_buf[(i*8)+6] = (m_data[i] >> 1) & 1;
-    trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
-  }
-
-  uint16_t crc = crc16ysf(trellis_buf, 176);
+  uint16_t crc = crc16ysf(viterbi_bits, 176);
   if (crc != 0) err = -2;	// crc failure
 
   for (i = 0; i < 160; i++)
-    trellis_buf[i] = trellis_buf[i] ^ pn95[i];
+    viterbi_bits[i] = viterbi_bits[i] ^ pn95[i];
 
   //reload after de-whitening
-  memset (m_data, 0, sizeof (m_data));
+  memset (viterbi_bytes, 0, sizeof (viterbi_bytes));
   for (i = 0; i < 22; i++)
-    m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
+    viterbi_bytes[i] = (uint8_t)ConvertBitIntoBytes(&viterbi_bits[i*8], 8);
 
   //decode the callsign, etc, found in the DCH when no errors
   if (err == 0)
-    ysf_dch_decode (state, bn, bt, fn, ft, cm, trellis_buf);
+    ysf_dch_decode (state, bn, bt, fn, ft, cm, viterbi_bits);
   else
   {
     fprintf (stderr, "%s", KRED);
@@ -553,25 +498,24 @@ int ysf_conv_dch (dsd_opts * opts, dsd_state * state, uint8_t bn, uint8_t bt, ui
     fprintf (stderr, "\n ");
     fprintf (stderr, "DCH1: ");
     for (i = 0; i < 22; i++)
-      fprintf (stderr, "[%02X]", m_data[i]);
+      fprintf (stderr, "[%02X]", viterbi_bytes[i]);
 
   }
 
 	return err;
 }
 
-//modified version of nxdn_deperm_facch1
-int ysf_conv_fich (uint8_t input[], uint8_t dest[32])
+//FICH Soft Decision Viterbi
+int ysf_conv_fich (dsd_opts * opts, uint8_t input[], uint8_t dest[32])
 {
-  int i, j, k, err;
-  uint8_t s0, s1;
-  uint8_t trellis_buf[100];
+  int i, j, err;
+  uint8_t viterbi_bits[100];
   uint8_t temp[210];
-  uint8_t m_data[100];
+  uint8_t viterbi_bytes[100];
   uint8_t bits[210];
-  memset (trellis_buf, 0, sizeof(trellis_buf));
+  memset (viterbi_bits, 0, sizeof(viterbi_bits));
   memset (temp, 0, sizeof (temp));
-  memset (m_data, 0, sizeof (m_data));
+  memset (viterbi_bytes, 0, sizeof (viterbi_bytes));
   memset (bits, 0, sizeof(bits));
   err = 0;
 
@@ -584,41 +528,12 @@ int ysf_conv_fich (uint8_t input[], uint8_t dest[32])
     }
   }
 
-  k = 0;
-  //convert dibits to bits
-  for (i = 0; i < 100; i++)
-  {
-    bits[k++] = (buf[i] >> 1) & 1;
-    bits[k++] = (buf[i] >> 0) & 1;
-  }
+  uint32_t v_error =
+    ysf_soft_decision_viterbi(buf, 200, 13, 8, viterbi_bits, viterbi_bytes);
 
-  //setup for the convolutional decoder
-  for (i = 0; i < 200; i++) //192
-    temp[i] = bits[i] << 1;
-
-  CNXDNConvolution_start();
-  for (i = 0; i < 100; i++)
-  {
-    s0 = temp[(2*i)+0];
-    s1 = temp[(2*i)+1];
-
-    CNXDNConvolution_decode(s0, s1);
-  }
-
-  CNXDNConvolution_chainback(m_data, 96);
-
-  //96/8 = 12, last 4 (96-100) are trailing zeroes
-  for(i = 0; i < 12; i++)
-  {
-    trellis_buf[(i*8)+0] = (m_data[i] >> 7) & 1;
-    trellis_buf[(i*8)+1] = (m_data[i] >> 6) & 1;
-    trellis_buf[(i*8)+2] = (m_data[i] >> 5) & 1;
-    trellis_buf[(i*8)+3] = (m_data[i] >> 4) & 1;
-    trellis_buf[(i*8)+4] = (m_data[i] >> 3) & 1;
-    trellis_buf[(i*8)+5] = (m_data[i] >> 2) & 1;
-    trellis_buf[(i*8)+6] = (m_data[i] >> 1) & 1;
-    trellis_buf[(i*8)+7] = (m_data[i] >> 0) & 1;
-  }
+  //debug
+  if (opts->payload == 1)
+    fprintf (stderr, " F-Ve: %1.1f; ", (float)v_error/(float)0xFFFF);
 
   uint8_t fich_bits[12*4];
   uint8_t temp_b[24];
@@ -631,30 +546,26 @@ int ysf_conv_fich (uint8_t input[], uint8_t dest[32])
     g[i] = FALSE;
 
     for (j = 0; j < 24; j++)
-      temp_b[j] = (char) trellis_buf[(i*24)+j];
+      temp_b[j] = (char) viterbi_bits[(i*24)+j];
 
     g[i] = Golay_24_12_decode(temp_b);
     if(g[i] == FALSE) err = -1;
 
     for (j = 0; j < 24; j++)
-      trellis_buf[(i*24)+j] = (uint8_t) temp_b[j];
+      viterbi_bits[(i*24)+j] = (uint8_t) temp_b[j];
   }
 
   //load corrected bits
   for (i = 0; i < 12; i++)
   {
-    fich_bits[(12*0)+i] = trellis_buf[i+0];
-    fich_bits[(12*1)+i] = trellis_buf[i+24];
-    fich_bits[(12*2)+i] = trellis_buf[i+48];
-    fich_bits[(12*3)+i] = trellis_buf[i+72];
+    fich_bits[(12*0)+i] = viterbi_bits[i+0];
+    fich_bits[(12*1)+i] = viterbi_bits[i+24];
+    fich_bits[(12*2)+i] = viterbi_bits[i+48];
+    fich_bits[(12*3)+i] = viterbi_bits[i+72];
   }
 
   uint16_t crc = crc16ysf(fich_bits, 48);
   if (crc != 0) err = -2;	// crc failure
-
-  memset (m_data, 0, sizeof (m_data));
-  for (i = 0; i < 12; i++)
-    m_data[i] = (uint8_t)ConvertBitIntoBytes(&trellis_buf[i*8], 8);
 
 	memcpy(dest, fich_bits, 32); //copy minus the crc16
 	return err;
@@ -808,7 +719,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
     fichrawdibits[i] = getDibit(opts, state);
 
   //from nxdn_deperm_facch1 w/ nxdn convolutional decoder
-  err = ysf_conv_fich (fichrawdibits, fich_decode);
+  err = ysf_conv_fich (opts, fichrawdibits, fich_decode);
 
   //if errors decoding fich, then just treat it like the last frame that came in
   if (err == 0)

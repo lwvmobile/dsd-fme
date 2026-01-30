@@ -39,6 +39,55 @@ if (LZ)
     add_definitions(-DLIMAZULUTWEAKS)
 endif ()
 
+#use cmake option -DASCII=ON to enable ASCII only Alias Support in NXDN
+option(ASCII
+    "Build with ASCII only Alias Support in NXDN Enabled" ON)
+if (ASCII)
+    add_definitions(-DASCII_DECODE)
+endif ()
+
+#use cmake option -DASCII=OFF -DBIG5=ON to enable ASCII and BIG5 Alias Support in NXDN
+option(BIG5
+    "Build with BIG5 and ASCII Alias Support in NXDN Enabled" OFF)
+if (BIG5)
+    add_definitions(-DBIG5_DECODE)
+endif ()
+
+#use cmake option -DASCII=OFF -DSJIS=ON to enable ASCII and SJIS Alias Support in NXDN
+option(SJIS
+    "Build with SJIS and ASCII Alias Support in NXDN Enabled" OFF)
+if (SJIS)
+    add_definitions(-DSJIS_DECODE)
+endif ()
+
+#use cmake option -DASCII=OFF -DUTF16=ON to enable ASCII and UTF16BE Alias Support in NXDN
+option(UTF16
+    "Build with UTF16BE and ASCII Alias Support in NXDN Enabled" OFF)
+if (UTF16)
+    add_definitions(-DUTF16_DECODE)
+endif ()
+
+#use cmake option -DTYPEC=OFF to disable NXDN Type-C and Conventional Decoding (enabled by default)
+option(TYPEC
+    "Build with NXDN Type-C and Conventional Decoding Enabled" ON)
+if (TYPEC)
+    add_definitions(-DTYPE_C_DECODE)
+endif ()
+
+#use cmake option -DTYPED=OFF to disable NXDN Type-D / IDAS Decoding (enabled by default)
+option(TYPED
+    "Build with NXDN Type-D / IDAS Decoding Enabled" ON)
+if (TYPED)
+    add_definitions(-DTYPE_D_DECODE)
+endif ()
+
+#use cmake option -DDCR=OFF to disable Japanese DCR (NXDN Variant) Decoding (enabled by default)
+option(DCR
+    "Build with Japanese DCR (NXDN Variant) Decoding Enabled" ON)
+if (DCR)
+    add_definitions(-DJPNDCR_DECODE)
+endif ()
+
 #use cmake option -DSID=ON to enable P25p1 Soft ID decoding -- Experimental
 option(SID
     "Build with P25p1 LSD/Soft ID Enabled" OFF)

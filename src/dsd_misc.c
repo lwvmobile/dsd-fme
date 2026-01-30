@@ -8,84 +8,6 @@
 
 #include "dsd.h"
 
-static const int PARITY[] = {0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1};
-
-// trellis_1_2 encode: source is in bits, result in bits
-void trellis_encode(uint8_t result[], const uint8_t source[], int result_len, int reg)
-{
-	for (int i=0; i<result_len; i+=2) {
-		reg = (reg << 1) | source[i>>1];
-		result[i] = PARITY[reg & 0x19];
-		result[i+1] = PARITY[reg & 0x17];
-	}
-}
-
-// simplified trellis 2:1 decode; source and result in bits
-// assumes that encoding was done with NTEST trailing zero bits
-// result_len should be set to the actual number of data bits
-// in the original unencoded message (excl. these trailing bits)
-void trellis_decode(uint8_t result[], const uint8_t source[], int result_len)
-{
-	int reg = 0;
-	int min_d;
-	int min_bt;
-	static const int NTEST = 4;
-	static const int NTESTC = 1 << NTEST;
-	uint8_t bt[NTEST];
-	uint8_t tt[NTEST*2];
-	int dstats[4];
-	int sum;
-	for (int p=0; p < 4; p++)
-		dstats[p] = 0;
-	for (int p=0; p < result_len; p++) {
-		for (int i=0; i<NTESTC; i++) {
-			bt[0] = (i&8)>>3;
-			bt[1] = (i&4)>>2;
-			bt[2] = (i&2)>>1;
-			bt[3] = (i&1);
-			trellis_encode(tt, bt, NTEST*2, reg);
-			sum=0;
-			for (int j=0; j<NTEST*2; j++) {
-				sum += tt[j] ^ source[p*2+j];
-			}
-			if (i == 0 || sum < min_d) {
-				min_d = sum;
-				min_bt = bt[0];
-			}
-		}
-		result[p] = min_bt;
-		reg = (reg << 1) | min_bt;
-		dstats[(min_d > 3) ? 3 : min_d] += 1;
-	}
-
-	//debug output
-	// fprintf (stderr, "\n stats\t%d %d %d %d\n", dstats[0], dstats[1], dstats[2], dstats[3]);
-}
-
-//Original Copyright/License
-
-/* -*- c++ -*- */
-/*
- * NXDN Encoder/Decoder (C) Copyright 2019 Max H. Parke KA1RBI
- *
- * This file is part of OP25
- *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
- */
-
 //Ripped from libM17
 #define K	5                       //constraint length
 #define NUM_STATES (1 << (K - 1)) //number of states
@@ -94,7 +16,7 @@ static uint32_t prevMetrics[NUM_STATES];
 static uint32_t currMetrics[NUM_STATES];
 static uint32_t prevMetricsData[NUM_STATES];
 static uint32_t currMetricsData[NUM_STATES];
-static uint16_t viterbi_history[244];
+static uint16_t viterbi_history[400]; //CAC needs more, expand to 400 for testing
 
 /**
 * @brief Decode unpunctured convolutionally encoded data.
@@ -106,8 +28,9 @@ static uint16_t viterbi_history[244];
 */
 uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, const uint16_t len)
 {
-	if(len > 244*2)
-		fprintf(stderr, "Input size exceeds max history\n");
+	//variable in len
+	// if(len > 244*2)
+	// 	fprintf(stderr, "Input size exceeds max history\n");
 
 	viterbi_reset();
 
@@ -142,11 +65,12 @@ uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, const uint16_t len)
 */
 uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, const uint16_t in_len, const uint16_t p_len)
 {
-	if(in_len > 244*2)
-	fprintf(stderr, "Input size exceeds max history\n");
+	//variable len now
+	// if(in_len > 244*2)
+	// 	fprintf(stderr, "Input size exceeds max history\n");
 
-	uint16_t umsg[244*2]; //unpunctured message
-	uint8_t p=0;		      //puncturer matrix entry
+	uint16_t umsg[400*2]; //unpunctured message
+	uint16_t p=0;		      //puncturer matrix entry
 	uint16_t u=0;		      //bits count - unpunctured message
 	uint16_t i=0;         //bits read from the input message
 
@@ -168,7 +92,7 @@ uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_
 	}
 
 	//debug
-	// fprintf (stderr, " p: %d, u: %d; p_len: %d; len: %d;", p, u, p_len, (u-in_len)*0x7FFF);
+	// fprintf (stderr, " p: %d, u: %d; p_len: %d; ", p, u, p_len); //
 
 	return viterbi_decode(out, umsg, u) - (u-in_len)*0x7FFF;
 }
@@ -249,7 +173,7 @@ uint32_t viterbi_chainback(uint8_t* out, size_t pos, uint16_t len)
 	uint8_t state = 0;
 	size_t bitPos = len+4;
 
-	memset(out, 0, (len-1)/8+1);
+	// memset(out, 0, (len-1)/8+1); //upstream bugfix, but arrays passed here are already memset / zeroed out
 
 	while(pos > 0)
 	{
@@ -647,6 +571,57 @@ void slice_symbols(uint16_t out[2*SYM_PER_PLD], const float inp[SYM_PER_PLD])
 }
 
 /**
+ * @brief Slice payload symbols into soft dibits.
+ * Input (RRC filtered baseband sampled at symbol centers)
+ * should be already normalized to {-3, -1, +1 +3}.
+ * @param out Soft valued dibits (type-4).
+ * @param inp Array of len floats (1 sample per symbol).
+ * @param len legnth value to run this at
+ */
+void slice_symbols_to_len(uint16_t * out, const float * inp, int len)
+{
+
+	for(int i=0; i<len; i++)
+	{
+		//bit 0
+		if(inp[i]>=symbol_list[3])
+		{
+			out[i*2+1]=0xFFFF;
+		}
+		else if(inp[i]>=symbol_list[2])
+		{
+			out[i*2+1]=-(float)0xFFFF/(symbol_list[3]-symbol_list[2])*symbol_list[2]+inp[i]*(float)0xFFFF/(symbol_list[3]-symbol_list[2]);
+		}
+		else if(inp[i]>=symbol_list[1])
+		{
+			out[i*2+1]=0x0000;
+		}
+		else if(inp[i]>=symbol_list[0])
+		{
+			out[i*2+1]=(float)0xFFFF/(symbol_list[1]-symbol_list[0])*symbol_list[1]-inp[i]*(float)0xFFFF/(symbol_list[1]-symbol_list[0]);
+		}
+		else
+		{
+			out[i*2+1]=0xFFFF;
+		}
+
+		//bit 1
+		if(inp[i]>=symbol_list[2])
+		{
+			out[i*2]=0x0000;
+		}
+		else if(inp[i]>=symbol_list[1])
+		{
+			out[i*2]=0x7FFF-inp[i]*(float)0xFFFF/(symbol_list[2]-symbol_list[1]);
+		}
+		else
+		{
+			out[i*2]=0xFFFF;
+		}
+	}
+}
+
+/**
  * @brief Soft logic NOT.
  * 
  * @param a Input A.
@@ -680,7 +655,7 @@ void randomize_soft_bits(uint16_t inp[SYM_PER_PLD*2])
     }
 }
 
-//interleaver pattern
+//interleaver pattern for M17
 const uint16_t intrl_seq[SYM_PER_PLD*2]=
 {
 	0, 137, 90, 227, 180, 317, 270, 39, 360, 129, 82, 219, 172, 309, 262, 31,
@@ -718,4 +693,123 @@ void reorder_soft_bits(uint16_t outp[SYM_PER_PLD*2], const uint16_t inp[SYM_PER_
 {
     for(uint16_t i=0; i<SYM_PER_PLD*2; i++)
         outp[i]=inp[intrl_seq[i]];
+}
+
+//NXDN all-in-one function to go from dibits to valid output, return viterbi error
+uint32_t nxdn_soft_decision_viterbi(uint8_t * bits, const uint16_t * interleave, uint8_t * puncture, int d_len, int p_len, int num_bytes, int offset, uint8_t * viterbi_bits, uint8_t * viterbi_bytes)
+{
+	uint32_t error = 0;
+	uint16_t soft_bit[1000];
+	uint8_t temp_bits[500];
+	memset(temp_bits, 0, sizeof(temp_bits));
+	memset(soft_bit, 0, sizeof(soft_bit));
+
+	//deinterleaved bits
+	uint8_t deinterleaved_bits[500];
+	memset(deinterleaved_bits, 0, sizeof(deinterleaved_bits));
+
+	//deinterleaving the bits
+	for (int i = 0; i < d_len; i++)
+		deinterleaved_bits[interleave[i]] = bits[i];
+
+	//converting back to dibits
+	uint8_t dbuf[500];
+	memset(dbuf, 0, sizeof(dbuf));
+	for (int i = 0; i < d_len/2; i++)
+		dbuf[i] = (deinterleaved_bits[(i*2)+0] << 1) | deinterleaved_bits[(i*2)+1];
+
+	float sbuf[500];
+	memset(sbuf, 0.0f, sizeof(sbuf));
+
+	//convert dbuf into a symbol array
+  for (int i = 0; i < d_len/2; i++)
+  {
+    if      (dbuf[i] == 0) sbuf[i] = +1.0f;
+    else if (dbuf[i] == 1) sbuf[i] = +3.0f;
+    else if (dbuf[i] == 2) sbuf[i] = -1.0f;
+    else if (dbuf[i] == 3) sbuf[i] = -3.0f;
+    else                   sbuf[i] = +0.0f;
+  }
+
+	//slice symbols to soft dibits
+  slice_symbols_to_len(soft_bit, sbuf, d_len/2);
+
+	//viterbi
+  error = viterbi_decode_punctured(viterbi_bytes, soft_bit, puncture, d_len, p_len);
+
+	//debug
+	// fprintf (stderr, " Ve: %1.1f; ", (float)error/(float)0xFFFF);
+
+	//debug
+	// for (int i = 0; i < num_bytes+1; i++)
+	// 	fprintf(stderr, "%02X", viterbi_bytes[i]);
+
+	//load viterbi_bytes into bits
+  unpack_byte_array_into_bit_array(viterbi_bytes, temp_bits, num_bytes+1);
+
+	//rearrange bits to get correct offset
+	for (int i = 0; i < num_bytes*8; i++)
+		viterbi_bits[i] = temp_bits[i+offset];
+
+	// memset(viterbi_bytes, 0, sizeof(viterbi_bytes));
+	for (int i = 0; i < num_bytes; i++)
+		viterbi_bytes[i] = 0;
+
+	pack_bit_array_into_byte_array(viterbi_bits, viterbi_bytes, num_bytes);
+
+	return error;
+}
+
+//ysf fake puncture
+uint8_t ysf_puncture[4] = {1,1,1,1};
+
+//YSF all-in-one function to go from dibits to valid output, return viterbi error
+uint32_t ysf_soft_decision_viterbi(uint8_t * dbuf, int d_len, int num_bytes, int offset, uint8_t * viterbi_bits, uint8_t * viterbi_bytes)
+{
+	uint32_t error = 0;
+	uint16_t soft_bit[1000];
+	uint8_t temp_bits[500];
+	memset(temp_bits, 0, sizeof(temp_bits));
+	memset(soft_bit, 0, sizeof(soft_bit));
+
+	float sbuf[500];
+	memset(sbuf, 0.0f, sizeof(sbuf));
+
+	//convert dbuf into a symbol array
+  for (int i = 0; i < d_len/2; i++)
+  {
+    if      (dbuf[i] == 0) sbuf[i] = +1.0f;
+    else if (dbuf[i] == 1) sbuf[i] = +3.0f;
+    else if (dbuf[i] == 2) sbuf[i] = -1.0f;
+    else if (dbuf[i] == 3) sbuf[i] = -3.0f;
+    else                   sbuf[i] = +0.0f;
+  }
+
+	//slice symbols to soft dibits
+  slice_symbols_to_len(soft_bit, sbuf, d_len/2);
+
+	//viterbi
+  error = viterbi_decode_punctured(viterbi_bytes, soft_bit, ysf_puncture, d_len, 4);
+
+	//debug
+	// fprintf (stderr, " Ve: %1.1f; ", (float)error/(float)0xFFFF);
+
+	//debug
+	// for (int i = 0; i < num_bytes+1; i++)
+	// 	fprintf(stderr, "%02X", viterbi_bytes[i]);
+
+	//load viterbi_bytes into bits
+  unpack_byte_array_into_bit_array(viterbi_bytes, temp_bits, num_bytes+1);
+
+	//rearrange bits to get correct offset
+	for (int i = 0; i < num_bytes*8; i++)
+		viterbi_bits[i] = temp_bits[i+offset];
+
+	// memset(viterbi_bytes, 0, sizeof(viterbi_bytes));
+	for (int i = 0; i < num_bytes; i++)
+		viterbi_bytes[i] = 0;
+
+	pack_bit_array_into_byte_array(viterbi_bits, viterbi_bytes, num_bytes);
+
+	return error;
 }

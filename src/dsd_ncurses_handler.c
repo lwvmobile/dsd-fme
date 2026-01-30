@@ -230,6 +230,7 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
       opts->inverted_dpmr = 1;
       opts->inverted_x2tdma = 1;
       opts->inverted_ysf = 1;
+      opts->inverted_nxdn = 1;
     }
     else
     {
@@ -237,6 +238,7 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
       opts->inverted_dpmr = 0;
       opts->inverted_x2tdma = 0;
       opts->inverted_ysf = 0;
+      opts->inverted_nxdn = 0;
     }
   }
 

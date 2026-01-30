@@ -187,7 +187,7 @@ dmr_filter(short sample)
 short
 nxdn_filter(short sample)
 {
-    return dsd_input_filter(sample, 4);
+    return dsd_input_filter(sample, 2);
 }
 
 short

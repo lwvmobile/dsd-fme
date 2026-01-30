@@ -18,7 +18,7 @@
 -f2 P25P2 (may need to specify wacn/sys/nac manually if traffic channel)
 -fx X2-TDMA
 -fy YSF
--fz M17 Audio
+-fz M17 Stream
 ```
 
 ## Conventional Frequency Scanner
@@ -311,70 +311,3 @@ On the remote side where dsd-fme is, use the TCP input:
 `dsd-fme -i tcp:192.168.7.8:1234 -N`
 
 Note: As always, when using rtl_fm, play with `-l` and `-g` to find a good squelch and gain values for your environment - you will know if the squelch is the right value when `input.wav` does not increase in size in the absence of useful signal on the monitored frequency.
-
-## Using the Experimental M17 Encoder (and Decoder)
-
-You can use the experimental M17 Voice Stream and Packet encoder with the following examples.
-
-Encode/Decode Local Feedback Voice Stream (Single Session):
-
-`dsd-fme -fZ -i pulse -o pulse -M M17:3:SP5WWP:BROADCAST:48000`
-
-Using the `-8` option (raw audio monitor) will instead send encoded raw audio to output instead of decoded audio. For example,
-
-To send a voice stream out of stdout into SOCAT TCP to a second/remote DSD-FME session to decode:
-
-Encode (Upper Z):
-
-`dsd-fme -fZ -8 -i pulse -M M17:9:LWVMOBILE:DSD-FME:48000 -o - | socat stdio tcp-listen:7355,forever,reuseaddr`
-
-Decode (Lower z): 
-
-`dsd-fme -fz -i tcp:192.168.7.8:7355`
-
-NOTE: When using tcp input for M17 decoding, DSD-FME will keep the TCP connection alive with constant retries, so no need to restart the decoding session on connection failure.
-
-SMS Packet Encoder (Text Only):
-
-`dsd-fme -fP -8 -S "This is a sample message sent over M17 Packet Data using DSD-FME to encode it."`
-
-SMS Packet Encoder (over SOCAT TCP):
-
-`dsd-fme -fP -8 -S "This is a sample message sent over M17 Packet Data using DSD-FME to encode it and SOCAT to send it over TCP." -o - | socat stdio tcp-listen:7355,forever,reuseaddr`
-
-Many combinations of input and output can be used as well, and using features like raw audio saving with `-6 m17str.wav` will save a wav file of your encoded audio to be replayed later with `-i m17str.wav`
-Also note, features function similarly, like -Z for payload, and input options include pulse, oss, stdin, rtl, tcp, etc, using those as the mic in for voice encoding. With the right setup of input/output/input using SOCAT TCP pipes, it is conceivable to use DSD-FME to convert analog audio from NFM into M17 audio, or even change another digital format supported by DSD-FME into M17 audio, if desired (purely for research and fun purposes). Ncurses terminal will function with internal encoder/decoder and wav file creation, with toggle encode/tx with `\` key, but will not function with stdout properly.
-
-The `-M` switch is used to specify user M17 variables, the string is in the format of M17:CAN:SRC:DST:INPUT_RATE.
-CAN 1-15; SRC and DST have to be no more than 9 UPPER base40 characters.
-BASE40: '  ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.'
-Input Rate Default is 48000; Use Multiples of 8000 up to 48000.
-Values not entered into the M17: string are set to default values. M17:7:DSD-FME:DSD-FME:48000
-
-Fun Example Transmuting OTA Analog Things into M17:
-
-Start up in sequence.
-
-Terminal #1 (RTL Input):
-`dsd-fme -fZ -8 -M M17:1:ANALOG:M17:48000 -i rtl:0:162.425M -o - | socat stdio tcp-listen:7310,forever,reuseaddr`
-
-Terminal #2:
-`dsd-fme -fz -i tcp:127.0.0.1:7310`
-
-Fun Example Transmuting OTA Digital Things into M17:
-
-Start up all three of these in sequence.
-
-Terminal #1 (connecting to SDR++):
-`dsd-fme -fi -i tcp:127.0.0.1:7355 -o - | socat stdio tcp-listen:7300,forever,reuseaddr`
-
-Terminal #2:
-`dsd-fme -fZ -8 -M M17:2:NXDN:M17:8000 -i tcp:127.0.0.1:7300 -o - | socat stdio tcp-listen:7301,forever,reuseaddr`
-
-Terminal #3:
-`dsd-fme -fz -i tcp:127.0.0.1:7301`
-
-Note: Transmuting only carries over voice when audio is output, and will not carry any ID values, or any other data payloads.
-This mode is only meant for educational or fun purposes, please do not retransmit stuff that doesn't belong to you.
-
-Information on this section will be updated as features are added or modified, etc. If you need help with a particular function and can't find a suitable answer, always open a new issue here, or make contact on the radio reference forum for additional examples, guidance, ideas, help, etc.

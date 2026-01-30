@@ -1,40 +1,32 @@
-//NXDN frame handler
-//Reworked portions from Osmocom OP25 rx_sync.cc
 
-/* -*- c++ -*- */
-/*
+/*-------------------------------------------------------------------------------
+ * nxdn_frame.c
+ * NXDN Frame Handling
+ *
+ * Reworked portions from Osmocom OP25 rx_sync.cc
  * NXDN Encoder/Decoder (C) Copyright 2019 Max H. Parke KA1RBI
  *
- *
- * This is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3, or (at your option)
- * any later version.
- *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this software; see the file COPYING.  If not, write to
- * the Free Software Foundation, Inc., 51 Franklin Street,
- * Boston, MA 02110-1301, USA.
- */
+ * LWVMOBILE
+ * 2026-01 DSD-FME Florida Man Edition
+ *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
 #include "nxdn_const.h"
 
-// #define NXDN_DEBUG_LICH   //print LICH debug info on err on payload == 1
-#define NXDN_LICH_OFFBITS //use the offbits to help determine sync status (disable if bad signal / bad sample)
+#define LICH_ERR_THRESHOLD 2 //Threshold for lich dibit "dividing" errors
+// #define NXDN_DEBUG_LICH      //print LICH debug info on err on payload == 1
+#define NXDN_LICH_OFFBITS    //use the offbits to help determine sync status (disable if bad signal / bad sample)
+
+//NXDN Type Enablement (handled by cmake -DTYPEC=OFF , -DTYPED=OFF, -DDCR=OFF)
+// #define JPNDCR_DECODE  //Include Japanese DCR Decoding
+// #define TYPE_D_DECODE  //Include Type-D Decoding
+// #define TYPE_C_DECODE  //Include Type-C and Conventional Decoding (Basically the "normal" NXDN stuff)
 
 void nxdn_frame (dsd_opts * opts, dsd_state * state)
 {
   // length is implicitly 192, with frame sync in first 10 dibits
 	uint8_t dbuf[182];
-	uint8_t lich;
-	uint8_t answer[32];
-	uint8_t sacch_answer[32];
+	uint8_t lich = 0;
 	int lich_parity_received;
 	int lich_parity_computed;
 	int voice = 0;
@@ -71,12 +63,9 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 
 	//nxdn bit buffer, for easy assignment handling
 	int nxdn_bit_buffer[364];
-	int nxdn_dibit_buffer[182];
 
 	//init all arrays
 	memset (dbuf, 0, sizeof(dbuf));
-	memset (answer, 0, sizeof(answer));
-	memset (sacch_answer, 0, sizeof(sacch_answer));
 	memset (lich_dibits, 0, sizeof(lich_dibits));
 	memset (sacch_bits, 0, sizeof(sacch_bits));
 	memset (facch_bits_b, 0, sizeof(facch_bits_b));
@@ -85,15 +74,18 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	memset (facch2_bits, 0, sizeof(facch2_bits));
 
 	memset (nxdn_bit_buffer, 0, sizeof(nxdn_bit_buffer));
-	memset (nxdn_dibit_buffer, 0, sizeof(nxdn_dibit_buffer));
 
 	//collect lich bits first, if they are good, then we can collect the rest of them
 	for (int i = 0; i < 8; i++) lich_dibits[i] = dbuf[i] = getDibit(opts, state);
 
 	nxdn_pn95_dibit_scrambler (state, lich_dibits, 8);
 
-	lich = 0;
-	for (int i=0; i<8; i++) lich |= (lich_dibits[i] >> 1) << (7-i);
+	//divide lich_dibits to get the lich code w/ parity bit on LSB
+	for (int i = 0; i < 8; i++)
+	{
+		lich <<= 1;
+		lich |= (lich_dibits[i] >> 1) & 1;
+	}
 
 	//debug lich as a 16-bit value (with encoding "dividing")
 	uint8_t lich_bits[16]; memset(lich_bits, 0, sizeof(lich_bits));
@@ -111,14 +103,13 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	for (int i=0; i<8; i++)
 		lich_off_hex += lich_bits[(i*2)+1];
 	#ifdef NXDN_LICH_OFFBITS
-	if (lich_off_hex < 7) //allow up to 1 bit error
+	if (lich_off_hex < LICH_ERR_THRESHOLD)
 	{
 		#ifdef NXDN_DEBUG_LICH
 		if (opts->payload == 1)
 			fprintf(stderr, "  Lich Off Bit Fill Error: %d / 8; \n", lich_off_hex);
 		#endif
 		state->lastsynctype = -1;  //set to -1 so we don't jump back here too quickly
-		goto END;
 	}
 	#endif
 
@@ -127,9 +118,11 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	lich_parity_computed = ((lich_full >> 7) + (lich_full >> 6) + (lich_full >> 5) + (lich_full >> 4)) & 1;
 	lich = lich_full >> 1;
 
+	#ifdef JPNDCR_DECODE
 	//special cases on DCR where parity is computed over 7 bits, and not 4 bits
 	if (lich == 0x08 || lich == 0x4A || lich == 0x48 || lich == 0x46)
 		lich_parity_computed = ((lich_full >> 7) + (lich_full >> 6) + (lich_full >> 5) + (lich_full >> 4) + (lich_full >> 3) + (lich_full >> 2) + (lich_full >> 1)) & 1;
+	#endif
 
 	if (lich_parity_received != lich_parity_computed)
 	{
@@ -137,8 +130,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		if (opts->payload == 1)
 			fprintf(stderr, "  Lich Parity Error %02X / %04X\n", lich_full, lich_bits_hex);
 		#endif
-		state->lastsynctype = -1;
-		goto END;
+		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
 	}
 
 	voice = 0;
@@ -156,149 +148,167 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 			fprintf(stderr, "  Simplex/Inbound NXDN lich on trunking system - type 0x%02X\n", lich);
 		#endif
 		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
-		goto END;
 	}
 
-	switch(lich) { //cases without breaks continue to flow downwards until they hit the break
-	case 0x01:	// CAC types
-	case 0x05:
-		cac = 1;
-		break;
-	case 0x28:  //facch2 types
-	case 0x29:
-	// case 0x48: //removing from here, moving to DCR as pich_tch
-	case 0x49:
-		facch2 = 1;
-		break;
-	case 0x2e: //udch types
-	case 0x2f:
-	case 0x4e:
-	case 0x4f:
-		udch = 1;
-		break;
-	case 0x32:  //facch in 1, vch in 2
-	case 0x33:
-	case 0x52:
-	case 0x53:
-		voice = 2;
-		facch = 1;
-		sacch = 1;
-		break;
-	case 0x34:  //vch in 1, facch in 2
-	case 0x35:
-	case 0x54:
-	case 0x55: //disabled for testing, IDAS system randomly triggers this one, probably due to poor signal
-		voice = 1;
-		facch = 2;
-		sacch = 1;
-		break;
-	case 0x36:  //vch in both
-	case 0x37:
-	case 0x56:
-	case 0x57:
-		voice = 3;
-		facch = 0;
-		sacch = 1;
-		break;
-	case 0x20: //facch in both
-	case 0x21:
-	case 0x30:
-	case 0x31:
-	case 0x40:
-	case 0x41:
-	case 0x50:
-	case 0x51:
-		voice = 0;
-		facch = 3;
-		sacch = 1;
-		break;
-	case 0x38: //sacch only (NULL?)
-	case 0x39:
-		sacch = 1;
-		break;
+	switch(lich)
+	{
 
-	//DCR Voice
-	case 0x46:
-		voice = 3;
-		sacch2 = 1;
-		break;
+#ifdef TYPE_C_DECODE
+		case 0x01:	// CAC types
+		case 0x05:
+			cac = 1;
+			break;
+		case 0x28:  //facch2 types
+		case 0x29:
+		// case 0x48: //removing from here, moving to DCR as pich_tch
+		case 0x49:
+			facch2 = 1;
+			break;
+		case 0x2e: //udch types
+		case 0x2f:
+		case 0x4e:
+		case 0x4f:
+			udch = 1;
+			break;
+		case 0x32:  //facch in 1, vch in 2
+		case 0x33:
+		case 0x52:
+		case 0x53:
+			voice = 2;
+			facch = 1;
+			sacch = 1;
+			break;
+		case 0x34:  //vch in 1, facch in 2
+		case 0x35:
+		case 0x54:
+		case 0x55:
+			voice = 1;
+			facch = 2;
+			sacch = 1;
+			break;
+		case 0x36:  //vch in both
+		case 0x37:
+		case 0x56:
+		case 0x57:
+			voice = 3;
+			facch = 0;
+			sacch = 1;
+			break;
+		case 0x20: //facch in both
+		case 0x21:
+		case 0x30:
+		case 0x31:
+		case 0x40:
+		case 0x41:
+		case 0x50:
+		case 0x51:
+			voice = 0;
+			facch = 3;
+			sacch = 1;
+			break;
+		case 0x38: //sacch only (NULL?)
+		case 0x39:
+			sacch = 1;
+			break;
+#endif
 
-	//DCR SB0, Data or End Frame
-	case 0x08: //SB0 w/ CSM 9 digit BCD found here
-		sacch2 = 1;
-		pich_tch = 1; //observed 2nd PICH is zero fill
-		break;
-	case 0x48:
-		pich_tch = 3; //may be 1, or 2 TCH (observed possibly both)
-	case 0x4A:
-		sacch2 = 1;
-		break;
+#ifdef JPNDCR_DECODE
+		//DCR Voice
+		case 0x46:
+			voice = 3;
+			sacch2 = 1;
+			break;
 
-	//NXDN "Type-D" or "IDAS" Specific Lich Codes
-	case 0x76: //normal vch voice (in one and two)
-	case 0x77:
-		idas = 1;
-		scch = 1;
-		voice = 3;
-		break;
-	// case 0x74: //False Positive on DCR, keep disabled, or revert this line
-	case 0x75: //vch in 1, facch1 in 2 (facch 2 steal)
-		idas = 1;
-		scch = 1;
-		voice = 1;
-		facch = 2;
-		break;
-	case 0x72: //facch in 1, vch in 2 (facch 1 steal)
-	case 0x73:
-		idas = 1;
-		scch = 1;
-		voice = 2;
-		facch = 1;
-		break;
-	case 0x70: //facch steal in vch 1 and vch 2 (during voice only)
-	case 0x71:
-		idas = 1;
-		scch = 1;
-		facch = 3;
-		break;
-	case 0x6E: //udch2
-	case 0x6F:
-		idas = 1;
-		scch = 1;
-		udch2 = 1;
-		break;
-	case 0x68:
-	case 0x69: //facch3
-		idas = 1;
-		scch = 1;
-		facch3 = 1;
-		break;
-	case 0x62:
-	case 0x63: //facch1 in 1, null data and post field in 2
-		idas = 1;
-		scch = 1;
-		facch = 1;
-		break;
-	case 0x60:
-	case 0x61: //facch1 in both (non vch)
-		idas = 1;
-		scch = 1;
-		facch = 3;
-		break;
+		//DCR SB0, Data or End Frame
+		case 0x08: //SB0 w/ CSM 9 digit BCD found here
+			sacch2 = 1;
+			pich_tch = 1; //observed 2nd PICH is zero fill
+			break;
+		case 0x48:
+			pich_tch = 3; //may be 1, or 2 TCH (observed possibly both)
+		case 0x4A:
+			sacch2 = 1;
+			break;
+#endif
 
-	default:
-		#ifdef NXDN_DEBUG_LICH
-    if (opts->payload == 1)
-			fprintf(stderr, "  false sync or unsupported NXDN lich type L: %02X / LH: %04X\n", lich, lich_bits_hex);
-		#endif
-		//reset the sacch field, we probably got a false sync and need to wipe or give a bad crc
-		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
-		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
-		state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
-		voice = 0;
-		goto END;
-		break;
+#ifdef TYPE_D_DECODE
+		//NXDN "Type-D" or "IDAS" Specific Lich Codes
+		case 0x76: //normal vch voice (in one and two)
+		case 0x77:
+			idas = 1;
+			scch = 1;
+			voice = 3;
+			break;
+		// case 0x74: //False Positive on DCR, keep disabled, or revert this line
+		case 0x75: //vch in 1, facch1 in 2 (facch 2 steal)
+			idas = 1;
+			scch = 1;
+			voice = 1;
+			facch = 2;
+			break;
+		case 0x72: //facch in 1, vch in 2 (facch 1 steal)
+		case 0x73:
+			idas = 1;
+			scch = 1;
+			voice = 2;
+			facch = 1;
+			break;
+		case 0x70: //facch steal in vch 1 and vch 2 (during voice only)
+		case 0x71:
+			idas = 1;
+			scch = 1;
+			facch = 3;
+			break;
+		case 0x6E: //udch2
+		case 0x6F:
+			idas = 1;
+			scch = 1;
+			udch2 = 1;
+			break;
+		case 0x68:
+		case 0x69: //facch3
+			idas = 1;
+			scch = 1;
+			facch3 = 1;
+			break;
+		case 0x62:
+		case 0x63: //facch1 in 1, null data and post field in 2
+			idas = 1;
+			scch = 1;
+			facch = 1;
+			break;
+		case 0x60:
+		case 0x61: //facch1 in both (non vch)
+			idas = 1;
+			scch = 1;
+			facch = 3;
+			break;
+	#endif
+
+		default:
+			#ifdef NXDN_DEBUG_LICH
+			if (opts->payload == 1)
+				fprintf(stderr, "  false sync or unsupported NXDN lich type L: %02X / LH: %04X\n", lich, lich_bits_hex);
+			#endif
+			//reset the sacch field, we probably got a false sync and need to wipe or give a bad crc
+			memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+			memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+			state->lastsynctype = -1; //set to -1 so we don't jump back here too quickly
+			voice = 0;
+			break;
 	} // end of switch(lich)
+
+	// //collect remaining dibits at this point (before bad frame skip)
+	// for (int i = 0; i < 174; i++) //192total-10FSW-8lich = 174
+	//  	dbuf[i+8] = getDibit(opts, state);
+
+	//go to end if bad returns from earlier
+	if (state->lastsynctype == -1)
+		goto END;
+
+	//collect remaining dibits at this point (after bad frame skip)
+	for (int i = 0; i < 174; i++) //192total-10FSW-8lich = 174
+	 	dbuf[i+8] = getDibit(opts, state);
 
 	//enable these after good lich parity and known lich value
 	state->carrier = 1;
@@ -340,13 +350,6 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 		#endif
 	}
 
-	//now that we have a good LICH, we can collect all of our dibits
-	//and push them to the proper places for decoding (if LICH calls for that type)
-	for (int i = 0; i < 174; i++) //192total-10FSW-8lich = 174
-	{
-	 	dbuf[i+8] = getDibit(opts, state);
-	}
-
 	nxdn_pn95_dibit_scrambler (state, dbuf, 182);
 
 	//seperate our dbuf (dibit_buffer) into individual bit array
@@ -358,9 +361,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 
 	//sacch or scch bits
 	for (int i = 0; i < 60; i++)
-	{
 		sacch_bits[i] = nxdn_bit_buffer[i+16];
-	}
 
 	//facch
 	for (int i = 0; i < 144; i++)
@@ -371,21 +372,15 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 
 	//cac
 	for (int i = 0; i < 300; i++)
-	{
 		cac_bits[i] = nxdn_bit_buffer[i+16];
-	}
 
 	//udch or facch2
 	for (int i = 0; i < 348; i++)
-	{
 		facch2_bits[i] = nxdn_bit_buffer[i+16];
-	}
 
 	//udch2 or facch3
 	for (int i = 0; i < 288; i++)
-	{
 		facch3_bits[i] = nxdn_bit_buffer[i+16+60];
-	}
 
 	//vch frames stay inside dbuf, easier to assign that to ambe_fr frames
 	//sacch needs extra handling depending on superframe or non-superframe variety
@@ -551,32 +546,30 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	else state->nxdn_sacch_non_superframe = FALSE;
 
 	//TODO Later: Add Direction and/or LICH to all decoding functions
-	if (scch) nxdn_deperm_scch (opts, state, sacch_bits, direction);
 
-	if (udch2)  nxdn_deperm_facch3_udch2(opts, state, facch3_bits, 0);
-	if (facch3) nxdn_deperm_facch3_udch2(opts, state, facch3_bits, 1);
+	//Type-D "IDAS"
+	if (scch) 	idas_scch(opts, state, sacch_bits, direction);
+	if (udch2)  idas_facch3_udch2(opts, state, facch3_bits, 0);
+	if (facch3) idas_facch3_udch2(opts, state, facch3_bits, 1);
 
-	if (sacch)  nxdn_deperm_sacch(opts, state, sacch_bits);
-	if (cac)    nxdn_deperm_cac(opts, state, cac_bits);
+	//NXDN Conventional and Type-C
+	if (sacch)	nxdn_sacch(opts, state, sacch_bits);
+	if (cac)    nxdn_cac(opts, state, cac_bits);
+
+	//TODO: Redo duplicate facch check inside decoder? storage for facch message?
+	if (facch & 1) nxdn_facch1(opts, state, facch_bits_a);
+	if (facch & 2) nxdn_facch1(opts, state, facch_bits_b);
 
 	//Seperated UDCH user data from facch2 data
-	if (udch)   nxdn_deperm_facch2_udch(opts, state, facch2_bits, 0);
-	if (facch2) nxdn_deperm_facch2_udch(opts, state, facch2_bits, 1);
+	if (udch)   nxdn_facch2_udch(opts, state, facch2_bits, 0);
+	if (facch2) nxdn_facch2_udch(opts, state, facch2_bits, 1);
 
-	//DCR
-	if (sacch2)       nxdn_deperm_sacch2(opts, state, sacch_bits);
-	if (pich_tch & 1) nxdn_deperm_pich_tch(opts, state, facch_bits_a, lich);
-	if (pich_tch & 2) nxdn_deperm_pich_tch(opts, state, facch_bits_b, lich);
+	//Japanese DCR
+	if (sacch2)       dcr_sacch(opts, state, sacch_bits);
+	if (pich_tch & 1) dcr_pich_tch(opts, state, facch_bits_a, lich);
+	if (pich_tch & 2) dcr_pich_tch(opts, state, facch_bits_b, lich);
 
-	//only run facch in second slot if its not equal to the first one
-	//ideally, this would work better AFTER decoding/FEC
-	if (facch & 1) nxdn_deperm_facch(opts, state, facch_bits_a);
-	if (facch & 2)
-	{
-		if (memcmp (facch_bits_a, facch_bits_b, 144) != 0)
-			nxdn_deperm_facch(opts, state, facch_bits_b);
-	}
-
+	//EHR only (TODO: Make an EFR mode? never observed)
 	if (voice)
 	{
 		//restore MBE file open here
@@ -632,7 +625,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	//if rejected sync, reset carrier and synctype as well
 	if (state->lastsynctype == -1)
 	{
-		state->carrier = 0;
+		state->carrier = 0; //this is why the "Sync: no sync" doesn't show in terminal if we have a bad sync (not an issue, just not consistent)
 		state->synctype = -1;
 	}
 }
