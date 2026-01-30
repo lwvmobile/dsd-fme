@@ -3088,7 +3088,6 @@
            opts.dmr_stereo = 0;
            state.dmr_stereo = 0;
            sprintf (opts.output_name, "MBE Playback");
-           state.optind = optind;
            break;
          case 'l':
            opts.use_cosine_filter = 0;
@@ -3098,6 +3097,10 @@
            exit (0);
          }
      }
+
+     // Set optind after getopt completes so -r works regardless of argument order
+     if (opts.playfiles == 1)
+       state.optind = optind;
  
      if (opts.resume > 0)
      {
