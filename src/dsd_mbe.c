@@ -93,7 +93,7 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
         //static wav file only, handled by playSynthesizedVoiceMS
         //NOTE: if using -o null, playSynthesizedVoiceMS will not write to static wav file
         //Per call will work, but will end up with a single file with no meta info
-        if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1)
+        if (opts->wav_out_f != NULL && (opts->dmr_stereo_wav == 1 || opts->static_wav_file == 1))
         {
           writeSynthesizedVoice (opts, state);
         }
@@ -141,7 +141,7 @@ void playMbeFiles (dsd_opts * opts, dsd_state * state, int argc, char **argv)
         //static wav file only, handled by playSynthesizedVoiceMS
         //NOTE: if using -o null, playSynthesizedVoiceMS will not write to static wav file
         //Per call will work, but will end up with a single file with no meta info
-        if (opts->wav_out_f != NULL && opts->dmr_stereo_wav == 1)
+        if (opts->wav_out_f != NULL && (opts->dmr_stereo_wav == 1 || opts->static_wav_file == 1))
         {
           writeSynthesizedVoice (opts, state);
         }
