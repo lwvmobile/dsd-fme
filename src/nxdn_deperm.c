@@ -114,10 +114,10 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 	//PROP_FORM handled by checkdown for ALIAS or other
 	else if (MessageType == 0x3F) {}
 
-	//ARIB STD-T102 第 2 編 w/ F1 on, F2 off //NOTE: These three are handled by dcr_sacch internally
-	// else if (MessageType == 0x81) fprintf(stderr, " VCALL");  //音声通信
-	// else if (MessageType == 0x88) fprintf(stderr, " TX_REL"); //終話
-	// else if (MessageType == 0x90) fprintf(stderr, " IDLE");   //アイドル
+	//ARIB STD-T102 第 2 編 w/ F1 on, F2 off //NOTE: These three are handled by dcr_sacch internally, but idle may still hit on sacch
+	else if (MessageType == 0x81) {} //fprintf(stderr, " VCALL");  //音声通信
+	else if (MessageType == 0x88) {} //fprintf(stderr, " TX_REL"); //終話
+	else if (MessageType == 0x90) {} //fprintf(stderr, " IDLE");   //アイドル
 
 	//observed from #318 and found in ARIB STD-B54, F1 and flags on (p. 22) listed in table order
 	else if (MessageType == 0xE1) fprintf(stderr, " VCALL_STD_B54");  //選択呼出音声通信

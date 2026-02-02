@@ -298,17 +298,17 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 			break;
 	} // end of switch(lich)
 
-	//collect remaining dibits at this point (before bad frame skip)
-	for (int i = 0; i < 174; i++) //192total-10FSW-8lich = 174
-	 	dbuf[i+8] = getDibit(opts, state);
+	// //collect remaining dibits at this point (before bad frame skip)
+	// for (int i = 0; i < 174; i++) //192total-10FSW-8lich = 174
+	//  	dbuf[i+8] = getDibit(opts, state);
 
 	//go to end if bad returns from earlier
 	if (state->lastsynctype == -1)
 		goto END;
 
-	// //collect remaining dibits at this point (after bad frame skip)
-	// for (int i = 0; i < 174; i++) //192total-10FSW-8lich = 174
-	//  	dbuf[i+8] = getDibit(opts, state);
+	//collect remaining dibits at this point (after bad frame skip)
+	for (int i = 0; i < 174; i++) //192total-10FSW-8lich = 174
+	 	dbuf[i+8] = getDibit(opts, state);
 
 	//enable these after good lich parity and known lich value
 	state->carrier = 1;
