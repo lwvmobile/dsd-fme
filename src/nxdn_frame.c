@@ -13,7 +13,7 @@
 #include "dsd.h"
 #include "nxdn_const.h"
 
-#define LICH_ERR_THRESHOLD 2 //Threshold for lich dibit "dividing" errors
+#define LICH_ERR_THRESHOLD 7 //Threshold for lich dibit "dividing" errors (8 is perfect, 7 is 1 bit error)
 // #define NXDN_DEBUG_LICH      //print LICH debug info on err on payload == 1
 #define NXDN_LICH_OFFBITS    //use the offbits to help determine sync status (disable if bad signal / bad sample)
 
@@ -298,17 +298,17 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 			break;
 	} // end of switch(lich)
 
-	// //collect remaining dibits at this point (before bad frame skip)
-	// for (int i = 0; i < 174; i++) //192total-10FSW-8lich = 174
-	//  	dbuf[i+8] = getDibit(opts, state);
+	//collect remaining dibits at this point (before bad frame skip)
+	for (int i = 0; i < 174; i++) //192total-10FSW-8lich = 174
+	 	dbuf[i+8] = getDibit(opts, state);
 
 	//go to end if bad returns from earlier
 	if (state->lastsynctype == -1)
 		goto END;
 
-	//collect remaining dibits at this point (after bad frame skip)
-	for (int i = 0; i < 174; i++) //192total-10FSW-8lich = 174
-	 	dbuf[i+8] = getDibit(opts, state);
+	// //collect remaining dibits at this point (after bad frame skip)
+	// for (int i = 0; i < 174; i++) //192total-10FSW-8lich = 174
+	//  	dbuf[i+8] = getDibit(opts, state);
 
 	//enable these after good lich parity and known lich value
 	state->carrier = 1;

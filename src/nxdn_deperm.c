@@ -591,6 +591,7 @@ void nxdn_facch1(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 
 }
 
+static int cac_fail = 0;
 void nxdn_cac(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 {
 
@@ -646,6 +647,10 @@ void nxdn_cac(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 		fprintf (stderr, "%s", KNRM);
 	}
 
+	//check for accumulative cac failures and reset if multiple errors pile up
+	if (crc != 0) cac_fail++;
+	else cac_fail = 0;
+
 	if (crc == 0) NXDN_Elements_Content_decode(opts, state, 1, cac_message_buffer);
 
 	if (opts->payload == 1)
@@ -660,6 +665,45 @@ void nxdn_cac(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 		if (crc != 0) fprintf (stderr, " CRC ERR ");
 
 	}
+
+	//reset some parameters if CAC continues to fail
+	if (cac_fail > 5)
+	{
+		//simple reset
+		state->synctype = -1; //was 0, which is p25p1
+		state->lastsynctype = -1;
+		state->carrier = 0;
+		state->last_cc_sync_time = time(NULL)+2; //probably not necesary
+		cac_fail = 0; //reset
+
+		//more advanced modulator reset
+		state->center = 0;
+		state->jitter = -1;
+		state->synctype = -1;
+		state->min = -15000;
+		state->max = 15000;
+		state->lmid = 0;
+		state->umid = 0;
+		state->minref = -12000;
+		state->maxref = 12000;
+		state->lastsample = 0;
+		for (int i = 0; i < 128; i++) state->sbuf[i] = 0;
+		state->sidx = 0;
+		for (int i = 0; i < 1024; i++) state->maxbuf[i] = 15000;
+		for (int i = 0; i < 1024; i++) state->minbuf[i] = -15000;
+		state->midx = 0;
+		state->symbolcnt = 0;
+
+		//reset the dibit buffer
+		state->dibit_buf_p = state->dibit_buf + 200;
+		memset (state->dibit_buf, 0, sizeof (int) * 200);
+		state->offset = 0;
+
+		//debug notification
+		// fprintf (stderr, " RESET CARRIER; ");
+
+	}
+
 }
 
 void idas_scch(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8_t direction)

@@ -19,7 +19,7 @@ static uint32_t prevMetrics[NUM_STATES];
 static uint32_t currMetrics[NUM_STATES];
 static uint32_t prevMetricsData[NUM_STATES];
 static uint32_t currMetricsData[NUM_STATES];
-static uint16_t viterbi_history[600];
+static uint16_t viterbi_history[600*2];
 
 /**
 * @brief Decode unpunctured convolutionally encoded data.
@@ -66,7 +66,7 @@ uint32_t viterbi_decode(uint8_t* out, const uint16_t* in, const uint16_t len)
 uint32_t viterbi_decode_punctured(uint8_t* out, const uint16_t* in, const uint8_t* punct, const uint16_t in_len, const uint16_t p_len)
 {
 
-	uint16_t umsg[400*2]; //unpunctured message
+	uint16_t umsg[600*2]; //unpunctured message
 	uint16_t p=0;		      //puncturer matrix entry
 	uint16_t u=0;		      //bits count - unpunctured message
 	uint16_t i=0;         //bits read from the input message
