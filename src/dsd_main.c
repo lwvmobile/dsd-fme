@@ -417,7 +417,7 @@
    // state->p25_vc_freq[1] = 0;
  
    //new nxdn stuff
-   state->nxdn_part_of_frame = 0;
+   state->nxdn_part_of_frame = 3;
    state->nxdn_ran = 0;
    state->nxdn_sf = 0;
    memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc)); //init on 1, bad CRC all
@@ -1202,7 +1202,7 @@
    state->tg_hold = 0;
  
    //new nxdn stuff
-   state->nxdn_part_of_frame = 0;
+   state->nxdn_part_of_frame = 3;
    state->nxdn_ran = 0;
    state->nxdn_sf = 0;
    memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc)); //init on 1, bad CRC all

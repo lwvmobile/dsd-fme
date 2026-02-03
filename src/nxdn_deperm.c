@@ -374,6 +374,16 @@ void nxdn_sacch(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 		check = check | viterbi_bits[i+26];
 	}
 
+	//if the crc is bad, its possible the SR value for part of frame is bad, so
+	//its better to invalidate all SACCH frames in storage to prevent
+	//random data splicing passing to the sacch assembly for decode
+	if (crc != check)
+	{
+		//reset the sacch field
+		memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+		memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+	}
+
 	//FIRST! If part of a non_superframe, and CRC is good, send directly to NXDN_Elements_Content_decode
 	if (state->nxdn_sacch_non_superframe == TRUE)
 	{
@@ -381,14 +391,12 @@ void nxdn_sacch(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 		else fprintf (stderr, "        ");
 
 		//needed for DES and AES
-		state->nxdn_part_of_frame = 0;
+		// state->nxdn_part_of_frame = 0; //might be needed for VCALL_IV ks gen, but first voice should be in a SF SACCH PF 1/4
 
 		uint8_t nsf_sacch[26];
 		memset (nsf_sacch, 0, sizeof(nsf_sacch));
 		for (int i = 0; i < 26; i++)
-		{
 			nsf_sacch[i] = viterbi_bits[i+8];
-		}
 
 		if (crc == check)
 		{
@@ -396,7 +404,18 @@ void nxdn_sacch(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 			state->nxdn_last_ran = ran;
 		}
 
-		fprintf (stderr, "PF 1/1");
+		//indicate whether or not this individual sacch is valid
+		if (crc == check)
+		{
+			state->nxdn_part_of_frame = 3; //set to 3 so that a starting SF SACCH sequence check will be okay
+			fprintf (stderr, "PF 1/1");
+		}
+		else
+		{
+			state->nxdn_part_of_frame = 0; //will not be an expected next value
+			fprintf (stderr, "PF X/1");
+		}
+
 		if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
 		else if (state->forced_alg_id == 1 && state->R != 0) state->payload_miN = state->R; //force reset scrambler seed
 
@@ -444,6 +463,24 @@ void nxdn_sacch(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 		else if (sf == 0) part_of_frame = 3;
 		else part_of_frame = 0;
 
+		//sequence check, if not expected next part of frame,
+		//or the first frame, then invalidate all sacch fields
+		uint8_t valid_sequence = 0;
+		// if (part_of_frame == ((state->nxdn_part_of_frame+1)%4) )
+		if (crc == check && (part_of_frame == ((state->nxdn_part_of_frame+1)%4)) )
+			valid_sequence = 1;
+		else if (crc == check && part_of_frame == 0)
+			valid_sequence = 1;
+
+		//its better to invalidate all SACCH frames in storage to prevent
+		//random data splicing passing to the sacch assembly for decode
+		if (valid_sequence == 0)
+		{
+			//reset the sacch field
+			memset (state->nxdn_sacch_frame_segment, 1, sizeof(state->nxdn_sacch_frame_segment));
+			memset (state->nxdn_sacch_frame_segcrc, 1, sizeof(state->nxdn_sacch_frame_segcrc));
+		}
+
 		//needed for DES and AES
 		state->nxdn_part_of_frame = part_of_frame;
 
@@ -452,7 +489,13 @@ void nxdn_sacch(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 		else fprintf (stderr, "        ");
 		fprintf (stderr, "%s", KNRM);
 
-		fprintf (stderr, "PF %d/4", part_of_frame+1);
+		//indicate whether or not this individual sacch is valid or in sequence
+		if (crc == check && valid_sequence == 1)
+			fprintf (stderr, "PF %d/4", part_of_frame+1);
+		else if (crc == check && part_of_frame == 0)
+			fprintf (stderr, "PF %d/4", part_of_frame+1);
+		else fprintf (stderr, "PF X/4");
+
 		if (part_of_frame == 0)
 		{
 			if (state->nxdn_cipher_type == 1 && state->R != 0) state->payload_miN = state->R; //reset scrambler seed
@@ -516,18 +559,15 @@ void nxdn_sacch(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 
 		//Hand off to LEH NXDN_SACCH_Full_decode
 		if (part_of_frame == 3)
-		{
 			NXDN_SACCH_Full_decode (opts, state);
-		}
 
 		if (opts->payload == 1)
 		{
 			fprintf (stderr, "\n");
 			fprintf (stderr, " SACCH SF Segment #%d ", part_of_frame+1);
 			for (int i = 0; i < 4; i++)
-			{
 				fprintf (stderr, "[%02X]", viterbi_bytes[i]);
-			}
+
 			if (crc != check) fprintf (stderr, " CRC ERR - %02X %02X", crc, check);
 		}
 
@@ -646,6 +686,7 @@ void nxdn_cac(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 		fprintf (stderr, " (CRC ERR)");
 		fprintf (stderr, "%s", KNRM);
 	}
+	else state->nxdn_part_of_frame = 3; //reset expected SF SACCH PF to 3 if trunking and no sync break
 
 	//check for accumulative cac failures and reset if multiple errors pile up
 	if (crc != 0) cac_fail++;
@@ -1266,15 +1307,20 @@ void nxdn_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8_
 		check = check | viterbi_bits[i+184];
 	}
 
-	// int sf  = (viterbi_bits[0] << 1) | viterbi_bits[1]; //not sure why an SF field if there is no SACCH, unless UDCH data is segmented this way?
+	int sf  = (viterbi_bits[0] << 1) | viterbi_bits[1]; //not sure why an SF field if there is no SACCH, unless UDCH data is segmented this way?
 	int ran = (viterbi_bits[2] << 5) | (viterbi_bits[3] << 4) | (viterbi_bits[4] << 3) | (viterbi_bits[5] << 2) | (viterbi_bits[6] << 1) | viterbi_bits[7];
 	if (crc == check)
 	{
 		state->nxdn_last_ran = ran;
 		fprintf (stderr, " RAN %02d ", state->nxdn_last_ran);
-		// fprintf (stderr, "PF %d/4", 4-sf); //on FACCh2 sample, was 4/4 sf = 0;
+		// fprintf (stderr, "PF %d/4", 4-sf); //on FACCH2 sample, was 4/4 sf = 0;
+		state->nxdn_part_of_frame = 3 - sf; //this, or hardset 3?
 	}
-	else fprintf (stderr, "        ");
+	else
+	{
+		fprintf (stderr, "        ");
+		state->nxdn_part_of_frame = 0; //should be invalid, pretty sure all FACCH2 are set to sf 0 (pf 3)
+	}
 
 	fprintf (stderr, "%s", KYEL);
 	if (type == 0) fprintf (stderr, " UDCH");
