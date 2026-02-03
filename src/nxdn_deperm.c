@@ -339,9 +339,15 @@ uint8_t facch1_puncture[4]  = {1,0,1,1};
 uint8_t facch2_puncture[14] = {1,1,1,0,1,1,1,1,1,1,1,0,1,1};
 uint8_t cac_puncture[14]    = {1,1,1,0,1,1,1,1,1,1,1,0,1,1};
 
+//facch1 storage, for duplicate message check
+static uint8_t facch1_storage[12] = {0};
+
 //sacch soft decision making
 void nxdn_sacch(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 {
+
+	//erase facch1 storage (facch1 only happens along with a sacch/scch frame)
+	memset(facch1_storage, 0, sizeof(facch1_storage));
 
 	uint8_t crc = 1;   //value computed by crc6 on payload
 	uint8_t check = 0; //value pulled from last 6 bits
@@ -575,7 +581,7 @@ void nxdn_sacch(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 
 }
 
-void nxdn_facch1(dsd_opts * opts, dsd_state * state, uint8_t * bits)
+void nxdn_facch1(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8_t frame)
 {
 
 	uint16_t crc = 0;
@@ -606,8 +612,22 @@ void nxdn_facch1(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 		check = check | viterbi_bits[80+i];
 	}
 
+	//duplicate frame check if frame == 2
+	uint8_t duplicate = 0;
+	if (frame == 2)
+	{
+		if (memcmp(facch1_storage, viterbi_bytes, 12) == 0)
+			duplicate = 1;
+	}
 
-	if (crc == check) NXDN_Elements_Content_decode(opts, state, 1, viterbi_bits);
+	//erase facch1 storage
+	memset(facch1_storage, 0, sizeof(facch1_storage));
+
+	//store facch1 message viterbi bytes if frame == 1
+	if (frame == 1)
+		memcpy(facch1_storage, viterbi_bytes, sizeof(facch1_storage));
+
+	if (crc == check && duplicate == 0) NXDN_Elements_Content_decode(opts, state, 1, viterbi_bits);
 	// else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, viterbi_bits);
 
 	if (opts->payload == 1)
@@ -749,6 +769,9 @@ void nxdn_cac(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 
 void idas_scch(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8_t direction)
 {
+
+	//erase facch1 storage (facch1 only happens along with a sacch/scch frame)
+	memset(facch1_storage, 0, sizeof(facch1_storage));
 
 	fprintf (stderr, "%s", KYEL);
 	fprintf (stderr, " SCCH");

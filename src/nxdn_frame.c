@@ -556,9 +556,17 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	if (sacch)	nxdn_sacch(opts, state, sacch_bits);
 	if (cac)    nxdn_cac(opts, state, cac_bits);
 
-	//TODO: Redo duplicate facch check inside decoder? storage for facch message?
-	if (facch & 1) nxdn_facch1(opts, state, facch_bits_a);
-	if (facch & 2) nxdn_facch1(opts, state, facch_bits_b);
+	//Duplicate facch check inside decoder. store and compare for facch message, depending on passed frame value
+	if (facch == 3)
+	{
+		if (facch & 1) nxdn_facch1(opts, state, facch_bits_a, 1);
+		if (facch & 2) nxdn_facch1(opts, state, facch_bits_b, 2);
+	}
+	else //facch1 steals, or single facch only messages
+	{
+		if (facch & 1) nxdn_facch1(opts, state, facch_bits_a, 0);
+		if (facch & 2) nxdn_facch1(opts, state, facch_bits_b, 0);
+	}
 
 	//Seperated UDCH user data from facch2 data
 	if (udch)   nxdn_facch2_udch(opts, state, facch2_bits, 0);

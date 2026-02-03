@@ -1272,7 +1272,7 @@ void nxdn_voice (dsd_opts * opts, dsd_state * state, int voice, uint8_t * dbuf);
 //All-in-One NXDN Soft Decision Viterbi Function based on libM17
 uint32_t nxdn_soft_decision_viterbi(uint8_t * bits, const uint16_t * interleave, uint8_t * puncture, int d_len, int p_len, int num_bytes, int offset, uint8_t * viterbi_bits, uint8_t * viterbi_bytes);
 //NXDN Conventional and Type-C
-void nxdn_facch1(dsd_opts * opts, dsd_state * state, uint8_t * bits);
+void nxdn_facch1(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8_t frame);
 void nxdn_sacch(dsd_opts * opts, dsd_state * state, uint8_t * bits);
 void nxdn_cac(dsd_opts * opts, dsd_state * state, uint8_t * bits);
 void nxdn_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8_t type);
