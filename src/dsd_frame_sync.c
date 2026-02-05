@@ -1140,55 +1140,56 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
                  }
 
             }
+          #ifdef NXDN_OLD_SYNC
+          //NXDN (previous sync, now a cmake option -DNOS=ON ..)
+          else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
+          {
+            strncpy (synctest10, (synctest_p - 9), 10); //FSW only
+            if (
+                   (strcmp (synctest10, "3131331131") == 0 ) //this seems to be the most common 'correct' pattern on Type-C
+                || (strcmp (synctest10, "3331331131") == 0 ) //this one hits on new sync but gives a bad lich code
+                || (strcmp (synctest10, "3131331111") == 0 )
+                || (strcmp (synctest10, "3331331111") == 0 )
+                || (strcmp (synctest10, "3131311131") == 0 ) //First few FSW on NXDN48 Type-C seems to hit this for some reason
 
-          // //NXDN (previous sync, revert if issues / complaints arise)
-          // else if ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1))
-          // {
-          //   strncpy (synctest10, (synctest_p - 9), 10); //FSW only
-          //   if (
-          //          (strcmp (synctest10, "3131331131") == 0 ) //this seems to be the most common 'correct' pattern on Type-C
-          //       || (strcmp (synctest10, "3331331131") == 0 ) //this one hits on new sync but gives a bad lich code
-          //       || (strcmp (synctest10, "3131331111") == 0 )
-          //       || (strcmp (synctest10, "3331331111") == 0 )
-          //       || (strcmp (synctest10, "3131311131") == 0 ) //First few FSW on NXDN48 Type-C seems to hit this for some reason
+                )
+            {
 
-          //       )
-          //   {
+              if (state->lastsynctype == 28)
+              {
+                state->offset = synctest_pos;
+                state->max = ((state->max) + lmax) / 2;
+                state->min = ((state->min) + lmin) / 2;
+                state->last_cc_sync_time = time(NULL);
+                return (28);
+              }
+              state->lastsynctype = 28;
+            }
 
-          //     if (state->lastsynctype == 28)
-          //     {
-          //       state->offset = synctest_pos;
-          //       state->max = ((state->max) + lmax) / 2;
-          //       state->min = ((state->min) + lmin) / 2;
-          //       state->last_cc_sync_time = time(NULL);
-          //       return (28);
-          //     }
-          //     state->lastsynctype = 28;
-          //   }
+            else if (
 
-          //   else if (
+                       (strcmp (synctest10, "1313113313") == 0 )
+                    || (strcmp (synctest10, "1113113313") == 0 )
+                    || (strcmp (synctest10, "1313113333") == 0 )
+                    || (strcmp (synctest10, "1113113333") == 0 )
+                    || (strcmp (synctest10, "1313133313") == 0 )
 
-          //              (strcmp (synctest10, "1313113313") == 0 )
-          //           || (strcmp (synctest10, "1113113313") == 0 )
-          //           || (strcmp (synctest10, "1313113333") == 0 )
-          //           || (strcmp (synctest10, "1113113333") == 0 )
-          //           || (strcmp (synctest10, "1313133313") == 0 )
+                    )
+            {
 
-          //           )
-          //   {
+              if (state->lastsynctype == 29)
+              {
+                state->offset = synctest_pos;
+                state->max = ((state->max) + lmax) / 2;
+                state->min = ((state->min) + lmin) / 2;
+                state->last_cc_sync_time = time(NULL);
+                return (29);
+              }
+              state->lastsynctype = 29;
+            }
+          }
 
-          //     if (state->lastsynctype == 29)
-          //     {
-          //       state->offset = synctest_pos;
-          //       state->max = ((state->max) + lmax) / 2;
-          //       state->min = ((state->min) + lmin) / 2;
-          //       state->last_cc_sync_time = time(NULL);
-          //       return (29);
-          //     }
-          //     state->lastsynctype = 29;
-          //   }
-          // }
-
+          #else //new sync
           //NXDN (positive sync only)
           else if (opts->inverted_nxdn == 0 && ((opts->frame_nxdn96 == 1) || (opts->frame_nxdn48 == 1)) )
           {
@@ -1242,6 +1243,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
             }
 
           }
+          #endif
 
           //Provoice Conventional -- Some False Positives due to shortened frame sync pattern, so use squelch if possible
           #ifdef PVCONVENTIONAL

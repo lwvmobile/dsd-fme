@@ -1490,7 +1490,11 @@
    printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
    printf ("  -xr           Expect inverted DMR signal\n");
    printf ("  -xd           Expect inverted ICOM dPMR signal\n");
+   #ifdef NXDN_OLD_SYNC
+   //
+   #else
    printf ("  -xn           Expect inverted NXDN/DCR/IDAS signal\n");
+   #endif
    printf ("\n");
    printf ("  * denotes frame types that cannot be auto-detected.\n");
    printf ("  ** Phase 2 Single Frequency may require user to manually set WACN/SYSID/CC parameters if MAC_SIGNAL not present.\n");
@@ -2759,7 +2763,11 @@
              sprintf (opts.output_name, "NXDN48");
              fprintf (stderr,"Setting symbol rate to 2400 / second\n");
              fprintf (stderr,"Decoding only NXDN 4800 baud frames.\n");
+             #ifdef NXDN_OLD_SYNC
+             //
+             #else
              fprintf(stderr, "Notice: NXDN autodetect polarity disabled. \n Use -xn option if Inverted Signal expected.\n");
+             #endif
            }
            else if (optarg[0] == 'y')
            {
@@ -3084,7 +3092,11 @@
            else if (optarg[0] == 'n')
            {
              opts.inverted_nxdn = 1;
+             #ifdef NXDN_OLD_SYNC
+             //
+             #else
              fprintf (stderr, "Expecting inverted NXDN/DCR/IDAS signals.\n");
+             #endif
            }
            break;
  

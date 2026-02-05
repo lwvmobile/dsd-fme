@@ -88,6 +88,13 @@ if (DCR)
     add_definitions(-DJPNDCR_DECODE)
 endif ()
 
+#use cmake option -DNOS=ON to enable older NXDN sync w/ pos and inv polarity, disable newer seperated (disabled by default)
+option(NOS
+    "Build with Old NXDN Sync (pos and inv polarity) Enabled" OFF)
+if (NOS)
+    add_definitions(-DNXDN_OLD_SYNC)
+endif ()
+
 #use cmake option -DSID=ON to enable P25p1 Soft ID decoding -- Experimental
 option(SID
     "Build with P25p1 LSD/Soft ID Enabled" OFF)
