@@ -64,6 +64,18 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	//nxdn bit buffer, for easy assignment handling
 	int nxdn_bit_buffer[364];
 
+	#ifdef NXDN_DEBUG_LICH
+	/*
+	//this is how many bad syncs with polarity flipping occurred when allowed both pos and inv polarity on sync test
+	Sync: no sync
+	[+] [+] [-] [+] [-] [+] [-] [-] [-] [+] [+] [-] [+] (+) 17:36:02 Sync: NXDN48  RDCH Voice  RAN 01 PF X/4
+	*/
+	//debug polarity (purely illustative, shows how frequently false sync can be attributed to wrong polarity)
+	if (state->lastsynctype == 28)
+		fprintf (stderr, "[+] ");
+	else fprintf (stderr, "[-] ");
+	#endif
+
 	//init all arrays
 	memset (dbuf, 0, sizeof(dbuf));
 	memset (lich_dibits, 0, sizeof(lich_dibits));
@@ -313,6 +325,13 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 	//enable these after good lich parity and known lich value
 	state->carrier = 1;
 	state->last_cc_sync_time = time(NULL);
+
+	//debug polarity (purely illustative, shows how frequently false sync can be attributed to wrong polarity)
+	#ifdef NXDN_DEBUG_LICH
+	if (state->lastsynctype == 28)
+		fprintf (stderr, "(+) ");
+	else fprintf (stderr, "(-) ");
+	#endif
 
 	//printframesync after determining we have a good lich and it has something in it
 	if (idas)
