@@ -1,12 +1,35 @@
 /*-------------------------------------------------------------------------------
  * dmr_34.c
- * DMR (and P25) 3/4 Rate Simple Trellis Decoder
+ * DMR (and P25) 3/4 Rate Viterbi Trellis Decoder (Improved)
+ *
+ * Code Sourced From: Unknown
+ * No License Provided
  *
  * LWVMOBILE
- * 2023-12 DSD-FME Florida Man Edition
+ * 2026-02 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
+#define INRANGE         8       // Serial input is grouped in 3 bits, each input value ranges 0~7
+#define INSTATIC        8       // Number of possible states in the state machine, range 0~7
+#define INDATA          49      // Input 144 bits, grouped into 3-bit units → outputs 48 values (0~15) + one final 0 to determine end state
+#define INSYMBOL        49      // Number of input symbols
+#define PATH            64      // For the i-th (48≥i≥2) input, there are 64 branch metrics → 64 possible paths
+#define SELECTPATH      8       // Among the 64 paths, select the 8 with smallest metrics, then choose the smallest one as final output
+#define BITELEN         9       //
+
+/******************************************************************************
+*   Header file includes
+*******************************************************************************/
 #include "dsd.h"
+#include <time.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/******************************************************************************
+*   Global variable definitions
+*******************************************************************************/
 
 uint8_t interleave[98] = {
 0, 1, 8,   9, 16, 17, 24, 25, 32, 33, 40, 41, 48, 49, 56, 57, 64, 65, 72, 73, 80, 81, 88, 89, 96, 97,
@@ -14,111 +37,288 @@ uint8_t interleave[98] = {
 4, 5, 12, 13, 20, 21, 28, 29, 36, 37, 44, 45, 52, 53, 60, 61, 68, 69, 76, 77, 84, 85, 92, 93,
 6, 7, 14, 15, 22, 23, 30, 31, 38, 39, 46, 47, 54, 55, 62, 63, 70, 71, 78, 79, 86, 87, 94, 95};
 
-//this is a convertion table for converting the dibit pairs into constellation points
-uint8_t constellation_map[16] = {
-11, 12, 0, 7, 14, 9, 5, 2, 10, 13, 1, 6, 15, 8, 4, 3
+static int16_t staticX[INSTATIC][INRANGE] =
+{
+	{ 1,-3,-3,1,3,-1,-1,3 },
+	{ -3,1,3,-1,-1,3,1,-3 },
+	{ -1,3,3,-1,-3,1,1,-3 },
+	{ 3,-1,-3,1,1,-3,-1,3 },
+	{ -3,1,1,-3,-1,3,3,-1 },
+	{ 1,-3,-1,3,3,-1,-3,1 },
+	{ 3,-1,-1,3,1,-3,-3,1 },
+	{ -1,3,1,-3,-3,1,3,-1 }
+
 };
 
-//digitized dibit to OTA symbol conversion for reference
-//0 = +1; 1 = +3;
-//2 = -1; 3 = -3;
-
-//finite state machine values
-uint8_t fsm[64] = {
-0,  8, 4, 12, 2, 10, 6, 14,
-4, 12, 2, 10, 6, 14, 0,  8,
-1,  9, 5, 13, 3, 11, 7, 15,
-5, 13, 3, 11, 7, 15, 1,  9,
-3, 11, 7, 15, 1,  9, 5, 13,
-7, 15, 1,  9, 5, 13, 3, 11,
-2, 10, 6, 14, 0,  8, 4, 12,
-6, 14, 0,  8, 4, 12, 2, 10};
-
-//attempt to find the surviving path, or the 'best' path available (most positions gained)
-uint8_t fix_34(uint8_t * p, uint8_t state, int position)
+static int16_t staticY[INSTATIC][INRANGE] =
 {
-  int i, j, k, counter, best_p, best_v, survivors;
-  uint8_t temp_s, tri, t;
+	{ -1,3,-1,3,-3,1,-3,1 },
+	{ -1,3,-3,1,-3,1,-1,3 },
+	{ -1,3,-1,3,-3,1,-3,1 },
+	{ -1,3,-3,1,-3,1,-1,3 },
+	{ -3,1,-3,1,-1,3,-1,3 },
+	{ -3,1,-1,3,-1,3,-3,1 },
+	{ -3,1,-3,1,-1,3,-1,3 },
+	{ -3,1,-1,3,-1,3,-3,1 }
 
-  //status of surviving paths -- debug
-  int s[8];
-  memset (s, 0, 8*sizeof(int));
+};
 
-  //assign all potentially correct points to temporary storage
-  uint8_t temp_p[8];
-  temp_p[0] = (p[position] ^  1) & 0xF;
-  temp_p[1] = (p[position] ^  3) & 0xF;
-  temp_p[2] = (p[position] ^  5) & 0xF;
-  temp_p[3] = (p[position] ^  7) & 0xF;
-  temp_p[4] = (p[position] ^  9) & 0xF;
-  temp_p[5] = (p[position] ^ 11) & 0xF;
-  temp_p[6] = (p[position] ^ 13) & 0xF;
-  temp_p[7] = (p[position] ^ 15) & 0xF;
 
-  best_p = 0; //best position
-  best_v = 0; //best path value
-
-  for (k = 0; k < 8; k++)
-  {
-    temp_s = state;
-    counter = 0;
-    tri = 0;
-    for (i = position; i < 49; i++)
-    {
-      //assign temp t either as our temp_p, or next point of i
-      if (i == position) t = temp_p[k];
-      else t = p[i];
-
-      if (tri != 0xFF) //while the path survives
-      {
-        tri = 0xFF;
-        for (j = 0; j < 8; j++)
-        {
-          if ( fsm[(temp_s*8)+j] == t )
-          {
-            //return our tribit value and state for the next point
-            tri = temp_s = (uint8_t)j;
-            counter++;
-            break;
-          }
-
-        }
-
-        if (counter > best_p)
-        {
-          best_p = counter;
-          best_v = k; //if we make it further on current path, assign as best path
-        }
-
-        // surviving path -- made it to 49
-        if (i == 48) s[k] = 1;
-
-      }
-    }
-
-  }
-
-  //NOTE: If there are no surviving paths, then that means there is another bit/point err
-  //Ideally, at the end of a single or multiple fixes, there should only be one survivor, but in practice,
-  //I've seen up to 4 surviving paths and somehow, get a good CRC and a good LRRP or LOCN decode
-  //multiple survivors seems common when the starting err position is very close to 49
-
-  //tally number of surviving paths
-  survivors = 0;
-  for (k = 0; k < 8; k++)
-  {
-    if (s[k] == 1) survivors++;
-  }
-
-  //debug
-  // fprintf (stderr, "START: %d; BEST_P: %d; BEST_V: %d; Survivors: %d; Point: %d; ", position, best_p, best_v, survivors, temp_p[best_v]);
-
-  return temp_p[best_v]; //return the point value of the best path's starting point value
+/**
+* @brief   Convert 0~7 symbols into 3-bit (0/1) bitstream
+*
+* @Param   [in]  psymbol     Input decimal symbol values
+* @Param   [in]  num         Number of input symbols
+* @Param   [out] pbit        Output 3-bit stream
+*
+*/
+void TriBit(uint16_t *psymbol, uint16_t num, uint16_t *pbit)
+{
+	int16_t temp, i;
+	for (i = 0; i < num; i++)
+	{
+		temp = psymbol[i];
+		*pbit++ = (temp >> 2) & 0x01;
+		*pbit++ = (temp >> 1) & 0x01;
+		*pbit++ = temp & 0x01;
+	}
 }
 
-uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
+/**
+* @brief   Organize the decoded 3-bit stream into 16-bit word format for output
+*
+* @Param   [in]  ptriBitDecRslt   Input 3-bit decoded bitstream
+* @Param   [out] poutdata         Output packed 16-bit words
+*
+*/
+void TriBitToShort(uint16_t *ptriBitDecRslt, uint16_t *poutdata)
 {
-  int i, j;
+	int16_t i, j, k = 0;
+	uint16_t  bitArray[144] = { 0 };
+	memset(poutdata, 0, sizeof(uint16_t) * 9);
+
+	TriBit(ptriBitDecRslt, 48, bitArray);
+	for (i = 0; i < 9; i++)
+	{
+		for (j = 15; j >= 0; j--)
+		{
+			poutdata[i] += bitArray[k++] << j;
+		}
+	}
+}
+
+/**
+* @brief   Among 8 paths, select the one with the smallest metric and return its index
+*
+* @Param   [in]  pdata       Array of 8 path metrics
+* @return  Index of the path with minimum metric
+*
+*/
+uint16_t MinPath(uint16_t *pdata)
+{
+	uint16_t i, j = 0;
+	uint16_t min = pdata[0];				// Take first value as initial minimum
+
+	for (i = 0; i < SELECTPATH; i++)
+	{
+		if (pdata[i] < min)				// If current value is smaller
+		{
+			min = pdata[i];				// Update minimum
+			j = i;
+		}
+	}
+	return j;							// Return index of minimum path
+}
+
+
+/**
+* @brief   From 64 paths, select the 8 paths with smallest metrics,
+*          and output corresponding state and input values
+*
+* @Param   [in]   parrary        Array of 64 branch metrics
+* @Param   [out]  pipath_ed      Sorted 8 smallest path metrics
+* @Param   [out]  pstate         States corresponding to the 8 best paths
+* @Param   [out]  pdata          Input values corresponding to the 8 best paths
+*
+*/
+void PathFunc(uint16_t *parrary, uint16_t *pipath_ed, uint16_t *pstate, uint16_t *pdata)
+{
+	int16_t i, j, locT = 0, ValT = 0;
+	uint16_t dataT[PATH] = { 0 };
+
+	memcpy(dataT, parrary, sizeof(uint16_t)*PATH);
+
+	for (i = 0; i < INRANGE; i++)
+	{
+		ValT = dataT[0];
+		locT = 0;
+		for (j = 1; j < PATH; j++)
+		{
+			if (dataT[j] < ValT)
+			{
+				ValT = dataT[j];
+				locT = j;
+			}
+		}
+		dataT[locT] = 10000;
+		pipath_ed[i] = ValT;
+		pstate[i] = locT / 8;	// quotient  → state
+		pdata[i]  = locT % 8;	// remainder → input symbol
+	}
+}
+
+
+
+
+/**
+* @brief   Calculate path metric (Manhattan distance)
+*
+* @Param   [in] dataAX		X-coordinate of received constellation point A
+* @Param   [in] dataBX		X-coordinate of reference constellation point B
+* @Param   [in] dataAY		Y-coordinate of received constellation point A
+* @Param   [in] dataBY		Y-coordinate of reference constellation point B
+* @return	Path metric result
+*
+*/
+uint16_t DistanceCal(int16_t dataAX, int16_t dataBX, int16_t dataAY, int16_t dataBY)
+{
+	uint16_t DistanceRslt = 0;
+	DistanceRslt = abs(dataAX - dataBX) + abs(dataAY - dataBY);
+	//DistanceRslt = sqrt((dataAX - dataBX)*(dataAX - dataBX) + (dataAY - dataBY)*(dataAY - dataBY));
+	return DistanceRslt;
+}
+
+/**
+* @brief   Convert 2-bit value to constellation symbol (±1, ±3)
+*
+* @Param   [in]  InBit		Input 2-bit value (0~3)
+* @return  Constellation symbol value
+*
+*/
+int16_t BitToSymbol(int16_t InBit)
+{
+	switch (InBit)
+	{
+	case 0:
+		return 1;
+	case 1:
+		return 3;
+	case 2:
+		return -1;
+	case 3:
+		return -3;
+	default:
+		return 1;
+	}
+}
+
+
+/**
+* @brief   Map input symbols (0~15) to constellation points (±1, ±3) in I/Q
+*
+* @Param   [in]  pinstar	Input symbol array (0~15)
+* @Param   [in]  num		Number of symbols
+* @Param   [out] pdataX		Output I-channel (X) coordinates
+* @Param   [out] pdataY		Output Q-channel (Y) coordinates
+*
+*/
+void MapStar(uint16_t *pinstar, uint16_t num, int16_t *pdataX, int16_t *pdataY)
+{
+	int16_t i, itemp;
+
+	for (i = 0; i < num; i++)
+	{
+		itemp = (pinstar[i] >> 2) & 0x03;
+		*pdataX++ = BitToSymbol(itemp);
+		itemp = pinstar[i] & 0x03;
+		*pdataY++ = BitToSymbol(itemp);
+	}
+}
+
+
+/**
+* @brief   Viterbi decoding function — selects the most likely sequence
+*
+* @Param   [in]  pindata	  Input symbol sequence (values 0~15)
+* @Param   [out] outdata      Decoded output (packed 16-bit words)
+*
+*/
+void Virterbi(uint16_t *pindata, uint16_t outdata[])
+{
+	int16_t i, p, j = 1;
+	uint16_t lastDistnc[INRANGE] = { 0 };					// Branch metrics for final input (8 values)
+	uint16_t crntDistnc[64] = { 0 };						// All 64 possible branch metrics for current step
+	uint16_t DecodeOut[INDATA][INRANGE] = { {0 }};			// Possible input sequences up to current step (8 survivors)
+	uint16_t DecodeOutEnd[INDATA][INRANGE] = { {0 }};		// Temporary buffer for path history
+	uint16_t exInDistnc[INRANGE] = { 0 };					// 8 survivor path metrics
+	uint16_t triBitDecRslt[INDATA] = { 0 };				// Final decoded 3-bit symbols
+	int16_t starX[INDATA] = { 0 }, starY[INDATA] = { 0 };	// Constellation point coordinates (I/Q)
+
+	uint16_t minDistnc = 0;
+	uint16_t ConstelPData[INRANGE] = { 0 };				// Input symbols leading to next states
+	uint16_t ConstelPState[INSTATIC] = { 0 }; 			// Survivor states
+	 
+	MapStar(pindata, INDATA, starX, starY);				// Map input symbols to constellation points
+
+	// Branch metrics for the first input symbol (starting from state 0)
+	for (i = 0; i < INRANGE; i++)
+	{
+		ConstelPData[i] = i;							// Next state value
+		DecodeOut[0][i] = i;							// Possible input symbols from state 0
+		exInDistnc[i] = DistanceCal(starX[0], staticX[0][i], starY[0], staticY[0][i]);
+	}
+
+	// Compute branch metrics for each subsequent input symbol
+	for (j = 1; j < INDATA - 1; j++)					// for each input symbol
+	{
+		for (p = 0; p < INSTATIC; p++)					// for each current survivor state
+		{
+			for (i = 0; i < INRANGE; i++)				// for each possible input
+			{
+				crntDistnc[p * 8 + i] = DistanceCal(starX[j], staticX[ConstelPData[p]][i], starY[j], staticY[ConstelPData[p]][i]) + exInDistnc[p];
+			}
+		}
+
+		PathFunc(crntDistnc, exInDistnc, ConstelPState, ConstelPData);	// Select 8 best paths
+
+		for (p = 0; p <= j; p++)
+		{
+			for (i = 0; i < INRANGE; i++)
+			{
+				if (p < j)
+				{
+					DecodeOutEnd[p][i] = DecodeOut[p][ConstelPState[i]];
+				}
+				else
+				{
+					DecodeOut[p][i] = ConstelPData[i];
+					DecodeOutEnd[p][i] = DecodeOut[p][i];
+				}
+			}
+		}
+		memcpy(DecodeOut, DecodeOutEnd, j * 8 * sizeof(int16_t));
+	}
+
+	// Final step — force ending in state 0
+	for (i = 0; i < INRANGE; i++)
+	{
+		lastDistnc[i] = DistanceCal(starX[INDATA - 1], staticX[DecodeOut[INDATA - 2][i]][0], starY[INDATA - 1], staticY[DecodeOut[INDATA - 2][i]][0]) + exInDistnc[i];
+	}
+
+	minDistnc = MinPath(lastDistnc);						// Find best final path
+
+	for (i = 0; i < INDATA - 1; i++)
+	{
+		triBitDecRslt[i] = DecodeOutEnd[i][minDistnc];
+	}
+
+	TriBitToShort(triBitDecRslt, outdata);
+}
+
+uint32_t viterbi_r34 (uint8_t * input, uint8_t * output)
+{
+
+  int i = 0;
   uint32_t irr_err = 0; //irrecoverable errors
 
   uint8_t deinterleaved_dibits[98];
@@ -135,80 +335,20 @@ uint32_t dmr_34(uint8_t * input, uint8_t treturn[18])
   for (i = 0; i < 49; i++)
     nibs[i] = (deinterleaved_dibits[i*2+0] << 2) | (deinterleaved_dibits[i*2+1] << 0);
 
-  //convert our dibit pairs into constellation point values
-  uint8_t point[49];
-  memset (point, 0xFF, sizeof(point));
+  uint16_t pindata[49]; memset (pindata, 0, sizeof(pindata));
+  uint16_t outdata[18]; memset (outdata, 0, sizeof(outdata));
 
-  for (i = 0; i < 49; i++)
-    point[i] = constellation_map[nibs[i]];
+  for (int i = 0; i < 49; i++)
+    pindata[i] = (uint16_t)nibs[i];
 
-  //debug view points
-  // fprintf (stderr, "\n P =");
-  // for (i = 0; i < 49; i++)
-  //   fprintf (stderr, " %02d", point[i]);
+  Virterbi(pindata, outdata);
 
-  //convert constellation points into tribit values using the FSM
-  uint8_t state = 0;
-  uint32_t tribits[49];
-  memset (tribits, 0xF, sizeof(tribits));
-
-  for (i = 0; i < 49; i++)
+  int k = 0;
+  for (int i = 0; i < 9; i++)
   {
-
-    for (j = 0; j < 8; j++)
-    {
-      if ( fsm[(state*8)+j] == point[i] )
-      {
-        //return our tribit value and state for the next point
-        tribits[i] = state = (uint8_t)j;
-        break;
-      }
-    }
-
-    //if tribit value is greater than 7, then we have a decoding error
-    if (tribits[i] > 7)
-    {
-      irr_err++; //tally number of errors
-
-      //debug point, position of error, and state value
-      // fprintf (stderr, "\n P: %d, %d:%d; ", point[i], i, state);
-
-      //attempt to fix point by looking for the best path from here
-      point[i] = fix_34(point, state, i);
-
-      //Make a hard decision and flip point to fit in current state
-      // point[i] ^= 7; //lucky number 7 (0111) //fallback
-
-      //decrement one and resume decoding
-      i--;
-
-    }
-
+    output[k++] = (outdata[i] >> 8) & 0xFF;
+    output[k++] = (outdata[i] >> 0) & 0xFF;
   }
 
-  //debug view tribits/states
-  // fprintf (stderr, "\n T =");
-  // for (i = 0; i < 49; i++)
-  //   fprintf (stderr, " %02d", tribits[i]);
-
-  //convert tribits into a return payload
-  uint32_t temp = 0;
-
-  //break into chunks of 24 bit values and shuffle into 8-bit (byte) treturn values
-  for (i = 0; i < 6; i++)
-  {
-    temp = (tribits[(i*8)+0] << 21) + (tribits[(i*8)+1] << 18) + (tribits[(i*8)+2] << 15) + (tribits[(i*8)+3] << 12) +
-            (tribits[(i*8)+4] << 9) + (tribits[(i*8)+5] << 6)  + (tribits[(i*8)+6] << 3)  + (tribits[(i*8)+7] << 0);
-
-    treturn[(i*3)+0] = (temp >> 16) & 0xFF;
-    treturn[(i*3)+1] = (temp >>  8) & 0xFF;
-    treturn[(i*3)+2] = (temp >>  0) & 0xFF;
-  }
-
-  //trellis point/state err tally
-  // if (irr_err != 0)
-  //   fprintf (stderr, " P_ERR = %d", irr_err);
-
-  return (0);
+  return irr_err; //TODO: Need to pull viterbi metrics from upper functions
 }
-

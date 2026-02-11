@@ -438,7 +438,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
     uint8_t TrellisReturn[18];
     memset (TrellisReturn, 0, sizeof(TrellisReturn));
-    IrrecoverableErrors = dmr_34(tdibits, TrellisReturn);
+    IrrecoverableErrors = viterbi_r34(tdibits, TrellisReturn);
 
     //NOTE: IrrecoverableErrors in this context are a tally of errors from trellis
     //they may have been successfully corrected, the CRC will reveal as much

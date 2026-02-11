@@ -1376,7 +1376,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8_t cs_pdu[], uint32_t CRCCorrect, uint32_t IrrecoverableErrors);
 void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[]);
 uint8_t dmr_cach (dsd_opts * opts, dsd_state * state, uint8_t cach_bits[25]);
-uint32_t dmr_34(uint8_t * input, uint8_t treturn[18]); //simplier trellis decoder
+uint32_t viterbi_r34 (uint8_t * input, uint8_t * output);
 void beeper (dsd_opts * opts, dsd_state * state, int lr, int id, int ad, int len);
 void dmr_gateway_identifier (uint32_t source, uint32_t target); //translate special addresses
 
