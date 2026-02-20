@@ -689,6 +689,7 @@
    //all RTL user options -- enabled AGC by default due to weak signal related issues
    opts->rtl_dev_index = 0;        //choose which device we want by index number
    opts->rtl_gain_value = 0;     //mid value, 0 - AGC - 0 to 49 acceptable values
+   opts->rtl_gain_actual = -100; //mirror dongle.gain actual values -100 is AUTO_GAIN, else nearest_gain(dongle.dev, dongle.gain);
    opts->rtl_squelch_level = 100; //100 by default, but only affects NXDN and dPMR during framesync test, compared to RMS value
    opts->rtl_volume_multiplier = 2; //sample multiplier; This multiplies the sample value to produce a higher 'inlvl' for the demodulator
    opts->rtl_udp_port = 0; //set UDP port for RTL remote -- 0 by default, will be making this optional for some external/legacy use cases (edacs-fm, etc)

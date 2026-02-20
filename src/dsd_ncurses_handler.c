@@ -594,7 +594,7 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
     else opts->trunk_tune_enc_calls = 1;
   }
 
-  if (opts->p25_trunk == 1 && c == 103) //'g' key, toggle tune group calls
+  if (opts->p25_trunk == 1 && c == 84) //'T' key, toggle tune group calls
   {
     if (opts->trunk_tune_group_calls == 1) opts->trunk_tune_group_calls = 0;
     else opts->trunk_tune_group_calls = 1;
@@ -917,6 +917,26 @@ uint8_t ncurses_input_handler(dsd_opts * opts, dsd_state * state, int c)
 
   if (c == 123)
     opts->rtlsdr_ppm_error--;
+
+  //RTL Gain Manual Adjustment
+  if (c == 103)
+  {
+    if (opts->rtl_gain_value > 0)
+    {
+      opts->rtl_gain_value--;
+      opts->rtl_gain_actual = 0;
+    }
+  }
+
+  if (c == 71)
+  {
+    if (opts->rtl_gain_value < 49)
+    {
+      opts->rtl_gain_value++;
+      opts->rtl_gain_actual = 0;
+    }
+  }
+    
 
   //anything with an entry box will need the inputs and outputs stopped first
   //so probably just write a function to handle c input, and when c = certain values

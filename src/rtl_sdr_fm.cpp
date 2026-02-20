@@ -1031,6 +1031,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
 
 	//this needs to be initted first, then we set the parameters
   dongle_init(&dongle);
+
 	//init with low pass if decoding P25 or EDACS/Provoice
 	if (opts->frame_p25p1 == 1 || opts->frame_p25p2 == 1 || opts->frame_provoice == 1)
   	demod_init_ro2(&demod);
@@ -1089,7 +1090,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
 		verbose_auto_gain(dongle.dev);
 		fprintf (stderr, "Setting RTL Autogain. \n");
 	} else {
-		dongle.gain = nearest_gain(dongle.dev, dongle.gain);
+		opts->rtl_gain_actual = dongle.gain = nearest_gain(dongle.dev, dongle.gain);
 		verbose_gain_set(dongle.dev, dongle.gain);
 		// fprintf (stderr, "Setting RTL Nearest Gain to %d. \n", dongle.gain); //seems to be working now
 	}
@@ -1149,6 +1150,26 @@ int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 	{
 		dongle.ppm_error = opts->rtlsdr_ppm_error;
 		verbose_ppm_set(dongle.dev, dongle.ppm_error);
+	}
+
+	//if Gain or AGC Value is Manually Changed, Change it here now
+	if (opts->rtl_gain_actual != dongle.gain && opts->rtl_gain_value != 0)
+	{
+		dongle.gain = (opts->rtl_gain_value * 10);
+		opts->rtl_gain_actual = dongle.gain = nearest_gain(dongle.dev, dongle.gain);
+		verbose_gain_set(dongle.dev, dongle.gain);
+
+		//debug
+		// fprintf (stderr, "\n Dongle Gain Set: %d; \n", dongle.gain);
+	}
+
+	else if (opts->rtl_gain_value == 0 && dongle.gain != AUTO_GAIN)
+	{
+		opts->rtl_gain_actual = dongle.gain = AUTO_GAIN;
+		verbose_auto_gain(dongle.dev);
+
+		//debug
+		// fprintf (stderr, "\n AGC Set; \n");
 	}
 
 	while (output.queue.empty())

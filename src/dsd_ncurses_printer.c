@@ -245,10 +245,10 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->audio_in_type == 3)
   {
     printw ("| RTL: %d;", opts->rtl_dev_index);
-    if (opts->rtl_gain_value == 0)
+    if (opts->rtl_gain_actual == -100)
       printw (" G: AGC;");
     else
-      printw (" G: %idB;", opts->rtl_gain_value);
+      printw (" G: %i/%i;", opts->rtl_gain_value, opts->rtl_gain_actual);
     printw (" V: %iX;", opts->rtl_volume_multiplier);
     printw (" PPM: %i;", opts->rtlsdr_ppm_error); //Adjust manually now with { and }
     printw (" SQ: %i;", opts->rtl_squelch_level);
@@ -363,7 +363,7 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   {
     printw ("| Trunking -");
     if (opts->trunk_tune_group_calls == 0) attron(COLOR_PAIR(2));
-    printw (" Group(g)");
+    printw (" Group(T)");
     attron(COLOR_PAIR(4));
     if (opts->trunk_tune_private_calls == 0) attron(COLOR_PAIR(2));
     printw (" Private(u)");
@@ -382,8 +382,8 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
   if (opts->p25_trunk == 1 && (opts->use_rigctl == 1 || opts->audio_in_type == 3) )
   {
     printw ("| Trunking -");
-    if (opts->trunk_tune_group_calls == 0) printw (" group(g)");
-    else printw (" GROUP(g)");
+    if (opts->trunk_tune_group_calls == 0) printw (" group(T)");
+    else printw (" GROUP(T)");
     if (opts->trunk_tune_private_calls == 0) printw (" private(u)");
     else printw (" PRIVATE(u)");
     if (opts->trunk_tune_data_calls == 0) printw (" data(d)");

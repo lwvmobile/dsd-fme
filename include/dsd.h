@@ -364,6 +364,7 @@ typedef struct
   int unmute_encrypted_p25;
   int rtl_dev_index;
   int rtl_gain_value;
+  int rtl_gain_actual;
   int rtl_squelch_level;
   int rtl_volume_multiplier;
   int rtl_udp_port;

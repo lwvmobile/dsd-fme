@@ -190,7 +190,7 @@ y - toggle scanner (needs either rtl input, or rigctl connection)
 1 - Toggle Voice Synthesis in TDMA Slot 1 or FDMA Conventional Voice
 2 - Toggle Voice Synthesis in TDMA Slot 2
 w - Toggle Trunking/Playback White List (Allow A Groups Only) / Black List (Block B or DE groups only) Mode
-g - Toggle Trunking Tuning to Group Calls (DMR T3, Con+, Cap+, P25, NXDN)
+T - Toggle Trunking Tuning to Group Calls (DMR T3, Con+, Cap+, P25, NXDN)
 u - Toggle Trunking Tuning to Private Calls (DMR T3, Cap+, P25)
 d - Toggle Trunking Tuning to Data Calls (DMR T3, NXDN)
 e - Toggle Trunking Tuning to Encrypted Calls (P25)
@@ -221,6 +221,12 @@ N - Toggle Passband  Filter on Analog Voice or Raw Signal Monitoring
 \ - Switch between Slot 1 and Slot 2 Event History
 
 v - Cycle RTL Input Volume Multiplier 1X, 2X, 3X (lower v)
+
+g - Manually decrease RTL gain
+G - Manually increase RTL gain
+
+{ - Manually decrease PPM
+} - Manually increase PPM
 
 ```
 
