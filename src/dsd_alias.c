@@ -581,11 +581,15 @@ void tait_iso7_embedded_alias_decode (dsd_opts * opts, dsd_state * state, uint8_
   for (uint8_t i = 0; i < len; i++)
   {
     alias[i] = (uint8_t)ConvertBitIntoBytes(&input[16+(i*7)], 7);
-    fprintf (stderr, "%c", alias[i]);
+    
+    // fprintf (stderr, "%X,", alias[i]); //debug
+
     if (alias[i] == 0x2C) //change a comma to a dot
       alias[i] = 0x2E;
     else if (alias[i] < 0x20) //change any garble / control chars to a space
       alias[i] = 0x20;
+
+    fprintf (stderr, "%c", alias[i]);
   }
 
   //flag to indicate this already exists in import or group struct
