@@ -506,16 +506,16 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       fprintf (stderr, " MFIDA4 (Harris) GPS Block 1");
       memset(state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
       memcpy(state->dmr_pdu_sf[0], LCW_bits, 16*sizeof(uint8_t)); //opcode and mfid for check
-      memcpy(state->dmr_pdu_sf[0]+40, LCW_bits+16, 56*sizeof(uint8_t)); //+40 offset to match the vPDU decoder
+      memcpy(state->dmr_pdu_sf[0]+16, LCW_bits+16, 56*sizeof(uint8_t)); //contents of message in this block
     }
 
     else if (lc_mfid == 0xA4 && lc_opcode == 0x2B)
     {
       fprintf (stderr, " MFIDA4 (Harris) GPS Block 2");
-      memcpy(state->dmr_pdu_sf[0]+40+56, LCW_bits+16, 56*sizeof(uint8_t)); //+40 +56 to offset first block
+      memcpy(state->dmr_pdu_sf[0]+16+56, LCW_bits+16, 56*sizeof(uint8_t)); //+16 +56 to offset first block
       uint16_t check = (uint16_t)ConvertBitIntoBytes(&state->dmr_pdu_sf[0][0], 16);
       if (check == 0x2AA4)
-        nmea_harris(opts, state, state->dmr_pdu_sf[0], (uint32_t)state->lastsrc, 0);
+        harris_lptt(opts, state, state->dmr_pdu_sf[0]+16, (uint32_t)state->lastsrc, 0, 1);
       else fprintf (stderr, " Missing GPS Block 1");
       memset(state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
     }

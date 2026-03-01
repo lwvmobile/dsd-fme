@@ -1816,12 +1816,12 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		if (MAC[len_a+1] == 0x80 && MAC[len_a+2] != 0xA4 && MAC[len_a+2] != 0x90)
 		{
 			int unk1 = MAC[len_a+1]; //assuming this is the octet set for the 'manufacturer specific' message, may only be the MSBit
-			int unk2 = MAC[len_a+2]; //This field is observed as 0xAA, unknown if this is an opcode, or other MFID
+			int unk2 = MAC[len_a+2]; //This field is observed as 0xAA, its possible its a derived message of 0x2A from P25p1 LCW format
 			int mfid = MAC[len_a+3]; //This is where the 0xA4 (Harris) Identifier is found in this message, as opposed to +2
-			int len  = MAC[len_a+4] & 0x3F;; //0x11 or 17 dec sounds reasonable, but cannot verify
+			int len  = MAC[len_a+4] & 0x3F; //len of this message (should always be 17)
 
 			//bugfix observed on random errant second MAC message on Phase 2
-			//although can't 100% confirm, pretty sure these all have same len value
+			//confirmed this MAC message is always 17 (0x11)
 			if (len != 0x11)
 				goto END_PDU;
 
@@ -1841,8 +1841,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (slot == 0 && state->lastsrc != 0) tsrc = state->lastsrc;
 			if (slot == 1 && state->lastsrcR != 0) tsrc = state->lastsrcR;
 
-			// harris_gps (opts, state, slot, mac_bits); //fallback
-			nmea_harris (opts, state, mac_bits+0, tsrc, slot); //new
+			harris_lptt (opts, state, mac_bits+40, tsrc, slot, 2);
 
 			//debug - just dump payload
 			// for (i = 0; i < 24; i++)
