@@ -674,10 +674,15 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       }
 
       pos = state->DMRvcL * 49;
-      for(i = 0; i < 49; i++)
+      if (memcmp(ambe_d, ambe_silence, 49) == 0)
+        pos += 49;
+      else
       {
-        ambe_d[i] ^= pN[pos];
-        pos++;
+        for(i = 0; i < 49; i++)
+        {
+          ambe_d[i] ^= pN[pos];
+          pos++;
+        }
       }
       state->DMRvcL++;
       }
@@ -1136,10 +1141,15 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         }
 
         pos = state->DMRvcR * 49;
-        for(i = 0; i < 49; i++)
+        if (memcmp(ambe_d, ambe_silence, 49) == 0)
+          pos += 49;
+        else
         {
-          ambe_d[i] ^= pN[pos];
-          pos++;
+          for(i = 0; i < 49; i++)
+          {
+            ambe_d[i] ^= pN[pos];
+            pos++;
+          }
         }
         state->DMRvcR++;
       }
