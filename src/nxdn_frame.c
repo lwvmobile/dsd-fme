@@ -7,7 +7,7 @@
  * NXDN Encoder/Decoder (C) Copyright 2019 Max H. Parke KA1RBI
  *
  * LWVMOBILE
- * 2026-01 DSD-FME Florida Man Edition
+ * 2026-03 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
@@ -15,7 +15,7 @@
 
 #define LICH_ERR_THRESHOLD 7 //Threshold for lich dibit "dividing" errors (8 is perfect, 7 is 1 bit error)
 // #define NXDN_DEBUG_LICH      //print LICH debug info on err on payload == 1
-#define NXDN_LICH_OFFBITS    //use the offbits to help determine sync status (disable if bad signal / bad sample)
+// #define NXDN_LICH_OFFBITS    //use the offbits to help determine sync status (disable if bad signal / bad sample)
 
 //NXDN Type Enablement (handled by cmake -DTYPEC=OFF , -DTYPED=OFF, -DDCR=OFF)
 // #define JPNDCR_DECODE  //Include Japanese DCR Decoding

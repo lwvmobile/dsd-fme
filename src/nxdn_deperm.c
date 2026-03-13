@@ -6,7 +6,7 @@
  * NXDN Encoder/Decoder (C) Copyright 2019 Max H. Parke KA1RBI
  *
  * LWVMOBILE
- * 2026-01 DSD-FME Florida Man Edition
+ * 2026-03 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
@@ -77,7 +77,7 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 	else if (MessageType == 0x08) fprintf(stderr, " TX_REL");
 	else if (MessageType == 0x09) fprintf(stderr, " DCALL_HEADER");
 	else if (MessageType == 0x0A) fprintf(stderr, " DCALL_REC_REQ");
-	else if (MessageType == 0x0B) fprintf(stderr, " DCALL_UDATA");
+	else if (MessageType == 0x0B) fprintf(stderr, " DCALL_DATA");
 	else if (MessageType == 0x0C) fprintf(stderr, " DCALL_ACK");
 	else if (MessageType == 0x0D) fprintf(stderr, " DCALL_ASSGN_DUP");
 	else if (MessageType == 0x0E) fprintf(stderr, " DCALL_ASSGN");
@@ -107,7 +107,7 @@ void nxdn_message_type (dsd_opts * opts, dsd_state * state, uint8_t MessageType)
 	else if (MessageType == 0x36) fprintf(stderr, " REM_CON_E_REQ");
 	else if (MessageType == 0x37) fprintf(stderr, " REM_CON_E_RESP");
 	else if (MessageType == 0x38) fprintf(stderr, " SDCALL_REQ_HEADER");
-	else if (MessageType == 0x39) fprintf(stderr, " SDCALL_REQ_USERDATA");
+	else if (MessageType == 0x39) fprintf(stderr, " SDCALL_REQ_DATA");
 	else if (MessageType == 0x3A) fprintf(stderr, " SDCALL_IV");
 	else if (MessageType == 0x3B) fprintf(stderr, " SDCALL_RESP");
 
@@ -270,6 +270,24 @@ uint16_t crc16cac(const uint8_t buf[], int len)
 	return crc & 0xffff;
 }
 
+uint32_t nxdn_message_crc32(uint8_t * input, int len)
+{
+  uint32_t crc = 0xFFFFFFFF;
+  uint32_t poly = 0x04C11DB7;
+
+  for (int i = 0; i < len; i++)
+  {
+
+    if( ((crc >> 31) & 1) ^ (input[i] & 1) )
+      crc = (crc << 1) ^ poly;
+    else
+      crc <<= 1;
+
+  }
+
+  return crc;
+}
+
 uint8_t crc7_scch(uint8_t bits[], int len)
 {
 	uint8_t s[7];
@@ -325,6 +343,58 @@ void LFSR128n(dsd_state * state)
 	fprintf (stderr, " IV(128): 0x");
 	for (x = 0; x < 16; x++)
 		fprintf (stderr, "%02X", state->aes_iv[x]);
+	fprintf (stderr, "%s", KNRM);
+
+}
+
+void pdu_scrambler_keystream_creation(uint8_t * ks, int lfsr, int len)
+{
+  int bit = 0;
+  for (int i = 0; i < len; i++)
+  {
+    ks[i] = lfsr & 0x1;
+    bit = ( (lfsr >> 1) ^ (lfsr >> 0) ) & 1;
+    lfsr =  ( (lfsr >> 1 ) | (bit << 14) );
+  }
+
+}
+
+void LFSR128npdu(dsd_state * state)
+{
+  //generate a 128-bit IV from a 64-bit IV for AES blocks
+  unsigned long long int lfsr = state->payload_mi;
+
+  //start packing aes_ivR (for data in case of simultaneous voice and data call)
+	state->aes_ivR[0] = (lfsr >> 56) & 0xFF;
+	state->aes_ivR[1] = (lfsr >> 48) & 0xFF;
+	state->aes_ivR[2] = (lfsr >> 40) & 0xFF;
+	state->aes_ivR[3] = (lfsr >> 32) & 0xFF;
+	state->aes_ivR[4] = (lfsr >> 24) & 0xFF;
+	state->aes_ivR[5] = (lfsr >> 16) & 0xFF;
+	state->aes_ivR[6] = (lfsr >> 8 ) & 0xFF;
+	state->aes_ivR[7] = (lfsr >> 0 ) & 0xFF;
+
+
+  int cnt = 0; int x = 64;
+  unsigned long long int bit;
+  //polynomial P(x) = 1 + X15 + X27 + X38 + X46 + X62 + X64
+  for(cnt=0;cnt<64;cnt++)
+  {
+    //63,61,45,37,27,14
+    // Polynomial is C(x) = x^64 + x^62 + x^46 + x^38 + x^27 + x^15 + 1
+    bit = ((lfsr >> 63) ^ (lfsr >> 61) ^ (lfsr >> 45) ^ (lfsr >> 37) ^ (lfsr >> 26) ^ (lfsr >> 14)) & 0x1;
+    lfsr = (lfsr << 1) | bit;
+
+    //continue packing aes_iv
+		state->aes_ivR[x/8] = (state->aes_ivR[x/8] << 1) + bit;
+    x++;
+  }
+
+	fprintf (stderr, "%s", KYEL);
+		fprintf (stderr, "\n");
+	fprintf (stderr, " IV(128): ");
+	for (x = 0; x < 16; x++)
+		fprintf (stderr, "%02X", state->aes_ivR[x]);
 	fprintf (stderr, "%s", KNRM);
 
 }
@@ -627,6 +697,8 @@ void nxdn_facch1(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8_t fra
 	if (frame == 1)
 		memcpy(facch1_storage, viterbi_bytes, sizeof(facch1_storage));
 
+	state->data_header_format[0] = 3;
+
 	if (crc == check && duplicate == 0) NXDN_Elements_Content_decode(opts, state, 1, viterbi_bits);
 	// else if (opts->aggressive_framesync == 0) NXDN_Elements_Content_decode(opts, state, 0, viterbi_bits);
 
@@ -692,6 +764,7 @@ void nxdn_cac(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 
 	if (crc == 0)
 	{
+		state->data_header_format[0] = 2;
 		ran = (viterbi_bits[2] << 5) | (viterbi_bits[3] << 4) | (viterbi_bits[4] << 3) | (viterbi_bits[5] << 2) | (viterbi_bits[6] << 1) | viterbi_bits[7];
 		state->nxdn_last_ran = ran;
 	}
@@ -759,6 +832,19 @@ void nxdn_cac(dsd_opts * opts, dsd_state * state, uint8_t * bits)
 		state->dibit_buf_p = state->dibit_buf + 200;
 		memset (state->dibit_buf, 0, sizeof (int) * 200);
 		state->offset = 0;
+
+		//invalidate any active data call assembly and wipe storage
+		//clear storage
+    memset(state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
+
+    //reset block number
+    state->data_header_blocks[0] = 1;
+
+    //reset delivery format (type)
+    state->data_header_format[0] = 0;
+
+    //reset header validity
+    state->data_header_valid[0] = 0;
 
 		//debug notification
 		// fprintf (stderr, " RESET CARRIER; ");
@@ -905,34 +991,36 @@ void idas_facch3_udch2(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8
 
 	if (crc[0] == check[0] && crc[1] == check[1])
 	{
+		state->data_header_format[0] = 1;
 		if (type == 1) NXDN_Elements_Content_decode(opts, state, 1, f3_udch2);
-		if (type == 0) {} //need handling for user data (text messages and AVL)
+		if (type == 0) NXDN_Elements_Content_decode(opts, state, 1, f3_udch2);
 	}
+	// else TODO: invalidate UDCH2 data buffers
 
-	if (type == 0)
-	{
-		fprintf (stderr, "\n UDCH2 Data: "  );
-		for (int i = 0; i < 22; i++) //all but last crc portion
-		{
-			if (i == 10)
-			{
-				fprintf (stderr, " "); //space seperator?
-				i = 12;  //skip first crc portion
-			}
-			fprintf (stderr, "%02X", f3_udch2_bytes[i]);
-		}
+	// if (type == 0)
+	// {
+	// 	fprintf (stderr, "\n UDCH2 Data: "  );
+	// 	for (int i = 0; i < 22; i++) //all but last crc portion
+	// 	{
+	// 		if (i == 10)
+	// 		{
+	// 			fprintf (stderr, " "); //space seperator?
+	// 			i = 12;  //skip first crc portion
+	// 		}
+	// 		fprintf (stderr, "%02X", f3_udch2_bytes[i]);
+	// 	}
 
-		fprintf (stderr, "\n UDCH2 Data: ASCII - "  );
-		for (int i = 0; i < 22; i++) //all but last crc portion
-		{
-			if (i == 10) i = 12;  //skip first crc portion
-			if (f3_udch2_bytes[i] <= 0x7E && f3_udch2_bytes[i] >=0x20)
-			{
-				fprintf (stderr, "%c", f3_udch2_bytes[i]);
-			}
-			else fprintf (stderr, " ");
-		}
-	}
+	// 	fprintf (stderr, "\n UDCH2 Data: ASCII - "  );
+	// 	for (int i = 0; i < 22; i++) //all but last crc portion
+	// 	{
+	// 		if (i == 10) i = 12;  //skip first crc portion
+	// 		if (f3_udch2_bytes[i] <= 0x7E && f3_udch2_bytes[i] >=0x20)
+	// 		{
+	// 			fprintf (stderr, "%c", f3_udch2_bytes[i]);
+	// 		}
+	// 		else fprintf (stderr, " ");
+	// 	}
+	// }
 
 	if (opts->payload == 1)
 	{
@@ -1359,27 +1447,29 @@ void nxdn_facch2_udch(dsd_opts * opts, dsd_state * state, uint8_t * bits, uint8_
 
 	if (crc == check)
 	{
+		state->data_header_format[0] = 1;
 		if (type == 1) NXDN_Elements_Content_decode(opts, state, 1, f2u_message_buffer);
-		if (type == 0) {} //need handling for user data (text messages and AVL)
+		if (type == 0) NXDN_Elements_Content_decode(opts, state, 1, f2u_message_buffer);
 	}
+	// else TODO: invalidate UDCH data buffers
 
-	if (type == 0 && crc == check)
-	{
-		fprintf (stderr, "\n UDCH Data: "  );
-		for (int i = 0; i < 24; i++) //all but last crc portion
-			fprintf (stderr, "%02X", viterbi_bytes[i]);
+	// if (type == 0 && crc == check)
+	// {
+	// 	fprintf (stderr, "\n UDCH Data: "  );
+	// 	for (int i = 0; i < 24; i++) //all but last crc portion
+	// 		fprintf (stderr, "%02X", viterbi_bytes[i]);
 
-		fprintf (stderr, "\n UDCH Data: ASCII - "  );
-		for (int i = 0; i < 24; i++) //remove crc portion
-		{
-			if (viterbi_bytes[i] <= 0x7E && viterbi_bytes[i] >=0x20)
-			{
-				fprintf (stderr, "%c", viterbi_bytes[i]);
-			}
-			else fprintf (stderr, " ");
-		}
+	// 	fprintf (stderr, "\n UDCH Data: ASCII - "  );
+	// 	for (int i = 0; i < 24; i++) //remove crc portion
+	// 	{
+	// 		if (viterbi_bytes[i] <= 0x7E && viterbi_bytes[i] >=0x20)
+	// 		{
+	// 			fprintf (stderr, "%c", viterbi_bytes[i]);
+	// 		}
+	// 		else fprintf (stderr, " ");
+	// 	}
 
-	}
+	// }
 
 	if (opts->payload == 1)
 	{

@@ -1291,6 +1291,7 @@ uint16_t crc12f(const uint8_t buf[], int len);
 uint16_t crc15(const uint8_t buf[], int len);
 uint16_t crc16cac(const uint8_t buf[], int len);
 uint8_t crc7_scch(uint8_t bits[], int len); //converted from op25 crc6
+uint32_t nxdn_message_crc32(uint8_t * input, int len);
 
 //YSF Soft Decision Viterbi
 uint32_t ysf_soft_decision_viterbi(uint8_t * dbuf, int d_len, int num_bytes, int offset, uint8_t * viterbi_bits, uint8_t * viterbi_bytes);
@@ -1320,6 +1321,7 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_VCALL_IV(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 char * NXDN_Call_Type_To_Str(uint8_t CallType);
 void NXDN_Voice_Call_Option_To_Str(uint8_t VoiceCallOption, uint8_t * Duplex, uint8_t * TransmissionMode);
+void NXDN_Data_Call_Option_To_Str(uint8_t DataCallOption, uint8_t * Duplex, uint8_t * TransmissionMode);
 char * NXDN_Cipher_Type_To_Str(uint8_t CipherType);
 //added these
 void NXDN_decode_Prop(dsd_opts * opts, dsd_state * state, uint8_t * Message);
@@ -1331,6 +1333,10 @@ void NXDN_decode_srv_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 void NXDN_decode_site_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void nxdn_decode_dst_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_adj_site(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void nxdn_sdcall_header(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void nxdn_dcall_header(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void nxdn_dcall_iv(dsd_opts * opts, dsd_state * state, int type, uint8_t * Message);
+int  nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Message);
 //Type-D SCCH Message Decoder
 void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uint8_t direction);
 void NXDN_decode_VCALL_ARIB(dsd_opts * opts, dsd_state * state, uint8_t * Message);
@@ -1610,6 +1616,9 @@ int udp_socket_connectA(dsd_opts * opts, dsd_state * state);
 void udp_socket_blaster(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
 void udp_socket_blasterA(dsd_opts * opts, dsd_state * state, size_t nsam, void * data);
 
+//15-bit Scrambler
+void pdu_scrambler_keystream_creation(uint8_t * ks, int lfsr, int len);
+
 //RC4 function prototypes
 void rc4_voice_decrypt (int drop, uint8_t keylength, uint8_t messagelength, uint8_t key[], uint8_t cipher[], uint8_t plain[]);
 void rc4_block_output (int drop, int keylen, int meslen, uint8_t * key, uint8_t * output_blocks);
@@ -1652,6 +1661,7 @@ void lfsr_64_to_128(uint8_t * iv);
 void LFSR128(dsd_state * state);
 void LFSR128n(dsd_state * state);
 void LFSR128d(dsd_state * state);
+void LFSR128npdu(dsd_state * state);
 
 
 #ifdef __cplusplus

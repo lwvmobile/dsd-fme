@@ -6,7 +6,7 @@
 * Originally found at - https://github.com/LouisErigHerve/dsd
 *
 * LWVMOBILE
-* 2026-01 DSD-FME Florida Man Edition
+* 2026-03 DSD-FME Florida Man Edition
 *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
@@ -81,17 +81,30 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state, uint8_t Cr
   switch(MessageType)
   {
 
-    /*
-    //Note: CAC Message with same Message Type -- This is a private call request and rejection (TODO: Seperate handling depending on CAC, FACCH< Sacch, etc)
-    20:56:15 Sync: NXDN96  RCCH  Data   RAN 01  CAC VCALL (VCALL_REQ)
-      Private Call - Half Duplex 9600bps/EHR (02) - Src=211 - Dst/TG=1603
-    20:56:15 Sync: NXDN96  RCCH  Data   RAN 01  CAC DISC (VCALL_REJECTION)
-      Private Call -        Disconnect       - Src=1603 - Dst/TG=211
+    //SDCALL Header
+    case 0x38:
+      nxdn_sdcall_header(opts, state, ElementsContent);
+      break;
 
-    */
-    //Debug: Disable DUP messages if they cause random issues with Type-C trunking (i.e. changing SRC ang TGT IDs, hopping in the middle of calls, etc)
+    //SDCALL Data Blocks
+    case 0x39:
+      nxdn_dcall_data(opts, state, state->data_header_format[0], ElementsContent); //TODO: type field as delivery format (FACCH1, UDCH, or CAC)
+      break;
 
-    //observed new messages in #318, should also be noted that F1 and F2 are both set on these messages
+    //SDCALL_IV
+    case 0x3A:
+      nxdn_dcall_iv(opts, state, 2, ElementsContent);
+      break;
+
+    //DCALL Header
+    case 0x09:
+      nxdn_dcall_header(opts, state, ElementsContent);
+      break;
+
+    //DCALL Data Blocks
+    case 0x0B:
+      nxdn_dcall_data(opts, state, state->data_header_format[0], ElementsContent); //TODO: type field as delivery format (FACCH1, UDCH, or CAC)
+      break;
 
     //VCALL and TX_REL custom to certain radios, but they have different elements in them
     case 0xE1:
@@ -157,6 +170,24 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state, uint8_t Cr
     case 0x08: //TX_REL
       sprintf (state->call_string[0], "%s", "");
       sprintf (state->nxdn_call_type, "%s", "");
+      //invalidate any active data call assembly and wipe storage
+      //clear storage
+      memset(state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
+
+      //reset block number
+      state->data_header_blocks[0] = 1;
+
+      //reset delivery format (type)
+      state->data_header_format[0] = 0;
+
+      //reset header validity
+      state->data_header_valid[0] = 0;
+
+      //reset encryption variables (for pdu)
+      state->payload_algid = 0;
+      state->payload_keyid = 0;
+      state->payload_mi = 0;
+
     case 0x01: //VCALL
       NXDN_decode_VCALL(opts, state, ElementsContent);
       break;
@@ -168,6 +199,24 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state, uint8_t Cr
       sprintf (state->generic_talker_alias[0], "%s", "");
       sprintf (state->call_string[0], "%s", "");
       sprintf (state->nxdn_call_type, "%s", "");
+
+      //invalidate any active data call assembly and wipe storage
+      //clear storage
+      memset(state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
+
+      //reset block number
+      state->data_header_blocks[0] = 1;
+
+      //reset delivery format (type)
+      state->data_header_format[0] = 0;
+
+      //reset header validity
+      state->data_header_valid[0] = 0;
+
+      //reset encryption variables (for pdu)
+      state->payload_algid = 0;
+      state->payload_keyid = 0;
+      state->payload_mi = 0;
 
       //tune back to CC here - save about 1-2 seconds
       if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
@@ -1115,8 +1164,12 @@ void nxdn_decode_dst_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     fprintf (stderr, "\n Option: %02X; Start: %d; End %d; Characters: %d or Sequence: %02X;", option, start, end, num_chars, option & 0x3F);
 
   //This message has a CRC, but it appears that it is carried out across
-  //multiple segments if this is a multi-part message, but CRC type is not
-  //indicated, so will just rely on the overall CRC from each message prior
+  //multiple segments (string part only) if this is a multi-part message
+
+  //CRC32 on this with Denny's dst_info sample, works, but its a single segment message
+  // uint32_t crc_ext = convert_bits_into_output(Message+16+(num_chars*8), 32);
+  // uint32_t crc_chk = nxdn_message_crc32(Message+16, num_chars*8);
+  // fprintf (stderr, " CRC: %08X / %08X", crc_ext, crc_chk);
 
   fprintf (stderr, "%s", KNRM);
 
@@ -2389,6 +2442,470 @@ void NXDN_decode_ALIAS_ARIB(dsd_opts * opts, dsd_state * state, uint8_t * Messag
 
 } /* End NXDN_decode_ALIAS_ARIB() */
 
+void nxdn_dcall_iv(dsd_opts * opts, dsd_state * state, int type, uint8_t * Message)
+{
+  UNUSED(opts);
+
+  uint8_t idas = 0;
+  if (strcmp (state->nxdn_location_category, "Type-D") == 0) idas = 1;
+
+  uint8_t iv[16]; memset(iv, 0, sizeof(iv));
+
+  if (idas)
+  {
+    state->payload_mi = (unsigned long long int)ConvertBitIntoBytes(Message+8, 22);
+    pack_bit_array_into_byte_array(Message+8, iv, 3);
+    //TODO: Figure out how IDAS 22-bit expansion works, use taps on 22-bit config, then go from 64-128?
+    //I really don't expect this will ever be something that comes up, given how Type-D is not prevelant
+  }
+  else
+  {
+    state->payload_mi = (unsigned long long int)ConvertBitIntoBytes(Message+8, 64);
+    pack_bit_array_into_byte_array(Message+8, iv, 8);
+    if (state->nxdn_cipher_type == 3)
+      LFSR128npdu(state);
+  }
+
+  fprintf (stderr, "%s", KYEL);
+  if (type == 1)
+    fprintf (stderr, "\n  DCALL_IV: %016llX", state->payload_mi);
+  else fprintf (stderr, "\n  SDCALL_IV: %016llX", state->payload_mi);
+
+}
+
+void nxdn_sdcall_header(dsd_opts * opts, dsd_state * state, uint8_t * Message)
+{
+  UNUSED(opts);
+
+  uint8_t idas = 0;
+  if (strcmp (state->nxdn_location_category, "Type-D") == 0) idas = 1;
+
+  uint8_t cc_option = (uint8_t)ConvertBitIntoBytes(Message+8, 8); UNUSED(cc_option);
+  uint8_t call_type = (uint8_t)ConvertBitIntoBytes(Message+16, 3);
+  uint8_t dcall_opt = (uint8_t)ConvertBitIntoBytes(Message+19, 5);
+
+  uint16_t source = (uint16_t)ConvertBitIntoBytes(Message+24, 16);
+  uint16_t target = (uint16_t)ConvertBitIntoBytes(Message+40, 16);
+  uint8_t cipher  = (uint8_t)ConvertBitIntoBytes(Message+56, 2);
+  uint8_t key_id  = (uint8_t)ConvertBitIntoBytes(Message+58, 6);
+
+  //encryption variable assignment for PDU
+  state->payload_algid = cipher;
+  state->payload_keyid = key_id;
+
+  //idas channel split
+  uint16_t source_ch = 0;
+  uint16_t target_ch = 0;
+
+  if (idas)
+  {
+    source_ch = (source >> 11) & 0x1F;
+    target_ch = (target >> 11) & 0x1F;
+    source = source & 0x7FF;
+    target = target & 0x7FF;
+  }
+
+  //packet information and its sub elements (bytes 0, and 1 only)
+  uint16_t pkt_info = (uint16_t)ConvertBitIntoBytes(Message+64, 16);
+  uint8_t confirmed_delivery = Message[64];
+  uint8_t spare1 = Message[65];
+  uint8_t selective_retry = Message[66];
+  uint8_t spare2 = Message[67];
+  uint8_t block_count = (uint8_t)ConvertBitIntoBytes(Message+68, 4);
+  uint8_t pad_bytes = (uint8_t)ConvertBitIntoBytes(Message+72, 5);
+  uint8_t start_frag = Message[77];
+  uint8_t circulate  = Message[78];
+
+  //NOTE: Location Info Element is only on UPCH (CAC) and not on FACCH1 message
+  //it will be treated as an optional element and will not be decoded.
+
+  uint8_t duplex_string[32]; memset(duplex_string, 0, sizeof(duplex_string));
+  uint8_t dcall_string[32];  memset(dcall_string, 0, sizeof(dcall_string));
+  NXDN_Data_Call_Option_To_Str(dcall_opt, duplex_string, dcall_string);
+
+  fprintf (stderr, "\n %s", KCYN);
+  fprintf (stderr, "SD Data Call Header (%04X) ", pkt_info);
+  if (idas == 0)
+    fprintf (stderr, "Source: %d; Target: %d; ", source, target);
+  else
+    fprintf (stderr, "Source: %d-%d; Target: %d-%d; ", source_ch, source, target_ch, target);
+  fprintf (stderr, "%s %s %s ", NXDN_Call_Type_To_Str(call_type), dcall_string, duplex_string);
+
+  //TODO: Decode cc_option
+
+  //next line
+  fprintf (stderr, "\n ");
+
+  fprintf (stderr, "Blocks: %d; Padding: %d; ", block_count, pad_bytes);
+
+  if (cipher)
+  {
+    fprintf (stderr, "ENC; ");
+    fprintf (stderr, "Cipher: %X; ", cipher);
+    fprintf (stderr, "Key ID; %02X; ", key_id);
+  }
+
+  if (spare1)
+    fprintf (stderr, "S1; ");
+
+  if (spare2)
+    fprintf (stderr, "S2; ");
+
+  if (start_frag)
+    fprintf (stderr, "Starting Fragment; ");
+
+  if (circulate)
+    fprintf (stderr, "Circulate; ");
+
+  if (confirmed_delivery)
+    fprintf (stderr, "Confirmed Delivery; ");
+
+  if (selective_retry)
+    fprintf (stderr, "Selective Retry; ");
+
+  fprintf (stderr, "%s", KNRM);
+
+  //clear storage
+  memset(state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
+
+  //set header block expected value
+  if (block_count > 0)
+    state->data_header_blocks[0] = block_count;
+  else state->data_header_blocks[0] = 1;
+
+  //set this is a valid header
+  state->data_header_valid[0] = 1;
+  
+}
+
+void nxdn_dcall_header(dsd_opts * opts, dsd_state * state, uint8_t * Message)
+{
+  UNUSED(opts);
+
+  uint8_t idas = 0;
+  if (strcmp (state->nxdn_location_category, "Type-D") == 0) idas = 1;
+
+  uint8_t cc_option = (uint8_t)ConvertBitIntoBytes(Message+8, 8); UNUSED(cc_option);
+  uint8_t call_type = (uint8_t)ConvertBitIntoBytes(Message+16, 3);
+  uint8_t dcall_opt = (uint8_t)ConvertBitIntoBytes(Message+19, 5);
+
+  uint16_t source = (uint16_t)ConvertBitIntoBytes(Message+24, 16);
+  uint16_t target = (uint16_t)ConvertBitIntoBytes(Message+40, 16);
+  uint8_t cipher  = (uint8_t)ConvertBitIntoBytes(Message+56, 2);
+  uint8_t key_id  = (uint8_t)ConvertBitIntoBytes(Message+58, 6);
+
+  //idas channel split
+  uint16_t source_ch = 0;
+  uint16_t target_ch = 0;
+
+  if (idas)
+  {
+    source_ch = (source >> 11) & 0x1F;
+    target_ch = (target >> 11) & 0x1F;
+    source = source & 0x7FF;
+    target = target & 0x7FF;
+  }
+
+  //packet information and its sub elements
+  uint32_t pkt_info = (uint32_t)ConvertBitIntoBytes(Message+64, 24);
+  uint8_t confirmed_delivery = Message[64];
+  uint8_t spare1 = Message[65];
+  uint8_t selective_retry = Message[66];
+  uint8_t spare2 = Message[67];
+  uint8_t block_count = (uint8_t)ConvertBitIntoBytes(Message+68, 4);
+  uint8_t pad_bytes = (uint8_t)ConvertBitIntoBytes(Message+72, 5);
+  uint8_t start_frag = Message[77];
+  uint8_t circulate  = Message[78];
+  uint16_t tx_frag_count = (uint16_t)ConvertBitIntoBytes(Message+79, 9);
+
+  //check for optional IV
+  uint8_t iv[16]; memset(iv, 0, sizeof(iv));
+  uint8_t iv_presence = (uint8_t)ConvertBitIntoBytes(Message+88, 8);
+  if (cipher > 1 && iv_presence != 0)
+  {
+    if (idas)
+      pack_bit_array_into_byte_array(Message+88, iv, 3);
+    else
+      pack_bit_array_into_byte_array(Message+88, iv, 8);
+
+    if (idas)
+    {
+      //TODO: Idas expansion
+      state->payload_mi = (unsigned long long int)ConvertBitIntoBytes(Message+88, 22);
+    }
+    else
+    {
+      state->payload_mi = (unsigned long long int)ConvertBitIntoBytes(Message+88, 64);
+    }
+  }
+
+  //encryption variable assignment for PDU
+  state->payload_algid = cipher;
+  state->payload_keyid = key_id;
+
+  uint8_t duplex_string[32]; memset(duplex_string, 0, sizeof(duplex_string));
+  uint8_t dcall_string[32];  memset(dcall_string, 0, sizeof(dcall_string));
+  NXDN_Data_Call_Option_To_Str(dcall_opt, duplex_string, dcall_string);
+
+  fprintf (stderr, "\n %s", KCYN);
+  fprintf (stderr, "Data Call Header (%04X) ", pkt_info);
+  if (idas == 0)
+    fprintf (stderr, "Source: %d; Target: %d; ", source, target);
+  else
+    fprintf (stderr, "Source: %d-%d; Target: %d-%d; ", source_ch, source, target_ch, target);
+  fprintf (stderr, "%s %s %s ", NXDN_Call_Type_To_Str(call_type), dcall_string, duplex_string);
+
+  //TODO: Decode cc_option
+
+  //next line
+  fprintf (stderr, "\n ");
+
+  fprintf (stderr, "Blocks: %d; Padding: %d; TX Frag: %d; ", block_count, pad_bytes, tx_frag_count);
+
+  if (cipher)
+  {
+    fprintf (stderr, "ENC; ");
+    fprintf (stderr, "Cipher: %X; ", cipher);
+    fprintf (stderr, "Key ID; %02X; ", key_id);
+    if (cipher > 1 && iv_presence)
+    {
+      fprintf (stderr, "IV: ");
+      if (idas)
+      {
+        for (int i = 0; i < 3; i++)
+          fprintf (stderr, "%02X", iv[i]);
+      }
+      else
+      {
+        for (int i = 0; i < 8; i++)
+          fprintf (stderr, "%02X", iv[i]);
+      }
+    }
+
+  }
+
+  if (spare1)
+    fprintf (stderr, "S1; ");
+
+  if (spare2)
+    fprintf (stderr, "S2; ");
+
+  if (start_frag)
+    fprintf (stderr, "Starting Fragment; ");
+
+  if (circulate)
+    fprintf (stderr, "Circulate; ");
+
+  if (confirmed_delivery)
+    fprintf (stderr, "Confirmed Delivery; ");
+
+  if (selective_retry)
+    fprintf (stderr, "Selective Retry; ");
+
+  //AES IV expansion
+  if (cipher == 3 && iv_presence != 0)
+    LFSR128npdu(state);
+
+  fprintf (stderr, "%s", KNRM);
+
+  //clear storage
+  memset(state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
+
+  //set header block expected value
+  if (block_count > 0)
+    state->data_header_blocks[0] = block_count;
+  else state->data_header_blocks[0] = 1;
+
+  //set this is a valid header
+  state->data_header_valid[0] = 1;
+  
+}
+
+int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Message)
+{
+  UNUSED(opts);
+
+  //packet frame number and block number, observation shows these seem to be the same value (observed Type-D)
+  //but the manual does not quite explain these values indicate super packet of up to 16 big packets, and 1 packet is up to 16 blocks?
+  uint8_t pf_num  = (uint8_t)ConvertBitIntoBytes(Message+8, 4);
+  uint8_t blk_num = (uint8_t)ConvertBitIntoBytes(Message+12, 4);
+
+  fprintf (stderr, "\n %s", KCYN);
+  fprintf (stderr, "Data Call (%d/%d); ", pf_num, blk_num);
+  fprintf (stderr, "%s", KNRM);
+
+  //TODO: Will need to have a len of valid bytes of dcall data at this point, that depends on carrier type (cac, facch1, udch, udch2, etc)
+  //NOTE: Its possible this format only works with UDCH, or UDCH2 if using Type-D
+  //TODO: Copy / Append data in blocks to superframe for decode on last one received
+  //TODO: CRC Check on completed PDU? Is that available?
+
+  int byte_len = 20; //relevant number of user data bytes in UDCH
+  uint8_t idas = 0;
+  if (strcmp (state->nxdn_location_category, "Type-D") == 0) idas = 1;
+  if (idas)
+    byte_len = 18;  //relevant number of user data bytes in UDCH2
+
+  //CAC type byte_len overrides on SDCALL (UPCH)
+  if (type == 2)
+    byte_len = 14;
+
+  //FACCH1 type byte_len overrides on SDCALL
+  if (type == 3)
+    byte_len = 8;
+
+  //Set a pointer value to where this block fits into the PDU superframe structure (bits, not bytes)
+  int ptr = byte_len * 8 * (state->data_header_blocks[0] - blk_num);
+  int total_bytes = state->data_header_blocks[0]*byte_len;
+
+  if (type == 2) //reported blocks is 2, but data blocks consists of 2,1,0 in sample obtained, doesn't occur on IDAS, but on Type-C UPCH
+    total_bytes = (state->data_header_blocks[0]+1)*byte_len;
+
+  //sanity check and warning
+  if (state->data_header_valid[0] == 0)
+  {
+    fprintf (stderr, "Missing or Invalid Header; ");
+    return -1;
+  }
+
+  if (blk_num > state->data_header_blocks[0])
+  {
+    fprintf (stderr, "Block Num Exceeds Header Reported (%d/%d); ", state->data_header_blocks[0], blk_num);
+    state->data_header_valid[0] = 0;
+    return -1;
+  }
+
+  //Debug
+  // fprintf (stderr, "Type: %d; Byte Len: %02d; Total: %03d; Ptr: %04d;", state->data_header_format[0], byte_len, total_bytes, ptr);
+
+  //storage (bits, not bytes)
+  memcpy(state->dmr_pdu_sf[0]+ptr, Message+16, byte_len*8*sizeof(uint8_t));
+
+  //WIP: completed, evaluate, dump, zero out completed results
+  if (blk_num == 0)
+  {
+
+    //WIP: KS creation and application, if applicable
+    //TODO: May need to use state->RR for simultaneous data and voice call where both are potentially encrypted?
+    uint8_t ks[3000]; memset(ks, 0, sizeof(ks));
+
+    //TODO: check for key available, if loader
+    // if (state->payload_algid == 2)
+    // {
+    //   if (state->keyloader == 1)
+    //   {
+
+    //   }
+    // }
+
+    if (state->payload_algid != 0)
+    {
+      fprintf (stderr, "\n Encrypted Data; Cipher: %d; Key ID: %02X;", state->payload_algid, state->payload_keyid);
+      if (state->payload_algid > 1)
+        fprintf (stderr, " IV: %016llX;", state->payload_mi);
+    }
+    
+    //scrambler
+    if (state->payload_algid == 1 && state->R != 0)
+    {
+      fprintf (stderr, " Key: %05lld;", state->R);
+      pdu_scrambler_keystream_creation(ks, state->R, total_bytes*8);
+    }
+    //DES
+    else if (state->payload_algid == 2 && state->R != 0)
+    {
+      fprintf (stderr, " Key: %016llX;", state->R);
+      int nblocks = total_bytes/8;
+      if (total_bytes%8)
+        nblocks++;
+      uint8_t ks_bytes[nblocks*8]; memset(ks_bytes, 0, sizeof(ks_bytes));
+      des_multi_keystream_output (state->payload_mi, state->R, ks_bytes, 1, nblocks);
+      unpack_byte_array_into_bit_array(ks_bytes, ks, nblocks*8);
+    }
+    //AES
+    else if (state->payload_algid == 3 && state->aes_key_loaded[1] == 1)
+    {
+      // fprintf (stderr, " KS: %016llX;", state->K4); //stub
+      int nblocks = total_bytes/16;
+      if (total_bytes%16)
+        nblocks++;
+      uint8_t ks_bytes[nblocks*16]; memset(ks_bytes, 0, sizeof(ks_bytes));
+      aes_ofb_keystream_output (state->aes_ivR, state->aes_key, ks_bytes, 2, nblocks);
+      unpack_byte_array_into_bit_array(ks_bytes, ks, nblocks*16);
+    }
+
+    //Debug Data Dump (before KS)
+    // fprintf (stderr, "\n DATA: ");
+    // for (int i = 0; i < total_bytes; i++)
+    //   fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0]+(i*8), 8));
+
+    //apply KS
+    for (int i = 0; i < total_bytes*8; i++)
+      state->dmr_pdu_sf[0][i] ^= ks[i];
+
+    //Message CRC calculated using the entire User Data is included in User Data
+    //area in the User Data format used to send the last block, so the CRC is encrypted (...genius)
+
+    ptr = (total_bytes * 8) - 32;
+    uint32_t crc_ext = convert_bits_into_output(state->dmr_pdu_sf[0]+ptr, 32);
+    uint32_t crc_chk = nxdn_message_crc32(state->dmr_pdu_sf[0], ptr);
+
+    //Debug Data Dump
+    fprintf (stderr, "\n DATA: ");
+    for (int i = 0; i < total_bytes; i++)
+      fprintf (stderr, "%02X", (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0]+(i*8), 8));
+
+    //debug
+    // fprintf (stderr, " CRC DATA LEN: %03d;", ptr);
+    // fprintf (stderr, " CRC: %08X / %08X;", crc_ext, crc_chk);
+
+    if (crc_ext == crc_chk)
+    {
+
+      if ((uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0], 8) == 0x06)
+      {
+        //String Data Dump for nmea if first byte is 0x06
+        fprintf (stderr, "\n NMEA: ");
+        for (int i = 1; i < total_bytes; i++)
+          fprintf (stderr, "%c", (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0]+(i*8), 8));
+      }
+      // else
+      // {
+
+      //   //String Data Dump (not suitable unless this is text)
+      //   fprintf (stderr, "\n String: ");
+      //   for (int i = 0; i < total_bytes; i++)
+      //     fprintf (stderr, "%c", (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0]+(i*8), 8));
+      // }
+
+    }
+    else
+    {
+      fprintf (stderr, " CRC: %08X / %08X;", crc_ext, crc_chk);
+      fprintf (stderr, " (CRC ERR) ");
+    }
+
+    //clear storage
+    memset(state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
+
+    //reset block number
+    state->data_header_blocks[0] = 1;
+
+    //reset delivery format (type)
+    state->data_header_format[0] = 0;
+
+    //reset header validity
+    state->data_header_valid[0] = 0;
+
+    //reset encryption variables
+    state->payload_algid = 0;
+    state->payload_keyid = 0;
+    state->payload_mi = 0;
+  }
+
+  return 0;
+  
+}
+
 char * NXDN_Call_Type_To_Str(uint8_t CallType)
 {
   char * Ptr = NULL;
@@ -2408,6 +2925,40 @@ char * NXDN_Call_Type_To_Str(uint8_t CallType)
 
   return Ptr;
 } /* End NXDN_Call_Type_To_Str() */
+
+void NXDN_Data_Call_Option_To_Str(uint8_t DataCallOption, uint8_t * Duplex, uint8_t * TransmissionMode)
+{
+  char * Ptr = NULL;
+
+  Duplex[0] = 0;
+  TransmissionMode[0] = 0;
+
+  if(DataCallOption & 0x10) strcpy((char *)Duplex, "Duplex"); //SU is in Simplex
+  else strcpy((char *)Duplex, "Half Duplex");
+
+  switch(DataCallOption & 0xF)
+  { //added all options, getting a random one on an NXDN96 System, need to know what it is
+    case 0:  Ptr = "4800bps"; break;
+    case 1:  Ptr = "Reserved 1";  break;
+    case 2:  Ptr = "9600bps"; break;
+    case 3:  Ptr = "Reserved 3"; break;
+    case 4:  Ptr = "Reserved 4";  break;
+    case 5:  Ptr = "Reserved 5";  break;
+    case 6:  Ptr = "Reserved 6";  break;
+    case 7:  Ptr = "Reserved 7";  break;
+    case 8:  Ptr = "4800bps S:1"; break; //spare bit enabled
+    case 9:  Ptr = "Reserved 9; S:1"; break; //spare bit enabled
+    case 10: Ptr = "9600bps S:1"; break; //spare bit enabled
+    case 11: Ptr = "9600bps S:1"; break; //spare bit enabled
+    case 12: Ptr = "Reserved C; S1;"; break; //spare bit enabled
+    case 13: Ptr = "Reserved D; S1";  break; //spare bit enabled
+    case 14: Ptr = "Reserved E; S1";  break; //spare bit enabled
+    case 15: Ptr = "Reserved F: S1";  break; //spare bit enabled
+    default: Ptr = "Unk;";  break; //should never get here
+  }
+
+  strcpy((char *)TransmissionMode, Ptr);
+} /* End NXDN_Voice_Call_Option_To_Str() */
 
 void NXDN_Voice_Call_Option_To_Str(uint8_t VoiceCallOption, uint8_t * Duplex, uint8_t * TransmissionMode)
 {
