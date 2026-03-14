@@ -93,7 +93,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state, uint8_t Cr
 
     //SDCALL_IV
     case 0x3A:
-      nxdn_dcall_iv(opts, state, 2, ElementsContent);
+      nxdn_sdcall_iv(opts, state, 2, ElementsContent);
       break;
 
     //DCALL Header
@@ -177,6 +177,9 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state, uint8_t Cr
       //reset block number
       state->data_header_blocks[0] = 1;
 
+      //reset padding bytes
+      state->data_header_padding[0] = 0;
+
       //reset delivery format (type)
       state->data_header_format[0] = 0;
 
@@ -187,6 +190,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state, uint8_t Cr
       state->payload_algid = 0;
       state->payload_keyid = 0;
       state->payload_mi = 0;
+      memset(state->aes_ivR, 0, sizeof(state->aes_ivR));
 
     case 0x01: //VCALL
       NXDN_decode_VCALL(opts, state, ElementsContent);
@@ -207,6 +211,9 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state, uint8_t Cr
       //reset block number
       state->data_header_blocks[0] = 1;
 
+      //reset padding bytes
+      state->data_header_padding[0] = 0;
+
       //reset delivery format (type)
       state->data_header_format[0] = 0;
 
@@ -217,6 +224,7 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state, uint8_t Cr
       state->payload_algid = 0;
       state->payload_keyid = 0;
       state->payload_mi = 0;
+      memset(state->aes_ivR, 0, sizeof(state->aes_ivR));
 
       //tune back to CC here - save about 1-2 seconds
       if (opts->p25_trunk == 1 && state->p25_cc_freq != 0 && opts->p25_is_tuned == 1)
@@ -2442,7 +2450,7 @@ void NXDN_decode_ALIAS_ARIB(dsd_opts * opts, dsd_state * state, uint8_t * Messag
 
 } /* End NXDN_decode_ALIAS_ARIB() */
 
-void nxdn_dcall_iv(dsd_opts * opts, dsd_state * state, int type, uint8_t * Message)
+void nxdn_sdcall_iv(dsd_opts * opts, dsd_state * state, int type, uint8_t * Message)
 {
   UNUSED(opts);
 
@@ -2572,6 +2580,9 @@ void nxdn_sdcall_header(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   if (block_count > 0)
     state->data_header_blocks[0] = block_count;
   else state->data_header_blocks[0] = 1;
+
+  //set padding bytes (needed for ks application, crc check, valid len of data)
+  state->data_header_padding[0] = pad_bytes;
 
   //set this is a valid header
   state->data_header_valid[0] = 1;
@@ -2716,6 +2727,9 @@ void nxdn_dcall_header(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     state->data_header_blocks[0] = block_count;
   else state->data_header_blocks[0] = 1;
 
+  //set padding bytes (needed for ks application, crc check, valid len of data)
+  state->data_header_padding[0] = pad_bytes;
+
   //set this is a valid header
   state->data_header_valid[0] = 1;
   
@@ -2734,11 +2748,6 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
   fprintf (stderr, "Data Call (%d/%d); ", pf_num, blk_num);
   fprintf (stderr, "%s", KNRM);
 
-  //TODO: Will need to have a len of valid bytes of dcall data at this point, that depends on carrier type (cac, facch1, udch, udch2, etc)
-  //NOTE: Its possible this format only works with UDCH, or UDCH2 if using Type-D
-  //TODO: Copy / Append data in blocks to superframe for decode on last one received
-  //TODO: CRC Check on completed PDU? Is that available?
-
   int byte_len = 20; //relevant number of user data bytes in UDCH
   uint8_t idas = 0;
   if (strcmp (state->nxdn_location_category, "Type-D") == 0) idas = 1;
@@ -2755,10 +2764,10 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
 
   //Set a pointer value to where this block fits into the PDU superframe structure (bits, not bytes)
   int ptr = byte_len * 8 * (state->data_header_blocks[0] - blk_num);
-  int total_bytes = state->data_header_blocks[0]*byte_len;
 
-  if (type == 2) //reported blocks is 2, but data blocks consists of 2,1,0 in sample obtained, doesn't occur on IDAS, but on Type-C UPCH
-    total_bytes = (state->data_header_blocks[0]+1)*byte_len;
+  int total_bytes = (state->data_header_blocks[0]+1)*byte_len;
+
+  total_bytes -= state->data_header_padding[0];
 
   //sanity check and warning
   if (state->data_header_valid[0] == 0)
@@ -2774,28 +2783,91 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
     return -1;
   }
 
+  if (total_bytes < 4) //this shouldn't even happen in code
+  {
+    fprintf (stderr, "Total Bytes After Padding Less Than Required; ");
+    state->data_header_valid[0] = 0;
+    return -1;
+  }
+
   //Debug
-  // fprintf (stderr, "Type: %d; Byte Len: %02d; Total: %03d; Ptr: %04d;", state->data_header_format[0], byte_len, total_bytes, ptr);
+  fprintf (stderr, "Type: %d; Byte Len: %02d; Pad: %02d; Total: %03d; Ptr: %04d;", state->data_header_format[0], byte_len, state->data_header_padding[0], total_bytes, ptr);
 
   //storage (bits, not bytes)
   memcpy(state->dmr_pdu_sf[0]+ptr, Message+16, byte_len*8*sizeof(uint8_t));
 
-  //WIP: completed, evaluate, dump, zero out completed results
+  //Finished Assembly
   if (blk_num == 0)
   {
 
-    //WIP: KS creation and application, if applicable
+    //KS creation and application, if applicable
     //TODO: May need to use state->RR for simultaneous data and voice call where both are potentially encrypted?
-    uint8_t ks[3000]; memset(ks, 0, sizeof(ks));
+    uint8_t ks[3000];
+    memset(ks, 0, sizeof(ks));
 
-    //TODO: check for key available, if loader
-    // if (state->payload_algid == 2)
-    // {
-    //   if (state->keyloader == 1)
-    //   {
+    //Check for key availability
+    unsigned long long int key = 0;
 
-    //   }
-    // }
+    uint8_t aes_key[32]; 
+    memset(aes_key, 0, sizeof(aes_key));
+    uint8_t empt[32];
+    memset(empt, 0, sizeof(empt));
+    uint8_t aes_key_loaded = 0;
+
+    if (state->payload_algid != 0)
+    {
+      if (state->keyloader == 1 && state->payload_algid != 3)
+      {
+        //DES and Scrambler Key (key loader)
+        if (state->rkey_array[state->payload_keyid] != 0)
+          key = state->rkey_array[state->payload_keyid];
+      }
+      else if (state->keyloader == 0 && state->payload_algid != 3)
+      {
+        //DES and Scrambler Key (single load)
+        if (state->R != 0)
+          key = state->R;
+      }
+      else if (state->keyloader == 1 && state->payload_algid == 3)
+      {
+
+        //AES Key (key loader)
+        for (int i = 0; i < 8; i++)
+        {
+          aes_key[i+0]   = ((state->rkey_array[state->payload_keyid+0x000]) >> (56-(i*8))) & 0xFF;
+          aes_key[i+8]   = ((state->rkey_array[state->payload_keyid+0x101]) >> (56-(i*8))) & 0xFF;
+          aes_key[i+16]  = ((state->rkey_array[state->payload_keyid+0x201]) >> (56-(i*8))) & 0xFF;
+          aes_key[i+24]  = ((state->rkey_array[state->payload_keyid+0x301]) >> (56-(i*8))) & 0xFF;
+
+          //if kaes is loaded with a key, then flag on the key loaded variable
+          if (memcmp(aes_key, empt, sizeof(aes_key)) != 0)
+          {
+            key = state->rkey_array[state->payload_keyid+0x301];
+            aes_key_loaded = 1;
+          }
+        }
+      }
+      else if (state->keyloader == 0 && state->payload_algid == 3)
+      {
+        
+        //AES Key (single load)
+        for (int i = 0; i < 8; i++)
+        {
+          aes_key[i+0]   = (state->K1) >> (56-(i*8)) & 0xFF;
+          aes_key[i+8]   = (state->K2) >> (56-(i*8)) & 0xFF;
+          aes_key[i+16]  = (state->K3) >> (56-(i*8)) & 0xFF;
+          aes_key[i+24]  = (state->K4) >> (56-(i*8)) & 0xFF;
+        }
+
+        //if kaes is loaded with a key, then flag on the key loaded variable
+        if (memcmp(aes_key, empt, sizeof(aes_key)) != 0)
+        {
+          key = state->K4;
+          aes_key_loaded = 1;
+        }
+
+      }
+    }
 
     if (state->payload_algid != 0)
     {
@@ -2805,31 +2877,31 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
     }
     
     //scrambler
-    if (state->payload_algid == 1 && state->R != 0)
+    if (state->payload_algid == 1 && key != 0)
     {
-      fprintf (stderr, " Key: %05lld;", state->R);
-      pdu_scrambler_keystream_creation(ks, state->R, total_bytes*8);
+      fprintf (stderr, " Key: %05lld;", key);
+      pdu_scrambler_keystream_creation(ks, key, total_bytes*8);
     }
     //DES
-    else if (state->payload_algid == 2 && state->R != 0)
+    else if (state->payload_algid == 2 && key != 0)
     {
-      fprintf (stderr, " Key: %016llX;", state->R);
+      fprintf (stderr, " Key: %016llX;", key);
       int nblocks = total_bytes/8;
       if (total_bytes%8)
         nblocks++;
       uint8_t ks_bytes[nblocks*8]; memset(ks_bytes, 0, sizeof(ks_bytes));
-      des_multi_keystream_output (state->payload_mi, state->R, ks_bytes, 1, nblocks);
+      des_multi_keystream_output (state->payload_mi, key, ks_bytes, 1, nblocks);
       unpack_byte_array_into_bit_array(ks_bytes, ks, nblocks*8);
     }
     //AES
-    else if (state->payload_algid == 3 && state->aes_key_loaded[1] == 1)
+    else if (state->payload_algid == 3 && aes_key_loaded == 1)
     {
-      // fprintf (stderr, " KS: %016llX;", state->K4); //stub
+      fprintf (stderr, " KS: %016llX;", key); //key stub
       int nblocks = total_bytes/16;
       if (total_bytes%16)
         nblocks++;
       uint8_t ks_bytes[nblocks*16]; memset(ks_bytes, 0, sizeof(ks_bytes));
-      aes_ofb_keystream_output (state->aes_ivR, state->aes_key, ks_bytes, 2, nblocks);
+      aes_ofb_keystream_output (state->aes_ivR, aes_key, ks_bytes, 2, nblocks);
       unpack_byte_array_into_bit_array(ks_bytes, ks, nblocks*16);
     }
 
@@ -2860,23 +2932,52 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
 
     if (crc_ext == crc_chk)
     {
-
-      if ((uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0], 8) == 0x06)
+      uint8_t opcode = (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0], 8);
+      uint32_t reverse = (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0], 24); //observed 3 bytes of zeroes
+      if (opcode == 0x06)
       {
-        //String Data Dump for nmea if first byte is 0x06
-        fprintf (stderr, "\n NMEA: ");
+        //String Data Dump if first byte is 0x06 (NMEA sentences observed here)
+        fprintf (stderr, "\n ");
         for (int i = 1; i < total_bytes; i++)
-          fprintf (stderr, "%c", (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0]+(i*8), 8));
+        {
+          uint8_t ascii = (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0]+(i*8), 8);
+          if (ascii >= 0x20 && ascii < 0x7F)
+            fprintf (stderr, "%c", ascii);
+          else break;
+        }
       }
-      // else
-      // {
+      else if (reverse == 0)
+      {
+        //Reverse Bytes observed on location data (unknown format, AVL? Other GNSS?)
+        uint8_t reverse_bytes[total_bytes];
+        memset(reverse_bytes, 0, sizeof(reverse_bytes));
 
-      //   //String Data Dump (not suitable unless this is text)
-      //   fprintf (stderr, "\n String: ");
-      //   for (int i = 0; i < total_bytes; i++)
-      //     fprintf (stderr, "%c", (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0]+(i*8), 8));
-      // }
+        //reverse bytes
+        int k = total_bytes-1-4;
+        for (int i = 0; i < total_bytes-4; i++)
+        {
+          reverse_bytes[i] = (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0]+(k*8), 8);
+          k--;
+        }
 
+        //Debug Data Dump
+        fprintf (stderr, "\n  REV: ");
+        for (int i = 0; i < total_bytes-4-4+1; i++) //sans the CRC and the leading zeroes
+          fprintf (stderr, "%02X", reverse_bytes[i]);
+
+        uint8_t reverse_byte_bits[total_bytes*8];
+        memset(reverse_byte_bits, 0, sizeof(reverse_byte_bits));
+        unpack_byte_array_into_bit_array(reverse_bytes, reverse_byte_bits, (total_bytes-4-4));
+
+        //GPS report on 0xFFFC? or is that just any odd Kenwood message?
+        if ((uint16_t)convert_bits_into_output(reverse_byte_bits, 16) == 0xFFFC)
+          nxdn_gps_report(opts, state, reverse_byte_bits+16, state->nxdn_last_rid); //src is probably reset on cac
+
+      }
+      else
+      {
+        //Anything else?
+      }
     }
     else
     {
@@ -2890,6 +2991,9 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
     //reset block number
     state->data_header_blocks[0] = 1;
 
+    //reset padding bytes
+    state->data_header_padding[0] = 0;
+
     //reset delivery format (type)
     state->data_header_format[0] = 0;
 
@@ -2900,6 +3004,7 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
     state->payload_algid = 0;
     state->payload_keyid = 0;
     state->payload_mi = 0;
+    memset(state->aes_ivR, 0, sizeof(state->aes_ivR));
   }
 
   return 0;

@@ -709,6 +709,7 @@ void decode_cellocator(dsd_opts * opts, dsd_state * state, uint8_t * input, int 
   //will need to establish a len value for data and contents
 
 }
+
 void decode_ars(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
 {
   //TODO: This
@@ -716,4 +717,13 @@ void decode_ars(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
   UNUSED(state);
   UNUSED(input);
   UNUSED(len);
+}
+
+void nxdn_gps_report(dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t src)
+{
+  //TODO: This
+  UNUSED(opts);
+  UNUSED(state);
+  UNUSED(input);
+  UNUSED(src);
 }

@@ -1334,8 +1334,8 @@ void NXDN_decode_site_info(dsd_opts * opts, dsd_state * state, uint8_t * Message
 void nxdn_decode_dst_info(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void NXDN_decode_adj_site(dsd_opts * opts, dsd_state * state, uint8_t * Message);
 void nxdn_sdcall_header(dsd_opts * opts, dsd_state * state, uint8_t * Message);
+void nxdn_sdcall_iv(dsd_opts * opts, dsd_state * state, int type, uint8_t * Message);
 void nxdn_dcall_header(dsd_opts * opts, dsd_state * state, uint8_t * Message);
-void nxdn_dcall_iv(dsd_opts * opts, dsd_state * state, int type, uint8_t * Message);
 int  nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Message);
 //Type-D SCCH Message Decoder
 void NXDN_decode_scch(dsd_opts * opts, dsd_state * state, uint8_t * Message, uint8_t direction);
@@ -1406,6 +1406,7 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[]);
 void lip_protocol_decoder (dsd_opts * opts, dsd_state * state, uint8_t * input);
 void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t src, int type);
 void harris_lptt (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t src, int slot, int phase);
+void nxdn_gps_report(dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t src);
 void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input);
 void utf8_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input);
 

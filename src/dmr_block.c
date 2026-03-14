@@ -1028,9 +1028,9 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           R = state->rkey_array[state->payload_keyidR];
 
         //loader for aes keys
-        uint8_t kaes[32];
-        uint8_t empt[32];
-        uint8_t maes[16];
+        uint8_t kaes[32]; memset(kaes, 0, sizeof(kaes));
+        uint8_t empt[32]; memset(empt, 0, sizeof(empt));
+        uint8_t maes[16]; memset(maes, 0, sizeof(maes));
         for (i = 0; i < 8; i++)
         {
           kaes[i+0]   = ((state->rkey_array[kid+0x000]) >> (56-(i*8))) & 0xFF;
