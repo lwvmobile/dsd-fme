@@ -457,8 +457,18 @@ void p25_decode_pdu_data(dsd_opts * opts, dsd_state * state, uint8_t * input, in
     if (sap == 0 || sap == 4) //User Data or Packet Data (both are UDP typically, same format dmr UDP/IP data)
       decode_ip_pdu (opts, state, len+1, input+ptr);
 
-    else if (sap == 48) //Tier 1 Location Service (or does it depend on the io bit?)
-      utf8_to_text(state, 1, len-ptr+1, input+ptr); //TODO, read initial string, i.e., $GPRMC and properly decode
+    //NMEA Tier 1 Location Reporting w/ Supplimentary $PP25 string
+    else if (sap == 48)
+    {
+      len += 12; //not sure how we ended up off by up to 12 on this, above negation too much?
+      state->dmr_lrrp_source[state->currentslot] = state->lastsrc;
+      state->dmr_lrrp_source[state->currentslot] = state->lasttg;
+      uint8_t input_bits[(len+1)*8];
+      memset(input_bits, 0, sizeof(input_bits));
+      unpack_byte_array_into_bit_array(input, input_bits, len);
+      fprintf (stderr, "\n ");
+      nmea_sentence_checker(opts, state, input_bits+ptr*8, state->currentslot, len*8);
+    }
 
     // else //default catch all (debug only)
     // {

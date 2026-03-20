@@ -186,6 +186,10 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state, uint8_t Cr
       //reset header validity
       state->data_header_valid[0] = 0;
 
+      //set source and target
+      state->dmr_lrrp_source[0] = 0;
+      state->dmr_lrrp_target[0] = 0;
+
       //reset encryption variables (for pdu)
       state->payload_algid = 0;
       state->payload_keyid = 0;
@@ -219,6 +223,10 @@ void NXDN_Elements_Content_decode(dsd_opts * opts, dsd_state * state, uint8_t Cr
 
       //reset header validity
       state->data_header_valid[0] = 0;
+
+      //set source and target
+      state->dmr_lrrp_source[0] = 0;
+      state->dmr_lrrp_target[0] = 0;
 
       //reset encryption variables (for pdu)
       state->payload_algid = 0;
@@ -712,23 +720,6 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
         state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
         opts->p25_is_tuned = 1; //set to 1 to set as currently tuned so we don't keep tuning nonstop
 
-        //set rid and tg when we actually tune to it
-        //only assign rid if not spare and not reserved (happens on private calls, unsure of its significance)
-        if ( (VoiceCallOption & 0xF) < 4) //ideally, only want 0, 2, or 3
-          state->nxdn_last_rid = SourceUnitID;
-        state->nxdn_last_tg = DestinationID;
-        sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType));
-
-        if (CallType == 3)
-        {
-          state->gi[0] = 1; //Private Call
-          //unassign these, sometimes, when trunking, these may be reversed by the time listened,
-          //and this will plant an extra private call in the event_history
-          state->nxdn_last_rid = 0;
-          state->nxdn_last_tg = 0;
-        }
-        else state->gi[0] = 0; //Group Call
-
         //Call String for Per Call WAV File
         sprintf (state->call_string[0], "%s", NXDN_Call_Type_To_Str(CallType));
         if (CCOption & 0x80) strcat (state->call_string[0], " Emergency");
@@ -759,23 +750,6 @@ void NXDN_decode_VCALL_ASSGN(dsd_opts * opts, dsd_state * state, uint8_t * Messa
         rtl_dev_tune (opts, freq);
         state->p25_vc_freq[0] = state->p25_vc_freq[1] = freq;
         opts->p25_is_tuned = 1;
-
-        //set rid and tg when we actually tune to it
-        //only assign rid if not spare and not reserved (happens on private calls, unsure of its significance)
-        if ( (VoiceCallOption & 0xF) < 4) //ideally, only want 0, 2, or 3
-          state->nxdn_last_rid = SourceUnitID;
-        state->nxdn_last_tg = DestinationID;
-        sprintf (state->nxdn_call_type, "%s", NXDN_Call_Type_To_Str(CallType));
-
-        if (CallType == 3)
-        {
-          state->gi[0] = 1; //Private Call
-          //unassign these, sometimes, when trunking, these may be reversed by the time listened,
-          //and this will plant an extra private call in the event_history
-          state->nxdn_last_rid = 0;
-          state->nxdn_last_tg = 0;
-        }
-        else state->gi[0] = 0; //Group Call
 
         //Call String for Per Call WAV File
         sprintf (state->call_string[0], "%s", NXDN_Call_Type_To_Str(CallType));
@@ -2586,6 +2560,10 @@ void nxdn_sdcall_header(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 
   //set this is a valid header
   state->data_header_valid[0] = 1;
+
+  //set source and target
+  state->dmr_lrrp_source[0] = source;
+  state->dmr_lrrp_target[0] = target;
   
 }
 
@@ -2659,7 +2637,7 @@ void nxdn_dcall_header(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   NXDN_Data_Call_Option_To_Str(dcall_opt, duplex_string, dcall_string);
 
   fprintf (stderr, "\n %s", KCYN);
-  fprintf (stderr, "Data Call Header (%04X) ", pkt_info);
+  fprintf (stderr, "Data Call Header (%06X) ", pkt_info);
   if (idas == 0)
     fprintf (stderr, "Source: %d; Target: %d; ", source, target);
   else
@@ -2732,6 +2710,10 @@ void nxdn_dcall_header(dsd_opts * opts, dsd_state * state, uint8_t * Message)
 
   //set this is a valid header
   state->data_header_valid[0] = 1;
+
+  //set source and target
+  state->dmr_lrrp_source[0] = source;
+  state->dmr_lrrp_target[0] = target;
   
 }
 
@@ -2739,8 +2721,9 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
 {
   UNUSED(opts);
 
-  //packet frame number and block number, observation shows these seem to be the same value (observed Type-D)
-  //but the manual does not quite explain these values indicate super packet of up to 16 big packets, and 1 packet is up to 16 blocks?
+  //if this is a full packet delivery, both of these numbers match typically,
+  //but if this is a selective retry resending blocks, the second number is the
+  //number of the retry block, and the first number is the remaining blocks
   uint8_t pf_num  = (uint8_t)ConvertBitIntoBytes(Message+8, 4);
   uint8_t blk_num = (uint8_t)ConvertBitIntoBytes(Message+12, 4);
 
@@ -2783,6 +2766,18 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
     return -1;
   }
 
+  //Part 1-B Basic Operation Ver.2.0 page 34
+  //if this is a retry, we don't have memory of the other pieces, so just nuke it
+  //although, I suppose its possible that, for example, there were originally 4 blocks,
+  //but the retry is going to retry 3,3,2,0 blocks all sequentially, or similar,
+  //and this would potentially miss it, but the CRC32 will determine success then.
+  if (pf_num != blk_num)
+  {
+    fprintf (stderr, "Partial Selective Retry, Previous Delivery Not Retained in Memory; ");
+    state->data_header_valid[0] = 0;
+    return -1;
+  }
+
   if (total_bytes < 4) //this shouldn't even happen in code
   {
     fprintf (stderr, "Total Bytes After Padding Less Than Required; ");
@@ -2797,7 +2792,7 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
   memcpy(state->dmr_pdu_sf[0]+ptr, Message+16, byte_len*8*sizeof(uint8_t));
 
   //Finished Assembly
-  if (blk_num == 0)
+  if (pf_num == 0)
   {
 
     //KS creation and application, if applicable
@@ -2933,18 +2928,13 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
     if (crc_ext == crc_chk)
     {
       uint8_t opcode = (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0], 8);
+      uint8_t nmea = (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0]+8, 8);
       uint32_t reverse = (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0], 24); //observed 3 bytes of zeroes
-      if (opcode == 0x06)
+      if (opcode == 0x06 && (nmea == '$' || nmea == '!')) //may only need to check one of the other
       {
-        //String Data Dump if first byte is 0x06 (NMEA sentences observed here)
+        //Check NMEA Sentence
         fprintf (stderr, "\n ");
-        for (int i = 1; i < total_bytes; i++)
-        {
-          uint8_t ascii = (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0]+(i*8), 8);
-          if (ascii >= 0x20 && ascii < 0x7F)
-            fprintf (stderr, "%c", ascii);
-          else break;
-        }
+        nmea_sentence_checker(opts, state, state->dmr_pdu_sf[0]+8, 0, total_bytes);
       }
       else if (reverse == 0)
       {
@@ -2962,7 +2952,7 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
 
         //Debug Data Dump
         fprintf (stderr, "\n  REV: ");
-        for (int i = 0; i < total_bytes-4-4+1; i++) //sans the CRC and the leading zeroes
+        for (int i = 0; i < total_bytes-7; i++) //sans the CRC and the leading zeroes
           fprintf (stderr, "%02X", reverse_bytes[i]);
 
         uint8_t reverse_byte_bits[total_bytes*8];
@@ -2971,7 +2961,7 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
 
         //GPS report on 0xFFFC? or is that just any odd Kenwood message?
         if ((uint16_t)convert_bits_into_output(reverse_byte_bits, 16) == 0xFFFC)
-          nxdn_gps_report(opts, state, reverse_byte_bits+16, state->nxdn_last_rid); //src is probably reset on cac
+          nxdn_gps_report(opts, state, reverse_byte_bits+16, state->dmr_lrrp_source[0]);
 
       }
       else
@@ -2999,6 +2989,10 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
 
     //reset header validity
     state->data_header_valid[0] = 0;
+
+    //set source and target
+    state->dmr_lrrp_source[0] = 0;
+    state->dmr_lrrp_target[0] = 0;
 
     //reset encryption variables
     state->payload_algid = 0;

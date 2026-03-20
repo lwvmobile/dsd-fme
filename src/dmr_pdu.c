@@ -995,8 +995,9 @@ void dmr_locn (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * DMR_P
     //write to LRRP file
     if (opts->lrrp_file_output == 1)
     {
-      char * timestr  = getTimeC();
+
       char * datestr  = getDateS();
+      char * timestr  = getTimeC();
 
       //open file by name that is supplied in the ncurses terminal, or cli
       FILE * pFile; //file pointer

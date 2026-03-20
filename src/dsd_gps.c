@@ -129,8 +129,8 @@ void lip_protocol_decoder (dsd_opts * opts, dsd_state * state, uint8_t * input)
     if (opts->lrrp_file_output == 1)
     {
 
-      char * datestr = getDate();
-      char * timestr = getTime();
+      char * datestr = getDateS();
+      char * timestr = getTimeC();
 
       //open file by name that is supplied in the ncurses terminal, or cli
       pFile = fopen (opts->lrrp_out_file, "a");
@@ -247,8 +247,8 @@ void nmea_iec_61162_1 (dsd_opts * opts, dsd_state * state, uint8_t * input, uint
   if (opts->lrrp_file_output == 1)
   {
 
-    char * datestr = getDate();
-    char * timestr = getTime();
+    char * datestr = getDateS();
+    char * timestr = getTimeC();
 
     int s = (int)fkph; //rounded interger format for the log report
     int a = 0;
@@ -406,8 +406,8 @@ void harris_lptt (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t 
   if (opts->lrrp_file_output == 1 && src != 0 && gps_quality != 3)
   {
 
-    char * datestr = getDate();
-    char * timestr = getTime();
+    char * datestr = getDateS();
+    char * timestr = getTimeC();
 
     //rounded interger formats for the log report
     int s = (int)fkph;
@@ -536,8 +536,8 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
       if (opts->lrrp_file_output == 1)
       {
 
-        char * datestr = getDate();
-        char * timestr = getTime();
+        char * datestr = getDateS();
+        char * timestr = getTimeC();
 
         //open file by name that is supplied in the ncurses terminal, or cli
         pFile = fopen (opts->lrrp_out_file, "a");
@@ -644,8 +644,9 @@ void apx_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
       FILE * pFile; //file pointer
       if (opts->lrrp_file_output == 1)
       {
-        char * datestr = getDate();
-        char * timestr = getTime();
+
+        char * datestr = getDateS();
+        char * timestr = getTimeC();
 
         //open file by name that is supplied in the ncurses terminal, or cli
         pFile = fopen (opts->lrrp_out_file, "a");
@@ -719,11 +720,235 @@ void decode_ars(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
   UNUSED(len);
 }
 
+//WIP: Based on Denny's always brilliant reverse-engineering of GPS reports
 void nxdn_gps_report(dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t src)
 {
-  //TODO: This
-  UNUSED(opts);
-  UNUSED(state);
-  UNUSED(input);
-  UNUSED(src);
+
+  // Basic fields
+  // uint8_t quality    = (uint8_t)convert_bits_into_output(input+8, 4);   //can't seem to work these first two out correctly
+  // uint8_t num_sat    = (uint8_t)convert_bits_into_output(input+12, 4); //can't seem to work these first two out correctly
+  int16_t elevation  = (int16_t)convert_bits_into_output(input+56, 16);
+
+  // Speed & Heading (in tenths)
+  uint16_t speed_raw   = (uint16_t)convert_bits_into_output(input+74, 14);
+  uint16_t heading_raw = (uint16_t)convert_bits_into_output(input+92, 12);
+  double speed   = speed_raw   / 10.0; //knots or k/h
+  double heading = heading_raw / 10.0;
+
+  //Date
+  uint16_t year  = (uint16_t)(convert_bits_into_output(input+136,7) + 2000);
+  uint8_t  month = (uint8_t) convert_bits_into_output(input+143,4);
+  uint8_t  day   = (uint8_t)(convert_bits_into_output(input+147,5) + 1);
+
+  // Longitude (DDMM.mmmm format)
+  uint16_t lon_degmin = (uint16_t)convert_bits_into_output(input+152, 16);
+  uint16_t lon_frac   = (uint16_t)convert_bits_into_output(input+16, 15);
+  uint8_t  lon_hem    = (uint8_t) convert_bits_into_output(input+183, 1);
+  double lon_minutes = (lon_degmin % 100) + (lon_frac / 10000.0);
+  double lon_decimal = (lon_degmin / 100) + (lon_minutes / 60.0);
+  double longitude = (lon_hem == 0) ? lon_decimal : -lon_decimal;
+
+  // Latitude (DDMM.mmmm format)
+  uint16_t lat_degmin = (uint16_t)convert_bits_into_output(input+184,16);
+  uint16_t lat_frac   = (uint16_t)convert_bits_into_output(input+200,15);
+  uint8_t  lat_hem    = (uint8_t) convert_bits_into_output(input+215,1);
+  double lat_minutes = (lat_degmin % 100) + (lat_frac / 10000.0);
+  double lat_decimal = (lat_degmin / 100) + (lat_minutes / 60.0);
+  double latitude = (lat_hem == 0) ? lat_decimal : -lat_decimal;
+
+  //Time
+  // uint8_t hour   = (uint8_t) convert_bits_into_output(input+247,5);
+  // uint8_t minute = (uint8_t) convert_bits_into_output(input+252,6);
+  // uint8_t second = (uint8_t) convert_bits_into_output(input+258,6); //this seems to be zero, recheck time
+
+  char deg_glyph[4];
+  sprintf (deg_glyph, "%s", "°");
+
+  //Report
+  fprintf (stderr, "\n GPS: (%f%s, %f%s) ", latitude, deg_glyph, longitude, deg_glyph);
+  fprintf (stderr, "Speed: %lf k/h; ", speed);
+  fprintf (stderr, "COG: %lf; ", heading);
+  fprintf (stderr, "Elevation: %i; ", elevation);
+  // fprintf (stderr, "Quality: %d / %d; ", quality, num_sat);
+  fprintf (stderr, "Date: %04d/%02d/%02d ", year, month, day);
+  // fprintf (stderr, "Time: %02d:%02d:%02d ", hour, minute, second);
+
+  //save to LRRP report for mapping/logging
+  if (opts->lrrp_file_output == 1 && src != 0) //&& quality?
+  {
+
+    char * datestr = getDateS();
+    char * timestr = getTimeC();
+
+    //rounded interger formats for the log report
+    int s = (int)speed;
+    int a = (int)heading;
+
+    //open file by name that is supplied in the ncurses terminal, or cli
+    FILE * pFile; //file pointer
+    pFile = fopen (opts->lrrp_out_file, "a");
+    fprintf (pFile, "%s\t", datestr );
+    fprintf (pFile, "%s\t", timestr );
+    fprintf (pFile, "%08d\t", src);
+    fprintf (pFile, "%.6lf\t", latitude);
+    fprintf (pFile, "%.6lf\t", longitude);
+    fprintf (pFile, "%d\t ", s);
+    fprintf (pFile, "%d\t ", a);
+    fprintf (pFile, "\n");
+    fclose (pFile);
+
+    if (timestr != NULL)
+    {
+      free (timestr);
+      timestr = NULL;
+    }
+    if (datestr != NULL)
+    {
+      free (datestr);
+      datestr = NULL;
+    }
+
+  }
+
+  //reset source and target from PDU storage
+  state->dmr_lrrp_source[0] = 0;
+  state->dmr_lrrp_target[0] = 0;
+}
+
+uint8_t nmea_sentence_checker(dsd_opts * opts, dsd_state * state, uint8_t * input, uint8_t slot, int len)
+{
+
+  //Check Start and End, and Validity w/ Checksum
+  int i;
+  uint8_t start_value = (uint8_t)ConvertBitIntoBytes(input, 8);
+  uint8_t end_value = 0;
+  uint8_t checksum_calc = 0;
+  uint8_t checksum_ext = 0;
+  char checksum_str[3];
+  memset(checksum_str, 0, sizeof(checksum_str));
+  uint8_t valid = 0;
+
+  if (start_value == '$' || start_value == '!')
+  {
+    //debug
+    // fprintf (stderr, "Start Okay! ");
+
+    for (i = 1; i < len; i++)
+    {
+      uint8_t value = (uint8_t)ConvertBitIntoBytes(input+(i*8), 8);
+      if (value == '*')
+      {
+        end_value = value;
+        checksum_str[0] = (uint8_t)ConvertBitIntoBytes(input+(i*8)+8, 8);
+        checksum_str[1] = (uint8_t)ConvertBitIntoBytes(input+(i*8)+16, 8);
+        checksum_str[2] = 0;
+        sscanf (checksum_str, "%hhX", &checksum_ext);
+        break;
+      }
+      else if (value >= 0x20 && value < 0x7F)
+      {
+        checksum_calc ^= value;
+        continue;
+      }
+      else break; //anything else that isn't ascii range values
+    }
+
+    //debug
+    // if (end_value == '*')
+    //   fprintf (stderr, "Checksum Present! ");
+
+    if (checksum_ext == checksum_calc)
+    {
+      // fprintf (stderr, "Checksum Okay! (%02X / %02X)", checksum_calc, checksum_ext);
+      valid = 1;
+    }
+    else
+    {
+      // fprintf (stderr, "Checksum Err! (%02X / %02X) ", checksum_calc, checksum_ext);
+      valid = 0;
+    }
+      
+  }
+
+
+  //dump, if valid
+  memset(state->event_history_s[slot].Event_History_Items[0].text_message, 0, sizeof(state->event_history_s[slot].Event_History_Items[0].text_message));
+  if (valid)
+  {
+    uint8_t ascii = 0;
+    uint16_t crlf = 0;
+    for (i = 0; i < len; i++)
+    {
+      ascii = (uint8_t)ConvertBitIntoBytes(input+(i*8), 8);
+      crlf  = (uint16_t)ConvertBitIntoBytes(input+(i*8), 16);
+      if (ascii >= 0x20 && ascii < 0x7F)
+      {
+        fprintf (stderr, "%c", ascii);
+        state->event_history_s[slot].Event_History_Items[0].text_message[i] = ascii;
+      }
+      else if (crlf == 0x0D0A) //NMEA Sentences end with 0x0D 0x0A (CR/LF)
+      {
+        fprintf (stderr, "%s", " ");
+        state->event_history_s[slot].Event_History_Items[0].text_message[i+0] = 0x20; //Space
+        state->event_history_s[slot].Event_History_Items[0].text_message[i+1] = 0x20; //Space
+        i+=2;
+        break;
+      }
+      else break; //anything else that isn't ascii range values
+    }
+
+    //check for supplimentary string i.e., $PP25
+    ascii = (uint8_t)ConvertBitIntoBytes(input+(i*8), 8);
+    if (crlf == 0x0D0A && ascii == '$')
+    {
+      for (i = i; i < len; i++)
+      {
+        ascii = (uint8_t)ConvertBitIntoBytes(input+(i*8), 8);
+        crlf  = (uint16_t)ConvertBitIntoBytes(input+(i*8), 16);
+
+        if (ascii >= 0x20 && ascii < 0x7F)
+        {
+          fprintf (stderr, "%c", ascii);
+          state->event_history_s[slot].Event_History_Items[0].text_message[i] = ascii;
+        }
+        else if (crlf == 0x0D0A) //Supplimentary Sentences end with 0x0D 0x0A (CR/LF)
+        {
+          state->event_history_s[slot].Event_History_Items[0].text_message[i] = 0x20;
+          break;
+        }
+        else break; //anything else that isn't ascii range values
+      }
+
+    }
+
+    //debug
+    // fprintf(stderr, "\n %s", state->event_history_s[slot].Event_History_Items[0].text_message);
+
+    //dump to event history
+    state->event_history_s[slot].Event_History_Items[0].text_message[i] = '\0';
+    uint32_t source = state->dmr_lrrp_source[slot];
+    uint32_t target = state->dmr_lrrp_target[slot];
+    char comp_string[500]; memset (comp_string, 0, sizeof(comp_string));
+    sprintf (comp_string, "NMEA SRC: %d; TGT: %d;", source, target);
+    watchdog_event_datacall (opts, state, source, target, comp_string, slot);
+  }
+
+  else
+  {
+    if (start_value != '$' && start_value != '!')
+      fprintf (stderr, " Not an NMEA Sentence Structure;");
+    else if ( (start_value == '$' || start_value == '!') && end_value != '*')
+      fprintf (stderr, " Possible NMEA Sentence, Missing Ending *;");
+    else if (  start_value != '$' && start_value != '!' && end_value == '*')
+      fprintf (stderr, " Possible NMEA Sentence, Missing Starting $ or !;");
+    else if (checksum_calc != checksum_ext)
+      fprintf (stderr, " NMEA Checksum Error (%02X / %02X);", checksum_calc, checksum_ext);
+  }
+
+  //TODO: Convert to LRRP data and report / GPS on Event History
+
+  state->dmr_lrrp_source[slot] = 0;
+  state->dmr_lrrp_target[slot] = 0;
+
+  return valid;
 }

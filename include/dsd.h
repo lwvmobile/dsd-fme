@@ -1409,6 +1409,7 @@ void harris_lptt (dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t 
 void nxdn_gps_report(dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t src);
 void utf16_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input);
 void utf8_to_text (dsd_state * state, uint8_t wr, uint16_t len, uint8_t * input);
+uint8_t nmea_sentence_checker(dsd_opts * opts, dsd_state * state, uint8_t * input, uint8_t slot, int len);
 
 //"DMR STEREO"
 void dmrBSBootstrap (dsd_opts * opts, dsd_state * state);

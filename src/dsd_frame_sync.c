@@ -1212,8 +1212,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           {
             strncpy (synctest10, (synctest_p - 9), 10); //FSW only
             if (
-                   (strcmp (synctest10, "3131331131") == 0 ) //this seems to be the most common 'correct' pattern on Type-C
-                || (strcmp (synctest10, "3331331131") == 0 ) //this seems to be the most common 'correct' pattern on Conventional
+                   (strcmp (synctest10, "3131331131") == 0 )
+                || (strcmp (synctest10, "3331331131") == 0 )
+                || (strcmp (synctest10, "3131331111") == 0 )
+                // || (strcmp (synctest10, "3331331111") == 0 )
+                // || (strcmp (synctest10, "3131311131") == 0 )
                 )
             {
 
@@ -1239,8 +1242,11 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
           {
             strncpy (synctest10, (synctest_p - 9), 10); //FSW only
             if (
-                   (strcmp (synctest10, "1313113313") == 0 ) //this seems to be the most common 'correct' pattern on Type-C
-                || (strcmp (synctest10, "1113113313") == 0 ) //this seems to be the most common 'correct' pattern on Conventional
+                   (strcmp (synctest10, "1313113313") == 0 )
+                || (strcmp (synctest10, "1113113313") == 0 )
+                || (strcmp (synctest10, "1313113333") == 0 )
+                // || (strcmp (synctest10, "1113113333") == 0 )
+                // || (strcmp (synctest10, "1313133313") == 0 )
                )
             {
 
