@@ -2964,15 +2964,39 @@ int nxdn_dcall_data(dsd_opts * opts, dsd_state * state, int type, uint8_t * Mess
           nxdn_gps_report(opts, state, reverse_byte_bits+16, state->dmr_lrrp_source[0]);
 
       }
+      // else if (0 == 1) //future case
+      // {
+      //   uint8_t bytes[total_bytes];
+      //   memset(bytes, 0, sizeof(bytes));
+      //   for (int i = 0; i < total_bytes-4; i++)
+      //     bytes[i] = (uint8_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0]+(i*8), 8);
+      // }
       else
       {
-        //Anything else?
+        //dump to event history as generic data call with no decode
+        sprintf (state->event_history_s[0].Event_History_Items[0].text_message, "Unknown Data Call Format: %04X;", (uint16_t)ConvertBitIntoBytes(state->dmr_pdu_sf[0], 16));
+        uint32_t source = state->dmr_lrrp_source[0];
+        uint32_t target = state->dmr_lrrp_target[0];
+        char comp_string[500]; memset (comp_string, 0, sizeof(comp_string));
+        sprintf (comp_string, "DATA CALL SRC: %d; TGT: %d;", source, target);
+        watchdog_event_datacall (opts, state, source, target, comp_string, 0);
       }
     }
     else
     {
       fprintf (stderr, " CRC: %08X / %08X;", crc_ext, crc_chk);
       fprintf (stderr, " (CRC ERR) ");
+
+      //dump to event history as generic data call with no decode, if still encrypted, yielding bad CRC32
+      if (state->payload_algid != 0)
+      {
+        sprintf (state->event_history_s[0].Event_History_Items[0].text_message, "Encrypted PDU; Cipher: %d; KID: %02X;", state->payload_algid, state->payload_keyid);
+        uint32_t source = state->dmr_lrrp_source[0];
+        uint32_t target = state->dmr_lrrp_target[0];
+        char comp_string[500]; memset (comp_string, 0, sizeof(comp_string));
+        sprintf (comp_string, "DATA CALL SRC: %d; TGT: %d;", source, target);
+        watchdog_event_datacall (opts, state, source, target, comp_string, 0);
+      }
     }
 
     //clear storage

@@ -521,6 +521,12 @@ void decode_ip_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t * 
       lip_protocol_decoder(opts, state, bits);
     }
     //known P25 Ports
+    else if (port1 == 9361 && port2 == 9361)
+    {
+      sprintf (state->dmr_lrrp_gps[slot], "P25 Atlas SRC(IP): %d.%d.%d.%d; DST(IP): %d.%d.%d.%d; ",
+               input[12], input[13], input[14], input[15], input[16], input[17], input[18], input[19]);
+      fprintf (stderr, "Atlas Data Registration Server;"); //EF Johnson Atlas
+    }
     else if (port1 == 49198 && port2 == 49198)
     {
       sprintf (state->dmr_lrrp_gps[slot], "P25 Tier 2 LOCN SRC(IP): %d.%d.%d.%d; DST(IP): %d.%d.%d.%d; ",

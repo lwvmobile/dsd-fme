@@ -1628,6 +1628,31 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 
 		}
 
+		//Extended Function Command - Abbreviated (Generic non MFID variant)
+		if (MAC[1+len_a] == 0x64)
+		{
+
+			uint8_t class = MAC[2+len_a];
+			uint8_t operand = MAC[3+len_a];
+			uint32_t argument = (MAC[4+len_a] << 16) | (MAC[5+len_a] << 8) | MAC[6+len_a];
+			uint32_t target = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
+			fprintf (stderr, "\n Extended Function Command: Class: %02X; Operand: %02X; Arg/Src: %06X; Target: %d; ", class, operand, argument, target);
+			//WIP: Further Decode
+			if (class == 0)
+			{
+				if 			((operand & 0x7F) == 0x00) fprintf (stderr, "Radio Check; ");
+				else if ((operand & 0x7F) == 0x7D) fprintf (stderr, "Radio Detach; ");
+				else if ((operand & 0x7F) == 0x7E) fprintf (stderr, "Radio Uninhibit; ");
+				else if ((operand & 0x7F) == 0x7F) fprintf (stderr, "Radio Inhibit; ");
+				else 											fprintf (stderr, "Reserved; ");
+
+				//MSB is an ack of the above command
+				if ((operand >> 7) == 1)  fprintf (stderr, "Ack; ");
+			}
+			else fprintf (stderr, "Other Command; ");
+
+		}
+
 		//MFID90 Group Regroup Add Command
 		if (MAC[1+len_a] == 0x81 && MAC[2+len_a] == 0x90)
 		{

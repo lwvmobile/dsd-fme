@@ -724,12 +724,10 @@ void decode_ars(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
 void nxdn_gps_report(dsd_opts * opts, dsd_state * state, uint8_t * input, uint32_t src)
 {
 
-  // Basic fields
-  // uint8_t quality    = (uint8_t)convert_bits_into_output(input+8, 4);   //can't seem to work these first two out correctly
-  // uint8_t num_sat    = (uint8_t)convert_bits_into_output(input+12, 4); //can't seem to work these first two out correctly
+  //Elevation
   int16_t elevation  = (int16_t)convert_bits_into_output(input+56, 16);
 
-  // Speed & Heading (in tenths)
+  //Speed & Heading (in tenths)
   uint16_t speed_raw   = (uint16_t)convert_bits_into_output(input+74, 14);
   uint16_t heading_raw = (uint16_t)convert_bits_into_output(input+92, 12);
   double speed   = speed_raw   / 10.0; //knots or k/h
@@ -740,7 +738,7 @@ void nxdn_gps_report(dsd_opts * opts, dsd_state * state, uint8_t * input, uint32
   uint8_t  month = (uint8_t) convert_bits_into_output(input+143,4);
   uint8_t  day   = (uint8_t)(convert_bits_into_output(input+147,5) + 1);
 
-  // Longitude (DDMM.mmmm format)
+  //Longitude (DDMM.mmmm format)
   uint16_t lon_degmin = (uint16_t)convert_bits_into_output(input+152, 16);
   uint16_t lon_frac   = (uint16_t)convert_bits_into_output(input+16, 15);
   uint8_t  lon_hem    = (uint8_t) convert_bits_into_output(input+183, 1);
@@ -748,7 +746,7 @@ void nxdn_gps_report(dsd_opts * opts, dsd_state * state, uint8_t * input, uint32
   double lon_decimal = (lon_degmin / 100) + (lon_minutes / 60.0);
   double longitude = (lon_hem == 0) ? lon_decimal : -lon_decimal;
 
-  // Latitude (DDMM.mmmm format)
+  //Latitude (DDMM.mmmm format)
   uint16_t lat_degmin = (uint16_t)convert_bits_into_output(input+184,16);
   uint16_t lat_frac   = (uint16_t)convert_bits_into_output(input+200,15);
   uint8_t  lat_hem    = (uint8_t) convert_bits_into_output(input+215,1);
@@ -757,9 +755,8 @@ void nxdn_gps_report(dsd_opts * opts, dsd_state * state, uint8_t * input, uint32
   double latitude = (lat_hem == 0) ? lat_decimal : -lat_decimal;
 
   //Time
-  // uint8_t hour   = (uint8_t) convert_bits_into_output(input+247,5);
-  // uint8_t minute = (uint8_t) convert_bits_into_output(input+252,6);
-  // uint8_t second = (uint8_t) convert_bits_into_output(input+258,6); //this seems to be zero, recheck time
+  uint8_t hour   = (uint8_t) convert_bits_into_output(input+247,5);
+  uint8_t minute = (uint8_t) convert_bits_into_output(input+252,6);
 
   char deg_glyph[4];
   sprintf (deg_glyph, "%s", "°");
@@ -769,12 +766,19 @@ void nxdn_gps_report(dsd_opts * opts, dsd_state * state, uint8_t * input, uint32
   fprintf (stderr, "Speed: %lf k/h; ", speed);
   fprintf (stderr, "COG: %lf; ", heading);
   fprintf (stderr, "Elevation: %i; ", elevation);
-  // fprintf (stderr, "Quality: %d / %d; ", quality, num_sat);
   fprintf (stderr, "Date: %04d/%02d/%02d ", year, month, day);
-  // fprintf (stderr, "Time: %02d:%02d:%02d ", hour, minute, second);
+  fprintf (stderr, "Time: %02d:%02d ", hour, minute);
+
+  //dump to event history
+  sprintf (state->event_history_s[0].Event_History_Items[0].gps_s, "(%f%s, %f%s)", latitude, deg_glyph, longitude, deg_glyph);
+  uint32_t source = state->dmr_lrrp_source[0];
+  uint32_t target = state->dmr_lrrp_target[0];
+  char comp_string[500]; memset (comp_string, 0, sizeof(comp_string));
+  sprintf (comp_string, "GPS SRC: %d; TGT: %d;", source, target);
+  watchdog_event_datacall (opts, state, source, target, comp_string, 0);
 
   //save to LRRP report for mapping/logging
-  if (opts->lrrp_file_output == 1 && src != 0) //&& quality?
+  if (opts->lrrp_file_output == 1 && src != 0)
   {
 
     char * datestr = getDateS();

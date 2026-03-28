@@ -489,9 +489,51 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       {
         fprintf (stderr, "\n");
         fprintf (stderr, "%s",KYEL);
-        fprintf (stderr, " MFID 90 (Moto) Acknoledge Response: ");
+        fprintf (stderr, " MFID 90 (Moto) Acknowledge Response: ");
         for (i = 2; i < 10; i++)
           fprintf (stderr, "%02X", tsbk_byte[i]);
+      }
+
+      else if ( (tsbk_byte[0] & 0x3F) == 0x09 )
+      {
+        fprintf (stderr, "\n");
+        fprintf (stderr, " MFID 90 (Moto) Scan Marker: ");
+        for (i = 2; i < 10; i++)
+          fprintf (stderr, "%02X", tsbk_byte[i]);
+      }
+
+      else if ( (tsbk_byte[0] & 0x3F) == 0x0B )
+      {
+
+        uint16_t channel = (tsbk_byte[8] << 8) | tsbk_byte[9];
+        fprintf (stderr, "\n");
+        fprintf (stderr, " MFID 90 (Moto) ID Channel: %04X;", channel);
+        char sid_string[10];
+        memset(sid_string, 0, sizeof(sid_string));
+        int k = 0;
+
+        if (tsbk_byte[2] != 0)
+        {
+          fprintf (stderr, " Station ID: ");
+          uint8_t sid_bits[42];
+          memset(sid_bits, 0, sizeof(sid_bits));
+          unpack_byte_array_into_bit_array(tsbk_byte+2, sid_bits, 6);
+          for (i = 0; i < 42; i+=6)
+          {
+            uint8_t bsi_char = convert_bits_into_output(sid_bits+i, 6) + 43;
+            if (bsi_char > 0x1F && bsi_char < 0x7F)
+            {
+              fprintf (stderr, "%c", bsi_char);
+              sid_string[k++] = bsi_char;
+            }
+            else break;
+          }
+        }
+
+        //debug, may assign this string to something else later on
+        // fprintf (stderr, " - Str: %s;", sid_string);
+
+        process_channel_to_freq(opts, state, channel);
       }
 
 
@@ -501,22 +543,6 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       // {
       //   fprintf (stderr, "\n");
       //   fprintf (stderr, " MFID 90 (Moto) Traffic Channel: "); //not sure about this one, don't understand what it means when its on a control channel (activity? but never seems to change even while call grants in progress)
-      //   for (i = 2; i < 10; i++)
-      //     fprintf (stderr, "%02X", tsbk_byte[i]);
-      // }
-
-      // else if ( (tsbk_byte[0] & 0x3F) == 0x09 )
-      // {
-      //   fprintf (stderr, "\n");
-      //   fprintf (stderr, " MFID 90 (Moto) Channel Loading: "); //don't understand the context for this one, waiting on units to arrive on channel?
-      //   for (i = 2; i < 10; i++)
-      //     fprintf (stderr, "%02X", tsbk_byte[i]);
-      // }
-
-      // else if ( (tsbk_byte[0] & 0x3F) == 0x0B )
-      // {
-      //   fprintf (stderr, "\n");
-      //   fprintf (stderr, " MFID 90 (Moto) Control Channel: "); //this appears to echo the 16-bit channel number for the main control channel/RFSS
       //   for (i = 2; i < 10; i++)
       //     fprintf (stderr, "%02X", tsbk_byte[i]);
       // }
@@ -533,14 +559,6 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
       // {
       //   fprintf (stderr, "\n");
       //   fprintf (stderr, " MFID 90 (Moto) Something: "); //observed, but no idea
-      //   for (i = 2; i < 10; i++)
-      //     fprintf (stderr, "%02X", tsbk_byte[i]);
-      // }
-
-      // else if ( (tsbk_byte[0] & 0x3F) == 0x15 ) //noted on RR, but not observed as of yet, this may actualy be a LCW and not a TSBK?
-      // {
-      //   fprintf (stderr, "\n");
-      //   fprintf (stderr, " MFID 90 (Moto) Talker Alias: ");
       //   for (i = 2; i < 10; i++)
       //     fprintf (stderr, "%02X", tsbk_byte[i]);
       // }
