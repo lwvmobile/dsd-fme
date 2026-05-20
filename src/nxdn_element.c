@@ -1648,7 +1648,7 @@ void NXDN_decode_VCALL(dsd_opts * opts, dsd_state * state, uint8_t * Message)
   if (opts->p25_trunk == 1 && opts->trunk_tune_enc_calls == 0 && MessageType == 0x1 && state->dmr_encL == 1)
   {
     int i, lo = 0;
-    uint16_t t = 0; char gm[8]; char gn[50];
+    uint16_t t = 0; char gm[3]; char gn[100];
 
     //check to see if this group already exists, or has already been locked out, or is allowed
     for (i = 0; i <= state->group_tally; i++)

@@ -173,8 +173,8 @@ typedef struct pa_devicelist
 typedef struct
 {
   unsigned long int groupNumber;
-  char groupMode[8]; //char *?
-  char groupName[50];
+  char groupMode[3];
+  char groupName[100];
 } groupinfo;
 
 
@@ -871,7 +871,7 @@ typedef struct
   //trunking group and lcn freq list
   long int trunk_lcn_freq[26]; //max number on an EDACS system, should be enough on DMR too hopefully
   long int trunk_chan_map[0xFFFF]; //NXDN - 10 bit; P25 - 16 bit; DMR up to 12 bit (standard TIII)
-  groupinfo group_array[0x3FF]; //max supported by Cygwin is 3FFF, I hope nobody actually tries to import this many groups
+  groupinfo * group_array;
   unsigned int group_tally; //tally number of groups imported from CSV file for referencing later
   int lcn_freq_count;
   int lcn_freq_roll; //number we have 'rolled' to in search of the CC

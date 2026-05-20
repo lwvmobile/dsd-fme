@@ -7,26 +7,31 @@ int csvGroupImport(dsd_opts * opts, dsd_state * state)
 {
   char filename[1024] = "filename.csv";
   sprintf (filename, "%s", opts->group_in_file);
-  //filename[1023] = '\0'; //necessary?
+
   char buffer[BSIZE];
   FILE * fp;
   fp = fopen(filename, "r");
-  if (fp == NULL) {
+
+  if (fp == NULL)
+  {
     printf("Unable to open group file '%s'\n", filename);
     exit(1);
   }
+
   int row_count = 0;
   int field_count = 0;
-  long int group_number = 0; //local group number for array index value
-  UNUSED(group_number);
-  int i = 0;
-  while (fgets(buffer, BSIZE, fp)) {
+
+  unsigned int i = 0;
+  while (fgets(buffer, BSIZE, fp))
+  {
+
     field_count = 0;
     row_count++;
     if (row_count == 1)
       continue; //don't want labels
     char * field = strtok(buffer, ","); //seperate by comma
-    while (field) {
+    while (field)
+    {
 
       if (field_count == 0)
       {
@@ -34,23 +39,38 @@ int csvGroupImport(dsd_opts * opts, dsd_state * state)
         state->group_array[i].groupNumber = atol(field);
         fprintf (stderr, "%ld, ", state->group_array[i].groupNumber);
       }
-      if (field_count == 1)
+      else if (field_count == 1)
       {
-        strcpy(state->group_array[i].groupMode, field);
+        // strcpy(state->group_array[i].groupMode, field);
+        strncpy(state->group_array[i].groupMode, field, 2); //only copy two letters max A, B, D, DE
         fprintf (stderr, "%s, ", state->group_array[i].groupMode);
       }
-      if (field_count == 2)
+      else if (field_count == 2)
       {
-        strcpy(state->group_array[i].groupName, field);
+        // strcpy(state->group_array[i].groupName, field);
+        strncpy(state->group_array[i].groupName, field, 98); //this should also fix potential issues observed in past when there is no comma after the name
+
+        uint16_t len = strlen((const char*)state->group_array[i].groupName);
+
+        //remove any potential linebreaks at this point
+        if (state->group_array[i].groupName[len-1] == '\n')
+        {
+          // fprintf(stderr, " ** LEN: %d; ** ", len); //debug
+          state->group_array[i].groupName[len-1] = '\0';
+        }
+
         fprintf (stderr, "%s ", state->group_array[i].groupName);
       }
 
       field = strtok(NULL, ",");
       field_count++;
     }
+
     fprintf (stderr, "\n");
+
     i++;
     state->group_tally++;
+
   }
   fclose(fp);
   return 0;

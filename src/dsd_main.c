@@ -1187,7 +1187,9 @@
    //trunking
    memset (state->trunk_lcn_freq, 0, sizeof(state->trunk_lcn_freq));
    memset (state->trunk_chan_map, 0, sizeof(state->trunk_chan_map));
-   state->group_tally = 0;
+   //allocate max 24-bit address w/ memory with zero fill (termination) for end of strings, import will only copy 98, leaving the terminator intact
+   state->group_array = calloc(16778000, sizeof(groupinfo));
+   state->group_tally = 0; //is an unsigned int
    state->lcn_freq_count = 0; //number of frequncies imported as an enumerated lcn list
    state->lcn_freq_roll = 0; //needs reset if sync is found?
    state->last_cc_sync_time = time(NULL);
