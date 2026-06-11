@@ -2194,6 +2194,8 @@ void agsm (dsd_opts * opts, dsd_state * state, short * input, int len)
 
   state->aout_gainA = coeff; //store for internal use
 
+  UNUSED(avg);
+
 }
 
 //until analog agc is fixed, going to use a manual gain control on this

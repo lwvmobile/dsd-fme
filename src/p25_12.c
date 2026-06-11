@@ -57,7 +57,7 @@ int count_bits(uint8_t b, int slen)
 int p25_12(uint8_t * input, uint8_t treturn[12])
 {
   int i, t;
-  int total_err = 0;
+  int total_err = 0; UNUSED(total_err);
 
   uint8_t deinterleaved_dibits[98];
   memset(deinterleaved_dibits, 0, sizeof(deinterleaved_dibits));

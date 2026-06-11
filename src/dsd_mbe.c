@@ -535,7 +535,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
 				state->bit_counterL = 0;
 
 				//unpack the octets into a bit-wise keystream
-				unpack_byte_array_into_bit_array(state->ks_octetL+8, state->ks_bitstreamL, 15*8);
+				unpack_byte_array_into_bit_array(state->ks_octetL+16, state->ks_bitstreamL, 14*16);
 
 				//reset flag to 0
 				state->nxdn_new_iv = 0;
@@ -546,7 +546,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
       if (state->bit_counterL > (1568-49))
         state->bit_counterL = (1568-49);
 
-      //Keystream creation is currently inside of the NXDN_decode_VCALL_IV function
+      //Keystream Application (no +7 discard like DMRA)
       for (i = 0; i < 49; i++)
         ambe_d[i] ^= state->ks_bitstreamL[state->bit_counterL++];
 

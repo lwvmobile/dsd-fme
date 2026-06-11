@@ -1345,6 +1345,18 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         state->lastsynctype = 10;
       }
 
+      if (strncmp ("NXDN", str_buffer, 4) == 0)
+      {
+        //set AMBE+2 protocol here
+        protocol = 3;
+
+        //disable dmra (+7 on ks_idx)
+        is_dmra = 0;
+
+        state->synctype = 28;
+        state->lastsynctype = 28;
+      }
+
       //open .imb or .amb file, if desired, but only after setting a synctype
       if (state->synctype != -1)
       {
@@ -1352,6 +1364,57 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         if ((opts->mbe_out_dir[0] != 0) && (opts->mbe_out_f == NULL))
           openMbeOutFile (opts, state);
       }
+
+    }
+
+    if (strncmp ("tag", str_buffer, 3) == 0)
+    {
+
+      str_buffer = strtok(NULL, "\n"); //copies to End of Line
+
+      //debug
+      // fprintf (stderr, " TAG: %s", str_buffer);
+
+      //NOTE: Nothing coded for SDRTrunk MBE files provides information regarding
+      //possible FACCH1 steals on voice frames, so keystrem index position here can
+      //become unsynced on some voice frames if trunking or other does FACCH1 steals
+      //when the system is really busy, or radio drops out. Writing code to read ahead
+      //would still not tell us if the FACCH1 steal was in vocoder socket 1 or 2
+
+      //NOTE: Above may become even more noticeable on DES or AES as those keystreams
+      //are generated for two voice superframes, and the decryption may become unsynced
+      //until the next VCALL_IV is read in from the MBE file.
+
+      //Check NXDN tag value, set the ks_idx to proper position
+      //by looking for SACCH_1, SACCH_2, SACCH_3, or SACCH_4 for scrambler
+      if (alg_id == 1 && protocol == 3)
+      {
+        if (strncmp ("SACCH 1", str_buffer+4, 7) == 0)
+        {
+          ks_idx = 0;
+          if (opts->payload == 1)
+            fprintf (stderr, "\n PF 1/4");
+        }
+        else if (strncmp ("SACCH 2", str_buffer+4, 7) == 0)
+        {
+          ks_idx = 49*4;
+          if (opts->payload == 1)
+            fprintf (stderr, "\n PF 2/4");
+        }
+        else if (strncmp ("SACCH 3", str_buffer+4, 7) == 0)
+        {
+          ks_idx = 49*8;
+          if (opts->payload == 1)
+            fprintf (stderr, "\n PF 3/4");
+        }
+        else if (strncmp ("SACCH 4", str_buffer+4, 7) == 0)
+        {
+          ks_idx = 49*12;
+          if (opts->payload == 1)
+            fprintf (stderr, "\n PF 4/4");
+        }
+      }
+
 
     }
 
@@ -1387,6 +1450,29 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       alg_id = 0;
       key_id = 0;
       iv_hex = 0;
+
+      //NXDN Forced Scrambler
+      if (is_enc == 1 && state->forced_alg_id == 1 && protocol == 3)
+      {
+
+        alg_id = state->forced_alg_id;
+
+        //TEST: Key Load Forced Scrambler Key by TGT or SRC value?
+        if (state->forced_alg_id == 1 && state->keyloader == 1)
+        {
+          if (state->rkey_array[target] != 0)
+            state->R = target;
+          else if (state->rkey_array[source] != 0)
+            state->R = source;
+        }
+
+        if (alg_id == 1 && state->R != 0)
+        {
+          pdu_scrambler_keystream_creation(ks, state->R, 16*49);
+          ks_available = 1;
+        }
+        //DES and AES still require the IV for KS creation
+      }
 
       //debug set value
       // fprintf (stderr, " ENC: %d;", is_enc);
@@ -1522,6 +1608,23 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       str_buffer = strtok(NULL, " : \""); //next value after any : "" string
 
       key_id = strtol (str_buffer, NULL, 10);
+
+      //NXDN Scrambler Setup
+      if (alg_id == 1 && protocol == 3)
+      {
+
+        state->payload_keyid = key_id;
+
+        //Scrambler Key Loading
+        if (state->keyloader == 1)
+          keyring(opts, state);
+
+        if (state->R != 0)
+        {
+          pdu_scrambler_keystream_creation(ks, state->R, 16*49);
+          ks_available = 1;
+        }
+      }
 
       //debug set value
       if (opts->payload == 1)
@@ -1708,6 +1811,29 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
       }
 
+      //WIP: Add handling for NXDN DES and AES256
+      //NOTE: This hinges on where SDRTrunk places the IV for the call, 
+      //ideally needs to be after the SACCH4 voice frames
+      else if (protocol == 3 && alg_id == 2 && state->R != 0)
+      {
+        //double check discards (seems same as in dsd_mbe)
+        des_multi_keystream_output(iv_hex, state->R, ks_bytes, 1, 32);
+
+        unpack_byte_array_into_bit_array(ks_bytes+8, ks, 256-8);
+
+        ambe2_counter = 0;
+        ks_idx = 0;
+
+        ks_available = 1;
+      }
+      else if (protocol == 3 && alg_id == 3 && state->aes_key_loaded[0] == 1)
+      {
+        //TODO: All of This
+
+        // ambe2_counter = 0;
+        // ks_idx = 0;
+      }
+
       //Pull request: https://github.com/DSheirer/sdrtrunk/pull/2273
       //Merged into SDRTrunk nightly so should be able to handle this better now
 
@@ -1776,7 +1902,7 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         //   fprintf (stderr, " Enc Play;");
 
       }
-      else if (protocol == 2) //P25p2 AMBE
+      else if (protocol == 2) //P25p2 or DMR AMBE+2
       {
         //debug print current str_buffer
         // fprintf (stderr, "\n AMBE HEX: %s", str_buffer);
@@ -1800,6 +1926,37 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
           ks_idx = 0;
         } 
 
+      }
+
+      else if (protocol == 3) //NXDN AMBE+2 (EHR)
+      {
+        //debug print current str_buffer
+        // fprintf (stderr, "\n AMBE HEX: %s", str_buffer);
+
+        //18 hex characters on 'hex' which is the AMBE interleaved C codewords
+        ks_idx = ambe2_str_to_decode(opts, state, str_buffer, ks, ks_idx, is_dmra, is_enc, ks_available);
+
+        //debug
+        // if (is_enc == 1 && ks_available == 0)
+        //   fprintf (stderr, " Enc Mute;");
+        // else if (is_enc == 1 && ks_available == 1)
+        //   fprintf (stderr, " Enc Play;");
+
+        //increment AMBE+2 counter
+        ambe2_counter++;
+
+        //Really actually need the Structure Field (PF values here)
+        //reset if over for NXDN 16 AMBE+2 frames for Scrambler
+        if (alg_id == 1 && ambe2_counter == 16)
+        {
+          ambe2_counter = 0;
+          ks_idx = 0;
+        }
+        else if (alg_id > 1 && ambe2_counter == 32)
+        {
+          ambe2_counter = 0;
+          ks_idx = 0;
+        }
       }
     }
 

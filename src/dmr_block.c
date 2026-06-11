@@ -293,8 +293,19 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
     //Confirmed or Unconfirmed Data Packets Header
     if (dpf == 2 || dpf == 3)
     {
-      if (dpf == 2) fprintf (stderr, "\n  SAP %02d [%s] - FMF %d - BLOCKS %02d - PAD %02d - FSN %d", sap, sap_string, f, bf, poc, fsn);
-      if (dpf == 3) fprintf (stderr, "\n  SAP %02d [%s] - FMF %d - BLOCKS %02d - PAD %02d - S %d - NS %d - FSN %d", sap, sap_string, f, bf, poc, s, ns, fsn);
+
+      uint8_t fsn_number = (fsn & 7) + 1;
+
+      char fsn_string[50];
+      memset(fsn_string, 0, sizeof(fsn_string));
+
+      if (fsn == 0)         sprintf(fsn_string, "%s", "Unconfirmed data single fragment");
+      else if (fsn == 8)    sprintf(fsn_string, "%s", "Confirmed data single fragment");
+      else if (fsn >= 9)    sprintf(fsn_string, "%s", "Last confirmed data fragment with number");
+      else                  sprintf(fsn_string, "%s", "Subsequent confirmed data fragment with number");
+
+      if (dpf == 2) fprintf (stderr, "\n  SAP %02d [%s] - FMF %d - BLOCKS %02d - PAD %02d - FSN: [%X] - %s %d; ", sap, sap_string, f, bf, poc, fsn, fsn_string, fsn_number);
+      if (dpf == 3) fprintf (stderr, "\n  SAP %02d [%s] - FMF %d - BLOCKS %02d - PAD %02d - S %d - NS %d - FSN: [%X] - %s %d; ", sap, sap_string, f, bf, poc, s, ns, fsn, fsn_string, fsn_number);
       state->data_header_blocks[slot] = bf;
       if (dpf == 3) state->data_conf_data[slot] = 1; //set confirmed data delivery flag for additional CRC checks, block assembly, etc.
 

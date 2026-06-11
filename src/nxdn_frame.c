@@ -111,7 +111,7 @@ void nxdn_frame (dsd_opts * opts, dsd_state * state)
 
 	//debug look at the "off bits" of the encoded lich, should be all 1's (8)
 	//disble this code if sync issues arise, this may not be ideal of marginal signal
-	uint8_t lich_off_hex = 0;
+	uint8_t lich_off_hex = 0; UNUSED(lich_off_hex);
 	for (int i=0; i<8; i++)
 		lich_off_hex += lich_bits[(i*2)+1];
 	#ifdef NXDN_LICH_OFFBITS

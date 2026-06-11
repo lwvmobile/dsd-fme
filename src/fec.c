@@ -1479,7 +1479,7 @@ bool QR_16_7_6_decode(unsigned char *rxBits)
     unsigned int syndromeI = 0; // syndrome index
     int is = 0;
     int i = 0;
-    int corrections = 0;
+    int corrections = 0; UNUSED(corrections);
     for (is = 0; is < 9; is++)
     {
         syndromeI += (((rxBits[0]  * QR_16_7_6_m_H[16*is + 0])
