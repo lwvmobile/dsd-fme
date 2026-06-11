@@ -538,6 +538,15 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       tait_iso7_embedded_alias_decode(opts, state, 0, 8, LCW_bits);
     }
 
+    //observed alongside Tait Talker Alias ID: 10T
+    else if (lc_mfid == 0xD8 && lc_format == 0x01)
+    {
+      uint32_t wacn = (uint32_t)ConvertBitIntoBytes(&LCW_bits[16], 20);
+      uint32_t sys = (uint32_t)ConvertBitIntoBytes(&LCW_bits[36], 12);
+      uint32_t rid = (uint32_t)ConvertBitIntoBytes(&LCW_bits[48], 24);
+      fprintf (stderr, " MFIDD8 (Tait) Subscriber FQ-SUID: %05X.%03X.%d", wacn, sys, rid);
+    }
+
     //not a duplicate, this one will print if not MFID 0 or 1
     else
     {
