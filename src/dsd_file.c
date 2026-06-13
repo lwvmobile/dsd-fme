@@ -502,7 +502,7 @@ SNDFILE * close_wav_file(SNDFILE * wav_file)
   return wav_file;
 }
 
-SNDFILE * close_and_rename_wav_file(SNDFILE * wav_file, char * wav_out_filename, char * dir, Event_History_I * event_struct)
+SNDFILE * close_and_rename_wav_file(SNDFILE * wav_file, char * wav_out_filename, char * dir, char * custom_tag, Event_History_I * event_struct)
 {
   sf_close(wav_file);
 
@@ -538,11 +538,46 @@ SNDFILE * close_and_rename_wav_file(SNDFILE * wav_file, char * wav_out_filename,
   char new_filename[2000];
   memset (new_filename, 0, sizeof(new_filename));
 
+  //parse any possible custom tags or aliasing (up to 3)
+  char custom_string_temp[100];
+  memset(custom_string_temp, 0, sizeof(custom_string_temp));
+  memcpy(custom_string_temp, custom_tag, sizeof(custom_string_temp));
+  char * token = strtok(custom_string_temp, ":");
+  char tag[3][25];
+  memset(tag, 0, sizeof(tag));
+  sprintf(tag[0], "%s", "");
+  sprintf(tag[1], "%s", "");
+  sprintf(tag[2], "%s", "");
+
+  for (int i = 0; i < 3; i++)
+  {
+
+    if (token != NULL)
+    {
+      tag[i][0] = '_';
+      strncpy(tag[i]+1, token, 23);
+      tag[i][24] = '\0';
+      token = strtok(NULL, ":");
+
+      //look for _TGT_, convert to strings
+      if (strncmp("_TGT_", tag[i], 5) == 0)
+      {
+        sprintf (tgt_str, "%s", tag[i]+5);
+        sprintf (src_str, "%d", source_id);
+        is_string = 1;
+        memset(tag[i], 0, sizeof(tag[i]));
+        sprintf(tag[i], "%s", "");
+      }
+
+    }
+    else break;
+  }
+
   //check for String based TGT and SRC values (M17, YSF, DSTAR)
   if (is_string == 1)
-    sprintf (new_filename, "%s/%s_%s_%05d_%s_%s_TGT_%s_SRC_%s.wav", dir, datestr, timestr, random_number, sys_str, gi_str, tgt_str, src_str);
+    sprintf (new_filename, "%s/%s_%s_%05d_%s_%s%s%s%s_TGT_%s_SRC_%s.wav", dir, datestr, timestr, random_number, sys_str, gi_str, tag[0], tag[1], tag[2], tgt_str, src_str);
   else //is a numerical value
-    sprintf (new_filename, "%s/%s_%s_%05d_%s_%s_TGT_%d_SRC_%d.wav", dir, datestr, timestr, random_number, sys_str, gi_str, target_id, source_id);
+    sprintf (new_filename, "%s/%s_%s_%05d_%s_%s%s%s%s_TGT_%d_SRC_%d.wav", dir, datestr, timestr, random_number, sys_str, gi_str, tag[0], tag[1], tag[2], target_id, source_id);
 
   if (timestr != NULL)
   {

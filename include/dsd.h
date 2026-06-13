@@ -324,6 +324,7 @@ typedef struct
   char wav_out_file[1024];
   char wav_out_fileR[1024];
   char wav_out_file_raw[1024];
+  char wav_custom_tag[100];
   char symbol_out_file[1024];
   char lrrp_out_file[1024];
   char event_out_file[1024];
@@ -1185,7 +1186,7 @@ void openWavOutFileLR (dsd_opts * opts, dsd_state * state); //stereo wav file fo
 void openWavOutFileRaw (dsd_opts * opts, dsd_state * state);
 SNDFILE * open_wav_file (char * dir, char * temp_filename, uint16_t sample_rate, uint8_t ext);
 SNDFILE * close_wav_file(SNDFILE * wav_file);
-SNDFILE * close_and_rename_wav_file(SNDFILE * wav_file, char * wav_out_filename, char * dir, Event_History_I * event_struct);
+SNDFILE * close_and_rename_wav_file(SNDFILE * wav_file, char * wav_out_filename, char * dir, char * custom_tag, Event_History_I * event_struct);
 SNDFILE * close_and_delete_wav_file(SNDFILE * wav_file, char * wav_out_filename);
 void openSymbolOutFile (dsd_opts * opts, dsd_state * state);
 void closeSymbolOutFile (dsd_opts * opts, dsd_state * state);

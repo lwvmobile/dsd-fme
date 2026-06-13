@@ -218,13 +218,13 @@ void watchdog_event_history (dsd_opts * opts, dsd_state * state, uint8_t slot)
 
       if (slot == 0 && opts->wav_out_f != NULL)
       {
-        opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, event_struct);
+        opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, opts->wav_custom_tag, event_struct);
         opts->wav_out_f = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 8000, 0);
       }
         
       else if (slot == 1 && opts->wav_out_fR != NULL)
       {
-        opts->wav_out_fR = close_and_rename_wav_file(opts->wav_out_fR, opts->wav_out_fileR, opts->wav_out_dir, event_struct);
+        opts->wav_out_fR = close_and_rename_wav_file(opts->wav_out_fR, opts->wav_out_fileR, opts->wav_out_dir, opts->wav_custom_tag, event_struct);
         opts->wav_out_fR = open_wav_file(opts->wav_out_dir, opts->wav_out_fileR, 8000, 0);
       }
 

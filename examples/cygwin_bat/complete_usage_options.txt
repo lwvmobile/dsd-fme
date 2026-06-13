@@ -1,4 +1,4 @@
-Build Version: AW 2026-1-g99f4228 
+Build Version: AW 2026-29-ge6d2dd7 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -50,6 +50,8 @@ Input/Output options:
   -w <file>     Output synthesized speech to a single static .wav file. (Do not use with -P Per Call Switch)
   -P            Enable Per Call WAV file saving. (Do not use with -w filename.wav single wav file switch)
                  (Per Call works with everything now and doesn't require ncurses terminal!)
+  -j <string>   Custom Tag(s), colon delimted, to append to Per Call decoded .wav files.
+                 -j TGT_LAPD:TAG_FIRE:FREQ_851987500 (Total 3 Tags, Maximum Letter Length = 100)
   -a            Enable Call Alert Beep
                  (Warning! Might be annoying.)
   -J <file>     Specify Filename for Event Log Output.
@@ -222,4 +224,3 @@ Advanced Decoder options:
 
  Trunking Example TCP: dsd-fme -fs -i tcp -U 4532 -T -C dmr_t3_chan.csv -G group.csv -N 2> log.txt
  Trunking Example RTL: dsd-fme -fs -i rtl:0:450M:26:-2:8 -T -C connect_plus_chan.csv -G group.csv -N 2> log.txt
-

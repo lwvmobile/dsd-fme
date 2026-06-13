@@ -1098,7 +1098,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               if (is_digital == 1) {} //just write to already open temp file to be renamed later
               else //close the temp 8k wav file and open as 48k
               {
-                opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+                opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, opts->wav_custom_tag, &state->event_history_s[0]);
                 opts->wav_out_f = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 48000, 0);
               }
             }
@@ -1214,7 +1214,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               if (is_digital == 1) {} //just write to already open temp file to be renamed later
               else //close the temp 8k wav file and open as 48k
               {
-                opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+                opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, opts->wav_custom_tag, &state->event_history_s[0]);
                 opts->wav_out_f = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 48000, 0);
               }
             }
@@ -1321,7 +1321,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               if (is_digital == 1) {} //just write to already open temp file to be renamed later
               else //close the temp 8k wav file and open as 48k
               {
-                opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+                opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, opts->wav_custom_tag, &state->event_history_s[0]);
                 opts->wav_out_f = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 48000, 0);
               }
             }
@@ -1501,7 +1501,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
               if (is_digital == 1) {} //just write to already open temp file to be renamed later
               else //close the temp 8k wav file and open as 48k
               {
-                opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+                opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, opts->wav_custom_tag, &state->event_history_s[0]);
                 opts->wav_out_f = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 48000, 0);
               }
             }
@@ -1757,7 +1757,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
                 if (is_digital == 1) {} //just write to already open temp file to be renamed later
                 else //close the temp 8k wav file and open as 48k
                 {
-                  opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+                  opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, opts->wav_custom_tag, &state->event_history_s[0]);
                   opts->wav_out_f = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 48000, 0);
                 }
               }
@@ -1870,7 +1870,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
                 if (is_digital == 1) {} //just write to already open temp file to be renamed later
                 else //close the temp 8k wav file and open as 48k
                 {
-                  opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+                  opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, opts->wav_custom_tag, &state->event_history_s[0]);
                   opts->wav_out_f = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 48000, 0);
                 }
               }
@@ -2166,7 +2166,7 @@ void edacs(dsd_opts * opts, dsd_state * state)
                   if (is_digital == 1) {} //just write to already open temp file to be renamed later
                   else //close the temp 8k wav file and open as 48k
                   {
-                    opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+                    opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, opts->wav_custom_tag, &state->event_history_s[0]);
                     opts->wav_out_f = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 48000, 0);
                   }
                 }
@@ -2312,7 +2312,7 @@ void eot_cc(dsd_opts * opts, dsd_state * state)
   if (opts->dmr_stereo_wav == 1)
   {
     if (opts->wav_out_f != NULL)
-      opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
+      opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, opts->wav_custom_tag, &state->event_history_s[0]);
     opts->wav_out_f  = open_wav_file(opts->wav_out_dir, opts->wav_out_file, 8000, 0);
   }
 

@@ -694,8 +694,8 @@ void ncursesMenu (dsd_opts * opts, dsd_state * state)
         if (choicec == 12)
         {
           //TODO: Add Closing of RAW files as well?
-          opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, &state->event_history_s[0]);
-          opts->wav_out_fR = close_and_rename_wav_file(opts->wav_out_fR, opts->wav_out_fileR, opts->wav_out_dir, &state->event_history_s[1]);
+          opts->wav_out_f = close_and_rename_wav_file(opts->wav_out_f, opts->wav_out_file, opts->wav_out_dir, opts->wav_custom_tag, &state->event_history_s[0]);
+          opts->wav_out_fR = close_and_rename_wav_file(opts->wav_out_fR, opts->wav_out_fileR, opts->wav_out_dir, opts->wav_custom_tag, &state->event_history_s[1]);
           opts->wav_out_file[0] = 0; //Bugfix for decoded wav file display after disabling
           opts->wav_out_fileR[0] = 0;
           opts->dmr_stereo_wav = 0;
