@@ -1437,7 +1437,7 @@
    printf ("  -w <file>     Output synthesized speech to a single static .wav file. (Do not use with -P Per Call Switch)\n");
    printf ("  -P            Enable Per Call WAV file saving. (Do not use with -w filename.wav single wav file switch)\n");
    printf ("                 (Per Call works with everything now and doesn't require ncurses terminal!)\n");
-   printf ("  -j <string>   Custom Tag(s), colon delimted, to append to Per Call decoded .wav files.\n");
+   printf ("  -j <string>   Custom Tag(s), colon delimited, to append to Per Call decoded .wav files.\n");
    printf ("                 -j TGT_LAPD:TAG_FIRE:FREQ_851987500 (Total 3 Tags, Maximum Letter Length = 100)\n");
    printf ("  -a            Enable Call Alert Beep\n");
    printf ("                 (Warning! Might be annoying.)\n");
@@ -1925,6 +1925,7 @@
          case 'j': //custom wav tags appended to per-call wav files
            strncpy(opts.wav_custom_tag, optarg, 99);
            opts.wav_custom_tag[99] = '\0';
+           fprintf(stderr, "Appending Tags %s to per-call wav files. \n", opts.wav_custom_tag);
            break;
  
          //this is a debug option hidden from users, but use it to replay .bin files on loop

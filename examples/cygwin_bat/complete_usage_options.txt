@@ -1,4 +1,4 @@
-Build Version: AW 2026-29-ge6d2dd7 
+Build Version: AW 2026-30-g43d63b2 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -50,7 +50,7 @@ Input/Output options:
   -w <file>     Output synthesized speech to a single static .wav file. (Do not use with -P Per Call Switch)
   -P            Enable Per Call WAV file saving. (Do not use with -w filename.wav single wav file switch)
                  (Per Call works with everything now and doesn't require ncurses terminal!)
-  -j <string>   Custom Tag(s), colon delimted, to append to Per Call decoded .wav files.
+  -j <string>   Custom Tag(s), colon delimited, to append to Per Call decoded .wav files.
                  -j TGT_LAPD:TAG_FIRE:FREQ_851987500 (Total 3 Tags, Maximum Letter Length = 100)
   -a            Enable Call Alert Beep
                  (Warning! Might be annoying.)
