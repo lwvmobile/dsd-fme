@@ -270,13 +270,12 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
       {
         strcat (rsp_string, "NACK - ");
         if (r_type == 0) strcat (rsp_string, "Illegal Format");
-        if (r_type == 1) strcat (rsp_string, "Illegal Format");
-        if (r_type == 2) strcat (rsp_string, "Packet CRC ERR");
-        if (r_type == 3) strcat (rsp_string, "Memory Full");
-        if (r_type == 4) strcat (rsp_string, "FSN Out of Seq");
-        if (r_type == 5) strcat (rsp_string, "Undeliverable");
-        if (r_type == 6) strcat (rsp_string, "PKT Out of Seq");
-        if (r_type == 7) strcat (rsp_string, "Invalid User");
+        if (r_type == 1) strcat (rsp_string, "Packet CRC ERR");
+        if (r_type == 2) strcat (rsp_string, "Memory Full");
+        if (r_type == 3) strcat (rsp_string, "FSN Out of Seq");
+        if (r_type == 4) strcat (rsp_string, "Undeliverable");
+        if (r_type == 5) strcat (rsp_string, "PKT Out of Seq");
+        if (r_type == 6) strcat (rsp_string, "Invalid User");
       }
       if (r_class == 2) strcat (rsp_string, "SACK - Retry");
       // if (r_status) strcat (rsp_string, " - %d", r_status);
