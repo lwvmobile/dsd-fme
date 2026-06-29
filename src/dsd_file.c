@@ -1492,13 +1492,13 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
         alg_id = state->forced_alg_id;
 
-        //TEST: Key Load Forced Scrambler Key by TGT or SRC value?
+        //Key Load Forced Scrambler Key by TGT or SRC value
         if (state->forced_alg_id == 1 && state->keyloader == 1)
         {
           if (state->rkey_array[target] != 0)
-            state->R = target;
+            state->R = state->rkey_array[target];
           else if (state->rkey_array[source] != 0)
-            state->R = source;
+            state->R = state->rkey_array[source];
         }
 
         if (alg_id == 1 && state->R != 0)
@@ -1653,6 +1653,19 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         //Scrambler Key Loading
         if (state->keyloader == 1)
           keyring(opts, state);
+
+        //If Scrambler Key still not available on KID
+        if (state->R == 0)
+        {
+          //Key Load Scrambler Key by TGT or SRC value
+          if (state->forced_alg_id == 1 && state->keyloader == 1)
+          {
+            if (state->rkey_array[target] != 0)
+              state->R = state->rkey_array[target];
+            else if (state->rkey_array[source] != 0)
+              state->R = state->rkey_array[source];
+          }
+        }
 
         if (state->R != 0)
         {
