@@ -1582,10 +1582,6 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       {
         //Hytera BP
       }
-      else if (state->R != 0)
-      {
-        //NXDN Scrambler
-      }
     }
 
     if (strncmp ("to", str_buffer, 2) == 0)
@@ -1862,9 +1858,10 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       //WIP: Add handling for NXDN DES and AES256
       //NOTE: This hinges on where SDRTrunk places the IV for the call, 
       //ideally needs to be after the SACCH4 voice frames
+      //NOTE: This will NOT WORK on Type-D with its 22-bit IV
+      //I doubt anybody will ever test that theory out here either
       else if (protocol == 3 && alg_id == 2 && state->R != 0)
       {
-        //double check discards (seems same as in dsd_mbe)
         des_multi_keystream_output(iv_hex, state->R, ks_bytes, 1, 32);
 
         unpack_byte_array_into_bit_array(ks_bytes+8, ks, 256-8);
@@ -1876,10 +1873,30 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
       }
       else if (protocol == 3 && alg_id == 3 && state->aes_key_loaded[0] == 1)
       {
-        //TODO: All of This
 
-        // ambe2_counter = 0;
-        // ks_idx = 0;
+        uint8_t aes_key[32];
+        memset (aes_key, 0, sizeof(aes_key));
+
+        //Load key from A1 - A4
+        for (int i = 0; i < 8; i++)
+        {
+          aes_key[i+0]  = (state->A1[0] >> (56-(i*8))) & 0xFF;
+          aes_key[i+8]  = (state->A2[0] >> (56-(i*8))) & 0xFF;
+          aes_key[i+16] = (state->A3[0] >> (56-(i*8))) & 0xFF;
+          aes_key[i+24] = (state->A4[0] >> (56-(i*8))) & 0xFF;
+        }
+
+        //Generate 128-bit IV for AES
+        LFSR128npdu(state); //npdu variant uses payload_mi here, and loads to aes_ivR
+
+        aes_ofb_keystream_output (state->aes_ivR, aes_key, ks_bytes, 2, 16);
+
+        unpack_byte_array_into_bit_array(ks_bytes+16, ks, 256-16);
+
+        ambe2_counter = 0;
+        ks_idx = 0;
+
+        ks_available = 1;
       }
 
       //Pull request: https://github.com/DSheirer/sdrtrunk/pull/2273
