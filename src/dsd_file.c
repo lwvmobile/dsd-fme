@@ -1038,7 +1038,7 @@ uint16_t ambe2_str_to_decode(dsd_opts * opts, dsd_state * state, char * ambe_str
     //run LFSR evaluate stored codewords for matching IV or replace if not match or not set
     if (ambe2_counter == 17)
     {
-      if (state->payload_mi != 0)
+      if (state->forced_alg_id == 0x21 && state->payload_mi != 0)
       {
         fprintf (stderr, "\n");
         LFSR(state);
@@ -1558,6 +1558,43 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         unpack_byte_array_into_bit_array(ks_bytes, ks, 200);
 
         ks_available = 1;
+
+      }
+
+      else if ((alg_id == 0x24 || alg_id == 0x25) && state->payload_mi != 0)
+      {
+
+        uint8_t ks_bytes[375];
+        memset(ks_bytes, 0, sizeof(ks_bytes));
+
+        uint8_t aes_key[32];
+        memset(aes_key, 0, sizeof(aes_key));
+
+        uint8_t empty[32];
+        memset(empty, 0, sizeof(empty));
+
+        //Load key from A1 - A4
+        for (int i = 0; i < 8; i++)
+        {
+          aes_key[i+0]  = (state->A1[0] >> (56-(i*8))) & 0xFF;
+          aes_key[i+8]  = (state->A2[0] >> (56-(i*8))) & 0xFF;
+          aes_key[i+16] = (state->A3[0] >> (56-(i*8))) & 0xFF;
+          aes_key[i+24] = (state->A4[0] >> (56-(i*8))) & 0xFF;
+        }
+
+        //check to see if a key is actually loaded
+        if (memcmp (aes_key, empty, sizeof(aes_key)) != 0)
+        {
+
+          if (alg_id == 0x24) //128, or 256
+            aes_ofb_keystream_output(state->aes_iv, aes_key, ks_bytes, 0, 16); //16*16=256
+          else aes_ofb_keystream_output(state->aes_iv, aes_key, ks_bytes, 2, 16); //16*16=256
+
+          unpack_byte_array_into_bit_array(ks_bytes+16, ks, 256-16); //unpack starting after discards
+
+          ks_available = 1;
+
+        }
 
       }
 
