@@ -1027,7 +1027,7 @@ uint16_t ambe2_str_to_decode(dsd_opts * opts, dsd_state * state, char * ambe_str
     //force slot to 0
     state->currentslot = 0;
 
-    uint8_t c3_hex = (uint64_t)ConvertBitIntoBytes(c3, 4);
+    uint8_t c3_hex = (uint8_t)ConvertBitIntoBytes(c3, 4);
 
     //debug
     // fprintf (stderr, "\n AMBE#: %02d / %d / %d; F: %X;", ambe2_counter, ambe2_counter/3, ambe2_counter%3, c3_hex);
@@ -1035,17 +1035,6 @@ uint16_t ambe2_str_to_decode(dsd_opts * opts, dsd_state * state, char * ambe_str
     //use div and mod 3 to set current storage fragment
     state->late_entry_mi_fragment[0][(ambe2_counter/3)+1][ambe2_counter%3] = c3_hex;
 
-    //run LFSR evaluate stored codewords for matching IV or replace if not match or not set
-    if (ambe2_counter == 17)
-    {
-      if (state->forced_alg_id == 0x21 && state->payload_mi != 0)
-      {
-        fprintf (stderr, "\n");
-        LFSR(state);
-      }
-      fprintf (stderr, "\n");
-      dmr_late_entry_mi (opts, state);
-    }
   }
 
   char ambe_d[49]; memset(ambe_d, 0, sizeof(ambe_d));
@@ -1598,6 +1587,23 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
       }
 
+      //Forced Application of DMRA DES Mode (untested on .mbe real samples)
+      if (alg_id == 0x22 && state->R != 0 && state->payload_mi != 0)
+      {
+        //expand IV from 32 to 64 (late entry iv should fix this)
+        // if (alg_id == 0x22)
+        //   LFSR64(state);
+
+        uint8_t ks_bytes[375];
+        memset(ks_bytes, 0, sizeof(ks_bytes));
+
+        des_multi_keystream_output(iv_hex, state->R, ks_bytes, 1, 32); //32*8=256
+
+        unpack_byte_array_into_bit_array(ks_bytes+8, ks, 256-8);
+
+        ks_available = 1;
+      }
+
     }
     //TODO: This
     else if (state->forced_alg_id == 1) //Basic Privacy
@@ -1737,7 +1743,11 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
       //debug set value
       if (opts->payload == 1)
-        fprintf (stderr, "\n IV: %016llX;", iv_hex); //not really needed if loaded into array
+      {
+        if (iv_hex > 0xFFFFFFFF)
+          fprintf (stderr, "\n IV: %016llX;", iv_hex);
+        else fprintf (stderr, "\n IV: %08llX;", iv_hex);
+      }
 
       //debug print current str_buffer
       // fprintf (stderr, "\n Encryption MI/IV: %s", str_buffer);
@@ -1789,9 +1799,13 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
       }
 
-      //P25 DES (v1 tested and working on P1, v2 should be okay now)
-      else if (alg_id == 0x81 && state->R != 0)
+      //P25 and DMR DES (v1 tested and working on P1, v2 should be okay now), DMR Untested but should be okay
+      else if ((alg_id == 0x22 || alg_id == 0x81) && state->R != 0)
       {
+
+        //expand IV from 32 to 64
+        if (alg_id == 0x22)
+          LFSR64(state);
 
         des_multi_keystream_output(iv_hex, state->R, ks_bytes, 1, 32); //32*8=256
 
@@ -1829,8 +1843,8 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
 
       }
 
-      //P25 AES (v1 and v2 tested working on P1)
-      else if ( (alg_id == 0x84 || alg_id == 0x89) && state->aes_key_loaded[0] == 1 )
+      //P25 and DMR AES (v1 and v2 tested working on P1), working on DMR
+      else if ( (alg_id == 0x24 || alg_id == 0x25 || alg_id == 0x84 || alg_id == 0x89) && state->aes_key_loaded[0] == 1 )
       {
 
         uint8_t aes_key[32];
@@ -1858,9 +1872,11 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
           aes_last_iv[i] = aes_iv[i];
 
         //Resolve the longer IV from the shorter one
-        lfsr_64_to_128(aes_iv);
+        if (alg_id == 0x24 || alg_id == 0x25)
+          lfsr_32_to_128(aes_iv);
+        else lfsr_64_to_128(aes_iv);
 
-        if (alg_id == 0x89) //128, or 256
+        if (alg_id == 0x89 || alg_id == 0x24) //128, or 256
           aes_ofb_keystream_output(aes_iv, aes_key, ks_bytes, 0, 16); //16*16=256
         else aes_ofb_keystream_output(aes_iv, aes_key, ks_bytes, 2, 16); //16*16=256
 
@@ -2024,6 +2040,15 @@ void read_sdrtrunk_json_format (dsd_opts * opts, dsd_state * state)
         //reset if over for DMR 18 AMBE+2 frames
         if (dmra_le && ambe2_counter == 18)
         {
+          //run LFSR evaluate stored codewords for matching IV or replace if not match or not set
+          if (state->forced_alg_id == 0x21 && state->payload_mi != 0)
+          {
+            fprintf (stderr, "\n");
+            LFSR(state);
+          }
+          fprintf (stderr, "\n");
+          dmr_late_entry_mi (opts, state);
+
           ambe2_counter = 0;
           ks_idx = 0;
         } 

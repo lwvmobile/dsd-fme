@@ -374,6 +374,33 @@ void LFSR64(dsd_state * state)
   }
 }
 
+//if supplied IV is only 32-bit in value, then expand it to a 128-bit IV using these LFSR taps (packed array)
+void lfsr_32_to_128(uint8_t * iv)
+{
+  uint64_t lfsr = 0, bit = 0;
+
+  lfsr = ((uint64_t)iv[0] << 24ULL) + ((uint64_t)iv[1] << 16ULL) + ((uint64_t)iv[2] << 8ULL)  + ((uint64_t)iv[3] << 0ULL);
+
+  uint8_t cnt = 0, x = 32;
+
+  for(cnt = 0;cnt < 96; cnt++) 
+  {
+    //32,22,2,1 (per Xilinx XAPP 052) Table 3: Taps for Maximum-Length LFSR Counters
+    bit = ( (lfsr >> 31) ^ (lfsr >> 21) ^ (lfsr >> 1) ^ (lfsr >> 0) ) & 0x1;
+    lfsr = (lfsr << 1) | bit;
+
+    //continue packing iv
+    iv[x/8] = (iv[x/8] << 1) + bit;
+
+    x++;
+  }
+
+  fprintf (stderr, "\n IV(128): ");
+  for (x = 0; x < 16; x++)
+    fprintf (stderr, "%02X", iv[x]);
+  fprintf (stderr, "\n");
+
+}
 
 //Expand a 32-bit MI into a 128-bit IV for AES
 void LFSR128d(dsd_state * state)
