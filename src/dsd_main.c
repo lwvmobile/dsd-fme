@@ -1571,6 +1571,9 @@
    printf ("                 \n");
    printf ("  -A <hex>      Manually Enter and Enforce Anytone 16-bit BP Key Value (DMR) (Hex Value) \n");
    printf ("                 \n");
+   printf ("  -, <string>   Manually Enter and Enforce Auctus A6 (GoComm) 8 Char Key Value (DMR) (String Value) \n");
+   printf ("                 -,  Secure04\n");
+   printf ("                 \n");
    printf ("  -S <str>      Manually Enter and Enforce Generic Static Keystream -> Length and BYTE PACKED / ALIGNED String for AMBE (up to 882 bits)\n");
    printf ("                  For Example, enter 16-bit Keystream 0909 as:\n");
    printf ("                    -S 16:0909\n");
@@ -1898,7 +1901,7 @@
  
    exitflag = 0;
  
-   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:G:D:L:V:U:YK:b:H:X:M:NQ:WrlZTF@:!:01:2:345:6:^:7:8_:9:Ek:I:J:O+:j:")) != -1)
+   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:G:D:L:V:U:YK:b:H:X:M:NQ:WrlZTF@:!:01:2:345:6:^:7:8_:9:Ek:I:J:O+:j:,:")) != -1)
      {
  
        switch (c)
@@ -2015,6 +2018,11 @@
           //get user Baofeng AP Key and Force Its application
          case '+':
            baofeng_ap_pc5_keystream_creation(&state, optarg);
+           break;
+
+         //Auctus (GoComm) Keystream Creation
+         case ',':
+           auctus_keystream_creation(&state, optarg);
            break;
 
          //Straight KS Generation

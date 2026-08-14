@@ -1648,6 +1648,7 @@ void anytone_bp_keystream_creation(dsd_state * state, char * input);
 void baofeng_ap_pc5_keystream_creation(dsd_state *state, char *input);
 void csi72_ambe2_codeword_keystream(dsd_state * state, char ambe_fr[4][24]);
 void straight_mod_xor_keystream_creation(dsd_state * state, char * input);
+void auctus_keystream_creation(dsd_state * state, char * input);
 
 //Kirisun
 uint32_t kirisun_lfsr(unsigned long long int mi);

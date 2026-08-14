@@ -144,3 +144,104 @@ void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long
   // fprintf (stderr, "\n");
 
 }
+
+void rc_poor_keystream_output(uint8_t * key, uint8_t * ks_bytes)
+{
+  int16_t i, j, x, count;
+  uint8_t t, b;
+
+  //init Sbox
+  uint8_t S[255];
+  for(i = 0; i < 255; i++)
+    S[i] = i;
+
+  //Key Scheduling
+  j = 0;
+  for(i = 0; i < 255; i++)
+  {
+    j = (j + S[i] + key[i % 8]) % 255;
+    t = S[i];
+    S[i] = S[j];
+    S[j] = t;
+  }
+
+  //KS Byte collection
+  i = j = x = 0;
+  for(count = 0; count < 6; count++)
+  {
+    i = (i + 1) % 255;
+    j = (j + S[i]) % 255;
+    t = S[i];
+    S[i] = S[j];
+    S[j] = t;
+    b = (S[i] + S[j]) % 255;
+    ks_bytes[x++] = b;
+  }
+
+}
+
+void auctus_keystream_creation(dsd_state * state, char * input)
+{
+
+  uint8_t key[8];
+  memset (key, 0, sizeof(key));
+
+  uint16_t len = strlen((const char*)input);
+
+  //sanity check on provided char len
+  if (len > 8)
+    len = 8;
+
+  //load chars as uint8_t into key array
+  for (int i = 0; i < len; i++)
+    key[i] = (uint8_t)input[i];
+
+  //debug
+  fprintf (stderr, "Key String: %s; LEN: %d; HEX: ", input, len);
+  for (int i = 0; i < len; i++)
+    fprintf (stderr, "%02X", key[i]);
+  fprintf (stderr, "\n");
+
+  uint8_t ks_bytes[6];
+  memset (ks_bytes, 0, sizeof(ks_bytes));
+
+  rc_poor_keystream_output(key, ks_bytes);
+
+  uint8_t ks_bits[48];
+  memset(ks_bits, 0, sizeof(ks_bits));
+  unpack_byte_array_into_bit_array(ks_bytes, ks_bits, 6);
+
+  //Reorder the bits of the keystream to compensate
+  //for 16-bit words with reversed bit storage
+  for (uint16_t j = 0; j < 3; j++)
+  {
+    uint16_t k = ((j+1)*16) - 1;
+    uint16_t x = j*16;
+    for (uint16_t i = 0; i < 16; i++)
+    {
+      state->static_ks_bits[0][x] = ks_bits[k];
+      state->static_ks_bits[1][x] = ks_bits[k];
+
+      //debug
+      // fprintf (stderr, " K: %02d; ", k);
+      
+      //debug
+      // fprintf (stderr, " X: %02d; ", x);
+
+      k--;
+      x++;
+    }
+  }
+
+  fprintf (stderr,"Auctus Keystream: ");
+  for (uint16_t i = 0; i < 6; i++)
+    fprintf (stderr, "%02X", ks_bytes[i]);
+  fprintf (stderr," - Word Bit Reverse: ");
+  for (uint16_t i = 0; i < 6; i++)
+    fprintf (stderr, "%02X", convert_bits_into_output(state->static_ks_bits[0]+(i*8), 8));
+  fprintf (stderr, " with Forced Application \n");
+
+  state->straight_ks = 1;
+  state->straight_mod = 49;
+
+}
