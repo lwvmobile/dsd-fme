@@ -629,13 +629,21 @@ int nearest_gain(rtlsdr_dev_t *dev, int target_gain)
 
 int verbose_set_frequency(rtlsdr_dev_t *dev, uint32_t frequency)
 {
-	int r;
-	r = rtlsdr_set_center_freq(dev, frequency);
-	if (r < 0) {
-		fprintf (stderr, " (WARNING: Failed to set Center Frequency). \n");
-	} else {
-		fprintf (stderr, " (Center Frequency: %u Hz.) \n", frequency);
+	int r = -1;
+
+  //spam tuning
+	for (int i = 0; i < 20; i++)
+	{
+		r = rtlsdr_set_center_freq(dev, frequency);
+		if (r < 0)
+			fprintf (stderr, " (RETRY: Failed to set Center Frequency %u). \n", dongle.freq);
+		else 
+    {
+      fprintf (stderr, " (Center Frequency: %u Hz.) \n", frequency);
+      break;
+    }
 	}
+
 	return r;
 }
 
@@ -1149,7 +1157,15 @@ int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 	if (opts->rtlsdr_ppm_error != dongle.ppm_error)
 	{
 		dongle.ppm_error = opts->rtlsdr_ppm_error;
-		verbose_ppm_set(dongle.dev, dongle.ppm_error);
+
+		for (int i = 0; i < 20; i++)
+		{
+			int r = -1;
+			r = verbose_ppm_set(dongle.dev, dongle.ppm_error);
+			if (r < 0)
+				fprintf (stderr, " Retry Gain.");
+			else break;
+		}
 	}
 
 	//if Gain or AGC Value is Manually Changed, Change it here now
@@ -1157,7 +1173,15 @@ int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 	{
 		dongle.gain = (opts->rtl_gain_value * 10);
 		opts->rtl_gain_actual = dongle.gain = nearest_gain(dongle.dev, dongle.gain);
-		verbose_gain_set(dongle.dev, dongle.gain);
+
+		for (int i = 0; i < 20; i++)
+		{
+			int r = -1;
+			r = verbose_gain_set(dongle.dev, dongle.gain);
+			if (r < 0)
+				fprintf (stderr, " Retry Gain.");
+			else break;
+		}
 
 		//debug
 		// fprintf (stderr, "\n Dongle Gain Set: %d; \n", dongle.gain);
@@ -1166,7 +1190,15 @@ int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 	else if (opts->rtl_gain_value == 0 && dongle.gain != AUTO_GAIN)
 	{
 		opts->rtl_gain_actual = dongle.gain = AUTO_GAIN;
-		verbose_auto_gain(dongle.dev);
+
+		for (int i = 0; i < 20; i++)
+		{
+			int r = 1;
+			r = verbose_auto_gain(dongle.dev);
+			if (r < 0)
+				fprintf (stderr, " Retry Gain.");
+			else break;
+		}
 
 		//debug
 		// fprintf (stderr, "\n AGC Set; \n");
@@ -1197,16 +1229,23 @@ int get_rtlsdr_sample(int16_t *sample, dsd_opts * opts, dsd_state * state)
 //function may lag since it isn't running as its own thread
 void rtl_dev_tune(dsd_opts * opts, long int frequency)
 {
-	int r;
+
 	if (opts->payload == 1)
 		fprintf (stderr, "\nTuning to %lu Hz.", frequency);
 	dongle.freq = opts->rtlsdr_center_freq = frequency;
-	optimal_settings(dongle.freq, demod.rate_in);
+	optimal_settings(dongle.freq, demod.rate_in); //this too?
 	if (opts->payload == 1)
 		fprintf (stderr, " (Center Frequency: %u Hz.) \n", dongle.freq);
-	r = rtlsdr_set_center_freq(dongle.dev, dongle.freq);
-	if (r < 0)
-		fprintf (stderr, " (WARNING: Failed to set Center Frequency %u). \n", dongle.freq);
+
+	//spam tuning
+	for (int i = 0; i < 20; i++)
+	{
+		int r = -1;
+		r = rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+		if (r < 0)
+			fprintf (stderr, " (RETRY: Failed to set Center Frequency %u). \n", dongle.freq);
+		else break;
+	}
 
 	pthread_rwlock_wrlock(&output.rw); //prevent possible segfault when cleaning the queue
 	rtl_clean_queue();
