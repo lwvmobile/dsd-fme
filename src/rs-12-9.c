@@ -314,3 +314,28 @@ rs_12_9_checksum_t *rs_12_9_calc_checksum(rs_12_9_codeword_t *codeword) {
 	}
 	return &rs_12_9_checksum;
 }
+
+//This will run a RS 12,9 encode on 9 bytes of input
+//input is an array of 12 bytes or more
+void rs_12_9_encode(uint8_t * input)
+{
+  rs_12_9_codeword_t cw;
+  rs_12_9_checksum_t *cs;
+
+  //init cw
+  memset(cw.data, 0, 12*sizeof(uint8_t));
+
+  //init cs
+  memset(cs->bytes, 0, 3*sizeof(uint8_t));
+
+  //Copy 9 bytes of data input
+  memcpy(cw.data, input, 9);
+
+  //Calculate the 3 parity / checksum bytes
+  cs = rs_12_9_calc_checksum(&cw);
+
+  //Build the final 12-byte codeword
+  input[9]  = cs->bytes[0];
+  input[10] = cs->bytes[1];
+  input[11] = cs->bytes[2];
+}

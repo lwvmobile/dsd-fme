@@ -1,4 +1,4 @@
-Build Version: AW 2026-36-g5e5c3c4 
+Build Version: AW 2026-37-g198f0ea 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -62,7 +62,6 @@ Input/Output options:
   -q            Reverse Mute - Mute Unencrypted Voice and Unmute Encrypted Voice
   -V <num>      Enable TDMA Voice Synthesis on Slot 1 (1), Slot 2 (2), or Both (3); Default is 3; 
   -z            Set TDMA Voice Slot Preference when using /dev/dsp audio output (prevent lag and stuttering)
-  -y            Enable Experimental Pulse Audio Float Audio Output
   -v <hex>      Set Filtering Bitmap Options (Advanced Option)
                 1 1 1 1 (0xF): PBF/LPF/HPF/HPFD on
 
@@ -174,6 +173,12 @@ Advanced Decoder options:
   -9 <dec>      Manually Enter and Enforce Kenwood 15-bit Scrambler Key Value (DMR) (Dec Value) 
                  
   -A <hex>      Manually Enter and Enforce Anytone 16-bit BP Key Value (DMR) (Hex Value) 
+                 
+  -$ <string>   Enter RAS Password 6-24 Char Key Value (DMR) (String Value) 
+                 -$  Password123
+                 
+  -y <hex>      Enter RAS 56-bit Effective Key Value (DMR) (14 Hex Value) 
+                 -y  6DF241BC4AE2EC
                  
   -, <string>   Manually Enter and Enforce Auctus A6 (GoComm) 8 Char Key Value (DMR) (String Value) 
                  -,  Secure04

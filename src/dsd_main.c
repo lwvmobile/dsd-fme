@@ -1234,6 +1234,11 @@
    //Remus DMR End Call Alert Beep
    state->dmr_end_alert[0] = 0;
    state->dmr_end_alert[1] = 0;
+
+   //RAS
+   memset (state->ras_permutation_order, 0, sizeof(state->ras_permutation_order));
+   state->ras_effective_key = 0;
+   state->dmr_is_ras = 0;
  
    sprintf (state->dmr_branding, "%s", "");
    sprintf (state->dmr_branding_sub, "%s", "");
@@ -1452,7 +1457,7 @@
    printf ("                If using /dev/dsp input and output at 48k1, launch two instances of DSD-FME w -V 1 and -V 2 if needed\n");
    #endif
    printf ("  -z            Set TDMA Voice Slot Preference when using /dev/dsp audio output (prevent lag and stuttering)\n");
-   printf ("  -y            Enable Experimental Pulse Audio Float Audio Output\n");
+  //  printf ("  -y            Enable Experimental Pulse Audio Float Audio Output\n");
    printf ("  -v <hex>      Set Filtering Bitmap Options (Advanced Option)\n");
    printf ("                1 1 1 1 (0xF): PBF/LPF/HPF/HPFD on\n");
    printf ("\n");
@@ -1570,6 +1575,12 @@
    printf ("  -9 <dec>      Manually Enter and Enforce Kenwood 15-bit Scrambler Key Value (DMR) (Dec Value) \n");
    printf ("                 \n");
    printf ("  -A <hex>      Manually Enter and Enforce Anytone 16-bit BP Key Value (DMR) (Hex Value) \n");
+   printf ("                 \n");
+   printf ("  -$ <string>   Enter RAS Password 6-24 Char Key Value (DMR) (String Value) \n");
+   printf ("                 -$  Password123\n");
+   printf ("                 \n");
+   printf ("  -y <hex>      Enter RAS 56-bit Effective Key Value (DMR) (14 Hex Value) \n");
+   printf ("                 -y  6DF241BC4AE2EC\n");
    printf ("                 \n");
    printf ("  -, <string>   Manually Enter and Enforce Auctus A6 (GoComm) 8 Char Key Value (DMR) (String Value) \n");
    printf ("                 -,  Secure04\n");
@@ -1901,7 +1912,7 @@
  
    exitflag = 0;
  
-   while ((c = getopt (argc, argv, "~yhaepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:G:D:L:V:U:YK:b:H:X:M:NQ:WrlZTF@:!:01:2:345:6:^:7:8_:9:Ek:I:J:O+:j:,:")) != -1)
+   while ((c = getopt (argc, argv, "~haepPqs:t:v:z:i:o:d:c:g:n:w:B:C:R:f:m:u:x:A:S:G:D:L:V:U:YK:b:H:X:M:NQ:WrlZTF@:!:01:2:345:6:^:7:8_:9:Ek:I:J:O+:j:,:$:y:")) != -1)
      {
  
        switch (c)
@@ -2025,6 +2036,19 @@
            auctus_keystream_creation(&state, optarg);
            break;
 
+         //RAS Effective Key Creation
+         case '$':
+           ras_effective_key_creation(&state, optarg);
+           break;
+
+         //RAS Effective Key Direct Set
+         case 'y':
+           sscanf (optarg, "%llX", &state.ras_effective_key);
+           state.ras_effective_key &= 0xFFFFFFFFFFFFFF; //truncate to 56-bits
+           ras_permute_order((state.ras_effective_key & 0xFFFFFFFF), state.ras_permutation_order);
+           fprintf (stderr,"DMR RAS 56-bit Effective Key: %llX\n", state.ras_effective_key);
+           break;
+
          //Straight KS Generation
          case 'S':
            straight_mod_xor_keystream_creation(&state, optarg);
@@ -2035,10 +2059,11 @@
            fprintf (stderr,"DMRA Late Entry Encryption Identifiers Disabled\n");
            break;
  
-         case 'y': //use experimental 'float' audio output
-           opts.floating_point = 1; //enable floating point audio output
-           fprintf (stderr,"Enabling Experimental Floating Point Audio Output\n");
-           break;
+        //float audio experiment not going to be used going forward, very minimal benefit
+        //  case 'y': //use experimental 'float' audio output
+        //    opts.floating_point = 1; //enable floating point audio output
+        //    fprintf (stderr,"Enabling Experimental Floating Point Audio Output\n");
+        //    break;
  
          case 'Y': //conventional scanner mode
            opts.scanner_mode = 1; //enable scanner

@@ -32,6 +32,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   int is_alias = 0;
   int is_gps = 0;
   UNUSED(capsite);
+  int is_ras = 0;
 
   //XPT 'Things'
   int is_xpt = 0;
@@ -117,6 +118,17 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     if (slot == 0) state->dmr_flco = flco;
     else state->dmr_flcoR = flco;
 
+    //debug output for potential RAS indicators on Moto Systems during EMB (0x2X and 0x1X indicators)
+    //TODO: Either leave handling of link control as is, or rework entire file to handle all the exceptions
+    //that have been added to it over the years.
+    if ( (flco & 0x30) && (fid == 0x10) && (type == 3) )
+    {
+      is_ras = 1;
+      UNUSED(is_ras);
+      // flco &= 0xCF; //mask off the RAS bits
+      //NOTE: Mask breaks below check on talker alias on RAS systems WIP: Fixing That
+    }
+
     //FID 0x10 and FLCO 0x14, 0x15, 0x16 and 0x17 confirmed as Moto EMB Alias
     //Can probably assume FID 0x10 FLCO 0x18 is Moto EMB GPS -- to be tested
     if ( fid == 0x10 && (flco == 0x14 || flco == 0x15 || flco == 0x16 || flco == 0x17 || flco == 0x18) )
@@ -126,7 +138,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     }
 
     //Embedded Talker Alias Header Only (format and len storage)
-    if ( (fid == 0 || fid == 0x68) && type == 3 && flco == 0x04)
+    if ((fid == 0 || fid == 0x68) && type == 3 && flco == 0x04)
     {
       is_alias = 1;
       dmr_talker_alias_lc_header(opts, state, slot, lc_bits);
@@ -140,7 +152,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     }
 
     //Embedded GPS
-    if ( (fid == 0 || fid == 0x68) && fid == 0 && type == 3 && flco == 0x08)
+    if ((fid == 0 || fid == 0x68) && type == 3 && flco == 0x08)
     {
       is_gps = 1;
       dmr_embedded_gps(opts, state, lc_bits);
@@ -502,9 +514,9 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
     //0x04 and 0x05 on a TLC seem to indicate a Cap + Private Call Terminator (perhaps one for each MS)
     //0x07 on a VLC seems to indicate a Cap+ Private Call Header
-    //0x23 on the Embedded Voice Burst Sync seems to indicate a Cap+ or Cap+ TXI Private Call in progress
-    //0x20 on the Embedded Voice Burst Sync seems to indicate a Moto (non-specific) Group Call in progress
-    //its possible that both EMB FID 0x10 FLCO 0x20 and 0x23 are just Moto but non-specific (observed 0x20 on Tier 2)
+    //0x23 on the Embedded Voice Burst Sync seems to indicate a Cap+ or Cap+ TXI Private Call in progress (RAS)
+    //0x20 on the Embedded Voice Burst Sync seems to indicate a Moto (non-specific) Group Call in progress (RAS)
+    //its possible that both EMB FID 0x10 FLCO 0x20 and 0x23 are just Moto but non-specific (RAS)
 
     if (fid == 0x68) sprintf (state->call_string[slot], " Hytera  ");
 
@@ -1191,7 +1203,13 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
 
   }
 
-  else if (slco == 0xF)
+  else if (slco == 0xE)
+  {
+    uint32_t update_tgt = (uint32_t)ConvertBitIntoBytes(&slco_bits[4], 24);
+    fprintf (stderr, " SLCO Cap Max Activity Update; TGT: %d;", update_tgt);
+  }
+
+  else if (slco == 0xF) //This opcode has also been observed on Cap Max Payload Channels
   {
     fprintf (stderr, " SLCO Capacity Plus Site: %d - Rest LSN: %d - RS: %02X", capsite, restchannel, cap_reserved);
 

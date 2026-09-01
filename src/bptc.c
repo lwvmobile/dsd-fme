@@ -176,7 +176,7 @@ void BPTCDeInterleaveDMRData(uint8_t * Input, uint8_t * Output)
  *
  * @return The total number of irrecoverable Hamming check errors
  */
-uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DMRDataExtracted[96], uint8_t R[3])
+uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DMRDataExtracted[96], uint8_t R[3], uint8_t * is_ras)
 {
   uint32_t i, j, k;
   uint8_t  DataMatrix[13][15];
@@ -198,24 +198,6 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DM
       k++;
     }
   }
-
-  /* Set to 0 R(0) to R(2) - See DMR standard chapter B1.1 BPTC (196,96) */
-  // DataMatrix[0][0] = 0; /* R(2) */
-  // DataMatrix[0][1] = 0; /* R(1) */
-  // DataMatrix[0][2] = 0; /* R(0) */
-
-  /* Init the Hamming (15,11,3) library
-   * Not needed because it has already been done
-   * in the "InitAllFecFunction()" function */
-  //Hamming_15_11_init();
-
-  /* Init the Hamming (13,9,3) library
-   * Not needed because it has already been done
-   * in the "InitAllFecFunction()" function */
-  //Hamming_13_9_init();
-
-  /* Init the Hamming error counter */
-  HammingIrrecoverableErrorNb = 0;
 
   /* Process the the Hamming (15,11,3) code
    * check on each line (first time).
@@ -268,7 +250,7 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DM
   }
 
   /* The first Hamming code check has maybe corrected bit
-   * witch can be use to correct other bit, so make the
+   * which can be use to correct other bit, so make the
    * same operation twice */
 
   /* Reset the number of irrecoverable errors */
@@ -359,9 +341,20 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DM
    * Restricted Access System (RAS) information,
    * So save these three bits after hamming correction
    * See patent US 2013/0288643 A1 */
-  R[0] = DataMatrix[0][2]; /* Save R(0) */
-  R[1] = DataMatrix[0][1]; /* Save R(1) */
-  R[2] = DataMatrix[0][0]; /* Save R(2) */
+
+  //TODO: Get seperate validity for line 0 and column 0,1,2
+  if (HammingIrrecoverableErrorNb == 0)
+  {
+    R[0] = DataMatrix[0][2]; /* Save R(0) */
+    R[1] = DataMatrix[0][1]; /* Save R(1) */
+    R[2] = DataMatrix[0][0]; /* Save R(2) */
+  }
+  
+  if (R[0] == 0 && R[1] == 0 && R[2] == 1)
+  {
+    *is_ras = 1;
+  }
+  else *is_ras = 0;
 
   /* Return the number of irrecoverable Hamming errors */
   return HammingIrrecoverableErrorNb;
@@ -403,11 +396,6 @@ uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDat
       DataMatrix[i][j] = (InputDataMatrix[i][j] & 1);
     }
   }
-
-  /* Init the Hamming (16,11,4) library
-   * Not needed because it has already been done
-   * in the "InitAllFecFunction()" function */
-  //Hamming_16_11_4_init();
 
   /* Process the the Hamming (16,11,4) code
    * check on each line.
@@ -488,6 +476,15 @@ uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDat
   /* Return the number of irrecoverable Hamming errors +
    * the number of parity check error */
   return (HammingIrrecoverableErrorNb + ParityCheckErrorNb);
+
+  //observation shows some parity check error is okay,
+  //as long as the hamming is completely okay, may be worth it
+  //to only check parity bits on columns
+
+  if (HammingIrrecoverableErrorNb == 0 && ParityCheckErrorNb < 2)
+    return (HammingIrrecoverableErrorNb);
+  else return (HammingIrrecoverableErrorNb + ParityCheckErrorNb);
+
 } /* End BPTC_128x77_Extract_Data() */
 
 

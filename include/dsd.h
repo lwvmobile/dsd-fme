@@ -918,6 +918,12 @@ typedef struct
   //Remus DMR End Call Alert Beep
   int dmr_end_alert[2]; //dmr TLC end call alert beep has already played once flag
 
+  //RAS Key Variables
+  // #define DEBUG_RAS
+  unsigned long long int ras_effective_key;
+  int ras_permutation_order[104];
+  uint8_t dmr_is_ras; //indicate a partial or complete RAS enabled system
+
   //Bitmap Filtering Options
   int audio_smoothing;
 
@@ -1358,11 +1364,13 @@ int32_t GetdPmrColorCode(uint8_t ChannelCodeBit[24]);
 
 //BPTC (Block Product Turbo Code) functions
 void BPTCDeInterleaveDMRData(uint8_t * Input, uint8_t * Output);
-uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DMRDataExtracted[96], uint8_t R[3]);
+uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DMRDataExtracted[96], uint8_t R[3], uint8_t * is_ras);
 uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDataExtracted[77]);
 uint32_t BPTC_16x2_Extract_Data(uint8_t InputInterleavedData[32], uint8_t DMRDataExtracted[32], uint32_t ParityCheckTypeOdd);
 
-//Reed Solomon (12,9) functions
+//Reed Solomon DMR functions
+void rs_16_13_encode(uint8_t * input);
+void rs_12_9_encode(uint8_t * input);
 void rs_12_9_calc_syndrome(rs_12_9_codeword_t *codeword, rs_12_9_poly_t *syndrome);
 uint8_t rs_12_9_check_syndrome(rs_12_9_poly_t *syndrome);
 rs_12_9_correct_errors_result_t rs_12_9_correct_errors(rs_12_9_codeword_t *codeword, rs_12_9_poly_t *syndrome, uint8_t *errors_found);
@@ -1659,6 +1667,11 @@ void kirisun_uni_keystream_creation(dsd_state *state);
 void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value);
 unsigned long long int hytera_lfsr(uint8_t * mi, uint8_t * taps, uint8_t len);
 void hytera_enhanced_alg_refresh(dsd_state * state);
+
+//RAS
+uint32_t ras_mac_calculator(dsd_state * state, uint8_t * input, int input_len, int type);
+void ras_effective_key_creation(dsd_state * state, char * input);
+void ras_permute_order(uint32_t seed, int * order);
 
 //LFSR to expand either a DMR 32-bit or P25/NXDN 64-bit MI into a 128-bit IV for AES
 void lfsr_32_to_128(uint8_t * iv);

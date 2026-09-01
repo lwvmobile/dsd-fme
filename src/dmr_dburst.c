@@ -6,7 +6,7 @@
  * Source: https://github.com/LouisErigHerve/dsd/blob/master/src/dmr_sync.c
  *
  * LWVMOBILE
- * 2023-12 DSD-FME Florida Man Edition
+ * 2026-09 DSD-FME Florida Man Edition
  *-----------------------------------------------------------------------------*/
 
 //TODO: Test USBD LIP Decoder with Real World Samples (if/when available)
@@ -51,14 +51,14 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
   //PDU Bytes and Bits
   uint8_t  DMR_PDU[25];
-  uint8_t  DMR_PDU_bits[196];
+  uint8_t  DMR_PDU_bits[200];
   memset (DMR_PDU, 0, sizeof (DMR_PDU));
   memset (DMR_PDU_bits, 0, sizeof (DMR_PDU_bits));
 
-  uint8_t  R[3];
-  uint8_t  BPTCReservedBits = 0;
-  uint8_t  is_ras = 0;
-  uint8_t  crc_original_validity = 0;
+  uint8_t is_ras = 0;
+  uint8_t bptc_res_bits[3];
+  memset (bptc_res_bits, 0, sizeof(bptc_res_bits));
+  uint8_t crc_original_validity = 0;
 
   uint32_t crcmask = 0;
   uint8_t  crclen = 0;
@@ -246,28 +246,27 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     BPTCDeInterleaveDMRData(info, BPTCDeInteleavedData);
 
     /* Extract the BPTC 196,96 DMR data */
-    IrrecoverableErrors = BPTC_196x96_Extract_Data(BPTCDeInteleavedData, BPTCDmrDataBit, R);
+    IrrecoverableErrors = BPTC_196x96_Extract_Data(BPTCDeInteleavedData, BPTCDmrDataBit, bptc_res_bits, &is_ras);
 
-    /* Fill the reserved bit (R(0)-R(2) of the BPTC(196,96) block) */
-    BPTCReservedBits = (R[0] & 0x01) | ((R[1] << 1) & 0x02) | ((R[2] << 2) & 0x04);
-
+    #ifdef DEBUG_RAS
     //debug print
-    //fprintf (stderr, " RAS? %X - %d %d %d", BPTCReservedBits, R[0], R[1], R[2]);
+    if (bptc_res_bits[0] != 0 || bptc_res_bits[1] != 0 || bptc_res_bits[2] != 0)
+      fprintf (stderr, " BPTC R BITS: %d %d %d", bptc_res_bits[0], bptc_res_bits[1], bptc_res_bits[2]);
+    #endif
 
     /* Convert the 96 bits BPTC data into 12 bytes */
-    k = 0;
-    for(i = 0; i < 12; i++)
-    {
-      BPTCDmrDataByte[i] = 0;
-      for(j = 0; j < 8; j++)
-      {
-        BPTCDmrDataByte[i] = BPTCDmrDataByte[i] << 1;
-        BPTCDmrDataByte[i] = BPTCDmrDataByte[i] | (BPTCDmrDataBit[k] & 0x01);
-        k++;
-      }
-    }
+    pack_bit_array_into_byte_array(BPTCDmrDataBit, BPTCDmrDataByte, 12);
 
-    /* Fill the CRC extracted (before Reed-Solomon (12,9) FEC correction) */
+    //make sure the system type isn't Hytera, but could just be bad decodes on bad sample
+    if (IrrecoverableErrors == 0 && BPTCDmrDataByte[1] == 0x68) is_ras = 0;
+
+    //make sure if this is link control, the FID is set to 0x10
+    if (IrrecoverableErrors == 0 && is_lc && BPTCDmrDataByte[1] != 0x10) is_ras = 0;
+
+    //make sure if this is a PI header, the FID is set to 0x10
+    if (IrrecoverableErrors == 0 && databurst == 0x00 && BPTCDmrDataByte[1] != 0x10) is_ras = 0;
+
+    /* Fill the CRC extracted */
     CRCExtracted = 0;
     for(i = 0; i < crclen; i++)
     {
@@ -279,7 +278,20 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     CRCExtracted = CRCExtracted ^ crcmask;
 
     /* Check/correct the BPTC data and compute the Reed-Solomon (12,9) CRC */
-    if (is_lc) CRCCorrect = ComputeAndCorrectFullLinkControlCrc(BPTCDmrDataByte, &CRCComputed, crcmask);
+    if (is_lc)
+    {
+      if (is_ras)
+      {
+        CRCComputed = ras_mac_calculator(state, BPTCDmrDataByte, 9, 1);
+        if (CRCComputed == CRCExtracted)
+          CRCCorrect = 1;
+
+        #ifdef DEBUG_RAS
+        fprintf (stderr, " EXT: %06X; MAC: %06X;", CRCExtracted, CRCComputed);
+        #endif
+      }
+      else CRCCorrect = ComputeAndCorrectFullLinkControlCrc(BPTCDmrDataByte, &CRCComputed, crcmask);
+    }
 
     //set CRC to correct on unconfirmed 1/2 data blocks (for reporting due to no CRC available on these)
     else if (state->data_conf_data[slot] == 0 && databurst == 0x7)
@@ -315,20 +327,23 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     //run CCITT on other data forms
     else
     {
-      CRCComputed = ComputeCrcCCITT(BPTCDmrDataBit);
+      if (is_ras == 1)
+      {
+        CRCComputed = ras_mac_calculator(state, BPTCDmrDataByte, 10, 0);
+
+        #ifdef DEBUG_RAS
+        fprintf (stderr, " EXT: %04X; MAC: %04X;", CRCExtracted, CRCComputed);
+        #endif
+      }
+      else CRCComputed = ComputeCrcCCITT(BPTCDmrDataBit);
+
       if (CRCComputed == CRCExtracted) CRCCorrect = 1;
       else CRCCorrect = 0;
     }
 
-    //set the 'RAS Flag', if no irrecoverable errors but bad crc, only when enabled by user (to prevent a lot of bad data CSBKs)
-    if (opts->aggressive_framesync == 0 && CRCCorrect == 0 && IrrecoverableErrors == 0 && BPTCReservedBits == 4) is_ras = 1;
-
-    //make sure the system type isn't Hytera, but could just be bad decodes on bad sample
-    if (BPTCDmrDataByte[1] == 0x68) is_ras = 0;
-
     //if this is a RAS system, set the CRC to okay if irrecoverable errors are okay
     //if we don't do this, then we can't view some data (CSBKs on RAS enabled systems)
-    if (is_ras == 1)
+    if (is_ras == 1 && state->ras_effective_key == 0)
     {
       crc_original_validity = CRCCorrect;
       CRCCorrect = 1;
@@ -344,17 +359,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     }
 
     /* Convert corrected x bytes into x*8 bits */
-    for(i = 0, j = 0; i < pdu_len; i++, j+=8)
-    {
-      BPTCDmrDataBit[j + 0] = (BPTCDmrDataByte[i+pdu_start] >> 7) & 0x01;
-      BPTCDmrDataBit[j + 1] = (BPTCDmrDataByte[i+pdu_start] >> 6) & 0x01;
-      BPTCDmrDataBit[j + 2] = (BPTCDmrDataByte[i+pdu_start] >> 5) & 0x01;
-      BPTCDmrDataBit[j + 3] = (BPTCDmrDataByte[i+pdu_start] >> 4) & 0x01;
-      BPTCDmrDataBit[j + 4] = (BPTCDmrDataByte[i+pdu_start] >> 3) & 0x01;
-      BPTCDmrDataBit[j + 5] = (BPTCDmrDataByte[i+pdu_start] >> 2) & 0x01;
-      BPTCDmrDataBit[j + 6] = (BPTCDmrDataByte[i+pdu_start] >> 1) & 0x01;
-      BPTCDmrDataBit[j + 7] = (BPTCDmrDataByte[i+pdu_start] >> 0) & 0x01;
-    }
+    unpack_byte_array_into_bit_array(BPTCDmrDataByte, BPTCDmrDataBit, pdu_len);
 
     //convert to DMR_PDU and DMR_PDU_bits
     for (i = 0; i < pdu_len; i++)
@@ -406,6 +411,16 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
     /* Compute the 5 bit CRC */
     CRCComputed = ComputeCrc5Bit(LC_DataBit);
+
+    //read ahead first two bytes, look for 1X10 or 2X10 pattern
+    uint16_t ras_test = (uint16_t)(ConvertBitIntoBytes(&LC_DataBit[0], 16) & 0x30FF);
+    if ((IrrecoverableErrors == 0) && (ras_test == 0x2010 || ras_test == 0x1010))
+    {
+      is_ras = 1;
+      if (state->ras_effective_key != 0)
+        CRCComputed = ras_mac_calculator(state, LC_DataBit, 9, 2);
+    }
+    else is_ras = 0;
 
     if(CRCExtracted == CRCComputed) CRCCorrect = 1;
     else CRCCorrect = 0;
@@ -593,19 +608,8 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     else fprintf (stderr, "Reserved %d ", usbd_st);
   }
 
-  //set the original CRCCorrect back to its original value if the RAS flag was tripped
-  if (is_ras == 1) CRCCorrect = crc_original_validity;
-
-  //start printing relevant fec/crc/ras messages, don't print on idle or MBC continuation blocks (handled in dmr_block.c)
-  // if (IrrecoverableErrors == 0 && CRCCorrect == 1 && databurst != 0x09 && databurst != 0x05) fprintf(stderr, "(CRC OK)");
-
-  // if (IrrecoverableErrors == 0 && CRCCorrect == 0 && databurst != 0x09 && databurst != 0x05)
-  // {
-  //   fprintf (stderr, "%s", KYEL);
-  //   fprintf(stderr, " (FEC OK)");
-  //   fprintf (stderr, "%s", KNRM);
-
-  // }
+  //set the original CRCCorrect back to its original value if the RAS flag was tripped (if no key value present)
+  if (is_ras == 1 && state->ras_effective_key == 0) CRCCorrect = crc_original_validity;
 
   if (IrrecoverableErrors != 0 && databurst != 0x08 && databurst != 0x09) //&& databurst != 0x05
   {
@@ -614,15 +618,24 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     fprintf (stderr, "%s", KNRM);
   }
 
-  //print whether or not the 'RAS Field' bits are set to indicate RAS enabled (to be verified)
-  if (is_ras == 1)
+  //print whether or not the 'RAS Field' bit is set to indicate RAS 
+  //detected for RAS enabled burst types and disposition if key available
+  if (IrrecoverableErrors == 0 && is_ras == 1 && (is_bptc || is_emb) && databurst != 0x05 && databurst != 0x07)
   {
     fprintf (stderr, "%s", KRED);
-    fprintf (stderr, " -RAS ");
-    //the value of this field seems to always, or usually, be 4, or just R[2] bit is set
-    if (opts->payload == 1) fprintf (stderr, "%X ", BPTCReservedBits);
+    fprintf (stderr, " {RAS ");
+    if (state->ras_effective_key != 0 && CRCComputed != CRCExtracted)
+      fprintf (stderr, "Fail} ");
+    else if (state->ras_effective_key != 0 && CRCComputed == CRCExtracted)
+      fprintf (stderr, "Okay} ");
+    else if (state->ras_effective_key == 0)
+      fprintf (stderr, "Skip} ");
     fprintf (stderr, "%s", KNRM);
   }
+
+  //might flicker the terminal on partially enabled systems, may need to find a better placement
+  if (IrrecoverableErrors == 0 && (is_bptc || is_emb) && databurst != 0x05 && databurst != 0x07)
+    state->dmr_is_ras = is_ras;
 
   if (IrrecoverableErrors == 0 && CRCCorrect == 0 && is_ras == 0 && databurst != 0x09 && databurst != 0x05)
   {
@@ -639,8 +652,23 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     fprintf (stderr, " DMR PDU Payload ");
     for (i = 0; i < pdu_len; i++)
     {
+      #ifdef DEBUG_RAS
+      fprintf (stderr, "%02X", DMR_PDU[i]);
+      #else
       fprintf (stderr, "[%02X]", DMR_PDU[i]);
+      #endif
     }
+
+    //RAS 5-bit - always same differential
+    //calculation should be 5-bit portion of RAS Effective Key's Last byte & 0x1F
+    //5-bit + CRCComputed % 31 = CRCExtracted
+    #ifdef DEBUG_RAS
+    if (opts->payload == 1 && is_emb && is_ras && CRCExtracted != CRCComputed && state->ras_effective_key == 0)
+    {
+      int32_t diff = ((int32_t)CRCExtracted - (int32_t)CRCComputed + 31) % 31;
+      fprintf (stderr, " CRC CMP: %02X EXT: %02X DIFF: %02X", CRCComputed, CRCExtracted, diff);
+    }
+    #endif
 
     //debug print
     // if (dbsn) fprintf (stderr, " SN %X", dbsn);

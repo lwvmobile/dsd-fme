@@ -921,10 +921,16 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         printw ("Freq: %.06lf MHz", (double)state->p25_cc_freq/1000000);
       }
 
+      if (state->dmr_is_ras == 1)
+        printw ("{RAS}");
+
     }
     else if (lls == 32 || lls == 33 || lls == 34)
     {
       printw ("DMR MS - DCC: %02i; ", state->dmr_color_code);
+
+      if (state->dmr_is_ras == 1)
+        printw ("{RAS}");
     }
     else if (lls == 0 || lls == 1) //P1
     {
