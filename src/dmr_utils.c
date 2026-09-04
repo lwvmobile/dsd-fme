@@ -438,3 +438,43 @@ uint32_t ComputeCrc32Bit(uint8_t * DMRData, uint32_t NbData)
   /* Return the CRC */
   return CRC;
 } /* End ComputeCrc32Bit() */
+
+uint32_t ComputeCrc32BitV(uint8_t * DMRData, uint32_t NbData)
+{
+  uint32_t i;
+  uint32_t CRC = 0x00000000; /* Initialization value = 0x00000000 */
+  /* Polynomial x^32 + x^26 + x^23 + x^22 + x^16 + x^12 + x^11 + x^10 + x^8 + x^7 + x^5 + x^4 + x^2 + x + 1
+   * Normal     = 0x04C11DB7
+   * Reversed   = 0xEDB88320
+   * Reciprocal = 0xDB710641
+   * Reversed reciprocal = 0x82608EDB */
+  uint32_t Polynome = 0x04C11DB7;
+  for(i = 0; i < NbData; i++)
+  {
+    if(((CRC >> 31) & 1) ^ (DMRData[i] & 1))
+    {
+      CRC = (CRC << 1) ^ Polynome;
+    }
+    else
+    {
+      CRC <<= 1;
+    }
+  }
+
+  //Alternate Return Configuration for Vertex 
+  //Encrypted PDUs that have already been reordered once before
+  //CRC32 CMP: 1622377A EXT: 377A1622
+  uint32_t a, b, c, d;
+  a = b = c = d = 0;
+
+  a = ((CRC >> 0)  & 0xFF) << 16;
+  b = ((CRC >> 8)  & 0xFF) << 24;
+  c = ((CRC >> 16) & 0xFF) <<  0;
+  d = ((CRC >> 24) & 0xFF) <<  8;
+
+  CRC = a + b + c + d;
+
+  /* Return the CRC */
+  return CRC;
+} /* End ComputeCrc32BitV() */
+

@@ -599,7 +599,14 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         }
         if (state->rkey_array[hash] != 0)
         {
+          #ifdef VERTEX_KEY40_BY_TG
+          state->vtx40_key = state->rkey_array[hash] & 0xFFFFFFFFFF;
+          vertex_40_keystream_creation(state, state->vtx40_key);
+          #elif VERTEX_KEY256_BY_TG
+          //TODO: This
+          #else
           state->K = state->rkey_array[hash] & 0xFF; //doesn't exceed 255
+          #endif
           state->K1 = state->H = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
           opts->dmr_mute_encL = 0;
           // fprintf (stderr, "Key: %X ", state->rkey_array[hash]);
@@ -617,6 +624,20 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           x = ( ((k << j) & 0x800000000000) >> 47 );
           ambe_d[j] ^= x;
         }
+      }
+
+      if ( (state->vtx_key_loaded != 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x10) ||
+           (state->vtx_key_loaded != 0 && state->forced_alg_id == 1) )
+      {
+        if (memcmp(ambe_d, ambe_silence, 49) != 0)
+        {
+          for (int i = 0; i < 49; i++)
+          {
+            if (i < 8 || i > 11)
+              ambe_d[i] ^= (char)state->static_ks_bits[0][i];
+          }
+        }
+        opts->dmr_mute_encL = 0; //shim to unmute
       }
 
       if ( (state->K1 > 0 && state->dmr_so & 0x40 && state->payload_keyid == 0 && state->dmr_fid == 0x68) ||
@@ -1066,7 +1087,14 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         }
         if (state->rkey_array[hash] != 0)
         {
+          #ifdef VERTEX_KEY40_BY_TG
+          state->vtx40_key = state->rkey_array[hash] & 0xFFFFFFFFFF;
+          vertex_40_keystream_creation(state, state->vtx40_key);
+          #elif VERTEX_KEY256_BY_TG
+          //TODO: This
+          #else
           state->K = state->rkey_array[hash] & 0xFF; //doesn't exceed 255
+          #endif
           state->K1 = state->H = state->rkey_array[hash] & 0xFFFFFFFFFF; //doesn't exceed 40-bit limit
           opts->dmr_mute_encR = 0;
           // fprintf (stderr, "Key: %X ", state->rkey_array[hash]);
@@ -1084,6 +1112,20 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           x = ( ((k << j) & 0x800000000000) >> 47 );
           ambe_d[j] ^= x;
         }
+      }
+
+      if ( (state->vtx_key_loaded != 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x10) ||
+           (state->vtx_key_loaded != 0 && state->forced_alg_id == 1) )
+      {
+        if (memcmp(ambe_d, ambe_silence, 49) != 0)
+        {
+          for (int i = 0; i < 49; i++)
+          {
+            if (i < 8 || i > 11)
+              ambe_d[i] ^= (char)state->static_ks_bits[1][i];
+          }
+        }
+        opts->dmr_mute_encR = 0; //shim to unmute
       }
 
       if ( (state->K1 > 0 && state->dmr_soR & 0x40 && state->payload_keyidR == 0 && state->dmr_fidR == 0x68) ||

@@ -39,6 +39,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "dsd.h"
+#include "bp.h"
 
 #define AES_BLOCKLEN 16
 unsigned Nb = 4;
@@ -507,6 +508,57 @@ void AES_CTR_xcrypt_buffer(struct AES_ctx* ctx, uint8_t* buf, size_t length)
 
     buf[i] = (buf[i] ^ buffer[bi]);
   }
+
+}
+
+//Vertex Standard "AES" Encryption - convert AES key into a round key at 256 Nb,Nk,Nr values
+//then select entries from the BP table to invert and convert to a keystream
+void vertex_256_keystream_creation(dsd_state * state, char * key_string)
+{
+
+  Nb = 4;
+  Nk = 8;
+  Nr = 14;
+
+  uint8_t key[32];
+  memset (key, 0, sizeof(key));
+
+  parse_raw_user_string(key_string, key);
+
+  struct AES_ctx ctx;
+  KeyExpansion(ctx.RoundKey, key);
+
+  uint64_t vtx_key = 0;
+
+  //use the bytes from rc4 output to select 4 BP key 16-bit words
+  for (int i = 224; i < 228; i++)
+  {
+    vtx_key <<= 16;
+    vtx_key |= BPK[ctx.RoundKey[i]];
+  }
+
+  //invert value
+  vtx_key = ~vtx_key;
+
+  fprintf (stderr,"Vertex Round Key Bytes: ");
+  for (uint16_t i = 224; i < 228; i++)
+    fprintf (stderr, "%02X ", ctx.RoundKey[i]);
+  fprintf (stderr, "Vertex Keystream: %016llX;", (unsigned long long int)vtx_key);
+  fprintf (stderr, "\n");
+
+  uint8_t vtx_bytes[8];
+  memset (vtx_bytes, 0, sizeof(vtx_bytes));
+
+  for (int i = 0; i < 8; i++)
+    vtx_bytes[i] = (vtx_key >> (56-(i*8))) & 0xFF;
+
+  unpack_byte_array_into_bit_array(vtx_bytes, state->static_ks_bits[0], 8);
+  unpack_byte_array_into_bit_array(vtx_bytes, state->static_ks_bits[1], 8);
+
+  //hex representation of the effective keystream value
+  state->vtx256_ekey = convert_bits_into_output(state->static_ks_bits[0], 64);
+
+  state->vtx_key_loaded = 1;
 
 }
 

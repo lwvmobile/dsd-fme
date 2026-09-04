@@ -649,6 +649,14 @@ typedef struct
   //xl specific, we need to know if the ESS is from HDU, or from LDU2
   int xl_is_hdu;
 
+  //Vertex Standard Keys
+  // #define VERTEX_KEY40_BY_TG
+  // #define VERTEX_KEY256_BY_TG
+  char vtx256_key[64];
+  unsigned long long int vtx40_key;
+  unsigned long long int vtx256_ekey;
+  uint8_t vtx_key_loaded;
+
   unsigned int debug_audio_errors;
   unsigned int debug_audio_errorsR;
   unsigned int debug_header_errors;
@@ -1383,6 +1391,7 @@ uint32_t ComputeAndCorrectFullLinkControlCrc(uint8_t * FullLinkControlDataBytes,
 uint8_t ComputeCrc5Bit(uint8_t * DMRData);
 uint16_t ComputeCrc9Bit(uint8_t * DMRData, uint32_t NbData);
 uint32_t ComputeCrc32Bit(uint8_t * DMRData, uint32_t NbData);
+uint32_t ComputeCrc32BitV(uint8_t * DMRData, uint32_t NbData);
 
 //new simplified dmr functions
 void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t databurst);
@@ -1646,7 +1655,7 @@ void aes_cfb_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * in, 
 void aes_ctr_bytewise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payload, int type);
 void aes_ctr_bitwise_payload_crypt (uint8_t * iv, uint8_t * key, uint8_t * payload, int type);
 
-//Tytera / Retevis / Anytone / Kenwood / Misc DMR Encryption Modes
+//Tytera / Retevis / Anytone / Kenwood / Vertex / Baofeng / Misc DMR Encryption Modes
 void tyt16_ambe2_codeword_keystream(dsd_state * state, char ambe_fr[4][24], int fnum);
 void tyt_ep_aes_keystream_creation(dsd_state * state, char * input);
 void tyt_ap_pc4_keystream_creation(dsd_state * state, char * input);
@@ -1657,6 +1666,10 @@ void baofeng_ap_pc5_keystream_creation(dsd_state *state, char *input);
 void csi72_ambe2_codeword_keystream(dsd_state * state, char ambe_fr[4][24]);
 void straight_mod_xor_keystream_creation(dsd_state * state, char * input);
 void auctus_keystream_creation(dsd_state * state, char * input);
+void vertex_keystream_setup(dsd_state * state, char * input);
+void vertex_40_keystream_creation(dsd_state * state, unsigned long long int key_value);
+void vertex_256_keystream_creation(dsd_state * state, char * key_string);
+void vtx256_ambe2_interleave_inversion(char ambe_fr[4][24]);
 
 //Kirisun
 uint32_t kirisun_lfsr(unsigned long long int mi);

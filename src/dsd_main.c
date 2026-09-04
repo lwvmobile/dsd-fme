@@ -437,6 +437,11 @@
      state->K2 = 0;
      state->K3 = 0;
      state->K4 = 0;
+     //vertex standard keys
+    //  memset(state->vtx256_key, 0, sizeof(state->vtx256_key));
+     state->vtx40_key = 0;
+     state->vtx256_ekey = 0;
+     state->vtx_key_loaded = 0;
      memset (state->A1, 0, sizeof(state->A1));
      memset (state->A2, 0, sizeof(state->A2));
      memset (state->A3, 0, sizeof(state->A3));
@@ -1093,6 +1098,12 @@
  
    //xl specific, we need to know if the ESS is from HDU, or from LDU2
    state->xl_is_hdu = 0;
+
+   //vertex standard keys
+   memset(state->vtx256_key, 0, sizeof(state->vtx256_key));
+   state->vtx40_key = 0;
+   state->vtx256_ekey = 0;
+   state->vtx_key_loaded = 0;
  
    //NXDN, when a new IV has arrived
    state->nxdn_new_iv = 0;
@@ -1497,7 +1508,7 @@
    printf ("  -fE             Decode only EDACS EA/ProVoice with ESK 0xA0*\n");
    printf ("  -fm             Decode only dPMR*\n");
    printf ("  -l            Disable DMR, dPMR, NXDN, M17 input filtering\n");
-   printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
+  //  printf ("  -u <num>      Unvoiced speech quality (default=3)\n");
    printf ("  -xx           Expect non-inverted X2-TDMA signal\n");
    printf ("  -xr           Expect inverted DMR signal\n");
    printf ("  -xd           Expect inverted ICOM dPMR signal\n");
@@ -1584,6 +1595,10 @@
    printf ("                 \n");
    printf ("  -, <string>   Manually Enter and Enforce Auctus A6 (GoComm) 8 Char Key Value (DMR) (String Value) \n");
    printf ("                 -,  Secure04\n");
+   printf ("                 \n");
+   printf ("  -u <string>   Manually Enter and Enforce Vertex Standard 10 or 64 Char Hex Key \n");
+   printf ("                 -u  10:1234567891 or 64:AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDD\n");
+   printf ("                 -u  0:0 no KS application, but apply the inversion to the interleave (clear errors on 256)\n");
    printf ("                 \n");
    printf ("  -S <str>      Manually Enter and Enforce Generic Static Keystream -> Length and BYTE PACKED / ALIGNED String for AMBE (up to 882 bits)\n");
    printf ("                  For Example, enter 16-bit Keystream 0909 as:\n");
@@ -2047,6 +2062,12 @@
            state.ras_effective_key &= 0xFFFFFFFFFFFFFF; //truncate to 56-bits
            ras_permute_order((state.ras_effective_key & 0xFFFFFFFF), state.ras_permutation_order);
            fprintf (stderr,"DMR RAS 56-bit Effective Key: %llX\n", state.ras_effective_key);
+           break;
+
+         //Vertex Standard KS Generation
+         case 'u':
+           vertex_keystream_setup(&state, optarg);
+           state.keyloader = 0;
            break;
 
          //Straight KS Generation
@@ -3106,18 +3127,18 @@
              fprintf (stderr,"Enabling 6000 sps P25p2 all optimizations.\n");
            }
            break;
-         case 'u':
-           sscanf (optarg, "%i", &opts.uvquality);
-           if (opts.uvquality < 1)
-             {
-               opts.uvquality = 1;
-             }
-           else if (opts.uvquality > 64)
-             {
-               opts.uvquality = 64;
-             }
-           fprintf (stderr,"Setting unvoice speech quality to %i waves per band.\n", opts.uvquality);
-           break;
+        //  case 'u':
+        //    sscanf (optarg, "%i", &opts.uvquality);
+        //    if (opts.uvquality < 1)
+        //      {
+        //        opts.uvquality = 1;
+        //      }
+        //    else if (opts.uvquality > 64)
+        //      {
+        //        opts.uvquality = 64;
+        //      }
+        //    fprintf (stderr,"Setting unvoice speech quality to %i waves per band.\n", opts.uvquality);
+        //    break;
          case 'x':
            if (optarg[0] == 'x')
            {

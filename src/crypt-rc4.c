@@ -4,6 +4,7 @@
  *-----------------------------------------------------------------------------*/
 
 #include "dsd.h"
+#include "bp.h"
 
 //this version is for voice, going to transition to a block output version
 void rc4_voice_decrypt(int drop, uint8_t keylength, uint8_t messagelength, uint8_t key[], uint8_t cipher[], uint8_t plain[])
@@ -243,5 +244,95 @@ void auctus_keystream_creation(dsd_state * state, char * input)
 
   state->straight_ks = 1;
   state->straight_mod = 49;
+
+}
+
+void vertex_40_keystream_creation(dsd_state * state, unsigned long long int key_value)
+{
+
+  uint8_t key[8];
+  memset (key, 0, sizeof(key));
+
+  //load key from key_value
+  for (int i = 0; i < 5; i++)
+    key[i] = (key_value >> (32-(i*8))) & 0xFF;
+
+  uint8_t rc4_bytes[4];
+  memset (rc4_bytes, 0, sizeof(rc4_bytes));
+
+  rc4_block_output(0, 5, 4, key, rc4_bytes);
+
+  uint64_t vtx_key = 0;
+
+  //use the bytes from rc4 output to select 4 BP key 16-bit words
+  for (int i = 0; i < 4; i++)
+  {
+    vtx_key <<= 16;
+    vtx_key |= BPK[rc4_bytes[i]];
+  }
+
+  fprintf (stderr,"Vertex RC4 Bytes: ");
+  for (uint16_t i = 0; i < 8; i++)
+    fprintf (stderr, "%02X ", rc4_bytes[i]);
+  fprintf (stderr, "Vertex Keystream: %016llX;", (unsigned long long int)vtx_key);
+  fprintf (stderr, "\n");
+
+  uint8_t vtx_bytes[8];
+  memset (vtx_bytes, 0, sizeof(vtx_bytes));
+
+  for (int i = 0; i < 8; i++)
+    vtx_bytes[i] = (vtx_key >> (56-(i*8))) & 0xFF;
+
+  unpack_byte_array_into_bit_array(vtx_bytes, state->static_ks_bits[0], 8);
+  unpack_byte_array_into_bit_array(vtx_bytes, state->static_ks_bits[1], 8);
+
+  state->vtx_key_loaded = 1;
+
+}
+
+void vertex_keystream_setup(dsd_state * state, char * input)
+{
+  uint16_t len = 0;
+  char * curr;
+  curr = strtok(input, ":"); //should be len (mod) of key (decimal)
+  if (curr != NULL)
+    sscanf (curr, "%hd", &len);
+  else goto END_KS;
+
+  //len sanity check
+  if (len != 0 && len != 10 && len != 64)
+  {
+    fprintf (stderr, "Vertex Standard Invalid Key Len Specified;");
+    goto END_KS;
+  }
+
+  curr = strtok(NULL, ":"); //should be key in hex
+  if (curr == NULL)
+  {
+    fprintf (stderr, "Vertex Standard No Key Value Specified;");
+    goto END_KS;
+  }
+
+  if (len == 10)
+  {
+    sscanf (curr, "%llx", &state->vtx40_key);
+    vertex_40_keystream_creation(state, state->vtx40_key);
+  }
+
+  else if (len == 64)
+  {
+    memcpy(state->vtx256_key, curr, 64);
+    vertex_256_keystream_creation(state, curr);
+  }
+
+  //special use case 0:0 to do the inversion, but the keystream of zero to clear the errors
+  //essentially no keystream is applied, but to analyze the frames, clean up the errors
+  else if (len == 0)
+  {
+    memset(state->static_ks_bits, 0, sizeof(state->static_ks_bits));
+    state->vtx256_ekey = 1;
+  }
+
+  END_KS: ; //do nothing
 
 }

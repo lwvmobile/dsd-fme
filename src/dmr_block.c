@@ -187,6 +187,7 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
       else if (p_mfid == 0x68) sprintf (mfid_string, "%s", "Hytera");
       else if (p_mfid == 0x08) sprintf (mfid_string, "%s", "Hytera");
       else if (p_mfid == 0x06) sprintf (mfid_string, "%s", "Trid/Mot");
+      else if (p_mfid == 0x77) sprintf (mfid_string, "%s", "VTX STD");
       else if (p_mfid == 0x00) sprintf (mfid_string, "%s", "Standard");
       else                     sprintf (mfid_string, "%s", "Other");
     }
@@ -378,33 +379,24 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
       if (p_sap != 1 && p_mfid == 0x77)
       {
 
-        fprintf (stderr, "\n Vertex Standard PDU ENC Header:");
-        fprintf (stderr, " MFID: %02X;", (uint8_t)ConvertBitIntoBytes(&dheader_bits[8], 8));
+        fprintf (stderr, "\n Vertex Standard PDU ENC Header;");
 
-        //Unsure of how similar this is to the DMRA Enc Header, but using
-        //guess work and best judgment from single sample of Vertex Enhanced
+        //This Extended Header only seems to exist to signal encryption,
+        //but is otherwise mostly empty aside from a FID and single 0x01 value
+        //[4F][77][01][00][00][00][00][00][00][00][XX][XX]
 
-        //main issue is, I don't know if the 0x01 signalled is a key id (which is known to be 0x01)
-        //or if it is an encryption alg id (alg may have to be inferred based on what is loaded in radio)
+        //Further analysis shows that using different key types on different channels
+        //does not change the byte values of this header, and what is reported is that
+        //the Vertex Standard radios only allow one encryption type and key per channel.
 
         //set to 0x100 so it won't trigger any weird flags, but still has a non-zero value to be checked later
         if (state->currentslot == 0) state->dmr_so = 0x100;
         else state->dmr_soR = 0x100;
 
-        if (state->currentslot == 0)
-          state->payload_keyid = (uint8_t)ConvertBitIntoBytes(&dheader_bits[16], 8);
-        else state->payload_keyidR = (uint8_t)ConvertBitIntoBytes(&dheader_bits[16], 8);
-        fprintf (stderr, " Key ID: %02X;", (uint8_t)ConvertBitIntoBytes(&dheader_bits[16], 8));
-
         //going to use algid of 0x7 to signal a vertex standard enc method
         if (state->currentslot == 0)
           state->payload_algid = 0x7;
         else state->payload_algidR = 0x7;
-
-        //unknown if MI, or IV is present on this header (need the AES256 Vertex PDU to compare)
-        if (state->currentslot == 0)
-          state->payload_mi = (unsigned long long int)ConvertBitIntoBytes(&dheader_bits[48], 32);
-        else state->payload_miR = (unsigned long long int)ConvertBitIntoBytes(&dheader_bits[48], 32);
 
         //reset ks start value
         state->data_ks_start[slot] = 0;
@@ -1113,6 +1105,53 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         {
           rc4_block_output (256, 9, (int)state->data_byte_ctr[slot], kiv, ob);
           decrypted_pdu = 1;
+        }
+
+        else if (alg == 7 && state->vtx_key_loaded == 1) //Vertex Standard, either enc type
+        {
+          pack_bit_array_into_byte_array(state->static_ks_bits[slot], ob, 8);
+          end += (poc + 4); //also perform application over padding bytes and crc value
+          for (i = 0; i < end; i++)
+            state->dmr_pdu_sf[slot][i+start] ^= ob[i%8];
+          decrypted_pdu = 1;
+
+          //Recalcuate CRC32
+          uint8_t reordered_bits[1000];
+          memset (reordered_bits, 0, sizeof(reordered_bits));
+
+          //rearrage for ridiculously stupid CRC32 LSO/MSO ordering
+          for(i = 0, j = 0; i < ctr; i+=2, j+=16)
+          {
+            reordered_bits[j + 0] = (state->dmr_pdu_sf[slot][i+1] >> 7) & 0x01;
+            reordered_bits[j + 1] = (state->dmr_pdu_sf[slot][i+1] >> 6) & 0x01;
+            reordered_bits[j + 2] = (state->dmr_pdu_sf[slot][i+1] >> 5) & 0x01;
+            reordered_bits[j + 3] = (state->dmr_pdu_sf[slot][i+1] >> 4) & 0x01;
+            reordered_bits[j + 4] = (state->dmr_pdu_sf[slot][i+1] >> 3) & 0x01;
+            reordered_bits[j + 5] = (state->dmr_pdu_sf[slot][i+1] >> 2) & 0x01;
+            reordered_bits[j + 6] = (state->dmr_pdu_sf[slot][i+1] >> 1) & 0x01;
+            reordered_bits[j + 7] = (state->dmr_pdu_sf[slot][i+1] >> 0) & 0x01;
+
+            reordered_bits[j +  8] = (state->dmr_pdu_sf[slot][i] >> 7) & 0x01;
+            reordered_bits[j +  9] = (state->dmr_pdu_sf[slot][i] >> 6) & 0x01;
+            reordered_bits[j + 10] = (state->dmr_pdu_sf[slot][i] >> 5) & 0x01;
+            reordered_bits[j + 11] = (state->dmr_pdu_sf[slot][i] >> 4) & 0x01;
+            reordered_bits[j + 12] = (state->dmr_pdu_sf[slot][i] >> 3) & 0x01;
+            reordered_bits[j + 13] = (state->dmr_pdu_sf[slot][i] >> 2) & 0x01;
+            reordered_bits[j + 14] = (state->dmr_pdu_sf[slot][i] >> 1) & 0x01;
+            reordered_bits[j + 15] = (state->dmr_pdu_sf[slot][i] >> 0) & 0x01;
+          }
+          CRCComputed = (uint32_t)ComputeCrc32BitV(reordered_bits, (ctr * 8) - 32);
+          CRCExtracted = (uint32_t)convert_bits_into_output(reordered_bits+((ctr * 8) - 32), 32);
+          if (CRCComputed == CRCExtracted)
+            CRCCorrect = 1;
+          else CRCCorrect = 0;
+
+          //set back to original value
+          end -= (poc + 4);
+
+          //debug
+          // fprintf (stderr, " CTR: %d; CRC32 CMP: %08X EXT: %08X", ctr, CRCComputed, CRCExtracted);
+
         }
 
         else if (alg == 5 && akl == 1 && mi != 0) //AES-256 OFB

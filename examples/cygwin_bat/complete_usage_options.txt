@@ -1,4 +1,4 @@
-Build Version: AW 2026-37-g198f0ea 
+Build Version: AW 2026-39-gc97400a 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -100,7 +100,6 @@ Decoder options:
   -fE             Decode only EDACS EA/ProVoice with ESK 0xA0*
   -fm             Decode only dPMR*
   -l            Disable DMR, dPMR, NXDN, M17 input filtering
-  -u <num>      Unvoiced speech quality (default=3)
   -xx           Expect non-inverted X2-TDMA signal
   -xr           Expect inverted DMR signal
   -xd           Expect inverted ICOM dPMR signal
@@ -182,6 +181,10 @@ Advanced Decoder options:
                  
   -, <string>   Manually Enter and Enforce Auctus A6 (GoComm) 8 Char Key Value (DMR) (String Value) 
                  -,  Secure04
+                 
+  -u <string>   Manually Enter and Enforce Vertex Standard 10 or 64 Char Hex Key 
+                 -u  10:1234567891 or 64:AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDD
+                 -u  0:0 no KS application, but apply the inversion to the interleave (clear errors on 256)
                  
   -S <str>      Manually Enter and Enforce Generic Static Keystream -> Length and BYTE PACKED / ALIGNED String for AMBE (up to 882 bits)
                   For Example, enter 16-bit Keystream 0909 as:

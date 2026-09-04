@@ -1,4 +1,5 @@
 #include "dsd.h"
+#include "dmr_const.h"
 
 void ken_dmr_scrambler_keystream_creation(dsd_state * state, char * input)
 {
@@ -122,5 +123,110 @@ void straight_mod_xor_keystream_creation(dsd_state * state, char * input)
 
   if (curr == NULL)
     fprintf (stderr, "Straight KS String Malformed! No KS Created!\n");
+
+}
+
+//connect systems 72-bit (9-byte) Extended Encryption //TODO: Move this later
+void csi72_ambe2_codeword_keystream(dsd_state * state, char ambe_fr[4][24])
+{
+
+  char interleaved[72];
+  memset (interleaved, 0, sizeof(interleaved));
+
+  //interleave the frame
+  const int *w, *x, *y, *z;
+  w = rW; x = rX; y = rY; z = rZ;
+
+  for (int8_t i = 0; i < 36; i++)
+  {
+    interleaved[(i*2)+0] = ambe_fr[*w][*x];
+    interleaved[(i*2)+1] = ambe_fr[*y][*z];
+
+    w++;
+    x++;
+    y++;
+    z++;
+  }
+
+  uint8_t ks_bytes[9]; memset(ks_bytes, 0, sizeof(ks_bytes));
+  uint8_t ks[72]; memset(ks, 0, sizeof(ks));
+
+  //keys are loaded in reverse byte order, stored in state->static_ks_bits[0] 
+  for (int i = 0; i < 9; i++)
+    ks_bytes[i] = state->static_ks_bits[0][8-i];
+
+  //convert byte array into a bit array
+  unpack_byte_array_into_bit_array(ks_bytes, ks, 9);
+
+  //apply keystream to interleave
+  for (int8_t i = 0; i < 72; i++)
+    interleaved[i] ^= ks[71-i];
+
+  //deinterleave back into ambe_fr frame
+  w = rW; x = rX; y = rY; z = rZ;
+  int k = 0;
+  for (int8_t i = 0; i < 36; i++)
+  {
+    ambe_fr[*w][*x] = interleaved[k++];
+    ambe_fr[*y][*z] = interleaved[k++];
+
+    w++;
+    x++;
+    y++;
+    z++;
+  }
+
+}
+
+void vtx256_ambe2_interleave_inversion(char ambe_fr[4][24])
+{
+
+  uint32_t silence_check = 0;
+  for (int i = 0; i < 20; i++)
+  {
+    silence_check <<= 1;
+    silence_check |= (uint8_t)ambe_fr[0][23-i];
+  }
+
+  if (silence_check == 0xF8014)
+    goto END_INV;
+
+  char interleaved[72];
+  memset (interleaved, 0, sizeof(interleaved));
+
+  //interleave the frame
+  const int *w, *x, *y, *z;
+  w = rW; x = rX; y = rY; z = rZ;
+
+  for (int8_t i = 0; i < 36; i++)
+  {
+    interleaved[(i*2)+0] = ambe_fr[*w][*x];
+    interleaved[(i*2)+1] = ambe_fr[*y][*z];
+
+    w++;
+    x++;
+    y++;
+    z++;
+  }
+
+  //invert the bits in the 49 to 71 position
+  for (int8_t i = 49; i < 72; i++)
+    interleaved[i] ^= 1;
+
+  //deinterleave back into ambe_fr frame
+  w = rW; x = rX; y = rY; z = rZ;
+  int k = 0;
+  for (int8_t i = 0; i < 36; i++)
+  {
+    ambe_fr[*w][*x] = interleaved[k++];
+    ambe_fr[*y][*z] = interleaved[k++];
+
+    w++;
+    x++;
+    y++;
+    z++;
+  }
+
+  END_INV: ; //do nothing
 
 }

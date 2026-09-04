@@ -92,6 +92,10 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
       {
         encL = 0;
       }
+      else if (state->vtx_key_loaded == 1)
+      {
+        encL = 0;
+      }
     }
     else if (state->payload_algid == 0x02 || state->payload_algid == 0x21 || state->payload_algid == 0x22)
     {
@@ -115,6 +119,10 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
     if (state->payload_algidR == 0)
     {
       if (state->K != 0 || state->K1 != 0)
+      {
+        encR = 0;
+      }
+      else if (state->vtx_key_loaded == 1)
       {
         encR = 0;
       }
@@ -1123,6 +1131,10 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
       {
         encL = 0;
       }
+      else if (state->vtx_key_loaded == 1)
+      {
+        encL = 0;
+      }
     }
     else if (state->payload_algid == 0x02 || state->payload_algid == 0x21 || state->payload_algid == 0x22)
     {
@@ -1146,6 +1158,10 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
     if (state->payload_algidR == 0)
     {
       if (state->K != 0 || state->K1 != 0)
+      {
+        encR = 0;
+      }
+      else if (state->vtx_key_loaded == 1)
       {
         encR = 0;
       }

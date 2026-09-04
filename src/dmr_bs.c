@@ -509,6 +509,13 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
       csi72_ambe2_codeword_keystream(state, ambe_fr3);
     }
 
+    if (state->vtx256_ekey != 0)
+    {
+      vtx256_ambe2_interleave_inversion(ambe_fr);
+      vtx256_ambe2_interleave_inversion(ambe_fr2);
+      vtx256_ambe2_interleave_inversion(ambe_fr3);
+    }
+
     #ifdef PRINT_AMBE72
     ambe2_codeword_print_i(opts, ambe_fr);
     ambe2_codeword_print_i(opts, ambe_fr2);
@@ -966,6 +973,13 @@ void dmrBSBootstrap (dsd_opts * opts, dsd_state * state)
     csi72_ambe2_codeword_keystream(state, ambe_fr);
     csi72_ambe2_codeword_keystream(state, ambe_fr2);
     csi72_ambe2_codeword_keystream(state, ambe_fr3);
+  }
+
+  if (state->vtx256_ekey != 0)
+  {
+    vtx256_ambe2_interleave_inversion(ambe_fr);
+    vtx256_ambe2_interleave_inversion(ambe_fr2);
+    vtx256_ambe2_interleave_inversion(ambe_fr3);
   }
 
   #ifdef PRINT_AMBE72
