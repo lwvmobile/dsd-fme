@@ -432,19 +432,22 @@ void ras_effective_key_creation(dsd_state * state, char * input)
     ctx.digest[6] += 2;
   }
 
-  //SEED low5 non-zero value (no change to 5-bit EMB checksum mod 31)
-  if ((ctx.digest[0] & 0x1F) == 0)
-  {
-    fprintf (stderr, " Byte %d: %02X -> %02X; ", 1, ctx.digest[0], ctx.digest[0]+2);
-    ctx.digest[0] += 2;
-  }
+  //UPDATE: I have now observed a system that has a 5-bit differential value of 0
+  //so that means that the low5 effective key value can be either 0, or 0x1F
 
-  //SEED low5 plus 1F (no change to 5-bit EMB checksum mod 31)
-  else if ((ctx.digest[0] & 0x1F) == 0x1F)
-  {
-    fprintf (stderr, " Byte %d: %02X -> %02X; ", 1, ctx.digest[0], ctx.digest[0]+2);
-    ctx.digest[0] += 2;
-  }
+  // //SEED low5 non-zero value (no change to 5-bit EMB checksum mod 31)
+  // if ((ctx.digest[0] & 0x1F) == 0)
+  // {
+  //   fprintf (stderr, " Byte %d: %02X -> %02X; ", 1, ctx.digest[0], ctx.digest[0]+2);
+  //   ctx.digest[0] += 2;
+  // }
+
+  // //SEED low5 plus 1F (no change to 5-bit EMB checksum mod 31)
+  // else if ((ctx.digest[0] & 0x1F) == 0x1F)
+  // {
+  //   fprintf (stderr, " Byte %d: %02X -> %02X; ", 1, ctx.digest[0], ctx.digest[0]+2);
+  //   ctx.digest[0] += 2;
+  // }
 
   unsigned long long int effective_key = 0;
   for (int i = 0; i < 7; i++)

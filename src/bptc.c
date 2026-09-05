@@ -362,21 +362,15 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DM
 
 
 /*
- * @brief : This function extract the 77 bits of a deinteleaved 128 bits
- *          buffer using BPTC (128,77).
+ * BPTC (128,77) extract with iterative Hamming + parity-guided repair
+ * and diagnostic logging.
+ * See ETSI TS 102 361-1 B.2.1
  *
- * @note : See DMR standard ETSI TS 102 361-1 chapter B.2.1 for details
- *
- * @param InputDeInteleavedData : Pointer of DMR input data deinterleaved (128 bytes
-                                  act as a 16 x 8 byte data matrix)
- *
- * @param DMRDataExtracted : Pointer where the DMR data will be written (77 bytes)
- *                           DMRDataExtracted[0..71]  = Util data (hamming corrected)
- *                           DMRDataExtracted[72..76] = 5 bit of CRC extracted (to be checked)
- *
- * @return 0 = All is OK
- *         Other = Error - Irrecoverable Hamming parity check error number
+ * Enable/disable chatter with BPTC_128x77_DEBUG (1 = on).
  */
+
+// #define BPTC_128x77_DEBUG 1
+
 uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDataExtracted[77])
 {
   uint32_t i, j, k;
@@ -387,106 +381,189 @@ uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDat
   uint32_t ParityCheckErrorNb = 0;
   uint32_t NbOfOne;
 
-  /* First step : Reconstitute the BPTC 16x8 matrix */
-  for(i = 0; i < 8; i++)
+  uint8_t row_bad[7];
+  uint8_t col_bad[16];
+
+  for (i = 0; i < 8; i++)
   {
-    for(j = 0; j < 16; j++)
-    {
-      /* Only the LSBit of the byte is stored */
+    for (j = 0; j < 16; j++)
       DataMatrix[i][j] = (InputDataMatrix[i][j] & 1);
-    }
   }
 
-  /* Process the the Hamming (16,11,4) code
-   * check on each line.
-   * Do not check the last line (line nb 8) */
-  for(i = 0; i < 7; i++)
+  /* ---------- Pass 1: Hamming (16,11,4) on rows 0..6 ---------- */
+  memset(row_bad, 0, sizeof(row_bad));
+  for (i = 0; i < 7; i++)
   {
-    /* Get a full line */
-    for(j = 0; j < 16; j++)
-    {
+    for (j = 0; j < 16; j++)
       LineUncorrected[j] = DataMatrix[i][j];
-    }
 
-    /* Apply Hamming (16,11,4) code correction */
-    if(Hamming_16_11_4_decode(LineUncorrected, LineCorrected, 1) == false)
+    if (Hamming_16_11_4_decode(LineUncorrected, LineCorrected, 1) == false)
     {
       HammingIrrecoverableErrorNb++;
+      row_bad[i] = 1;
+#if BPTC_128x77_DEBUG
+      fprintf(stderr, " BPTC128 P1 Hamming FAIL row=%u  rx=", (unsigned)i);
+      for (j = 0; j < 16; j++)
+        fprintf(stderr, "%u", LineUncorrected[j] & 1);
+      fprintf(stderr, "\n");
+#endif
+      for (j = 0; j < 11; j++)
+        DataMatrix[i][j] = LineUncorrected[j];
     }
-
-    /* Re-inject the line in the matrix (only the util data [11 bit],
-     * not the Hamming part [4 bit]) */
-    for(j = 0; j < 11; j++)
+    else
     {
-      DataMatrix[i][j] = LineCorrected[j];
+      for (j = 0; j < 11; j++)
+        DataMatrix[i][j] = LineCorrected[j];
     }
   }
+#if BPTC_128x77_DEBUG
+  if (HammingIrrecoverableErrorNb)
+    fprintf(stderr, " BPTC128 P1 Hamming irrecoverable rows=%u\n",
+            (unsigned)HammingIrrecoverableErrorNb);
+#endif
 
-  /* Extract the DMR data (77 bit) from the matrix */
-  k = 0;
-
-  /* 2 first lines */
-  for(i = 0; i < 2; i++)
-  {
-    for(j = 0; j < 11; j++)
-    {
-      DMRDataExtracted[k] = DataMatrix[i][j];
-      k++;
-    }
-  }
-
-  /* 5 Next lines */
-  for(i = 2; i < 7; i++)
-  {
-    for(j = 0; j < 10; j++)
-    {
-      DMRDataExtracted[k] = DataMatrix[i][j];
-      k++;
-    }
-  }
-
-  /* 5 bit of CRC */
-  for(i = 2; i < 7; i++)
-  {
-    DMRDataExtracted[k] = DataMatrix[i][10];
-    k++;
-  }
-
-  /* Verify the data integrity by checking
-   * all column parity bit */
+  /* ---------- Column even-parity check (row 7) ---------- */
+  memset(col_bad, 0, sizeof(col_bad));
   ParityCheckErrorNb = 0;
-  for(i = 0; i < 16; i++)
+  for (i = 0; i < 16; i++)
   {
     NbOfOne = 0;
-
-    /* Get a full column */
-    for(j = 0; j < 7; j++)
-    {
+    for (j = 0; j < 7; j++)
       NbOfOne += DataMatrix[j][i];
-    }
 
-    /* Check the parity bit (number of "1"
-     * must be even) */
-    if((NbOfOne % 2) != DataMatrix[7][i])
+    if ((NbOfOne % 2) != DataMatrix[7][i])
     {
       ParityCheckErrorNb++;
+      col_bad[i] = 1;
+#if BPTC_128x77_DEBUG
+      fprintf(stderr,
+              " BPTC128 P1 parity FAIL col=%u  sum7=%u  parity_bit=%u  (expect even)\n",
+              (unsigned)i, (unsigned)NbOfOne, (unsigned)DataMatrix[7][i]);
+#endif
+    }
+  }
+#if BPTC_128x77_DEBUG
+  if (ParityCheckErrorNb)
+    fprintf(stderr, " BPTC128 P1 parity bad columns=%u\n",
+            (unsigned)ParityCheckErrorNb);
+#endif
+
+  /* ---------- Parity-guided single-bit repair ---------- */
+  {
+    uint32_t n_bad_rows = 0, n_bad_cols = 0;
+    uint32_t br = 0, bc = 0;
+
+    for (i = 0; i < 7; i++)
+      if (row_bad[i]) { n_bad_rows++; br = i; }
+    for (i = 0; i < 16; i++)
+      if (col_bad[i]) { n_bad_cols++; bc = i; }
+
+#if BPTC_128x77_DEBUG
+    fprintf(stderr,
+            " BPTC128 repair candidates: bad_rows=%u bad_cols=%u",
+            (unsigned)n_bad_rows, (unsigned)n_bad_cols);
+    if (n_bad_rows == 1)
+      fprintf(stderr, " row=%u", (unsigned)br);
+    if (n_bad_cols == 1)
+      fprintf(stderr, " col=%u", (unsigned)bc);
+    fprintf(stderr, "\n");
+#endif
+
+    if (n_bad_rows == 1 && n_bad_cols == 1 && bc < 11)
+    {
+      DataMatrix[br][bc] ^= 1;
+      row_bad[br] = 0;
+#if BPTC_128x77_DEBUG
+      fprintf(stderr,
+              " BPTC128 parity-guided FLIP at row=%u col=%u -> %u\n",
+              (unsigned)br, (unsigned)bc, (unsigned)DataMatrix[br][bc]);
+#endif
+    }
+#if BPTC_128x77_DEBUG
+    else if (n_bad_rows || n_bad_cols)
+    {
+      fprintf(stderr,
+              " BPTC128 no single-intersection flip "
+              "(need exactly 1 bad row and 1 data col)\n");
+    }
+#endif
+  }
+
+  /* ---------- Pass 2: Hamming (16,11,4) again ---------- */
+  HammingIrrecoverableErrorNb = 0;
+  for (i = 0; i < 7; i++)
+  {
+    for (j = 0; j < 16; j++)
+      LineUncorrected[j] = DataMatrix[i][j];
+
+    if (Hamming_16_11_4_decode(LineUncorrected, LineCorrected, 1) == false)
+    {
+      HammingIrrecoverableErrorNb++;
+#if BPTC_128x77_DEBUG
+      fprintf(stderr, " BPTC128 P2 Hamming FAIL row=%u  rx=", (unsigned)i);
+      for (j = 0; j < 16; j++)
+        fprintf(stderr, "%u", LineUncorrected[j] & 1);
+      fprintf(stderr, "\n");
+#endif
+      for (j = 0; j < 11; j++)
+        DataMatrix[i][j] = LineUncorrected[j];
+    }
+    else
+    {
+      for (j = 0; j < 11; j++)
+        DataMatrix[i][j] = LineCorrected[j];
+    }
+  }
+#if BPTC_128x77_DEBUG
+  if (HammingIrrecoverableErrorNb)
+    fprintf(stderr, " BPTC128 P2 Hamming irrecoverable rows=%u\n",
+            (unsigned)HammingIrrecoverableErrorNb);
+#endif
+
+  /* ---------- Final column parity recount ---------- */
+  ParityCheckErrorNb = 0;
+  for (i = 0; i < 16; i++)
+  {
+    NbOfOne = 0;
+    for (j = 0; j < 7; j++)
+      NbOfOne += DataMatrix[j][i];
+
+    if ((NbOfOne % 2) != DataMatrix[7][i])
+    {
+      ParityCheckErrorNb++;
+#if BPTC_128x77_DEBUG
+      fprintf(stderr,
+              " BPTC128 P2 parity FAIL col=%u  sum7=%u  parity_bit=%u\n",
+              (unsigned)i, (unsigned)NbOfOne, (unsigned)DataMatrix[7][i]);
+#endif
     }
   }
 
-  /* Return the number of irrecoverable Hamming errors +
-   * the number of parity check error */
+#if BPTC_128x77_DEBUG
+  fprintf(stderr,
+          " BPTC128 result: Hamming_err=%u  parity_err=%u  total=%u\n",
+          (unsigned)HammingIrrecoverableErrorNb,
+          (unsigned)ParityCheckErrorNb,
+          (unsigned)(HammingIrrecoverableErrorNb + ParityCheckErrorNb));
+#endif
+
+  /* ---------- Extract 77 bits ---------- */
+  k = 0;
+  for (i = 0; i < 2; i++)
+  {
+    for (j = 0; j < 11; j++)
+      DMRDataExtracted[k++] = DataMatrix[i][j];
+  }
+  for (i = 2; i < 7; i++)
+  {
+    for (j = 0; j < 10; j++)
+      DMRDataExtracted[k++] = DataMatrix[i][j];
+  }
+  for (i = 2; i < 7; i++)
+    DMRDataExtracted[k++] = DataMatrix[i][10];
+
   return (HammingIrrecoverableErrorNb + ParityCheckErrorNb);
-
-  //observation shows some parity check error is okay,
-  //as long as the hamming is completely okay, may be worth it
-  //to only check parity bits on columns
-
-  if (HammingIrrecoverableErrorNb == 0 && ParityCheckErrorNb < 2)
-    return (HammingIrrecoverableErrorNb);
-  else return (HammingIrrecoverableErrorNb + ParityCheckErrorNb);
-
-} /* End BPTC_128x77_Extract_Data() */
-
+}
 
 /*
  * @brief : This function extract the 32 bits of a deinteleaved 32 bits

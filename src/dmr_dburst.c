@@ -663,7 +663,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     //calculation should be 5-bit portion of RAS Effective Key's Last byte & 0x1F
     //5-bit + CRCComputed % 31 = CRCExtracted
     #ifdef DEBUG_RAS
-    if (opts->payload == 1 && is_emb && is_ras && CRCExtracted != CRCComputed && state->ras_effective_key == 0)
+    if (opts->payload == 1 && is_emb && is_ras)
     {
       int32_t diff = ((int32_t)CRCExtracted - (int32_t)CRCComputed + 31) % 31;
       fprintf (stderr, " CRC CMP: %02X EXT: %02X DIFF: %02X", CRCComputed, CRCExtracted, diff);
