@@ -340,9 +340,8 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DM
   /* R(0) to R(2) may be used to transport some
    * Restricted Access System (RAS) information,
    * So save these three bits after hamming correction
-   * See patent US 2013/0288643 A1 */
-
-  //TODO: Get seperate validity for line 0 and column 0,1,2
+   * See patent https://patents.google.com/patent/US20130288643A1
+   */
   if (HammingIrrecoverableErrorNb == 0)
   {
     R[0] = DataMatrix[0][2]; /* Save R(0) */

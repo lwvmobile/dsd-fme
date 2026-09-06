@@ -512,15 +512,15 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     if (opts->payload == 1 && is_xpt == 1 && flco == 0x3) fprintf(stderr, "HASH=%d ", tg_hash);
     if (opts->payload == 1) fprintf(stderr, "FLCO=0x%02X FID=0x%02X SVC=0x%02X ", flco, fid, so);
 
-    //0x04 and 0x05 on a TLC seem to indicate a Cap + Private Call Terminator (perhaps one for each MS)
-    //0x07 on a VLC seems to indicate a Cap+ Private Call Header
-    //0x23 on the Embedded Voice Burst Sync seems to indicate a Cap+ or Cap+ TXI Private Call in progress (RAS)
-    //0x20 on the Embedded Voice Burst Sync seems to indicate a Moto (non-specific) Group Call in progress (RAS)
-    //its possible that both EMB FID 0x10 FLCO 0x20 and 0x23 are just Moto but non-specific (RAS)
+    //0x04 and 0x05 on a TLC seem to indicate a Cap + Private Call Terminator <--need to find this again and re-evaluate
+    //0x04 on a VLC seems to indicate a Cap+ Group Call Header   <--single bit flip from normal group
+    //0x07 on a VLC seems to indicate a Cap+ Private Call Header <--single bit flip from normal private
+    //0x20 on the Embedded Voice Burst Sync seems to indicate a Moto w/ FID 0x10   Group Call in progress (RAS)
+    //0x23 on the Embedded Voice Burst Sync seems to indicate a Moto w/ FID 0x10 Private Call in progress (RAS)
 
     if (fid == 0x68) sprintf (state->call_string[slot], " Hytera  ");
 
-    else if (flco == 0x4 || flco == 0x5 || flco == 0x7 || flco == 0x23) //Cap+ Things
+    else if (flco == 0x4 || flco == 0x5 || flco == 0x7) //Cap+ Things (double check 0x05)
     {
       // sprintf (state->call_string[slot], " Cap+");
       sprintf (state->call_string[slot], "%s","");
@@ -540,13 +540,13 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         state->gi[slot] = 1;
       }
     }
-    else if (flco == 0x3) //UU_V_Ch_Usr
+    else if (flco == 0x3 || flco == 0x23) //UU_V_Ch_Usr
     {
       sprintf (state->call_string[slot], " Private ");
       fprintf (stderr, "Private ");
       state->gi[slot] = 1;
     }
-    else //Grp_V_Ch_Usr -- still valid on hytera VLC
+    else //Grp_V_Ch_Usr
     {
       sprintf (state->call_string[slot], "   Group ");
       fprintf (stderr, "Group ");

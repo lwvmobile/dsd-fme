@@ -271,11 +271,15 @@ void vertex_40_keystream_creation(dsd_state * state, unsigned long long int key_
     vtx_key |= BPK[rc4_bytes[i]];
   }
 
+  #ifdef VERTEX_KEY40_BY_TG
+  //skip constant verbosity on keyloading
+  #else
   fprintf (stderr,"Vertex RC4 Bytes: ");
   for (uint16_t i = 0; i < 8; i++)
     fprintf (stderr, "%02X ", rc4_bytes[i]);
   fprintf (stderr, "Vertex Keystream: %016llX;", (unsigned long long int)vtx_key);
   fprintf (stderr, "\n");
+  #endif
 
   uint8_t vtx_bytes[8];
   memset (vtx_bytes, 0, sizeof(vtx_bytes));
@@ -316,12 +320,17 @@ void vertex_keystream_setup(dsd_state * state, char * input)
   if (len == 10)
   {
     sscanf (curr, "%llx", &state->vtx40_key);
+    fprintf (stderr, "Vertex Standard 40-bit Key: %010llX \n", state->vtx40_key);
     vertex_40_keystream_creation(state, state->vtx40_key);
   }
 
   else if (len == 64)
   {
     memcpy(state->vtx256_key, curr, 64);
+    fprintf (stderr, "Vertex Standard 256-bit Key: ");
+    for (int i = 0; i < 64; i++)
+      fprintf (stderr, "%c", state->vtx256_key[i]);
+    fprintf (stderr, "\n");
     vertex_256_keystream_creation(state, curr);
   }
 

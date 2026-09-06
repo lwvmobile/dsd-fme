@@ -1,4 +1,4 @@
-Build Version: AW 2026-39-gc97400a 
+Build Version: AW 2026-41-gfb3dc75 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -182,7 +182,7 @@ Advanced Decoder options:
   -, <string>   Manually Enter and Enforce Auctus A6 (GoComm) 8 Char Key Value (DMR) (String Value) 
                  -,  Secure04
                  
-  -u <string>   Manually Enter and Enforce Vertex Standard 10 or 64 Char Hex Key 
+  -u <string>   Manually Enter Vertex Standard 10 or 64 Char Hex Key 
                  -u  10:1234567891 or 64:AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDD
                  -u  0:0 no KS application, but apply the inversion to the interleave (clear errors on 256)
                  

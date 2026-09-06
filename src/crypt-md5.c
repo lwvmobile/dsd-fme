@@ -410,50 +410,48 @@ void ras_effective_key_creation(dsd_state * state, char * input)
   fprintf (stderr, "\n");
 
   //The following rules are still not entirely clear, however,
-  //the first one executed (last byte) has been observed to be
-  //true, the SEED values are more speculative, values of
-  //0 and 0x1F do not change the 5-bit checksum mod 31 (0x1F)
+  //the last taken digest byte has been observed to be true
 
   //Furthermore, it is still unclear how any rollover is handled,
   //if adding 2 is byte inclusive (effectively resetting the byte)
   //or if the value is flat 56-bit value and rollover occurs
-  //to the next value over, using best guess on this 
-  //until further informatin comes along
+  //against the flat value, using best guess on this
+  //until further information comes along
 
   //Below patent also suggest all bytes cannot equal zero
   //and if so, the next portion of MD5 may be used,
   //or some other method may be utilized to prevent fringe cases
   //https://patents.google.com/patent/US20130288643A1
 
-  //Last Byte low5 not allowed to be 0x1F (reasons unclear, but observed true)
+  //Last Collected Byte 5-bit LSB not allowed to be 0x1F
   if ((ctx.digest[6] & 0x1F) == 0x1F)
   {
-    fprintf (stderr, " Byte %d: %02X -> %02X; ", 7, ctx.digest[6], ctx.digest[6]+2);
+    fprintf (stderr, " Byte %d: %02X -> %02X; ", 7, ctx.digest[6], (ctx.digest[6]+2) & 0xFF);
     ctx.digest[6] += 2;
   }
 
-  //UPDATE: I have now observed a system that has a 5-bit differential value of 0
-  //so that means that the low5 effective key value can be either 0, or 0x1F
+  //collect 7 bytes of the MD5 Hash to create the flat key value
+  unsigned long long int flat_key = 0;
+  for (int i = 0; i < 7; i++)
+  {
+    flat_key <<= 8;
+    flat_key |= ctx.digest[i];
+  }
 
-  // //SEED low5 non-zero value (no change to 5-bit EMB checksum mod 31)
-  // if ((ctx.digest[0] & 0x1F) == 0)
+  //May switch to this correction method instead if the
+  //observed rollover is on a flat value and not a byte value
+  // if ((flat_key & 0x1F) == 0x1F)
   // {
-  //   fprintf (stderr, " Byte %d: %02X -> %02X; ", 1, ctx.digest[0], ctx.digest[0]+2);
-  //   ctx.digest[0] += 2;
+  //   fprintf (stderr, "Flat Correction: %014llX -> %014llX;\n", flat_key, flat_key+2);
+  //   flat_key += 2;
   // }
 
-  // //SEED low5 plus 1F (no change to 5-bit EMB checksum mod 31)
-  // else if ((ctx.digest[0] & 0x1F) == 0x1F)
-  // {
-  //   fprintf (stderr, " Byte %d: %02X -> %02X; ", 1, ctx.digest[0], ctx.digest[0]+2);
-  //   ctx.digest[0] += 2;
-  // }
-
+  //byte-reverse the flat_key into the effective_key
   unsigned long long int effective_key = 0;
   for (int i = 0; i < 7; i++)
   {
     effective_key <<= 8;
-    effective_key |= ctx.digest[6-i];
+    effective_key |= (flat_key >> (i*8)) & 0xFF;
   }
 
   uint32_t ras_seed = effective_key & 0xFFFFFFFF;
@@ -466,6 +464,5 @@ void ras_effective_key_creation(dsd_state * state, char * input)
   state->ras_effective_key = effective_key;
 
   fprintf (stderr, "\n");
-
 
 }

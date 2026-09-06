@@ -260,9 +260,6 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     //make sure the system type isn't Hytera, but could just be bad decodes on bad sample
     if (IrrecoverableErrors == 0 && BPTCDmrDataByte[1] == 0x68) is_ras = 0;
 
-    //make sure if this is link control, the FID is set to 0x10
-    if (IrrecoverableErrors == 0 && is_lc && BPTCDmrDataByte[1] != 0x10) is_ras = 0;
-
     //make sure if this is a PI header, the FID is set to 0x10
     if (IrrecoverableErrors == 0 && databurst == 0x00 && BPTCDmrDataByte[1] != 0x10) is_ras = 0;
 
@@ -634,7 +631,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   }
 
   //might flicker the terminal on partially enabled systems, may need to find a better placement
-  if (IrrecoverableErrors == 0 && (is_bptc || is_emb) && databurst != 0x05 && databurst != 0x07)
+  if (IrrecoverableErrors == 0 && (is_bptc || is_emb) && databurst != 0x05 && databurst != 0x07 && databurst != 0x09)
     state->dmr_is_ras = is_ras;
 
   if (IrrecoverableErrors == 0 && CRCCorrect == 0 && is_ras == 0 && databurst != 0x09 && databurst != 0x05)

@@ -1596,7 +1596,7 @@
    printf ("  -, <string>   Manually Enter and Enforce Auctus A6 (GoComm) 8 Char Key Value (DMR) (String Value) \n");
    printf ("                 -,  Secure04\n");
    printf ("                 \n");
-   printf ("  -u <string>   Manually Enter and Enforce Vertex Standard 10 or 64 Char Hex Key \n");
+   printf ("  -u <string>   Manually Enter Vertex Standard 10 or 64 Char Hex Key \n");
    printf ("                 -u  10:1234567891 or 64:AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDD\n");
    printf ("                 -u  0:0 no KS application, but apply the inversion to the interleave (clear errors on 256)\n");
    printf ("                 \n");
