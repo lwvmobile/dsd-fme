@@ -409,27 +409,6 @@ void ras_effective_key_creation(dsd_state * state, char * input)
     fprintf (stderr, "%02X ", ctx.digest[i]);
   fprintf (stderr, "\n");
 
-  //The following rules are still not entirely clear, however,
-  //the last taken digest byte has been observed to be true
-
-  //Furthermore, it is still unclear how any rollover is handled,
-  //if adding 2 is byte inclusive (effectively resetting the byte)
-  //or if the value is flat 56-bit value and rollover occurs
-  //against the flat value, using best guess on this
-  //until further information comes along
-
-  //Below patent also suggest all bytes cannot equal zero
-  //and if so, the next portion of MD5 may be used,
-  //or some other method may be utilized to prevent fringe cases
-  //https://patents.google.com/patent/US20130288643A1
-
-  //Last Collected Byte 5-bit LSB not allowed to be 0x1F
-  if ((ctx.digest[6] & 0x1F) == 0x1F)
-  {
-    fprintf (stderr, " Byte %d: %02X -> %02X; ", 7, ctx.digest[6], (ctx.digest[6]+2) & 0xFF);
-    ctx.digest[6] += 2;
-  }
-
   //collect 7 bytes of the MD5 Hash to create the flat key value
   unsigned long long int flat_key = 0;
   for (int i = 0; i < 7; i++)
@@ -438,13 +417,24 @@ void ras_effective_key_creation(dsd_state * state, char * input)
     flat_key |= ctx.digest[i];
   }
 
-  //May switch to this correction method instead if the
-  //observed rollover is on a flat value and not a byte value
-  // if ((flat_key & 0x1F) == 0x1F)
-  // {
-  //   fprintf (stderr, "Flat Correction: %014llX -> %014llX;\n", flat_key, flat_key+2);
-  //   flat_key += 2;
-  // }
+  //On real world testing, it was discovered that by selecting a password (VluByDZhkPenguinkeeper) which has
+  //an MD5 partial hash of FFFFFFFFFEDFFF, the value actually placed into the radio was FFFFFFFFFEE001
+  //this indicates the entire value will roll-over, and not just a byte rollvoer (mod)
+
+  //The known rule is that the last 5 bits of the flat key value (prior to reverse)
+  //is that it cannot equal 0x1F (all 1 bits), if so, a correction of +2 is 
+  //performaed onto a flat value, which increments the entire value appropriately
+
+  //Below patent also suggest all bytes cannot equal zero
+  //and if so, the next portion of MD5 may be used,
+  //or some other method may be utilized to prevent fringe cases
+  //https://patents.google.com/patent/US20130288643A1
+
+  if ((flat_key & 0x1F) == 0x1F)
+  {
+    fprintf (stderr, "Flat Correction: %014llX -> %014llX;\n", flat_key, flat_key+2);
+    flat_key += 2;
+  }
 
   //byte-reverse the flat_key into the effective_key
   unsigned long long int effective_key = 0;
