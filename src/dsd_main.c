@@ -1587,10 +1587,14 @@
    printf ("                 \n");
    printf ("  -A <hex>      Manually Enter and Enforce Anytone 16-bit BP Key Value (DMR) (Hex Value) \n");
    printf ("                 \n");
-   printf ("  -$ <string>   Enter RAS Password 6-24 Char Key Value (DMR) (String Value) \n");
+   printf ("  -$ <string>   Enter RAS Password 6-24 Char Key Value (DMR) (a-z A-Z, 0-9, $ # _ -) \n");
    printf ("                 -$  Password123\n");
    printf ("                 \n");
-   printf ("  -y <hex>      Enter RAS 56-bit Effective Key Value (DMR) (14 Hex Value) \n");
+   printf ("                   Special Use Cases involving # and $, use parenthesis and put \\ in front of all $ signs\n");
+   printf ("                    -$ \"######\"\n");
+   printf ("                    -$ \"\\$\\$\\$\\$\\$\\$\"\n");
+   printf ("                 \n");
+   printf ("  -y <hex>      Enter RAS 56-bit Effective Key Value (DMR) (14 Char Hex Value) \n");
    printf ("                 -y  6DF241BC4AE2EC\n");
    printf ("                 \n");
    printf ("  -, <string>   Manually Enter and Enforce Auctus A6 (GoComm) 8 Char Key Value (DMR) (String Value) \n");

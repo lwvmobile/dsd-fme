@@ -1,4 +1,4 @@
-Build Version: AW 2026-41-gfb3dc75 
+Build Version: AW 2026-43-g4139b19 
 MBElib Version: 1.3.4
 CODEC2 Support Enabled
 
@@ -173,10 +173,14 @@ Advanced Decoder options:
                  
   -A <hex>      Manually Enter and Enforce Anytone 16-bit BP Key Value (DMR) (Hex Value) 
                  
-  -$ <string>   Enter RAS Password 6-24 Char Key Value (DMR) (String Value) 
+  -$ <string>   Enter RAS Password 6-24 Char Key Value (DMR) (a-z A-Z, 0-9, $ # _ -) 
                  -$  Password123
                  
-  -y <hex>      Enter RAS 56-bit Effective Key Value (DMR) (14 Hex Value) 
+                   Special Use Cases involving # and $, use parenthesis and put \ in front of all $ signs
+                    -$ "######"
+                    -$ "\$\$\$\$\$\$"
+                 
+  -y <hex>      Enter RAS 56-bit Effective Key Value (DMR) (14 Char Hex Value) 
                  -y  6DF241BC4AE2EC
                  
   -, <string>   Manually Enter and Enforce Auctus A6 (GoComm) 8 Char Key Value (DMR) (String Value) 
