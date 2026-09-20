@@ -86,7 +86,7 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
 
   if (g[0] && g[1] && g[2])
   {
-    if (slot == 0 && state->payload_algid != 0)
+    if (slot == 0 && state->payload_algid != 0 && state->payload_algid != 0x26)
     {
       if (state->payload_mi != mi_final)
       {
@@ -116,7 +116,7 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
       }
 
     }
-    if (slot == 1 && state->payload_algidR != 0)
+    if (slot == 1 && state->payload_algidR != 0 && state->payload_algidR != 0x26)
     {
       if (state->payload_miR != mi_final)
       {
@@ -528,6 +528,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
               if (alg == 2) fprintf (stderr, " DES;");
               if (alg == 4) fprintf (stderr, " AES128;");
               if (alg == 5) fprintf (stderr, " AES256;");
+              if (alg == 6) fprintf (stderr, " Caltta BP");
               fprintf (stderr, "%s ", KNRM);
               if (opts->payload == 1) fprintf (stderr, "\n");
               if (state->payload_keyid != key)
@@ -550,6 +551,11 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
               fprintf (stderr, "%s", KCYN);
               fprintf (stderr, " Slot 2");
               fprintf (stderr, " DMR LE SB ALG ID: %02X; KEY ID: %02X;", alg + 0x20, key);
+              if (alg == 1) fprintf (stderr, " RC4;");
+              if (alg == 2) fprintf (stderr, " DES;");
+              if (alg == 4) fprintf (stderr, " AES128;");
+              if (alg == 5) fprintf (stderr, " AES256;");
+              if (alg == 6) fprintf (stderr, " Caltta BP");
               fprintf (stderr, "%s ", KNRM);
               if (opts->payload == 1) fprintf (stderr, "\n");
               if (state->payload_keyidR != key)

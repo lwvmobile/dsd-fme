@@ -1203,6 +1203,12 @@ void dmr_slco (dsd_opts * opts, dsd_state * state, uint8_t slco_bits[])
 
   }
 
+  else if (slco == 0x5)
+  {
+    uint32_t unk = (uint32_t)ConvertBitIntoBytes(&slco_bits[4], 24);
+    fprintf (stderr, " SLCO Caltta: %06X;", unk);
+  }
+
   else if (slco == 0xE)
   {
     uint32_t update_tgt = (uint32_t)ConvertBitIntoBytes(&slco_bits[4], 24);

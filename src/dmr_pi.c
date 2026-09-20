@@ -146,7 +146,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
         state->payload_algid = PI_BYTE[0];
         state->payload_keyid = PI_BYTE[2];
         state->payload_mi    = ((unsigned long long int)PI_BYTE[3] << 24ULL) | ((unsigned long long int)PI_BYTE[4] << 16ULL) | ((unsigned long long int)PI_BYTE[5] << 8ULL) | ((unsigned long long int)PI_BYTE[6] << 0ULL);
-        if (state->payload_algid < 0x26)
+        if (state->payload_algid < 0x28)
         {
           fprintf (stderr, "%s ", KYEL);
           fprintf (stderr, "\n Slot 1");
@@ -182,6 +182,13 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
             state->payload_algid = 0x25;
           }
 
+          else if ((state->payload_algid & 0x07) == 0x06)
+          {
+            fprintf (stderr, " Caltta BP;");
+            state->payload_algid = 0x26;
+            state->payload_mi = 0;
+          }
+
           fprintf (stderr, "%s ", KNRM);
 
           //expand the 32-bit MI to a 64-bit DES IV
@@ -199,7 +206,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
           }
         }
 
-        if (state->payload_algid >= 0x26)
+        if (state->payload_algid >= 0x28)
         {
           state->payload_algid = 0;
           state->payload_keyid = 0;
@@ -249,6 +256,12 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
             state->payload_algidR = 0x25;
           }
 
+          else if ((state->payload_algidR & 0x07) == 0x06)
+          {
+            fprintf (stderr, " Caltta BP;");
+            state->payload_algidR = 0x26;
+            state->payload_miR = 0;
+          }
 
           fprintf (stderr, "%s ", KNRM);
 
@@ -267,7 +280,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
           }
         }
 
-        if (state->payload_algidR >= 0x26)
+        if (state->payload_algidR >= 0x28)
         {
           state->payload_algidR = 0;
           state->payload_keyidR = 0;

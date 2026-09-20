@@ -112,6 +112,13 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
         encL = 0;
       }
     }
+    else if (state->payload_algid == 0x26)
+    {
+      if (state->straight_ks == 0x26)
+      {
+        encL = 0;
+      }
+    }
   }
 
   if (encR)
@@ -140,6 +147,13 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
       if (state->aes_key_loaded[1] == 1)
       {
         encR = 0;
+      }
+    }
+    else if (state->payload_algidR == 0x26)
+    {
+      if (state->straight_ks == 0x26)
+      {
+        encL = 0;
       }
     }
   }
@@ -1151,6 +1165,13 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
         encL = 0;
       }
     }
+    else if (state->payload_algid == 0x26)
+    {
+      if (state->straight_ks == 0x26)
+      {
+        encL = 0;
+      }
+    }
   }
 
   if (encR)
@@ -1177,6 +1198,13 @@ void playSynthesizedVoiceSS3 (dsd_opts * opts, dsd_state * state)
     {
       //going to need a better check for this later on, or seperated keys or something
       if (state->aes_key_loaded[1] == 1)
+      {
+        encR = 0;
+      }
+    }
+    else if (state->payload_algidR == 0x26)
+    {
+      if (state->straight_ks == 0x26)
       {
         encR = 0;
       }

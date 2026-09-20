@@ -1073,6 +1073,7 @@
    state->any_bp = 0;
    state->straight_ks = 0;
    state->straight_mod = 0;
+   state->straight_discard = 0;
  
    //ks array storage and counters
    memset (state->ks_octetL, 0, sizeof(state->ks_octetL));
@@ -1555,6 +1556,11 @@
    printf ("                 -H '736B9A9C5645288B 243AD5CB8701EF8A' \n");
    printf ("                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' \n");
    printf ("\n");
+   printf ("  -H <hex>      Manually Enter Caltta 10/32/64 Char Basic Privacy Hex Key (see example below)\n");
+   printf ("                 -H C:40:0292081081 \n");
+   printf ("                 -H C:128:736B9A9C5645288B243AD5CB8701EF8A' \n");
+   printf ("                 -H C:256:20029736A5D91042C923EB0697484433005EFC58A1905195E28E9C7836AA2DB8' \n");
+   printf ("\n");
    printf ("  -R <dec>      Manually Enter dPMR or NXDN EHR Scrambler Key Value (Decimal Value)\n");
    printf ("                 \n");
    printf ("  -1 <hex>      Manually Enter RC4 or DES Key Value (DMR, P25, NXDN) (Hex Value) \n");
@@ -1613,6 +1619,8 @@
    printf ("                    -S 49:ED0AED4AED4AED4A\n");
    printf ("                  For Example, Baofeng 49-bit Keystream for 56-bit Custom Encryption as:\n");
    printf ("                    -S 49:11AA22BB33CC44\n");
+   printf ("                  For Example, Caltta 40-bit Keystream w/ optional 7-bit discard as:\n");
+   printf ("                    -S 49:11AA22BB33CC44:7\n");
    printf ("                 \n");
    printf ("  -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.\n");
    printf ("                  Only supports NXDN, DMR Basic Privacy (decimal value). \n");
@@ -1643,7 +1651,7 @@
    printf ("  -p            Disable Tune to Private Calls (DMR TIII, P25, NXDN Type-C and Type-D)\n");
    printf ("  -E            Disable Tune to Group Calls (DMR TIII, Con+, Cap+, P25, NXDN Type-C, and Type-D)\n");
    printf ("  -e            Enable Tune to Data Calls (DMR TIII, Cap+, NXDN Type-C)\n");
-   printf ("                 (NOTE: No Clear Distinction between Cap+ Private Voice Calls and Data Calls -- Both enabled with Data Calls \n");
+   printf ("                 (NOTE: No Clear Distinction between Cap+ Private Voice Calls and Data Calls -- Both enabled with Data Calls) \n");
    printf ("  -I <dec>      Specify TG to Hold During Trunking (DMR, P25, NXDN Type-C Trunking)\n");
    printf ("  -U <port>     Enable RIGCTL/TCP; Set TCP Port for RIGCTL. (4532 on SDR++)\n");
    printf ("  -B <Hertz>    Set RIGCTL Setmod Bandwidth in Hertz (0 - default - OFF)\n");
@@ -2288,32 +2296,38 @@
           break;
  
          case 'H':
-           //new handling for 10/32/64 Char Key
- 
-           strncpy(opts.szNumbers, optarg, 1023);
-           opts.szNumbers[1023] = '\0';
-           state.K1 = strtoull (opts.szNumbers, &pEnd, 16);
-           state.K2 = strtoull (pEnd, &pEnd, 16);
-           state.K3 = strtoull (pEnd, &pEnd, 16);
-           state.K4 = strtoull (pEnd, &pEnd, 16);
-           fprintf (stderr, "Hytera40/128/256 BP or AES128/256 Key = %016llX %016llX %016llX %016llX\n", state.K1, state.K2, state.K3, state.K4);
-           opts.dmr_mute_encL = 0;
-           opts.dmr_mute_encR = 0;
-           if (state.K1 == 0 && state.K2 == 0 && state.K3 == 0 && state.K4 == 0)
+           //check for caltta, if not, then use older loader
+           if (optarg[0] == 'C' && optarg[1] == ':')
            {
-             opts.dmr_mute_encL = 1;
-             opts.dmr_mute_encR = 1;
+            caltta_bp_keystream_creation(&state, optarg+2);
            }
-           state.H = state.K1; //shim still required?
-           //load the AES keys into a seperate handler
-           state.A1[0] = state.A1[1] = state.K1;
-           state.A2[0] = state.A2[1] = state.K2;
-           state.A3[0] = state.A3[1] = state.K3;
-           state.A4[0] = state.A4[1] = state.K4;
-           //disable keyloader function
-           state.keyloader = 0;
-           //signal an aes key is loaded into each slot -- if no value presented, then this won't matter anyways
-           state.aes_key_loaded[0] = state.aes_key_loaded[1] = 1;
+           else
+           {
+            strncpy(opts.szNumbers, optarg, 1023);
+            opts.szNumbers[1023] = '\0';
+            state.K1 = strtoull (opts.szNumbers, &pEnd, 16);
+            state.K2 = strtoull (pEnd, &pEnd, 16);
+            state.K3 = strtoull (pEnd, &pEnd, 16);
+            state.K4 = strtoull (pEnd, &pEnd, 16);
+            fprintf (stderr, "Hytera40/128/256 BP or AES128/256 Key = %016llX %016llX %016llX %016llX\n", state.K1, state.K2, state.K3, state.K4);
+            opts.dmr_mute_encL = 0;
+            opts.dmr_mute_encR = 0;
+            if (state.K1 == 0 && state.K2 == 0 && state.K3 == 0 && state.K4 == 0)
+            {
+              opts.dmr_mute_encL = 1;
+              opts.dmr_mute_encR = 1;
+            }
+            state.H = state.K1; //shim still required?
+            //load the AES keys into a seperate handler
+            state.A1[0] = state.A1[1] = state.K1;
+            state.A2[0] = state.A2[1] = state.K2;
+            state.A3[0] = state.A3[1] = state.K3;
+            state.A4[0] = state.A4[1] = state.K4;
+            //disable keyloader function
+            state.keyloader = 0;
+            //signal an aes key is loaded into each slot -- if no value presented, then this won't matter anyways
+            state.aes_key_loaded[0] = state.aes_key_loaded[1] = 1;
+           }
            break;
  
          case '4':

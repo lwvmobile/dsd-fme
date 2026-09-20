@@ -1110,6 +1110,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
       if (state->aes_key_loaded[0] != 0) { printw("KS: %016llX ", state->A4[0]); }
       attron(COLOR_PAIR(3));
     }
+    if (state->payload_algid == 0x26)
+    {
+      attron(COLOR_PAIR(1));
+      printw("Caltta BP ");
+      // if (state->aes_key_loaded[0] != 0) { printw("KS: %016llX ", state->A4[0]); } //TODO: This
+      attron(COLOR_PAIR(3));
+    }
     if (state->payload_algid == 0x02)
     {
       attron(COLOR_PAIR(1));
@@ -1303,6 +1310,13 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
         attron(COLOR_PAIR(1));
         printw("AES-256 ");
         if (state->aes_key_loaded[1] != 0) { printw("KS: %016llX ", state->A4[1]); }
+        attron(COLOR_PAIR(3));
+      }
+      if (state->payload_algidR == 0x26)
+      {
+        attron(COLOR_PAIR(1));
+        printw("Caltta BP ");
+        // if (state->aes_key_loaded[1] != 0) { printw("KS: %016llX ", state->A4[1]); } //TODO: This
         attron(COLOR_PAIR(3));
       }
       if (state->payload_algidR == 0x02)
