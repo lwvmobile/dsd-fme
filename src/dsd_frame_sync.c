@@ -16,6 +16,7 @@
  */
 
 #include "dsd.h"
+#include <limits.h>
 #include <locale.h>
 
 void
@@ -197,11 +198,10 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   }
   else t_max = 24; //24 for everything else
 
-  int lbuf[48], lbuf2[48]; //if we use t_max in these arrays, and t >=  t_max in condition below, then it can overflow those checks in there if t exceeds t_max
+  int lbuf[48]; //if we use t_max in these arrays, and t >=  t_max in condition below, then it can overflow those checks in there if t exceeds t_max
   int lsum;
   //init the lbuf
   memset (lbuf, 0, sizeof(lbuf));
-  memset (lbuf2, 0, sizeof(lbuf2));
 
   // detect frame sync
   t = 0;
@@ -374,23 +374,37 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
       *synctest_p = dibit;
       if (t >= t_max) //works excelent now with short sync patterns, and no issues with large ones!
         {
+          int lmn[5] = {INT_MAX, INT_MAX, INT_MAX, INT_MAX, INT_MAX};
+          int lmx[5] = {INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MIN};
+          int j, x;
           for (i = 0; i < t_max; i++) //24
             {
-              lbuf2[i] = lbuf[i];
+              x = lbuf[i];
+              if (x < lmn[4])
+                {
+                  for (j = 4; j > 0 && x < lmn[j - 1]; j--)
+                    lmn[j] = lmn[j - 1];
+                  lmn[j] = x;
+                }
+              if (x > lmx[4])
+                {
+                  for (j = 4; j > 0 && x > lmx[j - 1]; j--)
+                    lmx[j] = lmx[j - 1];
+                  lmx[j] = x;
+                }
             }
-          qsort (lbuf2, t_max, sizeof (int), comp);
 
           //on shorter sync patterns, we need to look at the edges since we don't have many to pull from
           if (t_max < 13)
           {
-            lmin = (lbuf2[0] + lbuf2[1] + lbuf2[2]) / 3;
-            lmax = (lbuf2[t_max - 3] + lbuf2[t_max - 2] + lbuf2[t_max - 1]) / 3;
+            lmin = (lmn[0] + lmn[1] + lmn[2]) / 3;
+            lmax = (lmx[2] + lmx[1] + lmx[0]) / 3;
           }
           //on longer sync patterns, we can get more towards the middle and eliminate outlier values
           else
           {
-            lmin = (lbuf2[2] + lbuf2[3] + lbuf2[4]) / 3;
-            lmax = (lbuf2[t_max - 5] + lbuf2[t_max - 4] + lbuf2[t_max - 3]) / 3;
+            lmin = (lmn[2] + lmn[3] + lmn[4]) / 3;
+            lmax = (lmx[4] + lmx[3] + lmx[2]) / 3;
           }
 
           if (state->rf_mod == 1)
