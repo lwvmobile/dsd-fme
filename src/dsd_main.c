@@ -83,15 +83,6 @@
  };
  #endif
  
- int comp (const void *a, const void *b)
- {
-   if (*((const int *) a) == *((const int *) b))
-     return 0;
-   else if (*((const int *) a) < *((const int *) b))
-     return -1;
-   else
-     return 1;
- }
  
  //struct for checking existence of directory to write to
  struct stat st = {0};
