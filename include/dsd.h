@@ -1215,7 +1215,6 @@ void printFrameInfo (dsd_opts * opts, dsd_state * state);
 void processFrame (dsd_opts * opts, dsd_state * state);
 void printFrameSync (dsd_opts * opts, dsd_state * state, char *frametype, int offset, char *modulation);
 int getFrameSync (dsd_opts * opts, dsd_state * state);
-int comp (const void *a, const void *b);
 void noCarrier (dsd_opts * opts, dsd_state * state);
 void initOpts (dsd_opts * opts);
 void initState (dsd_state * state);

@@ -16,6 +16,7 @@
  */
 
 #include <assert.h>
+#include <limits.h>
 
 #include "dsd.h"
 
@@ -121,22 +122,46 @@ use_symbol (dsd_opts* opts, dsd_state* state, int symbol)
   UNUSED(symbol);
 
   int i;
-  int sbuf2[128];
   int lmin, lmax, lsum;
+  int lmn[2] = {INT_MAX, INT_MAX};
+  int lmx[2] = {INT_MIN, INT_MIN};
 
+  // single-pass tracking of the 2 smallest and 2 largest values in the symbol window
   for (i = 0; i < opts->ssize; i++)
     {
-      sbuf2[i] = state->sbuf[i];
+      int x = state->sbuf[i];
+      if (x < lmn[1])
+        {
+          if (x < lmn[0])
+            {
+              lmn[1] = lmn[0];
+              lmn[0] = x;
+            }
+          else
+            {
+              lmn[1] = x;
+            }
+        }
+      if (x > lmx[1])
+        {
+          if (x > lmx[0])
+            {
+              lmx[1] = lmx[0];
+              lmx[0] = x;
+            }
+          else
+            {
+              lmx[1] = x;
+            }
+        }
     }
-
-  qsort (sbuf2, opts->ssize, sizeof (int), comp);
 
   // continuous update of min/max in rf_mod=1 (QPSK) mode
   // in c4fm min/max must only be updated during sync
   if (state->rf_mod == 1)
     {
-      lmin = (sbuf2[0] + sbuf2[1]) / 2;
-      lmax = (sbuf2[(opts->ssize - 1)] + sbuf2[(opts->ssize - 2)]) / 2;
+      lmin = (lmn[0] + lmn[1]) / 2;
+      lmax = (lmx[1] + lmx[0]) / 2;
       state->minbuf[state->midx] = lmin;
       state->maxbuf[state->midx] = lmax;
       if (state->midx == (opts->msize - 1))
@@ -178,7 +203,7 @@ use_symbol (dsd_opts* opts, dsd_state* state, int symbol)
 
       if (opts->datascope == 1)
         {
-          print_datascope(opts, state, sbuf2);
+          print_datascope(opts, state, state->sbuf);
         }
     }
   else
