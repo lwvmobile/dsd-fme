@@ -1620,7 +1620,7 @@
    printf ("                  For Example, Baofeng 49-bit Keystream for 56-bit Custom Encryption as:\n");
    printf ("                    -S 49:11AA22BB33CC44\n");
    printf ("                  For Example, Caltta 40-bit Keystream w/ optional 7-bit discard as:\n");
-   printf ("                    -S 49:11AA22BB33CC44:7\n");
+   printf ("                    -S 40:0292081081:7\n");
    printf ("                 \n");
    printf ("  -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.\n");
    printf ("                  Only supports NXDN, DMR Basic Privacy (decimal value). \n");

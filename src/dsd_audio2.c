@@ -153,7 +153,7 @@ void playSynthesizedVoiceFS3 (dsd_opts * opts, dsd_state * state)
     {
       if (state->straight_ks == 0x26)
       {
-        encL = 0;
+        encR = 0;
       }
     }
   }
