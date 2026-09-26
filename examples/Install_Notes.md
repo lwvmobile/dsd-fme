@@ -108,6 +108,46 @@ LD_LIBRARY_PATH=/usr/local/lib
 export LD_LIBRARY_PATH
 ```
 
+### macOS Builds (Homebrew)
+
+Building on macOS (Apple Silicon) using [Homebrew](https://brew.sh "Homebrew") for dependencies has been tested working, but keep in mind this project is primarily focused on Linux, so macOS support should be considered experimental. Unlike the Linux steps above, macOS has no `ldconfig`, so simply skip that step wherever it appears below.
+
+Install dependencies first:
+
+```
+brew install cmake git libsndfile pulseaudio rtl-sdr codec2 ncurses pkg-config
+```
+
+Note: Homebrew's ncurses is keg-only (not symlinked into /opt/homebrew), so we will pass an extra CMake flag when configuring DSD-FME below so it can be found.
+
+MBELib is considered a requirement in this build. You must read this notice prior to continuing. [MBElib Patent Notice](https://github.com/lwvmobile/mbelib#readme "MBElib Patent Notice")
+
+```
+git clone https://github.com/lwvmobile/mbelib
+cd mbelib
+git checkout ambe_tones
+mkdir build
+cd build
+cmake ..
+make -j `sysctl -n hw.ncpu`
+sudo make install
+cd ../..
+```
+
+Finish by cloning and building DSD-FME (note the added -DCMAKE_PREFIX_PATH flag for keg-only ncurses):
+
+```
+git clone https://github.com/lwvmobile/dsd-fme
+cd dsd-fme
+mkdir build
+cd build
+cmake .. -DCMAKE_PREFIX_PATH=$(brew --prefix ncurses)
+make -j `sysctl -n hw.ncpu`
+sudo make install
+```
+
+Pulse Audio is still the default input/output in DSD-FME, so start the Homebrew Pulse Audio daemon before running dsd-fme (it will also restart at login): `brew services start pulseaudio`. To confirm your RTL-SDR dongle is detected, run `rtl_test` (ships with Homebrew's rtl-sdr package); unlike Linux, there is no driver blacklist to deal with on macOS.
+
 ### Windows Cygwin Builds
 
 Cygwin builds now have an experimental semi-automatic installer, to run, follow steps below:
