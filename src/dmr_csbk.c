@@ -940,14 +940,21 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
         //MassReg
         if (a_type == 4)
         {
+          uint8_t mreg_res   = (uint8_t)ConvertBitIntoBytes(&bpbits1[0], 5);
           uint8_t reg_window = (uint8_t)ConvertBitIntoBytes(&bpbits1[5], 4); //7.2.19.5.1 Table 7.77 convert raw to seconds
           uint8_t aloha_mask = (uint8_t)ConvertBitIntoBytes(&bpbits1[9], 5);
+
           //ADDRNull or MS Individual Address
-          uint8_t reg_address = (uint8_t)ConvertBitIntoBytes(&bpbits2[16], 8); //see clause 7.2.41
+          uint32_t reg_address = bparms2; //see clause 7.2.41
 
           fprintf (stderr, "\n"); //raw value only on the reg window, see aforementioned table
           fprintf (stderr, " Reg Window: %X; Aloha Mask: %02X; Target: %d; ", reg_window, aloha_mask, reg_address);
-          dmr_gateway_identifier(0,reg_address);
+
+          if (mreg_res != 0)
+            fprintf (stderr, "Res: %02X", mreg_res);
+
+          if (reg_address != 0)
+            dmr_gateway_identifier(0, reg_address);
         }
 
         //debug

@@ -595,7 +595,7 @@ void pn95_lfsr() //test to see if this generates the correct bits now
 }
 
 
-void ysf_ehr (dsd_opts * opts, dsd_state * state, uint8_t dbuf[180], int start, int stop )
+void ysf_ehr (dsd_opts * opts, dsd_state * state, uint8_t * dbuf, int start, int stop )
 {
   int i;
   char ambe_fr[4][24];
@@ -850,7 +850,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
     }
 
     // send VCH to ehr voice handler
-    ysf_ehr (opts, state, vbuf, 0, 4);
+    ysf_ehr (opts, state, vbuf, 0, 5);
 
     //send DCH to decoder
     ysf_conv_dch (opts, state, bn, bt, fn, ft, cm, dbuf);
