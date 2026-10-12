@@ -695,6 +695,9 @@
    opts->rtlsdr_center_freq = 850000000; //set to an initial value (if user is using a channel map, then they won't need to specify anything other than -i rtl if desired)
    opts->rtl_started = 0;
    opts->rtl_rms = 0; //root means square power level on rtl input signal
+   opts->rtltcp_enabled = 0; //1 when the rtl input is an rtl_tcp server instead of a local dongle
+   sprintf (opts->rtltcp_hostname, "%s", "localhost");
+   opts->rtltcp_portno = 1234; //rtl_tcp default port
    //end RTL user options
    opts->pulse_raw_rate_in   = 48000;
    opts->pulse_raw_rate_out  = 48000;//
@@ -1406,6 +1409,7 @@
    printf ("                pulse:6 or pulse:virtual_sink2.monitor for pulse audio signal input on virtual_sink2 (see -O) \n");
    printf ("                rtl for rtl dongle (Default Values -- see below)\n");
    printf ("                rtl:dev:freq:gain:ppm:bw:sq:vol for rtl dongle (see below)\n");
+   printf ("                rtltcp:host:port:freq:gain:ppm:bw:sq:vol for rtl dongle on an rtl_tcp server (see below)\n");
    printf ("                tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)\n");
    printf ("                tcp:192.168.7.5:7355 for custom address and port \n");
    printf ("                filename.bin for OP25/FME capture bin files\n");
@@ -1477,6 +1481,11 @@
    printf ("  vol  <num>    RTL-SDR Sample 'Volume' Multiplier (default = 2)(1,2,3)\n");
    printf (" Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T\n");
    printf (" Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:2\n");
+   printf (" Usage: rtltcp:host:port:freq:gain:ppm:bw:sq:vol\n");
+   printf ("  host <name>   rtl_tcp Server Hostname or IP Address (default = localhost)\n");
+   printf ("  port <num>    rtl_tcp Server Port (default = 1234)\n");
+   printf ("  freq, gain, ppm, bw, sq, vol as above\n");
+   printf (" Example: dsd-fme -fs -i rtltcp:192.168.1.10:1234:450M:26:-2:8 -C connect_plus_chan.csv -T\n");
    printf ("\n");
    printf ("Decoder options:\n");
    printf ("  -fa           Auto Detection\n");
@@ -3281,9 +3290,24 @@
        if (curr != NULL) ; //continue
        else goto RTLEND; //end early with preset values
  
-       curr = strtok(NULL, ":"); //rtl device number "-D"
-       if (curr != NULL) opts.rtl_dev_index = atoi (curr);
-       else goto RTLEND;
+       if (strcmp (curr, "rtltcp") == 0) //rtl_tcp server instead of a local dongle
+       {
+         opts.rtltcp_enabled = 1;
+
+         curr = strtok(NULL, ":"); //rtl_tcp hostname
+         if (curr != NULL) snprintf (opts.rtltcp_hostname, sizeof(opts.rtltcp_hostname), "%s", curr);
+         else goto RTLEND;
+
+         curr = strtok(NULL, ":"); //rtl_tcp port
+         if (curr != NULL) opts.rtltcp_portno = atoi (curr);
+         else goto RTLEND;
+       }
+       else
+       {
+         curr = strtok(NULL, ":"); //rtl device number "-D"
+         if (curr != NULL) opts.rtl_dev_index = atoi (curr);
+         else goto RTLEND;
+       }
  
        curr = strtok(NULL, ":"); //rtl freq "-c"
        if (curr != NULL) opts.rtlsdr_center_freq = (uint32_t)atofs(curr);
@@ -3326,6 +3350,8 @@
  
        RTLEND:
  
+       if (opts.rtltcp_enabled == 1) goto RTLTCPEND; //no local dongle to look for
+
        device_count = rtlsdr_get_device_count();
        if (!device_count)
        {
@@ -3353,10 +3379,15 @@
  
        }
  
+       RTLTCPEND:
+
        if (opts.rtl_volume_multiplier > 3 || opts.rtl_volume_multiplier < 0)
          opts.rtl_volume_multiplier = 1; //I wonder if you could flip polarity by using -1
  
-       fprintf (stderr, "Dev %d ", opts.rtl_dev_index);
+       if (opts.rtltcp_enabled == 1)
+         fprintf (stderr, "rtl_tcp %s:%d ", opts.rtltcp_hostname, opts.rtltcp_portno);
+       else
+         fprintf (stderr, "Dev %d ", opts.rtl_dev_index);
        fprintf (stderr, "Freq %d ", opts.rtlsdr_center_freq);
        fprintf (stderr, "Gain %d ", opts.rtl_gain_value);
        fprintf (stderr, "PPM %d ", opts.rtlsdr_ppm_error);

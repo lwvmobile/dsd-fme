@@ -372,6 +372,9 @@ typedef struct
   int rtl_bandwidth;
   int rtl_started;
   long int rtl_rms;
+  int rtltcp_enabled;
+  char rtltcp_hostname[1024];
+  int rtltcp_portno;
   int monitor_input_audio;
   int analog_only;
   int pulse_raw_rate_in;
@@ -1707,6 +1710,21 @@ void rtlsdr_sighandler();
 void rtl_dev_tune(dsd_opts * opts, long int frequency);
 long int rtl_return_rms();
 void rtl_clean_queue();
+
+//rtl_tcp client (rtl_sdr_tcp.c)
+int rtltcp_open(const char *hostname, int portno);
+int rtlsdr_or_tcp_close(rtlsdr_dev_t *dev);
+int rtlsdr_or_tcp_read_async(rtlsdr_dev_t *dev, rtlsdr_read_async_cb_t cb, void *ctx, uint32_t buf_num, uint32_t buf_len);
+int rtlsdr_or_tcp_cancel_async(rtlsdr_dev_t *dev);
+int rtlsdr_or_tcp_reset_buffer(rtlsdr_dev_t *dev);
+int rtlsdr_or_tcp_get_tuner_gains(rtlsdr_dev_t *dev, int *gains);
+int rtlsdr_or_tcp_set_center_freq(rtlsdr_dev_t *dev, uint32_t freq);
+int rtlsdr_or_tcp_set_sample_rate(rtlsdr_dev_t *dev, uint32_t rate);
+int rtlsdr_or_tcp_set_direct_sampling(rtlsdr_dev_t *dev, int on);
+int rtlsdr_or_tcp_set_offset_tuning(rtlsdr_dev_t *dev, int on);
+int rtlsdr_or_tcp_set_tuner_gain_mode(rtlsdr_dev_t *dev, int manual);
+int rtlsdr_or_tcp_set_tuner_gain(rtlsdr_dev_t *dev, int gain);
+int rtlsdr_or_tcp_set_freq_correction(rtlsdr_dev_t *dev, int ppm);
 #endif
 
 

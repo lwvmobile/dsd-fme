@@ -134,6 +134,7 @@ FILE(GLOB HEADERS include/*.h include/*.hpp)
 
 if(NOT RTLSDR_FOUND)
     list(REMOVE_ITEM SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/rtl_sdr_fm.cpp)
+    list(REMOVE_ITEM SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/rtl_sdr_tcp.c)
 endif(NOT RTLSDR_FOUND)
 
 configure_file("src/git_ver.c.in" "${CMAKE_CURRENT_BINARY_DIR}/git_ver.c" @ONLY)

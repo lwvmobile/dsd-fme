@@ -567,7 +567,7 @@ static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 static void *dongle_thread_fn(void *arg)
 {
 	struct dongle_state *s = static_cast<dongle_state*>(arg);
-	rtlsdr_read_async(s->dev, rtlsdr_callback, s, 0, s->buf_len);
+	rtlsdr_or_tcp_read_async(s->dev, rtlsdr_callback, s, 0, s->buf_len);
 	return 0;
 }
 
@@ -604,17 +604,17 @@ int nearest_gain(rtlsdr_dev_t *dev, int target_gain)
 {
 	int i, r, err1, err2, count, nearest;
 	int* gains;
-	r = rtlsdr_set_tuner_gain_mode(dev, 1);
+	r = rtlsdr_or_tcp_set_tuner_gain_mode(dev, 1);
 	if (r < 0) {
 		fprintf (stderr, "WARNING: Failed to enable manual gain.\n");
 		return r;
 	}
-	count = rtlsdr_get_tuner_gains(dev, NULL);
+	count = rtlsdr_or_tcp_get_tuner_gains(dev, NULL);
 	if (count <= 0) {
 		return 0;
 	}
 	gains = static_cast<int*>(malloc(sizeof(int) * count));
-	count = rtlsdr_get_tuner_gains(dev, gains);
+	count = rtlsdr_or_tcp_get_tuner_gains(dev, gains);
 	nearest = gains[0];
 	for (i=0; i<count; i++) {
 		err1 = abs(target_gain - nearest);
@@ -634,7 +634,7 @@ int verbose_set_frequency(rtlsdr_dev_t *dev, uint32_t frequency)
   //spam tuning
 	for (int i = 0; i < 20; i++)
 	{
-		r = rtlsdr_set_center_freq(dev, frequency);
+		r = rtlsdr_or_tcp_set_center_freq(dev, frequency);
 		if (r < 0)
 			fprintf (stderr, " (RETRY: Failed to set Center Frequency %u). \n", dongle.freq);
 		else 
@@ -650,7 +650,7 @@ int verbose_set_frequency(rtlsdr_dev_t *dev, uint32_t frequency)
 int verbose_set_sample_rate(rtlsdr_dev_t *dev, uint32_t samp_rate)
 {
 	int r;
-	r = rtlsdr_set_sample_rate(dev, samp_rate);
+	r = rtlsdr_or_tcp_set_sample_rate(dev, samp_rate);
 	if (r < 0) {
 		fprintf (stderr, "WARNING: Failed to set sample rate.\n");
 	} else {
@@ -662,7 +662,7 @@ int verbose_set_sample_rate(rtlsdr_dev_t *dev, uint32_t samp_rate)
 int verbose_direct_sampling(rtlsdr_dev_t *dev, int on)
 {
 	int r;
-	r = rtlsdr_set_direct_sampling(dev, on);
+	r = rtlsdr_or_tcp_set_direct_sampling(dev, on);
 	if (r != 0) {
 		fprintf (stderr, "WARNING: Failed to set direct sampling mode.\n");
 		return r;
@@ -679,7 +679,7 @@ int verbose_direct_sampling(rtlsdr_dev_t *dev, int on)
 int verbose_offset_tuning(rtlsdr_dev_t *dev)
 {
 	int r;
-	r = rtlsdr_set_offset_tuning(dev, 1);
+	r = rtlsdr_or_tcp_set_offset_tuning(dev, 1);
 	if (r != 0) {
 		fprintf (stderr, "WARNING: Failed to set offset tuning.\n");
 	} else {
@@ -691,7 +691,7 @@ int verbose_offset_tuning(rtlsdr_dev_t *dev)
 int verbose_auto_gain(rtlsdr_dev_t *dev)
 {
 	int r;
-	r = rtlsdr_set_tuner_gain_mode(dev, 0);
+	r = rtlsdr_or_tcp_set_tuner_gain_mode(dev, 0);
 	if (r != 0) {
 		fprintf (stderr, "WARNING: Failed to set tuner gain.\n");
 	} else {
@@ -703,12 +703,12 @@ int verbose_auto_gain(rtlsdr_dev_t *dev)
 int verbose_gain_set(rtlsdr_dev_t *dev, int gain)
 {
 	int r;
-	r = rtlsdr_set_tuner_gain_mode(dev, 1);
+	r = rtlsdr_or_tcp_set_tuner_gain_mode(dev, 1);
 	if (r < 0) {
 		fprintf (stderr, "WARNING: Failed to enable manual gain.\n");
 		return r;
 	}
-	r = rtlsdr_set_tuner_gain(dev, gain);
+	r = rtlsdr_or_tcp_set_tuner_gain(dev, gain);
 	if (r != 0) {
 		fprintf (stderr, "WARNING: Failed to set tuner gain.\n");
 	} else {
@@ -722,7 +722,7 @@ int verbose_ppm_set(rtlsdr_dev_t *dev, int ppm_error)
 	int r;
 	// if (ppm_error == 0) {
 	// 	return 0;}
-	r = rtlsdr_set_freq_correction(dev, ppm_error);
+	r = rtlsdr_or_tcp_set_freq_correction(dev, ppm_error);
 	if (r < 0) {
 		fprintf (stderr, "WARNING: Failed to set ppm error.\n");
 	} else {
@@ -734,7 +734,7 @@ int verbose_ppm_set(rtlsdr_dev_t *dev, int ppm_error)
 int verbose_reset_buffer(rtlsdr_dev_t *dev)
 {
 	int r;
-	r = rtlsdr_reset_buffer(dev);
+	r = rtlsdr_or_tcp_reset_buffer(dev);
 	if (r < 0) {
 		fprintf (stderr, "WARNING: Failed to reset buffers.\n");}
 	return r;
@@ -807,7 +807,7 @@ static void *controller_thread_fn(void *arg)
 		/* hacky hopping */
 		s->freq_now = (s->freq_now + 1) % s->freq_len;
 		optimal_settings(s->freqs[s->freq_now], demod.rate_in);
-		rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+		rtlsdr_or_tcp_set_center_freq(dongle.dev, dongle.freq);
 		dongle.mute = BUFFER_DUMP;
 	}
 	return 0;
@@ -1012,7 +1012,7 @@ static void *socket_thread_fn(void *arg) {
 			new_freq = chars_to_int(buffer);
 			dongle.freq = new_freq;
 			optimal_settings(new_freq, demod.rate_in);
-			rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+			rtlsdr_or_tcp_set_center_freq(dongle.dev, dongle.freq);
 			fprintf (stderr, "\nTuning to: %d [Hz] \n", new_freq);
 		}
 
@@ -1027,7 +1027,7 @@ static void *socket_thread_fn(void *arg) {
 void rtlsdr_sighandler()
 {
 	fprintf (stderr, "Signal caught, exiting!\n");
-	rtlsdr_cancel_async(dongle.dev);
+	rtlsdr_or_tcp_cancel_async(dongle.dev);
 }
 
 void open_rtlsdr_stream(dsd_opts *opts)
@@ -1080,14 +1080,23 @@ void open_rtlsdr_stream(dsd_opts *opts)
 
   ACTUAL_BUF_LENGTH = lcm_post[demod.post_downsample] * DEFAULT_BUF_LENGTH;
 
-  r = rtlsdr_open(&dongle.dev, (uint32_t)dongle.dev_index);
-  if (r < 0)
+  if (opts->rtltcp_enabled == 1)
   {
-    fprintf (stderr, "Failed to open rtlsdr device %d.\n", dongle.dev_index);
-    exit(1);
-  } else {
-		fprintf (stderr, "Using RTLSDR Device Index: %d. \n", dongle.dev_index);
-	}
+    if (rtltcp_open(opts->rtltcp_hostname, opts->rtltcp_portno) < 0)
+      //rtltcp_open prints its own error messages
+      exit(1);
+  }
+  else
+  {
+    r = rtlsdr_open(&dongle.dev, (uint32_t)dongle.dev_index);
+    if (r < 0)
+    {
+      fprintf (stderr, "Failed to open rtlsdr device %d.\n", dongle.dev_index);
+      exit(1);
+    } else {
+      fprintf (stderr, "Using RTLSDR Device Index: %d. \n", dongle.dev_index);
+    }
+  }
 
   if (demod.deemph) {
 		demod.deemph_a = (int)round(1.0/((1.0-exp(-1.0/(demod.rate_out * 75e-6)))));
@@ -1119,7 +1128,7 @@ void open_rtlsdr_stream(dsd_opts *opts)
 void cleanup_rtlsdr_stream()
 {
 	fprintf (stderr, "cleaning up...\n");
-  rtlsdr_cancel_async(dongle.dev);
+  rtlsdr_or_tcp_cancel_async(dongle.dev);
   pthread_join(dongle.thread, NULL);
   safe_cond_signal(&demod.ready, &demod.ready_m);
   pthread_join(demod.thread, NULL);
@@ -1132,7 +1141,7 @@ void cleanup_rtlsdr_stream()
   output_cleanup(&output);
   controller_cleanup(&controller);
 
-  rtlsdr_close(dongle.dev);
+  rtlsdr_or_tcp_close(dongle.dev);
 }
 
 //original for safe keeping
@@ -1241,7 +1250,7 @@ void rtl_dev_tune(dsd_opts * opts, long int frequency)
 	for (int i = 0; i < 20; i++)
 	{
 		int r = -1;
-		r = rtlsdr_set_center_freq(dongle.dev, dongle.freq);
+		r = rtlsdr_or_tcp_set_center_freq(dongle.dev, dongle.freq);
 		if (r < 0)
 			fprintf (stderr, " (RETRY: Failed to set Center Frequency %u). \n", dongle.freq);
 		else break;
