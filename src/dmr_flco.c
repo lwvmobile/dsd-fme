@@ -214,8 +214,29 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
       goto END_FLCO;
     }
 
+    //Tait Talker Alias
+    if (fid == 0x58 && flco == 0x08 && type == 3)
+    {
+      fprintf (stderr, "%s", KCYN);
+      fprintf (stderr, " SLOT %d", state->currentslot+1);
+      fprintf (stderr, " Tait Talker Alias: ");
+      char tta_str[8]; memset(tta_str, 0, sizeof(tta_str));
+      for (int i = 0; i < 7; i++)
+        tta_str[i] = (uint8_t)ConvertBitIntoBytes(&lc_bits[16+(i*8)], 8);
+      fprintf (stderr, "%s", tta_str);
+      uint32_t source = 0;
+      if (slot == 0)
+        source = state->lastsrc;
+      else source = state->lastsrcR;
+
+      if (state->event_history_s[slot].Event_History_Items[0].source_id == source)
+        sprintf (state->event_history_s[slot].Event_History_Items[0].alias, "%s; ", tta_str);
+      sprintf (state->generic_talker_alias[slot], "Talker Alias: %s; ", tta_str);
+
+      goto END_FLCO;
+    }
     //Unknown Tait Things
-    if (fid == 0x58)
+    else if (fid == 0x58)
     {
       //NOTE: fid 0x58 (tait) had a single flco 0x06 emb observed, but without the other blocks (4,5,7) for an alias
       //will need to observe this one, or just remove it from the list, going to isolate tait lc for now

@@ -1548,7 +1548,7 @@
    printf ("                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' \n");
    printf ("\n");
    printf ("  -H <hex>      Manually Enter Caltta 10/32/64 Char Basic Privacy Hex Key (see example below)\n");
-   printf ("                 -H C:40:0292081081 \n");
+   printf ("                 -H C:40:1234567890 \n");
    printf ("                 -H C:128:736B9A9C5645288B243AD5CB8701EF8A' \n");
    printf ("                 -H C:256:20029736A5D91042C923EB0697484433005EFC58A1905195E28E9C7836AA2DB8' \n");
    printf ("\n");
