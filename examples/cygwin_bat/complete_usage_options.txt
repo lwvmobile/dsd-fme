@@ -205,7 +205,7 @@ Advanced Decoder options:
                   For Example, Baofeng 49-bit Keystream for 56-bit Custom Encryption as:
                     -S 49:11AA22BB33CC44
                   For Example, Caltta 40-bit Keystream w/ optional 7-bit discard as:
-                    -S 40:0292081081:7
+                    -S 40:1234567890:7
                  
   -k <file>     Import Key List from csv file (Decimal Format) -- Lower Case 'k'.
                   Only supports NXDN, DMR Basic Privacy (decimal value). 
