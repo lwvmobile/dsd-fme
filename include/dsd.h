@@ -1672,10 +1672,9 @@ void vertex_40_keystream_creation(dsd_state * state, unsigned long long int key_
 void vertex_256_keystream_creation(dsd_state * state, char * key_string);
 void vtx256_ambe2_interleave_inversion(char ambe_fr[4][24]);
 
-//Kirisun
+//Kirisun LFSR and General Keystream Creator
 uint32_t kirisun_lfsr(unsigned long long int mi);
-void kirisun_adv_keystream_creation(dsd_state *state);
-void kirisun_uni_keystream_creation(dsd_state *state);
+void kirisun_keystream_creation(dsd_state * state);
 
 //Hytera Enhanced
 void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value);

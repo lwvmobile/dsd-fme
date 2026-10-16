@@ -1542,7 +1542,7 @@
    printf ("                 -H '736B9A9C5645288B 243AD5CB8701EF8A' \n");
    printf ("                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' \n");
    printf ("\n");
-   printf ("  -H <hex>      Manually Enter AES-128, AES-256, or Kirisun-256 Hex Key (see example below)\n");
+   printf ("  -H <hex>      Manually Enter AES-128, AES-256, or Kirisun 128 or 256 Hex Key (see example below)\n");
    printf ("                 Encapulate in Single Quotation Marks; Space every 16 chars.\n");
    printf ("                 -H '736B9A9C5645288B 243AD5CB8701EF8A' \n");
    printf ("                 -H '20029736A5D91042 C923EB0697484433 005EFC58A1905195 E28E9C7836AA2DB8' \n");

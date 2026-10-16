@@ -287,7 +287,7 @@ void des_cipher (uint8_t * main_key, uint8_t * input_register, uint8_t * output_
   memcpy (left, initial_permutation+0, sizeof(left));
   memcpy (right, initial_permutation+4, sizeof(right));
 
-  //16 fiestel rounds
+  //16 feistel rounds
   for (uint8_t f = 0; f < 16; f++)
   {
 
@@ -339,7 +339,102 @@ void des_cipher (uint8_t * main_key, uint8_t * input_register, uint8_t * output_
     memcpy (left, right, sizeof(left));
     memcpy (right, rperm, sizeof(right));
 
-  } //end fiestel rounds f
+  } //end feistel rounds f
+
+  //combine right and left into the pre_end_permutation array
+  memcpy (pre_end_permutation+0, right, sizeof(right));
+  memcpy (pre_end_permutation+4, left, sizeof(left));
+
+  //carry out the final permuation to get the completed output_register for this cipher iteration
+  permute (pre_end_permutation, output_register, final_register_permutation, 0, 64);
+
+}
+
+//kirisun variation on this cipher w/ preconfigured unique key schedule
+void ksun_des_cipher (uint8_t * key, uint8_t * input_register, uint8_t * output_register, uint8_t de)
+{
+
+  //starting and ending permutations
+  uint8_t initial_permutation[8]; memset(initial_permutation, 0, sizeof(initial_permutation));
+  uint8_t pre_end_permutation[8]; memset(pre_end_permutation, 0, sizeof(pre_end_permutation));
+
+  //intermediate left, right, and expansion/selection arrays
+  uint8_t left[4];  memset(left, 0, sizeof(left));
+  uint8_t right[4]; memset(right, 0, sizeof(right));
+  uint8_t rperm[4]; memset(rperm, 0, sizeof(rperm));
+  uint8_t exp[6];   memset(exp, 0, sizeof(exp));
+  uint8_t sel[4];   memset(sel, 0, sizeof(sel));
+
+  //key sets
+  uint8_t Ks[16][6]; memset(Ks, 0, sizeof(Ks));
+
+  //file the key into the keysets
+  for (int i = 0; i < 16; i++)
+  {
+    for (int j = 0; j < 6; j++)
+      Ks[i][j] = key[(i*6) + j];
+  }
+  
+  //permute the input_register with the ip (initial_register_permutation) table
+  permute (input_register, initial_permutation, initial_register_permutation, 0, 64);
+
+  //copy the initial permutation to left and right half arrays
+  memcpy (left, initial_permutation+0, sizeof(left));
+  memcpy (right, initial_permutation+4, sizeof(right));
+
+  //16 feistel rounds
+  for (uint8_t f = 0; f < 16; f++)
+  {
+
+    //reset rperm and exp arrays
+    memset(rperm, 0, sizeof(rperm));
+    memset(exp, 0, sizeof(exp));
+
+    //expand right half from 32-bit to 48-bit
+    permute (right, exp, message_expansion, 0, 48);
+
+    //apply current iteration keyset to the expanded array (encryption cycles Ks forward, decryption goes in reverse)
+    if (de == 1)
+    {
+      for (uint8_t i = 0; i < 6; i++)
+        exp[i] ^= Ks[f][i];
+    }
+    else
+    {
+      for (uint8_t i = 0; i < 6; i++)
+        exp[i] ^= Ks[15-f][i];
+    }
+
+    //extract 6 bits for each sbox swap from the expanded array
+    uint8_t e1 =   exp[0] >> 2;
+    uint8_t e2 = ((exp[0] & 0x3) << 4) | (exp[1] >> 4);
+    uint8_t e3 = ((exp[1] & 0xF) << 2) | (exp[2] >> 6);
+    uint8_t e4 =   exp[2] & 0x3F;
+
+    uint8_t e5 =   exp[3] >> 2;
+    uint8_t e6 = ((exp[3] & 0x3) << 4) | (exp[4] >> 4);
+    uint8_t e7 = ((exp[4] & 0xF) << 2) | (exp[5] >> 6);
+    uint8_t e8 =   exp[5] & 0x3F;
+
+    //select 32-bits of each 48-bit expansion via modified S Box Look Up Tables
+    //swap the 6 bits for 4 bits via SLUT tables and OR them together into a selection array
+    sel[0] = SLUT1[e1] | SLUT2[e2];
+    sel[1] = SLUT3[e3] | SLUT4[e4];
+    sel[2] = SLUT5[e5] | SLUT6[e6];
+    sel[3] = SLUT7[e7] | SLUT8[e8];
+
+    //permute the selected 32-bits into a new right half
+    permute (sel, rperm, right_half_permutation, 0, 32);
+
+    //xor new right half against left half
+    for (uint8_t i = 0; i < 4; i++)
+      rperm[i] ^= left[i];
+
+    //swap old right half to left, set new right half to rperm
+    memcpy (left, right, sizeof(left));
+    memcpy (right, rperm, sizeof(right));
+
+  } //end feistel rounds f
 
   //combine right and left into the pre_end_permutation array
   memcpy (pre_end_permutation+0, right, sizeof(right));

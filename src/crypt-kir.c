@@ -1,6 +1,9 @@
 #include "dsd.h"
 #include "pc4.h"
 
+//function prototype linked in crypt-des.c
+void ksun_des_cipher (uint8_t * key, uint8_t * input_register, uint8_t * output_register, uint8_t de);
+
 /* === Global MD2II buffers === */
 int x1, x2, i, n1global;
 unsigned char h2[n1];
@@ -174,7 +177,68 @@ void keystream37(unsigned char *key, uint64_t frame, unsigned char *output)
 
 }
 
-//dsd-fme -fs -Z -i '/SSD_STORAGE/2025_DEV/Tytera BP EP AP Master Folder/kirisun/cap-clear.wav/cap-33.wav' -H '3333333333333333 3333333333333333 3333333333333333 3333333333333333'
+#define ROTATE_LEFT(VALUE, SHIFT) \
+    (((VALUE) << ((SHIFT) & 63)) | ((VALUE) >> (64 - ((SHIFT) & 63))))
+
+#define ROTATE_RIGHT(VALUE, SHIFT) \
+    (((VALUE) >> ((SHIFT) & 63)) | ((VALUE) << (64 - ((SHIFT) & 63))))
+
+void keystream35(uint8_t * input_register, unsigned char * key)
+{
+
+  uint64_t round = 0x9E3779B97F4A7C15;
+  uint64_t round_key[2]; memset(round_key, 0, sizeof(round_key));
+
+  uint64_t state[2]; memset(state, 0, sizeof(state));
+
+  //load input_register into state as two 64-bit chunks
+  for (int i = 0; i < 8; i++)
+  {
+    state[0] <<= 8;
+    state[0]  |= input_register[i+0];
+
+    state[1] <<= 8;
+    state[1]  |= input_register[i+8];
+  }
+
+  //load key into round_key as two 64-bit chunks
+  for (int i = 0; i < 8; i++)
+  {
+    round_key[0] <<= 8;
+    round_key[0]  |= key[i+0];
+
+    round_key[1] <<= 8;
+    round_key[1]  |= key[i+8];
+  }
+
+  for (int i = 0; i < 64; i++)
+  {
+    round_key[0] += round;
+    round_key[1] -= round;
+
+    state[0] ^= round_key[0];
+    state[0] += state[1];
+    state[0] = ROTATE_LEFT(state[0], state[1]);
+
+    state[1] = ROTATE_RIGHT(state[1], state[0]);
+    state[1] -= state[0];
+    state[1] ^= round_key[1];
+  }
+
+  uint64_t temp = state[0];
+  state[0] = state[1];
+  state[1] = temp;
+
+  //reload input_register with current state values
+  for (int i = 0; i < 8; i++)
+    input_register[i+0] = (state[0] >> (56 - (i * 8))) & 0xFF;
+
+  for (int i = 0; i < 8; i++)
+    input_register[i+8] = (state[1] >> (56 - (i * 8))) & 0xFF;
+
+}
+
+//dsd-fme -fs -Z -i 'SSD_STORAGE/2025_DEV/Tytera BP EP AP Master Folder/kirisun/cap-clear.wav/cap-33.wav' -H '3333333333333333 3333333333333333 3333333333333333 3333333333333333'
 void kirisun_uni_keystream_creation(dsd_state *state)
 {
   uint8_t slot = 0;
@@ -292,7 +356,7 @@ void kirisun_uni_keystream_creation(dsd_state *state)
 
 }
 
-//dsd-fme -fs -Z -i '/SSD_STORAGE/2025_DEV/Tytera BP EP AP Master Folder/kirisun/better_samples_tg1/kirisun_advanced_tg1.wav' -H 'DC1A7E9F9BF312DB F45010CEC5F7A53A C407D0BFA803617B E426A7254DA9390D'
+//dsd-fme -fs -Z -i 'SSD_STORAGE/2025_DEV/Tytera BP EP AP Master Folder/kirisun/better_samples_tg1/kirisun_advanced_tg1.wav' -H 'DC1A7E9F9BF312DB F45010CEC5F7A53A C407D0BFA803617B E426A7254DA9390D'
 void kirisun_adv_keystream_creation(dsd_state *state)
 {
 
@@ -413,5 +477,464 @@ void kirisun_adv_keystream_creation(dsd_state *state)
     // fprintf (stderr, "\n");
 
   }
+
+}
+
+//dsd-fme -fs -Z -i 'SSD_STORAGE/2025_DEV/Tytera BP EP AP Master Folder/kirisun/enhanced-key-12.wav/enhanced-key-12.wav' -H 'C607727B8BECC3CB 7DD174F5526BB546'
+void kirisun_enh_keystream_creation(dsd_state *state)
+{
+  uint8_t slot = 0;
+  if (state->currentslot == 0)
+    slot = 0;
+  else slot = 1;
+
+  uint32_t lfsr = 0;
+  if (state->currentslot == 0)
+    lfsr = (uint32_t)state->payload_mi;
+  else lfsr = (uint32_t)state->payload_miR;
+
+  unsigned char userkeyhexa[32]; memset(userkeyhexa, 0, sizeof(userkeyhexa));
+  unsigned char realkey[32]; memset(realkey, 0, sizeof(realkey));
+  unsigned char lfsrhexa[4]; memset(lfsrhexa, 0, sizeof(lfsrhexa));
+  uint8_t ks_bytes[128]; memset(ks_bytes, 0, sizeof(ks_bytes));
+
+  lfsrhexa[0] = (lfsr >> 24) & 0xFF;
+  lfsrhexa[1] = (lfsr >> 16) & 0xFF;
+  lfsrhexa[2] = (lfsr >> 8)  & 0xFF;
+  lfsrhexa[3] = (lfsr >> 0)  & 0xFF;
+
+  uint64_t K1 = state->A1[slot];
+  uint64_t K2 = state->A2[slot];
+
+  if (K1 != 0 && K2 != 0)
+    state->aes_key_loaded[slot] = 1;
+  else state->aes_key_loaded[slot] = 0;
+
+  if (state->aes_key_loaded[slot] == 1)
+  {
+
+    u64_to_bytes_be(K1, &userkeyhexa[0]);
+    u64_to_bytes_be(K2, &userkeyhexa[8]);
+
+    // printf("=== userkey input (16 bytes) ===\n");
+    // print_hex(userkeyhexa,16);
+
+    /* --- MD2II first pass --- */
+    n1global=16;
+    unsigned char h4[n1]; memset(h4, 0, sizeof(h4));
+    MD2II_init();
+    MD2II_hashing(userkeyhexa,16);
+    MD2II_end(h4);
+    for(int i=0;i<16;i++) realkey[i]=h4[i];
+
+    // printf("=== realkey final (16 bytes) ===\n");
+    // print_hex(realkey,16);
+
+    n1global=16;
+    MD2II_init();
+    MD2II_hashing(lfsrhexa,4);
+    MD2II_hashing(realkey,16);
+    MD2II_end(h4);
+
+    uint8_t input_register[16]; memset(input_register, 0, sizeof(input_register));
+
+    //copy h4 to the input_register for the cipher
+    memcpy(input_register, h4, 16);
+
+    /* --- MD2II with n1global=32 --- */
+    n1global=32;
+    MD2II_init();
+    MD2II_hashing(lfsrhexa,4);
+    MD2II_hashing(realkey,16);
+    MD2II_end(h4);
+
+    //copy h4 to the tab for the cipher
+    uint8_t tab[16]; memset(tab, 0, sizeof(tab));
+    memcpy(tab, h4, 16);
+
+    // printf("=== Input Register (16 bytes) ===\n");
+    // print_hex(input_register,16);
+
+    // printf("=== Tab (16 bytes) ===\n");
+    // print_hex(tab,16);
+
+    /* --- keystream output --- */
+    uint8_t output[128]; memset(output, 0, sizeof(output));
+
+    //discard round
+    keystream35(input_register, tab);
+
+    for (int i = 0; i < 8; i++)
+    {
+      keystream35(input_register, tab);
+      memcpy(output+(i*16), input_register, 16);
+    }
+
+    //store ks_bytes to storage
+    for (int i = 0; i < 128; i++)
+      ks_bytes[i] = output[i];
+
+    if (slot == 0)
+      memcpy(state->ks_octetL, ks_bytes, sizeof(ks_bytes));
+    else memcpy(state->ks_octetR, ks_bytes, sizeof(ks_bytes));
+
+    //debug ks_bytes
+    // fprintf (stderr, "KS: ");
+    // for (int i = 0; i < 128; i++)
+    // {
+    //   if ((i != 0) && ((i%16)==0))
+    //     fprintf (stderr, "\n    ");
+    //   fprintf (stderr, "%02X ", ks_bytes[i]);
+    // }
+    // fprintf (stderr, "\n");
+
+  }
+
+}
+
+//dsd-fme -fs -Z -i 'SSD_STORAGE/2025_DEV/Tytera BP EP AP Master Folder/kirisun/kirisun_files/reinforced-key-9.wav' -H 'C607727B8BECC3CB 7DD174F5526BB546 B3DEA1C111DC1994 69243120CDB6F99A'
+void kirisun_rei_keystream_creation(dsd_state *state)
+{
+  uint8_t slot = 0;
+  if (state->currentslot == 0)
+    slot = 0;
+  else slot = 1;
+
+  uint32_t lfsr = 0;
+  if (state->currentslot == 0)
+    lfsr = (uint32_t)state->payload_mi;
+  else lfsr = (uint32_t)state->payload_miR;
+
+  unsigned char userkeyhexa[32]; memset(userkeyhexa, 0, sizeof(userkeyhexa));
+  unsigned char realkey[32]; memset(realkey, 0, sizeof(realkey));
+  unsigned char lfsrhexa[4]; memset(lfsrhexa, 0, sizeof(lfsrhexa));
+  uint8_t ks_bytes[128]; memset(ks_bytes, 0, sizeof(ks_bytes));
+
+  lfsrhexa[0] = (lfsr >> 24) & 0xFF;
+  lfsrhexa[1] = (lfsr >> 16) & 0xFF;
+  lfsrhexa[2] = (lfsr >> 8)  & 0xFF;
+  lfsrhexa[3] = (lfsr >> 0)  & 0xFF;
+
+  uint64_t K1 = state->A1[slot];
+  uint64_t K2 = state->A2[slot];
+  uint64_t K3 = state->A3[slot];
+  uint64_t K4 = state->A4[slot];
+
+  if (K1 != 0 && K2 != 0 && K3 != 0 && K4 != 0)
+    state->aes_key_loaded[slot] = 1;
+  else state->aes_key_loaded[slot] = 0;
+
+  if (state->aes_key_loaded[slot] == 1)
+  {
+
+    u64_to_bytes_be(K1, &userkeyhexa[0]);
+    u64_to_bytes_be(K2, &userkeyhexa[8]);
+    u64_to_bytes_be(K3, &userkeyhexa[16]);
+    u64_to_bytes_be(K4, &userkeyhexa[24]);
+
+    for(int i=0;i<32;i++) realkey[i]=userkeyhexa[i];
+
+    // printf("=== userkey input (32 bytes) ===\n");
+    // print_hex(userkeyhexa,32);
+
+    /* --- MD2II first pass --- */
+    n1global=32;
+    unsigned char h4[n1]; memset(h4, 0, sizeof(h4));
+    MD2II_init();
+    MD2II_hashing(realkey,32);
+    MD2II_end(h4);
+    for(int i=0;i<32;i++) realkey[i]=h4[i];
+
+    // printf("=== realkey final (32 bytes) ===\n");
+    // print_hex(realkey,32);
+
+    n1global=8;
+    MD2II_init();
+    MD2II_hashing(lfsrhexa,4);
+    MD2II_hashing(realkey,32);
+    MD2II_end(h4);
+
+    // printf("h4[0..7]: ");
+    // print_hex(h4,8);
+
+    uint64_t internal_state=0;
+    for(int i=0;i<8;i++)
+      internal_state=(internal_state<<8)+(h4[i]);
+
+    // printf("internal_state=%016llX\n",(unsigned long long)internal_state);
+
+    uint8_t input_register[8]; memset(input_register, 0, sizeof(input_register));
+    uint8_t output_register[8]; memset(output_register, 0, sizeof(output_register));
+
+    //copy internal state value to the input_register for the modified DES cipher
+    memcpy(input_register, h4, 8);
+
+    /* --- MD2II with n1global=96 --- */
+    n1global=96;
+    MD2II_init();
+    MD2II_hashing(lfsrhexa,4);
+    MD2II_hashing(realkey,32);
+    MD2II_end(h4);
+
+    // printf("realkey (96 bytes):\n");
+    // print_hex(h4,96);
+
+    /* --- keystream output --- */
+    uint8_t output[128]; memset(output, 0, sizeof(output));
+
+    //run discard round first
+    ksun_des_cipher(h4, input_register, output_register, 1);
+    memcpy(input_register, output_register, 8); //internal_state = des_reinforced(internal_state, encrypt);
+    memset(output_register, 0, sizeof(output_register));
+
+    //begin creation of actual keystream now
+    for (int i = 0; i < 16; i++)
+    {
+      //the internal state is the output feedback mode
+      ksun_des_cipher(h4, input_register, output_register, 1);
+      memcpy(output+(i*8), output_register, 8);
+      memcpy(input_register, output_register, 8);
+      memset(output_register, 0, sizeof(output_register));
+    }
+
+    // printf("keystream output (128 bytes):\n");
+    // print_hex(output,128);
+
+    //store ks_bytes to storage
+    for (int i = 0; i < 128; i++)
+      ks_bytes[i] = output[i];
+
+    if (slot == 0)
+      memcpy(state->ks_octetL, ks_bytes, sizeof(ks_bytes));
+    else memcpy(state->ks_octetR, ks_bytes, sizeof(ks_bytes));
+
+    //debug ks_bytes
+    // fprintf (stderr, "KS: ");
+    // for (int i = 0; i < 128; i++)
+    // {
+    //   if ((i != 0) && ((i%16)==0))
+    //     fprintf (stderr, "\n    ");
+    //   fprintf (stderr, "%02X ", ks_bytes[i]);
+    // }
+    // fprintf (stderr, "\n");
+
+  }
+
+}
+
+//dsd-fme -fs -Z -i 'SSD_STORAGE/2025_DEV/Tytera BP EP AP Master Folder/kirisun/kirisun_files/strengthened-key-7.wav' -H 'C607727B8BECC3CB 7DD174F5526BB546 B3DEA1C111DC1994 69243120CDB6F99A'
+void kirisun_str_keystream_creation(dsd_state *state)
+{
+  uint8_t slot = 0;
+  if (state->currentslot == 0)
+    slot = 0;
+  else slot = 1;
+
+  uint32_t lfsr = 0;
+  if (state->currentslot == 0)
+    lfsr = (uint32_t)state->payload_mi;
+  else lfsr = (uint32_t)state->payload_miR;
+
+  unsigned char userkeyhexa[32]; memset(userkeyhexa, 0, sizeof(userkeyhexa));
+  unsigned char realkey[32]; memset(realkey, 0, sizeof(realkey));
+  unsigned char lfsrhexa[4]; memset(lfsrhexa, 0, sizeof(lfsrhexa));
+  uint8_t ks_bytes[128]; memset(ks_bytes, 0, sizeof(ks_bytes));
+  uint8_t global_key[288]; memset (global_key, 0, sizeof(global_key));
+
+  lfsrhexa[0] = (lfsr >> 24) & 0xFF;
+  lfsrhexa[1] = (lfsr >> 16) & 0xFF;
+  lfsrhexa[2] = (lfsr >> 8)  & 0xFF;
+  lfsrhexa[3] = (lfsr >> 0)  & 0xFF;
+
+  uint64_t K1 = state->A1[slot];
+  uint64_t K2 = state->A2[slot];
+  uint64_t K3 = state->A3[slot];
+  uint64_t K4 = state->A4[slot];
+
+  if (K1 != 0 && K2 != 0 && K3 != 0 && K4 != 0)
+    state->aes_key_loaded[slot] = 1;
+  else state->aes_key_loaded[slot] = 0;
+
+  if (state->aes_key_loaded[slot] == 1)
+  {
+
+    u64_to_bytes_be(K1, &userkeyhexa[0]);
+    u64_to_bytes_be(K2, &userkeyhexa[8]);
+    u64_to_bytes_be(K3, &userkeyhexa[16]);
+    u64_to_bytes_be(K4, &userkeyhexa[24]);
+
+    for(int i=0;i<32;i++) realkey[i]=userkeyhexa[i];
+
+    // printf("=== userkey input (32 bytes) ===\n");
+    // print_hex(userkeyhexa,32);
+
+    /* --- MD2II first pass --- */
+    n1global=32;
+    unsigned char h4[288]; memset(h4, 0, sizeof(h4));
+    MD2II_init();
+    MD2II_hashing(realkey,32);
+    MD2II_end(h4);
+    for(int i=0;i<32;i++) realkey[i]=h4[i];
+
+    // printf("=== realkey final (32 bytes) ===\n");
+    // print_hex(realkey,32);
+
+    n1global=288;
+    MD2II_init();
+    MD2II_hashing(realkey, 32);
+    MD2II_end(h4);
+    for (int i=0;i<288;i++) global_key[i]=h4[i];
+
+    // printf("=== global key (288 bytes) ===\n");
+    // print_hex(realkey,288);
+
+    n1global=8;
+    MD2II_init();
+    MD2II_hashing(lfsrhexa,4);
+    MD2II_hashing(realkey,32);
+    MD2II_end(h4);
+
+    // printf("h4[0..7]: ");
+    // print_hex(h4,8);
+
+    uint64_t internal_state=0;
+    for(int i=0;i<8;i++)
+      internal_state=(internal_state<<8)+(h4[i]);
+
+    // printf("internal_state=%016llX\n",(unsigned long long)internal_state);
+
+    uint8_t input_register[8]; memset(input_register, 0, sizeof(input_register));
+    uint8_t output_register[8]; memset(output_register, 0, sizeof(output_register));
+
+    //copy internal state value to the input_register for the modified DES cipher
+    memcpy(input_register, h4, 8);
+
+    /* --- MD2II with n1global=96 --- */
+    n1global=96;
+    MD2II_init();
+    MD2II_hashing(lfsrhexa,4);
+    MD2II_hashing(realkey,32);
+    MD2II_end(h4);
+
+    // printf("realkey (96 bytes):\n");
+    // print_hex(h4,96);
+
+    /* --- keystream output --- */
+    uint8_t output[128]; memset(output, 0, sizeof(output));
+
+    //run discard round first
+    ksun_des_cipher(global_key+0, input_register, output_register, 1);
+    memcpy(input_register, output_register, 8); //internal_state = des_reinforced(internal_state, encrypt);
+    memset(output_register, 0, sizeof(output_register));
+
+    ksun_des_cipher(global_key+96, input_register, output_register, 0);
+    memcpy(input_register, output_register, 8); //internal_state = des_reinforced(internal_state, encrypt);
+    memset(output_register, 0, sizeof(output_register));
+
+    ksun_des_cipher(global_key+192, input_register, output_register, 1);
+    memcpy(input_register, output_register, 8); //internal_state = des_reinforced(internal_state, encrypt);
+    memset(output_register, 0, sizeof(output_register));
+
+    //begin creation of actual keystream now
+    for (int i = 0; i < 16; i++)
+    {
+      //the internal state is the output feedback mode
+      ksun_des_cipher(global_key+0, input_register, output_register, 1);
+      memcpy(input_register, output_register, 8); //internal_state = des_reinforced(internal_state, encrypt);
+      memset(output_register, 0, sizeof(output_register));
+
+      ksun_des_cipher(global_key+96, input_register, output_register, 0);
+      memcpy(input_register, output_register, 8); //internal_state = des_reinforced(internal_state, encrypt);
+      memset(output_register, 0, sizeof(output_register));
+
+      ksun_des_cipher(global_key+192, input_register, output_register, 1);
+      memcpy(input_register, output_register, 8); //internal_state = des_reinforced(internal_state, encrypt);
+
+      //copy out last output_register to output
+      memcpy(output+(i*8), output_register, 8);
+      memset(output_register, 0, sizeof(output_register));     
+    }
+
+    // printf("keystream output (128 bytes):\n");
+    // print_hex(output,128);
+
+    //store ks_bytes to storage
+    for (int i = 0; i < 128; i++)
+      ks_bytes[i] = output[i];
+
+    if (slot == 0)
+      memcpy(state->ks_octetL, ks_bytes, sizeof(ks_bytes));
+    else memcpy(state->ks_octetR, ks_bytes, sizeof(ks_bytes));
+
+    //debug ks_bytes
+    // fprintf (stderr, "KS: ");
+    // for (int i = 0; i < 128; i++)
+    // {
+    //   if ((i != 0) && ((i%16)==0))
+    //     fprintf (stderr, "\n    ");
+    //   fprintf (stderr, "%02X ", ks_bytes[i]);
+    // }
+    // fprintf (stderr, "\n");
+
+  }
+}
+
+void kirisun_low_keystream_creation(dsd_state *state)
+{
+  UNUSED(state);
+}
+
+void kirisun_mid_keystream_creation(dsd_state *state)
+{
+  UNUSED(state);
+}
+
+void kirisun_hi_keystream_creation(dsd_state *state)
+{
+  UNUSED(state);
+}
+
+void kirisun_top_keystream_creation(dsd_state *state)
+{
+  UNUSED(state);
+}
+
+void kirisun_ult_keystream_creation(dsd_state *state)
+{
+  UNUSED(state);
+}
+
+//General Keystream Creator for any known Kirisun cipher
+void kirisun_keystream_creation(dsd_state * state)
+{
+  if (state->payload_algid == 0x31)
+    kirisun_rei_keystream_creation(state);
+
+  else if (state->payload_algid == 0x32)
+    kirisun_low_keystream_creation(state);
+
+  else if (state->payload_algid == 0x33)
+    kirisun_mid_keystream_creation(state);
+
+  else if (state->payload_algid == 0x34)
+    kirisun_hi_keystream_creation(state);
+
+  else if (state->payload_algid == 0x35)
+    kirisun_enh_keystream_creation(state);
+
+  else if (state->payload_algid == 0x36)
+    kirisun_adv_keystream_creation(state);
+
+  else if (state->payload_algid == 0x37)
+    kirisun_uni_keystream_creation(state);
+
+  else if (state->payload_algid == 0x38)
+    kirisun_str_keystream_creation(state);
+
+  else if (state->payload_algid == 0x39)
+    kirisun_top_keystream_creation(state);
+  
+  else if (state->payload_algid == 0x3A)
+    kirisun_ult_keystream_creation(state);
 
 }

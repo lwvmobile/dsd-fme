@@ -219,20 +219,37 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%s\n", KNRM);
     }
 
-    if (state->payload_algid == 0x35 || state->payload_algid == 0x36 || state->payload_algid == 0x37)
+    if ((state->payload_algid & 0xF0) == 0x30) //any kirisun 0x3X alg
     {
+      uint8_t alg = state->payload_algid;
       state->DMRvcL = 0;
       state->payload_mi = kirisun_lfsr(state->payload_mi);
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot 1");
-      fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", state->payload_algid, state->payload_keyid);
+      fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", alg, state->payload_keyid);
       fprintf (stderr, " MI(32): %08llX;", state->payload_mi);
-      fprintf (stderr, " Kirisun");
-      if (state->payload_algid == 0x36)
-        fprintf (stderr, " Advanced;");
-      else if (state->payload_algid == 0x37)
-        fprintf (stderr, " Universal;");
-      else fprintf (stderr, " Encryption;");
+      fprintf (stderr, " Kirisun ");
+      if (alg == 0x31)
+        fprintf (stderr, "Reinforced ");
+      else if (alg == 0x32)
+        fprintf (stderr, "Low ");
+      else if (alg == 0x33)
+        fprintf (stderr, "Middle ");
+      else if (alg == 0x34)
+        fprintf (stderr, "High ");
+      else if (alg == 0x35)
+        fprintf (stderr, "Enhanced ");
+      else if (alg == 0x36)
+        fprintf (stderr, "Advanced ");
+      else if (alg == 0x37)
+        fprintf (stderr, "Universal ");
+      else if (alg == 0x38)
+        fprintf (stderr, "Strengthened ");
+      else if (alg == 0x39)
+        fprintf (stderr, "Top ");
+      else if (alg == 0x3A)
+        fprintf (stderr, "Ultra ");
+      fprintf (stderr, "Encryption;");
       fprintf (stderr, "%s\n", KNRM);
     }
 
@@ -266,20 +283,37 @@ void dmr_alg_refresh (dsd_opts * opts, dsd_state * state)
       fprintf (stderr, "%s\n", KNRM);
     } 
 
-    if (state->payload_algidR == 0x35 || state->payload_algidR == 0x36 || state->payload_algidR == 0x37)
+    if ((state->payload_algidR & 0xF0) == 0x30) //any 0x3X alg
     {
+      uint8_t alg = state->payload_algidR;
       state->DMRvcR = 0;
       state->payload_miR = kirisun_lfsr(state->payload_miR);
       fprintf (stderr, "%s", KYEL);
       fprintf (stderr, " Slot 2");
-      fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", state->payload_algidR, state->payload_keyidR);
+      fprintf (stderr, " DMR PI C- ALG ID: %02X; KEY ID: %02X;", alg, state->payload_keyidR);
       fprintf (stderr, " MI(32): %08llX;", state->payload_miR);
-      fprintf (stderr, " Kirisun");
-      if (state->payload_algidR == 0x36)
-        fprintf (stderr, " Advanced;");
-      else if (state->payload_algidR == 0x37)
-        fprintf (stderr, " Universal;");
-      else fprintf (stderr, " Encryption;");
+      fprintf (stderr, " Kirisun ");
+      if (alg == 0x31)
+        fprintf (stderr, "Reinforced ");
+      else if (alg == 0x32)
+        fprintf (stderr, "Low ");
+      else if (alg == 0x33)
+        fprintf (stderr, "Middle ");
+      else if (alg == 0x34)
+        fprintf (stderr, "High ");
+      else if (alg == 0x35)
+        fprintf (stderr, "Enhanced ");
+      else if (alg == 0x36)
+        fprintf (stderr, "Advanced ");
+      else if (alg == 0x37)
+        fprintf (stderr, "Universal ");
+      else if (alg == 0x38)
+        fprintf (stderr, "Strengthened ");
+      else if (alg == 0x39)
+        fprintf (stderr, "Top ");
+      else if (alg == 0x3A)
+        fprintf (stderr, "Ultra ");
+      fprintf (stderr, "Encryption;");
       fprintf (stderr, "%s\n", KNRM);
     }
 
@@ -407,7 +441,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   //NOTE: on above, I belive that we need to check by opcode as well, as a CRC3 can have multiple collisions
   //so we need to exclude op/alg 0 and 3 from the check (does algID 0x03/0x23 even exist?)
 
-  //Kirisun Placeholder
+  //Kirisun
   if (opts->dmr_le == 3)
   {
     if (irr_err != 0)
@@ -422,23 +456,38 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
       fprintf (stderr, "%s SLOT %d SB/RC (FEC ERR) E:%d; I:%08X D:%03X; %s ", KRED, slot+1, irr_err, sbrcpl, sbrc_hex, KNRM);
       if (opts->payload == 1) fprintf (stderr, "\n");
     }
-    else if (irr_err == 0 && sbrc_hex != 0) //first batch had sbrc_hex 0x5F1, second batch had 0x5E1 instead, what changed?
+    else if (irr_err == 0 && sbrc_hex != 0) //older firmware had sbrc_hex 0x5F1, and 0x5E1 instead
     {
       fprintf (stderr, "\n");
       fprintf (stderr, "%s", KCYN);
       fprintf (stderr, " Slot %d", state->currentslot+1);
-      fprintf (stderr, " DMR LE SB Kirisun Encryption Identifier;");
+      fprintf (stderr, " DMR LE SB Kirisun");
+
+      //Newer Samples and/or updated firmware seem to do this with actual key values
+      uint8_t alg = sbrc_hex >> 7;
+
+      if (alg != 0xB)
+      {
+        fprintf (stderr, " ALG: %02X;", alg+0x30);
+        uint8_t kid = (sbrc_hex >> 3) & 0xF;
+        fprintf (stderr, " KID: %02X;", kid);
+        uint8_t unk = sbrc_hex & 0x7;
+        fprintf (stderr, " LOW3: %X;", unk);
+
+        if (state->currentslot == 0)
+        {
+          if (state->payload_algid == 0 && state->dmr_so & 0x40)
+            state->payload_algid = alg+0x30;
+        }
+        else
+        {
+          if (state->payload_algidR == 0  && state->dmr_soR & 0x40)
+            state->payload_algidR = alg+0x30;
+        }
+      }
+
       fprintf (stderr, "%s ", KNRM);
-      if (state->currentslot == 0)
-      {
-        if (state->payload_algid == 0 && state->dmr_so & 0x40)
-          state->payload_algid = 0x35; //placeholder value
-      }
-      else
-      {
-        if (state->payload_algidR == 0  && state->dmr_soR & 0x40)
-          state->payload_algidR = 0x35; //placeholder value
-      }
+
     }
   }
 

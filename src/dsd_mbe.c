@@ -304,9 +304,9 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
         if (state->payload_algid == 0x9F) //DES-XL
           des_multi_keystream_output (state->payload_miP, state->R, state->ks_octetL, 2, state->xl_is_hdu); //hard coded bit count value, xl_is_hdu determines lfsr run values
         if (state->payload_algid == 0x84) //AES256
-          aes_ofb_keystream_output (state->aes_iv, aes_key, state->ks_octetL, 2, 14); //14 + 1 discard round
+          aes_ofb_keystream_output (state->aes_iv, aes_key, state->ks_octetL, 2, 16); //15 + 1 discard round
         if (state->payload_algid == 0x89) //AES128
-          aes_ofb_keystream_output (state->aes_iv, aes_key, state->ks_octetL, 0, 14); //14 + 1 discard round
+          aes_ofb_keystream_output (state->aes_iv, aes_key, state->ks_octetL, 0, 16); //15 + 1 discard round
 
       }
 
@@ -779,8 +779,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             (state->currentslot == 0 && state->payload_algid == 0x25 && state->aes_key_loaded[0] == 1 ) || //DMR AES256
             (state->currentslot == 0 && state->payload_algid == 0x89 && state->aes_key_loaded[0] == 1 ) || //P25 AES128
             (state->currentslot == 0 && state->payload_algid == 0x84 && state->aes_key_loaded[0] == 1 ) || //P25 AES256
-            (state->currentslot == 0 && state->payload_algid == 0x36 && state->aes_key_loaded[0] == 1 ) || //KIRI ADV
-            (state->currentslot == 0 && state->payload_algid == 0x37 && state->aes_key_loaded[0] == 1 ) || //KIRI UNI
+            (state->currentslot == 0 && state->payload_algid >= 0x31 && \
+                                        state->payload_algid <= 0x3A && state->aes_key_loaded[0] == 1 ) || //KIRI Any
             (state->currentslot == 0 && state->payload_algid == 0x02 && state->R != 0 )                  ) //HYT ENHANCED
       {
 
@@ -815,17 +815,11 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             n = 0;
             hytera_enhanced_rc4_setup(opts, state, state->R, state->payload_mi);
           }
-          if (state->payload_algid == 0x36)
+          if (state->payload_algid >= 0x31 && state->payload_algid <= 0x3A)
           {
             n = 0;
-            kirisun_adv_keystream_creation(state);
+            kirisun_keystream_creation(state);
           }
-          if (state->payload_algid == 0x37)
-          {
-            n = 0;
-            kirisun_uni_keystream_creation(state);
-          }
-
           //Load Keystream Octet Bytes directly into keystream array //TODO: Convert to unpack function
           for (i = 0; i < 9 * 16; i++) //9 rounds at 16 octets
           {
@@ -1285,8 +1279,8 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             (state->currentslot == 1 && state->payload_algidR == 0x25 && state->aes_key_loaded[1] == 1 ) || //DMR AES256
             (state->currentslot == 1 && state->payload_algidR == 0x89 && state->aes_key_loaded[1] == 1 ) || //P25 AES128
             (state->currentslot == 1 && state->payload_algidR == 0x84 && state->aes_key_loaded[1] == 1 ) || //P25 AES256
-            (state->currentslot == 1 && state->payload_algidR == 0x36 && state->aes_key_loaded[1] == 1 ) || //KIRI ADV
-            (state->currentslot == 1 && state->payload_algidR == 0x37 && state->aes_key_loaded[1] == 1 ) || //KIRI UNI
+            (state->currentslot == 1 && state->payload_algidR >= 0x31 && \
+                                        state->payload_algidR <= 0x3A && state->aes_key_loaded[1] == 1 ) || //KIRI Any
             (state->currentslot == 1 && state->payload_algidR == 0x02 && state->RR != 0 )                 ) //HYT ENHANCED
       {
 
@@ -1321,17 +1315,11 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
             n = 0;
             hytera_enhanced_rc4_setup(opts, state, state->RR, state->payload_miR);
           }
-          if (state->payload_algidR == 0x36)
+          if (state->payload_algidR >= 0x31 && state->payload_algidR <= 0x3A)
           {
             n = 0;
-            kirisun_adv_keystream_creation(state);
+            kirisun_keystream_creation(state);
           }
-          if (state->payload_algidR == 0x37)
-          {
-            n = 0;
-            kirisun_uni_keystream_creation(state);
-          }
-
           //Load Keystream Octet Bytes directly into keystream array
           for (i = 0; i < 9 * 16; i++) //9 rounds at 16 octets //TODO: Convert to unpack function
           {

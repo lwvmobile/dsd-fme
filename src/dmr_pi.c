@@ -27,13 +27,19 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
 
     if (MFID == 0x0A && CRCCorrect == 1) //Kirisun
     {
-      uint8_t so  = PI_BYTE[2]; //in VLC and PI, this byte is 0x40, so thinking this could be SVC_OPT
+      //NOTE: Some Kirisun Radios seem to use byte 2 as the SVC_OPT, others seem to use it like a KID value
+      // uint8_t so  = PI_BYTE[2]; //in VLC and PI, this byte is 0x40, so thinking this could be SVC_OPT
       uint8_t alg = PI_BYTE[0]; //observed 0x36 and 0x37 for Kirisun Advanced and Universal Privacy
-      // uint8_t kid = PI_BYTE[2]; //user info conveyed there is only 16 allotments for Key, and keys are channel specific, so no key id value
+      //NOTE: Original samples had this as 0x40 no matter which "key" was selected, new samples from different radio show a KID value
+      uint8_t kid = PI_BYTE[2]; //user info conveyed there is only 16 allotments for Key, and keys are channel specific, so no key id value on older FW
       uint32_t target = ((unsigned long long int)PI_BYTE[7] << 16) | ((unsigned long long int)PI_BYTE[8] << 8)  | ((unsigned long long int)PI_BYTE[9] << 0);
 
       //TODO: Use ALG and TGT value here to produce a key id via hashing it
       uint8_t hash = alg * target % 256; //more complex hash later (honestly, probably not)
+
+      //Only set real KID if the byte value isn't 0x40
+      if (kid == 0x40)
+        kid = hash;
 
       //MI only appears to be 32-bit
       uint32_t mi = ((uint32_t)PI_BYTE[3] << 24) | ((uint32_t)PI_BYTE[4] << 16) | 
@@ -41,29 +47,45 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
 
       if (state->currentslot == 0)
       {
-        state->dmr_so = so;
-        state->payload_algid = alg; 
-        state->payload_keyid = hash;
+        state->dmr_so = 0x40;
+        state->payload_algid = alg;
+        state->payload_keyid = kid;
         state->payload_mi = mi;
       }
       else
       {
-        state->dmr_soR = so;
+        state->dmr_soR = 0x40;
         state->payload_algidR = alg;
-        state->payload_keyidR = hash;
+        state->payload_keyidR = kid;
         state->payload_miR = mi;
       }
 
       fprintf (stderr, "%s ", KYEL);
       fprintf (stderr, "\n Slot %d", state->currentslot+1);
-      fprintf (stderr, " DMR PI H- ALG ID: %02X; KEY ID: %02X; MI(32): %08X;", alg, hash, mi);
+      fprintf (stderr, " DMR PI H- ALG ID: %02X; TGT: %d; KEY ID: %02X; MI(32): %08X;", alg, target, kid, mi);
 
       fprintf (stderr, " Kirisun ");
-      if (alg == 0x36)
-        fprintf (stderr, "Advanced;");
+      if (alg == 0x31)
+        fprintf (stderr, "Reinforced ");
+      else if (alg == 0x32)
+        fprintf (stderr, "Low ");
+      else if (alg == 0x33)
+        fprintf (stderr, "Middle ");
+      else if (alg == 0x34)
+        fprintf (stderr, "High ");
+      else if (alg == 0x35)
+        fprintf (stderr, "Enhanced ");
+      else if (alg == 0x36)
+        fprintf (stderr, "Advanced ");
       else if (alg == 0x37)
-        fprintf (stderr, "Universal;");
-      else fprintf (stderr, "Encryption;");
+        fprintf (stderr, "Universal ");
+      else if (alg == 0x38)
+        fprintf (stderr, "Strengthened ");
+      else if (alg == 0x39)
+        fprintf (stderr, "Top ");
+      else if (alg == 0x3A)
+        fprintf (stderr, "Ultra ");
+      fprintf (stderr, "Encryption;");
       fprintf (stderr, "%s", KNRM);
 
       //disable late entry for DMRA, Flag 3 for future check of VC-F 48-bit region with Golay 24,12 Encoding
