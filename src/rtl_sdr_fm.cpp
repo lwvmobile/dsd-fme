@@ -48,6 +48,7 @@ static int atan_lut_size = 131072; /* 512 KB */
 static int atan_lut_coef = 8;
 
 //UDP -- keep for compatibility reasons
+#include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 static pthread_t socket_freq;
