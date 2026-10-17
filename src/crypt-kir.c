@@ -239,7 +239,7 @@ void keystream35(uint8_t * input_register, unsigned char * key)
 }
 
 //dsd-fme -fs -Z -i 'SSD_STORAGE/2025_DEV/Tytera BP EP AP Master Folder/kirisun/cap-clear.wav/cap-33.wav' -H '3333333333333333 3333333333333333 3333333333333333 3333333333333333'
-void kirisun_uni_keystream_creation(dsd_state *state)
+void kirisun_universal_keystream_creation(dsd_state *state)
 {
   uint8_t slot = 0;
   if (state->currentslot == 0)
@@ -357,7 +357,7 @@ void kirisun_uni_keystream_creation(dsd_state *state)
 }
 
 //dsd-fme -fs -Z -i 'SSD_STORAGE/2025_DEV/Tytera BP EP AP Master Folder/kirisun/better_samples_tg1/kirisun_advanced_tg1.wav' -H 'DC1A7E9F9BF312DB F45010CEC5F7A53A C407D0BFA803617B E426A7254DA9390D'
-void kirisun_adv_keystream_creation(dsd_state *state)
+void kirisun_advanced_keystream_creation(dsd_state *state)
 {
 
   uint8_t slot = 0;
@@ -481,7 +481,7 @@ void kirisun_adv_keystream_creation(dsd_state *state)
 }
 
 //dsd-fme -fs -Z -i 'SSD_STORAGE/2025_DEV/Tytera BP EP AP Master Folder/kirisun/enhanced-key-12.wav/enhanced-key-12.wav' -H 'C607727B8BECC3CB 7DD174F5526BB546'
-void kirisun_enh_keystream_creation(dsd_state *state)
+void kirisun_enhanced_keystream_creation(dsd_state *state)
 {
   uint8_t slot = 0;
   if (state->currentslot == 0)
@@ -593,7 +593,7 @@ void kirisun_enh_keystream_creation(dsd_state *state)
 }
 
 //dsd-fme -fs -Z -i 'SSD_STORAGE/2025_DEV/Tytera BP EP AP Master Folder/kirisun/kirisun_files/reinforced-key-9.wav' -H 'C607727B8BECC3CB 7DD174F5526BB546 B3DEA1C111DC1994 69243120CDB6F99A'
-void kirisun_rei_keystream_creation(dsd_state *state)
+void kirisun_reinforced_keystream_creation(dsd_state *state)
 {
   uint8_t slot = 0;
   if (state->currentslot == 0)
@@ -723,7 +723,7 @@ void kirisun_rei_keystream_creation(dsd_state *state)
 }
 
 //dsd-fme -fs -Z -i 'SSD_STORAGE/2025_DEV/Tytera BP EP AP Master Folder/kirisun/kirisun_files/strengthened-key-7.wav' -H 'C607727B8BECC3CB 7DD174F5526BB546 B3DEA1C111DC1994 69243120CDB6F99A'
-void kirisun_str_keystream_creation(dsd_state *state)
+void kirisun_strengthened_keystream_creation(dsd_state *state)
 {
   uint8_t slot = 0;
   if (state->currentslot == 0)
@@ -884,12 +884,12 @@ void kirisun_low_keystream_creation(dsd_state *state)
   UNUSED(state);
 }
 
-void kirisun_mid_keystream_creation(dsd_state *state)
+void kirisun_middle_keystream_creation(dsd_state *state)
 {
   UNUSED(state);
 }
 
-void kirisun_hi_keystream_creation(dsd_state *state)
+void kirisun_high_keystream_creation(dsd_state *state)
 {
   UNUSED(state);
 }
@@ -899,7 +899,7 @@ void kirisun_top_keystream_creation(dsd_state *state)
   UNUSED(state);
 }
 
-void kirisun_ult_keystream_creation(dsd_state *state)
+void kirisun_ultimate_keystream_creation(dsd_state *state)
 {
   UNUSED(state);
 }
@@ -907,34 +907,40 @@ void kirisun_ult_keystream_creation(dsd_state *state)
 //General Keystream Creator for any known Kirisun cipher
 void kirisun_keystream_creation(dsd_state * state)
 {
-  if (state->payload_algid == 0x31)
-    kirisun_rei_keystream_creation(state);
 
-  else if (state->payload_algid == 0x32)
+  uint8_t algid = 0;
+  if (state->currentslot == 0)
+    algid = state->payload_algid;
+  else algid = state->payload_algidR;
+
+  if (algid == 0x31)
+    kirisun_reinforced_keystream_creation(state);
+
+  else if (algid == 0x32)
     kirisun_low_keystream_creation(state);
 
-  else if (state->payload_algid == 0x33)
-    kirisun_mid_keystream_creation(state);
+  else if (algid == 0x33)
+    kirisun_middle_keystream_creation(state);
 
-  else if (state->payload_algid == 0x34)
-    kirisun_hi_keystream_creation(state);
+  else if (algid == 0x34)
+    kirisun_high_keystream_creation(state);
 
-  else if (state->payload_algid == 0x35)
-    kirisun_enh_keystream_creation(state);
+  else if (algid == 0x35)
+    kirisun_enhanced_keystream_creation(state);
 
-  else if (state->payload_algid == 0x36)
-    kirisun_adv_keystream_creation(state);
+  else if (algid == 0x36)
+    kirisun_advanced_keystream_creation(state);
 
-  else if (state->payload_algid == 0x37)
-    kirisun_uni_keystream_creation(state);
+  else if (algid == 0x37)
+    kirisun_universal_keystream_creation(state);
 
-  else if (state->payload_algid == 0x38)
-    kirisun_str_keystream_creation(state);
+  else if (algid == 0x38)
+    kirisun_strengthened_keystream_creation(state);
 
-  else if (state->payload_algid == 0x39)
+  else if (algid == 0x39)
     kirisun_top_keystream_creation(state);
   
-  else if (state->payload_algid == 0x3A)
-    kirisun_ult_keystream_creation(state);
+  else if (algid == 0x3A)
+    kirisun_ultimate_keystream_creation(state);
 
 }
