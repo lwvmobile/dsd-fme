@@ -11,6 +11,9 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <time.h>
 
 //MSG_NOSIGNAL is missing before macOS 11; SO_NOSIGPIPE in rtltcp_open keeps send from raising SIGPIPE there
 #ifndef MSG_NOSIGNAL
@@ -27,6 +30,43 @@
 static int rtltcp_sock = -1;
 static int rtltcp_tuner_type = RTLSDR_TUNER_UNKNOWN; //from the server's greeting
 static pthread_mutex_t rtltcp_m = PTHREAD_MUTEX_INITIALIZER;
+
+//limit for connecting to each address, reading the greeting, and sending a command, so a stalled server can't hang dsd-fme
+static const int RTLTCP_TIMEOUT_MS = 5000;
+
+static int64_t rtltcp_now_ms(void)
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+//Poll in short intervals so shutdown works even when the server stops responding.
+//A negative deadline permits an idle sample stream; setup and commands have fixed deadlines.
+static int rtltcp_wait(int sock, short events, int64_t deadline)
+{
+	struct pollfd pfd = {sock, events, 0};
+	while (!exitflag) {
+		int timeout = 100;
+		if (deadline >= 0) {
+			//check if we have exceeded our wait time
+			int64_t remaining = deadline - rtltcp_now_ms();
+			if (remaining <= 0) {
+				errno = ETIMEDOUT;
+				return -1;
+			}
+			//set the next poll timeout
+			if (remaining < timeout) timeout = (int)remaining;
+		}
+
+		//poll and handle the result
+		int r = poll(&pfd, 1, timeout);
+		if (r > 0) return 0; //recv/send/getsockopt will report EOF or socket errors
+		if (r < 0 && errno != EINTR) return -1;
+	}
+	errno = EINTR;
+	return -1;
+}
 
 //rtl_tcp command bytes, each named after the librtlsdr function the server calls with the parameter
 enum
@@ -49,9 +89,13 @@ static int rtltcp_command(uint8_t cmd, uint32_t param)
 
 	size_t sent = 0;
 	pthread_mutex_lock(&rtltcp_m);
+
+	//non-blocking send with a timeout
+	int64_t deadline = rtltcp_now_ms() + RTLTCP_TIMEOUT_MS;
 	while (sent < 5) {
+		if (rtltcp_wait(rtltcp_sock, POLLOUT, deadline) < 0) break;
 		ssize_t n = send(rtltcp_sock, buf + sent, 5 - sent, MSG_NOSIGNAL);
-		if (n < 0 && errno == EINTR) {
+		if (n < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) {
 			continue;
 		}
 		if (n <= 0) {
@@ -86,15 +130,33 @@ int rtltcp_open(const char *hostname, int portno)
 	}
 
 	//try each resolved address in turn until one connects
-	for (ai = res; ai != NULL; ai = ai->ai_next) {
+	for (ai = res; ai != NULL && !exitflag; ai = ai->ai_next) {
 		//socket creation
 		sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
 		if (sock < 0) {
 			continue;
 		}
 
+		//set nonblocking
+		int flags = fcntl(sock, F_GETFL, 0);
+		if (flags < 0 || fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0) {
+			close(sock);
+			sock = -1;
+			continue;
+		}
+
 		//connect
-		if (connect(sock, ai->ai_addr, ai->ai_addrlen) == 0) {
+		int r = connect(sock, ai->ai_addr, ai->ai_addrlen);
+
+		//connect returns immediately; wait for the attempt to finish, then SO_ERROR says whether it succeeded
+		if (r < 0 && errno == EINPROGRESS && rtltcp_wait(sock, POLLOUT, rtltcp_now_ms() + RTLTCP_TIMEOUT_MS) == 0) {
+			int error = 0;
+			socklen_t len = sizeof(error);
+			if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error == 0) r = 0;
+		}
+
+		//successful connection
+		if (r == 0 && !exitflag) {
 			break;
 		}
 
@@ -115,8 +177,20 @@ int rtltcp_open(const char *hostname, int portno)
 	setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
 #endif
 
+	size_t received = 0;
+
+	//non-blocking receive with a timeout
+	int64_t deadline = rtltcp_now_ms() + RTLTCP_TIMEOUT_MS;
+	while (received < sizeof(header)) {
+		if (rtltcp_wait(sock, POLLIN, deadline) < 0) break;
+		ssize_t n = recv(sock, header + received, sizeof(header) - received, 0);
+		if (n < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) continue;
+		if (n <= 0) break;
+		received += n;
+	}
+
 	//the greeting is "RTL0", the tuner type, and the number of tuner gain steps
-	if (recv(sock, header, 12, MSG_WAITALL) != 12 || memcmp(header, "RTL0", 4) != 0) {
+	if (received != sizeof(header) || memcmp(header, "RTL0", 4) != 0) {
 		fprintf (stderr, "%s:%d did not send an rtl_tcp greeting.\n", hostname, portno);
 		close(sock);
 		return -1;
@@ -172,8 +246,18 @@ static int rtltcp_close(void)
 static int rtltcp_read_async(rtlsdr_read_async_cb_t cb, void *ctx)
 {
 	static unsigned char buf[RTLTCP_BUF_LENGTH];
-	while (!exitflag && recv(rtltcp_sock, buf, RTLTCP_BUF_LENGTH, MSG_WAITALL) == RTLTCP_BUF_LENGTH) {
-		cb(buf, RTLTCP_BUF_LENGTH, ctx);
+	size_t received = 0;
+
+	//receive until exit is requested or the connection ends; no deadline, so an idle stream can wait indefinitely
+	while (rtltcp_wait(rtltcp_sock, POLLIN, -1) == 0) {
+		ssize_t n = recv(rtltcp_sock, buf + received, sizeof(buf) - received, 0);
+		if (n < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) continue;
+		if (n <= 0) break;
+		received += n;
+		if (received == sizeof(buf)) {
+			cb(buf, sizeof(buf), ctx);
+			received = 0;
+		}
 	}
 
 	//we are finished (for a variety of reasons). ensure exitflag is set
