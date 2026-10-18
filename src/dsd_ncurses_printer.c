@@ -244,7 +244,9 @@ ncursesPrinter (dsd_opts * opts, dsd_state * state)
 
   if (opts->audio_in_type == 3)
   {
-    printw ("| RTL: %d;", opts->rtl_dev_index);
+    if (opts->rtltcp_enabled == 1)
+      printw ("| RTL_TCP: %s:%d;", opts->rtltcp_hostname, opts->rtltcp_portno);
+    else printw ("| RTL: %d;", opts->rtl_dev_index);
     if (opts->rtl_gain_actual == -100)
       printw (" G: AGC;");
     else

@@ -21,6 +21,7 @@ Input/Output options:
                 pulse:6 or pulse:virtual_sink2.monitor for pulse audio signal input on virtual_sink2 (see -O) 
                 rtl for rtl dongle (Default Values -- see below)
                 rtl:dev:freq:gain:ppm:bw:sq:vol for rtl dongle (see below)
+                rtltcp:host:port:freq:gain:ppm:bw:sq:vol for rtl dongle on an rtl_tcp server (see below)
                 tcp for tcp client SDR++/GNURadio Companion/Other (Port 7355)
                 tcp:192.168.7.5:7355 for custom address and port 
                 filename.bin for OP25/FME capture bin files
@@ -77,6 +78,11 @@ RTL-SDR options:
   vol  <num>    RTL-SDR Sample 'Volume' Multiplier (default = 2)(1,2,3)
  Example: dsd-fme -fs -i rtl -C cap_plus_channel.csv -T
  Example: dsd-fme -fp -i rtl:0:851.375M:22:-2:24:0:2
+ Usage: rtltcp:host:port:freq:gain:ppm:bw:sq:vol
+  host <name>   rtl_tcp Server Hostname or IP Address (default = localhost)
+  port <num>    rtl_tcp Server Port (default = 1234)
+  freq, gain, ppm, bw, sq, vol as above
+ Example: dsd-fme -fs -i rtltcp:192.168.1.10:1234:450M:26:-2:8 -C connect_plus_chan.csv -T
 
 Decoder options:
   -fa           Auto Detection
