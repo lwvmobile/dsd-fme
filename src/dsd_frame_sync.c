@@ -165,7 +165,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   char synctest8[9];   //M17
   char modulation[8];
   char *synctest_p;
-  char synctest_buf[10240]; //what actually is assigned to this, can't find its use anywhere?
+  char synctest_buf[10240 + 48]; //history for sync matching; look-back window up to 48 bytes
   int lmin, lmax, lidx;
 
   //assign t_max value based on decoding type expected (all non-auto decodes first)
@@ -214,7 +214,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
   synctest20[20] = 0;
   modulation[7] = 0;  //not initialized or terminated (unsure if this would be an issue or not)
   synctest_pos = 0;
-  synctest_p = synctest_buf + 10;
+  synctest_p = synctest_buf + 48;
   sync = 0;
   lmin = 0;
   lmax = 0;
@@ -1388,7 +1388,7 @@ getFrameSync (dsd_opts * opts, dsd_state * state)
         {
           // buffer reset
           synctest_pos = 0;
-          synctest_p = synctest_buf;
+          synctest_p = synctest_buf + 48;
           noCarrier (opts, state);
 
         }
