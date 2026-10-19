@@ -22,27 +22,20 @@
 @REM set options to pass to dsd-fme
 set "options= -N -Z "
 
-@REM Set Date Time for log (sourced from: https://stackoverflow.com/questions/1192476/format-date-and-time-in-a-windows-batch-script)
+@REM Create Folder and Set Date Time for logs
 @echo off
-REM "%date: =0%" replaces spaces with zeros
-set d=%date: =0%
-REM "set yyyy=%d:~-4%" pulls the last 4 characters
-set yyyy=%d:~-4%
-set mm=%d:~4,2%
-set dd=%d:~7,2%
-set dow=%d:~0,3%
-set d=%yyyy%%mm%%dd%
-
-set t=%TIME: =0%
-REM "%t::=%" removes semi-colons
-REM Instead of above, you could use "%t::=-%" to 
-REM replace semi-colons with hyphens (or any 
-REM non-special character)
-set t=%t::=%
-set t=%t:.=%
-
-set datetimestr=%d%_%t%
-@REM @echo Long date time str = %datetimestr%
+mkdir logs
+@REM Locale-independent date/time for log filenames (yyyyMMdd_HHmmss)
+@REM Works on older Windows without wmic or PowerShell
+for /f "tokens=1-6 delims=/: " %%a in ('robocopy "|" . /njh ^| find ":"') do (
+    set "YYYY=%%a"
+    set "MM=%%b"
+    set "DD=%%c"
+    set "HH=%%d"
+    set "Min=%%e"
+    set "Sec=%%f"
+)
+set "datetimestr=%YYYY%%MM%%DD%_%HH%%Min%%Sec%"
 
 @REM random number is used so that two log files don't share the same name
 set rnd=%RANDOM%
