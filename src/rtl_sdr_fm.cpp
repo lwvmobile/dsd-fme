@@ -454,6 +454,9 @@ void dc_block_filter(struct demod_state *fm)
 {
 	int i, avg;
 	int64_t sum = 0;
+	if (fm->result_len == 0) {
+		return;
+	}
 	for (i=0; i < fm->result_len; i++) {
 		sum += fm->result[i];
 	}
