@@ -267,8 +267,13 @@ void dmr_udp_comp_pdu (dsd_opts * opts, dsd_state * state, uint16_t len, uint8_t
     slot = 1;
 
   char comp_string[500]; memset (comp_string, 0, sizeof(comp_string));
-  sprintf (comp_string, "IPC: %d; OP: %d; SRC: %d:%d (%s):(%s); DST: %d:%d (%s):(%s); ", ipid, opcode, said, spid, addrstring[0], portstring[0], daid, dpid, addrstring[1], portstring[1]);
-  watchdog_event_datacall (opts, state, said, daid, comp_string, slot);
+
+  //use data header source and target instead of idx values
+  uint32_t source = state->dmr_lrrp_source[slot];
+  uint32_t target = state->dmr_lrrp_target[slot];
+  sprintf (comp_string, "IPC Call; SRC: %d; TGT: %d; %s", source, target, portstring);
+  // sprintf (comp_string, "IPC: %d; OP: %d; SRC: %d:%d (%s):(%s); DST: %d:%d (%s):(%s); ", ipid, opcode, said, spid, addrstring[0], portstring[0], daid, dpid, addrstring[1], portstring[1]);
+  watchdog_event_datacall (opts, state, source, target, comp_string, slot);
 
 }
 

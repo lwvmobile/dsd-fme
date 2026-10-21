@@ -402,6 +402,54 @@ void dmr_dheader (dsd_opts * opts, dsd_state * state, uint8_t dheader[], uint8_t
         state->data_ks_start[slot] = 0;
 
       }
+      else if (p_sap != 1 && p_mfid == 0x68)
+      {
+
+        //TODO: Assume Alg, Key ID, IV and other values present in this header
+        //if using Hytera Enhanced RC4, otherwise, may use DMRA header
+        //ALG 1 = BP (observed), ALG 2 = Hytera Enhanced (not observed, but speculation)
+
+        /*
+        15:44:00 Sync: +DMR MS/DM MODE/MONO | Color Code=01 | DATA 
+        Slot 1 Data Header - Extended - SAP 03 [UDP Comp] - MFID 68 [Hytera]
+        Unknown Extended Header: 0101000000000000
+        DMR PDU Payload [3F][68][01][01][00][00][00][00][00][00][E6][71] <-- key 1
+
+        16:06:21 Sync: +DMR MS/DM MODE/MONO | Color Code=02 | DATA 
+        Slot 1 Data Header - Extended - SAP 03 [UDP Comp] - MFID 68 [Hytera]
+        Hytera PDU ENC Header;
+        DMR PDU Payload [3F][68][01][02][00][00][00][00][00][00][3E][F3] <--key 2
+
+        */
+
+        uint8_t alg = (uint8_t)ConvertBitIntoBytes(&dheader_bits[16], 8);
+        uint8_t key = (uint8_t)ConvertBitIntoBytes(&dheader_bits[24], 8);
+        uint64_t mi = (uint64_t)ConvertBitIntoBytes(&dheader_bits[32], 40);
+
+        fprintf (stderr, "\n Hytera PDU ENC Header: MFID: %02X; ALG: %02X; Key ID: %02X;", p_mfid, alg, key);
+        if (mi != 0) fprintf (stderr, "MI: %010llX", (unsigned long long int)mi);
+
+        //set to 0x100 so it won't trigger any weird flags, but still has a non-zero value to be checked later
+        if (state->currentslot == 0) state->dmr_so = 0x100;
+        else state->dmr_soR = 0x100;
+
+        //going to use algid of 0x68*alg to signal a Hytera enc method
+        //should be 0x68 for bp, or 0xD0 for enhanced
+        if (state->currentslot == 0)
+          state->payload_algid = 0x68 * alg;
+        else state->payload_algidR = 0x68 * alg;
+
+        if (state->currentslot == 0)
+          state->payload_keyid = key;
+        else state->payload_keyidR = key;
+
+        if (state->currentslot == 0)
+          state->payload_mi = mi;
+        else state->payload_miR = mi;
+
+        //reset ks start value
+        state->data_ks_start[slot] = 0;
+      }
       else if (p_sap != 1 && p_mfid == 0x10)
       {
 
@@ -1081,6 +1129,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         if (alg == 4) fprintf (stderr, " AES128;");
         if (alg == 5) fprintf (stderr, " AES256;");
         if (alg == 7) fprintf (stderr, " VTX STD;");
+        if (alg == 0x68) fprintf (stderr, " Hytera BP;");
+        if (alg == 0xD0) fprintf (stderr, " Hytera EP;");
         if (R && alg != 0) fprintf (stderr, " Key: %010llX;", R);
 
         //generate 128-bit IV from 32-bit MI
@@ -1105,6 +1155,137 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         {
           rc4_block_output (256, 9, (int)state->data_byte_ctr[slot], kiv, ob);
           decrypted_pdu = 1;
+        }
+
+        else if (alg == 0x68 && akl == 1) //Hytera BP
+        {
+
+          //Find len on loaded Hytera BP key w/ memcmp on kaes and load into ob
+          int klen = 32;
+          uint8_t emp8[8];
+          memset(emp8, 0, sizeof(emp8));
+
+          //TODO: We are assumming the key isn't something like 0x100000000000000000000000000000.... zero fill to 16 or 32
+          //need to fix this checkdown, but may not be plausible without redoing the Hytera BP code entirely at this point
+
+          //test for 64 char (32 byte) key
+          if ((memcmp(emp8, kaes+16, 8) != 0) || (memcmp(emp8, kaes+24, 8) != 0))
+          {
+            memcpy(ob, kaes, 32);
+            klen = 32;
+          }
+          //test for 32 char (16 byte) key
+          else if ((memcmp(emp8, kaes+8, 8) != 0))
+          {
+            memcpy(ob, kaes, 16);
+            klen = 16;
+          }
+          //this is a 10 char (5 byte) key w/ offset
+          else
+          {
+            memcpy(ob, kaes+3, 5);
+            klen = 5;
+          }
+
+          end += (poc + 4); //also perform application over padding bytes and crc value
+          for (i = 0; i < end; i++)
+            state->dmr_pdu_sf[slot][i+start] ^= ob[i%klen];
+
+          decrypted_pdu = 1;
+
+          //Recalcuate CRC32
+          uint8_t reordered_bits[1000];
+          memset (reordered_bits, 0, sizeof(reordered_bits));
+
+          //rearrage for ridiculously stupid CRC32 LSO/MSO ordering
+          for(i = 0, j = 0; i < ctr; i+=2, j+=16)
+          {
+            reordered_bits[j + 0] = (state->dmr_pdu_sf[slot][i+1] >> 7) & 0x01;
+            reordered_bits[j + 1] = (state->dmr_pdu_sf[slot][i+1] >> 6) & 0x01;
+            reordered_bits[j + 2] = (state->dmr_pdu_sf[slot][i+1] >> 5) & 0x01;
+            reordered_bits[j + 3] = (state->dmr_pdu_sf[slot][i+1] >> 4) & 0x01;
+            reordered_bits[j + 4] = (state->dmr_pdu_sf[slot][i+1] >> 3) & 0x01;
+            reordered_bits[j + 5] = (state->dmr_pdu_sf[slot][i+1] >> 2) & 0x01;
+            reordered_bits[j + 6] = (state->dmr_pdu_sf[slot][i+1] >> 1) & 0x01;
+            reordered_bits[j + 7] = (state->dmr_pdu_sf[slot][i+1] >> 0) & 0x01;
+
+            reordered_bits[j +  8] = (state->dmr_pdu_sf[slot][i] >> 7) & 0x01;
+            reordered_bits[j +  9] = (state->dmr_pdu_sf[slot][i] >> 6) & 0x01;
+            reordered_bits[j + 10] = (state->dmr_pdu_sf[slot][i] >> 5) & 0x01;
+            reordered_bits[j + 11] = (state->dmr_pdu_sf[slot][i] >> 4) & 0x01;
+            reordered_bits[j + 12] = (state->dmr_pdu_sf[slot][i] >> 3) & 0x01;
+            reordered_bits[j + 13] = (state->dmr_pdu_sf[slot][i] >> 2) & 0x01;
+            reordered_bits[j + 14] = (state->dmr_pdu_sf[slot][i] >> 1) & 0x01;
+            reordered_bits[j + 15] = (state->dmr_pdu_sf[slot][i] >> 0) & 0x01;
+          }
+          CRCComputed = (uint32_t)ComputeCrc32BitV(reordered_bits, (ctr * 8) - 32);
+          CRCExtracted = (uint32_t)convert_bits_into_output(reordered_bits+((ctr * 8) - 32), 32);
+          if (CRCComputed == CRCExtracted)
+            CRCCorrect = 1;
+          else CRCCorrect = 0;
+
+          //set back to original value
+          end -= (poc + 4);
+
+          //debug
+          // fprintf (stderr, " CTR: %d; CRC32 CMP: %08X EXT: %08X", ctr, CRCComputed, CRCExtracted);
+
+        }
+
+        else if (alg == 0xD0 && R != 0) //Hytera Enhanced RC4
+        {
+          //TODO: Test this with any samples if we ever see one
+          //also, will need to make more ks with a len option in function
+          //currently, only have enough for 7.5 R34 data blocks tops
+          hytera_enhanced_rc4_setup(opts, state, R, mi);
+
+          if (slot == 0)
+            memcpy(ob, state->ks_octetL, 135);
+          else memcpy(ob, state->ks_octetR, 135);
+
+          end += (poc + 4); //also perform application over padding bytes and crc value
+          for (i = 0; i < end; i++)
+            state->dmr_pdu_sf[slot][i+start] ^= ob[i];
+
+          decrypted_pdu = 1;
+
+          //Recalcuate CRC32
+          uint8_t reordered_bits[1000];
+          memset (reordered_bits, 0, sizeof(reordered_bits));
+
+          //rearrage for ridiculously stupid CRC32 LSO/MSO ordering
+          for(i = 0, j = 0; i < ctr; i+=2, j+=16)
+          {
+            reordered_bits[j + 0] = (state->dmr_pdu_sf[slot][i+1] >> 7) & 0x01;
+            reordered_bits[j + 1] = (state->dmr_pdu_sf[slot][i+1] >> 6) & 0x01;
+            reordered_bits[j + 2] = (state->dmr_pdu_sf[slot][i+1] >> 5) & 0x01;
+            reordered_bits[j + 3] = (state->dmr_pdu_sf[slot][i+1] >> 4) & 0x01;
+            reordered_bits[j + 4] = (state->dmr_pdu_sf[slot][i+1] >> 3) & 0x01;
+            reordered_bits[j + 5] = (state->dmr_pdu_sf[slot][i+1] >> 2) & 0x01;
+            reordered_bits[j + 6] = (state->dmr_pdu_sf[slot][i+1] >> 1) & 0x01;
+            reordered_bits[j + 7] = (state->dmr_pdu_sf[slot][i+1] >> 0) & 0x01;
+
+            reordered_bits[j +  8] = (state->dmr_pdu_sf[slot][i] >> 7) & 0x01;
+            reordered_bits[j +  9] = (state->dmr_pdu_sf[slot][i] >> 6) & 0x01;
+            reordered_bits[j + 10] = (state->dmr_pdu_sf[slot][i] >> 5) & 0x01;
+            reordered_bits[j + 11] = (state->dmr_pdu_sf[slot][i] >> 4) & 0x01;
+            reordered_bits[j + 12] = (state->dmr_pdu_sf[slot][i] >> 3) & 0x01;
+            reordered_bits[j + 13] = (state->dmr_pdu_sf[slot][i] >> 2) & 0x01;
+            reordered_bits[j + 14] = (state->dmr_pdu_sf[slot][i] >> 1) & 0x01;
+            reordered_bits[j + 15] = (state->dmr_pdu_sf[slot][i] >> 0) & 0x01;
+          }
+          CRCComputed = (uint32_t)ComputeCrc32BitV(reordered_bits, (ctr * 8) - 32);
+          CRCExtracted = (uint32_t)convert_bits_into_output(reordered_bits+((ctr * 8) - 32), 32);
+          if (CRCComputed == CRCExtracted)
+            CRCCorrect = 1;
+          else CRCCorrect = 0;
+
+          //set back to original value
+          end -= (poc + 4);
+
+          //debug
+          // fprintf (stderr, " CTR: %d; CRC32 CMP: %08X EXT: %08X", ctr, CRCComputed, CRCExtracted);
+
         }
 
         else if (alg == 7 && state->vtx_key_loaded == 1) //Vertex Standard, either enc type
@@ -1305,7 +1486,8 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
         }
         else if (state->data_header_sap[slot] == 2 || state->data_header_sap[slot] == 3) //TCP and UDP Compression (may only be 3 UDP compression, unknown)
         {
-          uint16_t len = ((blocks+1)*block_len)-4; //total number of bytes in PDU minus 4 CRC32 bytes
+          uint8_t  poc = state->data_block_poc[slot]; //need to test if others also need this
+          uint16_t len = ((blocks+1)*block_len)-4 - poc; //total number of bytes in PDU minus 4 CRC32 bytes and padding bytes
           dmr_udp_comp_pdu (opts, state, len, state->dmr_pdu_sf[slot]);
         }
         else if (state->data_header_sap[slot] == 1 && state->dmr_pdu_sf[slot][1] == 0x10) //MNIS Proprietary Header
