@@ -528,7 +528,7 @@ void dmr_embedded_gps (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[])
       if (slot == 1) src = state->lasttgR;
 
       //save to event history string
-      if (state->event_history_s[slot].Event_History_Items[0].source_id == src)
+      // if (state->event_history_s[slot].Event_History_Items[0].source_id == src)
         sprintf (state->event_history_s[slot].Event_History_Items[0].gps_s, "%s", state->dmr_embedded_gps[slot]);
 
       //save to LRRP report for mapping/logging

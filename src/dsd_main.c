@@ -585,6 +585,14 @@
 
    //we do reset the counter, but not the static_ks_bits
    memset (state->static_ks_counter, 0, sizeof(state->static_ks_counter));
+
+   //Hytera OTA Encryption
+   memset(state->hota_lc_ctx, 0, sizeof(state->hota_lc_ctx));
+   memset(state->hota_ctx_ok, 0, sizeof(state->hota_ctx_ok));
+   state->hota_sbrc_idx1[0] = -1;
+   state->hota_sbrc_idx2[0] = -1;
+   state->hota_sbrc_idx1[1] = -1;
+   state->hota_sbrc_idx2[1] = -1;
  
  } //nocarrier
  
@@ -1245,6 +1253,21 @@
    memset (state->ras_permutation_order, 0, sizeof(state->ras_permutation_order));
    state->ras_effective_key = 0;
    state->dmr_is_ras = 0;
+
+   //Hytera OTA Encryption
+   state->hota_enc_check = 0;
+   state->hota_key_loaded = 0;
+   state->dmr_is_hota = 0;
+   state->hota_bit_shift = 0;
+   memset(state->hota_byte_shifts, 0, sizeof(state->hota_byte_shifts));
+   memset(state->hota_rc4_key, 0, sizeof(state->hota_rc4_key));
+   memset(state->hota_rc4_ks, 0, sizeof(state->hota_rc4_ks));
+   memset(state->hota_lc_ctx, 0, sizeof(state->hota_lc_ctx));
+   memset(state->hota_ctx_ok, 0, sizeof(state->hota_ctx_ok));
+   state->hota_sbrc_idx1[0] = -1;
+   state->hota_sbrc_idx2[0] = -1;
+   state->hota_sbrc_idx1[1] = -1;
+   state->hota_sbrc_idx2[1] = -1;
  
    sprintf (state->dmr_branding, "%s", "");
    sprintf (state->dmr_branding_sub, "%s", "");
@@ -1560,6 +1583,10 @@
    printf ("                 -H C:40:1234567890 \n");
    printf ("                 -H C:128:736B9A9C5645288B243AD5CB8701EF8A' \n");
    printf ("                 -H C:256:20029736A5D91042C923EB0697484433005EFC58A1905195E28E9C7836AA2DB8' \n");
+   printf ("\n");
+   printf ("  -H <hex>      Manually Enter Hytera OTA Encryption 32 Char Hex Key (see example below)\n");
+   printf ("                 -H O:0:0 no keystream application, but check for Hytera OTA Encryption and DMRA EP Late Entry IV.\n");
+   printf ("                 -H O:128:17bfe59b29a06136fb7d3811fd1a4904 for 128-bit RC4 OTA Key Setup\n");
    printf ("\n");
    printf ("  -R <dec>      Manually Enter dPMR or NXDN EHR Scrambler Key Value (Decimal Value)\n");
    printf ("                 \n");
@@ -2296,10 +2323,15 @@
           break;
  
          case 'H':
-           //check for caltta, if not, then use older loader
+           //check for caltta bp key load
            if (optarg[0] == 'C' && optarg[1] == ':')
            {
             caltta_bp_keystream_creation(&state, optarg+2);
+           }
+           //check for Hytera OTA key load
+           else if (optarg[0] == 'O' && optarg[1] == ':')
+           {
+            hytera_ota_keystream_setup(&state, optarg+2);
            }
            else
            {
@@ -2309,7 +2341,12 @@
             state.K2 = strtoull (pEnd, &pEnd, 16);
             state.K3 = strtoull (pEnd, &pEnd, 16);
             state.K4 = strtoull (pEnd, &pEnd, 16);
-            fprintf (stderr, "Hytera40/128/256 BP or AES128/256 Key = %016llX %016llX %016llX %016llX\n", state.K1, state.K2, state.K3, state.K4);
+            if (state.K2 == 0 && state.K3 == 0 && state.K4 == 0)
+              fprintf (stderr, "Hytera BP 40-bit Key: %010llX\n", state.K1);
+            else if (state.K2 != 0)
+              fprintf (stderr, "Multi 128-bit Key: %016llX%016llX\n", state.K1, state.K2);
+            else
+              fprintf (stderr, "Multi 256-bit Key: %016llX%016llX%016llX%016llX\n", state.K1, state.K2, state.K3, state.K4);
             opts.dmr_mute_encL = 0;
             opts.dmr_mute_encR = 0;
             if (state.K1 == 0 && state.K2 == 0 && state.K3 == 0 && state.K4 == 0)

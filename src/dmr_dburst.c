@@ -55,6 +55,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   memset (DMR_PDU, 0, sizeof (DMR_PDU));
   memset (DMR_PDU_bits, 0, sizeof (DMR_PDU_bits));
 
+  uint8_t hota_enc = 0;
   uint8_t is_ras = 0;
   uint8_t bptc_res_bits[3];
   memset (bptc_res_bits, 0, sizeof(bptc_res_bits));
@@ -76,6 +77,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
   switch(databurst){
     case 0x00: //PI
+      hota_enc = 1;
       is_bptc = 1;
       crclen = 16;
       crcmask = 0x6969; //insert pi and 69 jokes here
@@ -83,6 +85,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       sprintf(state->fsubtype, " PI  ");
       break;
     case 0x01: //VLC
+      hota_enc = 1;
       is_bptc = 1;
       is_lc = 1;
       crclen = 24;
@@ -91,6 +94,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       sprintf(state->fsubtype, " VLC ");
       break;
     case 0x02: //TLC
+      hota_enc = 1;
       is_bptc = 1;
       is_lc = 1;
       crcmask = 0x999999;
@@ -99,6 +103,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       sprintf(state->fsubtype, " TLC ");
       break;
     case 0x03: //CSBK
+      hota_enc = 1;
       is_bptc = 1;
       crclen = 16;
       crcmask = 0xA5A5;
@@ -106,6 +111,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       sprintf(state->fsubtype, " CSBK");
       break;
     case 0x04: //MBC Header
+      hota_enc = 1;
       is_bptc = 1;
       crclen = 16;
       crcmask = 0xAAAA;
@@ -119,6 +125,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       sprintf(state->fsubtype, " MBCC");
       break;
     case 0x06: //Data Header
+      hota_enc = 1;
       is_bptc = 1;
       crclen = 16;
       crcmask = 0xCCCC;
@@ -176,6 +183,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       }
       break;
     case 0x0B: //Unified Single Block Data USBD
+      hota_enc = 1;
       is_bptc = 1;
       crclen = 16;
       crcmask = 0x3333;
@@ -185,6 +193,7 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
 
     //special types (not real data 'sync' bursts)
     case 0xEB: //Embedded Signalling
+      hota_enc = 1;
       crclen = 5;
       is_emb = 1;
       pdu_len = 9;
@@ -254,6 +263,23 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       fprintf (stderr, " BPTC R BITS: %d %d %d", bptc_res_bits[0], bptc_res_bits[1], bptc_res_bits[2]);
     #endif
 
+    //TODO: Checkdown no irrecoverable errors prior to OTA Decryption?
+
+    //Hytera OTA Encryption
+    if (state->hota_key_loaded && hota_enc)
+      hytera_ota_decrypt_bptc_96(state, BPTCDmrDataBit, databurst);
+
+    //Hytera Data Block Level Decryption
+    if (databurst == 0x7) //Rate 1_2 Data Only
+    {
+      uint8_t bytes[12];
+      memset(bytes, 0, sizeof(bytes));
+      pack_bit_array_into_byte_array(BPTCDmrDataBit, bytes, 12);
+      hytera_bp_data_decrypt(state, bytes, 12);
+      hytera_ep_data_decrypt(opts, state, bytes, 12);
+      unpack_byte_array_into_bit_array(bytes, BPTCDmrDataBit, 12);
+    }
+
     /* Convert the 96 bits BPTC data into 12 bytes */
     pack_bit_array_into_byte_array(BPTCDmrDataBit, BPTCDmrDataByte, 12);
 
@@ -288,6 +314,10 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
         #endif
       }
       else CRCCorrect = ComputeAndCorrectFullLinkControlCrc(BPTCDmrDataByte, &CRCComputed, crcmask);
+
+      //Hytera OTA Encryption LC Context Creation for VLC Header
+      if (state->hota_key_loaded && CRCCorrect && databurst == 0x01)
+        hytera_create_lc_ctx(state, BPTCDmrDataBit);
     }
 
     //set CRC to correct on unconfirmed 1/2 data blocks (for reporting due to no CRC available on these)
@@ -400,8 +430,42 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       } /* End for(j = 0; j < 8; j++) */
     } /* End for(i = 0; i < 16; i++) */
 
+    //Hytera OTA Encryption
+    // if (state->hota_key_loaded && state->hota_ctx_ok[slot] == 0)
+    //   hytera_ota_search_emb_lc(state, BptcDataMatrix); //only run as a debug option
+    if (state->hota_key_loaded && state->hota_ctx_ok[slot] == 1)
+      hytera_ota_decrypt_emb_lc(state, BptcDataMatrix);
+
     /* Extract the 72 LC bit (+ 5 CRC bit) of the matrix */
-    IrrecoverableErrors = BPTC_128x77_Extract_Data(BptcDataMatrix, LC_DataBit);
+    if (state->hota_key_loaded && state->hota_ctx_ok[slot] == 0)
+    {
+      //just fill with all ones, would be garbage from FEC anyways
+      memset(LC_DataBit, 1, sizeof(LC_DataBit));
+      IrrecoverableErrors = 1;
+
+      //TODO: columns instead of rows to match application of keystream
+      #ifdef DEBUG_HOTA
+      fprintf(stderr, "\n BPTC 128: ");
+      for (int i = 0; i < 8; i++)
+        fprintf (stderr, "%04X", (uint16_t)convert_bits_into_output(BptcDataMatrix[i], 16));
+      fprintf (stderr, "\n");
+      #endif
+    }
+    else if (state->hota_enc_check == 1)
+    {
+      //just fill with all ones, would be garbage from FEC anyways
+      memset(LC_DataBit, 1, sizeof(LC_DataBit));
+      IrrecoverableErrors = 1;
+
+      //TODO: columns instead of rows to match application of keystream
+      #ifdef DEBUG_HOTA
+      fprintf(stderr, "\n BPTC 128: ");
+      for (int i = 0; i < 8; i++)
+        fprintf (stderr, "%04X", (uint16_t)convert_bits_into_output(BptcDataMatrix[i], 16));
+      fprintf (stderr, "\n");
+      #endif
+    }
+    else IrrecoverableErrors = BPTC_128x77_Extract_Data(BptcDataMatrix, LC_DataBit);
 
     /* Reconstitute the 5 bit CRC */
     CRCExtracted = (uint32_t)ConvertBitIntoBytes(&LC_DataBit[72], 5);
@@ -451,6 +515,10 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     uint8_t TrellisReturn[18];
     memset (TrellisReturn, 0, sizeof(TrellisReturn));
     IrrecoverableErrors = viterbi_r34(tdibits, TrellisReturn);
+
+    //Hytera Data Block Level Decryption
+    hytera_bp_data_decrypt(state, TrellisReturn, 18);
+    hytera_ep_data_decrypt(opts, state, TrellisReturn, 18);
 
     //NOTE: IrrecoverableErrors in this context are a tally of errors from trellis
     //they may have been successfully corrected, the CRC will reveal as much
@@ -529,6 +597,10 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     pack_bit_array_into_byte_array (info+bit_ptr, DMR_PDU+byte_ptr, 12-pdu_start);
     bit_ptr = 100; byte_ptr = 12-pdu_start;
     pack_bit_array_into_byte_array (info+bit_ptr, DMR_PDU+byte_ptr, 12);
+
+    //Hytera Data Block Level Decryption
+    hytera_bp_data_decrypt(state, DMR_PDU, 24);
+    hytera_ep_data_decrypt(opts, state, DMR_PDU, 24);
 
     //set CRC to correct on unconfirmed 1 rate data blocks (for reporting due to no CRC available on these)
     if (state->data_conf_data[slot] == 0) CRCCorrect = 1;

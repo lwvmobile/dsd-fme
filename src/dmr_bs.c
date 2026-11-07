@@ -462,6 +462,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
     if (internalslot == 0 && vc1 == 6)
     {
+      if (state->hota_enc_check && state->forced_alg_id > 1)
+      {
+        state->dmr_so = 0x40;
+        state->payload_algid = state->forced_alg_id;
+        state->payload_keyid = 0xFF;
+      }
       //this needs to run prior to embedded link control
       if (state->payload_algid == 0x02)
         hytera_enhanced_alg_refresh(state);
@@ -475,6 +481,12 @@ void dmrBS (dsd_opts * opts, dsd_state * state)
 
     if (internalslot == 1 && vc2 == 6)
     {
+      if (state->hota_enc_check && state->forced_alg_id > 1)
+      {
+        state->dmr_soR = 0x40;
+        state->payload_algidR = state->forced_alg_id;
+        state->payload_keyidR = 0xFF;
+      }
       //this needs to run prior to embedded link control
       if (state->payload_algidR == 0x02)
         hytera_enhanced_alg_refresh(state);

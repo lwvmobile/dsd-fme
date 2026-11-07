@@ -813,7 +813,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           if(state->payload_algid == 0x02)
           {
             n = 0;
-            hytera_enhanced_rc4_setup(opts, state, state->R, state->payload_mi);
+            hytera_enhanced_rc4_setup(opts, state, state->R, state->payload_mi, 135);
           }
           if (state->payload_algid >= 0x31 && state->payload_algid <= 0x3A)
           {
@@ -1313,7 +1313,7 @@ processMbeFrame (dsd_opts * opts, dsd_state * state, char imbe_fr[8][23], char a
           if(state->payload_algidR == 0x02)
           {
             n = 0;
-            hytera_enhanced_rc4_setup(opts, state, state->RR, state->payload_miR);
+            hytera_enhanced_rc4_setup(opts, state, state->RR, state->payload_miR, 135);
           }
           if (state->payload_algidR >= 0x31 && state->payload_algidR <= 0x3A)
           {

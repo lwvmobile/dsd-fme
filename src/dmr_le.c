@@ -8,6 +8,9 @@
 
 #include "dsd.h"
 
+static unsigned long long int next_iv_32[2] = {0,0};
+static unsigned long long int next_iv_64[2] = {0,0};
+
 //gather ambe_fr mi fragments for processing
 void dmr_late_entry_mi_fragment (dsd_opts * opts, dsd_state * state, uint8_t vc, uint8_t ambe_fr[4][24], uint8_t ambe_fr2[4][24], uint8_t ambe_fr3[4][24])
 {
@@ -86,6 +89,95 @@ void dmr_late_entry_mi (dsd_opts * opts, dsd_state * state)
 
   if (g[0] && g[1] && g[2])
   {
+
+    if (mi_crc_ok == 1 && state->hota_enc_check == 1)
+    {
+      fprintf (stderr, "%s", KCYN);
+      fprintf (stderr, " Slot %d DMRA EP Potential;", slot+1);
+      
+      unsigned long long int temp_iv = mi_final;
+
+      //Reverse Potential IV for both 32-bit and 128-bit to show the IV
+      //that may have been carried by the PI header or last superframe
+      uint8_t iv_a[16]; memset(iv_a, 0, sizeof(iv_a));
+      uint8_t iv_d[16]; memset(iv_d, 0, sizeof(iv_d));
+      for (int i = 0; i < 4; i++)
+      {
+        iv_a[i] = (mi_final >> (24-(i*8))) & 0xFF;
+        iv_d[i] = (mi_final >> (24-(i*8))) & 0xFF;
+      }
+      fprintf (stderr, "\n ");
+      reverse_lfsr_32a_to_len(iv_a, 32);
+      fprintf (stderr, " ");
+      reverse_lfsr_32d_to_len(iv_d, 32);
+      fprintf (stderr, "\n");
+
+      if (next_iv_64[slot] != 0 && mi_final == next_iv_64[slot])
+      {
+        //probably safe to assume AES-256 if its DMRA specific
+        fprintf (stderr, " DMRA AES 128-bit IV detected;");
+        state->forced_alg_id = 0x25;
+        if (slot == 0 && state->payload_mi == 0)
+        {
+          fprintf (stderr, "\n");
+          state->payload_mi = mi_final;
+          state->dmr_so = 0x40;
+          LFSR128d(state);
+        }
+          
+        else if (slot == 1 && state->payload_miR == 0)
+        {
+          fprintf (stderr, "\n");
+          state->payload_miR = mi_final;
+          state->dmr_soR = 0x40;
+          LFSR128d(state);
+        }
+          
+      }
+      if (next_iv_32[slot] != 0 && mi_final == next_iv_32[slot])
+      {
+        //only DMRA RC4 uses this tap configuration
+        fprintf (stderr, " DMRA RC4 32-bit IV detected;");
+        state->forced_alg_id = 0x21;
+        if (slot == 0 && state->payload_mi == 0)
+        {
+          fprintf (stderr, "\n");
+          state->payload_mi = mi_final;
+          state->dmr_so = 0x40;
+          LFSR(state);
+        }
+          
+        else if (slot == 1 && state->payload_miR == 0)
+        {
+          fprintf (stderr, "\n");
+          state->payload_miR = mi_final;
+          state->dmr_soR = 0x40;
+          LFSR(state);
+        }
+      }
+
+      //AES taps to next embedded value
+      for(int cnt = 0; cnt < 32; cnt++)
+      {
+        unsigned long long int bit = ( (temp_iv >> 31) ^ (temp_iv >> 21) ^ (temp_iv >> 1) ^ (temp_iv >> 0) ) & 0x1;
+        temp_iv = (temp_iv << 1) | bit;
+      }
+      next_iv_64[slot] = temp_iv & 0xFFFFFFFF;
+
+      //RC4 taps to next embedded value
+      temp_iv = mi_final;
+      for(int cnt = 0; cnt < 32; cnt++)
+      {
+        unsigned long long int bit = ( (temp_iv >> 31) ^ (temp_iv >> 3) ^ (temp_iv >> 1) ) & 0x1;
+        temp_iv = (temp_iv << 1) | bit;
+      }
+      next_iv_32[slot] = temp_iv & 0xFFFFFFFF;
+
+      fprintf (stderr, "\n");
+      fprintf (stderr, "%s", KNRM);
+
+    }
+
     if (slot == 0 && state->payload_algid != 0 && state->payload_algid != 0x26)
     {
       if (state->payload_mi != mi_final)
@@ -365,12 +457,49 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   // 1 - The embedded signalling carries RC information associated to the other logical channel
 
   for(i = 0; i < 32; i++) sbrc_interleaved[i] = state->dmr_embedded_signalling[slot][5][i + 8];
+
+  //decrypt for Hytera OTA Encryption w/ loaded key
+  if (state->hota_key_loaded && state->hota_sbrc_idx1[state->currentslot] == -1)
+    hytera_ota_search_sb_rc(state, sbrc_interleaved, power);
+  if (state->hota_key_loaded)
+    hytera_ota_decrypt_sb_rc(state, sbrc_interleaved);
+
   //power == 0 should be single burst
   if (power == 0) irr_err = BPTC_16x2_Extract_Data(sbrc_interleaved, sbrc_return, 0);
   //power == 1 should be reverse channel -- still need to check the interleave inside of BPTC
   if (power == 1) irr_err = BPTC_16x2_Extract_Data(sbrc_interleaved, sbrc_return, 1);
   //bad emb burst, never set a valid power indicator value (probably 9)
   if (power > 1) goto SBRC_END;
+
+  //Hytera OTA
+  if (irr_err && state->hota_key_loaded && state->hota_sbrc_idx2[state->currentslot] == -1)
+  {
+    state->hota_sbrc_idx1[state->currentslot] = -1;
+    state->hota_sbrc_idx2[state->currentslot] = -1;
+    fprintf (stderr, "%s \n", KRED);
+    fprintf (stderr, " SLOT %d ", slot+1);
+    fprintf (stderr, "SB_RC Missing IDX; Undecryptable;");
+    fprintf (stderr, "%s\n", KNRM);
+    goto SBRC_END;
+  }
+  else if (irr_err && state->hota_key_loaded && state->hota_sbrc_idx2[state->currentslot] != -1)
+  {
+    state->hota_sbrc_idx1[state->currentslot] = -1;
+    state->hota_sbrc_idx2[state->currentslot] = -1;
+    fprintf (stderr, "%s \n", KRED);
+    fprintf (stderr, " SLOT %d ", slot+1);
+    fprintf (stderr, "SB_RC Incorrect IDX or FEC Errors; Undecryptable;");
+    fprintf (stderr, "%s\n", KNRM);
+    goto SBRC_END;
+  }
+  else if (state->hota_enc_check)
+  {
+    fprintf (stderr, "%s \n", KRED);
+    fprintf (stderr, " SLOT %d ", slot+1);
+    fprintf (stderr, "SB_RC Undecryptable;");
+    fprintf (stderr, "%s\n", KNRM);
+    goto SBRC_END;
+  }
 
   //arrange the return for proper order for the crc3 check
   for (i = 0; i < 8; i++) sbrc_retcrc[i] = sbrc_return[i+3];

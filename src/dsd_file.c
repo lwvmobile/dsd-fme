@@ -877,6 +877,76 @@ void unpack_ambe (uint8_t * input, char * ambe)
   ambe[48] = input[6] >> 7;
 }
 
+uint64_t reverse_lfsr_32a_to_len(uint8_t * iv, int16_t len)
+{
+
+  uint64_t lfsr = 0, bit1 = 0, bit2 = 0;
+
+  lfsr = ((uint64_t)iv[0] << 24ULL) + ((uint64_t)iv[1] << 16ULL) + ((uint64_t)iv[2] << 8ULL)  + ((uint64_t)iv[3] << 0ULL);
+
+  memset (iv, 0, 8*sizeof(uint8_t));
+
+  for(int16_t cnt = 0; cnt < len; cnt++)
+  {
+    //32,22,2,1 (per Xilinx XAPP 052) Table 3: Taps for Maximum-Length LFSR Counters
+
+    //taps at the +1 position on all but MSB, then check the LSB and configure bit as required
+    bit1 = ( (lfsr >> 22) ^ (lfsr >> 2) ^ (lfsr >> 1) ) & 0x1;
+    bit2 = lfsr & 1;
+    if (bit1 == bit2)
+      bit2 = 0;
+    else bit2 = 1;
+
+    //just run this in reverse of normal LFSR
+    lfsr = (lfsr >> 1) | (bit2 << 31);
+  }
+
+  for (int16_t i = 0; i < 4; i++)
+    iv[i] = (lfsr >> (24-(i*8))) & 0xFF;
+
+  fprintf (stderr, "REV LFSR AES(%02d): ", len);
+  for (int16_t i = 0; i < 4; i++)
+    fprintf (stderr, "%02X", iv[i]);
+
+  return bit2;
+
+}
+
+uint64_t reverse_lfsr_32d_to_len(uint8_t * iv, int16_t len)
+{
+
+  uint64_t lfsr = 0, bit1 = 0, bit2 = 0;
+
+  lfsr = ((uint64_t)iv[0] << 24ULL) + ((uint64_t)iv[1] << 16ULL) + ((uint64_t)iv[2] << 8ULL)  + ((uint64_t)iv[3] << 0ULL);
+
+  memset (iv, 0, 8*sizeof(uint8_t));
+
+  for(int16_t cnt = 0; cnt < len; cnt++)
+  {
+    //magical taps that somebody must have dreamt up
+
+    //taps at the +1 position on all but MSB, then check the LSB and configure bit as required
+    bit1 = ((lfsr >> 4) ^ (lfsr >> 2)) & 0x1;
+    bit2 = lfsr & 1;
+    if (bit1 == bit2)
+      bit2 = 0;
+    else bit2 = 1;
+
+    //just run this in reverse of normal LFSR
+    lfsr = (lfsr >> 1) | (bit2 << 31);
+  }
+
+  for (int16_t i = 0; i < 4; i++)
+    iv[i] = (lfsr >> (24-(i*8))) & 0xFF;
+
+  fprintf (stderr, "REV LFSR RC4(%02d): ", len);
+  for (int16_t i = 0; i < 4; i++)
+    fprintf (stderr, "%02X", iv[i]);
+
+  return bit2;
+
+}
+
 //recover previous IV for SDRTrunk .mbe files when P25p1
 uint64_t reverse_lfsr_64_to_len(dsd_opts * opts, uint8_t * iv, int16_t len)
 {

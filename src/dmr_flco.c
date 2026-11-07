@@ -76,10 +76,65 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   //Kirisun
   if (*IrrecoverableErrors == 0 && CRCCorrect == 1 && fid == 0x0A) //&& (so & 0x40) == 0x40
   {
-      //disable late entry for DMRA, Flag 3 if encrypted, 0 if not
-      if (so & 0x40)
-        opts->dmr_le = 3;
-      else opts->dmr_le = 0;
+    //disable late entry for DMRA, Flag 3 if encrypted, 0 if not
+    if (so & 0x40)
+      opts->dmr_le = 3;
+    else opts->dmr_le = 0;
+  }
+
+  //Hytera OTA Check Enabled, Set SRC from VLC (TLC and ELC differ)
+  //NOTE: VLC will always be same for each radio if its a group call
+  //while this is not the true src, it should be unique
+  //TGT will also be random between calls in each VLC,
+  //so assign static value
+  if (state->hota_enc_check)
+  {
+    if (type == 1)
+    {
+      if (slot == 0)
+      {
+        state->lastsrc = source;
+        state->lasttg = 8686868;
+      }
+      else
+      {
+        state->lastsrcR = source;
+        state->lasttgR = 8686868;
+      }
+
+      fprintf (stderr, "\n%s", KYEL);
+      fprintf (stderr, " SLOT %d ", slot+1);
+      fprintf(stderr, "TGT=%u SRC=%u ", state->lasttg, source);
+      fprintf (stderr, "Forced Pseudo Call Information");
+      fprintf (stderr, "%s", KNRM);
+
+      return;
+    }
+    else if (type == 2)
+    {
+      fprintf (stderr, "\n%s", KRED);
+      fprintf (stderr, " SLOT %d", slot+1);
+      fprintf (stderr, " TLC Undecryptable;");
+      fprintf (stderr, "%s", KNRM);
+      return;
+    }
+    else if (type == 3)
+    {
+      fprintf (stderr, "%s", KRED);
+      fprintf (stderr, " SLOT %d", slot+1);
+      fprintf (stderr, " EMB LC Undecryptable;");
+      fprintf (stderr, "%s", KNRM);
+      return;
+    }
+  }
+  //HOTA CTX was not recovered, so dump that and return;
+  else if (state->hota_key_loaded && state->hota_ctx_ok[slot] == 0 && type == 3)
+  {
+    fprintf (stderr, "%s", KRED);
+    fprintf (stderr, " SLOT %d", slot+1);
+    fprintf (stderr, " EMB LC Missing CTX; Undecryptable;");
+    fprintf (stderr, "%s", KNRM);
+    return;
   }
 
   //read ahead a little to get this for the xpt flag
@@ -486,6 +541,12 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         sprintf (state->generic_talker_alias[0], "%s", "");
         // sprintf (state->event_history_s[0].Event_History_Items[0].alias, "%s", "BUMBLEBEETUNA");
         memset (state->dmr_pdu_sf[0], 0, sizeof(state->dmr_pdu_sf[0]));
+
+        //Hytera OTA Encryption
+        memset(state->hota_lc_ctx[0], 0, sizeof(state->hota_lc_ctx[0]));
+        state->hota_ctx_ok[0] = 0;
+        state->hota_sbrc_idx1[0] = -1;
+        state->hota_sbrc_idx2[0] = -1;
       }
       if (state->currentslot == 1)
       {
@@ -506,6 +567,12 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         sprintf (state->generic_talker_alias[1], "%s", "");
         // sprintf (state->event_history_s[1].Event_History_Items[0].alias, "%s", "BUMBLEBEETUNA");
         memset (state->dmr_pdu_sf[1], 0, sizeof(state->dmr_pdu_sf[1]));
+
+        //Hytera OTA Encryption
+        memset(state->hota_lc_ctx[1], 0, sizeof(state->hota_lc_ctx[1]));
+        state->hota_ctx_ok[1] = 0;
+        state->hota_sbrc_idx1[1] = -1;
+        state->hota_sbrc_idx2[1] = -1;
       }
 
     }

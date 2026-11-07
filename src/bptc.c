@@ -167,197 +167,283 @@ void BPTCDeInterleaveDMRData(uint8_t * Input, uint8_t * Output)
 
 
 /*
- * @brief : This function extract the 96 bits of a deinteleaved 196 bits
- *          buffer using BPTC (196,96)
- *
- * @param InputDeInteleavedData : Pointer of DMR input data deinterleaved (196 bytes)
- *
- * @param DMRDataExtracted : Pointer where the DMR data will be written (96 bytes)
- *
- * @return The total number of irrecoverable Hamming check errors
+ * BPTC (196,96) extract — ETSI TS 102 361-1 B.1.1
+ * Two-pass row Hamming(15,11) + column Hamming(13,9).
+ * Debug: define BPTC_196x96_DEBUG 1 for row/col correction chatter.
  */
-uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DMRDataExtracted[96], uint8_t R[3], uint8_t * is_ras)
+
+// #define BPTC_196x96_DEBUG 1
+
+uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196],
+                                  uint8_t DMRDataExtracted[96],
+                                  uint8_t R[3],
+                                  uint8_t * is_ras)
 {
   uint32_t i, j, k;
   uint8_t  DataMatrix[13][15];
   uint8_t  LineUncorrected[15];
+  uint8_t  LineBefore[15];
   uint8_t  LineCorrected[11];
   uint8_t  ColumnUncorrected[13];
+  uint8_t  ColumnBefore[13];
   uint8_t  ColumnCorrected[9];
   uint32_t HammingIrrecoverableErrorNb = 0;
+  uint32_t row_corr_p1 = 0, col_corr_p1 = 0;
+  uint32_t row_fail_p1 = 0, col_fail_p1 = 0;
+  uint32_t row_corr_p2 = 0, col_corr_p2 = 0;
+  uint32_t row_fail_p2 = 0, col_fail_p2 = 0;
 
-  /* First step : Reconstitute the BPTC 15x11 matrix
-   * Note : Input data shall be deinterleaved */
-  k = 1; /* Discard R(3) bit - See DMR standard chapter B1.1 BPTC (196,96) */
-  for(i = 0; i < 13; i++)
+  UNUSED(row_corr_p1); UNUSED(col_corr_p1);
+  UNUSED(row_fail_p1); UNUSED(col_fail_p1);
+  UNUSED(row_corr_p2); UNUSED(col_corr_p2);
+  UNUSED(row_fail_p2); UNUSED(col_fail_p2);
+
+#if BPTC_196x96_DEBUG
+  fprintf (stderr, "\n");
+#endif
+
+  /* Rebuild 13×15 matrix; discard R(3) at index 0 — DMR B.1.1 */
+  k = 1;
+  for (i = 0; i < 13; i++)
   {
-    for(j = 0; j < 15; j++)
+    for (j = 0; j < 15; j++)
     {
-      /* Only the LSBit of the byte is stored */
       DataMatrix[i][j] = (InputDeInteleavedData[k] & 1);
       k++;
     }
   }
 
-  /* Process the the Hamming (15,11,3) code
-   * check on each line (first time).
-   * Do not check the 4th last lines */
-  for(i = 0; i < 9; i++)
+  /* ========== Pass 1: row Hamming(15,11) on rows 0..8 ========== */
+  for (i = 0; i < 9; i++)
   {
-    /* Get a full line */
-    for(j = 0; j < 15; j++)
+    for (j = 0; j < 15; j++)
     {
       LineUncorrected[j] = DataMatrix[i][j];
+      LineBefore[j] = LineUncorrected[j];
     }
 
-    /* Apply Hamming (15,11,3) code correction */
-    if(Hamming_15_11_decode(LineUncorrected, LineCorrected, 1) == false)
+    if (Hamming_15_11_decode(LineUncorrected, LineCorrected, 1) == false)
     {
       HammingIrrecoverableErrorNb++;
+      row_fail_p1++;
+#if BPTC_196x96_DEBUG
+      fprintf(stderr, " BPTC196 P1 ROW FAIL row=%u  rx=", (unsigned)i);
+      for (j = 0; j < 15; j++)
+        fprintf(stderr, "%u", LineBefore[j] & 1);
+      fprintf(stderr, "\n");
+#endif
+      /* Keep original data bits on failure */
+      for (j = 0; j < 11; j++)
+        DataMatrix[i][j] = LineBefore[j];
     }
-
-    /* Re-inject the line in the matrix (only the util data [11 bit],
-     * not the Hamming part [4 bit]) */
-    for(j = 0; j < 11; j++)
+    else
     {
-      DataMatrix[i][j] = LineCorrected[j];
+      /* rxBits were corrected in place; note any flip */
+      for (j = 0; j < 15; j++)
+      {
+        if ((LineBefore[j] & 1) != (LineUncorrected[j] & 1))
+        {
+          row_corr_p1++;
+#if BPTC_196x96_DEBUG
+          fprintf(stderr,
+                  " BPTC196 P1 ROW CORRECTED row=%u bit=%u  %u->%u\n",
+                  (unsigned)i, (unsigned)j,
+                  (unsigned)(LineBefore[j] & 1),
+                  (unsigned)(LineUncorrected[j] & 1));
+#endif
+        }
+      }
+      for (j = 0; j < 11; j++)
+        DataMatrix[i][j] = LineCorrected[j];
     }
   }
+#if BPTC_196x96_DEBUG
+  if (row_fail_p1 || row_corr_p1)
+    fprintf(stderr, " BPTC196 P1 ROW summary: fail=%u corrected_bits=%u\n",
+            (unsigned)row_fail_p1, (unsigned)row_corr_p1);
+#endif
 
-
-  /* Process the the Hamming (15,11,3) code
-   * check on each column/row (first time) */
-  for(i = 0; i < 15; i++)
+  /* ========== Pass 1: column Hamming(13,9) on cols 0..14 ========== */
+  for (i = 0; i < 15; i++)
   {
-    /* Get a full column */
-    for(j = 0; j < 13; j++)
+    for (j = 0; j < 13; j++)
     {
       ColumnUncorrected[j] = DataMatrix[j][i];
+      ColumnBefore[j] = ColumnUncorrected[j];
     }
 
-    /* Apply Hamming (15,11,3) code correction */
-    if(Hamming_13_9_decode(ColumnUncorrected, ColumnCorrected, 1) == false)
+    if (Hamming_13_9_decode(ColumnUncorrected, ColumnCorrected, 1) == false)
     {
       HammingIrrecoverableErrorNb++;
+      col_fail_p1++;
+#if BPTC_196x96_DEBUG
+      fprintf(stderr, " BPTC196 P1 COL FAIL col=%u  rx=", (unsigned)i);
+      for (j = 0; j < 13; j++)
+        fprintf(stderr, "%u", ColumnBefore[j] & 1);
+      fprintf(stderr, "\n");
+#endif
+      for (j = 0; j < 9; j++)
+        DataMatrix[j][i] = ColumnBefore[j];
     }
-
-    /* Re-inject the column in the matrix (only the util data [11 bit],
-     * not the Hamming part [4 bit]) */
-    for(j = 0; j < 9; j++)
+    else
     {
-      DataMatrix[j][i] = ColumnCorrected[j];
+      for (j = 0; j < 13; j++)
+      {
+        if ((ColumnBefore[j] & 1) != (ColumnUncorrected[j] & 1))
+        {
+          col_corr_p1++;
+#if BPTC_196x96_DEBUG
+          fprintf(stderr,
+                  " BPTC196 P1 COL CORRECTED col=%u bit=%u  %u->%u\n",
+                  (unsigned)i, (unsigned)j,
+                  (unsigned)(ColumnBefore[j] & 1),
+                  (unsigned)(ColumnUncorrected[j] & 1));
+#endif
+        }
+      }
+      for (j = 0; j < 9; j++)
+        DataMatrix[j][i] = ColumnCorrected[j];
     }
   }
+#if BPTC_196x96_DEBUG
+  if (col_fail_p1 || col_corr_p1)
+    fprintf(stderr, " BPTC196 P1 COL summary: fail=%u corrected_bits=%u\n",
+            (unsigned)col_fail_p1, (unsigned)col_corr_p1);
+#endif
 
-  /* The first Hamming code check has maybe corrected bit
-   * which can be use to correct other bit, so make the
-   * same operation twice */
-
-  /* Reset the number of irrecoverable errors */
+  /* Second pass can fix more after the first cascade */
   HammingIrrecoverableErrorNb = 0;
 
-
-  /* Process the the Hamming (15,11,3) code
-   * check on each line (second time).
-   * Do not check the 4th last lines */
-  for(i = 0; i < 9; i++)
+  /* ========== Pass 2: rows ========== */
+  for (i = 0; i < 9; i++)
   {
-    /* Get a full line */
-    for(j = 0; j < 15; j++)
+    for (j = 0; j < 15; j++)
     {
       LineUncorrected[j] = DataMatrix[i][j];
+      LineBefore[j] = LineUncorrected[j];
     }
 
-    /* Apply Hamming (15,11,3) code correction */
-    if(Hamming_15_11_decode(LineUncorrected, LineCorrected, 1) == false)
+    if (Hamming_15_11_decode(LineUncorrected, LineCorrected, 1) == false)
     {
-      /* Row/Line contains irrecoverable errors */
       HammingIrrecoverableErrorNb++;
+      row_fail_p2++;
+#if BPTC_196x96_DEBUG
+      fprintf(stderr, " BPTC196 P2 ROW FAIL row=%u  rx=", (unsigned)i);
+      for (j = 0; j < 15; j++)
+        fprintf(stderr, "%u", LineBefore[j] & 1);
+      fprintf(stderr, "\n");
+#endif
+      for (j = 0; j < 11; j++)
+        DataMatrix[i][j] = LineBefore[j];
     }
     else
     {
-      /* Row/Line contains correct data */
-    }
-
-    /* Re-inject the line in the matrix (only the util data [11 bit],
-     * not the Hamming part [4 bit]) */
-    for(j = 0; j < 11; j++)
-    {
-      DataMatrix[i][j] = LineCorrected[j];
+      for (j = 0; j < 15; j++)
+      {
+        if ((LineBefore[j] & 1) != (LineUncorrected[j] & 1))
+        {
+          row_corr_p2++;
+#if BPTC_196x96_DEBUG
+          fprintf(stderr,
+                  " BPTC196 P2 ROW CORRECTED row=%u bit=%u  %u->%u\n",
+                  (unsigned)i, (unsigned)j,
+                  (unsigned)(LineBefore[j] & 1),
+                  (unsigned)(LineUncorrected[j] & 1));
+#endif
+        }
+      }
+      for (j = 0; j < 11; j++)
+        DataMatrix[i][j] = LineCorrected[j];
     }
   }
+#if BPTC_196x96_DEBUG
+  if (row_fail_p2 || row_corr_p2)
+    fprintf(stderr, " BPTC196 P2 ROW summary: fail=%u corrected_bits=%u\n",
+            (unsigned)row_fail_p2, (unsigned)row_corr_p2);
+#endif
 
-
-  /* Process the the Hamming (15,11,3) code
-   * check on each column/row (second time) */
-  for(i = 0; i < 15; i++)
+  /* ========== Pass 2: columns ========== */
+  for (i = 0; i < 15; i++)
   {
-    /* Get a full column */
-    for(j = 0; j < 13; j++)
+    for (j = 0; j < 13; j++)
     {
       ColumnUncorrected[j] = DataMatrix[j][i];
+      ColumnBefore[j] = ColumnUncorrected[j];
     }
 
-    /* Apply Hamming (15,11,3) code correction */
-    if(Hamming_13_9_decode(ColumnUncorrected, ColumnCorrected, 1) == false)
+    if (Hamming_13_9_decode(ColumnUncorrected, ColumnCorrected, 1) == false)
     {
-      /* Row/Line contains irrecoverable errors */
       HammingIrrecoverableErrorNb++;
+      col_fail_p2++;
+#if BPTC_196x96_DEBUG
+      fprintf(stderr, " BPTC196 P2 COL FAIL col=%u  rx=", (unsigned)i);
+      for (j = 0; j < 13; j++)
+        fprintf(stderr, "%u", ColumnBefore[j] & 1);
+      fprintf(stderr, "\n");
+#endif
+      for (j = 0; j < 9; j++)
+        DataMatrix[j][i] = ColumnBefore[j];
     }
     else
     {
-      /* Row/Line contains correct data */
-    }
-
-    /* Re-inject the column in the matrix (only the util data [11 bit],
-     * not the Hamming part [4 bit]) */
-    for(j = 0; j < 9; j++)
-    {
-      DataMatrix[j][i] = ColumnCorrected[j];
+      for (j = 0; j < 13; j++)
+      {
+        if ((ColumnBefore[j] & 1) != (ColumnUncorrected[j] & 1))
+        {
+          col_corr_p2++;
+#if BPTC_196x96_DEBUG
+          fprintf(stderr,
+                  " BPTC196 P2 COL CORRECTED col=%u bit=%u  %u->%u\n",
+                  (unsigned)i, (unsigned)j,
+                  (unsigned)(ColumnBefore[j] & 1),
+                  (unsigned)(ColumnUncorrected[j] & 1));
+#endif
+        }
+      }
+      for (j = 0; j < 9; j++)
+        DataMatrix[j][i] = ColumnCorrected[j];
     }
   }
+#if BPTC_196x96_DEBUG
+  if (col_fail_p2 || col_corr_p2)
+    fprintf(stderr, " BPTC196 P2 COL summary: fail=%u corrected_bits=%u\n",
+            (unsigned)col_fail_p2, (unsigned)col_corr_p2);
+  fprintf(stderr,
+          " BPTC196 FINAL irrecoverable=%u  P1(row_f=%u col_f=%u row_c=%u col_c=%u)  "
+          "P2(row_f=%u col_f=%u row_c=%u col_c=%u)\n",
+          (unsigned)HammingIrrecoverableErrorNb,
+          (unsigned)row_fail_p1, (unsigned)col_fail_p1,
+          (unsigned)row_corr_p1, (unsigned)col_corr_p1,
+          (unsigned)row_fail_p2, (unsigned)col_fail_p2,
+          (unsigned)row_corr_p2, (unsigned)col_corr_p2);
+#endif
 
-  /* Extract the DMR data (96 bit) from the matrix */
-  /* First line : Do not take R(2), R(1) and R(0) */
+  /* Extract 96 data bits */
   k = 0;
-
-  for(i = 3; i < 11; i++)
+  for (i = 3; i < 11; i++)
   {
-    DMRDataExtracted[k] = DataMatrix[0][i];
-    k++;
+    DMRDataExtracted[k++] = DataMatrix[0][i];
+  }
+  for (i = 1; i < 9; i++)
+  {
+    for (j = 0; j < 11; j++)
+      DMRDataExtracted[k++] = DataMatrix[i][j];
   }
 
-  /* Next lines */
-  for(i = 1; i < 9; i++)
-  {
-    for(j = 0; j < 11; j++)
-    {
-      DMRDataExtracted[k] = DataMatrix[i][j];
-      k++;
-    }
-  }
-
-  /* R(0) to R(2) may be used to transport some
-   * Restricted Access System (RAS) information,
-   * So save these three bits after hamming correction
-   * See patent https://patents.google.com/patent/US20130288643A1
-   */
   if (HammingIrrecoverableErrorNb == 0)
   {
-    R[0] = DataMatrix[0][2]; /* Save R(0) */
-    R[1] = DataMatrix[0][1]; /* Save R(1) */
-    R[2] = DataMatrix[0][0]; /* Save R(2) */
+    R[0] = DataMatrix[0][2]; /* R(0) */
+    R[1] = DataMatrix[0][1]; /* R(1) */
+    R[2] = DataMatrix[0][0]; /* R(2) */
   }
-  
-  if (R[0] == 0 && R[1] == 0 && R[2] == 1)
-  {
-    *is_ras = 1;
-  }
-  else *is_ras = 0;
 
-  /* Return the number of irrecoverable Hamming errors */
+  if (R[0] == 0 && R[1] == 0 && R[2] == 1)
+    *is_ras = 1;
+  else
+    *is_ras = 0;
+
   return HammingIrrecoverableErrorNb;
-} /* End BPTC_196x96_Extract_Data() */
+}
 
 
 /*
@@ -382,6 +468,10 @@ uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDat
 
   uint8_t row_bad[7];
   uint8_t col_bad[16];
+
+#if BPTC_128x77_DEBUG
+  fprintf (stderr, "\n");
+#endif
 
   for (i = 0; i < 8; i++)
   {
@@ -650,6 +740,52 @@ uint32_t BPTC_16x2_Extract_Data(uint8_t InputInterleavedData[32], uint8_t DMRDat
 
 } /* End BPTC_16x2_Extract_Data() */
 
+uint32_t BPTC_128x77_Check_Errors(uint8_t InputDataMatrix[8][16])
+{
+  uint32_t i, j;
+  uint32_t ham_bad = 0, ham_fix = 0, par_err = 0;
+  uint8_t  line[16], before[16], decoded[11];
+  uint32_t ones;
+  int changed;
 
+  for (i = 0; i < 7; i++)
+  {
+    for (j = 0; j < 16; j++)
+    {
+      before[j] = (InputDataMatrix[i][j] & 1);
+      line[j]   = before[j];
+    }
+
+    if (Hamming_16_11_4_decode(line, decoded, 1) == false)
+    {
+      ham_bad++;
+    }
+    else
+    {
+      changed = 0;
+      for (j = 0; j < 16; j++)
+      {
+        if (line[j] != before[j])
+        {
+          changed = 1;
+          break;
+        }
+      }
+      if (changed)
+        ham_fix++;
+    }
+  }
+
+  for (i = 0; i < 16; i++)
+  {
+    ones = 0;
+    for (j = 0; j < 7; j++)
+      ones += (InputDataMatrix[j][i] & 1);
+    if ((ones % 2) != (InputDataMatrix[7][i] & 1))
+      par_err++;
+  }
+
+  return ham_bad + ham_fix + par_err;
+}
 
 /* End of file */

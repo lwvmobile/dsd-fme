@@ -935,6 +935,20 @@ typedef struct
   int ras_permutation_order[104];
   uint8_t dmr_is_ras; //indicate a partial or complete RAS enabled system
 
+  //Hytera OTA Key Variables
+  // #define DEBUG_HOTA
+  uint8_t hota_enc_check;
+  uint8_t hota_key_loaded;
+  uint8_t dmr_is_hota;
+  int hota_bit_shift;
+  int hota_byte_shifts[12];
+  uint8_t hota_rc4_key[16];
+  uint8_t hota_rc4_ks[80];
+  uint8_t hota_lc_ctx[2][4];
+  uint8_t hota_ctx_ok[2];
+  int hota_sbrc_idx1[2];
+  int hota_sbrc_idx2[2];
+
   //Bitmap Filtering Options
   int audio_smoothing;
 
@@ -1378,6 +1392,7 @@ void BPTCDeInterleaveDMRData(uint8_t * Input, uint8_t * Output);
 uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196], uint8_t DMRDataExtracted[96], uint8_t R[3], uint8_t * is_ras);
 uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDataExtracted[77]);
 uint32_t BPTC_16x2_Extract_Data(uint8_t InputInterleavedData[32], uint8_t DMRDataExtracted[32], uint32_t ParityCheckTypeOdd);
+uint32_t BPTC_128x77_Check_Errors(uint8_t InputDataMatrix[8][16]);
 
 //Reed Solomon DMR functions
 void rs_16_13_encode(uint8_t * input);
@@ -1515,6 +1530,11 @@ void LFSRP(dsd_state * state);
 
 void LFSRN (char * BufferIn, char * BufferOut, dsd_state * state);
 void LFSR64(dsd_state * state);
+
+//IV Reversals using LFSR tap +1 arrangements
+uint64_t reverse_lfsr_32a_to_len(uint8_t * iv, int16_t len);
+uint64_t reverse_lfsr_32d_to_len(uint8_t * iv, int16_t len);
+uint64_t reverse_lfsr_64_to_len(dsd_opts * opts, uint8_t * iv, int16_t len);
 
 void Hamming_7_4_init();
 void Hamming_7_4_encode(unsigned char *origBits, unsigned char *encodedBits);
@@ -1680,7 +1700,7 @@ uint32_t kirisun_lfsr(unsigned long long int mi);
 void kirisun_keystream_creation(dsd_state * state);
 
 //Hytera Enhanced
-void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value);
+void hytera_enhanced_rc4_setup(dsd_opts * opts, dsd_state * state, unsigned long long int key_value, unsigned long long int mi_value, int len);
 unsigned long long int hytera_lfsr(uint8_t * mi, uint8_t * taps, uint8_t len);
 void hytera_enhanced_alg_refresh(dsd_state * state);
 
@@ -1688,6 +1708,20 @@ void hytera_enhanced_alg_refresh(dsd_state * state);
 uint32_t ras_mac_calculator(dsd_state * state, uint8_t * input, int input_len, int type);
 void ras_effective_key_creation(dsd_state * state, char * input);
 void ras_permute_order(uint32_t seed, int * order);
+
+//Hytera OTA Encryption
+void hytera_ota_keystream_setup(dsd_state * state, char * input);
+void hytera_ota_decrypt_bptc_96(dsd_state * state, uint8_t * input, uint8_t type);
+void hytera_ota_decrypt_emb_lc(dsd_state * state, uint8_t input[8][16]);
+void hytera_ota_search_emb_lc(dsd_state * state, uint8_t input[8][16]);
+void hytera_ota_decrypt_sb_rc(dsd_state * state, uint8_t * input);
+void hytera_ota_search_sb_rc(dsd_state * state, uint8_t * input, int ptype);
+void hytera_create_lc_ctx(dsd_state * state, uint8_t * input);
+void hytera_ota_unit_testing(dsd_state * state);
+
+//Hytera Decryption for Data Blocks
+uint8_t hytera_bp_data_decrypt(dsd_state * state, uint8_t * input, int len);
+uint8_t hytera_ep_data_decrypt(dsd_opts * opts, dsd_state * state, uint8_t * input, int len);
 
 //LFSR to expand either a DMR 32-bit or P25/NXDN 64-bit MI into a 128-bit IV for AES
 void lfsr_32_to_128(uint8_t * iv);

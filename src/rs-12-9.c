@@ -325,9 +325,6 @@ void rs_12_9_encode(uint8_t * input)
   //init cw
   memset(cw.data, 0, 12*sizeof(uint8_t));
 
-  //init cs
-  memset(cs->bytes, 0, 3*sizeof(uint8_t));
-
   //Copy 9 bytes of data input
   memcpy(cw.data, input, 9);
 

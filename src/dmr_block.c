@@ -1157,135 +1157,16 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           decrypted_pdu = 1;
         }
 
-        else if (alg == 0x68 && akl == 1) //Hytera BP
+        else if (alg == 0x68) //Hytera BP
         {
-
-          //Find len on loaded Hytera BP key w/ memcmp on kaes and load into ob
-          int klen = 32;
-          uint8_t emp8[8];
-          memset(emp8, 0, sizeof(emp8));
-
-          //TODO: We are assumming the key isn't something like 0x100000000000000000000000000000.... zero fill to 16 or 32
-          //need to fix this checkdown, but may not be plausible without redoing the Hytera BP code entirely at this point
-
-          //test for 64 char (32 byte) key
-          if ((memcmp(emp8, kaes+16, 8) != 0) || (memcmp(emp8, kaes+24, 8) != 0))
-          {
-            memcpy(ob, kaes, 32);
-            klen = 32;
-          }
-          //test for 32 char (16 byte) key
-          else if ((memcmp(emp8, kaes+8, 8) != 0))
-          {
-            memcpy(ob, kaes, 16);
-            klen = 16;
-          }
-          //this is a 10 char (5 byte) key w/ offset
-          else
-          {
-            memcpy(ob, kaes+3, 5);
-            klen = 5;
-          }
-
-          end += (poc + 4); //also perform application over padding bytes and crc value
-          for (i = 0; i < end; i++)
-            state->dmr_pdu_sf[slot][i+start] ^= ob[i%klen];
-
-          decrypted_pdu = 1;
-
-          //Recalcuate CRC32
-          uint8_t reordered_bits[1000];
-          memset (reordered_bits, 0, sizeof(reordered_bits));
-
-          //rearrage for ridiculously stupid CRC32 LSO/MSO ordering
-          for(i = 0, j = 0; i < ctr; i+=2, j+=16)
-          {
-            reordered_bits[j + 0] = (state->dmr_pdu_sf[slot][i+1] >> 7) & 0x01;
-            reordered_bits[j + 1] = (state->dmr_pdu_sf[slot][i+1] >> 6) & 0x01;
-            reordered_bits[j + 2] = (state->dmr_pdu_sf[slot][i+1] >> 5) & 0x01;
-            reordered_bits[j + 3] = (state->dmr_pdu_sf[slot][i+1] >> 4) & 0x01;
-            reordered_bits[j + 4] = (state->dmr_pdu_sf[slot][i+1] >> 3) & 0x01;
-            reordered_bits[j + 5] = (state->dmr_pdu_sf[slot][i+1] >> 2) & 0x01;
-            reordered_bits[j + 6] = (state->dmr_pdu_sf[slot][i+1] >> 1) & 0x01;
-            reordered_bits[j + 7] = (state->dmr_pdu_sf[slot][i+1] >> 0) & 0x01;
-
-            reordered_bits[j +  8] = (state->dmr_pdu_sf[slot][i] >> 7) & 0x01;
-            reordered_bits[j +  9] = (state->dmr_pdu_sf[slot][i] >> 6) & 0x01;
-            reordered_bits[j + 10] = (state->dmr_pdu_sf[slot][i] >> 5) & 0x01;
-            reordered_bits[j + 11] = (state->dmr_pdu_sf[slot][i] >> 4) & 0x01;
-            reordered_bits[j + 12] = (state->dmr_pdu_sf[slot][i] >> 3) & 0x01;
-            reordered_bits[j + 13] = (state->dmr_pdu_sf[slot][i] >> 2) & 0x01;
-            reordered_bits[j + 14] = (state->dmr_pdu_sf[slot][i] >> 1) & 0x01;
-            reordered_bits[j + 15] = (state->dmr_pdu_sf[slot][i] >> 0) & 0x01;
-          }
-          CRCComputed = (uint32_t)ComputeCrc32BitV(reordered_bits, (ctr * 8) - 32);
-          CRCExtracted = (uint32_t)convert_bits_into_output(reordered_bits+((ctr * 8) - 32), 32);
-          if (CRCComputed == CRCExtracted)
-            CRCCorrect = 1;
-          else CRCCorrect = 0;
-
-          //set back to original value
-          end -= (poc + 4);
-
-          //debug
-          // fprintf (stderr, " CTR: %d; CRC32 CMP: %08X EXT: %08X", ctr, CRCComputed, CRCExtracted);
-
+          //just passing through to see if a key was loaded and the blocks decrypted
+          decrypted_pdu = hytera_bp_data_decrypt(state, empt, 1);
         }
 
-        else if (alg == 0xD0 && R != 0) //Hytera Enhanced RC4
+        else if (alg == 0xD0) //Hytera Enhanced RC4
         {
-          //TODO: Test this with any samples if we ever see one
-          //also, will need to make more ks with a len option in function
-          //currently, only have enough for 7.5 R34 data blocks tops
-          hytera_enhanced_rc4_setup(opts, state, R, mi);
-
-          if (slot == 0)
-            memcpy(ob, state->ks_octetL, 135);
-          else memcpy(ob, state->ks_octetR, 135);
-
-          end += (poc + 4); //also perform application over padding bytes and crc value
-          for (i = 0; i < end; i++)
-            state->dmr_pdu_sf[slot][i+start] ^= ob[i];
-
-          decrypted_pdu = 1;
-
-          //Recalcuate CRC32
-          uint8_t reordered_bits[1000];
-          memset (reordered_bits, 0, sizeof(reordered_bits));
-
-          //rearrage for ridiculously stupid CRC32 LSO/MSO ordering
-          for(i = 0, j = 0; i < ctr; i+=2, j+=16)
-          {
-            reordered_bits[j + 0] = (state->dmr_pdu_sf[slot][i+1] >> 7) & 0x01;
-            reordered_bits[j + 1] = (state->dmr_pdu_sf[slot][i+1] >> 6) & 0x01;
-            reordered_bits[j + 2] = (state->dmr_pdu_sf[slot][i+1] >> 5) & 0x01;
-            reordered_bits[j + 3] = (state->dmr_pdu_sf[slot][i+1] >> 4) & 0x01;
-            reordered_bits[j + 4] = (state->dmr_pdu_sf[slot][i+1] >> 3) & 0x01;
-            reordered_bits[j + 5] = (state->dmr_pdu_sf[slot][i+1] >> 2) & 0x01;
-            reordered_bits[j + 6] = (state->dmr_pdu_sf[slot][i+1] >> 1) & 0x01;
-            reordered_bits[j + 7] = (state->dmr_pdu_sf[slot][i+1] >> 0) & 0x01;
-
-            reordered_bits[j +  8] = (state->dmr_pdu_sf[slot][i] >> 7) & 0x01;
-            reordered_bits[j +  9] = (state->dmr_pdu_sf[slot][i] >> 6) & 0x01;
-            reordered_bits[j + 10] = (state->dmr_pdu_sf[slot][i] >> 5) & 0x01;
-            reordered_bits[j + 11] = (state->dmr_pdu_sf[slot][i] >> 4) & 0x01;
-            reordered_bits[j + 12] = (state->dmr_pdu_sf[slot][i] >> 3) & 0x01;
-            reordered_bits[j + 13] = (state->dmr_pdu_sf[slot][i] >> 2) & 0x01;
-            reordered_bits[j + 14] = (state->dmr_pdu_sf[slot][i] >> 1) & 0x01;
-            reordered_bits[j + 15] = (state->dmr_pdu_sf[slot][i] >> 0) & 0x01;
-          }
-          CRCComputed = (uint32_t)ComputeCrc32BitV(reordered_bits, (ctr * 8) - 32);
-          CRCExtracted = (uint32_t)convert_bits_into_output(reordered_bits+((ctr * 8) - 32), 32);
-          if (CRCComputed == CRCExtracted)
-            CRCCorrect = 1;
-          else CRCCorrect = 0;
-
-          //set back to original value
-          end -= (poc + 4);
-
-          //debug
-          // fprintf (stderr, " CTR: %d; CRC32 CMP: %08X EXT: %08X", ctr, CRCComputed, CRCExtracted);
-
+          //just passing through to see if a key was loaded and the blocks decrypted
+          decrypted_pdu = hytera_ep_data_decrypt(opts, state, empt, 1);
         }
 
         else if (alg == 7 && state->vtx_key_loaded == 1) //Vertex Standard, either enc type
@@ -1825,4 +1706,12 @@ void dmr_reset_blocks (dsd_opts * opts, dsd_state * state)
   // sprintf (state->call_string[1], "%s", "                     "); //21 spaces
   sprintf (state->dmr_lrrp_gps[0], "%s", "");
   sprintf (state->dmr_lrrp_gps[1], "%s", "");
+
+  //Hytera OTA Encryption
+   memset(state->hota_lc_ctx, 0, sizeof(state->hota_lc_ctx));
+   memset(state->hota_ctx_ok, 0, sizeof(state->hota_ctx_ok));
+   state->hota_sbrc_idx1[0] = -1;
+   state->hota_sbrc_idx2[0] = -1;
+   state->hota_sbrc_idx1[1] = -1;
+   state->hota_sbrc_idx2[1] = -1;
 }

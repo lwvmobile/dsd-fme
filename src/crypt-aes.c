@@ -530,7 +530,7 @@ void vertex_256_keystream_creation(dsd_state * state, char * key_string)
 
   uint64_t vtx_key = 0;
 
-  //use the bytes from rc4 output to select 4 BP key 16-bit words
+  //use the bytes from round key output to select 4 BP key 16-bit words
   for (int i = 224; i < 228; i++)
   {
     vtx_key <<= 16;
