@@ -899,9 +899,305 @@ void kirisun_top_keystream_creation(dsd_state *state)
   UNUSED(state);
 }
 
+#define BLOCK_BYTES 512
+#define MEMORY_BYTES 4608
+
+static uint8_t memory_area[MEMORY_BYTES];
+static uint8_t *substitution_area = memory_area;
+static uint8_t *state_area = memory_area + 2048;
+static uint8_t *feedback_area = memory_area + 3584;
+static uint8_t *temporary_area = memory_area + 4096;
+static size_t processed_bytes;
+static uint8_t feedback_value;
+
+static const uint8_t substitution_maps[16][16] = {
+    { 0x4, 0xA, 0x9, 0x2, 0xD, 0x8, 0x0, 0xE, 0x6, 0xB, 0x1, 0xC, 0x7, 0xF, 0x5, 0x3 },
+    { 0xE, 0xB, 0x4, 0xC, 0x6, 0xD, 0xF, 0xA, 0x2, 0x3, 0x8, 0x1, 0x0, 0x7, 0x5, 0x9 },
+    { 0x5, 0x8, 0x1, 0xD, 0xA, 0x3, 0x4, 0x2, 0xE, 0xF, 0xC, 0x7, 0x6, 0x0, 0x9, 0xB },
+    { 0x7, 0xD, 0xA, 0x1, 0x0, 0x8, 0x9, 0xF, 0xE, 0x4, 0x6, 0xC, 0xB, 0x2, 0x5, 0x3 },
+    { 0x6, 0xC, 0x7, 0x1, 0x5, 0xF, 0xD, 0x8, 0x4, 0xA, 0x9, 0xE, 0x0, 0x3, 0xB, 0x2 },
+    { 0x4, 0xB, 0xA, 0x0, 0x7, 0x2, 0x1, 0xD, 0x3, 0x6, 0x8, 0x5, 0x9, 0xC, 0xF, 0xE },
+    { 0xD, 0xB, 0x4, 0x1, 0x3, 0xF, 0x5, 0x9, 0x0, 0xA, 0xE, 0x7, 0x6, 0x8, 0x2, 0xC },
+    { 0x1, 0xF, 0xD, 0x0, 0x5, 0x7, 0xA, 0x4, 0x9, 0x2, 0x3, 0xE, 0x6, 0xB, 0x8, 0xC },
+    { 0xC, 0x4, 0x6, 0x2, 0xA, 0x5, 0xB, 0x9, 0xE, 0x8, 0xD, 0x7, 0x0, 0x3, 0xF, 0x1 },
+    { 0x6, 0x8, 0x2, 0x3, 0x9, 0xA, 0x5, 0xC, 0x1, 0xE, 0x4, 0x7, 0xB, 0xD, 0x0, 0xF },
+    { 0xB, 0x3, 0x5, 0x8, 0x2, 0xF, 0xA, 0xD, 0xE, 0x1, 0x7, 0x4, 0xC, 0x9, 0x6, 0x0 },
+    { 0xC, 0x8, 0x2, 0x1, 0xD, 0x4, 0xF, 0x6, 0x7, 0x0, 0xA, 0x5, 0x3, 0xE, 0x9, 0xB },
+    { 0x7, 0xF, 0x5, 0xA, 0x8, 0x1, 0x6, 0xD, 0x0, 0x9, 0x3, 0xE, 0xB, 0x4, 0x2, 0xC },
+    { 0x5, 0xD, 0xF, 0x6, 0x9, 0x2, 0xC, 0xA, 0xB, 0x7, 0x8, 0x1, 0x4, 0x3, 0xE, 0x0 },
+    { 0x8, 0xE, 0x2, 0x5, 0x6, 0x9, 0x1, 0xC, 0xF, 0x4, 0xB, 0x0, 0xD, 0xA, 0x3, 0x7 },
+    { 0x1, 0x7, 0xE, 0xD, 0x0, 0x5, 0x8, 0x3, 0x4, 0xF, 0xA, 0x6, 0x9, 0xC, 0xB, 0x2 }
+};
+
+static const uint8_t nonlinear_map[256] = {
+       13, 199,  11,  67, 237, 193, 164,  77, 115, 184, 141, 222,  73,
+        38, 147,  36, 150,  87,  21, 104,  12,  61, 156, 101, 111, 145,
+       119,  22, 207,  35, 198,  37, 171, 167,  80,  30, 219,  28, 213,
+       121,  86,  29, 214, 242,   6,   4,  89, 162, 110, 175,  19, 157,
+         3,  88, 234,  94, 144, 118, 159, 239, 100,  17, 182, 173, 238,
+        68,  16,  79, 132,  54, 163,  52,   9,  58,  57,  55, 229, 192,
+       170, 226,  56, 231, 187, 158,  70, 224, 233, 245,  26,  47,  32,
+        44, 247,   8, 251,  20, 197, 185, 109, 153, 204, 218,  93, 178,
+       212, 137,  84, 174,  24, 120, 130, 149,  72, 180, 181, 208, 255,
+       189, 152,  18, 143, 176,  60, 249,  27, 227, 128, 139, 243, 253,
+        59, 123, 172, 108, 211,  96, 138,  10, 215,  42, 225,  40,  81,
+        65,  90,  25,  98, 126, 154,  64, 124, 116, 122,   5,   1, 168,
+        83, 190, 131, 191, 244, 240, 235, 177, 155, 228, 125,  66,  43,
+       201, 248, 220, 129, 188, 230,  62,  75,  71,  78,  34,  31, 216,
+       254, 136,  91, 114, 106,  46, 217, 196,  92, 151, 209, 133,  51,
+       236,  33, 252, 127, 179,  69,   7, 183, 105, 146,  97,  39,  15,
+       205, 112, 200, 166, 223,  45,  48, 246, 186,  41, 148, 140, 107,
+        76,  85,  95, 194, 142,  50,  49, 134,  23, 135, 169, 221, 210,
+       203,  63, 165,  82, 161, 202,  53,  14, 206, 232, 103, 102, 195,
+       117, 250,  99,   0,  74, 160, 241,   2, 113};
+
+
+void prepare_tables(void)
+{
+    for (unsigned int index = 0; index < 256; ++index) {
+        substitution_area[7 * 256 + index] = (uint8_t)((substitution_maps[15][index >> 4] << 4) | substitution_maps[14][index & 15]);
+        substitution_area[6 * 256 + index] = (uint8_t)((substitution_maps[13][index >> 4] << 4) | substitution_maps[12][index & 15]);
+        substitution_area[5 * 256 + index] = (uint8_t)((substitution_maps[11][index >> 4] << 4) | substitution_maps[10][index & 15]);
+        substitution_area[4 * 256 + index] = (uint8_t)((substitution_maps[9][index >> 4] << 4) | substitution_maps[8][index & 15]);
+        substitution_area[3 * 256 + index] = (uint8_t)((substitution_maps[7][index >> 4] << 4) | substitution_maps[6][index & 15]);
+        substitution_area[2 * 256 + index] = (uint8_t)((substitution_maps[5][index >> 4] << 4) | substitution_maps[4][index & 15]);
+        substitution_area[1 * 256 + index] = (uint8_t)((substitution_maps[3][index >> 4] << 4) | substitution_maps[2][index & 15]);
+        substitution_area[index] = (uint8_t)((substitution_maps[1][index >> 4] << 4) | substitution_maps[0][index & 15]);
+    }
+}
+
+void reset_state(void)
+{
+    processed_bytes = 0;
+    feedback_value = 0;
+    memset(feedback_area, 0, 512);
+    memset(state_area, 0, 1536);
+}
+
+void md2IIult(const uint8_t input[], size_t length)
+{
+    size_t input_position = 0;
+    while (length != 0) {
+        for (; length && processed_bytes < BLOCK_BYTES; --length, ++processed_bytes) {
+            uint8_t current_byte = input[input_position++];
+            state_area[processed_bytes + BLOCK_BYTES] = current_byte;
+            state_area[processed_bytes + 2 * BLOCK_BYTES] = (uint8_t)(current_byte ^ state_area[processed_bytes]);
+            feedback_area[processed_bytes] ^= nonlinear_map[current_byte ^ feedback_value];
+            feedback_value = feedback_area[processed_bytes];
+        }
+        if (processed_bytes == BLOCK_BYTES) {
+            unsigned int accumulator = 0;
+            processed_bytes = 0;
+            for (unsigned int round = 0; round < BLOCK_BYTES + 2; ++round) {
+                for (unsigned int index = 0; index < 3 * BLOCK_BYTES; ++index) {
+                    state_area[index] ^= nonlinear_map[accumulator];
+                    accumulator = state_area[index];
+                }
+                accumulator = (accumulator + round) & 255U;
+            }
+        }
+    }
+}
+
+void finalize_state(uint8_t output[BLOCK_BYTES])
+{
+    size_t remaining_bytes = BLOCK_BYTES - processed_bytes;
+    memset(temporary_area, (int)remaining_bytes, remaining_bytes);
+    md2IIult(temporary_area, remaining_bytes);
+    md2IIult(feedback_area, BLOCK_BYTES);
+    memcpy(output, state_area, BLOCK_BYTES);
+}
+
+void derive_schedule(const uint8_t digest[BLOCK_BYTES], uint8_t schedule[BLOCK_BYTES])
+{
+    size_t digest_position = 0;
+    memset(schedule, 0, BLOCK_BYTES);
+    for (unsigned int block = 0; block < 64; ++block) {
+        uint64_t value = 0;
+        for (unsigned int index = 0; index < 8; ++index) value = (value << 8) | digest[digest_position++];
+        memcpy(schedule + block * 8, &value, sizeof(value));
+    }
+}
+
+static uint64_t transform_word(uint64_t value)
+{
+    uint32_t upper_word = (uint32_t)(value >> 32);
+    uint32_t lower_word = (uint32_t)value;
+    upper_word = ((uint32_t)substitution_area[3 * 256 + ((upper_word >> 24) & 255u)] << 24) |
+                 ((uint32_t)substitution_area[2 * 256 + ((upper_word >> 16) & 255u)] << 16) |
+                 ((uint32_t)substitution_area[1 * 256 + ((upper_word >> 8) & 255u)] << 8) |
+                 (uint32_t)substitution_area[upper_word & 255u];
+    lower_word = ((uint32_t)substitution_area[7 * 256 + ((lower_word >> 24) & 255u)] << 24) |
+                 ((uint32_t)substitution_area[6 * 256 + ((lower_word >> 16) & 255u)] << 16) |
+                 ((uint32_t)substitution_area[5 * 256 + ((lower_word >> 8) & 255u)] << 8) |
+                 (uint32_t)substitution_area[4 * 256 + (lower_word & 255u)];
+    value = ((uint64_t)upper_word << 32) | lower_word;
+    return (value << 11) | (value >> (64 - 11));
+}
+
+void encode_block(const uint64_t input[2], uint64_t output[2], const uint8_t schedule[BLOCK_BYTES])
+{
+    uint64_t left_word = input[0], right_word = input[1];
+    for (unsigned int round = 0; round < 32; ++round) {
+        uint64_t round_key;
+        memcpy(&round_key, schedule + round * 16, sizeof(round_key));
+        right_word ^= transform_word(left_word + round_key);
+        memcpy(&round_key, schedule + round * 16 + 8, sizeof(round_key));
+        left_word ^= transform_word(right_word + round_key);
+    }
+    output[0] = right_word;
+    output[1] = left_word;
+}
+
+void decode_block(const uint64_t input[2], uint64_t output[2], const uint8_t schedule[BLOCK_BYTES])
+{
+    uint64_t left_word = input[0], right_word = input[1];
+    for (int round = 31; round >= 0; --round) {
+        uint64_t round_key;
+        memcpy(&round_key, schedule + round * 16 + 8, sizeof(round_key));
+        right_word ^= transform_word(left_word + round_key);
+        memcpy(&round_key, schedule + round * 16, sizeof(round_key));
+        left_word ^= transform_word(right_word + round_key);
+    }
+    output[0] = right_word;
+    output[1] = left_word;
+}
+
 void kirisun_ultimate_keystream_creation(dsd_state *state)
 {
-  UNUSED(state);
+  uint8_t slot = 0;
+  if (state->currentslot == 0)
+    slot = 0;
+  else slot = 1;
+
+  uint32_t lfsr = 0;
+  if (state->currentslot == 0)
+    lfsr = (uint32_t)state->payload_mi;
+  else lfsr = (uint32_t)state->payload_miR;
+
+  unsigned char userkeyhexa[32]; memset(userkeyhexa, 0, sizeof(userkeyhexa));
+  unsigned char realkey[32]; memset(realkey, 0, sizeof(realkey));
+  unsigned char lfsrhexa[4]; memset(lfsrhexa, 0, sizeof(lfsrhexa));
+  uint8_t ks_bytes[128]; memset(ks_bytes, 0, sizeof(ks_bytes));
+
+  lfsrhexa[0] = (lfsr >> 24) & 0xFF;
+  lfsrhexa[1] = (lfsr >> 16) & 0xFF;
+  lfsrhexa[2] = (lfsr >> 8)  & 0xFF;
+  lfsrhexa[3] = (lfsr >> 0)  & 0xFF;
+
+  uint64_t K1 = state->A1[slot];
+  uint64_t K2 = state->A2[slot];
+  uint64_t K3 = state->A3[slot];
+  uint64_t K4 = state->A4[slot];
+
+  if (K1 != 0 && K2 != 0 && K3 != 0 && K4 != 0)
+    state->aes_key_loaded[slot] = 1;
+  else state->aes_key_loaded[slot] = 0;
+
+  if (state->aes_key_loaded[slot] == 1)
+  {
+
+    u64_to_bytes_be(K1, &userkeyhexa[0]);
+    u64_to_bytes_be(K2, &userkeyhexa[8]);
+    u64_to_bytes_be(K3, &userkeyhexa[16]);
+    u64_to_bytes_be(K4, &userkeyhexa[24]);
+
+    for(int i=0;i<32;i++) realkey[i]=userkeyhexa[i];
+
+    // printf("=== userkey input (32 bytes) ===\n");
+    // print_hex(userkeyhexa,32);
+
+    /* --- MD2II first pass --- */
+    n1global=32;
+    unsigned char h4[n1]; memset(h4, 0, sizeof(h4));
+    MD2II_init();
+    MD2II_hashing(realkey,32);
+    MD2II_end(h4);
+    for(int i=0;i<32;i++) realkey[i]=h4[i];
+
+    // printf("=== realkey final (32 bytes) ===\n");
+    // print_hex(realkey,32);
+
+    unsigned char digest[512]; memset(digest, 0, sizeof(digest));
+    unsigned char schedule[512]; memset(schedule, 0, sizeof(schedule));
+
+    prepare_tables();
+    reset_state();
+    md2IIult(realkey, 32);
+    finalize_state(digest);
+    derive_schedule(digest, schedule);
+
+    n1global=32;
+    MD2II_init();
+    MD2II_hashing(lfsrhexa,4);
+    MD2II_hashing(realkey,32);
+    MD2II_end(h4);
+
+    // printf("h4[0..7]: ");
+    // print_hex(h4,8);
+
+    //the state machine is comprised of two 64-bit words that
+    //when output become the bytes of the keystream
+    uint64_t internal_state[2]; memset(internal_state, 0, sizeof(internal_state));
+
+    for (int i = 0; i < 8; i++)
+    {
+      internal_state[0] <<= 8;
+      internal_state[0] |= (uint64_t)h4[i];
+
+      internal_state[1] <<= 8;
+      internal_state[1] |= (uint64_t)h4[i+8];
+    }
+
+    /* --- keystream output --- */
+    uint8_t output[128]; memset(output, 0, sizeof(output));
+
+    for (int i = 0; i < 8; i++)
+    {
+      encode_block(internal_state, internal_state, schedule);
+
+      output[(i*16)+0] = (internal_state[0] >> 56) & 0xFF;
+      output[(i*16)+1] = (internal_state[0] >> 48) & 0xFF;
+      output[(i*16)+2] = (internal_state[0] >> 40) & 0xFF;
+      output[(i*16)+3] = (internal_state[0] >> 32) & 0xFF;
+      output[(i*16)+4] = (internal_state[0] >> 24) & 0xFF;
+      output[(i*16)+5] = (internal_state[0] >> 16) & 0xFF;
+      output[(i*16)+6] = (internal_state[0] >>  8) & 0xFF;
+      output[(i*16)+7] = (internal_state[0] >>  0) & 0xFF;
+
+      output[(i*16)+8]  = (internal_state[1] >> 56) & 0xFF;
+      output[(i*16)+9]  = (internal_state[1] >> 48) & 0xFF;
+      output[(i*16)+10] = (internal_state[1] >> 40) & 0xFF;
+      output[(i*16)+11] = (internal_state[1] >> 32) & 0xFF;
+      output[(i*16)+12] = (internal_state[1] >> 24) & 0xFF;
+      output[(i*16)+13] = (internal_state[1] >> 16) & 0xFF;
+      output[(i*16)+14] = (internal_state[1] >>  8) & 0xFF;
+      output[(i*16)+15] = (internal_state[1] >>  0) & 0xFF;
+
+    }
+
+    // printf("keystream output (128 bytes):\n");
+    // print_hex(output,128);
+
+    //store ks_bytes to storage
+    for (int i = 0; i < 128; i++)
+      ks_bytes[i] = output[i];
+
+    if (slot == 0)
+      memcpy(state->ks_octetL, ks_bytes, sizeof(ks_bytes));
+    else memcpy(state->ks_octetR, ks_bytes, sizeof(ks_bytes));
+
+    //debug ks_bytes
+    // fprintf (stderr, "KS: ");
+    // for (int i = 0; i < 128; i++)
+    // {
+    //   if ((i != 0) && ((i%16)==0))
+    //     fprintf (stderr, "\n    ");
+    //   fprintf (stderr, "%02X ", ks_bytes[i]);
+    // }
+    // fprintf (stderr, "\n");
+
+  }
 }
 
 //General Keystream Creator for any known Kirisun cipher
