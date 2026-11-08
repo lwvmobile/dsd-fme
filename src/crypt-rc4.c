@@ -1343,21 +1343,40 @@ void hytera_ota_search_sb_rc(dsd_state * state, uint8_t * input, int ptype)
 
 uint8_t hytera_ep_data_decrypt(dsd_opts * opts, dsd_state * state, uint8_t * input, int len)
 {
+
+  //check slot for RC4 Encrypted PDU Alg 0xD0 (0x68 * alg 2)
   uint8_t slot = state->currentslot;
   if (slot == 0 && state->payload_algid != 0xD0)
     return 0;
   else if (slot == 1 && state->payload_algidR != 0xD0)
     return 0;
 
-  //TODO: Attempt Load by TG value as well
-  //TODO: Hytera EP Data Header does have a Key ID,
-  //attempt loading by either TG or Key ID as well
-
+  //local copy of EP key (RC4 Enhanced)
   unsigned long long int R = 0;
-  if (slot == 0)
-    R = state->R;
-  else R = state->RR;
 
+  //check to see if a key is loaded by key_id into the array
+  if (R == 0)
+  {
+    uint8_t key_id = 0;
+    if (slot == 0)
+      key_id = state->payload_keyid;
+    else key_id = state->payload_keyidR;
+    R = state->rkey_array[key_id];
+  }
+
+  //if R is still zero, check to see if a key is manually loaded
+  if (R == 0)
+  {
+    if (slot == 0)
+      R = state->R;
+    else R = state->RR;
+  }
+
+  //NOTE: Since data targets are more often individual, loading by tgt
+  //doesn't make since, loading by src makes more sense, but then again
+  //could be 50-50 if a request packet is replied, and that is enc'd
+
+  //if no key is loaded, return as not decrypted
   if (R == 0)
     return 0;
 
@@ -1405,21 +1424,44 @@ uint8_t hytera_bp_data_decrypt(dsd_state * state, uint8_t * input, int len)
   uint8_t key[32]; memset(key, 0, sizeof(key));
   uint8_t empt[32]; memset(empt, 0, sizeof(empt));
 
-  //TODO: Attempt Load by TG value as well
-  //TODO: Hytera BP Data Header does have a Key ID,
-  //attempt loading by either TG or Key ID as well
-
-  for (int i = 0; i < 8; i++)
+  if (key_loaded == 0)
   {
-    key[i+0]   = (state->K1) >> (56-(i*8)) & 0xFF;
-    key[i+8]   = (state->K2) >> (56-(i*8)) & 0xFF;
-    key[i+16]  = (state->K3) >> (56-(i*8)) & 0xFF;
-    key[i+24]  = (state->K4) >> (56-(i*8)) & 0xFF;
+    uint8_t key_id = 0;
+    if (slot == 0)
+      key_id = state->payload_keyid;
+    else key_id = state->payload_keyidR;
+
+    for (int i = 0; i < 8; i++)
+    {
+      key[i+0]   = ((state->rkey_array[key_id+0x000]) >> (56-(i*8))) & 0xFF;
+      key[i+8]   = ((state->rkey_array[key_id+0x101]) >> (56-(i*8))) & 0xFF;
+      key[i+16]  = ((state->rkey_array[key_id+0x201]) >> (56-(i*8))) & 0xFF;
+      key[i+24]  = ((state->rkey_array[key_id+0x301]) >> (56-(i*8))) & 0xFF;
+    }
+
+    //if key is loaded with a key, then flag on the key loaded variable
+    if (memcmp(key, empt, sizeof(key)) != 0) key_loaded = 1;
   }
 
-  //if key is loaded with a key, then flag on the key loaded variable
-  if (memcmp(key, empt, sizeof(key)) != 0) key_loaded = 1;
+  if (key_loaded == 0)
+  {
+    for (int i = 0; i < 8; i++)
+    {
+      key[i+0]   = (state->K1) >> (56-(i*8)) & 0xFF;
+      key[i+8]   = (state->K2) >> (56-(i*8)) & 0xFF;
+      key[i+16]  = (state->K3) >> (56-(i*8)) & 0xFF;
+      key[i+24]  = (state->K4) >> (56-(i*8)) & 0xFF;
+    }
 
+    //if key is loaded with a key, then flag on the key loaded variable
+    if (memcmp(key, empt, sizeof(key)) != 0) key_loaded = 1;
+  }
+
+  //NOTE: Since data targets are more often individual, loading by tgt
+  //doesn't make since, loading by src makes more sense, but then again
+  //could be 50-50 if a request packet is replied, and that is enc'd
+
+  //if no key is loaded, return as not decrypted
   if (key_loaded == 0)
     return 0;
 

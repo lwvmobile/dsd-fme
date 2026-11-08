@@ -1087,10 +1087,10 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
           kaes[i+8]   = ((state->rkey_array[kid+0x101]) >> (56-(i*8))) & 0xFF;
           kaes[i+16]  = ((state->rkey_array[kid+0x201]) >> (56-(i*8))) & 0xFF;
           kaes[i+24]  = ((state->rkey_array[kid+0x301]) >> (56-(i*8))) & 0xFF;
-
-          //if kaes is loaded with a key, then flag on the key loaded variable
-          if (memcmp(kaes, empt, sizeof(kaes)) != 0) akl = 1;
         }
+
+        //if kaes is loaded with a key, then flag on the key loaded variable
+        if (memcmp(kaes, empt, sizeof(kaes)) != 0) akl = 1;
 
         //if still not akl, see if there is anything manually loaded into K1, K2, K3, K4 instead
         if (akl == 0)
