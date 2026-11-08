@@ -478,7 +478,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
     state->hota_sbrc_idx2[state->currentslot] = -1;
     fprintf (stderr, "%s \n", KRED);
     fprintf (stderr, " SLOT %d ", slot+1);
-    fprintf (stderr, "SB_RC Missing IDX; Undecryptable;");
+    fprintf (stderr, "SB_RC Missing IDX; Encrypted;");
     fprintf (stderr, "%s\n", KNRM);
     goto SBRC_END;
   }
@@ -488,7 +488,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
     state->hota_sbrc_idx2[state->currentslot] = -1;
     fprintf (stderr, "%s \n", KRED);
     fprintf (stderr, " SLOT %d ", slot+1);
-    fprintf (stderr, "SB_RC Incorrect IDX or FEC Errors; Undecryptable;");
+    fprintf (stderr, "SB_RC Incorrect IDX or FEC Errors; Encrypted;");
     fprintf (stderr, "%s\n", KNRM);
     goto SBRC_END;
   }
@@ -496,7 +496,7 @@ void dmr_sbrc (dsd_opts * opts, dsd_state * state, uint8_t power)
   {
     fprintf (stderr, "%s \n", KRED);
     fprintf (stderr, " SLOT %d ", slot+1);
-    fprintf (stderr, "SB_RC Undecryptable;");
+    fprintf (stderr, "SB_RC Encrypted;");
     fprintf (stderr, "%s\n", KNRM);
     goto SBRC_END;
   }

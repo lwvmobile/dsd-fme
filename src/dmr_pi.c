@@ -88,12 +88,7 @@ void dmr_pi (dsd_opts * opts, dsd_state * state, uint8_t PI_BYTE[], uint32_t CRC
       fprintf (stderr, "Encryption;");
       fprintf (stderr, "%s", KNRM);
 
-      //disable late entry for DMRA, Flag 3 for future check of VC-F 48-bit region with Golay 24,12 Encoding
-      //SEE: https://patents.google.com/patent/CN102307075A/en?q=(kirisun)&q=(dmr)&oq=kirisun
-      //tested patent above with information provided, VC-F had a SB, but the 48-bit
-      //full value yielded bad Golay results, and user submitted info contradicts this patent for samples provided
-      //Late Entry MI does appear to work, however, and reports a good CRC for that as well,
-      //reverse engineered LFSR for Kirisun lines up with the late entry for 32-bit MI values.
+      //flag late entry SB for Kirisun
       opts->dmr_le = 3;
 
     }

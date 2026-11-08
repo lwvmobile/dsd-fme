@@ -1063,7 +1063,7 @@ void decode_block(const uint64_t input[2], uint64_t output[2], const uint8_t sch
     output[1] = left_word;
 }
 
-void kirisun_ultimate_keystream_creation(dsd_state *state)
+void kirisun_ultra_keystream_creation(dsd_state *state)
 {
   uint8_t slot = 0;
   if (state->currentslot == 0)
@@ -1237,6 +1237,6 @@ void kirisun_keystream_creation(dsd_state * state)
     kirisun_top_keystream_creation(state);
   
   else if (algid == 0x3A)
-    kirisun_ultimate_keystream_creation(state);
+    kirisun_ultra_keystream_creation(state);
 
 }

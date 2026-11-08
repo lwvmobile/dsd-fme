@@ -89,23 +89,24 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   //so assign static value
   if (state->hota_enc_check)
   {
+    uint32_t t_target = 8686868;
     if (type == 1)
     {
       if (slot == 0)
       {
         state->lastsrc = source;
-        state->lasttg = 8686868;
+        state->lasttg = t_target;
       }
       else
       {
         state->lastsrcR = source;
-        state->lasttgR = 8686868;
+        state->lasttgR = t_target;
       }
 
       fprintf (stderr, "\n%s", KYEL);
       fprintf (stderr, " SLOT %d ", slot+1);
-      fprintf(stderr, "TGT=%u SRC=%u ", state->lasttg, source);
-      fprintf (stderr, "Forced Pseudo Call Information");
+      fprintf(stderr, "TGT=%u SRC=%u ", t_target, source);
+      fprintf (stderr, "Encrypted Pseudo Call Information");
       fprintf (stderr, "%s", KNRM);
 
       return;
@@ -114,7 +115,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     {
       fprintf (stderr, "\n%s", KRED);
       fprintf (stderr, " SLOT %d", slot+1);
-      fprintf (stderr, " TLC Undecryptable;");
+      fprintf (stderr, " TLC Encrypted;");
       fprintf (stderr, "%s", KNRM);
       return;
     }
@@ -122,7 +123,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     {
       fprintf (stderr, "%s", KRED);
       fprintf (stderr, " SLOT %d", slot+1);
-      fprintf (stderr, " EMB LC Undecryptable;");
+      fprintf (stderr, " EMB LC Encrypted;");
       fprintf (stderr, "%s", KNRM);
       return;
     }
@@ -132,7 +133,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
   {
     fprintf (stderr, "%s", KRED);
     fprintf (stderr, " SLOT %d", slot+1);
-    fprintf (stderr, " EMB LC Missing CTX; Undecryptable;");
+    fprintf (stderr, " EMB LC Missing CTX; Encrypted;");
     fprintf (stderr, "%s", KNRM);
     return;
   }
