@@ -2343,7 +2343,7 @@
             state.K4 = strtoull (pEnd, &pEnd, 16);
             if (state.K2 == 0 && state.K3 == 0 && state.K4 == 0)
               fprintf (stderr, "Hytera BP 40-bit Key: %010llX\n", state.K1);
-            else if (state.K2 != 0)
+            else if (state.K2 != 0 && state.K3 == 0 && state.K4 == 0)
               fprintf (stderr, "Multi 128-bit Key: %016llX%016llX\n", state.K1, state.K2);
             else
               fprintf (stderr, "Multi 256-bit Key: %016llX%016llX%016llX%016llX\n", state.K1, state.K2, state.K3, state.K4);

@@ -894,9 +894,364 @@ void kirisun_high_keystream_creation(dsd_state *state)
   UNUSED(state);
 }
 
+//start alg 39 "top"
+#define NUM_REGS_MAIN 7
+#define NUM_REGS_CTRL 3
+#define NUM_REGS (NUM_REGS_MAIN + NUM_REGS_CTRL)
+#define TOTAL_MASKS 64
+#define KEY_BITS 640
+#define FRAME_BITS 64
+
+typedef struct {
+    uint64_t regs[NUM_REGS];
+    uint64_t masks[NUM_REGS];
+    uint8_t out_bit_pos[NUM_REGS];
+    uint8_t maj_bit_pos_ctrl[NUM_REGS_CTRL];
+    uint32_t global_out_counter;
+    uint8_t global_choice;
+} CipherState39;
+
+static const uint64_t ALL_MASKS[TOTAL_MASKS] = {
+    0xDAD4A9CEF35E2420ULL, 0xDCDD39248075249BULL, 0x96858C3E324E3D7FULL,
+    0xE4D275E07AF08B7CULL, 0xB507D951563F5C36ULL, 0xB2780872314F0F86ULL,
+    0xD519B8BB4C481CE4ULL, 0x842A1B95E05E7F87ULL, 0x91E9439B2886B3AAULL,
+    0xA7122188120A212FULL, 0xAE4D0BF20D7ADB6BULL, 0x83C7BF84107C2891ULL,
+    0xAABAC2ADCE754BBAULL, 0xD5B05083F5D472D0ULL, 0xC15B68FE3DAF1D91ULL,
+    0xA26EAAFC534E79E6ULL, 0xAB1CF8D68E5B3A97ULL, 0xC9C43FF0E94D1580ULL,
+    0x8DE7098DFF722919ULL, 0xDC528FBFAF59524FULL, 0x8C62BF3A202B869DULL,
+    0x8B2AE4B656A42B07ULL, 0xE99E20DED6992F58ULL, 0x9D62A2B318CEB47FULL,
+    0x97B23916A28CE239ULL, 0xE3AEDDC607816193ULL, 0xEC431D8F1667ED8AULL,
+    0xC851867E91F4F41EULL, 0xCEA287E8004453DDULL, 0xF64FC71FC4D15B04ULL,
+    0xB72E37386904EFEDULL, 0xACCF01D1058FECBFULL, 0xCFA36D08B25B05DFULL,
+    0xC16281EC3B74C6D8ULL, 0x9CC8A285390AB24FULL, 0xA2CA5B1DDCFF5106ULL,
+    0x9D4E71CA21F9D0F9ULL, 0xC3119E1CCE07FC95ULL, 0xB7BED36180EA8604ULL,
+    0xE54926C4B8238E52ULL, 0x89CAD2795C19068AULL, 0xBA89993381C79575ULL,
+    0xA0694F38A34560D9ULL, 0xA507C1D4A6D1AF9CULL, 0xA0A88043C051368DULL,
+    0xBE451FBF6A22BDCEULL, 0xEC2040AE8197B977ULL, 0x8C5D783B907212D5ULL,
+    0xBDE2462A14FD277CULL, 0xE017D20046CC81A3ULL, 0x940D57A83F499DF0ULL,
+    0xDA74E12B0C248D67ULL, 0xF7485B9A998217E1ULL, 0x9A932895ECC7B023ULL,
+    0xBE899F6138395F6DULL, 0x9845A2782ED4D1F1ULL, 0x97631234A75C11D5ULL,
+    0x9ED48E5309D42CE1ULL, 0xD2DA8B5E23C96F07ULL, 0x9CF8B433FBC06E98ULL,
+    0xF7FD22E242EEB923ULL, 0xBFD240478BDFA02FULL, 0xC2E6377C20F6CB4DULL, 0xBD313202C33EAF60ULL
+};
+static inline uint8_t get_bit(uint64_t r, uint8_t pos) { return (r >> pos) & 1U; }
+static inline uint64_t clock_register(uint64_t r, uint64_t mask) {
+    uint64_t lsb = r & 1ULL;
+    r >>= 1;
+    if (lsb) r ^= mask;
+    return r;
+}
+
+
+static CipherState39 state39;
+
+static uint8_t clock_ctrl_regs_a51(uint64_t regs[NUM_REGS_CTRL],
+                                   uint64_t masks_ctrl[NUM_REGS_CTRL],
+                                   uint8_t maj_bit_pos_ctrl[NUM_REGS_CTRL]);
+static uint8_t clock_main_regs_modified(uint64_t regs_main[NUM_REGS_MAIN],
+                                        uint64_t masks_main[NUM_REGS_MAIN],
+                                        uint64_t regs_ctrl[NUM_REGS_CTRL],
+                                        uint64_t masks_ctrl[NUM_REGS_CTRL],
+                                        uint8_t out_bit_pos_ctrl[NUM_REGS_CTRL],
+                                        uint8_t maj_bit_pos_ctrl[NUM_REGS_CTRL]);
+static void select_10_masks_md2(uint8_t key80[80],
+                                uint64_t masks[NUM_REGS],
+                                uint8_t out_bit_pos[NUM_REGS],
+                                uint8_t maj_bit_pos_ctrl[NUM_REGS_CTRL]) {
+
+
+
+    unsigned char h4[264];
+    unsigned char hash_bytes[32];
+    n1global=32;
+    MD2II_init();
+    MD2II_hashing(key80, 80);
+    MD2II_end(h4);
+    for (int i=0;i<32;i++) hash_bytes[i]=h4[i];
+
+    int mask_nums[NUM_REGS];
+    for (int i = 0; i < NUM_REGS; i++) mask_nums[i] = -1;
+    int count = 0, hash_index = 0;
+    while (count < NUM_REGS) {
+        uint8_t byte = hash_bytes[hash_index++];
+        int idx = byte % TOTAL_MASKS;
+        int unique = 1;
+        for (int i = 0; i < count; i++) if (mask_nums[i] == idx) { unique = 0; break; }
+        if (unique) {
+            mask_nums[count] = idx;
+            masks[count] = ALL_MASKS[idx];
+            count++;
+        }
+        if (hash_index == 32) {
+
+        MD2II_init();
+        MD2II_hashing(hash_bytes, 32);
+        MD2II_end(h4);
+        for (int i=0;i<32;i++) hash_bytes[i]=h4[i];
+        hash_index = 0;
+        }
+    }
+
+    for (int i = 0; i < NUM_REGS; i++) {
+        if (hash_index == 32) {
+        MD2II_init();
+        MD2II_hashing(hash_bytes, 32);
+        MD2II_end(h4);
+        for (int i=0;i<32;i++) hash_bytes[i]=h4[i];
+        hash_index = 0;
+        }
+        uint8_t b = hash_bytes[hash_index++];
+        uint8_t pos = (b % 63) + 1;
+        out_bit_pos[i] = pos;
+    }
+    for (int i = 0; i < NUM_REGS_CTRL; i++) {
+        if (hash_index == 32) {
+        MD2II_init();
+        MD2II_hashing(hash_bytes, 32);
+        MD2II_end(h4);
+        for (int i=0;i<32;i++) hash_bytes[i]=h4[i];
+        hash_index = 0;
+            hash_index = 0;
+        }
+        uint8_t b = hash_bytes[hash_index++];
+        uint8_t pos = (b % 63) + 1;
+        if (pos == out_bit_pos[NUM_REGS_MAIN + i]) {
+            pos = (pos % 63) + 1;
+        }
+        maj_bit_pos_ctrl[i] = pos;
+    }
+
+    if (hash_index == 32) {
+        MD2II_init();
+        MD2II_hashing(hash_bytes, 32);
+        MD2II_end(h4);
+        for (int i=0;i<32;i++) hash_bytes[i]=h4[i];
+        hash_index = 0;
+    }
+    uint8_t rnd_byte = hash_bytes[hash_index++];
+    state39.global_choice = (uint8_t)((rnd_byte % 16) + 16);
+    state39.global_out_counter = 0;
+}
+static uint8_t clock_ctrl_regs_a51(uint64_t regs[NUM_REGS_CTRL],
+                                   uint64_t masks_ctrl[NUM_REGS_CTRL],
+                                   uint8_t maj_bit_pos_ctrl[NUM_REGS_CTRL]) {
+    uint8_t t0 = get_bit(regs[0], maj_bit_pos_ctrl[0]);
+    uint8_t t1 = get_bit(regs[1], maj_bit_pos_ctrl[1]);
+    uint8_t t2 = get_bit(regs[2], maj_bit_pos_ctrl[2]);
+    uint8_t maj = (t0 + t1 + t2 >= 2) ? 1 : 0;
+    uint8_t mask = 0;
+    if (t0 == maj) { regs[0] = clock_register(regs[0], masks_ctrl[0]); mask |= 0x4; }
+    if (t1 == maj) { regs[1] = clock_register(regs[1], masks_ctrl[1]); mask |= 0x2; }
+    if (t2 == maj) { regs[2] = clock_register(regs[2], masks_ctrl[2]); mask |= 0x1; }
+    return mask;
+}
+static uint8_t clock_main_regs_modified(uint64_t regs_main[NUM_REGS_MAIN],
+                                        uint64_t masks_main[NUM_REGS_MAIN],
+                                        uint64_t regs_ctrl[NUM_REGS_CTRL],
+                                        uint64_t masks_ctrl[NUM_REGS_CTRL],
+                                        uint8_t out_bit_pos_ctrl[NUM_REGS_CTRL],
+                                        uint8_t maj_bit_pos_ctrl[NUM_REGS_CTRL]) {
+    uint8_t mask = 0;
+    uint8_t selector = 0;
+    do {
+        selector = 0;
+        for (int k = 0; k < 7; k++) {
+            uint8_t x = get_bit(regs_ctrl[0], out_bit_pos_ctrl[0])
+                      ^ get_bit(regs_ctrl[1], out_bit_pos_ctrl[1])
+                      ^ get_bit(regs_ctrl[2], out_bit_pos_ctrl[2]);
+            selector = (uint8_t)((selector << 1) | (x & 1));
+            (void)clock_ctrl_regs_a51(regs_ctrl, masks_ctrl, maj_bit_pos_ctrl);
+        }
+        selector &= 0x7F;
+    } while (selector == 0);
+    for (int i = 0; i < NUM_REGS_MAIN; i++) {
+        if (selector & (1u << i)) {
+            regs_main[i] = clock_register(regs_main[i], masks_main[i]);
+            mask |= (1u << i);
+        }
+    }
+    return mask;
+}
+static void apply_selector2_and_update_choice(uint64_t regs[NUM_REGS],
+                                              uint64_t masks[NUM_REGS],
+                                              uint8_t out_bit_pos[NUM_REGS],
+                                              uint8_t maj_bit_pos_ctrl[NUM_REGS_CTRL]) {
+    uint64_t *regs_main = &regs[0];
+    uint64_t *regs_ctrl = &regs[NUM_REGS_MAIN];
+    uint64_t *masks_main = &masks[0];
+    uint64_t *masks_ctrl = &masks[NUM_REGS_MAIN];
+    uint8_t selector2 = 0;
+    for (int k = 0; k < NUM_REGS_MAIN; k++) {
+        uint8_t c0 = get_bit(regs_ctrl[0], out_bit_pos[NUM_REGS_MAIN + 0]);
+        uint8_t c1 = get_bit(regs_ctrl[1], out_bit_pos[NUM_REGS_MAIN + 1]);
+        uint8_t c2 = get_bit(regs_ctrl[2], out_bit_pos[NUM_REGS_MAIN + 2]);
+        uint8_t x = c0 ^ c1 ^ c2;
+        selector2 = (uint8_t)((selector2 << 1) | (x & 1));
+        (void)clock_ctrl_regs_a51(regs_ctrl, masks_ctrl, maj_bit_pos_ctrl);
+    }
+    if (selector2 != 0) {
+        for (int i = 0; i < NUM_REGS_MAIN; i++) {
+            if (selector2 & (1u << i)) {
+                regs_main[i] = clock_register(regs_main[i], masks_main[i]);
+            }
+        }
+    }
+    uint8_t bits4 = 0;
+    for (int k = 0; k < 4; k++) {
+        uint8_t c0 = get_bit(regs_ctrl[0], out_bit_pos[NUM_REGS_MAIN + 0]);
+        uint8_t c1 = get_bit(regs_ctrl[1], out_bit_pos[NUM_REGS_MAIN + 1]);
+        uint8_t c2 = get_bit(regs_ctrl[2], out_bit_pos[NUM_REGS_MAIN + 2]);
+        uint8_t x = c0 ^ c1 ^ c2;
+        bits4 = (uint8_t)((bits4 << 1) | (x & 1));
+        (void)clock_ctrl_regs_a51(regs_ctrl, masks_ctrl, maj_bit_pos_ctrl);
+    }
+    state39.global_choice = (uint8_t)((bits4 % 16) + 16);
+    state39.global_out_counter = 0;
+}
+static void init_regs(uint64_t regs[NUM_REGS],
+                      uint64_t masks[NUM_REGS],
+                      uint8_t key80[80],
+                      uint64_t frame,
+                      uint8_t out_bit_pos[NUM_REGS],
+                      uint8_t maj_bit_pos_ctrl[NUM_REGS_CTRL]) {
+    for (int i = 0; i < NUM_REGS; i++) {
+        regs[i] = 0;
+        for (int j = 0; j < 8; j++) if (i*8+j < 80) regs[i] |= ((uint64_t)key80[i*8+j]) << (j*8);
+    }
+    for (int i = 0; i < KEY_BITS; i++) {
+        uint8_t kbit = (key80[i/8] >> (i%8)) & 1U;
+        for (int j = 0; j < NUM_REGS; j++) regs[j] ^= kbit;
+        for (int j = 0; j < NUM_REGS; j++) regs[j] = clock_register(regs[j], masks[j]);
+    }
+    for (int i = 0; i < FRAME_BITS; i++) {
+        uint8_t fbit = (frame >> i) & 1U;
+        for (int j = 0; j < NUM_REGS; j++) regs[j] ^= fbit;
+        for (int j = 0; j < NUM_REGS; j++) regs[j] = clock_register(regs[j], masks[j]);
+    }
+    for (int i = 0; i < 384; i++) {
+        clock_ctrl_regs_a51(&regs[NUM_REGS_MAIN], &masks[NUM_REGS_MAIN], maj_bit_pos_ctrl);
+        (void)clock_main_regs_modified(&regs[0], &masks[0], &regs[NUM_REGS_MAIN], &masks[NUM_REGS_MAIN],
+                                      out_bit_pos + NUM_REGS_MAIN, maj_bit_pos_ctrl);
+        if (state39.global_out_counter == state39.global_choice) {
+            apply_selector2_and_update_choice(regs, masks, out_bit_pos, maj_bit_pos_ctrl);
+        }
+        state39.global_out_counter++;
+    }
+}
+static void derive_key80_from_key32_and_frame(const uint8_t key32[32], uint64_t frame, uint8_t out_key80[80]) {
+    unsigned char buffer[40];
+    memcpy(buffer, key32, 32);
+    for (int i = 0; i < 8; i++) buffer[32 + i] = (unsigned char)((frame >> (8*i)) & 0xFF);
+    unsigned char h4[n1];
+    n1global=80;
+    MD2II_init();
+    MD2II_hashing(buffer, 40);
+    MD2II_end(h4);
+    for (int i=0;i<80;i++) out_key80[i]=h4[i];
+
+}
+
+static void init(uint8_t key32[32], uint64_t frame) {
+    uint8_t key80[80]; memset(key80, 0, sizeof(key80));
+    derive_key80_from_key32_and_frame(key32, frame, key80);
+    select_10_masks_md2(key80, state39.masks, state39.out_bit_pos, state39.maj_bit_pos_ctrl);
+    init_regs(state39.regs, state39.masks, key80, frame, state39.out_bit_pos, state39.maj_bit_pos_ctrl);
+}
+
+static void outputbytes7(uint8_t output[7]) {
+    memset(output, 0, 7);
+    for (int i = 0; i < 56; i++) {
+        uint64_t *regs_main = state39.regs;
+        uint64_t *regs_ctrl = &state39.regs[NUM_REGS_MAIN];
+        uint64_t *masks_main = state39.masks;
+        uint64_t *masks_ctrl = &state39.masks[NUM_REGS_MAIN];
+        uint8_t *ctrl_out_pos = &state39.out_bit_pos[NUM_REGS_MAIN];
+        (void)clock_ctrl_regs_a51(regs_ctrl, masks_ctrl, state39.maj_bit_pos_ctrl);
+        (void)clock_main_regs_modified(regs_main, masks_main, regs_ctrl, masks_ctrl, ctrl_out_pos, state39.maj_bit_pos_ctrl);
+        uint8_t ks_bit = 0;
+        for (int j = 0; j < NUM_REGS_MAIN; j++) {
+            ks_bit ^= get_bit(state39.regs[j], state39.out_bit_pos[j]);
+        }
+        int byte_idx = i / 8;
+        int bit_in_byte = 7 - (i % 8);
+        output[byte_idx] |= (ks_bit << bit_in_byte);
+        if (state39.global_out_counter == state39.global_choice) {
+            apply_selector2_and_update_choice(state39.regs, state39.masks, state39.out_bit_pos, state39.maj_bit_pos_ctrl);
+        }
+        state39.global_out_counter++;
+    }
+}
+
 void kirisun_top_keystream_creation(dsd_state *state)
 {
-  UNUSED(state);
+  uint8_t slot = 0;
+  if (state->currentslot == 0)
+    slot = 0;
+  else slot = 1;
+
+  uint32_t lfsr = 0;
+  if (state->currentslot == 0)
+    lfsr = (uint32_t)state->payload_mi;
+  else lfsr = (uint32_t)state->payload_miR;
+
+  unsigned char userkeyhexa[32]; memset(userkeyhexa, 0, sizeof(userkeyhexa));
+  unsigned char realkey[32]; memset(realkey, 0, sizeof(realkey));
+  uint8_t ks_bytes[126]; memset(ks_bytes, 0, sizeof(ks_bytes));
+
+  uint64_t K1 = state->A1[slot];
+  uint64_t K2 = state->A2[slot];
+  uint64_t K3 = state->A3[slot];
+  uint64_t K4 = state->A4[slot];
+
+  if (K1 != 0 && K2 != 0 && K3 != 0 && K4 != 0)
+    state->aes_key_loaded[slot] = 1;
+  else state->aes_key_loaded[slot] = 0;
+
+  if (state->aes_key_loaded[slot] == 1)
+  {
+    u64_to_bytes_be(K1, &userkeyhexa[0]);
+    u64_to_bytes_be(K2, &userkeyhexa[8]);
+    u64_to_bytes_be(K3, &userkeyhexa[16]);
+    u64_to_bytes_be(K4, &userkeyhexa[24]);
+
+    for(int i=0;i<32;i++) realkey[i]=userkeyhexa[i];
+
+    // printf("=== userkey input (32 bytes) ===\n");
+    // print_hex(userkeyhexa,32);
+
+    /* --- MD2II first pass --- */
+    n1global=32;
+    unsigned char h4[n1]; memset(h4, 0, sizeof(h4));
+    MD2II_init();
+    MD2II_hashing(realkey,32);
+    MD2II_end(h4);
+    for(int i=0;i<32;i++) realkey[i]=h4[i];
+
+    // printf("=== realkey final (32 bytes) ===\n");
+    // print_hex(realkey,32);
+
+    uint32_t lfsr1 = kirisun_lfsr(lfsr);
+    uint64_t frame = ((uint64_t)lfsr1 << 32) | lfsr1;
+    init(realkey, frame);
+
+    for (int i = 0; i < 18; i++)
+      outputbytes7(ks_bytes+(i*7));
+
+    if (slot == 0)
+      memcpy(state->ks_octetL, ks_bytes, sizeof(ks_bytes));
+    else memcpy(state->ks_octetR, ks_bytes, sizeof(ks_bytes));
+
+    //debug ks_bytes
+    // fprintf (stderr, "KS: ");
+    // for (int i = 0; i < 126; i++)
+    // {
+    //   if ((i != 0) && ((i%16)==0))
+    //     fprintf (stderr, "\n    ");
+    //   fprintf (stderr, "%02X ", ks_bytes[i]);
+    // }
+    // fprintf (stderr, "\n");
+
+  }
 }
 
 #define BLOCK_BYTES 512
