@@ -60,6 +60,10 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   uint8_t bptc_res_bits[3];
   memset (bptc_res_bits, 0, sizeof(bptc_res_bits));
   uint8_t crc_original_validity = 0;
+  static uint8_t ras_confirm_count = 0;
+  static uint8_t prev_dmr_is_ras = 0;
+  if (prev_dmr_is_ras == 1 && state->dmr_is_ras == 0)
+    ras_confirm_count = 0;
 
   uint32_t crcmask = 0;
   uint8_t  crclen = 0;
@@ -305,13 +309,26 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     {
       if (is_ras)
       {
-        CRCComputed = ras_mac_calculator(state, BPTCDmrDataByte, 9, 1);
-        if (CRCComputed == CRCExtracted)
+        uint8_t tmp_bytes[12];
+        uint32_t std_crc = 0;
+        memcpy (tmp_bytes, BPTCDmrDataByte, sizeof(tmp_bytes));
+        if (ComputeAndCorrectFullLinkControlCrc(tmp_bytes, &std_crc, crcmask) && std_crc == CRCExtracted)
+        {
+          memcpy (BPTCDmrDataByte, tmp_bytes, sizeof(tmp_bytes));
+          is_ras = 0;
+          CRCComputed = std_crc;
           CRCCorrect = 1;
+        }
+        else
+        {
+          CRCComputed = ras_mac_calculator(state, BPTCDmrDataByte, 9, 1);
+          if (CRCComputed == CRCExtracted)
+            CRCCorrect = 1;
 
-        #ifdef DEBUG_RAS
-        fprintf (stderr, " EXT: %06X; MAC: %06X;", CRCExtracted, CRCComputed);
-        #endif
+          #ifdef DEBUG_RAS
+          fprintf (stderr, " EXT: %06X; MAC: %06X;", CRCExtracted, CRCComputed);
+          #endif
+        }
       }
       else CRCCorrect = ComputeAndCorrectFullLinkControlCrc(BPTCDmrDataByte, &CRCComputed, crcmask);
 
@@ -354,18 +371,28 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     //run CCITT on other data forms
     else
     {
-      if (is_ras == 1)
+      uint32_t std_crc = ComputeCrcCCITT(BPTCDmrDataBit);
+      if (std_crc == CRCExtracted)
+      {
+        is_ras = 0;
+        CRCComputed = std_crc;
+        CRCCorrect = 1;
+      }
+      else if (is_ras == 1)
       {
         CRCComputed = ras_mac_calculator(state, BPTCDmrDataByte, 10, 0);
+        if (CRCComputed == CRCExtracted) CRCCorrect = 1;
+        else CRCCorrect = 0;
 
         #ifdef DEBUG_RAS
         fprintf (stderr, " EXT: %04X; MAC: %04X;", CRCExtracted, CRCComputed);
         #endif
       }
-      else CRCComputed = ComputeCrcCCITT(BPTCDmrDataBit);
-
-      if (CRCComputed == CRCExtracted) CRCCorrect = 1;
-      else CRCCorrect = 0;
+      else
+      {
+        CRCComputed = std_crc;
+        CRCCorrect = 0;
+      }
     }
 
     //if this is a RAS system, set the CRC to okay if irrecoverable errors are okay
@@ -473,9 +500,11 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     /* Compute the 5 bit CRC */
     CRCComputed = ComputeCrc5Bit(LC_DataBit);
 
-    //read ahead first two bytes, look for 1X10 or 2X10 pattern
+    //read ahead first two bytes, look for 1X10 or 2X10 pattern (only if standard 5-bit CRC fails and PF/R bits are 0)
     uint16_t ras_test = (uint16_t)(ConvertBitIntoBytes(&LC_DataBit[0], 16) & 0x30FF);
-    if ((IrrecoverableErrors == 0) && (ras_test == 0x2010 || ras_test == 0x1010))
+    if ((IrrecoverableErrors == 0) && (CRCExtracted != CRCComputed) &&
+        (LC_DataBit[0] == 0) && (LC_DataBit[1] == 0) &&
+        (ras_test == 0x2010 || ras_test == 0x1010))
     {
       is_ras = 1;
       if (state->ras_effective_key != 0)
@@ -702,9 +731,28 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     fprintf (stderr, "%s", KNRM);
   }
 
-  //might flicker the terminal on partially enabled systems, may need to find a better placement
-  if (IrrecoverableErrors == 0 && (is_bptc || is_emb) && databurst != 0x05 && databurst != 0x07 && databurst != 0x09)
-    state->dmr_is_ras = is_ras;
+  //require a key-verified RAS burst or 2 RAS BPTC bursts to latch [RAS]; clear on valid non-PI non-RAS BPTC burst
+  if (IrrecoverableErrors == 0 && is_ras == 1 && (is_bptc || is_emb) && databurst != 0x05 && databurst != 0x07 && databurst != 0x09)
+  {
+    if (state->ras_effective_key != 0 && CRCCorrect == 1)
+    {
+      ras_confirm_count = 2;
+      state->dmr_is_ras = 1;
+    }
+    else if (is_bptc && databurst != 0x00)
+    {
+      if (ras_confirm_count < 2)
+        ras_confirm_count++;
+      if (ras_confirm_count >= 2)
+        state->dmr_is_ras = 1;
+    }
+  }
+  else if (IrrecoverableErrors == 0 && is_ras == 0 && is_bptc && CRCCorrect == 1 && databurst != 0x00 && databurst != 0x05 && databurst != 0x07 && databurst != 0x09)
+  {
+    ras_confirm_count = 0;
+    state->dmr_is_ras = 0;
+  }
+  prev_dmr_is_ras = state->dmr_is_ras;
 
   if (IrrecoverableErrors == 0 && CRCCorrect == 0 && is_ras == 0 && databurst != 0x09 && databurst != 0x05)
   {
