@@ -213,8 +213,8 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196],
     }
   }
 
-  /* ========== Pass 1: row Hamming(15,11) on rows 0..8 ========== */
-  for (i = 0; i < 9; i++)
+  /* ========== Pass 1: row Hamming(15,11) on rows 0..12 ========== */
+  for (i = 0; i < 13; i++)
   {
     for (j = 0; j < 15; j++)
     {
@@ -232,8 +232,8 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196],
         fprintf(stderr, "%u", LineBefore[j] & 1);
       fprintf(stderr, "\n");
 #endif
-      /* Keep original data bits on failure */
-      for (j = 0; j < 11; j++)
+      /* Keep original bits on failure */
+      for (j = 0; j < 15; j++)
         DataMatrix[i][j] = LineBefore[j];
     }
     else
@@ -253,8 +253,9 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196],
 #endif
         }
       }
-      for (j = 0; j < 11; j++)
-        DataMatrix[i][j] = LineCorrected[j];
+      /* Re-inject the full line (including corrected parity bits) in the matrix */
+      for (j = 0; j < 15; j++)
+        DataMatrix[i][j] = LineUncorrected[j];
     }
   }
 #if BPTC_196x96_DEBUG
@@ -282,7 +283,7 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196],
         fprintf(stderr, "%u", ColumnBefore[j] & 1);
       fprintf(stderr, "\n");
 #endif
-      for (j = 0; j < 9; j++)
+      for (j = 0; j < 13; j++)
         DataMatrix[j][i] = ColumnBefore[j];
     }
     else
@@ -301,8 +302,9 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196],
 #endif
         }
       }
-      for (j = 0; j < 9; j++)
-        DataMatrix[j][i] = ColumnCorrected[j];
+      /* Re-inject the full column (including corrected parity bits) in the matrix */
+      for (j = 0; j < 13; j++)
+        DataMatrix[j][i] = ColumnUncorrected[j];
     }
   }
 #if BPTC_196x96_DEBUG
@@ -315,7 +317,7 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196],
   HammingIrrecoverableErrorNb = 0;
 
   /* ========== Pass 2: rows ========== */
-  for (i = 0; i < 9; i++)
+  for (i = 0; i < 13; i++)
   {
     for (j = 0; j < 15; j++)
     {
@@ -333,7 +335,7 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196],
         fprintf(stderr, "%u", LineBefore[j] & 1);
       fprintf(stderr, "\n");
 #endif
-      for (j = 0; j < 11; j++)
+      for (j = 0; j < 15; j++)
         DataMatrix[i][j] = LineBefore[j];
     }
     else
@@ -352,8 +354,9 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196],
 #endif
         }
       }
-      for (j = 0; j < 11; j++)
-        DataMatrix[i][j] = LineCorrected[j];
+      /* Re-inject the full line (including corrected parity bits) in the matrix */
+      for (j = 0; j < 15; j++)
+        DataMatrix[i][j] = LineUncorrected[j];
     }
   }
 #if BPTC_196x96_DEBUG
@@ -381,7 +384,7 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196],
         fprintf(stderr, "%u", ColumnBefore[j] & 1);
       fprintf(stderr, "\n");
 #endif
-      for (j = 0; j < 9; j++)
+      for (j = 0; j < 13; j++)
         DataMatrix[j][i] = ColumnBefore[j];
     }
     else
@@ -400,8 +403,58 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196],
 #endif
         }
       }
-      for (j = 0; j < 9; j++)
-        DataMatrix[j][i] = ColumnCorrected[j];
+      /* Re-inject the full column (including corrected parity bits) in the matrix */
+      for (j = 0; j < 13; j++)
+        DataMatrix[j][i] = ColumnUncorrected[j];
+    }
+  }
+
+  /* Verify that all rows (0..12) and columns (0..14) have converged to zero syndrome.
+   * Hamming_15_11_decode never returns false because all 15 non-zero 4-bit syndromes
+   * map to a bit flip, so without a post-pass consistency check a noisy burst can
+   * mis-correct data bits in Pass 2 Columns while still reporting 0 errors. */
+  for (i = 0; i < 13; i++)
+  {
+    for (j = 0; j < 15; j++)
+    {
+      LineUncorrected[j] = DataMatrix[i][j];
+    }
+    if (Hamming_15_11_decode(LineUncorrected, LineCorrected, 1) == false)
+    {
+      HammingIrrecoverableErrorNb++;
+    }
+    else
+    {
+      for (j = 0; j < 15; j++)
+      {
+        if (LineUncorrected[j] != DataMatrix[i][j])
+        {
+          HammingIrrecoverableErrorNb++;
+          break;
+        }
+      }
+    }
+  }
+  for (i = 0; i < 15; i++)
+  {
+    for (j = 0; j < 13; j++)
+    {
+      ColumnUncorrected[j] = DataMatrix[j][i];
+    }
+    if (Hamming_13_9_decode(ColumnUncorrected, ColumnCorrected, 1) == false)
+    {
+      HammingIrrecoverableErrorNb++;
+    }
+    else
+    {
+      for (j = 0; j < 13; j++)
+      {
+        if (ColumnUncorrected[j] != DataMatrix[j][i])
+        {
+          HammingIrrecoverableErrorNb++;
+          break;
+        }
+      }
     }
   }
 #if BPTC_196x96_DEBUG
@@ -430,11 +483,32 @@ uint32_t BPTC_196x96_Extract_Data(uint8_t InputDeInteleavedData[196],
       DMRDataExtracted[k++] = DataMatrix[i][j];
   }
 
+  uint32_t total_corr = row_corr_p1 + col_corr_p1 + row_corr_p2 + col_corr_p2;
+  uint32_t p2_corr = row_corr_p2 + col_corr_p2;
+
+  /* In DMR BPTC(196,96), R(0) and R(1) must be 0. Also reject R(2)==1 when the
+   * received R(2) bit was 0 or the matrix required heavy multi-pass corrections,
+   * because is_ras==1 bypasses downstream CRC checks when no RAS key is loaded. */
+  if (DataMatrix[0][2] != 0 || DataMatrix[0][1] != 0)
+  {
+    HammingIrrecoverableErrorNb++;
+  }
+  else if (DataMatrix[0][0] == 1 && ((InputDeInteleavedData[1] & 1) == 0 || total_corr > 8 || p2_corr > 2))
+  {
+    HammingIrrecoverableErrorNb++;
+  }
+
   if (HammingIrrecoverableErrorNb == 0)
   {
     R[0] = DataMatrix[0][2]; /* R(0) */
     R[1] = DataMatrix[0][1]; /* R(1) */
     R[2] = DataMatrix[0][0]; /* R(2) */
+  }
+  else
+  {
+    R[0] = 0;
+    R[1] = 0;
+    R[2] = 0;
   }
 
   if (R[0] == 0 && R[1] == 0 && R[2] == 1)
@@ -466,7 +540,7 @@ uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDat
   uint32_t ParityCheckErrorNb = 0;
   uint32_t NbOfOne;
 
-  uint8_t row_bad[7];
+  uint8_t row_bad[8];
   uint8_t col_bad[16];
 
 #if BPTC_128x77_DEBUG
@@ -479,9 +553,9 @@ uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDat
       DataMatrix[i][j] = (InputDataMatrix[i][j] & 1);
   }
 
-  /* ---------- Pass 1: Hamming (16,11,4) on rows 0..6 ---------- */
+  /* ---------- Pass 1: Hamming (16,11,4) on rows 0..7 ---------- */
   memset(row_bad, 0, sizeof(row_bad));
-  for (i = 0; i < 7; i++)
+  for (i = 0; i < 8; i++)
   {
     for (j = 0; j < 16; j++)
       LineUncorrected[j] = DataMatrix[i][j];
@@ -496,13 +570,11 @@ uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDat
         fprintf(stderr, "%u", LineUncorrected[j] & 1);
       fprintf(stderr, "\n");
 #endif
-      for (j = 0; j < 11; j++)
-        DataMatrix[i][j] = LineUncorrected[j];
     }
     else
     {
-      for (j = 0; j < 11; j++)
-        DataMatrix[i][j] = LineCorrected[j];
+      for (j = 0; j < 16; j++)
+        DataMatrix[i][j] = LineUncorrected[j];
     }
   }
 #if BPTC_128x77_DEBUG
@@ -537,12 +609,14 @@ uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDat
             (unsigned)ParityCheckErrorNb);
 #endif
 
-  /* ---------- Parity-guided single-bit repair ---------- */
+  /* ---------- Parity-guided bit repair ---------- */
   {
     uint32_t n_bad_rows = 0, n_bad_cols = 0;
     uint32_t br = 0, bc = 0;
 
-    for (i = 0; i < 7; i++)
+    UNUSED(bc);
+
+    for (i = 0; i < 8; i++)
       if (row_bad[i]) { n_bad_rows++; br = i; }
     for (i = 0; i < 16; i++)
       if (col_bad[i]) { n_bad_cols++; bc = i; }
@@ -558,29 +632,35 @@ uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDat
     fprintf(stderr, "\n");
 #endif
 
-    if (n_bad_rows == 1 && n_bad_cols == 1 && bc < 11)
+    if (n_bad_rows == 1 && (n_bad_cols == 1 || n_bad_cols == 2))
     {
-      DataMatrix[br][bc] ^= 1;
-      row_bad[br] = 0;
+      for (i = 0; i < 16; i++)
+      {
+        if (col_bad[i])
+        {
+          DataMatrix[br][i] ^= 1;
 #if BPTC_128x77_DEBUG
-      fprintf(stderr,
-              " BPTC128 parity-guided FLIP at row=%u col=%u -> %u\n",
-              (unsigned)br, (unsigned)bc, (unsigned)DataMatrix[br][bc]);
+          fprintf(stderr,
+                  " BPTC128 parity-guided FLIP at row=%u col=%u -> %u\n",
+                  (unsigned)br, (unsigned)i, (unsigned)DataMatrix[br][i]);
 #endif
+        }
+      }
+      row_bad[br] = 0;
     }
 #if BPTC_128x77_DEBUG
     else if (n_bad_rows || n_bad_cols)
     {
       fprintf(stderr,
-              " BPTC128 no single-intersection flip "
-              "(need exactly 1 bad row and 1 data col)\n");
+              " BPTC128 no repair flip "
+              "(need 1 bad row and 1 or 2 bad cols)\n");
     }
 #endif
   }
 
   /* ---------- Pass 2: Hamming (16,11,4) again ---------- */
   HammingIrrecoverableErrorNb = 0;
-  for (i = 0; i < 7; i++)
+  for (i = 0; i < 8; i++)
   {
     for (j = 0; j < 16; j++)
       LineUncorrected[j] = DataMatrix[i][j];
@@ -594,13 +674,11 @@ uint32_t BPTC_128x77_Extract_Data(uint8_t InputDataMatrix[8][16], uint8_t DMRDat
         fprintf(stderr, "%u", LineUncorrected[j] & 1);
       fprintf(stderr, "\n");
 #endif
-      for (j = 0; j < 11; j++)
-        DataMatrix[i][j] = LineUncorrected[j];
     }
     else
     {
-      for (j = 0; j < 11; j++)
-        DataMatrix[i][j] = LineCorrected[j];
+      for (j = 0; j < 16; j++)
+        DataMatrix[i][j] = LineUncorrected[j];
     }
   }
 #if BPTC_128x77_DEBUG
@@ -696,22 +774,45 @@ uint32_t BPTC_16x2_Extract_Data(uint8_t InputInterleavedData[32], uint8_t DMRDat
     DMRDataExtracted[i] = DataMatrix[i] & 1;
   }
 
-  /* Prepare the line to be corrected */
+  /* Prepare the first row (bits 0..15) to be corrected */
   for(i = 0; i < 16; i++)
   {
     LineUncorrected[i] = DataMatrix[i] & 1;
   }
 
-  /* Apply Hamming (16,11,4) code correction */
+  /* Apply Hamming (16,11,4) code correction to row 0 */
   if(Hamming_16_11_4_decode(LineUncorrected, LineCorrected, 1) == false)
   {
     HammingIrrecoverableErrorNb++;
   }
-
-  /* Copy the corrected content to the output buffer */
-  for(i = 0; i < 11; i++)
+  else
   {
-    DMRDataExtracted[i] = LineCorrected[i] & 1;
+    /* Copy all 16 corrected bits (including parity bits 11..15) */
+    for(i = 0; i < 16; i++)
+    {
+      DMRDataExtracted[i] = LineUncorrected[i] & 1;
+    }
+  }
+
+  /* Prepare the second row (bits 16..31) to be corrected;
+   * 1^16 is a codeword of Hamming(16,11,4), so both even and odd parity rows are valid codewords */
+  for(i = 0; i < 16; i++)
+  {
+    LineUncorrected[i] = DataMatrix[i + 16] & 1;
+  }
+
+  /* Apply Hamming (16,11,4) code correction to row 1 */
+  if(Hamming_16_11_4_decode(LineUncorrected, LineCorrected, 1) == false)
+  {
+    HammingIrrecoverableErrorNb++;
+  }
+  else
+  {
+    /* Copy all 16 corrected bits (including parity bits 11..15) */
+    for(i = 0; i < 16; i++)
+    {
+      DMRDataExtracted[i + 16] = LineUncorrected[i] & 1;
+    }
   }
 
   /* Check Parity bits */
