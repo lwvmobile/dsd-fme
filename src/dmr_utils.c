@@ -236,10 +236,11 @@ uint32_t ComputeAndCorrectFullLinkControlCrc(uint8_t * FullLinkControlDataBytes,
   rs_12_9_calc_syndrome(&VoiceLCHeaderStr, &syndrome);
   if(rs_12_9_check_syndrome(&syndrome) != 0) result = rs_12_9_correct_errors(&VoiceLCHeaderStr, &syndrome, &errors_found);
 
-  /* Reconstitue the CRC */
-  *CRCComputed  = (uint32_t)((VoiceLCHeaderStr.data[9]  << 16) & 0xFF0000);
-  *CRCComputed |= (uint32_t)((VoiceLCHeaderStr.data[10] <<  8) & 0x00FF00);
-  *CRCComputed |= (uint32_t)((VoiceLCHeaderStr.data[11] <<  0) & 0x0000FF);
+  /* Compute the expected 24-bit RS(12,9) parity from the 9 LC data bytes */
+  rs_12_9_checksum_t * cs = rs_12_9_calc_checksum(&VoiceLCHeaderStr);
+  *CRCComputed  = (uint32_t)((cs->bytes[0] << 16) & 0xFF0000);
+  *CRCComputed |= (uint32_t)((cs->bytes[1] <<  8) & 0x00FF00);
+  *CRCComputed |= (uint32_t)((cs->bytes[2] <<  0) & 0x0000FF);
 
   if((result == RS_12_9_CORRECT_ERRORS_RESULT_NO_ERRORS_FOUND) ||
      (result == RS_12_9_CORRECT_ERRORS_RESULT_ERRORS_CORRECTED))

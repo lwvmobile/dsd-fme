@@ -254,16 +254,17 @@ rs_12_9_correct_errors_result_t rs_12_9_correct_errors(rs_12_9_codeword_t *codew
 	rs_12_9_roots_t *roots;
 	uint8_t num, denom;
 
+	if (rs_12_9_check_syndrome(syndrome) == 0) {
+		*errors_found = 0;
+		return RS_12_9_CORRECT_ERRORS_RESULT_NO_ERRORS_FOUND;
+	}
+
 	rs_12_9_calculate(syndrome, &error_locator_poly, &error_evaluator_poly);
 	roots = rs_12_9_find_roots(&error_locator_poly);
 	*errors_found = roots->errors_num;
 
-	if (roots->errors_num == 0)
-		return RS_12_9_CORRECT_ERRORS_RESULT_NO_ERRORS_FOUND;
-
-	// Error correction is done using the error-evaluator equation on pp 207.
-	if (roots->errors_num > 0 && roots->errors_num <= RS_12_9_CHECKSUMSIZE) {
-		// First check for illegal error locations.
+	// With 3 parity bytes (d_min = 4), RS(12,9) can only uniquely correct t = 1 byte error.
+	if (roots->errors_num == 1) {
 		for (r = 0; r < roots->errors_num; r++) {
 			if (roots->error_locations[r] >= RS_12_9_DATASIZE+RS_12_9_CHECKSUMSIZE)
 				return RS_12_9_CORRECT_ERRORS_RESULT_ERRORS_CANT_BE_CORRECTED;
@@ -284,10 +285,20 @@ rs_12_9_correct_errors_result_t rs_12_9_correct_errors(rs_12_9_codeword_t *codew
 			for (j = 1; j < RS_12_9_POLY_MAXDEG; j += 2)
 				denom ^= rs_12_9_galois_multiplication(error_locator_poly.data[j], rs_12_9_galois_exp_table_get(((255-i)*(j-1)) % 255));
 
+			if (denom == 0)
+				return RS_12_9_CORRECT_ERRORS_RESULT_ERRORS_CANT_BE_CORRECTED;
+
 			err = rs_12_9_galois_multiplication(num, rs_12_9_galois_inv(denom));
 			//console_log(LOGLEVEL_CODING LOGLEVEL_DEBUG "    rs (12,9): error magnitude %#x at byte loc. %u\n", err, sizeof(rs_12_9_codeword_t)-i);
 
 			codeword->data[sizeof(rs_12_9_codeword_t)-i-1] ^= err;
+
+			rs_12_9_poly_t post_syndrome;
+			rs_12_9_calc_syndrome(codeword, &post_syndrome);
+			if (rs_12_9_check_syndrome(&post_syndrome) != 0) {
+				codeword->data[sizeof(rs_12_9_codeword_t)-i-1] ^= err;
+				return RS_12_9_CORRECT_ERRORS_RESULT_ERRORS_CANT_BE_CORRECTED;
+			}
 		}
 		return RS_12_9_CORRECT_ERRORS_RESULT_ERRORS_CORRECTED;
 	}

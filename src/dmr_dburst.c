@@ -14,6 +14,24 @@
 
 #include "dsd.h"
 
+uint32_t dmr_flc_rs_calc(uint8_t * input)
+{
+  uint8_t tmp_bytes[12];
+  memset(tmp_bytes, 0, sizeof(tmp_bytes));
+  memcpy (tmp_bytes, input, 9);
+
+  uint32_t rs_clc = 0;
+  rs_12_9_encode(tmp_bytes);
+
+  rs_clc |= tmp_bytes[9];
+  rs_clc <<= 8;
+  rs_clc |= tmp_bytes[10];
+  rs_clc <<= 8;
+  rs_clc |= tmp_bytes[11];
+
+  return rs_clc;
+}
+
 void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196], uint8_t databurst)
 {
 
@@ -304,20 +322,21 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     /* Apply the CRC mask (see DMR standard B.3.12 Data Type CRC Mask) */
     CRCExtracted = CRCExtracted ^ crcmask;
 
-    /* Check/correct the BPTC data and compute the Reed-Solomon (12,9) CRC */
+    /* Check the 9 byte Full Link Control for Correct RS (or RAS MAC) Encoding*/
     if (is_lc)
     {
       if (is_ras)
       {
-        uint8_t tmp_bytes[12];
-        uint32_t std_crc = 0;
-        memcpy (tmp_bytes, BPTCDmrDataByte, sizeof(tmp_bytes));
-        if (ComputeAndCorrectFullLinkControlCrc(tmp_bytes, &std_crc, crcmask) && std_crc == CRCExtracted)
+        uint32_t std_crc = dmr_flc_rs_calc(BPTCDmrDataByte);
+        if (std_crc == CRCExtracted)
         {
-          memcpy (BPTCDmrDataByte, tmp_bytes, sizeof(tmp_bytes));
-          is_ras = 0;
           CRCComputed = std_crc;
           CRCCorrect = 1;
+          is_ras = 0;
+
+          #ifdef DEBUG_RAS
+          fprintf (stderr, " EXT: %06X; CRC: %06X;", CRCExtracted, CRCComputed);
+          #endif
         }
         else
         {
@@ -330,7 +349,19 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
           #endif
         }
       }
-      else CRCCorrect = ComputeAndCorrectFullLinkControlCrc(BPTCDmrDataByte, &CRCComputed, crcmask);
+      else
+      {
+        CRCComputed = dmr_flc_rs_calc(BPTCDmrDataByte);
+        if (CRCComputed == CRCExtracted)
+          CRCCorrect = 1;
+
+        /* Check/correct the BPTC data and compute the Reed-Solomon (12,9) CRC */
+        else CRCCorrect = ComputeAndCorrectFullLinkControlCrc(BPTCDmrDataByte, &CRCComputed, crcmask);
+
+        #ifdef DEBUG_RAS
+        fprintf (stderr, " EXT: %06X; CRC: %06X;", CRCExtracted, CRCComputed);
+        #endif
+      }
 
       //Hytera OTA Encryption LC Context Creation for VLC Header
       if (state->hota_key_loaded && CRCCorrect && databurst == 0x01)
