@@ -629,7 +629,7 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
         state->gi[slot] = 1;
       }
     }
-    else if (flco == 0x3 || flco == 0x23) //UU_V_Ch_Usr
+    else if (flco == 0x3 || flco == 0x13 || flco == 0x23) //UU_V_Ch_Usr
     {
       sprintf (state->call_string[slot], " Private ");
       fprintf (stderr, "Private ");
