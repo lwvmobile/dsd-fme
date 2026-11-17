@@ -31,6 +31,21 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
   csbk_fid =    cs_pdu[1]; //feature set id
   UNUSED(csbk_lb);
 
+  if (IrrecoverableErrors != 0 && state->hota_key_loaded == 1)
+  {
+    fprintf (stderr, "\n%s", KRED);
+    fprintf (stderr, " BPTC Irrecoverable Errors; Encrypted;");
+    fprintf (stderr, "%s", KNRM);
+    return;
+  }
+  else if (state->hota_enc_check)
+  {
+    fprintf (stderr, "\n%s", KRED);
+    fprintf (stderr, " Encrypted Control Signalling Block(s)");
+    fprintf (stderr, "%s", KNRM);
+    return;
+  }
+
   //check, regardless of CRC err
   if (IrrecoverableErrors == 0)
   {

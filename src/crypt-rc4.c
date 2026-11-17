@@ -1023,7 +1023,7 @@ void hytera_ota_unit_testing(dsd_state * state)
 {
   char keystr[100];
   memset(keystr, 0, sizeof(keystr));
-  sprintf (keystr, "%s", "2:17bfe59b29a06136fb7d3811fd1a4904");
+  sprintf (keystr, "%s", "128:17bfe59b29a06136fb7d3811fd1a4904");
   hytera_ota_keystream_setup(state, keystr);
 
   char string[30]; 

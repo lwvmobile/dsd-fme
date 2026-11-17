@@ -84,9 +84,8 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
 
   //Hytera OTA Check Enabled, Set SRC from VLC (TLC and ELC differ)
   //NOTE: VLC will always be same for each radio if its a group call
-  //while this is not the true src, it should be unique
-  //TGT will also be random between calls in each VLC,
-  //so assign static value
+  //while this is not the true src, it should be unique and static
+  //TGT will also be random between calls in each VLC, so assign hard value
   if (state->hota_enc_check)
   {
     uint32_t t_target = 8686868;
@@ -134,6 +133,14 @@ void dmr_flco (dsd_opts * opts, dsd_state * state, uint8_t lc_bits[], uint32_t C
     fprintf (stderr, "%s", KRED);
     fprintf (stderr, " SLOT %d", slot+1);
     fprintf (stderr, " EMB LC Missing CTX; Encrypted;");
+    fprintf (stderr, "%s", KNRM);
+    return;
+  }
+  else if (state->hota_key_loaded && *IrrecoverableErrors != 0 && type != 3)
+  {
+    fprintf (stderr, "\n%s", KRED);
+    fprintf (stderr, " SLOT %d", slot+1);
+    fprintf (stderr, " BPTC Irrecoverable Errors; Encrypted;");
     fprintf (stderr, "%s", KNRM);
     return;
   }

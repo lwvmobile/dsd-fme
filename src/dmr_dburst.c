@@ -285,11 +285,13 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       fprintf (stderr, " BPTC R BITS: %d %d %d", bptc_res_bits[0], bptc_res_bits[1], bptc_res_bits[2]);
     #endif
 
-    //TODO: Checkdown no irrecoverable errors prior to OTA Decryption?
-
     //Hytera OTA Encryption
-    if (state->hota_key_loaded && hota_enc)
+    if (state->hota_key_loaded && hota_enc && IrrecoverableErrors == 0)
       hytera_ota_decrypt_bptc_96(state, BPTCDmrDataBit, databurst);
+    else if (state->hota_key_loaded && hota_enc && IrrecoverableErrors != 0)
+      memset(BPTCDmrDataBit, 1, sizeof(BPTCDmrDataBit));
+    else if (state->hota_enc_check && hota_enc && databurst != 1)
+      memset(BPTCDmrDataBit, 1, sizeof(BPTCDmrDataBit));
 
     //Hytera Data Block Level Decryption
     if (databurst == 0x7) //Rate 1_2 Data Only
@@ -500,14 +502,6 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       //just fill with all ones, would be garbage from FEC anyways
       memset(LC_DataBit, 1, sizeof(LC_DataBit));
       IrrecoverableErrors = 1;
-
-      //TODO: columns instead of rows to match application of keystream
-      #ifdef DEBUG_HOTA
-      fprintf(stderr, "\n BPTC 128: ");
-      for (int i = 0; i < 8; i++)
-        fprintf (stderr, "%04X", (uint16_t)convert_bits_into_output(BptcDataMatrix[i], 16));
-      fprintf (stderr, "\n");
-      #endif
     }
     else if (state->hota_enc_check == 1)
     {
