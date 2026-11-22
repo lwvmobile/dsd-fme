@@ -275,7 +275,7 @@ void vertex_40_keystream_creation(dsd_state * state, unsigned long long int key_
   //skip constant verbosity on keyloading
   #else
   fprintf (stderr,"Vertex RC4 Bytes: ");
-  for (uint16_t i = 0; i < 8; i++)
+  for (uint16_t i = 0; i < 4; i++)
     fprintf (stderr, "%02X ", rc4_bytes[i]);
   fprintf (stderr, "Vertex Keystream: %016llX;", (unsigned long long int)vtx_key);
   fprintf (stderr, "\n");
@@ -853,17 +853,18 @@ void hytera_ota_decrypt_emb_lc(dsd_state * state, uint8_t input[8][16])
 
 }
 
-//This is a modified decrypt but to brute force an unknown 22-bit ctx value
-//This should not be run on live systems, but useful for replay or debug
-//This takes around 25 seconds on a full search and failure on Ryzen 5 2600
-void hytera_ota_search_emb_lc(dsd_state * state, uint8_t input[8][16])
+//This is a search to len for the ctx for an unknown embedded ctx value
+//default len is 0xFFF (12-bit) to match common q0 == 0 or 1 + q1 11-bit full range
+//full len is 0x3FFFFF (22-bit) to run full q0 and q1 values
+//full len cannot run in real time, but the 12-bit search can
+void hytera_ota_search_emb_lc(dsd_state * state, uint8_t input[8][16], uint32_t len)
 {
 
   #ifdef DEBUG_HOTA
   fprintf (stderr, "\n-----EMB LC and FEC CTX Search-----\n");
   #endif
 
-  for (uint32_t ctx = 0; ctx < 0x3FFFFF; ctx++)
+  for (uint32_t ctx = 0; ctx < len; ctx++)
   {
 
     uint8_t bits[128];
@@ -1016,6 +1017,10 @@ void hytera_ota_search_emb_lc(dsd_state * state, uint8_t input[8][16])
       break;
 
   }
+
+  #ifdef DEBUG_HOTA
+  fprintf (stderr, "-----EMB LC and FEC CTX Fail-------\n\n");
+  #endif
 
 }
 
@@ -1338,6 +1343,10 @@ void hytera_ota_search_sb_rc(dsd_state * state, uint8_t * input, int ptype)
       }
     }
   }
+
+  #ifdef DEBUG_HOTA
+  fprintf (stderr, "\n-----SB_RC KS Index Fail-------\n\n");
+  #endif
 
 }
 

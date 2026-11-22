@@ -1713,7 +1713,7 @@ void ras_permute_order(uint32_t seed, int * order);
 void hytera_ota_keystream_setup(dsd_state * state, char * input);
 void hytera_ota_decrypt_bptc_96(dsd_state * state, uint8_t * input, uint8_t type);
 void hytera_ota_decrypt_emb_lc(dsd_state * state, uint8_t input[8][16]);
-void hytera_ota_search_emb_lc(dsd_state * state, uint8_t input[8][16]);
+void hytera_ota_search_emb_lc(dsd_state * state, uint8_t input[8][16], uint32_t len);
 void hytera_ota_decrypt_sb_rc(dsd_state * state, uint8_t * input);
 void hytera_ota_search_sb_rc(dsd_state * state, uint8_t * input, int ptype);
 void hytera_create_lc_ctx(dsd_state * state, uint8_t * input);

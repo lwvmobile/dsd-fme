@@ -491,8 +491,16 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
     } /* End for(i = 0; i < 16; i++) */
 
     //Hytera OTA Encryption
+
+    //if the VLC CTX is missing, then run a partial search
+    if (state->hota_key_loaded && state->hota_ctx_ok[slot] == 0)
+      hytera_ota_search_emb_lc(state, BptcDataMatrix, 0xFFF);
+
+    //full search cannot run in real time, but is available as debug
     // if (state->hota_key_loaded && state->hota_ctx_ok[slot] == 0)
-    //   hytera_ota_search_emb_lc(state, BptcDataMatrix); //only run as a debug option
+    //   hytera_ota_search_emb_lc(state, BptcDataMatrix, 0x3FFFFF);
+
+    //Decrypt if a good CTX value is available
     if (state->hota_key_loaded && state->hota_ctx_ok[slot] == 1)
       hytera_ota_decrypt_emb_lc(state, BptcDataMatrix);
 
@@ -508,14 +516,6 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
       //just fill with all ones, would be garbage from FEC anyways
       memset(LC_DataBit, 1, sizeof(LC_DataBit));
       IrrecoverableErrors = 1;
-
-      //TODO: columns instead of rows to match application of keystream
-      #ifdef DEBUG_HOTA
-      fprintf(stderr, "\n BPTC 128: ");
-      for (int i = 0; i < 8; i++)
-        fprintf (stderr, "%04X", (uint16_t)convert_bits_into_output(BptcDataMatrix[i], 16));
-      fprintf (stderr, "\n");
-      #endif
     }
     else IrrecoverableErrors = BPTC_128x77_Extract_Data(BptcDataMatrix, LC_DataBit);
 
