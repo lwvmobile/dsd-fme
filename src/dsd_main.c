@@ -1585,7 +1585,7 @@
    printf ("                 -H C:256:20029736A5D91042C923EB0697484433005EFC58A1905195E28E9C7836AA2DB8' \n");
    printf ("\n");
    printf ("  -H <hex>      Manually Enter Hytera OTA Encryption 32 Char Hex Key (see example below)\n");
-   printf ("                 -H O:0:0 no keystream application, but check for Hytera OTA Encryption and DMRA EP Late Entry IV.\n");
+   printf ("                 -H O:0:0 Skip Encrypted Signalling, force pseudo call info, and check DMRA EP Late Entry IV.\n");
    printf ("                 -H O:128:17bfe59b29a06136fb7d3811fd1a4904 for 128-bit RC4 OTA Key Setup\n");
    printf ("\n");
    printf ("  -R <dec>      Manually Enter dPMR or NXDN EHR Scrambler Key Value (Decimal Value)\n");

@@ -1039,7 +1039,7 @@ void processYSF(dsd_opts * opts, dsd_state * state)
         for (m = 14; m >= 0; m--)
           imbe_fr[n][m] = imbe_vch[k++];
       }
-      for (m = 7; m >= 0; m--)
+      for (m = 6; m >= 0; m--)
         imbe_fr[7][m] = imbe_vch[k++];
 
       //fake it as P25p1 and sent to processMBEFrame
