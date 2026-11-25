@@ -15,7 +15,7 @@ static const uint8_t mac_msg_len[256] = {
 	 0, 14, 15,  0,  0, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //2F
 	 5,  7,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //3F
 	 9,  7,  9,  0,  9,  8,  9,  0, 10, 10,  9,  0, 10,  0,  0,  0, //4F
-	 0,  0,  0,  0,  9,  7,  0,  0, 10,  0,  7,  0, 10,  8, 14,  7, //5F //reverted previous changes here
+	 0,  0,  0,  0,  9,  7,  9,  0, 10,  0,  7,  0, 10,  8, 14,  7, //5F //reverted previous changes here; 56 set to 9 (P25p1 SNDCP Data Channel Announcement TSBK)
 	 9,  9,  0,  0,  9,  0,  0,  9, 10,  0,  7, 10, 10,  7,  0,  9, //6F
 	 9, 29,  9,  9,  9,  9, 10, 13,  9,  9,  9, 11,  9,  9,  0,  0, //7F
 	 8,  18,  0,  7, 11,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7, //8F (needed to add 81 and 8f for Harris)
@@ -1609,13 +1609,13 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			fprintf (stderr, "\n  DSO: %02X; DAC: %02X; Target: %d;", dso, dac, target);
 		}
 
-		//SNDCP Data Channel Announcement
-		if (MAC[1+len_a] == 0xD6)
+		//SNDCP Data Channel Announcement -- Explicit (P25p1 TSBK 0x16 arrives here as 0x56)
+		if (MAC[1+len_a] == 0xD6 || MAC[1+len_a] == 0x56)
 		{
 			fprintf (stderr, "\n SNDCP Data Channel Announcement ");
-			int aa = (MAC[2+len_a] >> 7) & 1;
-			int ra = (MAC[2+len_a] >> 6) & 1;
 			int dso = MAC[2+len_a];
+			int aa = (MAC[3+len_a] >> 7) & 1; //autonomous access
+			int ra = (MAC[3+len_a] >> 6) & 1; //requested access
 			int channelt = (MAC[4+len_a] << 8) | MAC[5+len_a];
 			int channelr = (MAC[6+len_a] << 8) | MAC[7+len_a];
 			int dac = (MAC[8+len_a] << 8) | MAC[9+len_a];
@@ -1624,7 +1624,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			if (channelt != 0)
 				freq = process_channel_to_freq (opts, state, channelt);
 			if (channelr != 0)
-				freq = process_channel_to_freq (opts, state, channelt);
+				freq = process_channel_to_freq (opts, state, channelr);
 
 		}
 
@@ -2224,6 +2224,46 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				fprintf (stderr, " WUID: %d; WUID: %d; WUID: %d; ", t1, t2, t3);
 			}
 
+		}
+
+		//Acknowledge Response - FNE -- Abbreviated (TSBK and vPDU are the same)
+		if (MAC[1+len_a] == 0x60)
+		{
+			int aiv = (MAC[2+len_a] >> 7) & 1; //additional information valid
+			int ex = (MAC[2+len_a] >> 6) & 1; //extended addressing
+			int svc = MAC[2+len_a] & 0x3F; //opcode of the request being acknowledged
+			int tgt = (MAC[7+len_a] << 16) | (MAC[8+len_a] << 8) | MAC[9+len_a];
+			fprintf (stderr, "\n Acknowledge Response - FNE - Service: %02X; TGT: %d;", svc, tgt);
+			if (aiv == 1 && ex == 1) //target's WACN and SYS
+			{
+				int twacn = (MAC[3+len_a] << 12) | (MAC[4+len_a] << 4) | ((MAC[5+len_a] & 0xF0) >> 4);
+				int tsys = ((MAC[5+len_a] & 0xF) << 8) | MAC[6+len_a];
+				fprintf (stderr, " WACN: %05X; SYS: %03X;", twacn, tsys);
+			}
+			else if (aiv == 1) //source address
+			{
+				int src = (MAC[4+len_a] << 16) | (MAC[5+len_a] << 8) | MAC[6+len_a];
+				fprintf (stderr, " SRC: %d;", src);
+			}
+		}
+
+		//Group Affiliation Response -- Abbreviated (vPDU is one octet higher than TSBK)
+		if (MAC[1+len_a] == 0x68)
+		{
+			int k = 1;
+			if (MAC[0] == 0x07) k = 0;
+			int lg = (MAC[2+len_a+k] >> 7) & 1; //1 global, 0 local
+			int gav = MAC[2+len_a+k] & 0x3;
+			int aga = (MAC[3+len_a+k] << 8) | MAC[4+len_a+k]; //announcement group
+			int ga = (MAC[5+len_a+k] << 8) | MAC[6+len_a+k];
+			int tgt = (MAC[7+len_a+k] << 16) | (MAC[8+len_a+k] << 8) | MAC[9+len_a+k];
+			fprintf (stderr, "\n Group Affiliation Response - TGT: %d; Group: %d; Announcement Group: %d;", tgt, ga, aga);
+			if (gav == 0) fprintf (stderr, " AFF_ACCEPT;");
+			if (gav == 1) fprintf (stderr, " AFF_FAIL;");
+			if (gav == 2) fprintf (stderr, " AFF_DENY;");
+			if (gav == 3) fprintf (stderr, " AFF_REFUSED;");
+			if (lg == 1) fprintf (stderr, " Global;");
+			else fprintf (stderr, " Local;");
 		}
 
 		//Unit Registration Response -- Extended vPDU (MBT will not make it here)
