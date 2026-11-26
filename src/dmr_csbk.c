@@ -841,8 +841,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
                 {
                   state->trunk_chan_map[a_channel] = freqr;
                   //add to rotation for CC Hunting on extended noframesync
-                  state->trunk_lcn_freq[state->lcn_freq_count++%25] = freqr; //no not exceed 25 entries
-                  if (state->lcn_freq_count > 25) state->lcn_freq_count = 25;
+                  cc_scc_freq_stash(state, freqr);
                 }
               }
 
@@ -854,8 +853,7 @@ void dmr_cspdu (dsd_opts * opts, dsd_state * state, uint8_t cs_pdu_bits[], uint8
               //   {
               //     state->trunk_chan_map[mbc_lpchannum] = freqr;
               //     //add to rotation for CC Hunting on extended noframesync
-              //     state->trunk_lcn_freq[state->lcn_freq_count++%25] = freqr; //no not exceed 25 entries
-              //     if (state->lcn_freq_count > 25) state->lcn_freq_count = 25;
+              //     cc_scc_freq_stash(state, freqr);
               //   }
               // }
 

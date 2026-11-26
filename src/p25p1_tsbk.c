@@ -150,9 +150,12 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
     if (err == 0)
       sprintf (state->dmr_lrrp_gps[0], "%s", "");
 
+    //TODO: Determine if any other Explicit messages are not handled in vPDU properly,
+    //or write their TSBK counterpart here instead
+
     //Don't run NET_STS out of this, or will set wrong NAC/CC
     //Note: Running MFID 90 (moto) opcode 9 GRG Delete or Reserve will falsely trigger a telephone interconnect grant
-    if (MFID < 0x2 && protectbit == 0 && err == 0 && PDU[1] != 0x7B )
+    if (MFID < 0x2 && protectbit == 0 && err == 0 && PDU[1] != 0x7B)
     {
       fprintf (stderr, "%s",KYEL);
       process_MAC_VPDU(opts, state, 0, PDU);
@@ -621,10 +624,7 @@ void processTSBK(dsd_opts * opts, dsd_state * state)
 
       //place the cc freq into the list at index 0 if 0 is empty, or not the same,
       //so we can hunt for rotating CCs without user LCN list
-      if (state->trunk_lcn_freq[0] == 0 || state->trunk_lcn_freq[0] != state->p25_cc_freq)
-      {
-        state->trunk_lcn_freq[0] = state->p25_cc_freq;
-      }
+      cc_scc_freq_stash(state, state->p25_cc_freq);
 
       //only set IF these values aren't already hard set by the user
       if (state->p2_hardset == 0)

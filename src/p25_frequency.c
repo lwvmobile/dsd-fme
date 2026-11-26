@@ -121,3 +121,23 @@ long int nxdn_channel_to_frequency(dsd_opts * opts, dsd_state * state, uint16_t 
 	}
 
 }
+
+void cc_scc_freq_stash(dsd_state * state, long int freq)
+{
+
+  if (freq == 0)
+    return;
+  else if (state->lcn_freq_count == 50)
+    return;
+
+  for (int i = 0; i < 50; i++)
+  {
+    if (state->trunk_lcn_freq[i] == freq)
+      return;
+  }
+
+  //debug
+  fprintf (stderr, "\n CC/SCC Added; Freq #%d: %d; ", state->lcn_freq_count+1, freq);
+
+  state->trunk_lcn_freq[state->lcn_freq_count++] = freq;
+}

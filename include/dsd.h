@@ -881,7 +881,7 @@ typedef struct
   #define EDACS_IS_FLEET_CALL   0x200
 
   //trunking group and lcn freq list
-  long int trunk_lcn_freq[26]; //max number on an EDACS system, should be enough on DMR too hopefully
+  long int trunk_lcn_freq[50];
   long int trunk_chan_map[0xFFFF]; //NXDN - 10 bit; P25 - 16 bit; DMR up to 12 bit (standard TIII)
   groupinfo * group_array;
   unsigned int group_tally; //tally number of groups imported from CSV file for referencing later
@@ -1586,6 +1586,7 @@ void process_FACCH_MAC_PDU (dsd_opts * opts, dsd_state * state, int payload[156]
 
 //P25 Channel to Frequency
 long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channel);
+void cc_scc_freq_stash(dsd_state * state, long int freq);
 
 //P25 CRC Functions
 int crc16_lb_bridge (int payload[190], int len);

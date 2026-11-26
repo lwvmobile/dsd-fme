@@ -54,12 +54,7 @@ void p25_decode_pdu_trunking(dsd_opts * opts, dsd_state * state, uint8_t * mpdu_
     state->p25_cc_freq = ct_freq;
     state->p25_cc_is_tdma = 0; //flag off for CC tuning purposes when system is qpsk
 
-    //place the cc freq into the list at index 0 if 0 is empty, or not the same,
-    //so we can hunt for rotating CCs without user LCN list
-    if (state->trunk_lcn_freq[0] == 0 || state->trunk_lcn_freq[0] != state->p25_cc_freq)
-    {
-      state->trunk_lcn_freq[0] = state->p25_cc_freq;
-    }
+    cc_scc_freq_stash(state, state->p25_cc_freq);
 
     //only set IF these values aren't already hard set by the user
     if (state->p2_hardset == 0)

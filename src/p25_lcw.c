@@ -130,7 +130,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
 
       else if (lc_format == 0x44)
       {
-        fprintf (stderr, " Group Voice Channel Update – Explicit");
+        fprintf (stderr, " Group Voice Channel Update - Explicit");
         uint16_t group1   = (uint16_t)ConvertBitIntoBytes(&LCW_bits[24], 16);
         uint16_t channelt = (uint16_t)ConvertBitIntoBytes(&LCW_bits[40], 16);
         uint16_t channelr = (uint16_t)ConvertBitIntoBytes(&LCW_bits[56], 16);
@@ -164,7 +164,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
 
       else if (lc_format == 0x4A)
       {
-        fprintf (stderr, " Unit to Unit Voice Channel User – Extended");
+        fprintf (stderr, " Unit to Unit Voice Channel User - Extended");
         uint32_t target = (uint32_t)ConvertBitIntoBytes(&LCW_bits[16], 24);
         uint32_t src   = (uint32_t)ConvertBitIntoBytes(&LCW_bits[40], 24);
         fprintf (stderr, "TGT: %d; SRC: %d; ", target, src);
@@ -209,12 +209,12 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
 
       else if (lc_format == 0x5A)
       {
-        fprintf (stderr, " Status Update – Source ID Extension Required");
+        fprintf (stderr, " Status Update - Source ID Extension Required");
       }
 
       else if (lc_format == 0x5C)
       {
-        fprintf (stderr, " Extended Function Command – Source ID Extension Required");
+        fprintf (stderr, " Extended Function Command - Source ID Extension Required");
       }
 
       else if (lc_format == 0x60)
@@ -226,7 +226,28 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       //its possible some of the other ones here don't as well, need to re-check all of them
       else if (lc_format == 0x61)
       {
-        fprintf (stderr, " Secondary Control Channel Broadcast");
+        fprintf (stderr, " Secondary Control Channel Broadcast \n");
+        uint8_t rfssid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 8);
+        uint8_t siteid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[16], 8);
+        uint16_t channel1 = (uint16_t)ConvertBitIntoBytes(&LCW_bits[24], 16);
+        uint8_t sysclass1 = (uint8_t)ConvertBitIntoBytes(&LCW_bits[40], 8);
+        uint16_t channel2 = (uint16_t)ConvertBitIntoBytes(&LCW_bits[48], 16);
+        uint8_t sysclass2 = (uint8_t)ConvertBitIntoBytes(&LCW_bits[64], 8);
+        long int freq1 = 0;
+        long int freq2 = 0;
+
+        fprintf (stderr, "  RFSS [%03d] SITE ID [%03d] CHAN1 [%04X] SSC [%02X] CHAN2 [%04X] SSC [%02X]", rfssid, siteid, channel1, sysclass1, channel2, sysclass2);
+
+        freq1 = process_channel_to_freq (opts, state, channel1);
+        freq2 = process_channel_to_freq (opts, state, channel2);
+
+        //place the cc freq into the list at index 0 if 0 is empty so we can hunt for rotating CCs without user LCN list
+        cc_scc_freq_stash(state, freq1);
+        cc_scc_freq_stash(state, freq2);
+
+        state->p2_siteid = siteid;
+        state->p2_rfssid = rfssid;
+
       }
 
       else if (lc_format == 0x62)
@@ -249,6 +270,21 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       else if (lc_format == 0x64)
       {
         fprintf (stderr, " Network Status Broadcast");
+        uint8_t res = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 8);
+        uint32_t wacn = (uint16_t)ConvertBitIntoBytes(&LCW_bits[16], 20);
+        uint16_t sysid = (uint16_t)ConvertBitIntoBytes(&LCW_bits[36], 12);
+        uint16_t channel = (uint16_t)ConvertBitIntoBytes(&LCW_bits[48], 16);
+        uint8_t ssc = (uint8_t)ConvertBitIntoBytes(&LCW_bits[64], 8);
+
+        fprintf (stderr, "  WACN [%05X] SYSID [%03X] NAC [%03llX] SSC [%X]", wacn, sysid, state->p2_cc, ssc);
+        if (res)
+          fprintf (stderr, "RES [%X]", res);
+        state->p25_cc_freq = process_channel_to_freq(opts, state, channel);
+
+        //place the cc freq into the list at index 0 if 0 is empty, or not the same,
+        //so we can hunt for rotating CCs without user LCN list
+        cc_scc_freq_stash(state, state->p25_cc_freq);
+
       }
 
       else if (lc_format == 0x65)
@@ -259,7 +295,29 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
 
       else if (lc_format == 0x66)
       {
-        fprintf (stderr, " Secondary Control Channel Broadcast – Explicit (LCSCBX)");
+        fprintf (stderr, " Secondary Control Channel Broadcast - Explicit (LCSCBX) \n");
+        int rfssid = (int)ConvertBitIntoBytes(&LCW_bits[8], 8);
+        int siteid = (int)ConvertBitIntoBytes(&LCW_bits[16], 8);
+        int channelt = (int)ConvertBitIntoBytes(&LCW_bits[24], 16);
+        int channelr = (int)ConvertBitIntoBytes(&LCW_bits[40], 16);
+        int sysclass = (int)ConvertBitIntoBytes(&LCW_bits[56], 8);
+        int reserved = (int)ConvertBitIntoBytes(&LCW_bits[64], 8);
+
+        fprintf (stderr, "  RFSS [%03d] SITE ID [%03d] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", rfssid, siteid, channelt, channelr, sysclass);
+        if (reserved != 0)
+          fprintf (stderr, " RES [%X]", reserved);
+
+        long int freq_tx = process_channel_to_freq (opts, state, channelt);
+        long int freq_rx = process_channel_to_freq (opts, state, channelr);
+
+        UNUSED(freq_tx);
+        UNUSED(freq_rx);
+
+        cc_scc_freq_stash(state, freq_tx); //FNE TX
+        // cc_scc_freq_stash(state, freq_rx); //FNE RX
+
+        state->p2_siteid = siteid;
+        state->p2_rfssid = rfssid;
       }
 
       else if (lc_format == 0x67) //explicit
@@ -290,12 +348,40 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
 
       else if (lc_format == 0x68)
       {
-        fprintf (stderr, " RFSS Status Broadcast – Explicit (LCRSBX)");
+        fprintf (stderr, " RFSS Status Broadcast - Explicit (LCRSBX) \n");
+        uint8_t lra = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 8);
+        uint16_t channelr = (uint16_t)ConvertBitIntoBytes(&LCW_bits[16], 16);
+        uint8_t rfssid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[32], 8);
+        uint8_t siteid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[40], 8);
+        uint16_t channelt = (uint16_t)ConvertBitIntoBytes(&LCW_bits[48], 16);
+        uint8_t sysclass = (uint8_t)ConvertBitIntoBytes(&LCW_bits[64], 8);
+        fprintf (stderr, "  LRA [%02X] RFSS ID [%03d] SITE ID [%03d]\n  CHAN-T [%04X] CHAN-R [%02X] SSC [%02X] ", lra, rfssid, siteid, channelt, channelr, sysclass);
+        process_channel_to_freq (opts, state, channelt);
+        process_channel_to_freq (opts, state, channelr);
+
+        state->p2_siteid = siteid;
+        state->p2_rfssid = rfssid;
       }
 
       else if (lc_format == 0x69)
       {
-        fprintf (stderr, " Network Status Broadcast – Explicit (LCNSBX)");
+        fprintf (stderr, " Network Status Broadcast - Explicit (LCNSBX) \n");
+
+        uint32_t wacn = (uint16_t)ConvertBitIntoBytes(&LCW_bits[8], 20);
+        uint16_t sysid = (uint16_t)ConvertBitIntoBytes(&LCW_bits[28], 12);
+        uint16_t channelt = (uint16_t)ConvertBitIntoBytes(&LCW_bits[40], 16);
+        uint16_t channelr = (uint16_t)ConvertBitIntoBytes(&LCW_bits[56], 16);
+
+        fprintf (stderr, "  WACN [%05X] SYSID [%03X] NAC [%03llX]", wacn, sysid, state->p2_cc);
+        state->p25_cc_freq = process_channel_to_freq(opts, state, channelt);
+        long int freq_rx = process_channel_to_freq(opts, state, channelr);
+
+        UNUSED(freq_rx);
+
+        //place the cc freq into the list at index 0 if 0 is empty, or not the same,
+        //so we can hunt for rotating CCs without user LCN list
+        cc_scc_freq_stash(state, state->p25_cc_freq);
+        // cc_scc_freq_stash(state, freq_rx); //FNE RX
       }
 
       else if (lc_format == 0x6A)
@@ -305,7 +391,7 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
 
       else if (lc_format == 0x6B)
       {
-        fprintf (stderr, " Message Update – Source ID Extension Required");
+        fprintf (stderr, " Message Update - Source ID Extension Required");
       }
 
       //tune back to CC here - save about 1-2 seconds

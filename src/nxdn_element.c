@@ -1058,9 +1058,7 @@ void NXDN_decode_cch_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     IFN2 = (uint16_t)ConvertBitIntoBytes(&Message[96], 16);
 
     if (OFN2 && IFN2)
-    {
       fprintf (stderr, "OFN2 [%04X][%05d] IFN2 [%04X][%05d]", OFN2, OFN2, IFN2, IFN2);
-    }
 
     fprintf (stderr, "Status: ");
     if (channel1sts & 0x10) fprintf (stderr, "New ");
@@ -1078,17 +1076,19 @@ void NXDN_decode_cch_info(dsd_opts * opts, dsd_state * state, uint8_t * Message)
     //run second -- if available and not equal to first
     if (OFN2 && IFN2 && OFN2 != OFN1)
     {
-      nxdn_channel_to_frequency (opts, state, OFN2);
+      freq2 = nxdn_channel_to_frequency (opts, state, OFN2);
       nxdn_channel_to_frequency (opts, state, IFN2);
     }
 
-    //add to lcn freq for hunting -- only when using pure DFA and not importing
-    if (state->trunk_lcn_freq[0] == 0 && freq1 != 0)
-    {
-      state->trunk_lcn_freq[0] = freq1;
-      state->p25_cc_freq = freq1;
-      state->lcn_freq_count = 1;
-    }
+    //need to test to see if this is required,
+    //but lacking in DFA system types, should be 
+    //acquired by frequency carrying CAC message
+
+    // if (freq1 != 0)
+    //   state->p25_cc_freq = freq1;
+
+    cc_scc_freq_stash(state, freq1);
+    cc_scc_freq_stash(state, freq2);
 
   }
 

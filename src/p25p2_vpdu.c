@@ -16,7 +16,7 @@ static const uint8_t mac_msg_len[256] = {
 	 5,  7,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //3F
 	 9,  7,  9,  0,  9,  8,  9,  0, 10, 10,  9,  0, 10,  0,  0,  0, //4F
 	 0,  0,  0,  0,  9,  7,  9,  0, 10,  0,  7,  0, 10,  8, 14,  7, //5F //reverted previous changes here; 56 set to 9 (P25p1 SNDCP Data Channel Announcement TSBK)
-	 9,  9,  0,  0,  9,  0,  0,  9, 10,  0,  7, 10, 10,  7,  0,  9, //6F
+	 9,  9,  0,  0,  9,  0,  0,  9, 10,  8,  7, 10, 10,  7,  0,  9, //6F //0x69 is TSBK SCCB Explicit Message
 	 9, 29,  9,  9,  9,  9, 10, 13,  9,  9,  9, 11,  9,  9,  0,  0, //7F
 	 8,  18,  0,  7, 11,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7, //8F (needed to add 81 and 8f for Harris)
 	 0, 17,  0,  0,  0,  17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, //9F // 0x91 and 0x95 manualy set to 17 (moto)
@@ -2056,7 +2056,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 		}
 
 		//Secondary Control Channel Broadcast, Explicit
-		if (MAC[1+len_a] == 0xE9)
+		if (MAC[1+len_a] == 0xE9 || MAC[1+len_a] == 0x69)
 		{
 			int rfssid = MAC[2+len_a];
 			int siteid = MAC[3+len_a];
@@ -2064,15 +2064,17 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channelr = (MAC[6+len_a] << 8) | MAC[7+len_a];
 			int sysclass = MAC[8+len_a];
 
-			if (1 == 1) //state->p2_is_lcch == 1
-			{
+      fprintf (stderr, "\n Secondary Control Channel Broadcast - Explicit\n");
+      fprintf (stderr, "  RFSS [%03d] SITE ID [%03d] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", rfssid, siteid, channelt, channelr, sysclass);
 
-				fprintf (stderr, "\n Secondary Control Channel Broadcast - Explicit\n");
-				fprintf (stderr, "  RFSS [%03d] SITE ID [%03d] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]", rfssid, siteid, channelt, channelr, sysclass);
+      long int freq_tx = process_channel_to_freq (opts, state, channelt);
+      long int freq_rx = process_channel_to_freq (opts, state, channelr);
 
-				process_channel_to_freq (opts, state, channelt);
-				process_channel_to_freq (opts, state, channelr);
-			}
+      UNUSED(freq_tx);
+      UNUSED(freq_rx);
+
+      cc_scc_freq_stash(state, freq_tx); //FNE TX
+      // cc_scc_freq_stash(state, freq_rx); //FNE RX
 
 			state->p2_siteid = siteid;
 			state->p2_rfssid = rfssid;
@@ -2090,23 +2092,16 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int sysclass2 = MAC[9+len_a];
 			long int freq1 = 0;
 			long int freq2 = 0;
-			if (1 == 1) //state->p2_is_lcch == 1
-			{
 
-				fprintf (stderr, "\n Secondary Control Channel Broadcast - Implicit\n");
-				fprintf (stderr, "  RFSS[%03d] SITE ID [%03d] CHAN1 [%04X] SSC [%02X] CHAN2 [%04X] SSC [%02X]", rfssid, siteid, channel1, sysclass1, channel2, sysclass2);
+      fprintf (stderr, "\n Secondary Control Channel Broadcast - Implicit\n");
+      fprintf (stderr, "  RFSS [%03d] SITE ID [%03d] CHAN1 [%04X] SSC [%02X] CHAN2 [%04X] SSC [%02X]", rfssid, siteid, channel1, sysclass1, channel2, sysclass2);
 
-				freq1 = process_channel_to_freq (opts, state, channel1);
-				freq2 = process_channel_to_freq (opts, state, channel2);
-			}
+      freq1 = process_channel_to_freq (opts, state, channel1);
+      freq2 = process_channel_to_freq (opts, state, channel2);
 
 			//place the cc freq into the list at index 0 if 0 is empty so we can hunt for rotating CCs without user LCN list
-			if (state->trunk_lcn_freq[1] == 0)
-			{
-				state->trunk_lcn_freq[1] = freq1;
-				state->trunk_lcn_freq[2] = freq2;
-				state->lcn_freq_count = 3; //increment to three
-			}
+			cc_scc_freq_stash(state, freq1);
+      cc_scc_freq_stash(state, freq2);
 
 			state->p2_siteid = siteid;
 			state->p2_rfssid = rfssid;
@@ -2496,12 +2491,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				state->p2_cc = lcolorcode;
 			}
 
-			//place the cc freq into the list at index 0 if 0 is empty, or not the same,
-			//so we can hunt for rotating CCs without user LCN list
-			if (state->trunk_lcn_freq[0] == 0 || state->trunk_lcn_freq[0] != state->p25_cc_freq)
-			{
-				state->trunk_lcn_freq[0] = state->p25_cc_freq;
-			}
+			cc_scc_freq_stash(state, state->p25_cc_freq);
 
 		}
 		//network status broadcast, extended
@@ -2527,6 +2517,8 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 				state->p2_cc = lcolorcode;
 			}
 
+      cc_scc_freq_stash(state, state->p25_cc_freq);
+
 		}
 
 		//Adjacent Status Broadcast, abbreviated
@@ -2540,7 +2532,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channelt = (MAC[7+len_a] << 8) | MAC[8+len_a];
 			int sysclass = MAC[9+len_a];
 			fprintf (stderr, "\n Adjacent Status Broadcast - Abbreviated\n");
-			fprintf (stderr, "  LRA [%02X] RFSS[%03d] SITE [%03d] SYSID [%03X] CHAN-T [%04X] SSC [%02X]\n  ", lra, rfssid, siteid, lsysid, channelt, sysclass);
+			fprintf (stderr, "  LRA [%02X] RFSS [%03d] SITE [%03d] SYSID [%03X] CHAN-T [%04X] SSC [%02X]\n  ", lra, rfssid, siteid, lsysid, channelt, sysclass);
 			if (cfva & 0x8) fprintf (stderr, " Conventional");
 			if (cfva & 0x4) fprintf (stderr, " Failure Condition");
 			if (cfva & 0x2) fprintf (stderr, " Up to Date (Correct)");
@@ -2563,7 +2555,7 @@ void process_MAC_VPDU(dsd_opts * opts, dsd_state * state, int type, unsigned lon
 			int channelr = (MAC[9+len_a] << 8) | MAC[10+len_a];
 			int sysclass = MAC[11+len_a];  //need to re-check this
 			fprintf (stderr, "\n Adjacent Status Broadcast - Extended\n");
-			fprintf (stderr, "  LRA [%02X] RFSS[%03d] SITE [%03d] SYSID [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]\n  ", lra, rfssid, siteid, lsysid, channelt, channelr, sysclass);
+			fprintf (stderr, "  LRA [%02X] RFSS [%03d] SITE [%03d] SYSID [%03X] CHAN-T [%04X] CHAN-R [%04X] SSC [%02X]\n  ", lra, rfssid, siteid, lsysid, channelt, channelr, sysclass);
 			if (cfva & 0x8) fprintf (stderr, " Conventional");
 			if (cfva & 0x4) fprintf (stderr, " Failure Condition");
 			if (cfva & 0x2) fprintf (stderr, " Up to Date (Correct)");
