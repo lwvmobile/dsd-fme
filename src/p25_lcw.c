@@ -237,6 +237,13 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       else if (lc_format == 0x63)
       {
         fprintf (stderr, " RFSS Status Broadcast");
+        //same fields as the TSBK, one octet lower (LRA in octet 1)
+        uint16_t sysid = (uint16_t)ConvertBitIntoBytes(&LCW_bits[20], 12);
+        uint8_t rfssid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[32], 8);
+        uint8_t siteid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[40], 8);
+        uint16_t channel = (uint16_t)ConvertBitIntoBytes(&LCW_bits[48], 16);
+        uint8_t ssc = (uint8_t)ConvertBitIntoBytes(&LCW_bits[64], 8);
+        fprintf (stderr, " - SYS %03X RFSS %d Site %d CH %04X SSC %02X", sysid, rfssid, siteid, channel, ssc);
       }
 
       else if (lc_format == 0x64)
