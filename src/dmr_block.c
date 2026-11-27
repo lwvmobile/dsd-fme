@@ -1218,7 +1218,10 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
         else if (alg == 5 && akl == 1 && mi != 0) //AES-256 OFB
         {
-          int nblocks = (state->data_byte_ctr[slot] / 16) + 1;
+          //+2, not +1: the keystream is applied from its octet 16 (ob[i+16]), so it needs one block more than the data;
+          //capped at ob's size, which still covers the largest PDU (3072 octets) from octet 16
+          int nblocks = (state->data_byte_ctr[slot] / 16) + 2;
+          if (nblocks > (int)(sizeof(ob) / 16)) nblocks = (int)(sizeof(ob) / 16);
           aes_ofb_keystream_output (maes, kaes, ob, 2, nblocks);
           decrypted_pdu = 1;
         }
@@ -1245,7 +1248,10 @@ void dmr_block_assembler (dsd_opts * opts, dsd_state * state, uint8_t block_byte
 
         else if (alg == 4 && akl == 1 && mi != 0) //AES-128 OFB
         {
-          int nblocks = (state->data_byte_ctr[slot] / 16) + 1;
+          //+2, not +1: the keystream is applied from its octet 16 (ob[i+16]), so it needs one block more than the data;
+          //capped at ob's size, which still covers the largest PDU (3072 octets) from octet 16
+          int nblocks = (state->data_byte_ctr[slot] / 16) + 2;
+          if (nblocks > (int)(sizeof(ob) / 16)) nblocks = (int)(sizeof(ob) / 16);
           aes_ofb_keystream_output (maes, kaes, ob, 0, nblocks);
           decrypted_pdu = 1;
         }
