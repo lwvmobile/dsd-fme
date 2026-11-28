@@ -241,7 +241,6 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         freq1 = process_channel_to_freq (opts, state, channel1);
         freq2 = process_channel_to_freq (opts, state, channel2);
 
-        //place the cc freq into the list at index 0 if 0 is empty so we can hunt for rotating CCs without user LCN list
         cc_scc_freq_stash(state, freq1);
         cc_scc_freq_stash(state, freq2);
 
@@ -253,6 +252,25 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
       else if (lc_format == 0x62)
       {
         fprintf (stderr, " Adjacent Site Status Broadcast");
+        uint8_t lra = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 8);
+        uint8_t cfva = (uint8_t)ConvertBitIntoBytes(&LCW_bits[16], 4);
+        uint8_t sysid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[20], 12);
+        uint8_t rfssid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[32], 8);
+        uint8_t siteid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[40], 8);
+        uint16_t channel = (uint16_t)ConvertBitIntoBytes(&LCW_bits[48], 16);
+        uint8_t ssc = (uint8_t)ConvertBitIntoBytes(&LCW_bits[64], 8);
+        
+        fprintf (stderr, " - LRA %02X SYS %03X RFSS %d Site %d CH %04X SSC %X", lra, sysid, rfssid, siteid, channel, ssc);
+
+        //debug print only
+        // fprintf (stderr, "\n  ");
+        // if (cfva & 0x8) fprintf (stderr, " Conventional");
+        // if (cfva & 0x4) fprintf (stderr, " Failure Condition");
+        // if (cfva & 0x2) fprintf (stderr, " Up to Date (Correct)");
+        // else fprintf (stderr, " Last Known");
+        if (cfva & 0x1) fprintf (stderr, " - Connection Active");
+        process_channel_to_freq (opts, state, channel);
+        //end debug, way too much for a simple link control line
       }
 
       else if (lc_format == 0x63)
@@ -265,13 +283,15 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         uint16_t channel = (uint16_t)ConvertBitIntoBytes(&LCW_bits[48], 16);
         uint8_t ssc = (uint8_t)ConvertBitIntoBytes(&LCW_bits[64], 8);
         fprintf (stderr, " - SYS %03X RFSS %d Site %d CH %04X SSC %02X", sysid, rfssid, siteid, channel, ssc);
+        long int freq = process_channel_to_freq (opts, state, channel);
+        cc_scc_freq_stash(state, freq);
       }
 
       else if (lc_format == 0x64)
       {
         fprintf (stderr, " Network Status Broadcast");
         uint8_t res = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 8);
-        uint32_t wacn = (uint16_t)ConvertBitIntoBytes(&LCW_bits[16], 20);
+        uint32_t wacn = (uint32_t)ConvertBitIntoBytes(&LCW_bits[16], 20);
         uint16_t sysid = (uint16_t)ConvertBitIntoBytes(&LCW_bits[36], 12);
         uint16_t channel = (uint16_t)ConvertBitIntoBytes(&LCW_bits[48], 16);
         uint8_t ssc = (uint8_t)ConvertBitIntoBytes(&LCW_bits[64], 8);
@@ -281,8 +301,6 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
           fprintf (stderr, "RES [%X]", res);
         state->p25_cc_freq = process_channel_to_freq(opts, state, channel);
 
-        //place the cc freq into the list at index 0 if 0 is empty, or not the same,
-        //so we can hunt for rotating CCs without user LCN list
         cc_scc_freq_stash(state, state->p25_cc_freq);
 
       }
@@ -340,10 +358,9 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         // if (cfva & 0x2) fprintf (stderr, " Up to Date (Correct)");
         // else fprintf (stderr, " Last Known");
         if (cfva & 0x1) fprintf (stderr, " - Connection Active");
-        // process_channel_to_freq (opts, state, channelt);
+        process_channel_to_freq (opts, state, channelt);
+        process_channel_to_freq (opts, state, channelr);
         //end debug, way too much for a simple link control line
-
-
       }
 
       else if (lc_format == 0x68)
@@ -356,18 +373,20 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
         uint16_t channelt = (uint16_t)ConvertBitIntoBytes(&LCW_bits[48], 16);
         uint8_t sysclass = (uint8_t)ConvertBitIntoBytes(&LCW_bits[64], 8);
         fprintf (stderr, "  LRA [%02X] RFSS ID [%03d] SITE ID [%03d]\n  CHAN-T [%04X] CHAN-R [%02X] SSC [%02X] ", lra, rfssid, siteid, channelt, channelr, sysclass);
-        process_channel_to_freq (opts, state, channelt);
+        long int freq = process_channel_to_freq (opts, state, channelt);
         process_channel_to_freq (opts, state, channelr);
 
         state->p2_siteid = siteid;
         state->p2_rfssid = rfssid;
+
+        cc_scc_freq_stash(state, freq);
       }
 
       else if (lc_format == 0x69)
       {
         fprintf (stderr, " Network Status Broadcast - Explicit (LCNSBX) \n");
 
-        uint32_t wacn = (uint16_t)ConvertBitIntoBytes(&LCW_bits[8], 20);
+        uint32_t wacn = (uint32_t)ConvertBitIntoBytes(&LCW_bits[8], 20);
         uint16_t sysid = (uint16_t)ConvertBitIntoBytes(&LCW_bits[28], 12);
         uint16_t channelt = (uint16_t)ConvertBitIntoBytes(&LCW_bits[40], 16);
         uint16_t channelr = (uint16_t)ConvertBitIntoBytes(&LCW_bits[56], 16);
@@ -378,8 +397,6 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
 
         UNUSED(freq_rx);
 
-        //place the cc freq into the list at index 0 if 0 is empty, or not the same,
-        //so we can hunt for rotating CCs without user LCN list
         cc_scc_freq_stash(state, state->p25_cc_freq);
         // cc_scc_freq_stash(state, freq_rx); //FNE RX
       }
@@ -504,30 +521,108 @@ void p25_lcw (dsd_opts * opts, dsd_state * state, uint8_t LCW_bits[], uint8_t ir
     //This lc_format doesn't use the MFID field
     else if (lc_format == 0x58)
     {
-      uint8_t iden = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 4);
-      uint32_t base = (uint32_t)ConvertBitIntoBytes(&LCW_bits[40], 32);
-      fprintf (stderr, " Channel Identifier Update VU; Iden: %X; Base: %d;", iden, base*5);
+      //TODO: Find Samples to Validate this LCW (already have VU working)
+      //double check bit start and number of bits on these
+      uint8_t   iden = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 4);
+      uint16_t    bw = (uint32_t)ConvertBitIntoBytes(&LCW_bits[12], 9);
+      uint16_t   off = (uint32_t)ConvertBitIntoBytes(&LCW_bits[21], 9);
+      uint16_t space = (uint32_t)ConvertBitIntoBytes(&LCW_bits[30], 10);
+      uint32_t  base = (uint32_t)ConvertBitIntoBytes(&LCW_bits[40], 32);
+      fprintf (stderr, " Channel Identifier Update LCCIU; Iden: %X; Base: %d; BW: %d; OFF: %d; Spacing: %d;", iden, base*5, bw, off, space);
+
+      state->p25_trans_off[iden] = off;
+      state->p25_chan_spac[iden] = space;
+      state->p25_base_freq[iden] = base;
+
+      //needed?
+      state->p25_chan_type[iden] = 1; //set as old values for now
+			state->p25_chan_tdma[iden] = 0; //set as old values for now
     }
 
     //This lc_format doesn't use the MFID field
     else if (lc_format == 0x59)
     {
-      uint8_t iden = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 4);
-      uint32_t base = (uint32_t)ConvertBitIntoBytes(&LCW_bits[40], 32);
-      fprintf (stderr, " Channel Identifier Update VU; Iden: %X; Base: %d;", iden, base*5);
+      uint8_t   iden = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 4);
+      uint8_t  bw_vu = (uint32_t)ConvertBitIntoBytes(&LCW_bits[12], 4);
+      uint16_t   off = (uint32_t)ConvertBitIntoBytes(&LCW_bits[16], 14);
+      uint16_t space = (uint32_t)ConvertBitIntoBytes(&LCW_bits[30], 10);
+      uint32_t  base = (uint32_t)ConvertBitIntoBytes(&LCW_bits[40], 32);
+      fprintf (stderr, " Channel Identifier Update VU; Iden: %X; Base: %d; BW: %d; OFF: %d; Spacing: %d;", iden, base*5, bw_vu, off, space);
+
+      state->p25_trans_off[iden] = off;
+      state->p25_chan_spac[iden] = space;
+      state->p25_base_freq[iden] = base;
+
+      //needed?
+      state->p25_chan_type[iden] = 1; //set as old values for now
+			state->p25_chan_tdma[iden] = 0; //set as old values for now
     }
 
     //This lc_format doesn't use the MFID field
     else if (lc_format == 0x61)
-      fprintf (stderr, " Secondary Control Channel Broadcast");
+    {
+      fprintf (stderr, " Secondary Control Channel Broadcast \n");
+      uint8_t rfssid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 8);
+      uint8_t siteid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[16], 8);
+      uint16_t channel1 = (uint16_t)ConvertBitIntoBytes(&LCW_bits[24], 16);
+      uint8_t sysclass1 = (uint8_t)ConvertBitIntoBytes(&LCW_bits[40], 8);
+      uint16_t channel2 = (uint16_t)ConvertBitIntoBytes(&LCW_bits[48], 16);
+      uint8_t sysclass2 = (uint8_t)ConvertBitIntoBytes(&LCW_bits[64], 8);
+      long int freq1 = 0;
+      long int freq2 = 0;
+
+      fprintf (stderr, "  RFSS [%03d] SITE ID [%03d] CHAN1 [%04X] SSC [%02X] CHAN2 [%04X] SSC [%02X]", rfssid, siteid, channel1, sysclass1, channel2, sysclass2);
+
+      freq1 = process_channel_to_freq (opts, state, channel1);
+      freq2 = process_channel_to_freq (opts, state, channel2);
+
+      cc_scc_freq_stash(state, freq1);
+      cc_scc_freq_stash(state, freq2);
+
+      state->p2_siteid = siteid;
+      state->p2_rfssid = rfssid;
+    }
 
     //This lc_format doesn't use the MFID field
     else if (lc_format == 0x62)
+    {
       fprintf (stderr, " Adjacent Site Status Broadcast");
+      uint8_t lra = (uint8_t)ConvertBitIntoBytes(&LCW_bits[8], 8);
+      uint8_t cfva = (uint8_t)ConvertBitIntoBytes(&LCW_bits[16], 4);
+      uint8_t sysid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[20], 12);
+      uint8_t rfssid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[32], 8);
+      uint8_t siteid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[40], 8);
+      uint16_t channel = (uint16_t)ConvertBitIntoBytes(&LCW_bits[48], 16);
+      uint8_t ssc = (uint8_t)ConvertBitIntoBytes(&LCW_bits[64], 8);
+      
+      fprintf (stderr, " - LRA %02X SYS %03X RFSS %d Site %d CH %04X SSC %X", lra, sysid, rfssid, siteid, channel, ssc);
+
+      //debug print only
+      // fprintf (stderr, "\n  ");
+      // if (cfva & 0x8) fprintf (stderr, " Conventional");
+      // if (cfva & 0x4) fprintf (stderr, " Failure Condition");
+      // if (cfva & 0x2) fprintf (stderr, " Up to Date (Correct)");
+      // else fprintf (stderr, " Last Known");
+      if (cfva & 0x1) fprintf (stderr, " - Connection Active");
+      process_channel_to_freq (opts, state, channel);
+      //end debug, way too much for a simple link control line
+
+    }
 
     //This lc_format doesn't use the MFID field
     else if (lc_format == 0x63)
+    {
       fprintf (stderr, " RFSS Status Broadcast");
+      //same fields as the TSBK, one octet lower (LRA in octet 1)
+      uint16_t sysid = (uint16_t)ConvertBitIntoBytes(&LCW_bits[20], 12);
+      uint8_t rfssid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[32], 8);
+      uint8_t siteid = (uint8_t)ConvertBitIntoBytes(&LCW_bits[40], 8);
+      uint16_t channel = (uint16_t)ConvertBitIntoBytes(&LCW_bits[48], 16);
+      uint8_t ssc = (uint8_t)ConvertBitIntoBytes(&LCW_bits[64], 8);
+      fprintf (stderr, " - SYS %03X RFSS %d Site %d CH %04X SSC %02X", sysid, rfssid, siteid, channel, ssc);
+      long int freq = process_channel_to_freq (opts, state, channel);
+      cc_scc_freq_stash(state, freq);
+    }
 
     //MFID 90 Embedded GPS
     else if (lc_mfid == 0x90 && lc_opcode == 0x6)

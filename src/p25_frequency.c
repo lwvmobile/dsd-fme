@@ -51,14 +51,13 @@ long int process_channel_to_freq (dsd_opts * opts, dsd_state * state, int channe
 		if (state->p25_base_freq[iden] != 0)
 		{
 			freq = (state->p25_base_freq[iden] * 5) + ( step * state->p25_chan_spac[iden] * 125);
-					fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
-					return (freq);
+      fprintf (stderr, "\n  Frequency [%.6lf] MHz", (double)freq/1000000);
+      return (freq);
 		}
 		else
 		{
-				fprintf (stderr, "\n  Base Frequency Not Found - Iden [%d]", iden);
-				fprintf(stderr, "\n    or Channel not found in import file");
-				return (0);
+      fprintf (stderr, "\n  Base Frequency Not Found - Iden: %d or Channel not found in import file", iden);
+      return (0);
 		}
 	}
 
